@@ -1,0 +1,6 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {},
+  "files": ["App.tsx"],
+  "exclude": ["node_modules", "supabase/functions", "src/__tests__"]
+}

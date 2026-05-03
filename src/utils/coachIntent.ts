@@ -1,0 +1,239 @@
+/**
+ * coachIntent.ts — structured intent schema for the coach pipeline.
+ *
+ * ARCHITECTURE
+ *
+ *   LLM = conversation brain / intent parser
+ *   UAE / deterministic engines = program authority
+ *   UI = verified visible state
+ *
+ * The LLM returns a `CoachIntent` (this module's discriminated union),
+ * NOT a program mutation. CoachScreen dispatches based on the intent
+ * kind:
+ *
+ *   new_injury_report           → severity clarifier + UAE
+ *   injury_severity_reply       → pending-injury resolver + UAE
+ *   active_injury_followup      → progression handler (improving / worse / resolved)
+ *   why_didnt_program_change    → coachStateInspector (explain, then maybe re-apply)
+ *   request_program_adjustment  → UAE / coachActions
+ *   fatigue / missed_session
+ *   exercise_swap               → UAE
+ *   general_question            → free-form LLM reply (no mutation)
+ *
+ * Only the deterministic engines mutate program state. The LLM never
+ * writes overrides directly. Visible-diff verification still applies
+ * to every mutation.
+ *
+ * PLUGGABLE CLASSIFIER
+ *
+ * The `CoachIntentClassifier` interface is the seam. Production wires
+ * a real LLM-backed implementation (edge function with structured
+ * output / tool use). Tests inject a deterministic mock that returns
+ * scripted intents, so the conversational dispatcher can be validated
+ * without an LLM call.
+ */
+
+import type { ResolvedDay } from './sessionResolver';
+import type { InjuryState } from './injuryProgression';
+import type { CoachUpdate, ActiveConstraint } from '../store/coachUpdatesStore';
+
+// ─── Intent schema ──────────────────────────────────────────────────
+
+export type CoachIntentKind =
+  | 'new_injury_report'
+  | 'injury_severity_reply'
+  | 'active_injury_followup'
+  | 'why_didnt_program_change'
+  | 'request_program_adjustment'
+  | 'fatigue'
+  | 'soreness'
+  | 'busy_week'
+  | 'missed_session'
+  | 'exercise_swap'
+  | 'general_question';
+
+export interface CoachIntentPayload {
+  /** Free-text body part (raw, not bucket — the engine resolves). */
+  bodyPart?: string;
+  /** Pain rating 1..10. */
+  severity?: number;
+  /** ISO YYYY-MM-DD reference for "why didn't X change?" / requests. */
+  requestedDate?: string;
+  /** Workout name reference for "why are deadlifts still in Lower?". */
+  requestedSession?: string;
+  /** Free-text athlete concern, surfaced into replies / state inspector. */
+  concern?: string;
+  /** Status update for active_injury_followup: 'better' / 'worse' / etc. */
+  followupKind?: 'resolved' | 'improving' | 'worsening' | 'unchanged';
+}
+
+/**
+ * The structured intent a classifier returns. `confidence` lets the
+ * dispatcher choose to ask a clarification question on borderline
+ * cases instead of dispatching incorrectly. `needsClarification`
+ * forces the clarification path when true.
+ */
+export interface CoachIntent {
+  intent: CoachIntentKind;
+  /** 0..1 model confidence. Below ~0.6 callers should consider clarification. */
+  confidence: number;
+  needsClarification: boolean;
+  /** Question to ask when needsClarification === true. */
+  clarificationQuestion?: string;
+  payload?: CoachIntentPayload;
+  /** Free-text rationale (for logs / UI debug). */
+  rationale?: string;
+}
+
+// ─── Context packet ─────────────────────────────────────────────────
+
+/**
+ * Rich state passed alongside the user message to the classifier so
+ * the LLM has enough context to differentiate "new injury" from
+ * "follow-up" without us hard-coding phrase guards.
+ *
+ * All fields are read-only snapshots of the moment the message was
+ * sent. The classifier MUST NOT mutate state — mutations belong to
+ * the deterministic engines that run after dispatch.
+ */
+export interface CoachContextPacket {
+  /** The full user message just submitted. */
+  userMessage: string;
+  /** Recent chat — last N messages, oldest first. */
+  recentMessages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  /** Active injury, if any. Drives most of the disambiguation logic. */
+  activeInjury: InjuryState | null;
+  /**
+   * All active constraints — injuries, fatigue, soreness, schedule, etc.
+   * Used by the constraint-resolution detector that runs BEFORE the
+   * LLM intent classifier so a message like "no fatigue anymore" can
+   * clear the right constraint without being re-classified as a fresh
+   * fatigue report.
+   */
+  activeConstraints: ActiveConstraint[];
+  /**
+   * Pending injury context from a prior clarifier turn. When present,
+   * a severity-only reply ("9") MUST bind to pending.bodyPart even
+   * if activeInjury exists for a different body part. This is the
+   * fix for the live "shoulder severity applied to hammy" bug.
+   */
+  pendingInjury?: {
+    bodyPart: string;
+    timestamp: number;
+  } | null;
+  /** Active Coach Update card for the displayed week, if present. */
+  coachUpdate: CoachUpdate | null;
+  /** Current-week resolved days — what the athlete sees on the Program tab. */
+  currentWeek: ResolvedDay[];
+  /** Next-week resolved days — for "next week is unchanged" type queries. */
+  nextWeek: ResolvedDay[];
+  /** ISO date the message was sent. Locks classifier reasoning to a clock. */
+  todayISO: string;
+}
+
+// ─── Classifier seam ─────────────────────────────────────────────────
+
+/**
+ * Pluggable intent classifier. Production wires a real LLM call
+ * (edge function with structured output); tests inject a mock.
+ *
+ *   classify(packet) → Promise<CoachIntent>
+ *
+ * Implementations MUST be pure side-effect-free (no store writes).
+ * The dispatcher is responsible for any state mutation.
+ */
+export interface CoachIntentClassifier {
+  classify(packet: CoachContextPacket): Promise<CoachIntent> | CoachIntent;
+}
+
+// ─── Production system prompt (used by the LLM-backed classifier) ──
+
+/**
+ * The prompt the LLM-backed classifier sends. Lives here so the rules
+ * stay in lock-step with the schema — tests assert against this same
+ * string when validating the production wiring.
+ *
+ * The model is instructed to return JSON matching `CoachIntent`. The
+ * dispatcher validates the shape before acting.
+ */
+export const COACH_INTENT_SYSTEM_PROMPT = `You are the intent classifier for a strength coach app.
+
+Your job is to read the athlete's latest message + the surrounding context and return a JSON object that matches this schema:
+
+{
+  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | why_didnt_program_change | request_program_adjustment | fatigue | soreness | busy_week | missed_session | exercise_swap | general_question>",
+  "confidence": <0..1>,
+  "needsClarification": <boolean>,
+  "clarificationQuestion": "<string if needsClarification>",
+  "payload": {
+    "bodyPart": "<optional, free-text>",
+    "severity": <optional, 1..10>,
+    "requestedDate": "<optional, YYYY-MM-DD>",
+    "requestedSession": "<optional>",
+    "concern": "<optional, free-text>",
+    "followupKind": "<optional: resolved | improving | worsening | unchanged>"
+  },
+  "rationale": "<one sentence>"
+}
+
+CRITICAL RULES
+
+1. If \`activeInjury\` is set in context AND the message references the same body part (or no specific body part), DO NOT classify as new_injury_report. Use active_injury_followup or why_didnt_program_change.
+
+2. If \`activeInjury\` is set and the user just gives a number ("4/10"), this is injury_severity_reply with payload.severity (interpret as the new severity for the EXISTING injury).
+
+3. Severity clarification (needsClarification=true with "How bad is it?") is ONLY appropriate when:
+   - no activeInjury exists, AND
+   - the user is reporting a NEW injury, AND
+   - severity is missing.
+   Never ask severity if activeInjury.severity is already set unless the user explicitly reports a different injury.
+
+4. "why didn't X change?" / "why are deadlifts still there?" / "should I still train?" → why_didnt_program_change. Do not classify as a new request unless it's clear they want a NEW change.
+
+5. Different body part with activeInjury → may be a NEW injury — classify as new_injury_report (the dispatcher will handle the severity clarifier flow if needed).
+
+6. Non-injury signals — disambiguate carefully:
+   - "fatigue" — global tired / cooked / drained / smashed without specific body part ("feeling cooked this week", "exhausted"). Estimate severity 1..10 from intensity language.
+   - "soreness" — localised muscle soreness, NOT injury-level pain ("quads are sore", "tight calves", "DOMS"). payload.bodyPart is required. Severity 1..10 from descriptors.
+   - "busy_week" — schedule constraint: limited time / capacity ("crazy week ahead", "can only train twice", "exam week"). Set payload.severity=5 by default.
+   - "missed_session" — past tense report of skipping a session ("missed Tuesday", "didn't get to the field session"). Capture payload.requestedDate when given.
+
+7. Output VALID JSON only. No prose. No markdown.`;
+
+// ─── Helpers ────────────────────────────────────────────────────────
+
+/**
+ * Validate / coerce a parsed JSON blob into a `CoachIntent`. Returns
+ * null when the shape is unrecognisable (the dispatcher falls back to
+ * the deterministic guard chain in that case).
+ */
+export function parseCoachIntent(raw: unknown): CoachIntent | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const r = raw as any;
+  const validKinds: CoachIntentKind[] = [
+    'new_injury_report',
+    'injury_severity_reply',
+    'active_injury_followup',
+    'why_didnt_program_change',
+    'request_program_adjustment',
+    'fatigue',
+    'soreness',
+    'busy_week',
+    'missed_session',
+    'exercise_swap',
+    'general_question',
+  ];
+  if (!validKinds.includes(r.intent)) return null;
+  const confidence = typeof r.confidence === 'number' ? r.confidence : 0.5;
+  const needsClarification = !!r.needsClarification;
+  const out: CoachIntent = {
+    intent: r.intent,
+    confidence,
+    needsClarification,
+    clarificationQuestion:
+      typeof r.clarificationQuestion === 'string' ? r.clarificationQuestion : undefined,
+    payload: r.payload && typeof r.payload === 'object' ? r.payload : undefined,
+    rationale: typeof r.rationale === 'string' ? r.rationale : undefined,
+  };
+  return out;
+}

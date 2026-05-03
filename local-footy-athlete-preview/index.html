@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Local Footy Athlete</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  :root{
+    --bg:#0C0C0C;--surface:#1A1A1A;--surface2:#222;--surface3:#2A2A2A;
+    --lime:#C8FF00;--lime-dim:rgba(200,255,0,.12);
+    --orange:#FF5C00;--orange-dim:rgba(255,92,0,.12);
+    --red:#FF3333;--red-dim:rgba(255,51,51,.1);
+    --text:#F0F0F0;--text2:#999;--text3:#555;
+    --border:#333;
+  }
+  body{font-family:'Inter',sans-serif;background:#000;display:flex;justify-content:center;align-items:center;min-height:100vh;color:var(--text);}
+  .phone{width:390px;height:844px;background:var(--bg);border-radius:44px;overflow:hidden;position:relative;box-shadow:0 0 0 3px #222,0 0 0 6px #111,0 30px 100px rgba(0,0,0,.8);}
+  .screen{display:none;flex-direction:column;height:100%;width:100%;position:absolute;top:0;left:0;animation:fadeIn .25s ease;}
+  .screen.active{display:flex;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes typeDot{0%,80%,100%{transform:scale(.5);opacity:.3}40%{transform:scale(1);opacity:1}}
+
+  .bebas{font-family:'Bebas Neue',sans-serif;letter-spacing:1.5px;}
+  .status-bar{height:50px;flex-shrink:0;}
+  .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+  .scroll::-webkit-scrollbar{display:none;}
+
+  /* Tab bar */
+  .tabs{height:78px;background:var(--surface);display:flex;align-items:center;justify-content:space-around;border-top:1px solid var(--border);flex-shrink:0;padding-bottom:12px;}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 14px;transition:.2s;}
+  .tab-i{font-size:20px;color:var(--text3);transition:.2s;}
+  .tab-l{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3);transition:.2s;}
+  .tab.on .tab-i{color:var(--lime);}
+  .tab.on .tab-l{color:var(--lime);}
+
+  /* Buttons */
+  .btn{padding:16px 28px;border-radius:8px;font-size:15px;font-weight:800;border:none;cursor:pointer;transition:.15s;text-transform:uppercase;letter-spacing:.8px;font-family:'Inter',sans-serif;}
+  .btn:active{transform:scale(.97);}
+  .btn-lime{background:var(--lime);color:#000;}
+  .btn-lime:hover{background:#B8EF00;}
+  .btn-dark{background:var(--surface2);color:var(--text);border:1px solid var(--border);}
+  .btn-orange{background:var(--orange);color:#fff;}
+  .btn-full{width:100%;}
+  .btn-sm{padding:10px 18px;font-size:12px;}
+
+  /* Cards */
+  .card{background:var(--surface);border-radius:12px;padding:18px;border:1px solid var(--border);}
+
+  /* Inputs */
+  .inp{width:100%;padding:14px 16px;background:var(--surface);border:2px solid var(--border);border-radius:8px;color:var(--text);font-size:15px;font-family:inherit;outline:none;transition:.2s;}
+  .inp:focus{border-color:var(--lime);}
+  .inp::placeholder{color:var(--text3);}
+  .inp-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text2);margin-bottom:6px;}
+
+  /* Selection cards */
+  .sel{background:var(--surface);border:2px solid var(--border);border-radius:10px;padding:16px;cursor:pointer;transition:.2s;}
+  .sel:hover{border-color:var(--text3);}
+  .sel.on{border-color:var(--lime);background:var(--lime-dim);}
+  .sel.on .sel-dot{background:var(--lime);border-color:var(--lime);}
+  .sel-dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--text3);transition:.2s;flex-shrink:0;}
+
+  /* Chips */
+  .chip{display:inline-flex;padding:8px 16px;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;border:2px solid var(--border);background:var(--surface);color:var(--text2);transition:.2s;text-transform:uppercase;letter-spacing:.5px;}
+  .chip.on{border-color:var(--lime);background:var(--lime-dim);color:var(--lime);}
+
+  /* Progress */
+  .prog{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+  .prog-fill{height:100%;background:var(--lime);border-radius:2px;transition:width .4s;}
+
+  /* Back button */
+  .back{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--surface2);cursor:pointer;font-size:16px;border:1px solid var(--border);color:var(--text);}
+
+  /* Texture overlay for grit */
+  .grit{position:relative;}
+  .grit::before{content:'';position:absolute;top:0;left:0;right:0;bottom:0;background:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;border-radius:inherit;}
+
+  /* Chat */
+  .msg{max-width:82%;padding:12px 16px;border-radius:14px;font-size:14px;line-height:1.5;animation:slideUp .25s ease;}
+  .msg-u{align-self:flex-end;background:var(--lime);color:#000;border-bottom-right-radius:4px;font-weight:500;}
+  .msg-a{align-self:flex-start;background:var(--surface2);color:var(--text);border-bottom-left-radius:4px;}
+  .msg-t{font-size:10px;margin-top:4px;opacity:.5;}
+  .typing span{width:7px;height:7px;background:var(--lime);border-radius:50%;display:inline-block;margin:0 2px;animation:typeDot 1.4s infinite;}
+  .typing span:nth-child(2){animation-delay:.2s;}
+  .typing span:nth-child(3){animation-delay:.4s;}
+
+  /* Exercise video container */
+  .vid-box{width:100%;aspect-ratio:16/9;background:var(--surface2);border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative;border:1px solid var(--border);}
+  .vid-box img{width:100%;height:100%;object-fit:cover;}
+  .vid-play{position:absolute;width:48px;height:48px;background:rgba(0,0,0,.7);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid var(--lime);}
+
+  @media(max-width:430px){body{align-items:flex-start;}.phone{width:100vw;height:100vh;border-radius:0;box-shadow:none;}}
+</style>
+</head>
+<body>
+<div class="phone" id="app">
+
+<!-- ===== SIGN IN ===== -->
+<div class="screen active" id="s-signin">
+  <div class="status-bar"></div>
+  <div class="scroll" style="display:flex;flex-direction:column;padding:28px;">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:36px;">
+      <div style="text-align:center;">
+        <div class="bebas" style="font-size:52px;line-height:.95;color:var(--lime);">LOCAL<br>FOOTY<br>ATHLETE</div>
+        <div style="width:60px;height:3px;background:var(--lime);margin:14px auto;"></div>
+        <p style="color:var(--text2);font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:2px;">S&C for local footy</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div><div class="inp-label">Email</div><input class="inp" type="email" placeholder="your@email.com" value="sam@localfooty.com"></div>
+        <div><div class="inp-label">Password</div><input class="inp" type="password" placeholder="Enter password" value="password123"></div>
+        <button class="btn btn-lime btn-full" onclick="go('s-welcome')" style="margin-top:4px;">Sign In</button>
+        <p style="text-align:center;color:var(--text3);font-size:12px;">Forgot password?</p>
+      </div>
+      <p style="text-align:center;color:var(--text3);font-size:13px;">No account? <span style="color:var(--lime);font-weight:700;cursor:pointer;" onclick="go('s-signup')">Start Free Trial</span></p>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SIGN UP ===== -->
+<div class="screen" id="s-signup">
+  <div class="status-bar"></div>
+  <div class="scroll" style="padding:28px;display:flex;flex-direction:column;gap:24px;">
+    <button class="back" onclick="go('s-signin')">&#8592;</button>
+    <div>
+      <div class="bebas" style="font-size:36px;color:var(--lime);">JOIN THE<br>PROGRAM</div>
+      <p style="color:var(--text2);font-size:13px;margin-top:6px;">1 week free. Then $10/week. Cancel anytime.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <div><div class="inp-label">Name</div><input class="inp" placeholder="First name"></div>
+      <div><div class="inp-label">Email</div><input class="inp" type="email" placeholder="your@email.com"></div>
+      <div><div class="inp-label">Password</div><input class="inp" type="password" placeholder="8+ characters"></div>
+      <button class="btn btn-lime btn-full" onclick="go('s-welcome')">Create Account</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== WELCOME ===== -->
+<div class="screen" id="s-welcome">
+  <div class="status-bar"></div>
+  <div class="scroll" style="padding:28px;display:flex;flex-direction:column;">
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:28px;">
+      <div style="text-align:center;">
+        <div class="bebas" style="font-size:44px;line-height:.95;">WELCOME TO<br><span style="color:var(--lime);">LOCAL FOOTY<br>ATHLETE</span></div>
+        <p style="color:var(--text2);margin-top:14px;font-size:14px;line-height:1.6;">Personalised S&C programming built for YOUR position, equipment, and season.</p>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:12px;align-items:center;background:var(--surface);padding:14px;border-radius:8px;border-left:3px solid var(--lime);">
+          <span style="font-size:20px;">&#127919;</span>
+          <div style="font-weight:600;font-size:13px;">Programs built for footy</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;background:var(--surface);padding:14px;border-radius:8px;border-left:3px solid var(--lime);">
+          <span style="font-size:20px;">&#128172;</span>
+          <div style="font-weight:600;font-size:13px;">AI coach that talks like a mate</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;background:var(--surface);padding:14px;border-radius:8px;border-left:3px solid var(--lime);">
+          <span style="font-size:20px;">&#128203;</span>
+          <div style="font-weight:600;font-size:13px;">Dead-simple training diary</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:center;background:var(--surface);padding:14px;border-radius:8px;border-left:3px solid var(--lime);">
+          <span style="font-size:20px;">&#128260;</span>
+          <div style="font-weight:600;font-size:13px;">Adapts to byes, injuries, schedule</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-lime btn-full" onclick="go('s-ob1')" style="margin-top:24px;">LET'S GO</button>
+  </div>
+</div>
+
+<!-- ===== ONBOARDING 1: POSITION ===== -->
+<div class="screen" id="s-ob1">
+  <div class="status-bar"></div>
+  <div style="padding:16px 24px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button class="back" onclick="go('s-welcome')">&#8592;</button>
+      <span style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">1 / 6</span>
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:16.6%"></div></div>
+  </div>
+  <div class="scroll" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+    <div class="bebas" style="font-size:32px;color:var(--lime);">WHAT POSITION<br>DO YOU PLAY?</div>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="g-pos">
+      <div class="sel" onclick="sel(this,'g-pos')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">DEFENDER</div><div style="color:var(--text2);font-size:12px;margin-top:2px;">Strength, acceleration, contested marking</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel on" onclick="sel(this,'g-pos')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">MIDFIELDER</div><div style="color:var(--text2);font-size:12px;margin-top:2px;">Endurance, power, repeat sprint ability</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel" onclick="sel(this,'g-pos')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">FORWARD</div><div style="color:var(--text2);font-size:12px;margin-top:2px;">Explosive power, marking, agility</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel" onclick="sel(this,'g-pos')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">RUCK</div><div style="color:var(--text2);font-size:12px;margin-top:2px;">Max strength, endurance, upper body</div></div><div class="sel-dot"></div></div></div>
+    </div>
+    <button class="btn btn-lime btn-full" onclick="go('s-ob2')">NEXT</button>
+  </div>
+</div>
+
+<!-- ===== ONBOARDING 2: EXPERIENCE ===== -->
+<div class="screen" id="s-ob2">
+  <div class="status-bar"></div>
+  <div style="padding:16px 24px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button class="back" onclick="go('s-ob1')">&#8592;</button>
+      <span style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">2 / 6</span>
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:33%"></div></div>
+  </div>
+  <div class="scroll" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+    <div class="bebas" style="font-size:32px;color:var(--lime);">ABOUT YOU</div>
+    <div><div class="inp-label">Age</div><input class="inp" type="number" value="24" style="font-size:22px;font-weight:800;text-align:center;"></div>
+    <div class="inp-label">GYM EXPERIENCE</div>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="g-exp">
+      <div class="sel" onclick="sel(this,'g-exp')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">BEGINNER</div><div style="color:var(--text2);font-size:12px;">Less than 1 year</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel on" onclick="sel(this,'g-exp')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">INTERMEDIATE</div><div style="color:var(--text2);font-size:12px;">1-3 years consistent</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel" onclick="sel(this,'g-exp')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">ADVANCED</div><div style="color:var(--text2);font-size:12px;">3+ years structured training</div></div><div class="sel-dot"></div></div></div>
+    </div>
+    <button class="btn btn-lime btn-full" onclick="go('s-ob3')">NEXT</button>
+  </div>
+</div>
+
+<!-- ===== ONBOARDING 3: EQUIPMENT ===== -->
+<div class="screen" id="s-ob3">
+  <div class="status-bar"></div>
+  <div style="padding:16px 24px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button class="back" onclick="go('s-ob2')">&#8592;</button>
+      <span style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">3 / 6</span>
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:50%"></div></div>
+  </div>
+  <div class="scroll" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+    <div class="bebas" style="font-size:32px;color:var(--lime);">YOUR SETUP</div>
+    <div class="inp-label">WHERE DO YOU TRAIN?</div>
+    <div style="display:flex;gap:8px;" id="g-loc">
+      <div class="sel on" onclick="sel(this,'g-loc')" style="flex:1;text-align:center;padding:14px;"><div style="font-size:22px;margin-bottom:4px;">&#127947;</div><div style="font-weight:800;font-size:12px;">GYM</div></div>
+      <div class="sel" onclick="sel(this,'g-loc')" style="flex:1;text-align:center;padding:14px;"><div style="font-size:22px;margin-bottom:4px;">&#127968;</div><div style="font-weight:800;font-size:12px;">HOME</div></div>
+      <div class="sel" onclick="sel(this,'g-loc')" style="flex:1;text-align:center;padding:14px;"><div style="font-size:22px;margin-bottom:4px;">&#128260;</div><div style="font-weight:800;font-size:12px;">BOTH</div></div>
+    </div>
+    <div class="inp-label">EQUIPMENT</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;">
+      <span class="chip on" onclick="this.classList.toggle('on')">Barbell</span>
+      <span class="chip on" onclick="this.classList.toggle('on')">Dumbbells</span>
+      <span class="chip on" onclick="this.classList.toggle('on')">Kettlebells</span>
+      <span class="chip on" onclick="this.classList.toggle('on')">Pull-up Bar</span>
+      <span class="chip" onclick="this.classList.toggle('on')">Bands</span>
+      <span class="chip on" onclick="this.classList.toggle('on')">Cable Machine</span>
+      <span class="chip on" onclick="this.classList.toggle('on')">Bench</span>
+      <span class="chip" onclick="this.classList.toggle('on')">Sled</span>
+    </div>
+    <button class="btn btn-lime btn-full" onclick="go('s-ob4')">NEXT</button>
+  </div>
+</div>
+
+<!-- ===== ONBOARDING 4: DAYS ===== -->
+<div class="screen" id="s-ob4">
+  <div class="status-bar"></div>
+  <div style="padding:16px 24px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button class="back" onclick="go('s-ob3')">&#8592;</button>
+      <span style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">4 / 6</span>
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:66%"></div></div>
+  </div>
+  <div class="scroll" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+    <div class="bebas" style="font-size:32px;color:var(--lime);">HOW MANY S&C<br>DAYS PER WEEK?</div>
+    <p style="color:var(--text2);font-size:13px;">Separate to team training.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="g-days">
+      <div class="sel" onclick="sel(this,'g-days')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">2 DAYS</div><div style="color:var(--text2);font-size:12px;">Full Body A / Full Body B</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel on" onclick="sel(this,'g-days')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">3 DAYS <span style="background:var(--lime);color:#000;font-size:9px;padding:2px 6px;border-radius:3px;margin-left:6px;font-weight:800;">POPULAR</span></div><div style="color:var(--text2);font-size:12px;">Lower / Upper / Power</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel" onclick="sel(this,'g-days')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">4 DAYS</div><div style="color:var(--text2);font-size:12px;">Lower / Upper / Hypertrophy / Power</div></div><div class="sel-dot"></div></div></div>
+    </div>
+    <button class="btn btn-lime btn-full" onclick="go('s-ob5')">NEXT</button>
+  </div>
+</div>
+
+<!-- ===== ONBOARDING 5: GOALS ===== -->
+<div class="screen" id="s-ob5">
+  <div class="status-bar"></div>
+  <div style="padding:16px 24px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button class="back" onclick="go('s-ob4')">&#8592;</button>
+      <span style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">5 / 6</span>
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:83%"></div></div>
+  </div>
+  <div class="scroll" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+    <div class="bebas" style="font-size:32px;color:var(--lime);">YOUR GOALS</div>
+    <p style="color:var(--text2);font-size:13px;">Pick up to 3.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="g-goals">
+      <div class="sel on" onclick="multi(this,3)" style="text-align:center;padding:16px 10px;"><div style="font-size:24px;margin-bottom:4px;">&#128170;</div><div style="font-weight:800;font-size:12px;">GET STRONGER</div></div>
+      <div class="sel on" onclick="multi(this,3)" style="text-align:center;padding:16px 10px;"><div style="font-size:24px;margin-bottom:4px;">&#9889;</div><div style="font-weight:800;font-size:12px;">BUILD POWER</div></div>
+      <div class="sel" onclick="multi(this,3)" style="text-align:center;padding:16px 10px;"><div style="font-size:24px;margin-bottom:4px;">&#128176;</div><div style="font-weight:800;font-size:12px;">BUILD MUSCLE</div></div>
+      <div class="sel" onclick="multi(this,3)" style="text-align:center;padding:16px 10px;"><div style="font-size:24px;margin-bottom:4px;">&#128168;</div><div style="font-weight:800;font-size:12px;">ENDURANCE</div></div>
+      <div class="sel on" onclick="multi(this,3)" style="text-align:center;padding:16px 10px;"><div style="font-size:24px;margin-bottom:4px;">&#129657;</div><div style="font-weight:800;font-size:12px;">STAY ON PARK</div></div>
+      <div class="sel" onclick="multi(this,3)" style="text-align:center;padding:16px 10px;"><div style="font-size:24px;margin-bottom:4px;">&#127942;</div><div style="font-weight:800;font-size:12px;">GAME DAY</div></div>
+    </div>
+    <button class="btn btn-lime btn-full" onclick="go('s-ob6')">NEXT</button>
+  </div>
+</div>
+
+<!-- ===== ONBOARDING 6: SEASON ===== -->
+<div class="screen" id="s-ob6">
+  <div class="status-bar"></div>
+  <div style="padding:16px 24px 0;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button class="back" onclick="go('s-ob5')">&#8592;</button>
+      <span style="color:var(--text3);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">6 / 6</span>
+    </div>
+    <div class="prog"><div class="prog-fill" style="width:100%"></div></div>
+  </div>
+  <div class="scroll" style="padding:24px;display:flex;flex-direction:column;gap:16px;">
+    <div class="bebas" style="font-size:32px;color:var(--lime);">SEASON PHASE</div>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="g-season">
+      <div class="sel" onclick="sel(this,'g-season')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">OFF-SEASON</div><div style="color:var(--text2);font-size:12px;">Heavy strength. Build your base.</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel on" onclick="sel(this,'g-season')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">PRE-SEASON</div><div style="color:var(--text2);font-size:12px;">Power & conditioning. Get game ready.</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel" onclick="sel(this,'g-season')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">IN-SEASON</div><div style="color:var(--text2);font-size:12px;">Maintenance. Stay strong without fatigue.</div></div><div class="sel-dot"></div></div></div>
+      <div class="sel" onclick="sel(this,'g-season')"><div style="display:flex;justify-content:space-between;align-items:center;"><div><div style="font-weight:800;">FINALS</div><div style="color:var(--text2);font-size:12px;">Peak. Minimal volume, max readiness.</div></div><div class="sel-dot"></div></div></div>
+    </div>
+    <button class="btn btn-lime btn-full" onclick="generate()">GENERATE MY PROGRAM</button>
+  </div>
+</div>
+
+<!-- ===== GENERATING ===== -->
+<div class="screen" id="s-gen">
+  <div class="status-bar"></div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;gap:20px;">
+    <div style="width:60px;height:60px;border:3px solid var(--border);border-top:3px solid var(--lime);border-radius:50%;animation:spin .8s linear infinite;"></div>
+    <div class="bebas" style="font-size:28px;text-align:center;" id="gen-t">BUILDING YOUR PROGRAM</div>
+    <p style="color:var(--text2);font-size:13px;text-align:center;" id="gen-s">Selecting exercises for your position...</p>
+  </div>
+</div>
+
+<!-- ===== HOME ===== -->
+<div class="screen" id="s-home">
+  <div class="status-bar"></div>
+  <div class="scroll" style="padding:18px;">
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px;">
+      <div>
+        <div class="bebas" style="font-size:28px;">HEY SAM</div>
+        <div style="color:var(--text2);font-size:12px;font-weight:600;">Monday 2 Mar &middot; Pre-Season Wk 2</div>
+      </div>
+      <div style="width:40px;height:40px;background:var(--lime);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#000;">SG</div>
+    </div>
+
+    <!-- Today's Session - big card -->
+    <div class="card grit" style="background:linear-gradient(135deg,#1A2A1A 0%,#1A1A1A 100%);border-color:#2A3A2A;margin-bottom:12px;cursor:pointer;" onclick="go('s-workout')">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:10px;">
+        <span style="background:var(--lime);color:#000;font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px;text-transform:uppercase;">Today's Session</span>
+        <span style="color:var(--text3);font-size:12px;">~55 min</span>
+      </div>
+      <div class="bebas" style="font-size:26px;margin-bottom:4px;">LOWER BODY POWER</div>
+      <div style="color:var(--text2);font-size:13px;margin-bottom:14px;">6 exercises &middot; Squat, Box Jumps, RDL + more</div>
+      <button class="btn btn-lime btn-full" onclick="event.stopPropagation();go('s-workout')">START SESSION</button>
+    </div>
+
+    <!-- Grid: 2x2 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      <!-- This week -->
+      <div class="card" style="padding:14px;">
+        <div style="color:var(--text3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">This Week</div>
+        <div style="font-size:28px;font-weight:900;color:var(--lime);margin-top:4px;">0<span style="font-size:16px;color:var(--text3);">/3</span></div>
+        <div style="color:var(--text2);font-size:11px;margin-top:2px;">sessions done</div>
+      </div>
+      <!-- Next game -->
+      <div class="card" style="padding:14px;">
+        <div style="color:var(--text3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Next Game</div>
+        <div style="font-size:28px;font-weight:900;color:var(--orange);margin-top:4px;">SAT</div>
+        <div style="color:var(--text2);font-size:11px;margin-top:2px;">vs Eastside</div>
+      </div>
+      <!-- Streak -->
+      <div class="card" style="padding:14px;">
+        <div style="color:var(--text3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Streak</div>
+        <div style="font-size:28px;font-weight:900;margin-top:4px;">4 &#128293;</div>
+        <div style="color:var(--text2);font-size:11px;margin-top:2px;">sessions straight</div>
+      </div>
+      <!-- Program -->
+      <div class="card" style="padding:14px;">
+        <div style="color:var(--text3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Program</div>
+        <div style="font-size:16px;font-weight:800;margin-top:4px;color:var(--lime);">PRE-SZN</div>
+        <div style="color:var(--text2);font-size:11px;margin-top:2px;">Week 2 of 6</div>
+      </div>
+    </div>
+
+    <!-- Week strip -->
+    <div style="display:flex;gap:4px;margin-bottom:12px;">
+      <div style="flex:1;background:var(--lime-dim);border:2px solid var(--lime);border-radius:8px;padding:8px 4px;text-align:center;">
+        <div style="font-size:10px;font-weight:800;color:var(--lime);">MON</div>
+        <div style="font-size:11px;font-weight:700;margin-top:2px;">Lower</div>
+      </div>
+      <div style="flex:1;background:var(--surface);border-radius:8px;padding:8px 4px;text-align:center;border:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);">WED</div>
+        <div style="font-size:11px;font-weight:700;margin-top:2px;color:var(--text2);">Upper</div>
+      </div>
+      <div style="flex:1;background:var(--surface);border-radius:8px;padding:8px 4px;text-align:center;border:1px solid var(--border);">
+        <div style="font-size:10px;font-weight:800;color:var(--text3);">FRI</div>
+        <div style="font-size:11px;font-weight:700;margin-top:2px;color:var(--text2);">Power</div>
+      </div>
+      <div style="flex:1;background:var(--orange-dim);border:1px solid var(--orange);border-radius:8px;padding:8px 4px;text-align:center;">
+        <div style="font-size:10px;font-weight:800;color:var(--orange);">SAT</div>
+        <div style="font-size:11px;font-weight:700;margin-top:2px;color:var(--orange);">&#127944;</div>
+      </div>
+    </div>
+
+    <!-- Make a Change button -->
+    <button class="btn btn-orange btn-full" onclick="go('s-change')" style="margin-bottom:8px;">&#9888;&#65039; MAKE A CHANGE TO MY PLAN</button>
+  </div>
+  <div class="tabs">
+    <div class="tab on" onclick="sw('s-home',this)"><span class="tab-i">&#127968;</span><span class="tab-l">Home</span></div>
+    <div class="tab" onclick="sw('s-program',this)"><span class="tab-i">&#128203;</span><span class="tab-l">Program</span></div>
+    <div class="tab" onclick="sw('s-journal',this)"><span class="tab-i">&#128214;</span><span class="tab-l">Journal</span></div>
+    <div class="tab" onclick="sw('s-coach',this)"><span class="tab-i">&#128172;</span><span class="tab-l">Coach</span></div>
+    <div class="tab" onclick="sw('s-profile',this)"><span class="tab-i">&#128100;</span><span class="tab-l">Profile</span></div>
+  </div>
+</div>
+
+<!-- ===== MAKE A CHANGE ===== -->
+<div class="screen" id="s-change">
+  <div class="status-bar"></div>
+  <div style="padding:16px 24px 0;">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <button class="back" onclick="go('s-home')">&#8592;</button>
+      <div class="bebas" style="font-size:24px;">MAKE A CHANGE</div>
+    </div>
+  </div>
+  <div class="scroll" style="padding:0 24px 24px;display:flex;flex-direction:column;gap:10px;">
+    <p style="color:var(--text2);font-size:13px;margin-bottom:4px;">What's changed? Your program will adapt automatically.</p>
+    <div class="sel" style="display:flex;gap:14px;align-items:center;cursor:pointer;">
+      <div style="width:44px;height:44px;background:var(--red-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;">&#129657;</div>
+      <div><div style="font-weight:800;">I'VE GOT AN INJURY</div><div style="color:var(--text2);font-size:12px;">We'll modify exercises to work around it</div></div>
+    </div>
+    <div class="sel" style="display:flex;gap:14px;align-items:center;cursor:pointer;">
+      <div style="width:44px;height:44px;background:var(--orange-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128197;</div>
+      <div><div style="font-weight:800;">GAME DAY CHANGED</div><div style="color:var(--text2);font-size:12px;">Moved to Sunday, pushed back, etc.</div></div>
+    </div>
+    <div class="sel" style="display:flex;gap:14px;align-items:center;cursor:pointer;">
+      <div style="width:44px;height:44px;background:var(--lime-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128336;</div>
+      <div><div style="font-weight:800;">CHANGE TRAINING DAYS</div><div style="color:var(--text2);font-size:12px;">Can only do 2 this week instead of 3</div></div>
+    </div>
+    <div class="sel" style="display:flex;gap:14px;align-items:center;cursor:pointer;">
+      <div style="width:44px;height:44px;background:rgba(68,138,255,.12);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;">&#127944;</div>
+      <div><div style="font-weight:800;">BYE WEEK</div><div style="color:var(--text2);font-size:12px;">No game this week</div></div>
+    </div>
+    <div class="sel" style="display:flex;gap:14px;align-items:center;cursor:pointer;">
+      <div style="width:44px;height:44px;background:rgba(156,39,176,.12);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128683;</div>
+      <div><div style="font-weight:800;">SEASON OVER</div><div style="color:var(--text2);font-size:12px;">Knocked out / season finished</div></div>
+    </div>
+    <div class="sel" style="display:flex;gap:14px;align-items:center;cursor:pointer;">
+      <div style="width:44px;height:44px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:22px;">&#128221;</div>
+      <div><div style="font-weight:800;">SOMETHING ELSE</div><div style="color:var(--text2);font-size:12px;">Tell the AI coach what's up</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== WORKOUT SESSION ===== -->
+<div class="screen" id="s-workout">
+  <div class="status-bar"></div>
+  <!-- Header -->
+  <div style="padding:10px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">
+    <button class="back" onclick="go('s-home')" style="font-size:12px;">&#10005;</button>
+    <div class="bebas" style="font-size:18px;">LOWER BODY POWER</div>
+    <div style="width:36px;font-size:12px;color:var(--text3);text-align:right;" id="ex-count">1/6</div>
+  </div>
+  <div class="prog"><div class="prog-fill" style="width:16.6%" id="ex-prog"></div></div>
+
+  <div class="scroll" style="padding:16px 20px;">
+    <!-- Exercise name -->
+    <div class="bebas" style="font-size:28px;color:var(--lime);margin-bottom:4px;" id="ex-name">BACK SQUAT</div>
+    <div style="color:var(--text2);font-size:12px;margin-bottom:14px;">3 sets x 5 reps &middot; <span style="color:var(--text3);">Last session: 90kg</span></div>
+
+    <!-- Video -->
+    <div class="vid-box" style="margin-bottom:14px;" id="vid-container">
+      <img id="ex-gif" src="https://v2.exercisedb.io/image/uICNsmzJhfVSjI" alt="Exercise demo" style="width:100%;height:100%;object-fit:contain;background:#111;">
+      <div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.8);padding:4px 10px;border-radius:4px;font-size:10px;font-weight:700;color:var(--lime);">DEMO</div>
+    </div>
+
+    <!-- Single weight input - SIMPLE -->
+    <div class="card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <div style="font-weight:800;font-size:14px;text-transform:uppercase;">Working Weight</div>
+        <div style="color:var(--text3);font-size:12px;">Last: 90kg</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="btn btn-dark btn-sm" style="padding:12px 16px;font-size:18px;" onclick="adjWeight(-2.5)">-</button>
+        <input class="inp" id="weight-inp" type="number" value="92.5" style="text-align:center;font-size:28px;font-weight:900;flex:1;padding:12px;">
+        <button class="btn btn-dark btn-sm" style="padding:12px 16px;font-size:18px;" onclick="adjWeight(2.5)">+</button>
+        <span style="color:var(--text2);font-weight:700;font-size:16px;">KG</span>
+      </div>
+    </div>
+
+    <!-- Sets completed - just tappable circles -->
+    <div style="margin-bottom:14px;">
+      <div style="font-weight:800;font-size:12px;text-transform:uppercase;color:var(--text2);margin-bottom:8px;">Sets Completed</div>
+      <div style="display:flex;gap:10px;justify-content:center;">
+        <div class="set-circle done" onclick="this.classList.toggle('done')">1</div>
+        <div class="set-circle" onclick="this.classList.toggle('done')">2</div>
+        <div class="set-circle" onclick="this.classList.toggle('done')">3</div>
+      </div>
+      <style>
+        .set-circle{width:52px;height:52px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;cursor:pointer;transition:.2s;color:var(--text3);background:var(--surface);}
+        .set-circle.done{background:var(--lime);border-color:var(--lime);color:#000;}
+      </style>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <div style="padding:10px 20px 24px;display:flex;gap:8px;border-top:1px solid var(--border);background:var(--surface);">
+    <button class="btn btn-dark" style="flex:1;font-size:13px;padding:14px;" onclick="prevEx()">&#8592; PREV</button>
+    <button class="btn btn-lime" style="flex:1;font-size:13px;padding:14px;" onclick="nextEx()">NEXT &#8594;</button>
+  </div>
+</div>
+
+<!-- ===== WORKOUT COMPLETE ===== -->
+<div class="screen" id="s-complete">
+  <div class="status-bar"></div>
+  <div class="scroll" style="padding:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:20px;">
+    <div style="font-size:64px;">&#128170;</div>
+    <div class="bebas" style="font-size:36px;color:var(--lime);">SESSION DONE</div>
+    <p style="color:var(--text2);font-size:14px;">Lower Body Power complete. Good stuff mate.</p>
+    <div class="card" style="width:100%;">
+      <div style="font-weight:800;font-size:13px;text-transform:uppercase;color:var(--text2);margin-bottom:12px;">How'd you feel?</div>
+      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;" id="g-feel">
+        <span class="chip" onclick="selChip(this,'g-feel')">&#128164; Cooked</span>
+        <span class="chip" onclick="selChip(this,'g-feel')">&#128170; Strong</span>
+        <span class="chip on" onclick="selChip(this,'g-feel')">&#128077; Good</span>
+        <span class="chip" onclick="selChip(this,'g-feel')">&#128528; Average</span>
+        <span class="chip" onclick="selChip(this,'g-feel')">&#129301; Sore</span>
+      </div>
+    </div>
+    <div style="width:100%;">
+      <textarea class="inp" placeholder="Any notes? (optional)" rows="3" style="resize:none;"></textarea>
+    </div>
+    <button class="btn btn-lime btn-full" onclick="go('s-home')">SAVE TO JOURNAL</button>
+  </div>
+</div>
+
+<!-- ===== PROGRAM ===== -->
+<div class="screen" id="s-program">
+  <div class="status-bar"></div>
+  <div class="scroll" style="padding:20px;">
+    <div class="bebas" style="font-size:28px;">MY PROGRAM</div>
+    <div style="color:var(--text2);font-size:12px;margin-bottom:16px;">Pre-Season Block 1 &middot; Week 2 of 6</div>
+    <div class="prog" style="height:5px;margin-bottom:18px;"><div class="prog-fill" style="width:33%"></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="card" style="cursor:pointer;padding:14px;" onclick="go('s-workout')">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <span style="background:var(--lime);color:#000;font-size:9px;font-weight:800;padding:2px 8px;border-radius:3px;">MON</span>
+            <div style="font-weight:800;margin-top:6px;">LOWER BODY POWER</div>
+            <div style="color:var(--text3);font-size:12px;margin-top:2px;">6 exercises &middot; 55 min</div>
+          </div>
+          <span style="font-size:18px;color:var(--text3);">&#8250;</span>
+        </div>
+      </div>
+      <div class="card" style="padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <span style="background:var(--surface2);color:var(--text2);font-size:9px;font-weight:800;padding:2px 8px;border-radius:3px;border:1px solid var(--border);">WED</span>
+            <div style="font-weight:800;margin-top:6px;">UPPER BODY STRENGTH</div>
+            <div style="color:var(--text3);font-size:12px;margin-top:2px;">7 exercises &middot; 50 min</div>
+          </div>
+          <span style="font-size:18px;color:var(--text3);">&#8250;</span>
+        </div>
+      </div>
+      <div class="card" style="padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <span style="background:var(--surface2);color:var(--text2);font-size:9px;font-weight:800;padding:2px 8px;border-radius:3px;border:1px solid var(--border);">FRI</span>
+            <div style="font-weight:800;margin-top:6px;">FULL BODY CONDITIONING</div>
+            <div style="color:var(--text3);font-size:12px;margin-top:2px;">8 exercises &middot; 45 min</div>
+          </div>
+          <span style="font-size:18px;color:var(--text3);">&#8250;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab" onclick="sw('s-home',this)"><span class="tab-i">&#127968;</span><span class="tab-l">Home</span></div>
+    <div class="tab on" onclick="sw('s-program',this)"><span class="tab-i">&#128203;</span><span class="tab-l">Program</span></div>
+    <div class="tab" onclick="sw('s-journal',this)"><span class="tab-i">&#128214;</span><span class="tab-l">Journal</span></div>
+    <div class="tab" onclick="sw('s-coach',this)"><span class="tab-i">&#128172;</span><span class="tab-l">Coach</span></div>
+    <div class="tab" onclick="sw('s-profile',this)"><span class="tab-i">&#128100;</span><span class="tab-l">Profile</span></div>
+  </div>
+</div>
+
+<!-- ===== JOURNAL ===== -->
+<div class="screen" id="s-journal">
+  <div class="status-bar"></div>
+  <div class="scroll" style="padding:20px;">
+    <div class="bebas" style="font-size:28px;margin-bottom:16px;">TRAINING JOURNAL</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="card" style="padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div><div style="font-weight:800;">LOWER BODY POWER</div><div style="color:var(--text3);font-size:12px;margin-top:3px;">Fri 28 Feb &middot; Felt: &#128170; Strong</div></div>
+          <span style="background:var(--lime-dim);color:var(--lime);font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px;">DONE</span>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+          <div style="background:var(--surface2);padding:6px 10px;border-radius:6px;font-size:11px;"><span style="color:var(--text3);">Squat</span> <strong>90kg</strong></div>
+          <div style="background:var(--surface2);padding:6px 10px;border-radius:6px;font-size:11px;"><span style="color:var(--text3);">RDL</span> <strong>80kg</strong></div>
+          <div style="background:var(--surface2);padding:6px 10px;border-radius:6px;font-size:11px;"><span style="color:var(--text3);">Box Jump</span> <strong>BW</strong></div>
+        </div>
+      </div>
+      <div class="card" style="padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div><div style="font-weight:800;">UPPER BODY STRENGTH</div><div style="color:var(--text3);font-size:12px;margin-top:3px;">Wed 26 Feb &middot; Felt: &#128077; Good</div></div>
+          <span style="background:var(--lime-dim);color:var(--lime);font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px;">DONE</span>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+          <div style="background:var(--surface2);padding:6px 10px;border-radius:6px;font-size:11px;"><span style="color:var(--text3);">Bench</span> <strong>80kg</strong></div>
+          <div style="background:var(--surface2);padding:6px 10px;border-radius:6px;font-size:11px;"><span style="color:var(--text3);">Row</span> <strong>70kg</strong></div>
+          <div style="background:var(--surface2);padding:6px 10px;border-radius:6px;font-size:11px;"><span style="color:var(--text3);">OHP</span> <strong>50kg</strong></div>
+        </div>
+      </div>
+      <div class="card" style="padding:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:start;">
+          <div><div style="font-weight:800;">FULL BODY CONDITIONING</div><div style="color:var(--text3);font-size:12px;margin-top:3px;">Mon 24 Feb &middot; Felt: &#128164; Cooked</div></div>
+          <span style="background:var(--lime-dim);color:var(--lime);font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px;">DONE</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab" onclick="sw('s-home',this)"><span class="tab-i">&#127968;</span><span class="tab-l">Home</span></div>
+    <div class="tab" onclick="sw('s-program',this)"><span class="tab-i">&#128203;</span><span class="tab-l">Program</span></div>
+    <div class="tab on" onclick="sw('s-journal',this)"><span class="tab-i">&#128214;</span><span class="tab-l">Journal</span></div>
+    <div class="tab" onclick="sw('s-coach',this)"><span class="tab-i">&#128172;</span><span class="tab-l">Coach</span></div>
+    <div class="tab" onclick="sw('s-profile',this)"><span class="tab-i">&#128100;</span><span class="tab-l">Profile</span></div>
+  </div>
+</div>
+
+<!-- ===== COACH ===== -->
+<div class="screen" id="s-coach">
+  <div class="status-bar"></div>
+  <div class="scroll" style="padding:20px;">
+    <div class="bebas" style="font-size:28px;">COACH</div>
+    <p style="color:var(--text2);font-size:13px;margin-bottom:14px;">Your footy S&C mate. Ask anything.</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+      <span class="chip" style="border-color:var(--orange);color:var(--orange);background:var(--orange-dim);" onclick="go('s-chat')">&#127860; Nutrition</span>
+      <span class="chip" style="border-color:var(--red);color:var(--red);background:var(--red-dim);" onclick="go('s-chat')">&#129657; Injury</span>
+      <span class="chip" style="border-color:var(--lime);color:var(--lime);background:var(--lime-dim);" onclick="go('s-chat')">&#128203; Program</span>
+      <span class="chip" style="border-color:#448AFF;color:#448AFF;background:rgba(68,138,255,.12);" onclick="go('s-chat')">&#128172; General</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="card" style="cursor:pointer;padding:14px;" onclick="go('s-chat')">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:36px;height:36px;background:var(--orange-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">&#127860;</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:13px;">Pre-game nutrition</div>
+            <div style="color:var(--text3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Carb-load the night before, keep it simple...</div>
+          </div>
+          <span style="color:var(--text3);font-size:10px;">2h</span>
+        </div>
+      </div>
+      <div class="card" style="cursor:pointer;padding:14px;" onclick="go('s-chat')">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:36px;height:36px;background:var(--red-dim);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">&#129657;</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:700;font-size:13px;">Sore knee after training</div>
+            <div style="color:var(--text3);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">Definitely get that checked by a physio...</div>
+          </div>
+          <span style="color:var(--text3);font-size:10px;">1d</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab" onclick="sw('s-home',this)"><span class="tab-i">&#127968;</span><span class="tab-l">Home</span></div>
+    <div class="tab" onclick="sw('s-program',this)"><span class="tab-i">&#128203;</span><span class="tab-l">Program</span></div>
+    <div class="tab" onclick="sw('s-journal',this)"><span class="tab-i">&#128214;</span><span class="tab-l">Journal</span></div>
+    <div class="tab on" onclick="sw('s-coach',this)"><span class="tab-i">&#128172;</span><span class="tab-l">Coach</span></div>
+    <div class="tab" onclick="sw('s-profile',this)"><span class="tab-i">&#128100;</span><span class="tab-l">Profile</span></div>
+  </div>
+</div>
+
+<!-- ===== CHAT ===== -->
+<div class="screen" id="s-chat">
+  <div class="status-bar"></div>
+  <div style="padding:10px 20px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border);">
+    <button class="back" onclick="go('s-coach')">&#8592;</button>
+    <div><div style="font-weight:800;font-size:14px;">COACH</div><div style="color:var(--lime);font-size:10px;font-weight:600;">Online</div></div>
+  </div>
+  <div style="display:flex;gap:6px;padding:8px 16px;overflow-x:auto;scrollbar-width:none;">
+    <span style="white-space:nowrap;padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text2);cursor:pointer;font-weight:600;" onclick="quickSend('What should I eat before a game?')">Pre-game meals?</span>
+    <span style="white-space:nowrap;padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text2);cursor:pointer;font-weight:600;" onclick="quickSend('How much protein do I need?')">Protein needs?</span>
+    <span style="white-space:nowrap;padding:6px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:11px;color:var(--text2);cursor:pointer;font-weight:600;" onclick="quickSend('I rolled my ankle at training')">Rolled ankle</span>
+  </div>
+  <div class="scroll" id="chat-box" style="display:flex;flex-direction:column;gap:10px;padding:14px;">
+    <div class="msg msg-a">G'day mate! How's it going? I'm here to help with anything - nutrition, niggles, your program, whatever. What's on your mind?<div class="msg-t">10:30</div></div>
+    <div class="msg msg-u">What should I eat the night before a game?<div class="msg-t" style="text-align:right;">10:31</div></div>
+    <div class="msg msg-a">Yeah good question. Night before you wanna carb up - think pasta, rice, sweet potato. Nothing fancy, nothing you haven't had before. Game day is NOT the time to try new foods.<br><br>Something like chicken pasta with a tomato sauce is perfect. Simple, easy to digest, gets the glycogen topped up.<br><br>Make sure you're smashing water all day too - at least 2-3 litres. If you're well hydrated the day before, you're already ahead of most blokes on the park.<div class="msg-t">10:31</div></div>
+  </div>
+  <div style="display:flex;gap:8px;padding:10px 16px 24px;background:var(--surface);border-top:1px solid var(--border);">
+    <input class="inp" id="chat-inp" placeholder="Ask your coach..." style="flex:1;border-radius:24px;padding:12px 18px;font-size:14px;" onkeydown="if(event.key==='Enter')chat()">
+    <button style="width:44px;height:44px;background:var(--lime);border:none;border-radius:50%;color:#000;font-size:18px;font-weight:900;cursor:pointer;flex-shrink:0;" onclick="chat()">&#8593;</button>
+  </div>
+</div>
+
+<!-- ===== PROFILE ===== -->
+<div class="screen" id="s-profile">
+  <div class="status-bar"></div>
+  <div class="scroll" style="padding:20px;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="width:72px;height:72px;background:var(--lime);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:28px;font-weight:900;color:#000;">SG</div>
+      <div class="bebas" style="font-size:24px;">SAM</div>
+      <div style="color:var(--text2);font-size:12px;">Midfielder &middot; Intermediate &middot; Pre-Season</div>
+    </div>
+    <div class="card" style="margin-bottom:10px;padding:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-weight:700;font-size:14px;">Subscription</div>
+        <span style="background:var(--lime-dim);color:var(--lime);font-size:10px;font-weight:800;padding:3px 8px;border-radius:4px;">ACTIVE</span>
+      </div>
+      <div style="color:var(--text2);font-size:12px;margin-top:4px;">$10/week &middot; Renews 8 Mar</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <div class="card" style="border-radius:10px 10px 2px 2px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;"><span style="font-size:13px;font-weight:600;">Edit Profile</span><span style="color:var(--text3);">&#8250;</span></div>
+      <div class="card" style="border-radius:2px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;"><span style="font-size:13px;font-weight:600;">Equipment Settings</span><span style="color:var(--text3);">&#8250;</span></div>
+      <div class="card" style="border-radius:2px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;"><span style="font-size:13px;font-weight:600;">Notifications</span><span style="color:var(--text3);">&#8250;</span></div>
+      <div class="card" style="border-radius:2px 2px 10px 10px;padding:14px 16px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;"><span style="font-size:13px;font-weight:600;">Help & Support</span><span style="color:var(--text3);">&#8250;</span></div>
+    </div>
+    <button class="btn btn-dark btn-full" style="margin-top:16px;color:var(--red);" onclick="go('s-signin')">SIGN OUT</button>
+    <p style="text-align:center;color:var(--text3);font-size:10px;margin-top:14px;">Local Footy Athlete v1.0.0</p>
+  </div>
+  <div class="tabs">
+    <div class="tab" onclick="sw('s-home',this)"><span class="tab-i">&#127968;</span><span class="tab-l">Home</span></div>
+    <div class="tab" onclick="sw('s-program',this)"><span class="tab-i">&#128203;</span><span class="tab-l">Program</span></div>
+    <div class="tab" onclick="sw('s-journal',this)"><span class="tab-i">&#128214;</span><span class="tab-l">Journal</span></div>
+    <div class="tab" onclick="sw('s-coach',this)"><span class="tab-i">&#128172;</span><span class="tab-l">Coach</span></div>
+    <div class="tab on" onclick="sw('s-profile',this)"><span class="tab-i">&#128100;</span><span class="tab-l">Profile</span></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+function go(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function sw(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
+function sel(el,gid){document.querySelectorAll('#'+gid+' .sel').forEach(s=>s.classList.remove('on'));el.classList.add('on');}
+function multi(el,max){const p=el.parentElement;if(el.classList.contains('on')){el.classList.remove('on');}else if(p.querySelectorAll('.on').length<max){el.classList.add('on');}}
+function selChip(el,gid){document.querySelectorAll('#'+gid+' .chip').forEach(s=>s.classList.remove('on'));el.classList.add('on');}
+
+function generate(){
+  go('s-gen');
+  const t=[['BUILDING YOUR PROGRAM','Selecting exercises for your position...'],['FILTERING EXERCISES','Checking equipment & injury restrictions...'],['SETTING WEIGHTS','Using your training history...'],['PROGRAM READY','Let\'s get after it.']];
+  let i=0;
+  const iv=setInterval(()=>{i++;if(i<t.length){document.getElementById('gen-t').textContent=t[i][0];document.getElementById('gen-s').textContent=t[i][1];}if(i>=t.length){clearInterval(iv);setTimeout(()=>go('s-home'),600);}},1000);
+}
+
+// Weight adjuster
+function adjWeight(n){const inp=document.getElementById('weight-inp');inp.value=(parseFloat(inp.value)+n).toFixed(1);}
+
+// Exercise navigation
+const exs=[
+  {name:'BACK SQUAT',sets:3,reps:5,last:'90kg',gif:'https://v2.exercisedb.io/image/uICNsmzJhfVSjI'},
+  {name:'BOX JUMPS',sets:3,reps:5,last:'BW',gif:'https://v2.exercisedb.io/image/UDGSmrMUBbBdw-'},
+  {name:'ROMANIAN DEADLIFT',sets:3,reps:8,last:'80kg',gif:'https://v2.exercisedb.io/image/LPwSvBuPq6kIfv'},
+  {name:'NORDIC HAMSTRING CURLS',sets:3,reps:6,last:'BW',gif:'https://v2.exercisedb.io/image/zq2cSoUUz-PcaA'},
+  {name:'CALF RAISES',sets:3,reps:12,last:'60kg',gif:'https://v2.exercisedb.io/image/dRdAVDnFaAjhY0'},
+  {name:'PALLOF PRESS',sets:3,reps:10,last:'15kg',gif:'https://v2.exercisedb.io/image/3lR-c42RVe4K0f'},
+];
+let cx=0;
+function updEx(){
+  const e=exs[cx];
+  document.getElementById('ex-name').textContent=e.name;
+  document.getElementById('ex-count').textContent=(cx+1)+'/'+exs.length;
+  document.getElementById('ex-prog').style.width=((cx+1)/exs.length*100)+'%';
+  document.getElementById('ex-gif').src=e.gif;
+  document.querySelector('#s-workout .scroll').scrollTop=0;
+}
+function nextEx(){if(cx<exs.length-1){cx++;updEx();}else{go('s-complete');}}
+function prevEx(){if(cx>0){cx--;updEx();}}
+
+// Chat
+const replies=[
+  "Yeah look, that's a common one. Main thing is don't panic - ice it, elevate it, and see how it feels in 24 hours. If it's still sore or swollen, get to a physio. Don't try to push through it at training.",
+  "Good question mate. For a mid in pre-season, you wanna be hitting around 1.6-2g of protein per kilo of bodyweight. So if you're 80kg, that's roughly 130-160g a day. Spread it across your meals - don't try to smash it all in one hit.",
+  "Honestly the best thing you can do for recovery is sleep. 8 hours minimum, 9 if you can get it. That's when your body actually repairs. After that, nutrition and hydration. Ice baths and all that are fine but they're the cherry on top, not the foundation.",
+  "If you're only training twice this week instead of three, that's totally fine. I'd combine the power work into your upper session and keep the lower session as is. Don't try to cram three sessions into two - that's how you end up cooked.",
+];
+function chat(){
+  const inp=document.getElementById('chat-inp');const txt=inp.value.trim();if(!txt)return;inp.value='';
+  addMsg(txt,true);
+  setTimeout(()=>{
+    const d=document.createElement('div');d.className='msg msg-a';d.id='typing';d.innerHTML='<div class="typing"><span></span><span></span><span></span></div>';
+    document.getElementById('chat-box').appendChild(d);
+    document.getElementById('chat-box').scrollTop=9999;
+    setTimeout(()=>{d.remove();addMsg(replies[Math.floor(Math.random()*replies.length)],false);},1500);
+  },200);
+}
+function quickSend(t){document.getElementById('chat-inp').value=t;chat();}
+function addMsg(t,u){
+  const d=document.createElement('div');d.className='msg '+(u?'msg-u':'msg-a');
+  const now=new Date();const ts=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');
+  d.innerHTML=t+'<div class="msg-t"'+(u?' style="text-align:right;"':'')+'>'+ts+'</div>';
+  document.getElementById('chat-box').appendChild(d);
+  document.getElementById('chat-box').scrollTop=9999;
+}
+</script>
+</body>
+</html>

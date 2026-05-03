@@ -1,0 +1,38 @@
+{
+  "expo": {
+    "name": "Local Footy Athlete",
+    "slug": "local-footy-athlete",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0C0C0C"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.localfootyathlete.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0C0C0C"
+      },
+      "package": "com.localfootyathlete.app"
+    },
+    "plugins": [
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "89ff4a60-3c54-4c17-8d92-99bfc480de0d"
+      }
+    },
+    "owner": "localfootyathlete"
+  }
+}

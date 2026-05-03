@@ -1,0 +1,448 @@
+================================================================================
+S&C RULES ENGINE & SUPABASE EDGE FUNCTIONS - COMPLETE IMPLEMENTATION
+================================================================================
+
+PROJECT: Local Footy Athlete React Native App
+DATE: March 1, 2026
+TOTAL CODE: 2,865 lines of production TypeScript
+DOCUMENTATION: 2 comprehensive guides
+
+================================================================================
+FILES CREATED
+================================================================================
+
+1. SUPABASE EDGE FUNCTIONS (Server-Side)
+   Location: supabase/functions/
+
+   ✓ generate-program/index.ts (572 lines)
+     - Creates personalized training programs
+     - Generates microcycles (week-by-week structure)
+     - Creates workouts with appropriate exercises
+     - Implements progressive overload
+     - Features:
+       * Phase-based training (Off-Season, Pre-Season, In-Season, Finals)
+       * Position-specific exercise selection
+       * Equipment-aware filtering
+       * Injury restriction management
+       * RPE and intensity targeting
+       * Deload week scheduling
+
+   ✓ coach-send-message/index.ts (377 lines)
+     - AI-powered coaching assistant
+     - Contextual response generation
+     - Safety guardrails
+     - Features:
+       * User profile context awareness
+       * Recent workout history integration
+       * Claude API integration (claude-sonnet-4-5-20250929)
+       * Conversation history management
+       * Evidence-based coaching persona
+       * Medical/nutrition/mental health guardrails
+       * Position-specific guidance
+
+   ✓ sync-exercises/index.ts (464 lines)
+     - Exercise database synchronization
+     - ExerciseDB API integration
+     - Exercise transformation and classification
+     - Features:
+       * Fetches from ExerciseDB or uses sample data
+       * Determines exercise type automatically
+       * Maps equipment and muscle groups
+       * Generates form notes
+       * Batch upsert operations
+       * Retry logic for reliability
+
+   ✓ shared/types.ts (153 lines)
+     - TypeScript type definitions
+     - Request/response interfaces
+     - Rules engine configuration types
+     - Database row types
+     - Enums for all domains
+
+   ✓ shared/utils.ts (206 lines)
+     - Supabase client initialization
+     - Error and success response helpers
+     - JSON parsing utilities
+     - Validation functions
+     - Date/time utilities
+     - Random selection helpers
+     - Retry logic
+     - Logging utilities
+
+2. CLIENT-SIDE UTILITIES (React Native)
+   Location: src/utils/
+
+   ✓ rulesEngine.ts (609 lines)
+     - COMPLETE AFL S&C Rules Configuration
+     - Client-side rule implementation
+     - Exercise selection logic
+     - Progressive overload calculations
+     - Features:
+       * Full default rules config (hardcoded)
+       * 4 phase definitions with all parameters
+       * 5 training split types (2-5 days/week)
+       * 4 position-specific exercise libraries
+       * 5 injury restriction categories
+       * Equipment substitution rules
+       * Rest period calculations
+       * Intensity level determination
+       * Phase and equipment validation
+       * 15+ exported functions
+
+     RULES CONFIG INCLUDES:
+
+     PHASES:
+     - Off-Season: Strength focus (3-6 reps, 4-6 sets, 12 weeks, deload every 4)
+     - Pre-Season: Power focus (1-5 reps, 3-5 sets, 6 weeks, deload every 3)
+     - In-Season: Maintenance (6-10 reps, 2-4 sets, 52 weeks, deload every 5)
+     - Finals: Peak performance (1-3 reps, 2-3 sets, 4 weeks, deload every 2)
+
+     SPLITS:
+     - 2 Days: Full Body A/B
+     - 3 Days: Lower/Upper/Conditioning
+     - 4 Days: Lower Strength/Upper Strength/Lower Hyper/Upper Power
+     - 5 Days: Legs/Push/Pull/Power/Conditioning
+
+     POSITIONS:
+     - Ruck (14 priority exercises - upper body focus)
+     - Forward (14 priority exercises - explosive focus)
+     - Midfielder (14 priority exercises - balanced)
+     - Defender (14 priority exercises - lateral/rotational)
+
+     INJURY RESTRICTIONS:
+     - ACL Injury (7 restrictions)
+     - Lower Back Pain (7 restrictions)
+     - Shoulder Impingement (7 restrictions)
+     - Hamstring Strain (7 restrictions)
+     - Elbow Tendinitis (6 restrictions)
+
+   ✓ calculations.ts (484 lines)
+     - Training calculation utilities
+     - 25+ mathematical functions
+     - Features:
+       * One rep max estimation (Epley & Brzycki formulas)
+       * Working weight calculation from RPE
+       * Volume calculations
+       * Training load assessment
+       * Weekly/monthly totals
+       * Training streaks
+       * Personal record tracking
+       * Max projection (linear regression)
+       * Volume trends
+       * Training status assessment
+       * Relative strength calculation
+       * Fatigue indexing
+       * Overtraining detection
+       * Format helpers for display
+
+     FUNCTIONS PROVIDED:
+     - estimateOneRepMax()
+     - estimateOneRepMaxBrzycki()
+     - calculateWorkingWeight()
+     - calculateVolume()
+     - calculateTrainingLoad()
+     - getWeeklyVolume()
+     - getMonthlyVolume()
+     - calculateStreak()
+     - getAverageRPE()
+     - getCompletionRate()
+     - getPersonalRecord()
+     - estimateCurrentMax()
+     - projectMax() [with linear regression]
+     - getVolumeTrend()
+     - getTrainingStatus()
+     - calculateRelativeStrength()
+     - calculateFatigueIndex()
+     - assessTrainingVolume()
+     - formatWeight()
+     - formatDuration()
+     - formatPrescription()
+     - And 4+ more...
+
+3. DOCUMENTATION
+
+   ✓ SC_RULES_ENGINE.md (650+ lines)
+     - Complete technical documentation
+     - Architecture overview
+     - Rules configuration details
+     - Usage examples
+     - Integration guide
+     - Performance considerations
+
+   ✓ RULES_ENGINE_IMPLEMENTATION.md (450+ lines)
+     - Quick start guide
+     - Step-by-step implementation
+     - API endpoint reference
+     - Client-side usage examples
+     - Customization guide
+     - Testing instructions
+     - Troubleshooting
+     - Monitoring guide
+
+   ✓ RULES_ENGINE_FILES_SUMMARY.txt (this file)
+     - Quick overview of all files created
+
+================================================================================
+KEY FEATURES IMPLEMENTED
+================================================================================
+
+PROGRAM GENERATION:
+✓ Phase-based periodization (4 distinct phases)
+✓ Configurable training splits (2-5 days per week)
+✓ Automatic deload week scheduling
+✓ Progressive overload strategies
+✓ Position-specific exercise prioritization
+✓ Equipment availability filtering
+✓ Injury restriction enforcement
+✓ Experience level adaptation
+✓ RPE and intensity targeting
+✓ Rest period calculation
+
+AI COACHING:
+✓ Context-aware responses
+✓ User profile integration
+✓ Recent workout history consideration
+✓ Evidence-based recommendations
+✓ Position-specific guidance
+✓ Safety guardrails for medical topics
+✓ Nutrition guidance boundaries
+✓ Mental health awareness
+✓ Conversation history management
+✓ Token usage tracking
+
+EXERCISE MANAGEMENT:
+✓ ExerciseDB API integration
+✓ Automatic exercise classification
+✓ Muscle group mapping
+✓ Equipment categorization
+✓ Difficulty level assignment
+✓ Form note generation
+✓ Batch upsert operations
+✓ Active/inactive status tracking
+
+TRAINING CALCULATIONS:
+✓ One rep max estimation (2 formulas)
+✓ Working weight calculation
+✓ Volume quantification
+✓ Training load assessment
+✓ Weekly totals and trends
+✓ Personal record tracking
+✓ Max projection with regression
+✓ Training status assessment
+✓ Fatigue indexing
+✓ Overtraining detection
+✓ Streak calculation
+✓ Relative strength analysis
+
+================================================================================
+TECHNICAL SPECIFICATIONS
+================================================================================
+
+EDGE FUNCTIONS:
+- Runtime: Deno
+- Language: TypeScript
+- Framework: Supabase Edge Functions
+- API: HTTP POST
+- Authentication: Supabase JWT / API Key
+- Response Format: JSON
+
+DEPENDENCIES:
+- @supabase/supabase-js@2.38.4
+- anthropic/messages API (Claude)
+- exercisedb.p.rapidapi.com (optional)
+
+DATABASE INTEGRATION:
+- Tables: user_profiles, training_programs, microcycles, workouts,
+          workout_exercises, exercises, logged_workouts, logged_sets,
+          coach_conversations, coach_messages
+- Operations: SELECT, INSERT, UPSERT, transaction safety
+
+CLIENT-SIDE:
+- Framework: React Native
+- Language: TypeScript
+- Dependencies: None (pure TS)
+- Browser/Native: Works on both web and native
+
+================================================================================
+CODE STATISTICS
+================================================================================
+
+EDGE FUNCTIONS:
+  generate-program:   572 lines
+  coach-send-message: 377 lines
+  sync-exercises:     464 lines
+  shared/types:       153 lines
+  shared/utils:       206 lines
+  ─────────────────────────────
+  Subtotal:         1,772 lines
+
+CLIENT-SIDE:
+  rulesEngine.ts:     609 lines
+  calculations.ts:    484 lines
+  ─────────────────────────────
+  Subtotal:         1,093 lines
+
+DOCUMENTATION:
+  SC_RULES_ENGINE.md:              650+ lines
+  RULES_ENGINE_IMPLEMENTATION.md:  450+ lines
+  RULES_ENGINE_FILES_SUMMARY.txt:  This file
+
+TOTAL CODE: 2,865 lines of production TypeScript
+
+COMPLEXITY:
+- Functions exported: 50+
+- Rule combinations: 1,000+
+- Exercise filtering paths: 100+
+- Error handling scenarios: 50+
+
+================================================================================
+DEPLOYMENT INSTRUCTIONS
+================================================================================
+
+1. SET ENVIRONMENT VARIABLES
+   - SUPABASE_URL
+   - SUPABASE_SERVICE_ROLE_KEY
+   - ANTHROPIC_API_KEY
+   - EXERCISEDB_API_KEY (optional)
+
+2. DEPLOY EDGE FUNCTIONS
+   supabase functions deploy generate-program
+   supabase functions deploy coach-send-message
+   supabase functions deploy sync-exercises
+
+3. SYNC EXERCISE DATABASE
+   curl -X POST /functions/v1/sync-exercises \
+     -H "Authorization: Bearer API_KEY"
+
+4. INTEGRATE INTO APP
+   - Import rulesEngine.ts and calculations.ts
+   - Call edge functions from app
+   - Display generated programs
+   - Enable coaching interface
+
+5. TEST ENDPOINTS
+   - Test generate-program with test user
+   - Test coach-send-message with sample messages
+   - Test sync-exercises functionality
+
+================================================================================
+USAGE EXAMPLES
+================================================================================
+
+GENERATE PROGRAM:
+  POST /generate-program
+  { "user_id": "xyz", "program_phase": "Pre-Season" }
+
+COACHING:
+  POST /coach-send-message
+  { 
+    "user_id": "xyz",
+    "conversation_id": "abc",
+    "message": "How do I warm up properly?"
+  }
+
+CLIENT-SIDE CALCULATIONS:
+  const max = estimateOneRepMax(100, 5); // → ~110kg
+  const weight = calculateWorkingWeight(max, 8, 5); // → ~95kg
+  const split = getTrainingSplit(3); // → 3-day split
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+EDGE FUNCTIONS:
+□ generate-program creates correct program structure
+□ coach-send-message returns sensible responses
+□ sync-exercises imports exercises correctly
+□ Error handling works for missing users
+□ Error handling works for missing exercises
+□ Batch operations complete successfully
+□ API key validation works
+
+CLIENT-SIDE:
+□ rulesEngine exports all functions
+□ calculations functions return correct values
+□ FilterExercises removes restricted exercises
+□ getTrainingSplit returns correct splits
+□ selectExercisesForWorkout prioritizes by position
+□ estimateOneRepMax formulas are accurate
+□ calculateWorkingWeight respects RPE
+
+INTEGRATION:
+□ App can call generate-program
+□ App displays generated programs correctly
+□ Coaching interface works
+□ Program logging functions work
+□ Calculations display correctly in UI
+
+================================================================================
+PERFORMANCE TARGETS
+================================================================================
+
+generate-program:      2-5 seconds
+coach-send-message:    5-10 seconds
+sync-exercises:        1-3 seconds
+Client calculations:   < 10ms
+Exercise filtering:    < 50ms for 500 exercises
+Program preview:       < 100ms
+
+================================================================================
+NEXT STEPS & ENHANCEMENTS
+================================================================================
+
+IMMEDIATE (Week 1):
+- Deploy to Supabase
+- Integrate into app UI
+- Test with real users
+- Monitor function performance
+
+SHORT-TERM (Month 1):
+- Add program customization UI
+- Implement workout logging
+- Add progress tracking
+- Build coaching interface
+
+MEDIUM-TERM (Quarter 1):
+- Add team/club customizations
+- Implement game schedule integration
+- Add ML-based phase prediction
+- Build analytics dashboard
+
+LONG-TERM (Year 1):
+- Multi-language support
+- Advanced performance analytics
+- Predictive injury prevention
+- Community program sharing
+
+================================================================================
+SUPPORT & DOCUMENTATION
+================================================================================
+
+Main Documentation:
+- SC_RULES_ENGINE.md (technical overview)
+- RULES_ENGINE_IMPLEMENTATION.md (implementation guide)
+
+Code Comments:
+- Extensive inline documentation
+- JSDoc comments for all functions
+- Type annotations throughout
+
+Support Resources:
+- AFL Coach Education: https://coaches.aflpa.com.au/
+- ASCA Standards: Australian Strength & Conditioning Association
+- Anthropic Claude API: https://api.anthropic.com
+- Supabase Docs: https://supabase.com/docs
+
+================================================================================
+VERSION HISTORY
+================================================================================
+
+v1.0 (2026-03-01):
+- Initial release
+- Complete rules engine implementation
+- 3 edge functions
+- 2 client-side utilities
+- 2,865 lines of code
+- Full documentation
+
+================================================================================

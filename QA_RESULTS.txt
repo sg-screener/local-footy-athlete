@@ -1,0 +1,712 @@
+╔══════════════════════════════════════════════════════════════════════╗
+║              WEEK PLAN QA HARNESS — STRUCTURAL TESTS               ║
+║              Testing coaching engine + resolver pipeline            ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+Scenarios: 17
+Block: 2026-03-23 → 2026-04-19
+Test week: 2026-03-23 (Mon)
+
+════════════════════════════════════════════════════════════════════════
+  S1: In-season, Saturday game (baseline)
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Saturday  |  Team: Tuesday, Thursday
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR     G-5   Lower body strength (squat + hinge)
+  Tuesday    core       UPR     G-4   Upper body — pull emphasis
+  Wednesday  recovery   ---     G-3   Mobility, foam rolling, light movement
+  Thursday   core       UPR     G-2   Upper body — push emphasis (moderate inten...
+  Friday     optional   UPR     G-1   Optional arms/pump — biceps, triceps, late...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-24  TUE   template      core         Upper body — pull emphasis ⚠ EMPTY
+  2026-03-25  WED   template      recovery     Mobility, foam rolling, light movement
+  2026-03-26  THU   template      core         Upper body — push emphasis (moderate ...
+  2026-03-27  FRI   gameProximity optional     Arms / Pump [6 ex]
+  2026-03-28  SAT   game          game         Game Day
+  2026-03-29  SUN   gameProximity recovery     Recovery Session [6 ex]
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Friday: Optional arms/pump — biceps, triceps, lateral rais
+  ✅ G+1 = recovery or rest: 2026-03-29: gameProximity
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 3 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S2: In-season, Sunday game
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Sunday  |  Team: Tuesday, Thursday
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 1
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     recovery   ---     G+1   Post-game recovery — flush, mobility, stre...
+  Tuesday    core       UPR     G-5   Upper body — pull emphasis
+  Wednesday  core       LWR     G-4   Lower body strength (squat + hinge)
+  Thursday   optional   UPR     G-3   Light accessories — trunk, calves, groin, ...
+  Friday     core       UPR     G-2   Upper body — push emphasis (moderate inten...
+  Saturday   recovery   ---     G-1   Mobility, foam rolling, light movement
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      recovery     Post-game recovery — flush, mobility, st
+  2026-03-24  TUE   template      core         Upper body — pull emphasis ⚠ EMPTY
+  2026-03-25  WED   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-26  THU   template      optional     Light accessories — trunk, calves, gr...
+  2026-03-27  FRI   template      core         Upper body — push emphasis (moderate ...
+  2026-03-28  SAT   template      recovery     Mobility, foam rolling, light movement
+  2026-03-29  SUN   game          game         Game Day
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Saturday: Mobility, foam rolling, light movement
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 4 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S3: In-season, Friday night game
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Friday  |  Team: Tuesday, Thursday
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR     G-4   Lower body strength (squat + hinge)
+  Tuesday    optional   UPR     G-3   Light accessories — trunk, calves, groin, ...
+  Wednesday  core       UPR     G-2   Upper body — push emphasis (moderate inten...
+  Thursday   recovery   ---     G-1   Mobility, foam rolling, light movement
+  Saturday   recovery   ---     G+1   Post-game recovery — flush, mobility, stre...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-24  TUE   template      optional     Light accessories — trunk, calves, gr...
+  2026-03-25  WED   template      core         Upper body — push emphasis (moderate ...
+  2026-03-26  THU   template      recovery     Mobility, foam rolling, light movement
+  2026-03-27  FRI   game          game         Game Day
+  2026-03-28  SAT   template      recovery     Post-game recovery — flush, mobility, st
+  2026-03-29  SUN   conditioning  conditioning MetCon [3 ex]
+
+  CONDITIONING DETAIL:
+  2026-03-29 — MetCon (40min, High)
+    1. MetCon warm-up: 8min: jog, dynamics, empty bar complex (5 each: deadlift, row, clean, ...
+    2. MetCon: 4 rounds for time:
+• 400m run
+• 15 KB swings
+• 10 push-ups
+• 10 box ju...
+    3. Cool-down: 5min walk, stretch
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Thursday: Mobility, foam rolling, light movement
+  ✅ G+1 = recovery or rest: 2026-03-28: template
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 3 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S4: In-season, NO game (bye week)
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: none  |  Team: Tuesday, Thursday
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 1
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR           Lower body strength
+  Tuesday    optional   UPR           Upper body hypertrophy / trunk & accessory...
+  Wednesday  core       UPR           Upper body strength
+  Thursday   recovery   ---           Mobility, foam rolling, light movement
+  Friday     recovery   ---           Mobility, foam rolling, light movement
+  Saturday   core       ---           Lower body strength + conditioning emphasi...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength ⚠ EMPTY
+  2026-03-24  TUE   template      optional     Upper body hypertrophy / trunk & acce...
+  2026-03-25  WED   template      core         Upper body strength ⚠ EMPTY
+  2026-03-26  THU   template      recovery     Mobility, foam rolling, light movement
+  2026-03-27  FRI   template      recovery     Mobility, foam rolling, light movement
+  2026-03-28  SAT   template      core         Lower body strength + conditioning em...
+  2026-03-29  SUN   conditioning  conditioning Quality Sprints [3 ex]
+
+  CONDITIONING DETAIL:
+  2026-03-29 — Quality Sprints (30min, Maximal)
+    1. Sprint warm-up: 12min: jog, dynamics, 4 × build-ups (30m → 50m → 70m → 90% effort)
+    2. 100m quality sprints: 4 × 100m — 95–100% effort, full 3min recovery between reps. Focus on a...
+    3. Cool-down: 5min walk/jog, full body stretch
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No-game week: Saturday = core: Saturday: Lower body strength + conditioning emphasis (no game this we
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 4 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S5: Off-season, 5 days, team Tue+Thu
+════════════════════════════════════════════════════════════════════════
+  Season: Off-season  |  Game: none  |  Team: Tuesday, Thursday
+  Readiness: high  |  Core: 4  Optional: 1  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR           Lower body strength
+  Tuesday    core       UPR           Upper body strength
+  Wednesday  core       LWR           Lower body strength
+  Thursday   core       UPR           Upper body strength
+  Friday     optional   ---           Aerobic base work / accessory hypertrophy
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength ⚠ EMPTY
+  2026-03-24  TUE   template      core         Upper body strength ⚠ EMPTY
+  2026-03-25  WED   template      core         Lower body strength ⚠ EMPTY
+  2026-03-26  THU   template      core         Upper body strength ⚠ EMPTY
+  2026-03-27  FRI   template      optional     Aerobic base work / accessory hypertr...
+  2026-03-28  SAT   conditioning  conditioning Hill Sprints [3 ex]
+  2026-03-29  SUN   conditioning  conditioning Row Intervals [3 ex]
+
+  CONDITIONING DETAIL:
+  2026-03-28 — Hill Sprints (30min, Maximal)
+    1. Dynamic warm-up: 10min: jog, high knees, A-skips, build-ups on flat (3 × 40m)
+    2. Hill sprints (30–40m slope): 8 × 30–40m hill sprints — 90–95% effort, walk down recovery
+    3. Cool-down jog + stretch: 5min flat jog, hamstring/quad/calf stretch
+  2026-03-29 — Row Intervals (35min, Moderate)
+    1. Row warm-up: 5min easy row, build-ups
+    2. 6 × 500m row: 6 × 500m at 80% effort. 90s easy paddle recovery.
+    3. Easy row: 3min easy row
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 1
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 5 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S6: Off-season, 4 days, no team training
+════════════════════════════════════════════════════════════════════════
+  Season: Off-season  |  Game: none  |  Team: none
+  Readiness: medium  |  Core: 4  Optional: 0  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR           Lower body strength
+  Wednesday  core       UPR           Upper body strength
+  Friday     core       LWR           Lower body strength
+  Saturday   core       UPR           Upper body strength
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength ⚠ EMPTY
+  2026-03-24  TUE   conditioning  conditioning Quality Sprints [3 ex]
+  2026-03-25  WED   template      core         Upper body strength ⚠ EMPTY
+  2026-03-26  THU   conditioning  conditioning Flog Friday [3 ex]
+  2026-03-27  FRI   template      core         Lower body strength ⚠ EMPTY
+  2026-03-28  SAT   template      core         Upper body strength ⚠ EMPTY
+  2026-03-29  SUN   conditioning  conditioning MetCon [3 ex]
+
+  CONDITIONING DETAIL:
+  2026-03-24 — Quality Sprints (30min, Maximal)
+    1. Sprint warm-up: 12min: jog, dynamics, 4 × build-ups (30m → 50m → 70m → 90% effort)
+    2. 80m quality sprints: 5 × 80m — 95–100% effort, full 3min recovery between reps. Focus on ac...
+    3. Cool-down: 5min walk/jog, full body stretch
+  2026-03-26 — Flog Friday (30min, Maximal)
+    1. Dynamic warm-up: 8min: jog, dynamics, 2 × 30m build-ups
+    2. Flog circuit: 3 rounds — 40s work / 20s transition:
+1. Assault bike (max effort)
+2. ...
+    3. Walk + stretch: 5min walk, full body stretch, breathing reset
+  2026-03-29 — MetCon (40min, High)
+    1. MetCon warm-up: 8min: jog, dynamics, empty bar complex (5 each: deadlift, row, clean, ...
+    2. MetCon: 4 rounds for time:
+• 400m run
+• 15 KB swings
+• 10 push-ups
+• 10 box ju...
+    3. Cool-down: 5min walk, stretch
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 1
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 4 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S7: Off-season, 6 days, team Mon+Wed+Fri
+════════════════════════════════════════════════════════════════════════
+  Season: Off-season  |  Game: none  |  Team: Monday, Wednesday, Friday
+  Readiness: high  |  Core: 4  Optional: 2  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       UPR           Upper body strength
+  Tuesday    core       UPR           Upper body strength
+  Wednesday  optional   ---           Aerobic base work / accessory hypertrophy
+  Thursday   core       UPR           Upper body strength
+  Friday     core       UPR           Upper body strength
+  Saturday   optional   ---           Aerobic base work / accessory hypertrophy
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Upper body strength ⚠ EMPTY
+  2026-03-24  TUE   template      core         Upper body strength ⚠ EMPTY
+  2026-03-25  WED   template      optional     Aerobic base work / accessory hypertr...
+  2026-03-26  THU   template      core         Upper body strength ⚠ EMPTY
+  2026-03-27  FRI   template      core         Upper body strength ⚠ EMPTY
+  2026-03-28  SAT   template      optional     Aerobic base work / accessory hypertr...
+  2026-03-29  SUN   conditioning  conditioning Quality Sprints [3 ex]
+
+  CONDITIONING DETAIL:
+  2026-03-29 — Quality Sprints (30min, Maximal)
+    1. Sprint warm-up: 12min: jog, dynamics, 4 × build-ups (30m → 50m → 70m → 90% effort)
+    2. 100m quality sprints: 4 × 100m — 95–100% effort, full 3min recovery between reps. Focus on a...
+    3. Cool-down: 5min walk/jog, full body stretch
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 6 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S8: In-season Sat game, team Mon+Wed (not typical Tue+Thu)
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Saturday  |  Team: Monday, Wednesday
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       UPR     G-5   Upper body — pull emphasis
+  Tuesday    core       LWR     G-4   Lower body strength (squat + hinge)
+  Wednesday  optional   UPR     G-3   Light accessories — trunk, calves, groin, ...
+  Thursday   core       UPR     G-2   Upper body — push emphasis (moderate inten...
+  Friday     recovery   ---     G-1   Mobility, foam rolling, light movement
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Upper body — pull emphasis ⚠ EMPTY
+  2026-03-24  TUE   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-25  WED   template      optional     Light accessories — trunk, calves, gr...
+  2026-03-26  THU   template      core         Upper body — push emphasis (moderate ...
+  2026-03-27  FRI   template      recovery     Mobility, foam rolling, light movement
+  2026-03-28  SAT   game          game         Game Day
+  2026-03-29  SUN   gameProximity recovery     Recovery Session [6 ex]
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Friday: Mobility, foam rolling, light movement
+  ✅ G+1 = recovery or rest: 2026-03-29: gameProximity
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 4 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S9: In-season Sat game, team Tue only
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Saturday  |  Team: Tuesday
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR     G-5   Lower body strength (squat + hinge)
+  Tuesday    core       UPR     G-4   Upper body — pull emphasis
+  Wednesday  recovery   ---     G-3   Mobility, foam rolling, light movement
+  Thursday   core       UPR     G-2   Upper body — push emphasis (moderate inten...
+  Friday     optional   UPR     G-1   Optional arms/pump — biceps, triceps, late...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-24  TUE   template      core         Upper body — pull emphasis ⚠ EMPTY
+  2026-03-25  WED   template      recovery     Mobility, foam rolling, light movement
+  2026-03-26  THU   template      core         Upper body — push emphasis (moderate ...
+  2026-03-27  FRI   gameProximity optional     Arms / Pump [6 ex]
+  2026-03-28  SAT   game          game         Game Day
+  2026-03-29  SUN   gameProximity recovery     Recovery Session [6 ex]
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Friday: Optional arms/pump — biceps, triceps, lateral rais
+  ✅ G+1 = recovery or rest: 2026-03-29: gameProximity
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 3 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S10: In-season Sat game, team Tue+Wed+Thu (3 consecutive)
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Saturday  |  Team: Tuesday, Wednesday, Thursday
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR     G-5   Lower body strength (squat + hinge)
+  Tuesday    core       UPR     G-4   Upper body — pull emphasis
+  Wednesday  recovery   ---     G-3   Mobility, foam rolling, light movement
+  Thursday   core       UPR     G-2   Upper body — push emphasis (moderate inten...
+  Friday     optional   UPR     G-1   Optional arms/pump — biceps, triceps, late...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-24  TUE   template      core         Upper body — pull emphasis ⚠ EMPTY
+  2026-03-25  WED   template      recovery     Mobility, foam rolling, light movement
+  2026-03-26  THU   template      core         Upper body — push emphasis (moderate ...
+  2026-03-27  FRI   gameProximity optional     Arms / Pump [6 ex]
+  2026-03-28  SAT   game          game         Game Day
+  2026-03-29  SUN   gameProximity recovery     Recovery Session [6 ex]
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Friday: Optional arms/pump — biceps, triceps, lateral rais
+  ✅ G+1 = recovery or rest: 2026-03-29: gameProximity
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 3 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S11: Pre-season, Sat game, 5 days
+════════════════════════════════════════════════════════════════════════
+  Season: Pre-season  |  Game: Saturday  |  Team: Tuesday, Thursday
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR     G-5   Lower body strength
+  Tuesday    core       UPR     G-4   Upper body strength
+  Wednesday  core       LWR     G-3   Lower body strength
+  Thursday   optional   ---     G-2   Light conditioning / accessory work / mobi...
+  Friday     optional   ---     G-1   Light conditioning / accessory work / mobi...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength ⚠ EMPTY
+  2026-03-24  TUE   template      core         Upper body strength ⚠ EMPTY
+  2026-03-25  WED   template      core         Lower body strength ⚠ EMPTY
+  2026-03-26  THU   template      optional     Light conditioning / accessory work /...
+  2026-03-27  FRI   gameProximity optional     Arms / Pump [6 ex]
+  2026-03-28  SAT   game          game         Game Day
+  2026-03-29  SUN   gameProximity recovery     Recovery Session [6 ex]
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 1
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 4 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S12: Pre-season, no game, 5 days
+════════════════════════════════════════════════════════════════════════
+  Season: Pre-season  |  Game: none  |  Team: Tuesday, Thursday
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR           Lower body strength
+  Tuesday    core       UPR           Upper body strength
+  Wednesday  core       LWR           Lower body strength
+  Thursday   optional   ---           Light conditioning / accessory work / mobi...
+  Friday     optional   ---           Light conditioning / accessory work / mobi...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength ⚠ EMPTY
+  2026-03-24  TUE   template      core         Upper body strength ⚠ EMPTY
+  2026-03-25  WED   template      core         Lower body strength ⚠ EMPTY
+  2026-03-26  THU   template      optional     Light conditioning / accessory work /...
+  2026-03-27  FRI   template      optional     Light conditioning / accessory work /...
+  2026-03-28  SAT   conditioning  conditioning Hill Sprints [3 ex]
+  2026-03-29  SUN   conditioning  conditioning Row Intervals [3 ex]
+
+  CONDITIONING DETAIL:
+  2026-03-28 — Hill Sprints (30min, Maximal)
+    1. Dynamic warm-up: 10min: jog, high knees, A-skips, build-ups on flat (3 × 40m)
+    2. Hill sprints (30–40m slope): 8 × 30–40m hill sprints — 90–95% effort, walk down recovery
+    3. Cool-down jog + stretch: 5min flat jog, hamstring/quad/calf stretch
+  2026-03-29 — Row Intervals (35min, Moderate)
+    1. Row warm-up: 5min easy row, build-ups
+    2. 6 × 500m row: 6 × 500m at 80% effort. 90s easy paddle recovery.
+    3. Easy row: 3min easy row
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 1
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 5 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  E1: Remove game — Sat game → no game
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: none  |  Team: Tuesday, Thursday
+  Edit: Removed Saturday game from calendar → Saturday now available for training
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 1
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR           Lower body strength
+  Tuesday    optional   UPR           Upper body hypertrophy / trunk & accessory...
+  Wednesday  core       UPR           Upper body strength
+  Thursday   recovery   ---           Mobility, foam rolling, light movement
+  Friday     recovery   ---           Mobility, foam rolling, light movement
+  Saturday   core       ---           Lower body strength + conditioning emphasi...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength ⚠ EMPTY
+  2026-03-24  TUE   template      optional     Upper body hypertrophy / trunk & acce...
+  2026-03-25  WED   template      core         Upper body strength ⚠ EMPTY
+  2026-03-26  THU   template      recovery     Mobility, foam rolling, light movement
+  2026-03-27  FRI   template      recovery     Mobility, foam rolling, light movement
+  2026-03-28  SAT   template      core         Lower body strength + conditioning em...
+  2026-03-29  SUN   conditioning  conditioning Quality Sprints [3 ex]
+
+  CONDITIONING DETAIL:
+  2026-03-29 — Quality Sprints (30min, Maximal)
+    1. Sprint warm-up: 12min: jog, dynamics, 4 × build-ups (30m → 50m → 70m → 90% effort)
+    2. 100m quality sprints: 4 × 100m — 95–100% effort, full 3min recovery between reps. Focus on a...
+    3. Cool-down: 5min walk/jog, full body stretch
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No-game week: Saturday = core: Saturday: Lower body strength + conditioning emphasis (no game this we
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 4 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  E2: Move game — Sat → Sun
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Sunday  |  Team: Tuesday, Thursday
+  Edit: Moved game from Saturday to Sunday → Saturday now available for training
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 1
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     recovery   ---     G+1   Post-game recovery — flush, mobility, stre...
+  Tuesday    core       UPR     G-5   Upper body — pull emphasis
+  Wednesday  core       LWR     G-4   Lower body strength (squat + hinge)
+  Thursday   optional   UPR     G-3   Light accessories — trunk, calves, groin, ...
+  Friday     core       UPR     G-2   Upper body — push emphasis (moderate inten...
+  Saturday   recovery   ---     G-1   Mobility, foam rolling, light movement
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      recovery     Post-game recovery — flush, mobility, st
+  2026-03-24  TUE   template      core         Upper body — pull emphasis ⚠ EMPTY
+  2026-03-25  WED   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-26  THU   template      optional     Light accessories — trunk, calves, gr...
+  2026-03-27  FRI   template      core         Upper body — push emphasis (moderate ...
+  2026-03-28  SAT   template      recovery     Mobility, foam rolling, light movement
+  2026-03-29  SUN   game          game         Game Day
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Saturday: Mobility, foam rolling, light movement
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 4 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  E3: Add game back — no game → Sat game
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Saturday  |  Team: Tuesday, Thursday
+  Edit: Re-added Saturday game to calendar → Saturday returns to game day
+  Readiness: high  |  Core: 3  Optional: 2  Recovery: 0
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR     G-5   Lower body strength (squat + hinge)
+  Tuesday    core       UPR     G-4   Upper body — pull emphasis
+  Wednesday  recovery   ---     G-3   Mobility, foam rolling, light movement
+  Thursday   core       UPR     G-2   Upper body — push emphasis (moderate inten...
+  Friday     optional   UPR     G-1   Optional arms/pump — biceps, triceps, late...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-24  TUE   template      core         Upper body — pull emphasis ⚠ EMPTY
+  2026-03-25  WED   template      recovery     Mobility, foam rolling, light movement
+  2026-03-26  THU   template      core         Upper body — push emphasis (moderate ...
+  2026-03-27  FRI   gameProximity optional     Arms / Pump [6 ex]
+  2026-03-28  SAT   game          game         Game Day
+  2026-03-29  SUN   gameProximity recovery     Recovery Session [6 ex]
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 2
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Friday: Optional arms/pump — biceps, triceps, lateral rais
+  ✅ G+1 = recovery or rest: 2026-03-29: gameProximity
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 3 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S13: In-season, 3 days only (Mon/Wed/Fri), Sat game
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Saturday  |  Team: Tuesday, Thursday
+  Readiness: low  |  Core: 1  Optional: 1  Recovery: 1
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR     G-5   Lower body strength (squat + hinge)
+  Wednesday  optional   UPR     G-3   Light accessories — trunk, calves, groin, ...
+  Friday     optional   UPR     G-1   Optional arms/pump — biceps, triceps, late...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-24  TUE   conditioning  conditioning Long Run [1 ex]
+  2026-03-25  WED   template      optional     Light accessories — trunk, calves, gr...
+  2026-03-26  THU   recovery      recovery     Passive Recovery [3 ex]
+  2026-03-27  FRI   gameProximity optional     Arms / Pump [6 ex]
+  2026-03-28  SAT   game          game         Game Day
+  2026-03-29  SUN   gameProximity recovery     Recovery Session [6 ex]
+
+  CONDITIONING DETAIL:
+  2026-03-24 — Long Run (40min, High)
+    1. 7km steady run: 7km at conversational pace (Zone 2, ~70% HRmax). Should be able to hol...
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 1
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Friday: Optional arms/pump — biceps, triceps, lateral rais
+  ✅ G+1 = recovery or rest: 2026-03-29: gameProximity
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 2 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  S14: In-season, low readiness, injuries
+════════════════════════════════════════════════════════════════════════
+  Season: In-season  |  Game: Saturday  |  Team: Tuesday, Thursday
+  Readiness: low  |  Core: 1  Optional: 1  Recovery: 2
+────────────────────────────────────────────────────────────────────────
+  COACHING PLAN:
+  Day        Tier       Region  G     Focus
+  ────────────────────────────────────────────────────────────────────
+  Monday     core       LWR     G-5   Lower body strength (squat + hinge)
+  Tuesday    optional   UPR     G-4   Light accessories — trunk, calves, groin, ...
+  Thursday   recovery   ---     G-2   Mobility, foam rolling, light movement
+  Friday     optional   UPR     G-1   Optional arms/pump — biceps, triceps, late...
+
+  RESOLVED WEEK:
+  Date        Day   Source         Indicator    Session
+  ────────────────────────────────────────────────────────────────────
+  2026-03-23  MON   template      core         Lower body strength (squat + hinge) ⚠...
+  2026-03-24  TUE   template      optional     Light accessories — trunk, calves, gr...
+  2026-03-25  WED   conditioning  conditioning 6x1km [3 ex]
+  2026-03-26  THU   template      recovery     Mobility, foam rolling, light movement
+  2026-03-27  FRI   gameProximity optional     Arms / Pump [6 ex]
+  2026-03-28  SAT   game          game         Game Day
+  2026-03-29  SUN   gameProximity recovery     Recovery Session [6 ex]
+
+  CONDITIONING DETAIL:
+  2026-03-25 — 6x1km (40min, High)
+    1. Run warm-up: 10min easy jog, dynamics, 2 × 200m strides
+    2. 6 × 1km repeats: 6 × 1km at threshold pace (~85% HRmax). 90s walk/jog recovery between ...
+    3. Cool-down jog: 5min easy jog, stretch
+
+  ASSERTIONS:
+  ✅ Max 2 consecutive same-region: max run: 1
+  ✅ No heavy lower within 72h of game: clean
+  ✅ No conditioning within 48h of game: clean
+  ✅ G-1 = arms/pump or recovery only: Friday: Optional arms/pump — biceps, triceps, lateral rais
+  ✅ G+1 = recovery or rest: 2026-03-29: gameProximity
+  ✅ No empty conditioning sessions: all conditioning sessions populated
+  ✅ No empty derived sessions: all derived sessions populated
+  ✅ Template sessions awaiting AI (info): 2 strength sessions need AI population
+
+  ✅ ALL PASSED
+
+════════════════════════════════════════════════════════════════════════
+  SUMMARY: 108 passed, 0 failed across 17 scenarios
+════════════════════════════════════════════════════════════════════════

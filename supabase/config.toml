@@ -1,0 +1,48 @@
+# Supabase CLI Configuration
+# https://supabase.com/docs/guides/cli/config
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+
+[auth.email]
+enable_signup = true
+enable_confirmations = false
+
+[storage]
+enabled = true
+
+[edge_runtime]
+enabled = true
+
+# Disable JWT verification for functions called from the app with the
+# publishable key (sb_publishable_...). The publishable key is NOT a JWT,
+# so the gateway's default verify_jwt = true rejects it with
+# UNAUTHORIZED_INVALID_JWT_FORMAT. The functions handle their own auth
+# via the apikey header.
+[functions.coach-chat]
+verify_jwt = false
+
+[functions.coach-send-message]
+verify_jwt = false
+
+[functions.generate-program]
+verify_jwt = false
+
+[functions.sync-exercises]
+verify_jwt = false
