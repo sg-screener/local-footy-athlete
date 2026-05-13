@@ -271,8 +271,11 @@ const RECURRING_HINT: RegExp[] = [
   /\bgoing\s+forward\b/i,
   /\bfrom\s+now\s+on\b/i,
   /\bin\s+future\b/i,
-  /\bevery\s+(?:time|week)\b/i,
-  /\beach\s+week\b/i,
+  /\bevery\s+(?:time|week|mon|tue|wed|thu|fri|sat|sun)\w*\b/i,
+  /\beach\s+(?:week|mon|tue|wed|thu|fri|sat|sun)\w*\b/i,
+  /\bweekly\b/i,
+  // Plural day names ("Mondays", "Wednesdays") imply recurring
+  /\b(?:mondays|tuesdays|wednesdays|thursdays|fridays|saturdays|sundays)\b/i,
   /\balways\b/i,
   /\busually\b/i,
 ];

@@ -211,13 +211,13 @@ const MUTATION_PATTERNS: RegExp[] = [
 
 /** Day-of-week names → 0..6 (Sun..Sat). */
 const DOW_BY_NAME: Record<string, number> = {
-  sun: 0, sunday: 0,
-  mon: 1, monday: 1,
-  tue: 2, tues: 2, tuesday: 2,
-  wed: 3, weds: 3, wednesday: 3,
-  thu: 4, thur: 4, thurs: 4, thursday: 4,
-  fri: 5, friday: 5,
-  sat: 6, saturday: 6,
+  sun: 0, sunday: 0, sundays: 0,
+  mon: 1, monday: 1, mondays: 1,
+  tue: 2, tues: 2, tuesday: 2, tuesdays: 2,
+  wed: 3, weds: 3, wednesday: 3, wednesdays: 3,
+  thu: 4, thur: 4, thurs: 4, thursday: 4, thursdays: 4,
+  fri: 5, friday: 5, fridays: 5,
+  sat: 6, saturday: 6, saturdays: 6,
 };
 
 /**
@@ -309,7 +309,10 @@ export function resolveCoachReference(
   const isMutation = isMutationLike(message);
 
   // ─── 1. Explicit day name beats everything ───
-  const explicit = matchExplicitDay(message, input.currentWeek, input.nextWeek);
+  const explicit = matchExplicitDay(message, input.currentWeek, input.nextWeek, {
+    todayISO: input.todayISO,
+    isMutationLike: isMutation,
+  });
   if (explicit.matched) {
     if (explicit.target) {
       return logResolution(input, message, isMutation, {
@@ -702,6 +705,7 @@ function matchExplicitDay(
   message: string,
   currentWeek: ResolvedDay[],
   nextWeek: ResolvedDay[] = [],
+  opts?: { todayISO?: string; isMutationLike?: boolean },
 ): {
   matched: boolean;
   target?: CoachReferenceTarget;
@@ -710,6 +714,8 @@ function matchExplicitDay(
 } {
   const lower = ` ${message.toLowerCase()} `;
   const isNext = /\bnext\s+(week|mon|tue|wed|thu|fri|sat|sun)/.test(lower);
+  const isExplicitlyPast = /\blast\s+(week|mon|tue|wed|thu|fri|sat|sun)/.test(lower) ||
+    /\bprevious\s+(mon|tue|wed|thu|fri|sat|sun)/.test(lower);
   let matchedDow: number | null = null;
   for (const [name, dow] of Object.entries(DOW_BY_NAME)) {
     const re = new RegExp(`\\b${name}\\b`, 'i');
@@ -729,6 +735,36 @@ function matchExplicitDay(
       clarifierQuestion: `I can't find that day in this week's program. Which session do you mean?`,
     };
   }
+
+  // ─── Future-default for bare weekday mutations ─────────────────
+  // When the matched day is in the past AND the user didn't say "last"
+  // or "previous" AND the message is mutation-like, auto-advance to
+  // next week's occurrence so the coach doesn't reject with "that
+  // session is in the past". Questions/explanations about a past day
+  // are fine — they legitimately refer to the current week.
+  const todayISO = opts?.todayISO;
+  const mutationLike = opts?.isMutationLike ?? false;
+  if (
+    todayISO &&
+    mutationLike &&
+    !isExplicitlyPast &&
+    !isNext &&
+    day.date < todayISO &&
+    nextWeek.length > 0
+  ) {
+    const nextDay = nextWeek.find((d) => d.dayOfWeek === matchedDow);
+    if (nextDay?.workout) {
+      return {
+        matched: true,
+        target: {
+          date: nextDay.date,
+          sessionName: nextDay.workout.name ?? 'session',
+          method: 'explicit_day',
+        },
+      };
+    }
+  }
+
   if (!day.workout) {
     return {
       matched: true,

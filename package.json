@@ -68,6 +68,7 @@
     "test:modality-preference-verification": "sucrase-node src/__tests__/coachModalityPreferenceVerificationTests.ts",
     "test:coach-command-router": "sucrase-node src/__tests__/coachCommandRouterTests.ts",
     "test:coach-pending-clarifier": "sucrase-node src/__tests__/coachPendingClarifierTests.ts",
+    "test:coach-behaviour-scenarios": "sucrase-node src/__tests__/coachBehaviourScenarioTests.ts",
     "test:coach-bike-subtype": "sucrase-node src/__tests__/coachBikeSubtypeIntentTests.ts",
     "test:coach-live-bike-audit": "sucrase-node src/__tests__/coachLiveBikeSubtypeAuditTests.ts",
     "test:smoke-coach-bike-flow": "sucrase-node src/__tests__/smokeCoachBikeFlowTests.ts",
