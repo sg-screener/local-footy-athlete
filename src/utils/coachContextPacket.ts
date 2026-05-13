@@ -27,6 +27,7 @@ import type { PendingCoachProposal } from './coachIntent';
 import { buildProgramTabProjectedWeek } from './visibleProgramReadModel';
 import { getCoachContextSnapshot } from '../store/coachContextStateStore';
 import { resolveCoachReference } from './coachReferenceResolver';
+import { autoBindUniqueModalityTarget } from './coachVisibleWeekAutoBind';
 
 const RECENT_HISTORY_LIMIT = 8;
 
@@ -91,7 +92,7 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
   // are TTL-filtered inside getCoachContextSnapshot so a workout
   // opened yesterday never silently anchors "it" today.
   const ctx = getCoachContextSnapshot();
-  const referenceResolution = resolveCoachReference({
+  const baseResolution = resolveCoachReference({
     userMessage: input.userMessage,
     todayISO: input.todayISO,
     currentWeek,
@@ -101,7 +102,15 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     lastDiscussedWorkout: ctx.lastDiscussedWorkout,
   });
 
-  return {
+  // ─── VISIBLE-WEEK UNIQUE-MODALITY AUTO-BIND ────────────────────
+  // When the resolver couldn't bind a target (no lastExplained /
+  // lastOpened / explicit day) but the message is a modality swap
+  // and exactly one visible-week session matches the source modality,
+  // synthesise the reference here so every downstream consumer
+  // (router, executor, CoachScreen) sees it.  This is the canonical
+  // location — CoachScreen also has a redundant call but this one
+  // fires first and makes the packet self-contained.
+  const basePacket = {
     userMessage: input.userMessage,
     recentMessages: recent,
     activeInjury,
@@ -116,8 +125,14 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     lastOpenedWorkout: ctx.lastOpenedWorkout,
     lastExplainedSession: ctx.lastExplainedSession,
     lastDiscussedWorkout: ctx.lastDiscussedWorkout,
-    referenceResolution,
+    referenceResolution: baseResolution,
   };
+
+  const autoBind = autoBindUniqueModalityTarget(basePacket, input.userMessage);
+  if (autoBind.bound) {
+    return autoBind.packet;
+  }
+  return basePacket;
 }
 
 /**

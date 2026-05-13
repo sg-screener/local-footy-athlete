@@ -44,7 +44,26 @@ function appendSmokeText(parts: string[], value: unknown) {
   }
 }
 
-function collectSmokeText(value: unknown, parts: string[], seen = new Set<unknown>()) {
+// Keys whose values are internal identifiers, not user-visible text.
+// Template exercise IDs (e.g. "ex-easy-aerobic-flush-rower") keep the
+// original modality token even after a preference rewrite — including
+// them in the smoke text would false-positive the forbidden-token check.
+const SKIP_KEYS = new Set([
+  'id',
+  'exerciseId',
+  'workoutId',
+  'templateId',
+  'conditioningOptionId',
+  'blockId',
+  'sectionId',
+]);
+
+function collectSmokeText(
+  value: unknown,
+  parts: string[],
+  seen = new Set<unknown>(),
+  _key?: string,
+) {
   if (value === null || value === undefined) return;
   if (typeof value === 'string' || typeof value === 'number') {
     appendSmokeText(parts, value);
@@ -57,9 +76,10 @@ function collectSmokeText(value: unknown, parts: string[], seen = new Set<unknow
     value.forEach((item) => collectSmokeText(item, parts, seen));
     return;
   }
-  Object.values(value as Record<string, unknown>).forEach((child) =>
-    collectSmokeText(child, parts, seen),
-  );
+  for (const [k, child] of Object.entries(value as Record<string, unknown>)) {
+    if (SKIP_KEYS.has(k)) continue;
+    collectSmokeText(child, parts, seen, k);
+  }
 }
 
 export function compactDayWorkoutSmokeText(text: string): string {
