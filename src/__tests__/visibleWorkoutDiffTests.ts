@@ -51,6 +51,7 @@ section('1. snapshotVisibleWorkout — null/missing safe defaults');
   const s = snapshotVisibleWorkout(null);
   eq('null → name=null', s.name, null);
   eq('null → empty exerciseNames', s.exerciseNames, []);
+  eq('null → empty conditioning', s.conditioning, []);
   eq('null → empty coachNotes', s.coachNotes, []);
 }
 

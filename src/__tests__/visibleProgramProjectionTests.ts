@@ -17,6 +17,10 @@ import {
   projectVisibleDay,
   projectAndLog,
 } from '../utils/visibleProgramProjection';
+import {
+  buildProgramTabProjectedWeek,
+  buildDayWorkoutProjectedDay,
+} from '../utils/visibleProgramReadModel';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { Workout } from '../types/domain';
 import type { InjuryState } from '../utils/injuryProgression';
@@ -70,6 +74,21 @@ function day(date: string, workout: Workout | null, source: any = 'template'): R
     source,
     indicator: null,
   } as any;
+}
+function stateWithManual(date: string, workout: Workout): any {
+  return {
+    currentProgram: null,
+    currentMicrocycle: null,
+    manualOverrides: { [date]: workout },
+    markedDays: {},
+    athleteContext: {},
+    seasonPhase: null,
+    readiness: 'medium',
+    sessionFeedback: {},
+    weightOverrides: {},
+    activeInjury: null,
+    activeConstraints: [],
+  };
 }
 function hammy(severity: number, status: InjuryState['status'] = 'active'): InjuryState {
   return {
@@ -305,6 +324,10 @@ section('[12] projectAndLog runtime logs');
 {
   let captured: string[] = [];
   const realLog = console.log;
+  const prevEnable = process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS;
+  const prevTrace = process.env.DEBUG_SCHEDULE_TRACE;
+  process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = 'true';
+  process.env.DEBUG_SCHEDULE_TRACE = 'true';
   console.log = (...args: any[]) => {
     captured.push(args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '));
   };
@@ -316,6 +339,8 @@ section('[12] projectAndLog runtime logs');
     surface: 'home',
   });
   console.log = realLog;
+  process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = prevEnable;
+  process.env.DEBUG_SCHEDULE_TRACE = prevTrace;
   ok('logs project_input', captured.some((l) => l.includes('[visible-program] project_input')));
   ok('logs project_output', captured.some((l) => l.includes('[visible-program] project_output')));
   ok(
@@ -349,6 +374,76 @@ section('[13] Same input → home and detail surfaces produce same projected wor
   const homeNames = (homeOut.day.workout?.exercises ?? []).map((e: any) => e.exercise?.name).sort();
   const detailNames = (detailOut.day.workout?.exercises ?? []).map((e: any) => e.exercise?.name).sort();
   eq('home and detail exercise lists match', homeNames, detailNames);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 14. Conditioning-only workouts do not keep stale strength titles.
+//     This drives the same read-model helpers used by Program tab and
+//     DayWorkoutScreen: raw resolver → buildProgramTabProjectedWeek /
+//     buildDayWorkoutProjectedDay → projected workout object.
+// ─────────────────────────────────────────────────────────────────────
+section('[14] Conditioning-only Wednesday row uses final conditioning identity');
+{
+  const wed = '2026-05-06';
+  const stale = wk('Upper Pull', 3, [ex('40min zone 2 row')], {
+    workoutType: 'Conditioning',
+    sessionTier: 'optional',
+    conditioningFlavour: 'aerobic',
+    coachNotes: ['Shifted to non-running modality to manage weekly run load.'],
+  });
+  const state = stateWithManual(wed, stale);
+  const programWeek = buildProgramTabProjectedWeek({
+    mondayISO: '2026-05-04',
+    todayISO: TODAY_ISO,
+    state,
+    overrideContexts: {},
+  });
+  const programWed = programWeek.find((d) => d.date === wed);
+  const dayWed = buildDayWorkoutProjectedDay({
+    date: wed,
+    todayISO: TODAY_ISO,
+    state,
+  });
+
+  ok('Program tab projection found Wednesday', !!programWed?.workout);
+  ok('Program tab title is not Upper Pull', programWed?.workout?.name !== 'Upper Pull');
+  ok('DayWorkout title is not Upper Pull', dayWed.workout?.name !== 'Upper Pull');
+  eq('Program tab and DayWorkout titles match', programWed?.workout?.name, dayWed.workout?.name);
+  ok(
+    'title shows conditioning/row identity',
+    /conditioning|aerobic|zone\s*2|row/i.test(programWed?.workout?.name ?? ''),
+    `title: ${programWed?.workout?.name}`,
+  );
+  ok('DayWorkout subtitle source is Conditioning', dayWed.workout?.workoutType === 'Conditioning');
+}
+
+section('[15] Easy Aerobic Flush stays the visible title, not generic Aerobic Base');
+{
+  const wed = '2026-05-06';
+  const flush = wk('Easy Aerobic Flush (25min Rower)', 3, [
+    ex('Easy Aerobic Flush (25min Rower)'),
+  ], {
+    workoutType: 'Conditioning',
+    sessionTier: 'optional',
+    conditioningFlavour: 'aerobic',
+  });
+  const state = stateWithManual(wed, flush);
+  const programWeek = buildProgramTabProjectedWeek({
+    mondayISO: '2026-05-04',
+    todayISO: TODAY_ISO,
+    state,
+    overrideContexts: {},
+  });
+  const programWed = programWeek.find((d) => d.date === wed);
+  const dayWed = buildDayWorkoutProjectedDay({
+    date: wed,
+    todayISO: TODAY_ISO,
+    state,
+  });
+
+  eq('Program tab title keeps recovery-biased identity', programWed?.workout?.name, 'Easy Aerobic Flush');
+  eq('DayWorkout title matches Program tab', dayWed.workout?.name, 'Easy Aerobic Flush');
+  ok('title is not generic Aerobic Base', programWed?.workout?.name !== 'Aerobic Base');
 }
 
 // ─── Summary ───

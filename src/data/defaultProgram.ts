@@ -989,7 +989,12 @@ export function buildWorkoutsFromCoach(
     // can't be converted — that's handled by the engine's H-PRE-12.)
     if (candidateIsRun && runStreak >= 3 && !isProtectedSpeed) {
       // 3rd (or later) consecutive run — convert to off-feet.
-      const offFeet = switchToOffFeetModality(candidateName, dateStr);
+      const offFeet = planEntry.conditioningVariant === 'reduced' && cat === 'aerobic_base'
+        ? buildConditioningTemplate(candidateName, dateStr, {
+            variant: 'reduced',
+            ergModality: planEntry.ergModality as ErgModality | undefined,
+          })
+        : switchToOffFeetModality(candidateName, dateStr);
       if (offFeet && offFeet.length > 0) {
         const tagged = tagAsShiftedFromRun(offFeet);
         resolved = {
@@ -1097,13 +1102,17 @@ export function buildWorkoutsFromCoach(
       // If the run-load guard shifted this session, reflect that in the
       // workout name + workoutType so the downstream UI doesn't read as
       // a run when the prescription is bike/row/ski.
-      const displayName = resolved?.shiftedFromRun
-        ? (condExercises.find((ex) => {
-            const n = (ex.exercise?.name || '').toLowerCase();
-            return !n.includes('warm-up') && !n.includes('cool-down') && !n.includes('cooldown');
-          })?.exercise?.name || exerciseName)
+      const isReducedAerobicBase =
+        planEntry.conditioningVariant === 'reduced' && planEntry.conditioningCategory === 'aerobic_base';
+      const headlineExerciseName = condExercises.find((ex) => {
+        const n = (ex.exercise?.name || '').toLowerCase();
+        return !n.includes('warm-up') && !n.includes('cool-down') && !n.includes('cooldown');
+      })?.exercise?.name;
+      const displayName = resolved?.shiftedFromRun || isReducedAerobicBase
+        ? (headlineExerciseName || exerciseName)
         : exerciseName;
       const condWorkoutType = resolved?.shiftedFromRun
+        || isReducedAerobicBase
         ? 'Conditioning'
         : conditioningWorkoutType(exerciseName);
 

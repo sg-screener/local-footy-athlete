@@ -47,6 +47,8 @@ export interface InspectAnswer {
     | 'session_unaffected_by_injury'
     | 'exercise_already_removed'
     | 'exercise_present_should_remove'
+    | 'conditioning_present'
+    | 'conditioning_missing'
     | 'no_active_injury'
     | 'general_state';
   /** Human-readable explanation suitable for chat. */
@@ -66,7 +68,11 @@ function findDayByDateOrName(
   if (query.date) return days.find((d) => d.date === query.date);
   if (query.sessionName) {
     const target = query.sessionName.trim().toLowerCase();
-    return days.find((d) => (d.workout?.name ?? '').toLowerCase().includes(target));
+    return days.find((d) => {
+      const workoutName = (d.workout?.name ?? '').toLowerCase();
+      if (workoutName.includes(target)) return true;
+      return dayAliases(d).some((alias) => target.includes(alias) || alias.includes(target));
+    });
   }
   return undefined;
 }
@@ -77,6 +83,24 @@ function exercisePresent(workout: ResolvedDay['workout'], name: string): boolean
   return (workout.exercises ?? []).some(
     (ex) => (ex.exercise?.name ?? '').toLowerCase().includes(target),
   );
+}
+
+function dayAliases(day: ResolvedDay): string[] {
+  const long = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.dayOfWeek];
+  return [long, day.short.toLowerCase()];
+}
+
+function hasConditioning(workout: ResolvedDay['workout']): boolean {
+  if (!workout) return false;
+  if (workout.conditioningBlock?.options?.length) return true;
+  return !!workout.hasCombinedConditioning;
+}
+
+function conditioningSummary(workout: NonNullable<ResolvedDay['workout']>): string {
+  const titles = (workout.conditioningBlock?.options ?? [])
+    .map((o) => o.title)
+    .filter(Boolean);
+  return titles.length > 0 ? titles.join('; ') : 'conditioning block present';
 }
 
 /**
@@ -107,7 +131,12 @@ export function inspectCoachState(input: InspectInput): InspectAnswer {
 
   // Find the referenced day across both weeks (current first, then next).
   const allDays = [...currentWeek, ...nextWeek];
-  const day = findDayByDateOrName(allDays, query);
+  const searchableDays = query.date
+    ? allDays
+    : allDays.filter((d) => d.date >= todayISO);
+  const day =
+    findDayByDateOrName(searchableDays, query) ??
+    findDayByDateOrName(allDays, query);
 
   if (query.date && !day) {
     return {
@@ -120,6 +149,23 @@ export function inspectCoachState(input: InspectInput): InspectAnswer {
     return {
       kind: 'no_session_on_date',
       message: `I couldn't find that session in the current or next week.`,
+    };
+  }
+
+  if (query.exerciseName && /conditioning|aerobic|interval/i.test(query.exerciseName)) {
+    if (hasConditioning(day.workout)) {
+      return {
+        kind: 'conditioning_present',
+        date: day.date,
+        source: day.source,
+        message: `I checked the visible program: ${day.short} ${day.workout.name} includes ${conditioningSummary(day.workout)}. Coach notes: ${(day.workout.coachNotes ?? []).join('; ') || 'none'}.`,
+      };
+    }
+    return {
+      kind: 'conditioning_missing',
+      date: day.date,
+      source: day.source,
+      message: `I checked the visible program: ${day.short} ${day.workout.name} does not have conditioning added.`,
     };
   }
 

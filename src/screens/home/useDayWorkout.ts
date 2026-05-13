@@ -6,6 +6,8 @@ import { useIsOverrideStale } from '../../hooks/useStaleOverrides';
 import { useSessionExplanation } from '../../hooks/useSessionExplanation';
 import { useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
+import { useCoachContextStateStore } from '../../store/coachContextStateStore';
+import { extractModalitiesFromSession } from '../../utils/coachReferenceResolver';
 import { isTrueBodyweightExercise, estimateStartingWeight } from '../../utils/loadEstimation';
 import {
   DESCRIPTIVE_CONDITIONING_TYPES,
@@ -51,6 +53,7 @@ export function useDayWorkout() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const date: string | undefined = route.params?.date;
+  const routeWorkoutId: string | undefined = route.params?.workoutId;
   // When startFinished=true the screen boots directly into the post-session
   // flow (feedback panel). Used by team-training-only cards on HomeScreen so
   // the athlete logs the external team session without seeing an empty
@@ -295,6 +298,30 @@ export function useDayWorkout() {
     };
   }, []);
 
+  // Phase 2: write the currently-opened workout into the coach context
+  // store so the reference resolver can anchor "it"/"that session" to
+  // this date when the athlete switches to the Coach tab. We stamp
+  // modality tokens (rower / bike / run / sprint…) extracted from the
+  // session name + exercise list so "the row" matches without us
+  // re-reading the workout body in the resolver. See
+  // src/store/coachContextStateStore.ts.
+  const setLastOpenedWorkout = useCoachContextStateStore(
+    (s) => s.setLastOpenedWorkout,
+  );
+  useEffect(() => {
+    if (!date || !workout) return;
+    const modalities = extractModalitiesFromSession({
+      name: workout.name,
+      exercises: workout.exercises,
+    });
+    setLastOpenedWorkout({
+      date,
+      sessionName: workout.name ?? 'session',
+      modalities,
+      source: 'day_workout',
+    });
+  }, [date, workout, setLastOpenedWorkout]);
+
   /** Stale banner review → coach tab with prefill. */
   const handleReviewStale = useCallback(
     (prefill: string) => {
@@ -426,6 +453,7 @@ export function useDayWorkout() {
   return {
     // Route
     date,
+    routeWorkoutId,
 
     // Resolved data
     workout,

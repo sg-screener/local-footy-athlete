@@ -21,6 +21,7 @@
  * UI FIELDS WE TRACK
  *   - name           — rendered in HomeScreen day rows
  *   - exerciseNames  — rendered as count + via View Workout
+ *   - conditioning   — rendered as the combined conditioning block
  *   - coachNotes     — rendered inline on HomeScreen + DayWorkoutScreen
  *
  *   We deliberately ignore `description` because not every surface
@@ -38,6 +39,7 @@ import type { Workout } from '../types/domain';
 export interface VisibleWorkoutSnapshot {
   name: string | null;
   exerciseNames: string[]; // sorted, lower-cased for stable comparison
+  conditioning: string[];  // sorted title/description surface
   coachNotes: string[];    // sorted for stable comparison
 }
 
@@ -50,7 +52,7 @@ export interface VisibleWorkoutSnapshot {
 export function snapshotVisibleWorkout(
   workout: Workout | null | undefined,
 ): VisibleWorkoutSnapshot {
-  if (!workout) return { name: null, exerciseNames: [], coachNotes: [] };
+  if (!workout) return { name: null, exerciseNames: [], conditioning: [], coachNotes: [] };
   const exerciseNames = (workout.exercises ?? [])
     .map((ex) => (ex.exercise?.name ?? '').trim())
     .filter((n) => n.length > 0)
@@ -60,9 +62,16 @@ export function snapshotVisibleWorkout(
     .map((n) => n.trim())
     .filter((n) => n.length > 0)
     .sort();
+  const conditioning = (workout.conditioningBlock?.options ?? [])
+    .flatMap((opt) => [opt.title, opt.description])
+    .map((n) => n.trim())
+    .filter((n) => n.length > 0)
+    .map((n) => n.toLowerCase())
+    .sort();
   return {
     name: workout.name ?? null,
     exerciseNames,
+    conditioning,
     coachNotes,
   };
 }
@@ -80,6 +89,10 @@ export function visibleSnapshotsEqual(
   for (let i = 0; i < a.exerciseNames.length; i++) {
     if (a.exerciseNames[i] !== b.exerciseNames[i]) return false;
   }
+  if (a.conditioning.length !== b.conditioning.length) return false;
+  for (let i = 0; i < a.conditioning.length; i++) {
+    if (a.conditioning[i] !== b.conditioning[i]) return false;
+  }
   if (a.coachNotes.length !== b.coachNotes.length) return false;
   for (let i = 0; i < a.coachNotes.length; i++) {
     if (a.coachNotes[i] !== b.coachNotes[i]) return false;
@@ -89,7 +102,7 @@ export function visibleSnapshotsEqual(
 
 export interface VisibleDiffEntry {
   date: string;
-  changedFields: Array<'name' | 'exerciseNames' | 'coachNotes'>;
+  changedFields: Array<'name' | 'exerciseNames' | 'conditioning' | 'coachNotes'>;
   before: VisibleWorkoutSnapshot;
   after: VisibleWorkoutSnapshot;
 }
@@ -114,7 +127,7 @@ export function computeVisibleDiff(
     const b = before[date] ?? snapshotVisibleWorkout(null);
     const a = after[date] ?? snapshotVisibleWorkout(null);
     if (visibleSnapshotsEqual(a, b)) continue;
-    const changed: Array<'name' | 'exerciseNames' | 'coachNotes'> = [];
+    const changed: Array<'name' | 'exerciseNames' | 'conditioning' | 'coachNotes'> = [];
     if (a.name !== b.name) changed.push('name');
     if (
       a.exerciseNames.length !== b.exerciseNames.length ||
@@ -128,7 +141,73 @@ export function computeVisibleDiff(
     ) {
       changed.push('coachNotes');
     }
+    if (
+      a.conditioning.length !== b.conditioning.length ||
+      a.conditioning.some((n, i) => n !== b.conditioning[i])
+    ) {
+      changed.push('conditioning');
+    }
     out.push({ date, changedFields: changed, before: b, after: a });
   }
   return out;
+}
+
+export interface VerifiedProgramMutationResult {
+  success: boolean;
+  changedDates: string[];
+  visibleDiff: VisibleDiffEntry[];
+  reason?: string;
+}
+
+export interface IntendedProgramChange {
+  type: 'add_conditioning' | 'remove_conditioning' | 'move_session' | string;
+  targetDates?: string[];
+  requiredText?: string;
+}
+
+export function assertVerifiedProgramMutation(args: {
+  beforeWeek: Array<{ date: string; workout?: Workout | null }>;
+  afterWeek: Array<{ date: string; workout?: Workout | null }>;
+  intendedChange: IntendedProgramChange;
+}): VerifiedProgramMutationResult {
+  const before: Record<string, VisibleWorkoutSnapshot> = {};
+  const after: Record<string, VisibleWorkoutSnapshot> = {};
+  for (const d of args.beforeWeek) before[d.date] = snapshotVisibleWorkout(d.workout);
+  for (const d of args.afterWeek) after[d.date] = snapshotVisibleWorkout(d.workout);
+  const dates = args.intendedChange.targetDates?.length
+    ? args.intendedChange.targetDates
+    : Array.from(new Set([...Object.keys(before), ...Object.keys(after)]));
+  const visibleDiff = computeVisibleDiff(dates, before, after);
+  if (visibleDiff.length === 0) {
+    return {
+      success: false,
+      changedDates: [],
+      visibleDiff,
+      reason: 'no_visible_diff',
+    };
+  }
+  if (args.intendedChange.type === 'add_conditioning') {
+    const needle = (args.intendedChange.requiredText ?? 'aerobic').toLowerCase();
+    const landed = visibleDiff.some((entry) => {
+      const surface = [
+        ...entry.after.conditioning,
+        ...entry.after.exerciseNames,
+        ...entry.after.coachNotes.map((n) => n.toLowerCase()),
+      ].join(' ');
+      return /conditioning|interval|aerobic|bike|flush|tempo/.test(surface) && surface.includes(needle);
+    });
+    if (!landed) {
+      return {
+        success: false,
+        changedDates: visibleDiff.map((d) => d.date),
+        visibleDiff,
+        reason: 'intended_conditioning_not_visible',
+      };
+    }
+  }
+  return {
+    success: true,
+    changedDates: visibleDiff.map((d) => d.date),
+    visibleDiff,
+  };
 }

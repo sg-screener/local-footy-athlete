@@ -86,11 +86,13 @@ export interface OverrideContext {
      * Why this override was created.
      *   - 'gameProximity': override was set because of a nearby game (G-1, G+1, etc.)
      *   - 'dismissed':     user reviewed a stale warning and chose to keep the override
+     *   - 'injury':        override emitted by the Universal Adjustment Engine
+     *   - 'program_adjustment': deterministic user-requested program edit
      *
      * Intentionally narrow — only values actively consumed by staleOverrideDetector.
      * Do NOT expand into a general-purpose metadata layer for all overrides.
      */
-    intent: 'gameProximity' | 'dismissed';
+    intent: 'gameProximity' | 'dismissed' | 'injury' | 'program_adjustment';
     /** ISO date of the game this override was relative to (for gameProximity only). */
     relatedGameDate?: string;
     /** Human-readable label shown in stale-override warnings (for gameProximity only). */

@@ -54,6 +54,7 @@ export interface V2ButtonProps {
   glow?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  testID?: string;
 }
 
 const HEIGHTS: Record<V2ButtonSize, number> = { sm: 36, md: 48, lg: 56 };
@@ -73,6 +74,7 @@ export function Button({
   glow = true,
   style,
   accessibilityLabel,
+  testID,
 }: V2ButtonProps) {
   const scale = React.useRef(new Animated.Value(1)).current;
 
@@ -130,6 +132,7 @@ export function Button({
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? label}
         accessibilityState={{ disabled: disabled || loading }}
+        testID={testID}
         onPress={onPress}
         onPressIn={handlePressIn}
         onPressOut={handlePressOut}

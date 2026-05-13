@@ -18,10 +18,15 @@
  */
 
 import type { ResolvedDay } from './sessionResolver';
-import { resolveWeekWithConditioning, getMondayStr, addDays } from './sessionResolver';
+import { getMondayStr, addDays } from './sessionResolver';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import { useProgramStore } from '../store/programStore';
 import type { CoachContextPacket } from './coachIntent';
+import type { PendingCoachProposal } from './coachIntent';
+import { buildProgramTabProjectedWeek } from './visibleProgramReadModel';
+import { getCoachContextSnapshot } from '../store/coachContextStateStore';
+import { resolveCoachReference } from './coachReferenceResolver';
 
 const RECENT_HISTORY_LIMIT = 8;
 
@@ -42,6 +47,7 @@ export interface BuildPacketInput {
     bodyPart: string;
     timestamp: number;
   } | null;
+  pendingCoachProposal?: PendingCoachProposal | null;
 }
 
 /**
@@ -54,17 +60,46 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
   const monday = getMondayStr(0);
   const nextMonday = addDays(monday, 7);
 
-  const currentWeek = resolveWeekWithConditioning(monday, state);
-  const nextWeek = resolveWeekWithConditioning(nextMonday, state);
-
   const cuStore = useCoachUpdatesStore.getState();
   const activeInjury = cuStore.activeInjury ?? null;
   const activeConstraints = (cuStore.activeConstraints ?? []).filter(
     (c) => c.status !== 'resolved',
   );
+  const programStore = useProgramStore.getState();
+  const projectedState = {
+    ...state,
+    activeConstraints,
+  };
+  const currentWeek = buildProgramTabProjectedWeek({
+    mondayISO: monday,
+    todayISO: input.todayISO,
+    state: projectedState,
+    overrideContexts: programStore.overrideContexts ?? {},
+  });
+  const nextWeek = buildProgramTabProjectedWeek({
+    mondayISO: nextMonday,
+    todayISO: input.todayISO,
+    state: projectedState,
+    overrideContexts: programStore.overrideContexts ?? {},
+  });
   const coachUpdate = cuStore.updatesByWeek[monday] ?? null;
 
   const recent = input.recentMessages.slice(-RECENT_HISTORY_LIMIT);
+
+  // Phase 2 — pull durable target context from the coach context
+  // store and run the deterministic reference resolver. Both fields
+  // are TTL-filtered inside getCoachContextSnapshot so a workout
+  // opened yesterday never silently anchors "it" today.
+  const ctx = getCoachContextSnapshot();
+  const referenceResolution = resolveCoachReference({
+    userMessage: input.userMessage,
+    todayISO: input.todayISO,
+    currentWeek,
+    nextWeek,
+    lastOpenedWorkout: ctx.lastOpenedWorkout,
+    lastExplainedSession: ctx.lastExplainedSession,
+    lastDiscussedWorkout: ctx.lastDiscussedWorkout,
+  });
 
   return {
     userMessage: input.userMessage,
@@ -72,10 +107,16 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     activeInjury,
     activeConstraints,
     pendingInjury: input.pendingInjury ?? null,
+    pendingCoachProposal: input.pendingCoachProposal ?? null,
     coachUpdate: coachUpdate && coachUpdate.active ? coachUpdate : null,
     currentWeek,
     nextWeek,
+    sessionFeedback: state.sessionFeedback ?? {},
     todayISO: input.todayISO,
+    lastOpenedWorkout: ctx.lastOpenedWorkout,
+    lastExplainedSession: ctx.lastExplainedSession,
+    lastDiscussedWorkout: ctx.lastDiscussedWorkout,
+    referenceResolution,
   };
 }
 
@@ -120,6 +161,23 @@ export function serialisePacketForLLM(packet: CoachContextPacket): string {
         ? { bodyPart: c.bodyPart }
         : {}),
     })),
+    pendingCoachProposal: packet.pendingCoachProposal
+      ? {
+          type: packet.pendingCoachProposal.type,
+          target: packet.pendingCoachProposal.target,
+          targetDay: packet.pendingCoachProposal.targetDay,
+          targetDate: packet.pendingCoachProposal.targetDate,
+          targetSessionName: packet.pendingCoachProposal.targetSessionName,
+          action: packet.pendingCoachProposal.action,
+          needs: packet.pendingCoachProposal.needs,
+          supportedOptions: packet.pendingCoachProposal.supportedOptions,
+          conditioningOption: packet.pendingCoachProposal.conditioningOption,
+          prescription: packet.pendingCoachProposal.prescription,
+          modality: packet.pendingCoachProposal.modality,
+          allowNonStrengthTarget: packet.pendingCoachProposal.allowNonStrengthTarget,
+          createdAt: packet.pendingCoachProposal.createdAt,
+        }
+      : null,
     coachUpdate: packet.coachUpdate
       ? {
           reason: packet.coachUpdate.reason,
@@ -130,6 +188,42 @@ export function serialisePacketForLLM(packet: CoachContextPacket): string {
     currentWeek: packet.currentWeek.map(stripDay),
     nextWeek: packet.nextWeek.map(stripDay),
     recentMessages: packet.recentMessages,
+    // Phase 2 — durable target context. Strip the timestamp from the
+    // wire payload (the resolver applied TTL already; raw timestamps
+    // are noise to the classifier).
+    lastOpenedWorkout: packet.lastOpenedWorkout
+      ? {
+          date: packet.lastOpenedWorkout.date,
+          sessionName: packet.lastOpenedWorkout.sessionName,
+          source: packet.lastOpenedWorkout.source,
+          modalities: packet.lastOpenedWorkout.modalities ?? [],
+        }
+      : null,
+    lastExplainedSession: packet.lastExplainedSession
+      ? {
+          date: packet.lastExplainedSession.date,
+          sessionName: packet.lastExplainedSession.sessionName,
+          source: packet.lastExplainedSession.source,
+          modalities: packet.lastExplainedSession.modalities ?? [],
+        }
+      : null,
+    lastDiscussedWorkout: packet.lastDiscussedWorkout
+      ? {
+          date: packet.lastDiscussedWorkout.date,
+          sessionName: packet.lastDiscussedWorkout.sessionName,
+          source: packet.lastDiscussedWorkout.source,
+          modalities: packet.lastDiscussedWorkout.modalities ?? [],
+        }
+      : null,
+    referenceResolution: packet.referenceResolution
+      ? {
+          status: packet.referenceResolution.status,
+          target: packet.referenceResolution.target,
+          confidence: packet.referenceResolution.confidence,
+          failureReason: packet.referenceResolution.failureReason,
+          isMutationLike: packet.referenceResolution.isMutationLike,
+        }
+      : null,
   };
   return JSON.stringify(out);
 }

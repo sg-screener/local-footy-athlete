@@ -19,8 +19,7 @@ import { useProfileStore } from '../../store/profileStore';
 import { useProgramStore } from '../../store/programStore';
 import { DEFAULT_PROGRAM } from '../../data/defaultProgram';
 import { generateProgramFromProfile } from '../../services/api/generateProgram';
-import { useCalendarStore } from '../../store/calendarStore';
-import { computeGameDatesForBlock } from '../../utils/sessionResolver';
+import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
 import { logger } from '../../utils/logger';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
@@ -118,7 +117,6 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
   const setCurrentProgram = useProgramStore((state) => state.setCurrentProgram);
   const setCurrentMicrocycle = useProgramStore((state) => state.setCurrentMicrocycle);
   const setTodayWorkout = useProgramStore((state) => state.setTodayWorkout);
-  const setGameDay = useCalendarStore((state) => state.setGameDay);
 
   // ── Staggered card entrance ──
   useEffect(() => {
@@ -302,34 +300,15 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
   };
 
   const seedProgram = (program: typeof DEFAULT_PROGRAM) => {
-    setCurrentProgram(program);
-    if (program.microcycles && program.microcycles.length > 0) {
-      const firstMicrocycle = program.microcycles[0];
-      setCurrentMicrocycle(firstMicrocycle);
-
-      const today = new Date();
-      const dayOfWeek = today.getDay();
-      const todayWorkout = firstMicrocycle.workouts?.find(
-        (w) => w.dayOfWeek === dayOfWeek,
-      );
-      if (todayWorkout) {
-        setTodayWorkout(todayWorkout);
-      }
-    }
-
-    // ── Seed calendar with game dates for the active block ──
-    // The resolver derives game proximity (G+1 recovery, G-1 reduction, etc.)
-    // from calendarStore marks, so we MUST seed actual game dates here.
-    const selectedGameDay = onboardingData?.gameDay;
-    if (selectedGameDay && selectedGameDay !== 'Varies' && program.startDate && program.endDate) {
-      const gameDates = computeGameDatesForBlock(
-        selectedGameDay,
-        program.startDate,
-        program.endDate,
-      );
-      logger.debug(`[Onboarding] Seeding ${gameDates.length} game dates for ${selectedGameDay}:`, gameDates);
-      gameDates.forEach((date) => setGameDay(date));
-    }
+    seedOnboardingProgram({
+      onboardingData,
+      program,
+      programStore: {
+        setCurrentProgram,
+        setCurrentMicrocycle,
+        setTodayWorkout,
+      },
+    });
   };
 
   const handleStartTraining = () => {

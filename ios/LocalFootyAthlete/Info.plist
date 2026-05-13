@@ -27,6 +27,7 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
+          <string>localfootyathlete</string>
           <string>com.localfootyathlete.app</string>
         </array>
       </dict>

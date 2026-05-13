@@ -38,7 +38,6 @@ export const INJURY_KEYWORDS: readonly string[] = [
   'tweaked',
   'strain',
   'strained',
-  'pull',
   'pulled',
   'tight',
   'tightness',

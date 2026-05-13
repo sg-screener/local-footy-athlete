@@ -155,12 +155,14 @@ export interface OverrideContext {
    *   - 'dismissed':     user reviewed a stale warning and chose to keep the override
    *   - 'injury':        override emitted by the Universal Adjustment Engine
    *                      injury handler (severity-known path)
+   *   - 'program_adjustment': deterministic user-requested program edit
+   *                      verified against the visible program before reply
    *
    * Intentionally narrow — only values actively consumed by staleOverrideDetector
    * and the UAE event applier. Do NOT expand into a general-purpose metadata
    * layer for all overrides.
    */
-  intent: 'gameProximity' | 'dismissed' | 'injury';
+  intent: 'gameProximity' | 'dismissed' | 'injury' | 'program_adjustment';
   /** ISO date of the game this override was relative to (for gameProximity only). */
   relatedGameDate?: string;
   /** Human-readable label shown in stale-override warnings (for gameProximity only). */

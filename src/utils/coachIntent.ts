@@ -15,6 +15,8 @@
  *   injury_severity_reply       → pending-injury resolver + UAE
  *   active_injury_followup      → progression handler (improving / worse / resolved)
  *   why_didnt_program_change    → coachStateInspector (explain, then maybe re-apply)
+ *   program_explanation         → explain visible programming choice
+ *   session_mismatch_question   → visible program explanation, no injury clarifier
  *   request_program_adjustment  → UAE / coachActions
  *   fatigue / missed_session
  *   exercise_swap               → UAE
@@ -36,6 +38,8 @@
 import type { ResolvedDay } from './sessionResolver';
 import type { InjuryState } from './injuryProgression';
 import type { CoachUpdate, ActiveConstraint } from '../store/coachUpdatesStore';
+import type { CoachContextEntry } from '../store/coachContextStateStore';
+import type { CoachReferenceResolution } from './coachReferenceResolver';
 
 // ─── Intent schema ──────────────────────────────────────────────────
 
@@ -44,6 +48,8 @@ export type CoachIntentKind =
   | 'injury_severity_reply'
   | 'active_injury_followup'
   | 'why_didnt_program_change'
+  | 'program_explanation'
+  | 'session_mismatch_question'
   | 'request_program_adjustment'
   | 'fatigue'
   | 'soreness'
@@ -65,6 +71,36 @@ export interface CoachIntentPayload {
   concern?: string;
   /** Status update for active_injury_followup: 'better' / 'worse' / etc. */
   followupKind?: 'resolved' | 'improving' | 'worsening' | 'unchanged';
+}
+
+export type ProgramAdjustmentAction =
+  | 'add_conditioning'
+  | 'remove_conditioning'
+  | 'move_session';
+
+export type ProgramAdjustmentNeed =
+  | 'conditioning_type';
+
+export type ProgramAdjustmentConditioningOption =
+  | 'light_aerobic_intervals'
+  | 'short_bike_flush'
+  | 'tempo_running'
+  | 'custom';
+
+export interface PendingCoachProposal {
+  type: 'program_adjustment';
+  target?: string;
+  targetDay?: string;
+  targetDate?: string;
+  targetSessionName?: string;
+  action: ProgramAdjustmentAction;
+  needs?: ProgramAdjustmentNeed;
+  supportedOptions?: ProgramAdjustmentConditioningOption[];
+  conditioningOption?: ProgramAdjustmentConditioningOption;
+  prescription?: string;
+  modality?: string;
+  allowNonStrengthTarget?: boolean;
+  createdAt: number;
 }
 
 /**
@@ -121,14 +157,40 @@ export interface CoachContextPacket {
     bodyPart: string;
     timestamp: number;
   } | null;
+  /**
+   * Pending deterministic program edit proposal. A confirmation like
+   * "sounds good" must bind to this instead of falling through as
+   * generic chat.
+   */
+  pendingCoachProposal?: PendingCoachProposal | null;
   /** Active Coach Update card for the displayed week, if present. */
   coachUpdate: CoachUpdate | null;
   /** Current-week resolved days — what the athlete sees on the Program tab. */
   currentWeek: ResolvedDay[];
   /** Next-week resolved days — for "next week is unchanged" type queries. */
   nextWeek: ResolvedDay[];
+  /** Session feedback keyed by ISO date. Used to avoid editing completed sessions. */
+  sessionFeedback?: Record<string, { completion?: string }>;
   /** ISO date the message was sent. Locks classifier reasoning to a clock. */
   todayISO: string;
+
+  /**
+   * Phase 2 — durable coach target context. Populated from
+   * coachContextStateStore so the dispatcher / reference resolver
+   * can bind "it" / "that session" / "the row" to a concrete date.
+   * Each entry is fresh-only (TTL applied at packet build time);
+   * stale entries are filtered out and presented as null.
+   */
+  lastOpenedWorkout?: CoachContextEntry | null;
+  lastExplainedSession?: CoachContextEntry | null;
+  lastDiscussedWorkout?: CoachContextEntry | null;
+  /**
+   * Phase 2 — pre-computed reference resolution outcome. The packet
+   * builder runs the resolver before classification so the dispatcher
+   * (and downstream truth gate) can short-circuit on
+   * unresolvable / ambiguous references without re-running the logic.
+   */
+  referenceResolution?: CoachReferenceResolution;
 }
 
 // ─── Classifier seam ─────────────────────────────────────────────────
@@ -161,7 +223,7 @@ export const COACH_INTENT_SYSTEM_PROMPT = `You are the intent classifier for a s
 Your job is to read the athlete's latest message + the surrounding context and return a JSON object that matches this schema:
 
 {
-  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | why_didnt_program_change | request_program_adjustment | fatigue | soreness | busy_week | missed_session | exercise_swap | general_question>",
+  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | why_didnt_program_change | program_explanation | session_mismatch_question | request_program_adjustment | fatigue | soreness | busy_week | missed_session | exercise_swap | general_question>",
   "confidence": <0..1>,
   "needsClarification": <boolean>,
   "clarificationQuestion": "<string if needsClarification>",
@@ -192,13 +254,30 @@ CRITICAL RULES
 
 5. Different body part with activeInjury → may be a NEW injury — classify as new_injury_report (the dispatcher will handle the severity clarifier flow if needed).
 
-6. Non-injury signals — disambiguate carefully:
+6. Programming rationale and session naming/display mismatch questions are NOT injuries. Classify as program_explanation or session_mismatch_question, never new_injury_report:
+   - "why did you put a mid week row in?"
+   - "why is there a row on Wednesday?"
+   - "why am I rowing instead of running?"
+   - "why is this a zone 2 row?"
+   - "upper pull", "pull day", "pull session", "push/pull", "upper/lower" are training terms unless paired with explicit injury language.
+   - "why is upper pull on Wednesday a rowing session?"
+   - "why do I have upper pull listed as Wednesday but it opens as rowing?"
+   - "why does Wednesday say X but open as Y?"
+   - "session mismatch", "rowing session"
+   Only ask pain out of 10 when explicit pain/injury words are present: pain, hurt, sore, soreness, strain, injured, tight, tweaked, pulled my hamstring/back/groin.
+
+7. Non-injury signals — disambiguate carefully:
    - "fatigue" — global tired / cooked / drained / smashed without specific body part ("feeling cooked this week", "exhausted"). Estimate severity 1..10 from intensity language.
    - "soreness" — localised muscle soreness, NOT injury-level pain ("quads are sore", "tight calves", "DOMS"). payload.bodyPart is required. Severity 1..10 from descriptors.
    - "busy_week" — schedule constraint: limited time / capacity ("crazy week ahead", "can only train twice", "exam week"). Set payload.severity=5 by default.
    - "missed_session" — past tense report of skipping a session ("missed Tuesday", "didn't get to the field session"). Capture payload.requestedDate when given.
 
-7. Output VALID JSON only. No prose. No markdown.`;
+8. Program adjustment requests:
+   - "add conditioning to Monday", "remove conditioning from Friday", "can we move Monday" → request_program_adjustment.
+   - If pendingCoachProposal is set and the user says "sounds good", "yes", "do it", or similar confirmation, classify as request_program_adjustment, not general_question.
+   - You only classify intent. The app will apply or reject deterministic supported edits.
+
+9. Output VALID JSON only. No prose. No markdown.`;
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -215,6 +294,8 @@ export function parseCoachIntent(raw: unknown): CoachIntent | null {
     'injury_severity_reply',
     'active_injury_followup',
     'why_didnt_program_change',
+    'program_explanation',
+    'session_mismatch_question',
     'request_program_adjustment',
     'fatigue',
     'soreness',

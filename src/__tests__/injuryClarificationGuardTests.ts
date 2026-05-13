@@ -333,14 +333,11 @@ function asst(content: string): GuardMessage {
   const r = checkInjuryClarificationGuard([user('I want to do back squats')]);
   ok('"back squats" — no descriptor, no kw → no fire', r.fired === false);
 
-  // "Pull-ups feel good today" — "pull" is an injury kw, so isInjury=true.
-  // No body part → falls to step 5 (severity-first default with loop-safety).
-  // No prior clarifier in this single-message thread → fires. Documented as a
-  // residual false-positive (cheap recovery: athlete clarifies "no I'm fine").
+  // Training "pull" terminology is not an injury signal by itself.
   const r2 = checkInjuryClarificationGuard([user('Pull-ups feel good today')]);
   ok(
-    '"Pull-ups feel good today" — residual false-positive via kw "pull" (no body part)',
-    r2.fired === true,
+    '"Pull-ups feel good today" — training pull term → no fire',
+    r2.fired === false,
   );
 
   // True non-injury: no kw, no body part → no fire.
@@ -350,6 +347,32 @@ function asst(content: string): GuardMessage {
   // Body-part alone passes through cleanly.
   const r4 = checkInjuryClarificationGuard([user('did some hamstring work')]);
   ok('"did some hamstring work" — body alone → no fire', r4.fired === false);
+}
+
+// ─── 10b. Training session terminology must not route as injury ───
+{
+  console.log('\n[10b] Training session terminology is not injury');
+
+  const noFires: string[] = [
+    'Why is upper pull on Wednesday a rowing session?',
+    'Why do I have upper pull listed as Wednesday but it opens as rowing?',
+    'upper pull',
+    'pull day',
+    'pull session',
+    'push/pull',
+    'upper/lower',
+    'session mismatch',
+  ];
+  for (const input of noFires) {
+    const r = checkInjuryClarificationGuard([user(input)]);
+    ok(`"${input}" → does NOT ask pain severity`, r.fired === false);
+  }
+
+  const sore = checkInjuryClarificationGuard([user('Upper pull feels sore')]);
+  ok('"Upper pull feels sore" → soreness/injury language may ask severity', sore.fired === true);
+
+  const pulled = checkInjuryClarificationGuard([user('I pulled my upper back')]);
+  ok('"I pulled my upper back" → real injury phrase still fires', pulled.fired === true);
 }
 
 // ─── 11. Body + negative descriptor shortcut (high-priority gate) ───

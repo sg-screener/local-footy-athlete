@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -16,6 +16,11 @@ import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
+import {
+  isDevOnboardingSkipEnabled,
+  runDevOnboardingSkip,
+} from '../../utils/devOnboardingSkip';
+import { logger } from '../../utils/logger';
 
 // AFL background image
 const welcomeBg = require('../../../assets/footy-bg.jpg');
@@ -44,6 +49,8 @@ const FEATURES = [
 ];
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
+  const [isSkippingSetup, setIsSkippingSetup] = useState(false);
+  const showDevSkip = isDevOnboardingSkipEnabled();
   // Animations
   const heroOpacity = useRef(new Animated.Value(0)).current;
   const heroTranslateY = useRef(new Animated.Value(-16)).current;
@@ -81,6 +88,26 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
 
   const handleGetStarted = () => {
     navigation.navigate('Name');
+  };
+
+  // Exposed for unit testing — the live `onPress` handler must invoke this
+  // *exact* function so a press equals a call to runDevOnboardingSkip.
+  // Top-of-handler log proves the press fired even if state guards or
+  // async errors short-circuit later. The smoke wrapper greps for this
+  // line in the simulator system log.
+  const handleDevSkipSetup = async () => {
+    logger.info('[dev-skip] press handler invoked');
+    if (isSkippingSetup) {
+      logger.warn('[dev-skip] press handler skipped: already in-flight');
+      return;
+    }
+    setIsSkippingSetup(true);
+    try {
+      await runDevOnboardingSkip();
+    } catch (err: any) {
+      logger.error('[dev-onboarding-skip] Failed:', err?.message ?? err);
+      setIsSkippingSetup(false);
+    }
   };
 
   return (
@@ -168,6 +195,9 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             ]}
           >
             <Pressable
+              testID="onboarding-welcome-cta"
+              accessibilityRole="button"
+              accessibilityLabel="Build My Program"
               style={({ pressed }) => [
                 styles.ctaButton,
                 pressed && styles.ctaButtonPressed,
@@ -179,6 +209,48 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
             <Text style={styles.ctaSubtext}>
               Takes about 3 minutes
             </Text>
+            {/*
+             * TEMP DEV ONLY — Maestro smoke-test entry point.
+             *
+             * Required contract (verified by WelcomeScreen.dev-skip.test.tsx
+             * and used by .maestro/coach-bike-flow.yaml):
+             *   - testID === 'onboarding-dev-skip-button'
+             *   - accessibilityLabel === 'onboarding-dev-skip-button'
+             *     (intentionally identical to testID so Maestro's
+             *     accessibility-finder fallback resolves the same node)
+             *   - Visible *static* text contains 'Skip onboarding (dev)'
+             *     so Maestro can match by `text:` if the testID lookup
+             *     ever silently misses.
+             *   - onPress is bound DIRECTLY to handleDevSkipSetup, which
+             *     calls runDevOnboardingSkip first thing.
+             *
+             * Do NOT add `disabled` here — a transient `true` disables
+             * the press handler and Maestro's tap silently succeeds
+             * (returns COMPLETED) while onPress never fires. Style the
+             * in-flight state via the `isSkippingSetup` flag in style
+             * only; never gate the press itself.
+             */}
+            {showDevSkip && (
+              <Pressable
+                testID="onboarding-dev-skip-button"
+                accessible
+                accessibilityRole="button"
+                accessibilityLabel="onboarding-dev-skip-button"
+                hitSlop={16}
+                style={({ pressed }) => [
+                  styles.devSkipButton,
+                  pressed && styles.devSkipButtonPressed,
+                  isSkippingSetup && styles.devSkipButtonDisabled,
+                ]}
+                onPress={handleDevSkipSetup}
+              >
+                <Text style={styles.devSkipText}>
+                  {isSkippingSetup
+                    ? 'Skipping onboarding…'
+                    : 'Skip onboarding (dev)'}
+                </Text>
+              </Pressable>
+            )}
           </Animated.View>
         </View>
       </SafeAreaView>
@@ -298,5 +370,22 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     marginTop: 12,
+  },
+  devSkipButton: {
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  devSkipButtonPressed: {
+    backgroundColor: 'rgba(255,255,255,0.08)',
+  },
+  devSkipButtonDisabled: {
+    opacity: 0.6,
+  },
+  devSkipText: {
+    color: '#AAAAAA',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

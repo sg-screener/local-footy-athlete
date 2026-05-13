@@ -7,6 +7,13 @@ import { useInitializeApp } from '../hooks/useInitializeApp';
 import { useProfileStore } from '../store/profileStore';
 import { Loading } from '../components/common/Loading';
 import { View } from 'react-native';
+import { logger } from '../utils/logger';
+import { navigationRef } from './navigationRef';
+import {
+  getCurrentLeafRouteName,
+  setActualCurrentRoute,
+  setNavReady,
+} from './smokeNavState';
 
 // Custom dark theme for navigation
 const navigationTheme = {
@@ -36,6 +43,14 @@ export default function RootNavigator() {
     (state) => state.isOnboardingComplete,
   );
 
+  // Diagnostic log for the live-smoke wrapper — every navigator swap is
+  // visible in the simulator log so we can correlate dev-skip → tabs-mounted.
+  React.useEffect(() => {
+    logger.info(
+      `[navigation-state] isOnboardingComplete ${isOnboardingComplete ? 'true' : 'false'} isReady ${isReady ? 'true' : 'false'}`,
+    );
+  }, [isOnboardingComplete, isReady]);
+
   if (!isReady) {
     return (
       <View
@@ -52,8 +67,73 @@ export default function RootNavigator() {
   }
 
   return (
-    <NavigationContainer theme={navigationTheme}>
+    <NavigationContainer
+      theme={navigationTheme}
+      ref={navigationRef}
+      onReady={() => {
+        // Mirrors NavigationContainer's onReady event into the smoke
+        // log stream so the wrapper can prove the container actually
+        // reached the ready state (a prerequisite for the smoke route
+        // enforcer's dispatch).
+        logger.info('[navigation-container] onReady');
+        // Update the smoke state machine. NavigationContainer.onReady
+        // is the canonical "navigator is mounted and ready to dispatch"
+        // signal. The SmokeRouteEnforcer is gated on navReady === true.
+        setNavReady(true);
+        // Also seed actualCurrentRoute from the post-mount tree so the
+        // first state event isn't required to populate it.
+        const initial = navigationRef.isReady()
+          ? navigationRef.getRootState?.() ?? null
+          : null;
+        if (initial) {
+          const leaf = getCurrentLeafRouteName(initial);
+          if (leaf) {
+            setActualCurrentRoute(leaf);
+            logger.info(`[nav-route] currentRoute=${leaf}`);
+          }
+        }
+      }}
+      onStateChange={(state) => {
+        // SINGLE SOURCE OF TRUTH for actualCurrentRoute. The previous
+        // implementation used Tab.Navigator's screenListeners.state,
+        // which only sees the Tab navigator's own state — when the
+        // inner stack hadn't initialised, the recursion bottomed out
+        // at "CoachTab" instead of "Coach", and route-current-Coach
+        // never appeared. NavigationContainer.onStateChange fires for
+        // ALL state changes anywhere in the tree, and getCurrentLeafRouteName
+        // walks down to the deepest active leaf.
+        const leaf = state ? getCurrentLeafRouteName(state) : null;
+        if (leaf) {
+          setActualCurrentRoute(leaf);
+          logger.info(`[nav-route] currentRoute=${leaf}`);
+        }
+      }}
+    >
       {isOnboardingComplete ? <AppNavigator /> : <OnboardingNavigator />}
+      {/* root-navigator-live — debug marker. Wrapper uses it together
+          with app-navigator-live to localize a mount failure. If
+          root-navigator-live is visible but app-navigator-live is
+          not, the app is in onboarding state (or AppNavigator
+          early-returned a gate). If neither is visible, RootNavigator
+          itself isn't reached. */}
+      {__DEV__ ? (
+        <View
+          accessible={true}
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 18,
+            left: 6,
+            width: 8,
+            height: 8,
+            backgroundColor: '#2196F3',
+            zIndex: 999998,
+            elevation: 999998,
+          }}
+          testID="root-navigator-live"
+          accessibilityLabel="root-navigator-live"
+        />
+      ) : null}
     </NavigationContainer>
   );
 }

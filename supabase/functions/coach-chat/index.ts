@@ -48,7 +48,6 @@ const GUARD_INJURY_KEYWORDS: string[] = [
   'tweaked',
   'strain',
   'strained',
-  'pull',
   'pulled',
   'tight',
   'tightness',
@@ -1133,11 +1132,11 @@ async function callAnthropicAPI(messages: Message[], coachNotes: string[] = [], 
   const REQUEST_TIMEOUT_MS = 55_000;
 
   // ── Model + retry config ──
-  // Primary: Sonnet (best quality). Fallback: Haiku (fast, reliable, good enough
-  // for structured tool use — the coaching engine constrains structure anyway).
+  // Primary: Opus (highest quality). Fallback: Sonnet (lower cost, still strong
+  // enough for structured tool use — the coaching engine constrains structure anyway).
   // Policy: 2 primary attempts → 2 fallback attempts. Faster failover than 3+0.
-  const PRIMARY_MODEL = 'claude-sonnet-4-6';
-  const FALLBACK_MODEL = 'claude-haiku-4-5-20251001';
+  const PRIMARY_MODEL = 'claude-opus-4-7';
+  const FALLBACK_MODEL = 'claude-sonnet-4-6';
   const ATTEMPTS_PER_MODEL = 2;
   const BASE_DELAY_MS = 1500; // exponential: ~1.5s, ~3s
   const RETRYABLE_STATUSES = new Set([529, 503]);

@@ -16,9 +16,15 @@ import { SessionExplanationBanner } from '../../components/SessionExplanationBan
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
+import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useDayWorkout } from './useDayWorkout';
+import {
+  buildDayWorkoutSmokeContractErrorResult,
+  deriveDayWorkoutSmokeContract,
+  type DayWorkoutSmokeContractResult,
+} from './dayWorkoutSmokeContract';
 import {
   buildCueText,
   cleanNotes,
@@ -55,6 +61,7 @@ import {
 export default function DayWorkoutScreenV2() {
   const {
     date,
+    routeWorkoutId,
     workout,
     staleWarning,
     explanation,
@@ -90,10 +97,48 @@ export default function DayWorkoutScreenV2() {
     conditioningRowCount,
   } = useDayWorkout();
 
+  const smokeCoachBikeFlow =
+    __DEV__ && getSmokeRuntimeSignal().flow === 'coach-bike-flow';
+  // Wrap derivation in try/catch so a thrown contract still produces a
+  // failed marker with reason=contract-error instead of leaving the
+  // screen silent.
+  const smokeContract: DayWorkoutSmokeContractResult = React.useMemo(() => {
+    try {
+      return deriveDayWorkoutSmokeContract({
+        workout,
+        date,
+        workoutId: routeWorkoutId,
+      });
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[smoke-dayworkout-contract] derive-error ${(e as Error)?.message ?? String(e)}`,
+      );
+      return buildDayWorkoutSmokeContractErrorResult({
+        error: e,
+        date,
+        workoutId: routeWorkoutId,
+      });
+    }
+  }, [workout, date, routeWorkoutId]);
+
+  React.useEffect(() => {
+    if (!smokeCoachBikeFlow) return;
+    // eslint-disable-next-line no-console
+    console.warn(
+      smokeContract.state === 'ready'
+        ? `[smoke-dayworkout-contract] ready ${smokeContract.label}`
+        : `[smoke-dayworkout-contract] failed ${smokeContract.label}`,
+    );
+  }, [smokeCoachBikeFlow, smokeContract.state, smokeContract.label]);
+
   // ── Missing-workout fallback ──
   if (!workout) {
     return (
       <SafeAreaView style={styles.container}>
+        {smokeCoachBikeFlow
+          ? renderDayWorkoutSmokeContractMarkers(smokeContract)
+          : null}
         <View style={styles.headerTopRow}>
           <IconButton
             onPress={handleBack}
@@ -139,6 +184,22 @@ export default function DayWorkoutScreenV2() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/*
+        Top-of-screen mirror of the contract markers, mounted as a
+        sibling of the header. The IDENTICAL markers also render
+        beside day-workout-title below so they share that title's
+        gate. Either path proves the marker can reach Maestro; if
+        BOTH paths fail something is fundamentally wrong with the
+        screen render itself (caught upstream by day-workout-title's
+        own visibility assertion).
+        NOTE: only ONE set of testIDs will be visible at a time —
+        React Native's hit-test resolves to whichever is on top in
+        the layout. The inline-with-title set is the canonical one;
+        this top-level mirror exists purely as a redundancy.
+        Actually, the two sets would create duplicate testIDs which
+        Maestro treats as "ambiguous match" → fails the assertVisible.
+        Drop this top-level mirror; the inline marker is sufficient.
+      */}
       {/* ─── Sticky header ─── */}
       <View style={styles.header}>
         <View style={styles.headerTopRow}>
@@ -165,9 +226,31 @@ export default function DayWorkoutScreenV2() {
            * break the line if absolutely necessary; on any modern iPhone
            * the full sentence fits one line.
            */}
-          <Text style={styles.headerTitle} numberOfLines={2}>
+          <Text
+            style={styles.headerTitle}
+            numberOfLines={2}
+            testID="day-workout-title"
+            accessibilityLabel={`Workout: ${workout.name}`}
+          >
             {workout.name}
           </Text>
+          {/*
+            DayWorkout smoke contract markers — mounted in the EXACT
+            same render path as day-workout-title (sibling inside the
+            same headerContent View) so they share its render gate.
+            Maestro asserts:
+              assertVisible smoke-dayworkout-contract-mounted
+              assertVisible smoke-dayworkout-contract-ready
+              assertNotVisible smoke-dayworkout-contract-failed
+            If day-workout-title rendered but the markers below didn't,
+            the only explanation is a runtime exception between the
+            two — which the React error boundary would surface anyway.
+            The renderer NEVER returns null and ALWAYS emits the
+            mounted marker, so no silent state is possible.
+          */}
+          {smokeCoachBikeFlow
+            ? renderDayWorkoutSmokeContractMarkers(smokeContract)
+            : null}
           {(combinedSubtitle || explanation) ? (
             <Text style={styles.headerSubtitle}>
               {combinedSubtitle}
@@ -227,7 +310,12 @@ export default function DayWorkoutScreenV2() {
 
         {/* Session description (rare — usually null) */}
         {workout.description ? (
-          <Text style={styles.sessionDescription}>{workout.description}</Text>
+          <Text
+            style={styles.sessionDescription}
+            testID="day-workout-description"
+          >
+            {workout.description}
+          </Text>
         ) : null}
 
         {/* ── Main body: three render branches ── */}
@@ -287,6 +375,77 @@ export default function DayWorkoutScreenV2() {
 // ─────────────────────────────────────────────────────────────
 // Sub-components
 // ─────────────────────────────────────────────────────────────
+
+/**
+ * DayWorkout smoke contract markers — mounted directly in the same
+ * render path as testID="day-workout-title" so the markers and the
+ * title share the exact same gate. Maestro's order is:
+ *   1. assertVisible day-workout-title
+ *   2. assertVisible smoke-dayworkout-contract-mounted
+ *   3. assertVisible smoke-dayworkout-contract-ready
+ *   4. assertNotVisible smoke-dayworkout-contract-failed
+ *
+ * Renders THREE markers (no silent state allowed):
+ *   • smoke-dayworkout-contract-mounted — always renders in smoke
+ *     mode, regardless of workout / derivation. Proves the mount
+ *     point reached the live UI tree.
+ *   • smoke-dayworkout-contract-ready   — only when result.state === 'ready'.
+ *   • smoke-dayworkout-contract-failed  — only when result.state === 'failed'.
+ *
+ * All markers use real native Views with collapsable={false}, real
+ * backgroundColor, ≥30×30 px, MAX-INT zIndex/elevation.
+ */
+function renderDayWorkoutSmokeContractMarkers(
+  result: DayWorkoutSmokeContractResult,
+) {
+  const isReady = result.state === 'ready';
+  return (
+    <View
+      accessible={false}
+      collapsable={false}
+      pointerEvents="none"
+      style={styles.smokeContractMarkerRoot}
+      testID="smoke-dayworkout-contract-root"
+    >
+      {/* Mount probe — proves the render path reached this JSX. */}
+      <View
+        accessible={true}
+        accessibilityLabel={`smoke-dayworkout-contract-mounted ${result.label}`}
+        collapsable={false}
+        pointerEvents="none"
+        style={styles.smokeContractMounted}
+        testID="smoke-dayworkout-contract-mounted"
+      >
+        <Text style={styles.smokeContractMarkerText}>
+          {`smoke-dayworkout-contract-mounted ${result.label}`}
+        </Text>
+      </View>
+      {isReady ? (
+        <View
+          accessible={true}
+          accessibilityLabel={result.label}
+          collapsable={false}
+          pointerEvents="none"
+          style={[styles.smokeContractMarker, styles.smokeContractReady]}
+          testID="smoke-dayworkout-contract-ready"
+        >
+          <Text style={styles.smokeContractMarkerText}>{result.label}</Text>
+        </View>
+      ) : (
+        <View
+          accessible={true}
+          accessibilityLabel={result.label}
+          collapsable={false}
+          pointerEvents="none"
+          style={[styles.smokeContractMarker, styles.smokeContractFailed]}
+          testID="smoke-dayworkout-contract-failed"
+        >
+          <Text style={styles.smokeContractMarkerText}>{result.label}</Text>
+        </View>
+      )}
+    </View>
+  );
+}
 
 /**
  * CoachNoteBanner — single concise sentence at the top of the screen.
@@ -908,6 +1067,51 @@ function PlayIcon() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0C0C0C' },
+  smokeContractMarkerRoot: {
+    // Container holds the mount probe + ready/failed marker. Real
+    // size (60×30) + absolute position so it survives any parent
+    // layout collapse (the renderer is mounted as a sibling of
+    // day-workout-title inside the header).
+    position: 'absolute',
+    top: 96,
+    left: 96,
+    width: 64,
+    height: 30,
+    zIndex: 2147483647,
+    elevation: 2147483647,
+  },
+  smokeContractMounted: {
+    // Cyan 30×30 mount probe — always rendered in smoke mode.
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: 30,
+    height: 30,
+    backgroundColor: '#00B8D4',
+    zIndex: 2147483647,
+    elevation: 2147483647,
+  },
+  smokeContractMarker: {
+    // Ready/failed state marker — offset from the mount probe so
+    // Maestro hit-tests can distinguish them.
+    position: 'absolute',
+    top: 0,
+    left: 32,
+    width: 30,
+    height: 30,
+    zIndex: 2147483647,
+    elevation: 2147483647,
+  },
+  smokeContractReady: {
+    backgroundColor: '#00C853',
+  },
+  smokeContractFailed: {
+    backgroundColor: '#FF1744',
+  },
+  smokeContractMarkerText: {
+    fontSize: 1,
+    color: 'transparent',
+  },
 
   // ── Header ──
   // The bottom divider mirrors the Finish section's whisper line: a

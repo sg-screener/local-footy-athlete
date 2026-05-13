@@ -1,0 +1,243 @@
+appId: com.localfootyathlete.app
+name: Coach bike-flow regression smoke (env bootstrap)
+tags:
+  - smoke
+  - coach
+  - regression
+---
+# Same product smoke as coach-bike-flow.yaml, but bootstrap is delivered
+# by EXPO_PUBLIC_SMOKE_BOOTSTRAP=coach-bike-flow at JS app launch.
+# There is intentionally no openLink step in this flow.
+#
+# CRITICAL — no clearState / no relaunch.
+# scripts/smoke-coach-bike-flow-fresh.js launches the app once, opens the
+# dev-client URL against the env-bootstrap Metro server, and proves the
+# runtime markers BEFORE Maestro starts. If we then did a second
+# `launchApp clearState: true` here, Maestro would wipe the bootstrapped
+# Zustand state and force a brand-new JS context to re-run bootstrap from
+# scratch — which racing against the route assertions is exactly what
+# produced the previous failure. Instead we attach to the
+# already-running, already-bootstrapped app.
+#
+# ──────────────────────────────────────────────────────────────────────
+# State-machine markers (src/navigation/smokeNavState.ts)
+#
+# Every assertion below is sourced from the single state machine. The
+# render pipeline is:
+#
+#   App.tsx                 → setRuntimeReady(true)
+#   smokeBootstrap.ts       → setRouteIntent('Coach') + setBootstrapComplete(true)
+#   RootNavigator.tsx       → setNavReady(true) on NavigationContainer.onReady
+#   RootNavigator.tsx       → setActualCurrentRoute(getCurrentLeafRouteName(state))
+#                             on NavigationContainer.onStateChange (the SINGLE
+#                             source of truth for current route)
+#   AppNavigator.tsx        → SmokeRouteEnforcer reads navReady +
+#                             bootstrapComplete + routeIntent, then dispatches
+#                             CommonActions.reset to CoachTab
+#   CoachScreen.tsx         → setCoachReady(isFocused)
+#
+# main-tabs-root is intentionally NOT a readiness gate in this flow.
+# It exists as a layout marker; the YAML does not depend on it.
+# ──────────────────────────────────────────────────────────────────────
+- launchApp:
+    clearState: false
+    stopApp: false
+
+# 1. Runtime alive (App.tsx evaluated module body, setRuntimeReady fired).
+- extendedWaitUntil:
+    visible:
+      id: "smoke-runtime-ready"
+    timeout: 30000
+
+# 2. Bootstrap (profile + program + onboarding complete) finished AND the
+#    state machine recorded bootstrapComplete = true.
+- extendedWaitUntil:
+    visible:
+      id: "smoke-bootstrap-complete"
+    timeout: 30000
+
+# 3. NavigationContainer.onReady has fired → setNavReady(true). This is
+#    the precondition for SmokeRouteEnforcer.
+- extendedWaitUntil:
+    visible:
+      id: "smoke-nav-ready"
+    timeout: 15000
+
+# 4. NavigationContainer.onStateChange resolved the active leaf route to
+#    'Coach'. This is the SINGLE source of truth for the current route —
+#    no longer derived from screenListeners or initialRouteName intent.
+- extendedWaitUntil:
+    visible:
+      id: "smoke-route-current-Coach"
+    timeout: 15000
+
+# 5. Composite — intent AND actual leaf route both resolve to Coach.
+#    Cannot render unless smoke-route-current-Coach is also visible.
+- extendedWaitUntil:
+    visible:
+      id: "smoke-bootstrap-route-ready"
+    timeout: 5000
+
+# 6. Sanity — the harness must NOT be in mismatch state.
+- assertNotVisible:
+    id: "smoke-route-mismatch"
+
+# 7. CoachScreen is focused and interactive.
+- extendedWaitUntil:
+    visible:
+      id: "coach-ready"
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "coach-input"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "coach-send-button"
+    timeout: 5000
+
+# 8. Hard preflight state machine. Three separate mount probes precede
+# the four-state visible-week machine; each probe maps to a precise
+# wrapper diagnostic label so a "no marker visible" failure cannot be
+# silent:
+#
+#   1. assertVisible smoke-build-fingerprint
+#      App.tsx-owned 30×30 lime square. Survives any failure in the
+#      imported harness module / navigators / Zustand. If missing →
+#      "Stale bundle / App.tsx marker not mounted."
+#   2. assertVisible smoke-harness-mounted
+#      Rendered by SmokeCoachBikeHarness itself BEFORE the state
+#      machine runs. If missing while fingerprint is visible →
+#      "Harness not mounted" (App.tsx OK; harness module load/render
+#      broke).
+#   3. assertVisible smoke-visible-week-debug
+#      Carries state+reason+route+week in accessibilityLabel.
+#      If missing while harness-mounted is visible →
+#      "Harness mounted but debug marker missing" (state derivation
+#      threw or marker render hit a layout problem).
+#   4. assertNotVisible smoke-visible-week-inactive  → Harness inactive
+#   5. extendedWaitUntil  smoke-precoach-week-ready  → 15s, tolerates pending
+#   6. assertNotVisible smoke-visible-week-pending   → Harness pending
+#   7. assertNotVisible smoke-visible-week-missing   → Harness missing
+- assertVisible:
+    id: "smoke-build-fingerprint"
+- assertVisible:
+    id: "smoke-harness-mounted"
+- assertVisible:
+    id: "smoke-visible-week-debug"
+- assertNotVisible:
+    id: "smoke-visible-week-inactive"
+- extendedWaitUntil:
+    visible:
+      id: "smoke-precoach-week-ready"
+    timeout: 15000
+- assertNotVisible:
+    id: "smoke-visible-week-pending"
+- assertNotVisible:
+    id: "smoke-visible-week-missing"
+
+- tapOn:
+    id: "coach-input"
+- inputText: "Why is there a mid week row?"
+- tapOn:
+    id: "coach-send-button"
+- waitForAnimationToEnd:
+    timeout: 12000
+- assertVisible:
+    id: "coach-message-list"
+
+# Negative contract — the latest assistant reply must NOT contain any
+# of the forbidden "Which session…?" / "I can't see…" clarifier strings.
+# Rendered by CoachScreen's FORBIDDEN_CLARIFIER_RE detector.
+- assertNotVisible:
+    id: "smoke-coach-unexpected-clarifier"
+
+- tapOn:
+    id: "coach-input"
+- inputText: "Can you change to a bike?"
+- tapOn:
+    id: "coach-send-button"
+- waitForAnimationToEnd:
+    timeout: 15000
+- assertVisible:
+    id: "coach-message-list"
+
+# This is THE turn where target binding has historically leaked into a
+# clarifier. If "Which session should I switch?" / "Which session should
+# the bike change apply to?" / similar emit, smoke-coach-unexpected-
+# clarifier renders and this assertion fails fast.
+- assertNotVisible:
+    id: "smoke-coach-unexpected-clarifier"
+
+- tapOn:
+    id: "coach-input"
+- inputText: "You changed to an assault bike I wanted a normal bike"
+- tapOn:
+    id: "coach-send-button"
+- waitForAnimationToEnd:
+    timeout: 15000
+- assertVisible:
+    id: "coach-message-list"
+
+- assertNotVisible:
+    id: "smoke-coach-unexpected-clarifier"
+
+# ── Smoke-only direct Coach → DayWorkout navigation ─────────────────
+#
+# After the third coach message we no longer route through Program/Home.
+# The purpose of this smoke is the final visible DayWorkout contract,
+# not Program tab navigation. CoachScreen reads the resolved week (same
+# source of truth HomeScreen uses — useResolvedWeek →
+# buildProgramTabProjectedWeek → projectVisibleDay), and renders a
+# smoke-only Pressable that dispatches navigate('ProgramTab', { screen:
+# 'DayWorkout', params: { workoutId, date } }) through the root
+# navigationRef.
+#
+# Gates rendered by CoachScreen (src/screens/coach/CoachScreen.tsx):
+#   smoke-wednesday-workout-ready    — stable Wednesday Easy Aerobic Flush
+#                                      target resolved (Rower not required)
+#   smoke-open-wednesday-workout     — tappable control (only when ready)
+#   smoke-wednesday-workout-missing  — fallback negative marker with
+#                                      [smoke-open-wednesday-workout]
+#                                      missing reason=<reason> log.
+#
+# Negative contract first — its presence means CoachScreen couldn't
+# resolve Wednesday's workout.
+- assertNotVisible:
+    id: "smoke-wednesday-workout-missing"
+- extendedWaitUntil:
+    visible:
+      id: "smoke-wednesday-workout-ready"
+    timeout: 10000
+- extendedWaitUntil:
+    visible:
+      id: "smoke-open-wednesday-workout"
+    timeout: 10000
+- tapOn:
+    id: "smoke-open-wednesday-workout"
+- waitForAnimationToEnd:
+    timeout: 5000
+
+- assertVisible:
+    id: "day-workout-title"
+
+# DayWorkout final contract markers — rendered inline with
+# day-workout-title in DayWorkoutScreenV2. THREE assertions in this
+# exact order so each failure surfaces a distinct wrapper label:
+#   1. smoke-dayworkout-contract-mounted  → "DayWorkout mounted but
+#      contract marker mount point missing." (mount probe — proves
+#      the render path reached the marker JSX).
+#   2. smoke-dayworkout-contract-ready    → "DayWorkout final contract
+#      failed: <label>" (contract evaluation — Easy Aerobic Flush /
+#      Bike / 20min / easy intensity, no Rower / Assault / Swapped).
+#   3. smoke-dayworkout-contract-failed   → "DayWorkout contract
+#      marker rendered silently." (assertNotVisible — must be absent
+#      when ready was visible).
+- assertVisible:
+    id: "smoke-dayworkout-contract-mounted"
+- assertVisible:
+    id: "smoke-dayworkout-contract-ready"
+- assertNotVisible:
+    id: "smoke-dayworkout-contract-failed"
+
+- takeScreenshot: artifacts/coach-bike-flow-wed.png

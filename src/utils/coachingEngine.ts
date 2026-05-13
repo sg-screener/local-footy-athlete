@@ -68,8 +68,9 @@ export interface SessionAllocation {
   /**
    * Volume variant of the conditioning block:
    *   - 'standard'  : normal template volume (default)
-   *   - 'reduced'   : ~50% volume — used when sprint is being retrofitted
-   *                   into a slot whose preferred pattern was different.
+   *   - 'reduced'   : lower fatigue dose — used when sprint is being
+   *                   retrofitted into a slot whose preferred pattern was
+   *                   different, and for recovery-biased aerobic flushes.
    *   - 'micro_dose': very low volume neural exposure — used as the last
    *                   resort so sprint category is never dropped from a week.
    * Currently only meaningful for sprint sessions.
@@ -3469,6 +3470,8 @@ function buildWeeklyPlan(
 //   CORE
 //     - Place standalone aerobic_base on Wednesday (G−3) when Wed is a
 //       non-team training day and not already a core strength slot.
+//       If Wednesday sits between Tue/Thu team training, bias it toward
+//       recovery: 20–30min easy bike/row, optional, 3–4/10.
 //     - When Wed is unavailable (team day OR not in selectedDays) AND
 //       teamCount ≤ 1, fall back to Tuesday (G−4) as an S+C aerobic
 //       finisher attached to an existing strength session.
@@ -3569,11 +3572,20 @@ function applyInSeasonConditioningFloor(
   const g3Eligible =
     !!g3 && !isTeamSlot(g3) && g3.tier !== 'core';
   if (g3Eligible) {
+    const wedBetweenTueThuTeam =
+      teamDayNumSet.has(dayNameToNumber('Tuesday')) &&
+      teamDayNumSet.has(dayNameToNumber('Thursday')) &&
+      gameDayNum === dayNameToNumber('Saturday');
     g3!.tier = 'optional';
-    g3!.focus =
-      'Aerobic base — easy continuous run/erg (low intensity, ~25–35min)';
+    g3!.focus = wedBetweenTueThuTeam
+      ? 'Easy Aerobic Flush — optional bike/row, 20–30min, 3–4/10. Skip if legs feel heavy or Thursday quality would suffer.'
+      : 'Aerobic base — easy continuous run/erg (low intensity, ~25–35min)';
     g3!.conditioningCategory = 'aerobic_base';
     g3!.conditioningFlavour = 'aerobic';
+    if (wedBetweenTueThuTeam) {
+      g3!.conditioningVariant = 'reduced';
+      g3!.ergModality = 'row';
+    }
     g3!.isHardExposure = false;
     corePlaced = true;
   } else if (teamCount <= 1) {

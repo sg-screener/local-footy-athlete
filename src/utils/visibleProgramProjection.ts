@@ -49,6 +49,12 @@ import {
   type ConstraintRegion,
 } from './exposureEngine';
 import { logger } from './logger';
+import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
+import {
+  getModalityPreferenceFor,
+  type ModalityPreference,
+} from '../store/coachPreferencesStore';
+import { applyModalityPreferenceToWorkout } from './coachModalitySwap';
 
 /** Map InjuryBucket → ConstraintRegion. Conservative defaults. */
 const BUCKET_TO_REGION: Record<InjuryBucket, ConstraintRegion> = {
@@ -80,6 +86,12 @@ export interface ProjectInput {
   todayISO: string;
   /** Additional constraints (fatigue, soreness, schedule, etc.) to layer on top. */
   extraConstraints?: Constraint[];
+  /**
+   * Recurring modality preferences (session-name → from/to). Optional.
+   * When omitted the projection reads from the live store; tests inject
+   * a deterministic map so they don't need to spin up Zustand.
+   */
+  modalityPreferences?: Record<string, ModalityPreference>;
 }
 
 export interface ProjectOutcome {
@@ -156,39 +168,73 @@ function buildActiveConstraints(input: ProjectInput): Constraint[] {
 export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
   const { day, activeInjury, overrideContext, todayISO } = input;
 
+  // ── Pass 0: recurring modality preference ──
+  // Apply BEFORE normalization + the past-date short-circuit so:
+  //   (a) the lookup uses the ORIGINAL session name the orchestrator
+  //       stored the preference under (e.g. "Easy Aerobic Flush",
+  //       not the conditioning-only normalized title "Easy Row"),
+  //   (b) future weeks pick up the preference automatically,
+  //   (c) past dates are excluded — the preference is forward-looking
+  //       and never edits completed sessions.
+  let preprocessedWorkout: Workout | null = day.workout ?? null;
+  if (
+    preprocessedWorkout &&
+    day.date >= todayISO &&
+    !isRecovery(preprocessedWorkout) &&
+    !isGame(preprocessedWorkout)
+  ) {
+    const originalSessionName = preprocessedWorkout.name ?? '';
+    const prefMap = input.modalityPreferences;
+    const pref = getModalityPreferenceFor(originalSessionName, prefMap);
+    if (pref) {
+      const rewritten = applyModalityPreferenceToWorkout(preprocessedWorkout, {
+        from: pref.from,
+        to: pref.to,
+        bikeLabel: pref.bikeLabel ?? null,
+      });
+      if (rewritten !== preprocessedWorkout) {
+        preprocessedWorkout = rewritten as Workout;
+      }
+    }
+  }
+
+  let visibleDay = preprocessedWorkout
+    ? { ...day, workout: normalizeVisibleWorkoutIdentity(preprocessedWorkout) }
+    : day;
+
   const constraints = buildActiveConstraints(input);
 
   // No active constraints → nothing to do.
   if (constraints.length === 0) {
-    return { day, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
+    return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
-  if (!day.workout) {
-    return { day, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
+  if (!visibleDay.workout) {
+    return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
   // Past dates are immutable.
-  if (day.date < todayISO) {
-    return { day, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
+  if (visibleDay.date < todayISO) {
+    return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
   // Recovery / game stubs untouched.
-  if (isRecovery(day.workout) || isGame(day.workout)) {
-    return { day, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
+  if (isRecovery(visibleDay.workout) || isGame(visibleDay.workout)) {
+    return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
   // Injury-authored override that ALREADY carries notes — skip to
   // avoid double-mutation. Non-injury manual overrides are STILL
   // re-checked so an athlete can't bypass constraints by editing.
   if (
-    day.source === 'manual' &&
+    visibleDay.source === 'manual' &&
     overrideContext?.intent === 'injury' &&
-    alreadyHasInjuryNote(day.workout)
+    alreadyHasInjuryNote(visibleDay.workout)
   ) {
-    return { day, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
+    return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
 
   // ── Pass 1: tag-based filter (legacy, only for injury constraint) ──
-  let workoutNow: Workout = day.workout;
+  let workoutNow: Workout = visibleDay.workout;
   let tagChanged = false;
   if (activeInjury && activeInjury.bucket && activeInjury.status !== 'resolved') {
-    const tagFiltered = applyInjuryFilterToWorkout(day.workout, {
+    const tagFiltered = applyInjuryFilterToWorkout(visibleDay.workout, {
       bodyPart: activeInjury.bodyPart,
       bucket: activeInjury.bucket,
       severity: activeInjury.severity,
@@ -208,7 +254,7 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
 
   const filterApplied = tagChanged || exposureApplied;
   if (!filterApplied) {
-    return { day, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
+    return { day: visibleDay, injuryFilterApplied: false, removedNames: [], replacementNames: [] };
   }
 
   // ── Pass 3: validator sweep ──
@@ -232,7 +278,7 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
   }
 
   return {
-    day: { ...day, workout: workoutNow },
+    day: { ...visibleDay, workout: normalizeVisibleWorkoutIdentity(workoutNow) },
     injuryFilterApplied: true,
     removedNames: finalRemoved,
     replacementNames: [],
@@ -247,6 +293,12 @@ export function projectAndLog(
   input: ProjectInput & { surface?: 'home' | 'detail' | 'calendar' },
 ): ResolvedDay {
   const surface = input.surface ?? 'home';
+  const traceEnabled =
+    process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS === 'true' &&
+    process.env.DEBUG_SCHEDULE_TRACE === 'true';
+  if (!traceEnabled) {
+    return projectVisibleDay(input).day;
+  }
   const beforeExercises = (input.day.workout?.exercises ?? [])
     .map((e: any) => e.exercise?.name)
     .filter(Boolean);

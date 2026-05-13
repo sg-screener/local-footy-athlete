@@ -140,6 +140,16 @@ function fallbackFromText(text: string | undefined): string {
  */
 export function resolveSessionDisplayName(input: SessionNameInput): string {
   const isTeam = !!input.isTeamDay;
+  const isStandaloneConditioning =
+    !!input.conditioningFlavour && !input.hasCombinedConditioning;
+
+  // A standalone conditioning slot may be a row/bike/run prescription even
+  // when the planner focus still carries a stale strength label. Do not let
+  // "row" infer "Upper Pull" for an erg session.
+  if (!isTeam && isStandaloneConditioning) {
+    const existingName = (input.name || '').trim();
+    if (existingName) return existingName;
+  }
 
   // Step 1: determine strength label (if any).
   let patterns: MovementPattern[] = [];

@@ -14,6 +14,7 @@
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
+process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = 'true';
 
 import { LLMCoachIntentClassifier } from '../utils/llmCoachIntentClassifier';
 import type { CoachContextPacket, CoachIntent } from '../utils/coachIntent';
@@ -251,6 +252,8 @@ section('[7] All intent kinds parse correctly');
     'injury_severity_reply',
     'active_injury_followup',
     'why_didnt_program_change',
+    'program_explanation',
+    'session_mismatch_question',
     'request_program_adjustment',
     'fatigue',
     'missed_session',

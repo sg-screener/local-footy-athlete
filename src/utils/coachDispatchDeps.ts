@@ -27,11 +27,13 @@ import { buildScheduleStateImperative } from './coachWeekDiff';
 import {
   resolveWeekWithConditioning,
   getMondayStr,
+  getMondayForDate,
   addDays,
 } from './sessionResolver';
 import {
   snapshotVisibleWorkout,
   computeVisibleDiff,
+  assertVerifiedProgramMutation,
 } from './visibleWorkoutDiff';
 import { inspectCoachState } from './coachStateInspector';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
@@ -52,6 +54,7 @@ import {
   isSeverityExplicitInMessage,
 } from './verifiedCoachCommunication';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
+import { verifyRenderedProgramMutation } from './visibleProgramReadModel';
 
 function capitalize(s: string): string {
   if (!s) return s;
@@ -463,6 +466,95 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
         cleared,
         remainingActiveCount: remainingActive.length,
         derivedCardShouldRender: remainingActive.length > 0 || !!currentWeekCard?.active,
+      };
+    },
+
+    applyProgramAdjustmentEvents(events, intendedChange) {
+      const targetDates = intendedChange.targetDates ?? events.map((e) => e.date);
+      const visibleMonday = getMondayForDate(todayISO);
+      const nextVisibleSunday = addDays(visibleMonday, 13);
+      const outsideVisibleWindow = targetDates.some(
+        (d) => d < visibleMonday || d > nextVisibleSunday,
+      );
+      if (outsideVisibleWindow) {
+        logger.debug('[program-adjustment] target outside visible window', {
+          todayISO,
+          visibleMonday,
+          nextVisibleSunday,
+          targetDates,
+        });
+        return {
+          eventsApplied: 0,
+          visibleDiff: [],
+          success: false,
+          reason: 'target_outside_visible_window',
+        };
+      }
+      const weekStarts = Array.from(new Set(targetDates.map((d) => getMondayForDate(d))));
+      const beforeWeek = weekStarts.flatMap((monday) =>
+        resolveWeekWithConditioning(monday, buildScheduleStateImperative()),
+      );
+
+      const apply = applyAdjustmentEvents(events, {
+        todayISO,
+        allowFutureWeeks: true,
+        allowPastDates: true,
+      });
+
+      const afterWeek = weekStarts.flatMap((monday) =>
+        resolveWeekWithConditioning(monday, buildScheduleStateImperative()),
+      );
+      const verified = assertVerifiedProgramMutation({
+        beforeWeek,
+        afterWeek,
+        intendedChange,
+      });
+      const renderedChecks = targetDates.map((targetDate) =>
+        verifyRenderedProgramMutation({
+          requestedDay: 'Monday',
+          todayISO,
+          targetDate,
+          beforeWorkout: beforeWeek.find((d) => d.date === targetDate)?.workout ?? null,
+        }),
+      );
+      const renderedSuccess =
+        renderedChecks.length > 0 &&
+        renderedChecks.every(
+          (r) =>
+            r.overrideKeyWritten &&
+            r.programTabProjectionHasConditioning &&
+            r.dayWorkoutProjectionHasConditioning,
+        );
+
+      logger.debug('[program-adjustment] applied', {
+        eventsEmitted: events.length,
+        eventsApplied: apply.applied.length,
+        rejected: apply.rejected.map((r) => `${r.kind}@${r.date ?? '-'}`),
+        success: verified.success && renderedSuccess,
+        reason: verified.reason,
+        changedDates: verified.changedDates,
+        renderedSuccess,
+      });
+
+      if (verified.success && renderedSuccess && apply.applied.length > 0) {
+        const touchedWeeks = Array.from(
+          new Set(verified.changedDates.map((date) => getMondayForDate(date))),
+        );
+        for (const weekStart of touchedWeeks) {
+          useCoachUpdatesStore.getState().upsertCoachUpdate(weekStart, {
+            source: 'uae',
+            reason: 'User-requested program adjustment',
+            rules: [],
+            changes: ['Added light aerobic intervals after strength'],
+          });
+        }
+      }
+
+      return {
+        eventsApplied: apply.applied.length,
+        visibleDiff: verified.changedDates,
+        success: verified.success && renderedSuccess,
+        reason: verified.reason ?? (renderedSuccess ? undefined : 'rendered_projection_missing_conditioning'),
       };
     },
   };

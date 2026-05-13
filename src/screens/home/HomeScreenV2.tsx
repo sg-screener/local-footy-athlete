@@ -207,7 +207,10 @@ export default function HomeScreenV2() {
       : getUpdateCoachPrefill(activeConstraints);
     navigation.navigate('CoachTab', { screen: 'Coach', params: { prefill } });
   }, [derivedView, activeConstraints, navigation]);
-
+  // Smoke harness no longer renders any controls in HomeScreen. The
+  // coach-bike-flow regression now opens Wednesday's DayWorkout directly
+  // from CoachScreen (see CoachScreen.handleSmokeOpenWednesdayWorkout),
+  // so HomeScreen owns no smoke testIDs and produces no smoke logs.
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <ScrollView
@@ -703,6 +706,8 @@ function DayRow({
       padding="none"
       radius="lg"
       onPress={onPress}
+      testID={`day-row-${(day.short || '').toString().toLowerCase()}`}
+      accessibilityLabel={`Day ${day.short ?? ''}${hasWorkout ? ` ${day.workout.name}` : ''}`}
       style={[
         styles.dayRow,
         // Rest-of-week rows sit on a darker, borderless surface — a
@@ -798,7 +803,7 @@ function DayRow({
               <Text style={styles.expandedMeta}>
                 {day.workout.exercises?.length || 0} exercises
               </Text>
-              <Button label="View Workout" size="lg" glow={false} onPress={onViewWorkout} />
+              <Button label="View Workout" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
             </>
           )}
         </View>

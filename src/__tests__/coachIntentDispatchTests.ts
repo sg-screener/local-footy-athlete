@@ -59,16 +59,18 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { buildCoachContextPacket } from '../utils/coachContextPacket';
 import { inspectCoachState } from '../utils/coachStateInspector';
 import { parseCoachIntent, COACH_INTENT_SYSTEM_PROMPT, type CoachIntent, type CoachIntentClassifier, type CoachContextPacket } from '../utils/coachIntent';
+import { dispatchCoachIntent, type DispatchDeps } from '../utils/coachIntentDispatcher';
 import type { InjuryState } from '../utils/injuryProgression';
 import { extractBodyPart } from '../utils/injuryAdjustmentEngine';
 
-function ex(name: string): any {
+function ex(name: string, notes?: string): any {
   return { id:`we-${name}`, workoutId:'wk', exerciseId:`ex-${name}`, exerciseOrder:0, prescribedSets:3, prescribedRepsMin:6, prescribedRepsMax:8, prescribedWeightKg:0, restSeconds:0,
+    notes,
     exercise:{ id:`ex-${name}`, name, description:name, exerciseType:'Compound', muscleGroups:[], equipmentRequired:[], difficultyLevel:'Intermediate', createdAt:'', updatedAt:'' },
     createdAt:'', updatedAt:'' };
 }
 function wk(name: string, dow: number, opts: any = {}): any {
-  return { id:`w-${dow}`, microcycleId:'mc', dayOfWeek:dow, name, description:'', durationMinutes:60, intensity:'Moderate', workoutType: opts.workoutType || 'Strength', sessionTier: opts.sessionTier || 'core', exercises: opts.exercises || [], createdAt:'', updatedAt:'' };
+  return { id:`w-${dow}`, microcycleId:'mc', dayOfWeek:dow, name, description:'', durationMinutes:60, intensity:'Moderate', ...opts, workoutType: opts.workoutType || 'Strength', sessionTier: opts.sessionTier || 'core', exercises: opts.exercises || [], createdAt:'', updatedAt:'' };
 }
 function injury(severity: number, bodyPart: string = 'hammy', status: InjuryState['status'] = 'active'): InjuryState {
   return { bodyPart, bucket: 'hamstring' as any, severity, initialSeverity: severity, status,
@@ -116,6 +118,9 @@ section('[2] COACH_INTENT_SYSTEM_PROMPT — contains critical rules');
   ok('mentions activeInjury rule', /activeInjury/.test(COACH_INTENT_SYSTEM_PROMPT));
   ok('mentions never re-ask severity', /\bnever\b.*severity/i.test(COACH_INTENT_SYSTEM_PROMPT));
   ok('mentions why_didnt_program_change', /why_didnt_program_change/.test(COACH_INTENT_SYSTEM_PROMPT));
+  ok('mentions program_explanation', /program_explanation/.test(COACH_INTENT_SYSTEM_PROMPT));
+  ok('mentions session_mismatch_question', /session_mismatch_question/.test(COACH_INTENT_SYSTEM_PROMPT));
+  ok('teaches upper pull is training terminology', /upper pull/.test(COACH_INTENT_SYSTEM_PROMPT));
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -257,6 +262,8 @@ section('[6] Mocked classifier dispatch — 7 spec scenarios route correctly');
         mutated = true;
         break;
       case 'why_didnt_program_change':
+      case 'program_explanation':
+      case 'session_mismatch_question':
       case 'general_question':
       case 'fatigue':
       case 'missed_session':
@@ -316,6 +323,150 @@ section('[6] Mocked classifier dispatch — 7 spec scenarios route correctly');
       payload: { concern: 'whether to train at all' } });
   eq('(7) routed to general_question', r7.intent.intent, 'general_question');
   ok('(7) no mutation', r7.mutated === false);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 7. Session mismatch questions do not become injury clarifiers.
+// ─────────────────────────────────────────────────────────────────────
+section('[7] Session mismatch wording routes to program explanation, not injury');
+{
+  resetAll();
+  baseWeekDef = {
+    2: wk('Team Training + Upper Pull', 2, {
+      workoutType: 'Strength',
+      sessionTier: 'core',
+      exercises: [ex('Pull-Up')],
+    }),
+    3: wk('Upper Pull', 3, {
+      workoutType: 'Conditioning',
+      sessionTier: 'optional',
+      conditioningFlavour: 'aerobic',
+      exercises: [ex('40min zone 2 row')],
+      coachNotes: ['Shifted to non-running modality to manage weekly run load.'],
+    }),
+  };
+  const packet = buildCoachContextPacket({
+    userMessage: 'Why is upper pull on Wednesday a rowing session?',
+    recentMessages: [],
+    todayISO: FIXED_TODAY,
+  });
+  const deps: DispatchDeps = {
+    reapplyInjuryAtSeverity: () => ({ applied: 0, visibleDiffDetected: false }),
+    runProgression: () => 'progression should not run',
+    runUAEForInjury: () => 'injury should not run',
+    inspect: () => ({ kind: 'general_state', message: 'inspect should not run' }),
+    generalReply: () => 'general should not run',
+    applyNonInjuryConstraint: () => ({ reply: 'non-injury should not run', mutated: false }),
+    applyConstraintResolution: () => ({ cleared: [], remainingActiveCount: 0 }),
+    applyProgramAdjustmentEvents: () => ({ success: false, eventsApplied: 0, visibleDiff: [] }),
+  };
+
+  const outcome = dispatchCoachIntent({
+    intent: 'session_mismatch_question',
+    confidence: 0.95,
+    needsClarification: false,
+  }, packet, deps);
+
+  ok('dispatcher handles session mismatch', outcome.handled === true);
+  eq('reply mode', outcome.replyMode, 'program_explanation');
+  ok('does not mutate', outcome.mutated === false);
+  ok('reply does not ask pain score', !/pain out of 10|how bad is it/i.test(outcome.reply));
+  ok('reply explains aerobic / non-running rationale', /aerobic base|running load|Zone 2/i.test(outcome.reply));
+  ok('reply targets Wednesday row, not Tuesday', /Wednesday/i.test(outcome.reply) && !/Tuesday/i.test(outcome.reply));
+
+  const misclassified = dispatchCoachIntent({
+    intent: 'new_injury_report',
+    confidence: 0.5,
+    needsClarification: true,
+    clarificationQuestion: 'How bad is it? Rough pain out of 10.',
+  }, packet, deps);
+  ok('misclassified injury clarifier is suppressed', misclassified.handled === true);
+  eq('suppressed reply mode', misclassified.replyMode, 'program_explanation');
+  ok('suppressed reply does not ask pain score', !/pain out of 10|how bad is it/i.test(misclassified.reply));
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 8. Row programming questions inspect the visible row session.
+// ─────────────────────────────────────────────────────────────────────
+section('[8] Program explanation for mid-week row');
+{
+  const deps: DispatchDeps = {
+    reapplyInjuryAtSeverity: () => ({ applied: 0, visibleDiffDetected: false }),
+    runProgression: () => 'progression should not run',
+    runUAEForInjury: () => 'injury should not run',
+    inspect: () => ({ kind: 'general_state', message: 'inspect should not run' }),
+    generalReply: () => 'general should not run',
+    applyNonInjuryConstraint: () => ({ reply: 'non-injury should not run', mutated: false }),
+    applyConstraintResolution: () => ({ cleared: [], remainingActiveCount: 0 }),
+    applyProgramAdjustmentEvents: () => ({ success: false, eventsApplied: 0, visibleDiff: [] }),
+  };
+
+  function withRow(message: string) {
+    resetAll();
+    baseWeekDef = {
+      2: wk('Team Training + Upper Pull', 2, {
+        workoutType: 'Strength',
+        sessionTier: 'core',
+        exercises: [ex('Pull-Up')],
+      }),
+      3: wk('Upper Pull', 3, {
+        workoutType: 'Conditioning',
+        sessionTier: 'optional',
+        conditioningFlavour: 'aerobic',
+        exercises: [ex(
+          'Easy Aerobic Flush (25min Rower)',
+          '25min easy Rower.\nIntensity: 3-4/10 — genuinely easy, conversational pace.\nOptional. Use this for recovery and aerobic maintenance.\nSkip if legs feel heavy after team training or if Thursday training quality would suffer.',
+        )],
+        coachNotes: ['Shifted to non-running modality to manage weekly run load.'],
+      }),
+    };
+    const packet = buildCoachContextPacket({
+      userMessage: message,
+      recentMessages: [],
+      todayISO: FIXED_TODAY,
+    });
+    return dispatchCoachIntent({
+      intent: 'general_question',
+      confidence: 0.7,
+      needsClarification: false,
+    }, packet, deps);
+  }
+
+  const midWeek = withRow('Why did you put a mid week row in?');
+  ok('mid-week row handled without legacy', midWeek.handled === true);
+  eq('mid-week row replyMode', midWeek.replyMode, 'program_explanation');
+  ok('mid-week row does not mention pain guard', !/pain score|pain out of 10|injury report/i.test(midWeek.reply));
+  ok('mid-week row finds visible row', /Wednesday|Easy Aerobic Flush|row/i.test(midWeek.reply));
+  ok('mid-week row explains rationale', /aerobic base|running load/i.test(midWeek.reply));
+  ok('mid-week row protects Thursday', /compromise Thursday|skip it|shorten it|3-4\/10/i.test(midWeek.reply));
+  ok('mid-week row does not invent Tuesday', !/Tuesday/i.test(midWeek.reply));
+
+  const wed = withRow('Why is there a row on Wednesday?');
+  ok('Wednesday row targets Wednesday', /Wednesday/i.test(wed.reply) && !/Tuesday/i.test(wed.reply));
+
+  const running = withRow('Why am I rowing instead of running?');
+  ok('rowing instead of running explains off-feet conversion', /non-running|running load|Zone 2/i.test(running.reply));
+
+  resetAll();
+  baseWeekDef = {
+    2: wk('Team Training + Upper Pull', 2, {
+      workoutType: 'Strength',
+      sessionTier: 'core',
+      exercises: [ex('Pull-Up')],
+    }),
+  };
+  const noRowPacket = buildCoachContextPacket({
+    userMessage: 'Why did you put a mid week row in?',
+    recentMessages: [],
+    todayISO: FIXED_TODAY,
+  });
+  const noRow = dispatchCoachIntent({
+    intent: 'general_question',
+    confidence: 0.7,
+    needsClarification: false,
+  }, noRowPacket, deps);
+  eq('no row asks which day', noRow.reply, "I can't see the row session in the visible week I'm reading. Which day are you looking at?");
+  ok('no row does not invent Tuesday', !/Tuesday/i.test(noRow.reply));
 }
 
 // ─── Summary ───

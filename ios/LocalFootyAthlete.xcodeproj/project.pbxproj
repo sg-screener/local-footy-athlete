@@ -7,26 +7,26 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0556A073FF702CB0F70A41BC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 543D4DE6B629E29BAF6C40F0 /* PrivacyInfo.xcprivacy */; };
-		0B572577FCAEAD0518536661 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 306376CBC9579B5DD30EB705 /* ExpoModulesProvider.swift */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		6A5705AC7DA7CBB222D94734 /* libPods-LocalFootyAthlete.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9CDC2523ADF5488C1269BA36 /* libPods-LocalFootyAthlete.a */; };
+		419FDD7A8061478B7B8A22A8 /* libPods-LocalFootyAthlete.a in Frameworks */ = {isa = PBXBuildFile; fileRef = A75419B4A4ECFA5E2464F077 /* libPods-LocalFootyAthlete.a */; };
+		99C04DE1B21A70A5549B0525 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = AA7F0C64B50BDBE491756E17 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
+		E18BD637B39E81A681A57B62 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9CBA79D5B52DF45E4EEA5D /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		0F282423EE7819B514587502 /* Pods-LocalFootyAthlete.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LocalFootyAthlete.debug.xcconfig"; path = "Target Support Files/Pods-LocalFootyAthlete/Pods-LocalFootyAthlete.debug.xcconfig"; sourceTree = "<group>"; };
 		13B07F961A680F5B00A75B9A /* LocalFootyAthlete.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LocalFootyAthlete.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = LocalFootyAthlete/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = LocalFootyAthlete/Info.plist; sourceTree = "<group>"; };
-		306376CBC9579B5DD30EB705 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-LocalFootyAthlete/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
-		40C873848F5121F71C4944D3 /* Pods-LocalFootyAthlete.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LocalFootyAthlete.release.xcconfig"; path = "Target Support Files/Pods-LocalFootyAthlete/Pods-LocalFootyAthlete.release.xcconfig"; sourceTree = "<group>"; };
-		543D4DE6B629E29BAF6C40F0 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = LocalFootyAthlete/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		9CDC2523ADF5488C1269BA36 /* libPods-LocalFootyAthlete.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-LocalFootyAthlete.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+		5D83FB649896090747AAE0C6 /* Pods-LocalFootyAthlete.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LocalFootyAthlete.release.xcconfig"; path = "Target Support Files/Pods-LocalFootyAthlete/Pods-LocalFootyAthlete.release.xcconfig"; sourceTree = "<group>"; };
+		9D9CBA79D5B52DF45E4EEA5D /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-LocalFootyAthlete/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		A75419B4A4ECFA5E2464F077 /* libPods-LocalFootyAthlete.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-LocalFootyAthlete.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = LocalFootyAthlete/SplashScreen.storyboard; sourceTree = "<group>"; };
+		AA7F0C64B50BDBE491756E17 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = LocalFootyAthlete/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
+		C65A9B6B746D48C5104F8E96 /* Pods-LocalFootyAthlete.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-LocalFootyAthlete.debug.xcconfig"; path = "Target Support Files/Pods-LocalFootyAthlete/Pods-LocalFootyAthlete.debug.xcconfig"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = LocalFootyAthlete/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* LocalFootyAthlete-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "LocalFootyAthlete-Bridging-Header.h"; path = "LocalFootyAthlete/LocalFootyAthlete-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -37,13 +37,21 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				6A5705AC7DA7CBB222D94734 /* libPods-LocalFootyAthlete.a in Frameworks */,
+				419FDD7A8061478B7B8A22A8 /* libPods-LocalFootyAthlete.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		09EFDB262BFB8E7561E30A0B /* ExpoModulesProviders */ = {
+			isa = PBXGroup;
+			children = (
+				7E7FA6E9B1512AFF9D72E34D /* LocalFootyAthlete */,
+			);
+			name = ExpoModulesProviders;
+			sourceTree = "<group>";
+		};
 		13B07FAE1A68108700A75B9A /* LocalFootyAthlete */ = {
 			isa = PBXGroup;
 			children = (
@@ -53,26 +61,26 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				543D4DE6B629E29BAF6C40F0 /* PrivacyInfo.xcprivacy */,
+				AA7F0C64B50BDBE491756E17 /* PrivacyInfo.xcprivacy */,
 			);
 			name = LocalFootyAthlete;
-			sourceTree = "<group>";
-		};
-		19F20992F675624889609D97 /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				AFBCA4B7A85CA2B6BCD9D996 /* LocalFootyAthlete */,
-			);
-			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				9CDC2523ADF5488C1269BA36 /* libPods-LocalFootyAthlete.a */,
+				A75419B4A4ECFA5E2464F077 /* libPods-LocalFootyAthlete.a */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		7E7FA6E9B1512AFF9D72E34D /* LocalFootyAthlete */ = {
+			isa = PBXGroup;
+			children = (
+				9D9CBA79D5B52DF45E4EEA5D /* ExpoModulesProvider.swift */,
+			);
+			name = LocalFootyAthlete;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -89,8 +97,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				BA1E6196958002AC605FC05E /* Pods */,
-				19F20992F675624889609D97 /* ExpoModulesProviders */,
+				91DA0C116E41E3BAC86C141D /* Pods */,
+				09EFDB262BFB8E7561E30A0B /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -105,19 +113,11 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		AFBCA4B7A85CA2B6BCD9D996 /* LocalFootyAthlete */ = {
+		91DA0C116E41E3BAC86C141D /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				306376CBC9579B5DD30EB705 /* ExpoModulesProvider.swift */,
-			);
-			name = LocalFootyAthlete;
-			sourceTree = "<group>";
-		};
-		BA1E6196958002AC605FC05E /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				0F282423EE7819B514587502 /* Pods-LocalFootyAthlete.debug.xcconfig */,
-				40C873848F5121F71C4944D3 /* Pods-LocalFootyAthlete.release.xcconfig */,
+				C65A9B6B746D48C5104F8E96 /* Pods-LocalFootyAthlete.debug.xcconfig */,
+				5D83FB649896090747AAE0C6 /* Pods-LocalFootyAthlete.release.xcconfig */,
 			);
 			name = Pods;
 			path = Pods;
@@ -140,13 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "LocalFootyAthlete" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				7C95C7443AE7629B86A83E87 /* [Expo] Configure project */,
+				691C8358F5923ABB75DDF73B /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				C4B5848AA3A1BDE0695AE3DB /* [CP] Embed Pods Frameworks */,
+				D2068DD1BB45DAF6E4E3C966 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -196,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				0556A073FF702CB0F70A41BC /* PrivacyInfo.xcprivacy in Resources */,
+				99C04DE1B21A70A5549B0525 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -242,7 +242,7 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		7C95C7443AE7629B86A83E87 /* [Expo] Configure project */ = {
+		691C8358F5923ABB75DDF73B /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -300,7 +300,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-LocalFootyAthlete/Pods-LocalFootyAthlete-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		C4B5848AA3A1BDE0695AE3DB /* [CP] Embed Pods Frameworks */ = {
+		D2068DD1BB45DAF6E4E3C966 /* [CP] Embed Pods Frameworks */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -330,7 +330,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				0B572577FCAEAD0518536661 /* ExpoModulesProvider.swift in Sources */,
+				E18BD637B39E81A681A57B62 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -339,7 +339,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 0F282423EE7819B514587502 /* Pods-LocalFootyAthlete.debug.xcconfig */;
+			baseConfigurationReference = C65A9B6B746D48C5104F8E96 /* Pods-LocalFootyAthlete.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -375,7 +375,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 40C873848F5121F71C4944D3 /* Pods-LocalFootyAthlete.release.xcconfig */;
+			baseConfigurationReference = 5D83FB649896090747AAE0C6 /* Pods-LocalFootyAthlete.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

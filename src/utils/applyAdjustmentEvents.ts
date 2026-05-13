@@ -48,6 +48,13 @@ import type {
   RejectedAdjustment,
 } from './programAdjustmentEngine';
 import { logger } from './logger';
+import {
+  pickEquivalentByTier,
+  applyConditioningModalityToWorkout,
+  type ParsedModalitySwap,
+  type BikeLabel,
+} from './coachModalitySwap';
+import { CONDITIONING_META, type ConditioningModality } from '../data/exerciseTags';
 
 // ─────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -75,6 +82,19 @@ export interface ApplyOptions {
     workout: Workout,
     context?: OverrideContext,
   ) => void;
+  /**
+   * Default false preserves the original injury path contract: events
+   * must target the week containing todayISO. Program-adjustment MVP
+   * turns this on so a future Monday can be edited when the current
+   * Monday has already passed.
+   */
+  allowFutureWeeks?: boolean;
+  /**
+   * Program-adjustment requests may edit an earlier day that is still
+   * visible/editable in the Program tab. Default false preserves the
+   * injury/UAE contract.
+   */
+  allowPastDates?: boolean;
 }
 
 export interface AppliedAdjustment {
@@ -426,21 +446,220 @@ function applyAddSessionNote(
   return { ok: true, workout: noted };
 }
 
+function buildCoachConditioningExercise(
+  current: Workout,
+  event: AdjustmentEvent,
+): Workout['exercises'][number] {
+  const p = (event.after && typeof event.after === 'object') ? event.after as any : {};
+  const title = String(p.title ?? 'Light Aerobic Intervals');
+  const description = String(
+    p.description ??
+      '8 x 2 min at 75-80% max HR, with 1 min easy recovery. Use bike or track.',
+  );
+  const id = `${current.id || 'workout'}-coach-conditioning-${event.id}`;
+  const now = new Date().toISOString();
+  return {
+    id,
+    workoutId: current.id,
+    exerciseId: 'coach-light-aerobic-intervals',
+    exerciseOrder: (current.exercises ?? []).length,
+    prescribedSets: Number(p.sets ?? 8),
+    prescribedRepsMin: Number(p.minutes ?? 2),
+    prescribedRepsMax: Number(p.minutes ?? 2),
+    prescriptionType: 'duration_minutes',
+    prescribedWeightKg: 0,
+    restSeconds: Number(p.restSeconds ?? 60),
+    notes: String(
+      p.notes ??
+        '75-80% max HR. Keep it aerobic; 1 min easy recovery between reps.',
+    ),
+    exercise: {
+      id: 'coach-light-aerobic-intervals',
+      name: title,
+      description,
+      exerciseType: 'Cardio',
+      muscleGroups: [],
+      equipmentRequired: [],
+      difficultyLevel: 'Intermediate',
+      createdAt: now,
+      updatedAt: now,
+    } as any,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+function applyAddConditioningBlock(
+  current: Workout,
+  event: AdjustmentEvent,
+): MutateResult {
+  const p = (event.after && typeof event.after === 'object') ? event.after as any : {};
+  const note = String(p.coachNote ?? 'Added light aerobic intervals after strength');
+  const title = String(p.title ?? 'Light Aerobic Intervals');
+  const description = String(
+    p.description ??
+      '8 x 2 min at 75-80% max HR, with 1 min easy recovery. Use bike or track.',
+  );
+  const row = buildCoachConditioningExercise(current, event);
+  const existingBlock = current.conditioningBlock;
+  const block =
+    existingBlock?.options?.length
+      ? {
+          ...existingBlock,
+          intent: 'aerobic' as const,
+          options: [
+            ...existingBlock.options,
+            { title, description, exerciseIds: [row.id] },
+          ],
+        }
+      : {
+          intent: 'aerobic' as const,
+          options: [{ title, description, exerciseIds: [row.id] }],
+        };
+  return {
+    ok: true,
+    workout: cloneWorkout(current, {
+      hasCombinedConditioning: true,
+      conditioningFlavour: 'aerobic',
+      conditioningCategory: 'aerobic_base',
+      conditioningBlock: block,
+      exercises: [...(current.exercises ?? []), row],
+      coachNotes: appendCoachNote(current, note),
+    }),
+  };
+}
+
+function applyRemoveConditioningBlock(
+  current: Workout,
+  event: AdjustmentEvent,
+): MutateResult {
+  const block = current.conditioningBlock;
+  const ownedIds = new Set<string>();
+  for (const opt of block?.options ?? []) {
+    for (const id of opt.exerciseIds ?? []) ownedIds.add(id);
+  }
+  const hadBlock = !!block?.options?.length || current.hasCombinedConditioning;
+  if (!hadBlock) {
+    return {
+      ok: false,
+      rejectKind: APPLY_REJECT_KIND.NO_CONDITIONING_TO_SWAP,
+      reason: `no conditioning block to remove on ${event.date}`,
+    };
+  }
+  const remaining = ownedIds.size > 0
+    ? (current.exercises ?? []).filter((ex) => !ownedIds.has(ex.id))
+    : (current.exercises ?? []);
+  return {
+    ok: true,
+    workout: cloneWorkout(current, {
+      hasCombinedConditioning: false,
+      conditioningFlavour: undefined,
+      conditioningCategory: undefined,
+      conditioningBlock: undefined,
+      exercises: remaining,
+      coachNotes: appendCoachNote(current, 'Removed conditioning from this session'),
+    }),
+  };
+}
+
 function applySwapConditioningModality(
   current: Workout,
   event: AdjustmentEvent,
 ): MutateResult {
-  // Strategy: rewrite any exercise whose name appears in RUN_TO_OFFFEET
-  // (i.e. any run-modality conditioning movement). Also rewrite the
-  // matching titles inside conditioningBlock.options. If nothing changed,
-  // reject — there was no run-modality conditioning to swap.
+  // Two payload shapes are supported:
+  //
+  // (A) Legacy injury path — no payload, or a string payload — runs the
+  //     RUN_TO_OFFFEET map and lands the athlete on a tier-matched bike.
+  //     This preserves the existing UAE injury contract.
+  //
+  // (B) Phase H explicit modality swap — event.before = { modality: 'row' }
+  //     (or null), event.after = { modality: 'bike', bikeLabel?: 'standard'|'assault' }.
+  //     The canonical applyConditioningModalityToWorkout helper rewrites
+  //     EVERY visible field (name, description, exercise name/description/
+  //     notes, block titles/descriptions, coachNotes) atomically.
+  const beforeModality = readModalityField(event.before);
+  const afterModality = readModalityField(event.after);
+  const afterBikeLabel = readBikeLabelField(event.after);
+  const isExplicitModalitySwap = !!afterModality;
+
+  // ─── Path B — Phase H canonical rewrite ────────────────────────────
+  if (isExplicitModalitySwap) {
+    const rewritten = applyConditioningModalityToWorkout(current, {
+      fromModality: beforeModality,
+      toModality: afterModality!,
+      bikeLabel: afterBikeLabel ?? (afterModality === 'bike' ? 'standard' : null),
+    });
+    let touched = rewritten !== current;
+
+    // Fallback: the workout is conditioning-flavoured but had nothing
+    // tagged on `fromModality`. The engine intended a swap; rewrite the
+    // first conditioning slot to a sensible default + run the canonical
+    // helper a second time so all surfaces stay coherent.
+    if (!touched) {
+      const isConditioning = current.workoutType === 'Conditioning';
+      if (isConditioning && current.exercises.length > 0) {
+        const fallbackName = defaultNameForModality(
+          afterModality!,
+          afterBikeLabel ?? (afterModality === 'bike' ? 'standard' : null),
+        );
+        const seeded = cloneWorkout(current, {
+          name: fallbackName,
+          description: fallbackName,
+          exercises: current.exercises.map((ex, i) =>
+            i === 0
+              ? {
+                  ...ex,
+                  exercise: ex.exercise
+                    ? { ...ex.exercise, name: fallbackName, description: fallbackName }
+                    : ex.exercise,
+                }
+              : ex,
+          ),
+          conditioningBlock: current.conditioningBlock?.options?.length
+            ? {
+                ...current.conditioningBlock,
+                options: current.conditioningBlock.options.map((opt, i) =>
+                  i === 0 ? { ...opt, title: fallbackName, description: fallbackName } : opt,
+                ),
+              }
+            : current.conditioningBlock,
+        });
+        const seededRewritten = applyConditioningModalityToWorkout(seeded, {
+          fromModality: beforeModality,
+          toModality: afterModality!,
+          bikeLabel: afterBikeLabel ?? (afterModality === 'bike' ? 'standard' : null),
+        });
+        const final = seededRewritten !== seeded ? seededRewritten : seeded;
+        return {
+          ok: true,
+          workout: cloneWorkout(final, { updatedAt: new Date().toISOString() }),
+        };
+      }
+      return {
+        ok: false,
+        rejectKind: APPLY_REJECT_KIND.NO_CONDITIONING_TO_SWAP,
+        reason: `no ${beforeModality ?? 'conditioning'}-modality conditioning to swap on ${event.date}`,
+      };
+    }
+
+    return {
+      ok: true,
+      workout: cloneWorkout(rewritten as Workout, {
+        updatedAt: new Date().toISOString(),
+      }),
+    };
+  }
+
+  // ─── Path A — Legacy injury swap (run → off-feet) ──────────────────
   let touched = false;
+  const renameSummary: Array<{ from: string; to: string }> = [];
 
   const newExercises = current.exercises.map((ex) => {
     const name = ex.exercise?.name || '';
     const replacement = RUN_TO_OFFFEET[name];
-    if (!replacement) return ex;
+    if (!replacement || replacement === name) return ex;
     touched = true;
+    renameSummary.push({ from: name, to: replacement });
     return {
       ...ex,
       exercise: ex.exercise
@@ -453,32 +672,28 @@ function applySwapConditioningModality(
   if (newBlock?.options?.length) {
     const newOptions = newBlock.options.map((opt) => {
       const replacement = RUN_TO_OFFFEET[opt.title];
-      if (!replacement) return opt;
+      if (!replacement || replacement === opt.title) return opt;
       touched = true;
       return { ...opt, title: replacement };
     });
     newBlock = { ...newBlock, options: newOptions };
   }
 
-  // If we found NOTHING but the workout is conditioning-flavoured, fall
-  // back to a generic off-feet exercise on the first slot. This mirrors
-  // the engine's fallback rule: a swap event implies the engine intended
-  // a real change, and we owe the athlete at least one visible swap.
   if (!touched) {
     const isConditioning = current.workoutType === 'Conditioning';
     if (isConditioning && current.exercises.length > 0) {
       const first = current.exercises[0];
-      newExercises[0] = {
-        ...first,
-        exercise: first.exercise
-          ? {
-              ...first.exercise,
-              name: DEFAULT_OFFFEET,
-              description: DEFAULT_OFFFEET,
-            }
-          : first.exercise,
-      };
-      touched = true;
+      const fallbackName = DEFAULT_OFFFEET;
+      if (fallbackName && fallbackName !== (first.exercise?.name ?? '')) {
+        newExercises[0] = {
+          ...first,
+          exercise: first.exercise
+            ? { ...first.exercise, name: fallbackName, description: fallbackName }
+            : first.exercise,
+        };
+        touched = true;
+        renameSummary.push({ from: first.exercise?.name ?? '(unknown)', to: fallbackName });
+      }
     }
   }
 
@@ -490,18 +705,92 @@ function applySwapConditioningModality(
     };
   }
 
+  const coachNote = 'Swapped running for off-feet (bike / row)';
   return {
     ok: true,
     workout: cloneWorkout(current, {
       exercises: newExercises,
       conditioningBlock: newBlock,
       description:
-        ((current.description || '').trim() +
-          ' [Off-feet — injury swap]').trim(),
-      coachNotes: appendCoachNote(current, 'Swapped running for off-feet (bike / row)'),
+        ((current.description || '').trim() + ` [Off-feet — injury swap]`).trim(),
+      coachNotes: appendCoachNote(current, coachNote),
     }),
   };
 }
+
+/**
+ * Pull `{modality: 'row'}` out of an event payload. Tolerant of null,
+ * undefined, strings, or non-object payloads.
+ */
+function readModalityField(payload: any): ConditioningModality | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const v = payload.modality;
+  if (typeof v !== 'string') return null;
+  // Validate against the union by spot-checking — TS can't narrow at runtime.
+  const allowed = ['run', 'bike', 'row', 'ski', 'swim', 'mixed'];
+  return allowed.includes(v) ? (v as ConditioningModality) : null;
+}
+
+/**
+ * Pull `{bikeLabel: 'standard'|'assault'}` out of an event payload.
+ * Phase H — when present, the canonical helper renders bike modality
+ * with the requested subtype label. Tolerant of null / non-object /
+ * unknown values.
+ */
+function readBikeLabelField(payload: any): BikeLabel | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const v = payload.bikeLabel;
+  if (typeof v !== 'string') return null;
+  if (v === 'standard' || v === 'assault' || v === 'generic') return v as BikeLabel;
+  return null;
+}
+
+/**
+ * Decide what to rename `currentName` to, given an explicit modality
+ * swap. Returns null when the rename should not happen (e.g. exercise
+ * isn't conditioning, or already on the destination modality, or
+ * `from` is set and the exercise doesn't match it).
+ */
+function pickModalityReplacement(
+  currentName: string,
+  fromModality: ConditioningModality | null,
+  toModality: ConditioningModality,
+): string | null {
+  const meta = CONDITIONING_META[currentName];
+  if (!meta) return null;
+  if (meta.modality === toModality) return null;
+  if (fromModality && meta.modality !== fromModality) return null;
+  return pickEquivalentByTier(currentName, toModality);
+}
+
+function defaultNameForModality(
+  modality: ConditioningModality,
+  bikeLabel?: BikeLabel | null,
+): string {
+  switch (modality) {
+    case 'bike':
+      // Phase H — bare bike default is the STANDARD label ("Bike Intervals"),
+      // not "Assault Bike Intervals". Callers pass bikeLabel='assault'
+      // when the athlete explicitly asked for an Assault/Air bike.
+      return bikeLabel === 'assault' ? 'Assault Bike Intervals' : 'Bike Intervals';
+    case 'row':
+      return 'Row Intervals';
+    case 'run':
+      return 'Tempo Run';
+    case 'ski':
+      return 'SkiErg Intervals';
+    case 'swim':
+      return 'Easy Swim';
+    case 'mixed':
+      return 'MetCon';
+    default:
+      return DEFAULT_OFFFEET;
+  }
+}
+
+// Quiet the unused-import warning in tooling that doesn't see the new
+// reference inside applySwapConditioningModality's payload reader.
+void ({} as ParsedModalitySwap);
 
 // ─────────────────────────────────────────────────────────────────────────
 // MAIN ENTRY
@@ -540,7 +829,14 @@ export function applyAdjustmentEvents(
   // mismatch is a real bug worth surfacing rather than silently fixing.
   const state = buildState();
   const monday = mondayOfISOLocal(todayISO);
-  const week = resolveWeek(monday, state);
+  const weekStarts = opts.allowFutureWeeks
+    ? Array.from(new Set(events.map((ev) => mondayOfISOLocal(ev.date || todayISO))))
+    : [monday];
+  const weeks = weekStarts.map((weekStart) => ({
+    weekStart,
+    days: resolveWeek(weekStart, state),
+  }));
+  const week = weeks.flatMap((w) => w.days);
   const dayByDate: Record<string, ResolvedDay> = {};
   for (const d of week) dayByDate[d.date] = d;
 
@@ -552,6 +848,7 @@ export function applyAdjustmentEvents(
     eventCount: Array.isArray(events) ? events.length : 0,
     todayISO,
     monday,
+    weekStarts,
     weekDates: week.map((d) => d.date),
   });
 
@@ -569,7 +866,7 @@ export function applyAdjustmentEvents(
       });
       continue;
     }
-    if (ev.date < todayISO) {
+    if (ev.date < todayISO && !opts.allowPastDates) {
       logger.debug('[apply-events] rejected', {
         kind: APPLY_REJECT_KIND.PAST_DATE,
         date: ev.date,
@@ -702,6 +999,12 @@ export function applyAdjustmentEvents(
         case 'swap_conditioning_modality':
           outcome = applySwapConditioningModality(working, ev);
           break;
+        case 'add_conditioning_block':
+          outcome = applyAddConditioningBlock(working, ev);
+          break;
+        case 'remove_conditioning_block':
+          outcome = applyRemoveConditioningBlock(working, ev);
+          break;
         case 'add_session_note':
           outcome = applyAddSessionNote(working, ev);
           break;
@@ -753,9 +1056,12 @@ export function applyAdjustmentEvents(
       continue;
     }
 
+    const isProgramAdjustment = group.some(
+      (ev) => ev.kind === 'add_conditioning_block' || ev.kind === 'remove_conditioning_block',
+    );
     const ctx: OverrideContext = {
-      intent: 'injury',
-      label: lastReason || 'Injury-driven adjustment',
+      intent: isProgramAdjustment ? 'program_adjustment' : 'injury',
+      label: lastReason || (isProgramAdjustment ? 'Program adjustment' : 'Injury-driven adjustment'),
     };
     setOverride(date, working, ctx);
 
@@ -789,6 +1095,271 @@ export function applyAdjustmentEvents(
   });
 
   return { applied, rejected };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// MOVE SESSION (cross-date — bypasses the per-event single-date applier)
+// ─────────────────────────────────────────────────────────────────────────
+//
+// A session move is fundamentally cross-date: source becomes empty, dest
+// receives the source's workout. The single-date AdjustmentEvent shape
+// can't express that without contortion, so move_session lives outside
+// the per-event loop. The contract mirrors `applyAdjustmentEvents`'s
+// return shape so the executor can DI-stub it the same way.
+//
+// Rules (analogue of R1–R6 above):
+//   M1. Source and dest must both be inside the resolved week(s).
+//   M2. Past dates are rejected unless allowPastDates.
+//   M3. Source must have a workout to move; dest's existing workout (if
+//       any) is OVERWRITTEN — moves are destructive.
+//   M4. Source override gets a "Rest" shell; dest gets a deep copy of
+//       the source workout with `coachNotes` updated to record the move.
+//   M5. The helper NEVER constructs dates or reaches for `new Date()`.
+
+export interface ApplyMoveSessionInput {
+  sourceDate: string;
+  destDate: string;
+  /** "coach move_session" — written into both override contexts. */
+  reason?: string;
+  /** When true, also moves dest → source (atomic two-way swap). */
+  swap?: boolean;
+}
+
+export interface ApplyMoveSessionResult {
+  applied: AppliedAdjustment[];
+  rejected: RejectedAdjustment[];
+  /** Snapshot of the source workout BEFORE the move (for verification). */
+  sourceWorkoutBefore: Workout | null;
+  /** Snapshot of the dest workout BEFORE the move (for verification). */
+  destWorkoutBefore: Workout | null;
+}
+
+/** Build a "Rest" shell for the source date once its workout has moved. */
+function buildRestShellForMove(
+  cloned: Workout,
+  reason: string,
+  movedToDate: string,
+): Workout {
+  return {
+    ...cloned,
+    name: 'Rest',
+    description: `Coach moved this session to ${movedToDate}.`,
+    sessionTier: 'recovery',
+    workoutType: 'Recovery',
+    exercises: [],
+    conditioningBlock: undefined,
+    hasCombinedConditioning: false,
+    coachNotes: [reason],
+    updatedAt: new Date().toISOString(),
+  } as Workout;
+}
+
+/** Build the destination workout — clone source and tag the move. */
+function buildMovedWorkoutForDest(
+  source: Workout,
+  reason: string,
+  fromDate: string,
+): Workout {
+  return cloneWorkout(source, {
+    coachNotes: appendCoachNote(source, `Moved from ${fromDate}: ${reason}`),
+  });
+}
+
+export function applyMoveSession(
+  input: ApplyMoveSessionInput,
+  opts: ApplyOptions,
+): ApplyMoveSessionResult {
+  const { todayISO } = opts;
+  const buildState = opts.buildState || defaultBuildState;
+  const resolveWeek = opts.resolveWeek || resolveWeekWithConditioning;
+  const setOverride = opts.setManualOverride || defaultSetManualOverride;
+
+  const applied: AppliedAdjustment[] = [];
+  const rejected: RejectedAdjustment[] = [];
+
+  const reason = input.reason ?? 'coach move_session';
+
+  if (!input.sourceDate || !input.destDate) {
+    rejected.push({
+      kind: 'invalid_event',
+      reason: 'move_session requires both sourceDate and destDate',
+    });
+    return { applied, rejected, sourceWorkoutBefore: null, destWorkoutBefore: null };
+  }
+  if (input.sourceDate === input.destDate) {
+    rejected.push({
+      kind: 'invalid_event',
+      date: input.sourceDate,
+      reason: 'move_session source and destination are the same date',
+    });
+    return { applied, rejected, sourceWorkoutBefore: null, destWorkoutBefore: null };
+  }
+  if (!opts.allowPastDates) {
+    if (input.sourceDate < todayISO) {
+      rejected.push({
+        kind: APPLY_REJECT_KIND.PAST_DATE,
+        date: input.sourceDate,
+        reason: `cannot move session from past date ${input.sourceDate}`,
+      });
+      return { applied, rejected, sourceWorkoutBefore: null, destWorkoutBefore: null };
+    }
+    if (input.destDate < todayISO) {
+      rejected.push({
+        kind: APPLY_REJECT_KIND.PAST_DATE,
+        date: input.destDate,
+        reason: `cannot move session to past date ${input.destDate}`,
+      });
+      return { applied, rejected, sourceWorkoutBefore: null, destWorkoutBefore: null };
+    }
+  }
+
+  // Resolve all weeks the move touches (source and dest may straddle).
+  const state = buildState();
+  const sourceMonday = mondayOfISOLocal(input.sourceDate);
+  const destMonday = mondayOfISOLocal(input.destDate);
+  const weekStarts = Array.from(new Set([sourceMonday, destMonday]));
+  const week = weekStarts.flatMap((m) => resolveWeek(m, state));
+  const dayByDate: Record<string, ResolvedDay> = {};
+  for (const d of week) dayByDate[d.date] = d;
+
+  const sourceDay = dayByDate[input.sourceDate];
+  const destDay = dayByDate[input.destDate];
+
+  if (!sourceDay) {
+    rejected.push({
+      kind: APPLY_REJECT_KIND.INVALID_TARGET_DATE,
+      date: input.sourceDate,
+      reason: `source date ${input.sourceDate} not in resolved week`,
+    });
+    return { applied, rejected, sourceWorkoutBefore: null, destWorkoutBefore: null };
+  }
+  if (!destDay) {
+    rejected.push({
+      kind: APPLY_REJECT_KIND.INVALID_TARGET_DATE,
+      date: input.destDate,
+      reason: `dest date ${input.destDate} not in resolved week`,
+    });
+    return { applied, rejected, sourceWorkoutBefore: null, destWorkoutBefore: null };
+  }
+
+  const sourceWorkoutBefore = sourceDay.workout ?? null;
+  const destWorkoutBefore = destDay.workout ?? null;
+
+  if (!sourceWorkoutBefore) {
+    rejected.push({
+      kind: APPLY_REJECT_KIND.NO_WORKOUT_ON_DATE,
+      date: input.sourceDate,
+      reason: `${input.sourceDate} has no workout to move`,
+    });
+    return { applied, rejected, sourceWorkoutBefore: null, destWorkoutBefore };
+  }
+
+  // Refuse to move team-training or game days (anchored sessions). The
+  // engine treats `isTeamDay` / sessionTier='game' as immutable anchors.
+  const sourceAny: any = sourceWorkoutBefore;
+  if (sourceAny.isTeamDay === true || sourceAny.workoutType === 'Team Training') {
+    rejected.push({
+      kind: 'cannot_move_team_training',
+      date: input.sourceDate,
+      reason: `${input.sourceDate} is a team training day — those are anchored to the calendar`,
+    });
+    return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
+  }
+  if (sourceAny.workoutType === 'Game' || sourceAny.sessionTier === 'game') {
+    rejected.push({
+      kind: 'cannot_move_game',
+      date: input.sourceDate,
+      reason: `${input.sourceDate} is a game day — game-day sessions can't be moved`,
+    });
+    return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
+  }
+
+  // ── Two-way swap or one-way move? ───────────────────────────────
+  if (input.swap) {
+    if (!destWorkoutBefore) {
+      // Swap with empty dest is just a one-way move; fall through.
+      // Keep the swap=true intent in the override context label.
+    } else {
+      const destAny: any = destWorkoutBefore;
+      if (destAny.isTeamDay === true || destAny.workoutType === 'Team Training') {
+        rejected.push({
+          kind: 'cannot_move_team_training',
+          date: input.destDate,
+          reason: `${input.destDate} is a team training day — can't swap into it`,
+        });
+        return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
+      }
+      if (destAny.workoutType === 'Game' || destAny.sessionTier === 'game') {
+        rejected.push({
+          kind: 'cannot_move_game',
+          date: input.destDate,
+          reason: `${input.destDate} is a game day — can't swap`,
+        });
+        return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
+      }
+      // Two-way swap: source receives dest's workout, dest receives source's.
+      const ctxA: OverrideContext = {
+        intent: 'program_adjustment',
+        label: `Coach swap from ${input.destDate}`,
+      };
+      const ctxB: OverrideContext = {
+        intent: 'program_adjustment',
+        label: `Coach swap from ${input.sourceDate}`,
+      };
+      const newSource = buildMovedWorkoutForDest(destWorkoutBefore, reason, input.destDate);
+      const newDest = buildMovedWorkoutForDest(sourceWorkoutBefore, reason, input.sourceDate);
+      setOverride(input.sourceDate, newSource, ctxA);
+      setOverride(input.destDate, newDest, ctxB);
+      applied.push({
+        date: input.sourceDate,
+        eventIds: [`move_session-${input.sourceDate}-from-${input.destDate}`],
+        workoutName: newSource.name,
+      });
+      applied.push({
+        date: input.destDate,
+        eventIds: [`move_session-${input.destDate}-from-${input.sourceDate}`],
+        workoutName: newDest.name,
+      });
+      logger.debug('[apply-events] move_session_swapped', {
+        sourceDate: input.sourceDate,
+        destDate: input.destDate,
+        sourceNameBefore: sourceWorkoutBefore.name,
+        destNameBefore: destWorkoutBefore.name,
+      });
+      return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
+    }
+  }
+
+  // ── One-way move ───────────────────────────────────────────────
+  const newDest = buildMovedWorkoutForDest(sourceWorkoutBefore, reason, input.sourceDate);
+  const newSource = buildRestShellForMove(sourceWorkoutBefore, reason, input.destDate);
+  const ctxSource: OverrideContext = {
+    intent: 'program_adjustment',
+    label: `Coach moved session to ${input.destDate}`,
+  };
+  const ctxDest: OverrideContext = {
+    intent: 'program_adjustment',
+    label: `Coach moved session from ${input.sourceDate}`,
+  };
+  setOverride(input.sourceDate, newSource, ctxSource);
+  setOverride(input.destDate, newDest, ctxDest);
+  applied.push({
+    date: input.sourceDate,
+    eventIds: [`move_session-${input.sourceDate}-out`],
+    workoutName: newSource.name,
+  });
+  applied.push({
+    date: input.destDate,
+    eventIds: [`move_session-${input.destDate}-in`],
+    workoutName: newDest.name,
+  });
+  logger.debug('[apply-events] move_session_moved', {
+    sourceDate: input.sourceDate,
+    destDate: input.destDate,
+    sourceNameBefore: sourceWorkoutBefore.name,
+    destNameBefore: destWorkoutBefore?.name ?? null,
+  });
+  return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
 }
 
 // ─────────────────────────────────────────────────────────────────────────

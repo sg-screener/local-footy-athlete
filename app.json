@@ -3,6 +3,7 @@
     "name": "Local Footy Athlete",
     "slug": "local-footy-athlete",
     "version": "1.0.0",
+    "scheme": "localfootyathlete",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

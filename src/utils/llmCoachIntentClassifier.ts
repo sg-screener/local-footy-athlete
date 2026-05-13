@@ -109,7 +109,13 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
     });
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-    if (this.authToken) headers['Authorization'] = `Bearer ${this.authToken}`;
+    if (this.authToken) {
+      // Supabase API gateway requires BOTH headers — `apikey` is checked by
+      // the gateway, `Authorization: Bearer` by the function runtime. Sending
+      // only one returns 401 Invalid JWT even when verify_jwt=false.
+      headers['Authorization'] = `Bearer ${this.authToken}`;
+      headers['apikey'] = this.authToken;
+    }
 
     const body = JSON.stringify({
       packet: serialisedPacket,

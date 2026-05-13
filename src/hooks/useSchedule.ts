@@ -31,6 +31,11 @@ import {
   DEFAULT_ATHLETE_CONTEXT,
   type AthleteContext,
 } from '../utils/sessionBuilder';
+import {
+  buildExtraConstraintsForVisibleProgram,
+  buildProgramTabProjectedWeek,
+  buildDayWorkoutProjectedDay,
+} from '../utils/visibleProgramReadModel';
 
 // ─── Internal: Read raw state from both stores ───
 
@@ -66,7 +71,10 @@ const DAY_NAME_TO_NUMBER: Record<string, number> = {
   Thursday: 4, Friday: 5, Saturday: 6,
 };
 
-function useScheduleState(): ScheduleState & { activeConstraints: any[] } {
+function useScheduleState(): ScheduleState & {
+  activeConstraints: any[];
+  modalityPreferences: Record<string, any>;
+} {
   const currentProgram = useProgramStore((s) => s.currentProgram);
   const currentMicrocycle = useProgramStore((s) => s.currentMicrocycle);
   const manualOverrides = useProgramStore((s) => s.dateOverrides);
@@ -74,6 +82,17 @@ function useScheduleState(): ScheduleState & { activeConstraints: any[] } {
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
   const markedDays = useCalendarStore((s) => s.markedDays);
   const athleteContext = useAthleteContext();
+  // Reactive subscription on the recurring modality preference store.
+  // Without this, the visible-program projection reads via .getState()
+  // (one-shot, not reactive) and HomeScreen / DayWorkoutScreen never
+  // re-render when the coach writes a new preference — the live-app
+  // bug that caused future Wednesday's Easy Aerobic Flush to keep
+  // showing "20min Rower" even after the coach said "Done".
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useCoachPreferencesStore } = require('../store/coachPreferencesStore');
+  const modalityPreferences = useCoachPreferencesStore(
+    (s: any) => s.modalityPreferences,
+  );
   // Subscribe to activeInjury so the resolver-level filter runs in the
   // LIVE React app. Without this, useScheduleState used to return
   // ScheduleState without activeInjury — applyInjuryFilterPass would
@@ -127,6 +146,7 @@ function useScheduleState(): ScheduleState & { activeConstraints: any[] } {
     availableDayNumbers,
     activeInjury: activeInjury ?? null,
     activeConstraints,
+    modalityPreferences: modalityPreferences ?? {},
   };
 }
 
@@ -137,42 +157,7 @@ function useScheduleState(): ScheduleState & { activeConstraints: any[] } {
  * entries are skipped here — the projection already builds the injury
  * Constraint from `activeInjury`.
  */
-function buildExtraConstraints(activeConstraints: any[]): any[] {
-  if (!Array.isArray(activeConstraints) || activeConstraints.length === 0) return [];
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const {
-    buildFatigueConstraint,
-    buildSorenessConstraint,
-    buildScheduleConstraint,
-    buildMissedSessionConstraint,
-  } = require('../utils/exposureEngine');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { bucketToRegion } = require('../utils/coachConstraintProducers');
-  const out: any[] = [];
-  for (const c of activeConstraints) {
-    if (!c || c.status === 'resolved') continue;
-    if (c.type === 'fatigue') {
-      out.push(buildFatigueConstraint({ id: c.id, severity: c.severity, startDate: c.startDate }));
-    } else if (c.type === 'soreness' && c.bucket) {
-      out.push(buildSorenessConstraint({
-        id: c.id,
-        region: bucketToRegion(c.bucket),
-        severity: c.severity,
-        startDate: c.startDate,
-      }));
-    } else if (c.type === 'schedule') {
-      out.push(buildScheduleConstraint({ id: c.id, severity: c.severity, startDate: c.startDate }));
-    } else if (c.type === 'missed_session') {
-      out.push(buildMissedSessionConstraint({
-        id: c.id,
-        missedDate: c.missedDate,
-        sessionName: c.sessionName,
-        startDate: c.startDate,
-      }));
-    }
-  }
-  return out;
-}
+const buildExtraConstraints = buildExtraConstraintsForVisibleProgram;
 
 // ─── Exported Hooks ───
 
@@ -189,26 +174,17 @@ function buildExtraConstraints(activeConstraints: any[]): any[] {
 export function useResolvedDay(date: string | undefined): ResolvedDay | null {
   const state = useScheduleState();
   if (!date) return null;
-  const raw = resolveDateWithConditioning(date, state);
-  // Run through the visible-program projection — final gate before
-  // any UI surface renders. Belt-and-braces over the resolver-level
-  // pass (catches AI-named exercises the tag map misses, and also
-  // re-applies for non-injury manual overrides).
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { projectAndLog } = require('../utils/visibleProgramProjection');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { useProgramStore } = require('../store/programStore');
   const overrideContext =
     useProgramStore.getState().overrideContexts?.[date];
   const todayISO = new Date().toISOString().slice(0, 10);
-  const extraConstraints = buildExtraConstraints((state as any).activeConstraints);
-  return projectAndLog({
-    day: raw,
-    activeInjury: state.activeInjury,
-    extraConstraints,
+  return buildDayWorkoutProjectedDay({
+    date,
+    state,
     overrideContext,
     todayISO,
-    surface: 'detail',
+    modalityPreferences: (state as any).modalityPreferences,
   });
 }
 
@@ -227,28 +203,18 @@ export function useResolvedWeek() {
   const [weekOffset, setWeekOffset] = useState(0);
 
   const mondayStr = getMondayStr(weekOffset);
-  const rawWeekDays = resolveWeekWithConditioning(mondayStr, state);
-  // Run every day through the visible-program projection — final gate
-  // before HomeScreen renders. The projection catches AI-named
-  // exercises the resolver-level tag-based filter misses.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { projectAndLog } = require('../utils/visibleProgramProjection');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { useProgramStore } = require('../store/programStore');
   const overrideContexts =
     useProgramStore.getState().overrideContexts ?? {};
   const todayISO = new Date().toISOString().slice(0, 10);
-  const extraConstraints = buildExtraConstraints((state as any).activeConstraints);
-  const weekDays = rawWeekDays.map((d) =>
-    projectAndLog({
-      day: d,
-      activeInjury: state.activeInjury,
-      extraConstraints,
-      overrideContext: overrideContexts[d.date],
-      todayISO,
-      surface: 'home',
-    }),
-  );
+  const weekDays = buildProgramTabProjectedWeek({
+    mondayISO: mondayStr,
+    todayISO,
+    state,
+    overrideContexts,
+    modalityPreferences: (state as any).modalityPreferences,
+  });
   const weekLabel = formatWeekLabel(mondayStr);
   const isThisWeek = weekOffset === 0;
 

@@ -37,6 +37,7 @@ export interface V2CardProps {
   radius?: 'md' | 'lg' | 'xl';
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  testID?: string;
 }
 
 const PADDING_MAP: Record<string, number> = {
@@ -64,6 +65,7 @@ export function Card({
   radius = 'xl',
   style,
   accessibilityLabel,
+  testID,
 }: V2CardProps) {
   const { bg, border } = toneColors(tone, selected);
   const pad = PADDING_MAP[padding] ?? spacing.lg;
@@ -97,7 +99,7 @@ export function Card({
   };
 
   if (!onPress) {
-    return <View style={[containerStyle, style]}>{children}</View>;
+    return <View style={[containerStyle, style]} testID={testID}>{children}</View>;
   }
 
   return (
@@ -108,6 +110,7 @@ export function Card({
         onPressOut={onPressOut}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
+        testID={testID}
         style={({ pressed }) => [
           containerStyle,
           pressed && styles.pressed,

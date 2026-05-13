@@ -8,7 +8,7 @@ import {
   FlatList,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute } from '@react-navigation/native';
+import { useIsFocused, useNavigation, useRoute } from '@react-navigation/native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { colors } from '../../theme/colors';
@@ -65,15 +65,66 @@ import {
   buildCoachContextPacket,
 } from '../../utils/coachContextPacket';
 import { dispatchCoachIntent } from '../../utils/coachIntentDispatcher';
-import type { CoachIntentClassifier } from '../../utils/coachIntent';
-import { LLMCoachIntentClassifier } from '../../utils/llmCoachIntentClassifier';
+import type { CoachIntent, PendingCoachProposal } from '../../utils/coachIntent';
+// Phase G runtime audit — `CoachIntentClassifier` and `LLMCoachIntentClassifier`
+// are no longer wired (see bypass below). Re-import when /coach-intent
+// auth is landed.
+// import type { CoachIntentClassifier } from '../../utils/coachIntent';
+// import { LLMCoachIntentClassifier } from '../../utils/llmCoachIntentClassifier';
 import { buildLiveDispatchDeps } from '../../utils/coachDispatchDeps';
+import { useCoachContextStateStore } from '../../store/coachContextStateStore';
+import { extractModalitiesFromSession, isMutationLike } from '../../utils/coachReferenceResolver';
+import { orchestrateModalitySwap } from '../../utils/coachModalitySwapOrchestrator';
+import { autoBindUniqueModalityTarget } from '../../utils/coachVisibleWeekAutoBind';
+import { parseModalitySwapRequest } from '../../utils/coachModalitySwap';
+import {
+  routeCoachCommand,
+  canFallbackToLegacy,
+  isMutateCommand,
+  type CoachCommand,
+} from '../../utils/coachCommandRouter';
+import {
+  executeCoachCommand,
+  describeStage,
+  type ProgressStage,
+} from '../../utils/coachCommandExecutor';
+import {
+  usePendingCoachClarifierStore,
+  getPendingClarifierSnapshot,
+  isCancelClarifierMessage,
+  isAffirmativeClarifierMessage,
+  isNegativeClarifierMessage,
+} from '../../store/pendingCoachClarifierStore';
+import {
+  captureFromExecutorClarify,
+  resumeFromPending,
+} from '../../utils/coachClarifierResume';
+import { filterLegacyCoachActions } from '../../utils/legacyCoachActionFilter';
+import { logCoachBuildFingerprint, COACH_BUILD_INFO } from '../../utils/coachBuildInfo';
+import { isPendingProgramProposalExpired } from '../../utils/programAdjustmentRequests';
 import { insertProgramSummaryBeforeFinalClose } from '../../utils/coachReplyComposer';
 import {
   getClientEnvConfig,
   logMissingClientEnv,
 } from '../../config/env';
 import { logger } from '../../utils/logger';
+import { setCoachReady } from '../../navigation/smokeNavState';
+import { getSmokeInitialRoute } from '../../utils/smokeBootstrap';
+import { navigationRef } from '../../navigation/navigationRef';
+import { CommonActions } from '@react-navigation/native';
+import { useResolvedWeek } from '../../hooks/useSchedule';
+import {
+  deriveSmokeWednesdayOpenTarget,
+  type SmokeWednesdayOpenTarget,
+} from '../../components/dev/smokeVisibleWeekHarnessState';
+// NOTE: SMOKE_WEDNESDAY_* fixture constants are now consumed exclusively by
+// SmokeCoachBikeHarness (src/components/dev/SmokeCoachBikeHarness.tsx).
+// CoachScreen no longer owns the visible-week preflight markers — they
+// previously lived here but rendered inconsistently because they were
+// gated on getSmokeInitialRoute() (non-reactive) and isFocused (race-prone
+// on tab mount). The harness mounts at AppNavigator level and reads the
+// authoritative smoke nav state machine; CoachScreen is purely the coach
+// chat UI again.
 
 /** Singleton classifier — instantiated at module load.
  *
@@ -86,23 +137,29 @@ if (!clientEnv.isReady) {
   logMissingClientEnv('CoachScreen', clientEnv);
 }
 
-const disabledCoachIntentClassifier: CoachIntentClassifier = {
-  async classify() {
-    return {
-      intent: 'general_question',
-      confidence: 0,
-      needsClarification: false,
-      rationale: 'missing_client_env',
-    };
-  },
-};
-
-const liveCoachIntentClassifier: CoachIntentClassifier = clientEnv.isReady
-  ? new LLMCoachIntentClassifier({
-      endpoint: clientEnv.coachIntentEndpoint,
-      authToken: clientEnv.supabaseAnonKey,
-    })
-  : disabledCoachIntentClassifier;
+// Phase G runtime audit — the live LLM-backed classifier was intercepting
+// EVERY conversation/inspect_state turn with a 401 against the Supabase
+// gateway, flooding logs without providing signal. The bypass at the
+// call site synthesizes the same fallback locally, so neither this
+// classifier nor the disabled fallback is invoked at runtime. Kept as
+// dormant scaffolding only — re-wire here when /coach-intent auth lands.
+//
+// const disabledCoachIntentClassifier: CoachIntentClassifier = {
+//   async classify() {
+//     return {
+//       intent: 'general_question',
+//       confidence: 0,
+//       needsClarification: false,
+//       rationale: 'missing_client_env',
+//     };
+//   },
+// };
+// const liveCoachIntentClassifier: CoachIntentClassifier = clientEnv.isReady
+//   ? new LLMCoachIntentClassifier({
+//       endpoint: clientEnv.coachIntentEndpoint,
+//       authToken: clientEnv.supabaseAnonKey,
+//     })
+//   : disabledCoachIntentClassifier;
 
 /** Local-clock today as YYYY-MM-DD. The UAE is deterministic — it never
  *  reads the clock itself; the caller supplies todayISO. */
@@ -406,14 +463,54 @@ const QUICK_ACTIONS: QuickAction[] = [
 
 export default function CoachScreen() {
   const route = useRoute<any>();
+  const navigation = useNavigation<any>();
+  const isFocused = useIsFocused();
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
+  // smokeCoachBikeFlow only gates the smoke-only "open Wednesday workout"
+  // control rendered later in this file. The visible-week preflight
+  // markers (ready/pending/missing/inactive/debug) are owned by
+  // SmokeCoachBikeHarness, which mounts at AppNavigator level. CoachScreen
+  // intentionally does not subscribe to activeSmokeInitialRoute — the
+  // smoke runtime flag is sufficient for the wednesday-workout control
+  // because by the time CoachScreen is focused the smoke route is
+  // already resolved.
+  const smokeCoachBikeFlow = __DEV__ && getSmokeInitialRoute() === 'Coach';
+
+  // Smoke state machine: CoachScreen being focused is the canonical
+  // "coach UI is interactive" signal. The state-machine flag is the
+  // source-of-truth for the smoke-coach-ready marker rendered by
+  // AppNavigator. The existing testID="coach-ready" view (gated on
+  // __DEV__ && isFocused) remains untouched as a second proof.
+  React.useEffect(() => {
+    setCoachReady(isFocused);
+  }, [isFocused]);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const inputRef = useRef<TextInput>(null);
   const [lastPrefill, setLastPrefill] = useState('');
+  // Phase 3 — dev-only debug snapshot. Rendered as a small overlay
+  // when EXPO_PUBLIC_ENABLE_DEBUG_LOGS=true so the live app makes the
+  // gate decision visible (intent / route / referenceResolution /
+  // mutationLike / legacyCalled / replySource) without needing to
+  // pull adb logs. Production builds ignore this state.
+  const [lastCoachDebug, setLastCoachDebug] = useState<{
+    intent: string;
+    route: string;
+    referenceStatus: string | null;
+    referenceTargetDate: string | null;
+    referenceTargetName: string | null;
+    mutationLike: boolean;
+    legacyCalled: boolean;
+    replySource: 'deterministic' | 'legacy';
+    applied?: boolean;
+    fromModality?: string | null;
+    toModality?: string | null;
+    projectionShowsTo?: boolean | null;
+    projectionShowsFrom?: boolean | null;
+  } | null>(null);
 
   // Pending-injury context — body part captured when the clarifier asks
   // for severity, so a bare "6/10" follow-up can still route through the
@@ -421,6 +518,27 @@ export default function CoachScreen() {
   // change and we want the latest value inside async handleSend without
   // closure pinning.
   const pendingInjuryRef = useRef<PendingInjury | null>(null);
+  const pendingCoachProposalRef = useRef<PendingCoachProposal | null>(null);
+
+  // Phase G runtime audit — log the build fingerprint on every
+  // CoachScreen mount. Pairs with the `app_launch` log to give us TWO
+  // independent vantage points to confirm we're running Phase-G code.
+  // If the device shows stale fingerprints, the bundle is older than
+  // the source on disk and the symptoms aren't logic bugs. See
+  // src/utils/coachBuildInfo.ts.
+  useEffect(() => {
+    logCoachBuildFingerprint('coach_screen_mount');
+    logger.info('[coach-screen] mounted');
+    return () => {
+      logger.info('[coach-screen] unmounted');
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isFocused) {
+      logger.info('[nav-route] currentRoute=Coach');
+    }
+  }, [isFocused]);
 
   // Subscribe to global reset signal — when Profile triggers a reset
   // we MUST drop the pending ref AND clear the chat, otherwise stale
@@ -433,6 +551,7 @@ export default function CoachScreen() {
     const { subscribeResetSignal } = require('../../utils/resetSignals');
     return subscribeResetSignal(() => {
       pendingInjuryRef.current = null;
+      pendingCoachProposalRef.current = null;
       setMessages([]);
       logger.debug('[reset] coach_screen_pending_cleared');
     });
@@ -454,6 +573,201 @@ export default function CoachScreen() {
     setInputValue(prefill);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
+
+  // ── Smoke-only direct DayWorkout navigation ────────────────────────
+  //
+  // The coach-bike-flow smoke is fundamentally a contract test on the
+  // VISIBLE DayWorkout text after the three-message coach mutation. It is
+  // NOT a navigation smoke. Routing through Program/Home and tapping a
+  // second smoke control there made the harness brittle without adding
+  // any coverage — every failure mode in that second hop was orthogonal
+  // to what we are trying to assert.
+  //
+  // This control reads the resolved program week from the SAME source of
+  // truth HomeScreen uses (useResolvedWeek → buildProgramTabProjectedWeek
+  // → projectVisibleDay), finds the Wednesday entry, and dispatches
+  // directly to the real DayWorkoutScreen via the root navigationRef.
+  //
+  // Render gates:
+  //   - smokeCoachBikeFlow              (__DEV__ + coach-bike-flow flow)
+  //   - isFocused                       (Coach is the current leaf)
+  //   - post-coach Wednesday open target exists (otherwise → missing marker)
+  // Missing reasons include no-visible-week-data, no-Wednesday-date-in-week,
+  // Wednesday-day-has-no-workout, Wednesday-not-easy-aerobic-flush, and
+  // DayWorkout-route-params-unavailable.
+  //
+  // When the Wednesday target cannot be resolved we render a negative
+  // marker (`smoke-wednesday-workout-missing`) with a categorical reason
+  // so the wrapper can diagnose the exact failure mode instead of
+  // guessing.
+  const resolvedWeek = useResolvedWeek();
+  const [smokeWednesdayStableTarget, setSmokeWednesdayStableTarget] =
+    useState<SmokeWednesdayOpenTarget | null>(null);
+  const smokeWednesdayTargetResult = React.useMemo(
+    () => deriveSmokeWednesdayOpenTarget({ weekDays: resolvedWeek.weekDays }),
+    [resolvedWeek.weekDays],
+  );
+  const smokeWednesdayCurrentTarget = smokeWednesdayTargetResult.target;
+  React.useEffect(() => {
+    if (
+      !smokeCoachBikeFlow ||
+      !isFocused ||
+      smokeWednesdayStableTarget ||
+      !smokeWednesdayCurrentTarget
+    ) {
+      return;
+    }
+    setSmokeWednesdayStableTarget(smokeWednesdayCurrentTarget);
+    logger.info(
+      `[smoke-open-wednesday-workout] stable target captured date=${smokeWednesdayCurrentTarget.date} workoutId=${smokeWednesdayCurrentTarget.workoutId} title=${smokeWednesdayCurrentTarget.title}`,
+    );
+  }, [
+    smokeCoachBikeFlow,
+    isFocused,
+    smokeWednesdayStableTarget,
+    smokeWednesdayCurrentTarget,
+  ]);
+  const smokeWednesdayOpenTarget =
+    smokeWednesdayTargetResult.state === 'ready'
+      ? smokeWednesdayStableTarget ?? smokeWednesdayCurrentTarget
+      : null;
+  const smokeWednesdayMissingReason: string | null = React.useMemo(() => {
+    return smokeWednesdayTargetResult.state === 'ready'
+      ? null
+      : smokeWednesdayTargetResult.reason;
+  }, [smokeWednesdayTargetResult]);
+
+  // ─── smoke-precoach-week-ready gate ─────────────────────────────────
+  //
+  // Hard preflight rendered into the live tree only when:
+  //   • smokeCoachBikeFlow + isFocused (otherwise the marker can't leak
+  //     out of the smoke harness)
+  //   • resolvedWeek has data
+  //   • Wednesday day exists
+  //   • Wednesday has a workout
+  //   • That workout's name === SMOKE_WEDNESDAY_WORKOUT_NAME ("Easy
+  //     Aerobic Flush") — the canonical pre-mutation session the coach
+  //     pipeline expects to find
+  //   • At least one visible field still mentions "Rower" so the row→bike
+  //     mutation has something to flip (otherwise the first coach turn
+  //     fails with "I can't see the row session in the visible week")
+  //
+  // Maestro asserts smoke-precoach-week-ready BEFORE typing any coach
+  // message. If smoke-visible-week-missing is visible instead, the wrapper
+  // reports the categorical reason without firing the coach turns.
+  // NOTE: The visible-week state machine + markers used to live here.
+  // They moved to SmokeCoachBikeHarness so they render at AppNavigator
+  // level (outside any ScrollView/FlatList/keyboard area) and are
+  // driven by the canonical smoke nav state machine instead of
+  // CoachScreen-local props. The Wednesday-workout-resolution helpers
+  // below (stable target + missingReason) are
+  // still owned by CoachScreen because they drive a tappable Pressable
+  // in the chat surface — that one is correctly inside CoachScreen.
+  React.useEffect(() => {
+    if (!smokeCoachBikeFlow || !isFocused) return;
+    if (smokeWednesdayMissingReason) {
+      logger.info(
+        `[smoke-open-wednesday-workout] missing reason=${smokeWednesdayMissingReason} wedText=${smokeWednesdayTargetResult.wedText || '(none)'}`,
+      );
+    } else {
+      logger.info(
+        `[smoke-open-wednesday-workout] rendered source=CoachScreen date=${smokeWednesdayOpenTarget?.date ?? '-'} workoutId=${smokeWednesdayOpenTarget?.workoutId ?? '-'} title=${smokeWednesdayOpenTarget?.title ?? '-'} stable=${smokeWednesdayStableTarget ? 'yes' : 'no'}`,
+      );
+    }
+  }, [
+    smokeCoachBikeFlow,
+    isFocused,
+    smokeWednesdayMissingReason,
+    smokeWednesdayOpenTarget?.date,
+    smokeWednesdayOpenTarget?.workoutId,
+    smokeWednesdayOpenTarget?.title,
+    smokeWednesdayStableTarget,
+    smokeWednesdayTargetResult.wedText,
+  ]);
+
+  // ─── Smoke-only forbidden-clarifier detector ────────────────────────
+  //
+  // The pipeline test (smokeCoachBikeFlowTests.ts, 33/33) proves the
+  // deterministic resolver auto-binds turns 2 + 3 to Wednesday's Easy
+  // Aerobic Flush when the upstream `lastDiscussedWorkout` /
+  // `lastExplainedSession` snapshot is populated. The live CoachScreen
+  // has historically diverged from that snapshot (race between
+  // dispatcher.referencedSession write and the next handleSend's
+  // packet build) and the user sees a clarifier instead of a mutation.
+  //
+  // This marker fires when the latest assistant message matches any
+  // string the router / resolver / dispatcher emits as a "Which session?
+  // Which day?" clarifier. The smoke YAML asserts NOT visible after
+  // each coach turn so any clarifier leakage fails the smoke at the
+  // exact turn it leaked, surfacing wrapper label:
+  //   "Live Coach target binding failed: unexpected clarifier."
+  //
+  // It is intentionally narrow — it only matches the literal clarifier
+  // sentences the existing code paths emit. False positives on
+  // legitimate disambiguation outside coach-bike-flow are not possible
+  // because the marker is gated on smokeCoachBikeFlow && isFocused.
+  const FORBIDDEN_CLARIFIER_RE =
+    /which\s+session\s+should\s+i\s+switch|which\s+session\s+should\s+the\s+bike\s+change\s+apply\s+to|which\s+day\s+are\s+you\s+looking\s+at|which\s+session\s+do\s+you\s+mean|i\s+see\s+multiple\s+\S+\s+sessions\s+this\s+week|i\s+can'?t\s+see\s+the\s+row\s+session\s+in\s+the\s+visible\s+week|i\s+don'?t\s+see\s+a\s+\S+\s+in\s+this\s+week/i;
+  const latestAssistantMessage = React.useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role === 'assistant') return m.content;
+    }
+    return null;
+  }, [messages]);
+  const smokeForbiddenClarifierVisible = React.useMemo(() => {
+    if (!latestAssistantMessage) return false;
+    return FORBIDDEN_CLARIFIER_RE.test(latestAssistantMessage);
+  }, [latestAssistantMessage]);
+  React.useEffect(() => {
+    if (!smokeCoachBikeFlow || !isFocused) return;
+    if (smokeForbiddenClarifierVisible) {
+      logger.warn(
+        `[smoke-coach-unexpected-clarifier] reply="${(latestAssistantMessage ?? '').slice(0, 200)}"`,
+      );
+    }
+  }, [smokeCoachBikeFlow, isFocused, smokeForbiddenClarifierVisible, latestAssistantMessage]);
+
+  const handleSmokeOpenWednesdayWorkout = () => {
+    logger.info('[smoke-open-wednesday-workout] pressed');
+    const latestSmokeWednesdayOpenTarget =
+      smokeWednesdayTargetResult.state === 'ready'
+        ? smokeWednesdayTargetResult.target
+        : null;
+    const target = latestSmokeWednesdayOpenTarget ?? smokeWednesdayOpenTarget;
+    if (!target) {
+      logger.warn(
+        `[smoke-open-wednesday-workout] no target reason=${smokeWednesdayMissingReason ?? 'unknown'}`,
+      );
+      return;
+    }
+    if (!navigationRef.isReady()) {
+      logger.warn(
+        '[smoke-open-wednesday-workout] navigationRef not ready — skipping dispatch',
+      );
+      return;
+    }
+    logger.info(
+      `[smoke-open-wednesday-workout] navigating DayWorkout date=${target.date} workoutId=${target.workoutId} title=${target.title} source=${latestSmokeWednesdayOpenTarget ? 'latest' : 'stable'}`,
+    );
+    // Use the same DayWorkout route + params HomeScreen.handleViewWorkout
+    // uses. We dispatch through the root navigationRef rather than the
+    // Coach-stack navigation prop: DayWorkout lives in the ProgramStack,
+    // so the nested navigate target needs to be ('ProgramTab', { screen:
+    // 'DayWorkout' }) at the root. navigation.getParent() from inside
+    // the Coach stack would return the bottom-tab navigator, which works,
+    // but the root ref is the canonical singleton and avoids races during
+    // nested-stack mount.
+    navigationRef.dispatch(
+      CommonActions.navigate('ProgramTab', {
+        screen: 'DayWorkout',
+        params: {
+          workoutId: target.workoutId,
+          date: target.date,
+        },
+      }),
+    );
+  };
   // currentMicrocycle drives the program-context summary sent to the AI.
   // All program mutations now flow through scoped actions (coachActions.ts);
   // we never call setCurrentMicrocycle / setTodayWorkout / replaceExerciseInWorkout
@@ -463,6 +777,11 @@ export default function CoachScreen() {
   const coachNotes = useCoachMemoryStore((s) => s.notes);
   const addCoachNote = useCoachMemoryStore((s) => s.addNote);
   const [loadingSeconds, setLoadingSeconds] = useState(0);
+  // Visible-progress label for deterministic mutation flows. The router/
+  // executor ticks `checking_program → applying_change → verifying_update
+  // → composing_reply` and we surface the human label so the athlete sees
+  // the work happening instead of a generic "Thinking..." spinner.
+  const [coachProgressLabel, setCoachProgressLabel] = useState<string | null>(null);
   const dot1 = useRef(new Animated.Value(0.3)).current;
   const dot2 = useRef(new Animated.Value(0.3)).current;
   const dot3 = useRef(new Animated.Value(0.3)).current;
@@ -1117,6 +1436,7 @@ export default function CoachScreen() {
     // every injury / state-introspection turn — when it does, we
     // SKIP the legacy /coach-chat fetch so old action tools can't
     // compete with the UAE.
+    let classifiedCoachIntent: CoachIntent | null = null;
     try {
       const recentMessages = messages
         .filter((m) => m.id !== '0' && m.role !== 'system')
@@ -1125,7 +1445,10 @@ export default function CoachScreen() {
           role: m.role as 'user' | 'assistant',
           content: m.content,
         }));
-      const packet = buildCoachContextPacket({
+      // Note: `let` rather than `const` — the visible-week unique-
+      // modality auto-bind below may reassign packet with a synthesised
+      // referenceResolution.
+      let packet = buildCoachContextPacket({
         userMessage: userMessage.content,
         recentMessages,
         todayISO: todayISOLocal(),
@@ -1133,27 +1456,483 @@ export default function CoachScreen() {
           ? {
               bodyPart: pendingInjuryRef.current.bodyPart,
               timestamp: pendingInjuryRef.current.timestamp,
-            }
+          }
           : null,
+        pendingCoachProposal: pendingCoachProposalRef.current,
       });
 
-      // Ask the LLM. Network failure / malformed JSON / schema
-      // mismatch all resolve to a safe `general_question` fallback —
-      // the dispatcher then falls through to legacy.
-      const intent = await liveCoachIntentClassifier.classify(packet);
+      // ─── PENDING CLARIFIER RESUME ───────────────────────────────
+      // If the previous coach turn returned mutate-mode clarify (e.g.
+      // "Which session should I switch?"), the athlete's reply might be
+      // an answer to that question. Try to splice their answer into the
+      // stashed partial command BEFORE the general router runs.
+      //
+      //   Coach: "Which session should I switch?" (clarifier)
+      //   User:  "The Wednesday one" (binds Wednesday → resume command)
+      //
+      // Cancel verbs ("never mind", "forget it") drop the slot without
+      // applying. If the new message can't be interpreted as an answer,
+      // fall through to the normal router and leave the pending entry
+      // for the next turn (TTL-bounded).
+      {
+        const pendingClarifier = getPendingClarifierSnapshot();
+        if (pendingClarifier) {
+          if (isCancelClarifierMessage(userMessage.content)) {
+            usePendingCoachClarifierStore.getState().clearPending();
+            logger.debug('[pending-clarifier] cancelled', {
+              operation: pendingClarifier.operation,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            const cancelMsg: Message = {
+              id: `${Date.now()}-clarifier-cancelled`,
+              role: 'assistant',
+              content: 'No worries — leaving things as they are.',
+            };
+            setMessages((prev) => [...prev, userMessage, cancelMsg]);
+            setInputValue('');
+            return;
+          }
+          const resumed = resumeFromPending({
+            pending: pendingClarifier,
+            newMessage: userMessage.content,
+            newResolution: packet.referenceResolution ?? null,
+          });
+          if (resumed && resumed.mode === 'mutate') {
+            // Phase G runtime audit — explicit `[pending-clarifier-resume]`
+            // tag so live logs prove the resume path fired and legacy was
+            // not consulted. Sam's spec — `legacyBlocked: true` is hard-
+            // coded because reaching this branch means we run the
+            // executor directly, never legacy /coach-chat.
+            logger.warn('[pending-clarifier-resume]', {
+              operation: pendingClarifier.operation,
+              filledTarget:
+                resumed.target.kind === 'date' || resumed.target.kind === 'exercise'
+                  ? {
+                      kind: resumed.target.kind,
+                      date: resumed.target.date,
+                      sessionName: resumed.target.kind === 'date'
+                        ? resumed.target.sessionName
+                        : resumed.target.exerciseName,
+                    }
+                  : { kind: resumed.target.kind },
+              legacyBlocked: true,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+              newMessage: userMessage.content.length > 200
+                ? `${userMessage.content.slice(0, 200)}…`
+                : userMessage.content,
+            });
+            usePendingCoachClarifierStore.getState().clearPending();
+            const onProgress = (stage: ProgressStage) => {
+              setCoachProgressLabel(describeStage(stage));
+            };
+            const result = executeCoachCommand({
+              command: resumed,
+              todayISO: todayISOLocal(),
+              referenceResolution: packet.referenceResolution ?? null,
+              userMessage: pendingClarifier.originalMessage,
+              onProgress,
+            });
+            setCoachProgressLabel(null);
+            logger.debug('[coach-flow] router_executed', {
+              route: result.route,
+              executorKind: result.kind,
+              applied: result.applied,
+              progress: result.progress,
+              source: 'pending_clarifier_resume',
+            });
+            const assistantMessage: Message = {
+              id: `${Date.now()}-resumed`,
+              role: 'assistant',
+              content: result.reply,
+            };
+            setMessages((prev) => [...prev, userMessage, assistantMessage]);
+            setInputValue('');
+            return;
+          }
+          // ─── BARE YES / NO HANDLING ─────────────────────────────────
+          // The athlete answered "Yes" / "Yeah" / "No" to a pending
+          // clarifier without giving a concrete target. We MUST NOT fall
+          // through to legacy — the legacy LLM has been observed to
+          // hallucinate a structural action ("set_preferred_alternative")
+          // for a single-word "Yes" reply.
+          //
+          //   • "No" / "Nope" → drop the pending slot, soft acknowledge.
+          //   • "Yes" / "Yeah" → restate the original clarifier so the
+          //     athlete can give a concrete answer (a day name, an
+          //     exercise name, etc.).
+          if (isNegativeClarifierMessage(userMessage.content)) {
+            usePendingCoachClarifierStore.getState().clearPending();
+            logger.debug('[pending-clarifier] negative_dismiss', {
+              operation: pendingClarifier.operation,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            const cancelMsg: Message = {
+              id: `${Date.now()}-clarifier-no`,
+              role: 'assistant',
+              content: 'Got it — leaving things as they are.',
+            };
+            setMessages((prev) => [...prev, userMessage, cancelMsg]);
+            setInputValue('');
+            return;
+          }
+          if (isAffirmativeClarifierMessage(userMessage.content)) {
+            logger.debug('[pending-clarifier] affirmative_no_target', {
+              operation: pendingClarifier.operation,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            // Pending entry stays — TTL still in force — so a follow-up
+            // concrete answer can resume.
+            const restateMsg: Message = {
+              id: `${Date.now()}-clarifier-restate`,
+              role: 'assistant',
+              content:
+                pendingClarifier.askedQuestion
+                  ? `${pendingClarifier.askedQuestion} (a day name like "Wednesday" works.)`
+                  : 'Which session do you mean? A day name like "Wednesday" works.',
+            };
+            setMessages((prev) => [...prev, userMessage, restateMsg]);
+            setInputValue('');
+            return;
+          }
+          // Couldn't bind a target — fall through to normal routing.
+          // The pending entry stays put; if the new turn itself emits
+          // a clarify, capture will overwrite it below.
+        }
+      }
+
+      // ─── LIVE SEND CONTEXT INSTRUMENTATION ──────────────────────────
+      // [coach-live-send] is the single tag we grep for when the live
+      // smoke leaks an "unexpected clarifier" we don't see in
+      // smokeCoachBikeFlowTests. Every field here is something the
+      // router consumes one frame later; if the live run produces
+      // `needsClarification: true` while these logs show a usable
+      // target candidate, the bug is between this point and
+      // `routedCommand` — nowhere else.
+      const liveSendSwapParse = parseModalitySwapRequest(userMessage.content);
+      const liveSendPendingClarifierBefore = getPendingClarifierSnapshot();
+      const liveSendVisibleWeekTargetCount = (packet.currentWeek ?? []).filter(
+        (d) => !!d?.workout,
+      ).length;
+      logger.debug('[coach-live-send] input', {
+        text: userMessage.content.length > 200
+          ? `${userMessage.content.slice(0, 200)}…`
+          : userMessage.content,
+        smokeCoachBikeFlow,
+        isFocused,
+        wednesdayWorkoutReady: !smokeWednesdayMissingReason,
+        wednesdayMissingReason: smokeWednesdayMissingReason ?? null,
+      });
+      logger.debug('[coach-live-send] visible_week_target_count', {
+        count: liveSendVisibleWeekTargetCount,
+      });
+      logger.debug('[coach-live-send] smoke_target_date_workout', {
+        date: smokeWednesdayOpenTarget?.date ?? null,
+        workoutId: smokeWednesdayOpenTarget?.workoutId ?? null,
+        title: smokeWednesdayOpenTarget?.title ?? null,
+      });
+      logger.debug('[coach-live-send] pending_clarifier_state', {
+        present: liveSendPendingClarifierBefore != null,
+        operation: liveSendPendingClarifierBefore?.operation ?? null,
+        ageMs: liveSendPendingClarifierBefore
+          ? Date.now() - liveSendPendingClarifierBefore.createdAt
+          : null,
+      });
+      logger.debug('[coach-live-send] injury_guard_state', {
+        activeInjury: !!useCoachUpdatesStore.getState().activeInjury,
+        pendingInjuryPresent: !!pendingInjuryRef.current,
+        pendingInjuryBodyPart: pendingInjuryRef.current?.bodyPart ?? null,
+      });
+
+      // ─── STALE-PENDING-CLARIFIER PRUNE (smoke critical path) ────────
+      // When the live smoke harness is on (smokeCoachBikeFlow + isFocused
+      // + Wednesday workout is ready) and the user's message parses as
+      // a direct modality swap, a leftover pendingClarifier from a
+      // previous unrelated turn would intercept the message and re-ask
+      // "Which session do you mean?". That's the wrong answer when the
+      // visible week contains exactly one rower session. Clear it.
+      const smokePrecoachReady =
+        smokeCoachBikeFlow && isFocused && !smokeWednesdayMissingReason;
+      if (
+        smokePrecoachReady &&
+        liveSendSwapParse != null &&
+        liveSendPendingClarifierBefore != null
+      ) {
+        usePendingCoachClarifierStore.getState().clearPending();
+        logger.warn('[coach-live-send] stale_pending_cleared', {
+          operation: liveSendPendingClarifierBefore.operation,
+          ageMs: Date.now() - liveSendPendingClarifierBefore.createdAt,
+          reason: 'smoke_precoach_ready_with_direct_modality_swap',
+        });
+      }
+
+      // ─── VISIBLE-WEEK UNIQUE-MODALITY AUTO-BIND ────────────────────
+      // The deterministic resolver only binds "it" / "the row" when the
+      // durable coachContextStateStore already carries a fresh
+      // lastDiscussedWorkout (or lastExplained / lastOpened). Live turn
+      // 2 ("Can you change to a bike?") fires BEFORE turn 1's dispatcher
+      // has had a chance to write that entry — so the resolver returns
+      // target=null and the router emits "Which session should I
+      // switch?" at coachCommandRouter.ts:760.
+      //
+      // The durable rule: when the message is a modality swap AND the
+      // visible week contains exactly one session matching the source
+      // modality, we bind that session automatically. Source pure
+      // (no Zustand reads, no mutations), gated on target=null so we
+      // never override a stronger explicit_day / pronoun match.
+      const autoBind = autoBindUniqueModalityTarget(packet, userMessage.content);
+      if (autoBind.bound && autoBind.boundTarget) {
+        packet = autoBind.packet;
+        logger.warn('[coach-live-send] reference_synthesised', {
+          method: autoBind.boundTarget.method,
+          date: autoBind.boundTarget.date,
+          sessionName: autoBind.boundTarget.sessionName,
+          candidateCount: autoBind.candidateCount,
+          previousStatus: 'no_target_or_unresolved',
+        });
+      } else {
+        logger.debug('[coach-live-send] reference_not_auto_bound', {
+          reason: autoBind.reason,
+          candidateCount: autoBind.candidateCount,
+          existingStatus: packet.referenceResolution?.status ?? null,
+          existingTarget: !!packet.referenceResolution?.target,
+        });
+      }
+
+      // ─── PRE-LLM CoachCommandRouter gate ─────────────────────────
+      // Replaces the previous "isMutationLike + orchestrateModalitySwap"
+      // pair. The router is a single typed entry point that ALWAYS
+      // emits one of: mutate / clarify / reject / explain / inspect_state.
+      // Anything other than 'explain' / 'inspect_state' is locally
+      // executed; the legacy /coach-chat fetch is hard-blocked for
+      // every mutate or clarify outcome — see canFallbackToLegacy.
+      logger.debug('[coach-live-send] router_reached', { reached: true });
+      const routedCommand: CoachCommand = routeCoachCommand({
+        userMessage: userMessage.content,
+        todayISO: todayISOLocal(),
+        referenceResolution: packet.referenceResolution ?? null,
+      });
+      logger.debug('[coach-live-send] router_emitted', {
+        mode: routedCommand.mode,
+        reason: 'reason' in routedCommand ? routedCommand.reason : null,
+        needsClarification:
+          routedCommand.mode === 'mutate' ? routedCommand.needsClarification : null,
+        targetKind:
+          routedCommand.mode === 'mutate' ? routedCommand.target?.kind ?? null : null,
+      });
+
+      logger.debug('[coach-router] command', {
+        mode: routedCommand.mode,
+        operation: routedCommand.mode === 'mutate' ? routedCommand.operation : null,
+        scope: routedCommand.mode === 'mutate' ? routedCommand.scope : null,
+        confidence: routedCommand.mode === 'mutate' ? routedCommand.confidence : null,
+        needsClarification: routedCommand.mode === 'mutate' ? routedCommand.needsClarification : null,
+        reason: 'reason' in routedCommand ? routedCommand.reason : null,
+        legacyAllowed: canFallbackToLegacy(routedCommand),
+      });
+
+      if (isMutateCommand(routedCommand)) {
+        // Show visible progress while the executor runs.
+        const onProgress = (stage: ProgressStage) => {
+          setCoachProgressLabel(describeStage(stage));
+        };
+        const result = executeCoachCommand({
+          command: routedCommand,
+          todayISO: todayISOLocal(),
+          referenceResolution: packet.referenceResolution ?? null,
+          userMessage: userMessage.content,
+          onProgress,
+        });
+        setCoachProgressLabel(null);
+
+        // ─── PENDING CLARIFIER CAPTURE ────────────────────────────
+        // If the executor returned `clarify` for a resumable mutate op
+        // (e.g. modality swap with no target bound), stash the partial
+        // command so the next user reply can answer it. captureFromExecutorClarify
+        // returns null for ops that don't need a target answer.
+        if (result.kind === 'clarify' && routedCommand.mode === 'mutate') {
+          const captured = captureFromExecutorClarify({
+            routedCommand,
+            askedQuestion: result.reply,
+            originalMessage: userMessage.content,
+            missingFields: routedCommand.missingFields,
+          });
+          if (captured) {
+            usePendingCoachClarifierStore.getState().setPending(captured);
+            // Phase G runtime audit — explicit `[pending-clarifier-set]`
+            // tag with partialPayload + targetStatus so the next turn's
+            // `[pending-clarifier-resume]` can be cross-checked against
+            // the captured slot. Sam's spec.
+            logger.warn('[pending-clarifier-set]', {
+              operation: captured.operation,
+              scope: captured.scope,
+              missingFields: captured.missingFields,
+              partialPayload: captured.partialPayload,
+              targetStatus: routedCommand.target?.kind ?? 'absent',
+              askedQuestion: captured.askedQuestion?.length > 200
+                ? `${captured.askedQuestion.slice(0, 200)}…`
+                : captured.askedQuestion,
+            });
+          }
+        } else if (result.kind === 'mutated' || result.kind === 'rejected'
+                || result.kind === 'rejected_with_alternatives') {
+          // A successful or hard-rejected mutation supersedes any
+          // outstanding clarifier — drop the slot so a stale "Which
+          // session?" answer doesn't bind to a different op tomorrow.
+          if (getPendingClarifierSnapshot()) {
+            usePendingCoachClarifierStore.getState().clearPending();
+            logger.debug('[pending-clarifier] superseded', {
+              by: result.kind,
+            });
+          }
+        }
+
+        const debugSnapshot = {
+          intent: 'coach_command_router',
+          route: result.route,
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: result.modalityOutcome?.targetDate
+            ?? packet.referenceResolution?.target?.date
+            ?? null,
+          referenceTargetName: result.modalityOutcome?.targetSessionName
+            ?? packet.referenceResolution?.target?.sessionName
+            ?? null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic' as const,
+          applied: result.applied,
+          fromModality: result.modalityOutcome?.fromModality ?? null,
+          toModality: result.modalityOutcome?.toModality ?? null,
+          projectionShowsTo: result.modalityOutcome?.projectionShowsTo ?? null,
+          projectionShowsFrom: result.modalityOutcome?.projectionShowsFrom ?? null,
+        };
+        setLastCoachDebug(debugSnapshot);
+        logger.debug('[coach-flow] router_executed', {
+          ...debugSnapshot,
+          executorKind: result.kind,
+          progress: result.progress,
+        });
+        logger.debug('[coach-transaction]', {
+          message: userMessage.content,
+          intent: 'coach_command_router',
+          route: result.route,
+          pendingProposalBefore: pendingCoachProposalRef.current,
+          mutationAttempted: true,
+          eventsEmitted: result.applied ? 1 : 0,
+          eventsApplied: result.applied ? 1 : 0,
+          visibleDiff: result.applied
+            ? [{ date: result.modalityOutcome?.targetDate, kind: 'router_command' }]
+            : [],
+          replyMode: result.applied
+            ? 'program_adjustment_applied'
+            : 'program_adjustment_failed',
+        });
+        const assistantMessage: Message = {
+          id: `${Date.now()}-router`,
+          role: 'assistant',
+          content: result.reply,
+        };
+        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        setInputValue('');
+        return;
+      }
+      // routedCommand.mode is 'conversation' (or legacy 'explain') /
+      // 'inspect_state' — fall through to the dispatcher, which calls
+      // the LLM with the FULL coachContextPacket so replies stay
+      // grounded in the visible week / activeInjury / lastDiscussed.
+      // The legacy /coach-chat path is now CONVERSATION-ONLY: the
+      // mutation router has already classified mutations and routed
+      // them locally, so the legacy text fallback can never apply
+      // structural changes.
+
+      // Phase G runtime audit — bypass the /coach-intent classifier for
+      // router-controlled paths. The router has already classified the
+      // turn as conversation/inspect_state, and the legacy /coach-chat
+      // is conversation-only. The classifier was added to pick a
+      // dispatcher branch (program_explanation / session_mismatch_question
+      // / general_question), but it's been 401-ing on the Supabase gateway
+      // every turn — flooding logs and providing no real signal because
+      // the disabled fallback already maps to general_question. Skip it
+      // entirely; synthesize the same fallback shape locally so the
+      // dispatcher's contract is preserved without a network round-trip.
+      // Sam's spec: "do not call /coach-intent for router-controlled
+      // paths."
+      const intent: CoachIntent = {
+        intent: 'general_question',
+        confidence: 0,
+        needsClarification: false,
+        rationale: `router_mode_${routedCommand.mode}_bypass`,
+      };
+      classifiedCoachIntent = intent;
       logger.debug('[coach-flow] intent', {
         kind: intent.intent,
         confidence: intent.confidence,
         needsClarification: intent.needsClarification,
+        source: 'router_bypass',
       });
 
       const deps = buildLiveDispatchDeps(todayISOLocal());
       const outcome = dispatchCoachIntent(intent, packet, deps);
 
       if (outcome.handled) {
+        if (outcome.pendingCoachProposal !== undefined) {
+          pendingCoachProposalRef.current = outcome.pendingCoachProposal;
+        }
+        // Phase 2 — when the dispatcher tied its reply to a specific
+        // session (program_explanation / session_mismatch_question
+        // outcomes carry a `referencedSession`), write it into the
+        // durable coach context store so a follow-up like "change it
+        // to a bike" knows what "it" refers to. Modality stamps are
+        // re-derived from the visible day so "the row" matches.
+        if (outcome.referencedSession) {
+          const day = packet.currentWeek.find(
+            (d) => d.date === outcome.referencedSession!.date,
+          );
+          const modalities = day?.workout
+            ? extractModalitiesFromSession({
+                name: day.workout.name,
+                exercises: day.workout.exercises,
+              })
+            : undefined;
+          useCoachContextStateStore.getState().setLastExplainedSession({
+            date: outcome.referencedSession.date,
+            sessionName: outcome.referencedSession.sessionName,
+            modalities,
+            source: 'coach_explanation',
+          });
+          logger.debug('[coach-flow] last_explained_set', {
+            date: outcome.referencedSession.date,
+            sessionName: outcome.referencedSession.sessionName,
+            replyMode: outcome.replyMode,
+          });
+        }
+        logger.debug('[coach-transaction]', {
+          message: userMessage.content,
+          intent: intent.intent,
+          route: outcome.transaction?.route ?? outcome.replyMode,
+          pendingProposalBefore: outcome.transaction?.pendingProposalBefore ?? null,
+          mutationAttempted: outcome.transaction?.mutationAttempted ?? outcome.mutated,
+          eventsEmitted: outcome.transaction?.eventsEmitted ?? 0,
+          eventsApplied: outcome.transaction?.eventsApplied ?? 0,
+          visibleDiff: outcome.transaction?.visibleDiff ?? [],
+          replyMode: outcome.replyMode,
+        });
         logger.debug('[coach-flow] dispatcher_handled', {
           replyMode: outcome.replyMode,
           mutated: outcome.mutated,
+        });
+        setLastCoachDebug({
+          intent: intent.intent,
+          route: outcome.transaction?.route ?? outcome.replyMode,
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: outcome.referencedSession?.date
+            ?? packet.referenceResolution?.target?.date
+            ?? null,
+          referenceTargetName: outcome.referencedSession?.sessionName
+            ?? packet.referenceResolution?.target?.sessionName
+            ?? null,
+          mutationLike: false,
+          legacyCalled: false,
+          replySource: 'deterministic' as const,
         });
         const assistantMessage: Message = {
           id: `${Date.now()}-dispatch`,
@@ -1168,15 +1947,126 @@ export default function CoachScreen() {
         replyMode: outcome.replyMode,
         intent: intent.intent,
       });
+      if (isPendingProgramProposalExpired(pendingCoachProposalRef.current)) {
+        pendingCoachProposalRef.current = null;
+      }
+
+      // ─── Phase 2 truth gate ───────────────────────────────────────
+      // Mutation-like messages must NEVER reach the legacy
+      // /coach-chat text fallback. If the deterministic dispatcher
+      // chose not to handle the turn, we either ask a clarifier (no
+      // resolved target) or fail honestly (target resolved but no
+      // deterministic modality swap route exists yet — Phase 4
+      // territory). The legacy path can still answer pure
+      // explanations and chit-chat.
+      const mutationLike = isMutationLike(userMessage.content);
+      if (mutationLike) {
+        const refRes = packet.referenceResolution ?? null;
+        let reply: string;
+        let gateReason: string;
+        if (refRes?.status === 'resolved' && refRes.target) {
+          gateReason = 'mutation_unsupported_target_resolved';
+          const dayLabel = (() => {
+            try {
+              return new Date(`${refRes.target.date}T12:00:00`)
+                .toLocaleDateString(undefined, { weekday: 'long' });
+            } catch {
+              return refRes.target.date;
+            }
+          })();
+          reply =
+            `I can see you mean ${dayLabel}'s ${refRes.target.sessionName}, ` +
+            `but I can't apply that change automatically yet. ` +
+            `I'm not going to pretend it's done.`;
+        } else if (refRes?.clarifierQuestion) {
+          gateReason = `mutation_clarifier_${refRes.status}`;
+          reply = refRes.clarifierQuestion;
+        } else {
+          gateReason = 'mutation_no_target';
+          reply = 'Which session do you mean?';
+        }
+        logger.debug('[coach-flow] mutation_truth_gate', {
+          reason: gateReason,
+          referenceStatus: refRes?.status ?? null,
+          referenceTarget: refRes?.target ?? null,
+        });
+        logger.debug('[coach-transaction]', {
+          message: userMessage.content,
+          intent: classifiedCoachIntent?.intent ?? 'mutation_truth_gate',
+          route: 'mutation_truth_gate',
+          pendingProposalBefore: pendingCoachProposalRef.current,
+          mutationAttempted: false,
+          eventsEmitted: 0,
+          eventsApplied: 0,
+          visibleDiff: [],
+          replyMode: 'program_adjustment_failed',
+        });
+        const assistantMessage: Message = {
+          id: `${Date.now()}-truth-gate`,
+          role: 'assistant',
+          content: reply,
+        };
+        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        setInputValue('');
+        return;
+      }
     } catch (err) {
-      // Defensive: if the dispatcher itself throws (shouldn't), fall
-      // through to legacy rather than crashing the chat.
+      // Defensive: if the dispatcher itself throws (shouldn't), fail
+      // closed for program-adjustment turns; other turns can still
+      // use legacy rather than crashing the chat.
       logger.warn('[coach-flow] dispatcher_error', {
         detail: err instanceof Error ? err.message : String(err),
       });
+      if (
+        pendingCoachProposalRef.current ||
+        classifiedCoachIntent?.intent === 'request_program_adjustment'
+      ) {
+        const assistantMessage: Message = {
+          id: `${Date.now()}-program-adjustment-error`,
+          role: 'assistant',
+          content:
+            "I tried to handle that program adjustment, but it didn't land in the visible program. I'm not going to pretend it changed.",
+        };
+        pendingCoachProposalRef.current = null;
+        logger.debug('[coach-transaction]', {
+          message: userMessage.content,
+          intent: classifiedCoachIntent?.intent ?? 'dispatcher_error',
+          route: 'program_adjustment_dispatcher_error',
+          pendingProposalBefore: null,
+          mutationAttempted: false,
+          eventsEmitted: 0,
+          eventsApplied: 0,
+          visibleDiff: [],
+          replyMode: 'program_adjustment_failed',
+        });
+        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        setInputValue('');
+        return;
+      }
     }
     logger.debug('[coach-flow] legacy_fallback', {
       reason: 'dispatcher_did_not_handle',
+    });
+    logger.debug('[coach-transaction]', {
+      message: userMessage.content,
+      intent: 'legacy_fallback',
+      route: 'legacy_fallback',
+      pendingProposalBefore: pendingCoachProposalRef.current,
+      mutationAttempted: false,
+      eventsEmitted: 0,
+      eventsApplied: 0,
+      visibleDiff: [],
+      replyMode: 'fall_through',
+    });
+    setLastCoachDebug({
+      intent: classifiedCoachIntent?.intent ?? 'legacy_fallback',
+      route: 'legacy_fallback',
+      referenceStatus: null,
+      referenceTargetDate: null,
+      referenceTargetName: null,
+      mutationLike: false,
+      legacyCalled: true,
+      replySource: 'legacy' as const,
     });
     // ──────────────── END COACH INTENT DISPATCHER ────────────────
 
@@ -1316,13 +2206,69 @@ export default function CoachScreen() {
       }
 
       // Diagnostic logging for coach action pipeline
-      const incomingActions: ServerCoachAction[] = Array.isArray(data.actions) ? data.actions : [];
+      const rawIncomingActions: ServerCoachAction[] = Array.isArray(data.actions) ? data.actions : [];
       logger.debug('[CoachScreen] Response received:', {
         hasReply: !!data.reply,
-        actionCount: incomingActions.length,
-        actionKinds: incomingActions.map((a) => `${a.kind}(${a.scope})`),
+        rawActionCount: rawIncomingActions.length,
+        rawActionKinds: rawIncomingActions.map((a) => `${a.kind}(${a.scope})`),
         hasNewNotes: !!data.newNotes,
       });
+
+      // ─── LEGACY ACTION HARD-BLOCK ─────────────────────────────────────
+      // The legacy /coach-chat endpoint is CONVERSATION-ONLY. The
+      // deterministic CoachCommandRouter owns every program change —
+      // structural OR permanent-preference. If legacy emits any action
+      // other than `save_note`, the model has either ignored its
+      // instructions or hallucinated — we drop the offender on the floor
+      // and log it so the regression is observable.
+      const { kept, blocked } = filterLegacyCoachActions(rawIncomingActions);
+      if (blocked.length > 0) {
+        logger.warn('[legacy-action-blocked]', {
+          count: blocked.length,
+          kinds: blocked.map((b) => `${b.action?.kind ?? 'unknown'}(${b.action?.scope ?? '?'})`),
+          reasons: blocked.map((b) => b.reason),
+          message: userMessage.content,
+          replyPreview: typeof data.reply === 'string' ? data.reply.slice(0, 120) : null,
+        });
+      }
+      const incomingActions: ServerCoachAction[] = kept as ServerCoachAction[];
+
+      // ─── REPLY-TEXT TRUTH GATE (Phase G hardened) ───────────────────
+      // Legacy /coach-chat is conversation-only — it has no path to
+      // verify a program change. ANY "Done"-shaped phrasing it emits is
+      // therefore a lie, regardless of whether actions came along for
+      // the ride. The previous gate only fired when actions had been
+      // blocked; that left a hole open when legacy emitted a "Done"
+      // reply with NO actions (and the user then thought their request
+      // had been honoured).
+      //
+      // Sam's spec: "If legacy returns a reply that says 'Done', 'Sorted',
+      // 'changed', 'swapped', 'saved', or 'pinned' without deterministic
+      // verification, replace it with: I can talk through that, but
+      // program changes need to go through the verified coach command
+      // path."
+      //
+      // Allowed exception: pure save_note results legitimately use
+      // "noted" — but the user-facing reply for a save_note isn't where
+      // we want "Done — I swapped your bike" either, so we still
+      // sanitize when the dangerous verbs are present.
+      const legacyReplyText = typeof data.reply === 'string' ? data.reply : '';
+      const replyImpliesDone =
+        /\b(done|sorted|saved|swapped|swap|changed|change|pinned|locked\s*in|got\s*it|noted|i'?ll\s+use|from\s+now\s+on)\b/i.test(legacyReplyText);
+      const sanitizedLegacyReply = replyImpliesDone
+        ? 'I can talk through that, but program changes need to go through the verified coach command path.'
+        : legacyReplyText;
+      if (replyImpliesDone) {
+        logger.warn('[legacy-reply-sanitized]', {
+          reason: 'reply_implies_done_without_router_verification',
+          blockedActionCount: blocked.length,
+          keptActionCount: kept.length,
+          originalPreview: legacyReplyText.slice(0, 200),
+          message: userMessage.content.length > 200
+            ? `${userMessage.content.slice(0, 200)}…`
+            : userMessage.content,
+        });
+      }
 
       // ─── GROUNDING GUARD ──────────────────────────────────────────────
       // Whatever the AI text says, we never claim "Program updated" unless
@@ -1342,12 +2288,12 @@ export default function CoachScreen() {
       const aiClaimedChange = incomingActions.length > 0;
       const beforeSnapshot = snapshotCurrentWeek();
 
-      // Pure-chat turn (no actions) → just relay the LLM's reply.
+      // Pure-chat turn (no actions) → relay the (possibly-sanitized) reply.
       if (!aiClaimedChange) {
         const coachMessage: Message = {
           id: (Date.now() + 1).toString(),
           role: 'assistant',
-          content: data.reply || 'Got it. What else can I help with?',
+          content: sanitizedLegacyReply || 'Got it. What else can I help with?',
         };
         setMessages((prev) => [...prev, coachMessage]);
       }
@@ -1455,6 +2401,7 @@ export default function CoachScreen() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setCoachProgressLabel(null);
     }
   };
 
@@ -1496,8 +2443,127 @@ export default function CoachScreen() {
     );
   };
 
+  // Phase 3 — render the debug overlay only when the live env var
+  // EXPO_PUBLIC_ENABLE_DEBUG_LOGS=true. Production never sees this.
+  const debugOverlayEnabled =
+    typeof process !== 'undefined' &&
+    process.env?.EXPO_PUBLIC_ENABLE_DEBUG_LOGS === 'true';
+
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View
+      style={[styles.container, { paddingTop: insets.top }]}
+      testID="coach-screen-root"
+      accessibilityLabel="Coach screen"
+    >
+      {__DEV__ && isFocused ? (
+        <View
+          accessible={false}
+          pointerEvents="none"
+          style={styles.coachReadyMarker}
+          testID="coach-ready"
+          accessibilityLabel="coach-ready"
+          onLayout={() => {
+            logger.info('[coach-ready] rendered');
+          }}
+        />
+      ) : null}
+      {smokeCoachBikeFlow &&
+      isFocused &&
+      !smokeWednesdayMissingReason &&
+      smokeWednesdayOpenTarget ? (
+        <View
+          accessible={true}
+          collapsable={false}
+          pointerEvents="none"
+          style={[styles.smokeMarker, styles.smokeReadyMarker]}
+          testID="smoke-wednesday-workout-ready"
+          accessibilityLabel="smoke-wednesday-workout-ready"
+        />
+      ) : null}
+      {smokeCoachBikeFlow &&
+      isFocused &&
+      !smokeWednesdayMissingReason &&
+      smokeWednesdayOpenTarget ? (
+        <Pressable
+          accessible={true}
+          accessibilityLabel="smoke-open-wednesday-workout"
+          accessibilityRole="button"
+          collapsable={false}
+          onPress={handleSmokeOpenWednesdayWorkout}
+          style={styles.smokeControl}
+          testID="smoke-open-wednesday-workout"
+        />
+      ) : null}
+      {smokeCoachBikeFlow && isFocused && smokeWednesdayMissingReason ? (
+        <View
+          accessible={true}
+          collapsable={false}
+          pointerEvents="none"
+          style={[styles.smokeMarker, styles.smokeMissingMarker]}
+          testID="smoke-wednesday-workout-missing"
+          accessibilityLabel="smoke-wednesday-workout-missing"
+        />
+      ) : null}
+      {/* Forbidden-clarifier guard. Rendered ONLY when the latest
+          assistant reply matches one of the canonical "Which session?
+          / Which day?" clarifier strings AND the smoke flag is on.
+          The Maestro YAML asserts NOT visible after every coach turn
+          so any clarifier leakage fails the smoke immediately. */}
+      {smokeCoachBikeFlow && isFocused && smokeForbiddenClarifierVisible ? (
+        <View
+          accessible={true}
+          collapsable={false}
+          pointerEvents="none"
+          style={[styles.smokeMarker, styles.smokeClarifierMarker]}
+          testID="smoke-coach-unexpected-clarifier"
+          accessibilityLabel="smoke-coach-unexpected-clarifier"
+        />
+      ) : null}
+      {/*
+        Visible-week preflight markers (ready/pending/missing/inactive/
+        debug) moved to SmokeCoachBikeHarness — mounted at AppNavigator
+        level so they survive CoachScreen mount-order races and never
+        sit behind the keyboard or inside ScrollView/FlatList.
+      */}
+      {/* Phase 3 dev debug overlay — surface intent / route /
+          referenceResolution / mutationLike / legacyCalled /
+          replySource so the user can verify the gate fired correctly
+          without grepping logs. Hidden in production builds. */}
+      {debugOverlayEnabled && lastCoachDebug ? (
+        <View
+          style={{
+            backgroundColor: '#0008',
+            padding: 6,
+            marginHorizontal: 8,
+            marginTop: 4,
+            borderRadius: 4,
+          }}
+          accessibilityLabel="coach debug overlay"
+        >
+          <Text style={{ color: '#9F9', fontSize: 10 }}>
+            intent={lastCoachDebug.intent} {' | '} route={lastCoachDebug.route}
+          </Text>
+          <Text style={{ color: '#9F9', fontSize: 10 }}>
+            ref={lastCoachDebug.referenceStatus ?? '–'}{' '}
+            target={lastCoachDebug.referenceTargetDate ?? '–'}{' '}
+            ({lastCoachDebug.referenceTargetName ?? '–'})
+          </Text>
+          <Text style={{ color: '#9F9', fontSize: 10 }}>
+            mutationLike={String(lastCoachDebug.mutationLike)} {' | '}
+            legacyCalled={String(lastCoachDebug.legacyCalled)} {' | '}
+            replySource={lastCoachDebug.replySource}
+          </Text>
+          {lastCoachDebug.toModality !== undefined ? (
+            <Text style={{ color: '#9F9', fontSize: 10 }}>
+              swap={String(lastCoachDebug.fromModality ?? '–')}→
+              {String(lastCoachDebug.toModality ?? '–')} {' | '}
+              applied={String(lastCoachDebug.applied)} {' | '}
+              showsTo={String(lastCoachDebug.projectionShowsTo)} {' | '}
+              showsFrom={String(lastCoachDebug.projectionShowsFrom)}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       {/* Messages */}
       <FlatList
         ref={flatListRef}
@@ -1506,6 +2572,8 @@ export default function CoachScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.messageListContent, { paddingBottom: 70 }]}
         style={styles.list}
+        testID="coach-message-list"
+        accessibilityLabel="Coach conversation"
         keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() =>
@@ -1545,7 +2613,9 @@ export default function CoachScreen() {
                 <Animated.View style={[styles.typingDot, { opacity: dot3 }]} />
               </View>
               <Text style={styles.typingText}>
-                {loadingSeconds < 5
+                {coachProgressLabel
+                  ? coachProgressLabel
+                  : loadingSeconds < 5
                   ? 'Coach is thinking...'
                   : loadingSeconds < 12
                   ? 'Working on it...'
@@ -1567,6 +2637,8 @@ export default function CoachScreen() {
             editable={!isLoading}
             multiline
             maxLength={500}
+            testID="coach-input"
+            accessibilityLabel="Coach message input"
           />
           <Pressable
             style={({ pressed }) => [
@@ -1576,6 +2648,8 @@ export default function CoachScreen() {
             ]}
             onPress={handleSend}
             disabled={isLoading || !inputValue.trim()}
+            testID="coach-send-button"
+            accessibilityLabel="Send message"
           >
             <Text style={styles.sendButtonText}>{'↑'}</Text>
           </Pressable>
@@ -1589,6 +2663,45 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0C0C0C',
+  },
+  coachReadyMarker: {
+    width: 1,
+    height: 1,
+    minWidth: 1,
+    minHeight: 1,
+    backgroundColor: '#0C0C0C',
+  },
+  smokeControl: {
+    position: 'absolute',
+    top: 48,
+    left: 4,
+    width: 44,
+    height: 44,
+    backgroundColor: '#1DE9B6',
+    zIndex: 2147483647,
+    elevation: 2147483647,
+  },
+  smokeMarker: {
+    position: 'absolute',
+    top: 48,
+    left: 56,
+    width: 30,
+    height: 30,
+    zIndex: 2147483647,
+    elevation: 2147483647,
+  },
+  smokeReadyMarker: {
+    backgroundColor: '#00C853',
+  },
+  smokeMissingMarker: {
+    backgroundColor: '#FF1744',
+  },
+  smokeClarifierMarker: {
+    // Positioned just below the ready/missing marker so the two never
+    // stack on top of each other in a screenshot. Vivid magenta so
+    // failure screenshots make the leakage visible at a glance.
+    top: 84,
+    backgroundColor: '#FF00C8',
   },
   list: {
     flex: 1,

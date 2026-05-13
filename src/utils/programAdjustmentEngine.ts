@@ -109,6 +109,8 @@ export type AdjustmentEventKind =
   | 'remove_exercise'
   | 'replace_exercise'
   | 'swap_conditioning_modality'
+  | 'add_conditioning_block'
+  | 'remove_conditioning_block'
   | 'mark_session_optional'
   | 'add_session_note'
   | 'add_preference'
@@ -1176,6 +1178,10 @@ export function eventToBullet(ev: AdjustmentEvent): string {
       return `${day}: marked optional${ev.before ? ` (${String(ev.before)})` : ''}`;
     case 'swap_conditioning_modality':
       return `${day}: swapped running for ${String(ev.after ?? 'off-feet conditioning')}`;
+    case 'add_conditioning_block':
+      return `${day}: added light aerobic intervals after strength`;
+    case 'remove_conditioning_block':
+      return `${day}: removed conditioning`;
     case 'add_session_note': {
       // Reply must reflect the actual exposure, not "lightened Team
       // Training". `event.after` carries the bucket-specific note text

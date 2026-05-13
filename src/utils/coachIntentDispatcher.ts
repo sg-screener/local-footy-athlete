@@ -25,6 +25,7 @@
 import type {
   CoachContextPacket,
   CoachIntent,
+  PendingCoachProposal,
 } from './coachIntent';
 import { logger } from './logger';
 import type { ResolvedDay } from './sessionResolver';
@@ -37,6 +38,17 @@ import {
   formatResolutionInactiveReply,
 } from './constraintResolutionDetector';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
+import {
+  isPendingProgramProposalExpired,
+  isProgramAdjustmentCancel,
+  isProgramAdjustmentConfirmation,
+  getProgramAdjustmentRequiredText,
+  getProgramAdjustmentSuccessReply,
+  planProgramAdjustmentRequest,
+  UNSUPPORTED_PROGRAM_ADJUSTMENT_REPLY,
+} from './programAdjustmentRequests';
+import type { AdjustmentEvent } from './programAdjustmentEngine';
+import { deriveVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
 
 // ─── Result type ────────────────────────────────────────────────────
 
@@ -45,9 +57,16 @@ export type DispatchReplyMode =
   | 'severity_reply_uae'
   | 'progression'
   | 'state_inspector'
+  | 'program_explanation'
+  | 'session_mismatch_question'
   | 'reapplied'
   | 'general_state_grounded'
   | 'non_injury_constraint'
+  | 'program_adjustment_clarifier'
+  | 'program_adjustment_proposed'
+  | 'program_adjustment_applied'
+  | 'program_adjustment_failed'
+  | 'program_adjustment_unsupported'
   | 'constraint_resolution_applied'
   | 'constraint_resolution_ambiguous'
   | 'constraint_resolution_no_match'
@@ -75,6 +94,274 @@ export interface DispatchOutcome {
   replyMode: DispatchReplyMode;
   /** Free-text rationale for logs. */
   rationale?: string;
+  pendingCoachProposal?: PendingCoachProposal | null;
+  /**
+   * Session the dispatcher explicitly explained or otherwise tied
+   * the reply to (program_explanation / session_mismatch_question
+   * branches). CoachScreen uses this to populate the durable coach
+   * context state so a follow-up "change it to a bike" knows which
+   * session "it" refers to. See coachContextStateStore.ts.
+   */
+  referencedSession?: {
+    date: string;
+    sessionName: string;
+    modalities?: string[];
+  } | null;
+  transaction?: {
+    route: string;
+    pendingProposalBefore: PendingCoachProposal | null;
+    mutationAttempted: boolean;
+    eventsEmitted: number;
+    eventsApplied: number;
+    visibleDiff: string[];
+    replyMode: DispatchReplyMode;
+  };
+}
+
+function looksLikeSessionMismatchQuestion(text: string): boolean {
+  const t = text.toLowerCase();
+  const hasTrainingTerm =
+    /\b(upper\s+pull|pull\s+day|pull\s+session|push\/pull|upper\/lower|upper\s+body|lower\s+body|row|rower|rowing|rowing\s+session|zone\s*2\s+row|aerobic\s+base)\b/.test(t);
+  const hasMismatchLanguage =
+    /\bwhy\b/.test(t) ||
+    /\b(listed|says?|showing|label(?:led)?|opens?|open as|instead|mismatch)\b/.test(t);
+  const hasExplicitInjury =
+    /\b(pain|hurt|hurts|sore|soreness|strain|strained|injured|injury|tight|tightness|tweaked|pulled\s+my|pulled\s+(?:a|the)?\s*(?:hamstring|hammy|back|groin|calf|quad|shoulder|knee))\b/.test(t);
+  return hasTrainingTerm && hasMismatchLanguage && !hasExplicitInjury;
+}
+
+function looksLikeProgramExplanationQuestion(text: string): boolean {
+  const t = text.toLowerCase();
+  if (/\b(pain|hurt|hurts|sore|soreness|strain|strained|injured|injury|tight|tightness|tweaked|pulled\s+my)\b/.test(t)) {
+    return false;
+  }
+  return (
+    /\bwhy\b/.test(t) &&
+    /\b(row|rower|rowing|zone\s*2|aerobic|mid[-\s]?week|instead of running|non[-\s]?running|running load)\b/.test(t)
+  ) || looksLikeSessionMismatchQuestion(text);
+}
+
+function dayNameForDow(dow: number): string {
+  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][dow] ?? 'That day';
+}
+
+function requestedDayFromText(text: string): number | null {
+  const t = text.toLowerCase();
+  const dayMatch = [
+    'sunday',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+  ].findIndex((d) => new RegExp(`\\b${d}\\b`).test(t));
+  return dayMatch >= 0 ? dayMatch : null;
+}
+
+function rowSignals(day: ResolvedDay): {
+  row: boolean;
+  zone2: boolean;
+  aerobic: boolean;
+  runningConversion: boolean;
+  haystack: string;
+} {
+  const workout = day.workout;
+  const exerciseNames = (workout?.exercises ?? [])
+    .map((ex: any) => ex.exercise?.name)
+    .filter(Boolean);
+  const notes = [
+    ...(workout?.coachNotes ?? []),
+    ...(workout?.exercises ?? []).map((ex: any) => ex.notes).filter(Boolean),
+    workout?.description,
+    workout?.name,
+    workout?.workoutType,
+  ].filter(Boolean);
+  const haystack = [...exerciseNames, ...notes].join(' ').toLowerCase();
+  return {
+    row: /\b(row|rower|rowing\s*erg)\b/.test(haystack),
+    zone2: /\bzone\s*2\b/.test(haystack),
+    aerobic: /\baerobic|conditioning\b/.test(haystack),
+    runningConversion: /non[-\s]?running|run load|running load|shifted to non[-\s]?running/.test(haystack),
+    haystack,
+  };
+}
+
+interface RowSessionCandidate {
+  day: ResolvedDay;
+  score: number;
+  reason: string;
+  title: string;
+  subtitle: string;
+}
+
+function findRowSessionCandidates(
+  packet: CoachContextPacket,
+  requestedDay: number | null,
+): RowSessionCandidate[] {
+  const all = [
+    ...packet.currentWeek.map((day) => ({ day, weekBias: 8 })),
+    ...packet.nextWeek.map((day) => ({ day, weekBias: 0 })),
+  ];
+  const wantsMidWeek = /\bmid[-\s]?week\b/i.test(packet.userMessage);
+  const wantsRow = /\b(row|rower|rowing)\b/i.test(packet.userMessage);
+  return all
+    .filter(({ day }) =>
+      !!day.workout && (requestedDay == null || day.dayOfWeek === requestedDay),
+    )
+    .map(({ day, weekBias }) => {
+      const signals = rowSignals(day);
+      if (wantsRow && !signals.row) return null;
+      if (!signals.row && !signals.zone2 && !signals.aerobic) return null;
+      const identity = deriveVisibleWorkoutIdentity(day.workout!);
+      let score = weekBias;
+      const reasons: string[] = [];
+      if (requestedDay != null && day.dayOfWeek === requestedDay) {
+        score += 100;
+        reasons.push('requested day');
+      }
+      if (requestedDay == null && wantsMidWeek) {
+        if (day.dayOfWeek === 3) {
+          score += 45;
+          reasons.push('mid-week Wednesday');
+        } else if (day.dayOfWeek === 2 || day.dayOfWeek === 4) {
+          score += 18;
+          reasons.push('mid-week adjacent day');
+        }
+      }
+      if (signals.row) {
+        score += 45;
+        reasons.push('row/rower visible');
+      }
+      if (signals.zone2) {
+        score += 30;
+        reasons.push('zone 2 visible');
+      }
+      if (signals.aerobic) {
+        score += 15;
+        reasons.push('aerobic/conditioning visible');
+      }
+      if (signals.runningConversion) {
+        score += 20;
+        reasons.push('non-running run-load note');
+      }
+      if (identity.isConditioningOnly) {
+        score += 12;
+        reasons.push('conditioning-only session');
+      }
+      return {
+        day,
+        score,
+        reason: reasons.join(', ') || 'visible conditioning',
+        title: identity.title || day.workout!.name,
+        subtitle: String(identity.subtitle || day.workout!.workoutType || ''),
+      };
+    })
+    .filter((candidate): candidate is RowSessionCandidate => !!candidate)
+    .sort((a, b) => b.score - a.score);
+}
+
+/**
+ * Identify the specific day the dispatcher's program-explanation /
+ * session-mismatch reply is referring to. Exported so CoachScreen
+ * can populate `lastExplainedSession` on the durable coach context
+ * store after a `program_explanation` outcome — see
+ * coachContextStateStore.ts.
+ */
+export function findReferencedVisibleDay(packet: CoachContextPacket): ResolvedDay | undefined {
+  const requestedDay = requestedDayFromText(packet.userMessage);
+  const all = [...packet.currentWeek, ...packet.nextWeek];
+  if (requestedDay != null) {
+    const rowOnDay = findRowSessionCandidates(packet, requestedDay)[0];
+    if (rowOnDay?.day.dayOfWeek === requestedDay) return rowOnDay.day;
+    return all.find((d) => d.dayOfWeek === requestedDay && d.workout);
+  }
+  return findRowSessionCandidates(packet, null)[0]?.day;
+}
+
+function buildProgramExplanationReply(packet: CoachContextPacket): string {
+  const requestedDay = requestedDayFromText(packet.userMessage);
+  const candidates = findRowSessionCandidates(packet, requestedDay);
+  const selected = candidates[0];
+  const detectedTopic = /\binstead of running|non[-\s]?running|running load\b/i.test(packet.userMessage)
+    ? 'running_load_conversion'
+    : /\bupper\s+pull|listed|opens?|label|mismatch\b/i.test(packet.userMessage)
+    ? 'session_label_mismatch'
+    : /\bzone\s*2\b/i.test(packet.userMessage)
+    ? 'zone_2_row'
+    : 'mid_week_row';
+
+  if (!selected?.day.workout) {
+    logger.debug('[coach-program-explanation]', {
+      userMessage: packet.userMessage,
+      requestedDay: requestedDay == null ? null : dayNameForDow(requestedDay),
+      detectedTopic,
+      rowSessionCandidates: [],
+      selectedSessionDate: null,
+      selectedSessionTitle: null,
+      selectedSessionSubtitle: null,
+      selectedSessionReason: null,
+      replyMode: 'program_explanation',
+    });
+    return "I can't see the row session in the visible week I'm reading. Which day are you looking at?";
+  }
+
+  const day = selected.day;
+  const workout = day.workout;
+  const exerciseNames = (workout.exercises ?? [])
+    .map((ex: any) => ex.exercise?.name)
+    .filter(Boolean);
+  const rowText = exerciseNames.find((name: string) => /\b(row|rower|rowing\s*erg)\b/i.test(name));
+  const signals = rowSignals(day);
+  const dayName = dayNameForDow(day.dayOfWeek);
+  const rowLabel = rowText || selected.title;
+  const recoveryBiased =
+    /easy aerobic flush|3-4\/10|skip if legs feel heavy|thursday training quality/i.test(signals.haystack);
+  const conversionSentence = signals.runningConversion
+    ? ' That session was shifted to a non-running modality to manage weekly run load.'
+    : '';
+  const mismatchSentence = /\bupper\s+pull|listed|opens?|label|mismatch\b/i.test(packet.userMessage)
+    ? ' If it still says Upper Pull while the workout is only rowing, that is a display issue: the title should match the final resolved conditioning session.'
+    : '';
+
+  logger.debug('[coach-program-explanation]', {
+    userMessage: packet.userMessage,
+    requestedDay: requestedDay == null ? null : dayNameForDow(requestedDay),
+    detectedTopic,
+    rowSessionCandidates: candidates.map((c) => ({
+      date: c.day.date,
+      day: dayNameForDow(c.day.dayOfWeek),
+      title: c.title,
+      subtitle: c.subtitle,
+      score: c.score,
+      reason: c.reason,
+    })),
+    selectedSessionDate: day.date,
+    selectedSessionTitle: selected.title,
+    selectedSessionSubtitle: selected.subtitle,
+    selectedSessionReason: selected.reason,
+    replyMode: 'program_explanation',
+  });
+
+  if (recoveryBiased) {
+    return `I put the ${dayName} ${rowLabel} there to maintain aerobic base without adding more running load.${conversionSentence} Because it sits between team training nights, it should be easy and optional: 20-30min at about 3-4/10. If it feels like it would compromise Thursday, skip it or shorten it.${mismatchSentence}`;
+  }
+
+  return `I put the ${dayName} ${rowLabel} there as an optional aerobic base session without adding more running load.${conversionSentence} Because you've already got team training and footy demands in the week, the rower gives you Zone 2 work while keeping impact and leg soreness lower. Keep it conversational, about 4-5/10, and skip it if your legs feel heavy or Thursday quality would suffer.${mismatchSentence}`;
+}
+
+function buildSessionMismatchReply(packet: CoachContextPacket): string {
+  const explanation = buildProgramExplanationReply(packet);
+  if (!/^I can't see the row session/.test(explanation)) return explanation;
+  const day = findReferencedVisibleDay(packet);
+  if (!day?.workout) return explanation;
+  const identity = deriveVisibleWorkoutIdentity(day.workout);
+  const title = identity.title || day.workout.name;
+  const dayName = dayNameForDow(day.dayOfWeek);
+  if (identity.isConditioningOnly) {
+    return `That ${dayName} session is resolving as ${title}. It should be labelled as the final conditioning session in both the Program tab and workout detail.`;
+  }
+  return `${dayName} is currently resolving as ${title}. I can't see a row session on that day in the visible week I'm reading.`;
 }
 
 // ─── Dependency surface ─────────────────────────────────────────────
@@ -152,6 +439,15 @@ export interface DispatchDeps {
     remainingActiveCount?: number;
     derivedCardShouldRender?: boolean;
   };
+  applyProgramAdjustmentEvents: (
+    events: AdjustmentEvent[],
+    intendedChange: { type: string; targetDates: string[]; requiredText?: string },
+  ) => {
+    eventsApplied: number;
+    visibleDiff: string[];
+    success: boolean;
+    reason?: string;
+  };
 }
 
 // ─── Dispatcher ─────────────────────────────────────────────────────
@@ -161,6 +457,7 @@ export function dispatchCoachIntent(
   packet: CoachContextPacket,
   deps: DispatchDeps,
 ): DispatchOutcome {
+  const pendingProposalBefore = packet.pendingCoachProposal ?? null;
   logger.debug('[coach-flow] intent', {
     kind: intent.intent,
     confidence: intent.confidence,
@@ -174,6 +471,199 @@ export function dispatchCoachIntent(
         status: packet.activeInjury.status,
       }
     : null);
+
+  if (
+    pendingProposalBefore?.type === 'program_adjustment' &&
+    isProgramAdjustmentCancel(packet.userMessage)
+  ) {
+    return {
+      handled: true,
+      reply: "No problem — I won't change the program.",
+      mutated: false,
+      replyMode: 'program_adjustment_failed',
+      pendingCoachProposal: null,
+      transaction: {
+        route: 'pending_program_adjustment_cancelled',
+        pendingProposalBefore,
+        mutationAttempted: false,
+        eventsEmitted: 0,
+        eventsApplied: 0,
+        visibleDiff: [],
+        replyMode: 'program_adjustment_failed',
+      },
+    };
+  }
+
+  if (
+    pendingProposalBefore?.type === 'program_adjustment' &&
+    isPendingProgramProposalExpired(pendingProposalBefore)
+  ) {
+    if (isProgramAdjustmentConfirmation(packet.userMessage)) {
+      return {
+        handled: true,
+        reply: 'That pending program adjustment expired, so I did not change the program. Ask me again and I can set it up fresh.',
+        mutated: false,
+        replyMode: 'program_adjustment_failed',
+        pendingCoachProposal: null,
+        transaction: {
+          route: 'pending_program_adjustment_expired',
+          pendingProposalBefore,
+          mutationAttempted: false,
+          eventsEmitted: 0,
+          eventsApplied: 0,
+          visibleDiff: [],
+          replyMode: 'program_adjustment_failed',
+        },
+      };
+    }
+  }
+
+  if (
+    pendingProposalBefore?.type === 'program_adjustment' &&
+    isProgramAdjustmentConfirmation(packet.userMessage)
+  ) {
+    const confirmationIntent: CoachIntent = {
+      intent: 'request_program_adjustment',
+      confidence: 1,
+      needsClarification: false,
+      payload: {
+        requestedSession: pendingProposalBefore.targetDay,
+        concern: pendingProposalBefore.prescription ?? pendingProposalBefore.action,
+      },
+    };
+    const planned = planProgramAdjustmentRequest(confirmationIntent, packet);
+    if (planned.kind === 'ready') {
+      const apply = deps.applyProgramAdjustmentEvents(planned.events, {
+        type: planned.proposal.action,
+        targetDates: planned.events.map((e) => e.date),
+        requiredText: getProgramAdjustmentRequiredText(planned.proposal),
+      });
+      const success = planned.events.length > 0 && apply.eventsApplied > 0 && apply.success;
+      const reply = success
+        ? getProgramAdjustmentSuccessReply(planned.proposal)
+        : "I tried to add that, but it didn't land in the visible program. I'm not going to pretend it changed.";
+      logger.debug('[coach-pending-adjustment]', {
+        pendingBefore: pendingProposalBefore,
+        userMessage: packet.userMessage,
+        resolvedOption: planned.proposal.conditioningOption ?? null,
+        nextPendingState: null,
+        route: 'pending_program_adjustment_confirmation',
+        replyMode: success ? 'program_adjustment_applied' : 'program_adjustment_failed',
+      });
+      return {
+        handled: true,
+        reply,
+        mutated: success,
+        replyMode: success ? 'program_adjustment_applied' : 'program_adjustment_failed',
+        pendingCoachProposal: null,
+        transaction: {
+          route: 'pending_program_adjustment_confirmation',
+          pendingProposalBefore,
+          mutationAttempted: true,
+          eventsEmitted: planned.events.length,
+          eventsApplied: apply.eventsApplied,
+          visibleDiff: apply.visibleDiff,
+          replyMode: success ? 'program_adjustment_applied' : 'program_adjustment_failed',
+        },
+      };
+    }
+    return {
+      handled: true,
+      reply: planned.reply || "I tried to add that, but it didn't land in the visible program. I'm not going to pretend it changed.",
+      mutated: false,
+      replyMode: planned.kind === 'unsupported'
+        ? 'program_adjustment_unsupported'
+        : 'program_adjustment_failed',
+      pendingCoachProposal: null,
+      transaction: {
+        route: `pending_program_adjustment_${planned.kind}`,
+        pendingProposalBefore,
+        mutationAttempted: false,
+        eventsEmitted: 0,
+        eventsApplied: 0,
+        visibleDiff: [],
+        replyMode: planned.kind === 'unsupported'
+          ? 'program_adjustment_unsupported'
+          : 'program_adjustment_failed',
+      },
+    };
+  }
+
+  if (
+    pendingProposalBefore?.type === 'program_adjustment' &&
+    (
+      pendingProposalBefore.needs === 'conditioning_type' ||
+      /conditioning|aerobic|interval|bike|flush|tempo|track|run|light|easy|something else|other/i.test(packet.userMessage)
+    )
+  ) {
+    const followupIntent: CoachIntent = {
+      intent: 'request_program_adjustment',
+      confidence: Math.max(intent.confidence, 0.9),
+      needsClarification: false,
+      payload: {
+        requestedSession: pendingProposalBefore.targetDay,
+        concern: packet.userMessage,
+      },
+    };
+    const planned = planProgramAdjustmentRequest(followupIntent, packet);
+    if (planned.kind === 'proposal' || planned.kind === 'clarifier') {
+      const replyMode = planned.kind === 'proposal'
+        ? 'program_adjustment_proposed'
+        : 'program_adjustment_clarifier';
+      logger.debug('[coach-pending-adjustment]', {
+        pendingBefore: pendingProposalBefore,
+        userMessage: packet.userMessage,
+        resolvedOption: planned.proposal.conditioningOption ?? null,
+        nextPendingState: planned.proposal,
+        route: planned.kind === 'proposal'
+          ? 'pending_program_adjustment_proposed'
+          : 'pending_program_adjustment_clarifier',
+        replyMode,
+      });
+      return {
+        handled: true,
+        reply: planned.reply,
+        mutated: false,
+        replyMode,
+        pendingCoachProposal: planned.proposal,
+        transaction: {
+          route: planned.kind === 'proposal'
+            ? 'pending_program_adjustment_proposed'
+            : 'pending_program_adjustment_clarifier',
+          pendingProposalBefore,
+          mutationAttempted: false,
+          eventsEmitted: 0,
+          eventsApplied: 0,
+          visibleDiff: [],
+          replyMode: planned.kind === 'proposal'
+            ? 'program_adjustment_proposed'
+            : 'program_adjustment_clarifier',
+        },
+      };
+    }
+  }
+
+  if (looksLikeProgramExplanationQuestion(packet.userMessage)) {
+    const reply = buildProgramExplanationReply(packet);
+    logger.debug('[coach-flow] route', {
+      route: 'program_explanation',
+      mutated: false,
+    });
+    logger.debug('[coach-reply] source', { mode: 'program_explanation' });
+    const referenced = findReferencedVisibleDay(packet);
+    return {
+      handled: true,
+      reply,
+      mutated: false,
+      replyMode: 'program_explanation',
+      referencedSession: referenced?.workout
+        ? {
+            date: referenced.date,
+            sessionName: referenced.workout.name ?? 'session',
+          }
+        : null,
+    };
+  }
 
   // ── 0. Constraint-resolution detector ──────────────────────────────
   // Runs BEFORE pending-clarifier and intent classification so a
@@ -278,6 +768,27 @@ export function dispatchCoachIntent(
 
   // ── Severity clarification — only for new injuries with no severity.
   if (intent.needsClarification && intent.clarificationQuestion) {
+    if (looksLikeSessionMismatchQuestion(packet.userMessage)) {
+      const reply = buildSessionMismatchReply(packet);
+      logger.debug('[coach-flow] suppressed_clarifier', {
+        reason: 'session mismatch / training terminology',
+        intent: intent.intent,
+      });
+      const referenced = findReferencedVisibleDay(packet);
+      return {
+        handled: true,
+        reply,
+        mutated: false,
+        replyMode: 'session_mismatch_question',
+        rationale: 'clarifier suppressed (session mismatch question)',
+        referencedSession: referenced?.workout
+          ? {
+              date: referenced.date,
+              sessionName: referenced.workout.name ?? 'session',
+            }
+          : null,
+      };
+    }
     // Hard-block when activeInjury exists for the SAME body part. The
     // LLM should not have classified this as needing clarification —
     // belt-and-braces here in case it does.
@@ -482,23 +993,139 @@ export function dispatchCoachIntent(
       };
     }
 
-    case 'request_program_adjustment': {
-      // Concrete adjustment requests still fall through for now —
-      // the existing edge-function action layer handles non-injury
-      // adjustments. When activeInjury exists, log a warning so we
-      // can spot any conflicting mutation in the wild.
-      if (packet.activeInjury && packet.activeInjury.status !== 'resolved') {
-        logger.debug('[coach-flow] route', {
-          route: 'request_program_adjustment',
-          warning: 'activeInjury present — UAE constraints take priority',
-        });
-      }
-      logger.debug('[coach-flow] route', { route: 'fall_through', reason: 'request_program_adjustment' });
-      return {
-        handled: false,
-        reply: '',
+    case 'program_explanation':
+    case 'session_mismatch_question': {
+      const reply = intent.intent === 'program_explanation'
+        ? buildProgramExplanationReply(packet)
+        : buildSessionMismatchReply(packet);
+      logger.debug('[coach-flow] route', {
+        route: intent.intent,
         mutated: false,
-        replyMode: 'fall_through',
+      });
+      logger.debug('[coach-reply] source', { mode: intent.intent });
+      const referenced = findReferencedVisibleDay(packet);
+      return {
+        handled: true,
+        reply,
+        mutated: false,
+        replyMode: intent.intent === 'program_explanation'
+          ? 'program_explanation'
+          : 'session_mismatch_question',
+        referencedSession: referenced?.workout
+          ? {
+              date: referenced.date,
+              sessionName: referenced.workout.name ?? 'session',
+            }
+          : null,
+      };
+    }
+
+    case 'request_program_adjustment': {
+      const planned = planProgramAdjustmentRequest(intent, packet);
+      if (planned.kind === 'unsupported') {
+        logger.debug('[coach-flow] route', {
+          route: 'request_program_adjustment_unsupported',
+          mutated: false,
+        });
+        return {
+          handled: true,
+          reply: planned.reply || UNSUPPORTED_PROGRAM_ADJUSTMENT_REPLY,
+          mutated: false,
+          replyMode: 'program_adjustment_unsupported',
+          pendingCoachProposal: null,
+          transaction: {
+            route: 'request_program_adjustment_unsupported',
+            pendingProposalBefore,
+            mutationAttempted: false,
+            eventsEmitted: 0,
+            eventsApplied: 0,
+            visibleDiff: [],
+            replyMode: 'program_adjustment_unsupported',
+          },
+        };
+      }
+      if (planned.kind === 'clarifier' || planned.kind === 'proposal') {
+        logger.debug('[coach-flow] route', {
+          route: planned.kind === 'clarifier'
+            ? 'request_program_adjustment_clarifier'
+            : 'request_program_adjustment_proposed',
+          mutated: false,
+        });
+        return {
+          handled: true,
+          reply: planned.reply,
+          mutated: false,
+          replyMode: planned.kind === 'clarifier'
+            ? 'program_adjustment_clarifier'
+            : 'program_adjustment_proposed',
+          pendingCoachProposal: planned.proposal,
+          transaction: {
+            route: planned.kind === 'clarifier'
+              ? 'request_program_adjustment_clarifier'
+              : 'request_program_adjustment_proposed',
+            pendingProposalBefore,
+            mutationAttempted: false,
+            eventsEmitted: 0,
+            eventsApplied: 0,
+            visibleDiff: [],
+            replyMode: planned.kind === 'clarifier'
+              ? 'program_adjustment_clarifier'
+              : 'program_adjustment_proposed',
+          },
+        };
+      }
+      if (planned.kind === 'not_found') {
+        logger.debug('[coach-flow] route', {
+          route: 'request_program_adjustment_not_found',
+          mutated: false,
+        });
+        return {
+          handled: true,
+          reply: planned.reply,
+          mutated: false,
+          replyMode: 'program_adjustment_failed',
+          pendingCoachProposal: null,
+          transaction: {
+            route: 'request_program_adjustment_not_found',
+            pendingProposalBefore,
+            mutationAttempted: false,
+            eventsEmitted: 0,
+            eventsApplied: 0,
+            visibleDiff: [],
+            replyMode: 'program_adjustment_failed',
+          },
+        };
+      }
+      const apply = deps.applyProgramAdjustmentEvents(planned.events, {
+        type: planned.proposal.action,
+        targetDates: planned.events.map((e) => e.date),
+        requiredText: getProgramAdjustmentRequiredText(planned.proposal),
+      });
+      const success = planned.events.length > 0 && apply.eventsApplied > 0 && apply.success;
+      logger.debug('[coach-flow] route', {
+        route: success ? 'request_program_adjustment_applied' : 'request_program_adjustment_failed',
+        mutated: success,
+        eventsEmitted: planned.events.length,
+        eventsApplied: apply.eventsApplied,
+        visibleDiff: apply.visibleDiff,
+      });
+      return {
+        handled: true,
+        reply: success
+          ? getProgramAdjustmentSuccessReply(planned.proposal)
+          : "I tried to add that, but it didn't land in the visible program. I'm not going to pretend it changed.",
+        mutated: success,
+        replyMode: success ? 'program_adjustment_applied' : 'program_adjustment_failed',
+        pendingCoachProposal: null,
+        transaction: {
+          route: success ? 'request_program_adjustment_applied' : 'request_program_adjustment_failed',
+          pendingProposalBefore,
+          mutationAttempted: true,
+          eventsEmitted: planned.events.length,
+          eventsApplied: apply.eventsApplied,
+          visibleDiff: apply.visibleDiff,
+          replyMode: success ? 'program_adjustment_applied' : 'program_adjustment_failed',
+        },
       };
     }
 
@@ -588,6 +1215,6 @@ function mondayOf(iso: string): string {
 
 function extractExerciseFromConcern(concern?: string): string | undefined {
   if (!concern) return undefined;
-  const m = concern.match(/(deadlift|RDL|nordic|squat|sprint|bench|overhead)/i);
+  const m = concern.match(/(conditioning|aerobic|interval|deadlift|RDL|nordic|squat|sprint|bench|overhead)/i);
   return m ? m[1] : undefined;
 }

@@ -957,7 +957,10 @@ export function buildConditioningTemplate(
     if (category === 'sprint') {
       return buildSprintReducedVolume(dateStr, opts.combined ?? false, opts.ergModality, opts.strengthRegion);
     }
-    // Non-sprint 'reduced' is not specified in the UI yet — fall through.
+    if (category === 'aerobic_base') {
+      return buildReducedAerobicBase(dateStr, opts.ergModality);
+    }
+    // Other non-sprint 'reduced' variants are not specified in the UI yet — fall through.
   }
 
   // Combined S+C days get a category-based, duration-capped (≤25min)
@@ -999,6 +1002,27 @@ export const CONDITIONING_DURATION_CAP = {
   combined: { max: 30, target: 22 }, // 15–25 preferred, 30 absolute
   standalone: { max: 45, target: 35 },
 } as const;
+
+function buildReducedAerobicBase(
+  dateStr: string,
+  ergModality?: ErgModality,
+): WorkoutExercise[] {
+  const hash = conditioningDateHash(dateStr);
+  const prefix = `cond-${dateStr}`;
+  const modalities = ['bike', 'row'] as const;
+  const mod = ergModality === 'row' || ergModality === 'bike'
+    ? ergModality
+    : modalities[hash % modalities.length];
+  const modLabel = mod === 'bike' ? 'Assault Bike' : 'Rower';
+  const duration = 20 + (hash % 3) * 5; // 20, 25, or 30 min
+  return [
+    condEx(`${prefix}-easy-flush`, `Easy Aerobic Flush (${duration}min ${modLabel})`, 1, 1, 1, 1, 0,
+      `${duration}min easy ${modLabel}.\n` +
+      'Intensity: 3-4/10 — genuinely easy, conversational pace.\n' +
+      'Optional. Use this for recovery and aerobic maintenance.\n' +
+      'Skip if legs feel heavy after team training or if Thursday training quality would suffer.'),
+  ];
+}
 
 /**
  * Build an abbreviated, duration-capped conditioning block for a
