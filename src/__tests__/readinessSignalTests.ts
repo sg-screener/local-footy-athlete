@@ -218,21 +218,27 @@ section('[7] readiness labels and weekly card scope');
 section('[8] coach chat routes to same readiness language');
 {
   const cooked = routeCoachReadinessMessage({ message: "I'm cooked today", now: 1000 });
-  eq('cooked applies signal', cooked.kind, 'apply_signal');
-  if (cooked.kind === 'apply_signal') {
-    eq('cooked source reason', cooked.reason, 'fatigue_reported');
-    eq('cooked uses flat flag', cooked.signal.flatToday, true);
-    ok('cooked reply avoids max-effort copy', !/max-effort/i.test(cooked.reply));
+  eq('bare cooked defers to ProgramEdit scope clarifier', cooked.kind, 'pass');
+  if (cooked.kind === 'pass') {
+    eq('cooked pass reason', cooked.reason, 'fatigue_needs_program_scope');
   }
 
   const feelingShit = routeCoachReadinessMessage({
     message: "I'm actually feeling shit today",
     now: 1000,
   });
-  eq('plain-language poor readiness applies signal', feelingShit.kind, 'apply_signal');
-  if (feelingShit.kind === 'apply_signal') {
-    eq('plain-language poor readiness reason', feelingShit.reason, 'fatigue_reported');
-    eq('plain-language poor readiness flat flag', feelingShit.signal.flatToday, true);
+  eq('plain-language poor readiness defers to ProgramEdit scope clarifier', feelingShit.kind, 'pass');
+  if (feelingShit.kind === 'pass') {
+    eq('plain-language poor readiness pass reason', feelingShit.reason, 'fatigue_needs_program_scope');
+  }
+
+  const fatigueRemove = routeCoachReadinessMessage({
+    message: 'legs cooked, remove Wednesday fully',
+    now: 1000,
+  });
+  eq('fatigue plus explicit remove defers to ProgramEdit', fatigueRemove.kind, 'pass');
+  if (fatigueRemove.kind === 'pass') {
+    eq('fatigue plus remove pass reason', fatigueRemove.reason, 'program_edit_priority');
   }
 
   const time = routeCoachReadinessMessage({ message: 'I only have 25 mins', now: 1000 });

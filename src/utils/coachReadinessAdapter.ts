@@ -38,6 +38,8 @@ const BODY_SORENESS_RE = /\b(sore|soreness|tight|tightness|stiff|aching|ache|coo
 const GENERAL_SORENESS_RE = /\b(sore|soreness|tight|tightness|stiff|aching|ache)\b/i;
 const FATIGUE_RE = /\b(cooked|smoked|fried|wrecked|toast|flat|exhausted|fatigued|drained|knackered|low energy|no energy|shit|shitty|crap|crappy|terrible|awful|rough|ordinary|off|not\s+feeling\s+(?:good|great|fresh|right)|not\s+(?:good|great|fresh|right))\b/i;
 const TIME_RE = /\b(short on time|limited time|not much time|only got|only have|just got|just have|in a rush)\b/i;
+const PROGRAM_MUTATION_CUE_RE =
+  /\b(?:add|include|chuck|throw\s+in|put\s+in|slot\s+in|tack\s+on|remove|drop|ditch|scrap|skip|cancel|cut|delete|take\s+out|get\s+rid\s+of|make|change|adjust|swap|replace|move|reschedule|easier|lighter|shorter|longer|whole\s+session|session|workout)\b/i;
 const PROGRAM_DURATION_EDIT_RE =
   /\b(?:make|set|change|adjust|extend|increase|reduce|trim|lengthen|shorten)\b[\s\S]{0,48}\b\d{1,3}\s*(?:min|mins|minute|minutes)\b/i;
 const PROGRAM_ADD_DURATION_RE =
@@ -69,6 +71,15 @@ function looksLikeProgramDurationEdit(message: string): boolean {
     NAMED_ACTIVITY_DURATION_RE.test(message) ||
     DURATION_NAMED_ACTIVITY_RE.test(message)
   );
+}
+
+function shouldDeferFatigueToProgramEdit(message: string): boolean {
+  if (!FATIGUE_RE.test(message)) return false;
+  // Bare fatigue/readiness ("I'm cooked", "I feel flat") is an
+  // ambiguous program-edit request until the athlete chooses a scope.
+  // Fatigue plus an explicit edit verb is even clearer: the edit command
+  // must dominate the readiness context.
+  return true;
 }
 
 function isFreshPending(
@@ -121,6 +132,19 @@ export function routeCoachReadinessMessage(input: {
   const minutes = extractMinutes(message);
   if (minutes != null && looksLikeProgramDurationEdit(message)) {
     return { kind: 'pass', reason: 'program_duration_edit' };
+  }
+  if (
+    shouldDeferFatigueToProgramEdit(message) &&
+    !bodyPart &&
+    !painOrInjury &&
+    !severityKnown
+  ) {
+    return {
+      kind: 'pass',
+      reason: PROGRAM_MUTATION_CUE_RE.test(message)
+        ? 'program_edit_priority'
+        : 'fatigue_needs_program_scope',
+    };
   }
   if ((minutes != null && minutes < 45) || (TIME_RE.test(message) && minutes == null)) {
     return {

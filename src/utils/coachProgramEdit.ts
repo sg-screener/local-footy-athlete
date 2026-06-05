@@ -510,6 +510,17 @@ function semanticRoleOverrideCommand(args: {
     conditioningItems,
   );
 
+  const hasExplicitReduceLever =
+    /\b(?:easier|lighter|shorter|reduce|deload|back\s+it\s+off|back\s+off|lower[-\s]*load|less)\b/i.test(normalizedMessage);
+  if (
+    command.mode === 'clarify' &&
+    command.reason === 'mutation_like_no_payload' &&
+    semanticRoles.actionIntent === 'reduce' &&
+    !hasExplicitReduceLever
+  ) {
+    return null;
+  }
+
   if (semanticRoles.actionIntent === 'remove' && semanticRoles.negativeTargetTexts.length > 0) {
     return {
       mode: 'mutate',
@@ -2993,7 +3004,7 @@ function looksLikeWholeSessionRemovalTarget(message: string): boolean {
 function hasReduceOrFatigueIntent(message: string): boolean {
   return (
     /\b(?:easier|lighter|less|reduce|deload|back\s+it\s+off|too\s+much|lower[-\s]*load)\b/i.test(message) ||
-    /\b(?:cooked|sore|tight|fried|wrecked|smoked|toast)\b/i.test(message)
+    /\b(?:cooked|sore|tight|fried|wrecked|smoked|toast|flat|exhausted|fatigued|drained|knackered|low\s+energy|no\s+energy)\b/i.test(message)
   );
 }
 

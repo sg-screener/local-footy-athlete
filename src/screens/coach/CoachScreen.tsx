@@ -842,6 +842,15 @@ function shouldHoldDurationClarifier(
   return !startsFreshEdit;
 }
 
+function isGenericReadinessWithoutInjuryTarget(message: string): boolean {
+  if (extractBodyPart(message)) return false;
+  if (/\b\d{1,2}\s*(?:\/\s*10|out\s+of\s+10)\b/i.test(message)) return false;
+  if (/\b(?:pain|painful|hurt|hurts|hurting|injur(?:y|ed)|tweak(?:ed)?|strain(?:ed)?|pulled|pinged|pop|popped|snap|snapped|tear|tore)\b/i.test(message)) {
+    return false;
+  }
+  return /\b(?:sore|soreness|tight|tightness|stiff|aching|ache|cooked|flat|exhausted|fatigued|drained|knackered|low\s+energy|no\s+energy)\b/i.test(message);
+}
+
 export default function CoachScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
@@ -1252,57 +1261,6 @@ export default function CoachScreen() {
       return;
     }
 
-    // ───────────── READINESS / ADAPTATION CHAT PATH ─────────────
-    // Keep chip + chat adaptation in one language. These messages write
-    // the same lightweight readiness signal used by the Program tab chips;
-    // the visible-program projection turns that into date-scoped guidance.
-    // Explicit pain / injury / severity still falls through to the injury
-    // guard below.
-    const readinessAction = routeCoachReadinessMessage({
-      message: userMessage.content,
-      pending: pendingReadinessRef.current,
-    });
-    if ('clearPending' in readinessAction && readinessAction.clearPending) {
-      pendingReadinessRef.current = null;
-    }
-    if (readinessAction.kind === 'clarify') {
-      pendingReadinessRef.current = readinessAction.pending;
-      logger.debug('[coach-readiness] clarify', {
-        reason: readinessAction.reason,
-      });
-      const assistantMessage: Message = {
-        id: `${Date.now()}-readiness-clarify`,
-        role: 'assistant',
-        content: readinessAction.reply,
-      };
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
-      setInputValue('');
-      return;
-    }
-    if (readinessAction.kind === 'apply_signal') {
-      const todayISO = todayISOLocal();
-      useReadinessStore.getState().setReadinessSignal(todayISO, {
-        ...readinessAction.signal,
-        source: 'coach_message',
-      });
-      logger.debug('[coach-readiness] applied', {
-        reason: readinessAction.reason,
-        todayISO,
-        signal: readinessAction.signal,
-      });
-      const assistantMessage: Message = {
-        id: `${Date.now()}-readiness`,
-        role: 'assistant',
-        content: [
-          buildSessionAwareReadinessReply(readinessAction, todayISO),
-          describeTodayReadinessImpact(todayISO),
-        ].join('\n\n'),
-      };
-      setMessages((prev) => [...prev, userMessage, assistantMessage]);
-      setInputValue('');
-      return;
-    }
-
     // ───────────── INJURY PROGRESSION FOLLOW-UP ─────────────
     // If we have an active injury on file, see whether THIS message is
     // a follow-up update ("better", "pain gone", "4/10", "worse"...).
@@ -1429,6 +1387,17 @@ export default function CoachScreen() {
           guardResult.fired = false;
         }
       }
+    }
+
+    if (
+      guardResult.fired &&
+      isGenericReadinessWithoutInjuryTarget(userMessage.content)
+    ) {
+      logger.debug('[injury-client-guard] suppressed', {
+        reason: 'generic_readiness_program_edit_priority',
+        guardReason: guardResult.reason,
+      });
+      guardResult.fired = false;
     }
 
     if (guardResult.fired && guardResult.reply) {
@@ -2614,6 +2583,57 @@ export default function CoachScreen() {
           id: `${Date.now()}-clarify`,
           role: 'assistant',
           content: routedCommand.question,
+        };
+        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        setInputValue('');
+        return;
+      }
+
+      // ───────────── READINESS / ADAPTATION CHAT PATH ─────────────
+      // ProgramEdit gets first refusal. A bare "I'm cooked" or "legs are
+      // cooked" is an ambiguous program-edit request and must ask which
+      // scope to adjust, not silently write a low-readiness constraint.
+      // Only turns the typed router leaves as non-mutating check-ins can
+      // reach this lightweight readiness signal path.
+      const readinessAction = routeCoachReadinessMessage({
+        message: userMessage.content,
+        pending: pendingReadinessRef.current,
+      });
+      if ('clearPending' in readinessAction && readinessAction.clearPending) {
+        pendingReadinessRef.current = null;
+      }
+      if (readinessAction.kind === 'clarify') {
+        pendingReadinessRef.current = readinessAction.pending;
+        logger.debug('[coach-readiness] clarify', {
+          reason: readinessAction.reason,
+        });
+        const assistantMessage: Message = {
+          id: `${Date.now()}-readiness-clarify`,
+          role: 'assistant',
+          content: readinessAction.reply,
+        };
+        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        setInputValue('');
+        return;
+      }
+      if (readinessAction.kind === 'apply_signal') {
+        const todayISO = todayISOLocal();
+        useReadinessStore.getState().setReadinessSignal(todayISO, {
+          ...readinessAction.signal,
+          source: 'coach_message',
+        });
+        logger.debug('[coach-readiness] applied', {
+          reason: readinessAction.reason,
+          todayISO,
+          signal: readinessAction.signal,
+        });
+        const assistantMessage: Message = {
+          id: `${Date.now()}-readiness`,
+          role: 'assistant',
+          content: [
+            buildSessionAwareReadinessReply(readinessAction, todayISO),
+            describeTodayReadinessImpact(todayISO),
+          ].join('\n\n'),
         };
         setMessages((prev) => [...prev, userMessage, assistantMessage]);
         setInputValue('');

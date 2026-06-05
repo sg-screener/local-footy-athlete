@@ -285,6 +285,8 @@ export interface VisibleSessionRef {
   modalities?: string[];
   workout?: {
     name?: string;
+    workoutType?: string;
+    sessionTier?: string;
     conditioningBlock?: {
       options?: Array<{
         title?: string;
@@ -404,8 +406,8 @@ const VAGUE_LOAD_REQUEST: RegExp[] = [
   /\b(?:do|make|change|adjust|switch|swap)\s+(?:something|it|this|today|tomorrow|the\s+session|the\s+workout)?\s*(?:easier|lighter|lower[-\s]*load)\b/i,
   /\b(?:lighten|ease|cut)\s+(?:me|it|things|the\s+week)\s+(?:up|down|back|off)\b/i,
   /\b(?:back\s+it\s+off|deload|reduce\s+(?:it|this|today|the\s+session|the\s+workout|the\s+load)|too\s+much\s+(?:work|conditioning|running|volume|load))\b/i,
-  /\b(?:cooked|smoked|fried|wrecked|toast)\s*(?:this\s+week|today)?\b/i,
-  /\b(?:i'?m|i\s+am|feel(?:ing)?|legs?|body|hamstrings?|hammys?|quads?|calves|groin|adductors?|shoulders?|back|hips?|knees?|ankles?)\s+(?:are\s+|is\s+|feel\s+|feels\s+|feeling\s+)?(?:cooked|sore|tight|fried|wrecked|smoked|toast)\b/i,
+  /\b(?:cooked|smoked|fried|wrecked|toast|flat|exhausted|fatigued|drained|knackered|low\s+energy|no\s+energy)\s*(?:this\s+week|today)?\b/i,
+  /\b(?:i'?m|i\s+am|feel(?:ing)?|legs?|body|hamstrings?|hammys?|quads?|calves|groin|adductors?|shoulders?|back|hips?|knees?|ankles?)\s+(?:are\s+|is\s+|feel\s+|feels\s+|feeling\s+)?(?:cooked|sore|tight|fried|wrecked|smoked|toast|flat|exhausted|fatigued|drained|knackered|low\s+energy|no\s+energy)\b/i,
 ];
 
 /**
@@ -839,6 +841,234 @@ function normaliseSessionMention(value: string): string {
     .trim();
 }
 
+type FatigueArea = 'lower' | 'upper' | 'general';
+type VisibleSessionKind =
+  | 'no_visible'
+  | 'rest'
+  | 'recovery'
+  | 'game'
+  | 'upper_pump'
+  | 'lower_strength'
+  | 'conditioning'
+  | 'strength'
+  | 'unknown';
+
+function buildVagueLoadClarification(input: RouteCoachCommandInput, message: string): {
+  question: string;
+  options: string[];
+  reason: string;
+} {
+  const area = detectFatigueArea(message);
+  const today = visibleSessionForDate(input.currentWeek, input.todayISO);
+  const sessionKind = classifyVisibleSession(today);
+  const daysToNextGame = daysToNextVisibleGame(input);
+
+  if (sessionKind === 'game') {
+    if (area === 'lower') {
+      return {
+        question:
+          "It's game day today, so the main question is whether you're okay to play or need to manage minutes/intensity. " +
+          "Do you want me to leave the game as-is, mark today as limited, or adjust tomorrow's recovery?",
+        options: ['Leave game day as-is', 'Mark today as limited', "Adjust tomorrow's recovery"],
+        reason: 'vague_load_request_game_day_lower_fatigue',
+      };
+    }
+    return {
+      question:
+        "It's game day today, so I won't change gym work. " +
+        "Are you feeling generally flat, or are your legs bad enough that you want to mark today as limited and adjust recovery?",
+      options: ['Generally flat', 'Mark today as limited', "Adjust tomorrow's recovery", 'Soreness or injury concern'],
+      reason: 'vague_load_request_game_day_general_readiness',
+    };
+  }
+
+  if (sessionKind === 'rest') {
+    return {
+      question:
+        "You're already resting today. Do you want me to add a short recovery/mobility session or leave the plan as-is?",
+      options: ['Add recovery/mobility', 'Leave as-is'],
+      reason: 'vague_load_request_rest_day',
+    };
+  }
+
+  if (sessionKind === 'recovery') {
+    return {
+      question:
+        "You're already on a recovery day, so I wouldn't add load. " +
+        'Do you want me to keep it as recovery only, shorten it to mobility, or leave the plan as-is?',
+      options: ['Keep recovery only', 'Shorten to mobility', 'Leave as-is'],
+      reason: 'vague_load_request_recovery_day',
+    };
+  }
+
+  if (area === 'lower' && daysToNextGame === 1) {
+    if (sessionKind === 'upper_pump') {
+      const sessionName = today?.sessionName || today?.workout?.name || 'today';
+      return {
+        question:
+          `You've got a game tomorrow and today is ${sessionName}, so I wouldn't add leg load. ` +
+          'Do you want me to keep it as upper pump only, switch today to recovery/mobility, or remove today\'s session?',
+        options: ['Keep upper pump only', 'Switch to recovery/mobility', "Remove today's session"],
+        reason: 'vague_load_request_game_tomorrow_upper_pump',
+      };
+    }
+    if (sessionKind === 'lower_strength') {
+      return {
+        question:
+          "You've got a game tomorrow, so I'd avoid lower-body loading. " +
+          'Do you want me to swap today to recovery, upper pump, or remove the session?',
+        options: ['Swap to recovery', 'Upper pump', 'Remove the session'],
+        reason: 'vague_load_request_game_tomorrow_lower_body',
+      };
+    }
+    if (sessionKind === 'conditioning') {
+      return {
+        question:
+          "Given the game tomorrow, I'd avoid extra running/conditioning. " +
+          'Do you want me to remove conditioning or swap it to recovery?',
+        options: ['Remove conditioning', 'Swap to recovery'],
+        reason: 'vague_load_request_game_tomorrow_conditioning',
+      };
+    }
+    return {
+      question:
+        "You've got a game tomorrow, so I'd avoid extra leg load. " +
+        'Do you want me to reduce lower-body work, swap to recovery, or remove the session?',
+      options: ['Reduce lower-body work', 'Swap to recovery', 'Remove the session'],
+      reason: 'vague_load_request_game_tomorrow_lower_fatigue',
+    };
+  }
+
+  if (sessionKind === 'no_visible' && (input.currentWeek?.length ?? 0) > 0) {
+    return {
+      question:
+        "I can't see a visible session for today. Do you want me to adjust tomorrow's recovery, mark today as limited, or leave the plan as-is?",
+      options: ["Adjust tomorrow's recovery", 'Mark today as limited', 'Leave as-is'],
+      reason: 'vague_load_request_no_visible_session',
+    };
+  }
+
+  if (area === 'lower') {
+    return {
+      question: 'Do you want me to reduce lower-body work, conditioning, or the whole session?',
+      options: ['Reduce lower-body work', 'Reduce conditioning', 'Whole session'],
+      reason: 'vague_load_request_lower_fatigue',
+    };
+  }
+
+  if (area === 'upper') {
+    return {
+      question: 'Do you want me to reduce upper-body work, conditioning, or the whole session?',
+      options: ['Reduce upper-body work', 'Reduce conditioning', 'Whole session'],
+      reason: 'vague_load_request_upper_fatigue',
+    };
+  }
+
+  return {
+    question: 'Do you want me to make the strength work easier, the conditioning easier, or the whole session?',
+    options: ['Strength work', 'Conditioning', 'Whole session'],
+    reason: 'vague_load_request',
+  };
+}
+
+function detectFatigueArea(message: string): FatigueArea {
+  if (/\b(?:legs?|quads?|hamstrings?|hammys?|calves?|groin|adductors?|hips?|knees?|ankles?|glutes?)\b/i.test(message)) {
+    return 'lower';
+  }
+  if (/\b(?:upper|shoulders?|arms?|chest|pecs?|biceps?|triceps?|elbows?|wrists?|lats?|traps?)\b/i.test(message)) {
+    return 'upper';
+  }
+  return 'general';
+}
+
+function visibleSessionForDate(
+  currentWeek: VisibleSessionRef[] | undefined,
+  dateISO: string,
+): VisibleSessionRef | null {
+  return currentWeek?.find((day) => day.date === dateISO) ?? null;
+}
+
+function daysToNextVisibleGame(input: RouteCoachCommandInput): number | null {
+  const candidates = new Set<string>(input.gameDates ?? []);
+  for (const day of input.currentWeek ?? []) {
+    if (isGameSession(day)) candidates.add(day.date);
+  }
+
+  let closest: number | null = null;
+  for (const iso of candidates) {
+    const delta = daysBetween(input.todayISO, iso);
+    if (delta == null || delta < 0) continue;
+    if (closest == null || delta < closest) closest = delta;
+  }
+  return closest;
+}
+
+function daysBetween(fromISO: string, toISO: string): number | null {
+  const from = new Date(`${fromISO}T12:00:00`).getTime();
+  const to = new Date(`${toISO}T12:00:00`).getTime();
+  if (!Number.isFinite(from) || !Number.isFinite(to)) return null;
+  return Math.round((to - from) / 86_400_000);
+}
+
+function classifyVisibleSession(day: VisibleSessionRef | null): VisibleSessionKind {
+  if (!day) return 'no_visible';
+  if (!day.workout) return 'rest';
+  if (isGameSession(day)) return 'game';
+
+  const text = visibleSessionText(day);
+  const identityText = [
+    day.sessionName,
+    day.workout?.name,
+    (day.workout as any)?.workoutType,
+    (day.workout as any)?.sessionTier,
+  ].filter(Boolean).join(' ');
+  const workoutType = String((day.workout as any).workoutType ?? '').toLowerCase();
+  if (
+    workoutType.includes('recovery') ||
+    /\b(?:recovery|mobility|rest(?:\s+day)?)\b/i.test(identityText)
+  ) {
+    return 'recovery';
+  }
+  if (
+    workoutType.includes('conditioning') ||
+    /\b(?:conditioning|aerobic|flush|row(?:er|ing)?|bike|assault|ski\s*erg|skierg|run(?:ning)?|sprints?|tempo|cardio)\b/i.test(text)
+  ) {
+    return 'conditioning';
+  }
+  if (/\b(?:gunshow|gun\s*show|upper|arms?|pump)\b/i.test(text)) {
+    return 'upper_pump';
+  }
+  if (/\b(?:lower|legs?|squat|hinge|deadlift|rdl|hamstrings?|quads?|calves?|glutes?)\b/i.test(text)) {
+    return 'lower_strength';
+  }
+  if (workoutType.includes('strength')) return 'strength';
+  return 'unknown';
+}
+
+function isGameSession(day: VisibleSessionRef | null): boolean {
+  if (!day?.workout && !day?.sessionName) return false;
+  return /\bgame(?:\s+day)?\b/i.test(visibleSessionText(day));
+}
+
+function visibleSessionText(day: VisibleSessionRef): string {
+  const workout = day.workout;
+  const exerciseText = (workout?.exercises ?? [])
+    .map((exercise) => `${exercise.exercise?.name ?? ''} ${exercise.exercise?.description ?? ''} ${exercise.notes ?? ''}`)
+    .join(' ');
+  const conditioningText = (workout?.conditioningBlock?.options ?? [])
+    .map((option) => `${option.title ?? ''} ${option.description ?? ''}`)
+    .join(' ');
+  return [
+    day.sessionName,
+    workout?.name,
+    (workout as any)?.workoutType,
+    (workout as any)?.sessionTier,
+    exerciseText,
+    conditioningText,
+    day.modalities?.join(' '),
+  ].filter(Boolean).join(' ');
+}
+
 // ─── Main router ────────────────────────────────────────────────────
 
 export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
@@ -891,12 +1121,13 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
   // instead of asking an open prompt.
   const hasDominantMutationCue = hasExplicitNonReadinessMutationCue(message);
   if (any(message, VAGUE_LOAD_REQUEST) && !hasDominantMutationCue) {
+    const clarification = buildVagueLoadClarification(input, message);
     return {
       mode: 'clarify',
-      question: 'Do you want me to make the strength work easier, the conditioning easier, or the whole session?',
-      options: ['Strength work', 'Conditioning', 'Whole session'],
+      question: clarification.question,
+      options: clarification.options,
       missingFields: ['load_lever'],
-      reason: 'vague_load_request',
+      reason: clarification.reason,
     };
   }
   if (any(message, VAGUE_DISLIKE) && !hasDominantMutationCue) {
@@ -1009,6 +1240,18 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
       confidence: namedDurationEdit.matchedExisting ? 0.88 : 0.65,
       needsClarification: false,
       reason: 'named_activity_duration_adjustment',
+    };
+  }
+
+  if (isUnderspecifiedRecoveryAdjustment(message)) {
+    return {
+      mode: 'clarify',
+      question: ref?.target
+        ? `How should I adjust ${formatTargetForQuestion(ref)} — keep it as recovery only, shorten it to mobility, or remove it?`
+        : 'Which recovery session should I adjust, and how?',
+      options: ['Keep recovery only', 'Shorten to mobility', 'Remove recovery'],
+      missingFields: ref?.target ? ['load_lever'] : ['target_session', 'load_lever'],
+      reason: 'recovery_adjustment_missing_lever',
     };
   }
 
@@ -1582,13 +1825,22 @@ function hasExplicitNonReadinessMutationCue(message: string): boolean {
   if (MOVE_VERBS.test(message)) return true;
   if (ADD_VERBS.test(message)) return true;
   if (/\b(?:replace|swap|substitut\w*)\b/i.test(message)) return true;
-  if (/\b(?:change|make|set)\b/i.test(message)) {
+  if (/\b(?:change|make|set|adjust)\b/i.test(message)) {
     if (/\b(?:easier|lighter|lower[-\s]*load|reduce|deload|back\s+off)\b/i.test(message)) {
       return false;
     }
     return /\b(?:to|into|instead|recovery|rest|bike|rower?|ski\s*erg|skierg|run|sprints?|conditioning|cardio|pilates|yoga|mobility|flush|aerobic)\b/i.test(message);
   }
   return false;
+}
+
+function isUnderspecifiedRecoveryAdjustment(message: string): boolean {
+  if (!/\badjust(?:ed|ing|s)?\b/i.test(message)) return false;
+  if (!/\b(?:recovery|recover|mobility|flush|rest)\b/i.test(message)) return false;
+  if (/\b(?:to|into|instead|rather|with|for|remove|drop|ditch|scrap|skip|cancel|add|include|put|longer|shorter|harder|easier|lighter|reduce|less|more|minutes?|mins?|\d{1,3}\s*(?:min|mins|minute|minutes))\b/i.test(message)) {
+    return false;
+  }
+  return true;
 }
 
 function looksLikeConditioningRequest(message: string): boolean {

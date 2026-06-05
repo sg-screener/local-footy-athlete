@@ -163,6 +163,7 @@ const MUTATION_PATTERNS: RegExp[] = [
   /\bchang(?:e|ed|es|ing)\b/i,
   /\bswap(?:p?ed|p?ing|s)?\b/i,
   /\breplac(?:e|ed|es|ing)\b/i,
+  /\badjust(?:ed|ing|s)?\b/i,
   /\bremov(?:e|ed|es|ing)\b/i,
   /\bdrop(?:p?ed|p?ing|s)?\b/i,
   /\badd(?:ed|ing|s)?\b/i,
