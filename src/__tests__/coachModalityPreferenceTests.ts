@@ -12,8 +12,9 @@
  *      projection, no per-date override required).
  *   4. Duration / intensity / optional / skip-guidance all preserved
  *      through the rewrite.
- *   5. Completed past sessions remain unchanged on render — past dates
- *      are forward-looking only.
+ *   5. Completed past sessions remain unchanged on render unless the
+ *      target date itself receives an eager override for immediate detail
+ *      screen visibility.
  *   6. "Just this session" + past target → no preference written, the
  *      orchestrator falls through to the per-date applier (which still
  *      rejects with past_date — but the contract is honoured).
@@ -35,7 +36,10 @@ import {
   canonicalSessionKey,
   getModalityPreferenceFor,
 } from '../store/coachPreferencesStore';
-import { applyModalityPreferenceToWorkout } from '../utils/coachModalitySwap';
+import {
+  applyModalityPreferenceToWorkout,
+  dayHasModality,
+} from '../utils/coachModalitySwap';
 import { projectVisibleDay } from '../utils/visibleProgramProjection';
 import type {
   Workout,
@@ -238,11 +242,18 @@ eq('stored.from', stored?.from, 'row');
 eq('stored.to', stored?.to, 'bike');
 ok('canonical key matches', canonicalSessionKey('Easy Aerobic Flush') === 'easy aerobic flush');
 
-// No future-this-week Wednesday means no eager writes for this test.
-eq('no eager overrides for past-only week', writes.length, 0);
-
-// Past Wednesday workout itself is not edited by orchestrator.
-ok('past Wednesday left alone', writes.find((w) => w.date === PAST_WED) === undefined);
+// No future-this-week Wednesday exists, but the target date itself gets
+// an eager override so the already-open DayWorkout screen updates too.
+eq('target-date eager override written', writes.length, 1);
+eq('target-date override is past Wednesday', writes[0].date, PAST_WED);
+ok(
+  'target-date override shows bike immediately',
+  dayHasModality({ date: PAST_WED, workout: writes[0].workout } as any, 'bike'),
+);
+ok(
+  'target-date override removes row immediately',
+  !dayHasModality({ date: PAST_WED, workout: writes[0].workout } as any, 'row'),
+);
 
 // ─── Test 2: Future Wednesday in current week shows bike via projection ──
 
@@ -604,8 +615,8 @@ ok('label-only past: outcome.applied = true', outcomeLabelPast.applied === true)
 ok('label-only past: reply mentions regular bike', /regular bike/i.test(outcomeLabelPast.reply), outcomeLabelPast.reply);
 ok('label-only past: reply mentions not assault', /not.*assault/i.test(outcomeLabelPast.reply), outcomeLabelPast.reply);
 ok(
-  'label-only past: reply discloses display-only limitation',
-  /(don't|do not).*distinguish.*subtypes/i.test(outcomeLabelPast.reply),
+  'label-only past: reply does not expose internal display limitations',
+  !/(don't|do not).*distinguish.*subtypes|coach-note|wording/i.test(outcomeLabelPast.reply),
   outcomeLabelPast.reply,
 );
 ok(

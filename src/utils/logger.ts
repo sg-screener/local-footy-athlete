@@ -19,23 +19,17 @@ export interface Logger {
   error: (...args: unknown[]) => void;
 }
 
-function readDevFlag(): boolean {
-  if (typeof __DEV__ !== 'undefined') return __DEV__;
-  return process.env.NODE_ENV !== 'production';
-}
-
 function readDebugOverride(): boolean {
   return process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS === 'true';
 }
 
 export function shouldEmitLog(
   level: LogLevel,
-  options: Pick<LoggerOptions, 'isDev' | 'enableDebugLogs'> = {},
+  options: Pick<LoggerOptions, 'enableDebugLogs'> = {},
 ): boolean {
   if (level === 'warn' || level === 'error') return true;
-  const isDev = options.isDev ?? readDevFlag();
   const enableDebugLogs = options.enableDebugLogs ?? readDebugOverride();
-  return isDev || enableDebugLogs;
+  return enableDebugLogs;
 }
 
 export function createLogger(options: LoggerOptions = {}): Logger {

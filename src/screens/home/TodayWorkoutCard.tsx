@@ -14,6 +14,7 @@ import { Badge } from '../../components/common/Badge';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import type { Workout } from '../../types/domain';
 import { splitSessionName as splitWorkoutName } from '../../utils/sessionNaming';
+import { getConditioningContextLabel } from './homeScreenConstants';
 
 interface TodayWorkoutCardProps {
   workout: Workout;
@@ -32,6 +33,7 @@ export const TodayWorkoutCard = ({
   const exerciseCount = workout.exercises?.length || 0;
   const displayExercises = (workout.exercises || []).slice(0, 4);
   const moreExercises = Math.max(0, exerciseCount - 4);
+  const conditioningContext = getConditioningContextLabel(workout);
 
   // Calculate estimated volume
   const estimatedDuration = workout.durationMinutes || 45;
@@ -87,12 +89,9 @@ export const TodayWorkoutCard = ({
               color={getWorkoutTypeColor()}
               size="sm"
             />
-            {workout.hasCombinedConditioning && (
+            {conditioningContext && (
               <Badge
-                label={workout.conditioningFlavour === 'aerobic' ? '+ Aerobic'
-                  : workout.conditioningFlavour === 'tempo' ? '+ Tempo'
-                  : workout.conditioningFlavour === 'high-intensity' ? '+ HI Intervals'
-                  : '+ Conditioning'}
+                label={`+ ${conditioningContext}`}
                 color={colors.intensity.moderate}
                 size="sm"
               />

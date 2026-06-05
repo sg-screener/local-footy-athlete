@@ -123,6 +123,10 @@ function capitalise(s: string): string {
 }
 
 function reasonLine(c: ActiveConstraint): string {
+  const labelled = (c as ActiveConstraint & { reasonLabel?: string }).reasonLabel;
+  if (labelled && 'severity' in c) {
+    return `${labelled} — ${c.severity}/10`;
+  }
   if (c.type === 'injury') {
     const part = c.bodyPart === 'unknown' ? 'Injury' : capitalise(c.bodyPart);
     return `${part} pain — ${c.severity}/10`;
@@ -198,7 +202,11 @@ export function getUpdateCoachPrefill(constraints: ActiveConstraint[]): string {
 export function buildWeeklyCoachUpdateFromConstraints(
   input: BuildWeeklyInput,
 ): WeeklyCoachUpdateView | null {
-  const constraints = activeFilter(input.activeConstraints);
+  const visibleDates = new Set(input.visibleWeek.map((d) => d.date));
+  const constraints = activeFilter(input.activeConstraints).filter((c) => {
+    const scopedDate = (c as ActiveConstraint & { appliesToDate?: string }).appliesToDate;
+    return !scopedDate || visibleDates.has(scopedDate);
+  });
   if (constraints.length === 0) return null;
 
   // Diff baseline vs visible.

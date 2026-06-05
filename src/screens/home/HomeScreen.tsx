@@ -25,7 +25,7 @@ import {
   WEEK_DAYS,
   DAY_SHORT,
   NEXT_PHASE,
-  COND_FLAVOUR_LABELS,
+  getConditioningContextLabel,
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
   QUICK_ACTIONS,
@@ -286,13 +286,14 @@ function HomeScreenClassic() {
                             </Text>
                           );
                         }
-                        if (day.workout!.hasCombinedConditioning && day.workout!.conditioningFlavour) {
+                        const conditioningContext = getConditioningContextLabel(day.workout);
+                        if (conditioningContext) {
                           return (
                             <Text
                               style={styles.combinedCondLabel}
                               numberOfLines={1}
                             >
-                              + {COND_FLAVOUR_LABELS[day.workout!.conditioningFlavour] || day.workout!.conditioningFlavour}
+                              + {conditioningContext}
                             </Text>
                           );
                         }

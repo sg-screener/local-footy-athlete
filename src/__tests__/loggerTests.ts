@@ -66,13 +66,22 @@ section('[3] logger sink behavior');
   ok('error used error sink', calls[1]?.level === 'error');
 }
 
-section('[4] dev behavior');
+section('[4] dev behavior stays quiet unless explicitly enabled');
 {
   const { calls, sink } = makeSink();
   const log = createLogger({ isDev: true, sink });
+  log.debug('hidden-debug');
+  log.info('hidden-info');
+  ok('debug/info suppressed in normal dev', calls.length === 0, JSON.stringify(calls));
+}
+
+section('[5] explicit dev debug behavior');
+{
+  const { calls, sink } = makeSink();
+  const log = createLogger({ isDev: true, enableDebugLogs: true, sink });
   log.debug('visible-debug');
   log.info('visible-info');
-  ok('debug/info emitted in dev', calls.length === 2, JSON.stringify(calls));
+  ok('debug/info emitted with debug flag', calls.length === 2, JSON.stringify(calls));
   ok('debug/info use log sink', calls.every((c) => c.level === 'log'));
 }
 

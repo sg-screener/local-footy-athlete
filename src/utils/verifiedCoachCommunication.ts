@@ -341,7 +341,7 @@ export function buildVerifiedCommunication(
 
 export interface ValidateInput {
   communication: VerifiedCoachCommunication;
-  /** The chat reply Claude/the engine wants to send. */
+  /** The chat reply the coach LLM/the engine wants to send. */
   replyText?: string;
   /**
    * The card data the UI is about to render. Only the fields that can

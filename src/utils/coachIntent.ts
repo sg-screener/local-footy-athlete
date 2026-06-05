@@ -39,6 +39,7 @@ import type { ResolvedDay } from './sessionResolver';
 import type { InjuryState } from './injuryProgression';
 import type { CoachUpdate, ActiveConstraint } from '../store/coachUpdatesStore';
 import type { CoachContextEntry } from '../store/coachContextStateStore';
+import type { MutationHistoryEntry } from '../store/coachMutationHistoryStore';
 import type { CoachReferenceResolution } from './coachReferenceResolver';
 
 // ─── Intent schema ──────────────────────────────────────────────────
@@ -71,10 +72,38 @@ export interface CoachIntentPayload {
   concern?: string;
   /** Status update for active_injury_followup: 'better' / 'worse' / etc. */
   followupKind?: 'resolved' | 'improving' | 'worsening' | 'unchanged';
+  /** Structured program-edit action when intent=request_program_adjustment. */
+  operation?: string;
+  action?: string;
+  targetDate?: string;
+  targetSessionName?: string;
+  activity?: string;
+  customActivity?: string;
+  newActivity?: string;
+  oldActivity?: string;
+  fromActivity?: string;
+  toActivity?: string;
+  replaceActivity?: string;
+  replacingActivity?: string;
+  modality?: string;
+  intensity?: string;
+  durationMinutes?: number;
+  minutes?: number;
+  durationSeconds?: number;
+  seconds?: number;
+  sets?: number;
+  repsMin?: number;
+  repsMax?: number;
+  bikeLabel?: string;
+  effortKind?: string;
+  trainingIntent?: string;
+  changeKind?: string;
+  scope?: string;
 }
 
 export type ProgramAdjustmentAction =
   | 'add_conditioning'
+  | 'remove_session'
   | 'remove_conditioning'
   | 'move_session';
 
@@ -184,6 +213,11 @@ export interface CoachContextPacket {
   lastOpenedWorkout?: CoachContextEntry | null;
   lastExplainedSession?: CoachContextEntry | null;
   lastDiscussedWorkout?: CoachContextEntry | null;
+  /** Most recent verified coach mutation with structured touched items. */
+  lastMutation?: Pick<
+    MutationHistoryEntry,
+    'operation' | 'mutationKind' | 'affectedDates' | 'scope' | 'touchedActivities' | 'timestamp'
+  > | null;
   /**
    * Phase 2 — pre-computed reference resolution outcome. The packet
    * builder runs the resolver before classification so the dispatcher
@@ -233,7 +267,24 @@ Your job is to read the athlete's latest message + the surrounding context and r
     "requestedDate": "<optional, YYYY-MM-DD>",
     "requestedSession": "<optional>",
     "concern": "<optional, free-text>",
-    "followupKind": "<optional: resolved | improving | worsening | unchanged>"
+    "followupKind": "<optional: resolved | improving | worsening | unchanged>",
+    "operation": "<for program edits: add_conditioning | remove_session | remove_conditioning | replace_conditioning | move_session | replace_exercise | change_duration>",
+    "targetDate": "<optional, YYYY-MM-DD>",
+    "targetSessionName": "<optional>",
+    "activity": "<new activity to add, preserve exact terms like HIIT rowing intervals, hard hill running, Pilates, assault bike sprints>",
+    "replaceActivity": "<existing activity being replaced, e.g. Pilates>",
+    "durationMinutes": <optional number>,
+    "durationSeconds": <optional number, for sprint/effort reps>,
+    "sets": <optional number>,
+    "repsMin": <optional number>,
+    "repsMax": <optional number>,
+    "modality": "<optional: bike | row | run | walk | ski | swim | cardio | aerobic | sprint>",
+    "intensity": "<optional: light | moderate | hard>",
+    "bikeLabel": "<optional: standard | assault>",
+    "effortKind": "<optional: sprint | interval>",
+    "trainingIntent": "<optional: hiit | sprint | tempo | aerobic | low_load>",
+    "changeKind": "<optional: modality | training_intent | modality_and_training_intent>",
+    "scope": "<optional: one_off | this_week | recurring | permanent>"
   },
   "rationale": "<one sentence>"
 }
@@ -273,9 +324,17 @@ CRITICAL RULES
    - "missed_session" — past tense report of skipping a session ("missed Tuesday", "didn't get to the field session"). Capture payload.requestedDate when given.
 
 8. Program adjustment requests:
-   - "add conditioning to Monday", "remove conditioning from Friday", "can we move Monday" → request_program_adjustment.
+   - "add conditioning to Monday", "chuck some HIIT rowing intervals on Tuesday", "slot in a rower session Friday", "remove conditioning from Friday", "can we move Monday" → request_program_adjustment.
    - If pendingCoachProposal is set and the user says "sounds good", "yes", "do it", or similar confirmation, classify as request_program_adjustment, not general_question.
-   - You only classify intent. The app will apply or reject deterministic supported edits.
+   - For supported edits, fill the structured edit fields in payload. Preserve the athlete's actual requested activity words. "HIIT rowing intervals" must not become "row"; "assault bike sprints" must not become "bike intervals"; "hard hill running" must not become "run".
+   - If the athlete asks for HIIT/high-intensity intervals on a named modality and gives a day, do not ask for the prescription unless they explicitly want custom work/rest. Use operation="add_conditioning", activity with their exact phrase, modality, intensity="hard", effortKind="interval".
+   - If the athlete changes only the modality of a recent add-on ("make them SkiErg", "can that be bike instead"), preserve the source training intent. HIIT rowing intervals → HIIT SkiErg intervals, not easy SkiErg. Return operation="change_modality", replaceActivity=<old title>, activity=<new title>, trainingIntent=<preserved intent>, changeKind="modality".
+   - If the athlete changes only the training quality ("make it HIIT", "make that recovery"), preserve the modality and return changeKind="training_intent".
+   - If the user says "X instead of Y", use operation="replace_conditioning", activity="X", replaceActivity="Y".
+   - If the user asks to make an existing add-on longer/shorter or a specific duration, use operation="change_duration", activity if known, and durationMinutes if stated. For sprint/effort work, use durationSeconds or repsMin/repsMax when seconds are requested.
+   - Pronouns like "it", "them", "that", "those" usually refer to packet.lastMutation.touchedActivities[0] first, then recentMessages/context. Preserve that activity title and target date when filling payload.
+   - If the date/session or activity is missing, set needsClarification=true and ask the smallest useful question.
+   - You only classify/structure intent. The app will apply or reject deterministic supported edits.
 
 9. Output VALID JSON only. No prose. No markdown.`;
 

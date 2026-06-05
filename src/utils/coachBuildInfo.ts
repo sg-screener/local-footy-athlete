@@ -70,7 +70,7 @@ export function logCoachBuildFingerprint(
     if (appLaunchLogged) return;
     appLaunchLogged = true;
   }
-  logger.warn('[coach-build]', {
+  logger.debug('[coach-build]', {
     callsite,
     ...COACH_BUILD_INFO,
   });

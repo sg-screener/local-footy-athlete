@@ -214,6 +214,12 @@ export function autoBindUniqueModalityTarget(
   }
 
   // (4) Exactly one candidate → synthesise resolved reference.
+  // NOTE: we do NOT future-default here. The user is referring to the
+  // session they see in the visible week, even if it's past. The
+  // router's `detectScope` will set scope=recurring for past dates,
+  // which the orchestrator handles correctly (writes a preference).
+  // Future-default only applies to explicit day names in
+  // matchExplicitDay where "Monday" after Monday = next Monday.
   const c = candidates[0];
   const target: CoachReferenceTarget = {
     date: c.date,

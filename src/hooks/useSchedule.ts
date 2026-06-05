@@ -15,6 +15,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useProgramStore } from '../store/programStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useProfileStore } from '../store/profileStore';
+import { useReadinessStore } from '../store/readinessStore';
 import {
   resolveDate,
   resolveWeekWithConditioning,
@@ -34,8 +35,11 @@ import {
 import {
   buildExtraConstraintsForVisibleProgram,
   buildProgramTabProjectedWeek,
-  buildDayWorkoutProjectedDay,
+  getResolvedVisibleProgramForDate,
 } from '../utils/visibleProgramReadModel';
+import { todayISOLocal } from '../utils/appDate';
+import { deriveProfileReadiness } from '../utils/readiness';
+import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
 
 // ─── Internal: Read raw state from both stores ───
 
@@ -82,6 +86,7 @@ function useScheduleState(): ScheduleState & {
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
   const markedDays = useCalendarStore((s) => s.markedDays);
   const athleteContext = useAthleteContext();
+  const onboardingData = useProfileStore((s) => s.onboardingData);
   // Reactive subscription on the recurring modality preference store.
   // Without this, the visible-program projection reads via .getState()
   // (one-shot, not reactive) and HomeScreen / DayWorkoutScreen never
@@ -105,7 +110,7 @@ function useScheduleState(): ScheduleState & {
   // (fatigue / soreness / schedule / missed_session) flow through the
   // visible-program projection's `extraConstraints` seam — see
   // useResolvedDay / useResolvedWeek below.
-  const activeConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
+  const coachActiveConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
 
   // Season phase from onboarding — null if not yet completed
   const seasonPhase = useProfileStore((s) => s.onboardingData?.seasonPhase) || null;
@@ -126,10 +131,17 @@ function useScheduleState(): ScheduleState & {
     ? preferredDays.map((name: string) => DAY_NAME_TO_NUMBER[name]).filter((n: number | undefined) => n !== undefined)
     : undefined;
 
-  // Readiness: default to 'medium' (safe baseline).
-  // Future enhancement: derive from coachingEngine.calculateReadiness()
-  // when full CoachingInputs are available in the store.
-  const readiness = 'medium' as const;
+  // Readiness: profile-derived baseline, replacing the old hard-coded
+  // `medium`. Today's quick signal is applied as a date-scoped constraint
+  // below so it doesn't reshape the whole week.
+  const todayISO = todayISOLocal();
+  const todayReadinessSignal = useReadinessStore(
+    (s) => s.signalsByDate[todayISO],
+  );
+  const readinessActiveConstraints = buildReadinessActiveConstraints(
+    todayReadinessSignal,
+  );
+  const readiness = deriveProfileReadiness(onboardingData);
 
   return {
     currentProgram,
@@ -145,7 +157,7 @@ function useScheduleState(): ScheduleState & {
     weightOverrides: weightOverrides || {},
     availableDayNumbers,
     activeInjury: activeInjury ?? null,
-    activeConstraints,
+    activeConstraints: [...coachActiveConstraints, ...readinessActiveConstraints],
     modalityPreferences: modalityPreferences ?? {},
   };
 }
@@ -178,14 +190,14 @@ export function useResolvedDay(date: string | undefined): ResolvedDay | null {
   const { useProgramStore } = require('../store/programStore');
   const overrideContext =
     useProgramStore.getState().overrideContexts?.[date];
-  const todayISO = new Date().toISOString().slice(0, 10);
-  return buildDayWorkoutProjectedDay({
+  const todayISO = todayISOLocal();
+  return getResolvedVisibleProgramForDate({
     date,
     state,
     overrideContext,
     todayISO,
     modalityPreferences: (state as any).modalityPreferences,
-  });
+  }).day;
 }
 
 /**
@@ -207,7 +219,7 @@ export function useResolvedWeek() {
   const { useProgramStore } = require('../store/programStore');
   const overrideContexts =
     useProgramStore.getState().overrideContexts ?? {};
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO = todayISOLocal();
   const weekDays = buildProgramTabProjectedWeek({
     mondayISO: mondayStr,
     todayISO,

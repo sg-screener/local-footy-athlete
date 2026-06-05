@@ -15,6 +15,30 @@ const safeErrorSummary = (err: unknown): string => {
   return `Error${status}: ${String(err).slice(0, 160).replace(/[A-Za-z0-9_-]{24,}/g, "[redacted]")}`;
 };
 
+const safePreview = (value: unknown, max = 500): string => {
+  return String(value ?? "")
+    .slice(0, max)
+    .replace(/\s+/g, " ")
+    .replace(/[A-Za-z0-9_-]{24,}/g, "[redacted]")
+    .trim();
+};
+
+function attachRuntimeDiagnostic(error: unknown, diagnostic: Record<string, unknown>): unknown {
+  if (typeof error !== "object" || error === null) return error;
+  const existing = (error as any).__coachDiagnostic;
+  (error as any).__coachDiagnostic = {
+    ...(existing && typeof existing === "object" ? existing : {}),
+    ...diagnostic,
+  };
+  return error;
+}
+
+function readRuntimeDiagnostic(error: unknown): Record<string, unknown> | null {
+  if (typeof error !== "object" || error === null) return null;
+  const diagnostic = (error as any).__coachDiagnostic;
+  return diagnostic && typeof diagnostic === "object" ? diagnostic : null;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -293,10 +317,27 @@ Examples:
 "what's today's session?" -> {"isInjuryIntent": false, "bodyPartKnown": false, "severityKnown": false}`;
 
 async function classifyInjuryIntent(message: string): Promise<InjuryIntent | null> {
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  const provider = resolveCoachProvider();
+  const apiKey = provider === "openai"
+    ? Deno.env.get("OPENAI_API_KEY")
+    : Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) return null;
   try {
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const resp = provider === "openai"
+      ? await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: getOpenAIModel("classifier"),
+          instructions: CLASSIFIER_SYSTEM_PROMPT,
+          input: [{ role: "user", content: message }],
+          max_output_tokens: 300,
+        }),
+      })
+      : await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -304,7 +345,7 @@ async function classifyInjuryIntent(message: string): Promise<InjuryIntent | nul
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: getAnthropicModel("classifier"),
         max_tokens: 100,
         system: CLASSIFIER_SYSTEM_PROMPT,
         messages: [{ role: "user", content: message }],
@@ -315,7 +356,9 @@ async function classifyInjuryIntent(message: string): Promise<InjuryIntent | nul
       return null;
     }
     const data = await resp.json();
-    const text: string = data?.content?.[0]?.text?.trim() || '';
+    const text: string = provider === "openai"
+      ? extractOpenAIText(data)
+      : data?.content?.[0]?.text?.trim() || '';
     // Permissive JSON extraction — model occasionally wraps in fences.
     const m = text.match(/\{[\s\S]*?\}/);
     if (!m) return null;
@@ -422,6 +465,180 @@ interface AnthropicContentBlock {
 interface AnthropicResponse {
   content: AnthropicContentBlock[];
   stop_reason: string;
+  openAIOutput?: any[];
+}
+
+type CoachLLMProvider = "openai" | "anthropic";
+
+type CoachLLMKind = "chat" | "classifier";
+
+function normalizeCoachProvider(raw: string | undefined | null): CoachLLMProvider | null {
+  const value = raw?.trim().toLowerCase();
+  if (value === "openai") return "openai";
+  if (value === "anthropic" || value === "claude") return "anthropic";
+  return null;
+}
+
+function resolveCoachProvider(): CoachLLMProvider {
+  const configured = normalizeCoachProvider(Deno.env.get("COACH_LLM_PROVIDER"));
+  if (configured) return configured;
+  return Deno.env.get("OPENAI_API_KEY") ? "openai" : "anthropic";
+}
+
+function getOpenAIModel(kind: CoachLLMKind, role: "primary" | "fallback" = "primary"): string {
+  if (kind === "classifier") {
+    return Deno.env.get("COACH_CLASSIFIER_LLM_MODEL") ||
+      Deno.env.get("COACH_LLM_FAST_MODEL") ||
+      "gpt-5.4-mini";
+  }
+  if (role === "fallback") {
+    return Deno.env.get("COACH_LLM_FALLBACK_MODEL") || "gpt-5.4";
+  }
+  return Deno.env.get("COACH_LLM_MODEL") || "gpt-5.5";
+}
+
+function getAnthropicModel(kind: CoachLLMKind, role: "primary" | "fallback" = "primary"): string {
+  if (kind === "classifier") {
+    return Deno.env.get("ANTHROPIC_CLASSIFIER_MODEL") || "claude-haiku-4-5-20251001";
+  }
+  if (role === "fallback") {
+    return Deno.env.get("ANTHROPIC_FALLBACK_MODEL") || "claude-sonnet-4-6";
+  }
+  return Deno.env.get("ANTHROPIC_COACH_MODEL") || "claude-opus-4-7";
+}
+
+function requireProviderKey(provider: CoachLLMProvider): string {
+  const key = provider === "openai"
+    ? Deno.env.get("OPENAI_API_KEY")
+    : Deno.env.get("ANTHROPIC_API_KEY");
+  if (!key) {
+    const envName = provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
+    console.error(`[coach-chat] ${envName} is not set`);
+    throw new Error(`${envName} environment variable is not set`);
+  }
+  return key;
+}
+
+function safeParseJSON(raw: unknown): any {
+  if (typeof raw !== "string") return {};
+  try {
+    return JSON.parse(raw);
+  } catch (_err) {
+    return {};
+  }
+}
+
+function toOpenAIFunctionTool(tool: any): any {
+  return {
+    type: "function",
+    name: tool.name,
+    description: tool.description,
+    parameters: tool.input_schema,
+    strict: false,
+  };
+}
+
+function toOpenAIInput(messages: any[]): any[] {
+  const input: any[] = [];
+
+  for (const msg of messages) {
+    if (!msg) continue;
+
+    if (typeof msg.content === "string") {
+      input.push({ role: msg.role, content: msg.content });
+      continue;
+    }
+
+    if (!Array.isArray(msg.content)) continue;
+
+    for (const block of msg.content) {
+      if (!block) continue;
+
+      // Raw Responses API output items must be replayed alongside tool results.
+      if (block.type === "function_call" || block.type === "reasoning" || block.type === "message") {
+        input.push(block);
+        continue;
+      }
+
+      // Anthropic-normalized assistant tool calls.
+      if (block.type === "tool_use") {
+        input.push({
+          type: "function_call",
+          call_id: String(block.id || `${block.name}-call`),
+          name: block.name,
+          arguments: JSON.stringify(block.input || {}),
+        });
+        continue;
+      }
+
+      // Anthropic tool results from the existing loop.
+      if (block.type === "tool_result") {
+        input.push({
+          type: "function_call_output",
+          call_id: String(block.tool_use_id),
+          output: typeof block.content === "string" ? block.content : JSON.stringify(block.content),
+        });
+        continue;
+      }
+
+      if (block.type === "text" && typeof block.text === "string") {
+        input.push({ role: msg.role || "assistant", content: block.text });
+      }
+    }
+  }
+
+  return input;
+}
+
+function extractOpenAIText(data: any): string {
+  if (typeof data?.output_text === "string") return data.output_text.trim();
+  const parts: string[] = [];
+  for (const item of data?.output || []) {
+    if (item?.type !== "message") continue;
+    for (const content of item.content || []) {
+      if (typeof content?.text === "string") parts.push(content.text);
+      if (typeof content?.refusal === "string") parts.push(content.refusal);
+    }
+  }
+  return parts.join("\n").trim();
+}
+
+function normalizeOpenAIResponse(data: any): AnthropicResponse {
+  const content: AnthropicContentBlock[] = [];
+
+  for (const item of data?.output || []) {
+    if (item?.type === "function_call") {
+      content.push({
+        type: "tool_use",
+        id: item.call_id || item.id,
+        name: item.name,
+        input: safeParseJSON(item.arguments),
+      });
+      continue;
+    }
+
+    if (item?.type === "message") {
+      for (const part of item.content || []) {
+        const text = typeof part?.text === "string"
+          ? part.text
+          : typeof part?.refusal === "string"
+            ? part.refusal
+            : "";
+        if (text) content.push({ type: "text", text });
+      }
+    }
+  }
+
+  const outputText = extractOpenAIText(data);
+  if (content.length === 0 && outputText) {
+    content.push({ type: "text", text: outputText });
+  }
+
+  return {
+    content,
+    stop_reason: content.some((block) => block.type === "tool_use") ? "tool_use" : "end_turn",
+    openAIOutput: Array.isArray(data?.output) ? data.output : undefined,
+  };
 }
 
 const SYSTEM_PROMPT = `You are an elite AFL Strength & Conditioning coach.
@@ -451,6 +668,7 @@ Do not give generic advice without linking it to training changes.
 - 2–4 bullet points max
 - No long paragraphs
 - No over-explaining
+- No markdown bold markers like **text**. Use short plain headings on their own lines if you need structure.
 
 3. ASK QUESTIONS ONLY WHEN NECESSARY
 Only ask a question if it directly changes the program.
@@ -690,11 +908,13 @@ const UPDATE_PROGRAM_TOOL = {
             },
             workoutType: {
               type: "string" as const,
+              enum: ["Strength", "Conditioning", "Recovery", "Team Training", "Mixed"],
               description:
-                'High-level type. One of: "core" | "optional" | "recovery" | "team" | "conditioning".',
+                'App-level session type. One of: "Strength" | "Conditioning" | "Recovery" | "Team Training" | "Mixed". Do NOT put tier labels like "core" or "optional" here; use sessionTier for those.',
             },
             sessionTier: {
               type: "string" as const,
+              enum: ["core", "optional", "recovery"],
               description:
                 'Optional tier label from the coaching engine — pass through if provided in the constraints, otherwise omit.',
             },
@@ -1089,14 +1309,10 @@ function buildCoachingConstraintsContext(plan: AIConstraints): string {
   return lines.join("\n");
 }
 
-async function callAnthropicAPI(messages: Message[], coachNotes: string[] = [], athleteProfile?: AthleteProfile, coachingPlan?: AIConstraints, currentProgramContext?: string, mode?: string): Promise<CallResult> {
+async function callCoachLLMAPI(messages: Message[], coachNotes: string[] = [], athleteProfile?: AthleteProfile, coachingPlan?: AIConstraints, currentProgramContext?: string, mode?: string): Promise<CallResult> {
   const startTime = Date.now();
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-
-  if (!apiKey) {
-    console.error("[coach-chat] ANTHROPIC_API_KEY is not set");
-    throw new Error("ANTHROPIC_API_KEY environment variable is not set");
-  }
+  const provider = resolveCoachProvider();
+  const apiKey = requireProviderKey(provider);
 
   // Build system prompt — lean version for program generation, full for coaching chat
   const isGenerate = mode === 'generate';
@@ -1132,55 +1348,93 @@ async function callAnthropicAPI(messages: Message[], coachNotes: string[] = [], 
   const REQUEST_TIMEOUT_MS = 55_000;
 
   // ── Model + retry config ──
-  // Primary: Opus (highest quality). Fallback: Sonnet (lower cost, still strong
-  // enough for structured tool use — the coaching engine constrains structure anyway).
+  // Primary provider is OpenAI when OPENAI_API_KEY is configured, unless
+  // COACH_LLM_PROVIDER explicitly selects Anthropic. The coaching engine
+  // still owns structure; the model supplies language and tool intents.
   // Policy: 2 primary attempts → 2 fallback attempts. Faster failover than 3+0.
-  const PRIMARY_MODEL = 'claude-opus-4-7';
-  const FALLBACK_MODEL = 'claude-sonnet-4-6';
+  const PRIMARY_MODEL = provider === "openai"
+    ? getOpenAIModel("chat", "primary")
+    : getAnthropicModel("chat", "primary");
+  const FALLBACK_MODEL = provider === "openai"
+    ? getOpenAIModel("chat", "fallback")
+    : getAnthropicModel("chat", "fallback");
+  const runtimeDiagnostic = {
+    mode: isGenerate ? "generate" : "chat",
+    isGenerate,
+    provider,
+    primaryModel: PRIMARY_MODEL,
+    fallbackModel: FALLBACK_MODEL,
+  };
+  if (isGenerate) {
+    infoLog("[coach-chat] Generate LLM config", runtimeDiagnostic);
+  }
   const ATTEMPTS_PER_MODEL = 2;
   const BASE_DELAY_MS = 1500; // exponential: ~1.5s, ~3s
-  const RETRYABLE_STATUSES = new Set([529, 503]);
+  const RETRYABLE_STATUSES = provider === "openai"
+    ? new Set([429, 500, 502, 503, 504])
+    : new Set([529, 503]);
 
-  /** Send a single Anthropic API request. Returns the parsed response or throws. */
+  /** Send a single LLM request. Returns an Anthropic-shaped response or throws. */
   const sendRequest = async (msgs: any[], model: string, label: string): Promise<AnthropicResponse> => {
     const reqStart = Date.now();
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
     try {
-      const response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 4096,
-          system: systemPrompt,
-          messages: msgs,
-          tools: isGenerate
-            ? [UPDATE_PROGRAM_TOOL]
-            : [
-                LIGHTEN_SESSION_TOOL,
-                MOVE_SESSION_TOOL,
-                MAKE_SESSION_OPTIONAL_TOOL,
-                REPLACE_EXERCISE_TOOL,
-                REMOVE_EXERCISE_TOOL,
-                ADD_WEEKLY_OVERRIDE_TOOL,
-                BAN_EXERCISE_GLOBALLY_TOOL,
-                SET_PREFERRED_ALTERNATIVE_TOOL,
-                SUGGEST_SUBSTITUTES_TOOL,
-                SAVE_NOTE_TOOL,
-              ],
-          // Generate mode FORCES update_program — the LLM cannot respond in prose.
-          ...(isGenerate
-            ? { tool_choice: { type: "tool", name: "update_program" } }
-            : {}),
-        }),
-        signal: controller.signal,
-      });
+      const coachTools = isGenerate
+        ? [UPDATE_PROGRAM_TOOL]
+        : [
+            LIGHTEN_SESSION_TOOL,
+            MOVE_SESSION_TOOL,
+            MAKE_SESSION_OPTIONAL_TOOL,
+            REPLACE_EXERCISE_TOOL,
+            REMOVE_EXERCISE_TOOL,
+            ADD_WEEKLY_OVERRIDE_TOOL,
+            BAN_EXERCISE_GLOBALLY_TOOL,
+            SET_PREFERRED_ALTERNATIVE_TOOL,
+            SUGGEST_SUBSTITUTES_TOOL,
+            SAVE_NOTE_TOOL,
+          ];
+
+      const response = provider === "openai"
+        ? await fetch("https://api.openai.com/v1/responses", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            instructions: systemPrompt,
+            input: toOpenAIInput(msgs),
+            tools: coachTools.map(toOpenAIFunctionTool),
+            max_output_tokens: 4096,
+            ...(isGenerate
+              ? { tool_choice: { type: "function", name: "update_program" } }
+              : {}),
+          }),
+          signal: controller.signal,
+        })
+        : await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 4096,
+            system: systemPrompt,
+            messages: msgs,
+            tools: coachTools,
+            // Generate mode FORCES update_program — the LLM cannot respond in prose.
+            ...(isGenerate
+              ? { tool_choice: { type: "tool", name: "update_program" } }
+              : {}),
+          }),
+          signal: controller.signal,
+        });
 
       clearTimeout(timeoutId);
       const elapsed = Date.now() - reqStart;
@@ -1190,23 +1444,39 @@ async function callAnthropicAPI(messages: Message[], coachNotes: string[] = [], 
         const errorBody = await response.text();
         console.error(`[coach-chat] ${label}: API error ${response.status}`);
         debugLog(`[coach-chat] ${label}: API error body preview: ${errorBody.substring(0, 300)}`);
-        const err = new Error(`Anthropic API error: ${response.status} - ${errorBody.substring(0, 300)}`);
+        const err = new Error(`${provider === "openai" ? "OpenAI" : "Anthropic"} API error: ${response.status} - ${errorBody.substring(0, 300)}`);
         (err as any).status = response.status;
+        attachRuntimeDiagnostic(err, {
+          ...runtimeDiagnostic,
+          attemptedModel: model,
+          attemptLabel: label,
+          apiStatus: response.status,
+          apiErrorPreview: safePreview(errorBody, 500),
+        });
         throw err;
       }
 
       const json = await response.json();
-      debugLog(`[coach-chat] ${label}: stop_reason=${json.stop_reason}, content_blocks=${json.content?.length} (model=${model})`);
+      const normalized = provider === "openai" ? normalizeOpenAIResponse(json) : json as AnthropicResponse;
+      debugLog(`[coach-chat] ${label}: stop_reason=${normalized.stop_reason}, content_blocks=${normalized.content?.length} (provider=${provider}, model=${model})`);
       if (json.usage) {
         debugLog(`[coach-chat] ${label}: usage input=${json.usage.input_tokens} output=${json.usage.output_tokens}`);
       }
-      return json as AnthropicResponse;
+      return normalized;
     } catch (err: any) {
       clearTimeout(timeoutId);
       if (err.name === 'AbortError') {
         const elapsed = Date.now() - reqStart;
         console.error(`[coach-chat] ${label}: TIMEOUT after ${elapsed}ms (model=${model})`);
-        throw new Error(`Anthropic API timeout after ${Math.round(elapsed / 1000)}s — prompt may be too large or model too slow`);
+        const timeoutError = new Error(`${provider === "openai" ? "OpenAI" : "Anthropic"} API timeout after ${Math.round(elapsed / 1000)}s — prompt may be too large or model too slow`);
+        attachRuntimeDiagnostic(timeoutError, {
+          ...runtimeDiagnostic,
+          attemptedModel: model,
+          attemptLabel: label,
+          timeoutMs: REQUEST_TIMEOUT_MS,
+          elapsedMs: elapsed,
+        });
+        throw timeoutError;
       }
       throw err;
     }
@@ -1228,7 +1498,8 @@ async function callAnthropicAPI(messages: Message[], coachNotes: string[] = [], 
     let lastError: any;
 
     for (let attempt = 1; attempt <= ATTEMPTS_PER_MODEL; attempt++) {
-      const label = `${baseLabel} (${model.includes('haiku') ? 'fallback' : 'primary'} attempt ${attempt}/${ATTEMPTS_PER_MODEL})`;
+      const role = model === PRIMARY_MODEL ? "primary" : "fallback";
+      const label = `${baseLabel} (${role} attempt ${attempt}/${ATTEMPTS_PER_MODEL})`;
       try {
         const result = await sendRequest(msgs, model, label);
         if (attempt > 1) {
@@ -1282,7 +1553,13 @@ async function callAnthropicAPI(messages: Message[], coachNotes: string[] = [], 
       console.error(`[coach-chat] ${label}: fallback model (${FALLBACK_MODEL}) also failed — ${safeErrorSummary(fallbackErr)}`);
 
       if (isRetryable(fallbackErr)) {
-        throw new Error(`[OVERLOADED] Both ${PRIMARY_MODEL} and ${FALLBACK_MODEL} unavailable after ${ATTEMPTS_PER_MODEL * 2} total attempts`);
+        const overloadedError = new Error(`[OVERLOADED] Both ${PRIMARY_MODEL} and ${FALLBACK_MODEL} unavailable after ${ATTEMPTS_PER_MODEL * 2} total attempts`);
+        attachRuntimeDiagnostic(overloadedError, {
+          ...runtimeDiagnostic,
+          finalError: safeErrorSummary(fallbackErr),
+          fallbackDiagnostic: readRuntimeDiagnostic(fallbackErr),
+        });
+        throw overloadedError;
       }
       throw fallbackErr;
     }
@@ -1321,6 +1598,19 @@ async function callAnthropicAPI(messages: Message[], coachNotes: string[] = [], 
     console.error(
       "[coach-chat] Generate mode: expected update_program tool_use but did not get one",
     );
+    const generateSchemaError = new Error(
+      "Generate mode expected update_program tool_use but did not get one",
+    );
+    attachRuntimeDiagnostic(generateSchemaError, {
+      ...runtimeDiagnostic,
+      stopReason: data.stop_reason,
+      contentTypes: (data.content ?? []).map((block) => block?.type),
+      outputTextPreview: safePreview(
+        data.content?.filter((block) => block?.type === "text").map((block) => block.text).join(" "),
+        500,
+      ),
+    });
+    throw generateSchemaError;
   }
 
   // Tool name → CoachAction kind + scope. Keep this table in sync with
@@ -1446,9 +1736,13 @@ async function callAnthropicAPI(messages: Message[], coachNotes: string[] = [], 
       }
     }
 
+    const assistantContent = provider === "openai" && data.openAIOutput
+      ? data.openAIOutput
+      : data.content;
+
     currentMessages = [
       ...currentMessages,
-      { role: "assistant" as const, content: data.content },
+      { role: "assistant" as const, content: assistantContent },
       { role: "user" as const, content: toolResults },
     ];
 
@@ -2172,8 +2466,8 @@ serve(async (req: Request) => {
       }
     }
 
-    // Call Anthropic API
-    const result = await callAnthropicAPI(body.messages, body.coachNotes || [], body.athleteProfile, body.coachingPlan, body.currentProgramContext, body.mode);
+    // Call the configured coach LLM provider.
+    const result = await callCoachLLMAPI(body.messages, body.coachNotes || [], body.athleteProfile, body.coachingPlan, body.currentProgramContext, body.mode);
 
     const elapsed = Date.now() - reqStart;
     infoLog(`[coach-chat] Success in ${elapsed}ms`);
@@ -2191,13 +2485,25 @@ serve(async (req: Request) => {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    const diagnostic = readRuntimeDiagnostic(error);
     const elapsed = Date.now() - reqStart;
     console.error(`[coach-chat] FAILED after ${elapsed}ms: ${safeErrorSummary(error)}`);
+    if (diagnostic) {
+      console.error("[coach-chat] failure diagnostic", diagnostic);
+    }
 
     // ALWAYS return 200 with error in body — non-2xx causes supabase.functions.invoke()
     // to discard the error body, making debugging impossible on the client.
     return new Response(
-      JSON.stringify({ reply: null, actions: null, newNotes: null, programUpdate: null, error: errorMessage, _v: FUNCTION_VERSION }),
+      JSON.stringify({
+        reply: null,
+        actions: null,
+        newNotes: null,
+        programUpdate: null,
+        error: errorMessage,
+        diagnostic,
+        _v: FUNCTION_VERSION,
+      }),
       { status: 200, headers: CORS_HEADERS }
     );
   }

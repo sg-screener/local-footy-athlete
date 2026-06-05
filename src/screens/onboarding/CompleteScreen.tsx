@@ -18,7 +18,12 @@ import { OnboardingStackParamList } from '../../types/navigation';
 import { useProfileStore } from '../../store/profileStore';
 import { useProgramStore } from '../../store/programStore';
 import { DEFAULT_PROGRAM } from '../../data/defaultProgram';
-import { generateProgramFromProfile } from '../../services/api/generateProgram';
+import {
+  ProgramGenError,
+  buildProgramGenerationRequestDiagnostics,
+  generateProgramFromProfile,
+  getProgramGenerationProfileFieldDiagnostics,
+} from '../../services/api/generateProgram';
 import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
 import { logger } from '../../utils/logger';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
@@ -27,6 +32,12 @@ type CompleteScreenProps = NativeStackScreenProps<
   OnboardingStackParamList,
   'Complete'
 >;
+
+function isDevBuild(): boolean {
+  return typeof __DEV__ !== 'undefined'
+    ? __DEV__
+    : process.env.NODE_ENV !== 'production';
+}
 
 /**
  * Loading copy is split into two stages so we never dead-end on a
@@ -249,7 +260,12 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
       seedProgram(program);
       transitionToReady();
     } catch (err: any) {
-      logger.error('[ProgramGen] FAILED:', err?.message || err);
+      const programGenError = err instanceof ProgramGenError ? err : null;
+      logger.error('[ProgramGen] FAILED:', {
+        message: err?.message || String(err),
+        kind: programGenError?.kind ?? 'unknown',
+        diagnostic: programGenError?.diagnostic ?? null,
+      });
 
       // Overload errors: show error state with retry — don't silently fallback
       if (err?.name === 'OverloadError') {
@@ -259,6 +275,16 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
       }
 
       // Other errors: fallback to default program so onboarding isn't blocked
+      if (isDevBuild()) {
+        logger.warn('[ProgramGen][dev] Using DEFAULT_PROGRAM fallback after generation failure', {
+          warning:
+            'DEV WARNING: The app is using DEFAULT_PROGRAM. Coach-edit tests may not reflect a real generated program.',
+          diagnostic: programGenError?.diagnostic ?? err?.message ?? String(err),
+          details: programGenError?.details ?? null,
+          request: buildProgramGenerationRequestDiagnostics(onboardingData),
+          missingProfileFields: getProgramGenerationProfileFieldDiagnostics(onboardingData),
+        });
+      }
       seedProgram(DEFAULT_PROGRAM);
       transitionToReady();
     }

@@ -489,6 +489,101 @@ section('[12] lastDiscussedWorkout = whichever is most recent');
   eq('lastDiscussedWorkout = explained (Wednesday)', ctx.lastDiscussedWorkout?.date, '2026-04-29');
 }
 
+// ─── 13. Add-conditioning payload modality is not the target ───────
+section('[13] "add 10 min ski erg onto that day" uses pronoun target, not ski modality');
+{
+  resetStore();
+  const week = buildSampleCurrentWeek();
+  useCoachContextStateStore.getState().setLastExplainedSession({
+    date: '2026-04-29',
+    sessionName: 'Easy Aerobic Flush',
+    modalities: ['rower', 'row'],
+    source: 'coach_explanation',
+  });
+  const ctx = getCoachContextSnapshot();
+  const res = resolveCoachReference({
+    userMessage: 'Can you also add a 10 min ski erg onto that day',
+    todayISO: FIXED_TODAY,
+    currentWeek: week,
+    lastOpenedWorkout: ctx.lastOpenedWorkout,
+    lastExplainedSession: ctx.lastExplainedSession,
+    lastDiscussedWorkout: ctx.lastDiscussedWorkout,
+  });
+  eq('status resolved', res.status, 'resolved');
+  eq('target remains last-discussed Wednesday', res.target?.date, '2026-04-29');
+  ok('method is pronoun, not modality match', res.target?.method === 'pronoun_last_explained');
+}
+
+section('[14] add-conditioning payload with no pronoun context asks which day');
+{
+  resetStore();
+  const week = buildSampleCurrentWeek();
+  const ctx = getCoachContextSnapshot();
+  const res = resolveCoachReference({
+    userMessage: 'Can you also add a 10 min ski erg onto that day',
+    todayISO: FIXED_TODAY,
+    currentWeek: week,
+    lastOpenedWorkout: ctx.lastOpenedWorkout,
+    lastExplainedSession: ctx.lastExplainedSession,
+    lastDiscussedWorkout: ctx.lastDiscussedWorkout,
+  });
+  eq('status no_target', res.status, 'no_target');
+  eq('failureReason is pronoun context, not modality match', res.failureReason, 'pronoun_no_context');
+}
+
+section('[15] deictic weekday after coach mutation uses verified mutation focus');
+{
+  resetStore();
+  const week = buildSampleCurrentWeek();
+  const nextWed = '2026-05-06';
+  useCoachContextStateStore.getState().setLastExplainedSession({
+    date: nextWed,
+    sessionName: 'Rest',
+    modalities: [],
+    source: 'coach_mutation',
+  });
+  const ctx = getCoachContextSnapshot();
+  const res = resolveCoachReference({
+    userMessage: 'Can you add a Gunshow to that Wednesday?',
+    todayISO: FIXED_TODAY,
+    currentWeek: week,
+    nextWeek: [
+      buildResolvedDay('2026-05-04', null),
+      buildResolvedDay('2026-05-05', null),
+      buildResolvedDay(nextWed, null),
+    ],
+    lastOpenedWorkout: ctx.lastOpenedWorkout,
+    lastExplainedSession: ctx.lastExplainedSession,
+    lastDiscussedWorkout: ctx.lastDiscussedWorkout,
+  });
+  eq('that Wednesday resolves to mutation date', res.target?.date, nextWed);
+  ok('method uses recent mutation context', res.target?.contextSource === 'coach_mutation');
+}
+
+section('[16] "there" after coach mutation uses verified mutation focus');
+{
+  resetStore();
+  const week = buildSampleCurrentWeek();
+  const nextWed = '2026-05-06';
+  useCoachContextStateStore.getState().setLastExplainedSession({
+    date: nextWed,
+    sessionName: 'Rest',
+    modalities: [],
+    source: 'coach_mutation',
+  });
+  const ctx = getCoachContextSnapshot();
+  const res = resolveCoachReference({
+    userMessage: 'put Gunshow there',
+    todayISO: FIXED_TODAY,
+    currentWeek: week,
+    lastOpenedWorkout: ctx.lastOpenedWorkout,
+    lastExplainedSession: ctx.lastExplainedSession,
+    lastDiscussedWorkout: ctx.lastDiscussedWorkout,
+  });
+  eq('there resolves to mutation date', res.target?.date, nextWed);
+  ok('there does not fall back to current-week Wednesday', res.target?.date !== '2026-04-29');
+}
+
 // ─── Summary ───────────────────────────────────────────────────────
 realLog(`\n— Summary —`);
 realLog(`  Pass: ${pass}`);

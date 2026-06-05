@@ -31,7 +31,12 @@ These must be set as Supabase secrets, not Expo client variables.
 
 | Secret | Required | Used by | Notes |
 | --- | --- | --- | --- |
-| `ANTHROPIC_API_KEY` | Yes | `supabase/functions/coach-chat`, `supabase/functions/coach-intent`, `supabase/functions/coach-send-message` | Private AI key. Never expose in app code or `EXPO_PUBLIC_*`. |
+| `OPENAI_API_KEY` | Yes for the preferred coach path | `supabase/functions/coach-chat`, `supabase/functions/coach-intent`, `supabase/functions/coach-send-message` | Private OpenAI key for GPT coach chat, intent classification, and program generation support. Never expose in app code or `EXPO_PUBLIC_*`. |
+| `COACH_LLM_PROVIDER` | Optional | Coach edge functions | Set to `openai` to force GPT, or `anthropic` for Claude fallback/testing. If unset, functions use OpenAI when `OPENAI_API_KEY` exists, otherwise Anthropic. |
+| `COACH_LLM_MODEL` | Optional | `coach-chat`, `coach-send-message` | Primary coach model. Defaults to `gpt-5.5`. |
+| `COACH_LLM_FALLBACK_MODEL` | Optional | `coach-chat` | OpenAI fallback model after retryable failures. Defaults to `gpt-5.4`. |
+| `COACH_LLM_FAST_MODEL` / `COACH_INTENT_LLM_MODEL` | Optional | `coach-intent`, injury classifier fallback | Compact classifier model. Defaults to `gpt-5.4-mini`. |
+| `ANTHROPIC_API_KEY` | Optional fallback | Coach edge functions | Private Claude key for fallback/testing only. Never expose in app code or `EXPO_PUBLIC_*`. |
 | `SUPABASE_URL` | Usually provided by Supabase | Shared function utility | Used by database-backed edge functions. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Required for database-backed functions | `supabase/functions/shared/utils.ts` | Private service role key. Never expose in app code. |
 | `ENABLE_DEBUG_LOGS` | Optional | Supabase edge function debug logging | Set to `true` only for temporary backend debugging. Default production behavior keeps verbose coach-chat logs quiet. |
@@ -41,11 +46,11 @@ These must be set as Supabase secrets, not Expo client variables.
 - Coach intent: `${functionsBase}/coach-intent`
   - Live caller: `src/screens/coach/CoachScreen.tsx`
   - Client transport: `src/utils/llmCoachIntentClassifier.ts`
-  - Server function calls Anthropic.
+  - Server function calls the configured coach LLM provider.
 
 - Coach chat: `${functionsBase}/coach-chat`
   - Live callers: `src/screens/coach/CoachScreen.tsx`, `src/services/api/generateProgram.ts`
-  - Server function calls Anthropic.
+  - Server function calls the configured coach LLM provider.
 
 - Program generation:
   - Live caller: `src/services/api/generateProgram.ts`
@@ -104,14 +109,16 @@ eas env:create --environment production --name EXPO_PUBLIC_FEEDBACK_EMAIL --valu
 eas env:create --environment production --name EXPO_PUBLIC_ENABLE_DEBUG_LOGS --value false
 ```
 
-Do not set `ANTHROPIC_API_KEY` or Supabase service-role secrets in EAS client env. Those remain Supabase secrets only. See `docs/TESTFLIGHT_CHECKLIST.md` for the release build command and smoke-test checklist.
+Do not set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or Supabase service-role secrets in EAS client env. Those remain Supabase secrets only. See `docs/TESTFLIGHT_CHECKLIST.md` for the release build command and smoke-test checklist.
 
 ## Supabase Function Secrets
 
 Set private secrets in Supabase:
 
 ```bash
-supabase secrets set ANTHROPIC_API_KEY=your-private-anthropic-key
+supabase secrets set OPENAI_API_KEY=your-private-openai-key
+supabase secrets set COACH_LLM_PROVIDER=openai
+supabase secrets set COACH_LLM_MODEL=gpt-5.5
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your-private-service-role-key
 ```
 
@@ -143,6 +150,6 @@ npm run test:profile-reset-ui
 ## Release Notes
 
 - The Supabase anon/publishable key is public by design for client-side edge function calls.
-- The Anthropic API key is private and must remain server-side only.
+- AI provider keys are private and must remain server-side only.
 - Changing `EXPO_PUBLIC_*` values requires rebuilding the app; they are embedded at build time.
 - Leave `EXPO_PUBLIC_ENABLE_DEBUG_LOGS` and Supabase `ENABLE_DEBUG_LOGS` off for release builds unless investigating a specific incident.

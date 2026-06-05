@@ -279,6 +279,8 @@ section('[8] Runtime logs');
 {
   const captured: string[] = [];
   const origLog = console.log;
+  const prevDebugFlag = process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS;
+  process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = 'true';
   console.log = (...args: any[]) =>
     captured.push(args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' '));
   const c = buildInjuryConstraint({ region: 'hamstring', severity: 7 });
@@ -297,6 +299,7 @@ section('[8] Runtime logs');
     nextWeekProjected: [projected],
   });
   console.log = origLog;
+  process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = prevDebugFlag;
   ok(
     '[constraint-summary] current_week_changes logged',
     captured.some((l) => l.includes('[constraint-summary] current_week_changes')),

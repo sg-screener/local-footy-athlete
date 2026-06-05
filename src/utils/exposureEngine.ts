@@ -318,7 +318,7 @@ export function classifyExerciseExposures(rawName: string): Exposure[] {
   }
 
   // ─ Calf / achilles
-  if (/calf\s*raise|calf\b|gastroc|soleus|donkey\s*calf|toe\s*raise/i.test(n)) {
+  if (/calf\s*raise|calf\b|gastroc|soleus|donkey\s*calf|toe\s*raise|tib(?:ialis)?\s*raise/i.test(n)) {
     out.add('calf_achilles');
   }
 

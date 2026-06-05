@@ -70,7 +70,7 @@ EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL=https://your-project.supabase.co/functions/v1
 
 Use either `EXPO_PUBLIC_SUPABASE_ANON_KEY` or `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Only set `EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL` if the functions base is not the default `${EXPO_PUBLIC_SUPABASE_URL}/functions/v1`.
 
-Never set private AI/backend secrets as Expo public variables. Do not set `ANTHROPIC_API_KEY` in EAS client env.
+Never set private AI/backend secrets as Expo public variables. Do not set `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or Supabase service-role keys in EAS client env.
 
 ## Supabase Checks
 
@@ -78,7 +78,9 @@ Confirm Supabase secrets are set server-side:
 
 ```bash
 supabase secrets list
-supabase secrets set ANTHROPIC_API_KEY=...
+supabase secrets set OPENAI_API_KEY=...
+supabase secrets set COACH_LLM_PROVIDER=openai
+supabase secrets set COACH_LLM_MODEL=gpt-5.5
 supabase secrets set SUPABASE_SERVICE_ROLE_KEY=...
 ```
 

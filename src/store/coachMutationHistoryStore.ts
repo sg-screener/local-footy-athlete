@@ -42,6 +42,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Workout, OverrideContext } from '../types/domain';
 import type { ModalityPreference } from './coachPreferencesStore';
+import type { CalendarDayType } from './calendarStore';
 import type {
   CoachMutateOperation,
   CoachCommandScope,
@@ -77,6 +78,11 @@ export interface ModalityPreferenceSnapshot {
   entry: ModalityPreference | null;
 }
 
+export interface CalendarMarkSnapshot {
+  date: string;
+  mark: CalendarDayType | null;
+}
+
 /**
  * Uniform revert plan. Every supported op produces this shape. The undo
  * engine walks `dateOverrides` first, then (if present) restores the
@@ -91,18 +97,41 @@ export interface RevertPlan {
   /** Optional preference snapshot — only present for modality-preference
    *  mutations. */
   modalityPreference?: ModalityPreferenceSnapshot;
+  /** Optional calendar mark snapshot for mutations that alter rest/game/noGame
+   *  marks instead of only dateOverrides. */
+  calendarMarks?: CalendarMarkSnapshot[];
 }
 
 /** Categorical hint for verification — tells the undo engine which surface
  *  to probe to confirm the undo landed. */
 export type MutationKind =
   | 'add_conditioning'
+  | 'add_session'
+  | 'remove_session'
   | 'remove_conditioning'
   | 'replace_exercise'
   | 'move_session'
   | 'modality_swap_once'
   | 'modality_preference'
   | 'bike_subtype_preference';
+
+export interface MutationTouchedActivity {
+  kind: 'conditioning' | 'exercise' | 'session';
+  date: string;
+  sessionName?: string;
+  title: string;
+  previousTitle?: string;
+  modality?: string | null;
+  intensity?: string;
+  durationMinutes?: number;
+  sets?: number;
+  repsMin?: number;
+  repsMax?: number;
+  prescriptionType?: string;
+  bikeLabel?: string | null;
+  effortKind?: string;
+  trainingIntent?: string;
+}
 
 /**
  * One persisted coach mutation. The executor writes this AFTER
@@ -130,6 +159,12 @@ export interface MutationHistoryEntry {
    *  dest. Modality preference ops carry the eager-rewrite dates plus
    *  any per-date swap target. */
   affectedDates: string[];
+  /**
+   * Structured memory of what the athlete actually changed. This is the
+   * durable target for follow-ups like "make them shorter", "replace it
+   * with hills", "undo that", etc. Older entries may omit it.
+   */
+  touchedActivities?: MutationTouchedActivity[];
   /** Router scope, surfaced so the undo reply can stay coherent
    *  ("undid the recurring change", "undid that one-off swap"). */
   scope: CoachCommandScope;
@@ -189,6 +224,7 @@ export const useCoachMutationHistoryStore = create<MutationHistoryState>()(
           userMessage: truncate(input.userMessage, 240),
           appliedReply: truncate(input.appliedReply, 240),
           affectedDates: [...(input.affectedDates ?? [])],
+          touchedActivities: input.touchedActivities?.map((activity) => ({ ...activity })),
           scope: input.scope,
           revertPlan: input.revertPlan,
           revertedAt: null,

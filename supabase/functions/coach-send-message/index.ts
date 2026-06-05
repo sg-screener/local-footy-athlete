@@ -2,7 +2,8 @@
  * Supabase Edge Function: coach-send-message
  *
  * AI Coach messaging endpoint
- * Receives user messages, generates contextual responses using Claude API
+ * Receives user messages, generates contextual responses using the configured
+ * coach LLM provider
  * Maintains conversation history and ensures safe, evidence-based coaching
  *
  * POST /coach-send-message
@@ -162,15 +163,15 @@ Deno.serve(async (req: Request) => {
 
     log('coach-send-message', 'User message saved', { messageId: userMessageData.id });
 
-    // Call Claude API
-    const claudeResponse = await callClaudeAPI(
+    // Call the configured coach LLM provider
+    const coachResponse = await callCoachLLMAPI(
       contextualSystemPrompt,
       conversationMessages || [],
       message
     );
 
-    if (!claudeResponse.success) {
-      return errorResponse(claudeResponse.error || 'Failed to get AI response', 500);
+    if (!coachResponse.success) {
+      return errorResponse(coachResponse.error || 'Failed to get AI response', 500);
     }
 
     // Save assistant response to database
@@ -179,8 +180,8 @@ Deno.serve(async (req: Request) => {
       .insert({
         conversation_id,
         role: 'assistant',
-        content: claudeResponse.message,
-        tokens_used: claudeResponse.tokensUsed,
+        content: coachResponse.message,
+        tokens_used: coachResponse.tokensUsed,
       })
       .select('id')
       .single();
@@ -191,14 +192,14 @@ Deno.serve(async (req: Request) => {
 
     log('coach-send-message', 'Response generated and saved', {
       messageId: assistantMessageData.id,
-      tokensUsed: claudeResponse.tokensUsed,
+      tokensUsed: coachResponse.tokensUsed,
     });
 
     const response: CoachSendMessageResponse = {
       success: true,
       conversationId: conversation_id,
       messageId: assistantMessageData.id,
-      response: claudeResponse.message,
+      response: coachResponse.message,
     };
 
     return successResponse(response);
@@ -258,9 +259,37 @@ function formatWorkoutContext(workouts: any[]): string {
 }
 
 /**
- * Helper: Call Claude API
+ * Helper: Call configured coach LLM provider
  */
-async function callClaudeAPI(
+type CoachLLMProvider = 'openai' | 'anthropic';
+
+function normalizeCoachProvider(raw: string | undefined | null): CoachLLMProvider | null {
+  const value = raw?.trim().toLowerCase();
+  if (value === 'openai') return 'openai';
+  if (value === 'anthropic' || value === 'claude') return 'anthropic';
+  return null;
+}
+
+function resolveCoachProvider(): CoachLLMProvider {
+  const configured = normalizeCoachProvider(Deno.env.get('COACH_LLM_PROVIDER'));
+  if (configured) return configured;
+  return Deno.env.get('OPENAI_API_KEY') ? 'openai' : 'anthropic';
+}
+
+function extractOpenAIText(data: any): string {
+  if (typeof data?.output_text === 'string') return data.output_text.trim();
+  const parts: string[] = [];
+  for (const item of data?.output || []) {
+    if (item?.type !== 'message') continue;
+    for (const content of item.content || []) {
+      if (typeof content?.text === 'string') parts.push(content.text);
+      if (typeof content?.refusal === 'string') parts.push(content.refusal);
+    }
+  }
+  return parts.join('\n').trim();
+}
+
+async function callCoachLLMAPI(
   systemPrompt: string,
   conversationHistory: any[],
   userMessage: string
@@ -271,12 +300,16 @@ async function callClaudeAPI(
   tokensUsed?: number;
 }> {
   try {
-    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY');
-    if (!anthropicApiKey) {
-      throw new Error('ANTHROPIC_API_KEY not configured');
+    const provider = resolveCoachProvider();
+    const apiKey = provider === 'openai'
+      ? Deno.env.get('OPENAI_API_KEY')
+      : Deno.env.get('ANTHROPIC_API_KEY');
+    if (!apiKey) {
+      const envName = provider === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY';
+      throw new Error(`${envName} not configured`);
     }
 
-    // Build messages array for Claude
+    // Build messages array for the selected provider
     const messages = [
       ...conversationHistory.map((msg: any) => ({
         role: msg.role,
@@ -288,41 +321,57 @@ async function callClaudeAPI(
       },
     ];
 
-    log('coach-send-message', 'Calling Claude API', {
+    log('coach-send-message', 'Calling coach LLM provider', {
+      provider,
       messageCount: messages.length,
     });
 
-    // Call Claude API
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': anthropicApiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-5-20250929',
-        max_tokens: 1024,
-        system: systemPrompt,
-        messages,
-      }),
-    });
+    const response = provider === 'openai'
+      ? await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: Deno.env.get('COACH_SEND_MESSAGE_LLM_MODEL') ||
+            Deno.env.get('COACH_LLM_MODEL') ||
+            'gpt-5.5',
+          instructions: systemPrompt,
+          input: messages,
+          max_output_tokens: 1024,
+        }),
+      })
+      : await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: Deno.env.get('ANTHROPIC_SEND_MESSAGE_MODEL') || 'claude-sonnet-4-5-20250929',
+          max_tokens: 1024,
+          system: systemPrompt,
+          messages,
+        }),
+      });
 
     if (!response.ok) {
       const errorData = await response.text();
-      throw new Error(`Claude API error: ${response.status} - ${errorData}`);
+      throw new Error(`${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API error: ${response.status} - ${errorData}`);
     }
 
     const data = await response.json();
-
-    if (!data.content || !data.content[0]) {
-      throw new Error('Invalid response format from Claude API');
+    const assistantMessage = provider === 'openai'
+      ? extractOpenAIText(data)
+      : data.content?.[0]?.text;
+    if (!assistantMessage) {
+      throw new Error(`Invalid response format from ${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API`);
     }
+    const tokensUsed = data.usage?.output_tokens || data.usage?.completion_tokens || 0;
 
-    const assistantMessage = data.content[0].text;
-    const tokensUsed = data.usage?.output_tokens || 0;
-
-    log('coach-send-message', 'Claude API response received', { tokensUsed });
+    log('coach-send-message', 'Coach LLM response received', { provider, tokensUsed });
 
     return {
       success: true,
@@ -331,7 +380,7 @@ async function callClaudeAPI(
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    log('coach-send-message', 'Claude API call failed', message);
+    log('coach-send-message', 'Coach LLM call failed', message);
     return {
       success: false,
       error: `AI coach unavailable: ${message}`,

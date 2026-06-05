@@ -5,7 +5,7 @@
  * coachCommandRouter.ts:
  *
  *  • Mutation-like turns NEVER drop into mode='explain'.
- *  • Each of the 8 supported operations classifies a representative
+ *  • Each supported operation classifies a representative
  *    set of messy user wordings.
  *  • The legacy fallback gate (canFallbackToLegacy) returns false for
  *    every mutate / clarify outcome.
@@ -27,6 +27,14 @@ import {
   executeCoachCommand,
 } from '../utils/coachCommandExecutor';
 import type { CoachReferenceResolution } from '../utils/coachReferenceResolver';
+import {
+  dayWorkoutShowsConditioningAfterStrength,
+  workoutShowsExpectedActivity,
+} from '../utils/visibleProgramReadModel';
+import {
+  applyConditioningModalityToWorkout,
+  parseBikeSubtypeIntent,
+} from '../utils/coachModalitySwap';
 
 // ─── Tiny harness ──────────────────────────────────────────────────
 
@@ -114,7 +122,7 @@ const PHRASES: Array<{ msg: string; expectedOp?: string; mode: 'mutate' | 'clari
   { msg: 'change it to a bike instead of a row', expectedOp: 'set_conditioning_modality_preference', mode: 'mutate' },
   { msg: 'swap it to bike going forward', expectedOp: 'set_conditioning_modality_preference', mode: 'mutate' },
   { msg: 'just this session, change it to bike', expectedOp: 'swap_conditioning_modality_once', mode: 'mutate' },
-  { msg: 'remove that session', expectedOp: 'remove_conditioning', mode: 'mutate' },
+  { msg: 'remove that session', expectedOp: 'remove_session', mode: 'mutate' },
   // Bike subtype callouts
   { msg: 'not assault bike, normal bike', expectedOp: 'set_bike_subtype_preference', mode: 'mutate' },
   { msg: 'actually make that a stationary bike', expectedOp: 'set_bike_subtype_preference', mode: 'mutate' },
@@ -127,6 +135,9 @@ const PHRASES: Array<{ msg: string; expectedOp?: string; mode: 'mutate' | 'clari
   // Move + add
   { msg: 'move Wednesday to Thursday', expectedOp: 'move_session', mode: 'mutate' },
   { msg: 'add a bike session on Thursday', expectedOp: 'add_conditioning', mode: 'mutate' },
+  { msg: "Can you add a light walk to Friday's session?", expectedOp: 'add_conditioning', mode: 'mutate' },
+  { msg: "Can you add a light bike to Friday's session?", expectedOp: 'add_conditioning', mode: 'mutate' },
+  { msg: "Can you add pilates to Friday's session?", expectedOp: 'add_conditioning', mode: 'mutate' },
 ];
 
 for (const { msg, expectedOp, mode } of PHRASES) {
@@ -181,6 +192,54 @@ const bikeNoTargetMut = asMutate(bikeNoTarget);
 ok('bike subtype no-resolution still mutate', bikeNoTargetMut !== null);
 ok('bike subtype no-resolution flags needsClarification', bikeNoTargetMut?.needsClarification === true);
 
+const whyNotAssaultIntent = parseBikeSubtypeIntent("Why isn't it an assault bike?");
+eq('"Why isn\'t it an assault bike?" → desired assault',
+  whyNotAssaultIntent.desiredLabel,
+  'assault' as any);
+const whyNotAssaultCmd = routeCoachCommand(
+  input("Why isn't it an assault bike?", resolved(TODAY, 'Lower Squat')),
+);
+ok('"Why isn\'t it an assault bike?" → mutate',
+  whyNotAssaultCmd.mode === 'mutate');
+eq('"Why isn\'t it an assault bike?" op',
+  asMutate(whyNotAssaultCmd)?.operation,
+  'set_bike_subtype_preference' as any);
+eq('"Why isn\'t it an assault bike?" payload bikeLabel=assault',
+  (asMutate(whyNotAssaultCmd)?.payload as any)?.bikeLabel,
+  'assault');
+const assaultLabelRewrite = applyConditioningModalityToWorkout({
+  name: 'Lower Squat',
+  description: 'core + Conditioning',
+  exercises: [
+    {
+      id: 'bike-row',
+      notes: '75-80% max HR. Keep it aerobic.',
+      exercise: {
+        name: 'Bike Intervals',
+        description: '8 x 2 min on bike.',
+      },
+    },
+  ],
+  conditioningBlock: {
+    options: [
+      {
+        title: 'Bike Intervals',
+        description: '8 x 2 min on bike.',
+        exerciseIds: ['bike-row'],
+      },
+    ],
+  },
+} as any, {
+  fromModality: 'bike',
+  toModality: 'bike',
+  bikeLabel: 'assault',
+  isLabelOnlyFix: true,
+});
+ok('assault label rewrite updates option title',
+  /Assault Bike Intervals/i.test(assaultLabelRewrite.conditioningBlock.options[0].title));
+ok('assault label rewrite updates exercise name',
+  /Assault Bike Intervals/i.test(assaultLabelRewrite.exercises[0].exercise.name));
+
 // ─── 3. Modality swap scope detection ──────────────────────────────
 
 section('3. Modality swap scope detection');
@@ -196,6 +255,86 @@ eq('"just this session" → swap_once op', oneOff.operation, 'swap_conditioning_
 const pastDefault = asMutate(routeCoachCommand(input('change it to bike instead of a row')))!;
 eq('past target without "just this" → recurring scope', pastDefault.scope, 'recurring');
 eq('past target → preference op', pastDefault.operation, 'set_conditioning_modality_preference');
+
+const dayModalityRewrite = asMutate(routeCoachCommand(input(
+  'Can you please change Wednesday session to be a ski erg?',
+  resolved('2026-06-03', 'Easy Aerobic Flush (25min Rower)'),
+)))!;
+eq('day + modality conversion → swap_once op',
+  dayModalityRewrite.operation,
+  'swap_conditioning_modality_once');
+eq('day + modality conversion preserves target day',
+  dayModalityRewrite.target,
+  { kind: 'date', date: '2026-06-03', sessionName: 'Easy Aerobic Flush (25min Rower)' } as any);
+eq('day + modality conversion payload targets ski',
+  (dayModalityRewrite.payload as any).to,
+  'ski');
+ok('day + modality conversion does not route as add_conditioning',
+  dayModalityRewrite.operation !== 'add_conditioning');
+ok('day + modality conversion does not route as replace_exercise',
+  dayModalityRewrite.operation !== 'replace_exercise');
+
+const dayModalityBeatsLastAdd = asMutate(routeCoachCommand({
+  ...input(
+    "Can you make wednesdays session a ski erg?",
+    resolved('2026-06-03', 'Easy Aerobic Flush (25min Rower)'),
+  ),
+  lastChange: {
+    operation: 'add_conditioning',
+    target: { kind: 'date', date: '2026-06-03', sessionName: 'Easy Aerobic Flush (25min Rower)' },
+    appliedAt: Date.now(),
+    userMessage: 'Can you also add a 10 min ski erg onto that day',
+    touchedActivities: [{
+      kind: 'conditioning',
+      date: '2026-06-03',
+      sessionName: 'Easy Aerobic Flush (25min Rower)',
+      title: 'SkiErg',
+      modality: 'ski',
+      durationMinutes: 10,
+    } as any],
+  },
+}))!;
+eq('explicit session modality beats last add-on history',
+  dayModalityBeatsLastAdd.operation,
+  'swap_conditioning_modality_once');
+eq('explicit session modality still targets ski',
+  (dayModalityBeatsLastAdd.payload as any).to,
+  'ski');
+ok('explicit session modality is not add_conditioning',
+  dayModalityBeatsLastAdd.operation !== 'add_conditioning');
+
+const skiErgWorkout = {
+  name: 'Easy Aerobic Flush',
+  exercises: [
+    {
+      id: 'ski-row',
+      exercise: { name: 'Easy Aerobic Flush (25min SkiErg)' },
+      notes: '25min easy SkiErg.',
+    },
+  ],
+} as any;
+const assaultAfterSki = asMutate(routeCoachCommand({
+  ...input(
+    'Actually make it assault bike please',
+    resolved('2026-06-03', 'Easy Aerobic Flush'),
+  ),
+  currentWeek: [{
+    date: '2026-06-03',
+    sessionName: 'Easy Aerobic Flush',
+    workout: skiErgWorkout,
+  }],
+}))!;
+eq('positive assault bike after non-bike target → swap_once op',
+  assaultAfterSki.operation,
+  'swap_conditioning_modality_once');
+eq('positive assault bike after non-bike target → bike modality',
+  (assaultAfterSki.payload as any).to,
+  'bike');
+eq('positive assault bike after non-bike target → assault subtype',
+  (assaultAfterSki.payload as any).bikeLabel,
+  'assault');
+ok('positive assault bike after non-bike target is not label-only preference',
+  assaultAfterSki.operation !== 'set_bike_subtype_preference');
 
 // ─── 4. Undo without lastChange → ask for clarification ────────────
 
@@ -646,7 +785,722 @@ ok('"add a bike session on Monday" → mutate', addCmd.mode === 'mutate');
 ok('add classified as add_conditioning', asMutate(addCmd)?.operation === 'add_conditioning');
 ok('add blocks legacy fallback', !canFallbackToLegacy(addCmd));
 
-// 14.2 — Executor with stubs verifies dual surface + emits "Done."
+// 14.1b — "light walk to Friday's session" is a concrete add request,
+// not a vague mutation that should ask "What change would you like?"
+const addWalkCmd = routeCoachCommand({
+  userMessage: 'Can you add a light walk to fridays session?',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TODAY, 'Upper Body Strength'),
+});
+ok('"add a light walk to fridays session" → mutate', addWalkCmd.mode === 'mutate');
+ok('"light walk" classified as add_conditioning',
+  asMutate(addWalkCmd)?.operation === 'add_conditioning');
+eq('"fridays session" typo keeps one-off scope',
+  asMutate(addWalkCmd)?.scope,
+  'one_off' as any);
+eq('"light walk" modality captured',
+  (asMutate(addWalkCmd)?.payload as any)?.modality,
+  'walk');
+const addWalkExec = executeCoachCommand({
+  command: addWalkCmd,
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  userMessage: 'Can you add a light walk to fridays session?',
+  conditioningDeps: {
+    applyEvents: stubApplyOk(ADD_TODAY),
+    verifyRendered: () => ({
+      requestedDay: ADD_TODAY,
+      todayISO: ADD_TODAY,
+      targetDate: ADD_TODAY,
+      targetWorkoutBeforeName: 'Upper Body Strength',
+      targetWorkoutAfterName: 'Upper Body Strength',
+      beforeHasConditioning: false,
+      afterHasConditioning: true,
+      overrideKeyWritten: true,
+      programTabProjectionHasConditioning: true,
+      dayWorkoutProjectionHasConditioning: true,
+    }),
+    snapshotBefore: () => null,
+    newEventId: () => 'test-add-walk-evt',
+  },
+});
+eq('"light walk" executor kind = mutated', addWalkExec.kind, 'mutated');
+ok('"light walk" reply says light walk', /light walk/i.test(addWalkExec.reply));
+
+const addLightBikeCmd = routeCoachCommand({
+  userMessage: 'Can you add a light bike to fridays session?',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TODAY, 'Upper Body Strength'),
+});
+ok('"add a light bike to fridays session" → mutate', addLightBikeCmd.mode === 'mutate');
+eq('"light bike" modality captured',
+  (asMutate(addLightBikeCmd)?.payload as any)?.modality,
+  'bike');
+eq('"light bike" custom activity captured',
+  (asMutate(addLightBikeCmd)?.payload as any)?.customActivity,
+  'Light Bike');
+eq('"light bike" intensity captured',
+  (asMutate(addLightBikeCmd)?.payload as any)?.intensity,
+  'light');
+
+const addSkiErgOntoThatDayCmd = routeCoachCommand({
+  userMessage: 'Can you also add a 10 min ski erg onto that day',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TODAY, 'Upper Body Strength'),
+});
+ok('"add 10 min ski erg onto that day" → mutate',
+  addSkiErgOntoThatDayCmd.mode === 'mutate');
+eq('"add 10 min ski erg" classified as add_conditioning',
+  asMutate(addSkiErgOntoThatDayCmd)?.operation,
+  'add_conditioning' as any);
+eq('"add 10 min ski erg" modality captured',
+  (asMutate(addSkiErgOntoThatDayCmd)?.payload as any)?.modality,
+  'ski');
+eq('"add 10 min ski erg" activity captured',
+  (asMutate(addSkiErgOntoThatDayCmd)?.payload as any)?.customActivity,
+  'Ski Erg');
+eq('"add 10 min ski erg" duration captured',
+  (asMutate(addSkiErgOntoThatDayCmd)?.payload as any)?.durationMinutes,
+  10);
+eq('"add 10 min ski erg" target preserved from resolver',
+  asMutate(addSkiErgOntoThatDayCmd)?.target,
+  { kind: 'date', date: ADD_TODAY, sessionName: 'Upper Body Strength' } as any);
+
+let assaultSprintEvents: any[] = [];
+let recordedAssaultSprintMutation: any = null;
+const addAssaultSprintCmd = routeCoachCommand({
+  userMessage: 'Can you add assault bike sprints to fridays session?',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TODAY, 'Upper Body Strength'),
+});
+ok('"add assault bike sprints" → mutate',
+  addAssaultSprintCmd.mode === 'mutate');
+eq('"assault bike sprints" modality stays bike',
+  (asMutate(addAssaultSprintCmd)?.payload as any)?.modality,
+  'bike');
+eq('"assault bike sprints" captures assault bike label',
+  (asMutate(addAssaultSprintCmd)?.payload as any)?.bikeLabel,
+  'assault');
+eq('"assault bike sprints" captures sprint effort',
+  (asMutate(addAssaultSprintCmd)?.payload as any)?.effortKind,
+  'sprint');
+eq('"assault bike sprints" activity title',
+  (asMutate(addAssaultSprintCmd)?.payload as any)?.customActivity,
+  'Assault Bike Sprints');
+const addAssaultSprintExec = executeCoachCommand({
+  command: addAssaultSprintCmd,
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  userMessage: 'Can you add assault bike sprints to fridays session?',
+  conditioningDeps: {
+    applyEvents: (events: any[]) => {
+      assaultSprintEvents = events;
+      return {
+        applied: events.map((e) => ({ date: e.date, eventIds: [e.id], workoutName: 'Upper Body Strength' })),
+        rejected: [],
+      };
+    },
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetWorkoutBeforeName: 'Upper Body Strength',
+      targetWorkoutAfterName: 'Upper Body Strength',
+      beforeHasConditioning: false,
+      afterHasConditioning: true,
+      overrideKeyWritten: true,
+      programTabProjectionHasConditioning: true,
+      dayWorkoutProjectionHasConditioning: true,
+      expectedActivityTitle: args.expectedActivityTitle ?? null,
+      programTabProjectionHasExpectedActivity: true,
+      dayWorkoutProjectionHasExpectedActivity: true,
+    }),
+    snapshotBefore: () => null,
+    newEventId: () => 'test-add-assault-sprints-evt',
+  },
+  undoDeps: {
+    recordMutation: (entry: any) => {
+      recordedAssaultSprintMutation = entry;
+      return {
+        ...entry,
+        id: 'recorded-assault-sprint',
+        timestamp: Date.now(),
+        revertedAt: null,
+      };
+    },
+  },
+});
+eq('"assault bike sprints" executor kind = mutated',
+  addAssaultSprintExec.kind,
+  'mutated');
+ok('"assault bike sprints" reply names assault bike sprints',
+  /assault bike sprints/i.test(addAssaultSprintExec.reply),
+  addAssaultSprintExec.reply);
+eq('"assault bike sprints" event title',
+  assaultSprintEvents[0]?.after?.title,
+  'Assault Bike Sprints');
+eq('"assault bike sprints" uses seconds prescription',
+  assaultSprintEvents[0]?.after?.prescriptionType,
+  'duration');
+eq('"assault bike sprints" reps min seconds',
+  assaultSprintEvents[0]?.after?.repsMin,
+  20);
+eq('"assault bike sprints" reps max seconds',
+  assaultSprintEvents[0]?.after?.repsMax,
+  30);
+ok('"assault bike sprints" does not use 2 min efforts',
+  !/(?:x\s*)?2\s*min\s*@/i.test(assaultSprintEvents[0]?.after?.description ?? ''),
+  assaultSprintEvents[0]?.after?.description);
+eq('"assault bike sprints" records structured touched activity',
+  recordedAssaultSprintMutation?.touchedActivities?.[0]?.title,
+  'Assault Bike Sprints');
+eq('"assault bike sprints" touched activity remembers sprint effort',
+  recordedAssaultSprintMutation?.touchedActivities?.[0]?.effortKind,
+  'sprint');
+
+const workoutWithAssaultSprints = {
+  id: 'upper-with-sprints',
+  name: 'Upper Body Strength',
+  workoutType: 'Strength',
+  sessionTier: 'core',
+  hasCombinedConditioning: true,
+  conditioningFlavour: 'high-intensity',
+  conditioningBlock: {
+    intent: 'high-intensity',
+    options: [{
+      title: 'Assault Bike Sprints',
+      description: '6 x 20-30s on the assault bike, full recovery.',
+      exerciseIds: ['assault-sprint-row'],
+    }],
+  },
+  exercises: [
+    {
+      id: 'assault-sprint-row',
+      prescribedSets: 6,
+      prescribedRepsMin: 20,
+      prescribedRepsMax: 30,
+      prescriptionType: 'duration',
+      restSeconds: 120,
+      notes: '6 x 20-30s assault bike sprints. Full recovery.',
+      exercise: {
+        name: 'Assault Bike Sprints',
+        description: '6 x 20-30s on the assault bike.',
+      },
+    },
+  ],
+} as any;
+let shortenSprintEvents: any[] = [];
+const shortenSprintCmd = routeCoachCommand({
+  userMessage: 'Thanks - maybe just make them a little bit shorter please?',
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  currentWeek: [
+    {
+      date: ADD_TODAY,
+      sessionName: 'Upper Body Strength',
+      workout: workoutWithAssaultSprints,
+    },
+  ],
+  lastChange: {
+    operation: 'add_conditioning',
+    target: { kind: 'date', date: ADD_TODAY, sessionName: 'Upper Body Strength' },
+    appliedAt: Date.now(),
+    userMessage: 'Can you add some assault bike sprints to Tuesday',
+    appliedReply: `Done. I added assault bike sprints to Tue ${ADD_TODAY}.`,
+  },
+});
+ok('"make them shorter" after assault sprint add → mutate',
+  shortenSprintCmd.mode === 'mutate');
+ok('"make them shorter" routes as add/update conditioning',
+  asMutate(shortenSprintCmd)?.operation === 'add_conditioning');
+eq('"make them shorter" keeps assault bike sprint activity',
+  (asMutate(shortenSprintCmd)?.payload as any)?.customActivity,
+  'Assault Bike Sprints');
+eq('"make them shorter" preserves assault bike label',
+  (asMutate(shortenSprintCmd)?.payload as any)?.bikeLabel,
+  'assault');
+eq('"make them shorter" preserves sprint effort',
+  (asMutate(shortenSprintCmd)?.payload as any)?.effortKind,
+  'sprint');
+eq('"make them shorter" lowers sprint min seconds',
+  (asMutate(shortenSprintCmd)?.payload as any)?.repsMin,
+  15);
+eq('"make them shorter" lowers sprint max seconds',
+  (asMutate(shortenSprintCmd)?.payload as any)?.repsMax,
+  20);
+const shortenSprintExec = executeCoachCommand({
+  command: shortenSprintCmd,
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  userMessage: 'Thanks - maybe just make them a little bit shorter please?',
+  conditioningDeps: {
+    applyEvents: (events: any[]) => {
+      shortenSprintEvents = events;
+      return {
+        applied: events.map((e) => ({ date: e.date, eventIds: [e.id], workoutName: 'Upper Body Strength' })),
+        rejected: [],
+      };
+    },
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetWorkoutBeforeName: 'Upper Body Strength',
+      targetWorkoutAfterName: 'Upper Body Strength',
+      beforeHasConditioning: true,
+      afterHasConditioning: true,
+      overrideKeyWritten: true,
+      programTabProjectionHasConditioning: true,
+      dayWorkoutProjectionHasConditioning: true,
+      expectedActivityTitle: args.expectedActivityTitle ?? null,
+      programTabProjectionHasExpectedActivity: true,
+      dayWorkoutProjectionHasExpectedActivity: true,
+    }),
+    snapshotBefore: () => workoutWithAssaultSprints,
+    newEventId: () => 'test-shorten-assault-sprints-evt',
+  },
+});
+eq('"make them shorter" executor kind=mutated',
+  shortenSprintExec.kind,
+  'mutated');
+ok('"make them shorter" reply confirms seconds',
+  /assault bike sprints/i.test(shortenSprintExec.reply) && /15-20\s*sec/i.test(shortenSprintExec.reply),
+  shortenSprintExec.reply);
+eq('"make them shorter" event reps min seconds',
+  shortenSprintEvents[0]?.after?.repsMin,
+  15);
+eq('"make them shorter" event reps max seconds',
+  shortenSprintEvents[0]?.after?.repsMax,
+  20);
+
+const ambiguousSprintMinuteCmd = routeCoachCommand({
+  userMessage: 'Nah just make it 30 mins',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TODAY, 'Upper Body Strength'),
+  currentWeek: [
+    {
+      date: ADD_TODAY,
+      sessionName: 'Upper Body Strength',
+      workout: workoutWithAssaultSprints,
+    },
+  ],
+  lastChange: {
+    operation: 'add_conditioning',
+    target: { kind: 'date', date: ADD_TODAY, sessionName: 'Upper Body Strength' },
+    appliedAt: Date.now(),
+    userMessage: 'Actually make it assault bike sprints',
+    appliedReply: `Done. I replaced the conditioning with assault bike sprints on Tue ${ADD_TODAY}.`,
+    touchedActivities: [{
+      kind: 'conditioning',
+      date: ADD_TODAY,
+      sessionName: 'Upper Body Strength',
+      title: 'Assault Bike Sprints',
+      modality: 'bike',
+      intensity: 'hard',
+      sets: 6,
+      repsMin: 20,
+      repsMax: 30,
+      restSeconds: 120,
+      prescriptionType: 'duration',
+      bikeLabel: 'assault',
+      effortKind: 'sprint',
+      trainingIntent: 'sprint',
+    } as any],
+  },
+});
+ok('"30 mins" after assault sprint replacement asks before mutating',
+  ambiguousSprintMinuteCmd.mode === 'mutate' &&
+    asMutate(ambiguousSprintMinuteCmd)?.needsClarification === true);
+eq('"30 mins" sprint ambiguity reason',
+  asMutate(ambiguousSprintMinuteCmd)?.reason,
+  'last_add_sprint_minute_duration_ambiguous' as any);
+eq('"30 mins" sprint ambiguity carries the proposed whole-session minutes',
+  (asMutate(ambiguousSprintMinuteCmd)?.payload as any)?.durationMinutes,
+  30);
+ok('"30 mins" sprint ambiguity does not rewrite sprint reps before clarification',
+  (asMutate(ambiguousSprintMinuteCmd)?.payload as any)?.repsMin == null &&
+    (asMutate(ambiguousSprintMinuteCmd)?.payload as any)?.repsMax == null,
+  JSON.stringify(asMutate(ambiguousSprintMinuteCmd)?.payload));
+ok('"30 mins" sprint ambiguity asks which duration slot',
+  /whole .*session/i.test(asMutate(ambiguousSprintMinuteCmd)?.clarificationQuestion ?? '') &&
+    /sprint efforts/i.test(asMutate(ambiguousSprintMinuteCmd)?.clarificationQuestion ?? '') &&
+    /recovery between reps/i.test(asMutate(ambiguousSprintMinuteCmd)?.clarificationQuestion ?? ''),
+  asMutate(ambiguousSprintMinuteCmd)?.clarificationQuestion);
+ok('"30 mins" sprint ambiguity still blocks legacy fallback',
+  !canFallbackToLegacy(ambiguousSprintMinuteCmd));
+
+const addPilatesCmd = routeCoachCommand({
+  userMessage: 'Can you add pilates to fridays session?',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TODAY, 'Upper Body Strength'),
+});
+ok('"add pilates to fridays session" → mutate', addPilatesCmd.mode === 'mutate');
+ok('"pilates" classified as add_conditioning',
+  asMutate(addPilatesCmd)?.operation === 'add_conditioning');
+eq('"pilates" custom activity captured',
+  (asMutate(addPilatesCmd)?.payload as any)?.customActivity,
+  'Pilates');
+eq('"pilates" keeps one-off scope',
+  asMutate(addPilatesCmd)?.scope,
+  'one_off' as any);
+const addPilatesExec = executeCoachCommand({
+  command: addPilatesCmd,
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  userMessage: 'Can you add pilates to fridays session?',
+  conditioningDeps: {
+    applyEvents: stubApplyOk(ADD_TODAY),
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetWorkoutBeforeName: 'Recovery Session',
+      targetWorkoutAfterName: 'Recovery Session',
+      beforeHasConditioning: false,
+      afterHasConditioning: true,
+      overrideKeyWritten: true,
+      programTabProjectionHasConditioning: false,
+      dayWorkoutProjectionHasConditioning: false,
+      expectedActivityTitle: args.expectedActivityTitle ?? null,
+      programTabProjectionHasExpectedActivity: false,
+      dayWorkoutProjectionHasExpectedActivity: true,
+    }),
+    snapshotBefore: () => null,
+    newEventId: () => 'test-add-pilates-evt',
+  },
+});
+eq('"pilates" visible only in day view still mutates', addPilatesExec.kind, 'mutated');
+ok('"pilates" day-view success reply says Pilates', /pilates/i.test(addPilatesExec.reply));
+ok('"pilates" day-view success does not claim invisible failure',
+  !/didn'?t show up|couldn'?t verify|apply layer/i.test(addPilatesExec.reply));
+
+const recoveryWithPilates = {
+  id: 'recovery-wed',
+  name: 'Recovery Session',
+  workoutType: 'Recovery',
+  sessionTier: 'recovery',
+  hasCombinedConditioning: true,
+  conditioningFlavour: 'aerobic',
+  conditioningBlock: {
+    intent: 'aerobic',
+    options: [{ title: 'Pilates', description: '20 min Pilates', exerciseIds: ['pilates-row'] }],
+  },
+  exercises: [
+    {
+      id: 'pilates-row',
+      notes: '20 min Pilates. Controlled, low-load work only.',
+      exercise: { name: 'Pilates', description: '20 min Pilates' },
+    },
+  ],
+} as any;
+ok('recovery-session add-on counts as visible in day workout',
+  dayWorkoutShowsConditioningAfterStrength(recoveryWithPilates));
+ok('expected activity matcher sees Pilates in recovery session',
+  workoutShowsExpectedActivity(recoveryWithPilates, 'Pilates'));
+
+let namedDurationEvents: any[] = [];
+const namedDurationCmd = routeCoachCommand({
+  userMessage: 'Can you make the Pilates longer?',
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  currentWeek: [
+    {
+      date: ADD_TODAY,
+      sessionName: 'Recovery Session',
+      workout: recoveryWithPilates,
+    },
+  ],
+});
+ok('"make the Pilates longer" fresh chat → mutate',
+  namedDurationCmd.mode === 'mutate');
+ok('"make the Pilates longer" routes as add/update conditioning',
+  asMutate(namedDurationCmd)?.operation === 'add_conditioning');
+eq('"make the Pilates longer" targets visible Pilates date',
+  asMutate(namedDurationCmd)?.target,
+  { kind: 'date', date: ADD_TODAY, sessionName: 'Recovery Session' } as any);
+eq('"make the Pilates longer" infers +5 min',
+  (asMutate(namedDurationCmd)?.payload as any)?.durationMinutes,
+  25);
+eq('"make the Pilates longer" keeps Pilates activity',
+  (asMutate(namedDurationCmd)?.payload as any)?.customActivity,
+  'Pilates');
+const namedDurationExec = executeCoachCommand({
+  command: namedDurationCmd,
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  userMessage: 'Can you make the Pilates longer?',
+  conditioningDeps: {
+    applyEvents: (events: any[]) => {
+      namedDurationEvents = events;
+      return {
+        applied: events.map((e) => ({ date: e.date, eventIds: [e.id], workoutName: 'Recovery Session' })),
+        rejected: [],
+      };
+    },
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetWorkoutBeforeName: 'Recovery Session',
+      targetWorkoutAfterName: 'Recovery Session',
+      beforeHasConditioning: true,
+      afterHasConditioning: true,
+      overrideKeyWritten: true,
+      programTabProjectionHasConditioning: false,
+      dayWorkoutProjectionHasConditioning: true,
+      expectedActivityTitle: args.expectedActivityTitle ?? null,
+      programTabProjectionHasExpectedActivity: false,
+      dayWorkoutProjectionHasExpectedActivity: true,
+    }),
+    snapshotBefore: () => recoveryWithPilates,
+    newEventId: () => 'test-named-duration-evt',
+  },
+});
+eq('"make the Pilates longer" executor kind=mutated',
+  namedDurationExec.kind,
+  'mutated');
+ok('"make the Pilates longer" reply confirms 25 min Pilates',
+  /pilates/i.test(namedDurationExec.reply) && /25\s*min/i.test(namedDurationExec.reply),
+  namedDurationExec.reply);
+eq('"make the Pilates longer" event minutes=25',
+  namedDurationEvents[0]?.after?.minutes,
+  25);
+
+let durationCorrectionEvents: any[] = [];
+const durationCorrectionCmd = routeCoachCommand({
+  userMessage: 'Sorry a bit more than 20 min',
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  lastChange: {
+    operation: 'add_conditioning',
+    target: { kind: 'date', date: ADD_TODAY, sessionName: 'Recovery Session' },
+    appliedAt: Date.now(),
+    userMessage: 'Can you add some Pilates into today',
+    appliedReply: `Done. I added Pilates to Fri ${ADD_TODAY}.`,
+  },
+});
+ok('"bit more than 20 min" after Pilates add → mutate',
+  durationCorrectionCmd.mode === 'mutate');
+ok('"bit more than 20 min" routes as add/update conditioning',
+  asMutate(durationCorrectionCmd)?.operation === 'add_conditioning');
+eq('"bit more than 20 min" infers 25 min',
+  (asMutate(durationCorrectionCmd)?.payload as any)?.durationMinutes,
+  25);
+eq('"bit more than 20 min" keeps Pilates activity',
+  (asMutate(durationCorrectionCmd)?.payload as any)?.customActivity,
+  'Pilates');
+const exactDurationCorrectionCmd = routeCoachCommand({
+  userMessage: 'Can you make it 30 mins?',
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  lastChange: {
+    operation: 'add_conditioning',
+    target: { kind: 'date', date: ADD_TODAY, sessionName: 'Recovery Session' },
+    appliedAt: Date.now(),
+    userMessage: 'Can you add some Pilates into today',
+    appliedReply: `Done. I added Pilates to Fri ${ADD_TODAY}.`,
+  },
+});
+ok('"make it 30 mins" after Pilates add → mutate',
+  exactDurationCorrectionCmd.mode === 'mutate');
+ok('"make it 30 mins" routes as add/update conditioning',
+  asMutate(exactDurationCorrectionCmd)?.operation === 'add_conditioning');
+eq('"make it 30 mins" infers exact 30 min',
+  (asMutate(exactDurationCorrectionCmd)?.payload as any)?.durationMinutes,
+  30);
+eq('"make it 30 mins" keeps Pilates activity',
+  (asMutate(exactDurationCorrectionCmd)?.payload as any)?.customActivity,
+  'Pilates');
+const replacePilatesCmd = routeCoachCommand({
+  userMessage: 'Actually I want some hard hill running instead of Pilates today',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TODAY, 'Recovery Session'),
+  currentWeek: [
+    {
+      date: ADD_TODAY,
+      sessionName: 'Recovery Session',
+      workout: recoveryWithPilates,
+    },
+  ],
+});
+ok('"hard hill running instead of Pilates" → mutate',
+  replacePilatesCmd.mode === 'mutate');
+ok('"hard hill running instead of Pilates" routes as add/update conditioning',
+  asMutate(replacePilatesCmd)?.operation === 'add_conditioning');
+eq('"hard hill running instead of Pilates" captures new activity',
+  (asMutate(replacePilatesCmd)?.payload as any)?.customActivity,
+  'Hard Hill Running');
+eq('"hard hill running instead of Pilates" captures replaced activity',
+  (asMutate(replacePilatesCmd)?.payload as any)?.replaceActivity,
+  'Pilates');
+eq('"hard hill running instead of Pilates" captures hard intensity',
+  (asMutate(replacePilatesCmd)?.payload as any)?.intensity,
+  'hard');
+let replacePilatesEvents: any[] = [];
+const replacePilatesExec = executeCoachCommand({
+  command: replacePilatesCmd,
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  userMessage: 'Actually I want some hard hill running instead of Pilates today',
+  conditioningDeps: {
+    applyEvents: (events: any[]) => {
+      replacePilatesEvents = events;
+      return {
+        applied: events.map((e) => ({ date: e.date, eventIds: [e.id], workoutName: 'Recovery Session' })),
+        rejected: [],
+      };
+    },
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetWorkoutBeforeName: 'Recovery Session',
+      targetWorkoutAfterName: 'Recovery Session',
+      beforeHasConditioning: true,
+      afterHasConditioning: true,
+      overrideKeyWritten: true,
+      programTabProjectionHasConditioning: true,
+      dayWorkoutProjectionHasConditioning: true,
+      expectedActivityTitle: args.expectedActivityTitle ?? null,
+      programTabProjectionHasExpectedActivity: true,
+      dayWorkoutProjectionHasExpectedActivity: true,
+    }),
+    snapshotBefore: () => recoveryWithPilates,
+    newEventId: () => 'test-replace-pilates-evt',
+  },
+});
+eq('"hard hill running instead of Pilates" executor kind=mutated',
+  replacePilatesExec.kind,
+  'mutated');
+ok('"hard hill running instead of Pilates" reply confirms swap',
+  /swapped pilates for hard hill running/i.test(replacePilatesExec.reply),
+  replacePilatesExec.reply);
+eq('"hard hill running instead of Pilates" event title',
+  replacePilatesEvents[0]?.after?.title,
+  'Hard Hill Running');
+eq('"hard hill running instead of Pilates" event replacement marker',
+  replacePilatesEvents[0]?.after?.replaceActivity,
+  'Pilates');
+ok('"hard hill running instead of Pilates" avoids 2 min efforts',
+  !/2\s*min/i.test(String(replacePilatesEvents[0]?.after?.description ?? '')),
+  String(replacePilatesEvents[0]?.after?.description ?? ''));
+const replacePilatesTrailCmd = routeCoachCommand({
+  userMessage: 'Actually I want a hard trail run instead of Pilates today',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TODAY, 'Recovery Session'),
+  currentWeek: [
+    {
+      date: ADD_TODAY,
+      sessionName: 'Recovery Session',
+      workout: recoveryWithPilates,
+    },
+  ],
+});
+ok('"hard trail run instead of Pilates" → mutate',
+  replacePilatesTrailCmd.mode === 'mutate');
+eq('"hard trail run instead of Pilates" preserves descriptive activity',
+  (asMutate(replacePilatesTrailCmd)?.payload as any)?.customActivity,
+  'Hard Trail Run');
+let replacePilatesTrailEvents: any[] = [];
+const replacePilatesTrailExec = executeCoachCommand({
+  command: replacePilatesTrailCmd,
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  userMessage: 'Actually I want a hard trail run instead of Pilates today',
+  conditioningDeps: {
+    applyEvents: (events: any[]) => {
+      replacePilatesTrailEvents = events;
+      return {
+        applied: events.map((e) => ({ date: e.date, eventIds: [e.id], workoutName: 'Recovery Session' })),
+        rejected: [],
+      };
+    },
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetWorkoutBeforeName: 'Recovery Session',
+      targetWorkoutAfterName: 'Recovery Session',
+      beforeHasConditioning: true,
+      afterHasConditioning: true,
+      overrideKeyWritten: true,
+      programTabProjectionHasConditioning: true,
+      dayWorkoutProjectionHasConditioning: true,
+      expectedActivityTitle: args.expectedActivityTitle ?? null,
+      programTabProjectionHasExpectedActivity: true,
+      dayWorkoutProjectionHasExpectedActivity: true,
+    }),
+    snapshotBefore: () => recoveryWithPilates,
+    newEventId: () => 'test-replace-pilates-trail-evt',
+  },
+});
+eq('"hard trail run instead of Pilates" executor kind=mutated',
+  replacePilatesTrailExec.kind,
+  'mutated');
+eq('"hard trail run instead of Pilates" event title',
+  replacePilatesTrailEvents[0]?.after?.title,
+  'Hard Trail Run');
+ok('"hard trail run instead of Pilates" avoids generic 2 min aerobic intervals',
+  !/2\s*min|75-80%/i.test(String(replacePilatesTrailEvents[0]?.after?.description ?? '')),
+  String(replacePilatesTrailEvents[0]?.after?.description ?? ''));
+const durationCorrectionExec = executeCoachCommand({
+  command: durationCorrectionCmd,
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  userMessage: 'Sorry a bit more than 20 min',
+  conditioningDeps: {
+    applyEvents: (events: any[]) => {
+      durationCorrectionEvents = events;
+      return {
+        applied: events.map((e) => ({ date: e.date, eventIds: [e.id], workoutName: 'Recovery Session' })),
+        rejected: [],
+      };
+    },
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetWorkoutBeforeName: 'Recovery Session',
+      targetWorkoutAfterName: 'Recovery Session',
+      beforeHasConditioning: true,
+      afterHasConditioning: true,
+      overrideKeyWritten: true,
+      programTabProjectionHasConditioning: false,
+      dayWorkoutProjectionHasConditioning: true,
+      expectedActivityTitle: args.expectedActivityTitle ?? null,
+      programTabProjectionHasExpectedActivity: false,
+      dayWorkoutProjectionHasExpectedActivity: true,
+    }),
+    snapshotBefore: () => recoveryWithPilates,
+    newEventId: () => 'test-duration-correction-evt',
+  },
+});
+eq('"bit more than 20 min" executor kind=mutated',
+  durationCorrectionExec.kind,
+  'mutated');
+ok('"bit more than 20 min" reply confirms 25 min Pilates',
+  /pilates/i.test(durationCorrectionExec.reply) && /25\s*min/i.test(durationCorrectionExec.reply),
+  durationCorrectionExec.reply);
+eq('"bit more than 20 min" event minutes=25',
+  durationCorrectionEvents[0]?.after?.minutes,
+  25);
+
+const vagueAddCmd = routeCoachCommand({
+  userMessage: 'Can you add something light to fridays session?',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TODAY, 'Upper Body Strength'),
+});
+eq('"add something light" asks a targeted clarifier',
+  vagueAddCmd.mode,
+  'clarify' as any);
+ok('"add something light" asks what to add',
+  vagueAddCmd.mode === 'clarify' && /what should i add/i.test(vagueAddCmd.question));
+ok('"add something light" offers concrete add-on options',
+  vagueAddCmd.mode === 'clarify' &&
+    (vagueAddCmd.options ?? []).some((o) => /light bike/i.test(o)) &&
+    (vagueAddCmd.options ?? []).some((o) => /pilates/i.test(o)));
+
+// 14.2 — Executor with stubs verifies dual surface + emits coach-style confirmation.
 const addStages: string[] = [];
 const addExec = executeCoachCommand({
   command: addCmd,
@@ -663,7 +1517,7 @@ const addExec = executeCoachCommand({
 });
 eq('add executor kind = mutated', addExec.kind, 'mutated');
 ok('add executor applied = true', addExec.applied === true);
-ok('add executor reply starts with "Done"', /^Done\b/.test(addExec.reply));
+ok('add executor reply starts with coach confirmation', /^Yeah, no worries\./.test(addExec.reply));
 ok('add executor reply names the date', addExec.reply.includes(ADD_MONDAY));
 ok('add executor route = add_conditioning:applied', addExec.route === 'add_conditioning:applied');
 eq('add executor progress order',
@@ -712,6 +1566,74 @@ ok('"actually remove that conditioning" → mutate', actuallyRem.mode === 'mutat
 ok('"actually remove" is remove_conditioning',
   asMutate(actuallyRem)?.operation === 'remove_conditioning');
 ok('"actually remove" blocks legacy', !canFallbackToLegacy(actuallyRem));
+
+// 14.6 — Command priority: fatigue/readiness context must not steal
+//        explicit remove/edit targets.
+const cookedRemoveSession = routeCoachCommand({
+  userMessage: 'My legs are cooked, can you actually remove the Wednesday session fully?',
+  todayISO: TODAY,
+  referenceResolution: resolved(PAST_WED, 'Lower Strength'),
+});
+ok('cooked + remove Wednesday session → mutate',
+  cookedRemoveSession.mode === 'mutate');
+ok('cooked + remove Wednesday session → remove_session',
+  asMutate(cookedRemoveSession)?.operation === 'remove_session');
+ok('cooked + remove Wednesday session blocks legacy',
+  !canFallbackToLegacy(cookedRemoveSession));
+
+const cookedDitchWednesday = routeCoachCommand({
+  userMessage: 'legs cooked, ditch Wednesday',
+  todayISO: TODAY,
+  referenceResolution: resolved(PAST_WED, 'Lower Strength'),
+});
+ok('cooked + ditch Wednesday → remove_session',
+  asMutate(cookedDitchWednesday)?.operation === 'remove_session');
+
+const soreRemoveRower = routeCoachCommand({
+  userMessage: 'I’m sore, remove the rower on Wednesday',
+  todayISO: TODAY,
+  referenceResolution: resolved(PAST_WED, 'Lower Strength'),
+});
+ok('sore + remove rower → remove_conditioning item path',
+  asMutate(soreRemoveRower)?.operation === 'remove_conditioning');
+
+const cookedOnlyRouter = routeCoachCommand({
+  userMessage: 'legs cooked',
+  todayISO: TODAY,
+  referenceResolution: resolved(TODAY, 'Gunshow'),
+});
+eq('bare fatigue asks clarification',
+  cookedOnlyRouter.mode,
+  'clarify' as any);
+ok('bare fatigue blocks legacy',
+  !canFallbackToLegacy(cookedOnlyRouter));
+
+const makeTodayEasierRouter = routeCoachCommand({
+  userMessage: 'can we make today easier?',
+  todayISO: TODAY,
+  referenceResolution: resolved(TODAY, 'Gunshow'),
+});
+eq('make today easier asks reduce clarification',
+  makeTodayEasierRouter.mode,
+  'clarify' as any);
+
+const cookedRecoveryOnly = routeCoachCommand({
+  userMessage: 'Feeling cooked, make Thursday recovery only',
+  todayISO: TODAY,
+  referenceResolution: resolved('2026-05-14', 'Conditioning'),
+  currentWeek: [{
+    date: '2026-05-14',
+    sessionName: 'Conditioning',
+    workout: {
+      name: 'Conditioning',
+      conditioningBlock: { options: [{ title: 'Bike Flush', exerciseIds: ['bike'] }] },
+      exercises: [{ id: 'bike', exercise: { name: 'Bike Flush' } }],
+    },
+  }],
+});
+ok('cooked + explicit recovery replacement does not become vague clarify',
+  cookedRecoveryOnly.mode === 'mutate',
+  `mode=${cookedRecoveryOnly.mode}, reason=${'reason' in cookedRecoveryOnly ? cookedRecoveryOnly.reason : 'n/a'}`);
 
 // 14.6 — "add it to this session" with lastOpenedWorkout-bound reference
 //         (resolver already bound to a date — we simulate that via
@@ -2284,6 +3206,407 @@ function undoCmd(): CoachCommand {
     rig.undoCalls[0]?.plan.dateOverrides.some((s) => s.date === UNDO_THU) &&
     !rig.undoCalls[0]?.plan.dateOverrides.some((s) => s.date === UNDO_WED));
 }
+
+// ─── 18. Free-form conditioning add abstraction ────────────────────
+
+section('18. free-form conditioning add — casual verb + modality + intensity');
+
+const hiitRowCmd = routeCoachCommand({
+  userMessage: 'Can you chuck some HIIT rowing intervals on Tuesday',
+  todayISO: '2026-05-30',
+  referenceResolution: resolved('2026-06-02', 'Lower Squat'),
+});
+const hiitRowMutate = asMutate(hiitRowCmd);
+ok('18.1 casual add routes to add_conditioning',
+  hiitRowMutate?.operation === 'add_conditioning',
+  JSON.stringify(hiitRowCmd));
+if (hiitRowMutate?.operation === 'add_conditioning' && hiitRowMutate.payload.operation === 'add_conditioning') {
+  eq('18.2 preserves exact activity label',
+    hiitRowMutate.payload.customActivity,
+    'HIIT Rowing Intervals' as any);
+  eq('18.3 row modality detected',
+    hiitRowMutate.payload.modality,
+    'row' as any);
+  eq('18.4 HIIT becomes hard intensity',
+    hiitRowMutate.payload.intensity,
+    'hard' as any);
+  eq('18.5 intervals become interval effort',
+    hiitRowMutate.payload.effortKind,
+    'interval' as any);
+
+  let capturedEvent: any = null;
+  const result = executeCoachCommand({
+    command: hiitRowMutate,
+    todayISO: '2026-05-30',
+    referenceResolution: resolved('2026-06-02', 'Lower Squat'),
+    userMessage: 'Can you chuck some HIIT rowing intervals on Tuesday',
+    conditioningDeps: {
+      snapshotBefore: () => ({ id: 'lower-squat', name: 'Lower Squat', exercises: [] } as any),
+      applyEvents: (events) => {
+        capturedEvent = events[0];
+        return {
+          applied: [{ date: '2026-06-02', eventIds: [events[0].id], workoutName: 'Lower Squat' }],
+          rejected: [],
+        };
+      },
+      verifyRendered: (a) => ({
+        requestedDay: a.requestedDay,
+        todayISO: a.todayISO,
+        targetDate: a.targetDate,
+        programTabProjectionHasConditioning: true,
+        dayWorkoutProjectionHasConditioning: true,
+        programTabProjectionHasExpectedActivity: true,
+        dayWorkoutProjectionHasExpectedActivity: true,
+        expectedActivityTitle: a.expectedActivityTitle,
+        afterHasConditioning: true,
+        targetWorkoutAfterName: 'Lower Squat',
+        targetWorkoutBeforeName: 'Lower Squat',
+        overrideKeyWritten: true,
+      } as any),
+      newEventId: () => 'hiit-row-event',
+    },
+  });
+  eq('18.6 executor verifies mutation',
+    result.kind,
+    'mutated' as any);
+  eq('18.7 uses standard HIIT seconds, not generic 2 min aerobic reps',
+    {
+      title: capturedEvent?.after?.title,
+      prescriptionType: capturedEvent?.after?.prescriptionType,
+      sets: capturedEvent?.after?.sets,
+      repsMin: capturedEvent?.after?.repsMin,
+      repsMax: capturedEvent?.after?.repsMax,
+      restSeconds: capturedEvent?.after?.restSeconds,
+      flavour: capturedEvent?.after?.conditioningFlavour,
+      category: capturedEvent?.after?.conditioningCategory,
+    },
+    {
+      title: 'HIIT Rowing Intervals',
+      prescriptionType: 'duration',
+      sets: 8,
+      repsMin: 45,
+      repsMax: 45,
+      restSeconds: 90,
+      flavour: 'high-intensity',
+      category: 'vo2',
+    });
+  ok('18.7b HIIT description is a full session, not a single effort',
+    /8\s*x\s*45s/i.test(capturedEvent?.after?.description ?? '') &&
+      !/1\s*x\s*45s/i.test(capturedEvent?.after?.description ?? ''),
+    capturedEvent?.after?.description);
+  ok('18.8 reply sounds like a coach and offers tweaks',
+    /^Yeah, no worries\./.test(result.reply) &&
+      /HIIT rowing intervals/.test(result.reply) &&
+      /work\/rest changed/.test(result.reply),
+    result.reply);
+}
+
+const hiitRowAliasCmd = routeCoachCommand({
+  userMessage: 'Could you slot in HIIT row intervals on Tuesday?',
+  todayISO: '2026-05-30',
+  referenceResolution: resolved('2026-06-02', 'Lower Squat'),
+});
+const hiitRowAliasMutate = asMutate(hiitRowAliasCmd);
+ok('18.9 row/rower wording is preserved as a conditioning activity',
+  hiitRowAliasMutate?.operation === 'add_conditioning' &&
+    (hiitRowAliasMutate.payload as any).customActivity === 'HIIT Row Intervals',
+  JSON.stringify(hiitRowAliasCmd));
+ok('18.10 row/rower wording does not collapse to generic Row Intervals',
+  (hiitRowAliasMutate?.payload as any)?.customActivity !== 'Row Intervals');
+
+// ─── 19. CoachPlan follow-ups preserve training meaning ─────────────
+
+section('19. CoachPlan follow-ups — change equipment without losing intent');
+
+const hiitRowTouchedActivity = {
+  kind: 'conditioning' as const,
+  date: '2026-06-02',
+  sessionName: 'Lower Squat',
+  title: 'HIIT Rowing Intervals',
+  modality: 'row',
+  intensity: 'hard',
+  effortKind: 'interval',
+  trainingIntent: 'hiit',
+  sets: 8,
+  repsMin: 45,
+  repsMax: 45,
+  prescriptionType: 'duration',
+};
+
+const skiErgFollowUpCmd = routeCoachCommand({
+  userMessage: 'Actually can you make them ski erg?',
+  todayISO: '2026-05-30',
+  referenceResolution: null,
+  lastChange: {
+    operation: 'add_conditioning',
+    target: { kind: 'date', date: '2026-06-02', sessionName: 'Lower Squat' },
+    appliedAt: Date.now(),
+    userMessage: 'Can you chuck some HIIT rowing intervals on Tuesday',
+    appliedReply: 'Yeah, no worries. I added HIIT rowing intervals to Tue 2026-06-02.',
+    touchedActivities: [hiitRowTouchedActivity],
+  },
+});
+const skiErgFollowUpMutate = asMutate(skiErgFollowUpCmd);
+ok('19.1 modality follow-up routes through add/update conditioning',
+  skiErgFollowUpMutate?.operation === 'add_conditioning',
+  JSON.stringify(skiErgFollowUpCmd));
+if (skiErgFollowUpMutate?.operation === 'add_conditioning' && skiErgFollowUpMutate.payload.operation === 'add_conditioning') {
+  eq('19.2 modality follow-up preserves HIIT interval payload',
+    {
+      customActivity: skiErgFollowUpMutate.payload.customActivity,
+      replaceActivity: skiErgFollowUpMutate.payload.replaceActivity,
+      modality: skiErgFollowUpMutate.payload.modality,
+      intensity: skiErgFollowUpMutate.payload.intensity,
+      effortKind: skiErgFollowUpMutate.payload.effortKind,
+      trainingIntent: skiErgFollowUpMutate.payload.trainingIntent,
+      changeKind: skiErgFollowUpMutate.payload.changeKind,
+      sets: skiErgFollowUpMutate.payload.sets,
+      repsMin: skiErgFollowUpMutate.payload.repsMin,
+      repsMax: skiErgFollowUpMutate.payload.repsMax,
+    },
+    {
+      customActivity: 'HIIT SkiErg Intervals',
+      replaceActivity: 'HIIT Rowing Intervals',
+      modality: 'ski',
+      intensity: 'hard',
+      effortKind: 'interval',
+      trainingIntent: 'hiit',
+      changeKind: 'modality',
+      sets: 8,
+      repsMin: 45,
+      repsMax: 45,
+    } as any);
+
+  let planEvent: any = null;
+  const skiErgFollowUpExec = executeCoachCommand({
+    command: skiErgFollowUpMutate,
+    todayISO: '2026-05-30',
+    referenceResolution: null,
+    userMessage: 'Actually can you make them ski erg?',
+    conditioningDeps: {
+      snapshotBefore: () => ({ id: 'lower-squat', name: 'Lower Squat', exercises: [] } as any),
+      applyEvents: (events) => {
+        planEvent = events[0];
+        return {
+          applied: [{ date: '2026-06-02', eventIds: [events[0].id], workoutName: 'Lower Squat' }],
+          rejected: [],
+        };
+      },
+      verifyRendered: (a) => ({
+        requestedDay: a.requestedDay,
+        todayISO: a.todayISO,
+        targetDate: a.targetDate,
+        programTabProjectionHasConditioning: true,
+        dayWorkoutProjectionHasConditioning: true,
+        programTabProjectionHasExpectedActivity: true,
+        dayWorkoutProjectionHasExpectedActivity: true,
+        expectedActivityTitle: a.expectedActivityTitle,
+        afterHasConditioning: true,
+        targetWorkoutAfterName: 'Lower Squat',
+        targetWorkoutBeforeName: 'Lower Squat',
+        overrideKeyWritten: true,
+      } as any),
+      newEventId: () => 'coach-plan-ski-erg',
+    },
+  });
+  eq('19.3 coach plan executor verifies mutation',
+    skiErgFollowUpExec.kind,
+    'mutated' as any);
+  eq('19.4 event is HIIT SkiErg, not low-load SkiErg',
+    {
+      title: planEvent?.after?.title,
+      replaceActivity: planEvent?.after?.replaceActivity,
+      repsMin: planEvent?.after?.repsMin,
+      repsMax: planEvent?.after?.repsMax,
+      flavour: planEvent?.after?.conditioningFlavour,
+      category: planEvent?.after?.conditioningCategory,
+      trainingIntent: planEvent?.after?.trainingIntent,
+    },
+    {
+      title: 'HIIT SkiErg Intervals',
+      replaceActivity: 'HIIT Rowing Intervals',
+      repsMin: 45,
+      repsMax: 45,
+      flavour: 'high-intensity',
+      category: 'vo2',
+      trainingIntent: 'hiit',
+    });
+  ok('19.5 reply explains preserved interval intent',
+    /switched the HIIT rower to SkiErg/i.test(skiErgFollowUpExec.reply) &&
+      /kept the same interval intent/i.test(skiErgFollowUpExec.reply),
+    skiErgFollowUpExec.reply);
+}
+
+const lowLoadSkiTouchedActivity = {
+  kind: 'conditioning' as const,
+  date: '2026-06-02',
+  sessionName: 'Lower Squat',
+  title: 'ski erg',
+  modality: 'ski',
+  intensity: 'light',
+  trainingIntent: 'low_load',
+  durationMinutes: 20,
+  sets: 1,
+  repsMin: 45,
+  repsMax: 45,
+  prescriptionType: 'duration_minutes',
+};
+const makeSkiHiitCmd = routeCoachCommand({
+  userMessage: 'Yeah can you make it HIIT though?',
+  todayISO: '2026-05-30',
+  referenceResolution: null,
+  lastChange: {
+    operation: 'add_conditioning',
+    target: { kind: 'date', date: '2026-06-02', sessionName: 'Lower Squat' },
+    appliedAt: Date.now(),
+    userMessage: 'Actually can you make them ski erg?',
+    appliedReply: 'Yeah, no worries. I swapped HIIT rowing intervals for a ski erg on Tue 2026-06-02.',
+    touchedActivities: [lowLoadSkiTouchedActivity],
+  },
+});
+const makeSkiHiitMutate = asMutate(makeSkiHiitCmd);
+ok('19.6 training-quality follow-up routes through coach plan',
+  makeSkiHiitMutate?.operation === 'add_conditioning',
+  JSON.stringify(makeSkiHiitCmd));
+if (makeSkiHiitMutate?.operation === 'add_conditioning' && makeSkiHiitMutate.payload.operation === 'add_conditioning') {
+  eq('19.7 training-quality follow-up turns low-load SkiErg into HIIT SkiErg',
+    {
+      customActivity: makeSkiHiitMutate.payload.customActivity,
+      replaceActivity: makeSkiHiitMutate.payload.replaceActivity,
+      modality: makeSkiHiitMutate.payload.modality,
+      intensity: makeSkiHiitMutate.payload.intensity,
+      effortKind: makeSkiHiitMutate.payload.effortKind,
+      trainingIntent: makeSkiHiitMutate.payload.trainingIntent,
+      changeKind: makeSkiHiitMutate.payload.changeKind,
+      sets: makeSkiHiitMutate.payload.sets,
+      repsMin: makeSkiHiitMutate.payload.repsMin,
+      repsMax: makeSkiHiitMutate.payload.repsMax,
+      durationMinutes: makeSkiHiitMutate.payload.durationMinutes,
+    },
+    {
+      customActivity: 'HIIT SkiErg Intervals',
+      replaceActivity: 'ski erg',
+      modality: 'ski',
+      intensity: 'hard',
+      effortKind: 'interval',
+      trainingIntent: 'hiit',
+      changeKind: 'training_intent',
+      sets: 8,
+      repsMin: 45,
+      repsMax: 45,
+      durationMinutes: undefined,
+    } as any);
+}
+
+// ─── 20. Conditioning edit contract ────────────────────────────────
+
+section('20. Conditioning edit contract — update source or ask');
+
+const implicitSourceUpdateCmd: any = {
+  mode: 'mutate',
+  operation: 'add_conditioning',
+  target: { kind: 'date', date: '2026-06-03', sessionName: 'Easy Aerobic Flush' },
+  payload: {
+    operation: 'add_conditioning',
+    modality: 'bike',
+    bikeLabel: 'assault',
+    durationMinutes: 60,
+    editMode: 'update_existing',
+  },
+  scope: 'one_off',
+  confidence: 0.88,
+  needsClarification: false,
+  reason: 'test_contract_update_existing',
+};
+
+let contractEvent: any = null;
+const implicitSourceUpdateExec = executeCoachCommand({
+  command: implicitSourceUpdateCmd,
+  todayISO: '2026-05-30',
+  referenceResolution: null,
+  userMessage: 'make it one hour',
+  conditioningDeps: {
+    snapshotBefore: () => ({
+      id: 'easy-flush',
+      name: 'Easy Aerobic Flush (25min Assault Bike)',
+      exercises: [],
+      conditioningBlock: {
+        options: [{
+          title: 'Easy Aerobic Flush (25min Assault Bike)',
+          description: '25min easy Assault Bike.',
+          exerciseIds: ['flush-row'],
+        }],
+      },
+    } as any),
+    applyEvents: (events) => {
+      contractEvent = events[0];
+      return {
+        applied: [{ date: '2026-06-03', eventIds: [events[0].id], workoutName: 'Easy Aerobic Flush' }],
+        rejected: [],
+      };
+    },
+    verifyRendered: (a) => ({
+      requestedDay: a.requestedDay,
+      todayISO: a.todayISO,
+      targetDate: a.targetDate,
+      programTabProjectionHasConditioning: true,
+      dayWorkoutProjectionHasConditioning: true,
+      programTabProjectionHasExpectedActivity: true,
+      dayWorkoutProjectionHasExpectedActivity: true,
+      expectedActivityTitle: a.expectedActivityTitle,
+      afterHasConditioning: true,
+      targetWorkoutAfterName: 'Easy Aerobic Flush',
+      targetWorkoutBeforeName: 'Easy Aerobic Flush',
+      overrideKeyWritten: true,
+    } as any),
+    newEventId: () => 'contract-source-update',
+  },
+});
+
+eq('20.1 implicit update verifies',
+  implicitSourceUpdateExec.kind,
+  'mutated' as any);
+eq('20.2 implicit update binds visible source instead of appending',
+  {
+    title: contractEvent?.after?.title,
+    replaceActivity: contractEvent?.after?.replaceActivity,
+    minutes: contractEvent?.after?.minutes,
+  },
+  {
+    title: 'Easy Aerobic Flush (60min Assault Bike)',
+    replaceActivity: 'Easy Aerobic Flush (25min Assault Bike)',
+    minutes: 60,
+  });
+
+const ambiguousSourceUpdateExec = executeCoachCommand({
+  command: implicitSourceUpdateCmd,
+  todayISO: '2026-05-30',
+  referenceResolution: null,
+  userMessage: 'make it one hour',
+  conditioningDeps: {
+    snapshotBefore: () => ({
+      id: 'multi-conditioning',
+      name: 'Lower Squat',
+      exercises: [],
+      conditioningBlock: {
+        options: [
+          { title: 'Easy Aerobic Flush', description: '', exerciseIds: ['a'] },
+          { title: 'SkiErg Add-on', description: '', exerciseIds: ['b'] },
+        ],
+      },
+    } as any),
+    applyEvents: () => { throw new Error('ambiguous source must not apply'); },
+    verifyRendered: () => { throw new Error('ambiguous source must not verify'); },
+  },
+});
+
+eq('20.3 ambiguous update asks instead of guessing',
+  ambiguousSourceUpdateExec.kind,
+  'clarify' as any);
+ok('20.4 ambiguous update offers visible conditioning options',
+  (ambiguousSourceUpdateExec.options ?? []).includes('Easy Aerobic Flush') &&
+    (ambiguousSourceUpdateExec.options ?? []).includes('SkiErg Add-on'),
+  JSON.stringify(ambiguousSourceUpdateExec));
 
 // ─── Summary ───────────────────────────────────────────────────────
 

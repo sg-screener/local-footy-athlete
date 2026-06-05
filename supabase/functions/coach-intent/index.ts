@@ -23,6 +23,44 @@
 
 import { serve } from "https://deno.land/std@0.208.0/http/server.ts";
 
+type CoachLLMProvider = "openai" | "anthropic";
+
+function normalizeCoachProvider(raw: string | undefined | null): CoachLLMProvider | null {
+  const value = raw?.trim().toLowerCase();
+  if (value === "openai") return "openai";
+  if (value === "anthropic" || value === "claude") return "anthropic";
+  return null;
+}
+
+function resolveCoachProvider(): CoachLLMProvider {
+  const configured = normalizeCoachProvider(Deno.env.get("COACH_LLM_PROVIDER"));
+  if (configured) return configured;
+  return Deno.env.get("OPENAI_API_KEY") ? "openai" : "anthropic";
+}
+
+function getOpenAIIntentModel(): string {
+  return Deno.env.get("COACH_INTENT_LLM_MODEL") ||
+    Deno.env.get("COACH_LLM_FAST_MODEL") ||
+    "gpt-5.4-mini";
+}
+
+function getAnthropicIntentModel(): string {
+  return Deno.env.get("ANTHROPIC_INTENT_MODEL") || "claude-haiku-4-5-20251001";
+}
+
+function extractOpenAIText(data: any): string {
+  if (typeof data?.output_text === "string") return data.output_text.trim();
+  const parts: string[] = [];
+  for (const item of data?.output || []) {
+    if (item?.type !== "message") continue;
+    for (const content of item.content || []) {
+      if (typeof content?.text === "string") parts.push(content.text);
+      if (typeof content?.refusal === "string") parts.push(content.refusal);
+    }
+  }
+  return parts.join("\n").trim();
+}
+
 // KEEP IN SYNC with src/utils/coachIntent.ts (COACH_INTENT_SYSTEM_PROMPT).
 const COACH_INTENT_SYSTEM_PROMPT = `You are the intent classifier for a strength coach app.
 
@@ -39,7 +77,24 @@ Your job is to read the athlete's latest message + the surrounding context and r
     "requestedDate": "<optional, YYYY-MM-DD>",
     "requestedSession": "<optional>",
     "concern": "<optional, free-text>",
-    "followupKind": "<optional: resolved | improving | worsening | unchanged>"
+    "followupKind": "<optional: resolved | improving | worsening | unchanged>",
+    "operation": "<for program edits: add_conditioning | remove_conditioning | replace_conditioning | move_session | replace_exercise | change_duration>",
+    "targetDate": "<optional, YYYY-MM-DD>",
+    "targetSessionName": "<optional>",
+    "activity": "<new activity to add, preserve exact terms like HIIT rowing intervals, hard hill running, Pilates, assault bike sprints>",
+    "replaceActivity": "<existing activity being replaced, e.g. Pilates>",
+    "durationMinutes": <optional number>,
+    "durationSeconds": <optional number, for sprint/effort reps>,
+    "sets": <optional number>,
+    "repsMin": <optional number>,
+    "repsMax": <optional number>,
+    "modality": "<optional: bike | row | run | walk | ski | swim | cardio | aerobic | sprint>",
+    "intensity": "<optional: light | moderate | hard>",
+    "bikeLabel": "<optional: standard | assault>",
+    "effortKind": "<optional: sprint | interval>",
+    "trainingIntent": "<optional: hiit | sprint | tempo | aerobic | low_load>",
+    "changeKind": "<optional: modality | training_intent | modality_and_training_intent>",
+    "scope": "<optional: one_off | this_week | recurring | permanent>"
   },
   "rationale": "<one sentence>"
 }
@@ -79,9 +134,17 @@ CRITICAL RULES
    - "missed_session" — past tense report of skipping a session ("missed Tuesday", "didn't get to the field session"). Capture payload.requestedDate when given.
 
 8. Program adjustment requests:
-   - "add conditioning to Monday", "remove conditioning from Friday", "can we move Monday" → request_program_adjustment.
+   - "add conditioning to Monday", "chuck some HIIT rowing intervals on Tuesday", "slot in a rower session Friday", "remove conditioning from Friday", "can we move Monday" → request_program_adjustment.
    - If pendingCoachProposal is set and the user says "sounds good", "yes", "do it", or similar confirmation, classify as request_program_adjustment, not general_question.
-   - You only classify intent. The app will apply or reject deterministic supported edits.
+   - For supported edits, fill the structured edit fields in payload. Preserve the athlete's actual requested activity words. "HIIT rowing intervals" must not become "row"; "assault bike sprints" must not become "bike intervals"; "hard hill running" must not become "run".
+   - If the athlete asks for HIIT/high-intensity intervals on a named modality and gives a day, do not ask for the prescription unless they explicitly want custom work/rest. Use operation="add_conditioning", activity with their exact phrase, modality, intensity="hard", effortKind="interval".
+   - If the athlete changes only the modality of a recent add-on ("make them SkiErg", "can that be bike instead"), preserve the source training intent. HIIT rowing intervals → HIIT SkiErg intervals, not easy SkiErg. Return operation="change_modality", replaceActivity=<old title>, activity=<new title>, trainingIntent=<preserved intent>, changeKind="modality".
+   - If the athlete changes only the training quality ("make it HIIT", "make that recovery"), preserve the modality and return changeKind="training_intent".
+   - If the user says "X instead of Y", use operation="replace_conditioning", activity="X", replaceActivity="Y".
+   - If the user asks to make an existing add-on longer/shorter or a specific duration, use operation="change_duration", activity if known, and durationMinutes if stated. For sprint/effort work, use durationSeconds or repsMin/repsMax when seconds are requested.
+   - Pronouns like "it", "them", "that", "those" usually refer to packet.lastMutation.touchedActivities[0] first, then recentMessages/context. Preserve that activity title and target date when filling payload.
+   - If the date/session or activity is missing, set needsClarification=true and ask the smallest useful question.
+   - You only classify/structure intent. The app will apply or reject deterministic supported edits.
 
 9. Output VALID JSON only. No prose. No markdown.`;
 
@@ -174,10 +237,14 @@ serve(async (req: Request) => {
     );
   }
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  const provider = resolveCoachProvider();
+  const apiKey = provider === "openai"
+    ? Deno.env.get("OPENAI_API_KEY")
+    : Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) {
+    const envName = provider === "openai" ? "OPENAI_API_KEY" : "ANTHROPIC_API_KEY";
     return new Response(
-      JSON.stringify({ error: "ANTHROPIC_API_KEY not configured" }),
+      JSON.stringify({ error: `${envName} not configured` }),
       { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() } },
     );
   }
@@ -189,20 +256,34 @@ serve(async (req: Request) => {
 
   let upstream: Response;
   try {
-    upstream = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 600,
-        system: COACH_INTENT_SYSTEM_PROMPT,
-        messages: [{ role: "user", content: userBlock }],
-      }),
-    });
+    upstream = provider === "openai"
+      ? await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: getOpenAIIntentModel(),
+          instructions: COACH_INTENT_SYSTEM_PROMPT,
+          input: [{ role: "user", content: userBlock }],
+          max_output_tokens: 900,
+        }),
+      })
+      : await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: getAnthropicIntentModel(),
+          max_tokens: 600,
+          system: COACH_INTENT_SYSTEM_PROMPT,
+          messages: [{ role: "user", content: userBlock }],
+        }),
+      });
   } catch (err) {
     return new Response(
       JSON.stringify({
@@ -222,7 +303,9 @@ serve(async (req: Request) => {
   }
 
   const data = await upstream.json();
-  const text: string = data?.content?.[0]?.text?.trim?.() ?? "";
+  const text: string = provider === "openai"
+    ? extractOpenAIText(data)
+    : data?.content?.[0]?.text?.trim?.() ?? "";
 
   // Permissive JSON extraction — model occasionally wraps in fences /
   // adds whitespace despite the prompt. Pick the first {...} block.

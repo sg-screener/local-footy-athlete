@@ -27,6 +27,9 @@ export {
 } from './athletePreferencesStore';
 export type { } from './athletePreferencesStore';
 
+export { useReadinessStore } from './readinessStore';
+export type { } from './readinessStore';
+
 /**
  * Helper function to clear all stores (for logout)
  */
@@ -38,6 +41,7 @@ export function clearAllStores() {
   const { clear: clearCoach } = useCoachStore.getState();
   const { clear: clearUI } = useUIStore.getState();
   const { clear: clearAthletePrefs } = useAthletePreferencesStore.getState();
+  const { clear: clearReadiness } = useReadinessStore.getState();
 
   clearAuth();
   clearProfile();
@@ -46,4 +50,5 @@ export function clearAllStores() {
   clearCoach();
   clearUI();
   clearAthletePrefs();
+  clearReadiness();
 }

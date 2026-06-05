@@ -390,6 +390,61 @@ section('[4] swap_conditioning_modality');
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// 4b. add_conditioning_block with replaceActivity updates, not duplicates
+// ─────────────────────────────────────────────────────────────────────────
+
+section('[4b] add_conditioning_block duration update replaces source activity');
+{
+  const flushEx = ex('Easy Aerobic Flush (25min Assault Bike)', 1);
+  const wedConditioning = conditioningWorkout(
+    'Easy Aerobic Flush (25min Assault Bike)',
+    [flushEx],
+    [{
+      title: 'Easy Aerobic Flush (25min Assault Bike)',
+      description: '25min easy Assault Bike.',
+      exerciseIds: [flushEx.id],
+    }],
+  );
+  const week = buildBaseWeek({ 3: wedConditioning });
+  const spy = makeSpy();
+  const events: AdjustmentEvent[] = [
+    event('add_conditioning_block', '2026-04-29', 'duration update', null, {
+      title: 'Easy Aerobic Flush (60min Assault Bike)',
+      description: '60 min easy assault bike at conversational pace.',
+      coachNote: 'Updated Easy Aerobic Flush to 60 min',
+      minutes: 60,
+      sets: 1,
+      restSeconds: 0,
+      prescriptionType: 'duration_minutes',
+      replaceActivity: 'Easy Aerobic Flush (25min Assault Bike)',
+      exerciseId: 'coach-easy-aerobic-flush-assault-bike',
+    }),
+  ];
+
+  const result = applyAdjustmentEvents(events, makeOpts(week, spy));
+
+  eq('one applied', result.applied.length, 1);
+  eq('one override write', spy.calls.length, 1);
+  const written = spy.calls[0].workout;
+  eq('conditioning option count remains one', written.conditioningBlock?.options.length, 1);
+  eq(
+    'conditioning option title updated',
+    written.conditioningBlock?.options[0].title,
+    'Easy Aerobic Flush (60min Assault Bike)',
+  );
+  ok(
+    'old 25min option removed',
+    !(written.conditioningBlock?.options ?? []).some((option) => /25min/i.test(option.title)),
+  );
+  eq('conditioning exercise count remains one', written.exercises.length, 1);
+  ok(
+    'exercise row updated to 60 min',
+    /60 min/i.test(String(written.exercises[0].notes ?? '')) ||
+      written.exercises[0].prescribedRepsMin === 60,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // 5. mark_session_optional — flips tier without touching exercises
 // ─────────────────────────────────────────────────────────────────────────
 

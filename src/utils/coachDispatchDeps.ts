@@ -522,8 +522,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
         renderedChecks.every(
           (r) =>
             r.overrideKeyWritten &&
-            r.programTabProjectionHasConditioning &&
-            r.dayWorkoutProjectionHasConditioning,
+            r.afterHasConditioning,
         );
 
       logger.debug('[program-adjustment] applied', {

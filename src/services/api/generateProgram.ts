@@ -21,7 +21,7 @@ import { logger } from '../../utils/logger';
  */
 export type ProgramGenErrorKind =
   | 'server_outage'   // 5xx, 503, Cloudflare/Supabase HTML "temporarily unavailable"
-  | 'overloaded'     // Anthropic/AI overloaded
+  | 'overloaded'     // coach LLM provider overloaded
   | 'unauthorized'   // 401/403 — config problem
   | 'bad_response'   // 200 but shape is wrong / empty
   | 'network'        // fetch threw (offline, DNS, timeout)
@@ -32,8 +32,15 @@ export class ProgramGenError extends Error {
   public readonly canRetry: boolean;
   public readonly userMessage: string;
   public readonly diagnostic: string;
+  public readonly details?: Record<string, unknown>;
 
-  constructor(kind: ProgramGenErrorKind, userMessage: string, diagnostic: string, canRetry: boolean) {
+  constructor(
+    kind: ProgramGenErrorKind,
+    userMessage: string,
+    diagnostic: string,
+    canRetry: boolean,
+    details?: Record<string, unknown>,
+  ) {
     // Parent Error `message` is the USER-FACING string so any accidental
     // render (e.g. `err.message`) still produces safe copy instead of raw HTML.
     super(userMessage);
@@ -42,6 +49,7 @@ export class ProgramGenError extends Error {
     this.canRetry = canRetry;
     this.userMessage = userMessage;
     this.diagnostic = diagnostic;
+    this.details = details;
   }
 }
 
@@ -57,6 +65,151 @@ function looksLikeHtml(body: string): boolean {
 /** Short, redacted preview of a body for logs only. */
 function previewBody(body: string, max = 500): string {
   return (body || '').slice(0, max).replace(/\s+/g, ' ').trim();
+}
+
+function isDevBuild(): boolean {
+  return typeof __DEV__ !== 'undefined'
+    ? __DEV__
+    : process.env.NODE_ENV !== 'production';
+}
+
+const REQUIRED_PROGRAM_GEN_PROFILE_FIELDS: Array<keyof OnboardingData> = [
+  'firstName',
+  'heightCm',
+  'weightKg',
+  'position',
+  'motivation',
+  'seasonPhase',
+  'trainingDaysPerWeek',
+  'preferredTrainingDays',
+  'sessionDurationMinutes',
+  'trainingLocation',
+  'equipment',
+  'experienceLevel',
+  'squatStrength',
+  'benchStrength',
+  'conditioningLevel',
+  'sprintExposure',
+  'recentTrainingLoad',
+  'injuries',
+];
+
+const RECOMMENDED_PROGRAM_GEN_PROFILE_FIELDS: Array<keyof OnboardingData> = [
+  'biggestLimitation',
+  'biggestFrustration',
+  'successVision',
+];
+
+function hasProfileValue(data: OnboardingData, field: keyof OnboardingData): boolean {
+  const value = data[field];
+  if (field === 'injuries') return Array.isArray(value);
+  if (Array.isArray(value)) return value.length > 0;
+  return value !== undefined && value !== null && String(value).trim() !== '';
+}
+
+export function getProgramGenerationProfileFieldDiagnostics(data: OnboardingData): {
+  missingRequired: string[];
+  missingRecommended: string[];
+} {
+  const missingRequired = REQUIRED_PROGRAM_GEN_PROFILE_FIELDS
+    .filter((field) => !hasProfileValue(data, field))
+    .map(String);
+
+  if (
+    data.seasonPhase !== 'Off-season' &&
+    !data.usualGameDay &&
+    !data.gameDay
+  ) {
+    missingRequired.push('usualGameDay/gameDay');
+  }
+
+  if (
+    (data.teamTrainingDaysPerWeek ?? 0) > 0 &&
+    (!data.teamTrainingDays || data.teamTrainingDays.length === 0)
+  ) {
+    missingRequired.push('teamTrainingDays');
+  }
+
+  const missingRecommended = RECOMMENDED_PROGRAM_GEN_PROFILE_FIELDS
+    .filter((field) => !hasProfileValue(data, field))
+    .map(String);
+
+  return { missingRequired, missingRecommended };
+}
+
+export function buildProgramGenerationRequestDiagnostics(
+  onboardingData: OnboardingData,
+  plan?: CoachingPlan,
+  message?: string,
+  env: ReturnType<typeof getClientEnvConfig> = getClientEnvConfig(),
+): Record<string, unknown> {
+  const derivedPlan = plan ?? buildCoachingPlan(onboardingToCoachingInputs(onboardingData));
+  const derivedMessage = message ?? buildGenerationPrompt(onboardingData, derivedPlan);
+  const profileFields = Object.keys(onboardingData).sort();
+  const profileFieldDiagnostics = getProgramGenerationProfileFieldDiagnostics(onboardingData);
+  const payloadShape = {
+    messages: [{ role: 'user', content: '[generation prompt omitted from log]' }],
+    athleteProfile: '[onboarding profile object]',
+    coachingPlan: '[coaching constraints object]',
+    mode: 'generate',
+  };
+  const payloadForSize = {
+    messages: [{ role: 'user', content: derivedMessage }],
+    athleteProfile: onboardingData,
+    coachingPlan: derivedPlan.constraints,
+    mode: 'generate',
+  };
+
+  return {
+    endpoint: env.coachChatEndpoint || '(missing)',
+    functionName: 'coach-chat',
+    mode: 'generate',
+    payloadShape,
+    request: {
+      messageCount: 1,
+      promptWords: derivedMessage.split(/\s+/).filter(Boolean).length,
+      promptPreview: previewBody(derivedMessage, 240),
+      approxPayloadBytes: JSON.stringify(payloadForSize).length,
+    },
+    profile: {
+      presentFields: profileFields,
+      missingRequired: profileFieldDiagnostics.missingRequired,
+      missingRecommended: profileFieldDiagnostics.missingRecommended,
+      summary: {
+        firstName: onboardingData.firstName ?? null,
+        position: onboardingData.position ?? null,
+        seasonPhase: onboardingData.seasonPhase ?? null,
+        gameDay: onboardingData.gameDay ?? null,
+        usualGameDay: onboardingData.usualGameDay ?? null,
+        teamTrainingDaysPerWeek: onboardingData.teamTrainingDaysPerWeek ?? null,
+        teamTrainingDays: onboardingData.teamTrainingDays ?? [],
+        trainingDaysPerWeek: onboardingData.trainingDaysPerWeek ?? null,
+        preferredTrainingDays: onboardingData.preferredTrainingDays ?? [],
+        sessionDurationMinutes: onboardingData.sessionDurationMinutes ?? null,
+        trainingLocation: onboardingData.trainingLocation ?? null,
+        equipmentCount: onboardingData.equipment?.length ?? 0,
+        goalsCount: onboardingData.goals?.length ?? 0,
+        injuriesCount: onboardingData.injuries?.length ?? 0,
+        conditioningLevel: onboardingData.conditioningLevel ?? null,
+        sprintExposure: onboardingData.sprintExposure ?? null,
+        recentTrainingLoad: onboardingData.recentTrainingLoad ?? null,
+      },
+    },
+    coachingPlan: {
+      readiness: derivedPlan.readiness,
+      weeklyPlanCount: derivedPlan.weeklyPlan.length,
+      coreSessions: derivedPlan.coreSessions,
+      optionalSessions: derivedPlan.optionalSessions,
+      recoverySessions: derivedPlan.recoverySessions,
+      constraintNoteCount: derivedPlan.constraints.notes.length,
+      weeklyPlan: derivedPlan.weeklyPlan.map((session) => ({
+        dayOfWeek: session.dayOfWeek,
+        tier: session.tier,
+        focus: session.focus,
+        isHardExposure: session.isHardExposure,
+      })),
+    },
+  };
 }
 
 /**
@@ -86,6 +239,113 @@ interface CoachResponse {
   newNotes?: string[] | null;
 }
 
+type GeneratedWorkout = NonNullable<NonNullable<CoachResponse['programUpdate']>['workouts']>[number];
+
+const VALID_APP_WORKOUT_TYPES = new Set([
+  'Strength',
+  'Conditioning',
+  'Technical',
+  'Recovery',
+  'Mixed',
+  'Flush-Out',
+  'Sprint-Intervals',
+  'Team Training',
+  'Game',
+  'Nordic-4x4',
+  'Long-Run',
+  'MetCon',
+  'Flog-Friday',
+  '6x1km',
+  'Hill-Sprints',
+  'MAS-Training',
+  'Tempo-Run',
+  'Quality-Sprints',
+]);
+const VALID_SESSION_TIERS = new Set(['core', 'optional', 'recovery']);
+const WORKOUT_TYPE_TIER_LABELS = new Set(['core', 'optional', 'recovery']);
+const RAW_WORKOUT_TYPE_VALUES_NORMALIZED_BY_CLIENT = new Set([
+  'core',
+  'optional',
+  'recovery',
+  'team',
+]);
+
+function countValues(values: unknown[]): Record<string, number> {
+  return values.reduce<Record<string, number>>((acc, value) => {
+    const key = String(value ?? '').trim() || '(missing)';
+    acc[key] = (acc[key] ?? 0) + 1;
+    return acc;
+  }, {});
+}
+
+function uniqueStrings(values: unknown[]): string[] {
+  return Array.from(new Set(
+    values
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean),
+  ));
+}
+
+function summarizeExerciseShape(exercises: unknown) {
+  const isArray = Array.isArray(exercises);
+  const rows = isArray ? exercises as any[] : [];
+  return {
+    exercisesIsArray: isArray,
+    exerciseCount: isArray ? rows.length : null,
+    exerciseIdsExpectedFromAI: false,
+    missingNameCount: rows.filter((ex) => !String(ex?.name ?? '').trim()).length,
+    missingSetsCount: rows.filter((ex) => !Number.isFinite(Number(ex?.sets))).length,
+    missingRepsMinCount: rows.filter((ex) => !Number.isFinite(Number(ex?.repsMin))).length,
+    missingRepsMaxCount: rows.filter((ex) => !Number.isFinite(Number(ex?.repsMax))).length,
+  };
+}
+
+function buildGeneratedWorkoutAcceptanceDiagnostics(workouts: GeneratedWorkout[] | null | undefined) {
+  const rows = Array.isArray(workouts) ? workouts : [];
+  const rawWorkoutTypes = rows.map((w) => w?.workoutType);
+  const rawSessionTiers = rows.map((w) => w?.sessionTier);
+  const rawWorkoutTypesNotInAppEnum = uniqueStrings(rawWorkoutTypes)
+    .filter((type) => !VALID_APP_WORKOUT_TYPES.has(type));
+  const tierLabelsInWorkoutType = rawWorkoutTypesNotInAppEnum
+    .filter((type) => WORKOUT_TYPE_TIER_LABELS.has(type));
+  return {
+    receivedProgramUpdateWorkouts: Array.isArray(workouts),
+    workoutCount: rows.length,
+    workoutTypes: countValues(rawWorkoutTypes),
+    sessionTiers: countValues(rawSessionTiers),
+    rawWorkoutTypesNotInAppEnum,
+    tierLabelsInWorkoutType,
+    rawWorkoutTypesNormalizedByClient: rawWorkoutTypesNotInAppEnum
+      .filter((type) => RAW_WORKOUT_TYPE_VALUES_NORMALIZED_BY_CLIENT.has(type)),
+    invalidWorkoutTypesAfterClientTolerance: rawWorkoutTypesNotInAppEnum
+      .filter((type) => !RAW_WORKOUT_TYPE_VALUES_NORMALIZED_BY_CLIENT.has(type)),
+    invalidSessionTiers: uniqueStrings(rawSessionTiers)
+      .filter((tier) => !VALID_SESSION_TIERS.has(tier)),
+    workoutTypeCoreIsInvalidAppEnum: rawWorkoutTypesNotInAppEnum.includes('core'),
+    workoutTypeCoreWillNormalizeClientSide: rawWorkoutTypesNotInAppEnum.includes('core'),
+    workoutTypeTeamWillNormalizeClientSide: rawWorkoutTypesNotInAppEnum.includes('team'),
+    sessionTierCoreIsValid: rawSessionTiers.some((tier) => String(tier ?? '').trim() === 'core'),
+    normalizerExpectations: {
+      workoutDatesExpectedFromAI: false,
+      exerciseIdsExpectedFromAI: false,
+      requiredExercisePrescriptionFields: ['name', 'sets', 'repsMin', 'repsMax'],
+    },
+    workouts: rows.map((w, index) => ({
+      index,
+      dayOfWeek: w?.dayOfWeek ?? null,
+      name: w?.name ?? null,
+      workoutType: w?.workoutType ?? null,
+      sessionTier: w?.sessionTier ?? null,
+      exerciseShape: summarizeExerciseShape((w as any)?.exercises),
+    })),
+  };
+}
+
+function errorDiagnostic(err: unknown): string {
+  if (err instanceof Error) return `${err.name}: ${err.message}`;
+  return String(err);
+}
+
 /**
  * Call the coach-chat edge function to generate a personalised program.
  *
@@ -99,6 +359,7 @@ export async function generateProgramFromProfile(
   onboardingData: OnboardingData,
 ): Promise<TrainingProgram> {
   const env = getClientEnvConfig();
+  const devBuild = isDevBuild();
   if (!env.isReady) {
     logMissingClientEnv('generateProgramFromProfile', env);
     throw new ProgramGenError(
@@ -122,9 +383,25 @@ export async function generateProgramFromProfile(
 
   // ─── Step 2: Build AI prompt from coaching plan ───
   const message = buildGenerationPrompt(onboardingData, plan);
+  const requestDiagnostics = buildProgramGenerationRequestDiagnostics(
+    onboardingData,
+    plan,
+    message,
+    env,
+  );
 
   const promptWords = message.split(/\s+/).length;
   logger.debug(`[ProgramGen] Calling edge function via direct fetch... (prompt: ${promptWords} words, ~${Math.round(promptWords * 1.3)} tokens)`);
+
+  if (devBuild) {
+    const missingRequired = getProgramGenerationProfileFieldDiagnostics(onboardingData).missingRequired;
+    logger.warn('[ProgramGen][dev] Edge function request payload summary', requestDiagnostics);
+    if (missingRequired.length > 0) {
+      logger.warn('[ProgramGen][dev] Profile is missing fields used by program generation', {
+        missingRequired,
+      });
+    }
+  }
 
   // Use direct fetch with both apikey + Authorization headers.
   // The Supabase gateway requires BOTH headers for edge function auth.
@@ -148,17 +425,19 @@ export async function generateProgramFromProfile(
   // UI layer. We always throw `ProgramGenError` whose `userMessage` is safe
   // copy; raw payload previews are gated behind debug logging only.
 
+  const requestBody = {
+    messages: [{ role: 'user', content: message }],
+    athleteProfile: onboardingData,
+    coachingPlan: plan.constraints,
+    mode: 'generate',
+  };
+
   let response: Response;
   try {
     response = await fetch(env.coachChatEndpoint, {
       method: 'POST',
       headers,
-      body: JSON.stringify({
-        messages: [{ role: 'user', content: message }],
-        athleteProfile: onboardingData,
-        coachingPlan: plan.constraints,
-        mode: 'generate',
-      }),
+      body: JSON.stringify(requestBody),
     });
   } catch (fetchErr: any) {
     logger.error('[ProgramGen] Network error on fetch:', fetchErr?.message || fetchErr);
@@ -167,6 +446,7 @@ export async function generateProgramFromProfile(
       'Couldn\u2019t reach the server. Check your connection and try again.',
       `fetch threw: ${fetchErr?.message || fetchErr}`,
       true,
+      { request: requestDiagnostics },
     );
   }
 
@@ -174,6 +454,13 @@ export async function generateProgramFromProfile(
 
   const contentType = (response.headers.get('content-type') || '').toLowerCase();
   const rawBody = await response.text().catch(() => '');
+  if (devBuild) {
+    logger.warn('[ProgramGen][dev] Edge function response received', {
+      status: response.status,
+      contentType,
+      bodyPreview: previewBody(rawBody, 700),
+    });
+  }
   const bodyIsHtml = contentType.includes('text/html') || looksLikeHtml(rawBody);
 
   // ── Response is HTML (Cloudflare / Supabase proxy page) → treat as outage ──
@@ -185,6 +472,14 @@ export async function generateProgramFromProfile(
       'Couldn\u2019t rebuild right now. There was a temporary server issue. Please try again in a minute.',
       `HTML response. status=${response.status} content-type=${contentType} preview="${previewBody(rawBody, 200)}"`,
       true,
+      {
+        request: requestDiagnostics,
+        response: {
+          status: response.status,
+          contentType,
+          bodyPreview: previewBody(rawBody, 300),
+        },
+      },
     );
   }
 
@@ -196,8 +491,16 @@ export async function generateProgramFromProfile(
       throw new ProgramGenError(
         'unauthorized',
         'Couldn\u2019t authorise the rebuild request. Please close the app and sign in again.',
-        `HTTP ${response.status}`,
+        `HTTP ${response.status} preview="${previewBody(rawBody, 200)}"`,
         false,
+        {
+          request: requestDiagnostics,
+          response: {
+            status: response.status,
+            contentType,
+            bodyPreview: previewBody(rawBody, 300),
+          },
+        },
       );
     }
     if (response.status >= 500 || response.status === 408 || response.status === 429) {
@@ -206,6 +509,14 @@ export async function generateProgramFromProfile(
         'Couldn\u2019t rebuild right now. There was a temporary server issue. Please try again in a minute.',
         `HTTP ${response.status} preview="${previewBody(rawBody, 200)}"`,
         true,
+        {
+          request: requestDiagnostics,
+          response: {
+            status: response.status,
+            contentType,
+            bodyPreview: previewBody(rawBody, 300),
+          },
+        },
       );
     }
     // Other 4xx — likely a request bug, not retryable on the user's side.
@@ -214,6 +525,14 @@ export async function generateProgramFromProfile(
       'Something went wrong rebuilding your week. Please try again, or contact support if it keeps happening.',
       `HTTP ${response.status} preview="${previewBody(rawBody, 200)}"`,
       false,
+      {
+        request: requestDiagnostics,
+        response: {
+          status: response.status,
+          contentType,
+          bodyPreview: previewBody(rawBody, 300),
+        },
+      },
     );
   }
 
@@ -229,6 +548,14 @@ export async function generateProgramFromProfile(
       'The server sent an unexpected response. Please try again.',
       `JSON parse error: ${parseErr?.message}. preview="${previewBody(rawBody, 200)}"`,
       true,
+      {
+        request: requestDiagnostics,
+        response: {
+          status: response.status,
+          contentType,
+          bodyPreview: previewBody(rawBody, 300),
+        },
+      },
     );
   }
 
@@ -236,25 +563,62 @@ export async function generateProgramFromProfile(
 
   // ── 200 with application-level error in body ──
   if (data?.error) {
-    logger.error('[ProgramGen] Edge function returned error');
-    logger.debug('[ProgramGen] Edge function error detail:', String(data.error).slice(0, 300));
+    const errorPreview = String(data.error).slice(0, 500);
+    logger.error('[ProgramGen] Edge function returned error', {
+      status: response.status,
+      functionVersion: data?._v || 'unknown',
+      error: errorPreview,
+      diagnostic: data?.diagnostic ?? null,
+    });
+    if (devBuild) {
+      logger.warn('[ProgramGen][dev] Edge function failure diagnostics', {
+        request: requestDiagnostics,
+        response: {
+          status: response.status,
+          contentType,
+          functionVersion: data?._v || 'unknown',
+          error: errorPreview,
+          diagnostic: data?.diagnostic ?? null,
+        },
+      });
+    }
 
     // Overload errors get a user-friendly message and a detectable error kind.
     if (typeof data.error === 'string' && data.error.includes('[OVERLOADED]')) {
-      logger.error('[ProgramGen] FAILED: All retry attempts exhausted — Anthropic API overloaded');
+      logger.error('[ProgramGen] FAILED: All retry attempts exhausted — coach LLM provider overloaded');
       throw new ProgramGenError(
         'overloaded',
         'The AI service is under heavy load right now. Please try again in a minute.',
-        `overloaded: ${String(data.error).slice(0, 200)}`,
+        `status=${response.status} functionVersion=${data?._v || 'unknown'} overloaded: ${String(data.error).slice(0, 300)}`,
         true,
+        {
+          request: requestDiagnostics,
+          response: {
+            status: response.status,
+            contentType,
+            functionVersion: data?._v || 'unknown',
+            error: errorPreview,
+            diagnostic: data?.diagnostic ?? null,
+          },
+        },
       );
     }
 
     throw new ProgramGenError(
       'bad_response',
       'Something went wrong rebuilding your week. Please try again.',
-      `edge error: ${String(data.error).slice(0, 300)}`,
+      `status=${response.status} functionVersion=${data?._v || 'unknown'} edge error: ${String(data.error).slice(0, 500)}`,
       true,
+      {
+        request: requestDiagnostics,
+        response: {
+          status: response.status,
+          contentType,
+          functionVersion: data?._v || 'unknown',
+          error: errorPreview,
+          diagnostic: data?.diagnostic ?? null,
+        },
+      },
     );
   }
 
@@ -268,6 +632,15 @@ export async function generateProgramFromProfile(
       'The AI didn\u2019t return a program this time. Please try again.',
       `no workouts. reply preview="${previewBody(result?.reply || '', 200)}"`,
       true,
+      {
+        request: requestDiagnostics,
+        response: {
+          status: response.status,
+          contentType,
+          functionVersion: data?._v || 'unknown',
+          replyPreview: previewBody(result?.reply || '', 300),
+        },
+      },
     );
   }
 
@@ -279,20 +652,97 @@ export async function generateProgramFromProfile(
     logger.debug(`[AI-TRACE]   day=${w.dayOfWeek} name="${w.name}" type="${w.workoutType}" tier="${w.sessionTier}" exercises=${w.exercises?.length}`);
   });
 
+  const generatedWorkoutDiagnostics = buildGeneratedWorkoutAcceptanceDiagnostics(
+    result.programUpdate.workouts,
+  );
+  if (devBuild) {
+    logger.warn('[ProgramGen][dev] programUpdate.workouts received', generatedWorkoutDiagnostics);
+  }
+
   // Convert the AI workout JSON into app domain types.
   // Pass the coaching engine's weeklyPlan so structural fields (tier, intensity)
   // are enforced deterministically — the AI is not trusted for these.
   // Cross-cycle variation: first program generation always starts at
   // block 1, week 1 of the rotation. Regenerations mid-program are
   // driven from CoachScreen with the ongoing microcycle's values.
-  const workouts = buildWorkoutsFromCoach(
-    result.programUpdate.workouts,
-    'mc-ai-1',
-    plan.weeklyPlan,
-    onboardingData,
-    { miniCycleNumber: 1, weekInBlock: 1 },
-    getAthletePrefs(),
-  );
+  let workouts;
+  try {
+    workouts = buildWorkoutsFromCoach(
+      result.programUpdate.workouts,
+      'mc-ai-1',
+      plan.weeklyPlan,
+      onboardingData,
+      { miniCycleNumber: 1, weekInBlock: 1 },
+      getAthletePrefs(),
+    );
+  } catch (normaliseErr: any) {
+    const diagnostic = `generated program normalisation failed: ${errorDiagnostic(normaliseErr)}`;
+    logger.error('[ProgramGen] Generated program normalisation failed before client acceptance', {
+      diagnostic,
+      response: {
+        status: response.status,
+        contentType,
+        functionVersion: data?._v || 'unknown',
+      },
+      generatedWorkoutDiagnostics,
+    });
+    throw new ProgramGenError(
+      'bad_response',
+      'The server returned a program, but the app could not read it. Please try again.',
+      diagnostic,
+      true,
+      {
+        request: requestDiagnostics,
+        response: {
+          status: response.status,
+          contentType,
+          functionVersion: data?._v || 'unknown',
+        },
+        generatedProgram: generatedWorkoutDiagnostics,
+      },
+    );
+  }
+
+  if (!workouts.length) {
+    const diagnostic = 'generated program normalisation returned zero workouts';
+    logger.error('[ProgramGen] Generated program rejected after normalisation', {
+      diagnostic,
+      generatedWorkoutDiagnostics,
+    });
+    throw new ProgramGenError(
+      'bad_response',
+      'The server returned a program, but the app could not read it. Please try again.',
+      diagnostic,
+      true,
+      {
+        request: requestDiagnostics,
+        response: {
+          status: response.status,
+          contentType,
+          functionVersion: data?._v || 'unknown',
+        },
+        generatedProgram: generatedWorkoutDiagnostics,
+      },
+    );
+  }
+
+  if (devBuild) {
+    logger.warn('[ProgramGen][dev] generated program accepted by client normaliser', {
+      inputWorkoutCount: result.programUpdate.workouts.length,
+      outputWorkoutCount: workouts.length,
+      workoutTypes: countValues(workouts.map((w) => w.workoutType)),
+      sessionTiers: countValues(workouts.map((w) => w.sessionTier)),
+      firstWorkout: workouts[0]
+        ? {
+          dayOfWeek: workouts[0].dayOfWeek,
+          name: workouts[0].name,
+          workoutType: workouts[0].workoutType,
+          sessionTier: workouts[0].sessionTier ?? null,
+          exerciseCount: workouts[0].exercises?.length ?? 0,
+        }
+        : null,
+    });
+  }
 
   // Build dates — aligned to calendar week boundaries (Mon-Sun).
   // The week containing "today" is Week 1. Block runs through
@@ -335,6 +785,24 @@ export async function generateProgramFromProfile(
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+
+  if (devBuild) {
+    logger.warn('[ProgramGen][dev] Using generated program from coach-chat', {
+      programId: program.id,
+      programName: program.name,
+      microcycleCount: program.microcycles.length,
+      workoutCount: workouts.length,
+      firstWorkout: workouts[0]
+        ? {
+          dayOfWeek: workouts[0].dayOfWeek,
+          name: workouts[0].name,
+          workoutType: workouts[0].workoutType,
+          sessionTier: workouts[0].sessionTier ?? null,
+          exerciseCount: workouts[0].exercises?.length ?? 0,
+        }
+        : null,
+    });
+  }
 
   return program;
 }

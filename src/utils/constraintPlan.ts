@@ -317,6 +317,8 @@ function capitalise(s: string): string {
 }
 
 function activeIssueLabel(c: ActiveConstraint): string {
+  const labelled = (c as ActiveConstraint & { reasonLabel?: string }).reasonLabel;
+  if (labelled && 'severity' in c) return `${labelled} — ${c.severity}/10`;
   if (c.type === 'injury') {
     const part = c.bodyPart === 'unknown' ? 'Injury' : capitalise(c.bodyPart);
     return `${part} pain — ${c.severity}/10`;

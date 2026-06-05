@@ -14,6 +14,7 @@ import { Text } from '../../components/common/Text';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
+import { ReadinessQuickCheck } from '../../components/ReadinessQuickCheck';
 import { Button, Card, Sheet, Badge, IconButton, SectionLabel } from '../../components/ui';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { splitSessionName } from '../../utils/sessionNaming';
@@ -22,12 +23,13 @@ import { useHomeScreen } from './useHomeScreen';
 import { CoachUpdateCard } from '../../components/CoachUpdateCard';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
+import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
 import { useNavigation } from '@react-navigation/native';
 import {
   WEEK_DAYS,
   DAY_SHORT,
   NEXT_PHASE,
-  COND_FLAVOUR_LABELS,
+  getConditioningContextLabel,
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
   QUICK_ACTIONS,
@@ -82,6 +84,9 @@ export default function HomeScreenV2() {
     handleViewWorkout,
     handleFinishTeamSession,
     handleQuickAction,
+    todayReadinessSignal,
+    handleSetTodayReadiness,
+    handleClearTodayReadiness,
     staleByDate,
     weekHasGame,
     showAddGameCTA,
@@ -136,7 +141,15 @@ export default function HomeScreenV2() {
   // entries written before the multi-constraint model shipped.
   const navigation = useNavigation<any>();
   const weekStartISO = weekDays[0]?.date ?? '';
-  const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
+  const coachActiveConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
+  const readinessActiveConstraints = React.useMemo(
+    () => buildReadinessActiveConstraints(todayReadinessSignal),
+    [todayReadinessSignal],
+  );
+  const activeConstraints = React.useMemo(
+    () => [...coachActiveConstraints, ...readinessActiveConstraints],
+    [coachActiveConstraints, readinessActiveConstraints],
+  );
   const storedUpdate = useCoachUpdatesStore((s) =>
     weekStartISO ? s.updatesByWeek[weekStartISO] : undefined,
   );
@@ -156,7 +169,11 @@ export default function HomeScreenV2() {
     require('../../utils/coachWeekDiff') as typeof import('../../utils/coachWeekDiff');
   const baselineWeek = React.useMemo(() => {
     if (!weekStartISO) return [];
-    const stateNoInjury = { ...buildScheduleStateImperative(), activeInjury: null };
+    const stateNoInjury = {
+      ...buildScheduleStateImperative(),
+      activeInjury: null,
+      activeConstraints: [],
+    };
     return sessionResolverMod.resolveWeekWithConditioning(weekStartISO, stateNoInjury);
   }, [weekStartISO]);
 
@@ -327,14 +344,21 @@ export default function HomeScreenV2() {
 
         {/* ── Today hero ── */}
         {showHero && todayDay && (
-          <TodayHero
-            day={todayDay}
-            staleWarning={staleByDate[todayDay.date]}
-            onOpenSheet={() => handleDayTap(todayIdx)}
-            onViewWorkout={() => handleViewWorkout(todayDay)}
-            onFinishTeam={() => handleFinishTeamSession(todayDay)}
-            onReviewStale={handleQuickAction}
-          />
+          <>
+            <TodayHero
+              day={todayDay}
+              staleWarning={staleByDate[todayDay.date]}
+              onOpenSheet={() => handleDayTap(todayIdx)}
+              onViewWorkout={() => handleViewWorkout(todayDay)}
+              onFinishTeam={() => handleFinishTeamSession(todayDay)}
+              onReviewStale={handleQuickAction}
+            />
+            <ReadinessQuickCheck
+              signal={todayReadinessSignal}
+              onSelect={handleSetTodayReadiness}
+              onClear={handleClearTodayReadiness}
+            />
+          </>
         )}
 
         {/* ── Week list ── */}
@@ -514,10 +538,7 @@ function TodayHero({
   const isTeamOnly = hasWorkout && day.workout.name === 'Team Training';
   const parsed = hasWorkout ? splitSessionName(day.workout.name) : null;
   const context = parsed?.context;
-  const condFlavour =
-    hasWorkout && day.workout.hasCombinedConditioning && day.workout.conditioningFlavour
-      ? COND_FLAVOUR_LABELS[day.workout.conditioningFlavour] || day.workout.conditioningFlavour
-      : null;
+  const conditioningContext = hasWorkout ? getConditioningContextLabel(day.workout) : null;
   const exerciseCount = day.workout?.exercises?.length ?? 0;
 
   // Game days delegate tap to the sheet; everything else uses the CTA buttons,
@@ -570,8 +591,8 @@ function TodayHero({
 
           {hasWorkout && context ? (
             <Text style={styles.heroContext}>{context}</Text>
-          ) : condFlavour ? (
-            <Text style={styles.heroContextAccent}>+ {condFlavour}</Text>
+          ) : conditioningContext ? (
+            <Text style={styles.heroContextAccent}>+ {conditioningContext}</Text>
           ) : null}
 
           {/* Coach-attribution chip — ONE concise line summarising any
@@ -697,6 +718,7 @@ function DayRow({
   const parsed = hasWorkout ? splitSessionName(day.workout.name) : null;
   const title = parsed?.title ?? null;
   const ctx = parsed?.context ?? null;
+  const conditioningContext = hasWorkout ? getConditioningContextLabel(day.workout) : null;
   const isTeamOnly = hasWorkout && day.workout.name === 'Team Training';
 
   return (
@@ -755,9 +777,9 @@ function DayRow({
             </Text>
             {ctx ? (
               <Text style={styles.workoutContext} numberOfLines={1}>{ctx}</Text>
-            ) : day.workout.hasCombinedConditioning && day.workout.conditioningFlavour ? (
+            ) : conditioningContext ? (
               <Text style={styles.workoutContextAccent} numberOfLines={1}>
-                + {COND_FLAVOUR_LABELS[day.workout.conditioningFlavour] || day.workout.conditioningFlavour}
+                + {conditioningContext}
               </Text>
             ) : null}
           </View>

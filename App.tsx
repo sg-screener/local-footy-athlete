@@ -24,13 +24,15 @@ const smokeBootstrapSignal = getSmokeRuntimeSignal();
 const shouldRenderSmokeRuntimeMarker =
   __DEV__ && smokeBootstrapSignal.flow === 'coach-bike-flow';
 
-console.warn('[app-entry] App.tsx module loaded', {
-  smokeBootstrapEnv: smokeBootstrapSignal.envValue,
-  smokeBootstrapFileFlag: smokeBootstrapSignal.fileValue,
-  smokeBootstrapSignal: smokeBootstrapSignal.flow,
-  smokeBootstrapSignalSource: smokeBootstrapSignal.source,
-  timestamp: new Date().toISOString(),
-});
+if (smokeBootstrapSignal.flow) {
+  console.warn('[app-entry] App.tsx module loaded', {
+    smokeBootstrapEnv: smokeBootstrapSignal.envValue,
+    smokeBootstrapFileFlag: smokeBootstrapSignal.fileValue,
+    smokeBootstrapSignal: smokeBootstrapSignal.flow,
+    smokeBootstrapSignalSource: smokeBootstrapSignal.source,
+    timestamp: new Date().toISOString(),
+  });
+}
 
 // CRITICAL: install the smoke-bootstrap Linking listener at module load,
 // BEFORE any React rendering or async work.
@@ -46,14 +48,15 @@ const queryClient = new QueryClient({
 });
 
 logCoachBuildFingerprint('app_launch');
-setRuntimeReady(true);
+if (smokeBootstrapSignal.flow) {
+  setRuntimeReady(true);
+}
 
 // ─── Direct App.tsx smoke markers ──────────────────────────────────
 //
-// The live smoke harness uses direct native marker Views rendered from
-// App.tsx beside RootNavigator. No overlay component, nested root, or
-// child render tree owns these markers; the debug/state markers use the
-// same renderSmokeMarker factory as the two probes Maestro already sees.
+// When an explicit smoke flow is active, the harness uses direct native
+// marker Views rendered from App.tsx beside RootNavigator. Normal dev app
+// launches must not render these markers or poll/log smoke state.
 
 type SmokeOverlayState = 'inactive' | 'pending' | 'ready' | 'missing';
 
@@ -525,7 +528,7 @@ export default function App() {
     React.useState<SmokeOverlayResult>(SMOKE_OVERLAY_INITIAL);
 
   React.useEffect(() => {
-    if (!__DEV__) return;
+    if (!shouldRenderSmokeRuntimeMarker) return;
     const tick = () => {
       try {
         setSmokeOverlayResult(deriveOverlayState());
@@ -549,7 +552,7 @@ export default function App() {
   const smokeOverlayStateTestID = STATE_TEST_IDS[smokeOverlayResult.state];
   const smokeOverlayStateColor = STATE_MARKER_COLORS[smokeOverlayResult.state];
 
-  if (__DEV__) {
+  if (shouldRenderSmokeRuntimeMarker) {
     // eslint-disable-next-line no-console
     console.warn(`[app-smoke-overlay] render ${smokeOverlayDebugLabel}`);
   }
@@ -571,7 +574,8 @@ export default function App() {
               </View>
             ) : null}
             {/*
-              App.tsx-OWNED smoke markers. Three groups:
+              App.tsx-owned smoke markers. Render only during an explicit
+              smoke flow. Three groups:
                 1. smoke-build-fingerprint — proves App.tsx bundle is current.
                 2. smoke-harness-mounted — proves the smoke mount zone executed.
                 3. Direct visible-week debug + state markers — rendered
@@ -580,7 +584,7 @@ export default function App() {
               MAX-INT zIndex/elevation. No ScrollView/FlatList/keyboard
               parent dependency. Maestro asserts each in turn.
             */}
-            {__DEV__ ? (
+            {shouldRenderSmokeRuntimeMarker ? (
               <>
                 {(() => {
                   // eslint-disable-next-line no-console

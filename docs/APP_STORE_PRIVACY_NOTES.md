@@ -33,7 +33,7 @@ This document maps the current Local Footy Athlete MVP data flows to App Store p
 ## Third-Party Processors
 
 - Supabase: edge functions for coach intent and coach chat/program generation. Some dormant service code also targets Supabase database/auth, but live MVP routing does not expose account auth.
-- Anthropic / AI provider: called from Supabase edge functions for coach intent classification, coach replies, and program generation support.
+- OpenAI / AI provider: called from Supabase edge functions for coach intent classification, coach replies, and program generation support.
 - YouTube / Google: exercise videos are embedded from `youtube-nocookie.com` only when a user opens a video.
 - Email provider: support and feedback use `mailto:` links, so the user's email app sends the message.
 - Expo / React Native platform services: app runtime/build stack. No explicit Expo analytics or crash reporting SDK was found in live code.
@@ -153,7 +153,7 @@ Support URL can be a simple page that lists the support email and expected respo
 3. Confirm whether support emails should be disclosed as Email Address and Customer Support in App Store Connect.
 4. Confirm whether injury/soreness/fatigue context should be disclosed only as Health/Fitness, or also as Sensitive Info after legal review.
 5. Confirm whether RevenueCat/subscriptions are truly out of MVP. If they are in MVP, update labels for Purchases and possibly Identifiers.
-6. Confirm backend retention policy for Supabase edge function logs and any Anthropic/provider logging settings.
+6. Confirm backend retention policy for Supabase edge function logs and any OpenAI/provider logging settings.
 7. Confirm whether any production analytics/crash reporting will be added before submission.
 
 ## Current Gaps Before Submission

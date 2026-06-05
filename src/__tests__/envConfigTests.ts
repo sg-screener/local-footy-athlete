@@ -81,6 +81,7 @@ section('[4] Client config does not reference private AI keys');
   const envPath = path.resolve(__dirname, '..', 'config', 'env.ts');
   const src = fs.readFileSync(envPath, 'utf8');
   ok('no ANTHROPIC string in client env module', !/ANTHROPIC/i.test(src));
+  ok('no OPENAI string in client env module', !/OPENAI/i.test(src));
 }
 
 section('[5] Support mailto helper is encoded');

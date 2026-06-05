@@ -14,6 +14,7 @@ import {
   setActualCurrentRoute,
   setNavReady,
 } from './smokeNavState';
+import { getSmokeRuntimeSignal } from '../utils/smokeBootstrap';
 
 // Custom dark theme for navigation
 const navigationTheme = {
@@ -41,6 +42,10 @@ export default function RootNavigator() {
   const { isReady } = useInitializeApp();
   const isOnboardingComplete = useProfileStore(
     (state) => state.isOnboardingComplete,
+  );
+  const inSmokeMode = React.useMemo(
+    () => getSmokeRuntimeSignal().flow === 'coach-bike-flow',
+    [],
   );
 
   // Diagnostic log for the live-smoke wrapper — every navigator swap is
@@ -110,13 +115,8 @@ export default function RootNavigator() {
       }}
     >
       {isOnboardingComplete ? <AppNavigator /> : <OnboardingNavigator />}
-      {/* root-navigator-live — debug marker. Wrapper uses it together
-          with app-navigator-live to localize a mount failure. If
-          root-navigator-live is visible but app-navigator-live is
-          not, the app is in onboarding state (or AppNavigator
-          early-returned a gate). If neither is visible, RootNavigator
-          itself isn't reached. */}
-      {__DEV__ ? (
+      {/* Smoke-only root marker. Normal dev app launches must not show it. */}
+      {__DEV__ && inSmokeMode ? (
         <View
           accessible={true}
           pointerEvents="none"

@@ -38,7 +38,8 @@
  *   swap_conditioning_modality_once       — single-date swap
  *   set_bike_subtype_preference           — label-only correction
  *   add_conditioning                      — append a session/exercise
- *   remove_conditioning                   — drop a session/exercise
+ *   remove_session                        — remove a whole date's session
+ *   remove_conditioning                   — drop a conditioning item/block
  *   replace_exercise                      — strength-pool style swap
  *   move_session                          — Wed → Thu shift
  *   undo_last_change                      — revert most recent mutation
@@ -57,9 +58,31 @@ import {
   parseModalitySwapRequest,
   extractBikeLabel,
   parseBikeSubtypeIntent,
+  dayHasModality,
   type BikeLabel,
+  type ParsedModalitySwap,
 } from './coachModalitySwap';
 import type { ConditioningModality } from '../data/exerciseTags';
+import type { MutationTouchedActivity } from '../store/coachMutationHistoryStore';
+import {
+  buildConditioningCoachPlan,
+  buildConditioningPayloadFromRequest,
+  type CoachConditioningEditScope,
+  type CoachConditioningEditMode,
+  detectRequestedTrainingIntent,
+  type CoachPlanChangeKind,
+  type CoachTrainingIntent,
+} from './coachPlan';
+import { parseCoachDurationMinutes } from './coachValueNormalizers';
+
+export type ConditioningIntentModality =
+  | ConditioningModality
+  | 'walk'
+  | 'cardio'
+  | 'aerobic'
+  | 'sprint';
+
+export type AddConditioningIntensity = 'light' | 'moderate' | 'hard';
 
 // ─── Public types ───────────────────────────────────────────────────
 
@@ -81,7 +104,9 @@ export type CoachMutateOperation =
   | 'set_conditioning_modality_preference'
   | 'swap_conditioning_modality_once'
   | 'set_bike_subtype_preference'
+  | 'add_session'
   | 'add_conditioning'
+  | 'remove_session'
   | 'remove_conditioning'
   | 'replace_exercise'
   | 'move_session'
@@ -107,12 +132,40 @@ export type CoachMutatePayload =
     }
   | {
       operation: 'add_conditioning';
-      modality: ConditioningModality | null;
+      modality: ConditioningIntentModality | null;
+      customActivity?: string;
+      intensity?: AddConditioningIntensity;
       durationMinutes?: number;
+      sets?: number;
+      repsMin?: number;
+      repsMax?: number;
+      restSeconds?: number;
+      prescriptionType?: 'duration' | 'duration_minutes';
+      bikeLabel?: BikeLabel | null;
+      effortKind?: 'sprint' | 'interval';
+      replaceActivity?: string;
+      trainingIntent?: CoachTrainingIntent;
+      changeKind?: CoachPlanChangeKind;
+      editMode?: CoachConditioningEditMode;
+      editScope?: CoachConditioningEditScope;
+      targetItemId?: string;
+    }
+  | {
+      operation: 'add_session';
+      sourceDate?: string;
+      sourceSessionName?: string;
+      targetSessionName?: string;
+      reason?: string;
+    }
+  | {
+      operation: 'remove_session';
+      targetSessionId?: string | null;
+      reason?: string;
     }
   | {
       operation: 'remove_conditioning';
-      modality: ConditioningModality | null;
+      modality: ConditioningIntentModality | null;
+      targetItemId?: string;
     }
   | {
       operation: 'replace_exercise';
@@ -170,6 +223,7 @@ export type CoachCommand =
       confidence: number;          // 0..1
       needsClarification: boolean; // true → executor MUST ask before applying
       clarificationQuestion?: string;
+      options?: string[];
       missingFields?: string[];    // structured list for the executor/UI
       reason: string;              // short rationale used in transaction logs
     }
@@ -229,6 +283,28 @@ export interface VisibleSessionRef {
   date: string;
   sessionName: string;
   modalities?: string[];
+  workout?: {
+    name?: string;
+    conditioningBlock?: {
+      options?: Array<{
+        title?: string;
+        description?: string;
+        exerciseIds?: string[];
+      }>;
+    };
+    exercises?: Array<{
+      id?: string;
+      prescribedSets?: number;
+      prescribedRepsMin?: number;
+      prescribedRepsMax?: number;
+      prescriptionType?: string;
+      notes?: string;
+      exercise?: {
+        name?: string;
+        description?: string;
+      };
+    }>;
+  } | null;
 }
 
 export interface RouteCoachCommandInput {
@@ -247,6 +323,9 @@ export interface RouteCoachCommandInput {
     operation: CoachMutateOperation;
     target: CoachCommandTarget;
     appliedAt: number;
+    userMessage?: string;
+    appliedReply?: string;
+    touchedActivities?: MutationTouchedActivity[];
   } | null;
   /** Recent chat tail. Used for "next Wednesday" / "going forward" drift. */
   recentMessages?: Array<{ role: 'user' | 'assistant'; content: string }>;
@@ -280,6 +359,12 @@ const RECURRING_HINT: RegExp[] = [
   /\busually\b/i,
 ];
 
+const EXPLICIT_RECURRING_HINT =
+  /\b(?:going\s+forward|from\s+now\s+on|in\s+future|every|each|weekly|always|usually)\b/i;
+
+const PLURAL_DAY_AS_POSSESSIVE_SESSION =
+  /\b(?:mondays|tuesdays|wednesdays|thursdays|fridays|saturdays|sundays)\s+(?:session|workout)\b/i;
+
 /** "Just this session" / "only Wednesday" → one_off scope. */
 const ONE_OFF_HINT: RegExp[] = [
   /\bjust\s+(?:this|today|tomorrow|wednesday|thursday|friday|saturday|sunday|monday|tuesday)\b/i,
@@ -300,8 +385,12 @@ const TARGET_CORRECTION: RegExp[] = [
   /\b(actually|wait,?\s*i\s+meant)\s+(?:next\s+)?(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i,
 ];
 
-const ADD_VERBS = /\b(?:add|tack\s+on|put\s+in|include|throw\s+in|extra)\b/i;
-const REMOVE_VERBS = /\b(?:remov|drop|skip|cancel|cut|axe|kill|delete|get\s+rid\s+of)\w*\b/i;
+const ADD_ACTION_WORDS =
+  '(?:add|tack\\s+on|put\\s+in|put|include|throw\\s+in|chuck\\s+in|chuck|slot\\s+in|work\\s+in|stick\\s+in|schedule|program|extra)';
+const ADD_VERBS = new RegExp(`\\b${ADD_ACTION_WORDS}\\b`, 'i');
+const REMOVE_ACTION_WORDS =
+  "(?:remov\\w*|drop\\w*|ditch\\w*|scrap\\w*|skip\\w*|cancel\\w*|cut\\w*|axe\\w*|kill\\w*|delete\\w*|take\\s+out|get\\s+rid\\s+of|don'?t\\s+do|do\\s+not\\s+do)";
+const REMOVE_VERBS = new RegExp(`\\b${REMOVE_ACTION_WORDS}\\b`, 'i');
 const MOVE_VERBS = /\b(?:move|shift|push|reschedule|reschedul\w*|bump)\b/i;
 const UNDO_VERBS = /\b(?:undo|revert|go\s+back|put\s+(?:it|that|this)\s+back|change\s+(?:it|that|this)\s+back|never\s+mind|nevermind|cancel\s+that)\b/i;
 
@@ -312,8 +401,11 @@ const UNDO_VERBS = /\b(?:undo|revert|go\s+back|put\s+(?:it|that|this)\s+back|cha
  */
 const VAGUE_LOAD_REQUEST: RegExp[] = [
   /\bmake\s+(?:this\s+week|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+(?:easier|lighter|shorter)\b/i,
+  /\b(?:do|make|change|adjust|switch|swap)\s+(?:something|it|this|today|tomorrow|the\s+session|the\s+workout)?\s*(?:easier|lighter|lower[-\s]*load)\b/i,
   /\b(?:lighten|ease|cut)\s+(?:me|it|things|the\s+week)\s+(?:up|down|back|off)\b/i,
+  /\b(?:back\s+it\s+off|deload|reduce\s+(?:it|this|today|the\s+session|the\s+workout|the\s+load)|too\s+much\s+(?:work|conditioning|running|volume|load))\b/i,
   /\b(?:cooked|smoked|fried|wrecked|toast)\s*(?:this\s+week|today)?\b/i,
+  /\b(?:i'?m|i\s+am|feel(?:ing)?|legs?|body|hamstrings?|hammys?|quads?|calves|groin|adductors?|shoulders?|back|hips?|knees?|ankles?)\s+(?:are\s+|is\s+|feel\s+|feels\s+|feeling\s+)?(?:cooked|sore|tight|fried|wrecked|smoked|toast)\b/i,
 ];
 
 /**
@@ -358,6 +450,12 @@ function any(message: string, patterns: RegExp[]): boolean {
 function detectScope(message: string, refDateBeforeToday: boolean): CoachCommandScope {
   if (any(message, SCOPE_CORRECTION_RECURRING)) return 'recurring';
   if (any(message, ONE_OFF_HINT)) return 'one_off';
+  if (
+    PLURAL_DAY_AS_POSSESSIVE_SESSION.test(message) &&
+    !EXPLICIT_RECURRING_HINT.test(message)
+  ) {
+    return 'one_off';
+  }
   if (any(message, RECURRING_HINT)) return 'recurring';
   // Past target without "just this" → recurring (the orchestrator's
   // existing rule, lifted into the router).
@@ -384,6 +482,120 @@ function targetFromResolution(
     return { kind: 'date', date: res.target.date, sessionName: res.target.sessionName };
   }
   return { kind: 'unbound' };
+}
+
+function buildModalitySwapCommand(
+  input: RouteCoachCommandInput,
+  swap: ParsedModalitySwap,
+  refDateBeforeToday: boolean,
+): Extract<CoachCommand, { mode: 'mutate' }> {
+  const ref = input.referenceResolution;
+  const scope = detectScope(input.userMessage ?? '', refDateBeforeToday);
+
+  if (swap.from && swap.from === swap.to) {
+    return {
+      mode: 'mutate',
+      operation: 'set_bike_subtype_preference',
+      target: targetFromResolution(ref),
+      payload: {
+        operation: 'set_bike_subtype_preference',
+        bikeLabel: swap.bikeLabel ?? 'standard',
+      },
+      scope: 'recurring',
+      confidence: 0.85,
+      needsClarification: !ref?.target,
+      clarificationQuestion: ref?.target ? undefined : 'Which session do you mean?',
+      reason: 'modality_swap_same_label',
+    };
+  }
+
+  if (scope === 'recurring') {
+    return {
+      mode: 'mutate',
+      operation: 'set_conditioning_modality_preference',
+      target: targetFromResolution(ref),
+      payload: {
+        operation: 'set_conditioning_modality_preference',
+        from: swap.from,
+        to: swap.to,
+        bikeLabel: swap.bikeLabel ?? null,
+      },
+      scope: 'recurring',
+      confidence: ref?.target ? 0.9 : 0.55,
+      needsClarification: !ref?.target,
+      clarificationQuestion: ref?.target ? undefined : 'Which session should I switch?',
+      reason: 'modality_swap_recurring',
+    };
+  }
+
+  return {
+    mode: 'mutate',
+    operation: 'swap_conditioning_modality_once',
+    target: targetFromResolution(ref),
+    payload: {
+      operation: 'swap_conditioning_modality_once',
+      from: swap.from,
+      to: swap.to,
+      bikeLabel: swap.bikeLabel ?? null,
+    },
+    scope: 'one_off',
+    confidence: ref?.target ? 0.9 : 0.55,
+    needsClarification: !ref?.target,
+    clarificationQuestion: ref?.target ? undefined : 'Which session should I switch?',
+    reason: 'modality_swap_one_off',
+  };
+}
+
+function targetWorkoutHasModality(
+  input: RouteCoachCommandInput,
+  modality: ConditioningModality,
+): boolean {
+  const target = findTargetVisibleSession(input);
+  return dayHasModality(
+    target ? ({ date: target.date, workout: target.workout } as any) : null,
+    modality,
+  );
+}
+
+function targetWorkoutHasAnyKnownNonBikeModality(
+  input: RouteCoachCommandInput,
+): boolean {
+  return (['row', 'run', 'ski', 'swim', 'mixed'] as ConditioningModality[]).some((modality) =>
+    targetWorkoutHasModality(input, modality),
+  );
+}
+
+function findTargetVisibleSession(
+  input: RouteCoachCommandInput,
+): VisibleSessionRef | null {
+  const targetDate = input.referenceResolution?.target?.date ?? null;
+  const targetSessionName = input.referenceResolution?.target?.sessionName ?? null;
+  const candidates = [
+    ...(input.currentWeek ?? []),
+    input.lastOpenedWorkout ?? null,
+    input.lastExplainedSession ?? null,
+  ].filter((entry): entry is VisibleSessionRef => !!entry?.workout);
+  return (
+    candidates.find((entry) => targetDate && entry.date === targetDate) ??
+    candidates.find((entry) =>
+      !!targetSessionName &&
+      entry.sessionName.toLowerCase() === targetSessionName.toLowerCase(),
+    ) ??
+    null
+  );
+}
+
+function formatTargetForQuestion(res: CoachReferenceResolution | null): string {
+  const target = res?.target;
+  if (!target) return 'that session';
+  const day = (() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(target.date);
+    if (!m) return target.date;
+    return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+      new Date(`${target.date}T12:00:00`).getDay()
+    ] ?? target.date;
+  })();
+  return `${day}'s ${target.sessionName}`;
 }
 
 function isExplainQuestion(message: string): boolean {
@@ -573,9 +785,58 @@ function isPutOnDayMove(message: string): boolean {
   const obj = m[1].trim();
   // Conditioning modality words → handled by add_conditioning, not move.
   if (looksLikeModality(obj)) return false;
+  if (looksLikeConditioningRequest(obj)) return false;
   // Single bare word that's a conditioning verb → also add_conditioning.
   if (/^(bike|row|run|ski|swim|sprint|cardio|aerobic|conditioning)$/i.test(obj)) return false;
   return true;
+}
+
+function extractAddSessionTemplate(input: RouteCoachCommandInput): {
+  sourceDate: string;
+  sourceSessionName: string;
+} | null {
+  const message = input.userMessage ?? '';
+  if (!ADD_VERBS.test(message)) return null;
+  if (looksLikeConditioningRequest(message)) return null;
+
+  const sessions = (input.currentWeek ?? [])
+    .filter((day) => day.workout?.name || day.sessionName)
+    .map((day) => ({
+      date: day.date,
+      sessionName: String(day.workout?.name ?? day.sessionName ?? '').trim(),
+    }))
+    .filter((day) => !!day.sessionName);
+  if (sessions.length === 0) return null;
+
+  const messageKey = normaliseSessionMention(message);
+  const messageCompact = messageKey.replace(/\s+/g, '');
+  for (const session of sessions) {
+    const sessionKey = normaliseSessionMention(session.sessionName);
+    const sessionCompact = sessionKey.replace(/\s+/g, '');
+    if (!sessionKey || sessionKey === 'session' || sessionKey === 'workout') continue;
+    if (
+      messageKey.includes(sessionKey) ||
+      sessionKey.includes(messageKey) ||
+      (sessionCompact.length >= 5 && messageCompact.includes(sessionCompact)) ||
+      (sessionCompact.length >= 5 && sessionCompact.includes(messageCompact))
+    ) {
+      return {
+        sourceDate: session.date,
+        sourceSessionName: session.sessionName,
+      };
+    }
+  }
+  return null;
+}
+
+function normaliseSessionMention(value: string): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/\b(?:can|could|would|you|we|please|actually|add|put|include|schedule|program|slot|work|stick|chuck|throw|in|on|to|onto|for|there|that|this|day|session|workout|the|a|an)\b/g, ' ')
+    .replace(/\b(?:sun(?:day)?|mon(?:day)?|tue(?:s|sday)?|wed(?:nesday|s)?|thu(?:rs(?:day)?|r)?|fri(?:day)?|sat(?:urday)?|today|tomorrow|next|last)\b/g, ' ')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 // ─── Main router ────────────────────────────────────────────────────
@@ -628,16 +889,17 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
   // "Make this week easier" / "I'm cooked" / "I don't like Wednesday"
   // — the athlete hasn't said WHAT to change. Offer 3 concrete levers
   // instead of asking an open prompt.
-  if (any(message, VAGUE_LOAD_REQUEST)) {
+  const hasDominantMutationCue = hasExplicitNonReadinessMutationCue(message);
+  if (any(message, VAGUE_LOAD_REQUEST) && !hasDominantMutationCue) {
     return {
       mode: 'clarify',
-      question: 'Yep — do you want me to reduce gym volume, conditioning, or both?',
-      options: ['Reduce gym volume', 'Reduce conditioning', 'Both'],
+      question: 'Do you want me to make the strength work easier, the conditioning easier, or the whole session?',
+      options: ['Strength work', 'Conditioning', 'Whole session'],
       missingFields: ['load_lever'],
       reason: 'vague_load_request',
     };
   }
-  if (any(message, VAGUE_DISLIKE)) {
+  if (any(message, VAGUE_DISLIKE) && !hasDominantMutationCue) {
     return {
       mode: 'clarify',
       question:
@@ -667,6 +929,143 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
     };
   }
 
+  // ─── 1b. Duration/volume correction to the last add-on ──────────
+  // "Sorry, a bit more than 20 min" after "Done. I added Pilates..."
+  // is not a fresh recovery-program question. It is a correction to the
+  // last verified add_conditioning mutation, so route it back through
+  // the deterministic add/update path.
+  const lastAddDurationEdit = inferLastAddDurationEdit(input);
+  if (
+    lastAddDurationEdit &&
+    input.lastChange?.operation === 'add_conditioning' &&
+    (input.lastChange.target.kind === 'date' || input.lastChange.target.kind === 'exercise')
+  ) {
+    const lastAdd = inferLastAddedConditioningPayload(input);
+    return {
+      mode: 'mutate',
+      operation: 'add_conditioning',
+      target: input.lastChange.target,
+      payload: {
+        operation: 'add_conditioning',
+        modality: lastAdd.modality,
+        customActivity: lastAdd.customActivity,
+        intensity: lastAddDurationEdit.intensity ?? lastAdd.intensity ?? 'light',
+        durationMinutes: lastAddDurationEdit.durationMinutes,
+        sets: lastAddDurationEdit.sets,
+        repsMin: lastAddDurationEdit.repsMin,
+        repsMax: lastAddDurationEdit.repsMax,
+        restSeconds: lastAddDurationEdit.restSeconds,
+        prescriptionType: lastAddDurationEdit.prescriptionType,
+        bikeLabel: lastAdd.bikeLabel,
+        effortKind: lastAdd.effortKind,
+        replaceActivity: lastAdd.customActivity,
+        trainingIntent: lastAddDurationEdit.trainingIntent,
+        editMode: 'update_existing',
+        editScope: 'edit_duration_only',
+      },
+      scope: 'one_off',
+      confidence: 0.9,
+      needsClarification: !!lastAddDurationEdit.needsClarification,
+      clarificationQuestion: lastAddDurationEdit.clarificationQuestion,
+      options: lastAddDurationEdit.options,
+      missingFields: lastAddDurationEdit.missingFields,
+      reason: lastAddDurationEdit.reason,
+    };
+  }
+
+  // ─── 1c. Duration edit for an existing named activity ───────────
+  // "Can you make the Pilates longer?" should bind to the visible
+  // Pilates row, not ask the generic "different exercise/day?" prompt.
+  const namedDurationEdit = inferNamedActivityDurationEdit(input);
+  if (namedDurationEdit) {
+    if (namedDurationEdit.status === 'ambiguous') {
+      return {
+        mode: 'clarify',
+        question: namedDurationEdit.question,
+        options: namedDurationEdit.options,
+        missingFields: ['target_session'],
+        reason: 'named_activity_duration_ambiguous',
+      };
+    }
+    return {
+      mode: 'mutate',
+      operation: 'add_conditioning',
+      target: {
+        kind: 'date',
+        date: namedDurationEdit.date,
+        sessionName: namedDurationEdit.sessionName,
+      },
+      payload: {
+        operation: 'add_conditioning',
+        modality: namedDurationEdit.modality,
+        customActivity: namedDurationEdit.customActivity,
+        intensity: namedDurationEdit.intensity,
+        durationMinutes: namedDurationEdit.durationMinutes,
+        replaceActivity: namedDurationEdit.sourceActivity,
+        editMode: 'update_existing',
+        editScope: 'edit_duration_only',
+      },
+      scope: 'one_off',
+      confidence: namedDurationEdit.matchedExisting ? 0.88 : 0.65,
+      needsClarification: false,
+      reason: 'named_activity_duration_adjustment',
+    };
+  }
+
+  const typeReplacementIntent = extractConditioningTypeReplacementIntent(input);
+  if (typeReplacementIntent) {
+    const payload = buildConditioningPayloadFromRequest({
+      userMessage: message,
+      seed: typeReplacementIntent,
+    });
+    return {
+      mode: 'mutate',
+      operation: 'add_conditioning',
+      target: targetFromResolution(ref),
+      payload,
+      scope: detectScope(message, refDateBeforeToday),
+      confidence: ref?.target ? 0.86 : 0.55,
+      needsClarification: !ref?.target,
+      clarificationQuestion: ref?.target
+        ? undefined
+        : 'Which day should I replace the conditioning on?',
+      reason: 'replace_conditioning_prescription_detected',
+    };
+  }
+
+  const parsedSwap = ADD_VERBS.test(message) ? null : parseModalitySwapRequest(message);
+
+  // ─── 1d. Explicit whole-session modality conversion ─────────────
+  // "Make Wednesday's session a SkiErg" targets the session itself.
+  // That must beat last-mutation follow-up planning, otherwise an old
+  // add-on in mutation history can steal the turn and create "rower +
+  // SkiErg" while the chat claims a swap.
+  if (parsedSwap?.targetedSession) {
+    return buildModalitySwapCommand(input, parsedSwap, refDateBeforeToday);
+  }
+
+  // ─── 1d. CoachPlan follow-up edit ───────────────────────────────
+  // "make them SkiErg" after adding HIIT row intervals is not a fresh
+  // low-load add. It is a modality edit that should preserve the
+  // source activity's training intent and prescription.
+  const coachPlan = buildConditioningCoachPlan({
+    userMessage: message,
+    referenceResolution: ref,
+    lastChange: input.lastChange,
+  });
+  if (coachPlan) {
+    return {
+      mode: 'mutate',
+      operation: 'add_conditioning',
+      target: coachPlan.target,
+      payload: coachPlan.payload,
+      scope: 'one_off',
+      confidence: 0.92,
+      needsClarification: false,
+      reason: coachPlan.reason,
+    };
+  }
+
   // ─── 2. Bike subtype-only correction ─────────────────────────────
   // "I want a regular bike, not an assault bike". Detected via the
   // structured parseBikeSubtypeIntent — covers negation, complaint,
@@ -684,10 +1083,21 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
     bikeIntent.source !== null &&
     bikeIntent.source !== 'token_only_regular' &&
     bikeIntent.source !== 'token_only_assault';
+  const isPositiveBikeSubtype =
+    bikeIntent.source === 'positive_regular' ||
+    bikeIntent.source === 'positive_assault';
+  const targetAlreadyBike = targetWorkoutHasModality(input, 'bike');
+  const targetKnownNonBike = targetWorkoutHasAnyKnownNonBikeModality(input);
+  const isSubtypeCorrection =
+    bikeIntent.source === 'negation_assault' ||
+    bikeIntent.source === 'negation_regular' ||
+    bikeIntent.source === 'complaint_assault' ||
+    targetAlreadyBike ||
+    (isPositiveBikeSubtype && !targetKnownNonBike);
   const hasMutationCue =
     /\b(?:i\s+(?:just\s+)?want|prefer|rather|use|make\s+(?:it|that)|actually)\b/i.test(message) ||
     /\bnot\s+(?:an?\s+)?\w*\s*bike\b/i.test(message);
-  if (bikeLabel && (isExplicitBikeIntent || hasMutationCue)) {
+  if (bikeLabel && !ADD_VERBS.test(message) && isSubtypeCorrection && (isExplicitBikeIntent || hasMutationCue)) {
     // Same-modality bike-label correction: route through the modality
     // preference operation but with from===to===bike. The executor
     // hands this off to orchestrateModalitySwap which already has the
@@ -706,62 +1116,31 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
   }
 
   // ─── 3. Modality swap (single-date or recurring) ────────────────
-  const swap = parseModalitySwapRequest(message);
+  const swap = parsedSwap;
   if (swap) {
-    const scope = detectScope(message, refDateBeforeToday);
+    return buildModalitySwapCommand(input, swap, refDateBeforeToday);
+  }
 
-    // Same-modality (from===to) → label-only preference path
-    if (swap.from && swap.from === swap.to) {
-      return {
-        mode: 'mutate',
-        operation: 'set_bike_subtype_preference',
-        target: targetFromResolution(ref),
-        payload: {
-          operation: 'set_bike_subtype_preference',
-          bikeLabel: swap.bikeLabel ?? 'standard',
-        },
-        scope: 'recurring',
-        confidence: 0.85,
-        needsClarification: !ref?.target,
-        clarificationQuestion: ref?.target ? undefined : 'Which session do you mean?',
-        reason: 'modality_swap_same_label',
-      };
-    }
-
-    if (scope === 'recurring') {
-      return {
-        mode: 'mutate',
-        operation: 'set_conditioning_modality_preference',
-        target: targetFromResolution(ref),
-        payload: {
-          operation: 'set_conditioning_modality_preference',
-          from: swap.from,
-          to: swap.to,
-          bikeLabel: swap.bikeLabel ?? null,
-        },
-        scope: 'recurring',
-        confidence: ref?.target ? 0.9 : 0.55,
-        needsClarification: !ref?.target,
-        clarificationQuestion: ref?.target ? undefined : 'Which session should I switch?',
-        reason: 'modality_swap_recurring',
-      };
-    }
-
+  // ─── 4. Whole-session removal ──────────────────────────────────
+  // Explicit delete/skip/cancel of a day/session beats readiness
+  // context. Specific activity targets ("remove the rower on Wed") keep
+  // routing to remove_conditioning below.
+  if (isWholeSessionRemoveRequest(message)) {
     return {
       mode: 'mutate',
-      operation: 'swap_conditioning_modality_once',
+      operation: 'remove_session',
       target: targetFromResolution(ref),
       payload: {
-        operation: 'swap_conditioning_modality_once',
-        from: swap.from,
-        to: swap.to,
-        bikeLabel: swap.bikeLabel ?? null,
+        operation: 'remove_session',
+        targetSessionId: ref?.target?.sessionName ?? null,
+        reason: fatigueReasonFromMessage(message),
       },
-      scope: 'one_off',
-      confidence: ref?.target ? 0.9 : 0.55,
+      scope: detectScope(message, refDateBeforeToday),
+      confidence: ref?.target ? 0.86 : 0.5,
       needsClarification: !ref?.target,
-      clarificationQuestion: ref?.target ? undefined : 'Which session should I switch?',
-      reason: 'modality_swap_one_off',
+      clarificationQuestion: ref?.target ? undefined : 'Which session should I remove?',
+      missingFields: ref?.target ? undefined : ['target_session'],
+      reason: 'remove_session_detected',
     };
   }
 
@@ -921,13 +1300,64 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
     };
   }
 
+  // ─── 4c. Add/copy an existing session onto a target day ─────────
+  // "Add Gunshow to that Wednesday" is a session-level add, not
+  // add_conditioning and not edit_item. We only bind when the requested
+  // session name matches a visible session template; the executor owns
+  // the Rest-target verification before writing.
+  const addSessionTemplate = extractAddSessionTemplate(input);
+  if (addSessionTemplate) {
+    return {
+      mode: 'mutate',
+      operation: 'add_session',
+      target: targetFromResolution(ref),
+      payload: {
+        operation: 'add_session',
+        sourceDate: addSessionTemplate.sourceDate,
+        sourceSessionName: addSessionTemplate.sourceSessionName,
+        targetSessionName: addSessionTemplate.sourceSessionName,
+      },
+      scope: 'one_off',
+      confidence: ref?.target ? 0.82 : 0.5,
+      needsClarification: !ref?.target,
+      clarificationQuestion: ref?.target
+        ? undefined
+        : 'Which day should I add that session to?',
+      missingFields: ref?.target ? undefined : ['target_session'],
+      reason: 'add_session_detected',
+    };
+  }
+
   // ─── 5. Add conditioning ────────────────────────────────────────
-  if (ADD_VERBS.test(message) && /\b(?:bike|row|rower|run|ski|swim|cardio|conditioning|aerobic|sprint)\b/i.test(message)) {
+  const replacementAddIntent = extractConditioningReplacementIntent(message);
+  if (replacementAddIntent) {
+    const payload = buildConditioningPayloadFromRequest({
+      userMessage: message,
+      seed: replacementAddIntent,
+    });
     return {
       mode: 'mutate',
       operation: 'add_conditioning',
       target: targetFromResolution(ref),
-      payload: { operation: 'add_conditioning', modality: detectModality(message) },
+      payload,
+      scope: detectScope(message, refDateBeforeToday),
+      confidence: ref?.target ? 0.82 : 0.55,
+      needsClarification: !ref?.target,
+      clarificationQuestion: ref?.target ? undefined : 'Which day should I make that replacement on?',
+      reason: 'replace_conditioning_activity_detected',
+    };
+  }
+  const addIntent = extractAddConditioningIntent(message);
+  if (addIntent) {
+    const payload = buildConditioningPayloadFromRequest({
+      userMessage: message,
+      seed: addIntent,
+    });
+    return {
+      mode: 'mutate',
+      operation: 'add_conditioning',
+      target: targetFromResolution(ref),
+      payload,
       scope: detectScope(message, refDateBeforeToday),
       confidence: ref?.target ? 0.7 : 0.45,
       needsClarification: !ref?.target,
@@ -935,9 +1365,23 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
       reason: 'add_conditioning_detected',
     };
   }
+  if (ADD_VERBS.test(message)) {
+    const hasTarget = !!ref?.target;
+    return {
+      mode: 'clarify',
+      question: hasTarget
+        ? `What should I add to ${formatTargetForQuestion(ref)} — light bike, light walk, mobility, or pilates?`
+        : 'What should I add, and which day should it go on? For example: light bike on Friday, mobility today, or pilates tomorrow.',
+      options: ['Light bike', 'Light walk', 'Mobility', 'Pilates'],
+      missingFields: hasTarget ? ['activity'] : ['target_session', 'activity'],
+      reason: hasTarget
+        ? 'add_conditioning_missing_activity'
+        : 'add_conditioning_missing_target_and_activity',
+    };
+  }
 
   // ─── 6. Remove conditioning ─────────────────────────────────────
-  if (REMOVE_VERBS.test(message) && /\b(?:bike|row|rower|run|ski|swim|cardio|conditioning|aerobic|sprint|session|workout)\b/i.test(message)) {
+  if (REMOVE_VERBS.test(message) && looksLikeConditioningRequest(message)) {
     return {
       mode: 'mutate',
       operation: 'remove_conditioning',
@@ -956,7 +1400,13 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
   // exercise tokens are NOT conditioning modality words.
   const replaceMatch =
     /\b(?:swap|replace|substitut\w*|change)\s+(?:the\s+)?([a-z][a-z\s-]+?)\s+(?:for|with|to)\s+(?:a\s+|an\s+)?([a-z][a-z\s-]+)/i.exec(message);
-  if (replaceMatch && !looksLikeModality(replaceMatch[1]) && !looksLikeModality(replaceMatch[2])) {
+  if (
+    replaceMatch &&
+    !looksLikeModality(replaceMatch[1]) &&
+    !looksLikeModality(replaceMatch[2]) &&
+    !looksLikeSessionTargetLabel(replaceMatch[1]) &&
+    !containsConditioningModalityPhrase(replaceMatch[2])
+  ) {
     return {
       mode: 'mutate',
       operation: 'replace_exercise',
@@ -1117,16 +1567,1057 @@ function extractSessionLabelFromMessage(message: string): string | null {
 
 function looksLikeModality(word: string): boolean {
   const w = word.toLowerCase().trim();
-  return /^(bike|row|rower|rowing|run|running|ski|skierg|swim|swimming|sprint|cardio|conditioning|aerobic)$/.test(w);
+  return /^(bike|row|rower|rowing|run|running|jog|jogging|ski|skierg|swim|swimming|sprint|cardio|conditioning|aerobic|walk|walking)$/.test(w);
 }
 
-function detectModality(message: string): ConditioningModality | null {
+function hasExplicitNonReadinessMutationCue(message: string): boolean {
+  if (!message) return false;
+  if (REMOVE_VERBS.test(message)) {
+    return (
+      isWholeSessionRemoveRequest(message) ||
+      looksLikeConditioningRequest(message) ||
+      /\b(?:exercise|block|item|session|workout|day|today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(message)
+    );
+  }
+  if (MOVE_VERBS.test(message)) return true;
+  if (ADD_VERBS.test(message)) return true;
+  if (/\b(?:replace|swap|substitut\w*)\b/i.test(message)) return true;
+  if (/\b(?:change|make|set)\b/i.test(message)) {
+    if (/\b(?:easier|lighter|lower[-\s]*load|reduce|deload|back\s+off)\b/i.test(message)) {
+      return false;
+    }
+    return /\b(?:to|into|instead|recovery|rest|bike|rower?|ski\s*erg|skierg|run|sprints?|conditioning|cardio|pilates|yoga|mobility|flush|aerobic)\b/i.test(message);
+  }
+  return false;
+}
+
+function looksLikeConditioningRequest(message: string): boolean {
+  if (!message) return false;
+  // "Farmer's walks" and "walking lunges" are strength/carry exercises,
+  // not the easy recovery walk athletes usually mean in chat.
+  if (/\b(?:farmer'?s?|farmers)\s+walks?\b/i.test(message)) return false;
+  if (/\bwalking\s+lunges?\b/i.test(message)) return false;
+  return /\b(?:bike|row|rower|rowing|run|running|jog|jogging|ski|skierg|swim|swimming|cardio|conditioning|aerobic|sprints?|walks?|walking|recovery|flush|pilates|yoga|mobility|stretch(?:ing)?|foam\s*roll(?:ing)?|prehab|activation|breath(?:ing)?|core)\b/i.test(message);
+}
+
+function detectModality(message: string): ConditioningIntentModality | null {
   if (/\bbike|cycling|spin\b/i.test(message)) return 'bike';
   if (/\brow|rower|rowing\b/i.test(message)) return 'row';
   if (/\bski|skierg\b/i.test(message)) return 'ski';
-  if (/\brun|running|jog\b/i.test(message)) return 'run';
+  if (/\bsprint\w*\b/i.test(message)) return 'sprint';
+  if (/\brun|running|jog|jogging\b/i.test(message)) return 'run';
   if (/\bswim\b/i.test(message)) return 'swim';
+  if (/\b(?:walks?|walking)\b/i.test(message) && looksLikeConditioningRequest(message)) return 'walk';
+  if (/\bcardio\b/i.test(message)) return 'cardio';
+  if (/\baerobic|recovery|flush\b/i.test(message)) return 'aerobic';
   return null;
+}
+
+function isWholeSessionRemoveRequest(message: string): boolean {
+  if (!REMOVE_VERBS.test(message)) return false;
+  if (hasSpecificConditioningRemovalTarget(message)) return false;
+  return hasWholeSessionRemovalLanguage(message) || hasDayReference(message);
+}
+
+function hasSpecificConditioningRemovalTarget(message: string): boolean {
+  if (/\b(?:conditioning|cardio|aerobic|flush|bike|rower?|rowing|ski\s*erg|skierg|run|running|sprints?|walks?|walking|pilates|yoga|mobility|stretch(?:ing)?|core)\b/i.test(message)) {
+    return !hasWholeSessionRemovalLanguage(message);
+  }
+  return /\b(?:block|item|exercise|efforts?|reps?|sets?|between\s+reps|recovery\s+between)\b/i.test(message);
+}
+
+function hasWholeSessionRemovalLanguage(message: string): boolean {
+  return (
+    /\b(?:whole|entire|full)\s+(?:session|workout|day|thing)\b/i.test(message) ||
+    /\b(?:session|workout|day)\s+fully\b/i.test(message) ||
+    /\bfully\s+(?:remove|drop|ditch|scrap|skip|cancel|cut|delete)\b/i.test(message) ||
+    /\b(?:remove|drop|ditch|scrap|skip|cancel|cut|delete)\b[^.?!,;]*\b(?:session|workout|day)\b/i.test(message) ||
+    /\b(?:that|this|the)\s+(?:session|workout)\b/i.test(message)
+  );
+}
+
+function hasDayReference(message: string): boolean {
+  return extractDow(message) !== null || /\b(?:today|tomorrow)\b/i.test(message);
+}
+
+function fatigueReasonFromMessage(message: string): string | undefined {
+  return any(message, VAGUE_LOAD_REQUEST) ? 'fatigue/readiness context' : undefined;
+}
+
+export interface AddConditioningIntent {
+  modality: ConditioningIntentModality | null;
+  customActivity?: string;
+  intensity?: AddConditioningIntensity;
+  durationMinutes?: number;
+  sets?: number;
+  repsMin?: number;
+  repsMax?: number;
+  restSeconds?: number;
+  prescriptionType?: 'duration' | 'duration_minutes';
+  bikeLabel?: BikeLabel | null;
+  effortKind?: 'sprint' | 'interval';
+  replaceActivity?: string;
+  trainingIntent?: CoachTrainingIntent;
+  changeKind?: CoachPlanChangeKind;
+  editMode?: CoachConditioningEditMode;
+  editScope?: CoachConditioningEditScope;
+}
+
+const LOW_LOAD_CUSTOM_ACTIVITIES: Array<{ re: RegExp; label: string }> = [
+  { re: /\bpilates\b/i, label: 'Pilates' },
+  { re: /\byoga\b/i, label: 'Yoga' },
+  { re: /\bmobility\b/i, label: 'Mobility' },
+  { re: /\bstretch(?:ing)?\b/i, label: 'Stretching' },
+  { re: /\bfoam\s*roll(?:ing)?\b/i, label: 'Foam Rolling' },
+  { re: /\bprehab\b/i, label: 'Prehab' },
+  { re: /\bactivation\b/i, label: 'Activation' },
+  { re: /\bbreath(?:ing)?\b/i, label: 'Breathing' },
+  { re: /\bcore\b/i, label: 'Core' },
+];
+
+export function extractAddConditioningIntent(
+  message: string,
+  opts?: { requireAddVerb?: boolean },
+): AddConditioningIntent | null {
+  const requireAddVerb = opts?.requireAddVerb ?? true;
+  if (requireAddVerb && !ADD_VERBS.test(message)) return null;
+  if (!looksLikeConditioningRequest(message)) return null;
+
+  const modality = detectModality(message);
+  const intensity = detectIntensity(message);
+  const durationMinutes = detectDurationMinutes(message);
+  const bikeLabel = modality === 'bike' || /\bbike\b/i.test(message)
+    ? parseBikeSubtypeIntent(message).desiredLabel
+    : null;
+  const effortKind = detectEffortKind(message);
+  const trainingIntent = detectRequestedTrainingIntent(message);
+  const customActivity =
+    detectCustomActivity(message, modality, intensity) ??
+    detectSprintBikeActivity(modality, bikeLabel, effortKind);
+
+  return {
+    modality,
+    customActivity,
+    intensity,
+    durationMinutes,
+    bikeLabel,
+    effortKind,
+    trainingIntent,
+  };
+}
+
+function extractConditioningReplacementIntent(message: string): AddConditioningIntent | null {
+  const parsed = parseConditioningReplacementPhrase(message);
+  if (!parsed) return null;
+
+  const newPhrase = parsed.toActivity;
+  if (!looksLikeConditioningRequest(newPhrase)) return null;
+  const modality = detectModality(newPhrase);
+  const intensity = detectIntensity(newPhrase) ?? detectIntensity(message);
+  const durationMinutes = detectDurationMinutes(newPhrase) ?? detectDurationMinutes(message);
+  const bikeLabel = modality === 'bike' || /\bbike\b/i.test(newPhrase)
+    ? parseBikeSubtypeIntent(newPhrase).desiredLabel
+    : null;
+  const effortKind = detectEffortKind(newPhrase) ?? detectEffortKind(message);
+  const trainingIntent = detectRequestedTrainingIntent(newPhrase) ?? detectRequestedTrainingIntent(message);
+  const customActivity =
+    detectCustomActivity(newPhrase, modality, intensity) ??
+    detectSprintBikeActivity(modality, bikeLabel, effortKind);
+
+  return {
+    modality,
+    customActivity,
+    intensity,
+    durationMinutes,
+    bikeLabel,
+    effortKind,
+    replaceActivity: parsed.fromActivity,
+    trainingIntent,
+    editMode: 'update_existing',
+    editScope: trainingIntent
+      ? 'replace_conditioning_prescription'
+      : 'edit_modality_only',
+  };
+}
+
+function extractConditioningTypeReplacementIntent(
+  input: RouteCoachCommandInput,
+): AddConditioningIntent | null {
+  const message = input.userMessage ?? '';
+  const trainingIntent = detectRequestedTrainingIntent(message);
+  if (!trainingIntent) return null;
+  if (isExplainQuestion(message) || isInspectQuery(message)) return null;
+  if (!looksLikeConditioningRequest(message)) return null;
+
+  const hasAddVerb = ADD_VERBS.test(message);
+  const hasReplacementCue =
+    /\b(?:instead|rather|replace|swap|change|make|actually|set|turn|convert)\b/i.test(message);
+  const clearAppend =
+    hasAddVerb &&
+    (!hasReplacementCue || /\b(?:after|extra|on\s+top|alongside|as\s+well)\b/i.test(message));
+  if (clearAppend) return null;
+
+  const hasExistingEditCue =
+    /\b(?:make|change|swap|replace|instead|rather|actually|set|turn|convert)\b/i.test(message) ||
+    /\b(?:it|that|this|them|session|workout)\b/i.test(message) ||
+    !!input.referenceResolution?.target;
+  if (!hasExistingEditCue) return null;
+
+  const visibleSeed = inferVisibleConditioningSeed(input);
+  const requestedModality = detectModality(message);
+  const modality =
+    requestedModality === 'sprint'
+      ? visibleSeed.modality
+      : requestedModality ?? visibleSeed.modality;
+  const intensity =
+    detectIntensity(message) ??
+    (trainingIntent === 'tempo' ? 'moderate' : trainingIntent === 'aerobic' || trainingIntent === 'low_load' ? 'light' : 'hard');
+  const bikeLabel =
+    modality === 'bike' || /\bbike\b/i.test(message)
+      ? parseBikeSubtypeIntent(message).desiredLabel ?? visibleSeed.bikeLabel
+      : null;
+  const effortKind =
+    detectEffortKind(message) ??
+    (trainingIntent === 'sprint'
+      ? 'sprint'
+      : trainingIntent === 'hiit' || trainingIntent === 'tempo'
+      ? 'interval'
+      : undefined);
+  const customActivity =
+    detectSprintBikeActivity(modality, bikeLabel, effortKind) ??
+    detectCustomActivity(message, modality, intensity);
+
+  return {
+    modality,
+    customActivity,
+    intensity,
+    durationMinutes: detectDurationMinutes(message),
+    bikeLabel,
+    effortKind,
+    replaceActivity: visibleSeed.title,
+    trainingIntent,
+    editMode: 'update_existing',
+    editScope: 'replace_conditioning_prescription',
+  };
+}
+
+function inferVisibleConditioningSeed(input: RouteCoachCommandInput): {
+  title?: string;
+  modality: ConditioningIntentModality | null;
+  bikeLabel: BikeLabel | null;
+} {
+  const target = findTargetVisibleSession(input);
+  const workout = target?.workout;
+  if (!workout) return { modality: null, bikeLabel: null };
+  const options = workout.conditioningBlock?.options ?? [];
+  const exercises = workout.exercises ?? [];
+  const firstOption = options[0];
+  const linkedExercises = firstOption
+    ? exercises.filter((ex) => (firstOption.exerciseIds ?? []).includes(String(ex.id ?? '')))
+    : [];
+  const firstExercise = linkedExercises[0] ?? exercises[0];
+  const title =
+    String(firstOption?.title ?? '').trim() ||
+    String(firstExercise?.exercise?.name ?? '').trim() ||
+    String(workout.name ?? '').trim() ||
+    undefined;
+  const haystack = [
+    workout.name ?? '',
+    (workout as any).description ?? '',
+    firstOption?.title ?? '',
+    firstOption?.description ?? '',
+    firstExercise?.exercise?.name ?? '',
+    firstExercise?.exercise?.description ?? '',
+    firstExercise?.notes ?? '',
+  ].join(' ');
+  const modality = detectModality(haystack);
+  const bikeLabel =
+    modality === 'bike'
+      ? parseBikeSubtypeIntent(haystack).desiredLabel
+      : null;
+  return { title, modality, bikeLabel };
+}
+
+function parseConditioningReplacementPhrase(
+  message: string,
+): { fromActivity: string; toActivity: string } | null {
+  const cleaned = message.trim();
+  const newInsteadOfOld =
+    /\b(?:actually\s+)?(?:i\s+)?(?:want|need|prefer|would\s+rather|use|do|make(?:\s+it)?|change(?:\s+it)?(?:\s+to)?|swap(?:\s+it)?(?:\s+to)?|replace(?:\s+it)?(?:\s+with)?)\s+(?:(?:some|a|an|the)\s+)?([^?.!,]+?)\s+(?:instead\s+of|rather\s+than)\s+(?:the\s+)?([^?.!,]+?)(?:\s+(?:today|tomorrow|this\s+week|on\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)))?\s*$/i.exec(cleaned);
+  if (newInsteadOfOld) {
+    return buildReplacementPhraseResult(newInsteadOfOld[2], newInsteadOfOld[1]);
+  }
+
+  const oldWithNew =
+    /\b(?:replace|swap|change)\s+(?:the\s+)?([^?.!,]+?)\s+(?:with|for|to)\s+(?:(?:some|a|an|the)\s+)?([^?.!,]+?)(?:\s+(?:today|tomorrow|this\s+week|on\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)))?\s*$/i.exec(cleaned);
+  if (oldWithNew) {
+    return buildReplacementPhraseResult(oldWithNew[1], oldWithNew[2]);
+  }
+
+  return null;
+}
+
+function buildReplacementPhraseResult(
+  fromRaw: string,
+  toRaw: string,
+): { fromActivity: string; toActivity: string } | null {
+  const fromActivity = cleanReplacementActivityPhrase(fromRaw, { preserveIntensity: false });
+  const toActivity = cleanReplacementActivityPhrase(toRaw, { preserveIntensity: true });
+  if (!fromActivity || !toActivity) return null;
+  if (/^(it|this|that|one|session|workout)$/i.test(fromActivity)) return null;
+  if (/^(it|this|that|one|session|workout)$/i.test(toActivity)) return null;
+  if (isDayOrDateLabel(fromActivity)) return null;
+  return { fromActivity, toActivity };
+}
+
+function isDayOrDateLabel(value: string): boolean {
+  const normalised = value.trim().toLowerCase();
+  return (
+    /^(today|tomorrow|monday|mon|tuesday|tue|wednesday|wed|thursday|thu|thurs|friday|fri|saturday|sat|sunday|sun)$/.test(normalised) ||
+    /^\d{4}-\d{2}-\d{2}$/.test(normalised)
+  );
+}
+
+function looksLikeSessionTargetLabel(value: string): boolean {
+  const normalised = value
+    .trim()
+    .toLowerCase()
+    .replace(/'s\b/g, '')
+    .replace(/\b(?:the|this|that)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (isDayOrDateLabel(normalised)) return true;
+  return (
+    /^(?:session|workout|day|conditioning|cardio|aerobic flush|flush)$/.test(normalised) ||
+    /^(?:monday|mon|tuesday|tue|wednesday|wed|thursday|thu|thurs|friday|fri|saturday|sat|sunday|sun|today|tomorrow)\s+(?:session|workout|day|conditioning|cardio|aerobic flush|flush)$/.test(normalised)
+  );
+}
+
+function containsConditioningModalityPhrase(value: string): boolean {
+  return /\b(?:assault\s+bike|air\s+bike|stationary\s+bike|regular\s+bike|normal\s+bike|ski\s*erg|skierg|rower|rowing|row|bike|cycling|run|running|swim|swimming|ski)\b/i.test(value);
+}
+
+function cleanReplacementActivityPhrase(
+  raw: string,
+  opts: { preserveIntensity: boolean },
+): string | null {
+  let value = raw
+    .replace(/\b(?:please|actually|instead|rather)\b/gi, ' ')
+    .replace(/\b(?:today|tomorrow|this\s+week|next\s+week)\b/gi, ' ')
+    .replace(/\bon\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, ' ')
+    .replace(/\b(?:session|workout|block|conditioning|cardio|aerobic)\b/gi, ' ')
+    .replace(/\b(?:some|a|an|the)\b/gi, ' ');
+  if (!opts.preserveIntensity) {
+    value = value.replace(/\b(?:light|easy|gentle|recovery|flush|hard|heavy|moderate|steady|tempo)\b/gi, ' ');
+  }
+  value = value
+    .replace(/\b\d{1,3}\s*(?:min|mins|minute|minutes)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!value || value.length > 48) return null;
+  return value;
+}
+
+function detectIntensity(message: string): AddConditioningIntensity | undefined {
+  if (/\b(?:light|easy|gentle|recovery|flush|low[-\s]*load|low[-\s]*impact|zone\s*2|z2|conversational)\b/i.test(message)) {
+    return 'light';
+  }
+  if (/\b(?:hard|heavy|intense|high[-\s]*intensity|hiit|max|near[-\s]*max|sprint|all[-\s]*out)\b/i.test(message)) {
+    return 'hard';
+  }
+  if (/\b(?:moderate|steady|tempo)\b/i.test(message)) {
+    return 'moderate';
+  }
+  return undefined;
+}
+
+function detectEffortKind(message: string): 'sprint' | 'interval' | undefined {
+  if (/\b(?:sprints?|sprint\s+efforts?|hill\s+sprints?|max\s+efforts?|all[-\s]*out|near[-\s]*max|peak\s+power)\b/i.test(message)) {
+    return 'sprint';
+  }
+  if (/\b(?:intervals?|efforts?|repeats?)\b/i.test(message)) {
+    return 'interval';
+  }
+  return undefined;
+}
+
+function detectSprintBikeActivity(
+  modality: ConditioningIntentModality | null,
+  bikeLabel: BikeLabel | null | undefined,
+  effortKind: 'sprint' | 'interval' | undefined,
+): string | undefined {
+  if (modality !== 'bike' || effortKind !== 'sprint') return undefined;
+  return bikeLabel === 'assault' ? 'Assault Bike Sprints' : 'Bike Sprints';
+}
+
+function detectDurationMinutes(message: string): number | undefined {
+  return parseCoachDurationMinutes(message) ?? undefined;
+}
+
+function detectDurationSeconds(message: string): number | undefined {
+  const match = /\b(\d{1,3})\s*(?:sec|secs|second|seconds)\b/i.exec(message);
+  if (!match) return undefined;
+  const value = Number(match[1]);
+  if (!Number.isFinite(value) || value < 5 || value > 120) return undefined;
+  return value;
+}
+
+function inferFollowUpDurationMinutes(message: string): number | null {
+  const exact = detectDurationMinutes(message);
+  const moreThan = /\b(?:a\s+)?(?:bit|little|touch)?\s*(?:more|longer|over|above)\s+than\s+(\d{1,3})\s*(?:min|mins|minute|minutes)?\b/i.exec(message);
+  if (moreThan) {
+    const base = Number(moreThan[1]);
+    if (!Number.isFinite(base) || base < 1 || base >= 180) return null;
+    return Math.min(180, base + 5);
+  }
+  const over = /\b(?:over|above)\s+(\d{1,3})\s*(?:min|mins|minute|minutes)\b/i.exec(message);
+  if (over) {
+    const base = Number(over[1]);
+    if (!Number.isFinite(base) || base < 1 || base >= 180) return null;
+    return Math.min(180, base + 5);
+  }
+  if (exact != null && /\b(?:make|set|change|adjust|to|for|duration|time|mins?|minutes?)\b/i.test(message)) {
+    return exact;
+  }
+  if (/\b(?:a\s+)?(?:bit|little|touch)\s+(?:more|longer)\b/i.test(message)) {
+    return 25;
+  }
+  return null;
+}
+
+interface LastAddDurationEdit {
+  durationMinutes?: number;
+  sets?: number;
+  repsMin?: number;
+  repsMax?: number;
+  restSeconds?: number;
+  prescriptionType?: 'duration' | 'duration_minutes';
+  intensity?: AddConditioningIntensity;
+  trainingIntent?: CoachTrainingIntent;
+  needsClarification?: boolean;
+  clarificationQuestion?: string;
+  options?: string[];
+  missingFields?: string[];
+  reason: string;
+}
+
+function inferLastAddDurationEdit(input: RouteCoachCommandInput): LastAddDurationEdit | null {
+  const message = input.userMessage ?? '';
+  const hasDurationEditCue =
+    detectDurationMinutes(message) != null ||
+    detectDurationSeconds(message) != null ||
+    /\b(?:longer|more|increase|extend|lengthen|shorter|less|reduce|trim|duration|time)\b/i.test(message);
+  if (!hasDurationEditCue) return null;
+
+  const lastChange = input.lastChange;
+  if (
+    lastChange?.operation !== 'add_conditioning' ||
+    (lastChange.target.kind !== 'date' && lastChange.target.kind !== 'exercise')
+  ) {
+    return null;
+  }
+
+  const lastAdd = inferLastAddedConditioningPayload(input);
+  const primaryActivity = getLastTouchedConditioningActivity(input.lastChange);
+  const targetDate = lastChange.target.kind === 'date' ? lastChange.target.date : lastChange.target.date;
+  const visibleMatch = findVisibleActivityMatches({
+    currentWeek: input.currentWeek ?? [],
+    customActivity: lastAdd.customActivity,
+    modality: lastAdd.modality,
+  }).find((m) => m.date === targetDate);
+
+  const isSprint =
+    lastAdd.effortKind === 'sprint' ||
+    primaryActivity?.effortKind === 'sprint' ||
+    visibleMatch?.prescriptionType === 'duration' ||
+    /\bsprints?\b/i.test(lastAdd.customActivity ?? '');
+
+  const exactMinutes = inferFollowUpDurationMinutes(message);
+  if (exactMinutes != null && !isSprint) {
+    return {
+      durationMinutes: exactMinutes,
+      reason: 'last_add_duration_correction',
+    };
+  }
+
+  if (isSprint) {
+    const exactSeconds = detectDurationSeconds(message);
+    const currentMin = visibleMatch?.repsMin ?? primaryActivity?.repsMin ?? 20;
+    const currentMax = visibleMatch?.repsMax ?? primaryActivity?.repsMax ?? 30;
+    const currentSets = visibleMatch?.sets ?? primaryActivity?.sets ?? 6;
+    if (exactSeconds != null) {
+      return {
+        sets: currentSets,
+        repsMin: exactSeconds,
+        repsMax: exactSeconds,
+        reason: 'last_add_sprint_duration_correction',
+      };
+    }
+    if (exactMinutes != null) {
+      const label = lastAdd.customActivity ?? primaryActivity?.title ?? 'sprint work';
+      const intensity = detectIntensity(message);
+      return {
+        durationMinutes: exactMinutes,
+        intensity,
+        trainingIntent:
+          detectRequestedTrainingIntent(message) ??
+          (intensity === 'light' ? 'low_load' : undefined),
+        prescriptionType: 'duration_minutes',
+        needsClarification: true,
+        clarificationQuestion:
+          `Do you mean ${exactMinutes} minutes for the whole ${label} session, ` +
+          'or do you want to change the sprint efforts or recovery between reps?',
+        options: [
+          `${exactMinutes}-minute total session`,
+          'Sprint effort length',
+          'Recovery between reps',
+        ],
+        missingFields: ['duration_scope'],
+        reason: 'last_add_sprint_minute_duration_ambiguous',
+      };
+    }
+    if (/\b(?:shorter|less|reduce|trim)\b/i.test(message)) {
+      const nextMax = Math.max(10, currentMax - 10);
+      const nextMin = Math.max(10, Math.min(currentMin - 5, nextMax));
+      return {
+        sets: currentSets,
+        repsMin: nextMin,
+        repsMax: nextMax,
+        reason: 'last_add_sprint_duration_correction',
+      };
+    }
+    if (/\b(?:longer|more|increase|extend|lengthen)\b/i.test(message)) {
+      const nextMin = Math.min(60, currentMin + 5);
+      const nextMax = Math.min(60, Math.max(currentMax + 10, nextMin));
+      return {
+        sets: currentSets,
+        repsMin: nextMin,
+        repsMax: nextMax,
+        reason: 'last_add_sprint_duration_correction',
+      };
+    }
+  }
+
+  if (exactMinutes != null) {
+    return {
+      durationMinutes: exactMinutes,
+      reason: 'last_add_duration_correction',
+    };
+  }
+
+  const currentMinutes = visibleMatch?.durationMinutes ?? primaryActivity?.durationMinutes;
+  const base =
+    Number.isFinite(currentMinutes) && currentMinutes && currentMinutes > 0
+      ? currentMinutes
+      : 20;
+  if (/\b(?:longer|more|increase|extend|lengthen)\b/i.test(message)) {
+    return {
+      durationMinutes: Math.min(180, base + 5),
+      reason: 'last_add_duration_correction',
+    };
+  }
+  if (/\b(?:shorter|less|reduce|trim)\b/i.test(message)) {
+    return {
+      durationMinutes: Math.max(5, base - 5),
+      reason: 'last_add_duration_correction',
+    };
+  }
+  return null;
+}
+
+function inferLastAddedConditioningPayload(
+  input: RouteCoachCommandInput,
+): Pick<AddConditioningIntent, 'modality' | 'customActivity' | 'intensity' | 'bikeLabel' | 'effortKind'> {
+  const primaryActivity = getLastTouchedConditioningActivity(input.lastChange);
+  const sourceText = [
+    input.lastChange?.userMessage ?? '',
+    input.lastChange?.appliedReply ?? '',
+    ...(input.recentMessages ?? []).slice(-4).map((m) => m.content),
+  ].join(' ');
+  const fromAddIntent = extractAddConditioningIntent(input.lastChange?.userMessage ?? '');
+  const customActivity =
+    primaryActivity?.title ??
+    fromAddIntent?.customActivity ??
+    detectCustomActivity(sourceText, fromAddIntent?.modality ?? null, fromAddIntent?.intensity) ??
+    extractAddedActivityFromReply(input.lastChange?.appliedReply ?? '') ??
+    undefined;
+  const modality =
+    (primaryActivity?.modality as ConditioningIntentModality | null | undefined) ??
+    fromAddIntent?.modality ??
+    detectModality(sourceText);
+  const intensity =
+    (primaryActivity?.intensity as AddConditioningIntensity | undefined) ??
+    fromAddIntent?.intensity ??
+    detectIntensity(sourceText) ??
+    'light';
+  const bikeLabel = (primaryActivity?.bikeLabel as BikeLabel | null | undefined) ?? fromAddIntent?.bikeLabel ?? (
+    modality === 'bike' || /\bbike\b/i.test(sourceText)
+      ? parseBikeSubtypeIntent(sourceText).desiredLabel
+      : null
+  );
+  const effortKind =
+    (primaryActivity?.effortKind as 'sprint' | 'interval' | undefined) ??
+    fromAddIntent?.effortKind ??
+    detectEffortKind(sourceText);
+  return {
+    modality,
+    customActivity,
+    intensity,
+    bikeLabel,
+    effortKind,
+  };
+}
+
+function getLastTouchedConditioningActivity(
+  lastChange: RouteCoachCommandInput['lastChange'],
+): MutationTouchedActivity | undefined {
+  return lastChange?.touchedActivities?.find((activity) => activity.kind === 'conditioning');
+}
+
+type NamedActivityDurationEdit =
+  | {
+      status: 'resolved';
+      date: string;
+      sessionName?: string;
+      customActivity?: string;
+      modality: ConditioningIntentModality | null;
+      intensity: AddConditioningIntensity;
+      durationMinutes: number;
+      matchedExisting: boolean;
+      sourceActivity?: string;
+    }
+  | {
+      status: 'ambiguous';
+      question: string;
+      options?: string[];
+    };
+
+interface VisibleActivityMatch {
+  date: string;
+  sessionName?: string;
+  title: string;
+  durationMinutes?: number;
+  sets?: number;
+  repsMin?: number;
+  repsMax?: number;
+  prescriptionType?: string;
+}
+
+function inferNamedActivityDurationEdit(
+  input: RouteCoachCommandInput,
+): NamedActivityDurationEdit | null {
+  const message = input.userMessage ?? '';
+  const hasDurationEditCue =
+    detectDurationMinutes(message) != null ||
+    /\b(?:longer|more|increase|extend|lengthen|shorter|less|reduce|trim|duration|time)\b/i.test(message);
+  if (!hasDurationEditCue) return null;
+
+  const modality = detectModality(message);
+  const intensity = detectIntensity(message) ?? 'light';
+  const customActivity = detectCustomActivity(message, modality, intensity);
+  if (!customActivity && !modality) return null;
+
+  const matches = findVisibleActivityMatches({
+    currentWeek: input.currentWeek ?? [],
+    customActivity,
+    modality,
+  });
+  const refDate = input.referenceResolution?.target?.date ?? null;
+  const refMatch = refDate ? matches.find((m) => m.date === refDate) : undefined;
+  const todayMatch = matches.find((m) => m.date === input.todayISO);
+  const chosen =
+    refMatch ??
+    (matches.length === 1 ? matches[0] : undefined) ??
+    (matches.length > 1 ? todayMatch : undefined);
+
+  if (matches.length > 1 && !chosen) {
+    const label = customActivity ?? humanConditioningLabel(modality ?? 'conditioning');
+    return {
+      status: 'ambiguous',
+      question: `I found more than one ${label} option this week. Which day should I make longer?`,
+      options: matches.map((m) => `${shortDay(m.date)} ${m.date}`),
+    };
+  }
+
+  const fallbackDate = refDate;
+  const targetDate = chosen?.date ?? fallbackDate;
+  if (!targetDate) {
+    const label = customActivity ?? humanConditioningLabel(modality ?? 'conditioning');
+    return {
+      status: 'ambiguous',
+      question: `I can't find ${label} in this week's program. Which day should I change?`,
+      options: visibleWorkoutOptions(input.currentWeek ?? []),
+    };
+  }
+
+  const durationMinutes = inferDurationMinutesFromDurationEdit(
+    message,
+    chosen?.durationMinutes,
+  );
+  if (durationMinutes == null) return null;
+
+  return {
+    status: 'resolved',
+    date: targetDate,
+    sessionName: chosen?.sessionName ?? input.referenceResolution?.target?.sessionName,
+    customActivity: customActivity ?? chosen?.title,
+    modality,
+    intensity,
+    durationMinutes,
+    matchedExisting: !!chosen,
+    sourceActivity: chosen?.title,
+  };
+}
+
+function inferDurationMinutesFromDurationEdit(
+  message: string,
+  currentMinutes?: number,
+): number | null {
+  const hasExplicitDuration =
+    detectDurationMinutes(message) != null ||
+    /\b(?:more|longer|over|above)\s+than\s+\d{1,3}\b/i.test(message) ||
+    /\b(?:over|above)\s+\d{1,3}\s*(?:min|mins|minute|minutes)\b/i.test(message);
+  if (hasExplicitDuration) return inferFollowUpDurationMinutes(message);
+
+  const base =
+    Number.isFinite(currentMinutes) && currentMinutes && currentMinutes > 0
+      ? currentMinutes
+      : 20;
+  if (/\b(?:longer|more|increase|extend|lengthen)\b/i.test(message)) {
+    return Math.min(180, base + 5);
+  }
+  if (/\b(?:shorter|less|reduce|trim)\b/i.test(message)) {
+    return Math.max(5, base - 5);
+  }
+  return null;
+}
+
+function findVisibleActivityMatches(args: {
+  currentWeek: VisibleSessionRef[];
+  customActivity?: string;
+  modality: ConditioningIntentModality | null;
+}): VisibleActivityMatch[] {
+  const { currentWeek, customActivity, modality } = args;
+  const seen = new Set<string>();
+  const matches: VisibleActivityMatch[] = [];
+
+  for (const day of currentWeek) {
+    const workout = day.workout;
+    if (!workout) continue;
+    const sessionName = day.sessionName ?? workout.name ?? 'session';
+    const exercises = workout.exercises ?? [];
+    const options = workout.conditioningBlock?.options ?? [];
+
+    for (const option of options) {
+      const optionText = [
+        option.title ?? '',
+        option.description ?? '',
+        ...exercises
+          .filter((ex) => (option.exerciseIds ?? []).includes(String(ex.id ?? '')))
+          .flatMap((ex) => [ex.exercise?.name ?? '', ex.exercise?.description ?? '', ex.notes ?? '']),
+      ].join(' ');
+      if (!activityTextMatches(optionText, customActivity, modality)) continue;
+      const linkedExercises = exercises.filter((ex) =>
+        (option.exerciseIds ?? []).includes(String(ex.id ?? '')),
+      );
+      const title =
+        String(option.title ?? '').trim() ||
+        String(linkedExercises[0]?.exercise?.name ?? '').trim() ||
+        customActivity ||
+        humanConditioningLabel(modality ?? 'conditioning');
+      const key = `${day.date}:${normaliseActivityText(title)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      matches.push({
+        date: day.date,
+        sessionName,
+        title,
+        durationMinutes: extractVisibleDurationMinutes(optionText, linkedExercises),
+        ...extractVisiblePrescription(linkedExercises),
+      });
+    }
+
+    for (const ex of exercises) {
+      const text = [ex.exercise?.name ?? '', ex.exercise?.description ?? '', ex.notes ?? ''].join(' ');
+      if (!activityTextMatches(text, customActivity, modality)) continue;
+      const title =
+        String(ex.exercise?.name ?? '').trim() ||
+        customActivity ||
+        humanConditioningLabel(modality ?? 'conditioning');
+      const key = `${day.date}:${normaliseActivityText(title)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      matches.push({
+        date: day.date,
+        sessionName,
+        title,
+        durationMinutes: extractVisibleDurationMinutes(text, [ex]),
+        ...extractVisiblePrescription([ex]),
+      });
+    }
+  }
+
+  return matches;
+}
+
+function activityTextMatches(
+  text: string,
+  customActivity: string | undefined,
+  modality: ConditioningIntentModality | null,
+): boolean {
+  const haystack = normaliseActivityText(text);
+  if (!haystack) return false;
+  if (customActivity) {
+    const wanted = normaliseActivityText(customActivity);
+    if (wanted && haystack.includes(wanted)) return true;
+  }
+  if (!modality) return false;
+  const termsByModality: Record<string, string[]> = {
+    bike: ['bike', 'cycling', 'spin', 'stationarybike'],
+    row: ['row', 'rower', 'rowing'],
+    rower: ['row', 'rower', 'rowing'],
+    run: ['run', 'running', 'jog', 'jogging'],
+    ski: ['ski', 'skierg'],
+    swim: ['swim', 'swimming'],
+    walk: ['walk', 'walking'],
+    cardio: ['cardio'],
+    aerobic: ['aerobic', 'recovery', 'flush'],
+    sprint: ['sprint'],
+    mixed: ['metcon', 'conditioning'],
+  };
+  return (termsByModality[modality] ?? [modality]).some((term) =>
+    haystack.includes(normaliseActivityText(term)),
+  );
+}
+
+function normaliseActivityText(value: string | undefined): string {
+  return String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function humanConditioningLabel(modality: string): string {
+  switch (modality) {
+    case 'bike': return 'bike';
+    case 'row':
+    case 'rower': return 'row';
+    case 'run': return 'run';
+    case 'ski': return 'SkiErg';
+    case 'swim': return 'swim';
+    case 'walk': return 'walk';
+    case 'cardio': return 'cardio';
+    case 'aerobic': return 'aerobic work';
+    case 'sprint': return 'sprint work';
+    default: return 'conditioning';
+  }
+}
+
+function extractVisibleDurationMinutes(
+  text: string,
+  exercises: NonNullable<VisibleSessionRef['workout']>['exercises'],
+): number | undefined {
+  for (const ex of exercises ?? []) {
+    const repsMax = Number(ex.prescribedRepsMax ?? 0);
+    const repsMin = Number(ex.prescribedRepsMin ?? 0);
+    if (ex.prescriptionType === 'duration_minutes') {
+      const minutes = repsMax || repsMin;
+      if (minutes > 0) return minutes;
+    }
+  }
+  return detectDurationMinutes(text);
+}
+
+function extractVisiblePrescription(
+  exercises: NonNullable<VisibleSessionRef['workout']>['exercises'],
+): Pick<VisibleActivityMatch, 'sets' | 'repsMin' | 'repsMax' | 'prescriptionType'> {
+  for (const ex of exercises ?? []) {
+    const repsMin = Number(ex.prescribedRepsMin ?? 0);
+    const repsMax = Number(ex.prescribedRepsMax ?? 0);
+    const sets = Number(ex.prescribedSets ?? 0);
+    const prescriptionType =
+      typeof ex.prescriptionType === 'string' ? ex.prescriptionType : undefined;
+    if (repsMin > 0 || repsMax > 0 || sets > 0 || prescriptionType) {
+      return {
+        sets: sets > 0 ? sets : undefined,
+        repsMin: repsMin > 0 ? repsMin : undefined,
+        repsMax: repsMax > 0 ? repsMax : undefined,
+        prescriptionType,
+      };
+    }
+  }
+  return {};
+}
+
+function visibleWorkoutOptions(currentWeek: VisibleSessionRef[]): string[] {
+  return currentWeek
+    .filter((d) => !!d.workout)
+    .map((d) => `${shortDay(d.date)} ${d.date}`);
+}
+
+function shortDay(iso: string): string {
+  const dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][
+    new Date(`${iso}T12:00:00`).getDay()
+  ];
+  return dow ?? iso;
+}
+
+function extractAddedActivityFromReply(reply: string): string | undefined {
+  const m = /\badded\s+(?:a|an)?\s*([A-Za-z][A-Za-z\s-]{1,40}?)\s+(?:to|for|on)\b/i.exec(reply);
+  if (!m) return undefined;
+  const raw = m[1].trim().replace(/\s+/g, ' ');
+  if (!raw || /\bconditioning\s+block\b/i.test(raw)) return undefined;
+  return raw
+    .split(/\s+/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ');
+}
+
+function detectCustomActivity(
+  message: string,
+  modality: ConditioningIntentModality | null,
+  intensity: AddConditioningIntensity | undefined,
+): string | undefined {
+  const namedConditioning = detectNamedConditioningActivity(message);
+  if (namedConditioning) return namedConditioning;
+
+  for (const activity of LOW_LOAD_CUSTOM_ACTIVITIES) {
+    if (activity.re.test(message)) return activity.label;
+  }
+
+  if (modality === 'walk') return intensity === 'hard' ? 'Walk' : 'Light Walk';
+  const describedActivity = extractDescribedConditioningActivity(message);
+  if (describedActivity) return toTitleCase(describedActivity);
+  if (modality && intensity === 'light') {
+    const labelByModality: Record<string, string> = {
+      bike: 'Light Bike',
+      row: 'Light Row',
+      run: 'Easy Run',
+      ski: 'Light SkiErg',
+      swim: 'Easy Swim',
+      cardio: 'Light Cardio',
+      aerobic: 'Light Aerobic',
+      sprint: 'Sprint Intervals',
+      mixed: 'Mixed Conditioning',
+    };
+    return labelByModality[modality];
+  }
+  if (modality) return undefined;
+
+  const freeform = extractFreeformAddActivity(message);
+  if (freeform && isSafeFreeformAddActivity(freeform)) return toTitleCase(freeform);
+  return undefined;
+}
+
+function extractDescribedConditioningActivity(message: string): string | null {
+  const addPhrase =
+    new RegExp(`\\b${ADD_ACTION_WORDS}\\s+(?:(?:a|an|some|the)\\s+)?([^?.!,]+?)(?=\\s+\\b(?:to|onto|on|for|after|before|into)\\b|\\s*$)`, 'i').exec(message)?.[1];
+  let value = (addPhrase ?? message)
+    .replace(/\b(?:can|could|would)\s+you\b/gi, ' ')
+    .replace(/\b(?:please|actually|instead|rather)\b/gi, ' ')
+    .replace(/\b(?:want|need|prefer|make|change|swap|replace|with|for|to|do)\b/gi, ' ')
+    .replace(/\b(?:today|tomorrow|this\s+week|next\s+week)\b/gi, ' ')
+    .replace(/\bon\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/gi, ' ')
+    .replace(/\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)'?s?\b/gi, ' ')
+    .replace(/\b\d{1,3}\s*(?:min|mins|minute|minutes)\b/gi, ' ')
+    .replace(/\b(?:session|workout|block|conditioning|cardio|aerobic)\b/gi, ' ')
+    .replace(/\b(?:some|a|an|the|it|this|that)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!value || value.length > 48) return null;
+  if (isGenericConditioningActivityLabel(value)) return null;
+  if (!looksLikeConditioningRequest(value) && !looksLikeConditioningRequest(message)) return null;
+  if (!isSafeFreeformAddActivity(value) && !isSafeConditioningFreeformActivity(value)) return null;
+  return value;
+}
+
+function isGenericConditioningActivityLabel(activity: string): boolean {
+  const normalized = activity
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(?:light|easy|gentle|hard|moderate|steady|tempo|recovery|flush)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return [
+    'bike',
+    'cycling',
+    'row',
+    'rower',
+    'rowing',
+    'run',
+    'running',
+    'jog',
+    'jogging',
+    'walk',
+    'walking',
+    'ski',
+    'skierg',
+    'swim',
+    'swimming',
+    'sprint',
+    'sprints',
+    'interval',
+    'intervals',
+    'cardio',
+    'conditioning',
+    'aerobic',
+  ].includes(normalized);
+}
+
+function detectNamedConditioningActivity(message: string): string | undefined {
+  const patterns: Array<{ re: RegExp; fallback?: string }> = [
+    { re: /\b((?:hard|easy|light|moderate|tempo)?\s*hill\s+(?:running|runs?|sprints?))\b/i },
+    { re: /\b((?:hard|easy|light|moderate|tempo)\s+running)\b/i },
+    { re: /\b(tempo\s+runn?ing|tempo\s+runs?)\b/i, fallback: 'Tempo Running' },
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.re.exec(message);
+    if (!match) continue;
+    const label = (match[1] ?? pattern.fallback ?? '').replace(/\s+/g, ' ').trim();
+    if (!label) continue;
+    return toTitleCase(label);
+  }
+  return undefined;
+}
+
+function extractFreeformAddActivity(message: string): string | null {
+  const match = new RegExp(`\\b${ADD_ACTION_WORDS}\\s+(?:(?:a|an|some|the)\\s+)?([^?.!,]+?)(?=\\s+\\b(?:to|onto|on|for|after|before|into)\\b|\\s*$)`, 'i').exec(message);
+  if (!match) return null;
+  let value = match[1]
+    .replace(/\b(?:light|easy|gentle|recovery|flush|hard|heavy|moderate|steady|tempo)\b/gi, ' ')
+    .replace(/\b\d{1,3}\s*(?:min|mins|minute|minutes)\b/gi, ' ')
+    .replace(/\b(?:session|workout|block|conditioning|cardio|aerobic)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!value || value.length > 40) return null;
+  return value;
+}
+
+function isSafeFreeformAddActivity(activity: string): boolean {
+  if (!activity) return false;
+  if (/\b(?:squat|deadlift|bench|press|rdl|clean|snatch|jerk|lunge|row|curl|extension|raise|carry|carries|kg|reps?|sets?)\b/i.test(activity)) {
+    return false;
+  }
+  return /^[a-z][a-z\s/-]{1,39}$/i.test(activity);
+}
+
+function isSafeConditioningFreeformActivity(activity: string): boolean {
+  if (!activity) return false;
+  if (!/\b(?:hiit|high[-\s]*intensity|intervals?|sprints?|efforts?|tempo|flush|row(?:ing|er)?|bike|run(?:ning)?|ski(?:erg)?|swim(?:ming)?|walk(?:ing)?|pilates|mobility|yoga)\b/i.test(activity)) {
+    return false;
+  }
+  if (/\b(?:squat|deadlift|bench|press|rdl|clean|snatch|jerk|lunge|curl|extension|raise|carry|carries|kg|reps?|sets?)\b/i.test(activity)) {
+    return false;
+  }
+  return /^[a-z0-9][a-z0-9\s/-]{1,48}$/i.test(activity);
+}
+
+function toTitleCase(value: string): string {
+  return value
+    .split(/\s+/)
+    .map((word) => word.length <= 3 && word === word.toUpperCase()
+      ? word
+      : /^(hiit|mas)$/i.test(word)
+      ? word.toUpperCase()
+      : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 }
 
 /**

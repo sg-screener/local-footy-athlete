@@ -455,9 +455,11 @@ ok(
   outcome8.reply,
 );
 
-// Eager loop must have rewritten FUTURE_SAT (future-this-week match).
+// Eager loop must have rewritten FUTURE_SAT (future-this-week match)
+// and the target date itself so an already-open DayWorkout screen updates
+// immediately, even when the target is in the past.
 ok('FUTURE_SAT eager-rewrite happened', eagerWrites.find((w) => w.date === FUTURE_SAT) !== undefined);
-ok('PAST_WED was NOT rewritten (forward-looking only)', eagerWrites.find((w) => w.date === PAST_WED) === undefined);
+ok('PAST_WED target-date eager-rewrite happened', eagerWrites.find((w) => w.date === PAST_WED) !== undefined);
 
 const eagerSat = eagerWrites.find((w) => w.date === FUTURE_SAT)!;
 ok(

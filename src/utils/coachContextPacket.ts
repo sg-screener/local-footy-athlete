@@ -22,6 +22,7 @@ import { getMondayStr, addDays } from './sessionResolver';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useProgramStore } from '../store/programStore';
+import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import type { CoachContextPacket } from './coachIntent';
 import type { PendingCoachProposal } from './coachIntent';
 import { buildProgramTabProjectedWeek } from './visibleProgramReadModel';
@@ -86,6 +87,19 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
   const coachUpdate = cuStore.updatesByWeek[monday] ?? null;
 
   const recent = input.recentMessages.slice(-RECENT_HISTORY_LIMIT);
+  const lastMutationRaw = useCoachMutationHistoryStore
+    .getState()
+    .getLastUndoableMutation();
+  const lastMutation = lastMutationRaw
+    ? {
+        operation: lastMutationRaw.operation,
+        mutationKind: lastMutationRaw.mutationKind,
+        affectedDates: lastMutationRaw.affectedDates,
+        scope: lastMutationRaw.scope,
+        touchedActivities: lastMutationRaw.touchedActivities,
+        timestamp: lastMutationRaw.timestamp,
+      }
+    : null;
 
   // Phase 2 — pull durable target context from the coach context
   // store and run the deterministic reference resolver. Both fields
@@ -125,6 +139,7 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     lastOpenedWorkout: ctx.lastOpenedWorkout,
     lastExplainedSession: ctx.lastExplainedSession,
     lastDiscussedWorkout: ctx.lastDiscussedWorkout,
+    lastMutation,
     referenceResolution: baseResolution,
   };
 
@@ -150,7 +165,18 @@ export function serialisePacketForLLM(packet: CoachContextPacket): string {
           name: d.workout.name,
           workoutType: (d.workout as any).workoutType,
           sessionTier: (d.workout as any).sessionTier,
-          exercises: (d.workout.exercises ?? []).map((e: any) => e.exercise?.name).filter(Boolean),
+          conditioningOptions: (d.workout.conditioningBlock?.options ?? []).map((o: any) => ({
+            title: o.title,
+            description: o.description,
+          })),
+          exercises: (d.workout.exercises ?? []).map((e: any) => ({
+            name: e.exercise?.name,
+            notes: e.notes,
+            prescriptionType: e.prescriptionType,
+            sets: e.prescribedSets,
+            repsMin: e.prescribedRepsMin,
+            repsMax: e.prescribedRepsMax,
+          })).filter((e: any) => e.name),
           coachNotes: d.workout.coachNotes ?? [],
         }
       : null,
@@ -228,6 +254,16 @@ export function serialisePacketForLLM(packet: CoachContextPacket): string {
           sessionName: packet.lastDiscussedWorkout.sessionName,
           source: packet.lastDiscussedWorkout.source,
           modalities: packet.lastDiscussedWorkout.modalities ?? [],
+        }
+      : null,
+    lastMutation: packet.lastMutation
+      ? {
+          operation: packet.lastMutation.operation,
+          mutationKind: packet.lastMutation.mutationKind,
+          affectedDates: packet.lastMutation.affectedDates,
+          scope: packet.lastMutation.scope,
+          touchedActivities: packet.lastMutation.touchedActivities ?? [],
+          timestamp: packet.lastMutation.timestamp,
         }
       : null,
     referenceResolution: packet.referenceResolution

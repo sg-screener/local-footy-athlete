@@ -304,6 +304,14 @@ export interface Workout {
   conditioningBlock?: ConditioningBlock;
 
   /**
+   * Short display label for coach-added conditioning shown on weekly cards.
+   * Example: "Pilates" or "Assault Bike Sprints". This keeps the Program tab
+   * aligned with the visible row instead of falling back to the internal
+   * energy-system label.
+   */
+  coachAddedConditioningLabel?: string;
+
+  /**
    * Coach-authored notes attached to this session — surfaced as a visible
    * tag list on the Program tab, the day-detail screen, and the team-day
    * card. Distinct from `description` (which is sometimes empty,

@@ -137,6 +137,12 @@ export interface ActiveFatigueConstraint {
   status: InjuryStatus;
   startDate: string;
   lastUpdatedAt: string;
+  /** Optional display override for derived constraints such as readiness chips. */
+  reasonLabel?: string;
+  /** Optional origin for derived/non-chat constraints. */
+  source?: 'coach' | 'readiness';
+  /** Optional single-day scope. If present, projection only applies on this date. */
+  appliesToDate?: string;
   rules: string[];
   safeFocus: string[];
   advice: string[];
@@ -158,6 +164,9 @@ export interface ActiveSorenessConstraint {
   status: InjuryStatus;
   startDate: string;
   lastUpdatedAt: string;
+  reasonLabel?: string;
+  source?: 'coach' | 'readiness';
+  appliesToDate?: string;
   rules: string[];
   safeFocus: string[];
   advice: string[];
@@ -176,6 +185,9 @@ export interface ActiveScheduleConstraint {
   status: InjuryStatus;
   startDate: string;
   lastUpdatedAt: string;
+  reasonLabel?: string;
+  source?: 'coach' | 'readiness';
+  appliesToDate?: string;
   /** Optional Mon-Sun ISO of the affected week. */
   weekStartISO?: string;
   /** Optional cap on total sessions for the week. */

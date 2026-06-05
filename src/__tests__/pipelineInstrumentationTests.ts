@@ -14,6 +14,7 @@
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
+process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = 'true';
 
 // Capture pipeline logs so we can assert on them.
 const realLog = console.log;

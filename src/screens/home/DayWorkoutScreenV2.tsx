@@ -5,8 +5,8 @@ import {
   Pressable,
   ScrollView,
   TextInput,
-  SafeAreaView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { Card, Button, IconButton, SectionLabel } from '../../components/ui';

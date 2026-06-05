@@ -16,6 +16,7 @@ import { spacing, borderRadius } from '../../theme/spacing';
 import { Text } from '../../components/common/Text';
 import { useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
+import { useCoachStore } from '../../store/coachStore';
 import { useCoachMemoryStore } from '../../store/coachMemoryStore';
 import {
   snapshotCurrentWeek,
@@ -46,6 +47,11 @@ import {
 } from '../../utils/applyAdjustmentEvents';
 import { buildScheduleStateImperative } from '../../utils/coachWeekDiff';
 import {
+  buildDayWorkoutProjectedDay,
+  getResolvedVisibleProgramForDate,
+} from '../../utils/visibleProgramReadModel';
+import { explainSession } from '../../utils/sessionExplanation';
+import {
   resolveInjuryFromMessage,
   shouldBindSeverityToPending,
   isDifferentBodyPartInjuryReport,
@@ -56,6 +62,8 @@ import {
   computeVisibleDiff,
 } from '../../utils/visibleWorkoutDiff';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
+import { useCoachMutationHistoryStore } from '../../store/coachMutationHistoryStore';
+import { useReadinessStore } from '../../store/readinessStore';
 import {
   classifyInjuryUpdate,
   shouldSuggestPhysio,
@@ -65,12 +73,8 @@ import {
   buildCoachContextPacket,
 } from '../../utils/coachContextPacket';
 import { dispatchCoachIntent } from '../../utils/coachIntentDispatcher';
-import type { CoachIntent, PendingCoachProposal } from '../../utils/coachIntent';
-// Phase G runtime audit — `CoachIntentClassifier` and `LLMCoachIntentClassifier`
-// are no longer wired (see bypass below). Re-import when /coach-intent
-// auth is landed.
-// import type { CoachIntentClassifier } from '../../utils/coachIntent';
-// import { LLMCoachIntentClassifier } from '../../utils/llmCoachIntentClassifier';
+import type { CoachIntent, CoachIntentClassifier, PendingCoachProposal } from '../../utils/coachIntent';
+import { LLMCoachIntentClassifier } from '../../utils/llmCoachIntentClassifier';
 import { buildLiveDispatchDeps } from '../../utils/coachDispatchDeps';
 import { useCoachContextStateStore } from '../../store/coachContextStateStore';
 import { extractModalitiesFromSession, isMutationLike } from '../../utils/coachReferenceResolver';
@@ -78,22 +82,37 @@ import { orchestrateModalitySwap } from '../../utils/coachModalitySwapOrchestrat
 import { autoBindUniqueModalityTarget } from '../../utils/coachVisibleWeekAutoBind';
 import { parseModalitySwapRequest } from '../../utils/coachModalitySwap';
 import {
-  routeCoachCommand,
   canFallbackToLegacy,
   isMutateCommand,
   type CoachCommand,
 } from '../../utils/coachCommandRouter';
 import {
-  executeCoachCommand,
+  coachCommandFromLLMIntent,
+  shouldTryLLMCoachCommand,
+} from '../../utils/coachLLMCommandAdapter';
+import {
+  routeCoachReadinessMessage,
+  type CoachReadinessAction,
+  type PendingReadinessClarifier,
+} from '../../utils/coachReadinessAdapter';
+import {
   describeStage,
+  type ExecutionResult,
   type ProgressStage,
 } from '../../utils/coachCommandExecutor';
+import {
+  interpretCoachMessageToProgramEdit,
+  executeProgramEdit,
+  resolvePendingProgramEditAnswer,
+  type ProgramEdit,
+} from '../../utils/coachProgramEdit';
 import {
   usePendingCoachClarifierStore,
   getPendingClarifierSnapshot,
   isCancelClarifierMessage,
   isAffirmativeClarifierMessage,
   isNegativeClarifierMessage,
+  type PendingCoachClarifier,
 } from '../../store/pendingCoachClarifierStore';
 import {
   captureFromExecutorClarify,
@@ -112,6 +131,7 @@ import { setCoachReady } from '../../navigation/smokeNavState';
 import { getSmokeInitialRoute } from '../../utils/smokeBootstrap';
 import { navigationRef } from '../../navigation/navigationRef';
 import { CommonActions } from '@react-navigation/native';
+import type { CoachMessage } from '../../types/domain';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import {
   deriveSmokeWednesdayOpenTarget,
@@ -137,29 +157,22 @@ if (!clientEnv.isReady) {
   logMissingClientEnv('CoachScreen', clientEnv);
 }
 
-// Phase G runtime audit — the live LLM-backed classifier was intercepting
-// EVERY conversation/inspect_state turn with a 401 against the Supabase
-// gateway, flooding logs without providing signal. The bypass at the
-// call site synthesizes the same fallback locally, so neither this
-// classifier nor the disabled fallback is invoked at runtime. Kept as
-// dormant scaffolding only — re-wire here when /coach-intent auth lands.
-//
-// const disabledCoachIntentClassifier: CoachIntentClassifier = {
-//   async classify() {
-//     return {
-//       intent: 'general_question',
-//       confidence: 0,
-//       needsClarification: false,
-//       rationale: 'missing_client_env',
-//     };
-//   },
-// };
-// const liveCoachIntentClassifier: CoachIntentClassifier = clientEnv.isReady
-//   ? new LLMCoachIntentClassifier({
-//       endpoint: clientEnv.coachIntentEndpoint,
-//       authToken: clientEnv.supabaseAnonKey,
-//     })
-//   : disabledCoachIntentClassifier;
+const disabledCoachIntentClassifier: CoachIntentClassifier = {
+  async classify() {
+    return {
+      intent: 'general_question',
+      confidence: 0,
+      needsClarification: false,
+      rationale: 'missing_client_env',
+    };
+  },
+};
+const liveCoachIntentClassifier: CoachIntentClassifier = clientEnv.isReady
+  ? new LLMCoachIntentClassifier({
+      endpoint: clientEnv.coachIntentEndpoint,
+      authToken: clientEnv.supabaseAnonKey,
+    })
+  : disabledCoachIntentClassifier;
 
 /** Local-clock today as YYYY-MM-DD. The UAE is deterministic — it never
  *  reads the clock itself; the caller supplies todayISO. */
@@ -169,6 +182,307 @@ function todayISOLocal(): string {
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
+}
+
+function isTodaySessionQuestion(message: string): boolean {
+  const lower = message.toLowerCase();
+  return (
+    /\btoday(?:'s)?\b/.test(lower) &&
+    /\b(session|workout|training|program)\b/.test(lower) &&
+    /\b(what|why|show|tell|explain|on)\b/.test(lower)
+  );
+}
+
+function getTodayProjectedDay(todayISO = todayISOLocal()) {
+  const state = buildScheduleStateImperative();
+  const overrideContext = useProgramStore.getState().overrideContexts?.[todayISO];
+  const day = buildDayWorkoutProjectedDay({
+    date: todayISO,
+    todayISO,
+    state,
+    overrideContext,
+  });
+  return { day, state };
+}
+
+function resolveLiveVisibleProgramForDate(date: string, todayISO = todayISOLocal()) {
+  const programState = useProgramStore.getState();
+  return getResolvedVisibleProgramForDate({
+    date,
+    todayISO,
+    state: buildScheduleStateImperative(),
+    overrideContexts: programState.overrideContexts ?? {},
+  });
+}
+
+function recordVerifiedProgramEditMutationFocus(
+  edit: ProgramEdit,
+  result: ExecutionResult,
+  todayISO = todayISOLocal(),
+) {
+  if (result.kind !== 'mutated' || !result.applied) return;
+  const targetDate =
+    edit.targetDate ??
+    result.modalityOutcome?.targetDate ??
+    null;
+  if (!targetDate) return;
+
+  const visible = resolveLiveVisibleProgramForDate(targetDate, todayISO);
+  const workout = visible.day.workout ?? null;
+  const sessionName =
+    workout?.name ??
+    edit.targetItemTitle ??
+    (edit.targetDomain === 'session' ? 'Rest' : 'session');
+  const modalities = workout
+    ? extractModalitiesFromSession({
+        name: workout.name,
+        exercises: workout.exercises,
+      })
+    : undefined;
+
+  useCoachContextStateStore.getState().setLastExplainedSession({
+    date: targetDate,
+    sessionName,
+    modalities,
+    source: 'coach_mutation',
+  });
+  if (getPendingClarifierSnapshot()) {
+    usePendingCoachClarifierStore.getState().clearPending();
+    logger.debug('[pending-clarifier] cleared_after_verified_mutation', {
+      targetDate,
+      route: result.route,
+    });
+  }
+  logger.debug('[coach-flow] mutation_focus_set', {
+    targetDate,
+    sessionName,
+    route: result.route,
+  });
+}
+
+function formatCoachDate(day: { short?: string; date: string }): string {
+  const label = day.short || new Date(`${day.date}T12:00:00`).toLocaleDateString('en-AU', {
+    weekday: 'short',
+  });
+  return `${label} ${day.date}`;
+}
+
+function exerciseNamesForReply(workout: any): string {
+  const names = (workout?.exercises ?? [])
+    .map((ex: any) => ex?.exercise?.name || ex?.name || ex?.exerciseId)
+    .filter(Boolean);
+  if (names.length === 0) return '';
+  const shown = names.slice(0, 6);
+  const suffix = names.length > shown.length ? `, +${names.length - shown.length} more` : '';
+  return `${shown.join(', ')}${suffix}`;
+}
+
+function conditioningForReply(workout: any): string {
+  const optionTitles = (workout?.conditioningBlock?.options ?? [])
+    .map((o: any) => o?.title)
+    .filter(Boolean);
+  if (optionTitles.length > 0) return optionTitles.join(', ');
+
+  const conditioningNames = (workout?.exercises ?? [])
+    .map((ex: any) => ex?.exercise?.name || ex?.name || '')
+    .filter((name: string) => /\b(conditioning|interval|bike|row|run|sprint|erg|aerobic)\b/i.test(name));
+  return Array.from(new Set(conditioningNames)).join(', ');
+}
+
+type AppliedReadinessAction = Extract<CoachReadinessAction, { kind: 'apply_signal' }>;
+
+function isRecoveryWorkoutForCoach(workout: any): boolean {
+  return (
+    workout?.workoutType === 'Recovery' ||
+    workout?.sessionTier === 'recovery'
+  );
+}
+
+function buildSessionAwareReadinessReply(
+  readinessAction: AppliedReadinessAction,
+  todayISO: string,
+): string {
+  const signal = readinessAction.signal ?? {};
+  const isFlat = signal.flatToday || signal.energy === 'low';
+  const isSore = signal.soreness === 'moderate' || signal.soreness === 'high';
+  const isShortTime =
+    typeof signal.timeAvailableMinutes === 'number' &&
+    signal.timeAvailableMinutes < 45;
+  const bodyPart =
+    typeof signal.bodyPart === 'string' && signal.bodyPart.trim()
+      ? signal.bodyPart.trim()
+      : 'that area';
+
+  let workout: any = null;
+  try {
+    workout = getTodayProjectedDay(todayISO).day?.workout ?? null;
+  } catch (err) {
+    logger.warn('[coach-readiness-reply] failed to read today workout', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  if (!workout) {
+    if (isFlat) {
+      return 'Got it — no S&C session is scheduled today, so keep it as recovery. Easy movement is fine if it makes you feel better.';
+    }
+    if (isSore) {
+      return `Got it — no S&C session is scheduled today, so keep ${bodyPart} calm and pain-free. If it feels like pain, tell me a rough score out of 10.`;
+    }
+    if (isShortTime) {
+      return 'Got it — no S&C session is scheduled today, so there is nothing we need to squeeze in.';
+    }
+  }
+
+  if (isRecoveryWorkoutForCoach(workout)) {
+    if (isFlat) {
+      return 'Got it — today is already a recovery session, so we’ll keep it recovery-led. Aim to finish fresher than you started: easy pace, relaxed mobility, and no extra work added.';
+    }
+    if (isSore) {
+      return `Got it — today is already recovery, so keep it gentle around ${bodyPart}. Stay pain-free, use the flush and mobility work, and tell me a pain score if it feels sharper than soreness.`;
+    }
+    if (isShortTime) {
+      return 'Got it — today is already recovery, so keep the essentials only. Do the main mobility or flush work, then call it.';
+    }
+  }
+
+  if (isFlat) {
+    const sessionName = workout?.name ? `For ${workout.name}, ` : '';
+    return (
+      `Yep — that’s a low-readiness flag. ${sessionName}` +
+      `we’ll pull today back: keep the main work crisp, cap effort around 6–7/10, and skip anything that turns into a grind. ` +
+      `If you still feel worse after warming up, make it recovery only.`
+    );
+  }
+
+  if (isSore) {
+    return (
+      `Got it — sore ${bodyPart} today. ` +
+      `Keep that area pain-free, avoid pushing through sharpness, and I’ll bias the plan away from anything that hammers it.`
+    );
+  }
+
+  if (isShortTime) {
+    return 'Got it — short-time day. Main stimulus first, then leave the accessories unless you’ve genuinely got room.';
+  }
+
+  return readinessAction.reply;
+}
+
+function buildTodaySessionReply(): string {
+  try {
+    const todayISO = todayISOLocal();
+    const { day, state } = getTodayProjectedDay(todayISO);
+    if (!day?.workout) {
+      return [
+        'Today',
+        formatCoachDate({ short: day?.short, date: todayISO }),
+        '',
+        'No S&C session is scheduled today.',
+        'Use it as recovery unless you want me to move or add something.',
+      ].join('\n');
+    }
+
+    const explanation = explainSession(day, {
+      daysToGame: null,
+      seasonPhase: (state as any).seasonPhase ?? undefined,
+      hasGameThisWeek: true,
+    });
+    const mainWork = exerciseNamesForReply(day.workout);
+    const conditioning = conditioningForReply(day.workout);
+
+    return [
+      'Today',
+      formatCoachDate(day),
+      day.workout.name,
+      '',
+      'Why it fits',
+      explanation.body,
+      '',
+      'Main work',
+      mainWork || 'Open Program for the full exercise list.',
+      conditioning ? '' : null,
+      conditioning ? 'Conditioning' : null,
+      conditioning || null,
+    ].filter((line): line is string => line !== null).join('\n');
+  } catch (err) {
+    logger.warn('[coach-today-reply] failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return "I couldn't read today's program cleanly. Open the Program tab and I can still help adjust what you see there.";
+  }
+}
+
+function describeTodayReadinessImpact(todayISO: string): string {
+  try {
+    const { day } = getTodayProjectedDay(todayISO);
+    const workout = day?.workout;
+    if (!workout) {
+      return 'Program update\nToday is already a no-session day, so there was nothing to trim.';
+    }
+
+    const notes = workout.coachNotes ?? [];
+    const removed = notes
+      .filter((n: string) => /^Removed:\s*/i.test(n))
+      .map((n: string) => n.replace(/^Removed:\s*/i, '').trim());
+    const cautions = notes
+      .filter((n: string) => /^Caution:\s*/i.test(n))
+      .map((n: string) => n.replace(/^Caution:\s*/i, '').trim());
+    const focus = notes
+      .filter((n: string) => /^Focus:\s*/i.test(n))
+      .map((n: string) => n.replace(/^Focus:\s*/i, '').trim())
+      .slice(0, 2);
+
+    const lines: string[] = ['Program update'];
+    if (removed.length > 0) lines.push(`Removed today: ${removed.join(', ')}`);
+    if (cautions.length > 0) lines.push(`Treat as caution: ${cautions.join(', ')}`);
+    if (focus.length > 0) lines.push(`Focus: ${focus.join(', ')}`);
+
+    if (lines.length > 1) return lines.join('\n');
+
+    if (isRecoveryWorkoutForCoach(workout)) {
+      return [
+        'Program update',
+        `${workout.name} is already the low-cost option, so I left the structure alone.`,
+        'Keep it easy and finish feeling better than you started.',
+      ].join('\n');
+    }
+
+    return [
+      'Program update',
+      `${workout.name} was already low-cost enough that I did not need to remove exercises.`,
+      'Keep it controlled and do not add extras today.',
+    ].join('\n');
+  } catch (err) {
+    logger.warn('[coach-readiness-impact] failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return 'Program update\nI flagged today, but could not verify the visible session change in chat. Check the Program tab before training.';
+  }
+}
+
+function renderMessageContent(content: string, isUserMessage: boolean): React.ReactNode {
+  if (isUserMessage || !content.includes('**')) return content.replace(/\*\*/g, '');
+
+  const nodes: React.ReactNode[] = [];
+  const re = /\*\*([^*]+)\*\*/g;
+  let last = 0;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(content)) !== null) {
+    if (match.index > last) {
+      nodes.push(content.slice(last, match.index).replace(/\*\*/g, ''));
+    }
+    nodes.push(
+      <Text key={`bold-${match.index}`} style={styles.messageTextBold}>
+        {match[1]}
+      </Text>,
+    );
+    last = re.lastIndex;
+  }
+  if (last < content.length) {
+    nodes.push(content.slice(last).replace(/\*\*/g, ''));
+  }
+  return nodes;
 }
 
 /**
@@ -446,6 +760,50 @@ const WELCOME_MESSAGE: Message = {
     "Missed sessions, soreness, schedule changes — we'll sort it out.",
 };
 
+let coachScreenMessageCache: Message[] | null = null;
+
+const COACH_SCREEN_CONVERSATION_ID = 'coach-screen';
+
+function messageCreatedAt(id: string): string {
+  const numericPart = Number(String(id).split('-')[0]);
+  if (Number.isFinite(numericPart) && numericPart > 0) {
+    return new Date(numericPart).toISOString();
+  }
+  return new Date().toISOString();
+}
+
+function toStoredCoachMessages(messages: Message[]): CoachMessage[] {
+  return messages
+    .filter((message) => message.id !== WELCOME_MESSAGE.id)
+    .filter((message): message is Message & { role: 'user' | 'assistant' } =>
+      message.role === 'user' || message.role === 'assistant',
+    )
+    .map((message) => ({
+      id: message.id,
+      conversationId: COACH_SCREEN_CONVERSATION_ID,
+      role: message.role,
+      content: message.content,
+      createdAt: messageCreatedAt(message.id),
+    }));
+}
+
+function fromStoredCoachMessages(messages: CoachMessage[]): Message[] {
+  const restored = messages
+    .filter((message) => message.role === 'user' || message.role === 'assistant')
+    .map((message) => ({
+      id: message.id,
+      role: message.role,
+      content: message.content,
+    }));
+  return restored.length > 0 ? [WELCOME_MESSAGE, ...restored] : [WELCOME_MESSAGE];
+}
+
+function initialCoachScreenMessages(storedMessages?: CoachMessage[]): Message[] {
+  if (coachScreenMessageCache) return coachScreenMessageCache;
+  const persisted = storedMessages ?? useCoachStore.getState().messages;
+  return fromStoredCoachMessages(persisted);
+}
+
 interface QuickAction {
   label: string;
   prefill: string;
@@ -460,6 +818,27 @@ const QUICK_ACTIONS: QuickAction[] = [
   { label: 'Busy week',                 prefill: "I've got a busy week ahead — " },
   { label: "I'm injured",                prefill: "I've picked up a niggle — " },
 ];
+
+function pendingClarifierNeedsDuration(pending: PendingCoachClarifier): boolean {
+  return pending.operation === 'add_conditioning' &&
+    pending.missingFields.some((field) =>
+      /^(?:duration|durationMinutes|minutes|time)$/.test(field),
+    );
+}
+
+function shouldHoldDurationClarifier(
+  pending: PendingCoachClarifier,
+  message: string,
+): boolean {
+  if (!pendingClarifierNeedsDuration(pending)) return false;
+  const text = message.trim();
+  if (!text) return false;
+  const startsFreshEdit =
+    /\b(?:add|remove|drop|skip|swap|replace|move|reschedule|instead\s+of|rather\s+than)\b/i.test(text) ||
+    /\b(?:bike|row(?:er|ing)?|ski\s*erg|skierg|run(?:ning)?|walk(?:ing)?|pilates|yoga|mobility|hiit|sprints?|intervals?)\b/i.test(text) ||
+    /\b(?:harder|lighter|easier|shorter)\b/i.test(text);
+  return !startsFreshEdit;
+}
 
 export default function CoachScreen() {
   const route = useRoute<any>();
@@ -485,7 +864,39 @@ export default function CoachScreen() {
   React.useEffect(() => {
     setCoachReady(isFocused);
   }, [isFocused]);
-  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const storedCoachMessages = useCoachStore((s) => s.messages);
+  const persistCoachMessages = useCoachStore((s) => s.setMessages);
+  const [messages, setMessagesState] = useState<Message[]>(() =>
+    initialCoachScreenMessages(storedCoachMessages),
+  );
+  const setMessages = React.useCallback<React.Dispatch<React.SetStateAction<Message[]>>>(
+    (updater) => {
+      setMessagesState((prev) => {
+        const next = typeof updater === 'function'
+          ? (updater as (prev: Message[]) => Message[])(prev)
+          : updater;
+        coachScreenMessageCache = next;
+        return next;
+      });
+    },
+    [],
+  );
+  React.useEffect(() => {
+    if (coachScreenMessageCache !== null) return;
+    if (messages.length > 1) return;
+    if (storedCoachMessages.length === 0) return;
+    const restored = fromStoredCoachMessages(storedCoachMessages);
+    coachScreenMessageCache = restored;
+    setMessagesState(restored);
+  }, [messages.length, storedCoachMessages]);
+  const didPersistMessagesAfterMountRef = useRef(false);
+  React.useEffect(() => {
+    if (!didPersistMessagesAfterMountRef.current) {
+      didPersistMessagesAfterMountRef.current = true;
+      return;
+    }
+    persistCoachMessages(toStoredCoachMessages(messages));
+  }, [messages, persistCoachMessages]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const flatListRef = useRef<FlatList>(null);
@@ -518,6 +929,7 @@ export default function CoachScreen() {
   // change and we want the latest value inside async handleSend without
   // closure pinning.
   const pendingInjuryRef = useRef<PendingInjury | null>(null);
+  const pendingReadinessRef = useRef<PendingReadinessClarifier | null>(null);
   const pendingCoachProposalRef = useRef<PendingCoachProposal | null>(null);
 
   // Phase G runtime audit — log the build fingerprint on every
@@ -551,6 +963,7 @@ export default function CoachScreen() {
     const { subscribeResetSignal } = require('../../utils/resetSignals');
     return subscribeResetSignal(() => {
       pendingInjuryRef.current = null;
+      pendingReadinessRef.current = null;
       pendingCoachProposalRef.current = null;
       setMessages([]);
       logger.debug('[reset] coach_screen_pending_cleared');
@@ -825,6 +1238,68 @@ export default function CoachScreen() {
       role: 'user',
       content: inputValue.trim(),
     };
+
+    if (isTodaySessionQuestion(userMessage.content)) {
+      const assistantMessage: Message = {
+        id: `${Date.now()}-today-session`,
+        role: 'assistant',
+        content: buildTodaySessionReply(),
+      };
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setInputValue('');
+      return;
+    }
+
+    // ───────────── READINESS / ADAPTATION CHAT PATH ─────────────
+    // Keep chip + chat adaptation in one language. These messages write
+    // the same lightweight readiness signal used by the Program tab chips;
+    // the visible-program projection turns that into date-scoped guidance.
+    // Explicit pain / injury / severity still falls through to the injury
+    // guard below.
+    const readinessAction = routeCoachReadinessMessage({
+      message: userMessage.content,
+      pending: pendingReadinessRef.current,
+    });
+    if ('clearPending' in readinessAction && readinessAction.clearPending) {
+      pendingReadinessRef.current = null;
+    }
+    if (readinessAction.kind === 'clarify') {
+      pendingReadinessRef.current = readinessAction.pending;
+      logger.debug('[coach-readiness] clarify', {
+        reason: readinessAction.reason,
+      });
+      const assistantMessage: Message = {
+        id: `${Date.now()}-readiness-clarify`,
+        role: 'assistant',
+        content: readinessAction.reply,
+      };
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setInputValue('');
+      return;
+    }
+    if (readinessAction.kind === 'apply_signal') {
+      const todayISO = todayISOLocal();
+      useReadinessStore.getState().setReadinessSignal(todayISO, {
+        ...readinessAction.signal,
+        source: 'coach_message',
+      });
+      logger.debug('[coach-readiness] applied', {
+        reason: readinessAction.reason,
+        todayISO,
+        signal: readinessAction.signal,
+      });
+      const assistantMessage: Message = {
+        id: `${Date.now()}-readiness`,
+        role: 'assistant',
+        content: [
+          buildSessionAwareReadinessReply(readinessAction, todayISO),
+          describeTodayReadinessImpact(todayISO),
+        ].join('\n\n'),
+      };
+      setMessages((prev) => [...prev, userMessage, assistantMessage]);
+      setInputValue('');
+      return;
+    }
 
     // ───────────── INJURY PROGRESSION FOLLOW-UP ─────────────
     // If we have an active injury on file, see whether THIS message is
@@ -1237,7 +1712,11 @@ export default function CoachScreen() {
       const nextMonday = sessionResolverMod.addDays(monday, 7);
       // Baseline next week: resolve as if there were NO active injury,
       // so the constraint diff is computed against the unfiltered template.
-      const stateNoInjury = { ...buildScheduleStateImperative(), activeInjury: null };
+      const stateNoInjury = {
+        ...buildScheduleStateImperative(),
+        activeInjury: null,
+        activeConstraints: [],
+      };
       const stateWithInjury = buildScheduleStateImperative();
       const nextWeekRaw = sessionResolverMod.resolveWeekWithConditioning(
         nextMonday,
@@ -1492,6 +1971,83 @@ export default function CoachScreen() {
             setInputValue('');
             return;
           }
+          const pendingProgramEditAnswer = resolvePendingProgramEditAnswer({
+            pending: pendingClarifier,
+            userMessage: userMessage.content,
+            currentWeek: (packet.currentWeek ?? []).map((day) => ({
+              date: day.date,
+              sessionName: day.workout?.name ?? 'session',
+              workout: day.workout,
+            })),
+            resolveVisibleProgramForDate: (date) =>
+              resolveLiveVisibleProgramForDate(date, todayISOLocal()),
+          });
+          if (pendingProgramEditAnswer.kind === 'complete') {
+            logger.warn('[pending-program-edit-resume]', {
+              missingFields: pendingClarifier.programEdit?.missingFields ?? pendingClarifier.missingFields,
+              targetDate: pendingProgramEditAnswer.programEdit.targetDate,
+              targetItemId: pendingProgramEditAnswer.programEdit.targetItemId,
+              targetItemTitle: pendingProgramEditAnswer.programEdit.targetItemTitle,
+              legacyBlocked: true,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            const onProgress = (stage: ProgressStage) => {
+              setCoachProgressLabel(describeStage(stage));
+            };
+            const result = executeProgramEdit({
+              programEdit: pendingProgramEditAnswer.programEdit,
+              todayISO: todayISOLocal(),
+              referenceResolution: packet.referenceResolution ?? null,
+              userMessage: pendingClarifier.originalMessage,
+              onProgress,
+            });
+            setCoachProgressLabel(null);
+            recordVerifiedProgramEditMutationFocus(
+              pendingProgramEditAnswer.programEdit,
+              result,
+              todayISOLocal(),
+            );
+            if (result.kind === 'mutated' && result.applied) {
+              usePendingCoachClarifierStore.getState().clearPending();
+            }
+            logger.debug('[coach-flow] router_executed', {
+              route: result.route,
+              executorKind: result.kind,
+              applied: result.applied,
+              progress: result.progress,
+              source: 'pending_program_edit_resume',
+            });
+            const assistantMessage: Message = {
+              id: `${Date.now()}-program-edit-resumed`,
+              role: 'assistant',
+              content: result.reply,
+            };
+            setMessages((prev) => [...prev, userMessage, assistantMessage]);
+            setInputValue('');
+            return;
+          }
+          if (pendingProgramEditAnswer.kind === 'clarify') {
+            usePendingCoachClarifierStore.getState().setPending({
+              ...pendingClarifier,
+              askedQuestion: pendingProgramEditAnswer.reply,
+              programEdit: pendingProgramEditAnswer.programEdit,
+              candidateItems: pendingProgramEditAnswer.programEdit.candidateItems,
+              createdAt: pendingClarifier.createdAt,
+            });
+            logger.debug('[pending-program-edit] answer_needs_better_clarifier', {
+              missingFields: pendingClarifier.programEdit?.missingFields ?? pendingClarifier.missingFields,
+              options: pendingProgramEditAnswer.options,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            const clarifyMsg: Message = {
+              id: `${Date.now()}-program-edit-clarify`,
+              role: 'assistant',
+              content: pendingProgramEditAnswer.reply,
+            };
+            setMessages((prev) => [...prev, userMessage, clarifyMsg]);
+            setInputValue('');
+            return;
+          }
           const resumed = resumeFromPending({
             pending: pendingClarifier,
             newMessage: userMessage.content,
@@ -1525,14 +2081,34 @@ export default function CoachScreen() {
             const onProgress = (stage: ProgressStage) => {
               setCoachProgressLabel(describeStage(stage));
             };
-            const result = executeCoachCommand({
-              command: resumed,
+            const resumedProgramEdit = interpretCoachMessageToProgramEdit({
+              userMessage: userMessage.content,
+              todayISO: todayISOLocal(),
+              referenceResolution: packet.referenceResolution ?? null,
+              currentWeek: (packet.currentWeek ?? []).map((day) => ({
+                date: day.date,
+                sessionName: day.workout?.name ?? 'session',
+                workout: day.workout,
+              })),
+              resolveVisibleProgramForDate: (date) =>
+                resolveLiveVisibleProgramForDate(date, todayISOLocal()),
+              recentMessages,
+              candidateCommand: resumed,
+              source: 'pending_clarifier',
+            });
+            const result = executeProgramEdit({
+              programEdit: resumedProgramEdit,
               todayISO: todayISOLocal(),
               referenceResolution: packet.referenceResolution ?? null,
               userMessage: pendingClarifier.originalMessage,
               onProgress,
             });
             setCoachProgressLabel(null);
+            recordVerifiedProgramEditMutationFocus(
+              resumedProgramEdit,
+              result,
+              todayISOLocal(),
+            );
             logger.debug('[coach-flow] router_executed', {
               route: result.route,
               executorKind: result.kind,
@@ -1546,6 +2122,24 @@ export default function CoachScreen() {
               content: result.reply,
             };
             setMessages((prev) => [...prev, userMessage, assistantMessage]);
+            setInputValue('');
+            return;
+          }
+          if (shouldHoldDurationClarifier(pendingClarifier, userMessage.content)) {
+            logger.debug('[pending-clarifier] duration_answer_unparseable', {
+              operation: pendingClarifier.operation,
+              missingFields: pendingClarifier.missingFields,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            const restateMsg: Message = {
+              id: `${Date.now()}-clarifier-duration-restate`,
+              role: 'assistant',
+              content:
+                pendingClarifier.askedQuestion
+                  ? `${pendingClarifier.askedQuestion} A time like "45 min" or "1 hour" works.`
+                  : 'How long should it be? A time like "45 min" or "1 hour" works.',
+            };
+            setMessages((prev) => [...prev, userMessage, restateMsg]);
             setInputValue('');
             return;
           }
@@ -1706,11 +2300,37 @@ export default function CoachScreen() {
       // executed; the legacy /coach-chat fetch is hard-blocked for
       // every mutate or clarify outcome — see canFallbackToLegacy.
       logger.debug('[coach-live-send] router_reached', { reached: true });
-      const routedCommand: CoachCommand = routeCoachCommand({
+      const lastUndoableMutation = useCoachMutationHistoryStore
+        .getState()
+        .getLastUndoableMutation();
+      const lastChange = lastUndoableMutation?.affectedDates?.[0]
+        ? {
+            operation: lastUndoableMutation.operation,
+            target: {
+              kind: 'date' as const,
+              date: lastUndoableMutation.affectedDates[0],
+            },
+            appliedAt: lastUndoableMutation.timestamp,
+            userMessage: lastUndoableMutation.userMessage,
+            appliedReply: lastUndoableMutation.appliedReply,
+            touchedActivities: lastUndoableMutation.touchedActivities,
+          }
+        : null;
+      const routedProgramEdit = interpretCoachMessageToProgramEdit({
         userMessage: userMessage.content,
         todayISO: todayISOLocal(),
         referenceResolution: packet.referenceResolution ?? null,
+        currentWeek: (packet.currentWeek ?? []).map((day) => ({
+          date: day.date,
+          sessionName: day.workout?.name ?? 'session',
+          workout: day.workout,
+        })),
+        resolveVisibleProgramForDate: (date) =>
+          resolveLiveVisibleProgramForDate(date, todayISOLocal()),
+        lastChange,
+        recentMessages,
       });
+      const routedCommand: CoachCommand = routedProgramEdit.command as CoachCommand;
       logger.debug('[coach-live-send] router_emitted', {
         mode: routedCommand.mode,
         reason: 'reason' in routedCommand ? routedCommand.reason : null,
@@ -1730,31 +2350,111 @@ export default function CoachScreen() {
         legacyAllowed: canFallbackToLegacy(routedCommand),
       });
 
-      if (isMutateCommand(routedCommand)) {
+      let commandForExecution: CoachCommand = routedCommand;
+      let programEditForExecution = routedProgramEdit;
+      if (shouldTryLLMCoachCommand(routedCommand, userMessage.content)) {
+        const llmIntent = await liveCoachIntentClassifier.classify(packet);
+        classifiedCoachIntent = llmIntent;
+        const adapted = coachCommandFromLLMIntent(llmIntent, packet);
+        logger.debug('[coach-llm-command]', {
+          intent: llmIntent.intent,
+          confidence: llmIntent.confidence,
+          needsClarification: llmIntent.needsClarification,
+          adapterKind: adapted.kind,
+          reason: adapted.kind === 'ignored' ? adapted.reason : adapted.command.reason,
+        });
+        if (adapted.kind === 'command') {
+          programEditForExecution = interpretCoachMessageToProgramEdit({
+            userMessage: userMessage.content,
+            todayISO: todayISOLocal(),
+            referenceResolution: packet.referenceResolution ?? null,
+            currentWeek: (packet.currentWeek ?? []).map((day) => ({
+              date: day.date,
+              sessionName: day.workout?.name ?? 'session',
+              workout: day.workout,
+            })),
+            resolveVisibleProgramForDate: (date) =>
+              resolveLiveVisibleProgramForDate(date, todayISOLocal()),
+            lastChange,
+            recentMessages,
+            candidateCommand: adapted.command,
+            source: 'llm_adapter',
+          });
+          commandForExecution = programEditForExecution.command as CoachCommand;
+        } else if (adapted.kind === 'clarify') {
+          const clarifyCommand = adapted.command;
+          const captured = captureFromExecutorClarify({
+            routedCommand: clarifyCommand,
+            askedQuestion: clarifyCommand.question,
+            originalMessage: userMessage.content,
+            referenceResolution: packet.referenceResolution,
+            candidateItems: programEditForExecution.candidateItems,
+          });
+          if (captured) {
+            usePendingCoachClarifierStore.getState().setPending(captured);
+            logger.warn('[pending-clarifier-set]', {
+              operation: captured.operation,
+              scope: captured.scope,
+              missingFields: captured.missingFields,
+              partialPayload: captured.partialPayload,
+              targetStatus: packet.referenceResolution?.target ? 'resolved' : 'absent',
+              askedQuestion: captured.askedQuestion?.length > 200
+                ? `${captured.askedQuestion.slice(0, 200)}…`
+                : captured.askedQuestion,
+              source: 'llm_command_adapter',
+            });
+          }
+          const assistantMessage: Message = {
+            id: `${Date.now()}-llm-command-clarify`,
+            role: 'assistant',
+            content: clarifyCommand.question,
+          };
+          setMessages((prev) => [...prev, userMessage, assistantMessage]);
+          setInputValue('');
+          return;
+        }
+      }
+
+      if (isMutateCommand(commandForExecution)) {
         // Show visible progress while the executor runs.
         const onProgress = (stage: ProgressStage) => {
           setCoachProgressLabel(describeStage(stage));
         };
-        const result = executeCoachCommand({
-          command: routedCommand,
+        const result = executeProgramEdit({
+          programEdit: programEditForExecution,
           todayISO: todayISOLocal(),
           referenceResolution: packet.referenceResolution ?? null,
           userMessage: userMessage.content,
           onProgress,
         });
         setCoachProgressLabel(null);
+        recordVerifiedProgramEditMutationFocus(
+          programEditForExecution,
+          result,
+          todayISOLocal(),
+        );
 
         // ─── PENDING CLARIFIER CAPTURE ────────────────────────────
-        // If the executor returned `clarify` for a resumable mutate op
-        // (e.g. modality swap with no target bound), stash the partial
-        // command so the next user reply can answer it. captureFromExecutorClarify
-        // returns null for ops that don't need a target answer.
-        if (result.kind === 'clarify' && routedCommand.mode === 'mutate') {
+        // If the executor returned `clarify`, stash the partial command
+        // so the next user reply can answer it. captureFromExecutorClarify
+        // handles both mode='mutate' (operation-specific clarifiers like
+        // "Which session should I switch?") and mode='clarify' (generic
+        // "What change would you like?" with a resolved target). Returns
+        // null for ops/modes that aren't resumable.
+        if (result.kind === 'clarify') {
           const captured = captureFromExecutorClarify({
-            routedCommand,
+            routedCommand: commandForExecution,
             askedQuestion: result.reply,
             originalMessage: userMessage.content,
-            missingFields: routedCommand.missingFields,
+            missingFields:
+              programEditForExecution.missingFields.length > 0
+                ? programEditForExecution.missingFields
+                : commandForExecution.mode === 'mutate'
+                  ? commandForExecution.missingFields
+                  : undefined,
+            referenceResolution: packet.referenceResolution,
+            programEdit: programEditForExecution,
+            candidateItems: programEditForExecution.candidateItems,
           });
           if (captured) {
             usePendingCoachClarifierStore.getState().setPending(captured);
@@ -1767,7 +2467,7 @@ export default function CoachScreen() {
               scope: captured.scope,
               missingFields: captured.missingFields,
               partialPayload: captured.partialPayload,
-              targetStatus: routedCommand.target?.kind ?? 'absent',
+              targetStatus: (commandForExecution as any).target?.kind ?? 'absent',
               askedQuestion: captured.askedQuestion?.length > 200
                 ? `${captured.askedQuestion.slice(0, 200)}…`
                 : captured.askedQuestion,
@@ -1835,27 +2535,72 @@ export default function CoachScreen() {
         setInputValue('');
         return;
       }
+
+      // ─── ROUTER CLARIFY MODE — capture placeholder pending ─────────
+      // Slice 1: when the router emits mode='clarify' (e.g. "What change
+      // would you like — different exercise, different day, lighter
+      // session, or skip it?" with reason='mutation_like_no_payload')
+      // we MUST capture a placeholder pending clarifier here. Otherwise
+      // the follow-up answer ("longer session", "lighter", "skip") has
+      // no pending state to resume from, falls through to the legacy
+      // /coach-chat LLM, and gets rewritten to the generic fallback.
+      //
+      // The capture path inside the `isMutateCommand` block above never
+      // fires for clarify-mode because `isMutateCommand` returns false.
+      // Mirror it here for clarify-mode + return the question directly,
+      // bypassing the dispatcher / legacy entirely.
+      if (routedCommand.mode === 'clarify') {
+        const captured = captureFromExecutorClarify({
+          routedCommand,
+          askedQuestion: routedCommand.question,
+          originalMessage: userMessage.content,
+          missingFields: routedProgramEdit.missingFields,
+          referenceResolution: packet.referenceResolution,
+          programEdit: routedProgramEdit,
+          candidateItems: routedProgramEdit.candidateItems,
+        });
+        if (captured) {
+          usePendingCoachClarifierStore.getState().setPending(captured);
+          logger.warn('[pending-clarifier-set]', {
+            operation: captured.operation,
+            scope: captured.scope,
+            missingFields: captured.missingFields,
+            partialPayload: captured.partialPayload,
+            targetStatus: packet.referenceResolution?.target ? 'resolved' : 'absent',
+            askedQuestion: captured.askedQuestion?.length > 200
+              ? `${captured.askedQuestion.slice(0, 200)}…`
+              : captured.askedQuestion,
+            source: 'router_clarify_mode',
+          });
+        } else {
+          logger.debug('[pending-clarifier] not_captured_for_clarify', {
+            reason: routedCommand.reason ?? 'unknown',
+            hasReferenceTarget: !!packet.referenceResolution?.target,
+          });
+        }
+        const assistantMessage: Message = {
+          id: `${Date.now()}-clarify`,
+          role: 'assistant',
+          content: routedCommand.question,
+        };
+        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        setInputValue('');
+        return;
+      }
+
       // routedCommand.mode is 'conversation' (or legacy 'explain') /
-      // 'inspect_state' — fall through to the dispatcher, which calls
-      // the LLM with the FULL coachContextPacket so replies stay
-      // grounded in the visible week / activeInjury / lastDiscussed.
+      // 'inspect_state' — fall through to the dispatcher for a grounded
+      // non-mutating reply.
       // The legacy /coach-chat path is now CONVERSATION-ONLY: the
       // mutation router has already classified mutations and routed
       // them locally, so the legacy text fallback can never apply
       // structural changes.
 
-      // Phase G runtime audit — bypass the /coach-intent classifier for
-      // router-controlled paths. The router has already classified the
-      // turn as conversation/inspect_state, and the legacy /coach-chat
-      // is conversation-only. The classifier was added to pick a
-      // dispatcher branch (program_explanation / session_mismatch_question
-      // / general_question), but it's been 401-ing on the Supabase gateway
-      // every turn — flooding logs and providing no real signal because
-      // the disabled fallback already maps to general_question. Skip it
-      // entirely; synthesize the same fallback shape locally so the
-      // dispatcher's contract is preserved without a network round-trip.
-      // Sam's spec: "do not call /coach-intent for router-controlled
-      // paths."
+      // We already tried the LLM edit parser above for mutation-like
+      // turns the router could not structure. For read-only conversation
+      // and inspect-state paths, skip the intent classifier and synthesize
+      // the same safe fallback shape locally; the legacy /coach-chat path
+      // below is conversation-only and cannot mutate state.
       const intent: CoachIntent = {
         intent: 'general_question',
         confidence: 0,
@@ -2087,16 +2832,33 @@ export default function CoachScreen() {
       // workout-level description (which is empty) nor the conditioning block
       // description (hardcoded to a generic line). So we surface exercise notes
       // for any conditioning / interval / running exercise.
-      let programContext = '';
+      const todayISOForCoach = todayISOLocal();
+      let programContext =
+        `\n\nLOCAL APP CONTEXT:\n` +
+        `- The athlete's local date is ${todayISOForCoach} (Australia/Melbourne app time).\n` +
+        `- When the athlete says "today", use ${todayISOForCoach}. Do not infer today from server or model timezone.\n` +
+        `- Do not use markdown bold markers like **text**. Use short plain headings on their own lines.`;
+      try {
+        const { day } = getTodayProjectedDay(todayISOForCoach);
+        programContext += day?.workout
+          ? `\n- Today's visible session is: ${day.short} ${day.date} - ${day.workout.name}.`
+          : `\n- Today has no visible S&C session scheduled.`;
+      } catch {
+        // The deterministic local today reply handles state questions; this
+        // context is only a fallback hint for the server conversation path.
+      }
       if (currentMicrocycle?.workouts?.length) {
-        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const jsDayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const programDayNames = ['', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        const labelWorkoutDay = (dayOfWeek: number) =>
+          programDayNames[dayOfWeek] || jsDayNames[dayOfWeek] || `Day ${dayOfWeek}`;
         const NOTE_PATTERN = /(MAS|interval|tempo|sprint|run|bike|row|ski|fartlek|tabata|110%|100%|min on|sec on|km|on \/|tt|time trial)/i;
 
         const lines = currentMicrocycle.workouts.map((w) => {
           const exNames = w.exercises
             .map((ex) => ex.exercise?.name || ex.exerciseId)
             .join(', ');
-          const parts: string[] = [`${dayNames[w.dayOfWeek]}: ${w.name} [${exNames}]`];
+          const parts: string[] = [`${labelWorkoutDay(w.dayOfWeek)}: ${w.name} [${exNames}]`];
 
           // Workout-level description (currently empty for generated programs,
           // but include if non-empty in case future templates set it).
@@ -2129,7 +2891,7 @@ export default function CoachScreen() {
 
           return parts.join('\n');
         });
-        programContext =
+        programContext +=
           `\n\nCURRENT PROGRAM (this is what the athlete is doing right now — read the bulleted prescription notes for MAS %, work intervals, target paces, and intensity rating):\n` +
           lines.join('\n') +
           `\n\nWhen the user asks to swap an exercise on a specific day, use replace_exercise (LOCAL scope) with an ISO date. For a permanent substitution, use set_preferred_alternative (PERMANENT scope) — and ask first if it's not unambiguously permanent. Match exercise names from the list above. ` +
@@ -2242,11 +3004,9 @@ export default function CoachScreen() {
       // reply with NO actions (and the user then thought their request
       // had been honoured).
       //
-      // Sam's spec: "If legacy returns a reply that says 'Done', 'Sorted',
-      // 'changed', 'swapped', 'saved', or 'pinned' without deterministic
-      // verification, replace it with: I can talk through that, but
-      // program changes need to go through the verified coach command
-      // path."
+      // If legacy returns a "Done"-shaped reply without deterministic
+      // verification, replace it with a plain clarification. Do not expose
+      // internal router / verification language to the athlete.
       //
       // Allowed exception: pure save_note results legitimately use
       // "noted" — but the user-facing reply for a save_note isn't where
@@ -2256,7 +3016,7 @@ export default function CoachScreen() {
       const replyImpliesDone =
         /\b(done|sorted|saved|swapped|swap|changed|change|pinned|locked\s*in|got\s*it|noted|i'?ll\s+use|from\s+now\s+on)\b/i.test(legacyReplyText);
       const sanitizedLegacyReply = replyImpliesDone
-        ? 'I can talk through that, but program changes need to go through the verified coach command path.'
+        ? 'I can help, but I need a specific change before I edit the program. Tell me what you want: lighter, shorter, swap an exercise, move the session, or add conditioning.'
         : legacyReplyText;
       if (replyImpliesDone) {
         logger.warn('[legacy-reply-sanitized]', {
@@ -2267,6 +3027,22 @@ export default function CoachScreen() {
           message: userMessage.content.length > 200
             ? `${userMessage.content.slice(0, 200)}…`
             : userMessage.content,
+        });
+      }
+      // ─── DEV GUARD: pending-command leak to legacy ─────────────────
+      // If a pending clarifier existed when this turn started, the
+      // resume path should have handled it. Reaching legacy with a
+      // sanitized clarification reply means the resume failed — log an
+      // error so the smoke and dev overlay surface it.
+      if (
+        replyImpliesDone &&
+        getPendingClarifierSnapshot()
+      ) {
+        logger.error('[pending-command-legacy-leak]', {
+          reason: 'pending_clarifier_active_but_legacy_sanitized',
+          pendingOp: getPendingClarifierSnapshot()?.operation ?? null,
+          message: userMessage.content.slice(0, 200),
+          originalReply: legacyReplyText.slice(0, 200),
         });
       }
 
@@ -2436,7 +3212,7 @@ export default function CoachScreen() {
               isUserMessage && styles.userMessageText,
             ]}
           >
-            {item.content}
+            {renderMessageContent(item.content, isUserMessage)}
           </Text>
         </View>
       </View>
@@ -2732,6 +3508,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     lineHeight: 20,
+  },
+  messageTextBold: {
+    fontWeight: '800',
   },
   userMessageText: {
     color: '#0C0C0C',

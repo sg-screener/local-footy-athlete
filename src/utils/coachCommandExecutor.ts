@@ -43,6 +43,7 @@ import {
   type RenderedMutationVerification,
   type RenderedExerciseSwapVerification,
   type RenderedSessionMoveVerification,
+  extractVisibleProgramItemsFromWorkout,
 } from './visibleProgramReadModel';
 import { EXERCISE_TAGS } from '../data/exerciseTags';
 import {
@@ -64,19 +65,30 @@ import {
   type DateOverrideSnapshot,
   type ModalityPreferenceSnapshot,
   type MutationKind,
+  type MutationTouchedActivity,
 } from '../store/coachMutationHistoryStore';
 import {
   applyUndoPlan,
   readCurrentDateOverride,
   readCurrentDateOverrideMap,
+  readCurrentCalendarMark,
   readCurrentModalityPreference,
   readCurrentModalityPreferenceMap,
   type ApplyUndoPlanResult,
   type ApplyUndoPlanDeps,
 } from './coachUndoEngine';
 import type { ModalityPreference } from '../store/coachPreferencesStore';
+import { useProgramStore } from '../store/programStore';
+import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import type { Workout, OverrideContext } from '../types/domain';
 import { logger } from './logger';
+import {
+  buildConditioningPrescription,
+  type CoachConditioningEditScope,
+  type CoachConditioningEditMode,
+  type CoachPlanChangeKind,
+  type CoachTrainingIntent,
+} from './coachPlan';
 
 // ─── Public types ───────────────────────────────────────────────────
 
@@ -145,6 +157,10 @@ export interface ExecuteCoachCommandInput {
   replaceExerciseDeps?: ReplaceExerciseDeps;
   /** Test seam — same idea for the deterministic move_session branch. */
   moveSessionDeps?: MoveSessionDeps;
+  /** Test seam — same idea for adding/copying a session onto a Rest day. */
+  addSessionDeps?: AddSessionDeps;
+  /** Test seam — same idea for the deterministic remove_session branch. */
+  removeSessionDeps?: RemoveSessionDeps;
   /** Test seam — bundled deps for undo recording + execution. Production
    *  leaves undefined; the executor reads/writes the live mutation
    *  history store and runs the live undo engine. */
@@ -169,11 +185,18 @@ export interface ConditioningMutationDeps {
     todayISO: string;
     targetDate: string;
     beforeWorkout?: ResolvedDay['workout'] | null;
+    expectedActivityTitle?: string | null;
   }) => RenderedMutationVerification;
   /** Snapshots the workout on the target date BEFORE the apply call.
    *  Used to populate `verifyRendered`'s `beforeWorkout` argument so
    *  the verification can compare before/after. Tests can stub. */
   snapshotBefore?: (targetDate: string) => ResolvedDay['workout'] | null;
+  /** Optional post-apply snapshot for ProgramEdit invariant verification.
+   *  Production leaves this undefined and reads the live visible program. */
+  snapshotAfter?: (targetDate: string) => ResolvedDay['workout'] | null;
+  /** Replaces the live undo application when a post-apply verifier rejects
+   *  the mutation. Production falls back to `applyUndoPlan`. */
+  rollback?: (plan: RevertPlan, opts: { todayISO: string }) => ApplyUndoPlanResult;
   /** Optional ID generator for the AdjustmentEvent. Tests pin a value. */
   newEventId?: () => string;
 }
@@ -227,6 +250,80 @@ export interface MoveSessionDeps {
    *  clarifier — the executor lists ACTUAL session names by day rather
    *  than asking an open-ended question. */
   visibleWeek?: (mondayISO: string) => ResolvedDay[];
+}
+
+export interface RemoveSessionApplyResult {
+  applied: boolean;
+  reason?: string;
+}
+
+export interface RenderedRemoveSessionVerification {
+  targetRemoved: boolean;
+  otherDaysUnchanged: boolean;
+  changedOtherDates: string[];
+  beforeWorkoutName: string | null;
+  afterWorkoutName: string | null;
+}
+
+export interface AddSessionApplyResult {
+  applied: boolean;
+  reason?: string;
+}
+
+export interface RenderedAddSessionVerification {
+  targetAdded: boolean;
+  otherDaysUnchanged: boolean;
+  changedOtherDates: string[];
+  beforeWorkoutName: string | null;
+  afterWorkoutName: string | null;
+}
+
+export interface AddSessionDeps {
+  applyAdd?: (
+    input: { targetDate: string; sourceWorkout: Workout; reason?: string },
+    opts: { todayISO: string },
+  ) => AddSessionApplyResult;
+  verifyRendered?: (args: {
+    requestedDay: string;
+    todayISO: string;
+    targetDate: string;
+    sourceWorkout: Workout;
+    beforeWorkout: ResolvedDay['workout'] | null;
+    afterWorkout: ResolvedDay['workout'] | null;
+    visibleWeekBefore: ResolvedDay[];
+    visibleWeekAfter: ResolvedDay[];
+  }) => RenderedAddSessionVerification;
+  snapshotBefore?: (date: string) => ResolvedDay['workout'] | null;
+  snapshotAfter?: (date: string) => ResolvedDay['workout'] | null;
+  visibleWeek?: (mondayISO: string) => ResolvedDay[];
+  readCalendarMark?: (date: string) => CalendarDayType | null;
+  rollback?: (snapshot: RemoveSessionRollbackSnapshot, opts: { todayISO: string }) => void;
+}
+
+/**
+ * Dependency surface for the deterministic remove_session branch. The live
+ * path clears any manual override for the target date, marks it as rest,
+ * then verifies the rendered week before replying.
+ */
+export interface RemoveSessionDeps {
+  applyRemove?: (
+    input: { targetDate: string; targetSessionId?: string | null; reason?: string },
+    opts: { todayISO: string },
+  ) => RemoveSessionApplyResult;
+  verifyRendered?: (args: {
+    requestedDay: string;
+    todayISO: string;
+    targetDate: string;
+    beforeWorkout: ResolvedDay['workout'] | null;
+    afterWorkout: ResolvedDay['workout'] | null;
+    visibleWeekBefore: ResolvedDay[];
+    visibleWeekAfter: ResolvedDay[];
+  }) => RenderedRemoveSessionVerification;
+  snapshotBefore?: (date: string) => ResolvedDay['workout'] | null;
+  snapshotAfter?: (date: string) => ResolvedDay['workout'] | null;
+  visibleWeek?: (mondayISO: string) => ResolvedDay[];
+  readCalendarMark?: (date: string) => CalendarDayType | null;
+  rollback?: (snapshot: RemoveSessionRollbackSnapshot, opts: { todayISO: string }) => void;
 }
 
 /**
@@ -394,6 +491,12 @@ function executeMutate(
 
     case 'replace_exercise':
       return runReplaceExercise(input, stages, tick);
+
+    case 'add_session':
+      return runAddSession(input, stages, tick);
+
+    case 'remove_session':
+      return runRemoveSession(input, stages, tick);
 
     case 'move_session':
       return runMoveSession(input, stages, tick);
@@ -607,6 +710,34 @@ function buildRevertPlanFromDateSnapshots(
   return { kind: 'restore_snapshot', dateOverrides };
 }
 
+function rollbackFailedConditioningMutation(
+  input: ExecuteCoachCommandInput,
+  beforeOverrideMap: Map<string, DateBeforeSnapshot>,
+  affectedDates: string[],
+  route: string,
+): void {
+  const plan = buildRevertPlanFromDateSnapshots(beforeOverrideMap, affectedDates);
+  const rollback =
+    input.conditioningDeps?.rollback ??
+    ((revertPlan: RevertPlan, opts: { todayISO: string }) =>
+      applyUndoPlan(revertPlan, opts));
+  try {
+    const result = rollback(plan, { todayISO: input.todayISO });
+    logger.debug('[coach-command-executor] rollback_failed_conditioning_mutation', {
+      route,
+      affectedDates,
+      executed: result.executed,
+      fullyVerified: result.verification.fullyVerified,
+    });
+  } catch (e) {
+    logger.warn('[coach-command-executor] rollback_failed_conditioning_mutation_threw', {
+      route,
+      affectedDates,
+      error: (e as Error)?.message ?? String(e),
+    });
+  }
+}
+
 /** Cheap equality check between two ModalityPreference entries. Treats
  *  null and undefined as equal; ignores `createdAt` because timestamps
  *  drift even when intent didn't. */
@@ -701,6 +832,7 @@ function recordVerifiedMutation(args: {
   operation: CoachMutateOperation;
   mutationKind: MutationKind;
   affectedDates: string[];
+  touchedActivities?: MutationTouchedActivity[];
   scope: CoachCommandScope;
   revertPlan: RevertPlan;
 }): void {
@@ -719,6 +851,7 @@ function recordVerifiedMutation(args: {
       userMessage: input.userMessage,
       appliedReply: result.reply,
       affectedDates: args.affectedDates,
+      touchedActivities: args.touchedActivities,
       scope: args.scope,
       revertPlan: args.revertPlan,
       timestamp: now(),
@@ -758,6 +891,7 @@ function runModalityOrchestrator(
     userMessage: input.userMessage,
     todayISO: input.todayISO,
     referenceResolution: input.referenceResolution,
+    parsedSwap: parsedModalitySwapFromCommand(input.command),
   });
 
   tick('verifying_update');
@@ -875,6 +1009,56 @@ function runModalityOrchestrator(
   return result;
 }
 
+function parsedModalitySwapFromCommand(
+  command: CoachCommand,
+): Parameters<typeof orchestrateModalitySwap>[0]['parsedSwap'] {
+  if (command.mode !== 'mutate') return null;
+  if (
+    command.operation === 'swap_conditioning_modality_once' &&
+    command.payload.operation === 'swap_conditioning_modality_once'
+  ) {
+    return command.payload.to
+      ? {
+          from: command.payload.from,
+          to: command.payload.to,
+          toToken: command.payload.to === 'ski' ? 'ski erg' : command.payload.to,
+          fromInferred: command.payload.from == null,
+          bikeLabel: command.payload.bikeLabel ?? null,
+          targetedSession: true,
+        }
+      : null;
+  }
+  if (
+    command.operation === 'set_conditioning_modality_preference' &&
+    command.payload.operation === 'set_conditioning_modality_preference'
+  ) {
+    return command.payload.to
+      ? {
+          from: command.payload.from,
+          to: command.payload.to,
+          toToken: command.payload.to === 'ski' ? 'ski erg' : command.payload.to,
+          fromInferred: command.payload.from == null,
+          bikeLabel: command.payload.bikeLabel ?? null,
+          targetedSession: true,
+        }
+      : null;
+  }
+  if (
+    command.operation === 'set_bike_subtype_preference' &&
+    command.payload.operation === 'set_bike_subtype_preference'
+  ) {
+    return {
+      from: 'bike' as any,
+      to: 'bike' as any,
+      toToken: command.payload.bikeLabel === 'assault' ? 'assault bike' : 'bike',
+      fromInferred: false,
+      bikeLabel: command.payload.bikeLabel,
+      targetedSession: true,
+    };
+  }
+  return null;
+}
+
 // ─── Add / remove conditioning via applyAdjustmentEvents ────────────
 //
 // Both ops share the same shape: build a single AdjustmentEvent
@@ -952,10 +1136,68 @@ function runConditioningMutation(
     command.payload.operation === 'remove_conditioning'
       ? command.payload.modality ?? null
       : null;
+  let addSpec: AddConditioningEventSpec | null =
+    command.operation === 'add_conditioning' &&
+    command.payload.operation === 'add_conditioning'
+	      ? {
+	          modality,
+	          customActivity: command.payload.customActivity,
+	          intensity: command.payload.intensity,
+	          durationMinutes: command.payload.durationMinutes,
+	          sets: command.payload.sets,
+	          repsMin: command.payload.repsMin,
+	          repsMax: command.payload.repsMax,
+	          restSeconds: command.payload.restSeconds,
+	          prescriptionType: command.payload.prescriptionType,
+	          bikeLabel: command.payload.bikeLabel,
+	          effortKind: command.payload.effortKind,
+	          replaceActivity: command.payload.replaceActivity,
+	          trainingIntent: command.payload.trainingIntent,
+	          changeKind: command.payload.changeKind,
+	          editMode: command.payload.editMode,
+	          editScope: command.payload.editScope,
+	          targetItemId: command.payload.targetItemId,
+	        }
+      : null;
+  const removeSpec: RemoveConditioningEventSpec | null =
+    command.operation === 'remove_conditioning' &&
+    command.payload.operation === 'remove_conditioning'
+      ? {
+          modality,
+          targetItemId: command.payload.targetItemId,
+        }
+      : null;
+
+  if (command.operation === 'add_conditioning' && addSpec) {
+    const contract = completeConditioningEditContract({
+      addSpec,
+      beforeWorkout,
+      targetDate,
+    });
+    if (contract.kind === 'clarify') {
+      tick('composing_reply');
+      return {
+        kind: 'clarify',
+        reply: contract.reply,
+        applied: false,
+        route: 'clarify_conditioning_source',
+        progress: stages,
+        options: contract.options,
+      };
+    }
+    addSpec = contract.addSpec;
+  }
+
   const event: AdjustmentEvent =
     command.operation === 'add_conditioning'
-      ? buildAddConditioningEvent(targetDate, modality, newEventId())
-      : buildRemoveConditioningEvent(targetDate, newEventId());
+      ? buildAddConditioningEvent(targetDate, addSpec ?? { modality }, newEventId())
+      : buildRemoveConditioningEvent(targetDate, newEventId(), removeSpec ?? { modality });
+  const expectedActivityTitle =
+    command.operation === 'add_conditioning' &&
+    event.after &&
+    typeof event.after === 'object'
+      ? String((event.after as any).title ?? '').trim() || null
+      : null;
 
   // ── Apply ──────────────────────────────────────────────────────
   tick('applying_change');
@@ -972,28 +1214,104 @@ function runConditioningMutation(
     todayISO: input.todayISO,
     targetDate,
     beforeWorkout,
+    expectedActivityTitle,
   });
 
   logger.debug('[coach-command-executor] conditioning_mutation', {
     operation: command.operation,
     targetDate,
     modality,
+    customActivity: addSpec?.customActivity ?? null,
+    intensity: addSpec?.intensity ?? null,
+    editScope: addSpec?.editScope ?? null,
     appliedCount: applyResult.applied.length,
     rejectedCount: applyResult.rejected.length,
     rejectedKinds: applyResult.rejected.map((r) => r.kind),
     programTabProjectionHasConditioning: verification.programTabProjectionHasConditioning,
     dayWorkoutProjectionHasConditioning: verification.dayWorkoutProjectionHasConditioning,
+    expectedActivityTitle: verification.expectedActivityTitle,
+    programTabProjectionHasExpectedActivity: verification.programTabProjectionHasExpectedActivity,
+    dayWorkoutProjectionHasExpectedActivity: verification.dayWorkoutProjectionHasExpectedActivity,
   });
 
   const result = composeConditioningResult({
     operation: command.operation,
     targetDate,
     modality,
+    customActivity: addSpec?.customActivity,
+    intensity: addSpec?.intensity,
+    durationMinutes: addSpec?.durationMinutes,
+    sets: addSpec?.sets,
+    repsMin: addSpec?.repsMin,
+    repsMax: addSpec?.repsMax,
+    restSeconds: addSpec?.restSeconds,
+    prescriptionType: addSpec?.prescriptionType,
+    replaceActivity: addSpec?.replaceActivity,
+    trainingIntent: addSpec?.trainingIntent,
+    changeKind: addSpec?.changeKind,
+    editScope: addSpec?.editScope,
+    removeTargetItemId: removeSpec?.targetItemId,
+    removeTargetTitle: removeSpec?.targetItemId
+      ? visibleConditioningSources(beforeWorkout).find((source) => source.id === removeSpec.targetItemId)?.title
+      : undefined,
+    targetedRemoveVerification: removeSpec?.targetItemId
+      ? verifyTargetedRemoveConditioningMutation({
+          beforeWorkout,
+          afterWorkout: deps.snapshotAfter
+            ? deps.snapshotAfter(targetDate)
+            : input.conditioningDeps
+            ? null
+            : snapshotBefore(targetDate),
+          targetItemId: removeSpec.targetItemId,
+        })
+      : undefined,
     applyResult,
     verification,
+    expectedActivityTitle,
+    isDurationCorrection: /(?:last_add_duration_correction|last_add_sprint_duration_correction|named_activity_duration_adjustment|pending_duration_answer)/.test(command.reason ?? ''),
     stages,
     tick,
   });
+
+  if (
+    result.kind === 'mutated' &&
+    result.applied &&
+    command.operation === 'add_conditioning' &&
+    addSpec?.editScope === 'edit_duration_only'
+  ) {
+    const afterWorkout = deps.snapshotAfter
+      ? deps.snapshotAfter(targetDate)
+      : input.conditioningDeps
+      ? null
+      : snapshotBefore(targetDate);
+    const durationVerification = afterWorkout
+      ? verifyDurationOnlyConditioningMutation({
+          beforeWorkout,
+          afterWorkout,
+          targetItemId: addSpec.targetItemId,
+          durationMinutes: addSpec.durationMinutes,
+        })
+      : { ok: true, reason: 'no_after_snapshot' };
+    if (!durationVerification.ok) {
+      rollbackFailedConditioningMutation(
+        input,
+        beforeOverrideMap,
+        [targetDate],
+        `duration_only_verification_failed:${durationVerification.reason}`,
+      );
+      return {
+        kind: 'verified_no_op',
+        reply: 'I couldn\'t safely update that duration. Which conditioning item should I change?',
+        applied: false,
+        route: `duration_only_verification_failed:${durationVerification.reason}`,
+        progress: Array.from(new Set([...stages, 'verifying_update', 'composing_reply'])),
+      };
+    }
+  }
+
+  if (applyResult.applied.length > 0 && !result.applied) {
+    rollbackFailedConditioningMutation(input, beforeOverrideMap, [targetDate], result.route);
+  }
 
   // Record the mutation only if the executor confirmed it landed visibly
   // on both surfaces — failed/verified-no-op turns must NOT enter history.
@@ -1008,6 +1326,42 @@ function runConditioningMutation(
           ? 'add_conditioning'
           : 'remove_conditioning',
       affectedDates: [targetDate],
+      touchedActivities:
+        command.operation === 'add_conditioning'
+          ? [
+              {
+                kind: 'conditioning',
+                date: targetDate,
+                sessionName:
+                  command.target.kind === 'date'
+                    ? command.target.sessionName
+                    : undefined,
+                title: expectedActivityTitle ?? addSpec?.customActivity ?? humanModality(modality ?? 'conditioning'),
+                modality,
+                intensity: addSpec?.intensity,
+                durationMinutes: addSpec?.durationMinutes,
+                sets: event.after && typeof event.after === 'object'
+                  ? Number((event.after as any).sets ?? 0) || undefined
+                  : undefined,
+                repsMin: event.after && typeof event.after === 'object'
+                  ? Number((event.after as any).repsMin ?? 0) || undefined
+                  : undefined,
+                repsMax: event.after && typeof event.after === 'object'
+                  ? Number((event.after as any).repsMax ?? 0) || undefined
+                  : undefined,
+                prescriptionType: event.after && typeof event.after === 'object'
+                  ? String((event.after as any).prescriptionType ?? '') || undefined
+                  : undefined,
+                bikeLabel: addSpec?.bikeLabel,
+                effortKind: addSpec?.effortKind,
+                trainingIntent: addSpec?.trainingIntent ?? (
+                  event.after && typeof event.after === 'object'
+                    ? String((event.after as any).trainingIntent ?? '') || undefined
+                    : undefined
+                ),
+              },
+            ]
+          : undefined,
       scope: command.scope,
       revertPlan,
     });
@@ -1020,12 +1374,54 @@ function composeConditioningResult(args: {
   operation: 'add_conditioning' | 'remove_conditioning';
   targetDate: string;
   modality: string | null;
+  customActivity?: string;
+  intensity?: string;
+  durationMinutes?: number;
+  sets?: number;
+  repsMin?: number;
+  repsMax?: number;
+  restSeconds?: number;
+  prescriptionType?: 'duration' | 'duration_minutes';
+  replaceActivity?: string;
+  trainingIntent?: CoachTrainingIntent;
+  changeKind?: CoachPlanChangeKind;
+  editScope?: CoachConditioningEditScope;
+  removeTargetItemId?: string;
+  removeTargetTitle?: string;
+  targetedRemoveVerification?: { ok: boolean; reason: string };
   applyResult: ApplyEventsResult;
   verification: RenderedMutationVerification;
+  expectedActivityTitle: string | null;
+  isDurationCorrection?: boolean;
   stages: ProgressStage[];
   tick: (s: ProgressStage) => void;
 }): ExecutionResult {
-  const { operation, targetDate, modality, applyResult, verification, stages, tick } = args;
+  const {
+    operation,
+    targetDate,
+    modality,
+    customActivity,
+    intensity,
+    durationMinutes,
+    sets,
+    repsMin,
+    repsMax,
+    restSeconds,
+    prescriptionType,
+    replaceActivity,
+    trainingIntent,
+    changeKind,
+    editScope,
+    removeTargetItemId,
+    removeTargetTitle,
+    targetedRemoveVerification,
+    applyResult,
+    verification,
+    expectedActivityTitle,
+    isDurationCorrection,
+    stages,
+    tick,
+  } = args;
   const niceDate = humanDate(targetDate);
 
   // 1. Engine rejected the event outright.
@@ -1043,11 +1439,23 @@ function composeConditioningResult(args: {
 
   // 2. Apply succeeded — verify the visible surface actually moved.
   const wantsConditioning = operation === 'add_conditioning';
-  const programVerified =
-    verification.programTabProjectionHasConditioning === wantsConditioning;
-  const dayWorkoutVerified =
-    verification.dayWorkoutProjectionHasConditioning === wantsConditioning;
-  const fullyVerified = programVerified && dayWorkoutVerified;
+  const expectedActivityVerified =
+    !!expectedActivityTitle &&
+    (verification.programTabProjectionHasExpectedActivity === true ||
+      verification.dayWorkoutProjectionHasExpectedActivity === true);
+  const visibleConditioningVerified =
+    verification.afterHasConditioning === true ||
+    verification.programTabProjectionHasConditioning === true ||
+    verification.dayWorkoutProjectionHasConditioning === true ||
+    expectedActivityVerified;
+  const addVerified =
+    visibleConditioningVerified;
+  const removeVerified = removeTargetItemId
+    ? targetedRemoveVerification?.ok === true
+    : !visibleConditioningVerified &&
+      verification.programTabProjectionHasConditioning === false &&
+      verification.dayWorkoutProjectionHasConditioning === false;
+  const fullyVerified = wantsConditioning ? addVerified : removeVerified;
 
   tick('composing_reply');
   if (!fullyVerified) {
@@ -1055,12 +1463,16 @@ function composeConditioningResult(args: {
       kind: 'verified_no_op',
       reply:
         operation === 'add_conditioning'
-          ? `I added conditioning on ${niceDate}, but the change didn't show up on either the Program tab or the day view. ` +
+          ? `I tried to add conditioning on ${niceDate}, but I couldn't verify it in the visible program. ` +
             `Try editing that session directly — the apply layer didn't land it visibly.`
+          : removeTargetItemId
+          ? `I couldn't safely remove that conditioning item on ${niceDate}. Which item should I remove?`
           : `I removed the conditioning on ${niceDate}, but the visible program still shows it. ` +
             `Try editing that session directly — the apply layer didn't land it visibly.`,
       applied: false,
-      route: `verification_failed:${operation}`,
+      route: removeTargetItemId
+        ? `verification_failed:${operation}:${targetedRemoveVerification?.reason ?? 'targeted_remove'}`
+        : `verification_failed:${operation}`,
       progress: stages,
     };
   }
@@ -1068,28 +1480,473 @@ function composeConditioningResult(args: {
   // 3. Fully verified — derive a concrete reply.
   const reply =
     operation === 'add_conditioning'
-      ? `Done. I added a${modality ? ` ${humanModality(modality)}` : ' light aerobic'} ` +
-        `conditioning block to ${niceDate} after the strength work.`
+      ? buildAddedConditioningReply(niceDate, {
+          modality,
+          customActivity,
+	          intensity,
+	          durationMinutes,
+      sets,
+      repsMin,
+      repsMax,
+      restSeconds,
+      prescriptionType,
+      replaceActivity,
+	          trainingIntent,
+          changeKind,
+	          editScope,
+	          isDurationCorrection,
+	        })
       : `Done. I removed the conditioning block from ${niceDate}.`;
+  const removeReply = removeTargetItemId
+    ? `Done. I removed ${removeTargetTitle ?? 'that conditioning item'} from ${niceDate}.`
+    : `Done. I removed the conditioning block from ${niceDate}.`;
   return {
     kind: 'mutated',
-    reply,
+    reply: operation === 'remove_conditioning' ? removeReply : reply,
     applied: true,
     route: `${operation}:applied`,
     progress: stages,
   };
 }
 
+interface AddConditioningEventSpec {
+  modality: string | null;
+  customActivity?: string;
+  intensity?: string;
+  durationMinutes?: number;
+  sets?: number;
+  repsMin?: number;
+  repsMax?: number;
+  restSeconds?: number;
+  prescriptionType?: 'duration' | 'duration_minutes';
+  bikeLabel?: string | null;
+  effortKind?: 'sprint' | 'interval';
+  replaceActivity?: string;
+  trainingIntent?: CoachTrainingIntent;
+  changeKind?: CoachPlanChangeKind;
+  editMode?: CoachConditioningEditMode;
+  editScope?: CoachConditioningEditScope;
+  targetItemId?: string;
+}
+
+interface RemoveConditioningEventSpec {
+  modality: string | null;
+  targetItemId?: string;
+}
+
+type ConditioningEditContractResult =
+  | { kind: 'ok'; addSpec: AddConditioningEventSpec }
+  | { kind: 'clarify'; reply: string; options?: string[] };
+
+interface VisibleConditioningSource {
+  id: string;
+  title: string;
+}
+
+function completeConditioningEditContract(args: {
+  addSpec: AddConditioningEventSpec;
+  beforeWorkout: ResolvedDay['workout'] | null;
+  targetDate: string;
+}): ConditioningEditContractResult {
+  const editMode =
+    args.addSpec.editMode ??
+    (args.addSpec.replaceActivity ? 'update_existing' : 'append');
+
+  if (editMode !== 'update_existing') {
+    return { kind: 'ok', addSpec: args.addSpec };
+  }
+
+  if (typeof args.addSpec.replaceActivity === 'string' && args.addSpec.replaceActivity.trim()) {
+    if (args.addSpec.targetItemId) {
+      const source = visibleConditioningSources(args.beforeWorkout).find((candidate) =>
+        candidate.id === args.addSpec.targetItemId,
+      );
+      if (source) {
+        return {
+          kind: 'ok',
+          addSpec: {
+            ...args.addSpec,
+            replaceActivity: source.title,
+            customActivity:
+              titleForImplicitConditioningUpdate(source.title, args.addSpec) ??
+              args.addSpec.customActivity ??
+              source.title,
+          },
+        };
+      }
+      return { kind: 'ok', addSpec: args.addSpec };
+    }
+    const sourceMatches = visibleConditioningSources(args.beforeWorkout).filter((source) =>
+      normalisedConditioningTitle(source.title) ===
+        normalisedConditioningTitle(args.addSpec.replaceActivity ?? '') ||
+      activityTitleMatchesForExecutor(source.title, args.addSpec.replaceActivity ?? ''),
+    );
+    if (sourceMatches.length === 1) {
+      const source = sourceMatches[0];
+      return {
+        kind: 'ok',
+        addSpec: {
+          ...args.addSpec,
+          targetItemId: source.id,
+          customActivity:
+            titleForImplicitConditioningUpdate(source.title, args.addSpec) ??
+            args.addSpec.customActivity ??
+            source.title,
+        },
+      };
+    }
+    if (args.addSpec.editScope === 'edit_duration_only') {
+      const niceDate = humanDate(args.targetDate);
+      return {
+        kind: 'clarify',
+        reply: `Which conditioning piece on ${niceDate} should I change?`,
+        options: sourceMatches.length > 1
+          ? sourceMatches.map((source) => source.title)
+          : visibleConditioningSources(args.beforeWorkout).map((source) => source.title),
+      };
+    }
+    return { kind: 'ok', addSpec: args.addSpec };
+  }
+
+  const sources = visibleConditioningSources(args.beforeWorkout);
+  const niceDate = humanDate(args.targetDate);
+  if (sources.length === 1) {
+    const source = sources[0];
+    return {
+      kind: 'ok',
+      addSpec: {
+        ...args.addSpec,
+        targetItemId: source.id,
+        replaceActivity: source.title,
+        customActivity:
+          titleForImplicitConditioningUpdate(source.title, args.addSpec) ??
+          args.addSpec.customActivity ??
+          source.title,
+      },
+    };
+  }
+
+  if (sources.length > 1) {
+    return {
+      kind: 'clarify',
+      reply: `Which conditioning piece on ${niceDate} should I change?`,
+      options: sources.map((source) => source.title),
+    };
+  }
+
+  return {
+    kind: 'clarify',
+    reply:
+      `I can do that, but I can't see a conditioning item on ${niceDate} to update. ` +
+      `Which session or exercise should I change?`,
+  };
+}
+
+function visibleConditioningSources(
+  workout: ResolvedDay['workout'] | null,
+): VisibleConditioningSource[] {
+  const seen = new Set<string>();
+  const out: VisibleConditioningSource[] = [];
+  for (const item of extractVisibleProgramItemsFromWorkout(workout)) {
+    if (item.domain !== 'conditioning' && item.domain !== 'recovery') continue;
+    const title = String(item.title ?? '').trim();
+    if (!title) continue;
+    const key = title.toLowerCase().replace(/\s+/g, ' ');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ id: item.id, title });
+  }
+  return out;
+}
+
+function activityTitleMatchesForExecutor(title: unknown, wanted: string): boolean {
+  const left = normalisedConditioningTitle(String(title ?? ''));
+  const right = normalisedConditioningTitle(String(wanted ?? ''));
+  if (!left || !right) return false;
+  return left === right || left.includes(right) || right.includes(left);
+}
+
+interface VisibleDurationOnlyConditioningItem {
+  id: string;
+  title: string;
+  modality: string | null;
+  durationMinutes: number | null;
+}
+
+function verifyDurationOnlyConditioningMutation(args: {
+  beforeWorkout: ResolvedDay['workout'] | null;
+  afterWorkout: ResolvedDay['workout'] | null;
+  targetItemId?: string;
+  durationMinutes?: number;
+}): { ok: boolean; reason: string } {
+  const beforeItems = visibleDurationOnlyConditioningItems(args.beforeWorkout);
+  const afterItems = visibleDurationOnlyConditioningItems(args.afterWorkout);
+  const targetItemId = String(args.targetItemId ?? '').trim();
+  if (!targetItemId) return { ok: false, reason: 'missing_target_item_id' };
+  if (afterItems.length !== beforeItems.length) {
+    return { ok: false, reason: 'duplicate_conditioning_created' };
+  }
+  const beforeTarget = beforeItems.find((item) => item.id === targetItemId);
+  const afterTarget = afterItems.find((item) => item.id === targetItemId);
+  if (!beforeTarget) return { ok: false, reason: 'duration_target_missing_before' };
+  if (!afterTarget) return { ok: false, reason: 'duration_target_missing_after' };
+  if (beforeTarget.modality !== afterTarget.modality) {
+    return { ok: false, reason: 'duration_edit_changed_modality' };
+  }
+  if (
+    normalisedConditioningDurationIdentity(beforeTarget.title) !==
+    normalisedConditioningDurationIdentity(afterTarget.title)
+  ) {
+    return { ok: false, reason: 'duration_edit_changed_identity' };
+  }
+  if (
+    args.durationMinutes != null &&
+    afterTarget.durationMinutes !== args.durationMinutes
+  ) {
+    return { ok: false, reason: 'duration_edit_not_applied' };
+  }
+  return { ok: true, reason: 'ok' };
+}
+
+function verifyTargetedRemoveConditioningMutation(args: {
+  beforeWorkout: ResolvedDay['workout'] | null;
+  afterWorkout: ResolvedDay['workout'] | null;
+  targetItemId?: string;
+}): { ok: boolean; reason: string } {
+  if (!args.afterWorkout) return { ok: false, reason: 'missing_after_snapshot' };
+  const beforeItems = visibleDurationOnlyConditioningItems(args.beforeWorkout);
+  const afterItems = visibleDurationOnlyConditioningItems(args.afterWorkout);
+  const targetItemId = String(args.targetItemId ?? '').trim();
+  if (!targetItemId) return { ok: false, reason: 'missing_target_item_id' };
+  if (!beforeItems.some((item) => item.id === targetItemId)) {
+    return { ok: false, reason: 'remove_target_missing_before' };
+  }
+  if (afterItems.some((item) => item.id === targetItemId)) {
+    return { ok: false, reason: 'remove_target_still_visible' };
+  }
+  if (afterItems.length !== beforeItems.length - 1) {
+    return { ok: false, reason: 'remove_changed_wrong_item_count' };
+  }
+  const beforeUntouchedIds = beforeItems
+    .filter((item) => item.id !== targetItemId)
+    .map((item) => item.id)
+    .sort();
+  const afterIds = afterItems.map((item) => item.id).sort();
+  if (JSON.stringify(beforeUntouchedIds) !== JSON.stringify(afterIds)) {
+    return { ok: false, reason: 'remove_changed_unrelated_conditioning' };
+  }
+  return { ok: true, reason: 'ok' };
+}
+
+function visibleDurationOnlyConditioningItems(
+  workout: ResolvedDay['workout'] | null,
+): VisibleDurationOnlyConditioningItem[] {
+  return extractVisibleProgramItemsFromWorkout(workout)
+    .filter((item) => item.domain === 'conditioning' || item.domain === 'recovery')
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      modality: item.modality,
+      durationMinutes: item.durationMinutes,
+    }));
+}
+
+function normalisedConditioningDurationIdentity(value: string): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/\b\d{1,3}\s*(?:m|min|mins|minute|minutes)\b/g, '{duration}')
+    .replace(/\b\d{1,3}\s*(?:[-–]\s*\d{1,3})?\s*(?:s|sec|secs|second|seconds)\b/g, '{duration}')
+    .replace(/\(\s*\{duration\}\s*\)/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function titleForImplicitConditioningUpdate(
+  sourceTitle: string,
+  spec: AddConditioningEventSpec,
+): string | undefined {
+  const explicit = spec.customActivity?.trim();
+  const source = sourceTitle.trim();
+  if (!source) return explicit;
+  if (spec.editScope === 'replace_conditioning_prescription') {
+    return explicit ?? replacementConditioningTitle(spec) ?? source;
+  }
+
+  let next = source;
+  if (spec.durationMinutes) {
+    next = replaceDurationInConditioningTitle(next, spec.durationMinutes, spec);
+  }
+  if (spec.modality) {
+    next = replaceModeInConditioningTitle(next, spec);
+  }
+
+  const sourceChanged = normalisedConditioningTitle(next) !== normalisedConditioningTitle(source);
+  if (!explicit) return sourceChanged ? next : source;
+
+  const explicitIsSourceLike =
+    normalisedConditioningTitle(explicit) === normalisedConditioningTitle(source);
+  const shouldPreserveSourceShape =
+    sourceChanged &&
+    sourceHasStructuredConditioningName(source) &&
+    isGenericConditioningUpdateTitle(explicit, spec);
+
+  if (explicitIsSourceLike || shouldPreserveSourceShape) return next;
+  return explicit;
+}
+
+function replacementConditioningTitle(spec: AddConditioningEventSpec): string | undefined {
+  const mode = conditioningModeLabelForTitle(spec);
+  if (spec.trainingIntent === 'sprint' || spec.effortKind === 'sprint') {
+    return mode ? `${mode} Sprints` : 'Sprint Intervals';
+  }
+  if (spec.trainingIntent === 'hiit') {
+    return mode ? `HIIT ${mode} Intervals` : 'HIIT Intervals';
+  }
+  if (spec.trainingIntent === 'tempo') {
+    return mode ? `Tempo ${mode}` : 'Tempo Conditioning';
+  }
+  if (spec.trainingIntent === 'aerobic') {
+    return mode ? `Aerobic ${mode}` : 'Aerobic Conditioning';
+  }
+  return undefined;
+}
+
+function replaceDurationInConditioningTitle(
+  sourceTitle: string,
+  durationMinutes: number,
+  spec: AddConditioningEventSpec,
+): string {
+  const token = `${durationMinutes}min`;
+  if (/\b\d{1,3}\s*(?:m|min|mins|minute|minutes)\b/i.test(sourceTitle)) {
+    return sourceTitle.replace(/\b\d{1,3}\s*(?:m|min|mins|minute|minutes)\b/ig, token);
+  }
+  if (/\bEasy\s+Aerobic\s+Flush\b/i.test(sourceTitle)) {
+    const mode = conditioningModeLabelForTitle(spec);
+    return mode ? `Easy Aerobic Flush (${token} ${mode})` : sourceTitle;
+  }
+  return sourceTitle;
+}
+
+function replaceModeInConditioningTitle(
+  sourceTitle: string,
+  spec: AddConditioningEventSpec,
+): string {
+  const mode = conditioningModeLabelForTitle(spec);
+  if (!mode) return sourceTitle;
+  if (/\([^)]*\b(?:bike|assault\s+bike|air\s+bike|rower|row|skierg|ski\s*erg|run|swim|walk)\b[^)]*\)/i.test(sourceTitle)) {
+    return sourceTitle.replace(
+      /\(([^)]*)\)/g,
+      (_match, content) => {
+        const nextContent = String(content)
+          .replace(/\b(?:assault\s+bike|air\s+bike|bike|rower|row|skierg|ski\s*erg|run|swim|walk)\b/i, mode)
+          .replace(/\s+/g, ' ')
+          .trim();
+        return `(${nextContent})`;
+      },
+    );
+  }
+  if (/\bEasy\s+Aerobic\s+Flush\b/i.test(sourceTitle) && spec.durationMinutes) {
+    return `Easy Aerobic Flush (${spec.durationMinutes}min ${mode})`;
+  }
+  return sourceTitle;
+}
+
+function conditioningModeLabelForTitle(spec: AddConditioningEventSpec): string | null {
+  if (spec.modality === 'bike') {
+    return spec.bikeLabel === 'assault' ? 'Assault Bike' : 'Bike';
+  }
+  if (spec.modality === 'ski') return 'SkiErg';
+  if (spec.modality === 'row' || spec.modality === 'rower') return 'Rower';
+  if (spec.modality === 'run') return 'Run';
+  if (spec.modality === 'swim') return 'Swim';
+  if (spec.modality === 'walk') return 'Walk';
+  return null;
+}
+
+function canonicalConditioningDisplayTitle(title: string): string {
+  return title
+    .replace(/\bski\s*erg\b/ig, 'SkiErg')
+    .replace(/\bskierg\b/ig, 'SkiErg')
+    .replace(/\bassault\s+bike\b/ig, 'Assault Bike')
+    .replace(/\brower\b/ig, 'Rower');
+}
+
+function sprintModeTitleLabel(
+  modality: string | null,
+  bikeLabel?: string | null,
+): string {
+  if (modality === 'bike') return bikeLabel === 'assault' ? 'Assault Bike' : 'Bike';
+  if (modality === 'ski') return 'SkiErg';
+  if (modality === 'row' || modality === 'rower') return 'Rower';
+  if (modality === 'run') return 'Run';
+  if (modality === 'swim') return 'Swim';
+  if (modality === 'walk') return 'Walk';
+  return 'Sprint';
+}
+
+function sprintEffortDisplayLabel(
+  modality: string | null,
+  bikeLabel: string | null | undefined,
+  title: string,
+): string {
+  const mode = sprintModeTitleLabel(modality, bikeLabel);
+  if (mode !== 'Sprint') return `${mode} sprints`;
+  if (/\bski\s*erg|skierg\b/i.test(title)) return 'SkiErg sprints';
+  if (/\bassault\s+bike|air\s+bike\b/i.test(title)) return 'Assault Bike sprints';
+  if (/\bbike\b/i.test(title)) return 'Bike sprints';
+  if (/\brow(?:er|ing)?\b/i.test(title)) return 'Rower sprints';
+  if (/\brun(?:ning)?\b/i.test(title)) return 'run sprints';
+  return 'sprint efforts';
+}
+
+function sourceHasStructuredConditioningName(title: string): boolean {
+  return /\bEasy\s+Aerobic\s+Flush\b/i.test(title) || /\(\s*\d{1,3}\s*(?:m|min)/i.test(title);
+}
+
+function isGenericConditioningUpdateTitle(
+  title: string,
+  spec: AddConditioningEventSpec,
+): boolean {
+  const normalised = normalisedConditioningTitle(title);
+  const mode = conditioningModeLabelForTitle(spec);
+  const modeNormalised = normalisedConditioningTitle(mode ?? '');
+  if (modeNormalised && normalised === modeNormalised) return true;
+  if (modeNormalised && normalised === normalisedConditioningTitle(`light ${mode}`)) return true;
+  if (modeNormalised && normalised === normalisedConditioningTitle(`easy ${mode}`)) return true;
+  return /^(?:light|easy)?(?:bike|row|rower|skierg|ski|run|swim|walk|aerobic|cardio)$/.test(normalised);
+}
+
+function normalisedConditioningTitle(value: string): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(?:the|a|an)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 function buildAddConditioningEvent(
   date: string,
-  modality: string | null,
+  spec: AddConditioningEventSpec,
   id: string,
 ): AdjustmentEvent {
+  const {
+    modality,
+    customActivity,
+    intensity,
+    bikeLabel,
+    effortKind,
+    replaceActivity,
+    trainingIntent,
+    editScope,
+    targetItemId,
+  } = spec;
   const titleByModality: Record<string, string> = {
     bike: 'Bike Intervals',
     row: 'Row Intervals',
     rower: 'Row Intervals',
     run: 'Aerobic Run',
+    walk: 'Light Walk',
     ski: 'SkiErg Intervals',
     swim: 'Easy Swim',
     cardio: 'Light Aerobic Intervals',
@@ -1097,14 +1954,147 @@ function buildAddConditioningEvent(
     sprint: 'Sprint Intervals',
     mixed: 'MetCon',
   };
-  const title = modality ? titleByModality[modality] ?? 'Light Aerobic Intervals' : 'Light Aerobic Intervals';
+  const isLowLoadCustom = !!customActivity && !/\bsprint|interval|hard\b/i.test(customActivity);
+  const hasDuration = spec.durationMinutes != null;
+  const isEasy = intensity === 'light' || modality === 'walk' || isLowLoadCustom ||
+    (hasDuration && modality !== 'sprint' && intensity !== 'hard');
+  const easyTitleByModality: Record<string, string> = {
+    bike: 'Light Bike',
+    row: 'Light Row',
+    rower: 'Light Row',
+    run: 'Easy Run',
+    ski: 'Light SkiErg',
+    swim: 'Easy Swim',
+    cardio: 'Light Cardio',
+    aerobic: 'Light Aerobic',
+  };
+  const rawSprintEffort = trainingIntent === 'sprint' || effortKind === 'sprint' || /\bsprints?\b/i.test(customActivity ?? '');
+  const rawTitle =
+    customActivity ||
+    (rawSprintEffort && modality
+      ? `${sprintModeTitleLabel(modality, bikeLabel)} Sprints`
+      : undefined) ||
+    (isEasy && modality ? easyTitleByModality[modality] : undefined) ||
+    (modality ? titleByModality[modality] ?? 'Light Aerobic Intervals' : 'Light Aerobic Intervals');
+  const title = canonicalConditioningDisplayTitle(rawTitle);
+  const isHillPowerRun =
+    /\bhill\s+(?:run|runs|running|sprints?)\b/i.test(title) &&
+    (intensity === 'hard' || /\b(?:hard|sprints?)\b/i.test(title));
+  const isHardRunEffort =
+    !isHillPowerRun &&
+    !rawSprintEffort &&
+    intensity === 'hard' &&
+    (modality === 'run' || /\b(?:run|running)\b/i.test(title)) &&
+    !hasDuration;
+  const isSprintEffort = rawSprintEffort || isHillPowerRun || isHardRunEffort;
+  const isHighIntensityInterval =
+    !isSprintEffort &&
+    (trainingIntent === 'hiit' || effortKind === 'interval' || /\b(?:hiit|high[-\s]*intensity|intervals?)\b/i.test(title)) &&
+    (intensity === 'hard' || /\b(?:hiit|hard|high[-\s]*intensity)\b/i.test(title));
+  const prescriptionIntent: CoachTrainingIntent | undefined =
+    trainingIntent ??
+    (isSprintEffort
+      ? 'sprint'
+      : isHighIntensityInterval
+      ? 'hiit'
+      : isEasy
+      ? 'low_load'
+      : undefined);
+  const plannedPrescription = buildConditioningPrescription({
+    trainingIntent: prescriptionIntent,
+    modality: modality as any,
+    title,
+    intensity,
+    durationMinutes: spec.durationMinutes,
+    sets: spec.sets,
+    repsMin: spec.repsMin,
+    repsMax: spec.repsMax,
+    restSeconds: spec.restSeconds,
+    prescriptionType: spec.prescriptionType,
+  });
+  const sprintRepsMin = plannedPrescription.repsMin ?? 20;
+  const sprintRepsMax = plannedPrescription.repsMax ?? 30;
+  const sprintSets = plannedPrescription.sets ?? 6;
+  const sprintRange =
+    sprintRepsMin === sprintRepsMax
+      ? `${sprintRepsMin}s`
+      : `${sprintRepsMin}-${sprintRepsMax}s`;
+  const intervalRepsMin = plannedPrescription.repsMin ?? 45;
+  const intervalRepsMax = plannedPrescription.repsMax ?? 45;
+  const intervalSets = plannedPrescription.sets ?? 8;
+  const intervalRange =
+    intervalRepsMin === intervalRepsMax
+      ? `${intervalRepsMin}s`
+      : `${intervalRepsMin}-${intervalRepsMax}s`;
+  const durationMinutes =
+    plannedPrescription.durationMinutes ??
+    spec.durationMinutes ??
+    (isEasy ? 20 : undefined);
+  const lowerTitle = title.toLowerCase();
   const description =
-    modality === 'sprint'
-      ? '6 x 30s @ near-max effort, 2 min easy recovery between reps.'
+    isLowLoadCustom && !modality
+      ? `${durationMinutes} min ${title}. Keep it controlled and low-load; stop if it adds soreness.`
+      : isEasy
+      ? `${durationMinutes} min ${lowerTitle} at conversational pace. Keep it light: 3-4/10.`
+      : isHillPowerRun
+      ? `${sprintSets} x ${sprintRange} hard hill runs, walk-back recovery between reps. Keep mechanics sharp; stop if speed drops.`
+      : isHardRunEffort
+      ? `${sprintSets} x ${sprintRange} hard run efforts, full easy recovery between reps. Keep mechanics sharp; stop if speed drops.`
+      : isSprintEffort
+      ? `${sprintSets} x ${sprintRange} ${sprintEffortDisplayLabel(modality, bikeLabel, title)} @ near-max effort, 2 min easy recovery between reps.`
+      : isHighIntensityInterval
+      ? `${intervalSets} x ${intervalRange} hard ${conditioningModeLabel(modality, title)} intervals, 90s easy recovery between reps.`
+      : modality === 'sprint'
+      ? '6 x 20-30s @ near-max effort, 2 min easy recovery between reps.'
       : '8 x 2 min @ 75-80% max HR, 1 min easy recovery between reps.';
-  const coachNote = modality
-    ? `Added ${humanModality(modality)} conditioning after strength`
-    : 'Added light aerobic intervals after strength';
+  const coachNote =
+    replaceActivity && customActivity
+      ? `Replaced ${replaceActivity} with ${customActivity}`
+      : customActivity
+      ? `Added ${customActivity}`
+      : modality === 'walk'
+      ? 'Added Light Walk'
+      : modality
+      ? `Added ${humanModality(modality)} conditioning after strength`
+      : 'Added light aerobic intervals after strength';
+  const sets = plannedPrescription.sets ?? (isEasy ? 1 : isSprintEffort ? sprintSets : isHighIntensityInterval ? intervalSets : spec.sets ?? 8);
+  const minutes = durationMinutes;
+  const restSeconds = plannedPrescription.restSeconds ?? (isEasy ? 0 : isSprintEffort ? 120 : isHighIntensityInterval ? 90 : 60);
+  const conditioningFlavour = isSprintEffort || isHighIntensityInterval
+    ? 'high-intensity'
+    : trainingIntent === 'tempo' || intensity === 'moderate'
+    ? 'tempo'
+    : 'aerobic';
+  const conditioningCategory = isSprintEffort
+    ? 'sprint'
+    : isHighIntensityInterval
+    ? 'vo2'
+    : 'aerobic_base';
+  const resolvedTrainingIntent: CoachTrainingIntent =
+    trainingIntent ??
+    (isSprintEffort
+      ? 'sprint'
+      : isHighIntensityInterval
+      ? 'hiit'
+      : conditioningFlavour === 'tempo'
+      ? 'tempo'
+      : isEasy
+      ? 'low_load'
+      : 'aerobic');
+  const notes =
+    isLowLoadCustom && !modality
+      ? `${durationMinutes} min ${title}. Controlled, low-load work only.`
+      : isEasy
+      ? `${durationMinutes} min ${lowerTitle}. Conversational pace only; stop if it adds soreness.`
+      : isHillPowerRun
+      ? `${sprintSets} x ${sprintRange} hard hill runs. Walk back and recover fully; stop if mechanics fade.`
+      : isHardRunEffort
+      ? `${sprintSets} x ${sprintRange} hard run efforts. Full recovery; stop if mechanics fade.`
+      : isSprintEffort
+      ? `${sprintSets} x ${sprintRange} ${sprintEffortDisplayLabel(modality, bikeLabel, title)}. Full recovery; stop if power drops.`
+      : isHighIntensityInterval
+      ? `${intervalSets} x ${intervalRange} hard ${conditioningModeLabel(modality, title)} intervals. Keep the recoveries easy and stop if output drops.`
+      : undefined;
   return {
     id,
     kind: 'add_conditioning_block',
@@ -1114,19 +2104,38 @@ function buildAddConditioningEvent(
       title,
       description,
       coachNote,
-      sets: 8,
-      minutes: 2,
-      restSeconds: 60,
-    },
-  };
-}
+      sets,
+      minutes,
+      repsMin: plannedPrescription.repsMin ?? (isSprintEffort ? 20 : isHighIntensityInterval ? 45 : undefined),
+	      repsMax: plannedPrescription.repsMax ?? (isSprintEffort ? 30 : isHighIntensityInterval ? 45 : undefined),
+	      prescriptionType: plannedPrescription.prescriptionType ?? (isSprintEffort || isHighIntensityInterval ? 'duration' : undefined),
+	      restSeconds,
+	      notes,
+	      exerciseId: exerciseIdForAddedActivity(title, modality),
+	      replaceActivity,
+	      conditioningFlavour,
+	      conditioningCategory,
+	      trainingIntent: resolvedTrainingIntent,
+	      editScope,
+	      targetItemId,
+	    },
+	  };
+	}
 
-function buildRemoveConditioningEvent(date: string, id: string): AdjustmentEvent {
+function buildRemoveConditioningEvent(
+  date: string,
+  id: string,
+  spec: RemoveConditioningEventSpec,
+): AdjustmentEvent {
   return {
     id,
     kind: 'remove_conditioning_block',
     date,
     reason: 'coach remove_conditioning',
+    before: {
+      targetItemId: spec.targetItemId,
+      modality: spec.modality,
+    },
   };
 }
 
@@ -1163,9 +2172,143 @@ function humanDate(iso: string): string {
   return `${dow} ${iso}`;
 }
 
+function buildAddedConditioningReply(
+  niceDate: string,
+  spec: Pick<AddConditioningEventSpec, 'modality' | 'customActivity' | 'intensity' | 'durationMinutes' | 'sets' | 'repsMin' | 'repsMax' | 'restSeconds' | 'prescriptionType' | 'replaceActivity' | 'trainingIntent' | 'changeKind' | 'editScope'> & {
+    isDurationCorrection?: boolean;
+  },
+): string {
+  const activity = spec.customActivity ||
+    (spec.modality === 'walk' ? 'Light Walk' : undefined) ||
+    (spec.intensity === 'light' && spec.modality ? easyActivityLabel(spec.modality) : undefined);
+  if (activity) {
+    if (spec.isDurationCorrection && spec.repsMin && spec.repsMax) {
+      const seconds =
+        spec.repsMin === spec.repsMax
+          ? `${spec.repsMin} sec`
+          : `${spec.repsMin}-${spec.repsMax} sec`;
+      const sets = spec.sets && spec.sets > 1 ? `${spec.sets} x ` : '';
+      return `Done. I set ${formatActivityForReply(activity)} to ${sets}${seconds} on ${niceDate}.`;
+    }
+    if (spec.isDurationCorrection && spec.durationMinutes) {
+      return `Done. I set ${formatActivityForReply(activity)} to ${spec.durationMinutes} min on ${niceDate}.`;
+    }
+    if (spec.replaceActivity) {
+      const plannedReply = plannedConditioningEditReply(niceDate, {
+        sourceActivity: spec.replaceActivity,
+        finalActivity: activity,
+        modality: spec.modality,
+        trainingIntent: spec.trainingIntent,
+        changeKind: spec.changeKind,
+      });
+      if (plannedReply) return plannedReply;
+      if (spec.editScope === 'replace_conditioning_prescription') {
+        return `Done. I replaced ${formatActivityForReply(spec.replaceActivity)} with ${formatActivityForReply(activity)} on ${niceDate}. ${followUpTweakLine(activity)}`;
+      }
+      return `Yeah, no worries. I swapped ${formatActivityForReply(spec.replaceActivity)} for ${formatActivityForReply(activity)} on ${niceDate}. ${followUpTweakLine(activity)}`;
+    }
+    if (spec.durationMinutes) {
+      return `Yeah, no worries. I added ${formatActivityForReply(activity)} for ${spec.durationMinutes} min to ${niceDate}. ${followUpTweakLine(activity)}`;
+    }
+    return `Yeah, no worries. I added ${formatActivityForReply(activity)} to ${niceDate}. ${followUpTweakLine(activity)}`;
+  }
+  return `Yeah, no worries. I added a${spec.modality ? ` ${humanModality(spec.modality)}` : ' light aerobic'} ` +
+    `conditioning block to ${niceDate} after the strength work. Let me know if you want to tweak it.`;
+}
+
+function easyActivityLabel(modality: string): string | undefined {
+  switch (modality) {
+    case 'bike': return 'Light Bike';
+    case 'row':
+    case 'rower': return 'Light Row';
+    case 'run': return 'Easy Run';
+    case 'ski': return 'Light SkiErg';
+    case 'swim': return 'Easy Swim';
+    case 'cardio': return 'Light Cardio';
+    case 'aerobic': return 'Light Aerobic';
+    default: return undefined;
+  }
+}
+
+function formatActivityForReply(activity: string): string {
+  const label = activity.trim();
+  if (/^(pilates|yoga|mobility|stretching|foam rolling|prehab|activation|breathing|core)$/i.test(label)) {
+    return label;
+  }
+  const lower = label.toLowerCase();
+  const readable = lower
+    .replace(/\bhiit\b/g, 'HIIT')
+    .replace(/\bmas\b/g, 'MAS')
+    .replace(/\bskierg\b/g, 'SkiErg');
+  if (/\bsprints$|\bintervals$|\befforts$/i.test(label)) {
+    return readable;
+  }
+  if (/\b(?:running|run|walking|cycling|swimming|rowing)\b$/i.test(label)) {
+    return readable;
+  }
+  const article = /^[aeiou]/i.test(lower) ? 'an' : 'a';
+  return `${article} ${readable}`;
+}
+
+function followUpTweakLine(activity: string): string {
+  return /\b(?:hiit|intervals?|sprints?|efforts?)\b/i.test(activity)
+    ? 'Let me know if you want the work/rest changed.'
+    : 'Let me know if you want to tweak it.';
+}
+
+function plannedConditioningEditReply(
+  niceDate: string,
+  spec: {
+    sourceActivity: string;
+    finalActivity: string;
+    modality: string | null;
+    trainingIntent?: CoachTrainingIntent;
+    changeKind?: CoachPlanChangeKind;
+  },
+): string | null {
+  if (!spec.trainingIntent || !spec.changeKind) return null;
+  const targetMode = conditioningModeLabel(spec.modality, spec.finalActivity);
+  const sourceMode = conditioningModeLabel(null, spec.sourceActivity);
+  if (spec.changeKind === 'modality' && spec.trainingIntent === 'hiit') {
+    return `Yeah, no worries. I switched the HIIT ${sourceMode} to ${targetMode} on ${niceDate} and kept the same interval intent: hard efforts, easy recoveries. Let me know if you want the work/rest changed.`;
+  }
+  if (spec.changeKind === 'training_intent' && spec.trainingIntent === 'hiit') {
+    return `Yeah, no worries. I made the ${targetMode} work HIIT on ${niceDate}: hard efforts, easy recoveries. Let me know if you want the work/rest changed.`;
+  }
+  if (spec.changeKind === 'modality_and_training_intent' && spec.trainingIntent === 'hiit') {
+    return `Yeah, no worries. I changed it to HIIT ${targetMode} intervals on ${niceDate}: hard efforts, easy recoveries. Let me know if you want the work/rest changed.`;
+  }
+  if (spec.trainingIntent === 'sprint') {
+    return `Done. I replaced ${formatActivityForReply(spec.sourceActivity)} with ${formatActivityForReply(spec.finalActivity)} on ${niceDate}. Let me know if you want the work/rest changed.`;
+  }
+  return null;
+}
+
+function conditioningModeLabel(modality: string | null, title: string): string {
+  if (modality === 'row' || modality === 'rower' || /\brow(?:ing|er)?\b/i.test(title)) return 'rower';
+  if (modality === 'bike' || /\bbike\b/i.test(title)) return 'bike';
+  if (modality === 'ski' || /\bski(?:erg)?\b/i.test(title)) return 'SkiErg';
+  if (modality === 'run' || /\brun(?:ning)?\b/i.test(title)) return 'running';
+  if (modality === 'swim' || /\bswim(?:ming)?\b/i.test(title)) return 'swim';
+  return 'conditioning';
+}
+
+function exerciseIdForAddedActivity(title: string, modality: string | null): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+  if (slug) return `coach-${slug}`;
+  if (modality === 'walk') return 'coach-light-walk';
+  return 'coach-light-aerobic-intervals';
+}
+
 function humanModality(modality: string): string {
   switch (modality) {
     case 'rower': return 'row';
+    case 'walk': return 'light walk';
+    case 'aerobic': return 'light aerobic';
     case 'sprint': return 'sprint';
     default: return modality;
   }
@@ -1420,6 +2563,14 @@ function runReplaceExercise(
       operation: 'replace_exercise',
       mutationKind: 'replace_exercise',
       affectedDates: [targetDate],
+      touchedActivities: [
+        {
+          kind: 'exercise',
+          date: targetDate,
+          title: replacementName,
+          previousTitle: sourceMatch,
+        },
+      ],
       scope: command.scope,
       revertPlan,
     });
@@ -1639,6 +2790,721 @@ function suggestSiblingsFor(sourceName: string): string[] {
 // Placate the unused-import linter: findPoolEntry is reserved for the
 // next refinement (cross-role suggestions). Keep the import warm.
 void findPoolEntry;
+
+// ─── Remove whole session ─────────────────────────────────────────
+
+interface RemoveSessionRollbackSnapshot {
+  date: string;
+  overrideWorkout: Workout | null;
+  overrideContext: OverrideContext | null;
+  calendarMark: CalendarDayType | null;
+  visibleWorkout: ResolvedDay['workout'] | null;
+}
+
+function runAddSession(
+  input: ExecuteCoachCommandInput,
+  stages: ProgressStage[],
+  tick: (s: ProgressStage) => void,
+): ExecutionResult {
+  const { command } = input;
+  if (command.mode !== 'mutate' || command.operation !== 'add_session') {
+    return {
+      kind: 'error',
+      reply: 'Internal error: runAddSession called on wrong command.',
+      applied: false,
+      route: 'internal_error',
+      progress: stages,
+    };
+  }
+  const payload = command.payload.operation === 'add_session' ? command.payload : null;
+  if (!payload) {
+    return {
+      kind: 'error',
+      reply: 'Internal error: add_session payload mismatch.',
+      applied: false,
+      route: 'internal_error',
+      progress: stages,
+    };
+  }
+
+  const targetDate = targetDateFor(command.target);
+  if (!targetDate) {
+    tick('composing_reply');
+    return {
+      kind: 'clarify',
+      reply: 'Which day should I add that session to?',
+      applied: false,
+      route: 'clarify_no_target:add_session',
+      progress: stages,
+    };
+  }
+
+  const deps: AddSessionDeps = input.addSessionDeps ?? {};
+  const snapshotBefore = deps.snapshotBefore ?? defaultSnapshotBefore;
+  const snapshotAfter = deps.snapshotAfter ?? (input.addSessionDeps ? (() => null) : defaultSnapshotBefore);
+  const visibleWeek = deps.visibleWeek ?? defaultVisibleWeek;
+  const readCalendarMark = deps.readCalendarMark ?? readCurrentCalendarMark;
+  const applyAdd = deps.applyAdd ?? defaultApplyAddSession;
+  const verifyRendered = deps.verifyRendered ?? verifyRenderedAddSession;
+
+  tick('checking_program');
+  const sourceWorkout = findSourceSessionWorkout({
+    visibleWeek,
+    todayISO: input.todayISO,
+    targetDate,
+    sourceDate: payload.sourceDate,
+    sourceSessionName: payload.sourceSessionName ?? payload.targetSessionName,
+  });
+  if (!sourceWorkout) {
+    tick('composing_reply');
+    return {
+      kind: 'clarify',
+      reply: 'Which session should I add?',
+      applied: false,
+      route: 'clarify_no_source:add_session',
+      progress: stages,
+      options: buildMoveSessionDayOptions(visibleWeek, input.todayISO, targetDate),
+    };
+  }
+
+  const beforeWorkout = snapshotBefore(targetDate);
+  if (beforeWorkout && !isRemovedSessionProjection(beforeWorkout)) {
+    tick('composing_reply');
+    return {
+      kind: 'verified_no_op',
+      reply:
+        `${humanDate(targetDate)} already has ${quoteSession(beforeWorkout.name ?? 'a session')}. ` +
+        `Do you want me to replace it or move ${quoteSession(sourceWorkout.name ?? 'that session')} somewhere else?`,
+      applied: false,
+      route: 'target_not_rest:add_session',
+      progress: stages,
+    };
+  }
+
+  const weekMonday = getMondayForDate(targetDate);
+  const visibleWeekBefore = safeVisibleWeekForMonday(visibleWeek, weekMonday);
+  const beforeOverride = takeDateOverrideSnapshots(input, [targetDate]).get(targetDate) ?? {
+    workout: null,
+    context: null,
+  };
+  const beforeCalendarMark = readCalendarMark(targetDate);
+  const rollbackSnapshot: RemoveSessionRollbackSnapshot = {
+    date: targetDate,
+    overrideWorkout: beforeOverride.workout,
+    overrideContext: beforeOverride.context,
+    calendarMark: beforeCalendarMark,
+    visibleWorkout: beforeWorkout,
+  };
+
+  tick('applying_change');
+  const applyResult = applyAdd(
+    {
+      targetDate,
+      sourceWorkout,
+      reason: payload.reason ?? 'coach add_session',
+    },
+    { todayISO: input.todayISO },
+  );
+
+  tick('verifying_update');
+  const afterWorkout = snapshotAfter(targetDate);
+  const visibleWeekAfter = safeVisibleWeekForMonday(visibleWeek, weekMonday);
+  const verification = verifyRendered({
+    requestedDay: targetDate,
+    todayISO: input.todayISO,
+    targetDate,
+    sourceWorkout,
+    beforeWorkout,
+    afterWorkout,
+    visibleWeekBefore,
+    visibleWeekAfter,
+  });
+
+  logger.debug('[coach-command-executor] add_session', {
+    targetDate,
+    sourceWorkoutName: sourceWorkout.name ?? null,
+    beforeWorkoutName: beforeWorkout?.name ?? null,
+    afterWorkoutName: afterWorkout?.name ?? null,
+    applied: applyResult.applied,
+    applyReason: applyResult.reason ?? null,
+    targetAdded: verification.targetAdded,
+    otherDaysUnchanged: verification.otherDaysUnchanged,
+    changedOtherDates: verification.changedOtherDates,
+  });
+
+  if (!applyResult.applied) {
+    tick('composing_reply');
+    return {
+      kind: applyResult.reason === 'past_date_blocked' ? 'rejected' : 'verified_no_op',
+      reply: addSessionApplyRejectReply(targetDate, applyResult.reason),
+      applied: false,
+      route: `apply_rejected:add_session${applyResult.reason ? ':' + applyResult.reason : ''}`,
+      progress: stages,
+    };
+  }
+
+  if (!verification.targetAdded || !verification.otherDaysUnchanged) {
+    rollbackRemoveSession(input, rollbackSnapshot, 'verification_failed:add_session');
+    tick('composing_reply');
+    return {
+      kind: 'verified_no_op',
+      reply:
+        `I tried to add ${quoteSession(sourceWorkout.name ?? 'that session')} to ${humanDate(targetDate)}, ` +
+        `but the visible program didn't verify cleanly. I haven't claimed the change as done.`,
+      applied: false,
+      route: verification.targetAdded
+        ? `verification_failed:add_session:other_days_changed:${verification.changedOtherDates.join(',')}`
+        : 'verification_failed:add_session:target_not_added',
+      progress: stages,
+    };
+  }
+
+  tick('composing_reply');
+  const finalName = afterWorkout?.name ?? sourceWorkout.name ?? 'Session';
+  const result: ExecutionResult = {
+    kind: 'mutated',
+    reply: `Done. I added ${quoteSession(finalName)} to ${humanDate(targetDate)}.`,
+    applied: true,
+    route: 'add_session:applied',
+    progress: stages,
+  };
+
+  const revertPlan: RevertPlan = {
+    kind: 'restore_snapshot',
+    dateOverrides: [{
+      date: targetDate,
+      workout: beforeOverride.workout,
+      context: beforeOverride.context,
+    }],
+    calendarMarks: [{ date: targetDate, mark: beforeCalendarMark }],
+  };
+  recordVerifiedMutation({
+    input,
+    result,
+    operation: 'add_session',
+    mutationKind: 'add_session' as MutationKind,
+    affectedDates: [targetDate],
+    touchedActivities: [{
+      kind: 'session',
+      date: targetDate,
+      sessionName: finalName,
+      title: finalName,
+    }],
+    scope: command.scope,
+    revertPlan,
+  });
+
+  return result;
+}
+
+function runRemoveSession(
+  input: ExecuteCoachCommandInput,
+  stages: ProgressStage[],
+  tick: (s: ProgressStage) => void,
+): ExecutionResult {
+  const { command } = input;
+  if (command.mode !== 'mutate' || command.operation !== 'remove_session') {
+    return {
+      kind: 'error',
+      reply: 'Internal error: runRemoveSession called on wrong command.',
+      applied: false,
+      route: 'internal_error',
+      progress: stages,
+    };
+  }
+  const payload = command.payload.operation === 'remove_session' ? command.payload : null;
+  if (!payload) {
+    return {
+      kind: 'error',
+      reply: 'Internal error: remove_session payload mismatch.',
+      applied: false,
+      route: 'internal_error',
+      progress: stages,
+    };
+  }
+
+  const targetDate = targetDateFor(command.target);
+  if (!targetDate) {
+    tick('composing_reply');
+    return {
+      kind: 'clarify',
+      reply: 'Which session should I remove?',
+      applied: false,
+      route: 'clarify_no_target:remove_session',
+      progress: stages,
+      options: buildMoveSessionDayOptions(
+        input.removeSessionDeps?.visibleWeek ?? defaultVisibleWeek,
+        input.todayISO,
+        null,
+      ),
+    };
+  }
+
+  const deps: RemoveSessionDeps = input.removeSessionDeps ?? {};
+  const snapshotBefore = deps.snapshotBefore ?? defaultSnapshotBefore;
+  const snapshotAfter = deps.snapshotAfter ?? (input.removeSessionDeps ? (() => null) : defaultSnapshotBefore);
+  const visibleWeek = deps.visibleWeek ?? defaultVisibleWeek;
+  const readCalendarMark = deps.readCalendarMark ?? readCurrentCalendarMark;
+  const applyRemove = deps.applyRemove ?? defaultApplyRemoveSession;
+  const verifyRendered = deps.verifyRendered ?? verifyRenderedRemoveSession;
+
+  tick('checking_program');
+  const beforeWorkout = snapshotBefore(targetDate);
+  if (!beforeWorkout) {
+    tick('composing_reply');
+    return {
+      kind: 'verified_no_op',
+      reply: `${humanDate(targetDate)} doesn't have a workout to remove.`,
+      applied: false,
+      route: 'no_workout:remove_session',
+      progress: stages,
+    };
+  }
+
+  const beforeAny: any = beforeWorkout;
+  if (beforeAny.isTeamDay === true || beforeAny.workoutType === 'Team Training') {
+    tick('composing_reply');
+    return {
+      kind: 'rejected',
+      reply:
+        `${humanDate(targetDate)} is a team training day — those are anchored ` +
+        `to the calendar and can't be removed by coach chat.`,
+      applied: false,
+      route: 'cannot_remove_team_training:remove_session',
+      progress: stages,
+    };
+  }
+  if (beforeAny.workoutType === 'Game' || beforeAny.sessionTier === 'game') {
+    tick('composing_reply');
+    return {
+      kind: 'rejected',
+      reply: `${humanDate(targetDate)} is a game day — game-day sessions can't be removed by coach chat.`,
+      applied: false,
+      route: 'cannot_remove_game:remove_session',
+      progress: stages,
+    };
+  }
+
+  const weekMonday = getMondayForDate(targetDate);
+  const visibleWeekBefore = safeVisibleWeekForMonday(visibleWeek, weekMonday);
+  const beforeOverride = takeDateOverrideSnapshots(input, [targetDate]).get(targetDate) ?? {
+    workout: null,
+    context: null,
+  };
+  const beforeCalendarMark = readCalendarMark(targetDate);
+  const rollbackSnapshot: RemoveSessionRollbackSnapshot = {
+    date: targetDate,
+    overrideWorkout: beforeOverride.workout,
+    overrideContext: beforeOverride.context,
+    calendarMark: beforeCalendarMark,
+    visibleWorkout: beforeWorkout,
+  };
+
+  tick('applying_change');
+  const applyResult = applyRemove(
+    {
+      targetDate,
+      targetSessionId: payload.targetSessionId ?? beforeAny.id ?? null,
+      reason: payload.reason,
+    },
+    { todayISO: input.todayISO },
+  );
+
+  tick('verifying_update');
+  const afterWorkout = snapshotAfter(targetDate);
+  const visibleWeekAfter = safeVisibleWeekForMonday(visibleWeek, weekMonday);
+  const verification = verifyRendered({
+    requestedDay: targetDate,
+    todayISO: input.todayISO,
+    targetDate,
+    beforeWorkout,
+    afterWorkout,
+    visibleWeekBefore,
+    visibleWeekAfter,
+  });
+
+  logger.debug('[coach-command-executor] remove_session', {
+    targetDate,
+    beforeWorkoutName: beforeWorkout.name ?? null,
+    afterWorkoutName: afterWorkout?.name ?? null,
+    applied: applyResult.applied,
+    applyReason: applyResult.reason ?? null,
+    targetRemoved: verification.targetRemoved,
+    otherDaysUnchanged: verification.otherDaysUnchanged,
+    changedOtherDates: verification.changedOtherDates,
+  });
+
+  if (!applyResult.applied) {
+    tick('composing_reply');
+    return {
+      kind: applyResult.reason === 'past_date_blocked' ? 'rejected' : 'verified_no_op',
+      reply: removeSessionApplyRejectReply(targetDate, applyResult.reason),
+      applied: false,
+      route: `apply_rejected:remove_session${applyResult.reason ? ':' + applyResult.reason : ''}`,
+      progress: stages,
+    };
+  }
+
+  if (!verification.targetRemoved || !verification.otherDaysUnchanged) {
+    rollbackRemoveSession(input, rollbackSnapshot, 'verification_failed:remove_session');
+    tick('composing_reply');
+    return {
+      kind: 'verified_no_op',
+      reply:
+        `I tried to remove ${quoteSession(beforeWorkout.name ?? 'session')} from ${humanDate(targetDate)}, ` +
+        `but the visible program didn't verify cleanly. I haven't claimed the change as done.`,
+      applied: false,
+      route: verification.targetRemoved
+        ? `verification_failed:remove_session:other_days_changed:${verification.changedOtherDates.join(',')}`
+        : 'verification_failed:remove_session:target_still_visible',
+      progress: stages,
+    };
+  }
+
+  tick('composing_reply');
+  const result: ExecutionResult = {
+    kind: 'mutated',
+    reply: `Done. I removed ${quoteSession(beforeWorkout.name ?? 'session')} from ${humanDate(targetDate)}.`,
+    applied: true,
+    route: 'remove_session:applied',
+    progress: stages,
+  };
+
+  const revertPlan: RevertPlan = {
+    kind: 'restore_snapshot',
+    dateOverrides: [{
+      date: targetDate,
+      workout: beforeOverride.workout ?? beforeWorkout,
+      context:
+        beforeOverride.context ??
+        { intent: 'program_adjustment', label: 'coach undo remove_session' } as OverrideContext,
+    }],
+    calendarMarks: [{ date: targetDate, mark: beforeCalendarMark }],
+  };
+  recordVerifiedMutation({
+    input,
+    result,
+    operation: 'remove_session',
+    mutationKind: 'remove_session',
+    affectedDates: [targetDate],
+    touchedActivities: [{
+      kind: 'session',
+      date: targetDate,
+      sessionName: beforeWorkout.name ?? undefined,
+      title: beforeWorkout.name ?? 'Session',
+    }],
+    scope: command.scope,
+    revertPlan,
+  });
+
+  return result;
+}
+
+function defaultApplyRemoveSession(
+  input: { targetDate: string },
+  opts: { todayISO: string },
+): RemoveSessionApplyResult {
+  if (input.targetDate < opts.todayISO) {
+    return { applied: false, reason: 'past_date_blocked' };
+  }
+  try {
+    useProgramStore.getState().removeManualOverride(input.targetDate);
+    useCalendarStore.getState().setRestDay(input.targetDate);
+    return { applied: true };
+  } catch (e) {
+    return {
+      applied: false,
+      reason: (e as Error)?.message ?? String(e),
+    };
+  }
+}
+
+function defaultApplyAddSession(
+  input: { targetDate: string; sourceWorkout: Workout; reason?: string },
+  opts: { todayISO: string },
+): AddSessionApplyResult {
+  if (input.targetDate < opts.todayISO) {
+    return { applied: false, reason: 'past_date_blocked' };
+  }
+  try {
+    const workout = buildAddedSessionWorkout(input.sourceWorkout, input.targetDate, input.reason);
+    useProgramStore.getState().setManualOverride(
+      input.targetDate,
+      workout,
+      { intent: 'program_adjustment', label: input.reason ?? 'coach add_session' } as OverrideContext,
+    );
+    useCalendarStore.getState().removeRestDay(input.targetDate);
+    return { applied: true };
+  } catch (e) {
+    return {
+      applied: false,
+      reason: (e as Error)?.message ?? String(e),
+    };
+  }
+}
+
+function findSourceSessionWorkout(args: {
+  visibleWeek: (mondayISO: string) => ResolvedDay[];
+  todayISO: string;
+  targetDate: string;
+  sourceDate?: string;
+  sourceSessionName?: string;
+}): Workout | null {
+  const mondayCandidates = new Set<string>();
+  mondayCandidates.add(getMondayForDate(args.todayISO));
+  mondayCandidates.add(getMondayForDate(args.targetDate));
+  if (args.sourceDate) mondayCandidates.add(getMondayForDate(args.sourceDate));
+
+  const days = [...mondayCandidates].flatMap((monday) =>
+    safeVisibleWeekForMonday(args.visibleWeek, monday),
+  );
+  if (args.sourceDate) {
+    const sourceDay = days.find((day) => day.date === args.sourceDate);
+    if (sourceDay?.workout && !isRemovedSessionProjection(sourceDay.workout)) {
+      return sourceDay.workout as Workout;
+    }
+  }
+
+  const wanted = normaliseSessionLookup(args.sourceSessionName ?? '');
+  if (!wanted) return null;
+  const wantedCompact = wanted.replace(/\s+/g, '');
+  for (const day of days) {
+    const workout = day.workout;
+    if (!workout || isRemovedSessionProjection(workout)) continue;
+    const candidate = normaliseSessionLookup(workout.name ?? '');
+    const candidateCompact = candidate.replace(/\s+/g, '');
+    if (
+      candidate === wanted ||
+      candidate.includes(wanted) ||
+      wanted.includes(candidate) ||
+      (candidateCompact.length >= 5 && wantedCompact.includes(candidateCompact)) ||
+      (wantedCompact.length >= 5 && candidateCompact.includes(wantedCompact))
+    ) {
+      return workout as Workout;
+    }
+  }
+  return null;
+}
+
+function normaliseSessionLookup(value: string): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(?:session|workout|the|a|an)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildAddedSessionWorkout(
+  sourceWorkout: Workout,
+  targetDate: string,
+  reason?: string,
+): Workout {
+  const clone: any = JSON.parse(JSON.stringify(sourceWorkout));
+  const sourceId = String((sourceWorkout as any).id ?? 'session');
+  clone.id = `${sourceId}-coach-add-${targetDate}`;
+  clone.dayOfWeek = new Date(`${targetDate}T12:00:00`).getDay();
+  clone.coachNotes = appendSessionCoachNote(sourceWorkout, reason ?? `Added to ${targetDate}: coach add_session`);
+  clone.updatedAt = new Date().toISOString();
+  return clone as Workout;
+}
+
+function appendSessionCoachNote(workout: Workout, note: string): string[] {
+  const notes = Array.isArray((workout as any).coachNotes)
+    ? [...((workout as any).coachNotes as string[])]
+    : [];
+  notes.push(note);
+  return notes;
+}
+
+function verifyRenderedAddSession(args: {
+  targetDate: string;
+  sourceWorkout: Workout;
+  beforeWorkout: ResolvedDay['workout'] | null;
+  afterWorkout: ResolvedDay['workout'] | null;
+  visibleWeekBefore: ResolvedDay[];
+  visibleWeekAfter: ResolvedDay[];
+}): RenderedAddSessionVerification {
+  const targetAdded =
+    (!args.beforeWorkout || isRemovedSessionProjection(args.beforeWorkout)) &&
+    !!args.afterWorkout &&
+    !isRemovedSessionProjection(args.afterWorkout) &&
+    sessionNamesMatch(args.afterWorkout.name ?? '', args.sourceWorkout.name ?? '');
+  const changedOtherDates = changedVisibleWeekDates(
+    args.visibleWeekBefore,
+    args.visibleWeekAfter,
+  ).filter((date) => date !== args.targetDate);
+  const comparableWeeks = args.visibleWeekBefore.length > 0 && args.visibleWeekAfter.length > 0;
+  return {
+    targetAdded,
+    otherDaysUnchanged: !comparableWeeks || changedOtherDates.length === 0,
+    changedOtherDates,
+    beforeWorkoutName: args.beforeWorkout?.name ?? null,
+    afterWorkoutName: args.afterWorkout?.name ?? null,
+  };
+}
+
+function sessionNamesMatch(a: string, b: string): boolean {
+  const left = normaliseSessionLookup(a);
+  const right = normaliseSessionLookup(b);
+  if (!left || !right) return false;
+  return left === right || left.includes(right) || right.includes(left);
+}
+
+function addSessionApplyRejectReply(targetDate: string, reason?: string): string {
+  if (reason === 'past_date_blocked') {
+    return `${humanDate(targetDate)} is in the past — I can't change it.`;
+  }
+  return reason
+    ? `I couldn't add a session to ${humanDate(targetDate)}: ${reason}.`
+    : `I couldn't add a session to ${humanDate(targetDate)}.`;
+}
+
+function verifyRenderedRemoveSession(args: {
+  targetDate: string;
+  beforeWorkout: ResolvedDay['workout'] | null;
+  afterWorkout: ResolvedDay['workout'] | null;
+  visibleWeekBefore: ResolvedDay[];
+  visibleWeekAfter: ResolvedDay[];
+}): RenderedRemoveSessionVerification {
+  const targetRemoved =
+    !!args.beforeWorkout &&
+    (!args.afterWorkout || isRemovedSessionProjection(args.afterWorkout));
+  const changedOtherDates = changedVisibleWeekDates(
+    args.visibleWeekBefore,
+    args.visibleWeekAfter,
+  ).filter((date) => date !== args.targetDate);
+  const comparableWeeks = args.visibleWeekBefore.length > 0 && args.visibleWeekAfter.length > 0;
+  return {
+    targetRemoved,
+    otherDaysUnchanged: !comparableWeeks || changedOtherDates.length === 0,
+    changedOtherDates,
+    beforeWorkoutName: args.beforeWorkout?.name ?? null,
+    afterWorkoutName: args.afterWorkout?.name ?? null,
+  };
+}
+
+function isRemovedSessionProjection(workout: ResolvedDay['workout'] | null): boolean {
+  if (!workout) return true;
+  const anyWorkout: any = workout;
+  return (
+    anyWorkout.removed === true ||
+    anyWorkout.isRemoved === true ||
+    anyWorkout.sessionTier === 'removed' ||
+    anyWorkout.workoutType === 'Removed' ||
+    anyWorkout.workoutType === 'Rest'
+  );
+}
+
+function changedVisibleWeekDates(before: ResolvedDay[], after: ResolvedDay[]): string[] {
+  const beforeByDate = new Map(before.map((day) => [day.date, day]));
+  const afterByDate = new Map(after.map((day) => [day.date, day]));
+  const dates = new Set<string>([
+    ...beforeByDate.keys(),
+    ...afterByDate.keys(),
+  ]);
+  const changed: string[] = [];
+  for (const date of dates) {
+    const beforeDay = beforeByDate.get(date) ?? null;
+    const afterDay = afterByDate.get(date) ?? null;
+    if (removeSessionDayFingerprint(beforeDay) !== removeSessionDayFingerprint(afterDay)) {
+      changed.push(date);
+    }
+  }
+  changed.sort();
+  return changed;
+}
+
+function removeSessionDayFingerprint(day: ResolvedDay | null): string {
+  const workout = day?.workout ?? null;
+  if (!workout) return JSON.stringify({ source: day?.source ?? null, workoutName: null, exercises: [] });
+  const exercises = (workout.exercises ?? []).map((exercise: any) => ({
+    id: String(exercise.id ?? exercise.exerciseId ?? ''),
+    name: String(exercise.exercise?.name ?? exercise.exerciseId ?? ''),
+    sets: exercise.prescribedSets ?? null,
+    repsMin: exercise.prescribedRepsMin ?? null,
+    repsMax: exercise.prescribedRepsMax ?? null,
+    prescriptionType: exercise.prescriptionType ?? null,
+  }));
+  return JSON.stringify({
+    source: day?.source ?? null,
+    workoutName: workout.name ?? null,
+    workoutType: (workout as any).workoutType ?? null,
+    sessionTier: (workout as any).sessionTier ?? null,
+    exercises,
+  });
+}
+
+function safeVisibleWeekForMonday(
+  visibleWeek: (mondayISO: string) => ResolvedDay[],
+  mondayISO: string,
+): ResolvedDay[] {
+  try {
+    return visibleWeek(mondayISO) ?? [];
+  } catch (e) {
+    logger.warn('[coach-command-executor] remove_session_visible_week_failed', {
+      mondayISO,
+      error: (e as Error)?.message ?? String(e),
+    });
+    return [];
+  }
+}
+
+function rollbackRemoveSession(
+  input: ExecuteCoachCommandInput,
+  snapshot: RemoveSessionRollbackSnapshot,
+  route: string,
+): void {
+  const rollback = input.removeSessionDeps?.rollback;
+  try {
+    if (rollback) {
+      rollback(snapshot, { todayISO: input.todayISO });
+    } else {
+      restoreRemoveSessionStores(snapshot);
+    }
+    logger.debug('[coach-command-executor] rollback_failed_remove_session', {
+      route,
+      targetDate: snapshot.date,
+    });
+  } catch (e) {
+    logger.warn('[coach-command-executor] rollback_failed_remove_session_threw', {
+      route,
+      targetDate: snapshot.date,
+      error: (e as Error)?.message ?? String(e),
+    });
+  }
+}
+
+function restoreRemoveSessionStores(snapshot: RemoveSessionRollbackSnapshot): void {
+  restoreCalendarMark(snapshot.date, snapshot.calendarMark);
+  const store = useProgramStore.getState();
+  if (snapshot.overrideWorkout) {
+    store.setManualOverride(
+      snapshot.date,
+      snapshot.overrideWorkout,
+      snapshot.overrideContext ?? undefined,
+    );
+    return;
+  }
+  store.removeManualOverride(snapshot.date);
+}
+
+function restoreCalendarMark(date: string, mark: CalendarDayType | null): void {
+  const calendar = useCalendarStore.getState();
+  calendar.removeRestDay(date);
+  calendar.removeGameDay(date);
+  calendar.removeNoGame(date);
+  if (mark === 'rest') calendar.setRestDay(date);
+  if (mark === 'game') calendar.setGameDay(date);
+  if (mark === 'noGame') calendar.setNoGame(date);
+}
+
+function removeSessionApplyRejectReply(targetDate: string, reason?: string): string {
+  if (reason === 'past_date_blocked') {
+    return `${humanDate(targetDate)} is in the past — I can't change it.`;
+  }
+  return `I tried to remove the session on ${humanDate(targetDate)}, but the apply layer rejected it${reason ? ` (${reason})` : ''}.`;
+}
 
 // ─── Move session via applyMoveSession (Phase C) ────────────────────
 //
@@ -2080,7 +3946,9 @@ function notSupported(
 
 function humaniseOperation(op: string): string {
   switch (op) {
+    case 'add_session': return 'add a session';
     case 'add_conditioning': return 'add a conditioning session';
+    case 'remove_session': return 'remove a whole session';
     case 'remove_conditioning': return 'remove a conditioning session';
     case 'replace_exercise': return 'swap one strength exercise for another';
     case 'move_session': return 'move a session to a different day';

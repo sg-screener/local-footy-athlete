@@ -443,10 +443,12 @@ section('[24] buildSessionPlanNote — soreness gives "X soreness N/10"');
 section('[17] runtime logs — proof');
 {
   const orig = console.log;
+  const prevDebugFlag = process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS;
   const captured: any[] = [];
   console.log = (...args: any[]) => { captured.push(args); };
   try {
     (global as unknown as { __DEV__: boolean }).__DEV__ = true;
+    process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = 'true';
     const plans = buildConstraintPlans([injury('hammy', 'hamstring', 7)]);
     validateVisibleProgramAgainstConstraintPlans(
       [{ date: '2026-04-27', workout: wk('Mon', [ex('Goblet Squat')]) }],
@@ -463,6 +465,7 @@ section('[17] runtime logs — proof');
     ok('logged reply_composed', captured.some((a) => a[0] === '[constraint-plan] reply_composed'));
   } finally {
     (global as unknown as { __DEV__: boolean }).__DEV__ = false;
+    process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = prevDebugFlag;
     console.log = orig;
   }
 }

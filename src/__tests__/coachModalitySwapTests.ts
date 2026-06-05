@@ -260,6 +260,31 @@ section('[3] parser — "make it a bike day" → from inferred');
   ok('fromInferred = true', r?.fromInferred === true);
 }
 
+section('[3b] parser — target day + modality conversion');
+{
+  const examples = [
+    'Can you please change Wednesday to be Ski Erg',
+    'Can you please change Wednesday session to be a ski erg?',
+    "Change Wednesday's session to SkiErg",
+    'Make Wednesday a Ski Erg',
+    'Do ski erg on Wednesday',
+    'Wednesday session should be ski erg',
+  ];
+  for (const text of examples) {
+    const r = parseModalitySwapRequest(text);
+    ok(`parsed: ${text}`, !!r);
+    eq(`to = ski: ${text}`, r?.to, 'ski');
+    eq(`from = null: ${text}`, r?.from, null);
+    ok(`fromInferred = true: ${text}`, r?.fromInferred === true);
+    ok(`targetedSession = true: ${text}`, r?.targetedSession === true);
+  }
+  const assault = parseModalitySwapRequest('Actually make it assault bike please');
+  ok('parsed positive assault bike pronoun conversion', !!assault);
+  eq('positive assault bike → bike modality', assault?.to, 'bike');
+  eq('positive assault bike → assault subtype', assault?.bikeLabel, 'assault');
+  ok('pronoun-only conversion is not a whole-session target', assault?.targetedSession === false);
+}
+
 section('[4] parser — "switch from row to bike"');
 {
   const r = parseModalitySwapRequest('Switch it from row to bike');
@@ -280,6 +305,7 @@ section('[6] tokenToModality — synonyms collapse');
   eq('rower → row', tokenToModality('rower'), 'row');
   eq('rowing → row', tokenToModality('rowing'), 'row');
   eq('cycling → bike', tokenToModality('cycling'), 'bike');
+  eq('ski erg → ski', tokenToModality('ski erg'), 'ski');
   eq('skierg → ski', tokenToModality('skierg'), 'ski');
   eq('jog → run', tokenToModality('jog'), 'run');
   ok('garbage → null', tokenToModality('blueberry') === null);
@@ -404,9 +430,9 @@ section('[13] applier — explicit row→bike preserves tier (Hard Row → Hard 
   eq('one applied', result.applied.length, 1);
   const written = spy.calls[0].workout;
   eq(
-    'B-high row → B-high bike (Hard Assault Bike Intervals)',
+    'B-high row → standard bike wording (Hard Bike Intervals)',
     written.exercises[0].exercise?.name,
-    'Hard Assault Bike Intervals',
+    'Hard Bike Intervals',
   );
 }
 
@@ -639,6 +665,58 @@ section('[21] orchestrator — happy path: row → bike, projections verify');
   eq('one override written', spy.calls.length, 1);
   ok('projectionShowsTo true', out.projectionShowsTo === true);
   ok('projectionShowsFrom false', out.projectionShowsFrom === false);
+}
+
+section('[21b] orchestrator — day target + modality rewrites existing conditioning');
+{
+  const easyRower = ex('Easy Aerobic Flush (25min Rower)');
+  const wed = conditioningWorkout(
+    'Easy Aerobic Flush (25min Rower)',
+    [easyRower],
+    [{
+      title: 'Easy Aerobic Flush (25min Rower)',
+      description: '25min easy Rower. Intensity: 3-4/10.',
+      exerciseIds: [easyRower.id],
+    }],
+  );
+  const week = buildBaseWeek({ 3: wed });
+  const spy = makeSpy();
+  const stubApply: typeof applyAdjustmentEvents = (events) =>
+    applyAdjustmentEvents(events, makeOpts(week, spy));
+
+  const verify: (args: any) => ProjectionCheck = () => ({
+    programTabShowsTo: true,
+    programTabStillShowsFrom: false,
+    dayWorkoutShowsTo: true,
+    dayWorkoutStillShowsFrom: false,
+    bothProjectionsShowTo: true,
+  });
+
+  const out = orchestrateModalitySwap({
+    userMessage: 'Can you please change Wednesday session to be a ski erg?',
+    todayISO: FIXED_TODAY,
+    referenceResolution: makeResolution({
+      status: 'resolved',
+      date: WED_DATE,
+      sessionName: 'Easy Aerobic Flush (25min Rower)',
+    }),
+    applyEvents: stubApply,
+    verifyProjectionsFn: verify,
+  });
+
+  eq('outcome kind = applied', out.kind, 'applied');
+  eq('route', out.route, 'modality_swap_applied');
+  eq('one override written', spy.calls.length, 1);
+  const writtenText = JSON.stringify(spy.calls[0]?.workout ?? {});
+  ok('written workout rewrites to ski modality',
+    /ski/i.test(writtenText),
+    writtenText);
+  ok('written workout does not append "Be Ski Erg"',
+    !/Be Ski Erg/i.test(writtenText),
+    writtenText);
+  ok('reply names existing session, not an invented activity',
+    /Easy Aerobic Flush/i.test(out.reply) && !/be ski erg/i.test(out.reply),
+    out.reply);
 }
 
 section('[22] orchestrator — ambiguous reference → clarifier reply, no apply');
@@ -1048,6 +1126,71 @@ section('[A2] canonical: rower→bike via swap_conditioning_modality event (live
   );
   const check = verifyModalityRewrite(written, 'bike', 'standard');
   ok('A2: truth gate passes', check.ok, JSON.stringify(check.leaks));
+}
+
+section('[A3] canonical: rower→ski swap rejects the fake rower + SkiErg success shape');
+{
+  const rower = exWithNotes(
+    'Easy Aerobic Flush (25min Rower)',
+    '25min easy Rower. Intensity: 3-4/10.',
+  );
+  const ski = exWithNotes(
+    'SkiErg',
+    '20 min SkiErg. Conversational pace only; stop if it adds soreness.',
+  );
+  const wed = conditioningWorkoutFull({
+    name: 'Easy Aerobic Flush (25min Rower)',
+    description: 'Shifted to non-running modality to manage weekly run load. 25min easy Rower.',
+    exercises: [rower, ski],
+    options: [
+      {
+        title: 'Easy Aerobic Flush (25min Rower)',
+        description: 'Use this for recovery and aerobic maintenance. 25min easy Rower.',
+        exerciseIds: [rower.id],
+      },
+      {
+        title: 'SkiErg',
+        description: '20 min SkiErg. Conversational pace only.',
+        exerciseIds: [ski.id],
+      },
+    ],
+  });
+  ok(
+    'A3: visible modality detector sees the stale rower before swap',
+    dayHasModality({ date: WED_DATE, workout: wed } as any, 'row'),
+  );
+  const week = buildBaseWeek({ 3: wed });
+  const spy = makeSpy();
+  const event = buildSwapConditioningModalityEvent({
+    date: WED_DATE,
+    from: 'row',
+    to: 'ski',
+    reason: 'visible mutation invariant',
+  });
+  const result = applyAdjustmentEvents([event], makeOpts(week, spy));
+
+  eq('A3: one applied', result.applied.length, 1);
+  eq('A3: one override write', spy.calls.length, 1);
+  const written = spy.calls[0].workout;
+  const visibleText = [
+    written.name,
+    written.description,
+    ...written.exercises.flatMap((e: any) => [
+      e?.exercise?.name,
+      e?.exercise?.description,
+      e?.notes,
+    ]),
+    ...(written.conditioningBlock?.options?.flatMap((o: any) => [o?.title, o?.description]) ?? []),
+  ].join(' || ');
+  ok('A3: written visible text contains SkiErg', /\b(?:SkiErg|ski)\b/i.test(visibleText), visibleText);
+  ok('A3: written visible text contains no Rower', !/\bRower\b/i.test(visibleText), visibleText);
+  ok(
+    'A3: visible modality detector no longer sees rower after swap',
+    !dayHasModality({ date: WED_DATE, workout: written } as any, 'row'),
+    visibleText,
+  );
+  const check = verifyModalityRewrite(written, 'ski', null, 'row');
+  ok('A3: truth gate passes', check.ok, JSON.stringify(check.leaks));
 }
 
 // ─── Scenario B — subtype correction repairs existing override ──────

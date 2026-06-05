@@ -496,13 +496,8 @@ function ResolvedAppNavigator({
           testID={`route-current-${snapshot.actualCurrentRoute}`}
         />
       ) : null}
-      {/* app-navigator-live — debug marker so the wrapper can prove
-          which navigator is actually mounted when the harness check
-          fails. If smoke-build-fingerprint is missing but
-          app-navigator-live is visible, the harness mount in App.tsx
-          is what broke; if neither is visible, Maestro isn't on the
-          expected app tree at all. */}
-      {__DEV__ ? (
+      {/* Smoke-only app marker. Normal dev app launches must not show it. */}
+      {__DEV__ && inSmokeMode ? (
         <View
           accessible={true}
           pointerEvents="none"

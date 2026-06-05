@@ -1178,8 +1178,16 @@ export function eventToBullet(ev: AdjustmentEvent): string {
       return `${day}: marked optional${ev.before ? ` (${String(ev.before)})` : ''}`;
     case 'swap_conditioning_modality':
       return `${day}: swapped running for ${String(ev.after ?? 'off-feet conditioning')}`;
-    case 'add_conditioning_block':
+    case 'add_conditioning_block': {
+      const title =
+        ev.after && typeof ev.after === 'object' && typeof ev.after.title === 'string'
+          ? ev.after.title.trim()
+          : '';
+      if (title && title !== 'Light Aerobic Intervals') {
+        return `${day}: added ${title.toLowerCase()} after strength`;
+      }
       return `${day}: added light aerobic intervals after strength`;
+    }
     case 'remove_conditioning_block':
       return `${day}: removed conditioning`;
     case 'add_session_note': {

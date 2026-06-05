@@ -9,9 +9,9 @@
  *   const intent = await classifier.classify(packet);
  *
  * The class delegates the heavy lifting to the edge function at
- * `supabase/functions/coach-intent/index.ts`, which calls Anthropic
- * with the COACH_INTENT_SYSTEM_PROMPT and returns the parsed JSON
- * intent. This module is just the client transport.
+ * `supabase/functions/coach-intent/index.ts`, which calls the configured
+ * coach LLM provider and returns the parsed JSON intent. This module is
+ * just the client transport.
  *
  * SAFETY GUARANTEES
  *   - On any failure (network error, HTTP error, malformed JSON,
@@ -51,7 +51,7 @@ export interface LLMCoachIntentClassifierOptions {
   fetcher?: typeof fetch;
   /**
    * Per-request timeout in ms. Defaults to 8s — the edge function
-   * upstream is Anthropic Haiku so this should be plenty.
+   * upstream is a compact classifier model, so this should be plenty.
    */
   timeoutMs?: number;
 }

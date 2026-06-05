@@ -38,6 +38,7 @@
 
 import { create } from 'zustand';
 import type { CoachMutateOperation, CoachMutatePayload, CoachCommandScope } from '../utils/coachCommandRouter';
+import type { ProgramEdit, ProgramEditCandidateItem } from '../utils/coachProgramEdit';
 
 /**
  * How long a pending clarifier is treated as "still on the table".
@@ -65,6 +66,20 @@ export interface PendingCoachClarifier {
   askedQuestion: string;
   /** ms since epoch — used for TTL. */
   createdAt: number;
+  /** Optional: the resolved target date from the original turn.
+   *  Used by placeholder clarifiers (mutation_like_no_payload) so the
+   *  follow-up can bind to the same session without re-resolving. */
+  targetDate?: string;
+  /** Optional: the session name at targetDate. */
+  targetSessionName?: string;
+  /** Structured edit contract the coach was trying to complete. When
+   *  present, the next user reply is resolved against this object before
+   *  the fresh router/LLM path is allowed to run. */
+  programEdit?: ProgramEdit;
+  /** Snapshot of visible candidates shown/considered when the question
+   *  was asked. The next reply is matched against this before any fresh
+   *  state read, so clarification answers do not drift. */
+  candidateItems?: ProgramEditCandidateItem[];
 }
 
 interface PendingCoachClarifierState {
@@ -87,6 +102,10 @@ export const usePendingCoachClarifierStore = create<PendingCoachClarifierState>(
         originalMessage: entry.originalMessage,
         askedQuestion: entry.askedQuestion,
         createdAt: entry.createdAt ?? Date.now(),
+        targetDate: entry.targetDate,
+        targetSessionName: entry.targetSessionName,
+        programEdit: entry.programEdit,
+        candidateItems: entry.candidateItems,
       },
     }),
   clearPending: () => set({ pending: null }),

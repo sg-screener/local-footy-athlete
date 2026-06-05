@@ -66,6 +66,7 @@
     "test:coach-live-modality-path": "sucrase-node src/__tests__/coachLiveModalitySwapPathTests.ts",
     "test:modality-preference": "sucrase-node src/__tests__/coachModalityPreferenceTests.ts",
     "test:modality-preference-verification": "sucrase-node src/__tests__/coachModalityPreferenceVerificationTests.ts",
+    "test:coach-program-edit": "sucrase-node src/__tests__/coachProgramEditContractTests.ts",
     "test:coach-command-router": "sucrase-node src/__tests__/coachCommandRouterTests.ts",
     "test:coach-pending-clarifier": "sucrase-node src/__tests__/coachPendingClarifierTests.ts",
     "test:coach-behaviour-scenarios": "sucrase-node src/__tests__/coachBehaviourScenarioTests.ts",
@@ -76,6 +77,7 @@
     "test:smoke-bootstrap-installer": "sucrase-node src/__tests__/smokeBootstrapInstallerTests.ts",
     "test:smoke-wrapper-preflight": "sucrase-node src/__tests__/smokeWrapperPreflightContractTests.ts",
     "test:coach-live-send-context": "sucrase-node src/__tests__/coachScreenLiveSendContextTests.ts",
+    "test:readiness": "sucrase-node src/__tests__/readinessSignalTests.ts",
     "smoke:coach-bike-flow": "node scripts/smoke-coach-bike-flow.js",
     "smoke:coach-bike-flow:fresh": "node scripts/smoke-coach-bike-flow-fresh.js"
   },

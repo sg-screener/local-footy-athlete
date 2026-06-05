@@ -1518,10 +1518,13 @@ section('[18] Smoke state machine — single-source-of-truth contract');
 
   // 18.10 — Bonus structural checks on the wiring.
   ok(
-    'App.tsx wires setRuntimeReady(true) at module body',
+    'App.tsx wires setRuntimeReady(true) behind the smoke runtime signal',
     /import\s*\{\s*setRuntimeReady\s*\}\s*from\s*['"]\.\/src\/navigation\/smokeNavState['"]/.test(
       appSource,
-    ) && /setRuntimeReady\(true\)/.test(appSource),
+    ) &&
+      /if\s*\(\s*smokeBootstrapSignal\.flow\s*\)\s*\{[\s\S]{0,120}setRuntimeReady\(true\)/.test(
+        appSource,
+      ),
   );
   ok(
     'CoachScreen wires setCoachReady(isFocused)',
@@ -3326,8 +3329,8 @@ section('[23] Top-level harness mount + physical-visibility hardening');
     ),
   );
   ok(
-    '23.1: App.tsx mount is NOT gated on smoke runtime signal',
-    !/shouldRenderSmokeRuntimeMarker[\s\S]{0,160}smoke-visible-week-debug/.test(
+    '23.1: App.tsx smoke marker mount is gated on smoke runtime signal',
+    /shouldRenderSmokeRuntimeMarker\s*\?\s*\([\s\S]{0,2200}smoke-visible-week-debug/.test(
       appSource,
     ),
   );
@@ -3980,8 +3983,8 @@ section('[25] App.tsx-direct visible-week smoke markers');
     ),
   );
   ok(
-    '25.3: App.tsx useEffect polls deriveOverlayState every 250ms',
-    /React\.useEffect[\s\S]{0,200}if\s*\(\s*!__DEV__\s*\)\s*return[\s\S]{0,800}setSmokeOverlayResult\(deriveOverlayState\(\)\)[\s\S]{0,600}setInterval\(tick,\s*250\)/.test(
+    '25.3: App.tsx useEffect polls deriveOverlayState every 250ms only in smoke runtime',
+    /React\.useEffect[\s\S]{0,240}if\s*\(\s*!shouldRenderSmokeRuntimeMarker\s*\)\s*return[\s\S]{0,800}setSmokeOverlayResult\(deriveOverlayState\(\)\)[\s\S]{0,600}setInterval\(tick,\s*250\)/.test(
       appReturn,
     ),
   );

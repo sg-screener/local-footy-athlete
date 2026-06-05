@@ -1,4 +1,4 @@
-import type { SeasonPhase, DayOfWeek } from '../../types/domain';
+import type { SeasonPhase, DayOfWeek, Workout } from '../../types/domain';
 
 /**
  * Shared constants for the Home screen.
@@ -73,6 +73,21 @@ export const COND_FLAVOUR_LABELS: Record<string, string> = {
   tempo: 'Tempo',
   'high-intensity': 'HI Intervals',
 };
+
+type ConditioningLabelWorkout = Pick<
+  Workout,
+  'hasCombinedConditioning' | 'conditioningFlavour' | 'coachAddedConditioningLabel'
+>;
+
+export function getConditioningContextLabel(
+  workout: ConditioningLabelWorkout | null | undefined,
+): string | null {
+  if (!workout?.hasCombinedConditioning) return null;
+  const coachLabel = workout.coachAddedConditioningLabel?.trim();
+  if (coachLabel) return coachLabel;
+  const flavour = workout.conditioningFlavour;
+  return flavour ? COND_FLAVOUR_LABELS[flavour] || flavour : null;
+}
 
 /** Rotating coach messages shown while the week is rebuilding. */
 export const REBUILD_MESSAGES = [

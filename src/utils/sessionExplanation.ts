@@ -487,6 +487,13 @@ function isProgrammedConditioning(
   return classifyConditioning(name || '', workoutType) !== null;
 }
 
+function isRecoveryWorkout(workout: ResolvedDay['workout']): boolean {
+  return (
+    workout?.workoutType === 'Recovery' ||
+    workout?.sessionTier === 'recovery'
+  );
+}
+
 // ─── Headline Generation ───
 
 function buildConditioningHeadline(kind: ConditioningKind): string {
@@ -595,8 +602,12 @@ export function explainSession(
   const effectiveDaysToGame = noGameContext ? null : ctx.daysToGame;
   const hasGameContext = !noGameContext;
 
-  const intent = deriveIntent(day.source);
   const workout = day.workout;
+  const sourceIntent = deriveIntent(day.source);
+  const intent =
+    sourceIntent === 'programmed' && isRecoveryWorkout(workout)
+      ? 'recovery'
+      : sourceIntent;
   const profile = parseWorkoutName(workout?.name ?? '');
   const placement = getPlacement(day.dayOfWeek);
   const isOptional = workout?.sessionTier === 'optional';

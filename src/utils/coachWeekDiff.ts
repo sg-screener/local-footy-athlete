@@ -38,7 +38,11 @@ import { inferEquipment, DEFAULT_ATHLETE_CONTEXT } from './sessionBuilder';
 import { useProgramStore } from '../store/programStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useProfileStore } from '../store/profileStore';
+import { useReadinessStore } from '../store/readinessStore';
 import { logger } from './logger';
+import { todayISOLocal as getTodayISOLocal } from './appDate';
+import { deriveProfileReadiness } from './readiness';
+import { buildReadinessActiveConstraints } from './readinessConstraints';
 
 // ─── Types ───
 
@@ -107,7 +111,7 @@ export interface WeekDiff {
  * KEEP IN SYNC with `useScheduleState` — any new field added there must be
  * mirrored here, or the snapshot won't match what the Program tab shows.
  */
-export function buildScheduleStateImperative(): ScheduleState {
+export function buildScheduleStateImperative(): ScheduleState & { activeConstraints: any[] } {
   const programState = useProgramStore.getState();
   const calendarState = useCalendarStore.getState();
   const profileState = useProfileStore.getState();
@@ -128,6 +132,10 @@ export function buildScheduleStateImperative(): ScheduleState {
   const seasonPhase = onboardingData?.seasonPhase || null;
   const usualGameDay = onboardingData?.usualGameDay;
   const gameDay = onboardingData?.gameDay;
+  const todayISO = getTodayISOLocal();
+  const todayReadinessSignal =
+    useReadinessStore.getState().signalsByDate[todayISO];
+  const readiness = deriveProfileReadiness(onboardingData);
 
   const preferredDays = onboardingData?.preferredTrainingDays;
   const availableDayNumbers =
@@ -143,7 +151,11 @@ export function buildScheduleStateImperative(): ScheduleState {
   // typing on the ScheduleState side is safe.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
-  const activeInjury = useCoachUpdatesStore.getState().activeInjury ?? null;
+  const coachUpdatesState = useCoachUpdatesStore.getState();
+  const activeInjury = coachUpdatesState.activeInjury ?? null;
+  const readinessActiveConstraints = buildReadinessActiveConstraints(
+    todayReadinessSignal,
+  );
 
   return {
     currentProgram: programState.currentProgram,
@@ -154,11 +166,15 @@ export function buildScheduleStateImperative(): ScheduleState {
     seasonPhase,
     usualGameDay,
     gameDay,
-    readiness: 'medium',
+    readiness,
     sessionFeedback: programState.sessionFeedback || {},
     weightOverrides: programState.weightOverrides || {},
     availableDayNumbers,
     activeInjury,
+    activeConstraints: [
+      ...(coachUpdatesState.activeConstraints ?? []),
+      ...readinessActiveConstraints,
+    ],
   };
 }
 
@@ -340,17 +356,9 @@ export function filterDiffFromDate(
   diff: WeekDiff,
   todayISO?: string,
 ): WeekDiff {
-  const cutoff = todayISO || todayISOLocal();
+  const cutoff = todayISO || getTodayISOLocal();
   const future = diff.changedDays.filter((d) => d.date >= cutoff);
   return { hasChanges: future.length > 0, changedDays: future };
-}
-
-function todayISOLocal(): string {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
 }
 
 // ─── Bullet-style summary (preferred for coach reply turns) ───

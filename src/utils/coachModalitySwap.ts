@@ -43,6 +43,11 @@ const TOKEN_TO_MODALITY: Record<string, ConditioningModality> = {
   row: 'row',
   rowing: 'row',
   bike: 'bike',
+  'assault bike': 'bike',
+  'air bike': 'bike',
+  'stationary bike': 'bike',
+  'regular bike': 'bike',
+  'normal bike': 'bike',
   cycling: 'bike',
   cycle: 'bike',
   spin: 'bike',
@@ -51,8 +56,10 @@ const TOKEN_TO_MODALITY: Record<string, ConditioningModality> = {
   runs: 'run',
   jog: 'run',
   ski: 'ski',
+  'ski erg': 'ski',
   skierg: 'ski',
   swim: 'swim',
+  swimming: 'swim',
 };
 
 const MODALITY_TOKENS = Object.keys(TOKEN_TO_MODALITY);
@@ -60,7 +67,8 @@ const MODALITY_TOKENS = Object.keys(TOKEN_TO_MODALITY);
 /** Return canonical modality for a free-text token, or null. */
 export function tokenToModality(token: string): ConditioningModality | null {
   if (!token) return null;
-  return TOKEN_TO_MODALITY[token.toLowerCase()] ?? null;
+  const normalised = token.toLowerCase().replace(/\s+/g, ' ').trim();
+  return TOKEN_TO_MODALITY[normalised] ?? TOKEN_TO_MODALITY[normalised.replace(/\s+/g, '')] ?? null;
 }
 
 // ─── Parsed swap intent ─────────────────────────────────────────────
@@ -85,6 +93,13 @@ export interface ParsedModalitySwap {
    * existing label alone.
    */
   bikeLabel: BikeLabel | null;
+  /**
+   * True when the user explicitly targeted the whole session/day/workout
+   * as the thing whose modality should change ("make Wednesday's session
+   * a SkiErg"). This lets the router prefer the session-swap path over
+   * last-mutation follow-up editing.
+   */
+  targetedSession: boolean;
 }
 
 // ─── Bike subtype intent parser ─────────────────────────────────────
@@ -188,7 +203,7 @@ function computeBikeSubtypeIntent(message: string): BikeSubtypeIntent {
     `i'?d\\s+(?:like|prefer|rather)|i\\s+would\\s+(?:like|prefer|rather)|` +
     `i'?ll\\s+(?:do|use|go\\s+with|take)|` +
     // Bare verbs / imperatives
-    `want|prefer|rather|use|using|do|take|` +
+    `want|prefer|rather|use|using|do|take|add|include|throw\\s+in|put\\s+in|` +
     `go\\s+(?:with|on)|` +
     `change\\s+(?:it\\s+)?(?:to|into)|switch\\s+(?:it\\s+)?to|` +
     `make\\s+(?:it|that|it\\s+a|that\\s+a)|` +
@@ -249,6 +264,13 @@ function computeBikeSubtypeIntent(message: string): BikeSubtypeIntent {
   // 5. Complaint about assault bike (an indirect negation).
   if (reAssaultBike(COMPLAINT_VERB).test(m)) {
     return { desiredLabel: 'standard', source: 'complaint_assault', confidence: 0.85 };
+  }
+  // "Why isn't it an assault bike?" is a request for assault, not the
+  // complaint shape above ("Why is it an assault bike?").
+  if (
+    new RegExp(`\\bwhy\\s+(?:isn'?t|is\\s+not|aren'?t|are\\s+not)\\s+(?:it|that|there)?\\s*(?:an?\\s+|the\\s+)?${ASSAULT_TOKEN}\\s+bike\\b`, 'i').test(m)
+  ) {
+    return { desiredLabel: 'assault', source: 'positive_assault', confidence: 0.85 };
   }
   // 6. Question-form complaint: trailing `?` + an assault mention with
   // no positive desire-verb anywhere → treat as "why is it assault?".
@@ -317,15 +339,23 @@ export function parseModalitySwapRequest(message: string): ParsedModalitySwap | 
   // question). Bare-token mentions ("what is a regular bike?") shouldn't
   // commit a preference write — they fall through to the conventional
   // swap pattern matcher below, which generally won't match either.
-  if (bikeLabel && bikeIntent.source !== null && bikeIntent.source !== 'token_only_regular' && bikeIntent.source !== 'token_only_assault') {
+  const isBikeSubtypeCorrection =
+    bikeIntent.source === 'negation_assault' ||
+    bikeIntent.source === 'negation_regular' ||
+    bikeIntent.source === 'complaint_assault' ||
+    hasOpposedBikeSubtypeContext(lower, bikeLabel);
+  if (bikeLabel && isBikeSubtypeCorrection) {
     return {
       from: 'bike',
       to: 'bike',
       toToken: 'bike',
       fromInferred: false,
       bikeLabel,
+      targetedSession: false,
     };
   }
+
+  const targetedConversion = parseTargetSessionModalityConversion(lower);
 
   // Try each `to`-style pattern first; if none yield a modality, bail.
   const toPatterns: RegExp[] = [
@@ -342,6 +372,7 @@ export function parseModalitySwapRequest(message: string): ParsedModalitySwap | 
   let toToken = '';
   let from: ConditioningModality | null = null;
   let fromInferred = true;
+  let targetedSession = false;
 
   // Two-token forms: `swap rower for bike`, `change rower to bike`.
   const twoTokenSwap =
@@ -356,6 +387,16 @@ export function parseModalitySwapRequest(message: string): ParsedModalitySwap | 
       toToken = twoTokenSwap[2];
       fromInferred = false;
     }
+  }
+
+  // Target-session forms ("make Wednesday a SkiErg", "make it assault bike")
+  // fill the destination, then fall through to the shared source extractor
+  // below so phrases like "instead of row" still preserve from=row.
+  if (!to && targetedConversion) {
+    to = targetedConversion.to;
+    toToken = targetedConversion.toToken;
+    fromInferred = true;
+    targetedSession = targetedConversion.targetedSession;
   }
 
   // Otherwise scan for a single `to X` token.
@@ -388,7 +429,64 @@ export function parseModalitySwapRequest(message: string): ParsedModalitySwap | 
     }
   }
 
-  return { from, to, toToken, fromInferred, bikeLabel };
+  return { from, to, toToken, fromInferred, bikeLabel, targetedSession };
+}
+
+const DAY_NAME_TOKEN =
+  '(?:today|tomorrow|sun|sundays?|mon|mondays?|tue|tues|tuesdays?|wed|weds|wednesdays?|thu|thur|thurs|thursdays?|fri|fridays?|sat|saturdays?)';
+const SESSION_TARGET_TOKEN =
+  `(?:(?:${DAY_NAME_TOKEN})(?:'s)?(?:\\s+(?:session|workout|day|conditioning|cardio|aerobic\\s+flush|flush))?|(?:it|this|that)|(?:this|that|the)?\\s*(?:session|workout|day|conditioning|cardio|aerobic\\s+flush|flush))`;
+const MODALITY_DESTINATION_TOKEN =
+  '(assault\\s+bike|air\\s+bike|stationary\\s+bike|regular\\s+bike|normal\\s+bike|ski\\s*erg|skierg|rower|rowing|row|bike|cycling|run|running|swim|swimming|ski)';
+
+function parseTargetSessionModalityConversion(
+  message: string,
+): { to: ConditioningModality; toToken: string; targetedSession: boolean } | null {
+  const patterns = [
+    // "change Wednesday session to be a Ski Erg"
+    `\\b(?:change|switch|make|turn|convert|set)\\s+(?:the\\s+)?${SESSION_TARGET_TOKEN}\\s+(?:to\\s+be|to|into|onto|as)\\s+(?:an?\\s+)?${MODALITY_DESTINATION_TOKEN}\\b`,
+    // "make Wednesday a Ski Erg"
+    `\\b(?:make|set|turn)\\s+(?:the\\s+)?${SESSION_TARGET_TOKEN}\\s+(?:an?\\s+)?${MODALITY_DESTINATION_TOKEN}\\b`,
+    // "do/use Ski Erg on Wednesday"
+    `\\b(?:do|use|put\\s+in|program|schedule)\\s+(?:an?\\s+)?${MODALITY_DESTINATION_TOKEN}\\s+(?:on|for|into)\\s+(?:the\\s+)?${SESSION_TARGET_TOKEN}\\b`,
+    // "Wednesday session should be Ski Erg"
+    `\\b(?:the\\s+)?${SESSION_TARGET_TOKEN}\\s+(?:should\\s+be|can\\s+be|could\\s+be|becomes?|as)\\s+(?:an?\\s+)?${MODALITY_DESTINATION_TOKEN}\\b`,
+  ];
+  let toToken = '';
+  for (const source of patterns) {
+    const match = new RegExp(source, 'i').exec(message);
+    if (!match) continue;
+    toToken = [...match].reverse().find((part) => tokenToModality(part)) ?? '';
+    if (toToken) {
+      toToken = toToken.replace(/\s+/g, ' ').trim();
+      const to = tokenToModality(toToken);
+      if (!to) return null;
+      return {
+        to,
+        toToken,
+        targetedSession: hasExplicitSessionTarget(match[0]),
+      };
+    }
+  }
+  return null;
+}
+
+function hasExplicitSessionTarget(matchedText: string): boolean {
+  return (
+    new RegExp(`\\b${DAY_NAME_TOKEN}\\b`, 'i').test(matchedText) ||
+    /\b(?:session|workout|day|conditioning|cardio|aerobic\s+flush|flush)\b/i.test(matchedText)
+  );
+}
+
+function hasOpposedBikeSubtypeContext(
+  message: string,
+  desiredLabel: BikeLabel | null,
+): boolean {
+  if (!desiredLabel) return false;
+  const opposedToken = desiredLabel === 'standard' ? ASSAULT_TOKEN : REGULAR_TOKEN;
+  const opposedMention = new RegExp(`\\b${opposedToken}(?:\\s+bike)?\\b`, 'i').test(message);
+  if (!opposedMention) return false;
+  return /\b(?:not|no|without|instead\s+of|rather\s+than|changed|switched|still|says?|shows?|showing|set|made|put)\b/i.test(message);
 }
 
 // ─── Tier-preserving mapping ────────────────────────────────────────
@@ -553,6 +651,10 @@ export function rewriteModalityInName(
       const replaced = name.replace(assaultRe, targetLabel);
       if (replaced !== name) return replaced;
     }
+    if (targetLabel !== 'Bike' && /\bbike\b/i.test(name) && !assaultRe.test(name)) {
+      const replaced = name.replace(/\bbike\b/i, targetLabel);
+      if (replaced !== name) return replaced;
+    }
     // Already labelled as "Bike" (no assault prefix) and target is also
     // a generic Bike → no rewrite needed.
     if (targetLabel === 'Bike' && /\bbike\b/i.test(name) && !assaultRe.test(name)) {
@@ -601,8 +703,22 @@ export function dayHasModality(
   };
   const re = tokensForModality[modality];
   if (re) {
+    const parts: string[] = [
+      day.workout.name,
+      day.workout.description,
+      (day.workout as any).coachAddedConditioningLabel,
+    ].filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+    for (const opt of day.workout.conditioningBlock?.options ?? []) {
+      if (typeof opt.title === 'string') parts.push(opt.title);
+      if (typeof opt.description === 'string') parts.push(opt.description);
+    }
     for (const ex of day.workout.exercises ?? []) {
-      if (re.test(ex.exercise?.name ?? '')) return true;
+      if (typeof ex.exercise?.name === 'string') parts.push(ex.exercise.name);
+      if (typeof ex.exercise?.description === 'string') parts.push(ex.exercise.description);
+      if (typeof (ex as any).notes === 'string') parts.push((ex as any).notes);
+    }
+    for (const part of parts) {
+      if (re.test(part)) return true;
     }
   }
   return false;
@@ -735,6 +851,28 @@ export interface ModalityRewriteVerification {
   leaks: ModalityRewriteLeak[];
 }
 
+function forbiddenPatternsForSources(
+  sources: ConditioningModality[],
+  toModality: ConditioningModality,
+  bikeLabel: BikeLabel | null,
+): RegExp[] {
+  const patterns: RegExp[] = [];
+  for (const source of sources) {
+    if (source === toModality) continue;
+    if (source === 'row') patterns.push(/\b(?:rower|rowing\s*erg|\brow\b|rowing)\b/i);
+    if (source === 'bike') {
+      patterns.push(/\b(?:assault\s*bike|air\s*bike|airbike|echo\s*bike|airdyne|stationary\s*bike|exercise\s*bike|\bbike\b|cycling)\b/i);
+    }
+    if (source === 'run') patterns.push(/\b(?:run|running|runs|jog|sprint)\b/i);
+    if (source === 'ski') patterns.push(/\b(?:skierg|ski\s*erg|\bski\b)\b/i);
+    if (source === 'swim') patterns.push(/\b(?:swim|swimming|pool)\b/i);
+  }
+  if (toModality === 'bike' && bikeLabel !== 'assault') {
+    patterns.push(/\b(?:assault\s*bike|air\s*bike|airbike|echo\s*bike|airdyne)\b/i);
+  }
+  return patterns;
+}
+
 /**
  * Phase H truth gate. After a modality rewrite, scan EVERY athlete-visible
  * string field for tokens that contradict the destination modality. The
@@ -760,10 +898,17 @@ export function verifyModalityRewrite(
   } | null | undefined,
   toModality: ConditioningModality,
   bikeLabel: BikeLabel | null,
+  sourceModalities?: ConditioningModality | ConditioningModality[] | null,
 ): ModalityRewriteVerification {
   if (!workout) return { ok: true, leaks: [] };
-  const variant = bikeLabel === 'assault' ? 'assault' : 'regular';
-  const patterns = FORBIDDEN_TOKENS_BY_DESTINATION[toModality]?.[variant] ?? [];
+  const sources = Array.isArray(sourceModalities)
+    ? sourceModalities
+    : sourceModalities
+      ? [sourceModalities]
+      : null;
+  const patterns = sources
+    ? forbiddenPatternsForSources(sources, toModality, bikeLabel)
+    : FORBIDDEN_TOKENS_BY_DESTINATION[toModality]?.[bikeLabel === 'assault' ? 'assault' : 'regular'] ?? [];
   if (patterns.length === 0) return { ok: true, leaks: [] };
   const leaks: ModalityRewriteLeak[] = [];
   const scan = (field: string, text: string | undefined) => {
@@ -900,6 +1045,10 @@ export function applyConditioningModalityToWorkout<
     // real registered exercise (e.g. "Easy Row" → "Easy Bike").
     const meta = CONDITIONING_META[text];
     if (meta) {
+      if (to === 'bike' && bikeLabel !== 'assault') {
+        const r = rewriteModalityInName(text, to, labelOpts);
+        if (r && r !== text) return r;
+      }
       const replacement = pickEquivalentByTier(text, to);
       if (replacement && replacement !== text) return replacement;
     }

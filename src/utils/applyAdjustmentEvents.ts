@@ -51,6 +51,8 @@ import { logger } from './logger';
 import {
   pickEquivalentByTier,
   applyConditioningModalityToWorkout,
+  verifyModalityRewrite,
+  inferModalityFromName,
   type ParsedModalitySwap,
   type BikeLabel,
 } from './coachModalitySwap';
@@ -456,17 +458,18 @@ function buildCoachConditioningExercise(
     p.description ??
       '8 x 2 min at 75-80% max HR, with 1 min easy recovery. Use bike or track.',
   );
+  const exerciseId = String(p.exerciseId ?? 'coach-light-aerobic-intervals');
   const id = `${current.id || 'workout'}-coach-conditioning-${event.id}`;
   const now = new Date().toISOString();
   return {
     id,
     workoutId: current.id,
-    exerciseId: 'coach-light-aerobic-intervals',
+    exerciseId,
     exerciseOrder: (current.exercises ?? []).length,
     prescribedSets: Number(p.sets ?? 8),
-    prescribedRepsMin: Number(p.minutes ?? 2),
-    prescribedRepsMax: Number(p.minutes ?? 2),
-    prescriptionType: 'duration_minutes',
+    prescribedRepsMin: Number(p.repsMin ?? p.minutes ?? 2),
+    prescribedRepsMax: Number(p.repsMax ?? p.minutes ?? 2),
+    prescriptionType: p.prescriptionType ?? 'duration_minutes',
     prescribedWeightKg: 0,
     restSeconds: Number(p.restSeconds ?? 60),
     notes: String(
@@ -474,7 +477,7 @@ function buildCoachConditioningExercise(
         '75-80% max HR. Keep it aerobic; 1 min easy recovery between reps.',
     ),
     exercise: {
-      id: 'coach-light-aerobic-intervals',
+      id: exerciseId,
       name: title,
       description,
       exerciseType: 'Cardio',
@@ -489,41 +492,359 @@ function buildCoachConditioningExercise(
   };
 }
 
+function applyReplaceConditioningPrescription(
+  current: Workout,
+  event: AdjustmentEvent,
+): MutateResult {
+  const p = (event.after && typeof event.after === 'object') ? event.after as any : {};
+  const title = String(p.title ?? 'Conditioning').trim() || 'Conditioning';
+  const description = String(p.description ?? title);
+  const note = String(p.coachNote ?? `Replaced conditioning with ${title}`);
+  const conditioningFlavour =
+    p.conditioningFlavour === 'high-intensity' || p.conditioningFlavour === 'tempo'
+      ? p.conditioningFlavour
+      : 'aerobic';
+  const conditioningCategory =
+    p.conditioningCategory === 'sprint' ||
+    p.conditioningCategory === 'vo2' ||
+    p.conditioningCategory === 'glycolytic'
+      ? p.conditioningCategory
+      : 'aerobic_base';
+
+  const blockOwnedIds = new Set<string>();
+  for (const option of current.conditioningBlock?.options ?? []) {
+    for (const id of option.exerciseIds ?? []) blockOwnedIds.add(String(id));
+  }
+
+  const standaloneConditioning = current.workoutType === 'Conditioning';
+  const existingRow = blockOwnedIds.size > 0
+    ? (current.exercises ?? []).find((ex) => blockOwnedIds.has(String(ex.id ?? '')))
+    : standaloneConditioning
+    ? current.exercises?.[0]
+    : undefined;
+  const baseExercises = blockOwnedIds.size > 0
+    ? (current.exercises ?? []).filter((ex) => !blockOwnedIds.has(String(ex.id ?? '')))
+    : standaloneConditioning
+    ? []
+    : (current.exercises ?? []);
+  const row = buildCoachConditioningExercise(current, event);
+  if (existingRow) {
+    row.id = existingRow.id;
+    row.exerciseOrder = standaloneConditioning ? 0 : baseExercises.length;
+  } else {
+    row.exerciseOrder = baseExercises.length;
+  }
+  const exercises = [...baseExercises, row];
+  const durationMinutes = Number(p.minutes ?? p.durationMinutes ?? 0) > 0
+    ? Number(p.minutes ?? p.durationMinutes)
+    : current.durationMinutes;
+  const intensity =
+    p.intensity === 'hard' || conditioningFlavour === 'high-intensity'
+      ? 'High'
+      : p.intensity === 'moderate' || conditioningFlavour === 'tempo'
+      ? 'Moderate'
+      : 'Light';
+  const block = {
+    intent: conditioningFlavour,
+    options: [{ title, description, exerciseIds: [row.id] }],
+  };
+
+  return {
+    ok: true,
+    workout: cloneWorkout(current, {
+      name: standaloneConditioning ? title : current.name,
+      description: standaloneConditioning ? description : current.description,
+      durationMinutes,
+      intensity: intensity as any,
+      workoutType: standaloneConditioning ? 'Conditioning' : current.workoutType,
+      hasCombinedConditioning: true,
+      conditioningFlavour,
+      conditioningCategory,
+      conditioningBlock: block,
+      coachAddedConditioningLabel: title,
+      exercises,
+      coachNotes: appendCoachNote(current, note),
+    }),
+  };
+}
+
+function normaliseActivityTitle(value: unknown): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(?:light|easy|gentle|hard|moderate|tempo|conditioning|cardio|aerobic|session|block)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function activityTitleMatches(title: unknown, wanted: string): boolean {
+  const left = normaliseActivityTitle(title);
+  const right = normaliseActivityTitle(wanted);
+  if (!left || !right) return false;
+  return left === right || left.includes(right) || right.includes(left);
+}
+
+function applyDurationOnlyConditioningUpdate(
+  current: Workout,
+  event: AdjustmentEvent,
+): MutateResult {
+  const p = (event.after && typeof event.after === 'object') ? event.after as any : {};
+  const targetItemId = String(p.targetItemId ?? '').trim();
+  const minutes = Number(p.minutes ?? p.durationMinutes ?? 0);
+  const repsMin = Number(p.repsMin ?? 0);
+  const repsMax = Number(p.repsMax ?? p.repsMin ?? 0);
+  const hasMinuteDuration = Number.isFinite(minutes) && minutes > 0;
+  const hasRepDuration = Number.isFinite(repsMin) && repsMin > 0;
+  if (!targetItemId || (!hasMinuteDuration && !hasRepDuration)) {
+    return {
+      ok: false,
+      rejectKind: APPLY_REJECT_KIND.NO_CONDITIONING_TO_SWAP,
+      reason: `duration edit missing target item or duration on ${event.date}`,
+    };
+  }
+
+  const rowIndex = (current.exercises ?? []).findIndex((ex: any) =>
+    String(ex.id ?? '') === targetItemId ||
+    String(ex.exerciseId ?? '') === targetItemId ||
+    String(ex.exercise?.id ?? '') === targetItemId,
+  );
+  if (rowIndex < 0) {
+    return {
+      ok: false,
+      rejectKind: APPLY_REJECT_KIND.NO_CONDITIONING_TO_SWAP,
+      reason: `duration edit target ${targetItemId} was not visible on ${event.date}`,
+    };
+  }
+
+  const existingRow = current.exercises[rowIndex] as any;
+  const linkedOptionIndex = (current.conditioningBlock?.options ?? []).findIndex((option: any) =>
+    (option.exerciseIds ?? []).some((id: unknown) => String(id) === targetItemId),
+  );
+  const linkedOption =
+    linkedOptionIndex >= 0 ? current.conditioningBlock?.options?.[linkedOptionIndex] : null;
+  const sourceTitle =
+    String(linkedOption?.title ?? existingRow.exercise?.name ?? current.name ?? 'Conditioning').trim() ||
+    'Conditioning';
+  const sourceDescription =
+    String(linkedOption?.description ?? existingRow.notes ?? existingRow.exercise?.description ?? '').trim();
+  const rawNextTitle = hasMinuteDuration
+    ? replaceDurationText(sourceTitle, minutes, { prefixIfMissing: false })
+    : replaceSecondsText(sourceTitle, repsMin, repsMax, { prefixIfMissing: false });
+  const nextTitle =
+    hasRepDuration &&
+    rawNextTitle === sourceTitle &&
+    !/\b\d{1,3}\s*(?:[-–]\s*\d{1,3})?\s*(?:s|sec|secs|second|seconds)\b/i.test(sourceTitle)
+      ? `${sourceTitle} (${formatSecondsRange(repsMin, repsMax)})`
+      : rawNextTitle;
+  const nextDescription = hasMinuteDuration
+    ? replaceDurationText(sourceDescription, minutes, { prefixIfMissing: false })
+    : replaceSecondsText(sourceDescription, repsMin, repsMax, { prefixIfMissing: false });
+  const nextNotes = hasMinuteDuration
+    ? replaceDurationText(String(existingRow.notes ?? sourceDescription ?? nextTitle), minutes)
+    : replaceSecondsText(String(existingRow.notes ?? sourceDescription ?? nextTitle), repsMin, repsMax);
+
+  const exercises = (current.exercises ?? []).map((ex: any, index: number) => {
+    if (index !== rowIndex) return ex;
+    return {
+      ...ex,
+      prescribedSets: Number(ex.prescribedSets ?? 1) || 1,
+      prescribedRepsMin: hasMinuteDuration ? minutes : repsMin,
+      prescribedRepsMax: hasMinuteDuration ? minutes : (Number.isFinite(repsMax) && repsMax > 0 ? repsMax : repsMin),
+      prescriptionType: hasMinuteDuration ? 'duration_minutes' : (p.prescriptionType ?? ex.prescriptionType ?? 'duration'),
+      notes: nextNotes,
+      exercise: ex.exercise
+        ? {
+            ...ex.exercise,
+            name: nextTitle,
+            description: nextDescription || ex.exercise.description,
+          }
+        : ex.exercise,
+      updatedAt: new Date().toISOString(),
+    };
+  });
+
+  const conditioningBlock = current.conditioningBlock && linkedOptionIndex >= 0
+    ? {
+        ...current.conditioningBlock,
+        options: current.conditioningBlock.options.map((option: any, index: number) =>
+          index === linkedOptionIndex
+            ? {
+                ...option,
+                title: nextTitle,
+                description: nextDescription || option.description,
+              }
+            : option,
+        ),
+      }
+    : current.conditioningBlock;
+  const standaloneConditioning = current.workoutType === 'Conditioning';
+
+  return {
+    ok: true,
+    workout: cloneWorkout(current, {
+      name: standaloneConditioning
+        ? hasMinuteDuration
+          ? replaceDurationText(current.name, minutes, { prefixIfMissing: false })
+          : replaceSecondsText(current.name, repsMin, repsMax, { prefixIfMissing: false })
+        : current.name,
+      description: standaloneConditioning
+        ? hasMinuteDuration
+          ? replaceDurationText(current.description, minutes, { prefixIfMissing: false })
+          : replaceSecondsText(current.description, repsMin, repsMax, { prefixIfMissing: false })
+        : current.description,
+      durationMinutes: standaloneConditioning && hasMinuteDuration ? minutes : current.durationMinutes,
+      conditioningBlock,
+      exercises,
+      coachNotes: appendCoachNote(
+        current,
+        hasMinuteDuration
+          ? `Set ${sourceTitle} to ${minutes} min`
+          : `Set ${sourceTitle} to ${formatSecondsRange(repsMin, repsMax)}`,
+      ),
+    }),
+  };
+}
+
+function replaceDurationText(
+  value: unknown,
+  minutes: number,
+  options: { prefixIfMissing?: boolean } = {},
+): string {
+  const text = String(value ?? '').trim();
+  const token = `${minutes}min`;
+  if (!text) return options.prefixIfMissing === false ? '' : `${token} conditioning`;
+  const withUnit = /\b\d{1,3}\s*(?:m|min|mins|minute|minutes)\b/i;
+  if (withUnit.test(text)) {
+    return text.replace(/\b\d{1,3}\s*(?:m|min|mins|minute|minutes)\b/ig, token);
+  }
+  const bareSeconds = /\b\d{1,3}\s*(?:sec|secs|second|seconds|s)\b/i;
+  if (options.prefixIfMissing !== false && !bareSeconds.test(text)) {
+    return `${token} ${text}`;
+  }
+  return text;
+}
+
+function replaceSecondsText(
+  value: unknown,
+  repsMin: number,
+  repsMax: number,
+  options: { prefixIfMissing?: boolean } = {},
+): string {
+  const text = String(value ?? '').trim();
+  const token = formatSecondsRange(repsMin, repsMax);
+  if (!text) return options.prefixIfMissing === false ? '' : `${token} conditioning`;
+  const secondsRange = /\b\d{1,3}\s*(?:[-–]\s*\d{1,3})?\s*(?:s|sec|secs|second|seconds)\b/i;
+  if (secondsRange.test(text)) {
+    return text.replace(/\b\d{1,3}\s*(?:[-–]\s*\d{1,3})?\s*(?:s|sec|secs|second|seconds)\b/ig, token);
+  }
+  if (options.prefixIfMissing !== false) {
+    return `${token} ${text}`;
+  }
+  return text;
+}
+
+function formatSecondsRange(repsMin: number, repsMax: number): string {
+  const min = Number.isFinite(repsMin) && repsMin > 0 ? repsMin : repsMax;
+  const max = Number.isFinite(repsMax) && repsMax > 0 ? repsMax : min;
+  return min === max ? `${min}s` : `${min}-${max}s`;
+}
+
 function applyAddConditioningBlock(
   current: Workout,
   event: AdjustmentEvent,
 ): MutateResult {
   const p = (event.after && typeof event.after === 'object') ? event.after as any : {};
+  if (p.editScope === 'edit_duration_only' || p.editScope === 'duration_only') {
+    return applyDurationOnlyConditioningUpdate(current, event);
+  }
+  if (p.editScope === 'replace_conditioning_prescription') {
+    return applyReplaceConditioningPrescription(current, event);
+  }
   const note = String(p.coachNote ?? 'Added light aerobic intervals after strength');
   const title = String(p.title ?? 'Light Aerobic Intervals');
+  const replaceActivity = typeof p.replaceActivity === 'string' ? p.replaceActivity.trim() : '';
+  const conditioningFlavour =
+    p.conditioningFlavour === 'high-intensity' || p.conditioningFlavour === 'tempo'
+      ? p.conditioningFlavour
+      : 'aerobic';
+  const conditioningCategory =
+    p.conditioningCategory === 'sprint' ||
+    p.conditioningCategory === 'vo2' ||
+    p.conditioningCategory === 'glycolytic'
+      ? p.conditioningCategory
+      : 'aerobic_base';
   const description = String(
     p.description ??
       '8 x 2 min at 75-80% max HR, with 1 min easy recovery. Use bike or track.',
   );
-  const row = buildCoachConditioningExercise(current, event);
   const existingBlock = current.conditioningBlock;
+  const replacementIds = new Set<string>();
+  const sourceOptions = existingBlock?.options ?? [];
+  const retainedOptions = replaceActivity
+    ? sourceOptions.filter((opt) => {
+        if (!activityTitleMatches(opt.title, replaceActivity)) return true;
+        for (const id of opt.exerciseIds ?? []) replacementIds.add(String(id));
+        return false;
+      })
+    : sourceOptions;
+  const blockBase = existingBlock
+    ? {
+        ...existingBlock,
+        options: retainedOptions,
+      }
+    : undefined;
+  const normalizedTitle = title.trim().toLowerCase();
+  const existingOptionIndex = blockBase?.options?.findIndex((opt) =>
+    String(opt.title ?? '').trim().toLowerCase() === normalizedTitle,
+  ) ?? -1;
+  const existingOption =
+    existingOptionIndex >= 0 ? blockBase?.options?.[existingOptionIndex] : undefined;
+  const existingRowId = existingOption?.exerciseIds?.[0] ?? null;
+  const existingRow = existingRowId
+    ? (current.exercises ?? []).find((ex) => ex.id === existingRowId)
+    : undefined;
+  const row = buildCoachConditioningExercise(current, event);
+  const baseExercises = replacementIds.size > 0
+    ? (current.exercises ?? []).filter((ex) => !replacementIds.has(String(ex.id ?? '')))
+    : (current.exercises ?? []);
+  if (existingRow) {
+    row.id = existingRow.id;
+    row.exerciseOrder = existingRow.exerciseOrder;
+  } else {
+    row.exerciseOrder = baseExercises.length;
+  }
   const block =
-    existingBlock?.options?.length
+    blockBase?.options?.length
       ? {
-          ...existingBlock,
-          intent: 'aerobic' as const,
-          options: [
-            ...existingBlock.options,
-            { title, description, exerciseIds: [row.id] },
-          ],
+          ...blockBase,
+          intent: conditioningFlavour,
+          options: existingOptionIndex >= 0 && blockBase
+            ? blockBase.options.map((opt, index) =>
+                index === existingOptionIndex
+                  ? { title, description, exerciseIds: [row.id] }
+                  : opt,
+              )
+            : [
+                ...blockBase.options,
+                { title, description, exerciseIds: [row.id] },
+              ],
         }
       : {
-          intent: 'aerobic' as const,
+          intent: conditioningFlavour,
           options: [{ title, description, exerciseIds: [row.id] }],
         };
+  const exercises = existingRow
+    ? baseExercises.map((ex) => (ex.id === existingRow.id ? row : ex))
+    : [...baseExercises, row];
   return {
     ok: true,
     workout: cloneWorkout(current, {
       hasCombinedConditioning: true,
-      conditioningFlavour: 'aerobic',
-      conditioningCategory: 'aerobic_base',
+      conditioningFlavour,
+      conditioningCategory,
       conditioningBlock: block,
-      exercises: [...(current.exercises ?? []), row],
+      coachAddedConditioningLabel: title,
+      exercises,
       coachNotes: appendCoachNote(current, note),
     }),
   };
@@ -533,6 +854,17 @@ function applyRemoveConditioningBlock(
   current: Workout,
   event: AdjustmentEvent,
 ): MutateResult {
+  const payload =
+    event.before && typeof event.before === 'object'
+      ? event.before as any
+      : event.after && typeof event.after === 'object'
+      ? event.after as any
+      : {};
+  const targetItemId = String(payload.targetItemId ?? '').trim();
+  if (targetItemId) {
+    return applyRemoveTargetedConditioningItem(current, event, targetItemId);
+  }
+
   const block = current.conditioningBlock;
   const ownedIds = new Set<string>();
   for (const opt of block?.options ?? []) {
@@ -556,7 +888,77 @@ function applyRemoveConditioningBlock(
       conditioningFlavour: undefined,
       conditioningCategory: undefined,
       conditioningBlock: undefined,
+      coachAddedConditioningLabel: undefined,
       exercises: remaining,
+      coachNotes: appendCoachNote(current, 'Removed conditioning from this session'),
+    }),
+  };
+}
+
+function applyRemoveTargetedConditioningItem(
+  current: Workout,
+  event: AdjustmentEvent,
+  targetItemId: string,
+): MutateResult {
+  const block = current.conditioningBlock;
+  const matchedExerciseIds = new Set<string>();
+  for (const ex of current.exercises ?? []) {
+    if (
+      String(ex.id ?? '') === targetItemId ||
+      String(ex.exerciseId ?? '') === targetItemId ||
+      String(ex.exercise?.id ?? '') === targetItemId
+    ) {
+      matchedExerciseIds.add(String(ex.id ?? targetItemId));
+    }
+  }
+
+  const matchedOptionIndexes = new Set<number>();
+  for (const [index, opt] of (block?.options ?? []).entries()) {
+    const ids = (opt.exerciseIds ?? []).map((id: unknown) => String(id));
+    if (ids.some((id) => id === targetItemId || matchedExerciseIds.has(id))) {
+      matchedOptionIndexes.add(index);
+      ids.forEach((id) => matchedExerciseIds.add(id));
+    }
+  }
+
+  if (matchedExerciseIds.size === 0 && matchedOptionIndexes.size === 0) {
+    return {
+      ok: false,
+      rejectKind: APPLY_REJECT_KIND.NO_CONDITIONING_TO_SWAP,
+      reason: `conditioning item ${targetItemId} was not visible on ${event.date}`,
+    };
+  }
+
+  const remainingExercises = (current.exercises ?? []).filter((ex) => {
+    const ids = [
+      String(ex.id ?? ''),
+      String(ex.exerciseId ?? ''),
+      String(ex.exercise?.id ?? ''),
+    ];
+    return !ids.some((id) => id && (id === targetItemId || matchedExerciseIds.has(id)));
+  });
+  const remainingOptions = (block?.options ?? []).filter((_, index) =>
+    !matchedOptionIndexes.has(index),
+  );
+  const hasRemainingConditioning = remainingOptions.length > 0 ||
+    (
+      current.workoutType === 'Conditioning' &&
+      remainingExercises.length > 0
+    );
+
+  return {
+    ok: true,
+    workout: cloneWorkout(current, {
+      hasCombinedConditioning: hasRemainingConditioning ? current.hasCombinedConditioning : false,
+      conditioningFlavour: hasRemainingConditioning ? current.conditioningFlavour : undefined,
+      conditioningCategory: hasRemainingConditioning ? current.conditioningCategory : undefined,
+      conditioningBlock: remainingOptions.length > 0 && block
+        ? { ...block, options: remainingOptions }
+        : undefined,
+      coachAddedConditioningLabel: hasRemainingConditioning
+        ? current.coachAddedConditioningLabel
+        : undefined,
+      exercises: remainingExercises,
       coachNotes: appendCoachNote(current, 'Removed conditioning from this session'),
     }),
   };
@@ -584,6 +986,26 @@ function applySwapConditioningModality(
 
   // ─── Path B — Phase H canonical rewrite ────────────────────────────
   if (isExplicitModalitySwap) {
+    const sourceModalities = beforeModality
+      ? [beforeModality]
+      : collectConditioningSourceModalities(current).filter((m) => m !== afterModality);
+    const verifyFinalWorkout = (candidate: Workout): MutateErr | null => {
+      const check = verifyModalityRewrite(
+        candidate,
+        afterModality!,
+        afterBikeLabel ?? (afterModality === 'bike' ? 'standard' : null),
+        sourceModalities,
+      );
+      if (check.ok) return null;
+      return {
+        ok: false,
+        rejectKind: APPLY_REJECT_KIND.NO_CONDITIONING_TO_SWAP,
+        reason:
+          `modality swap left visible ${beforeModality ?? 'source'} text on ${event.date}: ` +
+          check.leaks.map((leak) => `${leak.field}="${leak.matched}"`).join(', '),
+      };
+    };
+
     const rewritten = applyConditioningModalityToWorkout(current, {
       fromModality: beforeModality,
       toModality: afterModality!,
@@ -630,6 +1052,8 @@ function applySwapConditioningModality(
           bikeLabel: afterBikeLabel ?? (afterModality === 'bike' ? 'standard' : null),
         });
         const final = seededRewritten !== seeded ? seededRewritten : seeded;
+        const verifyErr = verifyFinalWorkout(final as Workout);
+        if (verifyErr) return verifyErr;
         return {
           ok: true,
           workout: cloneWorkout(final, { updatedAt: new Date().toISOString() }),
@@ -641,6 +1065,9 @@ function applySwapConditioningModality(
         reason: `no ${beforeModality ?? 'conditioning'}-modality conditioning to swap on ${event.date}`,
       };
     }
+
+    const verifyErr = verifyFinalWorkout(rewritten as Workout);
+    if (verifyErr) return verifyErr;
 
     return {
       ok: true,
@@ -716,6 +1143,20 @@ function applySwapConditioningModality(
       coachNotes: appendCoachNote(current, coachNote),
     }),
   };
+}
+
+function collectConditioningSourceModalities(current: Workout): ConditioningModality[] {
+  const out = new Set<ConditioningModality>();
+  for (const ex of current.exercises ?? []) {
+    const name = ex.exercise?.name ?? '';
+    const modality = inferModalityFromName(name);
+    if (modality) out.add(modality);
+  }
+  for (const opt of current.conditioningBlock?.options ?? []) {
+    const modality = inferModalityFromName(opt.title ?? '');
+    if (modality) out.add(modality);
+  }
+  return [...out];
 }
 
 /**

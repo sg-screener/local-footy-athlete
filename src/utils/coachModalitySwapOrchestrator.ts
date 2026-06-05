@@ -39,6 +39,7 @@ import {
   buildSwapConditioningModalityEvent,
   dayHasModality,
   applyModalityPreferenceToWorkout,
+  type ParsedModalitySwap,
 } from './coachModalitySwap';
 import type { ConditioningModality } from '../data/exerciseTags';
 import type { CoachReferenceResolution } from './coachReferenceResolver';
@@ -78,6 +79,9 @@ export interface OrchestrateInput {
   userMessage: string;
   todayISO: string;
   referenceResolution: CoachReferenceResolution | null;
+  /** Structured parse supplied by the typed ProgramEdit/CoachCommand path.
+   *  When present, the orchestrator trusts this instead of reparsing text. */
+  parsedSwap?: ParsedModalitySwap | null;
   /** Test seam — defaults to live store reads. */
   applyEvents?: typeof applyAdjustmentEvents;
   buildState?: () => any;
@@ -136,7 +140,7 @@ export interface VerifyProjectionsArgs {
  */
 export function orchestrateModalitySwap(input: OrchestrateInput): ModalitySwapOutcome {
   const ref = input.referenceResolution;
-  const parse = parseModalitySwapRequest(input.userMessage);
+  const parse = input.parsedSwap ?? parseModalitySwapRequest(input.userMessage);
 
   // ─── 1. Reference resolution gates ──────────────────────────────
   if (!ref) {
@@ -474,11 +478,11 @@ interface RecurringPathArgs {
 
 /**
  * Write a recurring modality preference for the resolved session name.
- * Eagerly rewrite any future-this-week matching sessions via the same
- * setManualOverride pathway the per-date applier uses, then VERIFY the
- * change actually landed in the visible projection (Program tab + the
- * DayWorkout view) before claiming success. Past dates are NEVER
- * rewritten — the preference is forward-looking.
+ * Eagerly rewrite the target date plus any future-this-week matching
+ * sessions via the same setManualOverride pathway the per-date applier
+ * uses, then VERIFY the change actually landed in the visible projection
+ * (Program tab + the DayWorkout view) before claiming success. The
+ * recurring preference remains the source of truth for future weeks.
  *
  * Hard verification gate: if the preference saves but neither the
  * Program tab nor the DayWorkout projection now shows `to`, we refuse
@@ -505,10 +509,13 @@ function runRecurringPreferencePath(
     bikeLabel: parse.bikeLabel ?? null,
   });
 
-  // Best-effort eager rewrite for future-this-week matching sessions.
-  // The recurring preference is the source of truth for future weeks
-  // (projectVisibleDay reads the store on every render), so even when
-  // this loop fails the user sees the change next time they navigate.
+  // Best-effort eager rewrite for matching sessions in the visible
+  // week. The recurring preference is the source of truth for future
+  // weeks (projectVisibleDay reads the store on every render), so even
+  // when this loop fails the user sees the change next time they
+  // navigate. The target date itself is always rewritten (even past)
+  // so the DayWorkout screen shows the update immediately —
+  // projectVisibleDay excludes past dates from preference projection.
   const resolveWeek = input.resolveCurrentWeekFn ?? defaultResolveCurrentWeek;
   const setOverride = input.setManualOverrideFn ?? defaultSetManualOverride;
   const targetKey = canonicalSessionKey(args.targetSessionName);
@@ -517,8 +524,29 @@ function runRecurringPreferencePath(
   let scannedWeek: Array<{ date: string; workout?: { name?: string } | null }> = [];
   try {
     scannedWeek = resolveWeek() ?? [];
+
+    // Write the override on the target date itself, including past
+    // dates. Without this, a past-date DayWorkout screen would still
+    // show the original modality because projectVisibleDay skips
+    // preference projection for past dates (day.date < todayISO).
+    const targetDay = scannedWeek.find((d) => d?.date === args.targetDate);
+    if (targetDay?.workout) {
+      const rewritten = applyModalityPreferenceToWorkout(targetDay.workout as any, {
+        from: parse.from,
+        to: parse.to,
+        bikeLabel: parse.bikeLabel ?? null,
+      });
+      if (rewritten !== targetDay.workout) {
+        setOverride(args.targetDate, rewritten, {
+          intent: 'program_adjustment',
+          reason: `coach modality preference: ${parse.from ?? 'auto'} → ${parse.to}`,
+        });
+        eagerWrites++;
+      }
+    }
+
     for (const day of scannedWeek) {
-      if (!day || day.date <= input.todayISO) continue; // strict: today or earlier untouched
+      if (!day || day.date <= input.todayISO || day.date === args.targetDate) continue;
       const w: any = day.workout;
       if (!w || canonicalSessionKey(w.name ?? '') !== targetKey) continue;
       if (!firstFutureMatchDate) firstFutureMatchDate = day.date;
@@ -705,7 +733,8 @@ function composeRecurringPreferenceReply(args: {
   const firstDayLabel = args.firstFutureDate ? formatDayLabel(args.firstFutureDate) : null;
 
   // Same-modality bike-label correction — both sides are "bike", just the
-  // subtype changed. Reply lands without "instead of" framing.
+  // subtype changed. Keep the athlete-facing copy simple; implementation
+  // details stay in logs/tests, not the chat bubble.
   const isLabelOnly = args.fromModality === 'bike' && args.toModality === 'bike';
   if (isLabelOnly) {
     const noteLabel =
@@ -717,8 +746,7 @@ function composeRecurringPreferenceReply(args: {
     const opposite = args.bikeLabel === 'standard' ? 'an assault bike' : 'a regular bike';
     return (
       `Done — I'll use a ${noteLabel} for ${args.sessionName} sessions going forward, ` +
-      `not ${opposite}. Note: I don't currently distinguish bike subtypes in the ` +
-      `program display, so the change shows up as wording / coach-note only.`
+      `not ${opposite}.`
     );
   }
 

@@ -25,11 +25,10 @@
  * Run: npm run test:coach-orchestration
  */
 
-// Debug logs are gated by __DEV__ in src/utils/logger.ts. The dispatcher's
-// flow-trace logs (`[coach-flow] suppressed_clarifier`, `explanation_path`,
-// `[coach-reply] source`) ride on logger.debug — required for the
-// `loggedAny(...)` assertions below — so this suite must run in dev mode.
+// Flow-trace logs are opt-in so normal Expo runs stay quiet. This suite
+// asserts on those traces, so it enables them explicitly.
 (global as unknown as { __DEV__: boolean }).__DEV__ = true;
+process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = 'true';
 
 const realLog = console.log;
 const realWarn = console.warn;

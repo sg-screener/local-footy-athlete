@@ -4,7 +4,10 @@
  * Run: npm run test:dev-onboarding-skip
  */
 
-import { DEFAULT_PROGRAM } from '../data/defaultProgram';
+import { DEFAULT_PROGRAM, buildWorkoutsFromCoach } from '../data/defaultProgram';
+import {
+  getProgramGenerationProfileFieldDiagnostics,
+} from '../services/api/generateProgram';
 import {
   DEV_TEST_ONBOARDING_DATA,
   isDevOnboardingSkipEnabled,
@@ -51,6 +54,33 @@ section('[2] default test athlete profile');
   eq('team training days', DEV_TEST_ONBOARDING_DATA.teamTrainingDays, ['Tuesday', 'Thursday']);
   eq('preferred training days', DEV_TEST_ONBOARDING_DATA.preferredTrainingDays, ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']);
   eq('injuries none', DEV_TEST_ONBOARDING_DATA.injuries, []);
+  eq(
+    'no required generation profile fields missing',
+    getProgramGenerationProfileFieldDiagnostics(DEV_TEST_ONBOARDING_DATA).missingRequired,
+    [],
+  );
+}
+
+section('[2b] generated workout type normalization');
+{
+  const [workout] = buildWorkoutsFromCoach([
+    {
+      dayOfWeek: 1,
+      name: 'Lower Strength',
+      workoutType: 'core',
+      sessionTier: 'core',
+      exercises: [
+        {
+          name: 'Back Squat',
+          sets: 4,
+          repsMin: 4,
+          repsMax: 6,
+        },
+      ],
+    },
+  ]);
+  eq('core workoutType normalises to Strength', workout.workoutType, 'Strength');
+  eq('core remains sessionTier', workout.sessionTier, 'core');
 }
 
 async function main() {
@@ -92,6 +122,7 @@ section('[4] generator failure falls back to valid default program');
   const calls = {
     completed: false,
     program: null as any,
+    error: null as string | null,
   };
   const result = await runDevOnboardingSkip({
     generateProgram: async () => {
@@ -105,6 +136,7 @@ section('[4] generator failure falls back to valid default program');
       setCurrentProgram: (program) => { calls.program = program; },
       setCurrentMicrocycle: () => {},
       setTodayWorkout: () => {},
+      setError: (error) => { calls.error = error; },
     },
     calendarStore: {
       setGameDay: () => {},
@@ -113,6 +145,11 @@ section('[4] generator failure falls back to valid default program');
   eq('used fallback', result.usedFallback, true);
   eq('onboarding completed', calls.completed, true);
   ok('fallback program has workouts', !!calls.program?.microcycles?.[0]?.workouts?.length);
+  ok(
+    'fallback stores dev warning',
+    !!calls.error && calls.error.includes('Using DEFAULT_PROGRAM'),
+    `expected warning error, got ${calls.error}`,
+  );
 }
 
 console.log(`\n— Summary —`);

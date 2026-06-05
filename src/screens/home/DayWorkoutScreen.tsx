@@ -2,11 +2,11 @@ import React from 'react';
 import {
   StyleSheet,
   View,
-  SafeAreaView,
   ScrollView,
   Pressable,
   TextInput,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { Text } from '../../components/common/Text';

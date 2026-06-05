@@ -19,7 +19,7 @@ export function buildCueText(exerciseName: string): string | null {
     cue.primaryCue === 'Control the movement.' &&
     cue.secondaryCue === 'Stay tight through the full range.'
   ) {
-    logger.warn(`[exerciseCues] Missing specific cue for: ${exerciseName}`);
+    logger.debug(`[exerciseCues] Missing specific cue for: ${exerciseName}`);
   }
 
   if (!cue.primaryCue && !cue.secondaryCue) return null;

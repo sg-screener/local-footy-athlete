@@ -1,5 +1,4 @@
 import { useProgramStore } from '../store/programStore';
-import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
 import {
   resolveDateWithConditioning,
@@ -13,6 +12,40 @@ import { projectVisibleDay } from './visibleProgramProjection';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { bucketToRegion } from './coachConstraintProducers';
 import { logger } from './logger';
+import { filterConstraintsForDate } from './readinessConstraints';
+import {
+  inferModalityFromName,
+} from './coachModalitySwap';
+import type { ConditioningModality } from '../data/exerciseTags';
+
+export type VisibleProgramItemDomain =
+  | 'conditioning'
+  | 'recovery'
+  | 'strength'
+  | 'session';
+
+export interface VisibleProgramItem {
+  id: string;
+  title: string;
+  domain: VisibleProgramItemDomain;
+  modality: ConditioningModality | null;
+  durationMinutes: number | null;
+  description?: string;
+  exerciseIds: string[];
+  source:
+    | 'conditioning_option'
+    | 'conditioning_phase'
+    | 'conditioning_exercise'
+    | 'strength_exercise'
+    | 'session';
+}
+
+export interface ResolvedVisibleProgramForDate {
+  day: ResolvedDay;
+  items: VisibleProgramItem[];
+  conditioningItems: VisibleProgramItem[];
+  strengthItems: VisibleProgramItem[];
+}
 
 export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[]): any[] {
   if (!Array.isArray(activeConstraints) || activeConstraints.length === 0) return [];
@@ -58,12 +91,16 @@ export function buildProgramTabProjectedWeek(args: {
 }): ResolvedDay[] {
   const monday = args.mondayISO ?? getMondayStr(0);
   const rawWeek = resolveWeekWithConditioning(monday, args.state);
-  const extraConstraints = buildExtraConstraintsForVisibleProgram(args.state.activeConstraints ?? []);
   const prefs =
     args.modalityPreferences ??
     useCoachPreferencesStore.getState().modalityPreferences;
-  return rawWeek.map((day) =>
-    projectVisibleDay({
+  return rawWeek.map((day) => {
+    const dayActiveConstraints = filterConstraintsForDate(
+      args.state.activeConstraints ?? [],
+      day.date,
+    );
+    const extraConstraints = buildExtraConstraintsForVisibleProgram(dayActiveConstraints);
+    return projectVisibleDay({
       day,
       activeInjury: args.state.activeInjury
         ? { ...args.state.activeInjury, rules: args.state.activeInjury.rules ?? [] }
@@ -72,8 +109,8 @@ export function buildProgramTabProjectedWeek(args: {
       overrideContext: args.overrideContexts?.[day.date],
       todayISO: args.todayISO,
       modalityPreferences: prefs,
-    }).day,
-  );
+    }).day;
+  });
 }
 
 export function buildDayWorkoutProjectedDay(args: {
@@ -84,7 +121,11 @@ export function buildDayWorkoutProjectedDay(args: {
   modalityPreferences?: Record<string, any>;
 }): ResolvedDay {
   const raw = resolveDateWithConditioning(args.date, args.state);
-  const extraConstraints = buildExtraConstraintsForVisibleProgram(args.state.activeConstraints ?? []);
+  const dayActiveConstraints = filterConstraintsForDate(
+    args.state.activeConstraints ?? [],
+    args.date,
+  );
+  const extraConstraints = buildExtraConstraintsForVisibleProgram(dayActiveConstraints);
   const prefs =
     args.modalityPreferences ??
     useCoachPreferencesStore.getState().modalityPreferences;
@@ -100,9 +141,224 @@ export function buildDayWorkoutProjectedDay(args: {
   }).day;
 }
 
+export function getResolvedVisibleProgramForDate(args: {
+  date: string;
+  todayISO: string;
+  state: ScheduleState & { activeConstraints?: any[] };
+  overrideContext?: any;
+  overrideContexts?: Record<string, any>;
+  modalityPreferences?: Record<string, any>;
+}): ResolvedVisibleProgramForDate {
+  const day = buildDayWorkoutProjectedDay({
+    date: args.date,
+    todayISO: args.todayISO,
+    state: args.state,
+    overrideContext: args.overrideContext ?? args.overrideContexts?.[args.date],
+    modalityPreferences: args.modalityPreferences,
+  });
+  const items = extractVisibleProgramItemsFromResolvedDay(day);
+  const conditioningItems = items.filter((item) =>
+    item.domain === 'conditioning' || item.domain === 'recovery',
+  );
+  const strengthItems = items.filter((item) => item.domain === 'strength');
+  logger.debug('[visible-program-date-resolution]', {
+    date: args.date,
+    workoutName: day.workout?.name ?? null,
+    workoutType: day.workout?.workoutType ?? null,
+    source: day.source,
+    itemCount: items.length,
+    conditioningItems: conditioningItems.map(visibleItemLogPayload),
+    strengthItems: strengthItems.map(visibleItemLogPayload),
+  });
+  return { day, items, conditioningItems, strengthItems };
+}
+
+export function extractVisibleProgramItemsFromResolvedDay(day: ResolvedDay): VisibleProgramItem[] {
+  return extractVisibleProgramItemsFromWorkout(day.workout ?? null);
+}
+
+export function extractVisibleProgramItemsFromWorkout(
+  workout: ResolvedDay['workout'] | null,
+): VisibleProgramItem[] {
+  if (!workout) return [];
+
+  const items: VisibleProgramItem[] = [];
+  const seen = new Set<string>();
+  const isRecovery =
+    workout.workoutType === 'Recovery' ||
+    (workout as any).sessionTier === 'recovery';
+  const workoutType = String(workout.workoutType ?? '');
+  const isPureConditioning =
+    workoutType === 'Conditioning' ||
+    workoutType === 'Aerobic' ||
+    workoutType === 'Tempo' ||
+    workoutType === 'Speed' ||
+    workoutType === 'HIIT' ||
+    /(?:flush|sprint|interval|run|metcon|conditioning|tempo|mas)/i.test(workoutType);
+
+  const addItem = (item: VisibleProgramItem) => {
+    const key = `${item.domain}:${item.id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push(item);
+  };
+
+  for (const [index, option] of (workout.conditioningBlock?.options ?? []).entries()) {
+    const linkedExercises = linkedExercisesForOption(workout, option);
+    const title =
+      cleanVisibleTitle(option.title) ||
+      cleanVisibleTitle(linkedExercises[0]?.exercise?.name) ||
+      cleanVisibleTitle(workout.name) ||
+      `Conditioning ${index + 1}`;
+    const description = cleanVisibleTitle(option.description);
+    const text = [
+      title,
+      description,
+      ...linkedExercises.flatMap((exercise: any) => [
+        exercise?.exercise?.name,
+        exercise?.exercise?.description,
+        exercise?.notes,
+      ]),
+    ].filter(Boolean).join(' ');
+    const exerciseIds = linkedExercises.map((exercise: any) =>
+      String(exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? ''),
+    ).filter(Boolean);
+    addItem({
+      id: exerciseIds[0] ?? `conditioning-option:${normaliseVisibleItemKey(title)}`,
+      title,
+      domain: isRecovery ? 'recovery' : 'conditioning',
+      modality: inferModalityFromName(text),
+      durationMinutes: extractVisibleDurationMinutes(text, linkedExercises),
+      description,
+      exerciseIds,
+      source: 'conditioning_option',
+    });
+  }
+
+  if (isPureConditioning || isRecovery) {
+    for (const [index, exercise] of (workout.exercises ?? []).entries()) {
+      const title =
+        cleanVisibleTitle(exercise.exercise?.name) ||
+        cleanVisibleTitle(workout.name) ||
+        `Phase ${index + 1}`;
+      const description = cleanVisibleTitle(exercise.notes || exercise.exercise?.description);
+      const text = [title, description].filter(Boolean).join(' ');
+      addItem({
+        id: String(exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? `conditioning-phase:${index}`),
+        title,
+        domain: isRecovery ? 'recovery' : 'conditioning',
+        modality: inferModalityFromName(text),
+        durationMinutes: extractVisibleDurationMinutes(text, [exercise]),
+        description,
+        exerciseIds: [String(exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? '')].filter(Boolean),
+        source: isPureConditioning ? 'conditioning_phase' : 'conditioning_exercise',
+      });
+    }
+  }
+
+  const conditioningIds = new Set(
+    items.flatMap((item) => item.exerciseIds).filter(Boolean),
+  );
+  for (const [index, exercise] of (workout.exercises ?? []).entries()) {
+    const id = String(exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? `strength:${index}`);
+    if (conditioningIds.has(id)) continue;
+    const title = cleanVisibleTitle(exercise.exercise?.name);
+    if (!title) continue;
+    addItem({
+      id,
+      title,
+      domain: 'strength',
+      modality: null,
+      durationMinutes: null,
+      description: cleanVisibleTitle(exercise.notes || exercise.exercise?.description),
+      exerciseIds: [id],
+      source: 'strength_exercise',
+    });
+  }
+
+  if (items.length === 0 && workout.name) {
+    const title = cleanVisibleTitle(workout.name);
+    addItem({
+      id: String((workout as any).id ?? `session:${normaliseVisibleItemKey(title)}`),
+      title,
+      domain: 'session',
+      modality: inferModalityFromName([
+        workout.name,
+        workout.description,
+        ...(workout.coachNotes ?? []),
+      ].filter(Boolean).join(' ')),
+      durationMinutes: extractVisibleDurationMinutes([
+        workout.name,
+        workout.description,
+      ].filter(Boolean).join(' '), []),
+      description: cleanVisibleTitle(workout.description),
+      exerciseIds: [],
+      source: 'session',
+    });
+  }
+
+  return items;
+}
+
+function visibleItemLogPayload(item: VisibleProgramItem) {
+  return {
+    id: item.id,
+    title: item.title,
+    domain: item.domain,
+    modality: item.modality,
+    durationMinutes: item.durationMinutes,
+    source: item.source,
+  };
+}
+
+function linkedExercisesForOption(workout: ResolvedDay['workout'], option: any): any[] {
+  const ids = new Set((option?.exerciseIds ?? []).map((id: unknown) => String(id)));
+  return (workout?.exercises ?? []).filter((exercise: any) =>
+    ids.has(String(exercise.id ?? '')) ||
+    ids.has(String(exercise.exerciseId ?? '')) ||
+    ids.has(String(exercise.exercise?.id ?? '')),
+  );
+}
+
+function extractVisibleDurationMinutes(text: string, exercises: any[]): number | null {
+  const durationText = String(text ?? '');
+  const compact = durationText.match(/\b(\d{1,3})\s*(?:min|mins|minute|minutes)\b/i);
+  if (compact) return Number(compact[1]);
+
+  for (const exercise of exercises) {
+    const type = String(exercise?.prescriptionType ?? '').toLowerCase();
+    const repsMin = Number(exercise?.prescribedRepsMin);
+    const repsMax = Number(exercise?.prescribedRepsMax);
+    if (
+      type.includes('duration') &&
+      Number.isFinite(repsMin) &&
+      repsMin > 0 &&
+      (!Number.isFinite(repsMax) || repsMax === repsMin)
+    ) {
+      return repsMin;
+    }
+  }
+
+  return null;
+}
+
+function cleanVisibleTitle(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function normaliseVisibleItemKey(value: string): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'item';
+}
+
 export function programTabWorkoutShowsConditioning(workout: ResolvedDay['workout']): boolean {
   if (!workout) return false;
-  return !!workout.hasCombinedConditioning && !!workout.conditioningFlavour;
+  return (
+    (!!workout.hasCombinedConditioning && !!workout.conditioningFlavour) ||
+    !!workout.conditioningBlock?.options?.length
+  );
 }
 
 export function dayWorkoutShowsConditioningAfterStrength(workout: ResolvedDay['workout']): boolean {
@@ -112,14 +368,55 @@ export function dayWorkoutShowsConditioningAfterStrength(workout: ResolvedDay['w
     (workout as any).sessionTier === 'recovery';
   const isConditioning = workout.workoutType === 'Conditioning' && !isRecovery;
   const isCombinedDay = !!workout.hasCombinedConditioning && !isConditioning && !isRecovery;
-  if (!isCombinedDay) return false;
+  if (!isCombinedDay && !isRecovery) return false;
   const ids = new Set<string>();
   for (const opt of workout.conditioningBlock?.options ?? []) {
     for (const id of opt.exerciseIds ?? []) ids.add(id);
   }
   if (ids.size === 0) return false;
   const firstConditioningIndex = (workout.exercises ?? []).findIndex((ex) => ids.has(ex.id));
+  if (isRecovery) return firstConditioningIndex >= 0;
   return firstConditioningIndex > 0;
+}
+
+function normalizeVisibleText(value: string): string {
+  return value.toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+function collectWorkoutVisibleText(workout: ResolvedDay['workout']): string {
+  if (!workout) return '';
+  const parts: string[] = [
+    workout.name,
+    workout.description,
+    ...(workout.coachNotes ?? []),
+  ].filter((v): v is string => typeof v === 'string' && v.trim().length > 0);
+
+  for (const opt of workout.conditioningBlock?.options ?? []) {
+    if (typeof opt.title === 'string') parts.push(opt.title);
+    if (typeof opt.description === 'string') parts.push(opt.description);
+  }
+
+  for (const ex of workout.exercises ?? []) {
+    const anyEx = ex as any;
+    [
+      anyEx.notes,
+      anyEx.exercise?.name,
+      anyEx.exercise?.description,
+    ].forEach((value) => {
+      if (typeof value === 'string' && value.trim()) parts.push(value);
+    });
+  }
+
+  return normalizeVisibleText(parts.join(' '));
+}
+
+export function workoutShowsExpectedActivity(
+  workout: ResolvedDay['workout'],
+  activityTitle: string | null | undefined,
+): boolean {
+  const needle = normalizeVisibleText(activityTitle ?? '');
+  if (!workout || !needle) return false;
+  return collectWorkoutVisibleText(workout).includes(needle);
 }
 
 export interface RenderedMutationVerification {
@@ -133,6 +430,9 @@ export interface RenderedMutationVerification {
   overrideKeyWritten: boolean;
   programTabProjectionHasConditioning: boolean;
   dayWorkoutProjectionHasConditioning: boolean;
+  expectedActivityTitle?: string | null;
+  programTabProjectionHasExpectedActivity?: boolean;
+  dayWorkoutProjectionHasExpectedActivity?: boolean;
 }
 
 export function verifyRenderedProgramMutation(args: {
@@ -140,13 +440,10 @@ export function verifyRenderedProgramMutation(args: {
   todayISO: string;
   targetDate: string;
   beforeWorkout?: ResolvedDay['workout'] | null;
+  expectedActivityTitle?: string | null;
 }): RenderedMutationVerification {
   const programStore = useProgramStore.getState();
-  const coachStore = useCoachUpdatesStore.getState();
-  const state = {
-    ...buildScheduleStateImperative(),
-    activeConstraints: coachStore.activeConstraints ?? [],
-  };
+  const state = buildScheduleStateImperative();
   const overrideContexts = programStore.overrideContexts ?? {};
   const targetWeekStart = getMondayForDate(args.targetDate);
   const programTabWeek = buildProgramTabProjectedWeek({
@@ -166,6 +463,15 @@ export function verifyRenderedProgramMutation(args: {
     programTabWorkoutShowsConditioning(args.beforeWorkout) ||
     dayWorkoutShowsConditioningAfterStrength(args.beforeWorkout);
   const afterWorkout = dayWorkoutTarget.workout ?? programTabTarget?.workout ?? null;
+  const expectedActivityTitle = args.expectedActivityTitle ?? null;
+  const programTabProjectionHasExpectedActivity = workoutShowsExpectedActivity(
+    programTabTarget?.workout ?? null,
+    expectedActivityTitle,
+  );
+  const dayWorkoutProjectionHasExpectedActivity = workoutShowsExpectedActivity(
+    dayWorkoutTarget.workout,
+    expectedActivityTitle,
+  );
   const out: RenderedMutationVerification = {
     requestedDay: args.requestedDay,
     todayISO: args.todayISO,
@@ -175,10 +481,15 @@ export function verifyRenderedProgramMutation(args: {
     beforeHasConditioning,
     afterHasConditioning:
       programTabWorkoutShowsConditioning(afterWorkout) ||
-      dayWorkoutShowsConditioningAfterStrength(afterWorkout),
+      dayWorkoutShowsConditioningAfterStrength(afterWorkout) ||
+      programTabProjectionHasExpectedActivity ||
+      dayWorkoutProjectionHasExpectedActivity,
     overrideKeyWritten: !!programStore.dateOverrides?.[args.targetDate],
     programTabProjectionHasConditioning: programTabWorkoutShowsConditioning(programTabTarget?.workout ?? null),
     dayWorkoutProjectionHasConditioning: dayWorkoutShowsConditioningAfterStrength(dayWorkoutTarget.workout),
+    expectedActivityTitle,
+    programTabProjectionHasExpectedActivity,
+    dayWorkoutProjectionHasExpectedActivity,
   };
   logger.debug('[coach-mutation-target]', out);
   return out;
@@ -278,11 +589,7 @@ export function verifyRenderedSessionMove(args: {
   movedSessionName: string;
 }): RenderedSessionMoveVerification {
   const programStore = useProgramStore.getState();
-  const coachStore = useCoachUpdatesStore.getState();
-  const state = {
-    ...buildScheduleStateImperative(),
-    activeConstraints: coachStore.activeConstraints ?? [],
-  };
+  const state = buildScheduleStateImperative();
   const overrideContexts = programStore.overrideContexts ?? {};
 
   // Both the source and dest weeks may matter — resolve both. Most of
@@ -342,11 +649,7 @@ export function verifyRenderedExerciseSwap(args: {
   toName: string;
 }): RenderedExerciseSwapVerification {
   const programStore = useProgramStore.getState();
-  const coachStore = useCoachUpdatesStore.getState();
-  const state = {
-    ...buildScheduleStateImperative(),
-    activeConstraints: coachStore.activeConstraints ?? [],
-  };
+  const state = buildScheduleStateImperative();
   const overrideContexts = programStore.overrideContexts ?? {};
   const targetWeekStart = getMondayForDate(args.targetDate);
   const programTabWeek = buildProgramTabProjectedWeek({

@@ -790,6 +790,47 @@ export function buildWorkoutsFromCoach(
     return undefined;
   }
 
+  function normalizeGeneratedWorkoutType(
+    cw: { name: string; workoutType: string },
+    planEntry: SessionAllocation | null,
+  ): WorkoutType {
+    const raw = String(cw.workoutType || '').trim().toLowerCase();
+    const text = `${cw.name || ''} ${planEntry?.focus || ''}`.toLowerCase();
+
+    if (planEntry?.isTeamDay || raw === 'team' || raw === 'team training') {
+      return 'Team Training';
+    }
+    if (raw === 'strength') return 'Strength';
+    if (raw === 'conditioning') return 'Conditioning';
+    if (raw === 'recovery') return 'Recovery';
+    if (raw === 'mixed') return 'Mixed';
+    if (raw === 'game') return 'Game';
+
+    // Older generate-mode schema incorrectly described workoutType as a tier.
+    // Treat those values as sessionTier only and infer the app-level type.
+    if (raw === 'core' || raw === 'optional') {
+      if (planEntry?.conditioningFlavour && !planEntry.hasCombinedConditioning) {
+        return 'Conditioning';
+      }
+      if (planEntry?.hasCombinedConditioning) {
+        return 'Mixed';
+      }
+      if (/\b(recovery|mobility|flush|restore|reset)\b/.test(text)) {
+        return 'Recovery';
+      }
+      if (/\b(conditioning|aerobic|tempo|sprint|interval|run|bike|row|ski)\b/.test(text)) {
+        return 'Conditioning';
+      }
+      return 'Strength';
+    }
+
+    if (/\b(recovery|mobility|flush|restore|reset)\b/.test(text)) return 'Recovery';
+    if (/\b(conditioning|aerobic|tempo|sprint|interval|run|bike|row|ski)\b/.test(text)) {
+      return 'Conditioning';
+    }
+    return 'Strength';
+  }
+
   // ── Team-day name enforcement ──
   // Guarantees that any day marked isTeamDay in the engine plan has its
   // workout.name lead with "Team Training" — independent of what the AI
@@ -1271,7 +1312,7 @@ export function buildWorkoutsFromCoach(
       }),
       description: '',
       intensity: canonicalIntensity,
-      workoutType: cw.workoutType as any,
+      workoutType: normalizeGeneratedWorkoutType(cw, planEntry),
       sessionTier: canonicalTier,
       ...(planEntry?.hasCombinedConditioning ? { hasCombinedConditioning: true } : {}),
       ...(planEntry?.conditioningFlavour ? { conditioningFlavour: planEntry.conditioningFlavour } : {}),

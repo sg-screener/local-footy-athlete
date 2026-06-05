@@ -132,6 +132,7 @@ const PRONOUN_PATTERNS: RegExp[] = [
   /\bthis\s+(session|workout|day|one)\b/i,
   /\bthe\s+session\b/i,
   /\bthe\s+workout\b/i,
+  /\bthere\b/i,
 ];
 
 /**
@@ -307,6 +308,25 @@ export function resolveCoachReference(
   const now = input.now ?? Date.now();
   const message = (input.userMessage ?? '').trim();
   const isMutation = isMutationLike(message);
+  const deicticDay = matchDeicticWeekdayReference(message);
+  const lastDiscussedForDeictic = freshOrNull(input.lastDiscussedWorkout, now);
+  if (
+    deicticDay != null &&
+    lastDiscussedForDeictic &&
+    isoDow(lastDiscussedForDeictic.date) === deicticDay
+  ) {
+    return logResolution(input, message, isMutation, {
+      status: 'resolved',
+      target: {
+        date: lastDiscussedForDeictic.date,
+        sessionName: lastDiscussedForDeictic.sessionName,
+        method: 'pronoun_last_discussed',
+        contextSource: lastDiscussedForDeictic.source,
+      },
+      confidence: 0.86,
+      isMutationLike: isMutation,
+    });
+  }
 
   // ─── 1. Explicit day name beats everything ───
   const explicit = matchExplicitDay(message, input.currentWeek, input.nextWeek, {
@@ -334,7 +354,7 @@ export function resolveCoachReference(
 
   // ─── 2. Modality reference ───
   const modalityTokens = extractModalityTokensFromMessage(message);
-  if (modalityTokens.length > 0) {
+  if (modalityTokens.length > 0 && !isAddConditioningPayloadMessage(message)) {
     const modalityRes = matchByModality({
       tokens: modalityTokens,
       currentWeek: input.currentWeek,
@@ -520,6 +540,34 @@ export function resolveCoachReference(
 }
 
 // ─── Private helpers ────────────────────────────────────────────────
+
+function isAddConditioningPayloadMessage(message: string): boolean {
+  if (!message) return false;
+  const hasAddVerb =
+    /\b(?:add|include|chuck|throw\s+in|put\s+in|slot\s+in|tack\s+on|add\s+on)\b/i.test(message);
+  if (!hasAddVerb) return false;
+  const hasConditioningPayload =
+    /\b(?:bike|row|rower|rowing|run|running|jog|ski\s*erg|skierg|ski|swim|swimming|cardio|conditioning|aerobic|sprints?|intervals?|walks?|walking|pilates|yoga|mobility)\b/i.test(message);
+  if (!hasConditioningPayload) return false;
+  return (
+    containsPronoun(message) ||
+    /\b(?:on|onto|to|for|into)\s+(?:today|tomorrow|mon(?:day)?|tue(?:s|sday)?|wed(?:nesday|s)?|thu(?:rs(?:day)?|r)?|fri(?:day)?|sat(?:urday)?|sun(?:day)?|this\s+day|that\s+day|this\s+session|that\s+session|the\s+session|the\s+workout)\b/i.test(message)
+  );
+}
+
+function matchDeicticWeekdayReference(message: string): number | null {
+  const lower = String(message ?? '').toLowerCase();
+  const m =
+    /\b(?:that|this)\s+(sun(?:day)?|mon(?:day)?|tue(?:s|sday)?|wed(?:nesday|s)?|thu(?:rs(?:day)?|r)?|fri(?:day)?|sat(?:urday)?)\b/i.exec(lower);
+  if (!m) return null;
+  return DOW_BY_NAME[m[1]] ?? null;
+}
+
+function isoDow(iso: string): number | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0, 0).getDay();
+}
 
 function freshOrNull(
   entry: CoachContextEntry | null,
@@ -716,6 +764,55 @@ function matchExplicitDay(
   const isNext = /\bnext\s+(week|mon|tue|wed|thu|fri|sat|sun)/.test(lower);
   const isExplicitlyPast = /\blast\s+(week|mon|tue|wed|thu|fri|sat|sun)/.test(lower) ||
     /\bprevious\s+(mon|tue|wed|thu|fri|sat|sun)/.test(lower);
+
+  // ─── "today" / "tomorrow" → resolve to day-of-week ─────────────
+  const todayISO = opts?.todayISO;
+  if (todayISO && /\btoday\b/i.test(lower)) {
+    const todayDay = currentWeek.find((d) => d.date === todayISO);
+    if (todayDay?.workout) {
+      return {
+        matched: true,
+        target: {
+          date: todayDay.date,
+          sessionName: todayDay.workout.name ?? 'session',
+          method: 'explicit_day',
+        },
+      };
+    }
+    if (todayDay) {
+      return {
+        matched: true,
+        failureReason: 'explicit_day_no_workout',
+        clarifierQuestion: `There's no session scheduled for today. Which day do you mean?`,
+      };
+    }
+  }
+  if (todayISO && /\btomorrow\b/i.test(lower)) {
+    const [y, m, d] = todayISO.split('-').map(Number);
+    const dt = new Date(y, m - 1, d, 12);
+    dt.setDate(dt.getDate() + 1);
+    const tmrISO = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    const tmrDay = currentWeek.find((dd) => dd.date === tmrISO)
+      ?? nextWeek.find((dd) => dd.date === tmrISO);
+    if (tmrDay?.workout) {
+      return {
+        matched: true,
+        target: {
+          date: tmrDay.date,
+          sessionName: tmrDay.workout.name ?? 'session',
+          method: 'explicit_day',
+        },
+      };
+    }
+    if (tmrDay) {
+      return {
+        matched: true,
+        failureReason: 'explicit_day_no_workout',
+        clarifierQuestion: `There's no session scheduled for tomorrow. Which day do you mean?`,
+      };
+    }
+  }
+
   let matchedDow: number | null = null;
   for (const [name, dow] of Object.entries(DOW_BY_NAME)) {
     const re = new RegExp(`\\b${name}\\b`, 'i');
@@ -742,7 +839,6 @@ function matchExplicitDay(
   // next week's occurrence so the coach doesn't reject with "that
   // session is in the past". Questions/explanations about a past day
   // are fine — they legitimately refer to the current week.
-  const todayISO = opts?.todayISO;
   const mutationLike = opts?.isMutationLike ?? false;
   if (
     todayISO &&

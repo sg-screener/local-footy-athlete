@@ -2,9 +2,10 @@
  * smokeBootstrapInstaller unit tests.
  *
  * These tests prove the deep-link receiver race fix: the Linking
- * listener must be attached SYNCHRONOUSLY (before any await), the raw
- * URL is logged before parsing, multi-channel delivery is idempotent,
- * and unknown URLs are surfaced + ignored without crashing.
+ * listener stays out of the normal runtime unless an explicit smoke flag is
+ * active. When active, it must attach SYNCHRONOUSLY (before any await);
+ * smoke URLs are logged + bootstrapped, non-smoke URLs are ignored silently,
+ * and multi-channel delivery is idempotent.
  *
  * Run: npm run test:smoke-bootstrap-installer
  */
@@ -109,6 +110,7 @@ import { useCalendarStore } from '../store/calendarStore';
 let pass = 0;
 let fail = 0;
 const failures: string[] = [];
+const originalSmokeBootstrapEnv = process.env.EXPO_PUBLIC_SMOKE_BOOTSTRAP;
 
 function ok(name: string, cond: boolean, detail?: string) {
   if (cond) {
@@ -126,6 +128,7 @@ function section(label: string) {
 }
 
 function resetAll() {
+  delete process.env.EXPO_PUBLIC_SMOKE_BOOTSTRAP;
   __resetSmokeBootstrapInstallerForTest();
   __resetSmokeBootstrapForTest();
   linkingShim.listeners = [];
@@ -139,10 +142,22 @@ function resetAll() {
   } catch {}
 }
 
+function enableSmokeRuntimeFlag() {
+  process.env.EXPO_PUBLIC_SMOKE_BOOTSTRAP = 'coach-bike-flow';
+}
+
+function restoreSmokeBootstrapEnv() {
+  if (originalSmokeBootstrapEnv === undefined) {
+    delete process.env.EXPO_PUBLIC_SMOKE_BOOTSTRAP;
+  } else {
+    process.env.EXPO_PUBLIC_SMOKE_BOOTSTRAP = originalSmokeBootstrapEnv;
+  }
+}
+
 // ────────────────────────────────────────────────────────────────────
-// [1] Race fix — listener must attach synchronously
+// [1] Runtime gate + race fix — listener must attach synchronously when active
 // ────────────────────────────────────────────────────────────────────
-section('[1] Linking listener attaches BEFORE installer returns');
+section('[1] Installer is gated, then attaches BEFORE returning when active');
 {
   resetAll();
   ok(
@@ -150,16 +165,27 @@ section('[1] Linking listener attaches BEFORE installer returns');
     !__isSmokeBootstrapInstalledForTest(),
   );
   ok('precondition: 0 listeners', linkingShim.listeners.length === 0);
-  // Install — this is the call that must register the listener
-  // synchronously, not via any await.
+  installSmokeBootstrapListener();
+  ok(
+    'normal runtime: listener is not attached',
+    linkingShim.listeners.length === 0,
+    `listeners=${linkingShim.listeners.length} addCalls=${linkingShim.addCalls}`,
+  );
+  ok(
+    'normal runtime: installer does not mark itself installed',
+    !__isSmokeBootstrapInstalledForTest(),
+  );
+
+  resetAll();
+  enableSmokeRuntimeFlag();
   const teardown = installSmokeBootstrapListener();
   ok(
-    'after install: listener attached synchronously',
+    'smoke runtime: listener attached synchronously',
     linkingShim.listeners.length === 1,
     `listeners=${linkingShim.listeners.length} addCalls=${linkingShim.addCalls}`,
   );
   ok(
-    'installer marks itself installed',
+    'smoke runtime: installer marks itself installed',
     __isSmokeBootstrapInstalledForTest(),
   );
   teardown();
@@ -171,6 +197,7 @@ section('[1] Linking listener attaches BEFORE installer returns');
 section('[2] installSmokeBootstrapListener is idempotent');
 {
   resetAll();
+  enableSmokeRuntimeFlag();
   installSmokeBootstrapListener();
   installSmokeBootstrapListener();
   installSmokeBootstrapListener();
@@ -188,6 +215,7 @@ async function main() {
   section('[3] Warm URL (Maestro openLink path) triggers bootstrap');
   {
     resetAll();
+    enableSmokeRuntimeFlag();
     installSmokeBootstrapListener();
     // Maestro fires openLink → react-native dispatches "url" event.
     linkingShim.emit('localfootyathlete://smoke/coach-bike-flow');
@@ -213,6 +241,7 @@ async function main() {
   section('[4] Cold-start URL via getInitialURL triggers bootstrap');
   {
     resetAll();
+    enableSmokeRuntimeFlag();
     linkingShim.initialUrl = 'localfootyathlete://smoke/coach-bike-flow';
     installSmokeBootstrapListener();
     // getInitialURL is awaited inside the installer; tick a few times.
@@ -224,9 +253,9 @@ async function main() {
   }
 
   // ──────────────────────────────────────────────────────────────────
-  // [5] Raw-URL log marker fires BEFORE parse
+  // [5] Non-smoke URLs are ignored silently
   // ──────────────────────────────────────────────────────────────────
-  section('[5] Raw-URL log marker emitted for every received URL');
+  section('[5] Non-smoke URLs are ignored silently');
   {
     resetAll();
     const logs: string[] = [];
@@ -260,8 +289,8 @@ async function main() {
     }
     // Restore console.log FIRST, then assert — otherwise the ok() output
     // gets captured into `logs` and nothing prints to stdout.
-    ok('raw URL log fires for non-smoke URLs (dev-client launch)', !!rawLog);
-    ok('non-smoke URLs are explicitly ignored (logged)', !!ignoredLog);
+    ok('raw URL log does not fire for non-smoke URLs', !rawLog);
+    ok('ignored log does not fire for non-smoke URLs', !ignoredLog);
     ok('non-smoke URL did NOT seed profile', !seededProfile);
   }
 
@@ -271,6 +300,7 @@ async function main() {
   section('[6] Multi-channel delivery is idempotent');
   {
     resetAll();
+    enableSmokeRuntimeFlag();
     let updateCalls = 0;
     // Patch profile store with a counter — we want to prove that even
     // if the URL arrives via BOTH getInitialURL and event, the second
@@ -328,12 +358,15 @@ async function main() {
   if (fail > 0) {
     console.log(`\n— Failures —`);
     for (const f of failures) console.log(`  • ${f}`);
+    restoreSmokeBootstrapEnv();
     process.exit(1);
   }
+  restoreSmokeBootstrapEnv();
   process.exit(0);
 }
 
 main().catch((err) => {
+  restoreSmokeBootstrapEnv();
   console.error(err);
   process.exit(1);
 });

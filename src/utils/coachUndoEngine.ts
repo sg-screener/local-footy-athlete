@@ -26,6 +26,7 @@
  */
 
 import { useProgramStore } from '../store/programStore';
+import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import {
   useCoachPreferencesStore,
   canonicalSessionKey,
@@ -40,6 +41,7 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import type {
   RevertPlan,
   DateOverrideSnapshot,
+  CalendarMarkSnapshot,
   ModalityPreferenceSnapshot,
 } from '../store/coachMutationHistoryStore';
 import type { Workout, OverrideContext } from '../types/domain';
@@ -101,6 +103,8 @@ export interface ApplyUndoPlanDeps {
   ) => void;
   /** Replaces `coachPreferencesStore.clearModalityPreference`. */
   clearModalityPreference?: (sessionName: string) => void;
+  /** Replaces calendar mark restoration for remove_session undo. */
+  restoreCalendarMark?: (date: string, mark: CalendarDayType | null) => void;
   /** Verifies a single date's projection matches the snapshot. */
   verifyDate?: (args: {
     date: string;
@@ -122,6 +126,7 @@ export function applyUndoPlan(
   const removeOverride = deps.removeManualOverride ?? defaultRemoveManualOverride;
   const setPref = deps.setModalityPreference ?? defaultSetModalityPreference;
   const clearPref = deps.clearModalityPreference ?? defaultClearModalityPreference;
+  const restoreCalendar = deps.restoreCalendarMark ?? defaultRestoreCalendarMark;
   const verifyDate = deps.verifyDate ?? defaultVerifyDate;
   const verifyPreference = deps.verifyPreference ?? defaultVerifyPreference;
 
@@ -140,7 +145,20 @@ export function applyUndoPlan(
     }
   }
 
-  // 2. Restore modality preference (when present).
+  // 2. Restore calendar marks (when present).
+  for (const snap of plan.calendarMarks ?? []) {
+    try {
+      restoreCalendarMark(snap, restoreCalendar);
+    } catch (e) {
+      executed = false;
+      logger.warn('[coach-undo-engine] restore_calendar_mark_threw', {
+        date: snap.date,
+        error: (e as Error)?.message ?? String(e),
+      });
+    }
+  }
+
+  // 3. Restore modality preference (when present).
   if (plan.modalityPreference) {
     try {
       restoreModalityPreference(plan.modalityPreference, setPref, clearPref);
@@ -153,7 +171,7 @@ export function applyUndoPlan(
     }
   }
 
-  // 3. Verification — re-read the visible surfaces for every affected
+  // 4. Verification — re-read the visible surfaces for every affected
   //    date, plus the preference map when present.
   const perDate = (plan.dateOverrides ?? []).map((snap) =>
     verifyDate({
@@ -208,6 +226,13 @@ function restoreDateOverride(
     snap.workout,
     snap.context ?? { intent: 'program_adjustment', label: 'coach undo' },
   );
+}
+
+function restoreCalendarMark(
+  snap: CalendarMarkSnapshot,
+  restore: NonNullable<ApplyUndoPlanDeps['restoreCalendarMark']>,
+): void {
+  restore(snap.date, snap.mark);
 }
 
 function restoreModalityPreference(
@@ -323,6 +348,16 @@ function defaultRemoveManualOverride(date: string): void {
   useProgramStore.getState().removeManualOverride(date);
 }
 
+function defaultRestoreCalendarMark(date: string, mark: CalendarDayType | null): void {
+  const store = useCalendarStore.getState();
+  store.removeRestDay(date);
+  store.removeGameDay(date);
+  store.removeNoGame(date);
+  if (mark === 'rest') store.setRestDay(date);
+  if (mark === 'game') store.setGameDay(date);
+  if (mark === 'noGame') store.setNoGame(date);
+}
+
 function defaultSetModalityPreference(
   sessionName: string,
   pref: {
@@ -380,6 +415,14 @@ export function readCurrentDateOverride(date: string): {
     };
   } catch {
     return { workout: null, context: null };
+  }
+}
+
+export function readCurrentCalendarMark(date: string): CalendarDayType | null {
+  try {
+    return useCalendarStore.getState().markedDays?.[date] ?? null;
+  } catch {
+    return null;
   }
 }
 

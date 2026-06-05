@@ -11,15 +11,9 @@ import { typography } from '../../theme/typography';
 import { Text } from '../../components/common/Text';
 import type { Workout } from '../../types/domain';
 import { splitSessionName } from '../../utils/sessionNaming';
+import { getConditioningContextLabel } from './homeScreenConstants';
 
 import { format } from 'date-fns';
-
-/** Human-friendly conditioning flavour labels for the weekly view */
-const COND_FLAVOUR_LABELS: Record<string, string> = {
-  aerobic: 'Aerobic Base',
-  tempo: 'Tempo',
-  'high-intensity': 'HI Intervals',
-};
 
 /**
  * Derive a short, glanceable label for the weekly view.
@@ -94,21 +88,25 @@ export const WeekViewCard = ({ weekWorkouts, onDayPress }: WeekViewCardProps) =>
                 {getShortLabel(day.workout)}
               </Text>
               {/* Combined S+C: show conditioning flavour as paired secondary line */}
-              {day.workout.hasCombinedConditioning && day.workout.conditioningFlavour ? (
-                <View style={[
-                  styles.combinedBadge,
-                  day.isToday && styles.combinedBadgeToday,
-                ]}>
-                  <Text
-                    variant="caption"
-                    color={day.isToday ? colors.button.primaryText : colors.accent.lime}
-                    style={styles.conditioningLabel}
-                    numberOfLines={1}
-                  >
-                    + {COND_FLAVOUR_LABELS[day.workout.conditioningFlavour] || day.workout.conditioningFlavour}
-                  </Text>
-                </View>
-              ) : null}
+              {(() => {
+                const conditioningContext = getConditioningContextLabel(day.workout);
+                if (!conditioningContext) return null;
+                return (
+                  <View style={[
+                    styles.combinedBadge,
+                    day.isToday && styles.combinedBadgeToday,
+                  ]}>
+                    <Text
+                      variant="caption"
+                      color={day.isToday ? colors.button.primaryText : colors.accent.lime}
+                      style={styles.conditioningLabel}
+                      numberOfLines={1}
+                    >
+                      + {conditioningContext}
+                    </Text>
+                  </View>
+                );
+              })()}
               {/* Optional badge */}
               {day.workout.sessionTier === 'optional' ? (
                 <View style={styles.optionalBadge}>

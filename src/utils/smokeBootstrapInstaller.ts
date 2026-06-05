@@ -16,8 +16,9 @@
  *   late-attached listeners; if there's no handler when the URL arrives,
  *   it is lost.
  *
- *   This installer is called at App.tsx top level (module load), BEFORE
- *   any React rendering. It:
+ *   This installer can be called at App.tsx top level (module load), BEFORE
+ *   any React rendering. To keep normal dev/app launches quiet, it only does
+ *   real work when an explicit smoke runtime flag is active. When active, it:
  *     - synchronously registers `Linking.addEventListener('url', …)` so
  *       any subsequent warm URL is captured;
  *     - kicks off `Linking.getInitialURL()` for the cold-start case;
@@ -27,11 +28,10 @@
  *       where the first URL is the dev-client launch URL and the smoke
  *       URL arrives second).
  *
- *   Every URL path logs a precise raw-URL marker before parsing:
+ *   Smoke URLs log a precise raw-URL marker before bootstrapping:
  *     [smoke-bootstrap] url received raw=<url> source=<channel>
- *   so the smoke wrapper can distinguish "URL never arrived" from
- *   "URL arrived but bootstrap refused" (e.g. parser rejected, not in
- *   dev, etc.).
+ *   Non-smoke URLs are ignored silently so the Expo dev-client launch URL
+ *   does not spam the terminal on every ordinary app start.
  *
  *   The bootstrap itself is idempotent (lastBootstrapForFlow guard in
  *   smokeBootstrap.ts), so duplicate deliveries from multiple channels
@@ -40,14 +40,13 @@
 
 import { Linking } from 'react-native';
 import {
+  getSmokeRuntimeSignal,
   isSmokeBootstrapAllowed,
   parseSmokeBootstrapUrl,
   runSmokeBootstrap,
   type SmokeFlow,
 } from './smokeBootstrap';
 import { logger } from './logger';
-
-logger.info('[smoke-bootstrap] installer imported');
 
 export type DeepLinkSource =
   | 'getInitialURL'
@@ -59,10 +58,17 @@ let installed = false;
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let urlEventSubscription: { remove: () => void } | null = null;
 
+function shouldInstallSmokeBootstrapListener(): boolean {
+  return getSmokeRuntimeSignal().flow !== null;
+}
+
+if (shouldInstallSmokeBootstrapListener()) {
+  logger.info('[smoke-bootstrap] installer imported');
+}
+
 /**
- * Pure URL → bootstrap handler. Logs the raw URL first (so the smoke
- * wrapper can detect "URL was received but did not parse" separately
- * from "URL never arrived"), then attempts to parse + bootstrap.
+ * Pure URL → bootstrap handler. Non-smoke URLs are ignored silently; smoke
+ * URLs log the raw URL marker, then attempt to bootstrap.
  *
  * Returns the resolved flow when bootstrap fires, null otherwise.
  * Idempotent against re-deliveries via runSmokeBootstrap's guard.
@@ -73,22 +79,16 @@ export async function handleIncomingSmokeUrl(
 ): Promise<SmokeFlow | null> {
   if (!url) return null;
 
-  // Raw-URL marker — fires for every URL the installer receives,
-  // regardless of whether it parses as a smoke URL. This is the key
-  // diagnostic the smoke wrapper greps for.
+  const parsed = parseSmokeBootstrapUrl(url);
+  if (!parsed) {
+    return null;
+  }
+
+  // Raw-URL marker — only fire for URLs that parse as smoke bootstrap links.
+  // The normal Expo dev-client launch URL should never reach the terminal.
   logger.info(
     `[smoke-bootstrap] url received raw=${url} source=${source}`,
   );
-
-  const parsed = parseSmokeBootstrapUrl(url);
-  if (!parsed) {
-    // Not a smoke URL (could be dev-client launch URL, push handoff,
-    // etc.) — log and move on. The wrapper can tell the difference.
-    logger.info(
-      `[smoke-bootstrap] ignored: not a recognised smoke URL (source=${source})`,
-    );
-    return null;
-  }
 
   if (!isSmokeBootstrapAllowed()) {
     logger.warn(
@@ -117,6 +117,10 @@ export async function handleIncomingSmokeUrl(
  * Returns a teardown function (only useful in tests / hot reload).
  */
 export function installSmokeBootstrapListener(): () => void {
+  if (!shouldInstallSmokeBootstrapListener()) {
+    return () => {};
+  }
+
   if (installed) {
     return () => {};
   }

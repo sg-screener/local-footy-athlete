@@ -260,6 +260,114 @@ section('[2] pending clarification resumes command on next turn');
     (resumed.payload as any).to === 'bike');
 }
 
+// ─── 2b. Pending add-activity answer uses the main activity compiler ──
+section('[2b] pending add-activity answer preserves exact activity slots');
+{
+  const fridayRes: CoachReferenceResolution = {
+    status: 'resolved',
+    target: {
+      date: '2026-05-01',
+      sessionName: 'Upper Pull',
+      method: 'explicit_day',
+    },
+    confidence: 0.95,
+    clarifierQuestion: '',
+    isMutationLike: true,
+  };
+  const clarifyCommand = routeCoachCommand({
+    userMessage: "Can you add something to Friday's session?",
+    todayISO: FIXED_TODAY,
+    referenceResolution: fridayRes,
+  });
+  ok('2b.1 add-something asks for activity',
+    clarifyCommand.mode === 'clarify' &&
+    clarifyCommand.reason === 'add_conditioning_missing_activity');
+  const captured = captureFromExecutorClarify({
+    routedCommand: clarifyCommand,
+    askedQuestion: clarifyCommand.mode === 'clarify' ? clarifyCommand.question : '',
+    originalMessage: "Can you add something to Friday's session?",
+    referenceResolution: fridayRes,
+  });
+  ok('2b.2 add-activity clarifier captured',
+    !!captured && captured.operation === 'add_conditioning');
+
+  const resumed = resumeFromPending({
+    pending: { ...captured!, createdAt: NOW },
+    newMessage: 'assault bike sprints please',
+    newResolution: null,
+  });
+  ok('2b.3 answer resumes without a fresh target',
+    resumed?.mode === 'mutate');
+  ok('2b.4 answer keeps assault-bike sprint slots',
+    resumed?.mode === 'mutate' &&
+    resumed.operation === 'add_conditioning' &&
+    (resumed.payload as any).customActivity === 'Assault Bike Sprints' &&
+    (resumed.payload as any).modality === 'bike' &&
+    (resumed.payload as any).bikeLabel === 'assault' &&
+    (resumed.payload as any).effortKind === 'sprint',
+    JSON.stringify(resumed?.mode === 'mutate' ? resumed.payload : null));
+}
+
+// ─── 2c. Pending duration question accepts scalar answer ───────────
+section('[2c] pending duration clarifier resumes from "1 hour"');
+{
+  const durationCommand: CoachCommand = {
+    mode: 'mutate',
+    operation: 'add_conditioning',
+    target: { kind: 'date', date: '2026-04-29', sessionName: 'Easy Aerobic Flush' },
+    payload: {
+      operation: 'add_conditioning',
+      modality: 'bike',
+      customActivity: 'Easy Aerobic Flush (25min Assault Bike)',
+      intensity: 'light',
+      durationMinutes: 25,
+      bikeLabel: 'assault',
+      replaceActivity: 'Easy Aerobic Flush (25min Assault Bike)',
+    },
+    scope: 'one_off',
+    confidence: 0.82,
+    needsClarification: true,
+    clarificationQuestion: 'How much longer would you like the Wednesday Easy Aerobic Flush to be?',
+    missingFields: ['durationMinutes'],
+    reason: 'llm_command_adapter:duration_missing',
+  };
+  const captured = captureFromExecutorClarify({
+    routedCommand: durationCommand,
+    askedQuestion: durationCommand.clarificationQuestion!,
+    originalMessage: 'Can you make it a longer session?',
+    missingFields: durationCommand.missingFields,
+  });
+  ok('2c.1 duration clarifier captured target date',
+    !!captured && captured.targetDate === '2026-04-29');
+
+  const resumed = resumeFromPending({
+    pending: { ...captured!, createdAt: NOW },
+    newMessage: '1 hour',
+    newResolution: null,
+  });
+  ok('2c.2 scalar duration answer resumes without fresh resolver target',
+    resumed?.mode === 'mutate');
+  ok('2c.3 scalar answer becomes 60 minute deterministic edit',
+    resumed?.mode === 'mutate' &&
+    resumed.operation === 'add_conditioning' &&
+    resumed.target.kind === 'date' &&
+    resumed.target.date === '2026-04-29' &&
+    (resumed.payload as any).customActivity === 'Easy Aerobic Flush (60min Assault Bike)' &&
+    (resumed.payload as any).replaceActivity === 'Easy Aerobic Flush (25min Assault Bike)' &&
+    (resumed.payload as any).bikeLabel === 'assault' &&
+    (resumed.payload as any).durationMinutes === 60 &&
+    resumed.reason === 'pending_duration_answer',
+    JSON.stringify(resumed?.mode === 'mutate' ? resumed : null));
+
+  const tooAmbiguous = resumeFromPending({
+    pending: { ...captured!, createdAt: NOW },
+    newMessage: '1',
+    newResolution: null,
+  });
+  ok('2c.4 bare "1" is not treated as one minute',
+    tooAmbiguous === null);
+}
+
 // ─── 3. Pending clarification blocks legacy on next turn ──────────
 section('[3] pending clarifier — resumed command is mutate, never legacy');
 {
