@@ -117,7 +117,9 @@ import {
 import {
   captureFromExecutorClarify,
   resumeFromPending,
+  resolvePendingGameDayReadinessAnswer,
 } from '../../utils/coachClarifierResume';
+import { buildReadinessSignalPatch } from '../../utils/readiness';
 import { filterLegacyCoachActions } from '../../utils/legacyCoachActionFilter';
 import { logCoachBuildFingerprint, COACH_BUILD_INFO } from '../../utils/coachBuildInfo';
 import { isPendingProgramProposalExpired } from '../../utils/programAdjustmentRequests';
@@ -1971,6 +1973,33 @@ export default function CoachScreen() {
             setInputValue('');
             return;
           }
+          const pendingGameDayAnswer = resolvePendingGameDayReadinessAnswer(
+            pendingClarifier,
+            userMessage.content,
+          );
+          if (pendingGameDayAnswer) {
+            usePendingCoachClarifierStore.getState().clearPending();
+            logger.debug('[pending-clarifier] game_day_readiness_answer', {
+              operation: pendingClarifier.operation,
+              answerKind: pendingGameDayAnswer.kind,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            if (pendingGameDayAnswer.kind === 'mark_limited') {
+              const todayISO = todayISOLocal();
+              useReadinessStore.getState().setReadinessSignal(todayISO, {
+                ...buildReadinessSignalPatch('flat'),
+                source: 'coach_message',
+              });
+            }
+            const replyMsg: Message = {
+              id: `${Date.now()}-game-day-readiness-answer`,
+              role: 'assistant',
+              content: pendingGameDayAnswer.reply,
+            };
+            setMessages((prev) => [...prev, userMessage, replyMsg]);
+            setInputValue('');
+            return;
+          }
           const pendingProgramEditAnswer = resolvePendingProgramEditAnswer({
             pending: pendingClarifier,
             userMessage: userMessage.content,
@@ -2387,6 +2416,7 @@ export default function CoachScreen() {
             routedCommand: clarifyCommand,
             askedQuestion: clarifyCommand.question,
             originalMessage: userMessage.content,
+            todayISO: todayISOLocal(),
             referenceResolution: packet.referenceResolution,
             candidateItems: programEditForExecution.candidateItems,
           });
@@ -2446,6 +2476,7 @@ export default function CoachScreen() {
             routedCommand: commandForExecution,
             askedQuestion: result.reply,
             originalMessage: userMessage.content,
+            todayISO: todayISOLocal(),
             missingFields:
               programEditForExecution.missingFields.length > 0
                 ? programEditForExecution.missingFields
@@ -2554,6 +2585,7 @@ export default function CoachScreen() {
           routedCommand,
           askedQuestion: routedCommand.question,
           originalMessage: userMessage.content,
+          todayISO: todayISOLocal(),
           missingFields: routedProgramEdit.missingFields,
           referenceResolution: packet.referenceResolution,
           programEdit: routedProgramEdit,

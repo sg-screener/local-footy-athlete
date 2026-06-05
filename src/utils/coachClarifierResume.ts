@@ -74,6 +74,8 @@ export interface CaptureClarifierInput {
   askedQuestion: string;
   /** The athlete's original mutation request. */
   originalMessage: string;
+  /** Today's date, used for contextual clarifiers without an explicit text target. */
+  todayISO?: string;
   /** Optional structured list of fields the executor reported missing. */
   missingFields?: string[];
   /** Pre-resolved reference — used for mode='clarify' captures where
@@ -132,6 +134,23 @@ export function captureFromExecutorClarify(
   // "lighter", "skip") can resume instead of falling to legacy.
   if (cmd.mode === 'clarify' && input.referenceResolution?.target) {
     const reason = cmd.reason ?? '';
+    if (/^vague_load_request_game_day/i.test(reason)) {
+      return {
+        operation: 'add_conditioning',
+        partialPayload: {
+          operation: 'add_conditioning',
+          modality: null,
+        },
+        scope: 'one_off',
+        missingFields: ['game_day_readiness_choice'],
+        originalMessage: input.originalMessage,
+        askedQuestion: input.askedQuestion,
+        targetDate: input.referenceResolution.target.date,
+        targetSessionName: input.referenceResolution.target.sessionName,
+        programEdit: input.programEdit,
+        candidateItems: input.candidateItems ?? input.programEdit?.candidateItems,
+      };
+    }
     if (reason === 'add_conditioning_missing_activity') {
       return {
         operation: 'add_conditioning',
@@ -170,7 +189,98 @@ export function captureFromExecutorClarify(
     }
   }
 
+  if (
+    cmd.mode === 'clarify' &&
+    /^vague_load_request_game_day/i.test(cmd.reason ?? '') &&
+    input.todayISO
+  ) {
+    return {
+      operation: 'add_conditioning',
+      partialPayload: {
+        operation: 'add_conditioning',
+        modality: null,
+      },
+      scope: 'one_off',
+      missingFields: ['game_day_readiness_choice'],
+      originalMessage: input.originalMessage,
+      askedQuestion: input.askedQuestion,
+      targetDate: input.programEdit?.targetDate ?? input.todayISO,
+      targetSessionName: 'Game Day',
+      programEdit: input.programEdit,
+      candidateItems: input.candidateItems ?? input.programEdit?.candidateItems,
+    };
+  }
+
   return null;
+}
+
+export type PendingGameDayReadinessAnswer =
+  | {
+      kind: 'acknowledge_no_op';
+      reply: string;
+    }
+  | {
+      kind: 'adjust_recovery';
+      reply: string;
+    }
+  | {
+      kind: 'mark_limited';
+      reply: string;
+    };
+
+export function resolvePendingGameDayReadinessAnswer(
+  pending: PendingCoachClarifier,
+  message: string,
+): PendingGameDayReadinessAnswer | null {
+  if (!isPendingGameDayReadinessClarifier(pending)) return null;
+  const text = String(message ?? '').trim();
+  if (!text) return null;
+
+  if (/\badjust\b[\s\S]{0,40}\b(?:tomorrow|recovery|recover|mobility)\b/i.test(text)) {
+    return {
+      kind: 'adjust_recovery',
+      reply:
+        "How should I adjust tomorrow's recovery — keep it easy, shorten it to mobility, or remove it?",
+    };
+  }
+
+  if (/\b(?:mark|set|log)\b[\s\S]{0,30}\b(?:limited|low\s+readiness|flat|managed)\b/i.test(text) || /^\s*limited\s*$/i.test(text)) {
+    return {
+      kind: 'mark_limited',
+      reply:
+        "Got it — I'll mark today as limited and leave the game day session unchanged.",
+    };
+  }
+
+  if (isLeaveAsIsAnswer(text)) {
+    return {
+      kind: 'acknowledge_no_op',
+      reply:
+        "No worries — I'll leave today as game day. Let me know after the match if you want recovery adjusted.",
+    };
+  }
+
+  return null;
+}
+
+function isPendingGameDayReadinessClarifier(pending: PendingCoachClarifier): boolean {
+  if (pending.missingFields.includes('game_day_readiness_choice')) return true;
+  const reason = pending.programEdit?.naturalLanguageReason ?? '';
+  if (/^vague_load_request_game_day/i.test(reason)) return true;
+  return (
+    /\bgame day today\b/i.test(pending.askedQuestion) &&
+    /\b(?:mark today as limited|leave the game as-is|adjust tomorrow'?s recovery)\b/i.test(pending.askedQuestion)
+  );
+}
+
+function isLeaveAsIsAnswer(message: string): boolean {
+  return (
+    /\bleave\b[\s\S]{0,30}\b(?:today|game|it|things)?\s*(?:as[-\s]?is|unchanged)\b/i.test(message) ||
+    /\bkeep\b[\s\S]{0,30}\b(?:today|game|it|things)?\s*(?:as[-\s]?is|unchanged)\b/i.test(message) ||
+    /\b(?:don'?t|do\s+not)\s+change\s+(?:anything|it|today|the\s+game)\b/i.test(message) ||
+    /\bno\s+changes?\b/i.test(message) ||
+    /\bsee\s+how\s+(?:i|we)\s+go\b/i.test(message)
+  );
 }
 
 export interface ResumeFromPendingInput {
@@ -195,6 +305,10 @@ export function resumeFromPending(
   input: ResumeFromPendingInput,
 ): CoachCommand | null {
   const { pending, newMessage, newResolution } = input;
+
+  if (pending.missingFields.includes('game_day_readiness_choice')) {
+    return null;
+  }
 
   // ─── Placeholder pending (mutation_like_no_payload) ────────────
   // The previous turn was "What change would you like?" with a known
