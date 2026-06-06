@@ -27,6 +27,14 @@ const HOME_V2 = fs.readFileSync(
   path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'),
   'utf8',
 );
+const HOME_CLASSIC = fs.readFileSync(
+  path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreen.tsx'),
+  'utf8',
+);
+const READINESS_QUICK_CHECK = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'ReadinessQuickCheck.tsx'),
+  'utf8',
+);
 const DAY_V2 = fs.readFileSync(
   path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'),
   'utf8',
@@ -133,6 +141,22 @@ section('[7] helper — generic fallback only when local changes absent');
 section('[8] HomeScreenV2 — Program rows use helper + one-line row');
 {
   ok('HomeScreenV2 imports getCoachNoteDisplay', /getCoachNoteDisplay/.test(HOME_V2));
+  ok('HomeScreenV2 keeps lower adjustment prompt', /Need to adjust your weekly plan\?/.test(HOME_V2));
+  ok(
+    'HomeScreenV2 does not render Today Feel quick check',
+    !/ReadinessQuickCheck|readiness-quick-check|Today feel|Today Feel/.test(HOME_V2),
+  );
+  ok(
+    'classic HomeScreen does not render Today Feel quick check',
+    !/ReadinessQuickCheck|readiness-quick-check|Today feel|Today Feel/.test(HOME_CLASSIC),
+  );
+  ok(
+    'stale ReadinessQuickCheck component is inert if mounted',
+    /return null;/.test(READINESS_QUICK_CHECK)
+      && !/Today feel|Today Feel|Short time|readiness-quick-check/.test(READINESS_QUICK_CHECK),
+  );
+  ok('HomeScreenV2 does not render CoachUpdateCard', !/CoachUpdateCard/.test(HOME_V2));
+  ok('classic HomeScreen does not render CoachUpdateCard', !/CoachUpdateCard/.test(HOME_CLASSIC));
   ok('Program row summary testID exists', /testID="day-row-coach-summary"/.test(HOME_V2));
   ok(
     'Program row caps summary to one line',

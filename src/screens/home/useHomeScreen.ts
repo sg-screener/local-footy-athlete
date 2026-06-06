@@ -6,14 +6,9 @@ import { useStaleOverrides } from '../../hooks/useStaleOverrides';
 import { useCalendarStore } from '../../store/calendarStore';
 import { useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
-import { useReadinessStore } from '../../store/readinessStore';
 import { generateProgramFromProfile } from '../../services/api/generateProgram';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { applyGameDayChange, applyPhaseShift } from '../../utils/profileMutations';
-import {
-  buildReadinessSignalPatch,
-  type ReadinessQuickOption,
-} from '../../utils/readiness';
 import {
   WEEK_DAYS,
   DAY_NUM_TO_NAME,
@@ -94,28 +89,6 @@ export function useHomeScreen() {
   const todayIdx = weekDays.findIndex((d) => d.isToday);
   const todayDay = todayIdx >= 0 ? weekDays[todayIdx] : null;
   const [selectedIdx, setSelectedIdx] = useState(todayIdx >= 0 ? todayIdx : 0);
-
-  // ── Lightweight readiness signal ──
-  // Optional by design: missing input means "use the plan".
-  const todayReadinessSignal = useReadinessStore((s) =>
-    todayDay?.date ? s.signalsByDate[todayDay.date] : undefined,
-  );
-  const setReadinessSignal = useReadinessStore((s) => s.setReadinessSignal);
-  const clearReadinessSignal = useReadinessStore((s) => s.clearReadinessSignal);
-  const handleSetTodayReadiness = useCallback(
-    (option: ReadinessQuickOption) => {
-      if (!todayDay?.date) return;
-      setReadinessSignal(todayDay.date, {
-        ...buildReadinessSignalPatch(option),
-        source: 'quick_check',
-      });
-    },
-    [setReadinessSignal, todayDay?.date],
-  );
-  const handleClearTodayReadiness = useCallback(() => {
-    if (!todayDay?.date) return;
-    clearReadinessSignal(todayDay.date);
-  }, [clearReadinessSignal, todayDay?.date]);
 
   // Game-day action sheet
   const [gameModalVisible, setGameModalVisible] = useState(false);
@@ -861,9 +834,6 @@ export function useHomeScreen() {
     handleViewWorkout,
     handleFinishTeamSession,
     handleQuickAction,
-    todayReadinessSignal,
-    handleSetTodayReadiness,
-    handleClearTodayReadiness,
 
     // Stale overrides
     staleByDate,

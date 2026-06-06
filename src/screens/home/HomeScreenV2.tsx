@@ -14,17 +14,12 @@ import { Text } from '../../components/common/Text';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
-import { ReadinessQuickCheck } from '../../components/ReadinessQuickCheck';
 import { Button, Card, Sheet, Badge, IconButton, SectionLabel } from '../../components/ui';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { splitSessionName } from '../../utils/sessionNaming';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen } from './useHomeScreen';
-import { CoachUpdateCard } from '../../components/CoachUpdateCard';
-import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
-import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
-import { useNavigation } from '@react-navigation/native';
 import {
   WEEK_DAYS,
   DAY_SHORT,
@@ -84,9 +79,6 @@ export default function HomeScreenV2() {
     handleViewWorkout,
     handleFinishTeamSession,
     handleQuickAction,
-    todayReadinessSignal,
-    handleSetTodayReadiness,
-    handleClearTodayReadiness,
     staleByDate,
     weekHasGame,
     showAddGameCTA,
@@ -132,98 +124,6 @@ export default function HomeScreenV2() {
     ? weekDays.filter((_, idx) => idx !== todayIdx)
     : weekDays;
 
-  // ── Coach Update card: DERIVED live from activeConstraints +
-  // the visible projected week. This means the card appears on EVERY
-  // week affected by an active restriction (current AND future), not
-  // just the week where the injury was first reported.
-  //
-  // We keep the legacy stored `updatesByWeek` read as a fallback for
-  // entries written before the multi-constraint model shipped.
-  const navigation = useNavigation<any>();
-  const weekStartISO = weekDays[0]?.date ?? '';
-  const coachActiveConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
-  const readinessActiveConstraints = React.useMemo(
-    () => buildReadinessActiveConstraints(todayReadinessSignal),
-    [todayReadinessSignal],
-  );
-  const activeConstraints = React.useMemo(
-    () => [...coachActiveConstraints, ...readinessActiveConstraints],
-    [coachActiveConstraints, readinessActiveConstraints],
-  );
-  const storedUpdate = useCoachUpdatesStore((s) =>
-    weekStartISO ? s.updatesByWeek[weekStartISO] : undefined,
-  );
-
-  // Build the derived weekly view. Requires baseline (no activeInjury)
-  // and visible (projected) versions of the same week. The parent
-  // hook returns the projected version as `weekDays`; the baseline is
-  // resolved on the fly here so the diff is per-render.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { buildWeeklyCoachUpdateFromConstraints, getUpdateCoachPrefill } =
-    require('../../utils/weeklyCoachUpdate') as typeof import('../../utils/weeklyCoachUpdate');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const sessionResolverMod =
-    require('../../utils/sessionResolver') as typeof import('../../utils/sessionResolver');
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { buildScheduleStateImperative } =
-    require('../../utils/coachWeekDiff') as typeof import('../../utils/coachWeekDiff');
-  const baselineWeek = React.useMemo(() => {
-    if (!weekStartISO) return [];
-    const stateNoInjury = {
-      ...buildScheduleStateImperative(),
-      activeInjury: null,
-      activeConstraints: [],
-    };
-    return sessionResolverMod.resolveWeekWithConditioning(weekStartISO, stateNoInjury);
-  }, [weekStartISO]);
-
-  const derivedView = React.useMemo(() => {
-    if (!weekStartISO) return null;
-    return buildWeeklyCoachUpdateFromConstraints({
-      weekStartISO,
-      visibleWeek: weekDays,
-      baselineWeek,
-      activeConstraints,
-    });
-  }, [weekStartISO, weekDays, baselineWeek, activeConstraints]);
-
-  // Adapt the derived view → the shape the existing card consumes.
-  // When no constraints active, fall back to the stored update.
-  const coachUpdate = React.useMemo(() => {
-    if (derivedView) {
-      const reason = derivedView.activeIssues.join(' • ');
-      const changes = derivedView.sessionsChanged;
-      return {
-        id: `derived-${weekStartISO}`,
-        weekStartISO,
-        source: 'uae' as const,
-        reason,
-        // Legacy fields kept populated so old consumers keep working;
-        // the card itself prefers the new plan-driven fields below.
-        rules: derivedView.rules,
-        changes,
-        nextWeekChanges: undefined,
-        // Plan-driven fields — what the concise card actually renders.
-        avoid: derivedView.avoid,
-        substituteWith: derivedView.substituteWith,
-        keep: derivedView.keep,
-        advice: derivedView.advice,
-        createdAt: new Date().toISOString(),
-        active: true,
-      };
-    }
-    return storedUpdate;
-  }, [derivedView, storedUpdate, weekStartISO]);
-
-  // Show the card on EVERY week with active constraints, or when a
-  // stored update exists for this week.
-  const showCoachUpdate = !!coachUpdate && coachUpdate.active;
-  const handleUpdateCoach = React.useCallback(() => {
-    const prefill = derivedView
-      ? derivedView.ctaPrefill
-      : getUpdateCoachPrefill(activeConstraints);
-    navigation.navigate('CoachTab', { screen: 'Coach', params: { prefill } });
-  }, [derivedView, activeConstraints, navigation]);
   // Smoke harness no longer renders any controls in HomeScreen. The
   // coach-bike-flow regression now opens Wednesday's DayWorkout directly
   // from CoachScreen (see CoachScreen.handleSmokeOpenWednesdayWorkout),
@@ -313,19 +213,6 @@ export default function HomeScreenV2() {
           <MoveBanner text="Tap the day to set as game day" onCancel={handleCancelMove} />
         )}
 
-        {/* ── Coach Update card ──
-            Persistent week-level note when the coach/UAE has applied
-            changes. Renders only when an active update exists for the
-            currently displayed week (this-week only — past/future weeks
-            don't auto-render). The store write is gated on
-            visible_diff_detected so the card never lies. */}
-        {showCoachUpdate && coachUpdate && (
-          <CoachUpdateCard
-            update={coachUpdate}
-            onUpdateCoach={handleUpdateCoach}
-          />
-        )}
-
         {/* ── No game CTA ── */}
         {isNormal && !weekHasGame && showAddGameCTA && (
           <Pressable onPress={handleAddGameMode} style={({ pressed }) => [pressed && { opacity: 0.75 }]}>
@@ -344,21 +231,14 @@ export default function HomeScreenV2() {
 
         {/* ── Today hero ── */}
         {showHero && todayDay && (
-          <>
-            <TodayHero
-              day={todayDay}
-              staleWarning={staleByDate[todayDay.date]}
-              onOpenSheet={() => handleDayTap(todayIdx)}
-              onViewWorkout={() => handleViewWorkout(todayDay)}
-              onFinishTeam={() => handleFinishTeamSession(todayDay)}
-              onReviewStale={handleQuickAction}
-            />
-            <ReadinessQuickCheck
-              signal={todayReadinessSignal}
-              onSelect={handleSetTodayReadiness}
-              onClear={handleClearTodayReadiness}
-            />
-          </>
+          <TodayHero
+            day={todayDay}
+            staleWarning={staleByDate[todayDay.date]}
+            onOpenSheet={() => handleDayTap(todayIdx)}
+            onViewWorkout={() => handleViewWorkout(todayDay)}
+            onFinishTeam={() => handleFinishTeamSession(todayDay)}
+            onReviewStale={handleQuickAction}
+          />
         )}
 
         {/* ── Week list ── */}
@@ -597,8 +477,8 @@ function TodayHero({
 
           {/* Coach-attribution chip — ONE concise line summarising any
               engine adjustments on today's session. The full per-exercise
-              detail lives on the workout detail screen + Coach Update card,
-              not here. App-store-friendly: no audit log on the hero. */}
+              detail lives on the workout detail screen, not here.
+              App-store-friendly: no audit log on the hero. */}
           {hasWorkout && (() => {
             const summary = getCoachNoteDisplay(day.workout.coachNotes, {
               workoutName: day.workout.name,
@@ -789,8 +669,8 @@ function DayRow({
       </View>
 
       {/* Coach attribution — ONE short line, no bullets. The audit log
-          (per-exercise removals + focus targets) lives behind "Show details"
-          on the Coach Update card, not on every Program-tab row. */}
+          (per-exercise removals + focus targets) lives on the workout
+          detail screen, not on every Program-tab row. */}
       {hasWorkout && (() => {
         const summary = getCoachNoteDisplay(day.workout.coachNotes, {
           workoutName: day.workout.name,
@@ -1378,7 +1258,7 @@ const styles = StyleSheet.create({
   },
   // Row attribution sits under the right-aligned workout title — one
   // line, capped, no bullets. The audit log (removed/replaced/focus)
-  // is reserved for the workout detail screen + Coach Update card.
+  // is reserved for the workout detail screen.
   rowCoachNoteText: {
     color: '#C8FF00',
     fontSize: 11,
