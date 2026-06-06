@@ -116,7 +116,7 @@ export function getProgramGenerationProfileFieldDiagnostics(data: OnboardingData
     .map(String);
 
   if (
-    data.seasonPhase !== 'Off-season' &&
+    data.seasonPhase === 'In-season' &&
     !data.usualGameDay &&
     !data.gameDay
   ) {
@@ -851,7 +851,17 @@ function buildGenerationPrompt(data: OnboardingData, plan: CoachingPlan): string
       }
       parts.push(`  ${session.dayOfWeek || 'TBD'}${gLabel}: [${session.tier.toUpperCase()}] ${session.focus}${session.isHardExposure ? ' (HARD)' : ''}`);
     });
+    const expectedDayNumbers = plan.weeklyPlan
+      .map((session) => session.dayOfWeek ? DAY_MAP[session.dayOfWeek] : null)
+      .filter((day): day is number => day !== null);
+    parts.push(`\nReturn exactly one workout object for every WEEKLY PLAN line above. Do not omit optional, recovery, team-training, or Saturday sessions. Expected numeric dayOfWeek values: ${expectedDayNumbers.join(', ')}.`);
     parts.push('\nFollow the above tiers EXACTLY. Do NOT promote OPTIONAL/RECOVERY to CORE.');
+  }
+
+  const setupConstraints = formatAvailabilityConstraintsForPrompt(data);
+  if (setupConstraints.length > 0) {
+    parts.push('\nPROGRAM SETUP CONSTRAINTS:');
+    setupConstraints.forEach((line) => parts.push(`• ${line}`));
   }
 
   // ─── Safety notes (engine-generated, always relevant) ───
@@ -879,6 +889,34 @@ function buildGenerationPrompt(data: OnboardingData, plan: CoachingPlan): string
   }
 
   return parts.join('\n');
+}
+
+function formatAvailabilityConstraintsForPrompt(data: OnboardingData): string[] {
+  return (data.availabilityConstraints ?? [])
+    .filter((constraint) => constraint.active !== false)
+    .map((constraint) => {
+      if (constraint.kind === 'unavailable_day' && constraint.dayOfWeek) {
+        const range = constraint.scope === 'temporary'
+          ? ` from ${constraint.startDate ?? 'now'} to ${constraint.endDate ?? 'the stated end date'}`
+          : '';
+        const reason = constraint.reason ? ` (${constraint.reason})` : '';
+        return `${constraint.dayOfWeek} is unavailable${range}${reason}. Do not schedule training there unless it is a fixed game/team-training anchor.`;
+      }
+      if (constraint.kind === 'time_limit' && constraint.dayOfWeek && constraint.maxSessionMinutes) {
+        const range = constraint.scope === 'temporary'
+          ? ` from ${constraint.startDate ?? 'now'} to ${constraint.endDate ?? 'the stated end date'}`
+          : '';
+        return `${constraint.dayOfWeek} has a ${constraint.maxSessionMinutes} minute training cap${range}. Keep that day short or move load elsewhere.`;
+      }
+      if (constraint.kind === 'travel') {
+        const range = constraint.startDate || constraint.endDate
+          ? ` from ${constraint.startDate ?? 'the start date'} to ${constraint.endDate ?? 'the end date'}`
+          : '';
+        return `Athlete is away${range}. Ask or avoid scheduling sessions in that window if dates are incomplete.`;
+      }
+      return '';
+    })
+    .filter(Boolean);
 }
 
 /**

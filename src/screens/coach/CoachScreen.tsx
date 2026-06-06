@@ -16,6 +16,7 @@ import { spacing, borderRadius } from '../../theme/spacing';
 import { Text } from '../../components/common/Text';
 import { useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
+import { generateProgramFromProfile } from '../../services/api/generateProgram';
 import { useCoachStore } from '../../store/coachStore';
 import { useCoachMemoryStore } from '../../store/coachMemoryStore';
 import {
@@ -103,6 +104,8 @@ import {
 import {
   interpretCoachMessageToProgramEdit,
   executeProgramEdit,
+  executeProgramSetupEdit,
+  isProgramSetupEdit,
   resolvePendingProgramEditAnswer,
   type ProgramEdit,
 } from '../../utils/coachProgramEdit';
@@ -118,12 +121,17 @@ import {
   captureFromExecutorClarify,
   resumeFromPending,
   resolvePendingGameDayReadinessAnswer,
+  resolvePendingScheduleTransactionAnswer,
 } from '../../utils/coachClarifierResume';
 import { buildReadinessSignalPatch } from '../../utils/readiness';
 import { filterLegacyCoachActions } from '../../utils/legacyCoachActionFilter';
 import { logCoachBuildFingerprint, COACH_BUILD_INFO } from '../../utils/coachBuildInfo';
 import { isPendingProgramProposalExpired } from '../../utils/programAdjustmentRequests';
 import { insertProgramSummaryBeforeFinalClose } from '../../utils/coachReplyComposer';
+import {
+  SETUP_REBUILD_PROGRESS_INTERVAL_MS,
+  setupRebuildProgressMessageForTick,
+} from '../../utils/coachLongRunningProgress';
 import {
   getClientEnvConfig,
   logMissingClientEnv,
@@ -942,6 +950,7 @@ export default function CoachScreen() {
   const pendingInjuryRef = useRef<PendingInjury | null>(null);
   const pendingReadinessRef = useRef<PendingReadinessClarifier | null>(null);
   const pendingCoachProposalRef = useRef<PendingCoachProposal | null>(null);
+  const lastBlockedSendNoticeAtRef = useRef(0);
 
   // Phase G runtime audit — log the build fingerprint on every
   // CoachScreen mount. Pairs with the `app_launch` log to give us TWO
@@ -1206,9 +1215,38 @@ export default function CoachScreen() {
   // → composing_reply` and we surface the human label so the athlete sees
   // the work happening instead of a generic "Thinking..." spinner.
   const [coachProgressLabel, setCoachProgressLabel] = useState<string | null>(null);
+  const [setupRebuildLoadingMessage, setSetupRebuildLoadingMessage] = useState<string | null>(null);
+  const setupRebuildProgressTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const dot1 = useRef(new Animated.Value(0.3)).current;
   const dot2 = useRef(new Animated.Value(0.3)).current;
   const dot3 = useRef(new Animated.Value(0.3)).current;
+
+  const clearSetupRebuildProgress = () => {
+    if (setupRebuildProgressTimerRef.current) {
+      clearInterval(setupRebuildProgressTimerRef.current);
+      setupRebuildProgressTimerRef.current = null;
+    }
+    setSetupRebuildLoadingMessage(null);
+  };
+
+  const startSetupRebuildProgress = () => {
+    clearSetupRebuildProgress();
+    let tick = 0;
+    setSetupRebuildLoadingMessage(setupRebuildProgressMessageForTick(tick));
+    setupRebuildProgressTimerRef.current = setInterval(() => {
+      tick += 1;
+      setSetupRebuildLoadingMessage(setupRebuildProgressMessageForTick(tick));
+    }, SETUP_REBUILD_PROGRESS_INTERVAL_MS);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (setupRebuildProgressTimerRef.current) {
+        clearInterval(setupRebuildProgressTimerRef.current);
+        setupRebuildProgressTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Animate dots when loading
   useEffect(() => {
@@ -1242,12 +1280,46 @@ export default function CoachScreen() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!inputValue.trim()) return;
+    const rawInputValue = inputValue;
+    const trimmedInput = rawInputValue.trim();
+    logger.debug('[coach-send] tapped', {
+      inputLength: rawInputValue.length,
+      trimmedLength: trimmedInput.length,
+      isLoading,
+      disabled: isLoading || trimmedInput.length === 0,
+      messageCount: messages.length,
+    });
+
+    if (!trimmedInput) {
+      logger.debug('[coach-send] early_return', {
+        reason: 'empty_input',
+        messageAppended: false,
+      });
+      return;
+    }
+
+    if (isLoading) {
+      logger.warn('[coach-send] early_return', {
+        reason: 'isLoading',
+        messageAppended: false,
+      });
+      const now = Date.now();
+      if (now - lastBlockedSendNoticeAtRef.current > 5000) {
+        lastBlockedSendNoticeAtRef.current = now;
+        const assistantMessage: Message = {
+          id: `${now}-send-busy`,
+          role: 'assistant',
+          content: "I'm still working on the previous request. Give me a moment, then try again.",
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      }
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: inputValue.trim(),
+      content: trimmedInput,
     };
 
     if (isTodaySessionQuestion(userMessage.content)) {
@@ -1969,6 +2041,150 @@ export default function CoachScreen() {
             setInputValue('');
             return;
           }
+          const pendingScheduleAnswer = resolvePendingScheduleTransactionAnswer({
+            pending: pendingClarifier,
+            userMessage: userMessage.content,
+            todayISO: todayISOLocal(),
+          });
+          if (pendingScheduleAnswer.kind === 'cancelled') {
+            usePendingCoachClarifierStore.getState().clearPending();
+            logger.debug('[pending-schedule-transaction] cancelled', {
+              kind: pendingScheduleAnswer.transaction.kind,
+              currentStep: pendingScheduleAnswer.transaction.currentStep,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            const cancelMsg: Message = {
+              id: `${Date.now()}-schedule-transaction-cancelled`,
+              role: 'assistant',
+              content: pendingScheduleAnswer.reply,
+            };
+            setMessages((prev) => [...prev, userMessage, cancelMsg]);
+            setInputValue('');
+            return;
+          }
+          if (pendingScheduleAnswer.kind === 'clarify') {
+            usePendingCoachClarifierStore.getState().setPending({
+              ...pendingClarifier,
+              missingFields: pendingScheduleAnswer.transaction.missingFields,
+              askedQuestion: pendingScheduleAnswer.reply,
+              scheduleTransaction: pendingScheduleAnswer.transaction,
+              createdAt: pendingClarifier.createdAt,
+            });
+            logger.debug('[pending-schedule-transaction] clarify', {
+              kind: pendingScheduleAnswer.transaction.kind,
+              currentStep: pendingScheduleAnswer.transaction.currentStep,
+              missingFields: pendingScheduleAnswer.transaction.missingFields,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            const clarifyMsg: Message = {
+              id: `${Date.now()}-schedule-transaction-clarify`,
+              role: 'assistant',
+              content: pendingScheduleAnswer.reply,
+            };
+            setMessages((prev) => [...prev, userMessage, clarifyMsg]);
+            setInputValue('');
+            return;
+          }
+          if (pendingScheduleAnswer.kind === 'complete') {
+            usePendingCoachClarifierStore.getState().clearPending();
+            logger.warn('[pending-schedule-transaction-resume]', {
+              transactionKind: pendingScheduleAnswer.transaction.kind,
+              operation:
+                pendingScheduleAnswer.command.mode === 'mutate'
+                  ? pendingScheduleAnswer.command.operation
+                  : pendingScheduleAnswer.command.mode,
+              legacyBlocked: true,
+              ageMs: Date.now() - pendingClarifier.createdAt,
+            });
+            const onProgress = (stage: ProgressStage) => {
+              setCoachProgressLabel(describeStage(stage));
+            };
+            const transactionProgramEdit = interpretCoachMessageToProgramEdit({
+              userMessage: userMessage.content,
+              todayISO: todayISOLocal(),
+              referenceResolution: packet.referenceResolution ?? null,
+              currentWeek: (packet.currentWeek ?? []).map((day) => ({
+                date: day.date,
+                sessionName: day.workout?.name ?? 'session',
+                workout: day.workout,
+              })),
+              resolveVisibleProgramForDate: (date) =>
+                resolveLiveVisibleProgramForDate(date, todayISOLocal()),
+              recentMessages,
+              candidateCommand: pendingScheduleAnswer.command,
+              source: 'pending_clarifier',
+            });
+            if (isProgramSetupEdit(transactionProgramEdit)) {
+              setMessages((prev) => [...prev, userMessage]);
+              setInputValue('');
+              startSetupRebuildProgress();
+              setIsLoading(true);
+              try {
+                const setupResult = await executeProgramSetupEdit({
+                  programEdit: transactionProgramEdit,
+                  todayISO: todayISOLocal(),
+                  getOnboardingData: () => useProfileStore.getState().onboardingData,
+                  updateOnboardingData: (patch) => useProfileStore.getState().updateOnboardingData(patch),
+                  generateProgramFromProfile,
+                  setCurrentProgram: (program) => useProgramStore.getState().setCurrentProgram(program),
+                  setCurrentMicrocycle: (microcycle) => useProgramStore.getState().setCurrentMicrocycle(microcycle),
+                  setTodayWorkout: (workout) => useProgramStore.getState().setTodayWorkout(workout),
+                  onProgress,
+                });
+                setCoachProgressLabel(null);
+                const assistantMessage: Message = {
+                  id: `${Date.now()}-schedule-transaction-setup`,
+                  role: 'assistant',
+                  content: setupResult.reply,
+                };
+                setMessages((prev) => [...prev, assistantMessage]);
+              } catch (err) {
+                logger.error('[coach-send] schedule_transaction_setup_error', {
+                  message: pendingClarifier.originalMessage,
+                  answer: userMessage.content,
+                  error: err instanceof Error ? err.message : String(err),
+                });
+                const assistantMessage: Message = {
+                  id: `${Date.now()}-schedule-transaction-setup-error`,
+                  role: 'assistant',
+                  content: "I understood the setup change, but I couldn't rebuild the program safely. I haven't changed the program.",
+                };
+                setMessages((prev) => [...prev, assistantMessage]);
+              } finally {
+                clearSetupRebuildProgress();
+                setIsLoading(false);
+                setCoachProgressLabel(null);
+              }
+              return;
+            }
+            const result = executeProgramEdit({
+              programEdit: transactionProgramEdit,
+              todayISO: todayISOLocal(),
+              referenceResolution: packet.referenceResolution ?? null,
+              userMessage: pendingClarifier.originalMessage,
+              onProgress,
+            });
+            setCoachProgressLabel(null);
+            recordVerifiedProgramEditMutationFocus(
+              transactionProgramEdit,
+              result,
+              todayISOLocal(),
+            );
+            logger.debug('[coach-flow] schedule_transaction_executed', {
+              route: result.route,
+              executorKind: result.kind,
+              applied: result.applied,
+              progress: result.progress,
+            });
+            const assistantMessage: Message = {
+              id: `${Date.now()}-schedule-transaction`,
+              role: 'assistant',
+              content: result.reply,
+            };
+            setMessages((prev) => [...prev, userMessage, assistantMessage]);
+            setInputValue('');
+            return;
+          }
           const pendingProgramEditAnswer = resolvePendingProgramEditAnswer({
             pending: pendingClarifier,
             userMessage: userMessage.content,
@@ -2094,6 +2310,56 @@ export default function CoachScreen() {
               candidateCommand: resumed,
               source: 'pending_clarifier',
             });
+            if (isProgramSetupEdit(resumedProgramEdit)) {
+              setMessages((prev) => [...prev, userMessage]);
+              setInputValue('');
+              startSetupRebuildProgress();
+              setIsLoading(true);
+              try {
+                const setupResult = await executeProgramSetupEdit({
+                  programEdit: resumedProgramEdit,
+                  todayISO: todayISOLocal(),
+                  getOnboardingData: () => useProfileStore.getState().onboardingData,
+                  updateOnboardingData: (patch) => useProfileStore.getState().updateOnboardingData(patch),
+                  generateProgramFromProfile,
+                  setCurrentProgram: (program) => useProgramStore.getState().setCurrentProgram(program),
+                  setCurrentMicrocycle: (microcycle) => useProgramStore.getState().setCurrentMicrocycle(microcycle),
+                  setTodayWorkout: (workout) => useProgramStore.getState().setTodayWorkout(workout),
+                  onProgress,
+                });
+                setCoachProgressLabel(null);
+                logger.debug('[coach-flow] pending_program_setup_executed', {
+                  route: setupResult.route,
+                  executorKind: setupResult.kind,
+                  applied: setupResult.applied,
+                  progress: setupResult.progress,
+                  source: 'pending_move_scope_resume',
+                });
+                const assistantMessage: Message = {
+                  id: `${Date.now()}-pending-program-setup`,
+                  role: 'assistant',
+                  content: setupResult.reply,
+                };
+                setMessages((prev) => [...prev, assistantMessage]);
+              } catch (err) {
+                logger.error('[coach-send] pending_program_setup_error', {
+                  message: pendingClarifier.originalMessage,
+                  answer: userMessage.content,
+                  error: err instanceof Error ? err.message : String(err),
+                });
+                const assistantMessage: Message = {
+                  id: `${Date.now()}-pending-program-setup-error`,
+                  role: 'assistant',
+                  content: "I understood the setup change, but I couldn't rebuild the program safely. I haven't changed the program.",
+                };
+                setMessages((prev) => [...prev, assistantMessage]);
+              } finally {
+                clearSetupRebuildProgress();
+                setIsLoading(false);
+                setCoachProgressLabel(null);
+              }
+              return;
+            }
             const result = executeProgramEdit({
               programEdit: resumedProgramEdit,
               todayISO: todayISOLocal(),
@@ -2412,6 +2678,113 @@ export default function CoachScreen() {
           setInputValue('');
           return;
         }
+      }
+
+      if (isProgramSetupEdit(programEditForExecution)) {
+        logger.debug('[coach-send] message_appended', {
+          source: 'program_setup_pre_rebuild',
+          messageId: userMessage.id,
+          route: programEditForExecution.command?.mode === 'mutate'
+            ? programEditForExecution.command.operation
+            : programEditForExecution.command?.mode ?? null,
+        });
+        setMessages((prev) => [...prev, userMessage]);
+        setInputValue('');
+        startSetupRebuildProgress();
+        setIsLoading(true);
+        const onProgress = (stage: ProgressStage) => {
+          setCoachProgressLabel(describeStage(stage));
+        };
+
+        try {
+          const result = await executeProgramSetupEdit({
+            programEdit: programEditForExecution,
+            todayISO: todayISOLocal(),
+            getOnboardingData: () => useProfileStore.getState().onboardingData,
+            updateOnboardingData: (patch) => useProfileStore.getState().updateOnboardingData(patch),
+            generateProgramFromProfile,
+            setCurrentProgram: (program) => useProgramStore.getState().setCurrentProgram(program),
+            setCurrentMicrocycle: (microcycle) => useProgramStore.getState().setCurrentMicrocycle(microcycle),
+            setTodayWorkout: (workout) => useProgramStore.getState().setTodayWorkout(workout),
+            onProgress,
+          });
+          setCoachProgressLabel(null);
+
+          if (result.kind === 'mutated' || result.kind === 'rejected' || result.kind === 'error') {
+            if (getPendingClarifierSnapshot()) {
+              usePendingCoachClarifierStore.getState().clearPending();
+              logger.debug('[pending-clarifier] superseded', {
+                by: result.kind,
+                route: result.route,
+              });
+            }
+          }
+
+          setLastCoachDebug({
+            intent: 'program_setup_edit',
+            route: result.route,
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: null,
+            referenceTargetName: null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic' as const,
+            applied: result.applied,
+          });
+          logger.debug('[coach-flow] program_setup_executed', {
+            route: result.route,
+            executorKind: result.kind,
+            applied: result.applied,
+            progress: result.progress,
+            legacyCalled: false,
+          });
+          logger.debug('[coach-transaction]', {
+            message: userMessage.content,
+            intent: 'program_setup_edit',
+            route: result.route,
+            pendingProposalBefore: pendingCoachProposalRef.current,
+            mutationAttempted: true,
+            eventsEmitted: result.applied ? 1 : 0,
+            eventsApplied: result.applied ? 1 : 0,
+            visibleDiff: result.applied ? [{ kind: 'program_setup_rebuild' }] : [],
+            replyMode: result.applied
+              ? 'program_adjustment_applied'
+              : 'program_adjustment_failed',
+          });
+          const assistantMessage: Message = {
+            id: `${Date.now()}-program-setup`,
+            role: 'assistant',
+            content: result.reply,
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+        } catch (err) {
+          logger.error('[coach-send] program_setup_error', {
+            message: userMessage.content,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          setLastCoachDebug({
+            intent: 'program_setup_edit',
+            route: 'program_setup_unhandled_error',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: null,
+            referenceTargetName: null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic' as const,
+            applied: false,
+          });
+          const assistantMessage: Message = {
+            id: `${Date.now()}-program-setup-error`,
+            role: 'assistant',
+            content: "I understood the setup change, but I couldn't rebuild the program safely. I haven't changed the program.",
+          };
+          setMessages((prev) => [...prev, assistantMessage]);
+        } finally {
+          clearSetupRebuildProgress();
+          setIsLoading(false);
+          setCoachProgressLabel(null);
+        }
+        return;
       }
 
       if (isMutateCommand(commandForExecution)) {
@@ -3441,7 +3814,9 @@ export default function CoachScreen() {
                 <Animated.View style={[styles.typingDot, { opacity: dot3 }]} />
               </View>
               <Text style={styles.typingText}>
-                {coachProgressLabel
+                {setupRebuildLoadingMessage
+                  ? setupRebuildLoadingMessage
+                  : coachProgressLabel
                   ? coachProgressLabel
                   : loadingSeconds < 5
                   ? 'Coach is thinking...'
@@ -3472,10 +3847,13 @@ export default function CoachScreen() {
             style={({ pressed }) => [
               styles.sendButton,
               pressed && { opacity: 0.7 },
-              isLoading && { opacity: 0.5 },
+              (isLoading || !inputValue.trim()) && { opacity: 0.5 },
             ]}
             onPress={handleSend}
-            disabled={isLoading || !inputValue.trim()}
+            accessibilityState={{
+              disabled: isLoading || !inputValue.trim(),
+              busy: isLoading,
+            }}
             testID="coach-send-button"
             accessibilityLabel="Send message"
           >

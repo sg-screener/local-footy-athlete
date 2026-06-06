@@ -549,9 +549,24 @@ export function findOrCreateExercise(name: string): Exercise {
   };
 }
 
-/**
- * Convert coach AI workout JSON into app Workout[] format
- */
+type CoachGeneratedWorkoutInput = {
+  dayOfWeek: number;
+  name: string;
+  workoutType: string;
+  sessionTier?: string;
+  exercises: Array<{
+    name: string;
+    sets: number;
+    repsMin: number;
+    repsMax: number;
+    weight?: number;
+    notes?: string;
+    supersetGroup?: string;
+    supersetOrder?: number;
+    pairType?: string;
+  }>;
+};
+
 /**
  * Day name → JS dayOfWeek number (0=Sun..6=Sat).
  * Must match coachingEngine's DAY_NAMES indexing.
@@ -577,6 +592,110 @@ function buildPlanLookup(
     }
   }
   return lookup;
+}
+
+function fallbackWorkoutTypeForPlanEntry(entry: SessionAllocation): string {
+  if (entry.isTeamDay) return 'Team Training';
+  if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(entry.focus)) {
+    return 'Recovery';
+  }
+  if (entry.conditioningFlavour && !entry.hasCombinedConditioning) return 'Conditioning';
+  if (entry.hasCombinedConditioning) return 'Mixed';
+  return 'Strength';
+}
+
+function fallbackNameForPlanEntry(entry: SessionAllocation): string {
+  if (entry.isTeamDay) return 'Team Training';
+  if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(entry.focus)) {
+    return 'Recovery Session';
+  }
+  if (entry.conditioningFlavour && !entry.hasCombinedConditioning) return 'Conditioning';
+  if (/hip-dominant|hinge|RDL|hamstring/i.test(entry.focus)) return 'Lower Hinge';
+  if (/squat|quad|lower body/i.test(entry.focus)) return 'Lower Squat';
+  if (/pull|row|pull-up/i.test(entry.focus)) return 'Upper Pull';
+  if (/push|bench|OHP|dip/i.test(entry.focus)) return 'Upper Push';
+  if (/full body/i.test(entry.focus)) return 'Full Body';
+  return 'Strength Session';
+}
+
+function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGeneratedWorkoutInput['exercises'] {
+  const strengthText = entry.focus.split('+')[0];
+  const lower = strengthText.toLowerCase();
+
+  if (entry.isTeamDay) {
+    return [{ name: 'Team Training', sets: 1, repsMin: 1, repsMax: 1, notes: 'Field session' }];
+  }
+  if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(lower)) {
+    return [{ name: 'Mobility Flow', sets: 1, repsMin: 10, repsMax: 15, notes: 'Easy mobility and recovery work' }];
+  }
+  if (entry.conditioningFlavour && !entry.hasCombinedConditioning) {
+    return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
+  }
+  if (/hip-dominant|hinge|rdl|hamstring/i.test(lower)) {
+    return [
+      { name: 'RDLs', sets: 3, repsMin: 6, repsMax: 8 },
+      { name: 'Hip Thrusts', sets: 3, repsMin: 8, repsMax: 10 },
+      { name: 'Nordic Lower', sets: 2, repsMin: 5, repsMax: 8 },
+    ];
+  }
+  if (/squat|quad|lower body/i.test(lower)) {
+    return [
+      { name: 'Back Squat', sets: 3, repsMin: 5, repsMax: 8 },
+      { name: 'Bulgarian Split Squats', sets: 3, repsMin: 8, repsMax: 10 },
+      { name: 'Leg Extension', sets: 2, repsMin: 10, repsMax: 12 },
+    ];
+  }
+  if (/pull|row|pull-up/i.test(lower)) {
+    return [
+      { name: 'Pull-Ups', sets: 3, repsMin: 5, repsMax: 8 },
+      { name: 'Barbell Row', sets: 3, repsMin: 6, repsMax: 10 },
+      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
+    ];
+  }
+  if (/full body/i.test(lower)) {
+    return [
+      { name: 'Back Squat', sets: 3, repsMin: 5, repsMax: 8 },
+      { name: 'Bench Press', sets: 3, repsMin: 5, repsMax: 8 },
+      { name: 'Single-Arm DB Row', sets: 3, repsMin: 8, repsMax: 10 },
+    ];
+  }
+  return [
+    { name: 'Bench Press', sets: 3, repsMin: 5, repsMax: 8 },
+    { name: 'Overhead Press', sets: 3, repsMin: 6, repsMax: 8 },
+    { name: 'Dips', sets: 2, repsMin: 8, repsMax: 12 },
+  ];
+}
+
+function completeCoachWorkoutsFromPlan(
+  coachWorkouts: CoachGeneratedWorkoutInput[],
+  weeklyPlan?: SessionAllocation[],
+): CoachGeneratedWorkoutInput[] {
+  if (!weeklyPlan?.length) return coachWorkouts;
+
+  const existingDows = new Set(coachWorkouts.map((workout) => workout.dayOfWeek));
+  const additions: CoachGeneratedWorkoutInput[] = [];
+
+  for (const entry of weeklyPlan) {
+    if (!entry.dayOfWeek) continue;
+    const dayOfWeek = PLAN_DAY_MAP[entry.dayOfWeek];
+    if (dayOfWeek === undefined || existingDows.has(dayOfWeek)) continue;
+    additions.push({
+      dayOfWeek,
+      name: fallbackNameForPlanEntry(entry),
+      workoutType: fallbackWorkoutTypeForPlanEntry(entry),
+      sessionTier: entry.tier,
+      exercises: fallbackExercisesForPlanEntry(entry),
+    });
+    existingDows.add(dayOfWeek);
+  }
+
+  if (additions.length > 0) {
+    logger.warn('[ProgramGen] AI omitted weekly plan days; completing from deterministic plan', {
+      missingDays: additions.map((workout) => workout.dayOfWeek),
+    });
+  }
+
+  return [...coachWorkouts, ...additions].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
 }
 
 /**
@@ -712,23 +831,7 @@ function buildConditioningBlock(
 }
 
 export function buildWorkoutsFromCoach(
-  coachWorkouts: Array<{
-    dayOfWeek: number;
-    name: string;
-    workoutType: string;
-    sessionTier?: string;
-    exercises: Array<{
-      name: string;
-      sets: number;
-      repsMin: number;
-      repsMax: number;
-      weight?: number;
-      notes?: string;
-      supersetGroup?: string;
-      supersetOrder?: number;
-      pairType?: string;
-    }>;
-  }>,
+  coachWorkouts: CoachGeneratedWorkoutInput[],
   microcycleId: string = 'mc-1',
   weeklyPlan?: SessionAllocation[],
   onboardingData?: OnboardingData,
@@ -750,6 +853,7 @@ export function buildWorkoutsFromCoach(
   athletePrefs?: AthletePoolPrefs,
 ): Workout[] {
   const planLookup = weeklyPlan ? buildPlanLookup(weeklyPlan) : null;
+  const completedCoachWorkouts = completeCoachWorkoutsFromPlan(coachWorkouts, weeklyPlan);
 
   // ── Build a synthetic dateStr for deterministic variety ──
   // AI-generated workouts don't have a real date at build time,
@@ -902,7 +1006,7 @@ export function buildWorkoutsFromCoach(
   // off-feet conversion, or aerobic default), prefer an UNUSED modality
   // from the pool so the athlete doesn't end up on the bike twice in
   // one week unless we've exhausted options.
-  const sortedCw = [...coachWorkouts].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+  const sortedCw = [...completedCoachWorkouts].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
   const usedErgs = new Set<ErgModality>();
   let lastErg: ErgModality | undefined; // last erg used on the immediately-preceding day
   let lastErgDow = -2;
@@ -1088,7 +1192,7 @@ export function buildWorkoutsFromCoach(
     prevDow = cw.dayOfWeek;
   }
 
-  return coachWorkouts.map((cw) => {
+  return completedCoachWorkouts.map((cw) => {
     const workoutId = `w-coach-${cw.dayOfWeek}`;
     const planEntry = planLookup?.get(cw.dayOfWeek) ?? null;
     const aiTier = (cw.sessionTier as SessionTier) || undefined;

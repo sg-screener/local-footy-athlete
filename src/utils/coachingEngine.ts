@@ -4800,13 +4800,18 @@ export function onboardingToCoachingInputs(data: OnboardingData): CoachingInputs
   // profile keeps the user's original preferences untouched, and every
   // downstream consumer that goes through this function gets the
   // reconciled set for free.
-  const prefDays = (data.preferredTrainingDays || []) as string[];
+  const rawPrefDays = (data.preferredTrainingDays || []) as string[];
+  const blockedDays = activeUnavailableDays(data);
+  const prefDays = rawPrefDays.filter((day) => !blockedDays.has(day));
   const teamDays = (data.teamTrainingDays || []) as string[];
   const selectedDays: string[] = [...prefDays];
   for (const td of teamDays) {
     if (!selectedDays.includes(td)) selectedDays.push(td);
   }
-  const baseAvailableDays = data.trainingDaysPerWeek || 3;
+  const baseTrainingDays = data.trainingDaysPerWeek || prefDays.length || 3;
+  const baseAvailableDays = blockedDays.size > 0
+    ? Math.min(baseTrainingDays, selectedDays.length)
+    : baseTrainingDays;
   // availableDays feeds conditioning-target math. If team days forced the
   // actual schedulable-day count above the user's declared budget, lift
   // availableDays to match — otherwise conditioning targets under-count
@@ -4839,4 +4844,20 @@ export function onboardingToCoachingInputs(data: OnboardingData): CoachingInputs
     // so the in-season phase-shift flow drives game-proximity scheduling immediately.
     gameDay: data.usualGameDay || data.gameDay,
   };
+}
+
+function activeUnavailableDays(data: OnboardingData, today = new Date()): Set<string> {
+  const out = new Set<string>();
+  const todayISO = today.toISOString().slice(0, 10);
+  for (const constraint of data.availabilityConstraints ?? []) {
+    if (constraint.active === false) continue;
+    if (constraint.kind !== 'unavailable_day') continue;
+    if (!constraint.dayOfWeek) continue;
+    if (constraint.scope === 'temporary') {
+      if (constraint.startDate && constraint.startDate > todayISO) continue;
+      if (constraint.endDate && constraint.endDate < todayISO) continue;
+    }
+    out.add(constraint.dayOfWeek);
+  }
+  return out;
 }

@@ -67,6 +67,7 @@
     "test:modality-preference": "sucrase-node src/__tests__/coachModalityPreferenceTests.ts",
     "test:modality-preference-verification": "sucrase-node src/__tests__/coachModalityPreferenceVerificationTests.ts",
     "test:coach-program-edit": "sucrase-node src/__tests__/coachProgramEditContractTests.ts",
+    "test:coach-program-setup-edit": "sucrase-node src/__tests__/coachProgramSetupEditTests.ts",
     "test:coach-command-router": "sucrase-node src/__tests__/coachCommandRouterTests.ts",
     "test:coach-pending-clarifier": "sucrase-node src/__tests__/coachPendingClarifierTests.ts",
     "test:coach-live-readiness-priority": "sucrase-node src/__tests__/coachLiveReadinessPriorityTests.ts",

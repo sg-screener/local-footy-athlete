@@ -55,7 +55,10 @@ export function shouldTryLLMCoachCommand(
     }
     return routedCommand.needsClarification || routedCommand.confidence < 0.65;
   }
-  if (routedCommand.mode === 'clarify') return true;
+  if (routedCommand.mode === 'clarify') {
+    if (/^program_setup_/.test(routedCommand.reason)) return false;
+    return true;
+  }
   if (routedCommand.mode === 'conversation') {
     return looksLikeProgramEditForLLM(userMessage);
   }

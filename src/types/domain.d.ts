@@ -30,6 +30,19 @@ export interface OnboardingInjury {
     movementTriggers?: string[];
     notes?: string;
 }
+export interface ProgramAvailabilityConstraint {
+    id: string;
+    kind: 'unavailable_day' | 'time_limit' | 'travel';
+    scope: 'permanent' | 'temporary';
+    dayOfWeek?: DayOfWeek;
+    startDate?: string;
+    endDate?: string;
+    maxSessionMinutes?: number;
+    reason?: string;
+    active?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
+}
 export interface OnboardingData {
     firstName?: string;
     ageRange?: AgeRange;
@@ -45,6 +58,7 @@ export interface OnboardingData {
     teamTrainingIntensity?: TeamTrainingIntensity;
     trainingDaysPerWeek?: number;
     preferredTrainingDays?: DayOfWeek[];
+    availabilityConstraints?: ProgramAvailabilityConstraint[];
     sessionDurationMinutes?: SessionDuration;
     trainingLocation?: TrainingLocation;
     equipment?: string[];
