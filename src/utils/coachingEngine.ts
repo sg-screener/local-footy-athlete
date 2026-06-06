@@ -26,6 +26,7 @@ import type {
   TeamTrainingIntensity,
 } from '../types/domain';
 import { logger } from './logger';
+import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
 
 // ─── Input Types ───
 
@@ -1412,12 +1413,43 @@ function buildWeeklyPlan(
     // This ensures the finished week has breaks between hard training days,
     // not 4+ consecutive hard days followed by rest at the end.
     const weekSlack = daySlots.length - core;
-    const restCount = daySlots.length >= 5 ? Math.min(weekSlack, 2) : 0;
+    const hasSundaySlot = daySlots.some(s => s.dayName === 'Sunday');
+    const usePreSeasonRhythm =
+      isPreSeason && hasTeamDays && daySlots.length >= 5;
+    const useSixDaySpreadRhythm =
+      !hasGameThisWeek &&
+      daySlots.length >= 6 &&
+      inputs.availableDays >= 6 &&
+      daySlots.some(s => s.dayName === 'Saturday');
+    const useDistributedRhythm = usePreSeasonRhythm || useSixDaySpreadRhythm;
+    const maxDistributedRestSlots = useDistributedRhythm
+      // Pre-season wants 3 on / 1 off / 2 on / 1 off. If Sunday is not an
+      // available slot, keep one in-week recovery break and leave the extra
+      // slack for conditioning/support rather than creating train/rest/train
+      // too early in the week.
+      ? (hasSundaySlot ? 2 : 1)
+      : 2;
+    const restCount = daySlots.length >= 5
+      ? Math.min(weekSlack, maxDistributedRestSlots)
+      : 0;
     const restSlotIndices: Set<number> = new Set();
 
     // Default rest indices, before team-day reconciliation.
     const defaultRestIndices: number[] = [];
-    if (restCount === 2) {
+    if (useDistributedRhythm && restCount > 0) {
+      const midweekBreakIdx = Math.min(3, daySlots.length - 1);
+      defaultRestIndices.push(midweekBreakIdx);
+      if (restCount >= 2) {
+        const sundayIdx = daySlots.findIndex(s => s.dayName === 'Sunday');
+        const lateBreakIdx = sundayIdx >= 0 ? sundayIdx : daySlots.length - 1;
+        if (lateBreakIdx !== midweekBreakIdx) {
+          defaultRestIndices.push(lateBreakIdx);
+        }
+      }
+      for (let i = daySlots.length - 1; defaultRestIndices.length < restCount && i >= 0; i--) {
+        if (!defaultRestIndices.includes(i)) defaultRestIndices.push(i);
+      }
+    } else if (restCount === 2) {
       if (daySlots.length <= 5) {
         // 5 slots: rest at positions 1 and 3 → train/rest/train/rest/train
         defaultRestIndices.push(1, 3);
@@ -1448,28 +1480,23 @@ function buildWeeklyPlan(
     // still "buffers" the field load (active-recovery-after-team pattern),
     // matching how a coach would naturally reorganise the week.
     //
-    // Scope: ONLY applied when `restCount >= 2`. Single-rest weeks (5-day
-    // pre-season + team) intentionally allow the rest to land on a team day
-    // — the team-day promotion pass absorbs the REC slot back into "Team
-    // training + …", and the queue + conditioning floor have already been
-    // sized so this collision is harmless. Reconciling away from the team
-    // day in single-rest mode actually MAKES it worse: the absorbed rest
-    // becomes a real REC, the freed team slot has to take an extra strength
-    // item the queue didn't budget for, and the resulting structure is
-    // 1L + 2U + standalone conditioning instead of 2L + 2U.
+    // Scope: multi-rest weeks always reconcile. Pre-season team weeks also
+    // reconcile single-rest collisions because the midweek recovery break is
+    // a load-management anchor, not a disposable filler for the team-label
+    // pass to absorb.
     const isTeamDayIdx = (i: number): boolean =>
       i >= 0 && i < daySlots.length && !!daySlots[i].isTeamDay;
     const isAdjacentToTeamIdx = (i: number): boolean =>
       isTeamDayIdx(i - 1) || isTeamDayIdx(i + 1);
-    const reconcileTeamDayCollisions = restCount >= 2;
+    const reconcileTeamDayCollisions = restCount >= 2 || usePreSeasonRhythm;
 
     for (const defaultIdx of defaultRestIndices) {
       if (!isTeamDayIdx(defaultIdx) && !restSlotIndices.has(defaultIdx)) {
         restSlotIndices.add(defaultIdx);
         continue;
       }
-      // Single-rest weeks: keep the original collision behaviour. The
-      // team-day promotion pass will absorb the slot.
+      // Non-reconciled single-rest weeks keep the original collision
+      // behaviour. The team-day promotion pass will absorb the slot.
       if (!reconcileTeamDayCollisions) {
         if (!restSlotIndices.has(defaultIdx)) {
           restSlotIndices.add(defaultIdx);
@@ -2595,7 +2622,7 @@ function buildWeeklyPlan(
 
       if (isRestSlot) {
         // Rest/conditioning slot — no strength allowed
-        slotCandidates = ['COND', 'ACC', 'REC'];
+        slotCandidates = useSixDaySpreadRhythm ? ['REC', 'ACC'] : ['COND', 'ACC', 'REC'];
       } else if (useStructureMode) {
         const uniqueStrength = [...new Set(strengthQueue)] as CandidateType[];
         if (queueMustComplete) {
@@ -2614,6 +2641,13 @@ function buildWeeklyPlan(
         }
       } else {
         slotCandidates = [...ALL_CANDIDATES];
+      }
+
+      if (useSixDaySpreadRhythm && slotIdx < 3 && !slot.isTeamDay) {
+        const trainingCandidates = slotCandidates.filter((candidate) =>
+          candidate !== 'REC' && candidate !== 'ACC'
+        );
+        slotCandidates = trainingCandidates.length > 0 ? trainingCandidates : ['COND'];
       }
 
       for (const candidate of slotCandidates) {
@@ -3326,7 +3360,12 @@ function buildWeeklyPlan(
   // so the guard always evaluates `false !== false` → swap permitted.
   // The consequence is a team day can silently lose its session when a
   // 3-consecutive-same-region run includes it.
-  const adjusted = enforceAdjacentRegionLimit(plan, teamDaySetTail);
+  let adjusted = enforceAdjacentRegionLimit(plan, teamDaySetTail);
+  adjusted = optimiseStrengthLoadSequence(adjusted, {
+    teamDayNumSet: teamDaySetTail,
+    hasGameThisWeek,
+    gameDayNum,
+  });
 
   // (2) Universal team-day label ─────────────────────────────────────────
   // "Wholesale replace" list is deliberately narrow: these three focuses
@@ -3890,6 +3929,216 @@ function getSessionRegion(session: SessionAllocation): SessionRegion {
   return 'neutral';
 }
 
+type StrengthSequenceKind =
+  | 'squat'
+  | 'hinge'
+  | 'push'
+  | 'pull'
+  | 'lower_combined'
+  | 'upper_combined'
+  | 'full_body'
+  | 'neutral';
+
+interface StrengthSequenceOptions {
+  teamDayNumSet?: Set<number>;
+  hasGameThisWeek?: boolean;
+  gameDayNum?: number | null;
+}
+
+function strengthSequenceKind(session: SessionAllocation): StrengthSequenceKind {
+  const strengthPart = (session.focus || '').replace(
+    /\s\+\s.*(?:conditioning|finisher|interval|aerobic|tempo|sprint|zone 2).*/i,
+    '',
+  );
+  const patterns = inferMovementPatterns(strengthPart);
+  const has = (pattern: MovementPattern): boolean => patterns.includes(pattern);
+
+  const hasSquat = has('squat');
+  const hasHinge = has('hinge');
+  const hasPush = has('push');
+  const hasPull = has('pull');
+  const hasLower = hasSquat || hasHinge;
+  const hasUpper = hasPush || hasPull;
+
+  if (hasLower && hasUpper) return 'full_body';
+  if (hasSquat && hasHinge) return 'lower_combined';
+  if (hasPush && hasPull) return 'upper_combined';
+  if (hasHinge) return 'hinge';
+  if (hasSquat) return 'squat';
+  if (hasPull) return 'pull';
+  if (hasPush) return 'push';
+
+  switch (session.strengthPattern) {
+    case 'lower':
+      return 'lower_combined';
+    case 'lower_combined':
+      return 'lower_combined';
+    case 'push':
+      return 'push';
+    case 'pull':
+      return 'pull';
+    case 'upper_combined':
+      return 'upper_combined';
+    case 'full_body':
+      return 'full_body';
+    default:
+      return 'neutral';
+  }
+}
+
+function strengthBodyRegion(kind: StrengthSequenceKind): SessionRegion {
+  switch (kind) {
+    case 'squat':
+    case 'hinge':
+    case 'lower_combined':
+      return 'lower';
+    case 'push':
+    case 'pull':
+    case 'upper_combined':
+      return 'upper';
+    default:
+      return 'neutral';
+  }
+}
+
+function isPullLike(kind: StrengthSequenceKind): boolean {
+  return kind === 'pull' || kind === 'upper_combined' || kind === 'full_body';
+}
+
+function isHingeLike(kind: StrengthSequenceKind): boolean {
+  return kind === 'hinge' || kind === 'lower_combined' || kind === 'full_body';
+}
+
+function isHighPosteriorChainPair(a: StrengthSequenceKind, b: StrengthSequenceKind): boolean {
+  return (isPullLike(a) && isHingeLike(b)) || (isHingeLike(a) && isPullLike(b));
+}
+
+export function scoreStrengthSequence(plan: SessionAllocation[]): number {
+  const byDay = [...plan]
+    .filter(s => dayNameToNumber(s.dayOfWeek || '') >= 0)
+    .sort((a, b) => dayNameToNumber(a.dayOfWeek || '') - dayNameToNumber(b.dayOfWeek || ''));
+
+  let score = 0;
+
+  for (let i = 1; i < byDay.length; i++) {
+    const prev = byDay[i - 1];
+    const curr = byDay[i];
+    const prevDay = dayNameToNumber(prev.dayOfWeek || '');
+    const currDay = dayNameToNumber(curr.dayOfWeek || '');
+    if (currDay - prevDay !== 1) continue;
+
+    const prevKind = strengthSequenceKind(prev);
+    const currKind = strengthSequenceKind(curr);
+    const prevRegion = strengthBodyRegion(prevKind);
+    const currRegion = strengthBodyRegion(currKind);
+
+    if (prevRegion !== 'neutral' && prevRegion === currRegion) {
+      score += 100;
+    }
+
+    if (isHighPosteriorChainPair(prevKind, currKind)) {
+      score += 45;
+    }
+
+    if (prevRegion === 'lower' && currRegion === 'upper') {
+      score += 3;
+    }
+  }
+
+  const orderedKinds = byDay.map(strengthSequenceKind);
+  const firstPush = orderedKinds.indexOf('push');
+  const firstPull = orderedKinds.indexOf('pull');
+  if (firstPush >= 0 && firstPull >= 0 && firstPull < firstPush) {
+    score += 5;
+  }
+
+  return score;
+}
+
+function gameProximityBucket(dayNum: number, gameDayNum: number | null | undefined): string {
+  if (gameDayNum === null || gameDayNum === undefined || gameDayNum < 0) return 'none';
+  const offset = gOffset(dayNum, gameDayNum);
+  if (offset <= -4 && offset >= -5) return 'high_load';
+  if (offset === -3) return 'mid';
+  if (offset === -2) return 'late';
+  if (offset === -1) return 'pre_game';
+  if (offset === 0) return 'game';
+  if (offset === 1 || offset <= -6) return 'post_game';
+  return 'other';
+}
+
+function optimiseStrengthLoadSequence(
+  plan: SessionAllocation[],
+  options: StrengthSequenceOptions = {},
+): SessionAllocation[] {
+  if (plan.length <= 2) return plan;
+
+  let result = [...plan].sort(
+    (a, b) => dayNameToNumber(a.dayOfWeek || '') - dayNameToNumber(b.dayOfWeek || '')
+  );
+
+  const teamDayNumSet = options.teamDayNumSet ?? new Set<number>();
+  const isTeamDay = (s: SessionAllocation): boolean => {
+    const d = dayNameToNumber(s.dayOfWeek || '');
+    return d >= 0 && (teamDayNumSet.has(d) || !!s.isTeamDay);
+  };
+  const canSwap = (a: SessionAllocation, b: SessionAllocation): boolean => {
+    const dayA = dayNameToNumber(a.dayOfWeek || '');
+    const dayB = dayNameToNumber(b.dayOfWeek || '');
+    if (dayA < 0 || dayB < 0) return false;
+    if (isTeamDay(a) !== isTeamDay(b)) return false;
+
+    if (options.hasGameThisWeek) {
+      const bucketA = gameProximityBucket(dayA, options.gameDayNum);
+      const bucketB = gameProximityBucket(dayB, options.gameDayNum);
+      if (bucketA !== bucketB) return false;
+    }
+
+    return true;
+  };
+  const withDaySwap = (
+    sessions: SessionAllocation[],
+    a: number,
+    b: number,
+  ): SessionAllocation[] => {
+    const dayA = sessions[a].dayOfWeek;
+    const dayB = sessions[b].dayOfWeek;
+    return sessions
+      .map((s, idx) => {
+        if (idx === a) return { ...s, dayOfWeek: dayB };
+        if (idx === b) return { ...s, dayOfWeek: dayA };
+        return s;
+      })
+      .sort((x, y) => dayNameToNumber(x.dayOfWeek || '') - dayNameToNumber(y.dayOfWeek || ''));
+  };
+
+  for (let pass = 0; pass < 6; pass++) {
+    const currentScore = scoreStrengthSequence(result);
+    let bestScore = currentScore;
+    let best: SessionAllocation[] | null = null;
+
+    for (let i = 0; i < result.length; i++) {
+      if (strengthSequenceKind(result[i]) === 'neutral') continue;
+      for (let j = i + 1; j < result.length; j++) {
+        if (strengthSequenceKind(result[j]) === 'neutral') continue;
+        if (!canSwap(result[i], result[j])) continue;
+
+        const swapped = withDaySwap(result, i, j);
+        const swappedScore = scoreStrengthSequence(swapped);
+        if (swappedScore < bestScore) {
+          bestScore = swappedScore;
+          best = swapped;
+        }
+      }
+    }
+
+    if (!best) break;
+    result = best;
+  }
+
+  return result;
+}
+
 // ─── Adjacency Constraint Pass ───
 //
 // RULE: No more than 2 consecutive days with the same region (upper or lower).
@@ -4200,7 +4449,14 @@ function enforceFieldLoadStreak(plan: SessionAllocation[]): void {
           const midStart = runStart + 1;
           const midEnd = i - 2;
           let target: SessionAllocation | null = null;
+          const thursdayBreak = byDay
+            .slice(runStart, i)
+            .find((entry) => entry.dayNum === 4 && isBreakable(entry.ref));
+          if (thursdayBreak) {
+            target = thursdayBreak.ref;
+          }
           for (let j = midStart; j <= midEnd; j++) {
+            if (target) break;
             if (isBreakable(byDay[j].ref)) { target = byDay[j].ref; break; }
           }
           if (!target) {

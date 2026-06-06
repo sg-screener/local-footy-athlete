@@ -79,6 +79,8 @@
     "test:smoke-wrapper-preflight": "sucrase-node src/__tests__/smokeWrapperPreflightContractTests.ts",
     "test:coach-live-send-context": "sucrase-node src/__tests__/coachScreenLiveSendContextTests.ts",
     "test:readiness": "sucrase-node src/__tests__/readinessSignalTests.ts",
+    "test:strength-sequencing": "sucrase-node src/__tests__/strengthSequencingTests.ts",
+    "test:off-season-sequencing": "npm run test:strength-sequencing",
     "smoke:coach-bike-flow": "node scripts/smoke-coach-bike-flow.js",
     "smoke:coach-bike-flow:fresh": "node scripts/smoke-coach-bike-flow-fresh.js"
   },

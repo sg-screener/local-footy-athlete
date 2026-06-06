@@ -441,11 +441,11 @@ function createDefaultMicrocycle(programId: string, onboardingData?: OnboardingD
       'core'
     ),
 
-    // Friday: Lower Hypertrophy
+    // Friday: Lower Hinge
     createWorkout(
       'mc-1',
       5,
-      'Lower Hypertrophy',
+      'Lower Hinge',
       'Hip hinge focus with high volume',
       'Moderate',
       'Strength',
@@ -461,19 +461,19 @@ function createDefaultMicrocycle(programId: string, onboardingData?: OnboardingD
       'optional'
     ),
 
-    // Saturday: Upper Hypertrophy
+    // Saturday: Upper Push
     createWorkout(
       'mc-1',
       6,
-      'Upper Hypertrophy',
-      'Pull focus with high volume',
+      'Upper Push',
+      'Low-fatigue push and arm accessory work',
       'Moderate',
       'Strength',
       [
-        { exerciseId: 'ex-pullups', sets: 4, repsMin: 6, repsMax: 8, weight: 0, rest: 120 },
         { exerciseId: 'ex-incline-db-bench', sets: 3, repsMin: 8, repsMax: 10, weight: 30, rest: 90 },
-        { exerciseId: 'ex-barbell-rows', sets: 3, repsMin: 8, repsMax: 10, weight: 70, rest: 120 },
+        { exerciseId: 'ex-overhead-press', sets: 3, repsMin: 6, repsMax: 8, weight: 45, rest: 120 },
         { exerciseId: 'ex-lateral-raises', sets: 3, repsMin: 12, repsMax: 15, weight: 10, rest: 60 },
+        { exerciseId: 'ex-tricep-dips', sets: 3, repsMin: 8, repsMax: 12, weight: 0, rest: 90 },
         { exerciseId: 'ex-barbell-curls', sets: 3, repsMin: 10, repsMax: 12, weight: 30, rest: 60 },
       ],
       80,

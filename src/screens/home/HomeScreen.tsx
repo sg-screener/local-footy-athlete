@@ -184,19 +184,6 @@ function HomeScreenClassic() {
           </View>
         )}
 
-        {/* ─── No Game This Week — Add One ─── */}
-        {mode.type === 'normal' && !weekHasGame && showAddGameCTA && (
-          <TouchableOpacity style={styles.addGameBanner} onPress={handleAddGameMode} activeOpacity={0.7}>
-            <View style={styles.addGameIconWrap}>
-              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M12 5v14" />
-                <Path d="M5 12h14" />
-              </Svg>
-            </View>
-            <Text style={styles.addGameBannerText}>No game this week — add one</Text>
-          </TouchableOpacity>
-        )}
-
         {/* ─── Day Rows ─── */}
         <View style={styles.dayList}>
           {weekDays.map((day, idx) => {
@@ -394,6 +381,19 @@ function HomeScreenClassic() {
             );
           })}
         </View>
+
+        {/* ─── No Game This Week — Add One ─── */}
+        {mode.type === 'normal' && !weekHasGame && showAddGameCTA && (
+          <TouchableOpacity style={styles.addGameBanner} onPress={handleAddGameMode} activeOpacity={0.7}>
+            <View style={styles.addGameIconWrap}>
+              <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M12 5v14" />
+                <Path d="M5 12h14" />
+              </Svg>
+            </View>
+            <Text style={styles.addGameBannerText}>No game this week — add one</Text>
+          </TouchableOpacity>
+        )}
 
         {/* ─── Quick Actions ─── */}
         {mode.type === 'normal' && (

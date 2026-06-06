@@ -213,22 +213,6 @@ export default function HomeScreenV2() {
           <MoveBanner text="Tap the day to set as game day" onCancel={handleCancelMove} />
         )}
 
-        {/* ── No game CTA ── */}
-        {isNormal && !weekHasGame && showAddGameCTA && (
-          <Pressable onPress={handleAddGameMode} style={({ pressed }) => [pressed && { opacity: 0.75 }]}>
-            <Card tone="default" padding="md" radius="lg" style={styles.addGame}>
-              <View style={styles.addGameRow}>
-                <View style={styles.addGameIcon}>
-                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                    <Path d="M12 5v14" /><Path d="M5 12h14" />
-                  </Svg>
-                </View>
-                <Text style={styles.addGameText}>No game this week — add one</Text>
-              </View>
-            </Card>
-          </Pressable>
-        )}
-
         {/* ── Today hero ── */}
         {showHero && todayDay && (
           <TodayHero
@@ -277,6 +261,22 @@ export default function HomeScreenV2() {
             );
           })}
         </View>
+
+        {/* ── No game CTA ── */}
+        {isNormal && !weekHasGame && showAddGameCTA && (
+          <Pressable onPress={handleAddGameMode} style={({ pressed }) => [pressed && { opacity: 0.75 }]}>
+            <Card tone="default" padding="md" radius="lg" style={styles.addGame}>
+              <View style={styles.addGameRow}>
+                <View style={styles.addGameIcon}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M12 5v14" /><Path d="M5 12h14" />
+                  </Svg>
+                </View>
+                <Text style={styles.addGameText}>No game this week — add one</Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
 
         {/* ── Quick actions ── */}
         {isNormal && (

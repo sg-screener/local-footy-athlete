@@ -157,6 +157,22 @@ section('[8] HomeScreenV2 — Program rows use helper + one-line row');
   );
   ok('HomeScreenV2 does not render CoachUpdateCard', !/CoachUpdateCard/.test(HOME_V2));
   ok('classic HomeScreen does not render CoachUpdateCard', !/CoachUpdateCard/.test(HOME_CLASSIC));
+  const v2AddGameIdx = HOME_V2.indexOf('No game this week — add one');
+  const v2WeekListIdx = HOME_V2.indexOf('/* ── Week list ── */');
+  const v2QuickActionsIdx = HOME_V2.indexOf('Need to adjust your weekly plan?');
+  ok(
+    'HomeScreenV2 places add-game CTA below weekly plan',
+    v2AddGameIdx > v2WeekListIdx && v2AddGameIdx < v2QuickActionsIdx,
+    `indices add=${v2AddGameIdx} list=${v2WeekListIdx} quick=${v2QuickActionsIdx}`,
+  );
+  const classicAddGameIdx = HOME_CLASSIC.indexOf('No game this week — add one');
+  const classicDayRowsIdx = HOME_CLASSIC.indexOf('/* ─── Day Rows ─── */');
+  const classicQuickActionsIdx = HOME_CLASSIC.indexOf('NEED TO ADJUST YOUR WEEKLY PLAN?');
+  ok(
+    'classic HomeScreen places add-game CTA below weekly plan',
+    classicAddGameIdx > classicDayRowsIdx && classicAddGameIdx < classicQuickActionsIdx,
+    `indices add=${classicAddGameIdx} rows=${classicDayRowsIdx} quick=${classicQuickActionsIdx}`,
+  );
   ok('Program row summary testID exists', /testID="day-row-coach-summary"/.test(HOME_V2));
   ok(
     'Program row caps summary to one line',
