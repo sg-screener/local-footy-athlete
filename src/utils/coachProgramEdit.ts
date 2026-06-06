@@ -1,4 +1,10 @@
 import type { ResolvedDay } from './sessionResolver';
+import type {
+  DayOfWeek,
+  OnboardingData,
+  ProgramAvailabilityConstraint,
+  TrainingProgram,
+} from '../types/domain';
 import {
   routeCoachCommand,
   type CoachCommand,
@@ -15,6 +21,7 @@ import {
   executeCoachCommand,
   type ExecuteCoachCommandInput,
   type ExecutionResult,
+  type ProgressStage,
 } from './coachCommandExecutor';
 import {
   inferModalityFromName,
@@ -29,6 +36,7 @@ import {
   type VisibleProgramItem,
 } from './visibleProgramReadModel';
 import { buildScheduleStateImperative } from './coachWeekDiff';
+import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine';
 import { useProgramStore } from '../store/programStore';
 import { logger } from './logger';
 
@@ -69,7 +77,8 @@ export type ProgramEditEditScope =
   | 'add_conditioning_item'
   | 'remove_conditioning_item'
   | 'add_whole_session'
-  | 'remove_whole_session';
+  | 'remove_whole_session'
+  | 'update_program_setup';
 
 export type ConditioningReplacementType =
   | 'sprint'
@@ -226,6 +235,28 @@ export interface AddSessionEdit extends ProgramEditBase {
   sourceSessionName: string;
 }
 
+export interface ProgramSetupChange {
+  addTrainingDays?: DayOfWeek[];
+  removeTrainingDays?: DayOfWeek[];
+  replaceTrainingDays?: DayOfWeek[];
+  trainingDaysPerWeek?: number;
+  clearUnavailableDays?: DayOfWeek[];
+  availabilityConstraints?: ProgramAvailabilityConstraint[];
+  summary: string;
+}
+
+export interface ProgramSetupEdit extends ProgramEditBase {
+  targetDomain: 'schedule';
+  intent: 'edit';
+  editScope: 'update_program_setup';
+  targetDate: null;
+  targetSessionId: null;
+  targetItemId: null;
+  requestedChange: 'day' | 'duration' | 'unknown';
+  setupChange: ProgramSetupChange;
+  rebuildRequired: true;
+}
+
 export type ConditioningProgramEdit =
   | ConditioningModalityEdit
   | ConditioningDurationEdit
@@ -256,6 +287,7 @@ export type ProgramEdit =
   | ConditioningProgramEdit
   | AddSessionEdit
   | RemoveSessionEdit
+  | ProgramSetupEdit
   | AskClarificationProgramEdit
   | ExplainProgramEdit
   | NonConditioningProgramEdit;
@@ -382,6 +414,14 @@ const PROGRAM_EDIT_LEXICON = [
   'session',
   'today',
   'tomorrow',
+  'setup',
+  'availability',
+  'available',
+  'rebuild',
+  'train',
+  'training',
+  'days',
+  'week',
 ];
 
 export function interpretCoachMessageToProgramEdit(
@@ -389,6 +429,13 @@ export function interpretCoachMessageToProgramEdit(
 ): ProgramEdit {
   const normalizedMessage = normalizeCoachEditMessage(input.userMessage);
   const semanticRoles = extractProgramEditSemanticRoles(normalizedMessage);
+  const setupEdit = programSetupEditFromMessage({
+    message: normalizedMessage,
+    todayISO: input.todayISO,
+  });
+  if (setupEdit) {
+    return attachSemanticRolesToProgramEdit(setupEdit, semanticRoles, input);
+  }
 
   if (input.candidateCommand) {
     return attachSemanticRolesToProgramEdit(programEditFromCoachCommand(input.candidateCommand, {
@@ -941,6 +988,347 @@ function targetFromReferenceResolution(
   return { kind: 'unbound' };
 }
 
+const DAY_ALIASES: Array<{ day: DayOfWeek; re: RegExp }> = [
+  { day: 'Monday', re: /\bmons?days?|\bmons?\b/i },
+  { day: 'Tuesday', re: /\btuesdays?|\btues?\b/i },
+  { day: 'Wednesday', re: /\bwednesdays?|\bweds?\b/i },
+  { day: 'Thursday', re: /\bthursdays?|\bthurs?\b|\bthur\b/i },
+  { day: 'Friday', re: /\bfridays?|\bfri\b/i },
+  { day: 'Saturday', re: /\bsaturdays?|\bsat\b/i },
+  { day: 'Sunday', re: /\bsundays?|\bsun\b/i },
+];
+
+const ALL_DAYS: DayOfWeek[] = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+];
+
+function programSetupEditFromMessage(args: {
+  message: string;
+  todayISO: string;
+}): ProgramEdit | null {
+  const { message, todayISO } = args;
+  const text = message.toLowerCase();
+  const mentionedDays = extractDayNames(message);
+  const frequency = extractTrainingFrequency(message);
+  const durationMinutes = parseCoachDurationMinutes(message);
+
+  if (/\baway\s+next\s+week\b|\btravell?ing\s+next\s+week\b/i.test(message)) {
+    return buildProgramSetupClarifier({
+      message,
+      question: 'What dates are you away?',
+      missingFields: ['startDate', 'endDate'],
+      reason: 'program_setup_travel_dates_missing',
+      options: undefined,
+    });
+  }
+
+  const explicitSetupLanguage =
+    /\bprogram\s+setup\b|\bavailability\b|\bavailable\b|\bcan\s+(?:now\s+)?train\b|\bcan'?t\s+train\b|\bcannot\s+train\b|\bcan\s+only\s+train\b|\bonly\s+(?:can\s+)?train\b|\btraining\s+days?\b|\bdays?\s+(?:a|per)\s+week\b|\b(?:only\s+have|only\s+got|have\s+only|short\s+on\s+time|limited\s+time)\b|\b(?:working\s+late|work\s+late|late\s+shift|night\s+shift)\b/i.test(message);
+  const asksRebuildWithSetup =
+    /\brebuild\b/i.test(message) &&
+    (mentionedDays.length > 0 || frequency != null || /\bsetup|availability|available|train\b/i.test(message));
+  if (!explicitSetupLanguage && !asksRebuildWithSetup) {
+    return null;
+  }
+
+  if (/\bcan\s+(?:now\s+)?train\b[^.?!]*\bagain\b|\bavailable\b[^.?!]*\bagain\b/i.test(message) && mentionedDays.length > 0) {
+    return buildProgramSetupEdit({
+      message,
+      requestedChange: 'day',
+      setupChange: {
+        addTrainingDays: mentionedDays,
+        clearUnavailableDays: mentionedDays,
+        trainingDaysPerWeek: frequency,
+        summary: `restore ${formatDayList(mentionedDays)}`,
+      },
+    });
+  }
+
+  if (/\b(?:working\s+late|work\s+late|late\s+shift|night\s+shift)\b/i.test(message) && mentionedDays.length > 0) {
+    return buildProgramSetupClarifier({
+      message,
+      question: `Should I make ${formatDayList(mentionedDays)} unavailable while you're working late, or just cap it as a short session?`,
+      missingFields: ['constraintType'],
+      reason: 'program_setup_work_late_constraint_type_missing',
+      options: ['Make unavailable', 'Cap as short session'],
+    });
+  }
+
+  if (/\b(?:can'?t|cannot|can\s+not|won'?t|not\s+available|unavailable)\s+(?:train|do|make)?\b/i.test(message) && mentionedDays.length > 0) {
+    const temporary = extractTemporaryWindow(message, todayISO);
+    if (!temporary && !/\b(?:permanent|from\s+now\s+on|going\s+forward|indefinitely)\b/i.test(message)) {
+      return buildProgramSetupClarifier({
+        message,
+        question: `Is ${formatDayList(mentionedDays)} unavailable permanently, or just for a few weeks?`,
+        missingFields: ['constraintDuration'],
+        reason: 'program_setup_unavailable_duration_missing',
+        options: ['Permanent', 'Just a few weeks'],
+      });
+    }
+    const constraints = mentionedDays.map((day) => ({
+      id: buildAvailabilityConstraintId('unavailable_day', day, todayISO),
+      kind: 'unavailable_day' as const,
+      scope: temporary ? 'temporary' as const : 'permanent' as const,
+      dayOfWeek: day,
+      startDate: temporary?.startDate,
+      endDate: temporary?.endDate,
+      reason: extractAvailabilityReason(message),
+      active: true,
+      createdAt: `${todayISO}T00:00:00.000Z`,
+      updatedAt: `${todayISO}T00:00:00.000Z`,
+    }));
+    return buildProgramSetupEdit({
+      message,
+      requestedChange: 'day',
+      setupChange: {
+        availabilityConstraints: constraints,
+        summary: `${temporary ? 'temporarily block' : 'block'} ${formatDayList(mentionedDays)}`,
+      },
+    });
+  }
+
+  if (/\b(?:only\s+(?:can\s+)?train|can\s+only\s+train)\b/i.test(message) && mentionedDays.length > 0) {
+    return buildProgramSetupEdit({
+      message,
+      requestedChange: 'day',
+      setupChange: {
+        replaceTrainingDays: mentionedDays,
+        trainingDaysPerWeek: frequency ?? mentionedDays.length,
+        summary: `use only ${formatDayList(mentionedDays)}`,
+      },
+    });
+  }
+
+  if (
+    durationMinutes != null &&
+    mentionedDays.length > 0 &&
+    /\b(?:only\s+have|only\s+got|have\s+only|short\s+on\s+time|limited\s+time|minutes?\s+on)\b/i.test(message)
+  ) {
+    const constraints = mentionedDays.map((day) => ({
+      id: buildAvailabilityConstraintId('time_limit', day, todayISO),
+      kind: 'time_limit' as const,
+      scope: /\b(?:for\s+the\s+next|next\s+\d|this\s+week|next\s+week)\b/i.test(message)
+        ? 'temporary' as const
+        : 'permanent' as const,
+      dayOfWeek: day,
+      maxSessionMinutes: durationMinutes,
+      reason: extractAvailabilityReason(message),
+      active: true,
+      createdAt: `${todayISO}T00:00:00.000Z`,
+      updatedAt: `${todayISO}T00:00:00.000Z`,
+    }));
+    return buildProgramSetupEdit({
+      message,
+      requestedChange: 'duration',
+      setupChange: {
+        availabilityConstraints: constraints,
+        summary: `${formatDayList(mentionedDays)} time cap ${durationMinutes} minutes`,
+      },
+    });
+  }
+
+  if (/\bcan\s+(?:now\s+)?train\b|\bavailable\b/i.test(message) && mentionedDays.length > 0) {
+    return buildProgramSetupEdit({
+      message,
+      requestedChange: 'day',
+      setupChange: {
+        addTrainingDays: mentionedDays,
+        trainingDaysPerWeek: frequency,
+        summary: `add ${formatDayList(mentionedDays)}`,
+      },
+    });
+  }
+
+  if (frequency != null && /\b(?:train|training|want|days?\s+(?:a|per)\s+week)\b/i.test(message)) {
+    return buildProgramSetupEdit({
+      message,
+      requestedChange: 'day',
+      setupChange: {
+        trainingDaysPerWeek: frequency,
+        summary: `set ${frequency} training days per week`,
+      },
+    });
+  }
+
+  return null;
+}
+
+function buildProgramSetupEdit(args: {
+  message: string;
+  requestedChange: ProgramSetupEdit['requestedChange'];
+  setupChange: ProgramSetupChange;
+}): ProgramSetupEdit {
+  return {
+    intent: 'edit',
+    targetDomain: 'schedule',
+    editScope: 'update_program_setup',
+    targetDate: null,
+    targetSessionId: null,
+    targetItemId: null,
+    requestedChange: args.requestedChange,
+    newValue: args.setupChange,
+    missingFields: [],
+    confidence: 0.9,
+    naturalLanguageReason: 'program setup / availability update',
+    command: {
+      mode: 'mutate',
+      operation: 'update_program_setup',
+      target: { kind: 'unbound' },
+      payload: {
+        operation: 'update_program_setup',
+        addTrainingDays: args.setupChange.addTrainingDays,
+        removeTrainingDays: args.setupChange.removeTrainingDays,
+        replaceTrainingDays: args.setupChange.replaceTrainingDays,
+        trainingDaysPerWeek: args.setupChange.trainingDaysPerWeek,
+        clearUnavailableDays: args.setupChange.clearUnavailableDays,
+        availabilityConstraints: args.setupChange.availabilityConstraints,
+        rebuildRequired: true,
+      },
+      scope: 'permanent',
+      confidence: 0.9,
+      needsClarification: false,
+      reason: 'program_setup_availability_update',
+    },
+    normalizedMessage: args.message,
+    source: 'router',
+    setupChange: args.setupChange,
+    rebuildRequired: true,
+  };
+}
+
+function buildProgramSetupClarifier(args: {
+  message: string;
+  question: string;
+  missingFields: [string, ...string[]] | string[];
+  reason: string;
+  options?: string[];
+}): AskClarificationProgramEdit {
+  const missingFields = args.missingFields.length > 0
+    ? args.missingFields as [string, ...string[]]
+    : ['setupDetail'];
+  return {
+    intent: 'ask_question',
+    targetDomain: 'schedule',
+    requestedChange: 'unknown',
+    targetDate: null,
+    targetSessionId: null,
+    targetItemId: null,
+    newValue: null,
+    missingFields,
+    confidence: 0.75,
+    naturalLanguageReason: 'program setup clarification',
+    command: {
+      mode: 'clarify',
+      question: args.question,
+      options: args.options,
+      missingFields,
+      reason: args.reason,
+    },
+    question: args.question,
+    options: args.options,
+    normalizedMessage: args.message,
+    source: 'router',
+  } as AskClarificationProgramEdit;
+}
+
+function extractDayNames(message: string): DayOfWeek[] {
+  const out: DayOfWeek[] = [];
+  for (const entry of DAY_ALIASES) {
+    if (entry.re.test(message) && !out.includes(entry.day)) {
+      out.push(entry.day);
+    }
+  }
+  if (/\bweekdays?\b/i.test(message)) {
+    for (const day of ALL_DAYS.slice(0, 5)) {
+      if (!out.includes(day)) out.push(day);
+    }
+  }
+  if (/\bweekends?\b/i.test(message)) {
+    for (const day of ['Saturday', 'Sunday'] as DayOfWeek[]) {
+      if (!out.includes(day)) out.push(day);
+    }
+  }
+  return out;
+}
+
+function extractTrainingFrequency(message: string): number | undefined {
+  const numeric = /\b(?:train(?:ing)?\s*)?([1-7])\s+days?\s*(?:a|per)?\s*week\b/i.exec(message)
+    ?? /\b(?:want|do|set(?:\s+me)?\s+to)\s+([1-7])\s+days?\b/i.exec(message);
+  if (numeric) return Number(numeric[1]);
+
+  const words: Record<string, number> = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+  };
+  const wordMatch = /\b(one|two|three|four|five|six|seven)\s+days?\s*(?:a|per)?\s*week\b/i.exec(message);
+  return wordMatch ? words[wordMatch[1].toLowerCase()] : undefined;
+}
+
+function extractTemporaryWindow(message: string, todayISO: string): { startDate: string; endDate: string } | null {
+  const weeks = /\b(?:for\s+)?(?:the\s+)?next\s+([1-9])\s+weeks?\b/i.exec(message);
+  if (weeks) {
+    const count = Number(weeks[1]);
+    const start = dateFromISO(todayISO);
+    const end = new Date(start);
+    end.setDate(end.getDate() + count * 7 - 1);
+    return { startDate: todayISO, endDate: isoFromDate(end) };
+  }
+  if (/\bnext\s+week\b/i.test(message)) {
+    const start = dateFromISO(todayISO);
+    const day = start.getDay();
+    const daysUntilNextMonday = ((1 - day + 7) % 7) || 7;
+    start.setDate(start.getDate() + daysUntilNextMonday);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return { startDate: isoFromDate(start), endDate: isoFromDate(end) };
+  }
+  return null;
+}
+
+function extractAvailabilityReason(message: string): string | undefined {
+  const match = /\b(?:because(?:\s+of)?|due\s+to)\s+([^.!?]+)$/i.exec(message)
+    ?? /\bfor\s+([^.!?]+)$/i.exec(message);
+  if (!match) return undefined;
+  const reason = match[1]
+    .replace(/\b(?:the\s+)?next\s+\d+\s+weeks?\b/i, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return reason || undefined;
+}
+
+function buildAvailabilityConstraintId(
+  kind: ProgramAvailabilityConstraint['kind'],
+  day: DayOfWeek,
+  todayISO: string,
+): string {
+  return `${kind}-${day.toLowerCase()}-${todayISO}`;
+}
+
+function formatDayList(days: DayOfWeek[]): string {
+  if (days.length <= 1) return days[0] ?? 'that day';
+  if (days.length === 2) return `${days[0]} and ${days[1]}`;
+  return `${days.slice(0, -1).join(', ')} and ${days[days.length - 1]}`;
+}
+
+function dateFromISO(iso: string): Date {
+  return new Date(`${iso}T12:00:00`);
+}
+
+function isoFromDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 export function executeProgramEdit(
   input: ExecuteProgramEditInput,
 ): ExecutionResult {
@@ -957,6 +1345,16 @@ export function executeProgramEdit(
       route: `program_edit_clarify:${edit.missingFields.join(',') || 'unknown'}`,
       progress: ['composing_reply'],
       options: edit.options,
+    };
+  }
+
+  if (isProgramSetupEdit(edit)) {
+    return {
+      kind: 'not_supported',
+      reply: 'I understood that as a program setup change, but this path needs the rebuild executor.',
+      applied: false,
+      route: 'program_setup_requires_async_executor',
+      progress: ['composing_reply'],
     };
   }
 
@@ -1014,6 +1412,334 @@ export function executeProgramEdit(
     },
   });
   return result;
+}
+
+export interface ExecuteProgramSetupEditInput {
+  programEdit: ProgramSetupEdit;
+  todayISO: string;
+  getOnboardingData: () => OnboardingData;
+  updateOnboardingData: (patch: Partial<OnboardingData>) => void;
+  generateProgramFromProfile: (profile: OnboardingData) => Promise<TrainingProgram>;
+  setCurrentProgram: (program: TrainingProgram | null) => void;
+  setCurrentMicrocycle: (microcycle: TrainingProgram['microcycles'][number] | null) => void;
+  setTodayWorkout: (workout: TrainingProgram['microcycles'][number]['workouts'][number] | null) => void;
+  onProgress?: (stage: ProgressStage) => void;
+}
+
+export function isProgramSetupEdit(edit: ProgramEdit): edit is ProgramSetupEdit {
+  return edit.intent === 'edit' &&
+    edit.targetDomain === 'schedule' &&
+    'editScope' in edit &&
+    edit.editScope === 'update_program_setup';
+}
+
+export async function executeProgramSetupEdit(
+  input: ExecuteProgramSetupEditInput,
+): Promise<ExecutionResult> {
+  const edit = input.programEdit;
+  input.onProgress?.('checking_program');
+  const currentProfile = input.getOnboardingData();
+  const profilePatchResult = buildProgramSetupProfilePatch(edit, currentProfile, input.todayISO);
+  if (profilePatchResult.kind === 'clarify') {
+    return {
+      kind: 'clarify',
+      reply: profilePatchResult.reply,
+      applied: false,
+      route: profilePatchResult.route,
+      progress: ['checking_program', 'composing_reply'],
+      options: profilePatchResult.options,
+    };
+  }
+
+  const nextProfile = {
+    ...currentProfile,
+    ...profilePatchResult.patch,
+  };
+
+  if (
+    nextProfile.seasonPhase === 'In-season' &&
+    !nextProfile.usualGameDay &&
+    !nextProfile.gameDay
+  ) {
+    return {
+      kind: 'clarify',
+      reply: 'Do you have a regular game day right now, or should I rebuild this as a no-game training week?',
+      applied: false,
+      route: 'program_setup_clarify:game_day_missing',
+      progress: ['checking_program', 'composing_reply'],
+      options: ['Set a regular game day', 'Rebuild as no-game week'],
+    };
+  }
+
+  input.onProgress?.('applying_change');
+  let program: TrainingProgram;
+  try {
+    program = await input.generateProgramFromProfile(nextProfile);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.warn('[coach-program-setup] rebuild_failed', {
+      summary: edit.setupChange.summary,
+      message,
+    });
+    return {
+      kind: 'error',
+      reply: 'I understood the setup change, but I could not rebuild the program safely. Please try again.',
+      applied: false,
+      route: 'program_setup_rebuild_failed',
+      progress: ['checking_program', 'applying_change', 'composing_reply'],
+    };
+  }
+
+  input.onProgress?.('verifying_update');
+  const verification = verifyProgramSetupRebuild({
+    edit,
+    nextProfile,
+    program,
+  });
+  if (verification.ok === false) {
+    logger.warn('[coach-program-setup] verification_failed', {
+      reason: verification.reason,
+      summary: edit.setupChange.summary,
+      preferredTrainingDays: nextProfile.preferredTrainingDays,
+      trainingDaysPerWeek: nextProfile.trainingDaysPerWeek,
+    });
+    return {
+      kind: 'rejected',
+      reply: verification.reply,
+      applied: false,
+      route: `program_setup_verification_failed:${verification.reason}`,
+      progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'],
+    };
+  }
+
+  input.updateOnboardingData(profilePatchResult.patch);
+  input.setCurrentProgram(program);
+  const firstMicrocycle = program.microcycles?.[0] ?? null;
+  input.setCurrentMicrocycle(firstMicrocycle);
+  if (firstMicrocycle) {
+    const todayDow = new Date(`${input.todayISO}T12:00:00`).getDay();
+    const todayWorkout = firstMicrocycle.workouts?.find((workout) => workout.dayOfWeek === todayDow) ?? null;
+    input.setTodayWorkout(todayWorkout);
+  } else {
+    input.setTodayWorkout(null);
+  }
+
+  input.onProgress?.('composing_reply');
+  return {
+    kind: 'mutated',
+    reply: buildProgramSetupReply(edit, nextProfile),
+    applied: true,
+    route: 'program_setup:applied',
+    progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'],
+  };
+}
+
+type ProgramSetupPatchResult =
+  | { kind: 'patch'; patch: Partial<OnboardingData> }
+  | { kind: 'clarify'; reply: string; route: string; options?: string[] };
+
+function buildProgramSetupProfilePatch(
+  edit: ProgramSetupEdit,
+  current: OnboardingData,
+  todayISO: string,
+): ProgramSetupPatchResult {
+  const change = edit.setupChange;
+  const currentDays = orderedDays(current.preferredTrainingDays ?? []);
+  let nextDays = [...currentDays];
+
+  if (change.replaceTrainingDays) {
+    nextDays = orderedDays(change.replaceTrainingDays);
+  }
+  if (change.addTrainingDays) {
+    nextDays = orderedDays([...nextDays, ...change.addTrainingDays]);
+  }
+  if (change.removeTrainingDays) {
+    const remove = new Set(change.removeTrainingDays);
+    nextDays = nextDays.filter((day) => !remove.has(day));
+  }
+
+  const desiredFrequency =
+    change.trainingDaysPerWeek ??
+    (nextDays.length !== currentDays.length ? nextDays.length : current.trainingDaysPerWeek);
+  if (
+    desiredFrequency != null &&
+    desiredFrequency > nextDays.length &&
+    !change.addTrainingDays?.length &&
+    !change.replaceTrainingDays?.length
+  ) {
+    return {
+      kind: 'clarify',
+      reply: `You are asking for ${desiredFrequency} training days, but I only have ${nextDays.length || 'no'} available day${nextDays.length === 1 ? '' : 's'} saved. Which extra day can you train?`,
+      route: 'program_setup_clarify:extra_training_day',
+      options: ALL_DAYS.filter((day) => !nextDays.includes(day)),
+    };
+  }
+
+  let nextConstraints = [...(current.availabilityConstraints ?? [])];
+  if (change.clearUnavailableDays?.length) {
+    const clear = new Set(change.clearUnavailableDays);
+    nextConstraints = nextConstraints.map((constraint) =>
+      constraint.kind === 'unavailable_day' && constraint.dayOfWeek && clear.has(constraint.dayOfWeek)
+        ? { ...constraint, active: false, updatedAt: `${todayISO}T00:00:00.000Z` }
+        : constraint,
+    );
+  }
+  if (change.availabilityConstraints?.length) {
+    for (const nextConstraint of change.availabilityConstraints) {
+      const existingIdx = nextConstraints.findIndex((constraint) =>
+        constraint.kind === nextConstraint.kind &&
+        constraint.dayOfWeek === nextConstraint.dayOfWeek &&
+        constraint.scope === nextConstraint.scope,
+      );
+      if (existingIdx >= 0) {
+        nextConstraints[existingIdx] = {
+          ...nextConstraints[existingIdx],
+          ...nextConstraint,
+          id: nextConstraints[existingIdx].id,
+          updatedAt: `${todayISO}T00:00:00.000Z`,
+        };
+      } else {
+        nextConstraints.push(nextConstraint);
+      }
+    }
+  }
+
+  const patch: Partial<OnboardingData> = {};
+  if (change.replaceTrainingDays || change.addTrainingDays || change.removeTrainingDays) {
+    patch.preferredTrainingDays = nextDays;
+  }
+  if (desiredFrequency != null) {
+    patch.trainingDaysPerWeek = desiredFrequency;
+  }
+  if (change.availabilityConstraints?.length || change.clearUnavailableDays?.length) {
+    patch.availabilityConstraints = nextConstraints;
+  }
+
+  return { kind: 'patch', patch };
+}
+
+function verifyProgramSetupRebuild(args: {
+  edit: ProgramSetupEdit;
+  nextProfile: OnboardingData;
+  program: TrainingProgram;
+}): { ok: true } | { ok: false; reason: string; reply: string } {
+  const { edit, nextProfile, program } = args;
+  const workouts = program.microcycles?.[0]?.workouts ?? [];
+  const deterministicPlan = buildCoachingPlan(onboardingToCoachingInputs(nextProfile));
+  const expectedPlanDows = new Set(
+    deterministicPlan.weeklyPlan
+      .map((session) => session.dayOfWeek ? dayOfWeekNumber(session.dayOfWeek as DayOfWeek) : -1)
+      .filter((day) => day >= 0),
+  );
+  const workoutDows = new Set(workouts.map((workout) => workout.dayOfWeek));
+  const preferred = new Set(nextProfile.preferredTrainingDays ?? []);
+  for (const day of edit.setupChange.addTrainingDays ?? []) {
+    if (!preferred.has(day)) {
+      return {
+        ok: false,
+        reason: 'availability_not_stored',
+        reply: `I could not verify that ${day} was saved as an available training day, so I did not apply the rebuild.`,
+      };
+    }
+  }
+
+  const missingPlannedDows = [...expectedPlanDows].filter((day) => !workoutDows.has(day));
+  if (missingPlannedDows.length > 0) {
+    return {
+      ok: false,
+      reason: 'rebuilt_program_missing_planned_days',
+      reply: `I rebuilt the setup draft, but the generated week was missing ${formatDayList(missingPlannedDows.map(dayNameFromNumber))}. I did not apply it because that would not match the updated training plan.`,
+    };
+  }
+
+  const expectedFrequency = nextProfile.trainingDaysPerWeek ?? 0;
+  const shouldUseAddedSaturday =
+    (edit.setupChange.addTrainingDays ?? []).includes('Saturday') &&
+    expectedFrequency >= 6;
+  if (shouldUseAddedSaturday && !workouts.some((workout) => workout.dayOfWeek === 6)) {
+    return {
+      ok: false,
+      reason: 'saturday_not_used_after_rebuild',
+      reply: 'I updated the setup draft, but the rebuilt week did not include Saturday. I did not apply it because that would not match your availability change.',
+    };
+  }
+
+  if (
+    expectedFrequency >= 6 &&
+    preferred.has('Saturday') &&
+    expectedPlanDows.has(6) &&
+    !workoutDows.has(6)
+  ) {
+    return {
+      ok: false,
+      reason: 'six_day_rebuild_missing_saturday',
+      reply: 'I rebuilt the setup draft, but the visible week did not include Saturday even though Saturday is available and the plan is set to 6 days. I did not apply it.',
+    };
+  }
+
+  const blockedDows = new Set(
+    (edit.setupChange.availabilityConstraints ?? [])
+      .filter((constraint) => constraint.kind === 'unavailable_day' && constraint.dayOfWeek)
+      .map((constraint) => dayOfWeekNumber(constraint.dayOfWeek!)),
+  );
+  if (blockedDows.size > 0 && workouts.some((workout) => blockedDows.has(workout.dayOfWeek))) {
+    return {
+      ok: false,
+      reason: 'blocked_day_still_scheduled',
+      reply: 'I rebuilt the week, but it still had training on a blocked day. I did not apply it.',
+    };
+  }
+
+  return { ok: true };
+}
+
+function buildProgramSetupReply(edit: ProgramSetupEdit, nextProfile: OnboardingData): string {
+  const change = edit.setupChange;
+  const recurringMove =
+    change.addTrainingDays?.length === 1 &&
+    change.removeTrainingDays?.length === 1 &&
+    /^move\s+/i.test(change.summary);
+  if (recurringMove) {
+    return `Done — I’ve updated your weekly setup so that session moves from ${change.removeTrainingDays![0]} to ${change.addTrainingDays![0]} going forward.`;
+  }
+  if (change.addTrainingDays?.length && change.trainingDaysPerWeek) {
+    return `Done — I’ve updated your availability to include ${formatDayList(change.addTrainingDays)} and rebuilt the week. You’re now set up for ${nextProfile.trainingDaysPerWeek} training days where the week allows it.`;
+  }
+  if (change.addTrainingDays?.length) {
+    return `Done — I’ve updated your availability to include ${formatDayList(change.addTrainingDays)} and rebuilt the week. You’re now set up for ${nextProfile.trainingDaysPerWeek ?? change.addTrainingDays.length} training days where the week allows it.`;
+  }
+  if (change.replaceTrainingDays?.length) {
+    return `Done — I’ve updated your available training days to ${formatDayList(change.replaceTrainingDays)} and rebuilt the week.`;
+  }
+  if (change.trainingDaysPerWeek) {
+    return `Done — I’ve set your program up for ${change.trainingDaysPerWeek} training days per week and rebuilt the week.`;
+  }
+  if (change.clearUnavailableDays?.length) {
+    return `Done — ${formatDayList(change.clearUnavailableDays)} can be used again, and I rebuilt the week around your updated availability.`;
+  }
+  const blocked = (change.availabilityConstraints ?? []).filter((constraint) => constraint.kind === 'unavailable_day' && constraint.dayOfWeek);
+  if (blocked.length > 0) {
+    return `Done — I’ve blocked ${formatDayList(blocked.map((constraint) => constraint.dayOfWeek!))} and rebuilt the week around that availability.`;
+  }
+  const timeCaps = (change.availabilityConstraints ?? []).filter((constraint) => constraint.kind === 'time_limit' && constraint.dayOfWeek && constraint.maxSessionMinutes);
+  if (timeCaps.length > 0) {
+    const first = timeCaps[0];
+    return `Done — I’ve saved the ${first.maxSessionMinutes} minute cap for ${first.dayOfWeek} and rebuilt the week around that constraint.`;
+  }
+  return 'Done — I’ve updated your program setup and rebuilt the week.';
+}
+
+function orderedDays(days: DayOfWeek[]): DayOfWeek[] {
+  const set = new Set(days.filter((day): day is DayOfWeek => ALL_DAYS.includes(day)));
+  return ALL_DAYS.filter((day) => set.has(day));
+}
+
+function dayOfWeekNumber(day: DayOfWeek): number {
+  return day === 'Sunday' ? 0 : ALL_DAYS.indexOf(day) + 1;
+}
+
+function dayNameFromNumber(day: number): DayOfWeek {
+  return day === 0 ? 'Sunday' : ALL_DAYS[day - 1] ?? 'Monday';
 }
 
 function commandForProgramEditExecution(edit: ProgramEdit): CoachCommand {
@@ -1579,12 +2305,296 @@ function wholeSessionDurationModeLabel(input: {
   }
 }
 
+function repairExplicitScheduleMoveCommand(
+  command: CoachCommand,
+  input: InterpretCoachMessageToProgramEditInput & { normalizedMessage?: string },
+): CoachCommand {
+  if (command.mode !== 'mutate' || command.operation !== 'move_session') return command;
+  if (command.payload.operation !== 'move_session') return command;
+  const pair = parseExplicitScheduleMoveWeekdays(input.normalizedMessage ?? input.userMessage);
+  if (!pair) return command;
+
+  const sourceVisible = visibleSessionForDow(input.currentWeek, pair.sourceDow);
+  const targetVisible = visibleSessionForDow(input.currentWeek, pair.targetDow);
+  const message = input.normalizedMessage ?? input.userMessage;
+  const wantsViewedWeek = scheduleMoveUsesViewedWeek(message);
+  const wantsNextWeek = scheduleMoveUsesNextWeek(message);
+  const visibleDatesHavePassed =
+    !wantsViewedWeek &&
+    !pair.sourceExplicitNext &&
+    !pair.targetExplicitNext &&
+    !wantsNextWeek &&
+    ((!!sourceVisible?.date && sourceVisible.date < input.todayISO) ||
+      (!!targetVisible?.date && targetVisible.date < input.todayISO));
+  const useUpcomingDates =
+    pair.sourceExplicitNext || pair.targetExplicitNext || wantsNextWeek || visibleDatesHavePassed;
+  const originalSourceDate =
+    command.target.kind === 'date' && dowFromISO(command.target.date) === pair.sourceDow
+      ? command.target.date
+      : null;
+  const originalTargetDate =
+    command.payload.toDate && dowFromISO(command.payload.toDate) === pair.targetDow
+      ? command.payload.toDate
+      : null;
+  const sourceDate =
+    useUpcomingDates
+      ? nextISOForDow(input.todayISO, pair.sourceDow)
+      : sourceVisible?.date ??
+        originalSourceDate ??
+        nextISOForDow(input.todayISO, pair.sourceDow);
+  const toDate =
+    useUpcomingDates
+      ? nextISOForDow(input.todayISO, pair.targetDow)
+      : targetVisible?.date ??
+        originalTargetDate ??
+        nextISOForDow(input.todayISO, pair.targetDow);
+  const sourceDay = dayNameFromDow(pair.sourceDow);
+  const targetDay = dayNameFromDow(pair.targetDow);
+  const resolvedSourceVisible = resolveVisibleProgramForDateFromInputs({
+    targetDate: sourceDate,
+    currentWeek: input.currentWeek,
+    resolveVisibleProgramForDate: input.resolveVisibleProgramForDate,
+  });
+  const resolvedTargetVisible = resolveVisibleProgramForDateFromInputs({
+    targetDate: toDate,
+    currentWeek: input.currentWeek,
+    resolveVisibleProgramForDate: input.resolveVisibleProgramForDate,
+  });
+  const sourceSession = visibleSessionRefFromResolved(
+    sourceDate,
+    resolvedSourceVisible,
+    `${sourceDay} session`,
+  );
+  const targetSession = visibleSessionRefFromResolved(
+    toDate,
+    resolvedTargetVisible,
+    `${targetDay} session`,
+  );
+  const sourceSessionName =
+    sourceSession?.workout?.name ??
+    (command.target.kind === 'date' && originalSourceDate ? command.target.sessionName : undefined);
+  const sourceHasWorkout = !!sourceSession?.workout && !isRestOrEmptyWorkout(sourceSession.workout);
+  const targetHasWorkout = !!targetSession?.workout && !isRestOrEmptyWorkout(targetSession.workout);
+  const explicitOneOff =
+    /\b(?:this\s+week|today\s+only|just\s+this\s+once|just\s+this\s+week|this\s+once|one[-\s]?off|only\s+this\s+week)\b/i.test(
+      message,
+    );
+  const shouldClarify = sourceHasWorkout && (targetHasWorkout || !explicitOneOff);
+  const repairedPayload: Extract<CoachMutatePayload, { operation: 'move_session' }> = {
+    ...command.payload,
+    operation: 'move_session',
+    fromDow: pair.sourceDow,
+    toDate,
+    toDow: pair.targetDow,
+    moveScope: command.payload.moveScope ?? 'one_off',
+  };
+  const repaired: Extract<CoachCommand, { mode: 'mutate' }> = {
+    ...command,
+    target: {
+      kind: 'date',
+      date: sourceDate,
+      sessionName: sourceSessionName,
+    },
+    payload: repairedPayload,
+    needsClarification: shouldClarify,
+    clarificationQuestion: shouldClarify
+      ? targetHasWorkout
+        ? `${targetDay} already has ${scheduleMoveSessionSummary(targetSession, `${targetDay} session`)}. Do you want to replace it, swap the two days, or cancel?`
+        : `Move ${useUpcomingDates ? `next ${sourceDay}` : sourceDay}'s ${scheduleMoveSessionSummary(sourceSession, sourceSessionName ?? 'session')} to ${targetDay}${useUpcomingDates ? '' : ' this week'}?`
+      : command.clarificationQuestion,
+    options: shouldClarify
+      ? targetHasWorkout
+        ? [`Replace ${targetDay}`, 'Swap the two days', 'Cancel']
+        : ['Yes', 'No']
+      : command.options,
+    missingFields: shouldClarify
+      ? [targetHasWorkout ? 'conflict_resolution' : 'confirmation']
+      : command.missingFields,
+    reason:
+      command.reason === 'move_verb_detected' || command.reason === 'put_on_day_move_detected'
+        ? 'explicit_weekday_move_repaired'
+        : command.reason,
+  };
+  logger.debug('[coach-schedule-move-program-edit-repair]', {
+    rawUserMessage: input.userMessage,
+    parsedSourceWeekday: sourceDay,
+    parsedTargetWeekday: targetDay,
+    visibleWeekStart: visibleWeekStart(input.currentWeek),
+    resolvedFromDate: sourceDate,
+    resolvedToDate: toDate,
+    dateResolutionDefault: visibleDatesHavePassed
+      ? 'next_upcoming_due_past_visible_week'
+      : wantsViewedWeek
+        ? 'visible_week_requested'
+        : wantsNextWeek || pair.sourceExplicitNext || pair.targetExplicitNext
+          ? 'next_upcoming_requested'
+          : 'visible_week_or_today',
+    sourceSessionFound: sourceHasWorkout,
+    targetStatus: targetSession ? (targetHasWorkout ? 'session' : 'rest') : 'missing',
+    pendingTransactionPayload: repairedPayload,
+    originalTarget:
+      command.target.kind === 'date'
+        ? { date: command.target.date, sessionName: command.target.sessionName ?? null }
+        : { kind: command.target.kind },
+  });
+  return repaired;
+}
+
+function parseExplicitScheduleMoveWeekdays(message: string): {
+  sourceDow: number;
+  targetDow: number;
+  sourceExplicitNext: boolean;
+  targetExplicitNext: boolean;
+} | null {
+  const day =
+    '((?:next\\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun))';
+  const patterns = [
+    new RegExp(
+      `\\b(?:move|shift|push|reschedul\\w*|bump)\\s+(?:all\\s+of\\s+)?(?:my\\s+|the\\s+)?${day}(?:'s)?\\s*(?:session|workout|day)?\\s+(?:to|onto|on)\\s+${day}\\b`,
+      'i',
+    ),
+    new RegExp(
+      `\\b(?:can\\s+we\\s+)?(?:do|put)\\s+(?:all\\s+of\\s+)?(?:my\\s+|the\\s+)?${day}(?:'s)?\\s*(?:session|workout|day)?\\s+(?:on|to)\\s+${day}\\b`,
+      'i',
+    ),
+  ];
+  for (const pattern of patterns) {
+    const match = pattern.exec(message);
+    if (!match) continue;
+    const sourceDow = dowFromDayToken(match[1]);
+    const targetDow = dowFromDayToken(match[2]);
+    if (sourceDow !== null && targetDow !== null && sourceDow !== targetDow) {
+      return {
+        sourceDow,
+        targetDow,
+        sourceExplicitNext: /\bnext\s+/i.test(match[1]),
+        targetExplicitNext: /\bnext\s+/i.test(match[2]),
+      };
+    }
+  }
+  const better = new RegExp(
+    `\\b${day}\\s+(?:works\\s+better|is\\s+better|would\\s+be\\s+better)\\s+(?:than|instead\\s+of)\\s+${day}\\b`,
+    'i',
+  ).exec(message);
+  if (better) {
+    const targetDow = dowFromDayToken(better[1]);
+    const sourceDow = dowFromDayToken(better[2]);
+    if (sourceDow !== null && targetDow !== null && sourceDow !== targetDow) {
+      return {
+        sourceDow,
+        targetDow,
+        sourceExplicitNext: /\bnext\s+/i.test(better[2]),
+        targetExplicitNext: /\bnext\s+/i.test(better[1]),
+      };
+    }
+  }
+  return null;
+}
+
+function dowFromDayToken(token: string | undefined): number | null {
+  const raw = String(token ?? '').toLowerCase().replace(/\bnext\s+/i, '').trim();
+  if (raw.startsWith('sun')) return 0;
+  if (raw.startsWith('mon')) return 1;
+  if (raw.startsWith('tue')) return 2;
+  if (raw.startsWith('wed')) return 3;
+  if (raw.startsWith('thu')) return 4;
+  if (raw.startsWith('fri')) return 5;
+  if (raw.startsWith('sat')) return 6;
+  return null;
+}
+
+function dayNameFromDow(dow: number): DayOfWeek {
+  const names: DayOfWeek[] = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+  return names[dow] ?? 'Monday';
+}
+
+function dowFromISO(iso: string): number {
+  return new Date(`${iso}T12:00:00`).getDay();
+}
+
+function nextISOForDow(todayISO: string, dow: number): string {
+  const t = new Date(`${todayISO}T12:00:00`);
+  const todayDow = t.getDay();
+  const delta = ((dow - todayDow) + 7) % 7 || 7;
+  const d = new Date(t.getTime() + delta * 86_400_000);
+  return isoFromDate(d);
+}
+
+function scheduleMoveUsesViewedWeek(message: string): boolean {
+  return /\b(?:this\s+(?:viewed\s+)?week|the\s+week\s+i'?m\s+looking\s+at|the\s+week\s+i\s+am\s+looking\s+at|that\s+week|viewed\s+week|currently\s+viewed\s+week)\b/i.test(
+    message,
+  );
+}
+
+function scheduleMoveUsesNextWeek(message: string): boolean {
+  return /\bnext\s+week\b/i.test(message);
+}
+
+function visibleSessionForDow(
+  currentWeek: VisibleSessionRef[] | undefined,
+  dow: number,
+): VisibleSessionRef | null {
+  return (currentWeek ?? []).find((day) => dowFromISO(day.date) === dow) ?? null;
+}
+
+function visibleSessionRefFromResolved(
+  date: string,
+  resolved: ResolvedVisibleProgramForDate,
+  fallbackName: string,
+): VisibleSessionRef | null {
+  const workout = resolved.day.workout;
+  if (!workout) return null;
+  const sessionName = String(workout.name ?? fallbackName).trim() || fallbackName;
+  return {
+    date,
+    sessionName,
+    workout: workout as VisibleSessionRef['workout'],
+  };
+}
+
+function visibleWeekStart(currentWeek: VisibleSessionRef[] | undefined): string | null {
+  const dates = (currentWeek ?? [])
+    .map((day) => day.date)
+    .filter(Boolean)
+    .sort();
+  return dates[0] ?? null;
+}
+
+function isRestOrEmptyWorkout(workout: VisibleSessionRef['workout'] | null | undefined): boolean {
+  if (!workout) return true;
+  const name = String(workout.name ?? '').trim();
+  const type = String(workout.workoutType ?? '').trim();
+  const tier = String(workout.sessionTier ?? '').trim();
+  return /^(rest|rest day)$/i.test(name) || /^rest$/i.test(type) || /^rest$/i.test(tier);
+}
+
+function scheduleMoveSessionSummary(session: VisibleSessionRef | null, fallback: string): string {
+  const workout = session?.workout;
+  const base = String(workout?.name ?? session?.sessionName ?? fallback).trim() || fallback;
+  const conditioningTitle = workout?.conditioningBlock?.options
+    ?.map((option) => String(option.title ?? '').trim())
+    .find(Boolean);
+  if (conditioningTitle && conditioningTitle.toLowerCase() !== base.toLowerCase()) {
+    return `${base} + ${conditioningTitle}`;
+  }
+  return base;
+}
+
 export function programEditFromCoachCommand(
   command: CoachCommand,
   input: InterpretCoachMessageToProgramEditInput & {
     normalizedMessage?: string;
   },
 ): ProgramEdit {
+  command = repairExplicitScheduleMoveCommand(command, input);
   const targetDate = targetDateFromCommand(command) ?? input.referenceResolution?.target?.date ?? null;
   const visibleProgram = targetDate
     ? resolveVisibleProgramForDateFromInputs({
@@ -1602,6 +2612,27 @@ export function programEditFromCoachCommand(
     : undefined;
   const targetSessionId = stringOrNull((visibleDay?.workout as any)?.id);
   const base = baseEdit(command, targetDate, targetSessionId, input);
+
+  if (command.mode === 'mutate' && command.operation === 'update_program_setup') {
+    const payload = command.payload.operation === 'update_program_setup'
+      ? command.payload
+      : null;
+    if (payload) {
+      return buildProgramSetupEdit({
+        message: input.normalizedMessage ?? input.userMessage,
+        requestedChange: payload.availabilityConstraints?.length ? 'duration' : 'day',
+        setupChange: {
+          addTrainingDays: payload.addTrainingDays,
+          removeTrainingDays: payload.removeTrainingDays,
+          replaceTrainingDays: payload.replaceTrainingDays,
+          trainingDaysPerWeek: payload.trainingDaysPerWeek,
+          clearUnavailableDays: payload.clearUnavailableDays,
+          availabilityConstraints: payload.availabilityConstraints,
+          summary: payload.summary ?? 'update program setup',
+        },
+      });
+    }
+  }
 
   if (command.mode === 'clarify') {
     return finaliseProgramEditDraft({
@@ -1936,6 +2967,8 @@ function finaliseConditioningProgramEdit(draft: ProgramEditDraft): ProgramEdit {
     case 'remove_whole_session':
     case 'add_whole_session':
       return askQuestionFromDraft({ ...draft, editScope }, ['editScope']);
+    case 'update_program_setup':
+      return askQuestionFromDraft({ ...draft, editScope: undefined }, ['editScope']);
     default:
       return assertNever(editScope);
   }
@@ -2302,6 +3335,7 @@ function targetDomainFromMutation(
   if (command.operation === 'add_session') return 'session';
   if (command.operation === 'remove_session') return 'session';
   if (command.operation === 'move_session') return 'schedule';
+  if (command.operation === 'update_program_setup') return 'schedule';
   if (
     command.operation === 'add_conditioning' ||
     command.operation === 'remove_conditioning' ||
@@ -2338,6 +3372,8 @@ function intentFromMutation(
       return 'replace';
     case 'move_session':
       return 'move';
+    case 'update_program_setup':
+      return 'edit';
     case 'set_conditioning_modality_preference':
     case 'swap_conditioning_modality_once':
     case 'set_bike_subtype_preference':
@@ -2350,7 +3386,12 @@ function intentFromMutation(
 function requestedChangeFromMutation(
   command: Extract<CoachCommand, { mode: 'mutate' }>,
 ): ProgramEditRequestedChange {
-  if (command.operation === 'move_session' || command.operation === 'remove_session' || command.operation === 'add_session') return 'day';
+  if (
+    command.operation === 'move_session' ||
+    command.operation === 'remove_session' ||
+    command.operation === 'add_session' ||
+    command.operation === 'update_program_setup'
+  ) return 'day';
   if (command.operation === 'replace_exercise') return 'exercise';
   if (
     command.operation === 'swap_conditioning_modality_once' ||

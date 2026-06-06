@@ -2265,6 +2265,89 @@ eq('duration verifier names unapplied duration',
   durationNoOpVerifier.reason,
   'duration_edit_not_applied');
 
+section('12. Schedule move explicit weekdays beat selected/current day');
+
+const thursdayLowerSquat = conditioningWorkout('Lower Squat', []);
+const explicitThursdayToSaturday = interpretCoachMessageToProgramEdit({
+  userMessage: 'Can you move all of Thursday to Saturday?',
+  todayISO: '2026-06-01',
+  referenceResolution: resolved('2026-06-07', 'Rest'),
+  currentWeek: [
+    { date: '2026-06-04', sessionName: 'Lower Squat', workout: thursdayLowerSquat },
+    { date: '2026-06-06', sessionName: 'Rest', workout: null },
+    { date: '2026-06-07', sessionName: 'Rest', workout: null },
+  ],
+});
+ok('explicit Thursday→Saturday ProgramEdit targets Thursday, not Sunday',
+  explicitThursdayToSaturday.command?.mode === 'mutate' &&
+    explicitThursdayToSaturday.command.operation === 'move_session' &&
+    explicitThursdayToSaturday.command.target.kind === 'date' &&
+    explicitThursdayToSaturday.command.target.date === '2026-06-04' &&
+    explicitThursdayToSaturday.command.target.date !== '2026-06-07',
+  explicitThursdayToSaturday.command);
+ok('explicit Thursday→Saturday ProgramEdit preserves from/to weekdays',
+  explicitThursdayToSaturday.command?.mode === 'mutate' &&
+    explicitThursdayToSaturday.command.operation === 'move_session' &&
+    explicitThursdayToSaturday.command.payload.operation === 'move_session' &&
+    explicitThursdayToSaturday.command.payload.fromDow === 4 &&
+    explicitThursdayToSaturday.command.payload.toDow === 6 &&
+    explicitThursdayToSaturday.command.payload.toDate === '2026-06-06',
+  explicitThursdayToSaturday.command);
+ok('explicit Thursday→Saturday ProgramEdit asks confirmation, not Sunday no-op',
+  explicitThursdayToSaturday.missingFields.includes('confirmation') &&
+    /Move Thursday's Lower Squat to Saturday this week\?/i.test(explicitThursdayToSaturday.question ?? ''),
+  explicitThursdayToSaturday.question);
+
+const futureUpperPullWithSki = strengthWithConditioningWorkout(
+  'Upper Pull',
+  ['Chest-Supported Row'],
+  ['4 x 2min hard SkiErg'],
+);
+const pastVisibleMoveResolverCalls: string[] = [];
+const pastVisibleThursdayToSaturday = interpretCoachMessageToProgramEdit({
+  userMessage: 'Can you move all of Thursday to Saturday?',
+  todayISO: '2026-06-07',
+  referenceResolution: resolved('2026-06-07', 'Rest'),
+  currentWeek: [
+    {
+      date: '2026-06-04',
+      sessionName: 'Old Thursday',
+      workout: strengthWithConditioningWorkout('Old Thursday', ['Old Row'], ['Old Conditioning']),
+    },
+    { date: '2026-06-06', sessionName: 'Rest', workout: null },
+    { date: '2026-06-07', sessionName: 'Rest', workout: null },
+  ],
+  resolveVisibleProgramForDate: (date) => {
+    pastVisibleMoveResolverCalls.push(date);
+    return date === '2026-06-11'
+      ? ({
+          day: { date, workout: futureUpperPullWithSki },
+          items: [],
+          conditioningItems: [],
+          strengthItems: [],
+        } as any)
+      : null;
+  },
+});
+ok('past visible Thursday→Saturday ProgramEdit rolls to next Thursday',
+  pastVisibleThursdayToSaturday.command?.mode === 'mutate' &&
+    pastVisibleThursdayToSaturday.command.operation === 'move_session' &&
+    pastVisibleThursdayToSaturday.command.target.kind === 'date' &&
+    pastVisibleThursdayToSaturday.command.target.date === '2026-06-11' &&
+    pastVisibleThursdayToSaturday.command.payload.operation === 'move_session' &&
+    pastVisibleThursdayToSaturday.command.payload.toDate === '2026-06-13',
+  pastVisibleThursdayToSaturday.command);
+ok('past visible Thursday→Saturday asks one next-upcoming confirmation',
+  pastVisibleThursdayToSaturday.missingFields.includes('confirmation') &&
+    /Move next Thursday's Upper Pull \+ 4 x 2min hard SkiErg to Saturday\?/i.test(
+      pastVisibleThursdayToSaturday.question ?? '',
+    ) &&
+    !/currently viewed week|Which Thursday/i.test(pastVisibleThursdayToSaturday.question ?? ''),
+  pastVisibleThursdayToSaturday.question);
+ok('past visible Thursday→Saturday consults the rolled-forward visible resolver',
+  pastVisibleMoveResolverCalls.includes('2026-06-11'),
+  pastVisibleMoveResolverCalls);
+
 console.log(`\n— Summary —`);
 console.log(`  Pass: ${pass}`);
 console.log(`  Fail: ${fail}`);

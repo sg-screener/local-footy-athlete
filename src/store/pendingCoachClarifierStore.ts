@@ -37,8 +37,9 @@
  */
 
 import { create } from 'zustand';
-import type { CoachMutateOperation, CoachMutatePayload, CoachCommandScope } from '../utils/coachCommandRouter';
+import type { CoachMutateOperation, CoachMutatePayload, CoachCommandScope, CoachMoveScope } from '../utils/coachCommandRouter';
 import type { ProgramEdit, ProgramEditCandidateItem } from '../utils/coachProgramEdit';
+import type { DayOfWeek } from '../types/domain';
 
 /**
  * How long a pending clarifier is treated as "still on the table".
@@ -46,6 +47,45 @@ import type { ProgramEdit, ProgramEditCandidateItem } from '../utils/coachProgra
  * forever.
  */
 export const PENDING_CLARIFIER_TTL_MS = 10 * 60 * 1000;
+
+export interface PendingScheduleSessionSnapshot {
+  date?: string;
+  day?: DayOfWeek;
+  sessionName?: string;
+  summary?: string;
+  itemTitles?: string[];
+}
+
+export interface PendingScheduleCandidateDate {
+  date: string;
+  day: DayOfWeek;
+  sessionName?: string;
+  isPast?: boolean;
+}
+
+export interface PendingMoveSessionTransaction {
+  kind: 'move_session_transaction';
+  originalUserMessage: string;
+  sourceDate?: string;
+  sourceDay?: DayOfWeek;
+  sourceSessionSnapshot?: PendingScheduleSessionSnapshot;
+  targetDate?: string;
+  targetDay?: DayOfWeek;
+  scope: CoachMoveScope;
+  missingFields: string[];
+  candidateDates?: PendingScheduleCandidateDate[];
+  createdFromVisibleWeek: boolean;
+  currentStep:
+    | 'resolve_source'
+    | 'resolve_target'
+    | 'resolve_scope'
+    | 'resolve_conflict'
+    | 'resolve_week_context'
+    | 'confirm'
+    | 'ready';
+}
+
+export type PendingScheduleTransaction = PendingMoveSessionTransaction;
 
 export interface PendingCoachClarifier {
   /** The operation the router wanted to run before it asked. */
@@ -58,7 +98,11 @@ export interface PendingCoachClarifier {
   partialPayload: Partial<CoachMutatePayload> & { operation: CoachMutateOperation };
   /** Scope of the eventual command (one_off / this_week / recurring / permanent). */
   scope: CoachCommandScope;
-  /** Structured names of the missing pieces (e.g. ['target_session']). */
+  /** Typed scope answer for whole-day move clarifiers. */
+  moveScope?: CoachMoveScope;
+  /** Transaction state for multi-turn schedule edits. */
+  scheduleTransaction?: PendingScheduleTransaction;
+  /** Structured names of the missing pieces (e.g. ['source_date']). */
   missingFields: string[];
   /** The user's original mutation request — for transaction logs. */
   originalMessage: string;
@@ -98,6 +142,8 @@ export const usePendingCoachClarifierStore = create<PendingCoachClarifierState>(
         operation: entry.operation,
         partialPayload: entry.partialPayload,
         scope: entry.scope,
+        moveScope: entry.moveScope,
+        scheduleTransaction: entry.scheduleTransaction,
         missingFields: entry.missingFields,
         originalMessage: entry.originalMessage,
         askedQuestion: entry.askedQuestion,

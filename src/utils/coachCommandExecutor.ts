@@ -476,6 +476,7 @@ function executeMutate(
       applied: false,
       route: `clarify_needed:${command.operation}`,
       progress: stages,
+      options: command.options,
     };
   }
 
@@ -2172,6 +2173,14 @@ function humanDate(iso: string): string {
   return `${dow} ${iso}`;
 }
 
+function weekdayName(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!m) return iso;
+  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+    new Date(`${iso}T12:00:00`).getDay()
+  ] ?? iso;
+}
+
 function buildAddedConditioningReply(
   niceDate: string,
   spec: Pick<AddConditioningEventSpec, 'modality' | 'customActivity' | 'intensity' | 'durationMinutes' | 'sets' | 'repsMin' | 'repsMax' | 'restSeconds' | 'prescriptionType' | 'replaceActivity' | 'trainingIntent' | 'changeKind' | 'editScope'> & {
@@ -3629,7 +3638,7 @@ function runMoveSession(
     };
   }
 
-  const movedSessionName = sourceWorkout.name?.trim() || 'session';
+  const movedSessionName = moveSessionSummary(sourceWorkout);
 
   // ── 3. Resolve destination ─────────────────────────────────────
   const destDate = payload.toDate ?? null;
@@ -3745,6 +3754,18 @@ function runMoveSession(
   return result;
 }
 
+function moveSessionSummary(workout: ResolvedDay['workout']): string {
+  const base = workout?.name?.trim() || 'session';
+  const items = extractVisibleProgramItemsFromWorkout(workout);
+  const conditioning = items.find((item) => item.domain === 'conditioning');
+  if (!conditioning?.title) return base;
+  const conditioningTitle = conditioning.title.trim();
+  if (!conditioningTitle || conditioningTitle.toLowerCase() === base.toLowerCase()) {
+    return base;
+  }
+  return `${base} + ${conditioningTitle} session`;
+}
+
 function composeMoveSessionResult(args: {
   sourceDate: string;
   destDate: string;
@@ -3840,7 +3861,7 @@ function composeMoveSessionResult(args: {
 
   return {
     kind: 'mutated',
-    reply: `Done. I moved ${quoteSession(movedSessionName)} from ${niceSource} to ${niceDest}.`,
+    reply: `Done — I moved ${weekdayName(sourceDate)}'s session to ${weekdayName(destDate)}.`,
     applied: true,
     route: 'move_session:applied',
     progress: stages,

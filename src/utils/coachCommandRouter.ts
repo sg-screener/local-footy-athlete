@@ -53,6 +53,7 @@
  */
 
 import type { CoachReferenceResolution } from './coachReferenceResolver';
+import type { DayOfWeek, ProgramAvailabilityConstraint } from '../types/domain';
 import { isMutationLike } from './coachReferenceResolver';
 import {
   parseModalitySwapRequest,
@@ -74,6 +75,7 @@ import {
   type CoachTrainingIntent,
 } from './coachPlan';
 import { parseCoachDurationMinutes } from './coachValueNormalizers';
+import { logger } from './logger';
 
 export type ConditioningIntentModality =
   | ConditioningModality
@@ -99,11 +101,14 @@ export type CoachCommandScope =
   | 'recurring'      // future-looking, applies until cleared
   | 'permanent';     // until explicitly undone
 
+export type CoachMoveScope = 'one_off' | 'recurring' | 'unknown';
+
 /** The discrete set of mutate operations the executor knows how to run. */
 export type CoachMutateOperation =
   | 'set_conditioning_modality_preference'
   | 'swap_conditioning_modality_once'
   | 'set_bike_subtype_preference'
+  | 'update_program_setup'
   | 'add_session'
   | 'add_conditioning'
   | 'remove_session'
@@ -129,6 +134,17 @@ export type CoachMutatePayload =
   | {
       operation: 'set_bike_subtype_preference';
       bikeLabel: BikeLabel;
+    }
+  | {
+      operation: 'update_program_setup';
+      addTrainingDays?: DayOfWeek[];
+      removeTrainingDays?: DayOfWeek[];
+      replaceTrainingDays?: DayOfWeek[];
+      trainingDaysPerWeek?: number;
+      clearUnavailableDays?: DayOfWeek[];
+      availabilityConstraints?: ProgramAvailabilityConstraint[];
+      summary?: string;
+      rebuildRequired: true;
     }
   | {
       operation: 'add_conditioning';
@@ -174,6 +190,7 @@ export type CoachMutatePayload =
     }
   | {
       operation: 'move_session';
+      fromDow?: number; // 0=Sun..6=Sat, transaction metadata for source day
       toDate?: string;
       toDow?: number; // 0=Sun..6=Sat
       /** True when the athlete asked to swap two days' sessions. The
@@ -183,6 +200,8 @@ export type CoachMutatePayload =
        *  target.date=Mon, swapWithDow=Tue). Used by the executor's
        *  bidirectional safety pass. */
       swapWithDow?: number;
+      /** Whole-day moves must resolve one-off vs recurring before mutation. */
+      moveScope?: CoachMoveScope;
     }
   | {
       operation: 'undo_last_change';
@@ -463,6 +482,131 @@ function detectScope(message: string, refDateBeforeToday: boolean): CoachCommand
   // existing rule, lifted into the router).
   if (refDateBeforeToday) return 'recurring';
   return 'one_off';
+}
+
+function detectMoveScope(message: string): CoachMoveScope {
+  if (
+    /\b(?:going\s+forward|from\s+now\s+on|permanently|every\s+week|each\s+week|weekly|ongoing|regular(?:ly)?)\b/i.test(
+      message,
+    )
+  ) {
+    return 'recurring';
+  }
+  if (
+    /\b(?:this\s+week|today\s+only|just\s+this\s+once|just\s+this\s+week|this\s+once|one[-\s]?off|only\s+this\s+week)\b/i.test(
+      message,
+    )
+  ) {
+    return 'one_off';
+  }
+  return 'unknown';
+}
+
+function moveCommandScope(moveScope: CoachMoveScope): CoachCommandScope {
+  return moveScope === 'recurring' ? 'recurring' : 'one_off';
+}
+
+function moveScopeClarifier(
+  sourceDow: number | null,
+  targetDow: number | null,
+): string {
+  const source = sourceDow != null ? dayNameFromDow(sourceDow) : 'that day';
+  const target = targetDow != null ? dayNameFromDow(targetDow) : 'the new day';
+  return `Do you want to move ${source} to ${target} just this week, or every week going forward?`;
+}
+
+function normaliseDayToken(token: string): string {
+  return String(token ?? '').toLowerCase().replace(/\bnext\s+/i, '').trim();
+}
+
+function isRestOrEmptyWorkout(workout: VisibleSessionRef['workout'] | null | undefined): boolean {
+  if (!workout) return true;
+  const name = String(workout.name ?? '').trim();
+  const type = String(workout.workoutType ?? '').trim();
+  const tier = String(workout.sessionTier ?? '').trim();
+  return /^(rest|rest day)$/i.test(name) || /^rest$/i.test(type) || /^rest$/i.test(tier);
+}
+
+function visibleSessionForDow(
+  currentWeek: VisibleSessionRef[] | undefined,
+  dow: number,
+): VisibleSessionRef | null {
+  return (currentWeek ?? []).find((day) => dowFromISO(day.date) === dow) ?? null;
+}
+
+function dateForScheduleMoveDow(input: RouteCoachCommandInput, dow: number, explicitNext: boolean): string {
+  if (explicitNext) return isoForDow(input.todayISO, dow);
+  return visibleSessionForDow(input.currentWeek, dow)?.date ?? isoForDow(input.todayISO, dow);
+}
+
+function scheduleMoveUsesViewedWeek(message: string): boolean {
+  return /\b(?:this\s+(?:viewed\s+)?week|the\s+week\s+i'?m\s+looking\s+at|the\s+week\s+i\s+am\s+looking\s+at|that\s+week|viewed\s+week|currently\s+viewed\s+week)\b/i.test(
+    message,
+  );
+}
+
+function scheduleMoveUsesNextWeek(message: string): boolean {
+  return /\bnext\s+week\b/i.test(message);
+}
+
+function scheduleMoveSessionSummary(session: VisibleSessionRef | null, fallback: string): string {
+  const workout = session?.workout;
+  const base = String(workout?.name ?? session?.sessionName ?? fallback).trim() || fallback;
+  const conditioningTitle = workout?.conditioningBlock?.options
+    ?.map((option) => String(option.title ?? '').trim())
+    .find(Boolean);
+  if (conditioningTitle && conditioningTitle.toLowerCase() !== base.toLowerCase()) {
+    return `${base} + ${conditioningTitle}`;
+  }
+  return base;
+}
+
+function scheduleMoveConfirmationQuestion(
+  sourceDow: number,
+  sourceSummary: string,
+  targetDow: number,
+  options?: { nextSource?: boolean; includeThisWeek?: boolean },
+): string {
+  const sourceDay = `${options?.nextSource ? 'next ' : ''}${dayNameFromDow(sourceDow)}`;
+  const suffix = options?.includeThisWeek === false ? '' : ' this week';
+  return `Move ${sourceDay}'s ${sourceSummary} to ${dayNameFromDow(targetDow)}${suffix}?`;
+}
+
+function scheduleMoveTargetConflictQuestion(
+  targetDow: number,
+  targetSummary: string,
+): string {
+  return `${dayNameFromDow(targetDow)} already has ${targetSummary}. Do you want to replace it, swap the two days, or cancel?`;
+}
+
+function dayNameFromDow(dow: number): DayOfWeek {
+  const names: DayOfWeek[] = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+  ];
+  return names[dow] ?? 'Monday';
+}
+
+function dowFromISO(iso: string): number {
+  return new Date(`${iso}T12:00:00`).getDay();
+}
+
+function visibleWeekStart(currentWeek: VisibleSessionRef[] | undefined): string | null {
+  const dates = (currentWeek ?? [])
+    .map((day) => day.date)
+    .filter(Boolean)
+    .sort();
+  return dates[0] ?? null;
+}
+
+function visibleTargetStatus(session: VisibleSessionRef | null): 'missing' | 'rest' | 'session' {
+  if (!session) return 'missing';
+  return isRestOrEmptyWorkout(session.workout) ? 'rest' : 'session';
 }
 
 function extractDow(message: string): number | null {
@@ -770,6 +914,71 @@ function extractSwapDays(message: string): { dowA: number; dowB: number } | null
   if (typeof dowA !== 'number' || typeof dowB !== 'number') return null;
   if (dowA === dowB) return null;
   return { dowA, dowB };
+}
+
+function extractWholeDayMovePair(message: string): {
+  sourceDow: number;
+  targetDow: number;
+  sourceExplicitNext: boolean;
+  targetExplicitNext: boolean;
+} | null {
+  const day =
+    '((?:next\\s+)?(?:sun(?:day)?|mon(?:day)?|tue(?:s|sday)?|wed(?:nesday|s)?|thu(?:rs(?:day)?|r)?|fri(?:day)?|sat(?:urday)?))';
+  const moved =
+    new RegExp(
+      `\\b(?:move|shift|push|reschedul\\w*|bump)\\s+(?:all\\s+of\\s+)?(?:my\\s+|the\\s+)?${day}(?:'s)?\\s*(?:session|workout|day)?\\s+(?:to|onto|on)\\s+${day}\\b`,
+      'i',
+    ).exec(message);
+  if (moved) {
+    const sourceDow = DOW_MAP[normaliseDayToken(moved[1])];
+    const targetDow = DOW_MAP[normaliseDayToken(moved[2])];
+    return typeof sourceDow === 'number' && typeof targetDow === 'number' && sourceDow !== targetDow
+      ? {
+          sourceDow,
+          targetDow,
+          sourceExplicitNext: /\bnext\s+/i.test(moved[1]),
+          targetExplicitNext: /\bnext\s+/i.test(moved[2]),
+        }
+      : null;
+  }
+
+  const doOn =
+    new RegExp(
+      `\\b(?:can\\s+we\\s+)?(?:do|put)\\s+(?:all\\s+of\\s+)?(?:my\\s+|the\\s+)?${day}(?:'s)?\\s*(?:session|workout|day)?\\s+(?:on|to)\\s+${day}\\b`,
+      'i',
+    ).exec(message);
+  if (doOn) {
+    const sourceDow = DOW_MAP[normaliseDayToken(doOn[1])];
+    const targetDow = DOW_MAP[normaliseDayToken(doOn[2])];
+    return typeof sourceDow === 'number' && typeof targetDow === 'number' && sourceDow !== targetDow
+      ? {
+          sourceDow,
+          targetDow,
+          sourceExplicitNext: /\bnext\s+/i.test(doOn[1]),
+          targetExplicitNext: /\bnext\s+/i.test(doOn[2]),
+        }
+      : null;
+  }
+
+  const better =
+    new RegExp(
+      `\\b${day}\\s+(?:works\\s+better|is\\s+better|would\\s+be\\s+better)\\s+(?:than|instead\\s+of)\\s+${day}\\b`,
+      'i',
+    ).exec(message);
+  if (better) {
+    const targetDow = DOW_MAP[normaliseDayToken(better[1])];
+    const sourceDow = DOW_MAP[normaliseDayToken(better[2])];
+    return typeof sourceDow === 'number' && typeof targetDow === 'number' && sourceDow !== targetDow
+      ? {
+          sourceDow,
+          targetDow,
+          sourceExplicitNext: /\bnext\s+/i.test(better[2]),
+          targetExplicitNext: /\bnext\s+/i.test(better[1]),
+        }
+      : null;
+  }
+
+  return null;
 }
 
 /**
@@ -1443,6 +1652,179 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
       confidence: 0.85,
       needsClarification: false,
       reason: 'swap_days_detected',
+    };
+  }
+
+  const wholeDayMovePair = extractWholeDayMovePair(message);
+  if (wholeDayMovePair) {
+    const { sourceDow, targetDow, sourceExplicitNext, targetExplicitNext } = wholeDayMovePair;
+    const wantsViewedWeek = scheduleMoveUsesViewedWeek(message);
+    const wantsNextWeek = scheduleMoveUsesNextWeek(message);
+    const sourceVisible = sourceExplicitNext || wantsNextWeek ? null : visibleSessionForDow(input.currentWeek, sourceDow);
+    const targetVisible = targetExplicitNext || wantsNextWeek ? null : visibleSessionForDow(input.currentWeek, targetDow);
+    const visibleDatesHavePassed =
+      !wantsViewedWeek &&
+      !sourceExplicitNext &&
+      !targetExplicitNext &&
+      !wantsNextWeek &&
+      ((!!sourceVisible?.date && sourceVisible.date < input.todayISO) ||
+        (!!targetVisible?.date && targetVisible.date < input.todayISO));
+    const useUpcomingDates = sourceExplicitNext || targetExplicitNext || wantsNextWeek || visibleDatesHavePassed;
+    const sourceDate =
+      useUpcomingDates
+        ? isoForDow(input.todayISO, sourceDow)
+        : sourceVisible?.date ??
+          (ref?.target?.date && dowFromISO(ref.target.date) === sourceDow
+            ? ref.target.date
+            : dateForScheduleMoveDow(input, sourceDow, sourceExplicitNext));
+    const toDate = useUpcomingDates
+      ? isoForDow(input.todayISO, targetDow)
+      : dateForScheduleMoveDow(input, targetDow, targetExplicitNext);
+    const sourceDay = dayNameFromDow(sourceDow);
+    const targetDay = dayNameFromDow(targetDow);
+    const sourceSessionName =
+      sourceVisible?.workout?.name ??
+      (ref?.target?.date && dowFromISO(ref.target.date) === sourceDow ? ref.target.sessionName : undefined);
+    const sourceSummary = scheduleMoveSessionSummary(sourceVisible, sourceSessionName ?? `${sourceDay} session`);
+    const targetForConflict = useUpcomingDates ? null : targetVisible;
+    const targetSummary = scheduleMoveSessionSummary(targetForConflict, `${targetDay} session`);
+    const moveScope = detectMoveScope(message);
+    const pendingPayloadPreview = {
+      operation: 'move_session' as const,
+      fromDow: sourceDow,
+      toDate,
+      toDow: targetDow,
+      moveScope: moveScope === 'recurring' ? 'recurring' : 'one_off',
+    };
+    logger.debug('[coach-schedule-move-resolution]', {
+      rawUserMessage: input.userMessage,
+      parsedSourceWeekday: sourceDay,
+      parsedTargetWeekday: targetDay,
+      visibleWeekStart: visibleWeekStart(input.currentWeek),
+      resolvedFromDate: sourceDate,
+      resolvedToDate: toDate,
+      dateResolutionDefault: visibleDatesHavePassed
+        ? 'next_upcoming_due_past_visible_week'
+        : wantsViewedWeek
+          ? 'visible_week_requested'
+          : wantsNextWeek || sourceExplicitNext || targetExplicitNext
+            ? 'next_upcoming_requested'
+            : 'visible_week_or_today',
+      sourceSessionFound: !!sourceVisible?.workout,
+      sourceSessionName: sourceSessionName ?? null,
+      targetStatus: visibleTargetStatus(targetForConflict),
+      pendingTransactionPayload: pendingPayloadPreview,
+    });
+
+    if (sourceDate < input.todayISO && !wantsViewedWeek) {
+      const sourceDay = dayNameFromDow(sourceDow);
+      return {
+        mode: 'mutate',
+        operation: 'move_session',
+        target: {
+          kind: 'date',
+          date: sourceDate,
+          sessionName: ref?.target?.sessionName,
+        },
+        payload: {
+          operation: 'move_session',
+          fromDow: sourceDow,
+          toDate,
+          toDow: targetDow,
+          moveScope: 'unknown',
+        },
+        scope: 'one_off',
+        confidence: 0.8,
+        needsClarification: true,
+        clarificationQuestion: `This week's ${sourceDay} has already passed. Do you mean next ${sourceDay}'s session, or do you want to change future ${sourceDay}s going forward?`,
+        options: [`Next ${sourceDay}'s session`, `Future ${sourceDay}s going forward`],
+        missingFields: ['source_date'],
+        reason: 'move_session_source_date_past',
+      };
+    }
+    const sessionLabel = ref?.target?.sessionName ?? extractSessionLabelFromMessage(message);
+    const violation = moveSafetyPrePass({
+      toDateISO: toDate,
+      toDow: targetDow,
+      sessionLabel,
+      gameDates: input.gameDates,
+      teamTrainingDows: input.teamTrainingDows,
+    });
+    if (violation) {
+      const ruleProse = humaniseSafetyConcerns(violation.safetyConcerns);
+      const altProse =
+        violation.alternatives.length > 0
+          ? ` Want me to ${violation.alternatives[0].toLowerCase()}?`
+          : '';
+      return {
+        mode: 'reject_with_reason',
+        reason: violation.reason,
+        reply: `I wouldn't ${ruleProse}.${altProse}`,
+        safetyConcerns: violation.safetyConcerns,
+        suggestedAlternatives: violation.alternatives,
+      };
+    }
+
+    if (moveScope === 'recurring') {
+      const sourceDay = dayNameFromDow(sourceDow);
+      const targetDay = dayNameFromDow(targetDow);
+      return {
+        mode: 'mutate',
+        operation: 'update_program_setup',
+        target: { kind: 'unbound' },
+        payload: {
+          operation: 'update_program_setup',
+          addTrainingDays: [targetDay],
+          removeTrainingDays: [sourceDay],
+          summary: `move ${sourceDay} to ${targetDay}`,
+          rebuildRequired: true,
+        },
+        scope: 'permanent',
+        confidence: 0.9,
+        needsClarification: false,
+        reason: 'recurring_move_updates_program_setup',
+      };
+    }
+
+    const sourceHasSession = !!sourceVisible?.workout && !isRestOrEmptyWorkout(sourceVisible.workout);
+    const targetHasSession = !!targetForConflict && !isRestOrEmptyWorkout(targetForConflict.workout);
+    const missingField = targetHasSession ? 'conflict_resolution' : 'confirmation';
+    const shouldAskMoveConfirmation = sourceHasSession && (targetHasSession || moveScope === 'unknown');
+
+    return {
+      mode: 'mutate',
+      operation: 'move_session',
+      target: {
+        kind: 'date',
+        date: sourceDate,
+        sessionName: sourceSessionName,
+      },
+      payload: {
+        operation: 'move_session',
+        fromDow: sourceDow,
+        toDate,
+        toDow: targetDow,
+        moveScope: 'one_off',
+      },
+      scope: 'one_off',
+      confidence: 0.85,
+      needsClarification: shouldAskMoveConfirmation,
+      clarificationQuestion:
+        shouldAskMoveConfirmation
+          ? targetHasSession
+            ? scheduleMoveTargetConflictQuestion(targetDow, targetSummary)
+            : scheduleMoveConfirmationQuestion(sourceDow, sourceSummary, targetDow, {
+                nextSource: useUpcomingDates,
+                includeThisWeek: !useUpcomingDates,
+              })
+          : undefined,
+      options: shouldAskMoveConfirmation
+        ? targetHasSession
+          ? [`Replace ${targetDay}`, 'Swap the two days', 'Cancel']
+          : ['Yes', 'No']
+        : undefined,
+      missingFields: shouldAskMoveConfirmation ? [missingField] : undefined,
+      reason: targetHasSession ? 'whole_day_move_target_conflict' : 'whole_day_move_confirmation',
     };
   }
 

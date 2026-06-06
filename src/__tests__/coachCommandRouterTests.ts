@@ -380,7 +380,10 @@ ok('move w/ target but no dow → payload toDow undefined',
   moveTargetNoDow.payload.operation === 'move_session' &&
     moveTargetNoDow.payload.toDow === undefined);
 
-const moveTargetAndDow = asMutate(routeCoachCommand(input('move Wednesday to Thursday')))!;
+const moveTargetAndDow = asMutate(routeCoachCommand(input(
+  'move Wednesday to Thursday this week',
+  resolved('2026-05-13', 'Easy Aerobic Flush'),
+)))!;
 ok('move w/ both flagged → no clarification', moveTargetAndDow.needsClarification === false);
 const movePayload = moveTargetAndDow.payload;
 ok(
@@ -2136,6 +2139,7 @@ function moveWorkout(opts: {
   isTeamDay?: boolean;
   workoutType?: string;
   sessionTier?: string;
+  conditioningTitle?: string;
 } = {}): any {
   return {
     id: 'wk-move-test',
@@ -2143,6 +2147,9 @@ function moveWorkout(opts: {
     isTeamDay: opts.isTeamDay === true,
     workoutType: opts.workoutType,
     sessionTier: opts.sessionTier,
+    conditioningBlock: opts.conditioningTitle
+      ? { options: [{ title: opts.conditioningTitle, exerciseIds: [] }] }
+      : undefined,
     exercises: [],
   };
 }
@@ -2193,17 +2200,19 @@ function stubMoveVerify(args: {
   });
 }
 
-// 16.1 — Safe move Wed → Fri applies and verifies
+// 16.1 — Safe explicit one-off move Wed → Fri applies and verifies
 const move16_1Cmd = routeCoachCommand({
-  userMessage: 'move Wednesday to Friday',
+  userMessage: 'move Wednesday to Friday this week',
   todayISO: MOV_TODAY,
   referenceResolution: resolved(MOV_WED, 'Lower Body Strength'),
   gameDates: [],
   teamTrainingDows: [],
 });
-ok('"move Wed to Fri" → mutate', move16_1Cmd.mode === 'mutate');
+ok('"move Wed to Fri this week" → mutate', move16_1Cmd.mode === 'mutate');
 ok('move 16.1 → operation=move_session',
   asMutate(move16_1Cmd)?.operation === 'move_session');
+ok('move 16.1 explicit one-off does not need scope clarification',
+  asMutate(move16_1Cmd)?.needsClarification === false);
 ok('move 16.1 legacy blocked', !canFallbackToLegacy(move16_1Cmd));
 
 const move16_1Stages: string[] = [];
@@ -2211,7 +2220,7 @@ const move16_1Exec = executeCoachCommand({
   command: move16_1Cmd,
   todayISO: MOV_TODAY,
   referenceResolution: null,
-  userMessage: 'move Wednesday to Friday',
+  userMessage: 'move Wednesday to Friday this week',
   onProgress: (s) => move16_1Stages.push(s),
   moveSessionDeps: {
     snapshotBefore: () => moveWorkout({ name: 'Lower Body Strength' }),
@@ -2225,16 +2234,306 @@ const move16_1Exec = executeCoachCommand({
 });
 eq('move 16.1 executor kind = mutated', move16_1Exec.kind, 'mutated');
 ok('move 16.1 applied = true', move16_1Exec.applied === true);
-ok('move 16.1 reply starts with "Done"', /^Done\b/.test(move16_1Exec.reply));
-ok('move 16.1 reply names the source date', move16_1Exec.reply.includes(MOV_WED));
-ok('move 16.1 reply names the dest date', move16_1Exec.reply.includes(MOV_FRI));
-ok('move 16.1 reply names "Lower Body Strength"',
-  /Lower Body Strength/.test(move16_1Exec.reply));
+eq('move 16.1 reply uses simplified weekday copy',
+  move16_1Exec.reply,
+  "Done — I moved Wednesday's session to Friday.");
 ok('move 16.1 route = move_session:applied',
   move16_1Exec.route === 'move_session:applied');
 eq('move 16.1 progress order',
   move16_1Stages,
   ['checking_program', 'applying_change', 'verifying_update', 'composing_reply']);
+
+// 16.1b — Whole-day weekday move resolves against the visible week first
+const move16_1bCmd = routeCoachCommand({
+  userMessage: 'move all of Saturday to Thursday',
+  todayISO: '2026-06-01',
+  referenceResolution: resolved('2026-06-04', 'Lower Squat'),
+  currentWeek: [
+    { date: '2026-06-04', sessionName: 'Rest', workout: null },
+    { date: '2026-06-06', sessionName: 'Recovery Session', workout: moveWorkout({ name: 'Recovery Session' }) },
+  ],
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1b visible-week whole-day move → mutate clarifier',
+  move16_1bCmd.mode === 'mutate' &&
+    asMutate(move16_1bCmd)?.operation === 'move_session' &&
+    asMutate(move16_1bCmd)?.needsClarification === true);
+ok('move 16.1b asks simple confirmation from visible Saturday to Thursday',
+  /Move Saturday's Recovery Session to Thursday this week\?/i.test(asMutate(move16_1bCmd)?.clarificationQuestion ?? ''),
+  asMutate(move16_1bCmd)?.clarificationQuestion);
+eq('move 16.1b missing field = confirmation',
+  asMutate(move16_1bCmd)?.missingFields ?? [],
+  ['confirmation']);
+ok('move 16.1b carries visible-week source and target dates',
+  asMutate(move16_1bCmd)?.payload.operation === 'move_session' &&
+    asMutate(move16_1bCmd)?.target.kind === 'date' &&
+    asMutate(move16_1bCmd)?.target.date === '2026-06-06' &&
+    asMutate(move16_1bCmd)?.payload.fromDow === 6 &&
+    asMutate(move16_1bCmd)?.payload.toDate === '2026-06-04' &&
+    asMutate(move16_1bCmd)?.payload.toDow === 4 &&
+    asMutate(move16_1bCmd)?.payload.moveScope === 'one_off');
+ok('move 16.1b does not use target_session for schedule date resolution',
+  !(asMutate(move16_1bCmd)?.missingFields ?? []).includes('target_session'),
+  JSON.stringify(asMutate(move16_1bCmd)?.missingFields ?? []));
+const move16_1bExec = executeCoachCommand({
+  command: move16_1bCmd,
+  todayISO: '2026-06-01',
+  referenceResolution: null,
+  userMessage: 'move all of Saturday to Thursday',
+  moveSessionDeps: {
+    snapshotBefore: () => { throw new Error('confirmation clarifier must not read source workout'); },
+    applyMove: () => { throw new Error('confirmation clarifier must not apply move'); },
+    verifyRendered: () => { throw new Error('confirmation clarifier must not verify move'); },
+  },
+});
+eq('move 16.1b executor asks clarify', move16_1bExec.kind, 'clarify');
+ok('move 16.1b options include yes/no confirmation',
+  (move16_1bExec.options ?? []).includes('Yes') &&
+    (move16_1bExec.options ?? []).includes('No'),
+  JSON.stringify(move16_1bExec.options));
+
+const move16_1bThursdayToSaturday = routeCoachCommand({
+  userMessage: 'Can you move all of Thursday to Saturday?',
+  todayISO: '2026-06-01',
+  referenceResolution: resolved('2026-06-07', 'Rest'),
+  currentWeek: [
+    { date: '2026-06-04', sessionName: 'Lower Squat', workout: moveWorkout({ name: 'Lower Squat' }) },
+    { date: '2026-06-06', sessionName: 'Rest', workout: null },
+    { date: '2026-06-07', sessionName: 'Rest', workout: null },
+  ],
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1b Thursday→Saturday source is Thursday, not selected Sunday',
+  move16_1bThursdayToSaturday.mode === 'mutate' &&
+    asMutate(move16_1bThursdayToSaturday)?.operation === 'move_session' &&
+    asMutate(move16_1bThursdayToSaturday)?.target.kind === 'date' &&
+    asMutate(move16_1bThursdayToSaturday)?.target.date === '2026-06-04' &&
+    asMutate(move16_1bThursdayToSaturday)?.target.date !== '2026-06-07' &&
+    asMutate(move16_1bThursdayToSaturday)?.payload.operation === 'move_session' &&
+    asMutate(move16_1bThursdayToSaturday)?.payload.fromDow === 4 &&
+    asMutate(move16_1bThursdayToSaturday)?.payload.toDow === 6 &&
+    asMutate(move16_1bThursdayToSaturday)?.payload.toDate === '2026-06-06',
+  JSON.stringify(asMutate(move16_1bThursdayToSaturday)));
+ok('move 16.1b Thursday→Saturday asks confirmation from explicit weekdays',
+  /Move Thursday's Lower Squat to Saturday this week\?/i.test(asMutate(move16_1bThursdayToSaturday)?.clarificationQuestion ?? ''),
+  asMutate(move16_1bThursdayToSaturday)?.clarificationQuestion);
+
+const move16_1bConflict = routeCoachCommand({
+  userMessage: 'move all of Saturday to Thursday',
+  todayISO: '2026-06-01',
+  referenceResolution: resolved('2026-06-04', 'Lower Squat'),
+  currentWeek: [
+    { date: '2026-06-04', sessionName: 'Lower Squat', workout: moveWorkout({ name: 'Lower Squat' }) },
+    { date: '2026-06-06', sessionName: 'Recovery Session', workout: moveWorkout({ name: 'Recovery Session' }) },
+  ],
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1b target session asks replace/swap/cancel',
+  move16_1bConflict.mode === 'mutate' &&
+    asMutate(move16_1bConflict)?.operation === 'move_session' &&
+    asMutate(move16_1bConflict)?.missingFields?.includes('conflict_resolution') &&
+    /Thursday already has Lower Squat/i.test(asMutate(move16_1bConflict)?.clarificationQuestion ?? '') &&
+    /replace it, swap the two days, or cancel/i.test(asMutate(move16_1bConflict)?.clarificationQuestion ?? ''),
+  asMutate(move16_1bConflict)?.clarificationQuestion);
+
+const move16_1bThursdayNoWorkout = routeCoachCommand({
+  userMessage: 'move all of Thursday to Saturday',
+  todayISO: '2026-06-01',
+  referenceResolution: resolved('2026-06-07', 'Rest'),
+  currentWeek: [
+    { date: '2026-06-04', sessionName: 'Rest', workout: null },
+    { date: '2026-06-06', sessionName: 'Rest', workout: null },
+    { date: '2026-06-07', sessionName: 'Rest', workout: null },
+  ],
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1b empty Thursday still binds source to Thursday, not Sunday',
+  move16_1bThursdayNoWorkout.mode === 'mutate' &&
+    asMutate(move16_1bThursdayNoWorkout)?.operation === 'move_session' &&
+    asMutate(move16_1bThursdayNoWorkout)?.target.kind === 'date' &&
+    asMutate(move16_1bThursdayNoWorkout)?.target.date === '2026-06-04' &&
+    asMutate(move16_1bThursdayNoWorkout)?.target.date !== '2026-06-07' &&
+    asMutate(move16_1bThursdayNoWorkout)?.needsClarification === false,
+  JSON.stringify(asMutate(move16_1bThursdayNoWorkout)));
+
+const move16_1bPastSource = routeCoachCommand({
+  userMessage: 'Can you move all of Saturday to Thursday?',
+  todayISO: '2026-06-06',
+  referenceResolution: resolved('2026-05-30', 'Upper Pull + 40min Zone 2 Row'),
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1b past source date asks date clarification',
+  move16_1bPastSource.mode === 'mutate' &&
+    asMutate(move16_1bPastSource)?.operation === 'move_session' &&
+    asMutate(move16_1bPastSource)?.needsClarification === true &&
+    asMutate(move16_1bPastSource)?.missingFields?.includes('source_date'));
+ok('move 16.1b past source date preserves move transaction metadata',
+  asMutate(move16_1bPastSource)?.payload.operation === 'move_session' &&
+    asMutate(move16_1bPastSource)?.payload.fromDow === 6 &&
+    asMutate(move16_1bPastSource)?.payload.toDow === 4 &&
+    /next Saturday|future Saturdays/i.test(asMutate(move16_1bPastSource)?.clarificationQuestion ?? ''),
+  asMutate(move16_1bPastSource)?.clarificationQuestion);
+
+for (const phrase of [
+  'move Thursday to Saturday',
+  'can we do Thursday on Saturday instead',
+  'put my Thursday session on Saturday',
+  'Saturday works better than Thursday',
+]) {
+  const cmd = routeCoachCommand({
+    userMessage: phrase,
+    todayISO: MOV_TODAY,
+    referenceResolution: resolved(MOV_THU, 'Lower Squat'),
+    currentWeek: [
+      { date: MOV_THU, sessionName: 'Lower Squat', workout: moveWorkout({ name: 'Lower Squat' }) },
+      { date: MOV_SAT, sessionName: 'Rest', workout: null },
+    ],
+    gameDates: [],
+    teamTrainingDows: [],
+  });
+  ok(`${phrase} asks visible-week move confirmation`,
+    cmd.mode === 'mutate' &&
+      asMutate(cmd)?.operation === 'move_session' &&
+      asMutate(cmd)?.needsClarification === true &&
+      asMutate(cmd)?.missingFields?.includes('confirmation'));
+}
+
+const move16_1bViewedPastRollsForward = routeCoachCommand({
+  userMessage: 'move all of Thursday to Saturday',
+  todayISO: '2026-06-07',
+  referenceResolution: resolved('2026-06-07', 'Rest'),
+  currentWeek: [
+    {
+      date: '2026-06-04',
+      sessionName: 'Upper Pull',
+      workout: moveWorkout({ name: 'Upper Pull', conditioningTitle: '4 x 2min hard SkiErg' }),
+    },
+    { date: '2026-06-06', sessionName: 'Rest', workout: null },
+    { date: '2026-06-07', sessionName: 'Rest', workout: null },
+  ],
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1b past visible weekdays roll forward by default',
+  move16_1bViewedPastRollsForward.mode === 'mutate' &&
+    asMutate(move16_1bViewedPastRollsForward)?.operation === 'move_session' &&
+    asMutate(move16_1bViewedPastRollsForward)?.target.kind === 'date' &&
+    asMutate(move16_1bViewedPastRollsForward)?.target.date === '2026-06-11' &&
+    asMutate(move16_1bViewedPastRollsForward)?.payload.operation === 'move_session' &&
+    asMutate(move16_1bViewedPastRollsForward)?.payload.fromDow === 4 &&
+    asMutate(move16_1bViewedPastRollsForward)?.payload.toDow === 6 &&
+    asMutate(move16_1bViewedPastRollsForward)?.payload.toDate === '2026-06-13',
+  JSON.stringify(asMutate(move16_1bViewedPastRollsForward)));
+ok('move 16.1b past visible weekdays do not ask viewed-vs-upcoming clarification',
+  asMutate(move16_1bViewedPastRollsForward)?.missingFields?.includes('confirmation') &&
+    !asMutate(move16_1bViewedPastRollsForward)?.missingFields?.includes('week_context') &&
+    /Move next Thursday's Upper Pull \+ 4 x 2min hard SkiErg to Saturday\?/i.test(
+      asMutate(move16_1bViewedPastRollsForward)?.clarificationQuestion ?? '',
+    ) &&
+    !/currently viewed week|Which Thursday/i.test(
+      asMutate(move16_1bViewedPastRollsForward)?.clarificationQuestion ?? '',
+    ),
+  asMutate(move16_1bViewedPastRollsForward)?.clarificationQuestion);
+
+const move16_1bViewedPastExplicitViewedWeek = routeCoachCommand({
+  userMessage: 'move all of Thursday to Saturday this viewed week',
+  todayISO: '2026-06-07',
+  referenceResolution: resolved('2026-06-07', 'Rest'),
+  currentWeek: [
+    { date: '2026-06-04', sessionName: 'Upper Pull', workout: moveWorkout({ name: 'Upper Pull' }) },
+    { date: '2026-06-06', sessionName: 'Rest', workout: null },
+    { date: '2026-06-07', sessionName: 'Rest', workout: null },
+  ],
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1b explicit viewed-week wording keeps the selected week',
+  move16_1bViewedPastExplicitViewedWeek.mode === 'mutate' &&
+    asMutate(move16_1bViewedPastExplicitViewedWeek)?.operation === 'move_session' &&
+    asMutate(move16_1bViewedPastExplicitViewedWeek)?.target.kind === 'date' &&
+    asMutate(move16_1bViewedPastExplicitViewedWeek)?.target.date === '2026-06-04' &&
+    asMutate(move16_1bViewedPastExplicitViewedWeek)?.payload.operation === 'move_session' &&
+    asMutate(move16_1bViewedPastExplicitViewedWeek)?.payload.toDate === '2026-06-06' &&
+    /Move Thursday's Upper Pull to Saturday this week\?/i.test(
+      asMutate(move16_1bViewedPastExplicitViewedWeek)?.clarificationQuestion ?? '',
+    ),
+  asMutate(move16_1bViewedPastExplicitViewedWeek)?.clarificationQuestion);
+
+const move16_1bPastVisibleNextWeek = routeCoachCommand({
+  userMessage: 'move all of Thursday to Saturday next week',
+  todayISO: '2026-06-07',
+  referenceResolution: resolved('2026-06-04', 'Upper Pull'),
+  currentWeek: [
+    { date: '2026-06-04', sessionName: 'Upper Pull', workout: moveWorkout({ name: 'Upper Pull' }) },
+    { date: '2026-06-06', sessionName: 'Rest', workout: null },
+  ],
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1b past visible week plus next week uses upcoming dates',
+  move16_1bPastVisibleNextWeek.mode === 'mutate' &&
+    asMutate(move16_1bPastVisibleNextWeek)?.operation === 'move_session' &&
+    asMutate(move16_1bPastVisibleNextWeek)?.target.kind === 'date' &&
+    asMutate(move16_1bPastVisibleNextWeek)?.target.date === '2026-06-11' &&
+    asMutate(move16_1bPastVisibleNextWeek)?.payload.operation === 'move_session' &&
+    asMutate(move16_1bPastVisibleNextWeek)?.payload.toDate === '2026-06-13',
+  JSON.stringify(asMutate(move16_1bPastVisibleNextWeek)));
+
+const move16_1cCmd = routeCoachCommand({
+  userMessage: 'move all of Thursday to Saturday going forward',
+  todayISO: MOV_TODAY,
+  referenceResolution: resolved(MOV_THU, 'Lower Squat'),
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1c explicit recurring routes to setup update',
+  move16_1cCmd.mode === 'mutate' &&
+    asMutate(move16_1cCmd)?.operation === 'update_program_setup');
+ok('move 16.1c removes Thursday and adds Saturday',
+  asMutate(move16_1cCmd)?.payload.operation === 'update_program_setup' &&
+    asMutate(move16_1cCmd)?.payload.removeTrainingDays?.includes('Thursday') &&
+    asMutate(move16_1cCmd)?.payload.addTrainingDays?.includes('Saturday'));
+
+const move16_1dCmd = routeCoachCommand({
+  userMessage: 'move all of Thursday to Saturday this week',
+  todayISO: MOV_TODAY,
+  referenceResolution: resolved(MOV_THU, 'Lower Squat'),
+  gameDates: [],
+  teamTrainingDows: [],
+});
+ok('move 16.1d explicit this week routes one-off move',
+  move16_1dCmd.mode === 'mutate' &&
+    asMutate(move16_1dCmd)?.operation === 'move_session' &&
+    asMutate(move16_1dCmd)?.needsClarification === false &&
+    asMutate(move16_1dCmd)?.payload.operation === 'move_session' &&
+    asMutate(move16_1dCmd)?.payload.moveScope === 'one_off');
+
+const move16_1eExec = executeCoachCommand({
+  command: move16_1dCmd,
+  todayISO: MOV_TODAY,
+  referenceResolution: null,
+  userMessage: 'move all of Thursday to Saturday this week',
+  moveSessionDeps: {
+    snapshotBefore: () => moveWorkout({
+      name: 'Lower Squat',
+      conditioningTitle: 'HI Intervals',
+    }),
+    applyMove: stubMoveOk(MOV_THU, MOV_SAT, 'Lower Squat + HI Intervals session'),
+    verifyRendered: stubMoveVerify({
+      sourcePresent: { tab: false, day: false },
+      destPresent: { tab: true, day: true },
+    }),
+    visibleWeek: () => [],
+  },
+});
+eq('move 16.1e combined-session reply stays simple',
+  move16_1eExec.reply,
+  "Done — I moved Thursday's session to Saturday.");
 
 // 16.2 — Heavy lower → Friday before Saturday game → router-level reject_with_reason
 const move16_2 = routeCoachCommand({
@@ -2349,8 +2648,9 @@ const move16_5Exec = executeCoachCommand({
   },
 });
 eq('move 16.5 executor kind = mutated', move16_5Exec.kind, 'mutated');
-ok('move 16.5 reply mentions tomorrow date',
-  move16_5Exec.reply.includes(MOV_MON));
+eq('move 16.5 reply uses simplified weekday copy',
+  move16_5Exec.reply,
+  "Done — I moved Wednesday's session to Monday.");
 
 // 16.6 — Same-date "Wednesday off" → executor clarifier with OTHER days
 const move16_6Cmd = routeCoachCommand({
@@ -2480,7 +2780,7 @@ const move16_9Exec = executeCoachCommand({
   command: move16_1Cmd,
   todayISO: MOV_TODAY,
   referenceResolution: null,
-  userMessage: 'move Wednesday to Friday',
+  userMessage: 'move Wednesday to Friday this week',
   moveSessionDeps: {
     snapshotBefore: () => moveWorkout({ name: 'Lower Body Strength' }),
     applyMove: stubMoveOk(MOV_WED, MOV_FRI, 'Lower Body Strength'),
@@ -2519,7 +2819,7 @@ for (const c of [move16_1Cmd, move16_4Cmd, move16_5Cmd, move16_6Cmd, move16_7Cmd
 //          executor MUST refuse the move even if the router didn't catch
 //          it (the router's pre-pass only sees the destination dow).
 const move16_12Cmd = routeCoachCommand({
-  userMessage: 'move Tuesday to Friday',
+  userMessage: 'move Tuesday to Friday this week',
   todayISO: MOV_TODAY,
   referenceResolution: resolved(MOV_TUE, 'Team Training'),
   gameDates: [],
@@ -2532,7 +2832,7 @@ const move16_12Exec = executeCoachCommand({
   command: move16_12Cmd,
   todayISO: MOV_TODAY,
   referenceResolution: null,
-  userMessage: 'move Tuesday to Friday',
+  userMessage: 'move Tuesday to Friday this week',
   moveSessionDeps: {
     snapshotBefore: () => moveWorkout({
       name: 'Team Training',
@@ -2559,7 +2859,7 @@ const move16_13Exec = executeCoachCommand({
   command: move16_1Cmd,
   todayISO: MOV_TODAY,
   referenceResolution: null,
-  userMessage: 'move Wednesday to Friday',
+  userMessage: 'move Wednesday to Friday this week',
   moveSessionDeps: {
     snapshotBefore: () => moveWorkout({ name: 'Lower Body Strength' }),
     applyMove: stubMoveReject('cannot move onto team training day', 'cannot_move_team_training', MOV_FRI),
@@ -2581,7 +2881,7 @@ const move16_14Exec = executeCoachCommand({
   command: move16_1Cmd,
   todayISO: MOV_TODAY,
   referenceResolution: null,
-  userMessage: 'move Wednesday to Friday',
+  userMessage: 'move Wednesday to Friday this week',
   moveSessionDeps: {
     snapshotBefore: () => moveWorkout({ name: 'Lower Body Strength' }),
     applyMove: stubMoveReject('cannot move from past date', 'past_date_blocked', MOV_WED),
@@ -2971,7 +3271,7 @@ function undoCmd(): CoachCommand {
   const { rig, deps } = makeUndoRig();
   const moveResult = executeCoachCommand({
     command: routeCoachCommand({
-      userMessage: 'move Wednesday to Friday',
+      userMessage: 'move Wednesday to Friday this week',
       todayISO: UNDO_TODAY,
       referenceResolution: resolved(UNDO_WED, 'Lower Body Strength'),
       gameDates: [],
@@ -2979,7 +3279,7 @@ function undoCmd(): CoachCommand {
     }),
     todayISO: UNDO_TODAY,
     referenceResolution: null,
-    userMessage: 'move Wednesday to Friday',
+    userMessage: 'move Wednesday to Friday this week',
     moveSessionDeps: {
       snapshotBefore: (d: string) => ({
         id: `wk-${d}`,

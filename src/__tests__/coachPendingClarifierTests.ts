@@ -37,6 +37,7 @@ import {
 import {
   captureFromExecutorClarify,
   resumeFromPending,
+  resolvePendingScheduleTransactionAnswer,
 } from '../utils/coachClarifierResume';
 import {
   usePendingCoachClarifierStore,
@@ -924,6 +925,386 @@ section('[12] Phase G end-to-end — bike subtype correction never reaches legac
   ok('12.4 resumed payload bikeLabel=standard preserved',
     wedResume?.mode === 'mutate'
     && (wedResume.payload as any).bikeLabel === 'standard');
+}
+
+// ─── 13. Move-scope clarification resolves before legacy ───────────
+section('[13] move-scope pending answers resolve to typed commands');
+{
+  const partialMove: CoachCommand = {
+    mode: 'mutate',
+    operation: 'move_session',
+    target: { kind: 'date', date: '2026-04-30', sessionName: 'Lower Squat' },
+    payload: {
+      operation: 'move_session',
+      toDate: '2026-05-02',
+      toDow: 6,
+      moveScope: 'unknown',
+    },
+    scope: 'one_off',
+    confidence: 0.85,
+    needsClarification: true,
+    clarificationQuestion: 'Do you want to move Thursday to Saturday just this week, or every week going forward?',
+    options: ['Just this week', 'Every week going forward'],
+    missingFields: ['target_scope'],
+    reason: 'whole_day_move_detected',
+  };
+  const stashed = captureFromExecutorClarify({
+    routedCommand: partialMove,
+    askedQuestion: partialMove.clarificationQuestion!,
+    originalMessage: 'move all of Thursday to Saturday',
+    missingFields: ['target_scope'],
+  });
+  ok('13.1 move-scope clarifier captured', stashed != null);
+  ok('13.2 pending preserves source date',
+    stashed?.targetDate === '2026-04-30',
+    JSON.stringify(stashed));
+  ok('13.3 pending preserves options/scope metadata',
+    stashed?.moveScope === 'unknown' &&
+      (stashed.partialPayload as any).toDate === '2026-05-02' &&
+      (stashed.partialPayload as any).toDow === 6);
+  ok('13.3b pending stores a move_session_transaction',
+    stashed?.scheduleTransaction?.kind === 'move_session_transaction' &&
+      stashed.scheduleTransaction.sourceDate === '2026-04-30' &&
+      stashed.scheduleTransaction.targetDate === '2026-05-02' &&
+      stashed.scheduleTransaction.scope === 'unknown',
+    JSON.stringify(stashed?.scheduleTransaction));
+
+  const oneOff = resumeFromPending({
+    pending: { ...stashed!, createdAt: NOW },
+    newMessage: 'just this week',
+    newResolution: null,
+  });
+  ok('13.4 "just this week" resumes one-off move_session',
+    oneOff?.mode === 'mutate' &&
+      oneOff.operation === 'move_session' &&
+      oneOff.scope === 'one_off' &&
+      oneOff.target.kind === 'date' &&
+      oneOff.target.date === '2026-04-30' &&
+      oneOff.payload.operation === 'move_session' &&
+      oneOff.payload.toDate === '2026-05-02' &&
+      oneOff.payload.moveScope === 'one_off');
+
+  const recurring = resumeFromPending({
+    pending: { ...stashed!, createdAt: NOW },
+    newMessage: 'every week going forward',
+    newResolution: null,
+  });
+  ok('13.5 "every week going forward" resumes setup update',
+    recurring?.mode === 'mutate' &&
+      recurring.operation === 'update_program_setup' &&
+      recurring.scope === 'permanent' &&
+      recurring.payload.operation === 'update_program_setup' &&
+      recurring.payload.removeTrainingDays?.includes('Thursday') &&
+      recurring.payload.addTrainingDays?.includes('Saturday') &&
+      recurring.payload.rebuildRequired === true);
+
+  const unclear = resumeFromPending({
+    pending: { ...stashed!, createdAt: NOW },
+    newMessage: 'yeah',
+    newResolution: null,
+  });
+  ok('13.6 unclear move-scope answer does not resume to legacy-capable command',
+    unclear === null);
+
+  const transactionUnclear = resolvePendingScheduleTransactionAnswer({
+    pending: { ...stashed!, createdAt: NOW },
+    userMessage: 'yeah',
+    todayISO: FIXED_TODAY,
+  });
+  ok('13.7 unclear transaction answer re-asks inside transaction',
+    transactionUnclear.kind === 'clarify' &&
+      /just this week|every week going forward/i.test(transactionUnclear.reply));
+
+  const transactionDetails = resolvePendingScheduleTransactionAnswer({
+    pending: { ...stashed!, createdAt: NOW },
+    userMessage: 'Next Saturday = upper pull and zone 2 row',
+    todayISO: FIXED_TODAY,
+  });
+  ok('13.8 session-detail answer stays inside existing move transaction',
+    transactionDetails.kind === 'clarify' &&
+      transactionDetails.transaction.kind === 'move_session_transaction' &&
+      /just this week|every week going forward/i.test(transactionDetails.reply),
+    transactionDetails.kind === 'clarify' ? transactionDetails.reply : JSON.stringify(transactionDetails));
+
+  const pastSourceMove: CoachCommand = {
+    mode: 'mutate',
+    operation: 'move_session',
+    target: { kind: 'date', date: '2026-04-25', sessionName: 'Saturday Session' },
+    payload: {
+      operation: 'move_session',
+      fromDow: 6,
+      toDate: '2026-04-30',
+      toDow: 4,
+      moveScope: 'unknown',
+    },
+    scope: 'one_off',
+    confidence: 0.8,
+    needsClarification: true,
+    clarificationQuestion: "This week's Saturday has already passed. Do you mean next Saturday's session, or do you want to change future Saturdays going forward?",
+    options: ["Next Saturday's session", 'Future Saturdays going forward'],
+    missingFields: ['source_date'],
+    reason: 'move_session_source_date_past',
+  };
+  const pastStashed = captureFromExecutorClarify({
+    routedCommand: pastSourceMove,
+    askedQuestion: pastSourceMove.clarificationQuestion!,
+    originalMessage: 'move all of Saturday to Thursday',
+    missingFields: ['source_date'],
+  });
+  ok('13.9 past source move captures transaction without executable source date',
+    pastStashed?.scheduleTransaction?.kind === 'move_session_transaction' &&
+      pastStashed.scheduleTransaction.sourceDate === undefined &&
+      pastStashed.scheduleTransaction.sourceDay === 'Saturday');
+  const nextSaturdayDetails = resolvePendingScheduleTransactionAnswer({
+    pending: { ...pastStashed!, createdAt: NOW },
+    userMessage: 'Next Saturday = upper pull and zone 2 row',
+    todayISO: FIXED_TODAY,
+  });
+  ok('13.10 next Saturday details update transaction date/session, not row replacement',
+    nextSaturdayDetails.kind === 'clarify' &&
+      nextSaturdayDetails.transaction.kind === 'move_session_transaction' &&
+      nextSaturdayDetails.transaction.sourceDate === '2026-05-02' &&
+      nextSaturdayDetails.transaction.sourceSessionSnapshot?.summary === 'Upper Pull + Zone 2 Row' &&
+      /Upper Pull \+ Zone 2 Row/i.test(nextSaturdayDetails.reply),
+    nextSaturdayDetails.kind === 'clarify' ? nextSaturdayDetails.reply : JSON.stringify(nextSaturdayDetails));
+  const futureSaturdays = resolvePendingScheduleTransactionAnswer({
+    pending: { ...pastStashed!, createdAt: NOW },
+    userMessage: 'Future Saturdays going forward',
+    todayISO: FIXED_TODAY,
+  });
+  ok('13.11 future Saturdays answer becomes recurring setup transaction',
+    futureSaturdays.kind === 'complete' &&
+      futureSaturdays.command.mode === 'mutate' &&
+      futureSaturdays.command.operation === 'update_program_setup' &&
+      futureSaturdays.command.payload.operation === 'update_program_setup' &&
+      futureSaturdays.command.payload.removeTrainingDays?.includes('Saturday') &&
+      futureSaturdays.command.payload.addTrainingDays?.includes('Thursday'));
+
+  const staleTarget = resolvePendingScheduleTransactionAnswer({
+    pending: {
+      ...pastStashed!,
+      scheduleTransaction: {
+        kind: 'move_session_transaction',
+        originalUserMessage: 'move all of Saturday to Thursday',
+        sourceDate: '2026-05-02',
+        sourceDay: 'Saturday',
+        sourceSessionSnapshot: {
+          date: '2026-05-02',
+          day: 'Saturday',
+          summary: 'Upper Pull + Zone 2 Row',
+        },
+        targetDate: '2026-04-23',
+        targetDay: 'Thursday',
+        scope: 'unknown',
+        missingFields: ['target_scope'],
+        createdFromVisibleWeek: true,
+        currentStep: 'resolve_scope',
+      },
+      createdAt: NOW,
+    },
+    userMessage: 'Next Thursday',
+    todayISO: FIXED_TODAY,
+  });
+  ok('13.12 stale target date resolves inside move transaction',
+    staleTarget.kind === 'clarify' &&
+      staleTarget.transaction.kind === 'move_session_transaction' &&
+      staleTarget.transaction.sourceDate === '2026-05-02' &&
+      staleTarget.transaction.targetDate === '2026-04-30' &&
+      /Upper Pull \+ Zone 2 Row/i.test(staleTarget.reply) &&
+      /just this week|every week going forward/i.test(staleTarget.reply),
+    staleTarget.kind === 'clarify' ? staleTarget.reply : JSON.stringify(staleTarget));
+
+  const confirmationMove: CoachCommand = {
+    mode: 'mutate',
+    operation: 'move_session',
+    target: { kind: 'date', date: '2026-06-13', sessionName: 'Upper Pull + Zone 2 Row' },
+    payload: {
+      operation: 'move_session',
+      fromDow: 6,
+      toDate: '2026-06-11',
+      toDow: 4,
+      moveScope: 'one_off',
+    },
+    scope: 'one_off',
+    confidence: 0.85,
+    needsClarification: true,
+    clarificationQuestion: 'Do you want me to move the entire Saturday session to Thursday on 2026-06-11, replacing the current Rest day?',
+    options: ['Yes', 'No'],
+    missingFields: ['confirmation'],
+    reason: 'move_session_confirmation',
+  };
+  const confirmationStashed = captureFromExecutorClarify({
+    routedCommand: confirmationMove,
+    askedQuestion: confirmationMove.clarificationQuestion!,
+    originalMessage: 'Can you move all of Saturday to Thursday?',
+    missingFields: ['confirmation'],
+  });
+  ok('13.13 confirmation capture stores confirm step',
+    confirmationStashed?.scheduleTransaction?.kind === 'move_session_transaction' &&
+      confirmationStashed.scheduleTransaction.currentStep === 'confirm' &&
+      confirmationStashed.scheduleTransaction.missingFields.includes('confirmation'));
+  for (const answer of ['Yes', 'Yep', 'Do it']) {
+    const confirmed = resolvePendingScheduleTransactionAnswer({
+      pending: { ...confirmationStashed!, createdAt: NOW },
+      userMessage: answer,
+      todayISO: '2026-06-06',
+    });
+    ok(`13.14 confirmation answer "${answer}" executes move transaction`,
+      confirmed.kind === 'complete' &&
+        confirmed.command.mode === 'mutate' &&
+        confirmed.command.operation === 'move_session' &&
+        confirmed.command.target.kind === 'date' &&
+        confirmed.command.target.date === '2026-06-13' &&
+        confirmed.command.payload.operation === 'move_session' &&
+        confirmed.command.payload.toDate === '2026-06-11',
+      confirmed.kind === 'complete' ? JSON.stringify(confirmed.command) : JSON.stringify(confirmed));
+  }
+  for (const answer of ['No', 'Cancel']) {
+    const cancelled = resolvePendingScheduleTransactionAnswer({
+      pending: { ...confirmationStashed!, createdAt: NOW },
+      userMessage: answer,
+      todayISO: '2026-06-06',
+    });
+    ok(`13.15 confirmation answer "${answer}" cancels without mutation`,
+      cancelled.kind === 'cancelled' &&
+        /left the plan unchanged/i.test(cancelled.reply),
+      JSON.stringify(cancelled));
+  }
+  const repeatedDayDuringConfirmation = resolvePendingScheduleTransactionAnswer({
+    pending: { ...confirmationStashed!, createdAt: NOW },
+    userMessage: 'Saturday',
+    todayISO: '2026-06-06',
+  });
+  ok('13.16 repeated day answer stays inside confirmation transaction',
+    repeatedDayDuringConfirmation.kind === 'clarify' &&
+      /Move Saturday's Upper Pull \+ Zone 2 Row to Thursday this week/i.test(repeatedDayDuringConfirmation.reply) &&
+      !/Which Thursday/i.test(repeatedDayDuringConfirmation.reply),
+    repeatedDayDuringConfirmation.kind === 'clarify'
+      ? repeatedDayDuringConfirmation.reply
+      : JSON.stringify(repeatedDayDuringConfirmation));
+  const legacyShapeYes = resolvePendingScheduleTransactionAnswer({
+    pending: {
+      ...confirmationStashed!,
+      scheduleTransaction: undefined,
+      createdAt: NOW,
+    },
+    userMessage: 'Yes',
+    todayISO: '2026-06-06',
+  });
+  ok('13.16b confirmation resolves before generic fallback even without stored transaction',
+    legacyShapeYes.kind === 'complete' &&
+      legacyShapeYes.command.mode === 'mutate' &&
+      legacyShapeYes.command.operation === 'move_session',
+    JSON.stringify(legacyShapeYes));
+
+  const conflictMove: CoachCommand = {
+    mode: 'mutate',
+    operation: 'move_session',
+    target: { kind: 'date', date: '2026-06-13', sessionName: 'Recovery Session' },
+    payload: {
+      operation: 'move_session',
+      fromDow: 6,
+      toDate: '2026-06-11',
+      toDow: 4,
+      moveScope: 'one_off',
+    },
+    scope: 'one_off',
+    confidence: 0.85,
+    needsClarification: true,
+    clarificationQuestion: 'Thursday already has Lower Squat. Do you want to replace it, swap the two days, or cancel?',
+    options: ['Replace Thursday', 'Swap the two days', 'Cancel'],
+    missingFields: ['conflict_resolution'],
+    reason: 'whole_day_move_target_conflict',
+  };
+  const conflictStashed = captureFromExecutorClarify({
+    routedCommand: conflictMove,
+    askedQuestion: conflictMove.clarificationQuestion!,
+    originalMessage: 'Can you move all of Saturday to Thursday?',
+    missingFields: ['conflict_resolution'],
+  });
+  const repeatedDayDuringConflict = resolvePendingScheduleTransactionAnswer({
+    pending: { ...conflictStashed!, createdAt: NOW },
+    userMessage: 'Saturday',
+    todayISO: '2026-06-06',
+  });
+  ok('13.17 repeated day answer stays inside target-conflict transaction',
+    repeatedDayDuringConflict.kind === 'clarify' &&
+      /already has a session|replace it, swap the two days, or cancel/i.test(repeatedDayDuringConflict.reply) &&
+      !/Which Thursday/i.test(repeatedDayDuringConflict.reply),
+    repeatedDayDuringConflict.kind === 'clarify'
+      ? repeatedDayDuringConflict.reply
+      : JSON.stringify(repeatedDayDuringConflict));
+  const swapConflict = resolvePendingScheduleTransactionAnswer({
+    pending: { ...conflictStashed!, createdAt: NOW },
+    userMessage: 'swap the two days',
+    todayISO: '2026-06-06',
+  });
+  ok('13.18 target-conflict swap answer executes swap move',
+    swapConflict.kind === 'complete' &&
+      swapConflict.command.mode === 'mutate' &&
+      swapConflict.command.operation === 'move_session' &&
+      swapConflict.command.payload.operation === 'move_session' &&
+      swapConflict.command.payload.swap === true,
+    JSON.stringify(swapConflict));
+  const replaceConflict = resolvePendingScheduleTransactionAnswer({
+    pending: { ...conflictStashed!, createdAt: NOW },
+    userMessage: 'replace Thursday',
+    todayISO: '2026-06-06',
+  });
+  ok('13.19 target-conflict replace answer executes one-way move',
+    replaceConflict.kind === 'complete' &&
+      replaceConflict.command.mode === 'mutate' &&
+      replaceConflict.command.operation === 'move_session' &&
+      replaceConflict.command.payload.operation === 'move_session' &&
+      replaceConflict.command.payload.swap !== true,
+    JSON.stringify(replaceConflict));
+
+  const legacyLoggedBadMove: CoachCommand = {
+    mode: 'mutate',
+    operation: 'move_session',
+    target: { kind: 'date', date: '2026-06-04', sessionName: 'Recovery Session' },
+    payload: {
+      operation: 'move_session',
+      toDate: '2026-06-04',
+    },
+    scope: 'this_week',
+    confidence: 0.5,
+    needsClarification: true,
+    clarificationQuestion: 'Where do you want me to move "Recovery Session" to instead of Thu 2026-06-04?',
+    missingFields: ['target_session'],
+    reason: 'clarify_same_date:move_session',
+  };
+  const repairedBadMove = captureFromExecutorClarify({
+    routedCommand: legacyLoggedBadMove,
+    askedQuestion: legacyLoggedBadMove.clarificationQuestion!,
+    originalMessage: 'Can you move all of Saturday to Thursday?',
+    missingFields: ['target_session'],
+  });
+  ok('13.20 logged bad move capture does not keep target_session',
+    repairedBadMove?.missingFields.includes('source_date') === true &&
+      repairedBadMove.missingFields.includes('target_session') === false,
+    JSON.stringify(repairedBadMove));
+  ok('13.21 logged bad move capture preserves source/target weekdays',
+    repairedBadMove?.scheduleTransaction?.kind === 'move_session_transaction' &&
+      repairedBadMove.scheduleTransaction.sourceDay === 'Saturday' &&
+      repairedBadMove.scheduleTransaction.targetDay === 'Thursday' &&
+      (repairedBadMove.partialPayload as any).fromDow === 6 &&
+      (repairedBadMove.partialPayload as any).toDow === 4,
+    JSON.stringify(repairedBadMove));
+  const repairedBadMoveFollowUp = resolvePendingScheduleTransactionAnswer({
+    pending: { ...repairedBadMove!, createdAt: NOW },
+    userMessage: 'Saturday',
+    todayISO: '2026-06-06',
+  });
+  ok('13.22 logged bad move follow-up resolves source inside transaction',
+    repairedBadMoveFollowUp.kind === 'clarify' &&
+      repairedBadMoveFollowUp.transaction.kind === 'move_session_transaction' &&
+      repairedBadMoveFollowUp.transaction.sourceDay === 'Saturday' &&
+      repairedBadMoveFollowUp.transaction.targetDay === 'Thursday' &&
+      !/Which Thursday/i.test(repairedBadMoveFollowUp.reply),
+    repairedBadMoveFollowUp.kind === 'clarify'
+      ? repairedBadMoveFollowUp.reply
+      : JSON.stringify(repairedBadMoveFollowUp));
 }
 
 // ─── Summary ───────────────────────────────────────────────────────
