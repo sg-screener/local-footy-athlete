@@ -92,7 +92,7 @@ export interface SessionAllocation {
    * through to the session builder so the week avoids repeating the
    * same erg twice unless forced.
    */
-  ergModality?: 'bike' | 'row' | 'ski' | 'mixed';
+  ergModality?: 'bike' | 'bike_erg' | 'row' | 'ski' | 'mixed';
   /**
    * Set by pre-season post-validation when this slot falls on a
    * scheduled team training day. Downstream renderers MUST treat this
@@ -3617,8 +3617,8 @@ function applyInSeasonConditioningFloor(
       gameDayNum === dayNameToNumber('Saturday');
     g3!.tier = 'optional';
     g3!.focus = wedBetweenTueThuTeam
-      ? 'Easy Aerobic Flush — optional bike/row, 20–30min, 3–4/10. Skip if legs feel heavy or Thursday quality would suffer.'
-      : 'Aerobic base — easy continuous run/erg (low intensity, ~25–35min)';
+      ? 'Easy Aerobic Flush - 20-30min easy bike/row, 3-4/10.'
+      : 'Aerobic base - 25-35min easy run/erg, low intensity.';
     g3!.conditioningCategory = 'aerobic_base';
     g3!.conditioningFlavour = 'aerobic';
     if (wedBetweenTueThuTeam) {
