@@ -344,10 +344,10 @@ function buildProgramExplanationReply(packet: CoachContextPacket): string {
   });
 
   if (recoveryBiased) {
-    return `I put the ${dayName} ${rowLabel} there to maintain aerobic base without adding more running load.${conversionSentence} Because it sits between team training nights, it should be easy and optional: 20-30min at about 3-4/10. If it feels like it would compromise Thursday, skip it or shorten it.${mismatchSentence}`;
+    return `I put the ${dayName} ${rowLabel} there as easy aerobic base without extra running load.${conversionSentence} Keep it easy: 20-30min at about 3-4/10.${mismatchSentence}`;
   }
 
-  return `I put the ${dayName} ${rowLabel} there as an optional aerobic base session without adding more running load.${conversionSentence} Because you've already got team training and footy demands in the week, the rower gives you Zone 2 work while keeping impact and leg soreness lower. Keep it conversational, about 4-5/10, and skip it if your legs feel heavy or Thursday quality would suffer.${mismatchSentence}`;
+  return `I put the ${dayName} ${rowLabel} there as easy Zone 2 without extra running load.${conversionSentence} Keep it conversational: about 4-5/10.${mismatchSentence}`;
 }
 
 function buildSessionMismatchReply(packet: CoachContextPacket): string {

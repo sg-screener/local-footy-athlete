@@ -636,7 +636,9 @@ function StrengthBlock({
               style={styles.conditioningOptionCard}
             >
               <Text style={styles.conditioningOptionTitle}>{opt.title}</Text>
-              <Text style={styles.conditioningOptionDescription}>{opt.description}</Text>
+              {opt.description ? (
+                <Text style={styles.conditioningOptionDescription}>{opt.description}</Text>
+              ) : null}
               {opt.rows.map((exercise: any, idx: number) => (
                 <ConditioningRow
                   key={exercise.id}

@@ -38,8 +38,7 @@ export function masIntensityLabel(workSeconds: number): string {
  * so every MAS session must carry this line.
  */
 export const MAS_FALLBACK_NOTE =
-  "If you don't know your MAS, tell the coach your recent 2km or 3km " +
-  'time trial and it will work out your target distance for each rep.';
+  "Don't know MAS? Send your 2km or 3km time trial.";
 
 /**
  * Build a full MAS intensity + fallback block for pasting into a

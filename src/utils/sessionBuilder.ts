@@ -689,6 +689,101 @@ export function condEx(
   };
 }
 
+const MACHINE_OPTIONS_NOTE = 'Use Bike, Rower, SkiErg, or Assault Bike.';
+const LOWER_BODY_MACHINE_NOTE = 'Machine-based conditioning keeps running load down today.';
+
+function noteLines(...lines: Array<string | false | null | undefined>): string {
+  return lines
+    .filter((line): line is string => typeof line === 'string' && line.trim().length > 0)
+    .join('\n');
+}
+
+function modLabelFromErg(mod: Exclude<ErgModality, 'mixed'>): string {
+  if (mod === 'bike') return 'Assault Bike';
+  if (mod === 'bike_erg') return 'BikeErg';
+  return mod === 'row' ? 'Rower' : 'SkiErg';
+}
+
+function modLabelFromErgSelection(mod: ErgModality): string {
+  return mod === 'mixed' ? 'Row + SkiErg' : modLabelFromErg(mod);
+}
+
+function shortWarmup(modLabel: string, minutes = 5): string {
+  return noteLines(`${minutes}min easy ${modLabel}`, '2 short build-ups');
+}
+
+function easyBetweenReps(seconds: number): string {
+  return seconds % 60 === 0
+    ? `${seconds / 60}min easy between reps`
+    : `${seconds}s easy between reps`;
+}
+
+interface MachineSprintPrescription {
+  reps: number;
+  seconds: number;
+  restSeconds: number;
+  effort: 'all-out' | 'hard';
+  qualityCue: string;
+}
+
+function machineSprintPrescription(
+  modality: ErgModality,
+  hash: number,
+  feel?: ConditioningFeel,
+  reduced = false,
+): MachineSprintPrescription {
+  if (modality === 'mixed') {
+    return reduced
+      ? { reps: 4, seconds: 20, restSeconds: 120, effort: 'hard', qualityCue: 'Full quality' }
+      : { reps: 6, seconds: 20, restSeconds: 90, effort: 'hard', qualityCue: 'Full quality' };
+  }
+
+  if (modality === 'bike') {
+    if (reduced) {
+      return { reps: 4, seconds: 10, restSeconds: 120, effort: 'all-out', qualityCue: 'Max power, full quality' };
+    }
+    const assaultBikeVariants: MachineSprintPrescription[] = [
+      { reps: 6, seconds: 10, restSeconds: 90, effort: 'all-out', qualityCue: 'Max power, full quality' },
+      { reps: 8, seconds: 15, restSeconds: 120, effort: 'all-out', qualityCue: 'Max power, full quality' },
+      { reps: 10, seconds: 10, restSeconds: 60, effort: 'all-out', qualityCue: 'Max power, full quality' },
+    ];
+    const idx = feel === 'grindy' ? 1 : feel === 'flowing' ? 2 : feel === 'sharp' ? 0 : hash % assaultBikeVariants.length;
+    return assaultBikeVariants[idx];
+  }
+
+  if (reduced) {
+    return { reps: 4, seconds: 20, restSeconds: 120, effort: 'hard', qualityCue: 'Full quality' };
+  }
+  const rhythmErgVariants: MachineSprintPrescription[] = [
+    { reps: 6, seconds: 20, restSeconds: 90, effort: 'hard', qualityCue: 'Full quality' },
+    { reps: 8, seconds: 25, restSeconds: 120, effort: 'hard', qualityCue: 'Full quality' },
+    { reps: 5, seconds: 30, restSeconds: 150, effort: 'hard', qualityCue: 'Full quality' },
+  ];
+  const idx = feel === 'sharp' ? 0 : feel === 'flowing' ? 1 : feel === 'grindy' ? 2 : hash % rhythmErgVariants.length;
+  return rhythmErgVariants[idx];
+}
+
+function machineSprintTitle(
+  prescription: MachineSprintPrescription,
+  modLabel: string,
+  suffix = '',
+): string {
+  return `${prescription.reps} x ${prescription.seconds}s ${prescription.effort} (${modLabel}${suffix})`;
+}
+
+function machineSprintNotes(
+  prescription: MachineSprintPrescription,
+  modLabel: string,
+  extraNote?: string,
+): string {
+  return noteLines(
+    `${prescription.reps} x ${prescription.seconds}s ${prescription.effort} on ${modLabel}`,
+    easyBetweenReps(prescription.restSeconds),
+    prescription.qualityCue,
+    extraNote,
+  );
+}
+
 /**
  * Map a conditioningFlavour (from coaching engine) to a concrete exercise name
  * for buildConditioningTemplate. Uses the date hash for deterministic variety
@@ -905,7 +1000,7 @@ export function categoryToFlavour(
  *   - NOT randomisation
  */
 /** Supported ergometer modalities for combined-day leg-sparing. */
-export type ErgModality = 'bike' | 'row' | 'ski' | 'mixed';
+export type ErgModality = 'bike' | 'bike_erg' | 'row' | 'ski' | 'mixed';
 
 /** Density/feel tag — drives session differentiation within a category. */
 export type ConditioningFeel = 'grindy' | 'sharp' | 'flowing';
@@ -971,7 +1066,12 @@ export function buildConditioningTemplate(
       const scaled = buildCombinedConditioningTemplate(
         category, dateStr, opts.strengthRegion, opts.feel, opts.ergModality,
       );
-      if (!SPEED_SPRINT_TEMPLATES.has(exerciseName) && isModalityFlexibleConditioning(exerciseName)) {
+      if (
+        category !== 'aerobic_base' &&
+        opts.strengthRegion !== 'lower' &&
+        !SPEED_SPRINT_TEMPLATES.has(exerciseName) &&
+        isModalityFlexibleConditioning(exerciseName)
+      ) {
         return appendNoteToHeadline(scaled, MODALITY_FLEX_NOTE);
       }
       return scaled;
@@ -1017,10 +1117,11 @@ function buildReducedAerobicBase(
   const duration = 20 + (hash % 3) * 5; // 20, 25, or 30 min
   return [
     condEx(`${prefix}-easy-flush`, `Easy Aerobic Flush (${duration}min ${modLabel})`, 1, 1, 1, 1, 0,
-      `${duration}min easy ${modLabel}.\n` +
-      'Intensity: 3-4/10 — genuinely easy, conversational pace.\n' +
-      'Optional. Use this for recovery and aerobic maintenance.\n' +
-      'Skip if legs feel heavy after team training or if Thursday training quality would suffer.'),
+      noteLines(
+        `${duration}min easy on ${modLabel}`,
+        '3-4/10 effort',
+        'Recovery pace',
+      )),
   ];
 }
 
@@ -1069,24 +1170,24 @@ export function buildCombinedConditioningTemplate(
     ? ergModality
     : modPool[hash % modPool.length];
   const isMixed = ergModality === 'mixed';
-  const modLabel = isMixed ? 'Row + SkiErg (mixed)'
-    : mod === 'bike' ? 'Assault Bike' : mod === 'row' ? 'Rower' : 'SkiErg';
-  const combinedNote =
-    'Combined S+C day — abbreviated conditioning dose.\n' +
-    'Should complement the lift, not dominate the session.';
-  const legSpareNote = isLowerPairing
-    ? '\nLower-body lift today — conditioning is on the ergometer to spare the legs.'
-    : '';
+  const selectedErgModality: ErgModality = isMixed ? 'mixed' : mod;
+  const modLabel = modLabelFromErgSelection(selectedErgModality);
+  const aerobicTitleMod = isMixed
+    ? 'Row + SkiErg'
+    : mod === 'bike' ? 'bike' : mod === 'row' ? 'rower' : mod === 'bike_erg' ? 'BikeErg' : 'SkiErg';
+  const pairingNote = isLowerPairing ? LOWER_BODY_MACHINE_NOTE : undefined;
 
   switch (category) {
     case 'aerobic_base': {
       // 20–25min zone 2 — lift first, then a controlled aerobic finisher.
       const duration = 20 + (hash % 2) * 5; // 20 or 25 min
       return [
-        condEx(`${prefix}-aero`, `${duration}min zone 2 ${mod}`, 1, 1, 1, 1, 0,
-          `${duration}min zone 2 steady on ${modLabel}.\n` +
-          'Intensity: 5-6/10 — conversational pace.\n' +
-          `${combinedNote}${legSpareNote}`),
+        condEx(`${prefix}-aero`, `${duration}min zone 2 ${aerobicTitleMod}`, 1, 1, 1, 1, 0,
+          noteLines(
+            `${duration}min zone 2 on Bike, Rower, SkiErg, or Assault Bike.`,
+            '5-6/10 effort',
+            isLowerPairing ? LOWER_BODY_MACHINE_NOTE : 'Conversational pace',
+          )),
       ];
     }
     case 'sprint': {
@@ -1095,45 +1196,20 @@ export function buildCombinedConditioningTemplate(
       // both heavy compounds AND max-velocity running. Upper / full-body
       // days keep the running sprint (quality neural exposure).
       if (isLowerPairing) {
-        // Ergo power-sprint session on lower-paired day. Feel variants:
-        //   sharp   → 6 × 10s all-out, 90s rest   (neural, full recovery)
-        //   grindy  → 8 × 15s hard, 45s rest      (repeat power, short rest)
-        //   flowing → pyramid 10/15/20/15/10s     (rising then easing)
-        const ergFeelIdx = feel === 'sharp' ? 0
-          : feel === 'grindy' ? 1
-          : feel === 'flowing' ? 2
-          : hash % 3;
-        if (ergFeelIdx === 1) {
-          return [
-            condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-              `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps).`),
-            condEx(`${prefix}-grindsprint`, `8 × 15s hard (${modLabel})`, 2, 8, 1, 1, 45,
-              `8 reps: 15s hard on ${modLabel}, 45s rest between (1:3).\n` +
-              'Intensity: 9/10 — grindy repeat power, alactic-lactic.\n' +
-              `${combinedNote}${legSpareNote}`),
-          ];
-        }
-        if (ergFeelIdx === 2) {
-          return [
-            condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-              `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps).`),
-            condEx(`${prefix}-pyramid`, `Pyramid 10/15/20/15/10s × 2 rounds (${modLabel})`, 2, 2, 1, 1, 120,
-              `2 rounds of 10s / 15s / 20s / 15s / 10s on ${modLabel}.\n` +
-              '60s rest between reps, 2min between rounds.\n' +
-              'Intensity: 9/10 — flowing surges, rising then easing.\n' +
-              `${combinedNote}${legSpareNote}`),
-          ];
-        }
-        // default sharp
-        const reps = 6 + (hash % 3); // 6 / 7 / 8
+        const prescription = machineSprintPrescription(selectedErgModality, hash, feel);
         return [
           condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-            `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps).`),
-          condEx(`${prefix}-powersprint`, `${reps} × 10s all-out power sprint (${modLabel})`, 2, reps, 1, 1, 90,
-            `${reps} × 10s max-wattage on ${modLabel}.\n` +
-            '90s easy spin between reps — full recovery.\n' +
-            'Intensity: 9-10/10 — sharp, quality-based, neural alactic.\n' +
-            `${combinedNote}${legSpareNote}`),
+            shortWarmup(modLabel)),
+          condEx(
+            `${prefix}-powersprint`,
+            machineSprintTitle(prescription, modLabel),
+            2,
+            prescription.reps,
+            1,
+            1,
+            prescription.restSeconds,
+            machineSprintNotes(prescription, modLabel, pairingNote),
+          ),
         ];
       }
       // Upper/full-body sprint day — running sprints stay on.
@@ -1149,36 +1225,39 @@ export function buildCombinedConditioningTemplate(
         // flowing — acceleration ladder
         return [
           condEx(`${prefix}-warmup`, 'Sprint warm-up', 1, 1, 1, 1, 0,
-            '8min: light jog, dynamic prep, 3 × 20m gradual accelerations (50% → 70% → 90%). Must feel sharp.'),
+            '8min easy jog + 3 x 20m build-ups'),
           condEx(`${prefix}-ladder`, 'Acceleration ladder × 3 rounds', 2, 3, 1, 1, 120,
-            '3 rounds of 10m / 20m / 30m accelerations.\n' +
-            '60s walk between distances, 2min between rounds.\n' +
-            'Intensity: 9/10 — crisp, rhythmic, rising velocity.\n' +
-            `${combinedNote}`),
+            noteLines(
+              '3 rounds: 10m / 20m / 30m accelerations',
+              '60s walk between distances',
+              '9/10 effort',
+            )),
         ];
       }
       if (sprintFeelIdx === 2) {
         // grindy — 6×20m shuttle with short rest
         return [
           condEx(`${prefix}-warmup`, 'Sprint warm-up', 1, 1, 1, 1, 0,
-            '8min: light jog, dynamic prep, 3 × 20m gradual accelerations (50% → 70% → 90%). Must feel sharp.'),
+            '8min easy jog + 3 x 20m build-ups'),
           condEx(`${prefix}-shuttle`, '6 × 20m shuttle sprints', 2, 6, 1, 1, 60,
-            '6 reps: 20m out / 20m back, hard turn.\n' +
-            '60s rest between reps — deliberately short to grind.\n' +
-            'Intensity: 9/10 — repeat speed quality.\n' +
-            `${combinedNote}`),
+            noteLines(
+              '6 x 20m out-and-back shuttle sprints',
+              '60s easy between reps',
+              '9/10 effort',
+            )),
         ];
       }
       // default sharp — classic flying sprints
       const reps = 3 + (hash % 2); // 3 or 4
       return [
         condEx(`${prefix}-warmup`, 'Sprint warm-up', 1, 1, 1, 1, 0,
-          '8min: light jog, dynamic prep, 3 × 20m gradual accelerations (50% → 70% → 90%). Must feel sharp.'),
+          '8min easy jog + 3 x 20m build-ups'),
         condEx(`${prefix}-sprints`, `${reps} × max-velocity sprints`, 2, reps, 1, 1, 180,
-          `${reps} reps: 20m build → 20m max velocity.\n` +
-          'Full walk-back recovery between reps (3min).\n' +
-          'Intensity: 9-10/10 — quality-based, neural.\n' +
-          `${combinedNote}`),
+          noteLines(
+            `${reps} x 20m build + 20m max velocity`,
+            '3min walk-back between reps',
+            'Max speed, full quality',
+          )),
       ];
     }
     case 'vo2': {
@@ -1191,18 +1270,20 @@ export function buildCombinedConditioningTemplate(
         : feel === 'flowing' ? 2
         : hash % 3;
       const [reps, workSec, restSec, label, feelNote] =
-        variantIdx === 0 ? [3, 180, 90, '3 × 3min', 'Grindy: long work, short recovery — sustained ceiling.']
-        : variantIdx === 1 ? [5, 90, 180, '5 × 90s', 'Sharp: short work, long recovery — repeat power.']
-        : [4, 120, 120, '4 × 2min', 'Flowing: balanced 1:1 — rhythmic tempo.'];
+        variantIdx === 0 ? [3, 180, 90, '3 x 3min', 'Grindy: long work, short recovery — sustained ceiling.']
+        : variantIdx === 1 ? [5, 90, 180, '5 x 90s', 'Sharp: short work, long recovery — repeat power.']
+        : [4, 120, 120, '4 x 2min', 'Flowing: balanced 1:1 — rhythmic tempo.'];
+      void workSec; void feelNote;
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-          `5min easy ${mod}, 2 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+          shortWarmup(modLabel)),
         condEx(`${prefix}-vo2`, `${label} VO2 intervals (${modLabel})`, 2, reps as number, 1, 1, restSec as number,
-          `${label} at ~90% HRmax on ${modLabel} (${workSec}s work).\n` +
-          `${Math.round((restSec as number) / 60 * 10) / 10}min easy recovery between reps.\n` +
-          'Intensity: 8-9/10.\n' +
-          `${feelNote}\n` +
-          `${combinedNote}${legSpareNote}`),
+          noteLines(
+            `${label} hard on ${modLabel}`,
+            easyBetweenReps(restSec as number),
+            '8-9/10 effort',
+            pairingNote,
+          )),
       ];
     }
     case 'glycolytic': {
@@ -1218,43 +1299,52 @@ export function buildCombinedConditioningTemplate(
         // grindy
         return [
           condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-            `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+            shortWarmup(modLabel)),
           condEx(`${prefix}-grind`, `4 × 2min hard (${modLabel})`, 2, 4, 1, 1, 120,
-            `4 reps: 2min hard on ${modLabel}, 2min easy between.\n` +
-            'Intensity: 8-9/10 — grindy, long lactate accumulation.\n' +
-            `${combinedNote}${legSpareNote}`),
+            noteLines(
+              `4 x 2min hard on ${modLabel}`,
+              '2min easy between reps',
+              '8-9/10 effort',
+              pairingNote,
+            )),
         ];
       }
       if (variantIdx === 1) {
         // sharp
         return [
           condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-            `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+            shortWarmup(modLabel)),
           condEx(`${prefix}-sharp`, `10 × 30s hard (${modLabel})`, 2, 10, 1, 1, 90,
-            `10 reps: 30s hard on ${modLabel}, 90s easy between (1:3).\n` +
-            'Intensity: 8-9/10 — sharp repeat power with full recovery.\n' +
-            `${combinedNote}${legSpareNote}`),
+            noteLines(
+              `10 x 30s hard on ${modLabel}`,
+              '90s easy between reps',
+              '8-9/10 effort',
+              pairingNote,
+            )),
         ];
       }
       // flowing (default) — 40s work is MAS-prescribed at 100% MAS (>30s rule).
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-          `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+          shortWarmup(modLabel)),
         condEx(`${prefix}-flow`, `40:20 intervals × 2 rounds (${modLabel})`, 2, 2, 1, 1, 120,
-          `40s on / 20s off × 4min block on ${modLabel}.\n` +
-          '2 rounds total. Rest 2min between blocks.\n' +
-          `\n${MAS_FALLBACK_NOTE}\n` +
-          `\nTarget pace: ${masIntensityLabel(40)} on each 40s work rep.\n` +
-          'Intensity: 8-9/10 — flowing continuous, glycolytic repeat effort.\n' +
-          `${combinedNote}${legSpareNote}`),
+          noteLines(
+            `40s hard / 20s easy x 4min on ${modLabel}`,
+            '2min easy between rounds',
+            '8-9/10 effort',
+            `${masIntensityLabel(40)} target`,
+            pairingNote,
+          )),
       ];
     }
     default:
       return [
         condEx(`${prefix}-aero`, `20min zone 2 ${mod}`, 1, 1, 1, 1, 0,
-          `20min zone 2 steady on ${modLabel}.\n` +
-          'Intensity: 5-6/10.\n' +
-          `${combinedNote}${legSpareNote}`),
+          noteLines(
+            `20min zone 2 on ${modLabel}`,
+            '5-6/10 effort',
+            pairingNote ?? 'Conversational pace',
+          )),
       ];
   }
 }
@@ -1278,18 +1368,16 @@ function buildSprintMicroDose(
   const hash = conditioningDateHash(dateStr);
   const prefix = `cond-${dateStr}`;
   const reps = 3 + (hash % 2); // 3 or 4
-  const note = combined
-    ? 'Combined S+C day — sprint micro-dose. Neural exposure only.'
-    : 'Sprint micro-dose. Keeps speed alive in the week without accumulating fatigue.';
+  void combined;
   return [
     condEx(`${prefix}-warmup`, 'Sprint warm-up (short)', 1, 1, 1, 1, 0,
-      '6min: light jog, dynamic prep, 2 × 20m gradual accelerations (50% → 70% → 90%).\n' +
-      'Must feel sharp — stop immediately if anything tight.'),
+      '6min easy jog + 2 x 20m build-ups'),
     condEx(`${prefix}-micro`, `${reps} × 10s flying sprint (micro-dose)`, 2, reps, 1, 1, 180,
-      `${reps} reps: 15m gradual build → 10s flying sprint.\n` +
-      'Full walk-back recovery (3min) — quality over volume.\n' +
-      'Intensity: 9-10/10 — neural only, very low total volume.\n' +
-      `${note}`),
+      noteLines(
+        `${reps} x 10s flying sprint`,
+        '3min walk-back between reps',
+        'Max speed, full quality',
+      )),
   ];
 }
 
@@ -1310,31 +1398,35 @@ function buildSprintReducedVolume(
   // If this is a lower-day combined session, keep it off-feet.
   if (isLower || ergModality) {
     const legSparingMods = ['ski', 'row', 'bike'] as const;
-    const mod = ergModality && ergModality !== 'mixed'
-      ? ergModality
-      : legSparingMods[hash % legSparingMods.length];
-    const modLabel = mod === 'bike' ? 'Assault Bike' : mod === 'row' ? 'Rower' : 'SkiErg';
-    const reps = 4; // half of standard 8
+    const selectedModality: ErgModality = ergModality ?? legSparingMods[hash % legSparingMods.length];
+    const modLabel = modLabelFromErgSelection(selectedModality);
+    const prescription = machineSprintPrescription(selectedModality, hash, undefined, true);
     return [
       condEx(`${prefix}-warmup`, `${modLabel} warm-up (short)`, 1, 1, 1, 1, 0,
-        `4min easy ${mod}, 2 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps).`),
-      condEx(`${prefix}-reduced`, `${reps} × 10s power sprint (${modLabel}, reduced)`, 2, reps, 1, 1, 120,
-        `${reps} × 10s all-out on ${modLabel} — reduced volume.\n` +
-        '2min easy spin between reps — full recovery.\n' +
-        'Intensity: 9-10/10.\n' +
-        `${combined ? 'Combined S+C day — ' : ''}Reduced-volume sprint retrofit.`),
+        shortWarmup(modLabel, 4)),
+      condEx(
+        `${prefix}-reduced`,
+        machineSprintTitle(prescription, modLabel, ', reduced'),
+        2,
+        prescription.reps,
+        1,
+        1,
+        prescription.restSeconds,
+        machineSprintNotes(prescription, modLabel, isLower ? LOWER_BODY_MACHINE_NOTE : undefined),
+      ),
     ];
   }
   // On-feet reduced — 3 flying sprints with long rest.
   const reps = 3;
   return [
     condEx(`${prefix}-warmup`, 'Sprint warm-up (short)', 1, 1, 1, 1, 0,
-      '6min: light jog, dynamic prep, 2 × 20m gradual accelerations (50% → 70% → 90%). Must feel sharp.'),
+      '6min easy jog + 2 x 20m build-ups'),
     condEx(`${prefix}-reduced`, `${reps} × 20m flying sprint (reduced)`, 2, reps, 1, 1, 180,
-      `${reps} reps: 20m build → 20m max velocity.\n` +
-      'Full walk-back recovery (3min).\n' +
-      'Intensity: 9-10/10 — neural, reduced volume.\n' +
-      `${combined ? 'Combined S+C day — ' : ''}Reduced-volume sprint retrofit.`),
+      noteLines(
+        `${reps} x 20m build + 20m max velocity`,
+        '3min walk-back between reps',
+        'Max speed, full quality',
+      )),
   ];
 }
 
@@ -1395,14 +1487,15 @@ function buildConditioningTemplateRaw(
       const startEvery = 6; // fixed 6 min — keeps cap-compliant
       return [
         condEx(`${prefix}-warmup`, 'Run warm-up', 1, 1, 1, 1, 0,
-          '10min easy jog, then dynamic prep: leg swings, walking lunges, A-skips, high knees, butt kicks. Finish with 2 × 200m strides.'),
+          '10min easy jog + 2 x 200m strides'),
         condEx(`${prefix}-intervals`, `${reps} × 1km repeats`, 2, reps, 1, 1, 0,
-          `${reps} × 1km — start every ${startEvery} min.\n` +
-          'Intensity: 8-9/10 — VO2 effort.\n' +
-          'Consistent pacing — not all-out sprinting.\n' +
-          'Walk/jog in remaining time before next rep.'),
+          noteLines(
+            `${reps} x 1km - start every ${startEvery}min`,
+            '8-9/10 effort',
+            'Walk/jog remaining time',
+          )),
         condEx(`${prefix}-cooldown`, 'Cool-down jog', 3, 1, 1, 1, 0,
-          '5min easy jog, stretch'),
+          '5min easy jog'),
       ];
     }
 
@@ -1416,14 +1509,16 @@ function buildConditioningTemplateRaw(
       const rest = 2; // fixed 2min recovery — keeps cap-compliant
       return [
         condEx(`${prefix}-warmup`, 'Conditioning warm-up', 1, 1, 1, 1, 0,
-          '10min easy bike/row, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)'),
+          '10min easy Bike/Rower + 3 x 10s build-ups'),
         condEx(`${prefix}-vo2`, `${reps} × 4min VO2 intervals`, 2, reps, 1, 1, rest * 60,
-          `${reps} × 4min at high aerobic intensity (~90% HRmax).\n` +
-          `Intensity: 8-9/10.\n` +
-          `${rest}min easy recovery between intervals.\n` +
-          'Controlled hard effort — not a sprint. Bike or row preferred.'),
+          noteLines(
+            `${reps} x 4min hard`,
+            `${rest}min easy between reps`,
+            '8-9/10 effort',
+            'Bike or Rower preferred',
+          )),
         condEx(`${prefix}-cooldown`, 'Easy cool-down', 3, 1, 1, 1, 0,
-          '5min easy spin/row, stretch'),
+          '5min easy Bike/Rower'),
       ];
     }
 
@@ -1438,17 +1533,17 @@ function buildConditioningTemplateRaw(
       const rounds = 3 + (hash % 3); // 3–5 rounds
       return [
         condEx(`${prefix}-warmup`, 'Interval warm-up', 1, 1, 1, 1, 0,
-          '10min jog, then dynamic prep: leg swings, walking lunges, A-skips, high knees, hip openers. Finish with 3 × 80m strides at 80%.'),
+          '10min easy jog + 3 x 80m strides'),
         condEx(`${prefix}-intervals`, `15:15 intervals × ${rounds} rounds`, 2, rounds, 1, 1, 120,
-          `15s on / 15s off × 4min block.\n` +
-          `Rest 2min between blocks.\n` +
-          `${rounds} rounds total.\n` +
-          `\n${MAS_FALLBACK_NOTE}\n` +
-          `\nTarget pace: ${masIntensityLabel(15)} on each 15s work rep.\n` +
-          'Intensity: 9/10 — glycolytic repeat effort.\n' +
-          'Must stay sharp — stop if form collapses.'),
+          noteLines(
+            `15s hard / 15s easy x 4min`,
+            `2min easy between rounds (${rounds} rounds)`,
+            '9/10 effort',
+            `${masIntensityLabel(15)} target`,
+            MAS_FALLBACK_NOTE,
+          )),
         condEx(`${prefix}-cooldown`, 'Cool-down jog', 3, 1, 1, 1, 0,
-          '5min easy jog, stretch'),
+          '5min easy jog'),
       ];
     }
 
@@ -1459,15 +1554,16 @@ function buildConditioningTemplateRaw(
       const rounds = 4 + (hash % 3); // 4–6 rounds
       return [
         condEx(`${prefix}-warmup`, 'Interval warm-up', 1, 1, 1, 1, 0,
-          '5min easy bike/row, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)'),
+          '5min easy Bike/Rower + 3 x 10s build-ups'),
         condEx(`${prefix}-tabata`, `Tabata 20:10 × ${rounds} rounds`, 2, rounds, 1, 1, 120,
-          `20s on / 10s off × 4min block.\n` +
-          `Rest 2min between blocks.\n` +
-          `${rounds} rounds total.\n` +
-          'Intensity: 8-9/10 — glycolytic.\n' +
-          'Max effort on working intervals. Bike/row/ski.'),
+          noteLines(
+            `20s hard / 10s easy x 4min`,
+            `2min easy between rounds (${rounds} rounds)`,
+            '8-9/10 effort',
+            MACHINE_OPTIONS_NOTE,
+          )),
         condEx(`${prefix}-cooldown`, 'Easy cool-down', 3, 1, 1, 1, 0,
-          '3min easy spin/row, stretch'),
+          '3min easy Bike/Rower'),
       ];
     }
 
@@ -1478,14 +1574,16 @@ function buildConditioningTemplateRaw(
       const rounds = 4 + (hash % 3); // 4–6 rounds
       return [
         condEx(`${prefix}-warmup`, 'Interval warm-up', 1, 1, 1, 1, 0,
-          '5min easy bike, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)'),
+          '5min easy Assault Bike + 3 x 10s build-ups'),
         condEx(`${prefix}-inv-tabata`, `Inverse Tabata 10:20 × ${rounds} rounds`, 2, rounds, 1, 1, 120,
-          `10s on / 20s off × 4min block.\n` +
-          `Rest 2min between blocks.\n` +
-          `${rounds} rounds total.\n` +
-          'Intensity: 8-9/10 — quality > volume. Air bike preferred.'),
+          noteLines(
+            `10s hard / 20s easy x 4min`,
+            `2min easy between rounds (${rounds} rounds)`,
+            '8-9/10 effort',
+            'Assault Bike preferred',
+          )),
         condEx(`${prefix}-cooldown`, 'Easy cool-down', 3, 1, 1, 1, 0,
-          '3min easy spin, stretch'),
+          '3min easy spin'),
       ];
     }
 
@@ -1497,20 +1595,24 @@ function buildConditioningTemplateRaw(
       // Bucket: Alactic power
       // Purpose: Max output without fatigue spillover
       // Air bike / echo bike. Neural + power session.
-      const formats = [
-        { reps: 2, dur: '30s', rest: 180, note: '2 × 30s max effort sprints. Start every 3min. MUST be max effort — full recovery between.' },
-        { reps: 3, dur: '20s', rest: 120, note: '3 × 20s max effort sprints. Start every 2min. Full commitment, full recovery.' },
-        { reps: 6, dur: '10s', rest: 60, note: '6 × 10s max effort sprints. Start every 1min. Explosive — zero pacing.' },
-      ];
-      const fmt = formats[hash % formats.length];
+      const selectedModality = ergModality ?? 'bike';
+      const modLabel = modLabelFromErgSelection(selectedModality);
+      const prescription = machineSprintPrescription(selectedModality, hash, feel);
       return [
         condEx(`${prefix}-warmup`, 'Sprint warm-up', 1, 1, 1, 1, 0,
-          '5min easy bike, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)'),
-        condEx(`${prefix}-sprints`, `Sprint accumulation (${fmt.reps} × ${fmt.dur})`, 2, fmt.reps, 1, 1, fmt.rest,
-          `Accumulate 60s total max sprinting.\n${fmt.note}\n` +
-          'Intensity: 9-10/10 — quality-based, full recovery.'),
+          shortWarmup(modLabel)),
+        condEx(
+          `${prefix}-sprints`,
+          `Sprint accumulation (${prescription.reps} x ${prescription.seconds}s ${prescription.effort} ${modLabel})`,
+          2,
+          prescription.reps,
+          1,
+          1,
+          prescription.restSeconds,
+          machineSprintNotes(prescription, modLabel),
+        ),
         condEx(`${prefix}-cooldown`, 'Easy spin', 3, 1, 1, 1, 0,
-          '3min easy spin, stretch'),
+          `3min easy ${modLabel}`),
       ];
     }
 
@@ -1519,20 +1621,22 @@ function buildConditioningTemplateRaw(
       // Purpose: Speed, mechanics, neural freshness
       // Field or hill. Quality > volume. Never fatigued sprinting.
       const formats = [
-        { dist: '20–40m', note: 'Short acceleration sprints. 20–40m × 6–8 reps. Full walk-back recovery. Focus on first-step explosion.' },
-        { dist: '40–60m', note: 'Medium sprints. 40–60m × 5–6 reps. Full walk-back recovery. Focus on acceleration + top speed.' },
-        { dist: '60–100m', note: 'Longer sprints. 60–100m × 4–5 reps. Full 3min recovery. Focus on speed maintenance and mechanics.' },
+        { dist: '20-40m', reps: '6-8', rest: 'walk-back' },
+        { dist: '40-60m', reps: '5-6', rest: 'walk-back' },
+        { dist: '60-100m', reps: '4-5', rest: '3min' },
       ];
       const fmt = formats[hash % formats.length];
       return [
         condEx(`${prefix}-warmup`, 'Sprint warm-up', 1, 1, 1, 1, 0,
-          '12min jog, then dynamic prep: leg swings, walking lunges, A-skips, high knees, butt kicks, straight-leg bounds, ankling. Finish with 4 × 20m gradual accelerations (50% → 70% → 80% → 90%).'),
+          '12min easy jog + 4 x 20m build-ups'),
         condEx(`${prefix}-sprints`, `Free sprints (${fmt.dist})`, 2, 1, 1, 1, 0,
-          `20min total session.\n${fmt.note}\n` +
-          'Intensity: 9-10/10 — quality-based.\n' +
-          'Quality > volume. Stop if any rep feels sluggish.'),
+          noteLines(
+            `${fmt.reps} x ${fmt.dist} sprints`,
+            `${fmt.rest} recovery between reps`,
+            'Max speed, full quality',
+          )),
         condEx(`${prefix}-cooldown`, 'Cool-down jog + stretch', 3, 1, 1, 1, 0,
-          '5min easy jog, hamstring/hip flexor/calf stretch'),
+          '5min easy jog'),
       ];
     }
 
@@ -1548,22 +1652,15 @@ function buildConditioningTemplateRaw(
       const rest = 2 + (hash % 2); // 2–3 min full recovery
       return [
         condEx(`${prefix}-warmup`, 'Sprint warm-up', 1, 1, 1, 1, 0,
-          '15min easy jog, then dynamic prep: leg swings, walking lunges, hip openers, high knees, butt kicks, A-skips, B-skips, straight-leg bounds, pogo hops.\n' +
-          '4 × 20m gradual accelerations (50% → 70% → 80% → 90%).\n' +
-          'Must feel sharp before first rep.'),
+          '15min easy jog + 4 x 20m build-ups'),
         condEx(`${prefix}-flying`, `Flying sprints (${reps} × ${buildup}m build + ${maxV}m max)`, 2, reps, 1, 1, rest * 60,
-          `${reps} reps:\n` +
-          `• ${buildup}m gradual acceleration to ~95%\n` +
-          `• ${maxV}m at max velocity\n` +
-          `• ${rest}min FULL recovery between reps (walk back, wait).\n\n` +
-          'Intensity: 9-10/10 — quality-based neural session.\n\n' +
-          'Rules:\n' +
-          '• Full recovery is mandatory — no fatigue sprinting.\n' +
-          '• Quality > volume. Stop if any rep feels sluggish.\n' +
-          '• This is a neural/speed session, not conditioning.\n' +
-          '• Focus: hip height, relaxation at top speed, ground contact.'),
+          noteLines(
+            `${reps} x ${buildup}m build + ${maxV}m max`,
+            `${rest}min walk-back between reps`,
+            'Max speed, full quality',
+          )),
         condEx(`${prefix}-cooldown`, 'Cool-down jog + stretch', 3, 1, 1, 1, 0,
-          '5min easy jog, hamstring/hip flexor/calf stretch'),
+          '5min easy jog'),
       ];
     }
 
@@ -1580,14 +1677,15 @@ function buildConditioningTemplateRaw(
       const duration = 20 + (hash % 3) * 5; // 20–30 min
       return [
         condEx(`${prefix}-warmup`, 'Run warm-up', 1, 1, 1, 1, 0,
-          '8min easy jog, then dynamic prep: leg swings, walking lunges, A-skips, high knees, butt kicks. Finish with 2 × 100m strides.'),
+          '8min easy jog + 2 x 100m strides'),
         condEx(`${prefix}-repeats`, `${dist} repeats (${duration}min)`, 2, 1, 1, 1, 0,
-          `${dist} every ${startEvery}min for ${duration}min.\n` +
-          'Intensity: 8-9/10 — glycolytic repeat effort.\n' +
-          'Consistent output — avoid early burnout.\n' +
-          'Walk/jog remaining time before next rep.'),
+          noteLines(
+            `${dist} every ${startEvery}min for ${duration}min`,
+            '8-9/10 effort',
+            'Walk/jog remaining time',
+          )),
         condEx(`${prefix}-cooldown`, 'Cool-down jog', 3, 1, 1, 1, 0,
-          '5min easy jog, stretch'),
+          '5min easy jog'),
       ];
     }
 
@@ -1601,17 +1699,15 @@ function buildConditioningTemplateRaw(
       const rounds = 3; // fixed — keeps volume controlled
       return [
         condEx(`${prefix}-warmup`, 'Dynamic warm-up', 1, 1, 1, 1, 0,
-          '10min: jog, high knees, butt kicks, A-skips, lateral shuffles, 3 × 20m gradual accelerations (50% → 70% → 90%)'),
+          '10min easy jog + 3 x 20m build-ups'),
         condEx(`${prefix}-fartlek`, `Footy fartlek (${rounds} rounds × ${reps} reps)`, 2, rounds, reps, reps, 150,
-          `Goal-to-goal sprint (200m)\n` +
-          `Very slow 50m recovery\n` +
-          `Sprint centre square (50m)\n` +
-          `Very slow jog\n\n` +
-          `${reps} reps per round. Rest 2–3min between rounds.\n` +
-          `${rounds} rounds total.\n` +
-          'Intensity: 8/10 — game-simulation repeat effort.'),
+          noteLines(
+            `${rounds} rounds x ${reps} footy fartlek reps`,
+            '2-3min easy between rounds',
+            '8/10 effort',
+          )),
         condEx(`${prefix}-cooldown`, 'Cool-down jog + stretch', 3, 1, 1, 1, 0,
-          '5min easy jog, full body stretch'),
+          '5min easy jog'),
       ];
     }
 
@@ -1630,31 +1726,31 @@ function buildConditioningTemplateRaw(
       // erg to avoid repeating a modality already used this week.
       const duration = 35 + (hash % 3) * 5; // 35–45 min
       let modLabel: string;
-      let modNote: string;
+      let modNote: string | undefined;
       if (ergModality === 'bike') {
         modLabel = 'Assault Bike';
-        modNote = 'Smooth cadence 80–90rpm, low resistance.';
+        modNote = undefined;
       } else if (ergModality === 'row') {
         modLabel = 'Rower';
-        modNote = 'Stroke rate 20–24, relaxed recovery between drives.';
+        modNote = undefined;
       } else if (ergModality === 'ski') {
         modLabel = 'SkiErg';
-        modNote = 'Relaxed arm rhythm, drive from hips — no grip strain.';
+        modNote = undefined;
       } else if (ergModality === 'mixed') {
-        modLabel = 'Row + SkiErg (mixed)';
-        modNote = 'Alternate 5min Rower / 5min SkiErg blocks, smooth and relaxed.';
+        modLabel = 'Row + SkiErg';
+        modNote = 'Alternate 5min blocks';
       } else {
         const modVariant = hash % 5;
         const pair =
           modVariant === 0 || modVariant === 1
-            ? ['run', 'Nasal breathing encouraged on easy stretches.']
+            ? ['run', undefined]
             : modVariant === 2
-            ? ['Assault Bike', 'Smooth cadence 80–90rpm, low resistance.']
+            ? ['Assault Bike', undefined]
             : modVariant === 3
-            ? ['Rower', 'Stroke rate 20–24, relaxed recovery between drives.']
-            : ['SkiErg', 'Relaxed arm rhythm, drive from hips — no grip strain.'];
-        modLabel = pair[0];
-        modNote = pair[1];
+            ? ['Rower', undefined]
+            : ['SkiErg', undefined];
+        modLabel = pair[0] as string;
+        modNote = pair[1] as string | undefined;
       }
       // Structure variant: drive by feel if supplied, else hash.
       //   flowing → pure steady    (default aerobic character)
@@ -1666,16 +1762,17 @@ function buildConditioningTemplateRaw(
         : hash % 3;
       const structBlock =
         structVariant === 0
-          ? `${duration}min zone 2 steady state.`
+          ? `${duration}min zone 2 on ${modLabel}`
           : structVariant === 1
-          ? `${duration}min: steady zone 2, with 3 × 60s surges to high zone 2 at ${Math.floor(duration / 4)}min, ${Math.floor(duration / 2)}min and ${Math.floor((3 * duration) / 4)}min.`
-          : `${duration}min fartlek: alternating 4min zone 2 / 1min high-zone 2 throughout. Never red, never sprinting.`;
+          ? `${duration}min zone 2 on ${modLabel} + 3 x 60s surges`
+          : `${duration}min: 4min zone 2 / 1min high-zone 2 on ${modLabel}`;
       return [
         condEx(`${prefix}-run`, `${duration}min zone 2 ${modLabel}`, 1, 1, 1, 1, 0,
-          `${structBlock}\n` +
-          `${modNote}\n` +
-          'Intensity: 5-6/10 — conversational pace.\n' +
-          'Must feel easy — no drift into tempo.'),
+          noteLines(
+            structBlock,
+            '5-6/10 effort',
+            modNote ?? 'Conversational pace',
+          )),
       ];
     }
 
@@ -1686,31 +1783,35 @@ function buildConditioningTemplateRaw(
 
     case 'Flush Run':
       return [condEx(`${prefix}-flush`, 'Flush run', 1, 1, 1, 1, 0,
-        '20min easy run at conversational pace (Zone 1–2). Purpose: flush metabolites, promote blood flow, aid recovery.')];
+        noteLines('20min easy run', '3-4/10 effort', 'Recovery pace'))];
 
     case 'Easy Bike':
       return [condEx(`${prefix}-bike`, 'Easy bike', 1, 1, 1, 1, 0,
-        '20min easy spin (Zone 1–2). Low resistance, high cadence (80–90rpm). Recovery only.')];
+        noteLines('20min easy bike', '3-4/10 effort', 'Recovery pace'))];
 
     case 'Easy Row':
       return [condEx(`${prefix}-row`, 'Easy row', 1, 1, 1, 1, 0,
-        '15–20min easy row (Zone 1–2). Stroke rate 18–22. Smooth technique, not power.')];
+        noteLines('15-20min easy row', '3-4/10 effort', 'Recovery pace'))];
 
     case 'Easy Ski':
       return [condEx(`${prefix}-ski`, 'Easy SkiErg', 1, 1, 1, 1, 0,
-        '15–20min easy SkiErg (Zone 1–2). Smooth, relaxed rhythm. Recovery focus.')];
+        noteLines('15-20min easy SkiErg', '3-4/10 effort', 'Recovery pace'))];
 
     case 'Easy Swim':
       return [condEx(`${prefix}-swim`, 'Easy swim', 1, 1, 1, 1, 0,
-        '20–30min easy swim. Mix of freestyle and backstroke. Recovery pace.')];
+        noteLines('20-30min easy swim', '3-4/10 effort', 'Recovery pace'))];
 
     case 'Light Circuits':
       return [condEx(`${prefix}-circuits`, 'Light recovery circuit', 1, 2, 1, 1, 60,
-        '2 rounds — easy pace, no rushing:\n• 2min easy bike\n• 10 bodyweight squats\n• 10 push-ups\n• 30s plank\n• 2min easy row\n60s rest between rounds. Purpose: blood flow, not fitness.')];
+        noteLines(
+          '2 rounds easy',
+          '2min bike, 10 squats, 10 push-ups, 30s plank, 2min row',
+          '60s easy between rounds',
+        ))];
 
     default:
       return [
-        condEx(`${prefix}-session`, exerciseName, 1, 1, 1, 1, 0, `${exerciseName} — see coach notes for details`),
+        condEx(`${prefix}-session`, exerciseName, 1, 1, 1, 1, 0, exerciseName),
       ];
   }
 }
@@ -1769,12 +1870,11 @@ export function isRunningBasedConditioning(exerciseName: string): boolean {
  * as a single line so callers can append to existing prescription notes.
  */
 export const MODALITY_FLEX_NOTE =
-  'Can also be completed on bike, rower, SkiErg, or Assault Bike. ' +
-  'If your weekly run load is already high, prefer a non-running modality.';
+  MACHINE_OPTIONS_NOTE;
 
 /** Coach-tone note stamped on sessions converted by the run-load guard. */
 export const RUN_LOAD_SHIFT_NOTE =
-  'Shifted to non-running modality to manage weekly run load.';
+  'Shifted off-feet to manage run load.';
 
 /**
  * Tag a freshly converted off-feet conditioning block with the coach
@@ -1839,7 +1939,7 @@ export function switchToOffFeetModality(
   const prefix = `cond-${dateStr}`;
   const modalities = ['bike', 'row', 'ski'] as const;
   const mod = modalities[hash % modalities.length];
-  const modLabel = mod === 'bike' ? 'Assault Bike' : mod === 'row' ? 'Rower' : 'SkiErg';
+  const modLabel = modLabelFromErg(mod);
 
   // Map each running template to an equivalent off-feet session
   switch (exerciseName) {
@@ -1850,16 +1950,17 @@ export function switchToOffFeetModality(
       const rounds = 3 + (hash % 3);
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-          `10min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+          shortWarmup(modLabel, 10)),
         condEx(`${prefix}-intervals`, `15:15 intervals × ${rounds} rounds (${modLabel})`, 2, rounds, 1, 1, 120,
-          `15s on / 15s off × 4min block on ${modLabel}.\n` +
-          `Rest 2min between blocks.\n${rounds} rounds total.\n` +
-          `\n${MAS_FALLBACK_NOTE}\n` +
-          `\nTarget pace: ${masIntensityLabel(15)} equivalent on each 15s work rep.\n` +
-          'Intensity: 9/10 — glycolytic repeat effort.\n' +
-          'Must stay sharp — stop if form collapses.'),
+          noteLines(
+            `15s hard / 15s easy x 4min on ${modLabel}`,
+            `2min easy between rounds (${rounds} rounds)`,
+            '9/10 effort',
+            `${masIntensityLabel(15)} target`,
+            MAS_FALLBACK_NOTE,
+          )),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `5min easy ${mod}, stretch`),
+          `5min easy ${modLabel}`),
       ];
     }
 
@@ -1867,14 +1968,15 @@ export function switchToOffFeetModality(
       const rounds = 4 + (hash % 3);
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-          `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+          shortWarmup(modLabel)),
         condEx(`${prefix}-tabata`, `Tabata 20:10 × ${rounds} rounds (${modLabel})`, 2, rounds, 1, 1, 120,
-          `20s on / 10s off × 4min block on ${modLabel}.\n` +
-          `Rest 2min between blocks.\n${rounds} rounds total.\n` +
-          'Intensity: 8-9/10 — glycolytic.\n' +
-          `Max effort on working intervals.`),
+          noteLines(
+            `20s hard / 10s easy x 4min on ${modLabel}`,
+            `2min easy between rounds (${rounds} rounds)`,
+            '8-9/10 effort',
+          )),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `3min easy ${mod}, stretch`),
+          `3min easy ${modLabel}`),
       ];
     }
 
@@ -1882,62 +1984,77 @@ export function switchToOffFeetModality(
       const rounds = 4 + (hash % 3);
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-          `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+          shortWarmup(modLabel)),
         condEx(`${prefix}-inv-tabata`, `Inverse Tabata 10:20 × ${rounds} rounds (${modLabel})`, 2, rounds, 1, 1, 120,
-          `10s on / 20s off × 4min block on ${modLabel}.\n` +
-          `Rest 2min between blocks.\n${rounds} rounds total.\n` +
-          'Intensity: 8-9/10 — quality > volume.'),
+          noteLines(
+            `10s hard / 20s easy x 4min on ${modLabel}`,
+            `2min easy between rounds (${rounds} rounds)`,
+            '8-9/10 effort',
+          )),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `3min easy ${mod}, stretch`),
+          `3min easy ${modLabel}`),
       ];
     }
 
     // ── Sprint / Alactic → Bike sprints ──
     case 'Max Effort Sprint Accumulation': {
-      const formats = [
-        { reps: 2, dur: '30s', rest: 180, note: `2 × 30s max effort on ${modLabel}. Start every 3min. Full recovery.` },
-        { reps: 3, dur: '20s', rest: 120, note: `3 × 20s max effort on ${modLabel}. Start every 2min. Full recovery.` },
-        { reps: 6, dur: '10s', rest: 60, note: `6 × 10s max effort on ${modLabel}. Start every 1min. Explosive.` },
-      ];
-      const fmt = formats[hash % formats.length];
+      const prescription = machineSprintPrescription(mod, hash);
       return [
         condEx(`${prefix}-warmup`, `${modLabel} sprint warm-up`, 1, 1, 1, 1, 0,
-          `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
-        condEx(`${prefix}-sprints`, `Sprint accumulation (${fmt.reps} × ${fmt.dur}, ${modLabel})`, 2, fmt.reps, 1, 1, fmt.rest,
-          `Accumulate 60s total max effort on ${modLabel}.\n${fmt.note}\n` +
-          'Intensity: 9-10/10 — quality-based, full recovery.'),
+          shortWarmup(modLabel)),
+        condEx(
+          `${prefix}-sprints`,
+          `Sprint accumulation (${prescription.reps} x ${prescription.seconds}s ${prescription.effort} ${modLabel})`,
+          2,
+          prescription.reps,
+          1,
+          1,
+          prescription.restSeconds,
+          machineSprintNotes(prescription, modLabel),
+        ),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `3min easy ${mod}, stretch`),
+          `3min easy ${modLabel}`),
       ];
     }
 
     case 'Free Sprint Session': {
+      const prescription = machineSprintPrescription(mod, hash);
       return [
         condEx(`${prefix}-warmup`, `${modLabel} sprint warm-up`, 1, 1, 1, 1, 0,
-          `5min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
-        condEx(`${prefix}-sprints`, `Free sprints on ${modLabel}`, 2, 1, 1, 1, 0,
-          `20min session: 6–8 × 10–15s max effort on ${modLabel}.\n` +
-          'Intensity: 9-10/10 — quality-based.\n' +
-          'Full recovery between reps (easy spin/row until HR settles).\n' +
-          'Quality > volume. Stop if output drops.'),
+          shortWarmup(modLabel)),
+        condEx(
+          `${prefix}-sprints`,
+          `Free sprints on ${modLabel}`,
+          2,
+          prescription.reps,
+          1,
+          1,
+          prescription.restSeconds,
+          machineSprintNotes(prescription, modLabel),
+        ),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `5min easy ${mod}, stretch`),
+          `5min easy ${modLabel}`),
       ];
     }
 
     case 'Flying Sprints': {
       // Flying sprints are field-only — neural session. Convert to bike sprint equiv.
-      const reps = 3 + (hash % 4);
-      const rest = 2 + (hash % 3);
+      const prescription = machineSprintPrescription(mod, hash);
       return [
         condEx(`${prefix}-warmup`, `${modLabel} sprint warm-up`, 1, 1, 1, 1, 0,
-          `10min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
-        condEx(`${prefix}-flying`, `${modLabel} max velocity sprints (${reps} × 10–15s)`, 2, reps, 1, 1, rest * 60,
-          `${reps} reps: 5s progressive build → 10–15s max effort on ${modLabel}.\n` +
-          `${rest}min FULL recovery between reps.\n` +
-          'Intensity: 9-10/10 — quality-based neural equivalent.'),
+          shortWarmup(modLabel, 10)),
+        condEx(
+          `${prefix}-flying`,
+          `${modLabel} max velocity sprints (${prescription.reps} x ${prescription.seconds}s ${prescription.effort})`,
+          2,
+          prescription.reps,
+          1,
+          1,
+          prescription.restSeconds,
+          machineSprintNotes(prescription, modLabel),
+        ),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `5min easy ${mod}, stretch`),
+          `5min easy ${modLabel}`),
       ];
     }
 
@@ -1947,14 +2064,15 @@ export function switchToOffFeetModality(
       const workTime = mod === 'bike' ? '3:30' : '3:45';
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-          `10min easy ${mod}, then dynamic prep: leg swings, walking lunges, hip openers, high knees, ankling. Finish with 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps).`),
+          shortWarmup(modLabel, 10)),
         condEx(`${prefix}-intervals`, `${reps} × ${workTime} intervals (${modLabel})`, 2, reps, 1, 1, 0,
-          `${reps} × ${workTime} at 1km-repeat intensity on ${modLabel}.\n` +
-          'Intensity: 8-9/10 — VO2 effort.\n' +
-          'Start every 7min. Consistent output.\n' +
-          'Easy recovery between reps.'),
+          noteLines(
+            `${reps} x ${workTime} hard on ${modLabel}`,
+            'Start every 7min',
+            '8-9/10 effort',
+          )),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `5min easy ${mod}, stretch`),
+          `5min easy ${modLabel}`),
       ];
     }
 
@@ -1963,14 +2081,15 @@ export function switchToOffFeetModality(
       const rest = 2 + (hash % 2);
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-          `10min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+          shortWarmup(modLabel, 10)),
         condEx(`${prefix}-vo2`, `${reps} × 4min VO2 intervals (${modLabel})`, 2, reps, 1, 1, rest * 60,
-          `${reps} × 4min at ~90% HRmax on ${modLabel}.\n` +
-          `Intensity: 8-9/10.\n` +
-          `${rest}min easy recovery between intervals.\n` +
-          'Controlled hard effort — not a sprint.'),
+          noteLines(
+            `${reps} x 4min hard on ${modLabel}`,
+            `${rest}min easy between reps`,
+            '8-9/10 effort',
+          )),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `5min easy ${mod}, stretch`),
+          `5min easy ${modLabel}`),
       ];
     }
 
@@ -1980,13 +2099,15 @@ export function switchToOffFeetModality(
       const duration = 20 + (hash % 3) * 5;
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-          `8min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+          shortWarmup(modLabel, 8)),
         condEx(`${prefix}-repeats`, `${workTime} repeats on ${modLabel} (${duration}min)`, 2, 1, 1, 1, 0,
-          `${workTime} hard / easy recovery on ${modLabel} for ${duration}min.\n` +
-          'Intensity: 8-9/10 — glycolytic repeat effort.\n' +
-          'Consistent output. Equivalent of 200m/400m repeats.'),
+          noteLines(
+            `${workTime} hard / easy for ${duration}min on ${modLabel}`,
+            '8-9/10 effort',
+            'Consistent output',
+          )),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `5min easy ${mod}, stretch`),
+          `5min easy ${modLabel}`),
       ];
     }
 
@@ -1995,13 +2116,15 @@ export function switchToOffFeetModality(
       const rounds = 3; // fixed — keeps volume controlled
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
-          `10min easy ${mod}, 3 × 5-10s gradual accelerations (easy → moderate → fast, easy between reps)`),
+          shortWarmup(modLabel, 10)),
         condEx(`${prefix}-fartlek`, `Fartlek intervals on ${modLabel} (${rounds} rounds × ${reps} reps)`, 2, rounds, reps, reps, 150,
-          `Hard 30s / easy 30s × ${reps} reps per round on ${modLabel}.\n` +
-          `Rest 2–3min between rounds. ${rounds} rounds total.\n` +
-          'Intensity: 8/10 — game-conditioning equivalent with varied output.'),
+          noteLines(
+            `30s hard / 30s easy x ${reps} reps on ${modLabel}`,
+            `2-3min easy between rounds (${rounds} rounds)`,
+            '8/10 effort',
+          )),
         condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
-          `5min easy ${mod}, stretch`),
+          `5min easy ${modLabel}`),
       ];
     }
 
@@ -2010,9 +2133,11 @@ export function switchToOffFeetModality(
       const duration = 35 + (hash % 3) * 5;
       return [
         condEx(`${prefix}-steady`, `${duration}min zone 2 ${mod}`, 1, 1, 1, 1, 0,
-          `${duration}min zone 2 steady state on ${modLabel}.\n` +
-          'Intensity: 5-6/10 — conversational pace.\n' +
-          'Nasal breathing encouraged. Must feel easy.'),
+          noteLines(
+            `${duration}min zone 2 on ${modLabel}`,
+            '5-6/10 effort',
+            'Conversational pace',
+          )),
       ];
     }
 
@@ -2020,7 +2145,7 @@ export function switchToOffFeetModality(
       // Unknown running template — generic machine conversion
       return [
         condEx(`${prefix}-session`, `${exerciseName} (${modLabel})`, 1, 1, 1, 1, 0,
-          `${exerciseName} adapted to ${modLabel}. See coach notes.`),
+          `${exerciseName} on ${modLabel}`),
       ];
   }
 }
@@ -2063,15 +2188,15 @@ export function buildAerobicFlushFinisher(
   const duration = 15 + (hash % 4) * 5; // 15, 20, 25, or 30 min
   const modalities = ['bike', 'row', 'ski'] as const;
   const mod = modalities[hash % modalities.length];
-  const modLabel = mod === 'bike' ? 'Assault Bike' : mod === 'row' ? 'Rower' : 'SkiErg';
+  const modLabel = modLabelFromErg(mod);
 
   return [
     condEx(`${prefix}-flush-finisher`, `Aerobic flush (${duration}min ${modLabel})`, 99, 1, 1, 1, 0,
-      `${duration}min aerobic flush on ${modLabel}:\n` +
-      '30s moderate / 30s easy steady — repeat.\n' +
-      'Intensity: 5-6/10 — conversational pace.\n' +
-      'Purpose: low-fatigue aerobic volume, not a second hard session.\n' +
-      'Must not feel difficult. Skip if fatigued.'),
+      noteLines(
+        `${duration}min aerobic flush on ${modLabel}`,
+        '30s moderate / 30s easy',
+        '5-6/10 effort',
+      )),
   ];
 }
 

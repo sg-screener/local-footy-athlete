@@ -549,9 +549,11 @@ function DayWorkoutScreenClassic() {
                     style={styles.conditioningBlock}
                   >
                     <Text style={styles.conditioningBlockTitle}>{opt.title}</Text>
-                    <Text style={styles.conditioningBlockDescription}>
-                      {opt.description}
-                    </Text>
+                    {opt.description ? (
+                      <Text style={styles.conditioningBlockDescription}>
+                        {opt.description}
+                      </Text>
+                    ) : null}
                     {opt.rows.map((exercise, idx) =>
                       renderConditioningRow(exercise, idx),
                     )}

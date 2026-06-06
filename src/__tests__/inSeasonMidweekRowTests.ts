@@ -54,7 +54,7 @@ assert(wedPlan?.isHardExposure === false, 'Wednesday is not a hard exposure');
 assert(/Easy Aerobic Flush/i.test(wedPlan?.focus ?? ''), 'focus names recovery-biased flush');
 assert(/20[–-]30min/i.test(wedPlan?.focus ?? ''), 'focus caps dose at 20-30min');
 assert(/3[–-]4\/10/i.test(wedPlan?.focus ?? ''), 'focus uses 3-4/10 intensity');
-assert(/Skip if legs feel heavy|Thursday quality/i.test(wedPlan?.focus ?? ''), 'focus includes skip guidance');
+assert(!/Skip if legs feel heavy|Thursday quality|optional bike\/row/i.test(wedPlan?.focus ?? ''), 'focus avoids verbose skip guidance');
 assert(!/40min|5[–-]6\/10/i.test(wedPlan?.focus ?? ''), 'focus does not prescribe 40min at 5-6/10');
 
 section('2. Builder renders the reduced aerobic flush as the visible workout');
@@ -111,9 +111,8 @@ assert(/Easy Aerobic Flush/i.test(headline), 'headline exercise is Easy Aerobic 
 assert(/\b(20|25|30)min\b/i.test(headline), 'headline duration is 20, 25, or 30min');
 assert(/Rower|Bike|Assault Bike/i.test(headline), 'headline uses an off-feet modality');
 assert(/3-4\/10/i.test(notes), 'notes use 3-4/10 intensity');
-assert(/Optional/i.test(notes), 'notes say optional');
-assert(/Skip if legs feel heavy/i.test(notes), 'notes include post-team skip guidance');
-assert(/Thursday training quality/i.test(notes), 'notes protect Thursday quality');
+assert(/Recovery pace/i.test(notes), 'notes keep one short recovery note');
+assert(!/Optional|Skip if legs feel heavy|Thursday training quality/i.test(notes), 'notes avoid verbose skip guidance');
 assert(!/40min|5-6\/10/i.test(`${headline}\n${notes}`), 'builder does not emit default 40min 5-6/10 row');
 
 console.log(`\n${'='.repeat(60)}`);

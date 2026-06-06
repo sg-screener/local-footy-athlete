@@ -424,7 +424,7 @@ export function useDayWorkout() {
         conditioningOptions = [
           {
             title: legacyTitle,
-            description: 'Complete all phases below in order.',
+            description: '',
             rows: tail,
           },
         ];

@@ -27,6 +27,7 @@
  */
 
 import {
+  buildConditioningTemplate,
   conditioningCategoryToExerciseName,
   conditioningDateHash,
 } from '../utils/sessionBuilder';
@@ -299,6 +300,171 @@ section('7. buildWorkoutsFromCoach threads miniCycleNumber into template pick');
       `[${cat}] template stable across weeks within mc=1 (w1=${mc1w1[cat]} / w4=${mc1w4[cat]})`,
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Section 8: Combined lower + aerobic-base copy is concise and
+// athlete-facing. This is copy-only: duration, zone, intensity, and
+// modality flexibility stay on the same builder path.
+// ─────────────────────────────────────────────────────────────────
+section('8. combined lower + aerobic-base copy');
+{
+  const out = buildConditioningTemplate('Long Nasal Run', '2026-06-01', {
+    combined: true,
+    strengthRegion: 'lower',
+    ergModality: 'bike',
+  });
+  const primary = out.find((ex) => ex.exercise?.name?.includes('zone 2'));
+  const title = primary?.exercise?.name ?? '';
+  const notes = primary?.notes ?? '';
+
+  assert(
+    title === '25min zone 2 bike',
+    `combined aerobic title is concise (got "${title}")`,
+  );
+  assert(
+    notes.includes('25min zone 2 on Bike, Rower, SkiErg, or Assault Bike.'),
+    'combined aerobic notes mention machine options clearly',
+  );
+  assert(
+    notes.includes('5-6/10 effort'),
+    'combined aerobic notes keep the existing intensity prescription',
+  );
+  assert(
+    notes.includes('Machine-based conditioning keeps running load down today.'),
+    'combined aerobic notes give the short lower-day reason',
+  );
+  assert(
+    !/Combined S\+C day|abbreviated conditioning dose|Can also be completed|Intensity:/i.test(notes),
+    `combined aerobic notes avoid technical/duplicate copy (got "${notes}")`,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Section 9: Conditioning prescriptions stay glanceable across
+// interval and sprint templates.
+// ─────────────────────────────────────────────────────────────────
+section('9. conditioning card copy stays terse globally');
+{
+  const banned = /Complete all phases|Keep this block|Can also be completed|Intensity:|Purpose:|Rules:|quality > volume|Must feel/i;
+  const primaryNotes = (out: ReturnType<typeof buildConditioningTemplate>): string => {
+    const primary = out.find((ex) => {
+      const n = ex.exercise?.name?.toLowerCase() ?? '';
+      return !n.includes('warm-up') && !n.includes('cool-down') && !n.includes('cooldown');
+    });
+    return primary?.notes ?? '';
+  };
+  const nonEmptyLineCount = (text: string): number =>
+    text.split('\n').map((line) => line.trim()).filter(Boolean).length;
+
+  const vo2Notes = primaryNotes(buildConditioningTemplate('4x4 VO2', '2026-06-01', {
+    combined: true,
+    strengthRegion: 'upper',
+    ergModality: 'bike',
+    feel: 'grindy',
+  }));
+  assert(/3 x 3min hard on Assault Bike/i.test(vo2Notes), `VO2 notes show prescription (got "${vo2Notes}")`);
+  assert(/90s easy between reps/i.test(vo2Notes), `VO2 notes show rest (got "${vo2Notes}")`);
+  assert(/8-9\/10 effort/i.test(vo2Notes), `VO2 notes show effort (got "${vo2Notes}")`);
+
+  const sprintNotes = primaryNotes(buildConditioningTemplate('Max Effort Sprint Accumulation', '2026-06-01', {
+    combined: true,
+    strengthRegion: 'lower',
+    ergModality: 'mixed',
+    feel: 'sharp',
+  }));
+  assert(/hard on Row \+ SkiErg/i.test(sprintNotes), `sprint notes use canonical mixed modality (got "${sprintNotes}")`);
+  assert(/90s easy between reps/i.test(sprintNotes), `sprint notes show rest (got "${sprintNotes}")`);
+  assert(/Full quality/i.test(sprintNotes), `sprint notes show quality cue (got "${sprintNotes}")`);
+  assert(/Machine-based conditioning keeps running load down today/i.test(sprintNotes), `sprint notes keep one lower-day note (got "${sprintNotes}")`);
+
+  const skiHardNotes = primaryNotes(buildConditioningTemplate('Tabata Intervals', '2026-06-01', {
+    combined: true,
+    strengthRegion: 'upper',
+    ergModality: 'ski',
+    feel: 'grindy',
+  }));
+  assert(/4 x 2min hard on SkiErg/i.test(skiHardNotes), `SkiErg hard notes show prescription (got "${skiHardNotes}")`);
+  assert(/2min easy between reps/i.test(skiHardNotes), `SkiErg hard notes show rest (got "${skiHardNotes}")`);
+  assert(/8-9\/10 effort/i.test(skiHardNotes), `SkiErg hard notes show effort (got "${skiHardNotes}")`);
+  assert(/Use Bike, Rower, SkiErg, or Assault Bike/i.test(skiHardNotes), `upper flexible notes keep one machine-options line (got "${skiHardNotes}")`);
+
+  for (const [label, notes] of [
+    ['vo2', vo2Notes],
+    ['sprint', sprintNotes],
+    ['ski hard', skiHardNotes],
+  ] as const) {
+    assert(!banned.test(notes), `${label} notes avoid verbose/system copy (got "${notes}")`);
+    assert(nonEmptyLineCount(notes) <= 4, `${label} notes stay within four short lines (got "${notes}")`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Section 10: Machine sprint duration follows modality mechanics.
+// Assault Bike can use short all-out bursts; Rower, SkiErg, BikeErg,
+// and mixed erg sessions use longer hard efforts.
+// ─────────────────────────────────────────────────────────────────
+section('10. machine sprint duration is modality-aware');
+{
+  const primary = (out: ReturnType<typeof buildConditioningTemplate>) => {
+    const ex = out.find((row) => {
+      const n = row.exercise?.name?.toLowerCase() ?? '';
+      return !n.includes('warm-up') && !n.includes('cool-down') && !n.includes('cooldown');
+    });
+    return {
+      name: ex?.exercise?.name ?? '',
+      notes: ex?.notes ?? '',
+    };
+  };
+  const workSeconds = (notes: string): number | null => {
+    const match = notes.match(/\b\d+\s+x\s+(\d+)s\s+(?:all-out|hard)\s+on/i);
+    return match ? Number(match[1]) : null;
+  };
+
+  const assaultSharp = primary(buildConditioningTemplate('Max Effort Sprint Accumulation', '2026-06-01', {
+    ergModality: 'bike',
+    feel: 'sharp',
+  }));
+  const assaultGrindy = primary(buildConditioningTemplate('Max Effort Sprint Accumulation', '2026-06-01', {
+    ergModality: 'bike',
+    feel: 'grindy',
+  }));
+  assert(/10s all-out on Assault Bike/i.test(assaultSharp.notes), `Assault Bike sharp sprint can be 10s (got "${assaultSharp.notes}")`);
+  assert(/15s all-out on Assault Bike/i.test(assaultGrindy.notes), `Assault Bike grindy sprint can be 15s (got "${assaultGrindy.notes}")`);
+
+  const ski = primary(buildConditioningTemplate('Max Effort Sprint Accumulation', '2026-06-01', {
+    ergModality: 'ski',
+    feel: 'sharp',
+  }));
+  assert(/SkiErg/i.test(`${ski.name}\n${ski.notes}`), `SkiErg sprint is labelled (got "${ski.name}" / "${ski.notes}")`);
+  assert(workSeconds(ski.notes)! >= 20, `SkiErg sprint is at least 20s (got "${ski.notes}")`);
+  assert(!/\b10s\s+(?:all-out|hard)\s+on SkiErg/i.test(ski.notes), `SkiErg sprint is not 10s (got "${ski.notes}")`);
+
+  const rower = primary(buildConditioningTemplate('Max Effort Sprint Accumulation', '2026-06-01', {
+    ergModality: 'row',
+    feel: 'sharp',
+  }));
+  assert(/Rower/i.test(`${rower.name}\n${rower.notes}`), `Rower sprint is labelled (got "${rower.name}" / "${rower.notes}")`);
+  assert(workSeconds(rower.notes)! >= 20, `Rower sprint is at least 20s (got "${rower.notes}")`);
+  assert(!/\b10s\s+(?:all-out|hard)\s+on Rower/i.test(rower.notes), `Rower sprint is not 10s (got "${rower.notes}")`);
+
+  const bikeErg = primary(buildConditioningTemplate('Max Effort Sprint Accumulation', '2026-06-01', {
+    ergModality: 'bike_erg',
+    feel: 'sharp',
+  }));
+  assert(/BikeErg/i.test(`${bikeErg.name}\n${bikeErg.notes}`), `BikeErg sprint is labelled (got "${bikeErg.name}" / "${bikeErg.notes}")`);
+  assert(workSeconds(bikeErg.notes)! >= 20, `BikeErg sprint is at least 20s (got "${bikeErg.notes}")`);
+  assert(!/\b10s\s+(?:all-out|hard)\s+on BikeErg/i.test(bikeErg.notes), `BikeErg sprint is not 10s (got "${bikeErg.notes}")`);
+
+  const mixed = primary(buildConditioningTemplate('Max Effort Sprint Accumulation', '2026-06-01', {
+    combined: true,
+    strengthRegion: 'lower',
+    ergModality: 'mixed',
+    feel: 'sharp',
+  }));
+  assert(/Row \+ SkiErg/i.test(`${mixed.name}\n${mixed.notes}`), `mixed sprint is labelled (got "${mixed.name}" / "${mixed.notes}")`);
+  assert(workSeconds(mixed.notes)! >= 20, `mixed erg sprint is at least 20s (got "${mixed.notes}")`);
+  assert(!/\b10s\s+(?:all-out|hard)\s+on Row \+ SkiErg/i.test(mixed.notes), `mixed erg sprint is not 10s (got "${mixed.notes}")`);
 }
 
 // ─────────────────────────────────────────────────────────────────

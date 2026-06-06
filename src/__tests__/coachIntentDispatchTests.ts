@@ -415,7 +415,7 @@ section('[8] Program explanation for mid-week row');
         conditioningFlavour: 'aerobic',
         exercises: [ex(
           'Easy Aerobic Flush (25min Rower)',
-          '25min easy Rower.\nIntensity: 3-4/10 — genuinely easy, conversational pace.\nOptional. Use this for recovery and aerobic maintenance.\nSkip if legs feel heavy after team training or if Thursday training quality would suffer.',
+          '25min easy on Rower\n3-4/10 effort\nRecovery pace',
         )],
         coachNotes: ['Shifted to non-running modality to manage weekly run load.'],
       }),
@@ -438,7 +438,7 @@ section('[8] Program explanation for mid-week row');
   ok('mid-week row does not mention pain guard', !/pain score|pain out of 10|injury report/i.test(midWeek.reply));
   ok('mid-week row finds visible row', /Wednesday|Easy Aerobic Flush|row/i.test(midWeek.reply));
   ok('mid-week row explains rationale', /aerobic base|running load/i.test(midWeek.reply));
-  ok('mid-week row protects Thursday', /compromise Thursday|skip it|shorten it|3-4\/10/i.test(midWeek.reply));
+  ok('mid-week row keeps intensity concise', /3-4\/10/i.test(midWeek.reply));
   ok('mid-week row does not invent Tuesday', !/Tuesday/i.test(midWeek.reply));
 
   const wed = withRow('Why is there a row on Wednesday?');

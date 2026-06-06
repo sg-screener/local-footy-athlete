@@ -704,7 +704,7 @@ function buildConditioningBlock(
     options: [
       {
         title: headlineName,
-        description: 'Complete all phases below in order.',
+        description: '',
         exerciseIds: condBlock.map((ex) => ex.id),
       },
     ],
