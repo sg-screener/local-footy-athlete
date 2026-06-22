@@ -165,12 +165,31 @@ export type CoachMutatePayload =
       editMode?: CoachConditioningEditMode;
       editScope?: CoachConditioningEditScope;
       targetItemId?: string;
+      overrideType?: 'one_off_extra';
+      setupChange?: boolean;
     }
   | {
       operation: 'add_session';
       sourceDate?: string;
       sourceSessionName?: string;
       targetSessionName?: string;
+      standaloneAddType?: 'conditioning' | 'strength' | 'recovery' | 'session';
+      overrideType?: 'one_off_extra';
+      setupChange?: boolean;
+      standaloneConditioning?: {
+        modality?: ConditioningIntentModality | null;
+        customActivity?: string;
+        intensity?: AddConditioningIntensity;
+        durationMinutes?: number;
+        sets?: number;
+        repsMin?: number;
+        repsMax?: number;
+        restSeconds?: number;
+        prescriptionType?: 'duration' | 'duration_minutes';
+        bikeLabel?: BikeLabel | null;
+        effortKind?: 'sprint' | 'interval';
+        trainingIntent?: CoachTrainingIntent;
+      };
       reason?: string;
     }
   | {
@@ -630,6 +649,47 @@ function targetFromResolution(
   return { kind: 'unbound' };
 }
 
+function targetFromResolutionOrMessageDate(
+  input: RouteCoachCommandInput,
+  message: string,
+): CoachCommandTarget {
+  const targetDate = explicitDateTargetFromMessage(message, input.todayISO, input.currentWeek);
+  if (targetDate) {
+    const visibleDay = (input.currentWeek ?? []).find((day) => day.date === targetDate);
+    const workout = visibleDay?.workout ?? null;
+    const sessionName =
+      workout && !isRestOrEmptyWorkout(workout)
+        ? String(workout.name ?? visibleDay?.sessionName ?? 'session')
+        : 'Rest';
+    return { kind: 'date', date: targetDate, sessionName };
+  }
+
+  return targetFromResolution(input.referenceResolution);
+}
+
+function explicitDateTargetFromMessage(
+  message: string,
+  todayISO: string,
+  currentWeek: VisibleSessionRef[] | undefined,
+): string | null {
+  const text = String(message ?? '');
+  if (/\btoday\b/i.test(text)) return todayISO;
+  if (/\btomorrow\b/i.test(text)) {
+    const d = new Date(`${todayISO}T12:00:00`);
+    d.setDate(d.getDate() + 1);
+    return isoDateFromLocalNoon(d);
+  }
+  const explicitNext = /\bnext\s+(sun(?:day)?|mon(?:day)?|tue(?:s|sday)?|wed(?:nesday|s)?|thu(?:rs(?:day)?|r)?|fri(?:day)?|sat(?:urday)?)\b/i.exec(text);
+  if (explicitNext) return isoForDow(todayISO, DOW_MAP[explicitNext[1].toLowerCase()]);
+  const dow = extractDow(text);
+  if (dow == null) return null;
+  return visibleSessionForDow(currentWeek, dow)?.date ?? isoForDow(todayISO, dow);
+}
+
+function isoDateFromLocalNoon(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
 function buildModalitySwapCommand(
   input: RouteCoachCommandInput,
   swap: ParsedModalitySwap,
@@ -734,6 +794,15 @@ function findTargetVisibleSession(
 function formatTargetForQuestion(res: CoachReferenceResolution | null): string {
   const target = res?.target;
   if (!target) return 'that session';
+  return formatTargetForQuestionFromTarget({
+    kind: 'date',
+    date: target.date,
+    sessionName: target.sessionName,
+  });
+}
+
+function formatTargetForQuestionFromTarget(target: CoachCommandTarget): string {
+  if (target.kind !== 'date') return 'that session';
   const day = (() => {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(target.date);
     if (!m) return target.date;
@@ -741,7 +810,7 @@ function formatTargetForQuestion(res: CoachReferenceResolution | null): string {
       new Date(`${target.date}T12:00:00`).getDay()
     ] ?? target.date;
   })();
-  return `${day}'s ${target.sessionName}`;
+  return `${day}'s ${target.sessionName ?? 'session'}`;
 }
 
 function isExplainQuestion(message: string): boolean {
@@ -1932,10 +2001,11 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
   // the Rest-target verification before writing.
   const addSessionTemplate = extractAddSessionTemplate(input);
   if (addSessionTemplate) {
+    const addSessionTarget = targetFromResolutionOrMessageDate(input, message);
     return {
       mode: 'mutate',
       operation: 'add_session',
-      target: targetFromResolution(ref),
+      target: addSessionTarget,
       payload: {
         operation: 'add_session',
         sourceDate: addSessionTemplate.sourceDate,
@@ -1943,12 +2013,12 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
         targetSessionName: addSessionTemplate.sourceSessionName,
       },
       scope: 'one_off',
-      confidence: ref?.target ? 0.82 : 0.5,
-      needsClarification: !ref?.target,
-      clarificationQuestion: ref?.target
+      confidence: addSessionTarget.kind === 'date' ? 0.82 : 0.5,
+      needsClarification: addSessionTarget.kind !== 'date',
+      clarificationQuestion: addSessionTarget.kind === 'date'
         ? undefined
         : 'Which day should I add that session to?',
-      missingFields: ref?.target ? undefined : ['target_session'],
+      missingFields: addSessionTarget.kind === 'date' ? undefined : ['target_session'],
       reason: 'add_session_detected',
     };
   }
@@ -1960,15 +2030,16 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
       userMessage: message,
       seed: replacementAddIntent,
     });
+    const replacementTarget = targetFromResolutionOrMessageDate(input, message);
     return {
       mode: 'mutate',
       operation: 'add_conditioning',
-      target: targetFromResolution(ref),
+      target: replacementTarget,
       payload,
       scope: detectScope(message, refDateBeforeToday),
-      confidence: ref?.target ? 0.82 : 0.55,
-      needsClarification: !ref?.target,
-      clarificationQuestion: ref?.target ? undefined : 'Which day should I make that replacement on?',
+      confidence: replacementTarget.kind === 'date' ? 0.82 : 0.55,
+      needsClarification: replacementTarget.kind !== 'date',
+      clarificationQuestion: replacementTarget.kind === 'date' ? undefined : 'Which day should I make that replacement on?',
       reason: 'replace_conditioning_activity_detected',
     };
   }
@@ -1978,24 +2049,52 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
       userMessage: message,
       seed: addIntent,
     });
+    const addTarget = targetFromResolutionOrMessageDate(input, message);
     return {
       mode: 'mutate',
       operation: 'add_conditioning',
-      target: targetFromResolution(ref),
+      target: addTarget,
       payload,
       scope: detectScope(message, refDateBeforeToday),
-      confidence: ref?.target ? 0.7 : 0.45,
-      needsClarification: !ref?.target,
-      clarificationQuestion: ref?.target ? undefined : 'Which day do you want me to add conditioning to?',
+      confidence: addTarget.kind === 'date' ? 0.7 : 0.45,
+      needsClarification: addTarget.kind !== 'date',
+      clarificationQuestion: addTarget.kind === 'date' ? undefined : 'Which day do you want me to add conditioning to?',
       reason: 'add_conditioning_detected',
     };
   }
+  const explicitConditioningToDateIntent =
+    /\b(?:i\s+)?(?:want|need|would\s+like)\b/i.test(message) &&
+    explicitDateTargetFromMessage(message, input.todayISO, input.currentWeek) != null &&
+    looksLikeConditioningRequest(message) &&
+    !/\b(?:instead|rather|replace|swap|change)\b/i.test(message);
+  if (explicitConditioningToDateIntent) {
+    const seed = extractAddConditioningIntent(message, { requireAddVerb: false });
+    if (seed) {
+      const payload = buildConditioningPayloadFromRequest({
+        userMessage: message,
+        seed,
+      });
+      const addTarget = targetFromResolutionOrMessageDate(input, message);
+      return {
+        mode: 'mutate',
+        operation: 'add_conditioning',
+        target: addTarget,
+        payload,
+        scope: detectScope(message, refDateBeforeToday),
+        confidence: addTarget.kind === 'date' ? 0.72 : 0.45,
+        needsClarification: addTarget.kind !== 'date',
+        clarificationQuestion: addTarget.kind === 'date' ? undefined : 'Which day do you want me to add conditioning to?',
+        reason: 'add_conditioning_explicit_date_detected',
+      };
+    }
+  }
   if (ADD_VERBS.test(message)) {
-    const hasTarget = !!ref?.target;
+    const genericAddTarget = targetFromResolutionOrMessageDate(input, message);
+    const hasTarget = genericAddTarget.kind === 'date';
     return {
       mode: 'clarify',
       question: hasTarget
-        ? `What should I add to ${formatTargetForQuestion(ref)} — light bike, light walk, mobility, or pilates?`
+        ? `What should I add to ${formatTargetForQuestionFromTarget(genericAddTarget)} — light bike, light walk, mobility, or pilates?`
         : 'What should I add, and which day should it go on? For example: light bike on Friday, mobility today, or pilates tomorrow.',
       options: ['Light bike', 'Light walk', 'Mobility', 'Pilates'],
       missingFields: hasTarget ? ['activity'] : ['target_session', 'activity'],

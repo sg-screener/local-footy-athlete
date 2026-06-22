@@ -41,6 +41,10 @@ import type {
 import { autoBindUniqueModalityTarget } from '../utils/coachVisibleWeekAutoBind';
 import { routeCoachCommand } from '../utils/coachCommandRouter';
 import { parseModalitySwapRequest } from '../utils/coachModalitySwap';
+import {
+  executeProgramEdit,
+  interpretCoachMessageToProgramEdit,
+} from '../utils/coachProgramEdit';
 
 // ─── Fixture builders ───────────────────────────────────────────────
 
@@ -502,6 +506,94 @@ section('[11] Cold context + bare "Can you change to a bike?" binds Wednesday');
   } else {
     ok('router emitted mutate mode', false, `mode=${cmd.mode}`);
   }
+}
+
+// ─── [12] Live ProgramEdit path binds explicit "today" add on Rest ─
+section('[12] Cold context + "add conditioning today" writes Rest-day session');
+{
+  const week = [
+    buildResolvedDay(addDays(FIXED_MONDAY, 0), wk('Upper Push + Power Sprints', 1, [
+      ex('Power Sprints'),
+    ])),
+    buildResolvedDay(addDays(FIXED_MONDAY, 1), wk('VO2 Intervals', 2, [
+      ex('VO2 Intervals'),
+    ])),
+    buildResolvedDay(FIXED_TODAY, null),
+    buildResolvedDay(addDays(FIXED_MONDAY, 3), wk('Upper Pull', 4, [
+      ex('Pull-Up'),
+    ])),
+  ];
+  const packet = buildPacket(week, {
+    todayISO: FIXED_TODAY,
+    referenceResolution: {
+      status: 'no_reference',
+      target: null,
+      confidence: 0,
+      isMutationLike: true,
+    },
+  });
+  const edit = interpretCoachMessageToProgramEdit({
+    userMessage: 'Can you add some conditioning today?',
+    todayISO: FIXED_TODAY,
+    referenceResolution: packet.referenceResolution ?? null,
+    currentWeek: packet.currentWeek,
+  });
+  eq('ProgramEdit targetDate is today', (edit as any).targetDate, FIXED_TODAY);
+  ok(
+    'ProgramEdit does not ask which day',
+    edit.intent !== 'ask_question' &&
+      !edit.missingFields.includes('targetDate' as any),
+    JSON.stringify(edit),
+  );
+
+  let addedWorkout: any = null;
+  const result = executeProgramEdit({
+    programEdit: edit,
+    todayISO: FIXED_TODAY,
+    referenceResolution: packet.referenceResolution ?? null,
+    userMessage: 'Can you add some conditioning today?',
+    conditioningDeps: {
+      snapshotBefore: () => null,
+      snapshotAfter: () => addedWorkout,
+      snapshotWeek: () => week,
+    },
+    addSessionDeps: {
+      snapshotBefore: () => null,
+      snapshotAfter: () => addedWorkout,
+      visibleWeek: () => week,
+      readCalendarMark: () => 'rest' as any,
+      applyAdd: ({ sourceWorkout }) => {
+        addedWorkout = sourceWorkout;
+        return { applied: true };
+      },
+      verifyRendered: (args) => ({
+        requestedDay: args.requestedDay,
+        todayISO: args.todayISO,
+        targetDate: args.targetDate,
+        targetAdded: !!args.afterWorkout && (args.afterWorkout as any).workoutType === 'Conditioning',
+        otherDaysUnchanged: true,
+        changedOtherDates: [],
+        beforeWorkoutName: args.beforeWorkout?.name ?? null,
+        afterWorkoutName: args.afterWorkout?.name ?? null,
+      }),
+    },
+    undoDeps: {
+      recordMutation: (entry) => ({
+        ...entry,
+        id: 'live-add-conditioning-test-mutation',
+        timestamp: entry.timestamp ?? 0,
+        revertedAt: null,
+      }),
+    },
+  });
+  eq('executor mutates Rest day into visible session', result.kind, 'mutated');
+  eq('standalone workout type is Conditioning', addedWorkout?.workoutType, 'Conditioning');
+  ok('standalone title is not generic Conditioning',
+    !!addedWorkout?.name && addedWorkout.name !== 'Conditioning',
+    JSON.stringify(addedWorkout));
+  ok('reply is verified one-off Done',
+    /^Done\b/.test(result.reply) && /one-off extra session/i.test(result.reply),
+    result.reply);
 }
 
 // ─── Final report ───────────────────────────────────────────────────

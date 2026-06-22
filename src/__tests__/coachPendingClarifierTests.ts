@@ -1307,6 +1307,127 @@ section('[13] move-scope pending answers resolve to typed commands');
       : JSON.stringify(repairedBadMoveFollowUp));
 }
 
+section('[14] add-to-date pending transaction accumulates target/type');
+{
+  const todayISO = '2026-06-07';
+  const addTodayClarify: CoachCommand = {
+    mode: 'clarify',
+    question: 'What would you like to add: conditioning, strength, recovery, or a named session?',
+    options: ['Conditioning', 'Strength', 'Recovery', 'Named session'],
+    missingFields: ['add_type'],
+    reason: 'add_conditioning_missing_target_and_activity',
+  };
+  const captured = captureFromExecutorClarify({
+    routedCommand: addTodayClarify,
+    askedQuestion: addTodayClarify.question,
+    originalMessage: 'I want to put a workout on today',
+    todayISO,
+  });
+  ok('14.1 add-to-date capture stores transaction',
+    !!captured && captured.scheduleTransaction?.kind === 'add_to_date_transaction',
+    JSON.stringify(captured));
+  ok('14.2 add-to-date capture keeps today target',
+    captured?.scheduleTransaction?.kind === 'add_to_date_transaction' &&
+      captured.scheduleTransaction.targetDate === todayISO,
+    JSON.stringify(captured?.scheduleTransaction));
+  ok('14.3 add-to-date capture only needs add type once target is known',
+    captured?.scheduleTransaction?.kind === 'add_to_date_transaction' &&
+      captured.scheduleTransaction.missingFields.includes('add_type') &&
+      !captured.scheduleTransaction.missingFields.includes('target_date'),
+    JSON.stringify(captured?.scheduleTransaction));
+  ok('14.3b add-to-date capture marks one-off extra, not setup change',
+    captured?.scheduleTransaction?.kind === 'add_to_date_transaction' &&
+      captured.scheduleTransaction.overrideType === 'one_off_extra' &&
+      captured.scheduleTransaction.setupChange === false,
+    JSON.stringify(captured?.scheduleTransaction));
+
+  const conditioningAnswer = resolvePendingScheduleTransactionAnswer({
+    pending: { ...captured!, createdAt: NOW },
+    userMessage: 'conditioning',
+    todayISO,
+    currentWeek: [{ date: todayISO, sessionName: 'Rest', workout: null }],
+  });
+  ok('14.4 "conditioning" completes pending add-to-date transaction',
+    conditioningAnswer.kind === 'complete' &&
+      conditioningAnswer.command.mode === 'mutate' &&
+      conditioningAnswer.command.operation === 'add_conditioning' &&
+      conditioningAnswer.command.target.kind === 'date' &&
+      conditioningAnswer.command.target.date === todayISO &&
+      conditioningAnswer.command.payload.operation === 'add_conditioning' &&
+      conditioningAnswer.command.payload.overrideType === 'one_off_extra' &&
+      conditioningAnswer.command.payload.setupChange === false,
+    JSON.stringify(conditioningAnswer));
+
+  const noTargetCaptured = captureFromExecutorClarify({
+    routedCommand: addTodayClarify,
+    askedQuestion: addTodayClarify.question,
+    originalMessage: 'I just said I want to add something',
+    todayISO,
+  });
+  const conditioningToToday = resolvePendingScheduleTransactionAnswer({
+    pending: { ...noTargetCaptured!, createdAt: NOW },
+    userMessage: 'Conditioning to today',
+    todayISO,
+    currentWeek: [{ date: todayISO, sessionName: 'Rest', workout: null }],
+  });
+  ok('14.5 "conditioning to today" fills both missing slots',
+    conditioningToToday.kind === 'complete' &&
+      conditioningToToday.command.mode === 'mutate' &&
+      conditioningToToday.command.operation === 'add_conditioning' &&
+      conditioningToToday.command.target.kind === 'date' &&
+      conditioningToToday.command.target.date === todayISO,
+    JSON.stringify(conditioningToToday));
+
+  const existingSessionAnswer = resolvePendingScheduleTransactionAnswer({
+    pending: { ...captured!, createdAt: NOW },
+    userMessage: 'conditioning',
+    todayISO,
+    currentWeek: [{
+      date: todayISO,
+      sessionName: 'Upper Pull',
+      workout: { id: 'upper-pull', name: 'Upper Pull', workoutType: 'Strength' },
+    }],
+  });
+  ok('14.6 existing-session target asks add-to-existing vs separate',
+    existingSessionAnswer.kind === 'clarify' &&
+      /already has a session/i.test(existingSessionAnswer.reply) &&
+      /Add to existing session/i.test((existingSessionAnswer.options ?? []).join(' ')),
+    JSON.stringify(existingSessionAnswer));
+
+  const recurringConditioningAnswer = resolvePendingScheduleTransactionAnswer({
+    pending: { ...noTargetCaptured!, createdAt: NOW },
+    userMessage: 'Conditioning to today every week',
+    todayISO,
+    currentWeek: [{ date: todayISO, sessionName: 'Rest', workout: null }],
+  });
+  ok('14.7 recurring add answer asks setup-vs-one-off instead of mutating',
+    recurringConditioningAnswer.kind === 'clarify' &&
+      recurringConditioningAnswer.transaction.kind === 'add_to_date_transaction' &&
+      recurringConditioningAnswer.transaction.setupChange === true &&
+      /weekly setup|one-off extra/i.test(recurringConditioningAnswer.reply),
+    JSON.stringify(recurringConditioningAnswer));
+
+  const oneOffAfterRecurring = recurringConditioningAnswer.kind === 'clarify'
+    ? resolvePendingScheduleTransactionAnswer({
+        pending: {
+          ...noTargetCaptured!,
+          scheduleTransaction: recurringConditioningAnswer.transaction,
+          createdAt: NOW,
+        },
+        userMessage: 'one-off extra session',
+        todayISO,
+        currentWeek: [{ date: todayISO, sessionName: 'Rest', workout: null }],
+      })
+    : null;
+  ok('14.8 one-off answer resolves recurring-scope add transaction safely',
+    oneOffAfterRecurring?.kind === 'complete' &&
+      oneOffAfterRecurring.command.mode === 'mutate' &&
+      oneOffAfterRecurring.command.operation === 'add_conditioning' &&
+      oneOffAfterRecurring.command.payload.operation === 'add_conditioning' &&
+      oneOffAfterRecurring.command.payload.overrideType === 'one_off_extra',
+    JSON.stringify(oneOffAfterRecurring));
+}
+
 // ─── Summary ───────────────────────────────────────────────────────
 
 console.log(`\n— Summary —`);

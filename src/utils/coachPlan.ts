@@ -95,6 +95,116 @@ export interface ConditioningRequestSeed {
   editScope?: CoachConditioningEditScope;
 }
 
+export type ConditioningAdditionCategory =
+  | 'aerobic_base'
+  | 'sprint'
+  | 'vo2'
+  | 'glycolytic'
+  | 'tempo'
+  | 'low_load';
+
+export interface ConditioningAdditionVisibleDay {
+  date: string;
+  sessionName?: string;
+  workout?: unknown | null;
+}
+
+export interface ConditioningAdditionProgramContext {
+  seasonPhase?: string | null;
+  gameDates?: string[];
+  teamTrainingDows?: number[];
+  trainingDaysPerWeek?: number | null;
+}
+
+export type ConditioningAdditionDecision =
+  | {
+      kind: 'selection';
+      category: ConditioningAdditionCategory;
+      title: string;
+      modality: ConditioningIntentModality | null;
+      durationMinutes?: number;
+      intensity?: AddConditioningIntensity;
+      trainingIntent?: CoachTrainingIntent;
+      effortKind?: 'sprint' | 'interval';
+      sets?: number;
+      repsMin?: number;
+      repsMax?: number;
+      restSeconds?: number;
+      prescriptionType?: 'duration' | 'duration_minutes';
+      conditioningFlavour?: 'aerobic' | 'high-intensity' | 'tempo';
+      reason: string;
+      description: string;
+      notes: string;
+    }
+  | {
+      kind: 'clarify';
+      reason: string;
+      question: string;
+      options: string[];
+    };
+
+const MACHINE_OPTIONS = 'Bike, Rower, SkiErg, or Assault Bike';
+
+export function chooseBestConditioningAddition(
+  date: string,
+  visibleWeek: ConditioningAdditionVisibleDay[],
+  programContext: ConditioningAdditionProgramContext = {},
+): ConditioningAdditionDecision {
+  const targetDay = visibleWeek.find((day) => day.date === date) ?? null;
+  if (!targetDay && visibleWeek.length === 0) {
+    return {
+      kind: 'clarify',
+      reason: 'missing_visible_week_context',
+      question: 'What type do you want: easy aerobic, sprint, or intervals?',
+      options: ['Easy aerobic', 'Sprint', 'Intervals'],
+    };
+  }
+
+  const weekProfile = profileConditioningWeek(visibleWeek);
+  const dayProfile = profileConditioningDay(targetDay);
+  const inSeason = /\bin[-_\s]*season\b/i.test(String(programContext.seasonPhase ?? ''));
+  const nearGame = isWithinDaysOfGame(date, visibleWeek, programContext, 2);
+  const nearTeamTraining = isWithinDaysOfTeamTraining(date, visibleWeek, programContext, 2);
+  const safeForHardConditioning =
+    !inSeason &&
+    !nearGame &&
+    !nearTeamTraining &&
+    !dayProfile.isLower &&
+    !dayProfile.isGame &&
+    !dayProfile.isRecovery;
+
+  if (
+    dayProfile.isLower ||
+    weekProfile.hardCount > 0 ||
+    !weekProfile.hasAerobic ||
+    inSeason ||
+    nearGame ||
+    nearTeamTraining
+  ) {
+    return aerobicAdditionSelection({
+      lowerBodyDay: dayProfile.isLower,
+      reason: dayProfile.isLower
+        ? 'lower_body_day_machine_aerobic'
+        : weekProfile.hardCount > 0
+        ? 'hard_conditioning_already_present'
+        : !weekProfile.hasAerobic
+        ? 'missing_aerobic_base'
+        : inSeason || nearGame || nearTeamTraining
+        ? 'game_or_team_training_proximity'
+        : 'conservative_aerobic_default',
+    });
+  }
+
+  if (safeForHardConditioning && dayProfile.isUpper && !weekProfile.hasSprint) {
+    return sprintAdditionSelection('safe_upper_day_missing_sprint');
+  }
+
+  return aerobicAdditionSelection({
+    lowerBodyDay: dayProfile.isLower,
+    reason: 'balanced_aerobic_default',
+  });
+}
+
 export function buildConditioningPayloadFromRequest(input: {
   userMessage: string;
   seed: ConditioningRequestSeed;
@@ -569,6 +679,215 @@ function detectBikeLabel(message: string): 'standard' | 'assault' | null {
 function normaliseBikeLabel(raw: string | null | undefined): 'standard' | 'assault' | 'generic' | null {
   if (raw === 'standard' || raw === 'assault' || raw === 'generic') return raw;
   return null;
+}
+
+function aerobicAdditionSelection(args: {
+  lowerBodyDay: boolean;
+  reason: string;
+}): Extract<ConditioningAdditionDecision, { kind: 'selection' }> {
+  const note = args.lowerBodyDay
+    ? 'Machine-based conditioning keeps running load down today.'
+    : `Use ${MACHINE_OPTIONS}.`;
+  const lines = [
+    `25-30min zone 2 on ${MACHINE_OPTIONS}.`,
+    '5-6/10 effort.',
+    'Conversational pace.',
+    note,
+  ];
+  return {
+    kind: 'selection',
+    category: 'aerobic_base',
+    title: 'Easy Aerobic Flush',
+    modality: 'aerobic',
+    durationMinutes: 25,
+    intensity: 'light',
+    trainingIntent: 'aerobic',
+    sets: 1,
+    restSeconds: 0,
+    prescriptionType: 'duration_minutes',
+    conditioningFlavour: 'aerobic',
+    reason: args.reason,
+    description: lines.join('\n'),
+    notes: lines.join('\n'),
+  };
+}
+
+function sprintAdditionSelection(
+  reason: string,
+): Extract<ConditioningAdditionDecision, { kind: 'selection' }> {
+  const lines = [
+    '6 x 20s hard on Rower or SkiErg.',
+    '90s easy between reps.',
+    'Full quality.',
+  ];
+  return {
+    kind: 'selection',
+    category: 'sprint',
+    title: 'Power Sprints',
+    modality: 'row',
+    intensity: 'hard',
+    trainingIntent: 'sprint',
+    effortKind: 'sprint',
+    sets: 6,
+    repsMin: 20,
+    repsMax: 20,
+    restSeconds: 90,
+    prescriptionType: 'duration',
+    conditioningFlavour: 'high-intensity',
+    reason,
+    description: lines.join('\n'),
+    notes: lines.join('\n'),
+  };
+}
+
+interface ConditioningWeekProfile {
+  hasAerobic: boolean;
+  hasSprint: boolean;
+  hardCount: number;
+}
+
+interface ConditioningDayProfile {
+  isUpper: boolean;
+  isLower: boolean;
+  isGame: boolean;
+  isRecovery: boolean;
+  isTeamTraining: boolean;
+}
+
+function profileConditioningWeek(
+  visibleWeek: ConditioningAdditionVisibleDay[],
+): ConditioningWeekProfile {
+  let hasAerobic = false;
+  let hasSprint = false;
+  let hardCount = 0;
+  for (const day of visibleWeek) {
+    const text = conditioningDayText(day);
+    const category = String(readWorkoutField(day.workout, 'conditioningCategory') ?? '').toLowerCase();
+    const flavour = String(readWorkoutField(day.workout, 'conditioningFlavour') ?? '').toLowerCase();
+    if (
+      category === 'aerobic_base' ||
+      category === 'low_load' ||
+      flavour === 'aerobic' ||
+      /\b(?:zone\s*2|z2|easy\s+aerobic|aerobic\s+base|flush|steady|conversational)\b/i.test(text)
+    ) {
+      hasAerobic = true;
+    }
+    if (category === 'sprint' || /\b(?:sprints?|power\s+sprints?|all[-\s]*out)\b/i.test(text)) {
+      hasSprint = true;
+      hardCount++;
+      continue;
+    }
+    if (
+      category === 'vo2' ||
+      category === 'glycolytic' ||
+      flavour === 'high-intensity' ||
+      /\b(?:vo2|hiit|glycolytic|hard\s+intervals?|8-9\/10|45s\s+hard|3min\s+hard)\b/i.test(text)
+    ) {
+      hardCount++;
+    }
+  }
+  return { hasAerobic, hasSprint, hardCount };
+}
+
+function profileConditioningDay(
+  day: ConditioningAdditionVisibleDay | null,
+): ConditioningDayProfile {
+  const text = conditioningDayText(day);
+  return {
+    isUpper: /\b(?:upper|push|pull|bench|press|row|pull[-\s]*up|chin[-\s]*up|gunshow|arms?)\b/i.test(text),
+    isLower: /\b(?:lower|hinge|squat|deadlift|rdl|lunge|hamstring|glute|posterior)\b/i.test(text),
+    isGame: /\b(?:game\s*day|match|fixture)\b/i.test(text),
+    isRecovery: /\b(?:rest|recovery|mobility|flush)\b/i.test(text),
+    isTeamTraining: /\bteam\s+training\b/i.test(text),
+  };
+}
+
+function conditioningDayText(day: ConditioningAdditionVisibleDay | null): string {
+  if (!day) return '';
+  const parts: string[] = [day.date, day.sessionName ?? ''];
+  appendWorkoutText(parts, day.workout);
+  return parts.join(' ');
+}
+
+function appendWorkoutText(parts: string[], workout: unknown): void {
+  if (!workout || typeof workout !== 'object') return;
+  const record = workout as Record<string, unknown>;
+  for (const key of [
+    'name',
+    'title',
+    'description',
+    'notes',
+    'workoutType',
+    'sessionTier',
+    'conditioningCategory',
+    'conditioningFlavour',
+  ]) {
+    const value = record[key];
+    if (typeof value === 'string') parts.push(value);
+  }
+  const block = record.conditioningBlock;
+  if (block && typeof block === 'object') {
+    appendWorkoutText(parts, block);
+  }
+  const options = Array.isArray((block as any)?.options) ? (block as any).options : [];
+  for (const option of options) {
+    appendWorkoutText(parts, option);
+  }
+  const exercises = Array.isArray(record.exercises) ? record.exercises : [];
+  for (const exercise of exercises) {
+    appendWorkoutText(parts, exercise);
+    appendWorkoutText(parts, (exercise as any)?.exercise);
+  }
+}
+
+function readWorkoutField(workout: unknown, key: string): unknown {
+  if (!workout || typeof workout !== 'object') return undefined;
+  return (workout as Record<string, unknown>)[key];
+}
+
+function isWithinDaysOfGame(
+  date: string,
+  visibleWeek: ConditioningAdditionVisibleDay[],
+  context: ConditioningAdditionProgramContext,
+  days: number,
+): boolean {
+  const gameDates = [
+    ...(context.gameDates ?? []),
+    ...visibleWeek
+      .filter((day) => profileConditioningDay(day).isGame)
+      .map((day) => day.date),
+  ];
+  return gameDates.some((gameDate) => Math.abs(dateDiffDays(date, gameDate)) <= days);
+}
+
+function isWithinDaysOfTeamTraining(
+  date: string,
+  visibleWeek: ConditioningAdditionVisibleDay[],
+  context: ConditioningAdditionProgramContext,
+  days: number,
+): boolean {
+  const teamTrainingDates = visibleWeek
+    .filter((day) => profileConditioningDay(day).isTeamTraining)
+    .map((day) => day.date);
+  const targetDow = isoDow(date);
+  const fromDow = (context.teamTrainingDows ?? []).some((dow) => {
+    const delta = Math.abs(targetDow - dow);
+    return Math.min(delta, 7 - delta) <= days;
+  });
+  return fromDow || teamTrainingDates.some((teamDate) => Math.abs(dateDiffDays(date, teamDate)) <= days);
+}
+
+function isoDow(date: string): number {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  const day = parsed.getUTCDay();
+  return day === 0 ? 7 : day;
+}
+
+function dateDiffDays(a: string, b: string): number {
+  const left = Date.parse(`${a}T00:00:00Z`);
+  const right = Date.parse(`${b}T00:00:00Z`);
+  if (!Number.isFinite(left) || !Number.isFinite(right)) return Number.POSITIVE_INFINITY;
+  return Math.round((right - left) / 86400000);
 }
 
 function titleCase(value: string): string {

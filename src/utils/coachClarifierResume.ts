@@ -34,6 +34,7 @@ import {
 import type { CoachReferenceResolution } from './coachReferenceResolver';
 import type {
   PendingCoachClarifier,
+  PendingAddToDateTransaction,
   PendingMoveSessionTransaction,
   PendingScheduleTransaction,
 } from '../store/pendingCoachClarifierStore';
@@ -205,18 +206,73 @@ export function captureFromExecutorClarify(
       };
     }
     if (reason === 'add_conditioning_missing_activity') {
-      return {
-        operation: 'add_conditioning',
-        partialPayload: {
+      if (/\bsession\b/i.test(input.originalMessage)) {
+        return {
           operation: 'add_conditioning',
-          modality: null,
+          partialPayload: {
+            operation: 'add_conditioning',
+            modality: null,
+          },
+          scope: 'one_off',
+          missingFields: ['activity'],
+          originalMessage: input.originalMessage,
+          askedQuestion: input.askedQuestion,
+          targetDate: input.referenceResolution.target.date,
+          targetSessionName: input.referenceResolution.target.sessionName,
+          programEdit: input.programEdit,
+          candidateItems: input.candidateItems ?? input.programEdit?.candidateItems,
+        };
+      }
+      const targetDate =
+        input.referenceResolution.target.date ??
+        input.programEdit?.targetDate ??
+        parseAddTargetDate(input.originalMessage, input.todayISO);
+      const missingFields = targetDate ? ['add_type'] : ['target_date', 'add_type'];
+      return {
+        operation: 'add_session',
+        partialPayload: {
+          operation: 'add_session',
         },
         scope: 'one_off',
-        missingFields: ['activity'],
+        scheduleTransaction: buildAddToDateTransaction({
+          originalMessage: input.originalMessage,
+          targetDate,
+          addType: 'unknown',
+          missingFields,
+          createdFromVisibleWeek: !!input.referenceResolution.target,
+        }),
+        missingFields,
         originalMessage: input.originalMessage,
         askedQuestion: input.askedQuestion,
-        targetDate: input.referenceResolution.target.date,
+        targetDate,
         targetSessionName: input.referenceResolution.target.sessionName,
+        programEdit: input.programEdit,
+        candidateItems: input.candidateItems ?? input.programEdit?.candidateItems,
+      };
+    }
+    if (reason === 'add_conditioning_missing_target_and_activity') {
+      const targetDate =
+        input.programEdit?.targetDate ??
+        parseAddTargetDate(input.originalMessage, input.todayISO);
+      const missingFields = targetDate ? ['add_type'] : ['target_date', 'add_type'];
+      return {
+        operation: 'add_session',
+        partialPayload: {
+          operation: 'add_session',
+        },
+        scope: 'one_off',
+        scheduleTransaction: buildAddToDateTransaction({
+          originalMessage: input.originalMessage,
+          targetDate,
+          addType: 'unknown',
+          missingFields,
+          createdFromVisibleWeek: false,
+        }),
+        missingFields,
+        originalMessage: input.originalMessage,
+        askedQuestion: input.askedQuestion,
+        targetDate,
+        targetSessionName: input.programEdit?.targetItemTitle ?? undefined,
         programEdit: input.programEdit,
         candidateItems: input.candidateItems ?? input.programEdit?.candidateItems,
       };
@@ -240,6 +296,37 @@ export function captureFromExecutorClarify(
         candidateItems: input.candidateItems ?? input.programEdit?.candidateItems,
       };
     }
+  }
+
+  if (
+    cmd.mode === 'clarify' &&
+    (cmd.reason ?? '') === 'add_conditioning_missing_target_and_activity'
+  ) {
+    const targetDate =
+      input.programEdit?.targetDate ??
+      parseAddTargetDate(input.originalMessage, input.todayISO);
+    const missingFields = targetDate ? ['add_type'] : ['target_date', 'add_type'];
+    return {
+      operation: 'add_session',
+      partialPayload: {
+        operation: 'add_session',
+      },
+      scope: 'one_off',
+      scheduleTransaction: buildAddToDateTransaction({
+        originalMessage: input.originalMessage,
+        targetDate,
+        addType: 'unknown',
+        missingFields,
+        createdFromVisibleWeek: false,
+      }),
+      missingFields,
+      originalMessage: input.originalMessage,
+      askedQuestion: input.askedQuestion,
+      targetDate,
+      targetSessionName: input.programEdit?.targetItemTitle ?? undefined,
+      programEdit: input.programEdit,
+      candidateItems: input.candidateItems ?? input.programEdit?.candidateItems,
+    };
   }
 
   if (
@@ -427,6 +514,37 @@ function buildMoveSessionTransactionFromCommand(args: {
   };
 }
 
+function buildAddToDateTransaction(args: {
+  originalMessage: string;
+  targetDate?: string;
+  addType: PendingAddToDateTransaction['addType'];
+  missingFields: string[];
+  createdFromVisibleWeek: boolean;
+}): PendingAddToDateTransaction {
+  const setupChange = isRecurringAddSetupIntent(args.originalMessage);
+  return {
+    kind: 'add_to_date_transaction',
+    originalUserMessage: args.originalMessage,
+    action: 'add',
+    targetDate: args.targetDate,
+    targetDow: args.targetDate ? dayNameFromISO(args.targetDate) : undefined,
+    targetStatus: 'unknown',
+    addType: args.addType,
+    overrideType: setupChange ? undefined : 'one_off_extra',
+    setupChange,
+    missingFields: uniqueFields(args.missingFields),
+    candidateOptions: ['Conditioning', 'Strength', 'Recovery', 'Named session'],
+    createdFromVisibleWeek: args.createdFromVisibleWeek,
+    currentStep: !args.targetDate
+      ? 'resolve_target'
+      : setupChange
+      ? 'resolve_scope'
+      : args.addType === 'unknown'
+      ? 'resolve_add_type'
+      : 'ready',
+  };
+}
+
 function summariseScheduleSession(
   sessionName: string | undefined,
   items: ProgramEditCandidateItem[] | undefined,
@@ -592,6 +710,22 @@ function parseDayAnswer(message: string): { day: DayOfWeek; explicitNext: boolea
   return { day, explicitNext: !!m[1] };
 }
 
+function parseAddTargetDate(message: string, todayISO?: string): string | undefined {
+  if (!todayISO) return undefined;
+  const text = String(message ?? '');
+  if (/\btoday\b/i.test(text)) return todayISO;
+  if (/\btomorrow\b/i.test(text)) return addDaysISO(todayISO, 1);
+  const day = parseDayAnswer(text);
+  if (day) return nextISOForDay(todayISO, day.day);
+  return undefined;
+}
+
+function addDaysISO(iso: string, days: number): string {
+  const d = new Date(`${iso}T12:00:00`);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function parseMoveDayPair(message: string): { sourceDay: DayOfWeek; targetDay: DayOfWeek } | null {
   const day =
     '((?:next\\s+)?(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thur|thurs|fri|sat|sun))';
@@ -669,15 +803,225 @@ export function resolvePendingScheduleTransactionAnswer(input: {
   pending: PendingCoachClarifier;
   userMessage: string;
   todayISO: string;
+  currentWeek?: Array<{ date: string; sessionName?: string; workout?: unknown | null }>;
 }): PendingScheduleTransactionAnswer {
   const rawTransaction =
-    input.pending.scheduleTransaction ?? buildMoveSessionTransactionFromPending(input.pending);
+    input.pending.scheduleTransaction ?? buildScheduleTransactionFromPending(input.pending, input.todayISO);
   const transaction = rawTransaction
     ? promoteMoveTransactionConfirmation(rawTransaction, input.pending)
     : null;
   if (!transaction) return { kind: 'unresolved' };
+  if (transaction.kind === 'add_to_date_transaction') {
+    return resolvePendingAddToDateTransactionAnswer(
+      transaction,
+      input.userMessage,
+      input.todayISO,
+      input.currentWeek ?? [],
+    );
+  }
   if (transaction.kind !== 'move_session_transaction') return { kind: 'unresolved' };
   return resolvePendingMoveSessionTransactionAnswer(transaction, input.userMessage, input.todayISO);
+}
+
+function buildScheduleTransactionFromPending(
+  pending: PendingCoachClarifier,
+  todayISO: string,
+): PendingScheduleTransaction | null {
+  if (pending.operation === 'move_session') return buildMoveSessionTransactionFromPending(pending);
+  if (
+    pending.operation === 'add_session' &&
+    (pending.missingFields.includes('add_type') ||
+      pending.missingFields.includes('activity') ||
+      pending.missingFields.includes('target_date') ||
+      pending.missingFields.includes('target_session'))
+  ) {
+    const targetDate =
+      pending.targetDate ??
+      parseAddTargetDate(pending.originalMessage, todayISO);
+    const addType = classifyAddTypeAnswer(pending.originalMessage) ?? 'unknown';
+    const missingFields = uniqueFields([
+      ...(targetDate ? [] : ['target_date']),
+      ...(addType === 'unknown' ? ['add_type'] : []),
+    ]);
+    return buildAddToDateTransaction({
+      originalMessage: pending.originalMessage,
+      targetDate,
+      addType,
+      missingFields,
+      createdFromVisibleWeek: !!pending.targetDate,
+    });
+  }
+  return null;
+}
+
+function resolvePendingAddToDateTransactionAnswer(
+  transaction: PendingAddToDateTransaction,
+  message: string,
+  todayISO: string,
+  currentWeek: Array<{ date: string; sessionName?: string; workout?: unknown | null }>,
+): PendingScheduleTransactionAnswer {
+  const targetDateAnswer = parseAddTargetDate(message, todayISO);
+  const addTypeAnswer = classifyAddTypeAnswer(message);
+  const addScopeAnswer = classifyAddScopeAnswer(message);
+  const messageAsksForSetupChange = isRecurringAddSetupIntent(message);
+  let next: PendingAddToDateTransaction = {
+    ...transaction,
+    missingFields: [...transaction.missingFields],
+  };
+
+  if (messageAsksForSetupChange || addScopeAnswer === 'recurring') {
+    next = {
+      ...next,
+      setupChange: true,
+      overrideType: undefined,
+      currentStep: 'resolve_scope',
+      missingFields: uniqueFields([...next.missingFields, 'setup_scope']),
+    };
+  } else if (addScopeAnswer === 'one_off') {
+    next = {
+      ...next,
+      setupChange: false,
+      overrideType: 'one_off_extra',
+      missingFields: next.missingFields.filter((field) => field !== 'setup_scope'),
+    };
+  }
+
+  if (targetDateAnswer) {
+    next = {
+      ...next,
+      targetDate: targetDateAnswer,
+      targetDow: dayNameFromISO(targetDateAnswer),
+      missingFields: next.missingFields.filter((field) =>
+        field !== 'target_date' && field !== 'target_session',
+      ),
+    };
+  }
+  if (addTypeAnswer && !(addScopeAnswer && next.addType !== 'unknown')) {
+    next = {
+      ...next,
+      addType: addTypeAnswer,
+      missingFields: next.missingFields.filter((field) =>
+        field !== 'add_type' && field !== 'activity',
+      ),
+    };
+  }
+  if (!next.setupChange && !next.overrideType) {
+    next = { ...next, overrideType: 'one_off_extra' };
+  }
+
+  const targetStatus = resolveAddTargetStatus(next.targetDate, currentWeek) ?? next.targetStatus;
+  next = { ...next, targetStatus };
+
+  if (!next.targetDate) {
+    return {
+      kind: 'clarify',
+      transaction: {
+        ...next,
+        currentStep: 'resolve_target',
+        missingFields: uniqueFields([...next.missingFields, 'target_date']),
+      },
+      reply: 'Which day should I add it to?',
+      options: ['Today', 'Tomorrow'],
+    };
+  }
+
+  if (next.addType === 'unknown') {
+    return {
+      kind: 'clarify',
+      transaction: {
+        ...next,
+        currentStep: 'resolve_add_type',
+        missingFields: uniqueFields([...next.missingFields, 'add_type']),
+      },
+      reply: 'What would you like to add: conditioning, strength, recovery, or a named session?',
+      options: ['Conditioning', 'Strength', 'Recovery', 'Named session'],
+    };
+  }
+
+  if (next.addType !== 'conditioning') {
+    return {
+      kind: 'clarify',
+      transaction: {
+        ...next,
+        currentStep: 'resolve_add_type',
+        missingFields: uniqueFields([...next.missingFields, 'add_type']),
+      },
+      reply: 'What would you like to add: conditioning, strength, recovery, or a named session?',
+      options: ['Conditioning', 'Strength', 'Recovery', 'Named session'],
+    };
+  }
+
+  if (next.setupChange) {
+    return {
+      kind: 'clarify',
+      transaction: {
+        ...next,
+        currentStep: 'resolve_scope',
+        missingFields: uniqueFields([...next.missingFields, 'setup_scope']),
+      },
+      reply:
+        'Do you want this as a one-off extra session, or should I update your weekly setup and rebuild the program?',
+      options: ['One-off extra session', 'Update weekly setup'],
+    };
+  }
+
+  if (
+    targetStatus === 'existing_session' &&
+    next.currentStep !== 'resolve_existing_target'
+  ) {
+    return {
+      kind: 'clarify',
+      transaction: {
+        ...next,
+        currentStep: 'resolve_existing_target',
+        missingFields: uniqueFields([...next.missingFields, 'target_mode']),
+      },
+      reply: `${dayNameFromISO(next.targetDate)} already has a session. Add conditioning to that session, or create a separate conditioning session?`,
+      options: ['Add to existing session', 'Create separate conditioning', 'Cancel'],
+    };
+  }
+
+  if (next.currentStep === 'resolve_existing_target') {
+    const existingAnswer = classifyExistingTargetAddAnswer(message);
+    if (existingAnswer === 'cancel') {
+      return {
+        kind: 'cancelled',
+        transaction: next,
+        reply: 'No worries — I left the plan unchanged.',
+      };
+    }
+    if (existingAnswer === 'separate') {
+      return {
+        kind: 'clarify',
+        transaction: next,
+        reply: 'That day already has a session, so I can add conditioning to the existing session instead. Do you want me to do that?',
+        options: ['Add to existing session', 'Cancel'],
+      };
+    }
+    if (existingAnswer !== 'existing') {
+      return {
+        kind: 'clarify',
+        transaction: next,
+        reply: `${dayNameFromISO(next.targetDate)} already has a session. Add conditioning to that session, or cancel?`,
+        options: ['Add to existing session', 'Cancel'],
+      };
+    }
+  }
+
+  const command = commandFromAddToDateTransaction({
+    ...next,
+    currentStep: 'ready',
+    missingFields: [],
+  }, message);
+  return {
+    kind: 'complete',
+    command,
+    transaction: {
+      ...next,
+      currentStep: 'ready',
+      missingFields: [],
+    },
+  };
 }
 
 function resolvePendingMoveSessionTransactionAnswer(
@@ -1113,6 +1457,78 @@ function classifyScheduleConfirmationAnswer(message: string): 'confirm' | 'cance
   return null;
 }
 
+function classifyAddTypeAnswer(
+  message: string,
+): PendingAddToDateTransaction['addType'] | null {
+  const text = String(message ?? '').trim();
+  if (!text) return null;
+  if (classifyAddScopeAnswer(text) === 'one_off') return null;
+  if (/\b(?:conditioning|cardio|zone\s*2|aerobic|flush|sprints?|intervals?|bike|row|rower|skierg|ski\s*erg)\b/i.test(text)) {
+    return 'conditioning';
+  }
+  if (/\b(?:strength|lift|lifting|gym|weights?|upper|lower|push|pull|squat|hinge|gunshow)\b/i.test(text)) {
+    return 'strength';
+  }
+  if (/\b(?:recovery|mobility|stretch|rest|flush)\b/i.test(text)) {
+    return 'recovery';
+  }
+  if (/\b(?:named\s+session|session|workout)\b/i.test(text)) {
+    return 'session';
+  }
+  return null;
+}
+
+function isRecurringAddSetupIntent(message: string): boolean {
+  return /\b(?:going\s+forward|from\s+now\s+on|every\s+(?:week|mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|each\s+(?:week|mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)|weekly|mondays|tuesdays|wednesdays|thursdays|fridays|saturdays|sundays)\b/i.test(
+    String(message ?? ''),
+  );
+}
+
+function classifyAddScopeAnswer(message: string): 'one_off' | 'recurring' | null {
+  const text = String(message ?? '').trim();
+  if (!text) return null;
+  if (/\b(?:one[-\s]*off|just\s+today|today\s+only|just\s+this\s+once|extra\s+session|this\s+time\s+only)\b/i.test(text)) {
+    return 'one_off';
+  }
+  if (isRecurringAddSetupIntent(text) || /\b(?:update\s+(?:my\s+)?weekly\s+setup|rebuild\s+the\s+program|make\s+it\s+regular)\b/i.test(text)) {
+    return 'recurring';
+  }
+  return null;
+}
+
+function resolveAddTargetStatus(
+  targetDate: string | undefined,
+  currentWeek: Array<{ date: string; sessionName?: string; workout?: unknown | null }>,
+): PendingAddToDateTransaction['targetStatus'] | undefined {
+  if (!targetDate) return undefined;
+  const day = currentWeek.find((candidate) => candidate.date === targetDate);
+  if (!day) return undefined;
+  if (!day.workout) return 'rest';
+  const workout = day.workout as Record<string, unknown>;
+  const name = String(workout.name ?? day.sessionName ?? '').toLowerCase();
+  const type = String(workout.workoutType ?? '').toLowerCase();
+  const removed = (workout as any).removed === true || /\b(?:rest|removed)\b/.test(name) || type === 'rest';
+  return removed ? 'rest' : 'existing_session';
+}
+
+function classifyExistingTargetAddAnswer(message: string): 'existing' | 'separate' | 'cancel' | null {
+  const text = String(message ?? '').trim();
+  if (!text) return null;
+  if (/^\s*(?:cancel|no|nope|nah|leave\s+it|never\s*mind|nevermind)\s*[.!?]*\s*$/i.test(text)) {
+    return 'cancel';
+  }
+  if (/\b(?:existing|that\s+session|same\s+session|add\s+to|on\s+that|onto\s+that|with\s+that)\b/i.test(text)) {
+    return 'existing';
+  }
+  if (/\b(?:separate|standalone|own\s+session|new\s+session)\b/i.test(text)) {
+    return 'separate';
+  }
+  if (/^\s*(?:yes|yeah|yep|do\s+it|ok|okay|sure)\s*[.!?]*\s*$/i.test(text)) {
+    return 'existing';
+  }
+  return null;
+}
+
 function uniqueFields(fields: string[]): string[] {
   return Array.from(new Set(fields));
 }
@@ -1235,6 +1651,34 @@ function commandFromMoveTransaction(
     'one_off',
     message,
     'schedule_transaction:one_off_move',
+  );
+}
+
+function commandFromAddToDateTransaction(
+  transaction: PendingAddToDateTransaction,
+  message: string,
+): CoachCommand {
+  const targetDate = transaction.targetDate!;
+  const payload: CoachMutatePayload = {
+    operation: 'add_conditioning',
+    modality: null,
+    overrideType: transaction.overrideType ?? 'one_off_extra',
+    setupChange: false,
+  };
+  return makeMutate(
+    'add_conditioning',
+    {
+      kind: 'date',
+      date: targetDate,
+      sessionName:
+        transaction.targetStatus === 'existing_session'
+          ? `${transaction.targetDow ?? dayNameFromISO(targetDate)} session`
+          : 'Rest',
+    },
+    payload,
+    'one_off',
+    message,
+    'add_to_date_transaction:conditioning',
   );
 }
 

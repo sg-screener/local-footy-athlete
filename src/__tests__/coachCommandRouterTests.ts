@@ -35,6 +35,13 @@ import {
   applyConditioningModalityToWorkout,
   parseBikeSubtypeIntent,
 } from '../utils/coachModalitySwap';
+import {
+  chooseBestConditioningAddition,
+} from '../utils/coachPlan';
+import {
+  executeProgramEdit,
+  interpretCoachMessageToProgramEdit,
+} from '../utils/coachProgramEdit';
 
 // ─── Tiny harness ──────────────────────────────────────────────────
 
@@ -748,6 +755,9 @@ section('14. Phase A — add/remove conditioning via applyAdjustmentEvents');
 // today=2026-05-08 (Friday) so router-emitted target dates pass.
 const ADD_TODAY = '2026-05-08';
 const ADD_MONDAY = '2026-05-11';
+const ADD_TUESDAY = '2026-05-12';
+const ADD_THURSDAY = '2026-05-14';
+const ADD_SATURDAY = '2026-05-16';
 
 function stubVerify(addedAfter: boolean): any {
   return () => ({
@@ -777,6 +787,406 @@ function stubApplyReject(reason: string, kind: string): any {
     rejected: events.map((e) => ({ kind, date: e.date, reason })),
   });
 }
+
+function visibleDay(date: string, sessionName: string, workout: any): any {
+  return { date, sessionName, workout };
+}
+
+function visibleWorkout(name: string, extras: Record<string, unknown> = {}): any {
+  return {
+    id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+    name,
+    workoutType: 'Strength',
+    sessionTier: 'core',
+    exercises: [
+      {
+        id: `${name}-exercise`,
+        exercise: { name, description: name },
+      },
+    ],
+    ...extras,
+  };
+}
+
+// 14.0 — Underspecified "add conditioning" chooses a real conditioning
+// category from visible-week context before the executor writes an event.
+const hardConditioningWeek = [
+  visibleDay(ADD_MONDAY, 'Upper Push', visibleWorkout('Upper Push + Power Sprints', {
+    conditioningCategory: 'sprint',
+    conditioningFlavour: 'high-intensity',
+    conditioningBlock: {
+      options: [{ title: 'Power Sprints', description: '6 x 20s hard.' }],
+    },
+  })),
+  visibleDay(ADD_TUESDAY, 'Lower Hinge', visibleWorkout('Lower Hinge', {
+    exercises: [
+      { id: 'rdl', exercise: { name: 'Romanian Deadlift', description: 'Lower hinge strength.' } },
+    ],
+  })),
+  visibleDay(ADD_THURSDAY, 'Upper Pull + VO2', visibleWorkout('Upper Pull + VO2', {
+    conditioningCategory: 'vo2',
+    conditioningFlavour: 'high-intensity',
+    conditioningBlock: {
+      options: [{ title: '3 x 3min VO2 Intervals', description: '3 x 3min hard.' }],
+    },
+  })),
+  visibleDay(ADD_SATURDAY, 'Glycolytic Intervals', visibleWorkout('Glycolytic Intervals', {
+    conditioningCategory: 'glycolytic',
+    conditioningFlavour: 'high-intensity',
+    conditioningBlock: {
+      options: [{ title: 'Glycolytic Intervals', description: '10 x 45s hard / 75s easy.' }],
+    },
+  })),
+];
+const hardWeekDecision = chooseBestConditioningAddition(ADD_TUESDAY, hardConditioningWeek, {
+  seasonPhase: 'Pre-season',
+});
+eq('generic add + hard week selects aerobic base',
+  hardWeekDecision.kind === 'selection' ? hardWeekDecision.category : hardWeekDecision.kind,
+  'aerobic_base' as any);
+eq('generic add + hard week title is specific',
+  hardWeekDecision.kind === 'selection' ? hardWeekDecision.title : '',
+  'Easy Aerobic Flush');
+
+const safeUpperSprintWeek = [
+  visibleDay(ADD_MONDAY, 'Zone 2', visibleWorkout('Zone 2', {
+    conditioningCategory: 'aerobic_base',
+    conditioningFlavour: 'aerobic',
+    conditioningBlock: {
+      options: [{ title: '20min Zone 2', description: '20min zone 2.' }],
+    },
+  })),
+  visibleDay(ADD_TUESDAY, 'Upper Push', visibleWorkout('Upper Push')),
+];
+const sprintDecision = chooseBestConditioningAddition(ADD_TUESDAY, safeUpperSprintWeek, {
+  seasonPhase: 'Off-season',
+});
+eq('safe upper day missing sprint can select power work',
+  sprintDecision.kind === 'selection' ? sprintDecision.category : sprintDecision.kind,
+  'sprint' as any);
+ok('erg sprint prescription is at least 20 seconds',
+  sprintDecision.kind === 'selection' && (sprintDecision.repsMin ?? 0) >= 20,
+  JSON.stringify(sprintDecision));
+
+const lowerDayDecision = chooseBestConditioningAddition(ADD_TUESDAY, [
+  visibleDay(ADD_MONDAY, 'Zone 2', visibleWorkout('Zone 2', {
+    conditioningCategory: 'aerobic_base',
+    conditioningFlavour: 'aerobic',
+    conditioningBlock: {
+      options: [{ title: '20min Zone 2', description: '20min zone 2.' }],
+    },
+  })),
+  visibleDay(ADD_TUESDAY, 'Lower Squat', visibleWorkout('Lower Squat')),
+], { seasonPhase: 'Off-season' });
+eq('lower-body strength day selects aerobic base',
+  lowerDayDecision.kind === 'selection' ? lowerDayDecision.category : lowerDayDecision.kind,
+  'aerobic_base' as any);
+ok('lower-body add names machine-based load control',
+  lowerDayDecision.kind === 'selection' &&
+    /machine-based conditioning keeps running load down/i.test(lowerDayDecision.notes),
+  lowerDayDecision.kind === 'selection' ? lowerDayDecision.notes : JSON.stringify(lowerDayDecision));
+
+const inSeasonNearGameDecision = chooseBestConditioningAddition(ADD_TUESDAY, [
+  visibleDay(ADD_TUESDAY, 'Upper Push', visibleWorkout('Upper Push')),
+  visibleDay(ADD_THURSDAY, 'Game Day', visibleWorkout('Game Day', {
+    workoutType: 'Game',
+  })),
+], { seasonPhase: 'In-season' });
+eq('in-season within 48h of game avoids hard conditioning',
+  inSeasonNearGameDecision.kind === 'selection' ? inSeasonNearGameDecision.category : inSeasonNearGameDecision.kind,
+  'aerobic_base' as any);
+
+const noContextDecision = chooseBestConditioningAddition(ADD_TUESDAY, [], {});
+eq('missing visible context asks conditioning type',
+  noContextDecision.kind,
+  'clarify' as any);
+ok('missing visible context offers easy aerobic / sprint / intervals',
+  noContextDecision.kind === 'clarify' &&
+    /easy aerobic/i.test(noContextDecision.options.join(' ')) &&
+    /sprint/i.test(noContextDecision.options.join(' ')) &&
+    /interval/i.test(noContextDecision.options.join(' ')),
+  JSON.stringify(noContextDecision));
+
+const fourDayRestDayDecision = chooseBestConditioningAddition('2026-06-07', [
+  visibleDay('2026-06-07', 'Rest', null),
+  ...hardConditioningWeek,
+], { trainingDaysPerWeek: 4, seasonPhase: 'Off-season' });
+eq('4-day setup + explicit rest-day add still selects conditioning',
+  fourDayRestDayDecision.kind === 'selection' ? fourDayRestDayDecision.category : fourDayRestDayDecision.kind,
+  'aerobic_base' as any);
+
+let contextualAddEvents: any[] = [];
+const contextualAddCmd = routeCoachCommand({
+  userMessage: 'Can you add conditioning to Tuesday',
+  todayISO: ADD_TODAY,
+  referenceResolution: resolved(ADD_TUESDAY, 'Lower Hinge'),
+  currentWeek: hardConditioningWeek,
+});
+ok('"add conditioning to Tuesday" → mutate',
+  contextualAddCmd.mode === 'mutate');
+eq('"add conditioning to Tuesday" classified as add_conditioning',
+  asMutate(contextualAddCmd)?.operation,
+  'add_conditioning' as any);
+const contextualAddExec = executeCoachCommand({
+  command: contextualAddCmd,
+  todayISO: ADD_TODAY,
+  referenceResolution: null,
+  userMessage: 'Can you add conditioning to Tuesday',
+  conditioningDeps: {
+    applyEvents: (events: any[]) => {
+      contextualAddEvents = events;
+      return {
+        applied: events.map((e) => ({ date: e.date, eventIds: [e.id], workoutName: 'Lower Hinge' })),
+        rejected: [],
+      };
+    },
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetWorkoutBeforeName: 'Lower Hinge',
+      targetWorkoutAfterName: 'Lower Hinge',
+      beforeHasConditioning: false,
+      afterHasConditioning: true,
+      overrideKeyWritten: true,
+      programTabProjectionHasConditioning: true,
+      dayWorkoutProjectionHasConditioning: true,
+      expectedActivityTitle: args.expectedActivityTitle ?? null,
+      programTabProjectionHasExpectedActivity: true,
+      dayWorkoutProjectionHasExpectedActivity: true,
+    }),
+    snapshotBefore: () => hardConditioningWeek[1].workout,
+    snapshotWeek: () => hardConditioningWeek,
+    newEventId: () => 'test-contextual-add-conditioning-evt',
+  },
+});
+eq('"add conditioning to Tuesday" executor kind = mutated',
+  contextualAddExec.kind,
+  'mutated');
+eq('"add conditioning to Tuesday" event title is specific',
+  contextualAddEvents[0]?.after?.title,
+  'Easy Aerobic Flush');
+eq('"add conditioning to Tuesday" event category',
+  contextualAddEvents[0]?.after?.conditioningCategory,
+  'aerobic_base');
+ok('"add conditioning to Tuesday" does not create generic title',
+  contextualAddEvents[0]?.after?.title !== 'Conditioning',
+  JSON.stringify(contextualAddEvents[0]?.after));
+ok('"add conditioning to Tuesday" names machine options',
+  /Bike, Rower, SkiErg, or Assault Bike/i.test(contextualAddEvents[0]?.after?.notes ?? ''),
+  contextualAddEvents[0]?.after?.notes);
+
+let standaloneConditioningWorkout: any = null;
+const restDayWeek = [
+  visibleDay('2026-06-07', 'Rest', null),
+  ...hardConditioningWeek,
+];
+const addConditioningTodayNoRefCmd = routeCoachCommand({
+  userMessage: 'Can you add some conditioning today?',
+  todayISO: '2026-06-07',
+  referenceResolution: null,
+  currentWeek: restDayWeek,
+});
+ok('"add conditioning today" with no resolver target → mutate',
+  addConditioningTodayNoRefCmd.mode === 'mutate');
+eq('"add conditioning today" with no resolver target keeps add_conditioning',
+  asMutate(addConditioningTodayNoRefCmd)?.operation,
+  'add_conditioning' as any);
+eq('"add conditioning today" binds targetDate from message',
+  (asMutate(addConditioningTodayNoRefCmd)?.target as any)?.date,
+  '2026-06-07');
+ok('"add conditioning today" does not ask which day when today is explicit',
+  asMutate(addConditioningTodayNoRefCmd)?.needsClarification === false,
+  JSON.stringify(addConditioningTodayNoRefCmd));
+const addConditioningTodayStaleRefCmd = routeCoachCommand({
+  userMessage: 'Can you add some conditioning today?',
+  todayISO: '2026-06-07',
+  referenceResolution: resolved(ADD_TUESDAY, 'Lower Hinge'),
+  currentWeek: restDayWeek,
+});
+eq('"add conditioning today" explicit today beats stale resolver target',
+  (asMutate(addConditioningTodayStaleRefCmd)?.target as any)?.date,
+  '2026-06-07');
+const addConditioningTodayCmd = routeCoachCommand({
+  userMessage: 'Can you add some conditioning today?',
+  todayISO: '2026-06-07',
+  referenceResolution: resolved('2026-06-07', 'Rest'),
+  currentWeek: restDayWeek,
+});
+ok('"add conditioning today" on rest day → mutate',
+  addConditioningTodayCmd.mode === 'mutate');
+eq('"add conditioning today" routes through add_conditioning',
+  asMutate(addConditioningTodayCmd)?.operation,
+  'add_conditioning' as any);
+const addConditioningTodayExec = executeCoachCommand({
+  command: addConditioningTodayCmd,
+  todayISO: '2026-06-07',
+  referenceResolution: null,
+  userMessage: 'Can you add some conditioning today?',
+  conditioningDeps: {
+    snapshotBefore: () => null,
+    snapshotWeek: () => restDayWeek,
+  },
+  addSessionDeps: {
+    snapshotBefore: () => null,
+    snapshotAfter: () => standaloneConditioningWorkout,
+    visibleWeek: () => restDayWeek as any,
+    readCalendarMark: () => 'rest' as any,
+    applyAdd: ({ sourceWorkout }) => {
+      standaloneConditioningWorkout = sourceWorkout;
+      return { applied: true };
+    },
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetAdded: !!args.afterWorkout && (args.afterWorkout as any).workoutType === 'Conditioning',
+      otherDaysUnchanged: true,
+      changedOtherDates: [],
+      beforeWorkoutName: args.beforeWorkout?.name ?? null,
+      afterWorkoutName: args.afterWorkout?.name ?? null,
+    }),
+  },
+});
+eq('"add conditioning today" executor creates standalone session',
+  addConditioningTodayExec.kind,
+  'mutated');
+eq('"add conditioning today" standalone workout type',
+  standaloneConditioningWorkout?.workoutType,
+  'Conditioning');
+eq('"add conditioning today" standalone title is specific',
+  standaloneConditioningWorkout?.name,
+  'Easy Aerobic Flush');
+eq('"add conditioning today" standalone category',
+  standaloneConditioningWorkout?.conditioningCategory,
+  'aerobic_base');
+ok('"add conditioning today" does not create generic Conditioning title',
+  standaloneConditioningWorkout?.name !== 'Conditioning',
+  JSON.stringify(standaloneConditioningWorkout));
+ok('"add conditioning today" reply labels one-off extra',
+  /one-off extra session/i.test(addConditioningTodayExec.reply),
+  addConditioningTodayExec.reply);
+
+let programEditStandaloneConditioningWorkout: any = null;
+const addConditioningTodayProgramEdit = interpretCoachMessageToProgramEdit({
+  userMessage: 'Can you add some conditioning today?',
+  todayISO: '2026-06-07',
+  referenceResolution: null,
+  currentWeek: restDayWeek,
+});
+ok('"add conditioning today" ProgramEdit is not a day clarifier',
+  addConditioningTodayProgramEdit.intent !== 'ask_question' &&
+    !addConditioningTodayProgramEdit.missingFields.includes('targetDate' as any),
+  JSON.stringify(addConditioningTodayProgramEdit));
+eq('"add conditioning today" ProgramEdit targetDate',
+  (addConditioningTodayProgramEdit as any).targetDate,
+  '2026-06-07');
+const addConditioningTodayProgramEditExec = executeProgramEdit({
+  programEdit: addConditioningTodayProgramEdit,
+  todayISO: '2026-06-07',
+  referenceResolution: null,
+  userMessage: 'Can you add some conditioning today?',
+  conditioningDeps: {
+    snapshotBefore: () => null,
+    snapshotAfter: () => programEditStandaloneConditioningWorkout,
+    snapshotWeek: () => restDayWeek,
+  },
+  addSessionDeps: {
+    snapshotBefore: () => null,
+    snapshotAfter: () => programEditStandaloneConditioningWorkout,
+    visibleWeek: () => restDayWeek as any,
+    readCalendarMark: () => 'rest' as any,
+    applyAdd: ({ sourceWorkout }) => {
+      programEditStandaloneConditioningWorkout = sourceWorkout;
+      return { applied: true };
+    },
+    verifyRendered: (args) => ({
+      requestedDay: args.requestedDay,
+      todayISO: args.todayISO,
+      targetDate: args.targetDate,
+      targetAdded: !!args.afterWorkout && (args.afterWorkout as any).workoutType === 'Conditioning',
+      otherDaysUnchanged: true,
+      changedOtherDates: [],
+      beforeWorkoutName: args.beforeWorkout?.name ?? null,
+      afterWorkoutName: args.afterWorkout?.name ?? null,
+    }),
+  },
+});
+eq('"add conditioning today" ProgramEdit executor creates visible session',
+  addConditioningTodayProgramEditExec.kind,
+  'mutated');
+eq('"add conditioning today" ProgramEdit standalone workout type',
+  programEditStandaloneConditioningWorkout?.workoutType,
+  'Conditioning');
+ok('"add conditioning today" ProgramEdit reply is verified Done',
+  /^Done\b/.test(addConditioningTodayProgramEditExec.reply) &&
+    /one-off extra session/i.test(addConditioningTodayProgramEditExec.reply),
+  addConditioningTodayProgramEditExec.reply);
+
+const wantConditioningTodayCmd = routeCoachCommand({
+  userMessage: 'I want conditioning today',
+  todayISO: '2026-06-07',
+  referenceResolution: null,
+  currentWeek: restDayWeek,
+});
+ok('"I want conditioning today" → mutate',
+  wantConditioningTodayCmd.mode === 'mutate');
+eq('"I want conditioning today" binds today',
+  (asMutate(wantConditioningTodayCmd)?.target as any)?.date,
+  '2026-06-07');
+
+const addConditioningNoDateCmd = routeCoachCommand({
+  userMessage: 'Can you add conditioning?',
+  todayISO: '2026-06-07',
+  referenceResolution: null,
+  currentWeek: restDayWeek,
+});
+ok('"add conditioning" without date still asks which day',
+  asMutate(addConditioningNoDateCmd)?.needsClarification === true,
+  JSON.stringify(addConditioningNoDateCmd));
+
+const existingTodayWeek = [
+  visibleDay('2026-06-07', 'Upper Pull', visibleWorkout('Upper Pull')),
+];
+const addConditioningExistingTodayCmd = routeCoachCommand({
+  userMessage: 'Can you add conditioning today?',
+  todayISO: '2026-06-07',
+  referenceResolution: null,
+  currentWeek: existingTodayWeek,
+});
+eq('"add conditioning today" on existing session targets today',
+  (asMutate(addConditioningExistingTodayCmd)?.target as any)?.date,
+  '2026-06-07');
+eq('"add conditioning today" on existing session preserves session name',
+  (asMutate(addConditioningExistingTodayCmd)?.target as any)?.sessionName,
+  'Upper Pull');
+
+const recurringConditioningTodayCmd = routeCoachCommand({
+  userMessage: 'Can you add conditioning today every week?',
+  todayISO: '2026-06-07',
+  referenceResolution: resolved('2026-06-07', 'Rest'),
+  currentWeek: restDayWeek,
+});
+eq('"add conditioning today every week" detects recurring scope',
+  asMutate(recurringConditioningTodayCmd)?.scope,
+  'recurring' as any);
+const recurringConditioningTodayExec = executeCoachCommand({
+  command: recurringConditioningTodayCmd,
+  todayISO: '2026-06-07',
+  referenceResolution: null,
+  userMessage: 'Can you add conditioning today every week?',
+  conditioningDeps: {
+    snapshotBefore: () => null,
+    snapshotWeek: () => restDayWeek,
+  },
+});
+eq('"add conditioning today every week" asks setup scope before mutating',
+  recurringConditioningTodayExec.kind,
+  'clarify');
+ok('"add conditioning today every week" does not one-off mutate',
+  recurringConditioningTodayExec.applied === false &&
+    /weekly setup|one-off extra/i.test(recurringConditioningTodayExec.reply),
+  recurringConditioningTodayExec.reply);
 
 // 14.1 — Router classifies "add conditioning to Monday" as mutate
 const addCmd = routeCoachCommand({
@@ -1514,7 +1924,7 @@ const addExec = executeCoachCommand({
   conditioningDeps: {
     applyEvents: stubApplyOk(ADD_MONDAY),
     verifyRendered: stubVerify(true),
-    snapshotBefore: () => null,
+    snapshotBefore: () => visibleWorkout('Lower Body Strength'),
     newEventId: () => 'test-add-evt',
   },
 });
@@ -1719,7 +2129,7 @@ const ghostAdd = executeCoachCommand({
   conditioningDeps: {
     applyEvents: stubApplyOk(ADD_MONDAY),
     verifyRendered: stubVerify(false), // we asked to ADD, but verify says NO conditioning
-    snapshotBefore: () => null,
+    snapshotBefore: () => visibleWorkout('Lower Body Strength'),
     newEventId: () => 'test-ghost-evt',
   },
 });
@@ -2631,6 +3041,69 @@ const move16_5Payload = asMutate(move16_5Cmd)?.payload;
 ok('move 16.5 payload toDate = today+1',
   move16_5Payload?.operation === 'move_session' && move16_5Payload.toDate === MOV_MON,
   `got toDate=${(move16_5Payload as any)?.toDate}`);
+ok('move 16.5 pronoun source stays on resolver target',
+  asMutate(move16_5Cmd)?.target.kind === 'date' &&
+    asMutate(move16_5Cmd)?.target.date === MOV_WED &&
+    asMutate(move16_5Cmd)?.target.sessionName === 'Lower Body Strength',
+  JSON.stringify(asMutate(move16_5Cmd)?.target));
+
+const moveAddedSessionToTomorrowCmd = routeCoachCommand({
+  userMessage: 'Actually move it to tomorrow',
+  todayISO: MOV_TODAY,
+  referenceResolution: resolved(MOV_TODAY, 'Easy Aerobic Flush'),
+});
+ok('move added session → mutate',
+  moveAddedSessionToTomorrowCmd.mode === 'mutate');
+ok('move added session keeps newly added source date',
+  asMutate(moveAddedSessionToTomorrowCmd)?.target.kind === 'date' &&
+    asMutate(moveAddedSessionToTomorrowCmd)?.target.date === MOV_TODAY &&
+    asMutate(moveAddedSessionToTomorrowCmd)?.target.sessionName === 'Easy Aerobic Flush',
+  JSON.stringify(asMutate(moveAddedSessionToTomorrowCmd)?.target));
+ok('move added session resolves tomorrow only as target date',
+  asMutate(moveAddedSessionToTomorrowCmd)?.payload.operation === 'move_session' &&
+    asMutate(moveAddedSessionToTomorrowCmd)?.payload.toDate === MOV_MON,
+  JSON.stringify(asMutate(moveAddedSessionToTomorrowCmd)?.payload));
+
+const moveAddedSessionPushCmd = routeCoachCommand({
+  userMessage: 'Actually push it to Sunday',
+  todayISO: '2026-06-08',
+  referenceResolution: resolved('2026-06-13', 'Easy Aerobic Flush'),
+});
+ok('push added session → mutate',
+  moveAddedSessionPushCmd.mode === 'mutate');
+ok('push added session keeps Saturday as source',
+  asMutate(moveAddedSessionPushCmd)?.target.kind === 'date' &&
+    asMutate(moveAddedSessionPushCmd)?.target.date === '2026-06-13' &&
+    asMutate(moveAddedSessionPushCmd)?.target.sessionName === 'Easy Aerobic Flush',
+  JSON.stringify(asMutate(moveAddedSessionPushCmd)?.target));
+ok('push added session uses Sunday only as destination',
+  asMutate(moveAddedSessionPushCmd)?.payload.operation === 'move_session' &&
+    asMutate(moveAddedSessionPushCmd)?.payload.toDate === '2026-06-14',
+  JSON.stringify(asMutate(moveAddedSessionPushCmd)?.payload));
+const moveAddedSessionPushExec = executeCoachCommand({
+  command: moveAddedSessionPushCmd,
+  todayISO: '2026-06-08',
+  referenceResolution: null,
+  userMessage: 'Actually push it to Sunday',
+  moveSessionDeps: {
+    snapshotBefore: () => moveWorkout({ name: 'Easy Aerobic Flush' }),
+    applyMove: stubMoveOk('2026-06-13', '2026-06-14', 'Easy Aerobic Flush'),
+    verifyRendered: stubMoveVerify({
+      sourcePresent: { tab: false, day: false },
+      destPresent: { tab: true, day: true },
+    }),
+    visibleWeek: () => [],
+  },
+});
+eq('push added session executor mutates',
+  moveAddedSessionPushExec.kind,
+  'mutated');
+ok('push added session never says Sunday to Sunday',
+  !/moved\s+Sunday'?s\s+session\s+to\s+Sunday/i.test(moveAddedSessionPushExec.reply),
+  moveAddedSessionPushExec.reply);
+eq('push added session reply moves Saturday to Sunday',
+  moveAddedSessionPushExec.reply,
+  "Done — I moved Saturday's session to Sunday.");
 
 const move16_5Exec = executeCoachCommand({
   command: move16_5Cmd,

@@ -20,6 +20,7 @@ import type {
   CoachCommand,
   CoachCommandTarget,
   CoachCommandScope,
+  CoachMutatePayload,
   CoachMutateOperation,
 } from './coachCommandRouter';
 import type { CoachReferenceResolution } from './coachReferenceResolver';
@@ -84,6 +85,7 @@ import type { Workout, OverrideContext } from '../types/domain';
 import { logger } from './logger';
 import {
   buildConditioningPrescription,
+  chooseBestConditioningAddition,
   type CoachConditioningEditScope,
   type CoachConditioningEditMode,
   type CoachPlanChangeKind,
@@ -194,6 +196,9 @@ export interface ConditioningMutationDeps {
   /** Optional post-apply snapshot for ProgramEdit invariant verification.
    *  Production leaves this undefined and reads the live visible program. */
   snapshotAfter?: (targetDate: string) => ResolvedDay['workout'] | null;
+  /** Optional visible-week snapshot used to choose context-aware
+   *  conditioning when the user asks for generic "conditioning". */
+  snapshotWeek?: (targetDate: string) => ResolvedDay[];
   /** Replaces the live undo application when a post-apply verifier rejects
    *  the mutation. Production falls back to `applyUndoPlan`. */
   rollback?: (plan: RevertPlan, opts: { todayISO: string }) => ApplyUndoPlanResult;
@@ -1119,6 +1124,7 @@ function runConditioningMutation(
   const applyEvents = deps.applyEvents ?? applyAdjustmentEvents;
   const verifyRendered = deps.verifyRendered ?? verifyRenderedProgramMutation;
   const snapshotBefore = deps.snapshotBefore ?? defaultSnapshotBefore;
+  const snapshotWeek = deps.snapshotWeek ?? defaultSnapshotWeek;
   const newEventId =
     deps.newEventId ?? (() => `coach-cmd-${command.operation}-${targetDate}`);
 
@@ -1158,6 +1164,8 @@ function runConditioningMutation(
 	          editMode: command.payload.editMode,
 	          editScope: command.payload.editScope,
 	          targetItemId: command.payload.targetItemId,
+	          overrideType: command.payload.overrideType,
+	          setupChange: command.payload.setupChange,
 	        }
       : null;
   const removeSpec: RemoveConditioningEventSpec | null =
@@ -1170,6 +1178,99 @@ function runConditioningMutation(
       : null;
 
   if (command.operation === 'add_conditioning' && addSpec) {
+    if (command.scope === 'recurring' || addSpec.setupChange === true) {
+      tick('composing_reply');
+      return {
+        kind: 'clarify',
+        reply:
+          'Do you want this as a one-off extra session, or should I update your weekly setup and rebuild the program?',
+        applied: false,
+        route: 'clarify_recurring_conditioning_add_requires_setup_scope',
+        progress: stages,
+        options: ['One-off extra session', 'Update weekly setup'],
+      };
+    }
+    if (
+      isEmptyTargetForStandaloneConditioningAdd({
+        command,
+        beforeWorkout,
+        targetDate,
+        snapshotWeek,
+      })
+    ) {
+      const standaloneCommand: CoachCommand = {
+        mode: 'mutate',
+        operation: 'add_session',
+        target: command.target,
+        payload: {
+          operation: 'add_session',
+          sourceSessionName: addSpec.customActivity,
+          targetSessionName: addSpec.customActivity,
+          standaloneAddType: 'conditioning',
+          overrideType: addSpec.overrideType ?? 'one_off_extra',
+          setupChange: false,
+          standaloneConditioning: {
+            modality: addSpec.modality as any,
+            customActivity: addSpec.customActivity,
+            intensity: addSpec.intensity as any,
+            durationMinutes: addSpec.durationMinutes,
+            sets: addSpec.sets,
+            repsMin: addSpec.repsMin,
+            repsMax: addSpec.repsMax,
+            restSeconds: addSpec.restSeconds,
+            prescriptionType: addSpec.prescriptionType,
+            bikeLabel: addSpec.bikeLabel as any,
+            effortKind: addSpec.effortKind,
+            trainingIntent: addSpec.trainingIntent,
+          },
+          reason: 'coach add standalone conditioning',
+        },
+        scope: command.scope,
+        confidence: command.confidence,
+        needsClarification: false,
+        reason: 'add_conditioning_empty_day_to_standalone_session',
+      };
+      return runAddSession(
+        {
+          ...input,
+          command: standaloneCommand,
+        },
+        stages,
+        tick,
+      );
+    }
+    if (isUnderspecifiedAddConditioningSpec(addSpec)) {
+      const contextual = chooseBestConditioningAddition(targetDate, snapshotWeek(targetDate));
+      if (contextual.kind === 'clarify') {
+        tick('composing_reply');
+        return {
+          kind: 'clarify',
+          reply: contextual.question,
+          applied: false,
+          route: `clarify_conditioning_category:${contextual.reason}`,
+          progress: stages,
+          options: contextual.options,
+        };
+      }
+      addSpec = {
+        ...addSpec,
+        modality: contextual.modality,
+        customActivity: contextual.title,
+        intensity: contextual.intensity,
+        durationMinutes: contextual.durationMinutes,
+        sets: contextual.sets,
+        repsMin: contextual.repsMin,
+        repsMax: contextual.repsMax,
+        restSeconds: contextual.restSeconds,
+        prescriptionType: contextual.prescriptionType,
+        effortKind: contextual.effortKind,
+        trainingIntent: contextual.trainingIntent,
+        description: contextual.description,
+        notes: contextual.notes,
+        conditioningFlavour: contextual.conditioningFlavour,
+        conditioningCategory: contextual.category,
+      };
+    }
     const contract = completeConditioningEditContract({
       addSpec,
       beforeWorkout,
@@ -1528,11 +1629,61 @@ interface AddConditioningEventSpec {
   editMode?: CoachConditioningEditMode;
   editScope?: CoachConditioningEditScope;
   targetItemId?: string;
+  description?: string;
+  notes?: string;
+  conditioningFlavour?: 'aerobic' | 'high-intensity' | 'tempo';
+  conditioningCategory?: 'aerobic_base' | 'sprint' | 'vo2' | 'glycolytic' | 'tempo' | 'low_load';
+  overrideType?: 'one_off_extra';
+  setupChange?: boolean;
 }
 
 interface RemoveConditioningEventSpec {
   modality: string | null;
   targetItemId?: string;
+}
+
+function isUnderspecifiedAddConditioningSpec(spec: AddConditioningEventSpec): boolean {
+  if (spec.editMode && spec.editMode !== 'append') return false;
+  if (spec.replaceActivity || spec.targetItemId || spec.changeKind) return false;
+  if (spec.trainingIntent || spec.effortKind || spec.intensity) return false;
+  if (spec.modality) return false;
+  if (spec.durationMinutes || spec.sets || spec.repsMin || spec.repsMax || spec.restSeconds) return false;
+  const title = normalisedConditioningTitle(spec.customActivity ?? '');
+  return title === '' || title === 'conditioning';
+}
+
+function isEmptyTargetForStandaloneConditioningAdd(args: {
+  command: Extract<CoachCommand, { mode: 'mutate' }>;
+  beforeWorkout: ResolvedDay['workout'] | null;
+  targetDate: string;
+  snapshotWeek: (targetDate: string) => ResolvedDay[];
+}): boolean {
+  if (args.beforeWorkout && !isRemovedSessionProjection(args.beforeWorkout)) return false;
+  if (args.beforeWorkout && isRemovedSessionProjection(args.beforeWorkout)) return true;
+  const targetSessionName =
+    args.command.target.kind === 'date'
+      ? String(args.command.target.sessionName ?? '')
+      : '';
+  if (/\b(?:rest|empty|no\s+(?:s&c\s+)?session|no\s+workout)\b/i.test(targetSessionName)) {
+    return true;
+  }
+  if (targetSessionName.trim() && !isGenericDateTargetLabel(targetSessionName)) {
+    return false;
+  }
+  const weekTarget = args.snapshotWeek(args.targetDate).find((day) => day.date === args.targetDate);
+  if (weekTarget && !weekTarget.workout) return true;
+  if (weekTarget?.workout && isRemovedSessionProjection(weekTarget.workout)) return true;
+  return false;
+}
+
+function isGenericDateTargetLabel(label: string): boolean {
+  const normalized = label.trim().toLowerCase();
+  return (
+    normalized === 'today' ||
+    normalized === 'tomorrow' ||
+    /^(mon|tue|wed|thu|fri|sat|sun)(day)?$/.test(normalized) ||
+    /^[a-z]{3}\s+\d{4}-\d{2}-\d{2}$/.test(normalized)
+  );
 }
 
 type ConditioningEditContractResult =
@@ -1941,6 +2092,10 @@ function buildAddConditioningEvent(
     trainingIntent,
     editScope,
     targetItemId,
+    description: descriptionOverride,
+    notes: notesOverride,
+    conditioningFlavour: conditioningFlavourOverride,
+    conditioningCategory: conditioningCategoryOverride,
   } = spec;
   const titleByModality: Record<string, string> = {
     bike: 'Bike Intervals',
@@ -2032,8 +2187,8 @@ function buildAddConditioningEvent(
     spec.durationMinutes ??
     (isEasy ? 20 : undefined);
   const lowerTitle = title.toLowerCase();
-  const description =
-    isLowLoadCustom && !modality
+  const description = descriptionOverride ??
+    (isLowLoadCustom && !modality
       ? `${durationMinutes} min ${title}. Keep it controlled and low-load; stop if it adds soreness.`
       : isEasy
       ? `${durationMinutes} min ${lowerTitle} at conversational pace. Keep it light: 3-4/10.`
@@ -2047,7 +2202,7 @@ function buildAddConditioningEvent(
       ? `${intervalSets} x ${intervalRange} hard ${conditioningModeLabel(modality, title)} intervals, 90s easy recovery between reps.`
       : modality === 'sprint'
       ? '6 x 20-30s @ near-max effort, 2 min easy recovery between reps.'
-      : '8 x 2 min @ 75-80% max HR, 1 min easy recovery between reps.';
+      : '8 x 2 min @ 75-80% max HR, 1 min easy recovery between reps.');
   const coachNote =
     replaceActivity && customActivity
       ? `Replaced ${replaceActivity} with ${customActivity}`
@@ -2061,16 +2216,16 @@ function buildAddConditioningEvent(
   const sets = plannedPrescription.sets ?? (isEasy ? 1 : isSprintEffort ? sprintSets : isHighIntensityInterval ? intervalSets : spec.sets ?? 8);
   const minutes = durationMinutes;
   const restSeconds = plannedPrescription.restSeconds ?? (isEasy ? 0 : isSprintEffort ? 120 : isHighIntensityInterval ? 90 : 60);
-  const conditioningFlavour = isSprintEffort || isHighIntensityInterval
+  const conditioningFlavour = conditioningFlavourOverride ?? (isSprintEffort || isHighIntensityInterval
     ? 'high-intensity'
     : trainingIntent === 'tempo' || intensity === 'moderate'
     ? 'tempo'
-    : 'aerobic';
-  const conditioningCategory = isSprintEffort
+    : 'aerobic');
+  const conditioningCategory = conditioningCategoryOverride ?? (isSprintEffort
     ? 'sprint'
     : isHighIntensityInterval
     ? 'vo2'
-    : 'aerobic_base';
+    : 'aerobic_base');
   const resolvedTrainingIntent: CoachTrainingIntent =
     trainingIntent ??
     (isSprintEffort
@@ -2082,8 +2237,8 @@ function buildAddConditioningEvent(
       : isEasy
       ? 'low_load'
       : 'aerobic');
-  const notes =
-    isLowLoadCustom && !modality
+  const notes = notesOverride ??
+    (isLowLoadCustom && !modality
       ? `${durationMinutes} min ${title}. Controlled, low-load work only.`
       : isEasy
       ? `${durationMinutes} min ${lowerTitle}. Conversational pace only; stop if it adds soreness.`
@@ -2095,7 +2250,7 @@ function buildAddConditioningEvent(
       ? `${sprintSets} x ${sprintRange} ${sprintEffortDisplayLabel(modality, bikeLabel, title)}. Full recovery; stop if power drops.`
       : isHighIntensityInterval
       ? `${intervalSets} x ${intervalRange} hard ${conditioningModeLabel(modality, title)} intervals. Keep the recoveries easy and stop if output drops.`
-      : undefined;
+      : undefined);
   return {
     id,
     kind: 'add_conditioning_block',
@@ -2153,6 +2308,20 @@ function defaultSnapshotBefore(targetDate: string): ResolvedDay['workout'] | nul
       error: (e as Error)?.message ?? String(e),
     });
     return null;
+  }
+}
+
+function defaultSnapshotWeek(targetDate: string): ResolvedDay[] {
+  try {
+    const monday = getMondayForDate(targetDate);
+    const state: ScheduleState = buildScheduleStateImperative();
+    return resolveWeekWithConditioning(monday, state);
+  } catch (e) {
+    logger.warn('[coach-command-executor] snapshot_week_failed', {
+      targetDate,
+      error: (e as Error)?.message ?? String(e),
+    });
+    return [];
   }
 }
 
@@ -2857,7 +3026,28 @@ function runAddSession(
   const verifyRendered = deps.verifyRendered ?? verifyRenderedAddSession;
 
   tick('checking_program');
-  const sourceWorkout = findSourceSessionWorkout({
+  const weekMonday = getMondayForDate(targetDate);
+  const visibleWeekBefore = safeVisibleWeekForMonday(visibleWeek, weekMonday);
+  const standaloneWorkout =
+    payload.standaloneAddType === 'conditioning'
+      ? buildStandaloneConditioningSourceWorkout({
+          targetDate,
+          visibleWeek: visibleWeekBefore,
+          payload: payload.standaloneConditioning,
+        })
+      : null;
+  if (standaloneWorkout?.kind === 'clarify') {
+    tick('composing_reply');
+    return {
+      kind: 'clarify',
+      reply: standaloneWorkout.reply,
+      applied: false,
+      route: `clarify_standalone_conditioning:${standaloneWorkout.reason}`,
+      progress: stages,
+      options: standaloneWorkout.options,
+    };
+  }
+  const sourceWorkout = standaloneWorkout?.workout ?? findSourceSessionWorkout({
     visibleWeek,
     todayISO: input.todayISO,
     targetDate,
@@ -2890,13 +3080,22 @@ function runAddSession(
     };
   }
 
-  const weekMonday = getMondayForDate(targetDate);
-  const visibleWeekBefore = safeVisibleWeekForMonday(visibleWeek, weekMonday);
   const beforeOverride = takeDateOverrideSnapshots(input, [targetDate]).get(targetDate) ?? {
     workout: null,
     context: null,
   };
   const beforeCalendarMark = readCalendarMark(targetDate);
+  if (payload.standaloneAddType === 'conditioning' && beforeCalendarMark === 'game') {
+    tick('composing_reply');
+    return {
+      kind: 'rejected',
+      reply:
+        `${humanDate(targetDate)} is game day, so I won't add extra conditioning without a clearer safety call.`,
+      applied: false,
+      route: 'game_day_blocked:add_session:standalone_conditioning',
+      progress: stages,
+    };
+  }
   const rollbackSnapshot: RemoveSessionRollbackSnapshot = {
     date: targetDate,
     overrideWorkout: beforeOverride.workout,
@@ -2970,9 +3169,15 @@ function runAddSession(
 
   tick('composing_reply');
   const finalName = afterWorkout?.name ?? sourceWorkout.name ?? 'Session';
+  const isOneOffExtraConditioning =
+    payload.standaloneAddType === 'conditioning' &&
+    payload.overrideType === 'one_off_extra' &&
+    payload.setupChange !== true;
   const result: ExecutionResult = {
     kind: 'mutated',
-    reply: `Done. I added ${quoteSession(finalName)} to ${humanDate(targetDate)}.`,
+    reply: isOneOffExtraConditioning
+      ? `Done — I added ${finalName} ${targetDate === input.todayISO ? 'today' : `to ${humanDate(targetDate)}`} as a one-off extra session.`
+      : `Done. I added ${quoteSession(finalName)} to ${humanDate(targetDate)}.`,
     applied: true,
     route: 'add_session:applied',
     progress: stages,
@@ -3250,6 +3455,149 @@ function defaultApplyAddSession(
       reason: (e as Error)?.message ?? String(e),
     };
   }
+}
+
+type StandaloneConditioningSourceResult =
+  | { kind: 'ok'; workout: Workout }
+  | { kind: 'clarify'; reply: string; options?: string[]; reason: string };
+
+function buildStandaloneConditioningSourceWorkout(args: {
+  targetDate: string;
+  visibleWeek: ResolvedDay[];
+  payload?: Extract<CoachMutatePayload, { operation: 'add_session' }>['standaloneConditioning'];
+}): StandaloneConditioningSourceResult {
+  const payload = args.payload ?? {};
+  let spec: AddConditioningEventSpec = {
+    modality: payload.modality ?? null,
+    customActivity: payload.customActivity,
+    intensity: payload.intensity,
+    durationMinutes: payload.durationMinutes,
+    sets: payload.sets,
+    repsMin: payload.repsMin,
+    repsMax: payload.repsMax,
+    restSeconds: payload.restSeconds,
+    prescriptionType: payload.prescriptionType,
+    bikeLabel: payload.bikeLabel,
+    effortKind: payload.effortKind,
+    trainingIntent: payload.trainingIntent,
+  };
+
+  if (isUnderspecifiedAddConditioningSpec(spec)) {
+    const contextual = chooseBestConditioningAddition(args.targetDate, args.visibleWeek);
+    if (contextual.kind === 'clarify') {
+      return {
+        kind: 'clarify',
+        reply: contextual.question,
+        options: contextual.options,
+        reason: contextual.reason,
+      };
+    }
+    spec = {
+      ...spec,
+      modality: contextual.modality,
+      customActivity: contextual.title,
+      intensity: contextual.intensity,
+      durationMinutes: contextual.durationMinutes,
+      sets: contextual.sets,
+      repsMin: contextual.repsMin,
+      repsMax: contextual.repsMax,
+      restSeconds: contextual.restSeconds,
+      prescriptionType: contextual.prescriptionType,
+      effortKind: contextual.effortKind,
+      trainingIntent: contextual.trainingIntent,
+      description: contextual.description,
+      notes: contextual.notes,
+      conditioningFlavour: contextual.conditioningFlavour,
+      conditioningCategory: contextual.category,
+    };
+  }
+
+  const event = buildAddConditioningEvent(
+    args.targetDate,
+    spec,
+    `coach-standalone-conditioning-${args.targetDate}`,
+  );
+  const after = event.after && typeof event.after === 'object'
+    ? event.after as any
+    : {};
+  return {
+    kind: 'ok',
+    workout: workoutFromStandaloneConditioningAfter(args.targetDate, after),
+  };
+}
+
+function workoutFromStandaloneConditioningAfter(
+  targetDate: string,
+  after: Record<string, any>,
+): Workout {
+  const now = new Date().toISOString();
+  const title = String(after.title ?? 'Easy Aerobic Flush').trim() || 'Easy Aerobic Flush';
+  const description = String(after.description ?? after.notes ?? title);
+  const exerciseId = String(after.exerciseId ?? `coach-${normalisedConditioningTitle(title) || 'conditioning'}`);
+  const minutes = Number(after.minutes ?? after.durationMinutes ?? 25) || 25;
+  const conditioningFlavour =
+    after.conditioningFlavour === 'high-intensity' || after.conditioningFlavour === 'tempo'
+      ? after.conditioningFlavour
+      : 'aerobic';
+  const conditioningCategory =
+    after.conditioningCategory === 'sprint' ||
+    after.conditioningCategory === 'vo2' ||
+    after.conditioningCategory === 'glycolytic'
+      ? after.conditioningCategory
+      : 'aerobic_base';
+  const intensity =
+    conditioningFlavour === 'high-intensity'
+      ? 'High'
+      : conditioningFlavour === 'tempo'
+      ? 'Moderate'
+      : 'Light';
+  return {
+    id: `coach-standalone-conditioning-${targetDate}`,
+    microcycleId: 'coach-standalone',
+    dayOfWeek: new Date(`${targetDate}T12:00:00`).getDay(),
+    name: title,
+    description,
+    durationMinutes: minutes,
+    intensity: intensity as any,
+    workoutType: 'Conditioning',
+    sessionTier: 'optional',
+    hasCombinedConditioning: true,
+    conditioningFlavour,
+    conditioningCategory,
+    conditioningBlock: {
+      intent: conditioningFlavour,
+      options: [{ title, description, exerciseIds: [exerciseId] }],
+    },
+    coachAddedConditioningLabel: title,
+    coachNotes: ['Added standalone conditioning via coach'],
+    exercises: [{
+      id: exerciseId,
+      exerciseId,
+      exerciseOrder: 0,
+      prescribedSets: Number(after.sets ?? 1) || 1,
+      prescribedRepsMin: Number(after.repsMin ?? minutes) || minutes,
+      prescribedRepsMax: Number(after.repsMax ?? after.repsMin ?? minutes) || minutes,
+      prescriptionType: after.prescriptionType ?? 'duration_minutes',
+      prescribedWeightKg: 0,
+      restSeconds: Number(after.restSeconds ?? 0) || 0,
+      notes: String(after.notes ?? description),
+      exercise: {
+        id: exerciseId,
+        name: title,
+        description,
+        exerciseType: 'Cardio',
+        muscleGroups: [],
+        equipmentRequired: [],
+        difficultyLevel: 'Intermediate',
+        createdAt: now,
+        updatedAt: now,
+      } as any,
+      createdAt: now,
+      updatedAt: now,
+    } as any],
+    createdAt: now,
+    updatedAt: now,
+  } as Workout;
 }
 
 function findSourceSessionWorkout(args: {
