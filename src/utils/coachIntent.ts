@@ -41,6 +41,7 @@ import type { CoachUpdate, ActiveConstraint } from '../store/coachUpdatesStore';
 import type { CoachContextEntry } from '../store/coachContextStateStore';
 import type { MutationHistoryEntry } from '../store/coachMutationHistoryStore';
 import type { CoachReferenceResolution } from './coachReferenceResolver';
+import type { CoachTargetFrame } from './coachTargetFrame';
 
 // ─── Intent schema ──────────────────────────────────────────────────
 
@@ -213,6 +214,8 @@ export interface CoachContextPacket {
   lastOpenedWorkout?: CoachContextEntry | null;
   lastExplainedSession?: CoachContextEntry | null;
   lastDiscussedWorkout?: CoachContextEntry | null;
+  /** Most recent verified coach mutation target; pronouns should prefer it. */
+  lastMutationTarget?: CoachContextEntry | null;
   /** Most recent verified coach mutation with structured touched items. */
   lastMutation?: Pick<
     MutationHistoryEntry,
@@ -225,6 +228,13 @@ export interface CoachContextPacket {
    * unresolvable / ambiguous references without re-running the logic.
    */
   referenceResolution?: CoachReferenceResolution;
+  /**
+   * Stage 2 — central target-resolution frame. This is the source of
+   * truth for "what is the user referring to?". `referenceResolution`
+   * remains as a compatibility projection for older router/program-edit
+   * paths while they migrate.
+   */
+  targetFrame?: CoachTargetFrame;
 }
 
 // ─── Classifier seam ─────────────────────────────────────────────────

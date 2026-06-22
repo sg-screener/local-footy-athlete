@@ -27,8 +27,13 @@ import type { CoachContextPacket } from './coachIntent';
 import type { PendingCoachProposal } from './coachIntent';
 import { buildProgramTabProjectedWeek } from './visibleProgramReadModel';
 import { getCoachContextSnapshot } from '../store/coachContextStateStore';
-import { resolveCoachReference } from './coachReferenceResolver';
 import { autoBindUniqueModalityTarget } from './coachVisibleWeekAutoBind';
+import type { PendingScheduleTransaction } from '../store/pendingCoachClarifierStore';
+import {
+  referenceResolutionFromTargetFrame,
+  resolveCoachTargetFrame,
+  targetFrameFromReferenceTarget,
+} from './coachTargetFrame';
 
 const RECENT_HISTORY_LIMIT = 8;
 
@@ -50,6 +55,8 @@ export interface BuildPacketInput {
     timestamp: number;
   } | null;
   pendingCoachProposal?: PendingCoachProposal | null;
+  pendingTransaction?: PendingScheduleTransaction | null;
+  selectedDate?: string | null;
 }
 
 /**
@@ -106,15 +113,17 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
   // are TTL-filtered inside getCoachContextSnapshot so a workout
   // opened yesterday never silently anchors "it" today.
   const ctx = getCoachContextSnapshot();
-  const baseResolution = resolveCoachReference({
+  const targetFrame = resolveCoachTargetFrame({
     userMessage: input.userMessage,
+    visibleWeek: currentWeek,
+    pendingTransaction: input.pendingTransaction ?? null,
+    lastMutationTarget: ctx.lastMutationTarget,
+    openedSession: ctx.lastOpenedWorkout,
+    explainedSession: ctx.lastExplainedSession,
+    selectedDate: input.selectedDate ?? null,
     todayISO: input.todayISO,
-    currentWeek,
-    nextWeek,
-    lastOpenedWorkout: ctx.lastOpenedWorkout,
-    lastExplainedSession: ctx.lastExplainedSession,
-    lastDiscussedWorkout: ctx.lastDiscussedWorkout,
   });
+  const baseResolution = referenceResolutionFromTargetFrame(targetFrame, input.userMessage);
 
   // ─── VISIBLE-WEEK UNIQUE-MODALITY AUTO-BIND ────────────────────
   // When the resolver couldn't bind a target (no lastExplained /
@@ -139,13 +148,28 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     lastOpenedWorkout: ctx.lastOpenedWorkout,
     lastExplainedSession: ctx.lastExplainedSession,
     lastDiscussedWorkout: ctx.lastDiscussedWorkout,
+    lastMutationTarget: ctx.lastMutationTarget,
     lastMutation,
+    targetFrame,
     referenceResolution: baseResolution,
   };
 
   const autoBind = autoBindUniqueModalityTarget(basePacket, input.userMessage);
   if (autoBind.bound) {
-    return autoBind.packet;
+    const autoBoundTargetFrame = autoBind.boundTarget
+      ? targetFrameFromReferenceTarget({
+          target: autoBind.boundTarget,
+          targetSource: 'visible_week',
+          reason: 'visible_week_auto_bind',
+          explicitDateRole: 'none',
+          confidence: 0.78,
+        })
+      : targetFrame;
+    return {
+      ...autoBind.packet,
+      targetFrame: autoBoundTargetFrame,
+      referenceResolution: referenceResolutionFromTargetFrame(autoBoundTargetFrame, input.userMessage),
+    };
   }
   return basePacket;
 }
@@ -256,6 +280,17 @@ export function serialisePacketForLLM(packet: CoachContextPacket): string {
           modalities: packet.lastDiscussedWorkout.modalities ?? [],
         }
       : null,
+    lastMutationTarget: packet.lastMutationTarget
+      ? {
+          date: packet.lastMutationTarget.date,
+          sessionName: packet.lastMutationTarget.sessionName,
+          source: packet.lastMutationTarget.source,
+          modalities: packet.lastMutationTarget.modalities ?? [],
+          lastMutationType: packet.lastMutationTarget.lastMutationType,
+          targetSessionId: packet.lastMutationTarget.targetSessionId ?? null,
+          newlyAdded: packet.lastMutationTarget.newlyAdded ?? false,
+        }
+      : null,
     lastMutation: packet.lastMutation
       ? {
           operation: packet.lastMutation.operation,
@@ -273,6 +308,17 @@ export function serialisePacketForLLM(packet: CoachContextPacket): string {
           confidence: packet.referenceResolution.confidence,
           failureReason: packet.referenceResolution.failureReason,
           isMutationLike: packet.referenceResolution.isMutationLike,
+        }
+      : null,
+    targetFrame: packet.targetFrame
+      ? {
+          targetSource: packet.targetFrame.targetSource,
+          resolvedTarget: packet.targetFrame.resolvedTarget,
+          confidence: packet.targetFrame.confidence,
+          missingFields: packet.targetFrame.missingFields,
+          candidateOptions: packet.targetFrame.candidateOptions,
+          reason: packet.targetFrame.reason,
+          explicitDateRole: packet.targetFrame.explicitDateRole,
         }
       : null,
   };

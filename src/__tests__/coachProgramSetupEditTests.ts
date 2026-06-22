@@ -343,43 +343,61 @@ async function main() {
     ok('in-season missing gameDay does not call generator before clarification', !generatorCalled, { generatorCalled });
   }
 
-  section('[9] CoachScreen setup send path appends before async rebuild');
+  section('[9] CoachScreen delegates setup send path to CoachTurnController');
   {
     const coachScreenSource = fs.readFileSync(
       path.resolve(__dirname, '../screens/coach/CoachScreen.tsx'),
       'utf8',
     );
+    const controllerSource = fs.readFileSync(
+      path.resolve(__dirname, '../utils/coachTurnController.ts'),
+      'utf8',
+    );
     ok('send tap logs composer state', coachScreenSource.includes("[coach-send] tapped"));
     ok('busy send logs early return instead of silent disabled tap', coachScreenSource.includes("reason: 'isLoading'"));
     ok(
-      'setup branch appends user message before executeProgramSetupEdit',
-      /if \(isProgramSetupEdit\(programEditForExecution\)\)[\s\S]*setMessages\(\(prev\) => \[\.\.\.prev, userMessage\]\);[\s\S]*await executeProgramSetupEdit/.test(coachScreenSource),
+      'CoachScreen delegates non-injury turns to CoachTurnController',
+      /from ['"]\.\.\/\.\.\/utils\/coachTurnController['"]/.test(coachScreenSource) &&
+        /await handleCoachTurn\(\{/.test(coachScreenSource),
     );
     ok(
-      'setup branch starts long-running rebuild progress immediately',
-      /setInputValue\(''\);\s*startSetupRebuildProgress\(\);\s*setIsLoading\(true\);/.test(coachScreenSource),
+      'CoachScreen passes setup rebuild callbacks into controller',
+      /startSetupRebuildProgress,\s*clearSetupRebuildProgress,/.test(coachScreenSource),
     );
     ok(
-      'setup branch appends assistant only after rebuild result',
-      /id: `\$\{Date\.now\(\)\}-program-setup`[\s\S]*setMessages\(\(prev\) => \[\.\.\.prev, assistantMessage\]\);/.test(coachScreenSource),
+      'CoachScreen supplies user/assistant append callbacks to controller',
+      /appendUser:\s*\(\)\s*=>\s*\{[\s\S]{0,160}setMessages\(\(prev\) => \[\.\.\.prev, userMessage\]\);/.test(coachScreenSource) &&
+        /appendAssistant:\s*\(assistantMessage\)\s*=>\s*\{[\s\S]{0,180}setMessages\(\(prev\) => \[\.\.\.prev, assistantMessage\]\);/.test(coachScreenSource),
     );
     ok(
-      'setup branch clears long-running progress in finally',
-      /finally\s*\{[\s\S]{0,240}clearSetupRebuildProgress\(\);[\s\S]{0,240}setIsLoading\(false\);/.test(coachScreenSource),
+      'controller setup branch appends user message before async rebuild',
+      /if \(isProgramSetupEdit\(programEditForExecution\)\)[\s\S]*input\.appendUser\(\);[\s\S]*await executeSetupEditInController/.test(controllerSource),
+    );
+    ok(
+      'controller setup branch starts long-running rebuild progress immediately',
+      /input\.clearInput\(\);\s*input\.startSetupRebuildProgress\(\);\s*input\.setIsLoading\(true\);/.test(controllerSource),
+    );
+    ok(
+      'controller setup branch appends assistant only after rebuild result',
+      /const result = await executeSetupEditInController[\s\S]*input\.appendAssistant\(assistantMessage\('program-setup', result\.reply\)\);/.test(controllerSource),
+    );
+    ok(
+      'controller setup branch clears long-running progress in finally',
+      /finally\s*\{[\s\S]{0,240}input\.clearSetupRebuildProgress\(\);[\s\S]{0,240}input\.setIsLoading\(false\);/.test(controllerSource),
     );
     ok(
       'setup rebuild timer clears on unmount',
       /return \(\) => \{[\s\S]{0,260}clearInterval\(setupRebuildProgressTimerRef\.current\);[\s\S]{0,160}setupRebuildProgressTimerRef\.current = null;/.test(coachScreenSource),
     );
-    const quickEditBlock = coachScreenSource.match(/if \(isMutateCommand\(commandForExecution\)\) \{[\s\S]*?if \(routedCommand\.mode === 'clarify'\)/)?.[0] ?? '';
+    const quickEditBlock = controllerSource.match(/if \(isMutateCommand\(commandForExecution\)\) \{[\s\S]*?return replyAndFinish\(input, 'router', result\.reply\);/)?.[0] ?? '';
     ok(
       'normal quick session edits do not start setup rebuild progress',
       !quickEditBlock.includes('startSetupRebuildProgress()'),
     );
     ok(
       'pending recurring move-scope answer can enter setup rebuild path',
-      coachScreenSource.includes("source: 'pending_move_scope_resume'") &&
-        /if \(isProgramSetupEdit\(resumedProgramEdit\)\)[\s\S]*await executeProgramSetupEdit/.test(coachScreenSource),
+      controllerSource.includes("source: 'pending_move_scope_resume'") &&
+        /if \(isProgramSetupEdit\(resumedProgramEdit\)\)[\s\S]*await executeSetupEditInController/.test(controllerSource),
     );
   }
 

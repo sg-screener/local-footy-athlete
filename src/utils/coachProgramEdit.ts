@@ -15,6 +15,7 @@ import {
   type VisibleSessionRef,
 } from './coachCommandRouter';
 import type { CoachReferenceResolution } from './coachReferenceResolver';
+import type { CoachTargetFrame } from './coachTargetFrame';
 import { resumeFromPending } from './coachClarifierResume';
 import type { PendingCoachClarifier } from '../store/pendingCoachClarifierStore';
 import {
@@ -361,6 +362,7 @@ export interface InterpretCoachMessageToProgramEditInput {
   userMessage: string;
   todayISO: string;
   referenceResolution: CoachReferenceResolution | null;
+  targetFrame?: CoachTargetFrame | null;
   currentWeek?: VisibleSessionRef[];
   lastChange?: RouteCoachCommandInput['lastChange'];
   recentMessages?: Array<{ role: 'user' | 'assistant'; content: string }>;
@@ -435,6 +437,11 @@ export function interpretCoachMessageToProgramEdit(
   });
   if (setupEdit) {
     return attachSemanticRolesToProgramEdit(setupEdit, semanticRoles, input);
+  }
+
+  const ambiguousTargetEdit = programEditFromAmbiguousTargetFrame(input.targetFrame);
+  if (ambiguousTargetEdit) {
+    return ambiguousTargetEdit;
   }
 
   if (input.candidateCommand) {
@@ -2990,6 +2997,33 @@ function askQuestionFromDraft(
       missingFields,
     } as AskClarificationProgramEdit),
     pendingEdit: draft.targetDomain === 'conditioning' ? draft : undefined,
+  };
+}
+
+function programEditFromAmbiguousTargetFrame(
+  frame: CoachTargetFrame | null | undefined,
+): AskClarificationProgramEdit | null {
+  if (!frame || frame.targetSource !== 'ambiguous' || frame.missingFields.length === 0) {
+    return null;
+  }
+  const missingFields = nonEmptyFields(frame.missingFields);
+  const options = frame.candidateOptions.map((option) => option.label).filter(Boolean);
+  return {
+    targetDate: null,
+    targetSessionId: null,
+    targetItemId: null,
+    targetDomain: 'session',
+    intent: 'ask_question',
+    requestedChange: 'unknown',
+    newValue: null,
+    missingFields,
+    confidence: frame.confidence,
+    naturalLanguageReason: frame.reason,
+    command: null,
+    question: options.length > 0
+      ? `Which one do you mean: ${options.join(' or ')}?`
+      : 'Which session or item do you mean?',
+    options,
   };
 }
 
