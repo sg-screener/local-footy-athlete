@@ -60,6 +60,10 @@ export interface CoachContextEntry {
    * the visible projection. Lowercase, deduped.
    */
   modalities?: string[];
+  /** Optional mutation metadata when source === 'coach_mutation'. */
+  lastMutationType?: string;
+  targetSessionId?: string | null;
+  newlyAdded?: boolean;
 }
 
 interface CoachContextState {
@@ -79,11 +83,20 @@ interface CoachContextState {
    * Always equals the entry with the larger `updatedAt`.
    */
   lastDiscussedWorkout: CoachContextEntry | null;
+  /**
+   * Most recent verified coach mutation target. This is separate from
+   * opened/explained context because a visible screen mount can refresh
+   * `lastOpenedWorkout` after a mutation, but pronouns like "it" should
+   * still refer to the thing the coach just changed.
+   */
+  lastMutationTarget: CoachContextEntry | null;
 
   /** Set the currently-opened workout (DayWorkoutScreen mount). */
   setLastOpenedWorkout: (entry: Omit<CoachContextEntry, 'updatedAt' | 'source'> & { source?: CoachContextSource }) => void;
   /** Record the workout the coach just explained. */
   setLastExplainedSession: (entry: Omit<CoachContextEntry, 'updatedAt' | 'source'> & { source?: CoachContextSource }) => void;
+  /** Record the target of a verified coach mutation. */
+  setLastMutationTarget: (entry: Omit<CoachContextEntry, 'updatedAt' | 'source'> & { source?: CoachContextSource }) => void;
   /** Clear everything (used by tests + reset coach controls). */
   clearCoachContext: () => void;
 }
@@ -109,6 +122,7 @@ export const useCoachContextStateStore = create<CoachContextState>()((set, get) 
   lastOpenedWorkout: null,
   lastExplainedSession: null,
   lastDiscussedWorkout: null,
+  lastMutationTarget: null,
 
   setLastOpenedWorkout: (entry) => {
     const now = Date.now();
@@ -138,11 +152,27 @@ export const useCoachContextStateStore = create<CoachContextState>()((set, get) 
     set({ lastExplainedSession: stored, lastDiscussedWorkout });
   },
 
+  setLastMutationTarget: (entry) => {
+    const now = Date.now();
+    const stored: CoachContextEntry = {
+      date: entry.date,
+      sessionName: entry.sessionName,
+      modalities: entry.modalities ? dedupeLower(entry.modalities) : undefined,
+      lastMutationType: entry.lastMutationType,
+      targetSessionId: entry.targetSessionId ?? null,
+      newlyAdded: entry.newlyAdded,
+      updatedAt: now,
+      source: entry.source ?? 'coach_mutation',
+    };
+    set({ lastMutationTarget: stored, lastDiscussedWorkout: stored });
+  },
+
   clearCoachContext: () =>
     set({
       lastOpenedWorkout: null,
       lastExplainedSession: null,
       lastDiscussedWorkout: null,
+      lastMutationTarget: null,
     }),
 }));
 
@@ -171,15 +201,18 @@ export function getCoachContextSnapshot(now: number = Date.now()): {
   lastOpenedWorkout: CoachContextEntry | null;
   lastExplainedSession: CoachContextEntry | null;
   lastDiscussedWorkout: CoachContextEntry | null;
+  lastMutationTarget: CoachContextEntry | null;
 } {
   const s = useCoachContextStateStore.getState();
   const fresh = (e: CoachContextEntry | null): CoachContextEntry | null =>
     e && now - e.updatedAt <= COACH_CONTEXT_TTL_MS ? e : null;
   const lastOpenedWorkout = fresh(s.lastOpenedWorkout);
   const lastExplainedSession = fresh(s.lastExplainedSession);
+  const lastMutationTarget = fresh(s.lastMutationTarget);
   return {
     lastOpenedWorkout,
     lastExplainedSession,
-    lastDiscussedWorkout: pickMostRecent(lastOpenedWorkout, lastExplainedSession),
+    lastDiscussedWorkout: lastMutationTarget ?? pickMostRecent(lastOpenedWorkout, lastExplainedSession),
+    lastMutationTarget,
   };
 }

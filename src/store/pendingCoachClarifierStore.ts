@@ -85,7 +85,33 @@ export interface PendingMoveSessionTransaction {
     | 'ready';
 }
 
-export type PendingScheduleTransaction = PendingMoveSessionTransaction;
+export interface PendingAddToDateTransaction {
+  kind: 'add_to_date_transaction';
+  originalUserMessage: string;
+  action: 'add';
+  targetDate?: string;
+  targetDow?: DayOfWeek;
+  targetStatus: 'rest' | 'empty' | 'existing_session' | 'unknown';
+  addType: 'conditioning' | 'strength' | 'recovery' | 'session' | 'unknown';
+  overrideType?: 'one_off_extra';
+  setupChange: boolean;
+  sessionType?: string;
+  prescription?: Record<string, unknown>;
+  missingFields: string[];
+  candidateOptions?: string[];
+  createdFromVisibleWeek: boolean;
+  currentStep:
+    | 'resolve_target'
+    | 'resolve_add_type'
+    | 'resolve_scope'
+    | 'resolve_existing_target'
+    | 'confirm'
+    | 'ready';
+}
+
+export type PendingScheduleTransaction =
+  | PendingMoveSessionTransaction
+  | PendingAddToDateTransaction;
 
 export interface PendingCoachClarifier {
   /** The operation the router wanted to run before it asked. */
