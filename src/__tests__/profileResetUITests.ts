@@ -21,6 +21,7 @@ import {
   clearCoachAdjustments,
   clearCoachChat,
   resetProgramAndOnboarding,
+  resetToDevPostOnboardingState,
 } from '../utils/resetCoach';
 
 // ─── Harness ─────────────────────────────────────────────────────────
@@ -58,6 +59,7 @@ section('[1] ProfileScreen.tsx contains MVP Profile sections');
 ok('section title PROGRAM SETUP present', /PROGRAM SETUP/.test(src));
 ok('section title COACH ADJUSTMENTS present', /COACH ADJUSTMENTS/.test(src));
 ok('section title LEARN / FAQ present', /LEARN \/ FAQ/.test(src));
+ok('section title DEVELOPER TOOLS present', /DEVELOPER TOOLS/.test(src));
 ok('section title SUPPORT present', /SUPPORT/.test(src));
 ok('section title LEGAL present', /LEGAL/.test(src));
 ok('section title DANGER ZONE present', /DANGER ZONE/.test(src));
@@ -73,6 +75,7 @@ ok('label "Privacy Policy" present', /Privacy Policy/.test(src));
 ok('label "Terms of Use" present', /Terms of Use/.test(src));
 ok('Delete Account is not shown for no-account MVP', !/>\s*Delete Account\s*</.test(src));
 ok('label "Full reset" present', /Full reset/.test(src));
+ok('label "Reset to post-onboarding state" present', /Reset to post-onboarding state/.test(src));
 
 // ═════════════════════════════════════════════════════════════════════
 // 1b. Program setup shows available program-driving profile fields
@@ -128,6 +131,10 @@ ok(
   'imports resetProgramAndOnboarding',
   /import\s*{[^}]*resetProgramAndOnboarding[^}]*}\s*from\s*['"][^'"]*resetCoach['"]/.test(src),
 );
+ok(
+  'imports resetToDevPostOnboardingState',
+  /import\s*{[^}]*resetToDevPostOnboardingState[^}]*}\s*from\s*['"][^'"]*resetCoach['"]/.test(src),
+);
 
 // ═════════════════════════════════════════════════════════════════════
 // 3. Each button's onPress handler invokes the correct reset function
@@ -145,6 +152,10 @@ ok(
   'onFullReset calls resetProgramAndOnboarding()',
   /onFullReset[\s\S]*?resetProgramAndOnboarding\(/.test(src),
 );
+ok(
+  'onDevPostOnboardingReset calls resetToDevPostOnboardingState()',
+  /onDevPostOnboardingReset[\s\S]*?resetToDevPostOnboardingState\(/.test(src),
+);
 
 // ═════════════════════════════════════════════════════════════════════
 // 4. Section order matches MVP structure
@@ -154,12 +165,14 @@ section('[4] Profile sections are in MVP order');
   const setupIdx = src.indexOf('PROGRAM SETUP');
   const coachIdx = src.indexOf('COACH ADJUSTMENTS');
   const faqIdx = src.indexOf('LEARN / FAQ');
+  const devIdx = src.indexOf('DEVELOPER TOOLS');
   const supportIdx = src.indexOf('SUPPORT');
   const legalIdx = src.indexOf('LEGAL');
   const dangerIdx = src.indexOf('DANGER ZONE');
   ok('PROGRAM SETUP found', setupIdx !== -1);
   ok('COACH ADJUSTMENTS found', coachIdx !== -1);
   ok('LEARN / FAQ found', faqIdx !== -1);
+  ok('DEVELOPER TOOLS found', devIdx !== -1);
   ok('SUPPORT found', supportIdx !== -1);
   ok('LEGAL found', legalIdx !== -1);
   ok('DANGER ZONE found', dangerIdx !== -1);
@@ -167,11 +180,19 @@ section('[4] Profile sections are in MVP order');
     setupIdx >= 0 &&
     setupIdx < coachIdx &&
     coachIdx < faqIdx &&
-    faqIdx < supportIdx &&
+    faqIdx < devIdx &&
+    devIdx < supportIdx &&
     supportIdx < legalIdx &&
     legalIdx < dangerIdx,
-    `setup=${setupIdx}, coach=${coachIdx}, faq=${faqIdx}, support=${supportIdx}, legal=${legalIdx}, danger=${dangerIdx}`);
+    `setup=${setupIdx}, coach=${coachIdx}, faq=${faqIdx}, dev=${devIdx}, support=${supportIdx}, legal=${legalIdx}, danger=${dangerIdx}`);
 }
+
+// ═════════════════════════════════════════════════════════════════════
+// 4c. Developer reset is dev-only
+// ═════════════════════════════════════════════════════════════════════
+section('[4c] Developer reset is hidden outside dev builds');
+ok('Developer Tools section is guarded by __DEV__', /\{__DEV__\s*\?\s*\(/.test(src));
+ok('Dev reset button testID is inside source', /testID="profile-dev-reset-post-onboarding"/.test(src));
 
 // ═════════════════════════════════════════════════════════════════════
 // 4b. Full reset is separated from Coach adjustments
@@ -198,10 +219,13 @@ section('[5] Section lives inside ScrollView');
   const scrollOpen = src.indexOf('<ScrollView');
   const scrollClose = src.indexOf('</ScrollView>');
   const coachIdx = src.indexOf('COACH ADJUSTMENTS');
+  const devIdx = src.indexOf('DEVELOPER TOOLS');
   ok('ScrollView open found', scrollOpen !== -1);
   ok('ScrollView close found', scrollClose !== -1);
   ok('COACH ADJUSTMENTS between ScrollView tags',
     scrollOpen < coachIdx && coachIdx < scrollClose);
+  ok('DEVELOPER TOOLS between ScrollView tags',
+    scrollOpen < devIdx && devIdx < scrollClose);
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -215,6 +239,8 @@ ok('testID profile-coach-adjustments-section', /testID="profile-coach-adjustment
 ok('testID profile-active-coach-state', /testID="profile-active-coach-state"/.test(src));
 ok('testID profile-no-active-coach-adjustments', /testID="profile-no-active-coach-adjustments"/.test(src));
 ok('testID profile-learn-faq-section', /testID="profile-learn-faq-section"/.test(src));
+ok('testID profile-developer-tools-section', /testID="profile-developer-tools-section"/.test(src));
+ok('testID profile-dev-reset-post-onboarding', /testID="profile-dev-reset-post-onboarding"/.test(src));
 ok('testID profile-support-section', /testID="profile-support-section"/.test(src));
 ok('testID profile-legal-section', /testID="profile-legal-section"/.test(src));
 ok('testID profile-privacy-policy', /testID="profile-privacy-policy"/.test(src));
@@ -253,6 +279,10 @@ ok(
 ok(
   '[reset-ui] full_reset_pressed',
   /\[reset-ui\]\s*full_reset_pressed/.test(src),
+);
+ok(
+  '[reset-ui] dev_post_onboarding_reset_pressed',
+  /\[reset-ui\]\s*dev_post_onboarding_reset_pressed/.test(src),
 );
 
 // ═════════════════════════════════════════════════════════════════════

@@ -19,6 +19,11 @@
  *   resetProgramAndOnboarding()  — full reset across all coach + program
  *                                  stores; returns the user to onboarding.
  *
+ *   resetToDevPostOnboardingState()
+ *                                — dev-only: clears test-session state and
+ *                                  reseeds the app as if dev onboarding skip
+ *                                  had just completed.
+ *
  * The functions are pure orchestrators: every store mutation goes
  * through the existing store action APIs (no direct AsyncStorage
  * writes). Dependency injection is supported via `opts.deps` so tests
@@ -41,8 +46,20 @@ import { useCalendarStore } from '../store/calendarStore';
 import { logger } from './logger';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import { useCoachStore } from '../store/coachStore';
+import { useCoachContextStateStore } from '../store/coachContextStateStore';
+import { useCoachMemoryStore } from '../store/coachMemoryStore';
+import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
+import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
+import { usePendingCoachClarifierStore } from '../store/pendingCoachClarifierStore';
+import { useReadinessStore } from '../store/readinessStore';
+import { useWorkoutLogStore } from '../store/workoutLogStore';
 import { fireResetSignal } from './resetSignals';
-import type { OverrideContext, Workout } from '../types/domain';
+import {
+  DEV_TEST_ONBOARDING_DATA,
+  isDevOnboardingSkipEnabled,
+  runDevOnboardingSkip,
+} from './devOnboardingSkip';
+import type { OnboardingData, OverrideContext, TrainingProgram, Workout } from '../types/domain';
 
 // ─── Dependency seam (so tests can stub the stores) ────────────────
 
@@ -89,6 +106,25 @@ export interface ResetDeps {
   clearChatMessages?: () => void;
 }
 
+export interface DevPostOnboardingResetDeps {
+  isDev: () => boolean;
+  getCurrentOnboardingData: () => OnboardingData;
+  programStore: { clear: () => void };
+  coachUpdatesStore: { clearAllCoachUpdates: () => void };
+  calendarStore: { clear: () => void };
+  athletePreferencesStore: { clear: () => void };
+  coachStore: { clear: () => void };
+  pendingClarifierStore: { clearPending: () => void };
+  mutationHistoryStore: { clearAll: () => void };
+  readinessStore: { clear: () => void };
+  coachContextStore: { clearCoachContext: () => void };
+  coachPreferencesStore: { clearAllModalityPreferences: () => void };
+  coachMemoryStore: { clearNotes: () => void };
+  workoutLogStore: { clear: () => void };
+  fireResetSignal: () => void;
+  runDevOnboardingSkip: typeof runDevOnboardingSkip;
+}
+
 function defaultDeps(): ResetDeps {
   return {
     programStore: {
@@ -128,6 +164,55 @@ function defaultDeps(): ResetDeps {
   };
 }
 
+function defaultDevPostOnboardingResetDeps(): DevPostOnboardingResetDeps {
+  return {
+    isDev: () => isDevOnboardingSkipEnabled(),
+    getCurrentOnboardingData: () => useProfileStore.getState().onboardingData,
+    programStore: {
+      clear: () => useProgramStore.getState().clear(),
+    },
+    coachUpdatesStore: {
+      clearAllCoachUpdates: () =>
+        useCoachUpdatesStore.getState().clearAllCoachUpdates(),
+    },
+    calendarStore: {
+      clear: () => useCalendarStore.getState().clear(),
+    },
+    athletePreferencesStore: {
+      clear: () => useAthletePreferencesStore.getState().clear(),
+    },
+    coachStore: {
+      clear: () => useCoachStore.getState().clear(),
+    },
+    pendingClarifierStore: {
+      clearPending: () =>
+        usePendingCoachClarifierStore.getState().clearPending(),
+    },
+    mutationHistoryStore: {
+      clearAll: () => useCoachMutationHistoryStore.getState().clearAll(),
+    },
+    readinessStore: {
+      clear: () => useReadinessStore.getState().clear(),
+    },
+    coachContextStore: {
+      clearCoachContext: () =>
+        useCoachContextStateStore.getState().clearCoachContext(),
+    },
+    coachPreferencesStore: {
+      clearAllModalityPreferences: () =>
+        useCoachPreferencesStore.getState().clearAllModalityPreferences(),
+    },
+    coachMemoryStore: {
+      clearNotes: () => useCoachMemoryStore.getState().clearNotes(),
+    },
+    workoutLogStore: {
+      clear: () => useWorkoutLogStore.getState().clear(),
+    },
+    fireResetSignal,
+    runDevOnboardingSkip,
+  };
+}
+
 // ─── Result types ───────────────────────────────────────────────────
 
 export interface ResetSummary {
@@ -140,6 +225,43 @@ export interface ResetSummary {
   pendingInjuryCleared: boolean;
   /** True when chat messages were cleared. */
   chatCleared: boolean;
+}
+
+export interface DevPostOnboardingResetResult {
+  program: TrainingProgram;
+  onboardingData: OnboardingData;
+  usedFallback: boolean;
+  message: string;
+}
+
+function definedOnboardingFields(data: OnboardingData | null | undefined): Partial<OnboardingData> {
+  if (!data) return {};
+  const out: Partial<OnboardingData> = {};
+  for (const [key, value] of Object.entries(data) as Array<[keyof OnboardingData, unknown]>) {
+    if (value !== undefined && value !== null) {
+      (out as Record<string, unknown>)[key as string] = value;
+    }
+  }
+  if (Array.isArray(out.availabilityConstraints)) {
+    const permanentConstraints = out.availabilityConstraints.filter(
+      (constraint) => constraint.scope !== 'temporary',
+    );
+    if (permanentConstraints.length > 0) {
+      out.availabilityConstraints = permanentConstraints;
+    } else {
+      delete out.availabilityConstraints;
+    }
+  }
+  return out;
+}
+
+export function buildDevPostOnboardingResetProfile(
+  current: OnboardingData | null | undefined,
+): OnboardingData {
+  return {
+    ...DEV_TEST_ONBOARDING_DATA,
+    ...definedOnboardingFields(current),
+  };
 }
 
 // ─── 1. SURGICAL: clearCoachAdjustments ─────────────────────────────
@@ -360,4 +482,93 @@ export function resetProgramAndOnboarding(opts?: {
   };
   logger.debug('[reset] complete', { mode: 'full_reset', summary });
   return summary;
+}
+
+// ─── 4. DEV-ONLY POST-ONBOARDING RESET ─────────────────────────────
+
+/**
+ * Dev-only reset for repeated coach-flow testing. It clears all ephemeral
+ * coach/program surfaces, then runs the same dev-onboarding skip path that
+ * creates the generated post-onboarding program.
+ */
+export async function resetToDevPostOnboardingState(opts?: {
+  onboardingData?: OnboardingData;
+  generateProgram?: (data: OnboardingData) => Promise<TrainingProgram>;
+  deps?: Partial<DevPostOnboardingResetDeps>;
+}): Promise<DevPostOnboardingResetResult> {
+  const deps: DevPostOnboardingResetDeps = {
+    ...defaultDevPostOnboardingResetDeps(),
+    ...(opts?.deps ?? {}),
+  } as DevPostOnboardingResetDeps;
+
+  if (!deps.isDev()) {
+    logger.warn('[dev-reset] blocked_non_dev');
+    throw new Error('Reset to post-onboarding state is only available in dev builds.');
+  }
+
+  const onboardingData =
+    opts?.onboardingData ??
+    buildDevPostOnboardingResetProfile(deps.getCurrentOnboardingData());
+
+  logger.info('[dev-reset] post_onboarding_reset_started', {
+    firstName: onboardingData.firstName ?? null,
+    seasonPhase: onboardingData.seasonPhase ?? null,
+    trainingDaysPerWeek: onboardingData.trainingDaysPerWeek ?? null,
+    preferredTrainingDays: onboardingData.preferredTrainingDays ?? null,
+  });
+
+  deps.pendingClarifierStore.clearPending();
+  deps.mutationHistoryStore.clearAll();
+  deps.readinessStore.clear();
+  deps.coachContextStore.clearCoachContext();
+  deps.coachPreferencesStore.clearAllModalityPreferences();
+  deps.coachMemoryStore.clearNotes();
+  deps.coachUpdatesStore.clearAllCoachUpdates();
+  deps.programStore.clear();
+  deps.calendarStore.clear();
+  deps.athletePreferencesStore.clear();
+  deps.coachStore.clear();
+  deps.workoutLogStore.clear();
+  deps.fireResetSignal();
+
+  const result = await deps.runDevOnboardingSkip({
+    onboardingData,
+    generateProgram: opts?.generateProgram,
+  });
+
+  deps.pendingClarifierStore.clearPending();
+  deps.mutationHistoryStore.clearAll();
+  deps.readinessStore.clear();
+  deps.coachContextStore.clearCoachContext();
+  deps.coachPreferencesStore.clearAllModalityPreferences();
+  deps.coachMemoryStore.clearNotes();
+  deps.coachUpdatesStore.clearAllCoachUpdates();
+  deps.coachStore.clear();
+  deps.workoutLogStore.clear();
+  deps.fireResetSignal();
+
+  const message = result.usedFallback
+    ? 'Reset used DEFAULT_PROGRAM fallback. Check dev logs.'
+    : 'Reset to clean post-onboarding state.';
+
+  if (result.usedFallback) {
+    logger.warn('[dev-reset] completed_with_default_program_fallback', {
+      programId: result.program.id,
+      programName: result.program.name,
+    });
+  } else {
+    logger.info('[dev-reset] completed_with_generated_program', {
+      programId: result.program.id,
+      programName: result.program.name,
+      firstMicrocycleWorkoutCount:
+        result.program.microcycles?.[0]?.workouts?.length ?? 0,
+    });
+  }
+
+  return {
+    program: result.program,
+    onboardingData: result.onboardingData,
+    usedFallback: result.usedFallback,
+    message,
+  };
 }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Linking, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -11,6 +11,7 @@ import {
   clearCoachAdjustments,
   clearCoachChat,
   resetProgramAndOnboarding,
+  resetToDevPostOnboardingState,
 } from '../../utils/resetCoach';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
@@ -50,6 +51,7 @@ export default function ProfileScreen() {
   const onboardingData = useProfileStore((s) => s.onboardingData);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
   const env = getClientEnvConfig();
+  const [isDevResetting, setIsDevResetting] = useState(false);
 
   // Render-time proof — confirms the live Profile tab actually mounts
   // the Coach adjustments section. Pair with [reset-ui] press logs below.
@@ -110,6 +112,26 @@ export default function ProfileScreen() {
         },
       ],
     );
+  };
+
+  const onDevPostOnboardingReset = async () => {
+    if (isDevResetting) return;
+    logger.debug('[reset-ui] dev_post_onboarding_reset_pressed');
+    setIsDevResetting(true);
+    try {
+      const result = await resetToDevPostOnboardingState();
+      Alert.alert(
+        result.usedFallback ? 'Developer reset warning' : 'Developer reset complete',
+        result.message,
+      );
+      navigation.navigate('ProgramTab', { screen: 'Home' });
+    } catch (err: any) {
+      const message = err?.message ?? String(err);
+      logger.error('[reset-ui] dev_post_onboarding_reset_failed', { message });
+      Alert.alert('Developer reset failed', message);
+    } finally {
+      setIsDevResetting(false);
+    }
   };
 
   const onProgramSetupChanged = () => {
@@ -260,6 +282,35 @@ export default function ProfileScreen() {
             </Text>
           </TouchableOpacity>
         </View>
+
+        {__DEV__ ? (
+          <View
+            style={styles.section}
+            testID="profile-developer-tools-section"
+            accessibilityLabel="Developer tools"
+          >
+            <Text variant="label" color={colors.accent.lime} style={styles.sectionTitle}>
+              DEVELOPER TOOLS
+            </Text>
+            <Card style={styles.infoCard}>
+              <TouchableOpacity
+                style={styles.resetRow}
+                activeOpacity={0.7}
+                onPress={onDevPostOnboardingReset}
+                disabled={isDevResetting}
+                testID="profile-dev-reset-post-onboarding"
+                accessibilityLabel="Reset to post-onboarding state"
+              >
+                <Text variant="body" color={colors.text.primary} style={{ fontWeight: '700' }}>
+                  {isDevResetting ? 'Resetting...' : 'Reset to post-onboarding state'}
+                </Text>
+                <Text variant="caption" color={colors.text.tertiary}>
+                  Clears test-session state and reloads a clean generated program.
+                </Text>
+              </TouchableOpacity>
+            </Card>
+          </View>
+        ) : null}
 
         {/* Support */}
         <View style={styles.section} testID="profile-support-section">

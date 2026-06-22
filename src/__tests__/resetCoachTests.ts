@@ -19,13 +19,15 @@
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import {
+  buildDevPostOnboardingResetProfile,
   clearCoachAdjustments,
   clearCoachChat,
   resetProgramAndOnboarding,
+  resetToDevPostOnboardingState,
   type ResetDeps,
   type ResetSummary,
 } from '../utils/resetCoach';
-import type { OverrideContext, Workout } from '../types/domain';
+import type { OverrideContext, TrainingProgram, Workout } from '../types/domain';
 
 // ─── Harness ─────────────────────────────────────────────────────────
 let pass = 0;
@@ -393,13 +395,137 @@ section('[10] athletePreferencesStore.activeInjuries → cleared');
     typeof deps.athletePreferencesStore.setActiveInjuries === 'function');
 }
 
-// ─── Summary ───
-console.log(`\n— Summary —`);
-console.log(`  Pass: ${pass}`);
-console.log(`  Fail: ${fail}`);
-if (fail > 0) {
-  console.log(`\n— Failures —`);
-  for (const f of failures) console.log(`  • ${f}`);
-  process.exit(1);
+// ═════════════════════════════════════════════════════════════════════
+// 11. Dev reset profile keeps current setup and backfills dev defaults
+// ═════════════════════════════════════════════════════════════════════
+section('[11] Dev post-onboarding reset profile backfills defaults');
+{
+  const profile = buildDevPostOnboardingResetProfile({
+    firstName: 'Riley',
+    trainingDaysPerWeek: 6,
+    preferredTrainingDays: ['Monday', 'Saturday'] as any,
+    availabilityConstraints: [
+      {
+        id: 'tmp-exams',
+        kind: 'unavailable_day',
+        scope: 'temporary',
+        dayOfWeek: 'Wednesday',
+      },
+      {
+        id: 'perm-friday-short',
+        kind: 'time_limit',
+        scope: 'permanent',
+        dayOfWeek: 'Friday',
+        maxSessionMinutes: 30,
+      },
+    ] as any,
+  });
+  eq('current firstName preserved', profile.firstName, 'Riley');
+  eq('current trainingDaysPerWeek preserved', profile.trainingDaysPerWeek, 6);
+  eq('current preferredTrainingDays preserved', profile.preferredTrainingDays, ['Monday', 'Saturday'] as any);
+  eq('dev default position backfilled', profile.position, 'Midfielder');
+  eq('dev default game day backfilled', profile.gameDay, 'Saturday');
+  eq('temporary constraints cleared', profile.availabilityConstraints?.map((c) => c.id), ['perm-friday-short']);
 }
-process.exit(0);
+
+function fakeProgram(): TrainingProgram {
+  return {
+    id: 'generated-dev-reset-program',
+    userId: 'dev-user',
+    name: 'Generated Dev Reset Program',
+    description: 'Generated for reset test',
+    programPhase: 'In-Season',
+    startDate: '2026-06-01',
+    endDate: '2026-06-07',
+    primaryFocus: 'Clean reset',
+    isActive: true,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+    microcycles: [
+      {
+        id: 'mc-reset',
+        programId: 'generated-dev-reset-program',
+        weekNumber: 1,
+        startDate: '2026-06-01',
+        endDate: '2026-06-07',
+        miniCycleNumber: 1,
+        intensityMultiplier: 1,
+        workouts: [workout('Upper Push')],
+        createdAt: '2026-06-01T00:00:00.000Z',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      },
+    ],
+  } as TrainingProgram;
+}
+
+async function runAsyncSections() {
+  // ═══════════════════════════════════════════════════════════════════
+  // 12. Dev post-onboarding reset clears ephemeral stores then reseeds
+  // ═══════════════════════════════════════════════════════════════════
+  section('[12] Dev post-onboarding reset clears stores and reruns dev skip');
+  {
+    const calls: string[] = [];
+    const generated = fakeProgram();
+    const result = await resetToDevPostOnboardingState({
+      deps: {
+        isDev: () => true,
+        getCurrentOnboardingData: () => ({
+          firstName: 'Riley',
+          trainingDaysPerWeek: 6,
+        } as any),
+        programStore: { clear: () => calls.push('program') },
+        coachUpdatesStore: { clearAllCoachUpdates: () => calls.push('updates') },
+        calendarStore: { clear: () => calls.push('calendar') },
+        athletePreferencesStore: { clear: () => calls.push('athletePrefs') },
+        coachStore: { clear: () => calls.push('coach') },
+        pendingClarifierStore: { clearPending: () => calls.push('pending') },
+        mutationHistoryStore: { clearAll: () => calls.push('mutationHistory') },
+        readinessStore: { clear: () => calls.push('readiness') },
+        coachContextStore: { clearCoachContext: () => calls.push('coachContext') },
+        coachPreferencesStore: { clearAllModalityPreferences: () => calls.push('coachPrefs') },
+        coachMemoryStore: { clearNotes: () => calls.push('coachMemory') },
+        workoutLogStore: { clear: () => calls.push('workoutLog') },
+        fireResetSignal: () => calls.push('resetSignal'),
+        runDevOnboardingSkip: async (args: any) => {
+          calls.push('devSkip');
+          return {
+            program: generated,
+            onboardingData: args.onboardingData,
+            usedFallback: false,
+          };
+        },
+      } as any,
+    });
+
+    ok('program store cleared before reseed', calls.includes('program'));
+    ok('pending clarifier cleared', calls.includes('pending'));
+    ok('mutation history cleared', calls.includes('mutationHistory'));
+    ok('readiness cleared', calls.includes('readiness'));
+    ok('coach context cleared', calls.includes('coachContext'));
+    ok('manual coach prefs cleared', calls.includes('coachPrefs'));
+    ok('calendar marks cleared', calls.includes('calendar'));
+    ok('dev skip rerun', calls.includes('devSkip'));
+    eq('result program returned', result.program.id, generated.id);
+    eq('result message success', result.message, 'Reset to clean post-onboarding state.');
+    eq('current profile survives reset', result.onboardingData.firstName, 'Riley');
+    eq('dev default profile fields backfilled', result.onboardingData.position, 'Midfielder');
+  }
+}
+
+// ─── Summary ───
+runAsyncSections()
+  .then(() => {
+    console.log(`\n— Summary —`);
+    console.log(`  Pass: ${pass}`);
+    console.log(`  Fail: ${fail}`);
+    if (fail > 0) {
+      console.log(`\n— Failures —`);
+      for (const f of failures) console.log(`  • ${f}`);
+      process.exit(1);
+    }
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error(err);
+    process.exit(1);
+  });
