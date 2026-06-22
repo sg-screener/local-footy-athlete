@@ -42,6 +42,7 @@ import type { CoachContextEntry } from '../store/coachContextStateStore';
 import type { MutationHistoryEntry } from '../store/coachMutationHistoryStore';
 import type { CoachReferenceResolution } from './coachReferenceResolver';
 import type { CoachTargetFrame } from './coachTargetFrame';
+import type { ProgramEditDraft } from './coachProgramEditDraft';
 
 // ─── Intent schema ──────────────────────────────────────────────────
 
@@ -235,6 +236,12 @@ export interface CoachContextPacket {
    * paths while they migrate.
    */
   targetFrame?: CoachTargetFrame;
+  /**
+   * Stage 3A — pure mutation-contract draft. This answers
+   * "what should happen?" without mutating or replacing the old
+   * CoachCommand compatibility path yet.
+   */
+  programEditDraft?: ProgramEditDraft;
 }
 
 // ─── Classifier seam ─────────────────────────────────────────────────

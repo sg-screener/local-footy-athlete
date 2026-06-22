@@ -827,6 +827,16 @@ export async function handleCoachTurn(
       });
     }
 
+    logger.debug('[coach-program-edit-draft]', {
+      intent: packet.programEditDraft?.intent ?? null,
+      targetDomain: packet.programEditDraft?.targetDomain ?? null,
+      actionScope: packet.programEditDraft?.actionScope ?? null,
+      targetDate: packet.programEditDraft?.targetDate ?? null,
+      missingFields: packet.programEditDraft?.missingFields ?? [],
+      proposedActionCount: packet.programEditDraft?.proposedActions.length ?? 0,
+      compatibilityPath: 'coach_command_router',
+    });
+
     logger.debug('[coach-live-send] router_reached', { reached: true });
     const lastUndoableMutation = useCoachMutationHistoryStore
       .getState()

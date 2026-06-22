@@ -34,6 +34,7 @@ import {
   resolveCoachTargetFrame,
   targetFrameFromReferenceTarget,
 } from './coachTargetFrame';
+import { buildProgramEditDraft } from './coachProgramEditDraft';
 
 const RECENT_HISTORY_LIMIT = 8;
 
@@ -123,6 +124,13 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     selectedDate: input.selectedDate ?? null,
     todayISO: input.todayISO,
   });
+  const programEditDraft = buildProgramEditDraft({
+    userMessage: input.userMessage,
+    targetFrame,
+    visibleWeek: currentWeek,
+    currentProgramContext: { currentWeek, nextWeek },
+    pendingTransaction: input.pendingTransaction ?? null,
+  });
   const baseResolution = referenceResolutionFromTargetFrame(targetFrame, input.userMessage);
 
   // ─── VISIBLE-WEEK UNIQUE-MODALITY AUTO-BIND ────────────────────
@@ -151,6 +159,7 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     lastMutationTarget: ctx.lastMutationTarget,
     lastMutation,
     targetFrame,
+    programEditDraft,
     referenceResolution: baseResolution,
   };
 
@@ -168,6 +177,13 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     return {
       ...autoBind.packet,
       targetFrame: autoBoundTargetFrame,
+      programEditDraft: buildProgramEditDraft({
+        userMessage: input.userMessage,
+        targetFrame: autoBoundTargetFrame,
+        visibleWeek: currentWeek,
+        currentProgramContext: { currentWeek, nextWeek },
+        pendingTransaction: input.pendingTransaction ?? null,
+      }),
       referenceResolution: referenceResolutionFromTargetFrame(autoBoundTargetFrame, input.userMessage),
     };
   }
