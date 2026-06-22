@@ -89,6 +89,26 @@ export function getConditioningContextLabel(
   return flavour ? COND_FLAVOUR_LABELS[flavour] || flavour : null;
 }
 
+function normaliseDisplayLabel(label: string | null | undefined): string {
+  return String(label ?? '')
+    .replace(/^\+\s*/, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+export function suppressDuplicateWorkoutContext(
+  title: string | null | undefined,
+  context: string | null | undefined,
+): string | null {
+  const cleanContext = String(context ?? '').trim();
+  if (!cleanContext) return null;
+  const titleKey = normaliseDisplayLabel(title);
+  const contextKey = normaliseDisplayLabel(cleanContext);
+  if (titleKey && contextKey && titleKey === contextKey) return null;
+  return cleanContext;
+}
+
 /** Rotating coach messages shown while the week is rebuilding. */
 export const REBUILD_MESSAGES = [
   'Coach is reviewing your week…',

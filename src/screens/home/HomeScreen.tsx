@@ -26,6 +26,7 @@ import {
   DAY_SHORT,
   NEXT_PHASE,
   getConditioningContextLabel,
+  suppressDuplicateWorkoutContext,
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
   QUICK_ACTIONS,
@@ -261,7 +262,11 @@ function HomeScreenClassic() {
                           no suffix — otherwise stale flags like "high-intensity" can
                           override a post-resolver change to "+ Team Training". */}
                       {(() => {
-                        const nameContext = splitWorkoutName(day.workout!.name).context;
+                        const parsedName = splitWorkoutName(day.workout!.name);
+                        const nameContext = suppressDuplicateWorkoutContext(
+                          parsedName.title,
+                          parsedName.context,
+                        );
                         if (nameContext) {
                           return (
                             <Text
@@ -273,7 +278,10 @@ function HomeScreenClassic() {
                             </Text>
                           );
                         }
-                        const conditioningContext = getConditioningContextLabel(day.workout);
+                        const conditioningContext = suppressDuplicateWorkoutContext(
+                          parsedName.title,
+                          getConditioningContextLabel(day.workout),
+                        );
                         if (conditioningContext) {
                           return (
                             <Text

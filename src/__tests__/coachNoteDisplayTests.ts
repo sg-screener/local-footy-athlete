@@ -10,6 +10,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { getCoachNoteDisplay } from '../utils/coachNoteSummary';
+import { suppressDuplicateWorkoutContext } from '../screens/home/homeScreenConstants';
 
 let pass = 0;
 let fail = 0;
@@ -141,6 +142,17 @@ section('[7] helper — generic fallback only when local changes absent');
 section('[8] HomeScreenV2 — Program rows use helper + one-line row');
 {
   ok('HomeScreenV2 imports getCoachNoteDisplay', /getCoachNoteDisplay/.test(HOME_V2));
+  eq('duplicate title/context is hidden',
+    suppressDuplicateWorkoutContext('Easy Aerobic Flush', 'Easy Aerobic Flush'),
+    null);
+  eq('duplicate +context is hidden',
+    suppressDuplicateWorkoutContext('Easy Aerobic Flush', '+ Easy Aerobic Flush'),
+    null);
+  eq('useful non-duplicate context is kept',
+    suppressDuplicateWorkoutContext('Upper Push', '+ Team Training'),
+    '+ Team Training');
+  ok('HomeScreenV2 suppresses duplicate workout context', /suppressDuplicateWorkoutContext/.test(HOME_V2));
+  ok('classic HomeScreen suppresses duplicate workout context', /suppressDuplicateWorkoutContext/.test(HOME_CLASSIC));
   ok('HomeScreenV2 keeps lower adjustment prompt', /Need to adjust your weekly plan\?/.test(HOME_V2));
   ok(
     'HomeScreenV2 does not render Today Feel quick check',

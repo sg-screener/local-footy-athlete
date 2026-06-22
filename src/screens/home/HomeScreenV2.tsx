@@ -25,6 +25,7 @@ import {
   DAY_SHORT,
   NEXT_PHASE,
   getConditioningContextLabel,
+  suppressDuplicateWorkoutContext,
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
   QUICK_ACTIONS,
@@ -417,8 +418,12 @@ function TodayHero({
   const isGame = day.workout?.workoutType === 'Game';
   const isTeamOnly = hasWorkout && day.workout.name === 'Team Training';
   const parsed = hasWorkout ? splitSessionName(day.workout.name) : null;
-  const context = parsed?.context;
-  const conditioningContext = hasWorkout ? getConditioningContextLabel(day.workout) : null;
+  const title = parsed?.title ?? null;
+  const context = suppressDuplicateWorkoutContext(title, parsed?.context);
+  const conditioningContext = suppressDuplicateWorkoutContext(
+    title,
+    hasWorkout ? getConditioningContextLabel(day.workout) : null,
+  );
   const exerciseCount = day.workout?.exercises?.length ?? 0;
 
   // Game days delegate tap to the sheet; everything else uses the CTA buttons,
@@ -466,7 +471,7 @@ function TodayHero({
 
           {/* Session title is the focal point of the whole screen. */}
           <Text style={styles.heroTitle} numberOfLines={2}>
-            {hasWorkout ? parsed?.title : 'Rest Day'}
+            {hasWorkout ? title : 'Rest Day'}
           </Text>
 
           {hasWorkout && context ? (
@@ -597,8 +602,11 @@ function DayRow({
   const rowTone = isSelected && normal ? 'accent' : 'default';
   const parsed = hasWorkout ? splitSessionName(day.workout.name) : null;
   const title = parsed?.title ?? null;
-  const ctx = parsed?.context ?? null;
-  const conditioningContext = hasWorkout ? getConditioningContextLabel(day.workout) : null;
+  const ctx = suppressDuplicateWorkoutContext(title, parsed?.context);
+  const conditioningContext = suppressDuplicateWorkoutContext(
+    title,
+    hasWorkout ? getConditioningContextLabel(day.workout) : null,
+  );
   const isTeamOnly = hasWorkout && day.workout.name === 'Team Training';
 
   return (
