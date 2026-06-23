@@ -15,6 +15,7 @@ import type { CoachTargetFrame } from '../utils/coachTargetFrame';
 import {
   buildProgramEditDraft,
   decideProgramEditDraftFrontDoor,
+  validateProgramEditAgainstDraft,
   type ProgramEditDraft,
 } from '../utils/coachProgramEditDraft';
 
@@ -112,6 +113,45 @@ function decisionKind(value: ProgramEditDraft): string {
   return decideProgramEditDraftFrontDoor(value).kind;
 }
 
+function finalEdit(args: {
+  intent: string;
+  targetDomain: string;
+  editScope?: string;
+  requestedChange?: string;
+}): any {
+  return {
+    intent: args.intent,
+    targetDomain: args.targetDomain,
+    editScope: args.editScope,
+    targetDate: TODAY,
+    targetSessionId: 'session-lower',
+    targetItemId: args.targetDomain === 'session' ? null : `${args.targetDomain}-item`,
+    requestedChange: args.requestedChange ?? 'unknown',
+    newValue: null,
+    missingFields: [],
+    confidence: 0.9,
+    naturalLanguageReason: 'test final edit',
+    command: {
+      mode: 'mutate',
+      operation: args.targetDomain === 'session'
+        ? 'remove_session'
+        : args.targetDomain === 'conditioning'
+        ? 'remove_conditioning'
+        : 'replace_exercise',
+      target: { kind: 'date', date: TODAY, sessionName: 'Lower Body Strength' },
+      payload: args.targetDomain === 'session'
+        ? { operation: 'remove_session' }
+        : args.targetDomain === 'conditioning'
+        ? { operation: 'remove_conditioning', modality: null, targetItemId: 'conditioning-item' }
+        : { operation: 'replace_exercise', fromExercise: 'Back Squat', toExercise: null },
+      scope: 'one_off',
+      confidence: 0.9,
+      needsClarification: false,
+      reason: 'test final edit',
+    },
+  };
+}
+
 section('[1] remove lower body strength preserves conditioning');
 {
   const out = draft('remove lower body strength');
@@ -193,7 +233,10 @@ section('[9] controller sees draft before command-router compatibility');
   const source = readFileSync('src/utils/coachTurnController.ts', 'utf8');
   const draftIdx = source.indexOf('[coach-program-edit-draft]');
   const frontDoorIdx = source.indexOf('decideProgramEditDraftFrontDoor', draftIdx);
+  const guardIdx = source.indexOf('const draftExecutionGuard = validateProgramEditAgainstDraft', draftIdx);
   const routerIdx = source.indexOf('const routedProgramEdit = interpretCoachMessageToProgramEdit', draftIdx);
+  const executeIdx = source.indexOf('const result = executeProgramEdit({', routerIdx);
+  const legacyIdx = source.indexOf('[coach-flow] legacy_fallback', routerIdx);
   ok('controller logs draft seam', draftIdx >= 0);
   ok('controller checks draft front door', frontDoorIdx > draftIdx, { draftIdx, frontDoorIdx });
   ok('draft seam precedes old router compatibility', draftIdx >= 0 && routerIdx >= 0 && draftIdx < routerIdx, {
@@ -203,6 +246,14 @@ section('[9] controller sees draft before command-router compatibility');
   ok('draft front door precedes old router compatibility', frontDoorIdx >= 0 && routerIdx >= 0 && frontDoorIdx < routerIdx, {
     frontDoorIdx,
     routerIdx,
+  });
+  ok('draft execution guard runs before executeProgramEdit', guardIdx > routerIdx && guardIdx < executeIdx, {
+    guardIdx,
+    executeIdx,
+  });
+  ok('draft execution guard blocks before legacy fallback', guardIdx > routerIdx && guardIdx < legacyIdx, {
+    guardIdx,
+    legacyIdx,
   });
   ok('draft front door marks legacy blocked', /legacyBlocked:\s*true/.test(source));
 }
@@ -263,6 +314,77 @@ section('[12] Stage 3B ambiguous and compound drafts stop before legacy');
   eq('compound draft deferred safely', compoundDecision.kind, 'unsupported');
   ok('compound does not generic fallback', compoundDecision.kind !== 'allow_conversation', compoundDecision);
   ok('compound does not enter compatibility yet', compoundDecision.kind !== 'allow_compatibility', compoundDecision);
+}
+
+section('[13] Stage 3C-1 guard blocks draft/final domain mismatches');
+{
+  const strengthDraft = draft("remove all of today's lower body strength");
+  const conditioningFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'conditioning',
+    editScope: 'remove_conditioning_item',
+    requestedChange: 'type',
+  });
+  const strengthGuard = validateProgramEditAgainstDraft(strengthDraft, conditioningFinal);
+  eq('strength draft cannot finalise as conditioning removal', strengthGuard.kind, 'blocked');
+  ok('strength mismatch reply refuses conditioning removal',
+    /won't remove conditioning/i.test((strengthGuard as any).reply),
+    strengthGuard);
+  ok('blocked strength mismatch is not Done',
+    !/^Done\b/i.test((strengthGuard as any).reply ?? ''),
+    strengthGuard);
+
+  const conditioningDraft = draft('remove conditioning today');
+  const strengthFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'strength',
+    requestedChange: 'exercise',
+  });
+  const conditioningGuard = validateProgramEditAgainstDraft(conditioningDraft, strengthFinal);
+  eq('conditioning draft cannot finalise as strength removal', conditioningGuard.kind, 'blocked');
+  ok('conditioning mismatch reply refuses strength change',
+    /won't change strength/i.test((conditioningGuard as any).reply),
+    conditioningGuard);
+}
+
+section('[14] Stage 3C-1 guard allows matching executable scopes');
+{
+  const conditioningDraft = draft('remove conditioning today');
+  const conditioningFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'conditioning',
+    editScope: 'remove_conditioning_item',
+    requestedChange: 'type',
+  });
+  eq('conditioning draft can finalise as conditioning removal',
+    validateProgramEditAgainstDraft(conditioningDraft, conditioningFinal).kind,
+    'ok');
+
+  const sessionDraft = draft('remove whole session today');
+  const sessionFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'session',
+    editScope: 'remove_whole_session',
+    requestedChange: 'day',
+  });
+  eq('whole-session draft can finalise as whole-session removal',
+    validateProgramEditAgainstDraft(sessionDraft, sessionFinal).kind,
+    'ok');
+}
+
+section('[15] Stage 3C-1 protected target conflicts block execution');
+{
+  const keepConditioning = draft('keep conditioning but remove lower strength');
+  const conditioningFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'conditioning',
+    editScope: 'remove_conditioning_item',
+    requestedChange: 'type',
+  });
+  const guard = validateProgramEditAgainstDraft(keepConditioning, conditioningFinal);
+  eq('protected conditioning conflict blocks execution', guard.kind, 'blocked');
+  eq('protected conflict route', (guard as any).route, 'program_edit_draft_guard_protected_target_conflict');
+  ok('protected conflict does not say Done', !/^Done\b/i.test((guard as any).reply ?? ''), guard);
 }
 
 console.log('\n-- Summary --');

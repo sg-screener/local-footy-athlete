@@ -56,7 +56,10 @@ import {
   resolvePendingProgramEditAnswer,
   type ProgramEdit,
 } from './coachProgramEdit';
-import { decideProgramEditDraftFrontDoor } from './coachProgramEditDraft';
+import {
+  decideProgramEditDraftFrontDoor,
+  validateProgramEditAgainstDraft,
+} from './coachProgramEditDraft';
 import {
   captureFromExecutorClarify,
   resumeFromPending,
@@ -957,6 +960,27 @@ export async function handleCoachTurn(
         }
         return replyAndFinish(input, 'llm-command-clarify', clarifyCommand.question);
       }
+    }
+
+    const draftExecutionGuard = validateProgramEditAgainstDraft(
+      packet.programEditDraft,
+      programEditForExecution,
+    );
+    if (draftExecutionGuard.kind === 'blocked') {
+      logger.debug('[coach-program-edit-draft-execution-guard]', {
+        route: draftExecutionGuard.route,
+        reason: draftExecutionGuard.reason,
+        draftIntent: packet.programEditDraft?.intent ?? null,
+        draftTargetDomain: packet.programEditDraft?.targetDomain ?? null,
+        draftActionScope: packet.programEditDraft?.actionScope ?? null,
+        finalIntent: programEditForExecution.intent,
+        finalTargetDomain: programEditForExecution.targetDomain,
+        finalEditScope: 'editScope' in programEditForExecution
+          ? programEditForExecution.editScope ?? null
+          : null,
+        legacyBlocked: true,
+      });
+      return replyAndFinish(input, 'program-edit-draft-guard', draftExecutionGuard.reply);
     }
 
     if (isProgramSetupEdit(programEditForExecution)) {

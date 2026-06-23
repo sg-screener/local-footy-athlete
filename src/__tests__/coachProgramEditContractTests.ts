@@ -608,6 +608,41 @@ eq('ditch conditioning event carries target item id',
   ditchSingleApply.eventPayload?.targetItemId,
   'conditioning-row-1');
 
+const mixedConditioningRemovalWorkout = strengthWithConditioningWorkout(
+  'Lower Squat',
+  ['Back Squat', 'Copenhagen Plank'],
+  ['Rower Flush'],
+);
+const ditchConditioningFromMixed = interpretCoachMessageToProgramEdit({
+  userMessage: 'remove conditioning today',
+  todayISO: TODAY,
+  referenceResolution: resolved(TARGET, 'Lower Squat'),
+  currentWeek: [visibleDay(TARGET, mixedConditioningRemovalWorkout)],
+});
+eq('remove conditioning from mixed session stays conditioning domain',
+  ditchConditioningFromMixed.targetDomain,
+  'conditioning' as any);
+eq('remove conditioning from mixed session uses conditioning-item scope',
+  ditchConditioningFromMixed.editScope,
+  'remove_conditioning_item' as any);
+const ditchConditioningFromMixedApply = runConditioningProgramEdit(
+  ditchConditioningFromMixed,
+  mixedConditioningRemovalWorkout,
+);
+ok('remove conditioning from mixed session keeps strength exercises',
+  ditchConditioningFromMixedApply.written?.exercises?.some((ex: any) =>
+    ex.exercise?.name === 'Back Squat',
+  ) &&
+    ditchConditioningFromMixedApply.written?.exercises?.some((ex: any) =>
+      ex.exercise?.name === 'Copenhagen Plank',
+    ),
+  ditchConditioningFromMixedApply.written);
+ok('remove conditioning from mixed session removes the rower',
+  !ditchConditioningFromMixedApply.written?.exercises?.some((ex: any) =>
+    ex.exercise?.name === 'Rower Flush',
+  ),
+  ditchConditioningFromMixedApply.written);
+
 const ditchMulti = interpretCoachMessageToProgramEdit({
   userMessage: 'ditch the conditioning on wed',
   todayISO: TODAY,

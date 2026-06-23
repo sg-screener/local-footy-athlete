@@ -4,6 +4,7 @@ import type {
   CoachTargetFrame,
   CoachExplicitDateRole,
 } from './coachTargetFrame';
+import type { ProgramEdit } from './coachProgramEdit';
 import type { PendingScheduleTransaction } from '../store/pendingCoachClarifierStore';
 
 export type ProgramEditDraftIntent =
@@ -117,6 +118,18 @@ export type ProgramEditDraftFrontDoorDecision =
       route: string;
       reply: string;
       options?: string[];
+    };
+
+export type ProgramEditDraftCompatibilityGuardResult =
+  | {
+      kind: 'ok';
+      route: 'program_edit_draft_guard_ok';
+    }
+  | {
+      kind: 'blocked';
+      route: string;
+      reason: string;
+      reply: string;
     };
 
 type DomainSignal = {
@@ -273,6 +286,282 @@ export function decideProgramEditDraftFrontDoor(
   }
 
   return { kind: 'allow_compatibility', route: 'program_edit_draft_compatibility' };
+}
+
+export function validateProgramEditAgainstDraft(
+  draft: ProgramEditDraft | null | undefined,
+  finalEdit: ProgramEdit | null | undefined,
+): ProgramEditDraftCompatibilityGuardResult {
+  if (!draft || draft.intent === 'ask_question' || draft.intent === 'explain') {
+    return { kind: 'ok', route: 'program_edit_draft_guard_ok' };
+  }
+
+  if (!finalEdit) {
+    return blockedDraftGuard(
+      'program_edit_draft_guard_missing_final_edit',
+      'missing_final_edit',
+      'I understood that as a program edit, but I could not build a safe executable change. What should I change?',
+    );
+  }
+
+  if (draft.missingFields.length > 0) {
+    return blockedDraftGuard(
+      'program_edit_draft_guard_missing_fields',
+      `missing:${draft.missingFields.join(',')}`,
+      clarificationForDraftMissingFields(draft),
+    );
+  }
+
+  if (draft.isCompound) {
+    return blockedDraftGuard(
+      'program_edit_draft_guard_compound_deferred',
+      'compound_draft_not_executable',
+      "I understood that as more than one program edit. I can't safely apply a compound edit in one turn yet. Pick one change first.",
+    );
+  }
+
+  if (finalEdit.intent === 'ask_question') {
+    return { kind: 'ok', route: 'program_edit_draft_guard_ok' };
+  }
+
+  if (finalEdit.intent === 'explain' && draft.proposedActions.length > 0) {
+    return blockedDraftGuard(
+      'program_edit_draft_guard_blocked_legacy_fallback',
+      'mutation_draft_finalised_as_conversation',
+      'I understood that as a program edit, but I need one more detail before changing the program. What exactly should I change?',
+    );
+  }
+
+  const expected = primaryDraftAction(draft);
+  const protectedConflict = firstProtectedTargetConflict(draft, finalEdit);
+  if (protectedConflict) {
+    return blockedDraftGuard(
+      'program_edit_draft_guard_protected_target_conflict',
+      `protected_target:${protectedConflict.targetDomain}`,
+      protectedTargetConflictReply(protectedConflict),
+    );
+  }
+
+  if (isUnsupportedStrengthBlockDraft(draft)) {
+    return blockedDraftGuard(
+      `program_edit_draft_guard_unsupported_strength_block_${draft.intent}`,
+      'unsupported_strength_block_scope',
+      unsupportedStrengthBlockReply(draft),
+    );
+  }
+
+  const finalIntent = normalisedFinalIntent(finalEdit.intent);
+  const expectedIntent = normalisedDraftIntent(expected.intent);
+  if (finalIntent !== expectedIntent) {
+    return blockedDraftGuard(
+      'program_edit_draft_guard_intent_mismatch',
+      `intent:${expectedIntent}->${finalIntent}`,
+      mismatchReply(draft, finalEdit),
+    );
+  }
+
+  // Session moves are still implemented through the schedule executor.
+  // The draft source can be a session-like conditioning target, while the
+  // final executable edit is a schedule move. Stage 3C-1 only guards
+  // contradictions, so let the existing verified move path own this case.
+  if (finalEdit.intent === 'move') {
+    return { kind: 'ok', route: 'program_edit_draft_guard_ok' };
+  }
+
+  if (!domainsCompatible(expected.targetDomain, finalEdit.targetDomain)) {
+    return blockedDraftGuard(
+      'program_edit_draft_guard_domain_mismatch',
+      `domain:${expected.targetDomain}->${finalEdit.targetDomain}`,
+      mismatchReply(draft, finalEdit),
+    );
+  }
+
+  const finalScope = actionScopeFromProgramEdit(finalEdit);
+  if (finalScope && !scopesCompatible(expected.actionScope, finalScope)) {
+    return blockedDraftGuard(
+      'program_edit_draft_guard_scope_mismatch',
+      `scope:${expected.actionScope}->${finalScope}`,
+      mismatchReply(draft, finalEdit),
+    );
+  }
+
+  return { kind: 'ok', route: 'program_edit_draft_guard_ok' };
+}
+
+function blockedDraftGuard(
+  route: string,
+  reason: string,
+  reply: string,
+): ProgramEditDraftCompatibilityGuardResult {
+  return { kind: 'blocked', route, reason, reply };
+}
+
+function primaryDraftAction(draft: ProgramEditDraft): ProgramEditDraftAction {
+  const first = draft.proposedActions[0];
+  if (first) return first;
+  return {
+    intent: executableIntentFromDraftIntent(draft.intent) ?? 'edit',
+    targetDomain: draft.targetDomain,
+    actionScope: draft.actionScope,
+    targetDate: draft.targetDate,
+    targetSessionId: draft.targetSessionId,
+    targetItemId: draft.targetItemId,
+    sourceTarget: draft.sourceTarget,
+    reason: 'primary_draft_fallback',
+  };
+}
+
+function normalisedDraftIntent(intent: ProgramEditDraftAction['intent']): ProgramEditDraftAction['intent'] {
+  return intent;
+}
+
+function normalisedFinalIntent(intent: ProgramEdit['intent']): ProgramEditDraftAction['intent'] | 'explain' | 'ask_question' {
+  if (intent === 'ask_question' || intent === 'explain') return intent;
+  return intent;
+}
+
+function isUnsupportedStrengthBlockDraft(draft: ProgramEditDraft): boolean {
+  return draft.targetDomain === 'strength' &&
+    draft.actionScope === 'strength_block' &&
+    (draft.intent === 'remove' || draft.intent === 'reduce');
+}
+
+function firstProtectedTargetConflict(
+  draft: ProgramEditDraft,
+  finalEdit: ProgramEdit,
+): ProgramEditDraftProtectedTarget | null {
+  if (!isDestructiveFinalEdit(finalEdit)) return null;
+  return draft.protectedTargets.find((target) =>
+    domainsCompatible(target.targetDomain, finalEdit.targetDomain),
+  ) ?? null;
+}
+
+function isDestructiveFinalEdit(finalEdit: ProgramEdit): boolean {
+  return finalEdit.intent === 'remove' ||
+    finalEdit.intent === 'replace' ||
+    finalEdit.intent === 'edit' ||
+    finalEdit.intent === 'move';
+}
+
+function domainsCompatible(
+  draftDomain: ProgramEditDraftTargetDomain,
+  finalDomain: ProgramEdit['targetDomain'],
+): boolean {
+  if (draftDomain === finalDomain) return true;
+  if (draftDomain === 'setup') return finalDomain === 'schedule';
+  if (draftDomain === 'schedule') return finalDomain === 'schedule';
+  return false;
+}
+
+function actionScopeFromProgramEdit(
+  edit: ProgramEdit,
+): ProgramEditDraftActionScope | null {
+  const editScope = 'editScope' in edit ? edit.editScope : undefined;
+  switch (editScope) {
+    case 'add_conditioning_item':
+    case 'remove_conditioning_item':
+    case 'replace_conditioning_prescription':
+      return 'conditioning_block';
+    case 'duration_only':
+      return 'duration';
+    case 'intensity_only':
+      return 'intensity';
+    case 'modality_only':
+      return 'modality';
+    case 'add_whole_session':
+    case 'remove_whole_session':
+      return 'whole_session';
+    case 'update_program_setup':
+      return 'setup';
+    default:
+      break;
+  }
+
+  if (edit.targetDomain === 'session') return 'whole_session';
+  if (edit.targetDomain === 'strength') {
+    if (edit.requestedChange === 'exercise') return 'exercise';
+    if (edit.requestedChange === 'volume' || edit.requestedChange === 'intensity') {
+      return 'strength_block';
+    }
+  }
+  if (edit.targetDomain === 'schedule') return 'whole_session';
+  return null;
+}
+
+function scopesCompatible(
+  draftScope: ProgramEditDraftActionScope,
+  finalScope: ProgramEditDraftActionScope,
+): boolean {
+  if (draftScope === finalScope) return true;
+  if (
+    draftScope === 'conditioning_block' &&
+    (finalScope === 'duration' || finalScope === 'intensity' || finalScope === 'modality')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function unsupportedStrengthBlockReply(draft: ProgramEditDraft): string {
+  const verb = draft.intent === 'remove' ? 'remove' : 'reduce';
+  return (
+    `I can see you want to ${verb} ${strengthTargetLabel(draft)}, ` +
+    'but I need confirmation before changing that block. Conditioning will stay as-is.'
+  );
+}
+
+function protectedTargetConflictReply(target: ProgramEditDraftProtectedTarget): string {
+  if (target.targetDomain === 'conditioning') {
+    return "I won't remove conditioning unless you ask for that too. Which strength work should I change?";
+  }
+  if (target.targetDomain === 'strength') {
+    return "I won't change strength work because you asked me to keep it. Which conditioning item should I change?";
+  }
+  return `I won't change ${target.targetDomain} because you asked me to keep it. Which part should I change instead?`;
+}
+
+function mismatchReply(draft: ProgramEditDraft, finalEdit: ProgramEdit): string {
+  const expected = primaryDraftAction(draft);
+  const verb = draftActionVerb(expected.intent);
+  if (expected.targetDomain === 'strength' && finalEdit.targetDomain === 'conditioning') {
+    return (
+      `I can ${verb} ${strengthTargetLabel(draft)}, ` +
+      "but I won't remove conditioning unless you ask for that too."
+    );
+  }
+  if (expected.targetDomain === 'conditioning' && finalEdit.targetDomain === 'strength') {
+    return (
+      `I can ${verb} conditioning, ` +
+      "but I won't change strength work unless you ask for that too."
+    );
+  }
+  if (expected.targetDomain === 'session' && finalEdit.targetDomain !== 'session') {
+    return "I understood that as a whole-session change, so I won't change an individual block instead. Which should I change?";
+  }
+  return 'I understood the requested target, but the executable edit did not match it. I have not changed the program.';
+}
+
+function draftActionVerb(intent: ProgramEditDraftAction['intent']): string {
+  switch (intent) {
+    case 'remove':
+      return 'remove';
+    case 'add':
+      return 'add';
+    case 'replace':
+      return 'replace';
+    case 'move':
+      return 'move';
+    case 'edit':
+    default:
+      return 'change';
+  }
+}
+
+function strengthTargetLabel(draft: ProgramEditDraft): string {
+  const text = draft.explicitUserWording.toLowerCase();
+  if (/\b(?:lower|legs?|leg)\b/.test(text)) return 'the lower-body strength work';
+  if (/\bupper\b/.test(text)) return 'the upper-body strength work';
+  return 'the strength work';
 }
 
 function classifyIntent(message: string): ProgramEditDraftIntent {
