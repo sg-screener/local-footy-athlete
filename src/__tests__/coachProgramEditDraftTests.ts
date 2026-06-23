@@ -18,6 +18,11 @@ import {
   validateProgramEditAgainstDraft,
   type ProgramEditDraft,
 } from '../utils/coachProgramEditDraft';
+import {
+  fingerprintVisibleProgramDay,
+  verifyProgramEditDraftVisibleState,
+  type CoachVisibleDomainSnapshotMap,
+} from '../utils/coachVisibleDomainVerifier';
 
 const TODAY = '2026-06-23';
 
@@ -27,6 +32,57 @@ function workout(name: string, type = 'Strength'): any {
     name,
     workoutType: type,
     exercises: [],
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
+function strengthConditioningWorkout(args: {
+  strengthName?: string | null;
+  conditioningName?: string | null;
+  type?: string;
+} = {}): any {
+  const strengthName = Object.prototype.hasOwnProperty.call(args, 'strengthName')
+    ? args.strengthName
+    : 'Back Squat';
+  const conditioningName = Object.prototype.hasOwnProperty.call(args, 'conditioningName')
+    ? args.conditioningName
+    : 'Easy Aerobic Flush';
+  const exercises: any[] = [];
+  const conditioningIds: string[] = [];
+  if (strengthName) {
+    exercises.push({
+      id: 'strength-1',
+      exerciseId: 'strength-1',
+      exercise: { id: 'strength-1', name: strengthName },
+    });
+  }
+  if (conditioningName) {
+    conditioningIds.push('conditioning-1');
+    exercises.push({
+      id: 'conditioning-1',
+      exerciseId: 'conditioning-1',
+      prescriptionType: 'duration',
+      prescribedRepsMin: 25,
+      prescribedRepsMax: 25,
+      exercise: { id: 'conditioning-1', name: conditioningName },
+      notes: '25 min easy aerobic work',
+    });
+  }
+  return {
+    id: 'workout-visible-test',
+    name: conditioningName && !strengthName ? conditioningName : 'Lower Body Strength',
+    workoutType: args.type ?? 'Strength',
+    exercises,
+    conditioningBlock: conditioningName
+      ? {
+          options: [{
+            title: conditioningName,
+            description: '25 min easy aerobic work',
+            exerciseIds: conditioningIds,
+          }],
+        }
+      : undefined,
     createdAt: '',
     updatedAt: '',
   };
@@ -42,6 +98,30 @@ function day(date: string, name: string | null, isToday = false): ResolvedDay {
     source: name ? 'template' : 'rest',
     indicator: null,
   } as any;
+}
+
+function visibleDay(
+  date: string,
+  visibleWorkout: any | null,
+  isToday = date === TODAY,
+): ResolvedDay {
+  return {
+    date,
+    dayOfWeek: 2,
+    short: 'TUE',
+    isToday,
+    workout: visibleWorkout,
+    source: visibleWorkout ? 'template' : 'rest',
+    indicator: null,
+  } as any;
+}
+
+function visibleMap(days: ResolvedDay[]): CoachVisibleDomainSnapshotMap {
+  const out: CoachVisibleDomainSnapshotMap = {};
+  for (const visible of days) {
+    out[visible.date] = fingerprintVisibleProgramDay(visible);
+  }
+  return out;
 }
 
 function visibleWeek(name = 'Lower Body Strength'): ResolvedDay[] {
@@ -118,12 +198,14 @@ function finalEdit(args: {
   targetDomain: string;
   editScope?: string;
   requestedChange?: string;
+  targetDate?: string;
+  command?: any;
 }): any {
   return {
     intent: args.intent,
     targetDomain: args.targetDomain,
     editScope: args.editScope,
-    targetDate: TODAY,
+    targetDate: args.targetDate ?? TODAY,
     targetSessionId: 'session-lower',
     targetItemId: args.targetDomain === 'session' ? null : `${args.targetDomain}-item`,
     requestedChange: args.requestedChange ?? 'unknown',
@@ -131,7 +213,7 @@ function finalEdit(args: {
     missingFields: [],
     confidence: 0.9,
     naturalLanguageReason: 'test final edit',
-    command: {
+    command: args.command ?? {
       mode: 'mutate',
       operation: args.targetDomain === 'session'
         ? 'remove_session'
@@ -149,6 +231,16 @@ function finalEdit(args: {
       needsClarification: false,
       reason: 'test final edit',
     },
+  };
+}
+
+function mutatedDone(route = 'test:applied'): any {
+  return {
+    kind: 'mutated',
+    applied: true,
+    reply: 'Done — test mutation applied.',
+    route,
+    progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'],
   };
 }
 
@@ -385,6 +477,269 @@ section('[15] Stage 3C-1 protected target conflicts block execution');
   eq('protected conditioning conflict blocks execution', guard.kind, 'blocked');
   eq('protected conflict route', (guard as any).route, 'program_edit_draft_guard_protected_target_conflict');
   ok('protected conflict does not say Done', !/^Done\b/i.test((guard as any).reply ?? ''), guard);
+}
+
+section('[16] Stage 3C-2 visible verifier blocks invisible conditioning removal success');
+{
+  const conditioningDraft = draft('remove conditioning today');
+  const conditioningFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'conditioning',
+    editScope: 'remove_conditioning_item',
+    requestedChange: 'type',
+  });
+  const before = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout()),
+  ]);
+  const after = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout()),
+  ]);
+  const verification = verifyProgramEditDraftVisibleState({
+    draft: conditioningDraft,
+    finalEdit: conditioningFinal,
+    result: mutatedDone('remove_conditioning:applied'),
+    before,
+    after,
+  });
+  eq('conditioning still visible blocks success', verification.ok, false);
+  ok('failed verifier reply is not Done', !/^Done\b/i.test((verification as any).reply ?? ''), verification);
+}
+
+section('[17] Stage 3C-2 conditioning removal preserves visible strength');
+{
+  const conditioningDraft = draft('remove conditioning today');
+  const conditioningFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'conditioning',
+    editScope: 'remove_conditioning_item',
+    requestedChange: 'type',
+  });
+  const before = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout()),
+  ]);
+  const afterStrengthPreserved = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout({ conditioningName: null })),
+  ]);
+  const okVerification = verifyProgramEditDraftVisibleState({
+    draft: conditioningDraft,
+    finalEdit: conditioningFinal,
+    result: mutatedDone('remove_conditioning:applied'),
+    before,
+    after: afterStrengthPreserved,
+  });
+  eq('conditioning removal with same strength passes', okVerification.ok, true);
+
+  const afterStrengthChanged = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout({
+      strengthName: 'Trap Bar Deadlift',
+      conditioningName: null,
+    })),
+  ]);
+  const badVerification = verifyProgramEditDraftVisibleState({
+    draft: conditioningDraft,
+    finalEdit: conditioningFinal,
+    result: mutatedDone('remove_conditioning:applied'),
+    before,
+    after: afterStrengthChanged,
+  });
+  eq('conditioning removal that changes strength fails', badVerification.ok, false);
+  eq('strength protection reason', (badVerification as any).reason, 'protected_domain_changed');
+}
+
+section('[18] Stage 3C-2 strength edits must preserve visible conditioning');
+{
+  const strengthDraft = draft('keep conditioning but remove lower strength');
+  const strengthFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'strength',
+    requestedChange: 'volume',
+  });
+  const before = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout()),
+  ]);
+  const afterConditioningRemoved = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout({
+      strengthName: null,
+      conditioningName: null,
+    })),
+  ]);
+  const verification = verifyProgramEditDraftVisibleState({
+    draft: strengthDraft,
+    finalEdit: strengthFinal,
+    result: mutatedDone('remove_strength:applied'),
+    before,
+    after: afterConditioningRemoved,
+  });
+  eq('strength edit that removes conditioning fails', verification.ok, false);
+  eq('protected conditioning reason', (verification as any).reason, 'protected_domain_changed');
+}
+
+section('[19] Stage 3C-2 whole-session removal verifies the visible session is gone');
+{
+  const sessionDraft = draft('remove whole session today');
+  const sessionFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'session',
+    editScope: 'remove_whole_session',
+    requestedChange: 'day',
+  });
+  const before = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout()),
+  ]);
+  const afterSessionGone = visibleMap([
+    visibleDay(TODAY, null),
+  ]);
+  const okVerification = verifyProgramEditDraftVisibleState({
+    draft: sessionDraft,
+    finalEdit: sessionFinal,
+    result: mutatedDone('remove_session:applied'),
+    before,
+    after: afterSessionGone,
+  });
+  eq('whole session gone passes', okVerification.ok, true);
+
+  const afterOnlyConditioningRemoved = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout({ conditioningName: null })),
+  ]);
+  const badVerification = verifyProgramEditDraftVisibleState({
+    draft: sessionDraft,
+    finalEdit: sessionFinal,
+    result: mutatedDone('remove_session:applied'),
+    before,
+    after: afterOnlyConditioningRemoved,
+  });
+  eq('whole-session draft fails if a session is still visible', badVerification.ok, false);
+  eq('whole-session reason', (badVerification as any).reason, 'session_remove_still_visible');
+}
+
+section('[20] Stage 3C-2 add conditioning must make conditioning visible');
+{
+  const addDraft = draft('add conditioning today');
+  const addFinal = finalEdit({
+    intent: 'add',
+    targetDomain: 'conditioning',
+    editScope: 'add_conditioning_item',
+    requestedChange: 'type',
+  });
+  const before = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout({ conditioningName: null })),
+  ]);
+  const afterVisible = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout()),
+  ]);
+  eq('add conditioning visible passes',
+    verifyProgramEditDraftVisibleState({
+      draft: addDraft,
+      finalEdit: addFinal,
+      result: mutatedDone('add_conditioning:applied'),
+      before,
+      after: afterVisible,
+    }).ok,
+    true);
+
+  const afterUnchanged = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout({ conditioningName: null })),
+  ]);
+  const failed = verifyProgramEditDraftVisibleState({
+    draft: addDraft,
+    finalEdit: addFinal,
+    result: mutatedDone('add_conditioning:applied'),
+    before,
+    after: afterUnchanged,
+  });
+  eq('add conditioning invisible fails', failed.ok, false);
+  eq('add invisible reason', (failed as any).reason, 'domain_add_not_visible');
+}
+
+section('[21] Stage 3C-2 move verifies source and destination visible state');
+{
+  const tomorrow = '2026-06-24';
+  const targetFrame = frameForSession('Easy Aerobic Flush');
+  const moveDraft = draft('move it to tomorrow', targetFrame);
+  const moveFinal = finalEdit({
+    intent: 'move',
+    targetDomain: 'schedule',
+    requestedChange: 'day',
+    targetDate: TODAY,
+    command: {
+      mode: 'mutate',
+      operation: 'move_session',
+      target: { kind: 'date', date: TODAY, sessionName: 'Easy Aerobic Flush' },
+      payload: { operation: 'move_session', toDate: tomorrow },
+      scope: 'one_off',
+      confidence: 0.9,
+      needsClarification: false,
+      reason: 'test move final edit',
+    },
+  });
+  const before = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout({
+      strengthName: null,
+      conditioningName: 'Easy Aerobic Flush',
+      type: 'Conditioning',
+    })),
+    visibleDay(tomorrow, null, false),
+  ]);
+  const afterMoved = visibleMap([
+    visibleDay(TODAY, null),
+    visibleDay(tomorrow, strengthConditioningWorkout({
+      strengthName: null,
+      conditioningName: 'Easy Aerobic Flush',
+      type: 'Conditioning',
+    }), false),
+  ]);
+  eq('move with source cleared and destination visible passes',
+    verifyProgramEditDraftVisibleState({
+      draft: moveDraft,
+      finalEdit: moveFinal,
+      result: mutatedDone('move_session:applied'),
+      before,
+      after: afterMoved,
+    }).ok,
+    true);
+
+  const afterDuplicated = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout({
+      strengthName: null,
+      conditioningName: 'Easy Aerobic Flush',
+      type: 'Conditioning',
+    })),
+    visibleDay(tomorrow, strengthConditioningWorkout({
+      strengthName: null,
+      conditioningName: 'Easy Aerobic Flush',
+      type: 'Conditioning',
+    }), false),
+  ]);
+  const failed = verifyProgramEditDraftVisibleState({
+    draft: moveDraft,
+    finalEdit: moveFinal,
+    result: mutatedDone('move_session:applied'),
+    before,
+    after: afterDuplicated,
+  });
+  eq('move fails when source still shows moved session', failed.ok, false);
+}
+
+section('[22] Stage 3C-2 controller visible gate runs before success reply handling');
+{
+  const source = readFileSync('src/utils/coachTurnController.ts', 'utf8');
+  const executeIdx = source.indexOf('const result = executeProgramEdit({');
+  const visibleGuardIdx = source.indexOf('const draftVisibleVerification = verifyDraftVisibleExecution', executeIdx);
+  const recordIdx = source.indexOf('recordVerifiedProgramEditMutationFocus', visibleGuardIdx);
+  const replyIdx = source.indexOf("return replyAndFinish(input, 'router', result.reply)", visibleGuardIdx);
+  ok('visible verifier runs after executeProgramEdit', visibleGuardIdx > executeIdx, {
+    executeIdx,
+    visibleGuardIdx,
+  });
+  ok('visible verifier runs before mutation focus recording', visibleGuardIdx >= 0 && visibleGuardIdx < recordIdx, {
+    visibleGuardIdx,
+    recordIdx,
+  });
+  ok('visible verifier runs before router success reply', visibleGuardIdx >= 0 && visibleGuardIdx < replyIdx, {
+    visibleGuardIdx,
+    replyIdx,
+  });
+  ok('visible verifier failure blocks Done replies', /resultReplyWasDone:\s*\/\^Done/.test(source));
 }
 
 console.log('\n-- Summary --');
