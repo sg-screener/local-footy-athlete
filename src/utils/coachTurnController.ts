@@ -56,6 +56,7 @@ import {
   resolvePendingProgramEditAnswer,
   type ProgramEdit,
 } from './coachProgramEdit';
+import { decideProgramEditDraftFrontDoor } from './coachProgramEditDraft';
 import {
   captureFromExecutorClarify,
   resumeFromPending,
@@ -836,6 +837,23 @@ export async function handleCoachTurn(
       proposedActionCount: packet.programEditDraft?.proposedActions.length ?? 0,
       compatibilityPath: 'coach_command_router',
     });
+
+    const draftFrontDoor = decideProgramEditDraftFrontDoor(packet.programEditDraft);
+    if (
+      draftFrontDoor.kind === 'ask_clarification' ||
+      draftFrontDoor.kind === 'unsupported'
+    ) {
+      logger.debug('[coach-program-edit-draft-front-door]', {
+        kind: draftFrontDoor.kind,
+        route: draftFrontDoor.route,
+        intent: packet.programEditDraft?.intent ?? null,
+        targetDomain: packet.programEditDraft?.targetDomain ?? null,
+        actionScope: packet.programEditDraft?.actionScope ?? null,
+        missingFields: packet.programEditDraft?.missingFields ?? [],
+        legacyBlocked: true,
+      });
+      return replyAndFinish(input, 'program-edit-draft-front-door', draftFrontDoor.reply);
+    }
 
     logger.debug('[coach-live-send] router_reached', { reached: true });
     const lastUndoableMutation = useCoachMutationHistoryStore

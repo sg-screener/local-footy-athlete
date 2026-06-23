@@ -97,6 +97,28 @@ export interface BuildProgramEditDraftInput {
   pendingTransaction?: PendingScheduleTransaction | null;
 }
 
+export type ProgramEditDraftFrontDoorDecision =
+  | {
+      kind: 'allow_conversation';
+      route: 'program_edit_draft_conversation';
+    }
+  | {
+      kind: 'allow_compatibility';
+      route: 'program_edit_draft_compatibility';
+    }
+  | {
+      kind: 'ask_clarification';
+      route: string;
+      reply: string;
+      options?: string[];
+    }
+  | {
+      kind: 'unsupported';
+      route: string;
+      reply: string;
+      options?: string[];
+    };
+
 type DomainSignal = {
   domain: ProgramEditDraftTargetDomain;
   scope: ProgramEditDraftActionScope;
@@ -134,7 +156,10 @@ export function buildProgramEditDraft(
   const message = explicitUserWording.toLowerCase();
   const sourceTarget = input.targetFrame?.resolvedTarget ?? null;
   const explicitDateRole = input.targetFrame?.explicitDateRole ?? 'none';
-  const targetDate = sourceTarget?.date ?? inferTodayFromVisibleWeek(input.visibleWeek ?? []);
+  const targetFrameAmbiguous = input.targetFrame?.targetSource === 'ambiguous';
+  const targetDate = targetFrameAmbiguous
+    ? null
+    : sourceTarget?.date ?? inferTodayFromVisibleWeek(input.visibleWeek ?? []);
   const targetSessionId = inferTargetSessionId({
     sourceTarget,
     targetDate,
@@ -165,6 +190,7 @@ export function buildProgramEditDraft(
     intent,
     targetDate,
     sourceTarget,
+    targetFrameAmbiguous,
     proposedActions,
   });
 
@@ -198,6 +224,55 @@ export function buildProgramEditDraft(
     isCompound,
     reason: reasonForDraft({ intent, primary, isCompound, sourceTarget }),
   };
+}
+
+export function decideProgramEditDraftFrontDoor(
+  draft: ProgramEditDraft | null | undefined,
+): ProgramEditDraftFrontDoorDecision {
+  if (!draft) {
+    return { kind: 'allow_compatibility', route: 'program_edit_draft_compatibility' };
+  }
+
+  if (draft.intent === 'ask_question' || draft.intent === 'explain') {
+    return { kind: 'allow_conversation', route: 'program_edit_draft_conversation' };
+  }
+
+  if (draft.missingFields.length > 0) {
+    return {
+      kind: 'ask_clarification',
+      route: `program_edit_draft_missing:${draft.missingFields.join(',')}`,
+      reply: clarificationForDraftMissingFields(draft),
+      options: clarificationOptionsForDraft(draft),
+    };
+  }
+
+  if (draft.isCompound) {
+    return {
+      kind: 'unsupported',
+      route: 'program_edit_draft_compound_deferred',
+      reply:
+        "I understood that as more than one program edit. I can't safely apply a remove-and-add compound edit in one turn yet. Pick one change first: remove the source session, add conditioning, or leave it unchanged.",
+      options: ['Remove source session', 'Add conditioning', 'Leave unchanged'],
+    };
+  }
+
+  if (
+    draft.targetDomain === 'strength' &&
+    draft.actionScope === 'strength_block' &&
+    (draft.intent === 'remove' || draft.intent === 'reduce')
+  ) {
+    const verb = draft.intent === 'remove' ? 'remove' : 'reduce';
+    return {
+      kind: 'unsupported',
+      route: `program_edit_draft_strength_block_${draft.intent}_deferred`,
+      reply:
+        `I understood that as a request to ${verb} the strength block while leaving conditioning alone. ` +
+        "I can't safely apply that block-level strength edit yet. Choose a specific exercise, remove the whole session, or leave it unchanged.",
+      options: ['Choose an exercise', 'Remove whole session', 'Leave unchanged'],
+    };
+  }
+
+  return { kind: 'allow_compatibility', route: 'program_edit_draft_compatibility' };
 }
 
 function classifyIntent(message: string): ProgramEditDraftIntent {
@@ -396,14 +471,39 @@ function missingFieldsForDraft(args: {
   intent: ProgramEditDraftIntent;
   targetDate: string | null;
   sourceTarget: CoachResolvedTarget | null;
+  targetFrameAmbiguous: boolean;
   proposedActions: ProgramEditDraftAction[];
 }): string[] {
   if (args.intent === 'ask_question' || args.intent === 'explain') return [];
   const missing: string[] = [];
+  if (args.targetFrameAmbiguous) missing.push('target');
   if (!args.targetDate) missing.push('targetDate');
   if (args.intent === 'move' && !args.sourceTarget) missing.push('sourceTarget');
   if (args.proposedActions.length === 0) missing.push('action');
   return missing;
+}
+
+function clarificationForDraftMissingFields(draft: ProgramEditDraft): string {
+  if (draft.missingFields.includes('target')) {
+    return 'Which session or day should I apply that edit to?';
+  }
+  if (draft.missingFields.includes('targetDate')) {
+    return 'Which day should I apply that edit to?';
+  }
+  if (draft.missingFields.includes('sourceTarget')) {
+    return 'Which session should I move?';
+  }
+  return 'What exactly should I change?';
+}
+
+function clarificationOptionsForDraft(draft: ProgramEditDraft): string[] | undefined {
+  if (draft.missingFields.includes('sourceTarget')) {
+    return ['Today', 'Tomorrow', 'Choose another day'];
+  }
+  if (draft.missingFields.includes('target') || draft.missingFields.includes('targetDate')) {
+    return ['Today', 'Tomorrow', 'Choose another day'];
+  }
+  return undefined;
 }
 
 function confidenceForDraft(args: {

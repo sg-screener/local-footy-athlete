@@ -14,6 +14,7 @@ import type { ResolvedDay } from '../utils/sessionResolver';
 import type { CoachTargetFrame } from '../utils/coachTargetFrame';
 import {
   buildProgramEditDraft,
+  decideProgramEditDraftFrontDoor,
   type ProgramEditDraft,
 } from '../utils/coachProgramEditDraft';
 
@@ -107,6 +108,10 @@ function actionDomains(value: ProgramEditDraft): string[] {
   return value.proposedActions.map((action) => `${action.intent}:${action.targetDomain}:${action.actionScope}`);
 }
 
+function decisionKind(value: ProgramEditDraft): string {
+  return decideProgramEditDraftFrontDoor(value).kind;
+}
+
 section('[1] remove lower body strength preserves conditioning');
 {
   const out = draft('remove lower body strength');
@@ -187,12 +192,77 @@ section('[9] controller sees draft before command-router compatibility');
 {
   const source = readFileSync('src/utils/coachTurnController.ts', 'utf8');
   const draftIdx = source.indexOf('[coach-program-edit-draft]');
+  const frontDoorIdx = source.indexOf('decideProgramEditDraftFrontDoor', draftIdx);
   const routerIdx = source.indexOf('const routedProgramEdit = interpretCoachMessageToProgramEdit', draftIdx);
   ok('controller logs draft seam', draftIdx >= 0);
+  ok('controller checks draft front door', frontDoorIdx > draftIdx, { draftIdx, frontDoorIdx });
   ok('draft seam precedes old router compatibility', draftIdx >= 0 && routerIdx >= 0 && draftIdx < routerIdx, {
     draftIdx,
     routerIdx,
   });
+  ok('draft front door precedes old router compatibility', frontDoorIdx >= 0 && routerIdx >= 0 && frontDoorIdx < routerIdx, {
+    frontDoorIdx,
+    routerIdx,
+  });
+  ok('draft front door marks legacy blocked', /legacyBlocked:\s*true/.test(source));
+}
+
+section('[10] Stage 3B front door blocks unsafe strength-block edits');
+{
+  const removeStrength = draft('remove lower body strength');
+  const removeDecision = decideProgramEditDraftFrontDoor(removeStrength);
+  eq('remove strength decision is unsupported', removeDecision.kind, 'unsupported');
+  ok('remove strength does not enter compatibility executor', removeDecision.kind !== 'allow_compatibility', removeDecision);
+  ok('remove strength reply preserves conditioning concept', /conditioning alone/i.test((removeDecision as any).reply), removeDecision);
+
+  const reduceStrength = draft('make lower body easier');
+  const reduceDecision = decideProgramEditDraftFrontDoor(reduceStrength);
+  eq('reduce strength decision is unsupported', reduceDecision.kind, 'unsupported');
+  ok('reduce strength does not generic fallback', reduceDecision.kind !== 'allow_conversation', reduceDecision);
+}
+
+section('[11] Stage 3B front door allows supported compatibility paths');
+{
+  const removeConditioning = draft('remove conditioning today');
+  eq('conditioning draft domain', removeConditioning.targetDomain, 'conditioning');
+  eq('conditioning front door allows compatibility', decisionKind(removeConditioning), 'allow_compatibility');
+  eq('conditioning proposed action only removes conditioning', actionDomains(removeConditioning), [
+    'remove:conditioning:conditioning_block',
+  ]);
+
+  const removeSession = draft('remove whole session today');
+  eq('session draft domain', removeSession.targetDomain, 'session');
+  eq('whole-session front door allows compatibility', decisionKind(removeSession), 'allow_compatibility');
+  eq('whole-session proposed action removes session', actionDomains(removeSession), [
+    'remove:session:whole_session',
+  ]);
+}
+
+section('[12] Stage 3B ambiguous and compound drafts stop before legacy');
+{
+  const ambiguousFrame: CoachTargetFrame = {
+    resolvedTarget: null,
+    confidence: 0,
+    targetSource: 'ambiguous',
+    missingFields: ['target'],
+    candidateOptions: [
+      { label: 'Tuesday lower', date: TODAY, sessionName: 'Lower Body Strength' },
+      { label: 'Thursday lower', date: '2026-06-25', sessionName: 'Lower Body Strength' },
+    ],
+    reason: 'test_ambiguous_target',
+    explicitDateRole: 'none',
+  };
+  const ambiguous = draft('remove lower body strength', ambiguousFrame);
+  const ambiguousDecision = decideProgramEditDraftFrontDoor(ambiguous);
+  eq('ambiguous mutation asks clarification', ambiguousDecision.kind, 'ask_clarification');
+  ok('ambiguous draft does not enter compatibility', ambiguousDecision.kind !== 'allow_compatibility', ambiguousDecision);
+
+  const targetFrame = frameForSession('Team Training');
+  const compound = draft("I can't make team training tonight, remove it and add conditioning", targetFrame);
+  const compoundDecision = decideProgramEditDraftFrontDoor(compound);
+  eq('compound draft deferred safely', compoundDecision.kind, 'unsupported');
+  ok('compound does not generic fallback', compoundDecision.kind !== 'allow_conversation', compoundDecision);
+  ok('compound does not enter compatibility yet', compoundDecision.kind !== 'allow_compatibility', compoundDecision);
 }
 
 console.log('\n-- Summary --');
