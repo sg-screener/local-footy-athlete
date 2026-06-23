@@ -397,26 +397,9 @@ const classifier = new LLMCoachIntentClassifier({
     const rawWeek = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
     const visibleWeek = projectVisibleWeek(rawWeek);
     const friDay = visibleWeek.find((d) => d.dayOfWeek === 5);
-    ok('Fri Sprint+Plyo session present', !!friDay?.workout);
-    if (friDay?.workout) {
-      const friNames = exNames(friDay.workout);
-      // Fatigue 7/10 BLOCKS sprint + plyometric → both Fri exercises removed.
-      ok(
-        'Sprint removed by fatigue exposure',
-        !friNames.includes('Flying 30m Sprints'),
-        `friNames=${JSON.stringify(friNames)}`,
-      );
-      ok(
-        'Box Jumps removed by fatigue exposure',
-        !friNames.includes('Box Jumps'),
-        `friNames=${JSON.stringify(friNames)}`,
-      );
-      ok(
-        'Fri coachNotes mention Removed: Flying 30m Sprints',
-        friDay.workout.coachNotes?.some((n) => /Removed: Flying 30m Sprints/i.test(n)) ?? false,
-        `notes=${JSON.stringify(friDay.workout.coachNotes)}`,
-      );
-    }
+    ok('Fri day exists in visible week', !!friDay);
+    ok('Fri Sprint+Plyo collapses to Rest after all training content is removed', !friDay?.workout);
+    eq('Fri collapsed source = rest', friDay?.source, 'rest' as any);
 
     // 3. Visible day (DayWorkoutScreenV2 surface) — Wed Lower Strength carries notes
     const wedDay = projectVisibleDayForUI(FIXED_TODAY);

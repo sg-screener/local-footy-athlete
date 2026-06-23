@@ -196,6 +196,53 @@ function appendCoachNote(
   return [...existing, note];
 }
 
+function hasMeaningfulTrainingContent(workout: Workout): boolean {
+  if ((workout.conditioningBlock?.options ?? []).length > 0) return true;
+  if ((workout.exercises ?? []).length > 0) return true;
+
+  const type = String(workout.workoutType ?? '').trim();
+  const tier = String((workout as any).sessionTier ?? '').trim();
+  if (type === 'Game' || type === 'Team Training' || (workout as any).isTeamDay === true) {
+    return true;
+  }
+  if (type === 'Recovery' && tier !== 'removed' && !/^rest$/i.test(workout.name ?? '')) {
+    return true;
+  }
+
+  return false;
+}
+
+function buildRestShellAfterContentRemoval(
+  current: Workout,
+  note: string,
+): Workout {
+  return cloneWorkout(current, {
+    name: 'Rest',
+    description: 'Coach removed all training content from this session.',
+    durationMinutes: 0,
+    intensity: 'Light' as any,
+    workoutType: 'Rest' as any,
+    sessionTier: 'recovery',
+    hasCombinedConditioning: false,
+    conditioningFlavour: undefined,
+    conditioningCategory: undefined,
+    conditioningBlock: undefined,
+    coachAddedConditioningLabel: undefined,
+    exercises: [],
+    coachNotes: appendCoachNote(current, note),
+  });
+}
+
+function cleanupEmptyWorkoutAfterRemoval(
+  current: Workout,
+  next: Workout,
+  note: string,
+): Workout {
+  return hasMeaningfulTrainingContent(next)
+    ? next
+    : buildRestShellAfterContentRemoval(current, note);
+}
+
 /** Lazy import — avoid evaluating store-touching modules at test load. */
 function defaultBuildState(): ScheduleState {
   // require() so the import isn't pulled in until apply runs.
@@ -359,12 +406,14 @@ function applyRemoveExercise(
       reason: `"${target}" not present in workout on ${event.date}`,
     };
   }
+  const note = `Removed: ${target}`;
+  const next = cloneWorkout(current, {
+    exercises: filtered,
+    coachNotes: appendCoachNote(current, note),
+  });
   return {
     ok: true,
-    workout: cloneWorkout(current, {
-      exercises: filtered,
-      coachNotes: appendCoachNote(current, `Removed: ${target}`),
-    }),
+    workout: cleanupEmptyWorkoutAfterRemoval(current, next, note),
   };
 }
 
@@ -881,17 +930,19 @@ function applyRemoveConditioningBlock(
   const remaining = ownedIds.size > 0
     ? (current.exercises ?? []).filter((ex) => !ownedIds.has(ex.id))
     : (current.exercises ?? []);
+  const note = 'Removed conditioning from this session';
+  const next = cloneWorkout(current, {
+    hasCombinedConditioning: false,
+    conditioningFlavour: undefined,
+    conditioningCategory: undefined,
+    conditioningBlock: undefined,
+    coachAddedConditioningLabel: undefined,
+    exercises: remaining,
+    coachNotes: appendCoachNote(current, note),
+  });
   return {
     ok: true,
-    workout: cloneWorkout(current, {
-      hasCombinedConditioning: false,
-      conditioningFlavour: undefined,
-      conditioningCategory: undefined,
-      conditioningBlock: undefined,
-      coachAddedConditioningLabel: undefined,
-      exercises: remaining,
-      coachNotes: appendCoachNote(current, 'Removed conditioning from this session'),
-    }),
+    workout: cleanupEmptyWorkoutAfterRemoval(current, next, note),
   };
 }
 
@@ -946,21 +997,23 @@ function applyRemoveTargetedConditioningItem(
       remainingExercises.length > 0
     );
 
+  const note = 'Removed conditioning from this session';
+  const next = cloneWorkout(current, {
+    hasCombinedConditioning: hasRemainingConditioning ? current.hasCombinedConditioning : false,
+    conditioningFlavour: hasRemainingConditioning ? current.conditioningFlavour : undefined,
+    conditioningCategory: hasRemainingConditioning ? current.conditioningCategory : undefined,
+    conditioningBlock: remainingOptions.length > 0 && block
+      ? { ...block, options: remainingOptions }
+      : undefined,
+    coachAddedConditioningLabel: hasRemainingConditioning
+      ? current.coachAddedConditioningLabel
+      : undefined,
+    exercises: remainingExercises,
+    coachNotes: appendCoachNote(current, note),
+  });
   return {
     ok: true,
-    workout: cloneWorkout(current, {
-      hasCombinedConditioning: hasRemainingConditioning ? current.hasCombinedConditioning : false,
-      conditioningFlavour: hasRemainingConditioning ? current.conditioningFlavour : undefined,
-      conditioningCategory: hasRemainingConditioning ? current.conditioningCategory : undefined,
-      conditioningBlock: remainingOptions.length > 0 && block
-        ? { ...block, options: remainingOptions }
-        : undefined,
-      coachAddedConditioningLabel: hasRemainingConditioning
-        ? current.coachAddedConditioningLabel
-        : undefined,
-      exercises: remainingExercises,
-      coachNotes: appendCoachNote(current, 'Removed conditioning from this session'),
-    }),
+    workout: cleanupEmptyWorkoutAfterRemoval(current, next, note),
   };
 }
 

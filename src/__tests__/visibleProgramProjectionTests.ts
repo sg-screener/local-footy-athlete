@@ -446,6 +446,49 @@ section('[15] Easy Aerobic Flush stays the visible title, not generic Aerobic Ba
   ok('title is not generic Aerobic Base', programWed?.workout?.name !== 'Aerobic Base');
 }
 
+section('[16] Empty training shells project as Rest, not clickable sessions');
+{
+  const wed = '2026-05-06';
+  const emptyFlush = wk('Easy Aerobic Flush', 3, [], {
+    workoutType: 'Conditioning',
+    sessionTier: 'optional',
+  });
+  const projected = projectVisibleDay({
+    day: day(wed, emptyFlush, 'manual'),
+    activeInjury: null,
+    todayISO: TODAY_ISO,
+  });
+  eq('direct projection collapses empty conditioning shell', projected.day.workout, null);
+  eq('direct projection marks day as rest source', projected.day.source, 'rest' as any);
+
+  const state = stateWithManual(wed, emptyFlush);
+  const programWeek = buildProgramTabProjectedWeek({
+    mondayISO: '2026-05-04',
+    todayISO: TODAY_ISO,
+    state,
+    overrideContexts: {},
+  });
+  const programWed = programWeek.find((d) => d.date === wed);
+  const detailWed = buildDayWorkoutProjectedDay({
+    date: wed,
+    todayISO: TODAY_ISO,
+    state,
+  });
+  eq('Program tab projection does not show empty Easy Aerobic Flush shell', programWed?.workout, null);
+  eq('Detail projection does not open empty Easy Aerobic Flush shell', detailWed.workout, null);
+
+  const recovery = wk('Recovery Session', 3, [], {
+    workoutType: 'Recovery',
+    sessionTier: 'recovery',
+  });
+  const recoveryProjected = projectVisibleDay({
+    day: day(wed, recovery, 'template'),
+    activeInjury: null,
+    todayISO: TODAY_ISO,
+  });
+  eq('valid recovery shell is preserved', recoveryProjected.day.workout?.name, 'Recovery Session');
+}
+
 // ─── Summary ───
 console.log(`\n— Summary —`);
 console.log(`  Pass: ${pass}`);

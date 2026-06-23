@@ -79,8 +79,10 @@ import { isPendingProgramProposalExpired } from './programAdjustmentRequests';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import {
   buildDayWorkoutProjectedDay,
+  buildProgramTabProjectedWeek,
   getResolvedVisibleProgramForDate,
 } from './visibleProgramReadModel';
+import { getMondayForDate } from './sessionResolver';
 import { logger } from './logger';
 
 export interface CoachTurnMessage {
@@ -169,6 +171,21 @@ function resolveLiveVisibleProgramForDate(date: string, todayISO: string) {
   });
 }
 
+function resolveLiveProgramTabVisibleDayForDate(date: string, todayISO: string) {
+  const programState = useProgramStore.getState();
+  const state = buildScheduleStateImperative();
+  const week = buildProgramTabProjectedWeek({
+    mondayISO: getMondayForDate(date),
+    todayISO,
+    state,
+    overrideContexts: programState.overrideContexts ?? {},
+    modalityPreferences: (state as any).modalityPreferences,
+  });
+  const day = week.find((candidate) => candidate.date === date);
+  if (day) return day;
+  return resolveLiveVisibleProgramForDate(date, todayISO).day;
+}
+
 interface DraftVisibleVerifierSnapshot {
   dates: string[];
   visible: CoachVisibleDomainSnapshotMap;
@@ -194,7 +211,7 @@ function captureDraftVisibleVerifierSnapshot(
   for (const date of dates) {
     try {
       visible[date] = fingerprintVisibleProgramDay(
-        resolveLiveVisibleProgramForDate(date, todayISO).day,
+        resolveLiveProgramTabVisibleDayForDate(date, todayISO),
       );
     } catch (err) {
       logger.warn('[coach-program-edit-draft-visible-snapshot-failed]', {
@@ -304,7 +321,7 @@ function verifyDraftVisibleExecution(args: {
   for (const date of args.before.dates) {
     try {
       afterVisible[date] = fingerprintVisibleProgramDay(
-        resolveLiveVisibleProgramForDate(date, args.todayISO).day,
+        resolveLiveProgramTabVisibleDayForDate(date, args.todayISO),
       );
     } catch (err) {
       logger.warn('[coach-program-edit-draft-visible-after-snapshot-failed]', {
@@ -322,6 +339,190 @@ function verifyDraftVisibleExecution(args: {
     before: args.before.visible,
     after: afterVisible,
   });
+}
+
+type ProgramEditVisibleGuardRun =
+  | {
+      kind: 'ok';
+      result: ExecutionResult;
+    }
+  | {
+      kind: 'blocked';
+      result: ExecutionResult;
+      verification: Extract<CoachVisibleDomainVerificationResult, { ok: false }>;
+    };
+
+function executeProgramEditWithVisibleGuard(args: {
+  input: CoachTurnControllerInput;
+  programEdit: ProgramEdit;
+  draft: ProgramEditDraft | null | undefined;
+  referenceResolution: any;
+  userMessage: string;
+  source: string;
+}): ProgramEditVisibleGuardRun {
+  const verifierDraft = visibleVerifierDraftForProgramEdit(
+    args.programEdit,
+    args.draft,
+    args.userMessage,
+  );
+  const before = captureDraftVisibleVerifierSnapshot(
+    verifierDraft,
+    args.programEdit,
+    args.input.todayISO,
+  );
+  const result = executeProgramEdit({
+    programEdit: args.programEdit,
+    todayISO: args.input.todayISO,
+    referenceResolution: args.referenceResolution,
+    userMessage: args.userMessage,
+    onProgress: (stage) => setProgress(args.input, stage),
+  });
+  args.input.setCoachProgressLabel(null);
+
+  const verification = verifyDraftVisibleExecution({
+    draft: verifierDraft,
+    edit: args.programEdit,
+    result,
+    before,
+    todayISO: args.input.todayISO,
+  });
+  if (verification.ok === false) {
+    if (before?.rollback) {
+      restoreDraftVisibleRollbackSnapshot(before.rollback, verification.reason);
+    }
+    logger.warn('[coach-program-edit-draft-visible-guard-blocked]', {
+      source: args.source,
+      route: verification.route,
+      reason: verification.reason,
+      details: verification.details ?? null,
+      draftIntent: verifierDraft?.intent ?? null,
+      draftTargetDomain: verifierDraft?.targetDomain ?? null,
+      draftActionScope: verifierDraft?.actionScope ?? null,
+      finalIntent: args.programEdit.intent,
+      finalTargetDomain: args.programEdit.targetDomain,
+      resultRoute: result.route,
+      resultReplyWasDone: /^Done\b/i.test(result.reply),
+    });
+    return { kind: 'blocked', result, verification };
+  }
+
+  return { kind: 'ok', result };
+}
+
+function visibleVerifierDraftForProgramEdit(
+  edit: ProgramEdit,
+  draft: ProgramEditDraft | null | undefined,
+  explicitUserWording: string,
+): ProgramEditDraft | null {
+  if (
+    draft &&
+    draft.intent !== 'ask_question' &&
+    draft.intent !== 'explain' &&
+    draft.proposedActions.length > 0
+  ) {
+    return draft;
+  }
+
+  if (edit.intent === 'ask_question' || edit.intent === 'explain') return null;
+  const actionScope = visibleVerifierActionScopeFromProgramEdit(edit);
+  const targetDomain = visibleVerifierTargetDomainFromProgramEdit(edit);
+  const actionIntent = edit.intent as Exclude<ProgramEditDraft['intent'], 'ask_question' | 'explain' | 'reduce'>;
+  const reason = `final_program_edit_${edit.intent}_${targetDomain}_${actionScope}`;
+
+  const protectedTargets = (edit.protectedTargets ?? []).map((target: any) => ({
+    targetDomain: target.domain === 'strength' ? 'strength' : 'conditioning',
+    actionScope: target.domain === 'strength' ? 'strength_block' : 'conditioning_block',
+    targetDate: edit.targetDate,
+    targetItemId: target.id ?? null,
+    title: target.title ?? null,
+    reason: 'final_program_edit_protected_target',
+  })) as ProgramEditDraft['protectedTargets'];
+
+  return {
+    intent: edit.intent as ProgramEditDraft['intent'],
+    targetDomain,
+    actionScope,
+    targetDate: edit.targetDate,
+    targetSessionId: edit.targetSessionId,
+    targetItemId: edit.targetItemId,
+    sourceTarget: null,
+    explicitDateRole: 'none',
+    explicitUserWording,
+    missingFields: edit.missingFields,
+    confidence: edit.confidence,
+    protectedTargets,
+    constraints: protectedTargets.map((target) =>
+      `keep ${target.targetDomain}:${target.actionScope ?? 'whole_session'}`,
+    ),
+    proposedActions: [{
+      intent: actionIntent,
+      targetDomain,
+      actionScope,
+      targetDate: edit.targetDate,
+      targetSessionId: edit.targetSessionId,
+      targetItemId: edit.targetItemId,
+      sourceTarget: null,
+      reason,
+    }],
+    verifierExpectations: [
+      {
+        kind: targetDomain === 'session' && actionScope === 'whole_session'
+          ? 'session_removed'
+          : 'domain_changed',
+        targetDomain,
+        actionScope,
+        targetDate: edit.targetDate,
+        reason,
+      },
+      ...protectedTargets.map((target) => ({
+        kind: 'domain_unchanged' as const,
+        targetDomain: target.targetDomain,
+        actionScope: target.actionScope,
+        targetDate: target.targetDate ?? edit.targetDate,
+        reason: target.reason,
+      })),
+    ],
+    isCompound: false,
+    reason,
+  };
+}
+
+function visibleVerifierTargetDomainFromProgramEdit(
+  edit: ProgramEdit,
+): ProgramEditDraft['targetDomain'] {
+  if (edit.targetDomain === 'schedule') return 'schedule';
+  return edit.targetDomain;
+}
+
+function visibleVerifierActionScopeFromProgramEdit(
+  edit: ProgramEdit,
+): ProgramEditDraft['actionScope'] {
+  const editScope = 'editScope' in edit ? edit.editScope : undefined;
+  switch (editScope) {
+    case 'add_conditioning_item':
+    case 'remove_conditioning_item':
+    case 'replace_conditioning_prescription':
+      return 'conditioning_block';
+    case 'duration_only':
+      return 'duration';
+    case 'intensity_only':
+      return 'intensity';
+    case 'modality_only':
+      return 'modality';
+    case 'add_whole_session':
+    case 'remove_whole_session':
+      return 'whole_session';
+    case 'update_program_setup':
+      return 'setup';
+    default:
+      break;
+  }
+
+  if (edit.targetDomain === 'conditioning') return 'conditioning_block';
+  if (edit.targetDomain === 'strength') {
+    return edit.requestedChange === 'exercise' ? 'exercise' : 'strength_block';
+  }
+  return 'whole_session';
 }
 
 function getTodayProjectedDay(todayISO: string) {
@@ -725,14 +926,22 @@ export async function handleCoachTurn(
           }
           return { handled: true };
         }
-        const result = executeProgramEdit({
+        const guarded = executeProgramEditWithVisibleGuard({
+          input,
           programEdit: transactionProgramEdit,
-          todayISO: input.todayISO,
+          draft: null,
           referenceResolution: packet.referenceResolution ?? null,
           userMessage: pendingClarifier.originalMessage,
-          onProgress: (stage) => setProgress(input, stage),
+          source: 'schedule_transaction',
         });
-        input.setCoachProgressLabel(null);
+        if (guarded.kind === 'blocked') {
+          return replyAndFinish(
+            input,
+            'schedule-transaction-visible-guard',
+            guarded.verification.reply,
+          );
+        }
+        const result = guarded.result;
         recordVerifiedProgramEditMutationFocus(transactionProgramEdit, result, input.todayISO);
         logger.debug('[coach-flow] schedule_transaction_executed', {
           route: result.route,
@@ -759,14 +968,22 @@ export async function handleCoachTurn(
           legacyBlocked: true,
           ageMs: Date.now() - pendingClarifier.createdAt,
         });
-        const result = executeProgramEdit({
+        const guarded = executeProgramEditWithVisibleGuard({
+          input,
           programEdit: pendingProgramEditAnswer.programEdit,
-          todayISO: input.todayISO,
+          draft: null,
           referenceResolution: packet.referenceResolution ?? null,
           userMessage: pendingClarifier.originalMessage,
-          onProgress: (stage) => setProgress(input, stage),
+          source: 'pending_program_edit_resume',
         });
-        input.setCoachProgressLabel(null);
+        if (guarded.kind === 'blocked') {
+          return replyAndFinish(
+            input,
+            'program-edit-resumed-visible-guard',
+            guarded.verification.reply,
+          );
+        }
+        const result = guarded.result;
         recordVerifiedProgramEditMutationFocus(pendingProgramEditAnswer.programEdit, result, input.todayISO);
         if (result.kind === 'mutated' && result.applied) {
           usePendingCoachClarifierStore.getState().clearPending();
@@ -870,14 +1087,22 @@ export async function handleCoachTurn(
           }
           return { handled: true };
         }
-        const result = executeProgramEdit({
+        const guarded = executeProgramEditWithVisibleGuard({
+          input,
           programEdit: resumedProgramEdit,
-          todayISO: input.todayISO,
+          draft: null,
           referenceResolution: packet.referenceResolution ?? null,
           userMessage: pendingClarifier.originalMessage,
-          onProgress: (stage) => setProgress(input, stage),
+          source: 'pending_clarifier_resume',
         });
-        input.setCoachProgressLabel(null);
+        if (guarded.kind === 'blocked') {
+          return replyAndFinish(
+            input,
+            'resumed-visible-guard',
+            guarded.verification.reply,
+          );
+        }
+        const result = guarded.result;
         recordVerifiedProgramEditMutationFocus(resumedProgramEdit, result, input.todayISO);
         logger.debug('[coach-flow] router_executed', {
           route: result.route,
@@ -1238,37 +1463,18 @@ export async function handleCoachTurn(
     }
 
     if (isMutateCommand(commandForExecution)) {
-      const draftVisibleBefore = captureDraftVisibleVerifierSnapshot(
-        packet.programEditDraft,
-        programEditForExecution,
-        input.todayISO,
-      );
-      const result = executeProgramEdit({
+      const guarded = executeProgramEditWithVisibleGuard({
+        input,
         programEdit: programEditForExecution,
-        todayISO: input.todayISO,
+        draft: packet.programEditDraft,
         referenceResolution: packet.referenceResolution ?? null,
         userMessage: input.userMessage.content,
-        onProgress: (stage) => setProgress(input, stage),
+        source: 'router',
       });
-      input.setCoachProgressLabel(null);
-
-      const draftVisibleVerification = verifyDraftVisibleExecution({
-        draft: packet.programEditDraft,
-        edit: programEditForExecution,
-        result,
-        before: draftVisibleBefore,
-        todayISO: input.todayISO,
-      });
-      if (draftVisibleVerification.ok === false) {
-        if (draftVisibleBefore?.rollback) {
-          restoreDraftVisibleRollbackSnapshot(
-            draftVisibleBefore.rollback,
-            draftVisibleVerification.reason,
-          );
-        }
+      if (guarded.kind === 'blocked') {
         input.setLastCoachDebug({
           intent: 'coach_command_router',
-          route: draftVisibleVerification.route,
+          route: guarded.verification.route,
           referenceStatus: packet.referenceResolution?.status ?? null,
           referenceTargetDate:
             programEditForExecution.targetDate ??
@@ -1283,24 +1489,13 @@ export async function handleCoachTurn(
           replySource: 'deterministic',
           applied: false,
         });
-        logger.warn('[coach-program-edit-draft-visible-guard-blocked]', {
-          route: draftVisibleVerification.route,
-          reason: draftVisibleVerification.reason,
-          details: draftVisibleVerification.details ?? null,
-          draftIntent: packet.programEditDraft?.intent ?? null,
-          draftTargetDomain: packet.programEditDraft?.targetDomain ?? null,
-          draftActionScope: packet.programEditDraft?.actionScope ?? null,
-          finalIntent: programEditForExecution.intent,
-          finalTargetDomain: programEditForExecution.targetDomain,
-          resultRoute: result.route,
-          resultReplyWasDone: /^Done\b/i.test(result.reply),
-        });
         return replyAndFinish(
           input,
           'program-edit-draft-visible-guard',
-          draftVisibleVerification.reply,
+          guarded.verification.reply,
         );
       }
+      const result = guarded.result;
       recordVerifiedProgramEditMutationFocus(programEditForExecution, result, input.todayISO);
 
       if (result.kind === 'clarify') {

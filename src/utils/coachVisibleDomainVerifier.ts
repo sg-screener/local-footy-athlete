@@ -17,6 +17,7 @@ export interface CoachVisibleDomainFingerprint {
   session: {
     visible: boolean;
     removedOrRest: boolean;
+    emptyShell: boolean;
     name: string | null;
     workoutType: string | null;
     sessionTier: string | null;
@@ -56,18 +57,21 @@ export function fingerprintVisibleProgramDay(
   const items = extractVisibleProgramItemsFromResolvedDay(day);
   const workout = day.workout ?? null;
   const removedOrRest = isRemovedOrRestWorkout(workout);
+  const emptyShell = isVisibleEmptySessionShell(workout, items);
 
   return {
     date: day.date,
     session: {
       visible: !!workout && !removedOrRest,
       removedOrRest,
+      emptyShell,
       name: clean(workout?.name),
       workoutType: clean(workout?.workoutType),
       sessionTier: clean((workout as any)?.sessionTier),
       signature: stableString({
         visible: !!workout && !removedOrRest,
         removedOrRest,
+        emptyShell,
         name: normalise(workout?.name),
         workoutType: normalise(workout?.workoutType),
         sessionTier: normalise((workout as any)?.sessionTier),
@@ -233,6 +237,14 @@ function verifyActionDomainChange(args: {
         actionScope: action.actionScope,
         beforeCount,
         afterCount,
+      });
+    }
+    if (after.session.emptyShell) {
+      return failVisibleGuard('empty_session_shell_visible', {
+        targetDate: after.date,
+        afterSession: after.session.name,
+        targetDomain: action.targetDomain,
+        actionScope: action.actionScope,
       });
     }
     return { ok: true, route: 'program_edit_draft_visible_guard_ok' };
@@ -476,6 +488,24 @@ function isRemovedOrRestWorkout(workout: ResolvedDay['workout'] | null): boolean
     anyWorkout.workoutType === 'Removed' ||
     anyWorkout.workoutType === 'Rest'
   );
+}
+
+function isVisibleEmptySessionShell(
+  workout: ResolvedDay['workout'] | null,
+  items: VisibleProgramItem[],
+): boolean {
+  if (!workout || isRemovedOrRestWorkout(workout)) return false;
+  const anyWorkout = workout as any;
+  const type = String(anyWorkout.workoutType ?? '').trim();
+  if (type === 'Game' || type === 'Team Training' || anyWorkout.isTeamDay === true) {
+    return false;
+  }
+  if ((type === 'Recovery' || anyWorkout.sessionTier === 'recovery') && !/^rest$/i.test(workout.name ?? '')) {
+    return false;
+  }
+  if ((workout.exercises ?? []).length > 0) return false;
+  if ((workout.conditioningBlock?.options ?? []).length > 0) return false;
+  return items.length === 0 || items.every((item) => item.source === 'session');
 }
 
 function clean(value: unknown): string | null {

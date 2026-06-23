@@ -445,6 +445,103 @@ section('[4b] add_conditioning_block duration update replaces source activity');
 }
 
 // ─────────────────────────────────────────────────────────────────────────
+// 4c. remove_conditioning_block — conditioning-only shell collapses to Rest
+// ─────────────────────────────────────────────────────────────────────────
+
+section('[4c] remove_conditioning_block collapses conditioning-only session to Rest');
+{
+  const flushEx = ex('Easy Aerobic Flush', 1);
+  const wedConditioning = conditioningWorkout(
+    'Easy Aerobic Flush',
+    [flushEx],
+    [{
+      title: 'Easy Aerobic Flush',
+      description: '25 min easy aerobic work.',
+      exerciseIds: [flushEx.id],
+    }],
+  );
+  const week = buildBaseWeek({ 3: wedConditioning });
+  const spy = makeSpy();
+  const events: AdjustmentEvent[] = [
+    event('remove_conditioning_block', '2026-04-29', 'remove conditioning', {
+      targetItemId: flushEx.id,
+    }),
+  ];
+
+  const result = applyAdjustmentEvents(events, makeOpts(week, spy));
+
+  eq('one applied', result.applied.length, 1);
+  eq('one override write', spy.calls.length, 1);
+  const written = spy.calls[0].workout;
+  eq('name = Rest', written.name, 'Rest');
+  eq('workoutType = Rest', written.workoutType as any, 'Rest');
+  eq('exercises empty', written.exercises.length, 0);
+  ok('conditioningBlock cleared', written.conditioningBlock === undefined);
+  ok('hasCombinedConditioning is false', written.hasCombinedConditioning === false);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 4d. remove_conditioning_block — strength remains when present
+// ─────────────────────────────────────────────────────────────────────────
+
+section('[4d] remove_conditioning_block preserves strength content');
+{
+  const backSquat = ex('Back Squat', 4);
+  const flushEx = ex('Easy Aerobic Flush', 1);
+  const combined = strengthWorkout('Lower Strength', [backSquat, flushEx]);
+  combined.hasCombinedConditioning = true;
+  combined.conditioningFlavour = 'aerobic';
+  combined.conditioningCategory = 'aerobic_base';
+  combined.conditioningBlock = {
+    intent: 'aerobic',
+    options: [{
+      title: 'Easy Aerobic Flush',
+      description: '25 min easy aerobic work.',
+      exerciseIds: [flushEx.id],
+    }],
+  };
+  const week = buildBaseWeek({ 3: combined });
+  const spy = makeSpy();
+  const events: AdjustmentEvent[] = [
+    event('remove_conditioning_block', '2026-04-29', 'remove conditioning', {
+      targetItemId: flushEx.id,
+    }),
+  ];
+
+  const result = applyAdjustmentEvents(events, makeOpts(week, spy));
+
+  eq('one applied', result.applied.length, 1);
+  const written = spy.calls[0].workout;
+  eq('session name preserved', written.name, 'Lower Strength');
+  eq('workoutType preserved', written.workoutType, 'Strength' as any);
+  eq('only strength exercise remains', written.exercises.length, 1);
+  eq('Back Squat remains', written.exercises[0].exercise?.name, 'Back Squat');
+  ok('conditioningBlock cleared', written.conditioningBlock === undefined);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// 4e. remove_exercise — final strength row also collapses empty shell
+// ─────────────────────────────────────────────────────────────────────────
+
+section('[4e] remove_exercise collapses strength-only session when no content remains');
+{
+  const thuStrength = strengthWorkout('Lower Strength', [ex('Back Squat', 4)]);
+  const week = buildBaseWeek({ 4: thuStrength });
+  const spy = makeSpy();
+  const events: AdjustmentEvent[] = [
+    event('remove_exercise', '2026-04-30', 'remove final strength', 'Back Squat'),
+  ];
+
+  const result = applyAdjustmentEvents(events, makeOpts(week, spy));
+
+  eq('one applied', result.applied.length, 1);
+  const written = spy.calls[0].workout;
+  eq('name = Rest', written.name, 'Rest');
+  eq('workoutType = Rest', written.workoutType as any, 'Rest');
+  eq('exercises empty', written.exercises.length, 0);
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // 5. mark_session_optional — flips tier without touching exercises
 // ─────────────────────────────────────────────────────────────────────────
 

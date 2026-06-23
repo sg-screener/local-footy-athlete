@@ -88,6 +88,17 @@ function strengthConditioningWorkout(args: {
   };
 }
 
+function emptyWorkoutShell(name: string, type = 'Conditioning'): any {
+  return {
+    id: `empty-shell-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    name,
+    workoutType: type,
+    exercises: [],
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
 function day(date: string, name: string | null, isToday = false): ResolvedDay {
   return {
     date,
@@ -327,7 +338,7 @@ section('[9] controller sees draft before command-router compatibility');
   const frontDoorIdx = source.indexOf('decideProgramEditDraftFrontDoor', draftIdx);
   const guardIdx = source.indexOf('const draftExecutionGuard = validateProgramEditAgainstDraft', draftIdx);
   const routerIdx = source.indexOf('const routedProgramEdit = interpretCoachMessageToProgramEdit', draftIdx);
-  const executeIdx = source.indexOf('const result = executeProgramEdit({', routerIdx);
+  const executeIdx = source.indexOf('executeProgramEditWithVisibleGuard({', routerIdx);
   const legacyIdx = source.indexOf('[coach-flow] legacy_fallback', routerIdx);
   ok('controller logs draft seam', draftIdx >= 0);
   ok('controller checks draft front door', frontDoorIdx > draftIdx, { draftIdx, frontDoorIdx });
@@ -339,7 +350,7 @@ section('[9] controller sees draft before command-router compatibility');
     frontDoorIdx,
     routerIdx,
   });
-  ok('draft execution guard runs before executeProgramEdit', guardIdx > routerIdx && guardIdx < executeIdx, {
+  ok('draft execution guard runs before guarded executeProgramEdit', guardIdx > routerIdx && guardIdx < executeIdx, {
     guardIdx,
     executeIdx,
   });
@@ -571,7 +582,7 @@ section('[18] Stage 3C-2 strength edits must preserve visible conditioning');
     after: afterConditioningRemoved,
   });
   eq('strength edit that removes conditioning fails', verification.ok, false);
-  eq('protected conditioning reason', (verification as any).reason, 'protected_domain_changed');
+  eq('empty shell reason wins before protected-domain success', (verification as any).reason, 'empty_session_shell_visible');
 }
 
 section('[19] Stage 3C-2 whole-session removal verifies the visible session is gone');
@@ -720,14 +731,71 @@ section('[21] Stage 3C-2 move verifies source and destination visible state');
   eq('move fails when source still shows moved session', failed.ok, false);
 }
 
-section('[22] Stage 3C-2 controller visible gate runs before success reply handling');
+section('[22] Stage 3C-2 visible verifier blocks empty parent shells');
+{
+  const conditioningDraft = draft('remove conditioning today');
+  const conditioningFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'conditioning',
+    editScope: 'remove_conditioning_item',
+    requestedChange: 'type',
+  });
+  const before = visibleMap([
+    visibleDay(TODAY, strengthConditioningWorkout({
+      strengthName: null,
+      conditioningName: 'Easy Aerobic Flush',
+      type: 'Conditioning',
+    })),
+  ]);
+  const afterEmptyShell = visibleMap([
+    visibleDay(TODAY, emptyWorkoutShell('Easy Aerobic Flush', 'Conditioning')),
+  ]);
+  const failed = verifyProgramEditDraftVisibleState({
+    draft: conditioningDraft,
+    finalEdit: conditioningFinal,
+    result: mutatedDone('remove_conditioning:applied'),
+    before,
+    after: afterEmptyShell,
+  });
+  eq('empty parent shell after conditioning removal fails', failed.ok, false);
+  eq('empty shell reason', (failed as any).reason, 'empty_session_shell_visible');
+  ok('empty shell failure is not Done', !/^Done\b/i.test((failed as any).reply ?? ''), failed);
+
+  const afterRest = visibleMap([
+    visibleDay(TODAY, null),
+  ]);
+  eq('conditioning-only removal passes when projected day is Rest',
+    verifyProgramEditDraftVisibleState({
+      draft: conditioningDraft,
+      finalEdit: conditioningFinal,
+      result: mutatedDone('remove_conditioning:applied'),
+      before,
+      after: afterRest,
+    }).ok,
+    true);
+}
+
+section('[23] Stage 3C-2 controller visible gate runs before success reply handling');
 {
   const source = readFileSync('src/utils/coachTurnController.ts', 'utf8');
-  const executeIdx = source.indexOf('const result = executeProgramEdit({');
-  const visibleGuardIdx = source.indexOf('const draftVisibleVerification = verifyDraftVisibleExecution', executeIdx);
+  const wrapperIdx = source.indexOf('function executeProgramEditWithVisibleGuard');
+  const executeIdx = source.indexOf('const result = executeProgramEdit({', wrapperIdx);
+  const visibleGuardIdx = source.indexOf('const verification = verifyDraftVisibleExecution', executeIdx);
   const recordIdx = source.indexOf('recordVerifiedProgramEditMutationFocus', visibleGuardIdx);
   const replyIdx = source.indexOf("return replyAndFinish(input, 'router', result.reply)", visibleGuardIdx);
-  ok('visible verifier runs after executeProgramEdit', visibleGuardIdx > executeIdx, {
+  const rawExecuteCalls = (source.match(/executeProgramEdit\(\{/g) ?? []).length;
+  const guardedCalls = (source.match(/executeProgramEditWithVisibleGuard\(\{/g) ?? []).length;
+  const programTabResolverIdx = source.indexOf('function resolveLiveProgramTabVisibleDayForDate');
+  const programTabProjectionIdx = source.indexOf('buildProgramTabProjectedWeek({', programTabResolverIdx);
+  const snapshotUsesProgramTabIdx = source.indexOf('resolveLiveProgramTabVisibleDayForDate(date, todayISO)');
+  const afterUsesProgramTabIdx = source.indexOf('resolveLiveProgramTabVisibleDayForDate(date, args.todayISO)');
+  ok('raw executeProgramEdit only exists inside the guarded wrapper', rawExecuteCalls === 1, {
+    rawExecuteCalls,
+  });
+  ok('controller mutation paths use guarded wrapper', guardedCalls >= 4, {
+    guardedCalls,
+  });
+  ok('visible verifier runs after raw executeProgramEdit inside wrapper', visibleGuardIdx > executeIdx, {
     executeIdx,
     visibleGuardIdx,
   });
@@ -738,6 +806,16 @@ section('[22] Stage 3C-2 controller visible gate runs before success reply handl
   ok('visible verifier runs before router success reply', visibleGuardIdx >= 0 && visibleGuardIdx < replyIdx, {
     visibleGuardIdx,
     replyIdx,
+  });
+  ok('visible verifier resolves Program tab projected week', programTabProjectionIdx > programTabResolverIdx, {
+    programTabResolverIdx,
+    programTabProjectionIdx,
+  });
+  ok('before snapshot uses Program tab projection', snapshotUsesProgramTabIdx > programTabResolverIdx, {
+    snapshotUsesProgramTabIdx,
+  });
+  ok('after snapshot uses Program tab projection', afterUsesProgramTabIdx > programTabResolverIdx, {
+    afterUsesProgramTabIdx,
   });
   ok('visible verifier failure blocks Done replies', /resultReplyWasDone:\s*\/\^Done/.test(source));
 }
