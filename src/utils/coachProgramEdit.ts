@@ -16,6 +16,12 @@ import {
 } from './coachCommandRouter';
 import type { CoachReferenceResolution } from './coachReferenceResolver';
 import type { CoachTargetFrame } from './coachTargetFrame';
+import type {
+  ProgramEditDraft as SemanticProgramEditDraft,
+  ProgramEditDraftActionScope as SemanticProgramEditDraftActionScope,
+  ProgramEditDraftIntent as SemanticProgramEditDraftIntent,
+  ProgramEditDraftTargetDomain as SemanticProgramEditDraftTargetDomain,
+} from './coachProgramEditDraft';
 import { resumeFromPending } from './coachClarifierResume';
 import {
   classifyPendingClarificationAnswer,
@@ -145,7 +151,7 @@ interface ProgramEditBase {
   candidateItems?: ProgramEditCandidateItem[];
   targetItemTitle?: string | null;
   normalizedMessage?: string;
-  source?: 'pending_clarifier' | 'router' | 'llm_adapter' | 'provided_command';
+  source?: 'pending_clarifier' | 'router' | 'llm_adapter' | 'provided_command' | 'semantic_draft';
   semanticRoles?: ProgramEditSemanticRoles;
   protectedTargets?: ProgramEditCandidateItem[];
   negativeTargets?: ProgramEditCandidateItem[];
@@ -3260,6 +3266,260 @@ function finaliseProgramEditDraft(draft: ProgramEditDraft): ProgramEdit {
     intent: draft.intent as Exclude<ProgramEditIntent, 'ask_question' | 'explain'>,
     editScope: undefined as never,
   };
+}
+
+export function programEditFromSemanticProgramEditDraft(input: {
+  draft: SemanticProgramEditDraft;
+  userMessage: string;
+  todayISO: string;
+}): ProgramEdit {
+  const { draft } = input;
+  const targetDomain = programEditDomainFromSemanticDraft(draft.targetDomain);
+  const intent = programEditIntentFromSemanticDraft(draft.intent);
+  const requestedChange = requestedChangeFromSemanticDraft(draft);
+  const editScope = editScopeFromSemanticDraft(draft);
+  const command = commandFromSemanticDraft(draft, editScope);
+  const missingFields = semanticProgramEditMissingFields(draft, command, editScope);
+  const question = missingFields.length > 0
+    ? semanticDraftClarificationQuestion(draft, missingFields)
+    : undefined;
+
+  return finaliseProgramEditDraft({
+    targetDate: draft.targetDate,
+    targetSessionId: draft.targetSessionId,
+    targetItemId: draft.targetItemId,
+    targetDomain,
+    intent: missingFields.length > 0 ? 'ask_question' : intent,
+    requestedChange,
+    newValue: semanticDraftNewValue(draft),
+    missingFields,
+    confidence: draft.confidence,
+    naturalLanguageReason: `semantic_program_edit_draft:${draft.reason}`,
+    command,
+    question,
+    options: semanticDraftClarificationOptions(draft, missingFields),
+    targetItemTitle: draft.sourceTarget?.itemTitle ?? null,
+    editScope,
+    source: 'semantic_draft',
+  });
+}
+
+function programEditDomainFromSemanticDraft(
+  domain: SemanticProgramEditDraftTargetDomain,
+): ProgramEditTargetDomain {
+  return domain === 'setup' ? 'schedule' : domain;
+}
+
+function programEditIntentFromSemanticDraft(
+  intent: SemanticProgramEditDraftIntent,
+): ProgramEditIntent {
+  if (intent === 'reduce') return 'edit';
+  return intent;
+}
+
+function requestedChangeFromSemanticDraft(
+  draft: SemanticProgramEditDraft,
+): ProgramEditRequestedChange {
+  switch (draft.actionScope) {
+    case 'duration':
+      return 'duration';
+    case 'intensity':
+      return 'intensity';
+    case 'modality':
+      return 'modality';
+    case 'exercise':
+      return 'exercise';
+    case 'strength_block':
+      return draft.intent === 'reduce' ? 'volume' : 'unknown';
+    case 'conditioning_block':
+      return draft.intent === 'add' || draft.intent === 'replace' || draft.intent === 'remove'
+        ? 'type'
+        : 'unknown';
+    case 'whole_session':
+    case 'setup':
+      return 'day';
+    default:
+      return assertNever(draft.actionScope);
+  }
+}
+
+function editScopeFromSemanticDraft(
+  draft: SemanticProgramEditDraft,
+): ProgramEditEditScope | undefined {
+  if (draft.targetDomain === 'setup' || draft.actionScope === 'setup') {
+    return 'update_program_setup';
+  }
+  if (draft.actionScope === 'whole_session') {
+    if (draft.intent === 'add') return 'add_whole_session';
+    if (draft.intent === 'remove' || draft.intent === 'replace') return 'remove_whole_session';
+    return undefined;
+  }
+  if (draft.targetDomain !== 'conditioning') return undefined;
+  return conditioningEditScopeFromSemanticDraft(draft.intent, draft.actionScope);
+}
+
+function conditioningEditScopeFromSemanticDraft(
+  intent: SemanticProgramEditDraftIntent,
+  scope: SemanticProgramEditDraftActionScope,
+): ProgramEditEditScope | undefined {
+  if (intent === 'add') return 'add_conditioning_item';
+  if (intent === 'remove') return 'remove_conditioning_item';
+  if (scope === 'duration') return 'duration_only';
+  if (scope === 'intensity') return 'intensity_only';
+  if (scope === 'modality') return 'modality_only';
+  if (intent === 'replace') return 'replace_conditioning_prescription';
+  if (scope === 'conditioning_block' && intent === 'edit') return 'replace_conditioning_prescription';
+  return undefined;
+}
+
+function commandFromSemanticDraft(
+  draft: SemanticProgramEditDraft,
+  editScope: ProgramEditEditScope | undefined,
+): CoachCommand | null {
+  if (draft.intent === 'ask_question' || draft.intent === 'explain') return null;
+  const target =
+    draft.targetDate
+      ? {
+          kind: 'date' as const,
+          date: draft.targetDate,
+          sessionName: draft.sourceTarget?.sessionName,
+        }
+      : { kind: 'unbound' as const };
+
+  if (draft.targetDomain === 'conditioning') {
+    if (draft.intent === 'remove') {
+      return {
+        mode: 'mutate',
+        operation: 'remove_conditioning',
+        target,
+        payload: {
+          operation: 'remove_conditioning',
+          modality: null,
+          targetItemId: draft.targetItemId ?? undefined,
+        },
+        scope: 'one_off',
+        confidence: draft.confidence,
+        needsClarification: !draft.targetDate || !draft.targetItemId,
+        missingFields: [
+          ...(!draft.targetDate ? ['targetDate'] : []),
+          ...(!draft.targetItemId ? ['targetItemId'] : []),
+        ],
+        reason: `semantic_program_edit_draft:${draft.reason}`,
+      };
+    }
+    if (draft.intent === 'add' || draft.intent === 'edit' || draft.intent === 'replace') {
+      return {
+        mode: 'mutate',
+        operation: 'add_conditioning',
+        target,
+        payload: {
+          operation: 'add_conditioning',
+          modality: null,
+          editMode: draft.intent === 'add' ? undefined : 'update_existing',
+          editScope: semanticConditioningCommandScope(editScope),
+          targetItemId: draft.targetItemId ?? undefined,
+        },
+        scope: 'one_off',
+        confidence: draft.confidence,
+        needsClarification: !draft.targetDate || (draft.intent !== 'add' && !draft.targetItemId),
+        missingFields: [
+          ...(!draft.targetDate ? ['targetDate'] : []),
+          ...(draft.intent !== 'add' && !draft.targetItemId ? ['targetItemId'] : []),
+        ],
+        reason: `semantic_program_edit_draft:${draft.reason}`,
+      };
+    }
+  }
+
+  if (draft.targetDomain === 'session' && draft.actionScope === 'whole_session') {
+    if (draft.intent === 'remove' || draft.intent === 'replace') {
+      return {
+        mode: 'mutate',
+        operation: 'remove_session',
+        target,
+        payload: {
+          operation: 'remove_session',
+          targetSessionId: draft.targetSessionId,
+          reason: draft.explicitUserWording,
+        },
+        scope: 'one_off',
+        confidence: draft.confidence,
+        needsClarification: !draft.targetDate,
+        missingFields: !draft.targetDate ? ['targetDate'] : [],
+        reason: `semantic_program_edit_draft:${draft.reason}`,
+      };
+    }
+  }
+
+  return null;
+}
+
+function semanticProgramEditMissingFields(
+  draft: SemanticProgramEditDraft,
+  command: CoachCommand | null,
+  editScope: ProgramEditEditScope | undefined,
+): string[] {
+  const fields = new Set(draft.missingFields);
+  if (draft.intent === 'ask_question' || draft.intent === 'explain') return [...fields];
+  if (!draft.targetDate && draft.actionScope !== 'setup') fields.add('targetDate');
+  if (draft.targetDomain === 'conditioning' && draft.intent !== 'add' && !draft.targetItemId) {
+    fields.add('targetItemId');
+  }
+  if (!command && !isUnsupportedSemanticDraftHandledAtFrontDoor(draft)) {
+    fields.add(editScope === 'update_program_setup' ? 'setupChange' : 'supported_change');
+  }
+  return [...fields];
+}
+
+function isUnsupportedSemanticDraftHandledAtFrontDoor(draft: SemanticProgramEditDraft): boolean {
+  return draft.isCompound ||
+    (draft.targetDomain === 'strength' &&
+      draft.actionScope === 'strength_block' &&
+      (draft.intent === 'remove' || draft.intent === 'reduce'));
+}
+
+function semanticDraftNewValue(draft: SemanticProgramEditDraft): Record<string, unknown> {
+  return {
+    source: 'semantic_program_edit_draft',
+    explicitUserWording: draft.explicitUserWording,
+    proposedActions: draft.proposedActions,
+    constraints: draft.constraints,
+  };
+}
+
+function semanticDraftClarificationQuestion(
+  draft: SemanticProgramEditDraft,
+  fields: string[],
+): string {
+  if (fields.includes('targetDate')) return 'Which day should I apply that edit to?';
+  if (fields.includes('targetItemId')) return 'Which visible item should I change?';
+  if (fields.includes('setupChange')) {
+    return 'I understand that as a setup change, but I need the exact availability change before rebuilding.';
+  }
+  return 'I understand the edit, but I need one more detail before changing the program.';
+}
+
+function semanticDraftClarificationOptions(
+  draft: SemanticProgramEditDraft,
+  fields: string[],
+): string[] | undefined {
+  if (fields.includes('targetDate')) return ['Today', 'Tomorrow', 'Choose another day'];
+  if (fields.includes('targetItemId')) {
+    const title = draft.sourceTarget?.itemTitle;
+    return title ? [title, 'Choose another item'] : undefined;
+  }
+  if (fields.includes('setupChange')) return ['Training days', 'Availability limit', 'Cancel'];
+  return undefined;
+}
+
+function semanticConditioningCommandScope(
+  editScope: ProgramEditEditScope | undefined,
+): Extract<AddConditioningMutatePayload, { operation: 'add_conditioning' }>['editScope'] | undefined {
+  if (editScope === 'duration_only') return 'edit_duration_only';
+  if (editScope === 'modality_only') return 'edit_modality_only';
+  if (editScope === 'intensity_only') return 'edit_intensity_only';
+  if (editScope === 'replace_conditioning_prescription') return 'replace_conditioning_prescription';
+  return undefined;
 }
 
 function finaliseAddSessionProgramEdit(draft: ProgramEditDraft): ProgramEdit {

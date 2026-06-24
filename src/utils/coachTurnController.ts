@@ -14,6 +14,7 @@ import {
   isNegativeClarifierMessage,
   classifyPendingClarificationAnswer,
   type PendingClarificationAnswerClassification,
+  type PendingClarificationExpectedAnswerType,
   type PendingCoachClarifier,
 } from '../store/pendingCoachClarifierStore';
 import { useCoachContextStateStore } from '../store/coachContextStateStore';
@@ -57,6 +58,7 @@ import {
   executeProgramEdit,
   executeProgramSetupEdit,
   isProgramSetupEdit,
+  programEditFromSemanticProgramEditDraft,
   resolvePendingProgramEditAnswer,
   type ProgramEdit,
 } from './coachProgramEdit';
@@ -71,6 +73,11 @@ import {
   type CoachVisibleDomainSnapshotMap,
   type CoachVisibleDomainVerificationResult,
 } from './coachVisibleDomainVerifier';
+import {
+  buildSemanticProgramEditDraft,
+  type SemanticProgramEditDraftAdapter,
+  type SemanticProgramEditDraftResult,
+} from './semanticProgramEditDraft';
 import {
   captureFromExecutorClarify,
   resumeFromPending,
@@ -144,6 +151,9 @@ export interface CoachTurnControllerInput {
   startSetupRebuildProgress: () => void;
   clearSetupRebuildProgress: () => void;
   setLastCoachDebug: (debug: CoachTurnDebug | null) => void;
+  enableSemanticProgramEditDraft?: boolean;
+  semanticProgramEditDraftAdapter?: SemanticProgramEditDraftAdapter | null;
+  semanticProgramEditDraftMinConfidence?: number;
 }
 
 type AppliedReadinessAction = Extract<CoachReadinessAction, { kind: 'apply_signal' }>;
@@ -812,6 +822,121 @@ function shouldHoldDurationClarifier(
   return !startsFreshEdit;
 }
 
+async function buildSemanticProgramEditDraftForController(args: {
+  input: CoachTurnControllerInput;
+  packet: ReturnType<typeof buildCoachContextPacket>;
+}): Promise<SemanticProgramEditDraftResult | null> {
+  if (!args.input.enableSemanticProgramEditDraft) return null;
+  const adapter = args.input.semanticProgramEditDraftAdapter;
+  if (!adapter) return null;
+  return buildSemanticProgramEditDraft({
+    userMessage: args.input.userMessage.content,
+    targetFrame: args.packet.targetFrame ?? null,
+    visibleWeek: args.packet.currentWeek ?? [],
+    pendingClarifier: getPendingClarifierSnapshot(),
+    currentProgramContext: {
+      currentWeek: args.packet.currentWeek ?? [],
+      nextWeek: args.packet.nextWeek ?? [],
+    },
+    adapter,
+    minConfidence: args.input.semanticProgramEditDraftMinConfidence,
+  });
+}
+
+function pendingClarifierFromSemanticClarify(args: {
+  result: Extract<SemanticProgramEditDraftResult, { kind: 'clarify' }>;
+  originalMessage: string;
+}): Omit<PendingCoachClarifier, 'createdAt'> {
+  const draft = args.result.response?.draft ?? null;
+  const operation = semanticPendingOperation(draft);
+  const missingFields = draft?.missingFields.length
+    ? draft.missingFields
+    : ['semantic_program_edit'];
+  return {
+    operation,
+    partialPayload: semanticPendingPayload(operation),
+    scope: 'one_off',
+    missingFields,
+    originalMessage: args.originalMessage,
+    askedQuestion: args.result.reply,
+    targetDate: draft?.targetDate ?? undefined,
+    targetSessionName: draft?.sourceTarget?.sessionName ?? undefined,
+    pendingClarification: {
+      originalIntent: draft
+        ? `${draft.intent}:${draft.targetDomain}:${draft.actionScope}`
+        : 'semantic_program_edit',
+      missingField: missingFields[0] ?? 'semantic_program_edit',
+      expectedAnswerType: semanticExpectedAnswerType(missingFields[0]),
+      candidateOptions: args.result.options,
+      partialDraft: draft ?? undefined,
+      reason: args.result.reason,
+    },
+  };
+}
+
+function semanticPendingOperation(
+  draft: ProgramEditDraft | null,
+): PendingCoachClarifier['operation'] {
+  if (!draft) return 'add_conditioning';
+  if (draft.targetDomain === 'conditioning') {
+    return draft.intent === 'remove' ? 'remove_conditioning' : 'add_conditioning';
+  }
+  if (draft.targetDomain === 'session') {
+    if (draft.intent === 'move') return 'move_session';
+    if (draft.intent === 'add') return 'add_session';
+    return 'remove_session';
+  }
+  if (draft.targetDomain === 'schedule' || draft.targetDomain === 'setup') {
+    return 'update_program_setup';
+  }
+  if (draft.actionScope === 'exercise') return 'replace_exercise';
+  return 'add_conditioning';
+}
+
+function semanticPendingPayload(
+  operation: PendingCoachClarifier['operation'],
+): PendingCoachClarifier['partialPayload'] {
+  switch (operation) {
+    case 'remove_conditioning':
+      return { operation, modality: null };
+    case 'remove_session':
+      return { operation };
+    case 'add_session':
+      return { operation, setupChange: false };
+    case 'move_session':
+      return { operation };
+    case 'update_program_setup':
+      return { operation, rebuildRequired: true };
+    case 'replace_exercise':
+      return { operation, fromExercise: '', toExercise: null };
+    case 'set_conditioning_modality_preference':
+      return { operation, from: null, to: 'bike', bikeLabel: null };
+    case 'swap_conditioning_modality_once':
+      return { operation, from: null, to: 'bike', bikeLabel: null };
+    case 'set_bike_subtype_preference':
+      return { operation, bikeLabel: 'standard' };
+    case 'undo_last_change':
+      return { operation };
+    case 'add_conditioning':
+    default:
+      return { operation: 'add_conditioning', modality: null };
+  }
+}
+
+function semanticExpectedAnswerType(
+  missingField: string | undefined,
+): PendingClarificationExpectedAnswerType {
+  if (!missingField) return 'unknown';
+  if (/date|day/i.test(missingField)) return 'date';
+  if (/session/i.test(missingField)) return 'session';
+  if (/item|exercise/i.test(missingField)) return 'item';
+  if (/scope|week|recurring/i.test(missingField)) return 'scope';
+  if (/type|domain|modality/i.test(missingField)) return 'type';
+  if (/duration|minutes|time/i.test(missingField)) return 'duration';
+  if (/confirm|confirmation/i.test(missingField)) return 'confirmation';
+  return 'unknown';
+}
+
 async function classifyPendingAnswerForController(args: {
   input: CoachTurnControllerInput;
   pending: PendingCoachClarifier;
@@ -1454,6 +1579,74 @@ export async function handleCoachTurn(
       });
     }
 
+    let semanticProgramEditForExecution: ProgramEdit | null = null;
+    const semanticDraftResult = await buildSemanticProgramEditDraftForController({
+      input,
+      packet,
+    });
+    if (semanticDraftResult) {
+      logger.debug('[coach-semantic-program-edit-draft]', {
+        kind: semanticDraftResult.kind,
+        confidence: 'confidence' in semanticDraftResult ? semanticDraftResult.confidence : null,
+        reason: 'reason' in semanticDraftResult ? semanticDraftResult.reason : null,
+      });
+      if (semanticDraftResult.kind === 'draft') {
+        packet = {
+          ...packet,
+          programEditDraft: semanticDraftResult.draft,
+        };
+        semanticProgramEditForExecution = programEditFromSemanticProgramEditDraft({
+          draft: semanticDraftResult.draft,
+          userMessage: input.userMessage.content,
+          todayISO: input.todayISO,
+        });
+      } else if (semanticDraftResult.kind === 'clarify') {
+        const captured = pendingClarifierFromSemanticClarify({
+          result: semanticDraftResult,
+          originalMessage: input.userMessage.content,
+        });
+        usePendingCoachClarifierStore.getState().setPending(captured);
+        logger.warn('[pending-clarifier-set]', {
+          operation: captured.operation,
+          scope: captured.scope,
+          missingFields: captured.missingFields,
+          partialPayload: captured.partialPayload,
+          askedQuestion: captured.askedQuestion,
+          source: 'semantic_program_edit_draft',
+        });
+        input.setLastCoachDebug({
+          intent: 'semantic_program_edit_draft',
+          route: `semantic_program_edit_draft_clarify:${semanticDraftResult.reason}`,
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+          referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: false,
+        });
+        return replyAndFinish(input, 'semantic-program-edit-clarify', semanticDraftResult.reply);
+      } else if (semanticDraftResult.kind === 'unsupported') {
+        input.setLastCoachDebug({
+          intent: 'semantic_program_edit_draft',
+          route: `semantic_program_edit_draft_unsupported:${semanticDraftResult.reason}`,
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+          referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: false,
+        });
+        return replyAndFinish(input, 'semantic-program-edit-unsupported', semanticDraftResult.reply);
+      } else if (semanticDraftResult.kind === 'invalid') {
+        logger.warn('[coach-semantic-program-edit-draft] invalid_fallback', {
+          reason: semanticDraftResult.reason,
+          issues: semanticDraftResult.issues,
+        });
+      }
+    }
+
     logger.debug('[coach-program-edit-draft]', {
       intent: packet.programEditDraft?.intent ?? null,
       targetDomain: packet.programEditDraft?.targetDomain ?? null,
@@ -1480,6 +1673,36 @@ export async function handleCoachTurn(
       });
       return replyAndFinish(input, 'program-edit-draft-front-door', draftFrontDoor.reply);
     }
+    if (draftFrontDoor.kind === 'allow_conversation' && semanticProgramEditForExecution) {
+      semanticProgramEditForExecution = null;
+    }
+
+    if (semanticProgramEditForExecution?.intent === 'ask_question') {
+      const reply =
+        semanticProgramEditForExecution.question ??
+        'I understand the edit, but I need one more detail before changing the program.';
+      const captured = pendingClarifierFromSemanticClarify({
+        result: {
+          kind: 'clarify',
+          reply,
+          options: semanticProgramEditForExecution.options,
+          confidence: semanticProgramEditForExecution.confidence,
+          reason: semanticProgramEditForExecution.naturalLanguageReason,
+          response: {
+            schemaVersion: 'program_edit_draft.v1',
+            status: 'clarify',
+            confidence: semanticProgramEditForExecution.confidence,
+            draft: packet.programEditDraft ?? null,
+            clarificationQuestion: reply,
+            candidateOptions: semanticProgramEditForExecution.options,
+            reason: semanticProgramEditForExecution.naturalLanguageReason,
+          },
+        },
+        originalMessage: input.userMessage.content,
+      });
+      usePendingCoachClarifierStore.getState().setPending(captured);
+      return replyAndFinish(input, 'semantic-program-edit-finaliser-clarify', reply);
+    }
 
     logger.debug('[coach-live-send] router_reached', { reached: true });
     const lastUndoableMutation = useCoachMutationHistoryStore
@@ -1498,7 +1721,7 @@ export async function handleCoachTurn(
           touchedActivities: lastUndoableMutation.touchedActivities,
         }
       : null;
-    const routedProgramEdit = interpretCoachMessageToProgramEdit({
+    const routedProgramEdit = semanticProgramEditForExecution ?? interpretCoachMessageToProgramEdit({
       userMessage: input.userMessage.content,
       todayISO: input.todayISO,
       referenceResolution: packet.referenceResolution ?? null,
@@ -1509,6 +1732,13 @@ export async function handleCoachTurn(
       lastChange,
       recentMessages,
     });
+    if (!routedProgramEdit.command) {
+      return replyAndFinish(
+        input,
+        'semantic-program-edit-no-command',
+        'I understand the edit, but I need one more detail before changing the program.',
+      );
+    }
     const routedCommand: CoachCommand = routedProgramEdit.command as CoachCommand;
     logger.debug('[coach-live-send] router_emitted', {
       mode: routedCommand.mode,

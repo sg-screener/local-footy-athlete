@@ -337,8 +337,11 @@ section('[9] controller sees draft before command-router compatibility');
   const draftIdx = source.indexOf('[coach-program-edit-draft]');
   const frontDoorIdx = source.indexOf('decideProgramEditDraftFrontDoor', draftIdx);
   const guardIdx = source.indexOf('const draftExecutionGuard = validateProgramEditAgainstDraft', draftIdx);
-  const routerIdx = source.indexOf('const routedProgramEdit = interpretCoachMessageToProgramEdit', draftIdx);
-  const executeIdx = source.indexOf('executeProgramEditWithVisibleGuard({', routerIdx);
+  const routerIdx = source.indexOf(
+    'const routedProgramEdit = semanticProgramEditForExecution ?? interpretCoachMessageToProgramEdit',
+    draftIdx,
+  );
+  const executeIdx = source.indexOf('executeProgramEditWithVisibleGuard({', guardIdx);
   const legacyIdx = source.indexOf('[coach-flow] legacy_fallback', routerIdx);
   ok('controller logs draft seam', draftIdx >= 0);
   ok('controller checks draft front door', frontDoorIdx > draftIdx, { draftIdx, frontDoorIdx });

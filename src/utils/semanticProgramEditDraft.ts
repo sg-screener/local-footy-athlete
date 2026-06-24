@@ -168,7 +168,7 @@ export function parseSemanticProgramEditDraftResponse(input: {
   minConfidence?: number;
 }): SemanticProgramEditDraftResult {
   const parsed = parseRawSemanticResponse(input.raw);
-  if (!parsed.ok) {
+  if (parsed.ok === false) {
     return {
       kind: 'invalid',
       reason: 'malformed_json',
@@ -179,7 +179,7 @@ export function parseSemanticProgramEditDraftResponse(input: {
 
   const context = semanticValidationContext(input.visibleWeek, input.targetFrame);
   const validated = validateSemanticResponse(parsed.value, context);
-  if (!validated.ok) {
+  if (validated.ok === false) {
     return {
       kind: 'invalid',
       reason: 'schema_validation_failed',
