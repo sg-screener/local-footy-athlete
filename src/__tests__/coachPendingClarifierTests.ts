@@ -35,6 +35,17 @@ import {
   type CoachCommand,
 } from '../utils/coachCommandRouter';
 import {
+  resolvePendingProgramEditAnswer,
+  type ProgramEdit,
+} from '../utils/coachProgramEdit';
+import {
+  capturePendingDateClarificationFromProgramEditRejection,
+  handleCoachTurn,
+  type CoachTurnDebug,
+  type CoachTurnMessage,
+} from '../utils/coachTurnController';
+import type { ExecutionResult } from '../utils/coachCommandExecutor';
+import {
   captureFromExecutorClarify,
   resumeFromPending,
   resolvePendingScheduleTransactionAnswer,
@@ -43,11 +54,17 @@ import {
   usePendingCoachClarifierStore,
   getPendingClarifierSnapshot,
   isCancelClarifierMessage,
+  classifyPendingClarificationAnswer,
   PENDING_CLARIFIER_TTL_MS,
 } from '../store/pendingCoachClarifierStore';
 import { filterLegacyCoachActions } from '../utils/legacyCoachActionFilter';
+import { buildSmokeCoachBikeFlowProgram, buildSmokeWednesdayWorkout } from '../data/smokeCoachBikeFlowProgram';
+import { useProgramStore } from '../store/programStore';
 import type { ResolvedDay } from '../utils/sessionResolver';
-import type { CoachContextEntry } from '../store/coachContextStateStore';
+import {
+  useCoachContextStateStore,
+  type CoachContextEntry,
+} from '../store/coachContextStateStore';
 
 // ─── Tiny harness ──────────────────────────────────────────────────
 
@@ -419,6 +436,7 @@ section('[4] "never mind" / "forget it" cancel verbs');
   ok('4.2 "nvm" detected', isCancelClarifierMessage('nvm'));
   ok('4.3 "forget it" detected', isCancelClarifierMessage('forget it'));
   ok('4.4 "cancel that" detected', isCancelClarifierMessage('cancel that'));
+  ok('4.4b "leave it" detected', isCancelClarifierMessage('leave it'));
   ok('4.5 "the Wednesday one" NOT cancel', !isCancelClarifierMessage('The Wednesday one'));
   ok('4.6 "no" alone NOT cancel (yes/no answers protected)',
     !isCancelClarifierMessage('no'));
@@ -1428,14 +1446,500 @@ section('[14] add-to-date pending transaction accumulates target/type');
     JSON.stringify(oneOffAfterRecurring));
 }
 
+section('[15] pending slot resolver fills targetDate before generic routing');
+{
+  const todayISO = '2026-06-24'; // Wednesday
+  const staleMonday = '2026-06-22';
+  const nextMonday = '2026-06-29';
+  const futureFlush = wk('Easy Aerobic Flush', 1, [ex('Rower')]);
+  const removeCommand: CoachCommand = {
+    mode: 'mutate',
+    operation: 'remove_conditioning',
+    target: {
+      kind: 'date',
+      date: staleMonday,
+      sessionName: 'Easy Aerobic Flush',
+    },
+    payload: {
+      operation: 'remove_conditioning',
+      modality: null,
+      targetItemId: 'stale-flush-item',
+    },
+    scope: 'one_off',
+    confidence: 0.82,
+    needsClarification: false,
+    reason: 'remove_conditioning_detected',
+  };
+  const pendingDateEdit: ProgramEdit = {
+    targetDate: staleMonday,
+    targetSessionId: 'stale-session',
+    targetItemId: null,
+    targetDomain: 'conditioning',
+    intent: 'ask_question',
+    editScope: 'remove_conditioning_item',
+    requestedChange: 'unknown',
+    newValue: {
+      operation: 'remove_conditioning',
+      modality: null,
+    },
+    missingFields: ['targetDate', 'targetItemId'],
+    confidence: 0.82,
+    naturalLanguageReason: 'remove_conditioning_past_date_blocked',
+    command: removeCommand,
+    question: "That session is in the past — which date should I use?",
+    options: ['Today', 'Tomorrow', 'Next Monday'],
+    candidateItems: [],
+  };
+  const pending = {
+    operation: 'remove_conditioning' as const,
+    partialPayload: removeCommand.payload,
+    scope: 'one_off' as const,
+    missingFields: ['targetDate', 'targetItemId'],
+    originalMessage: 'remove conditioning from Monday',
+    askedQuestion: "That session is in the past — which date should I use?",
+    createdAt: NOW,
+    targetDate: staleMonday,
+    targetSessionName: 'Easy Aerobic Flush',
+    programEdit: pendingDateEdit,
+    candidateItems: [],
+    pendingClarification: {
+      originalIntent: 'remove:conditioning:remove_conditioning_item',
+      missingField: 'targetDate',
+      expectedAnswerType: 'date' as const,
+      proposedCandidate: {
+        label: 'Next Monday',
+        value: nextMonday,
+        answerType: 'date' as const,
+      },
+      candidateOptions: ['Today', 'Tomorrow', 'Next Monday'],
+      reason: 'apply_rejected:remove_conditioning:past_date_blocked',
+    },
+  };
+
+  const terminalPastResult: ExecutionResult = {
+    kind: 'verified_no_op',
+    reply: "That session (Mon 2026-06-22) is in the past — I can't change it.",
+    applied: false,
+    route: 'apply_rejected:remove_conditioning:past_date_blocked',
+    progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'],
+  };
+  const capturedPastDate = capturePendingDateClarificationFromProgramEditRejection({
+    result: terminalPastResult,
+    programEdit: pendingDateEdit,
+    command: removeCommand,
+    draft: null,
+    originalMessage: 'remove conditioning from Monday',
+    todayISO,
+  });
+  ok('15.0a verified_no_op past-date branch creates pending targetDate slot',
+    !!capturedPastDate &&
+      capturedPastDate.pendingClarification?.missingField === 'targetDate' &&
+      capturedPastDate.pendingClarification.expectedAnswerType === 'date',
+    JSON.stringify(capturedPastDate));
+  ok('15.0b pending slot stores stale date and requested weekday',
+    capturedPastDate?.pendingClarification?.staleDate === staleMonday &&
+      capturedPastDate.pendingClarification.requestedDow === 'Monday',
+    JSON.stringify(capturedPastDate?.pendingClarification));
+  ok('15.0b2 pending slot stores a typed proposed date candidate',
+    capturedPastDate?.pendingClarification?.proposedCandidate?.value === nextMonday,
+    JSON.stringify(capturedPastDate?.pendingClarification));
+  ok('15.0c branch reply asks a live question instead of terminal refusal',
+    !!capturedPastDate &&
+      /do you mean next monday/i.test(capturedPastDate.askedQuestion) &&
+      !/can't change it/i.test(capturedPastDate.askedQuestion),
+    capturedPastDate?.askedQuestion);
+
+  const staleThursday = '2026-06-18';
+  const thursdayEdit = {
+    ...pendingDateEdit,
+    targetDate: staleThursday,
+    targetSessionId: 'stale-thursday-session',
+    naturalLanguageReason: 'remove_conditioning_past_date_blocked_thursday',
+  } as ProgramEdit;
+  const thursdayCommand: CoachCommand = {
+    ...removeCommand,
+    target: {
+      kind: 'date',
+      date: staleThursday,
+      sessionName: 'Easy Aerobic Flush',
+    },
+  };
+  const capturedPastThursday = capturePendingDateClarificationFromProgramEditRejection({
+    result: {
+      ...terminalPastResult,
+      reply: "That session (Thu 2026-06-18) is in the past — I can't change it.",
+    },
+    programEdit: thursdayEdit,
+    command: thursdayCommand,
+    draft: null,
+    originalMessage: 'remove conditioning from Thursday',
+    todayISO,
+  });
+  ok('15.0d same pending-date capture works for any stale weekday',
+    capturedPastThursday?.pendingClarification?.requestedDow === 'Thursday' &&
+      /next thursday/i.test(capturedPastThursday.askedQuestion),
+    JSON.stringify(capturedPastThursday));
+
+  const resolvedNextMonday = resolvePendingProgramEditAnswer({
+    pending,
+    userMessage: 'Yeah the next Monday',
+    todayISO,
+    currentWeek: [{
+      date: nextMonday,
+      sessionName: 'Easy Aerobic Flush',
+      workout: futureFlush,
+    }],
+  });
+  ok('15.1 next-week answer completes pending date slot',
+    resolvedNextMonday.kind === 'complete' &&
+      resolvedNextMonday.programEdit.targetDate === nextMonday,
+    JSON.stringify(resolvedNextMonday));
+  ok('15.2 retargeting drops stale conditioning item id',
+    resolvedNextMonday.kind === 'complete' &&
+      resolvedNextMonday.programEdit.targetItemId !== 'stale-flush-item' &&
+      !!resolvedNextMonday.programEdit.targetItemId,
+    JSON.stringify(resolvedNextMonday));
+  ok('15.3 command target is retargeted before execution',
+    resolvedNextMonday.kind === 'complete' &&
+      resolvedNextMonday.programEdit.command?.mode === 'mutate' &&
+      resolvedNextMonday.programEdit.command.target.kind === 'date' &&
+      resolvedNextMonday.programEdit.command.target.date === nextMonday,
+    JSON.stringify(resolvedNextMonday));
+
+  for (const answer of ['yeah', 'yep', 'correct']) {
+    const acceptedProposedDate = resolvePendingProgramEditAnswer({
+      pending,
+      userMessage: answer,
+      todayISO,
+      currentWeek: [{
+        date: nextMonday,
+        sessionName: 'Easy Aerobic Flush',
+        workout: futureFlush,
+      }],
+    });
+    ok(`15.3a pending date proposal + "${answer}" resolves to proposed candidate`,
+      acceptedProposedDate.kind === 'complete' &&
+        acceptedProposedDate.programEdit.targetDate === nextMonday &&
+        acceptedProposedDate.programEdit.targetDomain === 'conditioning',
+      JSON.stringify(acceptedProposedDate));
+  }
+
+  const rejectedProposedDate = resolvePendingProgramEditAnswer({
+    pending,
+    userMessage: 'no',
+    todayISO,
+    currentWeek: [{
+      date: nextMonday,
+      sessionName: 'Easy Aerobic Flush',
+      workout: futureFlush,
+    }],
+  });
+  ok('15.3b pending date proposal + "no" cancels instead of re-asking',
+    rejectedProposedDate.kind === 'cancelled',
+    JSON.stringify(rejectedProposedDate));
+
+  const ambiguousAffirmativePending = {
+    ...pending,
+    pendingClarification: {
+      ...pending.pendingClarification,
+      proposedCandidate: undefined,
+      candidateOptions: ['Today', 'Tomorrow'],
+    },
+  };
+  const ambiguousAffirmative = resolvePendingProgramEditAnswer({
+    pending: ambiguousAffirmativePending,
+    userMessage: 'yeah',
+    todayISO,
+    currentWeek: [{
+      date: nextMonday,
+      sessionName: 'Easy Aerobic Flush',
+      workout: futureFlush,
+    }],
+  });
+  ok('15.3c multi-candidate pending date + "yeah" asks which option',
+    ambiguousAffirmative.kind === 'clarify' &&
+      ambiguousAffirmative.programEdit.missingFields.includes('targetDate'),
+    JSON.stringify(ambiguousAffirmative));
+
+  const semanticAlternative = classifyPendingClarificationAnswer({
+    message: 'next Tuesday actually',
+    pendingClarification: pending.pendingClarification,
+    askedQuestion: pending.askedQuestion,
+  });
+  ok('15.3d alternative date answer is classified as a value, not accept-proposed',
+    semanticAlternative.kind === 'provide_alternative_value',
+    JSON.stringify(semanticAlternative));
+
+  const rowerCandidate = {
+    id: 'rower-conditioning-item',
+    title: '20min zone 2 rower',
+    domain: 'conditioning' as const,
+    modality: 'rower' as const,
+    durationMinutes: 20,
+    source: 'conditioning_exercise' as const,
+  };
+  const pendingItemClarifier = {
+    ...pending,
+    missingFields: ['targetItemId'],
+    askedQuestion: 'Do you mean the rower?',
+    targetDate: nextMonday,
+    programEdit: {
+      ...pendingDateEdit,
+      targetDate: nextMonday,
+      targetItemId: null,
+      missingFields: ['targetItemId'],
+      question: 'Do you mean the rower?',
+      options: ['20min zone 2 rower'],
+      candidateItems: [rowerCandidate],
+    } as ProgramEdit,
+    candidateItems: [rowerCandidate],
+    pendingClarification: {
+      originalIntent: 'remove:conditioning:remove_conditioning_item',
+      missingField: 'targetItemId',
+      expectedAnswerType: 'item' as const,
+      proposedCandidate: {
+        label: 'the rower',
+        value: 'rower-conditioning-item',
+        answerType: 'item' as const,
+      },
+      candidateOptions: ['20min zone 2 rower'],
+      reason: 'program_edit_clarify:targetItemId',
+    },
+  };
+  const acceptedRower = resolvePendingProgramEditAnswer({
+    pending: pendingItemClarifier,
+    userMessage: 'yes',
+    todayISO,
+  });
+  ok('15.3e pending item proposal + "yes" resolves the proposed rower',
+    acceptedRower.kind === 'complete' &&
+      acceptedRower.programEdit.targetItemId === 'rower-conditioning-item',
+    JSON.stringify(acceptedRower));
+
+  const scopeAffirmative = classifyPendingClarificationAnswer({
+    message: 'yes',
+    askedQuestion: 'Do you want that just this week or every week?',
+    pendingClarification: {
+      originalIntent: 'move:session:day',
+      missingField: 'scope',
+      expectedAnswerType: 'scope',
+      candidateOptions: ['Just this week', 'Every week'],
+    },
+  });
+  ok('15.3f scope question with two options + "yes" remains unclear',
+    scopeAffirmative.kind === 'unclear',
+    JSON.stringify(scopeAffirmative));
+
+  const unresolvedDateAnswer = resolvePendingProgramEditAnswer({
+    pending,
+    userMessage: 'the one I meant',
+    todayISO,
+    currentWeek: [{
+      date: nextMonday,
+      sessionName: 'Easy Aerobic Flush',
+      workout: futureFlush,
+    }],
+  });
+  ok('15.4 vague answer keeps the pending date question closed to legacy',
+    unresolvedDateAnswer.kind === 'clarify' &&
+      unresolvedDateAnswer.programEdit.missingFields.includes('targetDate'),
+    JSON.stringify(unresolvedDateAnswer));
+
+  const noVisibleItemAnswer = resolvePendingProgramEditAnswer({
+    pending,
+    userMessage: 'next Monday',
+    todayISO,
+    currentWeek: [{
+      date: nextMonday,
+      sessionName: 'Rest',
+      workout: null,
+    }],
+  });
+  ok('15.5 resolved date with no visible item asks typed item clarification',
+    noVisibleItemAnswer.kind === 'clarify' &&
+      noVisibleItemAnswer.programEdit.targetDate === nextMonday &&
+      noVisibleItemAnswer.programEdit.missingFields.includes('targetItemId') &&
+      /can't see a visible conditioning item/i.test(noVisibleItemAnswer.reply),
+    JSON.stringify(noVisibleItemAnswer));
+
+  const removeSessionCommand: CoachCommand = {
+    mode: 'mutate',
+    operation: 'remove_session',
+    target: {
+      kind: 'date',
+      date: staleMonday,
+      sessionName: 'Easy Aerobic Flush',
+    },
+    payload: {
+      operation: 'remove_session',
+      reason: 'athlete requested removal',
+    },
+    scope: 'one_off',
+    confidence: 0.8,
+    needsClarification: false,
+    reason: 'remove_session_detected',
+  };
+  const pendingSessionDate = {
+    ...pending,
+    operation: 'remove_session' as const,
+    partialPayload: removeSessionCommand.payload,
+    missingFields: ['targetDate'],
+    programEdit: {
+      targetDate: staleMonday,
+      targetSessionId: 'stale-session',
+      targetItemId: null,
+      targetDomain: 'session',
+      intent: 'remove',
+      editScope: 'remove_whole_session',
+      requestedChange: 'day',
+      newValue: { reason: 'athlete requested removal' },
+      missingFields: ['targetDate'],
+      confidence: 0.8,
+      naturalLanguageReason: 'remove_session_past_date_blocked',
+      command: removeSessionCommand,
+      question: "That session is in the past — which date should I use?",
+      options: ['Today', 'Tomorrow'],
+    } as ProgramEdit,
+    pendingClarification: {
+      originalIntent: 'remove:session:remove_whole_session',
+      missingField: 'targetDate',
+      expectedAnswerType: 'date' as const,
+      candidateOptions: ['Today', 'Tomorrow'],
+      reason: 'apply_rejected:remove_session:past_date_blocked',
+    },
+  };
+  const tomorrowSession = resolvePendingProgramEditAnswer({
+    pending: pendingSessionDate,
+    userMessage: 'tomorrow',
+    todayISO,
+    currentWeek: [{
+      date: '2026-06-25',
+      sessionName: 'Upper Pull',
+      workout: wk('Upper Pull', 4, [ex('Pull-Up')]),
+    }],
+  });
+  ok('15.6 generic pending date slot handles tomorrow for session edits',
+    tomorrowSession.kind === 'complete' &&
+      tomorrowSession.programEdit.targetDomain === 'session' &&
+      tomorrowSession.programEdit.targetDate === '2026-06-25',
+    JSON.stringify(tomorrowSession));
+}
+
+async function runControllerPendingDateSection() {
+  section('[16] CoachTurnController stores pending date slot on stale visible date');
+  const todayISO = '2026-06-24';
+  const program = buildSmokeCoachBikeFlowProgram(new Date(`${todayISO}T12:00:00`)) as any;
+  const microcycle = program.microcycles[0];
+  const mondayFlush = {
+    ...buildSmokeWednesdayWorkout(microcycle.id),
+    id: 'wk-smoke-mon-easy-flush',
+    dayOfWeek: 1,
+    exercises: buildSmokeWednesdayWorkout(microcycle.id).exercises.map((item: any) => ({
+      ...item,
+      id: `mon-${item.id}`,
+      workoutId: 'wk-smoke-mon-easy-flush',
+    })),
+  };
+  microcycle.workouts = microcycle.workouts.map((workout: any) =>
+    workout.dayOfWeek === 1 ? mondayFlush : workout,
+  );
+  useProgramStore.getState().clear();
+  useProgramStore.getState().setCurrentProgram(program);
+  useProgramStore.getState().setCurrentMicrocycle(microcycle);
+  useCoachContextStateStore.getState().clearCoachContext();
+  usePendingCoachClarifierStore.getState().clearPending();
+
+  const messages: CoachTurnMessage[] = [];
+  let debug: CoachTurnDebug | null = null;
+  const inputMessage: CoachTurnMessage = {
+    id: 'turn-stale-monday',
+    role: 'user',
+    content: 'Can you remove conditioning from Monday?',
+  };
+  const handled = await handleCoachTurn({
+    userMessage: inputMessage,
+    messages,
+    todayISO,
+    classifier: {
+      classify: async () => ({
+        intent: 'conversation',
+        confidence: 0,
+        needsClarification: false,
+      } as any),
+    },
+    pendingCoachProposal: null,
+    pendingReadiness: null,
+    pendingInjury: null,
+    smokeCoachBikeFlow: false,
+    isFocused: true,
+    smokeWednesdayMissingReason: null,
+    smokeWednesdayOpenTarget: null,
+    setPendingCoachProposal: () => {},
+    setPendingReadiness: () => {},
+    appendUser: () => messages.push(inputMessage),
+    appendAssistant: (message) => messages.push(message),
+    appendUserAndAssistant: (message) => {
+      messages.push(inputMessage, message);
+    },
+    clearInput: () => {},
+    setIsLoading: () => {},
+    setCoachProgressLabel: () => {},
+    startSetupRebuildProgress: () => {},
+    clearSetupRebuildProgress: () => {},
+    setLastCoachDebug: (nextDebug) => {
+      debug = nextDebug;
+    },
+  });
+  const pendingAfter = getPendingClarifierSnapshot(NOW);
+  const assistantReply = messages.find((message) => message.role === 'assistant')?.content ?? '';
+
+  ok('16.1 CoachTurnController handled the stale-date mutation',
+    handled.handled === true,
+    JSON.stringify(handled));
+  ok('16.2 stale date is caught before executor terminal refusal',
+    debug?.route === 'pending_clarification:target_date:past_date',
+    JSON.stringify(debug));
+  ok('16.3 controller branch populated pending targetDate slot',
+    pendingAfter?.pendingClarification?.missingField === 'targetDate' &&
+      pendingAfter.pendingClarification.expectedAnswerType === 'date',
+    JSON.stringify(pendingAfter));
+  ok('16.4 pending slot preserves original remove-conditioning intent',
+    pendingAfter?.operation === 'remove_conditioning' &&
+      pendingAfter.programEdit?.targetDomain === 'conditioning',
+    JSON.stringify(pendingAfter));
+  ok('16.5 assistant reply is a clarification, not terminal refusal',
+    /do you mean next monday/i.test(assistantReply) &&
+      !/can't change it/i.test(assistantReply),
+    assistantReply);
+  ok('16.6 pending store carries stale date and requested weekday',
+    pendingAfter?.pendingClarification?.staleDate === '2026-06-22' &&
+      pendingAfter.pendingClarification.requestedDow === 'Monday',
+    JSON.stringify(pendingAfter?.pendingClarification));
+  usePendingCoachClarifierStore.getState().clearPending();
+}
+
 // ─── Summary ───────────────────────────────────────────────────────
 
-console.log(`\n— Summary —`);
-console.log(`  Pass: ${pass}`);
-console.log(`  Fail: ${fail}`);
-if (fail > 0) {
-  console.log(`\n— Failures —`);
-  for (const f of failures) console.log(`  • ${f}`);
-  process.exit(1);
-}
-process.exit(0);
+runControllerPendingDateSection()
+  .then(() => {
+    console.log(`\n— Summary —`);
+    console.log(`  Pass: ${pass}`);
+    console.log(`  Fail: ${fail}`);
+    if (fail > 0) {
+      console.log(`\n— Failures —`);
+      for (const f of failures) console.log(`  • ${f}`);
+      process.exit(1);
+    }
+    process.exit(0);
+  })
+  .catch((err) => {
+    fail++;
+    const detail = err instanceof Error ? err.stack ?? err.message : String(err);
+    failures.push(`controller pending-date section threw\n      ${detail}`);
+    console.log(`\n— Summary —`);
+    console.log(`  Pass: ${pass}`);
+    console.log(`  Fail: ${fail}`);
+    console.log(`\n— Failures —`);
+    for (const f of failures) console.log(`  • ${f}`);
+    process.exit(1);
+  });

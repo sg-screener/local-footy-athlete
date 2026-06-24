@@ -5,12 +5,15 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
+import type { DayOfWeek } from '../types/domain';
 import {
   usePendingCoachClarifierStore,
   getPendingClarifierSnapshot,
   isCancelClarifierMessage,
   isAffirmativeClarifierMessage,
   isNegativeClarifierMessage,
+  classifyPendingClarificationAnswer,
+  type PendingClarificationAnswerClassification,
   type PendingCoachClarifier,
 } from '../store/pendingCoachClarifierStore';
 import { useCoachContextStateStore } from '../store/coachContextStateStore';
@@ -604,6 +607,190 @@ function recordVerifiedProgramEditMutationFocus(
   });
 }
 
+export function capturePendingDateClarificationFromProgramEditRejection(args: {
+  result: ExecutionResult;
+  programEdit: ProgramEdit;
+  command: CoachCommand;
+  draft: ProgramEditDraft | null | undefined;
+  originalMessage: string;
+  todayISO?: string;
+}): Omit<PendingCoachClarifier, 'createdAt'> | null {
+  const { result, programEdit, command, draft, originalMessage, todayISO } = args;
+  if (!isDateClarificationRejection(result)) return null;
+  if (!programEdit.targetDate || command.mode !== 'mutate') return null;
+
+  const targetDay = controllerDayNameFromISO(programEdit.targetDate);
+  const proposedDate = targetDay && todayISO
+    ? controllerNextDateForDay(todayISO, targetDay)
+    : null;
+  const proposedCandidate = proposedDate && targetDay
+    ? {
+        label: `Next ${targetDay}`,
+        value: proposedDate,
+        answerType: 'date' as const,
+      }
+    : undefined;
+  const askedQuestion = pendingDateClarificationQuestion(programEdit.targetDate, targetDay);
+  const candidateOptions = [
+    targetDay ? `Next ${targetDay}` : null,
+    'Leave unchanged',
+  ].filter((option): option is string => !!option);
+  const needsItemRetarget = programEditNeedsRetargetedItem(programEdit);
+  const missingFields = uniqueControllerFields([
+    ...programEdit.missingFields.filter((field) => !controllerIsDateField(field)),
+    'targetDate',
+    ...(needsItemRetarget ? ['targetItemId'] : []),
+  ]);
+  const pendingEdit = {
+    ...programEdit,
+    targetItemId: needsItemRetarget ? null : programEdit.targetItemId,
+    targetItemTitle: needsItemRetarget ? null : programEdit.targetItemTitle,
+    candidateItems: needsItemRetarget ? [] : programEdit.candidateItems,
+    missingFields,
+    question: askedQuestion,
+    options: candidateOptions,
+  } as ProgramEdit;
+
+  return {
+    operation: command.operation,
+    partialPayload: command.payload,
+    scope: command.scope,
+    moveScope:
+      command.payload.operation === 'move_session'
+        ? command.payload.moveScope
+        : undefined,
+    missingFields,
+    originalMessage,
+    askedQuestion,
+    targetDate: programEdit.targetDate,
+    targetSessionName: programEdit.targetItemTitle ?? undefined,
+    programEdit: pendingEdit,
+    candidateItems: pendingEdit.candidateItems,
+    pendingClarification: {
+      originalIntent: `${programEdit.intent}:${programEdit.targetDomain}:${'editScope' in programEdit ? programEdit.editScope ?? programEdit.requestedChange : programEdit.requestedChange}`,
+      missingField: 'targetDate',
+      expectedAnswerType: 'date',
+      staleDate: programEdit.targetDate,
+      requestedDow: targetDay ?? undefined,
+      proposedCandidate,
+      candidateOptions,
+      partialDraft: draft ?? undefined,
+      reason: result.route,
+    },
+  };
+}
+
+function capturePendingDateClarificationFromPastProgramEditTarget(args: {
+  programEdit: ProgramEdit;
+  command: CoachCommand;
+  draft: ProgramEditDraft | null | undefined;
+  originalMessage: string;
+  todayISO: string;
+}): Omit<PendingCoachClarifier, 'createdAt'> | null {
+  const { programEdit, command, draft, originalMessage, todayISO } = args;
+  if (!programEdit.targetDate || !isPastISODate(programEdit.targetDate, todayISO)) return null;
+  if (!isMutationProgramEditForDateClarifier(programEdit, command)) return null;
+  return capturePendingDateClarificationFromProgramEditRejection({
+    result: {
+      kind: 'verified_no_op',
+      reply: pendingDateClarificationQuestion(
+        programEdit.targetDate,
+        controllerDayNameFromISO(programEdit.targetDate),
+      ),
+      applied: false,
+      route: 'pending_clarification:target_date:past_date',
+      progress: ['composing_reply'],
+    },
+    programEdit,
+    command,
+    draft,
+    originalMessage,
+    todayISO,
+  });
+}
+
+function isDateClarificationRejection(result: ExecutionResult): boolean {
+  if (!['rejected', 'rejected_with_alternatives', 'verified_no_op'].includes(result.kind)) return false;
+  return /\b(?:past_date_blocked|invalid_target_date|target_date)\b/i.test(result.route);
+}
+
+function pendingDateClarificationQuestion(staleDate: string, dayName: string | null): string {
+  const label = dayName ? `${dayName} ${staleDate}` : staleDate;
+  const next = dayName ? `next ${dayName}` : 'the next matching day';
+  return `${label} is in the past. Do you mean ${next} instead?`;
+}
+
+function programEditNeedsRetargetedItem(edit: ProgramEdit): boolean {
+  return (
+    edit.targetDomain !== 'session' &&
+    edit.targetDomain !== 'schedule' &&
+    edit.intent !== 'add' &&
+    edit.intent !== 'explain' &&
+    edit.intent !== 'ask_question'
+  );
+}
+
+function isMutationProgramEditForDateClarifier(edit: ProgramEdit, command: CoachCommand): boolean {
+  if (edit.intent === 'explain') return false;
+  if (command.mode === 'mutate') return true;
+  return edit.intent !== 'ask_question' || edit.missingFields.some((field) =>
+    field === 'targetDate' || field === 'target_date' || field === 'targetItemId',
+  );
+}
+
+function isPastISODate(dateISO: string, todayISO: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(dateISO) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(todayISO) &&
+    dateISO < todayISO;
+}
+
+function controllerIsDateField(field: string): boolean {
+  return /^(?:targetDate|target_date|target_day|destination_date|destination_day|day|date)$/.test(field);
+}
+
+function uniqueControllerFields(fields: string[]): string[] {
+  const out: string[] = [];
+  for (const field of fields) {
+    if (!field || out.includes(field)) continue;
+    out.push(field);
+  }
+  return out;
+}
+
+function controllerDayNameFromISO(iso: string): DayOfWeek | null {
+  const [year, month, day] = iso.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const dow = new Date(year, month - 1, day, 12, 0, 0, 0).getDay();
+  return (['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as DayOfWeek[])[dow] ?? null;
+}
+
+function controllerNextDateForDay(todayISO: string, day: DayOfWeek): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(todayISO)) return null;
+  const currentDow = controllerDayNumberFromISO(todayISO);
+  const targetDow = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].indexOf(day);
+  if (currentDow < 0 || targetDow < 0) return null;
+  let diff = targetDow - currentDow;
+  if (diff <= 0) diff += 7;
+  return controllerAddDaysISO(todayISO, diff);
+}
+
+function controllerDayNumberFromISO(iso: string): number {
+  const [year, month, day] = iso.split('-').map(Number);
+  if (!year || !month || !day) return -1;
+  return new Date(year, month - 1, day, 12, 0, 0, 0).getDay();
+}
+
+function controllerAddDaysISO(iso: string, days: number): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  const dt = new Date(year, month - 1, day, 12, 0, 0, 0);
+  dt.setDate(dt.getDate() + days);
+  return [
+    dt.getFullYear(),
+    String(dt.getMonth() + 1).padStart(2, '0'),
+    String(dt.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
 function pendingClarifierNeedsDuration(pending: PendingCoachClarifier): boolean {
   return pending.operation === 'add_conditioning' &&
     pending.missingFields.some((field) =>
@@ -623,6 +810,40 @@ function shouldHoldDurationClarifier(
     /\b(?:bike|row(?:er|ing)?|ski\s*erg|skierg|run(?:ning)?|walk(?:ing)?|pilates|yoga|mobility|hiit|sprints?|intervals?)\b/i.test(text) ||
     /\b(?:harder|lighter|easier|shorter)\b/i.test(text);
   return !startsFreshEdit;
+}
+
+async function classifyPendingAnswerForController(args: {
+  input: CoachTurnControllerInput;
+  pending: PendingCoachClarifier;
+}): Promise<PendingClarificationAnswerClassification | null> {
+  if (!args.pending.pendingClarification) return null;
+  const deterministic = classifyPendingClarificationAnswer({
+    message: args.input.userMessage.content,
+    pendingClarification: args.pending.pendingClarification,
+    askedQuestion: args.pending.askedQuestion,
+  });
+  if (deterministic.kind !== 'unclear') {
+    return deterministic;
+  }
+  const semanticClassifier = args.input.classifier.classifyPendingClarificationAnswer;
+  if (!semanticClassifier) {
+    return deterministic;
+  }
+  try {
+    const semantic = await semanticClassifier({
+      message: args.input.userMessage.content,
+      pendingClarification: args.pending.pendingClarification,
+      askedQuestion: args.pending.askedQuestion,
+    });
+    return semantic.confidence >= 0.65 ? semantic : deterministic;
+  } catch (err) {
+    logger.warn('[pending-clarifier] semantic_answer_classifier_failed', {
+      error: err instanceof Error ? err.message : String(err),
+      deterministicKind: deterministic.kind,
+      deterministicReason: deterministic.reason,
+    });
+    return deterministic;
+  }
 }
 
 function isRecoveryWorkoutForCoach(workout: any): boolean {
@@ -952,12 +1173,18 @@ export async function handleCoachTurn(
         return replyAndFinish(input, 'schedule-transaction', result.reply);
       }
 
+      const pendingAnswerClassification = await classifyPendingAnswerForController({
+        input,
+        pending: pendingClarifier,
+      });
       const pendingProgramEditAnswer = resolvePendingProgramEditAnswer({
         pending: pendingClarifier,
         userMessage: input.userMessage.content,
+        todayISO: input.todayISO,
         currentWeek: currentWeekRefs(packet),
         resolveVisibleProgramForDate: (date) =>
           resolveLiveVisibleProgramForDate(date, input.todayISO),
+        pendingAnswerClassification,
       });
       if (pendingProgramEditAnswer.kind === 'complete') {
         logger.warn('[pending-program-edit-resume]', {
@@ -1011,6 +1238,14 @@ export async function handleCoachTurn(
           ageMs: Date.now() - pendingClarifier.createdAt,
         });
         return replyAndFinish(input, 'program-edit-clarify', pendingProgramEditAnswer.reply);
+      }
+      if (pendingProgramEditAnswer.kind === 'cancelled') {
+        usePendingCoachClarifierStore.getState().clearPending();
+        logger.debug('[pending-program-edit] cancelled', {
+          missingFields: pendingClarifier.programEdit?.missingFields ?? pendingClarifier.missingFields,
+          ageMs: Date.now() - pendingClarifier.createdAt,
+        });
+        return replyAndFinish(input, 'program-edit-cancelled', pendingProgramEditAnswer.reply);
       }
 
       const resumed = resumeFromPending({
@@ -1296,6 +1531,51 @@ export async function handleCoachTurn(
 
     let commandForExecution: CoachCommand = routedCommand;
     let programEditForExecution = routedProgramEdit;
+    const staleDateClarifier = capturePendingDateClarificationFromPastProgramEditTarget({
+      programEdit: programEditForExecution,
+      command: commandForExecution,
+      draft: packet.programEditDraft,
+      originalMessage: input.userMessage.content,
+      todayISO: input.todayISO,
+    });
+    if (staleDateClarifier) {
+      usePendingCoachClarifierStore.getState().setPending(staleDateClarifier);
+      const route = staleDateClarifier.pendingClarification?.reason ??
+        'pending_clarification:target_date:past_date';
+      input.setLastCoachDebug({
+        intent: 'coach_command_router',
+        route,
+        referenceStatus: packet.referenceResolution?.status ?? null,
+        referenceTargetDate:
+          programEditForExecution.targetDate ??
+          packet.referenceResolution?.target?.date ??
+          null,
+        referenceTargetName:
+          programEditForExecution.targetItemTitle ??
+          packet.referenceResolution?.target?.sessionName ??
+          null,
+        mutationLike: true,
+        legacyCalled: false,
+        replySource: 'deterministic',
+        applied: false,
+      });
+      logger.warn('[pending-clarifier-set]', {
+        operation: staleDateClarifier.operation,
+        scope: staleDateClarifier.scope,
+        missingFields: staleDateClarifier.missingFields,
+        partialPayload: staleDateClarifier.partialPayload,
+        targetStatus: (commandForExecution as any).target?.kind ?? 'absent',
+        askedQuestion: staleDateClarifier.askedQuestion?.length > 200
+          ? `${staleDateClarifier.askedQuestion.slice(0, 200)}…`
+          : staleDateClarifier.askedQuestion,
+        source: 'program_edit_stale_target_date',
+      });
+      return replyAndFinish(
+        input,
+        'program-edit-stale-target-date',
+        staleDateClarifier.askedQuestion,
+      );
+    }
     if (shouldTryLLMCoachCommand(routedCommand, input.userMessage.content)) {
       const llmIntent = await input.classifier.classify(packet);
       classifiedCoachIntent = llmIntent;
@@ -1497,6 +1777,14 @@ export async function handleCoachTurn(
       }
       const result = guarded.result;
       recordVerifiedProgramEditMutationFocus(programEditForExecution, result, input.todayISO);
+      const dateClarifier = capturePendingDateClarificationFromProgramEditRejection({
+        result,
+        programEdit: programEditForExecution,
+        command: commandForExecution,
+        draft: packet.programEditDraft,
+        originalMessage: input.userMessage.content,
+        todayISO: input.todayISO,
+      });
 
       if (result.kind === 'clarify') {
         const captured = captureFromExecutorClarify({
@@ -1527,6 +1815,19 @@ export async function handleCoachTurn(
               : captured.askedQuestion,
           });
         }
+      } else if (dateClarifier) {
+        usePendingCoachClarifierStore.getState().setPending(dateClarifier);
+        logger.warn('[pending-clarifier-set]', {
+          operation: dateClarifier.operation,
+          scope: dateClarifier.scope,
+          missingFields: dateClarifier.missingFields,
+          partialPayload: dateClarifier.partialPayload,
+          targetStatus: (commandForExecution as any).target?.kind ?? 'absent',
+          askedQuestion: dateClarifier.askedQuestion?.length > 200
+            ? `${dateClarifier.askedQuestion.slice(0, 200)}…`
+            : dateClarifier.askedQuestion,
+          source: 'program_edit_date_rejection',
+        });
       } else if (result.kind === 'mutated' || result.kind === 'rejected'
               || result.kind === 'rejected_with_alternatives') {
         if (getPendingClarifierSnapshot()) {
@@ -1577,7 +1878,7 @@ export async function handleCoachTurn(
           ? 'program_adjustment_applied'
           : 'program_adjustment_failed',
       });
-      return replyAndFinish(input, 'router', result.reply);
+      return replyAndFinish(input, 'router', dateClarifier?.askedQuestion ?? result.reply);
     }
 
     if (routedCommand.mode === 'clarify') {

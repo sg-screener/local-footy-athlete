@@ -43,6 +43,10 @@ import type { MutationHistoryEntry } from '../store/coachMutationHistoryStore';
 import type { CoachReferenceResolution } from './coachReferenceResolver';
 import type { CoachTargetFrame } from './coachTargetFrame';
 import type { ProgramEditDraft } from './coachProgramEditDraft';
+import type {
+  PendingClarificationAnswerClassification,
+  PendingClarificationAnswerInput,
+} from '../store/pendingCoachClarifierStore';
 
 // ─── Intent schema ──────────────────────────────────────────────────
 
@@ -257,6 +261,9 @@ export interface CoachContextPacket {
  */
 export interface CoachIntentClassifier {
   classify(packet: CoachContextPacket): Promise<CoachIntent> | CoachIntent;
+  classifyPendingClarificationAnswer?: (
+    input: PendingClarificationAnswerInput,
+  ) => Promise<PendingClarificationAnswerClassification> | PendingClarificationAnswerClassification;
 }
 
 // ─── Production system prompt (used by the LLM-backed classifier) ──

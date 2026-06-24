@@ -17,7 +17,12 @@ import {
 import type { CoachReferenceResolution } from './coachReferenceResolver';
 import type { CoachTargetFrame } from './coachTargetFrame';
 import { resumeFromPending } from './coachClarifierResume';
-import type { PendingCoachClarifier } from '../store/pendingCoachClarifierStore';
+import {
+  classifyPendingClarificationAnswer,
+  type PendingClarificationAnswerClassification,
+  type PendingClarificationProposedCandidate,
+  type PendingCoachClarifier,
+} from '../store/pendingCoachClarifierStore';
 import {
   executeCoachCommand,
   type ExecuteCoachCommandInput,
@@ -380,6 +385,7 @@ export interface ExecuteProgramEditInput
 export type PendingProgramEditAnswerResult =
   | { kind: 'complete'; programEdit: ProgramEdit }
   | { kind: 'clarify'; programEdit: ProgramEdit; reply: string; options?: string[] }
+  | { kind: 'cancelled'; reply: string }
   | { kind: 'unresolved' };
 
 const PROGRAM_EDIT_LEXICON = [
@@ -1997,12 +2003,25 @@ function assertCompleteProgramEditForExecution(edit: ProgramEdit): void {
 export function resolvePendingProgramEditAnswer(input: {
   pending: PendingCoachClarifier;
   userMessage: string;
+  todayISO?: string;
   currentWeek?: VisibleSessionRef[];
   resolveVisibleProgramForDate?: ResolveVisibleProgramForDate;
+  pendingAnswerClassification?: PendingClarificationAnswerClassification | null;
 }): PendingProgramEditAnswerResult {
   const edit = input.pending.programEdit;
   if (!edit) {
     return { kind: 'unresolved' };
+  }
+  if (pendingProgramEditNeedsTargetDate(input.pending, edit)) {
+    return resolvePendingTargetDateAnswer({
+      edit,
+      pending: input.pending,
+      userMessage: input.userMessage,
+      todayISO: input.todayISO,
+      currentWeek: input.currentWeek,
+      resolveVisibleProgramForDate: input.resolveVisibleProgramForDate,
+      pendingAnswerClassification: input.pendingAnswerClassification,
+    });
   }
   if (edit.missingFields.includes('duration_scope')) {
     return resolvePendingDurationScopeAnswer({
@@ -2050,6 +2069,27 @@ export function resolvePendingProgramEditAnswer(input: {
     };
   }
 
+  const answerClassification =
+    input.pendingAnswerClassification ??
+    classifyPendingClarificationAnswer({
+      message: input.userMessage,
+      pendingClarification: input.pending.pendingClarification,
+      askedQuestion: input.pending.askedQuestion,
+    });
+  if (answerClassification.kind === 'reject_proposed') {
+    return {
+      kind: 'cancelled',
+      reply: 'Got it — leaving things as they are.',
+    };
+  }
+  const acceptedItem = targetItemFromPendingAnswerClassification(answerClassification, candidates);
+  if (acceptedItem) {
+    return {
+      kind: 'complete',
+      programEdit: completeProgramEditTargetItem(edit, acceptedItem),
+    };
+  }
+
   const match = matchPendingAnswerToItem(input.userMessage, candidates);
   if (match.kind === 'one') {
     return {
@@ -2076,6 +2116,431 @@ export function resolvePendingProgramEditAnswer(input: {
     reply,
     options: narrowedOptions,
   };
+}
+
+function pendingProgramEditNeedsTargetDate(
+  pending: PendingCoachClarifier,
+  edit: ProgramEdit,
+): boolean {
+  return (
+    edit.missingFields.includes('targetDate') ||
+    edit.missingFields.includes('target_date') ||
+    pending.missingFields.includes('targetDate') ||
+    pending.missingFields.includes('target_date') ||
+    pending.pendingClarification?.missingField === 'targetDate' ||
+    pending.pendingClarification?.missingField === 'target_date'
+  );
+}
+
+function resolvePendingTargetDateAnswer(input: {
+  edit: ProgramEdit;
+  pending: PendingCoachClarifier;
+  userMessage: string;
+  todayISO?: string;
+  currentWeek?: VisibleSessionRef[];
+  resolveVisibleProgramForDate?: ResolveVisibleProgramForDate;
+  pendingAnswerClassification?: PendingClarificationAnswerClassification | null;
+}): PendingProgramEditAnswerResult {
+  const answerClassification =
+    input.pendingAnswerClassification ??
+    classifyPendingClarificationAnswer({
+      message: input.userMessage,
+      pendingClarification: input.pending.pendingClarification,
+      askedQuestion: input.pending.askedQuestion,
+    });
+  if (answerClassification.kind === 'reject_proposed') {
+    return {
+      kind: 'cancelled',
+      reply: 'Got it — leaving things as they are.',
+    };
+  }
+
+  const acceptedCandidateDate = targetDateFromPendingAnswerClassification({
+    classification: answerClassification,
+    pending: input.pending,
+    edit: input.edit,
+    todayISO: input.todayISO,
+    currentWeek: input.currentWeek,
+  });
+  const targetDate = acceptedCandidateDate ?? parsePendingTargetDateAnswer({
+    message: input.userMessage,
+    todayISO: input.todayISO,
+    pending: input.pending,
+    edit: input.edit,
+    currentWeek: input.currentWeek,
+  });
+  if (!targetDate) {
+    const options =
+      input.pending.pendingClarification?.candidateOptions?.length
+        ? input.pending.pendingClarification.candidateOptions
+        : ['Today', 'Tomorrow'];
+    const reply =
+      input.pending.askedQuestion ??
+      'Which day should I use?';
+    return {
+      kind: 'clarify',
+      programEdit: pendingSlotClarificationEdit(input.edit, ['targetDate'], reply, options),
+      reply,
+      options,
+    };
+  }
+
+  const visibleProgram = resolveVisibleProgramForDateFromInputs({
+    targetDate,
+    currentWeek: input.currentWeek,
+    resolveVisibleProgramForDate: input.resolveVisibleProgramForDate,
+  });
+  let retargeted = retargetProgramEditDate({
+    edit: input.edit,
+    targetDate,
+    visibleProgram,
+  });
+
+  if (!programEditNeedsTargetItem(retargeted)) {
+    return { kind: 'complete', programEdit: retargeted };
+  }
+
+  const candidates = candidateItemsForDomain({
+    items: visibleProgram.items,
+    targetDomain: retargeted.targetDomain,
+  });
+  const match = matchPendingAnswerToItem(input.userMessage, candidates);
+  if (match.kind === 'one') {
+    return {
+      kind: 'complete',
+      programEdit: completeProgramEditTargetItem(retargeted, match.item),
+    };
+  }
+
+  if (candidates.length === 1) {
+    return {
+      kind: 'complete',
+      programEdit: completeProgramEditTargetItem(retargeted, candidates[0]),
+    };
+  }
+
+  const options = match.kind === 'many'
+    ? match.items.map((item) => item.title)
+    : candidates.map((item) => item.title);
+  const reply = candidates.length === 0
+    ? `I can use ${targetDate}, but I can't see a visible ${targetDomainLabel(retargeted.targetDomain)} item there. Which session or item do you mean?`
+    : betterItemClarificationQuestion({
+        targetDate,
+        answer: input.userMessage,
+        options,
+      });
+  retargeted = pendingSlotClarificationEdit(
+    {
+      ...retargeted,
+      candidateItems: candidates,
+    } as ProgramEdit,
+    ['targetItemId'],
+    reply,
+    options,
+  );
+  return {
+    kind: 'clarify',
+    programEdit: retargeted,
+    reply,
+    options,
+  };
+}
+
+function targetDateFromPendingAnswerClassification(args: {
+  classification: PendingClarificationAnswerClassification;
+  pending: PendingCoachClarifier;
+  edit: ProgramEdit;
+  todayISO?: string;
+  currentWeek?: VisibleSessionRef[];
+}): string | null {
+  const { classification, pending, edit, todayISO, currentWeek } = args;
+  if (classification.kind !== 'accept_proposed' && classification.kind !== 'choose_candidate') {
+    return null;
+  }
+  const candidate = classification.candidate ?? pending.pendingClarification?.proposedCandidate;
+  if (!candidate) return null;
+  return targetDateFromPendingCandidate({
+    candidate,
+    pending,
+    edit,
+    todayISO,
+    currentWeek,
+  });
+}
+
+function targetDateFromPendingCandidate(args: {
+  candidate: PendingClarificationProposedCandidate;
+  pending: PendingCoachClarifier;
+  edit: ProgramEdit;
+  todayISO?: string;
+  currentWeek?: VisibleSessionRef[];
+}): string | null {
+  const { candidate, pending, edit, todayISO, currentWeek } = args;
+  if (candidate.answerType !== 'date') return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(candidate.value)) {
+    return candidate.value;
+  }
+  return parsePendingTargetDateAnswer({
+    message: candidate.value || candidate.label,
+    todayISO,
+    pending,
+    edit,
+    currentWeek,
+  });
+}
+
+function targetItemFromPendingAnswerClassification(
+  classification: PendingClarificationAnswerClassification,
+  candidates: ProgramEditCandidateItem[],
+): ProgramEditCandidateItem | null {
+  if (classification.kind !== 'accept_proposed' && classification.kind !== 'choose_candidate') {
+    return null;
+  }
+  const candidate = classification.candidate;
+  if (!candidate || !['item', 'session'].includes(candidate.answerType)) {
+    return null;
+  }
+  const normalizedValue = normalizeProgramEditMatchText(candidate.value);
+  const normalizedLabel = normalizeProgramEditMatchText(candidate.label);
+  return candidates.find((item) => {
+    const id = normalizeProgramEditMatchText(item.id);
+    const title = normalizeProgramEditMatchText(item.title);
+    return (
+      (!!normalizedValue && (normalizedValue === id || normalizedValue === title)) ||
+      (!!normalizedLabel && normalizedLabel === title)
+    );
+  }) ?? null;
+}
+
+function normalizeProgramEditMatchText(value: string | null | undefined): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9\s'-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function parsePendingTargetDateAnswer(args: {
+  message: string;
+  todayISO?: string;
+  pending: PendingCoachClarifier;
+  edit: ProgramEdit;
+  currentWeek?: VisibleSessionRef[];
+}): string | null {
+  const text = String(args.message ?? '').toLowerCase();
+  const todayISO = args.todayISO;
+  if (todayISO && /\btoday\b/i.test(text)) return todayISO;
+  if (todayISO && /\btomorrow\b/i.test(text)) return addDaysISO(todayISO, 1);
+
+  const explicitDay = extractDayNames(args.message)[0];
+  if (explicitDay && todayISO) {
+    return nextDateForDay(todayISO, explicitDay, /\bnext\b/i.test(text));
+  }
+
+  const inferredDay = pendingDateSlotDay(args.pending, args.edit);
+  if (inferredDay) {
+    if (/\b(?:the\s+)?(?:next|upcoming|future)\s+one\b/i.test(text) && todayISO) {
+      return nextDateForDay(todayISO, inferredDay, true);
+    }
+    if (/\b(?:this|current)\s+week\b|\bthe\s+one\s+(?:i'?m|im)\s+looking\s+at\b/i.test(text)) {
+      return findVisibleWeekDateForDay(args.currentWeek, inferredDay);
+    }
+  }
+
+  return null;
+}
+
+function pendingDateSlotDay(
+  pending: PendingCoachClarifier,
+  edit: ProgramEdit,
+): DayOfWeek | null {
+  const seed =
+    pending.targetDate ??
+    edit.targetDate ??
+    (edit.command && 'target' in edit.command ? dateFromTarget(edit.command.target) : null);
+  return seed ? dayNameFromISO(seed) : null;
+}
+
+function findVisibleWeekDateForDay(
+  currentWeek: VisibleSessionRef[] | undefined,
+  day: DayOfWeek,
+): string | null {
+  if (!currentWeek?.length) return null;
+  const match = currentWeek.find((ref) => dayNameFromISO(ref.date) === day);
+  return match?.date ?? null;
+}
+
+function retargetProgramEditDate(args: {
+  edit: ProgramEdit;
+  targetDate: string;
+  visibleProgram: ResolvedVisibleProgramForDate;
+}): ProgramEdit {
+  const { edit, targetDate, visibleProgram } = args;
+  const dateChanged = edit.targetDate !== targetDate;
+  const targetSessionId = stringOrNull((visibleProgram.day.workout as any)?.id);
+  const shouldClearItem = dateChanged && programEditNeedsTargetItem(edit);
+  const command = retargetProgramEditCommandDate({
+    command: edit.command,
+    targetDate,
+    sessionName: visibleProgram.day.workout?.name,
+    clearTargetItem: shouldClearItem,
+  });
+  const pendingDraft = pendingDraftFromProgramEdit(edit);
+  const draft = {
+    ...((pendingDraft ?? edit) as ProgramEditDraft),
+    intent: resumeIntentForPendingEdit(edit),
+    targetDate,
+    targetSessionId,
+    targetItemId: shouldClearItem ? null : edit.targetItemId,
+    targetItemTitle: shouldClearItem ? null : edit.targetItemTitle,
+    missingFields: uniquePendingFields([
+      ...edit.missingFields.filter((field) => !isDateMissingField(field)),
+      ...(shouldClearItem ? ['targetItemId'] : []),
+    ]),
+    question: undefined,
+    options: undefined,
+    candidateItems: candidateItemsForDomain({
+      items: visibleProgram.items,
+      targetDomain: edit.targetDomain,
+    }),
+    command,
+    confidence: Math.max(edit.confidence, 0.85),
+    naturalLanguageReason: `${edit.naturalLanguageReason}; target date resolved from pending answer`,
+    source: 'pending_clarifier',
+  } as ProgramEditDraft;
+  return finaliseProgramEditDraft(draft);
+}
+
+function retargetProgramEditCommandDate(args: {
+  command: CoachCommand | null;
+  targetDate: string;
+  sessionName?: string;
+  clearTargetItem: boolean;
+}): CoachCommand | null {
+  const { command, targetDate, sessionName, clearTargetItem } = args;
+  if (!command || command.mode !== 'mutate') return command;
+  const missingFields = (command.missingFields ?? []).filter((field) => !isDateMissingField(field));
+  const target: CoachCommandTarget = {
+    kind: 'date',
+    date: targetDate,
+    sessionName,
+  };
+  if (command.payload.operation === 'remove_conditioning') {
+    return {
+      ...command,
+      target,
+      payload: {
+        ...command.payload,
+        targetItemId: clearTargetItem ? undefined : command.payload.targetItemId,
+      },
+      missingFields,
+      needsClarification: missingFields.length > 0,
+      reason: `${command.reason}:pending_target_date_resolved`,
+    };
+  }
+  if (command.payload.operation === 'add_conditioning') {
+    return {
+      ...command,
+      target,
+      payload: {
+        ...command.payload,
+        targetItemId: clearTargetItem ? undefined : command.payload.targetItemId,
+      },
+      missingFields,
+      needsClarification: missingFields.length > 0,
+      reason: `${command.reason}:pending_target_date_resolved`,
+    };
+  }
+  return {
+    ...command,
+    target,
+    missingFields,
+    needsClarification: missingFields.length > 0,
+    reason: `${command.reason}:pending_target_date_resolved`,
+  };
+}
+
+function resumeIntentForPendingEdit(edit: ProgramEdit): ProgramEditIntent {
+  if (edit.intent !== 'ask_question') return edit.intent;
+  const pendingDraft = pendingDraftFromProgramEdit(edit);
+  if (pendingDraft?.intent && pendingDraft.intent !== 'ask_question') {
+    return pendingDraft.intent;
+  }
+  if (edit.command?.mode === 'mutate') return intentFromMutation(edit.command);
+  return 'edit';
+}
+
+function pendingDraftFromProgramEdit(edit: ProgramEdit): ProgramEditDraft | undefined {
+  return edit.intent === 'ask_question' && 'pendingEdit' in edit
+    ? edit.pendingEdit
+    : undefined;
+}
+
+function programEditNeedsTargetItem(edit: ProgramEdit): boolean {
+  if (
+    edit.missingFields.includes('targetItemId') ||
+    edit.missingFields.includes('target_item') ||
+    edit.missingFields.includes('target_session')
+  ) {
+    return true;
+  }
+  return (
+    edit.targetDomain !== 'session' &&
+    edit.targetDomain !== 'schedule' &&
+    edit.intent !== 'add' &&
+    edit.intent !== 'explain' &&
+    edit.intent !== 'ask_question'
+  );
+}
+
+function targetDomainLabel(domain: ProgramEditTargetDomain): string {
+  if (domain === 'conditioning') return 'conditioning';
+  if (domain === 'strength') return 'strength';
+  if (domain === 'recovery') return 'recovery';
+  return 'program';
+}
+
+function isDateMissingField(field: string): boolean {
+  return /^(?:targetDate|target_date|target_day|destination_date|destination_day|day|date)$/.test(field);
+}
+
+function uniquePendingFields(fields: string[]): string[] {
+  const out: string[] = [];
+  for (const field of fields) {
+    if (!field || out.includes(field)) continue;
+    out.push(field);
+  }
+  return out;
+}
+
+function dayNameFromISO(iso: string): DayOfWeek {
+  const [year, month, day] = iso.split('-').map(Number);
+  return dayNameFromNumber(new Date(year, month - 1, day, 12, 0, 0, 0).getDay());
+}
+
+function nextDateForDay(todayISO: string, day: DayOfWeek, forceNext: boolean): string {
+  const todayDow = isoDayNumber(todayISO);
+  const targetDow = dayOfWeekNumber(day);
+  let diff = (targetDow - todayDow + 7) % 7;
+  if (forceNext || diff === 0) diff = diff === 0 ? 7 : diff;
+  return addDaysISO(todayISO, diff);
+}
+
+function isoDayNumber(iso: string): number {
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(year, month - 1, day, 12, 0, 0, 0).getDay();
+}
+
+function addDaysISO(iso: string, days: number): string {
+  const [year, month, day] = iso.split('-').map(Number);
+  const dt = new Date(year, month - 1, day, 12, 0, 0, 0);
+  dt.setDate(dt.getDate() + days);
+  return [
+    dt.getFullYear(),
+    String(dt.getMonth() + 1).padStart(2, '0'),
+    String(dt.getDate()).padStart(2, '0'),
+  ].join('-');
 }
 
 type PendingDurationScopeAnswer =

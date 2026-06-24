@@ -782,7 +782,7 @@ section('[23] Stage 3C-2 controller visible gate runs before success reply handl
   const executeIdx = source.indexOf('const result = executeProgramEdit({', wrapperIdx);
   const visibleGuardIdx = source.indexOf('const verification = verifyDraftVisibleExecution', executeIdx);
   const recordIdx = source.indexOf('recordVerifiedProgramEditMutationFocus', visibleGuardIdx);
-  const replyIdx = source.indexOf("return replyAndFinish(input, 'router', result.reply)", visibleGuardIdx);
+  const replyIdx = source.indexOf("return replyAndFinish(input, 'router'", visibleGuardIdx);
   const rawExecuteCalls = (source.match(/executeProgramEdit\(\{/g) ?? []).length;
   const guardedCalls = (source.match(/executeProgramEditWithVisibleGuard\(\{/g) ?? []).length;
   const programTabResolverIdx = source.indexOf('function resolveLiveProgramTabVisibleDayForDate');

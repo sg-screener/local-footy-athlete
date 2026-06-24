@@ -39,6 +39,7 @@
 import { create } from 'zustand';
 import type { CoachMutateOperation, CoachMutatePayload, CoachCommandScope, CoachMoveScope } from '../utils/coachCommandRouter';
 import type { ProgramEdit, ProgramEditCandidateItem } from '../utils/coachProgramEdit';
+import type { ProgramEditDraft } from '../utils/coachProgramEditDraft';
 import type { DayOfWeek } from '../types/domain';
 
 /**
@@ -113,6 +114,55 @@ export type PendingScheduleTransaction =
   | PendingMoveSessionTransaction
   | PendingAddToDateTransaction;
 
+export type PendingClarificationExpectedAnswerType =
+  | 'date'
+  | 'session'
+  | 'item'
+  | 'scope'
+  | 'type'
+  | 'duration'
+  | 'confirmation'
+  | 'unknown';
+
+export interface PendingClarificationProposedCandidate {
+  label: string;
+  value: string;
+  answerType: PendingClarificationExpectedAnswerType;
+}
+
+export interface PendingClarificationSlot {
+  originalIntent: string;
+  missingField: string;
+  expectedAnswerType: PendingClarificationExpectedAnswerType;
+  staleDate?: string;
+  requestedDow?: DayOfWeek;
+  proposedCandidate?: PendingClarificationProposedCandidate;
+  candidateOptions?: string[];
+  partialDraft?: ProgramEditDraft;
+  partialTransaction?: PendingScheduleTransaction;
+  reason?: string;
+}
+
+export type PendingClarificationAnswerKind =
+  | 'accept_proposed'
+  | 'reject_proposed'
+  | 'choose_candidate'
+  | 'provide_alternative_value'
+  | 'unclear';
+
+export interface PendingClarificationAnswerClassification {
+  kind: PendingClarificationAnswerKind;
+  confidence: number;
+  candidate?: PendingClarificationProposedCandidate;
+  reason: string;
+}
+
+export interface PendingClarificationAnswerInput {
+  message: string;
+  pendingClarification?: PendingClarificationSlot | null;
+  askedQuestion?: string | null;
+}
+
 export interface PendingCoachClarifier {
   /** The operation the router wanted to run before it asked. */
   operation: CoachMutateOperation;
@@ -150,6 +200,10 @@ export interface PendingCoachClarifier {
    *  was asked. The next reply is matched against this before any fresh
    *  state read, so clarification answers do not drift. */
   candidateItems?: ProgramEditCandidateItem[];
+  /** Durable slot contract for the next answer. This is the generic
+   *  “fill this missing field first” hook before routing/ProgramEdit/legacy
+   *  get to reinterpret the reply. */
+  pendingClarification?: PendingClarificationSlot;
 }
 
 interface PendingCoachClarifierState {
@@ -178,6 +232,7 @@ export const usePendingCoachClarifierStore = create<PendingCoachClarifierState>(
         targetSessionName: entry.targetSessionName,
         programEdit: entry.programEdit,
         candidateItems: entry.candidateItems,
+        pendingClarification: entry.pendingClarification,
       },
     }),
   clearPending: () => set({ pending: null }),
@@ -209,6 +264,7 @@ const CANCEL_PATTERNS: RegExp[] = [
   /\bnah\s*,?\s*(actually|forget|skip)\b/i,
   /\bdon'?t\s+(bother|worry)\b/i,
   /\bskip\s+(it|that)\b/i,
+  /\bleave\s+(it|that)\b/i,
 ];
 
 export function isCancelClarifierMessage(message: string): boolean {
@@ -266,4 +322,163 @@ export function isNegativeClarifierMessage(message: string): boolean {
     if (r.test(trimmed)) return true;
   }
   return false;
+}
+
+export function classifyPendingClarificationAnswer(
+  input: PendingClarificationAnswerInput,
+): PendingClarificationAnswerClassification {
+  const slot = input.pendingClarification;
+  const message = String(input.message ?? '');
+  const normalized = normalizePendingAnswer(message);
+  if (!slot || !normalized) {
+    return {
+      kind: 'unclear',
+      confidence: 0,
+      reason: 'no_pending_slot_or_empty_answer',
+    };
+  }
+
+  const explicitCandidate = matchPendingClarificationCandidate(normalized, slot);
+  if (explicitCandidate) {
+    if (candidateIsRejectOption(explicitCandidate)) {
+      return {
+        kind: 'reject_proposed',
+        confidence: 0.95,
+        candidate: explicitCandidate,
+        reason: 'explicit_reject_candidate',
+      };
+    }
+    return {
+      kind: 'choose_candidate',
+      confidence: 0.95,
+      candidate: explicitCandidate,
+      reason: 'explicit_candidate_match',
+    };
+  }
+
+  if (isCancelClarifierMessage(message) || isNegativeClarifierMessage(message)) {
+    return {
+      kind: 'reject_proposed',
+      confidence: 0.9,
+      reason: 'obvious_negative_or_cancel_answer',
+    };
+  }
+
+  if (looksLikeAlternativePendingValue(normalized, slot)) {
+    return {
+      kind: 'provide_alternative_value',
+      confidence: 0.75,
+      reason: 'answer_contains_alternative_value',
+    };
+  }
+
+  if (isObviousPendingAffirmation(normalized)) {
+    if (slot.proposedCandidate) {
+      return {
+        kind: 'accept_proposed',
+        confidence: 0.9,
+        candidate: slot.proposedCandidate,
+        reason: 'obvious_accepts_proposed_candidate',
+      };
+    }
+    const candidates = pendingClarificationCandidates(slot);
+    if (candidates.length === 1) {
+      return {
+        kind: 'choose_candidate',
+        confidence: 0.85,
+        candidate: candidates[0],
+        reason: 'obvious_accepts_single_candidate',
+      };
+    }
+    return {
+      kind: 'unclear',
+      confidence: 0.35,
+      reason: 'affirmative_without_single_candidate',
+    };
+  }
+
+  return {
+    kind: 'unclear',
+    confidence: 0.2,
+    reason: 'needs_semantic_pending_answer_classifier',
+  };
+}
+
+function pendingClarificationCandidates(
+  slot: PendingClarificationSlot,
+): PendingClarificationProposedCandidate[] {
+  const candidates: PendingClarificationProposedCandidate[] = [];
+  if (slot.proposedCandidate) candidates.push(slot.proposedCandidate);
+  for (const option of slot.candidateOptions ?? []) {
+    if (!option) continue;
+    if (slot.proposedCandidate && normalizePendingAnswer(option) === normalizePendingAnswer(slot.proposedCandidate.label)) {
+      continue;
+    }
+    candidates.push({
+      label: option,
+      value: option,
+      answerType: slot.expectedAnswerType,
+    });
+  }
+  return candidates;
+}
+
+function matchPendingClarificationCandidate(
+  normalized: string,
+  slot: PendingClarificationSlot,
+): PendingClarificationProposedCandidate | null {
+  for (const candidate of pendingClarificationCandidates(slot)) {
+    const label = normalizePendingAnswer(candidate.label);
+    const value = normalizePendingAnswer(candidate.value);
+    if (!label && !value) continue;
+    if (label && (normalized === label || normalized.includes(label))) {
+      return candidate;
+    }
+    if (value && value !== label && (normalized === value || normalized.includes(value))) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+function candidateIsRejectOption(candidate: PendingClarificationProposedCandidate): boolean {
+  const text = normalizePendingAnswer(`${candidate.label} ${candidate.value}`);
+  return /\b(?:leave|unchanged|cancel|no change|keep as is)\b/.test(text);
+}
+
+function looksLikeAlternativePendingValue(
+  normalized: string,
+  slot: PendingClarificationSlot,
+): boolean {
+  if (slot.expectedAnswerType === 'date') {
+    return /\b(?:today|tomorrow|next|upcoming|future|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{4}-\d{2}-\d{2})\b/.test(normalized);
+  }
+  if (slot.expectedAnswerType === 'duration') {
+    return /\b\d+(?:\.\d+)?\s*(?:s|sec|secs|second|seconds|min|mins|minute|minutes|h|hr|hrs|hour|hours)\b/.test(normalized);
+  }
+  return false;
+}
+
+function isObviousPendingAffirmation(normalized: string): boolean {
+  const compact = normalized.replace(/[.!?]+$/g, '').trim();
+  if (!compact) return false;
+  if (/^(?:y(?:es|eah|ep|up)?|ok(?:ay)?|correct|right|affirmative|please)$/.test(compact)) {
+    return true;
+  }
+  if (/^(?:sounds|looks|that(?: is|'s)|this(?: is|'s))\s+(?:good|right|correct|fine|okay|ok)$/.test(compact)) {
+    return true;
+  }
+  if (/^(?:(?:do|use|choose|go\s+with)\s+)?(?:that|this|it|that\s+one|this\s+one)$/.test(compact)) {
+    return true;
+  }
+  return false;
+}
+
+function normalizePendingAnswer(value: string): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[’]/g, "'")
+    .replace(/[^a-z0-9\s'-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
