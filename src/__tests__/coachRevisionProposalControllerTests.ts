@@ -321,7 +321,8 @@ function removeStrengthProposal(input: SemanticCoachRevisionProposalAdapterInput
 function clarifyProposal(args: {
   question?: string;
   missingField?: string;
-  intent?: CoachRevisionProposal extends { kind: 'clarify' } ? never : unknown;
+  /** Live models sometimes return clarify with partialIntent: null. */
+  nullIntent?: boolean;
 } = {}): unknown {
   return {
     schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
@@ -330,14 +331,16 @@ function clarifyProposal(args: {
     question: args.question ?? 'Which Monday do you mean?',
     missingField: args.missingField ?? 'targetDate',
     candidateOptions: [],
-    partialIntent: {
-      intent: 'remove',
-      targetDomain: 'strength',
-      actionScope: 'strength_section',
-      targetDates: [],
-      protectedRefs: [],
-      reason: 'controller_clarify_test',
-    },
+    partialIntent: args.nullIntent
+      ? null
+      : {
+          intent: 'remove',
+          targetDomain: 'strength',
+          actionScope: 'strength_section',
+          targetDates: [],
+          protectedRefs: [],
+          reason: 'controller_clarify_test',
+        },
     reason: 'ambiguous_date',
   };
 }
@@ -924,6 +927,36 @@ async function run() {
     ok('[14] strength preserved on next Monday',
       second.visible.strengthItems.length > 0,
       second.visible.items);
+  }
+
+  {
+    // NULL-INTENT CLARIFY: live models return clarify with partialIntent
+    // null (observed 2026-07-02: "Bin tomorrows session" → NPE in a
+    // diagnostics summary → turn leaked to legacy, which invented a wrong
+    // "Done"). The clarify must store pending state, relay its question, and
+    // never reach legacy — even with no partial intent to summarize.
+    const adapter = new RecordingRevisionAdapter(() =>
+      clarifyProposal({
+        question: 'Which session do you mean by that?',
+        missingField: 'targetSession',
+        nullIntent: true,
+      }));
+    const result = await runControllerTurn({
+      message: 'Bin tomorrows session',
+      adapter,
+    });
+    eq('[15] handled', result.handled.handled, true);
+    ok('[15] clarify question relayed, not legacy reply',
+      /Which session do you mean by that\?/.test(result.reply),
+      result.reply);
+    eq('[15] legacy classifier not called', result.classifierCalls, 0);
+    ok('[15] pending stored despite null intent',
+      !!result.pending?.coachRevisionProposalEnvelope,
+      result.pending);
+    eq('[15] envelope intent is null, not fabricated',
+      result.pending?.coachRevisionProposalEnvelope?.partialIntent,
+      null);
+    ok('[15] no override written', Object.keys(result.dateOverrides).length === 0, result.dateOverrides);
   }
 
   {

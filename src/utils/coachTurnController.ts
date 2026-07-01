@@ -260,35 +260,48 @@ function programEditDiagnosticSummary(edit: ProgramEdit | null | undefined) {
 
 function pendingDiagnosticSummary(pending: PendingCoachClarifier | null | undefined) {
   if (!pending) return null;
-  return {
-    operation: pending.operation,
-    missingFields: pending.missingFields,
-    askedQuestion: pending.askedQuestion ?? null,
-    pendingClarification: pending.pendingClarification
-      ? {
-          missingField: pending.pendingClarification.missingField,
-          expectedAnswerType: pending.pendingClarification.expectedAnswerType,
-          source: pending.pendingClarification.source ?? null,
-          proposedCandidate: pending.pendingClarification.proposedCandidate ?? null,
-          requestedDow: pending.pendingClarification.requestedDow ?? null,
-          staleDate: pending.pendingClarification.staleDate ?? null,
-        }
-      : null,
-    storedDraft: draftDiagnosticSummary(pending.programEditDraftEnvelope?.draft),
-    storedRevision: pending.coachRevisionProposalEnvelope
-      ? {
-          source: pending.coachRevisionProposalEnvelope.source,
-          continuationId: pending.coachRevisionProposalEnvelope.continuationId,
-          originalUserWording: pending.coachRevisionProposalEnvelope.originalUserWording,
-          intent: pending.coachRevisionProposalEnvelope.partialIntent.intent,
-          targetDomain: pending.coachRevisionProposalEnvelope.partialIntent.targetDomain,
-          actionScope: pending.coachRevisionProposalEnvelope.partialIntent.actionScope,
-          targetDates: pending.coachRevisionProposalEnvelope.partialIntent.targetDates,
-          protectedRefs: pending.coachRevisionProposalEnvelope.partialIntent.protectedRefs,
-        }
-      : null,
-    storedProgramEdit: programEditDiagnosticSummary(pending.programEdit),
-  };
+  // Diagnostics are observers, never actors: a summary must NEVER throw,
+  // because a diagnostics exception inside the revision path would hand the
+  // turn to legacy dispatch (observed live 2026-07-02 via an unguarded
+  // partialIntent read on a clarify-origin envelope).
+  try {
+    return {
+      operation: pending.operation,
+      missingFields: pending.missingFields,
+      askedQuestion: pending.askedQuestion ?? null,
+      pendingClarification: pending.pendingClarification
+        ? {
+            missingField: pending.pendingClarification.missingField,
+            expectedAnswerType: pending.pendingClarification.expectedAnswerType,
+            source: pending.pendingClarification.source ?? null,
+            proposedCandidate: pending.pendingClarification.proposedCandidate ?? null,
+            requestedDow: pending.pendingClarification.requestedDow ?? null,
+            staleDate: pending.pendingClarification.staleDate ?? null,
+          }
+        : null,
+      storedDraft: draftDiagnosticSummary(pending.programEditDraftEnvelope?.draft),
+      storedRevision: pending.coachRevisionProposalEnvelope
+        ? {
+            source: pending.coachRevisionProposalEnvelope.source,
+            continuationId: pending.coachRevisionProposalEnvelope.continuationId,
+            originalUserWording: pending.coachRevisionProposalEnvelope.originalUserWording,
+            intent: pending.coachRevisionProposalEnvelope.partialIntent?.intent ?? null,
+            targetDomain: pending.coachRevisionProposalEnvelope.partialIntent?.targetDomain ?? null,
+            actionScope: pending.coachRevisionProposalEnvelope.partialIntent?.actionScope ?? null,
+            targetDates: pending.coachRevisionProposalEnvelope.partialIntent?.targetDates ?? [],
+            protectedRefs: pending.coachRevisionProposalEnvelope.partialIntent?.protectedRefs ?? [],
+            clarificationRounds:
+              pending.coachRevisionProposalEnvelope.clarifications?.length ?? 0,
+          }
+        : null,
+      storedProgramEdit: programEditDiagnosticSummary(pending.programEdit),
+    };
+  } catch (err) {
+    return {
+      diagnosticError: err instanceof Error ? err.message : String(err),
+      operation: pending.operation,
+    };
+  }
 }
 
 function classificationDiagnosticSummary(
@@ -2497,6 +2510,9 @@ export async function handleCoachTurn(
           ageMs: Date.now() - pendingClarifier.createdAt,
         });
       } else {
+      // Same no-legacy-on-exception boundary as the new-message revision
+      // region: resumed revision turns must never leak to legacy on a throw.
+      try {
       const pendingRevisionAnswer = resolvePendingCoachRevisionProposalAnswer({
         pending: pendingClarifier,
         userMessage: input.userMessage.content,
@@ -2666,6 +2682,29 @@ export async function handleCoachTurn(
           applied: false,
         });
         return replyAndFinish(input, `pending-coach-revision-${revisionResult.kind}`, reply);
+      }
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : String(err);
+        logger.error('[coach-revision-proposal] pending_resume_exception', { detail });
+        if (controllerCoachRevisionProposalMode(input) === 'active') {
+          usePendingCoachClarifierStore.getState().clearPending();
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: 'coach-revision-proposal-error',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: null,
+            referenceTargetName: null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(
+            input,
+            'coach-revision-proposal-error',
+            `[dev] Coach revision path crashed (${detail}). No changes made — see logs.`,
+          );
+        }
       }
       const pendingScheduleAnswer = resolvePendingScheduleTransactionAnswer({
         pending: pendingClarifier,
@@ -3243,6 +3282,12 @@ export async function handleCoachTurn(
         COACH_REVISION_MISCONFIGURED_REPLY,
       );
     }
+    // No-legacy-on-exception boundary: any throw inside the revision path
+    // (including diagnostics) must dead-end fail-loud in active mode. Falling
+    // out of this region on an exception would hand a mutation turn to the
+    // legacy dispatch/coach-chat layers — the exact leak class the pivot
+    // removes.
+    try {
     const revisionResult = await buildCoachRevisionProposalForController({
       input,
       packet,
@@ -3416,6 +3461,29 @@ export async function handleCoachTurn(
           coachRevisionInvalidReply(revisionResult),
         );
       }
+    }
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      logger.error('[coach-revision-proposal] active_path_exception', { detail });
+      if (revisionMode === 'active') {
+        input.setLastCoachDebug({
+          intent: 'coach_revision_proposal',
+          route: 'coach-revision-proposal-error',
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: null,
+          referenceTargetName: null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: false,
+        });
+        return replyAndFinish(
+          input,
+          'coach-revision-proposal-error',
+          `[dev] Coach revision path crashed (${detail}). No changes made — see logs.`,
+        );
+      }
+      // Shadow mode never owned the turn; legacy continues as before.
     }
 
     const semanticMode = controllerSemanticProgramEditDraftMode(input);
