@@ -11,6 +11,8 @@ import {
 } from './coachRevisionProposal';
 import { logger } from './logger';
 
+export type CoachRevisionProposalMode = 'off' | 'shadow' | 'active';
+
 export interface SemanticCoachRevisionProposalAdapterInput {
   userMessage: string;
   visibleSnapshot: CoachVisibleWeekSnapshot;
@@ -245,8 +247,14 @@ export function diagnosticForValidation(args: {
   validation: CoachRevisionValidationResult;
 }): CoachRevisionShadowDiagnostic {
   const { proposal, validation } = args;
+  const issues = validation.issues as Array<{
+    code: string;
+    message?: string;
+    date?: string;
+    ref?: string;
+  }>;
   const protectedRefs = new Set(proposal.userIntent.protectedRefs);
-  const violated = validation.issues
+  const violated = issues
     .filter((issue) =>
       issue.code === 'protected_ref_changed' ||
       issue.code === 'protected_ref_missing_before',
@@ -254,7 +262,7 @@ export function diagnosticForValidation(args: {
     .map((issue) => issue.ref)
     .filter((ref): ref is string => !!ref);
   const violatedSet = new Set(violated);
-  const unknownIds = validation.issues
+  const unknownIds = issues
     .filter((issue) =>
       issue.code === 'unknown_section_id' ||
       issue.code === 'unknown_item_id',
@@ -292,7 +300,7 @@ export function diagnosticForValidation(args: {
     protectedRefsViolated: violated,
     unknownIds,
     confirmationRequired: validation.status === 'needs_confirmation',
-    issues: validation.issues.map((issue) => issue.code),
+    issues: issues.map((issue) => issue.code),
   };
 }
 

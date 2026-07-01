@@ -83,6 +83,7 @@ import {
   type CoachTurnDebug,
 } from '../../utils/coachTurnController';
 import { LLMSemanticProgramEditDraftAdapter } from '../../utils/llmSemanticProgramEditDraftAdapter';
+import { LLMSemanticCoachRevisionProposalAdapter } from '../../utils/llmSemanticCoachRevisionProposalAdapter';
 import {
   SETUP_REBUILD_PROGRESS_INTERVAL_MS,
   setupRebuildProgressMessageForTick,
@@ -90,6 +91,7 @@ import {
 import {
   getClientEnvConfig,
   logMissingClientEnv,
+  shouldCreateCoachRevisionProposalAdapter,
   shouldCreateSemanticProgramEditDraftAdapter,
 } from '../../config/env';
 import { logger } from '../../utils/logger';
@@ -146,6 +148,13 @@ const liveSemanticProgramEditDraftAdapter = clientEnv.isReady &&
       authToken: clientEnv.supabaseAnonKey,
     })
   : null;
+const liveCoachRevisionProposalAdapter = clientEnv.isReady &&
+  shouldCreateCoachRevisionProposalAdapter(clientEnv.coachRevisionProposalMode)
+  ? new LLMSemanticCoachRevisionProposalAdapter({
+      endpoint: clientEnv.coachRevisionProposalEndpoint,
+      authToken: clientEnv.supabaseAnonKey,
+    })
+  : null;
 
 if (__DEV__ && shouldCreateSemanticProgramEditDraftAdapter(clientEnv.semanticProgramEditDraftMode)) {
   logger.warn('[coach-semantic-program-edit-draft-endpoint]', {
@@ -155,6 +164,17 @@ if (__DEV__ && shouldCreateSemanticProgramEditDraftAdapter(clientEnv.semanticPro
     adapterPresent: !!liveSemanticProgramEditDraftAdapter,
     functionName: clientEnv.coachSemanticProgramEditDraftFunctionName,
     endpoint: clientEnv.coachSemanticProgramEditDraftEndpoint,
+  });
+}
+
+if (__DEV__ && shouldCreateCoachRevisionProposalAdapter(clientEnv.coachRevisionProposalMode)) {
+  logger.warn('[coach-revision-proposal-endpoint]', {
+    resolvedMode: clientEnv.coachRevisionProposalMode,
+    rawMode: clientEnv.coachRevisionProposalRawMode,
+    activeAllowed: clientEnv.coachRevisionProposalActiveAllowed,
+    adapterPresent: !!liveCoachRevisionProposalAdapter,
+    functionName: clientEnv.coachRevisionProposalFunctionName,
+    endpoint: clientEnv.coachRevisionProposalEndpoint,
   });
 }
 
@@ -1722,6 +1742,10 @@ export default function CoachScreen() {
       semanticProgramEditDraftRawMode: clientEnv.semanticProgramEditDraftRawMode,
       semanticProgramEditDraftActiveAllowed: clientEnv.semanticProgramEditDraftActiveAllowed,
       semanticProgramEditDraftAdapter: liveSemanticProgramEditDraftAdapter,
+      coachRevisionProposalMode: clientEnv.coachRevisionProposalMode,
+      coachRevisionProposalRawMode: clientEnv.coachRevisionProposalRawMode,
+      coachRevisionProposalActiveAllowed: clientEnv.coachRevisionProposalActiveAllowed,
+      coachRevisionProposalAdapter: liveCoachRevisionProposalAdapter,
       pendingCoachProposal: pendingCoachProposalRef.current,
       pendingReadiness: pendingReadinessRef.current,
       pendingInjury: pendingInjuryRef.current

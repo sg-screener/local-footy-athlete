@@ -7,10 +7,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {
+  COACH_REVISION_PROPOSAL_FUNCTION_NAME,
   COACH_SEMANTIC_PROGRAM_EDIT_DRAFT_FUNCTION_NAME,
   buildMailto,
   describeMissingClientEnv,
   getClientEnvConfig,
+  shouldCreateCoachRevisionProposalAdapter,
   shouldCreateSemanticProgramEditDraftAdapter,
 } from '../config/env';
 
@@ -60,7 +62,18 @@ section('[1] Reads required Supabase public env');
     config.coachSemanticProgramEditDraftFunctionName ===
       COACH_SEMANTIC_PROGRAM_EDIT_DRAFT_FUNCTION_NAME,
   );
+  ok(
+    'CoachRevisionProposal endpoint derived',
+    config.coachRevisionProposalEndpoint ===
+      'https://project.supabase.co/functions/v1/coach-revision-proposal',
+  );
+  ok(
+    'CoachRevisionProposal function name exposed',
+    config.coachRevisionProposalFunctionName ===
+      COACH_REVISION_PROPOSAL_FUNCTION_NAME,
+  );
   ok('semantic ProgramEditDraft mode defaults off', config.semanticProgramEditDraftMode === 'off');
+  ok('CoachRevisionProposal mode defaults off', config.coachRevisionProposalMode === 'off');
   ok('anon key read', config.supabaseAnonKey === 'anon-key');
 }
 
@@ -81,6 +94,11 @@ section('[2] Supports publishable key alias and custom functions base');
     'semantic ProgramEditDraft endpoint uses custom functions base',
     config.coachSemanticProgramEditDraftEndpoint ===
       'https://edge.example.com/functions/v1/coach-semantic-program-edit-draft',
+  );
+  ok(
+    'CoachRevisionProposal endpoint uses custom functions base',
+    config.coachRevisionProposalEndpoint ===
+      'https://edge.example.com/functions/v1/coach-revision-proposal',
   );
 }
 
@@ -179,6 +197,71 @@ section('[7] CoachScreen passes resolved semantic mode wiring');
   ok(
     'CoachScreen passes active gate diagnostics to controller',
     /semanticProgramEditDraftActiveAllowed:\s*clientEnv\.semanticProgramEditDraftActiveAllowed/.test(coachScreen),
+  );
+}
+
+section('[8] CoachRevisionProposal mode is dev-active gated');
+{
+  const defaultMode = getClientEnvConfig({
+    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+  });
+  const shadow = getClientEnvConfig({
+    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_MODE: ' shadow ',
+  });
+  const activeWithoutFlag = getClientEnvConfig({
+    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_MODE: 'active',
+  }, { isDev: true });
+  const activeOutsideDev = getClientEnvConfig({
+    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_MODE: 'active',
+    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_DEV_ACTIVE: '1',
+  }, { isDev: false });
+  const activeInDev = getClientEnvConfig({
+    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_MODE: ' active ',
+    EXPO_PUBLIC_COACH_REVISION_PROPOSAL_DEV_ACTIVE: '1',
+  }, { isDev: true });
+
+  ok('default revision mode resolves off', defaultMode.coachRevisionProposalMode === 'off');
+  ok('revision shadow mode can be enabled for diagnostics', shadow.coachRevisionProposalMode === 'shadow');
+  ok('revision active without dev-active flag resolves off', activeWithoutFlag.coachRevisionProposalMode === 'off');
+  ok('revision active with dev-active flag outside dev resolves off', activeOutsideDev.coachRevisionProposalMode === 'off');
+  ok('revision active with dev-active flag in dev resolves active', activeInDev.coachRevisionProposalMode === 'active');
+  ok('raw revision mode is exposed for diagnostics', activeInDev.coachRevisionProposalRawMode === 'active');
+  ok('revision activeAllowed true only in dev-active mode', activeInDev.coachRevisionProposalActiveAllowed);
+  ok('revision production active path remains impossible', !activeOutsideDev.coachRevisionProposalActiveAllowed);
+  ok('revision adapter is not created for off mode', !shouldCreateCoachRevisionProposalAdapter('off'));
+  ok('revision adapter is created for shadow mode', shouldCreateCoachRevisionProposalAdapter('shadow'));
+  ok('revision adapter is created for dev active mode', shouldCreateCoachRevisionProposalAdapter('active'));
+}
+
+section('[9] CoachScreen passes resolved CoachRevisionProposal wiring');
+{
+  const coachScreenPath = path.resolve(__dirname, '..', 'screens', 'coach', 'CoachScreen.tsx');
+  const coachScreen = fs.readFileSync(coachScreenPath, 'utf8');
+
+  ok(
+    'CoachScreen creates revision adapter through resolved-mode helper',
+    /shouldCreateCoachRevisionProposalAdapter\(clientEnv\.coachRevisionProposalMode\)/.test(coachScreen),
+  );
+  ok(
+    'CoachScreen passes resolved revision mode to controller',
+    /coachRevisionProposalMode:\s*clientEnv\.coachRevisionProposalMode/.test(coachScreen),
+  );
+  ok(
+    'CoachScreen passes raw revision mode diagnostics to controller',
+    /coachRevisionProposalRawMode:\s*clientEnv\.coachRevisionProposalRawMode/.test(coachScreen),
+  );
+  ok(
+    'CoachScreen passes revision active gate diagnostics to controller',
+    /coachRevisionProposalActiveAllowed:\s*clientEnv\.coachRevisionProposalActiveAllowed/.test(coachScreen),
   );
 }
 

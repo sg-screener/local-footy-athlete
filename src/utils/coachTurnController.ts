@@ -96,6 +96,20 @@ import {
   getResolvedVisibleProgramForDate,
 } from './visibleProgramReadModel';
 import { getMondayForDate } from './sessionResolver';
+import {
+  buildCoachRevisionWeekSnapshotFromProjectedDays,
+  snapshotProjectedDay,
+} from './coachRevisionProposal';
+import {
+  buildSemanticCoachRevisionProposal,
+  type CoachRevisionProposalMode,
+  type CoachRevisionShadowDiagnostic,
+  type SemanticCoachRevisionProposalAdapter,
+  type SemanticCoachRevisionProposalResult,
+} from './semanticCoachRevisionProposal';
+import {
+  applyCoachRevisionDateOverrides,
+} from './coachRevisionOverrideWriter';
 import { logger } from './logger';
 
 export interface CoachTurnMessage {
@@ -136,6 +150,13 @@ export interface SemanticProgramEditDraftControllerDiagnostic {
     isCompound: boolean;
     missingFields: string[];
   };
+}
+
+export interface CoachRevisionProposalControllerDiagnostic {
+  mode: Exclude<CoachRevisionProposalMode, 'off'>;
+  kind: SemanticCoachRevisionProposalResult['kind'];
+  confidence: number | null;
+  diagnostic: CoachRevisionShadowDiagnostic;
 }
 
 export type CoachTurnControllerResult =
@@ -182,6 +203,14 @@ export interface CoachTurnControllerInput {
   semanticProgramEditDraftTimezone?: string;
   onSemanticProgramEditDraftDiagnostic?: (
     diagnostic: SemanticProgramEditDraftControllerDiagnostic,
+  ) => void;
+  coachRevisionProposalMode?: CoachRevisionProposalMode;
+  coachRevisionProposalRawMode?: string;
+  coachRevisionProposalActiveAllowed?: boolean;
+  coachRevisionProposalAdapter?: SemanticCoachRevisionProposalAdapter | null;
+  coachRevisionProposalMinConfidence?: number;
+  onCoachRevisionProposalDiagnostic?: (
+    diagnostic: CoachRevisionProposalControllerDiagnostic,
   ) => void;
 }
 
@@ -1092,6 +1121,20 @@ function controllerSemanticProgramEditDraftMode(
   return requested;
 }
 
+function controllerCoachRevisionProposalMode(
+  input: CoachTurnControllerInput,
+): CoachRevisionProposalMode {
+  const requested = input.coachRevisionProposalMode ?? 'off';
+  if (requested === 'active' && input.coachRevisionProposalActiveAllowed === false) {
+    logger.warn('[coach-revision-proposal] active mode blocked by config gate', {
+      rawMode: input.coachRevisionProposalRawMode ?? null,
+      activeAllowed: false,
+    });
+    return 'off';
+  }
+  return requested;
+}
+
 function shouldAttemptSemanticProgramEditDraft(args: {
   mode: SemanticProgramEditDraftMode;
   input: CoachTurnControllerInput;
@@ -1104,6 +1147,14 @@ function shouldAttemptSemanticProgramEditDraft(args: {
   if (!draft) return false;
   if (draft.intent === 'ask_question' || draft.intent === 'explain') return false;
   return draft.proposedActions.length > 0 || draft.missingFields.length > 0;
+}
+
+function shouldAttemptCoachRevisionProposal(args: {
+  mode: CoachRevisionProposalMode;
+  input: CoachTurnControllerInput;
+}): boolean {
+  if (args.mode === 'off') return false;
+  return isMutationLike(args.input.userMessage.content);
 }
 
 function controllerTimeZone(): string | undefined {
@@ -1139,6 +1190,46 @@ async function buildSemanticProgramEditDraftForController(args: {
   });
 }
 
+async function buildCoachRevisionProposalForController(args: {
+  input: CoachTurnControllerInput;
+  packet: ReturnType<typeof buildCoachContextPacket>;
+  mode: CoachRevisionProposalMode;
+}): Promise<SemanticCoachRevisionProposalResult | null> {
+  if (!shouldAttemptCoachRevisionProposal(args)) return null;
+  const adapter = args.input.coachRevisionProposalAdapter;
+  if (!adapter) return null;
+  const visibleWeek = uniqueResolvedDays([
+    ...(args.packet.currentWeek ?? []),
+    ...(args.packet.nextWeek ?? []),
+  ]);
+  return buildSemanticCoachRevisionProposal({
+    userMessage: args.input.userMessage.content,
+    visibleSnapshot: buildCoachRevisionWeekSnapshotFromProjectedDays(visibleWeek),
+    pendingClarifier: getPendingClarifierSnapshot(),
+    recentContext: {
+      currentWeekDates: (args.packet.currentWeek ?? []).map((day) => day.date),
+      nextWeekDates: (args.packet.nextWeek ?? []).map((day) => day.date),
+      targetFrame: args.packet.targetFrame ?? null,
+    },
+    todayISO: args.input.todayISO,
+    nowISO: args.input.semanticProgramEditDraftNowISO ?? new Date().toISOString(),
+    timezone: args.input.semanticProgramEditDraftTimezone ?? controllerTimeZone(),
+    adapter,
+    minConfidence: args.input.coachRevisionProposalMinConfidence,
+  });
+}
+
+function uniqueResolvedDays(days: ReturnType<typeof buildCoachContextPacket>['currentWeek']): ReturnType<typeof buildCoachContextPacket>['currentWeek'] {
+  const seen = new Set<string>();
+  const out: ReturnType<typeof buildCoachContextPacket>['currentWeek'] = [];
+  for (const day of days) {
+    if (seen.has(day.date)) continue;
+    seen.add(day.date);
+    out.push(day);
+  }
+  return out;
+}
+
 function diagnosticFromSemanticProgramEditDraftResult(args: {
   mode: Exclude<SemanticProgramEditDraftMode, 'off'>;
   result: SemanticProgramEditDraftResult;
@@ -1171,12 +1262,154 @@ function diagnosticFromSemanticProgramEditDraftResult(args: {
   };
 }
 
+function diagnosticFromCoachRevisionProposalResult(args: {
+  mode: Exclude<CoachRevisionProposalMode, 'off'>;
+  result: SemanticCoachRevisionProposalResult;
+}): CoachRevisionProposalControllerDiagnostic {
+  const confidence = 'confidence' in args.result ? args.result.confidence : null;
+  return {
+    mode: args.mode,
+    kind: args.result.kind,
+    confidence,
+    diagnostic: args.result.diagnostic,
+  };
+}
+
 function emitSemanticProgramEditDraftDiagnostic(args: {
   input: CoachTurnControllerInput;
   diagnostic: SemanticProgramEditDraftControllerDiagnostic;
 }) {
   args.input.onSemanticProgramEditDraftDiagnostic?.(args.diagnostic);
   logger.debug('[coach-semantic-program-edit-draft-diagnostic]', args.diagnostic);
+}
+
+function emitCoachRevisionProposalDiagnostic(args: {
+  input: CoachTurnControllerInput;
+  diagnostic: CoachRevisionProposalControllerDiagnostic;
+}) {
+  args.input.onCoachRevisionProposalDiagnostic?.(args.diagnostic);
+  logger.debug('[coach-revision-proposal-diagnostic]', args.diagnostic);
+}
+
+function isSupportedDevActiveCoachRevision(
+  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>,
+): boolean {
+  const proposal = result.proposal;
+  if (proposal.scope.mode !== 'single_day') return false;
+  if (proposal.scope.dates.length !== 1) return false;
+  if (proposal.revisedDays.length !== 1) return false;
+  if (result.diff.changedDates.length !== 1) return false;
+  const { intent, targetDomain, actionScope } = proposal.userIntent;
+  if (intent === 'remove' && targetDomain === 'strength' && actionScope === 'strength_section') {
+    return true;
+  }
+  if (intent === 'remove' && targetDomain === 'conditioning' && actionScope === 'conditioning_section') {
+    return true;
+  }
+  if (intent === 'remove' && targetDomain === 'session' && actionScope === 'whole_session') {
+    return true;
+  }
+  if (intent === 'reduce' && targetDomain === 'strength' && actionScope === 'strength_section') {
+    return true;
+  }
+  return false;
+}
+
+function applyDevActiveCoachRevision(args: {
+  input: CoachTurnControllerInput;
+  packet: ReturnType<typeof buildCoachContextPacket>;
+  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>;
+}): { ok: true; reply: string; route: string } | { ok: false; reply: string; route: string } {
+  if (!isSupportedDevActiveCoachRevision(args.result)) {
+    return {
+      ok: false,
+      route: 'coach-revision-proposal-unsupported-scope',
+      reply:
+        'I understood the requested revision, but this dev path only supports simple single-day edits right now.',
+    };
+  }
+
+  const visibleWeek = uniqueResolvedDays([
+    ...(args.packet.currentWeek ?? []),
+    ...(args.packet.nextWeek ?? []),
+  ]);
+  const apply = applyCoachRevisionDateOverrides({
+    proposal: args.result.proposal,
+    visibleWeek,
+    todayISO: args.input.todayISO,
+    setManualOverride: (date, workout, context) =>
+      useProgramStore.getState().setManualOverride(date, workout, context),
+  });
+
+  if (apply.applied.length === 0 || apply.rejected.length > 0) {
+    return {
+      ok: false,
+      route: 'coach-revision-proposal-apply-rejected',
+      reply: "I couldn't safely apply that revision, so I left the plan unchanged.",
+    };
+  }
+
+  const verified = apply.applied.every((write) =>
+    verifyCoachRevisionProjectionAfterWrite({
+      date: write.date,
+      todayISO: args.input.todayISO,
+      accepted: write.projectedDay,
+    }),
+  );
+  if (!verified) {
+    return {
+      ok: false,
+      route: 'coach-revision-proposal-visible-verifier-failed',
+      reply: "I couldn't safely apply that revision, so I left the plan unchanged.",
+    };
+  }
+
+  return {
+    ok: true,
+    route: 'coach-revision-proposal-applied',
+    reply: composeCoachRevisionDoneReply(args.result),
+  };
+}
+
+function verifyCoachRevisionProjectionAfterWrite(args: {
+  date: string;
+  todayISO: string;
+  accepted: ReturnType<typeof snapshotProjectedDay>;
+}): boolean {
+  const state = buildScheduleStateImperative();
+  const programStore = useProgramStore.getState();
+  const projected = buildDayWorkoutProjectedDay({
+    date: args.date,
+    todayISO: args.todayISO,
+    state,
+    overrideContext: programStore.overrideContexts?.[args.date],
+  });
+  return JSON.stringify(snapshotProjectedDay(projected)) === JSON.stringify(args.accepted);
+}
+
+function composeCoachRevisionDoneReply(
+  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>,
+): string {
+  const date = result.diff.changedDates[0] ?? result.proposal.scope.dates[0] ?? 'that day';
+  const summary = result.diagnostic.diffSummary[0];
+  const removedStrength = summary?.sectionsRemoved.some((item) => item.startsWith('strength:'));
+  const removedConditioning = summary?.sectionsRemoved.some((item) => item.startsWith('conditioning:'));
+  const changedStrength =
+    summary?.sectionsChanged.some((item) => item.startsWith('strength:')) ||
+    summary?.itemsChanged.some((item) => item.startsWith('strength:'));
+  if (summary?.workoutChange === 'removed') {
+    return `Done. I removed the session on ${date}.`;
+  }
+  if (removedStrength && !removedConditioning) {
+    return `Done. I removed the strength work on ${date} and left conditioning alone.`;
+  }
+  if (removedConditioning && !removedStrength) {
+    return `Done. I removed conditioning from ${date} and left strength alone.`;
+  }
+  if (changedStrength) {
+    return `Done. I made the strength work lighter on ${date}.`;
+  }
+  return `Done. I updated ${date}.`;
 }
 
 function pendingClarifierFromSemanticClarify(args: {
@@ -2331,6 +2564,111 @@ export async function handleCoachTurn(
         existingStatus: packet.referenceResolution?.status ?? null,
         existingTarget: !!packet.referenceResolution?.target,
       });
+    }
+
+    const revisionMode = controllerCoachRevisionProposalMode(input);
+    const revisionResult = await buildCoachRevisionProposalForController({
+      input,
+      packet,
+      mode: revisionMode,
+    });
+    emitCoachTurnDiagnostic('coach_revision_proposal_result', {
+      message: input.userMessage.content,
+      rawRevisionMode: input.coachRevisionProposalRawMode ?? null,
+      revisionMode,
+      resolvedRevisionMode: revisionMode,
+      revisionAdapterPresent: !!input.coachRevisionProposalAdapter,
+      activeModeConfigAllowed: input.coachRevisionProposalActiveAllowed ?? null,
+      handledPath:
+        revisionMode === 'active'
+          ? 'active'
+          : revisionMode === 'shadow'
+            ? 'shadow'
+            : 'off',
+      resultKind: revisionResult?.kind ?? null,
+      validatorStatus: revisionResult?.diagnostic.validatorStatus ?? null,
+      affectedDates: revisionResult?.diagnostic.affectedDates ?? [],
+    });
+    if (revisionResult && revisionMode !== 'off') {
+      emitCoachRevisionProposalDiagnostic({
+        input,
+        diagnostic: diagnosticFromCoachRevisionProposalResult({
+          mode: revisionMode,
+          result: revisionResult,
+        }),
+      });
+      if (revisionMode === 'shadow') {
+        logger.debug('[coach-revision-proposal-shadow]', {
+          kind: revisionResult.kind,
+          ignoredForExecution: true,
+          diagnostic: revisionResult.diagnostic,
+        });
+      } else if (revisionResult.kind === 'revision') {
+        const applied = applyDevActiveCoachRevision({
+          input,
+          packet,
+          result: revisionResult,
+        });
+        input.setLastCoachDebug({
+          intent: 'coach_revision_proposal',
+          route: applied.route,
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+          referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: applied.ok,
+        });
+        return replyAndFinish(input, applied.route, applied.reply);
+      } else if (revisionResult.kind === 'needs_confirmation') {
+        input.setLastCoachDebug({
+          intent: 'coach_revision_proposal',
+          route: 'coach-revision-proposal-needs-confirmation',
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+          referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: false,
+        });
+        return replyAndFinish(
+          input,
+          'coach-revision-proposal-needs-confirmation',
+          'I need confirmation before making that replacement.',
+        );
+      } else if (revisionResult.kind === 'clarify') {
+        input.setLastCoachDebug({
+          intent: 'coach_revision_proposal',
+          route: 'coach-revision-proposal-clarify',
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+          referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: false,
+        });
+        return replyAndFinish(input, 'coach-revision-proposal-clarify', revisionResult.reply);
+      } else if (revisionResult.kind === 'invalid') {
+        input.setLastCoachDebug({
+          intent: 'coach_revision_proposal',
+          route: `coach-revision-proposal-invalid:${revisionResult.reason}`,
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+          referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: false,
+        });
+        return replyAndFinish(
+          input,
+          'coach-revision-proposal-invalid',
+          "I couldn't safely validate that revision, so I left the plan unchanged.",
+        );
+      }
     }
 
     const semanticMode = controllerSemanticProgramEditDraftMode(input);

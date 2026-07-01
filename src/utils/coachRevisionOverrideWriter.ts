@@ -95,7 +95,7 @@ export function applyCoachRevisionDateOverrides(
       revisedDay: revised,
       todayISO: input.todayISO,
     });
-    if (!built.ok) {
+    if (built.ok === false) {
       rejected.push({
         date: revised.date,
         code: built.code,
