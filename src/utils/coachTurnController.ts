@@ -1669,6 +1669,20 @@ function applyDevActiveCoachRevision(args: {
   });
 
   if (apply.applied.length === 0 || apply.rejected.length > 0) {
+    // Failures at this layer were previously silent, making every writer
+    // rejection look identical from the chat. Name them.
+    emitCoachTurnDiagnostic('coach_revision_apply_rejected', {
+      appliedDates: apply.applied.map((write) => write.date),
+      rejected: apply.rejected.map((entry) => ({
+        date: entry.date ?? null,
+        code: entry.code,
+        reason: entry.reason,
+      })),
+      proposalDates: args.result.proposal.scope.dates,
+      intent: args.result.proposal.userIntent.intent,
+      actionScope: args.result.proposal.userIntent.actionScope,
+      visibleWeekDates: visibleWeek.map((day) => day.date),
+    });
     return {
       ok: false,
       route: 'coach-revision-proposal-apply-rejected',
@@ -1711,7 +1725,24 @@ function verifyCoachRevisionProjectionAfterWrite(args: {
     state,
     overrideContext: programStore.overrideContexts?.[args.date],
   });
-  return JSON.stringify(snapshotProjectedDay(projected)) === JSON.stringify(args.accepted);
+  const acceptedJson = JSON.stringify(args.accepted);
+  const projectedJson = JSON.stringify(snapshotProjectedDay(projected));
+  if (acceptedJson === projectedJson) return true;
+  // Verifier mismatches are the "silent lossiness" failure class: the write
+  // happened but the projection renders something else. Emit the first point
+  // of divergence so every mismatch names the exact field.
+  let divergeAt = 0;
+  const max = Math.min(acceptedJson.length, projectedJson.length);
+  while (divergeAt < max && acceptedJson[divergeAt] === projectedJson[divergeAt]) divergeAt++;
+  emitCoachTurnDiagnostic('coach_revision_projection_mismatch', {
+    date: args.date,
+    acceptedLength: acceptedJson.length,
+    projectedLength: projectedJson.length,
+    divergeAt,
+    acceptedAround: acceptedJson.slice(Math.max(0, divergeAt - 80), divergeAt + 160),
+    projectedAround: projectedJson.slice(Math.max(0, divergeAt - 80), divergeAt + 160),
+  });
+  return false;
 }
 
 function composeCoachRevisionDoneReply(
