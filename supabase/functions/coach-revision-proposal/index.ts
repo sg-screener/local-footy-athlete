@@ -39,6 +39,15 @@ function getAnthropicModel(): string {
     "claude-haiku-4-5-20251001";
 }
 
+function getMaxOutputTokens(): number {
+  // Full-state echo of a real training day (6+ exercises with prescriptions
+  // and descriptions) does not fit in a small budget; truncated JSON fails
+  // parse and surfaces as an opaque 502 to the app. Default high, allow
+  // env override for tuning.
+  const raw = Number(Deno.env.get("COACH_REVISION_PROPOSAL_MAX_OUTPUT_TOKENS"));
+  return Number.isFinite(raw) && raw > 0 ? raw : 8000;
+}
+
 function extractOpenAIText(data: any): string {
   if (typeof data?.output_text === "string") return data.output_text.trim();
   const parts: string[] = [];
@@ -123,7 +132,7 @@ serve(async (req: Request) => {
           model,
           instructions: systemPrompt,
           input: [{ role: "user", content: userBlock }],
-          max_output_tokens: 3600,
+          max_output_tokens: getMaxOutputTokens(),
         }),
       })
       : await fetch("https://api.anthropic.com/v1/messages", {
@@ -135,7 +144,7 @@ serve(async (req: Request) => {
         },
         body: JSON.stringify({
           model,
-          max_tokens: 3200,
+          max_tokens: getMaxOutputTokens(),
           system: systemPrompt,
           messages: [{ role: "user", content: userBlock }],
         }),
@@ -157,6 +166,20 @@ serve(async (req: Request) => {
   }
 
   const data = await upstream.json();
+  // Truncated output is the classic large-payload failure: the JSON echo gets
+  // cut at the token budget and would otherwise surface as an opaque parse
+  // error. Name it explicitly so client logs say exactly what to fix.
+  const truncated = provider === "openai"
+    ? data?.status === "incomplete" &&
+      data?.incomplete_details?.reason === "max_output_tokens"
+    : data?.stop_reason === "max_tokens";
+  if (truncated) {
+    return jsonResponse({
+      error: "model output truncated at max output tokens",
+      model,
+      maxOutputTokens: getMaxOutputTokens(),
+    }, 502);
+  }
   const text = provider === "openai"
     ? extractOpenAIText(data)
     : data?.content?.[0]?.text?.trim?.() ?? "";
