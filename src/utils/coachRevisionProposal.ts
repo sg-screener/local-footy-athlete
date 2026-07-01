@@ -299,8 +299,34 @@ export function parseCoachRevisionProposal(raw: unknown): CoachRevisionParseResu
 
   return {
     ok: true,
-    proposal: parsed as CoachRevisionProposal,
+    proposal: normalizeParsedProposal(parsed as CoachRevisionProposal),
     issues: [],
+  };
+}
+
+/**
+ * Canonicalize semantically unambiguous representations so downstream diff,
+ * validation, and the override writer see one shape per meaning. Models are
+ * told "a workout with no visible content must be workout: null", but they
+ * still sometimes echo empty shells when removing the last section. An empty
+ * shell has exactly one meaning — no visible content — so normalize it here
+ * rather than rejecting the whole turn. WRONG empty days (content that should
+ * have survived) are still caught after normalization by the protected-ref
+ * and target/unrelated-domain checks, which see the content as removed.
+ */
+function normalizeParsedProposal(proposal: CoachRevisionProposal): CoachRevisionProposal {
+  if (proposal.kind !== 'revision') return proposal;
+  return {
+    ...proposal,
+    revisedDays: proposal.revisedDays.map((day) => {
+      if (!day.workout) return day;
+      const sections = day.workout.sections.filter(
+        (section) => section.items.length > 0,
+      );
+      if (sections.length === 0) return { ...day, workout: null };
+      if (sections.length === day.workout.sections.length) return day;
+      return { ...day, workout: { ...day.workout, sections } };
+    }),
   };
 }
 

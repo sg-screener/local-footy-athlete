@@ -537,6 +537,44 @@ section('[10] empty shell rejected');
   ok('empty shell flagged', result.issues.some((entry) => entry.code === 'empty_workout_shell'));
 }
 
+section('[10b] parse normalizes empty shells to canonical rest/null');
+{
+  const before = snapshot([visibleDay(MON, mixedWorkout())]);
+  const monday = daySnap(before, MON);
+  const shellDay = clone(monday);
+  shellDay.workout = {
+    id: monday.workout!.id,
+    title: monday.workout!.title,
+    workoutType: monday.workout!.workoutType,
+    sections: [],
+  };
+  const parsed = parseCoachRevisionProposal(proposal({
+    intent: { intent: 'remove', targetDomain: 'session', actionScope: 'whole_session' },
+    dates: [MON],
+    revisedDays: [shellDay],
+  }));
+  eq('shell proposal parses', parsed.ok, true);
+  eq('empty shell normalized to null workout',
+    parsed.proposal?.kind === 'revision' ? parsed.proposal.revisedDays[0].workout : 'unparsed',
+    null);
+
+  // Empty SECTION among non-empty ones is dropped, not fatal.
+  const partialShell = clone(monday);
+  const strengthSection = sectionOf(partialShell, 'strength');
+  strengthSection.items = [];
+  const parsedPartial = parseCoachRevisionProposal(proposal({
+    intent: { intent: 'remove', targetDomain: 'strength', actionScope: 'strength_section' },
+    dates: [MON],
+    revisedDays: [partialShell],
+  }));
+  eq('partial shell parses', parsedPartial.ok, true);
+  ok('empty section dropped, conditioning kept',
+    parsedPartial.proposal?.kind === 'revision' &&
+      parsedPartial.proposal.revisedDays[0].workout?.sections.length === 1 &&
+      parsedPartial.proposal.revisedDays[0].workout?.sections[0].kind === 'conditioning',
+    parsedPartial.proposal);
+}
+
 section('[11] snapshot workout IDs are stable across renames when workout.id is set');
 {
   const original = mixedWorkout();

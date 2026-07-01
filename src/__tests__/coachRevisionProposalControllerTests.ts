@@ -808,6 +808,66 @@ async function run() {
   }
 
   {
+    // SEQUENTIAL EDITS: after one revision writes an override, the next
+    // revision must operate on the OVERRIDDEN visible day. Remove strength
+    // (day becomes conditioning-only), then remove conditioning (day becomes
+    // rest). This mirrors the live "remove conditioning from Monday" follow-up.
+    let phase: 'strength' | 'conditioning' = 'strength';
+    const adapter = new RecordingRevisionAdapter((input) => {
+      const context = input.recentContext as any;
+      const targetDate =
+        context?.pendingCoachRevision?.targetDateOverride ?? THURSDAY;
+      if (phase === 'strength') {
+        return removeStrengthKeepConditioningAt(input, targetDate);
+      }
+      // Live models sometimes echo an EMPTY SHELL instead of workout: null
+      // when removing the last section (exact live failure 2026-07-02).
+      // Parse normalization must canonicalize this to a rest day.
+      const current = dayByDate(input, targetDate);
+      const after = clone(current);
+      after.workout = {
+        id: after.workout!.id,
+        title: after.workout!.title,
+        workoutType: after.workout!.workoutType,
+        sections: [],
+      };
+      return revision({
+        input,
+        intent: { intent: 'remove', targetDomain: 'conditioning', actionScope: 'conditioning_section' },
+        revisedDay: after,
+        targetDate,
+      });
+    });
+
+    const first = await runControllerTurn({
+      message: 'drop the lower work tomorrow but keep the flush',
+      adapter,
+    });
+    ok('[13] first edit applied', /^Done\./.test(first.reply), first.reply);
+    ok('[13] first edit removed strength only',
+      first.visible.strengthItems.length === 0 && first.visible.conditioningItems.length > 0,
+      first.visible.items);
+
+    phase = 'conditioning';
+    const second = await runControllerTurn({
+      message: 'now remove the conditioning tomorrow too',
+      adapter,
+      seed: false,
+    });
+    const secondSnapshotDay = adapter.calls[1]?.visibleSnapshot.days.find(
+      (day) => day.date === THURSDAY,
+    );
+    ok('[13] second snapshot reflects first override (no strength)',
+      !!secondSnapshotDay?.workout &&
+        !secondSnapshotDay.workout.sections.some((section) => section.kind === 'strength'),
+      secondSnapshotDay?.workout?.sections.map((section) => section.kind));
+    ok('[13] second edit applied on overridden day',
+      /^Done\./.test(second.reply),
+      { reply: second.reply, debugRoute: (second.debug as CoachTurnDebug | null)?.route });
+    eq('[13] day projects as rest after both edits', second.visible.day.workout, null);
+  }
+
+  {
     // Round cap: a model that clarifies forever gets cut off honestly after
     // COACH_REVISION_MAX_CLARIFY_ROUNDS, with no mutation and no legacy path.
     const adapter = new RecordingRevisionAdapter(() =>

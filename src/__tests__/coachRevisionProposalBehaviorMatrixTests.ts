@@ -333,11 +333,23 @@ function protectedViolation(input: SemanticCoachRevisionProposalAdapterInput): C
 function unknownIdProposal(input: SemanticCoachRevisionProposalAdapterInput): CoachRevisionProposal {
   const current = dayByDate(input, THURSDAY);
   const after = strengthRemovedDay(current);
+  // Invented section must carry content: parse normalization strips truly
+  // EMPTY shells (they add nothing visible), so the unknown-id guard is about
+  // invented content, not invented empty wrappers.
   after.workout!.sections.push({
     id: 'section:unknown:recovery',
     kind: 'recovery',
     title: 'Invented Recovery',
-    items: [],
+    items: [{
+      id: 'item:unknown:recovery-walk',
+      title: 'Invented Recovery Walk',
+      domain: 'recovery',
+      source: 'conditioning_option',
+      description: null,
+      exerciseIds: [],
+      durationMinutes: 20,
+      prescription: null,
+    }],
   });
   return revision({
     intent: { intent: 'remove', targetDomain: 'strength', actionScope: 'strength_section' },
