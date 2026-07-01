@@ -354,6 +354,73 @@ section('[6] unknown added IDs do not write');
   ok('rejects unknown id', result.rejected.some((entry) => entry.code === 'unknown_section_id'), result);
 }
 
+section('[7] app-derived presentation drift does not reject the contract');
+{
+  // The projection recomputes descriptions/durations/ordering after an edit.
+  // The LLM cannot predict those derivations; only the change CONTRACT
+  // (item identity + prescriptions + section kinds) must round-trip.
+  const visibleWeek = [visibleDay(TUE, strengthWorkout())];
+  const before = snapshot(visibleWeek);
+  const after = clone(daySnap(before, TUE));
+  const strength = sectionOf(after, 'strength');
+  for (const item of strength.items) {
+    if (item.prescription) item.prescription.sets = 2;
+  }
+  // Presentation drift the echo can't predict:
+  strength.title = 'Strength (model-renamed)';
+  strength.items.reverse();
+  for (const item of strength.items) {
+    item.description = 'model paraphrased this description';
+    item.durationMinutes = 5;
+  }
+  const { result, writes } = apply({
+    visibleWeek,
+    proposal: proposal({
+      intent: { intent: 'reduce', targetDomain: 'strength', actionScope: 'strength_section' },
+      dates: [TUE],
+      revisedDays: [after],
+    }),
+  });
+
+  eq('one write despite presentation drift', writes.length, 1);
+  eq('no rejects despite presentation drift', result.rejected.length, 0);
+  ok('sets reduced in override',
+    writes[0].workout.exercises.every((row: any) => row.prescribedSets === 2),
+    writes[0].workout.exercises);
+}
+
+section('[8] contract violations still reject, and the reason names the divergence');
+{
+  // Accepted revision keeps an item the writer cannot actually produce
+  // (its exerciseIds no longer reference any source exercise), so the
+  // projected override loses it. That IS a contract breach — reject, and
+  // say exactly where the projected day diverges from the accepted one.
+  const visibleWeek = [visibleDay(TUE, strengthWorkout())];
+  const before = snapshot(visibleWeek);
+  const after = clone(daySnap(before, TUE));
+  const strength = sectionOf(after, 'strength');
+  for (const item of strength.items) {
+    if (item.prescription) item.prescription.sets = 2;
+  }
+  strength.items[0].exerciseIds = ['ghost-exercise-id'];
+  const { result, writes } = apply({
+    visibleWeek,
+    proposal: proposal({
+      intent: { intent: 'reduce', targetDomain: 'strength', actionScope: 'strength_section' },
+      dates: [TUE],
+      revisedDays: [after],
+    }),
+  });
+
+  eq('no writes on contract breach', writes.length, 0);
+  ok('rejected as projected_override_mismatch',
+    result.rejected.some((entry) => entry.code === 'projected_override_mismatch'),
+    result.rejected);
+  ok('reason names the divergence',
+    result.rejected.some((entry) => entry.reason.includes('Contract divergence')),
+    result.rejected);
+}
+
 console.log(`\ncoachRevisionOverrideWriterTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.error(failures.join('\n'));

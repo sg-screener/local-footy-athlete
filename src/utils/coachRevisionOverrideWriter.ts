@@ -178,11 +178,12 @@ export function buildWorkoutOverrideFromRevision(args: {
     todayISO: args.todayISO,
   }).day;
   const projectedDay = snapshotProjectedDay(projected);
-  if (!visibleDayMatchesAcceptedRevision(projectedDay, args.revisedDay)) {
+  const match = visibleDayMatchesAcceptedRevision(projectedDay, args.revisedDay);
+  if (match.ok === false) {
     return {
       ok: false,
       code: 'projected_override_mismatch',
-      reason: 'The built override does not project back to the accepted visible revision.',
+      reason: `The built override does not project back to the accepted visible revision. ${match.detail}`,
     };
   }
 
@@ -370,9 +371,60 @@ function cloneWorkout(workout: Workout, overrides: Partial<Workout>): Workout {
   };
 }
 
+/**
+ * Contract view of a visible day: the fields the athlete's approved change
+ * actually concerns — which items exist (identity), where they live (section
+ * kind / domain), and their prescriptions. App-DERIVED presentation fields
+ * (descriptions, durations, titles, item ordering, section ids) are excluded
+ * on purpose: the projection recomputes those after an edit, and byte-equality
+ * against the LLM's echo would force the model to predict every derived
+ * field — a structural false-rejection source. Safety is unaffected:
+ * removals, reductions, and protected items are all identity+prescription
+ * facts, and all remain in the contract.
+ */
+function revisionContractView(day: CoachVisibleDaySnapshot): unknown {
+  if (!day.workout) return { date: day.date, workout: null };
+  const sections = day.workout.sections
+    .map((section) => ({
+      kind: section.kind,
+      items: [...section.items]
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          domain: item.domain,
+          sets: item.prescription?.sets ?? null,
+          repsMin: item.prescription?.repsMin ?? null,
+          repsMax: item.prescription?.repsMax ?? null,
+        }))
+        .sort((a, b) => a.id.localeCompare(b.id)),
+    }))
+    .sort((a, b) =>
+      a.kind === b.kind
+        ? (a.items[0]?.id ?? '').localeCompare(b.items[0]?.id ?? '')
+        : a.kind.localeCompare(b.kind),
+    );
+  return { date: day.date, workout: { sections } };
+}
+
 function visibleDayMatchesAcceptedRevision(
   projected: CoachVisibleDaySnapshot,
   accepted: CoachVisibleDaySnapshot,
-): boolean {
-  return JSON.stringify(projected) === JSON.stringify(accepted);
+): { ok: true } | { ok: false; detail: string } {
+  const projectedJson = JSON.stringify(revisionContractView(projected));
+  const acceptedJson = JSON.stringify(revisionContractView(accepted));
+  if (projectedJson === acceptedJson) return { ok: true };
+  let divergeAt = 0;
+  const max = Math.min(projectedJson.length, acceptedJson.length);
+  while (
+    divergeAt < max &&
+    projectedJson[divergeAt] === acceptedJson[divergeAt]
+  ) divergeAt++;
+  const from = Math.max(0, divergeAt - 60);
+  return {
+    ok: false,
+    detail:
+      `Contract divergence at ${divergeAt}: ` +
+      `accepted "…${acceptedJson.slice(from, divergeAt + 120)}" ` +
+      `vs projected "…${projectedJson.slice(from, divergeAt + 120)}".`,
+  };
 }
