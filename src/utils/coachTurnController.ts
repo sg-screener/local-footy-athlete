@@ -173,6 +173,8 @@ export interface CoachTurnControllerInput {
   clearSetupRebuildProgress: () => void;
   setLastCoachDebug: (debug: CoachTurnDebug | null) => void;
   semanticProgramEditDraftMode?: SemanticProgramEditDraftMode;
+  semanticProgramEditDraftRawMode?: string;
+  semanticProgramEditDraftActiveAllowed?: boolean;
   enableSemanticProgramEditDraft?: boolean;
   semanticProgramEditDraftAdapter?: SemanticProgramEditDraftAdapter | null;
   semanticProgramEditDraftMinConfidence?: number;
@@ -184,6 +186,101 @@ export interface CoachTurnControllerInput {
 }
 
 type AppliedReadinessAction = Extract<CoachReadinessAction, { kind: 'apply_signal' }>;
+
+const COACH_TURN_DIAGNOSTIC_MARKER = 'coach-turn-diagnostics:9084c05-stage3e1b';
+
+function coachTurnDiagnosticsEnabled(): boolean {
+  return typeof __DEV__ !== 'undefined' && __DEV__;
+}
+
+function draftDiagnosticSummary(draft: ProgramEditDraft | null | undefined) {
+  if (!draft) return null;
+  return {
+    source: draft.reason,
+    intent: draft.intent,
+    targetDomain: draft.targetDomain,
+    actionScope: draft.actionScope,
+    targetDate: draft.targetDate,
+    targetItemId: draft.targetItemId,
+    protectedTargets: draft.protectedTargets.map((target) => ({
+      targetDomain: target.targetDomain,
+      actionScope: target.actionScope,
+      targetDate: target.targetDate ?? null,
+      title: target.title ?? null,
+    })),
+    missingFields: draft.missingFields,
+  };
+}
+
+function programEditDiagnosticSummary(edit: ProgramEdit | null | undefined) {
+  if (!edit) return null;
+  return {
+    intent: edit.intent,
+    targetDomain: edit.targetDomain,
+    editScope: 'editScope' in edit ? edit.editScope ?? null : null,
+    targetDate: edit.targetDate,
+    targetItemId: edit.targetItemId ?? null,
+    targetItemTitle: edit.targetItemTitle ?? null,
+    missingFields: edit.missingFields,
+  };
+}
+
+function pendingDiagnosticSummary(pending: PendingCoachClarifier | null | undefined) {
+  if (!pending) return null;
+  return {
+    operation: pending.operation,
+    missingFields: pending.missingFields,
+    askedQuestion: pending.askedQuestion ?? null,
+    pendingClarification: pending.pendingClarification
+      ? {
+          missingField: pending.pendingClarification.missingField,
+          expectedAnswerType: pending.pendingClarification.expectedAnswerType,
+          source: pending.pendingClarification.source ?? null,
+          proposedCandidate: pending.pendingClarification.proposedCandidate ?? null,
+          requestedDow: pending.pendingClarification.requestedDow ?? null,
+          staleDate: pending.pendingClarification.staleDate ?? null,
+        }
+      : null,
+    storedDraft: draftDiagnosticSummary(pending.programEditDraftEnvelope?.draft),
+    storedProgramEdit: programEditDiagnosticSummary(pending.programEdit),
+  };
+}
+
+function classificationDiagnosticSummary(
+  classification: PendingClarificationAnswerClassification | null | undefined,
+) {
+  if (!classification) return null;
+  return {
+    kind: classification.kind,
+    confidence: classification.confidence,
+    reason: classification.reason,
+    candidate: 'candidate' in classification ? classification.candidate ?? null : null,
+  };
+}
+
+function pendingDraftOnlyPatchedTargetDate(
+  before: ProgramEditDraft | null | undefined,
+  after: ProgramEditDraft | null | undefined,
+): boolean | null {
+  if (!before || !after) return null;
+  return (
+    before.targetDate !== after.targetDate &&
+    before.intent === after.intent &&
+    before.targetDomain === after.targetDomain &&
+    before.actionScope === after.actionScope &&
+    JSON.stringify(before.protectedTargets) === JSON.stringify(after.protectedTargets) &&
+    before.proposedActions.length === after.proposedActions.length
+  );
+}
+
+function emitCoachTurnDiagnostic(event: string, payload: Record<string, unknown>) {
+  if (!coachTurnDiagnosticsEnabled()) return;
+  logger.warn('[coach-turn-diagnostic]', {
+    marker: COACH_TURN_DIAGNOSTIC_MARKER,
+    event,
+    ...payload,
+  });
+}
 
 function assistantMessage(suffix: string, content: string): CoachTurnMessage {
   return {
@@ -983,8 +1080,16 @@ function shouldHoldDurationClarifier(
 function controllerSemanticProgramEditDraftMode(
   input: CoachTurnControllerInput,
 ): SemanticProgramEditDraftMode {
-  if (input.semanticProgramEditDraftMode) return input.semanticProgramEditDraftMode;
-  return input.enableSemanticProgramEditDraft ? 'active' : 'off';
+  const requested = input.semanticProgramEditDraftMode ??
+    (input.enableSemanticProgramEditDraft ? 'active' : 'off');
+  if (requested === 'active' && input.semanticProgramEditDraftActiveAllowed === false) {
+    logger.warn('[coach-semantic-program-edit-draft] active mode blocked by config gate', {
+      rawMode: input.semanticProgramEditDraftRawMode ?? null,
+      activeAllowed: false,
+    });
+    return 'off';
+  }
+  return requested;
 }
 
 function shouldAttemptSemanticProgramEditDraft(args: {
@@ -1609,6 +1714,22 @@ export async function handleCoachTurn(
     });
 
     const pendingClarifier = getPendingClarifierSnapshot();
+    const semanticModeAtTurnStart = controllerSemanticProgramEditDraftMode(input);
+    emitCoachTurnDiagnostic('turn_start', {
+      message: input.userMessage.content,
+      todayISO: input.todayISO,
+      rawSemanticMode: input.semanticProgramEditDraftRawMode ?? null,
+      semanticMode: semanticModeAtTurnStart,
+      resolvedSemanticMode: semanticModeAtTurnStart,
+      semanticAdapterPresent: !!input.semanticProgramEditDraftAdapter,
+      activeModeConfigAllowed: input.semanticProgramEditDraftActiveAllowed ?? null,
+      activeSemanticAllowed:
+        semanticModeAtTurnStart === 'active' &&
+        (input.semanticProgramEditDraftActiveAllowed ?? true) &&
+        !!input.semanticProgramEditDraftAdapter,
+      pendingBefore: pendingDiagnosticSummary(pendingClarifier),
+      buildMarker: COACH_TURN_DIAGNOSTIC_MARKER,
+    });
     if (pendingClarifier) {
       if (isCancelClarifierMessage(input.userMessage.content)) {
         usePendingCoachClarifierStore.getState().clearPending();
@@ -1643,6 +1764,11 @@ export async function handleCoachTurn(
         input,
         pending: pendingClarifier,
       });
+      emitCoachTurnDiagnostic('pending_answer_classification', {
+        message: input.userMessage.content,
+        pendingBefore: pendingDiagnosticSummary(pendingClarifier),
+        classification: classificationDiagnosticSummary(pendingAnswerClassification),
+      });
       const pendingSupersededByNewMutation = shouldSupersedePendingClarifierWithNewMutation({
         pending: pendingClarifier,
         classification: pendingAnswerClassification,
@@ -1651,6 +1777,11 @@ export async function handleCoachTurn(
       });
       if (pendingSupersededByNewMutation) {
         usePendingCoachClarifierStore.getState().clearPending();
+        emitCoachTurnDiagnostic('pending_superseded_by_new_mutation', {
+          message: input.userMessage.content,
+          pendingBefore: pendingDiagnosticSummary(pendingClarifier),
+          classification: classificationDiagnosticSummary(pendingAnswerClassification),
+        });
         logger.debug('[pending-clarifier] superseded_by_new_mutation', {
           operation: pendingClarifier.operation,
           missingFields: pendingClarifier.missingFields,
@@ -1799,6 +1930,17 @@ export async function handleCoachTurn(
       }
       if (pendingDraftAnswer.kind === 'complete') {
         const resumedDraft = pendingDraftAnswer.draft;
+        emitCoachTurnDiagnostic('pending_draft_answer_complete', {
+          message: input.userMessage.content,
+          storedDraftBefore: draftDiagnosticSummary(
+            pendingClarifier.programEditDraftEnvelope?.draft,
+          ),
+          resumedDraftAfter: draftDiagnosticSummary(resumedDraft),
+          patchedOnlyTargetDate: pendingDraftOnlyPatchedTargetDate(
+            pendingClarifier.programEditDraftEnvelope?.draft,
+            resumedDraft,
+          ),
+        });
         const draftFrontDoor = decideProgramEditDraftFrontDoor(resumedDraft);
         logger.warn('[pending-program-edit-draft-resume]', {
           continuationId: pendingClarifier.programEditDraftEnvelope?.continuationId ?? null,
@@ -1918,6 +2060,11 @@ export async function handleCoachTurn(
         pendingAnswerClassification,
       });
       if (pendingProgramEditAnswer.kind === 'complete') {
+        emitCoachTurnDiagnostic('pending_legacy_program_edit_answer_complete', {
+          message: input.userMessage.content,
+          pendingBefore: pendingDiagnosticSummary(pendingClarifier),
+          resumedProgramEdit: programEditDiagnosticSummary(pendingProgramEditAnswer.programEdit),
+        });
         logger.warn('[pending-program-edit-resume]', {
           missingFields: pendingClarifier.programEdit?.missingFields ?? pendingClarifier.missingFields,
           targetDate: pendingProgramEditAnswer.programEdit.targetDate,
@@ -2194,6 +2341,29 @@ export async function handleCoachTurn(
       packet,
       mode: semanticMode,
     });
+    emitCoachTurnDiagnostic('semantic_parser_result', {
+      message: input.userMessage.content,
+      rawSemanticMode: input.semanticProgramEditDraftRawMode ?? null,
+      semanticMode,
+      resolvedSemanticMode: semanticMode,
+      semanticAdapterPresent: !!input.semanticProgramEditDraftAdapter,
+      activeModeConfigAllowed: input.semanticProgramEditDraftActiveAllowed ?? null,
+      activeSemanticAllowed:
+        semanticMode === 'active' &&
+        (input.semanticProgramEditDraftActiveAllowed ?? true) &&
+        !!input.semanticProgramEditDraftAdapter,
+      handledPath:
+        semanticMode === 'active'
+          ? 'active'
+          : semanticMode === 'shadow'
+            ? 'shadow'
+            : 'off',
+      resultKind: semanticDraftResult?.kind ?? null,
+      resultReason:
+        semanticDraftResult && 'reason' in semanticDraftResult
+          ? semanticDraftResult.reason
+          : null,
+    });
     if (semanticDraftResult) {
       logger.debug('[coach-semantic-program-edit-draft]', {
         mode: semanticMode,
@@ -2285,6 +2455,11 @@ export async function handleCoachTurn(
         });
       if (staleSemanticDraftClarifier) {
         usePendingCoachClarifierStore.getState().setPending(staleSemanticDraftClarifier);
+        emitCoachTurnDiagnostic('pending_set_semantic_stale_date', {
+          message: input.userMessage.content,
+          storedDraft: draftDiagnosticSummary(packet.programEditDraft),
+          pendingAfter: pendingDiagnosticSummary(staleSemanticDraftClarifier as PendingCoachClarifier),
+        });
         input.setLastCoachDebug({
           intent: 'semantic_program_edit_draft',
           route: staleSemanticDraftClarifier.pendingClarification?.reason ??
@@ -2450,6 +2625,12 @@ export async function handleCoachTurn(
       : null;
     if (staleDateClarifier) {
       usePendingCoachClarifierStore.getState().setPending(staleDateClarifier);
+      emitCoachTurnDiagnostic('pending_set_legacy_stale_date', {
+        message: input.userMessage.content,
+        semanticDraftInPacket: draftDiagnosticSummary(packet.programEditDraft),
+        programEdit: programEditDiagnosticSummary(programEditForExecution),
+        pendingAfter: pendingDiagnosticSummary(staleDateClarifier as PendingCoachClarifier),
+      });
       const route = staleDateClarifier.pendingClarification?.reason ??
         'pending_clarification:target_date:past_date';
       input.setLastCoachDebug({

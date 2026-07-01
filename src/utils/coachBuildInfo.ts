@@ -39,6 +39,7 @@ export const REFERENCE_RESOLVER_VERSION = 'g.1.2026-05-10';
 export const BIKE_INTENT_PARSER_VERSION = 'g.1.2026-05-10';
 export const CLARIFIER_RESUME_VERSION = 'g.1.2026-05-10';
 export const COACH_SCREEN_PENDING_WIRING_VERSION = 'g.1.2026-05-10';
+export const COACH_STAGE3E_BLOCK_RESOLVER_VERSION = '3e.1b.9084c05';
 
 /**
  * Top-level Phase-G fingerprint. Bumped on every Phase-G-affecting
@@ -54,6 +55,7 @@ export const COACH_BUILD_INFO = {
   bikeIntentParserVersion: BIKE_INTENT_PARSER_VERSION,
   clarifierResumeVersion: CLARIFIER_RESUME_VERSION,
   coachScreenPendingWiringVersion: COACH_SCREEN_PENDING_WIRING_VERSION,
+  stage3EBlockResolverVersion: COACH_STAGE3E_BLOCK_RESOLVER_VERSION,
 } as const;
 
 let appLaunchLogged = false;

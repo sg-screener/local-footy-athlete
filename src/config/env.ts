@@ -14,11 +14,18 @@ export interface ClientEnvConfig {
   coachChatEndpoint: string;
   coachIntentEndpoint: string;
   coachSemanticProgramEditDraftEndpoint: string;
-  semanticProgramEditDraftMode: Exclude<SemanticProgramEditDraftMode, 'active'>;
+  semanticProgramEditDraftMode: SemanticProgramEditDraftMode;
+  semanticProgramEditDraftRawMode: string;
+  semanticProgramEditDraftDevActive: boolean;
+  semanticProgramEditDraftActiveAllowed: boolean;
   supportEmail: string;
   feedbackEmail: string;
   missing: ClientEnvKey[];
   isReady: boolean;
+}
+
+interface ClientEnvOptions {
+  isDev?: boolean;
 }
 
 const DEFAULT_SUPPORT_EMAIL = 'one22gym@gmail.com';
@@ -29,6 +36,8 @@ function readPublicEnv(): PublicEnv {
     EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL: process.env.EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL,
+    EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE: process.env.EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE,
+    EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE: process.env.EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE,
     EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE: process.env.EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE,
     EXPO_PUBLIC_SUPPORT_EMAIL: process.env.EXPO_PUBLIC_SUPPORT_EMAIL,
     EXPO_PUBLIC_FEEDBACK_EMAIL: process.env.EXPO_PUBLIC_FEEDBACK_EMAIL,
@@ -43,17 +52,63 @@ function clean(value: string | undefined): string {
   return (value ?? '').trim();
 }
 
-function semanticProgramEditDraftMode(value: string | undefined): Exclude<SemanticProgramEditDraftMode, 'active'> {
-  return clean(value).toLowerCase() === 'shadow' ? 'shadow' : 'off';
+function runtimeIsDev(): boolean {
+  return typeof __DEV__ !== 'undefined' && __DEV__;
 }
 
-export function getClientEnvConfig(env: PublicEnv = readPublicEnv()): ClientEnvConfig {
+function truthyFlag(value: string | undefined): boolean {
+  return /^(?:1|true|yes|on)$/i.test(clean(value));
+}
+
+function semanticProgramEditRawMode(env: PublicEnv): string {
+  return clean(
+    env.EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE ??
+      env.EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE,
+  ).toLowerCase();
+}
+
+function semanticProgramEditDraftMode(args: {
+  rawMode: string;
+  devActive: boolean;
+  isDev: boolean;
+}): SemanticProgramEditDraftMode {
+  if (args.rawMode === 'shadow') return 'shadow';
+  if (args.rawMode !== 'active') return 'off';
+  if (args.isDev && args.devActive) return 'active';
+
+  logger.warn('[env] Semantic ProgramEditDraft active mode requested but disabled', {
+    rawMode: args.rawMode,
+    isDev: args.isDev,
+    devActive: args.devActive,
+    resolvedMode: 'off',
+  });
+  return 'off';
+}
+
+export function shouldCreateSemanticProgramEditDraftAdapter(
+  mode: SemanticProgramEditDraftMode,
+): boolean {
+  return mode === 'shadow' || mode === 'active';
+}
+
+export function getClientEnvConfig(
+  env: PublicEnv = readPublicEnv(),
+  options: ClientEnvOptions = {},
+): ClientEnvConfig {
   const supabaseUrl = clean(env.EXPO_PUBLIC_SUPABASE_URL);
   const supabaseAnonKey = clean(
     env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   );
   const supportEmail = clean(env.EXPO_PUBLIC_SUPPORT_EMAIL) || DEFAULT_SUPPORT_EMAIL;
   const feedbackEmail = clean(env.EXPO_PUBLIC_FEEDBACK_EMAIL) || supportEmail;
+  const rawSemanticMode = semanticProgramEditRawMode(env);
+  const semanticDevActive = truthyFlag(env.EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE);
+  const isDev = options.isDev ?? runtimeIsDev();
+  const resolvedSemanticMode = semanticProgramEditDraftMode({
+    rawMode: rawSemanticMode,
+    devActive: semanticDevActive,
+    isDev,
+  });
 
   const missing: ClientEnvKey[] = [];
   if (!supabaseUrl) missing.push('EXPO_PUBLIC_SUPABASE_URL');
@@ -71,7 +126,10 @@ export function getClientEnvConfig(env: PublicEnv = readPublicEnv()): ClientEnvC
     coachSemanticProgramEditDraftEndpoint: functionsBase
       ? `${trimTrailingSlash(functionsBase)}/coach-semantic-program-edit-draft`
       : '',
-    semanticProgramEditDraftMode: semanticProgramEditDraftMode(env.EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE),
+    semanticProgramEditDraftMode: resolvedSemanticMode,
+    semanticProgramEditDraftRawMode: rawSemanticMode || 'off',
+    semanticProgramEditDraftDevActive: semanticDevActive,
+    semanticProgramEditDraftActiveAllowed: resolvedSemanticMode === 'active',
     supportEmail,
     feedbackEmail,
     missing,

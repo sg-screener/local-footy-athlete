@@ -90,6 +90,7 @@ import {
 import {
   getClientEnvConfig,
   logMissingClientEnv,
+  shouldCreateSemanticProgramEditDraftAdapter,
 } from '../../config/env';
 import { logger } from '../../utils/logger';
 import { setCoachReady } from '../../navigation/smokeNavState';
@@ -139,7 +140,7 @@ const liveCoachIntentClassifier: CoachIntentClassifier = clientEnv.isReady
     })
   : disabledCoachIntentClassifier;
 const liveSemanticProgramEditDraftAdapter = clientEnv.isReady &&
-  clientEnv.semanticProgramEditDraftMode === 'shadow'
+  shouldCreateSemanticProgramEditDraftAdapter(clientEnv.semanticProgramEditDraftMode)
   ? new LLMSemanticProgramEditDraftAdapter({
       endpoint: clientEnv.coachSemanticProgramEditDraftEndpoint,
       authToken: clientEnv.supabaseAnonKey,
@@ -1707,6 +1708,8 @@ export default function CoachScreen() {
       todayISO: todayISOLocal(),
       classifier: liveCoachIntentClassifier,
       semanticProgramEditDraftMode: clientEnv.semanticProgramEditDraftMode,
+      semanticProgramEditDraftRawMode: clientEnv.semanticProgramEditDraftRawMode,
+      semanticProgramEditDraftActiveAllowed: clientEnv.semanticProgramEditDraftActiveAllowed,
       semanticProgramEditDraftAdapter: liveSemanticProgramEditDraftAdapter,
       pendingCoachProposal: pendingCoachProposalRef.current,
       pendingReadiness: pendingReadinessRef.current,

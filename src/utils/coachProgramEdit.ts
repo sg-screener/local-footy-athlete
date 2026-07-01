@@ -57,6 +57,21 @@ import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine'
 import { useProgramStore } from '../store/programStore';
 import { logger } from './logger';
 
+const COACH_PROGRAM_EDIT_DIAGNOSTIC_MARKER = 'coach-program-edit-diagnostics:9084c05-stage3e1b';
+
+function programEditDiagnosticsEnabled(): boolean {
+  return typeof __DEV__ !== 'undefined' && __DEV__;
+}
+
+function emitProgramEditDiagnostic(event: string, payload: Record<string, unknown>) {
+  if (!programEditDiagnosticsEnabled()) return;
+  logger.warn('[coach-program-edit-diagnostic]', {
+    marker: COACH_PROGRAM_EDIT_DIAGNOSTIC_MARKER,
+    event,
+    ...payload,
+  });
+}
+
 type MutateCoachCommand = Extract<CoachCommand, { mode: 'mutate' }>;
 type AddConditioningMutatePayload = Extract<CoachMutatePayload, { operation: 'add_conditioning' }>;
 
@@ -3592,7 +3607,17 @@ function resolveBlockLevelProgramEditDraftTarget(input: {
 } {
   const { draft } = input;
   const editScope = editScopeFromSemanticDraft(draft);
-  if (!isSemanticStrengthBlockDraft(draft, editScope)) return { draft };
+  if (!isSemanticStrengthBlockDraft(draft, editScope)) {
+    emitProgramEditDiagnostic('strength_block_resolver_skipped', {
+      intent: draft.intent,
+      targetDomain: draft.targetDomain,
+      actionScope: draft.actionScope,
+      editScope: editScope ?? null,
+      targetDate: draft.targetDate,
+      missingFields: draft.missingFields,
+    });
+    return { draft };
+  }
 
   const withoutItemField = {
     ...draft,
@@ -3603,10 +3628,35 @@ function resolveBlockLevelProgramEditDraftTarget(input: {
       targetItemId: null,
     })),
   };
-  if (!withoutItemField.targetDate) return { draft: withoutItemField };
+  if (!withoutItemField.targetDate) {
+    emitProgramEditDiagnostic('strength_block_resolver_ran', {
+      targetDate: null,
+      candidateCount: 0,
+      candidates: [],
+      missingFieldsBefore: draft.missingFields,
+      missingFieldsAfter: withoutItemField.missingFields,
+      resolved: false,
+      reason: 'missing_target_date',
+    });
+    return { draft: withoutItemField };
+  }
 
   const visibleProgram = input.resolveVisibleProgramForDate?.(withoutItemField.targetDate) ?? null;
   const blockTargets = visibleStrengthBlockTargets(visibleProgram);
+  emitProgramEditDiagnostic('strength_block_resolver_ran', {
+    targetDate: withoutItemField.targetDate,
+    visibleWorkoutName: visibleProgram?.day.workout?.name ?? null,
+    candidateCount: blockTargets.length,
+    candidates: blockTargets.map((target) => ({
+      id: target.id,
+      title: target.title,
+      domain: target.domain,
+      source: target.source,
+    })),
+    missingFieldsBefore: draft.missingFields,
+    missingFieldsAfter: withoutItemField.missingFields,
+    resolved: blockTargets.length <= 1,
+  });
   if (blockTargets.length > 1) {
     const options = blockTargets.map((target) => target.title);
     return {
@@ -3892,7 +3942,20 @@ function semanticDraftClarificationQuestion(
       ? `Which strength block on ${draft.targetDate} should I change?`
       : 'Which strength block should I change?';
   }
-  if (fields.includes('targetItemId')) return 'Which visible item should I change?';
+  if (fields.includes('targetItemId')) {
+    emitProgramEditDiagnostic('generic_visible_item_prompt_generated', {
+      functionName: 'semanticDraftClarificationQuestion',
+      intent: draft.intent,
+      targetDomain: draft.targetDomain,
+      actionScope: draft.actionScope,
+      targetDate: draft.targetDate,
+      targetItemId: draft.targetItemId,
+      missingFields: fields,
+      reason:
+        'targetItemId remained missing after semantic draft finalisation',
+    });
+    return 'Which visible item should I change?';
+  }
   if (fields.includes('setupChange')) {
     return 'I understand that as a setup change, but I need the exact availability change before rebuilding.';
   }

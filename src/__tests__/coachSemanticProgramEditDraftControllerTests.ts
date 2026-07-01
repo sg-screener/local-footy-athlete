@@ -391,6 +391,7 @@ async function runControllerTurn(args: {
   message: string;
   semanticEnabled?: boolean;
   semanticMode?: SemanticProgramEditDraftMode;
+  semanticActiveAllowed?: boolean;
   semanticAdapter?: SemanticProgramEditDraftAdapter | null;
   seedPendingDuration?: boolean;
   seedPendingItem?: boolean;
@@ -473,6 +474,8 @@ async function runControllerTurn(args: {
       debug = nextDebug;
     },
     semanticProgramEditDraftMode: args.semanticMode,
+    semanticProgramEditDraftRawMode: args.semanticMode,
+    semanticProgramEditDraftActiveAllowed: args.semanticActiveAllowed,
     enableSemanticProgramEditDraft: args.semanticEnabled,
     semanticProgramEditDraftAdapter: args.semanticAdapter ?? null,
     semanticProgramEditDraftNowISO: `${TODAY}T12:00:00.000Z`,
@@ -523,6 +526,20 @@ async function run() {
         /team training|game content/i.test(result.reply) &&
         !/\bdone\b|not sure|generic|I can help/i.test(result.reply),
       result.reply);
+  }
+
+  {
+    const adapter = new RecordingSemanticAdapter(responseForDraft(strengthBlockDraft("I'm cooked, bin the leg stuff tomorrow")));
+    const result = await runControllerTurn({
+      message: "I'm cooked, bin the leg stuff tomorrow",
+      semanticMode: 'active',
+      semanticActiveAllowed: false,
+      semanticAdapter: adapter,
+    });
+    eq('[2b] active mode blocked by config gate does not call adapter', adapter.calls.length, 0);
+    ok('[2b] blocked active gate leaves semantic diagnostics empty',
+      result.diagnostics.length === 0,
+      result.diagnostics);
   }
 
   {
