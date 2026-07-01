@@ -505,6 +505,37 @@ async function run() {
   }
 
   {
+    // Stage 1 date bound: a proposal changing a date outside the visible
+    // snapshot must fail diff validation via app-side policy — the LLM's own
+    // scope.dates can no longer define its own boundary.
+    const OUT_OF_WINDOW = '2026-08-15';
+    const adapter = new RecordingRevisionAdapter((input) => {
+      const current = day(input);
+      const after = clone(current);
+      after.date = OUT_OF_WINDOW;
+      return revision({
+        input,
+        intent: { intent: 'remove', targetDomain: 'strength', actionScope: 'strength_section' },
+        revisedDay: after,
+        targetDate: OUT_OF_WINDOW,
+      });
+    });
+    const result = await runControllerTurn({
+      message: 'drop the strength on August 15',
+      adapter,
+    });
+    eq('[9] handled', result.handled.handled, true);
+    eq('[9] invalid route',
+      (result.debug as CoachTurnDebug | null)?.route,
+      'coach-revision-proposal-invalid:diff_validation_failed');
+    ok('[9] safe no-change reply', /left the plan unchanged/.test(result.reply), result.reply);
+    eq('[9] legacy classifier not called', result.classifierCalls, 0);
+    ok('[9] no override written anywhere',
+      Object.keys(result.dateOverrides).length === 0,
+      result.dateOverrides);
+  }
+
+  {
     // Stage 0 fail-loud: active mode + null adapter must dead-end with a dev
     // misconfig reply — never continue into legacy mutation paths.
     const result = await runControllerTurn({

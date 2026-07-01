@@ -345,15 +345,24 @@ export function validateCoachRevisionDiff(args: {
 
   const issues: CoachRevisionValidationIssue[] = [];
   const confirmationIssues: CoachRevisionValidationIssue[] = [];
-  const allowedDates = new Set(
-    args.policy?.allowedChangedDates ??
-      args.proposal.scope.dates ??
-      args.proposal.userIntent.targetDates,
+  // Two independent date bounds, both required:
+  // 1. scope consistency — the diff may only change dates the proposal itself
+  //    declared in scope (catches the LLM editing days it didn't claim);
+  // 2. app policy — when provided, changed dates must also be inside the
+  //    app-side window (the snapshot the LLM was shown), so the proposal can
+  //    never define its own outer boundary.
+  const scopeDates = new Set(
+    args.proposal.scope.dates ?? args.proposal.userIntent.targetDates,
   );
+  const policyDates = args.policy?.allowedChangedDates
+    ? new Set(args.policy.allowedChangedDates)
+    : null;
 
   for (const date of diff.changedDates) {
-    if (!allowedDates.has(date)) {
+    if (!scopeDates.has(date)) {
       issues.push(issue('unrelated_day_changed', `Proposal changed ${date}, which was not in scope.`, date));
+    } else if (policyDates && !policyDates.has(date)) {
+      issues.push(issue('unrelated_day_changed', `Proposal changed ${date}, which is outside the allowed visible window.`, date));
     }
   }
 

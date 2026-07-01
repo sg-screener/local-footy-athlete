@@ -1334,6 +1334,14 @@ async function buildCoachRevisionProposalForController(args: {
   return buildSemanticCoachRevisionProposal({
     userMessage: args.input.userMessage.content,
     visibleSnapshot: buildCoachRevisionWeekSnapshotFromProjectedDays(visibleWeek),
+    // App-side validation policy: the proposal may only change dates that
+    // were in the snapshot the LLM was shown, and may not add sections.
+    // Past visible dates stay allowed here so stale-date proposals reach the
+    // stale-date clarification flow instead of failing as unrelated dates.
+    validationPolicy: {
+      allowedChangedDates: visibleWeek.map((day) => day.date),
+      allowedAddedSectionKinds: [],
+    },
     pendingClarifier: getPendingClarifierSnapshot(),
     recentContext: {
       currentWeekDates: (args.packet.currentWeek ?? []).map((day) => day.date),
@@ -1371,6 +1379,12 @@ async function buildCoachRevisionProposalForPendingResume(args: {
   return buildSemanticCoachRevisionProposal({
     userMessage: args.envelope.originalUserWording,
     visibleSnapshot: buildCoachRevisionWeekSnapshotFromProjectedDays(visibleWeek),
+    // Same app-side bound as the new-message path: only snapshot dates may
+    // change, no adds. visibleWeek already includes the patched target date.
+    validationPolicy: {
+      allowedChangedDates: visibleWeek.map((day) => day.date),
+      allowedAddedSectionKinds: [],
+    },
     pendingClarifier: args.pending,
     recentContext: {
       currentWeekDates: (args.packet.currentWeek ?? []).map((day) => day.date),
