@@ -235,13 +235,20 @@ function runConditioningProgramEdit(edit: ProgramEdit, beforeWorkout: any) {
         targetWorkoutBeforeName: beforeWorkout.name,
         targetWorkoutAfterName: written?.name ?? null,
         beforeHasConditioning: true,
-        afterHasConditioning: true,
+        afterHasConditioning: extractVisibleProgramItemsFromWorkout(written)
+          .some((item: any) => item.domain === 'conditioning' || item.domain === 'recovery'),
         overrideKeyWritten: !!written,
-        programTabProjectionHasConditioning: true,
-        dayWorkoutProjectionHasConditioning: true,
+        programTabProjectionHasConditioning: extractVisibleProgramItemsFromWorkout(written)
+          .some((item: any) => item.domain === 'conditioning' || item.domain === 'recovery'),
+        dayWorkoutProjectionHasConditioning: extractVisibleProgramItemsFromWorkout(written)
+          .some((item: any) => item.domain === 'conditioning' || item.domain === 'recovery'),
         expectedActivityTitle: args.expectedActivityTitle,
-        programTabProjectionHasExpectedActivity: true,
-        dayWorkoutProjectionHasExpectedActivity: true,
+        programTabProjectionHasExpectedActivity: args.expectedActivityTitle
+          ? JSON.stringify(written ?? {}).toLowerCase().includes(String(args.expectedActivityTitle).toLowerCase())
+          : true,
+        dayWorkoutProjectionHasExpectedActivity: args.expectedActivityTitle
+          ? JSON.stringify(written ?? {}).toLowerCase().includes(String(args.expectedActivityTitle).toLowerCase())
+          : true,
       }),
       snapshotAfter: () => written,
       newEventId: () => 'test-conditioning-event',
@@ -2523,6 +2530,18 @@ const mixedStrengthFlush = strengthWithConditioningWorkout(
   ['Back Squat', 'Romanian Deadlift'],
   ['Easy Aerobic Flush'],
 );
+const sixExerciseStrengthFlush = strengthWithConditioningWorkout(
+  'Lower Body Strength',
+  [
+    'Back Squat',
+    'Romanian Deadlift',
+    'Walking Lunge',
+    'Split Squat',
+    'Nordic Curl',
+    'Copenhagen Plank',
+  ],
+  ['Easy Aerobic Flush'],
+);
 const removeStrengthEdit = semanticStrengthBlockEdit({ intent: 'remove' });
 eq('semantic strength remove finalises to strength domain',
   removeStrengthEdit.targetDomain,
@@ -2548,6 +2567,18 @@ ok('block-level strength resolver does not ask which visible item',
   !staleItemStrengthEdit.missingFields.includes('targetItemId') &&
     !/visible item/i.test(staleItemStrengthEdit.question ?? ''),
   staleItemStrengthEdit);
+const multiExerciseStrengthEdit = semanticStrengthBlockEdit({
+  intent: 'remove',
+  missingFields: ['targetItemId', 'strengthBlockTarget'],
+  resolveVisibleProgramForDate: () => visibleProgramForWorkout(sixExerciseStrengthFlush),
+});
+eq('one strength block with many exercises still resolves automatically',
+  multiExerciseStrengthEdit.intent,
+  'remove' as any);
+ok('many child strength exercises do not ask which strength work',
+  !/which strength|which visible item/i.test(multiExerciseStrengthEdit.question ?? '') &&
+    !multiExerciseStrengthEdit.missingFields.includes('strengthBlockTarget'),
+  multiExerciseStrengthEdit);
 const multiBlockStrengthEdit = semanticStrengthBlockEdit({
   intent: 'remove',
   missingFields: ['targetItemId'],
@@ -2678,9 +2709,9 @@ eq('conditioning block resolver finalises to conditioning domain',
 eq('conditioning block resolver keeps remove_conditioning_item scope',
   (semanticConditioningRemove as any).editScope,
   'remove_conditioning_item');
-eq('conditioning block resolver binds the single visible conditioning block',
+eq('conditioning block resolver uses aggregate block target',
   semanticConditioningRemove.targetItemId,
-  'conditioning-row-1');
+  null);
 ok('conditioning block resolver does not ask which visible item',
   !semanticConditioningRemove.missingFields.includes('targetItemId') &&
     !/visible item/i.test(semanticConditioningRemove.question ?? ''),
@@ -2704,7 +2735,7 @@ ok('semantic conditioning block removal removes only conditioning',
   ),
   semanticConditioningRemoveRun.written);
 
-const multiConditioningBlockEdit = semanticConditioningBlockEdit({
+const multiChildConditioningBlockEdit = semanticConditioningBlockEdit({
   missingFields: ['targetItemId'],
   resolveVisibleProgramForDate: () => visibleProgramForWorkout(
     strengthWithConditioningWorkout(
@@ -2713,6 +2744,60 @@ const multiConditioningBlockEdit = semanticConditioningBlockEdit({
       ['Bike Conditioning', 'Sprint Conditioning'],
     ),
   ),
+});
+eq('one conditioning block with multiple child items resolves automatically',
+  multiChildConditioningBlockEdit.intent,
+  'remove' as any);
+ok('multiple child conditioning items do not ask generic or block clarification',
+  !/which conditioning block|which visible item/i.test(multiChildConditioningBlockEdit.question ?? '') &&
+    !multiChildConditioningBlockEdit.missingFields.includes('conditioningBlockTarget'),
+  multiChildConditioningBlockEdit);
+
+const multiConditioningBlockEdit = semanticConditioningBlockEdit({
+  missingFields: ['targetItemId'],
+  resolveVisibleProgramForDate: () => {
+    const visible = visibleProgramForWorkout(mixedStrengthFlush);
+    return {
+      ...visible,
+      items: [
+        ...visible.items.filter((item: any) => item.domain !== 'conditioning'),
+        {
+          id: 'bike-conditioning-block',
+          title: 'Bike Conditioning',
+          domain: 'conditioning',
+          modality: 'bike',
+          durationMinutes: 20,
+          source: 'session',
+        },
+        {
+          id: 'sprint-conditioning-block',
+          title: 'Sprint Conditioning',
+          domain: 'conditioning',
+          modality: 'run',
+          durationMinutes: 15,
+          source: 'session',
+        },
+      ],
+      conditioningItems: [
+        {
+          id: 'bike-conditioning-block',
+          title: 'Bike Conditioning',
+          domain: 'conditioning',
+          modality: 'bike',
+          durationMinutes: 20,
+          source: 'session',
+        },
+        {
+          id: 'sprint-conditioning-block',
+          title: 'Sprint Conditioning',
+          domain: 'conditioning',
+          modality: 'run',
+          durationMinutes: 15,
+          source: 'session',
+        },
+      ],
+    };
+  },
 });
 eq('multiple visible conditioning blocks ask typed clarification',
   multiConditioningBlockEdit.intent,

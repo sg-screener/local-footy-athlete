@@ -1932,11 +1932,18 @@ async function runControllerPendingDateSection() {
   const microcycle2 = program2.microcycles[0];
   const mondayBase = microcycle2.workouts.find((workout: any) => workout.dayOfWeek === 1);
   const flushTemplate = buildSmokeWednesdayWorkout(microcycle2.id);
-  const lowerStrengthRow = {
-    id: 'mon-draft-strength-back-squat',
+  const lowerStrengthRows = [
+    'Back Squat',
+    'Romanian Deadlift',
+    'Walking Lunge',
+    'Split Squat',
+    'Nordic Curl',
+    'Copenhagen Plank',
+  ].map((name, index) => ({
+    id: `mon-draft-strength-${index + 1}`,
     workoutId: mondayBase.id,
-    exerciseId: 'mon-draft-strength-back-squat',
-    exerciseOrder: 0,
+    exerciseId: `mon-draft-strength-${index + 1}`,
+    exerciseOrder: index,
     prescribedSets: 3,
     prescribedRepsMin: 5,
     prescribedRepsMax: 8,
@@ -1944,11 +1951,11 @@ async function runControllerPendingDateSection() {
     restSeconds: 120,
     notes: 'Lower strength work',
     exercise: {
-      id: 'mon-draft-strength-back-squat',
-      name: 'Back Squat',
+      id: `mon-draft-strength-${index + 1}`,
+      name,
       description: 'Lower strength work',
     },
-  };
+  }));
   const mondayFlushRows = flushTemplate.exercises.map((item: any) => ({
     ...item,
     id: `mon-draft-${item.id}`,
@@ -1966,7 +1973,7 @@ async function runControllerPendingDateSection() {
       })),
     },
     exercises: [
-      lowerStrengthRow,
+      ...lowerStrengthRows,
       ...mondayFlushRows,
     ],
   };

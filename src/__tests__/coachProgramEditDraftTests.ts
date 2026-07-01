@@ -431,7 +431,7 @@ section('[12b] Resumed draft support gate uses executable action shape');
     targetDate: '2026-07-06',
     targetSessionId: null,
     targetItemId: null,
-    missingFields: ['targetItemId'],
+    missingFields: ['targetItemId', 'strengthBlockTarget'],
     proposedActions: baseStrength.proposedActions.map((action): ProgramEditDraftAction => ({
       ...action,
       targetDate: '2026-07-06',
@@ -455,7 +455,7 @@ section('[12b] Resumed draft support gate uses executable action shape');
   eq('over-marked strength draft reaches typed finaliser',
     decideProgramEditDraftFrontDoor(overMarkedStrength).kind,
     'allow_compatibility');
-  eq('strength targetItemId guard does not ask generic item question',
+  eq('strength target guard does not ask generic item question',
     decideProgramEditDraftFrontDoor(overMarkedStrength).kind,
     'allow_compatibility');
   const strengthFinal = finalEdit({
@@ -474,7 +474,7 @@ section('[12b] Resumed draft support gate uses executable action shape');
     ...conditioning,
     targetDate: '2026-07-06',
     targetItemId: null,
-    missingFields: ['targetItemId'],
+    missingFields: ['targetItemId', 'conditioningBlockTarget'],
     proposedActions: conditioning.proposedActions.map((action) => ({
       ...action,
       targetDate: '2026-07-06',

@@ -19,10 +19,12 @@ import type { CoachTargetFrame } from './coachTargetFrame';
 import type {
   ProgramEditDraft as SemanticProgramEditDraft,
   ProgramEditDraftActionScope as SemanticProgramEditDraftActionScope,
+  ProgramEditDraftProtectedTarget as SemanticProgramEditDraftProtectedTarget,
   ProgramEditDraftIntent as SemanticProgramEditDraftIntent,
   ProgramEditDraftTargetDomain as SemanticProgramEditDraftTargetDomain,
 } from './coachProgramEditDraft';
 import {
+  isBlockTargetMissingFieldName,
   isBlockLevelProgramEditDraft,
   isTargetItemMissingFieldName,
 } from './coachProgramEditDraft';
@@ -179,7 +181,16 @@ interface ProgramEditBase {
   normalizedMessage?: string;
   source?: 'pending_clarifier' | 'router' | 'llm_adapter' | 'provided_command' | 'semantic_draft';
   semanticRoles?: ProgramEditSemanticRoles;
-  protectedTargets?: ProgramEditCandidateItem[];
+  actionScope?: SemanticProgramEditDraftActionScope;
+  sourceTarget?: SemanticProgramEditDraft['sourceTarget'];
+  explicitDateRole?: SemanticProgramEditDraft['explicitDateRole'];
+  explicitUserWording?: string;
+  protectedTargets?: Array<ProgramEditCandidateItem | SemanticProgramEditDraftProtectedTarget>;
+  constraints?: string[];
+  proposedActions?: SemanticProgramEditDraft['proposedActions'];
+  verifierExpectations?: SemanticProgramEditDraft['verifierExpectations'];
+  isCompound?: boolean;
+  reason?: string;
   negativeTargets?: ProgramEditCandidateItem[];
 }
 
@@ -245,7 +256,7 @@ export interface ConditioningRemove extends ProgramEditBase {
   intent: 'remove';
   editScope: 'remove_conditioning_item';
   targetDate: string;
-  targetItemId: string;
+  targetItemId: string | null;
   requestedChange: 'type' | 'unknown';
 }
 
@@ -257,7 +268,7 @@ export interface StrengthBlockEdit extends ProgramEditBase {
   targetSessionId: string | null;
   targetItemId: null;
   requestedChange: 'volume';
-  protectedTargets?: ProgramEditCandidateItem[];
+  protectedTargets?: Array<ProgramEditCandidateItem | SemanticProgramEditDraftProtectedTarget>;
 }
 
 export interface RemoveSessionEdit extends ProgramEditBase {
@@ -268,7 +279,7 @@ export interface RemoveSessionEdit extends ProgramEditBase {
   targetSessionId: string | null;
   targetItemId: null;
   requestedChange: 'day';
-  protectedTargets?: ProgramEditCandidateItem[];
+  protectedTargets?: Array<ProgramEditCandidateItem | SemanticProgramEditDraftProtectedTarget>;
   reason?: string;
 }
 
@@ -1422,7 +1433,8 @@ export function executeProgramEdit(
   if (
     (edit.intent === 'edit' || edit.intent === 'remove' || edit.intent === 'replace') &&
     !edit.targetItemId &&
-    edit.targetDomain !== 'session'
+    edit.targetDomain !== 'session' &&
+    !isBlockLevelProgramEdit(edit)
   ) {
     return {
       kind: 'clarify',
@@ -2129,7 +2141,9 @@ function verifyExecutedProgramEdit(args: {
   if (verification.ok) return null;
 
   const reply =
-    edit.intent === 'remove'
+    edit.intent === 'remove' && isBlockLevelProgramEdit(edit)
+      ? 'I couldn\'t safely remove that conditioning block, so I left the session unchanged.'
+      : edit.intent === 'remove'
       ? 'I couldn\'t safely remove that item. Which conditioning item should I remove?'
       : (edit.protectedTargets?.length ?? 0) > 0
       ? 'I couldn\'t safely make that change without touching something you asked me to keep. Which item should I change?'
@@ -2657,15 +2671,15 @@ function retargetProgramEditDate(args: {
   const { edit, targetDate, visibleProgram } = args;
   const dateChanged = edit.targetDate !== targetDate;
   const targetSessionId = stringOrNull((visibleProgram.day.workout as any)?.id);
-  const blockLevelStrengthEdit = isStrengthBlockLevelProgramEdit(edit);
-  const shouldClearItem = dateChanged && programEditNeedsTargetItem(edit);
+  const pendingDraft = pendingDraftFromProgramEdit(edit);
+  const blockLevelEdit = isBlockLevelProgramEdit(edit);
+  const shouldClearItem = dateChanged && programEditNeedsTargetItem(edit, pendingDraft);
   const command = retargetProgramEditCommandDate({
     command: edit.command,
     targetDate,
     sessionName: visibleProgram.day.workout?.name,
     clearTargetItem: shouldClearItem,
   });
-  const pendingDraft = pendingDraftFromProgramEdit(edit);
   const draft = {
     ...((pendingDraft ?? edit) as ProgramEditDraft),
     intent: resumeIntentForPendingEdit(edit),
@@ -2676,7 +2690,7 @@ function retargetProgramEditDate(args: {
     missingFields: uniquePendingFields([
       ...edit.missingFields.filter((field) =>
         !isDateMissingField(field) &&
-        !(blockLevelStrengthEdit && isTargetItemMissingField(field)),
+        !(blockLevelEdit && (isTargetItemMissingField(field) || isBlockTargetMissingFieldName(field))),
       ),
       ...(shouldClearItem ? ['targetItemId'] : []),
     ]),
@@ -2759,8 +2773,16 @@ function pendingDraftFromProgramEdit(edit: ProgramEdit): ProgramEditDraft | unde
     : undefined;
 }
 
-function programEditNeedsTargetItem(edit: ProgramEdit): boolean {
-  if (isStrengthBlockLevelProgramEdit(edit)) return false;
+function programEditNeedsTargetItem(
+  edit: ProgramEdit,
+  draft?: ProgramEditDraft,
+): boolean {
+  if (draft?.actionScope && isBlockLevelProgramEditDraft({
+    intent: draft.intent as SemanticProgramEditDraftIntent,
+    targetDomain: draft.targetDomain as SemanticProgramEditDraftTargetDomain,
+    actionScope: draft.actionScope,
+  })) return false;
+  if (isBlockLevelProgramEdit(edit)) return false;
   if (
     edit.missingFields.some(isTargetItemMissingField)
   ) {
@@ -2794,6 +2816,15 @@ function isStrengthBlockLevelProgramEdit(edit: ProgramEdit): boolean {
   const editScope = 'editScope' in edit ? edit.editScope : undefined;
   return edit.targetDomain === 'strength' &&
     (editScope === 'remove_strength_block' || editScope === 'reduce_strength_block');
+}
+
+function isBlockLevelProgramEdit(edit: ProgramEdit): boolean {
+  if (isStrengthBlockLevelProgramEdit(edit)) return true;
+  const editScope = 'editScope' in edit ? edit.editScope : undefined;
+  return edit.targetDomain === 'conditioning' &&
+    edit.intent === 'remove' &&
+    editScope === 'remove_conditioning_item' &&
+    (edit as any).actionScope === 'conditioning_block';
 }
 
 function uniquePendingFields(fields: string[]): string[] {
@@ -3582,6 +3613,16 @@ export function programEditFromSemanticProgramEditDraft(input: {
     : undefined;
 
   return finaliseProgramEditDraft({
+    actionScope: draft.actionScope,
+    sourceTarget: draft.sourceTarget,
+    explicitDateRole: draft.explicitDateRole,
+    explicitUserWording: draft.explicitUserWording,
+    protectedTargets: draft.protectedTargets,
+    constraints: draft.constraints,
+    proposedActions: draft.proposedActions,
+    verifierExpectations: draft.verifierExpectations,
+    isCompound: draft.isCompound,
+    reason: draft.reason,
     targetDate: draft.targetDate,
     targetSessionId: draft.targetSessionId,
     targetItemId: draft.targetItemId,
@@ -3627,7 +3668,10 @@ function resolveBlockLevelProgramEditDraftTarget(input: {
   const withoutItemField = {
     ...draft,
     targetItemId: blockConfig.carriesTargetItemId ? draft.targetItemId : null,
-    missingFields: draft.missingFields.filter((field) => !isTargetItemMissingField(field)),
+    missingFields: draft.missingFields.filter((field) =>
+      !isTargetItemMissingField(field) &&
+      !isBlockTargetMissingFieldName(field),
+    ),
     proposedActions: draft.proposedActions.map((action) => ({
       ...action,
       targetItemId: blockConfig.carriesTargetItemId ? action.targetItemId : null,
@@ -3774,7 +3818,7 @@ function blockLevelResolverConfig(
       ambiguousField: 'conditioningBlockTarget',
       notFoundField: 'conditioningBlockNotFound',
       label: 'conditioning',
-      carriesTargetItemId: true,
+      carriesTargetItemId: false,
     };
   }
   if (
@@ -3787,7 +3831,7 @@ function blockLevelResolverConfig(
       ambiguousField: 'recoveryBlockTarget',
       notFoundField: 'recoveryBlockNotFound',
       label: 'recovery',
-      carriesTargetItemId: true,
+      carriesTargetItemId: false,
     };
   }
   if (draft.actionScope === 'whole_session') {
@@ -3826,18 +3870,16 @@ function visibleStrengthBlockTargets(
   const explicitBlockItems = strengthItems.filter((item) =>
     item.source !== 'strength_exercise',
   );
+  const childExerciseItems = strengthItems.filter((item) =>
+    item.source === 'strength_exercise',
+  );
+  if (childExerciseItems.length > 0) {
+    return [visibleWorkoutBlockTarget(visibleProgram, 'strength', 'Strength block')];
+  }
   if (explicitBlockItems.length > 1) return explicitBlockItems;
+  if (explicitBlockItems.length === 1) return explicitBlockItems;
 
-  return [{
-    id:
-      stringOrNull((visibleProgram.day.workout as any).id) ??
-      `strength-block:${visibleProgram.day.date}`,
-    title: visibleProgram.day.workout.name || 'Strength block',
-    domain: 'strength',
-    modality: null,
-    durationMinutes: null,
-    source: 'session',
-  }];
+  return [visibleWorkoutBlockTarget(visibleProgram, 'strength', 'Strength block')];
 }
 
 function visibleConditioningBlockTargets(
@@ -3850,7 +3892,35 @@ function visibleConditioningBlockTargets(
     : visibleProgram.items.filter((item) =>
       item.domain === 'conditioning' || item.domain === 'recovery',
     );
-  return conditioningItems.filter((item) => item.domain === domain);
+  const domainItems = conditioningItems.filter((item) => item.domain === domain);
+  if (domainItems.length === 0) return [];
+
+  const explicitBlockItems = domainItems.filter((item) => item.source === 'session');
+  if (explicitBlockItems.length > 1) return explicitBlockItems;
+  if (explicitBlockItems.length === 1 && domainItems.length === 1) return explicitBlockItems;
+
+  return [visibleWorkoutBlockTarget(
+    visibleProgram,
+    domain,
+    domain === 'recovery' ? 'Recovery block' : 'Conditioning block',
+  )];
+}
+
+function visibleWorkoutBlockTarget(
+  visibleProgram: ResolvedVisibleProgramForDate,
+  domain: 'strength' | 'conditioning' | 'recovery',
+  fallbackTitle: string,
+): ProgramEditCandidateItem {
+  const workout = visibleProgram.day.workout;
+  const workoutId = stringOrNull((workout as any)?.id);
+  return {
+    id: workoutId ?? `${domain}-block:${visibleProgram.day.date}`,
+    title: workout?.name || fallbackTitle,
+    domain,
+    modality: null,
+    durationMinutes: null,
+    source: 'session',
+  };
 }
 
 function typedBlockClarificationQuestion(
@@ -3959,6 +4029,7 @@ function commandFromSemanticDraft(
 
   if (draft.targetDomain === 'conditioning') {
     if (draft.intent === 'remove') {
+      const removesWholeConditioningBlock = draft.actionScope === 'conditioning_block';
       return {
         mode: 'mutate',
         operation: 'remove_conditioning',
@@ -3970,10 +4041,11 @@ function commandFromSemanticDraft(
         },
         scope: 'one_off',
         confidence: draft.confidence,
-        needsClarification: !draft.targetDate || !draft.targetItemId,
+        needsClarification:
+          !draft.targetDate || (!removesWholeConditioningBlock && !draft.targetItemId),
         missingFields: [
           ...(!draft.targetDate ? ['targetDate'] : []),
-          ...(!draft.targetItemId ? ['targetItemId'] : []),
+          ...(!removesWholeConditioningBlock && !draft.targetItemId ? ['targetItemId'] : []),
         ],
         reason: `semantic_program_edit_draft:${draft.reason}`,
       };
@@ -4239,7 +4311,8 @@ function finaliseConditioningProgramEdit(draft: ProgramEditDraft): ProgramEdit {
   if (
     editScope !== 'add_conditioning_item' &&
     (draft.intent === 'edit' || draft.intent === 'remove' || draft.intent === 'replace') &&
-    !draft.targetItemId
+    !draft.targetItemId &&
+    !(draft.intent === 'remove' && draft.actionScope === 'conditioning_block')
   ) {
     missing.add('targetItemId');
   }
@@ -4346,7 +4419,7 @@ function finaliseConditioningProgramEdit(draft: ProgramEditDraft): ProgramEdit {
       };
     }
     case 'remove_conditioning_item': {
-      if (!draft.targetItemId) {
+      if (!draft.targetItemId && draft.actionScope !== 'conditioning_block') {
         return askQuestionFromDraft({ ...draft, editScope }, ['targetItemId']);
       }
       return {
@@ -4355,7 +4428,7 @@ function finaliseConditioningProgramEdit(draft: ProgramEditDraft): ProgramEdit {
         intent: 'remove',
         editScope,
         targetDate: draft.targetDate,
-        targetItemId: draft.targetItemId,
+        targetItemId: draft.targetItemId ?? null,
         requestedChange: draft.requestedChange === 'unknown' ? 'unknown' : 'type',
       };
     }
@@ -4537,6 +4610,15 @@ export function verifyProgramEditVisibleMutation(args: {
     }
 
     if (edit.editScope === 'remove_conditioning_item') {
+      if (!edit.targetItemId) {
+        if (beforeSources.length === 0) {
+          return { ok: false, reason: 'remove_block_missing_before' };
+        }
+        if (afterSources.length > 0) {
+          return { ok: false, reason: 'remove_block_still_visible' };
+        }
+        return { ok: true };
+      }
       const beforeTarget = beforeSources.find((item) => item.id === edit.targetItemId);
       const afterTarget = afterSources.find((item) => item.id === edit.targetItemId);
       if (!beforeTarget) {
@@ -4644,15 +4726,26 @@ function isRemovedSessionWorkout(workout: ResolvedDay['workout'] | null): boolea
 }
 
 function verifyProtectedConditioningTargets(args: {
-  protectedTargets: ProgramEditCandidateItem[];
+  protectedTargets: Array<ProgramEditCandidateItem | SemanticProgramEditDraftProtectedTarget>;
   beforeSources: Array<{ id: string; title: string; modality: ConditioningModality | null; durationMinutes: number | null }>;
   afterSources: Array<{ id: string; title: string; modality: ConditioningModality | null; durationMinutes: number | null }>;
   editableTargetItemId: string | null;
 }): ProgramEditVisibleVerification {
   for (const protectedTarget of args.protectedTargets) {
-    if (protectedTarget.id === args.editableTargetItemId) continue;
-    const before = args.beforeSources.find((item) => item.id === protectedTarget.id);
-    const after = args.afterSources.find((item) => item.id === protectedTarget.id);
+    const protectedDomain = (protectedTarget as any).domain ?? (protectedTarget as any).targetDomain;
+    if (
+      protectedDomain !== 'conditioning' &&
+      protectedDomain !== 'recovery'
+    ) {
+      continue;
+    }
+    const protectedItemId = 'id' in protectedTarget
+      ? protectedTarget.id
+      : protectedTarget.targetItemId ?? null;
+    if (!protectedItemId) continue;
+    if (protectedItemId === args.editableTargetItemId) continue;
+    const before = args.beforeSources.find((item) => item.id === protectedItemId);
+    const after = args.afterSources.find((item) => item.id === protectedItemId);
     if (!before) {
       return { ok: false, reason: 'protected_target_missing_before' };
     }

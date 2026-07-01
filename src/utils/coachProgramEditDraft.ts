@@ -119,6 +119,10 @@ export function isTargetItemMissingFieldName(field: string): boolean {
   return /^(?:targetItemId|target_item|target_session|source_item|item|visible_item)$/.test(field);
 }
 
+export function isBlockTargetMissingFieldName(field: string): boolean {
+  return /^(?:strengthBlockTarget|conditioningBlockTarget|recoveryBlockTarget|sessionTarget|blockTarget|targetBlock|target_block)$/.test(field);
+}
+
 export interface BuildProgramEditDraftInput {
   userMessage: string;
   targetFrame?: CoachTargetFrame | null;
@@ -305,7 +309,8 @@ export function decideProgramEditDraftFrontDoor(
 function effectiveMissingFieldsForDraft(draft: ProgramEditDraft): string[] {
   if (isBlockLevelProgramEditDraft(draft)) {
     return draft.missingFields.filter((field) =>
-      !isTargetItemMissingFieldName(field),
+      !isTargetItemMissingFieldName(field) &&
+      !isBlockTargetMissingFieldName(field),
     );
   }
   return draft.missingFields;
