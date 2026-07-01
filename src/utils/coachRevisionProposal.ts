@@ -568,10 +568,12 @@ function validateAddedRefs(args: {
 } {
   const invalid: CoachRevisionValidationIssue[] = [];
   const needsConfirmation: CoachRevisionValidationIssue[] = [];
-  const allowedAdded = new Set([
-    ...(args.policy?.allowedAddedSectionKinds ?? []),
-    ...(args.proposal.userIntent.allowedAddedSectionKinds ?? []),
-  ]);
+  // Authorization for added content comes from app-side policy ONLY. The
+  // proposal's own userIntent.allowedAddedSectionKinds is LLM output and must
+  // never expand what the app permits — otherwise the model can grant itself
+  // permission to invent sections/items. The proposal field remains only a
+  // confirmation-flow signal (see requiresConfirmation below).
+  const allowedAdded = new Set(args.policy?.allowedAddedSectionKinds ?? []);
 
   for (const dateDiff of args.diff.dateDiffs) {
     const addedSections = dateDiff.sectionDiffs.filter((entry) => entry.kind === 'added');
@@ -595,14 +597,17 @@ function validateAddedRefs(args: {
       }
     }
 
-    const addedSectionIds = new Set(addedSections.map((entry) => entry.sectionId));
     for (const addedItem of dateDiff.itemDiffs.filter((entry) => entry.kind === 'added')) {
+      // Skip only items whose own parent section was added (those are already
+      // authorized or flagged with that section above). Items injected into
+      // EXISTING sections must always be validated, even when an unrelated
+      // section addition happens on the same date.
       const parentAdded = dateDiff.sectionDiffs.some((section) =>
         section.kind === 'added' &&
         section.sectionKind === addedItem.sectionKind &&
         section.after?.items.some((item) => item.id === addedItem.itemId),
       );
-      if (parentAdded || addedSectionIds.size > 0) continue;
+      if (parentAdded) continue;
       if (!allowedAdded.has(addedItem.sectionKind)) {
         invalid.push(issue(
           'unknown_item_id',

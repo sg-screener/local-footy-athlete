@@ -377,11 +377,78 @@ section('[7] replace team training with conditioning requires confirmation');
     allowedAddedSectionKinds: ['conditioning'],
     requiresConfirmation: true,
   });
-  const result = validateCoachRevisionDiff({ before, proposal: p });
+  // Adds must be authorized by app-side policy; the proposal's own
+  // allowedAddedSectionKinds is not authorization (see [7b]).
+  const result = validateCoachRevisionDiff({
+    before,
+    proposal: p,
+    policy: { allowedAddedSectionKinds: ['conditioning'] },
+  });
 
   eq('requires confirmation', result.status, 'needs_confirmation');
   ok('classified as replace/remove+add', result.diff.dateDiffs[0].sectionDiffs.some((entry) => entry.kind === 'removed' && entry.sectionKind === 'session'));
   ok('conditioning addition visible', result.diff.dateDiffs[0].sectionDiffs.some((entry) => entry.kind === 'added' && entry.sectionKind === 'conditioning'));
+
+  section('[7b] proposal cannot self-authorize adds');
+  {
+    // Same proposal, but WITHOUT app-side policy: the LLM-supplied
+    // userIntent.allowedAddedSectionKinds must not grant authorization.
+    const selfAuthorized = validateCoachRevisionDiff({ before, proposal: p });
+    eq('self-authorized add rejected', selfAuthorized.status, 'invalid');
+    ok('unknown_section_id issue reported',
+      selfAuthorized.issues.some((entry) => entry.code === 'unknown_section_id'),
+      selfAuthorized.issues);
+  }
+
+  section('[7c] forged item into existing section is caught even alongside an authorized section add');
+  {
+    // Policy allows conditioning section adds. Proposal adds a conditioning
+    // section AND injects a forged item into the EXISTING strength section.
+    // Before the fix, any section add on the date skipped all item checks.
+    const mixedBefore = snapshot([visibleDay(TUE, mixedWorkout())]);
+    const mixedDay = daySnap(mixedBefore, TUE);
+    const forged = clone(mixedDay);
+    sectionOf(forged, 'strength').items.push({
+      id: 'item:forged:extra-squat',
+      title: 'Extra Back Squat',
+      domain: 'strength',
+      source: 'strength_exercise',
+      description: null,
+      exerciseIds: [],
+      durationMinutes: 0,
+      prescription: { sets: 5, repsMin: 5, repsMax: 5, intensity: null },
+    });
+    forged.workout!.sections.push({
+      id: 'section:tuesday:extra-conditioning',
+      kind: 'conditioning',
+      title: 'Extra Conditioning',
+      items: [{
+        id: 'item:tuesday:extra-conditioning',
+        title: '20min zone 2 row',
+        domain: 'conditioning',
+        source: 'conditioning_option',
+        description: null,
+        exerciseIds: [],
+        durationMinutes: 20,
+        prescription: null,
+      }],
+    });
+    const forgedProposal = proposal({
+      intent: { intent: 'add', targetDomain: 'conditioning', actionScope: 'conditioning_section' },
+      dates: [TUE],
+      revisedDays: [forged],
+      requiresConfirmation: true,
+    });
+    const result = validateCoachRevisionDiff({
+      before: mixedBefore,
+      proposal: forgedProposal,
+      policy: { allowedAddedSectionKinds: ['conditioning'] },
+    });
+    eq('forged item rejected', result.status, 'invalid');
+    ok('unknown_item_id names the forged item',
+      result.issues.some((entry) => entry.code === 'unknown_item_id' && entry.ref === 'item:forged:extra-squat'),
+      result.issues);
+  }
 }
 
 section('[8] make tomorrow lighter via conservative reduction');

@@ -222,6 +222,7 @@ async function semanticResult(args: {
   before: CoachVisibleWeekSnapshot;
   message: string;
   output: unknown;
+  validationPolicy?: Parameters<typeof buildSemanticCoachRevisionProposal>[0]['validationPolicy'];
 }) {
   return buildSemanticCoachRevisionProposal({
     userMessage: args.message,
@@ -230,6 +231,7 @@ async function semanticResult(args: {
     todayISO: '2026-07-01',
     nowISO: '2026-07-01T12:00:00.000Z',
     timezone: 'Australia/Melbourne',
+    validationPolicy: args.validationPolicy,
   });
 }
 
@@ -340,19 +342,34 @@ async function run() {
         }],
       }],
     };
+    const replacementOutput = revision({
+      intent: { intent: 'replace', targetDomain: 'session', actionScope: 'whole_session' },
+      dates: [TUE],
+      revisedDays: [after],
+      allowedAddedSectionKinds: ['conditioning'],
+      requiresConfirmation: true,
+    });
     const result = await semanticResult({
       before,
       message: 'replace team training tomorrow with easy bike',
-      output: revision({
-        intent: { intent: 'replace', targetDomain: 'session', actionScope: 'whole_session' },
-        dates: [TUE],
-        revisedDays: [after],
-        allowedAddedSectionKinds: ['conditioning'],
-        requiresConfirmation: true,
-      }),
+      output: replacementOutput,
+      // Adds require app-side policy authorization (see [5b]).
+      validationPolicy: { allowedAddedSectionKinds: ['conditioning'] },
     });
     eq('replacement needs confirmation', result.kind, 'needs_confirmation');
     ok('diagnostic flags confirmation', result.kind === 'needs_confirmation' && result.diagnostic.confirmationRequired, result);
+
+    // [5b] Without app-side policy, the proposal's own
+    // allowedAddedSectionKinds must NOT authorize the added section.
+    const selfAuthorized = await semanticResult({
+      before,
+      message: 'replace team training tomorrow with easy bike',
+      output: replacementOutput,
+    });
+    eq('self-authorized replacement rejected', selfAuthorized.kind, 'invalid');
+    ok('unknown id diagnostic recorded',
+      selfAuthorized.kind === 'invalid' && selfAuthorized.diagnostic.unknownIds.length > 0,
+      selfAuthorized);
   }
 
   section('[6] protected violation fails');
