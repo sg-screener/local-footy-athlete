@@ -2531,6 +2531,12 @@ export async function handleCoachTurn(
           },
           resultKind: revisionResult?.kind ?? null,
           validatorStatus: revisionResult?.diagnostic.validatorStatus ?? null,
+          invalidReason:
+            revisionResult?.kind === 'invalid' ? revisionResult.reason : null,
+          invalidIssues:
+            revisionResult?.kind === 'invalid'
+              ? revisionResult.issues.slice(0, 6)
+              : null,
         });
         if (revisionResult) {
           emitCoachRevisionProposalDiagnostic({
@@ -3251,6 +3257,12 @@ export async function handleCoachTurn(
           : null,
       clarifyReason:
         revisionResult?.kind === 'clarify' ? revisionResult.reason ?? null : null,
+      invalidReason:
+        revisionResult?.kind === 'invalid' ? revisionResult.reason : null,
+      invalidIssues:
+        revisionResult?.kind === 'invalid'
+          ? revisionResult.issues.slice(0, 6)
+          : null,
     });
     if (revisionResult && revisionMode !== 'off') {
       emitCoachRevisionProposalDiagnostic({
