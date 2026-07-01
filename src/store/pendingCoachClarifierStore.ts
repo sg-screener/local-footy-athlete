@@ -130,10 +130,22 @@ export interface PendingClarificationProposedCandidate {
   answerType: PendingClarificationExpectedAnswerType;
 }
 
+export type PendingProgramEditDraftSource = 'semantic' | 'deterministic';
+
+export interface PendingProgramEditDraftEnvelope {
+  draft: ProgramEditDraft;
+  source: PendingProgramEditDraftSource;
+  originalUserWording: string;
+  continuationId: string;
+}
+
 export interface PendingClarificationSlot {
   originalIntent: string;
   missingField: string;
   expectedAnswerType: PendingClarificationExpectedAnswerType;
+  source?: PendingProgramEditDraftSource;
+  continuationId?: string;
+  originalUserWording?: string;
   staleDate?: string;
   requestedDow?: DayOfWeek;
   proposedCandidate?: PendingClarificationProposedCandidate;
@@ -196,6 +208,9 @@ export interface PendingCoachClarifier {
    *  present, the next user reply is resolved against this object before
    *  the fresh router/LLM path is allowed to run. */
   programEdit?: ProgramEdit;
+  /** Full typed draft transaction. When present, pending answers patch this
+   *  draft instead of rebuilding intent from the short reply. */
+  programEditDraftEnvelope?: PendingProgramEditDraftEnvelope;
   /** Snapshot of visible candidates shown/considered when the question
    *  was asked. The next reply is matched against this before any fresh
    *  state read, so clarification answers do not drift. */
@@ -231,6 +246,7 @@ export const usePendingCoachClarifierStore = create<PendingCoachClarifierState>(
         targetDate: entry.targetDate,
         targetSessionName: entry.targetSessionName,
         programEdit: entry.programEdit,
+        programEditDraftEnvelope: entry.programEditDraftEnvelope,
         candidateItems: entry.candidateItems,
         pendingClarification: entry.pendingClarification,
       },

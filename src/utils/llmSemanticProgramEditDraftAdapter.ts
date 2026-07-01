@@ -244,9 +244,28 @@ function summarisePendingClarifier(pending: PendingCoachClarifier | null) {
           originalIntent: pending.pendingClarification.originalIntent,
           missingField: pending.pendingClarification.missingField,
           expectedAnswerType: pending.pendingClarification.expectedAnswerType,
+          source: pending.pendingClarification.source ?? null,
+          continuationId: pending.pendingClarification.continuationId ?? null,
           proposedCandidate: pending.pendingClarification.proposedCandidate ?? null,
           candidateOptions: pending.pendingClarification.candidateOptions ?? [],
           reason: pending.pendingClarification.reason ?? null,
+        }
+      : null,
+    draftEnvelope: pending.programEditDraftEnvelope
+      ? {
+          source: pending.programEditDraftEnvelope.source,
+          continuationId: pending.programEditDraftEnvelope.continuationId,
+          originalUserWording: pending.programEditDraftEnvelope.originalUserWording,
+          draft: {
+            intent: pending.programEditDraftEnvelope.draft.intent,
+            targetDomain: pending.programEditDraftEnvelope.draft.targetDomain,
+            actionScope: pending.programEditDraftEnvelope.draft.actionScope,
+            targetDate: pending.programEditDraftEnvelope.draft.targetDate,
+            missingFields: pending.programEditDraftEnvelope.draft.missingFields,
+            protectedTargets: pending.programEditDraftEnvelope.draft.protectedTargets,
+            proposedActions: pending.programEditDraftEnvelope.draft.proposedActions,
+            verifierExpectations: pending.programEditDraftEnvelope.draft.verifierExpectations,
+          },
         }
       : null,
     programEdit: pending.programEdit

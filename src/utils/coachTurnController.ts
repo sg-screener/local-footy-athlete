@@ -16,6 +16,8 @@ import {
   type PendingClarificationAnswerClassification,
   type PendingClarificationExpectedAnswerType,
   type PendingCoachClarifier,
+  type PendingProgramEditDraftEnvelope,
+  type PendingProgramEditDraftSource,
 } from '../store/pendingCoachClarifierStore';
 import { useCoachContextStateStore } from '../store/coachContextStateStore';
 import { buildCoachContextPacket } from './coachContextPacket';
@@ -641,6 +643,57 @@ function recordVerifiedProgramEditMutationFocus(
   });
 }
 
+function pendingDraftSourceForProgramEdit(
+  draft: ProgramEditDraft,
+  programEdit?: ProgramEdit | null,
+): PendingProgramEditDraftSource {
+  if (programEdit?.source === 'semantic_draft') return 'semantic';
+  if (/semantic/i.test(draft.reason) || /semantic/i.test(draft.explicitUserWording)) {
+    return 'semantic';
+  }
+  return 'deterministic';
+}
+
+function pendingDraftContinuationId(args: {
+  draft: ProgramEditDraft;
+  source: PendingProgramEditDraftSource;
+  originalMessage: string;
+}): string {
+  const seed = [
+    args.source,
+    args.draft.intent,
+    args.draft.targetDomain,
+    args.draft.actionScope,
+    args.draft.targetDate ?? 'no-date',
+    args.originalMessage,
+  ].join('|');
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+  }
+  return `program-edit-draft:${args.source}:${Math.abs(hash)}`;
+}
+
+function pendingDraftEnvelopeFromDraft(args: {
+  draft: ProgramEditDraft | null | undefined;
+  programEdit?: ProgramEdit | null;
+  originalMessage: string;
+  source?: PendingProgramEditDraftSource;
+}): PendingProgramEditDraftEnvelope | undefined {
+  if (!args.draft) return undefined;
+  const source = args.source ?? pendingDraftSourceForProgramEdit(args.draft, args.programEdit);
+  return {
+    draft: args.draft,
+    source,
+    originalUserWording: args.draft.explicitUserWording || args.originalMessage,
+    continuationId: pendingDraftContinuationId({
+      draft: args.draft,
+      source,
+      originalMessage: args.originalMessage,
+    }),
+  };
+}
+
 export function capturePendingDateClarificationFromProgramEditRejection(args: {
   result: ExecutionResult;
   programEdit: ProgramEdit;
@@ -675,6 +728,11 @@ export function capturePendingDateClarificationFromProgramEditRejection(args: {
     'targetDate',
     ...(needsItemRetarget ? ['targetItemId'] : []),
   ]);
+  const draftEnvelope = pendingDraftEnvelopeFromDraft({
+    draft,
+    programEdit,
+    originalMessage,
+  });
   const pendingEdit = {
     ...programEdit,
     targetItemId: needsItemRetarget ? null : programEdit.targetItemId,
@@ -699,11 +757,15 @@ export function capturePendingDateClarificationFromProgramEditRejection(args: {
     targetDate: programEdit.targetDate,
     targetSessionName: programEdit.targetItemTitle ?? undefined,
     programEdit: pendingEdit,
+    programEditDraftEnvelope: draftEnvelope,
     candidateItems: pendingEdit.candidateItems,
     pendingClarification: {
       originalIntent: `${programEdit.intent}:${programEdit.targetDomain}:${'editScope' in programEdit ? programEdit.editScope ?? programEdit.requestedChange : programEdit.requestedChange}`,
       missingField: 'targetDate',
       expectedAnswerType: 'date',
+      source: draftEnvelope?.source,
+      continuationId: draftEnvelope?.continuationId,
+      originalUserWording: draftEnvelope?.originalUserWording,
       staleDate: programEdit.targetDate,
       requestedDow: targetDay ?? undefined,
       proposedCandidate,
@@ -741,6 +803,66 @@ function capturePendingDateClarificationFromPastProgramEditTarget(args: {
     originalMessage,
     todayISO,
   });
+}
+
+function capturePendingDateClarificationFromProgramEditDraftTarget(args: {
+  draft: ProgramEditDraft | null | undefined;
+  originalMessage: string;
+  todayISO: string;
+  source?: PendingProgramEditDraftSource;
+}): Omit<PendingCoachClarifier, 'createdAt'> | null {
+  const { draft, originalMessage, todayISO } = args;
+  if (!draft?.targetDate || !isPastISODate(draft.targetDate, todayISO)) return null;
+  if (draft.intent === 'ask_question' || draft.intent === 'explain') return null;
+  const targetDay = controllerDayNameFromISO(draft.targetDate);
+  const proposedDate = targetDay ? controllerNextDateForDay(todayISO, targetDay) : null;
+  const proposedCandidate = proposedDate && targetDay
+    ? {
+        label: `Next ${targetDay}`,
+        value: proposedDate,
+        answerType: 'date' as const,
+      }
+    : undefined;
+  const candidateOptions = [
+    targetDay ? `Next ${targetDay}` : null,
+    'Leave unchanged',
+  ].filter((option): option is string => !!option);
+  const source = args.source ?? pendingDraftSourceForProgramEdit(draft, null);
+  const draftEnvelope = pendingDraftEnvelopeFromDraft({
+    draft,
+    originalMessage,
+    source,
+  });
+  const operation = semanticPendingOperation(draft);
+  const missingFields = uniqueControllerFields([
+    ...draft.missingFields.filter((field) => !controllerIsDateField(field)),
+    'targetDate',
+  ]);
+  return {
+    operation,
+    partialPayload: semanticPendingPayload(operation),
+    scope: 'one_off',
+    missingFields,
+    originalMessage,
+    askedQuestion: pendingDateClarificationQuestion(draft.targetDate, targetDay),
+    targetDate: draft.targetDate,
+    targetSessionName: draft.sourceTarget?.sessionName,
+    programEditDraftEnvelope: draftEnvelope,
+    pendingClarification: {
+      originalIntent: `${draft.intent}:${draft.targetDomain}:${draft.actionScope}`,
+      missingField: 'targetDate',
+      expectedAnswerType: 'date',
+      source,
+      continuationId: draftEnvelope?.continuationId,
+      originalUserWording: draftEnvelope?.originalUserWording,
+      staleDate: draft.targetDate,
+      requestedDow: targetDay ?? undefined,
+      proposedCandidate,
+      candidateOptions,
+      partialDraft: draft,
+      reason: 'pending_clarification:target_date:past_date',
+    },
+  };
 }
 
 function isDateClarificationRejection(result: ExecutionResult): boolean {
@@ -949,6 +1071,11 @@ function pendingClarifierFromSemanticClarify(args: {
   const missingFields = draft?.missingFields.length
     ? draft.missingFields
     : ['semantic_program_edit'];
+  const draftEnvelope = pendingDraftEnvelopeFromDraft({
+    draft,
+    originalMessage: args.originalMessage,
+    source: 'semantic',
+  });
   return {
     operation,
     partialPayload: semanticPendingPayload(operation),
@@ -958,12 +1085,16 @@ function pendingClarifierFromSemanticClarify(args: {
     askedQuestion: args.result.reply,
     targetDate: draft?.targetDate ?? undefined,
     targetSessionName: draft?.sourceTarget?.sessionName ?? undefined,
+    programEditDraftEnvelope: draftEnvelope,
     pendingClarification: {
       originalIntent: draft
         ? `${draft.intent}:${draft.targetDomain}:${draft.actionScope}`
         : 'semantic_program_edit',
       missingField: missingFields[0] ?? 'semantic_program_edit',
       expectedAnswerType: semanticExpectedAnswerType(missingFields[0]),
+      source: draftEnvelope?.source,
+      continuationId: draftEnvelope?.continuationId,
+      originalUserWording: draftEnvelope?.originalUserWording,
       candidateOptions: args.result.options,
       partialDraft: draft ?? undefined,
       reason: args.result.reason,
@@ -986,6 +1117,7 @@ function semanticPendingOperation(
   if (draft.targetDomain === 'schedule' || draft.targetDomain === 'setup') {
     return 'update_program_setup';
   }
+  if (draft.targetDomain === 'strength') return 'replace_exercise';
   if (draft.actionScope === 'exercise') return 'replace_exercise';
   return 'add_conditioning';
 }
@@ -1066,6 +1198,188 @@ async function classifyPendingAnswerForController(args: {
     });
     return deterministic;
   }
+}
+
+type PendingProgramEditDraftAnswerResult =
+  | { kind: 'cancelled'; reply: string }
+  | { kind: 'clarify'; reply: string; options?: string[]; draft: ProgramEditDraft }
+  | { kind: 'complete'; draft: ProgramEditDraft }
+  | { kind: 'unresolved' };
+
+function resolvePendingProgramEditDraftAnswer(args: {
+  pending: PendingCoachClarifier;
+  userMessage: string;
+  todayISO: string;
+  currentWeek: ReturnType<typeof currentWeekRefs>;
+  pendingAnswerClassification: PendingClarificationAnswerClassification | null;
+}): PendingProgramEditDraftAnswerResult {
+  const envelope = args.pending.programEditDraftEnvelope;
+  const slot = args.pending.pendingClarification;
+  if (!envelope?.draft || !slot) return { kind: 'unresolved' };
+
+  const classification =
+    args.pendingAnswerClassification ??
+    classifyPendingClarificationAnswer({
+      message: args.userMessage,
+      pendingClarification: slot,
+      askedQuestion: args.pending.askedQuestion,
+    });
+  if (classification.kind === 'reject_proposed') {
+    return {
+      kind: 'cancelled',
+      reply: 'Got it — leaving things as they are.',
+    };
+  }
+
+  if (controllerIsDateField(slot.missingField)) {
+    const targetDate = pendingDraftTargetDateFromAnswer({
+      pending: args.pending,
+      classification,
+      message: args.userMessage,
+      todayISO: args.todayISO,
+      currentWeek: args.currentWeek,
+    });
+    if (!targetDate) {
+      return {
+        kind: 'clarify',
+        draft: envelope.draft,
+        reply:
+          args.pending.askedQuestion ??
+          'Which day should I use?',
+        options: slot.candidateOptions,
+      };
+    }
+    return {
+      kind: 'complete',
+      draft: patchProgramEditDraftTargetDate({
+        draft: envelope.draft,
+        targetDate,
+        staleDate: slot.staleDate ?? envelope.draft.targetDate,
+      }),
+    };
+  }
+
+  return { kind: 'unresolved' };
+}
+
+function pendingDraftTargetDateFromAnswer(args: {
+  pending: PendingCoachClarifier;
+  classification: PendingClarificationAnswerClassification;
+  message: string;
+  todayISO: string;
+  currentWeek: ReturnType<typeof currentWeekRefs>;
+}): string | null {
+  const slot = args.pending.pendingClarification;
+  const candidate =
+    args.classification.kind === 'accept_proposed' ||
+    args.classification.kind === 'choose_candidate'
+      ? args.classification.candidate ?? slot?.proposedCandidate ?? null
+      : null;
+  if (candidate?.answerType === 'date') {
+    return pendingDraftDateFromText({
+      text: candidate.value || candidate.label,
+      todayISO: args.todayISO,
+      currentWeek: args.currentWeek,
+      requestedDow: slot?.requestedDow ?? null,
+    });
+  }
+  if (
+    args.classification.kind === 'provide_alternative_value' ||
+    args.classification.kind === 'unclear'
+  ) {
+    return pendingDraftDateFromText({
+      text: args.message,
+      todayISO: args.todayISO,
+      currentWeek: args.currentWeek,
+      requestedDow: slot?.requestedDow ?? null,
+    });
+  }
+  return null;
+}
+
+function pendingDraftDateFromText(args: {
+  text: string;
+  todayISO: string;
+  currentWeek: ReturnType<typeof currentWeekRefs>;
+  requestedDow: DayOfWeek | null;
+}): string | null {
+  const text = String(args.text ?? '').trim();
+  const lower = text.toLowerCase();
+  const iso = text.match(/\b\d{4}-\d{2}-\d{2}\b/)?.[0];
+  if (iso) return iso;
+  if (/\btoday\b/i.test(lower)) return args.todayISO;
+  if (/\btomorrow\b/i.test(lower)) return controllerAddDaysISO(args.todayISO, 1);
+
+  const explicitDow = controllerDayNameFromText(text);
+  if (explicitDow) return controllerNextDateForDay(args.todayISO, explicitDow);
+
+  if (args.requestedDow) {
+    if (/\b(?:next|upcoming|future)\b/i.test(lower)) {
+      return controllerNextDateForDay(args.todayISO, args.requestedDow);
+    }
+    if (/\b(?:this|current)\s+week\b|\bthe\s+one\s+(?:i'?m|im)\s+looking\s+at\b/i.test(lower)) {
+      return args.currentWeek.find((day) =>
+        controllerDayNameFromISO(day.date) === args.requestedDow,
+      )?.date ?? null;
+    }
+  }
+  return null;
+}
+
+function controllerDayNameFromText(text: string): DayOfWeek | null {
+  const lower = text.toLowerCase();
+  for (const day of ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as DayOfWeek[]) {
+    if (new RegExp(`\\b${day.toLowerCase()}s?\\b`, 'i').test(lower)) return day;
+  }
+  return null;
+}
+
+function patchProgramEditDraftTargetDate(args: {
+  draft: ProgramEditDraft;
+  targetDate: string;
+  staleDate?: string | null;
+}): ProgramEditDraft {
+  const previousDate = args.staleDate ?? args.draft.targetDate;
+  const dateChanged = previousDate !== args.targetDate;
+  const patchDate = (value: string | null | undefined): string | null => {
+    if (!value || value === previousDate || controllerIsDateField(args.draft.missingFields[0] ?? '')) {
+      return args.targetDate;
+    }
+    return value;
+  };
+  const patchSourceTarget = (sourceTarget: ProgramEditDraft['sourceTarget']) =>
+    sourceTarget
+      ? {
+          ...sourceTarget,
+          date: patchDate(sourceTarget.date) ?? args.targetDate,
+          ...(dateChanged ? { itemId: undefined } : {}),
+        }
+      : null;
+
+  return {
+    ...args.draft,
+    targetDate: args.targetDate,
+    targetSessionId: dateChanged ? null : args.draft.targetSessionId,
+    targetItemId: dateChanged ? null : args.draft.targetItemId,
+    sourceTarget: patchSourceTarget(args.draft.sourceTarget),
+    missingFields: args.draft.missingFields.filter((field) => !controllerIsDateField(field)),
+    protectedTargets: args.draft.protectedTargets.map((target) => ({
+      ...target,
+      targetDate: patchDate(target.targetDate),
+    })),
+    proposedActions: args.draft.proposedActions.map((action) => ({
+      ...action,
+      targetDate: patchDate(action.targetDate),
+      targetSessionId: dateChanged ? null : action.targetSessionId,
+      targetItemId: dateChanged ? null : action.targetItemId,
+      sourceTarget: patchSourceTarget(action.sourceTarget),
+    })),
+    verifierExpectations: args.draft.verifierExpectations.map((expectation) => ({
+      ...expectation,
+      targetDate: patchDate(expectation.targetDate),
+    })),
+    reason: `${args.draft.reason}:pending_${args.targetDate}`,
+  };
 }
 
 function isRecoveryWorkoutForCoach(workout: any): boolean {
@@ -1399,6 +1713,144 @@ export async function handleCoachTurn(
         input,
         pending: pendingClarifier,
       });
+      const pendingDraftAnswer = resolvePendingProgramEditDraftAnswer({
+        pending: pendingClarifier,
+        userMessage: input.userMessage.content,
+        todayISO: input.todayISO,
+        currentWeek: currentWeekRefs(packet),
+        pendingAnswerClassification,
+      });
+      if (pendingDraftAnswer.kind === 'cancelled') {
+        usePendingCoachClarifierStore.getState().clearPending();
+        return replyAndFinish(input, 'pending-program-edit-draft-cancelled', pendingDraftAnswer.reply);
+      }
+      if (pendingDraftAnswer.kind === 'clarify') {
+        const envelope = pendingClarifier.programEditDraftEnvelope;
+        usePendingCoachClarifierStore.getState().setPending({
+          ...pendingClarifier,
+          askedQuestion: pendingDraftAnswer.reply,
+          programEditDraftEnvelope: envelope
+            ? { ...envelope, draft: pendingDraftAnswer.draft }
+            : undefined,
+          pendingClarification: pendingClarifier.pendingClarification
+            ? {
+                ...pendingClarifier.pendingClarification,
+                partialDraft: pendingDraftAnswer.draft,
+              }
+            : undefined,
+          createdAt: pendingClarifier.createdAt,
+        });
+        return replyAndFinish(input, 'pending-program-edit-draft-clarify', pendingDraftAnswer.reply);
+      }
+      if (pendingDraftAnswer.kind === 'complete') {
+        const resumedDraft = pendingDraftAnswer.draft;
+        const draftFrontDoor = decideProgramEditDraftFrontDoor(resumedDraft);
+        logger.warn('[pending-program-edit-draft-resume]', {
+          continuationId: pendingClarifier.programEditDraftEnvelope?.continuationId ?? null,
+          source: pendingClarifier.programEditDraftEnvelope?.source ?? null,
+          targetDate: resumedDraft.targetDate,
+          targetDomain: resumedDraft.targetDomain,
+          actionScope: resumedDraft.actionScope,
+          protectedTargets: resumedDraft.protectedTargets.map((target) => ({
+            targetDomain: target.targetDomain,
+            actionScope: target.actionScope,
+            title: target.title ?? null,
+          })),
+          frontDoor: draftFrontDoor.kind,
+          legacyBlocked: true,
+          ageMs: Date.now() - pendingClarifier.createdAt,
+        });
+        if (
+          draftFrontDoor.kind === 'ask_clarification' ||
+          draftFrontDoor.kind === 'unsupported'
+        ) {
+          if (draftFrontDoor.kind === 'ask_clarification') {
+            const envelope = pendingClarifier.programEditDraftEnvelope;
+            usePendingCoachClarifierStore.getState().setPending({
+              ...pendingClarifier,
+              missingFields: resumedDraft.missingFields,
+              askedQuestion: draftFrontDoor.reply,
+              programEditDraftEnvelope: envelope
+                ? { ...envelope, draft: resumedDraft }
+                : undefined,
+              pendingClarification: {
+                originalIntent: `${resumedDraft.intent}:${resumedDraft.targetDomain}:${resumedDraft.actionScope}`,
+                missingField: resumedDraft.missingFields[0] ?? 'program_edit',
+                expectedAnswerType: semanticExpectedAnswerType(resumedDraft.missingFields[0]),
+                source: pendingClarifier.programEditDraftEnvelope?.source,
+                continuationId: pendingClarifier.programEditDraftEnvelope?.continuationId,
+                originalUserWording:
+                  pendingClarifier.programEditDraftEnvelope?.originalUserWording ??
+                  resumedDraft.explicitUserWording,
+                candidateOptions: draftFrontDoor.options,
+                partialDraft: resumedDraft,
+                reason: draftFrontDoor.route,
+              },
+              createdAt: pendingClarifier.createdAt,
+            });
+          } else {
+            usePendingCoachClarifierStore.getState().clearPending();
+          }
+          input.setLastCoachDebug({
+            intent: 'program_edit_draft',
+            route: `pending_program_edit_draft:${draftFrontDoor.route}`,
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: resumedDraft.targetDate,
+            referenceTargetName: resumedDraft.sourceTarget?.sessionName ?? null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(input, 'pending-program-edit-draft-front-door', draftFrontDoor.reply);
+        }
+
+        const programEditFromDraft = programEditFromSemanticProgramEditDraft({
+          draft: resumedDraft,
+          userMessage: pendingClarifier.originalMessage,
+          todayISO: input.todayISO,
+        });
+        const draftExecutionGuard = validateProgramEditAgainstDraft(
+          resumedDraft,
+          programEditFromDraft,
+        );
+        if (draftExecutionGuard.kind === 'blocked') {
+          usePendingCoachClarifierStore.getState().clearPending();
+          input.setLastCoachDebug({
+            intent: 'program_edit_draft',
+            route: `pending_program_edit_draft:${draftExecutionGuard.route}`,
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: resumedDraft.targetDate,
+            referenceTargetName: resumedDraft.sourceTarget?.sessionName ?? null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(input, 'pending-program-edit-draft-guard', draftExecutionGuard.reply);
+        }
+        const guarded = executeProgramEditWithVisibleGuard({
+          input,
+          programEdit: programEditFromDraft,
+          draft: resumedDraft,
+          referenceResolution: packet.referenceResolution ?? null,
+          userMessage: pendingClarifier.originalMessage,
+          source: 'pending_program_edit_draft_resume',
+        });
+        if (guarded.kind === 'blocked') {
+          return replyAndFinish(
+            input,
+            'pending-program-edit-draft-visible-guard',
+            guarded.verification.reply,
+          );
+        }
+        const result = guarded.result;
+        recordVerifiedProgramEditMutationFocus(programEditFromDraft, result, input.todayISO);
+        if (result.kind === 'mutated' && result.applied) {
+          usePendingCoachClarifierStore.getState().clearPending();
+        }
+        return replyAndFinish(input, 'pending-program-edit-draft-resume', result.reply);
+      }
       const pendingProgramEditAnswer = resolvePendingProgramEditAnswer({
         pending: pendingClarifier,
         userMessage: input.userMessage.content,
@@ -1678,6 +2130,7 @@ export async function handleCoachTurn(
 
     const semanticMode = controllerSemanticProgramEditDraftMode(input);
     let semanticProgramEditForExecution: ProgramEdit | null = null;
+    let semanticDraftOwnsCurrentPacket = false;
     const semanticDraftResult = await buildSemanticProgramEditDraftForController({
       input,
       packet,
@@ -1709,6 +2162,7 @@ export async function handleCoachTurn(
           ...packet,
           programEditDraft: semanticDraftResult.draft,
         };
+        semanticDraftOwnsCurrentPacket = true;
         semanticProgramEditForExecution = programEditFromSemanticProgramEditDraft({
           draft: semanticDraftResult.draft,
           userMessage: input.userMessage.content,
@@ -1758,6 +2212,44 @@ export async function handleCoachTurn(
           reason: semanticDraftResult.reason,
           issues: semanticDraftResult.issues,
         });
+      }
+    }
+
+    if (semanticDraftOwnsCurrentPacket) {
+      const staleSemanticDraftClarifier =
+        capturePendingDateClarificationFromProgramEditDraftTarget({
+          draft: packet.programEditDraft,
+          originalMessage: input.userMessage.content,
+          todayISO: input.todayISO,
+          source: 'semantic',
+        });
+      if (staleSemanticDraftClarifier) {
+        usePendingCoachClarifierStore.getState().setPending(staleSemanticDraftClarifier);
+        input.setLastCoachDebug({
+          intent: 'semantic_program_edit_draft',
+          route: staleSemanticDraftClarifier.pendingClarification?.reason ??
+            'pending_clarification:target_date:past_date',
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: packet.programEditDraft?.targetDate ?? null,
+          referenceTargetName: packet.programEditDraft?.sourceTarget?.sessionName ?? null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: false,
+        });
+        logger.warn('[pending-clarifier-set]', {
+          operation: staleSemanticDraftClarifier.operation,
+          scope: staleSemanticDraftClarifier.scope,
+          missingFields: staleSemanticDraftClarifier.missingFields,
+          targetDomain: packet.programEditDraft?.targetDomain ?? null,
+          actionScope: packet.programEditDraft?.actionScope ?? null,
+          source: 'semantic_program_edit_draft_stale_target_date',
+        });
+        return replyAndFinish(
+          input,
+          'semantic-program-edit-draft-stale-target-date',
+          staleSemanticDraftClarifier.askedQuestion,
+        );
       }
     }
 

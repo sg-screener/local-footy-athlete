@@ -44,6 +44,16 @@ import {
   type CoachTurnDebug,
   type CoachTurnMessage,
 } from '../utils/coachTurnController';
+import type {
+  ProgramEditDraft,
+  ProgramEditDraftAction,
+  ProgramEditVerifierExpectation,
+} from '../utils/coachProgramEditDraft';
+import {
+  SEMANTIC_PROGRAM_EDIT_DRAFT_SCHEMA_VERSION,
+  type SemanticProgramEditDraftAdapter,
+  type SemanticProgramEditDraftAdapterInput,
+} from '../utils/semanticProgramEditDraft';
 import type { ExecutionResult } from '../utils/coachCommandExecutor';
 import {
   captureFromExecutorClarify,
@@ -1915,6 +1925,256 @@ async function runControllerPendingDateSection() {
     pendingAfter?.pendingClarification?.staleDate === '2026-06-29' &&
       pendingAfter.pendingClarification.requestedDow === 'Monday',
     JSON.stringify(pendingAfter?.pendingClarification));
+  usePendingCoachClarifierStore.getState().clearPending();
+
+  section('[17] Pending date answer resumes stored ProgramEditDraft, not legacy command');
+  const program2 = buildSmokeCoachBikeFlowProgram(new Date(`${todayISO}T12:00:00`)) as any;
+  const microcycle2 = program2.microcycles[0];
+  const mondayBase = microcycle2.workouts.find((workout: any) => workout.dayOfWeek === 1);
+  const flushTemplate = buildSmokeWednesdayWorkout(microcycle2.id);
+  const mondayLowerWithFlush = {
+    ...mondayBase,
+    name: 'Lower Body Strength',
+    workoutType: 'Strength',
+    conditioningBlock: flushTemplate.conditioningBlock,
+    exercises: [
+      ...(mondayBase?.exercises ?? []),
+      ...flushTemplate.exercises.map((item: any) => ({
+        ...item,
+        id: `mon-draft-${item.id}`,
+        workoutId: mondayBase.id,
+      })),
+    ],
+  };
+  microcycle2.workouts = microcycle2.workouts.map((workout: any) =>
+    workout.dayOfWeek === 1 ? mondayLowerWithFlush : workout,
+  );
+  useProgramStore.getState().clear();
+  useProgramStore.getState().setCurrentProgram(program2);
+  useProgramStore.getState().setCurrentMicrocycle(microcycle2);
+  useCoachContextStateStore.getState().clearCoachContext();
+  usePendingCoachClarifierStore.getState().clearPending();
+
+  const semanticStrengthAdapter: SemanticProgramEditDraftAdapter = {
+    buildDraft: (input: SemanticProgramEditDraftAdapterInput) => {
+      const targetDay = input.visibleWeek.find((day) => day.date === '2026-06-29');
+      const targetSessionId = String((targetDay?.workout as any)?.id ?? 'wk-smoke-dow-1');
+      const sourceTarget = {
+        kind: 'session' as const,
+        date: '2026-06-29',
+        sessionName: targetDay?.workout?.name ?? 'Lower Body Strength',
+        itemId: targetSessionId,
+        domain: 'strength' as const,
+        stillVisible: true,
+      };
+      const removeStrength: ProgramEditDraftAction = {
+        intent: 'remove',
+        targetDomain: 'strength',
+        actionScope: 'strength_block',
+        targetDate: '2026-06-29',
+        targetSessionId,
+        targetItemId: null,
+        sourceTarget,
+        reason: 'semantic_lower_strength_remove',
+      };
+      const protectedConditioning = {
+        targetDomain: 'conditioning' as const,
+        actionScope: 'conditioning_block' as const,
+        targetDate: '2026-06-29',
+        targetItemId: null,
+        title: 'Easy Aerobic Flush',
+        reason: 'explicit_keep_conditioning',
+      };
+      const verifierExpectations: ProgramEditVerifierExpectation[] = [
+        {
+          kind: 'domain_changed',
+          targetDomain: 'strength',
+          actionScope: 'strength_block',
+          targetDate: '2026-06-29',
+          reason: 'remove_lower_strength',
+        },
+        {
+          kind: 'domain_unchanged',
+          targetDomain: 'conditioning',
+          actionScope: 'conditioning_block',
+          targetDate: '2026-06-29',
+          reason: 'keep_flush',
+        },
+      ];
+      const semanticDraft: ProgramEditDraft = {
+        intent: 'remove',
+        targetDomain: 'strength',
+        actionScope: 'strength_block',
+        targetDate: '2026-06-29',
+        targetSessionId,
+        targetItemId: null,
+        sourceTarget,
+        explicitDateRole: 'referent',
+        explicitUserWording: input.userMessage,
+        missingFields: [],
+        confidence: 0.91,
+        protectedTargets: [protectedConditioning],
+        constraints: ['keep conditioning:conditioning_block'],
+        proposedActions: [removeStrength],
+        verifierExpectations,
+        isCompound: false,
+        reason: 'semantic_lower_strength_keep_flush',
+      };
+      return {
+        schemaVersion: SEMANTIC_PROGRAM_EDIT_DRAFT_SCHEMA_VERSION,
+        status: 'draft',
+        confidence: 0.91,
+        draft: semanticDraft,
+        reason: 'semantic_lower_strength_keep_flush',
+      };
+    },
+  };
+
+  const firstMessages: CoachTurnMessage[] = [];
+  let firstDebug: CoachTurnDebug | null = null;
+  const firstMessage: CoachTurnMessage = {
+    id: 'turn-stale-strength-keep-flush',
+    role: 'user',
+    content: 'Can you drop the lower work Monday but keep the flush',
+  };
+  const controllerInputBase = {
+    todayISO,
+    classifier: {
+      classify: async () => ({
+        intent: 'conversation',
+        confidence: 0,
+        needsClarification: false,
+      } as any),
+    },
+    pendingCoachProposal: null,
+    pendingReadiness: null,
+    pendingInjury: null,
+    smokeCoachBikeFlow: false,
+    isFocused: true,
+    smokeWednesdayMissingReason: null,
+    smokeWednesdayOpenTarget: null,
+    setPendingCoachProposal: () => {},
+    setPendingReadiness: () => {},
+    clearInput: () => {},
+    setIsLoading: () => {},
+    setCoachProgressLabel: () => {},
+    startSetupRebuildProgress: () => {},
+    clearSetupRebuildProgress: () => {},
+    semanticProgramEditDraftMode: 'active' as const,
+    semanticProgramEditDraftAdapter: semanticStrengthAdapter,
+  };
+  const firstHandled = await handleCoachTurn({
+    ...controllerInputBase,
+    userMessage: firstMessage,
+    messages: firstMessages,
+    appendUser: () => firstMessages.push(firstMessage),
+    appendAssistant: (message) => firstMessages.push(message),
+    appendUserAndAssistant: (message) => {
+      firstMessages.push(firstMessage, message);
+    },
+    setLastCoachDebug: (nextDebug) => {
+      firstDebug = nextDebug;
+    },
+  });
+  const draftPending = getPendingClarifierSnapshot(NOW);
+  const firstReply = firstMessages.find((message) => message.role === 'assistant')?.content ?? '';
+  ok('17.1 stale date turn still asks date clarification',
+    firstHandled.handled === true &&
+      firstDebug?.route === 'pending_clarification:target_date:past_date' &&
+      /do you mean next monday/i.test(firstReply),
+    JSON.stringify({ firstDebug, firstReply }));
+  ok('17.2 pending slot stores full draft envelope',
+    draftPending?.programEditDraftEnvelope?.draft.targetDomain === 'strength' &&
+      draftPending.programEditDraftEnvelope.draft.actionScope === 'strength_block' &&
+      draftPending.programEditDraftEnvelope.draft.protectedTargets.some((target) =>
+        target.targetDomain === 'conditioning',
+      ),
+    JSON.stringify(draftPending?.programEditDraftEnvelope));
+
+  const secondMessages: CoachTurnMessage[] = [];
+  let secondDebug: CoachTurnDebug | null = null;
+  const secondMessage: CoachTurnMessage = {
+    id: 'turn-stale-strength-keep-flush-yes',
+    role: 'user',
+    content: 'Yeah',
+  };
+  const secondHandled = await handleCoachTurn({
+    ...controllerInputBase,
+    userMessage: secondMessage,
+    messages: secondMessages,
+    appendUser: () => secondMessages.push(secondMessage),
+    appendAssistant: (message) => secondMessages.push(message),
+    appendUserAndAssistant: (message) => {
+      secondMessages.push(secondMessage, message);
+    },
+    setLastCoachDebug: (nextDebug) => {
+      secondDebug = nextDebug;
+    },
+  });
+  const secondReply = secondMessages.find((message) => message.role === 'assistant')?.content ?? '';
+  ok('17.3 affirmative date answer resumes stored strength draft',
+    secondHandled.handled === true &&
+      secondDebug?.route === 'pending_program_edit_draft:program_edit_draft_strength_block_remove_deferred',
+    JSON.stringify({ secondDebug, secondReply }));
+  ok('17.4 resumed draft does not remove protected conditioning',
+    /strength block/i.test(secondReply) &&
+      /leaving conditioning alone/i.test(secondReply) &&
+      /can't safely apply/i.test(secondReply) &&
+      !/\bdone\b/i.test(secondReply) &&
+      !/removed\s+\d+min|removed.*flush|removed.*bike/i.test(secondReply),
+    secondReply);
+  ok('17.5 unsupported resumed draft leaves program overrides untouched',
+    Object.keys(useProgramStore.getState().dateOverrides ?? {}).length === 0,
+    JSON.stringify(useProgramStore.getState().dateOverrides ?? {}));
+  ok('17.6 draft continuation clears finished unsupported transaction',
+    getPendingClarifierSnapshot(NOW) === null,
+    JSON.stringify(getPendingClarifierSnapshot(NOW)));
+
+  const repeatFirstMessages: CoachTurnMessage[] = [];
+  const repeatFirstMessage: CoachTurnMessage = {
+    id: 'turn-stale-strength-keep-flush-repeat',
+    role: 'user',
+    content: 'Can you drop the lower work Monday but keep the flush',
+  };
+  await handleCoachTurn({
+    ...controllerInputBase,
+    userMessage: repeatFirstMessage,
+    messages: repeatFirstMessages,
+    appendUser: () => repeatFirstMessages.push(repeatFirstMessage),
+    appendAssistant: (message) => repeatFirstMessages.push(message),
+    appendUserAndAssistant: (message) => {
+      repeatFirstMessages.push(repeatFirstMessage, message);
+    },
+    setLastCoachDebug: () => {},
+  });
+  const explicitAnswerMessages: CoachTurnMessage[] = [];
+  let explicitAnswerDebug: CoachTurnDebug | null = null;
+  const explicitAnswerMessage: CoachTurnMessage = {
+    id: 'turn-stale-strength-keep-flush-yep-next',
+    role: 'user',
+    content: 'Yep next Monday',
+  };
+  await handleCoachTurn({
+    ...controllerInputBase,
+    userMessage: explicitAnswerMessage,
+    messages: explicitAnswerMessages,
+    appendUser: () => explicitAnswerMessages.push(explicitAnswerMessage),
+    appendAssistant: (message) => explicitAnswerMessages.push(message),
+    appendUserAndAssistant: (message) => {
+      explicitAnswerMessages.push(explicitAnswerMessage, message);
+    },
+    setLastCoachDebug: (nextDebug) => {
+      explicitAnswerDebug = nextDebug;
+    },
+  });
+  const explicitAnswerReply = explicitAnswerMessages.find((message) => message.role === 'assistant')?.content ?? '';
+  ok('17.7 explicit next-Monday answer also resumes stored strength draft',
+    explicitAnswerDebug?.route === 'pending_program_edit_draft:program_edit_draft_strength_block_remove_deferred' &&
+      /strength block/i.test(explicitAnswerReply) &&
+      /leaving conditioning alone/i.test(explicitAnswerReply) &&
+      !/\bdone\b/i.test(explicitAnswerReply),
+    JSON.stringify({ explicitAnswerDebug, explicitAnswerReply }));
+
   usePendingCoachClarifierStore.getState().clearPending();
 }
 
