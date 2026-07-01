@@ -1282,6 +1282,7 @@ function shouldAttemptCoachRevisionProposal(args: {
   input: CoachTurnControllerInput;
 }): boolean {
   if (args.mode === 'off') return false;
+  if (args.mode === 'active') return true;
   return isMutationLike(args.input.userMessage.content);
 }
 
