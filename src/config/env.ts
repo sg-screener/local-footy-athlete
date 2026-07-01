@@ -1,4 +1,5 @@
 import { logger } from '../utils/logger';
+import type { SemanticProgramEditDraftMode } from '../utils/coachTurnController';
 
 type PublicEnv = Record<string, string | undefined>;
 
@@ -12,6 +13,8 @@ export interface ClientEnvConfig {
   supabaseFunctionsBaseUrl: string;
   coachChatEndpoint: string;
   coachIntentEndpoint: string;
+  coachSemanticProgramEditDraftEndpoint: string;
+  semanticProgramEditDraftMode: Exclude<SemanticProgramEditDraftMode, 'active'>;
   supportEmail: string;
   feedbackEmail: string;
   missing: ClientEnvKey[];
@@ -26,6 +29,7 @@ function readPublicEnv(): PublicEnv {
     EXPO_PUBLIC_SUPABASE_ANON_KEY: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL: process.env.EXPO_PUBLIC_SUPABASE_FUNCTIONS_URL,
+    EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE: process.env.EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE,
     EXPO_PUBLIC_SUPPORT_EMAIL: process.env.EXPO_PUBLIC_SUPPORT_EMAIL,
     EXPO_PUBLIC_FEEDBACK_EMAIL: process.env.EXPO_PUBLIC_FEEDBACK_EMAIL,
   };
@@ -37,6 +41,10 @@ function trimTrailingSlash(value: string): string {
 
 function clean(value: string | undefined): string {
   return (value ?? '').trim();
+}
+
+function semanticProgramEditDraftMode(value: string | undefined): Exclude<SemanticProgramEditDraftMode, 'active'> {
+  return clean(value).toLowerCase() === 'shadow' ? 'shadow' : 'off';
 }
 
 export function getClientEnvConfig(env: PublicEnv = readPublicEnv()): ClientEnvConfig {
@@ -60,6 +68,10 @@ export function getClientEnvConfig(env: PublicEnv = readPublicEnv()): ClientEnvC
     supabaseFunctionsBaseUrl: functionsBase ? trimTrailingSlash(functionsBase) : '',
     coachChatEndpoint: functionsBase ? `${trimTrailingSlash(functionsBase)}/coach-chat` : '',
     coachIntentEndpoint: functionsBase ? `${trimTrailingSlash(functionsBase)}/coach-intent` : '',
+    coachSemanticProgramEditDraftEndpoint: functionsBase
+      ? `${trimTrailingSlash(functionsBase)}/coach-semantic-program-edit-draft`
+      : '',
+    semanticProgramEditDraftMode: semanticProgramEditDraftMode(env.EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE),
     supportEmail,
     feedbackEmail,
     missing,

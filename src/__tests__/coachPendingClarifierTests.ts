@@ -1827,7 +1827,7 @@ section('[15] pending slot resolver fills targetDate before generic routing');
 
 async function runControllerPendingDateSection() {
   section('[16] CoachTurnController stores pending date slot on stale visible date');
-  const todayISO = '2026-06-24';
+  const todayISO = '2026-07-01';
   const program = buildSmokeCoachBikeFlowProgram(new Date(`${todayISO}T12:00:00`)) as any;
   const microcycle = program.microcycles[0];
   const mondayFlush = {
@@ -1912,7 +1912,7 @@ async function runControllerPendingDateSection() {
       !/can't change it/i.test(assistantReply),
     assistantReply);
   ok('16.6 pending store carries stale date and requested weekday',
-    pendingAfter?.pendingClarification?.staleDate === '2026-06-22' &&
+    pendingAfter?.pendingClarification?.staleDate === '2026-06-29' &&
       pendingAfter.pendingClarification.requestedDow === 'Monday',
     JSON.stringify(pendingAfter?.pendingClarification));
   usePendingCoachClarifierStore.getState().clearPending();

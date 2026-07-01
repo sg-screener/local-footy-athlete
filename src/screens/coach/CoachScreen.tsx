@@ -82,6 +82,7 @@ import {
   handleCoachTurn,
   type CoachTurnDebug,
 } from '../../utils/coachTurnController';
+import { LLMSemanticProgramEditDraftAdapter } from '../../utils/llmSemanticProgramEditDraftAdapter';
 import {
   SETUP_REBUILD_PROGRESS_INTERVAL_MS,
   setupRebuildProgressMessageForTick,
@@ -137,6 +138,13 @@ const liveCoachIntentClassifier: CoachIntentClassifier = clientEnv.isReady
       authToken: clientEnv.supabaseAnonKey,
     })
   : disabledCoachIntentClassifier;
+const liveSemanticProgramEditDraftAdapter = clientEnv.isReady &&
+  clientEnv.semanticProgramEditDraftMode === 'shadow'
+  ? new LLMSemanticProgramEditDraftAdapter({
+      endpoint: clientEnv.coachSemanticProgramEditDraftEndpoint,
+      authToken: clientEnv.supabaseAnonKey,
+    })
+  : null;
 
 /** Local-clock today as YYYY-MM-DD. The UAE is deterministic — it never
  *  reads the clock itself; the caller supplies todayISO. */
@@ -1698,6 +1706,8 @@ export default function CoachScreen() {
       messages,
       todayISO: todayISOLocal(),
       classifier: liveCoachIntentClassifier,
+      semanticProgramEditDraftMode: clientEnv.semanticProgramEditDraftMode,
+      semanticProgramEditDraftAdapter: liveSemanticProgramEditDraftAdapter,
       pendingCoachProposal: pendingCoachProposalRef.current,
       pendingReadiness: pendingReadinessRef.current,
       pendingInjury: pendingInjuryRef.current

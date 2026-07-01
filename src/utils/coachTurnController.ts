@@ -117,6 +117,24 @@ export interface CoachTurnDebug {
   projectionShowsFrom?: boolean | null;
 }
 
+export type SemanticProgramEditDraftMode = 'off' | 'shadow' | 'active';
+
+export interface SemanticProgramEditDraftControllerDiagnostic {
+  mode: Exclude<SemanticProgramEditDraftMode, 'off'>;
+  kind: SemanticProgramEditDraftResult['kind'];
+  confidence: number | null;
+  reason: string | null;
+  issues?: string[];
+  draft?: {
+    intent: string;
+    targetDomain: string;
+    actionScope: string;
+    targetDate: string | null;
+    isCompound: boolean;
+    missingFields: string[];
+  };
+}
+
 export type CoachTurnControllerResult =
   | { handled: true }
   | { handled: false; classifiedCoachIntent: CoachIntent | null };
@@ -151,9 +169,15 @@ export interface CoachTurnControllerInput {
   startSetupRebuildProgress: () => void;
   clearSetupRebuildProgress: () => void;
   setLastCoachDebug: (debug: CoachTurnDebug | null) => void;
+  semanticProgramEditDraftMode?: SemanticProgramEditDraftMode;
   enableSemanticProgramEditDraft?: boolean;
   semanticProgramEditDraftAdapter?: SemanticProgramEditDraftAdapter | null;
   semanticProgramEditDraftMinConfidence?: number;
+  semanticProgramEditDraftNowISO?: string;
+  semanticProgramEditDraftTimezone?: string;
+  onSemanticProgramEditDraftDiagnostic?: (
+    diagnostic: SemanticProgramEditDraftControllerDiagnostic,
+  ) => void;
 }
 
 type AppliedReadinessAction = Extract<CoachReadinessAction, { kind: 'apply_signal' }>;
@@ -822,11 +846,41 @@ function shouldHoldDurationClarifier(
   return !startsFreshEdit;
 }
 
+function controllerSemanticProgramEditDraftMode(
+  input: CoachTurnControllerInput,
+): SemanticProgramEditDraftMode {
+  if (input.semanticProgramEditDraftMode) return input.semanticProgramEditDraftMode;
+  return input.enableSemanticProgramEditDraft ? 'active' : 'off';
+}
+
+function shouldAttemptSemanticProgramEditDraft(args: {
+  mode: SemanticProgramEditDraftMode;
+  input: CoachTurnControllerInput;
+  packet: ReturnType<typeof buildCoachContextPacket>;
+}): boolean {
+  if (args.mode === 'off') return false;
+  if (args.mode === 'active') return true;
+  const draft = args.packet.programEditDraft;
+  if (isMutationLike(args.input.userMessage.content)) return true;
+  if (!draft) return false;
+  if (draft.intent === 'ask_question' || draft.intent === 'explain') return false;
+  return draft.proposedActions.length > 0 || draft.missingFields.length > 0;
+}
+
+function controllerTimeZone(): string | undefined {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch (_err) {
+    return undefined;
+  }
+}
+
 async function buildSemanticProgramEditDraftForController(args: {
   input: CoachTurnControllerInput;
   packet: ReturnType<typeof buildCoachContextPacket>;
+  mode: SemanticProgramEditDraftMode;
 }): Promise<SemanticProgramEditDraftResult | null> {
-  if (!args.input.enableSemanticProgramEditDraft) return null;
+  if (!shouldAttemptSemanticProgramEditDraft(args)) return null;
   const adapter = args.input.semanticProgramEditDraftAdapter;
   if (!adapter) return null;
   return buildSemanticProgramEditDraft({
@@ -838,9 +892,52 @@ async function buildSemanticProgramEditDraftForController(args: {
       currentWeek: args.packet.currentWeek ?? [],
       nextWeek: args.packet.nextWeek ?? [],
     },
+    todayISO: args.input.todayISO,
+    nowISO: args.input.semanticProgramEditDraftNowISO ?? new Date().toISOString(),
+    timezone: args.input.semanticProgramEditDraftTimezone ?? controllerTimeZone(),
     adapter,
     minConfidence: args.input.semanticProgramEditDraftMinConfidence,
   });
+}
+
+function diagnosticFromSemanticProgramEditDraftResult(args: {
+  mode: Exclude<SemanticProgramEditDraftMode, 'off'>;
+  result: SemanticProgramEditDraftResult;
+}): SemanticProgramEditDraftControllerDiagnostic {
+  const confidence = 'confidence' in args.result ? args.result.confidence : null;
+  const reason = 'reason' in args.result ? args.result.reason : null;
+  const draft = args.result.kind === 'draft'
+    ? args.result.draft
+    : args.result.kind === 'invalid'
+      ? null
+      : args.result.response?.draft ?? null;
+  return {
+    mode: args.mode,
+    kind: args.result.kind,
+    confidence,
+    reason,
+    ...(args.result.kind === 'invalid' ? { issues: args.result.issues } : {}),
+    ...(draft
+      ? {
+          draft: {
+            intent: draft.intent,
+            targetDomain: draft.targetDomain,
+            actionScope: draft.actionScope,
+            targetDate: draft.targetDate,
+            isCompound: draft.isCompound,
+            missingFields: draft.missingFields,
+          },
+        }
+      : {}),
+  };
+}
+
+function emitSemanticProgramEditDraftDiagnostic(args: {
+  input: CoachTurnControllerInput;
+  diagnostic: SemanticProgramEditDraftControllerDiagnostic;
+}) {
+  args.input.onSemanticProgramEditDraftDiagnostic?.(args.diagnostic);
+  logger.debug('[coach-semantic-program-edit-draft-diagnostic]', args.diagnostic);
 }
 
 function pendingClarifierFromSemanticClarify(args: {
@@ -1579,18 +1676,35 @@ export async function handleCoachTurn(
       });
     }
 
+    const semanticMode = controllerSemanticProgramEditDraftMode(input);
     let semanticProgramEditForExecution: ProgramEdit | null = null;
     const semanticDraftResult = await buildSemanticProgramEditDraftForController({
       input,
       packet,
+      mode: semanticMode,
     });
     if (semanticDraftResult) {
       logger.debug('[coach-semantic-program-edit-draft]', {
+        mode: semanticMode,
         kind: semanticDraftResult.kind,
         confidence: 'confidence' in semanticDraftResult ? semanticDraftResult.confidence : null,
         reason: 'reason' in semanticDraftResult ? semanticDraftResult.reason : null,
       });
-      if (semanticDraftResult.kind === 'draft') {
+      if (semanticMode !== 'off') {
+        emitSemanticProgramEditDraftDiagnostic({
+          input,
+          diagnostic: diagnosticFromSemanticProgramEditDraftResult({
+            mode: semanticMode,
+            result: semanticDraftResult,
+          }),
+        });
+      }
+      if (semanticMode === 'shadow') {
+        logger.debug('[coach-semantic-program-edit-draft-shadow]', {
+          kind: semanticDraftResult.kind,
+          ignoredForExecution: true,
+        });
+      } else if (semanticDraftResult.kind === 'draft') {
         packet = {
           ...packet,
           programEditDraft: semanticDraftResult.draft,

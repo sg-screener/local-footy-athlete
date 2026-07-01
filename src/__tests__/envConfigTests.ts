@@ -48,6 +48,12 @@ section('[1] Reads required Supabase public env');
     'coach-intent endpoint derived',
     config.coachIntentEndpoint === 'https://project.supabase.co/functions/v1/coach-intent',
   );
+  ok(
+    'semantic ProgramEditDraft endpoint derived',
+    config.coachSemanticProgramEditDraftEndpoint ===
+      'https://project.supabase.co/functions/v1/coach-semantic-program-edit-draft',
+  );
+  ok('semantic ProgramEditDraft mode defaults off', config.semanticProgramEditDraftMode === 'off');
   ok('anon key read', config.supabaseAnonKey === 'anon-key');
 }
 
@@ -63,6 +69,11 @@ section('[2] Supports publishable key alias and custom functions base');
   ok(
     'custom functions base used',
     config.coachIntentEndpoint === 'https://edge.example.com/functions/v1/coach-intent',
+  );
+  ok(
+    'semantic ProgramEditDraft endpoint uses custom functions base',
+    config.coachSemanticProgramEditDraftEndpoint ===
+      'https://edge.example.com/functions/v1/coach-semantic-program-edit-draft',
   );
 }
 
@@ -91,6 +102,23 @@ section('[5] Support mailto helper is encoded');
     buildMailto('support@example.com', 'LFA - Speak to a Human') ===
       'mailto:support@example.com?subject=LFA%20-%20Speak%20to%20a%20Human',
   );
+}
+
+section('[6] Semantic ProgramEditDraft mode is shadow-only from public env');
+{
+  const shadow = getClientEnvConfig({
+    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+    EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE: ' shadow ',
+  });
+  const active = getClientEnvConfig({
+    EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
+    EXPO_PUBLIC_SUPABASE_ANON_KEY: 'anon-key',
+    EXPO_PUBLIC_SEMANTIC_PROGRAM_EDIT_DRAFT_MODE: 'active',
+  });
+
+  ok('shadow mode can be enabled for diagnostics', shadow.semanticProgramEditDraftMode === 'shadow');
+  ok('active mode is not enabled by public env', active.semanticProgramEditDraftMode === 'off');
 }
 
 console.log(`\n- Summary -`);

@@ -76,6 +76,9 @@ export interface SemanticProgramEditDraftAdapterInput {
   visibleWeek: ResolvedDay[];
   pendingClarifier?: PendingCoachClarifier | null;
   currentProgramContext?: unknown;
+  todayISO?: string;
+  nowISO?: string;
+  timezone?: string;
 }
 
 export interface SemanticProgramEditDraftAdapter {
@@ -143,6 +146,9 @@ export async function buildSemanticProgramEditDraft(
       visibleWeek: input.visibleWeek,
       pendingClarifier: input.pendingClarifier,
       currentProgramContext: input.currentProgramContext,
+      todayISO: input.todayISO,
+      nowISO: input.nowISO,
+      timezone: input.timezone,
     });
   } catch (err) {
     return {

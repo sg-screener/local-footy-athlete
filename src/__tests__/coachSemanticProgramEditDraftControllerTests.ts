@@ -21,6 +21,8 @@ import {
   handleCoachTurn,
   type CoachTurnDebug,
   type CoachTurnMessage,
+  type SemanticProgramEditDraftControllerDiagnostic,
+  type SemanticProgramEditDraftMode,
 } from '../utils/coachTurnController';
 import type {
   ProgramEditDraft,
@@ -35,6 +37,7 @@ import {
   type SemanticProgramEditDraftAdapter,
   type SemanticProgramEditDraftAdapterInput,
 } from '../utils/semanticProgramEditDraft';
+import { extractVisibleProgramItemsFromWorkout } from '../utils/visibleProgramReadModel';
 
 const TODAY = '2026-06-24';
 const MONDAY = '2026-06-22';
@@ -269,9 +272,109 @@ function compoundTeamTrainingDraft(wording: string): ProgramEditDraft {
   });
 }
 
+function visibleSessionTarget(
+  input: SemanticProgramEditDraftAdapterInput,
+  sessionNamePart: string,
+  fallbackDate = THURSDAY,
+): CoachResolvedTarget {
+  const day = input.visibleWeek.find((candidate) =>
+    (candidate.workout?.name ?? '').toLowerCase().includes(sessionNamePart.toLowerCase()),
+  );
+  if (!day?.workout) {
+    return sessionTarget({
+      date: fallbackDate,
+      sessionName: sessionNamePart,
+      itemId: `missing-${sessionNamePart}`,
+    });
+  }
+  return sessionTarget({
+    date: day.date,
+    sessionName: day.workout.name,
+    itemId: (day.workout as any).id ?? day.workout.name,
+  });
+}
+
+function visibleConditioningProtection(
+  input: SemanticProgramEditDraftAdapterInput,
+): ProgramEditDraft['protectedTargets'][number] | null {
+  for (const day of input.visibleWeek) {
+    const item = extractVisibleProgramItemsFromWorkout(day.workout)
+      .find((candidate) => candidate.domain === 'conditioning');
+    if (!item) continue;
+    return {
+      targetDomain: 'conditioning',
+      actionScope: 'conditioning_block',
+      targetDate: day.date,
+      targetItemId: item.id,
+      title: item.title,
+      reason: 'semantic_keep_conditioning',
+    };
+  }
+  return null;
+}
+
+function strengthBlockDraftFromVisibleContext(
+  wording: string,
+  input: SemanticProgramEditDraftAdapterInput,
+): ProgramEditDraft {
+  const sourceTarget = visibleSessionTarget(input, 'Lower Body Strength');
+  const protectedTarget = visibleConditioningProtection(input);
+  return draft({
+    wording,
+    intent: wording.includes('easier') || wording.includes('lighter') ? 'reduce' : 'remove',
+    targetDomain: 'strength',
+    actionScope: 'strength_block',
+    targetDate: sourceTarget.date,
+    targetSessionId: sourceTarget.itemId,
+    sourceTarget,
+    protectedTargets: wording.includes('flush') && protectedTarget ? [protectedTarget] : [],
+    reason: 'semantic_controller_strength_block',
+  });
+}
+
+function compoundTeamTrainingDraftFromVisibleContext(
+  wording: string,
+  input: SemanticProgramEditDraftAdapterInput,
+): ProgramEditDraft {
+  const teamTarget = visibleSessionTarget(input, 'Team Training');
+  const removeTeam: ProgramEditDraftAction = {
+    intent: 'remove',
+    targetDomain: 'session',
+    actionScope: 'whole_session',
+    targetDate: teamTarget.date,
+    targetSessionId: teamTarget.itemId,
+    targetItemId: null,
+    sourceTarget: teamTarget,
+    reason: 'remove_team_training',
+  };
+  const addConditioning: ProgramEditDraftAction = {
+    intent: 'add',
+    targetDomain: 'conditioning',
+    actionScope: 'conditioning_block',
+    targetDate: teamTarget.date,
+    targetSessionId: null,
+    targetItemId: null,
+    sourceTarget: null,
+    reason: 'add_easy_conditioning',
+  };
+  return draft({
+    wording,
+    intent: 'replace',
+    targetDomain: 'session',
+    actionScope: 'whole_session',
+    targetDate: teamTarget.date,
+    targetSessionId: teamTarget.itemId,
+    sourceTarget: teamTarget,
+    isCompound: true,
+    proposedActions: [removeTeam, addConditioning],
+    reason: 'semantic_controller_compound_replace',
+  });
+}
+
 async function runControllerTurn(args: {
   message: string;
   semanticEnabled?: boolean;
+  semanticMode?: SemanticProgramEditDraftMode;
   semanticAdapter?: SemanticProgramEditDraftAdapter | null;
   seedPendingDuration?: boolean;
 }) {
@@ -296,6 +399,7 @@ async function runControllerTurn(args: {
   const messages: CoachTurnMessage[] = [];
   let debug: CoachTurnDebug | null = null;
   let classifierCalls = 0;
+  const diagnostics: SemanticProgramEditDraftControllerDiagnostic[] = [];
   const userMessage: CoachTurnMessage = {
     id: `turn-${Math.random().toString(36).slice(2)}`,
     role: 'user',
@@ -335,8 +439,14 @@ async function runControllerTurn(args: {
     setLastCoachDebug: (nextDebug) => {
       debug = nextDebug;
     },
+    semanticProgramEditDraftMode: args.semanticMode,
     enableSemanticProgramEditDraft: args.semanticEnabled,
     semanticProgramEditDraftAdapter: args.semanticAdapter ?? null,
+    semanticProgramEditDraftNowISO: `${TODAY}T12:00:00.000Z`,
+    semanticProgramEditDraftTimezone: 'Australia/Melbourne',
+    onSemanticProgramEditDraftDiagnostic: (diagnostic) => {
+      diagnostics.push(diagnostic);
+    },
   });
 
   return {
@@ -345,6 +455,8 @@ async function runControllerTurn(args: {
     reply: messages.filter((message) => message.role === 'assistant').at(-1)?.content ?? '',
     debug,
     classifierCalls,
+    diagnostics,
+    dateOverrides: useProgramStore.getState().dateOverrides,
   };
 }
 
@@ -353,15 +465,15 @@ async function run() {
 
   {
     const adapter = new RecordingSemanticAdapter(responseForDraft(strengthBlockDraft("I'm cooked, bin the leg stuff tomorrow")));
-    const result = await runControllerTurn({
+    const offResult = await runControllerTurn({
       message: "I'm cooked, bin the leg stuff tomorrow",
       semanticEnabled: false,
       semanticAdapter: adapter,
     });
     eq('[1] semantic disabled does not call adapter', adapter.calls.length, 0);
     ok('[1] disabled path still completes without semantic routing',
-      result.handled.handled === true || result.handled.handled === false,
-      result);
+      offResult.handled.handled === true || offResult.handled.handled === false,
+      offResult);
   }
 
   {
@@ -381,7 +493,9 @@ async function run() {
   }
 
   {
-    const adapter = new RecordingSemanticAdapter(responseForDraft(strengthBlockDraft('Drop the lower work but keep the flush', MONDAY)));
+    const adapter = new RecordingSemanticAdapter((input) =>
+      responseForDraft(strengthBlockDraftFromVisibleContext('Drop the lower work but keep the flush', input)),
+    );
     const result = await runControllerTurn({
       message: 'Drop the lower work but keep the flush',
       semanticEnabled: true,
@@ -394,7 +508,9 @@ async function run() {
   }
 
   {
-    const adapter = new RecordingSemanticAdapter(responseForDraft(compoundTeamTrainingDraft("Can't make team training tonight, swap it for easy conditioning")));
+    const adapter = new RecordingSemanticAdapter((input) =>
+      responseForDraft(compoundTeamTrainingDraftFromVisibleContext("Can't make team training tonight, swap it for easy conditioning", input)),
+    );
     const result = await runControllerTurn({
       message: "Can't make team training tonight, swap it for easy conditioning",
       semanticEnabled: true,
@@ -481,14 +597,174 @@ async function run() {
   }
 
   {
+    const message = "I'm cooked, bin the leg stuff tomorrow";
+    const offAdapter = new RecordingSemanticAdapter(responseForDraft(strengthBlockDraft(message)));
+    const offResult = await runControllerTurn({
+      message,
+      semanticMode: 'off',
+      semanticAdapter: offAdapter,
+    });
+    const shadowAdapter = new RecordingSemanticAdapter(responseForDraft(strengthBlockDraft(message)));
+    const shadowResult = await runControllerTurn({
+      message,
+      semanticMode: 'shadow',
+      semanticAdapter: shadowAdapter,
+    });
+    eq('[9] shadow mode calls semantic adapter once for messy mutation-like message', shadowAdapter.calls.length, 1);
+    eq('[9] off mode does not call semantic adapter even when adapter is injected', offAdapter.calls.length, 0);
+    eq('[9] shadow mode does not change user-facing reply', shadowResult.reply, offResult.reply);
+    ok('[9] shadow mode records draft diagnostics only',
+      shadowResult.diagnostics.length === 1 &&
+        shadowResult.diagnostics[0].mode === 'shadow' &&
+        shadowResult.diagnostics[0].kind === 'draft' &&
+        shadowResult.diagnostics[0].draft?.targetDomain === 'strength',
+      shadowResult.diagnostics);
+    ok('[9] shadow adapter receives grounded time and visible context',
+      shadowAdapter.calls[0]?.todayISO === TODAY &&
+        shadowAdapter.calls[0]?.nowISO === `${TODAY}T12:00:00.000Z` &&
+        shadowAdapter.calls[0]?.timezone === 'Australia/Melbourne' &&
+        (shadowAdapter.calls[0]?.visibleWeek.length ?? 0) > 0,
+      shadowAdapter.calls[0]);
+    ok('[9] shadow mode does not mutate through semantic draft',
+      Object.keys(shadowResult.dateOverrides ?? {}).length === Object.keys(offResult.dateOverrides ?? {}).length,
+      { off: offResult.dateOverrides, shadow: shadowResult.dateOverrides });
+  }
+
+  {
+    const message = 'Drop the lower work but keep the flush';
+    const offResult = await runControllerTurn({
+      message,
+      semanticMode: 'off',
+      semanticAdapter: new RecordingSemanticAdapter((input) =>
+        responseForDraft(strengthBlockDraftFromVisibleContext(message, input)),
+      ),
+    });
+    const adapter = new RecordingSemanticAdapter((input) =>
+      responseForDraft(strengthBlockDraftFromVisibleContext(message, input)),
+    );
+    const shadowResult = await runControllerTurn({
+      message,
+      semanticMode: 'shadow',
+      semanticAdapter: adapter,
+    });
+    eq('[10] shadow protected-target draft does not change reply', shadowResult.reply, offResult.reply);
+    ok('[10] shadow diagnostics expose protected conditioning without executing',
+      shadowResult.diagnostics[0]?.draft?.targetDomain === 'strength' &&
+        adapter.calls.length === 1 &&
+        !/leaving conditioning alone/i.test(shadowResult.reply),
+      { diagnostics: shadowResult.diagnostics, reply: shadowResult.reply });
+  }
+
+  {
+    const message = "Can't make team training tonight, swap it for easy conditioning";
+    const offResult = await runControllerTurn({
+      message,
+      semanticMode: 'off',
+      semanticAdapter: new RecordingSemanticAdapter((input) =>
+        responseForDraft(compoundTeamTrainingDraftFromVisibleContext(message, input)),
+      ),
+    });
+    const adapter = new RecordingSemanticAdapter((input) =>
+      responseForDraft(compoundTeamTrainingDraftFromVisibleContext(message, input)),
+    );
+    const shadowResult = await runControllerTurn({
+      message,
+      semanticMode: 'shadow',
+      semanticAdapter: adapter,
+    });
+    eq('[11] shadow compound draft does not change reply', shadowResult.reply, offResult.reply);
+    ok('[11] shadow compound draft is diagnostics-only',
+      adapter.calls.length === 1 &&
+        shadowResult.diagnostics[0]?.draft?.isCompound === true,
+      shadowResult.diagnostics);
+  }
+
+  {
+    const message = 'yeah';
+    const adapter = new RecordingSemanticAdapter(responseForDraft(strengthBlockDraft(message)));
+    const result = await runControllerTurn({
+      message,
+      semanticMode: 'shadow',
+      semanticAdapter: adapter,
+      seedPendingDuration: true,
+    });
+    eq('[12] active pending clarification resolves before shadow semantic parser', adapter.calls.length, 0);
+    eq('[12] no shadow diagnostics emitted for pending answer', result.diagnostics.length, 0);
+  }
+
+  {
+    const message = 'remove conditioning today';
+    const offResult = await runControllerTurn({
+      message,
+      semanticMode: 'off',
+      semanticAdapter: new RecordingSemanticAdapter('{ this is not json }'),
+    });
+    const adapter = new RecordingSemanticAdapter('{ this is not json }');
+    const shadowResult = await runControllerTurn({
+      message,
+      semanticMode: 'shadow',
+      semanticAdapter: adapter,
+    });
+    eq('[13] shadow malformed JSON does not change reply', shadowResult.reply, offResult.reply);
+    ok('[13] shadow malformed JSON is captured as invalid diagnostic',
+      shadowResult.diagnostics.length === 1 &&
+        shadowResult.diagnostics[0].kind === 'invalid',
+      shadowResult.diagnostics);
+  }
+
+  {
+    const message = 'How are we looking today?';
+    const offResult = await runControllerTurn({
+      message,
+      semanticMode: 'off',
+      semanticAdapter: new ThrowingSemanticAdapter(),
+    });
+    const adapter = new ThrowingSemanticAdapter();
+    const shadowResult = await runControllerTurn({
+      message,
+      semanticMode: 'shadow',
+      semanticAdapter: adapter,
+    });
+    eq('[14] shadow mode skips non-mutation conversation messages', adapter.calls, 0);
+    eq('[14] non-mutation shadow reply matches off reply', shadowResult.reply, offResult.reply);
+  }
+
+  {
+    const invalidDraft = responseForDraft(draft({
+      wording: 'remove that',
+      intent: 'remove',
+      targetDomain: 'conditioning',
+      actionScope: 'conditioning_block',
+      targetDate: WEDNESDAY,
+      targetSessionId: 'invented-session',
+      targetItemId: 'invented-item',
+      reason: 'semantic_invented_target',
+    }));
+    const adapter = new RecordingSemanticAdapter(invalidDraft);
+    const result = await runControllerTurn({
+      message: 'remove that',
+      semanticMode: 'shadow',
+      semanticAdapter: adapter,
+    });
+    ok('[15] shadow semantic output cannot bypass target/id validation',
+      adapter.calls.length === 1 &&
+        result.diagnostics[0]?.kind === 'invalid' &&
+        result.diagnostics[0].issues?.some((issue) => /not present in the target frame or visible week/i.test(issue)),
+      result.diagnostics);
+    ok('[15] invalid shadow semantic output does not claim success',
+      !/\bdone\b/i.test(result.reply),
+      result.reply);
+  }
+
+  {
     const controllerSource = readFileSync('src/utils/coachTurnController.ts', 'utf8');
     const semanticIndex = controllerSource.indexOf('const semanticDraftResult = await buildSemanticProgramEditDraftForController');
     const routedIndex = controllerSource.indexOf('const routedProgramEdit = semanticProgramEditForExecution ?? interpretCoachMessageToProgramEdit');
     const guardIndex = controllerSource.indexOf('executeProgramEditWithVisibleGuard({', routedIndex);
-    ok('[9] semantic draft is built before legacy router compatibility',
+    ok('[16] semantic draft is built before legacy router compatibility',
       semanticIndex > -1 && routedIndex > semanticIndex,
       { semanticIndex, routedIndex });
-    ok('[9] semantic draft execution still goes through visible verifier',
+    ok('[16] semantic draft execution still goes through visible verifier',
       guardIndex > routedIndex &&
         /executeProgramEditWithVisibleGuard\(\{[\s\S]*draft: packet\.programEditDraft/.test(controllerSource.slice(guardIndex, guardIndex + 500)),
       controllerSource.slice(guardIndex, guardIndex + 500));
