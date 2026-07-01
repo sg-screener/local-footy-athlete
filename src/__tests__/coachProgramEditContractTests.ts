@@ -15,7 +15,10 @@ import {
   usePendingCoachClarifierStore,
 } from '../store/pendingCoachClarifierStore';
 import { orchestrateModalitySwap } from '../utils/coachModalitySwapOrchestrator';
-import { getResolvedVisibleProgramForDate } from '../utils/visibleProgramReadModel';
+import {
+  extractVisibleProgramItemsFromWorkout,
+  getResolvedVisibleProgramForDate,
+} from '../utils/visibleProgramReadModel';
 import { applyAdjustmentEvents } from '../utils/applyAdjustmentEvents';
 
 let pass = 0;
@@ -138,6 +141,25 @@ function strengthWithConditioningWorkout(
 
 function visibleDay(date: string, workout: any): any {
   return { date, sessionName: workout.name, workout };
+}
+
+function visibleProgramForWorkout(workout: any, date = TARGET): any {
+  const items = extractVisibleProgramItemsFromWorkout(workout);
+  return {
+    day: {
+      date,
+      dayOfWeek: 3,
+      short: 'WED',
+      source: 'manual',
+      indicator: 'none',
+      workout,
+    },
+    items,
+    conditioningItems: items.filter((item: any) =>
+      item.domain === 'conditioning' || item.domain === 'recovery',
+    ),
+    strengthItems: items.filter((item: any) => item.domain === 'strength'),
+  };
 }
 
 function pureConditioningWorkout(
@@ -436,6 +458,8 @@ function semanticStrengthBlockEdit(args: {
   intent?: 'remove' | 'reduce';
   targetDate?: string;
   protectConditioning?: boolean;
+  missingFields?: string[];
+  resolveVisibleProgramForDate?: (date: string) => any;
 } = {}): ProgramEdit {
   const intent = args.intent ?? 'remove';
   const targetDate = args.targetDate ?? TARGET;
@@ -461,7 +485,7 @@ function semanticStrengthBlockEdit(args: {
       } as any,
       explicitDateRole: 'referent',
       explicitUserWording: 'drop the lower work but keep the flush',
-      missingFields: [],
+      missingFields: args.missingFields ?? [],
       confidence: 0.91,
       protectedTargets: args.protectConditioning === false ? [] : [{
         targetDomain: 'conditioning',
@@ -492,6 +516,7 @@ function semanticStrengthBlockEdit(args: {
       isCompound: false,
       reason: `semantic_${intent}_strength_block`,
     } as any,
+    resolveVisibleProgramForDate: args.resolveVisibleProgramForDate,
   });
 }
 
@@ -2442,6 +2467,74 @@ eq('semantic strength remove finalises to remove_strength_block',
 ok('semantic strength remove does not use legacy command',
   removeStrengthEdit.command === null,
   removeStrengthEdit.command);
+const staleItemStrengthEdit = semanticStrengthBlockEdit({
+  intent: 'remove',
+  missingFields: ['targetItemId'],
+  resolveVisibleProgramForDate: () => visibleProgramForWorkout(mixedStrengthFlush),
+});
+eq('block-level strength resolver ignores stale targetItemId missing field',
+  staleItemStrengthEdit.intent,
+  'remove' as any);
+eq('block-level strength resolver keeps remove_strength_block scope',
+  (staleItemStrengthEdit as any).editScope,
+  'remove_strength_block');
+ok('block-level strength resolver does not ask which visible item',
+  !staleItemStrengthEdit.missingFields.includes('targetItemId') &&
+    !/visible item/i.test(staleItemStrengthEdit.question ?? ''),
+  staleItemStrengthEdit);
+const multiBlockStrengthEdit = semanticStrengthBlockEdit({
+  intent: 'remove',
+  missingFields: ['targetItemId'],
+  resolveVisibleProgramForDate: () => {
+    const visible = visibleProgramForWorkout(mixedStrengthFlush);
+    return {
+      ...visible,
+      items: [
+        {
+          id: 'gym-strength-block',
+          title: 'Gym Strength',
+          domain: 'strength',
+          modality: null,
+          durationMinutes: null,
+          source: 'session',
+        },
+        {
+          id: 'lower-strength-block',
+          title: 'Lower Body Strength',
+          domain: 'strength',
+          modality: null,
+          durationMinutes: null,
+          source: 'session',
+        },
+      ],
+      strengthItems: [
+        {
+          id: 'gym-strength-block',
+          title: 'Gym Strength',
+          domain: 'strength',
+          modality: null,
+          durationMinutes: null,
+          source: 'session',
+        },
+        {
+          id: 'lower-strength-block',
+          title: 'Lower Body Strength',
+          domain: 'strength',
+          modality: null,
+          durationMinutes: null,
+          source: 'session',
+        },
+      ],
+    };
+  },
+});
+eq('multiple visible strength blocks ask typed clarification',
+  multiBlockStrengthEdit.intent,
+  'ask_question' as any);
+ok('multiple visible strength blocks do not use generic item wording',
+  /which strength block/i.test(multiBlockStrengthEdit.question ?? '') &&
+    !/visible item/i.test(multiBlockStrengthEdit.question ?? ''),
+  multiBlockStrengthEdit.question);
 const removeStrengthRun = runStrengthBlockProgramEdit(removeStrengthEdit, mixedStrengthFlush);
 eq('mixed strength+flush removal mutates',
   removeStrengthRun.result.kind,
@@ -2527,11 +2620,13 @@ const noStrengthRun = runStrengthBlockProgramEdit(
   semanticStrengthBlockEdit({ intent: 'remove' }),
   conditioningWorkout('Easy Aerobic Flush', ['Easy Aerobic Flush']),
 );
-eq('unsupported/ambiguous missing strength asks instead of mutating',
+eq('no visible strength block is a safe no-op',
   noStrengthRun.result.kind,
-  'clarify' as any);
-ok('missing strength reply is typed',
-  /strength block/i.test(noStrengthRun.result.reply),
+  'verified_no_op' as any);
+ok('missing strength reply is safe and preserves conditioning',
+  /couldn't find strength work/i.test(noStrengthRun.result.reply) &&
+    /left conditioning unchanged/i.test(noStrengthRun.result.reply) &&
+    !/^Done\b/i.test(noStrengthRun.result.reply),
   noStrengthRun.result.reply);
 
 section('13. Schedule move explicit weekdays beat selected/current day');

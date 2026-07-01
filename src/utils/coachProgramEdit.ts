@@ -1518,10 +1518,10 @@ function executeStrengthBlockProgramEdit(
   if (beforeStrength.length === 0) {
     tick('composing_reply');
     return {
-      kind: 'clarify',
-      reply: `I can't see a visible strength block on ${humanDate(edit.targetDate)}. Which strength work should I change?`,
+      kind: 'verified_no_op',
+      reply: `I couldn't find strength work on ${humanDate(edit.targetDate)}, so I left conditioning unchanged.`,
       applied: false,
-      route: 'clarify_no_strength_block',
+      route: 'no_strength_block_visible',
       progress: stages,
     };
   }
@@ -2638,6 +2638,7 @@ function retargetProgramEditDate(args: {
   const { edit, targetDate, visibleProgram } = args;
   const dateChanged = edit.targetDate !== targetDate;
   const targetSessionId = stringOrNull((visibleProgram.day.workout as any)?.id);
+  const blockLevelStrengthEdit = isStrengthBlockLevelProgramEdit(edit);
   const shouldClearItem = dateChanged && programEditNeedsTargetItem(edit);
   const command = retargetProgramEditCommandDate({
     command: edit.command,
@@ -2654,7 +2655,10 @@ function retargetProgramEditDate(args: {
     targetItemId: shouldClearItem ? null : edit.targetItemId,
     targetItemTitle: shouldClearItem ? null : edit.targetItemTitle,
     missingFields: uniquePendingFields([
-      ...edit.missingFields.filter((field) => !isDateMissingField(field)),
+      ...edit.missingFields.filter((field) =>
+        !isDateMissingField(field) &&
+        !(blockLevelStrengthEdit && isTargetItemMissingField(field)),
+      ),
       ...(shouldClearItem ? ['targetItemId'] : []),
     ]),
     question: undefined,
@@ -2737,10 +2741,9 @@ function pendingDraftFromProgramEdit(edit: ProgramEdit): ProgramEditDraft | unde
 }
 
 function programEditNeedsTargetItem(edit: ProgramEdit): boolean {
+  if (isStrengthBlockLevelProgramEdit(edit)) return false;
   if (
-    edit.missingFields.includes('targetItemId') ||
-    edit.missingFields.includes('target_item') ||
-    edit.missingFields.includes('target_session')
+    edit.missingFields.some(isTargetItemMissingField)
   ) {
     return true;
   }
@@ -2762,6 +2765,16 @@ function targetDomainLabel(domain: ProgramEditTargetDomain): string {
 
 function isDateMissingField(field: string): boolean {
   return /^(?:targetDate|target_date|target_day|destination_date|destination_day|day|date)$/.test(field);
+}
+
+function isTargetItemMissingField(field: string): boolean {
+  return /^(?:targetItemId|target_item|target_session|source_item|item|visible_item)$/.test(field);
+}
+
+function isStrengthBlockLevelProgramEdit(edit: ProgramEdit): boolean {
+  const editScope = 'editScope' in edit ? edit.editScope : undefined;
+  return edit.targetDomain === 'strength' &&
+    (editScope === 'remove_strength_block' || editScope === 'reduce_strength_block');
 }
 
 function uniquePendingFields(fields: string[]): string[] {
@@ -3532,8 +3545,13 @@ export function programEditFromSemanticProgramEditDraft(input: {
   draft: SemanticProgramEditDraft;
   userMessage: string;
   todayISO: string;
+  resolveVisibleProgramForDate?: ResolveVisibleProgramForDate;
 }): ProgramEdit {
-  const { draft } = input;
+  const semanticDraft = resolveBlockLevelProgramEditDraftTarget({
+    draft: input.draft,
+    resolveVisibleProgramForDate: input.resolveVisibleProgramForDate,
+  });
+  const { draft } = semanticDraft;
   const targetDomain = programEditDomainFromSemanticDraft(draft.targetDomain);
   const intent = programEditIntentFromSemanticDraft(draft.intent);
   const requestedChange = requestedChangeFromSemanticDraft(draft);
@@ -3541,7 +3559,7 @@ export function programEditFromSemanticProgramEditDraft(input: {
   const command = commandFromSemanticDraft(draft, editScope);
   const missingFields = semanticProgramEditMissingFields(draft, command, editScope);
   const question = missingFields.length > 0
-    ? semanticDraftClarificationQuestion(draft, missingFields)
+    ? semanticDraft.question ?? semanticDraftClarificationQuestion(draft, missingFields)
     : undefined;
 
   return finaliseProgramEditDraft({
@@ -3557,11 +3575,115 @@ export function programEditFromSemanticProgramEditDraft(input: {
     naturalLanguageReason: `semantic_program_edit_draft:${draft.reason}`,
     command,
     question,
-    options: semanticDraftClarificationOptions(draft, missingFields),
+    options: semanticDraft.options ?? semanticDraftClarificationOptions(draft, missingFields),
     targetItemTitle: draft.sourceTarget?.itemTitle ?? null,
     editScope,
     source: 'semantic_draft',
   });
+}
+
+function resolveBlockLevelProgramEditDraftTarget(input: {
+  draft: SemanticProgramEditDraft;
+  resolveVisibleProgramForDate?: ResolveVisibleProgramForDate;
+}): {
+  draft: SemanticProgramEditDraft;
+  question?: string;
+  options?: string[];
+} {
+  const { draft } = input;
+  const editScope = editScopeFromSemanticDraft(draft);
+  if (!isSemanticStrengthBlockDraft(draft, editScope)) return { draft };
+
+  const withoutItemField = {
+    ...draft,
+    targetItemId: null,
+    missingFields: draft.missingFields.filter((field) => !isTargetItemMissingField(field)),
+    proposedActions: draft.proposedActions.map((action) => ({
+      ...action,
+      targetItemId: null,
+    })),
+  };
+  if (!withoutItemField.targetDate) return { draft: withoutItemField };
+
+  const visibleProgram = input.resolveVisibleProgramForDate?.(withoutItemField.targetDate) ?? null;
+  const blockTargets = visibleStrengthBlockTargets(visibleProgram);
+  if (blockTargets.length > 1) {
+    const options = blockTargets.map((target) => target.title);
+    return {
+      draft: {
+        ...withoutItemField,
+        missingFields: uniquePendingFields([
+          ...withoutItemField.missingFields,
+          'strengthBlockTarget',
+        ]),
+      },
+      question: typedStrengthBlockClarificationQuestion(withoutItemField.targetDate, options),
+      options,
+    };
+  }
+
+  const workoutId = stringOrNull((visibleProgram?.day.workout as any)?.id);
+  return {
+    draft: {
+      ...withoutItemField,
+      targetSessionId: withoutItemField.targetSessionId ?? workoutId,
+      sourceTarget: withoutItemField.sourceTarget
+        ? {
+            ...withoutItemField.sourceTarget,
+            itemId: withoutItemField.sourceTarget.itemId ?? workoutId ?? undefined,
+            sessionName:
+              withoutItemField.sourceTarget.sessionName ??
+              visibleProgram?.day.workout?.name,
+          }
+        : withoutItemField.sourceTarget,
+    },
+  };
+}
+
+function isSemanticStrengthBlockDraft(
+  draft: SemanticProgramEditDraft,
+  editScope: ProgramEditEditScope | undefined,
+): boolean {
+  return draft.targetDomain === 'strength' &&
+    draft.actionScope === 'strength_block' &&
+    (draft.intent === 'remove' || draft.intent === 'reduce' || draft.intent === 'edit') &&
+    (editScope === 'remove_strength_block' || editScope === 'reduce_strength_block');
+}
+
+function visibleStrengthBlockTargets(
+  visibleProgram: ResolvedVisibleProgramForDate | null,
+): ProgramEditCandidateItem[] {
+  if (!visibleProgram?.day.workout) return [];
+  const strengthItems = visibleProgram.strengthItems.length > 0
+    ? visibleProgram.strengthItems
+    : visibleProgram.items.filter((item) => item.domain === 'strength');
+  if (strengthItems.length === 0) return [];
+
+  const explicitBlockItems = strengthItems.filter((item) =>
+    item.source !== 'strength_exercise',
+  );
+  if (explicitBlockItems.length > 1) return explicitBlockItems;
+
+  return [{
+    id:
+      stringOrNull((visibleProgram.day.workout as any).id) ??
+      `strength-block:${visibleProgram.day.date}`,
+    title: visibleProgram.day.workout.name || 'Strength block',
+    domain: 'strength',
+    modality: null,
+    durationMinutes: null,
+    source: 'session',
+  }];
+}
+
+function typedStrengthBlockClarificationQuestion(
+  targetDate: string,
+  options: string[],
+): string {
+  const optionText = options.join(' or ');
+  return optionText
+    ? `Which strength block on ${targetDate} should I change: ${optionText}?`
+    : `Which strength block on ${targetDate} should I change?`;
 }
 
 function programEditDomainFromSemanticDraft(
@@ -3724,6 +3846,11 @@ function semanticProgramEditMissingFields(
   editScope: ProgramEditEditScope | undefined,
 ): string[] {
   const fields = new Set(draft.missingFields);
+  if (isSemanticStrengthBlockDraft(draft, editScope)) {
+    for (const field of [...fields]) {
+      if (isTargetItemMissingField(field)) fields.delete(field);
+    }
+  }
   if (draft.intent === 'ask_question' || draft.intent === 'explain') return [...fields];
   if (!draft.targetDate && draft.actionScope !== 'setup') fields.add('targetDate');
   if (draft.targetDomain === 'conditioning' && draft.intent !== 'add' && !draft.targetItemId) {
@@ -3760,6 +3887,11 @@ function semanticDraftClarificationQuestion(
   fields: string[],
 ): string {
   if (fields.includes('targetDate')) return 'Which day should I apply that edit to?';
+  if (fields.includes('strengthBlockTarget')) {
+    return draft.targetDate
+      ? `Which strength block on ${draft.targetDate} should I change?`
+      : 'Which strength block should I change?';
+  }
   if (fields.includes('targetItemId')) return 'Which visible item should I change?';
   if (fields.includes('setupChange')) {
     return 'I understand that as a setup change, but I need the exact availability change before rebuilding.';
@@ -3772,6 +3904,7 @@ function semanticDraftClarificationOptions(
   fields: string[],
 ): string[] | undefined {
   if (fields.includes('targetDate')) return ['Today', 'Tomorrow', 'Choose another day'];
+  if (fields.includes('strengthBlockTarget')) return ['Gym strength', 'Lower-body strength', 'Whole session'];
   if (fields.includes('targetItemId')) {
     const title = draft.sourceTarget?.itemTitle;
     return title ? [title, 'Choose another item'] : undefined;
@@ -3832,7 +3965,9 @@ function finaliseRemoveSessionProgramEdit(draft: ProgramEditDraft): ProgramEdit 
 }
 
 function finaliseStrengthBlockProgramEdit(draft: ProgramEditDraft): ProgramEdit {
-  const missing = new Set(draft.missingFields);
+  const missing = new Set(draft.missingFields.filter((field) =>
+    !isTargetItemMissingField(field),
+  ));
   if (!draft.targetDate) missing.add('targetDate');
   const editScope = draft.editScope === 'reduce_strength_block'
     ? 'reduce_strength_block'

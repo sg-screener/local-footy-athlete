@@ -65,6 +65,7 @@ import {
   type ProgramEdit,
 } from './coachProgramEdit';
 import {
+  buildProgramEditDraft,
   decideProgramEditDraftFrontDoor,
   validateProgramEditAgainstDraft,
   type ProgramEditDraft,
@@ -1211,6 +1212,34 @@ async function classifyPendingAnswerForController(args: {
   }
 }
 
+function shouldSupersedePendingClarifierWithNewMutation(args: {
+  pending: PendingCoachClarifier;
+  classification: PendingClarificationAnswerClassification | null;
+  userMessage: string;
+  packet: ReturnType<typeof buildCoachContextPacket>;
+}): boolean {
+  if (!args.pending.askedQuestion) return false;
+  if (
+    args.classification?.kind === 'accept_proposed' ||
+    args.classification?.kind === 'reject_proposed' ||
+    args.classification?.kind === 'choose_candidate'
+  ) {
+    return false;
+  }
+  if (!isMutationLike(args.userMessage)) return false;
+
+  const draft = buildProgramEditDraft({
+    userMessage: args.userMessage,
+    targetFrame: args.packet.targetFrame ?? null,
+    visibleWeek: args.packet.currentWeek,
+    pendingTransaction: null,
+  });
+  return draft.intent !== 'ask_question' &&
+    draft.intent !== 'explain' &&
+    draft.proposedActions.length > 0 &&
+    draft.confidence >= 0.55;
+}
+
 type PendingProgramEditDraftAnswerResult =
   | { kind: 'cancelled'; reply: string }
   | { kind: 'clarify'; reply: string; options?: string[]; draft: ProgramEditDraft }
@@ -1610,6 +1639,25 @@ export async function handleCoachTurn(
         return replyAndFinish(input, 'game-day-readiness-answer', pendingGameDayAnswer.reply);
       }
 
+      const pendingAnswerClassification = await classifyPendingAnswerForController({
+        input,
+        pending: pendingClarifier,
+      });
+      const pendingSupersededByNewMutation = shouldSupersedePendingClarifierWithNewMutation({
+        pending: pendingClarifier,
+        classification: pendingAnswerClassification,
+        userMessage: input.userMessage.content,
+        packet,
+      });
+      if (pendingSupersededByNewMutation) {
+        usePendingCoachClarifierStore.getState().clearPending();
+        logger.debug('[pending-clarifier] superseded_by_new_mutation', {
+          operation: pendingClarifier.operation,
+          missingFields: pendingClarifier.missingFields,
+          answerKind: pendingAnswerClassification?.kind ?? null,
+          ageMs: Date.now() - pendingClarifier.createdAt,
+        });
+      } else {
       const pendingScheduleAnswer = resolvePendingScheduleTransactionAnswer({
         pending: pendingClarifier,
         userMessage: input.userMessage.content,
@@ -1720,10 +1768,6 @@ export async function handleCoachTurn(
         return replyAndFinish(input, 'schedule-transaction', result.reply);
       }
 
-      const pendingAnswerClassification = await classifyPendingAnswerForController({
-        input,
-        pending: pendingClarifier,
-      });
       const pendingDraftAnswer = resolvePendingProgramEditDraftAnswer({
         pending: pendingClarifier,
         userMessage: input.userMessage.content,
@@ -1820,6 +1864,8 @@ export async function handleCoachTurn(
           draft: resumedDraft,
           userMessage: pendingClarifier.originalMessage,
           todayISO: input.todayISO,
+          resolveVisibleProgramForDate: (date) =>
+            resolveLiveVisibleProgramForDate(date, input.todayISO),
         });
         const draftExecutionGuard = validateProgramEditAgainstDraft(
           resumedDraft,
@@ -2068,6 +2114,7 @@ export async function handleCoachTurn(
             : 'Which session do you mean? A day name like "Wednesday" works.',
         );
       }
+      }
     }
 
     const liveSendSwapParse = parseModalitySwapRequest(input.userMessage.content);
@@ -2178,6 +2225,8 @@ export async function handleCoachTurn(
           draft: semanticDraftResult.draft,
           userMessage: input.userMessage.content,
           todayISO: input.todayISO,
+          resolveVisibleProgramForDate: (date) =>
+            resolveLiveVisibleProgramForDate(date, input.todayISO),
         });
       } else if (semanticDraftResult.kind === 'clarify') {
         const captured = pendingClarifierFromSemanticClarify({

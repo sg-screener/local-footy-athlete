@@ -250,12 +250,13 @@ export function decideProgramEditDraftFrontDoor(
     return { kind: 'allow_conversation', route: 'program_edit_draft_conversation' };
   }
 
-  if (draft.missingFields.length > 0) {
+  const missingFields = effectiveMissingFieldsForDraft(draft);
+  if (missingFields.length > 0) {
     return {
       kind: 'ask_clarification',
-      route: `program_edit_draft_missing:${draft.missingFields.join(',')}`,
-      reply: clarificationForDraftMissingFields(draft),
-      options: clarificationOptionsForDraft(draft),
+      route: `program_edit_draft_missing:${missingFields.join(',')}`,
+      reply: clarificationForDraftMissingFields({ ...draft, missingFields }),
+      options: clarificationOptionsForDraft({ ...draft, missingFields }),
     };
   }
 
@@ -270,6 +271,19 @@ export function decideProgramEditDraftFrontDoor(
   }
 
   return { kind: 'allow_compatibility', route: 'program_edit_draft_compatibility' };
+}
+
+function effectiveMissingFieldsForDraft(draft: ProgramEditDraft): string[] {
+  if (
+    draft.targetDomain === 'strength' &&
+    draft.actionScope === 'strength_block' &&
+    (draft.intent === 'remove' || draft.intent === 'reduce' || draft.intent === 'edit')
+  ) {
+    return draft.missingFields.filter((field) =>
+      !/^(?:targetItemId|target_item|target_session|source_item|item|visible_item)$/.test(field),
+    );
+  }
+  return draft.missingFields;
 }
 
 export function validateProgramEditAgainstDraft(
@@ -288,11 +302,12 @@ export function validateProgramEditAgainstDraft(
     );
   }
 
-  if (draft.missingFields.length > 0) {
+  const missingFields = effectiveMissingFieldsForDraft(draft);
+  if (missingFields.length > 0) {
     return blockedDraftGuard(
       'program_edit_draft_guard_missing_fields',
-      `missing:${draft.missingFields.join(',')}`,
-      clarificationForDraftMissingFields(draft),
+      `missing:${missingFields.join(',')}`,
+      clarificationForDraftMissingFields({ ...draft, missingFields }),
     );
   }
 

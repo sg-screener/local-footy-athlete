@@ -393,6 +393,7 @@ async function runControllerTurn(args: {
   semanticMode?: SemanticProgramEditDraftMode;
   semanticAdapter?: SemanticProgramEditDraftAdapter | null;
   seedPendingDuration?: boolean;
+  seedPendingItem?: boolean;
 }) {
   seedSmokeProgram();
   if (args.seedPendingDuration) {
@@ -408,6 +409,22 @@ async function runControllerTurn(args: {
         missingField: 'duration',
         expectedAnswerType: 'duration',
         reason: 'test_pending_duration',
+      },
+    });
+  }
+  if (args.seedPendingItem) {
+    usePendingCoachClarifierStore.getState().setPending({
+      operation: 'remove_conditioning',
+      partialPayload: { operation: 'remove_conditioning', modality: null },
+      scope: 'one_off',
+      missingFields: ['targetItemId'],
+      originalMessage: 'Remove conditioning',
+      askedQuestion: 'Which visible item should I change?',
+      pendingClarification: {
+        originalIntent: 'remove:conditioning:conditioning_block',
+        missingField: 'targetItemId',
+        expectedAnswerType: 'item',
+        reason: 'test_pending_item',
       },
     });
   }
@@ -595,6 +612,26 @@ async function run() {
     ok('[6] pending answer gets interpreted relative to pending question',
       /how long/i.test(result.reply) || /time like/i.test(result.reply),
       result.reply);
+  }
+
+  {
+    const adapter = new RecordingSemanticAdapter((input) =>
+      responseForDraft(strengthBlockDraftFromVisibleContext('Drop the lower work but keep the flush', input)),
+    );
+    const result = await runControllerTurn({
+      message: 'Drop the lower work but keep the flush',
+      semanticEnabled: true,
+      semanticAdapter: adapter,
+      seedPendingItem: true,
+    });
+    eq('[6b] new mutation supersedes stale pending item question', adapter.calls.length, 1);
+    ok('[6b] superseded pending item question does not trap new command',
+      !/which visible item/i.test(result.reply) &&
+        /strength work|strength-block edit/i.test(result.reply),
+      result.reply);
+    ok('[6b] stale pending item slot is cleared after new command',
+      usePendingCoachClarifierStore.getState().pending == null,
+      usePendingCoachClarifierStore.getState().pending);
   }
 
   {

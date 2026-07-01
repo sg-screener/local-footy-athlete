@@ -2028,7 +2028,7 @@ async function runControllerPendingDateSection() {
         sourceTarget,
         explicitDateRole: 'referent',
         explicitUserWording: input.userMessage,
-        missingFields: [],
+        missingFields: ['targetItemId'],
         confidence: 0.91,
         protectedTargets: [protectedConditioning],
         constraints: ['keep conditioning:conditioning_block'],
@@ -2132,7 +2132,8 @@ async function runControllerPendingDateSection() {
   ok('17.3 affirmative date answer resumes stored strength draft',
     secondHandled.handled === true &&
       /^Done\b/i.test(secondReply) &&
-      /strength work/i.test(secondReply),
+      /strength work/i.test(secondReply) &&
+      !/which visible item/i.test(secondReply),
     JSON.stringify({ secondDebug, secondReply }));
   const nextMondayOverride = useProgramStore.getState().dateOverrides?.['2026-07-06'] as any;
   ok('17.4 resumed draft removes strength and preserves protected conditioning',
