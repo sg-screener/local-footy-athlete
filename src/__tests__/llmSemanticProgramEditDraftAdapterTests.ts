@@ -11,6 +11,7 @@ import {
   LLMSemanticProgramEditDraftAdapter,
   SEMANTIC_PROGRAM_EDIT_DRAFT_SYSTEM_PROMPT,
   buildSemanticProgramEditDraftLLMContext,
+  semanticProgramEditDraftFunctionNameFromEndpoint,
 } from '../utils/llmSemanticProgramEditDraftAdapter';
 import type { CoachTargetFrame } from '../utils/coachTargetFrame';
 import type { ProgramEditDraft } from '../utils/coachProgramEditDraft';
@@ -196,6 +197,16 @@ async function run() {
   console.log('llmSemanticProgramEditDraftAdapterTests');
 
   {
+    eq(
+      '[0] function name is derived from configured endpoint',
+      semanticProgramEditDraftFunctionNameFromEndpoint(
+        'https://edge.example.com/functions/v1/coach-semantic-program-edit-draft',
+      ),
+      'coach-semantic-program-edit-draft',
+    );
+  }
+
+  {
     const context = buildSemanticProgramEditDraftLLMContext({
       userMessage: 'Drop the lower work but keep the flush',
       targetFrame: targetFrame(),
@@ -248,6 +259,9 @@ async function run() {
     ok('[2] adapter requests JSON-only parser contract',
       calls[0].body.systemPrompt === SEMANTIC_PROGRAM_EDIT_DRAFT_SYSTEM_PROMPT &&
         /Return JSON only/i.test(calls[0].body.systemPrompt) &&
+        /Do not invent a nested "target" object/i.test(calls[0].body.systemPrompt) &&
+        /Do not invent "keep" actions/i.test(calls[0].body.systemPrompt) &&
+        /Exact draft shape when status is "draft"/i.test(calls[0].body.systemPrompt) &&
         calls[0].body.schema.schemaVersion === SEMANTIC_PROGRAM_EDIT_DRAFT_SCHEMA.schemaVersion,
       calls[0].body);
     ok('[2] adapter sends compact context',

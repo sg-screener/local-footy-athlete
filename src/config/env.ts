@@ -3,6 +3,9 @@ import type { SemanticProgramEditDraftMode } from '../utils/coachTurnController'
 
 type PublicEnv = Record<string, string | undefined>;
 
+export const COACH_SEMANTIC_PROGRAM_EDIT_DRAFT_FUNCTION_NAME =
+  'coach-semantic-program-edit-draft';
+
 export type ClientEnvKey =
   | 'EXPO_PUBLIC_SUPABASE_URL'
   | 'EXPO_PUBLIC_SUPABASE_ANON_KEY';
@@ -14,6 +17,7 @@ export interface ClientEnvConfig {
   coachChatEndpoint: string;
   coachIntentEndpoint: string;
   coachSemanticProgramEditDraftEndpoint: string;
+  coachSemanticProgramEditDraftFunctionName: string;
   semanticProgramEditDraftMode: SemanticProgramEditDraftMode;
   semanticProgramEditDraftRawMode: string;
   semanticProgramEditDraftDevActive: boolean;
@@ -124,8 +128,9 @@ export function getClientEnvConfig(
     coachChatEndpoint: functionsBase ? `${trimTrailingSlash(functionsBase)}/coach-chat` : '',
     coachIntentEndpoint: functionsBase ? `${trimTrailingSlash(functionsBase)}/coach-intent` : '',
     coachSemanticProgramEditDraftEndpoint: functionsBase
-      ? `${trimTrailingSlash(functionsBase)}/coach-semantic-program-edit-draft`
+      ? `${trimTrailingSlash(functionsBase)}/${COACH_SEMANTIC_PROGRAM_EDIT_DRAFT_FUNCTION_NAME}`
       : '',
+    coachSemanticProgramEditDraftFunctionName: COACH_SEMANTIC_PROGRAM_EDIT_DRAFT_FUNCTION_NAME,
     semanticProgramEditDraftMode: resolvedSemanticMode,
     semanticProgramEditDraftRawMode: rawSemanticMode || 'off',
     semanticProgramEditDraftDevActive: semanticDevActive,

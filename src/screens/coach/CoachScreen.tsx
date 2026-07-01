@@ -147,6 +147,17 @@ const liveSemanticProgramEditDraftAdapter = clientEnv.isReady &&
     })
   : null;
 
+if (__DEV__ && shouldCreateSemanticProgramEditDraftAdapter(clientEnv.semanticProgramEditDraftMode)) {
+  logger.warn('[coach-semantic-program-edit-draft-endpoint]', {
+    resolvedMode: clientEnv.semanticProgramEditDraftMode,
+    rawMode: clientEnv.semanticProgramEditDraftRawMode,
+    activeAllowed: clientEnv.semanticProgramEditDraftActiveAllowed,
+    adapterPresent: !!liveSemanticProgramEditDraftAdapter,
+    functionName: clientEnv.coachSemanticProgramEditDraftFunctionName,
+    endpoint: clientEnv.coachSemanticProgramEditDraftEndpoint,
+  });
+}
+
 /** Local-clock today as YYYY-MM-DD. The UAE is deterministic — it never
  *  reads the clock itself; the caller supplies todayISO. */
 function todayISOLocal(): string {

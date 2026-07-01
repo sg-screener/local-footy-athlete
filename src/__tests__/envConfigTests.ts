@@ -7,6 +7,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import {
+  COACH_SEMANTIC_PROGRAM_EDIT_DRAFT_FUNCTION_NAME,
   buildMailto,
   describeMissingClientEnv,
   getClientEnvConfig,
@@ -53,6 +54,11 @@ section('[1] Reads required Supabase public env');
     'semantic ProgramEditDraft endpoint derived',
     config.coachSemanticProgramEditDraftEndpoint ===
       'https://project.supabase.co/functions/v1/coach-semantic-program-edit-draft',
+  );
+  ok(
+    'semantic ProgramEditDraft function name exposed',
+    config.coachSemanticProgramEditDraftFunctionName ===
+      COACH_SEMANTIC_PROGRAM_EDIT_DRAFT_FUNCTION_NAME,
   );
   ok('semantic ProgramEditDraft mode defaults off', config.semanticProgramEditDraftMode === 'off');
   ok('anon key read', config.supabaseAnonKey === 'anon-key');

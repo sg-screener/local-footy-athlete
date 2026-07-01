@@ -30,6 +30,80 @@ Rules:
 - Protected targets must be listed when the athlete says to keep/preserve/leave something alone.
 - Compound requests should set isCompound=true and include proposedActions.
 - Dates and ids must come from the visible context or targetFrame only.
+- Do not invent a nested "target" object. Use targetDate, targetSessionId, targetItemId, and sourceTarget.
+- Do not invent "keep" actions. If the athlete says to keep something, put it in protectedTargets and verifierExpectations.
+- For block-level strength requests, use targetDomain "strength" and actionScope "strength_block"; do not force a single exercise target unless the athlete names a specific exercise.
+
+Exact draft shape when status is "draft":
+{
+  "schemaVersion": "${SEMANTIC_PROGRAM_EDIT_DRAFT_SCHEMA_VERSION}",
+  "status": "draft",
+  "confidence": 0.0,
+  "draft": {
+    "intent": "add|edit|remove|replace|move|reduce|explain|ask_question",
+    "targetDomain": "strength|conditioning|session|recovery|setup|schedule",
+    "actionScope": "whole_session|strength_block|conditioning_block|exercise|duration|intensity|modality|setup",
+    "targetDate": "YYYY-MM-DD or null",
+    "targetSessionId": "visible session id or null",
+    "targetItemId": "visible item id or null",
+    "sourceTarget": null,
+    "explicitDateRole": "referent|destination|none|ambiguous",
+    "explicitUserWording": "the athlete message",
+    "missingFields": [],
+    "confidence": 0.0,
+    "protectedTargets": [],
+    "constraints": [],
+    "proposedActions": [],
+    "verifierExpectations": [],
+    "isCompound": false,
+    "reason": "short_reason"
+  },
+  "clarificationQuestion": null,
+  "candidateOptions": [],
+  "reason": "short_reason"
+}
+
+Exact sourceTarget shape, when non-null:
+{
+  "kind": "session|conditioning_item|exercise|day",
+  "date": "YYYY-MM-DD",
+  "sessionName": "visible session name or null",
+  "itemId": "visible session/item id or null",
+  "itemTitle": "visible item title or null",
+  "domain": "strength|conditioning|session|recovery|setup|schedule or null",
+  "stillVisible": true
+}
+
+Exact protectedTargets item shape:
+{
+  "targetDomain": "conditioning",
+  "actionScope": "conditioning_block",
+  "targetDate": "YYYY-MM-DD or null",
+  "targetItemId": "visible item id or null",
+  "title": "visible title or null",
+  "reason": "short_reason"
+}
+
+Exact proposedActions item shape:
+{
+  "intent": "add|edit|remove|replace|move",
+  "targetDomain": "strength|conditioning|session|recovery|setup|schedule",
+  "actionScope": "whole_session|strength_block|conditioning_block|exercise|duration|intensity|modality|setup",
+  "targetDate": "YYYY-MM-DD or null",
+  "targetSessionId": "visible session id or null",
+  "targetItemId": "visible item id or null",
+  "sourceTarget": null,
+  "reason": "short_reason"
+}
+
+Exact verifierExpectations item shape:
+{
+  "kind": "domain_changed|domain_unchanged|session_removed|item_added|ask_before_execution",
+  "targetDomain": "strength|conditioning|session|recovery|setup|schedule or null",
+  "actionScope": "whole_session|strength_block|conditioning_block|exercise|duration|intensity|modality|setup or null",
+  "targetDate": "YYYY-MM-DD or null",
+  "reason": "short_reason"
+}
 
 The app will validate this JSON, then deterministic finalisers/executors/verifiers decide whether anything can happen.`;
 
@@ -92,14 +166,25 @@ function truncate(value: string, n: number = LOG_TRUNCATE): string {
   return value.length <= n ? value : `${value.slice(0, n)}...`;
 }
 
+export function semanticProgramEditDraftFunctionNameFromEndpoint(endpoint: string): string {
+  try {
+    const url = new URL(endpoint);
+    return url.pathname.split('/').filter(Boolean).at(-1) ?? '';
+  } catch (_err) {
+    return endpoint.split('/').filter(Boolean).at(-1) ?? '';
+  }
+}
+
 export class LLMSemanticProgramEditDraftAdapter implements SemanticProgramEditDraftAdapter {
   private readonly endpoint: string;
+  private readonly functionName: string;
   private readonly authToken?: string;
   private readonly fetcher: typeof fetch;
   private readonly timeoutMs: number;
 
   constructor(opts: LLMSemanticProgramEditDraftAdapterOptions) {
     this.endpoint = opts.endpoint;
+    this.functionName = semanticProgramEditDraftFunctionNameFromEndpoint(opts.endpoint);
     this.authToken = opts.authToken;
     this.fetcher = opts.fetcher ?? fetch;
     this.timeoutMs = opts.timeoutMs ?? 8000;
@@ -114,6 +199,7 @@ export class LLMSemanticProgramEditDraftAdapter implements SemanticProgramEditDr
       visibleDays: context.visibleWeek.length,
       candidateCount: context.visibleCandidates.length,
       endpoint: this.endpoint,
+      functionName: this.functionName,
     });
 
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -156,6 +242,12 @@ export class LLMSemanticProgramEditDraftAdapter implements SemanticProgramEditDr
       logger.warn('[semantic-program-edit-draft] transport_error', {
         kind: 'http_error',
         status: resp.status,
+        endpoint: this.endpoint,
+        functionName: this.functionName,
+        diagnostic:
+          resp.status === 404
+            ? 'semantic adapter endpoint missing / HTTP 404'
+            : undefined,
       });
       logger.debug('[semantic-program-edit-draft] http_error body preview', truncate(body));
       throw new Error(`semantic draft endpoint HTTP ${resp.status}`);
