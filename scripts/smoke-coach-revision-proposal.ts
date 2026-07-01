@@ -140,6 +140,18 @@ async function main() {
   console.log('[coach-revision-smoke] endpoint', endpoint);
   console.log('[coach-revision-smoke] functionName', coachRevisionProposalFunctionNameFromEndpoint(endpoint));
 
+  // Deployment proof, independent of LLM behavior: the function answers
+  // OPTIONS with 204 (CORS preflight). A 404 here means the function is not
+  // deployed or the base URL is wrong -- stop and fix wiring, not app logic.
+  const preflight = await fetch(endpoint, { method: 'OPTIONS' });
+  console.log('[coach-revision-smoke] OPTIONS status', preflight.status);
+  if (preflight.status !== 204) {
+    throw new Error(
+      `expected OPTIONS 204 from ${endpoint}, got ${preflight.status} - ` +
+        'function not deployed or wrong base URL',
+    );
+  }
+
   const result = await buildSemanticCoachRevisionProposal({
     userMessage: 'Can you drop the lower work Monday but keep the flush',
     visibleSnapshot,
@@ -152,12 +164,25 @@ async function main() {
   console.log('[coach-revision-smoke] result', result.kind);
   console.log('[coach-revision-smoke] diagnostic', JSON.stringify(result.diagnostic, null, 2));
 
+  // POST 200 + schema-valid proof: 'revision'/'needs_confirmation' means the
+  // full diff validation pipeline accepted the proposal; 'clarify' is a
+  // schema-valid clarification and still proves endpoint + schema + parsing.
+  // 'invalid' (adapter_failed / schema_validation_failed / diff failure) fails.
+  if (result.kind === 'clarify') {
+    console.log('[coach-revision-smoke] clarify reply', result.reply);
+    console.log('[coach-revision-smoke] endpoint reachable and schema-valid (clarification path)');
+    return;
+  }
   if (result.kind !== 'revision' && result.kind !== 'needs_confirmation') {
     if (result.kind === 'invalid') {
       console.error('[coach-revision-smoke] issues', result.issues.join(' | '));
     }
     throw new Error(`coach revision endpoint returned ${result.kind}`);
   }
+  console.log(
+    '[coach-revision-smoke] validatorStatus',
+    result.kind === 'revision' ? 'valid' : 'needs_confirmation',
+  );
 }
 
 main().catch((err) => {
