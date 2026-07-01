@@ -542,6 +542,9 @@ function visibleVerifierActionScopeFromProgramEdit(
     case 'remove_conditioning_item':
     case 'replace_conditioning_prescription':
       return 'conditioning_block';
+    case 'remove_strength_block':
+    case 'reduce_strength_block':
+      return 'strength_block';
     case 'duration_only':
       return 'duration';
     case 'intensity_only':
@@ -562,6 +565,14 @@ function visibleVerifierActionScopeFromProgramEdit(
     return edit.requestedChange === 'exercise' ? 'exercise' : 'strength_block';
   }
   return 'whole_session';
+}
+
+function isCommandlessTypedStrengthBlockProgramEdit(edit: ProgramEdit): boolean {
+  if (edit.command) return false;
+  if (edit.targetDomain !== 'strength') return false;
+  if (edit.intent !== 'remove' && edit.intent !== 'edit') return false;
+  const editScope = 'editScope' in edit ? edit.editScope : undefined;
+  return editScope === 'remove_strength_block' || editScope === 'reduce_strength_block';
 }
 
 function getTodayProjectedDay(todayISO: string) {
@@ -2338,42 +2349,56 @@ export async function handleCoachTurn(
       lastChange,
       recentMessages,
     });
-    if (!routedProgramEdit.command) {
+    const commandlessTypedStrengthBlockProgramEdit =
+      isCommandlessTypedStrengthBlockProgramEdit(routedProgramEdit);
+    if (!routedProgramEdit.command && !commandlessTypedStrengthBlockProgramEdit) {
       return replyAndFinish(
         input,
         'semantic-program-edit-no-command',
         'I understand the edit, but I need one more detail before changing the program.',
       );
     }
-    const routedCommand: CoachCommand = routedProgramEdit.command as CoachCommand;
-    logger.debug('[coach-live-send] router_emitted', {
-      mode: routedCommand.mode,
-      reason: 'reason' in routedCommand ? routedCommand.reason : null,
-      needsClarification:
-        routedCommand.mode === 'mutate' ? routedCommand.needsClarification : null,
-      targetKind:
-        routedCommand.mode === 'mutate' ? routedCommand.target?.kind ?? null : null,
-    });
+    const routedCommand: CoachCommand | null =
+      routedProgramEdit.command ? routedProgramEdit.command as CoachCommand : null;
+    if (routedCommand) {
+      logger.debug('[coach-live-send] router_emitted', {
+        mode: routedCommand.mode,
+        reason: 'reason' in routedCommand ? routedCommand.reason : null,
+        needsClarification:
+          routedCommand.mode === 'mutate' ? routedCommand.needsClarification : null,
+        targetKind:
+          routedCommand.mode === 'mutate' ? routedCommand.target?.kind ?? null : null,
+      });
 
-    logger.debug('[coach-router] command', {
-      mode: routedCommand.mode,
-      operation: routedCommand.mode === 'mutate' ? routedCommand.operation : null,
-      scope: routedCommand.mode === 'mutate' ? routedCommand.scope : null,
-      confidence: routedCommand.mode === 'mutate' ? routedCommand.confidence : null,
-      needsClarification: routedCommand.mode === 'mutate' ? routedCommand.needsClarification : null,
-      reason: 'reason' in routedCommand ? routedCommand.reason : null,
-      legacyAllowed: canFallbackToLegacy(routedCommand),
-    });
+      logger.debug('[coach-router] command', {
+        mode: routedCommand.mode,
+        operation: routedCommand.mode === 'mutate' ? routedCommand.operation : null,
+        scope: routedCommand.mode === 'mutate' ? routedCommand.scope : null,
+        confidence: routedCommand.mode === 'mutate' ? routedCommand.confidence : null,
+        needsClarification: routedCommand.mode === 'mutate' ? routedCommand.needsClarification : null,
+        reason: 'reason' in routedCommand ? routedCommand.reason : null,
+        legacyAllowed: canFallbackToLegacy(routedCommand),
+      });
+    } else {
+      logger.debug('[coach-router] commandless_typed_program_edit', {
+        intent: routedProgramEdit.intent,
+        targetDomain: routedProgramEdit.targetDomain,
+        editScope: 'editScope' in routedProgramEdit ? routedProgramEdit.editScope ?? null : null,
+        legacyAllowed: false,
+      });
+    }
 
-    let commandForExecution: CoachCommand = routedCommand;
+    let commandForExecution: CoachCommand | null = routedCommand;
     let programEditForExecution = routedProgramEdit;
-    const staleDateClarifier = capturePendingDateClarificationFromPastProgramEditTarget({
-      programEdit: programEditForExecution,
-      command: commandForExecution,
-      draft: packet.programEditDraft,
-      originalMessage: input.userMessage.content,
-      todayISO: input.todayISO,
-    });
+    const staleDateClarifier = commandForExecution
+      ? capturePendingDateClarificationFromPastProgramEditTarget({
+          programEdit: programEditForExecution,
+          command: commandForExecution,
+          draft: packet.programEditDraft,
+          originalMessage: input.userMessage.content,
+          todayISO: input.todayISO,
+        })
+      : null;
     if (staleDateClarifier) {
       usePendingCoachClarifierStore.getState().setPending(staleDateClarifier);
       const route = staleDateClarifier.pendingClarification?.reason ??
@@ -2400,7 +2425,7 @@ export async function handleCoachTurn(
         scope: staleDateClarifier.scope,
         missingFields: staleDateClarifier.missingFields,
         partialPayload: staleDateClarifier.partialPayload,
-        targetStatus: (commandForExecution as any).target?.kind ?? 'absent',
+        targetStatus: (commandForExecution as any)?.target?.kind ?? 'absent',
         askedQuestion: staleDateClarifier.askedQuestion?.length > 200
           ? `${staleDateClarifier.askedQuestion.slice(0, 200)}…`
           : staleDateClarifier.askedQuestion,
@@ -2412,7 +2437,7 @@ export async function handleCoachTurn(
         staleDateClarifier.askedQuestion,
       );
     }
-    if (shouldTryLLMCoachCommand(routedCommand, input.userMessage.content)) {
+    if (routedCommand && shouldTryLLMCoachCommand(routedCommand, input.userMessage.content)) {
       const llmIntent = await input.classifier.classify(packet);
       classifiedCoachIntent = llmIntent;
       const adapted = coachCommandFromLLMIntent(llmIntent, packet);
@@ -2578,7 +2603,10 @@ export async function handleCoachTurn(
       return { handled: true };
     }
 
-    if (isMutateCommand(commandForExecution)) {
+    if (
+      (commandForExecution && isMutateCommand(commandForExecution)) ||
+      isCommandlessTypedStrengthBlockProgramEdit(programEditForExecution)
+    ) {
       const guarded = executeProgramEditWithVisibleGuard({
         input,
         programEdit: programEditForExecution,
@@ -2613,31 +2641,35 @@ export async function handleCoachTurn(
       }
       const result = guarded.result;
       recordVerifiedProgramEditMutationFocus(programEditForExecution, result, input.todayISO);
-      const dateClarifier = capturePendingDateClarificationFromProgramEditRejection({
-        result,
-        programEdit: programEditForExecution,
-        command: commandForExecution,
-        draft: packet.programEditDraft,
-        originalMessage: input.userMessage.content,
-        todayISO: input.todayISO,
-      });
+      const dateClarifier = commandForExecution
+        ? capturePendingDateClarificationFromProgramEditRejection({
+            result,
+            programEdit: programEditForExecution,
+            command: commandForExecution,
+            draft: packet.programEditDraft,
+            originalMessage: input.userMessage.content,
+            todayISO: input.todayISO,
+          })
+        : null;
 
       if (result.kind === 'clarify') {
-        const captured = captureFromExecutorClarify({
-          routedCommand: commandForExecution,
-          askedQuestion: result.reply,
-          originalMessage: input.userMessage.content,
-          todayISO: input.todayISO,
-          missingFields:
-            programEditForExecution.missingFields.length > 0
-              ? programEditForExecution.missingFields
-              : commandForExecution.mode === 'mutate'
-                ? commandForExecution.missingFields
-                : undefined,
-          referenceResolution: packet.referenceResolution,
-          programEdit: programEditForExecution,
-          candidateItems: programEditForExecution.candidateItems,
-        });
+        const captured = commandForExecution
+          ? captureFromExecutorClarify({
+              routedCommand: commandForExecution,
+              askedQuestion: result.reply,
+              originalMessage: input.userMessage.content,
+              todayISO: input.todayISO,
+              missingFields:
+                programEditForExecution.missingFields.length > 0
+                  ? programEditForExecution.missingFields
+                  : commandForExecution.mode === 'mutate'
+                    ? commandForExecution.missingFields
+                    : undefined,
+              referenceResolution: packet.referenceResolution,
+              programEdit: programEditForExecution,
+              candidateItems: programEditForExecution.candidateItems,
+            })
+          : null;
         if (captured) {
           usePendingCoachClarifierStore.getState().setPending(captured);
           logger.warn('[pending-clarifier-set]', {
@@ -2645,7 +2677,7 @@ export async function handleCoachTurn(
             scope: captured.scope,
             missingFields: captured.missingFields,
             partialPayload: captured.partialPayload,
-            targetStatus: (commandForExecution as any).target?.kind ?? 'absent',
+            targetStatus: (commandForExecution as any)?.target?.kind ?? 'absent',
             askedQuestion: captured.askedQuestion?.length > 200
               ? `${captured.askedQuestion.slice(0, 200)}…`
               : captured.askedQuestion,
@@ -2658,7 +2690,7 @@ export async function handleCoachTurn(
           scope: dateClarifier.scope,
           missingFields: dateClarifier.missingFields,
           partialPayload: dateClarifier.partialPayload,
-          targetStatus: (commandForExecution as any).target?.kind ?? 'absent',
+          targetStatus: (commandForExecution as any)?.target?.kind ?? 'absent',
           askedQuestion: dateClarifier.askedQuestion?.length > 200
             ? `${dateClarifier.askedQuestion.slice(0, 200)}…`
             : dateClarifier.askedQuestion,

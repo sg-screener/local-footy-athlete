@@ -107,6 +107,8 @@ export type AdjustmentEventKind =
   | 'set_session_recovery'
   | 'lighten_session'
   | 'remove_exercise'
+  | 'remove_strength_block'
+  | 'reduce_strength_block'
   | 'replace_exercise'
   | 'swap_conditioning_modality'
   | 'add_conditioning_block'
@@ -1190,6 +1192,10 @@ export function eventToBullet(ev: AdjustmentEvent): string {
     }
     case 'remove_conditioning_block':
       return `${day}: removed conditioning`;
+    case 'remove_strength_block':
+      return `${day}: removed strength`;
+    case 'reduce_strength_block':
+      return `${day}: reduced strength`;
     case 'add_session_note': {
       // Reply must reflect the actual exposure, not "lightened Team
       // Training". `event.after` carries the bucket-specific note text

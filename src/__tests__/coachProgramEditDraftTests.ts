@@ -364,17 +364,16 @@ section('[9] controller sees draft before command-router compatibility');
   ok('draft front door marks legacy blocked', /legacyBlocked:\s*true/.test(source));
 }
 
-section('[10] Stage 3B front door blocks unsafe strength-block edits');
+section('[10] Stage 3E front door allows typed strength-block edits');
 {
   const removeStrength = draft('remove lower body strength');
   const removeDecision = decideProgramEditDraftFrontDoor(removeStrength);
-  eq('remove strength decision is unsupported', removeDecision.kind, 'unsupported');
-  ok('remove strength does not enter compatibility executor', removeDecision.kind !== 'allow_compatibility', removeDecision);
-  ok('remove strength reply preserves conditioning concept', /conditioning alone/i.test((removeDecision as any).reply), removeDecision);
+  eq('remove strength decision reaches typed ProgramEdit path', removeDecision.kind, 'allow_compatibility');
+  ok('remove strength does not generic fallback', removeDecision.kind !== 'allow_conversation', removeDecision);
 
   const reduceStrength = draft('make lower body easier');
   const reduceDecision = decideProgramEditDraftFrontDoor(reduceStrength);
-  eq('reduce strength decision is unsupported', reduceDecision.kind, 'unsupported');
+  eq('reduce strength decision reaches typed ProgramEdit path', reduceDecision.kind, 'allow_compatibility');
   ok('reduce strength does not generic fallback', reduceDecision.kind !== 'allow_conversation', reduceDecision);
 }
 

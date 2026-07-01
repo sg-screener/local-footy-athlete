@@ -1932,13 +1932,30 @@ async function runControllerPendingDateSection() {
   const microcycle2 = program2.microcycles[0];
   const mondayBase = microcycle2.workouts.find((workout: any) => workout.dayOfWeek === 1);
   const flushTemplate = buildSmokeWednesdayWorkout(microcycle2.id);
+  const lowerStrengthRow = {
+    id: 'mon-draft-strength-back-squat',
+    workoutId: mondayBase.id,
+    exerciseId: 'mon-draft-strength-back-squat',
+    exerciseOrder: 0,
+    prescribedSets: 3,
+    prescribedRepsMin: 5,
+    prescribedRepsMax: 8,
+    prescriptionType: 'reps',
+    restSeconds: 120,
+    notes: 'Lower strength work',
+    exercise: {
+      id: 'mon-draft-strength-back-squat',
+      name: 'Back Squat',
+      description: 'Lower strength work',
+    },
+  };
   const mondayLowerWithFlush = {
     ...mondayBase,
     name: 'Lower Body Strength',
     workoutType: 'Strength',
     conditioningBlock: flushTemplate.conditioningBlock,
     exercises: [
-      ...(mondayBase?.exercises ?? []),
+      lowerStrengthRow,
       ...flushTemplate.exercises.map((item: any) => ({
         ...item,
         id: `mon-draft-${item.id}`,
@@ -2114,21 +2131,32 @@ async function runControllerPendingDateSection() {
   const secondReply = secondMessages.find((message) => message.role === 'assistant')?.content ?? '';
   ok('17.3 affirmative date answer resumes stored strength draft',
     secondHandled.handled === true &&
-      secondDebug?.route === 'pending_program_edit_draft:program_edit_draft_strength_block_remove_deferred',
+      /^Done\b/i.test(secondReply) &&
+      /strength work/i.test(secondReply),
     JSON.stringify({ secondDebug, secondReply }));
-  ok('17.4 resumed draft does not remove protected conditioning',
-    /strength block/i.test(secondReply) &&
-      /leaving conditioning alone/i.test(secondReply) &&
-      /can't safely apply/i.test(secondReply) &&
-      !/\bdone\b/i.test(secondReply) &&
+  const nextMondayOverride = useProgramStore.getState().dateOverrides?.['2026-07-06'] as any;
+  ok('17.4 resumed draft removes strength and preserves protected conditioning',
+    nextMondayOverride &&
+      !(nextMondayOverride.exercises ?? []).some((row: any) =>
+        /squat|deadlift|lunge|split/i.test(row.exercise?.name ?? ''),
+      ) &&
+      (nextMondayOverride.exercises ?? []).some((row: any) =>
+        /easy aerobic flush|zone 2|row|bike/i.test(row.exercise?.name ?? ''),
+      ) &&
       !/removed\s+\d+min|removed.*flush|removed.*bike/i.test(secondReply),
-    secondReply);
-  ok('17.5 unsupported resumed draft leaves program overrides untouched',
-    Object.keys(useProgramStore.getState().dateOverrides ?? {}).length === 0,
+    JSON.stringify({ secondReply, nextMondayOverride }));
+  ok('17.5 resumed strength draft writes only the patched next-Monday override',
+    Object.keys(useProgramStore.getState().dateOverrides ?? {}).join(',') === '2026-07-06',
     JSON.stringify(useProgramStore.getState().dateOverrides ?? {}));
-  ok('17.6 draft continuation clears finished unsupported transaction',
+  ok('17.6 draft continuation clears finished transaction',
     getPendingClarifierSnapshot(NOW) === null,
     JSON.stringify(getPendingClarifierSnapshot(NOW)));
+
+  useProgramStore.getState().clear();
+  useProgramStore.getState().setCurrentProgram(program2);
+  useProgramStore.getState().setCurrentMicrocycle(microcycle2);
+  useCoachContextStateStore.getState().clearCoachContext();
+  usePendingCoachClarifierStore.getState().clearPending();
 
   const repeatFirstMessages: CoachTurnMessage[] = [];
   const repeatFirstMessage: CoachTurnMessage = {
@@ -2169,10 +2197,9 @@ async function runControllerPendingDateSection() {
   });
   const explicitAnswerReply = explicitAnswerMessages.find((message) => message.role === 'assistant')?.content ?? '';
   ok('17.7 explicit next-Monday answer also resumes stored strength draft',
-    explicitAnswerDebug?.route === 'pending_program_edit_draft:program_edit_draft_strength_block_remove_deferred' &&
-      /strength block/i.test(explicitAnswerReply) &&
-      /leaving conditioning alone/i.test(explicitAnswerReply) &&
-      !/\bdone\b/i.test(explicitAnswerReply),
+    /^Done\b/i.test(explicitAnswerReply) &&
+      /strength work/i.test(explicitAnswerReply) &&
+      /left conditioning alone/i.test(explicitAnswerReply),
     JSON.stringify({ explicitAnswerDebug, explicitAnswerReply }));
 
   usePendingCoachClarifierStore.getState().clearPending();

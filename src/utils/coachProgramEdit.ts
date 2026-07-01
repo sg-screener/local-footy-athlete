@@ -36,6 +36,11 @@ import {
   type ProgressStage,
 } from './coachCommandExecutor';
 import {
+  applyAdjustmentEvents,
+  type ApplyEventsResult,
+} from './applyAdjustmentEvents';
+import type { AdjustmentEvent } from './programAdjustmentEngine';
+import {
   inferModalityFromName,
   tokenToModality,
 } from './coachModalitySwap';
@@ -88,6 +93,8 @@ export type ProgramEditEditScope =
   | 'replace_conditioning_prescription'
   | 'add_conditioning_item'
   | 'remove_conditioning_item'
+  | 'remove_strength_block'
+  | 'reduce_strength_block'
   | 'add_whole_session'
   | 'remove_whole_session'
   | 'update_program_setup';
@@ -223,6 +230,17 @@ export interface ConditioningRemove extends ProgramEditBase {
   requestedChange: 'type' | 'unknown';
 }
 
+export interface StrengthBlockEdit extends ProgramEditBase {
+  targetDomain: 'strength';
+  intent: 'remove' | 'edit';
+  editScope: 'remove_strength_block' | 'reduce_strength_block';
+  targetDate: string;
+  targetSessionId: string | null;
+  targetItemId: null;
+  requestedChange: 'volume';
+  protectedTargets?: ProgramEditCandidateItem[];
+}
+
 export interface RemoveSessionEdit extends ProgramEditBase {
   targetDomain: 'session';
   intent: 'remove';
@@ -297,6 +315,7 @@ export interface NonConditioningProgramEdit extends ProgramEditBase {
 
 export type ProgramEdit =
   | ConditioningProgramEdit
+  | StrengthBlockEdit
   | AddSessionEdit
   | RemoveSessionEdit
   | ProgramSetupEdit
@@ -1352,6 +1371,10 @@ export function executeProgramEdit(
   input: ExecuteProgramEditInput,
 ): ExecutionResult {
   const edit = input.programEdit;
+  if (isStrengthBlockProgramEdit(edit)) {
+    return executeStrengthBlockProgramEdit(input, edit);
+  }
+
   if (
     edit.intent === 'ask_question' ||
     edit.missingFields.length > 0 ||
@@ -1431,6 +1454,234 @@ export function executeProgramEdit(
     },
   });
   return result;
+}
+
+function isStrengthBlockProgramEdit(edit: ProgramEdit): edit is StrengthBlockEdit {
+  return edit.targetDomain === 'strength' &&
+    (edit.intent === 'remove' || edit.intent === 'edit') &&
+    'editScope' in edit &&
+    (edit.editScope === 'remove_strength_block' || edit.editScope === 'reduce_strength_block');
+}
+
+function executeStrengthBlockProgramEdit(
+  input: ExecuteProgramEditInput,
+  edit: StrengthBlockEdit,
+): ExecutionResult {
+  const stages: ProgressStage[] = [];
+  const tick = (stage: ProgressStage) => {
+    if (!stages.includes(stage)) stages.push(stage);
+    input.onProgress?.(stage);
+  };
+
+  if (!edit.targetDate) {
+    tick('composing_reply');
+    return {
+      kind: 'clarify',
+      reply: 'Which day should I change the strength work on?',
+      applied: false,
+      route: 'program_edit_clarify:strength_block_targetDate',
+      progress: stages,
+    };
+  }
+
+  const deps = input.conditioningDeps ?? {};
+  const applyEvents = deps.applyEvents ?? applyAdjustmentEvents;
+  const snapshotBefore = deps.snapshotBefore ??
+    ((date: string) => snapshotProgramEditVisibleWorkout(input, edit, 'before', date));
+  const snapshotAfter = deps.snapshotAfter ??
+    ((date: string) => snapshotProgramEditVisibleWorkout(input, edit, 'after', date));
+
+  tick('checking_program');
+  const beforeWorkout = snapshotBefore(edit.targetDate);
+  const beforeOverrideSnapshot = readProgramEditOverrideSnapshot(input, edit.targetDate);
+  if (!beforeWorkout) {
+    tick('composing_reply');
+    return {
+      kind: 'verified_no_op',
+      reply: `${humanDate(edit.targetDate)} doesn't have a visible workout to change.`,
+      applied: false,
+      route: 'no_workout:strength_block',
+      progress: stages,
+    };
+  }
+  if (isTeamOrGameWorkout(beforeWorkout)) {
+    tick('composing_reply');
+    return {
+      kind: 'rejected',
+      reply: "I won't remove team training or game content as a strength-block edit. Which gym strength work should I change?",
+      applied: false,
+      route: 'protected_team_or_game:strength_block',
+      progress: stages,
+    };
+  }
+  const beforeStrength = visibleStrengthBlockItems(beforeWorkout);
+  if (beforeStrength.length === 0) {
+    tick('composing_reply');
+    return {
+      kind: 'clarify',
+      reply: `I can't see a visible strength block on ${humanDate(edit.targetDate)}. Which strength work should I change?`,
+      applied: false,
+      route: 'clarify_no_strength_block',
+      progress: stages,
+    };
+  }
+
+  const event: AdjustmentEvent = {
+    id: `coach-program-edit-${edit.editScope}-${edit.targetDate}`,
+    kind: edit.editScope === 'remove_strength_block'
+      ? 'remove_strength_block'
+      : 'reduce_strength_block',
+    date: edit.targetDate,
+    reason: `coach ${edit.editScope}`,
+  };
+
+  tick('applying_change');
+  const applyResult = applyEvents([event], {
+    todayISO: input.todayISO,
+    allowFutureWeeks: true,
+    allowPastDates: false,
+  });
+
+  tick('verifying_update');
+  const afterWorkout = snapshotAfter(edit.targetDate);
+  const verification = verifyStrengthBlockMutation({
+    edit,
+    beforeWorkout,
+    afterWorkout,
+    applyResult,
+  });
+  const verificationFailureReason = 'reason' in verification ? verification.reason : null;
+
+  logger.debug('[coach-program-edit-strength-block]', {
+    targetDate: edit.targetDate,
+    editScope: edit.editScope,
+    appliedCount: applyResult.applied.length,
+    rejectedCount: applyResult.rejected.length,
+    rejectedKinds: applyResult.rejected.map((rejection) => rejection.kind),
+    verification,
+  });
+
+  tick('composing_reply');
+  if (verificationFailureReason) {
+    rollbackProgramEditVisibleFailure({
+      input,
+      edit,
+      beforeOverrideSnapshot,
+      beforeVisibleWorkout: beforeWorkout,
+      reason: verificationFailureReason,
+    });
+    return {
+      kind: verificationFailureReason === 'apply_rejected'
+        ? 'verified_no_op'
+        : 'verified_no_op',
+      reply: strengthBlockFailureReply(edit, verificationFailureReason, applyResult),
+      applied: false,
+      route: `strength_block_verification_failed:${verificationFailureReason}`,
+      progress: stages,
+    };
+  }
+
+  const verb = edit.editScope === 'remove_strength_block' ? 'removed' : 'reduced';
+  return {
+    kind: 'mutated',
+    reply: `Done. I ${verb} the strength work on ${humanDate(edit.targetDate)} and left conditioning alone.`,
+    applied: true,
+    route: `${edit.editScope}:applied`,
+    progress: stages,
+  };
+}
+
+function isTeamOrGameWorkout(workout: ResolvedDay['workout'] | null): boolean {
+  if (!workout) return false;
+  const type = String(workout.workoutType ?? '').toLowerCase();
+  return type === 'game' ||
+    type === 'team training' ||
+    type.includes('team training') ||
+    (workout as any).isTeamDay === true;
+}
+
+function visibleStrengthBlockItems(workout: ResolvedDay['workout'] | null): ProgramEditCandidateItem[] {
+  return extractVisibleProgramItemsFromWorkout(workout)
+    .filter((item) => item.domain === 'strength');
+}
+
+function strengthBlockSignature(workout: ResolvedDay['workout'] | null): string {
+  return visibleStrengthBlockItems(workout)
+    .map((item) => `${item.id}:${item.title}:${(item as any).description ?? ''}`)
+    .sort()
+    .join('|');
+}
+
+function conditioningBlockSignatureForStrengthGuard(workout: ResolvedDay['workout'] | null): string {
+  const optionSignature = (workout?.conditioningBlock?.options ?? [])
+    .map((option: any) => `${String(option.title ?? '').trim()}:${String(option.description ?? '').trim()}`)
+    .filter((value) => value.replace(/:/g, '').trim().length > 0);
+  const visibleSignature = visibleConditioningItems(workout)
+    .map((item) => `${item.title}:${item.modality ?? ''}:${item.durationMinutes ?? ''}`);
+  return [...optionSignature, ...visibleSignature]
+    .sort()
+    .join('|');
+}
+
+function verifyStrengthBlockMutation(args: {
+  edit: StrengthBlockEdit;
+  beforeWorkout: ResolvedDay['workout'] | null;
+  afterWorkout: ResolvedDay['workout'] | null;
+  applyResult: ApplyEventsResult;
+}): { ok: true } | { ok: false; reason: string } {
+  const { edit, beforeWorkout, afterWorkout, applyResult } = args;
+  if (applyResult.applied.length === 0) return { ok: false, reason: 'apply_rejected' };
+
+  const beforeStrength = visibleStrengthBlockItems(beforeWorkout);
+  const afterStrength = visibleStrengthBlockItems(afterWorkout);
+  if (beforeStrength.length === 0) return { ok: false, reason: 'strength_missing_before' };
+
+  const beforeConditioning = conditioningBlockSignatureForStrengthGuard(beforeWorkout);
+  const afterConditioning = conditioningBlockSignatureForStrengthGuard(afterWorkout);
+  if (beforeConditioning !== afterConditioning) {
+    return { ok: false, reason: 'protected_conditioning_changed' };
+  }
+
+  if (edit.editScope === 'remove_strength_block') {
+    if (afterStrength.length > 0) return { ok: false, reason: 'strength_still_visible' };
+    if (!afterWorkout && beforeConditioning) return { ok: false, reason: 'protected_conditioning_missing' };
+    return { ok: true };
+  }
+
+  if (afterStrength.length === 0) return { ok: false, reason: 'reduced_strength_removed' };
+  if (strengthBlockSignature(beforeWorkout) === strengthBlockSignature(afterWorkout)) {
+    return { ok: false, reason: 'strength_unchanged' };
+  }
+  return { ok: true };
+}
+
+function strengthBlockFailureReply(
+  edit: StrengthBlockEdit,
+  reason: string,
+  applyResult: ApplyEventsResult,
+): string {
+  const first = applyResult.rejected[0];
+  if (reason === 'apply_rejected' && first?.kind === 'past_date_blocked') {
+    return `${humanDate(edit.targetDate)} is in the past — I can't change it.`;
+  }
+  if (reason === 'apply_rejected' && first?.reason) {
+    return `I couldn't safely change the strength work on ${humanDate(edit.targetDate)}: ${first.reason}`;
+  }
+  if (reason === 'protected_conditioning_changed' || reason === 'protected_conditioning_missing') {
+    return "I couldn't safely change the strength work without touching conditioning, so I left the plan unchanged.";
+  }
+  if (reason === 'strength_still_visible' || reason === 'strength_unchanged') {
+    return "I tried to change the strength work, but the visible program didn't update, so I left the plan unchanged.";
+  }
+  return "I couldn't safely apply that strength-block change, so I left the plan unchanged.";
+}
+
+function humanDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return iso;
+  const dt = new Date(y, m - 1, d, 12, 0, 0, 0);
+  const weekday = dt.toLocaleDateString('en-AU', { weekday: 'short' });
+  return `${weekday} ${iso}`;
 }
 
 export interface ExecuteProgramSetupEditInput {
@@ -1884,13 +2135,15 @@ function snapshotProgramEditVisibleWorkout(
   input: ExecuteProgramEditInput,
   edit: ProgramEdit,
   phase: 'before' | 'after',
+  targetDateOverride?: string,
 ): ResolvedDay['workout'] | null {
-  if (edit.targetDomain !== 'conditioning' || !edit.targetDate) return null;
+  const targetDate = targetDateOverride ?? edit.targetDate;
+  if (!targetDate) return null;
   const seam =
     phase === 'before'
       ? input.conditioningDeps?.snapshotBefore
       : input.conditioningDeps?.snapshotAfter;
-  if (seam) return seam(edit.targetDate);
+  if (seam) return seam(targetDate);
 
   if (input.conditioningDeps) {
     return null;
@@ -1899,14 +2152,14 @@ function snapshotProgramEditVisibleWorkout(
   try {
     const programState = useProgramStore.getState();
     return getResolvedVisibleProgramForDate({
-      date: edit.targetDate,
+      date: targetDate,
       todayISO: input.todayISO,
       state: buildScheduleStateImperative(),
       overrideContexts: programState.overrideContexts ?? {},
     }).day.workout ?? null;
   } catch (e) {
     logger.warn('[coach-program-edit-visible-snapshot-failed]', {
-      targetDate: edit.targetDate,
+      targetDate,
       phase,
       error: (e as Error)?.message ?? String(e),
     });
@@ -3260,6 +3513,13 @@ function finaliseProgramEditDraft(draft: ProgramEditDraft): ProgramEdit {
     return finaliseRemoveSessionProgramEdit(draft);
   }
 
+  if (
+    draft.targetDomain === 'strength' &&
+    (draft.editScope === 'remove_strength_block' || draft.editScope === 'reduce_strength_block')
+  ) {
+    return finaliseStrengthBlockProgramEdit(draft);
+  }
+
   return {
     ...draft,
     targetDomain: draft.targetDomain as Exclude<ProgramEditTargetDomain, 'conditioning'>,
@@ -3348,6 +3608,10 @@ function editScopeFromSemanticDraft(
 ): ProgramEditEditScope | undefined {
   if (draft.targetDomain === 'setup' || draft.actionScope === 'setup') {
     return 'update_program_setup';
+  }
+  if (draft.targetDomain === 'strength' && draft.actionScope === 'strength_block') {
+    if (draft.intent === 'remove') return 'remove_strength_block';
+    if (draft.intent === 'reduce' || draft.intent === 'edit') return 'reduce_strength_block';
   }
   if (draft.actionScope === 'whole_session') {
     if (draft.intent === 'add') return 'add_whole_session';
@@ -3465,13 +3729,17 @@ function semanticProgramEditMissingFields(
   if (draft.targetDomain === 'conditioning' && draft.intent !== 'add' && !draft.targetItemId) {
     fields.add('targetItemId');
   }
-  if (!command && !isUnsupportedSemanticDraftHandledAtFrontDoor(draft)) {
+  if (!command && !isCommandlessSemanticDraftHandledByProgramEdit(draft, editScope)) {
     fields.add(editScope === 'update_program_setup' ? 'setupChange' : 'supported_change');
   }
   return [...fields];
 }
 
-function isUnsupportedSemanticDraftHandledAtFrontDoor(draft: SemanticProgramEditDraft): boolean {
+function isCommandlessSemanticDraftHandledByProgramEdit(
+  draft: SemanticProgramEditDraft,
+  editScope: ProgramEditEditScope | undefined,
+): boolean {
+  if (editScope === 'remove_strength_block' || editScope === 'reduce_strength_block') return true;
   return draft.isCompound ||
     (draft.targetDomain === 'strength' &&
       draft.actionScope === 'strength_block' &&
@@ -3560,6 +3828,28 @@ function finaliseRemoveSessionProgramEdit(draft: ProgramEditDraft): ProgramEdit 
     targetItemId: null,
     requestedChange: 'day',
     reason: stringOrNull((draft.newValue as any)?.reason) ?? undefined,
+  };
+}
+
+function finaliseStrengthBlockProgramEdit(draft: ProgramEditDraft): ProgramEdit {
+  const missing = new Set(draft.missingFields);
+  if (!draft.targetDate) missing.add('targetDate');
+  const editScope = draft.editScope === 'reduce_strength_block'
+    ? 'reduce_strength_block'
+    : 'remove_strength_block';
+  if (missing.size > 0 || !draft.targetDate) {
+    return askQuestionFromDraft({ ...draft, editScope }, [...missing]);
+  }
+  return {
+    ...draft,
+    targetDomain: 'strength',
+    intent: editScope === 'reduce_strength_block' ? 'edit' : 'remove',
+    editScope,
+    targetDate: draft.targetDate,
+    targetSessionId: draft.targetSessionId ?? null,
+    targetItemId: null,
+    requestedChange: 'volume',
+    command: null,
   };
 }
 
@@ -3696,6 +3986,9 @@ function finaliseConditioningProgramEdit(draft: ProgramEditDraft): ProgramEdit {
         requestedChange: draft.requestedChange === 'unknown' ? 'unknown' : 'type',
       };
     }
+    case 'remove_strength_block':
+    case 'reduce_strength_block':
+      return askQuestionFromDraft({ ...draft, editScope }, ['editScope']);
     case 'remove_whole_session':
     case 'add_whole_session':
       return askQuestionFromDraft({ ...draft, editScope }, ['editScope']);

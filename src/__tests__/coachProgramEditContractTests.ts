@@ -1,6 +1,7 @@
 import {
   interpretCoachMessageToProgramEdit,
   executeProgramEdit,
+  programEditFromSemanticProgramEditDraft,
   verifyProgramEditVisibleMutation,
   normalizeCoachEditMessage,
   resolvePendingProgramEditAnswer,
@@ -235,6 +236,67 @@ function runConditioningProgramEdit(edit: ProgramEdit, beforeWorkout: any) {
   return { result, written, eventPayload };
 }
 
+function runStrengthBlockProgramEdit(
+  edit: ProgramEdit,
+  beforeWorkout: any,
+  options: {
+    targetDate?: string;
+    applyEvents?: (events: any[], opts: any) => any;
+    afterWorkout?: any;
+  } = {},
+) {
+  const targetDate = options.targetDate ?? TARGET;
+  let written: any = null;
+  let rolledBack = false;
+  let eventKind: string | null = null;
+  const result = executeProgramEdit({
+    programEdit: edit,
+    todayISO: TODAY,
+    referenceResolution: resolved(targetDate, beforeWorkout.name),
+    userMessage: edit.normalizedMessage ?? '',
+    conditioningDeps: {
+      snapshotBefore: () => beforeWorkout,
+      snapshotAfter: () => written,
+      applyEvents: (events: any[], opts: any) => {
+        eventKind = events[0]?.kind ?? null;
+        if (options.applyEvents) {
+          const out = options.applyEvents(events, opts);
+          if (Object.prototype.hasOwnProperty.call(options, 'afterWorkout')) {
+            written = options.afterWorkout;
+          }
+          return out;
+        }
+        return applyAdjustmentEvents(events as any, {
+          ...opts,
+          buildState: () => ({} as any),
+          resolveWeek: () => [{
+            date: targetDate,
+            dayOfWeek: 3,
+            short: 'WED',
+            source: 'manual',
+            indicator: 'none',
+            workout: beforeWorkout,
+          }] as any,
+          setManualOverride: (_date: string, workout: any) => {
+            written = workout;
+          },
+          allowFutureWeeks: true,
+          allowPastDates: false,
+        });
+      },
+      rollback: () => {
+        rolledBack = true;
+        written = beforeWorkout;
+        return { applied: [{ date: targetDate, eventIds: ['rollback'], workoutName: beforeWorkout.name }], rejected: [] } as any;
+      },
+    },
+    undoDeps: {
+      readDateOverride: () => ({ workout: beforeWorkout, context: null }),
+    },
+  });
+  return { result, written, eventKind, rolledBack };
+}
+
 function runRemoveSessionProgramEdit(edit: ProgramEdit, beforeWeek: any[], targetDate = TARGET) {
   let removedDate: string | null = null;
   let recorded: any = null;
@@ -369,6 +431,69 @@ function completeTargetForAnswer(
 
 const TODAY = '2026-06-02';
 const TARGET = '2026-06-03';
+
+function semanticStrengthBlockEdit(args: {
+  intent?: 'remove' | 'reduce';
+  targetDate?: string;
+  protectConditioning?: boolean;
+} = {}): ProgramEdit {
+  const intent = args.intent ?? 'remove';
+  const targetDate = args.targetDate ?? TARGET;
+  return programEditFromSemanticProgramEditDraft({
+    todayISO: TODAY,
+    userMessage: intent === 'remove'
+      ? 'drop the lower work but keep the flush'
+      : 'make the lower strength easier but keep the flush',
+    draft: {
+      intent,
+      targetDomain: 'strength',
+      actionScope: 'strength_block',
+      targetDate,
+      targetSessionId: 'session-lower',
+      targetItemId: null,
+      sourceTarget: {
+        kind: 'session',
+        date: targetDate,
+        sessionName: 'Lower Body Strength',
+        itemId: 'session-lower',
+        domain: 'strength',
+        stillVisible: true,
+      } as any,
+      explicitDateRole: 'referent',
+      explicitUserWording: 'drop the lower work but keep the flush',
+      missingFields: [],
+      confidence: 0.91,
+      protectedTargets: args.protectConditioning === false ? [] : [{
+        targetDomain: 'conditioning',
+        actionScope: 'conditioning_block',
+        targetDate,
+        targetItemId: null,
+        title: 'Easy Aerobic Flush',
+        reason: 'explicit_keep_conditioning',
+      }],
+      constraints: args.protectConditioning === false ? [] : ['keep conditioning:conditioning_block'],
+      proposedActions: [{
+        intent: intent === 'reduce' ? 'edit' : 'remove',
+        targetDomain: 'strength',
+        actionScope: 'strength_block',
+        targetDate,
+        targetSessionId: 'session-lower',
+        targetItemId: null,
+        sourceTarget: null,
+        reason: `${intent}_strength_block`,
+      }],
+      verifierExpectations: [{
+        kind: 'domain_changed',
+        targetDomain: 'strength',
+        actionScope: 'strength_block',
+        targetDate,
+        reason: `${intent}_strength_block`,
+      }],
+      isCompound: false,
+      reason: `semantic_${intent}_strength_block`,
+    } as any,
+  });
+}
 
 section('1. ProgramEdit schema is the mutation contract');
 
@@ -2300,7 +2425,116 @@ eq('duration verifier names unapplied duration',
   durationNoOpVerifier.reason,
   'duration_edit_not_applied');
 
-section('12. Schedule move explicit weekdays beat selected/current day');
+section('12. Typed strength-block executor support');
+
+const mixedStrengthFlush = strengthWithConditioningWorkout(
+  'Lower Body Strength',
+  ['Back Squat', 'Romanian Deadlift'],
+  ['Easy Aerobic Flush'],
+);
+const removeStrengthEdit = semanticStrengthBlockEdit({ intent: 'remove' });
+eq('semantic strength remove finalises to strength domain',
+  removeStrengthEdit.targetDomain,
+  'strength' as any);
+eq('semantic strength remove finalises to remove_strength_block',
+  (removeStrengthEdit as any).editScope,
+  'remove_strength_block');
+ok('semantic strength remove does not use legacy command',
+  removeStrengthEdit.command === null,
+  removeStrengthEdit.command);
+const removeStrengthRun = runStrengthBlockProgramEdit(removeStrengthEdit, mixedStrengthFlush);
+eq('mixed strength+flush removal mutates',
+  removeStrengthRun.result.kind,
+  'mutated' as any);
+eq('mixed strength+flush removal event is typed strength block',
+  removeStrengthRun.eventKind,
+  'remove_strength_block');
+ok('mixed strength+flush removal removes strength exercises',
+  !(removeStrengthRun.written?.exercises ?? []).some((row: any) =>
+    /squat|deadlift/i.test(row.exercise?.name ?? ''),
+  ),
+  removeStrengthRun.written?.exercises);
+ok('mixed strength+flush removal preserves conditioning row',
+  (removeStrengthRun.written?.exercises ?? []).some((row: any) =>
+    /easy aerobic flush/i.test(row.exercise?.name ?? ''),
+  ) &&
+    (removeStrengthRun.written?.conditioningBlock?.options ?? []).some((option: any) =>
+      /easy aerobic flush/i.test(option.title ?? ''),
+    ),
+  removeStrengthRun.written);
+ok('mixed strength+flush removal says Done only after verification',
+  /^Done\b/i.test(removeStrengthRun.result.reply) &&
+    /left conditioning alone/i.test(removeStrengthRun.result.reply),
+  removeStrengthRun.result.reply);
+
+const strengthOnly = strengthWithConditioningWorkout(
+  'Lower Body Strength',
+  ['Back Squat'],
+  [],
+);
+const strengthOnlyRun = runStrengthBlockProgramEdit(
+  semanticStrengthBlockEdit({ intent: 'remove', protectConditioning: false }),
+  strengthOnly,
+);
+eq('strength-only removal mutates',
+  strengthOnlyRun.result.kind,
+  'mutated' as any);
+eq('strength-only removal collapses session to Rest',
+  strengthOnlyRun.written?.workoutType,
+  'Rest');
+eq('strength-only removal clears visible training rows',
+  (strengthOnlyRun.written?.exercises ?? []).length,
+  0);
+
+const reduceStrengthEdit = semanticStrengthBlockEdit({ intent: 'reduce' });
+const reduceStrengthRun = runStrengthBlockProgramEdit(reduceStrengthEdit, mixedStrengthFlush);
+eq('reduce strength finalises to reduce_strength_block',
+  (reduceStrengthEdit as any).editScope,
+  'reduce_strength_block');
+eq('reduce strength mutates',
+  reduceStrengthRun.result.kind,
+  'mutated' as any);
+ok('reduce strength changes strength notes/sets',
+  (reduceStrengthRun.written?.exercises ?? []).some((row: any) =>
+    /reduced strength block/i.test(row.notes ?? '') &&
+      /squat|deadlift/i.test(row.exercise?.name ?? ''),
+  ),
+  reduceStrengthRun.written?.exercises);
+ok('reduce strength preserves conditioning row',
+  (reduceStrengthRun.written?.exercises ?? []).some((row: any) =>
+    /easy aerobic flush/i.test(row.exercise?.name ?? '') &&
+      !/reduced strength block/i.test(row.notes ?? ''),
+  ),
+  reduceStrengthRun.written?.exercises);
+
+const badAfter = strengthWithConditioningWorkout('Lower Body Strength', [], []);
+const protectedViolationRun = runStrengthBlockProgramEdit(removeStrengthEdit, mixedStrengthFlush, {
+  afterWorkout: badAfter,
+  applyEvents: () => ({
+    applied: [{ date: TARGET, eventIds: ['bad-strength-event'], workoutName: badAfter.name }],
+    rejected: [],
+  }),
+});
+eq('protected conditioning violation is blocked',
+  protectedViolationRun.result.kind,
+  'verified_no_op' as any);
+ok('protected conditioning violation rolls back',
+  protectedViolationRun.rolledBack === true &&
+    !/^Done\b/i.test(protectedViolationRun.result.reply),
+  protectedViolationRun.result);
+
+const noStrengthRun = runStrengthBlockProgramEdit(
+  semanticStrengthBlockEdit({ intent: 'remove' }),
+  conditioningWorkout('Easy Aerobic Flush', ['Easy Aerobic Flush']),
+);
+eq('unsupported/ambiguous missing strength asks instead of mutating',
+  noStrengthRun.result.kind,
+  'clarify' as any);
+ok('missing strength reply is typed',
+  /strength block/i.test(noStrengthRun.result.reply),
+  noStrengthRun.result.reply);
+
+section('13. Schedule move explicit weekdays beat selected/current day');
 
 const thursdayLowerSquat = conditioningWorkout('Lower Squat', []);
 const explicitThursdayToSaturday = interpretCoachMessageToProgramEdit({

@@ -269,22 +269,6 @@ export function decideProgramEditDraftFrontDoor(
     };
   }
 
-  if (
-    draft.targetDomain === 'strength' &&
-    draft.actionScope === 'strength_block' &&
-    (draft.intent === 'remove' || draft.intent === 'reduce')
-  ) {
-    const verb = draft.intent === 'remove' ? 'remove' : 'reduce';
-    return {
-      kind: 'unsupported',
-      route: `program_edit_draft_strength_block_${draft.intent}_deferred`,
-      reply:
-        `I understood that as a request to ${verb} the strength block while leaving conditioning alone. ` +
-        "I can't safely apply that block-level strength edit yet. Choose a specific exercise, remove the whole session, or leave it unchanged.",
-      options: ['Choose an exercise', 'Remove whole session', 'Leave unchanged'],
-    };
-  }
-
   return { kind: 'allow_compatibility', route: 'program_edit_draft_compatibility' };
 }
 
@@ -339,14 +323,6 @@ export function validateProgramEditAgainstDraft(
       'program_edit_draft_guard_protected_target_conflict',
       `protected_target:${protectedConflict.targetDomain}`,
       protectedTargetConflictReply(protectedConflict),
-    );
-  }
-
-  if (isUnsupportedStrengthBlockDraft(draft)) {
-    return blockedDraftGuard(
-      `program_edit_draft_guard_unsupported_strength_block_${draft.intent}`,
-      'unsupported_strength_block_scope',
-      unsupportedStrengthBlockReply(draft),
     );
   }
 
@@ -420,12 +396,6 @@ function normalisedFinalIntent(intent: ProgramEdit['intent']): ProgramEditDraftA
   return intent;
 }
 
-function isUnsupportedStrengthBlockDraft(draft: ProgramEditDraft): boolean {
-  return draft.targetDomain === 'strength' &&
-    draft.actionScope === 'strength_block' &&
-    (draft.intent === 'remove' || draft.intent === 'reduce');
-}
-
 function firstProtectedTargetConflict(
   draft: ProgramEditDraft,
   finalEdit: ProgramEdit,
@@ -462,6 +432,9 @@ function actionScopeFromProgramEdit(
     case 'remove_conditioning_item':
     case 'replace_conditioning_prescription':
       return 'conditioning_block';
+    case 'remove_strength_block':
+    case 'reduce_strength_block':
+      return 'strength_block';
     case 'duration_only':
       return 'duration';
     case 'intensity_only':
@@ -500,14 +473,6 @@ function scopesCompatible(
     return true;
   }
   return false;
-}
-
-function unsupportedStrengthBlockReply(draft: ProgramEditDraft): string {
-  const verb = draft.intent === 'remove' ? 'remove' : 'reduce';
-  return (
-    `I can see you want to ${verb} ${strengthTargetLabel(draft)}, ` +
-    'but I need confirmation before changing that block. Conditioning will stay as-is.'
-  );
 }
 
 function protectedTargetConflictReply(target: ProgramEditDraftProtectedTarget): string {

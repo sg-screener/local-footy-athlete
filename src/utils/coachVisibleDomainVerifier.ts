@@ -79,7 +79,7 @@ export function fingerprintVisibleProgramDay(
       }),
     },
     strength: itemSignature(items.filter((item) => item.domain === 'strength')),
-    conditioning: itemSignature(items.filter((item) => item.domain === 'conditioning')),
+    conditioning: conditioningDomainSignature(workout, items),
     recovery: itemSignature(items.filter((item) => item.domain === 'recovery')),
     exercises: itemSignature(items.filter((item) => item.source === 'strength_exercise')),
     allItems: itemSignature(items),
@@ -442,6 +442,29 @@ function itemSignature(items: VisibleProgramItem[]): string {
     const bKey = `${b.domain}:${b.id}:${b.title}`;
     return aKey.localeCompare(bKey);
   }));
+}
+
+function conditioningDomainSignature(
+  workout: ResolvedDay['workout'] | null,
+  items: VisibleProgramItem[],
+): string {
+  const options = (workout?.conditioningBlock?.options ?? []).map((option: any) => ({
+    title: normalise(option?.title),
+    description: normalise(option?.description),
+  }));
+  const visibleItems = items
+    .filter((item) => item.domain === 'conditioning')
+    .map((item) => ({
+      title: normalise(item.title),
+      modality: item.modality ?? null,
+      durationMinutes: item.durationMinutes ?? null,
+      source: item.source,
+    }));
+  return stableString([...options, ...visibleItems].sort((a, b) =>
+    `${a.title}:${'source' in a ? a.source : 'option'}`.localeCompare(
+      `${b.title}:${'source' in b ? b.source : 'option'}`,
+    ),
+  ));
 }
 
 function fingerprintContainsTitle(

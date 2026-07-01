@@ -417,6 +417,188 @@ function applyRemoveExercise(
   };
 }
 
+function conditioningExerciseIds(workout: Workout): Set<string> {
+  const ids = new Set<string>();
+  for (const option of workout.conditioningBlock?.options ?? []) {
+    for (const id of option.exerciseIds ?? []) ids.add(String(id));
+  }
+  return ids;
+}
+
+function rowIds(row: any): string[] {
+  return [
+    row?.id,
+    row?.exerciseId,
+    row?.exercise?.id,
+  ].map((value) => String(value ?? '').trim()).filter(Boolean);
+}
+
+function normaliseTrainingContentKey(value: unknown): string {
+  return String(value ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\b(?:min|mins|minute|minutes|easy|light|moderate|hard|session|block)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isConditioningRow(workout: Workout, row: any): boolean {
+  const ids = conditioningExerciseIds(workout);
+  if (rowIds(row).some((id) => ids.has(id))) return true;
+  const rowText = normaliseTrainingContentKey([
+    row?.exercise?.name,
+    row?.exercise?.description,
+    row?.notes,
+  ].filter(Boolean).join(' '));
+  if (!rowText) return false;
+  return (workout.conditioningBlock?.options ?? []).some((option: any) => {
+    const optionText = normaliseTrainingContentKey([
+      option?.title,
+      option?.description,
+    ].filter(Boolean).join(' '));
+    return optionText && (
+      rowText.includes(optionText) ||
+      optionText.includes(rowText) ||
+      normaliseTrainingContentKey(option?.title).split(' ').some((token) =>
+        token.length >= 4 && rowText.includes(token),
+      )
+    );
+  });
+}
+
+function relinkConditioningBlockOptions(
+  current: Workout,
+  exercises: Workout['exercises'],
+): Workout['conditioningBlock'] {
+  if (!current.conditioningBlock?.options?.length) return current.conditioningBlock;
+  return {
+    ...current.conditioningBlock,
+    options: current.conditioningBlock.options.map((option: any) => {
+      const existingIds = new Set((option.exerciseIds ?? []).map((id: unknown) => String(id)));
+      const linked = exercises.filter((row: any) =>
+        rowIds(row).some((id) => existingIds.has(id)),
+      );
+      if (linked.length > 0) return option;
+
+      const optionText = normaliseTrainingContentKey([
+        option?.title,
+        option?.description,
+      ].filter(Boolean).join(' '));
+      const matched = exercises.filter((row: any) => {
+        const rowText = normaliseTrainingContentKey([
+          row?.exercise?.name,
+          row?.exercise?.description,
+          row?.notes,
+        ].filter(Boolean).join(' '));
+        return optionText && rowText && (
+          rowText.includes(optionText) ||
+          optionText.includes(rowText) ||
+          normaliseTrainingContentKey(option?.title).split(' ').some((token) =>
+            token.length >= 4 && rowText.includes(token),
+          )
+        );
+      });
+      if (matched.length === 0) return option;
+      return {
+        ...option,
+        exerciseIds: matched
+          .map((row: any) => String(row.id ?? row.exerciseId ?? row.exercise?.id ?? '').trim())
+          .filter(Boolean),
+      };
+    }),
+  };
+}
+
+function isProtectedTeamOrGameWorkout(workout: Workout): boolean {
+  const type = String(workout.workoutType ?? '').toLowerCase();
+  return type === 'game' ||
+    type === 'team training' ||
+    type.includes('team training') ||
+    (workout as any).isTeamDay === true;
+}
+
+function strengthRows(workout: Workout): any[] {
+  if (isProtectedTeamOrGameWorkout(workout)) return [];
+  if (String(workout.workoutType ?? '') === 'Conditioning') return [];
+  return (workout.exercises ?? []).filter((row: any) => !isConditioningRow(workout, row));
+}
+
+function applyRemoveStrengthBlock(
+  current: Workout,
+  event: AdjustmentEvent,
+): MutateResult {
+  if (isProtectedTeamOrGameWorkout(current)) {
+    return {
+      ok: false,
+      rejectKind: APPLY_REJECT_KIND.UNHANDLED_EVENT,
+      reason: `strength block removal cannot remove team training or game content on ${event.date}`,
+    };
+  }
+  const strength = strengthRows(current);
+  if (strength.length === 0) {
+    return {
+      ok: false,
+      rejectKind: APPLY_REJECT_KIND.EXERCISE_NOT_PRESENT,
+      reason: `no visible strength block present on ${event.date}`,
+    };
+  }
+  const removeIds = new Set(strength.flatMap(rowIds));
+  const filtered = (current.exercises ?? []).filter((row: any) =>
+    !rowIds(row).some((id) => removeIds.has(id)),
+  );
+  const note = 'Removed strength block';
+  const next = cloneWorkout(current, {
+    exercises: filtered,
+    conditioningBlock: relinkConditioningBlockOptions(current, filtered),
+    coachNotes: appendCoachNote(current, note),
+  });
+  return {
+    ok: true,
+    workout: cleanupEmptyWorkoutAfterRemoval(current, next, note),
+  };
+}
+
+function applyReduceStrengthBlock(
+  current: Workout,
+  event: AdjustmentEvent,
+): MutateResult {
+  if (isProtectedTeamOrGameWorkout(current)) {
+    return {
+      ok: false,
+      rejectKind: APPLY_REJECT_KIND.UNHANDLED_EVENT,
+      reason: `strength block reduction cannot change team training or game content on ${event.date}`,
+    };
+  }
+  const strengthIds = new Set(strengthRows(current).flatMap(rowIds));
+  if (strengthIds.size === 0) {
+    return {
+      ok: false,
+      rejectKind: APPLY_REJECT_KIND.EXERCISE_NOT_PRESENT,
+      reason: `no visible strength block present on ${event.date}`,
+    };
+  }
+  const note = 'Reduced strength block';
+  const exercises = (current.exercises ?? []).map((row: any) => {
+    if (!rowIds(row).some((id) => strengthIds.has(id))) return row;
+    const prescribedSets = Number(row.prescribedSets ?? 1);
+    return {
+      ...row,
+      prescribedSets: Number.isFinite(prescribedSets)
+        ? Math.max(1, Math.ceil(prescribedSets / 2))
+        : row.prescribedSets,
+      notes: `${String(row.notes ?? row.exercise?.description ?? '').trim()} [${note}]`.trim(),
+    };
+  });
+  return {
+    ok: true,
+    workout: cloneWorkout(current, {
+      sessionTier: current.sessionTier === 'core' ? 'optional' : current.sessionTier,
+      exercises,
+      coachNotes: appendCoachNote(current, note),
+    }),
+  };
+}
+
 function applySetSessionRecovery(
   current: Workout,
   _event: AdjustmentEvent,
@@ -1478,6 +1660,12 @@ export function applyAdjustmentEvents(
         case 'remove_exercise':
           outcome = applyRemoveExercise(working, ev);
           break;
+        case 'remove_strength_block':
+          outcome = applyRemoveStrengthBlock(working, ev);
+          break;
+        case 'reduce_strength_block':
+          outcome = applyReduceStrengthBlock(working, ev);
+          break;
         case 'replace_exercise':
           outcome = applyReplaceExercise(working, ev);
           break;
@@ -1551,7 +1739,11 @@ export function applyAdjustmentEvents(
     }
 
     const isProgramAdjustment = group.some(
-      (ev) => ev.kind === 'add_conditioning_block' || ev.kind === 'remove_conditioning_block',
+      (ev) =>
+        ev.kind === 'add_conditioning_block' ||
+        ev.kind === 'remove_conditioning_block' ||
+        ev.kind === 'remove_strength_block' ||
+        ev.kind === 'reduce_strength_block',
     );
     const ctx: OverrideContext = {
       intent: isProgramAdjustment ? 'program_adjustment' : 'injury',

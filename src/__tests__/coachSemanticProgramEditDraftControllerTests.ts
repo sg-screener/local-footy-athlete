@@ -37,7 +37,11 @@ import {
   type SemanticProgramEditDraftAdapter,
   type SemanticProgramEditDraftAdapterInput,
 } from '../utils/semanticProgramEditDraft';
-import { extractVisibleProgramItemsFromWorkout } from '../utils/visibleProgramReadModel';
+import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
+import {
+  extractVisibleProgramItemsFromWorkout,
+  getResolvedVisibleProgramForDate,
+} from '../utils/visibleProgramReadModel';
 
 const TODAY = '2026-06-24';
 const MONDAY = '2026-06-22';
@@ -313,6 +317,18 @@ function visibleConditioningProtection(
   return null;
 }
 
+function visibleItemsForDate(date: string) {
+  const state = buildScheduleStateImperative();
+  const programState = useProgramStore.getState();
+  return getResolvedVisibleProgramForDate({
+    date,
+    todayISO: TODAY,
+    state,
+    overrideContext: programState.overrideContexts?.[date],
+    overrideContexts: programState.overrideContexts,
+  }).items;
+}
+
 function strengthBlockDraftFromVisibleContext(
   wording: string,
   input: SemanticProgramEditDraftAdapterInput,
@@ -485,10 +501,10 @@ async function run() {
     });
     eq('[2] semantic enabled calls adapter once', adapter.calls.length, 1);
     eq('[2] semantic front door returns before LLM legacy classifier', result.classifierCalls, 0);
-    ok('[2] messy command is understood as unsupported strength-block draft, not generic fallback',
-      /strength block/i.test(result.reply) &&
-        /can't safely apply/i.test(result.reply) &&
-        !/not sure|generic|I can help/i.test(result.reply),
+    ok('[2] messy command is handled as a typed strength-block draft, not generic fallback',
+      /strength-block edit/i.test(result.reply) &&
+        /team training|game content/i.test(result.reply) &&
+        !/\bdone\b|not sure|generic|I can help/i.test(result.reply),
       result.reply);
   }
 
@@ -501,10 +517,21 @@ async function run() {
       semanticEnabled: true,
       semanticAdapter: adapter,
     });
+    const targetDate = adapter.calls[0]?.visibleWeek.find((day) =>
+      (day.workout?.name ?? '').toLowerCase().includes('lower body strength'),
+    )?.date;
+    const targetVisibleItems = targetDate ? visibleItemsForDate(targetDate) : [];
+    const protectedDate = adapter.calls[0]?.visibleWeek.find((day) =>
+      extractVisibleProgramItemsFromWorkout(day.workout)
+        .some((item) => item.domain === 'conditioning'),
+    )?.date;
+    const protectedVisibleItems = protectedDate ? visibleItemsForDate(protectedDate) : [];
     ok('[3] semantic draft can carry protected conditioning target',
       adapter.calls.length === 1 &&
-        /leaving conditioning alone/i.test(result.reply),
-      result.reply);
+        /conditioning alone/i.test(result.reply) &&
+        !targetVisibleItems.some((item) => item.domain === 'strength') &&
+        protectedVisibleItems.some((item) => item.domain === 'conditioning'),
+      { reply: result.reply, targetDate, targetVisibleItems, protectedDate, protectedVisibleItems });
   }
 
   {
