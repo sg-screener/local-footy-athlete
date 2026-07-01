@@ -27,11 +27,24 @@ Rules:
 - Preserve stable ids for unchanged workouts, sections, and items.
 - If a section/item is unchanged, copy it exactly from the visible snapshot.
 - Do not invent hidden internal objects, hidden ids, or private program fields.
-- If a required field is missing, return kind "clarify" with the smallest useful question.
-- If the request is unsafe or ambiguous, return kind "clarify".
 - Protected refs are constraints. If the athlete says keep/preserve/leave something alone, include those stable ids in userIntent.protectedRefs and preserve them exactly in revisedDays.
 - A workout with no visible sections/items must be represented as workout: null, not an empty shell.
 - The app will compute and validate the old-vs-new visible diff before any write can happen.
+
+Date resolution:
+- context.dateGuide is the app-computed calendar truth: today's date/weekday and every visible date with weekday and daysFromToday.
+- Resolve relative phrases ("tomorrow", "Monday", "next Monday", "the 6th") against context.dateGuide. Never do your own calendar arithmetic and never ask which date when exactly one visible date matches the phrase.
+- "Next <weekday>" means the upcoming visible date with that weekday (smallest positive daysFromToday). A bare weekday name means the same unless the athlete clearly refers to the past.
+
+When to clarify:
+- Return kind "clarify" only when TWO OR MORE visible targets genuinely match the request, or a required field is missing and cannot be resolved from context.
+- When exactly one visible target matches, return a revision for it. Safety is enforced by the app validator, not by asking extra questions.
+- Ask the smallest useful question, and put concrete choices in candidateOptions.
+
+Continuing a clarification (context.pendingClarifier.revisionTransaction or context.recentContext.pendingCoachRevision present):
+- The MESSAGE is the athlete's ORIGINAL request. The short latest answer is in pendingCoachRevision.clarificationAnswer and the full Q&A history is in clarifications/revisionTransaction.
+- Combine the original request with EVERY answered clarification, then return the revision. Never treat the short answer as a new request, and never re-ask a question that already has an answer.
+- Use pendingCoachRevision.targetDateOverride as the target date when set; otherwise resolve clarificationAnswer against context.dateGuide.
 
 Exact clarify shape:
 {
@@ -109,11 +122,28 @@ Every item must have exactly:
 
 Use null for nullable item fields exactly as shown in the visible snapshot.`;
 
+export interface CoachRevisionDateGuideEntry {
+  date: string;
+  weekday: string;
+  /** Signed day offset from todayISO (negative = past). */
+  daysFromToday: number;
+  relation: 'past' | 'today' | 'upcoming';
+}
+
 export interface CoachRevisionProposalLLMContext {
   schemaVersion: typeof COACH_REVISION_PROPOSAL_SCHEMA_VERSION;
   todayISO?: string;
   nowISO?: string;
   timezone?: string;
+  /** Deterministic, app-computed date resolution guide: today's weekday plus
+   *  every visible date with weekday + offset. The model must use this to
+   *  resolve relative phrases ("tomorrow", "next Monday") instead of doing
+   *  its own calendar arithmetic or asking. */
+  dateGuide: {
+    todayISO: string;
+    todayWeekday: string;
+    visibleDates: CoachRevisionDateGuideEntry[];
+  } | null;
   visibleSnapshot: CoachVisibleWeekSnapshot;
   pendingClarifier: ReturnType<typeof summarisePendingClarifier>;
   recentContext?: unknown;
@@ -233,8 +263,50 @@ export class LLMSemanticCoachRevisionProposalAdapter
 
     const json = await resp.json();
     logger.debug('[coach-revision-proposal] raw', truncate(JSON.stringify(json)));
+    logger.debug('[coach-revision-proposal] served_by', {
+      provider: resp.headers?.get?.('x-coach-provider') ?? null,
+      model: resp.headers?.get?.('x-coach-model') ?? null,
+    });
     return json;
   }
+}
+
+const WEEKDAY_NAMES = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+] as const;
+
+function weekdayFromISODate(date: string): string {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return 'Unknown';
+  return WEEKDAY_NAMES[parsed.getUTCDay()];
+}
+
+function daysBetweenISODates(from: string, to: string): number {
+  const a = new Date(`${from}T00:00:00Z`).getTime();
+  const b = new Date(`${to}T00:00:00Z`).getTime();
+  if (Number.isNaN(a) || Number.isNaN(b)) return 0;
+  return Math.round((b - a) / 86_400_000);
+}
+
+export function buildCoachRevisionDateGuide(args: {
+  todayISO: string | undefined;
+  visibleSnapshot: CoachVisibleWeekSnapshot;
+}): CoachRevisionProposalLLMContext['dateGuide'] {
+  const todayISO = args.todayISO?.trim();
+  if (!todayISO) return null;
+  return {
+    todayISO,
+    todayWeekday: weekdayFromISODate(todayISO),
+    visibleDates: args.visibleSnapshot.days.map((day) => {
+      const daysFromToday = daysBetweenISODates(todayISO, day.date);
+      return {
+        date: day.date,
+        weekday: weekdayFromISODate(day.date),
+        daysFromToday,
+        relation: daysFromToday < 0 ? 'past' : daysFromToday === 0 ? 'today' : 'upcoming',
+      };
+    }),
+  };
 }
 
 export function buildCoachRevisionProposalLLMContext(
@@ -245,6 +317,10 @@ export function buildCoachRevisionProposalLLMContext(
     todayISO: input.todayISO,
     nowISO: input.nowISO,
     timezone: input.timezone,
+    dateGuide: buildCoachRevisionDateGuide({
+      todayISO: input.todayISO,
+      visibleSnapshot: input.visibleSnapshot,
+    }),
     visibleSnapshot: input.visibleSnapshot,
     pendingClarifier: summarisePendingClarifier(input.pendingClarifier ?? null),
     recentContext: summariseRecentContext(input.recentContext),
@@ -281,6 +357,17 @@ function summarisePendingClarifier(pending: PendingCoachClarifier | null) {
             targetDate: pending.programEditDraftEnvelope.draft.targetDate,
             protectedTargets: pending.programEditDraftEnvelope.draft.protectedTargets,
           },
+        }
+      : null,
+    // The revision transaction itself: original wording, accumulated intent,
+    // and every clarification round so far. This is what lets a short answer
+    // like "the 6th" resume the original request instead of arriving bare.
+    revisionTransaction: pending.coachRevisionProposalEnvelope
+      ? {
+          continuationId: pending.coachRevisionProposalEnvelope.continuationId,
+          originalUserWording: pending.coachRevisionProposalEnvelope.originalUserWording,
+          partialIntent: pending.coachRevisionProposalEnvelope.partialIntent,
+          clarifications: pending.coachRevisionProposalEnvelope.clarifications ?? [],
         }
       : null,
   };
