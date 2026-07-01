@@ -260,7 +260,7 @@ export function decideProgramEditDraftFrontDoor(
     };
   }
 
-  if (draft.isCompound) {
+  if (isEffectivelyCompoundProgramEditDraft(draft)) {
     return {
       kind: 'unsupported',
       route: 'program_edit_draft_compound_deferred',
@@ -311,7 +311,7 @@ export function validateProgramEditAgainstDraft(
     );
   }
 
-  if (draft.isCompound) {
+  if (isEffectivelyCompoundProgramEditDraft(draft)) {
     return blockedDraftGuard(
       'program_edit_draft_guard_compound_deferred',
       'compound_draft_not_executable',
@@ -377,6 +377,30 @@ export function validateProgramEditAgainstDraft(
   }
 
   return { kind: 'ok', route: 'program_edit_draft_guard_ok' };
+}
+
+export function isEffectivelyCompoundProgramEditDraft(
+  draft: ProgramEditDraft | null | undefined,
+): boolean {
+  if (!draft?.isCompound) return false;
+  const executableActions = draft.proposedActions.length > 0
+    ? draft.proposedActions
+    : [primaryDraftAction(draft)];
+  if (executableActions.length <= 1) return false;
+  const first = executableActions[0];
+  return executableActions.some((action) => !sameExecutableDraftAction(first, action));
+}
+
+function sameExecutableDraftAction(
+  left: ProgramEditDraftAction,
+  right: ProgramEditDraftAction,
+): boolean {
+  return left.intent === right.intent &&
+    left.targetDomain === right.targetDomain &&
+    left.actionScope === right.actionScope &&
+    (left.targetDate ?? null) === (right.targetDate ?? null) &&
+    (left.targetSessionId ?? null) === (right.targetSessionId ?? null) &&
+    (left.targetItemId ?? null) === (right.targetItemId ?? null);
 }
 
 function blockedDraftGuard(

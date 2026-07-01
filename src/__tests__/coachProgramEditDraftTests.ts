@@ -15,8 +15,10 @@ import type { CoachTargetFrame } from '../utils/coachTargetFrame';
 import {
   buildProgramEditDraft,
   decideProgramEditDraftFrontDoor,
+  isEffectivelyCompoundProgramEditDraft,
   validateProgramEditAgainstDraft,
   type ProgramEditDraft,
+  type ProgramEditDraftAction,
 } from '../utils/coachProgramEditDraft';
 import {
   fingerprintVisibleProgramDay,
@@ -419,6 +421,154 @@ section('[12] Stage 3B ambiguous and compound drafts stop before legacy');
   eq('compound draft deferred safely', compoundDecision.kind, 'unsupported');
   ok('compound does not generic fallback', compoundDecision.kind !== 'allow_conversation', compoundDecision);
   ok('compound does not enter compatibility yet', compoundDecision.kind !== 'allow_compatibility', compoundDecision);
+}
+
+section('[12b] Resumed draft support gate uses executable action shape');
+{
+  const baseStrength = draft('keep conditioning but remove lower strength');
+  const overMarkedStrength: ProgramEditDraft = {
+    ...baseStrength,
+    targetDate: '2026-07-06',
+    targetSessionId: null,
+    targetItemId: null,
+    missingFields: ['targetItemId'],
+    proposedActions: baseStrength.proposedActions.map((action): ProgramEditDraftAction => ({
+      ...action,
+      targetDate: '2026-07-06',
+      targetSessionId: null,
+      targetItemId: null,
+    })),
+    verifierExpectations: baseStrength.verifierExpectations.map((expectation) => ({
+      ...expectation,
+      targetDate: '2026-07-06',
+    })),
+    protectedTargets: baseStrength.protectedTargets.map((target) => ({
+      ...target,
+      targetDate: '2026-07-06',
+    })),
+    isCompound: true,
+    reason: `${baseStrength.reason}:resumed_semantic_overmarked_compound`,
+  };
+  eq('over-marked strength draft is not effectively compound',
+    isEffectivelyCompoundProgramEditDraft(overMarkedStrength),
+    false);
+  eq('over-marked strength draft reaches typed finaliser',
+    decideProgramEditDraftFrontDoor(overMarkedStrength).kind,
+    'allow_compatibility');
+  eq('strength targetItemId guard does not ask generic item question',
+    decideProgramEditDraftFrontDoor(overMarkedStrength).kind,
+    'allow_compatibility');
+  const strengthFinal = finalEdit({
+    intent: 'remove',
+    targetDomain: 'strength',
+    editScope: 'remove_strength_block',
+    requestedChange: 'unknown',
+    targetDate: '2026-07-06',
+  });
+  eq('over-marked strength draft guard accepts matching strength-block edit',
+    validateProgramEditAgainstDraft(overMarkedStrength, strengthFinal).kind,
+    'ok');
+
+  const conditioning = draft('remove conditioning today');
+  const resumedConditioning: ProgramEditDraft = {
+    ...conditioning,
+    targetDate: '2026-07-06',
+    proposedActions: conditioning.proposedActions.map((action) => ({
+      ...action,
+      targetDate: '2026-07-06',
+    })),
+    verifierExpectations: conditioning.verifierExpectations.map((expectation) => ({
+      ...expectation,
+      targetDate: '2026-07-06',
+    })),
+    isCompound: false,
+  };
+  eq('resumed conditioning-block remove reaches finaliser',
+    decideProgramEditDraftFrontDoor(resumedConditioning).kind,
+    'allow_compatibility');
+
+  const sourceFrame = frameForSession('Team Training');
+  const moveAction: ProgramEditDraftAction = {
+    intent: 'move',
+    targetDomain: 'schedule',
+    actionScope: 'whole_session',
+    targetDate: '2026-07-06',
+    targetSessionId: sourceFrame.resolvedTarget?.itemId ?? null,
+    targetItemId: null,
+    sourceTarget: sourceFrame.resolvedTarget,
+    reason: 'resumed_destination_date',
+  };
+  const resumedMove: ProgramEditDraft = {
+    ...draft('move it to Monday', sourceFrame),
+    intent: 'move',
+    targetDomain: 'schedule',
+    actionScope: 'whole_session',
+    targetDate: '2026-07-06',
+    targetSessionId: sourceFrame.resolvedTarget?.itemId ?? null,
+    targetItemId: null,
+    sourceTarget: sourceFrame.resolvedTarget,
+    missingFields: [],
+    proposedActions: [moveAction],
+    verifierExpectations: [{
+      kind: 'domain_changed',
+      targetDomain: 'schedule',
+      actionScope: 'whole_session',
+      targetDate: '2026-07-06',
+      reason: 'move_session_after_destination_clarification',
+    }],
+    isCompound: false,
+  };
+  eq('resumed session move reaches finaliser',
+    decideProgramEditDraftFrontDoor(resumedMove).kind,
+    'allow_compatibility');
+
+  const reduceDuration = draft('make conditioning easier');
+  const resumedReduce: ProgramEditDraft = {
+    ...reduceDuration,
+    intent: 'reduce',
+    targetDomain: 'conditioning',
+    actionScope: 'duration',
+    targetDate: '2026-07-06',
+    missingFields: [],
+    proposedActions: [{
+      intent: 'edit',
+      targetDomain: 'conditioning',
+      actionScope: 'duration',
+      targetDate: '2026-07-06',
+      targetSessionId: reduceDuration.targetSessionId,
+      targetItemId: reduceDuration.targetItemId,
+      sourceTarget: reduceDuration.sourceTarget,
+      reason: 'resumed_reduce_duration',
+    }],
+    verifierExpectations: [{
+      kind: 'domain_changed',
+      targetDomain: 'conditioning',
+      actionScope: 'duration',
+      targetDate: '2026-07-06',
+      reason: 'reduce_duration_after_date_clarification',
+    }],
+    isCompound: false,
+  };
+  eq('resumed reduce duration reaches finaliser',
+    decideProgramEditDraftFrontDoor(resumedReduce).kind,
+    'allow_compatibility');
+
+  const actualCompound = draft("I can't make team training tonight, remove it and add conditioning", sourceFrame);
+  const resumedCompound: ProgramEditDraft = {
+    ...actualCompound,
+    targetDate: '2026-07-06',
+    proposedActions: actualCompound.proposedActions.map((action) => ({
+      ...action,
+      targetDate: '2026-07-06',
+    })),
+    isCompound: true,
+  };
+  eq('actual resumed compound remains effectively compound',
+    isEffectivelyCompoundProgramEditDraft(resumedCompound),
+    true);
+  eq('actual resumed compound is still safely unsupported',
+    decideProgramEditDraftFrontDoor(resumedCompound).kind,
+    'unsupported');
 }
 
 section('[13] Stage 3C-1 guard blocks draft/final domain mismatches');

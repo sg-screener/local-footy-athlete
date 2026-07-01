@@ -2034,15 +2034,15 @@ async function runControllerPendingDateSection() {
         constraints: ['keep conditioning:conditioning_block'],
         proposedActions: [removeStrength],
         verifierExpectations,
-        isCompound: false,
-        reason: 'semantic_lower_strength_keep_flush',
+        isCompound: true,
+        reason: 'semantic_lower_strength_keep_flush_overmarked_compound',
       };
       return {
         schemaVersion: SEMANTIC_PROGRAM_EDIT_DRAFT_SCHEMA_VERSION,
         status: 'draft',
         confidence: 0.91,
         draft: semanticDraft,
-        reason: 'semantic_lower_strength_keep_flush',
+        reason: 'semantic_lower_strength_keep_flush_overmarked_compound',
       };
     },
   };
@@ -2133,7 +2133,8 @@ async function runControllerPendingDateSection() {
     secondHandled.handled === true &&
       /^Done\b/i.test(secondReply) &&
       /strength work/i.test(secondReply) &&
-      !/which visible item/i.test(secondReply),
+      !/which visible item/i.test(secondReply) &&
+      !/compound edit|remove-and-add/i.test(secondReply),
     JSON.stringify({ secondDebug, secondReply }));
   const nextMondayOverride = useProgramStore.getState().dateOverrides?.['2026-07-06'] as any;
   ok('17.4 resumed draft removes strength and preserves protected conditioning',
