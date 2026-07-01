@@ -467,6 +467,40 @@ section('[8] make tomorrow lighter via conservative reduction');
 
   eq('validator passes', result.status, 'valid');
   ok('strength items changed', result.diff.dateDiffs[0].itemDiffs.some((entry) => entry.kind === 'changed' && entry.sectionKind === 'strength'));
+
+  section('[8b] nulling a populated prescription field is not a reduction');
+  {
+    const nulled = clone(daySnap(before, TUE));
+    const strength = sectionOf(nulled, 'strength');
+    strength.items[0].prescription!.repsMin = null;
+    const p2 = proposal({
+      intent: { intent: 'reduce', targetDomain: 'strength', actionScope: 'strength_section' },
+      dates: [TUE],
+      revisedDays: [nulled],
+    });
+    const result2 = validateCoachRevisionDiff({ before, proposal: p2 });
+    eq('nullified field rejected', result2.status, 'invalid');
+    ok('non_conservative_reduction issue',
+      result2.issues.some((entry) => entry.code === 'non_conservative_reduction'),
+      result2.issues);
+  }
+
+  section('[8c] dropping the whole prescription is not a reduction');
+  {
+    const dropped = clone(daySnap(before, TUE));
+    const strength = sectionOf(dropped, 'strength');
+    strength.items[0].prescription = null;
+    const p3 = proposal({
+      intent: { intent: 'reduce', targetDomain: 'strength', actionScope: 'strength_section' },
+      dates: [TUE],
+      revisedDays: [dropped],
+    });
+    const result3 = validateCoachRevisionDiff({ before, proposal: p3 });
+    eq('dropped prescription rejected', result3.status, 'invalid');
+    ok('non_conservative_reduction issue for dropped prescription',
+      result3.issues.some((entry) => entry.code === 'non_conservative_reduction'),
+      result3.issues);
+  }
 }
 
 section('[9] malformed proposal fails schema validation');

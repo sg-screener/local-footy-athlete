@@ -754,7 +754,12 @@ function isConservativeReduction(
   if (before.title !== after.title) return false;
   const beforeRx = before.prescription;
   const afterRx = after.prescription;
-  if (!beforeRx || !afterRx) return true;
+  // A reduction may only lower numbers that existed before. If the snapshot
+  // had no prescription there is nothing to reduce, but DROPPING an existing
+  // prescription (or any of its populated fields) is silent nullification,
+  // not a conservative reduction.
+  if (!beforeRx) return true;
+  if (!afterRx) return false;
   const setsOk = nullableNumberReducedOrSame(beforeRx.sets, afterRx.sets);
   const repsMinOk = nullableNumberReducedOrSame(beforeRx.repsMin, afterRx.repsMin);
   const repsMaxOk = nullableNumberReducedOrSame(beforeRx.repsMax, afterRx.repsMax);
@@ -762,7 +767,8 @@ function isConservativeReduction(
 }
 
 function nullableNumberReducedOrSame(before: number | null, after: number | null): boolean {
-  if (before === null || after === null) return true;
+  if (before === null) return true;
+  if (after === null) return false;
   return after <= before;
 }
 
