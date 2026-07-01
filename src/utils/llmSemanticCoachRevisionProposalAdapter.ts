@@ -247,18 +247,27 @@ export class LLMSemanticCoachRevisionProposalAdapter
 
     if (!resp.ok) {
       const body = await resp.text().catch(() => '');
+      // The edge function wraps upstream failures (LLM HTTP errors, JSON
+      // truncation/parse failures) in a JSON body with error + detail. That
+      // detail is the ONLY way to distinguish 502 flavors, so it must reach
+      // both the warn log and the thrown error (which surfaces in the [dev]
+      // fail-loud reply and diagnostics).
+      const bodyPreview = truncate(body.replace(/\s+/g, ' '), 200);
       logger.warn('[coach-revision-proposal] transport_error', {
         kind: 'http_error',
         status: resp.status,
         endpoint: this.endpoint,
         functionName: this.functionName,
+        bodyPreview,
         diagnostic:
           resp.status === 404
             ? 'coach revision proposal endpoint missing / HTTP 404'
             : undefined,
       });
-      logger.debug('[coach-revision-proposal] http_error body preview', truncate(body));
-      throw new Error(`coach revision proposal endpoint HTTP ${resp.status}`);
+      throw new Error(
+        `coach revision proposal endpoint HTTP ${resp.status}` +
+          (bodyPreview ? ` — ${bodyPreview}` : ''),
+      );
     }
 
     const json = await resp.json();

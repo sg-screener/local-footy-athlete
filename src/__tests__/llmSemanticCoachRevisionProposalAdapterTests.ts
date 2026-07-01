@@ -231,6 +231,9 @@ async function run() {
     ok('[3] issue carries HTTP status for fail-loud messaging',
       result.kind === 'invalid' && result.issues.some((entry) => entry.includes('HTTP 404')),
       result.kind === 'invalid' ? result.issues : result);
+    ok('[3] issue carries response body detail for 502 disambiguation',
+      result.kind === 'invalid' && result.issues.some((entry) => entry.includes('missing')),
+      result.kind === 'invalid' ? result.issues : result);
   }
 
   {
