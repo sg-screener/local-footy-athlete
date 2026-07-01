@@ -45,6 +45,7 @@ Continuing a clarification (context.pendingClarifier.revisionTransaction or cont
 - The MESSAGE is the athlete's ORIGINAL request. The short latest answer is in pendingCoachRevision.clarificationAnswer and the full Q&A history is in clarifications/revisionTransaction.
 - Combine the original request with EVERY answered clarification, then return the revision. Never treat the short answer as a new request, and never re-ask a question that already has an answer.
 - Use pendingCoachRevision.targetDateOverride as the target date when set; otherwise resolve clarificationAnswer against context.dateGuide.
+- userIntent.protectedRefs must be ids that exist in the TARGET day's snapshot. If the target date changed during clarification, re-derive protection from the original request against the new day — never copy refs that were minted for a different date.
 
 Exact clarify shape:
 {

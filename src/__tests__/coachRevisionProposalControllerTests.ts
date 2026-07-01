@@ -868,6 +868,65 @@ async function run() {
   }
 
   {
+    // STALE PROTECTED REFS: refs are per-snapshot bindings (section ids embed
+    // dates). When a stale-date resume patches the target date, old refs must
+    // NOT be fed back — an obedient model echoes them and the validator then
+    // rightly rejects refs that cannot exist on the new day (live failure
+    // 2026-07-02: "remove conditioning from Monday" → "Yes" → invalid).
+    const originalMessage = 'Can you remove conditioning from Monday?';
+    const adapter = new RecordingRevisionAdapter((input) => {
+      const context = input.recentContext as any;
+      const pendingRev = context?.pendingCoachRevision;
+      const targetDate = pendingRev?.targetDateOverride ?? PAST_MONDAY;
+      const current = dayByDate(input, targetDate);
+      const strength = sectionOf(current, 'strength');
+      const after = clone(current);
+      after.workout!.sections = [strength];
+      // Obedient echo: whatever protection the context carries, copy it —
+      // fresh turns derive from the day, resumes copy the passed intent.
+      const echoedRefs = pendingRev
+        ? [...(pendingRev.partialIntent?.protectedRefs ?? [])]
+        : [strength.id, ...strength.items.map((item) => item.id)];
+      return revision({
+        input,
+        intent: { intent: 'remove', targetDomain: 'conditioning', actionScope: 'conditioning_section' },
+        revisedDay: after,
+        protectedRefs: echoedRefs,
+        targetDate,
+      });
+    });
+
+    const first = await runControllerTurn({
+      message: originalMessage,
+      adapter,
+      visibleDate: PAST_MONDAY,
+    });
+    ok('[14] stale-date question asked', /in the past/.test(first.reply), first.reply);
+    const storedRefs =
+      first.pending?.coachRevisionProposalEnvelope?.partialIntent?.protectedRefs ?? [];
+    ok('[14] stored refs are date-stamped from past Monday',
+      storedRefs.some((ref) => ref.includes(PAST_MONDAY)),
+      storedRefs);
+
+    const second = await runControllerTurn({
+      message: 'Yes',
+      adapter,
+      seed: false,
+      visibleDate: NEXT_MONDAY,
+    });
+    eq('[14] stale refs cleared before resume regeneration',
+      ((adapter.calls[1]?.recentContext as any)?.pendingCoachRevision?.partialIntent?.protectedRefs ?? ['sentinel']).length,
+      0);
+    ok('[14] resumed conditioning removal applied',
+      /^Done\./.test(second.reply),
+      { reply: second.reply, route: (second.debug as CoachTurnDebug | null)?.route });
+    eq('[14] conditioning removed on next Monday', second.visible.conditioningItems.length, 0);
+    ok('[14] strength preserved on next Monday',
+      second.visible.strengthItems.length > 0,
+      second.visible.items);
+  }
+
+  {
     // Round cap: a model that clarifies forever gets cut off honestly after
     // COACH_REVISION_MAX_CLARIFY_ROUNDS, with no mutation and no legacy path.
     const adapter = new RecordingRevisionAdapter(() =>

@@ -1497,7 +1497,7 @@ async function buildCoachRevisionProposalForPendingResume(args: {
         partialIntent: patchedIntent,
         originalProposalDates: args.envelope.proposal?.scope.dates ?? [],
         instruction:
-          'Regenerate the revised visible snapshot from originalUserWording combined with every answered clarification. Use targetDateOverride when set; otherwise resolve clarificationAnswer against context.visibleDates. Never reinterpret a short clarification answer as a new request.',
+          'Regenerate the revised visible snapshot from originalUserWording combined with every answered clarification. Use targetDateOverride when set; otherwise resolve clarificationAnswer against context.visibleDates. Never reinterpret a short clarification answer as a new request. Re-derive userIntent.protectedRefs from originalUserWording against the TARGET day\'s snapshot ids only — never reuse refs from a different date.',
       },
     },
     todayISO: args.input.todayISO,
@@ -2021,10 +2021,24 @@ function patchPendingCoachRevisionEnvelopeTargetDate(args: {
   envelope: PendingCoachRevisionProposalEnvelope;
   targetDate: string;
 }): PendingCoachRevisionProposalEnvelope {
+  // Protected refs are PER-SNAPSHOT bindings (some literally embed the date,
+  // e.g. section:2026-06-29:...). When the target date changes they are
+  // invalid by construction: carrying them forward makes the model echo refs
+  // that cannot exist on the new day, which the validator then rightly
+  // rejects. Protection INTENT lives in originalUserWording — the model must
+  // re-derive refs against the new day's snapshot.
+  const dateChanged = !!args.envelope.partialIntent &&
+    !args.envelope.partialIntent.targetDates.includes(args.targetDate);
   return {
     ...args.envelope,
     partialIntent: args.envelope.partialIntent
-      ? { ...args.envelope.partialIntent, targetDates: [args.targetDate] }
+      ? {
+          ...args.envelope.partialIntent,
+          targetDates: [args.targetDate],
+          protectedRefs: dateChanged
+            ? []
+            : args.envelope.partialIntent.protectedRefs,
+        }
       : null,
     proposal: args.envelope.proposal
       ? {
@@ -2032,6 +2046,9 @@ function patchPendingCoachRevisionEnvelopeTargetDate(args: {
           userIntent: {
             ...args.envelope.proposal.userIntent,
             targetDates: [args.targetDate],
+            protectedRefs: dateChanged
+              ? []
+              : args.envelope.proposal.userIntent.protectedRefs,
           },
           scope: {
             ...args.envelope.proposal.scope,
