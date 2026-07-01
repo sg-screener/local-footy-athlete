@@ -143,12 +143,29 @@ export interface PendingProgramEditDraftEnvelope {
   continuationId: string;
 }
 
+/** One clarification round in a revision transaction: what was asked, and the
+ *  athlete's raw answer once it arrives. Accumulated so resumed turns always
+ *  regenerate from ORIGINAL wording + every answered slot, never from the
+ *  latest short reply alone. */
+export interface PendingCoachRevisionClarification {
+  missingField: string;
+  question: string;
+  answer: string | null;
+}
+
 export interface PendingCoachRevisionProposalEnvelope {
   source: 'semantic';
   originalUserWording: string;
   continuationId: string;
-  partialIntent: CoachRevisionIntent;
-  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
+  /** Null when the transaction began from a clarify response that carried no
+   *  partial intent. Filled/refined as rounds progress. */
+  partialIntent: CoachRevisionIntent | null;
+  /** Full proposal when the transaction began from a validated revision
+   *  (e.g. stale-date). Null for clarify-origin transactions. */
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }> | null;
+  /** Accumulated clarification rounds, oldest first. The last entry has
+   *  answer: null while its question is outstanding. */
+  clarifications?: PendingCoachRevisionClarification[];
 }
 
 export interface PendingClarificationSlot {

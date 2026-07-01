@@ -256,6 +256,49 @@ function removeStrengthProposal(input: SemanticCoachRevisionProposalAdapterInput
   });
 }
 
+function clarifyProposal(args: {
+  question?: string;
+  missingField?: string;
+  intent?: CoachRevisionProposal extends { kind: 'clarify' } ? never : unknown;
+} = {}): unknown {
+  return {
+    schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
+    kind: 'clarify',
+    confidence: 0.9,
+    question: args.question ?? 'Which Monday do you mean?',
+    missingField: args.missingField ?? 'targetDate',
+    candidateOptions: [],
+    partialIntent: {
+      intent: 'remove',
+      targetDomain: 'strength',
+      actionScope: 'strength_section',
+      targetDates: [],
+      protectedRefs: [],
+      reason: 'controller_clarify_test',
+    },
+    reason: 'ambiguous_date',
+  };
+}
+
+function removeStrengthKeepConditioningAt(
+  input: SemanticCoachRevisionProposalAdapterInput,
+  targetDate: string,
+): CoachRevisionProposal {
+  const current = dayByDate(input, targetDate);
+  const conditioning = sectionOf(current, 'conditioning');
+  const after = clone(current);
+  after.workout!.title = conditioning.title;
+  after.workout!.workoutType = 'Conditioning';
+  after.workout!.sections = [conditioning];
+  return revision({
+    input,
+    intent: { intent: 'remove', targetDomain: 'strength', actionScope: 'strength_section' },
+    revisedDay: after,
+    protectedRefs: [conditioning.id],
+    targetDate,
+  });
+}
+
 function pendingResumeTargetDate(input: SemanticCoachRevisionProposalAdapterInput): string {
   const context = input.recentContext as any;
   return context?.pendingCoachRevision?.targetDateOverride ?? PAST_MONDAY;
@@ -594,6 +637,94 @@ async function run() {
       result.reply);
     eq('[8] legacy classifier not called', result.classifierCalls, 0);
     ok('[8] no override written', !result.dateOverrides[THURSDAY], result.dateOverrides);
+  }
+
+  {
+    // Clarification transaction: a clarify response stores pending state, and
+    // the short answer resumes with ORIGINAL wording + the answered slot —
+    // the "which Monday?" → "next Monday" flow must converge in one round.
+    const originalMessage = 'drop the lower work but keep the flush';
+    let call = 0;
+    const adapter = new RecordingRevisionAdapter((input) => {
+      call++;
+      if (call === 1) return clarifyProposal({ question: 'Which Monday do you mean: 2026-06-29 or 2026-07-06?' });
+      const context = input.recentContext as any;
+      const targetDate = context?.pendingCoachRevision?.targetDateOverride ?? NEXT_MONDAY;
+      return removeStrengthKeepConditioningAt(input, targetDate);
+    });
+
+    const first = await runControllerTurn({ message: originalMessage, adapter });
+    eq('[10] first turn asks the clarify question', first.handled.handled, true);
+    ok('[10] clarify question relayed', /Which Monday/.test(first.reply), first.reply);
+    ok('[10] pending envelope stored on clarify',
+      !!first.pending?.coachRevisionProposalEnvelope,
+      first.pending);
+    eq('[10] one outstanding clarification round',
+      first.pending?.coachRevisionProposalEnvelope?.clarifications?.length,
+      1);
+    eq('[10] envelope keeps original wording',
+      first.pending?.coachRevisionProposalEnvelope?.originalUserWording,
+      originalMessage);
+    ok('[10] no override before answer',
+      Object.keys(first.dateOverrides).length === 0,
+      first.dateOverrides);
+
+    const second = await runControllerTurn({
+      message: 'next Monday',
+      adapter,
+      seed: false,
+      visibleDate: NEXT_MONDAY,
+    });
+    eq('[10] adapter called twice', adapter.calls.length, 2);
+    eq('[10] resume uses original wording', adapter.calls[1]?.userMessage, originalMessage);
+    eq('[10] raw answer carried to resume',
+      (adapter.calls[1]?.recentContext as any)?.pendingCoachRevision?.clarificationAnswer,
+      'next Monday');
+    ok('[10] answered round recorded',
+      ((adapter.calls[1]?.recentContext as any)?.pendingCoachRevision?.clarifications ?? [])
+        .some((entry: any) => entry.answer === 'next Monday'),
+      (adapter.calls[1]?.recentContext as any)?.pendingCoachRevision);
+    ok('[10] done reply after convergence', /^Done\./.test(second.reply), second.reply);
+    ok('[10] override written for resolved Monday',
+      !!second.dateOverrides[NEXT_MONDAY],
+      second.dateOverrides);
+    eq('[10] strength removed on resolved Monday', second.visible.strengthItems.length, 0);
+    ok('[10] conditioning preserved on resolved Monday',
+      second.visible.conditioningItems.length > 0,
+      second.visible.items);
+    eq('[10] pending cleared after apply',
+      usePendingCoachClarifierStore.getState().pending,
+      null);
+    eq('[10] legacy classifier never called', second.classifierCalls, 0);
+  }
+
+  {
+    // Round cap: a model that clarifies forever gets cut off honestly after
+    // COACH_REVISION_MAX_CLARIFY_ROUNDS, with no mutation and no legacy path.
+    const adapter = new RecordingRevisionAdapter(() =>
+      clarifyProposal({ question: 'Which session do you mean?' }));
+    const first = await runControllerTurn({ message: 'change my plan a bit', adapter });
+    ok('[11] round 1 pending stored', !!first.pending?.coachRevisionProposalEnvelope, first.pending);
+
+    const second = await runControllerTurn({ message: 'the usual one', adapter, seed: false });
+    eq('[11] round 2 outstanding',
+      second.pending?.coachRevisionProposalEnvelope?.clarifications?.length,
+      2);
+    const third = await runControllerTurn({ message: 'hmm', adapter, seed: false });
+    eq('[11] round 3 outstanding',
+      third.pending?.coachRevisionProposalEnvelope?.clarifications?.length,
+      3);
+    const fourth = await runControllerTurn({ message: 'that one', adapter, seed: false });
+    ok('[11] rounds exhausted declines honestly',
+      /left the plan as is/.test(fourth.reply),
+      fourth.reply);
+    eq('[11] pending cleared after exhaustion',
+      usePendingCoachClarifierStore.getState().pending,
+      null);
+    ok('[11] no override ever written',
+      Object.keys(fourth.dateOverrides).length === 0,
+      fourth.dateOverrides);
+    eq('[11] legacy classifier never called', fourth.classifierCalls, 0);
   }
 }
 
