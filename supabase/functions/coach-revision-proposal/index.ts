@@ -108,6 +108,7 @@ serve(async (req: Request) => {
   }
 
   const userBlock = `MESSAGE:\n${message}\n\nSCHEMA (JSON):\n${JSON.stringify(body.schema)}\n\nCONTEXT (JSON):\n${JSON.stringify(body.context)}`;
+  const model = provider === "openai" ? getOpenAIModel() : getAnthropicModel();
 
   let upstream: Response;
   try {
@@ -119,7 +120,7 @@ serve(async (req: Request) => {
           "Authorization": `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: getOpenAIModel(),
+          model,
           instructions: systemPrompt,
           input: [{ role: "user", content: userBlock }],
           max_output_tokens: 3600,
@@ -133,7 +134,7 @@ serve(async (req: Request) => {
           "anthropic-version": "2023-06-01",
         },
         body: JSON.stringify({
-          model: getAnthropicModel(),
+          model,
           max_tokens: 3200,
           system: systemPrompt,
           messages: [{ role: "user", content: userBlock }],
@@ -165,7 +166,17 @@ serve(async (req: Request) => {
   }
 
   try {
-    return jsonResponse(JSON.parse(jsonText));
+    // Model observability: header only (never in the body — the client
+    // validates the body as a raw CoachRevisionProposal).
+    return new Response(JSON.stringify(JSON.parse(jsonText)), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "x-coach-provider": provider,
+        "x-coach-model": model,
+        ...corsHeaders(),
+      },
+    });
   } catch (err) {
     return jsonResponse({
       error: "JSON parse failed",
