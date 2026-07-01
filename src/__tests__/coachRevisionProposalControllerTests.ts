@@ -69,6 +69,19 @@ class RecordingRevisionAdapter implements SemanticCoachRevisionProposalAdapter {
   }
 }
 
+/** Simulates transport failure (404/timeout/network) the way the live
+ *  LLMSemanticCoachRevisionProposalAdapter surfaces it: by throwing. */
+class ThrowingRevisionAdapter implements SemanticCoachRevisionProposalAdapter {
+  calls = 0;
+
+  constructor(private readonly message: string) {}
+
+  buildProposal(): unknown {
+    this.calls++;
+    throw new Error(this.message);
+  }
+}
+
 function ex(name: string, id: string, sets = 3, workoutId = 'workout-thu-mixed'): any {
   return {
     id,
@@ -305,7 +318,7 @@ function protectedViolationProposal(input: SemanticCoachRevisionProposalAdapterI
 
 async function runControllerTurn(args: {
   message: string;
-  adapter: SemanticCoachRevisionProposalAdapter;
+  adapter: SemanticCoachRevisionProposalAdapter | null;
   seed?: boolean;
   visibleDate?: string;
 }) {
@@ -489,6 +502,67 @@ async function run() {
     eq('[5] pending cleared after apply',
       usePendingCoachClarifierStore.getState().pending,
       null);
+  }
+
+  {
+    // Stage 0 fail-loud: active mode + null adapter must dead-end with a dev
+    // misconfig reply — never continue into legacy mutation paths.
+    const result = await runControllerTurn({
+      message: 'drop lower work tomorrow but keep the flush',
+      adapter: null,
+    });
+    eq('[6] handled', result.handled.handled, true);
+    eq('[6] misconfigured route',
+      (result.debug as CoachTurnDebug | null)?.route,
+      'coach-revision-proposal-misconfigured');
+    ok('[6] dev misconfig reply',
+      /\[dev\] Coach revision mode is active but the endpoint adapter is missing/.test(result.reply),
+      result.reply);
+    eq('[6] legacy classifier not called', result.classifierCalls, 0);
+    ok('[6] no override written', !result.dateOverrides[THURSDAY], result.dateOverrides);
+    ok('[6] visible program unchanged',
+      result.visible.strengthItems.length > 0 && result.visible.conditioningItems.length > 0,
+      result.visible.items);
+  }
+
+  {
+    // Stage 0 fail-loud: endpoint 404 (adapter throws like the live adapter
+    // does) must reply with an explicit endpoint-failure message, make no
+    // mutation, and never fall back to legacy paths.
+    const adapter = new ThrowingRevisionAdapter('coach revision proposal endpoint HTTP 404');
+    const result = await runControllerTurn({
+      message: 'drop lower work tomorrow but keep the flush',
+      adapter,
+    });
+    eq('[7] adapter attempted', adapter.calls, 1);
+    eq('[7] handled', result.handled.handled, true);
+    eq('[7] invalid route',
+      (result.debug as CoachTurnDebug | null)?.route,
+      'coach-revision-proposal-invalid:adapter_failed');
+    ok('[7] dev endpoint-failure reply',
+      /\[dev\] Coach revision endpoint failed \(.*HTTP 404.*\)\. No changes made/.test(result.reply),
+      result.reply);
+    ok('[7] does not claim validation failure',
+      !/couldn't safely validate/.test(result.reply),
+      result.reply);
+    eq('[7] legacy classifier not called', result.classifierCalls, 0);
+    ok('[7] no override written', !result.dateOverrides[THURSDAY], result.dateOverrides);
+  }
+
+  {
+    // Stage 0 fail-loud: timeout/network failure gets the same dev endpoint
+    // message (distinguishing detail carried in the error text).
+    const adapter = new ThrowingRevisionAdapter('Aborted');
+    const result = await runControllerTurn({
+      message: 'remove conditioning tomorrow',
+      adapter,
+    });
+    eq('[8] handled', result.handled.handled, true);
+    ok('[8] dev endpoint-failure reply on abort',
+      /\[dev\] Coach revision endpoint failed \(Aborted\)/.test(result.reply),
+      result.reply);
+    eq('[8] legacy classifier not called', result.classifierCalls, 0);
+    ok('[8] no override written', !result.dateOverrides[THURSDAY], result.dateOverrides);
   }
 }
 

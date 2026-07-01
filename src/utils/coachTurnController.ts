@@ -1482,6 +1482,26 @@ function emitCoachRevisionProposalDiagnostic(args: {
   logger.debug('[coach-revision-proposal-diagnostic]', args.diagnostic);
 }
 
+/**
+ * Active revision mode is dev-only (see env.ts gating), so these replies can
+ * name infrastructure directly. They exist so endpoint/wiring failures are
+ * impossible to mistake for coach reasoning, and so active mode NEVER falls
+ * back to legacy mutation paths when the revision pipeline is unavailable.
+ */
+const COACH_REVISION_MISCONFIGURED_REPLY =
+  '[dev] Coach revision mode is active but the endpoint adapter is missing ' +
+  '(check EXPO_PUBLIC_SUPABASE_URL / deployment). No changes made.';
+
+function coachRevisionInvalidReply(
+  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'invalid' }>,
+): string {
+  if (result.reason === 'adapter_failed') {
+    const detail = result.issues[0] ?? 'transport error';
+    return `[dev] Coach revision endpoint failed (${detail}). No changes made — check deployment/network.`;
+  }
+  return "I couldn't safely validate that revision, so I left the plan unchanged.";
+}
+
 function isSupportedDevActiveCoachRevision(
   result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>,
 ): boolean {
@@ -2372,7 +2392,9 @@ export async function handleCoachTurn(
           return replyAndFinish(
             input,
             'pending-coach-revision-unavailable',
-            "I couldn't safely resume that revision, so I left the plan unchanged.",
+            revisionMode === 'active' && !input.coachRevisionProposalAdapter
+              ? COACH_REVISION_MISCONFIGURED_REPLY
+              : "I couldn't safely resume that revision, so I left the plan unchanged.",
           );
         }
         if (revisionResult.kind === 'revision') {
@@ -2423,7 +2445,7 @@ export async function handleCoachTurn(
         usePendingCoachClarifierStore.getState().clearPending();
         const reply = revisionResult.kind === 'needs_confirmation'
           ? 'I need confirmation before making that replacement.'
-          : "I couldn't safely validate that revision, so I left the plan unchanged.";
+          : coachRevisionInvalidReply(revisionResult);
         input.setLastCoachDebug({
           intent: 'coach_revision_proposal',
           route: `pending-coach-revision-${revisionResult.kind}`,
@@ -2982,6 +3004,37 @@ export async function handleCoachTurn(
     }
 
     const revisionMode = controllerCoachRevisionProposalMode(input);
+    if (revisionMode === 'active' && !input.coachRevisionProposalAdapter) {
+      // Fail loud: active mode with no adapter means env/endpoint wiring is
+      // broken. Falling through here would silently hand mutation turns back
+      // to legacy paths, which is exactly the failure mode Stage 0 removes.
+      logger.error('[coach-revision-proposal] active_mode_without_adapter', {
+        rawMode: input.coachRevisionProposalRawMode ?? null,
+        activeAllowed: input.coachRevisionProposalActiveAllowed ?? null,
+      });
+      emitCoachTurnDiagnostic('coach_revision_proposal_misconfigured', {
+        message: input.userMessage.content,
+        rawRevisionMode: input.coachRevisionProposalRawMode ?? null,
+        revisionMode,
+        revisionAdapterPresent: false,
+      });
+      input.setLastCoachDebug({
+        intent: 'coach_revision_proposal',
+        route: 'coach-revision-proposal-misconfigured',
+        referenceStatus: packet.referenceResolution?.status ?? null,
+        referenceTargetDate: null,
+        referenceTargetName: null,
+        mutationLike: true,
+        legacyCalled: false,
+        replySource: 'deterministic',
+        applied: false,
+      });
+      return replyAndFinish(
+        input,
+        'coach-revision-proposal-misconfigured',
+        COACH_REVISION_MISCONFIGURED_REPLY,
+      );
+    }
     const revisionResult = await buildCoachRevisionProposalForController({
       input,
       packet,
@@ -3120,7 +3173,7 @@ export async function handleCoachTurn(
         return replyAndFinish(
           input,
           'coach-revision-proposal-invalid',
-          "I couldn't safely validate that revision, so I left the plan unchanged.",
+          coachRevisionInvalidReply(revisionResult),
         );
       }
     }

@@ -176,6 +176,19 @@ if (__DEV__ && shouldCreateCoachRevisionProposalAdapter(clientEnv.coachRevisionP
     functionName: clientEnv.coachRevisionProposalFunctionName,
     endpoint: clientEnv.coachRevisionProposalEndpoint,
   });
+  if (
+    clientEnv.coachRevisionProposalMode === 'active' &&
+    (!liveCoachRevisionProposalAdapter || !clientEnv.coachRevisionProposalEndpoint)
+  ) {
+    // Error level so a broken active-mode setup is impossible to miss in
+    // Metro output. The controller independently refuses legacy fallback.
+    logger.error('[coach-revision-proposal] ACTIVE MODE MISCONFIGURED', {
+      adapterPresent: !!liveCoachRevisionProposalAdapter,
+      endpoint: clientEnv.coachRevisionProposalEndpoint || '(empty)',
+      envReady: clientEnv.isReady,
+      missing: clientEnv.missing,
+    });
+  }
 }
 
 /** Local-clock today as YYYY-MM-DD. The UAE is deterministic — it never
