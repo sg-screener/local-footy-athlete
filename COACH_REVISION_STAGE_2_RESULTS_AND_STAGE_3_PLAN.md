@@ -1,0 +1,95 @@
+# CoachRevisionProposal — Stage 2 Results & Stage 3 Plan
+
+Date: 2026-07-02. Verdict: **Stage 2 GO.** Full-state snapshot echo is validated live at app scale on the production-class model. Zero hard fails (wrong "Done" / silent legacy mutation) across the entire live testing day.
+
+---
+
+## 1. Stage 2 Results
+
+Environment: dev-active (`__DEV__`-gated), Supabase `ryzoxwcijoqbguduonov`, edge fn `coach-revision-proposal` ACTIVE, served by **openai / gpt-5.5** (secret `COACH_REVISION_PROPOSAL_LLM_MODEL`, verified via `served_by` header→log).
+
+| # | Flow | Result | Notes |
+|---|------|--------|-------|
+| 1 | "drop the lower work Monday but keep the flush" | ✅ PASS | Incl. stale-date clarify → "Yes" resume; strength removed, flush preserved, verified Done |
+| 2 | "remove conditioning from Monday" | ✅ PASS | Incl. sequential edit on already-overridden day → rest day via shell normalization |
+| 3 | "Bin tomorrows session" | ✅ PASS | Correct date (2026-07-03) first try at 0.96 on gpt-5.5 |
+| 4 | "Make today lighter" | ✅ PASS | Whole-day conservative reduce; verified on detail screen (sets reduced, weights/content intact) |
+| 5 | Ambiguous "Change Tuesday" → "Only strength" | ◐ MECHANICS PASS | Multi-turn transaction resumed correctly (original wording + answer carried); validator refused safely. Conversion gap on team-training days → Stage 3A |
+| 6 | Endpoint failure (404/502/timeout) | ✅ PASS | Fail-loud dev reply, zero mutation, zero legacy fallback |
+| 7 | "Remove Mondays session but keep the flush" (protected trap) | ✅ PASS | Partial edit preserving conditioning — never full removal |
+| 8 | "remove Monday conditioning every week" (recurring) | ✅ SAFE | Honest refusal (no_visible_diff). Proper routing → Stage 3B |
+| 8b | "I'm away next week" → "Clear them" | ✅ SAFE + notable | Model asked a good coaching question, multi-turn resume produced a VALIDATOR-PASSING whole-week clear; the single-day whitelist refused — correctly, per the "away = availability change, not 7 date overrides" decision. Stage 3B must catch this shape and route to setup with a better message |
+| 9 | "How's my week looking next week?" (conversation) | ✅ PASS | `not_an_edit` at 0.95 → released to coach-chat → high-quality answer reflecting applied edits |
+
+**Pass bar:** zero confident-wrong edits — met. Every failure mode observed all day ended in a refusal, clarification, or dev diagnostic; the visible program was never wrongly mutated. The legacy sanitizer caught the one leaked legacy reply (exception path, since boundary-fixed) — layered defenses held.
+
+### Fixes landed during Stage 2 (each with a regression test that mimics real model misbehavior)
+
+| Commit | Fix (failure class killed) |
+|---|---|
+| `10949e1..1383b88` | Stage 0: config.toml declaration, smoke OPTIONS/POST proof, fail-loud on misconfig/transport (no silent legacy fallback) |
+| `5528998..e5a487a` | Stage 1: app-side-only add authorization, prescription-nullification rejection, date bounds (diff ⊆ scope ⊆ snapshot), endpoint failure matrix |
+| `3f54225` | Clarify results become pending transactions (accumulated Q&A, 3-round cap) — killed the context-reset loop |
+| `664ab0d` | Deterministic dateGuide in context; clarify-restraint prompt rules |
+| `fa754f6`/`c5dd0de` | Output token budget 3200→8000 (env-tunable), named truncation errors, app-scale smoke scenario |
+| `7104148` | Writer verifies the change CONTRACT (identity+prescriptions), not byte-identical LLM echo |
+| `0a46bdd` | Parse canonicalization: empty shells → workout null (one shape per meaning) |
+| `bc509f3` | Protected refs re-derived when resume changes target date (refs are per-snapshot bindings) |
+| `3e87fd0` | No-legacy-on-exception boundary; throw-proof diagnostics |
+| `b6a653a` | Confidence-anchor prompt fix; function-scoped provider override knob |
+| `1a59e4a` | Global conservative invariant for reduce (any domain) → whole-day "make it lighter"; adapter timeout 12s→45s |
+| `5715331` | Immediate send feedback (bubble + spinner before network) |
+| `6508f07` | Typed `not_an_edit` decline releases conversation to coach-chat |
+
+### Known gaps (logged, deliberately not patched)
+
+1. **Team-training day representation** (flow 5): "only strength" on a combined Team Training + lift day fails `target_domain_unchanged` — the team-training portion appears not to project as a removable session-kind section. → Stage 3A.
+2. **Recurring/availability requests** get generic refusals or conversational answers instead of routed setup changes. → Stage 3B.
+3. Intent label vs diff-shape mismatches (model says `reduce`, diff removes) pass when harmless but occasionally refuse legitimate edits; revisit label-free validation once 3A lands.
+4. Latency: turns run ~8–15s on gpt-5.5 vs 5–8s production target. → Stage 3E.
+5. `name_based_workout_id_fallback` warning has never fired live — ID contract holding; keep watching.
+
+---
+
+## 2. Stage 3 Plan (ordered)
+
+Rules unchanged: no phrase patches, no legacy deletions (that's Stage 4/5), every fix systemic with a misbehaving-mock regression test, live verify per workstream before the next.
+
+### 3A — Team-training/session snapshot representation *(first: unlocks flow 5 AND replacements)*
+
+- Reproduce in harness: seed a combined "Team Training + Upper Pull" workout via the real projection; snapshot it; assert the team-training portion appears as a `session`-kind section with a stable id. Expected to fail — that failure defines the work.
+- Fix in the snapshot builder/read model so combined days expose both sections; override writer learns to drop the team-training portion while keeping strength (mirror of the existing keep-flush path).
+- Live gate: "Change Tuesday" → "Only strength" applies; "remove team training tomorrow" applies; protected-trap variant on a team day.
+
+### 3B — `out_of_scope_setup` typed decline + routing
+
+- Schema: sibling of `not_an_edit` (`kind: 'out_of_scope_setup'`, reason, detectedChange summary).
+- Controller: route to the setup/schedule transaction pipeline when it can handle the request; otherwise honest "I can't change your recurring schedule yet — I can edit specific days."
+- Evidence from Stage 2 (flow 8b): the model will happily produce a validator-passing whole-week clear for "I'm away next week" — the single-day whitelist is currently the only thing enforcing the "availability ≠ date overrides" decision. 3B must intercept this shape UPSTREAM (typed decline or scope classification) rather than relying on the whitelist's generic dev message, and decide explicitly whether visible-week one-off clears (e.g. "clear this week") are ever legitimate override material vs always setup.
+- Audit the setup pipeline first (it was "not guaranteed complete" — verify before routing into it).
+- Live gate: "remove Monday conditioning every week", "I'm away next week", "can only train Mon/Wed/Fri" all get useful outcomes.
+
+### 3C — Within-week moves
+
+- Schema already has `move` intent; add validator cross-day conservation (content removed from source must appear at destination; destination's protected content preserved) and two-day override writes with atomic verify (both project back or neither writes).
+- Live gate: "move Thursday to Saturday" (once), destination-vs-source trap from the original handoff ("move it to Sunday").
+
+### 3D — Template-derived replacements
+
+- Entry gate: protected-ref signature hardening (content hash replacing sorted-key stableString) — deferred from Stage 1.5 to exactly here.
+- Schema `templateRef` on added sections; app-side template registry is the ONLY add authorization (policy stays app-side); `needs_confirmation` surfaces as a real confirm UX in chat.
+- Live gate: "swap team training tomorrow for an easy bike" → confirmation → applied from template; free-form invention still refused.
+
+### 3E — Latency & production readiness
+
+- Measure per-turn p50/p95 from `served_by`-to-result timestamps; then in order: prompt slimming (schema/prompt are resent every call), snapshot trimming (visible fields only), and only if still over budget: patch-shape output (ops over visible IDs, deterministically applied, SAME diff validator) — the pre-agreed fallback, now optional rather than necessary.
+- Production flag design: revision path default-on for one-off edits behind a server-controllable kill switch; offline = polished refusal message.
+
+### Continuous
+
+- Consistency reps during normal use; `invalidIssues`/`apply_rejected`/`projection_mismatch` diagnostics make every anomaly self-describing — paste any WARN that looks off.
+- Track refusal rate; if a supported-scope flow refuses >1/10 with echo-drift issues, revisit patch-shape earlier.
+
+## 3. What not to do (standing)
+
+No regex/phrase handlers. No loosening the validator to raise conversion. No LLM-side mutation or success claims. No legacy path deletions until the Stage 4 default-flip has soaked. No schema expansion beyond the active workstream.
