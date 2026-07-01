@@ -17,6 +17,7 @@ import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { Button, Card, Sheet, Badge, IconButton, SectionLabel } from '../../components/ui';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { splitSessionName } from '../../utils/sessionNaming';
+import { visibleWorkoutItemCountLabel } from '../../utils/visibleProgramReadModel';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen } from './useHomeScreen';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
@@ -424,7 +425,7 @@ function TodayHero({
     title,
     hasWorkout ? getConditioningContextLabel(day.workout) : null,
   );
-  const exerciseCount = day.workout?.exercises?.length ?? 0;
+  const visibleCountLabel = hasWorkout ? visibleWorkoutItemCountLabel(day.workout) : null;
 
   // Game days delegate tap to the sheet; everything else uses the CTA buttons,
   // so the card wrapper is non-interactive to avoid double-press confusion.
@@ -514,8 +515,8 @@ function TodayHero({
 
           {/* Exercise count — readable metadata now, not buried. Still
               a whisper compared to the title, but legible at a glance. */}
-          {hasWorkout && !isGame && !isTeamOnly && exerciseCount > 0 && (
-            <Text style={styles.heroMeta}>{exerciseCount} exercises</Text>
+          {hasWorkout && !isGame && !isTeamOnly && visibleCountLabel && (
+            <Text style={styles.heroMeta}>{visibleCountLabel}</Text>
           )}
 
           {isTeamOnly && !isGame && (
@@ -711,7 +712,7 @@ function DayRow({
           ) : (
             <>
               <Text style={styles.expandedMeta}>
-                {day.workout.exercises?.length || 0} exercises
+                {visibleWorkoutItemCountLabel(day.workout) ?? '0 items'}
               </Text>
               <Button label="View Workout" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
             </>

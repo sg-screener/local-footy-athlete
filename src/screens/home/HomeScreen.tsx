@@ -18,6 +18,7 @@ import { Text } from '../../components/common/Text';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { splitSessionName } from '../../utils/sessionNaming';
+import { visibleWorkoutItemCountLabel } from '../../utils/visibleProgramReadModel';
 import type { DesignVersion } from '../../store/uiStore';
 import HomeScreenV2 from './HomeScreenV2';
 import { useHomeScreen } from './useHomeScreen';
@@ -348,7 +349,7 @@ function HomeScreenClassic() {
                       ) : (
                         <>
                           <Text style={styles.exerciseCount}>
-                            {day.workout!.exercises?.length || 0} exercises
+                            {visibleWorkoutItemCountLabel(day.workout) ?? '0 items'}
                           </Text>
                           <Pressable
                             style={({ pressed }) => [

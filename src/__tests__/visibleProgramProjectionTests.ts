@@ -20,6 +20,8 @@ import {
 import {
   buildProgramTabProjectedWeek,
   buildDayWorkoutProjectedDay,
+  extractVisibleProgramItemsFromWorkout,
+  visibleWorkoutItemCountLabel,
 } from '../utils/visibleProgramReadModel';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { Workout } from '../types/domain';
@@ -59,6 +61,11 @@ function wk(name: string, dow: number, exercises: any[], opts: any = {}): Workou
     intensity: 'Moderate' as any,
     workoutType: opts.workoutType || ('Strength' as any),
     sessionTier: opts.sessionTier || ('core' as any),
+    hasCombinedConditioning: opts.hasCombinedConditioning,
+    conditioningFlavour: opts.conditioningFlavour,
+    conditioningCategory: opts.conditioningCategory,
+    conditioningBlock: opts.conditioningBlock,
+    coachAddedConditioningLabel: opts.coachAddedConditioningLabel,
     exercises, createdAt: '', updatedAt: '',
     coachNotes: opts.coachNotes,
   } as Workout;
@@ -487,6 +494,113 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
     todayISO: TODAY_ISO,
   });
   eq('valid recovery shell is preserved', recoveryProjected.day.workout?.name, 'Recovery Session');
+}
+
+section('[17] Strength removed from mixed session re-derives conditioning display');
+{
+  const mon = '2026-07-06';
+  const bike = ex('25min zone 2 bike');
+  const staleMixedShell = wk('Lower Body Strength', 1, [bike], {
+    workoutType: 'Strength',
+    hasCombinedConditioning: true,
+    conditioningFlavour: 'aerobic',
+    conditioningBlock: {
+      options: [{
+        title: 'Easy Aerobic Flush',
+        description: '25min zone 2 bike',
+        exerciseIds: [bike.id],
+      }],
+    },
+    coachNotes: ['Removed strength block'],
+  });
+
+  const direct = projectVisibleDay({
+    day: day(mon, staleMixedShell, 'manual'),
+    activeInjury: null,
+    todayISO: TODAY_ISO,
+  });
+  const directItems = extractVisibleProgramItemsFromWorkout(direct.day.workout);
+  ok('direct projection keeps conditioning visible',
+    directItems.some((item) => item.domain === 'conditioning' && /flush|bike|zone\s*2/i.test(item.title)),
+    JSON.stringify(directItems));
+  ok('direct projection removes visible strength section',
+    !directItems.some((item) => item.domain === 'strength'),
+    JSON.stringify(directItems));
+  eq('direct projection does not keep stale strength title',
+    direct.day.workout?.name,
+    'Easy Aerobic Flush');
+  eq('direct projection changes detail branch to Conditioning',
+    direct.day.workout?.workoutType,
+    'Conditioning' as any);
+  eq('direct projection clears combined flag',
+    !!direct.day.workout?.hasCombinedConditioning,
+    false);
+
+  const state = stateWithManual(mon, staleMixedShell);
+  const programWeek = buildProgramTabProjectedWeek({
+    mondayISO: mon,
+    todayISO: TODAY_ISO,
+    state,
+    overrideContexts: {},
+  });
+  const programMon = programWeek.find((d) => d.date === mon);
+  const detailMon = buildDayWorkoutProjectedDay({
+    date: mon,
+    todayISO: TODAY_ISO,
+    state,
+  });
+  eq('Program tab and detail titles agree after strength removal',
+    programMon?.workout?.name,
+    detailMon.workout?.name);
+  eq('Program tab no longer shows Lower Body Strength',
+    programMon?.workout?.name,
+    'Easy Aerobic Flush');
+  eq('detail projection uses conditioning branch, not empty Strength branch',
+    detailMon.workout?.workoutType,
+    'Conditioning' as any);
+  eq('Program card count label comes from visible conditioning item',
+    visibleWorkoutItemCountLabel(programMon?.workout),
+    '1 item');
+  ok('detail projected workout still has the bike row',
+    (detailMon.workout?.exercises ?? []).some((row: any) => /bike/i.test(row.exercise?.name ?? '')),
+    JSON.stringify(detailMon.workout?.exercises ?? []));
+}
+
+section('[18] Conditioning removed from mixed session clears stale conditioning labels');
+{
+  const mon = '2026-07-06';
+  const squat = ex('Back Squat');
+  const staleStrengthShell = wk('Lower Body Strength + Aerobic Base', 1, [squat], {
+    workoutType: 'Strength',
+    hasCombinedConditioning: true,
+    conditioningFlavour: 'aerobic',
+    conditioningBlock: undefined,
+    coachNotes: ['Removed conditioning from this session'],
+  });
+  const direct = projectVisibleDay({
+    day: day(mon, staleStrengthShell, 'manual'),
+    activeInjury: null,
+    todayISO: TODAY_ISO,
+  });
+  const directItems = extractVisibleProgramItemsFromWorkout(direct.day.workout);
+  eq('strength-only projection strips conditioning suffix',
+    direct.day.workout?.name,
+    'Lower Body Strength');
+  eq('strength-only projection clears combined flag',
+    !!direct.day.workout?.hasCombinedConditioning,
+    false);
+  eq('strength-only projection clears conditioning flavour',
+    direct.day.workout?.conditioningFlavour ?? null,
+    null);
+  ok('strength remains visible',
+    directItems.some((item) => item.domain === 'strength' && /squat/i.test(item.title)),
+    JSON.stringify(directItems));
+  eq('strength-only count label stays exercise-based',
+    visibleWorkoutItemCountLabel(direct.day.workout),
+    '1 exercise');
+  ok('conditioning no longer appears as a visible item',
+    !directItems.some((item) => item.domain === 'conditioning'),
+    JSON.stringify(directItems));
 }
 
 // ─── Summary ───

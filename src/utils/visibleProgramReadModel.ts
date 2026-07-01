@@ -177,6 +177,21 @@ export function extractVisibleProgramItemsFromResolvedDay(day: ResolvedDay): Vis
   return extractVisibleProgramItemsFromWorkout(day.workout ?? null);
 }
 
+export function visibleWorkoutItemCountLabel(
+  workout: ResolvedDay['workout'] | null | undefined,
+): string | null {
+  if (!workout) return null;
+  const items = extractVisibleProgramItemsFromWorkout(workout)
+    .filter((item) => item.source !== 'session');
+  const count = items.length > 0
+    ? items.length
+    : (workout.exercises ?? []).length;
+  if (count <= 0) return null;
+  const onlyStrength = items.length > 0 && items.every((item) => item.domain === 'strength');
+  const noun = onlyStrength ? 'exercise' : 'item';
+  return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
 export function extractVisibleProgramItemsFromWorkout(
   workout: ResolvedDay['workout'] | null,
 ): VisibleProgramItem[] {

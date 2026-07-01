@@ -63,17 +63,68 @@ function exerciseNames(workout: Workout): string[] {
     .filter((name: unknown): name is string => typeof name === 'string' && name.trim().length > 0);
 }
 
+function conditioningExerciseIds(workout: Workout): Set<string> {
+  const ids = new Set<string>();
+  for (const option of workout.conditioningBlock?.options ?? []) {
+    for (const id of option.exerciseIds ?? []) {
+      const value = String(id ?? '').trim();
+      if (value) ids.add(value);
+    }
+  }
+  return ids;
+}
+
+function rowIds(row: any): string[] {
+  return [
+    row?.id,
+    row?.exerciseId,
+    row?.exercise?.id,
+  ].map((id) => String(id ?? '').trim()).filter(Boolean);
+}
+
+function conditioningRows(workout: Workout): any[] {
+  const ids = conditioningExerciseIds(workout);
+  if (ids.size === 0) {
+    return isConditioningTypedWorkout(workout) ? (workout.exercises ?? []) : [];
+  }
+  return (workout.exercises ?? []).filter((row: any) =>
+    rowIds(row).some((id) => ids.has(id)),
+  );
+}
+
+function strengthRows(workout: Workout): any[] {
+  const ids = conditioningExerciseIds(workout);
+  if (ids.size === 0) {
+    return isConditioningTypedWorkout(workout) ? [] : (workout.exercises ?? []);
+  }
+  return (workout.exercises ?? []).filter((row: any) =>
+    !rowIds(row).some((id) => ids.has(id)),
+  );
+}
+
+function isConditioningTypedWorkout(workout: Workout): boolean {
+  return CONDITIONING_WORKOUT_TYPES.has(workout.workoutType) ||
+    (!!workout.conditioningFlavour && !workout.hasCombinedConditioning);
+}
+
+function hasVisibleConditioningContent(workout: Workout): boolean {
+  return (workout.conditioningBlock?.options ?? []).length > 0 ||
+    conditioningRows(workout).length > 0 ||
+    isConditioningTypedWorkout(workout);
+}
+
 export function isConditioningOnlyWorkout(workout: Workout): boolean {
-  if (workout.hasCombinedConditioning) return false;
   if (workout.workoutType === 'Recovery' || workout.workoutType === 'Game') return false;
 
   const names = exerciseNames(workout);
-  const hasConditioningType =
-    CONDITIONING_WORKOUT_TYPES.has(workout.workoutType) ||
-    (!!workout.conditioningFlavour && !workout.hasCombinedConditioning);
+  const hasConditioningType = isConditioningTypedWorkout(workout);
   const nameHintsConditioning = names.some((name) =>
     /\b(zone\s*2|aerobic|conditioning|tempo|interval|run|rower|rowing\s*erg|\brow\b|bike|ski[-\s]?erg|assault\s*bike)\b/i.test(name),
   );
+  const hasStrengthContent = strengthRows(workout).length > 0;
+  const hasConditioningContent = hasVisibleConditioningContent(workout);
+
+  if (hasConditioningContent && !hasStrengthContent) return true;
 
   if (!hasConditioningType && !nameHintsConditioning) return false;
   if (names.length === 0) return hasConditioningType;
@@ -132,11 +183,51 @@ export function deriveVisibleWorkoutIdentity(workout: Workout): VisibleWorkoutId
 
 export function normalizeVisibleWorkoutIdentity(workout: Workout): Workout {
   const identity = deriveVisibleWorkoutIdentity(workout);
-  if (!identity.isConditioningOnly) return workout;
-  if (workout.name === identity.title && workout.workoutType === 'Conditioning') return workout;
+  const hasConditioningContent = hasVisibleConditioningContent(workout);
+  const hasStrengthContent = strengthRows(workout).length > 0;
+
+  if (!identity.isConditioningOnly) {
+    if (!hasConditioningContent && hasStrengthContent && workout.hasCombinedConditioning) {
+      return {
+        ...workout,
+        name: stripConditioningSuffix(workout.name) || workout.name,
+        workoutType: workout.workoutType === 'Conditioning'
+          ? 'Strength' as WorkoutType
+          : workout.workoutType,
+        hasCombinedConditioning: false,
+        conditioningFlavour: undefined,
+        conditioningCategory: undefined,
+        conditioningBlock: undefined,
+        coachAddedConditioningLabel: undefined,
+      };
+    }
+    return workout;
+  }
+  if (
+    workout.name === identity.title &&
+    workout.workoutType === 'Conditioning' &&
+    !workout.hasCombinedConditioning
+  ) {
+    return workout;
+  }
   return {
     ...workout,
     name: identity.title,
     workoutType: 'Conditioning' as WorkoutType,
+    hasCombinedConditioning: false,
+    coachAddedConditioningLabel: undefined,
   };
+}
+
+function stripConditioningSuffix(name: string): string {
+  const parts = String(name ?? '').split(' + ').map((part) => part.trim()).filter(Boolean);
+  if (parts.length !== 2) return String(name ?? '').trim();
+  const [left, right] = parts;
+  if (looksLikeConditioningLabel(right)) return left;
+  if (looksLikeConditioningLabel(left)) return right;
+  return String(name ?? '').trim();
+}
+
+function looksLikeConditioningLabel(value: string): boolean {
+  return /\b(?:conditioning|aerobic|flush|zone\s*2|tempo|interval|run|row|rower|bike|sprint|metcon)\b/i.test(value);
 }
