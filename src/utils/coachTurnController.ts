@@ -1646,7 +1646,10 @@ function isSupportedDevActiveCoachRevision(
   if (intent === 'remove' && targetDomain === 'session' && actionScope === 'whole_session') {
     return true;
   }
-  if (intent === 'reduce' && targetDomain === 'strength' && actionScope === 'strength_section') {
+  if (intent === 'reduce') {
+    // Any single-day reduce is safe: the validator enforces the conservative
+    // invariant on EVERY changed item (no increases, no additions) regardless
+    // of which domain the model labeled — "make today lighter" included.
     return true;
   }
   return false;

@@ -485,6 +485,57 @@ section('[8] make tomorrow lighter via conservative reduction');
       result2.issues);
   }
 
+  section('[8d] whole-day reduce is valid when every change is conservative');
+  {
+    const mixedBefore = snapshot([visibleDay(TUE, mixedWorkout())]);
+    const lighter = clone(daySnap(mixedBefore, TUE));
+    for (const sectionSnap of lighter.workout!.sections) {
+      for (const item of sectionSnap.items) {
+        if (item.prescription?.sets != null) {
+          item.prescription = { ...item.prescription, sets: Math.max(1, item.prescription.sets - 1) };
+        }
+      }
+    }
+    const pDay = proposal({
+      intent: { intent: 'reduce', targetDomain: 'session', actionScope: 'session' },
+      dates: [TUE],
+      revisedDays: [lighter],
+    });
+    const resultDay = validateCoachRevisionDiff({ before: mixedBefore, proposal: pDay });
+    eq('whole-day conservative reduce valid', resultDay.status, 'valid');
+  }
+
+  section('[8e] reduce is conservative everywhere, not just the labeled domain');
+  {
+    const mixedBefore = snapshot([visibleDay(TUE, mixedWorkout())]);
+    const sneaky = clone(daySnap(mixedBefore, TUE));
+    // Labeled strength reduce, but bumps a conditioning prescription UP.
+    const strengthSection = sectionOf(sneaky, 'strength');
+    strengthSection.items[0].prescription = {
+      ...strengthSection.items[0].prescription!,
+      sets: 2,
+    };
+    const conditioningSection = sectionOf(sneaky, 'conditioning');
+    if (conditioningSection.items[0].prescription) {
+      conditioningSection.items[0].prescription = {
+        ...conditioningSection.items[0].prescription,
+        sets: (conditioningSection.items[0].prescription.sets ?? 1) + 3,
+      };
+    } else {
+      conditioningSection.items[0].prescription = { sets: 4, repsMin: 8, repsMax: 10, intensity: null };
+    }
+    const pSneaky = proposal({
+      intent: { intent: 'reduce', targetDomain: 'strength', actionScope: 'strength_section' },
+      dates: [TUE],
+      revisedDays: [sneaky],
+    });
+    const resultSneaky = validateCoachRevisionDiff({ before: mixedBefore, proposal: pSneaky });
+    eq('off-domain increase under reduce rejected', resultSneaky.status, 'invalid');
+    ok('non_conservative issue raised',
+      resultSneaky.issues.some((entry) => entry.code === 'non_conservative_reduction'),
+      resultSneaky.issues);
+  }
+
   section('[8c] dropping the whole prescription is not a reduction');
   {
     const dropped = clone(daySnap(before, TUE));

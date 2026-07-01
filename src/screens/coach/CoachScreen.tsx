@@ -153,6 +153,11 @@ const liveCoachRevisionProposalAdapter = clientEnv.isReady &&
   ? new LLMSemanticCoachRevisionProposalAdapter({
       endpoint: clientEnv.coachRevisionProposalEndpoint,
       authToken: clientEnv.supabaseAnonKey,
+      // Full-state echo on a strong model regularly exceeds the 12s default
+      // (observed live: gpt-5.5 aborted mid-generation). Reliability over
+      // latency while in dev-active; production latency budget is a Stage 4
+      // tuning question, not a truncation knob.
+      timeoutMs: 45000,
     })
   : null;
 

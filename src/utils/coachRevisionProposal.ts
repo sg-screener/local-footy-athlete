@@ -685,15 +685,25 @@ function validateDiffMatchesIntent(
   }
 
   if (proposal.userIntent.intent === 'reduce') {
+    // A reduction must be conservative EVERYWHERE it changes something, not
+    // just in the declared target domain — "make today lighter" legitimately
+    // touches multiple sections, and the conservative invariant is what makes
+    // whole-day reductions safe to allow.
     const badReduction = diff.dateDiffs.some((entry) =>
       entry.itemDiffs.some((itemDiff) =>
         itemDiff.kind === 'changed' &&
-        itemDiff.sectionKind === targetSectionKind(proposal.userIntent.targetDomain) &&
         !isConservativeReduction(itemDiff.before, itemDiff.after),
       ),
     );
     if (badReduction) {
       invalid.push(issue('non_conservative_reduction', 'Proposal changes the target instead of making it lighter.'));
+    }
+    const addedUnderReduce = diff.dateDiffs.some((entry) =>
+      entry.sectionDiffs.some((section) => section.kind === 'added') ||
+      entry.itemDiffs.some((item) => item.kind === 'added'),
+    );
+    if (addedUnderReduce) {
+      invalid.push(issue('non_conservative_reduction', 'Proposal adds content under a reduce intent.'));
     }
     return { invalid, needsConfirmation };
   }

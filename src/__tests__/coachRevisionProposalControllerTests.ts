@@ -960,6 +960,45 @@ async function run() {
   }
 
   {
+    // WHOLE-DAY REDUCE ("make today lighter"): the model labels this
+    // reduce/session, which the dev whitelist previously rejected despite a
+    // valid conservative proposal (live 2026-07-02). Any single-day reduce is
+    // allowed now — the validator enforces conservativeness everywhere.
+    const adapter = new RecordingRevisionAdapter((input) => {
+      const current = day(input);
+      const after = clone(current);
+      for (const sectionSnap of after.workout!.sections) {
+        for (const item of sectionSnap.items) {
+          if (item.prescription?.sets != null) {
+            item.prescription = {
+              ...item.prescription,
+              sets: Math.max(1, item.prescription.sets - 1),
+            };
+          }
+        }
+      }
+      return revision({
+        input,
+        intent: { intent: 'reduce', targetDomain: 'session', actionScope: 'session' },
+        revisedDay: after,
+      });
+    });
+    const result = await runControllerTurn({
+      message: 'make tomorrow lighter',
+      adapter,
+    });
+    eq('[16] handled', result.handled.handled, true);
+    ok('[16] whole-day reduce applied',
+      /^Done\./.test(result.reply),
+      { reply: result.reply, route: (result.debug as CoachTurnDebug | null)?.route });
+    ok('[16] override written', !!result.dateOverrides[THURSDAY], result.dateOverrides);
+    ok('[16] nothing removed: strength and conditioning both remain',
+      result.visible.strengthItems.length > 0 && result.visible.conditioningItems.length > 0,
+      result.visible.items);
+    eq('[16] legacy classifier not called', result.classifierCalls, 0);
+  }
+
+  {
     // Round cap: a model that clarifies forever gets cut off honestly after
     // COACH_REVISION_MAX_CLARIFY_ROUNDS, with no mutation and no legacy path.
     const adapter = new RecordingRevisionAdapter(() =>
