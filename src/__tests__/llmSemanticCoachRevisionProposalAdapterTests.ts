@@ -228,6 +228,82 @@ async function run() {
     ok('[3] endpoint failure becomes invalid and does not mutate',
       result.kind === 'invalid' && result.reason === 'adapter_failed',
       result);
+    ok('[3] issue carries HTTP status for fail-loud messaging',
+      result.kind === 'invalid' && result.issues.some((entry) => entry.includes('HTTP 404')),
+      result.kind === 'invalid' ? result.issues : result);
+  }
+
+  {
+    // Timeout: the adapter aborts after timeoutMs; the mock fetch respects
+    // the abort signal like the real fetch does.
+    const adapter = new LLMSemanticCoachRevisionProposalAdapter({
+      endpoint: 'https://edge.example.com/functions/v1/coach-revision-proposal',
+      timeoutMs: 20,
+      fetcher: ((_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          const signal = init.signal as AbortSignal | null;
+          signal?.addEventListener('abort', () => reject(new Error('Aborted')));
+        })) as typeof fetch,
+    });
+    const result = await buildSemanticCoachRevisionProposal({
+      userMessage: 'remove conditioning Monday',
+      visibleSnapshot: visibleSnapshot(),
+      adapter,
+    });
+    ok('[3b] timeout becomes invalid adapter_failed',
+      result.kind === 'invalid' && result.reason === 'adapter_failed',
+      result);
+    ok('[3b] issue carries abort detail',
+      result.kind === 'invalid' && result.issues.some((entry) => /abort/i.test(entry)),
+      result.kind === 'invalid' ? result.issues : result);
+  }
+
+  {
+    // Malformed JSON: transport succeeds but the payload is not a valid
+    // CoachRevisionProposal — must fail schema validation, never mutate.
+    const adapter = new LLMSemanticCoachRevisionProposalAdapter({
+      endpoint: 'https://edge.example.com/functions/v1/coach-revision-proposal',
+      fetcher: (async () => new Response(JSON.stringify({ kind: 'revision' }), { status: 200 })) as typeof fetch,
+    });
+    const result = await buildSemanticCoachRevisionProposal({
+      userMessage: 'remove conditioning Monday',
+      visibleSnapshot: visibleSnapshot(),
+      adapter,
+    });
+    ok('[3c] malformed JSON fails schema validation',
+      result.kind === 'invalid' && result.reason === 'schema_validation_failed',
+      result);
+  }
+
+  {
+    // Prose payloads: a JSON-encoded string body parses but is not an object
+    // (schema failure); a raw non-JSON body throws in resp.json()
+    // (adapter failure). Both end invalid with no mutation.
+    const proseAsJsonString = new LLMSemanticCoachRevisionProposalAdapter({
+      endpoint: 'https://edge.example.com/functions/v1/coach-revision-proposal',
+      fetcher: (async () => new Response(JSON.stringify('Sure! Happy to help with that.'), { status: 200 })) as typeof fetch,
+    });
+    const stringResult = await buildSemanticCoachRevisionProposal({
+      userMessage: 'remove conditioning Monday',
+      visibleSnapshot: visibleSnapshot(),
+      adapter: proseAsJsonString,
+    });
+    ok('[3d] prose-as-JSON-string fails schema validation',
+      stringResult.kind === 'invalid' && stringResult.reason === 'schema_validation_failed',
+      stringResult);
+
+    const rawProse = new LLMSemanticCoachRevisionProposalAdapter({
+      endpoint: 'https://edge.example.com/functions/v1/coach-revision-proposal',
+      fetcher: (async () => new Response('Sure! Happy to help with that.', { status: 200 })) as typeof fetch,
+    });
+    const proseResult = await buildSemanticCoachRevisionProposal({
+      userMessage: 'remove conditioning Monday',
+      visibleSnapshot: visibleSnapshot(),
+      adapter: rawProse,
+    });
+    ok('[3e] raw prose body fails as adapter error',
+      proseResult.kind === 'invalid' && proseResult.reason === 'adapter_failed',
+      proseResult);
   }
 
   {

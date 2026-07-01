@@ -5,6 +5,7 @@ import {
   type VisibleProgramItem,
 } from './visibleProgramReadModel';
 import type { ResolvedDay, ScheduleState } from './sessionResolver';
+import { logger } from './logger';
 
 export const COACH_REVISION_PROPOSAL_SCHEMA_VERSION = 'coach_revision_proposal.v1';
 
@@ -1007,7 +1008,18 @@ function conditioningSectionTitle(
 }
 
 function stableWorkoutId(day: ResolvedDay, workout: Workout): string {
-  return cleanText(workout.id) || `workout:${day.date}:${normaliseKey(workout.name)}`;
+  const explicit = cleanText(workout.id);
+  if (explicit) return explicit;
+  // Name-based IDs are only stable while the name is stable: a rename changes
+  // identity mid-conversation and breaks protected-ref/ID checks. Warn loudly
+  // so live testing reveals whether real programs ever reach this branch —
+  // if it fires, guaranteeing workout.id at generation becomes a Stage 3
+  // prerequisite.
+  logger.warn('[coach-revision-snapshot] name_based_workout_id_fallback', {
+    date: day.date,
+    name: workout.name,
+  });
+  return `workout:${day.date}:${normaliseKey(workout.name)}`;
 }
 
 function parseJson(value: string): unknown {

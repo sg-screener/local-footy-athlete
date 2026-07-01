@@ -537,6 +537,29 @@ section('[10] empty shell rejected');
   ok('empty shell flagged', result.issues.some((entry) => entry.code === 'empty_workout_shell'));
 }
 
+section('[11] snapshot workout IDs are stable across renames when workout.id is set');
+{
+  const original = mixedWorkout();
+  const renamed = clone(original);
+  renamed.name = 'Lower Strength (renamed)';
+  const beforeSnap = snapshot([visibleDay(MON, original)]);
+  const afterSnap = snapshot([visibleDay(MON, renamed)]);
+  eq('rename keeps workout id',
+    daySnap(afterSnap, MON).workout?.id,
+    daySnap(beforeSnap, MON).workout?.id);
+}
+
+section('[12] name-based fallback id is deterministic for identical inputs');
+{
+  const noId = mixedWorkout();
+  (noId as any).id = '';
+  const first = snapshot([visibleDay(MON, noId)]);
+  const second = snapshot([visibleDay(MON, clone(noId))]);
+  const firstId = daySnap(first, MON).workout?.id ?? '';
+  eq('fallback ids match across rebuilds', daySnap(second, MON).workout?.id, firstId);
+  ok('fallback id derives from date + name', firstId.startsWith(`workout:${MON}:`), firstId);
+}
+
 console.log(`\ncoachRevisionProposalTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.error(failures.join('\n'));
