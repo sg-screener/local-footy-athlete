@@ -195,6 +195,68 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
+/** Live-app topology: ONE microcycle only. Dates beyond it (e.g. next
+ *  Monday) exist purely as template projections, not materialized workouts.
+ *  The default two-microcycle seed masks failures in that projection path. */
+function seedSingleMicrocycleProgram() {
+  useProgramStore.getState().clear();
+  useCoachContextStateStore.getState().clearCoachContext();
+  usePendingCoachClarifierStore.getState().clearPending();
+  const microcycle: Microcycle = {
+    id: 'mc-only',
+    programId: 'program-1',
+    weekNumber: 1,
+    startDate: '2026-06-29',
+    endDate: '2026-07-05',
+    miniCycleNumber: 1,
+    intensityMultiplier: 1,
+    workouts: [
+      mixedWorkout({ id: 'workout-mon-mixed', dayOfWeek: 1 }),
+      mixedWorkout(),
+    ],
+    createdAt: '',
+    updatedAt: '',
+  };
+  const program: TrainingProgram = {
+    id: 'program-1',
+    userId: 'user-1',
+    name: 'Single Cycle Program',
+    description: '',
+    programPhase: 'In-Season',
+    startDate: '2026-06-29',
+    endDate: '2026-07-26',
+    microcycles: [microcycle],
+    primaryFocus: 'Test',
+    isActive: true,
+    createdAt: '',
+    updatedAt: '',
+  };
+  useProgramStore.getState().setCurrentProgram(program);
+  useProgramStore.getState().setCurrentMicrocycle(microcycle);
+}
+
+function reduceStrengthAt(
+  input: SemanticCoachRevisionProposalAdapterInput,
+  targetDate: string,
+): CoachRevisionProposal {
+  const current = dayByDate(input, targetDate);
+  const conditioning = sectionOf(current, 'conditioning');
+  const after = clone(current);
+  const strength = after.workout!.sections.find((section) => section.kind === 'strength')!;
+  for (const item of strength.items) {
+    if (item.prescription?.sets != null) {
+      item.prescription = { ...item.prescription, sets: Math.max(1, item.prescription.sets - 2) };
+    }
+  }
+  return revision({
+    input,
+    intent: { intent: 'reduce', targetDomain: 'strength', actionScope: 'strength_section' },
+    revisedDay: after,
+    protectedRefs: [conditioning.id],
+    targetDate,
+  });
+}
+
 function dayByDate(
   input: SemanticCoachRevisionProposalAdapterInput,
   date: string,
@@ -363,9 +425,10 @@ async function runControllerTurn(args: {
   message: string;
   adapter: SemanticCoachRevisionProposalAdapter | null;
   seed?: boolean;
+  seedFn?: () => void;
   visibleDate?: string;
 }) {
-  if (args.seed !== false) seedProgram();
+  if (args.seed !== false) (args.seedFn ?? seedProgram)();
   const messages: CoachTurnMessage[] = [];
   const userMessage: CoachTurnMessage = {
     id: `turn-${Math.random().toString(36).slice(2)}`,
@@ -696,6 +759,52 @@ async function run() {
       usePendingCoachClarifierStore.getState().pending,
       null);
     eq('[10] legacy classifier never called', second.classifierCalls, 0);
+  }
+
+  {
+    // LIVE REPRO: single-microcycle program (live topology), stale Monday →
+    // "Yes" → resumed reduce-intent revision on the PROJECTED next Monday.
+    // This is the exact live flow that ended in "couldn't safely apply".
+    const originalMessage = 'Can you drop the lower work Monday but keep the flush';
+    const adapter = new RecordingRevisionAdapter((input) => {
+      const context = input.recentContext as any;
+      const targetDate = context?.pendingCoachRevision?.targetDateOverride ?? PAST_MONDAY;
+      return reduceStrengthAt(input, targetDate);
+    });
+
+    const first = await runControllerTurn({
+      message: originalMessage,
+      adapter,
+      seedFn: seedSingleMicrocycleProgram,
+      visibleDate: PAST_MONDAY,
+    });
+    ok('[12] stale-date question asked', /in the past/.test(first.reply), first.reply);
+    ok('[12] revision envelope stored', !!first.pending?.coachRevisionProposalEnvelope, first.pending);
+
+    const second = await runControllerTurn({
+      message: 'Yes',
+      adapter,
+      seed: false,
+      visibleDate: NEXT_MONDAY,
+    });
+    eq('[12] resume adapter got projected next Monday',
+      (adapter.calls[1]?.recentContext as any)?.pendingCoachRevision?.targetDateOverride,
+      NEXT_MONDAY);
+    ok('[12] projected-date snapshot contains next Monday',
+      !!adapter.calls[1]?.visibleSnapshot.days.find((day) => day.date === NEXT_MONDAY),
+      adapter.calls[1]?.visibleSnapshot.days.map((day) => day.date));
+    ok('[12] resumed reduce applied on projected date',
+      /^Done\./.test(second.reply),
+      { reply: second.reply, debugRoute: (second.debug as CoachTurnDebug | null)?.route });
+    ok('[12] override written for projected next Monday',
+      !!second.dateOverrides[NEXT_MONDAY],
+      Object.keys(second.dateOverrides));
+    ok('[12] strength remains but reduced',
+      second.visible.strengthItems.length > 0,
+      second.visible.items);
+    ok('[12] conditioning untouched',
+      second.visible.conditioningItems.length > 0,
+      second.visible.items);
   }
 
   {
