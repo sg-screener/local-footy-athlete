@@ -8,6 +8,60 @@ import type { ResolvedDay, ScheduleState } from './sessionResolver';
 
 export const COACH_REVISION_PROPOSAL_SCHEMA_VERSION = 'coach_revision_proposal.v1';
 
+export const COACH_REVISION_PROPOSAL_SCHEMA = {
+  schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
+  clarifyTopLevelKeys: [
+    'schemaVersion',
+    'kind',
+    'confidence',
+    'question',
+    'missingField',
+    'candidateOptions',
+    'partialIntent',
+    'reason',
+  ],
+  revisionTopLevelKeys: [
+    'schemaVersion',
+    'kind',
+    'source',
+    'confidence',
+    'userIntent',
+    'scope',
+    'revisedDays',
+    'explanation',
+  ],
+  proposalKind: ['clarify', 'revision'],
+  intent: ['add', 'edit', 'remove', 'replace', 'move', 'reduce'],
+  targetDomain: [
+    'strength',
+    'conditioning',
+    'recovery',
+    'session',
+    'team_training',
+    'schedule',
+  ],
+  actionScope: [
+    'whole_session',
+    'strength_section',
+    'conditioning_section',
+    'recovery_section',
+    'session',
+    'exercise',
+    'duration',
+    'intensity',
+    'visible_week',
+  ],
+  sectionKind: ['strength', 'conditioning', 'recovery', 'session'],
+  scopeMode: ['single_day', 'visible_week'],
+  missingField: [
+    'targetDate',
+    'targetScope',
+    'targetSession',
+    'replacement',
+    'confirmation',
+  ],
+} as const;
+
 export type CoachRevisionIntentKind =
   | 'add'
   | 'edit'
@@ -720,20 +774,49 @@ function validateProposalShape(value: Record<string, unknown>): string[] {
   }
 
   if (value.kind === 'clarify') {
+    assertExactKeys(value, [...COACH_REVISION_PROPOSAL_SCHEMA.clarifyTopLevelKeys], 'clarify proposal', issues);
     if (typeof value.question !== 'string' || value.question.trim().length === 0) {
       issues.push('clarify.question is required');
     }
+    if (!COACH_REVISION_PROPOSAL_SCHEMA.missingField.includes(value.missingField as any)) {
+      issues.push('clarify.missingField is invalid');
+    }
     if (!Array.isArray(value.candidateOptions)) {
       issues.push('clarify.candidateOptions must be an array');
+    } else {
+      for (const [index, candidate] of value.candidateOptions.entries()) {
+        if (!isRecord(candidate)) {
+          issues.push(`clarify.candidateOptions[${index}] must be an object`);
+          continue;
+        }
+        assertExactKeys(candidate, ['id', 'label', 'value'], `clarify.candidateOptions[${index}]`, issues);
+        if (typeof candidate.id !== 'string') issues.push(`clarify.candidateOptions[${index}].id is required`);
+        if (typeof candidate.label !== 'string') issues.push(`clarify.candidateOptions[${index}].label is required`);
+      }
+    }
+    if (value.partialIntent !== null && !isRevisionIntent(value.partialIntent)) {
+      issues.push('clarify.partialIntent must be null or a valid intent');
+    }
+    if (typeof value.reason !== 'string') {
+      issues.push('clarify.reason is required');
     }
     return issues;
   }
 
   if (value.kind === 'revision') {
+    assertExactKeys(value, [...COACH_REVISION_PROPOSAL_SCHEMA.revisionTopLevelKeys], 'revision proposal', issues);
     if (value.source !== 'semantic') issues.push('revision.source must be semantic');
     if (!isRevisionIntent(value.userIntent)) issues.push('revision.userIntent is invalid');
     if (!isRecord(value.scope) || !Array.isArray(value.scope.dates)) {
       issues.push('revision.scope.dates is required');
+    } else {
+      assertExactKeys(value.scope, ['mode', 'dates'], 'revision.scope', issues);
+      if (!COACH_REVISION_PROPOSAL_SCHEMA.scopeMode.includes(value.scope.mode as any)) {
+        issues.push('revision.scope.mode is invalid');
+      }
+      if (!value.scope.dates.every((date) => typeof date === 'string')) {
+        issues.push('revision.scope.dates must contain strings');
+      }
     }
     if (!Array.isArray(value.revisedDays)) {
       issues.push('revision.revisedDays must be an array');
@@ -752,14 +835,38 @@ function validateProposalShape(value: Record<string, unknown>): string[] {
 
 function isRevisionIntent(value: unknown): value is CoachRevisionIntent {
   if (!isRecord(value)) return false;
+  const allowed = [
+    'intent',
+    'targetDomain',
+    'actionScope',
+    'targetDates',
+    'protectedRefs',
+    'allowedAddedSectionKinds',
+    'requiresConfirmation',
+    'reason',
+  ];
+  if (Object.keys(value).some((key) => !allowed.includes(key))) return false;
   return (
-    typeof value.intent === 'string' &&
-    typeof value.targetDomain === 'string' &&
-    typeof value.actionScope === 'string' &&
+    COACH_REVISION_PROPOSAL_SCHEMA.intent.includes(value.intent as any) &&
+    COACH_REVISION_PROPOSAL_SCHEMA.targetDomain.includes(value.targetDomain as any) &&
+    COACH_REVISION_PROPOSAL_SCHEMA.actionScope.includes(value.actionScope as any) &&
     Array.isArray(value.targetDates) &&
     value.targetDates.every((date) => typeof date === 'string') &&
     Array.isArray(value.protectedRefs) &&
     value.protectedRefs.every((ref) => typeof ref === 'string') &&
+    (
+      value.allowedAddedSectionKinds === undefined ||
+      (
+        Array.isArray(value.allowedAddedSectionKinds) &&
+        value.allowedAddedSectionKinds.every((kind) =>
+          COACH_REVISION_PROPOSAL_SCHEMA.sectionKind.includes(kind as any)
+        )
+      )
+    ) &&
+    (
+      value.requiresConfirmation === undefined ||
+      typeof value.requiresConfirmation === 'boolean'
+    ) &&
     typeof value.reason === 'string'
   );
 }
@@ -767,6 +874,7 @@ function isRevisionIntent(value: unknown): value is CoachRevisionIntent {
 function validateDayShape(value: unknown, path: string): string[] {
   const issues: string[] = [];
   if (!isRecord(value)) return [`${path} must be an object`];
+  assertExactKeys(value, ['date', 'workout'], path, issues);
   if (typeof value.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value.date)) {
     issues.push(`${path}.date must be YYYY-MM-DD`);
   }
@@ -775,8 +883,10 @@ function validateDayShape(value: unknown, path: string): string[] {
     issues.push(`${path}.workout must be null or an object`);
     return issues;
   }
+  assertExactKeys(value.workout, ['id', 'title', 'workoutType', 'sections'], `${path}.workout`, issues);
   if (typeof value.workout.id !== 'string') issues.push(`${path}.workout.id is required`);
   if (typeof value.workout.title !== 'string') issues.push(`${path}.workout.title is required`);
+  if (typeof value.workout.workoutType !== 'string') issues.push(`${path}.workout.workoutType is required`);
   if (!Array.isArray(value.workout.sections)) {
     issues.push(`${path}.workout.sections must be an array`);
   } else {
@@ -790,6 +900,7 @@ function validateDayShape(value: unknown, path: string): string[] {
 function validateSectionShape(value: unknown, path: string): string[] {
   const issues: string[] = [];
   if (!isRecord(value)) return [`${path} must be an object`];
+  assertExactKeys(value, ['id', 'kind', 'title', 'items'], path, issues);
   if (typeof value.id !== 'string') issues.push(`${path}.id is required`);
   if (!['strength', 'conditioning', 'recovery', 'session'].includes(String(value.kind))) {
     issues.push(`${path}.kind is invalid`);
@@ -797,6 +908,63 @@ function validateSectionShape(value: unknown, path: string): string[] {
   if (typeof value.title !== 'string') issues.push(`${path}.title is required`);
   if (!Array.isArray(value.items)) {
     issues.push(`${path}.items must be an array`);
+  } else {
+    for (const [index, item] of value.items.entries()) {
+      issues.push(...validateItemShape(item, `${path}.items[${index}]`));
+    }
+  }
+  return issues;
+}
+
+function validateItemShape(value: unknown, path: string): string[] {
+  const issues: string[] = [];
+  if (!isRecord(value)) return [`${path} must be an object`];
+  assertExactKeys(value, [
+    'id',
+    'title',
+    'domain',
+    'source',
+    'description',
+    'exerciseIds',
+    'durationMinutes',
+    'prescription',
+  ], path, issues);
+  if (typeof value.id !== 'string') issues.push(`${path}.id is required`);
+  if (typeof value.title !== 'string') issues.push(`${path}.title is required`);
+  if (!COACH_REVISION_PROPOSAL_SCHEMA.sectionKind.includes(value.domain as any)) {
+    issues.push(`${path}.domain is invalid`);
+  }
+  if (typeof value.source !== 'string') issues.push(`${path}.source is required`);
+  if (value.description !== null && typeof value.description !== 'string') {
+    issues.push(`${path}.description must be null or string`);
+  }
+  if (!Array.isArray(value.exerciseIds) || !value.exerciseIds.every((id) => typeof id === 'string')) {
+    issues.push(`${path}.exerciseIds must be string[]`);
+  }
+  if (value.durationMinutes !== null && typeof value.durationMinutes !== 'number') {
+    issues.push(`${path}.durationMinutes must be null or number`);
+  }
+  if (value.prescription !== null) {
+    if (!isRecord(value.prescription)) {
+      issues.push(`${path}.prescription must be null or an object`);
+    } else {
+      assertExactKeys(value.prescription, [
+        'sets',
+        'repsMin',
+        'repsMax',
+        'intensity',
+      ], `${path}.prescription`, issues);
+      for (const key of ['sets', 'repsMin', 'repsMax']) {
+        const item = value.prescription[key];
+        if (item !== null && typeof item !== 'number') {
+          issues.push(`${path}.prescription.${key} must be null or number`);
+        }
+      }
+      const intensity = value.prescription.intensity;
+      if (intensity !== null && typeof intensity !== 'string') {
+        issues.push(`${path}.prescription.intensity must be null or string`);
+      }
+    }
   }
   return issues;
 }
@@ -856,6 +1024,23 @@ function flattenForStableString(value: unknown): Record<string, unknown> {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function assertExactKeys(
+  value: Record<string, unknown>,
+  expected: string[],
+  path: string,
+  issues: string[],
+): void {
+  const allowed = new Set(expected);
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) issues.push(`${path}.${key} is not allowed`);
+  }
+  for (const key of expected) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) {
+      issues.push(`${path}.${key} is required`);
+    }
+  }
 }
 
 function cleanText(value: unknown): string {

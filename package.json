@@ -80,6 +80,7 @@
     "test:smoke-wrapper-preflight": "sucrase-node src/__tests__/smokeWrapperPreflightContractTests.ts",
     "test:coach-live-send-context": "sucrase-node src/__tests__/coachScreenLiveSendContextTests.ts",
     "smoke:semantic-program-edit-draft": "sucrase-node scripts/smoke-semantic-program-edit-draft.ts",
+    "smoke:coach-revision-proposal": "sucrase-node scripts/smoke-coach-revision-proposal.ts",
     "test:readiness": "sucrase-node src/__tests__/readinessSignalTests.ts",
     "test:strength-sequencing": "sucrase-node src/__tests__/strengthSequencingTests.ts",
     "test:off-season-sequencing": "npm run test:strength-sequencing",
