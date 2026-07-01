@@ -19,6 +19,13 @@ function normalizeCoachProvider(raw: string | undefined | null): CoachLLMProvide
 }
 
 function resolveCoachProvider(): CoachLLMProvider {
+  // Function-scoped override first: the revision task (full-state echo with
+  // strict IDs) has different model requirements than coach-chat, and the
+  // shared COACH_LLM_PROVIDER must not be repurposed per-function.
+  const perFunction = normalizeCoachProvider(
+    Deno.env.get("COACH_REVISION_PROPOSAL_PROVIDER"),
+  );
+  if (perFunction) return perFunction;
   const configured = normalizeCoachProvider(Deno.env.get("COACH_LLM_PROVIDER"));
   if (configured) return configured;
   return Deno.env.get("OPENAI_API_KEY") ? "openai" : "anthropic";

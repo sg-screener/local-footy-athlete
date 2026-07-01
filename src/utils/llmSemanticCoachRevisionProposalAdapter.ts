@@ -47,11 +47,12 @@ Continuing a clarification (context.pendingClarifier.revisionTransaction or cont
 - Use pendingCoachRevision.targetDateOverride as the target date when set; otherwise resolve clarificationAnswer against context.dateGuide.
 - userIntent.protectedRefs must be ids that exist in the TARGET day's snapshot. If the target date changed during clarification, re-derive protection from the original request against the new day — never copy refs that were minted for a different date.
 
-Exact clarify shape:
+Exact clarify shape (confidence must be YOUR real confidence in the
+interpretation, 0.0-1.0 — never copy the example value):
 {
   "schemaVersion": "${COACH_REVISION_PROPOSAL_SCHEMA_VERSION}",
   "kind": "clarify",
-  "confidence": 0.0,
+  "confidence": 0.85,
   "question": "small question",
   "missingField": "targetDate|targetScope|targetSession|replacement|confirmation",
   "candidateOptions": [{ "id": "stable_option_id", "label": "Visible label", "value": {} }],
@@ -273,7 +274,9 @@ export class LLMSemanticCoachRevisionProposalAdapter
 
     const json = await resp.json();
     logger.debug('[coach-revision-proposal] raw', truncate(JSON.stringify(json)));
-    logger.debug('[coach-revision-proposal] served_by', {
+    // Warn level so Metro always shows which provider/model actually served —
+    // model-quality debugging is impossible without this.
+    logger.warn('[coach-revision-proposal] served_by', {
       provider: resp.headers?.get?.('x-coach-provider') ?? null,
       model: resp.headers?.get?.('x-coach-model') ?? null,
     });
