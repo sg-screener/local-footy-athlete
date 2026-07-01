@@ -22,6 +22,10 @@ import type {
   ProgramEditDraftIntent as SemanticProgramEditDraftIntent,
   ProgramEditDraftTargetDomain as SemanticProgramEditDraftTargetDomain,
 } from './coachProgramEditDraft';
+import {
+  isBlockLevelProgramEditDraft,
+  isTargetItemMissingFieldName,
+} from './coachProgramEditDraft';
 import { resumeFromPending } from './coachClarifierResume';
 import {
   classifyPendingClarificationAnswer,
@@ -57,7 +61,7 @@ import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine'
 import { useProgramStore } from '../store/programStore';
 import { logger } from './logger';
 
-const COACH_PROGRAM_EDIT_DIAGNOSTIC_MARKER = 'coach-program-edit-diagnostics:9084c05-stage3e1b';
+const COACH_PROGRAM_EDIT_DIAGNOSTIC_MARKER = 'coach-program-edit-diagnostics:stage3e1e-generic-block-resolver';
 
 function programEditDiagnosticsEnabled(): boolean {
   return typeof __DEV__ !== 'undefined' && __DEV__;
@@ -2783,7 +2787,7 @@ function isDateMissingField(field: string): boolean {
 }
 
 function isTargetItemMissingField(field: string): boolean {
-  return /^(?:targetItemId|target_item|target_session|source_item|item|visible_item)$/.test(field);
+  return isTargetItemMissingFieldName(field);
 }
 
 function isStrengthBlockLevelProgramEdit(edit: ProgramEdit): boolean {
@@ -3607,8 +3611,9 @@ function resolveBlockLevelProgramEditDraftTarget(input: {
 } {
   const { draft } = input;
   const editScope = editScopeFromSemanticDraft(draft);
-  if (!isSemanticStrengthBlockDraft(draft, editScope)) {
-    emitProgramEditDiagnostic('strength_block_resolver_skipped', {
+  const blockConfig = blockLevelResolverConfig(draft, editScope);
+  if (!blockConfig) {
+    emitProgramEditDiagnostic('block_level_resolver_skipped', {
       intent: draft.intent,
       targetDomain: draft.targetDomain,
       actionScope: draft.actionScope,
@@ -3621,15 +3626,15 @@ function resolveBlockLevelProgramEditDraftTarget(input: {
 
   const withoutItemField = {
     ...draft,
-    targetItemId: null,
+    targetItemId: blockConfig.carriesTargetItemId ? draft.targetItemId : null,
     missingFields: draft.missingFields.filter((field) => !isTargetItemMissingField(field)),
     proposedActions: draft.proposedActions.map((action) => ({
       ...action,
-      targetItemId: null,
+      targetItemId: blockConfig.carriesTargetItemId ? action.targetItemId : null,
     })),
   };
   if (!withoutItemField.targetDate) {
-    emitProgramEditDiagnostic('strength_block_resolver_ran', {
+    emitProgramEditDiagnostic(`${blockConfig.diagnosticPrefix}_block_resolver_ran`, {
       targetDate: null,
       candidateCount: 0,
       candidates: [],
@@ -3641,9 +3646,19 @@ function resolveBlockLevelProgramEditDraftTarget(input: {
     return { draft: withoutItemField };
   }
 
+  if (blockConfig.kind === 'whole_session') {
+    emitProgramEditDiagnostic('whole_session_block_resolver_ran', {
+      targetDate: withoutItemField.targetDate,
+      missingFieldsBefore: draft.missingFields,
+      missingFieldsAfter: withoutItemField.missingFields,
+      resolved: true,
+    });
+    return { draft: withoutItemField };
+  }
+
   const visibleProgram = input.resolveVisibleProgramForDate?.(withoutItemField.targetDate) ?? null;
-  const blockTargets = visibleStrengthBlockTargets(visibleProgram);
-  emitProgramEditDiagnostic('strength_block_resolver_ran', {
+  const blockTargets = visibleBlockTargetsForConfig(visibleProgram, blockConfig);
+  emitProgramEditDiagnostic(`${blockConfig.diagnosticPrefix}_block_resolver_ran`, {
     targetDate: withoutItemField.targetDate,
     visibleWorkoutName: visibleProgram?.day.workout?.name ?? null,
     candidateCount: blockTargets.length,
@@ -3655,7 +3670,7 @@ function resolveBlockLevelProgramEditDraftTarget(input: {
     })),
     missingFieldsBefore: draft.missingFields,
     missingFieldsAfter: withoutItemField.missingFields,
-    resolved: blockTargets.length <= 1,
+    resolved: blockTargets.length === 1 || (blockTargets.length === 0 && blockConfig.kind === 'strength'),
   });
   if (blockTargets.length > 1) {
     const options = blockTargets.map((target) => target.title);
@@ -3664,23 +3679,52 @@ function resolveBlockLevelProgramEditDraftTarget(input: {
         ...withoutItemField,
         missingFields: uniquePendingFields([
           ...withoutItemField.missingFields,
-          'strengthBlockTarget',
+          blockConfig.ambiguousField,
         ]),
       },
-      question: typedStrengthBlockClarificationQuestion(withoutItemField.targetDate, options),
+      question: typedBlockClarificationQuestion(blockConfig, withoutItemField.targetDate, options),
       options,
     };
   }
+
+  if (blockTargets.length === 0 && blockConfig.kind !== 'strength') {
+    return {
+      draft: {
+        ...withoutItemField,
+        targetItemId: null,
+        missingFields: uniquePendingFields([
+          ...withoutItemField.missingFields,
+          blockConfig.notFoundField,
+        ]),
+      },
+      question: typedBlockNotFoundMessage(blockConfig, withoutItemField.targetDate),
+      options: ['Leave unchanged'],
+    };
+  }
+
+  const resolvedTarget = blockTargets[0] ?? null;
+  const resolvedItemId = blockConfig.carriesTargetItemId
+    ? resolvedTarget?.id ?? withoutItemField.targetItemId
+    : null;
+  const resolvedProposedActions = withoutItemField.proposedActions.map((action) => ({
+    ...action,
+    targetItemId: blockConfig.carriesTargetItemId ? resolvedItemId ?? null : action.targetItemId,
+  }));
 
   const workoutId = stringOrNull((visibleProgram?.day.workout as any)?.id);
   return {
     draft: {
       ...withoutItemField,
+      targetItemId: resolvedItemId ?? null,
+      proposedActions: resolvedProposedActions,
       targetSessionId: withoutItemField.targetSessionId ?? workoutId,
       sourceTarget: withoutItemField.sourceTarget
         ? {
             ...withoutItemField.sourceTarget,
-            itemId: withoutItemField.sourceTarget.itemId ?? workoutId ?? undefined,
+            itemId: withoutItemField.sourceTarget.itemId ?? resolvedItemId ?? workoutId ?? undefined,
+            itemTitle:
+              withoutItemField.sourceTarget.itemTitle ??
+              resolvedTarget?.title,
             sessionName:
               withoutItemField.sourceTarget.sessionName ??
               visibleProgram?.day.workout?.name,
@@ -3690,14 +3734,84 @@ function resolveBlockLevelProgramEditDraftTarget(input: {
   };
 }
 
-function isSemanticStrengthBlockDraft(
+type BlockLevelResolverKind = 'strength' | 'conditioning' | 'recovery' | 'whole_session';
+
+interface BlockLevelResolverConfig {
+  kind: BlockLevelResolverKind;
+  diagnosticPrefix: string;
+  ambiguousField: string;
+  notFoundField: string;
+  label: string;
+  carriesTargetItemId: boolean;
+}
+
+function blockLevelResolverConfig(
   draft: SemanticProgramEditDraft,
   editScope: ProgramEditEditScope | undefined,
-): boolean {
-  return draft.targetDomain === 'strength' &&
+): BlockLevelResolverConfig | null {
+  if (!isBlockLevelProgramEditDraft(draft)) return null;
+  if (
+    draft.targetDomain === 'strength' &&
     draft.actionScope === 'strength_block' &&
-    (draft.intent === 'remove' || draft.intent === 'reduce' || draft.intent === 'edit') &&
-    (editScope === 'remove_strength_block' || editScope === 'reduce_strength_block');
+    (editScope === 'remove_strength_block' || editScope === 'reduce_strength_block')
+  ) {
+    return {
+      kind: 'strength',
+      diagnosticPrefix: 'strength',
+      ambiguousField: 'strengthBlockTarget',
+      notFoundField: 'strengthBlockNotFound',
+      label: 'strength',
+      carriesTargetItemId: false,
+    };
+  }
+  if (
+    draft.targetDomain === 'conditioning' &&
+    draft.actionScope === 'conditioning_block'
+  ) {
+    return {
+      kind: 'conditioning',
+      diagnosticPrefix: 'conditioning',
+      ambiguousField: 'conditioningBlockTarget',
+      notFoundField: 'conditioningBlockNotFound',
+      label: 'conditioning',
+      carriesTargetItemId: true,
+    };
+  }
+  if (
+    draft.targetDomain === 'recovery' &&
+    draft.actionScope === 'conditioning_block'
+  ) {
+    return {
+      kind: 'recovery',
+      diagnosticPrefix: 'recovery',
+      ambiguousField: 'recoveryBlockTarget',
+      notFoundField: 'recoveryBlockNotFound',
+      label: 'recovery',
+      carriesTargetItemId: true,
+    };
+  }
+  if (draft.actionScope === 'whole_session') {
+    return {
+      kind: 'whole_session',
+      diagnosticPrefix: 'whole_session',
+      ambiguousField: 'sessionTarget',
+      notFoundField: 'sessionNotFound',
+      label: 'session',
+      carriesTargetItemId: false,
+    };
+  }
+  return null;
+}
+
+function visibleBlockTargetsForConfig(
+  visibleProgram: ResolvedVisibleProgramForDate | null,
+  config: BlockLevelResolverConfig,
+): ProgramEditCandidateItem[] {
+  if (config.kind === 'strength') return visibleStrengthBlockTargets(visibleProgram);
+  if (config.kind === 'conditioning' || config.kind === 'recovery') {
+    return visibleConditioningBlockTargets(visibleProgram, config.kind);
+  }
+  return [];
 }
 
 function visibleStrengthBlockTargets(
@@ -3726,14 +3840,35 @@ function visibleStrengthBlockTargets(
   }];
 }
 
-function typedStrengthBlockClarificationQuestion(
+function visibleConditioningBlockTargets(
+  visibleProgram: ResolvedVisibleProgramForDate | null,
+  domain: 'conditioning' | 'recovery',
+): ProgramEditCandidateItem[] {
+  if (!visibleProgram?.day.workout) return [];
+  const conditioningItems = visibleProgram.conditioningItems.length > 0
+    ? visibleProgram.conditioningItems
+    : visibleProgram.items.filter((item) =>
+      item.domain === 'conditioning' || item.domain === 'recovery',
+    );
+  return conditioningItems.filter((item) => item.domain === domain);
+}
+
+function typedBlockClarificationQuestion(
+  config: BlockLevelResolverConfig,
   targetDate: string,
   options: string[],
 ): string {
   const optionText = options.join(' or ');
   return optionText
-    ? `Which strength block on ${targetDate} should I change: ${optionText}?`
-    : `Which strength block on ${targetDate} should I change?`;
+    ? `Which ${config.label} block on ${targetDate} should I change: ${optionText}?`
+    : `Which ${config.label} block on ${targetDate} should I change?`;
+}
+
+function typedBlockNotFoundMessage(
+  config: BlockLevelResolverConfig,
+  targetDate: string,
+): string {
+  return `I couldn't find ${config.label} work on ${targetDate}. I left the session unchanged.`;
 }
 
 function programEditDomainFromSemanticDraft(
@@ -3896,14 +4031,20 @@ function semanticProgramEditMissingFields(
   editScope: ProgramEditEditScope | undefined,
 ): string[] {
   const fields = new Set(draft.missingFields);
-  if (isSemanticStrengthBlockDraft(draft, editScope)) {
+  const blockConfig = blockLevelResolverConfig(draft, editScope);
+  if (blockConfig) {
     for (const field of [...fields]) {
       if (isTargetItemMissingField(field)) fields.delete(field);
     }
   }
   if (draft.intent === 'ask_question' || draft.intent === 'explain') return [...fields];
   if (!draft.targetDate && draft.actionScope !== 'setup') fields.add('targetDate');
-  if (draft.targetDomain === 'conditioning' && draft.intent !== 'add' && !draft.targetItemId) {
+  if (
+    draft.targetDomain === 'conditioning' &&
+    draft.intent !== 'add' &&
+    !draft.targetItemId &&
+    !blockConfig
+  ) {
     fields.add('targetItemId');
   }
   if (!command && !isCommandlessSemanticDraftHandledByProgramEdit(draft, editScope)) {
@@ -3942,6 +4083,31 @@ function semanticDraftClarificationQuestion(
       ? `Which strength block on ${draft.targetDate} should I change?`
       : 'Which strength block should I change?';
   }
+  if (fields.includes('conditioningBlockTarget')) {
+    return draft.targetDate
+      ? `Which conditioning block on ${draft.targetDate} should I change?`
+      : 'Which conditioning block should I change?';
+  }
+  if (fields.includes('recoveryBlockTarget')) {
+    return draft.targetDate
+      ? `Which recovery block on ${draft.targetDate} should I change?`
+      : 'Which recovery block should I change?';
+  }
+  if (fields.includes('conditioningBlockNotFound')) {
+    return draft.targetDate
+      ? `I couldn't find conditioning work on ${draft.targetDate}. I left the session unchanged.`
+      : "I couldn't find conditioning work on that day. I left the session unchanged.";
+  }
+  if (fields.includes('recoveryBlockNotFound')) {
+    return draft.targetDate
+      ? `I couldn't find recovery work on ${draft.targetDate}. I left the session unchanged.`
+      : "I couldn't find recovery work on that day. I left the session unchanged.";
+  }
+  if (fields.includes('strengthBlockNotFound')) {
+    return draft.targetDate
+      ? `I couldn't find strength work on ${draft.targetDate}. I left the session unchanged.`
+      : "I couldn't find strength work on that day. I left the session unchanged.";
+  }
   if (fields.includes('targetItemId')) {
     emitProgramEditDiagnostic('generic_visible_item_prompt_generated', {
       functionName: 'semanticDraftClarificationQuestion',
@@ -3968,6 +4134,15 @@ function semanticDraftClarificationOptions(
 ): string[] | undefined {
   if (fields.includes('targetDate')) return ['Today', 'Tomorrow', 'Choose another day'];
   if (fields.includes('strengthBlockTarget')) return ['Gym strength', 'Lower-body strength', 'Whole session'];
+  if (fields.includes('conditioningBlockTarget')) return ['Bike conditioning', 'Sprint conditioning', 'Whole session'];
+  if (fields.includes('recoveryBlockTarget')) return ['Recovery block', 'Mobility block', 'Whole session'];
+  if (
+    fields.includes('conditioningBlockNotFound') ||
+    fields.includes('recoveryBlockNotFound') ||
+    fields.includes('strengthBlockNotFound')
+  ) {
+    return ['Leave unchanged'];
+  }
   if (fields.includes('targetItemId')) {
     const title = draft.sourceTarget?.itemTitle;
     return title ? [title, 'Choose another item'] : undefined;

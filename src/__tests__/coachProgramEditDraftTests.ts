@@ -473,9 +473,12 @@ section('[12b] Resumed draft support gate uses executable action shape');
   const resumedConditioning: ProgramEditDraft = {
     ...conditioning,
     targetDate: '2026-07-06',
+    targetItemId: null,
+    missingFields: ['targetItemId'],
     proposedActions: conditioning.proposedActions.map((action) => ({
       ...action,
       targetDate: '2026-07-06',
+      targetItemId: null,
     })),
     verifierExpectations: conditioning.verifierExpectations.map((expectation) => ({
       ...expectation,
@@ -483,9 +486,12 @@ section('[12b] Resumed draft support gate uses executable action shape');
     })),
     isCompound: false,
   };
-  eq('resumed conditioning-block remove reaches finaliser',
+  eq('resumed conditioning-block remove with stale item field reaches finaliser',
     decideProgramEditDraftFrontDoor(resumedConditioning).kind,
     'allow_compatibility');
+  ok('resumed conditioning-block remove does not ask generic item question',
+    !/visible item/i.test((decideProgramEditDraftFrontDoor(resumedConditioning) as any).reply ?? ''),
+    decideProgramEditDraftFrontDoor(resumedConditioning));
 
   const sourceFrame = frameForSession('Team Training');
   const moveAction: ProgramEditDraftAction = {

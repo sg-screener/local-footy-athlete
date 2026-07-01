@@ -520,6 +520,72 @@ function semanticStrengthBlockEdit(args: {
   });
 }
 
+function semanticConditioningBlockEdit(args: {
+  intent?: 'remove' | 'reduce' | 'edit';
+  targetDate?: string;
+  targetItemId?: string | null;
+  missingFields?: string[];
+  resolveVisibleProgramForDate?: (date: string) => any;
+  protectStrength?: boolean;
+} = {}): ProgramEdit {
+  const intent = args.intent ?? 'remove';
+  const targetDate = args.targetDate ?? TARGET;
+  return programEditFromSemanticProgramEditDraft({
+    todayISO: TODAY,
+    userMessage: 'remove conditioning from the target day',
+    draft: {
+      intent,
+      targetDomain: 'conditioning',
+      actionScope: 'conditioning_block',
+      targetDate,
+      targetSessionId: 'session-conditioning',
+      targetItemId: args.targetItemId ?? null,
+      sourceTarget: {
+        kind: 'conditioning_item',
+        date: targetDate,
+        sessionName: 'Lower Body Strength',
+        itemId: args.targetItemId ?? undefined,
+        itemTitle: 'Conditioning block',
+        domain: 'conditioning',
+        stillVisible: true,
+      } as any,
+      explicitDateRole: 'referent',
+      explicitUserWording: 'remove conditioning from the target day',
+      missingFields: args.missingFields ?? [],
+      confidence: 0.91,
+      protectedTargets: args.protectStrength === false ? [] : [{
+        targetDomain: 'strength',
+        actionScope: 'strength_block',
+        targetDate,
+        targetItemId: null,
+        title: 'Strength',
+        reason: 'conditioning_edit_preserves_strength_by_default',
+      }],
+      constraints: args.protectStrength === false ? [] : ['keep strength:strength_block'],
+      proposedActions: [{
+        intent: intent === 'reduce' ? 'edit' : intent,
+        targetDomain: 'conditioning',
+        actionScope: 'conditioning_block',
+        targetDate,
+        targetSessionId: 'session-conditioning',
+        targetItemId: args.targetItemId ?? null,
+        sourceTarget: null,
+        reason: `${intent}_conditioning_block`,
+      }],
+      verifierExpectations: [{
+        kind: 'domain_changed',
+        targetDomain: 'conditioning',
+        actionScope: 'conditioning_block',
+        targetDate,
+        reason: `${intent}_conditioning_block`,
+      }],
+      isCompound: false,
+      reason: `semantic_${intent}_conditioning_block`,
+    } as any,
+    resolveVisibleProgramForDate: args.resolveVisibleProgramForDate,
+  });
+}
+
 section('1. ProgramEdit schema is the mutation contract');
 
 const bikeWorkout = conditioningWorkout('Easy Aerobic Flush', ['Bike Flush']);
@@ -2599,6 +2665,78 @@ ok('reduce strength preserves conditioning row',
       !/reduced strength block/i.test(row.notes ?? ''),
   ),
   reduceStrengthRun.written?.exercises);
+
+section('12b. Generic block-level target resolver');
+
+const semanticConditioningRemove = semanticConditioningBlockEdit({
+  missingFields: ['targetItemId'],
+  resolveVisibleProgramForDate: () => visibleProgramForWorkout(mixedStrengthFlush),
+});
+eq('conditioning block resolver finalises to conditioning domain',
+  semanticConditioningRemove.targetDomain,
+  'conditioning' as any);
+eq('conditioning block resolver keeps remove_conditioning_item scope',
+  (semanticConditioningRemove as any).editScope,
+  'remove_conditioning_item');
+eq('conditioning block resolver binds the single visible conditioning block',
+  semanticConditioningRemove.targetItemId,
+  'conditioning-row-1');
+ok('conditioning block resolver does not ask which visible item',
+  !semanticConditioningRemove.missingFields.includes('targetItemId') &&
+    !/visible item/i.test(semanticConditioningRemove.question ?? ''),
+  semanticConditioningRemove);
+
+const semanticConditioningRemoveRun = runConditioningProgramEdit(
+  semanticConditioningRemove,
+  mixedStrengthFlush,
+);
+ok('semantic conditioning block removal preserves strength exercises',
+  semanticConditioningRemoveRun.written?.exercises?.some((row: any) =>
+    /squat/i.test(row.exercise?.name ?? ''),
+  ) &&
+    semanticConditioningRemoveRun.written?.exercises?.some((row: any) =>
+      /deadlift/i.test(row.exercise?.name ?? ''),
+    ),
+  semanticConditioningRemoveRun.written);
+ok('semantic conditioning block removal removes only conditioning',
+  !semanticConditioningRemoveRun.written?.exercises?.some((row: any) =>
+    /easy aerobic flush/i.test(row.exercise?.name ?? ''),
+  ),
+  semanticConditioningRemoveRun.written);
+
+const multiConditioningBlockEdit = semanticConditioningBlockEdit({
+  missingFields: ['targetItemId'],
+  resolveVisibleProgramForDate: () => visibleProgramForWorkout(
+    strengthWithConditioningWorkout(
+      'Mixed Conditioning',
+      ['Back Squat'],
+      ['Bike Conditioning', 'Sprint Conditioning'],
+    ),
+  ),
+});
+eq('multiple visible conditioning blocks ask typed clarification',
+  multiConditioningBlockEdit.intent,
+  'ask_question' as any);
+ok('multiple visible conditioning blocks do not use generic item wording',
+  /which conditioning block/i.test(multiConditioningBlockEdit.question ?? '') &&
+    !/visible item/i.test(multiConditioningBlockEdit.question ?? '') &&
+    (multiConditioningBlockEdit.options ?? []).includes('Bike Conditioning') &&
+    (multiConditioningBlockEdit.options ?? []).includes('Sprint Conditioning'),
+  multiConditioningBlockEdit);
+
+const noConditioningBlockEdit = semanticConditioningBlockEdit({
+  missingFields: ['targetItemId'],
+  resolveVisibleProgramForDate: () => visibleProgramForWorkout(
+    strengthWithConditioningWorkout('Strength Only', ['Bench Press'], []),
+  ),
+});
+eq('missing visible conditioning block becomes safe no-op clarify',
+  noConditioningBlockEdit.intent,
+  'ask_question' as any);
+ok('missing visible conditioning block does not ask generic visible item',
+  /couldn't find conditioning/i.test(noConditioningBlockEdit.question ?? '') &&
+    !/visible item/i.test(noConditioningBlockEdit.question ?? ''),
+  noConditioningBlockEdit.question);
 
 const badAfter = strengthWithConditioningWorkout('Lower Body Strength', [], []);
 const protectedViolationRun = runStrengthBlockProgramEdit(removeStrengthEdit, mixedStrengthFlush, {

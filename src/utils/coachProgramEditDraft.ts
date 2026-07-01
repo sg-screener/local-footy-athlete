@@ -90,6 +90,35 @@ export interface ProgramEditDraft {
   reason: string;
 }
 
+export function isBlockLevelProgramEditDraft(
+  draft: Pick<ProgramEditDraft, 'intent' | 'targetDomain' | 'actionScope'>,
+): boolean {
+  const mutatesBlock =
+    draft.intent === 'remove' ||
+    draft.intent === 'reduce' ||
+    draft.intent === 'edit' ||
+    draft.intent === 'replace';
+  if (!mutatesBlock) return false;
+
+  if (draft.actionScope === 'strength_block') {
+    return draft.targetDomain === 'strength';
+  }
+
+  if (draft.actionScope === 'conditioning_block') {
+    return draft.targetDomain === 'conditioning' || draft.targetDomain === 'recovery';
+  }
+
+  if (draft.actionScope === 'whole_session') {
+    return draft.targetDomain === 'session' || draft.targetDomain === 'schedule';
+  }
+
+  return false;
+}
+
+export function isTargetItemMissingFieldName(field: string): boolean {
+  return /^(?:targetItemId|target_item|target_session|source_item|item|visible_item)$/.test(field);
+}
+
 export interface BuildProgramEditDraftInput {
   userMessage: string;
   targetFrame?: CoachTargetFrame | null;
@@ -274,13 +303,9 @@ export function decideProgramEditDraftFrontDoor(
 }
 
 function effectiveMissingFieldsForDraft(draft: ProgramEditDraft): string[] {
-  if (
-    draft.targetDomain === 'strength' &&
-    draft.actionScope === 'strength_block' &&
-    (draft.intent === 'remove' || draft.intent === 'reduce' || draft.intent === 'edit')
-  ) {
+  if (isBlockLevelProgramEditDraft(draft)) {
     return draft.missingFields.filter((field) =>
-      !/^(?:targetItemId|target_item|target_session|source_item|item|visible_item)$/.test(field),
+      !isTargetItemMissingFieldName(field),
     );
   }
   return draft.missingFields;

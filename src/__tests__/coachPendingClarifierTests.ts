@@ -1949,18 +1949,25 @@ async function runControllerPendingDateSection() {
       description: 'Lower strength work',
     },
   };
+  const mondayFlushRows = flushTemplate.exercises.map((item: any) => ({
+    ...item,
+    id: `mon-draft-${item.id}`,
+    workoutId: mondayBase.id,
+  }));
   const mondayLowerWithFlush = {
     ...mondayBase,
     name: 'Lower Body Strength',
     workoutType: 'Strength',
-    conditioningBlock: flushTemplate.conditioningBlock,
+    conditioningBlock: {
+      ...flushTemplate.conditioningBlock,
+      options: (flushTemplate.conditioningBlock?.options ?? []).map((option: any) => ({
+        ...option,
+        exerciseIds: (option.exerciseIds ?? []).map((id: string) => `mon-draft-${id}`),
+      })),
+    },
     exercises: [
       lowerStrengthRow,
-      ...flushTemplate.exercises.map((item: any) => ({
-        ...item,
-        id: `mon-draft-${item.id}`,
-        workoutId: mondayBase.id,
-      })),
+      ...mondayFlushRows,
     ],
   };
   microcycle2.workouts = microcycle2.workouts.map((workout: any) =>
@@ -2203,6 +2210,163 @@ async function runControllerPendingDateSection() {
       /strength work/i.test(explicitAnswerReply) &&
       /left conditioning alone/i.test(explicitAnswerReply),
     JSON.stringify({ explicitAnswerDebug, explicitAnswerReply }));
+
+  useProgramStore.getState().clear();
+  useProgramStore.getState().setCurrentProgram(program2);
+  useProgramStore.getState().setCurrentMicrocycle(microcycle2);
+  useCoachContextStateStore.getState().clearCoachContext();
+  usePendingCoachClarifierStore.getState().clearPending();
+
+  const semanticConditioningAdapter: SemanticProgramEditDraftAdapter = {
+    buildDraft: (input: SemanticProgramEditDraftAdapterInput) => {
+      const targetDay = input.visibleWeek.find((day) => day.date === '2026-06-29');
+      const targetSessionId = String((targetDay?.workout as any)?.id ?? 'wk-smoke-dow-1');
+      const sourceTarget = {
+        kind: 'conditioning_item' as const,
+        date: '2026-06-29',
+        sessionName: targetDay?.workout?.name ?? 'Lower Body Strength',
+        itemId: undefined,
+        itemTitle: 'Conditioning block',
+        domain: 'conditioning' as const,
+        stillVisible: true,
+      };
+      const removeConditioning: ProgramEditDraftAction = {
+        intent: 'remove',
+        targetDomain: 'conditioning',
+        actionScope: 'conditioning_block',
+        targetDate: '2026-06-29',
+        targetSessionId,
+        targetItemId: null,
+        sourceTarget,
+        reason: 'semantic_conditioning_block_remove',
+      };
+      const semanticDraft: ProgramEditDraft = {
+        intent: 'remove',
+        targetDomain: 'conditioning',
+        actionScope: 'conditioning_block',
+        targetDate: '2026-06-29',
+        targetSessionId,
+        targetItemId: null,
+        sourceTarget,
+        explicitDateRole: 'referent',
+        explicitUserWording: input.userMessage,
+        missingFields: ['targetItemId'],
+        confidence: 0.91,
+        protectedTargets: [{
+          targetDomain: 'strength',
+          actionScope: 'strength_block',
+          targetDate: '2026-06-29',
+          targetItemId: null,
+          title: 'Lower Body Strength',
+          reason: 'conditioning_edit_preserves_strength_by_default',
+        }],
+        constraints: ['keep strength:strength_block'],
+        proposedActions: [removeConditioning],
+        verifierExpectations: [
+          {
+            kind: 'domain_changed',
+            targetDomain: 'conditioning',
+            actionScope: 'conditioning_block',
+            targetDate: '2026-06-29',
+            reason: 'remove_conditioning_block',
+          },
+          {
+            kind: 'domain_unchanged',
+            targetDomain: 'strength',
+            actionScope: 'strength_block',
+            targetDate: '2026-06-29',
+            reason: 'preserve_strength',
+          },
+        ],
+        isCompound: false,
+        reason: 'semantic_conditioning_block_remove',
+      };
+      return {
+        schemaVersion: SEMANTIC_PROGRAM_EDIT_DRAFT_SCHEMA_VERSION,
+        status: 'draft',
+        confidence: 0.91,
+        draft: semanticDraft,
+        reason: 'semantic_conditioning_block_remove',
+      };
+    },
+  };
+
+  const conditioningFirstMessages: CoachTurnMessage[] = [];
+  let conditioningFirstDebug: CoachTurnDebug | null = null;
+  const conditioningFirstMessage: CoachTurnMessage = {
+    id: 'turn-stale-conditioning-remove',
+    role: 'user',
+    content: 'Can you remove conditioning from Monday?',
+  };
+  await handleCoachTurn({
+    ...controllerInputBase,
+    semanticProgramEditDraftAdapter: semanticConditioningAdapter,
+    userMessage: conditioningFirstMessage,
+    messages: conditioningFirstMessages,
+    appendUser: () => conditioningFirstMessages.push(conditioningFirstMessage),
+    appendAssistant: (message) => conditioningFirstMessages.push(message),
+    appendUserAndAssistant: (message) => {
+      conditioningFirstMessages.push(conditioningFirstMessage, message);
+    },
+    setLastCoachDebug: (nextDebug) => {
+      conditioningFirstDebug = nextDebug;
+    },
+  });
+  const conditioningFirstReply = conditioningFirstMessages.find((message) => message.role === 'assistant')?.content ?? '';
+  const conditioningPending = getPendingClarifierSnapshot(NOW);
+  ok('17.8 stale-date conditioning turn asks date clarification and stores block draft',
+    conditioningFirstDebug?.route === 'pending_clarification:target_date:past_date' &&
+      /do you mean next monday/i.test(conditioningFirstReply) &&
+      conditioningPending?.programEditDraftEnvelope?.draft.targetDomain === 'conditioning' &&
+      conditioningPending.programEditDraftEnvelope.draft.actionScope === 'conditioning_block' &&
+      conditioningPending.programEditDraftEnvelope.source === 'semantic',
+    JSON.stringify({ conditioningFirstDebug, conditioningFirstReply, conditioningPending }));
+
+  const conditioningSecondMessages: CoachTurnMessage[] = [];
+  let conditioningSecondDebug: CoachTurnDebug | null = null;
+  const conditioningSecondMessage: CoachTurnMessage = {
+    id: 'turn-stale-conditioning-remove-yes',
+    role: 'user',
+    content: 'Yes',
+  };
+  await handleCoachTurn({
+    ...controllerInputBase,
+    semanticProgramEditDraftAdapter: semanticConditioningAdapter,
+    userMessage: conditioningSecondMessage,
+    messages: conditioningSecondMessages,
+    appendUser: () => conditioningSecondMessages.push(conditioningSecondMessage),
+    appendAssistant: (message) => conditioningSecondMessages.push(message),
+    appendUserAndAssistant: (message) => {
+      conditioningSecondMessages.push(conditioningSecondMessage, message);
+    },
+    setLastCoachDebug: (nextDebug) => {
+      conditioningSecondDebug = nextDebug;
+    },
+  });
+  const conditioningSecondReply = conditioningSecondMessages.find((message) => message.role === 'assistant')?.content ?? '';
+  const conditioningNextMondayOverride = useProgramStore.getState().dateOverrides?.['2026-07-06'] as any;
+  ok('17.9 resumed conditioning-block draft auto-resolves block target',
+    /^Done\b/i.test(conditioningSecondReply) &&
+      !/which visible item/i.test(conditioningSecondReply) &&
+      !/which visible item/i.test(JSON.stringify(conditioningSecondDebug ?? {})),
+    JSON.stringify({ conditioningSecondDebug, conditioningSecondReply }));
+  ok('17.10 resumed conditioning-block removal preserves strength content',
+    conditioningNextMondayOverride &&
+      (conditioningNextMondayOverride.exercises ?? []).some((row: any) =>
+        /back squat|lower strength/i.test([
+          row.exercise?.name,
+          row.exercise?.description,
+          row.notes,
+        ].filter(Boolean).join(' ')),
+      ) &&
+      !(conditioningNextMondayOverride.exercises ?? []).some((row: any) =>
+        /easy aerobic flush|zone 2|row|bike/i.test([
+          row.exercise?.name,
+          row.exercise?.description,
+          row.notes,
+        ].filter(Boolean).join(' ')),
+      ),
+    JSON.stringify({ conditioningSecondReply, conditioningNextMondayOverride }));
 
   usePendingCoachClarifierStore.getState().clearPending();
 }
