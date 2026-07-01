@@ -31,7 +31,13 @@ export const COACH_REVISION_PROPOSAL_SCHEMA = {
     'revisedDays',
     'explanation',
   ],
-  proposalKind: ['clarify', 'revision'],
+  notAnEditTopLevelKeys: [
+    'schemaVersion',
+    'kind',
+    'confidence',
+    'reason',
+  ],
+  proposalKind: ['clarify', 'revision', 'not_an_edit'],
   intent: ['add', 'edit', 'remove', 'replace', 'move', 'reduce'],
   targetDomain: [
     'strength',
@@ -175,6 +181,15 @@ export type CoachRevisionProposal =
       };
       revisedDays: CoachVisibleDaySnapshot[];
       explanation: string;
+    }
+  | {
+      // Typed decline: the message is not a program-change request at all
+      // (question, status check, chit-chat). The revision path releases the
+      // turn to normal conversation handling instead of forcing a clarify.
+      schemaVersion: typeof COACH_REVISION_PROPOSAL_SCHEMA_VERSION;
+      kind: 'not_an_edit';
+      confidence: number;
+      reason: string;
     };
 
 export interface CoachRevisionParseResult {
@@ -334,7 +349,7 @@ export function buildCoachRevisionDiff(args: {
   before: CoachVisibleWeekSnapshot;
   proposal: CoachRevisionProposal;
 }): CoachRevisionDiff {
-  if (args.proposal.kind === 'clarify') {
+  if (args.proposal.kind !== 'revision') {
     return { changedDates: [], dateDiffs: [] };
   }
 
@@ -366,7 +381,7 @@ export function validateCoachRevisionDiff(args: {
     proposal: args.proposal,
   });
 
-  if (args.proposal.kind === 'clarify') {
+  if (args.proposal.kind !== 'revision') {
     return { status: 'valid', canApply: true, diff, issues: [] };
   }
 
@@ -823,11 +838,19 @@ function validateProposalShape(value: Record<string, unknown>): string[] {
   if (value.schemaVersion !== COACH_REVISION_PROPOSAL_SCHEMA_VERSION) {
     issues.push('schemaVersion must be coach_revision_proposal.v1');
   }
-  if (value.kind !== 'revision' && value.kind !== 'clarify') {
-    issues.push('kind must be revision or clarify');
+  if (value.kind !== 'revision' && value.kind !== 'clarify' && value.kind !== 'not_an_edit') {
+    issues.push('kind must be revision, clarify, or not_an_edit');
   }
   if (typeof value.confidence !== 'number' || value.confidence < 0 || value.confidence > 1) {
     issues.push('confidence must be a number between 0 and 1');
+  }
+
+  if (value.kind === 'not_an_edit') {
+    assertExactKeys(value, ['schemaVersion', 'kind', 'confidence', 'reason'], 'not_an_edit proposal', issues);
+    if (typeof value.reason !== 'string' || value.reason.trim().length === 0) {
+      issues.push('not_an_edit.reason is required');
+    }
+    return issues;
   }
 
   if (value.kind === 'clarify') {

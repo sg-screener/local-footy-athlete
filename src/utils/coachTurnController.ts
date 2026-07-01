@@ -2669,6 +2669,17 @@ export async function handleCoachTurn(
           });
           return replyAndFinish(input, 'pending-coach-revision-regenerated-clarify', revisionResult.reply);
         }
+        if (revisionResult.kind === 'not_an_edit') {
+          // A resume that comes back "not an edit" means the transaction no
+          // longer describes a change; close it honestly rather than leaking
+          // the turn mid-transaction.
+          usePendingCoachClarifierStore.getState().clearPending();
+          return replyAndFinish(
+            input,
+            'pending-coach-revision-not-an-edit',
+            'No worries — leaving the plan as it is.',
+          );
+        }
         usePendingCoachClarifierStore.getState().clearPending();
         const reply = revisionResult.kind === 'needs_confirmation'
           ? 'I need confirmation before making that replacement.'
@@ -3446,6 +3457,18 @@ export async function handleCoachTurn(
           applied: false,
         });
         return replyAndFinish(input, 'coach-revision-proposal-clarify', revisionResult.reply);
+      } else if (revisionResult.kind === 'not_an_edit') {
+        // Typed release: the message is not a program change. Deliberately no
+        // return — the conversation layers (classifier/coach-chat) own the
+        // turn from here. Legacy MUTATION execution stays fenced by its own
+        // guards; questions and chit-chat get real conversational answers
+        // instead of "I think that is a program edit…".
+        emitCoachTurnDiagnostic('coach_revision_not_an_edit', {
+          message: input.userMessage.content,
+          reason: revisionResult.reason,
+          confidence: revisionResult.confidence,
+          mutationLike: isMutationLike(input.userMessage.content),
+        });
       } else if (revisionResult.kind === 'invalid') {
         input.setLastCoachDebug({
           intent: 'coach_revision_proposal',

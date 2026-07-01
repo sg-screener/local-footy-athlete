@@ -36,8 +36,25 @@ Date resolution:
 - Resolve relative phrases ("tomorrow", "Monday", "next Monday", "the 6th") against context.dateGuide. Never do your own calendar arithmetic and never ask which date when exactly one visible date matches the phrase.
 - "Next <weekday>" means the upcoming visible date with that weekday (smallest positive daysFromToday). A bare weekday name means the same unless the athlete clearly refers to the past.
 
+When the message is NOT a change request:
+- Questions, status checks, opinions, and chit-chat ("how's my week looking?",
+  "why is Monday heavy?", "thanks mate") are NOT program edits. Return kind
+  "not_an_edit" so the app routes the message to normal coach conversation.
+- Never return "clarify" for a message that asks for information instead of a
+  change. Clarify is only for change requests with a missing detail.
+
+Exact not_an_edit shape:
+{
+  "schemaVersion": "${COACH_REVISION_PROPOSAL_SCHEMA_VERSION}",
+  "kind": "not_an_edit",
+  "confidence": 0.9,
+  "reason": "short_reason"
+}
+
 When to clarify:
-- Return kind "clarify" only when TWO OR MORE visible targets genuinely match the request, or a required field is missing and cannot be resolved from context.
+- Return kind "clarify" only when the message IS a change request AND two or
+  more visible targets genuinely match, or a required field is missing and
+  cannot be resolved from context.
 - When exactly one visible target matches, return a revision for it. Safety is enforced by the app validator, not by asking extra questions.
 - Ask the smallest useful question, and put concrete choices in candidateOptions.
 

@@ -37,7 +37,7 @@ export interface BuildSemanticCoachRevisionProposalInput
 }
 
 export interface CoachRevisionShadowDiagnostic {
-  proposalKind: 'revision' | 'clarify' | 'invalid';
+  proposalKind: 'revision' | 'clarify' | 'invalid' | 'not_an_edit';
   affectedDates: string[];
   diffSummary: Array<{
     date: string;
@@ -93,6 +93,15 @@ export type SemanticCoachRevisionProposalResult =
       proposal?: CoachRevisionProposal;
       diff?: CoachRevisionDiff;
       validation?: CoachRevisionValidationResult;
+    }
+  | {
+      /** Typed decline: not a program-change request. The controller releases
+       *  the turn to normal conversation handling. */
+      kind: 'not_an_edit';
+      proposal: Extract<CoachRevisionProposal, { kind: 'not_an_edit' }>;
+      reason: string;
+      confidence: number;
+      diagnostic: CoachRevisionShadowDiagnostic;
     };
 
 export class MockSemanticCoachRevisionProposalAdapter
@@ -146,6 +155,32 @@ export async function buildSemanticCoachRevisionProposal(
   }
 
   const proposal = parsed.proposal;
+
+  // Typed decline: bypass the confidence gate entirely. Whether the model is
+  // 0.5 or 0.99 sure the message isn't an edit, forcing a clarify would
+  // hijack conversation — releasing the turn is the safe outcome either way.
+  if (proposal.kind === 'not_an_edit') {
+    const diagnostic: CoachRevisionShadowDiagnostic = {
+      proposalKind: 'not_an_edit',
+      affectedDates: [],
+      diffSummary: [],
+      validatorStatus: 'not_run',
+      protectedRefsPreserved: [],
+      protectedRefsViolated: [],
+      unknownIds: [],
+      confirmationRequired: false,
+      issues: [],
+    };
+    emitShadowDiagnostic(diagnostic);
+    return {
+      kind: 'not_an_edit',
+      proposal,
+      reason: proposal.reason,
+      confidence: proposal.confidence,
+      diagnostic,
+    };
+  }
+
   const minConfidence = input.minConfidence ?? 0.65;
   if (proposal.confidence < minConfidence) {
     const diagnostic = proposal.kind === 'revision'

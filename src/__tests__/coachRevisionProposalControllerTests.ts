@@ -999,6 +999,39 @@ async function run() {
   }
 
   {
+    // NOT_AN_EDIT: conversational messages must be RELEASED to the normal
+    // conversation layers, not hijacked into clarify (live 2026-07-02:
+    // "How's my week looking next week?" got "I think that is a program
+    // edit…"). The revision path declines with a typed kind and falls
+    // through; the classifier then owns the turn.
+    const adapter = new RecordingRevisionAdapter(() => ({
+      schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
+      kind: 'not_an_edit',
+      confidence: 0.92,
+      reason: 'status_question_not_change_request',
+    }));
+    const result = await runControllerTurn({
+      message: "How's my week looking next week?",
+      adapter,
+    });
+    eq('[17] revision adapter consulted', adapter.calls.length, 1);
+    // Released = controller returns handled:false so the screen's coach-chat
+    // conversation layer answers. (A deterministic conversation bypass may
+    // classify without calling the LLM classifier — that's still release.)
+    eq('[17] turn released to conversation (not handled by revision path)',
+      result.handled.handled,
+      false);
+    eq('[17] classified as conversation, not mutation',
+      (result.handled as any).classifiedCoachIntent?.intent,
+      'general_question');
+    ok('[17] no clarify hijack reply',
+      !/I think that is a program edit/.test(result.reply),
+      result.reply);
+    ok('[17] no pending transaction stored', !result.pending, result.pending);
+    ok('[17] no override written', Object.keys(result.dateOverrides).length === 0, result.dateOverrides);
+  }
+
+  {
     // Round cap: a model that clarifies forever gets cut off honestly after
     // COACH_REVISION_MAX_CLARIFY_ROUNDS, with no mutation and no legacy path.
     const adapter = new RecordingRevisionAdapter(() =>
