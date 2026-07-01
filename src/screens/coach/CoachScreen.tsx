@@ -1751,7 +1751,18 @@ export default function CoachScreen() {
     // now has one front door. The controller owns packet build, pending
     // clarifier/transaction resume, ProgramEdit interpretation, deterministic
     // execution, truth gates, and the decision to continue to legacy text chat.
-    const controllerResult = await handleCoachTurn({
+    //
+    // Send feedback is IMMEDIATE and screen-owned: the user's bubble, cleared
+    // input, and the thinking indicator appear before any network wait, for
+    // every path. The controller's append callbacks below therefore only add
+    // assistant messages — appending the user message there again would
+    // double it.
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue('');
+    setIsLoading(true);
+    let controllerResult!: Awaited<ReturnType<typeof handleCoachTurn>>;
+    try {
+    controllerResult = await handleCoachTurn({
       userMessage,
       messages,
       todayISO: todayISOLocal(),
@@ -1782,14 +1793,14 @@ export default function CoachScreen() {
       setPendingReadiness: (pending) => {
         pendingReadinessRef.current = pending;
       },
-      appendUser: () => {
-        setMessages((prev) => [...prev, userMessage]);
-      },
+      // User message is already appended above (immediate send feedback);
+      // these callbacks now only ever add assistant content.
+      appendUser: () => {},
       appendAssistant: (assistantMessage) => {
         setMessages((prev) => [...prev, assistantMessage]);
       },
       appendUserAndAssistant: (assistantMessage) => {
-        setMessages((prev) => [...prev, userMessage, assistantMessage]);
+        setMessages((prev) => [...prev, assistantMessage]);
       },
       clearInput: () => setInputValue(''),
       setIsLoading,
@@ -1798,15 +1809,28 @@ export default function CoachScreen() {
       clearSetupRebuildProgress,
       setLastCoachDebug,
     });
+    } catch (err) {
+      // With isLoading now flipped before the controller runs, an uncaught
+      // controller exception would freeze the input forever. Recover honestly.
+      logger.error('[coach-send] controller_exception', {
+        detail: err instanceof Error ? err.message : String(err),
+      });
+      setIsLoading(false);
+      setMessages((prev) => [...prev, {
+        id: `${Date.now()}-controller-error`,
+        role: 'assistant',
+        content: 'Something went wrong handling that — nothing was changed. Please try again.',
+      }]);
+      return;
+    }
 
     if (controllerResult.handled) {
+      setIsLoading(false);
       return;
     }
     // ──────────────── END COACH TURN CONTROLLER ────────────────
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
-    setIsLoading(true);
+    // User message/input/loading already handled above; legacy path continues
+    // with isLoading still true and clears it in its own finally.
 
     try {
       const env = getClientEnvConfig();
