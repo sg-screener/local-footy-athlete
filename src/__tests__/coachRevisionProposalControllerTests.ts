@@ -34,6 +34,8 @@ import {
 } from '../utils/visibleProgramReadModel';
 
 const TODAY = '2026-07-01';
+const PAST_MONDAY = '2026-06-29';
+const NEXT_MONDAY = '2026-07-06';
 const THURSDAY = '2026-07-02';
 
 let pass = 0;
@@ -67,10 +69,10 @@ class RecordingRevisionAdapter implements SemanticCoachRevisionProposalAdapter {
   }
 }
 
-function ex(name: string, id: string, sets = 3): any {
+function ex(name: string, id: string, sets = 3, workoutId = 'workout-thu-mixed'): any {
   return {
     id,
-    workoutId: 'workout-thu-mixed',
+    workoutId,
     exerciseId: id,
     exerciseOrder: 0,
     prescribedSets: sets,
@@ -94,11 +96,16 @@ function ex(name: string, id: string, sets = 3): any {
   };
 }
 
-function mixedWorkout(): Workout {
+function mixedWorkout(args: {
+  id?: string;
+  dayOfWeek?: number;
+} = {}): Workout {
+  const id = args.id ?? 'workout-thu-mixed';
+  const conditioningId = `${id}-conditioning-bike`;
   return {
-    id: 'workout-thu-mixed',
+    id,
     microcycleId: 'mc-1',
-    dayOfWeek: 4,
+    dayOfWeek: args.dayOfWeek ?? 4,
     name: 'Lower Body Strength',
     description: '',
     durationMinutes: 75,
@@ -113,13 +120,13 @@ function mixedWorkout(): Workout {
       options: [{
         title: 'Easy Aerobic Flush',
         description: '25min zone 2 bike',
-        exerciseIds: ['conditioning-bike'],
+        exerciseIds: [conditioningId],
       }],
     },
     exercises: [
-      ex('Back Squat', 'strength-squat', 4),
-      ex('Romanian Deadlift', 'strength-rdl', 3),
-      ex('25min zone 2 bike', 'conditioning-bike', 1),
+      ex('Back Squat', `${id}-strength-squat`, 4, id),
+      ex('Romanian Deadlift', `${id}-strength-rdl`, 3, id),
+      ex('25min zone 2 bike', conditioningId, 1, id),
     ],
     createdAt: '',
     updatedAt: '',
@@ -138,9 +145,20 @@ function seedProgram() {
     endDate: '2026-07-05',
     miniCycleNumber: 1,
     intensityMultiplier: 1,
-    workouts: [mixedWorkout()],
+    workouts: [
+      mixedWorkout({ id: 'workout-mon-mixed', dayOfWeek: 1 }),
+      mixedWorkout(),
+    ],
     createdAt: '',
     updatedAt: '',
+  };
+  const nextMicrocycle: Microcycle = {
+    ...microcycle,
+    id: 'mc-2',
+    weekNumber: 2,
+    startDate: NEXT_MONDAY,
+    endDate: '2026-07-12',
+    workouts: [mixedWorkout({ id: 'workout-next-mon-mixed', dayOfWeek: 1 })],
   };
   const program: TrainingProgram = {
     id: 'program-1',
@@ -150,7 +168,7 @@ function seedProgram() {
     programPhase: 'In-Season',
     startDate: '2026-06-29',
     endDate: '2026-07-26',
-    microcycles: [microcycle],
+    microcycles: [microcycle, nextMicrocycle],
     primaryFocus: 'Test',
     isActive: true,
     createdAt: '',
@@ -164,10 +182,17 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
-function day(input: SemanticCoachRevisionProposalAdapterInput): CoachVisibleDaySnapshot {
-  const found = input.visibleSnapshot.days.find((item) => item.date === THURSDAY);
-  if (!found) throw new Error('Thursday not in visible snapshot');
+function dayByDate(
+  input: SemanticCoachRevisionProposalAdapterInput,
+  date: string,
+): CoachVisibleDaySnapshot {
+  const found = input.visibleSnapshot.days.find((item) => item.date === date);
+  if (!found) throw new Error(`${date} not in visible snapshot`);
   return found;
+}
+
+function day(input: SemanticCoachRevisionProposalAdapterInput): CoachVisibleDaySnapshot {
+  return dayByDate(input, THURSDAY);
 }
 
 function sectionOf(day: CoachVisibleDaySnapshot, kind: string): CoachVisibleSectionSnapshot {
@@ -181,7 +206,9 @@ function revision(args: {
   intent: Pick<CoachRevisionIntent, 'intent' | 'targetDomain' | 'actionScope'>;
   revisedDay: CoachVisibleDaySnapshot;
   protectedRefs?: string[];
+  targetDate?: string;
 }): CoachRevisionProposal {
+  const targetDate = args.targetDate ?? args.revisedDay.date;
   return {
     schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
     kind: 'revision',
@@ -191,11 +218,11 @@ function revision(args: {
       intent: args.intent.intent,
       targetDomain: args.intent.targetDomain,
       actionScope: args.intent.actionScope,
-      targetDates: [THURSDAY],
+      targetDates: [targetDate],
       protectedRefs: args.protectedRefs ?? [],
       reason: 'controller_revision_test',
     },
-    scope: { mode: 'single_day', dates: [THURSDAY] },
+    scope: { mode: 'single_day', dates: [targetDate] },
     revisedDays: [args.revisedDay],
     explanation: 'controller_revision_test',
   };
@@ -213,6 +240,30 @@ function removeStrengthProposal(input: SemanticCoachRevisionProposalAdapterInput
     intent: { intent: 'remove', targetDomain: 'strength', actionScope: 'strength_section' },
     revisedDay: after,
     protectedRefs: [conditioning.id],
+  });
+}
+
+function pendingResumeTargetDate(input: SemanticCoachRevisionProposalAdapterInput): string {
+  const context = input.recentContext as any;
+  return context?.pendingCoachRevision?.targetDateOverride ?? PAST_MONDAY;
+}
+
+function removeMondayStrengthKeepConditioningProposal(
+  input: SemanticCoachRevisionProposalAdapterInput,
+): CoachRevisionProposal {
+  const targetDate = pendingResumeTargetDate(input);
+  const current = dayByDate(input, targetDate);
+  const conditioning = sectionOf(current, 'conditioning');
+  const after = clone(current);
+  after.workout!.title = conditioning.title;
+  after.workout!.workoutType = 'Conditioning';
+  after.workout!.sections = [conditioning];
+  return revision({
+    input,
+    intent: { intent: 'remove', targetDomain: 'strength', actionScope: 'strength_section' },
+    revisedDay: after,
+    protectedRefs: [conditioning.id],
+    targetDate,
   });
 }
 
@@ -255,8 +306,10 @@ function protectedViolationProposal(input: SemanticCoachRevisionProposalAdapterI
 async function runControllerTurn(args: {
   message: string;
   adapter: SemanticCoachRevisionProposalAdapter;
+  seed?: boolean;
+  visibleDate?: string;
 }) {
-  seedProgram();
+  if (args.seed !== false) seedProgram();
   const messages: CoachTurnMessage[] = [];
   const userMessage: CoachTurnMessage = {
     id: `turn-${Math.random().toString(36).slice(2)}`,
@@ -310,11 +363,12 @@ async function runControllerTurn(args: {
     semanticProgramEditDraftAdapter: null,
   });
   const programState = useProgramStore.getState();
+  const visibleDate = args.visibleDate ?? THURSDAY;
   const visible = getResolvedVisibleProgramForDate({
-    date: THURSDAY,
+    date: visibleDate,
     todayISO: TODAY,
     state: buildScheduleStateImperative(),
-    overrideContext: programState.overrideContexts?.[THURSDAY],
+    overrideContext: programState.overrideContexts?.[visibleDate],
     overrideContexts: programState.overrideContexts,
   });
   return {
@@ -325,6 +379,7 @@ async function runControllerTurn(args: {
     classifierCalls,
     diagnostics,
     dateOverrides: programState.dateOverrides,
+    pending: usePendingCoachClarifierStore.getState().pending,
     visible,
   };
 }
@@ -385,6 +440,55 @@ async function run() {
         diagnostic.diagnostic.protectedRefsViolated.length > 0,
       ),
       result.diagnostics);
+  }
+
+  {
+    const originalMessage = 'Can you drop the lower work Monday but keep the flush';
+    const adapter = new RecordingRevisionAdapter(removeMondayStrengthKeepConditioningProposal);
+    const first = await runControllerTurn({
+      message: originalMessage,
+      adapter,
+      visibleDate: PAST_MONDAY,
+    });
+    eq('[5] first turn handled', first.handled.handled, true);
+    ok('[5] asks stale-date clarification',
+      /Monday 2026-06-29 is in the past\. Do you mean next Monday instead\?/.test(first.reply),
+      first.reply);
+    ok('[5] stores coach revision envelope',
+      !!first.pending?.coachRevisionProposalEnvelope,
+      first.pending);
+    eq('[5] stored target domain',
+      first.pending?.coachRevisionProposalEnvelope?.partialIntent.targetDomain,
+      'strength');
+    ok('[5] no override before answer',
+      !first.dateOverrides[NEXT_MONDAY],
+      first.dateOverrides);
+
+    const second = await runControllerTurn({
+      message: 'Yes',
+      adapter,
+      seed: false,
+      visibleDate: NEXT_MONDAY,
+    });
+    eq('[5] adapter called twice', adapter.calls.length, 2);
+    eq('[5] resume uses original wording', adapter.calls[1]?.userMessage, originalMessage);
+    eq('[5] resume passes accepted date',
+      (adapter.calls[1]?.recentContext as any)?.pendingCoachRevision?.targetDateOverride,
+      NEXT_MONDAY);
+    eq('[5] second turn handled', second.handled.handled, true);
+    ok('[5] done reply after verified resume',
+      /Done\. I removed the strength work on Mon 2026-07-06|Done\. I removed the strength work on 2026-07-06|Done\. I removed the strength work on Mon/.test(second.reply),
+      second.reply);
+    ok('[5] override written for next Monday',
+      !!second.dateOverrides[NEXT_MONDAY],
+      second.dateOverrides);
+    eq('[5] next Monday strength removed', second.visible.strengthItems.length, 0);
+    ok('[5] next Monday conditioning preserved',
+      second.visible.conditioningItems.length > 0,
+      second.visible.items);
+    eq('[5] pending cleared after apply',
+      usePendingCoachClarifierStore.getState().pending,
+      null);
   }
 }
 

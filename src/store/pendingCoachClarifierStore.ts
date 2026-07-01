@@ -40,6 +40,10 @@ import { create } from 'zustand';
 import type { CoachMutateOperation, CoachMutatePayload, CoachCommandScope, CoachMoveScope } from '../utils/coachCommandRouter';
 import type { ProgramEdit, ProgramEditCandidateItem } from '../utils/coachProgramEdit';
 import type { ProgramEditDraft } from '../utils/coachProgramEditDraft';
+import type {
+  CoachRevisionIntent,
+  CoachRevisionProposal,
+} from '../utils/coachRevisionProposal';
 import type { DayOfWeek } from '../types/domain';
 
 /**
@@ -139,6 +143,14 @@ export interface PendingProgramEditDraftEnvelope {
   continuationId: string;
 }
 
+export interface PendingCoachRevisionProposalEnvelope {
+  source: 'semantic';
+  originalUserWording: string;
+  continuationId: string;
+  partialIntent: CoachRevisionIntent;
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
+}
+
 export interface PendingClarificationSlot {
   originalIntent: string;
   missingField: string;
@@ -151,6 +163,7 @@ export interface PendingClarificationSlot {
   proposedCandidate?: PendingClarificationProposedCandidate;
   candidateOptions?: string[];
   partialDraft?: ProgramEditDraft;
+  partialCoachRevision?: PendingCoachRevisionProposalEnvelope;
   partialTransaction?: PendingScheduleTransaction;
   reason?: string;
 }
@@ -211,6 +224,10 @@ export interface PendingCoachClarifier {
   /** Full typed draft transaction. When present, pending answers patch this
    *  draft instead of rebuilding intent from the short reply. */
   programEditDraftEnvelope?: PendingProgramEditDraftEnvelope;
+  /** Full revision proposal transaction. When present, pending answers patch
+   *  the missing slot and regenerate a revised visible snapshot from the
+   *  original user wording instead of rebuilding intent from the short reply. */
+  coachRevisionProposalEnvelope?: PendingCoachRevisionProposalEnvelope;
   /** Snapshot of visible candidates shown/considered when the question
    *  was asked. The next reply is matched against this before any fresh
    *  state read, so clarification answers do not drift. */
@@ -247,6 +264,7 @@ export const usePendingCoachClarifierStore = create<PendingCoachClarifierState>(
         targetSessionName: entry.targetSessionName,
         programEdit: entry.programEdit,
         programEditDraftEnvelope: entry.programEditDraftEnvelope,
+        coachRevisionProposalEnvelope: entry.coachRevisionProposalEnvelope,
         candidateItems: entry.candidateItems,
         pendingClarification: entry.pendingClarification,
       },

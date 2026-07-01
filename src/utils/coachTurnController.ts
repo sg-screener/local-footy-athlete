@@ -16,6 +16,7 @@ import {
   type PendingClarificationAnswerClassification,
   type PendingClarificationExpectedAnswerType,
   type PendingCoachClarifier,
+  type PendingCoachRevisionProposalEnvelope,
   type PendingProgramEditDraftEnvelope,
   type PendingProgramEditDraftSource,
 } from '../store/pendingCoachClarifierStore';
@@ -99,6 +100,8 @@ import { getMondayForDate } from './sessionResolver';
 import {
   buildCoachRevisionWeekSnapshotFromProjectedDays,
   snapshotProjectedDay,
+  type CoachRevisionIntent,
+  type CoachRevisionProposal,
 } from './coachRevisionProposal';
 import {
   buildSemanticCoachRevisionProposal,
@@ -271,6 +274,18 @@ function pendingDiagnosticSummary(pending: PendingCoachClarifier | null | undefi
         }
       : null,
     storedDraft: draftDiagnosticSummary(pending.programEditDraftEnvelope?.draft),
+    storedRevision: pending.coachRevisionProposalEnvelope
+      ? {
+          source: pending.coachRevisionProposalEnvelope.source,
+          continuationId: pending.coachRevisionProposalEnvelope.continuationId,
+          originalUserWording: pending.coachRevisionProposalEnvelope.originalUserWording,
+          intent: pending.coachRevisionProposalEnvelope.partialIntent.intent,
+          targetDomain: pending.coachRevisionProposalEnvelope.partialIntent.targetDomain,
+          actionScope: pending.coachRevisionProposalEnvelope.partialIntent.actionScope,
+          targetDates: pending.coachRevisionProposalEnvelope.partialIntent.targetDates,
+          protectedRefs: pending.coachRevisionProposalEnvelope.partialIntent.protectedRefs,
+        }
+      : null,
     storedProgramEdit: programEditDiagnosticSummary(pending.programEdit),
   };
 }
@@ -832,6 +847,119 @@ function pendingDraftEnvelopeFromDraft(args: {
   };
 }
 
+function pendingCoachRevisionContinuationId(args: {
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
+  originalMessage: string;
+}): string {
+  const intent = args.proposal.userIntent;
+  const seed = [
+    args.originalMessage,
+    intent.intent,
+    intent.targetDomain,
+    intent.actionScope,
+    intent.targetDates.join(','),
+    intent.protectedRefs.join(','),
+    args.proposal.scope.dates.join(','),
+  ].join('|');
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+  }
+  return `coach-revision-proposal:semantic:${Math.abs(hash)}`;
+}
+
+function pendingCoachRevisionEnvelopeFromProposal(args: {
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
+  originalMessage: string;
+}): PendingCoachRevisionProposalEnvelope {
+  return {
+    source: 'semantic',
+    originalUserWording: args.originalMessage,
+    continuationId: pendingCoachRevisionContinuationId(args),
+    partialIntent: args.proposal.userIntent,
+    proposal: args.proposal,
+  };
+}
+
+function coachRevisionPendingOperation(
+  intent: CoachRevisionIntent,
+): PendingCoachClarifier['operation'] {
+  if (intent.targetDomain === 'conditioning') {
+    return intent.intent === 'remove' ? 'remove_conditioning' : 'add_conditioning';
+  }
+  if (intent.targetDomain === 'session' || intent.actionScope === 'whole_session') {
+    if (intent.intent === 'move') return 'move_session';
+    if (intent.intent === 'add') return 'add_session';
+    return 'remove_session';
+  }
+  if (intent.targetDomain === 'schedule') {
+    return 'update_program_setup';
+  }
+  if (intent.targetDomain === 'strength' || intent.actionScope === 'exercise') {
+    return 'replace_exercise';
+  }
+  return 'add_conditioning';
+}
+
+function capturePendingDateClarificationFromCoachRevisionProposal(args: {
+  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>;
+  originalMessage: string;
+  todayISO: string;
+}): Omit<PendingCoachClarifier, 'createdAt'> | null {
+  const proposal = args.result.proposal;
+  const targetDate =
+    proposal.scope.dates[0] ??
+    proposal.userIntent.targetDates[0] ??
+    proposal.revisedDays[0]?.date ??
+    null;
+  if (!targetDate || !isPastISODate(targetDate, args.todayISO)) return null;
+
+  const targetDay = controllerDayNameFromISO(targetDate);
+  const proposedDate = targetDay
+    ? controllerNextDateForDay(args.todayISO, targetDay)
+    : null;
+  const proposedCandidate = proposedDate && targetDay
+    ? {
+        label: `Next ${targetDay}`,
+        value: proposedDate,
+        answerType: 'date' as const,
+      }
+    : undefined;
+  const candidateOptions = [
+    targetDay ? `Next ${targetDay}` : null,
+    'Leave unchanged',
+  ].filter((option): option is string => !!option);
+  const envelope = pendingCoachRevisionEnvelopeFromProposal({
+    proposal,
+    originalMessage: args.originalMessage,
+  });
+  const operation = coachRevisionPendingOperation(proposal.userIntent);
+  return {
+    operation,
+    partialPayload: semanticPendingPayload(operation),
+    scope: 'one_off',
+    missingFields: ['targetDate'],
+    originalMessage: args.originalMessage,
+    askedQuestion: pendingDateClarificationQuestion(targetDate, targetDay),
+    targetDate,
+    coachRevisionProposalEnvelope: envelope,
+    pendingClarification: {
+      originalIntent: `${proposal.userIntent.intent}:${proposal.userIntent.targetDomain}:${proposal.userIntent.actionScope}`,
+      missingField: 'targetDate',
+      expectedAnswerType: 'date',
+      source: envelope.source,
+      continuationId: envelope.continuationId,
+      originalUserWording: envelope.originalUserWording,
+      staleDate: targetDate,
+      requestedDow: targetDay ?? undefined,
+      proposedCandidate,
+      candidateOptions,
+      partialCoachRevision: envelope,
+      reason: 'pending_clarification:coach_revision_target_date:past_date',
+    },
+  };
+}
+
 export function capturePendingDateClarificationFromProgramEditRejection(args: {
   result: ExecutionResult;
   programEdit: ProgramEdit;
@@ -1219,6 +1347,68 @@ async function buildCoachRevisionProposalForController(args: {
   });
 }
 
+async function buildCoachRevisionProposalForPendingResume(args: {
+  input: CoachTurnControllerInput;
+  packet: ReturnType<typeof buildCoachContextPacket>;
+  pending: PendingCoachClarifier;
+  envelope: PendingCoachRevisionProposalEnvelope;
+  targetDate: string;
+  mode: CoachRevisionProposalMode;
+}): Promise<SemanticCoachRevisionProposalResult | null> {
+  if (args.mode !== 'active') return null;
+  const adapter = args.input.coachRevisionProposalAdapter;
+  if (!adapter) return null;
+  const visibleWeek = visibleDaysForCoachRevisionProposal({
+    packet: args.packet,
+    todayISO: args.input.todayISO,
+    includeDates: [args.targetDate],
+  });
+  const patchedIntent: CoachRevisionIntent = {
+    ...args.envelope.partialIntent,
+    targetDates: [args.targetDate],
+  };
+  return buildSemanticCoachRevisionProposal({
+    userMessage: args.envelope.originalUserWording,
+    visibleSnapshot: buildCoachRevisionWeekSnapshotFromProjectedDays(visibleWeek),
+    pendingClarifier: args.pending,
+    recentContext: {
+      currentWeekDates: (args.packet.currentWeek ?? []).map((day) => day.date),
+      nextWeekDates: (args.packet.nextWeek ?? []).map((day) => day.date),
+      targetFrame: args.packet.targetFrame ?? null,
+      pendingCoachRevision: {
+        continuationId: args.envelope.continuationId,
+        missingField: 'targetDate',
+        targetDateOverride: args.targetDate,
+        originalUserWording: args.envelope.originalUserWording,
+        partialIntent: patchedIntent,
+        originalProposalDates: args.envelope.proposal.scope.dates,
+        instruction:
+          'Regenerate the revised visible snapshot for targetDateOverride. Do not reinterpret the short clarification answer as a new request.',
+      },
+    },
+    todayISO: args.input.todayISO,
+    nowISO: args.input.semanticProgramEditDraftNowISO ?? new Date().toISOString(),
+    timezone: args.input.semanticProgramEditDraftTimezone ?? controllerTimeZone(),
+    adapter,
+    minConfidence: args.input.coachRevisionProposalMinConfidence,
+  });
+}
+
+function visibleDaysForCoachRevisionProposal(args: {
+  packet: ReturnType<typeof buildCoachContextPacket>;
+  todayISO: string;
+  includeDates?: string[];
+}): ReturnType<typeof buildCoachContextPacket>['currentWeek'] {
+  const included = (args.includeDates ?? []).map((date) =>
+    resolveLiveProgramTabVisibleDayForDate(date, args.todayISO),
+  );
+  return uniqueResolvedDays([
+    ...(args.packet.currentWeek ?? []),
+    ...(args.packet.nextWeek ?? []),
+    ...included,
+  ]);
+}
+
 function uniqueResolvedDays(days: ReturnType<typeof buildCoachContextPacket>['currentWeek']): ReturnType<typeof buildCoachContextPacket>['currentWeek'] {
   const seen = new Set<string>();
   const out: ReturnType<typeof buildCoachContextPacket>['currentWeek'] = [];
@@ -1319,6 +1509,7 @@ function applyDevActiveCoachRevision(args: {
   input: CoachTurnControllerInput;
   packet: ReturnType<typeof buildCoachContextPacket>;
   result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>;
+  visibleWeek?: ReturnType<typeof buildCoachContextPacket>['currentWeek'];
 }): { ok: true; reply: string; route: string } | { ok: false; reply: string; route: string } {
   if (!isSupportedDevActiveCoachRevision(args.result)) {
     return {
@@ -1330,8 +1521,10 @@ function applyDevActiveCoachRevision(args: {
   }
 
   const visibleWeek = uniqueResolvedDays([
-    ...(args.packet.currentWeek ?? []),
-    ...(args.packet.nextWeek ?? []),
+    ...(args.visibleWeek ?? [
+      ...(args.packet.currentWeek ?? []),
+      ...(args.packet.nextWeek ?? []),
+    ]),
   ]);
   const apply = applyCoachRevisionDateOverrides({
     proposal: args.result.proposal,
@@ -1583,6 +1776,92 @@ type PendingProgramEditDraftAnswerResult =
   | { kind: 'clarify'; reply: string; options?: string[]; draft: ProgramEditDraft }
   | { kind: 'complete'; draft: ProgramEditDraft }
   | { kind: 'unresolved' };
+
+type PendingCoachRevisionProposalAnswerResult =
+  | { kind: 'cancelled'; reply: string }
+  | { kind: 'clarify'; reply: string; options?: string[] }
+  | { kind: 'complete'; envelope: PendingCoachRevisionProposalEnvelope; targetDate: string }
+  | { kind: 'unresolved' };
+
+function resolvePendingCoachRevisionProposalAnswer(args: {
+  pending: PendingCoachClarifier;
+  userMessage: string;
+  todayISO: string;
+  currentWeek: ReturnType<typeof currentWeekRefs>;
+  pendingAnswerClassification: PendingClarificationAnswerClassification | null;
+}): PendingCoachRevisionProposalAnswerResult {
+  const envelope =
+    args.pending.coachRevisionProposalEnvelope ??
+    args.pending.pendingClarification?.partialCoachRevision;
+  const slot = args.pending.pendingClarification;
+  if (!envelope || !slot) return { kind: 'unresolved' };
+
+  const classification =
+    args.pendingAnswerClassification ??
+    classifyPendingClarificationAnswer({
+      message: args.userMessage,
+      pendingClarification: slot,
+      askedQuestion: args.pending.askedQuestion,
+    });
+  if (classification.kind === 'reject_proposed') {
+    return {
+      kind: 'cancelled',
+      reply: 'Got it — leaving things as they are.',
+    };
+  }
+
+  if (controllerIsDateField(slot.missingField)) {
+    const targetDate = pendingDraftTargetDateFromAnswer({
+      pending: args.pending,
+      classification,
+      message: args.userMessage,
+      todayISO: args.todayISO,
+      currentWeek: args.currentWeek,
+    });
+    if (!targetDate) {
+      return {
+        kind: 'clarify',
+        reply: args.pending.askedQuestion ?? 'Which day should I use?',
+        options: slot.candidateOptions,
+      };
+    }
+    return {
+      kind: 'complete',
+      envelope: patchPendingCoachRevisionEnvelopeTargetDate({
+        envelope,
+        targetDate,
+      }),
+      targetDate,
+    };
+  }
+
+  return { kind: 'unresolved' };
+}
+
+function patchPendingCoachRevisionEnvelopeTargetDate(args: {
+  envelope: PendingCoachRevisionProposalEnvelope;
+  targetDate: string;
+}): PendingCoachRevisionProposalEnvelope {
+  const intent: CoachRevisionIntent = {
+    ...args.envelope.partialIntent,
+    targetDates: [args.targetDate],
+  };
+  return {
+    ...args.envelope,
+    partialIntent: intent,
+    proposal: {
+      ...args.envelope.proposal,
+      userIntent: {
+        ...args.envelope.proposal.userIntent,
+        targetDates: [args.targetDate],
+      },
+      scope: {
+        ...args.envelope.proposal.scope,
+        dates: [args.targetDate],
+      },
+    },
+  };
+}
 
 function resolvePendingProgramEditDraftAnswer(args: {
   pending: PendingCoachClarifier;
@@ -2022,6 +2301,141 @@ export async function handleCoachTurn(
           ageMs: Date.now() - pendingClarifier.createdAt,
         });
       } else {
+      const pendingRevisionAnswer = resolvePendingCoachRevisionProposalAnswer({
+        pending: pendingClarifier,
+        userMessage: input.userMessage.content,
+        todayISO: input.todayISO,
+        currentWeek: currentWeekRefs(packet),
+        pendingAnswerClassification,
+      });
+      if (pendingRevisionAnswer.kind === 'cancelled') {
+        usePendingCoachClarifierStore.getState().clearPending();
+        return replyAndFinish(input, 'pending-coach-revision-cancelled', pendingRevisionAnswer.reply);
+      }
+      if (pendingRevisionAnswer.kind === 'clarify') {
+        usePendingCoachClarifierStore.getState().setPending({
+          ...pendingClarifier,
+          askedQuestion: pendingRevisionAnswer.reply,
+          createdAt: pendingClarifier.createdAt,
+        });
+        return replyAndFinish(input, 'pending-coach-revision-clarify', pendingRevisionAnswer.reply);
+      }
+      if (pendingRevisionAnswer.kind === 'complete') {
+        const revisionMode = controllerCoachRevisionProposalMode(input);
+        const revisionResult = await buildCoachRevisionProposalForPendingResume({
+          input,
+          packet,
+          pending: pendingClarifier,
+          envelope: pendingRevisionAnswer.envelope,
+          targetDate: pendingRevisionAnswer.targetDate,
+          mode: revisionMode,
+        });
+        emitCoachTurnDiagnostic('pending_coach_revision_answer_complete', {
+          message: input.userMessage.content,
+          pendingBefore: pendingDiagnosticSummary(pendingClarifier),
+          resolvedTargetDate: pendingRevisionAnswer.targetDate,
+          storedRevisionAfter: {
+            continuationId: pendingRevisionAnswer.envelope.continuationId,
+            source: pendingRevisionAnswer.envelope.source,
+            intent: pendingRevisionAnswer.envelope.partialIntent.intent,
+            targetDomain: pendingRevisionAnswer.envelope.partialIntent.targetDomain,
+            actionScope: pendingRevisionAnswer.envelope.partialIntent.actionScope,
+            targetDates: pendingRevisionAnswer.envelope.partialIntent.targetDates,
+            protectedRefs: pendingRevisionAnswer.envelope.partialIntent.protectedRefs,
+          },
+          resultKind: revisionResult?.kind ?? null,
+          validatorStatus: revisionResult?.diagnostic.validatorStatus ?? null,
+        });
+        if (revisionResult) {
+          emitCoachRevisionProposalDiagnostic({
+            input,
+            diagnostic: diagnosticFromCoachRevisionProposalResult({
+              mode: revisionMode === 'off' ? 'active' : revisionMode,
+              result: revisionResult,
+            }),
+          });
+        }
+        if (revisionMode !== 'active' || !revisionResult) {
+          usePendingCoachClarifierStore.getState().clearPending();
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: 'pending-coach-revision-unavailable',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: pendingRevisionAnswer.targetDate,
+            referenceTargetName: null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(
+            input,
+            'pending-coach-revision-unavailable',
+            "I couldn't safely resume that revision, so I left the plan unchanged.",
+          );
+        }
+        if (revisionResult.kind === 'revision') {
+          const visibleWeek = visibleDaysForCoachRevisionProposal({
+            packet,
+            todayISO: input.todayISO,
+            includeDates: [pendingRevisionAnswer.targetDate],
+          });
+          const applied = applyDevActiveCoachRevision({
+            input,
+            packet,
+            result: revisionResult,
+            visibleWeek,
+          });
+          if (applied.ok) {
+            usePendingCoachClarifierStore.getState().clearPending();
+          }
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: `pending_${applied.route}`,
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: pendingRevisionAnswer.targetDate,
+            referenceTargetName: null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: applied.ok,
+          });
+          return replyAndFinish(input, `pending-${applied.route}`, applied.reply);
+        }
+        if (revisionResult.kind === 'clarify') {
+          usePendingCoachClarifierStore.getState().setPending({
+            ...pendingClarifier,
+            askedQuestion: revisionResult.reply,
+            missingFields: [revisionResult.proposal.missingField],
+            pendingClarification: {
+              ...pendingClarifier.pendingClarification!,
+              missingField: revisionResult.proposal.missingField,
+              expectedAnswerType: semanticExpectedAnswerType(revisionResult.proposal.missingField),
+              candidateOptions: revisionResult.options,
+              partialCoachRevision: pendingRevisionAnswer.envelope,
+              reason: revisionResult.reason,
+            },
+            createdAt: pendingClarifier.createdAt,
+          });
+          return replyAndFinish(input, 'pending-coach-revision-regenerated-clarify', revisionResult.reply);
+        }
+        usePendingCoachClarifierStore.getState().clearPending();
+        const reply = revisionResult.kind === 'needs_confirmation'
+          ? 'I need confirmation before making that replacement.'
+          : "I couldn't safely validate that revision, so I left the plan unchanged.";
+        input.setLastCoachDebug({
+          intent: 'coach_revision_proposal',
+          route: `pending-coach-revision-${revisionResult.kind}`,
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: pendingRevisionAnswer.targetDate,
+          referenceTargetName: null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: false,
+        });
+        return replyAndFinish(input, `pending-coach-revision-${revisionResult.kind}`, reply);
+      }
       const pendingScheduleAnswer = resolvePendingScheduleTransactionAnswer({
         pending: pendingClarifier,
         userMessage: input.userMessage.content,
@@ -2604,6 +3018,45 @@ export async function handleCoachTurn(
           diagnostic: revisionResult.diagnostic,
         });
       } else if (revisionResult.kind === 'revision') {
+        const staleRevisionClarifier =
+          capturePendingDateClarificationFromCoachRevisionProposal({
+            result: revisionResult,
+            originalMessage: input.userMessage.content,
+            todayISO: input.todayISO,
+          });
+        if (staleRevisionClarifier) {
+          usePendingCoachClarifierStore.getState().setPending(staleRevisionClarifier);
+          emitCoachTurnDiagnostic('pending_set_coach_revision_stale_date', {
+            message: input.userMessage.content,
+            pendingAfter: pendingDiagnosticSummary(staleRevisionClarifier as PendingCoachClarifier),
+          });
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: staleRevisionClarifier.pendingClarification?.reason ??
+              'pending_clarification:coach_revision_target_date:past_date',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate:
+              revisionResult.proposal.scope.dates[0] ??
+              revisionResult.proposal.userIntent.targetDates[0] ??
+              null,
+            referenceTargetName: null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          logger.warn('[pending-clarifier-set]', {
+            operation: staleRevisionClarifier.operation,
+            scope: staleRevisionClarifier.scope,
+            missingFields: staleRevisionClarifier.missingFields,
+            source: 'coach_revision_proposal_stale_target_date',
+          });
+          return replyAndFinish(
+            input,
+            'coach-revision-proposal-stale-target-date',
+            staleRevisionClarifier.askedQuestion,
+          );
+        }
         const applied = applyDevActiveCoachRevision({
           input,
           packet,
