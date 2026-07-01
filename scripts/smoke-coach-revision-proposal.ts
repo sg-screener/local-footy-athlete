@@ -126,15 +126,151 @@ function visibleWeek(): ResolvedDay[] {
   } as any];
 }
 
+function bigWorkout(args: {
+  id: string;
+  dayOfWeek: number;
+  name: string;
+  workoutType: string;
+  exerciseNames: string[];
+  withConditioning?: boolean;
+}): Workout {
+  const conditioningId = `${args.id}-flush`;
+  const exercises = args.exerciseNames.map((name, index) => ({
+    ...ex(name, `${args.id}-ex-${index}`, 4),
+    workoutId: args.id,
+    exerciseOrder: index,
+    notes: `Cue ${index + 1}: controlled tempo, leave 1-2 reps in reserve, full rest between sets.`,
+  }));
+  if (args.withConditioning) {
+    exercises.push({
+      ...ex('Easy Aerobic Flush', conditioningId, 1),
+      workoutId: args.id,
+      prescriptionType: 'duration_minutes',
+      prescribedRepsMin: 25,
+      prescribedRepsMax: 25,
+      notes: '25min zone 2 bike, nasal breathing, conversational pace throughout.',
+    });
+  }
+  return {
+    ...workout(),
+    id: args.id,
+    dayOfWeek: args.dayOfWeek,
+    name: args.name,
+    workoutType: args.workoutType,
+    hasCombinedConditioning: !!args.withConditioning,
+    conditioningBlock: args.withConditioning
+      ? {
+          intent: 'aerobic',
+          options: [{
+            title: 'Easy Aerobic Flush',
+            description: '25min zone 2 bike',
+            exerciseIds: [conditioningId],
+          }],
+        }
+      : undefined,
+    exercises,
+  } as Workout;
+}
+
+/** App-scale snapshot mirroring a real generated program week: 5 workouts,
+ *  6 exercises each with notes. The toy single-day scenario missed failures
+ *  that only appear at real payload/echo size (e.g. output truncation). */
+function appScaleWeek(): ResolvedDay[] {
+  const days: Array<{ date: string; dayOfWeek: number; short: string; workout: Workout | null }> = [
+    {
+      date: '2026-07-06', dayOfWeek: 1, short: 'MON',
+      workout: bigWorkout({
+        id: 'workout-mon-lower', dayOfWeek: 1, name: 'Lower Body Strength', workoutType: 'Strength',
+        exerciseNames: ['Box Squat', 'Single Leg RDL', 'Nordic Lowers', 'Copenhagen Plank', 'Tib Raises'],
+        withConditioning: true,
+      }),
+    },
+    {
+      date: '2026-07-07', dayOfWeek: 2, short: 'TUE',
+      workout: bigWorkout({
+        id: 'workout-tue-team', dayOfWeek: 2, name: 'Team Training + Upper Pull', workoutType: 'Team Training',
+        exerciseNames: ['Weighted Chin Up', 'Chest Supported Row', 'Face Pull', 'Hammer Curl'],
+      }),
+    },
+    { date: '2026-07-08', dayOfWeek: 3, short: 'WED',
+      workout: bigWorkout({
+        id: 'workout-wed-flush', dayOfWeek: 3, name: 'Aerobic Flush + Trunk Prehab', workoutType: 'Conditioning',
+        exerciseNames: ['Zone 2 Bike', 'Pallof Press', 'Side Plank'],
+      }),
+    },
+    {
+      date: '2026-07-09', dayOfWeek: 4, short: 'THU',
+      workout: bigWorkout({
+        id: 'workout-thu-team', dayOfWeek: 4, name: 'Team Training + Upper Push', workoutType: 'Team Training',
+        exerciseNames: ['Incline DB Press', 'Half Kneeling Landmine Press', 'Dips', 'Lateral Raise'],
+      }),
+    },
+    {
+      date: '2026-07-10', dayOfWeek: 5, short: 'FRI',
+      workout: bigWorkout({
+        id: 'workout-fri-arms', dayOfWeek: 5, name: 'Upper Arms Pump', workoutType: 'Strength',
+        exerciseNames: ['EZ Bar Curl', 'Rope Pushdown', 'Incline Curl', 'Overhead Extension'],
+      }),
+    },
+  ];
+  return days.map((day) => ({
+    ...day,
+    isToday: false,
+    source: 'template',
+    indicator: null,
+  })) as any;
+}
+
+async function runScenario(args: {
+  name: string;
+  adapter: LLMSemanticCoachRevisionProposalAdapter;
+  days: ResolvedDay[];
+  message: string;
+}) {
+  const result = await buildSemanticCoachRevisionProposal({
+    userMessage: args.message,
+    visibleSnapshot: buildCoachRevisionWeekSnapshotFromProjectedDays(args.days),
+    adapter: args.adapter,
+    todayISO: TODAY,
+    nowISO: `${TODAY}T12:00:00.000Z`,
+    timezone: 'Australia/Melbourne',
+  });
+
+  console.log(`[coach-revision-smoke] [${args.name}] result`, result.kind);
+  console.log(
+    `[coach-revision-smoke] [${args.name}] diagnostic`,
+    JSON.stringify(result.diagnostic, null, 2),
+  );
+
+  // POST 200 + schema-valid proof: 'revision'/'needs_confirmation' means the
+  // full diff validation pipeline accepted the proposal; 'clarify' is a
+  // schema-valid clarification and still proves endpoint + schema + parsing.
+  // 'invalid' (adapter_failed / schema_validation_failed / diff failure) fails.
+  if (result.kind === 'clarify') {
+    console.log(`[coach-revision-smoke] [${args.name}] clarify reply`, result.reply);
+    console.log(`[coach-revision-smoke] [${args.name}] endpoint reachable and schema-valid (clarification path)`);
+    return;
+  }
+  if (result.kind !== 'revision' && result.kind !== 'needs_confirmation') {
+    if (result.kind === 'invalid') {
+      console.error(`[coach-revision-smoke] [${args.name}] issues`, result.issues.join(' | '));
+    }
+    throw new Error(`[${args.name}] coach revision endpoint returned ${result.kind}`);
+  }
+  console.log(
+    `[coach-revision-smoke] [${args.name}] validatorStatus`,
+    result.kind === 'revision' ? 'valid' : 'needs_confirmation',
+  );
+}
+
 async function main() {
   const envFile = loadDotEnv(resolve(process.cwd(), '.env'));
   const endpoint = buildEndpoint(envFile);
   const authToken = getEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY', envFile);
-  const visibleSnapshot = buildCoachRevisionWeekSnapshotFromProjectedDays(visibleWeek());
   const adapter = new LLMSemanticCoachRevisionProposalAdapter({
     endpoint,
     authToken,
-    timeoutMs: 30000,
+    timeoutMs: 45000,
   });
 
   console.log('[coach-revision-smoke] endpoint', endpoint);
@@ -152,37 +288,23 @@ async function main() {
     );
   }
 
-  const result = await buildSemanticCoachRevisionProposal({
-    userMessage: 'Can you drop the lower work Monday but keep the flush',
-    visibleSnapshot,
+  // Scenario 1: minimal single-day snapshot (fast wiring proof).
+  await runScenario({
+    name: 'single-day',
     adapter,
-    todayISO: TODAY,
-    nowISO: `${TODAY}T12:00:00.000Z`,
-    timezone: 'Australia/Melbourne',
+    days: visibleWeek(),
+    message: 'Can you drop the lower work Monday but keep the flush',
   });
 
-  console.log('[coach-revision-smoke] result', result.kind);
-  console.log('[coach-revision-smoke] diagnostic', JSON.stringify(result.diagnostic, null, 2));
-
-  // POST 200 + schema-valid proof: 'revision'/'needs_confirmation' means the
-  // full diff validation pipeline accepted the proposal; 'clarify' is a
-  // schema-valid clarification and still proves endpoint + schema + parsing.
-  // 'invalid' (adapter_failed / schema_validation_failed / diff failure) fails.
-  if (result.kind === 'clarify') {
-    console.log('[coach-revision-smoke] clarify reply', result.reply);
-    console.log('[coach-revision-smoke] endpoint reachable and schema-valid (clarification path)');
-    return;
-  }
-  if (result.kind !== 'revision' && result.kind !== 'needs_confirmation') {
-    if (result.kind === 'invalid') {
-      console.error('[coach-revision-smoke] issues', result.issues.join(' | '));
-    }
-    throw new Error(`coach revision endpoint returned ${result.kind}`);
-  }
-  console.log(
-    '[coach-revision-smoke] validatorStatus',
-    result.kind === 'revision' ? 'valid' : 'needs_confirmation',
-  );
+  // Scenario 2: app-scale week. This is what the live app actually sends;
+  // it catches payload-size failures (e.g. truncated model output) that the
+  // toy scenario cannot.
+  await runScenario({
+    name: 'app-scale-week',
+    adapter,
+    days: appScaleWeek(),
+    message: 'Can you drop the lower work Monday but keep the flush',
+  });
 }
 
 main().catch((err) => {
