@@ -89,7 +89,29 @@ refusal was model echo variance; the refusal was safe).
 - Fix in the snapshot builder/read model so combined days expose both sections; override writer learns to drop the team-training portion while keeping strength (mirror of the existing keep-flush path).
 - Live gate: "Change Tuesday" → "Only strength" applies; "remove team training tomorrow" applies; protected-trap variant on a team day.
 
-### 3B — `out_of_scope_setup` typed decline + routing
+### 3B — `out_of_scope_setup` typed decline + routing — **DELIVERED 2026-07-02**
+
+Pipeline audit found the setup path largely WORKING end-to-end
+(`programSetupEditFromMessage` → profile patch → regenerate → verify → store
+writes, progress UI): MWF-style day replacement, recurring moves, frequency,
+time limits all implemented; "away next week" enters its own date-clarify
+loop. So routing is a typed RELEASE (like not_an_edit): the revision path
+declines with `out_of_scope_setup` {reason, detectedChange} and the
+deterministic setup interpreter downstream owns the turn (`fcc0ba2`).
+Mid-transaction setup pivots close the one-off transaction with an honest
+redirect.
+
+Live gate: "I can only train Mon Wed and Fri now" → typed release at 0.95 →
+full regeneration → honest Done; "I'm away next week" → release → setup's own
+"What dates are you away?" → "never mind" cancels cleanly with no changes.
+
+**Flagged for product judgment (generation-engine, out of pivot scope): the
+MWF rebuild still pairs core lifts with Tue/Thu team sessions rather than
+moving gym work onto Mon/Wed/Fri, and the setup pipeline's own rebuild
+verifier accepted that. Pre-existing engine semantics — decide whether
+"training days" should constrain lifting placement on combined team days.**
+
+*(original 3B plan for reference below)*
 
 - Schema: sibling of `not_an_edit` (`kind: 'out_of_scope_setup'`, reason, detectedChange summary).
 - Controller: route to the setup/schedule transaction pipeline when it can handle the request; otherwise honest "I can't change your recurring schedule yet — I can edit specific days."
