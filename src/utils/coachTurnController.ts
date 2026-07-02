@@ -228,7 +228,24 @@ export interface CoachTurnControllerInput {
 
 type AppliedReadinessAction = Extract<CoachReadinessAction, { kind: 'apply_signal' }>;
 
-const COACH_TURN_DIAGNOSTIC_MARKER = 'coach-turn-diagnostics:9084c05-stage3e1b';
+const COACH_TURN_DIAGNOSTIC_MARKER = 'coach-turn-diagnostics:6fa216a-cond1';
+
+/**
+ * Self-truthing build fingerprint for turn_start diagnostics. The manual
+ * marker above proved unreliable (it was forgotten across several commits and
+ * a stale Metro bundle went undetected). These values are DERIVED from code
+ * that ships in the bundle, so a stale bundle exposes itself in the logs
+ * without anyone remembering to bump a string.
+ */
+function coachTurnBuildFingerprint() {
+  return {
+    templateRegistryCount: listCoachRevisionTemplates().length,
+    templateRegistryIds: listCoachRevisionTemplates()
+      .map((template) => template.templateId)
+      .sort()
+      .join(','),
+  };
+}
 
 function coachTurnDiagnosticsEnabled(): boolean {
   return typeof __DEV__ !== 'undefined' && __DEV__;
@@ -2660,6 +2677,7 @@ export async function handleCoachTurn(
         !!input.semanticProgramEditDraftAdapter,
       pendingBefore: pendingDiagnosticSummary(pendingClarifier),
       buildMarker: COACH_TURN_DIAGNOSTIC_MARKER,
+      buildFingerprint: coachTurnBuildFingerprint(),
     });
     if (pendingClarifier) {
       if (isCancelClarifierMessage(input.userMessage.content)) {
