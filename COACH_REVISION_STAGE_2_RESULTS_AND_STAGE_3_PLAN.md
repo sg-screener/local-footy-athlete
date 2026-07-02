@@ -62,7 +62,28 @@ Environment: dev-active (`__DEV__`-gated), Supabase `ryzoxwcijoqbguduonov`, edge
 
 Rules unchanged: no phrase patches, no legacy deletions (that's Stage 4/5), every fix systemic with a misbehaving-mock regression test, live verify per workstream before the next.
 
-### 3A — Team-training/session snapshot representation *(first: unlocks flow 5 AND replacements)*
+### 3A — Team-training/session snapshot representation — **DELIVERED 2026-07-02**
+
+Root cause was two layers of the same gap: the read model only synthesizes a
+session item on empty days, and the snapshot builder only emitted session
+sections on empty days — so a combined day's team-training commitment had no
+removable representation. Fixed in the snapshot layer only (Program tab
+untouched): combined team days now expose a session-kind section whose item id
+is the workout id, so post-edit pure-day projections round-trip
+(`bb2bb44`). Writer gained the session-only survivor direction; Done replies
+now describe session removals and the actual surviving sections
+(`0685c85`, `743469d`). Protected-ref resolution is finest-granularity-first —
+coarse-first refused a correct edit live when the model protected the team
+item whose id equals the workout id (`208d87d`).
+
+Live gate (Claude-driven): "Change today to only the strength work" → Done,
+today renders "Upper Push Strength", team gone, lifts intact. "Drop the
+lifting on Tuesday but keep the team training" → refused once on the ref
+collision, fixed, then Done — Tuesday renders "Team Training" only. Optional-
+tier snapshot presence locked in as regression [10d] (the earlier Friday
+refusal was model echo variance; the refusal was safe).
+
+*(original 3A plan for reference below)*
 
 - Reproduce in harness: seed a combined "Team Training + Upper Pull" workout via the real projection; snapshot it; assert the team-training portion appears as a `session`-kind section with a stable id. Expected to fail — that failure defines the work.
 - Fix in the snapshot builder/read model so combined days expose both sections; override writer learns to drop the team-training portion while keeping strength (mirror of the existing keep-flush path).
