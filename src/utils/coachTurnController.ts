@@ -1051,6 +1051,47 @@ function capturePendingConfirmationFromCoachRevision(args: {
   };
 }
 
+/**
+ * SINGLE owner for entering the confirmation transaction. Both the
+ * fresh-message path and the pending-resume path land here, so they can
+ * never diverge: the resume path used to dead-end needs_confirmation with a
+ * generic "I need confirmation" reply and silently discard the athlete's
+ * already-confirmed choice (live: clarify "which hard conditioning?" →
+ * "MetCon please" → dead end instead of "Want me to swap in…? (yes / no)").
+ */
+function enterCoachRevisionConfirmationTransaction(args: {
+  input: CoachTurnControllerInput;
+  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'needs_confirmation' }>;
+  originalMessage: string;
+  route: string;
+  referenceStatus: string | null;
+  referenceTargetDate: string | null;
+  referenceTargetName: string | null;
+}): CoachTurnControllerResult {
+  const confirmationPending = capturePendingConfirmationFromCoachRevision({
+    result: args.result,
+    originalMessage: args.originalMessage,
+  });
+  usePendingCoachClarifierStore.getState().setPending(confirmationPending.pending);
+  emitCoachTurnDiagnostic('pending_set_coach_revision_confirmation', {
+    message: args.input.userMessage.content,
+    route: args.route,
+    question: confirmationPending.question,
+  });
+  args.input.setLastCoachDebug({
+    intent: 'coach_revision_proposal',
+    route: args.route,
+    referenceStatus: args.referenceStatus,
+    referenceTargetDate: args.referenceTargetDate,
+    referenceTargetName: args.referenceTargetName,
+    mutationLike: true,
+    legacyCalled: false,
+    replySource: 'deterministic',
+    applied: false,
+  });
+  return replyAndFinish(args.input, args.route, confirmationPending.question);
+}
+
 /** The app KNOWS the addable templates — never make the athlete ask what
  *  their options are. Any replacement-related clarify gets the registry
  *  labels appended deterministically, independent of whether the model
@@ -2995,10 +3036,24 @@ export async function handleCoachTurn(
             "That's a schedule change rather than a one-off edit. Send it to me as one message — like \"I'm away next week\" or \"I can only train Mon/Wed/Fri now\" — and I'll update your plan properly.",
           );
         }
+        if (revisionResult.kind === 'needs_confirmation') {
+          // Same transaction owner as the fresh-message path — a resume that
+          // needs confirmation stores the proposal and asks yes/no; it never
+          // discards the athlete's choice.
+          return enterCoachRevisionConfirmationTransaction({
+            input,
+            result: revisionResult,
+            originalMessage:
+              pendingRevisionAnswer.envelope?.originalUserWording ??
+              input.userMessage.content,
+            route: 'pending-coach-revision-needs-confirmation',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: pendingRevisionAnswer.targetDate,
+            referenceTargetName: null,
+          });
+        }
         usePendingCoachClarifierStore.getState().clearPending();
-        const reply = revisionResult.kind === 'needs_confirmation'
-          ? 'I need confirmation before making that replacement.'
-          : coachRevisionInvalidReply(revisionResult);
+        const reply = coachRevisionInvalidReply(revisionResult);
         input.setLastCoachDebug({
           intent: 'coach_revision_proposal',
           route: `pending-coach-revision-${revisionResult.kind}`,
@@ -3733,28 +3788,17 @@ export async function handleCoachTurn(
         return replyAndFinish(input, applied.route, applied.reply);
       } else if (revisionResult.kind === 'needs_confirmation') {
         // Confirmation is a TRANSACTION, not a dead end: store the validated
-        // proposal so "yes" applies it and "no" cancels it.
-        const confirmationPending = capturePendingConfirmationFromCoachRevision({
+        // proposal so "yes" applies it and "no" cancels it. Shared owner with
+        // the pending-resume path.
+        return enterCoachRevisionConfirmationTransaction({
+          input,
           result: revisionResult,
           originalMessage: input.userMessage.content,
-        });
-        usePendingCoachClarifierStore.getState().setPending(confirmationPending.pending);
-        input.setLastCoachDebug({
-          intent: 'coach_revision_proposal',
           route: 'coach-revision-proposal-needs-confirmation',
           referenceStatus: packet.referenceResolution?.status ?? null,
           referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
           referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
-          mutationLike: true,
-          legacyCalled: false,
-          replySource: 'deterministic',
-          applied: false,
         });
-        return replyAndFinish(
-          input,
-          'coach-revision-proposal-needs-confirmation',
-          confirmationPending.question,
-        );
       } else if (revisionResult.kind === 'clarify') {
         // Store the clarification transaction so the athlete's next short
         // answer resumes with original wording + partial intent instead of

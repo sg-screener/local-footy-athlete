@@ -1403,6 +1403,86 @@ async function run() {
   }
 
   {
+    // CONFIRMATION AFTER CLARIFY: the resume path must enter the SAME
+    // confirmation transaction as the fresh path (live 2026-07-03: "which
+    // hard conditioning?" → "MetCon please" → dead-end "I need confirmation
+    // before making that replacement" and the choice was silently dropped).
+    const templateSection = buildCoachRevisionTemplateSection('easy_zone2_bike', TODAY)!;
+    let call = 0;
+    const adapter = new RecordingRevisionAdapter(() => {
+      call++;
+      if (call === 1) {
+        return clarifyProposal({
+          question: 'Which conditioning option do you want added?',
+          missingField: 'replacement',
+          nullIntent: true,
+        });
+      }
+      return {
+        schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
+        kind: 'revision',
+        source: 'semantic',
+        confidence: 0.9,
+        userIntent: {
+          intent: 'replace',
+          targetDomain: 'strength',
+          actionScope: 'session',
+          targetDates: [THURSDAY],
+          protectedRefs: [],
+          allowedAddedSectionKinds: ['conditioning'],
+          requiresConfirmation: true,
+          reason: 'controller_confirm_after_clarify_test',
+        },
+        scope: { mode: 'single_day', dates: [THURSDAY] },
+        revisedDays: [{
+          date: THURSDAY,
+          workout: {
+            id: 'template-easy_zone2_bike',
+            title: 'Easy Zone 2 Bike',
+            workoutType: 'Conditioning',
+            sections: [templateSection],
+          },
+        }],
+        explanation: 'controller_confirm_after_clarify_test',
+      } satisfies CoachRevisionProposal;
+    });
+
+    const first = await runControllerTurn({
+      message: 'add some conditioning tomorrow',
+      adapter,
+    });
+    ok('[26] clarify asked first', !!first.pending?.coachRevisionProposalEnvelope, first.pending);
+
+    const second = await runControllerTurn({
+      message: 'the easy bike please',
+      adapter,
+      seed: false,
+    });
+    eq('[26] adapter called twice (clarify then resume)', adapter.calls.length, 2);
+    ok('[26] resume asks the real confirmation question',
+      /Want me to swap in Easy Zone 2 Bike on 2026-07-02\? \(yes \/ no\)/.test(second.reply),
+      { reply: second.reply, route: (second.debug as CoachTurnDebug | null)?.route });
+    ok('[26] stored proposal in pending envelope',
+      !!second.pending?.coachRevisionProposalEnvelope?.proposal,
+      second.pending);
+    ok('[26] nothing written before confirmation',
+      Object.keys(second.dateOverrides).length === 0,
+      second.dateOverrides);
+
+    const third = await runControllerTurn({
+      message: 'Yes',
+      adapter,
+      seed: false,
+    });
+    eq('[26] no re-generation on confirm (adapter still called twice)', adapter.calls.length, 2);
+    ok('[26] applied with swap wording',
+      /^Done\. I swapped in Easy Zone 2 Bike on 2026-07-02\./.test(third.reply),
+      { reply: third.reply, route: (third.debug as CoachTurnDebug | null)?.route });
+    ok('[26] override written', !!third.dateOverrides[THURSDAY], third.dateOverrides);
+    eq('[26] pending cleared', usePendingCoachClarifierStore.getState().pending, null);
+  }
+
+  {
     // Round cap: a model that clarifies forever gets cut off honestly after
     // COACH_REVISION_MAX_CLARIFY_ROUNDS, with no mutation and no legacy path.
     const adapter = new RecordingRevisionAdapter(() =>
