@@ -147,7 +147,29 @@ v2 backlog: merge-moves onto occupied days (row transplant), swaps.
 - Schema already has `move` intent; add validator cross-day conservation (content removed from source must appear at destination; destination's protected content preserved) and two-day override writes with atomic verify (both project back or neither writes).
 - Live gate: "move Thursday to Saturday" (once), destination-vs-source trap from the original handoff ("move it to Sunday").
 
-### 3D — Template-derived replacements
+### 3D — Template-derived replacements — **DELIVERED 2026-07-02**
+
+Entry gate first: canonical deep-sorted signatures replaced the weak
+stableString (`48309b7` area). Template registry
+(`coachRevisionTemplates.ts`): three approved easy-conditioning templates
+whose advertised snapshots are DERIVED from projecting their own built
+workouts — round-trip by construction. Authorization is byte-exact body-
+signature match against app policy; the model cannot alter template content.
+Confirmation is a real transaction: needs_confirmation stores the FULL
+validated proposal, "yes" revalidates against current state and applies it
+directly (no regeneration — confirm applies in ~2s), "no" cancels.
+Replace validation is STRUCTURAL (something template-added, something
+replaced) — the fifth and final kill of the label-vs-diff class; the
+confirmation gate is the human check on replacement semantics. Writer
+materializes registry workouts; policy at apply-time marks confirmation
+satisfied (`69541c7`, `48309b7`).
+
+Live gate: "Swap next Fridays gunshow for an easy bike" → "Want me to swap in
+Easy Zone 2 Bike on 2026-07-10? (yes / no)" → "yes" → applied instantly,
+board shows Easy Zone 2 Bike on Friday. "Replace Mondays session with 6x400m
+hill sprints" → honest refusal: only approved templates, options offered.
+
+*(original 3D plan for reference below)*
 
 - Entry gate: protected-ref signature hardening (content hash replacing sorted-key stableString) — deferred from Stage 1.5 to exactly here.
 - Schema `templateRef` on added sections; app-side template registry is the ONLY add authorization (policy stays app-side); `needs_confirmation` surfaces as a real confirm UX in chat.
