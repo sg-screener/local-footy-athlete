@@ -1773,8 +1773,19 @@ function composeCoachRevisionDoneReply(
   if (summary?.workoutChange === 'removed') {
     return `Done. I removed the session on ${date}.`;
   }
+  // Describe what actually SURVIVED from the revised day, not a guess —
+  // "left conditioning alone" was wrong when the survivor was team training.
+  const survivingKinds = new Set(
+    result.proposal.revisedDays[0]?.workout?.sections.map((section) => section.kind) ?? [],
+  );
+  const keptLabel =
+    survivingKinds.has('session') && !survivingKinds.has('conditioning')
+      ? 'the team training'
+      : survivingKinds.has('conditioning') && !survivingKinds.has('session')
+        ? 'conditioning'
+        : 'the rest of the session';
   if (removedStrength && !removedConditioning) {
-    return `Done. I removed the strength work on ${date} and left conditioning alone.`;
+    return `Done. I removed the strength work on ${date} and left ${keptLabel} alone.`;
   }
   if (removedConditioning && !removedStrength) {
     return `Done. I removed conditioning from ${date} and left strength alone.`;
