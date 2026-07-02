@@ -37,7 +37,14 @@ export const COACH_REVISION_PROPOSAL_SCHEMA = {
     'confidence',
     'reason',
   ],
-  proposalKind: ['clarify', 'revision', 'not_an_edit'],
+  outOfScopeSetupTopLevelKeys: [
+    'schemaVersion',
+    'kind',
+    'confidence',
+    'reason',
+    'detectedChange',
+  ],
+  proposalKind: ['clarify', 'revision', 'not_an_edit', 'out_of_scope_setup'],
   intent: ['add', 'edit', 'remove', 'replace', 'move', 'reduce'],
   targetDomain: [
     'strength',
@@ -190,6 +197,18 @@ export type CoachRevisionProposal =
       kind: 'not_an_edit';
       confidence: number;
       reason: string;
+    }
+  | {
+      // Typed decline: the message IS a change request, but a program-shape
+      // one (recurring schedule, availability window, training-day set,
+      // frequency) that must alter generation inputs, not date overrides.
+      // The revision path releases the turn to the setup/regeneration
+      // pipeline, which owns those changes.
+      schemaVersion: typeof COACH_REVISION_PROPOSAL_SCHEMA_VERSION;
+      kind: 'out_of_scope_setup';
+      confidence: number;
+      reason: string;
+      detectedChange: string;
     };
 
 export interface CoachRevisionParseResult {
@@ -878,8 +897,13 @@ function validateProposalShape(value: Record<string, unknown>): string[] {
   if (value.schemaVersion !== COACH_REVISION_PROPOSAL_SCHEMA_VERSION) {
     issues.push('schemaVersion must be coach_revision_proposal.v1');
   }
-  if (value.kind !== 'revision' && value.kind !== 'clarify' && value.kind !== 'not_an_edit') {
-    issues.push('kind must be revision, clarify, or not_an_edit');
+  if (
+    value.kind !== 'revision' &&
+    value.kind !== 'clarify' &&
+    value.kind !== 'not_an_edit' &&
+    value.kind !== 'out_of_scope_setup'
+  ) {
+    issues.push('kind must be revision, clarify, not_an_edit, or out_of_scope_setup');
   }
   if (typeof value.confidence !== 'number' || value.confidence < 0 || value.confidence > 1) {
     issues.push('confidence must be a number between 0 and 1');
@@ -889,6 +913,22 @@ function validateProposalShape(value: Record<string, unknown>): string[] {
     assertExactKeys(value, ['schemaVersion', 'kind', 'confidence', 'reason'], 'not_an_edit proposal', issues);
     if (typeof value.reason !== 'string' || value.reason.trim().length === 0) {
       issues.push('not_an_edit.reason is required');
+    }
+    return issues;
+  }
+
+  if (value.kind === 'out_of_scope_setup') {
+    assertExactKeys(
+      value,
+      [...COACH_REVISION_PROPOSAL_SCHEMA.outOfScopeSetupTopLevelKeys],
+      'out_of_scope_setup proposal',
+      issues,
+    );
+    if (typeof value.reason !== 'string' || value.reason.trim().length === 0) {
+      issues.push('out_of_scope_setup.reason is required');
+    }
+    if (typeof value.detectedChange !== 'string' || value.detectedChange.trim().length === 0) {
+      issues.push('out_of_scope_setup.detectedChange is required');
     }
     return issues;
   }

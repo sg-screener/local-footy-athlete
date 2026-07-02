@@ -37,7 +37,7 @@ export interface BuildSemanticCoachRevisionProposalInput
 }
 
 export interface CoachRevisionShadowDiagnostic {
-  proposalKind: 'revision' | 'clarify' | 'invalid' | 'not_an_edit';
+  proposalKind: 'revision' | 'clarify' | 'invalid' | 'not_an_edit' | 'out_of_scope_setup';
   affectedDates: string[];
   diffSummary: Array<{
     date: string;
@@ -102,6 +102,16 @@ export type SemanticCoachRevisionProposalResult =
       reason: string;
       confidence: number;
       diagnostic: CoachRevisionShadowDiagnostic;
+    }
+  | {
+      /** Typed decline: a program-SHAPE change (recurring/availability/
+       *  frequency). The controller releases the turn to the setup pipeline. */
+      kind: 'out_of_scope_setup';
+      proposal: Extract<CoachRevisionProposal, { kind: 'out_of_scope_setup' }>;
+      reason: string;
+      detectedChange: string;
+      confidence: number;
+      diagnostic: CoachRevisionShadowDiagnostic;
     };
 
 export class MockSemanticCoachRevisionProposalAdapter
@@ -156,9 +166,31 @@ export async function buildSemanticCoachRevisionProposal(
 
   const proposal = parsed.proposal;
 
-  // Typed decline: bypass the confidence gate entirely. Whether the model is
-  // 0.5 or 0.99 sure the message isn't an edit, forcing a clarify would
-  // hijack conversation — releasing the turn is the safe outcome either way.
+  // Typed declines: bypass the confidence gate entirely. Whether the model is
+  // 0.5 or 0.99 sure, forcing a clarify would hijack the turn — releasing it
+  // to the owning layer is the safe outcome either way.
+  if (proposal.kind === 'out_of_scope_setup') {
+    const diagnostic: CoachRevisionShadowDiagnostic = {
+      proposalKind: 'out_of_scope_setup',
+      affectedDates: [],
+      diffSummary: [],
+      validatorStatus: 'not_run',
+      protectedRefsPreserved: [],
+      protectedRefsViolated: [],
+      unknownIds: [],
+      confirmationRequired: false,
+      issues: [],
+    };
+    emitShadowDiagnostic(diagnostic);
+    return {
+      kind: 'out_of_scope_setup',
+      proposal,
+      reason: proposal.reason,
+      detectedChange: proposal.detectedChange,
+      confidence: proposal.confidence,
+      diagnostic,
+    };
+  }
   if (proposal.kind === 'not_an_edit') {
     const diagnostic: CoachRevisionShadowDiagnostic = {
       proposalKind: 'not_an_edit',

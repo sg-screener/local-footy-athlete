@@ -52,6 +52,26 @@ Exact not_an_edit shape:
   "reason": "short_reason"
 }
 
+When the message is a PROGRAM-SHAPE change, not a one-off edit:
+- Recurring changes ("every week", "from now on", "going forward"),
+  availability windows ("I'm away next week"), training-day sets ("can only
+  train Mon/Wed/Fri now"), and weekly frequency changes ("drop to 3 days a
+  week") must change how the program is GENERATED — never individual visible
+  days. Return kind "out_of_scope_setup" so the app routes the message to its
+  schedule/setup pipeline.
+- Never express these as revisedDays, never write date-level removals for
+  them, and never clarify them — the setup pipeline asks its own questions.
+- One-off edits to a single visible day remain kind "revision" as normal.
+
+Exact out_of_scope_setup shape:
+{
+  "schemaVersion": "${COACH_REVISION_PROPOSAL_SCHEMA_VERSION}",
+  "kind": "out_of_scope_setup",
+  "confidence": 0.9,
+  "reason": "short_reason",
+  "detectedChange": "one-line summary of the schedule change the athlete wants"
+}
+
 When to clarify:
 - Return kind "clarify" only when the message IS a change request AND two or
   more visible targets genuinely match, or a required field is missing and

@@ -1201,6 +1201,36 @@ async function run() {
   }
 
   {
+    // OUT_OF_SCOPE_SETUP: program-shape requests must be RELEASED to the
+    // setup/regeneration pipeline (typed decline), never expressed as date
+    // overrides and never hijacked into revision clarifies.
+    const adapter = new RecordingRevisionAdapter(() => ({
+      schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
+      kind: 'out_of_scope_setup',
+      confidence: 0.94,
+      reason: 'recurring_training_day_change',
+      detectedChange: 'Replace training days with Mon/Wed/Fri',
+    }));
+    const result = await runControllerTurn({
+      message: 'I can only train Mon Wed and Fri now',
+      adapter,
+    });
+    eq('[21] revision adapter consulted', adapter.calls.length, 1);
+    ok('[21] no revision-path reply (released)',
+      !/left the plan unchanged|only supports simple single-day/.test(result.reply),
+      { reply: result.reply, route: (result.debug as CoachTurnDebug | null)?.route, handled: result.handled });
+    ok('[21] no date overrides written',
+      Object.keys(result.dateOverrides).length === 0,
+      result.dateOverrides);
+    // Ownership transferred: the setup pipeline interpreted and attempted the
+    // rebuild (route program_setup_*). In the harness the rebuild fails
+    // (no generation backend) — live, executeProgramSetupEdit regenerates.
+    ok('[21] released to setup pipeline (program_setup route)',
+      ((result.debug as CoachTurnDebug | null)?.route ?? '').startsWith('program_setup'),
+      { reply: result.reply, route: (result.debug as CoachTurnDebug | null)?.route });
+  }
+
+  {
     // Round cap: a model that clarifies forever gets cut off honestly after
     // COACH_REVISION_MAX_CLARIFY_ROUNDS, with no mutation and no legacy path.
     const adapter = new RecordingRevisionAdapter(() =>

@@ -2696,6 +2696,17 @@ export async function handleCoachTurn(
             'No worries — leaving the plan as it is.',
           );
         }
+        if (revisionResult.kind === 'out_of_scope_setup') {
+          // Mid-transaction setup pivot: close the one-off transaction and
+          // redirect honestly — routing a short clarification answer into the
+          // setup interpreter would lose the original request anyway.
+          usePendingCoachClarifierStore.getState().clearPending();
+          return replyAndFinish(
+            input,
+            'pending-coach-revision-out-of-scope-setup',
+            "That's a schedule change rather than a one-off edit. Send it to me as one message — like \"I'm away next week\" or \"I can only train Mon/Wed/Fri now\" — and I'll update your plan properly.",
+          );
+        }
         usePendingCoachClarifierStore.getState().clearPending();
         const reply = revisionResult.kind === 'needs_confirmation'
           ? 'I need confirmation before making that replacement.'
@@ -3489,6 +3500,18 @@ export async function handleCoachTurn(
           reason: revisionResult.reason,
           confidence: revisionResult.confidence,
           mutationLike: isMutationLike(input.userMessage.content),
+        });
+      } else if (revisionResult.kind === 'out_of_scope_setup') {
+        // Typed release to the setup/regeneration pipeline: program-SHAPE
+        // changes (recurring schedule, availability, frequency) must alter
+        // generation inputs, never date overrides. Deliberately no return —
+        // the deterministic setup interpreter downstream owns the turn
+        // (audited working: profile patch → regenerate → verify → write).
+        emitCoachTurnDiagnostic('coach_revision_out_of_scope_setup', {
+          message: input.userMessage.content,
+          reason: revisionResult.reason,
+          detectedChange: revisionResult.detectedChange,
+          confidence: revisionResult.confidence,
         });
       } else if (revisionResult.kind === 'invalid') {
         input.setLastCoachDebug({
