@@ -6,6 +6,54 @@ the top.
 
 ---
 
+## Friday 3 July 2026 — The coach learns Sam's conditioning philosophy
+
+**What happened.**
+Yesterday the coach learned to be honest. Today it learned to coach like
+Sam. We sat down and wrote out how conditioning should actually work across
+a footy season — and then built it into the app.
+
+The rules, in plain English: during a normal game week the body needs to
+recover, so the coach will only add easy "flush out" sessions — gentle
+bike, row or ski work that helps you bounce back. But on a bye week, with
+no game to save your legs for, the gloves come off: the coach unlocks two
+proper hard sessions — an every-minute-on-the-minute erg grinder and a
+"MetCon" of hard machines, carries and burpees — to simulate that game-day
+hit the body would otherwise miss. The app works out for itself which
+weeks are bye weeks. The AI doesn't get a say in breaking the rule — the
+app enforces it, so a hard session physically cannot land on a game week.
+
+Watching it work live was genuinely cool: asked for hard conditioning on
+Saturday (a bye), it offered the menu; picked the MetCon; it asked "want
+me to swap in MetCon — Off-Legs on Saturday? (yes/no)"; said yes; it was
+on the board two seconds later. Then asked for the same thing NEXT
+Saturday — a game week — and it politely refused, explained why, and
+offered the easy options instead. That's exactly what a good human coach
+would do.
+
+**A bug caught before Sam ever hit it.** In testing, picking an option
+from the coach's menu ("MetCon please") hit a dead end — the app dropped
+the choice instead of asking for the yes/no. Turned out two code paths
+were doing the same job slightly differently. Fixed by making them share
+one path, with a test so it can never quietly come back. This is the
+whole philosophy of the rebuild: don't patch the symptom, remove the
+duplicate.
+
+**Also fixed the invisible-updates trap.** Twice now, the app was
+secretly running yesterday's code while we tested today's — which makes
+test results meaningless. The app now stamps every coach reply in the
+logs with a fingerprint of what's actually running, so a stale build
+exposes itself immediately instead of wasting a morning.
+
+**What's next.**
+Sam feeds in more work-capacity sessions over time and the menu grows.
+Bigger picture: teach the program generator itself the running rules
+(max 4 runs a week, in-season running only around training and game
+days) — that one needs a proper plan first, it touches the engine that
+builds the whole week.
+
+---
+
 ## Thursday 2 July 2026 — The day the AI coach got a brain transplant
 
 **What happened.**

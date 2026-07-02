@@ -111,6 +111,38 @@ hard conditioning on the bye" was refused.
 
 ---
 
+# DELIVERED — overhaul v1 live-verified (2026-07-03)
+
+Registry now has 8 coach-addable templates (commit `6fa216a`):
+
+- **Easy / flush (any week):** Easy Zone 2 Bike, Easy Zone 2 Row, Easy
+  Zone 2 Ski Erg (25min), Flush Out — 30:30 Intervals, Flush Out — 1min
+  On/1min Off, Flush Out — 2min On/1min Off (24min).
+- **Work capacity (bye weeks only):** Erg EMOM — 10–15 cal (24min,
+  rotating bike/ski/row/assault), MetCon — Off-Legs (28min, 4 stations ×
+  7 rounds, hard ergs/carries/burpees, varying work:rest).
+
+Bye weeks are detected automatically (a week with no game day unlocks the
+hard set); the validator enforces it app-side (`template_bye_week_only`),
+so the model can't sneak a hard add onto a game week no matter what it
+proposes. 1km Repeat Intervals widened to 4–6 reps (absorbs old 6x1km).
+
+**Live gate results (Simulator, 2026-07-03):**
+- Bye Saturday: "add some hard conditioning" → options listed → "MetCon
+  please" → "Want me to swap in MetCon — Off-Legs on 2026-07-04?
+  (yes / no)" → yes → applied instantly from the stored proposal, board
+  shows SAT · MetCon — Off-Legs. PASS.
+- Game-week Saturday: same ask → honest refusal ("MetCon is only
+  available in bye weeks") offering the flush family instead. PASS.
+- "no thanks" → clean cancel, plan untouched. PASS.
+
+One real bug found and fixed on the way (commit `8aa98bf`): answering a
+clarify with a template pick used to dead-end at "I need confirmation
+before making that replacement" and drop the choice — the resume path now
+shares the exact confirmation transaction with the fresh path (test [26]).
+
+---
+
 # YOUR REVIEW — write straight into this file or tell Claude
 
 1. **Missing sessions?** Anything you program in real life that isn't in
