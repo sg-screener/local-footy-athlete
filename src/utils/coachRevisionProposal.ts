@@ -779,6 +779,29 @@ function validateDiffMatchesIntent(
     return validateMoveConservation(diff);
   }
 
+  if (proposal.userIntent.intent === 'replace') {
+    // Replace is judged STRUCTURALLY, like reduce and move — the label
+    // matrix kept rejecting valid swaps whenever the model picked a domain
+    // synonym. Safety comes from: template-only additions (byte-exact,
+    // enforced in validateAddedRefs), protected refs, date bounds, and the
+    // confirmation gate that shows the athlete exactly what will change.
+    const addedSections = diff.dateDiffs.flatMap((entry) =>
+      entry.sectionDiffs.filter((section) => section.kind === 'added'),
+    );
+    if (addedSections.length === 0) {
+      invalid.push(issue('replace_missing_addition', 'Replace must add replacement content.'));
+    }
+    const replacedSomething = diff.dateDiffs.some((entry) =>
+      entry.sectionDiffs.some(
+        (section) => section.kind === 'removed' || section.kind === 'changed',
+      ),
+    );
+    if (!replacedSomething) {
+      invalid.push(issue('replace_nothing_replaced', 'Replace did not remove or change any existing content.'));
+    }
+    return { invalid, needsConfirmation };
+  }
+
   if (proposal.userIntent.intent === 'reduce') {
     // A reduction must be conservative EVERYWHERE it changes something, not
     // just in the declared target domain — "make today lighter" legitimately

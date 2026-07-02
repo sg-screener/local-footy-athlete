@@ -753,6 +753,42 @@ section('[13] move conservation: relocated content must arrive exactly');
     occupiedResult.issues);
 }
 
+section('[14] replace is label-agnostic: any domain label validates structurally');
+{
+  const { buildCoachRevisionTemplateSection } = require('../utils/coachRevisionTemplates');
+  const { coachRevisionSectionBodySignature } = require('../utils/coachRevisionProposal');
+  const templateSection = buildCoachRevisionTemplateSection('easy_zone2_bike', MON);
+  const before = snapshot([visibleDay(MON, strengthOnlyWorkout('workout-mon-gunshow'))]);
+  // Live 2026-07-02: the model labeled a swap targetDomain 'session' on a
+  // strength-only day and the old label matching refused a valid proposal.
+  const p = proposal({
+    intent: { intent: 'replace', targetDomain: 'session', actionScope: 'session' },
+    dates: [MON],
+    revisedDays: [{
+      date: MON,
+      workout: {
+        id: 'template-easy_zone2_bike',
+        title: 'Easy Zone 2 Bike',
+        workoutType: 'Conditioning',
+        sections: [templateSection],
+      },
+    }],
+    allowedAddedSectionKinds: ['conditioning'],
+    requiresConfirmation: true,
+  });
+  const result = validateCoachRevisionDiff({
+    before,
+    proposal: p,
+    policy: {
+      allowedTemplateSectionSignatures: [coachRevisionSectionBodySignature(templateSection)],
+      allowedAddedSectionKinds: [],
+    },
+  });
+  eq('session-labeled swap on strength day needs confirmation (not invalid)',
+    result.status,
+    'needs_confirmation');
+}
+
 section('[11] snapshot workout IDs are stable across renames when workout.id is set');
 {
   const original = mixedWorkout();
