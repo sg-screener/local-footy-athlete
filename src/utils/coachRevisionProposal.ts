@@ -287,6 +287,10 @@ export interface CoachRevisionValidationPolicy {
    *  of template sections that may be added. The model must echo a template
    *  byte-exactly or the addition is unknown content. */
   allowedTemplateSectionSignatures?: string[];
+  /** Bye-week-only templates (work capacity): authorized ONLY on dates in
+   *  byeUnlockedDates (dates belonging to visible weeks with no game day). */
+  byeOnlyTemplateSectionSignatures?: string[];
+  byeUnlockedDates?: string[];
   requireConfirmationForAdds?: boolean;
 }
 
@@ -683,6 +687,8 @@ function validateAddedRefs(args: {
   const allowedAdded = new Set(args.policy?.allowedAddedSectionKinds ?? []);
 
   const templateSignatures = new Set(args.policy?.allowedTemplateSectionSignatures ?? []);
+  const byeOnlySignatures = new Set(args.policy?.byeOnlyTemplateSectionSignatures ?? []);
+  const byeUnlockedDates = new Set(args.policy?.byeUnlockedDates ?? []);
 
   for (const dateDiff of args.diff.dateDiffs) {
     const addedSections = dateDiff.sectionDiffs.filter((entry) => entry.kind === 'added');
@@ -691,9 +697,28 @@ function validateAddedRefs(args: {
       // athlete has already confirmed (apply-time), and the proposal's own
       // requiresConfirmation flag must not resurrect the gate forever.
       const confirmationRequired = args.policy?.requireConfirmationForAdds !== false;
+      const bodySignature = added.after
+        ? coachRevisionSectionBodySignature(added.after)
+        : null;
+      // Coaching policy: work-capacity templates only land on bye weeks.
       const isTemplateMatch =
-        !!added.after &&
-        templateSignatures.has(coachRevisionSectionBodySignature(added.after));
+        !!bodySignature &&
+        (templateSignatures.has(bodySignature) ||
+          (byeOnlySignatures.has(bodySignature) &&
+            byeUnlockedDates.has(dateDiff.date)));
+      if (
+        !!bodySignature &&
+        byeOnlySignatures.has(bodySignature) &&
+        !byeUnlockedDates.has(dateDiff.date)
+      ) {
+        invalid.push(issue(
+          'template_bye_week_only',
+          `That session is reserved for bye weeks; ${dateDiff.date} falls in a game week.`,
+          dateDiff.date,
+          added.sectionId,
+        ));
+        continue;
+      }
       if (isTemplateMatch) {
         if (confirmationRequired) {
           needsConfirmation.push(issue(

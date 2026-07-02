@@ -1481,9 +1481,10 @@ function buildConditioningTemplateRaw(
     case '1km Repeat Intervals': {
       // Bucket: Aerobic Power
       // Purpose: Build sustained high-output engine and pacing discipline
-      // Duration cap: standalone ≤45min. Locked to 4–5 reps, 6min start-interval
-      // so total session = 10min warmup + (reps × 6min) + 5min cool ≤ 45min.
-      const reps = 4 + (hash % 2); // 4–5 reps
+      // Duration cap: standalone target ≤45min. 4–6 reps (Sam 2026-07-03:
+      // widened from 4–5 to absorb the old "6x1km" concept), 6min
+      // start-interval: 10min warmup + (reps × 6min) + 5min cool.
+      const reps = 4 + (hash % 3); // 4–6 reps
       const startEvery = 6; // fixed 6 min — keeps cap-compliant
       return [
         condEx(`${prefix}-warmup`, 'Run warm-up', 1, 1, 1, 1, 0,

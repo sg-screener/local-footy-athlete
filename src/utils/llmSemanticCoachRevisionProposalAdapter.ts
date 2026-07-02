@@ -11,6 +11,7 @@ import {
 import {
   buildCoachRevisionTemplateSection,
   listCoachRevisionTemplates,
+  visibleDayLooksLikeGame,
 } from './coachRevisionTemplates';
 import type { CoachVisibleSectionSnapshot } from './coachRevisionProposal';
 import { logger } from './logger';
@@ -77,20 +78,29 @@ Exact out_of_scope_setup shape:
   "detectedChange": "one-line summary of the schedule change the athlete wants"
 }
 
-Template replacements (one-off swaps):
+Template replacements and additions (one-off):
 - context.addableTemplates is the ONLY content you may ever add. To swap a
-  day's session for a template: intent "replace", requiresConfirmation true,
+  day's session for a template (intent "replace") or add one to a REST day
+  (intent "add"): requiresConfirmation true,
   allowedAddedSectionKinds ["conditioning"]; the revised day's workout is
   { "id": "template-<templateId>", "title": the template label,
     "workoutType": "Conditioning", "sections": [ the template's section from
     context.addableTemplates COPIED BYTE-EXACT — same ids, titles,
     prescriptions, durations ] }.
+- COACHING POLICY — flush vs work capacity:
+  - category "flush" templates (easy zone 2, flush-out intervals) are for
+    rejuvenation and may be used any week in season.
+  - byeOnly templates (work capacity: EMOM, MetCon) may ONLY be placed on
+    dates in BYE weeks — check context.byeWeeks: a week with isBye true has
+    no game day. On game weeks, offer flush options instead and explain why.
+  - On bye weeks, prefer suggesting work-capacity options over an easy flush
+    when the athlete asks for conditioning, especially on the weekend
+    (simulates game-day load).
 - Never modify template content (no duration/sets tweaks) and never invent
-  exercises. If the athlete asks to add something that is not an approved
+  exercises. If the athlete asks for something that is not an approved
   template ("add hill sprints tomorrow"), return kind "clarify" explaining
-  you can only add the approved easy-conditioning templates for now, and list
-  them as candidateOptions.
-- The app will ask the athlete to confirm before a replacement is applied.
+  the approved options, and list them as candidateOptions.
+- The app will ask the athlete to confirm before any add/replace is applied.
 
 Moves (one-off, within the visible window):
 - A move is TWO revisedDays under scope.mode "visible_week" with scope.dates
@@ -222,13 +232,19 @@ export interface CoachRevisionProposalLLMContext {
   pendingClarifier: ReturnType<typeof summarisePendingClarifier>;
   recentContext?: unknown;
   /** The ONLY content that may be added to the program (product policy:
-   *  template-derived replacements only). Sections must be copied byte-exact. */
+   *  template-derived replacements only). Sections must be copied byte-exact.
+   *  byeOnly templates may ONLY be used on dates in bye weeks (see byeWeeks). */
   addableTemplates: Array<{
     templateId: string;
     label: string;
     description: string;
+    category: 'flush' | 'work_capacity';
+    byeOnly: boolean;
     section: CoachVisibleSectionSnapshot;
   }>;
+  /** Per visible week (keyed by Monday): whether it contains a game day.
+   *  Weeks WITHOUT a game are bye weeks — harder conditioning is allowed. */
+  byeWeeks: Array<{ weekOfMonday: string; hasGameDay: boolean; isBye: boolean }>;
   visibleCandidates: Array<{
     kind: 'day' | 'workout' | 'section' | 'item';
     label: string;
@@ -436,6 +452,7 @@ export function buildCoachRevisionProposalLLMContext(
     pendingClarifier: summarisePendingClarifier(input.pendingClarifier ?? null),
     recentContext: summariseRecentContext(input.recentContext),
     addableTemplates: buildAddableTemplates(input),
+    byeWeeks: buildByeWeeks(input),
     visibleCandidates: buildVisibleCandidates(input.visibleSnapshot),
   };
 }
@@ -451,10 +468,40 @@ function buildAddableTemplates(
           templateId: template.templateId,
           label: template.label,
           description: template.description,
+          category: template.category,
+          byeOnly: template.byeOnly,
           section,
         }]
       : [];
   });
+}
+
+function mondayOfISODate(date: string): string {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return date;
+  const dow = (parsed.getUTCDay() + 6) % 7; // 0 = Monday
+  parsed.setUTCDate(parsed.getUTCDate() - dow);
+  return parsed.toISOString().slice(0, 10);
+}
+
+function buildByeWeeks(
+  input: SemanticCoachRevisionProposalAdapterInput,
+): CoachRevisionProposalLLMContext['byeWeeks'] {
+  const weekHasGame = new Map<string, boolean>();
+  for (const day of input.visibleSnapshot.days) {
+    const monday = mondayOfISODate(day.date);
+    weekHasGame.set(
+      monday,
+      (weekHasGame.get(monday) ?? false) || visibleDayLooksLikeGame(day),
+    );
+  }
+  return Array.from(weekHasGame.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([weekOfMonday, hasGameDay]) => ({
+      weekOfMonday,
+      hasGameDay,
+      isBye: !hasGameDay,
+    }));
 }
 
 function summarisePendingClarifier(pending: PendingCoachClarifier | null) {

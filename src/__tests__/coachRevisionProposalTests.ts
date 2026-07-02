@@ -789,6 +789,79 @@ section('[14] replace is label-agnostic: any domain label validates structurally
     'needs_confirmation');
 }
 
+section('[15] all registry templates round-trip and self-identify');
+{
+  const { listCoachRevisionTemplates, buildCoachRevisionTemplateSection, templateIdFromRevisedWorkout } =
+    require('../utils/coachRevisionTemplates');
+  for (const template of listCoachRevisionTemplates()) {
+    const section = buildCoachRevisionTemplateSection(template.templateId, MON);
+    ok(`${template.templateId} builds a section`, !!section, template.templateId);
+    eq(`${template.templateId} recovers its id from a revised workout`,
+      templateIdFromRevisedWorkout({ sections: [section] }),
+      template.templateId);
+  }
+}
+
+section('[16] work-capacity templates are bye-week gated');
+{
+  const {
+    buildCoachRevisionTemplateSection,
+  } = require('../utils/coachRevisionTemplates');
+  const { coachRevisionSectionBodySignature } = require('../utils/coachRevisionProposal');
+  const emomSection = buildCoachRevisionTemplateSection('erg_emom', TUE);
+  const flushSection = buildCoachRevisionTemplateSection('flushout_3030', TUE);
+  const before = snapshot([visibleDay(TUE, strengthOnlyWorkout('workout-tue-gunshow'))]);
+  const emomProposal = (section: any) => proposal({
+    intent: { intent: 'replace', targetDomain: 'strength', actionScope: 'session' },
+    dates: [TUE],
+    revisedDays: [{
+      date: TUE,
+      workout: {
+        id: `template-${section === emomSection ? 'erg_emom' : 'flushout_3030'}`,
+        title: section.title,
+        workoutType: 'Conditioning',
+        sections: [section],
+      },
+    }],
+    allowedAddedSectionKinds: ['conditioning'],
+    requiresConfirmation: true,
+  });
+  const policyBase = {
+    allowedAddedSectionKinds: [] as any,
+    allowedTemplateSectionSignatures: [coachRevisionSectionBodySignature(flushSection)],
+    byeOnlyTemplateSectionSignatures: [coachRevisionSectionBodySignature(emomSection)],
+  };
+
+  // Game week: TUE not bye-unlocked → EMOM refused with the named issue.
+  const gameWeek = validateCoachRevisionDiff({
+    before,
+    proposal: emomProposal(emomSection),
+    policy: { ...policyBase, byeUnlockedDates: [] },
+  });
+  eq('EMOM on a game week is invalid', gameWeek.status, 'invalid');
+  ok('bye-only issue named',
+    gameWeek.issues.some((entry) => entry.code === 'template_bye_week_only'),
+    gameWeek.issues);
+
+  // Bye week: same proposal allowed (needs confirmation as usual).
+  const byeWeek = validateCoachRevisionDiff({
+    before,
+    proposal: emomProposal(emomSection),
+    policy: { ...policyBase, byeUnlockedDates: [TUE] },
+  });
+  eq('EMOM on a bye week needs confirmation', byeWeek.status, 'needs_confirmation');
+
+  // Flush-outs are fine on game weeks.
+  const flushGameWeek = validateCoachRevisionDiff({
+    before,
+    proposal: emomProposal(flushSection),
+    policy: { ...policyBase, byeUnlockedDates: [] },
+  });
+  eq('flush-out on a game week needs confirmation (allowed)',
+    flushGameWeek.status,
+    'needs_confirmation');
+}
+
 section('[11] snapshot workout IDs are stable across renames when workout.id is set');
 {
   const original = mixedWorkout();

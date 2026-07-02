@@ -110,6 +110,7 @@ import {
 import {
   buildCoachRevisionTemplateSection,
   listCoachRevisionTemplates,
+  visibleDayLooksLikeGame,
 } from './coachRevisionTemplates';
 import {
   buildSemanticCoachRevisionProposal,
@@ -1593,16 +1594,45 @@ function coachRevisionValidationPolicyForWeek(
   visibleWeek: ReturnType<typeof buildCoachContextPacket>['currentWeek'],
   todayISO: string,
 ) {
+  const signatureFor = (templateId: string): string | null => {
+    const section = buildCoachRevisionTemplateSection(templateId, todayISO);
+    return section ? coachRevisionSectionBodySignature(section) : null;
+  };
+  const standard: string[] = [];
+  const byeOnly: string[] = [];
+  for (const template of listCoachRevisionTemplates()) {
+    const signature = signatureFor(template.templateId);
+    if (!signature) continue;
+    (template.byeOnly ? byeOnly : standard).push(signature);
+  }
   return {
     allowedChangedDates: visibleWeek.map((day) => day.date),
     // Free-form section adds stay forbidden; the ONLY addable content is the
     // app template registry, matched byte-exactly by body signature.
     allowedAddedSectionKinds: [] as never[],
-    allowedTemplateSectionSignatures: listCoachRevisionTemplates()
-      .map((template) => buildCoachRevisionTemplateSection(template.templateId, todayISO))
-      .filter((section): section is NonNullable<typeof section> => !!section)
-      .map((section) => coachRevisionSectionBodySignature(section)),
+    allowedTemplateSectionSignatures: standard,
+    byeOnlyTemplateSectionSignatures: byeOnly,
+    byeUnlockedDates: byeUnlockedDatesForWeek(visibleWeek),
   };
+}
+
+/** Dates belonging to visible weeks that contain NO game day. Coaching
+ *  policy: bye weeks unlock the work-capacity templates. */
+function byeUnlockedDatesForWeek(
+  visibleWeek: ReturnType<typeof buildCoachContextPacket>['currentWeek'],
+): string[] {
+  const weekHasGame = new Map<string, boolean>();
+  for (const day of visibleWeek) {
+    const monday = getMondayForDate(day.date);
+    const snapshotDay = snapshotProjectedDay(day);
+    weekHasGame.set(
+      monday,
+      (weekHasGame.get(monday) ?? false) || visibleDayLooksLikeGame(snapshotDay),
+    );
+  }
+  return visibleWeek
+    .filter((day) => !weekHasGame.get(getMondayForDate(day.date)))
+    .map((day) => day.date);
 }
 
 function visibleDaysForCoachRevisionProposal(args: {
@@ -1743,7 +1773,13 @@ function isSupportedDevActiveCoachRevision(
     entry.sectionDiffs.some((section) => section.kind === 'added') ||
     entry.itemDiffs.some((item) => item.kind === 'added'),
   );
-  if (addsContent && proposal.userIntent.intent !== 'replace') return false;
+  if (
+    addsContent &&
+    proposal.userIntent.intent !== 'replace' &&
+    proposal.userIntent.intent !== 'add'
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -1882,12 +1918,20 @@ function composeCoachRevisionDoneReply(
       'the session';
     return `Done. I moved ${movedTitle} from ${sourceDate ?? 'its day'} to ${destDate ?? 'the new day'}.`;
   }
-  if (result.proposal.userIntent.intent === 'replace') {
+  if (
+    result.proposal.userIntent.intent === 'replace' ||
+    result.proposal.userIntent.intent === 'add'
+  ) {
     const addedTitle = result.diff.dateDiffs
       .flatMap((entry) => entry.sectionDiffs)
       .find((section) => section.kind === 'added')?.after?.title;
-    const replaceDate = result.diff.changedDates[0] ?? result.proposal.scope.dates[0] ?? 'that day';
-    return `Done. I swapped in ${addedTitle ?? 'the new session'} on ${replaceDate}.`;
+    const removedAnything = result.diff.dateDiffs.some((entry) =>
+      entry.sectionDiffs.some((section) => section.kind === 'removed'),
+    );
+    const changeDate = result.diff.changedDates[0] ?? result.proposal.scope.dates[0] ?? 'that day';
+    return removedAnything
+      ? `Done. I swapped in ${addedTitle ?? 'the new session'} on ${changeDate}.`
+      : `Done. I added ${addedTitle ?? 'the new session'} on ${changeDate}.`;
   }
   const date = result.diff.changedDates[0] ?? result.proposal.scope.dates[0] ?? 'that day';
   const summary = result.diagnostic.diffSummary[0];
