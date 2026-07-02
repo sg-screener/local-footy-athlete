@@ -999,6 +999,47 @@ async function run() {
   }
 
   {
+    // LABEL-SYNONYM COMBOS: the model labels the same diff many ways
+    // (live 2026-07-02: removing a day's only item labeled
+    // remove+conditioning+whole_session was rejected by the old intent/domain
+    // whitelist despite a validator-approved diff). Support is STRUCTURAL:
+    // any validated single-day, no-adds diff applies regardless of labels.
+    let phase: 'strength' | 'bike' = 'strength';
+    const adapter = new RecordingRevisionAdapter((input) => {
+      if (phase === 'strength') {
+        return removeStrengthKeepConditioningAt(input, THURSDAY);
+      }
+      // Day now holds ONLY the bike. Removing it clears the day; the model
+      // labels this remove+conditioning+WHOLE_SESSION — a synonym combo the
+      // old whitelist rejected despite the validator approving the diff.
+      const current = day(input);
+      const after = clone(current);
+      after.workout = null;
+      return revision({
+        input,
+        intent: { intent: 'remove', targetDomain: 'conditioning', actionScope: 'whole_session' },
+        revisedDay: after,
+      });
+    });
+    const first = await runControllerTurn({
+      message: 'drop the lifting tomorrow but keep the bike',
+      adapter,
+    });
+    ok('[18] setup edit applied', /^Done\./.test(first.reply), first.reply);
+
+    phase = 'bike';
+    const second = await runControllerTurn({
+      message: 'remove the bike tomorrow',
+      adapter,
+      seed: false,
+    });
+    ok('[18] label-synonym removal applied',
+      /^Done\./.test(second.reply),
+      { reply: second.reply, route: (second.debug as CoachTurnDebug | null)?.route });
+    eq('[18] day projects as rest', second.visible.day.workout, null);
+  }
+
+  {
     // NOT_AN_EDIT: conversational messages must be RELEASED to the normal
     // conversation layers, not hijacked into clarify (live 2026-07-02:
     // "How's my week looking next week?" got "I think that is a program

@@ -1631,28 +1631,26 @@ function coachRevisionInvalidReply(
 function isSupportedDevActiveCoachRevision(
   result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>,
 ): boolean {
+  // STRUCTURAL constraints only. Intent/domain/scope labels are the model's
+  // commentary; the validated DIFF is the truth. A label matrix here kept
+  // rejecting validator-approved edits whenever the model chose a synonym
+  // combination (reduce-labeled removals, conditioning+whole_session on a
+  // one-item day, …) while adding zero safety: adds are already blocked by
+  // the app-side validation policy, protected refs by the validator, and the
+  // writer re-verifies the contract before any store write.
   const proposal = result.proposal;
   if (proposal.scope.mode !== 'single_day') return false;
   if (proposal.scope.dates.length !== 1) return false;
   if (proposal.revisedDays.length !== 1) return false;
   if (result.diff.changedDates.length !== 1) return false;
-  const { intent, targetDomain, actionScope } = proposal.userIntent;
-  if (intent === 'remove' && targetDomain === 'strength' && actionScope === 'strength_section') {
-    return true;
-  }
-  if (intent === 'remove' && targetDomain === 'conditioning' && actionScope === 'conditioning_section') {
-    return true;
-  }
-  if (intent === 'remove' && targetDomain === 'session' && actionScope === 'whole_session') {
-    return true;
-  }
-  if (intent === 'reduce') {
-    // Any single-day reduce is safe: the validator enforces the conservative
-    // invariant on EVERY changed item (no increases, no additions) regardless
-    // of which domain the model labeled — "make today lighter" included.
-    return true;
-  }
-  return false;
+  // Belt-and-braces mirror of the adds policy: Stage 4A writes never add
+  // visible content.
+  const addsContent = result.diff.dateDiffs.some((entry) =>
+    entry.sectionDiffs.some((section) => section.kind === 'added') ||
+    entry.itemDiffs.some((item) => item.kind === 'added'),
+  );
+  if (addsContent) return false;
+  return true;
 }
 
 function applyDevActiveCoachRevision(args: {
