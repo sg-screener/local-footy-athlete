@@ -195,6 +195,61 @@ function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
+function teamPlusLiftWorkout(): Workout {
+  return {
+    id: 'workout-thu-team-pull',
+    microcycleId: 'mc-1',
+    dayOfWeek: 4,
+    name: 'Team Training + Upper Pull',
+    description: 'Club session plus upper pull work',
+    durationMinutes: 90,
+    intensity: 'High',
+    workoutType: 'Team Training',
+    sessionTier: 'core',
+    exercises: [
+      ex('Weighted Chin Up', 'thu-chin', 4, 'workout-thu-team-pull'),
+      ex('Chest Supported Row', 'thu-row', 3, 'workout-thu-team-pull'),
+    ],
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
+/** Combined team-training day seed for the 3A representation tests. */
+function seedTeamThursdayProgram() {
+  useProgramStore.getState().clear();
+  useCoachContextStateStore.getState().clearCoachContext();
+  usePendingCoachClarifierStore.getState().clearPending();
+  const microcycle: Microcycle = {
+    id: 'mc-1',
+    programId: 'program-1',
+    weekNumber: 1,
+    startDate: '2026-06-29',
+    endDate: '2026-07-05',
+    miniCycleNumber: 1,
+    intensityMultiplier: 1,
+    workouts: [mixedWorkout({ id: 'workout-mon-mixed', dayOfWeek: 1 }), teamPlusLiftWorkout()],
+    createdAt: '',
+    updatedAt: '',
+  };
+  const program: TrainingProgram = {
+    id: 'program-1',
+    userId: 'user-1',
+    name: 'Team Week Program',
+    description: '',
+    programPhase: 'In-Season',
+    startDate: '2026-06-29',
+    endDate: '2026-07-26',
+    microcycles: [microcycle],
+    primaryFocus: 'Test',
+    isActive: true,
+    createdAt: '',
+    updatedAt: '',
+  };
+  useProgramStore.getState().setCurrentProgram(program);
+  useProgramStore.getState().setCurrentMicrocycle(microcycle);
+}
+
 /** Live-app topology: ONE microcycle only. Dates beyond it (e.g. next
  *  Monday) exist purely as template projections, not materialized workouts.
  *  The default two-microcycle seed masks failures in that projection path. */
@@ -1037,6 +1092,73 @@ async function run() {
       /^Done\./.test(second.reply),
       { reply: second.reply, route: (second.debug as CoachTurnDebug | null)?.route });
     eq('[18] day projects as rest', second.visible.day.workout, null);
+  }
+
+  {
+    // 3A: COMBINED TEAM DAY — "only strength" must be able to remove the
+    // team-training portion (live flow-5 gap: the commitment had no
+    // removable representation in the snapshot).
+    const adapter = new RecordingRevisionAdapter((input) => {
+      const current = day(input);
+      const strength = sectionOf(current, 'strength');
+      const after = clone(current);
+      after.workout!.title = 'Upper Pull';
+      after.workout!.workoutType = 'Strength';
+      after.workout!.sections = [strength];
+      return revision({
+        input,
+        intent: { intent: 'remove', targetDomain: 'team_training', actionScope: 'session' },
+        revisedDay: after,
+        protectedRefs: [strength.id],
+      });
+    });
+    const result = await runControllerTurn({
+      message: 'change tomorrow to only the strength work',
+      adapter,
+      seedFn: seedTeamThursdayProgram,
+    });
+    const snapshotDay = adapter.calls[0]?.visibleSnapshot.days.find((d) => d.date === THURSDAY);
+    ok('[19] snapshot exposes team session section',
+      !!snapshotDay?.workout?.sections.some((s) => s.kind === 'session'),
+      snapshotDay?.workout?.sections.map((s) => s.kind));
+    ok('[19] team-portion removal applied',
+      /^Done\./.test(result.reply),
+      { reply: result.reply, route: (result.debug as CoachTurnDebug | null)?.route });
+    ok('[19] strength preserved', result.visible.strengthItems.length > 0, result.visible.items);
+    ok('[19] day no longer team training',
+      result.visible.day.workout?.workoutType !== 'Team Training',
+      result.visible.day.workout?.workoutType);
+  }
+
+  {
+    // 3A reverse: drop the lifting, KEEP team training. The day must remain
+    // a team session, not collapse to rest.
+    const adapter = new RecordingRevisionAdapter((input) => {
+      const current = day(input);
+      const sessionSection = current.workout!.sections.find((s) => s.kind === 'session')!;
+      const after = clone(current);
+      after.workout!.title = 'Team Training';
+      after.workout!.sections = [sessionSection];
+      return revision({
+        input,
+        intent: { intent: 'remove', targetDomain: 'strength', actionScope: 'strength_section' },
+        revisedDay: after,
+        protectedRefs: [sessionSection.id],
+      });
+    });
+    const result = await runControllerTurn({
+      message: 'drop the lifting tomorrow but keep team training',
+      adapter,
+      seedFn: seedTeamThursdayProgram,
+    });
+    ok('[20] strength removal applied',
+      /^Done\./.test(result.reply),
+      { reply: result.reply, route: (result.debug as CoachTurnDebug | null)?.route });
+    ok('[20] day still has a workout (not rest)', !!result.visible.day.workout, result.visible.day);
+    eq('[20] strength gone', result.visible.strengthItems.length, 0);
+    ok('[20] day remains team training',
+      result.visible.day.workout?.workoutType === 'Team Training',
+      result.visible.day.workout?.workoutType);
   }
 
   {

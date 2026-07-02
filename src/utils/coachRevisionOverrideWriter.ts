@@ -243,9 +243,18 @@ function buildContentOverride(source: Workout, revisedDay: CoachVisibleDaySnapsh
   }
 
   const onlyConditioning = !hasStrength && (hasConditioning || hasRecovery);
-  const onlyStrength = hasStrength && !hasConditioning && !hasRecovery;
-  const title = revisedWorkout.title || source.name;
-  const workoutType = onlyConditioning
+  const onlyStrength = hasStrength && !hasConditioning && !hasRecovery && !hasSession;
+  // Session-only survivor (e.g. "drop the lifting, keep team training"): the
+  // remaining commitment defines the day. Name from the kept session item so
+  // the pure-day projection (session item title = workout name) round-trips
+  // to the accepted revision's contract.
+  const onlySession = hasSession && !hasStrength && !hasConditioning && !hasRecovery;
+  const title = onlySession
+    ? (session?.items[0]?.title || revisedWorkout.title || source.name)
+    : (revisedWorkout.title || source.name);
+  const workoutType = onlySession
+    ? source.workoutType
+    : onlyConditioning
     ? 'Conditioning'
     : onlyStrength
     ? 'Strength'

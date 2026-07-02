@@ -626,6 +626,46 @@ section('[10b] parse normalizes empty shells to canonical rest/null');
     parsedPartial.proposal);
 }
 
+section('[10c] combined team day exposes the team-training portion as a session section');
+{
+  // Live 3A gap: "Team Training + Upper Pull" days only surfaced strength —
+  // the team commitment had NO representation, so "only strength" edits had
+  // nothing to remove. The snapshot must show every removable commitment.
+  const teamPlusLift: Workout = {
+    ...strengthOnlyWorkout('workout-tue-team-pull'),
+    name: 'Team Training + Upper Pull',
+    workoutType: 'Team Training',
+    dayOfWeek: 2,
+  };
+  const before = snapshot([visibleDay(TUE, teamPlusLift)]);
+  const tuesday = daySnap(before, TUE);
+  const kinds = tuesday.workout!.sections.map((sectionSnap) => sectionSnap.kind);
+  ok('strength section present', kinds.includes('strength'), kinds);
+  ok('session section present alongside strength', kinds.includes('session'), kinds);
+  const sessionSection = tuesday.workout!.sections.find((s) => s.kind === 'session');
+  eq('session item id is the workout id (round-trips to pure-day projection)',
+    sessionSection?.items[0]?.id,
+    'workout-tue-team-pull');
+}
+
+section('[10d] optional-tier day in current week projects into the snapshot');
+{
+  // Live Friday sample refused with no_visible_diff — lock in that optional
+  // tier days DO reach the snapshot with their content (model noise vs gap).
+  const gunshow: Workout = {
+    ...strengthOnlyWorkout('workout-fri-gunshow'),
+    name: 'Gunshow',
+    dayOfWeek: 5,
+    sessionTier: 'optional' as any,
+  };
+  const before = snapshot([visibleDay(WED, gunshow)]);
+  const day = daySnap(before, WED);
+  ok('optional day has a workout in snapshot', !!day.workout, day);
+  ok('optional day strength items present',
+    (day.workout?.sections.find((s) => s.kind === 'strength')?.items.length ?? 0) > 0,
+    day.workout?.sections);
+}
+
 section('[11] snapshot workout IDs are stable across renames when workout.id is set');
 {
   const original = mixedWorkout();

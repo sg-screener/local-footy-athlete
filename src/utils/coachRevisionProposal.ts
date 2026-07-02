@@ -495,9 +495,36 @@ function buildVisibleSections(
       title: cleanText(workout.name) || 'Session',
       items: sessionItems.map((item) => snapshotVisibleItem(item, workout)),
     });
+  } else if (isTeamTrainingWorkout(workout) && sections.length > 0) {
+    // Combined team days ("Team Training + Upper Pull") carry a commitment
+    // that the athlete sees in the title but that previously had NO removable
+    // representation — so "keep only the lifting" had nothing to diff away.
+    // Every visible commitment must be a first-class section. The item id is
+    // the workout id so that, after other sections are removed, the pure-day
+    // projection (which synthesizes a session item with id = workout.id)
+    // round-trips to the same contract identity.
+    sections.push({
+      id: `section:${day.date}:session:${workoutId}`,
+      kind: 'session',
+      title: 'Team Training',
+      items: [{
+        id: String((workout as any).id ?? workoutId),
+        title: 'Team Training',
+        domain: 'session',
+        source: 'session',
+        description: cleanText(workout.description) || null,
+        exerciseIds: [],
+        durationMinutes: null,
+        prescription: null,
+      }],
+    });
   }
 
   return sections;
+}
+
+function isTeamTrainingWorkout(workout: Workout): boolean {
+  return cleanText(workout.workoutType).toLowerCase() === 'team training';
 }
 
 function snapshotVisibleItem(
