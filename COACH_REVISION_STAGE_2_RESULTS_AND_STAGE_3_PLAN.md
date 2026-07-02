@@ -195,6 +195,20 @@ adds ~10s for a single-day revision (~700 output tokens ≈ 68ms/token —
 suspiciously slow; hidden reasoning tokens are the prime suspect, confirmable
 once the deployed headers report usage).
 
+**CONFIRMED SPLIT (2026-07-02, post-deploy headers):** whole-day reduce =
+totalMs 13,986 with upstreamMs 13,422 — network + edge overhead is ~560ms
+(4%), already optimal. All time is model generation: 1,138 output tokens of
+which 412 are REASONING tokens (~36%). The model genuinely thinks before
+proposing — plausibly why first-try accuracy has been so high.
+
+**Verdict:** ~14s is inherent to full-state echo on a thinking model. The
+only lever that reaches 5–8s WITHOUT touching what the model sees or how
+hard it thinks is the pre-designed patch-shape output (ops over visible IDs,
+deterministically expanded app-side, SAME validator/writer/gates): visible
+echo ~726 → ~150 tokens, projected total ~5–6s. Input slimming and
+reasoning-effort reduction both trade against intelligence — hold unless
+patch-shape alone proves insufficient.
+
 **Levers, all requiring Sam's sign-off (each touches model inputs/behavior):**
 1. Deploy the instrumented edge fn → see upstream/reasoning split (zero risk).
 2. Request slimming: the `schema` object duplicates shapes already in the
