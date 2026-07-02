@@ -49,6 +49,13 @@ Environment: dev-active (`__DEV__`-gated), Supabase `ryzoxwcijoqbguduonov`, edge
 4. Latency: turns run ~8–15s on gpt-5.5 vs 5–8s production target. → Stage 3E.
 5. `name_based_workout_id_fallback` warning has never fired live — ID contract holding; keep watching.
 
+### Autonomous consistency pass (2026-07-02, Claude driving the Simulator)
+
+- "Remove the bike on Monday": first exposed the dev whitelist rejecting a validator-approved diff over label synonyms (remove+conditioning+whole_session). Fixed structurally — support is now single-day + no-adds, labels ignored (`9c20682`) — then re-verified live: applied, Monday renders Rest.
+- "Make Thursday lighter": applied to 2026-07-09. Note: asked ON a Thursday, bare "Thursday" resolved to next week — defensible.
+- "Bin Fridays session" ×3: run 1 removed NEXT Friday (2026-07-10) instead of tomorrow — mis-resolved bare weekday, honestly reported, target wrong. Added nearest-upcoming tie-break to the date guide (`ac9483e`); run 3 then targeted 2026-07-03 correctly but refused with no_visible_diff. **Open finding → Stage 3A family: current-week optional-tier day (Fri 07-03 Gunshow) appears not to survive into the coach snapshot the way next week's identical session does.** Safety held in all runs (refusals, no wrong mutation beyond the transparent 07-10 removal).
+- Invalid diagnostics now include `invalidProposalDates` so refusals name their target (`ac9483e`).
+
 ---
 
 ## 2. Stage 3 Plan (ordered)
