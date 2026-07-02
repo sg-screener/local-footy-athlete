@@ -3337,6 +3337,11 @@ export async function handleCoachTurn(
         revisionResult?.kind === 'invalid'
           ? revisionResult.issues.slice(0, 6)
           : null,
+      invalidProposalDates:
+        revisionResult?.kind === 'invalid' &&
+        revisionResult.proposal?.kind === 'revision'
+          ? revisionResult.proposal.scope.dates
+          : null,
     });
     if (revisionResult && revisionMode !== 'off') {
       emitCoachRevisionProposalDiagnostic({

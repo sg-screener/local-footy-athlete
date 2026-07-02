@@ -34,7 +34,8 @@ Rules:
 Date resolution:
 - context.dateGuide is the app-computed calendar truth: today's date/weekday and every visible date with weekday and daysFromToday.
 - Resolve relative phrases ("tomorrow", "Monday", "next Monday", "the 6th") against context.dateGuide. Never do your own calendar arithmetic and never ask which date when exactly one visible date matches the phrase.
-- "Next <weekday>" means the upcoming visible date with that weekday (smallest positive daysFromToday). A bare weekday name means the same unless the athlete clearly refers to the past.
+- A bare weekday ("Friday") means the NEAREST upcoming visible date with that weekday — the smallest positive daysFromToday. If today is Thursday, "Friday" is tomorrow (daysFromToday 1), never next week's Friday (daysFromToday 8). When two visible dates share the weekday, the nearer one wins unless the athlete says "next <weekday>" or names the date.
+- "Next <weekday>" said on that same weekday (e.g. "next Thursday" on a Thursday) means the following week's date, not today.
 
 When the message is NOT a change request:
 - Questions, status checks, opinions, and chit-chat ("how's my week looking?",
