@@ -10,6 +10,10 @@ import {
 } from './coachRevisionProposal';
 import { projectVisibleDay } from './visibleProgramProjection';
 import type { ResolvedDay } from './sessionResolver';
+import {
+  buildCoachRevisionTemplateWorkout,
+  templateIdFromRevisedWorkout,
+} from './coachRevisionTemplates';
 
 export interface CoachRevisionOverrideWrite {
   date: string;
@@ -182,15 +186,23 @@ export function buildWorkoutOverrideFromRevision(args: {
     };
   }
 
-  if (!source && args.revisedDay.workout && !args.donorWorkout) {
+  // Template replacements: the revised day is a pure registry session, so the
+  // registry (not the source rows) materializes the workout — round-trip is
+  // guaranteed because the advertised snapshot was derived from this exact
+  // builder.
+  const templateId = templateIdFromRevisedWorkout(args.revisedDay.workout ?? null);
+
+  if (!source && args.revisedDay.workout && !args.donorWorkout && !templateId) {
     return {
       ok: false,
       code: 'add_workout_not_supported',
-      reason: 'New content can only arrive on a rest day via a conserved move from a visible donor day.',
+      reason: 'New content can only arrive via a conserved move or an approved template.',
     };
   }
 
-  let workout = source
+  let workout = templateId
+    ? buildCoachRevisionTemplateWorkout(templateId, args.revisedDay.date)
+    : source
     ? args.revisedDay.workout
       ? buildContentOverride(source, args.revisedDay)
       : buildRestOverride(source)

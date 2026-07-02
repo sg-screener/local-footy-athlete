@@ -8,6 +8,11 @@ import {
   type SemanticCoachRevisionProposalAdapter,
   type SemanticCoachRevisionProposalAdapterInput,
 } from './semanticCoachRevisionProposal';
+import {
+  buildCoachRevisionTemplateSection,
+  listCoachRevisionTemplates,
+} from './coachRevisionTemplates';
+import type { CoachVisibleSectionSnapshot } from './coachRevisionProposal';
 import { logger } from './logger';
 
 export const COACH_REVISION_PROPOSAL_FUNCTION_NAME = 'coach-revision-proposal';
@@ -71,6 +76,21 @@ Exact out_of_scope_setup shape:
   "reason": "short_reason",
   "detectedChange": "one-line summary of the schedule change the athlete wants"
 }
+
+Template replacements (one-off swaps):
+- context.addableTemplates is the ONLY content you may ever add. To swap a
+  day's session for a template: intent "replace", requiresConfirmation true,
+  allowedAddedSectionKinds ["conditioning"]; the revised day's workout is
+  { "id": "template-<templateId>", "title": the template label,
+    "workoutType": "Conditioning", "sections": [ the template's section from
+    context.addableTemplates COPIED BYTE-EXACT — same ids, titles,
+    prescriptions, durations ] }.
+- Never modify template content (no duration/sets tweaks) and never invent
+  exercises. If the athlete asks to add something that is not an approved
+  template ("add hill sprints tomorrow"), return kind "clarify" explaining
+  you can only add the approved easy-conditioning templates for now, and list
+  them as candidateOptions.
+- The app will ask the athlete to confirm before a replacement is applied.
 
 Moves (one-off, within the visible window):
 - A move is TWO revisedDays under scope.mode "visible_week" with scope.dates
@@ -201,6 +221,14 @@ export interface CoachRevisionProposalLLMContext {
   visibleSnapshot: CoachVisibleWeekSnapshot;
   pendingClarifier: ReturnType<typeof summarisePendingClarifier>;
   recentContext?: unknown;
+  /** The ONLY content that may be added to the program (product policy:
+   *  template-derived replacements only). Sections must be copied byte-exact. */
+  addableTemplates: Array<{
+    templateId: string;
+    label: string;
+    description: string;
+    section: CoachVisibleSectionSnapshot;
+  }>;
   visibleCandidates: Array<{
     kind: 'day' | 'workout' | 'section' | 'item';
     label: string;
@@ -389,8 +417,26 @@ export function buildCoachRevisionProposalLLMContext(
     visibleSnapshot: input.visibleSnapshot,
     pendingClarifier: summarisePendingClarifier(input.pendingClarifier ?? null),
     recentContext: summariseRecentContext(input.recentContext),
+    addableTemplates: buildAddableTemplates(input),
     visibleCandidates: buildVisibleCandidates(input.visibleSnapshot),
   };
+}
+
+function buildAddableTemplates(
+  input: SemanticCoachRevisionProposalAdapterInput,
+): CoachRevisionProposalLLMContext['addableTemplates'] {
+  const date = input.todayISO ?? input.visibleSnapshot.days[0]?.date ?? '2026-01-01';
+  return listCoachRevisionTemplates().flatMap((template) => {
+    const section = buildCoachRevisionTemplateSection(template.templateId, date);
+    return section
+      ? [{
+          templateId: template.templateId,
+          label: template.label,
+          description: template.description,
+          section,
+        }]
+      : [];
+  });
 }
 
 function summarisePendingClarifier(pending: PendingCoachClarifier | null) {

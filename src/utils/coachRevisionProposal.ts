@@ -283,6 +283,10 @@ export type CoachRevisionValidationResult =
 export interface CoachRevisionValidationPolicy {
   allowedChangedDates?: string[];
   allowedAddedSectionKinds?: CoachRevisionSectionKind[];
+  /** App-side registry authorization: canonical BODY signatures (id-stripped)
+   *  of template sections that may be added. The model must echo a template
+   *  byte-exactly or the addition is unknown content. */
+  allowedTemplateSectionSignatures?: string[];
   requireConfirmationForAdds?: boolean;
 }
 
@@ -678,9 +682,29 @@ function validateAddedRefs(args: {
   // confirmation-flow signal (see requiresConfirmation below).
   const allowedAdded = new Set(args.policy?.allowedAddedSectionKinds ?? []);
 
+  const templateSignatures = new Set(args.policy?.allowedTemplateSectionSignatures ?? []);
+
   for (const dateDiff of args.diff.dateDiffs) {
     const addedSections = dateDiff.sectionDiffs.filter((entry) => entry.kind === 'added');
     for (const added of addedSections) {
+      // Confirmation is governed by APP policy alone: policy false means the
+      // athlete has already confirmed (apply-time), and the proposal's own
+      // requiresConfirmation flag must not resurrect the gate forever.
+      const confirmationRequired = args.policy?.requireConfirmationForAdds !== false;
+      const isTemplateMatch =
+        !!added.after &&
+        templateSignatures.has(coachRevisionSectionBodySignature(added.after));
+      if (isTemplateMatch) {
+        if (confirmationRequired) {
+          needsConfirmation.push(issue(
+            'replacement_requires_confirmation',
+            `Proposal adds template ${added.sectionKind} on ${dateDiff.date}.`,
+            dateDiff.date,
+            added.sectionId,
+          ));
+        }
+        continue;
+      }
       if (!allowedAdded.has(added.sectionKind)) {
         invalid.push(issue(
           'unknown_section_id',
@@ -690,7 +714,7 @@ function validateAddedRefs(args: {
         ));
         continue;
       }
-      if (args.policy?.requireConfirmationForAdds !== false || args.proposal.userIntent.requiresConfirmation) {
+      if (confirmationRequired) {
         needsConfirmation.push(issue(
           'replacement_requires_confirmation',
           `Proposal adds ${added.sectionKind} on ${dateDiff.date}.`,
@@ -1279,19 +1303,42 @@ function issue(
   return { code, message, date, ref };
 }
 
-function stableString(value: unknown): string {
-  return JSON.stringify(value, Object.keys(flattenForStableString(value)).sort());
+/** Body signature of a section: content identity EXCLUDING the section id,
+ *  which legitimately varies by date/workout. Used to match added sections
+ *  against the app's template registry byte-exactly. */
+export function coachRevisionSectionBodySignature(
+  section: CoachVisibleSectionSnapshot,
+): string {
+  return stableString({
+    kind: section.kind,
+    title: section.title,
+    items: section.items,
+  });
 }
 
-function flattenForStableString(value: unknown): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  JSON.stringify(value, (_key, val) => {
-    if (val && typeof val === 'object' && !Array.isArray(val)) {
-      for (const key of Object.keys(val)) out[key] = true;
-    }
-    return val;
-  });
-  return out;
+/**
+ * Canonical content signature: recursive key-sorted serialization, so two
+ * structurally equal values always produce identical strings and any content
+ * difference produces different ones. Replaces the old global-key-allowlist
+ * replacer (3D hardening gate) — signatures now authorize template additions,
+ * so collisions/omissions would let non-registry content through.
+ */
+function stableString(value: unknown): string {
+  return canonicalJson(value);
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value) ?? 'null';
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => canonicalJson(entry)).join(',')}]`;
+  }
+  const record = value as Record<string, unknown>;
+  const keys = Object.keys(record).filter((key) => record[key] !== undefined).sort();
+  return `{${keys
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`)
+    .join(',')}}`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

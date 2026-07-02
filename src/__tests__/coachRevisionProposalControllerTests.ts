@@ -29,6 +29,7 @@ import type {
   SemanticCoachRevisionProposalAdapterInput,
 } from '../utils/semanticCoachRevisionProposal';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
+import { buildCoachRevisionTemplateSection } from '../utils/coachRevisionTemplates';
 import {
   getResolvedVisibleProgramForDate,
 } from '../utils/visibleProgramReadModel';
@@ -1269,6 +1270,111 @@ async function run() {
     ok('[22] destination has the moved content',
       result.visible.strengthItems.length > 0 && result.visible.conditioningItems.length > 0,
       result.visible.items);
+  }
+
+  {
+    // 3D: TEMPLATE REPLACEMENT with confirmation transaction. Swap a day for
+    // an approved template → confirm question → "Yes" applies the STORED
+    // proposal exactly.
+    const templateSection = buildCoachRevisionTemplateSection('easy_zone2_bike', TODAY)!;
+    const adapter = new RecordingRevisionAdapter(() => ({
+      schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
+      kind: 'revision',
+      source: 'semantic',
+      confidence: 0.9,
+      userIntent: {
+        intent: 'replace',
+        targetDomain: 'strength',
+        actionScope: 'session',
+        targetDates: [THURSDAY],
+        protectedRefs: [],
+        allowedAddedSectionKinds: ['conditioning'],
+        requiresConfirmation: true,
+        reason: 'controller_replace_test',
+      },
+      scope: { mode: 'single_day', dates: [THURSDAY] },
+      revisedDays: [{
+        date: THURSDAY,
+        workout: {
+          id: 'template-easy_zone2_bike',
+          title: 'Easy Zone 2 Bike',
+          workoutType: 'Conditioning',
+          sections: [templateSection],
+        },
+      }],
+      explanation: 'controller_replace_test',
+    } satisfies CoachRevisionProposal));
+
+    const first = await runControllerTurn({
+      message: 'swap tomorrows session for an easy bike',
+      adapter,
+    });
+    ok('[23] confirmation question asked',
+      /Want me to swap in Easy Zone 2 Bike on 2026-07-02\?/.test(first.reply),
+      first.reply);
+    ok('[23] stored proposal in pending envelope',
+      !!first.pending?.coachRevisionProposalEnvelope?.proposal,
+      first.pending);
+    ok('[23] nothing written before confirmation',
+      Object.keys(first.dateOverrides).length === 0,
+      first.dateOverrides);
+
+    const second = await runControllerTurn({
+      message: 'Yes',
+      adapter,
+      seed: false,
+    });
+    eq('[23] no re-generation on confirm (adapter still called once)', adapter.calls.length, 1);
+    ok('[23] replacement applied with swap wording',
+      /^Done\. I swapped in Easy Zone 2 Bike on 2026-07-02\./.test(second.reply),
+      { reply: second.reply, route: (second.debug as CoachTurnDebug | null)?.route });
+    ok('[23] override written', !!second.dateOverrides[THURSDAY], second.dateOverrides);
+    ok('[23] day is now the template session',
+      second.visible.conditioningItems.length > 0 && second.visible.strengthItems.length === 0,
+      second.visible.items);
+    eq('[23] pending cleared', usePendingCoachClarifierStore.getState().pending, null);
+  }
+
+  {
+    // 3D: FREE-FORM INVENTION still refused — a non-registry section under a
+    // replace intent has no byte-exact template match and no policy kind.
+    const adapter = new RecordingRevisionAdapter((input) => {
+      const current = day(input);
+      const after = clone(current);
+      after.workout = {
+        id: 'invented-hill-sprints',
+        title: 'Hill Sprints',
+        workoutType: 'Conditioning',
+        sections: [{
+          id: 'section:invented:hills',
+          kind: 'conditioning',
+          title: 'Hill Sprints',
+          items: [{
+            id: 'item:invented:hills',
+            title: '6x400m hill sprints',
+            domain: 'conditioning',
+            source: 'conditioning_option',
+            description: 'Invented content',
+            exerciseIds: [],
+            durationMinutes: 30,
+            prescription: null,
+          }],
+        }],
+      };
+      return revision({
+        input,
+        intent: { intent: 'replace', targetDomain: 'strength', actionScope: 'session' },
+        revisedDay: after,
+      });
+    });
+    const result = await runControllerTurn({
+      message: 'replace tomorrows session with hill sprints',
+      adapter,
+    });
+    ok('[24] free-form invention refused',
+      /left the plan unchanged/.test(result.reply),
+      { reply: result.reply, route: (result.debug as CoachTurnDebug | null)?.route });
+    ok('[24] nothing written', Object.keys(result.dateOverrides).length === 0, result.dateOverrides);
   }
 
   {

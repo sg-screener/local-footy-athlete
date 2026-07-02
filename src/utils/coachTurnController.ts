@@ -99,11 +99,18 @@ import {
 } from './visibleProgramReadModel';
 import { getMondayForDate } from './sessionResolver';
 import {
+  buildCoachRevisionDiff,
   buildCoachRevisionWeekSnapshotFromProjectedDays,
+  coachRevisionSectionBodySignature,
   snapshotProjectedDay,
+  validateCoachRevisionDiff,
   type CoachRevisionIntent,
   type CoachRevisionProposal,
 } from './coachRevisionProposal';
+import {
+  buildCoachRevisionTemplateSection,
+  listCoachRevisionTemplates,
+} from './coachRevisionTemplates';
 import {
   buildSemanticCoachRevisionProposal,
   type CoachRevisionProposalMode,
@@ -982,6 +989,50 @@ function capturePendingDateClarificationFromCoachRevisionProposal(args: {
  *  declines honestly instead of interrogating the athlete forever. */
 const COACH_REVISION_MAX_CLARIFY_ROUNDS = 3;
 
+/** Confirmation transaction for validated-but-unconfirmed revisions
+ *  (template replacements): store the FULL proposal so "yes" applies exactly
+ *  what was offered — never a regeneration that could drift. */
+function capturePendingConfirmationFromCoachRevision(args: {
+  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'needs_confirmation' }>;
+  originalMessage: string;
+}): { pending: Omit<PendingCoachClarifier, 'createdAt'>; question: string } {
+  const proposal = args.result.proposal;
+  const envelope = pendingCoachRevisionEnvelopeFromProposal({
+    proposal,
+    originalMessage: args.originalMessage,
+  });
+  const date = args.result.diff.changedDates[0] ?? proposal.scope.dates[0] ?? 'that day';
+  const addedTitle = args.result.diff.dateDiffs
+    .flatMap((entry) => entry.sectionDiffs)
+    .find((section) => section.kind === 'added')?.after?.title;
+  const question = `Want me to swap in ${addedTitle ?? 'that session'} on ${date}? (yes / no)`;
+  const operation = coachRevisionPendingOperation(proposal.userIntent);
+  return {
+    question,
+    pending: {
+      operation,
+      partialPayload: semanticPendingPayload(operation),
+      scope: 'one_off',
+      missingFields: ['confirmation'],
+      originalMessage: args.originalMessage,
+      askedQuestion: question,
+      coachRevisionProposalEnvelope: envelope,
+      pendingClarification: {
+        originalIntent: `${proposal.userIntent.intent}:${proposal.userIntent.targetDomain}:${proposal.userIntent.actionScope}`,
+        missingField: 'confirmation',
+        expectedAnswerType: 'confirmation',
+        source: envelope.source,
+        continuationId: envelope.continuationId,
+        originalUserWording: envelope.originalUserWording,
+        proposedCandidate: { label: 'Yes', value: 'confirm', answerType: 'confirmation' },
+        candidateOptions: ['Yes', 'No'],
+        partialCoachRevision: envelope,
+        reason: 'coach_revision_requires_confirmation',
+      },
+    },
+  };
+}
+
 /** Record the athlete's answer against the outstanding (last, unanswered)
  *  clarification round. */
 function fillLastCoachRevisionClarificationAnswer(
@@ -1441,10 +1492,7 @@ async function buildCoachRevisionProposalForController(args: {
     // were in the snapshot the LLM was shown, and may not add sections.
     // Past visible dates stay allowed here so stale-date proposals reach the
     // stale-date clarification flow instead of failing as unrelated dates.
-    validationPolicy: {
-      allowedChangedDates: visibleWeek.map((day) => day.date),
-      allowedAddedSectionKinds: [],
-    },
+    validationPolicy: coachRevisionValidationPolicyForWeek(visibleWeek, args.input.todayISO),
     pendingClarifier: getPendingClarifierSnapshot(),
     recentContext: {
       currentWeekDates: (args.packet.currentWeek ?? []).map((day) => day.date),
@@ -1490,10 +1538,7 @@ async function buildCoachRevisionProposalForPendingResume(args: {
     visibleSnapshot: buildCoachRevisionWeekSnapshotFromProjectedDays(visibleWeek),
     // Same app-side bound as the new-message path: only snapshot dates may
     // change, no adds. visibleWeek already includes the patched target date.
-    validationPolicy: {
-      allowedChangedDates: visibleWeek.map((day) => day.date),
-      allowedAddedSectionKinds: [],
-    },
+    validationPolicy: coachRevisionValidationPolicyForWeek(visibleWeek, args.input.todayISO),
     pendingClarifier: args.pending,
     recentContext: {
       currentWeekDates: (args.packet.currentWeek ?? []).map((day) => day.date),
@@ -1519,6 +1564,22 @@ async function buildCoachRevisionProposalForPendingResume(args: {
     adapter,
     minConfidence: args.input.coachRevisionProposalMinConfidence,
   });
+}
+
+function coachRevisionValidationPolicyForWeek(
+  visibleWeek: ReturnType<typeof buildCoachContextPacket>['currentWeek'],
+  todayISO: string,
+) {
+  return {
+    allowedChangedDates: visibleWeek.map((day) => day.date),
+    // Free-form section adds stay forbidden; the ONLY addable content is the
+    // app template registry, matched byte-exactly by body signature.
+    allowedAddedSectionKinds: [] as never[],
+    allowedTemplateSectionSignatures: listCoachRevisionTemplates()
+      .map((template) => buildCoachRevisionTemplateSection(template.templateId, todayISO))
+      .filter((section): section is NonNullable<typeof section> => !!section)
+      .map((section) => coachRevisionSectionBodySignature(section)),
+  };
 }
 
 function visibleDaysForCoachRevisionProposal(args: {
@@ -1652,13 +1713,14 @@ function isSupportedDevActiveCoachRevision(
   if (proposal.scope.dates.length !== 1) return false;
   if (proposal.revisedDays.length !== 1) return false;
   if (result.diff.changedDates.length !== 1) return false;
-  // Belt-and-braces mirror of the adds policy: Stage 4A writes never add
-  // visible content.
+  // Belt-and-braces mirror of the adds policy: writes never add visible
+  // content — EXCEPT replacements, whose additions were authorized by the
+  // byte-exact template-registry match in the validator.
   const addsContent = result.diff.dateDiffs.some((entry) =>
     entry.sectionDiffs.some((section) => section.kind === 'added') ||
     entry.itemDiffs.some((item) => item.kind === 'added'),
   );
-  if (addsContent) return false;
+  if (addsContent && proposal.userIntent.intent !== 'replace') return false;
   return true;
 }
 
@@ -1687,6 +1749,17 @@ function applyDevActiveCoachRevision(args: {
     proposal: args.result.proposal,
     visibleWeek,
     todayISO: args.input.todayISO,
+    // The writer re-validates internally; it must see the SAME app-side
+    // policy (date window + template authorization) as proposal time, or
+    // template replacements get re-flagged as unknown content at apply.
+    // Confirmation is a CONVERSATIONAL gate that has already been satisfied
+    // by the time anything reaches apply (needs_confirmation → stored
+    // transaction → athlete's "yes"); the writer's re-validation is the
+    // safety net for content/dates/protection, not the confirm UX.
+    validationPolicy: {
+      ...coachRevisionValidationPolicyForWeek(visibleWeek, args.input.todayISO),
+      requireConfirmationForAdds: false,
+    },
     setManualOverride: (date, workout, context) =>
       useProgramStore.getState().setManualOverride(date, workout, context),
   });
@@ -1785,6 +1858,13 @@ function composeCoachRevisionDoneReply(
       result.proposal.revisedDays.find((day) => day.date === destDate)?.workout?.title ??
       'the session';
     return `Done. I moved ${movedTitle} from ${sourceDate ?? 'its day'} to ${destDate ?? 'the new day'}.`;
+  }
+  if (result.proposal.userIntent.intent === 'replace') {
+    const addedTitle = result.diff.dateDiffs
+      .flatMap((entry) => entry.sectionDiffs)
+      .find((section) => section.kind === 'added')?.after?.title;
+    const replaceDate = result.diff.changedDates[0] ?? result.proposal.scope.dates[0] ?? 'that day';
+    return `Done. I swapped in ${addedTitle ?? 'the new session'} on ${replaceDate}.`;
   }
   const date = result.diff.changedDates[0] ?? result.proposal.scope.dates[0] ?? 'that day';
   const summary = result.diagnostic.diffSummary[0];
@@ -2002,6 +2082,12 @@ type PendingCoachRevisionProposalAnswerResult =
   | { kind: 'cancelled'; reply: string }
   | { kind: 'clarify'; reply: string; options?: string[] }
   | {
+      /** Confirmation accepted: apply the STORED proposal exactly as offered
+       *  (after revalidating against current state) — no regeneration. */
+      kind: 'apply_stored';
+      envelope: PendingCoachRevisionProposalEnvelope;
+    }
+  | {
       kind: 'complete';
       envelope: PendingCoachRevisionProposalEnvelope;
       /** Deterministically resolved date, when the missing slot was a date
@@ -2037,6 +2123,20 @@ function resolvePendingCoachRevisionProposalAnswer(args: {
     return {
       kind: 'cancelled',
       reply: 'Got it — leaving things as they are.',
+    };
+  }
+
+  if (slot.missingField === 'confirmation' && envelope.proposal) {
+    if (
+      classification.kind === 'accept_proposed' ||
+      classification.kind === 'choose_candidate'
+    ) {
+      return { kind: 'apply_stored', envelope };
+    }
+    return {
+      kind: 'clarify',
+      reply: args.pending.askedQuestion ?? 'Should I go ahead? (yes / no)',
+      options: slot.candidateOptions,
     };
   }
 
@@ -2574,6 +2674,78 @@ export async function handleCoachTurn(
           createdAt: pendingClarifier.createdAt,
         });
         return replyAndFinish(input, 'pending-coach-revision-clarify', pendingRevisionAnswer.reply);
+      }
+      if (pendingRevisionAnswer.kind === 'apply_stored') {
+        // Confirmation accepted: revalidate the STORED proposal against the
+        // CURRENT visible state (it may have changed since we asked), then
+        // apply exactly what was offered. No adapter call, no regeneration.
+        const storedProposal = pendingRevisionAnswer.envelope.proposal!;
+        const visibleWeek = visibleDaysForCoachRevisionProposal({
+          packet,
+          todayISO: input.todayISO,
+          includeDates: storedProposal.scope.dates,
+        });
+        const before = buildCoachRevisionWeekSnapshotFromProjectedDays(visibleWeek);
+        const validation = validateCoachRevisionDiff({
+          before,
+          proposal: storedProposal,
+          policy: coachRevisionValidationPolicyForWeek(visibleWeek, input.todayISO),
+        });
+        usePendingCoachClarifierStore.getState().clearPending();
+        if (validation.status !== 'valid' && validation.status !== 'needs_confirmation') {
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: 'pending-coach-revision-confirm-stale',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: storedProposal.scope.dates[0] ?? null,
+            referenceTargetName: null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(
+            input,
+            'pending-coach-revision-confirm-stale',
+            'Your plan changed since I offered that, so I left it as is. Ask again and I will re-check.',
+          );
+        }
+        const pseudoResult: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }> = {
+          kind: 'revision',
+          proposal: storedProposal,
+          diff: validation.diff,
+          validation: validation as Extract<typeof validation, { status: 'valid' }>,
+          diagnostic: {
+            proposalKind: 'revision',
+            affectedDates: validation.diff.changedDates,
+            diffSummary: [],
+            validatorStatus: 'valid',
+            protectedRefsPreserved: [],
+            protectedRefsViolated: [],
+            unknownIds: [],
+            confirmationRequired: false,
+            issues: [],
+          },
+          confidence: storedProposal.confidence,
+        };
+        const applied = applyDevActiveCoachRevision({
+          input,
+          packet,
+          result: pseudoResult,
+          visibleWeek,
+        });
+        input.setLastCoachDebug({
+          intent: 'coach_revision_proposal',
+          route: `pending_${applied.route}`,
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: storedProposal.scope.dates[0] ?? null,
+          referenceTargetName: null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: applied.ok,
+        });
+        return replyAndFinish(input, `pending-${applied.route}`, applied.reply);
       }
       if (pendingRevisionAnswer.kind === 'complete') {
         const revisionMode = controllerCoachRevisionProposalMode(input);
@@ -3468,6 +3640,13 @@ export async function handleCoachTurn(
         });
         return replyAndFinish(input, applied.route, applied.reply);
       } else if (revisionResult.kind === 'needs_confirmation') {
+        // Confirmation is a TRANSACTION, not a dead end: store the validated
+        // proposal so "yes" applies it and "no" cancels it.
+        const confirmationPending = capturePendingConfirmationFromCoachRevision({
+          result: revisionResult,
+          originalMessage: input.userMessage.content,
+        });
+        usePendingCoachClarifierStore.getState().setPending(confirmationPending.pending);
         input.setLastCoachDebug({
           intent: 'coach_revision_proposal',
           route: 'coach-revision-proposal-needs-confirmation',
@@ -3482,7 +3661,7 @@ export async function handleCoachTurn(
         return replyAndFinish(
           input,
           'coach-revision-proposal-needs-confirmation',
-          'I need confirmation before making that replacement.',
+          confirmationPending.question,
         );
       } else if (revisionResult.kind === 'clarify') {
         // Store the clarification transaction so the athlete's next short
