@@ -175,7 +175,39 @@ hill sprints" → honest refusal: only approved templates, options offered.
 - Schema `templateRef` on added sections; app-side template registry is the ONLY add authorization (policy stays app-side); `needs_confirmation` surfaces as a real confirm UX in chat.
 - Live gate: "swap team training tomorrow for an easy bike" → confirmation → applied from template; free-form invention still refused.
 
-### 3E — Latency & production readiness
+### 3E — Latency & production readiness — **MEASURED 2026-07-02; levers need product sign-off**
+
+Instrumentation landed (`76489cf`): client logs totalMs + request/response
+bytes per turn; edge function returns upstream-ms + output/reasoning-token
+headers (NEEDS REDEPLOY to activate); CoachScreen fires an OPTIONS warm-up on
+load to kill cold-start tax.
+
+**Live numbers (gpt-5.5, dev):**
+
+| Turn shape | request | response | total |
+|---|---|---|---|
+| not_an_edit (tiny output) | 52.8 KB | 118 B | **4.25 s** |
+| whole-day reduce (echo output) | 52.9 KB | 2.5 KB | **14.4 s** |
+
+Reading: the FLOOR is ~4.3s (network + 53KB upload + ~13k-token prefill +
+edge overhead) — most of the 5–8s budget before any output. Echo generation
+adds ~10s for a single-day revision (~700 output tokens ≈ 68ms/token —
+suspiciously slow; hidden reasoning tokens are the prime suspect, confirmable
+once the deployed headers report usage).
+
+**Levers, all requiring Sam's sign-off (each touches model inputs/behavior):**
+1. Deploy the instrumented edge fn → see upstream/reasoning split (zero risk).
+2. Request slimming: the `schema` object duplicates shapes already in the
+   system prompt (~15–20KB), and `visibleCandidates` duplicates every
+   snapshot id (~8–12KB). Removing either shrinks prefill but changes what
+   the model sees — A/B against the live gate flows before trusting.
+3. If reasoning tokens dominate: env knob for reasoning effort — an explicit
+   speed-vs-thinking trade, product owner's call.
+4. Patch-shape output (ops over visible IDs, same validator) — the
+   pre-designed fallback; would cut the ~10s echo cost to ~2–3s. Largest win,
+   real work, revisit if 1–3 don't reach budget.
+
+*(original 3E plan for reference below)*
 
 - Measure per-turn p50/p95 from `served_by`-to-result timestamps; then in order: prompt slimming (schema/prompt are resent every call), snapshot trimming (visible fields only), and only if still over budget: patch-shape output (ops over visible IDs, deterministically applied, SAME diff validator) — the pre-agreed fallback, now optional rather than necessary.
 - Production flag design: revision path default-on for one-off edits behind a server-controllable kill switch; offline = polished refusal message.
