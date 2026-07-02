@@ -1766,6 +1766,7 @@ function composeCoachRevisionDoneReply(
   const summary = result.diagnostic.diffSummary[0];
   const removedStrength = summary?.sectionsRemoved.some((item) => item.startsWith('strength:'));
   const removedConditioning = summary?.sectionsRemoved.some((item) => item.startsWith('conditioning:'));
+  const removedSession = summary?.sectionsRemoved.some((item) => item.startsWith('session:'));
   const changedStrength =
     summary?.sectionsChanged.some((item) => item.startsWith('strength:')) ||
     summary?.itemsChanged.some((item) => item.startsWith('strength:'));
@@ -1777,6 +1778,12 @@ function composeCoachRevisionDoneReply(
   }
   if (removedConditioning && !removedStrength) {
     return `Done. I removed conditioning from ${date} and left strength alone.`;
+  }
+  if (removedSession && !removedStrength && !removedConditioning) {
+    // Session-kind section on a combined day = the team-training commitment.
+    // Without this branch the composer fell through to "made it lighter",
+    // which misdescribes a correct edit — a wording lie on a true Done.
+    return `Done. I removed the team training on ${date} and kept the rest of the session.`;
   }
   if (changedStrength) {
     return `Done. I made the strength work lighter on ${date}.`;

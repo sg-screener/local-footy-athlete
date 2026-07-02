@@ -1124,6 +1124,9 @@ async function run() {
     ok('[19] team-portion removal applied',
       /^Done\./.test(result.reply),
       { reply: result.reply, route: (result.debug as CoachTurnDebug | null)?.route });
+    ok('[19] reply describes the actual change (team training removed, not "lighter")',
+      /team training/i.test(result.reply) && !/lighter/i.test(result.reply),
+      result.reply);
     ok('[19] strength preserved', result.visible.strengthItems.length > 0, result.visible.items);
     ok('[19] day no longer team training',
       result.visible.day.workout?.workoutType !== 'Team Training',
