@@ -803,14 +803,27 @@ function classifyWorkoutChange(
 }
 
 function findRefSignature(days: CoachVisibleDaySnapshot[], ref: string): string | null {
+  // Finest granularity wins. An id can legitimately name both an item and
+  // its containing workout (session items reuse the workout id so pure-day
+  // projections round-trip). "Protect X" refers to the visible content X —
+  // the ITEM — not the container, whose signature rightly changes whenever
+  // any sibling is edited. Coarse-first resolution refused correct edits
+  // (live 2026-07-02: protecting the team-training item resolved as the
+  // whole workout and rejected a valid strength removal).
   for (const day of days) {
-    if (day.workout?.id === ref) return stableString(day.workout);
     for (const section of day.workout?.sections ?? []) {
-      if (section.id === ref) return stableString(section);
       for (const item of section.items) {
         if (item.id === ref) return stableString(item);
       }
     }
+  }
+  for (const day of days) {
+    for (const section of day.workout?.sections ?? []) {
+      if (section.id === ref) return stableString(section);
+    }
+  }
+  for (const day of days) {
+    if (day.workout?.id === ref) return stableString(day.workout);
   }
   return null;
 }

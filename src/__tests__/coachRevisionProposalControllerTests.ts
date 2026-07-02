@@ -1146,7 +1146,10 @@ async function run() {
         input,
         intent: { intent: 'remove', targetDomain: 'strength', actionScope: 'strength_section' },
         revisedDay: after,
-        protectedRefs: [sessionSection.id],
+        // Live models protect the team-training ITEM id — which equals the
+        // workout id. Finest-granularity resolution must treat this as the
+        // item, not the changed container.
+        protectedRefs: [sessionSection.items[0].id],
       });
     });
     const result = await runControllerTurn({
