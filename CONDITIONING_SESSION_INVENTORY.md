@@ -78,6 +78,39 @@ hard conditioning on the bye" was refused.
 
 ---
 
+# SAM'S DECISIONS — round 1 (2026-07-03)
+
+**Rules (engine-level):**
+- Hard cap: max 4 RUNNING sessions per week, always.
+- In-season: running only at team training + game day; optional LIGHT run on
+  Monday (furthest from game). Other conditioning goes off-legs.
+- Bye weeks: every session EXCEPT the sprint family becomes a legitimate
+  coach-addable option (better than defaulting to a 20min flush).
+- 4x4 VO2 is NOT bike/row-preferred — running is a first-class modality,
+  subject to the running budget above.
+
+**Library changes:**
+- 1km Repeat Intervals: widen to 4–6 reps; delete the 6x1km stub (redundant).
+- Tempo Run stub: remove for now.
+- MetCon: BUILD. Hard conditioning, mostly off-legs, 20–40min, rotating
+  ergos / carries / burpees (runs only if running budget allows).
+  Draft structure awaiting Sam's tweak.
+- NEW — Erg EMOM: 20–40min, every minute on the minute 12–15 cal effort,
+  rest = remainder of minute, rotating bike/ski/row/assault.
+  Open: per-erg cal targets or flat 12–15?
+- NEW CATEGORY — Work Capacity / General Conditioning: MetCon, EMOM, plus
+  more sessions Sam will supply. In-season: extra off-leg midweek option.
+  Off-season: volume and work-capacity building.
+
+**Still open:**
+- Normal-week (non-bye) coach-addable set: easy-only as now, or
+  easy + work-capacity?
+- MetCon round/station structure sign-off.
+- EMOM cal targets per machine.
+- Sam's remaining work-capacity session list.
+
+---
+
 # YOUR REVIEW — write straight into this file or tell Claude
 
 1. **Missing sessions?** Anything you program in real life that isn't in
