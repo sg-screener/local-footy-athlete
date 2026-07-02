@@ -1378,6 +1378,31 @@ async function run() {
   }
 
   {
+    // OPTIONS ALWAYS LISTED: the app knows the addable templates — any
+    // replacement clarify must name them, whether or not the model did
+    // (live 2026-07-03: "what are my options" got the question repeated
+    // with the menu held behind the coach's back).
+    const adapter = new RecordingRevisionAdapter(() =>
+      clarifyProposal({
+        question: 'Which one should I add instead?',
+        missingField: 'replacement',
+        nullIntent: true,
+      }));
+    const result = await runControllerTurn({
+      message: 'add some hard conditioning tomorrow',
+      adapter,
+    });
+    ok('[25] replacement clarify lists every template option',
+      /Easy Zone 2 Bike/.test(result.reply) &&
+        /Easy Zone 2 Row/.test(result.reply) &&
+        /Easy Zone 2 Ski Erg/.test(result.reply),
+      result.reply);
+    ok('[25] stored question includes the options too',
+      /Easy Zone 2 Bike/.test(result.pending?.askedQuestion ?? ''),
+      result.pending?.askedQuestion);
+  }
+
+  {
     // Round cap: a model that clarifies forever gets cut off honestly after
     // COACH_REVISION_MAX_CLARIFY_ROUNDS, with no mutation and no legacy path.
     const adapter = new RecordingRevisionAdapter(() =>

@@ -1033,6 +1033,25 @@ function capturePendingConfirmationFromCoachRevision(args: {
   };
 }
 
+/** The app KNOWS the addable templates — never make the athlete ask what
+ *  their options are. Any replacement-related clarify gets the registry
+ *  labels appended deterministically, independent of whether the model
+ *  remembered to list them. */
+function withTemplateOptionsForReplacement(
+  missingField: string | undefined,
+  reply: string,
+): string {
+  if (!missingField || !/replacement/i.test(missingField)) return reply;
+  const labels = listCoachRevisionTemplates().map((template) => template.label);
+  if (labels.length === 0) return reply;
+  if (labels.every((label) => reply.includes(label))) return reply;
+  const last = labels[labels.length - 1];
+  const list = labels.length > 1
+    ? `${labels.slice(0, -1).join(', ')} or ${last}`
+    : last;
+  return `${reply} Your options: ${list}.`;
+}
+
 /** Record the athlete's answer against the outstanding (last, unanswered)
  *  clarification round. */
 function fillLastCoachRevisionClarificationAnswer(
@@ -1066,6 +1085,10 @@ function capturePendingFromCoachRevisionClarify(args: {
   if (prior.length >= COACH_REVISION_MAX_CLARIFY_ROUNDS) return null;
 
   const proposal = args.result.proposal;
+  const clarifyQuestion = withTemplateOptionsForReplacement(
+    proposal.missingField,
+    args.result.reply,
+  );
   const originalUserWording =
     args.previousEnvelope?.originalUserWording ?? args.latestMessage;
   const partialIntent =
@@ -1082,7 +1105,7 @@ function capturePendingFromCoachRevisionClarify(args: {
       ...prior,
       {
         missingField: proposal.missingField,
-        question: args.result.reply,
+        question: clarifyQuestion,
         answer: null,
       },
     ],
@@ -1096,7 +1119,7 @@ function capturePendingFromCoachRevisionClarify(args: {
     scope: 'one_off',
     missingFields: [proposal.missingField],
     originalMessage: originalUserWording,
-    askedQuestion: args.result.reply,
+    askedQuestion: clarifyQuestion,
     coachRevisionProposalEnvelope: envelope,
     pendingClarification: {
       originalIntent: partialIntent
@@ -2879,7 +2902,14 @@ export async function handleCoachTurn(
             ...nextPending,
             createdAt: pendingClarifier.createdAt,
           });
-          return replyAndFinish(input, 'pending-coach-revision-regenerated-clarify', revisionResult.reply);
+          return replyAndFinish(
+            input,
+            'pending-coach-revision-regenerated-clarify',
+            withTemplateOptionsForReplacement(
+              revisionResult.proposal.missingField,
+              revisionResult.reply,
+            ),
+          );
         }
         if (revisionResult.kind === 'not_an_edit') {
           // A resume that comes back "not an edit" means the transaction no
@@ -3691,7 +3721,14 @@ export async function handleCoachTurn(
           replySource: 'deterministic',
           applied: false,
         });
-        return replyAndFinish(input, 'coach-revision-proposal-clarify', revisionResult.reply);
+        return replyAndFinish(
+          input,
+          'coach-revision-proposal-clarify',
+          withTemplateOptionsForReplacement(
+            revisionResult.proposal.missingField,
+            revisionResult.reply,
+          ),
+        );
       } else if (revisionResult.kind === 'not_an_edit') {
         // Typed release: the message is not a program change. Deliberately no
         // return — the conversation layers (classifier/coach-chat) own the
