@@ -119,7 +119,30 @@ verifier accepted that. Pre-existing engine semantics — decide whether
 - Audit the setup pipeline first (it was "not guaranteed complete" — verify before routing into it).
 - Live gate: "remove Monday conditioning every week", "I'm away next week", "can only train Mon/Wed/Fri" all get useful outcomes.
 
-### 3C — Within-week moves
+### 3C — Within-week moves — **DELIVERED 2026-07-02 (v1: whole-day onto rest days)**
+
+Conservation invariant in the validator (`validateMoveConservation`):
+everything leaving the source must arrive at the destination byte-identical
+(same item ids + signatures), nothing invented, nothing modified in flight,
+no mixed gain/lose days (swaps unsupported), destination must have been rest
+(v1 — merging needs writer row-transplants). Moves bypass the generic adds
+policy because conservation IS their add authorization. Writer: two-phase
+all-or-nothing apply (fixes latent partial-write class for ALL multi-day
+proposals) + donor-sourced destination builds with date-correct dayOfWeek
+(`50a8ab9`). Whitelist judges moves structurally (2 dates/days); Done
+composer has real move wording; prompt carries the destination-vs-source
+trap rule and the occupied-destination clarify rule.
+
+Live gate: "Remove Wednesdays session" → rest; "Move Fridays session to
+Wednesday" → "Done. I moved Gunshow from 2026-07-03 to 2026-07-08", board
+verified (source Rest, destination Gunshow, next week's own Friday Gunshow
+untouched); trap "actually can you move it to Sunday instead" → clarify
+naming Sunday's Recovery and the occupied-destination rule, zero mutation —
+the handoff's destination-became-source failure is structurally dead.
+
+v2 backlog: merge-moves onto occupied days (row transplant), swaps.
+
+*(original 3C plan for reference below)*
 
 - Schema already has `move` intent; add validator cross-day conservation (content removed from source must appear at destination; destination's protected content preserved) and two-day override writes with atomic verify (both project back or neither writes).
 - Live gate: "move Thursday to Saturday" (once), destination-vs-source trap from the original handoff ("move it to Sunday").
