@@ -1231,6 +1231,47 @@ async function run() {
   }
 
   {
+    // 3C: WHOLE-DAY MOVE onto a rest day, end-to-end through real projection.
+    const SATURDAY = '2026-07-04';
+    const adapter = new RecordingRevisionAdapter((input) => {
+      const thursday = day(input);
+      const dest = clone(thursday);
+      dest.date = SATURDAY;
+      return {
+        schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
+        kind: 'revision',
+        source: 'semantic',
+        confidence: 0.9,
+        userIntent: {
+          intent: 'move',
+          targetDomain: 'session',
+          actionScope: 'whole_session',
+          targetDates: [THURSDAY, SATURDAY],
+          protectedRefs: [],
+          reason: 'controller_move_test',
+        },
+        scope: { mode: 'visible_week', dates: [THURSDAY, SATURDAY] },
+        revisedDays: [{ date: THURSDAY, workout: null }, dest],
+        explanation: 'controller_move_test',
+      } satisfies CoachRevisionProposal;
+    });
+    const result = await runControllerTurn({
+      message: 'move tomorrows session to Saturday',
+      adapter,
+      visibleDate: SATURDAY,
+    });
+    ok('[22] move applied with move wording',
+      /^Done\. I moved .* to 2026-07-04\./.test(result.reply),
+      { reply: result.reply, route: (result.debug as CoachTurnDebug | null)?.route });
+    ok('[22] both days overridden',
+      !!result.dateOverrides[THURSDAY] && !!result.dateOverrides[SATURDAY],
+      Object.keys(result.dateOverrides));
+    ok('[22] destination has the moved content',
+      result.visible.strengthItems.length > 0 && result.visible.conditioningItems.length > 0,
+      result.visible.items);
+  }
+
+  {
     // Round cap: a model that clarifies forever gets cut off honestly after
     // COACH_REVISION_MAX_CLARIFY_ROUNDS, with no mutation and no legacy path.
     const adapter = new RecordingRevisionAdapter(() =>

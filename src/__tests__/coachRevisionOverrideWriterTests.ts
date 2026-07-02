@@ -421,6 +421,56 @@ section('[8] contract violations still reject, and the reason names the divergen
     result.rejected);
 }
 
+section('[9] whole-day move writes both days atomically with donor rows');
+{
+  const visibleWeek = [visibleDay(MON, mixedWorkout()), visibleDay(TUE, null)];
+  const before = snapshot(visibleWeek);
+  const monday = daySnap(before, MON);
+  const dest = clone(monday);
+  dest.date = TUE;
+  const { result, writes } = apply({
+    visibleWeek,
+    proposal: proposal({
+      intent: { intent: 'move', targetDomain: 'session', actionScope: 'whole_session' },
+      dates: [MON, TUE],
+      revisedDays: [{ date: MON, workout: null }, dest],
+    }),
+  });
+
+  eq('two writes', writes.length, 2);
+  eq('no rejects', result.rejected.length, 0);
+  const mondayWrite = writes.find((entry) => entry.date === MON);
+  const tuesdayWrite = writes.find((entry) => entry.date === TUE);
+  eq('source becomes rest', mondayWrite?.workout.workoutType, 'Rest');
+  ok('destination carries donor rows',
+    (tuesdayWrite?.workout.exercises?.length ?? 0) === (mixedWorkout().exercises?.length ?? -1),
+    tuesdayWrite?.workout.exercises?.length);
+  eq('destination dayOfWeek follows the date', tuesdayWrite?.workout.dayOfWeek, 2);
+}
+
+section('[10] multi-day apply is all-or-nothing');
+{
+  // Same move, but the destination day is MISSING from the visible week the
+  // writer receives — its build must fail, and then NOTHING may be written,
+  // or the source empties while the content never lands.
+  const visibleWeek = [visibleDay(MON, mixedWorkout())];
+  const fullBefore = snapshot([visibleDay(MON, mixedWorkout()), visibleDay(TUE, null)]);
+  const monday = daySnap(fullBefore, MON);
+  const dest = clone(monday);
+  dest.date = TUE;
+  const { result, writes } = apply({
+    visibleWeek,
+    proposal: proposal({
+      intent: { intent: 'move', targetDomain: 'session', actionScope: 'whole_session' },
+      dates: [MON, TUE],
+      revisedDays: [{ date: MON, workout: null }, dest],
+    }),
+  });
+
+  eq('nothing written when any day fails', writes.length, 0);
+  ok('rejection reported', result.rejected.length > 0, result.rejected);
+}
+
 console.log(`\ncoachRevisionOverrideWriterTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.error(failures.join('\n'));

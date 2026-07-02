@@ -72,6 +72,20 @@ Exact out_of_scope_setup shape:
   "detectedChange": "one-line summary of the schedule change the athlete wants"
 }
 
+Moves (one-off, within the visible window):
+- A move is TWO revisedDays under scope.mode "visible_week" with scope.dates
+  [sourceDate, destinationDate]: the source day without the moved content
+  (workout null if nothing remains), and the destination day containing the
+  moved workout/sections COPIED EXACTLY — same ids, titles, prescriptions.
+  Content must never change while moving; "move and make lighter" is two
+  separate requests.
+- The destination must currently be a REST day. If it already has a session,
+  return kind "clarify" and say moving onto an occupied day isn't supported
+  yet — offer to remove the destination session first.
+- "Move it/that to X": the thing being moved is the most recently discussed
+  or edited content (see context/mutation history) — X is ONLY the
+  destination. Never treat X's existing session as the thing to move.
+
 When to clarify:
 - Return kind "clarify" only when the message IS a change request AND two or
   more visible targets genuinely match, or a required field is missing and

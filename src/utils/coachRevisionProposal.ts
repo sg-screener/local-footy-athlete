@@ -439,11 +439,17 @@ export function validateCoachRevisionDiff(args: {
   });
   issues.push(...protectedResult);
 
-  const addResult = validateAddedRefs({
-    proposal: args.proposal,
-    diff,
-    policy: args.policy,
-  });
+  // Moves authorize their destination additions through the conservation
+  // invariant (validateMoveConservation) — everything added must have left
+  // the source identically. The generic added-refs policy would wrongly flag
+  // conserved arrivals as unknown content.
+  const addResult = args.proposal.userIntent.intent === 'move'
+    ? { invalid: [], needsConfirmation: [] }
+    : validateAddedRefs({
+        proposal: args.proposal,
+        diff,
+        policy: args.policy,
+      });
   issues.push(...addResult.invalid);
   confirmationIssues.push(...addResult.needsConfirmation);
 
@@ -745,6 +751,10 @@ function validateDiffMatchesIntent(
     return { invalid, needsConfirmation };
   }
 
+  if (proposal.userIntent.intent === 'move') {
+    return validateMoveConservation(diff);
+  }
+
   if (proposal.userIntent.intent === 'reduce') {
     // A reduction must be conservative EVERYWHERE it changes something, not
     // just in the declared target domain — "make today lighter" legitimately
@@ -796,6 +806,97 @@ function validateDiffMatchesIntent(
   }
 
   return { invalid, needsConfirmation };
+}
+
+/**
+ * CONSERVATION invariant for moves: everything that leaves the source must
+ * arrive at the destination byte-identical (same item ids, same content),
+ * nothing may be invented, nothing may be modified in flight, and the
+ * destination's pre-existing content must be untouched. v1 additionally
+ * requires the destination to have been a rest day — merging into an
+ * occupied day needs writer row-transplant support (3C v2).
+ */
+function validateMoveConservation(diff: CoachRevisionDiff): {
+  invalid: CoachRevisionValidationIssue[];
+  needsConfirmation: CoachRevisionValidationIssue[];
+} {
+  const invalid: CoachRevisionValidationIssue[] = [];
+  const changed = diff.dateDiffs.filter((entry) => entry.workoutChange !== 'unchanged');
+  if (changed.length !== 2) {
+    invalid.push(issue(
+      'move_requires_two_days',
+      `A move must change exactly two visible days (source and destination); proposal changed ${changed.length}.`,
+    ));
+    return { invalid, needsConfirmation: [] };
+  }
+
+  const removed = new Map<string, CoachRevisionItemDiff>();
+  const added = new Map<string, CoachRevisionItemDiff>();
+  for (const entry of changed) {
+    const hasRemovals = entry.itemDiffs.some((item) => item.kind === 'removed');
+    const hasAdditions = entry.itemDiffs.some((item) => item.kind === 'added');
+    if (hasRemovals && hasAdditions) {
+      invalid.push(issue(
+        'move_mixed_day',
+        `Day ${entry.date} both gains and loses content; swaps are not supported yet.`,
+        entry.date,
+      ));
+    }
+    if (hasAdditions && entry.before.workout !== null) {
+      invalid.push(issue(
+        'move_destination_occupied',
+        `Destination ${entry.date} already has a session; moving onto occupied days is not supported yet.`,
+        entry.date,
+      ));
+    }
+    for (const item of entry.itemDiffs) {
+      if (item.kind === 'removed') removed.set(item.itemId, item);
+      else if (item.kind === 'added') added.set(item.itemId, item);
+      else if (item.kind === 'changed') {
+        invalid.push(issue(
+          'move_changed_content',
+          `Moves must relocate content exactly; item ${item.itemId} was modified.`,
+          entry.date,
+          item.itemId,
+        ));
+      }
+    }
+  }
+
+  if (removed.size === 0) {
+    invalid.push(issue('no_visible_diff', 'Move did not relocate any content.'));
+    return { invalid, needsConfirmation: [] };
+  }
+  for (const [id, rem] of removed) {
+    const arrival = added.get(id);
+    if (!arrival) {
+      invalid.push(issue(
+        'move_lost_content',
+        `Item ${id} left the source but never arrived at the destination.`,
+        undefined,
+        id,
+      ));
+    } else if (stableString(rem.before) !== stableString(arrival.after)) {
+      invalid.push(issue(
+        'move_changed_content',
+        `Item ${id} changed while moving; moves must relocate content exactly.`,
+        undefined,
+        id,
+      ));
+    }
+  }
+  for (const id of added.keys()) {
+    if (!removed.has(id)) {
+      invalid.push(issue(
+        'move_invented_content',
+        `Item ${id} appeared at the destination without leaving the source.`,
+        undefined,
+        id,
+      ));
+    }
+  }
+
+  return { invalid, needsConfirmation: [] };
 }
 
 function isAllowedReplacementChange(

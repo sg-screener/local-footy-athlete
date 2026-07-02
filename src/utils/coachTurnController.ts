@@ -1639,6 +1639,15 @@ function isSupportedDevActiveCoachRevision(
   // the app-side validation policy, protected refs by the validator, and the
   // writer re-verifies the contract before any store write.
   const proposal = result.proposal;
+  if (proposal.userIntent.intent === 'move') {
+    // Two-day conserved move: destination additions are authorized by the
+    // conservation invariant in the validator, not by the adds policy.
+    return (
+      proposal.scope.dates.length === 2 &&
+      proposal.revisedDays.length === 2 &&
+      result.diff.changedDates.length === 2
+    );
+  }
   if (proposal.scope.mode !== 'single_day') return false;
   if (proposal.scope.dates.length !== 1) return false;
   if (proposal.revisedDays.length !== 1) return false;
@@ -1762,6 +1771,21 @@ function verifyCoachRevisionProjectionAfterWrite(args: {
 function composeCoachRevisionDoneReply(
   result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>,
 ): string {
+  if (
+    result.proposal.userIntent.intent === 'move' &&
+    result.diff.changedDates.length === 2
+  ) {
+    const sourceDate = result.diff.dateDiffs.find((entry) =>
+      entry.itemDiffs.some((item) => item.kind === 'removed'),
+    )?.date;
+    const destDate = result.diff.dateDiffs.find((entry) =>
+      entry.itemDiffs.some((item) => item.kind === 'added'),
+    )?.date;
+    const movedTitle =
+      result.proposal.revisedDays.find((day) => day.date === destDate)?.workout?.title ??
+      'the session';
+    return `Done. I moved ${movedTitle} from ${sourceDate ?? 'its day'} to ${destDate ?? 'the new day'}.`;
+  }
   const date = result.diff.changedDates[0] ?? result.proposal.scope.dates[0] ?? 'that day';
   const summary = result.diagnostic.diffSummary[0];
   const removedStrength = summary?.sectionsRemoved.some((item) => item.startsWith('strength:'));

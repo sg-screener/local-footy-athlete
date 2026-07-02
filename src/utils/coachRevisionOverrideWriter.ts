@@ -75,9 +75,12 @@ export function applyCoachRevisionDateOverrides(
   }
 
   const daysByDate = new Map(input.visibleWeek.map((day) => [day.date, day]));
-  const applied: CoachRevisionOverrideWrite[] = [];
+  const built: CoachRevisionOverrideWrite[] = [];
   const rejected: CoachRevisionOverrideRejection[] = [];
 
+  // Phase 1 — build and verify EVERY day purely, no writes. Multi-day
+  // proposals (moves) must be atomic: a partial move that empties the source
+  // without populating the destination silently loses training content.
   for (const revised of input.proposal.revisedDays) {
     if (!validation.diff.changedDates.includes(revised.date)) continue;
     const beforeDay = daysByDate.get(revised.date);
@@ -90,34 +93,64 @@ export function applyCoachRevisionDateOverrides(
       continue;
     }
 
-    const built = buildWorkoutOverrideFromRevision({
+    // A rest day gaining a workout can only happen via a conserved move —
+    // the content's donor is the visible day that currently holds it.
+    const donorWorkout =
+      !beforeDay.workout && revised.workout
+        ? findDonorWorkout(input.visibleWeek, revised.workout.id)
+        : null;
+
+    const builtDay = buildWorkoutOverrideFromRevision({
       beforeDay,
       revisedDay: revised,
       todayISO: input.todayISO,
+      donorWorkout,
     });
-    if (built.ok === false) {
+    if (builtDay.ok === false) {
       rejected.push({
         date: revised.date,
-        code: built.code,
-        reason: built.reason,
+        code: builtDay.code,
+        reason: builtDay.reason,
       });
       continue;
     }
 
-    const context: OverrideContext = {
-      intent: 'program_adjustment',
-      label: `coach_revision:${input.proposal.userIntent.intent}:${input.proposal.userIntent.targetDomain}`,
-    };
-    input.setManualOverride?.(revised.date, built.workout, context);
-    applied.push({
+    built.push({
       date: revised.date,
-      workout: built.workout,
-      context,
-      projectedDay: built.projectedDay,
+      workout: builtDay.workout,
+      context: {
+        intent: 'program_adjustment',
+        label: `coach_revision:${input.proposal.userIntent.intent}:${input.proposal.userIntent.targetDomain}`,
+      },
+      projectedDay: builtDay.projectedDay,
     });
   }
 
-  return { applied, rejected };
+  // Phase 2 — all-or-nothing. Any rejection means NOTHING is written.
+  if (rejected.length > 0) {
+    return { applied: [], rejected };
+  }
+  for (const write of built) {
+    input.setManualOverride?.(write.date, write.workout, write.context);
+  }
+  return { applied: built, rejected: [] };
+}
+
+function isoDateToDayOfWeek(date: string): number | null {
+  const parsed = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) return null;
+  // App convention: 1 = Monday … 7 = Sunday.
+  return ((parsed.getUTCDay() + 6) % 7) + 1;
+}
+
+function findDonorWorkout(days: ResolvedDay[], workoutId: string): Workout | null {
+  for (const day of days) {
+    const candidate = day.workout;
+    if (candidate && String((candidate as any).id ?? '').trim() === workoutId) {
+      return candidate;
+    }
+  }
+  return null;
 }
 
 export type BuildWorkoutOverrideFromRevisionResult =
@@ -136,6 +169,9 @@ export function buildWorkoutOverrideFromRevision(args: {
   beforeDay: ResolvedDay;
   revisedDay: CoachVisibleDaySnapshot;
   todayISO: string;
+  /** Move support: when a rest day gains a workout, the content's current
+   *  holder elsewhere in the visible week supplies the rows. */
+  donorWorkout?: Workout | null;
 }): BuildWorkoutOverrideFromRevisionResult {
   const source = args.beforeDay.workout ?? null;
   if (!source && !args.revisedDay.workout) {
@@ -146,19 +182,21 @@ export function buildWorkoutOverrideFromRevision(args: {
     };
   }
 
-  if (!source && args.revisedDay.workout) {
+  if (!source && args.revisedDay.workout && !args.donorWorkout) {
     return {
       ok: false,
       code: 'add_workout_not_supported',
-      reason: 'Stage 4A-3 does not create new workouts from visible proposals yet.',
+      reason: 'New content can only arrive on a rest day via a conserved move from a visible donor day.',
     };
   }
 
-  const workout = source
+  let workout = source
     ? args.revisedDay.workout
       ? buildContentOverride(source, args.revisedDay)
       : buildRestOverride(source)
-    : null;
+    : args.donorWorkout && args.revisedDay.workout
+      ? buildContentOverride(args.donorWorkout, args.revisedDay)
+      : null;
 
   if (!workout) {
     return {
@@ -167,6 +205,10 @@ export function buildWorkoutOverrideFromRevision(args: {
       reason: 'Could not build a date override workout.',
     };
   }
+
+  // The override belongs to the destination date regardless of where the
+  // rows came from.
+  workout = { ...workout, dayOfWeek: isoDateToDayOfWeek(args.revisedDay.date) ?? workout.dayOfWeek };
 
   const projected = projectVisibleDay({
     day: {

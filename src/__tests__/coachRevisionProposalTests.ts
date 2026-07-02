@@ -666,6 +666,93 @@ section('[10d] optional-tier day in current week projects into the snapshot');
     day.workout?.sections);
 }
 
+section('[13] move conservation: relocated content must arrive exactly');
+{
+  const before = snapshot([visibleDay(MON, mixedWorkout()), visibleDay(WED, null)]);
+  const monday = daySnap(before, MON);
+
+  const movedDay = (mutate?: (day: CoachVisibleDaySnapshot) => void): CoachVisibleDaySnapshot[] => {
+    const source: CoachVisibleDaySnapshot = { date: MON, workout: null };
+    const dest = clone(monday);
+    dest.date = WED;
+    mutate?.(dest);
+    return [source, dest];
+  };
+  const moveProposal = (revisedDays: CoachVisibleDaySnapshot[]) => proposal({
+    intent: { intent: 'move', targetDomain: 'session', actionScope: 'whole_session' },
+    dates: [MON, WED],
+    revisedDays,
+  });
+
+  const valid = validateCoachRevisionDiff({ before, proposal: moveProposal(movedDay()) });
+  eq('whole-day move onto rest day is valid', valid.status, 'valid');
+
+  const lost = movedDay((day) => {
+    const strength = sectionOf(day, 'strength');
+    strength.items = strength.items.slice(1);
+  });
+  const lostResult = validateCoachRevisionDiff({ before, proposal: moveProposal(lost) });
+  eq('losing an item in transit rejected', lostResult.status, 'invalid');
+  ok('move_lost_content named',
+    lostResult.issues.some((entry) => entry.code === 'move_lost_content'),
+    lostResult.issues);
+
+  const mutated = movedDay((day) => {
+    const strength = sectionOf(day, 'strength');
+    strength.items[0].prescription = { ...strength.items[0].prescription!, sets: 1 };
+  });
+  const mutatedResult = validateCoachRevisionDiff({ before, proposal: moveProposal(mutated) });
+  eq('mutating content in transit rejected', mutatedResult.status, 'invalid');
+  ok('move_changed_content named',
+    mutatedResult.issues.some((entry) => entry.code === 'move_changed_content'),
+    mutatedResult.issues);
+
+  const invented = movedDay((day) => {
+    sectionOf(day, 'strength').items.push({
+      id: 'item:invented:on-the-way',
+      title: 'Invented Curl',
+      domain: 'strength',
+      source: 'strength_exercise',
+      description: null,
+      exerciseIds: [],
+      durationMinutes: null,
+      prescription: { sets: 3, repsMin: 10, repsMax: 12, intensity: null },
+    });
+  });
+  const inventedResult = validateCoachRevisionDiff({ before, proposal: moveProposal(invented) });
+  eq('inventing content in transit rejected', inventedResult.status, 'invalid');
+  ok('move_invented_content named',
+    inventedResult.issues.some((entry) => entry.code === 'move_invented_content'),
+    inventedResult.issues);
+
+  // Destination already occupied (v1 unsupported): move Monday onto a day
+  // holding team training.
+  const occupiedBefore = snapshot([
+    visibleDay(MON, mixedWorkout()),
+    visibleDay(TUE, teamTrainingWorkout()),
+  ]);
+  const occupiedMonday = daySnap(occupiedBefore, MON);
+  const occupiedDest = clone(occupiedMonday);
+  occupiedDest.date = TUE;
+  // Merge shape: destination keeps its own section plus arrivals.
+  occupiedDest.workout!.sections = [
+    ...clone(daySnap(occupiedBefore, TUE)).workout!.sections,
+    ...occupiedDest.workout!.sections,
+  ];
+  const occupiedResult = validateCoachRevisionDiff({
+    before: occupiedBefore,
+    proposal: proposal({
+      intent: { intent: 'move', targetDomain: 'session', actionScope: 'whole_session' },
+      dates: [MON, TUE],
+      revisedDays: [{ date: MON, workout: null }, occupiedDest],
+    }),
+  });
+  eq('move onto occupied day rejected (v1)', occupiedResult.status, 'invalid');
+  ok('move_destination_occupied named',
+    occupiedResult.issues.some((entry) => entry.code === 'move_destination_occupied'),
+    occupiedResult.issues);
+}
+
 section('[11] snapshot workout IDs are stable across renames when workout.id is set');
 {
   const original = mixedWorkout();
