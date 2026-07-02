@@ -161,6 +161,16 @@ const liveCoachRevisionProposalAdapter = clientEnv.isReady &&
     })
   : null;
 
+// Warm the revision edge function as soon as the app loads this screen's
+// module: a fire-and-forget CORS preflight spins up the isolate so the
+// athlete's FIRST edit doesn't pay the cold-start tax. No auth, no body,
+// no behavior — pure latency.
+if (liveCoachRevisionProposalAdapter && clientEnv.coachRevisionProposalEndpoint) {
+  fetch(clientEnv.coachRevisionProposalEndpoint, { method: 'OPTIONS' })
+    .then(() => logger.debug('[coach-revision-proposal] warmed'))
+    .catch(() => {});
+}
+
 if (__DEV__ && shouldCreateSemanticProgramEditDraftAdapter(clientEnv.semanticProgramEditDraftMode)) {
   logger.warn('[coach-semantic-program-edit-draft-endpoint]', {
     resolvedMode: clientEnv.semanticProgramEditDraftMode,

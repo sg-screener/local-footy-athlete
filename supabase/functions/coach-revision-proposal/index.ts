@@ -125,6 +125,7 @@ serve(async (req: Request) => {
 
   const userBlock = `MESSAGE:\n${message}\n\nSCHEMA (JSON):\n${JSON.stringify(body.schema)}\n\nCONTEXT (JSON):\n${JSON.stringify(body.context)}`;
   const model = provider === "openai" ? getOpenAIModel() : getAnthropicModel();
+  const upstreamStartedAt = Date.now();
 
   let upstream: Response;
   try {
@@ -173,6 +174,17 @@ serve(async (req: Request) => {
   }
 
   const data = await upstream.json();
+  const upstreamMs = Date.now() - upstreamStartedAt;
+  // Latency observability: where generation time goes, and whether hidden
+  // reasoning tokens are inflating it. Headers only — body stays a raw
+  // CoachRevisionProposal.
+  const usage: any = (data as any)?.usage ?? null;
+  const outputTokens =
+    usage?.output_tokens ?? usage?.completion_tokens ?? null;
+  const reasoningTokens =
+    usage?.output_tokens_details?.reasoning_tokens ??
+    usage?.completion_tokens_details?.reasoning_tokens ??
+    null;
   // Truncated output is the classic large-payload failure: the JSON echo gets
   // cut at the token budget and would otherwise surface as an opaque parse
   // error. Name it explicitly so client logs say exactly what to fix.
@@ -204,6 +216,9 @@ serve(async (req: Request) => {
         "Content-Type": "application/json",
         "x-coach-provider": provider,
         "x-coach-model": model,
+        "x-coach-upstream-ms": String(upstreamMs),
+        ...(outputTokens != null ? { "x-coach-output-tokens": String(outputTokens) } : {}),
+        ...(reasoningTokens != null ? { "x-coach-reasoning-tokens": String(reasoningTokens) } : {}),
         ...corsHeaders(),
       },
     });

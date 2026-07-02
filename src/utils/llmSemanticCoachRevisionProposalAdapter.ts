@@ -253,6 +253,12 @@ function truncate(value: string, n: number = LOG_TRUNCATE): string {
   return value.length <= n ? value : `${value.slice(0, n)}...`;
 }
 
+function numberOrNull(value: string | null | undefined): number | null {
+  if (value == null) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 export function coachRevisionProposalFunctionNameFromEndpoint(endpoint: string): string {
   try {
     const url = new URL(endpoint);
@@ -302,17 +308,20 @@ export class LLMSemanticCoachRevisionProposalAdapter
       ? setTimeout(() => controller.abort(), this.timeoutMs)
       : null;
 
+    const requestBody = JSON.stringify({
+      message: input.userMessage,
+      context,
+      schema: COACH_REVISION_PROPOSAL_SCHEMA,
+      systemPrompt: COACH_REVISION_PROPOSAL_SYSTEM_PROMPT,
+    });
+    const startedAt = Date.now();
+
     let resp: Response;
     try {
       resp = await this.fetcher(this.endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          message: input.userMessage,
-          context,
-          schema: COACH_REVISION_PROPOSAL_SCHEMA,
-          systemPrompt: COACH_REVISION_PROPOSAL_SYSTEM_PROMPT,
-        }),
+        body: requestBody,
         signal: controller?.signal as any,
       });
     } catch (err) {
@@ -353,12 +362,21 @@ export class LLMSemanticCoachRevisionProposalAdapter
     }
 
     const json = await resp.json();
+    const totalMs = Date.now() - startedAt;
     logger.debug('[coach-revision-proposal] raw', truncate(JSON.stringify(json)));
-    // Warn level so Metro always shows which provider/model actually served —
-    // model-quality debugging is impossible without this.
+    // Warn level so Metro always shows which provider/model actually served
+    // and where the time went — latency work is impossible without the split:
+    // upstreamMs = model generation (server-measured); totalMs - upstreamMs =
+    // network + edge overhead (incl. cold starts).
     logger.warn('[coach-revision-proposal] served_by', {
       provider: resp.headers?.get?.('x-coach-provider') ?? null,
       model: resp.headers?.get?.('x-coach-model') ?? null,
+      totalMs,
+      upstreamMs: numberOrNull(resp.headers?.get?.('x-coach-upstream-ms')),
+      outputTokens: numberOrNull(resp.headers?.get?.('x-coach-output-tokens')),
+      reasoningTokens: numberOrNull(resp.headers?.get?.('x-coach-reasoning-tokens')),
+      requestBytes: requestBody.length,
+      responseBytes: JSON.stringify(json).length,
     });
     return json;
   }
