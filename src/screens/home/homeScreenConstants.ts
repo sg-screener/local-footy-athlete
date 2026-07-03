@@ -67,26 +67,25 @@ export const NEXT_PHASE: Record<SeasonPhase, SeasonPhase> = {
   'Pre-season': 'In-season',
 };
 
-/** Human-friendly conditioning flavour labels. */
-export const COND_FLAVOUR_LABELS: Record<string, string> = {
-  aerobic: 'Aerobic Base',
-  tempo: 'Tempo',
-  'high-intensity': 'HI Intervals',
-};
-
 type ConditioningLabelWorkout = Pick<
   Workout,
-  'hasCombinedConditioning' | 'conditioningFlavour' | 'coachAddedConditioningLabel'
+  | 'hasCombinedConditioning'
+  | 'conditioningFlavour'
+  | 'coachAddedConditioningLabel'
+  | 'conditioningBlock'
 >;
 
 export function getConditioningContextLabel(
   workout: ConditioningLabelWorkout | null | undefined,
 ): string | null {
   if (!workout?.hasCombinedConditioning) return null;
-  const coachLabel = workout.coachAddedConditioningLabel?.trim();
-  if (coachLabel) return coachLabel;
-  const flavour = workout.conditioningFlavour;
-  return flavour ? COND_FLAVOUR_LABELS[flavour] || flavour : null;
+  // Weekly plan speaks in categories (Sam's taxonomy, 2026-07-04): the
+  // combined-day context reads "+ Hard Conditioning", not the session
+  // name. The real session shows inside the day. Single owner:
+  // weeklyPlanDisplay.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { combinedConditioningCategoryLabel } = require('../../utils/weeklyPlanDisplay');
+  return combinedConditioningCategoryLabel(workout);
 }
 
 function normaliseDisplayLabel(label: string | null | undefined): string {
