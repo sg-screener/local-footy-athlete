@@ -202,3 +202,39 @@ principles), then the "I'm not 100%" flow — tired, sick or injured,
 two taps for severity, coach conversation only when it actually helps.
 
 ---
+
+## Saturday 4 July 2026 — the change menu is complete
+
+**The last two pieces landed. The whole signed-off vision is now built.**
+
+1. **Strength swaps use the real coach brain.** Pick "Swap → Strength →
+   Upper body" and the same engine that writes the weekly program builds
+   the session on the spot — respecting injuries, how close the next
+   game is, and what your week already has (pick "Upper body" when
+   Upper Push is already scheduled and you'll get Upper Pull). Lower
+   body, full body, Gunshow and a proper prehab/accessories session are
+   all in there too.
+
+2. **"I'm not 100%".** Tap it and say what's up:
+   - *Tired* → "lacking spark" backs today off; "absolutely cooked"
+     drops today to recovery level. Nothing is deleted — the plan
+     bounces back tomorrow.
+   - *Sick* → "light sniffle" softens today to a recovery flow;
+     "bed-ridden" clears the rest of the week (game day untouched, one
+     confirm first); "pretty rough" opens the coach mid-conversation
+     with the context already filled in.
+   - *Injured* → straight to the coach, pre-loaded, into the existing
+     injury system that adapts the plan around a body part.
+
+**Numbers for the nerds:** the change-menu suite now runs 154 checks
+(49 this morning), 15 session templates in the registry including 6
+engine-generated ones, and the whole athlete-change vocabulary from
+Friday's design page is implemented except sprint conditioning (waiting
+on the running-rules decisions).
+
+**What's next.** Live-verify the lot in the simulator after a Metro
+restart, then polish: real set/rep prescriptions for one-off engine
+sessions, strength stacking onto occupied days, and the sprint category
+once the running rules are signed off.
+
+---
