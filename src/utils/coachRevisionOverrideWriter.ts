@@ -97,10 +97,12 @@ export function applyCoachRevisionDateOverrides(
       continue;
     }
 
-    // A rest day gaining a workout can only happen via a conserved move —
-    // the content's donor is the visible day that currently holds it.
+    // A day gaining a DIFFERENT workout can only happen via a conserved
+    // move or swap — the content's donor is the visible day that currently
+    // holds it. Covers both the rest-day destination (move) and an
+    // occupied destination exchanging content (swap, sheet v2).
     const donorWorkout =
-      !beforeDay.workout && revised.workout
+      revised.workout && beforeDay.workout?.id !== revised.workout.id
         ? findDonorWorkout(input.visibleWeek, revised.workout.id)
         : null;
 
@@ -200,15 +202,19 @@ export function buildWorkoutOverrideFromRevision(args: {
     };
   }
 
+  // Donor takes precedence over the day's own source rows: when a swap
+  // hands this day the OTHER day's workout, the rows must come from the
+  // donor — building from the local source would materialize the wrong
+  // session under the new title.
   let workout = templateId
     ? buildCoachRevisionTemplateWorkout(templateId, args.revisedDay.date)
+    : args.donorWorkout && args.revisedDay.workout
+    ? buildContentOverride(args.donorWorkout, args.revisedDay)
     : source
     ? args.revisedDay.workout
       ? buildContentOverride(source, args.revisedDay)
       : buildRestOverride(source)
-    : args.donorWorkout && args.revisedDay.workout
-      ? buildContentOverride(args.donorWorkout, args.revisedDay)
-      : null;
+    : null;
 
   if (!workout) {
     return {

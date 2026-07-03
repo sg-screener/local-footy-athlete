@@ -197,13 +197,26 @@ console.log('planChangeProducerTests');
     options.templates.some((t) => t.templateId === 'metcon_offlegs') &&
       options.templates.some((t) => t.templateId === 'erg_emom'),
     options.templates.map((t) => t.templateId));
-  ok('[2] move destinations are rest days only',
+  ok('[2] move destinations include every non-game day',
     options.moveDestinations.length > 0 &&
-      options.moveDestinations.every((date) => {
-        const day = bothWeeks().find((d) => d.date === date);
-        return day?.workout == null;
+      options.moveDestinations.every((destination) => {
+        const day = bothWeeks().find((d) => d.date === destination.date);
+        return day != null && day.workout?.workoutType !== 'Game';
       }),
     options.moveDestinations);
+  {
+    // Rest days first, then occupied (swap) destinations.
+    const firstOccupiedIdx = options.moveDestinations.findIndex((d) => d.occupiedBy !== null);
+    const lastRestIdx = options.moveDestinations
+      .map((d, i) => (d.occupiedBy === null ? i : -1))
+      .reduce((a, b) => Math.max(a, b), -1);
+    ok('[2] rest days listed before occupied days',
+      firstOccupiedIdx === -1 || lastRestIdx < firstOccupiedIdx,
+      options.moveDestinations);
+    ok('[2] occupied destinations carry the session name',
+      options.moveDestinations.some((d) => d.occupiedBy === 'Lower Body Strength'),
+      options.moveDestinations);
+  }
 }
 
 {
@@ -256,10 +269,12 @@ console.log('planChangeProducerTests');
         eq(`[5] swap ${template.templateId} on ${date} validates`,
           validation2.status, 'valid');
       }
-      for (const toDate of options.moveDestinations) {
+      for (const destination of options.moveDestinations) {
         const validation3 = validateProposal(
-          build({ kind: 'move_session', fromDate: date, toDate }, week), week);
-        eq(`[5] move ${date}→${toDate} validates`, validation3.status, 'valid');
+          build({ kind: 'move_session', fromDate: date, toDate: destination.date }, week),
+          week);
+        eq(`[5] move ${date}→${destination.date}${destination.occupiedBy ? ' (swap)' : ''} validates`,
+          validation3.status, 'valid');
       }
     } else {
       for (const template of options.templates) {
@@ -476,6 +491,51 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     recoveryWrites[0]?.workout?.workoutType, 'Recovery');
   eq('[10] recovery workout carries the recovery tier',
     (recoveryWrites[0]?.workout as any)?.sessionTier, 'recovery');
+}
+
+{
+  console.log('\n[11] move-as-swap: occupied destinations exchange atomically');
+  const week = bothWeeks();
+
+  // MON holds Lower Body Strength, THU holds Upper Push — swap them.
+  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const result = applyPlanChange({
+    change: { kind: 'move_session', fromDate: THU, toDate: MON },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => writes.push({ date, workout }),
+  });
+  ok('[11] swap applies', result.ok, result);
+  eq('[11] exactly two writes', writes.length, 2);
+  const monWrite = writes.find((w) => w.date === MON);
+  const thuWrite = writes.find((w) => w.date === THU);
+  ok('[11] MON now holds Upper Push',
+    /Upper Push/i.test(monWrite?.workout?.name ?? ''), monWrite?.workout?.name);
+  ok('[11] THU now holds Lower Body Strength',
+    /Lower Body/i.test(thuWrite?.workout?.name ?? ''), thuWrite?.workout?.name);
+  ok('[11] done message says swapped', /swapped/i.test(result.message), result.message);
+
+  // Plain move to a rest day still works and still reads as a move.
+  const moveWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const moveResult = applyPlanChange({
+    change: { kind: 'move_session', fromDate: THU, toDate: SAT },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => moveWrites.push({ date, workout }),
+  });
+  ok('[11] plain move applies', moveResult.ok, moveResult);
+  ok('[11] plain move message unchanged', /moved to/i.test(moveResult.message), moveResult.message);
+  ok('[11] source becomes rest on plain move',
+    moveWrites.find((w) => w.date === THU)?.workout?.workoutType === 'Rest',
+    moveWrites.find((w) => w.date === THU)?.workout?.workoutType);
+
+  // Game days are never destinations.
+  const thuOptions = listPlanChangeOptionsForDay({
+    visibleWeek: week, date: '2026-07-07', todayISO: TODAY,
+  });
+  ok('[11] game day never offered as destination',
+    thuOptions.moveDestinations.every((d) => d.date !== NEXT_SAT),
+    thuOptions.moveDestinations);
 }
 
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);

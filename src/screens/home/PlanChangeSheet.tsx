@@ -250,11 +250,13 @@ export function PlanChangeSheet({
           <Text style={styles.sectionLabel}>Move to:</Text>
           {options.moveDestinations.map((destination) => (
             <MenuOption
-              key={destination}
-              label={weekdayLabel(destination)}
-              sub="Currently a rest day"
+              key={destination.date}
+              label={weekdayLabel(destination.date)}
+              sub={destination.occupiedBy
+                ? `Swap with ${destination.occupiedBy}`
+                : 'Currently a rest day'}
               onPress={() =>
-                apply({ kind: 'move_session', fromDate: date, toDate: destination })}
+                apply({ kind: 'move_session', fromDate: date, toDate: destination.date })}
             />
           ))}
           <BackRow onPress={() => setStep({ kind: 'menu' })} />

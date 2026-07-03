@@ -108,6 +108,13 @@ export type PlanChange =
   | { kind: 'add_category'; date: string; category: PlanChangeCategoryId }
   | { kind: 'move_session'; fromDate: string; toDate: string };
 
+export interface PlanChangeMoveDestination {
+  date: string;
+  /** Name of the session currently on that day, or null for a rest day.
+   *  Occupied destinations SWAP with the source day (sheet v2). */
+  occupiedBy: string | null;
+}
+
 export interface PlanChangeDayOptions {
   date: string;
   /** Why the menu is empty, when it is. */
@@ -118,8 +125,9 @@ export interface PlanChangeDayOptions {
   templates: CoachRevisionTemplateDefinition[];
   /** Sheet-v2 categories legal for this date (derived from `templates`). */
   categories: PlanChangeCategoryOption[];
-  /** Legal move destinations: visible rest days inside the horizon. */
-  moveDestinations: string[];
+  /** Legal move destinations inside the horizon: every non-game day, rest
+   *  days FIRST (they're the cheapest move), then occupied days (swap). */
+  moveDestinations: PlanChangeMoveDestination[];
 }
 
 // ── Options listing ──
@@ -164,14 +172,22 @@ export function listPlanChangeOptionsForDay(args: {
     .map((id) => ({ id, ...CATEGORY_COPY[id] }));
 
   const hasSession = snap.workout !== null;
-  const moveDestinations = hasSession
+  // Every non-game day in horizon is a destination. Rest days come first
+  // (a plain move); occupied days follow (an atomic two-day swap).
+  const moveDestinations: PlanChangeMoveDestination[] = hasSession
     ? args.visibleWeek
         .filter((candidate) =>
           candidate.date !== args.date &&
           isWithinEditHorizon(candidate.date, args.todayISO) &&
-          snapshotProjectedDay(candidate).workout === null &&
           !visibleDayLooksLikeGame(snapshotProjectedDay(candidate)))
-        .map((candidate) => candidate.date)
+        .map((candidate) => ({
+          date: candidate.date,
+          occupiedBy: snapshotProjectedDay(candidate).workout?.title ?? null,
+        }))
+        .sort((a, b) =>
+          (a.occupiedBy === null) === (b.occupiedBy === null)
+            ? a.date.localeCompare(b.date)
+            : a.occupiedBy === null ? -1 : 1)
     : [];
 
   return {
@@ -401,16 +417,19 @@ export function buildPlanChangeProposal(
       const destination = daySnap(change.toDate);
       if (!source?.workout) return { error: 'nothing_to_move' };
       if (!destination) return { error: 'not_visible' };
-      if (destination.workout) return { error: 'destination_not_empty' };
+      // Occupied destination = the two days SWAP atomically (sheet v2);
+      // empty destination = plain move, source becomes rest.
       return revision({
         intent: 'move',
         targetDomain: 'session',
         dates: [change.fromDate, change.toDate],
         revisedDays: [
-          { date: change.fromDate, workout: null },
+          { date: change.fromDate, workout: destination.workout ?? null },
           { date: change.toDate, workout: source.workout },
         ],
-        explanation: 'Sheet: move session',
+        explanation: destination.workout
+          ? 'Sheet: swap two days'
+          : 'Sheet: move session',
       });
     }
   }
@@ -481,9 +500,19 @@ export function applyPlanChange(args: {
       ? proposal.revisedDays.find((day) => day.workout)?.workout?.title ?? null
       : null;
 
+  // Moves report differently when the destination was occupied (swap).
+  const message =
+    args.change.kind === 'move_session'
+      ? moveDoneMessage(
+          args.change,
+          proposal.kind === 'revision' &&
+            proposal.revisedDays.every((day) => day.workout !== null),
+        )
+      : planChangeDoneMessage(args.change, pickedTitle);
+
   return {
     ok: true,
-    message: planChangeDoneMessage(args.change, pickedTitle),
+    message,
     appliedDates: apply.applied.map((write) => write.date),
     rejected: [],
   };
@@ -504,4 +533,12 @@ function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): 
     case 'move_session':
       return `Done. Session moved to ${change.toDate}.`;
   }
+}
+
+/** Swap-aware done message needs to know whether the destination was
+ *  occupied when the change was built. */
+function moveDoneMessage(change: Extract<PlanChange, { kind: 'move_session' }>, swapped: boolean): string {
+  return swapped
+    ? `Done. ${change.fromDate} and ${change.toDate} swapped sessions.`
+    : `Done. Session moved to ${change.toDate}.`;
 }

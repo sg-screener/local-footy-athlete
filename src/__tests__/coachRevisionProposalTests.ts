@@ -725,8 +725,8 @@ section('[13] move conservation: relocated content must arrive exactly');
     inventedResult.issues.some((entry) => entry.code === 'move_invented_content'),
     inventedResult.issues);
 
-  // Destination already occupied (v1 unsupported): move Monday onto a day
-  // holding team training.
+  // PARTIAL MERGE stays forbidden (sheet v2): destination keeps its own
+  // section AND gains arrivals — no conserved ownership of the day.
   const occupiedBefore = snapshot([
     visibleDay(MON, mixedWorkout()),
     visibleDay(TUE, teamTrainingWorkout()),
@@ -747,10 +747,26 @@ section('[13] move conservation: relocated content must arrive exactly');
       revisedDays: [{ date: MON, workout: null }, occupiedDest],
     }),
   });
-  eq('move onto occupied day rejected (v1)', occupiedResult.status, 'invalid');
-  ok('move_destination_occupied named',
-    occupiedResult.issues.some((entry) => entry.code === 'move_destination_occupied'),
+  eq('partial merge onto occupied day rejected', occupiedResult.status, 'invalid');
+  ok('move_merge_not_supported named',
+    occupiedResult.issues.some((entry) => entry.code === 'move_merge_not_supported'),
     occupiedResult.issues);
+
+  // FULL SWAP is legal (sheet v2): the two days exchange their complete
+  // content, everything conserved byte-exactly.
+  const swapMon = clone(daySnap(occupiedBefore, TUE));
+  swapMon.date = MON;
+  const swapTue = clone(daySnap(occupiedBefore, MON));
+  swapTue.date = TUE;
+  const swapResult = validateCoachRevisionDiff({
+    before: occupiedBefore,
+    proposal: proposal({
+      intent: { intent: 'move', targetDomain: 'session', actionScope: 'whole_session' },
+      dates: [MON, TUE],
+      revisedDays: [swapMon, swapTue],
+    }),
+  });
+  eq('full two-day swap validates', swapResult.status, 'valid', swapResult.issues);
 }
 
 section('[14] replace is label-agnostic: any domain label validates structurally');

@@ -883,10 +883,15 @@ function validateDiffMatchesIntent(
 /**
  * CONSERVATION invariant for moves: everything that leaves the source must
  * arrive at the destination byte-identical (same item ids, same content),
- * nothing may be invented, nothing may be modified in flight, and the
- * destination's pre-existing content must be untouched. v1 additionally
- * requires the destination to have been a rest day — merging into an
- * occupied day needs writer row-transplant support (3C v2).
+ * nothing may be invented, nothing may be modified in flight.
+ *
+ * Two legal shapes (sheet v2, 2026-07-04):
+ *   MOVE — one day loses everything, a previously-rest day gains exactly
+ *          what left.
+ *   SWAP — two occupied days exchange their full content atomically.
+ * PARTIAL MERGES stay forbidden: a day may not keep some of its old
+ * content while also gaining new content — that shape has no writer
+ * support and no conservation story (which rows own the workout?).
  */
 function validateMoveConservation(diff: CoachRevisionDiff): {
   invalid: CoachRevisionValidationIssue[];
@@ -905,19 +910,15 @@ function validateMoveConservation(diff: CoachRevisionDiff): {
   const removed = new Map<string, CoachRevisionItemDiff>();
   const added = new Map<string, CoachRevisionItemDiff>();
   for (const entry of changed) {
-    const hasRemovals = entry.itemDiffs.some((item) => item.kind === 'removed');
     const hasAdditions = entry.itemDiffs.some((item) => item.kind === 'added');
-    if (hasRemovals && hasAdditions) {
+    const hasPreserved = entry.itemDiffs.some((item) => item.kind === 'preserved');
+    // A day that gains content must give up ALL its previous content
+    // (swap) or have been rest (move). Keeping old rows while gaining new
+    // ones is a partial merge — no conserved ownership, still forbidden.
+    if (hasAdditions && entry.before.workout !== null && hasPreserved) {
       invalid.push(issue(
-        'move_mixed_day',
-        `Day ${entry.date} both gains and loses content; swaps are not supported yet.`,
-        entry.date,
-      ));
-    }
-    if (hasAdditions && entry.before.workout !== null) {
-      invalid.push(issue(
-        'move_destination_occupied',
-        `Destination ${entry.date} already has a session; moving onto occupied days is not supported yet.`,
+        'move_merge_not_supported',
+        `Day ${entry.date} keeps part of its session while gaining content; partial merges are not supported.`,
         entry.date,
       ));
     }
