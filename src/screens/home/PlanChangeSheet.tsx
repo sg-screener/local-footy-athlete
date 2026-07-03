@@ -9,6 +9,7 @@ import {
   applyPlanChange,
   listPlanChangeOptionsForDay,
   type PlanChange,
+  type PlanChangeCategoryId,
   type PlanChangeDayOptions,
 } from '../../utils/planChangeProducer';
 
@@ -29,7 +30,8 @@ import {
 
 type Step =
   | { kind: 'menu' }
-  | { kind: 'pick_template'; mode: 'swap' | 'add' }
+  | { kind: 'pick_category'; mode: 'swap' | 'add' }
+  | { kind: 'pick_conditioning'; mode: 'swap' | 'add' }
   | { kind: 'pick_destination' }
   | { kind: 'confirm_remove' }
   | { kind: 'result'; ok: boolean; message: string };
@@ -84,6 +86,13 @@ export function PlanChangeSheet({
     setStep({ kind: 'result', ok: result.ok, message: result.message });
   };
 
+  const applyCategory = (mode: 'swap' | 'add', category: PlanChangeCategoryId) =>
+    apply(
+      mode === 'swap'
+        ? { kind: 'swap_category', date, category }
+        : { kind: 'add_category', date, category },
+    );
+
   const askCoach = () => {
     onClose();
     onAskCoach(`About ${weekdayLabel(date)}: `);
@@ -111,8 +120,8 @@ export function PlanChangeSheet({
             <>
               <MenuOption
                 label="Swap this session"
-                sub="Pick something else for this day"
-                onPress={() => setStep({ kind: 'pick_template', mode: 'swap' })}
+                sub="Conditioning, recovery or rest — we pick the session"
+                onPress={() => setStep({ kind: 'pick_category', mode: 'swap' })}
               />
               {options.moveDestinations.length > 0 && (
                 <MenuOption
@@ -131,8 +140,8 @@ export function PlanChangeSheet({
           ) : (
             <MenuOption
               label="Add a session"
-              sub="Approved conditioning for this day"
-              onPress={() => setStep({ kind: 'pick_template', mode: 'add' })}
+              sub="Conditioning or recovery for this day"
+              onPress={() => setStep({ kind: 'pick_category', mode: 'add' })}
             />
           )}
           <MenuOption
@@ -143,25 +152,58 @@ export function PlanChangeSheet({
         </View>
       )}
 
-      {options && step.kind === 'pick_template' && (
+      {/* Russian dolls level 1: what KIND of session. The athlete picks a
+          category; the producer deterministically picks the session
+          (sheet v2 — Strength and Sprint arrive in later phases). */}
+      {options && step.kind === 'pick_category' && (
         <View>
           <Text style={styles.sectionLabel}>
-            {step.mode === 'swap' ? 'Swap in:' : 'Add:'}
+            {step.mode === 'swap' ? 'Swap to:' : 'Add:'}
           </Text>
-          {options.templates.map((template) => (
+          {options.categories.some((c) => c.id.startsWith('conditioning_')) && (
             <MenuOption
-              key={template.templateId}
-              label={template.label}
-              sub={`${template.durationMinutes}min — ${template.description}`}
-              onPress={() =>
-                apply(
-                  step.mode === 'swap'
-                    ? { kind: 'swap_template', date, templateId: template.templateId }
-                    : { kind: 'add_template', date, templateId: template.templateId },
-                )}
+              label="Conditioning"
+              sub="Bike, row, ski or intervals — we pick it for you"
+              onPress={() => setStep({ kind: 'pick_conditioning', mode: step.mode })}
+            />
+          )}
+          {options.categories.filter((c) => c.id === 'recovery').map((c) => (
+            <MenuOption
+              key={c.id}
+              label={c.label}
+              sub={c.sub}
+              onPress={() => applyCategory(step.mode, c.id)}
             />
           ))}
+          {step.mode === 'swap' && (
+            <MenuOption
+              label="Rest day"
+              sub="Clear the day — same as binning the session"
+              danger
+              onPress={() => setStep({ kind: 'confirm_remove' })}
+            />
+          )}
           <BackRow onPress={() => setStep({ kind: 'menu' })} />
+        </View>
+      )}
+
+      {/* Russian dolls level 2: conditioning intensity. Availability is
+          policy — Hard only appears when the producer offered it (bye
+          weeks); the producer picks the concrete template. */}
+      {options && step.kind === 'pick_conditioning' && (
+        <View>
+          <Text style={styles.sectionLabel}>Conditioning:</Text>
+          {options.categories
+            .filter((c) => c.id.startsWith('conditioning_'))
+            .map((c) => (
+              <MenuOption
+                key={c.id}
+                label={c.label}
+                sub={c.sub}
+                onPress={() => applyCategory(step.mode, c.id)}
+              />
+            ))}
+          <BackRow onPress={() => setStep({ kind: 'pick_category', mode: step.mode })} />
         </View>
       )}
 

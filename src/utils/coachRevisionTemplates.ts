@@ -25,8 +25,10 @@ export interface CoachRevisionTemplateDefinition {
   /** 'flush' = rejuvenation, addable any week in-season.
    *  'work_capacity' = harder off-legs conditioning, BYE WEEKS ONLY
    *  (a week whose visible days include no Game Day). Coaching policy from
-   *  the product owner, 2026-07-03. */
-  category: 'flush' | 'work_capacity';
+   *  the product owner, 2026-07-03.
+   *  'recovery' = restorative flow (tissue quality / mobility / breathing),
+   *  addable any week. Sheet v2 category, 2026-07-03 evening. */
+  category: 'flush' | 'work_capacity' | 'recovery';
   byeOnly: boolean;
   durationMinutes: number;
 }
@@ -103,6 +105,53 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     byeOnly: true,
     durationMinutes: 28,
   },
+  // ── Recovery: restore, never load ──
+  {
+    templateId: 'recovery_flow',
+    label: 'Recovery Flow',
+    description:
+      '30min restorative: foam rolling, hip & ankle mobility, easy spin, breathing reset. Restore — never load.',
+    category: 'recovery',
+    byeOnly: false,
+    durationMinutes: 30,
+  },
+];
+
+/** Fixed rows for the recovery_flow template. Deterministic content — the
+ *  same flow every time, matching the registry principle that advertised
+ *  and materialized workouts agree byte-exactly. Row keys become
+ *  `template:recovery_flow:<key>` ids so templateIdFromRevisedWorkout
+ *  recognises the workout as registry-owned. */
+const RECOVERY_FLOW_ROWS: Array<{
+  key: string;
+  name: string;
+  minutes: number;
+  notes: string;
+}> = [
+  {
+    key: 'roll',
+    name: 'Foam Roll — Full Body',
+    minutes: 8,
+    notes: 'Quads, glutes, calves, upper back. Slow passes, keep breathing.',
+  },
+  {
+    key: 'mobility',
+    name: 'Mobility Flow — Hips & Ankles',
+    minutes: 10,
+    notes: 'Deep lunge holds, 90/90s, ankle rocks. Easy ranges only.',
+  },
+  {
+    key: 'spin',
+    name: 'Easy Spin or Walk',
+    minutes: 10,
+    notes: 'Zone 1, fully conversational. Any erg or a walk outside.',
+  },
+  {
+    key: 'breathe',
+    name: 'Breathing Reset',
+    minutes: 5,
+    notes: 'Box breathing 4-4-4-4, lying down. Switch off.',
+  },
 ];
 
 export function listCoachRevisionTemplates(): CoachRevisionTemplateDefinition[] {
@@ -126,6 +175,9 @@ export function buildCoachRevisionTemplateWorkout(
 ): Workout | null {
   const def = definitionById(templateId);
   if (!def) return null;
+  if (def.category === 'recovery') {
+    return buildRecoveryTemplateWorkout(def, date);
+  }
   const rowId = `template:${def.templateId}:main`;
   return {
     id: `template-${def.templateId}`,
@@ -172,6 +224,59 @@ export function buildCoachRevisionTemplateWorkout(
       createdAt: '',
       updatedAt: '',
     } as any],
+    createdAt: '',
+    updatedAt: '',
+  } as Workout;
+}
+
+/** Recovery templates carry real multi-row content (the flow's steps) so
+ *  the session screen renders them with the recovery treatment
+ *  (workoutType 'Recovery' + sessionTier 'recovery'). Same registry
+ *  guarantees: fixed content, template-owned row ids, byte-exact
+ *  round-trip through the shared projection. */
+function buildRecoveryTemplateWorkout(
+  def: CoachRevisionTemplateDefinition,
+  date: string,
+): Workout {
+  const workoutId = `template-${def.templateId}`;
+  return {
+    id: workoutId,
+    microcycleId: 'coach-template',
+    dayOfWeek: isoDateToDayOfWeek(date),
+    name: def.label,
+    description: def.description,
+    durationMinutes: def.durationMinutes,
+    intensity: 'Light',
+    workoutType: 'Recovery',
+    sessionTier: 'recovery',
+    hasCombinedConditioning: false,
+    exercises: RECOVERY_FLOW_ROWS.map((row, index) => {
+      const rowId = `template:${def.templateId}:${row.key}`;
+      return {
+        id: rowId,
+        workoutId,
+        exerciseId: rowId,
+        exerciseOrder: index,
+        prescribedSets: 1,
+        prescribedRepsMin: row.minutes,
+        prescribedRepsMax: row.minutes,
+        restSeconds: 0,
+        notes: row.notes,
+        exercise: {
+          id: rowId,
+          name: row.name,
+          description: row.notes,
+          exerciseType: 'Flexibility',
+          muscleGroups: [],
+          equipmentRequired: [],
+          difficultyLevel: 'Beginner',
+          createdAt: '',
+          updatedAt: '',
+        },
+        createdAt: '',
+        updatedAt: '',
+      } as any;
+    }),
     createdAt: '',
     updatedAt: '',
   } as Workout;

@@ -57,10 +57,55 @@ export function isWithinEditHorizon(dateISO: string, todayISO: string): boolean 
 
 // ── Change + option types ──
 
+/**
+ * Sheet-v2 categories (russian dolls). The athlete picks a CATEGORY; this
+ * module picks the concrete session deterministically — policy filters +
+ * variety + date-seeded rotation. "AI picks" without an LLM in the path.
+ *
+ * 'conditioning_sprint' and the strength buckets arrive in later phases
+ * (sprint waits on RUNNING_RULES_PLAN.md; strength on generation wiring).
+ */
+export type PlanChangeCategoryId =
+  | 'conditioning_light'
+  | 'conditioning_hard'
+  | 'recovery';
+
+export interface PlanChangeCategoryOption {
+  id: PlanChangeCategoryId;
+  label: string;
+  sub: string;
+}
+
+const CATEGORY_TO_REGISTRY: Record<
+  PlanChangeCategoryId,
+  CoachRevisionTemplateDefinition['category']
+> = {
+  conditioning_light: 'flush',
+  conditioning_hard: 'work_capacity',
+  recovery: 'recovery',
+};
+
+const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }> = {
+  conditioning_light: {
+    label: 'Light session',
+    sub: 'Easy flush — bike, row or ski. We pick it for you.',
+  },
+  conditioning_hard: {
+    label: 'Hard session',
+    sub: 'Work capacity, off legs. Bye weeks only.',
+  },
+  recovery: {
+    label: 'Recovery',
+    sub: 'Restorative flow — rolling, mobility, breathing.',
+  },
+};
+
 export type PlanChange =
   | { kind: 'remove_session'; date: string }
   | { kind: 'swap_template'; date: string; templateId: string }
   | { kind: 'add_template'; date: string; templateId: string }
+  | { kind: 'swap_category'; date: string; category: PlanChangeCategoryId }
+  | { kind: 'add_category'; date: string; category: PlanChangeCategoryId }
   | { kind: 'move_session'; fromDate: string; toDate: string };
 
 export interface PlanChangeDayOptions {
@@ -71,6 +116,8 @@ export interface PlanChangeDayOptions {
   canRemove: boolean;
   /** Registry templates legal for this date (bye gating applied). */
   templates: CoachRevisionTemplateDefinition[];
+  /** Sheet-v2 categories legal for this date (derived from `templates`). */
+  categories: PlanChangeCategoryOption[];
   /** Legal move destinations: visible rest days inside the horizon. */
   moveDestinations: string[];
 }
@@ -90,6 +137,7 @@ export function listPlanChangeOptionsForDay(args: {
     hasSession: false,
     canRemove: false,
     templates: [],
+    categories: [],
     moveDestinations: [],
   });
 
@@ -104,6 +152,16 @@ export function listPlanChangeOptionsForDay(args: {
   const templates = listCoachRevisionTemplates().filter(
     (template) => !template.byeOnly || byeDates.has(args.date),
   );
+
+  // Sheet-v2 categories: a category is offered iff at least one legal
+  // template backs it — availability IS policy (hard sessions vanish on
+  // game weeks because their templates are bye-gated away above).
+  const categories = (
+    Object.keys(CATEGORY_COPY) as PlanChangeCategoryId[]
+  )
+    .filter((id) =>
+      templates.some((template) => template.category === CATEGORY_TO_REGISTRY[id]))
+    .map((id) => ({ id, ...CATEGORY_COPY[id] }));
 
   const hasSession = snap.workout !== null;
   const moveDestinations = hasSession
@@ -122,8 +180,48 @@ export function listPlanChangeOptionsForDay(args: {
     hasSession,
     canRemove: hasSession,
     templates,
+    categories,
     moveDestinations,
   };
+}
+
+// ── Deterministic category pick ──
+// The athlete picked a category; we pick the session. Filters first
+// (registry category + bye gating), then variety (avoid a session that's
+// already visible this week), then date-seeded rotation so the same day
+// always resolves the same pick but different days rotate the registry.
+
+function dateSeed(dateISO: string): number {
+  let hash = 0;
+  for (let i = 0; i < dateISO.length; i++) {
+    hash = (hash * 31 + dateISO.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+export function pickTemplateForCategory(args: {
+  category: PlanChangeCategoryId;
+  date: string;
+  visibleWeek: ResolvedDay[];
+}): CoachRevisionTemplateDefinition | null {
+  const byeDates = new Set(byeUnlockedDatesForWeek(args.visibleWeek));
+  const candidates = listCoachRevisionTemplates().filter(
+    (template) =>
+      template.category === CATEGORY_TO_REGISTRY[args.category] &&
+      (!template.byeOnly || byeDates.has(args.date)),
+  );
+  if (candidates.length === 0) return null;
+
+  // Variety: prefer candidates not already sitting on a visible day.
+  const weekNames = new Set(
+    args.visibleWeek
+      .map((day) => day.workout?.name ?? '')
+      .filter(Boolean),
+  );
+  const fresh = candidates.filter((template) => !weekNames.has(template.label));
+  const pool = fresh.length > 0 ? fresh : candidates;
+
+  return pool[dateSeed(args.date) % pool.length];
 }
 
 // ── Proposal building ──
@@ -139,7 +237,9 @@ function templateWorkoutSnapshot(
   return {
     id: `template-${templateId}`,
     title: definition.label,
-    workoutType: 'Conditioning',
+    // Must match what the writer materializes for this template, or the
+    // advertised/written round-trip breaks.
+    workoutType: definition.category === 'recovery' ? 'Recovery' : 'Conditioning',
     sections: [section],
   };
 }
@@ -155,7 +255,7 @@ export function buildPlanChangeProposal(
 
   const revision = (args: {
     intent: 'add' | 'remove' | 'replace' | 'move';
-    targetDomain: 'session' | 'conditioning';
+    targetDomain: 'session' | 'conditioning' | 'recovery';
     dates: string[];
     revisedDays: CoachVisibleDaySnapshot[];
     explanation: string;
@@ -182,6 +282,23 @@ export function buildPlanChangeProposal(
   });
 
   switch (change.kind) {
+    // Category kinds resolve to a concrete template pick, then delegate to
+    // the template cases — one build path, no duplicate proposal logic.
+    case 'swap_category':
+    case 'add_category': {
+      const picked = pickTemplateForCategory({
+        category: change.category,
+        date: change.date,
+        visibleWeek: ctx.visibleWeek,
+      });
+      if (!picked) return { error: 'no_template_for_category' };
+      return buildPlanChangeProposal(
+        change.kind === 'swap_category'
+          ? { kind: 'swap_template', date: change.date, templateId: picked.templateId }
+          : { kind: 'add_template', date: change.date, templateId: picked.templateId },
+        ctx,
+      );
+    }
     case 'remove_session': {
       const before = daySnap(change.date);
       if (!before?.workout) return { error: 'nothing_to_remove' };
@@ -210,11 +327,15 @@ export function buildPlanChangeProposal(
       const before = daySnap(change.date);
       if (before === null) return { error: 'not_visible' };
       if (before.workout) return { error: 'day_not_empty' };
+      const definition = listCoachRevisionTemplates()
+        .find((template) => template.templateId === change.templateId);
       const workout = templateWorkoutSnapshot(change.templateId, change.date);
-      if (!workout) return { error: 'unknown_template' };
+      if (!definition || !workout) return { error: 'unknown_template' };
       return revision({
         intent: 'add',
-        targetDomain: 'conditioning',
+        // The validator checks the change landed in the declared domain —
+        // recovery templates add recovery, everything else conditioning.
+        targetDomain: definition.category === 'recovery' ? 'recovery' : 'conditioning',
         dates: [change.date],
         revisedDays: [{ date: change.date, workout }],
         explanation: `Sheet: add ${workout.title}`,
@@ -298,15 +419,22 @@ export function applyPlanChange(args: {
     };
   }
 
+  // Category picks name what was chosen — the athlete picked a bucket,
+  // so the confirmation must say which session the producer put in.
+  const pickedTitle =
+    proposal.kind === 'revision'
+      ? proposal.revisedDays.find((day) => day.workout)?.workout?.title ?? null
+      : null;
+
   return {
     ok: true,
-    message: planChangeDoneMessage(args.change),
+    message: planChangeDoneMessage(args.change, pickedTitle),
     appliedDates: apply.applied.map((write) => write.date),
     rejected: [],
   };
 }
 
-function planChangeDoneMessage(change: PlanChange): string {
+function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): string {
   switch (change.kind) {
     case 'remove_session':
       return `Done. Session removed on ${change.date}.`;
@@ -314,6 +442,10 @@ function planChangeDoneMessage(change: PlanChange): string {
       return `Done. Session swapped on ${change.date}.`;
     case 'add_template':
       return `Done. Session added on ${change.date}.`;
+    case 'swap_category':
+      return `Done. ${pickedTitle ?? 'New session'} is now on ${change.date}.`;
+    case 'add_category':
+      return `Done. ${pickedTitle ?? 'New session'} added on ${change.date}.`;
     case 'move_session':
       return `Done. Session moved to ${change.toDate}.`;
   }

@@ -24,6 +24,7 @@ import {
   buildPlanChangeProposal,
   isWithinEditHorizon,
   listPlanChangeOptionsForDay,
+  pickTemplateForCategory,
   type PlanChange,
 } from '../utils/planChangeProducer';
 
@@ -190,7 +191,7 @@ console.log('planChangeProducerTests');
   });
   eq('[2] unlocked', options.locked, null);
   ok('[2] can remove', options.canRemove);
-  eq('[2] all 8 templates offered (bye week)', options.templates.length, 8);
+  eq('[2] all 9 templates offered (bye week)', options.templates.length, 9);
   ok('[2] bye-only templates included',
     options.templates.some((t) => t.templateId === 'metcon_offlegs') &&
       options.templates.some((t) => t.templateId === 'erg_emom'),
@@ -212,7 +213,7 @@ console.log('planChangeProducerTests');
     todayISO: TODAY,
   });
   eq('[3] unlocked', options.locked, null);
-  eq('[3] only the 6 standard templates offered', options.templates.length, 6);
+  eq('[3] only the 7 non-bye templates offered', options.templates.length, 7);
   ok('[3] no bye-only template leaks',
     options.templates.every((t) => !t.byeOnly),
     options.templates.map((t) => t.templateId));
@@ -363,6 +364,84 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     ok(`[9] ${surface.name} uses the shared change vocabulary`,
       src.includes('Want to change something?'));
   }
+}
+
+{
+  console.log('\n[10] sheet v2 categories: availability is policy, picks are deterministic');
+  const week = bothWeeks();
+
+  const bye = listPlanChangeOptionsForDay({ visibleWeek: week, date: THU, todayISO: TODAY });
+  eq('[10] bye-week day offers all three categories',
+    bye.categories.map((c) => c.id).sort(),
+    ['conditioning_hard', 'conditioning_light', 'recovery']);
+
+  const gameWeekDay = listPlanChangeOptionsForDay({
+    visibleWeek: week, date: '2026-07-08', todayISO: TODAY,
+  });
+  eq('[10] game-week day hides the hard category',
+    gameWeekDay.categories.map((c) => c.id).sort(),
+    ['conditioning_light', 'recovery']);
+
+  // Deterministic pick: same inputs → same template, and the hard
+  // category refuses to pick anything on a game week.
+  const pick1 = pickTemplateForCategory({ category: 'conditioning_light', date: THU, visibleWeek: week });
+  const pick2 = pickTemplateForCategory({ category: 'conditioning_light', date: THU, visibleWeek: week });
+  ok('[10] light pick exists', !!pick1);
+  eq('[10] pick is deterministic', pick1?.templateId, pick2?.templateId);
+  eq('[10] light pick comes from the flush family', pick1?.category, 'flush');
+  eq('[10] hard pick refuses on a game week',
+    pickTemplateForCategory({ category: 'conditioning_hard', date: '2026-07-08', visibleWeek: week }),
+    null);
+  ok('[10] hard pick works on a bye week',
+    pickTemplateForCategory({ category: 'conditioning_hard', date: THU, visibleWeek: week })?.category === 'work_capacity');
+
+  // Variety: when every flush template but one already sits on the week,
+  // the pick MUST be the remaining one regardless of the date seed.
+  const flushLabels = [
+    'Easy Zone 2 Bike', 'Easy Zone 2 Row', 'Easy Zone 2 Ski Erg',
+    'Flush Out — 30:30 Intervals', 'Flush Out — 1min On / 1min Off',
+  ];
+  const crowdedWeek: ResolvedDay[] = [
+    visibleDay(MON, strengthWorkout('w1', flushLabels[0], 1)),
+    visibleDay('2026-06-30', strengthWorkout('w2', flushLabels[1], 2)),
+    visibleDay(TODAY, strengthWorkout('w3', flushLabels[2], 3)),
+    visibleDay(THU, strengthWorkout('w4', flushLabels[3], 4)),
+    visibleDay('2026-07-03', strengthWorkout('w5', flushLabels[4], 5)),
+    visibleDay(SAT, null),
+    visibleDay('2026-07-05', null),
+  ];
+  eq('[10] variety pick avoids sessions already on the week',
+    pickTemplateForCategory({ category: 'conditioning_light', date: SAT, visibleWeek: crowdedWeek })?.label,
+    'Flush Out — 2min On / 1min Off');
+
+  // Category kinds flow end-to-end through the same writer.
+  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const swapResult = applyPlanChange({
+    change: { kind: 'swap_category', date: THU, category: 'conditioning_light' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => writes.push({ date, workout }),
+  });
+  ok('[10] swap_category applies', swapResult.ok, swapResult);
+  eq('[10] one write on the swapped date', writes.map((w) => w.date), [THU]);
+  ok('[10] done message names the picked session',
+    !!pick1 && swapResult.message.includes(pick1.label),
+    swapResult.message);
+
+  const recoveryWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const addResult = applyPlanChange({
+    change: { kind: 'add_category', date: SAT, category: 'recovery' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => recoveryWrites.push({ date, workout }),
+  });
+  ok('[10] add_category recovery applies', addResult.ok, addResult);
+  eq('[10] recovery workout materializes as Recovery Flow',
+    recoveryWrites[0]?.workout?.name, 'Recovery Flow');
+  eq('[10] recovery workout carries the Recovery type',
+    recoveryWrites[0]?.workout?.workoutType, 'Recovery');
+  eq('[10] recovery workout carries the recovery tier',
+    (recoveryWrites[0]?.workout as any)?.sessionTier, 'recovery');
 }
 
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);

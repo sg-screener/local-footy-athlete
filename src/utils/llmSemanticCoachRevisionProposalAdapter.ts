@@ -238,7 +238,7 @@ export interface CoachRevisionProposalLLMContext {
     templateId: string;
     label: string;
     description: string;
-    category: 'flush' | 'work_capacity';
+    category: 'flush' | 'work_capacity' | 'recovery';
     byeOnly: boolean;
     section: CoachVisibleSectionSnapshot;
   }>;

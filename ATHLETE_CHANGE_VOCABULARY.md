@@ -95,3 +95,58 @@ side and still worth doing; this page governs the *change* side.
 3. **Edit horizon locked: this week + next 2, view-only beyond.**
 4. **Chat folds into the day sheet** as the layered "something else…" door —
    no separate front-door tab.
+
+## Sheet v2 (Sam, 2026-07-03 evening — SIGNED OFF)
+
+The Phase-1 flat menu deepens into russian-doll categories. Every pick
+below the category level is DETERMINISTIC (producer, not LLM): policy
+filters + date-seeded rotation choose the concrete session. The AI coach
+only ever talks in the "I'm not 100%" flows.
+
+**Swap this session** → Conditioning / Strength / Recovery / Rest day
+- Conditioning → Light / Hard (bye weeks only) / Sprint (DEFERRED —
+  on-legs running policy lands with RUNNING_RULES_PLAN.md). Producer
+  picks the template: registry filter + variety (avoid what's already in
+  the week) + date-hash rotation.
+- Strength → Upper / Lower / Full body / Accessories. Athlete picks the
+  bucket; producer picks push-vs-pull / squat-vs-hinge from week context.
+  Generated via the EXISTING programming engine (microcycle splits +
+  buildTagAwareSession: tag scoring, game proximity, injury filters,
+  weekly variety) — materialized through the template-registry seam the
+  writer already uses (templateId → builder). Needs real prescriptions
+  wired (one-off path currently placeholder 3×8-10) + load estimates.
+  Accessories = Gunshow-style pump AND rehab/prehab for small groups
+  (groin, rotator cuff…) — the derived-session types that already exist.
+- Recovery → puts a recovery flow on the day (registry template).
+- Rest day → same as bin (confirm step, then rest).
+
+**Move it to another day** → any non-game day in horizon, rest days
+listed first. Occupied destination = the two days SWAP atomically
+(supersedes the backlogged "move v2 merge" idea).
+
+**Bin this session** → confirm step (built). On multi-session days the
+athlete picks WHICH to bin or both — any session is binnable, including
+team training (that single date only; the recurring team schedule and
+future weeks are untouched; manual override wins at resolver priority 1
+so team training never re-injects). Partial bin needs: conditioning-
+promotion (removing all strength currently trips
+protected_conditioning_missing) and team-overlay rebuild (overlay is
+baked into the generated workout name/flags).
+
+**"I'm not 100%"** (new option, replaces old ask-coach slot) → Tired /
+Sick / Injured, each with SEVERITY TAPS. Clear ends apply
+deterministically with no chat (bed-ridden → recovery-only week;
+absolutely cooked → rest bias; athlete can re-add sessions when better,
+optionally offered light flushes/accessory days). Injuries and murky
+middles open the coach PRE-LOADED with what was tapped — never re-asks.
+
+**Something else — ask the coach** → unchanged, demoted to true
+catch-all.
+
+**Add a session** (rest days) → same russian-doll categories as swap.
+Also addable to OCCUPIED days (e.g. conditioning onto a lower-body day)
+→ needs combined-day merge machinery; same later phase as partial bin.
+
+**Build order (approved):** 1) menu restructure + conditioning
+categories with deterministic pick, 2) move-as-swap, 3) bin scopes incl.
+team training, 4) strength generation wiring, 5) "I'm not 100%".
