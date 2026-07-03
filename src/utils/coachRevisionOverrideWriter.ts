@@ -13,6 +13,7 @@ import type { ResolvedDay } from './sessionResolver';
 import {
   buildCoachRevisionTemplateWorkout,
   templateIdFromRevisedWorkout,
+  templateIdFromSection,
 } from './coachRevisionTemplates';
 
 export interface CoachRevisionOverrideWrite {
@@ -202,12 +203,23 @@ export function buildWorkoutOverrideFromRevision(args: {
     };
   }
 
+  // Mixed template stack (sheet v2 add-on-top): the revised day keeps its
+  // OWN sections and gains registry-owned section(s). Materialize the own
+  // half from source rows and the template half from the registry, then
+  // merge. Only reached when the day isn't a pure template replacement.
+  const mixedStack =
+    !templateId && source && args.revisedDay.workout
+      ? partitionRevisedSections(args.revisedDay.workout)
+      : null;
+
   // Donor takes precedence over the day's own source rows: when a swap
   // hands this day the OTHER day's workout, the rows must come from the
   // donor — building from the local source would materialize the wrong
   // session under the new title.
   let workout = templateId
     ? buildCoachRevisionTemplateWorkout(templateId, args.revisedDay.date)
+    : mixedStack && mixedStack.templateIds.length > 0 && mixedStack.ownSections.length > 0
+    ? buildStackedTemplateOverride(source!, args.revisedDay, mixedStack)
     : args.donorWorkout && args.revisedDay.workout
     ? buildContentOverride(args.donorWorkout, args.revisedDay)
     : source
@@ -248,6 +260,80 @@ export function buildWorkoutOverrideFromRevision(args: {
   }
 
   return { ok: true, workout, projectedDay };
+}
+
+/** Split a revised workout's sections into registry-owned template
+ *  sections (with their template ids) and the day's own sections. */
+function partitionRevisedSections(
+  revisedWorkout: NonNullable<CoachVisibleDaySnapshot['workout']>,
+): {
+  templateIds: string[];
+  templateSections: CoachVisibleSectionSnapshot[];
+  ownSections: CoachVisibleSectionSnapshot[];
+} {
+  const templateIds: string[] = [];
+  const templateSections: CoachVisibleSectionSnapshot[] = [];
+  const ownSections: CoachVisibleSectionSnapshot[] = [];
+  for (const section of revisedWorkout.sections) {
+    const sectionTemplateId = templateIdFromSection(section);
+    if (sectionTemplateId) {
+      templateIds.push(sectionTemplateId);
+      templateSections.push(section);
+    } else {
+      ownSections.push(section);
+    }
+  }
+  return { templateIds, templateSections, ownSections };
+}
+
+/**
+ * Add-on-top materialization: base workout from the day's own surviving
+ * sections (source rows), template rows appended from the registry. The
+ * template's conditioning block rides along so the day renders as a real
+ * combined S+C day — same structures generation produces.
+ */
+function buildStackedTemplateOverride(
+  source: Workout,
+  revisedDay: CoachVisibleDaySnapshot,
+  stack: ReturnType<typeof partitionRevisedSections>,
+): Workout | null {
+  const base = buildContentOverride(source, {
+    ...revisedDay,
+    workout: {
+      ...revisedDay.workout!,
+      sections: stack.ownSections,
+    },
+  });
+  if (!base) return null;
+
+  let exercises = [...(base.exercises ?? [])];
+  let conditioningBlock = base.conditioningBlock;
+  let durationMinutes = base.durationMinutes ?? 0;
+  for (const stackedTemplateId of stack.templateIds) {
+    const templateWorkout = buildCoachRevisionTemplateWorkout(
+      stackedTemplateId,
+      revisedDay.date,
+    );
+    if (!templateWorkout) return null;
+    exercises = [...exercises, ...(templateWorkout.exercises ?? [])];
+    if (templateWorkout.conditioningBlock && !conditioningBlock) {
+      conditioningBlock = templateWorkout.conditioningBlock;
+    }
+    durationMinutes += templateWorkout.durationMinutes ?? 0;
+  }
+
+  return cloneWorkout(base, {
+    exercises,
+    durationMinutes,
+    hasCombinedConditioning: !!conditioningBlock,
+    conditioningFlavour: conditioningBlock
+      ? base.conditioningFlavour ?? 'aerobic'
+      : base.conditioningFlavour,
+    conditioningCategory: conditioningBlock
+      ? base.conditioningCategory ?? 'aerobic_base'
+      : base.conditioningCategory,
+    conditioningBlock,
+  });
 }
 
 function buildContentOverride(source: Workout, revisedDay: CoachVisibleDaySnapshot): Workout {

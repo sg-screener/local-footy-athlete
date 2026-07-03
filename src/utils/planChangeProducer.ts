@@ -152,6 +152,13 @@ export interface PlanChangeDayOptions {
   /** Bin scopes: parts of the day binnable individually. Single-part days
    *  offer only whole_day; multi-session days list each part, whole last. */
   binScopes: PlanChangeBinScope[];
+  /** Categories addable ON TOP of this day (sheet v2: "add conditioning
+   *  to a lower-body day"). Empty when the day already carries
+   *  conditioning/recovery, has no snapshot sections to preserve, or is
+   *  locked. Rest days instead use `categories` via the normal add flow.
+   *  Conditioning only — stacking recovery/strength arrives with the
+   *  strength-generation phase. */
+  addOnTopCategories: PlanChangeCategoryOption[];
 }
 
 // ── Options listing ──
@@ -172,6 +179,7 @@ export function listPlanChangeOptionsForDay(args: {
     categories: [],
     moveDestinations: [],
     binScopes: [],
+    addOnTopCategories: [],
   });
 
   const day = args.visibleWeek.find((d) => d.date === args.date);
@@ -215,6 +223,17 @@ export function listPlanChangeOptionsForDay(args: {
             : a.occupiedBy === null ? -1 : 1)
     : [];
 
+  // Add-on-top: conditioning can stack onto a day that has real sections
+  // but no conditioning/recovery yet (strength day, team+strength day).
+  const sectionKinds = new Set(
+    (snap.workout?.sections ?? []).map((section) => section.kind),
+  );
+  const canAddOnTop =
+    hasSession &&
+    sectionKinds.size > 0 &&
+    !sectionKinds.has('conditioning') &&
+    !sectionKinds.has('recovery');
+
   return {
     date: args.date,
     locked: null,
@@ -224,6 +243,9 @@ export function listPlanChangeOptionsForDay(args: {
     categories,
     moveDestinations,
     binScopes: hasSession ? binScopesForSnapshot(snap) : [],
+    addOnTopCategories: canAddOnTop
+      ? categories.filter((category) => category.id.startsWith('conditioning_'))
+      : [],
   };
 }
 
@@ -532,11 +554,42 @@ export function buildPlanChangeProposal(
     case 'add_template': {
       const before = daySnap(change.date);
       if (before === null) return { error: 'not_visible' };
-      if (before.workout) return { error: 'day_not_empty' };
       const definition = listCoachRevisionTemplates()
         .find((template) => template.templateId === change.templateId);
       const workout = templateWorkoutSnapshot(change.templateId, change.date);
       if (!definition || !workout) return { error: 'unknown_template' };
+
+      // Occupied day: STACK the template on top (sheet v2 — "add
+      // conditioning to a lower-body day"). Conditioning only, one
+      // conditioning block per day, and the day must have real sections
+      // to preserve (otherwise this would silently become a pure-template
+      // replacement in the writer).
+      if (before.workout) {
+        const kinds = new Set(before.workout.sections.map((section) => section.kind));
+        if (definition.category === 'recovery') {
+          return { error: 'recovery_stack_not_supported' };
+        }
+        if (kinds.has('conditioning') || kinds.has('recovery')) {
+          return { error: 'day_already_has_conditioning' };
+        }
+        if (before.workout.sections.length === 0) {
+          return { error: 'day_not_stackable' };
+        }
+        return revision({
+          intent: 'add',
+          targetDomain: 'conditioning',
+          dates: [change.date],
+          revisedDays: [{
+            date: change.date,
+            workout: {
+              ...before.workout,
+              sections: [...before.workout.sections, ...workout.sections],
+            },
+          }],
+          explanation: `Sheet: add ${workout.title} on top`,
+        });
+      }
+
       return revision({
         intent: 'add',
         // The validator checks the change landed in the declared domain —

@@ -159,6 +159,13 @@ export function PlanChangeSheet({
                 sub="Conditioning, recovery or rest — we pick the session"
                 onPress={() => setStep({ kind: 'pick_category', mode: 'swap' })}
               />
+              {options.addOnTopCategories.length > 0 && (
+                <MenuOption
+                  label="Add to this day"
+                  sub="Stack conditioning on top of this session"
+                  onPress={() => setStep({ kind: 'pick_category', mode: 'add' })}
+                />
+              )}
               {options.moveDestinations.length > 0 && (
                 <MenuOption
                   label="Move it to another day"
@@ -192,20 +199,27 @@ export function PlanChangeSheet({
 
       {/* Russian dolls level 1: what KIND of session. The athlete picks a
           category; the producer deterministically picks the session
-          (sheet v2 — Strength and Sprint arrive in later phases). */}
-      {options && step.kind === 'pick_category' && (
+          (sheet v2 — Strength and Sprint arrive in later phases).
+          Add mode on an OCCUPIED day is restricted to what the producer
+          says can stack (conditioning only). */}
+      {options && step.kind === 'pick_category' && (() => {
+        const stepCategories =
+          step.mode === 'add' && options.hasSession
+            ? options.addOnTopCategories
+            : options.categories;
+        return (
         <View>
           <Text style={styles.sectionLabel}>
             {step.mode === 'swap' ? 'Swap to:' : 'Add:'}
           </Text>
-          {options.categories.some((c) => c.id.startsWith('conditioning_')) && (
+          {stepCategories.some((c) => c.id.startsWith('conditioning_')) && (
             <MenuOption
               label="Conditioning"
               sub="Bike, row, ski or intervals — we pick it for you"
               onPress={() => setStep({ kind: 'pick_conditioning', mode: step.mode })}
             />
           )}
-          {options.categories.filter((c) => c.id === 'recovery').map((c) => (
+          {stepCategories.filter((c) => c.id === 'recovery').map((c) => (
             <MenuOption
               key={c.id}
               label={c.label}
@@ -224,7 +238,8 @@ export function PlanChangeSheet({
           )}
           <BackRow onPress={() => setStep({ kind: 'menu' })} />
         </View>
-      )}
+        );
+      })()}
 
       {/* Russian dolls level 2: conditioning intensity. Availability is
           policy — Hard only appears when the producer offered it (bye
@@ -232,7 +247,9 @@ export function PlanChangeSheet({
       {options && step.kind === 'pick_conditioning' && (
         <View>
           <Text style={styles.sectionLabel}>Conditioning:</Text>
-          {options.categories
+          {(step.mode === 'add' && options.hasSession
+            ? options.addOnTopCategories
+            : options.categories)
             .filter((c) => c.id.startsWith('conditioning_'))
             .map((c) => (
               <MenuOption

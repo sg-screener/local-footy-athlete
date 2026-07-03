@@ -677,6 +677,74 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     wholeWrites[0]?.workout?.workoutType, 'Rest');
 }
 
+{
+  console.log('\n[13] add-on-top: conditioning stacks onto occupied days');
+  const week = bothWeeks();
+
+  // Strength day offers add-on-top (conditioning categories only).
+  const mon = listPlanChangeOptionsForDay({ visibleWeek: week, date: MON, todayISO: TODAY });
+  ok('[13] strength day offers add-on-top conditioning',
+    mon.addOnTopCategories.length > 0 &&
+      mon.addOnTopCategories.every((c) => c.id.startsWith('conditioning_')),
+    mon.addOnTopCategories);
+  const rest = listPlanChangeOptionsForDay({ visibleWeek: week, date: SAT, todayISO: TODAY });
+  eq('[13] rest day has no add-on-top (normal add flow instead)',
+    rest.addOnTopCategories.length, 0);
+
+  // Stack a light conditioning session onto Monday's Lower Body Strength.
+  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const result = applyPlanChange({
+    change: { kind: 'add_category', date: MON, category: 'conditioning_light' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => writes.push({ date, workout }),
+  });
+  ok('[13] stack applies', result.ok, result);
+  eq('[13] one write', writes.length, 1);
+  const stacked = writes[0]?.workout;
+  eq('[13] strength rows preserved', stacked?.exercises?.filter(
+    (row: any) => !String(row.id).startsWith('template:')).length, 2);
+  ok('[13] template row appended',
+    (stacked?.exercises ?? []).some((row: any) => String(row.id).startsWith('template:')),
+    stacked?.exercises?.map((row: any) => row.id));
+  ok('[13] combined-day structures attached',
+    !!stacked?.conditioningBlock && stacked?.hasCombinedConditioning === true,
+    { block: !!stacked?.conditioningBlock, combined: stacked?.hasCombinedConditioning });
+  ok('[13] day keeps its strength identity', stacked?.name === 'Lower Body Strength',
+    stacked?.name);
+  ok('[13] done message names the pick', /Done\./.test(result.message), result.message);
+
+  // A day that already has conditioning refuses a second block.
+  const scDay: Workout = {
+    ...strengthWorkout('workout-sc', 'Upper Pull', 2),
+    hasCombinedConditioning: true,
+    conditioningFlavour: 'aerobic',
+    conditioningBlock: {
+      intent: 'aerobic',
+      options: [{ title: 'Aerobic Base', description: '', exerciseIds: ['sc2-cond'] }],
+    },
+    exercises: [ex('Back Squat', 'sc2-squat', 4), ex('Bike Easy', 'sc2-cond', 1)],
+  } as Workout;
+  const scWeek = [...week];
+  scWeek[1] = visibleDay('2026-06-30', scDay);
+  const already = applyPlanChange({
+    change: { kind: 'add_category', date: '2026-06-30', category: 'conditioning_light' },
+    visibleWeek: scWeek,
+    todayISO: TODAY,
+    setManualOverride: () => { throw new Error('must not write'); },
+  });
+  ok('[13] second conditioning block refused', !already.ok, already);
+
+  // Recovery never stacks onto an occupied day.
+  const recoveryStack = applyPlanChange({
+    change: { kind: 'add_category', date: MON, category: 'recovery' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: () => { throw new Error('must not write'); },
+  });
+  ok('[13] recovery stack refused', !recoveryStack.ok, recoveryStack);
+}
+
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.log(failures.join('\n'));

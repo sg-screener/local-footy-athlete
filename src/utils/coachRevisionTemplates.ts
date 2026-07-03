@@ -320,6 +320,22 @@ export function visibleDayLooksLikeGame(day: {
   return haystack.includes('game');
 }
 
+/** Extract the template id when a SINGLE section is registry-owned (all
+ *  item ids `template:<id>:…`). Used by the writer's mixed-day path:
+ *  stacking a template section onto a day that keeps its own content. */
+export function templateIdFromSection(
+  section: { items: Array<{ id: string }> } | null | undefined,
+): string | null {
+  if (!section || section.items.length === 0) return null;
+  const match = /^template:([a-z0-9_]+):/.exec(section.items[0].id);
+  if (!match) return null;
+  const templateId = match[1];
+  if (!definitionById(templateId)) return null;
+  const allOwned = section.items.every((item) =>
+    item.id.startsWith(`template:${templateId}:`));
+  return allOwned ? templateId : null;
+}
+
 /** Extract the template id when a revised day is a pure template session
  *  (v1 replacement shape: exactly one section, all item ids template-owned). */
 export function templateIdFromRevisedWorkout(
