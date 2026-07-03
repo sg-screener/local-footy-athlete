@@ -101,31 +101,31 @@ const CATEGORY_TEMPLATE_MATCH: Record<
 const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }> = {
   conditioning_light: {
     label: 'Light session',
-    sub: 'Easy flush — bike, row or ski. We pick it for you.',
+    sub: 'Easy flush — bike, row or ski',
   },
   conditioning_hard: {
     label: 'Hard session',
-    sub: 'Work capacity, off legs. Earn your sleep.',
+    sub: 'Work capacity, off legs',
   },
   recovery: {
     label: 'Recovery',
-    sub: 'Restorative flow — rolling, mobility, breathing.',
+    sub: 'Rolling, mobility, easy movement, breathing',
   },
   strength_upper: {
     label: 'Upper body',
-    sub: 'Push or pull — we pick what your week needs.',
+    sub: 'Push or pull — whichever your week is missing',
   },
   strength_lower: {
     label: 'Lower body',
-    sub: 'Squat + hinge strength, engine-built for this date.',
+    sub: 'Squat and hinge strength',
   },
   strength_full: {
     label: 'Full body',
-    sub: 'Compound push, pull, squat and carry.',
+    sub: 'Compound push, pull, squat and carry',
   },
   accessories: {
     label: 'Accessories',
-    sub: 'Gunshow or prehab — small muscles, big payoff.',
+    sub: 'Gunshow or prehab — small muscles, big payoff',
   },
 };
 

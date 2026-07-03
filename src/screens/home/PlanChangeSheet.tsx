@@ -205,20 +205,20 @@ export function PlanChangeSheet({
             <>
               <MenuOption
                 label="Swap this session"
-                sub="Conditioning, recovery or rest — we pick the session"
+                sub="Strength, conditioning, recovery — or make it a rest day"
                 onPress={() => setStep({ kind: 'pick_category', mode: 'swap' })}
               />
               {options.addOnTopCategories.length > 0 && (
                 <MenuOption
                   label="Add to this day"
-                  sub="Stack conditioning on top of this session"
+                  sub="Conditioning on top of this session"
                   onPress={() => setStep({ kind: 'pick_category', mode: 'add' })}
                 />
               )}
               {options.moveDestinations.length > 0 && (
                 <MenuOption
                   label="Move it to another day"
-                  sub="Shift the whole session"
+                  sub="To a rest day, or trade places with another session"
                   onPress={() => setStep({ kind: 'pick_destination' })}
                 />
               )}
@@ -234,13 +234,13 @@ export function PlanChangeSheet({
           ) : (
             <MenuOption
               label="Add a session"
-              sub="Conditioning or recovery for this day"
+              sub="Strength, conditioning or recovery on this day"
               onPress={() => setStep({ kind: 'pick_category', mode: 'add' })}
             />
           )}
           <MenuOption
             label="I'm not 100%"
-            sub="Tired, sick or injured — tell the coach"
+            sub="Tired, sick or injured — the plan adjusts"
             onPress={() => setStep({ kind: 'pick_wellbeing' })}
           />
           <MenuOption
@@ -354,7 +354,7 @@ export function PlanChangeSheet({
           {stepCategories.some((c) => c.id.startsWith('conditioning_')) && (
             <MenuOption
               label="Conditioning"
-              sub="Bike, row, ski or intervals — we pick it for you"
+              sub="Light or hard — bike, row, ski or intervals"
               onPress={() => setStep({ kind: 'pick_conditioning', mode: step.mode })}
             />
           )}
@@ -362,7 +362,7 @@ export function PlanChangeSheet({
             c.id.startsWith('strength_') || c.id === 'accessories') && (
             <MenuOption
               label="Strength"
-              sub="Upper, lower, full body or accessories — engine-built"
+              sub="Upper, lower, full body or accessories"
               onPress={() => setStep({ kind: 'pick_strength', mode: step.mode })}
             />
           )}

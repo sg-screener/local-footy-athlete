@@ -128,7 +128,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'strength_upper_push',
     label: 'Upper Push',
-    description: 'Pressing strength — engine-built for this date.',
+    description: 'Pressing strength — chest, shoulders and triceps.',
     category: 'strength',
     byeOnly: false,
     durationMinutes: 60,
@@ -138,7 +138,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'strength_upper_pull',
     label: 'Upper Pull',
-    description: 'Pulling strength — engine-built for this date.',
+    description: 'Pulling strength — back and biceps.',
     category: 'strength',
     byeOnly: false,
     durationMinutes: 60,
@@ -148,7 +148,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'strength_lower',
     label: 'Lower Body Strength',
-    description: 'Squat + hinge strength — engine-built for this date.',
+    description: 'Squat and hinge strength — legs and glutes.',
     category: 'strength',
     byeOnly: false,
     durationMinutes: 60,
@@ -158,7 +158,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'strength_full_body',
     label: 'Full Body Strength',
-    description: 'Compound push, pull, squat, carry — engine-built.',
+    description: 'Compound push, pull, squat and carry.',
     category: 'strength',
     byeOnly: false,
     durationMinutes: 60,
