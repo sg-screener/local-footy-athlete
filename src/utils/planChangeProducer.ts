@@ -69,7 +69,11 @@ export function isWithinEditHorizon(dateISO: string, todayISO: string): boolean 
 export type PlanChangeCategoryId =
   | 'conditioning_light'
   | 'conditioning_hard'
-  | 'recovery';
+  | 'recovery'
+  | 'strength_upper'
+  | 'strength_lower'
+  | 'strength_full'
+  | 'accessories';
 
 export interface PlanChangeCategoryOption {
   id: PlanChangeCategoryId;
@@ -77,13 +81,21 @@ export interface PlanChangeCategoryOption {
   sub: string;
 }
 
-const CATEGORY_TO_REGISTRY: Record<
+/** Which registry templates back each category. Multi-template categories
+ *  ("Upper body", "Accessories") are where the producer's deterministic
+ *  pick earns its keep — variety first, date-seeded rotation second. */
+const CATEGORY_TEMPLATE_MATCH: Record<
   PlanChangeCategoryId,
-  CoachRevisionTemplateDefinition['category']
+  (template: CoachRevisionTemplateDefinition) => boolean
 > = {
-  conditioning_light: 'flush',
-  conditioning_hard: 'work_capacity',
-  recovery: 'recovery',
+  conditioning_light: (t) => t.category === 'flush',
+  conditioning_hard: (t) => t.category === 'work_capacity',
+  recovery: (t) => t.category === 'recovery',
+  strength_upper: (t) =>
+    t.templateId === 'strength_upper_push' || t.templateId === 'strength_upper_pull',
+  strength_lower: (t) => t.templateId === 'strength_lower',
+  strength_full: (t) => t.templateId === 'strength_full_body',
+  accessories: (t) => t.category === 'accessories',
 };
 
 const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }> = {
@@ -98,6 +110,22 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
   recovery: {
     label: 'Recovery',
     sub: 'Restorative flow — rolling, mobility, breathing.',
+  },
+  strength_upper: {
+    label: 'Upper body',
+    sub: 'Push or pull — we pick what your week needs.',
+  },
+  strength_lower: {
+    label: 'Lower body',
+    sub: 'Squat + hinge strength, engine-built for this date.',
+  },
+  strength_full: {
+    label: 'Full body',
+    sub: 'Compound push, pull, squat and carry.',
+  },
+  accessories: {
+    label: 'Accessories',
+    sub: 'Gunshow or prehab — small muscles, big payoff.',
   },
 };
 
@@ -200,8 +228,7 @@ export function listPlanChangeOptionsForDay(args: {
   const categories = (
     Object.keys(CATEGORY_COPY) as PlanChangeCategoryId[]
   )
-    .filter((id) =>
-      templates.some((template) => template.category === CATEGORY_TO_REGISTRY[id]))
+    .filter((id) => templates.some(CATEGORY_TEMPLATE_MATCH[id]))
     .map((id) => ({ id, ...CATEGORY_COPY[id] }));
 
   const hasSession = snap.workout !== null;
@@ -328,7 +355,7 @@ export function pickTemplateForCategory(args: {
   // No bye filter here — athlete override principle. The warning owner
   // below is the only place game-week caution lives.
   const candidates = listCoachRevisionTemplates().filter(
-    (template) => template.category === CATEGORY_TO_REGISTRY[args.category],
+    CATEGORY_TEMPLATE_MATCH[args.category],
   );
   if (candidates.length === 0) return null;
 
@@ -415,7 +442,12 @@ function templateWorkoutSnapshot(
     title: definition.label,
     // Must match what the writer materializes for this template, or the
     // advertised/written round-trip breaks.
-    workoutType: definition.category === 'recovery' ? 'Recovery' : 'Conditioning',
+    workoutType:
+      definition.category === 'recovery'
+        ? 'Recovery'
+        : definition.category === 'strength' || definition.category === 'accessories'
+        ? 'Strength'
+        : 'Conditioning',
     sections: [section],
   };
 }
@@ -569,6 +601,12 @@ export function buildPlanChangeProposal(
         if (definition.category === 'recovery') {
           return { error: 'recovery_stack_not_supported' };
         }
+        if (definition.category === 'strength' || definition.category === 'accessories') {
+          // Double-strength days need section-merge projection support —
+          // the merged day projects to ONE strength section while the
+          // accepted snapshot would carry two. Conditioning-only for now.
+          return { error: 'strength_stack_not_supported' };
+        }
         if (kinds.has('conditioning') || kinds.has('recovery')) {
           return { error: 'day_already_has_conditioning' };
         }
@@ -592,9 +630,13 @@ export function buildPlanChangeProposal(
 
       return revision({
         intent: 'add',
-        // The validator checks the change landed in the declared domain —
-        // recovery templates add recovery, everything else conditioning.
-        targetDomain: definition.category === 'recovery' ? 'recovery' : 'conditioning',
+        // The validator checks the change landed in the declared domain.
+        targetDomain:
+          definition.category === 'recovery'
+            ? 'recovery'
+            : definition.category === 'strength' || definition.category === 'accessories'
+            ? 'strength'
+            : 'conditioning',
         dates: [change.date],
         revisedDays: [{ date: change.date, workout }],
         explanation: `Sheet: add ${workout.title}`,

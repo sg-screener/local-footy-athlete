@@ -23,14 +23,23 @@ export interface CoachRevisionTemplateDefinition {
   label: string;
   description: string;
   /** 'flush' = rejuvenation, addable any week in-season.
-   *  'work_capacity' = harder off-legs conditioning, BYE WEEKS ONLY
-   *  (a week whose visible days include no Game Day). Coaching policy from
-   *  the product owner, 2026-07-03.
-   *  'recovery' = restorative flow (tissue quality / mobility / breathing),
-   *  addable any week. Sheet v2 category, 2026-07-03 evening. */
-  category: 'flush' | 'work_capacity' | 'recovery';
+   *  'work_capacity' = harder off-legs conditioning (advisory game-week
+   *  warning since 2026-07-04's athlete-override principle).
+   *  'recovery' = restorative flow (tissue quality / mobility / breathing).
+   *  'strength' / 'accessories' = ENGINE-GENERATED via buildTagAwareSession
+   *  / buildDerivedSession — the same principles as weekly programming
+   *  (tag scoring, game proximity, injury filters). Sheet v2 phase 4. */
+  category: 'flush' | 'work_capacity' | 'recovery' | 'strength' | 'accessories';
   byeOnly: boolean;
   durationMinutes: number;
+  /** True when the built content varies by DATE (engine-generated) — the
+   *  validation policy must compute per-date signatures for these. */
+  dynamic?: boolean;
+  /** Engine name handed to buildTagAwareSession's intent builder
+   *  (strength category only). */
+  engineName?: string;
+  /** Derived-session type for buildDerivedSession (accessories only). */
+  derivedType?: 'arms_pump' | 'prehab_accessories';
 }
 
 const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
@@ -115,6 +124,68 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     byeOnly: false,
     durationMinutes: 30,
   },
+  // ── Strength: engine-generated with the weekly-programming principles ──
+  {
+    templateId: 'strength_upper_push',
+    label: 'Upper Push',
+    description: 'Pressing strength — engine-built for this date.',
+    category: 'strength',
+    byeOnly: false,
+    durationMinutes: 60,
+    dynamic: true,
+    engineName: 'Upper Push',
+  },
+  {
+    templateId: 'strength_upper_pull',
+    label: 'Upper Pull',
+    description: 'Pulling strength — engine-built for this date.',
+    category: 'strength',
+    byeOnly: false,
+    durationMinutes: 60,
+    dynamic: true,
+    engineName: 'Upper Pull',
+  },
+  {
+    templateId: 'strength_lower',
+    label: 'Lower Body Strength',
+    description: 'Squat + hinge strength — engine-built for this date.',
+    category: 'strength',
+    byeOnly: false,
+    durationMinutes: 60,
+    dynamic: true,
+    engineName: 'Lower Body Strength',
+  },
+  {
+    templateId: 'strength_full_body',
+    label: 'Full Body Strength',
+    description: 'Compound push, pull, squat, carry — engine-built.',
+    category: 'strength',
+    byeOnly: false,
+    durationMinutes: 60,
+    dynamic: true,
+    engineName: 'Full Body',
+  },
+  // ── Accessories: pump + prehab derived sessions ──
+  {
+    templateId: 'accessories_pump',
+    label: 'Gunshow',
+    description: 'Light upper-body pump work.',
+    category: 'accessories',
+    byeOnly: false,
+    durationMinutes: 35,
+    dynamic: true,
+    derivedType: 'arms_pump',
+  },
+  {
+    templateId: 'accessories_prehab',
+    label: 'Prehab & Accessories',
+    description: 'Small-muscle armour: groin, rotator cuff, trunk.',
+    category: 'accessories',
+    byeOnly: false,
+    durationMinutes: 35,
+    dynamic: true,
+    derivedType: 'prehab_accessories',
+  },
 ];
 
 /** Fixed rows for the recovery_flow template. Deterministic content — the
@@ -177,6 +248,9 @@ export function buildCoachRevisionTemplateWorkout(
   if (!def) return null;
   if (def.category === 'recovery') {
     return buildRecoveryTemplateWorkout(def, date);
+  }
+  if (def.category === 'strength' || def.category === 'accessories') {
+    return buildEngineTemplateWorkout(def, date);
   }
   const rowId = `template:${def.templateId}:main`;
   return {
@@ -279,6 +353,92 @@ function buildRecoveryTemplateWorkout(
     }),
     createdAt: '',
     updatedAt: '',
+  } as Workout;
+}
+
+/**
+ * Engine-generated templates (strength splits, accessory sessions): the
+ * SAME machinery as weekly programming — buildTagAwareSession for splits
+ * (tag scoring, game proximity, injury filters), buildDerivedSession for
+ * accessory/pump days (pool slots, weekly caps, load estimates). Athlete
+ * context + game dates arrive via coachRevisionTemplateContext (one seam,
+ * injectable in tests). Deterministic per (templateId, date, context), so
+ * the advertised snapshot, validation signature, and written workout all
+ * agree by construction. Row ids are remapped to `template:<id>:<n>` so
+ * the writer recognises registry ownership; exerciseId keeps the engine's
+ * exercise identity (weight overrides, videos, history all keep working).
+ */
+function buildEngineTemplateWorkout(
+  def: CoachRevisionTemplateDefinition,
+  date: string,
+): Workout | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const {
+    getCoachRevisionTemplateContext,
+  } = require('./coachRevisionTemplateContext');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const {
+    buildTagAwareSession,
+    buildDerivedSession,
+  } = require('./sessionBuilder');
+  const ctx = getCoachRevisionTemplateContext();
+
+  let generated: Workout | null = null;
+  if (def.category === 'strength' && def.engineName) {
+    const synthetic: Workout = {
+      id: `template-${def.templateId}`,
+      microcycleId: 'coach-template',
+      dayOfWeek: isoDateToDayOfWeek(date),
+      name: def.engineName,
+      description: def.description,
+      durationMinutes: def.durationMinutes,
+      intensity: 'Moderate',
+      workoutType: 'Strength',
+      sessionTier: 'core',
+      exercises: [],
+      createdAt: '',
+      updatedAt: '',
+    } as Workout;
+    generated = buildTagAwareSession(
+      synthetic,
+      date,
+      ctx.gameDates,
+      ctx.athlete,
+      ctx.inSeason,
+    );
+  } else if (def.category === 'accessories' && def.derivedType) {
+    generated = buildDerivedSession(
+      def.derivedType,
+      date,
+      'coach-template',
+      'Athlete-added session',
+      ctx.athlete,
+    );
+  }
+  if (!generated) return null;
+
+  // Registry ownership: remap ROW ids to template:<id>:<n>. Exercise
+  // identity (exerciseId / exercise.id) is untouched.
+  const workoutId = `template-${def.templateId}`;
+  const exercises = (generated.exercises ?? []).map((row: any, index: number) => ({
+    ...row,
+    id: `template:${def.templateId}:${index}`,
+    workoutId,
+  }));
+
+  return {
+    ...generated,
+    id: workoutId,
+    microcycleId: 'coach-template',
+    dayOfWeek: isoDateToDayOfWeek(date),
+    name: def.label,
+    durationMinutes: def.durationMinutes,
+    sessionTier: def.category === 'strength' ? 'core' : 'optional',
+    hasCombinedConditioning: false,
+    conditioningFlavour: undefined,
+    conditioningCategory: undefined,
+    conditioningBlock: undefined,
+    exercises,
   } as Workout;
 }
 

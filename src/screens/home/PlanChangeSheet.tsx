@@ -34,6 +34,7 @@ type Step =
   | { kind: 'menu' }
   | { kind: 'pick_category'; mode: 'swap' | 'add' }
   | { kind: 'pick_conditioning'; mode: 'swap' | 'add' }
+  | { kind: 'pick_strength'; mode: 'swap' | 'add' }
   | {
       kind: 'confirm_warning';
       mode: 'swap' | 'add';
@@ -219,6 +220,14 @@ export function PlanChangeSheet({
               onPress={() => setStep({ kind: 'pick_conditioning', mode: step.mode })}
             />
           )}
+          {stepCategories.some((c) =>
+            c.id.startsWith('strength_') || c.id === 'accessories') && (
+            <MenuOption
+              label="Strength"
+              sub="Upper, lower, full body or accessories — engine-built"
+              onPress={() => setStep({ kind: 'pick_strength', mode: step.mode })}
+            />
+          )}
           {stepCategories.filter((c) => c.id === 'recovery').map((c) => (
             <MenuOption
               key={c.id}
@@ -251,6 +260,29 @@ export function PlanChangeSheet({
             ? options.addOnTopCategories
             : options.categories)
             .filter((c) => c.id.startsWith('conditioning_'))
+            .map((c) => (
+              <MenuOption
+                key={c.id}
+                label={c.label}
+                sub={c.sub}
+                onPress={() => chooseCategory(step.mode, c.id)}
+              />
+            ))}
+          <BackRow onPress={() => setStep({ kind: 'pick_category', mode: step.mode })} />
+        </View>
+      )}
+
+      {/* Russian dolls level 2: strength buckets. The athlete picks the
+          bucket ("Upper body"); the producer picks push-vs-pull from what
+          the week needs and the engine builds the session with the same
+          principles as weekly programming. */}
+      {options && step.kind === 'pick_strength' && (
+        <View>
+          <Text style={styles.sectionLabel}>Strength:</Text>
+          {(step.mode === 'add' && options.hasSession
+            ? options.addOnTopCategories
+            : options.categories)
+            .filter((c) => c.id.startsWith('strength_') || c.id === 'accessories')
             .map((c) => (
               <MenuOption
                 key={c.id}

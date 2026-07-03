@@ -28,8 +28,8 @@ export function coachRevisionValidationPolicyForWeek(
   visibleWeek: ResolvedDay[],
   todayISO: string,
 ) {
-  const signatureFor = (templateId: string): string | null => {
-    const section = buildCoachRevisionTemplateSection(templateId, todayISO);
+  const signatureFor = (templateId: string, date: string): string | null => {
+    const section = buildCoachRevisionTemplateSection(templateId, date);
     return section ? coachRevisionSectionBodySignature(section) : null;
   };
   // ATHLETE OVERRIDE PRINCIPLE (Sam, 2026-07-04): the athlete may choose
@@ -38,11 +38,18 @@ export function coachRevisionValidationPolicyForWeek(
   // point of choice (planChangeProducer.planChangeWarningForCategory),
   // never a validation rejection. The validator's byeOnly mechanism stays
   // (fed an empty list) so a future hard gate is one line away.
+  //
+  // DYNAMIC templates (engine-generated strength/accessories) produce
+  // date-dependent content, so their signatures are computed for every
+  // visible date; static templates are date-independent and computed once.
   const standard: string[] = [];
+  const weekDates = visibleWeek.map((day) => day.date);
   for (const template of listCoachRevisionTemplates()) {
-    const signature = signatureFor(template.templateId);
-    if (!signature) continue;
-    standard.push(signature);
+    const dates = template.dynamic ? weekDates : [todayISO];
+    for (const date of dates) {
+      const signature = signatureFor(template.templateId, date);
+      if (signature) standard.push(signature);
+    }
   }
   return {
     allowedChangedDates: visibleWeek.map((day) => day.date),

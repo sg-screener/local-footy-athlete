@@ -192,7 +192,7 @@ console.log('planChangeProducerTests');
   });
   eq('[2] unlocked', options.locked, null);
   ok('[2] can remove', options.canRemove);
-  eq('[2] all 9 templates offered (bye week)', options.templates.length, 9);
+  eq('[2] all 15 templates offered (bye week)', options.templates.length, 15);
   ok('[2] bye-only templates included',
     options.templates.some((t) => t.templateId === 'metcon_offlegs') &&
       options.templates.some((t) => t.templateId === 'erg_emom'),
@@ -227,7 +227,7 @@ console.log('planChangeProducerTests');
     todayISO: TODAY,
   });
   eq('[3] unlocked', options.locked, null);
-  eq('[3] all 9 templates offered on a game week', options.templates.length, 9);
+  eq('[3] all 15 templates offered on a game week', options.templates.length, 15);
   ok('[3] hard templates included (warned, not hidden)',
     options.templates.some((t) => t.byeOnly),
     options.templates.map((t) => t.templateId));
@@ -393,17 +393,19 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   console.log('\n[10] sheet v2 categories: availability is policy, picks are deterministic');
   const week = bothWeeks();
 
+  const ALL_CATEGORIES = [
+    'accessories', 'conditioning_hard', 'conditioning_light', 'recovery',
+    'strength_full', 'strength_lower', 'strength_upper',
+  ];
   const bye = listPlanChangeOptionsForDay({ visibleWeek: week, date: THU, todayISO: TODAY });
-  eq('[10] bye-week day offers all three categories',
-    bye.categories.map((c) => c.id).sort(),
-    ['conditioning_hard', 'conditioning_light', 'recovery']);
+  eq('[10] bye-week day offers every category',
+    bye.categories.map((c) => c.id).sort(), ALL_CATEGORIES);
 
   const gameWeekDay = listPlanChangeOptionsForDay({
     visibleWeek: week, date: '2026-07-08', todayISO: TODAY,
   });
-  eq('[10] game-week day offers all three categories too (athlete override)',
-    gameWeekDay.categories.map((c) => c.id).sort(),
-    ['conditioning_hard', 'conditioning_light', 'recovery']);
+  eq('[10] game-week day offers every category too (athlete override)',
+    gameWeekDay.categories.map((c) => c.id).sort(), ALL_CATEGORIES);
 
   // Deterministic pick: same inputs → same template. Hard picks work on
   // ANY week now — the game-week caution is a warning, not a filter.
@@ -743,6 +745,77 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     setManualOverride: () => { throw new Error('must not write'); },
   });
   ok('[13] recovery stack refused', !recoveryStack.ok, recoveryStack);
+}
+
+{
+  console.log('\n[14] strength swaps via the engine: buckets, variety, round-trip');
+  const week = bothWeeks();
+
+  // All strength buckets + accessories are offered.
+  const options = listPlanChangeOptionsForDay({ visibleWeek: week, date: THU, todayISO: TODAY });
+  ok('[14] strength buckets offered',
+    ['strength_upper', 'strength_lower', 'strength_full', 'accessories'].every((id) =>
+      options.categories.some((c) => c.id === id)),
+    options.categories.map((c) => c.id));
+
+  // "Upper body" picks what the week needs: THU already holds Upper Push,
+  // so the pick MUST be Upper Pull... but MON holds Lower Body Strength
+  // too — variety avoids both.
+  const upperPick = pickTemplateForCategory({
+    category: 'strength_upper', date: SAT, visibleWeek: week,
+  });
+  eq('[14] upper pick avoids the split already on the week',
+    upperPick?.templateId, 'strength_upper_pull');
+
+  // Deterministic engine build: same date + context → same session.
+  const pickA = pickTemplateForCategory({ category: 'accessories', date: SAT, visibleWeek: week });
+  const pickB = pickTemplateForCategory({ category: 'accessories', date: SAT, visibleWeek: week });
+  eq('[14] accessory pick deterministic', pickA?.templateId, pickB?.templateId);
+
+  // Swap THU's Upper Push for a lower-body engine session, end to end.
+  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const result = applyPlanChange({
+    change: { kind: 'swap_category', date: THU, category: 'strength_lower' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => writes.push({ date, workout }),
+  });
+  ok('[14] engine strength swap applies', result.ok, result);
+  const written = writes[0]?.workout;
+  eq('[14] written session is the engine build', written?.name, 'Lower Body Strength');
+  eq('[14] written type is Strength', written?.workoutType, 'Strength');
+  ok('[14] engine produced real exercises',
+    (written?.exercises?.length ?? 0) >= 4, written?.exercises?.length);
+  ok('[14] rows are registry-owned',
+    (written?.exercises ?? []).every((row: any) =>
+      String(row.id).startsWith('template:strength_lower:')),
+    written?.exercises?.map((row: any) => row.id));
+  ok('[14] exercise identity preserved for overrides/videos',
+    (written?.exercises ?? []).every((row: any) =>
+      row.exerciseId && !String(row.exerciseId).startsWith('template:')),
+    written?.exercises?.map((row: any) => row.exerciseId));
+
+  // Accessories end to end on a rest day (add).
+  const accWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const accResult = applyPlanChange({
+    change: { kind: 'add_category', date: SAT, category: 'accessories' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => accWrites.push({ date, workout }),
+  });
+  ok('[14] accessory add applies', accResult.ok, accResult);
+  ok('[14] accessory session has content',
+    (accWrites[0]?.workout?.exercises?.length ?? 0) >= 2,
+    accWrites[0]?.workout?.exercises?.length);
+
+  // Strength never stacks onto an occupied day (yet).
+  const stack = applyPlanChange({
+    change: { kind: 'add_category', date: MON, category: 'strength_upper' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: () => { throw new Error('must not write'); },
+  });
+  ok('[14] strength stack refused', !stack.ok, stack);
 }
 
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);
