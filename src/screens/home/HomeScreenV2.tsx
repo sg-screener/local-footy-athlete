@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
+import { PlanChangeSheet } from './PlanChangeSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
@@ -120,6 +121,9 @@ export default function HomeScreenV2() {
   const todayDay = todayIdx >= 0 ? weekDays[todayIdx] : null;
   const showHero = isNormal && isThisWeek && !!todayDay;
 
+  // ── Tap-first plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md group 1) ──
+  const [changeSheetDate, setChangeSheetDate] = useState<string | null>(null);
+
   // Days to render in the list: skip today when the hero is showing,
   // otherwise render the full week.
   const listDays = showHero
@@ -221,6 +225,7 @@ export default function HomeScreenV2() {
             day={todayDay}
             staleWarning={staleByDate[todayDay.date]}
             onOpenSheet={() => handleDayTap(todayIdx)}
+            onMakeChange={() => todayDay && setChangeSheetDate(todayDay.date)}
             onViewWorkout={() => handleViewWorkout(todayDay)}
             onFinishTeam={() => handleFinishTeamSession(todayDay)}
             onReviewStale={handleQuickAction}
@@ -256,6 +261,7 @@ export default function HomeScreenV2() {
                 onPress={() => handleDayTap(idx)}
                 onViewWorkout={() => handleViewWorkout(day)}
                 onFinishTeam={() => handleFinishTeamSession(day)}
+                onMakeChange={() => setChangeSheetDate(day.date)}
                 staleWarning={staleByDate[day.date]}
                 onReviewStale={handleQuickAction}
                 normal={isNormal}
@@ -346,6 +352,14 @@ export default function HomeScreenV2() {
       </ScrollView>
 
       {/* ── Sheets ── */}
+      <PlanChangeSheet
+        visible={changeSheetDate !== null}
+        date={changeSheetDate}
+        weekDays={weekDays}
+        onClose={() => setChangeSheetDate(null)}
+        onAskCoach={handleQuickAction}
+      />
+
       <GameDaySheet
         visible={gameModalVisible}
         onClose={closeGameModal}
@@ -397,6 +411,7 @@ interface TodayHeroProps {
   onOpenSheet: () => void;
   onViewWorkout: () => void;
   onFinishTeam: () => void;
+  onMakeChange: () => void;
   onReviewStale: (prefill: string) => void;
 }
 /**
@@ -413,7 +428,7 @@ interface TodayHeroProps {
  *  - Rest day            → muted title + "Recover & recharge", no CTA.
  */
 function TodayHero({
-  day, staleWarning, onOpenSheet, onViewWorkout, onFinishTeam, onReviewStale,
+  day, staleWarning, onOpenSheet, onViewWorkout, onFinishTeam, onMakeChange, onReviewStale,
 }: TodayHeroProps) {
   const hasWorkout = !!day.workout;
   const isGame = day.workout?.workoutType === 'Game';
@@ -547,6 +562,19 @@ function TodayHero({
               <Text style={styles.heroCtaHint}>Ready when you are</Text>
             </View>
           )}
+
+          {/* Tap-first change door — every non-game day, including rest. */}
+          {!isGame && (
+            <Pressable
+              onPress={onMakeChange}
+              style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
+              testID="hero-make-change-link"
+            >
+              <Text style={styles.makeChangeText}>
+                {hasWorkout ? 'Want to change something?' : 'Add a session?'}
+              </Text>
+            </Pressable>
+          )}
         </View>
       </Card>
     </View>
@@ -584,6 +612,7 @@ interface DayRowProps {
   onPress: () => void;
   onViewWorkout: () => void;
   onFinishTeam: () => void;
+  onMakeChange: () => void;
   staleWarning: any;
   onReviewStale: (prefill: string) => void;
 }
@@ -598,7 +627,7 @@ interface DayRowProps {
 function DayRow({
   day, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
-  staleWarning, onReviewStale,
+  onMakeChange, staleWarning, onReviewStale,
 }: DayRowProps) {
   const rowTone = isSelected && normal ? 'accent' : 'default';
   const parsed = hasWorkout ? splitSessionName(day.workout.name) : null;
@@ -717,6 +746,13 @@ function DayRow({
               <Button label="View Workout" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
             </>
           )}
+          <Pressable
+            onPress={onMakeChange}
+            style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
+            testID="make-change-link"
+          >
+            <Text style={styles.makeChangeText}>Want to change something?</Text>
+          </Pressable>
         </View>
       )}
 
@@ -732,6 +768,13 @@ function DayRow({
       {isSelected && !hasWorkout && normal && (
         <View style={styles.expanded}>
           <Text style={styles.expandedMeta}>Recover & recharge</Text>
+          <Pressable
+            onPress={onMakeChange}
+            style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
+            testID="add-session-link"
+          >
+            <Text style={styles.makeChangeText}>Add a session?</Text>
+          </Pressable>
         </View>
       )}
       </View>
@@ -1338,6 +1381,10 @@ const styles = StyleSheet.create({
 
   expanded: { marginTop: spacing.md, gap: spacing.sm },
   expandedMeta: { color: '#888888', fontSize: 13 },
+
+  // Tap-first change door (PlanChangeSheet trigger)
+  makeChangeLink: { paddingVertical: spacing.xs, alignSelf: 'flex-start' },
+  makeChangeText: { color: '#C8FF00', fontSize: 13, fontWeight: '600' },
 
   // Sections — larger rhythm between top-level blocks.
   section: { paddingTop: spacing.xxl, gap: spacing.md },

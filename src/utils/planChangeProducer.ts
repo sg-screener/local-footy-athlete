@@ -249,7 +249,7 @@ export interface PlanChangeApplyResult {
   ok: boolean;
   message: string;
   appliedDates: string[];
-  rejected: Array<{ date: string; issues: unknown }>;
+  rejected: Array<{ date: string | null; code: string; reason: string }>;
 }
 
 export function applyPlanChange(args: {
@@ -291,8 +291,9 @@ export function applyPlanChange(args: {
       message: "I couldn't safely make that change, so the plan is untouched.",
       appliedDates: apply.applied.map((write) => write.date),
       rejected: apply.rejected.map((entry) => ({
-        date: entry.date,
-        issues: entry.issues,
+        date: entry.date ?? null,
+        code: entry.code,
+        reason: entry.reason,
       })),
     };
   }

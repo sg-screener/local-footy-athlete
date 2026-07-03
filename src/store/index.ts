@@ -3,32 +3,29 @@
  * Central export point for all application state stores
  */
 
-export { useAuthStore } from './authStore';
-export type { } from './authStore';
-
-export { useProfileStore } from './profileStore';
-export type { } from './profileStore';
-
-export { useProgramStore } from './programStore';
-export type { } from './programStore';
-
-export { useWorkoutLogStore } from './workoutLogStore';
-export type { } from './workoutLogStore';
-
-export { useCoachStore } from './coachStore';
-export type { } from './coachStore';
-
-export { useUIStore } from './uiStore';
-export type { } from './uiStore';
+// Import-then-re-export (NOT bare `export ... from`) because clearAllStores
+// below needs local bindings — re-exports alone don't create them, which
+// made clearAllStores a latent compile/runtime error.
+import { useAuthStore } from './authStore';
+import { useProfileStore } from './profileStore';
+import { useProgramStore } from './programStore';
+import { useWorkoutLogStore } from './workoutLogStore';
+import { useCoachStore } from './coachStore';
+import { useUIStore } from './uiStore';
+import { useAthletePreferencesStore, getAthletePrefs } from './athletePreferencesStore';
+import { useReadinessStore } from './readinessStore';
 
 export {
+  useAuthStore,
+  useProfileStore,
+  useProgramStore,
+  useWorkoutLogStore,
+  useCoachStore,
+  useUIStore,
   useAthletePreferencesStore,
   getAthletePrefs,
-} from './athletePreferencesStore';
-export type { } from './athletePreferencesStore';
-
-export { useReadinessStore } from './readinessStore';
-export type { } from './readinessStore';
+  useReadinessStore,
+};
 
 /**
  * Helper function to clear all stores (for logout)
