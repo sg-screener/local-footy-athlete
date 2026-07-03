@@ -31,6 +31,7 @@ type Step =
   | { kind: 'menu' }
   | { kind: 'pick_template'; mode: 'swap' | 'add' }
   | { kind: 'pick_destination' }
+  | { kind: 'confirm_remove' }
   | { kind: 'result'; ok: boolean; message: string };
 
 interface PlanChangeSheetProps {
@@ -64,7 +65,7 @@ export function PlanChangeSheet({
 
   if (!date) return null;
 
-  const apply = (change: PlanChange) => {
+  const apply = (change: PlanChange, opts?: { closeOnSuccess?: boolean }) => {
     const result = applyPlanChange({
       change,
       visibleWeek: weekDays,
@@ -72,6 +73,14 @@ export function PlanChangeSheet({
       setManualOverride: (overrideDate, workout, context) =>
         useProgramStore.getState().setManualOverride(overrideDate, workout, context),
     });
+    if (result.ok && opts?.closeOnSuccess) {
+      // Destructive flows (bin) skip the result screen: the change is
+      // already confirmed, so close straight back to the weekly plan.
+      // The host's onClose handles any needed navigation (e.g. the
+      // session screen goBacks when its workout no longer exists).
+      onClose();
+      return;
+    }
     setStep({ kind: 'result', ok: result.ok, message: result.message });
   };
 
@@ -116,7 +125,7 @@ export function PlanChangeSheet({
                 label="Bin this session"
                 sub="Remove it — the day becomes rest"
                 danger
-                onPress={() => apply({ kind: 'remove_session', date })}
+                onPress={() => setStep({ kind: 'confirm_remove' })}
               />
             </>
           ) : (
@@ -172,6 +181,25 @@ export function PlanChangeSheet({
         </View>
       )}
 
+      {step.kind === 'confirm_remove' && (
+        <View>
+          <Text style={styles.confirmText}>
+            Are you sure? This session will be removed and the day becomes
+            rest.
+          </Text>
+          <MenuOption
+            label="Yes, bin it"
+            danger
+            onPress={() =>
+              apply({ kind: 'remove_session', date }, { closeOnSuccess: true })}
+          />
+          <MenuOption
+            label="No, keep it"
+            onPress={() => setStep({ kind: 'menu' })}
+          />
+        </View>
+      )}
+
       {step.kind === 'result' && (
         <View>
           <Text style={step.ok ? styles.resultOk : styles.resultBad}>
@@ -222,6 +250,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: 'uppercase',
     color: 'rgba(255,255,255,0.5)',
+    marginBottom: 8,
+  },
+  confirmText: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    lineHeight: 20,
     marginBottom: 8,
   },
   lockedText: {
