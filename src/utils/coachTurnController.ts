@@ -112,6 +112,7 @@ import {
   listCoachRevisionTemplates,
   visibleDayLooksLikeGame,
 } from './coachRevisionTemplates';
+import { coachRevisionValidationPolicyForWeek } from './coachRevisionPolicy';
 import {
   buildSemanticCoachRevisionProposal,
   type CoachRevisionProposalMode,
@@ -1648,50 +1649,9 @@ async function buildCoachRevisionProposalForPendingResume(args: {
   });
 }
 
-function coachRevisionValidationPolicyForWeek(
-  visibleWeek: ReturnType<typeof buildCoachContextPacket>['currentWeek'],
-  todayISO: string,
-) {
-  const signatureFor = (templateId: string): string | null => {
-    const section = buildCoachRevisionTemplateSection(templateId, todayISO);
-    return section ? coachRevisionSectionBodySignature(section) : null;
-  };
-  const standard: string[] = [];
-  const byeOnly: string[] = [];
-  for (const template of listCoachRevisionTemplates()) {
-    const signature = signatureFor(template.templateId);
-    if (!signature) continue;
-    (template.byeOnly ? byeOnly : standard).push(signature);
-  }
-  return {
-    allowedChangedDates: visibleWeek.map((day) => day.date),
-    // Free-form section adds stay forbidden; the ONLY addable content is the
-    // app template registry, matched byte-exactly by body signature.
-    allowedAddedSectionKinds: [] as never[],
-    allowedTemplateSectionSignatures: standard,
-    byeOnlyTemplateSectionSignatures: byeOnly,
-    byeUnlockedDates: byeUnlockedDatesForWeek(visibleWeek),
-  };
-}
-
-/** Dates belonging to visible weeks that contain NO game day. Coaching
- *  policy: bye weeks unlock the work-capacity templates. */
-function byeUnlockedDatesForWeek(
-  visibleWeek: ReturnType<typeof buildCoachContextPacket>['currentWeek'],
-): string[] {
-  const weekHasGame = new Map<string, boolean>();
-  for (const day of visibleWeek) {
-    const monday = getMondayForDate(day.date);
-    const snapshotDay = snapshotProjectedDay(day);
-    weekHasGame.set(
-      monday,
-      (weekHasGame.get(monday) ?? false) || visibleDayLooksLikeGame(snapshotDay),
-    );
-  }
-  return visibleWeek
-    .filter((day) => !weekHasGame.get(getMondayForDate(day.date)))
-    .map((day) => day.date);
-}
+// Revision policy (allowed dates, template signatures, bye unlock) is owned
+// by coachRevisionPolicy.ts and SHARED with the tap-first plan-change sheet.
+// Do not re-introduce a private copy here.
 
 function visibleDaysForCoachRevisionProposal(args: {
   packet: ReturnType<typeof buildCoachContextPacket>;
