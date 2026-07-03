@@ -818,6 +818,52 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[14] strength stack refused', !stack.ok, stack);
 }
 
+{
+  console.log('\n[15] shutdown_week (bed-ridden): clears today onward, games untouched');
+  const week = bothWeeks();
+
+  // Current week (TODAY = Wed): MON is history, THU is the only future
+  // session → exactly one write, and it becomes rest.
+  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const result = applyPlanChange({
+    change: { kind: 'shutdown_week', date: TODAY },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => writes.push({ date, workout }),
+  });
+  ok('[15] shutdown applies', result.ok, result);
+  eq('[15] only the future session cleared', writes.map((w) => w.date), [THU]);
+  eq('[15] cleared day becomes rest', writes[0]?.workout?.workoutType, 'Rest');
+  ok('[15] message says rest up', /rest up/i.test(result.message), result.message);
+
+  // Next week (game week): Upper Pull cleared, the GAME survives.
+  const gameWeekWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const gameWeekResult = applyPlanChange({
+    change: { kind: 'shutdown_week', date: '2026-07-06' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => gameWeekWrites.push({ date, workout }),
+  });
+  ok('[15] next-week shutdown applies', gameWeekResult.ok, gameWeekResult);
+  eq('[15] only the training session cleared', gameWeekWrites.map((w) => w.date), ['2026-07-07']);
+  ok('[15] game day untouched',
+    gameWeekWrites.every((w) => w.date !== NEXT_SAT), gameWeekWrites);
+
+  // Nothing to clear refuses cleanly.
+  const emptyWeek: ResolvedDay[] = [
+    visibleDay(TODAY, null),
+    visibleDay(THU, null),
+    visibleDay(SAT, null),
+  ];
+  const nothing = applyPlanChange({
+    change: { kind: 'shutdown_week', date: TODAY },
+    visibleWeek: emptyWeek,
+    todayISO: TODAY,
+    setManualOverride: () => { throw new Error('must not write'); },
+  });
+  ok('[15] nothing to clear refuses', !nothing.ok, nothing);
+}
+
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.log(failures.join('\n'));

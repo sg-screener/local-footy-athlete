@@ -44,6 +44,10 @@ type Step =
   | { kind: 'pick_destination' }
   | { kind: 'pick_bin_scope' }
   | { kind: 'confirm_remove'; scope: PlanChangeBinScopeId; label: string }
+  | { kind: 'pick_wellbeing' }
+  | { kind: 'pick_tired' }
+  | { kind: 'pick_sick' }
+  | { kind: 'confirm_shutdown' }
   | { kind: 'result'; ok: boolean; message: string };
 
 interface PlanChangeSheetProps {
@@ -135,6 +139,50 @@ export function PlanChangeSheet({
     onAskCoach(`About ${weekdayLabel(date)}: `);
   };
 
+  // "I'm not 100%" — severity taps. Clear ends apply deterministically
+  // (readiness signal / recovery swap / week shutdown through the same
+  // validated pipeline); injuries and murky middles open the coach
+  // PRE-LOADED with what was tapped so it never re-asks.
+  const askCoachWith = (prefill: string) => {
+    onClose();
+    onAskCoach(prefill);
+  };
+
+  const applyTired = (severity: 'spark' | 'cooked') => {
+    // Readiness signal for TODAY (being tired is about now, not the day
+    // being viewed) — the resolver's existing readiness constraints ease
+    // the plan off; nothing is deleted, so it bounces back tomorrow.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useReadinessStore } = require('../../store/readinessStore');
+    useReadinessStore.getState().setReadinessSignal(todayISO, {
+      energy: 'low',
+      flatToday: severity === 'cooked',
+      source: 'quick_check',
+    });
+    setStep({
+      kind: 'result',
+      ok: true,
+      message:
+        severity === 'cooked'
+          ? "Heard. Today eases right off — recovery-level only. Add sessions back when you're breathing fire again, or grab a light flush from Add a session."
+          : "Noted. Today backs off the hard stuff where it can. Shout if it gets worse.",
+    });
+  };
+
+  const applySniffle = () => {
+    // Light sniffle: today's session softens to the recovery flow. On a
+    // rest day there's nothing to soften.
+    if (!options?.hasSession) {
+      setStep({
+        kind: 'result',
+        ok: true,
+        message: "It's already an easy day — perfect. Fluids, food, sleep.",
+      });
+      return;
+    }
+    apply({ kind: 'swap_category', date, category: 'recovery' });
+  };
+
   return (
     <Sheet visible={visible} onClose={onClose} testID="plan-change-sheet">
       <Text style={styles.title}>{weekdayLabel(date)}</Text>
@@ -191,9 +239,99 @@ export function PlanChangeSheet({
             />
           )}
           <MenuOption
+            label="I'm not 100%"
+            sub="Tired, sick or injured — tell the coach"
+            onPress={() => setStep({ kind: 'pick_wellbeing' })}
+          />
+          <MenuOption
             label="Something else — ask the coach"
-            sub="Injury, fatigue, or anything the menu doesn't cover"
+            sub="Anything the menu doesn't cover"
             onPress={askCoach}
+          />
+        </View>
+      )}
+
+      {/* "I'm not 100%" level 1: what's going on. */}
+      {step.kind === 'pick_wellbeing' && (
+        <View>
+          <Text style={styles.sectionLabel}>What's going on?</Text>
+          <MenuOption
+            label="I'm tired"
+            sub="Flat, heavy legs, low battery"
+            onPress={() => setStep({ kind: 'pick_tired' })}
+          />
+          <MenuOption
+            label="I'm sick"
+            sub="From light sniffle to bed-ridden"
+            onPress={() => setStep({ kind: 'pick_sick' })}
+          />
+          <MenuOption
+            label="I'm injured"
+            sub="Tell the coach what and where — the plan adapts around it"
+            onPress={() => askCoachWith("I'm injured — ")}
+          />
+          <BackRow onPress={() => setStep({ kind: 'menu' })} />
+        </View>
+      )}
+
+      {/* Tired severity: clear ends are deterministic (readiness signal). */}
+      {step.kind === 'pick_tired' && (
+        <View>
+          <Text style={styles.sectionLabel}>How tired?</Text>
+          <MenuOption
+            label="Lacking a bit of spark"
+            sub="Today backs off the hard stuff where it can"
+            onPress={() => applyTired('spark')}
+          />
+          <MenuOption
+            label="Absolutely cooked"
+            sub="Today drops to recovery level"
+            onPress={() => applyTired('cooked')}
+          />
+          <BackRow onPress={() => setStep({ kind: 'pick_wellbeing' })} />
+        </View>
+      )}
+
+      {/* Sick severity: sniffle softens today, bed-ridden clears the week,
+          the middle talks to the coach with context pre-loaded. */}
+      {step.kind === 'pick_sick' && (
+        <View>
+          <Text style={styles.sectionLabel}>How sick?</Text>
+          <MenuOption
+            label="Light sniffle"
+            sub="Today softens to a recovery flow"
+            onPress={applySniffle}
+          />
+          <MenuOption
+            label="Pretty rough"
+            sub="Coach adjusts your week with you"
+            onPress={() => askCoachWith("I'm sick — pretty rough. Can you adjust my week? ")}
+          />
+          <MenuOption
+            label="Bed-ridden"
+            sub="Clears the rest of this week"
+            danger
+            onPress={() => setStep({ kind: 'confirm_shutdown' })}
+          />
+          <BackRow onPress={() => setStep({ kind: 'pick_wellbeing' })} />
+        </View>
+      )}
+
+      {step.kind === 'confirm_shutdown' && (
+        <View>
+          <Text style={styles.confirmText}>
+            Are you sure? Every remaining session this week becomes rest
+            (game day is left alone). You can add sessions back the moment
+            you're better.
+          </Text>
+          <MenuOption
+            label="Yes — clear my week"
+            danger
+            onPress={() => apply({ kind: 'shutdown_week', date })}
+          />
+          <MenuOption
+            label="No, keep the plan"
+            onPress={() => setStep({ kind: 'pick_sick' })}
           />
         </View>
       )}

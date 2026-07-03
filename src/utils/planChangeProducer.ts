@@ -155,7 +155,11 @@ export type PlanChange =
   | { kind: 'add_template'; date: string; templateId: string }
   | { kind: 'swap_category'; date: string; category: PlanChangeCategoryId }
   | { kind: 'add_category'; date: string; category: PlanChangeCategoryId }
-  | { kind: 'move_session'; fromDate: string; toDate: string };
+  | { kind: 'move_session'; fromDate: string; toDate: string }
+  /** "I'm not 100%" bed-ridden path: clear every remaining session in the
+   *  date's week (today onward, games untouched). One atomic proposal
+   *  through the same validate → apply pipeline. */
+  | { kind: 'shutdown_week'; date: string };
 
 export interface PlanChangeMoveDestination {
   date: string;
@@ -454,7 +458,7 @@ function templateWorkoutSnapshot(
 
 export function buildPlanChangeProposal(
   change: PlanChange,
-  ctx: { visibleWeek: ResolvedDay[] },
+  ctx: { visibleWeek: ResolvedDay[]; todayISO?: string },
 ): CoachRevisionProposal | { error: string } {
   const daySnap = (date: string): CoachVisibleDaySnapshot | null => {
     const day = ctx.visibleWeek.find((d) => d.date === date);
@@ -642,6 +646,27 @@ export function buildPlanChangeProposal(
         explanation: `Sheet: add ${workout.title}`,
       });
     }
+    case 'shutdown_week': {
+      // Bed-ridden: everything from today to the end of the date's week
+      // becomes rest. Games are left alone (their own flow owns them),
+      // past days are history, rest days need nothing.
+      const monday = getMondayForDate(change.date);
+      const cutoff = ctx.todayISO ?? change.date;
+      const toClear = ctx.visibleWeek.filter((day) => {
+        if (getMondayForDate(day.date) !== monday) return false;
+        if (day.date < cutoff) return false;
+        const snap = snapshotProjectedDay(day);
+        return snap.workout !== null && !visibleDayLooksLikeGame(snap);
+      });
+      if (toClear.length === 0) return { error: 'nothing_to_clear' };
+      return revision({
+        intent: 'remove',
+        targetDomain: 'session',
+        dates: toClear.map((day) => day.date),
+        revisedDays: toClear.map((day) => ({ date: day.date, workout: null })),
+        explanation: 'Sheet: sick — clear the rest of the week',
+      });
+    }
     case 'move_session': {
       const source = daySnap(change.fromDate);
       const destination = daySnap(change.toDate);
@@ -689,6 +714,7 @@ export function applyPlanChange(args: {
 }): PlanChangeApplyResult {
   const proposal = buildPlanChangeProposal(args.change, {
     visibleWeek: args.visibleWeek,
+    todayISO: args.todayISO,
   });
   if ('error' in proposal) {
     return {
@@ -774,6 +800,8 @@ function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): 
       return `Done. ${pickedTitle ?? 'New session'} added on ${change.date}.`;
     case 'move_session':
       return `Done. Session moved to ${change.toDate}.`;
+    case 'shutdown_week':
+      return 'Done. The rest of this week is cleared — rest up, and add sessions back when you\'re better.';
   }
 }
 
