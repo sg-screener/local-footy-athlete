@@ -36,17 +36,16 @@ import {
 } from './homeScreenConstants';
 
 /**
- * HomeScreenV2 — "Today-first" redesign.
+ * HomeScreenV2 — one week, one list.
  *
  * ## Hierarchy
- * Today is the hero: a large elevated card at the top of the scroll with
- * the primary CTA. The remaining days appear below as a condensed,
- * scannable week list. The eye lands on "what do I do right now" first,
- * then context-switches to "how does the rest of the week look".
- *
- * When the athlete browses a different week (past/future), or is in a
- * picker mode (move-game / add-game), the hero collapses and we fall back
- * to a uniform list — picker interactions need visual parity across days.
+ * All seven days render as a single scannable list. The SELECTED day is
+ * the emphasis carrier: slightly bigger type, roomier padding, accent
+ * surface, and the expanded CTA block (Start Session / change door).
+ * Selection defaults to today (useHomeScreen), so on open the athlete
+ * sees today gently lifted out of the week; tapping any other day moves
+ * the emphasis there. No hero card — "what do I do now" and "how does my
+ * week look" are the same view.
  *
  * ## Logic parity
  * All state and handler orchestration lives in `useHomeScreen`, which
@@ -55,11 +54,11 @@ import {
  * outcomes — only the rendering differs.
  *
  * ## Visual language
- * Premium, focused, high-end. The hero earns its dominance through scale
- * and whitespace — not borders or glow. The week list below recedes into
- * a structured timeline, not a grid of outlined buttons. Glow is reserved
- * for completion / success moments elsewhere in the app; the home screen
- * is a "ready to start" posture, not a "you just finished" posture.
+ * Premium, focused, high-end. The selected row earns its dominance
+ * through scale and surface — not borders or glow. Non-selected rows
+ * recede into a structured timeline, not a grid of outlined buttons.
+ * Glow is reserved for completion / success moments elsewhere in the
+ * app; the home screen is a "ready to start" posture.
  *
  * ## Micro-interactions
  * Card/Button primitives handle press-scale (0.98) + opacity (0.75) via
@@ -118,18 +117,9 @@ export default function HomeScreenV2() {
   } = useHomeScreen();
 
   const isNormal = mode.type === 'normal';
-  const todayIdx = weekDays.findIndex((d) => d.isToday);
-  const todayDay = todayIdx >= 0 ? weekDays[todayIdx] : null;
-  const showHero = isNormal && isThisWeek && !!todayDay;
 
   // ── Tap-first plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md group 1) ──
   const [changeSheetDate, setChangeSheetDate] = useState<string | null>(null);
-
-  // Days to render in the list: skip today when the hero is showing,
-  // otherwise render the full week.
-  const listDays = showHero
-    ? weekDays.filter((_, idx) => idx !== todayIdx)
-    : weekDays;
 
   // Smoke harness no longer renders any controls in HomeScreen. The
   // coach-bike-flow regression now opens Wednesday's DayWorkout directly
@@ -220,28 +210,9 @@ export default function HomeScreenV2() {
           <MoveBanner text="Tap the day to set as game day" onCancel={handleCancelMove} />
         )}
 
-        {/* ── Today hero ── */}
-        {showHero && todayDay && (
-          <TodayHero
-            day={todayDay}
-            staleWarning={staleByDate[todayDay.date]}
-            onOpenSheet={() => handleDayTap(todayIdx)}
-            onMakeChange={() => todayDay && setChangeSheetDate(todayDay.date)}
-            onViewWorkout={() => handleViewWorkout(todayDay)}
-            onFinishTeam={() => handleFinishTeamSession(todayDay)}
-            onReviewStale={handleQuickAction}
-          />
-        )}
-
-        {/* ── Week list ── */}
-        {showHero && listDays.length > 0 && (
-          <View style={styles.listHeader}>
-            <SectionLabel>Rest of your week</SectionLabel>
-          </View>
-        )}
+        {/* ── Week list — all seven days, selected day carries the emphasis ── */}
         <View style={styles.dayList}>
-          {listDays.map((day) => {
-            const idx = weekDays.indexOf(day);
+          {weekDays.map((day, idx) => {
             const isSelected = idx === selectedIdx;
             const hasWorkout = !!day.workout;
             const isGame = day.workout?.workoutType === 'Game';
@@ -406,197 +377,6 @@ export default function HomeScreenV2() {
 
 // ───────── Sub-components ─────────
 
-interface TodayHeroProps {
-  day: any;
-  staleWarning: any;
-  onOpenSheet: () => void;
-  onViewWorkout: () => void;
-  onFinishTeam: () => void;
-  onMakeChange: () => void;
-  onReviewStale: (prefill: string) => void;
-}
-/**
- * The hero card — a "this is what you do right now" statement at the top
- * of the scroll. Three behavioural branches:
- *
- *  - Regular workout     → big title + context + primary "View Workout" CTA.
- *  - Team-training only  → title "Team Training" + "Log Session" CTA.
- *                          Team sessions are completed externally with the
- *                          club — the in-app action is logging the session
- *                          afterwards, not finishing a tracked workout.
- *  - Game day            → card itself is pressable → opens GameDaySheet;
- *                          no inline CTA (sheet handles the 3 options).
- *  - Rest day            → muted title + "Recover & recharge", no CTA.
- */
-function TodayHero({
-  day, staleWarning, onOpenSheet, onViewWorkout, onFinishTeam, onMakeChange, onReviewStale,
-}: TodayHeroProps) {
-  const hasWorkout = !!day.workout;
-  const isGame = day.workout?.workoutType === 'Game';
-  const isTeamOnly = hasWorkout && day.workout.name === 'Team Training';
-  const parsed = hasWorkout ? splitSessionName(day.workout.name) : null;
-  const title = parsed?.title ?? null;
-  const context = suppressDuplicateWorkoutContext(title, parsed?.context);
-  const conditioningContext = suppressDuplicateWorkoutContext(
-    title,
-    hasWorkout ? getConditioningContextLabel(day.workout) : null,
-  );
-  const visibleCountLabel = hasWorkout ? visibleWorkoutItemCountLabel(day.workout) : null;
-
-  // Game days delegate tap to the sheet; everything else uses the CTA buttons,
-  // so the card wrapper is non-interactive to avoid double-press confusion.
-  const cardOnPress = isGame ? onOpenSheet : undefined;
-
-  return (
-    <View style={styles.heroWrap}>
-      <Card
-        tone="default"
-        radius="xl"
-        padding="none"
-        onPress={cardOnPress}
-        style={styles.heroCard}
-      >
-        <View style={styles.heroInner}>
-          {staleWarning && (
-            <View style={styles.heroStale}>
-              <StaleOverrideBanner
-                warning={staleWarning}
-                onReview={(prefill) => onReviewStale(prefill)}
-              />
-            </View>
-          )}
-
-          {/*
-           * Small, muted eyebrow — "TODAY" is a quiet label, not a signal.
-           * The title below is the signal.
-           *
-           * The RECOVERY tier chip is intentionally suppressed in the hero:
-           * the session title ("Recovery Session") already carries that
-           * meaning, and the chip only adds visual noise. CORE / OPTIONAL
-           * tiers still show because their titles don't encode the tier.
-           */}
-          <View style={styles.heroEyebrowRow}>
-            <Text style={styles.heroEyebrow}>
-              {eyebrowFor(hasWorkout, isGame, isTeamOnly, day.date)}
-            </Text>
-            {hasWorkout && !isGame && day.workout.sessionTier && day.workout.sessionTier !== 'recovery' ? (
-              <SessionTierBadge tier={day.workout.sessionTier} />
-            ) : isGame ? (
-              <Badge label="Game" tone="outline" />
-            ) : null}
-          </View>
-
-          {/* Session title is the focal point of the whole screen. */}
-          <Text style={styles.heroTitle} numberOfLines={2}>
-            {hasWorkout ? title : 'Rest Day'}
-          </Text>
-
-          {hasWorkout && context ? (
-            <Text style={styles.heroContext}>{context}</Text>
-          ) : conditioningContext ? (
-            <Text style={styles.heroContextAccent}>+ {conditioningContext}</Text>
-          ) : null}
-
-          {/* Coach-attribution chip — ONE concise line summarising any
-              engine adjustments on today's session. The full per-exercise
-              detail lives on the workout detail screen, not here.
-              App-store-friendly: no audit log on the hero. */}
-          {hasWorkout && (() => {
-            const summary = getCoachNoteDisplay(day.workout.coachNotes, {
-              workoutName: day.workout.name,
-              workoutType: day.workout.workoutType,
-            });
-            if (!summary.summaryLine) return null;
-            return (
-              <Text
-                style={styles.heroCoachNoteText}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-                testID="hero-coach-summary"
-              >
-                {summary.summaryLine}
-              </Text>
-            );
-          })()}
-
-          {/*
-           * Recovery session subtext — one quiet line that explains the
-           * intent of the day. The title ("Recovery Session") is deliberate
-           * about the category; this line tells the athlete what it feels
-           * like to do it. No chip, no accent — just context.
-           */}
-          {hasWorkout && !isGame && day.workout.sessionTier === 'recovery' && (
-            <Text style={styles.heroRecoveryBody}>Low intensity · restore & reset</Text>
-          )}
-
-          {/* Exercise count — readable metadata now, not buried. Still
-              a whisper compared to the title, but legible at a glance. */}
-          {hasWorkout && !isGame && !isTeamOnly && visibleCountLabel && (
-            <Text style={styles.heroMeta}>{visibleCountLabel}</Text>
-          )}
-
-          {isTeamOnly && !isGame && (
-            <Text style={styles.heroBodyMuted}>All together tonight.</Text>
-          )}
-          {/*
-           * Rest-day body — reframed from "Recover & recharge." (neutral
-           * filler) to a line that respects the athlete's investment: recovery
-           * is when adaptation actually happens.
-           */}
-          {!hasWorkout && (
-            <Text style={styles.heroBodyMuted}>Recovery is where adaptation happens.</Text>
-          )}
-          {isGame && (
-            <Text style={styles.heroBodyMuted}>Tap for game-day options.</Text>
-          )}
-
-          {/* Primary CTA — workout days only. `glow={false}` keeps the
-              button's presence confident without the flashy lime halo; the
-              screen earns its hierarchy through scale and space, not light. */}
-          {hasWorkout && !isGame && (
-            <View style={styles.heroCtaRow}>
-              {isTeamOnly ? (
-                <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
-              ) : (
-                <Button label="Start Session" size="lg" glow={false} onPress={onViewWorkout} />
-              )}
-              <Text style={styles.heroCtaHint}>Ready when you are</Text>
-            </View>
-          )}
-
-          {/* Tap-first change door — every non-game day, including rest. */}
-          {!isGame && (
-            <Pressable
-              onPress={onMakeChange}
-              style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
-              testID="hero-make-change-link"
-            >
-              <Text style={styles.makeChangeText}>
-                {hasWorkout ? 'Want to change something?' : 'Add a session?'}
-              </Text>
-            </Pressable>
-          )}
-        </View>
-      </Card>
-    </View>
-  );
-}
-
-function eyebrowFor(
-  hasWorkout: boolean,
-  isGame: boolean,
-  isTeamOnly: boolean,
-  dateISO?: string,
-): string {
-  // Actual calendar date rides along in the eyebrow ("TODAY · 3/7") so the
-  // hero matches the dated day rows below it.
-  const dateBit = dateISO ? ` · ${shortDayMonthLabel(dateISO)}` : '';
-  if (isGame) return `TODAY${dateBit} · GAME`;
-  if (!hasWorkout) return `TODAY${dateBit} · REST`;
-  if (isTeamOnly) return `TODAY${dateBit} · TEAM`;
-  return `TODAY${dateBit}`;
-}
-
 interface MoveBannerProps { text: string; onCancel: () => void; }
 function MoveBanner({ text, onCancel }: MoveBannerProps) {
   return (
@@ -626,19 +406,21 @@ interface DayRowProps {
   onReviewStale: (prefill: string) => void;
 }
 /**
- * Condensed day row — used for every day *other than today* when the
- * hero is active, and for all 7 days when browsing another week or in
- * picker mode.
+ * Day row — one of seven identical rows in the week list.
  *
- * Selection → expands with the same CTA/stale/meta surface as Classic,
- * preserving the tap-to-select contract.
+ * The SELECTED row (default: today, via useHomeScreen) is the screen's
+ * emphasis carrier: slightly bigger weekday + title type, roomier
+ * padding, accent surface, and the expanded CTA block (Start Session /
+ * change door). Tapping another day moves the emphasis there —
+ * selection IS the hierarchy, so no separate hero card exists.
  */
 function DayRow({
   day, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
   onMakeChange, staleWarning, onReviewStale,
 }: DayRowProps) {
-  const rowTone = isSelected && normal ? 'accent' : 'default';
+  const emphasized = isSelected && normal;
+  const rowTone = emphasized ? 'accent' : 'default';
   const parsed = hasWorkout ? splitSessionName(day.workout.name) : null;
   const title = parsed?.title ?? null;
   const ctx = suppressDuplicateWorkoutContext(title, parsed?.context);
@@ -668,20 +450,23 @@ function DayRow({
         day.isToday && !isSelected && normal && styles.dayRowToday,
       ]}
     >
-      <View style={styles.dayRowInner}>
+      <View style={[styles.dayRowInner, emphasized && styles.dayRowInnerSelected]}>
       <View style={styles.dayHeader}>
         <View style={styles.leftCluster}>
           <Text
             style={[
               styles.dayLabel,
-              (isSelected && normal) || day.isToday || isMoveTarget ? { color: '#C8FF00' } : null,
+              emphasized && styles.dayLabelSelected,
+              emphasized || day.isToday || isMoveTarget ? { color: '#C8FF00' } : null,
             ]}
           >
             {day.short}
           </Text>
           {/* Actual calendar date — quiet, one step dimmer than the
               weekday so "MON" stays the anchor and "3/7" is the detail. */}
-          <Text style={styles.dayDate}>{shortDayMonthLabel(day.date)}</Text>
+          <Text style={[styles.dayDate, emphasized && styles.dayDateSelected]}>
+            {shortDayMonthLabel(day.date)}
+          </Text>
           {day.isToday && <Badge label="Today" tone="accent" />}
           {isMoveSource
             ? <Badge label="Moving" tone="outline" />
@@ -699,8 +484,12 @@ function DayRow({
         ) : hasWorkout ? (
           <View style={styles.titleBlock}>
             <Text
-              style={[styles.workoutTitle, isMoveSource && { opacity: 0.4 }]}
-              numberOfLines={1}
+              style={[
+                styles.workoutTitle,
+                emphasized && styles.workoutTitleSelected,
+                isMoveSource && { opacity: 0.4 },
+              ]}
+              numberOfLines={emphasized ? 2 : 1}
               ellipsizeMode="tail"
             >
               {title}
@@ -714,7 +503,9 @@ function DayRow({
             ) : null}
           </View>
         ) : (
-          <Text style={styles.restLabel}>Rest</Text>
+          <Text style={[styles.restLabel, emphasized && styles.restLabelSelected]}>
+            Rest
+          </Text>
         )}
       </View>
 
@@ -755,7 +546,7 @@ function DayRow({
               <Text style={styles.expandedMeta}>
                 {visibleWorkoutItemCountLabel(day.workout) ?? '0 items'}
               </Text>
-              <Button label="View Workout" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
+              <Button label="Start Session" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
             </>
           )}
           <Pressable
@@ -779,7 +570,7 @@ function DayRow({
       )}
       {isSelected && !hasWorkout && normal && (
         <View style={styles.expanded}>
-          <Text style={styles.expandedMeta}>Recover & recharge</Text>
+          <Text style={styles.expandedMeta}>Recovery is where adaptation happens.</Text>
           <Pressable
             onPress={onMakeChange}
             style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
@@ -1174,7 +965,7 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.md, paddingBottom: spacing.xxl },
 
-  // Top bar (week nav) — generous bottom space so the hero below breathes.
+  // Top bar (week nav) — generous bottom space so the list below breathes.
   topBar: { marginBottom: spacing.xl },
   topBarRow: {
     flexDirection: 'row', alignItems: 'center',
@@ -1220,106 +1011,9 @@ const styles = StyleSheet.create({
   },
   addGameText: { color: '#B5B5B5', fontSize: 14, fontWeight: '500' },
 
-  // ─── Today hero ───
-  //
-  // The hero is the main event. Its dominance is earned through scale,
-  // space, and typography — not through a card backdrop. The container is
-  // transparent and borderless so the title reads as content on the
-  // screen, not content in a box. Extra margin above and below lifts it
-  // from the surrounding rhythm.
-  heroWrap: {
-    marginTop: spacing.sm,
-    marginBottom: spacing.xxl,
-  },
-  heroCard: {
-    // No backdrop: the hero is integrated into the screen. Matching the
-    // screen background removes the "boxed" feeling while keeping all the
-    // Card primitive's press/animation behaviour for game-day taps.
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    borderWidth: 0,
-  },
-  // Horizontal padding matches the day-row inner padding so hero content
-  // lines up vertically with list content. Vertical padding is content
-  // breathing room — not a card's internal inset.
-  heroInner: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
-  heroStale: { marginBottom: spacing.md },
-  heroEyebrowRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: spacing.md,
-  },
-  // "TODAY" — small, muted, tracked. A quiet label, not a signal.
-  heroEyebrow: {
-    color: '#6A6A6A', fontSize: 11, fontWeight: '700',
-    letterSpacing: 2.0,
-  },
-  // Title — the focal point of the whole screen. Dominant scale, tight
-  // leading, heavy weight. Sized down a couple of steps from its first
-  // pass so two-line titles ("Recovery Session") read as one compact
-  // block instead of slightly oversized; the leading drops with it.
-  heroTitle: {
-    color: '#FFFFFF', fontSize: 38, fontWeight: '800',
-    letterSpacing: -0.6, lineHeight: 41,
-  },
-  heroContext: {
-    color: '#8E8E8E', fontSize: 14, fontWeight: '500',
-    marginTop: spacing.sm,
-  },
-  // Conditioning flavour line — quieter accent so the title still wins.
-  heroContextAccent: {
-    color: '#C8FF00', fontSize: 14, fontWeight: '600',
-    marginTop: spacing.sm, opacity: 0.55,
-  },
-  // Exercise count — readable metadata. Pulled tighter to the subtext
-  // above so title → subtext → count read as one typeset block rather
-  // than three separate lines stacked with loose air between them.
-  heroMeta: {
-    color: '#8A8A8A', fontSize: 12, fontWeight: '500',
-    marginTop: 2, letterSpacing: 0.3,
-  },
-  // Recovery session subtext — muted neutral with a small opacity dial so
-  // it reads as supportive context, never competing with the title above.
-  heroRecoveryBody: {
-    color: '#8A8A8A', fontSize: 14, fontWeight: '500',
-    marginTop: spacing.sm, opacity: 0.85,
-  },
-  heroBodyMuted: {
-    color: '#8A8A8A', fontSize: 14, fontWeight: '500',
-    marginTop: spacing.sm,
-  },
-  // CTA gets a confident amount of top space — gives the button presence
-  // without needing light/shadow to claim it. A shade more than spacing.xl
-  // lets the button breathe away from the metadata block above.
-  heroCtaRow: {
-    marginTop: 40,
-  },
-  // Readiness hint below the CTA — tightened against the button so the
-  // two read as one unit. Slightly brighter than a muted grey gives the
-  // line clarity without competing with the CTA label.
-  heroCtaHint: {
-    color: '#8A8A8A', fontSize: 12, fontWeight: '500',
-    textAlign: 'center', marginTop: 4, letterSpacing: 0.3,
-  },
-
   // ─── Coach-authored note lists ───
-  // Lime accent matches the screen's existing accent vocabulary (the
-  // `+ Conditioning` hint, the lime CTA hint). Slightly muted opacity
-  // keeps the note from competing with the session title above it,
-  // while still flagging "this changed for a reason" at a glance.
-  // Single-line attribution chip on the Today hero. No bullet, no list —
-  // just the most useful restriction note when one exists.
-  heroCoachNoteText: {
-    color: '#C8FF00',
-    fontSize: 13,
-    fontWeight: '500',
-    opacity: 0.85,
-    lineHeight: 18,
-    marginTop: spacing.sm,
-  },
+  // Lime accent matches the screen's existing accent vocabulary. Slightly
+  // muted opacity keeps the note from competing with the session title.
   // Row attribution sits under the right-aligned workout title — one
   // line, capped, no bullets. The audit log (removed/replaced/focus)
   // is reserved for the workout detail screen.
@@ -1336,15 +1030,10 @@ const styles = StyleSheet.create({
   //
   // A structured weekly timeline, not a grid of outlined buttons. Rows
   // are flat, borderless, tighter vertically. Non-selected rows recede
-  // into a deeper grey; selection and move states pop because they carry
-  // the only accents in the sequence.
-  // Section label above the list — dimmed one step so it guides the eye
-  // without competing with the row content it's introducing.
-  listHeader: {
-    marginBottom: spacing.md,
-    opacity: 0.7,
-  },
-  dayList: { gap: 6 },
+  // into a deeper grey; the SELECTED row is the screen's emphasis
+  // carrier — slightly bigger type + roomier padding on top of the
+  // Card's accent surface. Selection IS the hierarchy (no hero card).
+  dayList: { gap: 6, marginTop: spacing.sm },
   dayRow: {},
   // Tighter vertical rhythm — pulls the list into a scannable weekly
   // timeline instead of a column of spaced buttons.
@@ -1352,11 +1041,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: 9,
   },
-  // Resting state — darker, borderless, quietly set back from the hero.
+  // Selected row breathes: extra vertical padding lets the bigger type
+  // and the expanded CTA block sit comfortably.
+  dayRowInnerSelected: {
+    paddingVertical: spacing.md,
+  },
+  // Resting state — darker, borderless, quietly set back from the page.
   dayRowResting: { backgroundColor: '#0F0F0F', borderColor: 'transparent' },
-  // Today row (only visible when the hero is collapsed — other weeks,
-  // picker modes). A half-step brighter than resting with a faint edge
-  // so "now" reads as structurally different without introducing colour.
+  // Today row when NOT selected (the athlete moved the emphasis to
+  // another day). A half-step brighter than resting with a faint edge so
+  // "now" stays findable without competing with the selected row.
   dayRowToday: { backgroundColor: '#141414', borderColor: '#1F1F1F' },
   dayRowMoveSource: { opacity: 0.5, borderColor: 'rgba(200, 255, 0, 0.30)' },
   dayRowMoveTarget: {
@@ -1369,16 +1063,28 @@ const styles = StyleSheet.create({
     color: '#5A5A5A', fontSize: 11, fontWeight: '800',
     letterSpacing: 1.6, minWidth: 32,
   },
+  // Selected weekday steps up a size — the "you are here" marker.
+  dayLabelSelected: {
+    fontSize: 13,
+  },
   // Calendar date beside the weekday — one step dimmer, lighter weight,
   // no tracking. "MON" is the anchor, "3/7" is the detail.
   dayDate: {
     color: '#4A4A4A', fontSize: 11, fontWeight: '600',
+  },
+  dayDateSelected: {
+    fontSize: 13, color: '#6A6A6A',
   },
   titleBlock: { flex: 1, alignItems: 'flex-end', minWidth: 0 },
   // Primary row text — nudged brighter so the session name is the clear
   // anchor of each row against the darker resting surface beneath it.
   workoutTitle: {
     color: '#F2F2F2', fontSize: 14, fontWeight: '600', textAlign: 'right',
+  },
+  // Selected session title — the biggest text in the list, but still a
+  // row, not a hero. White + heavier weight carry the emphasis.
+  workoutTitleSelected: {
+    color: '#FFFFFF', fontSize: 18, fontWeight: '700',
   },
   workoutContext: {
     color: '#7A7A7A', fontSize: 12, fontWeight: '500',
@@ -1390,6 +1096,9 @@ const styles = StyleSheet.create({
   },
   restLabel: {
     flex: 1, color: '#3E3E3E', fontSize: 13, fontWeight: '600', textAlign: 'right',
+  },
+  restLabelSelected: {
+    color: '#8A8A8A', fontSize: 18, fontWeight: '700',
   },
   moveTargetLabel: {
     flex: 1, color: 'rgba(200, 255, 0, 0.55)', fontSize: 14, fontWeight: '500',
