@@ -8,6 +8,7 @@ import type { ResolvedDay } from '../../utils/sessionResolver';
 import {
   applyPlanChange,
   listPlanChangeOptionsForDay,
+  planChangeWarningForCategory,
   type PlanChange,
   type PlanChangeCategoryId,
   type PlanChangeDayOptions,
@@ -32,6 +33,12 @@ type Step =
   | { kind: 'menu' }
   | { kind: 'pick_category'; mode: 'swap' | 'add' }
   | { kind: 'pick_conditioning'; mode: 'swap' | 'add' }
+  | {
+      kind: 'confirm_warning';
+      mode: 'swap' | 'add';
+      category: PlanChangeCategoryId;
+      message: string;
+    }
   | { kind: 'pick_destination' }
   | { kind: 'confirm_remove' }
   | { kind: 'result'; ok: boolean; message: string };
@@ -92,6 +99,22 @@ export function PlanChangeSheet({
         ? { kind: 'swap_category', date, category }
         : { kind: 'add_category', date, category },
     );
+
+  // Athlete override principle: nothing is blocked, but the coach gets a
+  // word in first. If the producer flags this pick (hard session on a game
+  // week / already a heavy week), route through a warning step.
+  const chooseCategory = (mode: 'swap' | 'add', category: PlanChangeCategoryId) => {
+    const warning = planChangeWarningForCategory({
+      category,
+      date,
+      visibleWeek: weekDays,
+    });
+    if (warning) {
+      setStep({ kind: 'confirm_warning', mode, category, message: warning.message });
+      return;
+    }
+    applyCategory(mode, category);
+  };
 
   const askCoach = () => {
     onClose();
@@ -172,7 +195,7 @@ export function PlanChangeSheet({
               key={c.id}
               label={c.label}
               sub={c.sub}
-              onPress={() => applyCategory(step.mode, c.id)}
+              onPress={() => chooseCategory(step.mode, c.id)}
             />
           ))}
           {step.mode === 'swap' && (
@@ -200,10 +223,25 @@ export function PlanChangeSheet({
                 key={c.id}
                 label={c.label}
                 sub={c.sub}
-                onPress={() => applyCategory(step.mode, c.id)}
+                onPress={() => chooseCategory(step.mode, c.id)}
               />
             ))}
           <BackRow onPress={() => setStep({ kind: 'pick_category', mode: step.mode })} />
+        </View>
+      )}
+
+      {/* Advisory warning — the athlete can always proceed; the coach just
+          gets a word in first (game-week freshness / burnout volume). */}
+      {step.kind === 'confirm_warning' && (
+        <View>
+          <Text style={styles.confirmText}>{step.message}</Text>
+          <MenuOption
+            label="Add it anyway — I'm good"
+            onPress={() => applyCategory(step.mode, step.category)}
+          />
+          <BackRow
+            onPress={() => setStep({ kind: 'pick_conditioning', mode: step.mode })}
+          />
         </View>
       )}
 

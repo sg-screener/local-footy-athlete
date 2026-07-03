@@ -25,6 +25,7 @@ import {
   isWithinEditHorizon,
   listPlanChangeOptionsForDay,
   pickTemplateForCategory,
+  planChangeWarningForCategory,
   type PlanChange,
 } from '../utils/planChangeProducer';
 
@@ -206,16 +207,16 @@ console.log('planChangeProducerTests');
 }
 
 {
-  console.log('\n[3] options on a game-week day: hard templates hidden');
+  console.log('\n[3] athlete override: game-week days offer EVERYTHING too');
   const options = listPlanChangeOptionsForDay({
     visibleWeek: bothWeeks(),
     date: '2026-07-08',
     todayISO: TODAY,
   });
   eq('[3] unlocked', options.locked, null);
-  eq('[3] only the 7 non-bye templates offered', options.templates.length, 7);
-  ok('[3] no bye-only template leaks',
-    options.templates.every((t) => !t.byeOnly),
+  eq('[3] all 9 templates offered on a game week', options.templates.length, 9);
+  ok('[3] hard templates included (warned, not hidden)',
+    options.templates.some((t) => t.byeOnly),
     options.templates.map((t) => t.templateId));
 }
 
@@ -273,18 +274,25 @@ console.log('planChangeProducerTests');
 }
 
 {
-  console.log('\n[6] policy still guards the door: illegal build is rejected');
-  // Bypass the menu and try to force a bye-only template onto a game week.
+  console.log('\n[6] athlete override at the policy layer + free-form still forbidden');
   const week = bothWeeks();
+  // Hard template on a game week now VALIDATES — the athlete may override
+  // anything; the caution lives in the warning step, not the validator.
   const forced = build(
     { kind: 'add_template', date: '2026-07-08', templateId: 'metcon_offlegs' },
     week);
   const validation = validateProposal(forced, week);
-  eq('[6] validator rejects bye-only template on game week',
-    validation.status, 'invalid');
-  ok('[6] with the bye-week issue named',
-    JSON.stringify(validation.issues ?? []).includes('template_bye_week_only'),
-    validation.issues);
+  eq('[6] hard template on a game week validates (athlete override)',
+    validation.status, 'valid');
+
+  // But content that is NOT byte-exact registry material stays forbidden —
+  // override applies to the athlete's CHOICE, not to arbitrary content.
+  const tampered = JSON.parse(JSON.stringify(forced));
+  const item = tampered.revisedDays[0].workout.sections[0].items[0];
+  item.label = `${item.label} (tampered)`;
+  const tamperedValidation = validateProposal(tampered, week);
+  eq('[6] tampered non-registry content is still rejected',
+    tamperedValidation.status, 'invalid');
 }
 
 {
@@ -378,22 +386,48 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   const gameWeekDay = listPlanChangeOptionsForDay({
     visibleWeek: week, date: '2026-07-08', todayISO: TODAY,
   });
-  eq('[10] game-week day hides the hard category',
+  eq('[10] game-week day offers all three categories too (athlete override)',
     gameWeekDay.categories.map((c) => c.id).sort(),
-    ['conditioning_light', 'recovery']);
+    ['conditioning_hard', 'conditioning_light', 'recovery']);
 
-  // Deterministic pick: same inputs → same template, and the hard
-  // category refuses to pick anything on a game week.
+  // Deterministic pick: same inputs → same template. Hard picks work on
+  // ANY week now — the game-week caution is a warning, not a filter.
   const pick1 = pickTemplateForCategory({ category: 'conditioning_light', date: THU, visibleWeek: week });
   const pick2 = pickTemplateForCategory({ category: 'conditioning_light', date: THU, visibleWeek: week });
   ok('[10] light pick exists', !!pick1);
   eq('[10] pick is deterministic', pick1?.templateId, pick2?.templateId);
   eq('[10] light pick comes from the flush family', pick1?.category, 'flush');
-  eq('[10] hard pick refuses on a game week',
-    pickTemplateForCategory({ category: 'conditioning_hard', date: '2026-07-08', visibleWeek: week }),
-    null);
+  ok('[10] hard pick works on a game week (warned, not blocked)',
+    pickTemplateForCategory({ category: 'conditioning_hard', date: '2026-07-08', visibleWeek: week })?.category === 'work_capacity');
   ok('[10] hard pick works on a bye week',
     pickTemplateForCategory({ category: 'conditioning_hard', date: THU, visibleWeek: week })?.category === 'work_capacity');
+
+  // Advisory warnings: single producer owner.
+  const gameWarning = planChangeWarningForCategory({
+    category: 'conditioning_hard', date: '2026-07-08', visibleWeek: week,
+  });
+  eq('[10] hard on a game week warns about freshness',
+    gameWarning?.code, 'game_week_fresh');
+  eq('[10] hard on a quiet bye week has no warning',
+    planChangeWarningForCategory({ category: 'conditioning_hard', date: THU, visibleWeek: week }),
+    null);
+  eq('[10] light never warns',
+    planChangeWarningForCategory({ category: 'conditioning_light', date: '2026-07-08', visibleWeek: week }),
+    null);
+
+  // Burnout: a bye week already carrying two hard sessions warns on a third.
+  const heavyByeWeek: ResolvedDay[] = [
+    visibleDay(MON, strengthWorkout('h1', 'MetCon — Off-Legs', 1)),
+    visibleDay('2026-06-30', strengthWorkout('h2', 'Erg EMOM — 10-15 cal', 2)),
+    visibleDay(TODAY, null),
+    visibleDay(THU, null),
+    visibleDay('2026-07-03', null),
+    visibleDay(SAT, null),
+    visibleDay('2026-07-05', null),
+  ];
+  eq('[10] third hard session in a week warns about burnout',
+    planChangeWarningForCategory({ category: 'conditioning_hard', date: THU, visibleWeek: heavyByeWeek })?.code,
+    'burnout_volume');
 
   // Variety: when every flush template but one already sits on the week,
   // the pick MUST be the remaining one regardless of the date seed.

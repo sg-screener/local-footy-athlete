@@ -32,12 +32,17 @@ export function coachRevisionValidationPolicyForWeek(
     const section = buildCoachRevisionTemplateSection(templateId, todayISO);
     return section ? coachRevisionSectionBodySignature(section) : null;
   };
+  // ATHLETE OVERRIDE PRINCIPLE (Sam, 2026-07-04): the athlete may choose
+  // ANY registry session on any week — the program is theirs to override.
+  // Bye/game-week awareness is ADVISORY now: it drives warnings at the
+  // point of choice (planChangeProducer.planChangeWarningForCategory),
+  // never a validation rejection. The validator's byeOnly mechanism stays
+  // (fed an empty list) so a future hard gate is one line away.
   const standard: string[] = [];
-  const byeOnly: string[] = [];
   for (const template of listCoachRevisionTemplates()) {
     const signature = signatureFor(template.templateId);
     if (!signature) continue;
-    (template.byeOnly ? byeOnly : standard).push(signature);
+    standard.push(signature);
   }
   return {
     allowedChangedDates: visibleWeek.map((day) => day.date),
@@ -45,7 +50,7 @@ export function coachRevisionValidationPolicyForWeek(
     // app template registry, matched byte-exactly by body signature.
     allowedAddedSectionKinds: [] as never[],
     allowedTemplateSectionSignatures: standard,
-    byeOnlyTemplateSectionSignatures: byeOnly,
+    byeOnlyTemplateSectionSignatures: [] as string[],
     byeUnlockedDates: byeUnlockedDatesForWeek(visibleWeek),
   };
 }

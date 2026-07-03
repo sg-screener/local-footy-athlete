@@ -104,10 +104,10 @@ filters + date-seeded rotation choose the concrete session. The AI coach
 only ever talks in the "I'm not 100%" flows.
 
 **Swap this session** → Conditioning / Strength / Recovery / Rest day
-- Conditioning → Light / Hard (bye weeks only) / Sprint (DEFERRED —
-  on-legs running policy lands with RUNNING_RULES_PLAN.md). Producer
-  picks the template: registry filter + variety (avoid what's already in
-  the week) + date-hash rotation.
+- Conditioning → Light / Hard / Sprint (DEFERRED — on-legs running
+  policy lands with RUNNING_RULES_PLAN.md). Producer picks the template:
+  registry filter + variety (avoid what's already in the week) +
+  date-hash rotation.
 - Strength → Upper / Lower / Full body / Accessories. Athlete picks the
   bucket; producer picks push-vs-pull / squat-vs-hinge from week context.
   Generated via the EXISTING programming engine (microcycle splits +
@@ -150,3 +150,20 @@ Also addable to OCCUPIED days (e.g. conditioning onto a lower-body day)
 **Build order (approved):** 1) menu restructure + conditioning
 categories with deterministic pick, 2) move-as-swap, 3) bin scopes incl.
 team training, 4) strength generation wiring, 5) "I'm not 100%".
+
+## Athlete override principle (Sam, 2026-07-04 — SIGNED OFF)
+
+**The athlete can choose anything and override anything in the program.**
+Nothing on the menu is hidden or blocked by coaching policy — caution is
+expressed as an advisory warning at the point of choice, then the athlete
+proceeds if they want. Supersedes the hard bye-week gate from 2026-07-03.
+
+- Hard session on a game week → "Make sure you don't overdo it — we want
+  you fresh for game day." → *Add it anyway — I'm good*.
+- Third-plus hard session in one week (off/pre-season stacking) →
+  burnout warning, same proceed affordance.
+- Single warning owner: `planChangeWarningForCategory` in the producer.
+  The validator's byeOnly mechanism remains in place but is fed an empty
+  list — a future hard gate is one line away. Free-form (non-registry)
+  content is still rejected: override covers the athlete's CHOICE, never
+  arbitrary content.

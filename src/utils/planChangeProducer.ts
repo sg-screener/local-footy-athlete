@@ -92,7 +92,7 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
   },
   conditioning_hard: {
     label: 'Hard session',
-    sub: 'Work capacity, off legs. Bye weeks only.',
+    sub: 'Work capacity, off legs. Earn your sleep.',
   },
   recovery: {
     label: 'Recovery',
@@ -148,14 +148,14 @@ export function listPlanChangeOptionsForDay(args: {
   const snap = snapshotProjectedDay(day);
   if (visibleDayLooksLikeGame(snap)) return empty('game_day');
 
-  const byeDates = new Set(byeUnlockedDatesForWeek(args.visibleWeek));
-  const templates = listCoachRevisionTemplates().filter(
-    (template) => !template.byeOnly || byeDates.has(args.date),
-  );
+  // Athlete override principle: EVERY registry template is offered on
+  // every editable day. Game-week / volume caution is expressed as a
+  // warning at the point of choice (planChangeWarningForCategory), never
+  // by hiding options.
+  const templates = listCoachRevisionTemplates();
 
-  // Sheet-v2 categories: a category is offered iff at least one legal
-  // template backs it — availability IS policy (hard sessions vanish on
-  // game weeks because their templates are bye-gated away above).
+  // Sheet-v2 categories: a category is offered iff at least one template
+  // backs it.
   const categories = (
     Object.keys(CATEGORY_COPY) as PlanChangeCategoryId[]
   )
@@ -204,11 +204,10 @@ export function pickTemplateForCategory(args: {
   date: string;
   visibleWeek: ResolvedDay[];
 }): CoachRevisionTemplateDefinition | null {
-  const byeDates = new Set(byeUnlockedDatesForWeek(args.visibleWeek));
+  // No bye filter here — athlete override principle. The warning owner
+  // below is the only place game-week caution lives.
   const candidates = listCoachRevisionTemplates().filter(
-    (template) =>
-      template.category === CATEGORY_TO_REGISTRY[args.category] &&
-      (!template.byeOnly || byeDates.has(args.date)),
+    (template) => template.category === CATEGORY_TO_REGISTRY[args.category],
   );
   if (candidates.length === 0) return null;
 
@@ -222,6 +221,62 @@ export function pickTemplateForCategory(args: {
   const pool = fresh.length > 0 ? fresh : candidates;
 
   return pool[dateSeed(args.date) % pool.length];
+}
+
+// ── Advisory warnings ──
+// The athlete can pick anything; the coach still gets a word in first.
+// SINGLE owner of the warning copy + trigger rules — the sheet renders
+// whatever this returns and never invents its own caution.
+
+export interface PlanChangeWarning {
+  code: 'game_week_fresh' | 'burnout_volume';
+  message: string;
+}
+
+/** Labels of the hard (work-capacity) registry sessions, for counting
+ *  how much hard work already sits on a week. */
+function hardSessionLabels(): Set<string> {
+  return new Set(
+    listCoachRevisionTemplates()
+      .filter((template) => template.category === 'work_capacity')
+      .map((template) => template.label),
+  );
+}
+
+export function planChangeWarningForCategory(args: {
+  category: PlanChangeCategoryId;
+  date: string;
+  visibleWeek: ResolvedDay[];
+}): PlanChangeWarning | null {
+  if (args.category !== 'conditioning_hard') return null;
+
+  // Game week (the date's Monday-week contains a game): freshness first.
+  const byeDates = new Set(byeUnlockedDatesForWeek(args.visibleWeek));
+  if (!byeDates.has(args.date)) {
+    return {
+      code: 'game_week_fresh',
+      message:
+        "Make sure you don't overdo it — we want you fresh for game day.",
+    };
+  }
+
+  // No game, but the week is already loaded with hard work: burnout.
+  const monday = getMondayForDate(args.date);
+  const hardLabels = hardSessionLabels();
+  const hardCount = args.visibleWeek.filter((day) =>
+    getMondayForDate(day.date) === monday &&
+    !!day.workout &&
+    (hardLabels.has(day.workout.name) || day.workout.intensity === 'High'),
+  ).length;
+  if (hardCount >= 2) {
+    return {
+      code: 'burnout_volume',
+      message:
+        "That's a lot of hard work in one week. Adding more risks burnout — keep something in the tank.",
+    };
+  }
+
+  return null;
 }
 
 // ── Proposal building ──
