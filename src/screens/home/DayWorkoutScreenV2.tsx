@@ -16,6 +16,7 @@ import { SessionExplanationBanner } from '../../components/SessionExplanationBan
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
+import { PlanChangeSheet } from './PlanChangeSheet';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
@@ -86,6 +87,10 @@ export default function DayWorkoutScreenV2() {
     handleFeedbackSaved,
     handleScrollBeginDrag,
     handleReviewStale,
+    weekDays,
+    changeSheetOpen,
+    openChangeSheet,
+    closeChangeSheet,
     exerciseCount,
     dayName,
     isTeamOnly,
@@ -266,6 +271,25 @@ export default function DayWorkoutScreenV2() {
               ) : null}
             </Text>
           ) : null}
+          {/*
+            Tap-first change door — same vocabulary as the Program tab
+            hero. Athletes open a session, read it, and often only then
+            decide to change it; the door has to exist HERE, not just on
+            the board. Lives in the sticky header so it stays reachable
+            at any scroll depth. Quiet lime link, never a CTA.
+          */}
+          {date ? (
+            <Pressable
+              onPress={openChangeSheet}
+              style={({ pressed }) => [
+                styles.makeChangeLink,
+                pressed && { opacity: 0.7 },
+              ]}
+              testID="day-workout-make-change-link"
+            >
+              <Text style={styles.makeChangeText}>Want to change something?</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 
@@ -367,6 +391,21 @@ export default function DayWorkoutScreenV2() {
         visible={!!selectedExercise}
         exerciseName={selectedExercise || ''}
         onClose={() => setSelectedExercise(null)}
+      />
+
+      {/*
+        Plan-change door — identical sheet to the Program tab (same
+        producer, same policy, same writer), fed the resolved week
+        containing THIS date so options match the board exactly.
+        "Something else" hands off to the coach with a day prefill via
+        the same navigation path as the stale-override review.
+      */}
+      <PlanChangeSheet
+        visible={changeSheetOpen}
+        date={date ?? null}
+        weekDays={weekDays}
+        onClose={closeChangeSheet}
+        onAskCoach={handleReviewStale}
       />
     </SafeAreaView>
   );
@@ -1166,6 +1205,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
+  // Change-door link — mirrors HomeScreenV2's makeChangeLink/-Text so the
+  // change vocabulary looks identical on every surface it appears on.
+  makeChangeLink: {
+    paddingVertical: spacing.xs,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  makeChangeText: { color: '#C8FF00', fontSize: 13, fontWeight: '600' },
 
   // ── Scroll body ──
   scroll: { flex: 1 },

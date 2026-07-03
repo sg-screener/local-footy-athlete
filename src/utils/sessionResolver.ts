@@ -270,6 +270,22 @@ export function getMondayStr(weekOffset: number): string {
   return formatDate(monday);
 }
 
+/**
+ * Get ISO date string for Monday of the week containing an arbitrary date.
+ * Single owner of the "which Monday does this date belong to" rule — any
+ * surface that needs the full week for a date (e.g. the plan-change door
+ * hosted away from the Program tab) goes through here rather than
+ * re-deriving Monday arithmetic locally.
+ */
+export function getMondayStrForDate(dateISO: string): string {
+  const d = new Date(`${dateISO}T12:00:00`);
+  const dow = d.getDay(); // 0=Sun
+  const mondayOffset = dow === 0 ? -6 : -(dow - 1);
+  d.setDate(d.getDate() + mondayOffset);
+  d.setHours(12, 0, 0, 0);
+  return formatDate(d);
+}
+
 function toDateString(year: number, month: number, day: number): string {
   const m = String(month + 1).padStart(2, '0');
   const d = String(day).padStart(2, '0');

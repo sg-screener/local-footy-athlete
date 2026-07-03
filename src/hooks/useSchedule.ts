@@ -23,6 +23,7 @@ import {
   resolveMonthIndicatorsWithConditioning,
   getBlockBounds,
   getMondayStr,
+  getMondayStrForDate,
   formatWeekLabel,
 } from '../utils/sessionResolver';
 import { logger } from '../utils/logger';
@@ -198,6 +199,34 @@ export function useResolvedDay(date: string | undefined): ResolvedDay | null {
     todayISO,
     modalityPreferences: (state as any).modalityPreferences,
   }).day;
+}
+
+/**
+ * Resolved projected week containing an arbitrary date.
+ *
+ * Systemic owner for any surface that hosts the plan-change door
+ * (PlanChangeSheet) away from the Program tab — the producer needs the
+ * FULL visible week for policy context (move destinations, bye gating,
+ * edit horizon), not just the single day. DayWorkoutScreen is the first
+ * consumer; any future surface (calendar drilldown, coach cards) should
+ * use this hook rather than re-deriving the week locally.
+ *
+ * Same projection pipeline as useResolvedWeek, so what the sheet offers
+ * here is bit-identical to what it offers on the Program tab.
+ */
+export function useResolvedWeekForDate(date: string | undefined): ResolvedDay[] {
+  const state = useScheduleState();
+  if (!date) return [];
+  const overrideContexts =
+    useProgramStore.getState().overrideContexts ?? {};
+  const todayISO = todayISOLocal();
+  return buildProgramTabProjectedWeek({
+    mondayISO: getMondayStrForDate(date),
+    todayISO,
+    state,
+    overrideContexts,
+    modalityPreferences: (state as any).modalityPreferences,
+  });
 }
 
 /**

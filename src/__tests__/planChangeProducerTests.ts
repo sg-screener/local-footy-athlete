@@ -333,6 +333,38 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   eq('[8] nothing written', writes, []);
 }
 
+{
+  console.log('\n[9] the change door exists on every session surface (source contract)');
+  // Systemic guard: the tap-first door must be mounted on BOTH surfaces an
+  // athlete reads their plan from — the board (HomeScreenV2) and the open
+  // session (DayWorkoutScreenV2). If a redesign drops the sheet or the
+  // link from either file, this fails before the Simulator ever would.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require('fs');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const path = require('path');
+  const surfaces: Array<{ name: string; file: string; linkTestID: string }> = [
+    {
+      name: 'HomeScreenV2',
+      file: path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'),
+      linkTestID: 'make-change-link',
+    },
+    {
+      name: 'DayWorkoutScreenV2',
+      file: path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'),
+      linkTestID: 'day-workout-make-change-link',
+    },
+  ];
+  for (const surface of surfaces) {
+    const src = fs.readFileSync(surface.file, 'utf8');
+    ok(`[9] ${surface.name} mounts PlanChangeSheet`, /<PlanChangeSheet\b/.test(src));
+    ok(`[9] ${surface.name} renders the change link (${surface.linkTestID})`,
+      src.includes(`"${surface.linkTestID}"`));
+    ok(`[9] ${surface.name} uses the shared change vocabulary`,
+      src.includes('Want to change something?'));
+  }
+}
+
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.log(failures.join('\n'));

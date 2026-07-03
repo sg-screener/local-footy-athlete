@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useResolvedDay } from '../../hooks/useSchedule';
+import { useResolvedDay, useResolvedWeekForDate } from '../../hooks/useSchedule';
 import { useIsOverrideStale } from '../../hooks/useStaleOverrides';
 import { useSessionExplanation } from '../../hooks/useSessionExplanation';
 import { useProgramStore } from '../../store/programStore';
@@ -77,6 +77,33 @@ export function useDayWorkout() {
   const workout = resolved?.workout ?? null;
   const staleWarning = useIsOverrideStale(date);
   const explanation = useSessionExplanation(resolved);
+
+  // ─── Plan-change door (PlanChangeSheet) ───
+  //
+  // Same tap-first change door as the Program tab, hosted inside the
+  // session screen: athletes open a session, read it, and often only THEN
+  // decide they need to change it. The sheet needs the full projected week
+  // for policy context (move destinations, bye gating, edit horizon) —
+  // useResolvedWeekForDate resolves the week containing this date through
+  // the same pipeline as the Program tab, so both doors offer identical
+  // options for the same day.
+  const weekDays = useResolvedWeekForDate(date);
+  const [changeSheetOpen, setChangeSheetOpen] = useState(false);
+  // Latest workout-existence flag, readable from the close callback without
+  // re-binding it on every resolution change.
+  const workoutExistsRef = useRef(!!workout);
+  workoutExistsRef.current = !!workout;
+
+  const openChangeSheet = useCallback(() => setChangeSheetOpen(true), []);
+  const closeChangeSheet = useCallback(() => {
+    setChangeSheetOpen(false);
+    // If the applied change removed or moved this session, the day no
+    // longer has a workout to show — return to the plan instead of
+    // stranding the athlete on the "Workout not found" fallback.
+    if (!workoutExistsRef.current) {
+      navigation.goBack();
+    }
+  }, [navigation]);
 
   /** Toggle coaching cue visibility for an exercise. */
   const toggleCue = useCallback((exerciseId: string) => {
@@ -488,6 +515,12 @@ export function useDayWorkout() {
     handleFeedbackSaved,
     handleScrollBeginDrag,
     handleReviewStale,
+
+    // Plan-change door
+    weekDays,
+    changeSheetOpen,
+    openChangeSheet,
+    closeChangeSheet,
 
     // Derived
     ...derived,
