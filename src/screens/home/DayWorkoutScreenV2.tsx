@@ -18,6 +18,7 @@ import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
 import { PlanChangeSheet } from './PlanChangeSheet';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
+import { shortWeekdayDateLabel } from '../../utils/appDate';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useDayWorkout } from './useDayWorkout';
@@ -178,12 +179,14 @@ export default function DayWorkoutScreenV2() {
     ? 0
     : exerciseCount;
 
-  // Combined "6 exercises · Strength" subtitle. Both fragments are merged
-  // into a single line of plain body text — no stacked labels, no uppercase
-  // chips. Count comes first so the athlete's eye lands on volume.
+  // Combined "Fri 3/7 · 6 exercises · Strength" subtitle. All fragments are
+  // merged into a single line of plain body text — no stacked labels, no
+  // uppercase chips. Date leads (matching the dated day rows on the
+  // Program tab), then count so the athlete's eye lands on volume.
+  const dateFragment = date ? shortWeekdayDateLabel(date) : '';
   const countFragment =
     metaCount > 0 ? `${metaCount} exercise${metaCount !== 1 ? 's' : ''}` : '';
-  const combinedSubtitle = [countFragment, subtitleText]
+  const combinedSubtitle = [dateFragment, countFragment, subtitleText]
     .filter(Boolean)
     .join(' · ');
 

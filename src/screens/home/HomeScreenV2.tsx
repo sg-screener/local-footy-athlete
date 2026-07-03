@@ -22,6 +22,7 @@ import { visibleWorkoutItemCountLabel } from '../../utils/visibleProgramReadMode
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen } from './useHomeScreen';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
+import { shortDayMonthLabel } from '../../utils/appDate';
 import {
   WEEK_DAYS,
   DAY_SHORT,
@@ -476,7 +477,7 @@ function TodayHero({
            */}
           <View style={styles.heroEyebrowRow}>
             <Text style={styles.heroEyebrow}>
-              {eyebrowFor(hasWorkout, isGame, isTeamOnly)}
+              {eyebrowFor(hasWorkout, isGame, isTeamOnly, day.date)}
             </Text>
             {hasWorkout && !isGame && day.workout.sessionTier && day.workout.sessionTier !== 'recovery' ? (
               <SessionTierBadge tier={day.workout.sessionTier} />
@@ -581,11 +582,19 @@ function TodayHero({
   );
 }
 
-function eyebrowFor(hasWorkout: boolean, isGame: boolean, isTeamOnly: boolean): string {
-  if (isGame) return 'TODAY · GAME';
-  if (!hasWorkout) return 'TODAY · REST';
-  if (isTeamOnly) return 'TODAY · TEAM';
-  return 'TODAY';
+function eyebrowFor(
+  hasWorkout: boolean,
+  isGame: boolean,
+  isTeamOnly: boolean,
+  dateISO?: string,
+): string {
+  // Actual calendar date rides along in the eyebrow ("TODAY · 3/7") so the
+  // hero matches the dated day rows below it.
+  const dateBit = dateISO ? ` · ${shortDayMonthLabel(dateISO)}` : '';
+  if (isGame) return `TODAY${dateBit} · GAME`;
+  if (!hasWorkout) return `TODAY${dateBit} · REST`;
+  if (isTeamOnly) return `TODAY${dateBit} · TEAM`;
+  return `TODAY${dateBit}`;
 }
 
 interface MoveBannerProps { text: string; onCancel: () => void; }
@@ -670,6 +679,9 @@ function DayRow({
           >
             {day.short}
           </Text>
+          {/* Actual calendar date — quiet, one step dimmer than the
+              weekday so "MON" stays the anchor and "3/7" is the detail. */}
+          <Text style={styles.dayDate}>{shortDayMonthLabel(day.date)}</Text>
           {day.isToday && <Badge label="Today" tone="accent" />}
           {isMoveSource
             ? <Badge label="Moving" tone="outline" />
@@ -1356,6 +1368,11 @@ const styles = StyleSheet.create({
   dayLabel: {
     color: '#5A5A5A', fontSize: 11, fontWeight: '800',
     letterSpacing: 1.6, minWidth: 32,
+  },
+  // Calendar date beside the weekday — one step dimmer, lighter weight,
+  // no tracking. "MON" is the anchor, "3/7" is the detail.
+  dayDate: {
+    color: '#4A4A4A', fontSize: 11, fontWeight: '600',
   },
   titleBlock: { flex: 1, alignItems: 'flex-end', minWidth: 0 },
   // Primary row text — nudged brighter so the session name is the clear
