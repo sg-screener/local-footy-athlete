@@ -28,7 +28,6 @@ import {
 // Screen imports
 import HomeScreen from '../screens/home/HomeScreen';
 import { DayWorkoutScreen } from '../screens/home/DayWorkoutScreen';
-import CalendarScreen from '../screens/calendar/CalendarScreen';
 import CoachScreen from '../screens/coach/CoachScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import FAQScreen from '../screens/profile/FAQScreen';
@@ -51,20 +50,14 @@ type ProfileStackParamList = {
   Terms: undefined;
 };
 
-type CalendarStackParamList = {
-  CalendarHome: undefined;
-};
-
 type TabParamList = {
   ProgramTab: { screen: string; params?: Record<string, any> } | undefined;
-  CalendarTab: undefined;
   CoachTab: { screen: string; params?: { prefill?: string } } | undefined;
   ProfileTab: undefined;
 };
 
 const Tab = createBottomTabNavigator<TabParamList>();
 const ProgramStack = createNativeStackNavigator<ProgramStackParamList>();
-const CalendarStack = createNativeStackNavigator<CalendarStackParamList>();
 const CoachStack = createNativeStackNavigator<CoachStackParamList>();
 const ProfileStackNav = createNativeStackNavigator<ProfileStackParamList>();
 
@@ -105,31 +98,12 @@ function ProfileIcon({ color, size }: { color: string; size: number }) {
   );
 }
 
-function CalendarIcon({ color, size }: { color: string; size: number }) {
-  return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-      <Path d="M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2z" />
-      <Path d="M16 2v4" />
-      <Path d="M8 2v4" />
-      <Path d="M3 10h18" />
-    </Svg>
-  );
-}
-
 function ProgramStackNavigator() {
   return (
     <ProgramStack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
       <ProgramStack.Screen name="Home" component={HomeScreen} />
       <ProgramStack.Screen name="DayWorkout" component={DayWorkoutScreen} />
     </ProgramStack.Navigator>
-  );
-}
-
-function CalendarStackNavigator() {
-  return (
-    <CalendarStack.Navigator id={undefined} screenOptions={{ headerShown: false }}>
-      <CalendarStack.Screen name="CalendarHome" component={CalendarScreen} />
-    </CalendarStack.Navigator>
   );
 }
 
@@ -439,21 +413,6 @@ function ResolvedAppNavigator({
           listeners={{
             tabPress: () => {
               logger.info('[tab-press] program');
-            },
-          }}
-        />
-        <Tab.Screen
-          name="CalendarTab"
-          component={CalendarStackNavigator}
-          options={{
-            title: 'Calendar',
-            tabBarIcon: ({ color }) => <CalendarIcon color={color} size={22} />,
-            tabBarButtonTestID: 'tab-calendar',
-            tabBarAccessibilityLabel: 'Calendar tab',
-          }}
-          listeners={{
-            tabPress: () => {
-              logger.info('[tab-press] calendar');
             },
           }}
         />
