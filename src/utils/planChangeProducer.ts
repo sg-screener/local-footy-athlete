@@ -16,6 +16,7 @@
 
 import type { ResolvedDay } from './sessionResolver';
 import { getMondayForDate } from './sessionResolver';
+import { splitSessionName } from './sessionNaming';
 import type { OverrideContext, Workout } from '../types/domain';
 import {
   COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
@@ -100,8 +101,28 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
   },
 };
 
+/**
+ * Bin scopes (sheet v2 phase 3): multi-session days offer WHICH part to
+ * bin. 'team' maps to the snapshot's zero-row 'session' commitment section
+ * ("Team Training + Upper Pull" days) — binnable like anything else, for
+ * that single date only (Sam 2026-07-03: recurring team schedule and
+ * future weeks untouched).
+ */
+export type PlanChangeBinScopeId =
+  | 'whole_day'
+  | 'strength'
+  | 'conditioning'
+  | 'recovery'
+  | 'team';
+
+export interface PlanChangeBinScope {
+  id: PlanChangeBinScopeId;
+  label: string;
+  sub: string;
+}
+
 export type PlanChange =
-  | { kind: 'remove_session'; date: string }
+  | { kind: 'remove_session'; date: string; scope?: PlanChangeBinScopeId }
   | { kind: 'swap_template'; date: string; templateId: string }
   | { kind: 'add_template'; date: string; templateId: string }
   | { kind: 'swap_category'; date: string; category: PlanChangeCategoryId }
@@ -128,6 +149,9 @@ export interface PlanChangeDayOptions {
   /** Legal move destinations inside the horizon: every non-game day, rest
    *  days FIRST (they're the cheapest move), then occupied days (swap). */
   moveDestinations: PlanChangeMoveDestination[];
+  /** Bin scopes: parts of the day binnable individually. Single-part days
+   *  offer only whole_day; multi-session days list each part, whole last. */
+  binScopes: PlanChangeBinScope[];
 }
 
 // ── Options listing ──
@@ -147,6 +171,7 @@ export function listPlanChangeOptionsForDay(args: {
     templates: [],
     categories: [],
     moveDestinations: [],
+    binScopes: [],
   });
 
   const day = args.visibleWeek.find((d) => d.date === args.date);
@@ -198,7 +223,65 @@ export function listPlanChangeOptionsForDay(args: {
     templates,
     categories,
     moveDestinations,
+    binScopes: hasSession ? binScopesForSnapshot(snap) : [],
   };
+}
+
+// ── Bin scopes ──
+// Which parts of a day can be binned individually. Derived from the day
+// snapshot's sections: a day with two or more visible parts (strength /
+// conditioning / recovery / team commitment) offers each part plus the
+// whole day; single-part days offer only the whole day.
+
+const BIN_SCOPE_FOR_SECTION_KIND: Record<
+  string,
+  { id: PlanChangeBinScopeId; label: string; sub: string }
+> = {
+  strength: {
+    id: 'strength',
+    label: 'Just the gym session',
+    sub: 'The rest of the day stays',
+  },
+  conditioning: {
+    id: 'conditioning',
+    label: 'Just the conditioning',
+    sub: 'The rest of the day stays',
+  },
+  recovery: {
+    id: 'recovery',
+    label: 'Just the recovery work',
+    sub: 'The rest of the day stays',
+  },
+  session: {
+    id: 'team',
+    label: 'Just team training',
+    sub: "Can't make it tonight — this date only",
+  },
+};
+
+const WHOLE_DAY_SCOPE: PlanChangeBinScope = {
+  id: 'whole_day',
+  label: 'The whole day',
+  sub: 'Everything — the day becomes rest',
+};
+
+function binScopesForSnapshot(
+  snap: CoachVisibleDaySnapshot,
+): PlanChangeBinScope[] {
+  const kinds = Array.from(
+    new Set((snap.workout?.sections ?? []).map((section) => section.kind)),
+  );
+  if (kinds.length < 2) return [WHOLE_DAY_SCOPE];
+  const parts = kinds
+    .map((kind) => BIN_SCOPE_FOR_SECTION_KIND[kind])
+    .filter((scope): scope is PlanChangeBinScope => !!scope);
+  return [...parts, WHOLE_DAY_SCOPE];
+}
+
+/** Snapshot section kind a bin scope removes. */
+function sectionKindForBinScope(scope: PlanChangeBinScopeId): string | null {
+  if (scope === 'whole_day') return null;
+  return scope === 'team' ? 'session' : scope;
 }
 
 // ── Deterministic category pick ──
@@ -326,10 +409,16 @@ export function buildPlanChangeProposal(
 
   const revision = (args: {
     intent: 'add' | 'remove' | 'replace' | 'move';
-    targetDomain: 'session' | 'conditioning' | 'recovery';
+    targetDomain: 'session' | 'conditioning' | 'recovery' | 'strength' | 'team_training';
     dates: string[];
     revisedDays: CoachVisibleDaySnapshot[];
     explanation: string;
+    actionScope?:
+      | 'whole_session'
+      | 'strength_section'
+      | 'conditioning_section'
+      | 'recovery_section'
+      | 'session';
   }): CoachRevisionProposal => ({
     schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
     kind: 'revision',
@@ -338,7 +427,7 @@ export function buildPlanChangeProposal(
     userIntent: {
       intent: args.intent,
       targetDomain: args.targetDomain,
-      actionScope: 'whole_session',
+      actionScope: args.actionScope ?? 'whole_session',
       targetDates: args.dates,
       protectedRefs: [],
       requiresConfirmation: false,
@@ -373,12 +462,58 @@ export function buildPlanChangeProposal(
     case 'remove_session': {
       const before = daySnap(change.date);
       if (!before?.workout) return { error: 'nothing_to_remove' };
+      const scope = change.scope ?? 'whole_day';
+      const removeKind = sectionKindForBinScope(scope);
+
+      // Whole day (or a partial scope that would leave nothing): rest.
+      const surviving = removeKind
+        ? before.workout.sections.filter((section) => section.kind !== removeKind)
+        : [];
+      if (!removeKind || surviving.length === 0) {
+        return revision({
+          intent: 'remove',
+          targetDomain: 'session',
+          dates: [change.date],
+          revisedDays: [{ date: change.date, workout: null }],
+          explanation: 'Sheet: remove session',
+        });
+      }
+      if (surviving.length === before.workout.sections.length) {
+        return { error: 'scope_not_on_day' };
+      }
+
+      // Partial bin: the day keeps its other parts. Title follows the
+      // survivors — the canonical name's strength half when strength
+      // survives, otherwise the surviving section's own title.
+      const survivorTitle = surviving.some((section) => section.kind === 'strength')
+        ? splitSessionName(before.workout.title).title || before.workout.title
+        : surviving[0].title || before.workout.title;
+      const survivorWorkoutType =
+        surviving.every((section) => section.kind === 'session')
+          ? before.workout.workoutType
+          : surviving.some((section) => section.kind === 'strength')
+          ? 'Strength'
+          : surviving.some((section) => section.kind === 'conditioning')
+          ? 'Conditioning'
+          : 'Recovery';
+
+      // scope !== 'whole_day' is guaranteed here (removeKind non-null).
+      const partialScope = scope as Exclude<PlanChangeBinScopeId, 'whole_day'>;
       return revision({
         intent: 'remove',
-        targetDomain: 'session',
+        targetDomain: partialScope === 'team' ? 'team_training' : partialScope,
+        actionScope: partialScope === 'team' ? 'session' : `${partialScope}_section`,
         dates: [change.date],
-        revisedDays: [{ date: change.date, workout: null }],
-        explanation: 'Sheet: remove session',
+        revisedDays: [{
+          date: change.date,
+          workout: {
+            ...before.workout,
+            title: survivorTitle,
+            workoutType: survivorWorkoutType,
+            sections: surviving,
+          },
+        }],
+        explanation: `Sheet: bin ${scope} only`,
       });
     }
     case 'swap_template': {
@@ -518,10 +653,22 @@ export function applyPlanChange(args: {
   };
 }
 
+const BIN_SCOPE_DONE: Record<Exclude<PlanChangeBinScopeId, 'whole_day'>, string> = {
+  strength: 'Gym session binned',
+  conditioning: 'Conditioning binned',
+  recovery: 'Recovery work binned',
+  team: 'Team training binned for this date',
+};
+
 function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): string {
   switch (change.kind) {
-    case 'remove_session':
+    case 'remove_session': {
+      const scope = change.scope ?? 'whole_day';
+      if (scope !== 'whole_day') {
+        return `Done. ${BIN_SCOPE_DONE[scope]} — the rest of ${change.date} stays.`;
+      }
       return `Done. Session removed on ${change.date}.`;
+    }
     case 'swap_template':
       return `Done. Session swapped on ${change.date}.`;
     case 'add_template':

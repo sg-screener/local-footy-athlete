@@ -10,6 +10,7 @@ import {
   listPlanChangeOptionsForDay,
   planChangeWarningForCategory,
   type PlanChange,
+  type PlanChangeBinScopeId,
   type PlanChangeCategoryId,
   type PlanChangeDayOptions,
 } from '../../utils/planChangeProducer';
@@ -40,7 +41,8 @@ type Step =
       message: string;
     }
   | { kind: 'pick_destination' }
-  | { kind: 'confirm_remove' }
+  | { kind: 'pick_bin_scope' }
+  | { kind: 'confirm_remove'; scope: PlanChangeBinScopeId; label: string }
   | { kind: 'result'; ok: boolean; message: string };
 
 interface PlanChangeSheetProps {
@@ -116,6 +118,17 @@ export function PlanChangeSheet({
     applyCategory(mode, category);
   };
 
+  // Bin entry point: multi-session days pick WHICH part first; single-part
+  // days go straight to the are-you-sure.
+  const startBin = () => {
+    const scopes = options?.binScopes ?? [];
+    if (scopes.length > 1) {
+      setStep({ kind: 'pick_bin_scope' });
+      return;
+    }
+    setStep({ kind: 'confirm_remove', scope: 'whole_day', label: 'this session' });
+  };
+
   const askCoach = () => {
     onClose();
     onAskCoach(`About ${weekdayLabel(date)}: `);
@@ -155,9 +168,11 @@ export function PlanChangeSheet({
               )}
               <MenuOption
                 label="Bin this session"
-                sub="Remove it — the day becomes rest"
+                sub={(options.binScopes.length > 1)
+                  ? 'Remove part of the day, or all of it'
+                  : 'Remove it — the day becomes rest'}
                 danger
-                onPress={() => setStep({ kind: 'confirm_remove' })}
+                onPress={startBin}
               />
             </>
           ) : (
@@ -203,7 +218,8 @@ export function PlanChangeSheet({
               label="Rest day"
               sub="Clear the day — same as binning the session"
               danger
-              onPress={() => setStep({ kind: 'confirm_remove' })}
+              onPress={() =>
+                setStep({ kind: 'confirm_remove', scope: 'whole_day', label: 'this session' })}
             />
           )}
           <BackRow onPress={() => setStep({ kind: 'menu' })} />
@@ -263,17 +279,47 @@ export function PlanChangeSheet({
         </View>
       )}
 
+      {/* Multi-session days: pick WHICH part to bin before the
+          are-you-sure. Options come from the producer (single owner of
+          what's individually binnable on this day). */}
+      {options && step.kind === 'pick_bin_scope' && (
+        <View>
+          <Text style={styles.sectionLabel}>Bin what?</Text>
+          {options.binScopes.map((scope) => (
+            <MenuOption
+              key={scope.id}
+              label={scope.label}
+              sub={scope.sub}
+              danger={scope.id === 'whole_day'}
+              onPress={() =>
+                setStep({
+                  kind: 'confirm_remove',
+                  scope: scope.id,
+                  label: scope.id === 'whole_day'
+                    ? 'everything on this day'
+                    : scope.label.toLowerCase(),
+                })}
+            />
+          ))}
+          <BackRow onPress={() => setStep({ kind: 'menu' })} />
+        </View>
+      )}
+
       {step.kind === 'confirm_remove' && (
         <View>
           <Text style={styles.confirmText}>
-            Are you sure? This session will be removed and the day becomes
-            rest.
+            {step.scope === 'whole_day'
+              ? 'Are you sure? This will be removed and the day becomes rest.'
+              : `Are you sure? This bins ${step.label} — the rest of the day stays.`}
           </Text>
           <MenuOption
             label="Yes, bin it"
             danger
             onPress={() =>
-              apply({ kind: 'remove_session', date }, { closeOnSuccess: true })}
+              apply(
+                { kind: 'remove_session', date, scope: step.scope },
+                { closeOnSuccess: true },
+              )}
           />
           <MenuOption
             label="No, keep it"

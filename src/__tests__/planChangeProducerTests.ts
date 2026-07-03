@@ -538,6 +538,145 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     thuOptions.moveDestinations);
 }
 
+{
+  console.log('\n[12] bin scopes: multi-session days bin by part, team training included');
+
+  // Team + strength combined day (Tue of a bye-style week).
+  const teamStrength: Workout = {
+    ...strengthWorkout('workout-team-tue', 'Team Training + Upper Push', 2),
+    workoutType: 'Team Training',
+  } as Workout;
+
+  // Combined S+C day: two strength rows + one conditioning row linked via
+  // conditioningBlock.
+  const condRow = {
+    ...ex('Bike Intervals', 'sc-cond-row', 1),
+    exercise: {
+      ...ex('Bike Intervals', 'sc-cond-row', 1).exercise,
+      exerciseType: 'Cardio',
+    },
+  };
+  const scCombined: Workout = {
+    ...strengthWorkout('workout-sc-wed', 'Upper Pull', 3),
+    hasCombinedConditioning: true,
+    conditioningFlavour: 'aerobic',
+    conditioningBlock: {
+      intent: 'aerobic',
+      options: [{
+        title: 'Aerobic Base',
+        description: 'Easy spin',
+        exerciseIds: ['sc-cond-row'],
+      }],
+    },
+    exercises: [
+      ex('Back Squat', 'sc-squat', 4),
+      ex('Pull Up', 'sc-pull', 3),
+      condRow,
+    ],
+  } as Workout;
+
+  const week: ResolvedDay[] = [
+    visibleDay(MON, strengthWorkout('workout-mon', 'Lower Body Strength', 1)),
+    visibleDay('2026-06-30', teamStrength),
+    visibleDay(TODAY, scCombined),
+    visibleDay(THU, null),
+    visibleDay('2026-07-03', null),
+    visibleDay(SAT, null),
+    visibleDay('2026-07-05', null),
+  ];
+
+  // Scope listings follow the day's structure.
+  const plain = listPlanChangeOptionsForDay({ visibleWeek: week, date: MON, todayISO: TODAY });
+  eq('[12] plain strength day offers only whole_day',
+    plain.binScopes.map((s) => s.id), ['whole_day']);
+
+  const team = listPlanChangeOptionsForDay({ visibleWeek: week, date: '2026-06-30', todayISO: TODAY });
+  eq('[12] team+strength day offers gym / team / whole',
+    team.binScopes.map((s) => s.id).sort(), ['strength', 'team', 'whole_day']);
+
+  const sc = listPlanChangeOptionsForDay({ visibleWeek: week, date: TODAY, todayISO: TODAY });
+  eq('[12] S+C day offers strength / conditioning / whole',
+    sc.binScopes.map((s) => s.id).sort(), ['conditioning', 'strength', 'whole_day']);
+
+  // Bin JUST team training: gym session survives under its own name.
+  const teamWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const teamResult = applyPlanChange({
+    change: { kind: 'remove_session', date: '2026-06-30', scope: 'team' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => teamWrites.push({ date, workout }),
+  });
+  ok('[12] bin team-only applies', teamResult.ok, teamResult);
+  eq('[12] one write', teamWrites.length, 1);
+  ok('[12] survivor is the gym session',
+    teamWrites[0]?.workout?.name === 'Upper Push' &&
+      !/team/i.test(teamWrites[0]?.workout?.name ?? ''),
+    teamWrites[0]?.workout?.name);
+  eq('[12] survivor type is Strength', teamWrites[0]?.workout?.workoutType, 'Strength');
+  eq('[12] strength rows preserved', teamWrites[0]?.workout?.exercises?.length, 2);
+
+  // Bin JUST the gym session: team training survives alone.
+  const gymWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const gymResult = applyPlanChange({
+    change: { kind: 'remove_session', date: '2026-06-30', scope: 'strength' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => gymWrites.push({ date, workout }),
+  });
+  ok('[12] bin gym-only applies', gymResult.ok, gymResult);
+  eq('[12] survivor is Team Training', gymWrites[0]?.workout?.name, 'Team Training');
+  eq('[12] no strength rows remain', gymWrites[0]?.workout?.exercises?.length, 0);
+
+  // Bin JUST the conditioning on an S+C day.
+  const condWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const condResult = applyPlanChange({
+    change: { kind: 'remove_session', date: TODAY, scope: 'conditioning' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => condWrites.push({ date, workout }),
+  });
+  ok('[12] bin conditioning-only applies', condResult.ok, condResult);
+  ok('[12] conditioning block gone',
+    !condWrites[0]?.workout?.conditioningBlock, condWrites[0]?.workout);
+  eq('[12] strength rows preserved on S+C day',
+    condWrites[0]?.workout?.exercises?.length, 2);
+
+  // Bin JUST the strength on an S+C day: conditioning becomes the day.
+  const strWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const strResult = applyPlanChange({
+    change: { kind: 'remove_session', date: TODAY, scope: 'strength' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => strWrites.push({ date, workout }),
+  });
+  ok('[12] bin strength-only applies', strResult.ok, strResult);
+  eq('[12] conditioning survives as the day',
+    strWrites[0]?.workout?.workoutType, 'Conditioning');
+  eq('[12] only the conditioning row remains',
+    strWrites[0]?.workout?.exercises?.length, 1);
+
+  // Scope that isn't on the day refuses cleanly.
+  const badResult = applyPlanChange({
+    change: { kind: 'remove_session', date: MON, scope: 'team' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: () => { throw new Error('must not write'); },
+  });
+  ok('[12] scope not on day refuses without writing', !badResult.ok, badResult);
+
+  // Whole-day default unchanged (back-compat: scope omitted).
+  const wholeWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const wholeResult = applyPlanChange({
+    change: { kind: 'remove_session', date: MON },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => wholeWrites.push({ date, workout }),
+  });
+  ok('[12] whole-day bin still works', wholeResult.ok, wholeResult);
+  eq('[12] whole-day write is a rest override',
+    wholeWrites[0]?.workout?.workoutType, 'Rest');
+}
+
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.log(failures.join('\n'));
