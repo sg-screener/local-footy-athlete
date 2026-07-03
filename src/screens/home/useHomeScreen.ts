@@ -57,6 +57,7 @@ export function useHomeScreen() {
   const {
     weekDays,
     weekLabel,
+    weekOffset,
     isThisWeek,
     goToPrev,
     goToNext,
@@ -85,10 +86,25 @@ export function useHomeScreen() {
   }, [staleWarnings]);
 
   // ── Selection / interaction mode ──
-  // Selected day defaults to today (or Monday if viewing another week).
+  // Selected day defaults to today on this week. On any OTHER week
+  // (past or future) nothing is selected until the athlete taps a day —
+  // selection is the emphasis carrier, and browsing a week shouldn't
+  // pre-emphasize an arbitrary Monday. Sentinel -1 = no selection.
   const todayIdx = weekDays.findIndex((d) => d.isToday);
   const todayDay = todayIdx >= 0 ? weekDays[todayIdx] : null;
-  const [selectedIdx, setSelectedIdx] = useState(todayIdx >= 0 ? todayIdx : 0);
+  const [selectedIdx, setSelectedIdx] = useState(todayIdx >= 0 ? todayIdx : -1);
+
+  // Single owner of the default-selection rule: whenever the visible week
+  // changes, selection resets to today (this week) or nothing (any other
+  // week). Runs AFTER the new week resolves, so todayIdx is derived from
+  // the current week's days — setting selection inside the nav handlers
+  // would read the outgoing week's data (stale closure).
+  useEffect(() => {
+    setSelectedIdx(weekOffset === 0 && todayIdx >= 0 ? todayIdx : -1);
+    // todayIdx is intentionally not a dependency: mid-week midnight
+    // rollover shouldn't yank a selection the athlete is looking at.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekOffset]);
 
   // Game-day action sheet
   const [gameModalVisible, setGameModalVisible] = useState(false);
@@ -501,20 +517,18 @@ export function useHomeScreen() {
 
   // ───────── Week navigation ─────────
 
+  // Selection is NOT set here — the weekOffset effect above owns the
+  // default-selection rule (today on this week, nothing elsewhere).
   const handlePrev = () => {
     goToPrev();
-    setSelectedIdx(0);
     setMode({ type: 'normal' });
   };
   const handleNext = () => {
     goToNext();
-    setSelectedIdx(0);
     setMode({ type: 'normal' });
   };
   const handleThisWeek = () => {
     goToThisWeek();
-    const idx = weekDays.findIndex((d) => d.isToday);
-    setSelectedIdx(idx >= 0 ? idx : 0);
     setMode({ type: 'normal' });
   };
 
@@ -817,6 +831,7 @@ export function useHomeScreen() {
     // Week nav / resolved week
     weekDays,
     weekLabel,
+    weekOffset,
     isThisWeek,
     handlePrev,
     handleNext,

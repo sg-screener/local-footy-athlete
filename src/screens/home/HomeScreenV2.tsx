@@ -67,6 +67,7 @@ export default function HomeScreenV2() {
   const {
     weekDays,
     weekLabel,
+    weekOffset,
     isThisWeek,
     handlePrev,
     handleNext,
@@ -170,7 +171,22 @@ export default function HomeScreenV2() {
               accessibilityLabel={isThisWeek ? 'This week' : 'Return to this week'}
             >
               <Text style={styles.topBarLabel} numberOfLines={1}>{weekLabel}</Text>
-              {isThisWeek && <Badge label="This week" tone="outline" style={styles.topBarBadge} />}
+              {(() => {
+                // Relative week badge beside the date range — "This week"
+                // keeps its existing treatment; the adjacent weeks get the
+                // same quiet outline so the athlete always knows where
+                // they are relative to now.
+                const badgeLabel = isThisWeek
+                  ? 'This week'
+                  : weekOffset === 1
+                  ? 'Next week'
+                  : weekOffset === -1
+                  ? 'Last week'
+                  : null;
+                return badgeLabel
+                  ? <Badge label={badgeLabel} tone="outline" style={styles.topBarBadge} />
+                  : null;
+              })()}
             </Pressable>
             <View style={styles.topBarRight}>
               <IconButton
