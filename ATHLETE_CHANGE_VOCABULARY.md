@@ -87,13 +87,11 @@ can't corrupt a plan.
 Running-rules plan (RUNNING_RULES_PLAN.md) is unaffected — it's generation-
 side and still worth doing; this page governs the *change* side.
 
-## Open decisions
+## Decisions (Sam, 2026-07-03 — SIGNED OFF)
 
-1. Menu wording: athlete language ("I'm cooked", "hurt something") vs neutral
-   ("reduce load", "report injury")? I'd go athlete language.
-2. Does group 2 feedback prompt automatically after each session, or stay
-   opt-in? (Auto-prompt = better data for rolling programming, mild friction.)
-3. Horizon: lock editing to this week + next 2, view-only beyond — matches
-   your 3–4-week coaching model and shrinks the surface further. Confirm.
-4. Chat placement: its own tab as now, or inside the day sheet as "something
-   else…"? (I'd fold it in — one door, layered.)
+1. **Menu wording: athlete language.** "I'm cooked", "I'm injured".
+2. **Feedback auto-prompts after each session** — better data for rolling
+   programming beats the mild friction.
+3. **Edit horizon locked: this week + next 2, view-only beyond.**
+4. **Chat folds into the day sheet** as the layered "something else…" door —
+   no separate front-door tab.
