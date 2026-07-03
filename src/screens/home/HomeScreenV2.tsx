@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import { PlanChangeSheet } from './PlanChangeSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
@@ -31,7 +30,6 @@ import {
   suppressDuplicateWorkoutContext,
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
-  QUICK_ACTIONS,
   type PhaseShiftStep,
 } from './homeScreenConstants';
 
@@ -256,49 +254,6 @@ export default function HomeScreenV2() {
               </View>
             </Card>
           </Pressable>
-        )}
-
-        {/* ── Quick actions ── */}
-        {isNormal && (
-          <View style={styles.section}>
-            <SectionLabel>Need to adjust your weekly plan?</SectionLabel>
-            <View style={styles.chipsWrap}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.chipsScroll}
-              >
-                {QUICK_ACTIONS.map((action) => (
-                  <Pressable
-                    key={action.label}
-                    onPress={() => handleQuickAction(action.prefill)}
-                    style={({ pressed }) => [
-                      styles.chip,
-                      action.prefill === '' && styles.chipHighlight,
-                      pressed && { opacity: 0.7, transform: [{ scale: 0.98 }] },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        action.prefill === '' && styles.chipTextHighlight,
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {action.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-              <LinearGradient
-                colors={['rgba(12,12,12,0)', 'rgba(12,12,12,0.9)', '#0C0C0C']}
-                start={{ x: 0, y: 0.5 }}
-                end={{ x: 1, y: 0.5 }}
-                style={styles.chipsFade}
-                pointerEvents="none"
-              />
-            </View>
-          </View>
         )}
 
         {/* ── Phase shift card ── */}
@@ -1114,20 +1069,6 @@ const styles = StyleSheet.create({
 
   // Sections — larger rhythm between top-level blocks.
   section: { paddingTop: spacing.xxl, gap: spacing.md },
-  chipsWrap: { position: 'relative' },
-  chipsScroll: { gap: spacing.sm, paddingRight: 50 },
-  chip: {
-    backgroundColor: '#151515', paddingHorizontal: 16, paddingVertical: 11,
-    borderRadius: borderRadius.full,
-  },
-  chipHighlight: {
-    backgroundColor: 'rgba(200, 255, 0, 0.10)',
-  },
-  chipText: { color: '#BFBFBF', fontSize: 13, fontWeight: '500' },
-  chipTextHighlight: { color: '#C8FF00', fontWeight: '600' },
-  chipsFade: {
-    position: 'absolute', right: 0, top: 0, bottom: 0, width: 60,
-  },
 
   // Phase card — borderless default surface; the outline Button below it
   // carries the accent weight.
