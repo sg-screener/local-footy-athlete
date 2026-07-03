@@ -164,3 +164,41 @@ menu live. Then, in order: day-swapping, partial binning, strength
 swaps, "I'm not 100%".
 
 ---
+
+## Saturday 4 July 2026 — early morning session
+
+**The change menu learned three big tricks.**
+
+1. **You're the boss now.** Hard sessions used to be hidden unless it
+   was a bye week. New rule signed off tonight: the athlete can choose
+   anything, always — the coach just gets a word in first. Pick a hard
+   session before game day and you'll see "make sure you don't overdo
+   it — we want you fresh for game day", with an "Add it anyway — I'm
+   good" button. Stack a third hard session in one week and you get a
+   burnout warning instead. Nothing is ever blocked; everything is
+   still checked.
+
+2. **Days can trade places.** "Move it to another day" used to only
+   offer empty days. Now every day (except game day) is fair game — pick
+   an occupied one and the two days simply swap, all-or-nothing, with
+   the safety checks proving nothing gets lost or mangled in transit.
+
+3. **Bin exactly what you mean.** On a double day like "Team Training +
+   Upper Pull" you now choose: just team training (can't make it
+   tonight — that date only, next week untouched), just the gym session,
+   or the whole day. Same for strength + conditioning days.
+
+**Bonus:** you can now stack conditioning ON TOP of a lifting day —
+"Add to this day" turns a lower-body session into a proper combined
+day, built with the same structures the weekly programming uses.
+
+**Numbers for the nerds:** 4 more commits, the change-menu test suite
+grew from 91 to 122 checks, and every new path still can't offer
+anything the safety validator would reject.
+
+**What's next.** Strength swaps powered by the real programming engine
+(pick "upper body", the engine builds it with all the coaching
+principles), then the "I'm not 100%" flow — tired, sick or injured,
+two taps for severity, coach conversation only when it actually helps.
+
+---

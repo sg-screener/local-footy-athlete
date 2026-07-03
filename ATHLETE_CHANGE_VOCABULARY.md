@@ -128,10 +128,9 @@ listed first. Occupied destination = the two days SWAP atomically
 athlete picks WHICH to bin or both — any session is binnable, including
 team training (that single date only; the recurring team schedule and
 future weeks are untouched; manual override wins at resolver priority 1
-so team training never re-injects). Partial bin needs: conditioning-
-promotion (removing all strength currently trips
-protected_conditioning_missing) and team-overlay rebuild (overlay is
-baked into the generated workout name/flags).
+so team training never re-injects). BUILT 2026-07-04: rides the
+existing revision actionScopes + writer surviving-section
+materialization; producer owns scope listing and survivor title/type.
 
 **"I'm not 100%"** (new option, replaces old ask-coach slot) → Tired /
 Sick / Injured, each with SEVERITY TAPS. Clear ends apply
@@ -144,8 +143,12 @@ middles open the coach PRE-LOADED with what was tapped — never re-asks.
 catch-all.
 
 **Add a session** (rest days) → same russian-doll categories as swap.
-Also addable to OCCUPIED days (e.g. conditioning onto a lower-body day)
-→ needs combined-day merge machinery; same later phase as partial bin.
+Also addable to OCCUPIED days (e.g. conditioning onto a lower-body day).
+BUILT 2026-07-04: producer merged snapshots + writer mixed
+materialization (own rows from source, template rows from registry,
+conditioningBlock attached → a real combined S+C day). Conditioning
+only for now; one block per day; recovery/strength stacking arrives
+with the strength-generation phase.
 
 **Build order (approved):** 1) menu restructure + conditioning
 categories with deterministic pick, 2) move-as-swap, 3) bin scopes incl.
