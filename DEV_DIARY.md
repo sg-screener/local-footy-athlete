@@ -113,3 +113,54 @@ says it's worth it. Otherwise: use the coach for a few days like a real
 athlete would, and let it prove itself.
 
 ---
+
+## Friday 3 July 2026 — evening session
+
+**The plan got a facelift, and the change menu grew up.**
+
+This afternoon we decided the plan itself should be the way athletes talk
+to the coach — tap a day, pick from a menu, done. Tonight that idea got
+polished in five visible ways:
+
+1. **One clean week list.** The big "today" card at the top is gone.
+   You now see Monday to Sunday as one list, with today gently bigger and
+   highlighted. Tap any other day and *it* becomes the highlighted one,
+   with its Start Session button and change options right there. Browsing
+   next week? Nothing is highlighted until you tap — and the top of the
+   screen now says "Next week" or "Last week" so you always know where
+   you are.
+
+2. **Real dates everywhere.** Every day now shows its actual date (like
+   "FRI 3/7"), on the week list and inside each session.
+
+3. **"Want to change something?" lives inside sessions too.** Athletes
+   open a session, read it, and *then* decide to change it — so the
+   change door is now in both places.
+
+4. **Binning asks "are you sure?"** and then takes you straight back to
+   your week. No accidental deletions.
+
+5. **The change menu now works like russian dolls.** Instead of a wall
+   of 18 session options: pick "Conditioning" → "Light or Hard" → and
+   the engine picks the best session *for you* — instantly, following
+   all the coaching rules (hard sessions only appear on bye weeks, and
+   it avoids giving you something already in your week). There's a new
+   "Recovery" option too — a proper restorative flow. No AI chat
+   involved, so it's instant and can never pick something illegal.
+
+Sam also signed off the bigger roadmap tonight: swapping between any two
+days (not just onto rest days), binning just one part of a double-session
+day (including team training if you can't make it), strength swaps that
+use the real programming engine, and an "I'm not 100%" flow — tired,
+sick, or injured, with a couple of taps for how bad it is, and the AI
+coach only stepping in when it's genuinely needed.
+
+**Numbers for the nerds:** 8 commits tonight, 72 producer tests all
+green (up from 49), and every new menu option is provably unable to
+offer something the safety validator would reject.
+
+**What's next.** Restart the app and try the new week view and change
+menu live. Then, in order: day-swapping, partial binning, strength
+swaps, "I'm not 100%".
+
+---
