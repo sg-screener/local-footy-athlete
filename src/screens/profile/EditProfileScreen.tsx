@@ -12,18 +12,10 @@ import { Text } from '../../components/common/Text';
 import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { useProfileStore } from '../../store/profileStore';
-import { Position } from '../../types/domain';
+import type { RoleBucket } from '../../types/domain';
+import { ROLE_BUCKET_OPTIONS, normalizeRoleBucket } from '../../utils/roleBuckets';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
-
-const POSITIONS: Position[] = [
-  'Small back',
-  'Key back',
-  'Midfielder',
-  'Ruck',
-  'Small forward',
-  'Key forward',
-];
 
 export const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
@@ -31,8 +23,8 @@ export const EditProfileScreen: React.FC = () => {
   const updateOnboardingData = useProfileStore((state) => state.updateOnboardingData);
 
   const [name, setName] = useState(onboardingData.firstName || '');
-  const [selectedPosition, setSelectedPosition] = useState<string>(
-    onboardingData.position || ''
+  const [selectedPosition, setSelectedPosition] = useState<RoleBucket | null>(
+    onboardingData.position ? normalizeRoleBucket(onboardingData.position) : null,
   );
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +33,7 @@ export const EditProfileScreen: React.FC = () => {
     try {
       updateOnboardingData({
         firstName: name,
-        position: selectedPosition as Position,
+        ...(selectedPosition ? { position: selectedPosition } : {}),
       });
       navigation.goBack();
     } catch (error) {
@@ -76,28 +68,28 @@ export const EditProfileScreen: React.FC = () => {
         placeholder="Your first name or nickname"
       />
 
-      {/* Position Selector */}
+      {/* Role Selector */}
       <Text variant="label" style={styles.label}>
-        Position
+        Role
       </Text>
       <View style={styles.positionGrid}>
-        {POSITIONS.map((position) => (
+        {ROLE_BUCKET_OPTIONS.map((role) => (
           <Pressable
-            key={position}
-            onPress={() => setSelectedPosition(position)}
+            key={role.id}
+            onPress={() => setSelectedPosition(role.id)}
             style={[
               styles.positionCard,
-              selectedPosition === position && styles.positionCardActive,
+              selectedPosition === role.id && styles.positionCardActive,
             ]}
           >
             <Text
               variant="body"
               style={[
                 styles.positionText,
-                selectedPosition === position && styles.positionTextActive,
+                selectedPosition === role.id && styles.positionTextActive,
               ]}
             >
-              {position}
+              {role.label}
             </Text>
           </Pressable>
         ))}
@@ -108,7 +100,7 @@ export const EditProfileScreen: React.FC = () => {
         title={loading ? 'Saving...' : 'Save Changes'}
         variant="primary"
         onPress={handleSave}
-        disabled={loading || !name.trim()}
+        disabled={loading || !name.trim() || !selectedPosition}
         style={styles.saveButton}
       />
 

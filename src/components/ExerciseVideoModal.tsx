@@ -18,6 +18,7 @@ import {
   extractYouTubeVideoId,
   buildYouTubeEmbedUrl,
 } from '../services/exerciseVideoService';
+import { formatExerciseDisplayName } from '../utils/exerciseDisplay';
 
 interface ExerciseVideoModalProps {
   visible: boolean;
@@ -55,6 +56,7 @@ export default function ExerciseVideoModal({
   onClose,
 }: ExerciseVideoModalProps) {
   const { url } = lookupExerciseDemo(exerciseName);
+  const exerciseDisplayName = formatExerciseDisplayName(exerciseName) || exerciseName;
   const videoId = useMemo(() => extractYouTubeVideoId(url), [url]);
   const embedUrl = videoId ? buildYouTubeEmbedUrl(videoId) : null;
 
@@ -115,7 +117,7 @@ export default function ExerciseVideoModal({
             <View style={styles.titleBlock}>
               <Text style={styles.eyebrow}>DEMO</Text>
               <Text style={styles.title} numberOfLines={2}>
-                {exerciseName}
+                {exerciseDisplayName}
               </Text>
             </View>
             <IconButton
@@ -161,7 +163,7 @@ export default function ExerciseVideoModal({
                 </Text>
                 <Text style={styles.fallbackNote}>
                   {loadError
-                    ? 'YouTube blocked the embed — tap below to watch it in the app.'
+                    ? 'YouTube blocked the embed - tap below to watch it in the app.'
                     : "This demo doesn't support inline playback."}
                 </Text>
                 <View style={styles.fallbackButton}>

@@ -15,6 +15,7 @@ import {
   CoachConversation,
   CoachMessage,
   ScheduleEvent,
+  Position,
 } from './domain';
 
 /**
@@ -125,7 +126,7 @@ export interface CreateUserProfileRequest {
   email: string;
   displayName: string;
   age: number;
-  position: string;
+  position: Position;
   experienceLevel: string;
 }
 

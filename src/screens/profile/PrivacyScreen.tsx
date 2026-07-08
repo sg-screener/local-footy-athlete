@@ -42,7 +42,7 @@ export const PrivacyScreen: React.FC = () => {
         Information the app uses
       </Text>
       <Text variant="body" style={styles.sectionContent}>
-        Local Footy Athlete may use your name, position, training schedule, game day, experience level, body measurements, training preferences, workout activity, calendar changes, soreness, fatigue, injury context and coach chat messages.
+        Local Footy Athlete may use your name, footy role, training schedule, game day, experience level, body measurements, training preferences, workout activity, calendar changes, soreness, fatigue, injury context and coach chat messages.
       </Text>
 
       <Text variant="h4" style={styles.sectionTitle}>

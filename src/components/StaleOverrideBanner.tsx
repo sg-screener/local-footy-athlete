@@ -2,9 +2,9 @@
  * StaleOverrideBanner — Warning banner for stale manual overrides.
  *
  * Shows when a manual override appears to reference a game-proximity intent
- * but the game context has changed. Offers three actions:
+ * but the game context has changed. Offers guided actions:
  *   - Keep: dismiss the warning, keep the override as-is
- *   - Review: navigate to coach chat to discuss the override
+ *   - Review: open a no-chat choice sheet
  *   - Clear: remove the override entirely, let the resolver take over
  *
  * Used in both HomeScreen (inline on day rows) and DayWorkoutScreen (top banner).
@@ -13,6 +13,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from './common/Text';
+import { Button, Sheet } from './ui';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import { useProgramStore } from '../store/programStore';
@@ -22,12 +23,14 @@ interface StaleOverrideBannerProps {
   warning: StaleOverrideWarning;
   /** Compact mode for inline use in day rows */
   compact?: boolean;
-  /** Called when user taps "Review" — navigate to coach chat with pre-filled context */
+  /** Called only when user explicitly taps "Message the coach" from the review sheet. */
   onReview?: (prefill: string) => void;
 }
 
 export function StaleOverrideBanner({ warning, compact = false, onReview }: StaleOverrideBannerProps) {
   const [dismissed, setDismissed] = useState(false);
+  const [reviewVisible, setReviewVisible] = useState(false);
+  const [detailVisible, setDetailVisible] = useState(false);
   const removeManualOverride = useProgramStore((s) => s.removeManualOverride);
   const dismissStaleWarning = useProgramStore((s) => s.dismissStaleWarning);
 
@@ -35,17 +38,24 @@ export function StaleOverrideBanner({ warning, compact = false, onReview }: Stal
 
   const handleKeep = () => {
     dismissStaleWarning(warning.date);
+    setReviewVisible(false);
+    setDetailVisible(false);
     setDismissed(true);
   };
 
   const handleClear = () => {
     removeManualOverride(warning.date);
+    setReviewVisible(false);
+    setDetailVisible(false);
     setDismissed(true);
   };
 
-  const handleReview = () => {
-    const prefill = `I have a manual override on ${warning.date} ("${warning.workout.name}") that might need updating. ${warning.reason} What should I do — keep it, change it, or clear it?`;
-    onReview?.(prefill);
+  const coachPrefill = `I have a manual override on ${warning.date} ("${warning.workout.name}") that might need updating. ${warning.reason} What should I do - keep it, change it, or clear it?`;
+
+  const handleMessageCoach = () => {
+    setReviewVisible(false);
+    setDetailVisible(false);
+    onReview?.(coachPrefill);
   };
 
   if (compact) {
@@ -53,7 +63,7 @@ export function StaleOverrideBanner({ warning, compact = false, onReview }: Stal
       <View style={styles.compactContainer}>
         <View style={styles.compactDot} />
         <Text style={styles.compactText} numberOfLines={1}>
-          Schedule changed — override may be stale
+          Schedule changed - override may be stale
         </Text>
         <Pressable onPress={handleClear} style={styles.compactAction}>
           <Text style={styles.compactActionText}>Clear</Text>
@@ -66,39 +76,96 @@ export function StaleOverrideBanner({ warning, compact = false, onReview }: Stal
   }
 
   return (
-    <View style={styles.container}>
-      <View style={styles.headerRow}>
-        <View style={styles.warningDot} />
-        <Text style={styles.headerText}>Override may be outdated</Text>
-      </View>
+    <>
+      <View style={styles.container}>
+        <View style={styles.headerRow}>
+          <View style={styles.warningDot} />
+          <Text style={styles.headerText}>Override may be outdated</Text>
+        </View>
 
-      <Text style={styles.reasonText}>{warning.reason}</Text>
+        <Text style={styles.reasonText}>{warning.reason}</Text>
 
-      <View style={styles.actions}>
-        <Pressable
-          onPress={handleKeep}
-          style={({ pressed }) => [styles.actionButton, styles.keepButton, pressed && styles.pressed]}
-        >
-          <Text style={styles.keepButtonText}>Keep</Text>
-        </Pressable>
-
-        {onReview && (
+        <View style={styles.actions}>
           <Pressable
-            onPress={handleReview}
-            style={({ pressed }) => [styles.actionButton, styles.reviewButton, pressed && styles.pressed]}
+            onPress={handleKeep}
+            style={({ pressed }) => [styles.actionButton, styles.keepButton, pressed && styles.pressed]}
           >
-            <Text style={styles.reviewButtonText}>Review</Text>
+            <Text style={styles.keepButtonText}>Keep</Text>
           </Pressable>
-        )}
 
-        <Pressable
-          onPress={handleClear}
-          style={({ pressed }) => [styles.actionButton, styles.clearButton, pressed && styles.pressed]}
-        >
-          <Text style={styles.clearButtonText}>Clear Override</Text>
-        </Pressable>
+          {onReview && (
+            <Pressable
+              onPress={() => setReviewVisible(true)}
+              style={({ pressed }) => [styles.actionButton, styles.reviewButton, pressed && styles.pressed]}
+            >
+              <Text style={styles.reviewButtonText}>Review</Text>
+            </Pressable>
+          )}
+
+          <Pressable
+            onPress={handleClear}
+            style={({ pressed }) => [styles.actionButton, styles.clearButton, pressed && styles.pressed]}
+          >
+            <Text style={styles.clearButtonText}>Clear Override</Text>
+          </Pressable>
+        </View>
       </View>
-    </View>
+
+      <Sheet
+        visible={reviewVisible}
+        onClose={() => setReviewVisible(false)}
+        testID="stale-override-review-sheet"
+      >
+        <Text style={styles.sheetTitle}>Review this change</Text>
+        <Text style={styles.sheetBody}>
+          This change may no longer match your current program.
+        </Text>
+        <Button label="Keep this change" variant="secondary" glow={false} onPress={handleKeep} />
+        <Button
+          label="Clear this change"
+          variant="danger"
+          glow={false}
+          onPress={handleClear}
+          style={styles.sheetButton}
+        />
+        <Button
+          label="Update this change"
+          variant="outline"
+          glow={false}
+          onPress={() => {
+            setReviewVisible(false);
+            setDetailVisible(true);
+          }}
+          style={styles.sheetButton}
+        />
+        <Button
+          label="Message the coach"
+          variant="ghost"
+          glow={false}
+          onPress={handleMessageCoach}
+          style={styles.sheetButton}
+        />
+      </Sheet>
+
+      <Sheet
+        visible={detailVisible}
+        onClose={() => setDetailVisible(false)}
+        testID="stale-override-detail-sheet"
+      >
+        <Text style={styles.sheetTitle}>I need a bit more detail</Text>
+        <Text style={styles.sheetBody}>
+          This one needs more context before we can change your program safely.
+        </Text>
+        <Button label="Message the coach" glow={false} onPress={handleMessageCoach} />
+        <Button
+          label="Cancel"
+          variant="ghost"
+          glow={false}
+          onPress={() => setDetailVisible(false)}
+          style={styles.sheetButton}
+        />
+      </Sheet>
+    </>
   );
 }
 
@@ -213,5 +280,20 @@ const styles = StyleSheet.create({
     color: '#666666',
     fontSize: 11,
     fontWeight: '600',
+  },
+  sheetTitle: {
+    color: colors.text.primary,
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: spacing.sm,
+  },
+  sheetBody: {
+    color: colors.text.secondary,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
+  sheetButton: {
+    marginTop: spacing.sm,
   },
 });

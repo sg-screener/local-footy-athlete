@@ -897,7 +897,7 @@ export function formatSubstitutesForLLM(
     return `No safe pattern-preserving substitutes found for "${original}". Pattern may need to be dropped or substitution may need a different family.`;
   }
   const lines = candidates.map((c) => {
-    const reasonStr = c.reason ? ` — ${c.reason}` : '';
+    const reasonStr = c.reason ? ` - ${c.reason}` : '';
     const axes =
       c.differsOn.length > 0
         ? ` [differs on: ${c.differsOn.join(', ')}]`

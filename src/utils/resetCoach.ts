@@ -3,13 +3,13 @@
  *
  * Three reset levels (least → most destructive):
  *
- *   clearCoachAdjustments()      — surgical: removes activeInjury,
- *                                  Coach Update cards, injury-tagged
- *                                  manual overrides, and coach-authored
- *                                  notes. Preserves the base program,
- *                                  onboarding profile, calendar marks,
- *                                  user-authored manual overrides, and
- *                                  athlete preferences.
+ *   clearCoachAdjustments()      — surgical: removes active program
+ *                                  modifiers, Coach Update cards,
+ *                                  injury-tagged manual overrides, and
+ *                                  coach-authored notes. Preserves the base
+ *                                  program, baseline onboarding profile,
+ *                                  calendar marks, and user-authored manual
+ *                                  overrides.
  *
  *   clearCoachChat()             — clears CoachScreen chat messages
  *                                  and the pendingInjury ref. Preserves
@@ -40,7 +40,10 @@
  */
 
 import { useProgramStore } from '../store/programStore';
-import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import {
+  useCoachUpdatesStore,
+  type ActivePreferenceConstraint,
+} from '../store/coachUpdatesStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { logger } from './logger';
@@ -53,6 +56,10 @@ import { useCoachPreferencesStore } from '../store/coachPreferencesStore';
 import { usePendingCoachClarifierStore } from '../store/pendingCoachClarifierStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useWorkoutLogStore } from '../store/workoutLogStore';
+import {
+  getActiveProgramModifiers,
+  clearActiveProgramModifier,
+} from './activeProgramModifiers';
 import { fireResetSignal } from './resetSignals';
 import {
   DEV_TEST_ONBOARDING_DATA,
@@ -279,11 +286,14 @@ export function buildDevPostOnboardingResetProfile(
  *     removed (notes that read like injury restrictions are stripped
  *     so the surface no longer carries the message)
  *   - athletePreferencesStore.activeInjuries ⇒ []
+ *   - future-generation exercise preferences ⇒ cleared
+ *   - modality preferences / readiness signals ⇒ cleared
+ *   - active profile availability constraints ⇒ cleared
  *   - pendingInjuryRef (caller-supplied) ⇒ cleared
  *
  * NEVER touched:
  *   - currentProgram, currentMicrocycle (base program)
- *   - profileStore.onboardingData (game days, team days, equipment)
+ *   - baseline profileStore.onboardingData (game days, team days, equipment)
  *   - calendarStore.markedDays (rest days, explicit games)
  *   - dateOverrides where intent is anything other than 'injury'
  */
@@ -303,6 +313,12 @@ export function clearCoachAdjustments(opts?: {
     chatCleared: false,
   };
 
+  const activePreferenceConstraints = useCoachUpdatesStore
+    .getState()
+    .activeConstraints.filter(
+      (c): c is ActivePreferenceConstraint => c.type === 'preference',
+    );
+
   // 1. Active injury — single record on coachUpdatesStore.
   const activeInjury = deps.coachUpdatesStore.getActiveInjury();
   if (activeInjury) {
@@ -320,6 +336,26 @@ export function clearCoachAdjustments(opts?: {
     deps.coachUpdatesStore.clearAllCoachUpdates();
     summary.coachUpdatesCleared = updateCount;
     logger.debug('[reset] coach_updates_cleared', { count: updateCount });
+  }
+
+  // 2b. Tap-created status modifiers (fatigue / recovery / busy-week / away /
+  //     soreness) don't always have a CoachUpdate card, so the card-gated
+  //     clear above can leave them behind. Sweep them through the SAME
+  //     active-modifier clear path the Program tab's per-note "Clear" uses,
+  //     so bulk clear and per-note clear stay in lockstep — including
+  //     removing the rest-day overrides an away/recovery note linked.
+  let statusModifiersCleared = 0;
+  for (const modifier of getActiveProgramModifiers()) {
+    if (
+      modifier.source === 'active_constraint' &&
+      (modifier.type === 'temporary_status' || modifier.type === 'coach_restriction')
+    ) {
+      const result = clearActiveProgramModifier(modifier.id);
+      if (result.cleared) statusModifiersCleared += 1;
+    }
+  }
+  if (statusModifiersCleared > 0) {
+    logger.debug('[reset] status_modifiers_cleared', { count: statusModifiersCleared });
   }
 
   // 3. Injury-tagged manual overrides (intent === 'injury').
@@ -367,6 +403,58 @@ export function clearCoachAdjustments(opts?: {
     summary.athletePrefInjuriesCleared = prefInjuries.length;
     logger.debug('[reset] athlete_pref_injuries_cleared', {
       count: prefInjuries.length,
+    });
+  }
+  if (activePreferenceConstraints.length > 0) {
+    for (const preference of activePreferenceConstraints) {
+      if (preference.exercise) {
+        prefStore.removeExclusion(preference.exercise);
+      }
+      if (preference.alternative) {
+        prefStore.removePinned(preference.alternative);
+      }
+    }
+    logger.debug('[reset] athlete_pref_exercise_preferences_cleared', {
+      count: activePreferenceConstraints.length,
+    });
+  }
+
+  const remainingExcluded = [...(prefStore.prefs?.excluded ?? [])];
+  const remainingPinned = [...(prefStore.prefs?.pinned ?? [])];
+  for (const exercise of remainingExcluded) prefStore.removeExclusion(exercise);
+  for (const exercise of remainingPinned) prefStore.removePinned(exercise);
+  if (remainingExcluded.length > 0 || remainingPinned.length > 0) {
+    logger.debug('[reset] athlete_pref_program_modifiers_cleared', {
+      excluded: remainingExcluded.length,
+      pinned: remainingPinned.length,
+    });
+  }
+
+  const modalityPrefs = useCoachPreferencesStore.getState().modalityPreferences ?? {};
+  if (Object.keys(modalityPrefs).length > 0) {
+    useCoachPreferencesStore.getState().clearAllModalityPreferences();
+    logger.debug('[reset] modality_preferences_cleared', {
+      count: Object.keys(modalityPrefs).length,
+    });
+  }
+
+  const readinessSignals = useReadinessStore.getState().signalsByDate ?? {};
+  if (Object.keys(readinessSignals).length > 0) {
+    useReadinessStore.getState().clear();
+    logger.debug('[reset] readiness_modifiers_cleared', {
+      count: Object.keys(readinessSignals).length,
+    });
+  }
+
+  const profileState = useProfileStore.getState();
+  const availability = profileState.onboardingData.availabilityConstraints ?? [];
+  const retainedAvailability = availability.filter((constraint) => constraint.active === false);
+  if (retainedAvailability.length !== availability.length) {
+    profileState.updateOnboardingData({
+      availabilityConstraints: retainedAvailability.length > 0 ? retainedAvailability : undefined,
+    });
+    logger.debug('[reset] availability_modifiers_cleared', {
+      count: availability.length - retainedAvailability.length,
     });
   }
 

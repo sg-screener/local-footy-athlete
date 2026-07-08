@@ -2,10 +2,9 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  Pressable,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Text } from '../../components/common/Text';
+import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
@@ -23,13 +22,11 @@ type BenchStrengthScreenProps = NativeStackScreenProps<
 // Mirrors SquatStrengthScreen's option-list refresh — see that file for
 // the rationale on the "I don't bench" + "Not sure" merge (canonical id
 // is 'Not sure' because it claims less about whether the user benches).
-// Bench progression is 1.0 → 1.25 → 1.5 BW — already evenly spaced; only
-// the labels changed (Below + leading "~" on multiplier tiers).
 const STRENGTH_OPTIONS: { id: BenchStrength; label: string }[] = [
-  { id: 'Less than bodyweight', label: 'Below bodyweight' },
+  { id: 'Less than bodyweight', label: 'Less than bodyweight' },
   { id: 'Around bodyweight', label: 'Around bodyweight' },
-  { id: '1.25x bodyweight', label: '~1.25× bodyweight' },
-  { id: '1.5x bodyweight+', label: '~1.5× bodyweight+' },
+  { id: '1.25x bodyweight', label: '1.25× bodyweight' },
+  { id: '1.5x bodyweight+', label: '1.5× bodyweight+' },
   { id: 'Not sure', label: "I don't bench / not sure" },
 ];
 
@@ -79,14 +76,11 @@ export const BenchStrengthScreen: React.FC<BenchStrengthScreenProps> = ({
         {STRENGTH_OPTIONS.map((option) => {
           const isSelected = selectedStrength === option.id;
           return (
-            <Pressable
+            <SelectableTile
               key={option.id}
-              style={({ pressed }) => [
-                styles.card,
-                isSelected && styles.cardSelected,
-                !isSelected && pressed && styles.cardPressed,
-              ]}
+              isSelected={isSelected}
               onPress={() => handleSelect(option.id)}
+              style={styles.card}
             >
               <Text
                 variant="bodyEmphasis"
@@ -95,7 +89,7 @@ export const BenchStrengthScreen: React.FC<BenchStrengthScreenProps> = ({
               >
                 {option.label}
               </Text>
-            </Pressable>
+            </SelectableTile>
           );
         })}
       </View>
@@ -119,21 +113,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: 14,
     paddingHorizontal: 20,
     paddingVertical: 18,
-    borderWidth: 1.5,
-    borderColor: colors.surface.tertiary,
-  },
-  cardSelected: {
-    borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200, 255, 0, 0.04)',
-  },
-  cardPressed: {
-    backgroundColor: colors.surface.tertiary,
   },
   cardLabel: {
     fontWeight: '600',
+    paddingRight: 28,
   },
 });

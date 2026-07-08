@@ -18,7 +18,7 @@ type TrainingCommitmentScreenProps = NativeStackScreenProps<
 const COMMITMENT_OPTIONS = [1, 2, 3, 4, 5, 6];
 
 /**
- * How-many-days picker (outside team training).
+ * How-many-days picker.
  *
  * Uses the shared <SelectableTile /> primitive with `variant="grid"` so
  * the big number (1..6) is the primary visual signal and the selected
@@ -27,8 +27,8 @@ const COMMITMENT_OPTIONS = [1, 2, 3, 4, 5, 6];
  * these cues make the choice unambiguous without drowning the tile in
  * a heavy fill.
  *
- * The "Not sure" escape hatch below is a Pressable (not a tile) because
- * it's a text-link affordance, not a peer option.
+ * The "Not sure" escape hatch below is a secondary pill that selects a
+ * sensible default without advancing automatically.
  */
 export const TrainingCommitmentScreen: React.FC<
   TrainingCommitmentScreenProps
@@ -44,28 +44,34 @@ export const TrainingCommitmentScreen: React.FC<
   const handleSelect = useCallback((days: number) => {
     setSelectedDays(days);
     setNotSure(false);
-    updateOnboardingData({ trainingDaysPerWeek: days });
-    setTimeout(() => {
-      navigation.navigate('PreferredTrainingDays');
-    }, 250);
-  }, [navigation, updateOnboardingData]);
+    updateOnboardingData({
+      trainingDaysPerWeek: days,
+      trainingDaysUnsure: false,
+    });
+  }, [updateOnboardingData]);
 
   const handleNotSure = useCallback(() => {
-    setNotSure(true);
     setSelectedDays(null);
-    updateOnboardingData({ trainingDaysPerWeek: 0 });
-    setTimeout(() => {
+    setNotSure(true);
+    updateOnboardingData({
+      trainingDaysPerWeek: 3,
+      trainingDaysUnsure: true,
+    });
+  }, [updateOnboardingData]);
+
+  const handleContinue = useCallback(() => {
+    if (selectedDays !== null || notSure) {
       navigation.navigate('PreferredTrainingDays');
-    }, 250);
-  }, [navigation, updateOnboardingData]);
+    }
+  }, [navigation, notSure, selectedDays]);
 
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
-      onContinue={() => {}}
-      hideFooter
+      onContinue={handleContinue}
+      continueDisabled={selectedDays === null && !notSure}
     >
       <View style={styles.section}>
         <Text
@@ -80,7 +86,7 @@ export const TrainingCommitmentScreen: React.FC<
           color={colors.text.secondary}
           style={styles.subtitle}
         >
-          Be realistic — we'll build around your team training and games
+          Pick how many days you can fit LFA work in. Include club training nights when you're happy to double up.
         </Text>
 
         <View style={styles.grid}>
@@ -110,12 +116,12 @@ export const TrainingCommitmentScreen: React.FC<
           style={({ pressed }) => [
             styles.notSureButton,
             notSure && styles.notSureButtonSelected,
-            pressed && !notSure && styles.notSurePressed,
+            pressed && styles.notSurePressed,
           ]}
           onPress={handleNotSure}
         >
           <Text style={[styles.notSureText, notSure && styles.notSureTextSelected]}>
-            Not sure — we can adjust later
+            Not sure? We can adjust later
           </Text>
         </Pressable>
       </View>
@@ -134,6 +140,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: colors.text.secondary,
+    marginBottom: spacing.lg,
   },
   grid: {
     flexDirection: 'row',
@@ -158,22 +165,30 @@ const styles = StyleSheet.create({
   },
   notSureButton: {
     marginTop: spacing.lg,
+    width: '100%',
+    minHeight: 52,
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    borderRadius: 15,
+    backgroundColor: colors.surface.secondary,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.10)',
   },
   notSureButtonSelected: {
-    opacity: 1,
+    backgroundColor: 'rgba(200,255,0,0.04)',
+    borderColor: colors.accent.lime,
   },
   notSurePressed: {
-    opacity: 0.6,
+    opacity: 0.72,
   },
   notSureText: {
     color: colors.text.tertiary,
     fontSize: 14,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
+    fontWeight: '700',
   },
   notSureTextSelected: {
-    color: colors.accent.lime,
+    color: colors.text.primary,
   },
 });

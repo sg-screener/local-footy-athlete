@@ -1755,7 +1755,7 @@ function coachRevisionInvalidReply(
 ): string {
   if (result.reason === 'adapter_failed') {
     const detail = result.issues[0] ?? 'transport error';
-    return `[dev] Coach revision endpoint failed (${detail}). No changes made — check deployment/network.`;
+    return `[dev] Coach revision endpoint failed (${detail}). No changes made - check deployment/network.`;
   }
   return "I couldn't safely validate that revision, so I left the plan unchanged.";
 }
@@ -2207,7 +2207,7 @@ function resolvePendingCoachRevisionProposalAnswer(args: {
   if (classification.kind === 'reject_proposed') {
     return {
       kind: 'cancelled',
-      reply: 'Got it — leaving things as they are.',
+      reply: 'Got it - leaving things as they are.',
     };
   }
 
@@ -2321,7 +2321,7 @@ function resolvePendingProgramEditDraftAnswer(args: {
   if (classification.kind === 'reject_proposed') {
     return {
       kind: 'cancelled',
-      reply: 'Got it — leaving things as they are.',
+      reply: 'Got it - leaving things as they are.',
     };
   }
 
@@ -2509,46 +2509,46 @@ function buildSessionAwareReadinessReply(
 
   if (!workout) {
     if (isFlat) {
-      return 'Got it — no S&C session is scheduled today, so keep it as recovery. Easy movement is fine if it makes you feel better.';
+      return 'Got it - no S&C session is scheduled today, so keep it as recovery. Easy movement is fine if it makes you feel better.';
     }
     if (isSore) {
-      return `Got it — no S&C session is scheduled today, so keep ${bodyPart} calm and pain-free. If it feels like pain, tell me a rough score out of 10.`;
+      return `Got it - no S&C session is scheduled today, so keep ${bodyPart} calm and pain-free. If it feels like pain, tell me a rough score out of 10.`;
     }
     if (isShortTime) {
-      return 'Got it — no S&C session is scheduled today, so there is nothing we need to squeeze in.';
+      return 'Got it - no S&C session is scheduled today, so there is nothing we need to squeeze in.';
     }
   }
 
   if (isRecoveryWorkoutForCoach(workout)) {
     if (isFlat) {
-      return 'Got it — today is already a recovery session, so we’ll keep it recovery-led. Aim to finish fresher than you started: easy pace, relaxed mobility, and no extra work added.';
+      return 'Got it - today is already a recovery session, so we’ll keep it recovery-led. Aim to finish fresher than you started: easy pace, relaxed mobility, and no extra work added.';
     }
     if (isSore) {
-      return `Got it — today is already recovery, so keep it gentle around ${bodyPart}. Stay pain-free, use the flush and mobility work, and tell me a pain score if it feels sharper than soreness.`;
+      return `Got it - today is already recovery, so keep it gentle around ${bodyPart}. Stay pain-free, use the flush and mobility work, and tell me a pain score if it feels sharper than soreness.`;
     }
     if (isShortTime) {
-      return 'Got it — today is already recovery, so keep the essentials only. Do the main mobility or flush work, then call it.';
+      return 'Got it - today is already recovery, so keep the essentials only. Do the main mobility or flush work, then call it.';
     }
   }
 
   if (isFlat) {
     const sessionName = workout?.name ? `For ${workout.name}, ` : '';
     return (
-      `Yep — that’s a low-readiness flag. ${sessionName}` +
-      `we’ll pull today back: keep the main work crisp, cap effort around 6–7/10, and skip anything that turns into a grind. ` +
+      `Yep - that’s a low-readiness flag. ${sessionName}` +
+      `we’ll pull today back: keep the main work crisp, cap effort around 6-7/10, and skip anything that turns into a grind. ` +
       `If you still feel worse after warming up, make it recovery only.`
     );
   }
 
   if (isSore) {
     return (
-      `Got it — sore ${bodyPart} today. ` +
+      `Got it - sore ${bodyPart} today. ` +
       `Keep that area pain-free, avoid pushing through sharpness, and I’ll bias the plan away from anything that hammers it.`
     );
   }
 
   if (isShortTime) {
-    return 'Got it — short-time day. Main stimulus first, then leave the accessories unless you’ve genuinely got room.';
+    return 'Got it - short-time day. Main stimulus first, then leave the accessories unless you’ve genuinely got room.';
   }
 
   return readinessAction.reply;
@@ -2687,7 +2687,7 @@ export async function handleCoachTurn(
           operation: pendingClarifier.operation,
           ageMs: Date.now() - pendingClarifier.createdAt,
         });
-        return replyAndFinish(input, 'clarifier-cancelled', 'No worries — leaving things as they are.');
+        return replyAndFinish(input, 'clarifier-cancelled', 'No worries - leaving things as they are.');
       }
 
       const pendingGameDayAnswer = resolvePendingGameDayReadinessAnswer(
@@ -2982,7 +2982,7 @@ export async function handleCoachTurn(
           return replyAndFinish(
             input,
             'pending-coach-revision-not-an-edit',
-            'No worries — leaving the plan as it is.',
+            'No worries - leaving the plan as it is.',
           );
         }
         if (revisionResult.kind === 'out_of_scope_setup') {
@@ -2993,7 +2993,7 @@ export async function handleCoachTurn(
           return replyAndFinish(
             input,
             'pending-coach-revision-out-of-scope-setup',
-            "That's a schedule change rather than a one-off edit. Send it to me as one message — like \"I'm away next week\" or \"I can only train Mon/Wed/Fri now\" — and I'll update your plan properly.",
+            "That's a schedule change rather than a one-off edit. Send it to me as one message - like \"I'm away next week\" or \"I can only train Mon/Wed/Fri now\" - and I'll update your plan properly.",
           );
         }
         if (revisionResult.kind === 'needs_confirmation') {
@@ -3046,7 +3046,7 @@ export async function handleCoachTurn(
           return replyAndFinish(
             input,
             'coach-revision-proposal-error',
-            `[dev] Coach revision path crashed (${detail}). No changes made — see logs.`,
+            `[dev] Coach revision path crashed (${detail}). No changes made - see logs.`,
           );
         }
       }
@@ -3507,7 +3507,7 @@ export async function handleCoachTurn(
           operation: pendingClarifier.operation,
           ageMs: Date.now() - pendingClarifier.createdAt,
         });
-        return replyAndFinish(input, 'clarifier-no', 'Got it — leaving things as they are.');
+        return replyAndFinish(input, 'clarifier-no', 'Got it - leaving things as they are.');
       }
       if (isAffirmativeClarifierMessage(input.userMessage.content)) {
         logger.debug('[pending-clarifier] affirmative_no_target', {
@@ -3856,7 +3856,7 @@ export async function handleCoachTurn(
         return replyAndFinish(
           input,
           'coach-revision-proposal-error',
-          `[dev] Coach revision path crashed (${detail}). No changes made — see logs.`,
+          `[dev] Coach revision path crashed (${detail}). No changes made - see logs.`,
         );
       }
       // Shadow mode never owned the turn; legacy continues as before.

@@ -122,7 +122,7 @@ export function routeCoachReadinessMessage(input: {
         source: 'coach_message',
       },
       reply:
-        `Got it — sore ${bodyPart} today. ` +
+        `Got it - sore ${bodyPart} today. ` +
         `Keep work around that area pain-free, and tell me a rough pain score out of 10 if it feels sharper than soreness.`,
       reason: 'pending_soreness_body_part_resolved',
       clearPending: true,
@@ -155,7 +155,7 @@ export function routeCoachReadinessMessage(input: {
         source: 'coach_message',
       },
       reply:
-        `Got it — I’ll treat today as a short-time session. ` +
+        `Got it - I’ll treat today as a short-time session. ` +
         `Main work first, trim the extras.`,
       reason: 'short_time_reported',
       clearPending: true,
@@ -171,7 +171,7 @@ export function routeCoachReadinessMessage(input: {
         source: 'coach_message',
       },
       reply:
-        `Got it — sore ${bodyPart} today. ` +
+        `Got it - sore ${bodyPart} today. ` +
         `Keep work around that area pain-free, and tell me a rough pain score out of 10 if it feels sharper than soreness.`,
       reason: 'body_part_soreness_reported',
       clearPending: true,
@@ -199,7 +199,7 @@ export function routeCoachReadinessMessage(input: {
         source: 'coach_message',
       },
       reply:
-        `Got it — I’ll dial today down. ` +
+        `Got it - I’ll dial today down. ` +
         `We’ll keep the useful work and trim anything that would dig a hole.`,
       reason: 'fatigue_reported',
       clearPending: true,

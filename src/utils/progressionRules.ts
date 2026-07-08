@@ -92,10 +92,10 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
     return buildDeload('Post-overreach mandatory deload');
   }
   if (input.doubleGameWeek) {
-    return buildDeload('Double game week — reduce training load');
+    return buildDeload('Double game week - reduce training load');
   }
   if (input.injuryAvoidFlag) {
-    return buildDeload('Injury avoidance — immediate load reduction');
+    return buildDeload('Injury avoidance - immediate load reduction');
   }
 
   // ── Step 3: Soft deload triggers (require 2+ concurrent) ──
@@ -132,7 +132,7 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
 
   // ── Step 5: Game proximity hold ──
   if (input.daysToGame !== null && input.daysToGame <= 2) {
-    return buildHold('Game proximity — hold for G-2 or closer');
+    return buildHold('Game proximity - hold for G-2 or closer');
   }
 
   // ── Step 6: Season phase + readiness matrix ──
@@ -142,10 +142,10 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
   if (input.seasonPhase === 'In-season') {
     if (input.readiness === 'low') {
       state = 'hold';
-      note = 'In-season, low readiness — hold';
+      note = 'In-season, low readiness - hold';
     } else if (input.readiness === 'medium') {
       state = 'maintain';
-      note = 'In-season, medium readiness — maintain';
+      note = 'In-season, medium readiness - maintain';
     } else {
       // High readiness — check in-season lower body build gate
       if (input.isLowerBody) {
@@ -155,31 +155,31 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
         }
       }
       state = 'maintain';
-      note = 'In-season, high readiness — maintain';
+      note = 'In-season, high readiness - maintain';
     }
   } else if (input.seasonPhase === 'Pre-season') {
     if (input.readiness === 'low') {
       state = 'maintain';
-      note = 'Pre-season, low readiness — maintain';
+      note = 'Pre-season, low readiness - maintain';
     } else {
       state = 'build';
-      note = `Pre-season, ${input.readiness} readiness — build`;
+      note = `Pre-season, ${input.readiness} readiness - build`;
     }
   } else {
     // Off-season
     if (input.readiness === 'low') {
       state = 'maintain';
-      note = 'Off-season, low readiness — maintain';
+      note = 'Off-season, low readiness - maintain';
     } else {
       state = 'build';
-      note = `Off-season, ${input.readiness} readiness — build`;
+      note = `Off-season, ${input.readiness} readiness - build`;
     }
   }
 
   // ── Step 7: Trend gate ──
   if (state === 'build' && input.trend === 'down') {
     state = 'hold';
-    note = 'Build downgraded to hold — trend is declining';
+    note = 'Build downgraded to hold - trend is declining';
   }
 
   // ── Step 8: Overreach decision (off-season only) ──
@@ -220,7 +220,7 @@ function buildReturn(input: ProgressionInput): ProgressionOutput {
     loadDelta: isPostDeload ? 'down' : 'big_down',
     setsDelta: 'none',
     rpeDelta: 'pull',
-    note: `Return to training after ${input.weeksOffTraining} weeks off — ramping back`,
+    note: `Return to training after ${input.weeksOffTraining} weeks off - ramping back`,
   };
 }
 
@@ -250,7 +250,7 @@ function buildInSeasonLowerBodyBuild(): ProgressionOutput {
     loadDelta: 'micro_up',
     setsDelta: 'none',
     rpeDelta: 'none',
-    note: 'In-season lower body micro-progression — conditions met',
+    note: 'In-season lower body micro-progression - conditions met',
   };
 }
 
@@ -260,7 +260,7 @@ function buildOverreach(): ProgressionOutput {
     loadDelta: 'up',
     setsDelta: 'add_one',
     rpeDelta: 'push',
-    note: 'Off-season overreach — high readiness, 3+ build weeks, RPE ≤ 7',
+    note: 'Off-season overreach - high readiness, 3+ build weeks, RPE ≤ 7',
   };
 }
 
@@ -296,7 +296,7 @@ function buildBuildOutput(note: string, input: ProgressionInput): ProgressionOut
       loadDelta: 'down',
       setsDelta: 'none',
       rpeDelta: 'none',
-      note: note + ' — failed completion, dropping load one step',
+      note: note + ' - failed completion, dropping load one step',
     };
   }
 
@@ -327,12 +327,12 @@ function buildMaintainOutput(note: string, input: ProgressionInput): Progression
       loadDelta: 'none',
       setsDelta: 'none',
       rpeDelta: 'pull',
-      note: note + ' — failed completion, downgrading to hold',
+      note: note + ' - failed completion, downgrading to hold',
     };
   }
 
   const enrichedNote = input.trend === 'up'
-    ? note + ' — progressing well within maintenance band'
+    ? note + ' - progressing well within maintenance band'
     : note;
 
   return {

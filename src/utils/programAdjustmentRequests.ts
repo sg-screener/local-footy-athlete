@@ -47,15 +47,15 @@ export type ProgramAdjustmentRequestOutcome =
     };
 
 export const UNSUPPORTED_PROGRAM_ADJUSTMENT_REPLY =
-  "I can’t redesign the whole week automatically yet, but I can help with a smaller change — like adding/removing conditioning, moving a session, adjusting fatigue, or changing equipment. What would you like changed first?";
+  "I can’t redesign the whole week automatically yet, but I can help with a smaller change - like adding/removing conditioning, moving a session, adjusting fatigue, or changing equipment. What would you like changed first?";
 
 const LIGHT_AEROBIC_PRESCRIPTION =
-  '8 x 2 min at 75–80% max HR with 1 min easy recovery';
+  '8 x 2 min at 75-80% max HR with 1 min easy recovery';
 const LIGHT_AEROBIC_MODALITY = 'bike or track';
 const SHORT_BIKE_FLUSH_PRESCRIPTION =
-  '12–20 min easy spin at 3–4/10 intensity';
+  '12-20 min easy spin at 3-4/10 intensity';
 const TEMPO_RUNNING_PRESCRIPTION =
-  'controlled reps at around 6–7/10 intensity, not a hard sprint session';
+  'controlled reps at around 6-7/10 intensity, not a hard sprint session';
 const CONDITIONING_OPTIONS: ProgramAdjustmentConditioningOption[] = [
   'light_aerobic_intervals',
   'short_bike_flush',
@@ -335,8 +335,8 @@ function getConditioningSpec(
       coachNote: 'Added a short bike flush after strength',
       requiredText: 'bike',
       proposalReply:
-        'I can add a short bike flush after Monday strength — 12–20 min easy spin at 3–4/10 intensity. Reply "sounds good" and I\'ll apply it.',
-      doneReply: 'Done — Monday now finishes with a short bike flush after strength.',
+        'I can add a short bike flush after Monday strength - 12-20 min easy spin at 3-4/10 intensity. Reply "sounds good" and I\'ll apply it.',
+      doneReply: 'Done - Monday now finishes with a short bike flush after strength.',
       eventPayload: {
         title: 'Short Bike Flush',
         description: SHORT_BIKE_FLUSH_PRESCRIPTION,
@@ -356,8 +356,8 @@ function getConditioningSpec(
       coachNote: 'Added tempo running after strength',
       requiredText: 'tempo',
       proposalReply:
-        'I can add tempo running after Monday strength — controlled reps at around 6–7/10 intensity, not a hard sprint session. Reply "sounds good" and I\'ll apply it.',
-      doneReply: 'Done — Monday now finishes with tempo running after strength.',
+        'I can add tempo running after Monday strength - controlled reps at around 6-7/10 intensity, not a hard sprint session. Reply "sounds good" and I\'ll apply it.',
+      doneReply: 'Done - Monday now finishes with tempo running after strength.',
       eventPayload: {
         title: 'Tempo Running',
         description: TEMPO_RUNNING_PRESCRIPTION,
@@ -379,7 +379,7 @@ function getConditioningSpec(
       requiredText: cleaned ? cleaned.split(/\s+/)[0].toLowerCase() : 'conditioning',
       proposalReply:
         'I can add that conditioning after Monday strength. Reply "sounds good" and I\'ll apply it.',
-      doneReply: 'Done — Monday now finishes with the conditioning after strength.',
+      doneReply: 'Done - Monday now finishes with the conditioning after strength.',
       eventPayload: {
         title: 'Conditioning',
         description: cleaned || 'Custom conditioning after strength.',
@@ -398,12 +398,12 @@ function getConditioningSpec(
     coachNote: 'Added light aerobic intervals after strength',
     requiredText: 'aerobic',
     proposalReply:
-      'I can add light aerobic intervals after Monday strength — 8 x 2 min at 75–80% max HR with 1 min easy recovery. Reply "sounds good" and I\'ll apply it.',
-    doneReply: 'Done — Monday now finishes with light aerobic intervals after strength.',
+      'I can add light aerobic intervals after Monday strength - 8 x 2 min at 75-80% max HR with 1 min easy recovery. Reply "sounds good" and I\'ll apply it.',
+    doneReply: 'Done - Monday now finishes with light aerobic intervals after strength.',
     eventPayload: {
       title: 'Light Aerobic Intervals',
       description: `${LIGHT_AEROBIC_PRESCRIPTION}. Use ${LIGHT_AEROBIC_MODALITY}.`,
-      notes: '75–80% max HR. Keep it aerobic; 1 min easy recovery between reps.',
+      notes: '75-80% max HR. Keep it aerobic; 1 min easy recovery between reps.',
       coachNote: 'Added light aerobic intervals after strength',
       sets: 8,
       minutes: 2,
@@ -417,12 +417,12 @@ function getConditioningClarifierReply(
   customNeedsDetails = false,
 ): string {
   if (customNeedsDetails) {
-    return 'Sure — what conditioning would you like me to add after Monday strength?';
+    return 'Sure - what conditioning would you like me to add after Monday strength?';
   }
   if (prior?.needs === 'conditioning_type') {
-    return 'I can do that — choose light aerobic intervals, a short bike flush, tempo running, or tell me the exact conditioning you want.';
+    return 'I can do that - choose light aerobic intervals, a short bike flush, tempo running, or tell me the exact conditioning you want.';
   }
-  return 'What type of conditioning are you after — light aerobic intervals, a short bike flush, tempo running, or something else?';
+  return 'What type of conditioning are you after - light aerobic intervals, a short bike flush, tempo running, or something else?';
 }
 
 export function getProgramAdjustmentProposalReply(proposal: PendingCoachProposal): string {
@@ -437,7 +437,7 @@ export function getProgramAdjustmentProposalReply(proposal: PendingCoachProposal
 
 export function getProgramAdjustmentSuccessReply(proposal: PendingCoachProposal): string {
   if (proposal.action !== 'add_conditioning') {
-    return 'Done — Monday no longer has the conditioning block.';
+    return 'Done - Monday no longer has the conditioning block.';
   }
   return getConditioningSpec(
     proposal.conditioningOption ?? 'light_aerobic_intervals',

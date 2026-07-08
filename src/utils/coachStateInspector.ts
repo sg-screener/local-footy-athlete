@@ -18,6 +18,7 @@
 
 import type { ResolvedDay } from './sessionResolver';
 import type { InjuryState } from './injuryProgression';
+import { formatExerciseDisplayName } from './exerciseDisplay';
 
 export interface InspectQuery {
   /** ISO date the user is asking about (optional). */
@@ -194,6 +195,7 @@ export function inspectCoachState(input: InspectInput): InspectAnswer {
   // Exercise-specific question — is the named exercise still in the
   // workout despite the active injury?
   if (query.exerciseName) {
+    const displayExercise = formatExerciseDisplayName(query.exerciseName) || query.exerciseName;
     const present = exercisePresent(day.workout, query.exerciseName);
     if (present) {
       // Two sub-cases: did the resolver-level filter run?
@@ -203,7 +205,7 @@ export function inspectCoachState(input: InspectInput): InspectAnswer {
           kind: 'exercise_already_removed',
           date: day.date,
           source: day.source,
-          message: `${query.exerciseName} is still listed because the resolver kept it (likely a tier mismatch — the injury severity doesn't warrant removal at this level). The session has notes: ${(day.workout.coachNotes ?? []).join('; ')}.`,
+          message: `${displayExercise} is still listed because the resolver kept it (likely a tier mismatch - the injury severity doesn't warrant removal at this level). The session has notes: ${(day.workout.coachNotes ?? []).join('; ')}.`,
         };
       }
       return {
@@ -211,14 +213,14 @@ export function inspectCoachState(input: InspectInput): InspectAnswer {
         date: day.date,
         source: day.source,
         suggestReapply: true,
-        message: `${query.exerciseName} is still in ${day.workout.name} — the injury filter didn't catch it. I'll re-apply the ${activeInjury.bodyPart} restrictions now.`,
+        message: `${displayExercise} is still in ${day.workout.name} - the injury filter didn't catch it. I'll re-apply the ${activeInjury.bodyPart} restrictions now.`,
       };
     }
     return {
       kind: 'exercise_already_removed',
       date: day.date,
       source: day.source,
-      message: `${query.exerciseName} is already out of ${day.workout.name}. Coach notes: ${(day.workout.coachNotes ?? []).join('; ') || 'none'}.`,
+      message: `${displayExercise} is already out of ${day.workout.name}. Coach notes: ${(day.workout.coachNotes ?? []).join('; ') || 'none'}.`,
     };
   }
 

@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   View,
   StyleSheet,
   TextInput,
+  Pressable,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
-import { spacing, borderRadius, shadows } from '../../theme/spacing';
+import { spacing, shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
@@ -26,6 +28,8 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
   const [weightKg, setWeightKg] = useState('');
   const [heightFocused, setHeightFocused] = useState(false);
   const [weightFocused, setWeightFocused] = useState(false);
+  const heightInputRef = useRef<TextInput>(null);
+  const weightInputRef = useRef<TextInput>(null);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('BodyMeasurements');
   const updateOnboardingData = useProfileStore(
     (state) => state.updateOnboardingData
@@ -83,26 +87,31 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
           >
             Height
           </Text>
-          <TextInput
+          <Pressable
+            onPress={() => heightInputRef.current?.focus()}
             style={[
-              styles.input,
+              styles.inputShell,
               heightFocused && styles.inputFocused,
             ]}
-            placeholder="0"
-            placeholderTextColor={colors.text.tertiary}
-            value={heightCm}
-            onChangeText={setHeightCm}
-            onFocus={() => setHeightFocused(true)}
-            onBlur={() => setHeightFocused(false)}
-            keyboardType="numeric"
-          />
-          <Text
-            variant="bodySmall"
-            color={colors.text.secondary}
-            style={styles.inputUnit}
           >
-            cm
-          </Text>
+            <MaterialCommunityIcons
+              name="ruler"
+              size={19}
+              color={colors.text.tertiary}
+            />
+            <TextInput
+              ref={heightInputRef}
+              style={styles.input}
+              placeholder="180"
+              placeholderTextColor={colors.text.tertiary}
+              value={heightCm}
+              onChangeText={setHeightCm}
+              onFocus={() => setHeightFocused(true)}
+              onBlur={() => setHeightFocused(false)}
+              keyboardType="numeric"
+            />
+            <Text style={styles.inputUnit}>cm</Text>
+          </Pressable>
         </View>
 
         <View style={styles.inputWrapper}>
@@ -113,26 +122,31 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
           >
             Weight
           </Text>
-          <TextInput
+          <Pressable
+            onPress={() => weightInputRef.current?.focus()}
             style={[
-              styles.input,
+              styles.inputShell,
               weightFocused && styles.inputFocused,
             ]}
-            placeholder="0"
-            placeholderTextColor={colors.text.tertiary}
-            value={weightKg}
-            onChangeText={setWeightKg}
-            onFocus={() => setWeightFocused(true)}
-            onBlur={() => setWeightFocused(false)}
-            keyboardType="numeric"
-          />
-          <Text
-            variant="bodySmall"
-            color={colors.text.secondary}
-            style={styles.inputUnit}
           >
-            kg
-          </Text>
+            <MaterialCommunityIcons
+              name="kettlebell"
+              size={19}
+              color={colors.text.tertiary}
+            />
+            <TextInput
+              ref={weightInputRef}
+              style={styles.input}
+              placeholder="80"
+              placeholderTextColor={colors.text.tertiary}
+              value={weightKg}
+              onChangeText={setWeightKg}
+              onFocus={() => setWeightFocused(true)}
+              onBlur={() => setWeightFocused(false)}
+              keyboardType="numeric"
+            />
+            <Text style={styles.inputUnit}>kg</Text>
+          </Pressable>
         </View>
       </View>
     </OnboardingLayout>
@@ -156,26 +170,39 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     flex: 1,
+    minWidth: 0,
   },
   inputLabel: {
     marginBottom: spacing.sm,
   },
-  input: {
+  inputShell: {
+    minHeight: 64,
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface.secondary,
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: colors.surface.tertiary,
-    padding: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+  },
+  input: {
+    flex: 1,
+    minWidth: 0,
     color: colors.text.primary,
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
+    paddingVertical: 0,
+    paddingLeft: 10,
+    paddingRight: 8,
   },
   inputFocused: {
     borderColor: colors.accent.lime,
     ...shadows.xs,
   },
   inputUnit: {
-    fontWeight: '500',
+    color: colors.text.tertiary,
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

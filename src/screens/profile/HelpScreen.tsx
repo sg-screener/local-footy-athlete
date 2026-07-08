@@ -23,7 +23,7 @@ const FAQ_ITEMS: FAQItem[] = [
     id: '1',
     question: 'How do I get started with LFA?',
     answer:
-      'Simply create an account with your email, set up your profile with your position and training preferences, and our AI coach will begin creating personalized workouts for you based on your goals and available equipment.',
+      'Simply create an account with your email, set up your profile with your footy role and training preferences, and our AI coach will begin creating personalized workouts for you based on your goals and available equipment.',
   },
   {
     id: '2',

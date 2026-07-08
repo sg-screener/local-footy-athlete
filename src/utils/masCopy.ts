@@ -55,7 +55,7 @@ export function masIntensityBlock(
 ): string {
   const pace = `Target pace: ${masIntensityLabel(workSeconds)} on each work interval.`;
   const gloss = opts.includeGloss
-    ? '\n(MAS = Maximum Aerobic Speed — the slowest pace that maxes out your aerobic system.)'
+    ? '\n(MAS = Maximum Aerobic Speed - the slowest pace that maxes out your aerobic system.)'
     : '';
   return `${pace}${gloss}\n${MAS_FALLBACK_NOTE}`;
 }

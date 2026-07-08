@@ -62,6 +62,7 @@ import { buildScheduleStateImperative } from './coachWeekDiff';
 import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine';
 import { useProgramStore } from '../store/programStore';
 import { logger } from './logger';
+import { clearManualOverridesPreservingActiveModifiers } from './activeProgramModifiers';
 
 const COACH_PROGRAM_EDIT_DIAGNOSTIC_MARKER = 'coach-program-edit-diagnostics:stage3e1e-generic-block-resolver';
 
@@ -1693,7 +1694,7 @@ function strengthBlockFailureReply(
 ): string {
   const first = applyResult.rejected[0];
   if (reason === 'apply_rejected' && first?.kind === 'past_date_blocked') {
-    return `${humanDate(edit.targetDate)} is in the past — I can't change it.`;
+    return `${humanDate(edit.targetDate)} is in the past - I can't change it.`;
   }
   if (reason === 'apply_rejected' && first?.reason) {
     return `I couldn't safely change the strength work on ${humanDate(edit.targetDate)}: ${first.reason}`;
@@ -1720,7 +1721,10 @@ export interface ExecuteProgramSetupEditInput {
   todayISO: string;
   getOnboardingData: () => OnboardingData;
   updateOnboardingData: (patch: Partial<OnboardingData>) => void;
-  generateProgramFromProfile: (profile: OnboardingData) => Promise<TrainingProgram>;
+  generateProgramFromProfile: (
+    profile: OnboardingData,
+    options?: { todayISO?: string },
+  ) => Promise<TrainingProgram>;
   setCurrentProgram: (program: TrainingProgram | null) => void;
   setCurrentMicrocycle: (microcycle: TrainingProgram['microcycles'][number] | null) => void;
   setTodayWorkout: (workout: TrainingProgram['microcycles'][number]['workouts'][number] | null) => void;
@@ -1775,7 +1779,7 @@ export async function executeProgramSetupEdit(
   input.onProgress?.('applying_change');
   let program: TrainingProgram;
   try {
-    program = await input.generateProgramFromProfile(nextProfile);
+    program = await input.generateProgramFromProfile(nextProfile, { todayISO: input.todayISO });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.warn('[coach-program-setup] rebuild_failed', {
@@ -1796,6 +1800,7 @@ export async function executeProgramSetupEdit(
     edit,
     nextProfile,
     program,
+    todayISO: input.todayISO,
   });
   if (verification.ok === false) {
     logger.warn('[coach-program-setup] verification_failed', {
@@ -1815,6 +1820,11 @@ export async function executeProgramSetupEdit(
 
   input.updateOnboardingData(profilePatchResult.patch);
   input.setCurrentProgram(program);
+  // Canonical rebuild policy (2026-07-08): setCurrentProgram no longer
+  // wipes per-date overrides implicitly. A setup rebuild is a rebuild —
+  // modifier-owned overrides (away days, injury swaps) and the athlete's
+  // manual edits survive; stale system artifacts are cleared.
+  clearManualOverridesPreservingActiveModifiers(input.todayISO);
   const firstMicrocycle = program.microcycles?.[0] ?? null;
   input.setCurrentMicrocycle(firstMicrocycle);
   if (firstMicrocycle) {
@@ -1923,10 +1933,13 @@ function verifyProgramSetupRebuild(args: {
   edit: ProgramSetupEdit;
   nextProfile: OnboardingData;
   program: TrainingProgram;
+  todayISO: string;
 }): { ok: true } | { ok: false; reason: string; reply: string } {
-  const { edit, nextProfile, program } = args;
+  const { edit, nextProfile, program, todayISO } = args;
   const workouts = program.microcycles?.[0]?.workouts ?? [];
-  const deterministicPlan = buildCoachingPlan(onboardingToCoachingInputs(nextProfile));
+  const deterministicPlan = buildCoachingPlan(onboardingToCoachingInputs(nextProfile, {
+    availabilityDateISO: todayISO,
+  }));
   const expectedPlanDows = new Set(
     deterministicPlan.weeklyPlan
       .map((session) => session.dayOfWeek ? dayOfWeekNumber(session.dayOfWeek as DayOfWeek) : -1)
@@ -2001,33 +2014,33 @@ function buildProgramSetupReply(edit: ProgramSetupEdit, nextProfile: OnboardingD
     change.removeTrainingDays?.length === 1 &&
     /^move\s+/i.test(change.summary);
   if (recurringMove) {
-    return `Done — I’ve updated your weekly setup so that session moves from ${change.removeTrainingDays![0]} to ${change.addTrainingDays![0]} going forward.`;
+    return `Done - I’ve updated your weekly setup so that session moves from ${change.removeTrainingDays![0]} to ${change.addTrainingDays![0]} going forward.`;
   }
   if (change.addTrainingDays?.length && change.trainingDaysPerWeek) {
-    return `Done — I’ve updated your availability to include ${formatDayList(change.addTrainingDays)} and rebuilt the week. You’re now set up for ${nextProfile.trainingDaysPerWeek} training days where the week allows it.`;
+    return `Done - I’ve updated your availability to include ${formatDayList(change.addTrainingDays)} and rebuilt the week. You’re now set up for ${nextProfile.trainingDaysPerWeek} training days where the week allows it.`;
   }
   if (change.addTrainingDays?.length) {
-    return `Done — I’ve updated your availability to include ${formatDayList(change.addTrainingDays)} and rebuilt the week. You’re now set up for ${nextProfile.trainingDaysPerWeek ?? change.addTrainingDays.length} training days where the week allows it.`;
+    return `Done - I’ve updated your availability to include ${formatDayList(change.addTrainingDays)} and rebuilt the week. You’re now set up for ${nextProfile.trainingDaysPerWeek ?? change.addTrainingDays.length} training days where the week allows it.`;
   }
   if (change.replaceTrainingDays?.length) {
-    return `Done — I’ve updated your available training days to ${formatDayList(change.replaceTrainingDays)} and rebuilt the week.`;
+    return `Done - I’ve updated your available training days to ${formatDayList(change.replaceTrainingDays)} and rebuilt the week.`;
   }
   if (change.trainingDaysPerWeek) {
-    return `Done — I’ve set your program up for ${change.trainingDaysPerWeek} training days per week and rebuilt the week.`;
+    return `Done - I’ve set your program up for ${change.trainingDaysPerWeek} training days per week and rebuilt the week.`;
   }
   if (change.clearUnavailableDays?.length) {
-    return `Done — ${formatDayList(change.clearUnavailableDays)} can be used again, and I rebuilt the week around your updated availability.`;
+    return `Done - ${formatDayList(change.clearUnavailableDays)} can be used again, and I rebuilt the week around your updated availability.`;
   }
   const blocked = (change.availabilityConstraints ?? []).filter((constraint) => constraint.kind === 'unavailable_day' && constraint.dayOfWeek);
   if (blocked.length > 0) {
-    return `Done — I’ve blocked ${formatDayList(blocked.map((constraint) => constraint.dayOfWeek!))} and rebuilt the week around that availability.`;
+    return `Done - I’ve blocked ${formatDayList(blocked.map((constraint) => constraint.dayOfWeek!))} and rebuilt the week around that availability.`;
   }
   const timeCaps = (change.availabilityConstraints ?? []).filter((constraint) => constraint.kind === 'time_limit' && constraint.dayOfWeek && constraint.maxSessionMinutes);
   if (timeCaps.length > 0) {
     const first = timeCaps[0];
-    return `Done — I’ve saved the ${first.maxSessionMinutes} minute cap for ${first.dayOfWeek} and rebuilt the week around that constraint.`;
+    return `Done - I’ve saved the ${first.maxSessionMinutes} minute cap for ${first.dayOfWeek} and rebuilt the week around that constraint.`;
   }
-  return 'Done — I’ve updated your program setup and rebuilt the week.';
+  return 'Done - I’ve updated your program setup and rebuilt the week.';
 }
 
 function orderedDays(days: DayOfWeek[]): DayOfWeek[] {
@@ -2371,7 +2384,7 @@ export function resolvePendingProgramEditAnswer(input: {
   if (answerClassification.kind === 'reject_proposed') {
     return {
       kind: 'cancelled',
-      reply: 'Got it — leaving things as they are.',
+      reply: 'Got it - leaving things as they are.',
     };
   }
   const acceptedItem = targetItemFromPendingAnswerClassification(answerClassification, candidates);
@@ -2443,7 +2456,7 @@ function resolvePendingTargetDateAnswer(input: {
   if (answerClassification.kind === 'reject_proposed') {
     return {
       kind: 'cancelled',
-      reply: 'Got it — leaving things as they are.',
+      reply: 'Got it - leaving things as they are.',
     };
   }
 

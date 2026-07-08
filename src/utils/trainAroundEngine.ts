@@ -355,7 +355,7 @@ const POLICY_TABLE: Record<
         'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
       globalRules: ['Build sprint volume back gradually'],
-      safeTrainingFocus: ['Most of the program — monitor symptoms'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
 
@@ -413,7 +413,7 @@ const POLICY_TABLE: Record<
         'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
       globalRules: ['Rebuild plyo + sprint volume gradually'],
-      safeTrainingFocus: ['Most of the program — monitor symptoms'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
 
@@ -465,7 +465,7 @@ const POLICY_TABLE: Record<
         'recovery', 'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
       globalRules: ['Ease back into heavy hinges gradually'],
-      safeTrainingFocus: ['Most of the program — monitor symptoms'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
 
@@ -518,7 +518,7 @@ const POLICY_TABLE: Record<
         'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
       globalRules: ['Build sprint + plyo volume gradually'],
-      safeTrainingFocus: ['Most of the program — monitor symptoms'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
 
@@ -566,7 +566,7 @@ const POLICY_TABLE: Record<
         'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
       globalRules: ['Rebuild change-of-direction gradually'],
-      safeTrainingFocus: ['Most of the program — monitor symptoms'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
 
@@ -613,7 +613,7 @@ const POLICY_TABLE: Record<
         'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
       globalRules: ['Rebuild lateral work gradually'],
-      safeTrainingFocus: ['Most of the program — monitor symptoms'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
 
@@ -656,7 +656,7 @@ const POLICY_TABLE: Record<
         'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
       globalRules: ['Rebuild kicking + cutting gradually'],
-      safeTrainingFocus: ['Most of the program — monitor symptoms'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
 
@@ -696,7 +696,7 @@ const POLICY_TABLE: Record<
         'recovery', 'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
       globalRules: ['Build pulling load back gradually'],
-      safeTrainingFocus: ['Most of the program — monitor symptoms'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
 
@@ -736,7 +736,7 @@ const POLICY_TABLE: Record<
         'bike_erg', 'rower_erg', 'ski_erg', 'low_load_accessory',
       ],
       globalRules: ['Build grip work back gradually'],
-      safeTrainingFocus: ['Most of the program — monitor symptoms'],
+      safeTrainingFocus: ['Most of the program - monitor symptoms'],
     },
   },
 };

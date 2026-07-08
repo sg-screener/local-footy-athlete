@@ -78,6 +78,7 @@ import {
 import { filterLegacyCoachActions } from '../../utils/legacyCoachActionFilter';
 import { logCoachBuildFingerprint, COACH_BUILD_INFO } from '../../utils/coachBuildInfo';
 import { insertProgramSummaryBeforeFinalClose } from '../../utils/coachReplyComposer';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 import {
   handleCoachTurn,
   type CoachTurnDebug,
@@ -247,7 +248,8 @@ function formatCoachDate(day: { short?: string; date: string }): string {
 function exerciseNamesForReply(workout: any): string {
   const names = (workout?.exercises ?? [])
     .map((ex: any) => ex?.exercise?.name || ex?.name || ex?.exerciseId)
-    .filter(Boolean);
+    .filter(Boolean)
+    .map((name: string) => formatExerciseDisplayName(name) || name);
   if (names.length === 0) return '';
   const shown = names.slice(0, 6);
   const suffix = names.length > shown.length ? `, +${names.length - shown.length} more` : '';
@@ -262,7 +264,8 @@ function conditioningForReply(workout: any): string {
 
   const conditioningNames = (workout?.exercises ?? [])
     .map((ex: any) => ex?.exercise?.name || ex?.name || '')
-    .filter((name: string) => /\b(conditioning|interval|bike|row|run|sprint|erg|aerobic)\b/i.test(name));
+    .filter((name: string) => /\b(conditioning|interval|bike|row|run|sprint|erg|aerobic)\b/i.test(name))
+    .map((name: string) => formatExerciseDisplayName(name) || name);
   return Array.from(new Set(conditioningNames)).join(', ');
 }
 
@@ -348,14 +351,14 @@ function buildNoOverrideFallbackReply(
 ): string {
   const head =
     bodyPart === 'unknown'
-      ? `Got it — ${severity}/10.`
-      : `Got it — ${bodyPart} ${severity}/10.`;
+      ? `Got it - ${severity}/10.`
+      : `Got it - ${bodyPart} ${severity}/10.`;
   // The engine emitted events but applyAdjustmentEvents wrote zero
   // overrides. Surface the failure mode by name so the bug is loud
   // instead of silent.
   const body =
     rejectedCount > 0
-      ? `Planned changes could not be applied — I lined up adjustments for your week, but they didn't land on real sessions. Investigate event targeting (likely date / session mismatch).`
+      ? `Planned changes could not be applied - I lined up adjustments for your week, but they didn't land on real sessions. Investigate event targeting (likely date / session mismatch).`
       : `Nothing in your remaining week loads that area, so I left the program unchanged.`;
   return `${head}\n\n${body}\n\nKeep things easy and let me know if it gets worse.`;
 }
@@ -371,10 +374,10 @@ function buildNoVisibleDiffFallbackReply(
 ): string {
   const head =
     bodyPart === 'unknown'
-      ? `Got it — ${severity}/10.`
-      : `Got it — ${bodyPart} ${severity}/10.`;
+      ? `Got it - ${severity}/10.`
+      : `Got it - ${bodyPart} ${severity}/10.`;
   return (
-    `${head}\n\nNo changes applied — I tried to adjust the program but the user-visible surface didn't move (no exercise / note / name change). Investigate the apply layer or visible-diff verifier.`
+    `${head}\n\nNo changes applied - I tried to adjust the program but the user-visible surface didn't move (no exercise / note / name change). Investigate the apply layer or visible-diff verifier.`
   );
 }
 
@@ -443,7 +446,7 @@ function handleInjuryProgression(
       clearedDates: cleared,
     });
     return (
-      `Great news — clearing the ${current.bodyPart} restrictions and getting your week back to normal. ` +
+      `Great news - clearing the ${current.bodyPart} restrictions and getting your week back to normal. ` +
       `Your sessions are restored to the original plan.`
     );
   }
@@ -459,13 +462,13 @@ function handleInjuryProgression(
     const physioState = useCoachUpdatesStore.getState().activeInjury;
     const nudgePhysio = physioState ? shouldSuggestPhysio(physioState, nowISO, 3) : false;
     const physioLine = nudgePhysio
-      ? `\n\nIt's been a few days now — worth getting a physio to look at it.`
+      ? `\n\nIt's been a few days now - worth getting a physio to look at it.`
       : '';
     logger.debug('[pipeline] progression unchanged', {
       bodyPart: current.bodyPart,
       nudgePhysio,
     });
-    return `Got it — keeping the ${current.bodyPart} restrictions in place for now.${physioLine}`;
+    return `Got it - keeping the ${current.bodyPart} restrictions in place for now.${physioLine}`;
   }
 
   // ── (c) IMPROVING / WORSENING — wipe + re-apply at new severity ────
@@ -526,7 +529,7 @@ function handleInjuryProgression(
 
   // ── card refresh ──
   const trendWord = outcome.kind === 'improving' ? 'improving' : 'worse';
-  const reason = `${partTitle} ${trendWord} — ${newSeverity}/10`;
+  const reason = `${partTitle} ${trendWord} - ${newSeverity}/10`;
 
   if (newSeverity < 5) {
     // The engine declines below severity 5 — restrictions go away
@@ -563,24 +566,24 @@ function handleInjuryProgression(
   if (outcome.kind === 'improving') {
     if (newSeverity < 5) {
       return (
-        `Good — ${current.bodyPart} ${newSeverity}/10 is light enough to train through. ` +
+        `Good - ${current.bodyPart} ${newSeverity}/10 is light enough to train through. ` +
         `Easing the restrictions off this week. Keep it honest if it flares back up.`
       );
     }
     return (
-      `Good — ${current.bodyPart} easing to ${newSeverity}/10. ` +
+      `Good - ${current.bodyPart} easing to ${newSeverity}/10. ` +
       `Pulling back some of the load restrictions while keeping the high-risk stuff out.`
     );
   }
   // worsening
   if (newSeverity >= 8) {
     return (
-      `Sorry to hear — ${current.bodyPart} ${newSeverity}/10 is serious. ` +
+      `Sorry to hear - ${current.bodyPart} ${newSeverity}/10 is serious. ` +
       `Pulling things back hard and converting heavy days to recovery. Get a physio to look at it.`
     );
   }
   return (
-    `Sorry to hear — ${current.bodyPart} worse at ${newSeverity}/10. ` +
+    `Sorry to hear - ${current.bodyPart} worse at ${newSeverity}/10. ` +
     `Tightening the restrictions and reducing load further this week.`
   );
 }
@@ -606,7 +609,7 @@ const WELCOME_MESSAGE: Message = {
   role: 'assistant',
   content:
     "G'day mate! I'm your S&C coach. Tell me what's changed and I'll adjust your plan.\n" +
-    "Missed sessions, soreness, schedule changes — we'll sort it out.",
+    "Missed sessions, soreness, schedule changes - we'll sort it out.",
 };
 
 let coachScreenMessageCache: Message[] | null = null;
@@ -659,13 +662,13 @@ interface QuickAction {
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
-  { label: 'I missed a session',       prefill: "I missed yesterday's session — " },
+  { label: 'I missed a session',       prefill: "I missed yesterday's session - " },
   { label: "I'm sore",                  prefill: "I'm pretty sore today, especially in my " },
-  { label: 'Feeling cooked this week',  prefill: "I'm feeling cooked this week — can we lighten the load?" },
-  { label: 'Game day changed',          prefill: "My game day's changed — " },
+  { label: 'Feeling cooked this week',  prefill: "I'm feeling cooked this week - can we lighten the load?" },
+  { label: 'Game day changed',          prefill: "My game day's changed - " },
   { label: 'Swap an exercise',          prefill: 'Can you swap ' },
-  { label: 'Busy week',                 prefill: "I've got a busy week ahead — " },
-  { label: "I'm injured",                prefill: "I've picked up a niggle — " },
+  { label: 'Busy week',                 prefill: "I've got a busy week ahead - " },
+  { label: "I'm injured",                prefill: "I've picked up a niggle - " },
 ];
 
 function isGenericReadinessWithoutInjuryTarget(message: string): boolean {
@@ -1628,7 +1631,7 @@ export default function CoachScreen() {
       if (shouldWriteCard) {
         const reasonBodyPart =
           bodyPart === 'unknown' ? 'Injury' : capitalize(bodyPart);
-        const reason = `${reasonBodyPart} pain — ${severity}/10`;
+        const reason = `${reasonBodyPart} pain - ${severity}/10`;
         const changes = result.events.map((e) => eventToBullet(e));
         const update = useCoachUpdatesStore.getState().upsertCoachUpdate(monday, {
           source: 'uae',
@@ -1829,7 +1832,7 @@ export default function CoachScreen() {
       setMessages((prev) => [...prev, {
         id: `${Date.now()}-controller-error`,
         role: 'assistant',
-        content: 'Something went wrong handling that — nothing was changed. Please try again.',
+        content: 'Something went wrong handling that - nothing was changed. Please try again.',
       }]);
       return;
     }
@@ -2157,12 +2160,12 @@ export default function CoachScreen() {
         let groundedContent: string;
         if (diff.hasChanges) {
           const bullets = summarizeDiffBullets(diff);
-          groundedContent = `Program changes:\n${bullets}\n\nProgram updated — check your Program tab.`;
+          groundedContent = `Program changes:\n${bullets}\n\nProgram updated - check your Program tab.`;
         } else if (successfulPermanent.length > 0) {
-          groundedContent = 'Saved as a permanent preference — applies to next week onwards.';
+          groundedContent = 'Saved as a permanent preference - applies to next week onwards.';
         } else if (ambiguousResults.length > 0) {
           const candidates = ambiguousResults[0].ambiguous!.candidates.join(', ');
-          groundedContent = `That could mean a few exercises — ${candidates}. Tell me which one and I'll swap it.`;
+          groundedContent = `That could mean a few exercises - ${candidates}. Tell me which one and I'll swap it.`;
         } else {
           // Action(s) were emitted but nothing changed in the resolved week
           // and no permanent prefs were saved either — the AI's "I changed X"
@@ -2343,9 +2346,9 @@ export default function CoachScreen() {
             intent={lastCoachDebug.intent} {' | '} route={lastCoachDebug.route}
           </Text>
           <Text style={{ color: '#9F9', fontSize: 10 }}>
-            ref={lastCoachDebug.referenceStatus ?? '–'}{' '}
-            target={lastCoachDebug.referenceTargetDate ?? '–'}{' '}
-            ({lastCoachDebug.referenceTargetName ?? '–'})
+            ref={lastCoachDebug.referenceStatus ?? '-'}{' '}
+            target={lastCoachDebug.referenceTargetDate ?? '-'}{' '}
+            ({lastCoachDebug.referenceTargetName ?? '-'})
           </Text>
           <Text style={{ color: '#9F9', fontSize: 10 }}>
             mutationLike={String(lastCoachDebug.mutationLike)} {' | '}
@@ -2354,8 +2357,8 @@ export default function CoachScreen() {
           </Text>
           {lastCoachDebug.toModality !== undefined ? (
             <Text style={{ color: '#9F9', fontSize: 10 }}>
-              swap={String(lastCoachDebug.fromModality ?? '–')}→
-              {String(lastCoachDebug.toModality ?? '–')} {' | '}
+              swap={String(lastCoachDebug.fromModality ?? '-')}→
+              {String(lastCoachDebug.toModality ?? '-')} {' | '}
               applied={String(lastCoachDebug.applied)} {' | '}
               showsTo={String(lastCoachDebug.projectionShowsTo)} {' | '}
               showsFrom={String(lastCoachDebug.projectionShowsFrom)}

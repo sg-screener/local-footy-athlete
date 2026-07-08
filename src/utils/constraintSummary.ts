@@ -22,6 +22,7 @@
 
 import type { ResolvedDay } from './sessionResolver';
 import type { Constraint } from './exposureEngine';
+import { formatExerciseDisplayName } from './exerciseDisplay';
 import { logger } from './logger';
 
 export interface SessionDelta {
@@ -128,17 +129,18 @@ function diffWeek(
 function workoutBullet(delta: SessionDelta, includeDow: boolean): string {
   const dow = includeDow ? `${dowFromISO(delta.date)} ` : '';
   const name = delta.workoutName ? delta.workoutName : 'session';
+  const displayRemoved = delta.removed.map((exercise) => formatExerciseDisplayName(exercise) || exercise);
   if (delta.removed.length === 0) {
-    return `${dow}${name} adjusted — coach note added`;
+    return `${dow}${name} adjusted - coach note added`;
   }
-  if (delta.removed.length === 1) {
-    return `${dow}${name} adjusted — ${delta.removed[0]} removed`;
+  if (displayRemoved.length === 1) {
+    return `${dow}${name} adjusted - ${displayRemoved[0]} removed`;
   }
-  if (delta.removed.length <= 3) {
-    return `${dow}${name} adjusted — removed ${delta.removed.join(', ')}`;
+  if (displayRemoved.length <= 3) {
+    return `${dow}${name} adjusted - removed ${displayRemoved.join(', ')}`;
   }
-  const head = delta.removed.slice(0, 2).join(', ');
-  return `${dow}${name} adjusted — ${head} + ${delta.removed.length - 2} more removed`;
+  const head = displayRemoved.slice(0, 2).join(', ');
+  return `${dow}${name} adjusted - ${head} + ${displayRemoved.length - 2} more removed`;
 }
 
 // ─── Main ───────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useResolvedDay, useResolvedWeekForDate } from '../../hooks/useSchedule';
+import { useResolvedDay } from '../../hooks/useSchedule';
 import { useIsOverrideStale } from '../../hooks/useStaleOverrides';
 import { useSessionExplanation } from '../../hooks/useSessionExplanation';
 import { useProgramStore } from '../../store/programStore';
@@ -16,6 +16,10 @@ import {
   DAY_NAMES,
 } from './dayWorkoutHelpers';
 import { logger } from '../../utils/logger';
+import {
+  getTeamTrainingWorkoutState,
+  normalizeTeamTrainingWorkoutForDisplay,
+} from '../../utils/teamTraining';
 
 // Enable LayoutAnimation on Android (idempotent — safe to call multiple times).
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -42,7 +46,7 @@ const SESSION_COMPLETE_DISMISS_MS = 2500;
  * - Weight overrides (+/- buttons, manual edit, BW handling): undefined
  *   override = no override, null override = explicit bodyweight, number = loaded.
  * - startFinished route param boots straight into the feedback flow for
- *   team-training-only days (per project_team_training_card_ux memory).
+ *   external logging shortcuts.
  * - Conditioning options resolution: structured `conditioningBlock` first,
  *   legacy keyword-tail fallback second, empty array otherwise.
  *
@@ -55,9 +59,7 @@ export function useDayWorkout() {
   const date: string | undefined = route.params?.date;
   const routeWorkoutId: string | undefined = route.params?.workoutId;
   // When startFinished=true the screen boots directly into the post-session
-  // flow (feedback panel). Used by team-training-only cards on HomeScreen so
-  // the athlete logs the external team session without seeing an empty
-  // "0 exercises" workout body — see project_team_training_card_ux.
+  // flow (feedback panel).
   const startFinished: boolean = !!route.params?.startFinished;
 
   // ─── UI state local to the screen ───
@@ -74,36 +76,13 @@ export function useDayWorkout() {
 
   // ─── Resolved data ───
   const resolved = useResolvedDay(date);
-  const workout = resolved?.workout ?? null;
+  const rawWorkout = resolved?.workout ?? null;
+  const workout = useMemo(
+    () => normalizeTeamTrainingWorkoutForDisplay(rawWorkout),
+    [rawWorkout],
+  );
   const staleWarning = useIsOverrideStale(date);
   const explanation = useSessionExplanation(resolved);
-
-  // ─── Plan-change door (PlanChangeSheet) ───
-  //
-  // Same tap-first change door as the Program tab, hosted inside the
-  // session screen: athletes open a session, read it, and often only THEN
-  // decide they need to change it. The sheet needs the full projected week
-  // for policy context (move destinations, bye gating, edit horizon) —
-  // useResolvedWeekForDate resolves the week containing this date through
-  // the same pipeline as the Program tab, so both doors offer identical
-  // options for the same day.
-  const weekDays = useResolvedWeekForDate(date);
-  const [changeSheetOpen, setChangeSheetOpen] = useState(false);
-  // Latest workout-existence flag, readable from the close callback without
-  // re-binding it on every resolution change.
-  const workoutExistsRef = useRef(!!workout);
-  workoutExistsRef.current = !!workout;
-
-  const openChangeSheet = useCallback(() => setChangeSheetOpen(true), []);
-  const closeChangeSheet = useCallback(() => {
-    setChangeSheetOpen(false);
-    // If the applied change removed or moved this session, the day no
-    // longer has a workout to show — return to the plan instead of
-    // stranding the athlete on the "Workout not found" fallback.
-    if (!workoutExistsRef.current) {
-      navigation.goBack();
-    }
-  }, [navigation]);
 
   /** Toggle coaching cue visibility for an exercise. */
   const toggleCue = useCallback((exerciseId: string) => {
@@ -190,7 +169,7 @@ export function useDayWorkout() {
         return 'BW';
       }
 
-      if (weightKg === null || weightKg === undefined || weightKg === 0) return '—';
+      if (weightKg === null || weightKg === undefined || weightKg === 0) return '-';
       return `${weightKg}kg`;
     },
     [getDisplayWeight, isBWExercise],
@@ -349,7 +328,7 @@ export function useDayWorkout() {
     });
   }, [date, workout, setLastOpenedWorkout]);
 
-  /** Stale banner review → coach tab with prefill. */
+  /** Explicit stale-banner fallback → coach tab with context. */
   const handleReviewStale = useCallback(
     (prefill: string) => {
       navigation.navigate('CoachTab', {
@@ -380,24 +359,31 @@ export function useDayWorkout() {
       };
     }
 
-    const exerciseCount = workout.exercises?.length || 0;
+    const teamState = getTeamTrainingWorkoutState(rawWorkout);
+    const exerciseCount = teamState.renderableExercises.length;
     const dayName = DAY_NAMES[workout.dayOfWeek] || '';
 
-    // Team-training-only: canonical signal is the exact "Team Training" name
-    // (resolveSessionDisplayName produces it ONLY for isTeamDay + no overlay).
-    const isTeamOnly = workout.name === 'Team Training';
+    // Team Training is a session commitment, not a gym exercise. The
+    // shared state object filters malformed legacy rows out of every
+    // render branch and tells the UI whether a separate Team Training
+    // card should be shown.
+    const hasTeamTraining = teamState.hasTeamTraining;
+    const isTeamOnly = teamState.isTeamTrainingOnly;
 
     // Recovery sessions — structured prescriptions, play buttons, formatted
     // sets/duration/reps. Detect via workoutType OR sessionTier to catch
     // AI-generated sessions with the wrong workoutType but correct tier.
     const isRecovery =
-      workout.workoutType === 'Recovery' ||
-      (workout as any).sessionTier === 'recovery';
+      !isTeamOnly &&
+      (workout.workoutType === 'Recovery' ||
+        (workout as any).sessionTier === 'recovery');
 
     // Conditioning sessions — descriptive phase cards, no numbered exercises.
     // Recovery wins when both would match (AI may tag recovery as Conditioning).
     const isConditioning =
-      DESCRIPTIVE_CONDITIONING_TYPES.has(workout.workoutType) && !isRecovery;
+      !isTeamOnly &&
+      DESCRIPTIVE_CONDITIONING_TYPES.has(workout.workoutType) &&
+      !isRecovery;
 
     // ── Combined S+C day: resolve conditioning from workout.conditioningBlock ──
     //
@@ -409,7 +395,7 @@ export function useDayWorkout() {
       !!workout.hasCombinedConditioning && !isConditioning && !isRecovery;
     const condBlock = workout.conditioningBlock;
 
-    let strengthExercises = (workout.exercises ?? []).slice();
+    let strengthExercises = teamState.renderableExercises.slice();
     let conditioningOptions: ResolvedConditioningOption[] = [];
 
     if (isCombinedDay && condBlock) {
@@ -471,11 +457,12 @@ export function useDayWorkout() {
       isRecovery,
       isConditioning,
       isCombinedDay,
+      hasTeamTraining,
       strengthExercises,
       conditioningOptions,
       conditioningRowCount,
     };
-  }, [workout]);
+  }, [rawWorkout, workout]);
 
   return {
     // Route
@@ -515,12 +502,6 @@ export function useDayWorkout() {
     handleFeedbackSaved,
     handleScrollBeginDrag,
     handleReviewStale,
-
-    // Plan-change door
-    weekDays,
-    changeSheetOpen,
-    openChangeSheet,
-    closeChangeSheet,
 
     // Derived
     ...derived,

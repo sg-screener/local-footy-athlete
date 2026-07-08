@@ -225,14 +225,14 @@ function buildAvoidLabels(c: Constraint): string[] {
 function buildSubstituteLabels(c: Constraint): string[] {
   if (c.type === 'fatigue') {
     return [
-      'Easy aerobic conditioning (zone 1–2 bike or row)',
+      'Easy aerobic conditioning (zone 1-2 bike or row)',
       'Mobility / recovery',
       'Light technique work',
     ];
   }
   if (c.type === 'schedule') {
     return [
-      'Short, focused strength (compound + 1–2 accessories)',
+      'Short, focused strength (compound + 1-2 accessories)',
       'Skill / technique work',
       'Easy aerobic conditioning if time allows',
     ];
@@ -318,20 +318,23 @@ function capitalise(s: string): string {
 
 function activeIssueLabel(c: ActiveConstraint): string {
   const labelled = (c as ActiveConstraint & { reasonLabel?: string }).reasonLabel;
-  if (labelled && 'severity' in c) return `${labelled} — ${c.severity}/10`;
+  if (labelled && 'severity' in c) return `${labelled} - ${c.severity}/10`;
   if (c.type === 'injury') {
     const part = c.bodyPart === 'unknown' ? 'Injury' : capitalise(c.bodyPart);
-    return `${part} pain — ${c.severity}/10`;
+    return `${part} pain - ${c.severity}/10`;
   }
   if (c.type === 'fatigue') {
-    return `Fatigue — ${c.severity}/10`;
+    return `Fatigue - ${c.severity}/10`;
   }
   if (c.type === 'soreness') {
     const part = !c.bodyPart || c.bodyPart === 'unknown' ? 'Soreness' : `${capitalise(c.bodyPart)} soreness`;
-    return `${part} — ${c.severity}/10`;
+    return `${part} - ${c.severity}/10`;
   }
   if (c.type === 'schedule') {
-    return `Busy week — ${c.severity}/10`;
+    return `Busy week - ${c.severity}/10`;
+  }
+  if (c.type === 'preference') {
+    return c.label || 'Training preference';
   }
   // missed_session
   const label = c.sessionName ? c.sessionName : 'session';
@@ -588,14 +591,14 @@ export function buildSessionPlanNote(plans: ConstraintPlan[]): string | null {
 
   const issueLabels = plans.map((p) => {
     if (p.type === 'injury') {
-      // "Hammy pain — 7/10"  →  "hammy 7/10" (concise card-friendly)
-      const m = p.activeIssue.match(/^(.*?) pain — (\d+)\/10$/);
+      // "Hammy pain - 7/10"  →  "hammy 7/10" (concise card-friendly)
+      const m = p.activeIssue.match(/^(.*?) pain [-—] (\d+)\/10$/);
       if (m) return `${m[1].toLowerCase()} ${m[2]}/10`;
       return p.activeIssue.toLowerCase();
     }
     if (p.type === 'soreness') {
-      // "Quad soreness — 6/10"  →  "quad soreness 6/10"
-      const m = p.activeIssue.match(/^(.*?) — (\d+)\/10$/);
+      // "Quad soreness - 6/10"  →  "quad soreness 6/10"
+      const m = p.activeIssue.match(/^(.*?) [-—] (\d+)\/10$/);
       if (m) return `${m[1].toLowerCase()} ${m[2]}/10`;
       return p.activeIssue.toLowerCase();
     }
@@ -612,12 +615,12 @@ export function buildSessionPlanNote(plans: ConstraintPlan[]): string | null {
     .map((s) => s.split(' / ')[0].toLowerCase());
 
   if (avoidShort.length === 0) {
-    return `Adjusted for ${issuesJoined} — update coach if symptoms improve.`;
+    return `Adjusted for ${issuesJoined} - update coach if symptoms improve.`;
   }
   const avoidJoined = avoidShort.length === 1
     ? avoidShort[0]
     : avoidShort.length === 2
       ? avoidShort.join(' or ')
       : `${avoidShort.slice(0, -1).join(', ')}, or ${avoidShort[avoidShort.length - 1]}`;
-  return `Adjusted for ${issuesJoined} — no ${avoidJoined}.`;
+  return `Adjusted for ${issuesJoined} - no ${avoidJoined}.`;
 }

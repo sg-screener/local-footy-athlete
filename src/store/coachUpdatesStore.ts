@@ -114,7 +114,25 @@ export type ActiveConstraintType =
   | 'missed_session'
   | 'preference';
 
-export interface ActiveInjuryConstraint {
+export type ActiveConstraintModifierAffect =
+  | 'current_day'
+  | 'current_week'
+  | 'future_generation';
+
+export interface ActiveConstraintModifierMetadata {
+  /** Optional Coach Notes display override for this constraint. */
+  modifierTitle?: string;
+  /** Optional Coach Notes body override for this constraint. */
+  modifierBody?: string;
+  /** Program surfaces this modifier is currently changing. */
+  modifierAffects?: ActiveConstraintModifierAffect[];
+  /** Manual overrides that should be removed when this modifier clears. */
+  linkedOverrideDates?: string[];
+  /** ISO date after which this temporary constraint is no longer active. */
+  expiresAt?: string;
+}
+
+export interface ActiveInjuryConstraint extends ActiveConstraintModifierMetadata {
   id: string;
   type: 'injury';
   bodyPart: string;
@@ -123,6 +141,13 @@ export interface ActiveInjuryConstraint {
   status: InjuryStatus;
   startDate: string;
   lastUpdatedAt: string;
+  source?: 'coach' | 'uae' | 'tap' | 'guided_injury_flow';
+  region?: 'upper_body' | 'lower_body' | 'back_midline' | 'other';
+  severityBand?: 'mild' | 'slight' | 'moderate' | 'avoid';
+  adjustmentLevel?: 'minimal' | 'slight' | 'moderate' | 'avoid_affected' | 'training_paused';
+  triggers?: string[];
+  seriousSymptoms?: boolean;
+  seriousSymptom?: string;
   rules: string[];
   /** Free-text bullets the card surfaces under "Keep". */
   safeFocus: string[];
@@ -130,7 +155,7 @@ export interface ActiveInjuryConstraint {
   advice: string[];
 }
 
-export interface ActiveFatigueConstraint {
+export interface ActiveFatigueConstraint extends ActiveConstraintModifierMetadata {
   id: string;
   type: 'fatigue';
   severity: number;
@@ -140,7 +165,7 @@ export interface ActiveFatigueConstraint {
   /** Optional display override for derived constraints such as readiness chips. */
   reasonLabel?: string;
   /** Optional origin for derived/non-chat constraints. */
-  source?: 'coach' | 'readiness';
+  source?: 'coach' | 'readiness' | 'tap';
   /** Optional single-day scope. If present, projection only applies on this date. */
   appliesToDate?: string;
   rules: string[];
@@ -153,7 +178,7 @@ export interface ActiveFatigueConstraint {
  * severity by 2 (see `buildSorenessConstraint`) so a 6/10 soreness is
  * roughly equivalent to a 4/10 injury — limits, not full blocks.
  */
-export interface ActiveSorenessConstraint {
+export interface ActiveSorenessConstraint extends ActiveConstraintModifierMetadata {
   id: string;
   type: 'soreness';
   /** Athlete-facing free-text — "quads", "calves", "shoulders". */
@@ -165,7 +190,7 @@ export interface ActiveSorenessConstraint {
   startDate: string;
   lastUpdatedAt: string;
   reasonLabel?: string;
-  source?: 'coach' | 'readiness';
+  source?: 'coach' | 'readiness' | 'tap';
   appliesToDate?: string;
   rules: string[];
   safeFocus: string[];
@@ -177,7 +202,7 @@ export interface ActiveSorenessConstraint {
  * capacity for the current week. Severity drives how aggressively the
  * engine drops hard exposures (max effort, heavy lower, etc.).
  */
-export interface ActiveScheduleConstraint {
+export interface ActiveScheduleConstraint extends ActiveConstraintModifierMetadata {
   id: string;
   type: 'schedule';
   /** 1..10 — perceived capacity hit. Defaults to 5 (moderate). */
@@ -186,7 +211,7 @@ export interface ActiveScheduleConstraint {
   startDate: string;
   lastUpdatedAt: string;
   reasonLabel?: string;
-  source?: 'coach' | 'readiness';
+  source?: 'coach' | 'readiness' | 'tap';
   appliesToDate?: string;
   /** Optional Mon-Sun ISO of the affected week. */
   weekStartISO?: string;
@@ -220,12 +245,34 @@ export interface ActiveMissedSessionConstraint {
   advice: string[];
 }
 
+export interface ActivePreferenceConstraint {
+  id: string;
+  type: 'preference';
+  preferenceKind: 'avoid_exercise' | 'preferred_alternative' | 'add_focus';
+  /** Athlete-facing label shown under Profile -> Coach Adjustments. */
+  label: string;
+  /** Canonical exercise name excluded from future generation, when relevant. */
+  exercise?: string;
+  /** Canonical preferred/pinned exercise name, when relevant. */
+  alternative?: string;
+  /** Human-readable focus bucket, such as "core" or "upper body". */
+  focus?: string;
+  severity: number;
+  status: InjuryStatus;
+  startDate: string;
+  lastUpdatedAt: string;
+  rules: string[];
+  safeFocus: string[];
+  advice: string[];
+}
+
 export type ActiveConstraint =
   | ActiveInjuryConstraint
   | ActiveFatigueConstraint
   | ActiveSorenessConstraint
   | ActiveScheduleConstraint
-  | ActiveMissedSessionConstraint;
+  | ActiveMissedSessionConstraint
+  | ActivePreferenceConstraint;
 
 interface CoachUpdatesState {
   /** weekStartISO → CoachUpdate. One per week. */

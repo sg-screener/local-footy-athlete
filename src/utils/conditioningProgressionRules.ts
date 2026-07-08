@@ -113,19 +113,19 @@ export function resolveConditioningProgression(
     return {
       state: 'maintain',
       adjustment: { ...ZERO_ADJUSTMENT },
-      note: 'Tier C — recovery conditioning, no progression',
+      note: 'Tier C - recovery conditioning, no progression',
     };
   }
 
   // ── Step 1: Hard deload triggers (any ONE fires) ──
   if (input.doubleGameWeek) {
-    return buildConditioningDeload(input, 'Double game week — conditioning deload');
+    return buildConditioningDeload(input, 'Double game week - conditioning deload');
   }
   if (input.hasAvoidInjury) {
     return {
       state: 'deload',
       adjustment: { ...ZERO_ADJUSTMENT },
-      note: 'Session skipped — injury avoidance',
+      note: 'Session skipped - injury avoidance',
     };
   }
 
@@ -147,7 +147,7 @@ export function resolveConditioningProgression(
     return {
       state: 'hold',
       adjustment: { ...ZERO_ADJUSTMENT },
-      note: 'Game proximity — conditioning hold',
+      note: 'Game proximity - conditioning hold',
     };
   }
 
@@ -157,30 +157,30 @@ export function resolveConditioningProgression(
 
   if (input.seasonPhase === 'In-season') {
     state = 'maintain';
-    note = 'In-season default — maintain';
+    note = 'In-season default - maintain';
   } else if (input.seasonPhase === 'Pre-season') {
     // Pre-season early → build, late → maintain
     // Approximation: if daysToGame is known and close, it's late pre-season
     // Otherwise default to build
     state = 'build';
-    note = 'Pre-season — build';
+    note = 'Pre-season - build';
   } else {
     // Off-season
     state = 'build';
-    note = 'Off-season — build';
+    note = 'Off-season - build';
   }
 
   // ── Step 5: Tier constraint (can only downgrade) ──
   if (input.tier === 'A' && input.seasonPhase === 'In-season') {
     if (state === 'build') {
       state = 'maintain';
-      note = 'Tier A in-season — capped at maintain';
+      note = 'Tier A in-season - capped at maintain';
     }
   }
   if (input.tier === 'B-high' && input.seasonPhase === 'In-season') {
     if (state === 'build') {
       state = 'maintain';
-      note = 'Tier B-high in-season — capped at maintain';
+      note = 'Tier B-high in-season - capped at maintain';
     }
   }
   // Tier B-low: build allowed in all phases (no cap)
@@ -188,13 +188,13 @@ export function resolveConditioningProgression(
   // ── Guard A: High fatigue strength week ──
   if (input.highFatigueStrengthThisWeek && state === 'build') {
     state = 'maintain';
-    note = 'High-fatigue strength this week — conditioning progression paused';
+    note = 'High-fatigue strength this week - conditioning progression paused';
   }
 
   // ── Guard B: No consecutive progression ──
   if (input.lastSessionProgressed && state === 'build') {
     state = 'maintain';
-    note = 'Previous session progressed — earn next progression';
+    note = 'Previous session progressed - earn next progression';
   }
 
   // ── Guard C: Weekly load spike ──
@@ -206,7 +206,7 @@ export function resolveConditioningProgression(
     const increase = (input.weeklyLoad - input.previousWeekLoad) / input.previousWeekLoad;
     if (increase > 0.35) {
       state = 'maintain';
-      note = 'Conditioning load spike detected — progression paused this week';
+      note = 'Conditioning load spike detected - progression paused this week';
     }
   }
 
@@ -247,27 +247,27 @@ function buildConditioningBuild(
     // Never increase all at once
     if (input.currentReps < caps.maxReps) {
       adjustment.repsDelta = 1;
-      return { state: 'build', adjustment, note: note + ' — +1 rep' };
+      return { state: 'build', adjustment, note: note + ' - +1 rep' };
     }
     if (input.currentRest > caps.minRest) {
       adjustment.restDelta = -5;
-      return { state: 'build', adjustment, note: note + ' — rest reduced 5s' };
+      return { state: 'build', adjustment, note: note + ' - rest reduced 5s' };
     }
     // All at cap
-    return { state: 'maintain', adjustment: { ...ZERO_ADJUSTMENT }, note: note + ' — all variables at cap' };
+    return { state: 'maintain', adjustment: { ...ZERO_ADJUSTMENT }, note: note + ' - all variables at cap' };
   }
 
   if (input.tier === 'B-high') {
     // Tier B-high: intervals → rest reduction (density)
     if (input.currentIntervals < caps.maxIntervals) {
       adjustment.intervalsDelta = 1;
-      return { state: 'build', adjustment, note: note + ' — +1 interval' };
+      return { state: 'build', adjustment, note: note + ' - +1 interval' };
     }
     if (input.currentRest > caps.minRest) {
       adjustment.restDelta = -10;
-      return { state: 'build', adjustment, note: note + ' — rest reduced 10s' };
+      return { state: 'build', adjustment, note: note + ' - rest reduced 10s' };
     }
-    return { state: 'maintain', adjustment: { ...ZERO_ADJUSTMENT }, note: note + ' — all variables at cap' };
+    return { state: 'maintain', adjustment: { ...ZERO_ADJUSTMENT }, note: note + ' - all variables at cap' };
   }
 
   if (input.tier === 'B-low') {
@@ -275,18 +275,18 @@ function buildConditioningBuild(
     // In-season: explicitly prefer duration/interval-count, NOT rest reduction
     if (input.currentDuration < caps.maxDuration) {
       adjustment.durationDelta = 5;
-      return { state: 'build', adjustment, note: note + ' — +5 min duration' };
+      return { state: 'build', adjustment, note: note + ' - +5 min duration' };
     }
     if (input.currentIntervals < caps.maxIntervals) {
       adjustment.intervalsDelta = 1;
-      return { state: 'build', adjustment, note: note + ' — +1 interval' };
+      return { state: 'build', adjustment, note: note + ' - +1 interval' };
     }
     // Only use rest reduction in non-in-season phases
     if (input.seasonPhase !== 'In-season' && input.currentRest > caps.minRest) {
       adjustment.restDelta = -5;
-      return { state: 'build', adjustment, note: note + ' — rest reduced 5s (off/pre-season)' };
+      return { state: 'build', adjustment, note: note + ' - rest reduced 5s (off/pre-season)' };
     }
-    return { state: 'maintain', adjustment: { ...ZERO_ADJUSTMENT }, note: note + ' — all variables at cap' };
+    return { state: 'maintain', adjustment: { ...ZERO_ADJUSTMENT }, note: note + ' - all variables at cap' };
   }
 
   // Shouldn't reach here (Tier C handled above), but safety net

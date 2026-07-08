@@ -630,7 +630,7 @@ function runUndoLastChange(
 
   return {
     kind: 'mutated',
-    reply: 'Done — I undid the last change.',
+    reply: 'Done - I undid the last change.',
     applied: true,
     route: `undo_last_change:applied:${entry.mutationKind}`,
     progress: stages,
@@ -1566,11 +1566,11 @@ function composeConditioningResult(args: {
       reply:
         operation === 'add_conditioning'
           ? `I tried to add conditioning on ${niceDate}, but I couldn't verify it in the visible program. ` +
-            `Try editing that session directly — the apply layer didn't land it visibly.`
+            `Try editing that session directly - the apply layer didn't land it visibly.`
           : removeTargetItemId
           ? `I couldn't safely remove that conditioning item on ${niceDate}. Which item should I remove?`
           : `I removed the conditioning on ${niceDate}, but the visible program still shows it. ` +
-            `Try editing that session directly — the apply layer didn't land it visibly.`,
+            `Try editing that session directly - the apply layer didn't land it visibly.`,
       applied: false,
       route: removeTargetItemId
         ? `verification_failed:${operation}:${targetedRemoveVerification?.reason ?? 'targeted_remove'}`
@@ -2509,11 +2509,11 @@ function honestRejectReason(
     case 'no_conditioning_to_swap':
       return `There's no conditioning block on ${niceDate} to remove.`;
     case 'past_date_blocked':
-      return `That session (${niceDate}) is in the past — I can't change it.`;
+      return `That session (${niceDate}) is in the past - I can't change it.`;
     case 'no_workout_on_date':
       return `${niceDate} doesn't have a workout to ${operation === 'add_conditioning' ? 'add to' : 'remove from'}.`;
     case 'invalid_target_date':
-      return `${niceDate} isn't in the visible program — try a date inside this week.`;
+      return `${niceDate} isn't in the visible program - try a date inside this week.`;
     default:
       return `I couldn't ${operation === 'add_conditioning' ? 'add' : 'remove'} conditioning on ${niceDate}: ${first.reason}.`;
   }
@@ -2779,13 +2779,13 @@ function composeReplaceExerciseResult(args: {
         body = `"${sourceMatch}" wasn't on ${niceDate} when I tried to swap it.`;
         break;
       case 'past_date_blocked':
-        body = `${niceDate} is in the past — I can't change it.`;
+        body = `${niceDate} is in the past - I can't change it.`;
         break;
       case 'no_workout_on_date':
         body = `${niceDate} doesn't have a workout to adjust.`;
         break;
       case 'invalid_target_date':
-        body = `${niceDate} isn't in the visible program — try a date inside this week.`;
+        body = `${niceDate} isn't in the visible program - try a date inside this week.`;
         break;
       default:
         body =
@@ -2812,7 +2812,7 @@ function composeReplaceExerciseResult(args: {
       reply:
         `I tried to swap ${sourceMatch} → ${replacementName} on ${niceDate}, ` +
         `but the change didn't fully land on the visible program. ` +
-        `Try editing that session directly — the apply layer didn't make it visible.`,
+        `Try editing that session directly - the apply layer didn't make it visible.`,
       applied: false,
       route: 'verification_failed:replace_exercise',
       progress: stages,
@@ -3176,7 +3176,7 @@ function runAddSession(
   const result: ExecutionResult = {
     kind: 'mutated',
     reply: isOneOffExtraConditioning
-      ? `Done — I added ${finalName} ${targetDate === input.todayISO ? 'today' : `to ${humanDate(targetDate)}`} as a one-off extra session.`
+      ? `Done - I added ${finalName} ${targetDate === input.todayISO ? 'today' : `to ${humanDate(targetDate)}`} as a one-off extra session.`
       : `Done. I added ${quoteSession(finalName)} to ${humanDate(targetDate)}.`,
     applied: true,
     route: 'add_session:applied',
@@ -3281,7 +3281,7 @@ function runRemoveSession(
     return {
       kind: 'rejected',
       reply:
-        `${humanDate(targetDate)} is a team training day — those are anchored ` +
+        `${humanDate(targetDate)} is a team training day - those are anchored ` +
         `to the calendar and can't be removed by coach chat.`,
       applied: false,
       route: 'cannot_remove_team_training:remove_session',
@@ -3292,7 +3292,7 @@ function runRemoveSession(
     tick('composing_reply');
     return {
       kind: 'rejected',
-      reply: `${humanDate(targetDate)} is a game day — game-day sessions can't be removed by coach chat.`,
+      reply: `${humanDate(targetDate)} is a game day - game-day sessions can't be removed by coach chat.`,
       applied: false,
       route: 'cannot_remove_game:remove_session',
       progress: stages,
@@ -3710,7 +3710,7 @@ function sessionNamesMatch(a: string, b: string): boolean {
 
 function addSessionApplyRejectReply(targetDate: string, reason?: string): string {
   if (reason === 'past_date_blocked') {
-    return `${humanDate(targetDate)} is in the past — I can't change it.`;
+    return `${humanDate(targetDate)} is in the past - I can't change it.`;
   }
   return reason
     ? `I couldn't add a session to ${humanDate(targetDate)}: ${reason}.`
@@ -3858,7 +3858,7 @@ function restoreCalendarMark(date: string, mark: CalendarDayType | null): void {
 
 function removeSessionApplyRejectReply(targetDate: string, reason?: string): string {
   if (reason === 'past_date_blocked') {
-    return `${humanDate(targetDate)} is in the past — I can't change it.`;
+    return `${humanDate(targetDate)} is in the past - I can't change it.`;
   }
   return `I tried to remove the session on ${humanDate(targetDate)}, but the apply layer rejected it${reason ? ` (${reason})` : ''}.`;
 }
@@ -3967,7 +3967,7 @@ function runMoveSession(
     return {
       kind: 'rejected',
       reply:
-        `${humanDate(sourceDate)} is a team training day — those are anchored ` +
+        `${humanDate(sourceDate)} is a team training day - those are anchored ` +
         `to the calendar and can't be moved.`,
       applied: false,
       route: 'cannot_move_team_training:move_session',
@@ -3979,7 +3979,7 @@ function runMoveSession(
     return {
       kind: 'rejected',
       reply:
-        `${humanDate(sourceDate)} is a game day — game-day sessions can't be moved.`,
+        `${humanDate(sourceDate)} is a game day - game-day sessions can't be moved.`,
       applied: false,
       route: 'cannot_move_game:move_session',
       progress: stages,
@@ -4143,17 +4143,17 @@ function composeMoveSessionResult(args: {
         break;
       case 'cannot_move_game':
         kind = 'rejected';
-        body = first?.reason ?? `Can't touch a game day — those are anchored.`;
+        body = first?.reason ?? `Can't touch a game day - those are anchored.`;
         break;
       case 'past_date_blocked':
-        body = `That date is in the past — I can't change it.`;
+        body = `That date is in the past - I can't change it.`;
         break;
       case 'no_workout_on_date':
         body = `${niceSource} doesn't have a workout to move.`;
         break;
       case 'invalid_target_date':
         body =
-          `That date isn't in the visible program — try a date inside this week or next.`;
+          `That date isn't in the visible program - try a date inside this week or next.`;
         break;
       case 'invalid_event':
         body = first?.reason ?? `That move isn't valid.`;
@@ -4190,7 +4190,7 @@ function composeMoveSessionResult(args: {
       reply:
         `I tried to move ${quoteSession(movedSessionName)} from ${niceSource} ` +
         `to ${niceDest}, but the change didn't fully land on the visible program. ` +
-        `Try editing those days directly — the apply layer didn't make it visible.`,
+        `Try editing those days directly - the apply layer didn't make it visible.`,
       applied: false,
       route: 'verification_failed:move_session',
       progress: stages,
@@ -4209,7 +4209,7 @@ function composeMoveSessionResult(args: {
 
   return {
     kind: 'mutated',
-    reply: `Done — I moved ${weekdayName(sourceDate)}'s session to ${weekdayName(destDate)}.`,
+    reply: `Done - I moved ${weekdayName(sourceDate)}'s session to ${weekdayName(destDate)}.`,
     applied: true,
     route: 'move_session:applied',
     progress: stages,
@@ -4237,12 +4237,12 @@ function buildMoveSessionDayOptions(
     if (!w) continue;
     let suffix = '';
     if (w.isTeamDay === true || w.workoutType === 'Team Training') {
-      suffix = ' (team training — unavailable)';
+      suffix = ' (team training - unavailable)';
     } else if (w.workoutType === 'Game' || w.sessionTier === 'game') {
-      suffix = ' (game day — unavailable)';
+      suffix = ' (game day - unavailable)';
     }
     const name = (w.name ?? '').trim() || 'Session';
-    out.push(`${humanDate(d.date)} — ${name}${suffix}`);
+    out.push(`${humanDate(d.date)} - ${name}${suffix}`);
   }
   return out;
 }

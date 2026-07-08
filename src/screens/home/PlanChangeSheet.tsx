@@ -5,6 +5,11 @@ import { Button, Sheet } from '../../components/ui';
 import { useProgramStore } from '../../store';
 import { todayISOLocal } from '../../utils/appDate';
 import type { ResolvedDay } from '../../utils/sessionResolver';
+import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
+import {
+  buildGuidedInjuryConstraint,
+  type GuidedInjuryFlowResult,
+} from '../../utils/guidedInjuryControl';
 import {
   applyPlanChange,
   listPlanChangeOptionsForDay,
@@ -14,6 +19,8 @@ import {
   type PlanChangeCategoryId,
   type PlanChangeDayOptions,
 } from '../../utils/planChangeProducer';
+import { executeProgramControlAction } from '../../utils/programControlActions';
+import type { TapRecoveryModifierScope } from '../../utils/tapProgramModifiers';
 
 /**
  * PlanChangeSheet — the tap-first change door (ATHLETE_CHANGE_VOCABULARY.md
@@ -26,20 +33,32 @@ import {
  * apply deterministically through the same writer as the chat coach —
  * no LLM in this path.
  *
- * "Something else" folds the chat coach in as the layered escape hatch
- * (signed-off decision 4): it hands a day-scoped prefill to the Coach tab.
+ * "Something else" folds the chat coach in as an explicit escape hatch
+ * (signed-off decision 4): it hands a day-scoped prefill to the Coach tab
+ * only after the athlete chooses that fallback.
  */
+
+type StepBackTarget = 'menu' | 'edit_session';
 
 type Step =
   | { kind: 'menu' }
-  | { kind: 'pick_category'; mode: 'swap' | 'add' }
-  | { kind: 'pick_conditioning'; mode: 'swap' | 'add' }
-  | { kind: 'pick_strength'; mode: 'swap' | 'add' }
+  | { kind: 'edit_session' }
+  | { kind: 'pick_add_kind'; returnTo: StepBackTarget }
+  | { kind: 'add_blocked_max_sessions'; returnTo: StepBackTarget }
+  | {
+      kind: 'add_blocked_duplicate';
+      duplicate: 'strength' | 'conditioning';
+      returnTo: StepBackTarget;
+    }
+  | { kind: 'pick_category'; mode: 'swap' | 'add'; returnTo: StepBackTarget }
+  | { kind: 'pick_conditioning'; mode: 'swap' | 'add'; returnTo: StepBackTarget }
+  | { kind: 'pick_strength'; mode: 'swap' | 'add'; returnTo: StepBackTarget }
   | {
       kind: 'confirm_warning';
       mode: 'swap' | 'add';
       category: PlanChangeCategoryId;
       message: string;
+      returnTo: StepBackTarget;
     }
   | { kind: 'pick_destination' }
   | { kind: 'pick_bin_scope' }
@@ -67,10 +86,14 @@ export function PlanChangeSheet({
   visible, date, weekDays, onClose, onAskCoach,
 }: PlanChangeSheetProps) {
   const [step, setStep] = useState<Step>({ kind: 'menu' });
+  const [injuryFlowVisible, setInjuryFlowVisible] = useState(false);
 
   // Fresh menu every time the sheet opens for a (new) day.
   useEffect(() => {
-    if (visible) setStep({ kind: 'menu' });
+    if (visible) {
+      setStep({ kind: 'menu' });
+      setInjuryFlowVisible(false);
+    }
   }, [visible, date]);
 
   const todayISO = todayISOLocal();
@@ -78,10 +101,77 @@ export function PlanChangeSheet({
     if (!visible || !date) return null;
     return listPlanChangeOptionsForDay({ visibleWeek: weekDays, date, todayISO });
   }, [visible, date, weekDays, todayISO]);
+  const selectedDay = useMemo(
+    () => (date ? weekDays.find((day) => day.date === date) ?? null : null),
+    [date, weekDays],
+  );
+  // Wellbeing ("I'm not 100%") is about how the athlete is RIGHT NOW, not the
+  // tapped day — so it always applies to today and only appears when today is
+  // in the viewed week (guaranteeing today's data is present). This removes
+  // the old bug where the sheet showed one date but changed today.
+  const todayDay = useMemo(
+    () => weekDays.find((day) => day.date === todayISO) ?? null,
+    [weekDays, todayISO],
+  );
+  const todayInView = todayDay !== null;
+  const WELLBEING_STEP_KINDS: Step['kind'][] = [
+    'pick_wellbeing',
+    'pick_tired',
+    'pick_sick',
+    'confirm_shutdown',
+  ];
+  const isWellbeingStep = WELLBEING_STEP_KINDS.includes(step.kind);
 
   if (!date) return null;
+  const selectedWorkout = selectedDay?.workout ?? null;
+  const selectedWorkoutName = String(selectedWorkout?.name ?? '').toLowerCase();
+  const isRestOrRecoveryDay =
+    !options?.hasSession ||
+    selectedWorkout?.workoutType === 'Recovery' ||
+    selectedWorkout?.sessionTier === 'recovery' ||
+    selectedWorkoutName === 'rest' ||
+    selectedWorkoutName === 'rest day' ||
+    selectedWorkoutName === 'recovery';
+  const hasEditableSession = !!options?.hasSession && !isRestOrRecoveryDay;
 
-  const apply = (change: PlanChange, opts?: { closeOnSuccess?: boolean }) => {
+  const apply = (
+    change: PlanChange,
+    opts?: {
+      closeOnSuccess?: boolean;
+      recoveryModifierScope?: TapRecoveryModifierScope;
+    },
+  ) => {
+    if (opts?.recoveryModifierScope && 'date' in change) {
+      const result = executeProgramControlAction({
+        type: 'set_recovery_mode',
+        source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
+        scope: opts.recoveryModifierScope === 'week' ? 'current_week' : 'today_only',
+        payload: {
+          date: change.date,
+          todayISO,
+          recoveryScope: opts.recoveryModifierScope,
+          planChange: change,
+        },
+        requiresRebuild: false,
+        createsActiveModifier: true,
+        oneOffOnly: false,
+      }, { visibleWeek: weekDays, todayISO });
+      if (result.ok && opts.closeOnSuccess) {
+        onClose();
+        return;
+      }
+      setStep({
+        kind: 'result',
+        ok: result.ok,
+        message: result.message ?? (
+          result.ok
+            ? 'Done. Recovery mode is active.'
+            : "I couldn't safely update recovery mode here."
+        ),
+      });
+      return;
+    }
+
     const result = applyPlanChange({
       change,
       visibleWeek: weekDays,
@@ -107,17 +197,50 @@ export function PlanChangeSheet({
         : { kind: 'add_category', date, category },
     );
 
+  const startAdd = (returnTo: StepBackTarget) => {
+    if ((options?.visibleSessionCount ?? 0) >= 2) {
+      setStep({ kind: 'add_blocked_max_sessions', returnTo });
+      return;
+    }
+    setStep({ kind: 'pick_add_kind', returnTo });
+  };
+
+  const chooseAddKind = (kind: 'strength' | 'conditioning', returnTo: StepBackTarget) => {
+    const existing = options?.visibleSessionKinds ?? [];
+    if (existing.includes(kind)) {
+      setStep({ kind: 'add_blocked_duplicate', duplicate: kind, returnTo });
+      return;
+    }
+    setStep({
+      kind: kind === 'strength' ? 'pick_strength' : 'pick_conditioning',
+      mode: 'add',
+      returnTo,
+    });
+  };
+
+  const pickerBackStep = (
+    mode: 'swap' | 'add',
+    returnTo: StepBackTarget,
+  ): Step =>
+    mode === 'add'
+      ? { kind: 'pick_add_kind', returnTo }
+      : { kind: 'pick_category', mode, returnTo };
+
   // Athlete override principle: nothing is blocked, but the coach gets a
   // word in first. If the producer flags this pick (hard session on a game
   // week / already a heavy week), route through a warning step.
-  const chooseCategory = (mode: 'swap' | 'add', category: PlanChangeCategoryId) => {
+  const chooseCategory = (
+    mode: 'swap' | 'add',
+    category: PlanChangeCategoryId,
+    returnTo: StepBackTarget,
+  ) => {
     const warning = planChangeWarningForCategory({
       category,
       date,
       visibleWeek: weekDays,
     });
     if (warning) {
-      setStep({ kind: 'confirm_warning', mode, category, message: warning.message });
+      setStep({ kind: 'confirm_warning', mode, category, message: warning.message, returnTo });
       return;
     }
     applyCategory(mode, category);
@@ -139,53 +262,115 @@ export function PlanChangeSheet({
     onAskCoach(`About ${weekdayLabel(date)}: `);
   };
 
-  // "I'm not 100%" — severity taps. Clear ends apply deterministically
-  // (readiness signal / recovery swap / week shutdown through the same
-  // validated pipeline); injuries and murky middles open the coach
-  // PRE-LOADED with what was tapped so it never re-asks.
-  const askCoachWith = (prefill: string) => {
-    onClose();
-    onAskCoach(prefill);
-  };
-
   const applyTired = (severity: 'spark' | 'cooked') => {
-    // Readiness signal for TODAY (being tired is about now, not the day
-    // being viewed) — the resolver's existing readiness constraints ease
-    // the plan off; nothing is deleted, so it bounces back tomorrow.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { useReadinessStore } = require('../../store/readinessStore');
-    useReadinessStore.getState().setReadinessSignal(todayISO, {
-      energy: 'low',
-      flatToday: severity === 'cooked',
-      source: 'quick_check',
-    });
+    const result = executeProgramControlAction({
+      type: 'set_fatigue_status',
+      source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
+      scope: severity === 'cooked' ? 'current_week' : 'today_only',
+      payload: {
+        date: todayISO,
+        todayISO,
+        level: severity === 'cooked' ? 'cooked' : 'low_energy',
+      },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { todayISO });
     setStep({
       kind: 'result',
-      ok: true,
+      ok: result.ok,
       message:
         severity === 'cooked'
-          ? "Heard. Today eases right off — recovery-level only. Add sessions back when you're breathing fire again, or grab a light flush from Add a session."
+          ? "Heard. This week eases right off - recovery-level only. Clear the note when you're breathing fire again."
           : "Noted. Today backs off the hard stuff where it can. Shout if it gets worse.",
     });
   };
 
+  const applySore = () => {
+    const result = executeProgramControlAction({
+      type: 'set_fatigue_status',
+      source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
+      scope: 'today_only',
+      payload: { date: todayISO, todayISO, level: 'sore' },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { todayISO });
+    setStep({
+      kind: 'result',
+      ok: result.ok,
+      message: "Noted. Today adjusts around how you're feeling.",
+    });
+  };
+
+  const applyRoughSick = () => {
+    const result = executeProgramControlAction({
+      type: 'set_recovery_mode',
+      source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: {
+        date: todayISO,
+        todayISO,
+        recoveryScope: 'week',
+      },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { todayISO });
+    setStep({
+      kind: 'result',
+      ok: result.ok,
+      message: "Recovery mode is active for this week. Clear the note when you're good again.",
+    });
+  };
+
   const applySniffle = () => {
-    // Light sniffle: today's session softens to the recovery flow. On a
-    // rest day there's nothing to soften.
-    if (!options?.hasSession) {
+    // Light sniffle: TODAY's session softens to the recovery flow (not the
+    // tapped day). On a rest day there's nothing to soften.
+    const todayHasSession =
+      !!todayDay?.workout && todayDay.workout.workoutType !== 'Game';
+    if (!todayHasSession) {
       setStep({
         kind: 'result',
         ok: true,
-        message: "It's already an easy day — perfect. Fluids, food, sleep.",
+        message: "Today's already an easy day - perfect. Fluids, food, sleep.",
       });
       return;
     }
-    apply({ kind: 'swap_category', date, category: 'recovery' });
+    apply(
+      { kind: 'swap_category', date: todayISO, category: 'recovery' },
+      { recoveryModifierScope: 'day' },
+    );
+  };
+
+  const applyGuidedInjury = (result: GuidedInjuryFlowResult) => {
+    const constraint = buildGuidedInjuryConstraint(result, { todayISO });
+    const trainingPaused = constraint.adjustmentLevel === 'training_paused';
+    const actionResult = executeProgramControlAction({
+      type: 'set_injury_modifier',
+      source: { screen: 'program_tab', surface: 'plan_change_injury_flow', initiatedBy: 'tap' },
+      scope: 'current_and_future',
+      payload: { constraint },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { todayISO });
+    setInjuryFlowVisible(false);
+    setStep({
+      kind: 'result',
+      ok: actionResult.ok,
+      message: trainingPaused
+        ? 'Affected training is paused until you get medical or physio advice.'
+        : 'Injury adjustment is active. Coach Notes will show it until you clear it.',
+    });
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} testID="plan-change-sheet">
-      <Text style={styles.title}>{weekdayLabel(date)}</Text>
+    <>
+    <Sheet visible={visible && !injuryFlowVisible} onClose={onClose} testID="plan-change-sheet">
+      <Text style={styles.title}>
+        {isWellbeingStep ? 'How are you today?' : weekdayLabel(date)}
+      </Text>
 
       {options?.locked === 'outside_horizon' && (
         <Text style={styles.lockedText}>
@@ -201,53 +386,117 @@ export function PlanChangeSheet({
 
       {options && options.locked === null && step.kind === 'menu' && (
         <View>
-          {options.hasSession ? (
-            <>
-              <MenuOption
-                label="Swap this session"
-                sub="Strength, conditioning, recovery — or make it a rest day"
-                onPress={() => setStep({ kind: 'pick_category', mode: 'swap' })}
-              />
-              {options.addOnTopCategories.length > 0 && (
-                <MenuOption
-                  label="Add to this day"
-                  sub="Conditioning on top of this session"
-                  onPress={() => setStep({ kind: 'pick_category', mode: 'add' })}
-                />
-              )}
-              {options.moveDestinations.length > 0 && (
-                <MenuOption
-                  label="Move it to another day"
-                  sub="To a rest day, or trade places with another session"
-                  onPress={() => setStep({ kind: 'pick_destination' })}
-                />
-              )}
-              <MenuOption
-                label="Bin this session"
-                sub={(options.binScopes.length > 1)
-                  ? 'Remove part of the day, or all of it'
-                  : 'Remove it — the day becomes rest'}
-                danger
-                onPress={startBin}
-              />
-            </>
+          {hasEditableSession ? (
+            <MenuOption
+              label="Edit this session"
+              sub="Swap, add, move or remove this session"
+              onPress={() => setStep({ kind: 'edit_session' })}
+            />
           ) : (
             <MenuOption
-              label="Add a session"
-              sub="Strength, conditioning or recovery on this day"
-              onPress={() => setStep({ kind: 'pick_category', mode: 'add' })}
+              label="Add optional session"
+              sub="Add extra strength or conditioning work to this day"
+              onPress={() => startAdd('menu')}
+            />
+          )}
+          {todayInView && (
+            <MenuOption
+              label="I'm not 100%"
+              sub="Tired, sick or injured today - the plan adjusts"
+              onPress={() => setStep({ kind: 'pick_wellbeing' })}
             />
           )}
           <MenuOption
-            label="I'm not 100%"
-            sub="Tired, sick or injured — the plan adjusts"
-            onPress={() => setStep({ kind: 'pick_wellbeing' })}
-          />
-          <MenuOption
-            label="Something else — ask the coach"
+            label="Something else - ask the coach"
             sub="Anything the menu doesn't cover"
             onPress={askCoach}
           />
+        </View>
+      )}
+
+      {options && options.locked === null && step.kind === 'edit_session' && (
+        <View>
+          <MenuOption
+            label="Swap this session"
+            sub="Change to strength, conditioning or recovery"
+            onPress={() => setStep({ kind: 'pick_category', mode: 'swap', returnTo: 'edit_session' })}
+          />
+          <MenuOption
+            label="Add to this day"
+            sub="Add extra strength or conditioning work to this day"
+            onPress={() => startAdd('edit_session')}
+          />
+          <MenuOption
+            label="Move this session"
+            sub="Move it to another day or trade places"
+            onPress={() => setStep({ kind: 'pick_destination' })}
+          />
+          <MenuOption
+            label="Bin this session"
+            sub="Remove it - the day becomes rest"
+            danger
+            onPress={startBin}
+          />
+          <BackRow onPress={() => setStep({ kind: 'menu' })} />
+        </View>
+      )}
+
+      {options && options.locked === null && step.kind === 'pick_add_kind' && (
+        <View>
+          <Text style={styles.sectionLabel}>ADD:</Text>
+          <MenuOption
+            label="Strength"
+            sub="Upper, lower, full body or accessories"
+            onPress={() => chooseAddKind('strength', step.returnTo)}
+          />
+          <MenuOption
+            label="Conditioning"
+            sub="Light or hard - bike, row, ski or intervals"
+            onPress={() => chooseAddKind('conditioning', step.returnTo)}
+          />
+          <BackRow onPress={() => setStep({ kind: step.returnTo })} />
+        </View>
+      )}
+
+      {options && options.locked === null && step.kind === 'add_blocked_max_sessions' && (
+        <View>
+          <Text style={styles.blockingTitle}>Please remove a session first</Text>
+          <Text style={styles.confirmText}>
+            This day already has 2 sessions. Remove one before adding another.
+          </Text>
+          <MenuOption
+            label="Remove a session"
+            onPress={startBin}
+          />
+          <BackRow onPress={() => setStep({ kind: step.returnTo })} />
+        </View>
+      )}
+
+      {options && options.locked === null && step.kind === 'add_blocked_duplicate' && (
+        <View>
+          <Text style={styles.blockingTitle}>
+            {step.duplicate === 'strength'
+              ? 'Already has strength work'
+              : 'Already has conditioning work'}
+          </Text>
+          <Text style={styles.confirmText}>
+            {step.duplicate === 'strength'
+              ? 'This day already includes a strength session. Swap the current session or remove one before adding another.'
+              : 'This day already includes conditioning. Swap the current session or remove one before adding another.'}
+          </Text>
+          <MenuOption
+            label="Swap this session"
+            onPress={() => setStep({
+              kind: 'pick_category',
+              mode: 'swap',
+              returnTo: 'edit_session',
+            })}
+          />
+          <MenuOption
+            label="Remove a session"
+            onPress={startBin}
+          />
+          <BackRow onPress={() => setStep({ kind: 'pick_add_kind', returnTo: step.returnTo })} />
         </View>
       )}
 
@@ -266,9 +515,14 @@ export function PlanChangeSheet({
             onPress={() => setStep({ kind: 'pick_sick' })}
           />
           <MenuOption
+            label="I'm sore"
+            sub="General soreness - today adjusts"
+            onPress={applySore}
+          />
+          <MenuOption
             label="I'm injured"
-            sub="Tell the coach what and where — the plan adapts around it"
-            onPress={() => askCoachWith("I'm injured — ")}
+            sub="Area, severity and triggers"
+            onPress={() => setInjuryFlowVisible(true)}
           />
           <BackRow onPress={() => setStep({ kind: 'menu' })} />
         </View>
@@ -304,8 +558,8 @@ export function PlanChangeSheet({
           />
           <MenuOption
             label="Pretty rough"
-            sub="Coach adjusts your week with you"
-            onPress={() => askCoachWith("I'm sick — pretty rough. Can you adjust my week? ")}
+            sub="Recovery mode for this week"
+            onPress={applyRoughSick}
           />
           <MenuOption
             label="Bed-ridden"
@@ -325,9 +579,15 @@ export function PlanChangeSheet({
             you're better.
           </Text>
           <MenuOption
-            label="Yes — clear my week"
+            label="Yes - clear my week"
             danger
-            onPress={() => apply({ kind: 'shutdown_week', date })}
+            onPress={() =>
+              apply(
+                // Bed-ridden clears THIS week from today onward, regardless
+                // of which day's sheet opened it.
+                { kind: 'shutdown_week', date: todayISO },
+                { recoveryModifierScope: 'week' },
+              )}
           />
           <MenuOption
             label="No, keep the plan"
@@ -354,8 +614,9 @@ export function PlanChangeSheet({
           {stepCategories.some((c) => c.id.startsWith('conditioning_')) && (
             <MenuOption
               label="Conditioning"
-              sub="Light or hard — bike, row, ski or intervals"
-              onPress={() => setStep({ kind: 'pick_conditioning', mode: step.mode })}
+              sub="Light or hard - bike, row, ski or intervals"
+              onPress={() =>
+                setStep({ kind: 'pick_conditioning', mode: step.mode, returnTo: step.returnTo })}
             />
           )}
           {stepCategories.some((c) =>
@@ -363,7 +624,8 @@ export function PlanChangeSheet({
             <MenuOption
               label="Strength"
               sub="Upper, lower, full body or accessories"
-              onPress={() => setStep({ kind: 'pick_strength', mode: step.mode })}
+              onPress={() =>
+                setStep({ kind: 'pick_strength', mode: step.mode, returnTo: step.returnTo })}
             />
           )}
           {stepCategories.filter((c) => c.id === 'recovery').map((c) => (
@@ -371,19 +633,10 @@ export function PlanChangeSheet({
               key={c.id}
               label={c.label}
               sub={c.sub}
-              onPress={() => chooseCategory(step.mode, c.id)}
+              onPress={() => chooseCategory(step.mode, c.id, step.returnTo)}
             />
           ))}
-          {step.mode === 'swap' && (
-            <MenuOption
-              label="Rest day"
-              sub="Clear the day — same as binning the session"
-              danger
-              onPress={() =>
-                setStep({ kind: 'confirm_remove', scope: 'whole_day', label: 'this session' })}
-            />
-          )}
-          <BackRow onPress={() => setStep({ kind: 'menu' })} />
+          <BackRow onPress={() => setStep({ kind: step.returnTo })} />
         </View>
         );
       })()}
@@ -403,10 +656,12 @@ export function PlanChangeSheet({
                 key={c.id}
                 label={c.label}
                 sub={c.sub}
-                onPress={() => chooseCategory(step.mode, c.id)}
+                onPress={() => chooseCategory(step.mode, c.id, step.returnTo)}
               />
             ))}
-          <BackRow onPress={() => setStep({ kind: 'pick_category', mode: step.mode })} />
+          <BackRow
+            onPress={() => setStep(pickerBackStep(step.mode, step.returnTo))}
+          />
         </View>
       )}
 
@@ -426,10 +681,12 @@ export function PlanChangeSheet({
                 key={c.id}
                 label={c.label}
                 sub={c.sub}
-                onPress={() => chooseCategory(step.mode, c.id)}
+                onPress={() => chooseCategory(step.mode, c.id, step.returnTo)}
               />
             ))}
-          <BackRow onPress={() => setStep({ kind: 'pick_category', mode: step.mode })} />
+          <BackRow
+            onPress={() => setStep(pickerBackStep(step.mode, step.returnTo))}
+          />
         </View>
       )}
 
@@ -439,11 +696,12 @@ export function PlanChangeSheet({
         <View>
           <Text style={styles.confirmText}>{step.message}</Text>
           <MenuOption
-            label="Add it anyway — I'm good"
+            label="Add it anyway - I'm good"
             onPress={() => applyCategory(step.mode, step.category)}
           />
           <BackRow
-            onPress={() => setStep({ kind: 'pick_conditioning', mode: step.mode })}
+            onPress={() =>
+              setStep({ kind: 'pick_conditioning', mode: step.mode, returnTo: step.returnTo })}
           />
         </View>
       )}
@@ -462,7 +720,7 @@ export function PlanChangeSheet({
                 apply({ kind: 'move_session', fromDate: date, toDate: destination.date })}
             />
           ))}
-          <BackRow onPress={() => setStep({ kind: 'menu' })} />
+          <BackRow onPress={() => setStep({ kind: 'edit_session' })} />
         </View>
       )}
 
@@ -488,7 +746,7 @@ export function PlanChangeSheet({
                 })}
             />
           ))}
-          <BackRow onPress={() => setStep({ kind: 'menu' })} />
+          <BackRow onPress={() => setStep({ kind: 'edit_session' })} />
         </View>
       )}
 
@@ -497,7 +755,7 @@ export function PlanChangeSheet({
           <Text style={styles.confirmText}>
             {step.scope === 'whole_day'
               ? 'Are you sure? This will be removed and the day becomes rest.'
-              : `Are you sure? This bins ${step.label} — the rest of the day stays.`}
+              : `Are you sure? This bins ${step.label} - the rest of the day stays.`}
           </Text>
           <MenuOption
             label="Yes, bin it"
@@ -510,7 +768,7 @@ export function PlanChangeSheet({
           />
           <MenuOption
             label="No, keep it"
-            onPress={() => setStep({ kind: 'menu' })}
+            onPress={() => setStep({ kind: 'edit_session' })}
           />
         </View>
       )}
@@ -524,6 +782,13 @@ export function PlanChangeSheet({
         </View>
       )}
     </Sheet>
+    <GuidedInjuryFlowSheet
+      visible={visible && injuryFlowVisible}
+      onClose={() => setInjuryFlowVisible(false)}
+      onComplete={applyGuidedInjury}
+      titlePrefix={date ? weekdayLabel(date) : undefined}
+    />
+    </>
   );
 }
 
@@ -573,6 +838,12 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     marginBottom: 8,
   },
+  blockingTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
   lockedText: {
     fontSize: 14,
     color: 'rgba(255,255,255,0.6)',
@@ -604,6 +875,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     color: '#C8FF00',
+  },
+  secondaryButton: {
+    marginTop: 8,
   },
   resultOk: {
     fontSize: 15,

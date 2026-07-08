@@ -27,6 +27,7 @@ import type {
 } from '../types/domain';
 import { logger } from './logger';
 import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
+import { logAllocationWeekValidation } from '../rules/weekStructureValidator';
 
 // ─── Input Types ───
 
@@ -53,6 +54,15 @@ export interface CoachingInputs {
   previousWeekSprintVariant?: 'standard' | 'reduced' | 'micro_dose';
 }
 
+export interface OnboardingToCoachingInputsOptions {
+  /**
+   * Date used to decide whether temporary availability constraints are active.
+   * When omitted, `active` is treated as the source of truth and temporary
+   * windows are not compared with the machine clock.
+   */
+  availabilityDateISO?: string;
+}
+
 // ─── Output Types ───
 
 export interface SessionAllocation {
@@ -64,8 +74,12 @@ export interface SessionAllocation {
   hasCombinedConditioning?: boolean;
   /** Conditioning flavour for COND or S+C days — guides the resolver/builder. */
   conditioningFlavour?: 'aerobic' | 'tempo' | 'high-intensity';
-  /** Energy-system category — primary driver in off-season / pre-season planning. */
-  conditioningCategory?: 'aerobic_base' | 'sprint' | 'vo2' | 'glycolytic';
+  /**
+   * Energy-system category — primary driver in off-season / pre-season
+   * planning. 'tempo' (4B) is TRUE medium conditioning: controlled repeat
+   * efforts at 6-7/10 — medium stress, never a hard exposure.
+   */
+  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
   /**
    * Volume variant of the conditioning block:
    *   - 'standard'  : normal template volume (default)
@@ -77,6 +91,13 @@ export interface SessionAllocation {
    * Currently only meaningful for sprint sessions.
    */
   conditioningVariant?: 'standard' | 'reduced' | 'micro_dose';
+  /**
+   * 4B: standalone tempo modality law — when true, the builder must use
+   * an off-feet (bike/row/ski) tempo template. Typed field so the
+   * decision travels on the plan entry (single representation), never
+   * parsed back out of focus text.
+   */
+  conditioningOffFeet?: boolean;
   /**
    * Feel/density tag for the session — used by the builder to pick a
    * structurally-differentiated variant within a category.
@@ -136,6 +157,17 @@ export interface SessionAllocation {
    *   'full_body'       — covers squat/hinge + push + pull in one session
    */
   strengthPattern?: 'lower' | 'lower_combined' | 'push' | 'pull' | 'upper_combined' | 'full_body';
+
+  /**
+   * B1 (2026-07-08): stress classification of this allocation, recorded at
+   * placement time by the scorer. Mirrors the Phase 1 rules kernel
+   * semantics (src/rules/stressClassification): upper strength = medium;
+   * lower / full-body / hard conditioning / sprint = high; accessories,
+   * recovery and easy aerobic = low/medium. Consumed by the consecutive
+   * high-stress guards (H1 / H-PRE-5). Team days are high anchors
+   * regardless of this field.
+   */
+  stressLevel?: 'high' | 'medium' | 'low';
 }
 
 export interface CoachingPlan {
@@ -249,7 +281,7 @@ export function calculateReadiness(inputs: CoachingInputs): {
     // Cap total injury penalty at 2 — injuries change WHAT you train, not WHETHER you train
     injuryPenalty = Math.min(injuryPenalty, 2);
     score -= injuryPenalty;
-    factors.push(`${inputs.injuries.length} injur${inputs.injuries.length === 1 ? 'y' : 'ies'} (-${injuryPenalty}) — training modified, not removed`);
+    factors.push(`${inputs.injuries.length} injur${inputs.injuries.length === 1 ? 'y' : 'ies'} (-${injuryPenalty}) - training modified, not removed`);
   } else {
     factors.push('No injuries (+0)');
   }
@@ -257,7 +289,7 @@ export function calculateReadiness(inputs: CoachingInputs): {
   // Sprint exposure context
   if (inputs.sprintExposure === 'No sprint training') {
     // Not a penalty per se, but means we need to be careful adding sprint load
-    factors.push('No current sprint exposure — ramp carefully');
+    factors.push('No current sprint exposure - ramp carefully');
   } else if (inputs.sprintExposure === '2+ times per week') {
     score += 0.5;
     factors.push('Regular sprint exposure (+0.5)');
@@ -309,10 +341,10 @@ export function countTeamHardExposures(inputs: CoachingInputs): {
       // Only count half (rounded up) as hard
       const hardTeamDays = Math.ceil(teamDays / 2);
       count += hardTeamDays;
-      breakdown.push(`Team training × ${teamDays} @ ${intensity} — ${hardTeamDays} counted as hard`);
+      breakdown.push(`Team training × ${teamDays} @ ${intensity} - ${hardTeamDays} counted as hard`);
     } else {
       // Light team training = 0 hard exposures
-      breakdown.push(`Team training × ${teamDays} @ Light — not counted as hard`);
+      breakdown.push(`Team training × ${teamDays} @ Light - not counted as hard`);
     }
   }
 
@@ -466,6 +498,27 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     coreRange = { min: 3, max: 3 };
   }
 
+  // ── B3 (2026-07-08): pre-season GAME-week analogue of H-IS-3 ──
+  // Same hard-DAY accounting philosophy: upper strength stacked onto an
+  // already-hard team training day does not add a new hard day, so a
+  // healthy pre-season athlete with 2 team days + a game should still get
+  // 3 proper strength exposures (Lower standalone + Pull/Push on team
+  // days). Without this floor, remainingBudget = cap − (game + 2 hard TT)
+  // charges the team-day uppers as if they created new hard days and the
+  // week collapses toward 1-2 strength exposures — the S11 failure.
+  // Low readiness / severe injury keeps the smaller default: the higher
+  // dose is only for athletes who can recover from it. max=3 caps volume.
+  const shouldTarget3StrengthPreSeasonGame =
+    inputs.seasonPhase === 'Pre-season' &&
+    inputs.hasGame &&
+    (inputs.teamTrainingDays || []).length >= 2 &&
+    inputs.availableDays >= 5 &&
+    readiness !== 'low' &&
+    !hasSevereInjury;
+  if (shouldTarget3StrengthPreSeasonGame) {
+    coreRange = { min: 3, max: 3 };
+  }
+
   // In-season: not all CORE sessions are hard exposures. The G−2 push session is CORE
   // (non-negotiable for movement balance) but moderate intensity — it doesn't consume
   // hard budget the way a heavy lower body or pull session does.
@@ -500,7 +553,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   logger.debug('[ENGINE-TRACE] readiness:', readiness);
   logger.debug('[ENGINE-TRACE] coreRange:', JSON.stringify(coreRange), '→ actualCore:', actualCore);
   logger.debug('[ENGINE-TRACE] optional:', optionalSessions, 'recovery:', recoverySessions);
-  const weeklyPlan = buildWeeklyPlan(inputs, actualCore, optionalSessions, recoverySessions);
+  const weeklyPlan = buildWeeklyPlan(inputs, actualCore, optionalSessions, recoverySessions, readiness);
   logger.debug('[ENGINE-TRACE] ═══ weeklyPlan output ═══');
   weeklyPlan.forEach(s => logger.debug(`[ENGINE-TRACE]   ${s.dayOfWeek}: [${s.tier}] ${s.focus}${s.isHardExposure ? ' (HARD)' : ''}`));
 
@@ -520,7 +573,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         const soleCore = weeklyPlan.find(s => s.tier === 'core');
         if (soleCore) {
           logger.debug(`[ENGINE-VALIDATE] Emergency relabel: ${soleCore.dayOfWeek} → basic full body`);
-          soleCore.focus = 'Basic full body (1 squat/hinge + 1 push + 1 pull — cover all patterns, moderate volume)';
+          soleCore.focus = 'Basic full body (1 squat/hinge + 1 push + 1 pull - cover all patterns, moderate volume)';
           soleCore.strengthPattern = 'full_body';
         }
       }
@@ -546,13 +599,59 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         if (promotable) {
           logger.debug(`[ENGINE-VALIDATE] Emergency promotion: ${promotable.dayOfWeek} optional → upper push`);
           promotable.tier = 'core';
-          promotable.focus = 'Upper body — push emphasis (moderate intensity, emergency promotion)';
+          promotable.focus = 'Upper body - push emphasis (moderate intensity, emergency promotion)';
           promotable.isHardExposure = false;
           promotable.strengthPattern = 'push';
         }
       }
       if (!hasLower) {
         logger.error('[ENGINE-VALIDATE] INVARIANT VIOLATION: In-season weekly plan missing LOWER exposure');
+      }
+    }
+  }
+
+  // ── Post-generation validation: game-week lower coverage (non-in-season) ──
+  // H-GAME blocks core strength on game day / G-1 (and heavy lower on G-2)
+  // in the scorer allocator. When that squeeze leaves a pre-season game week
+  // with NO lower-pattern coverage at all, swap the earliest safe upper-only
+  // gym core to a full-body session instead of silently dropping lower —
+  // Bible rule: reduce/swap the week, never delete useful work that can
+  // move safely, and never force it into the pre-game window.
+  if (!isInSeason && inputs.hasGame && inputs.gameDay) {
+    const gNum = dayNameToNumber(inputs.gameDay);
+    if (gNum !== null && gNum >= 0) {
+      const gymCores = weeklyPlan.filter(s => s.tier === 'core' && !s.isTeamDay);
+      const hasLowerCoverage = gymCores.some(s =>
+        s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
+        s.strengthPattern === 'full_body' ||
+        /lower|squat|hinge|full body/i.test(s.focus));
+      if (!hasLowerCoverage) {
+        const trainingOrderNum = (n: number) => (n === 0 ? 7 : n);
+        const swap = gymCores
+          .filter(s => s.dayOfWeek && /upper|push|pull/i.test(s.focus))
+          .filter(s => {
+            const d = dayNameToNumber(s.dayOfWeek!);
+            return d !== null && d >= 0 && gOffset(d, gNum) <= -3; // safely clear of the game
+          })
+          .sort((a, b) =>
+            trainingOrderNum(dayNameToNumber(a.dayOfWeek!) ?? 7) -
+            trainingOrderNum(dayNameToNumber(b.dayOfWeek!) ?? 7))[0];
+        if (swap) {
+          logger.debug(`[ENGINE-VALIDATE] Game-week lower coverage: ${swap.dayOfWeek} upper → basic full body (H-GAME squeezed lower out of the week)`);
+          swap.focus = 'Basic full body (1 squat/hinge + 1 push + 1 pull - cover all patterns, moderate volume)';
+          swap.strengthPattern = 'full_body';
+          // Pairing rule (2026-07-08): full body + EASY AEROBIC only. The
+          // upper session being swapped may carry a harder finisher
+          // (tempo/sprint) that was legal for upper — downgrade it rather
+          // than pairing a full-body dose with hard conditioning.
+          if (swap.hasCombinedConditioning || swap.conditioningFlavour) {
+            swap.conditioningFlavour = 'aerobic';
+            swap.conditioningCategory = 'aerobic_base';
+            swap.focus += ' + easy aerobic finisher (15-20min, off-feet)';
+          }
+        } else {
+          logger.error('[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body');
+        }
       }
     }
   }
@@ -567,6 +666,18 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     optionalSessions,
     recoverySessions
   );
+
+  // Phase 2 rules kernel — LOG-ONLY Bible weekly-structure validation of
+  // the generated plan. Throw-proof; findings never change this plan.
+  logAllocationWeekValidation(weeklyPlan, {
+    gameDay: inputs.gameDay,
+    seasonPhase: inputs.seasonPhase ?? null,
+    profile: {
+      teamTrainingIntensity: inputs.teamTrainingIntensity,
+      conditioningLevel: inputs.conditioningLevel,
+    },
+    label: 'buildCoachingPlan',
+  });
 
   return {
     readiness,
@@ -620,7 +731,9 @@ function buildWeeklyPlan(
   inputs: CoachingInputs,
   core: number,
   optional: number,
-  recovery: number
+  recovery: number,
+  /** Profile-derived readiness — read by finisherEligibility (4A). */
+  readiness: ReadinessLevel = 'medium',
 ): SessionAllocation[] {
   const plan: SessionAllocation[] = [];
   const days = [...inputs.selectedDays];
@@ -670,7 +783,7 @@ function buildWeeklyPlan(
         // Only 1 CORE session — must cover all movement categories in one session
         assigned.set(lowerSlot.dayName, {
           tier: 'core',
-          focus: 'Basic full body (1 squat/hinge + 1 push + 1 pull — cover all patterns, moderate volume)',
+        focus: 'Basic full body (1 squat/hinge + 1 push + 1 pull - cover all patterns, moderate volume)',
           dayOfWeek: lowerSlot.dayName,
           isHardExposure: true,
           strengthPattern: 'full_body',
@@ -738,8 +851,8 @@ function buildWeeklyPlan(
         assigned.set(pushSlot3Core.dayName, {
           tier: 'core',
           focus: isModerate
-            ? 'Upper body — push emphasis (moderate intensity, low fatigue — maintain strength, keep CNS sharp)'
-            : 'Upper body — push emphasis',
+            ? 'Upper body - push emphasis (moderate intensity, low fatigue - maintain strength, keep CNS sharp)'
+            : 'Upper body - push emphasis',
           dayOfWeek: pushSlot3Core.dayName,
           isHardExposure: !isModerate,
           strengthPattern: 'push',
@@ -761,7 +874,7 @@ function buildWeeklyPlan(
       pullSlot = pullCandidates[0] || null;
       if (pullSlot) {
         assigned.set(pullSlot.dayName, {
-          tier: 'core', focus: 'Upper body — pull emphasis',
+          tier: 'core', focus: 'Upper body - pull emphasis',
           dayOfWeek: pullSlot.dayName, isHardExposure: true,
           strengthPattern: 'pull',
         });
@@ -775,7 +888,7 @@ function buildWeeklyPlan(
           assigned.delete(pullSlot.dayName);
           pullSlot = betterPull;
           assigned.set(betterPull.dayName, {
-            tier: 'core', focus: 'Upper body — pull emphasis',
+            tier: 'core', focus: 'Upper body - pull emphasis',
             dayOfWeek: betterPull.dayName, isHardExposure: true,
             strengthPattern: 'pull',
           });
@@ -798,8 +911,8 @@ function buildWeeklyPlan(
       assigned.set(upperSlot.dayName, {
         tier: 'core',
         focus: isLateWeekSlot
-          ? 'Upper body — push emphasis (moderate intensity, low fatigue — maintain strength, keep CNS sharp)'
-          : 'Upper body — pull emphasis',
+          ? 'Upper body - push emphasis (moderate intensity, low fatigue - maintain strength, keep CNS sharp)'
+          : 'Upper body - pull emphasis',
         dayOfWeek: upperSlot.dayName,
         isHardExposure: !isLateWeekSlot,
         strengthPattern: isLateWeekSlot ? 'push' : 'pull',
@@ -817,18 +930,18 @@ function buildWeeklyPlan(
     for (const slot of remainingDays) {
       if (slot.offset === 1 || slot.offset <= -6) {
         // Post-game → always recovery
-        plan.push({ tier: 'recovery', focus: 'Post-game recovery — flush, mobility, stretching', dayOfWeek: slot.dayName, isHardExposure: false });
+        plan.push({ tier: 'recovery', focus: 'Post-game recovery - flush, mobility, stretching', dayOfWeek: slot.dayName, isHardExposure: false });
         recCount++;
       } else if (slot.offset === -1) {
         // G−1 → optional arms/pump only
-        plan.push({ tier: 'optional', focus: 'Optional arms/pump — biceps, triceps, lateral raises only', dayOfWeek: slot.dayName, isHardExposure: false });
+        plan.push({ tier: 'optional', focus: 'Optional arms/pump - biceps, triceps, lateral raises only', dayOfWeek: slot.dayName, isHardExposure: false });
         optCount++;
       } else if (slot.offset === -3) {
         // G−3 → optional light work or recovery (NEVER CORE)
         plan.push({
           tier: optCount < optional ? 'optional' : 'recovery',
           focus: optCount < optional
-            ? 'Light accessories — trunk, calves, groin, shoulder prehab, mobility'
+            ? 'Light accessories - trunk, calves, groin, shoulder prehab, mobility'
             : 'Mobility, foam rolling, light movement',
           dayOfWeek: slot.dayName,
           isHardExposure: false,
@@ -837,7 +950,7 @@ function buildWeeklyPlan(
       } else {
         // Other unassigned days
         if (optCount < optional) {
-          plan.push({ tier: 'optional', focus: 'Light accessories — trunk, calves, groin, shoulder prehab, mobility', dayOfWeek: slot.dayName, isHardExposure: false });
+          plan.push({ tier: 'optional', focus: 'Light accessories - trunk, calves, groin, shoulder prehab, mobility', dayOfWeek: slot.dayName, isHardExposure: false });
           optCount++;
         } else if (recCount < recovery) {
           plan.push({ tier: 'recovery', focus: 'Mobility, foam rolling, light movement', dayOfWeek: slot.dayName, isHardExposure: false });
@@ -918,8 +1031,8 @@ function buildWeeklyPlan(
       upperCount++;
       return {
         focus: pattern === 'pull'
-          ? 'Upper body — pull emphasis'
-          : 'Upper body — push emphasis',
+          ? 'Upper body - pull emphasis'
+          : 'Upper body - push emphasis',
         pattern,
       };
     };
@@ -1001,7 +1114,7 @@ function buildWeeklyPlan(
     if (saturdaySlot) {
       plan.push({
         tier: 'core',
-        focus: 'Lower body strength + conditioning emphasis (no game this week — build capacity)',
+        focus: 'Lower body strength + conditioning emphasis (no game this week - build capacity)',
         dayOfWeek: 'Saturday',
         isHardExposure: true,
         strengthPattern: 'lower',
@@ -1033,11 +1146,15 @@ function buildWeeklyPlan(
 
     // ── Candidate types ──
     type CondFlavour = 'aerobic' | 'tempo' | 'high-intensity';
-    // Energy-system category — the 4-way weekly distribution tracker.
+    // Energy-system category — the weekly distribution tracker.
     // Applied in Off-season and Pre-season weeks to prevent redundant
-    // conditioning sessions. Priority order when slots are limited:
-    // aerobic_base → sprint → vo2 → glycolytic.
-    type CondCategory = 'aerobic_base' | 'sprint' | 'vo2' | 'glycolytic';
+    // conditioning sessions.
+    //
+    // 'tempo' (Phase 4B, Sam 2026-07-09) is TRUE medium conditioning:
+    // controlled repeat efforts at 6-7/10, worked but composed. Medium
+    // stress — NOT a hard exposure, NOT easy aerobic. The old mislabelled
+    // "tempo" (vo2 wearing a tempo label) is gone; vo2/glycolytic stay hard.
+    type CondCategory = 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
     // L-co / U-co are combined-region sessions used in pre-season when
     // the week only has room for a single lower or single upper slot.
     // They carry BOTH movement patterns (squat+hinge in one L-co, push+pull
@@ -1065,6 +1182,15 @@ function buildWeeklyPlan(
     // are limited). Off-season uses the full priority; pre-season drops
     // aerobic + sprint to the bottom because team training already covers
     // those (long runs + sprint work happen at training).
+    // 4B design decision: tempo is NOT a coverage category. Weekly
+    // coverage stays 4-way (aerobic_base / sprint / vo2 / glycolytic) —
+    // tempo enters a week ONLY through the eligibility downgrade ladder
+    // (hard → tempo → aerobic). Making tempo a must-cover 5th category
+    // inflated conditioning scores everywhere (there is never room to
+    // cover 5 systems in a real week), letting COND steal queue-strength
+    // slots and breaking the signed-off weekly rhythm (Sunday-off
+    // regression in strengthSequencingTests). Coverage pressure is
+    // structural; tempo is opportunistic.
     const CATEGORY_PRIORITY_OFF: CondCategory[] =
       ['aerobic_base', 'sprint', 'vo2', 'glycolytic'];
     const CATEGORY_PRIORITY_PRE: CondCategory[] =
@@ -1077,11 +1203,15 @@ function buildWeeklyPlan(
       ? CATEGORY_PRIORITY_PRE
       : CATEGORY_PRIORITY_OFF;
 
-    // Map category → legacy flavour (for backward compat with downstream code).
+    // Map category → flavour (for downstream code). 4A label honesty
+    // (Sam, 2026-07-08): vo2 is HARD work and must not wear the "tempo"
+    // flavour — flavour/category/label/stress must agree. As of 4B the
+    // 'tempo' flavour belongs to the TRUE tempo category only.
     function categoryToFlavour(cat: CondCategory): CondFlavour {
       switch (cat) {
         case 'aerobic_base': return 'aerobic';
-        case 'vo2':          return 'tempo';
+        case 'tempo':        return 'tempo';
+        case 'vo2':          return 'high-intensity';
         case 'sprint':       return 'high-intensity';
         case 'glycolytic':   return 'high-intensity';
       }
@@ -1123,6 +1253,11 @@ function buildWeeklyPlan(
     const isPreSeason = inputs.seasonPhase === 'Pre-season';
     const teamDayNumSet = new Set(teamDayNums);
     const hasTeamDays = teamDayNumSet.size > 0;
+    // B4 (2026-07-08): a real game this week changes the pre-season shape —
+    // upper rides the team days, lower takes the early standalone slot, and
+    // H-GAME keeps G-0/G-1/G-2 protected. (In-season never reaches this
+    // allocator; off-season has hasGame=false.)
+    const isGameWeek = inputs.hasGame && gameDayNum !== null;
     const isTeamDayPos = (pos: number): boolean => {
       // pos uses trainingOrder (Sun=7, Mon..Sat=1..6). Map back to dayNum.
       const dayNum = pos === 7 ? 0 : pos;
@@ -1211,6 +1346,20 @@ function buildWeeklyPlan(
               ['U-co', 'L-co'],
             ];
           case 3:
+            // ── GAME WEEK (B4, 2026-07-08): 1 lower standalone + upper
+            // pull/push on the two team days. FB is deliberately absent:
+            // upper lives on team days (no new hard day), the standalone
+            // early slot carries the week's lower work, and G-1 stays
+            // light. Sam's target: Mon Lower / Tue TT+Pull / Thu TT+Push.
+            // L-co covers squat+hinge so pattern coverage is preserved.
+            if (isGameWeek) {
+              return [
+                ['L-co', 'U-pu', 'U-pl'],
+                ['L-co', 'U-pl', 'U-pu'],
+                ['L-sq', 'U-pu', 'U-pl'],
+                ['L-hi', 'U-pu', 'U-pl'],
+              ];
+            }
             // 3 slots → STRENGTH DISTRIBUTION BALANCE (H-PRE-6).
             //   Team training already delivers heavy lower load (running,
             //   cuts, contact). Stacking 2 dedicated lower sessions on top
@@ -1329,7 +1478,22 @@ function buildWeeklyPlan(
       // scoring steers the engine toward the balanced 1L + 1U + FB shape.
       // Heavy lower is penalised more than heavy upper because team
       // training already loads lower-body tissue (running, cuts, contact).
-      if (isPreSeason && hasTeamDays && core === 3) {
+      if (isPreSeason && hasTeamDays && core === 3 && isGameWeek) {
+        // ── B4 game-week shape (2026-07-08): 1 lower + 2 upper, no FB ──
+        // Upper pull/push ride the team days (medium stress, no new hard
+        // day); the single lower anchors the early standalone slot. The
+        // no-game upperCount>1 penalty must NOT apply here.
+        const lowerCount = struct.filter(s =>
+          s === 'L-sq' || s === 'L-hi' || s === 'L-co'
+        ).length;
+        const upperCount = struct.filter(s =>
+          s === 'U-pu' || s === 'U-pl' || s === 'U-co'
+        ).length;
+        const fullCount = struct.filter(s => s === 'FB').length;
+        if (lowerCount === 1 && upperCount === 2 && fullCount === 0) score += 45;
+        if (lowerCount > 1) score -= 40; // still never 2 lowers around a game
+        score -= fullCount * 15;         // FB shouldn't burn a slot here
+      } else if (isPreSeason && hasTeamDays && core === 3) {
         const lowerCount = struct.filter(s =>
           s === 'L-sq' || s === 'L-hi' || s === 'L-co'
         ).length;
@@ -1582,7 +1746,7 @@ function buildWeeklyPlan(
       upperCount: 0,
       condCount: 0,
       condFlavours: { aerobic: 0, tempo: 0, 'high-intensity': 0 },
-      condCategories: { aerobic_base: 0, sprint: 0, vo2: 0, glycolytic: 0 },
+      condCategories: { aerobic_base: 0, tempo: 0, sprint: 0, vo2: 0, glycolytic: 0 },
       fbCount: 0,
       coreStrengthCount: 0,
       lastCoreSubtype: null,
@@ -1590,12 +1754,264 @@ function buildWeeklyPlan(
       recCount: 0,
     };
 
+    // ── H-GAME: game-week proximity protection (ANY phase) ──
+    // In-season game weeks use the dedicated G-relative branch above and
+    // never reach this allocator. This protects PRE-SEASON (and any future
+    // phase) game weeks, which previously fell into the "no game" path and
+    // could drop a full lower session on G-1 (Bible validator finding, S11).
+    // ALWAYS enforced — including queue-must-complete mode — like the
+    // team-day guards: a required movement must be moved or dropped, never
+    // forced into the pre-game window.
+    //   Game day / G-1: block all core strength (incl. FB and S+C) and all
+    //     conditioning. The slot falls through to ACC/REC (light
+    //     accessories / recovery) — the Bible's accepted G-1 content.
+    //   G-2: block dedicated heavy lower (L-sq/L-hi/L-co, incl. as the
+    //     strength half of S+C) and any non-easy conditioning. Upper
+    //     strength, FB (moderate mixed dose) and easy aerobic stay legal.
+    function violatesGameProximity(c: CandidateType, dayNum: number): boolean {
+      if (!inputs.hasGame || gameDayNum === null) return false;
+      const offset = gOffset(dayNum, gameDayNum);
+      if (offset === 0 || offset === -1) {
+        return isStrength(c) || isConditioning(c);
+      }
+      if (offset === -2) {
+        if (isHeavyLower(c)) return true;
+        if (c === 'COND' || c === 'S+C') {
+          const wouldPickCat = pickCondCategory(trainingOrder(dayNum));
+          if (wouldPickCat !== 'aerobic_base') return true;
+        }
+      }
+      return false;
+    }
+
+    // ── B2 (2026-07-08): stress-aware streak state update ──
+    // st.consecutiveCoreCalendarDays / st.prevSlotWasCore now track
+    // consecutive HIGH-STRESS calendar days (team days always high),
+    // not "any core strength day". Medium/low days (upper strength,
+    // easy aerobic, accessories, recovery) RESET the run — they are the
+    // relative-recovery days that make the surrounding high days safe.
+    function updateStressStreak(dayStress: 'high' | 'medium' | 'low', isConsecutiveDay: boolean) {
+      if (dayStress === 'high') {
+        st.consecutiveCoreCalendarDays = isConsecutiveDay && st.prevSlotWasCore
+          ? st.consecutiveCoreCalendarDays + 1 : 1;
+        st.prevSlotWasCore = true;
+      } else {
+        st.consecutiveCoreCalendarDays = 0;
+        st.prevSlotWasCore = false;
+      }
+    }
+
+    // ── 4A (2026-07-08): THE shared finisher eligibility law ──
+    //
+    // The main scorer respects the Bible, but finisher/repair paths (H5a,
+    // H5b, Sprint Rescue, in-loop S+C) were each carrying partial guard
+    // lists and could bolt hard conditioning onto protected days. Every
+    // conditioning attachment now passes THIS one check.
+    //
+    // v1 decisions (Sam, 2026-07-08):
+    //   • NO automatic sprint/COD finishers, ever. Sprint exposure comes
+    //     from team training, games, and dedicated standalone sprint
+    //     sessions (Sprint Rescue may only retarget standalone slots).
+    //   • Lower/hinge days: easy off-feet aerobic only. If unsure,
+    //     downgrade — never a hidden second hard session.
+    //   • Upper days: aerobic freely; vo2/glycolytic only when readiness
+    //     is high AND the week still has hard-day headroom.
+    //   • Game window: G-0/G-1 deny everything; G-2 aerobic only.
+    //   • Team days: pre-season deny (field session IS the conditioning);
+    //     off-season aerobic only. Adjacent/sandwiched: nothing hard.
+    //   • Downgrade before dropping: unsafe hard requests become
+    //     aerobic_base rather than disappearing.
+    type FinisherStrengthContext = 'lower' | 'hinge' | 'upper' | 'full' | 'standalone';
+    type FinisherDecision =
+      | { allow: true; category: CondCategory; downgraded: boolean; offFeetOnly?: boolean }
+      | { allow: false; reason: string };
+
+    function planHighStressDayCount(): number {
+      const highDows = new Set<number>();
+      for (const s of plan) {
+        if (s.stressLevel === 'high' && s.dayOfWeek) {
+          const d = dayNameToNumber(s.dayOfWeek);
+          if (d >= 0) highDows.add(d);
+        }
+      }
+      // Team days are high anchors whether or not they're placed yet.
+      for (const d of teamDayNumSet) highDows.add(d);
+      if (isGameWeek && gameDayNum !== null) highDows.add(gameDayNum);
+      return highDows.size;
+    }
+
+    // ── 4B: standalone tempo modality law ──
+    // Running-based standalone tempo is a privilege, not a default. It is
+    // only prescribed in PRE-SEASON when the week can genuinely absorb
+    // quality running: normal/high readiness, a real conditioning base,
+    // no lower-limb injury, and running exposure (team days + game) not
+    // already saturating the legs. Everywhere else — and whenever the
+    // eligibility law forces it (TT-adjacent) — tempo goes off-feet
+    // (bike/row/ski). Off-season and in-season are off-feet-first in v1.
+    function standaloneTempoOffFeet(forcedOffFeet: boolean): boolean {
+      if (forcedOffFeet) return true;
+      if (inputs.seasonPhase !== 'Pre-season') return true;
+      if (readiness === 'low') return true;
+      const base = inputs.conditioningLevel;
+      if (base !== 'Good' && base !== 'Elite') return true;
+      const lowerLimb = inputs.injuries.some(i =>
+        /hamstring|calf|achilles|knee|ankle|groin|quad|hip|shin|foot|glute/i
+          .test(`${i.bodyArea} ${i.description}`));
+      if (lowerLimb) return true;
+      // Running anchors already in the week: team field sessions + game.
+      const runningAnchors = teamDayNumSet.size + (isGameWeek ? 1 : 0);
+      if (runningAnchors >= 3) return true;
+      return false;
+    }
+
+    function finisherEligibility(args: {
+      dayNum: number;
+      requestedCategory: CondCategory;
+      strengthContext: FinisherStrengthContext;
+    }): FinisherDecision {
+      const { dayNum, strengthContext } = args;
+      const easy = (downgraded: boolean): FinisherDecision =>
+        ({ allow: true, category: 'aerobic_base', downgraded });
+
+      // ── 4B downgrade ladder: hard → tempo → aerobic ──
+      // v1 sprint law: sprint/COD is never a finisher/attachment. Instead
+      // of collapsing straight to easy aerobic (4A), a denied sprint
+      // finisher request steps DOWN one rung to tempo — the medium dose —
+      // and the protective branches below then vet tempo exactly like any
+      // other request (game window / TT / adjacency / pairing / readiness
+      // all still end at aerobic). This is what makes tempo actually
+      // appear in real weeks: the zone picker's sprint/hard requests were
+      // previously un-grantable on every finisher slot, so weeks silently
+      // collapsed to all-aerobic ("lowest compliant dose"). Highest useful
+      // recoverable dose instead: hard → tempo where the day is clean.
+      let requestedCategory = args.requestedCategory;
+      let laddered = false;
+      if (requestedCategory === 'sprint' && strengthContext !== 'standalone') {
+        requestedCategory = 'tempo';
+        laddered = true;
+      }
+      const isHardCategory = requestedCategory !== 'aerobic_base';
+
+      // Game window (any phase reaching this allocator).
+      if (isGameWeek && gameDayNum !== null) {
+        const offset = gOffset(dayNum, gameDayNum);
+        if (offset === 0 || offset === -1) {
+          return { allow: false, reason: 'game_window_g1' };
+        }
+        if (offset === -2 && isHardCategory) return easy(true);
+      }
+
+      // Team training day.
+      if (teamDayNumSet.has(dayNum)) {
+        if (isPreSeason) return { allow: false, reason: 'team_day_pre_season' };
+        if (isHardCategory) return easy(true);
+      }
+
+      // Adjacent to / sandwiched between team days: nothing hard.
+      // 4B: tempo FINISHERS also back off to aerobic here (v1 — Sam may
+      // relax upper+tempo TT-adjacent later). STANDALONE tempo survives
+      // TT-adjacency but goes off-feet — the field session owns the legs.
+      {
+        const prevD = (dayNum + 6) % 7;
+        const nextD = (dayNum + 1) % 7;
+        const nearTeam = teamDayNumSet.has(prevD) || teamDayNumSet.has(nextD);
+        const sandwiched = teamDayNumSet.has(prevD) && teamDayNumSet.has(nextD);
+        if (nearTeam && isHardCategory) {
+          // Sandwiched days must be genuinely low-stress — even off-feet
+          // tempo backs off to easy aerobic (matches H-PRE-11).
+          if (requestedCategory === 'tempo' && strengthContext === 'standalone' && !sandwiched) {
+            if (readiness === 'low') return easy(true);
+            return { allow: true, category: 'tempo', downgraded: false, offFeetOnly: true };
+          }
+          return easy(true);
+        }
+      }
+
+      // Pairing: lower/hinge/full days take easy off-feet aerobic only.
+      if (
+        (strengthContext === 'lower' || strengthContext === 'hinge' || strengthContext === 'full') &&
+        isHardCategory
+      ) {
+        return easy(true);
+      }
+
+      // Standalone sprint sessions (Sprint Rescue's only legal target):
+      // deny in off-season (no late-block model yet — do not pretend the
+      // app knows "late off-season"), deny when TT/games already provide
+      // sprint exposure, deny below high readiness.
+      if (requestedCategory === 'sprint' && strengthContext === 'standalone') {
+        if (inputs.seasonPhase === 'Off-season') return { allow: false, reason: 'sprint_offseason_no_late_flag' };
+        if (isGameWeek || teamDayNumSet.size > 0) return { allow: false, reason: 'sprint_covered_by_team_or_game' };
+        if (readiness !== 'high') return { allow: false, reason: 'sprint_readiness' };
+        return { allow: true, category: 'sprint', downgraded: false };
+      }
+
+      // Tempo (4B): MEDIUM stress — controlled repeat efforts, 6-7/10.
+      // It shares every protective downgrade above (game window, team
+      // day/adjacency, lower/hinge/full pairing → aerobic), but because it
+      // is not a hard exposure it does NOT consume weekly hard-day
+      // headroom. Only gate left: low readiness backs off to easy aerobic.
+      if (requestedCategory === 'tempo') {
+        if (readiness === 'low') return easy(true);
+        return { allow: true, category: 'tempo', downgraded: laddered };
+      }
+
+      // Hard non-sprint (vo2 / glycolytic): upper or standalone only, and
+      // only when readiness and weekly hard-day headroom allow it. 4B:
+      // headroom-blocked hard requests step down to TEMPO (medium — does
+      // not consume hard-day headroom) instead of collapsing to easy.
+      // Low readiness still goes all the way down to aerobic.
+      if (isHardCategory) {
+        if (readiness === 'low') return easy(true);
+        if (planHighStressDayCount() >= 4) {
+          return { allow: true, category: 'tempo', downgraded: true };
+        }
+        return { allow: true, category: requestedCategory, downgraded: false };
+      }
+
+      return { allow: true, category: requestedCategory, downgraded: false };
+    }
+
+    /** Map a strength candidate/pattern to the eligibility context. */
+    function strengthContextOf(c: CandidateType | SessionAllocation['strengthPattern']): FinisherStrengthContext {
+      if (c === 'L-hi' || c === 'lower') return 'hinge';
+      if (c === 'L-sq' || c === 'L-co' || c === 'lower_combined') return 'lower';
+      if (c === 'FB' || c === 'full_body') return 'full';
+      return 'upper';
+    }
+
+    // ── B1 (2026-07-08): candidate stress table ──
+    // Mirrors the Phase 1 rules kernel (src/rules/stressClassification):
+    // upper strength is MEDIUM stress — it does not deserve the same
+    // protection as lower/full-body/hard-conditioning/sprint. Team
+    // training days and games are HIGH anchors, handled at slot level.
+    function candidateStress(c: CandidateType, pos: number): 'high' | 'medium' | 'low' {
+      if (c === 'U-pu' || c === 'U-pl' || c === 'U-co') return 'medium';
+      if (c === 'L-sq' || c === 'L-hi' || c === 'L-co' || c === 'FB') return 'high';
+      if (c === 'S+C') {
+        const scType = pickSCStrengthType(pos);
+        if (isLower(scType)) return 'high'; // lower or FB strength half
+        const cat = pickCondCategory(pos);
+        // aerobic_base AND tempo are medium (4B) — only vo2/glycolytic/
+        // sprint conditioning halves push the day to high stress.
+        return cat === 'aerobic_base' || cat === 'tempo' ? 'medium' : 'high';
+      }
+      if (c === 'COND') {
+        const cat = pickCondCategory(pos);
+        return cat === 'aerobic_base' || cat === 'tempo' ? 'medium' : 'high';
+      }
+      return 'low'; // ACC / REC
+    }
+
     // ── Hard constraint check ──
     function violatesHard(c: CandidateType, dayNum: number): boolean {
       const pos = trainingOrder(dayNum);
       const isConsecutiveDay = pos === st.prevSlotDayNum + 1;
       const onTeamDay = isPreSeason && teamDayNumSet.has(dayNum);
       const adjacentTeamDay = isPreSeason && isAdjacentToTeamDay(pos);
+
+      // H-GAME: pre-game protection is a hard rule in every mode.
+      if (violatesGameProximity(c, dayNum)) return true;
 
       // ── H-PRE-1: No separate conditioning on a team training day ──
       // Team training IS the field-load session. Adding standalone COND or
@@ -1611,6 +2027,13 @@ function buildWeeklyPlan(
       // tissue load. FB is allowed only at core ≤ 2 (see H-PRE-4 below)
       // because its dose is moderate and distributed.
       if (onTeamDay && isHeavyLower(c)) return true;
+
+      // ── H-TEAM-LOWER (Option B guardrail, 2026-07-08): the heavy-lower
+      // block applies in EVERY phase, not just pre-season. Sam: "No lower
+      // strength stacked onto team training." Before this, the stress-aware
+      // streak (correctly) displaced a triple-high off-season shape and the
+      // hinge day slid onto a Friday team session (S7).
+      if (teamDayNumSet.has(dayNum) && isHeavyLower(c)) return true;
 
       // ── H-PRE-4: No FB stacking on a team training day at core ≥ 3 ──
       // When the week already has 3+ strength slots (enough for a
@@ -1665,8 +2088,12 @@ function buildWeeklyPlan(
         if (st.coreStrengthCount + strengthCost > core) return true;
       }
 
-      // H1: No 3+ consecutive calendar days of core strength
-      if (isStrength(c)) {
+      // H1 (stress-aware, B2 2026-07-08): no 3+ consecutive HIGH-STRESS
+      // calendar days. Upper strength is medium stress and no longer
+      // extends or is blocked by the streak — TT + Wed upper + TT is a
+      // legal, Bible-approved shape. Lower / full-body / hard conditioning
+      // remain protected exactly as before.
+      if (candidateStress(c, pos) === 'high') {
         const runIfPlaced = isConsecutiveDay && st.prevSlotWasCore
           ? st.consecutiveCoreCalendarDays + 1
           : 1;
@@ -1681,14 +2108,43 @@ function buildWeeklyPlan(
       // Conditioning candidates are NOT checked — they can be demoted
       // to optional post-validation to break streaks, so blocking them
       // here over-constrains placement.
-      if (isPreSeason && isStrength(c)) {
+      // ── H-PRE-11 (B2, graded per Sam 2026-07-08): work SANDWICHED
+      // between two team training days. The issue is lower-body stress
+      // stacking, not balance alone. Hierarchy:
+      //   • NEVER (any phase): hinge-heavy lower (L-hi / L-co), hard
+      //     conditioning, sprint, lower-half or hard S+C.
+      //   • Pre-season: ALL high-stress work banned on the sandwiched day
+      //     (upper is medium and stays legal — TT + Wed upper + TT is a
+      //     Bible-approved shape), EXCEPT controlled full body when
+      //     availability genuinely forces it (core ≤ 2, the FB-replaces-
+      //     everything regime). FB there must stay a controlled moderate
+      //     dose, never a brutal lower session.
+      {
+        const prevDay = (dayNum + 6) % 7;
+        const nextDay = (dayNum + 1) % 7;
+        if (teamDayNumSet.has(prevDay) && teamDayNumSet.has(nextDay)) {
+          if (c === 'L-hi' || c === 'L-co') return true;
+          if ((c === 'COND' || c === 'S+C') && pickCondCategory(pos) !== 'aerobic_base') return true;
+          if (c === 'S+C' && isLower(pickSCStrengthType(pos))) return true;
+          if (isPreSeason && candidateStress(c, pos) === 'high') {
+            const controlledFbException = c === 'FB' && core <= 2;
+            if (!controlledFbException) return true;
+          }
+        }
+      }
+
+      // H-PRE-5 is stress-aware (B2): only HIGH-stress candidates extend or
+      // are blocked by the consecutive run; placed sessions count via their
+      // recorded stressLevel (legacy fallback: core tier).
+      if (isPreSeason && candidateStress(c, pos) === 'high') {
         let streak = 1; // the candidate day itself
         // Walk backward
         for (let back = 1; back < 7; back++) {
           const d = dayNum - back;
           if (d < 0) break;
           const placed = plan.find(s => s.dayOfWeek && dayNameToNumber(s.dayOfWeek) === d);
-          const coreHere = teamDayNumSet.has(d) || (placed && placed.tier === 'core');
+          const coreHere = teamDayNumSet.has(d) ||
+            (placed && (placed.stressLevel ? placed.stressLevel === 'high' : placed.tier === 'core'));
           if (coreHere) streak++;
           else break;
         }
@@ -1763,6 +2219,8 @@ function buildWeeklyPlan(
       // plays out early→high-fatigue→aerobic overall because slotPos 1
       // gets sprint and slotPos 2 gets vo2/glyco.
       const shortWeek = weekLen <= 4;
+      // NOTE (4B): tempo is deliberately ABSENT from these zone lists —
+      // it is not a coverage category. See CATEGORY_PRIORITY_* comment.
       const zonePriority: Record<string, CondCategory[]> = shortWeek ? {
         early: ['sprint', 'vo2', 'glycolytic', 'aerobic_base'],
         mid:   ['vo2', 'glycolytic', 'aerobic_base', 'sprint'],
@@ -1841,14 +2299,15 @@ function buildWeeklyPlan(
      */
     function flavourToSelectedCategory(f: CondFlavour, slotPos?: number): CondCategory {
       if (!useCategoryPlanner) {
-        // Legacy mapping when category planner isn't active.
+        // Legacy mapping when category planner isn't active. 4B label
+        // honesty: 'tempo' flavour means TRUE tempo — never vo2.
         if (f === 'aerobic') return 'aerobic_base';
-        if (f === 'tempo') return 'vo2';
+        if (f === 'tempo') return 'tempo';
         return 'glycolytic';
       }
       const candidates: CondCategory[] =
         f === 'aerobic' ? ['aerobic_base']
-        : f === 'tempo' ? ['vo2']
+        : f === 'tempo' ? ['tempo']
         : ['sprint', 'glycolytic']; // high-intensity
 
       // Sprint protection — ABSOLUTE. Must match pickCondCategory: sprint
@@ -2241,7 +2700,12 @@ function buildWeeklyPlan(
       // 1L + 1U + FB — no cluster is possible by construction, and adding
       // a lower-preference on the standalone slot can force the single FB
       // into a pre-team pre-load position (breaking H-PRE-6 adjacency).
-      if (isPreSeason && hasTeamDays && core === 4 && !slot.isTeamDay) {
+      //
+      // B4 (2026-07-08): ALSO applies to core=3 GAME weeks, whose queue is
+      // 1L + 2U (no FB) — the standalone early slot must carry Lower so
+      // the team days can host the uppers and G-1 stays light.
+      if (isPreSeason && hasTeamDays && !slot.isTeamDay &&
+          (core === 4 || (core === 3 && isGameWeek))) {
         // Count team days not yet placed into `plan`. Placement iterates
         // in training-order, so unplaced team days are always those whose
         // training-order position comes after the current slot.
@@ -2310,6 +2774,7 @@ function buildWeeklyPlan(
           // slots that fill an uncovered category, penalise ones that would
           // duplicate a covered category while gaps remain.
           const pickedCat = pickCondCategory(pos);
+          // Coverage stays 4-way — tempo is not a must-cover category (4B).
           const ALL_CATS: CondCategory[] = ['aerobic_base', 'sprint', 'vo2', 'glycolytic'];
           const uncovered = ALL_CATS.filter(
             cat => st.condCategories[cat] === 0,
@@ -2420,26 +2885,26 @@ function buildWeeklyPlan(
     function buildFocus(c: CandidateType, flavour?: CondFlavour): string {
       const isFbSupport = isPreSeason && hasTeamDays && core === 3;
       switch (c) {
-        case 'L-sq': return 'Lower body — squat emphasis (quad-dominant: squat, lunge, leg press; optional quad accessory: leg extension)';
+        case 'L-sq': return 'Lower body - squat emphasis (quad-dominant: squat, lunge, leg press; optional quad accessory: leg extension)';
         case 'L-hi': return 'Hip-dominant lower (RDL, hip thrust; optional hamstring accessory: nordic lower)';
-        case 'U-pu': return 'Upper body — push emphasis (bench, OHP, dips)';
-        case 'U-pl': return 'Upper body — pull emphasis (rows, pull-ups, face pulls)';
+        case 'U-pu': return 'Upper body - push emphasis (bench, OHP, dips)';
+        case 'U-pl': return 'Upper body - pull emphasis (rows, pull-ups, face pulls)';
         case 'FB': return isFbSupport
-          ? 'Full body support — light load, balance and movement-pattern coverage (not a heavy lower or upper day)'
-          : 'Full body — moderate load, cover all movement patterns (1 squat/hinge + 1 push + 1 pull)';
-        case 'L-co': return 'Lower body — combined squat + hinge (quad-dominant main + hip-dominant assistance in one session)';
-        case 'U-co': return 'Upper body — combined push + pull (horizontal + vertical, balanced load)';
+          ? 'Full body support - light load, balance and movement-pattern coverage (not a heavy lower or upper day)'
+          : 'Full body - moderate load, cover all movement patterns (1 squat/hinge + 1 push + 1 pull)';
+        case 'L-co': return 'Lower body - combined squat + hinge (quad-dominant main + hip-dominant assistance in one session)';
+        case 'U-co': return 'Upper body - combined push + pull (horizontal + vertical, balanced load)';
         case 'COND': {
           const fl = flavour || 'aerobic';
-          if (fl === 'aerobic') return 'Conditioning — aerobic base / zone 2 (steady state, conversational pace)';
-          if (fl === 'tempo') return 'Conditioning — tempo / repeat effort (threshold work, controlled intensity)';
-          return 'Conditioning — high intensity intervals (short, hard repeats with short rest)';
+          if (fl === 'aerobic') return 'Conditioning - aerobic base / zone 2 (steady state, conversational pace)';
+          if (fl === 'tempo') return 'Conditioning - tempo / controlled repeat efforts (6-7/10, worked but composed)';
+          return 'Conditioning - high intensity intervals (short, hard repeats with short rest)';
         }
         case 'S+C': {
           // Focus string is set by the strength component; conditioning is appended
           return ''; // placeholder — overridden below
         }
-        case 'ACC': return 'Low-fatigue accessories — trunk, calves, groin, shoulder prehab';
+        case 'ACC': return 'Low-fatigue accessories - trunk, calves, groin, shoulder prehab';
         case 'REC': return 'Mobility, foam rolling, light movement';
         default: return '';
       }
@@ -2491,19 +2956,35 @@ function buildWeeklyPlan(
     // delivers the same energy-system stimulus with much lower soft-tissue
     // load. Upper days keep running-based conditioning (legs are fresh).
     // Aerobic and tempo flavours are low-impact enough that running stays.
+    // 4A: labels are CATEGORY-driven so the athlete reads what the work
+    // actually is. "tempo" no longer labels hard VO2 blocks.
     function buildCondLabel(
       flavour: CondFlavour,
       category: CondCategory,
       useNonRunning: boolean,
     ): string {
-      if (flavour === 'aerobic') return 'aerobic base finisher (20min zone 2)';
-      if (flavour === 'tempo') return 'tempo conditioning finisher (20min repeat effort)';
+      if (category === 'aerobic_base') {
+        return useNonRunning
+          ? 'easy off-feet aerobic finisher (bike/row/ski, 15-20min)'
+          : 'aerobic base finisher (20min zone 2)';
+      }
+      if (category === 'tempo') {
+        // 4B: TRUE tempo — controlled repeat efforts, 6-7/10, medium.
+        return useNonRunning
+          ? 'tempo conditioning finisher (bike/row/ski, controlled repeat efforts 6-7/10, 10-15min)'
+          : 'tempo conditioning finisher (controlled repeat efforts 6-7/10, 10-15min)';
+      }
       if (category === 'sprint') {
         return useNonRunning
           ? 'sprint conditioning finisher (bike/rower/ski erg, quality, ≤15min)'
           : 'sprint conditioning finisher (quality, ≤15min)';
       }
-      // glycolytic / vo2 / high-intensity
+      if (category === 'vo2') {
+        return useNonRunning
+          ? 'VO2 / hard repeat effort finisher (bike/rower intervals, 15min)'
+          : 'VO2 / hard repeat effort finisher (15min intervals)';
+      }
+      // glycolytic
       return useNonRunning
         ? 'high-intensity conditioning finisher (bike/rower intervals, 15min)'
         : 'high-intensity conditioning finisher (15min intervals)';
@@ -2662,22 +3143,41 @@ function buildWeeklyPlan(
           const pos2 = trainingOrder(slot.num);
           const isConsec = pos2 === st.prevSlotDayNum + 1;
           const onTeamDay2 = isPreSeason && teamDayNumSet.has(slot.num);
+          // H-GAME: pre-game protection is ALWAYS enforced, even in
+          // queue-must-complete mode — never force a required movement
+          // into the G-1/G-2 window; move it or drop it instead.
+          if (violatesGameProximity(candidate, slot.num)) continue;
           // H-PRE-1: no conditioning on team day
           if (onTeamDay2 && (candidate === 'COND' || candidate === 'S+C')) continue;
-          // H-PRE-2: no heavy lower on team day — includes L-co (combined
-          // lower still fully loads both squat and hinge tissue).
-          if (onTeamDay2 && isHeavyLower(candidate)) continue;
+          // H-PRE-2 / H-TEAM-LOWER: no heavy lower on team day — ANY phase
+          // (Option B guardrail). Includes L-co (combined lower still fully
+          // loads both squat and hinge tissue).
+          if (teamDayNumSet.has(slot.num) && isHeavyLower(candidate)) continue;
           // H-PRE-4: no FB stacking on team day at core ≥ 3
           if (onTeamDay2 && candidate === 'FB' && core >= 3) continue;
           // H6: budget
           if (isStrength(candidate) && candidate !== 'COND') {
             if (st.coreStrengthCount + 1 > core) continue;
           }
-          // H1: 3+ consecutive
-          if (isStrength(candidate)) {
+          // H1: 3+ consecutive HIGH-stress days (stress-aware, B2)
+          if (candidateStress(candidate, pos2) === 'high') {
             const run = isConsec && st.prevSlotWasCore
               ? st.consecutiveCoreCalendarDays + 1 : 1;
             if (run >= 3) continue;
+          }
+          // H-PRE-11 (graded): sandwiched between two team days — hinge/
+          // hard-cond/sprint banned in any phase; pre-season bans all high
+          // stress except controlled FB at core ≤ 2.
+          {
+            const prevD = (slot.num + 6) % 7;
+            const nextD = (slot.num + 1) % 7;
+            if (teamDayNumSet.has(prevD) && teamDayNumSet.has(nextD)) {
+              if (candidate === 'L-hi' || candidate === 'L-co') continue;
+              if ((candidate === 'COND' || candidate === 'S+C') && pickCondCategory(pos2) !== 'aerobic_base') continue;
+              if (candidate === 'S+C' && isLower(pickSCStrengthType(pos2))) continue;
+              if (isPreSeason && candidateStress(candidate, pos2) === 'high' &&
+                  !(candidate === 'FB' && core <= 2)) continue;
+            }
           }
           // H2: same lower subtype spacing
           if ((candidate === 'L-sq' || candidate === 'L-hi') && st.lastLowerSubtype === candidate) {
@@ -2688,7 +3188,8 @@ function buildWeeklyPlan(
             const scType = pickSCStrengthType(pos2);
             // Check H6 and H1 for S+C
             if (st.coreStrengthCount + 1 > core) continue;
-            if (isStrength(candidate)) {
+            // H1 stress-aware (B2): only high-stress S+C extends the run.
+            if (candidateStress('S+C', pos2) === 'high') {
               const run = isConsec && st.prevSlotWasCore
                 ? st.consecutiveCoreCalendarDays + 1 : 1;
               if (run >= 3) continue;
@@ -2708,6 +3209,9 @@ function buildWeeklyPlan(
         if (candidate === 'S+C') {
           scStrength = pickSCStrengthType(trainingOrder(slot.num));
           if (!queueMustComplete && violatesHard(scStrength, slot.num)) continue;
+          // H-GAME on the strength half applies in EVERY mode (a lower
+          // strength component on G-2 is still a hard lower session).
+          if (queueMustComplete && violatesGameProximity(scStrength, slot.num)) continue;
         }
 
         const score = scoreCandidate(candidate, slot, slotIdx);
@@ -2724,18 +3228,34 @@ function buildWeeklyPlan(
       const isConsecutiveDay = pos === st.prevSlotDayNum + 1;
 
       if (bestCandidate === 'S+C' && bestSCStrength) {
-        // Combined day: strength + conditioning
-        const flavour = bestFlavour || pickCondFlavour(pos);
-        const category = flavourToSelectedCategory(flavour, pos);
+        // Combined day: strength + conditioning — the finisher half passes
+        // the shared eligibility law (4A). Lower/hinge days downgrade to
+        // easy off-feet aerobic; hard finishers need readiness + headroom.
+        const requestedCategory = flavourToSelectedCategory(bestFlavour || pickCondFlavour(pos), pos);
+        const decision = finisherEligibility({
+          dayNum: slot.num,
+          requestedCategory,
+          strengthContext: strengthContextOf(bestSCStrength),
+        });
+        const category = decision.allow ? decision.category : 'aerobic_base';
+        // Flavour is DERIVED from the final category (single source) so
+        // flavour/category/label/stress always agree — no more "tempo"
+        // wrapping a hard VO2 block.
+        const flavour = categoryToFlavour(category);
         const strengthFocus = buildFocus(bestSCStrength);
-        // Lower-body S+C with sprint or glycolytic stacks running stress on
-        // already-fatigued legs. Swap to non-running modality (bike / rower /
-        // ski erg) — same energy-system effect, much less soft-tissue load.
-        // Upper-body S+C keeps running-based conditioning (legs are fresh).
+        // Lower-body S+C always prefers off-feet modality (bike / rower /
+        // ski erg) — even the easy finisher spares the legs.
         const lowerStrengthSC = isLower(bestSCStrength);
-        const useNonRunning = lowerStrengthSC
-          && (category === 'sprint' || category === 'glycolytic');
+        const useNonRunning = lowerStrengthSC;
         const condLabel = buildCondLabel(flavour, category, useNonRunning);
+        // B1/B2: stress from the PLACED components (not the pickers, which
+        // are stateful): lower/FB strength half or HARD conditioning half
+        // → high; upper + easy aerobic / tempo (4B: medium) → medium.
+        // Team day → high.
+        const scStress: 'high' | 'medium' = slot.isTeamDay ||
+          isLower(bestSCStrength) ||
+          (category !== 'aerobic_base' && category !== 'tempo')
+          ? 'high' : 'medium';
 
         plan.push({
           tier: 'core',
@@ -2746,6 +3266,7 @@ function buildWeeklyPlan(
           conditioningFlavour: flavour,
           conditioningCategory: category,
           strengthPattern: buildStrengthPattern(bestSCStrength),
+          stressLevel: scStress,
         });
 
         // Update state for BOTH strength and conditioning
@@ -2771,39 +3292,68 @@ function buildWeeklyPlan(
         st.lastCondDay = pos;
         st.lastCondCategory = category;
         st.lastCoreSubtype = bestSCStrength;
-        st.consecutiveCoreCalendarDays = isConsecutiveDay && st.prevSlotWasCore
-          ? st.consecutiveCoreCalendarDays + 1 : 1;
-        st.prevSlotWasCore = true;
+        updateStressStreak(scStress, isConsecutiveDay);
 
       } else if (bestCandidate === 'COND') {
-        const flavour = bestFlavour || pickCondFlavour(pos);
-        const category = flavourToSelectedCategory(flavour, pos);
+        // Standalone conditioning also passes the shared eligibility law
+        // (4A) — same rules, 'standalone' strength context.
+        const requestedCondCategory = flavourToSelectedCategory(bestFlavour || pickCondFlavour(pos), pos);
+        const condDecision = finisherEligibility({
+          dayNum: slot.num,
+          requestedCategory: requestedCondCategory,
+          strengthContext: 'standalone',
+        });
+        const category = condDecision.allow ? condDecision.category : 'aerobic_base';
+        const flavour = categoryToFlavour(category);
         // Rest-slot conditioning is optional — breaks up core streaks and
         // gives the athlete flexibility. Non-rest-slot conditioning stays core.
         const condTier = isRestSlot ? 'optional' : 'core';
+        // B1/B2: hard conditioning is HIGH stress; easy aerobic AND tempo
+        // (4B: medium by definition) are medium; optional-tier (rest-slot)
+        // conditioning is a light dose.
+        const condStress: 'high' | 'medium' = slot.isTeamDay ||
+          (condTier === 'core' && category !== 'aerobic_base' && category !== 'tempo')
+          ? 'high' : 'medium';
+        // 4B standalone tempo modality: off-feet first unless the week
+        // genuinely supports quality running tempo (pre-season only).
+        const tempoOffFeet = category === 'tempo' &&
+          standaloneTempoOffFeet(condDecision.allow && condDecision.offFeetOnly === true);
+        const condFocus = category === 'tempo'
+          ? buildFocus('COND', flavour) + (tempoOffFeet
+              ? ' — off-feet (bike/row/ski)'
+              : ' — running-based OK this week')
+          : buildFocus('COND', flavour);
         plan.push({
           tier: condTier as SessionTier,
-          focus: buildFocus('COND', flavour),
+          focus: condFocus,
           dayOfWeek: slot.dayName,
           isHardExposure: condTier === 'core' && flavour === 'high-intensity',
           conditioningFlavour: flavour,
           conditioningCategory: category,
+          ...(category === 'tempo' ? { conditioningOffFeet: tempoOffFeet } : {}),
+          stressLevel: condStress,
         });
         st.condCount += 1.0;
         st.condFlavours[flavour]++;
         st.condCategories[category]++;
         st.lastCondDay = pos;
         st.lastCondCategory = category;
-        st.consecutiveCoreCalendarDays = 0; // COND breaks core strength runs
-        st.prevSlotWasCore = false;
+        // B2: hard conditioning EXTENDS the high-stress run (it no longer
+        // "breaks core strength runs" — a hard interval day is a hard day);
+        // easy aerobic still resets it.
+        updateStressStreak(condStress, isConsecutiveDay);
 
       } else if (STRENGTH_CANDIDATES.includes(bestCandidate)) {
+        // B1: upper strength is MEDIUM stress; lower / FB are HIGH.
+        const strengthStress: 'high' | 'medium' = slot.isTeamDay || isLower(bestCandidate)
+          ? 'high' : 'medium';
         plan.push({
           tier: 'core',
           focus: buildFocus(bestCandidate),
           dayOfWeek: slot.dayName,
           isHardExposure: true,
           strengthPattern: buildStrengthPattern(bestCandidate),
+          stressLevel: strengthStress,
         });
         st.coreStrengthCount++;
         // Pattern counts
@@ -2841,9 +3391,7 @@ function buildWeeklyPlan(
           st.lastUpperSubtype = bestCandidate;
         }
         st.lastCoreSubtype = bestCandidate;
-        st.consecutiveCoreCalendarDays = isConsecutiveDay && st.prevSlotWasCore
-          ? st.consecutiveCoreCalendarDays + 1 : 1;
-        st.prevSlotWasCore = true;
+        updateStressStreak(strengthStress, isConsecutiveDay);
 
       } else if (bestCandidate === 'ACC') {
         plan.push({
@@ -2851,10 +3399,11 @@ function buildWeeklyPlan(
           focus: buildFocus('ACC'),
           dayOfWeek: slot.dayName,
           isHardExposure: false,
+          stressLevel: slot.isTeamDay ? 'high' : 'low',
         });
         st.optCount++;
-        st.consecutiveCoreCalendarDays = 0;
-        st.prevSlotWasCore = false;
+        // B2: a bare/light team day is still a HIGH-stress anchor.
+        updateStressStreak(slot.isTeamDay ? 'high' : 'low', isConsecutiveDay);
 
       } else {
         // REC or fallback
@@ -2863,10 +3412,10 @@ function buildWeeklyPlan(
           focus: buildFocus('REC'),
           dayOfWeek: slot.dayName,
           isHardExposure: false,
+          stressLevel: slot.isTeamDay ? 'high' : 'low',
         });
         st.recCount++;
-        st.consecutiveCoreCalendarDays = 0;
-        st.prevSlotWasCore = false;
+        updateStressStreak(slot.isTeamDay ? 'high' : 'low', isConsecutiveDay);
       }
 
       // ── Update structure queue: remove placed strength type ──
@@ -2893,25 +3442,51 @@ function buildWeeklyPlan(
         .map((s, i) => ({ s, i }))
         .filter(({ s }) => s.tier === 'core' && s.isHardExposure
           && !s.hasCombinedConditioning && !s.conditioningFlavour)
+        // PRE-SEASON GUARD (H-PRE-1): never attach a conditioning finisher
+        // to a TEAM TRAINING day — the field session already is that day's
+        // conditioning. (Newly reachable since B4 places upper strength on
+        // team days, making them "convertible" cores.)
+        .filter(({ s }) => {
+          if (!isPreSeason) return true;
+          const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
+          return dayNum < 0 || !teamDayNumSet.has(dayNum);
+        })
+        // H-GAME GUARD: never attach a conditioning finisher to a session
+        // sitting on game day, G-1, or G-2 — this conversion path bypasses
+        // violatesHard(), and a vo2/sprint finisher on a G-2 upper session
+        // would put hard conditioning inside the 48h pre-game window.
+        .filter(({ s }) => {
+          if (!inputs.hasGame || gameDayNum === null) return true;
+          const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
+          if (dayNum < 0) return true;
+          const off = gOffset(dayNum, gameDayNum);
+          return off !== 0 && off !== -1 && off !== -2;
+        })
         .reverse();  // prefer later-in-week sessions
 
       for (const { s, i } of convertible) {
         if (st.condCount >= MIN_COND_FLOOR) break;
         const slotPos = i < daySlots.length ? trainingOrder(daySlots[i].num) : undefined;
-        const flavour = pickCondFlavour(slotPos);
-        const category = flavourToSelectedCategory(flavour, slotPos);
-        // S+C fallback non-running rule: when we're attaching conditioning
-        // to an existing LOWER-body strength session and the chosen category
-        // is sprint/glycolytic, switch the modality to bike/rower/ski erg
-        // so we don't double-load the legs. Mirrors the in-loop S+C path.
-        // Both 'lower' and 'lower_combined' are lower-body strength sessions —
-        // attaching sprint/glycolytic conditioning compounds running stress
-        // on legs that just took a hard squat/hinge regardless of which
-        // sub-pattern the strength block emphasised.
+        // 4A: the H5a conversion passes the SAME shared eligibility law as
+        // every other finisher path — lower/hinge days get easy off-feet
+        // aerobic only; hard finishers need readiness + weekly headroom;
+        // team-adjacent and game-window days stay protected.
+        const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
+        const requestedCategory = flavourToSelectedCategory(pickCondFlavour(slotPos), slotPos);
+        const decision = finisherEligibility({
+          dayNum,
+          requestedCategory,
+          strengthContext: strengthContextOf(s.strengthPattern),
+        });
+        if (!decision.allow) continue;
+        const category = decision.category;
+        const flavour = categoryToFlavour(category);
+        // Lower-body sessions always take the off-feet modality — even
+        // the easy finisher spares legs that just squatted/hinged.
         const lowerStrengthSC =
-          s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined';
-        const useNonRunning = lowerStrengthSC
-          && (category === 'sprint' || category === 'glycolytic');
+          s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
+          s.strengthPattern === 'full_body';
+        const useNonRunning = lowerStrengthSC;
         const condLabel = buildCondLabel(flavour, category, useNonRunning);
         plan[i] = {
           ...s,
@@ -2943,6 +3518,17 @@ function buildWeeklyPlan(
           if (!isPreSeason) return true;
           const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
           return dayNum < 0 || !teamDayNumSet.has(dayNum);
+        })
+        // H-GAME GUARD: never promote a game-day / G-1 / G-2 slot into
+        // standalone conditioning. This path bypasses violatesHard(), so
+        // without it a G-1 recovery slot could become a conditioning
+        // session right after H-GAME cleared the day (found live, S11).
+        .filter(({ s }) => {
+          if (!inputs.hasGame || gameDayNum === null) return true;
+          const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
+          if (dayNum < 0) return true;
+          const off = gOffset(dayNum, gameDayNum);
+          return off !== 0 && off !== -1 && off !== -2;
         })
         .sort((a, b) => {
           if (a.s.tier !== b.s.tier) return a.s.tier === 'optional' ? -1 : 1;
@@ -2984,15 +3570,42 @@ function buildWeeklyPlan(
         st.lastCondDay = predDay;
         st.lastCondCategory = predCat;
 
-        const flavour = pickCondFlavour(slotPos);
-        const category = flavourToSelectedCategory(flavour, slotPos);
+        // 4A: promotions pass the shared eligibility law ('standalone'
+        // context) — no hard work adjacent to team days or inside the
+        // game window; readiness/headroom gate vo2/glyco.
+        const promoDayNum = plan[i].dayOfWeek ? dayNameToNumber(plan[i].dayOfWeek!) : -1;
+        const requestedCategory = flavourToSelectedCategory(pickCondFlavour(slotPos), slotPos);
+        const decision = finisherEligibility({
+          dayNum: promoDayNum,
+          requestedCategory,
+          strengthContext: 'standalone',
+        });
+        if (!decision.allow) {
+          st.lastCondDay = prevLastCondDay;
+          st.lastCondCategory = prevLastCondCategory;
+          continue;
+        }
+        const category = decision.category;
+        const flavour = categoryToFlavour(category);
+        // 4B: promoted standalone tempo follows the same modality law.
+        const promoTempoOffFeet = category === 'tempo' &&
+          standaloneTempoOffFeet(decision.offFeetOnly === true);
+        const promoFocus = category === 'tempo'
+          ? buildFocus('COND', flavour) + (promoTempoOffFeet
+              ? ' — off-feet (bike/row/ski)'
+              : ' — running-based OK this week')
+          : buildFocus('COND', flavour);
         plan[i] = {
           tier: 'core',
-          focus: buildFocus('COND', flavour),
+          focus: promoFocus,
           dayOfWeek: plan[i].dayOfWeek,
           isHardExposure: flavour === 'high-intensity',
           conditioningFlavour: flavour,
           conditioningCategory: category,
+          ...(category === 'tempo' ? { conditioningOffFeet: promoTempoOffFeet } : {}),
+          // tempo is MEDIUM stress (4B); only vo2/glyco/sprint are high.
+          stressLevel: category !== 'aerobic_base' && category !== 'tempo'
+            ? 'high' : 'medium',
         };
         st.condCount += 1.0;
         st.condFlavours[flavour]++;
@@ -3026,7 +3639,15 @@ function buildWeeklyPlan(
     //      3–4×10s flying-sprint micro-dose that's low enough volume to
     //      ignore sprint-protection safely.
     // This guarantees sprint coverage without ever removing sprint.
-    if (useCategoryPlanner && st.condCategories.sprint === 0) {
+    //
+    // B-GAME GUARD (2026-07-08): the rescue does NOT run in a game week.
+    // Sprint exposure there comes from team training + the game itself
+    // (Bible: pre-season sprint exposure "can be at team training, and
+    // generally is"). Without this guard the rescue retrofitted a sprint
+    // finisher onto S11's hinge-heavy Monday lower — a forbidden pairing,
+    // adjacent to Tuesday team training (H-PRE-3 bypass), and a 4th
+    // sprint/COD exposure on a week that already has 2×TT + game.
+    if (useCategoryPlanner && st.condCategories.sprint === 0 && !isGameWeek) {
       // Gather conditioning slots in chronological order. Use the original
       // slot positions (daySlots index == plan index at this point because
       // the sort-by-day happens later, below).
@@ -3054,9 +3675,28 @@ function buildWeeklyPlan(
         condSlots.push({ planIdx: i, slotPos, prevCat, prevPos });
       }
 
-      if (condSlots.length > 0) {
+      // 4A: the rescue passes the shared eligibility law like every other
+      // path, with two extra v1 rules:
+      //   • it may only retarget STANDALONE conditioning slots — sprint is
+      //     never hidden inside a strength-day finisher;
+      //   • if no slot passes (off-season with no late-block model, any
+      //     week where team training/games already provide sprint
+      //     exposure, readiness below high), sprint is dropped HONESTLY
+      //     for the week rather than forced somewhere unsafe.
+      const rescueEligible = condSlots.filter(cs => {
+        if (plan[cs.planIdx].hasCombinedConditioning) return false; // finishers are off-limits
+        const dayNum = cs.slotPos === 7 ? 0 : cs.slotPos;
+        const decision = finisherEligibility({
+          dayNum,
+          requestedCategory: 'sprint',
+          strengthContext: 'standalone',
+        });
+        return decision.allow && decision.category === 'sprint';
+      });
+
+      if (rescueEligible.length > 0) {
         // Tier 1: slide-earlier — first unblocked slot.
-        let chosen = condSlots.find(cs => {
+        let chosen = rescueEligible.find(cs => {
           const adjacent = cs.slotPos === cs.prevPos + 1;
           const blocking = cs.prevCat === 'vo2' || cs.prevCat === 'glycolytic';
           return !(adjacent && blocking);
@@ -3068,7 +3708,7 @@ function buildWeeklyPlan(
           // conditioning day, use reduced volume; if it's combined (already
           // a short dose) OR sandwiched between two blocking slots, drop
           // to micro-dose.
-          chosen = condSlots[0];
+          chosen = rescueEligible[0];
           const isCombined = !!plan[chosen.planIdx].hasCombinedConditioning;
           variant = isCombined ? 'micro_dose' : 'reduced';
         }
@@ -3083,7 +3723,7 @@ function buildWeeklyPlan(
           variant = 'reduced';
           logger.debug(
             '[SprintRescue] Cross-week guard: previous week was micro_dose ' +
-            '— upgrading this week from micro_dose → reduced.'
+            '- upgrading this week from micro_dose → reduced.'
           );
         }
 
@@ -3117,9 +3757,9 @@ function buildWeeklyPlan(
           target.focus = `${strengthFocus} + ${suffix}`;
         } else {
           target.focus = variant === 'micro_dose'
-            ? 'Conditioning — sprint micro-dose (3×10s flying, ~10min)'
+            ? 'Conditioning - sprint micro-dose (3×10s flying, ~10min)'
             : variant === 'reduced'
-              ? 'Conditioning — sprint (reduced volume, ~12min)'
+              ? 'Conditioning - sprint (reduced volume, ~12min)'
               : buildFocus('COND', 'high-intensity');
         }
       }
@@ -3393,8 +4033,8 @@ function buildWeeklyPlan(
         || focusLc.startsWith('mobility, foam rolling')
         || focusLc.startsWith('full rest')) {
         s.focus = isG1
-          ? 'Team training — captain\u2019s run (walkthrough, low-load)'
-          : 'Team training — field session (sprint + skills + contact)';
+          ? 'Team training - captain\u2019s run (walkthrough, low-load)'
+          : 'Team training - field session (sprint + skills + contact)';
       } else {
         s.focus = 'Team training + ' + s.focus;
       }
@@ -3791,7 +4431,7 @@ function enforceInSeasonPushPullBalance(
         : '';
       const condMatch = focus.match(/( \+ easy aerobic finisher.*)$/);
       const condSuffix = condMatch ? condMatch[1] : '';
-      promotable.focus = `${teamPrefix}Upper body — combined push + pull (balanced, moderate intensity — restored for push/pull coverage)${condSuffix}`;
+      promotable.focus = `${teamPrefix}Upper body - combined push + pull (balanced, moderate intensity - restored for push/pull coverage)${condSuffix}`;
       promotable.strengthPattern = 'upper_combined';
       succeeded = true;
     }
@@ -3808,8 +4448,8 @@ function enforceInSeasonPushPullBalance(
         chosen.tier = 'core';
         chosen.focus =
           missing === 'push'
-            ? 'Upper body — push emphasis (moderate intensity — added for push/pull balance)'
-            : 'Upper body — pull emphasis (moderate intensity — added for push/pull balance)';
+            ? 'Upper body - push emphasis (moderate intensity - added for push/pull balance)'
+            : 'Upper body - pull emphasis (moderate intensity - added for push/pull balance)';
         chosen.strengthPattern = missing;
         chosen.isHardExposure = false;
         // Strength balance > conditioning: drop any conditioning here.
@@ -3849,8 +4489,8 @@ function enforceInSeasonPushPullBalance(
         const tdChosen = sortByEarliest(teamCandidates)[0];
         const layerLabel =
           missing === 'push'
-            ? 'Upper body — push emphasis (light/moderate, layered onto team day)'
-            : 'Upper body — pull emphasis (light/moderate, layered onto team day)';
+            ? 'Upper body - push emphasis (light/moderate, layered onto team day)'
+            : 'Upper body - pull emphasis (light/moderate, layered onto team day)';
         tdChosen.tier = 'core';
         tdChosen.focus = `Team training + ${layerLabel}`;
         tdChosen.strengthPattern = missing;
@@ -4605,7 +5245,7 @@ function enforceAdjacentRegionLimit(
       // canonical naming — vague "Upper body strength" is not emitted anywhere.
       const newFocus = offendingRegion === 'upper'
         ? 'Lower body strength'
-        : 'Upper body — push emphasis';
+        : 'Upper body - push emphasis';
       const newPattern: SessionAllocation['strengthPattern'] =
         offendingRegion === 'upper' ? 'lower' : 'push';
       result[i - 1] = {
@@ -4634,7 +5274,7 @@ function getOptionalFocus(inputs: CoachingInputs): string {
   }
   // Off-season: low-fatigue accessories only — conditioning is handled
   // as a first-class session by the resolver, not shoehorned into optional.
-  return 'Low-fatigue accessories — trunk, calves, groin, shoulder prehab';
+  return 'Low-fatigue accessories - trunk, calves, groin, shoulder prehab';
 }
 
 // ─── AI Constraint Builder ───
@@ -4694,16 +5334,16 @@ function buildAIConstraints(
     if (i.notes) parts.push(`notes: ${i.notes}`);
     // Add severity-aware action so the AI knows how to respond
     if (i.severity === 'Mild') {
-      parts.push('ACTION: train normally, slight awareness — swap only directly painful movements');
+      parts.push('ACTION: train normally, slight awareness - swap only directly painful movements');
     } else if (i.severity === 'Moderate') {
-      parts.push('ACTION: modify trigger movements, reduce load/ROM — keep training structure intact');
+      parts.push('ACTION: modify trigger movements, reduce load/ROM - keep training structure intact');
     } else if (i.severity === 'Severe') {
       const isConstant = i.movementTriggers?.includes('Constant');
       parts.push(isConstant
-        ? 'ACTION: avoid directly aggravating patterns, replace with safe alternatives — still train other patterns'
-        : 'ACTION: remove only the specific trigger movements, replace with non-aggravating alternatives — maintain training volume');
+        ? 'ACTION: avoid directly aggravating patterns, replace with safe alternatives - still train other patterns'
+        : 'ACTION: remove only the specific trigger movements, replace with non-aggravating alternatives - maintain training volume');
     }
-    return parts.join(' — ');
+    return parts.join(' - ');
   });
 
   // Ramp-up flag
@@ -4715,13 +5355,13 @@ function buildAIConstraints(
   // Safety notes
   const notes: string[] = [];
   if (rampUp) {
-    notes.push('Athlete needs gradual ramp-up — do NOT prescribe full volume immediately');
+    notes.push('Athlete needs gradual ramp-up - do NOT prescribe full volume immediately');
   }
   if (inputs.seasonPhase === 'Pre-season') {
     const teamDayList = (inputs.teamTrainingDays && inputs.teamTrainingDays.length > 0)
       ? inputs.teamTrainingDays.join(' and ')
       : null;
-    notes.push('PRE-SEASON: Team training days are PRIMARY FIELD-LOAD ANCHORS — treat them as real running/field stress, not as rest days with gym on top.');
+    notes.push('PRE-SEASON: Team training days are PRIMARY FIELD-LOAD ANCHORS - treat them as real running/field stress, not as rest days with gym on top.');
     if (teamDayList) {
       notes.push(`PRE-SEASON TEAM DAYS: ${teamDayList}. These days count as hard exposures because team training provides sprint, aerobic, and contact load.`);
     }
@@ -4729,33 +5369,33 @@ function buildAIConstraints(
     notes.push('NO heavy lower strength on a team training day (no dedicated squat or hinge focus). If gym is programmed on a team day, use: light upper, light full body (moderate load, cover all patterns), or low-fatigue support work (accessories, trunk, calves, groin, prehab).');
     notes.push('NO standalone sprint/speed conditioning on the day before or day after a team training day. Protect neural freshness and soft tissue recovery around team sessions.');
     notes.push('PRIORITISE VO2 and glycolytic first, then aerobic base; sprint work is mostly covered by team training and should only be added when team load is light.');
-    notes.push('STANDALONE CONDITIONING VOLUME is reduced compared with off-season because team training already covers field load. Gym complements team load — extra conditioning only fills gaps.');
+    notes.push('STANDALONE CONDITIONING VOLUME is reduced compared with off-season because team training already covers field load. Gym complements team load - extra conditioning only fills gaps.');
     notes.push('PRE-SEASON WEEKLY STRUCTURE: team sessions provide major field stress → gym complements team load → extra conditioning fills remaining gaps only where appropriate.');
   }
   if (inputs.seasonPhase === 'In-season') {
     notes.push('IN-SEASON: Anchor ENTIRE week to game day (G). All scheduling is G-relative, NOT fixed weekdays.');
     notes.push('PREFERRED TARGET: 3 CORE gym sessions (1× Lower, 1× Upper Pull, 1× Upper Push). If only 2 CORE sessions fit (low budget or readiness), use: 1× Lower + 1× Balanced Upper (push + pull merged). If only 1 CORE session fits, use: 1× Basic Full Body (1 squat/hinge + 1 push + 1 pull, moderate volume). NEVER omit an entire movement category.');
-    notes.push('3-CORE PLACEMENT: Lower earliest (G−5), Pull next (G−4, pair with team training), Push late (G−2, moderate intensity). This creates: Lower → Pull → gap → Push — good spacing.');
+    notes.push('3-CORE PLACEMENT: Lower earliest (G−5), Pull next (G−4, pair with team training), Push late (G−2, moderate intensity). This creates: Lower → Pull → gap → Push - good spacing.');
     notes.push('2-CORE PLACEMENT: Lower earliest (G−5), Balanced Upper at G−2 (moderate intensity). The balanced upper should include 1 main push (moderate load, 3×4-6), 1 main pull (moderate load), plus 1-2 accessories. Both push and pull patterns are covered in a single session.');
-    notes.push('1-CORE PLACEMENT: Basic Full Body at best available slot (G−5 preferred). Include 1 squat or hinge, 1 horizontal/vertical push, 1 horizontal/vertical pull, plus 1-2 prehab accessories. Moderate volume — cover all patterns rather than loading any one heavily.');
+    notes.push('1-CORE PLACEMENT: Basic Full Body at best available slot (G−5 preferred). Include 1 squat or hinge, 1 horizontal/vertical push, 1 horizontal/vertical pull, plus 1-2 prehab accessories. Moderate volume - cover all patterns rather than loading any one heavily.');
     notes.push('NO BACK-TO-BACK UPPER: Do NOT place pull and push on consecutive days (e.g. Tue pull → Wed push → Thu push). Space upper exposures with at least 1 day gap where possible.');
     notes.push('G−3 (WEDNESDAY) = OPTIONAL or RECOVERY by default. Light accessories, trunk, calves, groin, shoulder prehab, mobility. ONLY promote to CORE if a required exposure genuinely cannot fit elsewhere.');
     notes.push('G−2 UPPER IS CORE: The upper session at G−2 is a required exposure (not optional). If 3-core: push emphasis. If 2-core: balanced upper (push + pull). Moderate intensity in both cases. Do NOT make it a hypertrophy pump session.');
     notes.push('G−1: ABSOLUTE ZERO sprinting, speed work, conditioning, lower body, or plyometrics. Arms/pump ONLY. Always OPTIONAL tier.');
     notes.push('G+1: Recovery ONLY. Always RECOVERY tier.');
-    notes.push('CORE means true key sessions ONLY. 3 CORE gym + Game Day is the ideal ceiling — do NOT add more. If readiness or schedule makes 3 impractical, 2 CORE is fine.');
+    notes.push('CORE means true key sessions ONLY. 3 CORE gym + Game Day is the ideal ceiling - do NOT add more. If readiness or schedule makes 3 impractical, 2 CORE is fine.');
     notes.push('OPTIONAL ≠ junk. OPTIONAL can include: trunk, calves, groin, shoulder health, arms pump, low-fatigue balancing work. But OPTIONAL should not replace a missing CORE.');
     notes.push('No conditioning within 48h of game. No high-DOMS lower body in last 72h before game. No heavy lower body after G−4.');
-    notes.push('Sprint exposure covered by team training + games — do NOT add extra sprints or conditioning.');
+    notes.push('Sprint exposure covered by team training + games - do NOT add extra sprints or conditioning.');
     notes.push('PATTERN FREQUENCY: Pull max 2x/week, Push max 2-3x/week, Heavy hinge max 2x/week, Heavy squat max 2x/week. No same pattern on consecutive days.');
     notes.push('STRUCTURE FIRST: Place exposure type + tier + day FIRST, then fill exercises. Do NOT build exercises first and assign tiers after.');
     notes.push('MERGING: If 3 separate sessions cannot fit, merge intelligently. 2-core: push+pull=balanced upper. 1-core: lower+push+pull=basic full body. NEVER simply omit a movement category.');
     notes.push('PRIORITISE: 1) game day freshness, 2) sensible spacing, 3) movement balance, 4) exercise selection. Do NOT chase perfect balance by jamming patterns into adjacent days.');
   }
   if (existingHard >= hardCap) {
-    notes.push(`Hard exposure budget FULL (${existingHard}/${hardCap}) — all gym sessions should be moderate or light`);
+    notes.push(`Hard exposure budget FULL (${existingHard}/${hardCap}) - all gym sessions should be moderate or light`);
   }
-  notes.push('Injuries MODIFY training — they do NOT eliminate it. Train around limitations, replace movements, maintain stimulus.');
+  notes.push('Injuries MODIFY training - they do NOT eliminate it. Train around limitations, replace movements, maintain stimulus.');
   notes.push('NEVER default to all-recovery programs unless injuries are severe AND constant. Keep strength, power, and conditioning pillars.');
   notes.push('Ensure at least 1 true recovery / low-load day per week');
 
@@ -4780,7 +5420,10 @@ function buildAIConstraints(
 
 // ─── Helper: Build CoachingInputs from OnboardingData ───
 
-export function onboardingToCoachingInputs(data: OnboardingData): CoachingInputs {
+export function onboardingToCoachingInputs(
+  data: OnboardingData,
+  options: OnboardingToCoachingInputsOptions = {},
+): CoachingInputs {
   // Reconcile team days into selectedDays.
   //
   // Team days are HARD calendar anchors — the club schedules them and the
@@ -4801,7 +5444,7 @@ export function onboardingToCoachingInputs(data: OnboardingData): CoachingInputs
   // downstream consumer that goes through this function gets the
   // reconciled set for free.
   const rawPrefDays = (data.preferredTrainingDays || []) as string[];
-  const blockedDays = activeUnavailableDays(data);
+  const blockedDays = activeUnavailableDays(data, options.availabilityDateISO);
   const prefDays = rawPrefDays.filter((day) => !blockedDays.has(day));
   const teamDays = (data.teamTrainingDays || []) as string[];
   const selectedDays: string[] = [...prefDays];
@@ -4846,16 +5489,15 @@ export function onboardingToCoachingInputs(data: OnboardingData): CoachingInputs
   };
 }
 
-function activeUnavailableDays(data: OnboardingData, today = new Date()): Set<string> {
+function activeUnavailableDays(data: OnboardingData, availabilityDateISO?: string): Set<string> {
   const out = new Set<string>();
-  const todayISO = today.toISOString().slice(0, 10);
   for (const constraint of data.availabilityConstraints ?? []) {
     if (constraint.active === false) continue;
     if (constraint.kind !== 'unavailable_day') continue;
     if (!constraint.dayOfWeek) continue;
-    if (constraint.scope === 'temporary') {
-      if (constraint.startDate && constraint.startDate > todayISO) continue;
-      if (constraint.endDate && constraint.endDate < todayISO) continue;
+    if (constraint.scope === 'temporary' && availabilityDateISO) {
+      if (constraint.startDate && constraint.startDate > availabilityDateISO) continue;
+      if (constraint.endDate && constraint.endDate < availabilityDateISO) continue;
     }
     out.add(constraint.dayOfWeek);
   }

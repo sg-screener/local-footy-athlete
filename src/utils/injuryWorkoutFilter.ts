@@ -51,7 +51,7 @@ const BUCKET_TIER_NOTES: Record<
 > = {
   hamstring: {
     strict: 'no sprinting / no high-speed running',
-    relaxed: 'limited sprinting (50–60%) — light hinge work OK with reduced load',
+    relaxed: 'limited sprinting (50-60%) - light hinge work OK with reduced load',
     light: 'build sprint volume back gradually',
   },
   knee: {
@@ -76,12 +76,12 @@ const BUCKET_TIER_NOTES: Record<
   },
   pubalgia: {
     strict: 'no cutting / no kicking',
-    relaxed: 'limited cutting / kicking — controlled work only',
+    relaxed: 'limited cutting / kicking - controlled work only',
     light: 'rebuild kicking + cutting gradually',
   },
   shoulder: {
     strict: 'no contact drills / no overhead throwing',
-    relaxed: 'limited pressing — moderate load OK',
+    relaxed: 'limited pressing - moderate load OK',
     light: 'build pressing load back gradually',
   },
   elbow: {
@@ -96,7 +96,7 @@ const BUCKET_TIER_NOTES: Record<
   },
   lowerBack: {
     strict: 'no heavy contact / no high-load tackle drills',
-    relaxed: 'limited axial load — light hinge OK',
+    relaxed: 'limited axial load - light hinge OK',
     light: 'rebuild loaded hinge gradually',
   },
 };
@@ -252,7 +252,7 @@ export function applyInjuryFilterToWorkout(
   ) {
     coachNotes = appendNoteUnique(
       coachNotes,
-      `Rebuilt for ${bucket} — ${summariseRebuild(bucket)}`,
+      `Rebuilt for ${bucket} - ${summariseRebuild(bucket)}`,
     );
   }
 

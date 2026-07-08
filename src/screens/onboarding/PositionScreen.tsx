@@ -3,9 +3,11 @@ import { View, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
+import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useProfileStore } from '../../store/profileStore';
-import { Position } from '../../types/domain';
+import type { RoleBucket } from '../../types/domain';
+import { ROLE_BUCKET_OPTIONS, normalizeRoleBucket } from '../../utils/roleBuckets';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
@@ -16,32 +18,27 @@ type PositionScreenProps = NativeStackScreenProps<
 >;
 
 /**
- * Flat 2-column grid. Reads left→right, back-line first. Kept as a single
- * list (no group headers) per onboarding UX refresh — clean grid reads
- * faster than three labelled stacks for six tiles.
+ * Full-width role list. Kept as a single list (no group headers) per
+ * onboarding UX refresh — clean choices read faster than labelled stacks.
  *
  * Selection visuals come from the shared <SelectableTile /> primitive so
  * the look is identical to every other selection surface in the product.
  */
-const POSITIONS: { id: Position; label: string }[] = [
-  { id: 'Small back', label: 'Small back' },
-  { id: 'Key back', label: 'Key back' },
-  { id: 'Midfielder', label: 'Midfielder' },
-  { id: 'Ruck', label: 'Ruck' },
-  { id: 'Small forward', label: 'Small forward' },
-  { id: 'Key forward', label: 'Key forward' },
-];
+const ROLE_OPTIONS = ROLE_BUCKET_OPTIONS;
 
 export const PositionScreen: React.FC<PositionScreenProps> = ({
   navigation,
 }) => {
-  const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
+  const savedPosition = useProfileStore((state) => state.onboardingData.position);
+  const [selectedPosition, setSelectedPosition] = useState<RoleBucket | null>(
+    savedPosition ? normalizeRoleBucket(savedPosition) : null,
+  );
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Position');
   const updateOnboardingData = useProfileStore(
     (state) => state.updateOnboardingData
   );
 
-  const handleSelect = useCallback((position: Position) => {
+  const handleSelect = useCallback((position: RoleBucket) => {
     setSelectedPosition(position);
     updateOnboardingData({ position });
     setTimeout(() => {
@@ -63,18 +60,25 @@ export const PositionScreen: React.FC<PositionScreenProps> = ({
           color={colors.text.primary}
           style={styles.title}
         >
-          What position do you play?
+          WHAT FOOTY ROLE FITS YOU BEST?
+        </Text>
+        <Text
+          variant="bodySmall"
+          color={colors.text.secondary}
+          style={styles.subtitle}
+        >
+          Your role gives LFA a small programming bias.
         </Text>
       </View>
 
-      <View style={styles.grid}>
-        {POSITIONS.map((position) => {
-          const isSelected = selectedPosition === position.id;
+      <View style={styles.list}>
+        {ROLE_OPTIONS.map((role) => {
+          const isSelected = selectedPosition === role.id;
           return (
             <SelectableTile
-              key={position.id}
+              key={role.id}
               isSelected={isSelected}
-              onPress={() => handleSelect(position.id)}
+              onPress={() => handleSelect(role.id)}
               style={styles.tile}
             >
               <Text
@@ -83,7 +87,7 @@ export const PositionScreen: React.FC<PositionScreenProps> = ({
                   isSelected && styles.tileTextSelected,
                 ]}
               >
-                {position.label}
+                {role.label}
               </Text>
             </SelectableTile>
           );
@@ -95,30 +99,32 @@ export const PositionScreen: React.FC<PositionScreenProps> = ({
 
 const styles = StyleSheet.create({
   titleSection: {
-    marginBottom: 28,
+    marginBottom: spacing.xl,
   },
   title: {
     ...headingXL,
+    marginBottom: spacing.sm,
   },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+  subtitle: {
+    lineHeight: 20,
+  },
+  list: {
+    gap: 12,
+    paddingBottom: spacing.xl,
   },
   tile: {
-    // Two columns: (100% - 10px gap) / 2 → use flexBasis with subtraction.
-    flexBasis: '48.5%',
-    flexGrow: 1,
-    paddingVertical: 22,
-    paddingHorizontal: 14,
+    width: '100%',
+    paddingVertical: 18,
+    paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 64,
+    minHeight: 60,
   },
   tileText: {
     color: colors.text.secondary,
     fontSize: 15,
     fontWeight: '600',
+    lineHeight: 20,
     textAlign: 'center',
   },
   tileTextSelected: {

@@ -17,6 +17,11 @@ export function seedOnboardingProgram(args: {
   const calendarStore = args.calendarStore ?? useCalendarStore.getState();
   const { program, onboardingData } = args;
 
+  // Brand-new athlete program: a TRUE fresh slate is intended here, so the
+  // override wipe is explicit. (setCurrentProgram no longer clears
+  // overrides implicitly — override lifecycle belongs to the canonical
+  // rebuild sweep; see programStore.setCurrentProgram.)
+  useProgramStore.getState().clearManualOverrides();
   programStore.setCurrentProgram(program);
   if (program.microcycles && program.microcycles.length > 0) {
     const firstMicrocycle = program.microcycles[0];

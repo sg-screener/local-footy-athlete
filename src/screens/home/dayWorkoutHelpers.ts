@@ -150,20 +150,20 @@ export function formatRecoveryPrescription(
   const withPerSide = (s: string) => (exercise.perSide ? `${s} per side` : s);
 
   if (pType === 'duration_minutes') {
-    const str = minVal === maxVal ? `${minVal} min` : `${minVal}–${maxVal} min`;
+    const str = minVal === maxVal ? `${minVal} min` : `${minVal}-${maxVal} min`;
     return withPerSide(str);
   }
   if (pType === 'duration') {
     const formatTime = (s: number) =>
       s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` : `${s}s`;
-    const str = minVal === maxVal ? formatTime(minVal) : `${formatTime(minVal)}–${formatTime(maxVal)}`;
+    const str = minVal === maxVal ? formatTime(minVal) : `${formatTime(minVal)}-${formatTime(maxVal)}`;
     return withPerSide(str);
   }
   if (pType === 'distance') {
-    const str = minVal === maxVal ? `${minVal}m` : `${minVal}–${maxVal}m`;
+    const str = minVal === maxVal ? `${minVal}m` : `${minVal}-${maxVal}m`;
     return withPerSide(str);
   }
-  const repStr = minVal === maxVal ? `${minVal}` : `${minVal}–${maxVal}`;
+  const repStr = minVal === maxVal ? `${minVal}` : `${minVal}-${maxVal}`;
   return exercise.perSide ? `${repStr} reps per side` : `${repStr} reps`;
 }
 
@@ -219,7 +219,7 @@ export function groupStrengthExercises(exercises: any[]): StrengthGroup[] {
 export function formatStrengthSetsReps(exercise: any): string {
   const reps = exercise.prescribedRepsMin === exercise.prescribedRepsMax
     ? `${exercise.prescribedRepsMin}`
-    : `${exercise.prescribedRepsMin}–${exercise.prescribedRepsMax}`;
+    : `${exercise.prescribedRepsMin}-${exercise.prescribedRepsMax}`;
   return `${exercise.prescribedSets} × ${reps}`;
 }
 
@@ -234,11 +234,11 @@ export function formatConditioningRowPrescription(exercise: any): string {
     pType === 'duration_minutes' ? 'min' : pType === 'duration' ? 'sec' : null;
   if (!unit) return '';
   if (exercise.prescribedSets > 1) {
-    return `${exercise.prescribedSets} × ${exercise.prescribedRepsMin}–${exercise.prescribedRepsMax} ${unit}`;
+    return `${exercise.prescribedSets} × ${exercise.prescribedRepsMin}-${exercise.prescribedRepsMax} ${unit}`;
   }
   const base =
     exercise.prescribedRepsMin !== exercise.prescribedRepsMax
-      ? `${exercise.prescribedRepsMin}–${exercise.prescribedRepsMax}`
+      ? `${exercise.prescribedRepsMin}-${exercise.prescribedRepsMax}`
       : `${exercise.prescribedRepsMin}`;
   return `${base} ${unit}`;
 }

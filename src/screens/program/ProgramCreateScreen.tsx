@@ -105,6 +105,9 @@ export default function ProgramCreateScreen({ navigation }: ProgramCreateScreenP
         updatedAt: new Date().toISOString(),
       };
 
+      // Manual program creation is a TRUE fresh slate — clear overrides
+      // explicitly (setCurrentProgram no longer wipes them implicitly).
+      useProgramStore.getState().clearManualOverrides();
       setCurrentProgram(newProgram);
 
       // Seed calendar with game dates for the new block (same pattern as onboarding).

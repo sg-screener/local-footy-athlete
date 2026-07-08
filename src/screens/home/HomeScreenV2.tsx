@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,21 +8,35 @@ import {
   Animated,
 } from 'react-native';
 import { PlanChangeSheet } from './PlanChangeSheet';
+import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Svg, { Path } from 'react-native-svg';
 import { Text } from '../../components/common/Text';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
-import { Button, Card, Sheet, Badge, IconButton, SectionLabel } from '../../components/ui';
+import { Button, Card, Sheet, Badge, IconButton } from '../../components/ui';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { splitSessionName } from '../../utils/sessionNaming';
 import { weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
-import { visibleWorkoutItemCountLabel } from '../../utils/visibleProgramReadModel';
+import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen } from './useHomeScreen';
-import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
-import { shortDayMonthLabel } from '../../utils/appDate';
+import type {
+  ActiveCoachNote,
+  ActiveCoachNoteAction,
+} from '../../utils/activeCoachNotes';
+import type { ProgramControlStatusUpdate } from '../../utils/programControlActions';
+import { guidedInjuryResultFromConstraint } from '../../utils/guidedInjuryControl';
+import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
+import { shortDayMonthLabel, todayISOLocal } from '../../utils/appDate';
+import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
+import {
+  loadReductionModifierIdForDate,
+  recoveryModeModifierIdForDate,
+} from '../../utils/tapProgramModifiers';
+import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import {
   WEEK_DAYS,
   DAY_SHORT,
@@ -76,19 +90,33 @@ export default function HomeScreenV2() {
     selectedIdx,
     mode,
     handleDayTap,
+    handleSelectDayOnly,
     handleClearSelection,
     handleCancelMove,
     handleAddGameMode,
     handleViewWorkout,
     handleFinishTeamSession,
-    handleQuickAction,
+    handleMessageCoach,
+    handleApplyGuidedInjury,
+    handleApplyBusyWeekReduce,
+    handleApplyAwayDays,
+    handleApplyWeekReadiness,
+    handleClearWeekReadiness,
+    missedSessionPrompt,
+    handleMissedSessionResponse,
     staleByDate,
     weekHasGame,
     showAddGameCTA,
+    showPracticeMatchCTA,
     currentPhase,
+    coachNotes,
+    activeConstraints,
+    handleClearCoachNote,
+    handleUpdateCoachNoteStatus,
     gameModalVisible,
     gameModalLabel,
     closeGameModal,
+    handleOpenGameDayActions,
     handleLogGame,
     handleMoveGameDay,
     handleRemoveGameDay,
@@ -117,9 +145,88 @@ export default function HomeScreenV2() {
   } = useHomeScreen();
 
   const isNormal = mode.type === 'normal';
+  const practiceMatchDay = weekDays.find((day) => day.workout?.workoutType === 'Game') ?? null;
+  const practiceMatchLabel = practiceMatchDay
+    ? `Practice match: ${new Date(practiceMatchDay.date + 'T12:00:00').toLocaleDateString('en-AU', {
+        weekday: 'long',
+      })}`
+    : 'Add a pre-season practice match';
+  const handlePracticeMatchPress = () => {
+    if (practiceMatchDay) {
+      handleOpenGameDayActions(practiceMatchDay.date);
+      return;
+    }
+    handleAddGameMode();
+  };
 
   // ── Tap-first plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md group 1) ──
   const [changeSheetDate, setChangeSheetDate] = useState<string | null>(null);
+  const [coachNoteSheet, setCoachNoteSheet] = useState<{
+    mode: 'clear' | 'update';
+    note: ActiveCoachNote;
+  } | null>(null);
+  const [injuryFlowNote, setInjuryFlowNote] = useState<ActiveCoachNote | null>(null);
+  const [busyAwayVisible, setBusyAwayVisible] = useState(false);
+
+  // ── Weekly readiness ("I'm not 100%") — week-level card ──
+  // Active state is derived from the EXISTING tap modifiers for the
+  // currently selected week (ids are week-keyed by Monday).
+  const [readinessVisible, setReadinessVisible] = useState(false);
+  const [readinessInjuryVisible, setReadinessInjuryVisible] = useState(false);
+  const weekAnchorISO = weekDays[0]?.date ?? todayISOLocal();
+  const readinessActiveConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
+  const weekReadiness = useMemo(() => {
+    const todayISO = todayISOLocal();
+    const ids = [
+      recoveryModeModifierIdForDate(weekAnchorISO),
+      loadReductionModifierIdForDate(weekAnchorISO),
+    ];
+    const match = readinessActiveConstraints.find((c: any) => {
+      if (!ids.includes(c.id)) return false;
+      const end = typeof c.expiresAt === 'string' ? c.expiresAt : undefined;
+      return !(end && end < todayISO);
+    });
+    if (!match) return null;
+    return {
+      id: match.id as string,
+      isRecovery: match.id === ids[0],
+      title: String(match.modifierTitle ?? match.reasonLabel ?? 'Readiness adjusted'),
+    };
+  }, [readinessActiveConstraints, weekAnchorISO]);
+
+  const handleCoachNoteAction = (
+    note: ActiveCoachNote,
+    action: ActiveCoachNoteAction,
+  ) => {
+    if (action.kind === 'update_injury') {
+      setInjuryFlowNote(note);
+      return;
+    }
+    setCoachNoteSheet({
+      mode: action.kind.startsWith('clear') ? 'clear' : 'update',
+      note,
+    });
+  };
+
+  const handleConfirmCoachNoteClear = () => {
+    if (!coachNoteSheet) return;
+    void handleClearCoachNote(coachNoteSheet.note.id);
+    setCoachNoteSheet(null);
+  };
+
+  const handleCoachNoteStatusUpdate = (status: ProgramControlStatusUpdate) => {
+    if (!coachNoteSheet) return;
+    void handleUpdateCoachNoteStatus(coachNoteSheet.note.id, status);
+    setCoachNoteSheet(null);
+  };
+  const injuryFlowConstraint = injuryFlowNote
+    ? activeConstraints.find((constraint): constraint is ActiveInjuryConstraint =>
+        constraint.type === 'injury' && constraint.id === injuryFlowNote.constraintId)
+    : null;
+  const injuryFlowInitial = useMemo(
+    () => guidedInjuryResultFromConstraint(injuryFlowConstraint),
+    [injuryFlowConstraint],
+  );
 
   // Smoke harness no longer renders any controls in HomeScreen. The
   // coach-bike-flow regression now opens Wednesday's DayWorkout directly
@@ -222,7 +329,19 @@ export default function HomeScreenV2() {
           <MoveBanner text="Tap the day to move the game to" onCancel={handleCancelMove} />
         )}
         {mode.type === 'addGame' && (
-          <MoveBanner text="Tap the day to set as game day" onCancel={handleCancelMove} />
+          <MoveBanner
+            text={currentPhase === 'Pre-season' ? 'Tap the day to set the practice match' : 'Tap the day to set as game day'}
+            onCancel={handleCancelMove}
+          />
+        )}
+
+        {/* ── Missed-session follow-up ── */}
+        {isNormal && missedSessionPrompt && (
+          <MissedSessionPrompt
+            missed={missedSessionPrompt}
+            onRespond={(response) =>
+              void handleMissedSessionResponse(missedSessionPrompt, response)}
+          />
         )}
 
         {/* ── Week list — all seven days, selected day carries the emphasis ── */}
@@ -245,20 +364,28 @@ export default function HomeScreenV2() {
                 pickerMode={mode.type}
                 hasWorkout={hasWorkout}
                 isGame={!!isGame}
-                onPress={() => handleDayTap(idx)}
+                onPress={() =>
+                  isGame && isNormal ? handleSelectDayOnly(idx) : handleDayTap(idx)}
                 onViewWorkout={() => handleViewWorkout(day)}
                 onFinishTeam={() => handleFinishTeamSession(day)}
+                onLogGame={() => handleLogGame(day.date)}
+                onGameDayActions={() => handleOpenGameDayActions(day.date)}
                 onMakeChange={() => setChangeSheetDate(day.date)}
                 staleWarning={staleByDate[day.date]}
-                onReviewStale={handleQuickAction}
+                onReviewStale={handleMessageCoach}
                 normal={isNormal}
               />
             );
           })}
         </View>
 
+        <CoachNotesSection
+          notes={coachNotes}
+          onAction={handleCoachNoteAction}
+        />
+
         {/* ── No game CTA ── */}
-        {isNormal && !weekHasGame && showAddGameCTA && (
+        {isNormal && currentPhase === 'In-season' && !weekHasGame && showAddGameCTA && (
           <Pressable onPress={handleAddGameMode} style={({ pressed }) => [pressed && { opacity: 0.75 }]}>
             <Card tone="default" padding="md" radius="lg" style={styles.addGame}>
               <View style={styles.addGameRow}>
@@ -267,7 +394,71 @@ export default function HomeScreenV2() {
                     <Path d="M12 5v14" /><Path d="M5 12h14" />
                   </Svg>
                 </View>
-                <Text style={styles.addGameText}>No game this week — add one</Text>
+                <Text style={styles.addGameText}>No game this week - add one</Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* ── Busy / away this week ── */}
+        {isNormal && (
+          <Pressable
+            onPress={() => setBusyAwayVisible(true)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-busy-away-entry"
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={styles.busyAwayIcon}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" /><Path d="M12 6v6l4 2" />
+                  </Svg>
+                </View>
+                <Text style={styles.busyAwayText}>Busy or away this week?</Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
+
+        {/* ── Weekly readiness ("I'm not 100%") — all phases, week-level ── */}
+        {isNormal && (
+          <Pressable
+            onPress={() => setReadinessVisible(true)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-week-readiness-entry"
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={[styles.busyAwayIcon, styles.readinessIconTint]}>
+                  <Svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#FF7A85" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                    <Path d="M22 12h-4l-3 8-6-16-3 8H2" />
+                  </Svg>
+                </View>
+                <Text style={styles.busyAwayText}>
+                  {weekReadiness
+                    ? (weekReadiness.isRecovery ? 'Recovery mode this week' : 'Not 100% this week')
+                    : "I'm not 100%"}
+                </Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
+
+        {isNormal && showPracticeMatchCTA && (
+          <Pressable
+            onPress={handlePracticeMatchPress}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="preseason-practice-match-entry"
+          >
+            {/* Same component treatment as the busy/away card above — only
+                the icon, tint and label differ. Reuses the busyAway* styles
+                so the two cards can never drift apart. */}
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={[styles.busyAwayIcon, styles.practiceMatchIconTint]}>
+                  <RowIcon kind="game" size={14} color={DAY_ROW_ACCENT.game} />
+                </View>
+                <Text style={styles.busyAwayText}>{practiceMatchLabel}</Text>
               </View>
             </Card>
           </Pressable>
@@ -276,12 +467,10 @@ export default function HomeScreenV2() {
         {/* ── Phase shift card ── */}
         {isNormal && (
           <View style={styles.section}>
-            <SectionLabel>Changing season phase?</SectionLabel>
             <Card tone="outline" padding="lg" radius="xl" style={styles.phaseCard}>
-              <Text style={styles.phaseBadge}>{currentPhase.toUpperCase()} MODE</Text>
+              <Text style={styles.phaseBadge}>You’re in {currentPhase} mode</Text>
               <Text style={styles.phaseBody}>
-                Ready for the next block? Shift your whole program to{' '}
-                <Text style={styles.phaseBodyAccent}>{NEXT_PHASE[currentPhase]}</Text> priorities.
+                Hit the button below when you’re ready to move to the next phase.
               </Text>
               <Button
                 label={`Shift to ${NEXT_PHASE[currentPhase]} mode`}
@@ -301,16 +490,59 @@ export default function HomeScreenV2() {
         date={changeSheetDate}
         weekDays={weekDays}
         onClose={() => setChangeSheetDate(null)}
-        onAskCoach={handleQuickAction}
+        onAskCoach={handleMessageCoach}
       />
 
       <GameDaySheet
         visible={gameModalVisible}
         onClose={closeGameModal}
         label={gameModalLabel}
-        onView={handleLogGame}
         onMove={handleMoveGameDay}
         onRemove={handleRemoveGameDay}
+      />
+
+      <WeekReadinessSheet
+        visible={readinessVisible}
+        active={weekReadiness}
+        onClose={() => setReadinessVisible(false)}
+        onApply={async (kind) => {
+          await handleApplyWeekReadiness(kind, weekAnchorISO);
+          setReadinessVisible(false);
+        }}
+        onClear={async (modifierId) => {
+          await handleClearWeekReadiness(modifierId);
+          setReadinessVisible(false);
+        }}
+        onInjury={() => {
+          setReadinessVisible(false);
+          setReadinessInjuryVisible(true);
+        }}
+      />
+
+      {/* Fresh guided injury flow launched from the weekly readiness sheet.
+          Same flow + same set_injury_modifier action as the day sheet. */}
+      <GuidedInjuryFlowSheet
+        visible={readinessInjuryVisible}
+        onClose={() => setReadinessInjuryVisible(false)}
+        titlePrefix="Injury"
+        onComplete={async (result) => {
+          await handleApplyGuidedInjury(result);
+          setReadinessInjuryVisible(false);
+        }}
+      />
+
+      <BusyAwaySheet
+        visible={busyAwayVisible}
+        weekDays={weekDays}
+        onClose={() => setBusyAwayVisible(false)}
+        onBusyReduce={async () => {
+          await handleApplyBusyWeekReduce();
+          setBusyAwayVisible(false);
+        }}
+        onAwayDays={async (dates) => {
+          await handleApplyAwayDays(dates);
+          setBusyAwayVisible(false);
+        }}
       />
 
       <RebuildSheet
@@ -322,6 +554,27 @@ export default function HomeScreenV2() {
         msgIdx={rebuildMsgIdx}
         msgOpacity={rebuildMsgOpacity}
         onConfirm={handleConfirmRebuild}
+      />
+
+      <CoachNoteSheet
+        state={coachNoteSheet}
+        onClose={() => setCoachNoteSheet(null)}
+        onConfirmClear={handleConfirmCoachNoteClear}
+        onUpdateStatus={handleCoachNoteStatusUpdate}
+      />
+
+      <GuidedInjuryFlowSheet
+        visible={injuryFlowNote !== null}
+        onClose={() => setInjuryFlowNote(null)}
+        initial={injuryFlowInitial}
+        titlePrefix="Update injury"
+        onComplete={async (result) => {
+          await handleApplyGuidedInjury(
+            result,
+            injuryFlowConstraint?.id ?? injuryFlowNote?.constraintId,
+          );
+          setInjuryFlowNote(null);
+        }}
       />
 
       <PhaseShiftSheet
@@ -373,10 +626,345 @@ interface DayRowProps {
   onPress: () => void;
   onViewWorkout: () => void;
   onFinishTeam: () => void;
+  onLogGame: () => void;
+  onGameDayActions: () => void;
   onMakeChange: () => void;
   staleWarning: any;
   onReviewStale: (prefill: string) => void;
 }
+
+const DAY_ROW_ACCENT = {
+  core: '#C6FF00',
+  optional: '#5E6268',
+  recovery: '#1EA7FF',
+  game: '#FFC247',
+} as const;
+
+function getDayRowAccentColor({
+  hasWorkout,
+  isGame,
+  sessionTier,
+  title,
+}: {
+  hasWorkout: boolean;
+  isGame: boolean;
+  sessionTier?: string | null;
+  title?: string | null;
+}) {
+  if (isGame) return DAY_ROW_ACCENT.game;
+  const titleKey = displayLabelKey(title);
+  if (titleKey === 'recovery' || titleKey === 'rest' || titleKey === 'rest day') {
+    return DAY_ROW_ACCENT.recovery;
+  }
+  if (titleKey === 'hard conditioning') return '#D9874E';
+  if (titleKey === 'sprint work') return DAY_ROW_ACCENT.core;
+  if (!hasWorkout) return DAY_ROW_ACCENT.recovery;
+  if (sessionTier === 'optional') return DAY_ROW_ACCENT.optional;
+  if (sessionTier === 'recovery') return DAY_ROW_ACCENT.recovery;
+  return DAY_ROW_ACCENT.core;
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  if (clean.length !== 6) return `rgba(200, 255, 0, ${alpha})`;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function selectedDayRowStyle(accentColor: string) {
+  return {
+    backgroundColor: hexToRgba(accentColor, 0.08),
+    borderColor: accentColor,
+    shadowColor: accentColor,
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  };
+}
+
+function GameBadge() {
+  return (
+    <View style={styles.gameBadge}>
+      <Text style={styles.gameBadgeText}>GAME</Text>
+    </View>
+  );
+}
+
+type RowIconKind =
+  | 'strength'
+  | 'team'
+  | 'game'
+  | 'recovery'
+  | 'pulse'
+  | 'refresh'
+  | 'bolt'
+  | 'flame'
+  | 'mobility'
+  | 'prehab'
+  | 'core'
+  | 'activity';
+
+function displayLabelKey(label: string | null | undefined): string {
+  return String(label ?? '')
+    .replace(/^\+\s*/, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+function conditioningIconKind(label: string | null | undefined): RowIconKind | null {
+  switch (displayLabelKey(label)) {
+    case 'aerobic base':
+      return 'pulse';
+    case 'flush out':
+      return 'refresh';
+    case 'sprint work':
+      return 'bolt';
+    case 'hard conditioning':
+      return 'flame';
+    default:
+      return null;
+  }
+}
+
+function displayLabelIconKind(label: string | null | undefined): RowIconKind | null {
+  const key = displayLabelKey(label);
+  const conditioningKind = conditioningIconKind(key);
+  if (conditioningKind) return conditioningKind;
+
+  if (key === 'game' || key === 'game day') return 'game';
+  if (key === 'team training') return 'team';
+
+  if (
+    key === 'recovery' ||
+    key === 'recovery session' ||
+    key === 'rest' ||
+    key === 'rest day' ||
+    key === 'passive recovery' ||
+    key === 'extended recovery'
+  ) {
+    return 'recovery';
+  }
+
+  if (
+    key === 'mobility' ||
+    key === 'mobility flow' ||
+    key.includes('mobility') ||
+    key.includes('stretch') ||
+    key.includes('pilates') ||
+    key.includes('yoga')
+  ) {
+    return 'mobility';
+  }
+
+  if (
+    key === 'accessories' ||
+    key === 'prehab' ||
+    key === 'rehab' ||
+    key === 'prehab & accessories' ||
+    key.includes('prehab') ||
+    key.includes('rehab')
+  ) {
+    return 'prehab';
+  }
+
+  if (key === 'core' || key.includes('core')) return 'core';
+
+  if (
+    key === 'strength' ||
+    key === 'strength session' ||
+    key === 'lower squat' ||
+    key === 'lower hinge' ||
+    key === 'lower body strength' ||
+    key === 'upper push' ||
+    key === 'upper pull' ||
+    key === 'upper body strength' ||
+    key === 'full body strength' ||
+    key === 'upper arms pump' ||
+    key === 'gunshow'
+  ) {
+    return 'strength';
+  }
+
+  return null;
+}
+
+function titleIconKind({
+  hasWorkout,
+  isGame,
+  title,
+  workout,
+}: {
+  hasWorkout: boolean;
+  isGame: boolean;
+  title: string | null;
+  workout?: any;
+}): RowIconKind {
+  if (isGame) return 'game';
+  const labelKind = displayLabelIconKind(title);
+  if (labelKind) return labelKind;
+  if (!hasWorkout) return 'recovery';
+  if (workout?.workoutType === 'Recovery' || workout?.sessionTier === 'recovery') {
+    return 'recovery';
+  }
+
+  const workoutTypeKind = displayLabelIconKind(workout?.workoutType);
+  if (workoutTypeKind) return workoutTypeKind;
+
+  return 'activity';
+}
+
+function contextIconKind(label: string | null | undefined): RowIconKind | null {
+  return displayLabelIconKind(label);
+}
+
+function rowIconColor(kind: RowIconKind): string {
+  switch (kind) {
+    case 'game':
+      return '#FFC247';
+    case 'recovery':
+      return '#3AA7D8';
+    case 'bolt':
+      return '#B6D85A';
+    case 'flame':
+      return '#D9874E';
+    case 'strength':
+    case 'team':
+    case 'pulse':
+    case 'refresh':
+    case 'mobility':
+    case 'prehab':
+    case 'core':
+    case 'activity':
+    default:
+      return '#969696';
+  }
+}
+
+function RowIcon({ kind, size = 15, color }: { kind: RowIconKind; size?: number; color?: string }) {
+  const iconColor = color ?? rowIconColor(kind);
+
+  if (kind === 'team') {
+    return (
+      <MaterialCommunityIcons
+        name="account-multiple-outline"
+        size={16}
+        color={iconColor}
+        style={[styles.rowIcon, styles.teamTrainingIcon]}
+      />
+    );
+  }
+
+  return (
+    <Svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke={iconColor}
+      strokeWidth={2.3}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      style={styles.rowIcon}
+    >
+      {rowIconPaths(kind)}
+    </Svg>
+  );
+}
+
+function rowIconPaths(kind: RowIconKind) {
+  switch (kind) {
+    case 'game':
+      return (
+        <>
+          <Path d="M8 4h8v4a4 4 0 01-8 0V4z" />
+          <Path d="M8 6H5a3 3 0 003 3" />
+          <Path d="M16 6h3a3 3 0 01-3 3" />
+          <Path d="M12 12v4" />
+          <Path d="M9 20h6" />
+          <Path d="M10 16h4" />
+        </>
+      );
+    case 'recovery':
+      return (
+        <>
+          <Path d="M4 7h13a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V9a2 2 0 012-2z" />
+          <Path d="M20 10v4" />
+          <Path d="M11 9l-3 4h3l-1 3 4-5h-3l1-2z" />
+        </>
+      );
+    case 'pulse':
+      return <Path d="M3 12h4l2-5 4 10 2-5h6" />;
+    case 'refresh':
+      return (
+        <>
+          <Path d="M20 11a8 8 0 00-14.3-4.9L4 8" />
+          <Path d="M4 4v4h4" />
+          <Path d="M4 13a8 8 0 0014.3 4.9L20 16" />
+          <Path d="M20 20v-4h-4" />
+        </>
+      );
+    case 'bolt':
+      return <Path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />;
+    case 'flame':
+      return (
+        <>
+          <Path d="M12 22c4 0 7-3 7-7 0-3-2-5-4-7 .2 3-1 4-2 5 0-4-2-6-4-8 .5 4-4 6-4 10 0 4 3 7 7 7z" />
+          <Path d="M12 18c1.5 0 2.5-1.1 2.5-2.5 0-1-.5-1.8-1.5-2.8-.2 1.1-.8 1.8-1.7 2.5-.8.6-1.3 1.2-1.3 2.1 0 1.5 1 2.7 2 2.7z" />
+        </>
+      );
+    case 'mobility':
+      return (
+        <>
+          <Path d="M12 5v8" />
+          <Path d="M8 9l4 4 4-4" />
+          <Path d="M12 13l-5 7" />
+          <Path d="M12 13l5 7" />
+        </>
+      );
+    case 'prehab':
+      return (
+        <>
+          <Path d="M12 3l7 3v5c0 4.5-3 7.8-7 10-4-2.2-7-5.5-7-10V6l7-3z" />
+          <Path d="M12 8v6" />
+          <Path d="M9 11h6" />
+        </>
+      );
+    case 'core':
+      return (
+        <>
+          <Path d="M12 4a8 8 0 100 16 8 8 0 000-16z" />
+          <Path d="M12 9a3 3 0 100 6 3 3 0 000-6z" />
+        </>
+      );
+    case 'activity':
+      return (
+        <>
+          <Path d="M8 5h11" />
+          <Path d="M8 12h11" />
+          <Path d="M8 19h11" />
+          <Path d="M4 5h.01" />
+          <Path d="M4 12h.01" />
+          <Path d="M4 19h.01" />
+        </>
+      );
+    case 'strength':
+    default:
+      return (
+        <>
+          <Path d="M6.5 6.5l11 11" />
+          <Path d="M3.5 8.5l5-5" />
+          <Path d="M5.5 10.5l5-5" />
+          <Path d="M13.5 18.5l5-5" />
+          <Path d="M15.5 20.5l5-5" />
+        </>
+      );
+  }
+}
+
 /**
  * Day row — one of seven identical rows in the week list.
  *
@@ -389,9 +977,10 @@ interface DayRowProps {
 function DayRow({
   day, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
-  onMakeChange, staleWarning, onReviewStale,
+  onLogGame, onGameDayActions, onMakeChange, staleWarning, onReviewStale,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
+  const showRowBadges = emphasized;
   const rowTone = emphasized ? 'accent' : 'default';
   // Weekly plan speaks in categories: strength splits pass through
   // canonically, standalone conditioning reads as its category (Aerobic
@@ -399,12 +988,39 @@ function DayRow({
   // read "Recovery". The real session name lives inside the day.
   const parsed = hasWorkout ? splitSessionName(day.workout.name) : null;
   const title = hasWorkout ? weeklyPlanTitle(day.workout) : null;
+  const accentColor = getDayRowAccentColor({
+    hasWorkout,
+    isGame,
+    sessionTier: day.workout?.sessionTier,
+    title,
+  });
   const ctx = suppressDuplicateWorkoutContext(title, parsed?.context);
   const conditioningContext = suppressDuplicateWorkoutContext(
     title,
     hasWorkout ? getConditioningContextLabel(day.workout) : null,
   );
-  const isTeamOnly = hasWorkout && day.workout.name === 'Team Training';
+  const contextLabel = ctx ?? (conditioningContext ? `+ ${conditioningContext}` : null);
+  const isAttachedContextLine = contextLabel?.startsWith('+ ') ?? false;
+  const titleIcon = titleIconKind({ hasWorkout, isGame, title, workout: day.workout });
+  const contextIcon = contextIconKind(contextLabel);
+  const isTeamOnly = hasWorkout && isTeamTrainingOnlyWorkout(day.workout);
+  const isRecoverySession = hasWorkout && (
+    day.workout.workoutType === 'Recovery' ||
+    day.workout.sessionTier === 'recovery'
+  );
+  const rowBadges = (
+    <>
+      {showRowBadges && day.isToday && <Badge label="Today" tone="accent" />}
+      {isMoveSource
+        ? <Badge label="Moving" tone="outline" />
+        : showRowBadges && hasWorkout && isGame
+          ? <GameBadge />
+          : showRowBadges && hasWorkout && day.workout.sessionTier
+            ? <SessionTierBadge tier={day.workout.sessionTier} />
+            : null}
+    </>
+  );
+  const selectedTitle = hasWorkout ? title : 'Rest';
 
   return (
     <Card
@@ -424,87 +1040,140 @@ function DayRow({
         isMoveSource && styles.dayRowMoveSource,
         isMoveTarget && styles.dayRowMoveTarget,
         day.isToday && !isSelected && normal && styles.dayRowToday,
+        emphasized && selectedDayRowStyle(accentColor),
       ]}
     >
+      <View
+        pointerEvents="none"
+        style={[
+          styles.dayAccentStrip,
+          emphasized && styles.dayAccentStripSelected,
+          { backgroundColor: accentColor },
+        ]}
+      />
       <View style={[styles.dayRowInner, emphasized && styles.dayRowInnerSelected]}>
-      <View style={styles.dayHeader}>
-        <View style={styles.leftCluster}>
-          <Text
-            style={[
-              styles.dayLabel,
-              emphasized && styles.dayLabelSelected,
-              emphasized || day.isToday || isMoveTarget ? { color: '#C8FF00' } : null,
-            ]}
-          >
-            {day.short}
-          </Text>
-          {/* Actual calendar date — quiet, one step dimmer than the
-              weekday so "MON" stays the anchor and "3/7" is the detail. */}
-          <Text style={[styles.dayDate, emphasized && styles.dayDateSelected]}>
-            {shortDayMonthLabel(day.date)}
-          </Text>
-          {day.isToday && <Badge label="Today" tone="accent" />}
-          {isMoveSource
-            ? <Badge label="Moving" tone="outline" />
-            : hasWorkout && isGame
-              ? <Badge label="Game" tone="outline" />
-              : hasWorkout && day.workout.sessionTier
-                ? <SessionTierBadge tier={day.workout.sessionTier} />
-                : null}
-        </View>
+        {emphasized ? (
+          <View style={styles.selectedHeader}>
+            <View style={styles.selectedMetaRow}>
+              <View style={styles.selectedDateCluster}>
+                <Text
+                  style={[
+                    styles.dayLabel,
+                    styles.dayLabelSelected,
+                    { color: '#C8FF00' },
+                  ]}
+                >
+                  {day.short}
+                </Text>
+                <Text style={[styles.dayDate, styles.dayDateSelected]}>
+                  {shortDayMonthLabel(day.date)}
+                </Text>
+              </View>
+              <View style={styles.selectedBadgeCluster}>{rowBadges}</View>
+            </View>
 
-        {isMoveTarget ? (
-          <Text style={styles.moveTargetLabel}>
-            {pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
-          </Text>
-        ) : hasWorkout ? (
-          <View style={styles.titleBlock}>
-            <Text
-              style={[
-                styles.workoutTitle,
-                emphasized && styles.workoutTitleSelected,
-                isMoveSource && { opacity: 0.4 },
-              ]}
-              numberOfLines={emphasized ? 2 : 1}
-              ellipsizeMode="tail"
-            >
-              {title}
-            </Text>
-            {ctx ? (
-              <Text style={styles.workoutContext} numberOfLines={1}>{ctx}</Text>
-            ) : conditioningContext ? (
-              <Text style={styles.workoutContextAccent} numberOfLines={1}>
-                + {conditioningContext}
-              </Text>
-            ) : null}
+            <View style={styles.selectedTitleBlock}>
+              <View style={styles.selectedTitleLine}>
+                <RowIcon kind={titleIcon} size={16} color={accentColor} />
+                <Text
+                  style={[
+                    hasWorkout ? styles.workoutTitle : styles.restLabel,
+                    hasWorkout ? styles.workoutTitleSelected : styles.restLabelSelected,
+                    styles.selectedWorkoutTitle,
+                    isMoveSource && { opacity: 0.4 },
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {selectedTitle}
+                </Text>
+              </View>
+              {hasWorkout && contextLabel ? (
+                <View style={styles.selectedContextLine}>
+                  {contextIcon && <RowIcon kind={contextIcon} size={16} color={accentColor} />}
+                  <Text
+                    style={[
+                      styles.workoutContext,
+                      isAttachedContextLine && styles.attachedWorkoutContext,
+                      isAttachedContextLine && emphasized && styles.attachedWorkoutContextSelected,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {contextLabel}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </View>
         ) : (
-          <Text style={[styles.restLabel, emphasized && styles.restLabelSelected]}>
-            Rest
-          </Text>
-        )}
-      </View>
+          <View style={styles.dayHeader}>
+            <View style={styles.leftCluster}>
+              <Text
+                style={[
+                  styles.dayLabel,
+                  day.isToday || isMoveTarget ? { color: '#C8FF00' } : null,
+                ]}
+              >
+                {day.short}
+              </Text>
+              {/* Actual calendar date — quiet, one step dimmer than the
+                  weekday so "MON" stays the anchor and "3/7" is the detail. */}
+              <Text style={styles.dayDate}>
+                {shortDayMonthLabel(day.date)}
+              </Text>
+              {rowBadges}
+            </View>
 
-      {/* Coach attribution — ONE short line, no bullets. The audit log
-          (per-exercise removals + focus targets) lives on the workout
-          detail screen, not on every Program-tab row. */}
-      {hasWorkout && (() => {
-        const summary = getCoachNoteDisplay(day.workout.coachNotes, {
-          workoutName: day.workout.name,
-          workoutType: day.workout.workoutType,
-        });
-        if (!summary.summaryLine) return null;
-        return (
-          <Text
-            testID="day-row-coach-summary"
-            style={styles.rowCoachNoteText}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {summary.summaryLine}
-          </Text>
-        );
-      })()}
+          {isMoveTarget ? (
+            <Text style={styles.moveTargetLabel}>
+              {pickerMode === 'addGame' ? 'Tap to set game' : 'Tap to move here'}
+            </Text>
+          ) : hasWorkout ? (
+            <View style={styles.titleBlock}>
+              <View style={styles.rowTitleLine}>
+                <RowIcon kind={titleIcon} size={15} color={accentColor} />
+                <Text
+                  style={[
+                    styles.workoutTitle,
+                    isMoveSource && { opacity: 0.4 },
+                  ]}
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                >
+                  {title}
+                </Text>
+              </View>
+              {contextLabel ? (
+                <View style={styles.rowContextLine}>
+                  {contextIcon && (
+                    <RowIcon
+                      kind={contextIcon}
+                      size={isAttachedContextLine ? 15 : 14}
+                      color={accentColor}
+                    />
+                  )}
+                  <Text
+                    style={[
+                      styles.workoutContext,
+                      isAttachedContextLine && styles.attachedWorkoutContext,
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {contextLabel}
+                  </Text>
+                </View>
+              ) : null}
+            </View>
+          ) : (
+            <View style={styles.restLine}>
+              <RowIcon kind="recovery" size={15} color={accentColor} />
+              <Text style={styles.restLabel}>
+                Rest
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
 
       {/* Expanded selected content */}
       {isSelected && hasWorkout && !isGame && normal && (
@@ -519,9 +1188,9 @@ function DayRow({
             <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
           ) : (
             <>
-              <Text style={styles.expandedMeta}>
-                {visibleWorkoutItemCountLabel(day.workout) ?? '0 items'}
-              </Text>
+              {isRecoverySession ? (
+                <Text style={styles.expandedMeta}>Move easy. Feel better.</Text>
+              ) : null}
               <Button label="Start Session" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
             </>
           )}
@@ -541,18 +1210,32 @@ function DayRow({
 
       {isSelected && isGame && normal && (
         <View style={styles.expanded}>
-          <Text style={styles.expandedMeta}>Game Day</Text>
+          <Text style={styles.expandedMeta}>Good luck!</Text>
+          <Button
+            label="Log Game"
+            size="lg"
+            glow={false}
+            onPress={onLogGame}
+            testID="log-game-button"
+          />
+          <Pressable
+            onPress={onGameDayActions}
+            style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
+            testID="move-remove-game-link"
+          >
+            <Text style={styles.makeChangeText}>Move or remove game day</Text>
+          </Pressable>
         </View>
       )}
       {isSelected && !hasWorkout && normal && (
         <View style={styles.expanded}>
-          <Text style={styles.expandedMeta}>Recovery is where adaptation happens.</Text>
+          <Text style={styles.expandedMeta}>Freshen up. Adapt. Go again.</Text>
           <Pressable
             onPress={onMakeChange}
             style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
             testID="add-session-link"
           >
-            <Text style={styles.makeChangeText}>Add a session?</Text>
+            <Text style={styles.makeChangeText}>Add optional session?</Text>
           </Pressable>
         </View>
       )}
@@ -561,15 +1244,226 @@ function DayRow({
   );
 }
 
+interface CoachNotesSectionProps {
+  notes: ActiveCoachNote[];
+  onAction: (note: ActiveCoachNote, action: ActiveCoachNoteAction) => void;
+}
+
+function CoachNotesSection({ notes, onAction }: CoachNotesSectionProps) {
+  if (notes.length === 0) return null;
+
+  return (
+    <View style={styles.coachNotesSection} testID="program-active-coach-notes">
+      <Text style={styles.coachNotesTitle}>COACH NOTES</Text>
+      <View style={styles.coachNotesStack}>
+        {notes.map((note) => (
+          <Card
+            key={note.id}
+            tone="outline"
+            padding="none"
+            radius="lg"
+            style={styles.coachNoteCard}
+            testID={`program-active-coach-note-${note.constraintId}`}
+          >
+            <View style={styles.coachNoteContent}>
+              <View style={styles.coachNoteHeader}>
+                <View style={styles.coachNoteDot} />
+                <Text style={styles.coachNoteTitle} numberOfLines={2}>
+                  {note.title}
+                </Text>
+              </View>
+              <Text style={styles.coachNoteBody}>{note.body}</Text>
+              <View style={styles.coachNoteActions}>
+                {note.actions.map((action, index) => {
+                  const primary = index === 0;
+                  return (
+                    <Pressable
+                      key={action.kind}
+                      onPress={() => onAction(note, action)}
+                      style={({ pressed }) => [
+                        styles.coachNoteAction,
+                        primary && styles.coachNotePrimaryAction,
+                        pressed && { opacity: 0.72 },
+                      ]}
+                      testID={`program-active-coach-note-action-${note.constraintId}-${action.kind}`}
+                    >
+                      <Text
+                        style={[
+                          styles.coachNoteActionText,
+                          primary && styles.coachNotePrimaryActionText,
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {action.label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          </Card>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string } {
+  if (note.type === 'injury') {
+    const clearLabel = note.actions.find((action) => action.kind === 'clear_injury')?.label ?? '';
+    if (/cleared/i.test(clearLabel) || /training paused/i.test(note.title)) {
+      return {
+        title: 'Resume normal training?',
+        body: "Only clear this if you've been checked or the issue has settled enough to train normally.",
+      };
+    }
+    return {
+      title: 'Clear this injury?',
+      body: "We'll stop adjusting your program around this and update your week.",
+    };
+  }
+  if (note.type === 'temporary_status') {
+    return {
+      title: 'Clear this adjustment?',
+      body: "We'll stop adjusting your program around this and update your week.",
+    };
+  }
+  return {
+    title: 'Clear this adjustment?',
+    body: "We'll remove this active adjustment from future program decisions.",
+  };
+}
+
+function updateCopyForNote(note: ActiveCoachNote): { title: string; body: string } {
+  if (note.type === 'injury') {
+    return {
+      title: note.actions.find((a) => a.kind === 'update_injury')?.label ?? 'Update injury',
+      body: 'Keep this note active if the issue still affects training. Clear it only when it has settled.',
+    };
+  }
+  if (note.type === 'temporary_status') {
+    return {
+      title: 'How are you feeling now?',
+      body: 'Choose the closest option and your program will update from there.',
+    };
+  }
+  return {
+    title: 'Update adjustment',
+    body: 'Keep this adjustment active for future sessions, or clear it if it no longer applies.',
+  };
+}
+
+interface CoachNoteSheetProps {
+  state: { mode: 'clear' | 'update'; note: ActiveCoachNote } | null;
+  onClose: () => void;
+  onConfirmClear: () => void;
+  onUpdateStatus: (status: ProgramControlStatusUpdate) => void;
+}
+
+function CoachNoteSheet({
+  state,
+  onClose,
+  onConfirmClear,
+  onUpdateStatus,
+}: CoachNoteSheetProps) {
+  if (!state) return null;
+
+  const copy = state.mode === 'clear'
+    ? clearCopyForNote(state.note)
+    : updateCopyForNote(state.note);
+  const clearAction = state.note.actions.find((action) => action.kind.startsWith('clear'));
+  const isStatusUpdate = state.mode === 'update' && state.note.type === 'temporary_status';
+
+  return (
+    <Sheet visible={Boolean(state)} onClose={onClose}>
+      <Text style={styles.sheetTitle}>{copy.title}</Text>
+      <Text style={styles.sheetBody}>{copy.body}</Text>
+      {state.mode === 'clear' ? (
+        <>
+          <Button
+            label="Clear and update program"
+            size="lg"
+            onPress={onConfirmClear}
+          />
+          <Button
+            label="Cancel"
+            variant="secondary"
+            size="md"
+            onPress={onClose}
+            style={{ marginTop: spacing.md }}
+          />
+        </>
+      ) : isStatusUpdate ? (
+        <>
+          <Button
+            label="I'm good now"
+            size="lg"
+            onPress={() => onUpdateStatus('good_now')}
+          />
+          <Button
+            label="Still not right"
+            variant="secondary"
+            size="md"
+            onPress={() => onUpdateStatus('still_not_right')}
+            style={{ marginTop: spacing.sm }}
+          />
+          <Button
+            label="Still sick"
+            variant="secondary"
+            size="md"
+            onPress={() => onUpdateStatus('still_sick')}
+            style={{ marginTop: spacing.sm }}
+          />
+          <Button
+            label="Still cooked"
+            variant="secondary"
+            size="md"
+            onPress={() => onUpdateStatus('still_cooked')}
+            style={{ marginTop: spacing.sm }}
+          />
+          <Button
+            label="Worse"
+            variant="secondary"
+            size="md"
+            onPress={() => onUpdateStatus('worse')}
+            style={{ marginTop: spacing.sm }}
+          />
+          <Button
+            label="Cancel"
+            variant="secondary"
+            size="md"
+            onPress={onClose}
+            style={{ marginTop: spacing.md }}
+          />
+        </>
+      ) : (
+        <>
+          <Button
+            label="Keep active"
+            size="lg"
+            onPress={onClose}
+          />
+          <Button
+            label={clearAction?.label ?? 'Clear adjustment'}
+            variant="secondary"
+            size="md"
+            onPress={onConfirmClear}
+            style={{ marginTop: spacing.md }}
+          />
+        </>
+      )}
+    </Sheet>
+  );
+}
+
 interface GameDaySheetProps {
   visible: boolean;
   onClose: () => void;
   label: string;
-  onView: () => void;
   onMove: () => void;
   onRemove: () => void;
 }
-function GameDaySheet({ visible, onClose, label, onView, onMove, onRemove }: GameDaySheetProps) {
+function GameDaySheet({ visible, onClose, label, onMove, onRemove }: GameDaySheetProps) {
   return (
     <Sheet visible={visible} onClose={onClose}>
       <Text style={styles.sheetTitle}>{label}</Text>
@@ -578,12 +1472,6 @@ function GameDaySheet({ visible, onClose, label, onView, onMove, onRemove }: Gam
         <Text style={styles.sheetCurrentText}>Game day</Text>
       </View>
 
-      <SheetOption
-        label="Log Game"
-        accent
-        icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><Path d="M12 9a3 3 0 100 6 3 3 0 000-6z"/></Svg>}
-        onPress={onView}
-      />
       <SheetOption
         label="Move Game Day This Week"
         accent
@@ -624,6 +1512,251 @@ function SheetOption({ label, icon, accent, danger, onPress }: SheetOptionProps)
       </View>
       <Text style={[styles.sheetOptionText, danger && { color: '#F44336' }]}>{label}</Text>
     </Pressable>
+  );
+}
+
+// ── Missed-session follow-up card ──
+interface MissedSessionPromptProps {
+  missed: MissedSession;
+  onRespond: (response: MissedSessionResponse) => void;
+}
+function MissedSessionPrompt({ missed, onRespond }: MissedSessionPromptProps) {
+  const sessionLabel = missed.sessionName ? ` (${missed.sessionName})` : '';
+  return (
+    <Card
+      tone="outline"
+      padding="md"
+      radius="lg"
+      style={styles.missedCard}
+      testID="home-missed-session-prompt"
+    >
+      <Text style={styles.missedTitle}>Did you do {missed.weekdayLabel}?</Text>
+      <Text style={styles.missedBody}>
+        {missed.weekdayLabel}&apos;s session{sessionLabel} wasn&apos;t logged. Let the coach
+        know so your plan stays accurate.
+      </Text>
+      <View style={styles.missedActions}>
+        <MissedChip label="Did it" primary onPress={() => onRespond('did_it')} />
+        <MissedChip label="Missed it" onPress={() => onRespond('missed_it')} />
+        <MissedChip label="Move it forward" onPress={() => onRespond('move_forward')} />
+        <MissedChip label="Skip it" onPress={() => onRespond('skip_it')} />
+      </View>
+    </Card>
+  );
+}
+
+function MissedChip({ label, primary, onPress }: {
+  label: string;
+  primary?: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.missedChip,
+        primary && styles.missedChipPrimary,
+        pressed && { opacity: 0.72 },
+      ]}
+    >
+      <Text style={[styles.missedChipText, primary && styles.missedChipPrimaryText]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+// ── Busy / away this week sheet ──
+interface WeekReadinessSheetProps {
+  visible: boolean;
+  active: { id: string; isRecovery: boolean; title: string } | null;
+  onClose: () => void;
+  onApply: (kind: 'sore' | 'tired' | 'sick' | 'easier') => void | Promise<void>;
+  onClear: (modifierId: string) => void | Promise<void>;
+  onInjury: () => void;
+}
+
+/**
+ * Weekly readiness sheet — simple tap options, no chat. Reuses the same
+ * modifiers as the day-level wellbeing flow, scoped to the viewed week.
+ */
+function WeekReadinessSheet({ visible, active, onClose, onApply, onClear, onInjury }: WeekReadinessSheetProps) {
+  const [updating, setUpdating] = useState(false);
+
+  React.useEffect(() => {
+    if (visible) setUpdating(false);
+  }, [visible]);
+
+  const showOptions = !active || updating;
+
+  const pulseIcon = (color: string) => (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <Path d="M22 12h-4l-3 8-6-16-3 8H2" />
+    </Svg>
+  );
+
+  return (
+    <Sheet visible={visible} onClose={onClose} testID="home-week-readiness-sheet">
+      {!showOptions && active && (
+        <View>
+          <Text style={styles.sheetTitle}>{active.title}</Text>
+          <Text style={styles.busyAwayEmpty}>
+            This week is adjusted around how you said you're feeling. Clear
+            the adjustment when you're good again.
+          </Text>
+          <SheetOption
+            label="Update — how I'm feeling changed"
+            icon={pulseIcon('#FF7A85')}
+            onPress={() => setUpdating(true)}
+          />
+          <SheetOption
+            label="Clear adjustment — I'm good now"
+            accent
+            icon={
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M20 6L9 17l-5-5" />
+              </Svg>
+            }
+            onPress={() => onClear(active.id)}
+          />
+          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
+        </View>
+      )}
+
+      {showOptions && (
+        <View>
+          <Text style={styles.sheetTitle}>Not 100%? What's going on?</Text>
+          <SheetOption
+            label="Feeling sore / tight"
+            icon={pulseIcon('#FF7A85')}
+            onPress={() => onApply('sore')}
+          />
+          <SheetOption
+            label="Low energy / tired"
+            icon={pulseIcon('#FFC247')}
+            onPress={() => onApply('tired')}
+          />
+          <SheetOption
+            label="Sick / run down"
+            icon={pulseIcon('#1EA7FF')}
+            onPress={() => onApply('sick')}
+          />
+          <SheetOption
+            label="Niggle or injury"
+            icon={
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF7A85" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M12 9v4" /><Path d="M12 17h.01" /><Path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" />
+              </Svg>
+            }
+            onPress={onInjury}
+          />
+          <SheetOption
+            label="Need an easier week"
+            accent
+            icon={pulseIcon('#C8FF00')}
+            onPress={() => onApply('easier')}
+          />
+          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
+        </View>
+      )}
+    </Sheet>
+  );
+}
+
+interface BusyAwaySheetProps {
+  visible: boolean;
+  weekDays: any[];
+  onClose: () => void;
+  onBusyReduce: () => void | Promise<void>;
+  onAwayDays: (dates: string[]) => void | Promise<void>;
+}
+function BusyAwaySheet({ visible, weekDays, onClose, onBusyReduce, onAwayDays }: BusyAwaySheetProps) {
+  const [step, setStep] = useState<'menu' | 'away'>('menu');
+  const [selected, setSelected] = useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (visible) {
+      setStep('menu');
+      setSelected([]);
+    }
+  }, [visible]);
+
+  const todayISO = todayISOLocal();
+  // Days the athlete can be away on: real (non-game) sessions today-or-later
+  // in the viewed week. Clearing a rest day is a no-op, so we hide those.
+  const awayCandidates = weekDays.filter(
+    (day) => day.date >= todayISO && day.workout && day.workout.workoutType !== 'Game',
+  );
+
+  const toggle = (date: string) =>
+    setSelected((prev) =>
+      prev.includes(date) ? prev.filter((d) => d !== date) : [...prev, date],
+    );
+
+  return (
+    <Sheet visible={visible} onClose={onClose} testID="home-busy-away-sheet">
+      {step === 'menu' && (
+        <View>
+          <Text style={styles.sheetTitle}>Busy or away this week?</Text>
+          <SheetOption
+            label="Busy week — keep me training, go lighter"
+            accent
+            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M12 6v6l4 2"/><Path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/></Svg>}
+            onPress={onBusyReduce}
+          />
+          <SheetOption
+            label="Away some days — clear them"
+            icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M3 12h18"/><Path d="M12 3a15 15 0 010 18"/><Path d="M12 3a15 15 0 000 18"/></Svg>}
+            onPress={() => setStep('away')}
+          />
+          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
+        </View>
+      )}
+
+      {step === 'away' && (
+        <View>
+          <Text style={styles.sheetTitle}>Which days are you away?</Text>
+          {awayCandidates.length === 0 ? (
+            <Text style={styles.busyAwayEmpty}>
+              No upcoming sessions to clear this week.
+            </Text>
+          ) : (
+            awayCandidates.map((day) => {
+              const isOn = selected.includes(day.date);
+              return (
+                <Pressable
+                  key={day.date}
+                  onPress={() => toggle(day.date)}
+                  style={({ pressed }) => [
+                    styles.awayDayRow,
+                    isOn && styles.awayDayRowOn,
+                    pressed && { opacity: 0.75 },
+                  ]}
+                >
+                  <View style={[styles.awayCheck, isOn && styles.awayCheckOn]}>
+                    {isOn && (
+                      <Svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="#0B0B0B" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><Path d="M20 6L9 17l-5-5"/></Svg>
+                    )}
+                  </View>
+                  <Text style={styles.awayDayText}>
+                    {shortDayMonthLabel(day.date)}
+                    {day.workout?.name ? ` · ${day.workout.name}` : ''}
+                  </Text>
+                </Pressable>
+              );
+            })
+          )}
+          <Button
+            label={selected.length > 0 ? `Clear ${selected.length} day${selected.length > 1 ? 's' : ''}` : 'Pick days to clear'}
+            size="lg"
+            glow={false}
+            onPress={() => selected.length > 0 && onAwayDays(selected)}
+            style={{ marginTop: spacing.md, opacity: selected.length > 0 ? 1 : 0.5 }}
+          />
+          <Button label="Back" variant="secondary" size="md" onPress={() => setStep('menu')} style={{ marginTop: spacing.sm }} />
+        </View>
+      )}
+    </Sheet>
   );
 }
 
@@ -987,19 +2120,128 @@ const styles = StyleSheet.create({
   },
   addGameText: { color: '#B5B5B5', fontSize: 14, fontWeight: '500' },
 
-  // ─── Coach-authored note lists ───
-  // Lime accent matches the screen's existing accent vocabulary. Slightly
-  // muted opacity keeps the note from competing with the session title.
-  // Row attribution sits under the right-aligned workout title — one
-  // line, capped, no bullets. The audit log (removed/replaced/focus)
-  // is reserved for the workout detail screen.
-  rowCoachNoteText: {
+  // Busy / away entry + missed-session prompt.
+  busyAwayEntry: { marginTop: spacing.md },
+  busyAwayRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  busyAwayIcon: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: 'rgba(30, 167, 255, 0.12)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  busyAwayText: { color: '#B5B5B5', fontSize: 14, fontWeight: '500' },
+  // Practice-match card = busy/away card with the game-day accent.
+  // Same 0.12-alpha treatment as the blue busy icon (DAY_ROW_ACCENT.game).
+  practiceMatchIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
+  // Weekly readiness card = same treatment with a wellbeing tint.
+  readinessIconTint: { backgroundColor: 'rgba(255, 122, 133, 0.12)' },
+  busyAwayEmpty: {
+    color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 20,
+    marginVertical: spacing.sm,
+  },
+  awayDayRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 12, paddingHorizontal: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.08)',
+  },
+  awayDayRowOn: {},
+  awayCheck: {
+    width: 22, height: 22, borderRadius: 6,
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  awayCheckOn: { backgroundColor: '#C8FF00', borderColor: '#C8FF00' },
+  awayDayText: { color: '#FFFFFF', fontSize: 15, fontWeight: '500', flex: 1 },
+
+  missedCard: { marginTop: spacing.md },
+  missedTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '700', marginBottom: 4 },
+  missedBody: {
+    color: 'rgba(255,255,255,0.7)', fontSize: 13, lineHeight: 19,
+    marginBottom: spacing.sm,
+  },
+  missedActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  missedChip: {
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
+  },
+  missedChipPrimary: { backgroundColor: '#C8FF00', borderColor: '#C8FF00' },
+  missedChipText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  missedChipPrimaryText: { color: '#0B0B0B' },
+
+  // Active Coach Notes — compact control-panel cards derived from typed
+  // active constraints. Hidden entirely when nothing is shaping the program.
+  coachNotesSection: {
+    paddingTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  coachNotesTitle: {
     color: '#C8FF00',
     fontSize: 11,
-    fontWeight: '500',
-    opacity: 0.8,
-    textAlign: 'right',
-    marginTop: 6,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+  },
+  coachNotesStack: {
+    gap: 8,
+  },
+  coachNoteCard: {
+    backgroundColor: '#11140F',
+    borderColor: 'rgba(200, 255, 0, 0.20)',
+  },
+  coachNoteContent: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  coachNoteHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  coachNoteDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#C8FF00',
+  },
+  coachNoteTitle: {
+    flex: 1,
+    color: '#F5F5F5',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  coachNoteBody: {
+    color: '#A7A7A7',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  coachNoteActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    paddingTop: 2,
+  },
+  coachNoteAction: {
+    minHeight: 32,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1B1B1B',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#2F2F2F',
+  },
+  coachNotePrimaryAction: {
+    backgroundColor: 'rgba(200, 255, 0, 0.13)',
+    borderColor: 'rgba(200, 255, 0, 0.36)',
+  },
+  coachNoteActionText: {
+    color: '#CFCFCF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  coachNotePrimaryActionText: {
+    color: '#C8FF00',
   },
 
   // ─── Week list ───
@@ -1010,7 +2252,21 @@ const styles = StyleSheet.create({
   // carrier — slightly bigger type + roomier padding on top of the
   // Card's accent surface. Selection IS the hierarchy (no hero card).
   dayList: { gap: 6, marginTop: spacing.sm },
-  dayRow: {},
+  dayRow: { position: 'relative' },
+  dayAccentStrip: {
+    position: 'absolute',
+    left: 0,
+    top: 10,
+    bottom: 10,
+    width: 4,
+    borderRadius: 4,
+    opacity: 0.78,
+  },
+  dayAccentStripSelected: {
+    top: 12,
+    bottom: 12,
+    opacity: 1,
+  },
   // Tighter vertical rhythm — pulls the list into a scannable weekly
   // timeline instead of a column of spaced buttons.
   dayRowInner: {
@@ -1035,6 +2291,29 @@ const styles = StyleSheet.create({
 
   dayHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   leftCluster: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  selectedHeader: {
+    gap: 10,
+  },
+  selectedMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  selectedDateCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 0,
+  },
+  selectedBadgeCluster: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 8,
+    flexShrink: 1,
+    flexWrap: 'wrap',
+  },
   dayLabel: {
     color: '#5A5A5A', fontSize: 11, fontWeight: '800',
     letterSpacing: 1.6, minWidth: 32,
@@ -1051,11 +2330,69 @@ const styles = StyleSheet.create({
   dayDateSelected: {
     fontSize: 13, color: '#6A6A6A',
   },
+  gameBadge: {
+    backgroundColor: 'rgba(255, 194, 71, 0.15)',
+    borderColor: 'rgba(255, 194, 71, 0.45)',
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+  },
+  gameBadgeText: {
+    color: '#FFC247',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.9,
+  },
+  selectedTitleBlock: {
+    alignItems: 'flex-start',
+    gap: 4,
+    maxWidth: '100%',
+  },
+  selectedTitleLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: '100%',
+  },
+  selectedContextLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: '100%',
+  },
+  selectedWorkoutTitle: {
+    textAlign: 'left',
+    flexShrink: 1,
+  },
   titleBlock: { flex: 1, alignItems: 'flex-end', minWidth: 0 },
+  rowTitleLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
+    maxWidth: '100%',
+  },
+  rowContextLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
+    maxWidth: '100%',
+    marginTop: 2,
+  },
+  rowIcon: {
+    opacity: 0.95,
+  },
+  teamTrainingIcon: {
+    opacity: 1,
+  },
   // Primary row text — nudged brighter so the session name is the clear
   // anchor of each row against the darker resting surface beneath it.
   workoutTitle: {
     color: '#F2F2F2', fontSize: 14, fontWeight: '600', textAlign: 'right',
+    flexShrink: 1,
   },
   // Selected session title — the biggest text in the list, but still a
   // row, not a hero. White + heavier weight carry the emphasis.
@@ -1064,17 +2401,31 @@ const styles = StyleSheet.create({
   },
   workoutContext: {
     color: '#7A7A7A', fontSize: 12, fontWeight: '500',
-    textAlign: 'right', marginTop: 2,
+    textAlign: 'right', flexShrink: 1,
   },
-  workoutContextAccent: {
-    color: '#C8FF00', fontSize: 12, fontWeight: '600',
-    textAlign: 'right', marginTop: 2, opacity: 0.75,
+  attachedWorkoutContext: {
+    color: '#7A7A7A',
+    fontSize: 14,
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  attachedWorkoutContextSelected: {
+    color: '#7A7A7A',
+    fontSize: 17,
+    lineHeight: 21,
+  },
+  restLine: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 6,
   },
   restLabel: {
-    flex: 1, color: '#3E3E3E', fontSize: 13, fontWeight: '600', textAlign: 'right',
+    color: '#3E3E3E', fontSize: 13, fontWeight: '600', textAlign: 'right',
   },
   restLabelSelected: {
-    color: '#8A8A8A', fontSize: 18, fontWeight: '700',
+    color: '#F4F4F4', fontSize: 18, fontWeight: '700',
   },
   moveTargetLabel: {
     flex: 1, color: 'rgba(200, 255, 0, 0.55)', fontSize: 14, fontWeight: '500',
@@ -1099,10 +2450,10 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   phaseBadge: {
-    color: '#C8FF00', fontSize: 11, fontWeight: '800', letterSpacing: 1.5,
+    color: '#C8FF00', fontSize: 14, fontWeight: '500', letterSpacing: 0,
   },
   phaseBody: { color: '#D0D0D0', fontSize: 14, lineHeight: 20 },
-  phaseBodyAccent: { color: '#C8FF00', fontWeight: '700' },
+  phaseBodyAccent: { color: '#C8FF00', fontSize: 14, fontWeight: '400' },
 
   // Sheet
   // Back chevron — absolute top-left. Deliberately chromeless (no bg, no

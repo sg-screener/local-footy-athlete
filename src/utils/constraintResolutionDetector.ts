@@ -383,13 +383,13 @@ export function formatResolutionAmbiguityQuestion(
   candidates: ActiveConstraint[],
 ): string {
   const labels = candidates.map(constraintShortLabel);
-  if (labels.length === 0) return 'Good — which one should I clear?';
+  if (labels.length === 0) return 'Good - which one should I clear?';
   if (labels.length === 1) {
-    return `Good — should I clear ${labels[0]}?`;
+    return `Good - should I clear ${labels[0]}?`;
   }
   const head = labels.slice(0, -1).join(', ');
   const tail = labels[labels.length - 1];
-  return `Good — which one should I clear: ${head}, ${tail}, or all of them?`;
+  return `Good - which one should I clear: ${head}, ${tail}, or all of them?`;
 }
 
 /**
@@ -402,17 +402,17 @@ export function formatResolutionSuccessReply(
 ): string {
   if (kind === 'all' || cleared.length > 1) {
     const labels = cleared.map(constraintShortLabel);
-    if (labels.length === 0) return `Good — clearing any active flags.`;
-    if (labels.length === 1) return `Good — I've cleared the ${labels[0]} flag and your week is back to normal.`;
+    if (labels.length === 0) return `Good - clearing any active flags.`;
+    if (labels.length === 1) return `Good - I've cleared the ${labels[0]} flag and your week is back to normal.`;
     const head = labels.slice(0, -1).join(', ');
     const tail = labels[labels.length - 1];
-    return `Good — I've cleared the ${head} and ${tail} flags and your week is back to normal.`;
+    return `Good - I've cleared the ${head} and ${tail} flags and your week is back to normal.`;
   }
   if (cleared.length === 1) {
     const label = constraintShortLabel(cleared[0]);
-    return `Good — I've cleared the ${label} flag and your week is back to normal.`;
+    return `Good - I've cleared the ${label} flag and your week is back to normal.`;
   }
-  return `Good — your week is back to normal.`;
+  return `Good - your week is back to normal.`;
 }
 
 /**
@@ -424,13 +424,13 @@ export function formatResolutionInactiveReply(
   bodyPart?: string,
 ): string {
   if (kind === 'fatigue') {
-    return `Good to hear. I didn't have an active fatigue flag on your week — nothing to clear.`;
+    return `Good to hear. I didn't have an active fatigue flag on your week - nothing to clear.`;
   }
   if (kind === 'injury' || kind === 'soreness') {
     const label = bodyPart ? `${bodyPart} ` : '';
-    return `Good to hear. I didn't have an active ${label}flag on your week — nothing to clear.`;
+    return `Good to hear. I didn't have an active ${label}flag on your week - nothing to clear.`;
   }
-  return `Good to hear. There weren't any active flags on your week — nothing to clear.`;
+  return `Good to hear. There weren't any active flags on your week - nothing to clear.`;
 }
 
 function constraintShortLabel(c: ActiveConstraint): string {

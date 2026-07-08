@@ -265,9 +265,9 @@ async function main() {
       90,
     );
     eq(
-      'profile position Midfielder',
+      'profile role inside_mid',
       calls.profileUpdate?.position,
-      'Midfielder',
+      'inside_mid',
     );
     eq(
       'profile season in-season',

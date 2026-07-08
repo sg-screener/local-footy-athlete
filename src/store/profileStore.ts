@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OnboardingData } from '../types/domain';
+import { normalizeOnboardingRole } from '../utils/roleBuckets';
 
 interface ProfileState {
   onboardingData: OnboardingData;
@@ -40,10 +41,10 @@ export const useProfileStore = create<ProfileState>()(
 
       updateOnboardingData: (data) =>
         set((state) => ({
-          onboardingData: {
+          onboardingData: normalizeOnboardingRole({
             ...state.onboardingData,
             ...data,
-          },
+          }),
         })),
 
       completeOnboarding: () => {
@@ -73,6 +74,17 @@ export const useProfileStore = create<ProfileState>()(
     {
       name: 'profile-store',
       storage: createJSONStorage(() => AsyncStorage),
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as Partial<ProfileState> | undefined;
+        return {
+          ...currentState,
+          ...persisted,
+          onboardingData: normalizeOnboardingRole({
+            ...currentState.onboardingData,
+            ...(persisted?.onboardingData ?? {}),
+          }),
+        };
+      },
     },
   ),
 );

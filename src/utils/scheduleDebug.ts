@@ -277,7 +277,7 @@ function computeMismatches(
           reason = 'Recovery pass replaced planned session (unexpected)';
           break;
         case 'none':
-          reason = 'No workout resolved — engine plan was dropped';
+          reason = 'No workout resolved - engine plan was dropped';
           break;
         default:
           reason = `Source changed: ${resolved.source}`;
@@ -501,7 +501,7 @@ function explainSource(
 
     case 'none':
       return templateName
-        ? `Template "${templateName}" dropped — out of block or rest day`
+        ? `Template "${templateName}" dropped - out of block or rest day`
         : 'No workout (out of block, rest, or empty slot)';
 
     default:

@@ -2,12 +2,11 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  Pressable,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Text } from '../../components/common/Text';
+import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
-import { spacing, borderRadius, shadows } from '../../theme/spacing';
+import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
@@ -32,8 +31,8 @@ const EXPERIENCE_OPTIONS: { id: ExperienceLevel; title: string; subtitle: string
   },
   {
     id: '1-2 years',
-    title: 'BUILDING',
-    subtitle: 'Some experience, still learning',
+    title: 'DEVELOPING',
+    subtitle: 'Some gym experience, still learning',
   },
   {
     id: '2-5 years',
@@ -89,45 +88,34 @@ export const GymExperienceScreen: React.FC<GymExperienceScreenProps> = ({
         </Text>
 
         <View style={styles.cardsContainer}>
-          {EXPERIENCE_OPTIONS.map((option) => (
-            <Pressable
-              key={option.id}
-              style={({ pressed }) => [
-                styles.card,
-                selectedExperience === option.id && styles.cardSelected,
-                selectedExperience === option.id ? styles.cardSelectedShadow : styles.cardShadow,
-                pressed && selectedExperience !== option.id && styles.cardPressed,
-              ]}
-              onPress={() => handleSelect(option.id)}
-            >
-              <View style={styles.cardContent}>
-                <Text
-                  variant="bodyEmphasis"
-                  color={colors.text.primary}
-                  style={styles.cardLabel}
-                >
-                  {option.title}
-                </Text>
-                <Text
-                  variant="caption"
-                  color={colors.text.tertiary}
-                  style={styles.cardDescription}
-                >
-                  {option.subtitle}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.radioIndicator,
-                  selectedExperience === option.id && styles.radioSelected,
-                ]}
+          {EXPERIENCE_OPTIONS.map((option) => {
+            const isSelected = selectedExperience === option.id;
+            return (
+              <SelectableTile
+                key={option.id}
+                isSelected={isSelected}
+                onPress={() => handleSelect(option.id)}
+                style={styles.card}
               >
-                {selectedExperience === option.id && (
-                  <View style={styles.radioInnerCircle} />
-                )}
-              </View>
-            </Pressable>
-          ))}
+                <View style={styles.cardContent}>
+                  <Text
+                    variant="bodyEmphasis"
+                    color={isSelected ? colors.text.primary : colors.text.secondary}
+                    style={styles.cardLabel}
+                  >
+                    {option.title}
+                  </Text>
+                  <Text
+                    variant="caption"
+                    color={isSelected ? colors.text.secondary : colors.text.tertiary}
+                    style={styles.cardDescription}
+                  >
+                    {option.subtitle}
+                  </Text>
+                </View>
+              </SelectableTile>
+            );
+          })}
         </View>
       </View>
     </OnboardingLayout>
@@ -156,55 +144,16 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   card: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 20,
-    borderWidth: 1.5,
-    borderColor: colors.surface.tertiary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  cardSelected: {
-    borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200, 255, 0, 0.04)',
-  },
-  cardShadow: {
-    ...shadows.xs,
-  },
-  cardSelectedShadow: {
-    ...shadows.accentShadow,
-  },
-  cardPressed: {
-    backgroundColor: colors.surface.tertiary,
   },
   cardContent: {
-    flex: 1,
+    paddingRight: 28,
   },
   cardLabel: {
     fontWeight: '600',
   },
   cardDescription: {
     marginTop: 4,
-  },
-  radioIndicator: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: colors.neutral.gray600,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginLeft: 12,
-  },
-  radioSelected: {
-    borderColor: colors.accent.lime,
-  },
-  radioInnerCircle: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: colors.accent.lime,
   },
 });

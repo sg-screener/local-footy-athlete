@@ -4,6 +4,8 @@ import {
   ScrollView,
   StyleSheet,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '../common/Text';
@@ -26,9 +28,15 @@ interface OnboardingLayoutProps {
    * locking them out.
    */
   footerHelperText?: string;
+  /** Extra room at the end of the scroll area, useful above sticky footers. */
+  scrollContentExtraBottomPadding?: number;
+  /** Enables keyboard avoidance for steps with text inputs. */
+  keyboardAvoiding?: boolean;
   /** @deprecated No longer displayed — kept for backward compat */
   stepLabel?: string;
 }
+
+const DEFAULT_SCROLL_BOTTOM_PADDING = 40;
 
 /**
  * Onboarding screen shell.
@@ -51,70 +59,91 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   continueLabel = 'Continue',
   hideFooter = false,
   footerHelperText,
+  scrollContentExtraBottomPadding = 0,
+  keyboardAvoiding = false,
 }) => {
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.root}>
-        {/* ─── Header ─── */}
-        <View style={styles.header}>
+  const scrollBottomPadding =
+    DEFAULT_SCROLL_BOTTOM_PADDING + scrollContentExtraBottomPadding;
+
+  const content = (
+    <>
+      {/* ─── Header ─── */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={onBack}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          style={styles.backTouchable}
+        >
+          <Text style={styles.backText}>
+            {'‹'}
+          </Text>
+        </Pressable>
+
+        {/* Progress bar — takes remaining width */}
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${Math.max(progressPercent, 2)}%` },
+            ]}
+          />
+        </View>
+      </View>
+
+      {/* ─── Scrollable Content ─── */}
+      <View style={styles.scrollWrapper}>
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: scrollBottomPadding },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          {children}
+        </ScrollView>
+      </View>
+
+      {/* ─── Fixed Bottom CTA ─── */}
+      {!hideFooter && (
+        <View style={styles.footer}>
+          {footerHelperText ? (
+            <Text style={styles.footerHelper}>{footerHelperText}</Text>
+          ) : null}
           <Pressable
-            onPress={onBack}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            style={styles.backTouchable}
+            onPress={onContinue}
+            disabled={continueDisabled}
+            style={({ pressed }) => [
+              styles.ctaButton,
+              continueDisabled && styles.ctaDisabled,
+              pressed && !continueDisabled && styles.ctaPressed,
+            ]}
           >
-            <Text style={styles.backText}>
-              {'‹'}
+            <Text
+              variant="button"
+              color={continueDisabled ? colors.text.disabled : colors.text.inverse}
+              align="center"
+            >
+              {continueLabel}
             </Text>
           </Pressable>
-
-          {/* Progress bar — takes remaining width */}
-          <View style={styles.progressTrack}>
-            <View
-              style={[
-                styles.progressFill,
-                { width: `${Math.max(progressPercent, 2)}%` },
-              ]}
-            />
-          </View>
         </View>
+      )}
+    </>
+  );
 
-        {/* ─── Scrollable Content ─── */}
-        <View style={styles.scrollWrapper}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          >
-            {children}
-          </ScrollView>
-        </View>
-
-        {/* ─── Fixed Bottom CTA ─── */}
-        {!hideFooter && (
-          <View style={styles.footer}>
-            {footerHelperText ? (
-              <Text style={styles.footerHelper}>{footerHelperText}</Text>
-            ) : null}
-            <Pressable
-              onPress={onContinue}
-              disabled={continueDisabled}
-              style={({ pressed }) => [
-                styles.ctaButton,
-                continueDisabled && styles.ctaDisabled,
-                pressed && !continueDisabled && styles.ctaPressed,
-              ]}
-            >
-              <Text
-                variant="button"
-                color={continueDisabled ? colors.text.disabled : colors.text.inverse}
-                align="center"
-              >
-                {continueLabel}
-              </Text>
-            </Pressable>
-          </View>
-        )}
-      </View>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      {keyboardAvoiding ? (
+        <KeyboardAvoidingView
+          style={styles.root}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          {content}
+        </KeyboardAvoidingView>
+      ) : (
+        <View style={styles.root}>{content}</View>
+      )}
     </SafeAreaView>
   );
 };
@@ -169,7 +198,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: DEFAULT_SCROLL_BOTTOM_PADDING,
   },
 
   /* Footer */

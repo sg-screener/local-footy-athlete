@@ -5,7 +5,7 @@ import type { SeasonPhase, DayOfWeek, Workout } from '../../types/domain';
  *
  * Kept in their own module so HomeScreenClassic, HomeScreenV2 and the shared
  * useHomeScreen() hook all read the same values. Anything UI-shape-agnostic
- * (phase rotations, rebuild copy, quick-action prefills) lives here; presentational
+ * (phase rotations, rebuild copy, quick-action ids) lives here; presentational
  * tokens stay inside the render files.
  */
 
@@ -129,34 +129,59 @@ export const PHASE_SHIFT_MESSAGES = [
 /** Rotation interval for rebuild messages. */
 export const REBUILD_MSG_INTERVAL_MS = 2500;
 
-/** Quick-action chip prefills wired to the Coach tab. */
-export const QUICK_ACTIONS = [
+export type HomeQuickActionId =
+  | 'missed_session'
+  | 'game_day_changed'
+  | 'injury'
+  | 'training_cancelled'
+  | 'busy_week'
+  | 'missing_equipment'
+  | 'something_changed';
+
+export interface HomeQuickAction {
+  id: HomeQuickActionId;
+  label: string;
+  /**
+   * Legacy context string used only after the athlete explicitly chooses
+   * "Message the coach" from a guided fallback sheet.
+   */
+  prefill: string;
+}
+
+/** Program/Home quick-action chips. Routine taps open guided no-chat flows. */
+export const QUICK_ACTIONS: HomeQuickAction[] = [
   {
+    id: 'missed_session',
     label: 'I missed a session',
     prefill:
-      'I missed a session this week — can you adjust my program to account for this?',
+      'I missed a session this week - can you adjust my program to account for this?',
   },
   {
+    id: 'game_day_changed',
     label: 'Game day changed',
-    prefill: 'My game day has changed — can you adjust my program?',
+    prefill: 'My game day has changed - can you adjust my program?',
   },
   {
+    id: 'injury',
     label: 'I got injured',
     prefill: "I've picked up an injury and need to adjust my program.",
   },
   {
+    id: 'training_cancelled',
     label: 'Training cancelled',
-    prefill: 'Training is cancelled tonight — can you adjust my week?',
+    prefill: 'Training is cancelled tonight - can you adjust my week?',
   },
   {
+    id: 'busy_week',
     label: 'Change my schedule',
-    prefill: 'My training days have changed — can you adjust my program?',
+    prefill: 'My training days have changed - can you adjust my program?',
   },
   {
+    id: 'missing_equipment',
     label: 'Missing equipment',
     prefill: "I’m missing equipment for my program — ",
   },
-  { label: 'Something else? Tell the coach', prefill: '' },
+  { id: 'something_changed', label: 'Something changed?', prefill: '' },
 ];
 
 /** Interaction mode for the week view — normal tap, move-a-game, or add-a-game. */

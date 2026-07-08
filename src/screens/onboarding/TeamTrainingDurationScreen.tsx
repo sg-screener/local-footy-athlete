@@ -100,7 +100,7 @@ export const TeamTrainingDurationScreen: React.FC<TeamTrainingDurationScreenProp
           color={colors.text.secondary}
           style={styles.subtitle}
         >
-          We'll build your week around this
+          This helps balance your weekly load.
         </Text>
       </View>
 

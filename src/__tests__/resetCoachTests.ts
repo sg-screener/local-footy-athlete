@@ -423,7 +423,7 @@ section('[11] Dev post-onboarding reset profile backfills defaults');
   eq('current firstName preserved', profile.firstName, 'Riley');
   eq('current trainingDaysPerWeek preserved', profile.trainingDaysPerWeek, 6);
   eq('current preferredTrainingDays preserved', profile.preferredTrainingDays, ['Monday', 'Saturday'] as any);
-  eq('dev default position backfilled', profile.position, 'Midfielder');
+  eq('dev default role backfilled', profile.position, 'inside_mid');
   eq('dev default game day backfilled', profile.gameDay, 'Saturday');
   eq('temporary constraints cleared', profile.availabilityConstraints?.map((c) => c.id), ['perm-friday-short']);
 }
@@ -508,7 +508,7 @@ async function runAsyncSections() {
     eq('result program returned', result.program.id, generated.id);
     eq('result message success', result.message, 'Reset to clean post-onboarding state.');
     eq('current profile survives reset', result.onboardingData.firstName, 'Riley');
-    eq('dev default profile fields backfilled', result.onboardingData.position, 'Midfielder');
+    eq('dev default profile fields backfilled', result.onboardingData.position, 'inside_mid');
   }
 }
 

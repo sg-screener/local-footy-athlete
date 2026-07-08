@@ -16,6 +16,7 @@ import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { useProgramStore } from '../../store/programStore';
 import type { ProgramStackParamList } from '../../types/navigation';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 type CustomizeWorkoutScreenProps = NativeStackScreenProps<ProgramStackParamList, 'CustomizeWorkout'>;
 
@@ -161,7 +162,7 @@ export default function CustomizeWorkoutScreen({ navigation }: CustomizeWorkoutS
                 variant="bodyEmphasis"
                 color={colors.text.primary}
               >
-                {selectedReplacement ? selectedReplacement.name : item.exercise?.name}
+                {formatExerciseDisplayName(selectedReplacement ? selectedReplacement.name : item.exercise?.name) || 'Exercise'}
               </Text>
               {selectedReplacement && (
                 <Text variant="caption" color={colors.text.tertiary} style={styles.replacedNote}>

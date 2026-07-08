@@ -88,11 +88,11 @@ const FEELING_UP_ONE: Record<SessionFeeling, SessionFeeling> = {
 
 // ─── Detection ───
 
-function isHardFeeling(f: FeedbackFeeling): boolean {
+function isHardFeeling(f?: FeedbackFeeling): boolean {
   return f === 'hard' || f === 'very_hard';
 }
 
-function isEasyFeeling(f: FeedbackFeeling): boolean {
+function isEasyFeeling(f?: FeedbackFeeling): boolean {
   return f === 'very_easy' || f === 'easy';
 }
 
@@ -148,7 +148,11 @@ function detectFlags(entries: SessionFeedback[]): PatternFlag[] {
 }
 
 function deriveFatigueTrend(entries: SessionFeedback[]): FatigueTrend {
-  const scores = entries.slice(0, WINDOW_SIZE).map(e => FEELING_SCORE[e.feeling]);
+  const scores = entries
+    .slice(0, WINDOW_SIZE)
+    .map(e => (e.feeling ? FEELING_SCORE[e.feeling] : undefined))
+    .filter((score): score is number => typeof score === 'number');
+  if (scores.length === 0) return 'stable';
   const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
   if (avg >= 4.0) return 'rising';
   if (avg <= 2.0) return 'falling';

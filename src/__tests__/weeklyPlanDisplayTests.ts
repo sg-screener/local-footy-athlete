@@ -64,8 +64,8 @@ for (const name of [
 
 console.log('\n[4] Flush Out family');
 for (const name of [
-  'Flush Out — 30:30 Intervals', 'Flush Out — 1min On / 1min Off',
-  'Flush Out — 2min On / 1min Off', 'Easy Aerobic Flush',
+  'Flush Out - 30:30 Intervals', 'Flush Out - 1min On / 1min Off',
+  'Flush Out - 2min On / 1min Off', 'Easy Aerobic Flush',
 ]) {
   eq(name, weeklyPlanTitle(conditioning(name)), 'Flush Out');
 }
@@ -82,7 +82,7 @@ console.log('\n[6] Hard Conditioning family');
 for (const name of [
   '4x4 VO2', '1km Repeat Intervals', 'MAS 15:15 Blocks', 'Tabata Intervals',
   'Inverse Tabata', '200m/400m Repeat Runs', 'Footy Fartlek',
-  'MetCon — Off-Legs', 'Erg EMOM — 10-15 cal',
+  'MetCon - Off-Legs', 'Erg EMOM - 10-15 cal',
 ]) {
   eq(name, weeklyPlanTitle(conditioning(name)), 'Hard Conditioning');
 }
@@ -95,7 +95,7 @@ const combinedHard = {
   conditioningFlavour: 'aerobic',
   conditioningBlock: {
     intent: 'work_capacity',
-    options: [{ title: 'Erg EMOM — 10-15 cal', description: 'hard erg efforts' }],
+    options: [{ title: 'Erg EMOM - 10-15 cal', description: 'hard erg efforts' }],
   },
 } as any;
 eq('combined title stays strength', weeklyPlanTitle(combinedHard), 'Upper Pull');

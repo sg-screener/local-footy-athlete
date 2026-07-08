@@ -33,7 +33,7 @@ const TRAINING_LOAD_OPTIONS: { id: RecentTrainingLoad; label: string; subtitle: 
   },
   {
     id: 'Pretty consistent',
-    label: 'PRETTY CONSISTENT',
+    label: 'CONSISTENT',
     subtitle: '4-5 sessions per week',
   },
   {
@@ -76,6 +76,13 @@ export const RecentTrainingLoadScreen: React.FC<RecentTrainingLoadScreenProps> =
         >
           How often have you been training lately?
         </Text>
+        <Text
+          variant="bodySmall"
+          color={colors.text.secondary}
+          style={styles.subtitle}
+        >
+          Think last 4 weeks - gym, running, conditioning and footy all count.
+        </Text>
       </View>
 
       <View style={styles.cardsContainer}>
@@ -107,7 +114,11 @@ const styles = StyleSheet.create({
   },
   title: {
     ...headingXL,
-    // no marginBottom needed — no subtext
+    marginBottom: spacing.sm,
+  },
+  subtitle: {
+    color: colors.text.secondary,
+    lineHeight: 20,
   },
   cardsContainer: {
     gap: 10,

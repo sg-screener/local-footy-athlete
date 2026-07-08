@@ -11,6 +11,10 @@
  * for all structural rules.
  */
 
+// Node harness: define __DEV__ like every other suite. Some resolver
+// branches (reached once availability filtering is active) reference it.
+(global as unknown as { __DEV__: boolean }).__DEV__ = false;
+
 import {
   buildCoachingPlan,
   onboardingToCoachingInputs,
@@ -27,6 +31,11 @@ import {
   computeGameDatesForBlock,
 } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
+import {
+  validateProgramWeek,
+  validatorDaysFromResolvedWeek,
+} from '../rules/weekStructureValidator';
+import { isTeamTrainingSession } from '../utils/teamTraining';
 import type { OnboardingData, Workout, Microcycle, TrainingProgram, SeasonPhase } from '../types/domain';
 
 // ═══════════════════════════════════════════════════
@@ -193,7 +202,9 @@ function runAssertions(
   }
 
   // ── Rule 2: No heavy lower within 72h of game ──
-  if (isInSeason && gameDay) {
+  // ANY phase with a game (2026-07-08): H-GAME protects pre-season game
+  // weeks too — S11 previously put a full lower session on G-1.
+  if (gameDay && gameDayNum >= 0) {
     const g1 = DAY_NAMES[(gameDayNum + 7 - 1) % 7]; // G-1
     const g2 = DAY_NAMES[(gameDayNum + 7 - 2) % 7]; // G-2
     // 72h = G-1 and G-2 should not have heavy lower
@@ -241,13 +252,19 @@ function runAssertions(
   }
 
   // ── Rule 4: G-1 arms/pump only ──
-  if (isInSeason && gameDay) {
+  // ANY phase with a game (2026-07-08): G-1 must be light regardless of phase.
+  if (gameDay && gameDayNum >= 0) {
     const g1Day = DAY_NAMES[(gameDayNum + 7 - 1) % 7];
     const g1Session = sorted.find(s => s.dayOfWeek === g1Day);
     if (g1Session) {
       const focus = g1Session.focus.toLowerCase();
-      const isArmsOrPump = focus.includes('arm') || focus.includes('pump') || focus.includes('bicep') || focus.includes('tricep');
-      const isRecovery = g1Session.tier === 'recovery';
+      // Bible Section 17.C G-1 accepted content: rest, recovery, gunshow,
+      // LIGHT ACCESSORIES, mobility, very easy flush. The resolver's G-1
+      // pass converts optional accessories to Gunshow for display, but the
+      // plan-level label is already compliant.
+      const isArmsOrPump = focus.includes('arm') || focus.includes('pump') || focus.includes('bicep') || focus.includes('tricep')
+        || focus.includes('accessor') || focus.includes('prehab') || focus.includes('mobility') || focus.includes('low-fatigue');
+      const isRecovery = g1Session.tier === 'recovery' || g1Session.tier === 'optional' && focus.includes('gunshow');
       // Captain's run / walkthrough is a low-load G-1 team session — acceptable
       // when the club schedules team training the day before a game.
       const isCaptainsRun = focus.includes('captain') || focus.includes('walkthrough');
@@ -370,26 +387,40 @@ function buildScheduleState(
   plan: CoachingPlan,
   gameDayOverride?: string,
   calendarOverrides?: Record<string, 'game' | 'rest'>,
+  preferredTrainingDays?: string[],
 ): ScheduleState {
   const now = new Date().toISOString();
 
-  // Build workouts from the coaching plan (simplified — no AI content)
+  // Build workouts from the coaching plan (simplified — no AI content).
+  // FIDELITY (2026-07-08): carry isTeamDay + full focus as the name so the
+  // stub week matches what production renders. Truncated names + dropped
+  // team flags previously caused false validator positives (S13/S14
+  // "sprint on G-2" was actually team training).
   const workouts: Workout[] = plan.weeklyPlan.map((s, idx) => {
     const dayNum = DAY_NAMES.indexOf(s.dayOfWeek || '');
-    return {
+    const w: Workout = {
       id: `w-test-${idx}`,
       microcycleId: 'mc-test',
       dayOfWeek: dayNum >= 0 ? dayNum : 0,
-      name: s.focus.substring(0, 40),
+      name: s.focus,
       description: s.focus,
       durationMinutes: s.tier === 'recovery' ? 30 : s.tier === 'optional' ? 35 : 50,
       intensity: s.isHardExposure ? 'High' as const : s.tier === 'optional' ? 'Light' as const : 'Moderate' as const,
       workoutType: s.tier === 'recovery' ? 'Recovery' as const : 'Strength' as const,
       sessionTier: s.tier,
+      // FIDELITY (2026-07-08, part 2): carry the engine's combined-day
+      // conditioning metadata. Dropping these made S6 look like a
+      // zero-conditioning week when the engine had actually planned three
+      // S+C finishers — the validator/counters never saw them.
+      hasCombinedConditioning: s.hasCombinedConditioning,
+      conditioningFlavour: s.conditioningFlavour,
+      conditioningCategory: s.conditioningCategory,
       exercises: [],
       createdAt: now,
       updatedAt: now,
     };
+    if (s.isTeamDay) (w as Workout & { isTeamDay?: boolean }).isTeamDay = true;
+    return w;
   });
 
   const microcycle: Microcycle = {
@@ -437,6 +468,20 @@ function buildScheduleState(
     }
   }
 
+  // FIDELITY (2026-07-08): mirror production useSchedule — the resolver's
+  // availability hard-filter comes from raw preferredTrainingDays (NOT the
+  // engine's selectedDays union). Without this the QA sweep let pass-2/3
+  // place sessions on days real athletes never made available (S6/S7).
+  const DAY_NAME_TO_NUMBER: Record<string, number> = {
+    Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+    Thursday: 4, Friday: 5, Saturday: 6,
+  };
+  const availableDayNumbers = preferredTrainingDays && preferredTrainingDays.length > 0
+    ? preferredTrainingDays
+        .map((name) => DAY_NAME_TO_NUMBER[name])
+        .filter((n): n is number => n !== undefined)
+    : undefined;
+
   return {
     currentProgram: program,
     currentMicrocycle: microcycle,
@@ -445,6 +490,7 @@ function buildScheduleState(
     athleteContext: DEFAULT_ATHLETE_CONTEXT,
     seasonPhase: inputs.seasonPhase,
     readiness: plan.readiness,
+    availableDayNumbers,
   };
 }
 
@@ -769,7 +815,7 @@ for (const scenario of scenarios) {
   // Build schedule state and resolve week with conditioning
   let resolvedWeek: ResolvedDay[] | null = null;
   try {
-    const schedState = buildScheduleState(inputs, plan, undefined, scenario.calendarOverrides);
+    const schedState = buildScheduleState(inputs, plan, undefined, scenario.calendarOverrides, scenario.onboarding.preferredTrainingDays);
     resolvedWeek = resolveWeekWithConditioning(TEST_MONDAY, schedState);
   } catch (err: any) {
     console.log(`\n⚠️ Resolver error for "${scenario.name}": ${err.message}`);
@@ -777,7 +823,90 @@ for (const scenario of scenarios) {
 
   const assertions = runAssertions(plan, resolvedWeek, scenario);
 
+  // ── Phase 2 rules kernel: Bible validator findings (REPORT-ONLY) ──
+  // Findings never affect QA pass/fail — observability only. Two FIDELITY
+  // assertions below DO count: they guard against harness-induced false
+  // positives, not against genuine findings.
+  const findingLines: string[] = [];
+  if (resolvedWeek) {
+    try {
+      const report = validateProgramWeek({
+        days: validatorDaysFromResolvedWeek(resolvedWeek),
+        profile: {
+          seasonPhase: scenario.onboarding.seasonPhase,
+          teamTrainingIntensity: scenario.onboarding.teamTrainingIntensity,
+          conditioningLevel: scenario.onboarding.conditioningLevel,
+          experienceLevel: scenario.onboarding.experienceLevel,
+        },
+      });
+      if (report.findings.length > 0) {
+        findingLines.push('  📖 Bible validator findings (report-only, not failures):');
+        for (const f of report.findings) {
+          findingLines.push(`     [${f.severity}] ${f.ruleId}: ${f.message}`);
+        }
+      } else {
+        findingLines.push('  📖 Bible validator: no findings');
+      }
+
+      // Fidelity assertion 1: no game-proximity finding may target the team
+      // training session itself (normal club load is exempt by the Bible).
+      const ttDates = new Set(
+        resolvedWeek
+          .filter((d) => d.workout && isTeamTrainingSession(d.workout as never))
+          .map((d) => d.date),
+      );
+      const ttFalsePositives = report.findings.filter(
+        (f) =>
+          ['g2_sprint_cod', 'g2_hard_conditioning', 'g1_not_light', 'g_plus1_hard_work'].includes(f.ruleId) &&
+          f.dates.some((dt) => ttDates.has(dt)) &&
+          f.sessions.every((s) => /^\s*team training/i.test(s)),
+      );
+      assertions.push({
+        rule: 'No validator false positives on team-training sessions',
+        passed: ttFalsePositives.length === 0,
+        detail: ttFalsePositives.length === 0
+          ? 'clean'
+          : `FALSE POSITIVE: ${ttFalsePositives.map((f) => `${f.ruleId}@${f.dates.join(',')}`).join('; ')}`,
+      });
+
+      // Conditioning coverage floor: an off-season athlete must never get a
+      // ZERO/near-zero conditioning week just because strength fills every
+      // preferred day — the engine's S+C combined-day machinery (H5a +
+      // in-loop scorer) must deliver at least the MIN_COND_FLOOR of 2.
+      // (On-feet sprint finishers count as sprint exposure, not
+      // conditioning, so the floor here is 2, not the 3-5 Bible range.)
+      if (scenario.onboarding.seasonPhase === 'Off-season') {
+        const condCount = report.counts.conditioningExposures;
+        assertions.push({
+          rule: 'Off-season conditioning floor (≥2 exposures incl. S+C finishers)',
+          passed: condCount >= 2,
+          detail: `conditioning exposures: ${condCount}`,
+        });
+      }
+    } catch (err: any) {
+      findingLines.push(`  📖 Bible validator error (non-fatal): ${err?.message ?? err}`);
+    }
+
+    // Fidelity assertion 2: pass-2/3 placements (conditioning/recovery)
+    // must land on preferred training days only — mirrors production's
+    // availability hard-filter.
+    const prefDays = scenario.onboarding.preferredTrainingDays;
+    if (prefDays && prefDays.length > 0) {
+      const allowed = new Set(prefDays);
+      const violations = resolvedWeek
+        .filter((d) => d.workout && (d.source === 'conditioning' || d.source === 'recovery'))
+        .filter((d) => !allowed.has(DAY_NAMES[d.dayOfWeek] as never))
+        .map((d) => `${DAY_NAMES[d.dayOfWeek]} (${d.source}: ${d.workout?.name?.slice(0, 30)})`);
+      assertions.push({
+        rule: 'Availability: pass-2/3 placements on preferred days only',
+        passed: violations.length === 0,
+        detail: violations.length === 0 ? 'clean' : `VIOLATION: ${violations.join('; ')}`,
+      });
+    }
+  }
+
   printScenario(scenario, plan, resolvedWeek, assertions);
+  for (const line of findingLines) console.log(line);
 
   for (const a of assertions) {
     if (a.passed) totalPassed++;
@@ -798,7 +927,7 @@ if (totalFailed > 0) {
     const plan = buildCoachingPlan(inputs);
     let resolvedWeek: ResolvedDay[] | null = null;
     try {
-      const schedState = buildScheduleState(inputs, plan, undefined, scenario.calendarOverrides);
+      const schedState = buildScheduleState(inputs, plan, undefined, scenario.calendarOverrides, scenario.onboarding.preferredTrainingDays);
       resolvedWeek = resolveWeekWithConditioning(TEST_MONDAY, schedState);
     } catch { /* skip */ }
     const assertions = runAssertions(plan, resolvedWeek, scenario);

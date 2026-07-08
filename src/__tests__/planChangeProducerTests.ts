@@ -100,6 +100,37 @@ function strengthWorkout(id: string, name: string, dayOfWeek: number): Workout {
   } as Workout;
 }
 
+function conditioningWorkout(id: string, name: string, dayOfWeek: number): Workout {
+  const row = {
+    ...ex(name, `${id}-cond`, 1),
+    exercise: {
+      ...ex(name, `${id}-cond`, 1).exercise,
+      exerciseType: 'Conditioning',
+    },
+  };
+  return {
+    id,
+    microcycleId: 'mc',
+    dayOfWeek,
+    name,
+    description: '',
+    durationMinutes: 25,
+    intensity: 'Light',
+    workoutType: 'Conditioning',
+    sessionTier: 'optional',
+    hasCombinedConditioning: false,
+    conditioningFlavour: 'aerobic',
+    conditioningCategory: 'aerobic_base',
+    conditioningBlock: {
+      intent: 'aerobic',
+      options: [{ title: name, description: '', exerciseIds: [`${id}-cond`] }],
+    },
+    exercises: [row],
+    createdAt: '',
+    updatedAt: '',
+  } as Workout;
+}
+
 function gameWorkout(dayOfWeek: number): Workout {
   return {
     ...strengthWorkout('workout-game', 'Game Day', dayOfWeek),
@@ -358,35 +389,143 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
 }
 
 {
-  console.log('\n[9] the change door exists on every session surface (source contract)');
-  // Systemic guard: the tap-first door must be mounted on BOTH surfaces an
-  // athlete reads their plan from — the board (HomeScreenV2) and the open
-  // session (DayWorkoutScreenV2). If a redesign drops the sheet or the
-  // link from either file, this fails before the Simulator ever would.
+  console.log('\n[9] day-level and exercise-level change doors stay separated (source contract)');
+  // Systemic guard: the weekly board owns day/session changes through
+  // PlanChangeSheet. The open workout owns exercise edits through its
+  // local ExerciseEditSheet so session-detail taps never show move/bin
+  // whole-session actions.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const fs = require('fs');
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const path = require('path');
-  const surfaces: Array<{ name: string; file: string; linkTestID: string }> = [
-    {
-      name: 'HomeScreenV2',
-      file: path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'),
-      linkTestID: 'make-change-link',
-    },
-    {
-      name: 'DayWorkoutScreenV2',
-      file: path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'),
-      linkTestID: 'day-workout-make-change-link',
-    },
-  ];
-  for (const surface of surfaces) {
-    const src = fs.readFileSync(surface.file, 'utf8');
-    ok(`[9] ${surface.name} mounts PlanChangeSheet`, /<PlanChangeSheet\b/.test(src));
-    ok(`[9] ${surface.name} renders the change link (${surface.linkTestID})`,
-      src.includes(`"${surface.linkTestID}"`));
-    ok(`[9] ${surface.name} uses the shared change vocabulary`,
-      src.includes('Want to change something?'));
-  }
+  const homeSrc = fs.readFileSync(
+    path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreenV2.tsx'),
+    'utf8',
+  );
+  const dayWorkoutSrc = fs.readFileSync(
+    path.resolve(__dirname, '..', 'screens', 'home', 'DayWorkoutScreenV2.tsx'),
+    'utf8',
+  );
+
+  ok('[9] HomeScreenV2 keeps the weekly day-level PlanChangeSheet',
+    /<PlanChangeSheet\b/.test(homeSrc)
+      && homeSrc.includes('"make-change-link"')
+      && homeSrc.includes('Want to change something?'));
+  ok('[9] DayWorkoutScreenV2 removes the weekly PlanChangeSheet',
+    !/<PlanChangeSheet\b/.test(dayWorkoutSrc)
+      && !/Want to change something\?/.test(dayWorkoutSrc));
+  ok('[9] DayWorkoutScreenV2 renders an exercise-level change door',
+    dayWorkoutSrc.includes('"day-workout-make-change-link"')
+      && dayWorkoutSrc.includes('Edit exercises')
+      && /<ExerciseEditSheet\b/.test(dayWorkoutSrc));
+  ok('[9] DayWorkoutScreenV2 exercise sheet has exercise-level actions only',
+    dayWorkoutSrc.includes('Swap an exercise')
+      && dayWorkoutSrc.includes('Add an exercise')
+      && dayWorkoutSrc.includes('Remove an exercise')
+      && dayWorkoutSrc.includes('Something hurts / no equipment')
+      && !/Swap this session|Add to this day|Move this session|Bin this session/.test(dayWorkoutSrc));
+  ok('[9] DayWorkoutScreenV2 offers per-exercise Change actions',
+    /function ExerciseChangeAction/.test(dayWorkoutSrc)
+      && /exerciseChangeText/.test(dayWorkoutSrc));
+  ok('[9] session exercise edits use deterministic current-session executors',
+    /executeProgramControlAction/.test(dayWorkoutSrc)
+      && /type:\s*'swap_exercise'/.test(dayWorkoutSrc)
+      && /type:\s*'remove_exercise'/.test(dayWorkoutSrc)
+      && /type:\s*'add_exercise'/.test(dayWorkoutSrc)
+      && /onApplySwapToday/.test(dayWorkoutSrc)
+      && /onApplyAddToday/.test(dayWorkoutSrc));
+  ok('[9] future-week exercise edits save active preferences instead of opening Coach',
+    /saveFutureExerciseAdjustment/.test(dayWorkoutSrc)
+      && /type:\s*'add_exercise_preference'/.test(dayWorkoutSrc)
+      && /preferenceKind:\s*'avoid_exercise'/.test(dayWorkoutSrc)
+      && /preferenceKind:\s*'preferred_alternative'/.test(dayWorkoutSrc)
+      && /preferenceKind:\s*'add_focus'/.test(dayWorkoutSrc)
+      && !/onFutureRemove/.test(dayWorkoutSrc)
+      && !/askCoachForFutureRemove/.test(dayWorkoutSrc));
+  ok('[9] Team Training entries are excluded from exercise-level edits',
+    /filter\(\(exercise: any\) => !isTeamTrainingItem\(exercise\)\)/.test(dayWorkoutSrc)
+      && /isTeamTrainingItem\(exercise\) \? undefined : \(\) => onChangeExercise\(exercise\)/.test(dayWorkoutSrc));
+  ok('[9] Team Training-only detail does not expose a Coach-prefill edit menu',
+    /date && !isTeamOnly && editableExercises\.length > 0/.test(dayWorkoutSrc)
+      && !/team_menu|I can.t make team training|Tell coach about team training/.test(dayWorkoutSrc));
+  ok('[9] Coach fallback is explicit from inside the exercise sheet',
+    /kind: 'coach_fallback'/.test(dayWorkoutSrc)
+      && /I need a bit more detail before changing this safely\./.test(dayWorkoutSrc)
+      && /label="Message the coach"/.test(dayWorkoutSrc));
+  ok('[9] injury/pain exercise edits open the guided injury flow',
+    /<GuidedInjuryFlowSheet\b/.test(dayWorkoutSrc)
+      && /reason === 'Injury \/ pain'[\s\S]*openExerciseInjuryFlow\(exercise\)/.test(dayWorkoutSrc)
+      && /label="Something hurts"[\s\S]*onInjuryStart\(step\.exercise\)/.test(dayWorkoutSrc)
+      && /type:\s*'set_injury_modifier'/.test(dayWorkoutSrc));
+
+  const sheet = fs.readFileSync(
+    path.resolve(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'),
+    'utf8',
+  );
+  const menuIdx = sheet.indexOf("step.kind === 'menu'");
+  const editIdx = sheet.indexOf("step.kind === 'edit_session'");
+  const categoryIdx = sheet.indexOf("step.kind === 'pick_category'");
+  const destinationIdx = sheet.indexOf("step.kind === 'pick_destination'");
+  const binScopeIdx = sheet.indexOf("step.kind === 'pick_bin_scope'");
+  const wellbeingIdx = sheet.indexOf("step.kind === 'pick_wellbeing'");
+  const askCoachIdx = sheet.indexOf('const askCoach = () =>');
+  const menuBlock = sheet.slice(menuIdx, editIdx);
+  const editBlock = sheet.slice(editIdx, categoryIdx);
+
+  ok('[9] PlanChangeSheet has an explicit edit_session step',
+    /\| \{ kind: 'edit_session' \}/.test(sheet));
+  ok('[9] occupied top menu enters Edit this session',
+    /hasEditableSession \? \([\s\S]{0,220}label="Edit this session"[\s\S]{0,120}sub="Swap, add, move or remove this session"[\s\S]{0,140}setStep\(\{ kind: 'edit_session' \}\)/.test(menuBlock));
+  ok('[9] occupied top menu no longer directly lists edit actions',
+    !/label="Swap this session"|label="Add to this day"|label="Move this session"|label="Bin this session"/.test(menuBlock));
+  ok('[9] rest/recovery top menu offers optional add instead of edit',
+    /label="Add optional session"[\s\S]{0,120}sub="Add extra strength or conditioning work to this day"[\s\S]{0,180}startAdd\('menu'\)/.test(menuBlock)
+      && /selectedWorkout\?\.workoutType === 'Recovery'/.test(sheet)
+      && /selectedWorkout\?\.sessionTier === 'recovery'/.test(sheet));
+  ok('[9] edit_session menu owns swap/add/move/bin options',
+    /label="Swap this session"[\s\S]{0,80}Change to strength, conditioning or recovery/.test(editBlock)
+      && /label="Add to this day"[\s\S]{0,100}Add extra strength or conditioning work to this day/.test(editBlock)
+      && /label="Move this session"[\s\S]{0,80}Move it to another day or trade places/.test(editBlock)
+      && /label="Bin this session"[\s\S]{0,80}Remove it - the day becomes rest/.test(editBlock));
+  ok('[9] swap category no longer offers Rest day because bin owns rest',
+    !/label="Rest day"|Clear the day - same as binning the session/.test(sheet)
+      && /label="Bin this session"[\s\S]{0,80}Remove it - the day becomes rest/.test(editBlock));
+  ok('[9] edit_session reuses existing swap/add/move/bin routes',
+    /kind: 'pick_category', mode: 'swap', returnTo: 'edit_session'/.test(editBlock)
+      && /startAdd\('edit_session'\)/.test(editBlock)
+      && /kind: 'pick_destination'/.test(editBlock)
+      && /onPress=\{startBin\}/.test(editBlock)
+      && /apply\(\{ kind: 'move_session'/.test(sheet.slice(destinationIdx, binScopeIdx))
+      && /apply\([\s\S]{0,80}\{ kind: 'remove_session'/.test(sheet));
+  ok('[9] Add to this day opens an ADD menu with strength and conditioning',
+    /\| \{ kind: 'pick_add_kind'; returnTo: StepBackTarget \}/.test(sheet)
+      && /step\.kind === 'pick_add_kind'[\s\S]{0,120}<Text style=\{styles\.sectionLabel\}>ADD:<\/Text>/.test(sheet)
+      && /label="Strength"[\s\S]{0,100}Upper, lower, full body or accessories/.test(sheet)
+      && /label="Conditioning"[\s\S]{0,100}Light or hard - bike, row, ski or intervals/.test(sheet));
+  ok('[9] ADD menu routes pickers with add intent and backs naturally',
+    /chooseAddKind\('strength', step\.returnTo\)/.test(sheet)
+      && /chooseAddKind\('conditioning', step\.returnTo\)/.test(sheet)
+      && /mode: 'add'/.test(sheet.slice(sheet.indexOf('const chooseAddKind')))
+      && /pickerBackStep\(step\.mode, step\.returnTo\)/.test(sheet));
+  ok('[9] add blockers explain max sessions and duplicate session types',
+    /Please remove a session first/.test(sheet)
+      && /This day already has 2 sessions\. Remove one before adding another\./.test(sheet)
+      && /Already has strength work/.test(sheet)
+      && /This day already includes a strength session\. Swap the current session or remove one before adding another\./.test(sheet)
+      && /Already has conditioning work/.test(sheet)
+      && /This day already includes conditioning\. Swap the current session or remove one before adding another\./.test(sheet));
+  ok('[9] duplicate blockers route to existing swap/bin flows and back to ADD',
+    /label="Swap this session"[\s\S]{0,160}kind: 'pick_category'[\s\S]{0,80}mode: 'swap'/.test(sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'")))
+      && /label="Remove a session"[\s\S]{0,80}onPress=\{startBin\}/.test(sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'")))
+      && /kind: 'pick_add_kind', returnTo: step\.returnTo/.test(sheet.slice(sheet.indexOf("step.kind === 'add_blocked_duplicate'"))));
+  ok('[9] nested edit backs return to edit_session while wellbeing stays on menu path',
+    /BackRow onPress=\{\(\) => setStep\(\{ kind: step\.returnTo \}\)\}/.test(sheet)
+      && /BackRow onPress=\{\(\) => setStep\(\{ kind: 'edit_session' \}\)\}/.test(sheet.slice(destinationIdx))
+      && /BackRow onPress=\{\(\) => setStep\(\{ kind: 'menu' \}\)\}/.test(sheet.slice(wellbeingIdx)));
+  ok('[9] ask coach and wellbeing routes remain unchanged',
+    /onAskCoach\(`About \$\{weekdayLabel\(date\)\}: `\)/.test(sheet.slice(askCoachIdx, wellbeingIdx))
+      && /label="I'm not 100%"[\s\S]{0,140}setStep\(\{ kind: 'pick_wellbeing' \}\)/.test(menuBlock)
+      && /label="Something else - ask the coach"[\s\S]{0,120}onPress=\{askCoach\}/.test(menuBlock));
 }
 
 {
@@ -434,8 +573,8 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
 
   // Burnout: a bye week already carrying two hard sessions warns on a third.
   const heavyByeWeek: ResolvedDay[] = [
-    visibleDay(MON, strengthWorkout('h1', 'MetCon — Off-Legs', 1)),
-    visibleDay('2026-06-30', strengthWorkout('h2', 'Erg EMOM — 10-15 cal', 2)),
+    visibleDay(MON, strengthWorkout('h1', 'MetCon - Off-Legs', 1)),
+    visibleDay('2026-06-30', strengthWorkout('h2', 'Erg EMOM - 10-15 cal', 2)),
     visibleDay(TODAY, null),
     visibleDay(THU, null),
     visibleDay('2026-07-03', null),
@@ -450,7 +589,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   // the pick MUST be the remaining one regardless of the date seed.
   const flushLabels = [
     'Easy Zone 2 Bike', 'Easy Zone 2 Row', 'Easy Zone 2 Ski Erg',
-    'Flush Out — 30:30 Intervals', 'Flush Out — 1min On / 1min Off',
+    'Flush Out - 30:30 Intervals', 'Flush Out - 1min On / 1min Off',
   ];
   const crowdedWeek: ResolvedDay[] = [
     visibleDay(MON, strengthWorkout('w1', flushLabels[0], 1)),
@@ -463,7 +602,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ];
   eq('[10] variety pick avoids sessions already on the week',
     pickTemplateForCategory({ category: 'conditioning_light', date: SAT, visibleWeek: crowdedWeek })?.label,
-    'Flush Out — 2min On / 1min Off');
+    'Flush Out - 2min On / 1min Off');
 
   // Category kinds flow end-to-end through the same writer.
   const writes: Array<{ date: string; workout: Workout | null }> = [];
@@ -680,15 +819,17 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
 }
 
 {
-  console.log('\n[13] add-on-top: conditioning stacks onto occupied days');
+  console.log('\n[13] add-on-top: strength and conditioning stack onto occupied days');
   const week = bothWeeks();
 
-  // Strength day offers add-on-top (conditioning categories only).
+  // Strength day offers add-on-top conditioning, but not duplicate strength.
   const mon = listPlanChangeOptionsForDay({ visibleWeek: week, date: MON, todayISO: TODAY });
   ok('[13] strength day offers add-on-top conditioning',
     mon.addOnTopCategories.length > 0 &&
       mon.addOnTopCategories.every((c) => c.id.startsWith('conditioning_')),
     mon.addOnTopCategories);
+  eq('[13] strength day reports one visible session',
+    mon.visibleSessionKinds, ['strength']);
   const rest = listPlanChangeOptionsForDay({ visibleWeek: week, date: SAT, todayISO: TODAY });
   eq('[13] rest day has no add-on-top (normal add flow instead)',
     rest.addOnTopCategories.length, 0);
@@ -716,7 +857,51 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     stacked?.name);
   ok('[13] done message names the pick', /Done\./.test(result.message), result.message);
 
-  // A day that already has conditioning refuses a second block.
+  // A conditioning-only day offers add-on-top strength, but not duplicate conditioning.
+  const conditioningOnlyWeek = [...week];
+  conditioningOnlyWeek[1] = visibleDay(
+    '2026-06-30',
+    conditioningWorkout('workout-cond-only', 'Easy Zone 2 Bike', 2),
+  );
+  const conditioningOptions = listPlanChangeOptionsForDay({
+    visibleWeek: conditioningOnlyWeek,
+    date: '2026-06-30',
+    todayISO: TODAY,
+  });
+  ok('[13] conditioning day offers add-on-top strength',
+    conditioningOptions.addOnTopCategories.length > 0 &&
+      conditioningOptions.addOnTopCategories.every((c) =>
+        c.id.startsWith('strength_') || c.id === 'accessories'),
+    conditioningOptions.addOnTopCategories);
+  eq('[13] conditioning day reports one visible session',
+    conditioningOptions.visibleSessionKinds, ['conditioning']);
+  const strengthWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const strengthAdd = applyPlanChange({
+    change: { kind: 'add_category', date: '2026-06-30', category: 'strength_upper' },
+    visibleWeek: conditioningOnlyWeek,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => strengthWrites.push({ date, workout }),
+  });
+  ok('[13] strength can stack onto conditioning when under the limit',
+    strengthAdd.ok, strengthAdd);
+  ok('[13] stacked strength rows materialize',
+    (strengthWrites[0]?.workout?.exercises ?? []).some((row: any) =>
+      String(row.id).startsWith('template:strength_')),
+    strengthWrites[0]?.workout?.exercises?.map((row: any) => row.id));
+
+  // Duplicate conditioning gets a specific refusal on a single conditioning day.
+  const duplicateConditioning = applyPlanChange({
+    change: { kind: 'add_category', date: '2026-06-30', category: 'conditioning_light' },
+    visibleWeek: conditioningOnlyWeek,
+    todayISO: TODAY,
+    setManualOverride: () => { throw new Error('must not write'); },
+  });
+  ok('[13] duplicate conditioning refused with specific reason',
+    !duplicateConditioning.ok &&
+      duplicateConditioning.message.includes('day_already_has_conditioning'),
+    duplicateConditioning);
+
+  // A day that already has two visible sessions refuses a third before duplicate details.
   const scDay: Workout = {
     ...strengthWorkout('workout-sc', 'Upper Pull', 2),
     hasCombinedConditioning: true,
@@ -729,13 +914,24 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   } as Workout;
   const scWeek = [...week];
   scWeek[1] = visibleDay('2026-06-30', scDay);
+  const scOptions = listPlanChangeOptionsForDay({
+    visibleWeek: scWeek,
+    date: '2026-06-30',
+    todayISO: TODAY,
+  });
+  eq('[13] two-session day reports two visible sessions',
+    scOptions.visibleSessionKinds.sort(), ['conditioning', 'strength']);
+  eq('[13] two-session day offers no add-on-top categories',
+    scOptions.addOnTopCategories.length, 0);
   const already = applyPlanChange({
     change: { kind: 'add_category', date: '2026-06-30', category: 'conditioning_light' },
     visibleWeek: scWeek,
     todayISO: TODAY,
     setManualOverride: () => { throw new Error('must not write'); },
   });
-  ok('[13] second conditioning block refused', !already.ok, already);
+  ok('[13] direct call cannot create a third visible session',
+    !already.ok && already.message.includes('max_sessions_exceeded'),
+    already);
 
   // Recovery never stacks onto an occupied day.
   const recoveryStack = applyPlanChange({
@@ -808,14 +1004,16 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     (accWrites[0]?.workout?.exercises?.length ?? 0) >= 2,
     accWrites[0]?.workout?.exercises?.length);
 
-  // Strength never stacks onto an occupied day (yet).
+  // Duplicate strength never stacks onto an occupied strength day.
   const stack = applyPlanChange({
     change: { kind: 'add_category', date: MON, category: 'strength_upper' },
     visibleWeek: week,
     todayISO: TODAY,
     setManualOverride: () => { throw new Error('must not write'); },
   });
-  ok('[14] strength stack refused', !stack.ok, stack);
+  ok('[14] duplicate strength stack refused with specific reason',
+    !stack.ok && stack.message.includes('day_already_has_strength'),
+    stack);
 }
 
 {
@@ -862,6 +1060,45 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     setManualOverride: () => { throw new Error('must not write'); },
   });
   ok('[15] nothing to clear refuses', !nothing.ok, nothing);
+}
+
+{
+  console.log('\n[16] clear_days (away): clears the chosen days only, games untouched');
+  const week = bothWeeks();
+
+  // Clear exactly THU (a real future session). Only that day is written,
+  // and it becomes rest.
+  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const result = applyPlanChange({
+    change: { kind: 'clear_days', dates: [THU] },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => writes.push({ date, workout }),
+  });
+  ok('[16] clear applies', result.ok, result);
+  eq('[16] only the chosen day cleared', writes.map((w) => w.date), [THU]);
+  eq('[16] cleared day becomes rest', writes[0]?.workout?.workoutType, 'Rest');
+
+  // A game date in the chosen list is silently skipped (games are owned by
+  // their own flow).
+  const gameWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const gameResult = applyPlanChange({
+    change: { kind: 'clear_days', dates: ['2026-07-07', NEXT_SAT] },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => gameWrites.push({ date, workout }),
+  });
+  ok('[16] mixed list applies', gameResult.ok, gameResult);
+  ok('[16] game day never cleared', gameWrites.every((w) => w.date !== NEXT_SAT), gameWrites);
+
+  // Nothing matching → clean refusal, no writes.
+  const nothing = applyPlanChange({
+    change: { kind: 'clear_days', dates: ['1999-01-01'] },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: () => { throw new Error('must not write'); },
+  });
+  ok('[16] no matching days refuses', !nothing.ok, nothing);
 }
 
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);

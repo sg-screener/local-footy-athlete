@@ -17,6 +17,7 @@ import {
   inferModalityFromName,
 } from './coachModalitySwap';
 import type { ConditioningModality } from '../data/exerciseTags';
+import { getTeamTrainingWorkoutState } from './teamTraining';
 
 export type VisibleProgramItemDomain =
   | 'conditioning'
@@ -181,11 +182,12 @@ export function visibleWorkoutItemCountLabel(
   workout: ResolvedDay['workout'] | null | undefined,
 ): string | null {
   if (!workout) return null;
+  const teamState = getTeamTrainingWorkoutState(workout);
   const items = extractVisibleProgramItemsFromWorkout(workout)
     .filter((item) => item.source !== 'session');
   const count = items.length > 0
     ? items.length
-    : (workout.exercises ?? []).length;
+    : teamState.renderableExercises.length;
   if (count <= 0) return null;
   const onlyStrength = items.length > 0 && items.every((item) => item.domain === 'strength');
   const noun = onlyStrength ? 'exercise' : 'item';
@@ -197,6 +199,8 @@ export function extractVisibleProgramItemsFromWorkout(
 ): VisibleProgramItem[] {
   if (!workout) return [];
 
+  const teamState = getTeamTrainingWorkoutState(workout);
+  const exercises = teamState.renderableExercises;
   const items: VisibleProgramItem[] = [];
   const seen = new Set<string>();
   const isRecovery =
@@ -219,7 +223,7 @@ export function extractVisibleProgramItemsFromWorkout(
   };
 
   for (const [index, option] of (workout.conditioningBlock?.options ?? []).entries()) {
-    const linkedExercises = linkedExercisesForOption(workout, option);
+    const linkedExercises = linkedExercisesForOption(exercises, option);
     const title =
       cleanVisibleTitle(option.title) ||
       cleanVisibleTitle(linkedExercises[0]?.exercise?.name) ||
@@ -238,10 +242,11 @@ export function extractVisibleProgramItemsFromWorkout(
     const exerciseIds = linkedExercises.map((exercise: any) =>
       String(exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? ''),
     ).filter(Boolean);
+    const isStackedConditioningTemplate = exerciseIds.some(isTemplateConditioningRowId);
     addItem({
       id: exerciseIds[0] ?? `conditioning-option:${normaliseVisibleItemKey(title)}`,
       title,
-      domain: isRecovery ? 'recovery' : 'conditioning',
+      domain: isRecovery && !isStackedConditioningTemplate ? 'recovery' : 'conditioning',
       modality: inferModalityFromName(text),
       durationMinutes: extractVisibleDurationMinutes(text, linkedExercises),
       description,
@@ -251,7 +256,11 @@ export function extractVisibleProgramItemsFromWorkout(
   }
 
   if (isPureConditioning || isRecovery) {
-    for (const [index, exercise] of (workout.exercises ?? []).entries()) {
+    for (const [index, exercise] of exercises.entries()) {
+      const id = String(
+        exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? `conditioning-phase:${index}`,
+      );
+      if (isTemplateStrengthRowId(id) || (isRecovery && isTemplateConditioningRowId(id))) continue;
       const title =
         cleanVisibleTitle(exercise.exercise?.name) ||
         cleanVisibleTitle(workout.name) ||
@@ -259,13 +268,13 @@ export function extractVisibleProgramItemsFromWorkout(
       const description = cleanVisibleTitle(exercise.notes || exercise.exercise?.description);
       const text = [title, description].filter(Boolean).join(' ');
       addItem({
-        id: String(exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? `conditioning-phase:${index}`),
+        id,
         title,
         domain: isRecovery ? 'recovery' : 'conditioning',
         modality: inferModalityFromName(text),
         durationMinutes: extractVisibleDurationMinutes(text, [exercise]),
         description,
-        exerciseIds: [String(exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? '')].filter(Boolean),
+        exerciseIds: [id].filter(Boolean),
         source: isPureConditioning ? 'conditioning_phase' : 'conditioning_exercise',
       });
     }
@@ -274,7 +283,7 @@ export function extractVisibleProgramItemsFromWorkout(
   const conditioningIds = new Set(
     items.flatMap((item) => item.exerciseIds).filter(Boolean),
   );
-  for (const [index, exercise] of (workout.exercises ?? []).entries()) {
+  for (const [index, exercise] of exercises.entries()) {
     const id = String(exercise.id ?? exercise.exerciseId ?? exercise.exercise?.id ?? `strength:${index}`);
     if (conditioningIds.has(id)) continue;
     const title = cleanVisibleTitle(exercise.exercise?.name);
@@ -292,7 +301,7 @@ export function extractVisibleProgramItemsFromWorkout(
   }
 
   if (items.length === 0 && workout.name) {
-    const title = cleanVisibleTitle(workout.name);
+    const title = cleanVisibleTitle(teamState.displayName ?? workout.name);
     addItem({
       id: String((workout as any).id ?? `session:${normaliseVisibleItemKey(title)}`),
       title,
@@ -315,6 +324,16 @@ export function extractVisibleProgramItemsFromWorkout(
   return items;
 }
 
+function isTemplateStrengthRowId(id: string): boolean {
+  return /^template:(?:strength_|accessories_)/.test(id);
+}
+
+function isTemplateConditioningRowId(id: string): boolean {
+  return /^template:/.test(id) &&
+    !isTemplateStrengthRowId(id) &&
+    !/^template:recovery_/.test(id);
+}
+
 function visibleItemLogPayload(item: VisibleProgramItem) {
   return {
     id: item.id,
@@ -326,9 +345,9 @@ function visibleItemLogPayload(item: VisibleProgramItem) {
   };
 }
 
-function linkedExercisesForOption(workout: ResolvedDay['workout'], option: any): any[] {
+function linkedExercisesForOption(exercises: any[], option: any): any[] {
   const ids = new Set((option?.exerciseIds ?? []).map((id: unknown) => String(id)));
-  return (workout?.exercises ?? []).filter((exercise: any) =>
+  return exercises.filter((exercise: any) =>
     ids.has(String(exercise.id ?? '')) ||
     ids.has(String(exercise.exerciseId ?? '')) ||
     ids.has(String(exercise.exercise?.id ?? '')),

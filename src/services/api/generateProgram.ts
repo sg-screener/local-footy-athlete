@@ -6,6 +6,7 @@ import {
   type CoachingPlan,
   type AIConstraints,
 } from '../../utils/coachingEngine';
+import { todayISOLocal } from '../../utils/appDate';
 import { computeBlockBounds } from '../../utils/sessionResolver';
 import { getAthletePrefs } from '../../store/athletePreferencesStore';
 import {
@@ -13,6 +14,13 @@ import {
   logMissingClientEnv,
 } from '../../config/env';
 import { logger } from '../../utils/logger';
+import {
+  getProgrammingRoleBias,
+  normalizeOnboardingRole,
+  normalizeRoleBucket,
+  programmingRoleBiasLabel,
+  roleBucketLabel,
+} from '../../utils/roleBuckets';
 
 /**
  * Kinds of program-generation failure — used by the UI to decide whether
@@ -53,6 +61,103 @@ export class ProgramGenError extends Error {
   }
 }
 
+export interface GenerateProgramFromProfileOptions {
+  todayISO?: string;
+}
+
+/**
+ * DETERMINISTIC local program generation — no network, no LLM.
+ *
+ * Product rule (Sam, 2026-07-08): adding / moving / removing a game day
+ * from the tap/edit UI must NOT depend on the AI coach or OpenAI. This
+ * builds the full program with the exact same machinery the AI path uses,
+ * minus the AI:
+ *
+ *   1. buildCoachingPlan — deterministic allocations (already game-aware:
+ *      H-GAME, stress-aware placement, pre-season game structures).
+ *   2. buildWorkoutsFromCoach([]) — passing NO coach workouts makes
+ *      completeCoachWorkoutsFromPlan synthesise EVERY day from the plan's
+ *      deterministic fallbacks, then the normal normaliser applies tier /
+ *      intensity enforcement, conditioning blocks, and pool rotation
+ *      (which rewrites fallback exercise names to the block's variants).
+ *
+ * Content is deliberately simpler than an AI-enriched program (3-ish core
+ * exercises per session) — correct structure NOW beats rich copy in 55s
+ * (or a timeout). Synchronous and throw-safe for atomic commit flows:
+ * callers only apply state when this returns.
+ */
+export function generateProgramLocally(
+  onboardingData: OnboardingData,
+  options: GenerateProgramFromProfileOptions = {},
+): TrainingProgram {
+  const generationProfile = normalizeOnboardingRole(onboardingData);
+  const availabilityDateISO = options.todayISO ?? todayISOLocal();
+  const coachingInputs = onboardingToCoachingInputs(generationProfile, { availabilityDateISO });
+  const plan = buildCoachingPlan(coachingInputs);
+
+  logger.debug('[ProgramGen] Local deterministic build', {
+    readiness: plan.readiness,
+    coreSessions: plan.coreSessions,
+    gameDay: generationProfile.usualGameDay || generationProfile.gameDay || null,
+  });
+
+  const workouts = buildWorkoutsFromCoach(
+    [],
+    'mc-ai-1',
+    plan.weeklyPlan,
+    generationProfile,
+    { miniCycleNumber: 1, weekInBlock: 1 },
+    getAthletePrefs(),
+  );
+  if (!workouts.length) {
+    throw new ProgramGenError(
+      'bad_response',
+      'The app could not rebuild your week. Please try again.',
+      'local generation produced zero workouts',
+      true,
+    );
+  }
+
+  const today = new Date();
+  const { blockStart, blockEnd } = computeBlockBounds(today);
+  const startDate = new Date(blockStart + 'T12:00:00');
+  const endDate = new Date(blockEnd + 'T12:00:00');
+
+  const microcycle: Microcycle = {
+    id: 'mc-ai-1',
+    programId: 'prog-ai-1',
+    weekNumber: 1,
+    startDate: startDate.toISOString(),
+    endDate: new Date(startDate.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString(),
+    miniCycleNumber: 1,
+    intensityMultiplier: 1.0,
+    workouts,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  const localPhaseMap: Record<string, string> = {
+    'Off-season': 'Base-Building',
+    'Pre-season': 'Pre-Season-Skills',
+    'In-season': 'In-Season',
+  };
+
+  return {
+    id: 'prog-ai-1',
+    userId: 'user-default',
+    name: buildProgramName(generationProfile, plan),
+    description: 'Week rebuilt around your schedule change.',
+    programPhase: (localPhaseMap[generationProfile.seasonPhase || ''] || 'Pre-Season-Skills') as TrainingProgram['programPhase'],
+    startDate: startDate.toISOString(),
+    endDate: endDate.toISOString(),
+    primaryFocus: generationProfile.motivation || 'Strength and Conditioning',
+    isActive: true,
+    microcycles: [microcycle],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 /** Is a response body HTML (Cloudflare/Supabase proxy page etc.)? */
 function looksLikeHtml(body: string): boolean {
   const trimmed = body.trimStart().toLowerCase();
@@ -71,6 +176,17 @@ function isDevBuild(): boolean {
   return typeof __DEV__ !== 'undefined'
     ? __DEV__
     : process.env.NODE_ENV !== 'production';
+}
+
+function buildRoleContext(data: OnboardingData) {
+  const selectedRole = normalizeRoleBucket(data.position);
+  const programmingRoleBias = getProgrammingRoleBias(selectedRole);
+  return {
+    selectedRole,
+    selectedRoleLabel: roleBucketLabel(selectedRole),
+    programmingRoleBias,
+    programmingRoleBiasLabel: programmingRoleBiasLabel(selectedRole),
+  };
 }
 
 const REQUIRED_PROGRAM_GEN_PROFILE_FIELDS: Array<keyof OnboardingData> = [
@@ -143,19 +259,25 @@ export function buildProgramGenerationRequestDiagnostics(
   message?: string,
   env: ReturnType<typeof getClientEnvConfig> = getClientEnvConfig(),
 ): Record<string, unknown> {
-  const derivedPlan = plan ?? buildCoachingPlan(onboardingToCoachingInputs(onboardingData));
-  const derivedMessage = message ?? buildGenerationPrompt(onboardingData, derivedPlan);
-  const profileFields = Object.keys(onboardingData).sort();
-  const profileFieldDiagnostics = getProgramGenerationProfileFieldDiagnostics(onboardingData);
+  const generationProfile = normalizeOnboardingRole(onboardingData);
+  const derivedPlan = plan ?? buildCoachingPlan(onboardingToCoachingInputs(generationProfile, {
+    availabilityDateISO: todayISOLocal(),
+  }));
+  const derivedMessage = message ?? buildGenerationPrompt(generationProfile, derivedPlan);
+  const roleContext = buildRoleContext(generationProfile);
+  const profileFields = Object.keys(generationProfile).sort();
+  const profileFieldDiagnostics = getProgramGenerationProfileFieldDiagnostics(generationProfile);
   const payloadShape = {
     messages: [{ role: 'user', content: '[generation prompt omitted from log]' }],
     athleteProfile: '[onboarding profile object]',
+    roleContext: '[selected role + programming bias]',
     coachingPlan: '[coaching constraints object]',
     mode: 'generate',
   };
   const payloadForSize = {
     messages: [{ role: 'user', content: derivedMessage }],
-    athleteProfile: onboardingData,
+    athleteProfile: generationProfile,
+    roleContext,
     coachingPlan: derivedPlan.constraints,
     mode: 'generate',
   };
@@ -176,23 +298,28 @@ export function buildProgramGenerationRequestDiagnostics(
       missingRequired: profileFieldDiagnostics.missingRequired,
       missingRecommended: profileFieldDiagnostics.missingRecommended,
       summary: {
-        firstName: onboardingData.firstName ?? null,
-        position: onboardingData.position ?? null,
-        seasonPhase: onboardingData.seasonPhase ?? null,
-        gameDay: onboardingData.gameDay ?? null,
-        usualGameDay: onboardingData.usualGameDay ?? null,
-        teamTrainingDaysPerWeek: onboardingData.teamTrainingDaysPerWeek ?? null,
-        teamTrainingDays: onboardingData.teamTrainingDays ?? [],
-        trainingDaysPerWeek: onboardingData.trainingDaysPerWeek ?? null,
-        preferredTrainingDays: onboardingData.preferredTrainingDays ?? [],
-        sessionDurationMinutes: onboardingData.sessionDurationMinutes ?? null,
-        trainingLocation: onboardingData.trainingLocation ?? null,
-        equipmentCount: onboardingData.equipment?.length ?? 0,
-        goalsCount: onboardingData.goals?.length ?? 0,
-        injuriesCount: onboardingData.injuries?.length ?? 0,
-        conditioningLevel: onboardingData.conditioningLevel ?? null,
-        sprintExposure: onboardingData.sprintExposure ?? null,
-        recentTrainingLoad: onboardingData.recentTrainingLoad ?? null,
+        firstName: generationProfile.firstName ?? null,
+        position: generationProfile.position ?? null,
+        roleLabel: generationProfile.position ? roleBucketLabel(generationProfile.position) : null,
+        selectedRole: roleContext.selectedRole,
+        selectedRoleLabel: roleContext.selectedRoleLabel,
+        programmingRoleBias: roleContext.programmingRoleBias,
+        programmingRoleBiasLabel: roleContext.programmingRoleBiasLabel,
+        seasonPhase: generationProfile.seasonPhase ?? null,
+        gameDay: generationProfile.gameDay ?? null,
+        usualGameDay: generationProfile.usualGameDay ?? null,
+        teamTrainingDaysPerWeek: generationProfile.teamTrainingDaysPerWeek ?? null,
+        teamTrainingDays: generationProfile.teamTrainingDays ?? [],
+        trainingDaysPerWeek: generationProfile.trainingDaysPerWeek ?? null,
+        preferredTrainingDays: generationProfile.preferredTrainingDays ?? [],
+        sessionDurationMinutes: generationProfile.sessionDurationMinutes ?? null,
+        trainingLocation: generationProfile.trainingLocation ?? null,
+        equipmentCount: generationProfile.equipment?.length ?? 0,
+        goalsCount: generationProfile.goals?.length ?? 0,
+        injuriesCount: generationProfile.injuries?.length ?? 0,
+        conditioningLevel: generationProfile.conditioningLevel ?? null,
+        sprintExposure: generationProfile.sprintExposure ?? null,
+        recentTrainingLoad: generationProfile.recentTrainingLoad ?? null,
       },
     },
     coachingPlan: {
@@ -357,9 +484,11 @@ function errorDiagnostic(err: unknown): string {
  */
 export async function generateProgramFromProfile(
   onboardingData: OnboardingData,
+  options: GenerateProgramFromProfileOptions = {},
 ): Promise<TrainingProgram> {
   const env = getClientEnvConfig();
   const devBuild = isDevBuild();
+  const generationProfile = normalizeOnboardingRole(onboardingData);
   if (!env.isReady) {
     logMissingClientEnv('generateProgramFromProfile', env);
     throw new ProgramGenError(
@@ -371,7 +500,8 @@ export async function generateProgramFromProfile(
   }
 
   // ─── Step 1: Deterministic coaching logic ───
-  const coachingInputs = onboardingToCoachingInputs(onboardingData);
+  const availabilityDateISO = options.todayISO ?? todayISOLocal();
+  const coachingInputs = onboardingToCoachingInputs(generationProfile, { availabilityDateISO });
   const plan = buildCoachingPlan(coachingInputs);
 
   logger.debug('[ProgramGen] Coaching plan built', {
@@ -382,9 +512,9 @@ export async function generateProgramFromProfile(
   });
 
   // ─── Step 2: Build AI prompt from coaching plan ───
-  const message = buildGenerationPrompt(onboardingData, plan);
+  const message = buildGenerationPrompt(generationProfile, plan);
   const requestDiagnostics = buildProgramGenerationRequestDiagnostics(
-    onboardingData,
+    generationProfile,
     plan,
     message,
     env,
@@ -394,7 +524,7 @@ export async function generateProgramFromProfile(
   logger.debug(`[ProgramGen] Calling edge function via direct fetch... (prompt: ${promptWords} words, ~${Math.round(promptWords * 1.3)} tokens)`);
 
   if (devBuild) {
-    const missingRequired = getProgramGenerationProfileFieldDiagnostics(onboardingData).missingRequired;
+    const missingRequired = getProgramGenerationProfileFieldDiagnostics(generationProfile).missingRequired;
     logger.warn('[ProgramGen][dev] Edge function request payload summary', requestDiagnostics);
     if (missingRequired.length > 0) {
       logger.warn('[ProgramGen][dev] Profile is missing fields used by program generation', {
@@ -427,7 +557,8 @@ export async function generateProgramFromProfile(
 
   const requestBody = {
     messages: [{ role: 'user', content: message }],
-    athleteProfile: onboardingData,
+    athleteProfile: generationProfile,
+    roleContext: buildRoleContext(generationProfile),
     coachingPlan: plan.constraints,
     mode: 'generate',
   };
@@ -671,7 +802,7 @@ export async function generateProgramFromProfile(
       result.programUpdate.workouts,
       'mc-ai-1',
       plan.weeklyPlan,
-      onboardingData,
+      generationProfile,
       { miniCycleNumber: 1, weekInBlock: 1 },
       getAthletePrefs(),
     );
@@ -774,12 +905,12 @@ export async function generateProgramFromProfile(
   const program: TrainingProgram = {
     id: 'prog-ai-1',
     userId: 'user-default',
-    name: buildProgramName(onboardingData, plan),
+    name: buildProgramName(generationProfile, plan),
     description: result.reply || 'AI-generated program based on your profile',
-    programPhase: (phaseMap[onboardingData.seasonPhase || ''] || 'Pre-Season-Skills') as any,
+    programPhase: (phaseMap[generationProfile.seasonPhase || ''] || 'Pre-Season-Skills') as any,
     startDate: startDate.toISOString(),
     endDate: endDate.toISOString(),
-    primaryFocus: onboardingData.motivation || 'Strength and Conditioning',
+    primaryFocus: generationProfile.motivation || 'Strength and Conditioning',
     isActive: true,
     microcycles: [microcycle],
     createdAt: new Date().toISOString(),
@@ -829,6 +960,14 @@ function buildGenerationPrompt(data: OnboardingData, plan: CoachingPlan): string
   const parts: string[] = [];
 
   parts.push('Generate my initial training program using the update_program tool.');
+
+  if (data.position) {
+    const roleContext = buildRoleContext(data);
+    parts.push('\nROLE BIAS:');
+    parts.push(`• Athlete selected role: ${roleContext.selectedRoleLabel} (${roleContext.selectedRole}).`);
+    parts.push(`• Programming role bias: ${roleContext.programmingRoleBias} — ${roleContext.programmingRoleBiasLabel}. Outside mid and High forward / back use the same programming bias.`);
+    parts.push('• Do not let role override season phase, game day, team training, injuries, fatigue, training age, strength, fitness, goals, availability, or the weekly skeleton below.');
+  }
 
   // ─── Weekly skeleton from coaching engine ───
   if (plan.weeklyPlan.length > 0) {
@@ -900,7 +1039,7 @@ function formatAvailabilityConstraintsForPrompt(data: OnboardingData): string[] 
           ? ` from ${constraint.startDate ?? 'now'} to ${constraint.endDate ?? 'the stated end date'}`
           : '';
         const reason = constraint.reason ? ` (${constraint.reason})` : '';
-        return `${constraint.dayOfWeek} is unavailable${range}${reason}. Do not schedule training there unless it is a fixed game/team-training anchor.`;
+        return `${constraint.dayOfWeek} is unavailable${range}${reason}. Do not schedule training there. If this conflicts with team training or game day, preserve the availability constraint and move other work away.`;
       }
       if (constraint.kind === 'time_limit' && constraint.dayOfWeek && constraint.maxSessionMinutes) {
         const range = constraint.scope === 'temporary'

@@ -10,6 +10,13 @@ interface ReadinessState {
     signal: Omit<Partial<ReadinessSignal>, 'date' | 'updatedAt'>,
   ) => void;
   clearReadinessSignal: (date: string) => void;
+  /**
+   * Drop signals for dates strictly before `dateISO`. Only today's signal
+   * is ever read (see selectActiveProgramModifiers / useSchedule), so past
+   * signals go dormant the next day but were never deleted — this bounds
+   * the store instead of letting them accumulate forever.
+   */
+  pruneBefore: (dateISO: string) => void;
   clear: () => void;
 }
 
@@ -41,6 +48,17 @@ export const useReadinessStore = create<ReadinessState>()(
           const next = { ...state.signalsByDate };
           delete next[date];
           return { signalsByDate: next };
+        }),
+
+      pruneBefore: (dateISO) =>
+        set((state) => {
+          const entries = Object.entries(state.signalsByDate).filter(
+            ([date]) => date >= dateISO,
+          );
+          if (entries.length === Object.keys(state.signalsByDate).length) {
+            return state; // nothing dormant to drop
+          }
+          return { signalsByDate: Object.fromEntries(entries) };
         }),
 
       clear: () => set({ signalsByDate: {} }),

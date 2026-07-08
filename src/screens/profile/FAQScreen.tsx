@@ -18,7 +18,7 @@ interface FAQItem {
 const FAQ_DATA: FAQItem[] = [
   {
     question: 'How does the app build my program?',
-    answer: 'It uses your setup: season phase, position, experience, training days, team training, game day, equipment and main focus. The resolver then places strength, running, recovery and game-week work around those constraints.',
+    answer: 'It uses your setup: season phase, footy role, experience, training days, team training, game day, equipment and main focus. The resolver then places strength, running, recovery and game-week work around those constraints.',
   },
   {
     question: 'What does the AI coach actually change?',

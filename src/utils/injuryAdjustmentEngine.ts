@@ -318,9 +318,9 @@ function avoidThisWeekBullets(bucket: InjuryBucket): string {
 // ─── Empathy line ───
 
 function empathyLine(severity: number, bodyPart: string): string {
-  if (severity >= 8) return `That's a serious one — let's pull back hard on the ${bodyPart}.`;
-  if (severity >= 6) return `Sounds rough — let's take pressure off the ${bodyPart} this week.`;
-  return `Got it — let's protect the ${bodyPart} for a few days.`;
+  if (severity >= 8) return `That's a serious one - let's pull back hard on the ${bodyPart}.`;
+  if (severity >= 6) return `Sounds rough - let's take pressure off the ${bodyPart} this week.`;
+  return `Got it - let's protect the ${bodyPart} for a few days.`;
 }
 
 // ─── Engine ───
@@ -342,7 +342,7 @@ export function applyInjuryAdjustment(
   if (!context.bucket) {
     return {
       fired: false,
-      reason: 'legacy engine: body part unknown — UAE handles fallback',
+      reason: 'legacy engine: body part unknown - UAE handles fallback',
       context,
     };
   }
@@ -503,7 +503,7 @@ export function applyInjuryAdjustment(
       'Avoid this week:',
       avoid,
       '',
-      'Program updated — check your week.',
+      'Program updated - check your week.',
     ].join('\n');
   } else {
     reply =

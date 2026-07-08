@@ -374,9 +374,9 @@ function composeSuccessReply(args: {
           ? 'run'
           : args.toToken;
   if (args.fromModality) {
-    return `Done — ${day}'s ${args.targetSessionName} is now on the ${toWord} instead of the ${fromWord}.`;
+    return `Done - ${day}'s ${args.targetSessionName} is now on the ${toWord} instead of the ${fromWord}.`;
   }
-  return `Done — ${day}'s ${args.targetSessionName} is now on the ${toWord}.`;
+  return `Done - ${day}'s ${args.targetSessionName} is now on the ${toWord}.`;
 }
 
 export interface ProjectionCheck {
@@ -745,15 +745,15 @@ function composeRecurringPreferenceReply(args: {
           : `bike`;
     const opposite = args.bikeLabel === 'standard' ? 'an assault bike' : 'a regular bike';
     return (
-      `Done — I'll use a ${noteLabel} for ${args.sessionName} sessions going forward, ` +
+      `Done - I'll use a ${noteLabel} for ${args.sessionName} sessions going forward, ` +
       `not ${opposite}.`
     );
   }
 
   const lead =
     firstDayLabel && /^[A-Z]/.test(firstDayLabel)
-      ? `Done — next ${firstDayLabel}'s ${args.sessionName} is now on the ${toWord}`
-      : `Done — your next ${args.sessionName} is now on the ${toWord}`;
+      ? `Done - next ${firstDayLabel}'s ${args.sessionName} is now on the ${toWord}`
+      : `Done - your next ${args.sessionName} is now on the ${toWord}`;
   if (args.fromModality) {
     return `${lead} instead of the ${fromWord}, and I'll use the ${toWord} for these sessions going forward.`;
   }

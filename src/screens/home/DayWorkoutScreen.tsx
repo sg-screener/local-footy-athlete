@@ -30,6 +30,7 @@ import {
   groupStrengthExercises,
   formatConditioningRowPrescription,
 } from './dayWorkoutHelpers';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 // ── Design-version flag ──
 // Hardcoded to 'v2' so the app opens directly into the redesigned DayWorkout
@@ -37,6 +38,10 @@ import {
 //
 // Parallels the flag in HomeScreen.tsx — both screens share a rollout state.
 const DESIGN_VERSION: DesignVersion = 'v2';
+
+function displayExerciseName(name: string | null | undefined, fallback = 'Exercise'): string {
+  return formatExerciseDisplayName(name) || fallback;
+}
 
 /**
  * Thin routing wrapper — V2 and Classic share `useDayWorkout`, so they stay
@@ -88,6 +93,7 @@ function DayWorkoutScreenClassic() {
     isRecovery,
     isConditioning,
     isCombinedDay,
+    hasTeamTraining,
     strengthExercises,
     conditioningOptions,
     conditioningRowCount,
@@ -120,13 +126,14 @@ function DayWorkoutScreenClassic() {
     idx: number,
   ) => {
     const name = exercise.exercise?.name || `Phase ${idx + 1}`;
+    const displayName = displayExerciseName(name, `Phase ${idx + 1}`);
     const notes = exercise.notes || '';
     const prescription = formatConditioningRowPrescription(exercise);
     return (
       <View key={exercise.id} style={styles.conditioningExercise}>
         <View style={styles.conditioningBullet} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.conditioningExerciseName}>{name}</Text>
+          <Text style={styles.conditioningExerciseName}>{displayName}</Text>
           {prescription ? (
             <Text style={styles.conditioningPrescription}>{prescription}</Text>
           ) : null}
@@ -275,12 +282,13 @@ function DayWorkoutScreenClassic() {
           <View style={styles.section}>
             {(workout.exercises ?? []).map((exercise) => {
               const phaseName = exercise.exercise?.name || 'Phase';
+              const phaseDisplayName = displayExerciseName(phaseName, 'Phase');
               const description = exercise.notes || exercise.exercise?.description || '';
               const restFormatted = formatRest(exercise.restSeconds, 'recovery');
 
               return (
                 <View key={exercise.id} style={styles.conditioningPhase}>
-                  <Text style={styles.conditioningPhaseName}>{phaseName}</Text>
+                  <Text style={styles.conditioningPhaseName}>{phaseDisplayName}</Text>
                   {description ? (
                     <Text style={styles.conditioningDescription}>{description}</Text>
                   ) : null}
@@ -296,6 +304,7 @@ function DayWorkoutScreenClassic() {
           <View style={styles.section}>
             {(workout.exercises ?? []).map((exercise, index) => {
               const exerciseName = exercise.exercise?.name || `Exercise ${index + 1}`;
+              const exerciseDisplayName = displayExerciseName(exerciseName, `Exercise ${index + 1}`);
               const pType = inferRecoveryPrescriptionType(exercise, exerciseName);
               const displayNotes = cleanNotes(exercise.notes);
               const prescriptionLabel = formatRecoveryPrescription(exercise, pType);
@@ -316,7 +325,7 @@ function DayWorkoutScreenClassic() {
                     onPress={() => setSelectedExercise(exerciseName)}
                   >
                     <Text style={styles.recoveryIndex}>{index + 1}.</Text>
-                    <Text style={styles.exerciseName} numberOfLines={2}>{exerciseName}</Text>
+                    <Text style={styles.exerciseName} numberOfLines={2}>{exerciseDisplayName}</Text>
                     <View style={styles.playButton}>
                       <Text style={styles.playIcon}>▶</Text>
                     </View>
@@ -369,7 +378,7 @@ function DayWorkoutScreenClassic() {
         ) : (
           /* ─── Strength layout: numbered exercises with weight controls ─── */
           <View style={styles.section}>
-            {isCombinedDay && (
+            {(isCombinedDay || hasTeamTraining) && strengthExercises.length > 0 && (
               <Text style={styles.sectionHeader}>STRENGTH</Text>
             )}
             {(() => {
@@ -381,6 +390,7 @@ function DayWorkoutScreenClassic() {
                 const exercise = strengthExercises[idx];
                 const label = labels[idx];
                 const exerciseName = exercise.exercise?.name || `Exercise ${idx + 1}`;
+                const exerciseDisplayName = displayExerciseName(exerciseName, `Exercise ${idx + 1}`);
                 const displayNotes = cleanNotes(exercise.notes);
                 const cardStyle = {
                   ...styles.exerciseCard,
@@ -399,7 +409,7 @@ function DayWorkoutScreenClassic() {
                     >
                       <Text style={styles.exerciseNumber}>{label}.</Text>
                       <Text style={styles.exerciseName} numberOfLines={2}>
-                        {exerciseName}
+                        {exerciseDisplayName}
                       </Text>
                       <View style={styles.playButton}>
                         <Text style={styles.playIcon}>▶</Text>
@@ -413,7 +423,7 @@ function DayWorkoutScreenClassic() {
                         <Text style={styles.statsValue}>
                           {exercise.prescribedSets} × {exercise.prescribedRepsMin === exercise.prescribedRepsMax
                             ? exercise.prescribedRepsMin
-                            : `${exercise.prescribedRepsMin}–${exercise.prescribedRepsMax}`}
+                            : `${exercise.prescribedRepsMin}-${exercise.prescribedRepsMax}`}
                         </Text>
                       </View>
 
@@ -561,6 +571,20 @@ function DayWorkoutScreenClassic() {
                 ))}
               </>
             )}
+
+            {hasTeamTraining ? (
+              <View style={styles.teamTrainingSection}>
+                <Text style={styles.sectionHeader}>TEAM TRAINING</Text>
+                <Card style={styles.teamTrainingCard}>
+                  <Text style={styles.teamTrainingTitle}>
+                    Club/team field session.
+                  </Text>
+                  <Text style={styles.teamTrainingBody}>
+                    We'll account for the load in your week.
+                  </Text>
+                </Card>
+              </View>
+            ) : null}
           </View>
         )}
 
@@ -569,16 +593,14 @@ function DayWorkoutScreenClassic() {
           justSaved ? (
             <SessionCompleteMoment date={date} />
           ) : (
-            <SessionFeedbackPanel date={date} onSave={handleFeedbackSaved} />
+            <SessionFeedbackPanel date={date} workout={workout} onSave={handleFeedbackSaved} />
           )
         ) : null}
 
         {/* Finish CTA — hidden once finished (feedback panel takes over).
             Labelled "Finish Session" to match DayWorkoutScreenV2's wording
             and keep individual-workout CTA language consistent across the
-            Classic/V2 variants. Team-only sessions never reach this screen
-            in normal mode (they navigate straight to feedback via
-            startFinished=true), so this label is exclusively individual. */}
+            Classic/V2 variants. */}
         {!isFinished && (
           <View style={styles.buttonContainer}>
             <Button
@@ -920,6 +942,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     lineHeight: 20,
     marginBottom: spacing.sm,
+  },
+  teamTrainingSection: {
+    marginTop: spacing.xl,
+  },
+  teamTrainingCard: {
+    backgroundColor: 'rgba(200, 255, 0, 0.06)',
+    borderColor: 'rgba(200, 255, 0, 0.18)',
+    borderWidth: 1,
+  },
+  teamTrainingTitle: {
+    color: colors.text.primary,
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  teamTrainingBody: {
+    color: colors.text.secondary,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: spacing.md,
   },
   conditioningExercise: {
     flexDirection: 'row' as const,

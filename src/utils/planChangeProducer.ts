@@ -22,6 +22,7 @@ import {
   COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
   snapshotProjectedDay,
   type CoachRevisionProposal,
+  type CoachRevisionSectionKind,
   type CoachVisibleDaySnapshot,
   type CoachVisibleWorkoutSnapshot,
 } from './coachRevisionProposal';
@@ -101,7 +102,7 @@ const CATEGORY_TEMPLATE_MATCH: Record<
 const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }> = {
   conditioning_light: {
     label: 'Light session',
-    sub: 'Easy flush — bike, row or ski',
+    sub: 'Easy flush - bike, row or ski',
   },
   conditioning_hard: {
     label: 'Hard session',
@@ -113,7 +114,7 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
   },
   strength_upper: {
     label: 'Upper body',
-    sub: 'Push or pull — whichever your week is missing',
+    sub: 'Push or pull - whichever your week is missing',
   },
   strength_lower: {
     label: 'Lower body',
@@ -125,9 +126,41 @@ const CATEGORY_COPY: Record<PlanChangeCategoryId, { label: string; sub: string }
   },
   accessories: {
     label: 'Accessories',
-    sub: 'Gunshow or prehab — small muscles, big payoff',
+    sub: 'Gunshow or prehab - small muscles, big payoff',
   },
 };
+
+const MAX_VISIBLE_SESSIONS_PER_DAY = 2;
+
+type VisibleSessionKind = CoachRevisionSectionKind;
+
+function visibleSessionKindsForWorkout(
+  workout: CoachVisibleWorkoutSnapshot | null,
+): VisibleSessionKind[] {
+  return Array.from(
+    new Set((workout?.sections ?? []).map((section) => section.kind)),
+  );
+}
+
+function visibleSessionKindsForSnapshot(
+  snap: CoachVisibleDaySnapshot,
+): VisibleSessionKind[] {
+  return visibleSessionKindsForWorkout(snap.workout);
+}
+
+function categoryAddsSessionKind(category: PlanChangeCategoryId): VisibleSessionKind {
+  if (category === 'recovery') return 'recovery';
+  if (category.startsWith('strength_') || category === 'accessories') return 'strength';
+  return 'conditioning';
+}
+
+function templateAddsSessionKind(
+  category: CoachRevisionTemplateDefinition['category'],
+): VisibleSessionKind {
+  if (category === 'recovery') return 'recovery';
+  if (category === 'strength' || category === 'accessories') return 'strength';
+  return 'conditioning';
+}
 
 /**
  * Bin scopes (sheet v2 phase 3): multi-session days offer WHICH part to
@@ -159,7 +192,13 @@ export type PlanChange =
   /** "I'm not 100%" bed-ridden path: clear every remaining session in the
    *  date's week (today onward, games untouched). One atomic proposal
    *  through the same validate → apply pipeline. */
-  | { kind: 'shutdown_week'; date: string };
+  | { kind: 'shutdown_week'; date: string }
+  /** "Away / holiday" path: clear an EXPLICIT list of days to rest (the
+   *  athlete picked exactly which days they're unavailable). Games are
+   *  left alone; already-rest days are skipped. Same atomic validate →
+   *  apply pipeline as shutdown_week, but scoped to the chosen dates
+   *  rather than the whole rest-of-week. */
+  | { kind: 'clear_days'; dates: string[] };
 
 export interface PlanChangeMoveDestination {
   date: string;
@@ -184,13 +223,14 @@ export interface PlanChangeDayOptions {
   /** Bin scopes: parts of the day binnable individually. Single-part days
    *  offer only whole_day; multi-session days list each part, whole last. */
   binScopes: PlanChangeBinScope[];
-  /** Categories addable ON TOP of this day (sheet v2: "add conditioning
-   *  to a lower-body day"). Empty when the day already carries
-   *  conditioning/recovery, has no snapshot sections to preserve, or is
-   *  locked. Rest days instead use `categories` via the normal add flow.
-   *  Conditioning only — stacking recovery/strength arrives with the
-   *  strength-generation phase. */
+  /** Categories addable ON TOP of this day. Empty when the day already has
+   *  two visible parts, has no snapshot sections to preserve, or is locked.
+   *  Rest days instead use `categories` via the normal add flow. */
   addOnTopCategories: PlanChangeCategoryOption[];
+  /** Visible session parts on this day. The sheet uses this for friendly
+   *  add-flow blockers; the producer still enforces the same rules below. */
+  visibleSessionCount: number;
+  visibleSessionKinds: VisibleSessionKind[];
 }
 
 // ── Options listing ──
@@ -212,6 +252,8 @@ export function listPlanChangeOptionsForDay(args: {
     moveDestinations: [],
     binScopes: [],
     addOnTopCategories: [],
+    visibleSessionCount: 0,
+    visibleSessionKinds: [],
   });
 
   const day = args.visibleWeek.find((d) => d.date === args.date);
@@ -254,16 +296,15 @@ export function listPlanChangeOptionsForDay(args: {
             : a.occupiedBy === null ? -1 : 1)
     : [];
 
-  // Add-on-top: conditioning can stack onto a day that has real sections
-  // but no conditioning/recovery yet (strength day, team+strength day).
-  const sectionKinds = new Set(
-    (snap.workout?.sections ?? []).map((section) => section.kind),
-  );
+  // Add-on-top: strength and conditioning can stack until the day has two
+  // visible parts. Duplicate strength+strength or conditioning+conditioning
+  // is still blocked; rest is owned by bin/remove rather than add.
+  const visibleSessionKinds = visibleSessionKindsForSnapshot(snap);
+  const visibleSessionCount = visibleSessionKinds.length;
   const canAddOnTop =
     hasSession &&
-    sectionKinds.size > 0 &&
-    !sectionKinds.has('conditioning') &&
-    !sectionKinds.has('recovery');
+    visibleSessionCount > 0 &&
+    visibleSessionCount < MAX_VISIBLE_SESSIONS_PER_DAY;
 
   return {
     date: args.date,
@@ -275,8 +316,14 @@ export function listPlanChangeOptionsForDay(args: {
     moveDestinations,
     binScopes: hasSession ? binScopesForSnapshot(snap) : [],
     addOnTopCategories: canAddOnTop
-      ? categories.filter((category) => category.id.startsWith('conditioning_'))
+      ? categories.filter((category) => {
+          const addedKind = categoryAddsSessionKind(category.id);
+          if (addedKind === 'recovery') return false;
+          return !visibleSessionKinds.includes(addedKind);
+        })
       : [],
+    visibleSessionCount,
+    visibleSessionKinds,
   };
 }
 
@@ -308,14 +355,14 @@ const BIN_SCOPE_FOR_SECTION_KIND: Record<
   session: {
     id: 'team',
     label: 'Just team training',
-    sub: "Can't make it tonight — this date only",
+  sub: "Can't make it tonight - this date only",
   },
 };
 
 const WHOLE_DAY_SCOPE: PlanChangeBinScope = {
   id: 'whole_day',
   label: 'The whole day',
-  sub: 'Everything — the day becomes rest',
+  sub: 'Everything - the day becomes rest',
 };
 
 function binScopesForSnapshot(
@@ -408,7 +455,7 @@ export function planChangeWarningForCategory(args: {
     return {
       code: 'game_week_fresh',
       message:
-        "Make sure you don't overdo it — we want you fresh for game day.",
+        "Make sure you don't overdo it - we want you fresh for game day.",
     };
   }
 
@@ -424,7 +471,7 @@ export function planChangeWarningForCategory(args: {
     return {
       code: 'burnout_volume',
       message:
-        "That's a lot of hard work in one week. Adding more risks burnout — keep something in the tank.",
+        "That's a lot of hard work in one week. Adding more risks burnout - keep something in the tank.",
     };
   }
 
@@ -595,31 +642,32 @@ export function buildPlanChangeProposal(
       const workout = templateWorkoutSnapshot(change.templateId, change.date);
       if (!definition || !workout) return { error: 'unknown_template' };
 
-      // Occupied day: STACK the template on top (sheet v2 — "add
-      // conditioning to a lower-body day"). Conditioning only, one
-      // conditioning block per day, and the day must have real sections
-      // to preserve (otherwise this would silently become a pure-template
-      // replacement in the writer).
+      // Occupied day: STACK the template on top. The day can carry at most
+      // two visible parts, and add never duplicates an existing strength or
+      // conditioning part. The day must have real sections to preserve
+      // (otherwise this would silently become a pure-template replacement
+      // in the writer).
       if (before.workout) {
-        const kinds = new Set(before.workout.sections.map((section) => section.kind));
+        const kinds = visibleSessionKindsForWorkout(before.workout);
+        const addedKind = templateAddsSessionKind(definition.category);
+        if (before.workout.sections.length === 0 || kinds.length === 0) {
+          return { error: 'day_not_stackable' };
+        }
+        if (kinds.length >= MAX_VISIBLE_SESSIONS_PER_DAY) {
+          return { error: 'max_sessions_exceeded' };
+        }
         if (definition.category === 'recovery') {
           return { error: 'recovery_stack_not_supported' };
         }
-        if (definition.category === 'strength' || definition.category === 'accessories') {
-          // Double-strength days need section-merge projection support —
-          // the merged day projects to ONE strength section while the
-          // accepted snapshot would carry two. Conditioning-only for now.
-          return { error: 'strength_stack_not_supported' };
+        if (addedKind === 'strength' && kinds.includes('strength')) {
+          return { error: 'day_already_has_strength' };
         }
-        if (kinds.has('conditioning') || kinds.has('recovery')) {
+        if (addedKind === 'conditioning' && kinds.includes('conditioning')) {
           return { error: 'day_already_has_conditioning' };
-        }
-        if (before.workout.sections.length === 0) {
-          return { error: 'day_not_stackable' };
         }
         return revision({
           intent: 'add',
-          targetDomain: 'conditioning',
+          targetDomain: addedKind === 'strength' ? 'strength' : 'conditioning',
           dates: [change.date],
           revisedDays: [{
             date: change.date,
@@ -664,7 +712,28 @@ export function buildPlanChangeProposal(
         targetDomain: 'session',
         dates: toClear.map((day) => day.date),
         revisedDays: toClear.map((day) => ({ date: day.date, workout: null })),
-        explanation: 'Sheet: sick — clear the rest of the week',
+        explanation: 'Sheet: sick - clear the rest of the week',
+      });
+    }
+    case 'clear_days': {
+      // Away / holiday: clear the exact days the athlete picked. Only
+      // real, non-game sessions inside the visible week are cleared —
+      // rest days and games are skipped. All-or-nothing like every other
+      // producer change; an empty result is an honest error, never a
+      // silent no-op.
+      const wanted = new Set(change.dates);
+      const toClear = ctx.visibleWeek.filter((day) => {
+        if (!wanted.has(day.date)) return false;
+        const snap = snapshotProjectedDay(day);
+        return snap.workout !== null && !visibleDayLooksLikeGame(snap);
+      });
+      if (toClear.length === 0) return { error: 'nothing_to_clear' };
+      return revision({
+        intent: 'remove',
+        targetDomain: 'session',
+        dates: toClear.map((day) => day.date),
+        revisedDays: toClear.map((day) => ({ date: day.date, workout: null })),
+        explanation: 'Sheet: away - clear the chosen days',
       });
     }
     case 'move_session': {
@@ -786,7 +855,7 @@ function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): 
     case 'remove_session': {
       const scope = change.scope ?? 'whole_day';
       if (scope !== 'whole_day') {
-        return `Done. ${BIN_SCOPE_DONE[scope]} — the rest of ${change.date} stays.`;
+        return `Done. ${BIN_SCOPE_DONE[scope]} - the rest of ${change.date} stays.`;
       }
       return `Done. Session removed on ${change.date}.`;
     }
@@ -801,7 +870,9 @@ function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): 
     case 'move_session':
       return `Done. Session moved to ${change.toDate}.`;
     case 'shutdown_week':
-      return 'Done. The rest of this week is cleared — rest up, and add sessions back when you\'re better.';
+      return 'Done. The rest of this week is cleared - rest up, and add sessions back when you\'re better.';
+    case 'clear_days':
+      return "Done. Those days are cleared - they'll come back when you clear the note.";
   }
 }
 

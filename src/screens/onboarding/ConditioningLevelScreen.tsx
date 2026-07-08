@@ -36,12 +36,12 @@ const CONDITIONING_OPTIONS: {
   {
     id: 'Average',
     label: 'FADE LATE',
-    subtitle: 'Start okay, drop off',
+    subtitle: 'Start okay, drop off late',
   },
   {
     id: 'Good',
     label: 'SOLID',
-    subtitle: 'Handle most sessions well',
+    subtitle: 'Handle most conditioning well',
   },
   {
     id: 'Elite',
@@ -81,14 +81,14 @@ export const ConditioningLevelScreen: React.FC<ConditioningLevelScreenProps> = (
           color={colors.text.primary}
           style={styles.title}
         >
-          How is your running fitness right now?
+          How's your conditioning right now?
         </Text>
         <Text
           variant="bodySmall"
           color={colors.text.secondary}
           style={styles.subtitle}
         >
-          Be honest - this helps us get it right
+          Be honest - this helps set the right conditioning load.
         </Text>
       </View>
 

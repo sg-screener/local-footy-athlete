@@ -26,7 +26,7 @@ import {
 const baseHealthy: Partial<OnboardingData> = {
   firstName: 'TestAthlete',
   ageRange: '25-34',
-  position: 'Midfielder' as any,
+  position: 'inside_mid',
   motivation: 'Get stronger, run longer',
   experienceLevel: 'Intermediate' as any,
   squatStrength: '1.5x BW' as any,

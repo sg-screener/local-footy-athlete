@@ -14,6 +14,7 @@
  *   Pure: no I/O, no React. Both V2 surfaces and the Coach Update card
  *   call into this so the rules stay in one place.
  */
+import { formatExerciseDisplayName } from './exerciseDisplay';
 
 /** Hard caps that match the MVP simplification spec. */
 export const COACH_NOTE_LIMITS = {
@@ -173,13 +174,41 @@ function isDuplicateOfSummary(line: string, summaryLine?: string): boolean {
   return a === b || a.includes(b) || b.includes(a);
 }
 
+function formatAuditExerciseList(value: string): string {
+  return value
+    .split(/\s*,\s*/)
+    .map((part) => formatExerciseDisplayName(part) || part)
+    .join(', ');
+}
+
+function formatCoachNoteLineForDisplay(line: string): string {
+  if (REMOVED_RE.test(line)) {
+    const name = line.replace(REMOVED_RE, '').trim();
+    return `Removed: ${formatExerciseDisplayName(name) || name}`;
+  }
+
+  const replaced = line.match(/^replaced\s+(.+?)\s+with\s+(.+)$/i);
+  if (replaced) {
+    const from = formatExerciseDisplayName(replaced[1]) || replaced[1];
+    const to = formatExerciseDisplayName(replaced[2]) || replaced[2];
+    return `Replaced ${from} with ${to}`;
+  }
+
+  const caution = line.match(/^caution:\s*(.+)$/i);
+  if (caution) {
+    return `Caution: ${formatAuditExerciseList(caution[1])}`;
+  }
+
+  return line;
+}
+
 function detailLinesForDisplay(cleaned: readonly string[], summaryLine?: string): string[] {
   const detailCandidates = cleaned.filter((n) =>
     (REMOVED_RE.test(n) || REPLACED_RE.test(n) || /^caution:\s*/i.test(n)) &&
     !GENERIC_RE.test(n) &&
     !isDuplicateOfSummary(n, summaryLine),
   );
-  return dedupe(detailCandidates);
+  return dedupe(detailCandidates.map(formatCoachNoteLineForDisplay));
 }
 
 /**

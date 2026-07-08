@@ -17,6 +17,8 @@ import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { useProgramStore } from '../../store/programStore';
 import type { ProgramStackParamList } from '../../types/navigation';
+import { getTeamTrainingWorkoutState } from '../../utils/teamTraining';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 type WorkoutDetailScreenProps = NativeStackScreenProps<ProgramStackParamList, 'WorkoutDetail'>;
 
@@ -146,6 +148,8 @@ const formatRest = (seconds: number): string => {
 
 export default function WorkoutDetailScreen({ navigation }: WorkoutDetailScreenProps) {
   const todayWorkout = useProgramStore((state) => state.todayWorkout) || MOCK_WORKOUT;
+  const teamState = getTeamTrainingWorkoutState(todayWorkout as any);
+  const detailExercises = teamState.renderableExercises as typeof MOCK_WORKOUT.exercises;
 
   useFocusEffect(
     useCallback(() => {
@@ -183,7 +187,7 @@ export default function WorkoutDetailScreen({ navigation }: WorkoutDetailScreenP
                 variant="bodyEmphasis"
                 color={colors.text.primary}
               >
-                {item.exercise?.name || 'Exercise'}
+                {formatExerciseDisplayName(item.exercise?.name) || 'Exercise'}
               </Text>
               {item.exercise?.exerciseType && (
                 <Badge
@@ -299,14 +303,14 @@ export default function WorkoutDetailScreen({ navigation }: WorkoutDetailScreenP
         <View style={styles.infoDivider} />
         <View style={styles.infoItem}>
           <Text variant="caption" color={colors.text.tertiary}>
-            {todayWorkout.exercises.length} exercises
+            {detailExercises.length} exercises
           </Text>
         </View>
       </View>
 
       {/* Exercises List */}
       <FlatList
-        data={todayWorkout.exercises}
+        data={detailExercises}
         keyExtractor={(item) => item.id}
         renderItem={renderExerciseCard}
         scrollEnabled={false}

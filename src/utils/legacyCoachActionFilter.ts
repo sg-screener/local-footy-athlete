@@ -51,6 +51,7 @@ const STRUCTURAL_ACTION_KINDS: ReadonlySet<CoachActionKind> = new Set([
   'make_session_optional',
   'replace_exercise',
   'remove_exercise',
+  'add_exercise',
   'add_weekly_override',
 ]);
 

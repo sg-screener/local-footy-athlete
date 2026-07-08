@@ -1,0 +1,724 @@
+import { useProgramStore } from '../store/programStore';
+import {
+  useCoachUpdatesStore,
+  type ActiveInjuryConstraint,
+  type ActiveScheduleConstraint,
+} from '../store/coachUpdatesStore';
+import { useReadinessStore } from '../store/readinessStore';
+import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
+import { getMondayForDate, type ResolvedDay } from './sessionResolver';
+import {
+  applyPlanChange,
+  type PlanChange,
+  type PlanChangeBinScopeId,
+  type PlanChangeCategoryId,
+} from './planChangeProducer';
+import { clearActiveCoachNote } from './activeCoachNotes';
+import {
+  banExerciseGlobally,
+  setPreferredAlternative,
+  replaceExerciseAtDate,
+  removeExerciseAtDate,
+  addExerciseAtDate,
+  pinExerciseGlobally,
+} from './coachActions';
+import {
+  upsertTapLoadReductionModifier,
+  upsertTapRecoveryModeModifier,
+  recoveryModeModifierIdForDate,
+  withActiveProgramModifierContext,
+  type TapRecoveryModifierScope,
+} from './tapProgramModifiers';
+
+export type ProgramControlActionType =
+  | 'swap_session'
+  | 'add_to_day'
+  | 'move_session'
+  | 'bin_session'
+  | 'swap_exercise'
+  | 'add_exercise'
+  | 'remove_exercise'
+  | 'set_recovery_mode'
+  | 'clear_recovery_mode'
+  | 'set_fatigue_status'
+  | 'clear_fatigue_status'
+  | 'set_injury_modifier'
+  | 'clear_injury_modifier'
+  | 'set_schedule_modifier'
+  | 'update_lfa_days'
+  | 'update_team_training_days'
+  | 'update_game_day'
+  | 'update_season_phase'
+  | 'update_program_setup'
+  | 'add_exercise_preference'
+  | 'clear_exercise_preference'
+  | 'clear_active_modifier';
+
+export type ProgramControlScope =
+  | 'today_only'
+  | 'current_week'
+  | 'future_weeks'
+  | 'current_and_future';
+
+export type ProgramControlScreen =
+  | 'program_tab'
+  | 'session_detail'
+  | 'profile'
+  | 'coach_notes'
+  | 'setup'
+  | 'system'
+  | 'test';
+
+export interface ProgramControlActionSource {
+  screen: ProgramControlScreen;
+  surface?: string;
+  initiatedBy?: 'tap' | 'system' | 'test';
+}
+
+interface ProgramControlActionBase<TType extends ProgramControlActionType, TPayload> {
+  type: TType;
+  source: ProgramControlActionSource;
+  payload: TPayload;
+  scope?: ProgramControlScope;
+  requiresRebuild: boolean;
+  createsActiveModifier: boolean;
+  oneOffOnly: boolean;
+}
+
+interface SessionCategoryPayload {
+  date: string;
+  category?: PlanChangeCategoryId;
+  templateId?: string;
+}
+
+interface ExercisePrescriptionPayload {
+  name: string;
+  sets: number;
+  repsMin: number;
+  repsMax: number;
+  weight?: number;
+  notes?: string;
+  prescriptionType?: WorkoutExercise['prescriptionType'];
+  perSide?: boolean;
+  restSeconds?: number;
+}
+
+export type ProgramControlAction =
+  | ProgramControlActionBase<'swap_session', SessionCategoryPayload>
+  | ProgramControlActionBase<'add_to_day', SessionCategoryPayload>
+  | ProgramControlActionBase<'move_session', { fromDate: string; toDate: string }>
+  | ProgramControlActionBase<'bin_session', { date: string; scope?: PlanChangeBinScopeId }>
+  | ProgramControlActionBase<'swap_exercise', {
+      date: string;
+      fromExercise: string;
+      fromExerciseId?: string;
+      toExercise?: ExercisePrescriptionPayload;
+      futureWeeksToo?: boolean;
+    }>
+  | ProgramControlActionBase<'add_exercise', {
+      date: string;
+      exercise?: ExercisePrescriptionPayload;
+      futureWeeksToo?: boolean;
+    }>
+  | ProgramControlActionBase<'remove_exercise', {
+      date: string;
+      exercise: string;
+      exerciseId?: string;
+      futureWeeksToo?: boolean;
+    }>
+  | ProgramControlActionBase<'set_recovery_mode', {
+      date: string;
+      todayISO?: string;
+      appliedDates?: string[];
+      recoveryScope: TapRecoveryModifierScope;
+      planChange?: PlanChange;
+    }>
+  | ProgramControlActionBase<'clear_recovery_mode', { noteId?: string; modifierId?: string }>
+  | ProgramControlActionBase<'set_fatigue_status', {
+      date: string;
+      todayISO?: string;
+      level: 'spark' | 'cooked' | 'low_energy' | 'not_right' | 'sore' | 'worse';
+    }>
+  | ProgramControlActionBase<'clear_fatigue_status', { noteId?: string; modifierId?: string; date?: string }>
+  | ProgramControlActionBase<'set_injury_modifier', { constraint?: ActiveInjuryConstraint }>
+  | ProgramControlActionBase<'clear_injury_modifier', { noteId?: string; modifierId?: string }>
+  | ProgramControlActionBase<'set_schedule_modifier', {
+      date: string;
+      todayISO?: string;
+      severity?: number;
+      reasonLabel?: string;
+      maxSessionsThisWeek?: number;
+      /** Away / holiday: an explicit day-clearing change applied alongside
+       *  the schedule Coach Note. When present the modifier owns the
+       *  cleared-day overrides, so clearing the note restores them. */
+      planChange?: PlanChange;
+      /** Coach Notes copy overrides (busy vs away wording). */
+      modifierTitle?: string;
+      modifierBody?: string;
+    }>
+  | ProgramControlActionBase<'update_lfa_days', Record<string, unknown>>
+  | ProgramControlActionBase<'update_team_training_days', Record<string, unknown>>
+  | ProgramControlActionBase<'update_game_day', Record<string, unknown>>
+  | ProgramControlActionBase<'update_season_phase', Record<string, unknown>>
+  | ProgramControlActionBase<'update_program_setup', Record<string, unknown>>
+  | ProgramControlActionBase<'add_exercise_preference', {
+      exercise: string;
+      alternative?: string;
+      focus?: string;
+      preferenceKind: 'avoid_exercise' | 'preferred_alternative' | 'add_focus';
+    }>
+  | ProgramControlActionBase<'clear_exercise_preference', { noteId?: string; modifierId?: string }>
+  | ProgramControlActionBase<'clear_active_modifier', { noteId?: string; modifierId?: string }>;
+
+export type ProgramControlRoute =
+  | 'guided_tap_flow'
+  | 'guided_follow_up_sheet'
+  | 'coach_fallback';
+
+export type ProgramControlStatusUpdate =
+  | 'good_now'
+  | 'still_not_right'
+  | 'still_sick'
+  | 'still_cooked'
+  | 'worse';
+
+export interface ProgramControlRoutingDecision {
+  route: ProgramControlRoute;
+  reason: string;
+}
+
+export interface ProgramControlActionContext {
+  todayISO?: string;
+  visibleWeek?: ResolvedDay[];
+  setManualOverride?: (
+    date: string,
+    workout: Workout | null,
+    context?: OverrideContext,
+  ) => void;
+}
+
+export interface ProgramControlActionResult {
+  ok: boolean;
+  changedProgram: boolean;
+  requiresRebuild: boolean;
+  createdModifierIds?: string[];
+  clearedModifierIds?: string[];
+  message?: string;
+  fallbackToCoach?: boolean;
+  fallbackReason?: string;
+  needsGuidedFollowUp?: boolean;
+  route: ProgramControlRoute;
+}
+
+const SETUP_ACTIONS = new Set<ProgramControlActionType>([
+  'update_lfa_days',
+  'update_team_training_days',
+  'update_game_day',
+  'update_season_phase',
+  'update_program_setup',
+]);
+
+export function routeProgramControlAction(
+  action: ProgramControlAction,
+): ProgramControlRoutingDecision {
+  if (SETUP_ACTIONS.has(action.type)) {
+    return {
+      route: 'guided_tap_flow',
+      reason: 'Routine setup changes should stay inside guided controls.',
+    };
+  }
+  if (action.type === 'swap_exercise' && !action.payload.toExercise) {
+    return {
+      route: 'guided_follow_up_sheet',
+      reason: 'Exercise swap needs a selected replacement exercise.',
+    };
+  }
+  if (action.type === 'add_exercise' && !action.payload.exercise) {
+    return {
+      route: 'guided_follow_up_sheet',
+      reason: 'Add exercise needs a selected exercise prescription.',
+    };
+  }
+  if (action.type === 'set_injury_modifier' && !action.payload.constraint) {
+    return {
+      route: 'guided_follow_up_sheet',
+      reason: 'Injury modifiers need body area, severity, and restriction details.',
+    };
+  }
+  return {
+    route: 'guided_tap_flow',
+    reason: 'Routine typed action.',
+  };
+}
+
+function fallbackResult(
+  _action: ProgramControlAction,
+  route: ProgramControlRoutingDecision,
+  reason: string,
+): ProgramControlActionResult {
+  return {
+    ok: false,
+    changedProgram: false,
+    requiresRebuild: false,
+    route: route.route,
+    message: reason,
+    fallbackToCoach: route.route === 'coach_fallback',
+    fallbackReason: route.route === 'coach_fallback' ? reason : undefined,
+    needsGuidedFollowUp: route.route === 'guided_follow_up_sheet',
+  };
+}
+
+function defaultSetManualOverride(
+  date: string,
+  workout: Workout | null,
+  context?: OverrideContext,
+) {
+  if (!workout) return;
+  useProgramStore.getState().setManualOverride(date, workout, context);
+}
+
+function addDaysISO(dateISO: string, days: number): string {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + days, 12);
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  return `${dt.getFullYear()}-${mm}-${dd}`;
+}
+
+export function scheduleModifierIdForDate(
+  dateISO: string,
+  variant: 'busy' | 'away' = 'busy',
+): string {
+  const weekStartISO = getMondayForDate(dateISO);
+  return variant === 'away'
+    ? `tap-schedule-away:${weekStartISO}`
+    : `tap-schedule-busy-week:${weekStartISO}`;
+}
+
+// Exported for tests (gameChangeLocalRebuildTests) — pure builder, the
+// production entry point remains executeProgramControlAction.
+export function buildTapScheduleModifier(args: {
+  date: string;
+  todayISO: string;
+  severity?: number;
+  reasonLabel?: string;
+  maxSessionsThisWeek?: number;
+  /** 'busy' reduces the whole week; 'away' records chosen days cleared. */
+  variant?: 'busy' | 'away';
+  /** Overrides removed when this modifier clears (away days restore). */
+  linkedOverrideDates?: string[];
+  modifierTitle?: string;
+  modifierBody?: string;
+}): ActiveScheduleConstraint {
+  const variant = args.variant ?? 'busy';
+  // Away is a lighter touch on the days the athlete IS training — its job
+  // is to clear the chosen days and record the note, not to strip the rest
+  // of the week. Busy is the aggressive whole-week reducer.
+  const severity = Math.max(
+    1,
+    Math.min(10, Math.round(args.severity ?? (variant === 'away' ? 3 : 5))),
+  );
+  const weekStartISO = getMondayForDate(args.date);
+  const id = scheduleModifierIdForDate(args.date, variant);
+  const now = new Date().toISOString();
+  return {
+    id,
+    type: 'schedule',
+    severity,
+    status: 'active',
+    startDate: args.todayISO,
+    lastUpdatedAt: now,
+    reasonLabel: args.reasonLabel ?? (variant === 'away' ? 'Away' : 'Busy week'),
+    source: 'tap',
+    weekStartISO,
+    maxSessionsThisWeek: args.maxSessionsThisWeek,
+    expiresAt: addDaysISO(weekStartISO, 6),
+    linkedOverrideDates: args.linkedOverrideDates ?? [],
+    modifierTitle:
+      args.modifierTitle ?? (variant === 'away' ? 'Away this week' : 'Busy week active'),
+    modifierBody:
+      args.modifierBody ??
+      (variant === 'away'
+        ? "The days you're away are cleared. Clear this note to bring them back."
+        : 'Your week is being kept tighter around limited availability.'),
+    modifierAffects: ['current_week'],
+    rules: variant === 'away'
+      ? ['sessions on the days you’re away']
+      : severity >= 7
+      ? ['max-effort sessions this week', 'long accessory blocks']
+      : ['long sessions this week', 'optional accessory volume'],
+    safeFocus: ['Short, targeted sessions', 'Skill / technique work', 'Recovery + mobility'],
+    advice: [],
+  };
+}
+
+function planChangeForAction(action: ProgramControlAction): PlanChange | null {
+  if (action.type === 'swap_session') {
+    if (action.payload.category) {
+      return { kind: 'swap_category', date: action.payload.date, category: action.payload.category };
+    }
+    if (action.payload.templateId) {
+      return { kind: 'swap_template', date: action.payload.date, templateId: action.payload.templateId };
+    }
+  }
+  if (action.type === 'add_to_day') {
+    if (action.payload.category) {
+      return { kind: 'add_category', date: action.payload.date, category: action.payload.category };
+    }
+    if (action.payload.templateId) {
+      return { kind: 'add_template', date: action.payload.date, templateId: action.payload.templateId };
+    }
+  }
+  if (action.type === 'move_session') {
+    return { kind: 'move_session', fromDate: action.payload.fromDate, toDate: action.payload.toDate };
+  }
+  if (action.type === 'bin_session') {
+    return { kind: 'remove_session', date: action.payload.date, scope: action.payload.scope };
+  }
+  return null;
+}
+
+function executePlanChangeAction(
+  action: ProgramControlAction,
+  context: ProgramControlActionContext,
+  route: ProgramControlRoutingDecision,
+): ProgramControlActionResult | null {
+  const change = planChangeForAction(action);
+  if (!change) return null;
+  if (!context.visibleWeek || !context.todayISO) {
+    return fallbackResult(
+      action,
+      { route: 'guided_follow_up_sheet', reason: 'Visible week context is required.' },
+      'Cannot safely apply this day/session action without the current visible week.',
+    );
+  }
+  const result = applyPlanChange({
+    change,
+    visibleWeek: context.visibleWeek,
+    todayISO: context.todayISO,
+    setManualOverride: context.setManualOverride ?? defaultSetManualOverride,
+  });
+  return {
+    ok: result.ok,
+    changedProgram: result.ok && result.appliedDates.length > 0,
+    requiresRebuild: false,
+    message: result.message,
+    fallbackToCoach: false,
+    route: route.route,
+  };
+}
+
+function clearModifierFromPayload(
+  payload: { noteId?: string; modifierId?: string },
+  route: ProgramControlRoutingDecision,
+): ProgramControlActionResult {
+  const id = payload.noteId ?? payload.modifierId;
+  if (!id) {
+    return {
+      ok: false,
+      changedProgram: false,
+      requiresRebuild: false,
+      message: 'No active modifier id was provided.',
+      needsGuidedFollowUp: true,
+      fallbackToCoach: false,
+      route: 'guided_follow_up_sheet',
+    };
+  }
+  const cleared = clearActiveCoachNote(id);
+  return {
+    ok: Boolean(cleared.cleared),
+    changedProgram: Boolean(cleared.cleared),
+    requiresRebuild: cleared.rebuildRequired,
+    clearedModifierIds: cleared.cleared ? [cleared.cleared.id] : [],
+    message: cleared.cleared ? `Cleared ${cleared.cleared.title}.` : 'No active modifier matched.',
+    fallbackToCoach: false,
+    route: route.route,
+  };
+}
+
+export function executeProgramControlAction(
+  action: ProgramControlAction,
+  context: ProgramControlActionContext = {},
+): ProgramControlActionResult {
+  const route = routeProgramControlAction(action);
+  if (route.route === 'guided_follow_up_sheet') {
+    return fallbackResult(action, route, route.reason);
+  }
+
+  const planResult = executePlanChangeAction(action, context, route);
+  if (planResult) return planResult;
+
+  switch (action.type) {
+    case 'swap_exercise': {
+      const result = replaceExerciseAtDate({
+        date: action.payload.date,
+        fromExercise: action.payload.fromExercise,
+        fromExerciseId: action.payload.fromExerciseId,
+        toExercise: action.payload.toExercise!,
+      });
+      let futureResult: { success: boolean; reason?: string } | null = null;
+      if (result.success && action.payload.futureWeeksToo) {
+        futureResult = setPreferredAlternative({
+          exercise: action.payload.fromExercise,
+          alternative: action.payload.toExercise!.name,
+        });
+      }
+      return {
+        ok: result.success && futureResult?.success !== false,
+        changedProgram: result.success,
+        requiresRebuild: false,
+        message: futureResult?.reason ?? result.reason,
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'add_exercise': {
+      const result = addExerciseAtDate({
+        date: action.payload.date,
+        exercise: action.payload.exercise!,
+      });
+      let futureResult: { success: boolean; reason?: string } | null = null;
+      if (result.success && action.payload.futureWeeksToo) {
+        futureResult = pinExerciseGlobally({ exercise: action.payload.exercise!.name });
+      }
+      return {
+        ok: result.success && futureResult?.success !== false,
+        changedProgram: result.success,
+        requiresRebuild: false,
+        message: futureResult?.reason ?? result.reason,
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'remove_exercise': {
+      const result = removeExerciseAtDate({
+        date: action.payload.date,
+        exercise: action.payload.exercise,
+        exerciseId: action.payload.exerciseId,
+      });
+      let futureResult: { success: boolean; reason?: string } | null = null;
+      if (result.success && action.payload.futureWeeksToo) {
+        futureResult = banExerciseGlobally({ exercise: action.payload.exercise });
+      }
+      return {
+        ok: result.success && futureResult?.success !== false,
+        changedProgram: result.success,
+        requiresRebuild: false,
+        message: futureResult?.reason ?? result.reason,
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'set_recovery_mode': {
+      const todayISO = action.payload.todayISO ?? context.todayISO ?? action.payload.date;
+      const activeModifierId = recoveryModeModifierIdForDate(action.payload.date);
+      let appliedDates = action.payload.appliedDates ?? [];
+      let message: string | undefined;
+      if (action.payload.planChange) {
+        if (!context.visibleWeek) {
+          return fallbackResult(
+            action,
+            { route: 'guided_follow_up_sheet', reason: 'Visible week context is required.' },
+            'Cannot safely apply recovery mode without the current visible week.',
+          );
+        }
+        const planResult = applyPlanChange({
+          change: action.payload.planChange,
+          visibleWeek: context.visibleWeek,
+          todayISO,
+          setManualOverride: (date, workout, overrideContext) =>
+            (context.setManualOverride ?? defaultSetManualOverride)(
+              date,
+              workout,
+              withActiveProgramModifierContext(overrideContext, activeModifierId),
+            ),
+        });
+        if (!planResult.ok) {
+          return {
+            ok: false,
+            changedProgram: false,
+            requiresRebuild: false,
+            message: planResult.message,
+            fallbackToCoach: false,
+            route: route.route,
+          };
+        }
+        appliedDates = planResult.appliedDates;
+        message = planResult.message;
+      }
+      const modifierId = upsertTapRecoveryModeModifier({
+        date: action.payload.date,
+        todayISO,
+        appliedDates,
+        scope: action.payload.recoveryScope,
+      });
+      return {
+        ok: true,
+        changedProgram: true,
+        requiresRebuild: false,
+        createdModifierIds: [modifierId],
+        message,
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'set_fatigue_status': {
+      const todayISO = action.payload.todayISO ?? context.todayISO ?? action.payload.date;
+      if (action.payload.level === 'cooked') {
+        useReadinessStore.getState().clearReadinessSignal(todayISO);
+        const modifierId = upsertTapLoadReductionModifier({ date: action.payload.date, todayISO });
+        return {
+          ok: true,
+          changedProgram: true,
+          requiresRebuild: false,
+          createdModifierIds: [modifierId],
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
+      if (action.payload.level === 'sore') {
+        useReadinessStore.getState().setReadinessSignal(todayISO, {
+          soreness: 'moderate',
+          source: 'quick_check',
+        });
+      } else {
+        useReadinessStore.getState().setReadinessSignal(todayISO, {
+          energy: 'low',
+          flatToday: action.payload.level === 'worse',
+          source: 'quick_check',
+        });
+      }
+      // Garbage-collect dormant past-date signals now that we've written
+      // today's — only today's signal is ever read downstream.
+      useReadinessStore.getState().pruneBefore(todayISO);
+      return {
+        ok: true,
+        changedProgram: true,
+        requiresRebuild: false,
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'clear_recovery_mode':
+    case 'clear_fatigue_status':
+    case 'clear_injury_modifier':
+    case 'clear_exercise_preference':
+    case 'clear_active_modifier':
+      return clearModifierFromPayload(action.payload, route);
+    case 'set_injury_modifier': {
+      useCoachUpdatesStore.getState().upsertActiveConstraint(action.payload.constraint!);
+      return {
+        ok: true,
+        changedProgram: true,
+        requiresRebuild: false,
+        createdModifierIds: [action.payload.constraint!.id],
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'set_schedule_modifier': {
+      const todayISO = action.payload.todayISO ?? context.todayISO ?? action.payload.date;
+      // Away/holiday: an explicit day-clearing change rides alongside the
+      // schedule note. The note OWNS those overrides (tagged with its id +
+      // recorded as linkedOverrideDates), so clearing the note restores the
+      // days — the same ownership pattern recovery mode uses.
+      const variant: 'busy' | 'away' = action.payload.planChange ? 'away' : 'busy';
+      const scheduleId = scheduleModifierIdForDate(action.payload.date, variant);
+      let appliedDates: string[] = [];
+      let message: string | undefined;
+      if (action.payload.planChange) {
+        if (!context.visibleWeek) {
+          return fallbackResult(
+            action,
+            { route: 'guided_follow_up_sheet', reason: 'Visible week context is required.' },
+            'Cannot safely clear away days without the current visible week.',
+          );
+        }
+        const planResult = applyPlanChange({
+          change: action.payload.planChange,
+          visibleWeek: context.visibleWeek,
+          todayISO,
+          setManualOverride: (date, workout, overrideContext) =>
+            (context.setManualOverride ?? defaultSetManualOverride)(
+              date,
+              workout,
+              withActiveProgramModifierContext(overrideContext, scheduleId),
+            ),
+        });
+        if (!planResult.ok) {
+          return {
+            ok: false,
+            changedProgram: false,
+            requiresRebuild: false,
+            message: planResult.message,
+            fallbackToCoach: false,
+            route: route.route,
+          };
+        }
+        appliedDates = planResult.appliedDates;
+        message = planResult.message;
+      }
+      const constraint = buildTapScheduleModifier({
+        date: action.payload.date,
+        todayISO,
+        severity: action.payload.severity,
+        reasonLabel: action.payload.reasonLabel,
+        maxSessionsThisWeek: action.payload.maxSessionsThisWeek,
+        variant,
+        linkedOverrideDates: appliedDates,
+        modifierTitle: action.payload.modifierTitle,
+        modifierBody: action.payload.modifierBody,
+      });
+      useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
+      return {
+        ok: true,
+        changedProgram: true,
+        requiresRebuild: false,
+        createdModifierIds: [constraint.id],
+        message,
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'add_exercise_preference': {
+      const result = action.payload.preferenceKind === 'preferred_alternative'
+        ? setPreferredAlternative({
+            exercise: action.payload.exercise,
+            alternative: action.payload.alternative ?? '',
+          })
+        : action.payload.preferenceKind === 'add_focus'
+          ? pinExerciseGlobally({
+              exercise: action.payload.alternative ?? action.payload.exercise,
+            })
+          : banExerciseGlobally({ exercise: action.payload.exercise });
+      return {
+        ok: result.success,
+        changedProgram: result.success,
+        requiresRebuild: false,
+        message: result.reason,
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'update_lfa_days':
+    case 'update_team_training_days':
+    case 'update_game_day':
+    case 'update_season_phase':
+    case 'update_program_setup':
+      return {
+        ok: false,
+        changedProgram: false,
+        requiresRebuild: action.requiresRebuild,
+        message: 'This routine setup action is typed, but its guided executor wiring belongs in Stage 2B.',
+        fallbackToCoach: false,
+        needsGuidedFollowUp: false,
+        route: route.route,
+      };
+    default:
+      return fallbackResult(
+        action,
+        { route: 'coach_fallback', reason: 'No deterministic handler exists for this action.' },
+        'No deterministic handler exists for this action.',
+      );
+  }
+}

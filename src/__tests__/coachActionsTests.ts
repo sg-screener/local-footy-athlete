@@ -87,6 +87,7 @@ import {
   makeSessionOptional,
   replaceExerciseAtDate,
   removeExerciseAtDate,
+  addExerciseAtDate,
   addWeeklyOverride,
   banExerciseGlobally,
   setPreferredAlternative,
@@ -763,6 +764,65 @@ console.log('\n[coachActions] remove_exercise (precision: ambiguous bench)');
   ok('ambiguous candidates populated', !!result.ambiguous, JSON.stringify(result.ambiguous));
   eq('two candidates returned', result.ambiguous?.candidates.length, 2);
   eq('NO override written', overrideCalls.length, 0);
+}
+
+// 27b. remove_exercise — tapped row identity beats ambiguous text
+console.log('\n[coachActions] remove_exercise (row id disambiguates)');
+{
+  reset();
+  const date = '2026-04-27';
+  const bench = makeExercise('Bench Press', 4);
+  const dbBench = makeExercise('DB Bench Press', 3);
+  setFixture(date, makeWorkout('Upper Push', [bench, dbBench]));
+  const result = removeExerciseAtDate({
+    date,
+    exercise: 'bench',
+    exerciseId: bench.id,
+  });
+  eq('success with row id', result.success, true);
+  const exercises = overrideCalls[0]?.workout?.exercises || [];
+  eq('one exercise remains', exercises.length, 1);
+  eq('specific tapped row removed', exercises[0]?.exercise?.name, 'DB Bench Press');
+}
+
+// 27c. replace_exercise — tapped row identity beats ambiguous text
+console.log('\n[coachActions] replace_exercise (row id disambiguates)');
+{
+  reset();
+  const date = '2026-04-27';
+  const bench = makeExercise('Bench Press', 4);
+  const dbBench = makeExercise('DB Bench Press', 3);
+  setFixture(date, makeWorkout('Upper Push', [bench, dbBench]));
+  const result = replaceExerciseAtDate({
+    date,
+    fromExercise: 'bench',
+    fromExerciseId: dbBench.id,
+    toExercise: { name: 'Push-Ups', sets: 3, repsMin: 8, repsMax: 12 },
+  });
+  eq('success with row id', result.success, true);
+  const exercises = overrideCalls[0]?.workout?.exercises || [];
+  eq('exercise count unchanged', exercises.length, 2);
+  eq('untapped row untouched', exercises[0]?.exercise?.name, 'Bench Press');
+  eq('specific tapped row replaced', exercises[1]?.exercise?.name, 'Push-Ups');
+}
+
+// 27d. add_exercise — appends a deterministic date override
+console.log('\n[coachActions] add_exercise (append to date override)');
+{
+  reset();
+  const date = '2026-04-27';
+  setFixture(date, makeWorkout('Upper Push', [
+    makeExercise('Bench Press', 4),
+  ]));
+  const result = addExerciseAtDate({
+    date,
+    exercise: { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12 },
+  });
+  eq('success', result.success, true);
+  const exercises = overrideCalls[0]?.workout?.exercises || [];
+  eq('exercise appended', exercises.length, 2);
+  eq('new exercise name', exercises[1]?.exercise?.name, 'Pallof Press');
+  eq('new exercise order follows existing rows', exercises[1]?.exerciseOrder, 1);
 }
 
 // 28. ban_exercise_globally — alias resolves to canonical before persisting

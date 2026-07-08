@@ -320,7 +320,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Breathe and keep moving.',
   },
   'Suitcase Carry': {
-    primaryCue: "Stay tall — don't lean into the weight.",
+    primaryCue: "Stay tall - don't lean into the weight.",
     secondaryCue: 'Resist the side bend.',
   },
 
@@ -366,7 +366,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'McGill Sit Up': {
     primaryCue: 'Hands under the lower back, lift the shoulder blades only.',
-    secondaryCue: 'No spinal flexion — short, controlled lift.',
+    secondaryCue: 'No spinal flexion - short, controlled lift.',
   },
 
   // ═══════════════════════════════════════════════════
@@ -545,7 +545,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Dead Hang': {
     primaryCue: 'Passive hang, shoulders open and relaxed.',
-    secondaryCue: 'Breathe — let the spine decompress.',
+    secondaryCue: 'Breathe - let the spine decompress.',
   },
   'Toe Stretch': {
     primaryCue: 'Tuck toes under, sit back into the heels.',
@@ -602,7 +602,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Lacrosse Ball Glute Release': {
     primaryCue: 'Sit on the ball, shift to find the spot.',
-    secondaryCue: 'Hold 30–60 seconds per side.',
+    secondaryCue: 'Hold 30-60 seconds per side.',
   },
 
   // ═══════════════════════════════════════════════════

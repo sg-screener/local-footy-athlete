@@ -629,7 +629,7 @@ function applyGameProximity(
         ...templateWorkout,
         id: `derived-nearGame-${date}`,
         intensity: 'Moderate',
-        description: `${templateWorkout.description} (48h to game — moderate load)`,
+        description: `${templateWorkout.description} (48h to game - moderate load)`,
         exercises: templateWorkout.exercises.map(e => ({
           ...e,
           // Preserve nested exercise sub-object for display
@@ -919,7 +919,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   ) {
     return buildDay(
       date, dow, today,
-      buildDerivedSession('recovery', date, currentMicrocycle.id, 'Scheduled recovery — active', state.athleteContext),
+      buildDerivedSession('recovery', date, currentMicrocycle.id, 'Scheduled recovery - active', state.athleteContext),
       'template',
     );
   }
@@ -1232,7 +1232,7 @@ export function resolveWeekWithConditioning(
             'prehab_accessories',
             g2Day.date,
             state.currentMicrocycle?.id || 'derived',
-            'Pre-game window — avoiding upper-body stacking with G-1',
+            'Pre-game window - avoiding upper-body stacking with G-1',
             state.athleteContext,
           ),
           'gameProximity',
@@ -1433,7 +1433,7 @@ export function resolveWeekWithConditioning(
         recoveryResult.derivedType,
         day.date,
         state.currentMicrocycle?.id || 'derived',
-        `Scheduled recovery — ${recoveryResult.category}`,
+        `Scheduled recovery - ${recoveryResult.category}`,
         state.athleteContext,
       );
       result[i] = buildDay(day.date, day.dayOfWeek, today, recoveryWorkout, 'recovery');
@@ -1644,7 +1644,7 @@ export function computeGameDatesForBlock(
   return dates;
 }
 
-/** Format a week label like "6 – 12 Apr" from a Monday date string. */
+/** Format a week label like "6 - 12 Apr" from a Monday date string. */
 export function formatWeekLabel(mondayStr: string): string {
   const sunDate = addDays(mondayStr, 6);
   const [, mm, md] = mondayStr.split('-').map(Number);
@@ -1652,6 +1652,6 @@ export function formatWeekLabel(mondayStr: string): string {
   const mMon = MONTH_SHORT[mm - 1];
   const sMon = MONTH_SHORT[sm - 1];
   return mMon === sMon
-    ? `${md} – ${sd} ${sMon}`
-    : `${md} ${mMon} – ${sd} ${sMon}`;
+    ? `${md} - ${sd} ${sMon}`
+    : `${md} ${mMon} - ${sd} ${sMon}`;
 }

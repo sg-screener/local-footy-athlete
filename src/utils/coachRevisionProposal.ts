@@ -6,6 +6,7 @@ import {
 } from './visibleProgramReadModel';
 import type { ResolvedDay, ScheduleState } from './sessionResolver';
 import { logger } from './logger';
+import { getTeamTrainingWorkoutState } from './teamTraining';
 
 export const COACH_REVISION_PROPOSAL_SCHEMA_VERSION = 'coach_revision_proposal.v1';
 
@@ -557,7 +558,7 @@ function buildVisibleSections(
 }
 
 function isTeamTrainingWorkout(workout: Workout): boolean {
-  return cleanText(workout.workoutType).toLowerCase() === 'team training';
+  return getTeamTrainingWorkoutState(workout).hasTeamTraining;
 }
 
 function snapshotVisibleItem(

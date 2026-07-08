@@ -2,10 +2,9 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  Pressable,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Text } from '../../components/common/Text';
+import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
@@ -71,14 +70,14 @@ export const SprintExposureScreen: React.FC<SprintExposureScreenProps> = ({
           color={colors.text.primary}
           style={styles.title}
         >
-          Do you do any sprint work?
+          Do you already do sprint work?
         </Text>
         <Text
           variant="bodySmall"
           color={colors.text.secondary}
           style={styles.subtitle}
         >
-          This helps us manage speed work and recovery
+          So we can manage speed work and recovery. Club training counts if you sprint there.
         </Text>
       </View>
 
@@ -86,18 +85,29 @@ export const SprintExposureScreen: React.FC<SprintExposureScreenProps> = ({
         {SPRINT_OPTIONS.map((option) => {
           const isSelected = selectedExposure === option.id;
           return (
-            <Pressable
+            <SelectableTile
               key={option.id}
-              style={({ pressed }) => [
-                styles.card,
-                isSelected && styles.cardSelected,
-                !isSelected && pressed && styles.cardPressed,
-              ]}
+              isSelected={isSelected}
               onPress={() => handleSelect(option.id)}
+              style={styles.card}
             >
-              <Text style={styles.optionLabel}>{option.label}</Text>
-              <Text style={styles.optionSubtitle}>{option.subtitle}</Text>
-            </Pressable>
+              <Text
+                style={[
+                  styles.optionLabel,
+                  isSelected && styles.optionLabelSelected,
+                ]}
+              >
+                {option.label}
+              </Text>
+              <Text
+                style={[
+                  styles.optionSubtitle,
+                  isSelected && styles.optionSubtitleSelected,
+                ]}
+              >
+                {option.subtitle}
+              </Text>
+            </SelectableTile>
           );
         })}
       </View>
@@ -121,30 +131,27 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: 14,
     paddingHorizontal: 20,
     paddingVertical: 18,
-    borderWidth: 1.5,
-    borderColor: colors.surface.tertiary,
-  },
-  cardSelected: {
-    borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200, 255, 0, 0.04)',
-  },
-  cardPressed: {
-    backgroundColor: colors.surface.tertiary,
   },
   optionLabel: {
-    color: colors.text.primary,
+    color: colors.text.secondary,
     fontSize: 16,
     fontWeight: '700',
     letterSpacing: 0.5,
     marginBottom: 4,
+    paddingRight: 28,
+  },
+  optionLabelSelected: {
+    color: colors.text.primary,
   },
   optionSubtitle: {
     color: colors.text.tertiary,
     fontSize: 13,
     fontWeight: '400',
+    paddingRight: 28,
+  },
+  optionSubtitleSelected: {
+    color: colors.text.secondary,
   },
 });

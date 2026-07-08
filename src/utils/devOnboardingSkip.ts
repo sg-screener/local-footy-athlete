@@ -16,7 +16,7 @@ export const DEV_TEST_ONBOARDING_DATA: OnboardingData = {
   firstName: 'Sam',
   heightCm: 184,
   weightKg: 90,
-  position: 'Midfielder',
+  position: 'inside_mid',
   motivation: 'Stay injury-free',
   goals: ['Stay injury-free'],
   seasonPhase: 'In-season',

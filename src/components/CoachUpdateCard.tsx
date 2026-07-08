@@ -39,6 +39,7 @@ import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import type { CoachUpdate } from '../store/coachUpdatesStore';
 import { COACH_NOTE_LIMITS } from '../utils/coachNoteSummary';
+import { formatExerciseDisplayName } from '../utils/exerciseDisplay';
 
 const APPLIED_MAX = 3;
 const GUIDANCE_MAX = 3;
@@ -50,13 +51,15 @@ interface CoachUpdateCardProps {
 }
 
 function formatAppliedChange(c: NonNullable<CoachUpdate['appliedChanges']>[number]): string {
+  const before = formatExerciseDisplayName(c.before) || c.before;
+  const after = formatExerciseDisplayName(c.after) || c.after;
   switch (c.kind) {
     case 'exercise_removed':
-      return c.before ? `${c.before} removed from ${c.sessionName}` : `${c.sessionName} adjusted`;
+      return before ? `${before} removed from ${c.sessionName}` : `${c.sessionName} adjusted`;
     case 'exercise_replaced':
-      if (c.before && c.after) return `${c.before} → ${c.after} on ${c.sessionName}`;
-      if (c.after) return `${c.after} added to ${c.sessionName}`;
-      if (c.before) return `${c.before} removed from ${c.sessionName}`;
+      if (before && after) return `${before} → ${after} on ${c.sessionName}`;
+      if (after) return `${after} added to ${c.sessionName}`;
+      if (before) return `${before} removed from ${c.sessionName}`;
       return `${c.sessionName} adjusted`;
     case 'session_replaced':
       return c.before && c.after

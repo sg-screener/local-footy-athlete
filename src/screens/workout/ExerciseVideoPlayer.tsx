@@ -14,6 +14,7 @@ import { typography } from '../../theme/typography';
 import { Text } from '../../components/common/Text';
 import { Card } from '../../components/common/Card';
 import type { Exercise } from '../../types/domain';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 interface ExerciseVideoPlayerProps {
   exercise: Exercise;
@@ -92,7 +93,7 @@ export const ExerciseVideoPlayer = ({ exercise, onClose }: ExerciseVideoPlayerPr
           <Card style={styles.infoCard}>
             <View style={styles.infoContent}>
               <Text variant="h3" style={styles.exerciseName}>
-                {exercise.name}
+                {formatExerciseDisplayName(exercise.name) || exercise.name}
               </Text>
 
               {/* Type and difficulty */}

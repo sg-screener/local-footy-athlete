@@ -26,6 +26,7 @@ import { SetLoggerRow } from './SetLoggerRow';
 import { ExerciseVideoPlayer } from './ExerciseVideoPlayer';
 import { CompletionSummary } from './CompletionSummary';
 import { format } from 'date-fns';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 type WorkoutLoggerScreenProps = NativeStackScreenProps<HomeStackParamList, 'WorkoutLogger'>;
 
@@ -206,7 +207,7 @@ export default function WorkoutLoggerScreen({ route, navigation }: WorkoutLogger
           <View style={styles.exerciseHeader}>
             <View>
               <Text variant="h3" style={styles.exerciseName}>
-                {currentExercise.exercise?.name || 'Exercise'}
+                {formatExerciseDisplayName(currentExercise.exercise?.name) || 'Exercise'}
               </Text>
               {currentExercise.exercise?.muscleGroups && (
                 <Text variant="caption" color={colors.text.secondary}>

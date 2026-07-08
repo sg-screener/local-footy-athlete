@@ -13,6 +13,7 @@ import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { Text } from '../../components/common/Text';
 import { Card } from '../../components/common/Card';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 // Mock data for a single exercise history
 const MOCK_EXERCISE_HISTORY = {
@@ -95,7 +96,7 @@ export const ExerciseHistoryScreen = () => {
           <Text style={{ fontSize: 24, color: colors.text.primary }}>←</Text>
         </Pressable>
         <Text variant="h2" style={{ color: colors.text.primary, flex: 1, marginLeft: spacing.md }}>
-          {exercise.name}
+          {formatExerciseDisplayName(exercise.name) || exercise.name}
         </Text>
       </View>
 

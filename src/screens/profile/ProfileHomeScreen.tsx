@@ -17,6 +17,7 @@ import {
   clearCoachChat,
   resetProgramAndOnboarding,
 } from '../../utils/resetCoach';
+import { roleBucketLabel } from '../../utils/roleBuckets';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
 
@@ -26,7 +27,7 @@ export const ProfileHomeScreen: React.FC = () => {
   const auth = useAuthStore((state) => state.user);
 
   const displayName = onboardingData.firstName || 'Athlete';
-  const position = onboardingData.position || '';
+  const position = onboardingData.position ? roleBucketLabel(onboardingData.position) : '';
 
   const initials = (
     (displayName.charAt(0) || '').toUpperCase()

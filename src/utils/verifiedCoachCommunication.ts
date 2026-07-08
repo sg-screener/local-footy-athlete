@@ -315,7 +315,7 @@ export function buildVerifiedCommunication(
   let unchangedReason: string | undefined;
   if (!canSayProgramUpdated && input.activeConstraints.length > 0) {
     unchangedReason =
-      'Nothing risky scheduled in your visible week — flagging only.';
+      'Nothing risky scheduled in your visible week - flagging only.';
   }
 
   if (typeof console !== 'undefined') {
@@ -444,27 +444,27 @@ export interface GuidanceOnlyInput {
 function leadHeadline(c: ActiveConstraint, severityIsExplicit: boolean): string {
   if (c.type === 'fatigue') {
     if (severityIsExplicit && c.severity > 0) {
-      return `Got it — fatigue ${c.severity}/10. Flagging the week so we avoid adding extra hard work.`;
+      return `Got it - fatigue ${c.severity}/10. Flagging the week so we avoid adding extra hard work.`;
     }
-    return `Got it — sounds like fatigue is up. I've flagged the week so we avoid adding extra hard work.`;
+    return `Got it - sounds like fatigue is up. I've flagged the week so we avoid adding extra hard work.`;
   }
   if (c.type === 'soreness') {
     const part = (c as ActiveSorenessConstraint).bodyPart || 'soreness';
     return severityIsExplicit
-      ? `Got it — ${part} sore at ${c.severity}/10. Flagging the week so it doesn't get worse.`
-      : `Got it — ${part} feeling sore. Flagging the week so it doesn't get worse.`;
+      ? `Got it - ${part} sore at ${c.severity}/10. Flagging the week so it doesn't get worse.`
+      : `Got it - ${part} feeling sore. Flagging the week so it doesn't get worse.`;
   }
   if (c.type === 'schedule') {
-    return `Got it — busy week. Flagging the week so we keep extra hard work off the menu.`;
+    return `Got it - busy week. Flagging the week so we keep extra hard work off the menu.`;
   }
   if (c.type === 'missed_session') {
-    return `No worries — picking up where the schedule left off, no make-up needed.`;
+    return `No worries - picking up where the schedule left off, no make-up needed.`;
   }
   // injury (severity-unknown — rare, the injury path normally has explicit severity)
   const inj = c as ActiveInjuryConstraint;
   return severityIsExplicit
-    ? `Got it — ${inj.bodyPart} ${inj.severity}/10. Flagging the week.`
-    : `Got it — flagging the ${inj.bodyPart} restriction.`;
+    ? `Got it - ${inj.bodyPart} ${inj.severity}/10. Flagging the week.`
+    : `Got it - flagging the ${inj.bodyPart} restriction.`;
 }
 
 export function composeGuidanceOnlyReply(input: GuidanceOnlyInput): string {

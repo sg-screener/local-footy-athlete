@@ -36,6 +36,7 @@ import {
   type RotationContext,
   type AthletePoolPrefs,
 } from './exercisePoolsStrength';
+import { isTeamTrainingItem } from '../utils/teamTraining';
 
 /**
  * Default exercises used in the training program
@@ -214,7 +215,7 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   {
     id: 'ex-nordic-lower',
     name: 'Nordic Lower',
-    description: 'Nordic hamstring lower — eccentric posterior-chain isolation',
+    description: 'Nordic hamstring lower - eccentric posterior-chain isolation',
     exerciseType: 'Isolation',
     muscleGroups: ['Hamstrings'],
     equipmentRequired: [],
@@ -400,9 +401,7 @@ function createDefaultMicrocycle(programId: string, onboardingData?: OnboardingD
       'Footy training night',
       'Moderate',
       'Team Training',
-      [
-        { exerciseId: 'ex-sprint-intervals', sets: 10, repsMin: 1, repsMax: 1, weight: 0, rest: 60, notes: 'Footy training' },
-      ],
+      [],
       45,
       'core'
     ),
@@ -434,9 +433,7 @@ function createDefaultMicrocycle(programId: string, onboardingData?: OnboardingD
       'Footy training night',
       'Moderate',
       'Team Training',
-      [
-        { exerciseId: 'ex-tempo-run', sets: 1, repsMin: 1, repsMax: 1, weight: 0, rest: 0, notes: 'Footy training' },
-      ],
+      [],
       40,
       'core'
     ),
@@ -610,6 +607,10 @@ function fallbackNameForPlanEntry(entry: SessionAllocation): string {
     return 'Recovery Session';
   }
   if (entry.conditioningFlavour && !entry.hasCombinedConditioning) return 'Conditioning';
+  // Low-fatigue accessory/prehab slots (typical G-1 content) must not fall
+  // through to a main-lift label — the resolver's G-1 pass expects a light
+  // session here, and "Gunshow" is the canonical athlete-facing name.
+  if (/accessor|prehab|gunshow|pump|low-fatigue/i.test(entry.focus)) return 'Gunshow';
   if (/hip-dominant|hinge|RDL|hamstring/i.test(entry.focus)) return 'Lower Hinge';
   if (/squat|quad|lower body/i.test(entry.focus)) return 'Lower Squat';
   if (/pull|row|pull-up/i.test(entry.focus)) return 'Upper Pull';
@@ -619,17 +620,27 @@ function fallbackNameForPlanEntry(entry: SessionAllocation): string {
 }
 
 function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGeneratedWorkoutInput['exercises'] {
-  const strengthText = entry.focus.split('+')[0];
+  const strengthText = strengthFocusForPlanEntry(entry);
   const lower = strengthText.toLowerCase();
 
-  if (entry.isTeamDay) {
-    return [{ name: 'Team Training', sets: 1, repsMin: 1, repsMax: 1, notes: 'Field session' }];
-  }
+  if (entry.isTeamDay && !lower) return [];
   if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(lower)) {
     return [{ name: 'Mobility Flow', sets: 1, repsMin: 10, repsMax: 15, notes: 'Easy mobility and recovery work' }];
   }
   if (entry.conditioningFlavour && !entry.hasCombinedConditioning) {
     return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
+  }
+  // Low-fatigue accessories / gunshow / prehab (typical G-1 slot): light
+  // pump + prehab work, never main pressing — the previous fallthrough to
+  // the default bench/OHP/dips block put main lifts on the day before a game.
+  if (/accessor|prehab|gunshow|pump|low-fatigue/i.test(lower)) {
+    return [
+      { name: 'Bicep Curls', sets: 2, repsMin: 10, repsMax: 15 },
+      { name: 'Tricep Pushdowns', sets: 2, repsMin: 10, repsMax: 15 },
+      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
+      { name: 'Calf Raises', sets: 2, repsMin: 10, repsMax: 15 },
+      { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
+    ];
   }
   if (/hip-dominant|hinge|rdl|hamstring/i.test(lower)) {
     return [
@@ -664,6 +675,15 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
     { name: 'Overhead Press', sets: 3, repsMin: 6, repsMax: 8 },
     { name: 'Dips', sets: 2, repsMin: 8, repsMax: 12 },
   ];
+}
+
+function strengthFocusForPlanEntry(entry: SessionAllocation): string {
+  const parts = String(entry.focus ?? '')
+    .split('+')
+    .map((part) => part.trim())
+    .filter((part) => part && !/^team training\b/i.test(part));
+  if (parts.length > 0) return parts[0];
+  return entry.isTeamDay ? '' : String(entry.focus ?? '');
 }
 
 function completeCoachWorkoutsFromPlan(
@@ -1032,13 +1052,23 @@ export function buildWorkoutsFromCoach(
     const dateStr = syntheticDateStr(cw.dayOfWeek);
     // Prefer category when the planner assigned one (off-season / pre-
     // season). Falls back to flavour-based mapping for legacy phases.
-    const candidateName = planEntry.conditioningCategory
+    let candidateName = planEntry.conditioningCategory
       ? conditioningCategoryToExerciseName(
           planEntry.conditioningCategory,
           dateStr,
           rotationContext?.miniCycleNumber,
         )
       : conditioningFlavourToExerciseName(planEntry.conditioningFlavour, dateStr);
+    // 4B standalone tempo modality law: when the engine ruled this week's
+    // tempo off-feet (typed field on the plan entry — the single
+    // representation of that decision), force the erg tempo template.
+    if (
+      planEntry.conditioningCategory === 'tempo' &&
+      planEntry.conditioningOffFeet &&
+      isRunningBasedConditioning(candidateName)
+    ) {
+      candidateName = 'Bike/Row/Ski Tempo Intervals';
+    }
     const isCombined = !!planEntry.hasCombinedConditioning;
     // Infer the strength region being paired on combined days so the
     // conditioning builder can auto-shift to an ergometer when pairing a
@@ -1056,7 +1086,7 @@ export function buildWorkoutsFromCoach(
     const engineFeel: ConditioningFeel | undefined = planEntry.conditioningFeel as ConditioningFeel | undefined;
     const feel: ConditioningFeel | undefined =
       engineFeel ? engineFeel
-      : (cat === 'aerobic_base' || cat === 'vo2' || cat === 'glycolytic' || cat === 'sprint')
+      : (cat === 'aerobic_base' || cat === 'tempo' || cat === 'vo2' || cat === 'glycolytic' || cat === 'sprint')
         ? (['grindy', 'sharp', 'flowing'] as const)[conditioningDateHash(`${dateStr}-${cat}`) % 3]
         : undefined;
 
@@ -1068,6 +1098,7 @@ export function buildWorkoutsFromCoach(
       isCombined && (
         cat === 'vo2' || cat === 'glycolytic'
         || cat === 'aerobic_base'
+        || cat === 'tempo' // 4B: combined tempo finishers are erg-based
         || (cat === 'sprint' && strengthRegion === 'lower')
       );
     // Standalone aerobic_base (Long Nasal Run) MAY pick an erg. When we
@@ -1280,6 +1311,10 @@ export function buildWorkoutsFromCoach(
         workoutType: condWorkoutType as any,
         sessionTier: canonicalTier,
         conditioningFlavour: planEntry.conditioningFlavour,
+        // 4B: carry the energy-system category onto the workout so the
+        // rules kernel classifies from the typed field (tempo → medium),
+        // not just the flavour fallback.
+        conditioningCategory: planEntry.conditioningCategory,
         durationMinutes: 0,
         exercises: condExercises,
         createdAt: new Date().toISOString(),
@@ -1296,7 +1331,15 @@ export function buildWorkoutsFromCoach(
       ? new Map<string, Set<string>>()
       : undefined;
 
-    const aiExercises: WorkoutExercise[] = cw.exercises.map((ex, index) => {
+    const sourceAiExercises = (cw.exercises ?? []).filter((ex) =>
+      !isTeamTrainingItem({
+        name: ex.name,
+        exerciseName: ex.name,
+        workoutType: (ex as any).workoutType,
+      }),
+    );
+
+    const aiExercises: WorkoutExercise[] = sourceAiExercises.map((ex, index) => {
       // Cross-cycle variation: rewrite AI-suggested name to the
       // rotation-selected pool variant when applicable. Non-pool exercises
       // (carry, core, isolation, anything untagged) pass through unchanged.
@@ -1438,7 +1481,7 @@ export const DEFAULT_PROFILE: UserProfile = {
   email: 'athlete@localfooty.app',
   displayName: 'Athlete',
   age: 25,
-  position: 'Midfielder',
+  position: 'inside_mid',
   experienceLevel: '2-5 years',
   hasBarbell: true,
   hasDumbbells: true,

@@ -70,25 +70,25 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   },
   {
     templateId: 'flushout_3030',
-    label: 'Flush Out — 30:30 Intervals',
+    label: 'Flush Out - 30:30 Intervals',
     description:
-      '24min: 30s easy effort / 30s off, rotating bike, row or ski. Rejuvenation only — nothing hard.',
+      '24min: 30s easy effort / 30s off, rotating bike, row or ski. Rejuvenation only - nothing hard.',
     category: 'flush',
     byeOnly: false,
     durationMinutes: 24,
   },
   {
     templateId: 'flushout_1on_1off',
-    label: 'Flush Out — 1min On / 1min Off',
+    label: 'Flush Out - 1min On / 1min Off',
     description:
-      '24min: 1min easy effort / 1min off on any erg. Keep every rep genuinely easy — this is a flush, not fitness.',
+      '24min: 1min easy effort / 1min off on any erg. Keep every rep genuinely easy - this is a flush, not fitness.',
     category: 'flush',
     byeOnly: false,
     durationMinutes: 24,
   },
   {
     templateId: 'flushout_2on_1off',
-    label: 'Flush Out — 2min On / 1min Off',
+    label: 'Flush Out - 2min On / 1min Off',
     description:
       '24min: 2min easy effort / 1min off on any erg. Steady and restorative, RPE 4-5 max.',
     category: 'flush',
@@ -98,7 +98,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   // ── Work capacity: harder off-legs conditioning, bye weeks only ──
   {
     templateId: 'erg_emom',
-    label: 'Erg EMOM — 10-15 cal',
+    label: 'Erg EMOM - 10-15 cal',
     description:
       '24min EMOM: every minute on the minute, 10-15 cal effort, rest the remainder of the minute. Rotate bike, ski, row and assault bike each round.',
     category: 'work_capacity',
@@ -107,9 +107,9 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   },
   {
     templateId: 'metcon_offlegs',
-    label: 'MetCon — Off-Legs',
+    label: 'MetCon - Off-Legs',
     description:
-      '28min: 4 stations x 7 rounds — hard erg efforts (bike/row/ski/assault), carries and burpees. Vary work:rest from 1:2 up to 3:1. Mostly off legs.',
+      '28min: 4 stations x 7 rounds - hard erg efforts (bike/row/ski/assault), carries and burpees. Vary work:rest from 1:2 up to 3:1. Mostly off legs.',
     category: 'work_capacity',
     byeOnly: true,
     durationMinutes: 28,
@@ -119,7 +119,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     templateId: 'recovery_flow',
     label: 'Recovery Flow',
     description:
-      '30min restorative: foam rolling, hip & ankle mobility, easy spin, breathing reset. Restore — never load.',
+      '30min restorative: foam rolling, hip & ankle mobility, easy spin, breathing reset. Restore - never load.',
     category: 'recovery',
     byeOnly: false,
     durationMinutes: 30,
@@ -128,7 +128,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'strength_upper_push',
     label: 'Upper Push',
-    description: 'Pressing strength — chest, shoulders and triceps.',
+    description: 'Pressing strength - chest, shoulders and triceps.',
     category: 'strength',
     byeOnly: false,
     durationMinutes: 60,
@@ -138,7 +138,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'strength_upper_pull',
     label: 'Upper Pull',
-    description: 'Pulling strength — back and biceps.',
+    description: 'Pulling strength - back and biceps.',
     category: 'strength',
     byeOnly: false,
     durationMinutes: 60,
@@ -148,7 +148,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'strength_lower',
     label: 'Lower Body Strength',
-    description: 'Squat and hinge strength — legs and glutes.',
+    description: 'Squat and hinge strength - legs and glutes.',
     category: 'strength',
     byeOnly: false,
     durationMinutes: 60,
@@ -201,13 +201,13 @@ const RECOVERY_FLOW_ROWS: Array<{
 }> = [
   {
     key: 'roll',
-    name: 'Foam Roll — Full Body',
+    name: 'Foam Roll - Full Body',
     minutes: 8,
     notes: 'Quads, glutes, calves, upper back. Slow passes, keep breathing.',
   },
   {
     key: 'mobility',
-    name: 'Mobility Flow — Hips & Ankles',
+    name: 'Mobility Flow - Hips & Ankles',
     minutes: 10,
     notes: 'Deep lunge holds, 90/90s, ankle rocks. Easy ranges only.',
   },

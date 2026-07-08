@@ -49,7 +49,7 @@ function section(label: string) {
 const TODAY = '2026-06-06';
 const baseProfile: OnboardingData = {
   firstName: 'Sam',
-  position: 'Midfielder',
+  position: 'inside_mid',
   motivation: 'Get stronger',
   heightCm: 180,
   weightKg: 80,
@@ -70,8 +70,10 @@ const baseProfile: OnboardingData = {
   teamTrainingDays: [],
 };
 
-function fakeProgramForProfile(profile: OnboardingData): TrainingProgram {
-  const inputs = onboardingToCoachingInputs(profile);
+function fakeProgramForProfile(profile: OnboardingData, options: { todayISO?: string } = {}): TrainingProgram {
+  const inputs = onboardingToCoachingInputs(profile, {
+    availabilityDateISO: options.todayISO ?? TODAY,
+  });
   const days = inputs.selectedDays as DayOfWeek[];
   const workouts = days.map((day) => ({
     id: `workout-${day}`,
@@ -242,7 +244,9 @@ async function main() {
     eq('temporary block scope', constraint?.scope, 'temporary' as any);
     eq('temporary block reason', constraint?.reason, 'exams' as any);
     ok('temporary block rebuild applied', result?.kind === 'mutated' && result.applied, result);
-    const inputs = onboardingToCoachingInputs(storedProfile);
+    const inputs = onboardingToCoachingInputs(storedProfile, {
+      availabilityDateISO: TODAY,
+    });
     ok('active unavailable Wednesday is filtered from engine selectedDays', !inputs.selectedDays.includes('Wednesday'), inputs);
   }
 
@@ -365,8 +369,9 @@ async function main() {
       /startSetupRebuildProgress,\s*clearSetupRebuildProgress,/.test(coachScreenSource),
     );
     ok(
-      'CoachScreen supplies user/assistant append callbacks to controller',
-      /appendUser:\s*\(\)\s*=>\s*\{[\s\S]{0,160}setMessages\(\(prev\) => \[\.\.\.prev, userMessage\]\);/.test(coachScreenSource) &&
+      'CoachScreen owns immediate user append and supplies assistant-only callbacks to controller',
+      /setMessages\(\(prev\) => \[\.\.\.prev, userMessage\]\);\s*setInputValue\(''\);\s*setIsLoading\(true\);/.test(coachScreenSource) &&
+        /appendUser:\s*\(\)\s*=>\s*\{\}/.test(coachScreenSource) &&
         /appendAssistant:\s*\(assistantMessage\)\s*=>\s*\{[\s\S]{0,180}setMessages\(\(prev\) => \[\.\.\.prev, assistantMessage\]\);/.test(coachScreenSource),
     );
     ok(

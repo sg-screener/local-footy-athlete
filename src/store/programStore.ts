@@ -3,21 +3,64 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TrainingProgram, Microcycle, Workout, WorkoutExercise, OverrideContext } from '../types/domain';
 import { logger } from '../utils/logger';
+import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
+import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
+import type { SessionComponentKind } from '../utils/sessionComponents';
 
 // ─── Session Feedback ───
 
 export type FeedbackFeeling = 'very_easy' | 'easy' | 'good' | 'hard' | 'very_hard';
 export type FeedbackCompletion = 'full' | 'partial' | 'skipped';
 export type FeedbackSoreness = 'none' | 'mild' | 'moderate' | 'high';
+export type FeedbackPartialReason =
+  | 'ran_out_of_time'
+  | 'felt_sore_tight'
+  | 'too_hard_today'
+  | 'equipment_unavailable'
+  | 'other';
+export type FeedbackSkipReason =
+  | 'busy_no_time'
+  | 'sore_tight'
+  | 'injured_niggle'
+  | 'sick_low_energy'
+  | 'didnt_feel_like_it'
+  | 'equipment_unavailable'
+  | 'other';
+
+export interface SessionFeedbackComponent {
+  componentId: string;
+  kind: SessionComponentKind;
+  label: string;
+  completion: FeedbackCompletion;
+  partialReason?: FeedbackPartialReason;
+  skipReason?: FeedbackSkipReason;
+}
 
 export interface SessionFeedback {
   dateStr: string;
-  feeling: FeedbackFeeling;
   completion: FeedbackCompletion;
+  /**
+   * Component-level completions for combined sessions. Top-level completion
+   * remains as a backward-compatible aggregate only.
+   */
+  components?: SessionFeedbackComponent[];
+  /** Session effort. Omitted for skipped sessions to avoid fake exertion data. */
+  feeling?: FeedbackFeeling;
   /** RPE-style difficulty rating (1–10). Optional for backward compat. */
   difficulty?: number;
   /** Post-session soreness level. Optional for backward compat. */
   soreness?: FeedbackSoreness;
+  /** Optional reason when an athlete completed only part of the session. */
+  partialReason?: FeedbackPartialReason;
+  /** Required reason when an athlete skips the session from the feedback form. */
+  skipReason?: FeedbackSkipReason;
+  /**
+   * Optional performance data for trackable conditioning sessions.
+   * Easy/recovery sessions intentionally keep using completion + feeling only.
+   */
+  conditioning?: ConditioningPerformanceLog;
+  /** Main-lift snapshot captured on save for future progression/diary use. */
+  strength?: StrengthExercisePerformanceLog[];
   notes?: string;
 }
 
@@ -126,14 +169,21 @@ export const useProgramStore = create<ProgramState>()(
       sessionFeedback: {},
       weightOverrides: {},
 
-      // Setting a new program clears overrides — new block = fresh slate
+      // Override lifecycle is NOT owned by this setter (2026-07-08).
+      // It used to silently wipe dateOverrides/overrideContexts ("new
+      // block = fresh slate") — which meant EVERY rebuild destroyed
+      // away-day clears, injury swaps and the athlete's manual edits no
+      // matter what the rebuild logic decided (the root cause of the
+      // "removed Monday resurrects after adding a game" class of bug).
+      // Clearing decisions now belong to the canonical sweep
+      // (utils/weekRebuild.decideOverrideSweep) or an EXPLICIT
+      // clearManualOverrides() where a true fresh slate is intended
+      // (onboarding completion, program create, profile reset).
       setCurrentProgram: (program) =>
         set({
           currentProgram: program,
           currentMicrocycle: null,
           todayWorkout: null,
-          dateOverrides: {},
-          overrideContexts: {},
         }),
 
       setCurrentMicrocycle: (microcycle) => set({ currentMicrocycle: microcycle }),

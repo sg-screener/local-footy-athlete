@@ -6,9 +6,40 @@ import { useStaleOverrides } from '../../hooks/useStaleOverrides';
 import { useCalendarStore } from '../../store/calendarStore';
 import { useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
+import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
+import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
+import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
+import { useReadinessStore } from '../../store/readinessStore';
 import { generateProgramFromProfile } from '../../services/api/generateProgram';
+import {
+  commitRebuiltProgram,
+  decideSweepForCurrentStores,
+  rebuildLocalWeek,
+} from '../../utils/weekRebuild';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
-import { applyGameDayChange, applyPhaseShift } from '../../utils/profileMutations';
+import { applyPhaseShift } from '../../utils/profileMutations';
+import { selectActiveCoachNotes } from '../../utils/activeCoachNotes';
+import { getActiveProgramModifiers } from '../../utils/activeProgramModifiers';
+import {
+  executeProgramControlAction,
+  type ProgramControlActionResult,
+  type ProgramControlStatusUpdate,
+} from '../../utils/programControlActions';
+import {
+  buildGuidedInjuryConstraint,
+  type GuidedInjuryFlowResult,
+} from '../../utils/guidedInjuryControl';
+import {
+  mostRecentMissedSession,
+  missedSessionFeedback,
+  type MissedSession,
+  type MissedSessionResponse,
+} from '../../utils/missedSessions';
+import { todayISOLocal } from '../../utils/appDate';
+import {
+  loadReductionModifierIdForDate,
+  recoveryModeModifierIdForDate,
+} from '../../utils/tapProgramModifiers';
 import {
   WEEK_DAYS,
   DAY_NUM_TO_NAME,
@@ -19,6 +50,17 @@ import {
   type InteractionMode,
 } from './homeScreenConstants';
 import { logger } from '../../utils/logger';
+
+type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
+type HomeQuickStatusAction = 'busy_week_reduce';
+
+const targetStatusModifierKind = (
+  status: ProgramControlStatusUpdate,
+): Exclude<StatusModifierKind, 'unknown'> => {
+  if (status === 'still_sick') return 'recovery';
+  if (status === 'still_cooked') return 'load_reduction';
+  return 'readiness';
+};
 
 /**
  * useHomeScreen — single source of truth for the Home screen's state,
@@ -37,7 +79,9 @@ import { logger } from '../../utils/logger';
  * ## Behaviour contract
  * The hook reproduces Classic's behaviour bit-for-bit:
  * - Rebuild: modal + async `generateProgramFromProfile` + program/microcycle
- *   wiring + `clearManualOverrides()`.
+ *   wiring + the selective override sweep
+ *   (`clearManualOverridesPreservingActiveModifiers` — modifier-owned
+ *   overrides and user manual edits survive; stale system artifacts clear).
  * - Phase shift: 3-step flow (confirm → teamDays → gameDay|off-season skip),
  *   side-effectful `clearAllGames()` on leaving In-season, diff-based
  *   `updateOnboardingData()` patch, and rebuild-for-game-change retry loop.
@@ -148,10 +192,45 @@ export function useHomeScreen() {
   const [targetPhase, setTargetPhase] = useState<SeasonPhase>(NEXT_PHASE[currentPhase]);
 
   // Program store
-  const setCurrentProgram = useProgramStore((s) => s.setCurrentProgram);
-  const setCurrentMicrocycle = useProgramStore((s) => s.setCurrentMicrocycle);
-  const setTodayWorkout = useProgramStore((s) => s.setTodayWorkout);
-  const clearManualOverrides = useProgramStore((s) => s.clearManualOverrides);
+  const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
+  const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
+  const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
+  const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
+  const modalityPreferences = useCoachPreferencesStore((s) => s.modalityPreferences);
+  const readinessSignalsByDate = useReadinessStore((s) => s.signalsByDate);
+  const coachNotes = useMemo(
+    () => selectActiveCoachNotes({
+      activeConstraints,
+      activeInjury,
+      athletePrefs,
+      modalityPreferences,
+      onboardingData,
+      readinessSignalsByDate,
+    }),
+    [
+      activeConstraints,
+      activeInjury,
+      athletePrefs,
+      modalityPreferences,
+      onboardingData,
+      readinessSignalsByDate,
+    ],
+  );
+
+  // ── Missed-session prompt ──
+  // The most recent past, unlogged trainable day in the visible week.
+  // Surfaced as a single "Did you do <day>?" follow-up; every answer
+  // routes through the feedback / producer pipeline (see
+  // handleMissedSessionResponse). No Coach chat.
+  const missedSessionPrompt = useMemo(
+    () =>
+      mostRecentMissedSession({
+        weekDays,
+        todayISO: todayISOLocal(),
+        sessionFeedback,
+      }),
+    [weekDays, sessionFeedback],
+  );
 
 
   // ───────── Error helpers ─────────
@@ -200,21 +279,32 @@ export function useHomeScreen() {
     clearRebuildError();
   };
 
+  // A preserved manual edit that clashed with a game window was removed —
+  // protect the game, but never silently.
+  const alertGameConflicts = (conflictsRemoved: Array<{ date: string; name: string }>) => {
+    if (conflictsRemoved.length === 0) return;
+    const lines = conflictsRemoved
+      .map((c) => `• ${c.name} (${new Date(c.date + 'T12:00:00').toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' })})`)
+      .join('\n');
+    Alert.alert(
+      'Protected your game day',
+      `These custom sessions were too close to the game and were removed:\n${lines}`,
+    );
+  };
+
+  // AI rebuild path (onboarding / phase shift). Commits through the SAME
+  // canonical weekRebuild policy as tap/edit rebuilds — modifier-owned
+  // overrides and user manual edits survive; system junk is cleared.
   const runRebuild = async (profileOverride?: typeof onboardingData) => {
     const profile = profileOverride ?? onboardingData;
     const program = await generateProgramFromProfile(profile);
-    setCurrentProgram(program);
-    if (program.microcycles && program.microcycles.length > 0) {
-      const first = program.microcycles[0];
-      setCurrentMicrocycle(first);
-      const dow = new Date().getDay();
-      const todayWorkout = first.workouts?.find((w) => w.dayOfWeek === dow);
-      if (todayWorkout) setTodayWorkout(todayWorkout);
-    }
-    // Wipe per-date exercise overrides so the fresh template takes over.
-    // calendarStore (game/rest markers) and workoutLogStore (logged history)
-    // live in separate persisted stores and are untouched.
-    clearManualOverrides();
+    const sweep = decideSweepForCurrentStores(program, profile);
+    commitRebuiltProgram(program, {
+      preserve: sweep.preserve,
+      clear: sweep.clear,
+      conflictsRemoved: sweep.conflictsRemoved,
+    });
+    alertGameConflicts(sweep.conflictsRemoved);
   };
 
   const handleConfirmRebuild = async () => {
@@ -427,9 +517,9 @@ export function useHomeScreen() {
     }
   };
 
-  // ───────── In-season game-state rebuild ─────────
+  // ───────── Game-state rebuild ─────────
   //
-  // When the user removes / moves / adds a game in-season, the engine's
+  // When the user removes / moves / adds a game in a game-supported phase, the engine's
   // weeklyPlan must be regenerated. Calendar overrides alone are not enough:
   // they hide/show the game marker but cannot change the underlying plan
   // shape (the in-season NO-game branch produces a fundamentally different
@@ -450,28 +540,42 @@ export function useHomeScreen() {
   // because its "Rebuild week" button wires back to handleConfirmRebuild
   // (which runs against the stored profile, not our game-change override)
   // and the copy ("Rebuild this week?") is wrong for this context.
-  const rebuildForGameChange = async (newGameDay: DayOfWeek | null) => {
-    setRebuildMsgIdx(0);
-    rebuildMsgOpacity.setValue(1);
-    setRebuildModalVisible(true);
-    setIsRebuilding(true);
+  // DETERMINISTIC + ATOMIC (2026-07-08). Tap/edit game changes must never
+  // depend on the AI coach or OpenAI (product rule): the week is rebuilt
+  // locally via generateProgramLocally \u2014 same coaching engine, same
+  // normaliser, no network. Because the build is synchronous and pure,
+  // atomicity falls out naturally: we build FIRST, and only if that
+  // succeeds do we commit the program AND run the caller's game-mark
+  // commit (setGameDay / setNoGame) together. On failure nothing is
+  // touched \u2014 no more "Game Day card shows but the week didn't reshape".
+  //
+  // Returns true when the rebuild + commit succeeded so callers can gate
+  // their own follow-up state (mode/selection) on it.
+  const rebuildForGameChange = async (
+    newGameDay: DayOfWeek | null,
+    commitGameMark?: () => void,
+  ): Promise<boolean> => {
     clearRebuildError();
     try {
-      // Compute the temp profile via the shared mutation helper so the
-      // QA harness exercises the exact same overlay logic. See
-      // src/utils/profileMutations.ts.
-      const tempProfile = applyGameDayChange(onboardingData, newGameDay);
       if (__DEV__) {
-        logger.debug('[GameChange] Rebuilding with:', {
-          usualGameDay: tempProfile.usualGameDay,
-          gameDay: tempProfile.gameDay,
-        });
+        logger.debug('[GameChange] Canonical local rebuild:', { newGameDay });
       }
-      await runRebuild(tempProfile);
-      setRebuildModalVisible(false);
+      // THE canonical rebuild door (src/utils/weekRebuild.ts): assembles
+      // the full week context (profile + game overlay, every per-date
+      // override with ownership metadata, every live Coach Note
+      // constraint, the new game anchors), builds the candidate week,
+      // decides the preservation sweep with the pure policy, and commits
+      // game mark + program + sweep ATOMICALLY. Throws before any state
+      // change on failure \u2014 no half-applied weeks possible.
+      const result = rebuildLocalWeek({
+        baseProfile: onboardingData,
+        newGameDay,
+        commitGameMark,
+      });
+      alertGameConflicts(result.sweep.conflictsRemoved);
+      return true;
     } catch (err: any) {
       logger.error('[GameChange] Rebuild failed:', err?.diagnostic || err?.message || err);
-      setRebuildModalVisible(false);
       const { userMessage, canRetry } = classifyRebuildError(err);
       Alert.alert(
         'Couldn\u2019t update your week',
@@ -482,14 +586,13 @@ export function useHomeScreen() {
               {
                 text: 'Try again',
                 onPress: () => {
-                  void rebuildForGameChange(newGameDay);
+                  void rebuildForGameChange(newGameDay, commitGameMark);
                 },
               },
             ]
           : [{ text: 'OK' }],
       );
-    } finally {
-      setIsRebuilding(false);
+      return false;
     }
   };
 
@@ -582,7 +685,6 @@ export function useHomeScreen() {
 
     // ── Add-game mode: tap selects the day to add the game on ──
     if (mode.type === 'addGame') {
-      setGameDay(day.date);
       setMode({ type: 'normal' });
       setSelectedIdx(idx);
 
@@ -591,9 +693,16 @@ export function useHomeScreen() {
       // running the NO-game branch and Saturday is a core peak. Adding a
       // game must flip the week back to the WITH-game branch so Thu=Push
       // at G−2 and the game-day slot gets the recovery placement.
-      if (currentPhase === 'In-season') {
+      //
+      // ATOMIC (2026-07-08): the game mark commits INSIDE the rebuild's
+      // success path — build first, then mark + program together. If the
+      // rebuild fails, no Game Day card appears over an unchanged week.
+      if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
         const targetName = DAY_NUM_TO_NAME[day.dayOfWeek];
-        await rebuildForGameChange(targetName);
+        await rebuildForGameChange(targetName, () => setGameDay(day.date));
+      } else {
+        // No game-aware engine branch for this phase — mark only.
+        setGameDay(day.date);
       }
       return;
     }
@@ -614,6 +723,11 @@ export function useHomeScreen() {
       // when nothing is selected — no additional guards needed.
       setSelectedIdx((prev) => (prev === idx ? -1 : idx));
     }
+  };
+
+  const handleSelectDayOnly = (idx: number) => {
+    if (mode.type !== 'normal') return;
+    setSelectedIdx((prev) => (prev === idx ? -1 : idx));
   };
 
   /**
@@ -639,33 +753,381 @@ export function useHomeScreen() {
     }
   };
 
-  /**
-   * Team-training-only days (workout.name === "Team Training" — the canonical
-   * form produced by resolveSessionDisplayName when isTeamDay=true with no
-   * strength overlay) have no programmed exercise list; the athlete just
-   * completes the external session with their club and logs it afterwards.
-   * Tapping "Log Session" jumps straight into the post-session flow by
-   * navigating with startFinished=true, bypassing the empty exercise body.
-   * The label deliberately reads "log" not "finish" because there's no
-   * in-app workout to finish — the session happens externally with the
-   * club; the athlete is only logging it after the fact.
-   */
+  /** Team-training-only days still open the detail screen; the shared
+   * session CTA owns logging from there. */
   const handleFinishTeamSession = (day: typeof weekDays[0]) => {
     if (day.workout) {
       navigation.navigate('DayWorkout', {
         workoutId: day.workout.id,
         date: day.date,
-        startFinished: true,
       });
     }
   };
 
-  const handleQuickAction = (prefill: string) => {
+  const handleMessageCoach = (prefill: string) => {
     navigation.navigate('CoachTab', {
       screen: 'Coach',
-      params: { prefill: prefill || `Coach, I need to update my program — ` },
+      params: { prefill: prefill || `Coach, I need to update my program - ` },
     });
   };
+
+  const handleOpenProgramSetup = useCallback(() => {
+    navigation.navigate('ProfileTab');
+  }, [navigation]);
+
+  const clearCoachNoteAction = useCallback((noteId: string) => executeProgramControlAction({
+    type: 'clear_active_modifier',
+    source: {
+      screen: 'program_tab',
+      surface: 'coach_notes',
+      initiatedBy: 'tap',
+    },
+    scope: 'current_and_future',
+    payload: { noteId },
+    requiresRebuild: false,
+    createsActiveModifier: false,
+    oneOffOnly: false,
+  }), []);
+
+  const statusModifierKindForNote = useCallback((noteId: string): StatusModifierKind => {
+    const note = coachNotes.find((candidate) => candidate.id === noteId);
+    const sourceId = note?.constraintId ?? note?.modifierId ?? noteId;
+    if (sourceId.includes('tap-recovery-mode')) return 'recovery';
+    if (sourceId.includes('tap-load-reduction')) return 'load_reduction';
+    if (sourceId.includes('readiness:')) return 'readiness';
+    return 'unknown';
+  }, [coachNotes]);
+
+  const handleProgramControlResult = useCallback(async (
+    result: ProgramControlActionResult,
+  ) => {
+    if (result.fallbackToCoach) {
+      logger.warn('[ProgramControl] action requested Coach fallback:', result.fallbackReason);
+      return;
+    }
+    if (!result.requiresRebuild) return;
+
+    setRebuildMsgIdx(0);
+    rebuildMsgOpacity.setValue(1);
+    setRebuildModalVisible(true);
+    setIsRebuilding(true);
+    clearRebuildError();
+    try {
+      await runRebuild();
+      setRebuildModalVisible(false);
+    } catch (err: any) {
+      logger.error('[CoachNotes] rebuild after clear failed:', err?.diagnostic || err?.message || err);
+      const { userMessage, canRetry } = classifyRebuildError(err);
+      setRebuildError(userMessage);
+      setRebuildErrorCanRetry(canRetry);
+    } finally {
+      setIsRebuilding(false);
+    }
+  }, [rebuildMsgOpacity, runRebuild]);
+
+  const handleApplyHomeQuickStatus = useCallback(async (
+    action: HomeQuickStatusAction,
+  ) => {
+    const todayISO = todayISOLocal();
+    if (action === 'busy_week_reduce') {
+      const result = executeProgramControlAction({
+        type: 'set_schedule_modifier',
+        source: {
+          screen: 'program_tab',
+          surface: 'home_quick_action_busy_week',
+          initiatedBy: 'tap',
+        },
+        scope: 'current_week',
+        payload: {
+          date: todayISO,
+          todayISO,
+          severity: 5,
+          reasonLabel: 'Busy week',
+        },
+        requiresRebuild: false,
+        createsActiveModifier: true,
+        oneOffOnly: false,
+      }, { todayISO });
+      await handleProgramControlResult(result);
+    }
+  }, [handleProgramControlResult]);
+
+  // ── Busy week / Away / Holiday (vocab group 5) ──
+  // "Busy" reduces the whole current week; "Away" clears the exact days
+  // the athlete picked and records an Away Coach Note that restores them
+  // when cleared. Both run through executeProgramControlAction — no chat.
+  const handleApplyBusyWeekReduce = useCallback(async () => {
+    const todayISO = todayISOLocal();
+    const result = executeProgramControlAction({
+      type: 'set_schedule_modifier',
+      source: {
+        screen: 'program_tab',
+        surface: 'busy_away_sheet_busy',
+        initiatedBy: 'tap',
+      },
+      scope: 'current_week',
+      payload: { date: todayISO, todayISO, severity: 5, reasonLabel: 'Busy week' },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { todayISO });
+    await handleProgramControlResult(result);
+    return result;
+  }, [handleProgramControlResult]);
+
+  // ── Weekly readiness ("I'm not 100%") — week-scoped wellbeing card ──
+  // Reuses the EXISTING tap modifiers (no second readiness system):
+  //   sore / tired / easier → upsertTapLoadReductionModifier (severity 7,
+  //     "Load reduced this week")
+  //   sick → upsertTapRecoveryModeModifier week scope (severity 8,
+  //     "Recovery mode active")
+  // Both are week-keyed by the anchor date (id + expiresAt derive from
+  // that week's Monday), so passing a SELECTED-week date scopes the
+  // adjustment to that week. Constraints layer onto the resolved week at
+  // render time and survive every rebuild via the canonical weekRebuild
+  // context — busy/away, game anchors and manual edits are untouched.
+  const handleApplyWeekReadiness = useCallback(async (
+    kind: 'sore' | 'tired' | 'sick' | 'easier',
+    anchorDateISO: string,
+  ) => {
+    const todayISO = todayISOLocal();
+    // One readiness adjustment per week: switching kind replaces the other.
+    const otherId = kind === 'sick'
+      ? loadReductionModifierIdForDate(anchorDateISO)
+      : recoveryModeModifierIdForDate(anchorDateISO);
+    const otherModifier = getActiveProgramModifiers()
+      .find((m) => m.sourceId === otherId);
+    if (otherModifier) {
+      executeProgramControlAction({
+        type: 'clear_active_modifier',
+        source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+        scope: 'current_week',
+        payload: { modifierId: otherModifier.id },
+        requiresRebuild: false,
+        createsActiveModifier: false,
+        oneOffOnly: false,
+      }, { todayISO });
+    }
+    const result = kind === 'sick'
+      ? executeProgramControlAction({
+          type: 'set_recovery_mode',
+          source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+          scope: 'current_week',
+          payload: { date: anchorDateISO, todayISO, recoveryScope: 'week' },
+          requiresRebuild: false,
+          createsActiveModifier: true,
+          oneOffOnly: false,
+        }, { todayISO })
+      : executeProgramControlAction({
+          type: 'set_fatigue_status',
+          source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+          scope: 'current_week',
+          payload: { date: anchorDateISO, todayISO, level: 'cooked' },
+          requiresRebuild: false,
+          createsActiveModifier: true,
+          oneOffOnly: false,
+        }, { todayISO });
+    await handleProgramControlResult(result);
+    return result;
+  }, [handleProgramControlResult]);
+
+  const handleClearWeekReadiness = useCallback(async (constraintId: string) => {
+    const todayISO = todayISOLocal();
+    // The clear action resolves ACTIVE PROGRAM MODIFIER ids
+    // (program-modifier:active_constraint:<constraintId>), not raw
+    // constraint ids — resolve through the same selector Coach Notes use.
+    const modifier = getActiveProgramModifiers()
+      .find((m) => m.sourceId === constraintId);
+    const result = executeProgramControlAction({
+      type: 'clear_active_modifier',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { modifierId: modifier?.id ?? constraintId },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: false,
+    }, { todayISO });
+    await handleProgramControlResult(result);
+    return result;
+  }, [handleProgramControlResult]);
+
+  const handleApplyAwayDays = useCallback(async (dates: string[]) => {
+    const todayISO = todayISOLocal();
+    // Anchor the schedule note to the week the away days actually fall in
+    // so it shows + expires on the right week (not necessarily this one).
+    const anchor = [...dates].sort()[0] ?? todayISO;
+    const result = executeProgramControlAction({
+      type: 'set_schedule_modifier',
+      source: {
+        screen: 'program_tab',
+        surface: 'busy_away_sheet_away',
+        initiatedBy: 'tap',
+      },
+      scope: 'current_week',
+      payload: {
+        date: anchor,
+        todayISO,
+        reasonLabel: 'Away',
+        planChange: { kind: 'clear_days', dates },
+      },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { visibleWeek: weekDays, todayISO });
+    await handleProgramControlResult(result);
+    return result;
+  }, [weekDays, handleProgramControlResult]);
+
+  // ── Missed sessions ──
+  // Did it / Missed it → record feedback (feeds progression: 'full' allows
+  // normal progression, 'skipped' holds load). Skip it → bin the day.
+  // Move it forward → move the session to the next open rest day. Every
+  // path clears the prompt because detection keys off feedback + a live
+  // trainable session on that date.
+  const handleMissedSessionResponse = useCallback(async (
+    missed: MissedSession,
+    response: MissedSessionResponse,
+  ) => {
+    const todayISO = todayISOLocal();
+    if (response === 'did_it' || response === 'missed_it') {
+      useProgramStore
+        .getState()
+        .setSessionFeedback(missed.date, missedSessionFeedback(missed.date, response));
+      return;
+    }
+    if (response === 'skip_it') {
+      const result = executeProgramControlAction({
+        type: 'bin_session',
+        source: {
+          screen: 'program_tab',
+          surface: 'missed_session_prompt',
+          initiatedBy: 'tap',
+        },
+        scope: 'today_only',
+        payload: { date: missed.date },
+        requiresRebuild: false,
+        createsActiveModifier: false,
+        oneOffOnly: true,
+      }, { visibleWeek: weekDays, todayISO });
+      await handleProgramControlResult(result);
+      return;
+    }
+    // move_forward → soonest open (rest) day today-or-later this week.
+    const target = weekDays
+      .filter((day) => day.date >= todayISO && !day.workout)
+      .map((day) => day.date)
+      .sort()[0];
+    if (!target) {
+      // Nowhere open to land it — acknowledge as missed so the athlete
+      // isn't stuck, and the prompt clears.
+      useProgramStore
+        .getState()
+        .setSessionFeedback(missed.date, missedSessionFeedback(missed.date, 'missed_it'));
+      return;
+    }
+    const result = executeProgramControlAction({
+      type: 'move_session',
+      source: {
+        screen: 'program_tab',
+        surface: 'missed_session_prompt',
+        initiatedBy: 'tap',
+      },
+      scope: 'today_only',
+      payload: { fromDate: missed.date, toDate: target },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: true,
+    }, { visibleWeek: weekDays, todayISO });
+    await handleProgramControlResult(result);
+  }, [weekDays, handleProgramControlResult]);
+
+  const handleApplyGuidedInjury = useCallback(async (
+    result: GuidedInjuryFlowResult,
+    existingId?: string,
+  ) => {
+    const todayISO = todayISOLocal();
+    const constraint = buildGuidedInjuryConstraint(result, { todayISO, existingId });
+    const actionResult = executeProgramControlAction({
+      type: 'set_injury_modifier',
+      source: {
+        screen: 'program_tab',
+        surface: 'guided_injury_flow',
+        initiatedBy: 'tap',
+      },
+      scope: 'current_and_future',
+      payload: { constraint },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { todayISO });
+    await handleProgramControlResult(actionResult);
+  }, [handleProgramControlResult]);
+
+  const handleClearCoachNote = useCallback(async (noteId: string) => {
+    const result = clearCoachNoteAction(noteId);
+    await handleProgramControlResult(result);
+  }, [clearCoachNoteAction, handleProgramControlResult]);
+
+  const handleUpdateCoachNoteStatus = useCallback(async (
+    noteId: string,
+    status: ProgramControlStatusUpdate,
+  ) => {
+    if (status === 'good_now') {
+      await handleClearCoachNote(noteId);
+      return;
+    }
+    const todayISO = todayISOLocal();
+    const currentStatusKind = statusModifierKindForNote(noteId);
+    const nextStatusKind = targetStatusModifierKind(status);
+    if (currentStatusKind !== 'unknown' && currentStatusKind !== nextStatusKind) {
+      await handleProgramControlResult(clearCoachNoteAction(noteId));
+    }
+    const result = status === 'still_sick'
+      ? executeProgramControlAction({
+          type: 'set_recovery_mode',
+          source: {
+            screen: 'program_tab',
+            surface: 'coach_notes_status_update',
+            initiatedBy: 'tap',
+          },
+          scope: 'current_week',
+          payload: {
+            date: todayISO,
+            todayISO,
+            recoveryScope: 'week',
+          },
+          requiresRebuild: false,
+          createsActiveModifier: true,
+          oneOffOnly: false,
+        }, { todayISO })
+      : executeProgramControlAction({
+          type: 'set_fatigue_status',
+          source: {
+            screen: 'program_tab',
+            surface: 'coach_notes_status_update',
+            initiatedBy: 'tap',
+          },
+          scope: status === 'still_cooked' ? 'current_week' : 'today_only',
+          payload: {
+            date: todayISO,
+            todayISO,
+            level: status === 'still_cooked'
+              ? 'cooked'
+              : status === 'worse'
+                ? 'worse'
+                : 'not_right',
+          },
+          requiresRebuild: false,
+          createsActiveModifier: true,
+          oneOffOnly: false,
+        }, { todayISO });
+    await handleProgramControlResult(result);
+  }, [
+    clearCoachNoteAction,
+    handleClearCoachNote,
+    handleProgramControlResult,
+    statusModifierKindForNote,
+  ]);
 
   // ───────── Game day modal ─────────
 
@@ -674,16 +1136,19 @@ export function useHomeScreen() {
     setGameModalDate(null);
   };
 
+  const handleOpenGameDayActions = (date: string) => {
+    setGameModalDate(date);
+    setGameModalVisible(true);
+  };
+
   // Game day primary action — opens the session-feedback / logging flow
-  // for the game itself. Game days don't carry a workout, so we route
-  // through the same `startFinished: true` path used by the team-day
-  // Finish CTA so the athlete lands directly on SessionFeedbackPanel
-  // (the canonical logging surface). Only ever invoked from the Game
-  // Day sheet — gameModalDate is set when the user taps a `type === 'game'`
-  // day card, so other day types are untouched.
-  const handleLogGame = () => {
-    if (!gameModalDate) return;
-    const day = weekDays.find((d) => d.date === gameModalDate);
+  // for the game itself. Game days don't carry a workout, so they still
+  // route through `startFinished: true` and land directly on
+  // SessionFeedbackPanel. Team Training no longer uses this shortcut.
+  const handleLogGame = (dateOverride?: unknown) => {
+    const targetDate = typeof dateOverride === 'string' ? dateOverride : gameModalDate;
+    if (!targetDate) return;
+    const day = weekDays.find((d) => d.date === targetDate);
     closeGameModal();
     if (day?.workout) {
       // If a workout slot exists for the game day (some season-phase
@@ -699,7 +1164,7 @@ export function useHomeScreen() {
     // a synthetic empty workoutId; DayWorkout will resolve via date.
     navigation.navigate('DayWorkout', {
       workoutId: 'game',
-      date: gameModalDate,
+      date: targetDate,
       startFinished: true,
     });
   };
@@ -713,61 +1178,68 @@ export function useHomeScreen() {
 
   const handleRemoveGameDay = async () => {
     if (!gameModalDate) return;
-    removeGameDay(gameModalDate);
+    const removedDate = gameModalDate;
+    closeGameModal();
 
-    // In-season: the week's virtual game (rendered on the effective game day)
-    // would otherwise re-appear after we remove any explicit 'game' mark.
-    // Plant a 'noGame' marker on the virtual game's date inside this week
-    // so the bye sticks until the user explicitly adds another game.
-    // Uses the same usualGameDay → gameDay fallback as useResolvedWeek so
-    // onboarded-only profiles (gameDay set, usualGameDay missing) also get
-    // the bye marker.
-    if (currentPhase === 'In-season') {
-      const legacyGameDay = onboardingData.gameDay;
-      const effectiveGameDay: DayOfWeek | undefined =
-        (onboardingData.usualGameDay as DayOfWeek | undefined) ||
-        (legacyGameDay === 'Friday' ||
-        legacyGameDay === 'Saturday' ||
-        legacyGameDay === 'Sunday'
-          ? (legacyGameDay as DayOfWeek)
-          : undefined);
-      if (effectiveGameDay) {
-        const DOW_NUM: Record<DayOfWeek, number> = {
-          Sunday: 0,
-          Monday: 1,
-          Tuesday: 2,
-          Wednesday: 3,
-          Thursday: 4,
-          Friday: 5,
-          Saturday: 6,
-        };
-        const virtualDow = DOW_NUM[effectiveGameDay];
-        const virtualDay = weekDays.find((d) => d.dayOfWeek === virtualDow);
-        if (virtualDay) {
-          setNoGame(virtualDay.date);
+    // ATOMIC (2026-07-08): all calendar-mark mutations run INSIDE the
+    // deterministic rebuild's success path, so a failed rebuild never
+    // leaves the game half-removed over an unchanged week.
+    const commitRemoval = () => {
+      removeGameDay(removedDate);
+
+      // In-season: the week's virtual game (rendered on the effective game
+      // day) would otherwise re-appear after we remove any explicit 'game'
+      // mark. Plant a 'noGame' marker on the virtual game's date inside
+      // this week so the bye sticks until the user explicitly adds another
+      // game. Uses the same usualGameDay → gameDay fallback as
+      // useResolvedWeek so onboarded-only profiles (gameDay set,
+      // usualGameDay missing) also get the bye marker.
+      if (currentPhase === 'In-season') {
+        const legacyGameDay = onboardingData.gameDay;
+        const effectiveGameDay: DayOfWeek | undefined =
+          (onboardingData.usualGameDay as DayOfWeek | undefined) ||
+          (legacyGameDay === 'Friday' ||
+          legacyGameDay === 'Saturday' ||
+          legacyGameDay === 'Sunday'
+            ? (legacyGameDay as DayOfWeek)
+            : undefined);
+        if (effectiveGameDay) {
+          const DOW_NUM: Record<DayOfWeek, number> = {
+            Sunday: 0,
+            Monday: 1,
+            Tuesday: 2,
+            Wednesday: 3,
+            Thursday: 4,
+            Friday: 5,
+            Saturday: 6,
+          };
+          const virtualDow = DOW_NUM[effectiveGameDay];
+          const virtualDay = weekDays.find((d) => d.dayOfWeek === virtualDow);
+          if (virtualDay) {
+            setNoGame(virtualDay.date);
+          }
         }
       }
-    }
 
-    // Clean up stale game-proximity overrides (same pattern as CalendarScreen).
-    const { overrideContexts, removeManualOverride } = useProgramStore.getState();
-    for (const [date, ctx] of Object.entries(overrideContexts)) {
-      if (ctx.intent === 'gameProximity' && ctx.relatedGameDate === gameModalDate) {
-        removeManualOverride(date);
+      // Clean up stale game-proximity overrides (same pattern as CalendarScreen).
+      const { overrideContexts, removeManualOverride } = useProgramStore.getState();
+      for (const [date, ctx] of Object.entries(overrideContexts)) {
+        if (ctx.intent === 'gameProximity' && ctx.relatedGameDate === removedDate) {
+          removeManualOverride(date);
+        }
       }
-    }
-
-    closeGameModal();
+    };
 
     // Structural rebuild: the calendar override alone only hides the game
     // marker — the engine's weeklyPlan still reflects the WITH-game branch,
-    // so Saturday would otherwise render as the G+1 recovery template. Run
-    // the same pipeline as onboarding/phase-shift to regenerate the plan
-    // via the NO-game branch (Saturday becomes a core peak + conditioning
-    // day). Only applies in-season; pre-season/off-season don't have games
-    // and don't need the rebuild.
-    if (currentPhase === 'In-season') {
-      await rebuildForGameChange(null);
+    // so Saturday would otherwise render as the G+1 recovery template.
+    // Deterministic local rebuild via the NO-game branch (Saturday becomes
+    // a core peak + conditioning day). Pre-season practice matches use the
+    // same anchor logic.
+    if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
+      await rebuildForGameChange(null, commitRemoval);
+    } else {
+      commitRemoval();
     }
   };
 
@@ -780,35 +1252,15 @@ export function useHomeScreen() {
   const weekHasGame = weekDays.some((d) => d.workout?.workoutType === 'Game');
 
   /**
-   * Visibility for the "No game this week — add one" CTA.
-   * Rules:
-   *   Off-season                              → hide
-   *   Pre-season, displayed week before Jan 1 → hide
-   *   Pre-season, displayed week Jan 1+       → show
-   *   In-season                               → show
-   *
-   * Based on the displayed week, NOT today, so browsing into January
-   * reveals the CTA and browsing back into December hides it.
+   * Visibility for the regular-season "No game this week — add one" CTA.
+   * Pre-season practice matches are exposed by a separate tap/edit card so
+   * they can use practice-match copy without duplicating the in-season CTA.
    */
   const showAddGameCTA = useMemo(() => {
-    if (currentPhase === 'Off-season') return false;
-    if (currentPhase === 'In-season') return true;
+    return currentPhase === 'In-season';
+  }, [currentPhase]);
 
-    // Pre-season: compare displayed week's last day against the
-    // "next" Jan 1 from today's perspective. If today is already in
-    // Jan–Jun, Jan 1 has just passed (use current calendar year);
-    // if today is Jul–Dec, the relevant boundary is next year's Jan 1.
-    const lastDayStr = weekDays[weekDays.length - 1]?.date;
-    if (!lastDayStr) return false;
-    const lastDay = new Date(lastDayStr);
-    if (Number.isNaN(lastDay.getTime())) return false;
-
-    const today = new Date();
-    const jan1Year =
-      today.getMonth() >= 6 ? today.getFullYear() + 1 : today.getFullYear();
-    const jan1 = new Date(jan1Year, 0, 1);
-    return lastDay >= jan1;
-  }, [currentPhase, weekDays]);
+  const showPracticeMatchCTA = currentPhase === 'Pre-season';
 
   const handleAddGameMode = () => {
     setMode({ type: 'addGame' });
@@ -841,6 +1293,7 @@ export function useHomeScreen() {
     selectedIdx,
     mode,
     handleDayTap,
+    handleSelectDayOnly,
     handleClearSelection,
     handleCancelMove,
     handleAddGameMode,
@@ -848,7 +1301,18 @@ export function useHomeScreen() {
     // Per-day actions
     handleViewWorkout,
     handleFinishTeamSession,
-    handleQuickAction,
+    handleMessageCoach,
+    handleOpenProgramSetup,
+    handleApplyHomeQuickStatus,
+    handleApplyGuidedInjury,
+
+    // Busy / away + missed sessions (vocab groups 5 + 2)
+    handleApplyBusyWeekReduce,
+    handleApplyAwayDays,
+    handleApplyWeekReadiness,
+    handleClearWeekReadiness,
+    missedSessionPrompt,
+    handleMissedSessionResponse,
 
     // Stale overrides
     staleByDate,
@@ -856,12 +1320,18 @@ export function useHomeScreen() {
     // Week context / derived
     weekHasGame,
     showAddGameCTA,
+    showPracticeMatchCTA,
     currentPhase,
+    coachNotes,
+    activeConstraints,
+    handleClearCoachNote,
+    handleUpdateCoachNoteStatus,
 
     // Game-day modal
     gameModalVisible,
     gameModalLabel,
     closeGameModal,
+    handleOpenGameDayActions,
     handleLogGame,
     handleMoveGameDay,
     handleRemoveGameDay,

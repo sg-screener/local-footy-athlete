@@ -68,6 +68,13 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
         >
           TEAM TRAINING DAYS
         </Text>
+        <Text
+          variant="bodySmall"
+          color={colors.text.secondary}
+          style={styles.subtitle}
+        >
+          Pick the days you train with your club.
+        </Text>
       </View>
 
       <DayGrid selectedDays={selectedDays} onToggleDay={toggleDay} />
@@ -93,8 +100,8 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
  */
 function feedbackForCount(count: number): string {
   if (count === 1) return '1 team session';
-  if (count === 2) return '2 team sessions — solid load';
-  return `${count} team sessions — higher fatigue week`;
+  if (count === 2) return '2 team sessions - solid load';
+  return `${count} team sessions - higher fatigue week`;
 }
 
 const styles = StyleSheet.create({
@@ -105,6 +112,9 @@ const styles = StyleSheet.create({
     ...headingXL,
     color: colors.text.primary,
     marginBottom: spacing.sm,
+  },
+  subtitle: {
+    lineHeight: 20,
   },
   selectedCount: {
     marginTop: spacing.lg,

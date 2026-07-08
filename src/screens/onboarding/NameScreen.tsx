@@ -5,9 +5,10 @@ import {
   StyleSheet,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { Feather } from '@expo/vector-icons';
 import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
-import { spacing, shadows } from '../../theme/spacing';
+import { shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
@@ -60,6 +61,7 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
       </View>
 
       <View style={[styles.inputCard, shadows.xs]}>
+        <Feather name="user" size={19} color={colors.text.tertiary} />
         <TextInput
           style={styles.textInput}
           value={name}
@@ -90,6 +92,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   inputCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: colors.surface.secondary,
     borderRadius: 16,
     paddingHorizontal: 20,
@@ -98,9 +102,11 @@ const styles = StyleSheet.create({
     borderColor: colors.surface.tertiary,
   },
   textInput: {
+    flex: 1,
     color: colors.text.primary,
     fontSize: 18,
     fontWeight: '600',
+    paddingLeft: 12,
     paddingVertical: 8,
   },
 });

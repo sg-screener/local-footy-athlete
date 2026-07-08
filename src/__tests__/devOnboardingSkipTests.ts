@@ -48,7 +48,7 @@ section('[2] default test athlete profile');
   eq('name', DEV_TEST_ONBOARDING_DATA.firstName, 'Sam');
   eq('height', DEV_TEST_ONBOARDING_DATA.heightCm, 184);
   eq('weight', DEV_TEST_ONBOARDING_DATA.weightKg, 90);
-  eq('position', DEV_TEST_ONBOARDING_DATA.position, 'Midfielder');
+  eq('position', DEV_TEST_ONBOARDING_DATA.position, 'inside_mid');
   eq('season phase', DEV_TEST_ONBOARDING_DATA.seasonPhase, 'In-season');
   eq('game day', DEV_TEST_ONBOARDING_DATA.gameDay, 'Saturday');
   eq('team training days', DEV_TEST_ONBOARDING_DATA.teamTrainingDays, ['Tuesday', 'Thursday']);

@@ -25,21 +25,23 @@ export const PreferredTrainingDaysScreen: React.FC<
   const trainingDaysPerWeek = useProfileStore(
     (state) => state.onboardingData.trainingDaysPerWeek
   );
+  const trainingDaysUnsure = useProfileStore(
+    (state) => state.onboardingData.trainingDaysUnsure === true
+  );
   const updateOnboardingData = useProfileStore(
     (state) => state.updateOnboardingData
   );
 
-  const isFlexible = !trainingDaysPerWeek || trainingDaysPerWeek === 0;
-  const cap = trainingDaysPerWeek || 0;
+  const cap = trainingDaysUnsure ? 3 : trainingDaysPerWeek || 0;
+  const isFlexible = !trainingDaysUnsure && (!trainingDaysPerWeek || trainingDaysPerWeek === 0);
   const isAtCap = !isFlexible && selectedDays.length >= cap;
   const isValid = selectedDays.length >= 1;
 
   /**
    * Hard cap at `trainingDaysPerWeek` with no auto-rotate — the prior screen's
    * answer is treated as the ceiling, and the athlete picks any subset up to
-   * that. If they pick fewer (they only have 3 slots that work but said 4),
-   * we sync `trainingDaysPerWeek` down on continue rather than silently
-   * dropping a day later.
+   * that. "Not sure" is also capped at 3 while keeping its own copy and visual
+   * state upstream.
    */
   const toggleDay = (day: DayOfWeek) => {
     setSelectedDays((prev) => {
@@ -66,21 +68,26 @@ export const PreferredTrainingDaysScreen: React.FC<
   }, [cap, isFlexible, selectedDays.length]);
 
   const subtitle = useMemo(() => {
-    const picked = selectedDays.length;
-    if (isFlexible) {
-      if (picked === 0) return 'Tap all the days that work for you';
-      return `${picked} day${picked === 1 ? '' : 's'} selected`;
+    if (trainingDaysUnsure) {
+      return "We'll start you with 3 LFA days. Pick the days that usually work best.";
     }
-    if (picked === 0) return `Up to ${cap} day${cap === 1 ? '' : 's'}`;
-    return `${picked} of ${cap} selected`;
-  }, [cap, isFlexible, selectedDays.length]);
+    if (isFlexible) {
+      return 'Tap all the days that work for you';
+    }
+    return `Pick up to ${cap} day${cap === 1 ? '' : 's'} for LFA work.`;
+  }, [cap, isFlexible, trainingDaysUnsure]);
 
   const handleContinue = () => {
     if (isValid) {
+      let nextTrainingDays = selectedDays.length;
+      if (trainingDaysUnsure) {
+        nextTrainingDays = 3;
+      } else if (!isFlexible) {
+        nextTrainingDays = cap;
+      }
       updateOnboardingData({
         preferredTrainingDays: selectedDays,
-        // Sync down when athlete picks fewer than they said (flexible = always).
-        trainingDaysPerWeek: selectedDays.length,
+        trainingDaysPerWeek: nextTrainingDays,
       });
       navigation.navigate('GymExperience');
     }

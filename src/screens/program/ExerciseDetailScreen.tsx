@@ -15,6 +15,7 @@ import { Text } from '../../components/common/Text';
 import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import type { ProgramStackParamList } from '../../types/navigation';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 type ExerciseDetailScreenProps = NativeStackScreenProps<ProgramStackParamList, 'ExerciseDetail'>;
 
@@ -66,7 +67,7 @@ export default function ExerciseDetailScreen({ navigation }: ExerciseDetailScree
         </Pressable>
         <View style={styles.headerTitle}>
           <Text variant="h2" color={colors.text.primary}>
-            {exercise.name}
+            {formatExerciseDisplayName(exercise.name) || exercise.name}
           </Text>
         </View>
       </View>

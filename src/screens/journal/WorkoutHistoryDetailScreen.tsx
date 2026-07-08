@@ -12,6 +12,7 @@ import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { Text } from '../../components/common/Text';
 import { Card } from '../../components/common/Card';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 // Mock data for a sample workout
 const MOCK_WORKOUT_DETAIL = {
@@ -189,7 +190,7 @@ export const WorkoutHistoryDetailScreen = () => {
                 variant="h4"
                 style={{ color: colors.text.primary, marginBottom: spacing.md }}
               >
-                {exercise.name}
+                {formatExerciseDisplayName(exercise.name) || exercise.name}
               </Text>
 
               {/* Sets Table */}
@@ -269,7 +270,7 @@ export const WorkoutHistoryDetailScreen = () => {
                             : colors.text.primary,
                       }}
                     >
-                      {set.weight > 0 ? set.weight : '—'}
+                      {set.weight > 0 ? set.weight : '-'}
                     </Text>
                   </View>
                 ))}

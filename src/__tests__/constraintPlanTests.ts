@@ -138,7 +138,7 @@ section('[1] buildConstraintPlans — hammy 7/10 derives engine policy');
   const plans = buildConstraintPlans([injury('hammy', 'hamstring', 7)]);
   ok('one plan emitted', plans.length === 1);
   const p = plans[0];
-  eq('activeIssue label', p.activeIssue, 'Hammy pain — 7/10');
+  eq('activeIssue label', p.activeIssue, 'Hammy pain - 7/10');
   ok('avoid mentions sprinting', p.avoid.includes('Sprinting / max-speed running'));
   ok('avoid mentions plyos', p.avoid.includes('Plyometrics / jumping'));
   ok('avoid mentions heavy hinge', p.avoid.includes('Heavy hinge / nordics / RDLs'));
@@ -339,7 +339,7 @@ section('[15] composeCoachAdjustmentReply — legacy signature back-compat');
 {
   const reply = composeCoachAdjustmentReply({
     constraints: [injury('hammy', 'hamstring', 7) as ActiveConstraint],
-    currentWeekChanges: ['Mon Lower adjusted — RDL removed'],
+    currentWeekChanges: ['Mon Lower adjusted - RDL removed'],
     nextWeekChanges: [],
     didCurrentWeekChange: true,
     didFutureWeekChange: false,
@@ -369,7 +369,7 @@ section('[18] buildPlanForSoreness — quad 6/10 limits, never blocks');
   ok('one plan emitted', plans.length === 1);
   const p = plans[0];
   eq('type soreness', p.type, 'soreness');
-  eq('activeIssue label', p.activeIssue, 'Quads soreness — 6/10');
+  eq('activeIssue label', p.activeIssue, 'Quads soreness - 6/10');
   ok('subWith mentions hinge alternative', p.substituteWith.some((s) => /hinge/i.test(s)));
   ok('keep is non-empty', p.keep.length > 0);
   ok('updatePrompt is canonical', /improves/i.test(p.updatePrompt));
@@ -390,7 +390,7 @@ section('[20] buildPlanForBusyWeek — busy 7/10 drops max-effort + heavy lower'
   ok('one plan emitted', plans.length === 1);
   const p = plans[0];
   eq('type schedule', p.type, 'schedule');
-  eq('activeIssue label', p.activeIssue, 'Busy week — 7/10');
+  eq('activeIssue label', p.activeIssue, 'Busy week - 7/10');
   ok('avoid mentions max-effort', p.avoid.includes('Max-effort strength'));
   ok('avoid mentions hard conditioning', p.avoid.includes('High-intensity conditioning'));
   ok('subWith mentions short focused strength', p.substituteWith.some((s) => /short/i.test(s)));

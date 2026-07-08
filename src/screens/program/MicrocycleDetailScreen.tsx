@@ -17,6 +17,7 @@ import { Badge } from '../../components/common/Badge';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { useProgramStore } from '../../store/programStore';
 import type { ProgramStackParamList } from '../../types/navigation';
+import { getTeamTrainingWorkoutState } from '../../utils/teamTraining';
 
 type MicrocycleDetailScreenProps = NativeStackScreenProps<ProgramStackParamList, 'MicrocycleDetail'>;
 
@@ -165,6 +166,7 @@ export default function MicrocycleDetailScreen() {
   const renderDayCard = ({ item, index }: { item: typeof MOCK_WORKOUTS[0]; index: number }) => {
     const isToday = index === getCurrentDayOfWeek();
     const isRestDay = !item.name;
+    const exerciseCount = getTeamTrainingWorkoutState(item as any).renderableExercises.length;
 
     return (
       <Pressable
@@ -231,7 +233,7 @@ export default function MicrocycleDetailScreen() {
                     variant="caption"
                     color={colors.text.tertiary}
                   >
-                    {item.exercises.length} exercises
+                    {exerciseCount} exercises
                   </Text>
                   <Text
                     variant="caption"

@@ -82,11 +82,11 @@ ok('label "Reset to post-onboarding state" present', /Reset to post-onboarding s
 // ═════════════════════════════════════════════════════════════════════
 section('[1b] Program setup shows profile inputs that drive the program');
 ok('Name row present', /label="Name"/.test(src));
-ok('Position row present', /label="Position"/.test(src));
-ok('Experience row present', /label="Experience"/.test(src));
-ok('Training days per week row present', /label="Training days per week"/.test(src));
-ok('Team training days row present when available', /label="Team training days"/.test(src));
-ok('Game day row present when available', /label="Game day"/.test(src));
+ok('Footy role row present', /label="Footy role"/.test(src));
+ok('Training Experience row present', /label="Training Experience"/.test(src));
+ok('LFA Days row present', /label="LFA Days"/.test(src));
+ok('Team Training row present when available', /label="Team Training"/.test(src));
+ok('Game Day row present when available', /label="Game Day"/.test(src));
 ok('Main goal / focus row present when available', /label="Main goal \/ focus"/.test(src));
 ok('Equipment / gym access row removed', !/Equipment \/ gym access/.test(src));
 ok(
@@ -96,20 +96,197 @@ ok(
 ok('Program setup CTA present', /Something changed\? Tell the coach/.test(src));
 ok('Program setup CTA testID present', /testID="profile-program-setup-change"/.test(src));
 ok(
-  'Program setup CTA navigates to Coach with setup prefill',
-  /onProgramSetupChanged[\s\S]*navigation\.navigate\('CoachTab'[\s\S]*prefill:\s*'I need to make an adjustment to my program setup — '/.test(src),
+  'Program setup CTA opens guided setup sheet',
+  /onProgramSetupChanged[\s\S]*setSetupSheetVisible\(true\)/.test(src)
+    && /testID="profile-setup-update-sheet"/.test(src),
+);
+ok(
+  'Setup sheet keeps coach fallback for complex setup changes',
+  /Need to explain something\? Message the coach/.test(src)
+    && /prefill:\s*'I need to update something about my setup\.'/.test(src),
+);
+ok(
+  'Player details edit opens structured setup flow',
+  /Edit player details/.test(src)
+    && /onEditPlayerDetails=\{openPlayerDetailsEditor\}/.test(src)
+    && !/prefill:\s*'I want to update my player details\.'/.test(src),
 );
 
 // ═════════════════════════════════════════════════════════════════════
-// 1c. Coach adjustments show active state or empty state
+// 1c. Guided setup sheet owns routine setup changes
 // ═════════════════════════════════════════════════════════════════════
-section('[1c] Coach adjustments render active issue state');
+section('[1c] Guided setup update sheet');
+ok(
+  'setup sheet title and subtitle present',
+  /Update program setup/.test(src)
+    && /Change the details your program is built around\./.test(src),
+);
+ok(
+  'setup sheet reuses shared Sheet and SelectableTile controls',
+  /<Sheet[\s\S]*testID="profile-setup-update-sheet"/.test(src)
+    && /<DayChipGrid/.test(src)
+    && /<SelectableTile/.test(src),
+);
+ok(
+  'setup sheet includes LFA and team day selectors',
+  /What days can you train\?/.test(src)
+    && /We.ll build your LFA work around these days\./.test(src)
+    && /Team training days/.test(src)
+    && /Which days does your team train\? We.ll work your program around these\./.test(src),
+);
+ok(
+  'program details edit opens a batched structured setup flow',
+  /Edit program details/.test(src)
+    && /onEditProgramDetails=\{openProgramDetailsEditor\}/.test(src)
+    && /What phase are you in\?/.test(src)
+    && /SEASON_PHASE_OPTIONS/.test(src)
+    && /programLfaDays/.test(src)
+    && /programTeamDays/.test(src)
+    && /programGameDay/.test(src)
+    && /Save program details/.test(src),
+);
+ok(
+  'program details draft state is separate from saved setup draft',
+  /draftSeasonPhase/.test(src)
+    && /draftPreferredDays/.test(src)
+    && /draftTeamDays/.test(src)
+    && /draftGameDay/.test(src)
+    && /programDetailsSaved/.test(src)
+    && /setPendingSeasonPhase\(draftSeasonPhase\)/.test(src)
+    && /setPendingPreferredDays\(sortDays\(draftPreferredDays\)\)/.test(src)
+    && /setPendingTeamDays\(sortDays\(draftTeamDays\)\)/.test(src),
+);
+ok(
+  'program details cancel resets drafts without applying pending setup',
+  /const cancelProgramDetailsEdit = \(\) => \{[\s\S]*setDraftSeasonPhase\(pendingSeasonPhase\)[\s\S]*setDraftPreferredDays\(pendingPreferredDays\)[\s\S]*setSetupSheetStep\('overview'\)/.test(src),
+);
+ok(
+  'setup sheet includes structured player detail edit steps',
+  /What should I call you\?/.test(src)
+    && /What footy role fits you best\?/.test(src)
+    && /What’s your training experience\?/.test(src)
+    && /Save player details/.test(src),
+);
+ok(
+  'player detail options come from shared role buckets',
+  /ROLE_BUCKET_OPTIONS/.test(src)
+    && /ROLE_BUCKET_OPTIONS\.map/.test(src)
+    && /onSetDraftPosition\(option\.id\)/.test(src)
+    && /\{option\.label\}/.test(src)
+    && /New to training/.test(src)
+    && /Developing/.test(src)
+    && /Consistent/.test(src)
+    && /Advanced/.test(src),
+);
+ok(
+  'player detail option groups include anti-clipping padding',
+  /playerOptionGrid:\s*\{[\s\S]*paddingHorizontal: 4[\s\S]*overflow: 'visible'/.test(src)
+    && /playerExperienceStack:\s*\{[\s\S]*paddingHorizontal: 4[\s\S]*overflow: 'visible'/.test(src)
+    && /programOptionStack:\s*\{[\s\S]*paddingHorizontal: 4[\s\S]*overflow: 'visible'/.test(src)
+    && /sheetChipGrid:\s*\{[\s\S]*paddingHorizontal: 4[\s\S]*overflow: 'visible'/.test(src),
+);
+ok(
+  'usual game day row is shown only in-season',
+  /currentPhase === 'In-season' \? \([\s\S]*label="Usual game day"/.test(src),
+);
+ok(
+  'name-only player edit saves profile without forcing setup rebuild',
+  /updateOnboardingData\(\{ firstName: trimmedName \}\)/.test(src)
+    && !/pendingName !==/.test(src),
+);
+ok(
+  'position or training experience changes count as setup changes',
+  /const playerProgramHasChanges =[\s\S]*pendingPosition !==[\s\S]*pendingExperience !==/.test(src)
+    && /const setupHasChanges =\s*playerProgramHasChanges/.test(src),
+);
+ok(
+  'season phase and staged setup fields count as rebuild changes',
+  /pendingSeasonPhase !== currentPhase/.test(src)
+    && /lfaDayCountNeedsSync/.test(src)
+    && /!sameDays\(pendingPreferredDays/.test(src)
+    && /!sameDays\(pendingTeamDays/.test(src)
+    && /pendingIsInSeason && pendingGameDay !== dayFromGameFields/.test(src),
+);
+ok(
+  'program details save does not rebuild immediately',
+  /const saveProgramDetails = \(\) => \{[\s\S]*setPendingSeasonPhase\(draftSeasonPhase\)[\s\S]*setSetupSheetStep\('overview'\)[\s\S]*\};/.test(src)
+    && !/saveProgramDetails[\s\S]{0,500}generateProgramFromProfile/.test(src),
+);
+ok(
+  'setup rebuild loading matches phase-shift loading style',
+  /SetupUpdateBuildingState/.test(src)
+    && /Updating your program\.\.\./.test(src)
+    && /This can take up to 1 minute/.test(src)
+    && /PROFILE_SETUP_UPDATE_MESSAGES/.test(src)
+    && /Animated\.timing\(setupUpdateMsgOpacity/.test(src)
+    && /REBUILD_MSG_INTERVAL_MS/.test(src)
+    && /setupBuildingMsg/.test(src),
+);
+ok(
+  'setup rebuild status messages are short and height-stable',
+  /Rebuilding your week\.\.\./.test(src)
+    && /Updating training days\.\.\./.test(src)
+    && /Checking team anchors\.\.\./.test(src)
+    && /Applying setup changes\.\.\./.test(src)
+    && /setupBuildingMsgSlot/.test(src)
+    && /height: 20/.test(src)
+    && /numberOfLines=\{1\}/.test(src)
+    && !/Adjusting sessions around your training days/.test(src),
+);
+ok(
+  'old plain setup rebuild loading copy removed',
+  !/Rebuilding your week around the updated setup\./.test(src),
+);
+ok(
+  'setup confirmation warns about program rebuild and coach edits',
+  /Update your program\?/.test(src)
+    && /Your program will rebuild around your updated setup\./.test(src)
+    && /Setup changes saved/.test(src)
+    && /Team and game days preserved where possible/.test(src)
+    && /Custom coach edits may be replaced/.test(src),
+);
+ok(
+  'setup update rebuilds from patched profile before committing stores',
+  /const program = await generateProgramFromProfile\(nextProfile\)/.test(src)
+    && /updateOnboardingData\(patch\)/.test(src)
+    && /setCurrentProgram\(program\)/.test(src)
+    && /clearManualOverrides\(\)/.test(src),
+);
+ok(
+  'setup rebuild patch carries player detail fields',
+  /patch\.firstName = trimmedName/.test(src)
+    && /patch\.position = pendingPosition/.test(src)
+    && /patch\.experienceLevel = pendingExperience/.test(src),
+);
+ok(
+  'in-season game day patch preserves legacy and new game day fields',
+  /patch\.usualGameDay = pendingGameDay \?\? undefined/.test(src)
+    && /patch\.gameDay = pendingGameDay \? mapToLegacyGameDay\(pendingGameDay\) : undefined/.test(src),
+);
+ok(
+  'program setup patch carries season phase and explicit LFA day count',
+  /patch\.seasonPhase = pendingSeasonPhase/.test(src)
+    && /lfaDayCountNeedsSync/.test(src)
+    && /patch\.preferredTrainingDays = preferredDays/.test(src)
+    && /patch\.trainingDaysPerWeek = preferredDays\.length/.test(src)
+    && /patch\.trainingDaysUnsure = false/.test(src),
+);
+
+// ═════════════════════════════════════════════════════════════════════
+// 1d. Coach adjustments show active state or empty state
+// ═════════════════════════════════════════════════════════════════════
+section('[1d] Coach adjustments render active issue state');
 ok('imports useCoachUpdatesStore', /useCoachUpdatesStore/.test(src));
 ok('reads activeConstraints', /activeConstraints\s*=\s*useCoachUpdatesStore/.test(src));
-ok('formats injury issue as pain + severity', /return `\$\{part\} pain — \$\{c\.severity\}\/10`/.test(src));
-ok('formats fatigue issue as severity', /return `Fatigue — \$\{c\.severity\}\/10`/.test(src));
+ok('imports shared active Coach Notes read model', /selectActiveCoachNotes/.test(src));
+ok('active issues derive from shared active Coach Notes', /selectActiveCoachNotes\(\{[\s\S]*activeConstraints[\s\S]*modalityPreferences[\s\S]*readinessSignalsByDate/.test(src));
+ok('Profile bullets keep severity visible when present', /\$\{note\.title\} — \$\{note\.severity\}\/10/.test(src));
 ok('renders Active label', /Active:/.test(src));
 ok('renders no active coach changes empty state', /No active coach changes\./.test(src));
+ok(
+  'Clear active changes only renders when active issues exist',
+  /activeIssues\.length > 0 \? \([\s\S]{0,900}profile-clear-coach-adjustments/.test(src),
+);
 ok(
   'old equipment guidance copy removed from Profile',
   !/Missing equipment\? Tell the coach and your session can be adjusted\./.test(src),

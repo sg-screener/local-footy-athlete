@@ -3,8 +3,11 @@
  * Core business logic and data models
  */
 
-// Position types for athletes
-export type Position = 'Small back' | 'Key back' | 'Midfielder' | 'Ruck' | 'Small forward' | 'Key forward';
+// Footy role buckets for athletes. The legacy exact positions remain in the
+// type so old persisted profiles can be read and normalized at the app edge.
+export type RoleBucket = 'inside_mid' | 'outside_runner' | 'key_position_ruck_tall' | 'high_forward_back' | 'small_forward_back';
+export type LegacyPosition = 'Small back' | 'Key back' | 'Midfielder' | 'Ruck' | 'Small forward' | 'Key forward';
+export type Position = RoleBucket | LegacyPosition;
 
 // Experience level types
 export type ExperienceLevel = 'Complete beginner' | '1-2 years' | '2-5 years' | '5+ years';
@@ -88,6 +91,7 @@ export interface OnboardingData {
   teamTrainingDuration?: TeamTrainingDuration;
   teamTrainingIntensity?: TeamTrainingIntensity;
   trainingDaysPerWeek?: number;
+  trainingDaysUnsure?: boolean;
   preferredTrainingDays?: DayOfWeek[];
   availabilityConstraints?: ProgramAvailabilityConstraint[];
   sessionDurationMinutes?: SessionDuration;
@@ -182,6 +186,8 @@ export interface OverrideContext {
   relatedGameDate?: string;
   /** Human-readable label shown in stale-override warnings (for gameProximity only). */
   label?: string;
+  /** Active modifier that owns this override, so clearing the note can remove the real program effect. */
+  activeModifierId?: string;
 }
 
 // Session feeling (Sam's simple feedback model)
@@ -301,10 +307,13 @@ export interface Workout {
   /**
    * Conditioning category — the energy-system classification used by the
    * weekly distribution tracker. Off-season and pre-season weeks must
-   * cover each category at most once before duplicating (priority order:
-   * aerobic_base → sprint → vo2 → glycolytic).
+   * cover each category at most once before duplicating.
+   *
+   * 'tempo' (added Phase 4B, 2026-07-09) is TRUE medium conditioning:
+   * controlled repeat efforts at 6-7/10 — worked but composed. It is NOT
+   * the old mislabelled VO2 work; vo2/glycolytic remain hard.
    */
-  conditioningCategory?: 'aerobic_base' | 'sprint' | 'vo2' | 'glycolytic';
+  conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
 
   /**
    * Resolved conditioning block — single source of truth for the renderer.

@@ -23,6 +23,9 @@ function baseFields(signal: ReadinessSignal, suffix: string, label: string) {
     reasonLabel: label,
     source: 'readiness' as const,
     appliesToDate: signal.date,
+    modifierTitle: 'Training adjusted',
+    modifierBody: "Your program is being adjusted based on how you're feeling.",
+    modifierAffects: ['current_day' as const],
   };
 }
 
@@ -90,7 +93,7 @@ export function buildReadinessActiveConstraints(
       type: 'schedule',
       severity: signal.timeAvailableMinutes < 20 ? 7 : 5,
       rules: ['long accessory blocks', 'extra optional work'],
-      safeFocus: ['Main lift / main conditioning stimulus', '1–2 key accessories', 'Short warm-up + exit'],
+      safeFocus: ['Main lift / main conditioning stimulus', '1-2 key accessories', 'Short warm-up + exit'],
       advice: [],
       maxSessionsThisWeek: undefined,
     };
@@ -110,6 +113,7 @@ export function isReadinessConstraint(c: ActiveConstraint | null | undefined): b
 }
 
 export function constraintAppliesToDate(c: ActiveConstraint | any, date: string): boolean {
+  if (typeof c?.expiresAt === 'string' && c.expiresAt < date) return false;
   return !c?.appliesToDate || c.appliesToDate === date;
 }
 

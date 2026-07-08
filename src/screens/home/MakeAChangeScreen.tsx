@@ -57,7 +57,7 @@ const CHANGE_OPTIONS: ChangeOption[] = [
   {
     type: 'Season Over',
     title: 'Season Over',
-    subtitle: 'Season ended — shift to Off-season mode',
+    subtitle: 'Season ended - shift to Off-season mode',
     emoji: '🏁',
   },
   {
@@ -374,7 +374,7 @@ export default function MakeAChangeScreen({ navigation }: MakeAChangeScreenProps
             <Card style={styles.confirmCard}>
               <View style={styles.confirmContent}>
                 <Text variant="h3" color={colors.accent.lime} style={styles.confirmTitle}>
-                  This week is a bye — got it! 🏖️
+                  This week is a bye - got it! 🏖️
                 </Text>
                 <Text variant="body" color={colors.text.secondary} style={styles.confirmText}>
                   I'll switch your program to recovery mode. Use this time to rest up and prepare for your next game.
@@ -390,7 +390,7 @@ export default function MakeAChangeScreen({ navigation }: MakeAChangeScreenProps
             <Card style={styles.confirmCard}>
               <View style={styles.confirmContent}>
                 <Text variant="h3" color={colors.accent.lime} style={styles.confirmTitle}>
-                  Season's done — shifting to Off-season mode 🏁
+                  Season's done - shifting to Off-season mode 🏁
                 </Text>
                 <Text variant="body" color={colors.text.secondary} style={styles.confirmText}>
                   Time to build strength and address weaknesses. Let's make you even more dominant next season.

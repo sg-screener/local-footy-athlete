@@ -2,7 +2,9 @@
  * Domain types for Local Footy Athlete
  * Core business logic and data models
  */
-export type Position = 'Small back' | 'Key back' | 'Midfielder' | 'Ruck' | 'Small forward' | 'Key forward';
+export type RoleBucket = 'inside_mid' | 'outside_runner' | 'key_position_ruck_tall' | 'high_forward_back' | 'small_forward_back';
+export type LegacyPosition = 'Small back' | 'Key back' | 'Midfielder' | 'Ruck' | 'Small forward' | 'Key forward';
+export type Position = RoleBucket | LegacyPosition;
 export type ExperienceLevel = 'Complete beginner' | '1-2 years' | '2-5 years' | '5+ years';
 export type SubscriptionStatus = 'free' | 'trial' | 'active' | 'cancelled' | 'expired';
 export type TrainingLocation = 'Commercial gym' | 'Home gym' | 'Club gym' | 'Outdoor';
@@ -57,6 +59,7 @@ export interface OnboardingData {
     teamTrainingDuration?: TeamTrainingDuration;
     teamTrainingIntensity?: TeamTrainingIntensity;
     trainingDaysPerWeek?: number;
+    trainingDaysUnsure?: boolean;
     preferredTrainingDays?: DayOfWeek[];
     availabilityConstraints?: ProgramAvailabilityConstraint[];
     sessionDurationMinutes?: SessionDuration;
@@ -111,6 +114,8 @@ export interface OverrideContext {
     relatedGameDate?: string;
     /** Human-readable label shown in stale-override warnings (for gameProximity only). */
     label?: string;
+    /** Active modifier that owns this override, so clearing the note can remove the real program effect. */
+    activeModifierId?: string;
 }
 export type SessionFeeling = 'Cooked' | 'Strong' | 'Good' | 'Average' | 'Sore';
 /**

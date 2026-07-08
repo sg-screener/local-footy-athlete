@@ -606,7 +606,7 @@ function applySetSessionRecovery(
   const recovery = cloneWorkout(current, {
     name: 'Recovery',
     description:
-      'Light mobility / walk. Injury-protected — no loaded work today.',
+      'Light mobility / walk. Injury-protected - no loaded work today.',
     workoutType: 'Recovery',
     sessionTier: 'recovery',
     hasCombinedConditioning: false,
@@ -625,12 +625,12 @@ function applyLightenSession(
     sessionTier: 'optional',
     description:
       ((current.description || '').trim() +
-        ' [Injury-lightened — optional this week]').trim(),
+        ' [Injury-lightened - optional this week]').trim(),
     exercises: current.exercises.map((ex) => ({
       ...ex,
       prescribedSets: Math.max(1, Math.ceil((ex.prescribedSets || 1) / 2)),
     })),
-    coachNotes: appendCoachNote(current, 'Lightened — optional this week'),
+    coachNotes: appendCoachNote(current, 'Lightened - optional this week'),
   });
   return { ok: true, workout: lightened };
 }
@@ -1374,7 +1374,7 @@ function applySwapConditioningModality(
       exercises: newExercises,
       conditioningBlock: newBlock,
       description:
-        ((current.description || '').trim() + ` [Off-feet — injury swap]`).trim(),
+        ((current.description || '').trim() + ` [Off-feet - injury swap]`).trim(),
       coachNotes: appendCoachNote(current, coachNote),
     }),
   };
@@ -1650,7 +1650,7 @@ export function applyAdjustmentEvents(
         rejected.push({
           kind: APPLY_REJECT_KIND.REDUNDANT_AFTER_RECOVERY,
           date,
-          reason: `${ev.kind} on ${date} skipped — session already converted to recovery`,
+          reason: `${ev.kind} on ${date} skipped - session already converted to recovery`,
         });
         continue;
       }
@@ -1947,7 +1947,7 @@ export function applyMoveSession(
     rejected.push({
       kind: 'cannot_move_team_training',
       date: input.sourceDate,
-      reason: `${input.sourceDate} is a team training day — those are anchored to the calendar`,
+      reason: `${input.sourceDate} is a team training day - those are anchored to the calendar`,
     });
     return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
   }
@@ -1955,7 +1955,7 @@ export function applyMoveSession(
     rejected.push({
       kind: 'cannot_move_game',
       date: input.sourceDate,
-      reason: `${input.sourceDate} is a game day — game-day sessions can't be moved`,
+      reason: `${input.sourceDate} is a game day - game-day sessions can't be moved`,
     });
     return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
   }
@@ -1971,7 +1971,7 @@ export function applyMoveSession(
         rejected.push({
           kind: 'cannot_move_team_training',
           date: input.destDate,
-          reason: `${input.destDate} is a team training day — can't swap into it`,
+          reason: `${input.destDate} is a team training day - can't swap into it`,
         });
         return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
       }
@@ -1979,7 +1979,7 @@ export function applyMoveSession(
         rejected.push({
           kind: 'cannot_move_game',
           date: input.destDate,
-          reason: `${input.destDate} is a game day — can't swap`,
+          reason: `${input.destDate} is a game day - can't swap`,
         });
         return { applied, rejected, sourceWorkoutBefore, destWorkoutBefore };
       }

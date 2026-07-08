@@ -97,7 +97,7 @@ function injuryPlans(plans: ConstraintPlan[]): ConstraintPlan[] {
  */
 function buildHeadline(plans: ConstraintPlan[]): string {
   if (plans.length === 0) {
-    return 'Active restriction in place — keeping your training safe.';
+    return 'Active restriction in place - keeping your training safe.';
   }
   const injuries = injuryPlans(plans);
   if (injuries.length > 1) {
@@ -106,12 +106,12 @@ function buildHeadline(plans: ConstraintPlan[]): string {
       const m = p.activeIssue.match(/^(.*?) pain/);
       return m ? m[1].toLowerCase() : p.activeIssue.toLowerCase();
     });
-    return `Two issues active — ${parts.join(' + ')}. Putting the right restrictions on.`;
+    return `Two issues active - ${parts.join(' + ')}. Putting the right restrictions on.`;
   }
   if (plans.length === 1 && plans[0].type === 'injury') {
     // Bucket-themed headline so the message lands.
     const p = plans[0];
-    const m = p.activeIssue.match(/^(.*?) pain — (\d+)\/10$/);
+    const m = p.activeIssue.match(/^(.*?) pain [-—] (\d+)\/10$/);
     if (!m) return p.activeIssue;
     const partLabel = m[1];
     const severity = parseInt(m[2], 10);
@@ -130,9 +130,9 @@ function buildHeadline(plans: ConstraintPlan[]): string {
       if (region === 'back') {
         return `${partLabel} ${severity}/10 is too high for heavy hinging or axial loading.`;
       }
-      return `${partLabel} ${severity}/10 — putting a hard restriction on.`;
+      return `${partLabel} ${severity}/10 - putting a hard restriction on.`;
     }
-    return `${partLabel} ${severity}/10 — putting a restriction on the program.`;
+    return `${partLabel} ${severity}/10 - putting a restriction on the program.`;
   }
   // Fatigue-only or other — fall back to the activeIssue text.
   return capitalise(plans[0].activeIssue);
@@ -258,17 +258,17 @@ function composeCoachAdjustmentReplyFromPlans(input: ComposeReplyInput): string 
     const major = input.majorChangesSummary?.trim();
     if (input.currentWeekAffected && input.futureWeekAffected) {
       return major
-        ? `This week and next are now adjusted — ${major}.`
+        ? `This week and next are now adjusted - ${major}.`
         : 'This week and next are now adjusted.';
     }
     if (input.currentWeekAffected) {
       return major
-        ? `This week is now adjusted — ${major}.`
+        ? `This week is now adjusted - ${major}.`
         : 'This week is now adjusted.';
     }
     if (input.futureWeekAffected) {
       return major
-        ? `Nothing major left to change this week, but next week is now adjusted — ${major}.`
+        ? `Nothing major left to change this week, but next week is now adjusted - ${major}.`
         : 'Nothing major left to change this week, but next week is now adjusted.';
     }
     return '';

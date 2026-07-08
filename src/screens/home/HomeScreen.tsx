@@ -19,9 +19,12 @@ import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { splitSessionName } from '../../utils/sessionNaming';
 import { visibleWorkoutItemCountLabel } from '../../utils/visibleProgramReadModel';
+import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import type { DesignVersion } from '../../store/uiStore';
 import HomeScreenV2 from './HomeScreenV2';
 import { useHomeScreen } from './useHomeScreen';
+import { PlanChangeSheet } from './PlanChangeSheet';
+import { HomeQuickActionSheet } from './HomeQuickActionSheet';
 import {
   WEEK_DAYS,
   DAY_SHORT,
@@ -31,6 +34,7 @@ import {
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
   QUICK_ACTIONS,
+  type HomeQuickAction,
 } from './homeScreenConstants';
 
 // Dev-only debug overlay — tree-shaken in production builds
@@ -84,7 +88,10 @@ function HomeScreenClassic() {
     handleAddGameMode,
     handleViewWorkout,
     handleFinishTeamSession,
-    handleQuickAction,
+    handleMessageCoach,
+    handleOpenProgramSetup,
+    handleApplyHomeQuickStatus,
+    handleApplyGuidedInjury,
     staleByDate,
     weekHasGame,
     showAddGameCTA,
@@ -118,6 +125,21 @@ function HomeScreenClassic() {
     setPendingGameDay,
     handleAdvancePhaseShift,
   } = useHomeScreen();
+  const [quickActionSheet, setQuickActionSheet] = React.useState<HomeQuickAction | null>(null);
+  const [changeSheetDate, setChangeSheetDate] = React.useState<string | null>(null);
+
+  const selectedQuickActionDate =
+    (selectedIdx >= 0 ? weekDays[selectedIdx]?.date : null) ??
+    weekDays.find((day) => day.isToday)?.date ??
+    weekDays.find((day) => day.workout)?.date ??
+    weekDays[0]?.date ??
+    null;
+
+  const openSelectedDayControls = () => {
+    if (selectedQuickActionDate) {
+      setChangeSheetDate(selectedQuickActionDate);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -303,37 +325,19 @@ function HomeScreenClassic() {
                   )}
                 </View>
 
-                {/* Coach-authored notes — visible on EVERY day row (collapsed
-                    or expanded) so injury-driven changes are obvious without
-                    drilling in. Renders one line per note, prefixed with a
-                    coach-tag dot. */}
-                {hasWorkout && day.workout!.coachNotes && day.workout!.coachNotes.length > 0 && (
-                  <View style={styles.coachNoteList}>
-                    {day.workout!.coachNotes.map((note, i) => (
-                      <Text key={i} style={styles.coachNoteText} numberOfLines={2}>
-                        • {note}
-                      </Text>
-                    ))}
-                  </View>
-                )}
-
                 {/* Expanded content for selected day */}
                 {isSelected && hasWorkout && !isGame && mode.type === 'normal' && (() => {
-                  // Team-training-only days have no programmed exercises —
-                  // it's an external session the athlete completes at the
-                  // club. Replace the misleading "0 exercises + View Workout"
-                  // block with a single "Log Session" button that jumps
-                  // straight into the post-session feedback flow. The label
-                  // reflects the actual user behaviour — there's nothing to
-                  // "finish" in the app, only a session to log after the fact.
-                  const isTeamOnly = day.workout!.name === 'Team Training';
+                  // Team-training-only days have no programmed gym exercises.
+                  // Open the detail screen first so the athlete sees the Team
+                  // Training card, then logs it from there.
+                  const isTeamOnly = isTeamTrainingOnlyWorkout(day.workout);
                   return (
                     <View style={styles.expandedContent}>
                       {/* Stale override warning (full banner in expanded view) */}
                       {staleByDate[day.date] && (
                         <StaleOverrideBanner
                           warning={staleByDate[day.date]}
-                          onReview={(prefill) => handleQuickAction(prefill)}
+                          onReview={(prefill) => handleMessageCoach(prefill)}
                         />
                       )}
                       {isTeamOnly ? (
@@ -371,7 +375,7 @@ function HomeScreenClassic() {
                   <StaleOverrideBanner
                     warning={staleByDate[day.date]}
                     compact
-                    onReview={(prefill) => handleQuickAction(prefill)}
+                    onReview={(prefill) => handleMessageCoach(prefill)}
                   />
                 )}
 
@@ -400,7 +404,7 @@ function HomeScreenClassic() {
                 <Path d="M5 12h14" />
               </Svg>
             </View>
-            <Text style={styles.addGameBannerText}>No game this week — add one</Text>
+            <Text style={styles.addGameBannerText}>No game this week - add one</Text>
           </TouchableOpacity>
         )}
 
@@ -419,15 +423,15 @@ function HomeScreenClassic() {
                     key={action.label}
                     style={({ pressed }) => [
                       styles.quickActionChip,
-                      action.prefill === '' && styles.quickActionChipHighlight,
+                      action.id === 'something_changed' && styles.quickActionChipHighlight,
                       pressed && { opacity: 0.7 },
                     ]}
-                    onPress={() => handleQuickAction(action.prefill)}
+                    onPress={() => setQuickActionSheet(action)}
                   >
                     <Text
                       style={[
                         styles.quickActionText,
-                        action.prefill === '' && styles.quickActionTextHighlight,
+                        action.id === 'something_changed' && styles.quickActionTextHighlight,
                       ]}
                       numberOfLines={1}
                     >
@@ -468,6 +472,25 @@ function HomeScreenClassic() {
           </View>
         )}
       </ScrollView>
+
+      <HomeQuickActionSheet
+        visible={quickActionSheet !== null}
+        action={quickActionSheet}
+        onClose={() => setQuickActionSheet(null)}
+        onOpenDayControls={openSelectedDayControls}
+        onOpenProgramSetup={handleOpenProgramSetup}
+        onApplyBusyWeekReduction={() => void handleApplyHomeQuickStatus('busy_week_reduce')}
+        onApplyGuidedInjury={handleApplyGuidedInjury}
+        onMessageCoach={handleMessageCoach}
+      />
+
+      <PlanChangeSheet
+        visible={changeSheetDate !== null}
+        date={changeSheetDate}
+        weekDays={weekDays}
+        onClose={() => setChangeSheetDate(null)}
+        onAskCoach={handleMessageCoach}
+      />
 
       {/* ─── Game Day Action Modal ─── */}
       <Modal
@@ -1193,21 +1216,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontStyle: 'italic',
     textAlign: 'right',
-  },
-
-  // Coach-authored note list — visible on every workout day where injury
-  // adjustments have been applied. Lime accent matches the existing
-  // "+ Conditioning" hint style (combinedCondLabel) so the eye picks
-  // them up without competing with the workout name.
-  coachNoteList: {
-    marginTop: 8,
-    gap: 2,
-  },
-  coachNoteText: {
-    color: '#C8FF00',
-    fontSize: 12,
-    fontWeight: '500',
-    opacity: 0.85,
   },
 
   // ─── Expanded content ───

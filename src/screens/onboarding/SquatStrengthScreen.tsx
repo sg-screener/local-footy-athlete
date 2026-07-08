@@ -2,10 +2,9 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
-  Pressable,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Text } from '../../components/common/Text';
+import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
@@ -20,10 +19,6 @@ type SquatStrengthScreenProps = NativeStackScreenProps<
   'SquatStrength'
 >;
 
-// Strength progression (1.0 → 1.5 → 2.0 BW) is the same as it ever was —
-// only the labels softened: "Below" instead of "Less than", and a leading
-// "~" on the multiplier tiers to land the "rough estimate is fine" tone.
-//
 // "I don't squat" + "Not sure" are merged into a single escape-hatch tile
 // that persists the broader `'Not sure'` id. We deliberately use 'Not
 // sure' as the canonical (rather than "I don't squat") because the
@@ -33,10 +28,10 @@ type SquatStrengthScreenProps = NativeStackScreenProps<
 // type so previously-persisted profiles still validate; we just don't
 // surface it during onboarding any more.
 const STRENGTH_OPTIONS: { id: SquatStrength; label: string }[] = [
-  { id: 'Less than bodyweight', label: 'Below bodyweight' },
+  { id: 'Less than bodyweight', label: 'Less than bodyweight' },
   { id: 'Around bodyweight', label: 'Around bodyweight' },
-  { id: '1.5x bodyweight', label: '~1.5× bodyweight' },
-  { id: '2x bodyweight+', label: '~2× bodyweight+' },
+  { id: '1.5x bodyweight', label: '1.5× bodyweight' },
+  { id: '2x bodyweight+', label: '2× bodyweight+' },
   { id: 'Not sure', label: "I don't squat / not sure" },
 ];
 
@@ -86,14 +81,11 @@ export const SquatStrengthScreen: React.FC<SquatStrengthScreenProps> = ({
         {STRENGTH_OPTIONS.map((option) => {
           const isSelected = selectedStrength === option.id;
           return (
-            <Pressable
+            <SelectableTile
               key={option.id}
-              style={({ pressed }) => [
-                styles.card,
-                isSelected && styles.cardSelected,
-                !isSelected && pressed && styles.cardPressed,
-              ]}
+              isSelected={isSelected}
               onPress={() => handleSelect(option.id)}
+              style={styles.card}
             >
               <Text
                 variant="bodyEmphasis"
@@ -102,7 +94,7 @@ export const SquatStrengthScreen: React.FC<SquatStrengthScreenProps> = ({
               >
                 {option.label}
               </Text>
-            </Pressable>
+            </SelectableTile>
           );
         })}
       </View>
@@ -126,21 +118,11 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   card: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: 14,
     paddingHorizontal: 20,
     paddingVertical: 18,
-    borderWidth: 1.5,
-    borderColor: colors.surface.tertiary,
-  },
-  cardSelected: {
-    borderColor: colors.accent.lime,
-    backgroundColor: 'rgba(200, 255, 0, 0.04)',
-  },
-  cardPressed: {
-    backgroundColor: colors.surface.tertiary,
   },
   cardLabel: {
     fontWeight: '600',
+    paddingRight: 28,
   },
 });

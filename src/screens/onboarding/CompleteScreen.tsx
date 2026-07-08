@@ -74,7 +74,7 @@ const LOOP_TAIL = [
 ];
 
 const LONG_WAIT_MESSAGE =
-  'Taking a bit longer than usual — fine-tuning your plan...';
+  'Taking a bit longer than usual - fine-tuning your plan...';
 
 const MESSAGE_INTERVAL = 5000; // ~5s per status line (in the 4–6s window)
 const FADE_DURATION = 175;      // crossfade between messages
@@ -458,21 +458,21 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
               <EducationCard
                 icon="zap"
                 title="How this works"
-                body="Your program is built for right now — based on your goals, schedule, and injuries"
+                body="Built around your goals, schedule, available days, and injury history."
               />
             </Animated.View>
             <Animated.View style={{ opacity: card2Opacity, transform: [{ translateY: card2TranslateY }] }}>
               <EducationCard
                 icon="refresh-cw"
                 title="It adapts with you"
-                body="Miss a session? Busy week? Something hurts? Just message your AI coach and it will adjust your program instantly"
+                body="Miss a session? Busy week? Feeling sore? Message your AI coach and your plan can adjust with you."
               />
             </Animated.View>
             <Animated.View style={{ opacity: card3Opacity, transform: [{ translateY: card3TranslateY }] }}>
               <EducationCard
                 icon="target"
-                title="Built for footy players"
-                body="Designed for performance, durability, and game day readiness"
+                title="Built for local footy"
+                body="Designed for performance, durability, and game day readiness."
               />
             </Animated.View>
           </View>
@@ -482,7 +482,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
         <View style={styles.footer}>
           {phase === 'generating' && (
             <Text variant="bodySmall" color={colors.text.tertiary} align="center" style={styles.footerHint}>
-              Usually takes 30–60 seconds
+              Usually takes 30-60 seconds
             </Text>
           )}
           <Animated.View style={{ opacity: buttonOpacity }}>

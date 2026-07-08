@@ -12,6 +12,7 @@ const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { LinearGradient } from 'expo-linear-gradient';
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -30,23 +31,52 @@ type WelcomeScreenProps = NativeStackScreenProps<
   'Welcome'
 >;
 
-const FEATURES = [
+type FeatureCardData = {
+  label: string;
+  title: string;
+  description: string;
+  icon: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
+};
+
+const FEATURES: FeatureCardData[] = [
   {
     label: 'YOUR PLAN',
     title: 'Built for footy',
-    description: 'Strength, running, recovery — all in one week.',
+    description: 'Strength, running, recovery - all in one week.',
+    icon: 'dumbbell',
   },
   {
     label: 'YOUR SCHEDULE',
     title: 'Fits your week',
     description: 'Built around team training and game day.',
+    icon: 'calendar-month-outline',
   },
   {
     label: 'YOUR BODY',
     title: 'Keeps you available',
     description: 'Smart load so you can train hard and stay on the park.',
+    icon: 'shield-check-outline',
   },
 ];
+
+const FeatureCard: React.FC<{ feature: FeatureCardData }> = ({ feature }) => (
+  <View style={styles.featureCard}>
+    <View style={styles.featureIconBox}>
+      <MaterialCommunityIcons
+        name={feature.icon}
+        size={21}
+        color={colors.accent.lime}
+      />
+    </View>
+    <View style={styles.featureTextBlock}>
+      <View style={styles.featureLabelWrap}>
+        <Text style={styles.featureLabel}>{feature.label}</Text>
+      </View>
+      <Text style={styles.featureTitle}>{feature.title}</Text>
+      <Text style={styles.featureDescription}>{feature.description}</Text>
+    </View>
+  </View>
+);
 
 export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
   const [isSkippingSetup, setIsSkippingSetup] = useState(false);
@@ -157,21 +187,13 @@ export const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ navigation }) => {
           <View style={styles.featuresSection}>
             {FEATURES.map((feature, index) => (
               <Animated.View
-                key={index}
+                key={feature.label}
                 style={{
                   opacity: cardAnims[index].opacity,
                   transform: [{ translateY: cardAnims[index].translateY }],
                 }}
               >
-                <View style={styles.featureCard}>
-                  <View style={styles.featureLabelWrap}>
-                    <Text style={styles.featureLabel}>{feature.label}</Text>
-                  </View>
-                  <Text style={styles.featureTitle}>{feature.title}</Text>
-                  <Text style={styles.featureDescription}>
-                    {feature.description}
-                  </Text>
-                </View>
+                <FeatureCard feature={feature} />
               </Animated.View>
             ))}
           </View>
@@ -290,30 +312,51 @@ const styles = StyleSheet.create({
     color: colors.text.primary,
     fontSize: 42,
     fontWeight: '900',
-    letterSpacing: 1.5,
+    letterSpacing: 0,
     lineHeight: 48,
   },
   tagline: {
-    color: '#999999',
+    color: '#A8A8A8',
     fontSize: 15,
     fontWeight: '400',
     lineHeight: 22,
     marginBottom: spacing.lg,
   },
 
-  // Features — vertical cards, no icons, label-based
+  // Features
   featuresSection: {
     gap: 12,
   },
   featureCard: {
-    backgroundColor: 'rgba(20,20,20,0.9)',
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    backgroundColor: 'rgba(18,18,18,0.92)',
     borderRadius: 14,
-    paddingHorizontal: 18,
-    paddingVertical: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
     borderWidth: 1,
-    // Slightly more visible than before (0.05 → 0.07) so the cards feel
-    // intentional against the dark image bleed above them.
-    borderColor: 'rgba(255,255,255,0.07)',
+    borderColor: 'rgba(255,255,255,0.09)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  featureIconBox: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.055)',
+    borderWidth: 1,
+    borderColor: 'rgba(200,255,0,0.18)',
+  },
+  featureTextBlock: {
+    flex: 1,
+    minWidth: 0,
   },
   featureLabelWrap: {
     alignSelf: 'flex-start',
@@ -322,8 +365,8 @@ const styles = StyleSheet.create({
   featureLabel: {
     color: '#C8FF00',
     fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.5,
+    fontWeight: '800',
+    letterSpacing: 0,
   },
   featureTitle: {
     color: colors.text.primary,
@@ -332,9 +375,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   featureDescription: {
-    color: '#777777',
+    color: '#9C9C9C',
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 19,
     fontWeight: '400',
   },
 
@@ -351,22 +394,29 @@ const styles = StyleSheet.create({
   ctaButton: {
     width: '100%',
     height: 54,
-    backgroundColor: '#F0F0F0',
+    backgroundColor: '#F3F5EC',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(200,255,0,0.24)',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#C8FF00',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 2,
   },
   ctaButtonPressed: {
-    backgroundColor: '#D8D8D8',
+    backgroundColor: '#E1E5D4',
   },
   ctaText: {
     color: '#0C0C0C',
     fontSize: 16,
     fontWeight: '800',
-    letterSpacing: 0.3,
+    letterSpacing: 0,
   },
   ctaSubtext: {
-    color: '#888888',
+    color: '#9A9A9A',
     fontSize: 13,
     fontWeight: '500',
     marginTop: 12,

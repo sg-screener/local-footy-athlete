@@ -478,7 +478,7 @@ export function dispatchCoachIntent(
   ) {
     return {
       handled: true,
-      reply: "No problem — I won't change the program.",
+      reply: "No problem - I won't change the program.",
       mutated: false,
       replyMode: 'program_adjustment_failed',
       pendingCoachProposal: null,
@@ -946,7 +946,7 @@ export function dispatchCoachIntent(
         );
         if (result.visibleDiffDetected) {
           mutated = true;
-          suffix = ` Re-applied the ${packet.activeInjury.bodyPart} restriction — the program has been updated for ${ans.date}.`;
+          suffix = ` Re-applied the ${packet.activeInjury.bodyPart} restriction - the program has been updated for ${ans.date}.`;
           logger.debug('[active-constraint] future filter applied', { date: ans.date, applied: result.applied });
         } else {
           suffix = ` I tried to reconcile but the program already matches the active restriction.`;

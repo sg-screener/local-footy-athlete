@@ -1365,7 +1365,7 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
   if (any(message, TARGET_CORRECTION)) {
     return {
       mode: 'clarify',
-      question: 'Got it — what would you like me to change for that day?',
+      question: 'Got it - what would you like me to change for that day?',
       reason: 'target_correction_no_action',
     };
   }
@@ -1373,7 +1373,7 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
     return {
       mode: 'clarify',
       question:
-        'Understood — I\'ll apply this going forward. ' +
+        'Understood - I\'ll apply this going forward. ' +
         'Could you remind me what change you want?',
       reason: 'scope_correction_no_action',
     };
@@ -1412,7 +1412,7 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
     return {
       mode: 'clarify',
       question:
-        "What don't you like about it — the day, the modality, " +
+        "What don't you like about it - the day, the modality, " +
         'the duration, or how it sits next to team training?',
       options: ['The day', 'The modality', 'The duration', 'How it sits next to team training'],
       missingFields: ['dislike_facet'],
@@ -1433,7 +1433,7 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
       needsClarification: !input.lastChange,
       clarificationQuestion: input.lastChange
         ? undefined
-        : "I don't have a last change on record — what would you like me to undo?",
+        : "I don't have a last change on record - what would you like me to undo?",
       reason: 'undo_verb_detected',
     };
   }
@@ -1525,7 +1525,7 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
     return {
       mode: 'clarify',
       question: ref?.target
-        ? `How should I adjust ${formatTargetForQuestion(ref)} — keep it as recovery only, shorten it to mobility, or remove it?`
+        ? `How should I adjust ${formatTargetForQuestion(ref)} - keep it as recovery only, shorten it to mobility, or remove it?`
         : 'Which recovery session should I adjust, and how?',
       options: ['Keep recovery only', 'Shorten to mobility', 'Remove recovery'],
       missingFields: ref?.target ? ['load_lever'] : ['target_session', 'load_lever'],
@@ -1699,7 +1699,7 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
         return {
           mode: 'reject_with_reason',
           reason: violation.reason,
-          reply: `I wouldn't swap those days — ${ruleProse}.${altProse}`,
+          reply: `I wouldn't swap those days - ${ruleProse}.${altProse}`,
           safetyConcerns: violation.safetyConcerns,
           suggestedAlternatives: violation.alternatives,
         };
@@ -2094,7 +2094,7 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
     return {
       mode: 'clarify',
       question: hasTarget
-        ? `What should I add to ${formatTargetForQuestionFromTarget(genericAddTarget)} — light bike, light walk, mobility, or pilates?`
+        ? `What should I add to ${formatTargetForQuestionFromTarget(genericAddTarget)} - light bike, light walk, mobility, or pilates?`
         : 'What should I add, and which day should it go on? For example: light bike on Friday, mobility today, or pilates tomorrow.',
       options: ['Light bike', 'Light walk', 'Mobility', 'Pilates'],
       missingFields: hasTarget ? ['activity'] : ['target_session', 'activity'],
@@ -2213,7 +2213,7 @@ export function routeCoachCommand(input: RouteCoachCommandInput): CoachCommand {
     }
     return {
       mode: 'clarify',
-      question: 'What change would you like — different exercise, different day, lighter session, or skip it?',
+      question: 'What change would you like - different exercise, different day, lighter session, or skip it?',
       reason: 'mutation_like_no_payload',
     };
   }

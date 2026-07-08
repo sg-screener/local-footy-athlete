@@ -25,6 +25,7 @@
 
 import type { SessionFeedback, FeedbackSoreness } from '../store/programStore';
 import type { Workout, WorkoutType, SessionFeeling, ReadinessLevel } from '../types/domain';
+import { feedbackComponentKindForWorkoutType } from './sessionComponents';
 
 // ─── Types ───
 
@@ -106,12 +107,37 @@ export function findMatchingFeedback(
     if (!wType) continue;
 
     if (normalizeWorkoutCategory(wType) === targetCategory) {
-      best = fb;
+      best = projectFeedbackForWorkoutType(fb, targetType);
       break; // most recent match
     }
   }
 
   return best;
+}
+
+function projectFeedbackForWorkoutType(
+  feedback: SessionFeedback,
+  workoutType: WorkoutType | string,
+): SessionFeedback {
+  const targetKind = feedbackComponentKindForWorkoutType(String(workoutType));
+  const component = targetKind
+    ? feedback.components?.find((entry) => entry.kind === targetKind)
+    : null;
+  if (!component) return feedback;
+
+  if (component.completion === 'skipped') {
+    return {
+      dateStr: feedback.dateStr,
+      completion: 'skipped',
+      components: feedback.components,
+      notes: feedback.notes,
+    };
+  }
+
+  return {
+    ...feedback,
+    completion: component.completion,
+  };
 }
 
 // ─── Adaptation Rules ───
@@ -150,8 +176,6 @@ export function deriveAdaptation(
 ): AdaptationResult {
   if (!feedback) return NO_ADAPTATION;
 
-  const difficulty = feedback.difficulty ?? difficultyFromFeeling(feedback.feeling);
-  const soreness: FeedbackSoreness = feedback.soreness ?? 'none';
   const completion = feedback.completion;
 
   // ── Rule 1: Skipped session ──
@@ -161,7 +185,7 @@ export function deriveAdaptation(
       readinessBias: 'down',
       volumeAdjustment: -1,
       blockProgression: true,
-      explanation: 'Holding steady — no increase after missed session.',
+      explanation: 'Holding steady - no increase after missed session.',
     };
   }
 
@@ -172,9 +196,12 @@ export function deriveAdaptation(
       readinessBias: null,
       volumeAdjustment: 0,
       blockProgression: true,
-      explanation: 'Maintaining load — last session was cut short.',
+      explanation: 'Maintaining load - last session was cut short.',
     };
   }
+
+  const difficulty = feedback.difficulty ?? difficultyFromFeeling(feedback.feeling);
+  const soreness: FeedbackSoreness = feedback.soreness ?? 'none';
 
   // ── Rule 3: High fatigue (difficulty >= 9 OR soreness = high) ──
   if (difficulty >= 9 || soreness === 'high') {
@@ -194,7 +221,7 @@ export function deriveAdaptation(
       readinessBias: null,
       volumeAdjustment: 0,
       blockProgression: true,
-      explanation: 'Maintaining load — recovery still in progress.',
+      explanation: 'Maintaining load - recovery still in progress.',
     };
   }
 
@@ -205,7 +232,7 @@ export function deriveAdaptation(
       readinessBias: 'down',
       volumeAdjustment: 0,
       blockProgression: false,
-      explanation: 'Slightly reduced intensity — managing soreness.',
+      explanation: 'Slightly reduced intensity - managing soreness.',
     };
   }
 
@@ -227,7 +254,7 @@ export function deriveAdaptation(
 // ─── Helpers ───
 
 /** Map the 5-level feeling to approximate RPE difficulty (1-10). */
-function difficultyFromFeeling(feeling: string): number {
+function difficultyFromFeeling(feeling?: string | null): number {
   switch (feeling) {
     case 'very_easy': return 3;
     case 'easy': return 4;

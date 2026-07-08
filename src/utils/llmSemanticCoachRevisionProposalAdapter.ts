@@ -79,28 +79,39 @@ Exact out_of_scope_setup shape:
 }
 
 Template replacements and additions (one-off):
-- context.addableTemplates is the ONLY content you may ever add. To swap a
-  day's session for a template (intent "replace") or add one to a REST day
-  (intent "add"): requiresConfirmation true,
-  allowedAddedSectionKinds ["conditioning"]; the revised day's workout is
-  { "id": "template-<templateId>", "title": the template label,
-    "workoutType": "Conditioning", "sections": [ the template's section from
-    context.addableTemplates COPIED BYTE-EXACT — same ids, titles,
-    prescriptions, durations ] }.
-- COACHING POLICY — flush vs work capacity:
-  - category "flush" templates (easy zone 2, flush-out intervals) are for
-    rejuvenation and may be used any week in season.
-  - byeOnly templates (work capacity: EMOM, MetCon) may ONLY be placed on
-    dates in BYE weeks — check context.byeWeeks: a week with isBye true has
-    no game day. On game weeks, offer flush options instead and explain why.
-  - On bye weeks, prefer suggesting work-capacity options over an easy flush
-    when the athlete asks for conditioning, especially on the weekend
-    (simulates game-day load).
+- context.addableTemplates is the ONLY content you may ever add. The athlete
+  may choose any registry template on any visible week. Game-week/bye-week
+  awareness is advisory; never reject or reroute a valid registry template only
+  because context.byeWeeks says the week has a game.
+- To swap a day's session for a template (intent "replace") or add a template
+  to a REST day (intent "add"): requiresConfirmation true; the revised day's
+  workout is { "id": "template-<templateId>", "title": the template label,
+  "workoutType": category-mapped type, "sections": [ the template's section
+  from context.addableTemplates COPIED BYTE-EXACT — same ids, titles,
+  prescriptions, durations ] }. Category mapping: recovery -> "Recovery";
+  strength/accessories -> "Strength"; flush/work_capacity -> "Conditioning".
+- To add a conditioning template on top of an occupied day, preserve the
+  existing workout id/title/workoutType and all existing sections exactly, then
+  append the template's copied conditioning section. Only flush/work_capacity
+  templates may stack this way. Do not stack recovery, strength, or accessories
+  onto an occupied day; use replacement or clarify.
+- Do not stack conditioning onto a day that already has a conditioning or
+  recovery section. Return kind "clarify" with concrete template/day options
+  instead of inventing a merged workout.
+- COACHING POLICY:
+  - category "flush" templates (easy zone 2, flush-out intervals) are recovery
+    or rejuvenation; they are not a running/high-running exposure.
+  - category "work_capacity" templates are harder off-legs conditioning. They
+    may be proposed on game weeks when the athlete explicitly asks for them;
+    the app may warn before confirmation.
+  - Team training and game day count toward weekly running/high-running
+    exposure. Easy bike, flush, mobility, and recovery templates do not.
 - Never modify template content (no duration/sets tweaks) and never invent
-  exercises. If the athlete asks for something that is not an approved
-  template ("add hill sprints tomorrow"), return kind "clarify" explaining
-  the approved options, and list them as candidateOptions.
-- The app will ask the athlete to confirm before any add/replace is applied.
+  exercises. If the athlete asks for something that is not an approved template
+  ("add hill sprints tomorrow"), return kind "clarify" explaining the approved
+  options, and list them as candidateOptions.
+- The app will ask the athlete to confirm before any template add/replace is
+  applied.
 
 Moves (one-off, within the visible window):
 - A move is TWO revisedDays under scope.mode "visible_week" with scope.dates
@@ -109,9 +120,11 @@ Moves (one-off, within the visible window):
   moved workout/sections COPIED EXACTLY — same ids, titles, prescriptions.
   Content must never change while moving; "move and make lighter" is two
   separate requests.
-- The destination must currently be a REST day. If it already has a session,
-  return kind "clarify" and say moving onto an occupied day isn't supported
-  yet — offer to remove the destination session first.
+- If the destination is a REST day, the source becomes workout null. If the
+  destination already has a workout, the two days SWAP atomically: revised
+  source date gets the destination's original workout copied exactly, and
+  revised destination date gets the source's original workout copied exactly.
+  Never partially merge two occupied days.
 - "Move it/that to X": the thing being moved is the most recently discussed
   or edited content (see context/mutation history) — X is ONLY the
   destination. Never treat X's existing session as the thing to move.
@@ -232,8 +245,9 @@ export interface CoachRevisionProposalLLMContext {
   pendingClarifier: ReturnType<typeof summarisePendingClarifier>;
   recentContext?: unknown;
   /** The ONLY content that may be added to the program (product policy:
-   *  template-derived replacements only). Sections must be copied byte-exact.
-   *  byeOnly templates may ONLY be used on dates in bye weeks (see byeWeeks). */
+   *  template-derived replacements/additions only). Sections must be copied
+   *  byte-exact. `byeOnly` is advisory metadata for warnings, not a validator
+   *  gate under the athlete-override policy. */
   addableTemplates: Array<{
     templateId: string;
     label: string;
@@ -243,7 +257,8 @@ export interface CoachRevisionProposalLLMContext {
     section: CoachVisibleSectionSnapshot;
   }>;
   /** Per visible week (keyed by Monday): whether it contains a game day.
-   *  Weeks WITHOUT a game are bye weeks — harder conditioning is allowed. */
+   *  Weeks WITHOUT a game are bye weeks; game/bye status is advisory context
+   *  for coaching warnings, not a hard template gate. */
   byeWeeks: Array<{ weekOfMonday: string; hasGameDay: boolean; isBye: boolean }>;
   visibleCandidates: Array<{
     kind: 'day' | 'workout' | 'section' | 'item';

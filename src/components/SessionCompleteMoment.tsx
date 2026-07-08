@@ -74,10 +74,10 @@ function useWeekSessionCount(date: string): number {
 /** Pick a calm consistency message based on the weekly count. */
 function pickSupportCopy(weekCount: number): string {
   if (weekCount <= 1) return 'Consistency starts here.';
-  if (weekCount === 2) return 'Two this week — momentum building.';
-  if (weekCount === 3) return 'Three this week — solid rhythm.';
-  if (weekCount === 4) return 'Four this week — big effort.';
-  return `${weekCount} this week — keep showing up.`;
+  if (weekCount === 2) return 'Two this week - momentum building.';
+  if (weekCount === 3) return 'Three this week - solid rhythm.';
+  if (weekCount === 4) return 'Four this week - big effort.';
+  return `${weekCount} this week - keep showing up.`;
 }
 
 export const SessionCompleteMoment: React.FC<Props> = ({

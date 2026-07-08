@@ -82,6 +82,9 @@ const LOWER_BACK_TRIGGERS = [
 const OTHER_TRIGGERS = [
   'During training',
   'During games',
+  'Sprinting',
+  'Change of direction',
+  'Bending / twisting',
   'Heavy lifting',
   'Always there',
 ];
@@ -96,13 +99,36 @@ function getTriggersForArea(area: string): string[] {
   }
 }
 
+function getSeverityQuestion(area?: string): string {
+  if (!area || area.toLowerCase() === 'other area') {
+    return 'HOW MUCH IS THIS LIMITING YOU?';
+  }
+  return `HOW MUCH IS YOUR ${area.toUpperCase()} LIMITING YOU?`;
+}
+
+function isOtherArea(area?: string): boolean {
+  return area?.toLowerCase() === 'other area';
+}
+
+function getFirstDetailStep(area?: string): InternalStep {
+  return isOtherArea(area) ? 'customArea' : 'severity';
+}
+
+function getAreaLabel(area: string | undefined, detail?: InjuryDetail): string {
+  if (!area) return '';
+  if (!isOtherArea(area)) return area;
+  return detail?.customArea?.trim() || 'Other area';
+}
+
 const MAX_TRIGGERS = 3;
+const INJURY_BOTTOM_SCROLL_PADDING = 48;
 
 // ─── Internal types ───
 
-type InternalStep = 'question' | 'areas' | 'severity' | 'triggers' | 'notes';
+type InternalStep = 'question' | 'areas' | 'customArea' | 'severity' | 'triggers' | 'notes';
 
 interface InjuryDetail {
+  customArea?: string;
   severity?: InjurySeverity;
   movementTriggers: string[];
   notes: string;
@@ -125,6 +151,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
 
   const currentArea = selectedAreas[currentInjuryIndex];
   const currentDetail: InjuryDetail = injuryDetails[currentArea] || { movementTriggers: [], notes: '' };
+  const currentAreaLabel = getAreaLabel(currentArea, currentDetail);
   const totalInjuries = selectedAreas.length;
 
   const toggleArea = (area: string) => {
@@ -141,6 +168,13 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
     setInjuryDetails((prev) => ({
       ...prev,
       [area]: { ...ensureDetail(area), severity },
+    }));
+  };
+
+  const updateCustomArea = (area: string, customArea: string) => {
+    setInjuryDetails((prev) => ({
+      ...prev,
+      [area]: { ...ensureDetail(area), customArea },
     }));
   };
 
@@ -179,11 +213,24 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
     navigation.navigate('Review');
   };
 
+  const handleNoIssuesAfterAll = () => {
+    setHasInjuries(false);
+    setSelectedAreas([]);
+    setInjuryDetails({});
+    setCurrentInjuryIndex(0);
+    updateOnboardingData({ injuries: [] });
+    navigation.navigate('Review');
+  };
+
   const handleAreasSelected = () => {
     if (selectedAreas.length > 0) {
       setCurrentInjuryIndex(0);
-      setStep('severity');
+      setStep(getFirstDetailStep(selectedAreas[0]));
     }
+  };
+
+  const handleCustomAreaNext = () => {
+    setStep('severity');
   };
 
   const handleSeverityNext = () => {
@@ -196,19 +243,21 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
 
   const handleNotesNext = () => {
     if (currentInjuryIndex < totalInjuries - 1) {
-      setCurrentInjuryIndex((prev) => prev + 1);
-      setStep('severity');
+      const nextIndex = currentInjuryIndex + 1;
+      setCurrentInjuryIndex(nextIndex);
+      setStep(getFirstDetailStep(selectedAreas[nextIndex]));
     } else {
       // All injuries done — save and navigate
       const injuries: OnboardingInjury[] = selectedAreas.map((area) => {
         const detail = injuryDetails[area] || { movementTriggers: [], notes: '' };
+        const bodyArea = getAreaLabel(area, detail);
         const parts: string[] = [];
         if (detail.severity) parts.push(detail.severity);
         if (detail.movementTriggers.length > 0) parts.push(`Triggers: ${detail.movementTriggers.join(', ')}`);
         if (detail.notes) parts.push(detail.notes);
         return {
-          bodyArea: area,
-          description: parts.join(' — ') || '',
+          bodyArea,
+          description: parts.join(' - ') || '',
           severity: detail.severity,
           movementTriggers: detail.movementTriggers,
           notes: detail.notes || undefined,
@@ -225,6 +274,17 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
     } else if (step === 'triggers') {
       setStep('severity');
     } else if (step === 'severity') {
+      if (isOtherArea(currentArea)) {
+        setStep('customArea');
+        return;
+      }
+      if (currentInjuryIndex > 0) {
+        setCurrentInjuryIndex((prev) => prev - 1);
+        setStep('notes');
+      } else {
+        setStep('areas');
+      }
+    } else if (step === 'customArea') {
       if (currentInjuryIndex > 0) {
         setCurrentInjuryIndex((prev) => prev - 1);
         setStep('notes');
@@ -244,12 +304,14 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
         progressPercent={progressPercent}
         onBack={() => navigation.goBack()}
         onContinue={() => {}}
-        continueDisabled={true}
-        continueLabel=""
+        hideFooter
       >
         <View style={styles.titleSection}>
           <Text variant="h1" color={colors.text.primary} style={styles.title}>
             Are you dealing with any injuries right now?
+          </Text>
+          <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
+            So we can adjust your training safely.
           </Text>
         </View>
 
@@ -296,13 +358,14 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
         onContinue={handleAreasSelected}
         continueDisabled={selectedAreas.length === 0}
         continueLabel="Next"
+        scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
       >
         <View style={styles.titleSection}>
           <Text variant="h1" color={colors.text.primary} style={styles.title}>
             WHERE ARE YOU FEELING ISSUES?
           </Text>
           <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
-            Select any areas
+            Select all that apply.
           </Text>
         </View>
 
@@ -333,12 +396,9 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
             styles.nothingMajor,
             pressed && styles.choiceCardPressed,
           ]}
-          onPress={() => {
-            updateOnboardingData({ injuries: [] });
-            navigation.navigate('Review');
-          }}
+          onPress={handleNoIssuesAfterAll}
         >
-          <Text style={styles.nothingMajorText}>No issues</Text>
+          <Text style={styles.nothingMajorText}>No issues after all</Text>
         </Pressable>
       </OnboardingLayout>
     );
@@ -348,7 +408,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
   const progressIndicator = (
     <View style={styles.progressRow}>
       <Text style={styles.progressText}>
-        {currentArea} — {currentInjuryIndex + 1} of {totalInjuries}
+        {currentAreaLabel} - {currentInjuryIndex + 1} of {totalInjuries}
       </Text>
       <View style={styles.dotRow}>
         {selectedAreas.map((_, i) => (
@@ -361,6 +421,41 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
     </View>
   );
 
+  // ─── Step 2b: Label custom "Other area" injuries ───
+  if (step === 'customArea') {
+    return (
+      <OnboardingLayout
+        stepLabel={stepLabel}
+        progressPercent={progressPercent}
+        onBack={handleBack}
+        onContinue={handleCustomAreaNext}
+        continueLabel="Next"
+        scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
+        keyboardAvoiding
+      >
+        {progressIndicator}
+
+        <View style={styles.titleSection}>
+          <Text variant="h1" color={colors.text.primary} style={styles.title}>
+            WHAT AREA IS IT?
+          </Text>
+          <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
+            So we know what to adjust.
+          </Text>
+        </View>
+
+        <TextInput
+          style={styles.areaInput}
+          placeholder="e.g. calf, wrist, elbow"
+          placeholderTextColor={colors.text.tertiary}
+          value={currentDetail.customArea || ''}
+          onChangeText={(text) => updateCustomArea(currentArea, text)}
+          returnKeyType="done"
+        />
+      </OnboardingLayout>
+    );
+  }
+
   // ─── Step 3: Severity ───
   if (step === 'severity') {
     return (
@@ -371,19 +466,13 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
         onContinue={handleSeverityNext}
         continueDisabled={!currentDetail.severity}
         continueLabel="Next"
+        scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
       >
         {progressIndicator}
 
         <View style={styles.titleSection}>
-          {/*
-           * Single dynamic title now — used to render a "Let's start with
-           * your groin" prelude + a separate "How bad is it?" sectionLabel.
-           * Collapsed into one direct question because the progressIndicator
-           * above already shows which area we're on, so the prelude was
-           * redundant once the title itself names the area.
-           */}
           <Text variant="h1" color={colors.text.primary} style={styles.title}>
-            HOW BAD IS YOUR {currentArea?.toUpperCase()}?
+            {getSeverityQuestion(currentAreaLabel)}
           </Text>
         </View>
 
@@ -437,6 +526,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
         onContinue={handleTriggersNext}
         continueDisabled={selectedTriggers.length === 0}
         continueLabel="Next"
+        scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
       >
         {progressIndicator}
 
@@ -445,7 +535,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
             WHAT BRINGS IT ON?
           </Text>
           <Text variant="bodySmall" color={colors.text.secondary} style={styles.subtitle}>
-            Select up to {MAX_TRIGGERS}
+            Select up to {MAX_TRIGGERS} triggers
           </Text>
           {atMax && (
             <Text style={styles.maxText}>Max {MAX_TRIGGERS} selected</Text>
@@ -498,6 +588,8 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
       onContinue={handleNotesNext}
       continueDisabled={false}
       continueLabel={isLastInjury ? 'Continue' : 'Next injury'}
+      scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
+      keyboardAvoiding
     >
       {progressIndicator}
 
@@ -596,14 +688,21 @@ const styles = StyleSheet.create({
   },
   nothingMajor: {
     marginTop: spacing.xl,
+    alignSelf: 'center',
     alignItems: 'center',
-    paddingVertical: spacing.md,
+    justifyContent: 'center',
+    minHeight: 46,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+    borderRadius: 15,
+    backgroundColor: colors.surface.secondary,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
   },
   nothingMajorText: {
-    color: colors.text.tertiary,
+    color: colors.text.secondary,
     fontSize: 14,
-    fontWeight: '500',
-    textDecorationLine: 'underline',
+    fontWeight: '700',
   },
 
   // ── Progress indicator ──
@@ -728,6 +827,18 @@ const styles = StyleSheet.create({
   },
 
   // ── Notes input ──
+  areaInput: {
+    backgroundColor: colors.surface.secondary,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: colors.surface.tertiary,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    color: colors.text.primary,
+    fontSize: 15,
+    fontWeight: '400',
+    minHeight: 56,
+  },
   notesInput: {
     backgroundColor: colors.surface.secondary,
     borderRadius: 14,

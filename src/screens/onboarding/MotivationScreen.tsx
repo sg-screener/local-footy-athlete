@@ -93,18 +93,25 @@ export const MotivationScreen: React.FC<MotivationScreenProps> = ({
         >
           What do you want to get out of this season?
         </Text>
-        <Text
-          variant="bodySmall"
-          color={colors.text.secondary}
-          style={styles.subtitle}
-        >
-          Pick up to 3
-        </Text>
+        <View style={styles.subtitleRow}>
+          <Text
+            variant="bodySmall"
+            color={colors.text.secondary}
+            style={styles.subtitle}
+          >
+            Pick up to 3 goals
+          </Text>
+          <Text
+            variant="bodySmall"
+            style={[
+              styles.counterText,
+              isAtMax && styles.counterTextMax,
+            ]}
+          >
+            {selected.length}/{MAX_SELECTIONS} selected
+          </Text>
+        </View>
       </View>
-
-      {isAtMax && (
-        <Text style={styles.maxText}>Max 3 selected</Text>
-      )}
 
       <View style={styles.cardsContainer}>
         {MOTIVATION_OPTIONS.map((option) => {
@@ -145,6 +152,8 @@ export const MotivationScreen: React.FC<MotivationScreenProps> = ({
           />
         </View>
       )}
+
+      <View style={styles.bottomSpacer} />
     </OnboardingLayout>
   );
 };
@@ -157,14 +166,24 @@ const styles = StyleSheet.create({
     ...headingXL,
     marginBottom: spacing.sm,
   },
+  subtitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
   subtitle: {
+    flex: 1,
     lineHeight: 20,
   },
-  maxText: {
-    color: colors.accent.lime,
+  counterText: {
+    color: colors.text.secondary,
     fontSize: 13,
     fontWeight: '600',
-    marginBottom: spacing.md,
+    lineHeight: 20,
+  },
+  counterTextMax: {
+    color: colors.accent.lime,
   },
   cardsContainer: {
     gap: 10,
@@ -197,5 +216,8 @@ const styles = StyleSheet.create({
     fontSize: 15,
     borderWidth: 1.5,
     borderColor: colors.accent.lime,
+  },
+  bottomSpacer: {
+    height: 96,
   },
 });

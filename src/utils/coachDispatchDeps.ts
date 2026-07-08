@@ -171,7 +171,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       if (apply.applied.length > 0 && visibleDiffDetected) {
         useCoachUpdatesStore.getState().upsertCoachUpdate(monday, {
           source: 'uae',
-          reason: `${capitalize(bodyPart)} pain — ${severity}/10`,
+          reason: `${capitalize(bodyPart)} pain - ${severity}/10`,
           rules: [...policy.globalRules],
           changes: result.events.map((e) => eventToBullet(e)),
         });
@@ -182,16 +182,16 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       if (apply.applied.length === 0) {
         const head =
           bodyPart === 'unknown'
-            ? `Got it — ${severity}/10.`
-            : `Got it — ${bodyPart} ${severity}/10.`;
-        return `${head}\n\nPlanned changes could not be applied — I lined up adjustments for your week, but they didn't land on real sessions.`;
+            ? `Got it - ${severity}/10.`
+            : `Got it - ${bodyPart} ${severity}/10.`;
+        return `${head}\n\nPlanned changes could not be applied - I lined up adjustments for your week, but they didn't land on real sessions.`;
       }
       if (!visibleDiffDetected) {
         const head =
           bodyPart === 'unknown'
-            ? `Got it — ${severity}/10.`
-            : `Got it — ${bodyPart} ${severity}/10.`;
-        return `${head}\n\nNo changes applied — the user-visible surface didn't move. Investigate the apply layer.`;
+            ? `Got it - ${severity}/10.`
+            : `Got it - ${bodyPart} ${severity}/10.`;
+        return `${head}\n\nNo changes applied - the user-visible surface didn't move. Investigate the apply layer.`;
       }
       return result.reply;
     },
@@ -208,14 +208,14 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
           toStatus: 'resolved', severity: 0, note, timestamp: nowISO,
         });
         useCoachUpdatesStore.getState().setActiveInjury(null);
-        return `Great news — clearing the ${current.bodyPart} restrictions and getting your week back to normal.`;
+        return `Great news - clearing the ${current.bodyPart} restrictions and getting your week back to normal.`;
       }
 
       if (outcome.kind === 'unchanged') {
         useCoachUpdatesStore.getState().transitionInjuryStatus({
           toStatus: 'active', severity: current.severity, note, timestamp: nowISO,
         });
-        return `Got it — keeping the ${current.bodyPart} ${current.severity}/10 restrictions in place.`;
+        return `Got it - keeping the ${current.bodyPart} ${current.severity}/10 restrictions in place.`;
       }
 
       // improving / worsening: wipe + re-run engine at the new severity.
@@ -259,7 +259,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       }
 
       const trendWord = outcome.kind === 'improving' ? 'improving' : 'worse';
-      const reason = `${partTitle} ${trendWord} — ${newSeverity}/10`;
+      const reason = `${partTitle} ${trendWord} - ${newSeverity}/10`;
       if (newSeverity < 5) {
         useCoachUpdatesStore.getState().deactivateCoachUpdate(monday);
       } else if (appliedCount > 0 && visibleDiffDetected) {
@@ -274,12 +274,12 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
 
       if (outcome.kind === 'improving') {
         return newSeverity < 5
-          ? `Good — ${current.bodyPart} ${newSeverity}/10 is light enough to train through. Easing the restrictions off this week.`
-          : `Good — ${current.bodyPart} easing to ${newSeverity}/10. Pulling back some of the load restrictions.`;
+          ? `Good - ${current.bodyPart} ${newSeverity}/10 is light enough to train through. Easing the restrictions off this week.`
+          : `Good - ${current.bodyPart} easing to ${newSeverity}/10. Pulling back some of the load restrictions.`;
       }
       return newSeverity >= 8
-        ? `Sorry to hear — ${current.bodyPart} ${newSeverity}/10 is serious. Pulling things back hard.`
-        : `Sorry to hear — ${current.bodyPart} worse at ${newSeverity}/10. Tightening the restrictions.`;
+        ? `Sorry to hear - ${current.bodyPart} ${newSeverity}/10 is serious. Pulling things back hard.`
+        : `Sorry to hear - ${current.bodyPart} worse at ${newSeverity}/10. Tightening the restrictions.`;
     },
 
     inspect(query) {
@@ -325,7 +325,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
 
     generalReply(_intent: CoachIntent, packet: CoachContextPacket): string {
       const i = packet.activeInjury;
-      if (!i) return `Sure — what would you like to do?`;
+      if (!i) return `Sure - what would you like to do?`;
       const today = packet.currentWeek.find((d) => d.isToday);
       const todayName = today?.workout?.name ?? 'today\'s session';
       const rules = i.rules.length > 0 ? i.rules.join('; ') : 'no specific restrictions';
@@ -414,7 +414,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
             id: c.id, missedDate: c.missedDate, sessionName: c.sessionName,
           });
           const target = c.sessionName ?? (c.missedDate ? `the ${c.missedDate} session` : 'that session');
-          const reply = `No worries about ${target} — picking up where the schedule left off, no make-up needed.`;
+          const reply = `No worries about ${target} - picking up where the schedule left off, no make-up needed.`;
           return { reply, mutated: false };
         }
       }

@@ -444,7 +444,7 @@ export function buildDerivedSession(
     microcycleId,
     dayOfWeek: dow,
     name: meta.name,
-    description: `${reason} — ${meta.descriptionSuffix}`,
+    description: `${reason} - ${meta.descriptionSuffix}`,
     durationMinutes: meta.durationMinutes,
     intensity: meta.intensity,
     workoutType: meta.workoutType,
@@ -804,6 +804,8 @@ export function conditioningFlavourToExerciseName(
 
   switch (flavour) {
     case 'high-intensity': {
+      // 4B: the old "tempo" pool (1km repeats / 4x4 VO2 / 200-400m) is
+      // HARD work — it lives here now, labelled honestly.
       const options = [
         'MAS 15:15 Blocks',
         'Tabata Intervals',
@@ -812,11 +814,21 @@ export function conditioningFlavourToExerciseName(
         'Free Sprint Session',
         'Footy Fartlek',
         'Flying Sprints',
+        '1km Repeat Intervals',
+        '4x4 VO2',
+        '200m/400m Repeat Runs',
       ];
       return options[hash % options.length];
     }
     case 'tempo': {
-      const options = ['1km Repeat Intervals', '4x4 VO2', '200m/400m Repeat Runs'];
+      // 4B: TRUE tempo templates only — controlled repeat efforts,
+      // 6-7/10. Never VO2/MAS/hard-repeat templates under this name.
+      const options = [
+        'Tempo Intervals (1min on / 1min easy)',
+        '30:30 Tempo Blocks',
+        'Bike/Row/Ski Tempo Intervals',
+        'Cruise Intervals',
+      ];
       return options[hash % options.length];
     }
     case 'aerobic': {
@@ -833,17 +845,22 @@ export function conditioningFlavourToExerciseName(
 
 /**
  * Energy-system category. Off-season and pre-season weeks must cover
- * each category at most once before duplicating. Priority order when
- * slots are limited: aerobic_base → sprint → vo2 → glycolytic.
+ * each category at most once before duplicating.
+ *
+ * 'tempo' (Phase 4B, 2026-07-09) is TRUE medium conditioning:
+ * controlled repeat efforts at 6-7/10 — worked but composed, never
+ * gasping. It has its OWN templates; VO2/glycolytic templates are hard
+ * work and must never be served under a tempo name.
  */
 export type ConditioningCategory =
   | 'aerobic_base'
+  | 'tempo'
   | 'sprint'
   | 'vo2'
   | 'glycolytic';
 
 export const CONDITIONING_CATEGORIES: ConditioningCategory[] = [
-  'aerobic_base', 'sprint', 'vo2', 'glycolytic',
+  'aerobic_base', 'tempo', 'sprint', 'vo2', 'glycolytic',
 ];
 
 /**
@@ -853,6 +870,7 @@ export const CONDITIONING_CATEGORIES: ConditioningCategory[] = [
  */
 export const CATEGORY_INTENSITY: Record<ConditioningCategory, string> = {
   aerobic_base: '5-6/10',
+  tempo:        '6-7/10 (controlled — worked but composed)',
   sprint:       '9-10/10 (quality-based)',
   vo2:          '8-9/10',
   glycolytic:   '8-9/10',
@@ -871,6 +889,13 @@ export const TEMPLATE_CATEGORY: Record<string, ConditioningCategory> = {
   'Easy Row': 'aerobic_base',
   'Easy Ski': 'aerobic_base',
   'Easy Swim': 'aerobic_base',
+
+  // Tempo — TRUE medium (4B). Controlled repeat efforts, 6-7/10.
+  // NEVER reuse VO2/MAS/200-400m templates here — those are hard work.
+  '30:30 Tempo Blocks': 'tempo',
+  'Tempo Intervals (1min on / 1min easy)': 'tempo',
+  'Bike/Row/Ski Tempo Intervals': 'tempo',
+  'Cruise Intervals': 'tempo',
 
   // Sprint / alactic
   'Flying Sprints': 'sprint',
@@ -928,6 +953,20 @@ export function conditioningCategoryToExerciseName(
       // Keeps category-to-template mapping 1:1 for resolver simplicity
       // while still giving week-to-week variety at the session level.
       return 'Long Nasal Run';
+    case 'tempo': {
+      // 4B: true tempo standalone pool. 'Cruise Intervals' is the
+      // running-based option and deliberately sits at index 3 so the
+      // block rotation reaches erg-first options first (off-feet-first
+      // philosophy); the engine's focus text carries the week's
+      // run-vs-off-feet call.
+      const options = [
+        'Tempo Intervals (1min on / 1min easy)',
+        '30:30 Tempo Blocks',
+        'Bike/Row/Ski Tempo Intervals',
+        'Cruise Intervals',
+      ];
+      return options[pickIndex(options.length)];
+    }
     case 'sprint': {
       const options = [
         'Free Sprint Session',
@@ -959,8 +998,11 @@ export function conditioningCategoryToExerciseName(
  * Map the legacy flavour field onto a category. Used when upgrading a
  * planner slot that only has `conditioningFlavour` set.
  *
+ * 4B label honesty: 'tempo' means TRUE tempo (controlled repeat efforts,
+ * 6-7/10) — it must NEVER resolve to VO2-family hard templates.
+ *
  *   aerobic        → aerobic_base
- *   tempo          → vo2   (tempo/threshold templates are VO2-family)
+ *   tempo          → tempo
  *   high-intensity → glycolytic  (MAS/Tabata/RSA etc. — sprint is picked
  *                                 separately by the category planner)
  */
@@ -969,7 +1011,7 @@ export function flavourToCategory(
 ): ConditioningCategory {
   switch (flavour) {
     case 'aerobic': return 'aerobic_base';
-    case 'tempo':   return 'vo2';
+    case 'tempo':   return 'tempo';
     case 'high-intensity': return 'glycolytic';
   }
 }
@@ -977,13 +1019,17 @@ export function flavourToCategory(
 /**
  * Map a category back to a flavour for downstream code that still
  * reads `conditioningFlavour` (UI labels, legacy resolvers).
+ *
+ * 4B label honesty: vo2 is HARD work — it wears 'high-intensity', never
+ * 'tempo'. Only the true tempo category carries the tempo flavour.
  */
 export function categoryToFlavour(
   category: ConditioningCategory,
 ): 'aerobic' | 'tempo' | 'high-intensity' {
   switch (category) {
     case 'aerobic_base': return 'aerobic';
-    case 'vo2':          return 'tempo';
+    case 'tempo':        return 'tempo';
+    case 'vo2':          return 'high-intensity';
     case 'sprint':       return 'high-intensity';
     case 'glycolytic':   return 'high-intensity';
   }
@@ -1190,6 +1236,43 @@ export function buildCombinedConditioningTemplate(
           )),
       ];
     }
+    case 'tempo': {
+      // 4B: TRUE tempo finisher — 10-15min of controlled repeat efforts
+      // at 6-7/10. Small by design (a finisher, not a session). Erg-based:
+      // the engine only pairs tempo with upper days, but even there the
+      // legs stay spared after a lift. Shape rotates by feel/hash:
+      //   sharp  → 30:30 blocks (30s on / 30s easy)
+      //   grindy → 1min on / 1min easy rounds
+      const tempoIdx = feel === 'sharp' ? 0
+        : feel === 'grindy' ? 1
+        : hash % 2;
+      if (tempoIdx === 0) {
+        const blocks = 2 + (hash % 2);           // 2 or 3 blocks
+        const blockReps = 6;                     // 6 x (30s on / 30s easy) per block
+        const totalMin = blocks * 6 + (blocks - 1); // ~13-19min incl. 1min between blocks
+        void totalMin;
+        return [
+          condEx(`${prefix}-tempo3030`, `30:30 Tempo Blocks (${blocks} x ${blockReps}) — ${modLabel}`, 2, blocks * blockReps, 1, 1, 30,
+            noteLines(
+              `${blocks} blocks of ${blockReps} x (30s on / 30s easy) on ${modLabel}`,
+              '1min easy between blocks',
+              '6-7/10 on the work — controlled, worked but composed',
+              'You should finish feeling worked, not wrecked',
+              pairingNote,
+            )),
+        ];
+      }
+      const rounds = 5 + (hash % 3); // 5-7 rounds = 10-14min
+      return [
+        condEx(`${prefix}-tempo1on`, `Tempo Intervals ${rounds} x (1min on / 1min easy) — ${modLabel}`, 2, rounds, 1, 1, 60,
+          noteLines(
+            `${rounds} x 1min on / 1min easy on ${modLabel}`,
+            '6-7/10 on the work — controlled repeat efforts',
+            'Same pace every rep — if the last rep is a scramble, the first was too fast',
+            pairingNote,
+          )),
+      ];
+    }
     case 'sprint': {
       // Sprint exposure — when paired with a lower lift, convert to
       // ergometer power sprints so we're not hammering the legs with
@@ -1270,9 +1353,9 @@ export function buildCombinedConditioningTemplate(
         : feel === 'flowing' ? 2
         : hash % 3;
       const [reps, workSec, restSec, label, feelNote] =
-        variantIdx === 0 ? [3, 180, 90, '3 x 3min', 'Grindy: long work, short recovery — sustained ceiling.']
-        : variantIdx === 1 ? [5, 90, 180, '5 x 90s', 'Sharp: short work, long recovery — repeat power.']
-        : [4, 120, 120, '4 x 2min', 'Flowing: balanced 1:1 — rhythmic tempo.'];
+        variantIdx === 0 ? [3, 180, 90, '3 x 3min', 'Grindy: long work, short recovery - sustained ceiling.']
+        : variantIdx === 1 ? [5, 90, 180, '5 x 90s', 'Sharp: short work, long recovery - repeat power.']
+        : [4, 120, 120, '4 x 2min', 'Flowing: balanced 1:1 - rhythmic tempo.'];
       void workSec; void feelNote;
       return [
         condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
@@ -1520,6 +1603,93 @@ function buildConditioningTemplateRaw(
           )),
         condEx(`${prefix}-cooldown`, 'Easy cool-down', 3, 1, 1, 1, 0,
           '5min easy Bike/Rower'),
+      ];
+    }
+
+    // ════════════════════════════════════════════════
+    // 🟡 1B. TRUE TEMPO — controlled repeat efforts (4B)
+    // Medium stress. 6-7/10 — worked but composed, never gasping.
+    // Standalone target 20-30min total. NEVER reuse VO2/MAS/hard-repeat
+    // templates under these names.
+    // ════════════════════════════════════════════════
+
+    case '30:30 Tempo Blocks': {
+      // Running-based 30s on / 30s easy blocks, 10-15min of work.
+      // Convertible off-feet by the run-load guard / off-feet law.
+      const blocks = 2 + (hash % 2); // 2-3 blocks of 6 reps
+      return [
+        condEx(`${prefix}-warmup`, 'Tempo warm-up', 1, 1, 1, 1, 0,
+          '8min easy jog + 2 x 60m build-ups'),
+        condEx(`${prefix}-tempo3030`, `30:30 Tempo Blocks × ${blocks}`, 2, blocks * 6, 1, 1, 30,
+          noteLines(
+            `${blocks} blocks of 6 x (30s on / 30s easy)`,
+            '1min easy jog between blocks',
+            '6-7/10 on the work — controlled, worked but composed',
+            'Same pace every rep — smooth, tall running',
+          )),
+        condEx(`${prefix}-cooldown`, 'Cool-down jog', 3, 1, 1, 1, 0,
+          '5min easy jog'),
+      ];
+    }
+
+    case 'Tempo Intervals (1min on / 1min easy)': {
+      // Running-based 1:1 tempo rounds — 8-12 rounds (16-24min of work).
+      const rounds = 8 + (hash % 5); // 8-12 rounds
+      return [
+        condEx(`${prefix}-warmup`, 'Tempo warm-up', 1, 1, 1, 1, 0,
+          '8min easy jog + 2 x 60m build-ups'),
+        condEx(`${prefix}-tempo1on1`, `Tempo Intervals ${rounds} × (1min on / 1min easy)`, 2, rounds, 1, 1, 60,
+          noteLines(
+            `${rounds} x 1min on / 1min easy jog`,
+            '6-7/10 on the work — controlled repeat efforts',
+            'If the last rep is a scramble, the first was too fast',
+          )),
+        condEx(`${prefix}-cooldown`, 'Cool-down jog', 3, 1, 1, 1, 0,
+          '5min easy jog'),
+      ];
+    }
+
+    case 'Bike/Row/Ski Tempo Intervals': {
+      // Off-feet tempo — 2min on / 1min easy, 5-8 rounds. THE standalone
+      // off-feet tempo prescription (off-feet-first philosophy).
+      const mods = ['bike', 'row', 'ski'] as const;
+      const pickedMod = ergModality && ergModality !== 'mixed'
+        ? ergModality
+        : mods[hash % mods.length];
+      const modName = pickedMod === 'bike' ? 'Assault Bike'
+        : pickedMod === 'bike_erg' ? 'BikeErg'
+        : pickedMod === 'row' ? 'Rower' : 'SkiErg';
+      const rounds = 5 + (hash % 4); // 5-8 rounds
+      return [
+        condEx(`${prefix}-warmup`, `${modName} warm-up`, 1, 1, 1, 1, 0,
+          `5min easy on ${modName}, building the last minute`),
+        condEx(`${prefix}-tempoerg`, `Tempo Intervals ${rounds} × (2min on / 1min easy) — ${modName}`, 2, rounds, 1, 1, 60,
+          noteLines(
+            `${rounds} x 2min on / 1min easy on ${modName}`,
+            '6-7/10 on the work — strong but sustainable',
+            'Hold the same output every rep',
+          )),
+        condEx(`${prefix}-cooldown`, `Easy ${pickedMod}`, 3, 1, 1, 1, 0,
+          `3min easy ${modName}`),
+      ];
+    }
+
+    case 'Cruise Intervals': {
+      // Running-based cruise blocks — 3-5min at tempo with short floats.
+      // The "biggest" tempo shape; standalone only, 20-30min total.
+      const blockMin = 3 + (hash % 3); // 3-5min blocks
+      const blocks = blockMin === 3 ? 4 : 3; // keep 12-15min of work
+      return [
+        condEx(`${prefix}-warmup`, 'Tempo warm-up', 1, 1, 1, 1, 0,
+          '10min easy jog + 2 x 60m build-ups'),
+        condEx(`${prefix}-cruise`, `Cruise Intervals ${blocks} × ${blockMin}min`, 2, blocks, 1, 1, 90,
+          noteLines(
+            `${blocks} x ${blockMin}min at tempo pace`,
+            '90s easy jog between blocks',
+            '6-7/10 — controlled, conversational is too easy, gasping is too hard',
+          )),
+        condEx(`${prefix}-cooldown`, 'Cool-down jog', 3, 1, 1, 1, 0,
+          '5min easy jog'),
       ];
     }
 
@@ -2129,6 +2299,57 @@ export function switchToOffFeetModality(
       ];
     }
 
+    // ── TRUE tempo (4B) → same controlled shape, erg modality ──
+    // Stimulus preserved exactly (work:rest, 6-7/10); only modality moves.
+    case '30:30 Tempo Blocks': {
+      const blocks = 2 + (hash % 2);
+      return [
+        condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
+          shortWarmup(modLabel)),
+        condEx(`${prefix}-tempo3030`, `30:30 Tempo Blocks × ${blocks} (${modLabel})`, 2, blocks * 6, 1, 1, 30,
+          noteLines(
+            `${blocks} blocks of 6 x (30s on / 30s easy) on ${modLabel}`,
+            '1min easy between blocks',
+            '6-7/10 on the work — controlled, worked but composed',
+          )),
+        condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
+          `3min easy ${modLabel}`),
+      ];
+    }
+
+    case 'Tempo Intervals (1min on / 1min easy)': {
+      const rounds = 8 + (hash % 5);
+      return [
+        condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
+          shortWarmup(modLabel)),
+        condEx(`${prefix}-tempo1on1`, `Tempo Intervals ${rounds} × (1min on / 1min easy) (${modLabel})`, 2, rounds, 1, 1, 60,
+          noteLines(
+            `${rounds} x 1min on / 1min easy on ${modLabel}`,
+            '6-7/10 on the work — controlled repeat efforts',
+            'Hold the same output every rep',
+          )),
+        condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
+          `3min easy ${modLabel}`),
+      ];
+    }
+
+    case 'Cruise Intervals': {
+      const blockMin = 3 + (hash % 3);
+      const blocks = blockMin === 3 ? 4 : 3;
+      return [
+        condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
+          shortWarmup(modLabel)),
+        condEx(`${prefix}-cruise`, `Cruise Intervals ${blocks} × ${blockMin}min (${modLabel})`, 2, blocks, 1, 1, 90,
+          noteLines(
+            `${blocks} x ${blockMin}min at tempo effort on ${modLabel}`,
+            '90s easy between blocks',
+            '6-7/10 — strong but sustainable',
+          )),
+        condEx(`${prefix}-cooldown`, `Easy ${mod}`, 3, 1, 1, 1, 0,
+          `3min easy ${modLabel}`),
+      ];
+    }
+
     // ── Aerobic → Steady-state machine ──
     case 'Long Nasal Run': {
       const duration = 35 + (hash % 3) * 5;
@@ -2349,6 +2570,11 @@ export function conditioningWorkoutType(name: string): WorkoutType {
     // Game Conditioning
     '200m/400m Repeat Runs': 'Conditioning',
     'Footy Fartlek': 'Conditioning',
+    // TRUE tempo (4B) — kernel maps 'Tempo-Run' → tempo_conditioning
+    '30:30 Tempo Blocks': 'Tempo-Run',
+    'Tempo Intervals (1min on / 1min easy)': 'Tempo-Run',
+    'Cruise Intervals': 'Tempo-Run',
+    'Bike/Row/Ski Tempo Intervals': 'Conditioning',
     // Aerobic Base
     'Long Nasal Run': 'Long-Run',
     // ── Legacy (resolver compatibility) ──

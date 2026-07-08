@@ -246,7 +246,7 @@ export function applyProgramAdjustment(
           reason: `invalid todayISO: '${request.todayISO}'`,
         },
       ],
-      reply: "I can't process that — the date the engine was given is invalid.",
+      reply: "I can't process that - the date the engine was given is invalid.",
     };
   }
 
@@ -275,7 +275,7 @@ export function applyProgramAdjustment(
       events: [],
       rejected,
       reply:
-        "I can't change a session that's already in the past — let's pick today or a day later in the week.",
+        "I can't change a session that's already in the past - let's pick today or a day later in the week.",
     };
   }
 
@@ -340,7 +340,7 @@ function routeUnsupported(
     events: [],
     rejected,
     reply:
-      "I haven't been taught how to handle that one yet — give me a moment, I'll loop a coach in.",
+      "I haven't been taught how to handle that one yet - give me a moment, I'll loop a coach in.",
   };
 }
 
@@ -725,32 +725,32 @@ const BUCKET_EXPOSURE: Readonly<Partial<Record<InjuryBucket, BucketExposureSpec>
   hamstring: {
     removeExposure: 'sprinting, high-speed running, hinge patterns',
     teamNote: 'no sprinting / no high-speed running',
-    conditioningNote: 'avoid running — bike or row instead',
+    conditioningNote: 'avoid running - bike or row instead',
   },
   knee: {
     removeExposure: 'plyos, sprinting, knee-dominant loading',
     teamNote: 'no sprinting / no cutting / no plyos',
-    conditioningNote: 'avoid running and plyos — bike or row instead',
+    conditioningNote: 'avoid running and plyos - bike or row instead',
   },
   calf: {
     removeExposure: 'running, plyos, heavy calf work',
     teamNote: 'no sprinting / no plyo work',
-    conditioningNote: 'avoid running — bike or row instead',
+    conditioningNote: 'avoid running - bike or row instead',
   },
   ankle: {
     removeExposure: 'running, plyos, change-of-direction work',
     teamNote: 'no sprinting / no cutting / no plyos',
-    conditioningNote: 'avoid running and plyos — bike or row instead',
+    conditioningNote: 'avoid running and plyos - bike or row instead',
   },
   adductor: {
     removeExposure: 'cutting, sprinting, adductor-heavy work',
     teamNote: 'no cutting / no sprinting',
-    conditioningNote: 'avoid running and lateral work — bike or row instead',
+    conditioningNote: 'avoid running and lateral work - bike or row instead',
   },
   pubalgia: {
     removeExposure: 'cutting, kicking, hinge patterns',
     teamNote: 'no cutting / no kicking',
-    conditioningNote: 'avoid running and lateral work — bike or row instead',
+    conditioningNote: 'avoid running and lateral work - bike or row instead',
   },
   shoulder: {
     removeExposure: 'pressing, overhead work, heavy push',
@@ -770,7 +770,7 @@ const BUCKET_EXPOSURE: Readonly<Partial<Record<InjuryBucket, BucketExposureSpec>
   lowerBack: {
     removeExposure: 'axial loading, heavy hinges, heavy squats',
     teamNote: 'no heavy contact / no high-load tackle drills',
-    conditioningNote: 'avoid running impact — bike or row instead',
+    conditioningNote: 'avoid running impact - bike or row instead',
   },
 };
 
@@ -1143,13 +1143,13 @@ function empathyLine(severity: number, bodyPart: string): string {
   // know what's hurting. Keeps the reply grounded in what the athlete
   // actually told us.
   if (bodyPart === 'unknown') {
-    if (severity >= 8) return `Got it — ${severity}/10 is serious, pulling things right back.`;
-    if (severity >= 6) return `Got it — ${severity}/10 is enough to pull things back a bit.`;
-    return `Got it — ${severity}/10, let's ease off for a few days.`;
+    if (severity >= 8) return `Got it - ${severity}/10 is serious, pulling things right back.`;
+    if (severity >= 6) return `Got it - ${severity}/10 is enough to pull things back a bit.`;
+    return `Got it - ${severity}/10, let's ease off for a few days.`;
   }
-  if (severity >= 8) return `That's a serious one — let's pull back hard on the ${bodyPart}.`;
-  if (severity >= 6) return `Sounds rough — let's take pressure off the ${bodyPart} this week.`;
-  return `Got it — let's protect the ${bodyPart} for a few days.`;
+  if (severity >= 8) return `That's a serious one - let's pull back hard on the ${bodyPart}.`;
+  if (severity >= 6) return `Sounds rough - let's take pressure off the ${bodyPart} this week.`;
+  return `Got it - let's protect the ${bodyPart} for a few days.`;
 }
 
 const DAY_SHORT: Record<number, string> = {
@@ -1276,7 +1276,7 @@ function buildInjuryReply(
   parts.push(programChanges);
   if (keep) parts.push(keep);
   if (closing) parts.push(closing);
-  parts.push('Program updated — check your week.');
+  parts.push('Program updated - check your week.');
   return parts.join('\n\n');
 }
 
@@ -1342,7 +1342,7 @@ function handleInjuryIntent(
       applied: false,
       events: [],
       rejected,
-      reply: `${bodyPart} ${severity}/10 — that's manageable, no program change required. Train through it and we'll watch how it tracks.`,
+      reply: `${bodyPart} ${severity}/10 - that's manageable, no program change required. Train through it and we'll watch how it tracks.`,
     };
   }
 
@@ -1360,7 +1360,7 @@ function handleInjuryIntent(
     // still mutate the program — the contract is "act when severity ≥ 5".
     rejected.push({
       kind: 'unknown_body_part',
-      reason: `body part '${bodyPart}' is not in the injury bucket map — using region-agnostic fallback`,
+      reason: `body part '${bodyPart}' is not in the injury bucket map - using region-agnostic fallback`,
     });
   }
 
@@ -1449,7 +1449,7 @@ function handleInjuryIntent(
           buildEvent(
             'set_session_recovery',
             day.date,
-            `${bucket} ${severity}/10 — heavy ${region} load (${removable.length}/${exercises.length} risky)`,
+            `${bucket} ${severity}/10 - heavy ${region} load (${removable.length}/${exercises.length} risky)`,
             workout.name,
             'Recovery',
           ),
@@ -1478,7 +1478,7 @@ function handleInjuryIntent(
               buildEvent(
                 'replace_exercise',
                 day.date,
-                `${bucket} ${severity}/10 — ${region}-region risk; safe alt`,
+                `${bucket} ${severity}/10 - ${region}-region risk; safe alt`,
                 name,
                 replacement,
               ),
@@ -1488,7 +1488,7 @@ function handleInjuryIntent(
               buildEvent(
                 'remove_exercise',
                 day.date,
-                `${bucket} ${severity}/10 — ${region}-region risk`,
+                `${bucket} ${severity}/10 - ${region}-region risk`,
                 name,
                 null,
               ),
@@ -1503,9 +1503,9 @@ function handleInjuryIntent(
             buildEvent(
               'add_session_note',
               day.date,
-              `${bucket} ${severity}/10 — session rebuilt`,
+              `${bucket} ${severity}/10 - session rebuilt`,
               workout.name,
-              `Rebuilt for ${bucket} — ${summariseRebuild(bucket)}`,
+              `Rebuilt for ${bucket} - ${summariseRebuild(bucket)}`,
             ),
           );
         }
@@ -1520,7 +1520,7 @@ function handleInjuryIntent(
         buildEvent(
           'swap_conditioning_modality',
           day.date,
-          `${bucket} ${severity}/10 — off-feet conditioning`,
+          `${bucket} ${severity}/10 - off-feet conditioning`,
           'running',
           'bike or row',
         ),
@@ -1541,7 +1541,7 @@ function handleInjuryIntent(
         buildEvent(
           'add_session_note',
           day.date,
-          `${bucket} ${severity}/10 — modify team training`,
+          `${bucket} ${severity}/10 - modify team training`,
           workout.name,
           note,
         ),
@@ -1552,7 +1552,7 @@ function handleInjuryIntent(
     // ── (4) Generic relevant session — lighten or recover ───────────────
     if (bucket && isSessionRelevantToBucket(workout, bucket)) {
       const useRecovery = fallbackUsesRecovery;
-      const reason = `${bucket} ${severity}/10 — protective fallback (no specific exposure tagged on this day)`;
+      const reason = `${bucket} ${severity}/10 - protective fallback (no specific exposure tagged on this day)`;
       events.push(
         buildEvent(
           useRecovery ? 'set_session_recovery' : 'lighten_session',
@@ -1581,7 +1581,7 @@ function handleInjuryIntent(
         buildEvent(
           useRecovery ? 'set_session_recovery' : 'lighten_session',
           target.date,
-          `${severity}/10 — protective fallback (body part not specified)`,
+          `${severity}/10 - protective fallback (body part not specified)`,
           target.workout.name ?? null,
           useRecovery ? 'Recovery' : 'Lightened',
         ),
@@ -1612,7 +1612,7 @@ function handleInjuryIntent(
         buildEvent(
           'add_session_note',
           day.date,
-          `${bucket} ${severity}/10 — week-wide policy (no sprinting)`,
+          `${bucket} ${severity}/10 - week-wide policy (no sprinting)`,
           w.name,
           teamNote,
         ),

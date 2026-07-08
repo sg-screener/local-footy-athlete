@@ -31,6 +31,7 @@ import {
   type VerifiedCoachCommunication,
   type AppliedChange,
 } from './verifiedCoachCommunication';
+import { formatExerciseDisplayName } from './exerciseDisplay';
 
 export interface WeeklyCoachUpdateView {
   weekStartISO: string;
@@ -125,21 +126,21 @@ function capitalise(s: string): string {
 function reasonLine(c: ActiveConstraint): string {
   const labelled = (c as ActiveConstraint & { reasonLabel?: string }).reasonLabel;
   if (labelled && 'severity' in c) {
-    return `${labelled} — ${c.severity}/10`;
+    return `${labelled} - ${c.severity}/10`;
   }
   if (c.type === 'injury') {
     const part = c.bodyPart === 'unknown' ? 'Injury' : capitalise(c.bodyPart);
-    return `${part} pain — ${c.severity}/10`;
+    return `${part} pain - ${c.severity}/10`;
   }
   if (c.type === 'fatigue') {
-    return `Fatigue — ${c.severity}/10`;
+    return `Fatigue - ${c.severity}/10`;
   }
   if (c.type === 'soreness') {
     const part = !c.bodyPart || c.bodyPart === 'unknown' ? 'Soreness' : `${capitalise(c.bodyPart)} soreness`;
-    return `${part} — ${c.severity}/10`;
+    return `${part} - ${c.severity}/10`;
   }
   if (c.type === 'schedule') {
-    return `Busy week — ${c.severity}/10`;
+    return `Busy week - ${c.severity}/10`;
   }
   // missed_session
   return c.sessionName ? `Missed ${c.sessionName}` : 'Missed session';
@@ -157,11 +158,12 @@ function sessionBullet(date: string, baseline: ResolvedDay | undefined, projecte
   const removed = before.filter((n) => !after.includes(n));
   const dow = dowFromISO(date);
   const name = projected?.workout?.name ?? baseline?.workout?.name ?? 'session';
+  const displayRemoved = removed.map((exercise) => formatExerciseDisplayName(exercise) || exercise);
   if (removed.length === 0) return `${dow} ${name} adjusted`;
-  if (removed.length === 1) return `${dow} ${name} adjusted — ${removed[0]} removed`;
-  if (removed.length <= 3) return `${dow} ${name} adjusted — removed ${removed.join(', ')}`;
-  const head = removed.slice(0, 2).join(', ');
-  return `${dow} ${name} adjusted — ${head} + ${removed.length - 2} more removed`;
+  if (displayRemoved.length === 1) return `${dow} ${name} adjusted - ${displayRemoved[0]} removed`;
+  if (displayRemoved.length <= 3) return `${dow} ${name} adjusted - removed ${displayRemoved.join(', ')}`;
+  const head = displayRemoved.slice(0, 2).join(', ');
+  return `${dow} ${name} adjusted - ${head} + ${displayRemoved.length - 2} more removed`;
 }
 
 /**
@@ -315,5 +317,5 @@ export function buildSessionConstraintNote(
     .filter((s): s is string => Boolean(s));
   if (parts.length === 0) return null;
   const joined = parts.length === 1 ? parts[0] : parts.join(' + ');
-  return `Adjusted for active ${joined} — update coach if symptoms improve.`;
+  return `Adjusted for active ${joined} - update coach if symptoms improve.`;
 }

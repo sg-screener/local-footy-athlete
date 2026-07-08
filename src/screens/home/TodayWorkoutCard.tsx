@@ -15,6 +15,8 @@ import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import type { Workout } from '../../types/domain';
 import { splitSessionName as splitWorkoutName } from '../../utils/sessionNaming';
 import { getConditioningContextLabel } from './homeScreenConstants';
+import { getTeamTrainingWorkoutState } from '../../utils/teamTraining';
+import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 
 interface TodayWorkoutCardProps {
   workout: Workout;
@@ -30,8 +32,9 @@ export const TodayWorkoutCard = ({
   onStart,
   previousPerformance,
 }: TodayWorkoutCardProps) => {
-  const exerciseCount = workout.exercises?.length || 0;
-  const displayExercises = (workout.exercises || []).slice(0, 4);
+  const teamState = getTeamTrainingWorkoutState(workout);
+  const exerciseCount = teamState.renderableExercises.length;
+  const displayExercises = teamState.renderableExercises.slice(0, 4);
   const moreExercises = Math.max(0, exerciseCount - 4);
   const conditioningContext = getConditioningContextLabel(workout);
 
@@ -126,35 +129,37 @@ export const TodayWorkoutCard = ({
         )}
 
         {/* Exercise list */}
-        <View style={styles.exercisesSection}>
-          <Text variant="labelSmall" color={colors.text.secondary} style={styles.exerciseLabel}>
-            EXERCISES ({exerciseCount})
-          </Text>
-          <View style={styles.exercisesList}>
-            {displayExercises.map((exercise, index) => (
-              <View key={index} style={styles.exerciseItem}>
-                <View style={styles.exerciseBullet} />
-                <View style={styles.exerciseInfo}>
-                  <Text variant="bodySmall" color={colors.text.primary}>
-                    {exercise.exercise?.name || `Exercise ${index + 1}`}
-                  </Text>
-                  <Text variant="caption" color={colors.text.tertiary}>
-                    {exercise.prescribedSets}x {exercise.prescribedRepsMin}-{exercise.prescribedRepsMax}
-                    {exercise.prescribedWeightKg && ` @ ${exercise.prescribedWeightKg}kg`}
+        {exerciseCount > 0 ? (
+          <View style={styles.exercisesSection}>
+            <Text variant="labelSmall" color={colors.text.secondary} style={styles.exerciseLabel}>
+              EXERCISES ({exerciseCount})
+            </Text>
+            <View style={styles.exercisesList}>
+              {displayExercises.map((exercise, index) => (
+                <View key={index} style={styles.exerciseItem}>
+                  <View style={styles.exerciseBullet} />
+                  <View style={styles.exerciseInfo}>
+                    <Text variant="bodySmall" color={colors.text.primary}>
+                      {formatExerciseDisplayName(exercise.exercise?.name) || `Exercise ${index + 1}`}
+                    </Text>
+                    <Text variant="caption" color={colors.text.tertiary}>
+                      {exercise.prescribedSets}x {exercise.prescribedRepsMin}-{exercise.prescribedRepsMax}
+                      {exercise.prescribedWeightKg && ` @ ${exercise.prescribedWeightKg}kg`}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+              {moreExercises > 0 && (
+                <View style={styles.moreExercises}>
+                  <View style={styles.exerciseBullet} />
+                  <Text variant="bodySmall" color={colors.accent.lime}>
+                    and {moreExercises} more...
                   </Text>
                 </View>
-              </View>
-            ))}
-            {moreExercises > 0 && (
-              <View style={styles.moreExercises}>
-                <View style={styles.exerciseBullet} />
-                <Text variant="bodySmall" color={colors.accent.lime}>
-                  and {moreExercises} more...
-                </Text>
-              </View>
-            )}
+              )}
+            </View>
           </View>
-        </View>
+        ) : null}
 
         {/* Duration info */}
         <View style={styles.infoRow}>

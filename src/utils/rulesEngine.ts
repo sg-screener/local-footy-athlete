@@ -33,6 +33,7 @@ import type {
   Exercise,
   UserProfile,
 } from '../types/domain';
+import { getProgrammingRoleBias, type ProgrammingRoleBias } from './roleBuckets';
 
 /**
  * Program Phase Configuration (Sam's 7 phases)
@@ -346,12 +347,12 @@ export const AFL_RULES_CONFIG = {
   } as Record<number, TrainingSplit>,
 
   /**
-   * Position-Specific Exercise Priorities (Sam's approved exercises only)
+   * Footy role exercise priorities (Sam's approved exercises only)
    * NO Olympic lifts, NO speed ladders, NO complex agility drills
    * Focus on movement patterns: squat, hinge, push horizontal, push vertical, pull horizontal, pull vertical, carry
    */
   positionPriorities: {
-    Ruck: [
+    key_position_ruck_tall: [
       'Overhead Press',
       'Bench Press',
       'Pull-Ups',
@@ -366,22 +367,21 @@ export const AFL_RULES_CONFIG = {
       'Chin-Ups',
     ] as string[],
 
-    Forward: [
+    small_forward_back: [
       'Back Squat',
-      'Bench Press',
       'Deadlift',
-      'Bulgarian Split Squats',
-      'Box Jumps',
-      'Dips',
       'RDLs',
-      'Single Leg Work',
-      'Farmer Carry',
       'Rows',
+      'Bulgarian Split Squats',
+      'Single Leg Work',
+      'Bench Press',
       'Overhead Press',
+      'Chin-Ups',
+      'Dips',
       'Landmine Press',
     ] as string[],
 
-    Midfielder: [
+    inside_mid: [
       'Back Squat',
       'Deadlift',
       'Pull-Ups',
@@ -396,21 +396,21 @@ export const AFL_RULES_CONFIG = {
       'Suitcase Carry',
     ] as string[],
 
-    Defender: [
+    outside_runner: [
       'Back Squat',
-      'Deadlift',
-      'Pull-Ups',
-      'RDLs',
       'Bulgarian Split Squats',
+      'RDLs',
+      'Pull-Ups',
       'Rows',
+      'Chin-Ups',
+      'Suitcase Carry',
       'Farmer Carry',
       'Single Leg Work',
       'Bench Press',
       'Overhead Press',
-      'Chin-Ups',
       'Box Squat',
     ] as string[],
-  } as Partial<Record<Position, string[]>>,
+  } as Partial<Record<ProgrammingRoleBias, string[]>>,
 
   /**
    * Injury Restrictions
@@ -523,8 +523,9 @@ export function selectExercisesForWorkout(
     return availableExercises.slice(0, count);
   }
 
-  // Prioritize position-specific exercises
-  const positionPriorities = AFL_RULES_CONFIG.positionPriorities[userProfile.position] || [];
+  // Prioritize role-biased exercises
+  const programmingRoleBias = getProgrammingRoleBias(userProfile.position);
+  const positionPriorities = AFL_RULES_CONFIG.positionPriorities[programmingRoleBias] || [];
   const prioritized = filtered.filter((ex) => positionPriorities.includes(ex.name));
 
   // Use prioritized if available, otherwise use filtered

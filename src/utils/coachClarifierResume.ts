@@ -588,7 +588,7 @@ export function resolvePendingGameDayReadinessAnswer(
     return {
       kind: 'adjust_recovery',
       reply:
-        "How should I adjust tomorrow's recovery — keep it easy, shorten it to mobility, or remove it?",
+        "How should I adjust tomorrow's recovery - keep it easy, shorten it to mobility, or remove it?",
     };
   }
 
@@ -596,7 +596,7 @@ export function resolvePendingGameDayReadinessAnswer(
     return {
       kind: 'mark_limited',
       reply:
-        "Got it — I'll mark today as limited and leave the game day session unchanged.",
+        "Got it - I'll mark today as limited and leave the game day session unchanged.",
     };
   }
 
@@ -604,7 +604,7 @@ export function resolvePendingGameDayReadinessAnswer(
     return {
       kind: 'acknowledge_no_op',
       reply:
-        "No worries — I'll leave today as game day. Let me know after the match if you want recovery adjusted.",
+        "No worries - I'll leave today as game day. Let me know after the match if you want recovery adjusted.",
     };
   }
 
@@ -987,7 +987,7 @@ function resolvePendingAddToDateTransactionAnswer(
       return {
         kind: 'cancelled',
         transaction: next,
-        reply: 'No worries — I left the plan unchanged.',
+        reply: 'No worries - I left the plan unchanged.',
       };
     }
     if (existingAnswer === 'separate') {
@@ -1150,7 +1150,7 @@ function resolvePendingMoveSessionTransactionAnswer(
           currentStep: 'confirm',
           missingFields: uniqueFields([...next.missingFields, 'confirmation']),
         },
-        reply: 'No worries — I left the plan unchanged.',
+        reply: 'No worries - I left the plan unchanged.',
       };
     }
     if (confirmationAnswer === 'confirm') {
@@ -1194,7 +1194,7 @@ function resolvePendingMoveSessionTransactionAnswer(
           currentStep: 'resolve_conflict',
           missingFields: uniqueFields([...next.missingFields, 'conflict_resolution']),
         },
-        reply: 'No worries — I left the plan unchanged.',
+        reply: 'No worries - I left the plan unchanged.',
       };
     }
     if (targetConflictAnswer === 'replace' || targetConflictAnswer === 'swap') {
@@ -1535,7 +1535,7 @@ function uniqueFields(fields: string[]): string[] {
 
 function sourceDateClarifier(transaction: PendingMoveSessionTransaction): string {
   const sourceDay = transaction.sourceDay ?? 'that day';
-  return `Which ${sourceDay} session do you mean — the next ${sourceDay}, or future ${sourceDay}s going forward?`;
+  return `Which ${sourceDay} session do you mean - the next ${sourceDay}, or future ${sourceDay}s going forward?`;
 }
 
 function sourceDateOptions(transaction: PendingMoveSessionTransaction): string[] {

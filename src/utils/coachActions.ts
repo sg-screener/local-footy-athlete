@@ -10,9 +10,11 @@
  *     microcycle template is never mutated. This guarantees that future
  *     weeks (which read from the template, not from overrides) stay
  *     untouched.
- *   - PERMANENT actions write to `athletePreferencesStore` ONLY. They
- *     affect future program generation, never the current week's
- *     dateOverrides directly.
+ *   - PERMANENT actions write to `athletePreferencesStore` and mirror a typed
+ *     active preference constraint in `coachUpdatesStore`. They affect future
+ *     program generation, never the current week's dateOverrides directly, and
+ *     the mirrored constraint is what makes the ongoing modifier visible in
+ *     Coach Notes.
  *
  * WHY date overrides instead of microcycle edits:
  *   `setManualOverride(date, workout)` is the resolver's Priority-1 short
@@ -32,10 +34,15 @@
 import { useProgramStore } from '../store/programStore';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
 import {
+  useCoachUpdatesStore,
+  type ActivePreferenceConstraint,
+} from '../store/coachUpdatesStore';
+import {
   resolveDateWithConditioning,
 } from './sessionResolver';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { resolveExerciseName } from './loadEstimation';
+import { formatExerciseDisplayName } from './exerciseDisplay';
 import type { Workout, WorkoutExercise } from '../types/domain';
 
 // ─── Types ───
@@ -46,6 +53,7 @@ export type CoachActionKind =
   | 'make_session_optional'
   | 'replace_exercise'
   | 'remove_exercise'
+  | 'add_exercise'
   | 'add_weekly_override'
   | 'ban_exercise_globally'
   | 'set_preferred_alternative'
@@ -72,6 +80,46 @@ export interface ActionResult {
   ambiguous?: { candidates: string[] };
 }
 
+function slugForPreferenceId(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function upsertExercisePreferenceConstraint(input: {
+  preferenceKind: ActivePreferenceConstraint['preferenceKind'];
+  label: string;
+  exercise?: string;
+  alternative?: string;
+  focus?: string;
+}) {
+  const now = new Date().toISOString();
+  const idParts = [
+    'preference',
+    input.preferenceKind,
+    input.exercise,
+    input.alternative,
+    input.focus,
+  ].filter(Boolean);
+  useCoachUpdatesStore.getState().upsertActiveConstraint({
+    id: idParts.map((part) => slugForPreferenceId(String(part))).join('-'),
+    type: 'preference',
+    preferenceKind: input.preferenceKind,
+    label: input.label,
+    exercise: input.exercise,
+    alternative: input.alternative,
+    focus: input.focus,
+    severity: 0,
+    status: 'active',
+    startDate: now.slice(0, 10),
+    lastUpdatedAt: now,
+    rules: [input.label],
+    safeFocus: [],
+    advice: [],
+  });
+}
+
 export interface LightenSessionInput {
   date: string;
   /** Optional intensity floor — 'recovery' = full conversion to recovery; 'optional' = mark optional + halve volume; default 'optional' */
@@ -90,6 +138,8 @@ export interface MakeSessionOptionalInput {
 export interface ReplaceExerciseInput {
   date: string;
   fromExercise: string;
+  /** Optional exact row identity from a tapped UI exercise. */
+  fromExerciseId?: string;
   toExercise: {
     name: string;
     sets: number;
@@ -97,12 +147,32 @@ export interface ReplaceExerciseInput {
     repsMax: number;
     weight?: number;
     notes?: string;
+    prescriptionType?: WorkoutExercise['prescriptionType'];
+    perSide?: boolean;
+    restSeconds?: number;
   };
 }
 
 export interface RemoveExerciseInput {
   date: string;
   exercise: string;
+  /** Optional exact row identity from a tapped UI exercise. */
+  exerciseId?: string;
+}
+
+export interface AddExerciseAtDateInput {
+  date: string;
+  exercise: {
+    name: string;
+    sets: number;
+    repsMin: number;
+    repsMax: number;
+    weight?: number;
+    notes?: string;
+    prescriptionType?: WorkoutExercise['prescriptionType'];
+    perSide?: boolean;
+    restSeconds?: number;
+  };
 }
 
 export type WeeklyOverrideRule =
@@ -124,7 +194,17 @@ export interface SetPreferredAlternativeInput {
   alternative: string;
 }
 
+export interface PinExerciseGloballyInput {
+  exercise: string;
+}
+
 // ─── Helpers ───
+
+function finitePositiveNumber(value: unknown, fallback: number): number {
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  return fallback;
+}
 
 /**
  * Decides whether the proposed workout differs from the current one in any
@@ -316,7 +396,7 @@ export function lightenSession(input: LightenSessionInput): ActionResult {
   if (level === 'recovery') {
     const recoveryShell: Workout = cloneWorkout(current, {
       name: 'Recovery',
-      description: 'Light mobility / walk. Coach-lightened — no loaded work today.',
+      description: 'Light mobility / walk. Coach-lightened - no loaded work today.',
       workoutType: 'Recovery',
       sessionTier: 'recovery',
       hasCombinedConditioning: false,
@@ -333,7 +413,7 @@ export function lightenSession(input: LightenSessionInput): ActionResult {
   // Default: optional + halve sets
   const lightened = cloneWorkout(current, {
     sessionTier: 'optional',
-    description: (current.description || '').trim() + ' [Coach-lightened — optional this week]',
+    description: (current.description || '').trim() + ' [Coach-lightened - optional this week]',
     exercises: current.exercises.map((ex) => ({
       ...ex,
       prescribedSets: Math.max(1, Math.ceil(ex.prescribedSets / 2)),
@@ -413,37 +493,68 @@ export function makeSessionOptional(input: MakeSessionOptionalInput): ActionResu
 
 /** Swap one exercise on a single date for another. */
 export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult {
-  const { date, fromExercise, toExercise } = input;
+  const { date, fromExercise, fromExerciseId, toExercise } = input;
   const current = resolveDateWorkout(date);
   if (!current) {
     return { success: false, reason: `No session on ${date} to swap exercise on.` };
   }
-  const matchResult = findExerciseMatch(current, fromExercise);
-  if (matchResult.kind === 'not_found') {
-    return {
-      success: false,
-      reason: `Could not find "${fromExercise}" on ${date}.`,
-    };
+  let found: WorkoutExercise | null = null;
+  if (fromExerciseId) {
+    const id = String(fromExerciseId);
+    found = current.exercises.find((ex: any) =>
+      [ex.id, ex.exerciseId, ex.exercise?.id]
+        .filter(Boolean)
+        .some((candidate) => String(candidate) === id),
+    ) ?? null;
   }
-  if (matchResult.kind === 'ambiguous') {
-    // Surface the candidates so the AI can ask "which one?" rather than
-    // silently swapping the first match. We deliberately do NOT pick a
-    // default — every silent pick is a chance to swap the wrong variant.
-    return {
-      success: false,
-      reason: `"${fromExercise}" matches multiple exercises on ${date}: ${matchResult.candidates.join(', ')}. Ask the athlete which one they mean.`,
-      ambiguous: { candidates: matchResult.candidates },
-    };
+  if (!found) {
+    const matchResult = findExerciseMatch(current, fromExercise);
+    if (matchResult.kind === 'not_found') {
+      return {
+        success: false,
+        reason: `Could not find "${fromExercise}" on ${date}.`,
+      };
+    }
+    if (matchResult.kind === 'ambiguous') {
+      // Surface the candidates so the AI can ask "which one?" rather than
+      // silently swapping the first match. We deliberately do NOT pick a
+      // default — every silent pick is a chance to swap the wrong variant.
+      return {
+        success: false,
+        reason: `"${fromExercise}" matches multiple exercises on ${date}: ${matchResult.candidates.join(', ')}. Ask the athlete which one they mean.`,
+        ambiguous: { candidates: matchResult.candidates },
+      };
+    }
+    found = matchResult.match;
   }
-  const found = matchResult.match;
   const replacementId = `ex-coach-${toExercise.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+  const prescribedSets = finitePositiveNumber(
+    toExercise.sets,
+    finitePositiveNumber(found.prescribedSets, 3),
+  );
+  const prescribedRepsMin = finitePositiveNumber(
+    toExercise.repsMin,
+    finitePositiveNumber(found.prescribedRepsMin, 8),
+  );
+  const prescribedRepsMax = Math.max(
+    prescribedRepsMin,
+    finitePositiveNumber(
+      toExercise.repsMax,
+      finitePositiveNumber(found.prescribedRepsMax, prescribedRepsMin),
+    ),
+  );
   const replacement: WorkoutExercise = {
     ...found,
     exerciseId: replacementId,
-    prescribedSets: toExercise.sets,
-    prescribedRepsMin: toExercise.repsMin,
-    prescribedRepsMax: toExercise.repsMax,
-    prescribedWeightKg: toExercise.weight ?? 0,
+    prescribedSets,
+    prescribedRepsMin,
+    prescribedRepsMax,
+    prescribedWeightKg: Number.isFinite(Number(toExercise.weight))
+      ? Number(toExercise.weight)
+      : (found.prescribedWeightKg ?? 0),
+    prescriptionType: toExercise.prescriptionType ?? found.prescriptionType,
+    perSide: toExercise.perSide ?? found.perSide,
+    restSeconds: toExercise.restSeconds ?? found.restSeconds,
     notes: toExercise.notes || found.notes,
     exercise: {
       id: replacementId,
@@ -473,10 +584,29 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
 
 /** Remove a single exercise from a single date. */
 export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
-  const { date, exercise } = input;
+  const { date, exercise, exerciseId } = input;
   const current = resolveDateWorkout(date);
   if (!current) {
     return { success: false, reason: `No session on ${date} to remove exercise from.` };
+  }
+  if (exerciseId) {
+    const id = String(exerciseId);
+    const foundById = current.exercises.find((ex: any) =>
+      [ex.id, ex.exerciseId, ex.exercise?.id]
+        .filter(Boolean)
+        .some((candidate) => String(candidate) === id),
+    );
+    if (foundById) {
+      const setManualOverride = useProgramStore.getState().setManualOverride;
+      const newWorkout = cloneWorkout(current, {
+        exercises: current.exercises.filter((ex) => ex !== foundById),
+      });
+      if (workoutsAreEquivalent(current, newWorkout)) {
+        return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
+      }
+      setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise removed' });
+      return { success: true };
+    }
   }
   const matchResult = findExerciseMatch(current, exercise);
   if (matchResult.kind === 'not_found') {
@@ -502,6 +632,78 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
     return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
   }
   setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise removed' });
+  return { success: true };
+}
+
+/** Add one exercise to a single date. */
+export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
+  const { date, exercise } = input;
+  const current = resolveDateWorkout(date);
+  if (!current) {
+    return { success: false, reason: `No session on ${date} to add exercise to.` };
+  }
+  const name = exercise.name.trim();
+  if (!name) {
+    return { success: false, reason: 'No exercise name provided.' };
+  }
+  const displayName = formatExerciseDisplayName(name) || name;
+  const duplicate = current.exercises.some(
+    (ex) => (ex.exercise?.name || '').toLowerCase().trim() === name.toLowerCase(),
+  );
+  if (duplicate) {
+    return { success: false, reason: `${displayName} is already in this session.` };
+  }
+
+  const now = new Date().toISOString();
+  const safeId = name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/^-+|-+$/g, '') || 'exercise';
+  const prescribedSets = finitePositiveNumber(exercise.sets, 2);
+  const prescribedRepsMin = finitePositiveNumber(exercise.repsMin, 8);
+  const prescribedRepsMax = Math.max(
+    prescribedRepsMin,
+    finitePositiveNumber(exercise.repsMax, 12),
+  );
+  const nextOrder =
+    current.exercises.reduce(
+      (max, ex) => Math.max(max, Number.isFinite(ex.exerciseOrder) ? ex.exerciseOrder : -1),
+      -1,
+    ) + 1;
+  const exerciseId = `ex-coach-add-${safeId}`;
+  const added: WorkoutExercise = {
+    id: `${exerciseId}-${Date.now()}`,
+    workoutId: current.id,
+    exerciseId,
+    exerciseOrder: nextOrder,
+    prescribedSets,
+    prescribedRepsMin,
+    prescribedRepsMax,
+    prescribedWeightKg: Number.isFinite(Number(exercise.weight)) ? Number(exercise.weight) : 0,
+    prescriptionType: exercise.prescriptionType,
+    perSide: exercise.perSide,
+    restSeconds: finitePositiveNumber(exercise.restSeconds, 90),
+    notes: exercise.notes,
+    exercise: {
+      id: exerciseId,
+      name,
+      description: name,
+      exerciseType: 'Accessory' as any,
+      muscleGroups: [],
+      equipmentRequired: [],
+      difficultyLevel: 'Intermediate' as any,
+      createdAt: now,
+      updatedAt: now,
+    } as any,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  const setManualOverride = useProgramStore.getState().setManualOverride;
+  const newWorkout = cloneWorkout(current, {
+    exercises: [...current.exercises, added],
+  });
+  if (workoutsAreEquivalent(current, newWorkout)) {
+    return { success: false, reason: `Adding ${displayName} on ${date} produced no change.` };
+  }
+  setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise added' });
   return { success: true };
 }
 
@@ -640,7 +842,8 @@ export function addWeeklyOverride(input: AddWeeklyOverrideInput): ActionResult {
 /**
  * Ban an exercise from ALL future programs.
  * Writes to athletePreferencesStore.excluded — feeds the pool rotation
- * pipeline at program-build time.
+ * pipeline at program-build time. Also mirrors a typed active preference
+ * constraint so Coach Notes can explain the future-generation modifier.
  *
  * The user's input is alias-resolved to its canonical name BEFORE
  * persisting. This keeps the exclusion list consistent with the names the
@@ -655,6 +858,11 @@ export function banExerciseGlobally(input: BanExerciseGloballyInput): ActionResu
   }
   const canonical = resolveExerciseName(exercise.trim());
   useAthletePreferencesStore.getState().addExclusion(canonical);
+  upsertExercisePreferenceConstraint({
+    preferenceKind: 'avoid_exercise',
+    label: `Avoid ${canonical} in future generated sessions.`,
+    exercise: canonical,
+  });
   return { success: true };
 }
 
@@ -685,6 +893,29 @@ export function setPreferredAlternative(
   const prefs = useAthletePreferencesStore.getState();
   prefs.addExclusion(canonicalExercise);
   prefs.addPinned(canonicalAlternative);
+  upsertExercisePreferenceConstraint({
+    preferenceKind: 'preferred_alternative',
+    label: `Replace ${canonicalExercise} with ${canonicalAlternative} where appropriate.`,
+    exercise: canonicalExercise,
+    alternative: canonicalAlternative,
+  });
+  return { success: true };
+}
+
+/** Pin a useful exercise so future generation is biased toward including it. */
+export function pinExerciseGlobally(input: PinExerciseGloballyInput): ActionResult {
+  const { exercise } = input;
+  if (!exercise || !exercise.trim()) {
+    return { success: false, reason: 'No exercise name provided.' };
+  }
+  const canonical = resolveExerciseName(exercise.trim());
+  useAthletePreferencesStore.getState().addPinned(canonical);
+  upsertExercisePreferenceConstraint({
+    preferenceKind: 'add_focus',
+    label: `Prioritise ${canonical} in future generated sessions where appropriate.`,
+    alternative: canonical,
+    focus: canonical,
+  });
   return { success: true };
 }
 
@@ -713,6 +944,8 @@ export function applyCoachAction(action: CoachAction): ActionResult {
       return replaceExerciseAtDate(action.payload as ReplaceExerciseInput);
     case 'remove_exercise':
       return removeExerciseAtDate(action.payload as RemoveExerciseInput);
+    case 'add_exercise':
+      return addExerciseAtDate(action.payload as AddExerciseAtDateInput);
     case 'add_weekly_override':
       return addWeeklyOverride(action.payload as AddWeeklyOverrideInput);
     case 'ban_exercise_globally':

@@ -15,6 +15,7 @@ import {
   templateIdFromRevisedWorkout,
   templateIdFromSection,
 } from './coachRevisionTemplates';
+import { logWeekValidation } from '../rules/weekStructureValidator';
 
 export interface CoachRevisionOverrideWrite {
   date: string;
@@ -140,6 +141,24 @@ export function applyCoachRevisionDateOverrides(
   for (const write of built) {
     input.setManualOverride?.(write.date, write.workout, write.context);
   }
+
+  // Phase 2 rules kernel — LOG-ONLY weekly-structure validation of the
+  // post-apply visible week (both coach-chat and tap-sheet doors funnel
+  // through this writer). logWeekValidation is throw-proof and has no
+  // side effects; it cannot change or block this result.
+  if (built.length > 0) {
+    const overrideByDate = new Map(built.map((w) => [w.date, w.workout]));
+    logWeekValidation(
+      {
+        days: input.visibleWeek.map((day) => ({
+          date: day.date,
+          workouts: [overrideByDate.get(day.date) ?? day.workout],
+        })),
+      },
+      'coach_revision_apply',
+    );
+  }
+
   return { applied: built, rejected: [] };
 }
 
@@ -399,7 +418,7 @@ function buildContentOverride(source: Workout, revisedDay: CoachVisibleDaySnapsh
     ? (session?.items[0]?.title || revisedWorkout.title || source.name)
     : (revisedWorkout.title || source.name);
   const workoutType = onlySession
-    ? source.workoutType
+    ? 'Team Training'
     : onlyConditioning
     ? 'Conditioning'
     : onlyStrength
