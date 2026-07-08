@@ -13,6 +13,10 @@
 
 // Node harness: define __DEV__ like every other suite. Some resolver
 // branches (reached once availability filtering is active) reference it.
+declare global {
+  var __DEV__: boolean;
+}
+
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
 import {
@@ -37,7 +41,7 @@ import {
   validatorDaysFromResolvedWeek,
 } from '../rules/weekStructureValidator';
 import { isTeamTrainingSession } from '../utils/teamTraining';
-import type { OnboardingData, Workout, Microcycle, TrainingProgram, SeasonPhase } from '../types/domain';
+import type { DayOfWeek, OnboardingData, Workout, Microcycle, TrainingProgram, SeasonPhase } from '../types/domain';
 
 // ═══════════════════════════════════════════════════
 // TYPES
@@ -67,13 +71,25 @@ type Region = 'upper' | 'lower' | 'neutral';
 // CONSTANTS
 // ═══════════════════════════════════════════════════
 
-const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const DAY_ORDER_MON_FIRST = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAY_NAMES: readonly DayOfWeek[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const DAY_ORDER_MON_FIRST: readonly DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 // Block: Mon 2026-03-23 to Sun 2026-04-19 (4 weeks)
 const BLOCK_START = '2026-03-23';
 const BLOCK_END = '2026-04-19';
 const TEST_MONDAY = '2026-03-23'; // Week 1 Monday
+
+function isDayOfWeek(value: string | undefined): value is DayOfWeek {
+  return !!value && (DAY_NAMES as readonly string[]).includes(value);
+}
+
+function dayIndex(value: string | undefined): number {
+  return isDayOfWeek(value) ? DAY_NAMES.indexOf(value) : -1;
+}
+
+function monFirstDayIndex(value: string | undefined): number {
+  return isDayOfWeek(value) ? DAY_ORDER_MON_FIRST.indexOf(value) : -1;
+}
 
 // ═══════════════════════════════════════════════════
 // REGION CLASSIFICATION (mirrors coachingEngine)
@@ -113,8 +129,8 @@ function regionLabel(r: Region): string {
 
 function gOffsetLabel(dayName: string, gameDay: string | undefined): string {
   if (!gameDay) return '    ';
-  const dayNum = DAY_NAMES.indexOf(dayName);
-  const gameNum = DAY_NAMES.indexOf(gameDay);
+  const dayNum = dayIndex(dayName);
+  const gameNum = dayIndex(gameDay);
   if (dayNum < 0 || gameNum < 0) return '    ';
   let diff = dayNum - gameNum;
   if (diff > 0) diff -= 7;
@@ -134,10 +150,10 @@ function runAssertions(
 ): AssertionResult[] {
   const results: AssertionResult[] = [];
   const sorted = [...plan.weeklyPlan].sort(
-    (a, b) => DAY_ORDER_MON_FIRST.indexOf(a.dayOfWeek || '') - DAY_ORDER_MON_FIRST.indexOf(b.dayOfWeek || '')
+    (a, b) => monFirstDayIndex(a.dayOfWeek) - monFirstDayIndex(b.dayOfWeek)
   );
   const gameDay = scenario.onboarding.gameDay;
-  const gameDayNum = gameDay ? DAY_NAMES.indexOf(gameDay) : -1;
+  const gameDayNum = dayIndex(gameDay);
   const isInSeason = scenario.onboarding.seasonPhase === 'In-season';
   const teamDaysConfigured = new Set(scenario.onboarding.teamTrainingDays || []);
 
@@ -148,7 +164,7 @@ function runAssertions(
   if (teamDaysConfigured.size > 0) {
     const invariantViolations: string[] = [];
     for (const s of sorted) {
-      const onTeamDay = s.dayOfWeek ? teamDaysConfigured.has(s.dayOfWeek) : false;
+      const onTeamDay = isDayOfWeek(s.dayOfWeek) ? teamDaysConfigured.has(s.dayOfWeek) : false;
       const flagged = !!s.isTeamDay;
       if (onTeamDay && !flagged) {
         invariantViolations.push(`${s.dayOfWeek} is a team day but isTeamDay=false`);
@@ -175,7 +191,7 @@ function runAssertions(
     let worstRun = '';
 
     for (const s of sorted) {
-      const dayIdx = DAY_ORDER_MON_FIRST.indexOf(s.dayOfWeek || '');
+      const dayIdx = monFirstDayIndex(s.dayOfWeek);
       const region = classifyRegion(s);
 
       if (region !== 'neutral' && region === currentRegion && dayIdx - prevDayIdx === 1) {
@@ -398,7 +414,7 @@ function buildScheduleState(
   // team flags previously caused false validator positives (S13/S14
   // "sprint on G-2" was actually team training).
   const workouts: Workout[] = plan.weeklyPlan.map((s, idx) => {
-    const dayNum = DAY_NAMES.indexOf(s.dayOfWeek || '');
+    const dayNum = dayIndex(s.dayOfWeek);
     const w: Workout = {
       id: `w-test-${idx}`,
       microcycleId: 'mc-test',
@@ -524,7 +540,7 @@ function printScenario(
   console.log('  ' + '─'.repeat(68));
 
   const sorted = [...plan.weeklyPlan].sort(
-    (a, b) => DAY_ORDER_MON_FIRST.indexOf(a.dayOfWeek || '') - DAY_ORDER_MON_FIRST.indexOf(b.dayOfWeek || '')
+    (a, b) => monFirstDayIndex(a.dayOfWeek) - monFirstDayIndex(b.dayOfWeek)
   );
 
   for (const s of sorted) {
@@ -899,7 +915,7 @@ for (const scenario of scenarios) {
       const allowed = new Set(prefDays);
       const violations = resolvedWeek
         .filter((d) => d.workout && (d.source === 'conditioning' || d.source === 'recovery'))
-        .filter((d) => !allowed.has(DAY_NAMES[d.dayOfWeek] as never))
+        .filter((d) => !allowed.has(DAY_NAMES[d.dayOfWeek]))
         .map((d) => `${DAY_NAMES[d.dayOfWeek]} (${d.source}: ${d.workout?.name?.slice(0, 30)})`);
       assertions.push({
         rule: 'Availability: pass-2/3 placements on preferred days only',
