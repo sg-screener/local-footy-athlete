@@ -35,6 +35,14 @@
 
 export type MovementPattern = 'squat' | 'hinge' | 'push' | 'pull';
 
+export type StrengthPatternMetadata =
+  | 'lower'
+  | 'lower_combined'
+  | 'push'
+  | 'pull'
+  | 'upper_combined'
+  | 'full_body';
+
 /** Tier type mirrors the domain's SessionTier. Kept permissive for callers. */
 export type SessionTierLoose = 'core' | 'optional' | 'recovery' | string;
 
@@ -45,6 +53,8 @@ export interface SessionNameInput {
   name?: string;
   /** Optional explicit patterns. When present, overrides text inference. */
   movementPatterns?: MovementPattern[];
+  /** Typed engine strength pattern. Used before any legacy text inference. */
+  strengthPattern?: StrengthPatternMetadata;
   /** Team-day flag — when true, name ALWAYS leads with "Team Training". */
   isTeamDay?: boolean;
   /** Presence of a conditioning flavour marks this as a conditioning-bearing session. */
@@ -66,6 +76,59 @@ const PATTERN_PROBES: Array<[MovementPattern, RegExp]> = [
 ];
 
 /**
+ * Shared conditioning-text detector. Guards strength inference from erg /
+ * finisher wording such as "bike/row/ski", where "row" is not a strength pull.
+ */
+const CONDITIONING_TEXT_RX =
+  /flush|aerobic|conditioning|finisher|intervals?|metcon|tempo|fartlek|\brun\b|\bbike\b|\brow(?:er)?\b|rowing|\bski\b|\berg\b|\bsprints?\b|\bmas\b|zone\s*2|\bkm\b|off[- ]?feet/i;
+
+/**
+ * Explicit strength wording. Used to distinguish combined strength + finisher
+ * text from pure conditioning names that happen to mention row/bike/ski.
+ */
+const EXPLICIT_STRENGTH_TEXT_RX =
+  /strength|upper body|lower body|full body|squat|hinge|hip[- ]?dominant|quad[- ]?dominant|bench|\bpress\b|push[- ]?up|pull[- ]?up|chin[- ]?up|deadlift|\brdl\b|lunge|push emphasis|pull emphasis|\blift/i;
+
+export function hasConditioningText(text: string | undefined): boolean {
+  return !!text && CONDITIONING_TEXT_RX.test(text);
+}
+
+export function hasExplicitStrengthText(text: string | undefined): boolean {
+  return !!text && EXPLICIT_STRENGTH_TEXT_RX.test(text);
+}
+
+export function isConditioningOnlyText(text: string | undefined): boolean {
+  return hasConditioningText(text) && !hasExplicitStrengthText(text);
+}
+
+/**
+ * Keep movement-pattern inference scoped to the strength component. Engine
+ * focus strings often append " + easy off-feet aerobic finisher
+ * (bike/row/ski)"; the suffix must never add a fake pull pattern.
+ */
+export function strengthTextForMovementInference(text: string | undefined): string {
+  if (!text) return '';
+  const plusSeparator = /\s\+\s/g;
+  let match: RegExpExecArray | null;
+  while ((match = plusSeparator.exec(text))) {
+    const tail = text.slice(match.index + match[0].length);
+    if (hasConditioningText(tail)) {
+      return text.slice(0, match.index).trim();
+    }
+  }
+
+  const dashSeparator = /\s[—–-]\s/g;
+  while ((match = dashSeparator.exec(text))) {
+    const tail = text.slice(match.index + match[0].length);
+    if (hasConditioningText(tail) && !hasExplicitStrengthText(tail)) {
+      return text.slice(0, match.index).trim();
+    }
+  }
+
+  return text.trim();
+}
+
+/**
  * Extract movement patterns from a focus or name string.
  * Uses deterministic keyword matching against the engine's buildFocus outputs
  * and typical AI-generated names. Returns patterns in canonical order.
@@ -84,6 +147,42 @@ export function inferMovementPatterns(text: string | undefined): MovementPattern
     if (rx.test(t)) found.push(pattern);
   }
   return found;
+}
+
+export function inferStrengthMovementPatterns(text: string | undefined): MovementPattern[] {
+  const strengthText = strengthTextForMovementInference(text);
+  if (!strengthText || isConditioningOnlyText(strengthText)) return [];
+  return inferMovementPatterns(strengthText);
+}
+
+function lowerPatternDetailsFromText(text: string | undefined): MovementPattern[] {
+  return inferStrengthMovementPatterns(text).filter(
+    (pattern): pattern is 'squat' | 'hinge' => pattern === 'squat' || pattern === 'hinge',
+  );
+}
+
+export function movementPatternsFromStrengthPattern(
+  strengthPattern: StrengthPatternMetadata | undefined,
+  sourceText?: string,
+): MovementPattern[] {
+  switch (strengthPattern) {
+    case 'lower': {
+      const lowerDetails = lowerPatternDetailsFromText(sourceText);
+      return lowerDetails.length > 0 ? lowerDetails : ['squat', 'hinge'];
+    }
+    case 'lower_combined':
+      return ['squat', 'hinge'];
+    case 'push':
+      return ['push'];
+    case 'pull':
+      return ['pull'];
+    case 'upper_combined':
+      return ['push', 'pull'];
+    case 'full_body':
+      return ['squat', 'hinge', 'push', 'pull'];
+    default:
+      return [];
+  }
 }
 
 /**
@@ -134,9 +233,10 @@ function fallbackFromText(text: string | undefined): string {
  * Precedence:
  *   1. Team-day priority prefix (always leads).
  *   2. Explicit movementPatterns (when provided, overrides inference).
- *   3. Inferred patterns from focus (engine-authoritative).
- *   4. Inferred patterns from name (AI-generated fallback).
- *   5. Cleaned name/focus pass-through (for conditioning / recovery / other).
+ *   3. Typed strengthPattern from the engine/session allocation.
+ *   4. Inferred patterns from strength-scoped focus (legacy fallback).
+ *   5. Inferred patterns from strength-scoped name (AI-generated fallback).
+ *   6. Cleaned name/focus pass-through (for conditioning / recovery / other).
  */
 export function resolveSessionDisplayName(input: SessionNameInput): string {
   const isTeam = !!input.isTeamDay;
@@ -155,10 +255,15 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
   let patterns: MovementPattern[] = [];
   if (input.movementPatterns && input.movementPatterns.length > 0) {
     patterns = input.movementPatterns;
+  } else if (input.strengthPattern) {
+    patterns = movementPatternsFromStrengthPattern(
+      input.strengthPattern,
+      input.focus || input.name,
+    );
   } else {
-    patterns = inferMovementPatterns(input.focus);
+    patterns = inferStrengthMovementPatterns(input.focus);
     if (patterns.length === 0) {
-      patterns = inferMovementPatterns(input.name);
+      patterns = inferStrengthMovementPatterns(input.name);
     }
   }
   const strengthLabel = canonicalStrengthLabel(patterns);

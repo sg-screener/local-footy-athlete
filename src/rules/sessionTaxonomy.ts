@@ -26,6 +26,8 @@ import type { Workout } from '../types/domain';
 import {
   inferMovementPatterns,
   canonicalStrengthLabel,
+  hasConditioningText,
+  hasExplicitStrengthText,
 } from '../utils/sessionNaming';
 import { isTeamTrainingSession } from '../utils/teamTraining';
 import { classifyExerciseExposures } from '../utils/exposureEngine';
@@ -83,28 +85,12 @@ export const CONDITIONING_CATEGORIES: ReadonlySet<SessionCategory> = new Set([
 const GUNSHOW_RX = /gunshow|gun show|prehab|accessor|arm pump|pump session/i;
 const RECOVERY_RX = /\brecovery\b|mobility|foam roll|stretch|breathing/i;
 
-/**
- * Session-level conditioning text. Guards strength inference: sessionNaming's
- * pattern probes are built for strength focus strings, so conditioning names
- * like "easy bike/row" would otherwise false-match the pull probe ("row").
- */
-const CONDITIONING_TEXT_RX =
-  /flush|aerobic|conditioning|intervals?|metcon|tempo|fartlek|\brun\b|\bbike\b|\brower?\b|rowing|\bski\b|\berg\b|\bsprints?\b|\bmas\b|zone\s*2|\bkm\b/i;
-
 /** Exposure kinds that prove a session actually contains strength work. */
 const STRENGTH_EXPOSURES = new Set([
   'squat', 'hinge', 'lunge', 'heavy_lower_strength',
   'horizontal_press', 'vertical_press',
   'horizontal_pull', 'vertical_pull', 'heavy_pull',
 ]);
-
-/**
- * Explicit strength wording — stricter than sessionNaming's probes. Used
- * only to break the tie when a session name ALSO matches conditioning text
- * (the probes alone would let "easy bike/row" register as a pull day).
- */
-const EXPLICIT_STRENGTH_TEXT_RX =
-  /strength|upper body|lower body|full body|squat|hinge|bench|\bpress\b|push[- ]?up|pull[- ]?up|chin[- ]?up|deadlift|\brdl\b|lunge|push emphasis|pull emphasis|\blift/i;
 
 /** WorkoutType values that are unambiguous conditioning sub-types. */
 const WORKOUT_TYPE_CONDITIONING: Record<string, SessionCategory> = {
@@ -302,8 +288,8 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
     return exName ? classifyExerciseExposures(exName).some((e) => STRENGTH_EXPOSURES.has(e)) : false;
   });
   const nameIsConditioning =
-    CONDITIONING_TEXT_RX.test(workout.name ?? '') &&
-    !EXPLICIT_STRENGTH_TEXT_RX.test(text);
+    hasConditioningText(workout.name ?? '') &&
+    !hasExplicitStrengthText(text);
   // Gunshow-named sessions ("Gunshow", "Prehab & Accessories") infer
   // strength from the NAME only — their descriptions legitimately mention
   // pattern words (face pulls, calves) without being strength sessions.
@@ -360,7 +346,7 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
   // Allocation-level sessions sometimes reach the calendar with a generic
   // workoutType ('Strength') but a clearly-conditioning name ("Easy Aerobic
   // Flush - 20-30min easy bike/row"). Classify by name before giving up.
-  if (units.length === 0 && CONDITIONING_TEXT_RX.test(workout.name ?? '')) {
+  if (units.length === 0 && hasConditioningText(workout.name ?? '')) {
     const nameText = (workout.name ?? '').toLowerCase();
     let fallbackCat: SessionCategory;
     if (/\bsprints?\b/.test(nameText)) fallbackCat = 'sprint';

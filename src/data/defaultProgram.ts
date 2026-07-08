@@ -976,10 +976,12 @@ export function buildWorkoutsFromCoach(
     name: string | undefined,
     isTeamDay: boolean | undefined,
     focus?: string,
+    strengthPattern?: SessionAllocation['strengthPattern'],
   ): string {
     return resolveSessionDisplayName({
       name,
       focus,
+      strengthPattern,
       isTeamDay,
     });
   }
@@ -1301,6 +1303,7 @@ export function buildWorkoutsFromCoach(
         name: resolveSessionDisplayName({
           name: displayName,
           focus: planEntry?.focus,
+          strengthPattern: planEntry?.strengthPattern,
           isTeamDay: planEntry?.isTeamDay,
           conditioningFlavour: planEntry?.conditioningFlavour,
           hasCombinedConditioning: planEntry?.hasCombinedConditioning,
@@ -1452,6 +1455,7 @@ export function buildWorkoutsFromCoach(
       name: resolveSessionDisplayName({
         name: cw.name,
         focus: planEntry?.focus,
+        strengthPattern: planEntry?.strengthPattern,
         isTeamDay: planEntry?.isTeamDay,
         conditioningFlavour: planEntry?.conditioningFlavour,
         hasCombinedConditioning: planEntry?.hasCombinedConditioning,
