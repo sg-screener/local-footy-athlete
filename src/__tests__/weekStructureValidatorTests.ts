@@ -12,6 +12,7 @@
 
 import {
   validateProgramWeek,
+  deriveWeekValidationFlags,
   validatorDaysFromResolvedWeek,
   looksLikeNeuralPrimer,
   type ValidatorDayInput,
@@ -360,6 +361,62 @@ console.log('\n── 5b. Graded hard-day cap (4 target / 5 max / 6+ strong) ─
 
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 6. Bye week logic ──');
+{
+  const days = week({
+    0: [lower()],
+    1: [teamDay('Team Training + Upper Pull', 'rows', [mkEx('Barbell Row')])],
+    2: [lower()],
+    3: [teamDay('Team Training + Upper Push', 'bench', [mkEx('Bench Press')])],
+    4: [mkWorkout({
+      name: 'Upper body hypertrophy / trunk & accessory work',
+      description: 'Curls, pushdowns, face pulls, trunk',
+      exercises: [mkEx('Bicep Curl'), mkEx('Tricep Pushdown'), mkEx('Face Pull')],
+      sessionTier: 'optional',
+      intensity: 'Light',
+    })],
+    5: [lower()],
+  });
+  const input = { days, profile: { ...PROFILE, seasonPhase: 'In-season' as const } };
+  const flags = deriveWeekValidationFlags(input);
+  const r = validateProgramWeek(input);
+  const strengthOver = byRule(r.findings, 'cap_maxMainStrengthSessions_over');
+  const hardDaysOver = byRule(r.findings, 'cap_maxHardDays_over');
+  ok('in-season no-game week derives byeWeek=true',
+    flags.byeWeek === true && strengthOver[0]?.data?.byeWeek === true,
+    `flags=${JSON.stringify(flags)} findings=${ids(r.findings)}`);
+  ok('S4/E1-style accessory day is gunshow, so main strength count is 5 not 6',
+    r.counts.mainStrengthExposures === 5 && r.counts.gunshowSessions === 1,
+    `strength=${r.counts.mainStrengthExposures}, gunshow=${r.counts.gunshowSessions}`);
+  ok('S4/E1-style bye +1 strength finding is softened to info',
+    strengthOver.length === 1 && strengthOver[0].severity === 'info',
+    ids(r.findings));
+  ok('S4/E1-style bye 5 hard days finding is info',
+    hardDaysOver.length === 1 && hardDaysOver[0].severity === 'info',
+    ids(r.findings));
+}
+{
+  const days = week({
+    0: [lower()], 1: [upper('pull')], 2: [lower()], 3: [upper('push')], 4: [lower()],
+  });
+  const offFlags = deriveWeekValidationFlags({
+    days,
+    profile: { ...PROFILE, seasonPhase: 'Off-season' as const },
+  });
+  const preFlags = deriveWeekValidationFlags({
+    days,
+    profile: { ...PROFILE, seasonPhase: 'Pre-season' as const },
+  });
+  const offReport = validateProgramWeek({ days, profile: { ...PROFILE, seasonPhase: 'Off-season' } });
+  const preReport = validateProgramWeek({ days, profile: { ...PROFILE, seasonPhase: 'Pre-season' } });
+  ok('off-season no-game week does not derive byeWeek=true',
+    offFlags.byeWeek === false &&
+    byRule(offReport.findings, 'cap_maxMainStrengthSessions_over')[0]?.severity === 'strong',
+    `flags=${JSON.stringify(offFlags)} findings=${ids(offReport.findings)}`);
+  ok('pre-season no-game week does not derive byeWeek=true',
+    preFlags.byeWeek === false &&
+    byRule(preReport.findings, 'cap_maxMainStrengthSessions_over')[0]?.severity === 'strong',
+    `flags=${JSON.stringify(preFlags)} findings=${ids(preReport.findings)}`);
+}
 {
   // Bye week: 5 strength (over by 1) → info; unders suppressed.
   const days = week({

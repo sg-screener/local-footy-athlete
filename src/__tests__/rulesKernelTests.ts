@@ -123,6 +123,10 @@ ok('null workout → no units (rest)', classifyDaySessions(null).length === 0);
   ok('Upper Pull → [upper_strength]', cats(u) === 'upper_strength', cats(u));
 }
 {
+  const u = classifyDaySessions(mkWorkout({ name: 'Upper Push', description: 'Bench press and overhead press' }));
+  ok('Upper Push → [upper_strength]', cats(u) === 'upper_strength', cats(u));
+}
+{
   const u = classifyDaySessions(mkWorkout({ name: 'Full Body Strength', description: 'Full body: squat, push, pull' }));
   ok('Full body → [full_body_strength]', cats(u) === 'full_body_strength', cats(u));
 }
@@ -133,6 +137,32 @@ ok('null workout → no units (rest)', classifyDaySessions(null).length === 0);
 {
   const u = classifyDaySessions(mkWorkout({ name: 'Prehab & Accessories', description: 'Shoulder health + calves' }));
   ok('Prehab & Accessories → [gunshow_prehab]', cats(u) === 'gunshow_prehab', cats(u));
+}
+{
+  const u = classifyDaySessions(mkWorkout({
+    name: 'Upper body hypertrophy / trunk & accessory work',
+    description: 'Curls, pushdowns, face pulls, calves, Pallof press',
+    exercises: [mkEx('Bicep Curl'), mkEx('Tricep Pushdown'), mkEx('Face Pull')],
+  }));
+  ok('upper hypertrophy/trunk accessories → [gunshow_prehab], not upper_strength',
+    cats(u) === 'gunshow_prehab', cats(u));
+}
+{
+  const u = classifyDaySessions(mkWorkout({
+    name: 'Upper body accessory',
+    description: 'Small-muscle pump and trunk only',
+  }));
+  ok('vague upper body accessory text without main-lift proof → gunshow_prehab',
+    cats(u) === 'gunshow_prehab', cats(u));
+}
+{
+  const u = classifyDaySessions(mkWorkout({
+    name: 'Upper body hypertrophy / trunk & accessory work',
+    description: 'Includes real main lifts today',
+    exercises: [mkEx('Bench Press'), mkEx('Barbell Row')],
+  }));
+  ok('accessory-named session with exercise-proven main lifts → upper_strength',
+    cats(u) === 'upper_strength', cats(u));
 }
 {
   // Regression (S6, 2026-07-08): a strength focus that merely MENTIONS
@@ -337,6 +367,26 @@ const option1Findings = auditWeekAgainstCaps(counts);
 ok('Bible Option 1 week has NO over-cap findings',
   option1Findings.filter((f) => f.kind === 'over').length === 0,
   option1Findings.map((f) => f.detail).join('; '));
+
+{
+  const weekWithAccessory: WeekDayInput[] = [
+    { date: '2026-06-01', workout: mkWorkout({ name: 'Lower Body Strength', description: 'squat', exercises: [mkEx('Back Squat')] }) },
+    { date: '2026-06-02', workout: mkWorkout({ name: 'Upper Push', description: 'bench', exercises: [mkEx('Bench Press')] }) },
+    { date: '2026-06-03', workout: mkWorkout({ name: 'Lower Hinge', description: 'RDL', exercises: [mkEx('RDL')] }) },
+    { date: '2026-06-04', workout: mkWorkout({ name: 'Upper Pull', description: 'rows', exercises: [mkEx('Barbell Row')] }) },
+    { date: '2026-06-05', workout: mkWorkout({
+      name: 'Upper body hypertrophy / trunk & accessory work',
+      description: 'Curls, pushdowns, face pulls',
+      exercises: [mkEx('Bicep Curl'), mkEx('Tricep Pushdown'), mkEx('Face Pull')],
+    }) },
+  ];
+  const accessoryCounts = countWeeklyExposures(weekWithAccessory, {});
+  const accessoryCaps = auditWeekAgainstCaps(accessoryCounts);
+  ok('main strength cap excludes gunshow/accessory/prehab sessions',
+    accessoryCounts.mainStrengthExposures === 4 &&
+    !accessoryCaps.some((f) => f.cap === 'maxMainStrengthSessions' && f.kind === 'over'),
+    `strength=${accessoryCounts.mainStrengthExposures}; ${accessoryCaps.map((f) => f.detail).join('; ')}`);
+}
 
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 4. Cap audit — over-cap week is flagged ──');

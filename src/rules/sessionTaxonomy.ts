@@ -83,6 +83,7 @@ export const CONDITIONING_CATEGORIES: ReadonlySet<SessionCategory> = new Set([
 // ─── Internal detection helpers ──────────────────────────────────────
 
 const GUNSHOW_RX = /gunshow|gun show|prehab|accessor|arm pump|pump session/i;
+const ACCESSORY_SUPPORT_NAME_RX = /gunshow|gun show|prehab|accessor|arm pump|pump session|trunk|hypertrophy/i;
 const RECOVERY_RX = /\brecovery\b|mobility|foam roll|stretch|breathing/i;
 
 /** Exposure kinds that prove a session actually contains strength work. */
@@ -91,6 +92,9 @@ const STRENGTH_EXPOSURES = new Set([
   'horizontal_press', 'vertical_press',
   'horizontal_pull', 'vertical_pull', 'heavy_pull',
 ]);
+
+const MAIN_LIFT_EXERCISE_RX =
+  /\b(?:back|front|box|goblet)\s+squat\b|\bsquat\b|\bdeadlift\b|\brdl\b|romanian\s+deadlift|hip\s+thrust|split\s+squat|\blunge\b|leg\s+press|bench\s+press|overhead\s+press|\bohp\b|military\s+press|\bdips?\b|push[-\s]?ups?|pull[-\s]?ups?|chin[-\s]?ups?|barbell\s+row|bent[-\s]*over\s+row|pendlay|t[-\s]*bar\s+row/i;
 
 /** WorkoutType values that are unambiguous conditioning sub-types. */
 const WORKOUT_TYPE_CONDITIONING: Record<string, SessionCategory> = {
@@ -176,13 +180,23 @@ function detectModality(workout: Workout, fallbackCategory: SessionCategory): Se
   return 'none';
 }
 
-function strengthCategoryFrom(text: string): SessionCategory | null {
+function hasMainStrengthNameProof(text: string): boolean {
+  return !!canonicalStrengthLabel(inferMovementPatterns(text)) ||
+    /\bstrength\b|squat|hinge|hip[- ]?dominant|quad[- ]?dominant|push emphasis|pull emphasis|\bbench\b|overhead press|\bohp\b|\bdips?\b|push[- ]?up|deadlift|\brdl\b|\blunge\b|leg press|pull[- ]?up|chin[- ]?up/i.test(text);
+}
+
+function strengthCategoryFrom(
+  text: string,
+  opts: { allowRegionNameFallback?: boolean } = {},
+): SessionCategory | null {
   const label = canonicalStrengthLabel(inferMovementPatterns(text));
   if (label) {
     if (label.startsWith('Lower')) return 'lower_strength';
     if (label.startsWith('Upper')) return 'upper_strength';
     return 'full_body_strength';
   }
+  const allowRegionNameFallback = opts.allowRegionNameFallback ?? true;
+  if (!allowRegionNameFallback) return null;
   // Canonical REGION names carry no pattern tokens ("Lower Body Strength"
   // is the canonical squat+hinge label but contains neither word) — the
   // probes alone would drop the strength unit entirely (found 2026-07-08
@@ -213,6 +227,13 @@ function strengthCategoryFromExercises(workout: Workout): SessionCategory | null
   if (lower) return 'lower_strength';
   if (upper) return 'upper_strength';
   return null;
+}
+
+function hasMainLiftExercises(workout: Workout): boolean {
+  return (workout.exercises ?? []).some((ex) => {
+    const name = (ex as { exercise?: { name?: string } }).exercise?.name ?? '';
+    return MAIN_LIFT_EXERCISE_RX.test(name);
+  });
 }
 
 // ─── Public classifier ───────────────────────────────────────────────
@@ -287,23 +308,37 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
     const exName = (ex as { exercise?: { name?: string } }).exercise?.name ?? '';
     return exName ? classifyExerciseExposures(exName).some((e) => STRENGTH_EXPOSURES.has(e)) : false;
   });
+  const hasMainLiftExerciseProof = hasMainLiftExercises(workout);
   const nameIsConditioning =
     hasConditioningText(workout.name ?? '') &&
     !hasExplicitStrengthText(text);
   // Gunshow-named sessions ("Gunshow", "Prehab & Accessories") infer
   // strength from the NAME only — their descriptions legitimately mention
   // pattern words (face pulls, calves) without being strength sessions.
-  const nameLooksGunshow = GUNSHOW_RX.test(workout.name ?? '');
+  const workoutName = workout.name ?? '';
+  const nameLooksAccessorySupport =
+    ACCESSORY_SUPPORT_NAME_RX.test(workoutName) &&
+    !hasMainStrengthNameProof(workoutName);
+  const nameLooksGunshow = GUNSHOW_RX.test(workoutName) || nameLooksAccessorySupport;
+  const hasStrengthProofForSession = nameLooksGunshow
+    ? hasMainLiftExerciseProof
+    : hasStrengthExercises;
+  const strengthSourceText = nameLooksGunshow && !hasMainLiftExerciseProof
+    ? workoutName
+    : text;
   const strengthCat =
-    strengthCategoryFrom(nameLooksGunshow ? (workout.name ?? '') : text) ??
+    strengthCategoryFrom(strengthSourceText, {
+      allowRegionNameFallback: !nameLooksGunshow || hasMainLiftExerciseProof,
+    }) ??
     // Text yielded nothing — fall back to what the session actually
-    // contains (exercise exposures). Gunshow-named sessions never take
-    // this fallback: their light accessories would misread as strength.
-    (nameLooksGunshow ? null : strengthCategoryFromExercises(workout));
+    // contains (exercise exposures). Accessory-named sessions only take
+    // this fallback when exercises prove real main-lift content; light
+    // curls/pushdowns/face pulls remain gunshow/prehab.
+    (hasStrengthProofForSession ? strengthCategoryFromExercises(workout) : null);
   const isStrengthSession =
     strengthCat &&
     (wt === 'Strength' || wt === 'Mixed' || wt === 'Team Training' || isTeamDay) &&
-    (hasStrengthExercises || !nameIsConditioning);
+    (hasStrengthProofForSession || !nameIsConditioning);
   if (isStrengthSession) {
     units.push({ category: strengthCat!, modality: 'none', reason: `movement patterns → ${strengthCat}` });
   }

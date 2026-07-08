@@ -123,6 +123,27 @@ function dayName(dateISO: string): DayOfWeek {
   return names[new Date(`${dateISO}T12:00:00Z`).getUTCDay()];
 }
 
+function isGameWorkout(w: Workout | null | undefined): boolean {
+  if (!w) return false;
+  return String(w.workoutType ?? '') === 'Game' || /^game\b/i.test(w.name ?? '');
+}
+
+export function deriveWeekValidationFlags(input: Pick<ValidateProgramWeekInput, 'days' | 'anchors' | 'profile' | 'weekFlags'>): NonNullable<ValidateProgramWeekInput['weekFlags']> {
+  const explicit = input.weekFlags ?? {};
+  const weekDates = new Set(input.days.map((d) => d.date));
+  const hasGameThisWeek =
+    input.days.some((d) => d.workouts.some(isGameWorkout)) ||
+    (input.anchors?.gameDates ?? []).some((d) => weekDates.has(d));
+  const derivedByeWeek =
+    input.profile?.seasonPhase === 'In-season' &&
+    !hasGameThisWeek;
+
+  return {
+    ...explicit,
+    byeWeek: explicit.byeWeek ?? derivedByeWeek,
+  };
+}
+
 function workoutExposureSet(w: Workout): Set<Exposure> {
   const out = new Set<Exposure>();
   for (const ex of w.exercises ?? []) {
@@ -177,7 +198,7 @@ export function looksLikeNeuralPrimer(w: Workout): boolean {
 
 export function validateProgramWeek(input: ValidateProgramWeekInput): WeekValidationReport {
   const profile = input.profile ?? {};
-  const flags = input.weekFlags ?? {};
+  const flags = deriveWeekValidationFlags(input);
 
   // Classify every workout once.
   const classified: ClassifiedWorkout[] = [];
@@ -632,8 +653,13 @@ export function logAllocationWeekValidation(
       workouts: dayMap.get(dn)!,
     }));
 
+    const profile = { ...(opts.profile ?? {}), seasonPhase: opts.seasonPhase ?? undefined };
     return logWeekValidation(
-      { days, profile: { ...(opts.profile ?? {}), seasonPhase: opts.seasonPhase ?? undefined } },
+      {
+        days,
+        profile,
+        weekFlags: deriveWeekValidationFlags({ days, profile }),
+      },
       opts.label ?? 'generation_weekly_plan',
     );
   } catch (e) {

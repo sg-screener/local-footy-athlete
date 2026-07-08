@@ -33,6 +33,7 @@ import {
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import {
   validateProgramWeek,
+  deriveWeekValidationFlags,
   validatorDaysFromResolvedWeek,
 } from '../rules/weekStructureValidator';
 import { isTeamTrainingSession } from '../utils/teamTraining';
@@ -830,14 +831,17 @@ for (const scenario of scenarios) {
   const findingLines: string[] = [];
   if (resolvedWeek) {
     try {
+      const validatorDays = validatorDaysFromResolvedWeek(resolvedWeek);
+      const validatorProfile = {
+        seasonPhase: scenario.onboarding.seasonPhase,
+        teamTrainingIntensity: scenario.onboarding.teamTrainingIntensity,
+        conditioningLevel: scenario.onboarding.conditioningLevel,
+        experienceLevel: scenario.onboarding.experienceLevel,
+      };
       const report = validateProgramWeek({
-        days: validatorDaysFromResolvedWeek(resolvedWeek),
-        profile: {
-          seasonPhase: scenario.onboarding.seasonPhase,
-          teamTrainingIntensity: scenario.onboarding.teamTrainingIntensity,
-          conditioningLevel: scenario.onboarding.conditioningLevel,
-          experienceLevel: scenario.onboarding.experienceLevel,
-        },
+        days: validatorDays,
+        profile: validatorProfile,
+        weekFlags: deriveWeekValidationFlags({ days: validatorDays, profile: validatorProfile }),
       });
       if (report.findings.length > 0) {
         findingLines.push('  📖 Bible validator findings (report-only, not failures):');
