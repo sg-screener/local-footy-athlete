@@ -70,6 +70,8 @@ const finisherAboveEasy = (s: SessionAllocation) =>
 const finisherHard = (s: SessionAllocation) =>
   !!s.conditioningCategory && s.conditioningCategory !== 'aerobic_base' &&
   s.conditioningCategory !== 'tempo';
+const steadyAerobicFinishers = (plan: SessionAllocation[]) =>
+  plan.filter((s) => hasFinisher(s) && s.conditioningCategory === 'aerobic_base');
 
 const OFF_SEASON_BASE: Partial<OnboardingData> = {
   seasonPhase: 'Off-season', trainingDaysPerWeek: 4,
@@ -141,6 +143,26 @@ console.log('\n── 2. Lower/hinge days: easy off-feet aerobic only ──');
       lowerFinishers.every((s) => /off-feet aerobic/i.test(s.focus)),
       lowerFinishers.map((s) => s.focus).join(' | '));
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════
+console.log('\n── 2b. Off-season 4-day keeps useful conditioning, skips only filler ──');
+{
+  const plan = planFor(OFF_SEASON_BASE);
+  const conditioning = plan.filter((s) => !!s.conditioningCategory);
+  ok('S6 can still include conditioning on all 4 training days',
+    conditioning.length === 4,
+    plan.map((s) => `${s.dayOfWeek}:${s.conditioningCategory ?? '-'}`).join(' | '));
+  ok('S6 does not attach more than 2 steady aerobic finishers',
+    steadyAerobicFinishers(plan).length <= 2,
+    steadyAerobicFinishers(plan).map((s) => `${s.dayOfWeek}: ${s.focus}`).join(' | '));
+  const upperFinishers = plan.filter((s) => !isLowerish(s) && hasFinisher(s));
+  ok('S6 upper days still carry meaningful tempo/moderate conditioning when safe',
+    upperFinishers.some((s) => s.conditioningCategory === 'tempo' || finisherHard(s)),
+    upperFinishers.map((s) => `${s.dayOfWeek}: ${s.conditioningCategory}: ${s.focus}`).join(' | '));
+  ok('S6 no longer uses the old generic bike/row/ski 15-20min steady label',
+    plan.every((s) => !/bike\/row\/ski,\s*15-20min/i.test(s.focus)),
+    plan.map((s) => s.focus).join(' | '));
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -403,6 +425,36 @@ console.log('\n── 9. 4B content layer: mappings + true tempo templates ─�
   }
   ok("'Bike/Row/Ski Tempo Intervals' is NOT running-based",
     !sb.isRunningBasedConditioning('Bike/Row/Ski Tempo Intervals'));
+
+  const combinedBike = sb.buildCombinedConditioningTemplate('aerobic_base', '2026-07-06', 'lower', undefined, 'bike');
+  const combinedRow = sb.buildCombinedConditioningTemplate('aerobic_base', '2026-07-06', 'lower', undefined, 'row');
+  const combinedSki = sb.buildCombinedConditioningTemplate('aerobic_base', '2026-07-06', 'lower', undefined, 'ski');
+  const longBike = sb.buildConditioningTemplate('Long Nasal Run', '2026-07-06', { ergModality: 'bike' });
+  const longRow = sb.buildConditioningTemplate('Long Nasal Run', '2026-07-06', { ergModality: 'row' });
+  const longSki = sb.buildConditioningTemplate('Long Nasal Run', '2026-07-06', { ergModality: 'ski' });
+  const textOfRows = (rows: ReturnType<typeof sb.buildConditioningTemplate>) =>
+    rows.map((e) => `${e.exercise?.name} ${e.notes}`).join(' ');
+  const bikeText = textOfRows([...combinedBike, ...longBike]);
+  ok('bike can still be prescribed as 20+ minutes steady',
+    /\b(?:2[0-9]|3[0-9]|4[0-9])min zone 2 on Assault Bike\b/i.test(bikeText) &&
+    !/\d+\s*x\s*\d+min zone 2 on Assault Bike/i.test(bikeText),
+    bikeText.slice(0, 220));
+  ok('combined row aerobic over 10min is intervalised',
+    /\d+\s*x\s*(?:8|10)min zone 2 on Rower/i.test(textOfRows(combinedRow)) &&
+    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on Rower\b/i.test(textOfRows(combinedRow)),
+    textOfRows(combinedRow));
+  ok('combined ski aerobic over 10min is intervalised',
+    /\d+\s*x\s*(?:8|10)min zone 2 on SkiErg/i.test(textOfRows(combinedSki)) &&
+    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on SkiErg\b/i.test(textOfRows(combinedSki)),
+    textOfRows(combinedSki));
+  ok('standalone long row aerobic is intervalised',
+    /\d+\s*x\s*(?:8|10)min zone 2 on Rower/i.test(textOfRows(longRow)) &&
+    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on Rower\b/i.test(textOfRows(longRow)),
+    textOfRows(longRow));
+  ok('standalone long ski aerobic is intervalised',
+    /\d+\s*x\s*(?:8|10)min zone 2 on SkiErg/i.test(textOfRows(longSki)) &&
+    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on SkiErg\b/i.test(textOfRows(longSki)),
+    textOfRows(longSki));
 
   // Kernel classification: tempo category → tempo_conditioning, medium.
   const taxonomy = require('../rules/sessionTaxonomy') as typeof import('../rules/sessionTaxonomy');

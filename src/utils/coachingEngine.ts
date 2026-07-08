@@ -647,7 +647,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
           if (swap.hasCombinedConditioning || swap.conditioningFlavour) {
             swap.conditioningFlavour = 'aerobic';
             swap.conditioningCategory = 'aerobic_base';
-            swap.focus += ' + easy aerobic finisher (15-20min, off-feet)';
+            swap.focus += ' + easy aerobic finisher (bike steady or row/ski intervals, low intensity)';
           }
         } else {
           logger.error('[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body');
@@ -1307,6 +1307,11 @@ function buildWeeklyPlan(
     const condViaStandaloneMax = Math.min(standaloneSlotsAvailable, condTarget);
     const condShortfall = Math.max(0, MIN_COND_FLOOR - condViaStandaloneMax);
     const minCombinedDays = condShortfall > 0 ? Math.ceil(condShortfall / 0.75) : 0;
+
+    // Finishers are useful add-ons, not hidden second sessions. Keep the
+    // conditioning target intact, but do not let repeated steady aerobic
+    // add-ons become filler.
+    const MAX_STEADY_AEROBIC_FINISHERS = 2;
 
     // ── Approved strength structures ──
     //
@@ -1970,6 +1975,49 @@ function buildWeeklyPlan(
       }
 
       return { allow: true, category: requestedCategory, downgraded: false };
+    }
+
+    type FinisherAttachDecision =
+      | { attach: true; category: CondCategory; downgraded: boolean; offFeetOnly?: boolean }
+      | { attach: false; reason: string };
+
+    function steadyAerobicFinisherCount(): number {
+      return plan.filter((s) =>
+        s.hasCombinedConditioning && s.conditioningCategory === 'aerobic_base'
+      ).length;
+    }
+
+    function shouldAttachFinisher(args: {
+      dayNum: number;
+      requestedCategory: CondCategory;
+      strengthContext: FinisherStrengthContext;
+    }): FinisherAttachDecision {
+      const decision = finisherEligibility({
+        dayNum: args.dayNum,
+        requestedCategory: args.requestedCategory,
+        strengthContext: args.strengthContext,
+      });
+
+      if (!decision.allow) {
+        return {
+          attach: false,
+          reason: 'reason' in decision ? decision.reason : 'finisher_denied',
+        };
+      }
+
+      const category = decision.category;
+      if (category === 'aerobic_base') {
+        if (steadyAerobicFinisherCount() >= MAX_STEADY_AEROBIC_FINISHERS) {
+          return { attach: false, reason: 'steady_aerobic_finisher_cap' };
+        }
+      }
+
+      return {
+        attach: true,
+        category,
+        downgraded: decision.downgraded,
+        offFeetOnly: decision.offFeetOnly,
+      };
     }
 
     /** Map a strength candidate/pattern to the eligibility context. */
@@ -2965,7 +3013,7 @@ function buildWeeklyPlan(
     ): string {
       if (category === 'aerobic_base') {
         return useNonRunning
-          ? 'easy off-feet aerobic finisher (bike/row/ski, 15-20min)'
+          ? 'easy off-feet aerobic finisher (bike steady or row/ski intervals, 15-25min)'
           : 'aerobic base finisher (20min zone 2)';
       }
       if (category === 'tempo') {
@@ -3079,6 +3127,62 @@ function buildWeeklyPlan(
         return 0;
       });
       return patterns[0].type;
+    }
+
+    function placeStrengthCandidate(
+      candidate: CandidateType,
+      slot: { dayName: string; isTeamDay: boolean },
+      pos: number,
+      isConsecutiveDay: boolean,
+    ): void {
+      // B1: upper strength is MEDIUM stress; lower / FB are HIGH.
+      const strengthStress: 'high' | 'medium' = slot.isTeamDay || isLower(candidate)
+        ? 'high' : 'medium';
+      plan.push({
+        tier: 'core',
+        focus: buildFocus(candidate),
+        dayOfWeek: slot.dayName,
+        isHardExposure: true,
+        strengthPattern: buildStrengthPattern(candidate),
+        stressLevel: strengthStress,
+      });
+      st.coreStrengthCount++;
+      // Pattern counts
+      if (candidate === 'L-sq') st.sqCount++;
+      if (candidate === 'L-hi') st.hiCount++;
+      if (candidate === 'U-pu') st.puCount++;
+      if (candidate === 'U-pl') st.plCount++;
+      if (candidate === 'L-co') {
+        // Combined lower covers both lower sub-patterns at moderate dose.
+        st.sqCount += 0.5; st.hiCount += 0.5;
+      }
+      if (candidate === 'U-co') {
+        // Combined upper covers both upper sub-patterns at moderate dose.
+        st.puCount += 0.5; st.plCount += 0.5;
+      }
+      if (candidate === 'FB') {
+        // FB partially covers all patterns
+        st.sqCount += 0.5; st.hiCount += 0.5;
+        st.puCount += 0.5; st.plCount += 0.5;
+        st.fbCount++;
+        // FB updates upper tracking but NOT lastLowerDay —
+        // FB is moderate load and should not block next-day dedicated lower via H3
+        st.upperCount++;
+        st.lastUpperDay = pos;
+        st.lowerCount++;
+      } else if (isLower(candidate)) {
+        // L-sq / L-hi / L-co — all load the lower chain and count for H3.
+        st.lowerCount++;
+        st.lastLowerDay = pos;
+        st.lastLowerSubtype = candidate;
+      } else if (isUpper(candidate)) {
+        // U-pu / U-pl / U-co — all load the upper chain.
+        st.upperCount++;
+        st.lastUpperDay = pos;
+        st.lastUpperSubtype = candidate;
+      }
+      st.lastCoreSubtype = candidate;
+      updateStressStreak(strengthStress, isConsecutiveDay);
     }
 
     // ── Main scoring loop ──
@@ -3204,14 +3308,23 @@ function buildWeeklyPlan(
           if (violatesHard(candidate, slot.num)) continue;
         }
 
-        // For S+C, also check hard constraints on the strength component
+        // For S+C, also check hard constraints on the strength component and
+        // skip the candidate when the only safe finisher would be filler.
         let scStrength: CandidateType | undefined;
         if (candidate === 'S+C') {
-          scStrength = pickSCStrengthType(trainingOrder(slot.num));
+          const slotPos = trainingOrder(slot.num);
+          scStrength = pickSCStrengthType(slotPos);
           if (!queueMustComplete && violatesHard(scStrength, slot.num)) continue;
           // H-GAME on the strength half applies in EVERY mode (a lower
           // strength component on G-2 is still a hard lower session).
           if (queueMustComplete && violatesGameProximity(scStrength, slot.num)) continue;
+          const requestedCategory = flavourToSelectedCategory(pickCondFlavour(slotPos), slotPos);
+          const attachDecision = shouldAttachFinisher({
+            dayNum: slot.num,
+            requestedCategory,
+            strengthContext: strengthContextOf(scStrength),
+          });
+          if (!attachDecision.attach) continue;
         }
 
         const score = scoreCandidate(candidate, slot, slotIdx);
@@ -3232,67 +3345,73 @@ function buildWeeklyPlan(
         // the shared eligibility law (4A). Lower/hinge days downgrade to
         // easy off-feet aerobic; hard finishers need readiness + headroom.
         const requestedCategory = flavourToSelectedCategory(bestFlavour || pickCondFlavour(pos), pos);
-        const decision = finisherEligibility({
+        const decision = shouldAttachFinisher({
           dayNum: slot.num,
           requestedCategory,
           strengthContext: strengthContextOf(bestSCStrength),
         });
-        const category = decision.allow ? decision.category : 'aerobic_base';
-        // Flavour is DERIVED from the final category (single source) so
-        // flavour/category/label/stress always agree — no more "tempo"
-        // wrapping a hard VO2 block.
-        const flavour = categoryToFlavour(category);
-        const strengthFocus = buildFocus(bestSCStrength);
-        // Lower-body S+C always prefers off-feet modality (bike / rower /
-        // ski erg) — even the easy finisher spares the legs.
-        const lowerStrengthSC = isLower(bestSCStrength);
-        const useNonRunning = lowerStrengthSC;
-        const condLabel = buildCondLabel(flavour, category, useNonRunning);
-        // B1/B2: stress from the PLACED components (not the pickers, which
-        // are stateful): lower/FB strength half or HARD conditioning half
-        // → high; upper + easy aerobic / tempo (4B: medium) → medium.
-        // Team day → high.
-        const scStress: 'high' | 'medium' = slot.isTeamDay ||
-          isLower(bestSCStrength) ||
-          (category !== 'aerobic_base' && category !== 'tempo')
-          ? 'high' : 'medium';
+        if (!decision.attach) {
+          // Defensive fallback. Candidate selection already filters these
+          // out, but never convert a denied/skipped finisher into filler.
+          placeStrengthCandidate(bestSCStrength, slot, pos, isConsecutiveDay);
+        } else {
+          const category = decision.category;
+          // Flavour is DERIVED from the final category (single source) so
+          // flavour/category/label/stress always agree — no more "tempo"
+          // wrapping a hard VO2 block.
+          const flavour = categoryToFlavour(category);
+          const strengthFocus = buildFocus(bestSCStrength);
+          // Lower-body S+C always prefers off-feet modality (bike / rower /
+          // ski erg) — even the easy finisher spares the legs.
+          const lowerStrengthSC = isLower(bestSCStrength);
+          const useNonRunning = lowerStrengthSC;
+          const condLabel = buildCondLabel(flavour, category, useNonRunning);
+          // B1/B2: stress from the PLACED components (not the pickers, which
+          // are stateful): lower/FB strength half or HARD conditioning half
+          // → high; upper + easy aerobic / tempo (4B: medium) → medium.
+          // Team day → high.
+          const scStress: 'high' | 'medium' = slot.isTeamDay ||
+            isLower(bestSCStrength) ||
+            (category !== 'aerobic_base' && category !== 'tempo')
+            ? 'high' : 'medium';
 
-        plan.push({
-          tier: 'core',
-          focus: `${strengthFocus} + ${condLabel}`,
-          dayOfWeek: slot.dayName,
-          isHardExposure: true,
-          hasCombinedConditioning: true,
-          conditioningFlavour: flavour,
-          conditioningCategory: category,
-          strengthPattern: buildStrengthPattern(bestSCStrength),
-          stressLevel: scStress,
-        });
+          plan.push({
+            tier: 'core',
+            focus: `${strengthFocus} + ${condLabel}`,
+            dayOfWeek: slot.dayName,
+            isHardExposure: true,
+            hasCombinedConditioning: true,
+            conditioningFlavour: flavour,
+            conditioningCategory: category,
+            strengthPattern: buildStrengthPattern(bestSCStrength),
+            stressLevel: scStress,
+          });
 
-        // Update state for BOTH strength and conditioning
-        st.coreStrengthCount++;
-        st.condCount += 0.75;
-        st.condFlavours[flavour]++;
-        st.condCategories[category]++;
-        // Pattern count for the strength component
-        if (bestSCStrength === 'L-sq') st.sqCount++;
-        if (bestSCStrength === 'L-hi') st.hiCount++;
-        if (bestSCStrength === 'U-pu') st.puCount++;
-        if (bestSCStrength === 'U-pl') st.plCount++;
-        if (isLower(bestSCStrength)) {
-          st.lowerCount++;
-          st.lastLowerDay = pos;
-          st.lastLowerSubtype = bestSCStrength;
+          // Update state for BOTH strength and conditioning
+          st.coreStrengthCount++;
+          st.condCount += 0.75;
+          st.condFlavours[flavour]++;
+          st.condCategories[category]++;
+          // Pattern count for the strength component
+          if (bestSCStrength === 'L-sq') st.sqCount++;
+          if (bestSCStrength === 'L-hi') st.hiCount++;
+          if (bestSCStrength === 'U-pu') st.puCount++;
+          if (bestSCStrength === 'U-pl') st.plCount++;
+          if (isLower(bestSCStrength)) {
+            st.lowerCount++;
+            st.lastLowerDay = pos;
+            st.lastLowerSubtype = bestSCStrength;
+          }
+          if (isUpper(bestSCStrength)) {
+            st.upperCount++;
+            st.lastUpperDay = pos;
+            st.lastUpperSubtype = bestSCStrength;
+          }
+          st.lastCondDay = pos;
+          st.lastCondCategory = category;
+          st.lastCoreSubtype = bestSCStrength;
+          updateStressStreak(scStress, isConsecutiveDay);
         }
-        if (isUpper(bestSCStrength)) {
-          st.upperCount++;
-          st.lastUpperDay = pos;
-          st.lastUpperSubtype = bestSCStrength;
-        }
-        st.lastCondDay = pos;
-        st.lastCondCategory = category;
-        st.lastCoreSubtype = bestSCStrength;
-        updateStressStreak(scStress, isConsecutiveDay);
 
       } else if (bestCandidate === 'COND') {
         // Standalone conditioning also passes the shared eligibility law
@@ -3344,54 +3463,7 @@ function buildWeeklyPlan(
         updateStressStreak(condStress, isConsecutiveDay);
 
       } else if (STRENGTH_CANDIDATES.includes(bestCandidate)) {
-        // B1: upper strength is MEDIUM stress; lower / FB are HIGH.
-        const strengthStress: 'high' | 'medium' = slot.isTeamDay || isLower(bestCandidate)
-          ? 'high' : 'medium';
-        plan.push({
-          tier: 'core',
-          focus: buildFocus(bestCandidate),
-          dayOfWeek: slot.dayName,
-          isHardExposure: true,
-          strengthPattern: buildStrengthPattern(bestCandidate),
-          stressLevel: strengthStress,
-        });
-        st.coreStrengthCount++;
-        // Pattern counts
-        if (bestCandidate === 'L-sq') st.sqCount++;
-        if (bestCandidate === 'L-hi') st.hiCount++;
-        if (bestCandidate === 'U-pu') st.puCount++;
-        if (bestCandidate === 'U-pl') st.plCount++;
-        if (bestCandidate === 'L-co') {
-          // Combined lower covers both lower sub-patterns at moderate dose.
-          st.sqCount += 0.5; st.hiCount += 0.5;
-        }
-        if (bestCandidate === 'U-co') {
-          // Combined upper covers both upper sub-patterns at moderate dose.
-          st.puCount += 0.5; st.plCount += 0.5;
-        }
-        if (bestCandidate === 'FB') {
-          // FB partially covers all patterns
-          st.sqCount += 0.5; st.hiCount += 0.5;
-          st.puCount += 0.5; st.plCount += 0.5;
-          st.fbCount++;
-          // FB updates upper tracking but NOT lastLowerDay —
-          // FB is moderate load and should not block next-day dedicated lower via H3
-          st.upperCount++;
-          st.lastUpperDay = pos;
-          st.lowerCount++;
-        } else if (isLower(bestCandidate)) {
-          // L-sq / L-hi / L-co — all load the lower chain and count for H3.
-          st.lowerCount++;
-          st.lastLowerDay = pos;
-          st.lastLowerSubtype = bestCandidate;
-        } else if (isUpper(bestCandidate)) {
-          // U-pu / U-pl / U-co — all load the upper chain.
-          st.upperCount++;
-          st.lastUpperDay = pos;
-          st.lastUpperSubtype = bestCandidate;
-        }
-        st.lastCoreSubtype = bestCandidate;
-        updateStressStreak(strengthStress, isConsecutiveDay);
+        placeStrengthCandidate(bestCandidate, slot, pos, isConsecutiveDay);
 
       } else if (bestCandidate === 'ACC') {
         plan.push({
@@ -3473,12 +3545,12 @@ function buildWeeklyPlan(
         // team-adjacent and game-window days stay protected.
         const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
         const requestedCategory = flavourToSelectedCategory(pickCondFlavour(slotPos), slotPos);
-        const decision = finisherEligibility({
+        const decision = shouldAttachFinisher({
           dayNum,
           requestedCategory,
           strengthContext: strengthContextOf(s.strengthPattern),
         });
-        if (!decision.allow) continue;
+        if (!decision.attach) continue;
         const category = decision.category;
         const flavour = categoryToFlavour(category);
         // Lower-body sessions always take the off-feet modality — even
@@ -4234,7 +4306,7 @@ function applyInSeasonConditioningFloor(
     s.conditioningFlavour = 'aerobic';
     if (isLower) {
       s.ergModality = 'mixed'; // bike / rower / ski erg
-      s.focus = `${s.focus} + easy aerobic finisher (bike/rower, ≤${durationCap}, low intensity)`;
+      s.focus = `${s.focus} + easy aerobic finisher (bike steady or row/ski intervals, ≤${durationCap}, low intensity)`;
     } else {
       // Upper / non-strength day — running OK (legs are fresh).
       s.focus = `${s.focus} + easy aerobic finisher (≤${durationCap}, low intensity)`;

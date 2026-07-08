@@ -718,6 +718,55 @@ function easyBetweenReps(seconds: number): string {
     : `${seconds}s easy between reps`;
 }
 
+type AerobicErgPrescription = {
+  title: string;
+  workLine: string;
+  sets: number;
+  restSeconds: number;
+  restLine?: string;
+};
+
+function aerobicErgPrescription(
+  mod: ErgModality,
+  desiredMinutes: number,
+  label: 'zone 2' | 'easy' | 'aerobic flush',
+): AerobicErgPrescription {
+  const modLabel = modLabelFromErgSelection(mod);
+  const isBike = mod === 'bike' || mod === 'bike_erg';
+  if (isBike) {
+    return {
+      title: `${desiredMinutes}min ${label} ${modLabel}`,
+      workLine: `${desiredMinutes}min ${label} on ${modLabel}`,
+      sets: 1,
+      restSeconds: 0,
+    };
+  }
+
+  const isShort = desiredMinutes <= 10 && mod !== 'mixed';
+  if (isShort) {
+    return {
+      title: `${desiredMinutes}min ${label} ${modLabel}`,
+      workLine: `${desiredMinutes}min ${label} on ${modLabel}`,
+      sets: 1,
+      restSeconds: 0,
+    };
+  }
+
+  const blockMin = desiredMinutes <= 20 ? 10 : 8;
+  const blocks = desiredMinutes <= 20 ? 2 : Math.max(3, Math.floor(desiredMinutes / blockMin));
+  const actualTotal = blocks * blockMin;
+  const workLine = mod === 'mixed'
+    ? `${blocks} x ${blockMin}min ${label}, alternating Rower and SkiErg`
+    : `${blocks} x ${blockMin}min ${label} on ${modLabel}`;
+  return {
+    title: `${blocks} x ${blockMin}min ${label} ${modLabel}`,
+    workLine,
+    sets: blocks,
+    restSeconds: 120,
+    restLine: `2min easy between blocks (${actualTotal}min total work)`,
+  };
+}
+
 interface MachineSprintPrescription {
   reps: number;
   seconds: number;
@@ -1155,16 +1204,17 @@ function buildReducedAerobicBase(
 ): WorkoutExercise[] {
   const hash = conditioningDateHash(dateStr);
   const prefix = `cond-${dateStr}`;
-  const modalities = ['bike', 'row'] as const;
-  const mod = ergModality === 'row' || ergModality === 'bike'
+  const modalities = ['bike', 'row', 'ski'] as const;
+  const mod = ergModality === 'row' || ergModality === 'bike' || ergModality === 'ski'
     ? ergModality
     : modalities[hash % modalities.length];
-  const modLabel = mod === 'bike' ? 'Assault Bike' : 'Rower';
   const duration = 20 + (hash % 3) * 5; // 20, 25, or 30 min
+  const prescription = aerobicErgPrescription(mod, duration, 'easy');
   return [
-    condEx(`${prefix}-easy-flush`, `Easy Aerobic Flush (${duration}min ${modLabel})`, 1, 1, 1, 1, 0,
+    condEx(`${prefix}-easy-flush`, `Easy Aerobic Flush (${prescription.title})`, 1, prescription.sets, 1, 1, prescription.restSeconds,
       noteLines(
-        `${duration}min easy on ${modLabel}`,
+        prescription.workLine,
+        prescription.restLine,
         '3-4/10 effort',
         'Recovery pace',
       )),
@@ -1218,19 +1268,19 @@ export function buildCombinedConditioningTemplate(
   const isMixed = ergModality === 'mixed';
   const selectedErgModality: ErgModality = isMixed ? 'mixed' : mod;
   const modLabel = modLabelFromErgSelection(selectedErgModality);
-  const aerobicTitleMod = isMixed
-    ? 'Row + SkiErg'
-    : mod === 'bike' ? 'bike' : mod === 'row' ? 'rower' : mod === 'bike_erg' ? 'BikeErg' : 'SkiErg';
   const pairingNote = isLowerPairing ? LOWER_BODY_MACHINE_NOTE : undefined;
 
   switch (category) {
     case 'aerobic_base': {
-      // 20–25min zone 2 — lift first, then a controlled aerobic finisher.
+      // Bike can run steady for 20-25min. Row/Ski longer than 10min is
+      // intervalised so a finisher never becomes one long erg slog.
       const duration = 20 + (hash % 2) * 5; // 20 or 25 min
+      const prescription = aerobicErgPrescription(selectedErgModality, duration, 'zone 2');
       return [
-        condEx(`${prefix}-aero`, `${duration}min zone 2 ${aerobicTitleMod}`, 1, 1, 1, 1, 0,
+        condEx(`${prefix}-aero`, prescription.title, 1, prescription.sets, 1, 1, prescription.restSeconds,
           noteLines(
-            `${duration}min zone 2 on Bike, Rower, SkiErg, or Assault Bike.`,
+            prescription.workLine,
+            prescription.restLine,
             '5-6/10 effort',
             isLowerPairing ? LOWER_BODY_MACHINE_NOTE : 'Conversational pace',
           )),
@@ -1421,10 +1471,12 @@ export function buildCombinedConditioningTemplate(
       ];
     }
     default:
+      const prescription = aerobicErgPrescription(selectedErgModality, 20, 'zone 2');
       return [
-        condEx(`${prefix}-aero`, `20min zone 2 ${mod}`, 1, 1, 1, 1, 0,
+        condEx(`${prefix}-aero`, prescription.title, 1, prescription.sets, 1, 1, prescription.restSeconds,
           noteLines(
-            `20min zone 2 on ${modLabel}`,
+            prescription.workLine,
+            prescription.restLine,
             '5-6/10 effort',
             pairingNote ?? 'Conversational pace',
           )),
@@ -1898,30 +1950,33 @@ function buildConditioningTemplateRaw(
       const duration = 35 + (hash % 3) * 5; // 35–45 min
       let modLabel: string;
       let modNote: string | undefined;
+      let ergPrescription: AerobicErgPrescription | null = null;
       if (ergModality === 'bike') {
         modLabel = 'Assault Bike';
-        modNote = undefined;
+        ergPrescription = aerobicErgPrescription('bike', duration, 'zone 2');
       } else if (ergModality === 'row') {
         modLabel = 'Rower';
-        modNote = undefined;
+        ergPrescription = aerobicErgPrescription('row', duration, 'zone 2');
       } else if (ergModality === 'ski') {
         modLabel = 'SkiErg';
-        modNote = undefined;
+        ergPrescription = aerobicErgPrescription('ski', duration, 'zone 2');
       } else if (ergModality === 'mixed') {
         modLabel = 'Row + SkiErg';
-        modNote = 'Alternate 5min blocks';
+        ergPrescription = aerobicErgPrescription('mixed', duration, 'zone 2');
       } else {
         const modVariant = hash % 5;
-        const pair =
-          modVariant === 0 || modVariant === 1
-            ? ['run', undefined]
-            : modVariant === 2
-            ? ['Assault Bike', undefined]
-            : modVariant === 3
-            ? ['Rower', undefined]
-            : ['SkiErg', undefined];
-        modLabel = pair[0] as string;
-        modNote = pair[1] as string | undefined;
+        if (modVariant === 0 || modVariant === 1) {
+          modLabel = 'run';
+        } else if (modVariant === 2) {
+          modLabel = 'Assault Bike';
+          ergPrescription = aerobicErgPrescription('bike', duration, 'zone 2');
+        } else if (modVariant === 3) {
+          modLabel = 'Rower';
+          ergPrescription = aerobicErgPrescription('row', duration, 'zone 2');
+        } else {
+          modLabel = 'SkiErg';
+          ergPrescription = aerobicErgPrescription('ski', duration, 'zone 2');
+        }
       }
       // Structure variant: drive by feel if supplied, else hash.
       //   flowing → pure steady    (default aerobic character)
@@ -1931,16 +1986,18 @@ function buildConditioningTemplateRaw(
         : feel === 'sharp' ? 1
         : feel === 'grindy' ? 2
         : hash % 3;
-      const structBlock =
-        structVariant === 0
+      const structBlock = ergPrescription
+        ? ergPrescription.workLine
+        : structVariant === 0
           ? `${duration}min zone 2 on ${modLabel}`
           : structVariant === 1
           ? `${duration}min zone 2 on ${modLabel} + 3 x 60s surges`
           : `${duration}min: 4min zone 2 / 1min high-zone 2 on ${modLabel}`;
       return [
-        condEx(`${prefix}-run`, `${duration}min zone 2 ${modLabel}`, 1, 1, 1, 1, 0,
+        condEx(`${prefix}-run`, ergPrescription?.title ?? `${duration}min zone 2 ${modLabel}`, 1, ergPrescription?.sets ?? 1, 1, 1, ergPrescription?.restSeconds ?? 0,
           noteLines(
             structBlock,
+            ergPrescription?.restLine,
             '5-6/10 effort',
             modNote ?? 'Conversational pace',
           )),
@@ -1962,11 +2019,11 @@ function buildConditioningTemplateRaw(
 
     case 'Easy Row':
       return [condEx(`${prefix}-row`, 'Easy row', 1, 1, 1, 1, 0,
-        noteLines('15-20min easy row', '3-4/10 effort', 'Recovery pace'))];
+        noteLines('8-10min easy row', '3-4/10 effort', 'Recovery pace'))];
 
     case 'Easy Ski':
       return [condEx(`${prefix}-ski`, 'Easy SkiErg', 1, 1, 1, 1, 0,
-        noteLines('15-20min easy SkiErg', '3-4/10 effort', 'Recovery pace'))];
+        noteLines('8-10min easy SkiErg', '3-4/10 effort', 'Recovery pace'))];
 
     case 'Easy Swim':
       return [condEx(`${prefix}-swim`, 'Easy swim', 1, 1, 1, 1, 0,
@@ -2353,10 +2410,12 @@ export function switchToOffFeetModality(
     // ── Aerobic → Steady-state machine ──
     case 'Long Nasal Run': {
       const duration = 35 + (hash % 3) * 5;
+      const prescription = aerobicErgPrescription(mod, duration, 'zone 2');
       return [
-        condEx(`${prefix}-steady`, `${duration}min zone 2 ${mod}`, 1, 1, 1, 1, 0,
+        condEx(`${prefix}-steady`, prescription.title, 1, prescription.sets, 1, 1, prescription.restSeconds,
           noteLines(
-            `${duration}min zone 2 on ${modLabel}`,
+            prescription.workLine,
+            prescription.restLine,
             '5-6/10 effort',
             'Conversational pace',
           )),
@@ -2410,12 +2469,13 @@ export function buildAerobicFlushFinisher(
   const duration = 15 + (hash % 4) * 5; // 15, 20, 25, or 30 min
   const modalities = ['bike', 'row', 'ski'] as const;
   const mod = modalities[hash % modalities.length];
-  const modLabel = modLabelFromErg(mod);
+  const prescription = aerobicErgPrescription(mod, duration, 'aerobic flush');
 
   return [
-    condEx(`${prefix}-flush-finisher`, `Aerobic flush (${duration}min ${modLabel})`, 99, 1, 1, 1, 0,
+    condEx(`${prefix}-flush-finisher`, `Aerobic flush (${prescription.title})`, 99, prescription.sets, 1, 1, prescription.restSeconds,
       noteLines(
-        `${duration}min aerobic flush on ${modLabel}`,
+        prescription.workLine,
+        prescription.restLine,
         '30s moderate / 30s easy',
         '5-6/10 effort',
       )),
