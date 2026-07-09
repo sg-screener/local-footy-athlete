@@ -31,7 +31,7 @@ export const FEEDBACK_FORM_SECTION_LABELS = {
   feeling: 'How did the session feel?',
   partialFeeling: 'How did the completed part feel?',
   soreness: 'How sore are you?',
-  partialReason: 'Optional reason:',
+  partialReason: 'Why did you only complete part of it?',
   skipReason: 'Why did you skip it?',
   conditioning: 'Conditioning performance',
   notes: 'Add a note',
@@ -127,6 +127,11 @@ export function getVisibleFeedbackSections(
   if (completion === 'partial') {
     sections.push(
       {
+        id: 'partialReason',
+        label: FEEDBACK_FORM_SECTION_LABELS.partialReason,
+        required: true,
+      },
+      {
         id: 'feeling',
         label: FEEDBACK_FORM_SECTION_LABELS.partialFeeling,
         required: true,
@@ -144,18 +149,11 @@ export function getVisibleFeedbackSections(
         required: false,
       });
     }
-    sections.push(
-      {
-        id: 'partialReason',
-        label: FEEDBACK_FORM_SECTION_LABELS.partialReason,
-        required: false,
-      },
-      {
-        id: 'notes',
-        label: FEEDBACK_FORM_SECTION_LABELS.notes,
-        required: false,
-      },
-    );
+    sections.push({
+      id: 'notes',
+      label: FEEDBACK_FORM_SECTION_LABELS.notes,
+      required: false,
+    });
   }
 
   if (completion === 'skipped') {
@@ -351,6 +349,9 @@ export function canSaveFeedbackDraft(draft: FeedbackFormDraft): boolean {
   );
 
   if (completion === 'full' || completion === 'partial') {
+    if (completion === 'partial' && componentEntries.length === 0 && !draft.partialReason) {
+      return false;
+    }
     return !!(draft.feeling && draft.soreness);
   }
 

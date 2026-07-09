@@ -68,14 +68,21 @@ section('3. Partially completed flow');
 {
   const partialIds = ids('partial');
   assert(
-    partialIds.join(',') === 'completion,feeling,soreness,partialReason,notes',
-    `partial flow expands feel, soreness, reason, note (${partialIds.join(',')})`,
+    partialIds.join(',') === 'completion,partialReason,feeling,soreness,notes',
+    `partial flow puts reason directly after completion (${partialIds.join(',')})`,
   );
   assert(
     labels('partial').includes('How did the completed part feel?'),
     'partial uses completed-part feel copy',
   );
-  assert(labels('partial').includes('Optional reason:'), 'partial includes optional reason');
+  assert(
+    labels('partial').includes('Why did you only complete part of it?'),
+    'partial asks a specific completion reason',
+  );
+  assert(
+    getVisibleFeedbackSections('partial').find((entry) => entry.id === 'partialReason')?.required === true,
+    'partial reason is required',
+  );
 }
 
 section('4. Skipped flow');
@@ -210,14 +217,24 @@ section('7. Save requirements');
     'full can save with feel and soreness',
   );
   assert(
-    canSaveFeedbackDraft({
+    !canSaveFeedbackDraft({
       completion: 'partial',
       feeling: 'hard',
       soreness: 'mild',
       partialReason: null,
       skipReason: null,
     }),
-    'partial can save without optional reason',
+    'partial cannot save before a reason is selected',
+  );
+  assert(
+    canSaveFeedbackDraft({
+      completion: 'partial',
+      feeling: 'hard',
+      soreness: 'mild',
+      partialReason: 'too_hard_today',
+      skipReason: null,
+    }),
+    'partial can save with reason, feel and soreness',
   );
   assert(
     !canSaveFeedbackDraft({

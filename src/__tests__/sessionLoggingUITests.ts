@@ -31,6 +31,10 @@ const feedbackPanel = fs.readFileSync(
   path.resolve(__dirname, '..', 'components', 'SessionFeedbackPanel.tsx'),
   'utf8',
 );
+const feedbackForm = fs.readFileSync(
+  path.resolve(__dirname, '..', 'utils', 'sessionFeedbackForm.ts'),
+  'utf8',
+);
 
 console.log('\n=== 1. Main finish CTA is not gated by team training ===');
 assert(!/!isFinished\s*&&\s*!hasTeamTraining/.test(classic), 'Classic finish CTA is not hidden by team training');
@@ -66,6 +70,28 @@ assert(
 assert(
   /!hasComponentFlow && hasSection\('skipReason'\)/.test(feedbackPanel),
   'generic skip reason is not shown in component flow',
+);
+
+console.log('\n=== 4. Generic reasons sit directly below completion ===');
+const completionIndex = feedbackPanel.indexOf('{hasComponentFlow ? (');
+const partialReasonIndex = feedbackPanel.indexOf("!hasComponentFlow && hasSection('partialReason')");
+const skipReasonIndex = feedbackPanel.indexOf("!hasComponentFlow && hasSection('skipReason')");
+const feelingIndex = feedbackPanel.indexOf("hasSection('feeling')");
+const skippedTransitionStart = feedbackForm.indexOf("if (nextCompletion === 'skipped')");
+const skippedTransition = feedbackForm.slice(skippedTransitionStart, skippedTransitionStart + 300);
+assert(
+  completionIndex >= 0 && partialReasonIndex > completionIndex && partialReasonIndex < feelingIndex,
+  'generic partial reason renders before feel and soreness follow-ups',
+);
+assert(
+  completionIndex >= 0 && skipReasonIndex > completionIndex && skipReasonIndex < feelingIndex,
+  'generic skip reason renders before any performed-session follow-ups',
+);
+assert(
+  skippedTransitionStart >= 0 &&
+    skippedTransition.includes('feeling: null') &&
+    skippedTransition.includes('soreness: null'),
+  'skipped transition clears hidden feel and soreness state',
 );
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);

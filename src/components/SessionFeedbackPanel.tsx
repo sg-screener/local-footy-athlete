@@ -623,6 +623,44 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
         </>
       )}
 
+      {!hasComponentFlow && hasSection('partialReason') ? (
+        <>
+          <SectionLabel style={styles.section}>
+            {FEEDBACK_FORM_SECTION_LABELS.partialReason}
+          </SectionLabel>
+          <View style={styles.row}>
+            {PARTIAL_REASON_OPTIONS.map((opt) => (
+              <FeedbackChip
+                key={opt.key}
+                label={opt.label}
+                selected={partialReason === opt.key}
+                selectedColor={colors.accent.lime}
+                onPress={() => setPartialReason(opt.key)}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {!hasComponentFlow && hasSection('skipReason') ? (
+        <>
+          <SectionLabel style={styles.section}>
+            {FEEDBACK_FORM_SECTION_LABELS.skipReason}
+          </SectionLabel>
+          <View style={styles.row}>
+            {SKIP_REASON_OPTIONS.map((opt) => (
+              <FeedbackChip
+                key={opt.key}
+                label={opt.label}
+                selected={skipReason === opt.key}
+                selectedColor={colors.accent.lime}
+                onPress={() => setSkipReason(opt.key)}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
       {hasSection('feeling') ? (
         <>
           <SectionLabel style={styles.section}>
@@ -745,44 +783,6 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
               returnKeyType="done"
             />
           ) : null}
-        </>
-      ) : null}
-
-      {!hasComponentFlow && hasSection('partialReason') ? (
-        <>
-          <SectionLabel style={styles.section}>
-            {FEEDBACK_FORM_SECTION_LABELS.partialReason}
-          </SectionLabel>
-          <View style={styles.row}>
-            {PARTIAL_REASON_OPTIONS.map((opt) => (
-              <FeedbackChip
-                key={opt.key}
-                label={opt.label}
-                selected={partialReason === opt.key}
-                selectedColor={colors.accent.lime}
-                onPress={() => setPartialReason(opt.key)}
-              />
-            ))}
-          </View>
-        </>
-      ) : null}
-
-      {!hasComponentFlow && hasSection('skipReason') ? (
-        <>
-          <SectionLabel style={styles.section}>
-            {FEEDBACK_FORM_SECTION_LABELS.skipReason}
-          </SectionLabel>
-          <View style={styles.row}>
-            {SKIP_REASON_OPTIONS.map((opt) => (
-              <FeedbackChip
-                key={opt.key}
-                label={opt.label}
-                selected={skipReason === opt.key}
-                selectedColor={colors.accent.lime}
-                onPress={() => setSkipReason(opt.key)}
-              />
-            ))}
-          </View>
         </>
       ) : null}
 
