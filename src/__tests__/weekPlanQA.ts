@@ -49,6 +49,7 @@ import {
   scenarioDisplayLabel,
   scenarioTocLine,
 } from './weekPlanQA/scenarioMetadata';
+import { renderExpectedWeekShapeDiff } from './weekPlanQA/weekShapeDiff';
 import { renderWeekShapeSummary } from './weekPlanQA/weekShapeSummary';
 
 // ═══════════════════════════════════════════════════
@@ -553,6 +554,16 @@ function printScenario(
   console.log(`  Readiness: ${plan.readiness}  |  Core: ${plan.coreSessions}  Optional: ${plan.optionalSessions}  Recovery: ${plan.recoverySessions}`);
   console.log(`${'─'.repeat(72)}`);
   console.log(renderWeekShapeSummary({
+    resolvedWeek,
+    validationReport,
+    seasonPhase: scenario.onboarding.seasonPhase,
+    gameDay,
+    teamTrainingDays: scenario.onboarding.teamTrainingDays,
+    weekKind,
+  }));
+  console.log('');
+  console.log(renderExpectedWeekShapeDiff({
+    scenarioId: scenario.id,
     resolvedWeek,
     validationReport,
     seasonPhase: scenario.onboarding.seasonPhase,

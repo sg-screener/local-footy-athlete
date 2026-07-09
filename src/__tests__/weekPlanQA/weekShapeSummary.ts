@@ -3,6 +3,33 @@ import type { ResolvedDay } from '../../utils/sessionResolver';
 import type { WeekValidationReport } from '../../rules/weekStructureValidator';
 import type { ClassifiedDay, ClassifiedUnit } from '../../rules/weeklyExposureCounts';
 
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
+
+export type WeekShapeDayLabel = (typeof DAY_SHORT)[number];
+
+export interface WeekShapeCountsSummary {
+  hardDays: number;
+  mainStrength: number;
+  conditioning: number;
+  running: number;
+  sprintCod: number;
+}
+
+export interface WeekShapeSnapshot {
+  days: Partial<Record<WeekShapeDayLabel, string>>;
+  tiers: Partial<Record<WeekShapeDayLabel, string>>;
+  counts: WeekShapeCountsSummary | null;
+  anchors: {
+    teamTrainingDays: WeekShapeDayLabel[];
+    fixtureDays: WeekShapeDayLabel[];
+    fixtureLabel: string;
+  };
+  hardDays: WeekShapeDayLabel[];
+  gMinusOneLightDays: WeekShapeDayLabel[];
+  stackedDays: string[];
+  weekKind: string;
+}
+
 export interface WeekShapeSummaryInput {
   resolvedWeek: ResolvedDay[] | null;
   validationReport: WeekValidationReport | null;
@@ -11,8 +38,6 @@ export interface WeekShapeSummaryInput {
   teamTrainingDays?: readonly string[];
   weekKind?: WeekKind | null;
 }
-
-const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 function dateAtNoon(dateISO: string): Date {
   return new Date(`${dateISO}T12:00:00Z`);
@@ -24,8 +49,8 @@ function addDaysISO(dateISO: string, days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-function dayLabelFromDate(dateISO: string): string {
-  return DAY_SHORT[dateAtNoon(dateISO).getUTCDay()] ?? dateISO;
+function dayLabelFromDate(dateISO: string): WeekShapeDayLabel {
+  return DAY_SHORT[dateAtNoon(dateISO).getUTCDay()] ?? 'Mon';
 }
 
 function compactList(labels: readonly string[]): string {
@@ -98,10 +123,14 @@ function anchorLine(input: WeekShapeSummaryInput): string {
 }
 
 function stackedLine(report: WeekValidationReport | null, phase?: SeasonPhase): string {
-  const stacked = (report?.counts.days ?? [])
+  const stacked = stackedDayLabels(report, phase);
+  return `  Stacked days: ${stacked.length > 0 ? stacked.join('; ') : 'none'}`;
+}
+
+function stackedDayLabels(report: WeekValidationReport | null, phase?: SeasonPhase): string[] {
+  return (report?.counts.days ?? [])
     .filter((day) => day.units.length > 1)
     .map((day) => `${dayLabelFromDate(day.date)}: ${unitsLabel(day, phase)}`);
-  return `  Stacked days: ${stacked.length > 0 ? stacked.join('; ') : 'none'}`;
 }
 
 function isLightDay(day: ClassifiedDay | undefined): boolean {
@@ -150,6 +179,64 @@ function noteLines(input: WeekShapeSummaryInput): string[] {
   }
 
   return notes;
+}
+
+export function buildWeekShapeSnapshot(input: WeekShapeSummaryInput): WeekShapeSnapshot | null {
+  if (!input.resolvedWeek) return null;
+
+  const classifiedByDate = new Map((input.validationReport?.counts.days ?? []).map((day) => [day.date, day]));
+  const days: Partial<Record<WeekShapeDayLabel, string>> = {};
+  const tiers: Partial<Record<WeekShapeDayLabel, string>> = {};
+
+  for (const day of input.resolvedWeek) {
+    const label = dayLabelFromDate(day.date);
+    days[label] = unitsLabel(classifiedByDate.get(day.date), input.seasonPhase);
+    tiers[label] = tierLabel(day);
+  }
+
+  const counts = input.validationReport?.counts
+    ? {
+      hardDays: input.validationReport.counts.hardDays,
+      mainStrength: input.validationReport.counts.mainStrengthExposures,
+      conditioning: input.validationReport.counts.conditioningExposures,
+      running: input.validationReport.counts.runningExposures,
+      sprintCod: input.validationReport.counts.sprintCodExposures,
+    }
+    : null;
+
+  const teamTrainingDates = input.validationReport?.anchorsUsed.teamTrainingDates ?? [];
+  const gameDates = input.validationReport?.anchorsUsed.gameDates ?? [];
+  const teamTrainingDays = teamTrainingDates.length > 0
+    ? teamTrainingDates.map(dayLabelFromDate)
+    : (input.teamTrainingDays ?? []).map((day) => configuredDayLabel(day) as WeekShapeDayLabel);
+  const fixtureDays = gameDates.length > 0
+    ? gameDates.map(dayLabelFromDate)
+    : input.gameDay && input.gameDay !== 'none'
+      ? [configuredDayLabel(input.gameDay) as WeekShapeDayLabel]
+      : [];
+
+  const daysByDate = new Map((input.validationReport?.counts.days ?? []).map((day) => [day.date, day]));
+  const gMinusOneLightDays = gameDates
+    .map((gameDate) => addDaysISO(gameDate, -1))
+    .filter((date) => isLightDay(daysByDate.get(date)))
+    .map(dayLabelFromDate);
+
+  return {
+    days,
+    tiers,
+    counts,
+    anchors: {
+      teamTrainingDays,
+      fixtureDays,
+      fixtureLabel: fixtureLabel(input.seasonPhase),
+    },
+    hardDays: (input.validationReport?.counts.days ?? [])
+      .filter((day) => day.isHardDay)
+      .map((day) => dayLabelFromDate(day.date)),
+    gMinusOneLightDays,
+    stackedDays: stackedDayLabels(input.validationReport, input.seasonPhase),
+    weekKind: input.weekKind ?? 'unknown',
+  };
 }
 
 export function buildWeekShapeSummaryLines(input: WeekShapeSummaryInput): string[] {
