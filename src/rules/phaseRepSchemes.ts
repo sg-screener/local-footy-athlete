@@ -10,7 +10,7 @@
  *   Pre-season: 2-4 sets of 4-6 reps (3x5 base); pulls 4-8.
  *   Off-season: 2-4 sets of 6-8 reps (3x8 base); pulls 6-12;
  *               push 6-10 when the goal is muscle.
- *   Accessories: 2-3 x 8-15 (pump work 10-20); Nordics 2-3 x 3-6;
+ *   Accessories: 2-3 x 8-15 (pump work 10-20); Nordics 2-3 x 3-5;
  *               timed holds 2-3 x 30-60s; carries 2-4 x 20-60m/30-60s.
  */
 
@@ -68,7 +68,7 @@ export interface AccessoryGuideline {
 export const ACCESSORY_REP_GUIDELINES: Record<string, AccessoryGuideline> = {
   general: { setsMin: 2, setsMax: 3, min: 8, max: 15, unit: 'reps', note: 'Standard accessory range; ~6-7/10, pump not soreness.' },
   pump: { setsMin: 2, setsMax: 3, min: 10, max: 20, unit: 'reps', note: 'Arms/delts/upper-back pump; arms may go to failure in gunshow.' },
-  nordics: { setsMin: 2, setsMax: 3, min: 3, max: 6, unit: 'reps', note: 'Keep Nordics low rep — high soreness cost.' },
+  nordics: { setsMin: 2, setsMax: 3, min: 3, max: 5, unit: 'reps', note: 'Keep Nordics low rep — high soreness cost.' },
   timedHold: { setsMin: 2, setsMax: 3, min: 30, max: 60, unit: 'seconds', note: 'Planks/isometrics; groin/knee holds 20-45s.' },
   carries: { setsMin: 2, setsMax: 4, min: 20, max: 60, unit: 'metres', note: 'Or 30-60 seconds per carry.' },
 };

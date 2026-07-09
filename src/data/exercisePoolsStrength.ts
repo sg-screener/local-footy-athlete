@@ -322,6 +322,9 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
     anchor: {
       slot: 'carry', role: 'anchor', entries: [
         { name: 'Farmer Carry',   loadRatio: 1.00 },
+        // Bear-hug/sandbag carries usually cap out before farmer handles, so
+        // use ~75% of Farmer Carry as the carry-slot load reference.
+        { name: 'Bear Carry',     loadRatio: 0.75 },
         { name: 'Overhead Carry', loadRatio: 0.55 },
       ],
     },

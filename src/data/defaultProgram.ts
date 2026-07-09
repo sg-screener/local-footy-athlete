@@ -468,7 +468,7 @@ function createDefaultMicrocycle(programId: string, onboardingData?: OnboardingD
         { exerciseId: 'ex-trap-bar-deadlift', sets: 4, repsMin: 6, repsMax: 8, weight: 120, rest: 150 },
         { exerciseId: 'ex-hip-thrusts', sets: 3, repsMin: 10, repsMax: 12, weight: 80, rest: 90 },
         { exerciseId: 'ex-walking-lunges', sets: 3, repsMin: 10, repsMax: 10, weight: 30, rest: 90 },
-        { exerciseId: 'ex-nordic-lower', sets: 3, repsMin: 6, repsMax: 8, weight: 0, rest: 90 },
+        { exerciseId: 'ex-nordic-lower', sets: 3, repsMin: 3, repsMax: 5, weight: 0, rest: 90 },
         { exerciseId: 'ex-leg-extension', sets: 3, repsMin: 10, repsMax: 12, weight: 0, rest: 90 },
         { exerciseId: 'ex-calf-raises', sets: 3, repsMin: 12, repsMax: 15, weight: 0, rest: 60 },
       ],
@@ -807,7 +807,7 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
     return [
       { name: 'RDLs', sets: 3, repsMin: 6, repsMax: 8 },
       { name: 'Hip Thrusts', sets: 3, repsMin: 8, repsMax: 10 },
-      { name: 'Nordic Lower', sets: 2, repsMin: 5, repsMax: 8 },
+      { name: 'Nordic Lower', sets: 2, repsMin: 3, repsMax: 5 },
     ];
   }
   if (/squat|quad|lower body/i.test(lower)) {

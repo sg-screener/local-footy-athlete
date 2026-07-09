@@ -323,6 +323,14 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: "Stay tall - don't lean into the weight.",
     secondaryCue: 'Resist the side bend.',
   },
+  'Bear Carry': {
+    primaryCue: 'Hug the load tight, ribs down.',
+    secondaryCue: 'Short steady steps, no leaning back.',
+  },
+  'Bottoms-Up KB Carry': {
+    primaryCue: 'Bell vertical, wrist stacked over elbow.',
+    secondaryCue: 'Walk slowly, keep the shoulder packed.',
+  },
 
   // ═══════════════════════════════════════════════════
   // TRUNK / CORE
@@ -377,6 +385,14 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Top leg on the bench, drive through the inner thigh.',
     secondaryCue: 'Hold tension, no dropping.',
   },
+  'Short-Lever Copenhagen': {
+    primaryCue: 'Top knee supported, hips stacked.',
+    secondaryCue: 'Controlled hold, no groin pinch.',
+  },
+  'Long-Lever Copenhagen': {
+    primaryCue: 'Top ankle supported, hips high.',
+    secondaryCue: 'Short controlled holds only.',
+  },
   'Groin Squeeze (Band Adductor)': {
     primaryCue: 'Squeeze the band between the knees.',
     secondaryCue: 'Hold each squeeze for a beat.',
@@ -390,9 +406,17 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Full drop at the bottom, pause, then rise.',
     secondaryCue: 'Three-second lowering.',
   },
+  'Calf Raises': {
+    primaryCue: 'Full heel drop, rise onto the big toe.',
+    secondaryCue: 'Pause high, lower slowly.',
+  },
   'Seated Calf Raise': {
     primaryCue: 'Bent knee, full range top to bottom.',
     secondaryCue: 'Slow tempo, no bouncing.',
+  },
+  'Tib Raise': {
+    primaryCue: 'Pull the toes up against the resistance.',
+    secondaryCue: 'Controlled reps, full range.',
   },
   'Tibialis Raise': {
     primaryCue: 'Pull the toes up against the resistance.',
@@ -410,6 +434,14 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   'Banded External Rotation': {
     primaryCue: 'Elbow at 90 degrees, rotate against the band.',
     secondaryCue: 'Slow and controlled arc.',
+  },
+  'Scap Push-Up': {
+    primaryCue: 'Keep elbows locked, glide shoulder blades.',
+    secondaryCue: 'Move slowly, no sagging hips.',
+  },
+  'Bottoms-Up KB Press': {
+    primaryCue: 'Bell vertical, wrist stacked.',
+    secondaryCue: 'Press smooth, keep ribs down.',
   },
   // ═══════════════════════════════════════════════════
   // PLYO / JUMP

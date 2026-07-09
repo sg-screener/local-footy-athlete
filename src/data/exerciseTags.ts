@@ -341,14 +341,14 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
-    injury: SAFE,
+    injury: inj({ calf: 'caution', ankle: 'caution' }),
   },
 
   'Tibialis Raise': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
-    injury: SAFE,
+    injury: inj({ calf: 'caution', ankle: 'caution' }),
   },
 
   'Single-Leg Calf Raise': {
@@ -835,14 +835,21 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     movement: 'carry', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
-    injury: inj({ wrist: 'caution', lowerBack: 'caution' }),
+    injury: inj({ lowerBack: 'caution', shoulder: 'caution', elbow: 'caution', wrist: 'caution' }),
   },
 
   'Suitcase Carry': {
     movement: 'carry', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'moderate', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
-    injury: inj({ wrist: 'caution', lowerBack: 'caution', adductor: 'caution', pubalgia: 'caution' }),
+    injury: inj({ lowerBack: 'caution', shoulder: 'caution', elbow: 'caution', wrist: 'caution', adductor: 'caution', pubalgia: 'caution' }),
+  },
+
+  'Bear Carry': {
+    movement: 'carry', region: 'upper', load: 'moderate', fatigue: 'moderate',
+    doms: 'low', stability: 'moderate', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({ lowerBack: 'caution', shoulder: 'caution', elbow: 'caution', wrist: 'caution' }),
   },
 
   'Overhead Carry': {
@@ -881,14 +888,14 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     movement: 'horizontal_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
-    injury: SAFE,
+    injury: inj({ shoulder: 'caution' }),
   },
 
   'Cable Face Pull': {
     movement: 'horizontal_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
-    injury: SAFE,
+    injury: inj({ shoulder: 'caution' }),
   },
 
   'Rear Delt Fly': {

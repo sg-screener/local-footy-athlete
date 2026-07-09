@@ -203,6 +203,7 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Bottoms-Up KB Press':      { anchor: 'bench', ratio: 0.08, equipment: 'kettlebell' },
   'Explosive Landmine Press': { anchor: 'bench', ratio: 0.25, equipment: 'barbell' },
   'Bottoms-Up KB Carry':      { anchor: 'squat', ratio: 0.12, equipment: 'kettlebell' },
+  'Bear Carry':               { anchor: 'squat', ratio: 0.30, equipment: 'dumbbell' },
 
   // ═══ CORE (low load — most are BW but some use cable/band) ═══
   'Woodchop (Standing)':      { anchor: 'bench', ratio: 0.12, equipment: 'cable' },
@@ -330,7 +331,11 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'bottoms up carry':                       'Bottoms-Up KB Carry',
   'bottoms-up carry':                       'Bottoms-Up KB Carry',
   'bottoms up kb carry':                    'Bottoms-Up KB Carry',
+  'bottoms-up kb carry':                    'Bottoms-Up KB Carry',
   'bottoms-up kettlebell carry':            'Bottoms-Up KB Carry',
+  'bear carry':                             'Bear Carry',
+  'bear carries':                           'Bear Carry',
+  'bear hug carry':                         'Bear Carry',
 
   // ── Row variants ──
   'bent-over row':            'Barbell Row',
@@ -465,6 +470,7 @@ const EXERCISE_ALIASES: Record<string, string> = {
   // ── Lower machine ──
   'calf raise':               'Calf Raises',
   'standing calf raise':      'Calf Raises',
+  'standing calf raises':     'Calf Raises',
   'machine calf raise':       'Calf Raises',
 
   // ── Plyo ──
@@ -514,6 +520,11 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'cable woodchops':          'Woodchop (Standing)',
   'cable chop':               'Woodchop (Standing)',
   'cable chops':              'Woodchop (Standing)',
+  'cable lift':               'Woodchop (Half Kneeling)',
+  'cable lifts':              'Woodchop (Half Kneeling)',
+  'half-kneeling cable lift': 'Woodchop (Half Kneeling)',
+  'half kneeling cable lift': 'Woodchop (Half Kneeling)',
+  'low to high cable lift':   'Woodchop (Half Kneeling)',
   'band woodchop':            'Woodchop (Standing)',
   'cable or band woodchop':   'Woodchop (Standing)',
   'half-kneeling cable chop': 'Woodchop (Half Kneeling)',
@@ -573,10 +584,10 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'spanish squat':              'Spanish Squat Hold',
   'spanish squat hold':         'Spanish Squat Hold',
   'spanish squat iso':          'Spanish Squat Hold',
-  'tibialis raise':             'Tib Raise',
-  'tibialis raises':            'Tib Raise',
-  'tib raises':                 'Tib Raise',
-  'tib raise':                  'Tib Raise',
+  'tibialis raise':             'Tibialis Raise',
+  'tibialis raises':            'Tibialis Raise',
+  'tib raises':                 'Tibialis Raise',
+  'tib raise':                  'Tibialis Raise',
   'copenhagen':                 'Copenhagen Plank',
   'copenhagen plank':           'Copenhagen Plank',
   'copenhagen planks':          'Copenhagen Plank',
