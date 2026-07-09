@@ -26,11 +26,14 @@ import { rebuildLocalWeek } from '../utils/weekRebuild';
 import { addDays } from '../utils/sessionResolver';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useProgramStore } from '../store/programStore';
+import { useReadinessStore } from '../store/readinessStore';
 import {
   loadReductionModifierIdForDate,
   recoveryModeModifierIdForDate,
 } from '../utils/tapProgramModifiers';
 import { selectActiveCoachNotes } from '../utils/activeCoachNotes';
+import { getActiveProgramModifiers } from '../utils/activeProgramModifiers';
+import { todayISOLocal } from '../utils/appDate';
 import type { OnboardingData } from '../types/domain';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -52,6 +55,7 @@ function ok(name: string, cond: boolean, detail?: string) {
 
 function resetWorld() {
   useProgramStore.getState().clearManualOverrides();
+  useReadinessStore.getState().clear();
   useCoachUpdatesStore.setState((s: unknown) => ({
     ...(s as object),
     activeConstraints: [],
@@ -67,8 +71,10 @@ const PRESEASON: Partial<OnboardingData> = {
   motivation: 'Get stronger',
 };
 
-const applyReadiness = (kind: 'tired' | 'sick', anchorISO: string, todayISO: string) =>
-  kind === 'sick'
+type ReadinessOption = 'tired_today' | 'cooked_week' | 'sore_today' | 'sick_week';
+
+const applyReadiness = (kind: ReadinessOption, anchorISO: string, todayISO: string) =>
+  kind === 'sick_week'
     ? executeProgramControlAction({
         type: 'set_recovery_mode',
         source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
@@ -79,21 +85,46 @@ const applyReadiness = (kind: 'tired' | 'sick', anchorISO: string, todayISO: str
     : executeProgramControlAction({
         type: 'set_fatigue_status',
         source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-        scope: 'current_week',
-        payload: { date: anchorISO, todayISO, level: 'cooked' },
+        scope: kind === 'cooked_week' ? 'current_week' : 'today_only',
+        payload: {
+          date: kind === 'cooked_week' ? anchorISO : todayISO,
+          todayISO,
+          level: kind === 'cooked_week'
+            ? 'cooked'
+            : kind === 'sore_today'
+              ? 'sore'
+              : 'low_energy',
+        },
         requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
       }, { todayISO });
 
 // ═════════════════════════════════════════════════════════════════════
-console.log('\n── 1. Week-scoped modifier creation (existing system reused) ──');
+console.log('\n── 1. Every wellbeing option uses its existing deterministic owner ──');
 {
   resetWorld();
   const todayISO = '2026-07-06'; // a Monday
   const futureMonday = addDays(todayISO, 14);
-  const res = applyReadiness('tired', futureMonday, todayISO);
+
+  const tired = applyReadiness('tired_today', futureMonday, todayISO);
+  const tiredSignal = useReadinessStore.getState().signalsByDate[todayISO];
+  ok('tired today writes the existing today-scoped low-energy signal',
+    tired.ok && tiredSignal?.energy === 'low' && !tiredSignal?.soreness,
+    JSON.stringify(tiredSignal));
+  ok('tired today does not create a week load-reduction modifier',
+    !useCoachUpdatesStore.getState().activeConstraints.some((x) => x.id === loadReductionModifierIdForDate(futureMonday)));
+
+  resetWorld();
+  const sore = applyReadiness('sore_today', futureMonday, todayISO);
+  const soreSignal = useReadinessStore.getState().signalsByDate[todayISO];
+  ok('sore or tight writes the existing today-scoped soreness signal',
+    sore.ok && soreSignal?.soreness === 'moderate' && !soreSignal?.energy,
+    JSON.stringify(soreSignal));
+
+  resetWorld();
+  const res = applyReadiness('cooked_week', futureMonday, todayISO);
   const expectedId = loadReductionModifierIdForDate(futureMonday);
   const c: any = useCoachUpdatesStore.getState().activeConstraints.find((x) => x.id === expectedId);
-  ok('low readiness creates the existing load-reduction modifier', res.ok && !!c, JSON.stringify(res));
+  ok('cooked creates the existing load-reduction modifier', res.ok && !!c, JSON.stringify(res));
   ok('modifier is scoped to the SELECTED week (id keyed by that Monday)',
     expectedId === `tap-load-reduction:${futureMonday}`, expectedId);
   ok('modifier expires at the end of the selected week',
@@ -108,8 +139,8 @@ console.log('\n── 1. Week-scoped modifier creation (existing system reused) 
       todayISO,
     } as never)));
 
-  // Sick replaces with the recovery-mode modifier (different id, same week).
-  const res2 = applyReadiness('sick', futureMonday, todayISO);
+  resetWorld();
+  const res2 = applyReadiness('sick_week', futureMonday, todayISO);
   const recId = recoveryModeModifierIdForDate(futureMonday);
   ok('sick creates the existing recovery-mode modifier (week scope)',
     res2.ok && useCoachUpdatesStore.getState().activeConstraints.some((x) => x.id === recId));
@@ -137,7 +168,7 @@ console.log('\n── 2. Stacks with busy/away + game; survives canonical rebuil
   } as never, { intent: 'program_adjustment', activeModifierId: awayId });
 
   // Readiness for the same week.
-  applyReadiness('tired', wk2Mon, blockStart);
+  applyReadiness('cooked_week', wk2Mon, blockStart);
   const readinessId = loadReductionModifierIdForDate(wk2Mon);
 
   // Add the Saturday practice match through the canonical door.
@@ -186,7 +217,37 @@ console.log('\n── 3. Clearing removes ONLY the readiness modifier ──');
 }
 
 // ═════════════════════════════════════════════════════════════════════
-console.log('\n── 4. Program screen source: card, placement, phases, sheet ──');
+console.log('\n── 4. Today-scoped clear removes only wellbeing state ──');
+{
+  resetWorld();
+  const todayISO = todayISOLocal();
+  executeProgramControlAction({
+    type: 'set_schedule_modifier',
+    source: { screen: 'program_tab', surface: 'busy_away_sheet_busy', initiatedBy: 'tap' },
+    scope: 'current_week',
+    payload: { date: todayISO, todayISO, severity: 5, reasonLabel: 'Busy week' },
+    requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+  }, { todayISO });
+  applyReadiness('tired_today', todayISO, todayISO);
+  const readinessModifier = getActiveProgramModifiers(todayISO)
+    .find((modifier) => modifier.source === 'readiness_signal');
+  ok('today readiness signal has an active modifier for card clear', !!readinessModifier);
+  const cleared = executeProgramControlAction({
+    type: 'clear_active_modifier',
+    source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+    scope: 'today_only',
+    payload: { modifierId: readinessModifier?.id ?? '' },
+    requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+  }, { todayISO });
+  ok('today readiness clear succeeds', cleared.ok === true, JSON.stringify(cleared));
+  ok('today readiness signal is removed', !useReadinessStore.getState().signalsByDate[todayISO]);
+  ok('today readiness clear leaves busy modifier untouched',
+    useCoachUpdatesStore.getState().activeConstraints.some((constraint) => constraint.type === 'schedule'));
+  resetWorld();
+}
+
+// ═════════════════════════════════════════════════════════════════════
+console.log('\n── 5. Program screen source: card, placement, phases, sheet ──');
 {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const fs = require('fs');
@@ -211,15 +272,33 @@ console.log('\n── 4. Program screen source: card, placement, phases, sheet �
     cardBlock.includes('{isNormal && (') && !cardBlock.includes('showPracticeMatchCTA') && !cardBlock.includes('currentPhase'));
   ok('tapping opens the readiness sheet (state wiring present)',
     src.includes('setReadinessVisible(true)') && src.includes('home-week-readiness-sheet'));
-  ok('sheet offers the wellbeing options',
-    src.includes('Feeling sore / tight') && src.includes('Low energy / tired') &&
+  ok('sheet offers all six athlete-facing options',
+    src.includes('Just a bit tired today') && src.includes('Cooked / need an easier week') &&
+    src.includes('Sore or tight') &&
     src.includes('Sick / run down') && src.includes('Niggle or injury') &&
-    src.includes('Need an easier week'));
+    src.includes('Short on time'));
+  ok('sheet maps readiness choices to distinct deterministic routes',
+    src.includes("onApply('tired_today')") && src.includes("onApply('cooked_week')") &&
+    src.includes("onApply('sore_today')") && src.includes("onApply('sick_week')") &&
+    src.includes('onPress={onInjury}') && src.includes('onPress={onShortTime}'));
+  ok('short-on-time hands off to the existing Busy/Away sheet',
+    /onShortTime=\{\(\) => \{[\s\S]{0,160}setBusyAwayVisible\(true\)/.test(src));
   ok('active state label + update/clear affordances present',
-    src.includes("Not 100% this week") && src.includes('Recovery mode this week') &&
+    src.includes('Not 100% today') && src.includes("Not 100% this week") &&
+    src.includes('Recovery mode this week') &&
     src.includes('Clear adjustment'));
+  ok('Busy/Away and practice-match cards retain their tap handlers',
+    src.includes('home-busy-away-entry') && src.includes('setBusyAwayVisible(true)') &&
+    src.includes('preseason-practice-match-entry') && src.includes('onPress={handlePracticeMatchPress}'));
   ok('no coach-chat / LLM in the flow (no askCoach or fetch in readiness paths)',
     !/WeekReadinessSheet[\s\S]{0,4000}onAskCoach/.test(src));
+
+  const hookSrc = fs.readFileSync(`${__dirname}/../screens/home/useHomeScreen.ts`, 'utf8') as string;
+  ok('hook keeps today and week scopes distinct',
+    hookSrc.includes("scope: kind === 'cooked_week' ? 'current_week' : 'today_only'") &&
+    hookSrc.includes("kind === 'sore_today'") && hookSrc.includes("kind === 'sick_week'"));
+  ok('update cleanup is limited to readiness signal and the selected week readiness IDs',
+    hookSrc.includes("modifier.source === 'readiness_signal' || weekReadinessIds.has(modifier.sourceId)"));
 
   // Day-level wellbeing flow untouched.
   const planSheet = fs.readFileSync(`${__dirname}/../screens/home/PlanChangeSheet.tsx`, 'utf8') as string;

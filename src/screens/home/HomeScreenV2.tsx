@@ -22,7 +22,7 @@ import { splitSessionName } from '../../utils/sessionNaming';
 import { weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import { spacing, borderRadius } from '../../theme/spacing';
-import { useHomeScreen } from './useHomeScreen';
+import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
 import type {
   ActiveCoachNote,
   ActiveCoachNoteAction,
@@ -111,6 +111,7 @@ export default function HomeScreenV2() {
     currentPhase,
     coachNotes,
     activeConstraints,
+    todayReadinessModifier,
     handleClearCoachNote,
     handleUpdateCoachNoteStatus,
     gameModalVisible,
@@ -186,13 +187,22 @@ export default function HomeScreenV2() {
       const end = typeof c.expiresAt === 'string' ? c.expiresAt : undefined;
       return !(end && end < todayISO);
     });
-    if (!match) return null;
+    if (match) {
+      return {
+        id: match.id as string,
+        isRecovery: match.id === ids[0],
+        title: String(match.modifierTitle ?? match.reasonLabel ?? 'Readiness adjusted'),
+        scope: 'week' as const,
+      };
+    }
+    if (!isThisWeek || !todayReadinessModifier) return null;
     return {
-      id: match.id as string,
-      isRecovery: match.id === ids[0],
-      title: String(match.modifierTitle ?? match.reasonLabel ?? 'Readiness adjusted'),
+      id: todayReadinessModifier.id,
+      isRecovery: false,
+      title: todayReadinessModifier.title,
+      scope: 'today' as const,
     };
-  }, [readinessActiveConstraints, weekAnchorISO]);
+  }, [isThisWeek, readinessActiveConstraints, todayReadinessModifier, weekAnchorISO]);
 
   const handleCoachNoteAction = (
     note: ActiveCoachNote,
@@ -436,7 +446,11 @@ export default function HomeScreenV2() {
                 </View>
                 <Text style={styles.busyAwayText}>
                   {weekReadiness
-                    ? (weekReadiness.isRecovery ? 'Recovery mode this week' : 'Not 100% this week')
+                    ? (weekReadiness.scope === 'today'
+                        ? 'Not 100% today'
+                        : weekReadiness.isRecovery
+                          ? 'Recovery mode this week'
+                          : 'Not 100% this week')
                     : "I'm not 100%"}
                 </Text>
               </View>
@@ -516,6 +530,10 @@ export default function HomeScreenV2() {
         onInjury={() => {
           setReadinessVisible(false);
           setReadinessInjuryVisible(true);
+        }}
+        onShortTime={() => {
+          setReadinessVisible(false);
+          setBusyAwayVisible(true);
         }}
       />
 
@@ -1566,21 +1584,30 @@ function MissedChip({ label, primary, onPress }: {
   );
 }
 
-// ── Busy / away this week sheet ──
+// ── Weekly "I'm not 100%" sheet ──
 interface WeekReadinessSheetProps {
   visible: boolean;
-  active: { id: string; isRecovery: boolean; title: string } | null;
+  active: { id: string; isRecovery: boolean; title: string; scope: 'today' | 'week' } | null;
   onClose: () => void;
-  onApply: (kind: 'sore' | 'tired' | 'sick' | 'easier') => void | Promise<void>;
+  onApply: (kind: WeekReadinessAction) => void | Promise<void>;
   onClear: (modifierId: string) => void | Promise<void>;
   onInjury: () => void;
+  onShortTime: () => void;
 }
 
 /**
- * Weekly readiness sheet — simple tap options, no chat. Reuses the same
- * modifiers as the day-level wellbeing flow, scoped to the viewed week.
+ * Weekly readiness sheet — simple tap options, no chat. Reuses today's
+ * readiness signal and the existing viewed-week fatigue modifiers.
  */
-function WeekReadinessSheet({ visible, active, onClose, onApply, onClear, onInjury }: WeekReadinessSheetProps) {
+function WeekReadinessSheet({
+  visible,
+  active,
+  onClose,
+  onApply,
+  onClear,
+  onInjury,
+  onShortTime,
+}: WeekReadinessSheetProps) {
   const [updating, setUpdating] = useState(false);
 
   React.useEffect(() => {
@@ -1601,7 +1628,7 @@ function WeekReadinessSheet({ visible, active, onClose, onApply, onClear, onInju
         <View>
           <Text style={styles.sheetTitle}>{active.title}</Text>
           <Text style={styles.busyAwayEmpty}>
-            This week is adjusted around how you said you're feeling. Clear
+            {active.scope === 'today' ? 'Today is' : 'This week is'} adjusted around how you said you're feeling. Clear
             the adjustment when you're good again.
           </Text>
           <SheetOption
@@ -1627,19 +1654,25 @@ function WeekReadinessSheet({ visible, active, onClose, onApply, onClear, onInju
         <View>
           <Text style={styles.sheetTitle}>Not 100%? What's going on?</Text>
           <SheetOption
-            label="Feeling sore / tight"
-            icon={pulseIcon('#FF7A85')}
-            onPress={() => onApply('sore')}
+            label="Just a bit tired today"
+            icon={pulseIcon('#FFC247')}
+            onPress={() => onApply('tired_today')}
           />
           <SheetOption
-            label="Low energy / tired"
-            icon={pulseIcon('#FFC247')}
-            onPress={() => onApply('tired')}
+            label="Cooked / need an easier week"
+            accent
+            icon={pulseIcon('#C8FF00')}
+            onPress={() => onApply('cooked_week')}
+          />
+          <SheetOption
+            label="Sore or tight"
+            icon={pulseIcon('#FF7A85')}
+            onPress={() => onApply('sore_today')}
           />
           <SheetOption
             label="Sick / run down"
             icon={pulseIcon('#1EA7FF')}
-            onPress={() => onApply('sick')}
+            onPress={() => onApply('sick_week')}
           />
           <SheetOption
             label="Niggle or injury"
@@ -1651,10 +1684,13 @@ function WeekReadinessSheet({ visible, active, onClose, onApply, onClear, onInju
             onPress={onInjury}
           />
           <SheetOption
-            label="Need an easier week"
-            accent
-            icon={pulseIcon('#C8FF00')}
-            onPress={() => onApply('easier')}
+            label="Short on time"
+            icon={
+              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <Path d="M12 6v6l4 2" /><Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
+              </Svg>
+            }
+            onPress={onShortTime}
           />
           <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
         </View>

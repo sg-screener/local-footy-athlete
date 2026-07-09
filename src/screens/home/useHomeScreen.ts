@@ -26,7 +26,10 @@ import {
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { applyPhaseShift } from '../../utils/profileMutations';
 import { selectActiveCoachNotes } from '../../utils/activeCoachNotes';
-import { getActiveProgramModifiers } from '../../utils/activeProgramModifiers';
+import {
+  getActiveProgramModifiers,
+  type ActiveProgramModifier,
+} from '../../utils/activeProgramModifiers';
 import {
   executeProgramControlAction,
   type ProgramControlActionResult,
@@ -64,6 +67,11 @@ import { logger } from '../../utils/logger';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
+export type WeekReadinessAction =
+  | 'tired_today'
+  | 'cooked_week'
+  | 'sore_today'
+  | 'sick_week';
 
 const targetStatusModifierKind = (
   status: ProgramControlStatusUpdate,
@@ -211,6 +219,12 @@ export function useHomeScreen() {
   const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
   const modalityPreferences = useCoachPreferencesStore((s) => s.modalityPreferences);
   const readinessSignalsByDate = useReadinessStore((s) => s.signalsByDate);
+  const todayReadinessModifier = useMemo<ActiveProgramModifier | null>(() => {
+    const todayISO = todayISOLocal();
+    if (!readinessSignalsByDate[todayISO]) return null;
+    return getActiveProgramModifiers(todayISO)
+      .find((modifier) => modifier.source === 'readiness_signal') ?? null;
+  }, [readinessSignalsByDate]);
   const visibleWeekStart = weekDays[0]?.date;
   const visibleWeekKind = useMemo(() => {
     if (!visibleWeekStart) return undefined;
@@ -942,40 +956,37 @@ export function useHomeScreen() {
     return result;
   }, [handleProgramControlResult]);
 
-  // ── Weekly readiness ("I'm not 100%") — week-scoped wellbeing card ──
-  // Reuses the EXISTING tap modifiers (no second readiness system):
-  //   sore / tired / easier → upsertTapLoadReductionModifier (severity 7,
-  //     "Load reduced this week")
-  //   sick → upsertTapRecoveryModeModifier week scope (severity 8,
-  //     "Recovery mode active")
-  // Both are week-keyed by the anchor date (id + expiresAt derive from
-  // that week's Monday), so passing a SELECTED-week date scopes the
-  // adjustment to that week. Constraints layer onto the resolved week at
-  // render time and survive every rebuild via the canonical weekRebuild
-  // context — busy/away, game anchors and manual edits are untouched.
+  // ── Weekly readiness ("I'm not 100%") ──
+  // This surface only routes into existing owners: today's readiness signal
+  // for tired/sore, week load reduction for cooked, and week recovery mode
+  // for sick. Updating replaces wellbeing state only; busy/away and injury
+  // modifiers remain independent.
   const handleApplyWeekReadiness = useCallback(async (
-    kind: 'sore' | 'tired' | 'sick' | 'easier',
+    kind: WeekReadinessAction,
     anchorDateISO: string,
   ) => {
     const todayISO = todayISOLocal();
-    // One readiness adjustment per week: switching kind replaces the other.
-    const otherId = kind === 'sick'
-      ? loadReductionModifierIdForDate(anchorDateISO)
-      : recoveryModeModifierIdForDate(anchorDateISO);
-    const otherModifier = getActiveProgramModifiers()
-      .find((m) => m.sourceId === otherId);
-    if (otherModifier) {
-      executeProgramControlAction({
+    const weekReadinessIds = new Set([
+      loadReductionModifierIdForDate(anchorDateISO),
+      recoveryModeModifierIdForDate(anchorDateISO),
+    ]);
+    const existingWellbeing = getActiveProgramModifiers(todayISO).filter((modifier) =>
+      modifier.source === 'readiness_signal' || weekReadinessIds.has(modifier.sourceId));
+
+    for (const modifier of existingWellbeing) {
+      const clearResult = executeProgramControlAction({
         type: 'clear_active_modifier',
         source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
         scope: 'current_week',
-        payload: { modifierId: otherModifier.id },
+        payload: { modifierId: modifier.id },
         requiresRebuild: false,
         createsActiveModifier: false,
         oneOffOnly: false,
       }, { todayISO });
+      await handleProgramControlResult(clearResult);
     }
-    const result = kind === 'sick'
+
+    const result = kind === 'sick_week'
       ? executeProgramControlAction({
           type: 'set_recovery_mode',
           source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
@@ -988,8 +999,16 @@ export function useHomeScreen() {
       : executeProgramControlAction({
           type: 'set_fatigue_status',
           source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-          scope: 'current_week',
-          payload: { date: anchorDateISO, todayISO, level: 'cooked' },
+          scope: kind === 'cooked_week' ? 'current_week' : 'today_only',
+          payload: {
+            date: kind === 'cooked_week' ? anchorDateISO : todayISO,
+            todayISO,
+            level: kind === 'cooked_week'
+              ? 'cooked'
+              : kind === 'sore_today'
+                ? 'sore'
+                : 'low_energy',
+          },
           requiresRebuild: false,
           createsActiveModifier: true,
           oneOffOnly: false,
@@ -1394,6 +1413,7 @@ export function useHomeScreen() {
     currentPhase,
     coachNotes,
     activeConstraints,
+    todayReadinessModifier,
     handleClearCoachNote,
     handleUpdateCoachNoteStatus,
 
