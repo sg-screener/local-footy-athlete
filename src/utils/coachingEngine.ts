@@ -29,6 +29,7 @@ import type {
 import { logger } from './logger';
 import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
 import { logAllocationWeekValidation } from '../rules/weekStructureValidator';
+import { evaluateSprintExposureGate } from '../rules/sprintExposureGate';
 import type {
   GenerationConstraintContext,
   GenerationInjuryConstraint,
@@ -1260,9 +1261,9 @@ function buildWeeklyPlan(
 
     // ── Category-based weekly distribution (off-season / pre-season) ──
     // Priority order (head = highest priority — covered first when slots
-    // are limited). Off-season uses the full priority; pre-season drops
-    // aerobic + sprint to the bottom because team training already covers
-    // those (long runs + sprint work happen at training).
+    // are limited). Off-season uses the full priority; pre-season keeps
+    // sprint late in the pool and lets `sprintExposureGate` decide whether
+    // field anchors already cover the week's sprint/COD target.
     // 4B design decision: tempo is NOT a coverage category. Weekly
     // coverage stays category-native — tempo enters a week ONLY through
     // the eligibility downgrade ladder (hard → tempo → aerobic). Making
@@ -1273,9 +1274,7 @@ function buildWeeklyPlan(
     // regression in strengthSequencingTests). Coverage pressure is
     // structural; tempo is opportunistic.
     // Sprint is deliberately absent from off-season automatic placement
-    // until the late-off-season speed-block model exists. Sprint Rescue
-    // still owns explicit sprint exposure, and currently drops it honestly
-    // in off-season rather than hiding it inside a finisher.
+    // until the late-off-season speed-block model exists.
     const CATEGORY_PRIORITY_OFF: CondCategory[] =
       ['aerobic_base', 'vo2', 'glycolytic'];
     const CATEGORY_PRIORITY_PRE: CondCategory[] =
@@ -1913,6 +1912,17 @@ function buildWeeklyPlan(
       recCount: 0,
     };
 
+    function sprintExposureGate(plannedOnFeetSprintExposures = st.condCategories.sprint) {
+      return evaluateSprintExposureGate({
+        phase: inputs.seasonPhase,
+        teamTrainingDays: Array.from(teamDayNumSet),
+        gameOrPracticeMatchDays: isGameWeek && gameDayNum !== null ? [gameDayNum] : [],
+        plannedOnFeetSprintExposures,
+        readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
+        injuryAllowsSprint: !blocksConditioningCategoryForGeneration('sprint'),
+      });
+    }
+
     // ── H-GAME: game-week proximity protection (ANY phase) ──
     // In-season game weeks use the dedicated G-relative branch above and
     // never reach this allocator. This protects PRE-SEASON (and any future
@@ -2128,12 +2138,13 @@ function buildWeeklyPlan(
 
       // Standalone sprint sessions (Sprint Rescue's only legal target):
       // deny in off-season (no late-block model yet — do not pretend the
-      // app knows "late off-season"), deny when TT/games already provide
-      // sprint exposure, deny below high readiness.
+      // app knows "late off-season"), use the exposure-counted pre-season
+      // gate for team/practice/game coverage, deny below high readiness.
       if (requestedCategory === 'sprint' && strengthContext === 'standalone') {
         if (inputs.seasonPhase === 'Off-season') return { allow: false, reason: 'sprint_offseason_no_late_flag' };
-        if (isGameWeek || teamDayNumSet.size > 0) return { allow: false, reason: 'sprint_covered_by_team_or_game' };
         if (readiness !== 'high') return { allow: false, reason: 'sprint_readiness' };
+        const gate = sprintExposureGate();
+        if (!gate.allowStandaloneSprint) return { allow: false, reason: gate.reason };
         return { allow: true, category: 'sprint', downgraded: false };
       }
 
@@ -2510,7 +2521,9 @@ function buildWeeklyPlan(
     }
 
     function autoPlacementCategories(): CondCategory[] {
-      return categoryPriority;
+      return categoryPriority.filter((category) =>
+        category !== 'sprint' || sprintExposureGate().allowStandaloneSprint,
+      );
     }
 
     // ── Pick conditioning category candidates (off-season / pre-season) ──
@@ -4054,18 +4067,10 @@ function buildWeeklyPlan(
     //      conditioning with a blocking predecessor), convert it to a
     //      3–4×10s flying-sprint micro-dose that's low enough volume to
     //      ignore sprint-protection safely.
-    // In off-season or team/game-loaded weeks, the eligibility law below
+    // In off-season or team/game-loaded weeks, the exposure gate below
     // drops sprint honestly rather than hiding it inside a finisher.
-    //
-    // B-GAME GUARD (2026-07-08): the rescue does NOT run in a game week.
-    // Sprint exposure there comes from team training + the game itself
-    // (Bible: pre-season sprint exposure "can be at team training, and
-    // generally is"). Without this guard the rescue retrofitted a sprint
-    // finisher onto S11's hinge-heavy Monday lower — a forbidden pairing,
-    // adjacent to Tuesday team training (H-PRE-3 bypass), and a 4th
-    // sprint/COD exposure on a week that already has 2×TT + game.
-    if (useCategoryPlanner && st.condCategories.sprint === 0 && !isGameWeek &&
-        !blocksConditioningCategoryForGeneration('sprint')) {
+    if (useCategoryPlanner && st.condCategories.sprint === 0 &&
+        sprintExposureGate(0).allowStandaloneSprint) {
       // Gather conditioning slots in chronological order. Use the original
       // slot positions (daySlots index == plan index at this point because
       // the sort-by-day happens later, below).
