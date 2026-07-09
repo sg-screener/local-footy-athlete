@@ -217,6 +217,14 @@ console.log('\n── 5. Label / flavour / category / stress consistency ──'
           s.conditioningFlavour === 'high-intensity', `${s.conditioningFlavour}: ${s.focus}`);
         ok(`hard category never labelled 'tempo' (${s.dayOfWeek})`,
           !/tempo/i.test(s.focus), s.focus);
+        if (s.conditioningCategory === 'vo2') {
+          ok(`VO2 label speaks VO2 / hard-repeat language (${s.dayOfWeek})`,
+            /VO2|hard repeat/i.test(s.focus), s.focus);
+        }
+        if (s.conditioningCategory === 'glycolytic') {
+          ok(`glycolytic label speaks high-intensity / repeat-effort language (${s.dayOfWeek})`,
+            /high-intensity|repeat effort/i.test(s.focus), s.focus);
+        }
       }
       if (s.conditioningCategory === 'aerobic_base') {
         ok(`aerobic category carries aerobic flavour (${s.dayOfWeek})`,
@@ -248,9 +256,9 @@ console.log('\n── 5. Label / flavour / category / stress consistency ──'
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 6. Upper + hard non-sprint allowed only when gates pass ──');
 {
-  // Healthy, high readiness, no TT, plenty of headroom: upper days MAY
-  // carry vo2/glycolytic. (Zone rotation decides; we assert legality both
-  // ways: any hard finisher present must sit on an UPPER day.)
+  // Healthy, high readiness, no TT, plenty of headroom: upper days can now
+  // carry vo2/glycolytic directly. The old flavour round-trip used to lose
+  // this by resolving high-intensity back to sprint/tempo.
   const plan = planFor({
     ...OFF_SEASON_BASE,
     recentTrainingLoad: 'Very consistent',
@@ -258,6 +266,9 @@ console.log('\n── 6. Upper + hard non-sprint allowed only when gates pass �
     sprintExposure: '2+ times per week',
   });
   const hardFinishers = plan.filter((s) => hasFinisher(s) && finisherHard(s));
+  ok('eligible clean off-season upper path produces at least one VO2/glyco finisher',
+    hardFinishers.some((s) => s.conditioningCategory === 'vo2' || s.conditioningCategory === 'glycolytic'),
+    plan.map((s) => `${s.dayOfWeek}:${s.strengthPattern ?? '-'}:${s.conditioningCategory ?? '-'}`).join(' | '));
   ok('any hard finisher sits on an upper day only',
     hardFinishers.every((s) => !isLowerish(s)),
     hardFinishers.map((s) => `${s.dayOfWeek}: ${s.strengthPattern}: ${s.focus}`).join(' | '));
@@ -268,18 +279,22 @@ console.log('\n── 6. Upper + hard non-sprint allowed only when gates pass �
 }
 
 // ═════════════════════════════════════════════════════════════════════
-console.log('\n── 7. 4B ladder: tempo appears on clean upper days; TT weeks stay conservative ──');
+console.log('\n── 7. Category-native hard work survives; TT weeks stay conservative ──');
 {
-  // S6 (no TT, no game): the zone picker's denied-hard requests must
-  // ladder to TEMPO on upper days — not collapse to all-aerobic
-  // ("highest useful recoverable dose, not lowest compliant dose").
+  // S6 (no TT, no game): hard category picks must reach eligibility as
+  // vo2/glycolytic and survive when allowed — not round-trip through
+  // high-intensity flavour and collapse to sprint/tempo/aerobic.
   const s6 = planFor(OFF_SEASON_BASE);
-  const s6Tempo = s6.filter((s) => s.conditioningCategory === 'tempo');
-  ok('S6: at least one tempo exposure in a clean off-season week',
-    s6Tempo.length >= 1, s6.map((s) => `${s.dayOfWeek}:${s.conditioningCategory ?? '-'}`).join(' | '));
-  ok('S6: every tempo exposure sits on an upper day',
-    s6Tempo.every((s) => !isLowerish(s)),
-    s6Tempo.map((s) => `${s.dayOfWeek}: ${s.strengthPattern}: ${s.focus}`).join(' | '));
+  const s6Hard = s6.filter((s) =>
+    s.conditioningCategory === 'vo2' || s.conditioningCategory === 'glycolytic');
+  ok('S6: VO2/glyco is reachable in a clean off-season week',
+    s6Hard.length >= 1, s6.map((s) => `${s.dayOfWeek}:${s.conditioningCategory ?? '-'}`).join(' | '));
+  ok('S6: every attached VO2/glyco exposure sits on an upper day',
+    s6Hard.filter(hasFinisher).every((s) => !isLowerish(s)),
+    s6Hard.map((s) => `${s.dayOfWeek}: ${s.strengthPattern}: ${s.focus}`).join(' | '));
+  ok('S6: sprint is not auto-requested in off-season attached paths',
+    s6.every((s) => s.conditioningCategory !== 'sprint'),
+    s6.map((s) => `${s.dayOfWeek}:${s.conditioningCategory ?? '-'}`).join(' | '));
 
   // S7 (3 TT days): every non-TT slot is TT-adjacent — tempo FINISHERS
   // must all have backed off to aerobic (v1: TT-adjacent tempo → aerobic).
@@ -296,6 +311,10 @@ console.log('\n── 7. 4B ladder: tempo appears on clean upper days; TT weeks 
   const s7TeamTempo = s7.filter((s) => s.isTeamDay && s.conditioningCategory === 'tempo');
   ok('S7: no tempo on team training days',
     s7TeamTempo.length === 0, s7TeamTempo.map((s) => s.focus).join(' | '));
+  const s7HardFinishers = s7.filter((s) => hasFinisher(s) && finisherHard(s));
+  ok('S7: no hard finishers in a 3-TT week (TT-adjacent protection)',
+    s7HardFinishers.length === 0,
+    s7HardFinishers.map((s) => `${s.dayOfWeek}: ${s.focus}`).join(' | '));
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -357,6 +376,11 @@ console.log('\n── 8. 4B standalone tempo modality law (typed conditioningOff
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 9. 4B content layer: mappings + true tempo templates ──');
 {
+  const fs = require('fs') as typeof import('fs');
+  const engineSrc = fs.readFileSync('src/utils/coachingEngine.ts', 'utf8');
+  ok('engine no longer converts selected category through flavour and back',
+    !engineSrc.includes('flavourToSelectedCategory'), 'flavourToSelectedCategory still exists');
+
   // Late requires keep the top-of-file import surface unchanged.
   const sb = require('../utils/sessionBuilder') as typeof import('../utils/sessionBuilder');
 

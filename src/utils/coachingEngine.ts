@@ -1183,16 +1183,20 @@ function buildWeeklyPlan(
     // aerobic + sprint to the bottom because team training already covers
     // those (long runs + sprint work happen at training).
     // 4B design decision: tempo is NOT a coverage category. Weekly
-    // coverage stays 4-way (aerobic_base / sprint / vo2 / glycolytic) —
-    // tempo enters a week ONLY through the eligibility downgrade ladder
-    // (hard → tempo → aerobic). Making tempo a must-cover 5th category
+    // coverage stays category-native — tempo enters a week ONLY through
+    // the eligibility downgrade ladder (hard → tempo → aerobic). Making
+    // tempo a must-cover 5th category
     // inflated conditioning scores everywhere (there is never room to
     // cover 5 systems in a real week), letting COND steal queue-strength
     // slots and breaking the signed-off weekly rhythm (Sunday-off
     // regression in strengthSequencingTests). Coverage pressure is
     // structural; tempo is opportunistic.
+    // Sprint is deliberately absent from off-season automatic placement
+    // until the late-off-season speed-block model exists. Sprint Rescue
+    // still owns explicit sprint exposure, and currently drops it honestly
+    // in off-season rather than hiding it inside a finisher.
     const CATEGORY_PRIORITY_OFF: CondCategory[] =
-      ['aerobic_base', 'sprint', 'vo2', 'glycolytic'];
+      ['aerobic_base', 'vo2', 'glycolytic'];
     const CATEGORY_PRIORITY_PRE: CondCategory[] =
       ['vo2', 'glycolytic', 'aerobic_base', 'sprint'];
 
@@ -1978,7 +1982,13 @@ function buildWeeklyPlan(
     }
 
     type FinisherAttachDecision =
-      | { attach: true; category: CondCategory; downgraded: boolean; offFeetOnly?: boolean }
+      | {
+          attach: true;
+          requestedCategory: CondCategory;
+          category: CondCategory;
+          downgraded: boolean;
+          offFeetOnly?: boolean;
+        }
       | { attach: false; reason: string };
 
     function steadyAerobicFinisherCount(): number {
@@ -2014,9 +2024,79 @@ function buildWeeklyPlan(
 
       return {
         attach: true,
+        requestedCategory: args.requestedCategory,
         category,
         downgraded: decision.downgraded,
         offFeetOnly: decision.offFeetOnly,
+      };
+    }
+
+    function shouldAttachBestFinisher(args: {
+      dayNum: number;
+      slotPos?: number;
+      strengthContext: FinisherStrengthContext;
+    }): FinisherAttachDecision {
+      const denied: Array<{ category: CondCategory; reason: string }> = [];
+      for (const requestedCategory of pickPlacementCondCategories(args.slotPos)) {
+        const decision = shouldAttachFinisher({
+          dayNum: args.dayNum,
+          requestedCategory,
+          strengthContext: args.strengthContext,
+        });
+        if ('reason' in decision) {
+          denied.push({ category: requestedCategory, reason: decision.reason });
+          continue;
+        }
+        return decision;
+      }
+      return {
+        attach: false,
+        reason: denied.length > 0
+          ? denied.map((d) => `${d.category}:${d.reason}`).join(',')
+          : 'no_category_candidates',
+      };
+    }
+
+    type StandaloneCondDecision =
+      | {
+          place: true;
+          requestedCategory: CondCategory;
+          category: CondCategory;
+          downgraded: boolean;
+          offFeetOnly?: boolean;
+        }
+      | { place: false; reason: string };
+
+    function pickStandaloneCondDecision(args: {
+      dayNum: number;
+      slotPos?: number;
+    }): StandaloneCondDecision {
+      const denied: Array<{ category: CondCategory; reason: string }> = [];
+      for (const requestedCategory of pickPlacementCondCategories(args.slotPos)) {
+        const decision = finisherEligibility({
+          dayNum: args.dayNum,
+          requestedCategory,
+          strengthContext: 'standalone',
+        });
+        if (decision.allow) {
+          return {
+            place: true,
+            requestedCategory,
+            category: decision.category,
+            downgraded: decision.downgraded,
+            offFeetOnly: decision.offFeetOnly,
+          };
+        }
+        denied.push({
+          category: requestedCategory,
+          reason: 'reason' in decision ? decision.reason : 'conditioning_denied',
+        });
+      }
+      return {
+        place: false,
+        reason: denied.length > 0
+          ? denied.map((d) => `${d.category}:${d.reason}`).join(',')
+          : 'no_category_candidates',
       };
     }
 
@@ -2229,46 +2309,43 @@ function buildWeeklyPlan(
       return false;
     }
 
-    // ── Pick conditioning category (off-season / pre-season) ──
+    function pushUniqueCategory(list: CondCategory[], category: CondCategory): void {
+      if (!list.includes(category)) list.push(category);
+    }
+
+    function autoPlacementCategories(): CondCategory[] {
+      return categoryPriority;
+    }
+
+    // ── Pick conditioning category candidates (off-season / pre-season) ──
     //
-    // Walks the priority order for the current phase. If `slotPos` is
-    // supplied, a zone-aware preference is layered on top so the week
-    // sequences intentionally:
-    //   - early (first third)  → VO2 / glycolytic  (higher fatigue up front)
-    //   - mid   (middle third) → sprint            (freshness-dependent quality)
-    //   - late  (last third)   → aerobic base      (low-fatigue deload feel)
-    //
-    // Sprint protection: when the previous day was conditioning with a
-    // vo2 or glycolytic category, sprint is skipped for the consecutive
-    // slot so the athlete is fresh for neural work.
-    //
-    // Short-week fallback: on 4-day weeks the mid zone is a single slot
-    // that often sits the day after an early vo2/glyco → sprint-blocked.
-    // When that happens, sprint falls through Pass 2 and lands wherever
-    // protection allows (typically late). Zone rule yields to protection.
-    //
-    // All four categories still get covered across the week — this only
-    // changes which uncovered category is picked FIRST at a given slot.
-    function pickCondCategory(slotPos?: number): CondCategory {
+    // Category is the source of truth. This returns a ranked list of
+    // concrete categories; eligibility then vets those exact categories and
+    // may deliberately downgrade. Flavour is derived AFTER the final
+    // category is placed, never used to reconstruct category intent.
+    function pickPlacementCondCategories(slotPos?: number): CondCategory[] {
       const weekLen = daySlots.length;
       const zone = slotPos === undefined ? null
         : slotPos <= Math.ceil(weekLen / 3) ? 'early'
         : slotPos <= Math.ceil((weekLen * 2) / 3) ? 'mid'
         : 'late';
-      // Zone priority encodes Sam's sequencing intent:
+      // Zone priority encodes Sam's sequencing intent where sprint is in
+      // the active placement pool (pre-season). Off-season filters sprint
+      // out via `placementPool` below until the speed-block model exists:
       //   early → high-fatigue first  (vo2 / glyco)
       //   mid   → quality sprint      (athlete should be relatively fresh)
       //   late  → aerobic base flush  (low-fatigue deload feel)
       //
-      // Short-week bias: on ≤4-day weeks sprint has no room in a "middle"
-      // slot that isn't adjacent to a vo2/glyco day, so it risks being
-      // stranded by sprint-protection. Bias it EARLY so it lands before
-      // the high-fatigue categories rather than after them. The week still
-      // plays out early→high-fatigue→aerobic overall because slotPos 1
-      // gets sprint and slotPos 2 gets vo2/glyco.
+      // Short-week pre-season bias: on ≤4-day weeks sprint has no room in
+      // a "middle" slot that isn't adjacent to a vo2/glyco day, so it risks
+      // being stranded by sprint-protection. Bias it EARLY so it lands
+      // before the high-fatigue categories rather than after them.
       const shortWeek = weekLen <= 4;
       // NOTE (4B): tempo is deliberately ABSENT from these zone lists —
       // it is not a coverage category. See CATEGORY_PRIORITY_* comment.
+      // NOTE (Slice 1.1): off-season placement priorities omit sprint
+      // before these lists are applied, so it cannot be requested as an
+      // automatic attached finisher until the speed-block model exists.
       const zonePriority: Record<string, CondCategory[]> = shortWeek ? {
         early: ['sprint', 'vo2', 'glycolytic', 'aerobic_base'],
         mid:   ['vo2', 'glycolytic', 'aerobic_base', 'sprint'],
@@ -2287,30 +2364,39 @@ function buildWeeklyPlan(
       const sprintBlocked = isConsecutive &&
         (st.lastCondCategory === 'vo2' || st.lastCondCategory === 'glycolytic');
       const allow = (c: CondCategory) => !(c === 'sprint' && sprintBlocked);
+      const placementPool = autoPlacementCategories();
+      const out: CondCategory[] = [];
 
       // Pass 1 — zone priority among UNCOVERED categories (respecting block).
       if (zone) {
         for (const c of zonePriority[zone]) {
+          if (!placementPool.includes(c)) continue;
           if (!allow(c)) continue;
-          if (st.condCategories[c] === 0) return c;
+          if (st.condCategories[c] === 0) pushUniqueCategory(out, c);
         }
       }
       // Pass 2 — global phase priority among UNCOVERED categories (respecting block).
-      for (const c of categoryPriority) {
+      for (const c of placementPool) {
         if (!allow(c)) continue;
-        if (st.condCategories[c] === 0) return c;
+        if (st.condCategories[c] === 0) pushUniqueCategory(out, c);
       }
-      // Pass 3 — all non-sprint covered: return least-used (respecting sprint block).
-      let best: CondCategory = categoryPriority[0];
-      let bestCount = Infinity;
-      for (const c of categoryPriority) {
-        if (!allow(c)) continue;
-        if (st.condCategories[c] < bestCount) {
-          bestCount = st.condCategories[c];
-          best = c;
-        }
-      }
-      return best;
+      // Pass 3 — all allowed uncovered categories added: append least-used
+      // covered categories as fallbacks for eligibility denial.
+      const byUse = placementPool
+        .filter(allow)
+        .sort((a, b) =>
+          st.condCategories[a] - st.condCategories[b] ||
+          placementPool.indexOf(a) - placementPool.indexOf(b)
+        );
+      for (const c of byUse) pushUniqueCategory(out, c);
+
+      // Defensive fallback only. In practice placementPool is never empty.
+      if (out.length === 0) out.push('aerobic_base');
+      return out;
+    }
+
+    function pickCondCategory(slotPos?: number): CondCategory {
+      return pickPlacementCondCategories(slotPos)[0];
     }
 
     // ── Pick conditioning flavour for a slot ──
@@ -2331,55 +2417,6 @@ function buildWeeklyPlan(
         if (st.condFlavours[f] < bestCount) {
           bestCount = st.condFlavours[f];
           best = f;
-        }
-      }
-      return best;
-    }
-
-    /**
-     * For category-planner phases: resolve the category that a given
-     * flavour represents in the CURRENT week, by walking the priority
-     * list. Used at placement time — the flavour chosen by pickCondFlavour
-     * corresponds to whichever priority-category slot still needs filling.
-     * For flavours that map to more than one category (high-intensity →
-     * sprint OR glycolytic), we pick the highest-priority uncovered
-     * category first.
-     */
-    function flavourToSelectedCategory(f: CondFlavour, slotPos?: number): CondCategory {
-      if (!useCategoryPlanner) {
-        // Legacy mapping when category planner isn't active. 4B label
-        // honesty: 'tempo' flavour means TRUE tempo — never vo2.
-        if (f === 'aerobic') return 'aerobic_base';
-        if (f === 'tempo') return 'tempo';
-        return 'glycolytic';
-      }
-      const candidates: CondCategory[] =
-        f === 'aerobic' ? ['aerobic_base']
-        : f === 'tempo' ? ['tempo']
-        : ['sprint', 'glycolytic']; // high-intensity
-
-      // Sprint protection — ABSOLUTE. Must match pickCondCategory: sprint
-      // is never scheduled the day after a vo2/glycolytic slot, regardless
-      // of weekly coverage state. If the flavour chosen was "high-intensity"
-      // and sprint is blocked, fall through to glycolytic.
-      const isConsecutive = slotPos !== undefined && slotPos === st.lastCondDay + 1;
-      const sprintBlocked = isConsecutive &&
-        (st.lastCondCategory === 'vo2' || st.lastCondCategory === 'glycolytic');
-      const allow = (c: CondCategory) => !(c === 'sprint' && sprintBlocked);
-
-      // Walk the priority list to find the first uncovered candidate.
-      for (const c of categoryPriority) {
-        if (!allow(c)) continue;
-        if (candidates.includes(c) && st.condCategories[c] === 0) return c;
-      }
-      // Fallback: least-used from the candidates set (still respecting sprint block).
-      let best = candidates[0];
-      let bestCount = Infinity;
-      for (const c of candidates) {
-        if (!allow(c)) continue;
-        if (st.condCategories[c] < bestCount) {
-          bestCount = st.condCategories[c];
-          best = c;
         }
       }
       return best;
@@ -2817,13 +2854,15 @@ function buildWeeklyPlan(
       // ── Conditioning category / flavour balance ──
       if (isConditioning(c)) {
         if (useCategoryPlanner) {
-          // Off-season / Pre-season: the week should cover all 4 energy-system
-          // categories distinctly before any duplicates. Reward conditioning
+          // Off-season / Pre-season: the week should cover concrete
+          // auto-placement categories distinctly before any duplicates.
+          // Reward conditioning
           // slots that fill an uncovered category, penalise ones that would
           // duplicate a covered category while gaps remain.
           const pickedCat = pickCondCategory(pos);
-          // Coverage stays 4-way — tempo is not a must-cover category (4B).
-          const ALL_CATS: CondCategory[] = ['aerobic_base', 'sprint', 'vo2', 'glycolytic'];
+          // Tempo is not a must-cover category (4B), and off-season sprint
+          // is not auto-requested until the speed-block model exists.
+          const ALL_CATS: CondCategory[] = autoPlacementCategories();
           const uncovered = ALL_CATS.filter(
             cat => st.condCategories[cat] === 0,
           ).length;
@@ -2850,11 +2889,18 @@ function buildWeeklyPlan(
             pos <= Math.ceil(weekLen / 3) ? 'early'
             : pos <= Math.ceil((weekLen * 2) / 3) ? 'mid'
             : 'late';
-          const zoneFavoured: Record<typeof zone, CondCategory[]> = {
-            early: ['vo2', 'glycolytic'],
-            mid:   ['sprint'],
-            late:  ['aerobic_base'],
-          };
+          const zoneFavoured: Record<typeof zone, CondCategory[]> =
+            inputs.seasonPhase === 'Off-season'
+              ? {
+                  early: ['vo2', 'glycolytic'],
+                  mid:   ['vo2', 'glycolytic'],
+                  late:  ['aerobic_base'],
+                }
+              : {
+                  early: ['vo2', 'glycolytic'],
+                  mid:   ['sprint'],
+                  late:  ['aerobic_base'],
+                };
           if (zoneFavoured[zone].includes(pickedCat)) {
             score += W_SEQUENCING;
             // Sprint mid-week preference — reinforce. When sprint lands in
@@ -2930,7 +2976,7 @@ function buildWeeklyPlan(
     // sub-patterns and add movement balance. The focus string reflects
     // that explicitly so downstream prescription + athlete UI both
     // treat it as support rather than a hard exposure.
-    function buildFocus(c: CandidateType, flavour?: CondFlavour): string {
+    function buildFocus(c: CandidateType, flavour?: CondFlavour, category?: CondCategory): string {
       const isFbSupport = isPreSeason && hasTeamDays && core === 3;
       switch (c) {
         case 'L-sq': return 'Lower body - squat emphasis (quad-dominant: squat, lunge, leg press; optional quad accessory: leg extension)';
@@ -2944,8 +2990,21 @@ function buildWeeklyPlan(
         case 'U-co': return 'Upper body - combined push + pull (horizontal + vertical, balanced load)';
         case 'COND': {
           const fl = flavour || 'aerobic';
-          if (fl === 'aerobic') return 'Conditioning - aerobic base / zone 2 (steady state, conversational pace)';
-          if (fl === 'tempo') return 'Conditioning - tempo / controlled repeat efforts (6-7/10, worked but composed)';
+          if (category === 'aerobic_base' || (!category && fl === 'aerobic')) {
+            return 'Conditioning - aerobic base / zone 2 (steady state, conversational pace)';
+          }
+          if (category === 'tempo' || (!category && fl === 'tempo')) {
+            return 'Conditioning - tempo / controlled repeat efforts (6-7/10, worked but composed)';
+          }
+          if (category === 'vo2') {
+            return 'Conditioning - VO2 / hard repeat efforts (8-9/10 intervals)';
+          }
+          if (category === 'glycolytic') {
+            return 'Conditioning - high-intensity repeat efforts (8-9/10 intervals)';
+          }
+          if (category === 'sprint') {
+            return 'Conditioning - sprint / speed exposure (quality reps, full recovery)';
+          }
           return 'Conditioning - high intensity intervals (short, hard repeats with short rest)';
         }
         case 'S+C': {
@@ -3190,7 +3249,6 @@ function buildWeeklyPlan(
       const slot = daySlots[slotIdx];
       let bestCandidate: CandidateType = 'REC';
       let bestScore = -Infinity;
-      let bestFlavour: CondFlavour | undefined;
       let bestSCStrength: CandidateType | undefined;
 
       // ── Queue completion enforcement ──
@@ -3318,20 +3376,26 @@ function buildWeeklyPlan(
           // H-GAME on the strength half applies in EVERY mode (a lower
           // strength component on G-2 is still a hard lower session).
           if (queueMustComplete && violatesGameProximity(scStrength, slot.num)) continue;
-          const requestedCategory = flavourToSelectedCategory(pickCondFlavour(slotPos), slotPos);
-          const attachDecision = shouldAttachFinisher({
+          const attachDecision = shouldAttachBestFinisher({
             dayNum: slot.num,
-            requestedCategory,
+            slotPos,
             strengthContext: strengthContextOf(scStrength),
           });
           if (!attachDecision.attach) continue;
+        }
+        if (candidate === 'COND') {
+          const slotPos = trainingOrder(slot.num);
+          const condDecision = pickStandaloneCondDecision({
+            dayNum: slot.num,
+            slotPos,
+          });
+          if (!condDecision.place) continue;
         }
 
         const score = scoreCandidate(candidate, slot, slotIdx);
         if (score > bestScore) {
           bestScore = score;
           bestCandidate = candidate;
-          if (isConditioning(candidate)) bestFlavour = pickCondFlavour(trainingOrder(slot.num));
           if (candidate === 'S+C') bestSCStrength = scStrength;
         }
       }
@@ -3344,10 +3408,9 @@ function buildWeeklyPlan(
         // Combined day: strength + conditioning — the finisher half passes
         // the shared eligibility law (4A). Lower/hinge days downgrade to
         // easy off-feet aerobic; hard finishers need readiness + headroom.
-        const requestedCategory = flavourToSelectedCategory(bestFlavour || pickCondFlavour(pos), pos);
-        const decision = shouldAttachFinisher({
+        const decision = shouldAttachBestFinisher({
           dayNum: slot.num,
-          requestedCategory,
+          slotPos: pos,
           strengthContext: strengthContextOf(bestSCStrength),
         });
         if (!decision.attach) {
@@ -3416,13 +3479,24 @@ function buildWeeklyPlan(
       } else if (bestCandidate === 'COND') {
         // Standalone conditioning also passes the shared eligibility law
         // (4A) — same rules, 'standalone' strength context.
-        const requestedCondCategory = flavourToSelectedCategory(bestFlavour || pickCondFlavour(pos), pos);
-        const condDecision = finisherEligibility({
+        const condDecision = pickStandaloneCondDecision({
           dayNum: slot.num,
-          requestedCategory: requestedCondCategory,
-          strengthContext: 'standalone',
+          slotPos: pos,
         });
-        const category = condDecision.allow ? condDecision.category : 'aerobic_base';
+        if (!condDecision.place) {
+          plan.push({
+            tier: 'recovery',
+            focus: 'Mobility, foam rolling, light movement',
+            dayOfWeek: slot.dayName,
+            isHardExposure: false,
+            stressLevel: 'low',
+          });
+          st.recCount++;
+          updateStressStreak('low', isConsecutiveDay);
+          st.prevSlotDayNum = pos;
+          continue;
+        }
+        const category = condDecision.category;
         const flavour = categoryToFlavour(category);
         // Rest-slot conditioning is optional — breaks up core streaks and
         // gives the athlete flexibility. Non-rest-slot conditioning stays core.
@@ -3436,12 +3510,12 @@ function buildWeeklyPlan(
         // 4B standalone tempo modality: off-feet first unless the week
         // genuinely supports quality running tempo (pre-season only).
         const tempoOffFeet = category === 'tempo' &&
-          standaloneTempoOffFeet(condDecision.allow && condDecision.offFeetOnly === true);
+          standaloneTempoOffFeet(condDecision.offFeetOnly === true);
         const condFocus = category === 'tempo'
-          ? buildFocus('COND', flavour) + (tempoOffFeet
+          ? buildFocus('COND', flavour, category) + (tempoOffFeet
               ? ' — off-feet (bike/row/ski)'
               : ' — running-based OK this week')
-          : buildFocus('COND', flavour);
+          : buildFocus('COND', flavour, category);
         plan.push({
           tier: condTier as SessionTier,
           focus: condFocus,
@@ -3544,10 +3618,9 @@ function buildWeeklyPlan(
         // aerobic only; hard finishers need readiness + weekly headroom;
         // team-adjacent and game-window days stay protected.
         const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
-        const requestedCategory = flavourToSelectedCategory(pickCondFlavour(slotPos), slotPos);
-        const decision = shouldAttachFinisher({
+        const decision = shouldAttachBestFinisher({
           dayNum,
-          requestedCategory,
+          slotPos,
           strengthContext: strengthContextOf(s.strengthPattern),
         });
         if (!decision.attach) continue;
@@ -3646,13 +3719,11 @@ function buildWeeklyPlan(
         // context) — no hard work adjacent to team days or inside the
         // game window; readiness/headroom gate vo2/glyco.
         const promoDayNum = plan[i].dayOfWeek ? dayNameToNumber(plan[i].dayOfWeek!) : -1;
-        const requestedCategory = flavourToSelectedCategory(pickCondFlavour(slotPos), slotPos);
-        const decision = finisherEligibility({
+        const decision = pickStandaloneCondDecision({
           dayNum: promoDayNum,
-          requestedCategory,
-          strengthContext: 'standalone',
+          slotPos,
         });
-        if (!decision.allow) {
+        if (!decision.place) {
           st.lastCondDay = prevLastCondDay;
           st.lastCondCategory = prevLastCondCategory;
           continue;
@@ -3663,10 +3734,10 @@ function buildWeeklyPlan(
         const promoTempoOffFeet = category === 'tempo' &&
           standaloneTempoOffFeet(decision.offFeetOnly === true);
         const promoFocus = category === 'tempo'
-          ? buildFocus('COND', flavour) + (promoTempoOffFeet
+          ? buildFocus('COND', flavour, category) + (promoTempoOffFeet
               ? ' — off-feet (bike/row/ski)'
               : ' — running-based OK this week')
-          : buildFocus('COND', flavour);
+          : buildFocus('COND', flavour, category);
         plan[i] = {
           tier: 'core',
           focus: promoFocus,
@@ -3696,10 +3767,9 @@ function buildWeeklyPlan(
     }
 
     // ── Post-validation: sprint-rescue ──
-    // Sprint must always appear somewhere in the week. If the main loop
-    // plus H5a/H5b left sprint uncovered (e.g. every candidate slot was
-    // blocked by sprint-protection), retrofit it now using Sam's fallback
-    // chain:
+    // Pre-season no-game weeks may need an explicit standalone sprint
+    // exposure. If the main loop plus H5a/H5b left sprint uncovered,
+    // retrofit it using Sam's fallback chain:
     //   1. Slide earlier — pick the EARLIEST conditioning slot whose
     //      chronological predecessor (if any) isn't vo2/glycolytic, and
     //      swap its category to sprint.
@@ -3710,7 +3780,8 @@ function buildWeeklyPlan(
     //      conditioning with a blocking predecessor), convert it to a
     //      3–4×10s flying-sprint micro-dose that's low enough volume to
     //      ignore sprint-protection safely.
-    // This guarantees sprint coverage without ever removing sprint.
+    // In off-season or team/game-loaded weeks, the eligibility law below
+    // drops sprint honestly rather than hiding it inside a finisher.
     //
     // B-GAME GUARD (2026-07-08): the rescue does NOT run in a game week.
     // Sprint exposure there comes from team training + the game itself
@@ -3832,7 +3903,7 @@ function buildWeeklyPlan(
             ? 'Conditioning - sprint micro-dose (3×10s flying, ~10min)'
             : variant === 'reduced'
               ? 'Conditioning - sprint (reduced volume, ~12min)'
-              : buildFocus('COND', 'high-intensity');
+              : buildFocus('COND', 'high-intensity', 'sprint');
         }
       }
     }
@@ -3959,7 +4030,7 @@ function buildWeeklyPlan(
       const lastHigh = condSessions.reverse().find(s => s.conditioningFlavour === 'high-intensity');
       if (lastHigh) {
         const prevCat = lastHigh.conditioningCategory;
-        lastHigh.focus = buildFocus('COND', 'aerobic');
+        lastHigh.focus = buildFocus('COND', 'aerobic', 'aerobic_base');
         lastHigh.conditioningFlavour = 'aerobic';
         lastHigh.conditioningCategory = 'aerobic_base';
         lastHigh.isHardExposure = false;
