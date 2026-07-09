@@ -52,6 +52,7 @@ import {
   buildStrengthWorkoutHistoryFromFeedback,
   buildProgressionContext,
   deriveMissedStrengthSessionsThisWeek,
+  workoutHasProgressableStrengthRows,
 } from './strengthProgressionIntegration';
 import {
   analyzeFeedbackPatterns,
@@ -1102,7 +1103,7 @@ export function resolveWeekWithConditioning(
     const day = baseDays[i];
     if (
       day.workout &&
-      day.workout.workoutType === 'Strength' &&
+      workoutHasProgressableStrengthRows(day.workout) &&
       (day.source === 'template' || day.source === 'manual')
     ) {
       // Recent feedback before this date — for per-day pattern analysis

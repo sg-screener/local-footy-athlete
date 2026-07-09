@@ -21,7 +21,8 @@
  * INTEGRATION POINTS:
  *   - Called on template workouts after resolveDate() returns them (Priority 6)
  *   - Called inside buildTagAwareSession() after exercise selection
- *   - Called by the resolver for any strength session entering the live flow
+ *   - Called by the resolver for any strength or mixed session with strength
+ *     rows entering the live flow
  */
 
 import type {
@@ -293,6 +294,15 @@ export function classifyExerciseRole(exerciseName: string): ExerciseRole | null 
   return null;
 }
 
+export function workoutHasProgressableStrengthRows(workout: Workout): boolean {
+  if (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed') {
+    return false;
+  }
+  return workout.exercises.some((exercise) =>
+    !!classifyExerciseRole(exercise.exercise?.name || '')
+  );
+}
+
 /**
  * Determine if an exercise is lower body from its tags.
  */
@@ -477,7 +487,7 @@ function applyDelta(
  * primary and secondary lifts, and adjusts prescriptions. Accessories,
  * trunk, isolation, and pump exercises are left unchanged.
  *
- * @param workout          - The strength workout to process
+ * @param workout          - The strength or mixed workout to process
  * @param ctx              - Progression context (season, readiness, history, etc.)
  * @param lastPerformedWeights - Optional map of exerciseId → last performed weight (from weightOverrides store).
  *                               When provided, uses performed weight as baseline instead of template weight.
@@ -489,8 +499,8 @@ export function applyStrengthProgression(
   ctx: StrengthProgressionContext,
   lastPerformedWeights?: Record<string, number | null>,
 ): Workout & { _progressionResults?: Record<string, ProgressionOutput> } {
-  // Only process strength sessions
-  if (workout.workoutType !== 'Strength') return workout;
+  // Only process sessions that actually contain progressable strength rows.
+  if (!workoutHasProgressableStrengthRows(workout)) return workout;
 
   const rpe = feelingToRPE(ctx.sessionFeeling);
   const results: Record<string, ProgressionOutput> = {};

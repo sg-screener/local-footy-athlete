@@ -1382,6 +1382,9 @@ export function buildWorkoutsFromCoach(
       candidateName = 'Bike/Row/Ski Tempo Intervals';
     }
     const isCombined = !!planEntry.hasCombinedConditioning;
+    const attachedConditioningKind = isCombined
+      ? planEntry.attachedConditioningKind ?? 'finisher'
+      : undefined;
     // Infer the strength region being paired on combined days so the
     // conditioning builder can auto-shift to an ergometer when pairing a
     // lower-body lift with sprint or glycolytic work. "Lower body" /
@@ -1453,6 +1456,7 @@ export function buildWorkoutsFromCoach(
       lastErgDow = cw.dayOfWeek;
     }
     if (!planEntry.conditioningFeel && feel) planEntry.conditioningFeel = feel;
+    const templateErgModality = (ergHint ?? planEntry.ergModality) as ErgModality | undefined;
     const isConsecutive = cw.dayOfWeek - prevDow === 1;
     const candidateIsRun = isRunningBasedConditioning(candidateName);
     const isProtectedSpeed = SPEED_SPRINT_TEMPLATES.has(candidateName);
@@ -1477,12 +1481,21 @@ export function buildWorkoutsFromCoach(
     // can't be converted — that's handled by the engine's H-PRE-12.)
     if (candidateIsRun && runStreak >= 3 && !isProtectedSpeed) {
       // 3rd (or later) consecutive run — convert to off-feet.
-      const offFeet = planEntry.conditioningVariant === 'reduced' && cat === 'aerobic_base'
+      const offFeet = isCombined
         ? buildConditioningTemplate(candidateName, dateStr, {
-            variant: 'reduced',
-            ergModality: planEntry.ergModality as ErgModality | undefined,
+            combined: true,
+            attachedConditioningKind,
+            strengthRegion,
+            feel,
+            ergModality: templateErgModality,
+            variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
           })
-        : switchToOffFeetModality(candidateName, dateStr);
+        : planEntry.conditioningVariant === 'reduced' && cat === 'aerobic_base'
+          ? buildConditioningTemplate(candidateName, dateStr, {
+              variant: 'reduced',
+              ergModality: templateErgModality,
+            })
+          : switchToOffFeetModality(candidateName, dateStr);
       if (offFeet && offFeet.length > 0) {
         const tagged = tagAsShiftedFromRun(offFeet);
         resolved = {
@@ -1503,9 +1516,10 @@ export function buildWorkoutsFromCoach(
           exerciseName: candidateName,
           exercises: buildConditioningTemplate(candidateName, dateStr, {
             combined: isCombined,
+            attachedConditioningKind,
             strengthRegion,
             feel,
-            ergModality: ergHint,
+            ergModality: templateErgModality,
             variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
           }),
           shiftedFromRun: false,
@@ -1522,9 +1536,10 @@ export function buildWorkoutsFromCoach(
         exerciseName: candidateName,
         exercises: buildConditioningTemplate(candidateName, dateStr, {
           combined: isCombined,
+          attachedConditioningKind,
           strengthRegion,
           feel,
-          ergModality: ergHint,
+          ergModality: templateErgModality,
           variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
         }),
         shiftedFromRun: false,

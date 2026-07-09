@@ -71,6 +71,28 @@ function makeWorkout(): Workout {
   };
 }
 
+function makeMixedWorkout(): Workout {
+  return {
+    ...makeWorkout(),
+    name: 'Lower Body Strength + Bike Conditioning',
+    workoutType: 'Mixed',
+    hasCombinedConditioning: true,
+    attachedConditioningKind: 'component',
+    conditioningBlock: {
+      intent: 'high-intensity',
+      options: [{
+        title: 'Assault Bike Intervals',
+        description: '20-30min conditioning component',
+        exerciseIds: ['workout-ex-2'],
+      }],
+    },
+    exercises: [
+      makeExercise('Back Squat', 1, 100),
+      makeExercise('Assault Bike Intervals', 2),
+    ],
+  };
+}
+
 function strengthFeedback(args: {
   date: string;
   feeling?: SessionFeedback['feeling'];
@@ -148,6 +170,34 @@ console.log('\n-- Strength progression real inputs --');
   const result = applyStrengthProgression(makeWorkout(), contextFromFeedback(feedback, '2026-07-13'));
   ok('hard/bad session does not increase load', (progressedSquatWeight(result) ?? 0) <= 100);
   ok('hard/bad session can back off volume', (progressedSquatSets(result) ?? 0) <= 3);
+}
+
+{
+  const feedback = strengthFeedback({ date: '2026-07-06', feeling: 'easy', completion: 'full' });
+  const result = applyStrengthProgression(makeMixedWorkout(), contextFromFeedback(feedback, '2026-07-13'));
+  ok('Mixed session with strength rows can progress strength rows',
+    progressedSquatWeight(result) === 102.5,
+    String(progressedSquatWeight(result)));
+  const conditioningRow = result.exercises.find((exercise) => exercise.exercise?.name === 'Assault Bike Intervals');
+  ok('Mixed session strength progression does not mutate conditioning rows',
+    conditioningRow?.prescribedSets === 3 &&
+      conditioningRow.prescribedRepsMin === 10 &&
+      conditioningRow.prescribedRepsMax === 12 &&
+      conditioningRow.restSeconds === 60,
+    JSON.stringify(conditioningRow));
+  ok('Mixed session conditioning rows are not in strength progression results',
+    (result as any)._progressionResults?.['Assault Bike Intervals'] === undefined);
+}
+
+{
+  const feedback = strengthFeedback({ date: '2026-07-06', feeling: 'very_hard', completion: 'full' });
+  const result = applyStrengthProgression(makeMixedWorkout(), contextFromFeedback(feedback, '2026-07-13'));
+  ok('Mixed session hard/bad feedback does not increase strength rows',
+    (progressedSquatWeight(result) ?? 0) <= 100,
+    String(progressedSquatWeight(result)));
+  ok('Mixed session hard/bad feedback can reduce strength volume',
+    (progressedSquatSets(result) ?? 0) <= 3,
+    String(progressedSquatSets(result)));
 }
 
 {

@@ -478,6 +478,34 @@ console.log('\n── 9. 4B content layer: mappings + true tempo templates ─�
   ok('combined tempo finisher is not VO2/hard-labelled',
     !/vo2|8-9\/10|9\/10/i.test(finText), finText.slice(0, 160));
 
+  const templateFinisher = sb.buildConditioningTemplate('Bike/Row/Ski Tempo Intervals', '2026-07-06', {
+    combined: true,
+    attachedConditioningKind: 'finisher',
+    strengthRegion: 'upper',
+    feel: 'grindy',
+    ergModality: 'row',
+  });
+  const templateFinisherText = textOfRows(templateFinisher);
+  ok('attachedConditioningKind=finisher builds compact finisher-scale rows',
+    /(?:5|6|7) x \(1min on \/ 1min easy\)/.test(templateFinisherText) &&
+      /1min on \/ 1min easy/.test(templateFinisherText) &&
+      !/conditioning component|20-24min|20-30min/i.test(templateFinisherText),
+    templateFinisherText.slice(0, 220));
+
+  const templateComponent = sb.buildConditioningTemplate('Bike/Row/Ski Tempo Intervals', '2026-07-06', {
+    combined: true,
+    attachedConditioningKind: 'component',
+    strengthRegion: 'upper',
+    feel: 'grindy',
+    ergModality: 'row',
+  });
+  const templateComponentText = textOfRows(templateComponent);
+  ok('attachedConditioningKind=component builds component-scale rows',
+    templateComponent.length >= 2 &&
+      /conditioning component/i.test(templateComponentText) &&
+      /20-24min|20-30min/i.test(templateComponentText),
+    templateComponentText.slice(0, 220));
+
   const tempoComponent = sb.buildAttachedConditioningComponentTemplate('tempo', '2026-07-06', 'upper', 'grindy', 'row');
   const tempoComponentText = textOfRows(tempoComponent);
   ok('attached tempo component is larger than the compact finisher',
