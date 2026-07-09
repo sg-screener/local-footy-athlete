@@ -23,6 +23,8 @@ export type AgeRange = 'Under 18' | '18-22' | '22-26' | '26-30' | '30+';
 
 export type SeasonPhase = 'Off-season' | 'Pre-season' | 'In-season';
 
+export type WeekKind = 'build' | 'deload';
+
 export type GameDay = 'Friday' | 'Saturday' | 'Sunday' | 'Varies';
 
 export type TeamTrainingDuration = '60 minutes' | '90 minutes' | '2 hours';
@@ -286,6 +288,7 @@ export interface Microcycle {
   // Characteristics
   miniCycleNumber: number; // Which 3-4 week block this week belongs to
   intensityMultiplier: number; // 0.7-1.3 typical range
+  weekKind?: WeekKind;
 
   // Workouts in this week
   workouts: Workout[];

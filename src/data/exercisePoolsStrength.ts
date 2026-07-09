@@ -30,6 +30,7 @@
  */
 
 import { EXERCISE_TAGS, type MovementPattern, type InjuryKey } from './exerciseTags';
+import type { WeekKind } from '../types/domain';
 
 // ─── Types ───
 
@@ -82,6 +83,10 @@ export interface RotationContext {
   weekInBlock?: number;
   /** Monday ISO date for this generated week. Optional; drives date-based conditioning variety. */
   weekStartISO?: string;
+  /** Build vs generated deload week. Optional for backwards-compatible rotation-only callers. */
+  weekKind?: WeekKind;
+  /** Week-level generation intensity multiplier. Optional for rotation-only callers. */
+  intensityMultiplier?: number;
 }
 
 // ─── Per-Athlete Overrides (Refinement 3) ───

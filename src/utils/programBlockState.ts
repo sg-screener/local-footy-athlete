@@ -1,4 +1,8 @@
-import type { Microcycle, SeasonPhase, TrainingProgram } from '../types/domain';
+import type { Microcycle, SeasonPhase, TrainingProgram, WeekKind } from '../types/domain';
+import {
+  resolveWeekIntensityMultiplier,
+  resolveWeekKind,
+} from '../rules/deloadWeekRules';
 
 export const WEEKS_PER_BLOCK = 4;
 const DAYS_PER_WEEK = 7;
@@ -25,6 +29,7 @@ export interface ProgramBlockState {
   weekStart: string;
   weekEnd: string;
   /** Metadata consumed by existing microcycle/progression machinery. */
+  weekKind: WeekKind;
   intensityMultiplier: number;
   weeksSinceDeload: number;
   consecutiveBuildWeeks: number;
@@ -120,9 +125,10 @@ export function resolveIntensityMultiplier(
   seasonPhase: SeasonPhase | null | undefined,
   weekInBlock: number,
 ): number {
-  void seasonPhase;
-  void weekInBlock;
-  return 1.0;
+  return resolveWeekIntensityMultiplier(
+    seasonPhase,
+    resolveWeekKind(seasonPhase, weekInBlock),
+  );
 }
 
 export function getProgramBlockStateForDate(args: {
@@ -143,6 +149,7 @@ export function getProgramBlockStateForDate(args: {
   const weekStart = addDaysISO(blockStart, (weekInBlock - 1) * DAYS_PER_WEEK);
   const weekEnd = addDaysISO(weekStart, DAYS_PER_WEEK - 1);
 
+  const weekKind = resolveWeekKind(args.seasonPhase, weekInBlock);
   return {
     blockNumber,
     miniCycleNumber: blockNumber,
@@ -152,7 +159,8 @@ export function getProgramBlockStateForDate(args: {
     blockEnd,
     weekStart,
     weekEnd,
-    intensityMultiplier: resolveIntensityMultiplier(args.seasonPhase, weekInBlock),
+    weekKind,
+    intensityMultiplier: resolveWeekIntensityMultiplier(args.seasonPhase, weekKind),
     weeksSinceDeload: weekInBlock - 1,
     consecutiveBuildWeeks: Math.max(0, weekInBlock - 1),
   };
@@ -183,6 +191,7 @@ export function getStoredBlockStateForDate(
   const blockEnd = addDaysISO(blockStart, DAYS_PER_BLOCK - 1);
   const weekStart = addDaysISO(blockStart, (weekInBlock - 1) * DAYS_PER_WEEK);
   const weekEnd = addDaysISO(weekStart, DAYS_PER_WEEK - 1);
+  const weekKind = resolveWeekKind(seasonPhase, weekInBlock);
   return {
     blockNumber,
     miniCycleNumber: blockNumber,
@@ -192,7 +201,8 @@ export function getStoredBlockStateForDate(
     blockEnd,
     weekStart,
     weekEnd,
-    intensityMultiplier: resolveIntensityMultiplier(seasonPhase, weekInBlock),
+    weekKind,
+    intensityMultiplier: resolveWeekIntensityMultiplier(seasonPhase, weekKind),
     weeksSinceDeload: getWeeksSinceDeload(state.blockStartDate, dateISO),
     consecutiveBuildWeeks: Math.max(0, weekInBlock - 1),
   };
@@ -209,6 +219,7 @@ export function buildBlockWeekStates(args: {
     const weekInBlock = index + 1;
     const weekStart = addDaysISO(args.blockStartISO, index * DAYS_PER_WEEK);
     const weekEnd = addDaysISO(weekStart, DAYS_PER_WEEK - 1);
+    const weekKind = resolveWeekKind(args.seasonPhase, weekInBlock);
     return {
       blockNumber,
       miniCycleNumber: blockNumber,
@@ -218,7 +229,8 @@ export function buildBlockWeekStates(args: {
       blockEnd,
       weekStart,
       weekEnd,
-      intensityMultiplier: resolveIntensityMultiplier(args.seasonPhase, weekInBlock),
+      weekKind,
+      intensityMultiplier: resolveWeekIntensityMultiplier(args.seasonPhase, weekKind),
       weeksSinceDeload: weekInBlock - 1,
       consecutiveBuildWeeks: Math.max(0, weekInBlock - 1),
     };

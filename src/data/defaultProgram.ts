@@ -37,6 +37,14 @@ import {
   type AccessoryGuideline,
   type RepScheme,
 } from '../rules/phaseRepSchemes';
+import {
+  applyStrengthDeloadToExercises,
+  deloadConditioningCategory,
+  deloadConditioningFlavour,
+  isHardDeloadConditioningCategory,
+  resolveDeloadWeekPolicy,
+  type DeloadWeekPolicy,
+} from '../rules/deloadWeekRules';
 import { resolveSessionDisplayName } from '../utils/sessionNaming';
 import {
   applyPoolRotation,
@@ -1005,6 +1013,58 @@ function buildConditioningBlock(
   };
 }
 
+function stripConditioningSuffix(focus: string): string {
+  return focus
+    .replace(/\s+\+\s+.*(?:conditioning|finisher|interval|aerobic|tempo|sprint|zone\s*2).*$/i, '')
+    .trim();
+}
+
+function deloadPlanEntry(
+  entry: SessionAllocation,
+  policy: DeloadWeekPolicy | null,
+): SessionAllocation {
+  if (!policy) return entry;
+  const category = entry.conditioningCategory;
+  const isHardConditioning =
+    isHardDeloadConditioningCategory(category) ||
+    entry.conditioningFlavour === 'high-intensity';
+  if (!isHardConditioning) return entry;
+
+  const next: SessionAllocation = {
+    ...entry,
+    isHardExposure: false,
+  };
+
+  if (entry.hasCombinedConditioning) {
+    const strengthFocus = stripConditioningSuffix(entry.focus);
+    return {
+      ...next,
+      focus: strengthFocus || entry.focus,
+      hasCombinedConditioning: false,
+      attachedConditioningKind: undefined,
+      conditioningFlavour: undefined,
+      conditioningCategory: undefined,
+      conditioningVariant: undefined,
+      conditioningFeel: undefined,
+      conditioningOffFeet: undefined,
+      ergModality: undefined,
+    };
+  }
+
+  const safeCategory = deloadConditioningCategory(category) ?? 'aerobic_base';
+  const safeFlavour = deloadConditioningFlavour(category) ?? 'aerobic';
+  return {
+    ...next,
+    focus: safeCategory === 'tempo'
+      ? 'Tempo conditioning (deload week, controlled 6-7/10)'
+      : 'Easy aerobic conditioning (deload week)',
+    conditioningCategory: safeCategory,
+    conditioningFlavour: safeFlavour,
+    conditioningVariant: safeCategory === 'aerobic_base' ? 'reduced' : 'standard',
+    conditioningFeel: safeCategory === 'tempo' ? 'flowing' : undefined,
+  };
+}
+
 export function buildWorkoutsFromCoach(
   coachWorkouts: CoachGeneratedWorkoutInput[],
   microcycleId: string = 'mc-1',
@@ -1027,8 +1087,15 @@ export function buildWorkoutsFromCoach(
    */
   athletePrefs?: AthletePoolPrefs,
 ): Workout[] {
-  const planLookup = weeklyPlan ? buildPlanLookup(weeklyPlan) : null;
-  const completedCoachWorkouts = completeCoachWorkoutsFromPlan(coachWorkouts, weeklyPlan);
+  const deloadPolicy = resolveDeloadWeekPolicy(
+    onboardingData?.seasonPhase,
+    rotationContext?.weekKind,
+  );
+  const effectiveWeeklyPlan = weeklyPlan
+    ? weeklyPlan.map((entry) => deloadPlanEntry(entry, deloadPolicy))
+    : undefined;
+  const planLookup = effectiveWeeklyPlan ? buildPlanLookup(effectiveWeeklyPlan) : null;
+  const completedCoachWorkouts = completeCoachWorkoutsFromPlan(coachWorkouts, effectiveWeeklyPlan);
 
   // ── Build a synthetic dateStr for deterministic variety ──
   // Generated workouts are day-of-week keyed. When the caller passes a
@@ -1087,7 +1154,11 @@ export function buildWorkoutsFromCoach(
     if (raw === 'strength') return 'Strength';
     if (raw === 'conditioning') return 'Conditioning';
     if (raw === 'recovery') return 'Recovery';
-    if (raw === 'mixed') return 'Mixed';
+    if (raw === 'mixed') {
+      if (planEntry?.hasCombinedConditioning) return 'Mixed';
+      if (planEntry?.conditioningFlavour) return 'Conditioning';
+      return 'Strength';
+    }
     if (raw === 'game') return 'Game';
 
     // Older generate-mode schema incorrectly described workoutType as a tier.
@@ -1408,6 +1479,10 @@ export function buildWorkoutsFromCoach(
       canonicalTier = aiTier;
     }
 
+    if (deloadPolicy && canonicalIntensity === 'High') {
+      canonicalIntensity = 'Moderate';
+    }
+
     // ──────────────────────────────────────────────────────────────────────
     // STANDALONE CONDITIONING — fully deterministic, AI exercises IGNORED
     // ──────────────────────────────────────────────────────────────────────
@@ -1546,6 +1621,7 @@ export function buildWorkoutsFromCoach(
 
     // Resolved conditioning block — assembled below for combined S+C days.
     let resolvedConditioningBlock: ConditioningBlock | undefined;
+    const normalizedWorkoutType = normalizeGeneratedWorkoutType(cw, planEntry);
 
     // ──────────────────────────────────────────────────────────────────────
     // COMBINED S+C — AI strength + deterministic conditioning appended
@@ -1566,9 +1642,12 @@ export function buildWorkoutsFromCoach(
           break; // stop as soon as we hit a non-conditioning exercise
         }
       }
-      const strengthBlock = splitIdx > 0
+      const rawStrengthBlock = splitIdx > 0
         ? finalExercises.slice(0, splitIdx)
         : finalExercises;
+      const strengthBlock = deloadPolicy
+        ? applyStrengthDeloadToExercises(rawStrengthBlock, deloadPolicy)
+        : rawStrengthBlock;
 
       // Build deterministic conditioning block and append. The block was
       // pre-resolved above by the run-load guard; fall back to a fresh
@@ -1613,6 +1692,14 @@ export function buildWorkoutsFromCoach(
 
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} COMBINED S+C — strength=${strengthBlock.length} exercises (AI) + conditioning="${condExName}"${resolved?.shiftedFromRun ? ' [SHIFTED off-feet]' : ''} (template, ${condBlock.length} exercises)`);
     } else {
+      if (
+        deloadPolicy &&
+        normalizedWorkoutType !== 'Conditioning' &&
+        normalizedWorkoutType !== 'Recovery' &&
+        normalizedWorkoutType !== 'Game'
+      ) {
+        finalExercises = applyStrengthDeloadToExercises(finalExercises, deloadPolicy);
+      }
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} aiName="${cw.name}" aiType="${cw.workoutType}" aiTier="${cw.sessionTier}" → canonicalTier="${canonicalTier}" intensity="${canonicalIntensity}" planEntry=${planEntry ? `"${planEntry.tier} / ${planEntry.focus?.substring(0, 40)}"` : 'NONE'}`);
     }
 
@@ -1631,7 +1718,7 @@ export function buildWorkoutsFromCoach(
       }),
       description: '',
       intensity: canonicalIntensity,
-      workoutType: normalizeGeneratedWorkoutType(cw, planEntry),
+      workoutType: normalizedWorkoutType,
       sessionTier: canonicalTier,
       ...(planEntry?.hasCombinedConditioning ? { hasCombinedConditioning: true } : {}),
       ...(planEntry?.attachedConditioningKind ? { attachedConditioningKind: planEntry.attachedConditioningKind } : {}),

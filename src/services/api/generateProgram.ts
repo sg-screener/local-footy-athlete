@@ -108,6 +108,8 @@ function buildGeneratedMicrocycles(args: {
         miniCycleNumber: blockState.miniCycleNumber,
         weekInBlock: blockState.weekInBlock,
         weekStartISO: blockState.weekStart,
+        weekKind: blockState.weekKind,
+        intensityMultiplier: blockState.intensityMultiplier,
       },
       args.athletePrefs,
     );
@@ -119,6 +121,7 @@ function buildGeneratedMicrocycles(args: {
       startDate: dateAtNoonISO(blockState.weekStart),
       endDate: dateAtNoonISO(blockState.weekEnd),
       miniCycleNumber: blockState.miniCycleNumber,
+      weekKind: blockState.weekKind,
       intensityMultiplier: blockState.intensityMultiplier,
       workouts,
       createdAt: new Date().toISOString(),
