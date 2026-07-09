@@ -565,7 +565,7 @@ section('10. Injury handler — payload validation');
   );
 }
 
-// 10.0c — bodyPart='unknown' + severity≥7 → recovery (not lighten).
+// 10.0c — bodyPart='unknown' + severity≥8 still reduces before rest.
 {
   resetResolver();
   placeWorkouts({
@@ -580,8 +580,12 @@ section('10. Injury handler — payload validation');
   );
   eq('unknown + sev 8: applied=true', result.applied, true);
   ok(
-    'unknown + sev 8: fallback uses set_session_recovery',
-    result.events.some((e) => e.kind === 'set_session_recovery'),
+    'unknown + sev 8: fallback uses lighten_session before rest',
+    result.events.some((e) => e.kind === 'lighten_session'),
+  );
+  ok(
+    'unknown + sev 8: does not automatically rest',
+    !result.events.some((e) => e.kind === 'set_session_recovery'),
   );
 }
 
@@ -854,7 +858,7 @@ section('10.9 Fallback creates visible event when nothing risky tagged');
 }
 
 {
-  // Same fixture but severity 8 → fallback uses set_session_recovery.
+  // Same fixture but severity 8 → fallback still reduces before rest.
   resetResolver();
   placeWorkouts({
     2: { name: 'Wed Lower', exercises: [{ name: 'Goblet Squat' }] }, // today
@@ -865,12 +869,16 @@ section('10.9 Fallback creates visible event when nothing risky tagged');
   );
   ok('fallback (8): applied=true', result.applied);
   ok(
-    'fallback (8): kind is set_session_recovery',
-    result.events.some((e) => e.kind === 'set_session_recovery'),
+    'fallback (8): kind is lighten_session',
+    result.events.some((e) => e.kind === 'lighten_session'),
+  );
+  ok(
+    'fallback (8): no automatic recovery shell',
+    !result.events.some((e) => e.kind === 'set_session_recovery'),
   );
 }
 
-section('10.10 Severity tiers: 8 + ≥50% risky session → set_session_recovery');
+section('10.10 Severity tiers: 8 + risky session → substitute before removal/rest');
 
 {
   resetResolver();
@@ -882,19 +890,25 @@ section('10.10 Severity tiers: 8 + ≥50% risky session → set_session_recovery
     emptyScheduleState(),
   );
   eq('hamstring 8 + heavy session: applied=true', result.applied, true);
-  // Severity 8: caution also removable; with RDLs (avoid) + Deadlift (caution
-  // for hamstring) we should hit ≥50% risky and emit a recovery shell.
+  // Severity 8 pauses affected hamstring work, but the Bible still asks
+  // for safe alternatives before resting the whole day.
   ok(
-    'hamstring 8: emits set_session_recovery for the heavy day',
+    'hamstring 8: replaces/removes risky work on the heavy day',
     result.events.some(
+      (e) =>
+        (e.kind === 'replace_exercise' || e.kind === 'remove_exercise') &&
+        e.date === '2026-04-29',
+    ),
+  );
+  ok(
+    'hamstring 8: no automatic recovery shell while safe work exists',
+    !result.events.some(
       (e) => e.kind === 'set_session_recovery' && e.date === '2026-04-29',
     ),
   );
   ok(
-    'hamstring 8: NO per-exercise removal on the recovered day',
-    !result.events.some(
-      (e) => e.kind === 'remove_exercise' && e.date === '2026-04-29',
-    ),
+    'hamstring 8: keeps unaffected Goblet Squat untouched',
+    !result.events.some((e) => e.before === 'Goblet Squat'),
   );
 }
 
@@ -1627,6 +1641,7 @@ section('10.16g add_session_note bullet format');
 // ─────────────────────────────────────────────────────────────────────
 
 import { buildInjuryPolicy } from '../utils/programAdjustmentEngine';
+import { getReplacementChoiceForBucket } from '../utils/injurySessionClassifier';
 
 section('10.17a buildInjuryPolicy(hamstring, 6) → forbid sprinting + heavy hinge');
 
@@ -2083,6 +2098,208 @@ section('10.18g Reply NEVER contains restrictions without alternatives');
     }
   }
   eq('replies with rules-only (no alternatives)', restrictionsOnly, 0);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 10.19 SLICE 4.2 — readiness tiers + substitution before removal
+// ─────────────────────────────────────────────────────────────────────
+
+section('10.19a 4/10 injury swaps affected work and is not a no-op');
+
+{
+  resetResolver();
+  placeWorkouts({
+    2: { name: 'Lower Strength', exercises: [{ name: 'RDLs' }, { name: 'Goblet Squat' }] },
+  });
+  const result = applyProgramAdjustment(injuryRequest('hamstring', 4), emptyScheduleState());
+  ok('4/10: applied', result.applied === true);
+  ok(
+    '4/10: RDLs are swapped before removal',
+    result.events.some((e) => e.kind === 'replace_exercise' && e.before === 'RDLs'),
+    JSON.stringify(result.events),
+  );
+  ok(
+    '4/10: no recovery shell',
+    !result.events.some((e) => e.kind === 'set_session_recovery'),
+  );
+}
+
+section('10.19b 6/10 injury removes risk but keeps unaffected work');
+
+{
+  resetResolver();
+  placeWorkouts({
+    2: { name: 'Mixed Strength', exercises: [{ name: 'RDLs' }, { name: 'Bench Press' }, { name: 'Easy Bike' }] },
+  });
+  const result = applyProgramAdjustment(injuryRequest('hamstring', 6), emptyScheduleState());
+  ok('6/10: applied', result.applied === true);
+  ok(
+    '6/10: affected hinge targeted',
+    result.events.some((e) => e.before === 'RDLs'),
+    JSON.stringify(result.events),
+  );
+  ok(
+    '6/10: upper work untouched',
+    !result.events.some((e) => e.before === 'Bench Press'),
+  );
+  ok(
+    '6/10: easy bike untouched',
+    !result.events.some((e) => e.before === 'Easy Bike'),
+  );
+}
+
+section('10.19c 9/10 pauses affected area without resting safe work');
+
+{
+  resetResolver();
+  placeWorkouts({
+    2: { name: 'Mixed Strength', exercises: [{ name: 'RDLs' }, { name: 'Bench Press' }] },
+  });
+  const result = applyProgramAdjustment(injuryRequest('hamstring', 9), emptyScheduleState());
+  ok('9/10: applied', result.applied === true);
+  ok(
+    '9/10: affected hamstring work targeted',
+    result.events.some((e) => e.before === 'RDLs'),
+    JSON.stringify(result.events),
+  );
+  ok(
+    '9/10: safe upper work is not removed',
+    !result.events.some((e) => e.before === 'Bench Press'),
+  );
+  ok(
+    '9/10: no whole-session rest while safe work remains',
+    !result.events.some((e) => e.kind === 'set_session_recovery'),
+  );
+}
+
+section('10.19d Shoulder issue preserves lower/bike/core via safe swaps');
+
+{
+  resetResolver();
+  placeWorkouts({
+    2: {
+      name: 'Mixed Strength',
+      exercises: [
+        { name: 'Bench Press' },
+        { name: 'Back Squat' },
+        { name: 'Easy Bike' },
+        { name: 'Side Plank' },
+      ],
+    },
+  });
+  const result = applyProgramAdjustment(injuryRequest('shoulder', 6), emptyScheduleState());
+  ok('shoulder: applied', result.applied === true);
+  ok(
+    'shoulder: pressing/back-rack stress targeted',
+    result.events.some((e) => e.before === 'Bench Press') &&
+      result.events.some((e) => e.before === 'Back Squat'),
+    JSON.stringify(result.events),
+  );
+  ok(
+    'shoulder: easy bike preserved',
+    !result.events.some((e) => e.before === 'Easy Bike'),
+  );
+  ok(
+    'shoulder: core preserved',
+    !result.events.some((e) => e.before === 'Side Plank'),
+  );
+  ok(
+    'shoulder: no rest shell',
+    !result.events.some((e) => e.kind === 'set_session_recovery'),
+  );
+}
+
+section('10.19e Hamstring issue preserves upper/easy bike');
+
+{
+  resetResolver();
+  placeWorkouts({
+    2: {
+      name: 'Mixed Strength',
+      exercises: [{ name: 'Deadlift' }, { name: 'Bench Press' }, { name: 'Easy Bike' }],
+    },
+  });
+  const result = applyProgramAdjustment(injuryRequest('hamstring', 6), emptyScheduleState());
+  ok('hamstring: applied', result.applied === true);
+  ok('hamstring: hinge targeted', result.events.some((e) => e.before === 'Deadlift'));
+  ok('hamstring: upper preserved', !result.events.some((e) => e.before === 'Bench Press'));
+  ok('hamstring: easy bike preserved', !result.events.some((e) => e.before === 'Easy Bike'));
+}
+
+section('10.19f Knee issue preserves upper/off-feet work');
+
+{
+  resetResolver();
+  placeWorkouts({
+    2: {
+      name: 'Mixed Strength',
+      exercises: [{ name: 'Back Squat' }, { name: 'Box Jumps' }, { name: 'Bench Press' }, { name: 'Easy Bike' }],
+    },
+  });
+  const result = applyProgramAdjustment(injuryRequest('knee', 6), emptyScheduleState());
+  ok('knee: applied', result.applied === true);
+  ok('knee: knee-dominant/impact work targeted',
+    result.events.some((e) => e.before === 'Back Squat') &&
+      result.events.some((e) => e.before === 'Box Jumps'),
+    JSON.stringify(result.events));
+  ok('knee: upper preserved', !result.events.some((e) => e.before === 'Bench Press'));
+  ok('knee: off-feet bike preserved', !result.events.some((e) => e.before === 'Easy Bike'));
+}
+
+section('10.19g Gutted risky session becomes safe alternate work, not rest');
+
+{
+  resetResolver();
+  placeWorkouts({
+    2: {
+      name: 'Heavy Lower',
+      exercises: [{ name: 'RDLs' }, { name: 'Deadlift' }],
+    },
+  });
+  const result = applyProgramAdjustment(injuryRequest('hamstring', 9), emptyScheduleState());
+  ok('gutted: applied', result.applied === true);
+  ok(
+    'gutted: replacement events emitted',
+    result.events.some((e) => e.kind === 'replace_exercise'),
+    JSON.stringify(result.events),
+  );
+  ok(
+    'gutted: does not collapse to rest',
+    !result.events.some((e) => e.kind === 'set_session_recovery'),
+  );
+}
+
+section('10.19h Substitution hierarchy is followed');
+
+{
+  const hammyModerate = getReplacementChoiceForBucket('RDLs', 'hamstring' as any, 6);
+  eq('hamstring 6: same-pattern safe choice', hammyModerate, {
+    name: 'Hip Thrusts',
+    hierarchyTier: 'same_movement_pattern',
+  });
+
+  const hammyPause = getReplacementChoiceForBucket('RDLs', 'hamstring' as any, 9);
+  eq('hamstring 9: affected pattern skipped for unaffected work', hammyPause, {
+    name: 'Bench Press',
+    hierarchyTier: 'unaffected_body_area',
+  });
+
+  const hammyPauseWithUpperAlreadyThere = getReplacementChoiceForBucket(
+    'RDLs',
+    'hamstring' as any,
+    9,
+    ['Bench Press'],
+  );
+  eq('hamstring 9: existing upper avoided, recovery/easy conditioning next', hammyPauseWithUpperAlreadyThere, {
+    name: 'Easy Bike',
+    hierarchyTier: 'recovery_easy_conditioning',
+  });
+
+  const shoulderModerate = getReplacementChoiceForBucket('Bench Press', 'shoulder' as any, 6);
+  eq('shoulder 6: skips still-risky DB press and chooses safe similar push', shoulderModerate, {
+    name: 'Landmine Press',
+    hierarchyTier: 'similar_muscle_group',
+  });
 }
 
 // ─── Summary ───────────────────────────────────────────────────────────

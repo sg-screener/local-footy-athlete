@@ -211,8 +211,11 @@ export function applyInjuryFilterToWorkout(
   const removedNames: string[] = [];
   const replacements: Array<{ from: string; to: string }> = [];
 
-  if (tierRemovesExercises(tier) && sessionRisk !== 'LOW') {
+  if ((tierRemovesExercises(tier) || tier === 'relaxed') && sessionRisk !== 'LOW') {
     const removeCaution = tier === 'strict' || tier === 'severe';
+    const existingNames = exercises
+      .map((ex) => String(ex.exercise?.name ?? '').trim())
+      .filter(Boolean);
     filteredExercises = exercises.map((ex) => {
       const name = ex.exercise?.name || '';
       const r = classifyExerciseForBucket(name, bucket);
@@ -221,7 +224,7 @@ export function applyInjuryFilterToWorkout(
       if (!isRisky) return ex;
 
       // Prefer a curated replacement; fall back to removal when none.
-      const replacement = getReplacementForBucket(name, bucket);
+      const replacement = getReplacementForBucket(name, bucket, injury.severity, existingNames);
       if (replacement) {
         replacements.push({ from: name, to: replacement });
         return ex.exercise

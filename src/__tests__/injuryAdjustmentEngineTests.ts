@@ -469,9 +469,9 @@ console.log('\n[9] Hamstring 6/10 — caution exercises also dropped');
   );
 }
 
-// ─── 10. Engine — Severity 8/10 with mostly-risky session → recovery shell ───
+// ─── 10. Engine — Severity 8/10 substitutes before resting ───
 
-console.log('\n[10] Hamstring 8/10 — mostly-risky session swapped for recovery');
+console.log('\n[10] Hamstring 8/10 — mostly-risky session rescued with safe alternatives');
 {
   reset();
   baseWeekFixture = buildBaseWeek({
@@ -487,9 +487,22 @@ console.log('\n[10] Hamstring 8/10 — mostly-risky session swapped for recovery
   ok('engine fired', result.fired);
   const monChange = result.diff?.changedDays.find((d) => d.date === '2026-04-27');
   ok(
-    'Monday flipped to Recovery shell',
-    monChange?.after.workoutName === 'Recovery',
+    'Monday does not flip straight to Recovery',
+    monChange?.after.workoutName !== 'Recovery',
     `actual workoutName: ${monChange?.after.workoutName}`,
+  );
+  ok(
+    'affected hinge work removed or replaced',
+    monChange
+      ? !monChange.after.exerciseNames.includes('RDLs') &&
+        !monChange.after.exerciseNames.includes('Trap Bar Deadlift')
+      : false,
+    JSON.stringify(monChange?.after.exerciseNames),
+  );
+  ok(
+    'safe alternate work remains',
+    monChange ? monChange.after.exerciseNames.length > 0 : false,
+    JSON.stringify(monChange?.after.exerciseNames),
   );
 }
 

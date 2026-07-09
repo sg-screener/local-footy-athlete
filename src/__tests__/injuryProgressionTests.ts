@@ -372,13 +372,13 @@ section('[5] Hammy 6/10 → "pain gone" → overrides cleared, card deactivated'
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 6. SCENARIO: hammy 6/10 → "worse" 8/10 → recovery shells
+// 6. SCENARIO: hammy 6/10 → "worse" 8/10 → affected work paused
 // ─────────────────────────────────────────────────────────────────────
-section('[6] Hammy 6/10 → "8/10" → escalates to recovery shells');
+section('[6] Hammy 6/10 → "8/10" → pauses affected work without auto-rest');
 {
   resetAll();
   baseWeekDef = {
-    5: workout('Lower Strength', { exercises: [ex('RDLs', 4), ex('Deadlift', 3), ex('Hamstring Curl', 3)] }),
+    5: workout('Lower Strength', { exercises: [ex('RDLs', 4), ex('Deadlift', 3), ex('Nordic Lower', 3)] }),
   };
   seedInjury('hammy', 6);
 
@@ -386,11 +386,18 @@ section('[6] Hammy 6/10 → "8/10" → escalates to recovery shells');
   eq('classified worsening', r.replyKind, 'worsening');
   ok('engine fired at sev 8', r.applied >= 1);
 
-  // Fri Lower Strength has 3/3 risky exercises for hamstring at sev 8 →
-  // recovery-shell escalation kicks in.
+  // Fri Lower Strength has 3/3 risky exercises for hamstring at sev 8.
+  // Slice 4.2 should swap/remove those before resting the whole day.
   const friOverride = useProgramStore.getState().dateOverrides['2026-05-01'];
   ok('Fri override exists', !!friOverride);
-  ok('Fri converted to recovery (workoutType)', friOverride?.workoutType === 'Recovery');
+  ok('Fri not converted straight to recovery', friOverride?.workoutType !== 'Recovery');
+  const names = (friOverride?.exercises ?? []).map((row: any) => row.exercise?.name);
+  ok(
+    'Fri affected hamstring work gone',
+    !names.includes('RDLs') && !names.includes('Deadlift') && !names.includes('Nordic Lower'),
+    JSON.stringify(names),
+  );
+  ok('Fri safe alternate work remains', names.length > 0, JSON.stringify(names));
 
   // Card reason updated.
   const card = getActiveCoachUpdate(FIXED_MONDAY);

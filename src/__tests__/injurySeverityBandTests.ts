@@ -283,13 +283,19 @@ console.log('\n-- Program adjustment behaviour --');
 
 {
   placeWorkouts({
-    2: workout('Wed Lower', [ex('RDLs'), ex('Deadlift'), ex('Nordic Hamstring Curl')]),
+    2: workout('Wed Lower', [ex('RDLs'), ex('Bench Press')]),
   });
   const result = applyProgramAdjustment(injuryRequest('hamstring', 9), emptyState());
-  ok('severity 9 applies pause/recovery shell', result.applied);
-  ok('severity 9 emits set_session_recovery',
-    result.events.some((event) => event.kind === 'set_session_recovery'),
+  ok('severity 9 applies pause to affected work', result.applied);
+  ok('severity 9 replaces/removes affected work before rest',
+    result.events.some((event) =>
+      (event.kind === 'replace_exercise' || event.kind === 'remove_exercise') &&
+      event.before === 'RDLs'),
     JSON.stringify(result.events));
+  ok('severity 9 does not rest when unaffected work remains',
+    !result.events.some((event) => event.kind === 'set_session_recovery'));
+  ok('severity 9 keeps unaffected upper work',
+    !result.events.some((event) => event.before === 'Bench Press'));
 }
 
 {

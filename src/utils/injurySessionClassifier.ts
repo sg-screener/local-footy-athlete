@@ -26,6 +26,7 @@
 import type { Workout } from '../types/domain';
 import { getExerciseTags, getConditioningMeta } from '../data/exerciseTags';
 import type { InjuryBucket } from './programAdjustmentEngine';
+import { injurySeverityPausesAffectedTraining } from '../rules/injurySeverityBands';
 
 // ─── Risk class ─────────────────────────────────────────────────────
 
@@ -118,77 +119,341 @@ export function classifySessionRisk(workout: Workout, bucket: InjuryBucket): Ses
   return 'MODERATE';
 }
 
-// ─── Replacement map ─────────────────────────────────────────────────
+// ─── Replacement hierarchy ───────────────────────────────────────────
 //
-// Curated list keyed by bucket → original-exercise → safe substitute.
-// Entries are deliberately conservative; a missing key falls back to
-// `remove_exercise`. The exercise names match those in EXERCISE_TAGS
-// so the resolver / engine can compose tag lookups against them.
+// Bible order:
+//   1. same movement pattern if safe
+//   2. similar muscle group
+//   3. unaffected body area
+//   4. recovery / easy conditioning
+//   5. removal/rest only when no safe useful work remains
+//
+// The candidates below are ordered in that hierarchy. We still validate
+// every candidate against the injury tags before returning it, so a
+// nominally-similar swap that is still risky gets skipped.
 
-const REPLACEMENT_BY_BUCKET: Partial<Record<InjuryBucket, Record<string, string>>> = {
+export type SubstitutionHierarchyTier =
+  | 'same_movement_pattern'
+  | 'similar_muscle_group'
+  | 'unaffected_body_area'
+  | 'recovery_easy_conditioning';
+
+export interface InjuryReplacementChoice {
+  name: string;
+  hierarchyTier: SubstitutionHierarchyTier;
+}
+
+interface ReplacementCandidate extends InjuryReplacementChoice {
+  /** Optional alias used when tests/AI wording differs from tag names. */
+  aliases?: string[];
+}
+
+const REPLACEMENT_BY_BUCKET: Partial<Record<InjuryBucket, Record<string, ReplacementCandidate[]>>> = {
   hamstring: {
-    'RDLs': 'Goblet Squat',
-    'Single-Leg RDL': 'Goblet Squat',
-    'Deadlift': 'Goblet Squat',
-    'Conventional Deadlift': 'Goblet Squat',
-    'Sumo Deadlift': 'Goblet Squat',
-    'Hamstring Curl': 'Goblet Squat',
-    'Nordics': 'Goblet Squat',
-    'Sprint Intervals': 'Hard Assault Bike Intervals',
-    'Hill Sprints': 'Hard Assault Bike Intervals',
-    'Quality Sprints': 'Hard Assault Bike Intervals',
-    'MAS Training': 'Hard Assault Bike Intervals',
+    'RDLs': [
+      { name: 'Single-Leg RDL', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Hip Thrusts', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Single-Leg RDL': [
+      { name: 'Hip Thrusts', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Deadlift': [
+      { name: 'Hip Thrusts', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Conventional Deadlift': [
+      { name: 'Hip Thrusts', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Sumo Deadlift': [
+      { name: 'Hip Thrusts', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Hamstring Curl': [
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Nordic Lower': [
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group', aliases: ['Nordics', 'Nordic Hamstring Curl'] },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Sprint Intervals': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Hill Sprints': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Quality Sprints': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'MAS Training': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
   knee: {
-    'Back Squat': 'RDLs',
-    'Front Squat': 'RDLs',
-    'Walking Lunge': 'Hip Thrust',
-    'Reverse Lunge': 'Hip Thrust',
-    'Bulgarian Split Squat': 'Hip Thrust',
-    'Depth Jumps': 'Goblet Squat',
-    'Box Jumps': 'Goblet Squat',
+    'Back Squat': [
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Front Squat': [
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Walking Lunges': [
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group', aliases: ['Walking Lunge'] },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Reverse Lunges': [
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group', aliases: ['Reverse Lunge'] },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Bulgarian Split Squats': [
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group', aliases: ['Bulgarian Split Squat'] },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Depth Jumps': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Box Jumps': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
   calf: {
-    'Sprint Intervals': 'Assault Bike Intervals',
-    'Depth Jumps': 'Wall Sit',
-    'Box Jumps': 'Wall Sit',
+    'Sprint Intervals': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Depth Jumps': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Box Jumps': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
   ankle: {
-    'Sprint Intervals': 'Assault Bike Intervals',
-    'Depth Jumps': 'Wall Sit',
-    'Box Jumps': 'Wall Sit',
+    'Sprint Intervals': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Depth Jumps': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Box Jumps': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
   adductor: {
-    'Sprint Intervals': 'Assault Bike Intervals',
-    'Walking Lunge': 'Hip Thrust',
+    'Sprint Intervals': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Walking Lunges': [
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group', aliases: ['Walking Lunge'] },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
   pubalgia: {
-    'Sprint Intervals': 'Assault Bike Intervals',
-    'RDLs': 'Goblet Squat',
-    'Deadlift': 'Goblet Squat',
+    'Sprint Intervals': [
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'RDLs': [
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Deadlift': [
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
   shoulder: {
-    'Bench Press': 'DB Bench Press',
-    'Overhead Press': 'Landmine Press',
-    'Pull-Ups': 'Inverted Row',
+    'Bench Press': [
+      { name: 'DB Bench Press', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Landmine Press', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Chest Supported Row', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Overhead Press': [
+      { name: 'Landmine Press', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Chest Supported Row', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Pull-Ups': [
+      { name: 'Neutral-Grip Pulldown', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Chest Supported Row', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
   elbow: {
-    'Bench Press': 'DB Bench Press',
-    'Pull-Ups': 'Inverted Row',
+    'Bench Press': [
+      { name: 'DB Bench Press', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Landmine Press', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Pull-Ups': [
+      { name: 'Neutral-Grip Pulldown', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Chest Supported Row', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
   wrist: {
-    'Bench Press': 'DB Bench Press',
-    'Pull-Ups': 'Inverted Row',
+    'Bench Press': [
+      { name: 'DB Bench Press', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Landmine Press', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Pull-Ups': [
+      { name: 'Neutral-Grip Pulldown', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Chest Supported Row', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
   lowerBack: {
-    'Back Squat': 'Goblet Squat',
-    'Front Squat': 'Goblet Squat',
-    'Deadlift': 'Hip Thrust',
-    'Conventional Deadlift': 'Hip Thrust',
-    'Sumo Deadlift': 'Hip Thrust',
-    'RDLs': 'Single-Leg RDL',
+    'Back Squat': [
+      { name: 'Goblet Squat', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Chest Supported Row', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Front Squat': [
+      { name: 'Goblet Squat', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Hip Thrusts', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Chest Supported Row', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Deadlift': [
+      { name: 'Hip Thrusts', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Chest Supported Row', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Conventional Deadlift': [
+      { name: 'Hip Thrusts', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Chest Supported Row', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'Sumo Deadlift': [
+      { name: 'Hip Thrusts', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Chest Supported Row', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
+    'RDLs': [
+      { name: 'Hip Thrusts', hierarchyTier: 'same_movement_pattern' },
+      { name: 'Goblet Squat', hierarchyTier: 'similar_muscle_group' },
+      { name: 'Chest Supported Row', hierarchyTier: 'unaffected_body_area' },
+      { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+    ],
   },
 };
+
+const GENERIC_SAFE_BY_BUCKET: Partial<Record<InjuryBucket, ReplacementCandidate[]>> = {
+  hamstring: [
+    { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+  knee: [
+    { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+  calf: [
+    { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+  ankle: [
+    { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+  adductor: [
+    { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+  pubalgia: [
+    { name: 'Bench Press', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+  shoulder: [
+    { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+  elbow: [
+    { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+  wrist: [
+    { name: 'Goblet Squat', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+  lowerBack: [
+    { name: 'Chest Supported Row', hierarchyTier: 'unaffected_body_area' },
+    { name: 'Easy Bike', hierarchyTier: 'recovery_easy_conditioning' },
+  ],
+};
+
+function matchesCandidateKey(raw: string, key: string, candidates: ReplacementCandidate[]): boolean {
+  const name = raw.toLowerCase();
+  if (key.toLowerCase() === name) return true;
+  return candidates.some((candidate) =>
+    (candidate.aliases ?? []).some((alias) => alias.toLowerCase() === name));
+}
+
+function candidateIsAllowedBySeverity(
+  candidate: ReplacementCandidate,
+  severity: number,
+): boolean {
+  if (!injurySeverityPausesAffectedTraining(severity)) return true;
+  return candidate.hierarchyTier === 'unaffected_body_area' ||
+    candidate.hierarchyTier === 'recovery_easy_conditioning';
+}
+
+function isSafeCandidate(candidate: ReplacementCandidate, bucket: InjuryBucket): boolean {
+  const tag = getExerciseTags(candidate.name);
+  if (!tag) return false;
+  return (tag.injury as any)[bucket] === 'good';
+}
+
+function candidatesForExercise(
+  exerciseName: string,
+  bucket: InjuryBucket,
+): ReplacementCandidate[] {
+  const bucketMap = REPLACEMENT_BY_BUCKET[bucket];
+  if (bucketMap) {
+    for (const [key, candidates] of Object.entries(bucketMap)) {
+      if (matchesCandidateKey(exerciseName, key, candidates)) {
+        return candidates;
+      }
+    }
+  }
+  return GENERIC_SAFE_BY_BUCKET[bucket] ?? [];
+}
 
 /**
  * Curated safe replacement for a risky exercise + bucket. Returns null
@@ -198,15 +463,28 @@ const REPLACEMENT_BY_BUCKET: Partial<Record<InjuryBucket, Record<string, string>
 export function getReplacementForBucket(
   exerciseName: string,
   bucket: InjuryBucket,
+  severity: number = 6,
+  avoidNames: readonly string[] = [],
 ): string | null {
-  const map = REPLACEMENT_BY_BUCKET[bucket];
-  if (!map) return null;
-  // Exact match first.
-  if (map[exerciseName]) return map[exerciseName];
-  // Case-insensitive fallback for slightly off naming.
-  const lower = exerciseName.toLowerCase();
-  for (const [k, v] of Object.entries(map)) {
-    if (k.toLowerCase() === lower) return v;
+  return getReplacementChoiceForBucket(exerciseName, bucket, severity, avoidNames)?.name ?? null;
+}
+
+export function getReplacementChoiceForBucket(
+  exerciseName: string,
+  bucket: InjuryBucket,
+  severity: number = 6,
+  avoidNames: readonly string[] = [],
+): InjuryReplacementChoice | null {
+  const avoided = new Set(avoidNames.map((name) => name.toLowerCase()));
+  const candidates = candidatesForExercise(exerciseName, bucket);
+  for (const candidate of candidates) {
+    if (avoided.has(candidate.name.toLowerCase())) continue;
+    if (!candidateIsAllowedBySeverity(candidate, severity)) continue;
+    if (!isSafeCandidate(candidate, bucket)) continue;
+    return {
+      name: candidate.name,
+      hierarchyTier: candidate.hierarchyTier,
+    };
   }
   return null;
 }

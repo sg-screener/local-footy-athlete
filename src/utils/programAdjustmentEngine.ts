@@ -1394,8 +1394,6 @@ function handleInjuryIntent(
   // ── 4. Severity band flags ───────────────────────────────────────────
   const removeAvoid = injurySeverityAvoidsExactTriggers(severity);
   const removeCaution = injurySeverityRemovesRiskyWork(severity);
-  const recoveryShellActive = injurySeverityPausesAffectedTraining(severity);
-  const fallbackUsesRecovery = injurySeverityPausesAffectedTraining(severity);
   const canUseGenericFallback = injurySeverityReducesAffectedWork(severity);
 
   const events: AdjustmentEvent[] = [];
@@ -1406,12 +1404,10 @@ function handleInjuryIntent(
   // specific action that addresses the injured area. The priority list
   // (per the spec) is:
   //
-  //   (1) tagged risky exercises    → remove_exercise (or recovery shell
-  //                                    on ≥8 + heavy-risk session)
+  //   (1) tagged risky exercises    → replace_exercise before remove_exercise
   //   (2) running conditioning      → swap_conditioning_modality
   //   (3) team training             → add_session_note (lower-limb only)
   //   (4) generic relevant session  → lighten_session
-  //                                    (set_session_recovery at sev ≥7)
   //
   // (1) is ALSO compounded with (2) when the same day has both tagged
   // exercises AND running conditioning — we want both addressed.
@@ -1437,21 +1433,6 @@ function handleInjuryIntent(
         else if (rating === 'caution') cautionNames.push(name);
       }
       const removable = removeCaution ? [...avoidNames, ...cautionNames] : [...avoidNames];
-      const riskShare = removable.length / Math.max(1, exercises.length);
-
-      // ≥8 + ≥50% risky + ≥2 risky → recovery shell INSTEAD of removal.
-      if (recoveryShellActive && removable.length >= 2 && riskShare >= 0.5) {
-        events.push(
-          buildEvent(
-            'set_session_recovery',
-            day.date,
-            `${bucket} ${severity}/10 - heavy ${region} load (${removable.length}/${exercises.length} risky)`,
-            workout.name,
-            'Recovery',
-          ),
-        );
-        continue; // recovery is terminal for this day
-      }
 
       // ── Session-level decision ─────────────────────────────────────
       // Classify the session as HIGH / MODERATE / LOW. HIGH sessions
@@ -1467,14 +1448,17 @@ function handleInjuryIntent(
         require('./injurySessionClassifier');
       const risk = classifySessionRisk(workout, bucket);
       if (risk !== 'LOW') {
+        const existingNames = exercises
+          .map((ex) => String((ex as any).exercise?.name ?? '').trim())
+          .filter(Boolean);
         for (const name of removable) {
-          const replacement = getReplacementForBucket(name, bucket);
+          const replacement = getReplacementForBucket(name, bucket, severity, existingNames);
           if (replacement) {
             events.push(
               buildEvent(
                 'replace_exercise',
                 day.date,
-                `${bucket} ${severity}/10 - ${region}-region risk; safe alt`,
+                `${bucket} ${severity}/10 - ${region}-region risk; safe alt before removal`,
                 name,
                 replacement,
               ),
@@ -1547,15 +1531,14 @@ function handleInjuryIntent(
 
     // ── (4) Generic relevant session — lighten or recover ───────────────
     if (bucket && canUseGenericFallback && isSessionRelevantToBucket(workout, bucket)) {
-      const useRecovery = fallbackUsesRecovery;
       const reason = `${bucket} ${severity}/10 - protective fallback (no specific exposure tagged on this day)`;
       events.push(
         buildEvent(
-          useRecovery ? 'set_session_recovery' : 'lighten_session',
+          'lighten_session',
           day.date,
           reason,
           workout.name ?? null,
-          useRecovery ? 'Recovery' : 'Lightened',
+          'Lightened',
         ),
       );
       continue;
@@ -1572,14 +1555,13 @@ function handleInjuryIntent(
       (d) => d.workout != null && !isRecoverySession(d.workout),
     );
     if (target && target.workout) {
-      const useRecovery = fallbackUsesRecovery;
       events.push(
         buildEvent(
-          useRecovery ? 'set_session_recovery' : 'lighten_session',
+          'lighten_session',
           target.date,
           `${severity}/10 - protective fallback (body part not specified)`,
           target.workout.name ?? null,
-          useRecovery ? 'Recovery' : 'Lightened',
+          'Lightened',
         ),
       );
     }

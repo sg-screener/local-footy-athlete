@@ -142,9 +142,10 @@ section('[1] applyInjuryFilterToWorkout — unit');
     ),
   );
 
-  // Severity 4 relaxed → no removal, only notes.
+  // Severity 4 relaxed → swap/reduce affected work, keep the day intact.
   const relaxed = applyInjuryFilterToWorkout(fri, hammy(4));
   eq('relaxed: exercise count unchanged', relaxed.exercises.length, 2);
+  ok('relaxed: RDLs swapped out', !relaxed.exercises.some((e) => e.exercise?.name === 'RDLs'));
   ok(
     'relaxed: coachNotes mentions limited sprinting OR light hinge',
     !!relaxed.coachNotes?.some((n) => /limited|light hinge/i.test(n)),
@@ -233,9 +234,10 @@ section('[4] resolveDate — severity tier transitions reflected next week');
     !sev6.workout?.exercises.some((e) => e.exercise?.name === 'RDLs'),
   );
 
-  // Severity 4 (relaxed) — RDLs back, notes only.
+  // Severity 4 (relaxed) — affected work swapped, session preserved.
   const sev4 = resolveDate(FIXED_DATE, programState([fri], hammy(4)));
-  eq('sev 4: RDLs back', sev4.workout?.exercises.length, 2);
+  eq('sev 4: exercise count preserved', sev4.workout?.exercises.length, 2);
+  ok('sev 4: RDLs swapped out', !sev4.workout?.exercises.some((e) => e.exercise?.name === 'RDLs'));
   ok('sev 4: coachNotes present', (sev4.workout?.coachNotes ?? []).length > 0);
 
   // Severity 1 (light) — RDLs back, gradual note.

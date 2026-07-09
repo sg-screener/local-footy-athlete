@@ -39,9 +39,9 @@ export function buildReadinessActiveConstraints(
     const fatigue: ActiveFatigueConstraint = {
       ...baseFields(signal, 'flat', 'Feeling flat'),
       type: 'fatigue',
-      severity: signal.flatToday ? 7 : 5,
-      rules: ['max-effort lifts', 'hard conditioning + sprints'],
-      safeFocus: ['Easy aerobic conditioning', 'Recovery + mobility', 'Light technique work'],
+      severity: 3,
+      rules: ['finishers / hard extras', '1-2 accessories if the session feels too big'],
+      safeFocus: ['Main lift if moving well', 'Easy aerobic conditioning', 'Light technique work'],
       advice: [],
     };
     constraints.push(fatigue);

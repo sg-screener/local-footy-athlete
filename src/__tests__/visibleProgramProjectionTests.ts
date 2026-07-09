@@ -147,8 +147,8 @@ section('[1] Hammy 6/10 + next Monday Lower Body Strength → Deadlift + Nordic 
     `exercises: ${JSON.stringify(names)}`,
   );
   ok(
-    'coachNotes mention sprinting',
-    !!out.day.workout?.coachNotes?.some((n) => /sprint/i.test(n)),
+    'session does not collapse to rest',
+    out.day.workout?.name !== 'Rest' && out.day.workout?.workoutType !== 'Rest',
   );
 }
 

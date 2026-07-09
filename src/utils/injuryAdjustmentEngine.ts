@@ -60,6 +60,7 @@ import {
   injurySeverityPausesAffectedTraining,
   injurySeverityRemovesRiskyWork,
 } from '../rules/injurySeverityBands';
+import { getReplacementForBucket } from './injurySessionClassifier';
 
 // ─── Types ───
 
@@ -413,22 +414,33 @@ export function applyInjuryAdjustment(
         ? [...avoidNames]
         : [];
 
-    const totalRiskShare = removeNames.length / Math.max(1, exercises.length);
-    const useRecoveryShell =
-      injurySeverityPausesAffectedTraining(context.severity) &&
-      totalRiskShare >= 0.5 &&
-      removeNames.length >= 2;
-
-    if (useRecoveryShell) {
-      actions.push({
-        kind: 'lighten_session',
-        scope: 'local_adjustment',
-        payload: { date: session.date, level: 'recovery' },
-      });
-      continue;
-    }
-
     for (const name of removeNames) {
+      const replacement = context.bucket
+        ? getReplacementForBucket(
+            name,
+            context.bucket as any,
+            context.severity,
+            exercises.map((ex) => ex.exercise?.name || '').filter(Boolean),
+          )
+        : null;
+      if (replacement) {
+        actions.push({
+          kind: 'replace_exercise',
+          scope: 'local_adjustment',
+          payload: {
+            date: session.date,
+            fromExercise: name,
+            toExercise: {
+              name: replacement,
+              sets: 3,
+              repsMin: 6,
+              repsMax: 8,
+              notes: 'Injury swap - safe alternative before removing work.',
+            },
+          },
+        });
+        continue;
+      }
       actions.push({
         kind: 'remove_exercise',
         scope: 'local_adjustment',
@@ -486,7 +498,7 @@ export function applyInjuryAdjustment(
           scope: 'local_adjustment',
           payload: {
             date: candidate.date,
-            level: 'recovery',
+            level: 'optional',
           },
         });
       } catch (e) {

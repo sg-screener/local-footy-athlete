@@ -148,9 +148,18 @@ section('[5] readiness builds date-scoped active constraints');
   );
   eq('flat emits one constraint', flat.length, 1);
   eq('flat type fatigue', flat[0]?.type, 'fatigue');
+  eq('flat maps to slight reduction severity', (flat[0] as any)?.severity, 3);
   eq('flat scoped to date', (flat[0] as any)?.appliesToDate, '2026-05-19');
   eq('flat has readiness source', (flat[0] as any)?.source, 'readiness');
   ok('flat id marked readiness', isReadinessConstraint(flat[0]));
+  ok(
+    'flat preserves main lift focus',
+    ((flat[0] as any)?.safeFocus ?? []).some((focus: string) => /main lift/i.test(focus)),
+  );
+  ok(
+    'flat trims finishers/accessories first',
+    ((flat[0] as any)?.rules ?? []).some((rule: string) => /finisher|accessor/i.test(rule)),
+  );
 
   const sore = buildReadinessActiveConstraints(
     signal('2026-05-19', buildReadinessSignalPatch('sore')),
@@ -195,7 +204,7 @@ section('[7] readiness labels and weekly card scope');
     signal('2026-05-19', buildReadinessSignalPatch('flat')),
   );
   const plans = buildConstraintPlans(flat);
-  eq('plan uses readiness display label', plans[0]?.activeIssue, 'Feeling flat — 7/10');
+  eq('plan uses readiness display label', plans[0]?.activeIssue, 'Feeling flat - 3/10');
 
   const outsideWeek = buildWeeklyCoachUpdateFromConstraints({
     weekStartISO: '2026-05-18',
@@ -212,7 +221,7 @@ section('[7] readiness labels and weekly card scope');
     activeConstraints: flat,
   });
   ok('card appears on scoped date', !!sameDay);
-  eq('card uses readiness issue label', sameDay?.activeIssues[0], 'Feeling flat — 7/10');
+  eq('card uses readiness issue label', sameDay?.activeIssues[0], 'Feeling flat - 3/10');
 }
 
 section('[8] coach chat routes to same readiness language');
