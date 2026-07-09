@@ -82,6 +82,7 @@ interface GeneratedWeek {
   resolvedWeek: ResolvedDay[];
   report: WeekValidationReport;
   flags: ReturnType<typeof deriveWeekValidationFlags>;
+  weeklyPlan: ReturnType<typeof buildCoachingPlan>['weeklyPlan'];
 }
 
 function generatedWeek(profile: Partial<OnboardingData>, options: { gameDayMark?: string; weekKind?: WeekKind } = {}): GeneratedWeek {
@@ -157,7 +158,7 @@ function generatedWeek(profile: Partial<OnboardingData>, options: { gameDayMark?
     profile: validatorProfile,
     weekFlags: flags,
   });
-  return { resolvedWeek, report, flags };
+  return { resolvedWeek, report, flags, weeklyPlan: plan.weeklyPlan };
 }
 
 function dayLabel(dateISO: string): string {
@@ -242,26 +243,35 @@ console.log('\n[3] non-bye generated weeks stay non-bye');
   ok('off-season no game = not bye', offSeasonNoGame.flags.byeWeek === false, offSeasonNoGame.flags);
 }
 
-console.log('\n[4] current bye-week shape audit baseline');
+console.log('\n[4] bye-week Saturday metadata and counting stay honest');
 {
   const week = generatedWeek(baseProfile());
+  const saturdayAllocation = week.weeklyPlan.find((session) => session.dayOfWeek === 'Saturday');
   const saturday = week.resolvedWeek.find((day) => day.dayOfWeek === 6);
   const saturdayText = `${saturday?.workout?.name ?? ''} ${saturday?.workout?.description ?? ''}`;
   const saturdayUnits = week.report.counts.days.find((day) => day.date === saturday?.date)?.units ?? [];
   const saturdayCategories = saturdayUnits.map((unit) => unit.category);
-  ok('audit gap: Saturday currently resolves as lower strength without conditioning metadata',
+  ok('Saturday allocation is explicitly strength-only',
+    saturdayAllocation?.strengthPattern === 'lower' &&
+      !/conditioning|aerobic|tempo|interval|sprint|finisher/i.test(saturdayAllocation.focus) &&
+      !saturdayAllocation.hasCombinedConditioning &&
+      !saturdayAllocation.attachedConditioningKind &&
+      !saturdayAllocation.conditioningFlavour &&
+      !saturdayAllocation.conditioningCategory,
+    saturdayAllocation);
+  ok('resolved Saturday never shows conditioning wording without conditioning metadata',
     /lower body strength/i.test(saturdayText) &&
+      !/conditioning|aerobic|tempo|interval|sprint|finisher/i.test(saturdayText) &&
       !saturday?.workout?.conditioningCategory &&
-      !saturday?.workout?.hasCombinedConditioning,
-    { saturday: saturdayText, conditioningCategory: saturday?.workout?.conditioningCategory });
-  ok('audit gap: Saturday is not currently a real conditioning unit',
-    !saturdayCategories.some((category) =>
-      category === 'hard_conditioning' ||
-      category === 'tempo_conditioning' ||
-      category === 'aerobic_base' ||
-      category === 'sprint'
-    ),
-    saturdayCategories);
+      !saturday?.workout?.conditioningFlavour &&
+      !saturday?.workout?.hasCombinedConditioning &&
+      !saturday?.workout?.conditioningBlock,
+    {
+      saturday: saturdayText,
+      conditioningCategory: saturday?.workout?.conditioningCategory,
+      conditioningBlock: saturday?.workout?.conditioningBlock,
+    });
+  eq('Saturday counts as lower strength only', saturdayCategories, ['lower_strength']);
 
   const snapshot = buildWeekShapeSnapshot({
     resolvedWeek: week.resolvedWeek,
@@ -272,12 +282,35 @@ console.log('\n[4] current bye-week shape audit baseline');
     weekKind: 'build',
   });
   ok('QA snapshot makes bye context visible', snapshot?.weekContext === 'In-season bye week | Deload: no', snapshot);
+  ok('QA snapshot labels Saturday as lower strength only', snapshot?.days.Sat === 'lower strength', snapshot?.days);
+  eq('QA snapshot uses canonical exposure counts', snapshot?.counts, {
+    hardDays: week.report.counts.hardDays,
+    mainStrength: week.report.counts.mainStrengthExposures,
+    conditioning: week.report.counts.conditioningExposures,
+    running: week.report.counts.runningExposures,
+    sprintCod: week.report.counts.sprintCodExposures,
+  });
   ok('S4/E1-style accessory/gunshow does not inflate main strength',
     week.report.counts.gunshowSessions >= 1,
     {
       mainStrength: week.report.counts.mainStrengthExposures,
       gunshow: week.report.counts.gunshowSessions,
     });
+
+  const gameSaturday = generatedWeek(baseProfile({
+    gameDay: 'Saturday',
+    usualGameDay: 'Saturday',
+  })).resolvedWeek.find((day) => day.dayOfWeek === 6)?.workout;
+  const practiceMatchSaturday = generatedWeek(baseProfile({
+    seasonPhase: 'Pre-season',
+    gameDay: 'Saturday',
+    usualGameDay: 'Saturday',
+  }), { gameDayMark: 'Saturday' }).resolvedWeek.find((day) => day.dayOfWeek === 6)?.workout;
+  ok('game-week Saturday is unaffected', gameSaturday?.workoutType === 'Game', gameSaturday);
+  ok('practice-match Saturday is unaffected', practiceMatchSaturday?.workoutType === 'Game', practiceMatchSaturday);
+  ok('later game generation does not inherit bye Saturday metadata',
+    !/bye-week gym top-up/i.test(`${gameSaturday?.name ?? ''} ${gameSaturday?.description ?? ''}`),
+    gameSaturday);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

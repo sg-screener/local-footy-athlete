@@ -1122,12 +1122,13 @@ function buildWeeklyPlan(
     //
     // PHILOSOPHY:
     //   No game = freed recovery window. Use it to build, not coast.
-    //   Saturday becomes a primary training day (lower + conditioning emphasis).
+    //   Saturday becomes a primary lower-body strength top-up. Conditioning
+    //   is only claimed when a real typed conditioning component is attached.
     //   Sunday stays recovery/off — athletes expect a rest day here.
     //
     // PLACEMENT:
     //   1. Early-week core sessions: standard lower/upper alternation
-    //   2. Saturday: core lower body + conditioning emphasis (the "bonus" session)
+    //   2. Saturday: core lower-body strength top-up (the "bonus" session)
     //   3. Sunday: always off / recovery (never gets a session)
     //   4. Remaining days: optional → recovery as normal
     //
@@ -1154,7 +1155,7 @@ function buildWeeklyPlan(
     let recCount = 0;
 
     // Place core sessions on regular (non-Sat/Sun) days.
-    // Saturday already covers lower+conditioning, so regular days need:
+    // Saturday already covers lower strength, so regular days need:
     //   - Non-team days → lower body (gym legs without team fatigue)
     //   - Team days → upper body (pair with team running/drills)
     // This ensures balanced upper/lower distribution.
@@ -1262,14 +1263,14 @@ function buildWeeklyPlan(
       }
     }
 
-    // Saturday: core lower body + conditioning emphasis
+    // Saturday: core lower-body strength top-up.
     // This is the "bonus" session freed up by no game day.
     // Lower body emphasis because the athlete isn't accumulating game-day
     // lower body fatigue this week, so there's capacity to train it harder.
     if (saturdaySlot) {
       plan.push({
         tier: 'core',
-        focus: 'Lower body strength + conditioning emphasis (no game this week - build capacity)',
+        focus: 'Lower body strength (bye-week gym top-up)',
         dayOfWeek: 'Saturday',
         isHardExposure: true,
         strengthPattern: 'lower',

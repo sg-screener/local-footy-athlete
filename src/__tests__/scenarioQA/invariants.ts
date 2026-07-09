@@ -290,8 +290,9 @@ export const inseason_g1ArmsOrRecovery: Invariant = ({ inputs, plan }) => {
 };
 
 /**
- * NO-game in-season weeks: Saturday must be CORE (lower + conditioning peak),
- * NOT recovery. This is the Phase C invariant.
+ * No-game in-season weeks: Saturday must be a real CORE top-up, not recovery.
+ * It may be lower strength or typed conditioning, but wording alone is never
+ * enough to prove conditioning content.
  */
 export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
   if (inputs.seasonPhase !== 'In-season') return null;
@@ -301,22 +302,25 @@ export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
   const sat = plan.weeklyPlan.find((s) => s.dayOfWeek === 'Saturday');
   if (!sat) {
     return {
-      rule: 'NO-game in-season: Saturday = core peak',
+      rule: 'NO-game in-season: Saturday = core top-up',
       passed: false,
       detail: 'Saturday is in selectedDays but missing from plan entirely',
     };
   }
-  const isPeakLike =
-    sat.tier === 'core' &&
-    (sat.focus.toLowerCase().includes('lower') ||
-      sat.focus.toLowerCase().includes('conditioning') ||
-      sat.focus.toLowerCase().includes('build capacity'));
+  const isLowerStrengthTopUp =
+    sat.strengthPattern === 'lower' &&
+    sat.focus.toLowerCase().includes('lower');
+  const isTypedConditioningTopUp =
+    !!sat.conditioningCategory &&
+    !!sat.conditioningFlavour &&
+    (!sat.hasCombinedConditioning || sat.attachedConditioningKind === 'component');
+  const isPeakLike = sat.tier === 'core' && (isLowerStrengthTopUp || isTypedConditioningTopUp);
   return {
-    rule: 'NO-game in-season: Saturday = core peak',
+    rule: 'NO-game in-season: Saturday = core top-up',
     passed: isPeakLike,
     detail: isPeakLike
       ? `Saturday: ${sat.focus.substring(0, 60)}`
-      : `Saturday: [${sat.tier}] "${sat.focus}" (expected core lower+conditioning peak)`,
+      : `Saturday: [${sat.tier}] "${sat.focus}" (expected lower strength or typed conditioning)`,
   };
 };
 
