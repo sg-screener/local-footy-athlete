@@ -3,6 +3,7 @@ import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
 import {
   buildCoachingPlan,
   onboardingToCoachingInputs,
+  type CoachingInputs,
   type CoachingPlan,
   type AIConstraints,
 } from '../../utils/coachingEngine';
@@ -122,6 +123,7 @@ function resolveGenerationConstraints(
 function buildGeneratedMicrocycles(args: {
   coachWorkouts: CoachGeneratedWorkouts;
   plan: CoachingPlan;
+  coachingInputs?: CoachingInputs;
   profile: OnboardingData;
   programId: string;
   microcyclePrefix: string;
@@ -138,10 +140,19 @@ function buildGeneratedMicrocycles(args: {
 
   return states.map((blockState) => {
     const microcycleId = `${args.microcyclePrefix}-${blockState.weekNumber}`;
+    const weekPlan = args.coachingInputs
+      ? buildCoachingPlan({
+          ...args.coachingInputs,
+          miniCycleNumber: blockState.miniCycleNumber,
+          weekInBlock: blockState.weekInBlock,
+          weekNumber: blockState.weekNumber,
+          weekKind: blockState.weekKind,
+        })
+      : args.plan;
     const baseWorkouts = buildWorkoutsFromCoach(
       args.coachWorkouts,
       microcycleId,
-      args.plan.weeklyPlan,
+      weekPlan.weeklyPlan,
       args.profile,
       {
         miniCycleNumber: blockState.miniCycleNumber,
@@ -226,6 +237,7 @@ export function generateProgramLocally(
   const microcycles = buildGeneratedMicrocycles({
     coachWorkouts: [],
     plan,
+    coachingInputs,
     profile: generationProfile,
     programId: 'prog-ai-1',
     microcyclePrefix: 'mc-ai',
@@ -919,6 +931,7 @@ export async function generateProgramFromProfile(
     microcycles = buildGeneratedMicrocycles({
       coachWorkouts: result.programUpdate.workouts,
       plan,
+      coachingInputs,
       profile: generationProfile,
       programId: 'prog-ai-1',
       microcyclePrefix: 'mc-ai',

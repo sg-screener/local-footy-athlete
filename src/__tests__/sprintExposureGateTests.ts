@@ -13,6 +13,7 @@ import {
   buildCoachingPlan,
   onboardingToCoachingInputs,
   type CoachingPlan,
+  type OnboardingToCoachingInputsOptions,
   type SessionAllocation,
 } from '../utils/coachingEngine';
 import {
@@ -20,7 +21,9 @@ import {
   buildGenerationConstraintContext,
 } from '../utils/generationConstraints';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
+import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSprintExposureGate } from '../rules/sprintExposureGate';
+import { resolveOffseasonSubphase } from '../rules/offseasonSubphase';
 import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
 
 const TODAY = '2026-07-06';
@@ -116,6 +119,7 @@ function fatigue(severity = 5): ActiveFatigueConstraint {
 function planFor(
   profileData: OnboardingData,
   constraints: ActiveConstraint[] = [],
+  inputOptions: Partial<OnboardingToCoachingInputsOptions> = {},
 ): CoachingPlan {
   const context = buildGenerationConstraintContext({
     activeConstraints: constraints,
@@ -123,6 +127,7 @@ function planFor(
   });
   const constrainedProfile = applyGenerationConstraintsToProfile(profileData, context);
   return buildCoachingPlan(onboardingToCoachingInputs(constrainedProfile, {
+    ...inputOptions,
     availabilityDateISO: TODAY,
     generationConstraints: context,
   }));
@@ -245,6 +250,57 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     injuryAllowsSprint: true,
   });
   eq('pre-season 0 team/game exposures may allow sprint if healthy', gate.allowStandaloneSprint, true, JSON.stringify(gate));
+}
+
+{
+  eq('off-season week 1 resolves early',
+    resolveOffseasonSubphase({ seasonPhase: 'Off-season', miniCycleNumber: 1, weekInBlock: 1 }),
+    'early_offseason');
+  eq('off-season week 3 resolves mid',
+    resolveOffseasonSubphase({ seasonPhase: 'Off-season', miniCycleNumber: 1, weekInBlock: 3 }),
+    'mid_offseason');
+  eq('off-season week 4 resolves late',
+    resolveOffseasonSubphase({ seasonPhase: 'Off-season', miniCycleNumber: 1, weekInBlock: 4 }),
+    'late_offseason');
+  eq('unknown off-season week defaults to mid',
+    resolveOffseasonSubphase({ seasonPhase: 'Off-season' }),
+    'mid_offseason');
+}
+
+{
+  const early = evaluateSprintExposureGate({
+    phase: 'Off-season',
+    offseasonSubphase: 'early_offseason',
+    readinessAllowsSprint: true,
+    injuryAllowsSprint: true,
+  });
+  eq('early off-season denies app-added sprint', early.allowStandaloneSprint, false, JSON.stringify(early));
+
+  const mid = evaluateSprintExposureGate({
+    phase: 'Off-season',
+    offseasonSubphase: 'mid_offseason',
+    readinessAllowsSprint: true,
+    injuryAllowsSprint: true,
+  });
+  eq('mid off-season denies app-added sprint for now', mid.allowStandaloneSprint, false, JSON.stringify(mid));
+
+  const late = evaluateSprintExposureGate({
+    phase: 'Off-season',
+    offseasonSubphase: 'late_offseason',
+    readinessAllowsSprint: true,
+    injuryAllowsSprint: true,
+  });
+  eq('late off-season may allow one app-added sprint if healthy', late.allowStandaloneSprint, true, JSON.stringify(late));
+  eq('late off-season target is one sprint/COD exposure', late.target, 1, JSON.stringify(late));
+
+  const afterTopUp = evaluateSprintExposureGate({
+    phase: 'Off-season',
+    offseasonSubphase: 'late_offseason',
+    plannedOnFeetSprintExposures: 1,
+    readinessAllowsSprint: true,
+    injuryAllowsSprint: true,
+  });
+  eq('late off-season allows at most one app-added sprint', afterTopUp.allowStandaloneSprint, false, JSON.stringify(afterTopUp));
 }
 
 {
@@ -428,11 +484,119 @@ console.log('\n-- SP-2. Quality sprint micro-dose output --');
     teamTrainingDays: [],
     gameDay: undefined,
   });
-  const plan = planFor(p);
-  eq('off-season still adds no sprint until late off-season model exists',
+  const plan = planFor(p, [], { miniCycleNumber: 1, weekInBlock: 1, weekNumber: 1 });
+  eq('early off-season still adds no sprint',
     speedWorkouts(builtWorkoutsFor(plan, p)).length,
     0,
     planText(plan));
+}
+
+console.log('\n-- SP-3. Late off-season sprint subphase --');
+
+{
+  const p = profile({
+    seasonPhase: 'Off-season',
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    gameDay: undefined,
+  });
+  const early = planFor(p, [], { miniCycleNumber: 1, weekInBlock: 1, weekNumber: 1 });
+  const mid = planFor(p, [], { miniCycleNumber: 1, weekInBlock: 3, weekNumber: 3 });
+  const late = planFor(p, [], { miniCycleNumber: 1, weekInBlock: 4, weekNumber: 4 });
+  eq('early off-season generation denies app-added sprint',
+    speedWorkouts(builtWorkoutsFor(early, p)).length,
+    0,
+    planText(early));
+  eq('mid off-season generation denies app-added sprint for now',
+    speedWorkouts(builtWorkoutsFor(mid, p)).length,
+    0,
+    planText(mid));
+  eq('late off-season generation may add one quality sprint micro-dose',
+    speedWorkouts(builtWorkoutsFor(late, p)).length,
+    1,
+    planText(late));
+  ok('healthy non-sprint off-season week still has useful strength',
+    early.weeklyPlan.some((session) => !!session.strengthPattern) &&
+    early.weeklyPlan.length >= 4,
+    planText(early));
+}
+
+for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle', 'hip']) {
+  const p = profile({
+    seasonPhase: 'Off-season',
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    gameDay: undefined,
+  });
+  const late = planFor(p, [injury(bodyPart, 5)], {
+    miniCycleNumber: 1,
+    weekInBlock: 4,
+    weekNumber: 4,
+  });
+  eq(`late off-season ${bodyPart} issue denies sprint when unsafe`,
+    speedWorkouts(builtWorkoutsFor(late, p)).length,
+    0,
+    planText(late));
+}
+
+{
+  const p = profile({
+    seasonPhase: 'Off-season',
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    gameDay: undefined,
+  });
+  const lateCooked = planFor(p, [fatigue(5)], {
+    miniCycleNumber: 1,
+    weekInBlock: 4,
+    weekNumber: 4,
+  });
+  eq('low readiness denies late off-season sprint',
+    speedWorkouts(builtWorkoutsFor(lateCooked, p)).length,
+    0,
+    planText(lateCooked));
+
+  const lateHealthy = planFor(p, [], {
+    miniCycleNumber: 1,
+    weekInBlock: 4,
+    weekNumber: 4,
+  });
+  const speed = speedWorkouts(builtWorkoutsFor(lateHealthy, p))[0];
+  ok('late off-season sprint is not a finisher',
+    !!speed &&
+    !speed.hasCombinedConditioning &&
+    speed.attachedConditioningKind === undefined,
+    JSON.stringify({ hasCombined: speed?.hasCombinedConditioning, attached: speed?.attachedConditioningKind }));
+  ok('late off-season sprint is not conditioning',
+    !!speed &&
+    speed.conditioningBlock === undefined &&
+    speed.conditioningCategory === undefined &&
+    speed.conditioningFlavour === undefined,
+    JSON.stringify({
+      category: speed?.conditioningCategory,
+      flavour: speed?.conditioningFlavour,
+      block: speed?.conditioningBlock,
+    }));
+}
+
+{
+  const p = profile({
+    seasonPhase: 'Off-season',
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    gameDay: undefined,
+  });
+  const program = generateProgramLocally(p, { todayISO: TODAY, activeConstraints: [] });
+  const week1Speed = speedWorkouts(program.microcycles[0]?.workouts ?? []);
+  const week4Speed = speedWorkouts(program.microcycles[3]?.workouts ?? []);
+  eq('generated off-season block keeps week 1 sprint-free',
+    week1Speed.length,
+    0,
+    week1Speed.map((workout) => workout.name).join(' | '));
+  eq('generated off-season block can add late week 4 speed',
+    week4Speed.length,
+    1,
+    week4Speed.map((workout) => workout.name).join(' | '));
 }
 
 {
@@ -502,9 +666,9 @@ console.log('\n-- SP-2. Quality sprint micro-dose output --');
 }
 
 if (fail > 0) {
-  console.error(`\nSP-1 sprint exposure gate tests failed: ${fail}`);
+  console.error(`\nSprint exposure gate tests failed: ${fail}`);
   for (const failure of failures) console.error(` - ${failure}`);
   process.exit(1);
 }
 
-console.log(`\nSP-1 sprint exposure gate tests passed: ${pass}`);
+console.log(`\nSprint exposure gate tests passed: ${pass}`);

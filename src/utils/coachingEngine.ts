@@ -28,11 +28,16 @@ import type {
   SpeedBlock,
   SpeedBlockPlacement,
   SpeedWorkKind,
+  WeekKind,
 } from '../types/domain';
 import { logger } from './logger';
 import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
 import { logAllocationWeekValidation } from '../rules/weekStructureValidator';
 import { evaluateSprintExposureGate } from '../rules/sprintExposureGate';
+import {
+  resolveOffseasonSubphase,
+  type OffseasonSubphase,
+} from '../rules/offseasonSubphase';
 import type {
   GenerationConstraintContext,
   GenerationInjuryConstraint,
@@ -55,6 +60,11 @@ export interface CoachingInputs {
   goals: string[];
   hasGame: boolean;
   gameDay?: string;
+  weekNumber?: number;
+  miniCycleNumber?: number;
+  weekInBlock?: number;
+  weekKind?: WeekKind;
+  offseasonSubphase?: OffseasonSubphase;
   generationConstraints?: GenerationConstraintContext;
   /**
    * Sprint-variant used in the PREVIOUS week, if known. Enables the
@@ -72,6 +82,11 @@ export interface OnboardingToCoachingInputsOptions {
    * windows are not compared with the machine clock.
    */
   availabilityDateISO?: string;
+  weekNumber?: number;
+  miniCycleNumber?: number;
+  weekInBlock?: number;
+  weekKind?: WeekKind;
+  offseasonSubphase?: OffseasonSubphase;
   generationConstraints?: GenerationConstraintContext;
 }
 
@@ -829,6 +844,13 @@ function buildWeeklyPlan(
   const hasGameThisWeek = isInSeason && gameDayNum !== null;
   const generationConstraints = inputs.generationConstraints;
   const activeReadiness = generationConstraints?.readiness;
+  const offseasonSubphase = resolveOffseasonSubphase({
+    seasonPhase: inputs.seasonPhase,
+    explicitSubphase: inputs.offseasonSubphase,
+    miniCycleNumber: inputs.miniCycleNumber,
+    weekInBlock: inputs.weekInBlock,
+    weekNumber: inputs.weekNumber,
+  });
 
   const readinessTierRank = (tier: GenerationReadinessTier | undefined): number => {
     switch (tier) {
@@ -1950,6 +1972,7 @@ function buildWeeklyPlan(
         plannedOnFeetSprintExposures,
         readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
         injuryAllowsSprint: !blocksConditioningCategoryForGeneration('sprint'),
+        offseasonSubphase,
       });
     }
 
@@ -4585,12 +4608,13 @@ function buildWeeklyPlan(
     enforcePreSeasonCoreStreak(adjusted, teamDaySetTail);
   }
 
-  // (6) SP-2 quality speed top-up placement.
-  // If the sprint exposure gate still allows one app-added pre-season
-  // exposure after the shared tail has finished reshaping the week, attach
-  // it as first-in-session true speed on an upper day. This keeps sprint work
-  // out of conditioning and avoids finishers.
-  if (phaseIsPreSeason) {
+  // (6) SP-2/SP-3 quality speed top-up placement.
+  // If the sprint exposure gate still allows one app-added pre-season or
+  // late-off-season exposure after the shared tail has finished reshaping the
+  // week, attach it as first-in-session true speed on an upper day. This keeps
+  // sprint work out of conditioning and avoids finishers.
+  const phaseSupportsSpeedTopUp = phaseIsPreSeason || offseasonSubphase === 'late_offseason';
+  if (phaseSupportsSpeedTopUp) {
     const plannedSprintRows = adjusted.filter((session) =>
       session.speedWorkKind === 'true_speed' || session.conditioningCategory === 'sprint',
     ).length;
@@ -4606,14 +4630,15 @@ function buildWeeklyPlan(
         /\b(sprint|speed|max velocity|running|cod|change of direction|cutting|jumping)\b/.test(triggerText);
       return lowerLimb && (injury.removeRiskyWork || injury.pauseAffectedTraining || sprintTrigger);
     });
-    const preSeasonGameDayNum = inputs.hasGame && gameDayNum !== null ? gameDayNum : null;
+    const gameAnchorDayNum = inputs.hasGame && gameDayNum !== null ? gameDayNum : null;
     const gate = evaluateSprintExposureGate({
       phase: inputs.seasonPhase,
       teamTrainingDays: Array.from(teamDaySetTail),
-      gameOrPracticeMatchDays: preSeasonGameDayNum !== null ? [preSeasonGameDayNum] : [],
+      gameOrPracticeMatchDays: gameAnchorDayNum !== null ? [gameAnchorDayNum] : [],
       plannedOnFeetSprintExposures: plannedSprintRows,
       readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
       injuryAllowsSprint: !lowerLimbSprintBlocked,
+      offseasonSubphase,
     });
 
     if (plannedSprintRows === 0 && gate.allowStandaloneSprint) {
@@ -4631,8 +4656,8 @@ function buildWeeklyPlan(
           const prevDay = (dayNum + 6) % 7;
           const nextDay = (dayNum + 1) % 7;
           if (teamDaySetTail.has(prevDay) || teamDaySetTail.has(nextDay)) return false;
-          if (preSeasonGameDayNum !== null) {
-            const offset = gOffset(dayNum, preSeasonGameDayNum);
+          if (gameAnchorDayNum !== null) {
+            const offset = gOffset(dayNum, gameAnchorDayNum);
             if (offset === 0 || offset === -1 || offset === -2) return false;
           }
           const previousSession = adjusted.find((other) =>
@@ -5900,6 +5925,13 @@ function buildAIConstraints(
   let sprintLoading: AIConstraints['sprintLoading'] = 'allowed';
   const activeReadiness = inputs.generationConstraints?.readiness;
   const activeInjuries = inputs.generationConstraints?.injuries ?? [];
+  const offseasonSubphase = resolveOffseasonSubphase({
+    seasonPhase: inputs.seasonPhase,
+    explicitSubphase: inputs.offseasonSubphase,
+    miniCycleNumber: inputs.miniCycleNumber,
+    weekInBlock: inputs.weekInBlock,
+    weekNumber: inputs.weekNumber,
+  });
   const lowerLimbGenerationIssue = activeInjuries.some((injury) =>
     injury.severity >= 4 &&
     (injury.region === 'lower_body' ||
@@ -5913,6 +5945,9 @@ function buildAIConstraints(
   }
   if (inputs.seasonPhase === 'In-season') {
     // In-season: footy training IS the running
+    sprintLoading = 'do-not-add';
+  }
+  if (inputs.seasonPhase === 'Off-season' && offseasonSubphase !== 'late_offseason') {
     sprintLoading = 'do-not-add';
   }
   if (activeReadiness?.avoidSprint || lowerLimbGenerationIssue) {
@@ -5991,6 +6026,13 @@ function buildAIConstraints(
     notes.push('PRIORITISE VO2 and glycolytic first, then aerobic base; sprint work is mostly covered by team training and should only be added when team load is light.');
     notes.push('STANDALONE CONDITIONING VOLUME is reduced compared with off-season because team training already covers field load. Gym complements team load - extra conditioning only fills gaps.');
     notes.push('PRE-SEASON WEEKLY STRUCTURE: team sessions provide major field stress → gym complements team load → extra conditioning fills remaining gaps only where appropriate.');
+  }
+  if (inputs.seasonPhase === 'Off-season') {
+    if (offseasonSubphase === 'late_offseason') {
+      notes.push('LATE OFF-SEASON: one small true-speed exposure may be added if the athlete is fresh, healthy, and placement is safe. Keep it low volume and before fatigue.');
+    } else {
+      notes.push('EARLY/MID OFF-SEASON: do not add sprint work yet. Prioritise strength, size, base conditioning, recovery, and controlled movement quality.');
+    }
   }
   if (inputs.seasonPhase === 'In-season') {
     notes.push('IN-SEASON: Anchor ENTIRE week to game day (G). All scheduling is G-relative, NOT fixed weekdays.');
@@ -6106,6 +6148,11 @@ export function onboardingToCoachingInputs(
     // Prefer the new usualGameDay (full DayOfWeek) over the legacy gameDay field
     // so the in-season phase-shift flow drives game-proximity scheduling immediately.
     gameDay: data.usualGameDay || data.gameDay,
+    weekNumber: options.weekNumber,
+    miniCycleNumber: options.miniCycleNumber,
+    weekInBlock: options.weekInBlock,
+    weekKind: options.weekKind,
+    offseasonSubphase: options.offseasonSubphase,
     generationConstraints: options.generationConstraints,
   };
 }
