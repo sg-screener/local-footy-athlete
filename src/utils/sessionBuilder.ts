@@ -1421,12 +1421,18 @@ export function buildCombinedConditioningTemplate(
       // intervalised so a finisher never becomes one long erg slog.
       const duration = 20 + (hash % 2) * 5; // 20 or 25 min
       const prescription = aerobicErgPrescription(selectedErgModality, duration, 'zone 2');
+      const title = isLowerPairing && selectedErgModality === 'bike'
+        ? `${duration}min zone 2 bike`
+        : prescription.title;
       return [
-        condEx(`${prefix}-aero`, prescription.title, 1, prescription.sets, 1, 1, prescription.restSeconds,
+        condEx(`${prefix}-aero`, title, 1, prescription.sets, 1, 1, prescription.restSeconds,
           noteLines(
             prescription.workLine,
             prescription.restLine,
             '5-6/10 effort',
+            isLowerPairing
+              ? 'Machine options: Bike or Assault Bike can be continuous; Rower or SkiErg should be 3 x 8min with 2min easy.'
+              : undefined,
             isLowerPairing ? LOWER_BODY_MACHINE_NOTE : 'Conversational pace',
           )),
       ];

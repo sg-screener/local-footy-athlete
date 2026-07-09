@@ -68,6 +68,10 @@ import {
   selectMicrocycleForDate,
   type StoredProgramBlockState,
 } from './programBlockState';
+import {
+  BIBLE_WEEKLY_CAPS,
+  countWeeklyExposures,
+} from '../rules/weeklyExposureCounts';
 
 export { computeBlockBounds } from './programBlockState';
 
@@ -1306,12 +1310,15 @@ export function resolveWeekWithConditioning(
   let primaryConditioningCount = 0;
 
   // ── Running exposure cap ──
-  // Max 4 running-based conditioning sessions per week.
+  // Max 4 running exposures per week, seeded from anchors that already exist
+  // after base resolution. Team training, games and practice matches count.
   // When the cap is reached, additional running sessions are converted to
   // off-feet modalities (bike/row/ski) while preserving the conditioning stimulus.
   // This is invisible to the user — same session intent, different modality.
-  const MAX_RUNNING_SESSIONS = 4;
-  let runningSessionCount = 0;
+  const MAX_RUNNING_SESSIONS = BIBLE_WEEKLY_CAPS.maxRunningExposures;
+  let runningSessionCount = countWeeklyExposures(
+    result.map((day) => ({ date: day.date, workout: day.workout })),
+  ).runningExposures;
 
   // ── Pre-season team-day guard (safety belt) ──
   // In pre-season, team training days are FIELD-LOAD ANCHORS. Even if the

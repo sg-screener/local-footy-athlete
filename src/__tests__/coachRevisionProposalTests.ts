@@ -865,6 +865,58 @@ section('[15] all registry templates round-trip and self-identify');
   }
 }
 
+section('[15b] row/ski flush templates are intervalised, bike remains continuous');
+{
+  const { listCoachRevisionTemplates, buildCoachRevisionTemplateWorkout } =
+    require('../utils/coachRevisionTemplates');
+  const textOfWorkout = (workout: any): string =>
+    [
+      workout?.name,
+      workout?.description,
+      ...(workout?.exercises ?? []).flatMap((row: any) => [
+        row?.exercise?.name,
+        row?.exercise?.description,
+        row?.notes,
+      ]),
+    ].filter(Boolean).join('\n');
+  const looksLikeLongContinuousRowSki = (text: string): boolean => {
+    if (!/\b(?:rower|row|skierg|ski erg)\b/i.test(text)) return false;
+    if (!/\b(?:1[1-9]|[2-9]\d)\s*min\b/i.test(text)) return false;
+    return !/\b\d+\s*x\s*\d+\s*min\b|\b\d+\s*stations?\s*x\s*\d+\s*rounds\b|EMOM|\boff\b|between blocks|rounds|stations|\/\s*\d+\s*(?:s|min)\b/i.test(text);
+  };
+
+  const row = buildCoachRevisionTemplateWorkout('easy_zone2_row', MON);
+  const rowMain = row?.exercises?.[0];
+  ok('easy_zone2_row builds intervalised row workout',
+    /3 x 8min zone 2 Rower/i.test(textOfWorkout(row)));
+  eq('easy_zone2_row uses three blocks', rowMain?.prescribedSets, 3);
+  eq('easy_zone2_row uses 8min work blocks', rowMain?.prescribedRepsMin, 8);
+  eq('easy_zone2_row uses 2min easy rest', rowMain?.restSeconds, 120);
+
+  const ski = buildCoachRevisionTemplateWorkout('easy_zone2_ski', MON);
+  const skiMain = ski?.exercises?.[0];
+  ok('easy_zone2_ski builds intervalised SkiErg workout',
+    /3 x 8min zone 2 SkiErg/i.test(textOfWorkout(ski)));
+  eq('easy_zone2_ski uses three blocks', skiMain?.prescribedSets, 3);
+  eq('easy_zone2_ski uses 8min work blocks', skiMain?.prescribedRepsMin, 8);
+  eq('easy_zone2_ski uses 2min easy rest', skiMain?.restSeconds, 120);
+
+  const bike = buildCoachRevisionTemplateWorkout('easy_zone2_bike', MON);
+  const bikeMain = bike?.exercises?.[0];
+  ok('easy_zone2_bike keeps continuous bike prescription',
+    /25min zone 2 bike/i.test(textOfWorkout(bike)));
+  eq('easy_zone2_bike stays one continuous block', bikeMain?.prescribedSets, 1);
+  eq('easy_zone2_bike keeps 25min duration', bikeMain?.prescribedRepsMin, 25);
+  eq('easy_zone2_bike has no interval rest', bikeMain?.restSeconds, 0);
+
+  for (const template of listCoachRevisionTemplates()) {
+    const workout = buildCoachRevisionTemplateWorkout(template.templateId, MON);
+    ok(`${template.templateId} has no continuous Row/SkiErg >10min`,
+      !looksLikeLongContinuousRowSki(textOfWorkout(workout)),
+      textOfWorkout(workout));
+  }
+}
+
 section('[16] work-capacity templates are bye-week gated');
 {
   const {

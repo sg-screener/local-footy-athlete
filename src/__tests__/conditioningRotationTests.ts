@@ -30,10 +30,17 @@ import {
   buildConditioningTemplate,
   conditioningCategoryToExerciseName,
   conditioningDateHash,
+  DEFAULT_ATHLETE_CONTEXT,
 } from '../utils/sessionBuilder';
+import {
+  resolveWeekWithConditioning,
+  type ScheduleState,
+} from '../utils/sessionResolver';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import type { RotationContext } from '../data/exercisePoolsStrength';
 import type { SessionAllocation } from '../utils/coachingEngine';
+import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
+import type { DayOfWeek, Workout } from '../types/domain';
 
 // ─── Simple test runner ───
 
@@ -323,8 +330,12 @@ section('8. combined lower + aerobic-base copy');
     `combined aerobic title is concise (got "${title}")`,
   );
   assert(
-    notes.includes('25min zone 2 on Bike, Rower, SkiErg, or Assault Bike.'),
+    notes.includes('Machine options: Bike or Assault Bike can be continuous; Rower or SkiErg should be 3 x 8min with 2min easy.'),
     'combined aerobic notes mention machine options clearly',
+  );
+  assert(
+    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on (?:Rower|SkiErg)/i.test(notes),
+    `combined aerobic notes do not prescribe long continuous row/ski (got "${notes}")`,
   );
   assert(
     notes.includes('5-6/10 effort'),
@@ -465,6 +476,133 @@ section('10. machine sprint duration is modality-aware');
   assert(/Row \+ SkiErg/i.test(`${mixed.name}\n${mixed.notes}`), `mixed sprint is labelled (got "${mixed.name}" / "${mixed.notes}")`);
   assert(workSeconds(mixed.notes)! >= 20, `mixed erg sprint is at least 20s (got "${mixed.notes}")`);
   assert(!/\b10s\s+(?:all-out|hard)\s+on Row \+ SkiErg/i.test(mixed.notes), `mixed erg sprint is not 10s (got "${mixed.notes}")`);
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Section 11: Running exposure caps seed from anchors before app
+// conditioning is placed. Team training and games/practice matches
+// already count toward the Bible cap.
+// ─────────────────────────────────────────────────────────────────
+section('11. running cap seeds from team training and games');
+{
+  const weekStart = '2026-06-01';
+  const dayNum: Record<DayOfWeek, number> = {
+    Sunday: 0,
+    Monday: 1,
+    Tuesday: 2,
+    Wednesday: 3,
+    Thursday: 4,
+    Friday: 5,
+    Saturday: 6,
+  };
+  const dateForDay: Record<DayOfWeek, string> = {
+    Monday: '2026-06-01',
+    Tuesday: '2026-06-02',
+    Wednesday: '2026-06-03',
+    Thursday: '2026-06-04',
+    Friday: '2026-06-05',
+    Saturday: '2026-06-06',
+    Sunday: '2026-06-07',
+  };
+
+  const teamTraining = (day: DayOfWeek): Workout => ({
+    id: `team-training-${day.toLowerCase()}`,
+    microcycleId: 'mc-running-cap',
+    dayOfWeek: dayNum[day],
+    name: 'Team Training',
+    description: 'Club field session',
+    durationMinutes: 90,
+    intensity: 'High',
+    workoutType: 'Team Training',
+    sessionTier: 'core',
+    exercises: [],
+    createdAt: '',
+    updatedAt: '',
+  });
+
+  const stateForTeamDays = (teamDays: DayOfWeek[]): ScheduleState => {
+    const workouts = teamDays.map(teamTraining);
+    const microcycle = {
+      id: 'mc-running-cap',
+      programId: 'program-running-cap',
+      weekNumber: 1,
+      startDate: weekStart,
+      endDate: '2026-06-07',
+      miniCycleNumber: 1,
+      intensityMultiplier: 1,
+      workouts,
+      createdAt: '',
+      updatedAt: '',
+    };
+    return {
+      currentProgram: {
+        id: 'program-running-cap',
+        userId: 'test-user',
+        name: 'Running cap test',
+        description: '',
+        programPhase: 'Pre-Season-Skills',
+        startDate: weekStart,
+        endDate: '2026-06-07',
+        microcycles: [microcycle],
+        primaryFocus: 'Conditioning',
+        isActive: true,
+        createdAt: '',
+        updatedAt: '',
+      },
+      currentMicrocycle: microcycle,
+      manualOverrides: {},
+      markedDays: { '2026-06-07': 'game' },
+      athleteContext: {
+        ...DEFAULT_ATHLETE_CONTEXT,
+        onboardingData: {
+          seasonPhase: 'In-season',
+          teamTrainingDays: teamDays,
+          teamTrainingDaysPerWeek: teamDays.length,
+        },
+      },
+      seasonPhase: 'In-season',
+      readiness: 'high',
+      sessionFeedback: {},
+      availableDayNumbers: [1, 2, 3, 4, 5, 6, 0],
+    };
+  };
+
+  const appRunningUnits = (week: ReturnType<typeof resolveWeekWithConditioning>) => {
+    const counts = countWeeklyExposures(week.map((day) => ({ date: day.date, workout: day.workout })));
+    return counts.days.flatMap((day) =>
+      day.units
+        .filter((unit) =>
+          unit.category !== 'team_training' &&
+          unit.category !== 'game' &&
+          (unit.modality === 'running' || unit.modality === 'mixed'))
+        .map((unit) => ({ date: day.date, category: unit.category, modality: unit.modality })),
+    );
+  };
+
+  const twoTeamWeek = resolveWeekWithConditioning(
+    weekStart,
+    stateForTeamDays(['Tuesday', 'Thursday']),
+  );
+  const twoTeamCounts = countWeeklyExposures(
+    twoTeamWeek.map((day) => ({ date: day.date, workout: day.workout })),
+  );
+  assert(twoTeamCounts.teamTrainingSessions === 2, `2TT week counts team anchors (got ${twoTeamCounts.teamTrainingSessions})`);
+  assert(twoTeamCounts.games === 1, `2TT week counts game/practice-match anchor (got ${twoTeamCounts.games})`);
+  assert(twoTeamCounts.runningExposures >= 3, `2TT+game week seeds running exposure count from anchors (got ${twoTeamCounts.runningExposures})`);
+  assert(twoTeamCounts.runningExposures <= 4, `2TT+game week stays within running cap (got ${twoTeamCounts.runningExposures})`);
+
+  const cappedWeek = resolveWeekWithConditioning(
+    weekStart,
+    stateForTeamDays(['Monday', 'Tuesday', 'Thursday']),
+  );
+  const cappedCounts = countWeeklyExposures(
+    cappedWeek.map((day) => ({ date: day.date, workout: day.workout })),
+  );
+  assert(cappedCounts.teamTrainingSessions === 3, `3TT week counts team anchors (got ${cappedCounts.teamTrainingSessions})`);
+  assert(cappedCounts.games === 1, `3TT week counts game/practice-match anchor (got ${cappedCounts.games})`);
+  assert(cappedCounts.runningExposures <= 4, `3TT+game week does not add extra running above cap (got ${cappedCounts.runningExposures})`);
+  assert(appRunningUnits(cappedWeek).length === 0, `app-added conditioning is off-feet once anchors hit cap (got ${JSON.stringify(appRunningUnits(cappedWeek))})`);
+  assert(dateForDay.Sunday === cappedWeek[6]?.date, 'Sunday game date stays inside the resolved test week');
 }
 
 // ─────────────────────────────────────────────────────────────────

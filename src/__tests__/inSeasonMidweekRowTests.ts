@@ -108,8 +108,16 @@ const notes = wedWorkout?.exercises.map((ex) => ex.notes).filter(Boolean).join('
 assert(!!wedWorkout, 'Wednesday workout is built');
 assert(/Easy Aerobic Flush/i.test(wedWorkout?.name ?? ''), 'visible workout name is Easy Aerobic Flush');
 assert(/Easy Aerobic Flush/i.test(headline), 'headline exercise is Easy Aerobic Flush');
-assert(/\b(20|25|30)min\b/i.test(headline), 'headline duration is 20, 25, or 30min');
+assert(
+  /3 x 8min easy Rower/i.test(headline) ||
+    /\b(20|25|30)min\b/i.test(headline),
+  'headline uses intervalised row or an allowed continuous bike dose',
+);
 assert(/Rower|Bike|Assault Bike/i.test(headline), 'headline uses an off-feet modality');
+assert(
+  !/\b(?:1[1-9]|[2-9]\d)min\b.*\bRower\b/i.test(headline),
+  'headline does not prescribe long continuous row',
+);
 assert(/3-4\/10/i.test(notes), 'notes use 3-4/10 intensity');
 assert(/Recovery pace/i.test(notes), 'notes keep one short recovery note');
 assert(!/Optional|Skip if legs feel heavy|Thursday training quality/i.test(notes), 'notes avoid verbose skip guidance');

@@ -55,18 +55,18 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'easy_zone2_row',
     label: 'Easy Zone 2 Row',
-    description: '25min zone 2 row, smooth and steady',
+    description: '3 x 8min zone 2 row, 2min easy between blocks',
     category: 'flush',
     byeOnly: false,
-    durationMinutes: 25,
+    durationMinutes: 28,
   },
   {
     templateId: 'easy_zone2_ski',
     label: 'Easy Zone 2 Ski Erg',
-    description: '25min zone 2 ski erg, relaxed rhythm',
+    description: '3 x 8min zone 2 SkiErg, 2min easy between blocks',
     category: 'flush',
     byeOnly: false,
-    durationMinutes: 25,
+    durationMinutes: 28,
   },
   {
     templateId: 'flushout_3030',
@@ -239,6 +239,50 @@ function isoDateToDayOfWeek(date: string): number {
   return ((parsed.getUTCDay() + 6) % 7) + 1;
 }
 
+interface ConditioningTemplateRow {
+  key: string;
+  name: string;
+  sets: number;
+  repsMin: number;
+  repsMax: number;
+  restSeconds: number;
+  notes: string;
+}
+
+function conditioningRowsForTemplate(def: CoachRevisionTemplateDefinition): ConditioningTemplateRow[] {
+  if (def.templateId === 'easy_zone2_row') {
+    return [{
+      key: 'main',
+      name: '3 x 8min zone 2 Rower',
+      sets: 3,
+      repsMin: 8,
+      repsMax: 8,
+      restSeconds: 120,
+      notes: '3 x 8min zone 2 on Rower. 2min easy between blocks. Smooth, conversational rhythm.',
+    }];
+  }
+  if (def.templateId === 'easy_zone2_ski') {
+    return [{
+      key: 'main',
+      name: '3 x 8min zone 2 SkiErg',
+      sets: 3,
+      repsMin: 8,
+      repsMax: 8,
+      restSeconds: 120,
+      notes: '3 x 8min zone 2 on SkiErg. 2min easy between blocks. Relaxed rhythm, no grind.',
+    }];
+  }
+  return [{
+    key: 'main',
+    name: def.label,
+    sets: 1,
+    repsMin: def.durationMinutes,
+    repsMax: def.durationMinutes,
+    restSeconds: 0,
+    notes: def.description,
+  }];
+}
+
 /** Real Workout for a template on a given date — what the writer persists. */
 export function buildCoachRevisionTemplateWorkout(
   templateId: string,
@@ -252,7 +296,8 @@ export function buildCoachRevisionTemplateWorkout(
   if (def.category === 'strength' || def.category === 'accessories') {
     return buildEngineTemplateWorkout(def, date);
   }
-  const rowId = `template:${def.templateId}:main`;
+  const rows = conditioningRowsForTemplate(def);
+  const rowIds = rows.map((row) => `template:${def.templateId}:${row.key}`);
   return {
     id: `template-${def.templateId}`,
     microcycleId: 'coach-template',
@@ -271,33 +316,36 @@ export function buildCoachRevisionTemplateWorkout(
       options: [{
         title: def.label,
         description: def.description,
-        exerciseIds: [rowId],
+        exerciseIds: rowIds,
       }],
     },
-    exercises: [{
-      id: rowId,
-      workoutId: `template-${def.templateId}`,
-      exerciseId: rowId,
-      exerciseOrder: 0,
-      prescribedSets: 1,
-      prescribedRepsMin: def.durationMinutes,
-      prescribedRepsMax: def.durationMinutes,
-      restSeconds: 0,
-      notes: def.description,
-      exercise: {
+    exercises: rows.map((row, index) => {
+      const rowId = rowIds[index];
+      return {
         id: rowId,
-        name: def.label,
-        description: def.description,
-        exerciseType: 'Conditioning',
-        muscleGroups: [],
-        equipmentRequired: [],
-        difficultyLevel: 'Beginner',
+        workoutId: `template-${def.templateId}`,
+        exerciseId: rowId,
+        exerciseOrder: index,
+        prescribedSets: row.sets,
+        prescribedRepsMin: row.repsMin,
+        prescribedRepsMax: row.repsMax,
+        restSeconds: row.restSeconds,
+        notes: row.notes,
+        exercise: {
+          id: rowId,
+          name: row.name,
+          description: row.notes,
+          exerciseType: 'Conditioning',
+          muscleGroups: [],
+          equipmentRequired: [],
+          difficultyLevel: 'Beginner',
+          createdAt: '',
+          updatedAt: '',
+        },
         createdAt: '',
         updatedAt: '',
-      },
-      createdAt: '',
-      updatedAt: '',
-    } as any],
+      } as any;
+    }),
     createdAt: '',
     updatedAt: '',
   } as Workout;
