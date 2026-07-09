@@ -332,10 +332,10 @@ section('[1] Hammy 6/10 → events emitted, override written, no fetch');
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// 2. Severity 3/10 hammy → engine declines (severity gate), no override
+// 2. Severity 3/10 hammy → exact-trigger protection, no LLM
 // ─────────────────────────────────────────────────────────────────────────
 
-section('[2] Hammy 3/10 → engine declines, no override, no fetch');
+section('[2] Hammy 3/10 → exact-trigger protection, no fetch');
 {
   resetSpies();
   baseWeek = buildBaseWeek({
@@ -344,8 +344,8 @@ section('[2] Hammy 3/10 → engine declines, no override, no fetch');
 
   const out = runUAEFlow('hammy is sore 3/10');
   ok('flow fired (intent matched)', out.fired);
-  eq('zero events', out.events, 0);
-  eq('zero override writes', overrideCalls.length, 0);
+  ok('events emitted for exact-trigger protection', out.events > 0);
+  ok('override written for exact-trigger protection', overrideCalls.length >= 1);
   ok('reply non-empty', out.reply.length > 0);
   eq('zero fetch calls', fetchCalls, 0);
 }
@@ -558,7 +558,7 @@ section('[9] applied=true ↔ severity≥5 invariant across body-part awareness'
   }
 }
 
-section('[10] Unknown body part + severity≥7 → recovery (not lighten)');
+section('[10] Unknown body part + severity≥8 → lightens before rest');
 {
   resetSpies();
   baseWeek = buildBaseWeek({
@@ -569,11 +569,12 @@ section('[10] Unknown body part + severity≥7 → recovery (not lighten)');
   ok('flow fired', out.fired);
   ok('events emitted', out.events > 0);
   ok('at least one override', overrideCalls.length >= 1);
-  // For unknown body part + severity ≥ 7, the fallback emits set_session_recovery.
+  // For unknown body part + severity ≥ 8, the canonical fallback lightens
+  // before rest because it has no region to safely pause outright.
   const hasRecovery = overrideCalls.some(
     (c) => c.workout.workoutType === 'Recovery' && c.workout.exercises.length === 0,
   );
-  ok('severity≥7 + unknown → at least one recovery shell written', hasRecovery);
+  ok('severity≥8 + unknown → no automatic recovery shell', !hasRecovery);
 }
 
 // ─────────────────────────────────────────────────────────────────────────

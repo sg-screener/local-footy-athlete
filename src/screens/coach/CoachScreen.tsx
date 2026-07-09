@@ -1227,10 +1227,11 @@ export default function CoachScreen() {
     //
     // Source of truth: src/utils/injuryClarificationGuard.ts (same util the
     // edge function mirrors). Decision tree (in priority order):
-    //   1. Severity already present (e.g. "6/10")              → pass through (LLM adjusts program)
-    //   2. Body part + negative descriptor (e.g. "hammy cooked") → FIRE locally, no API call
-    //   3. Injury kw/phrase + body part / kw alone             → FIRE locally
-    //   4. Anything else                                       → pass through
+    //   1. Red-flag symptom                                      → FIRE hard-stop locally, no API call
+    //   2. Severity already present (e.g. "6/10")                → pass through (LLM adjusts program)
+    //   3. Body part + negative descriptor (e.g. "hammy cooked") → FIRE locally, no API call
+    //   4. Injury kw/phrase + body part / kw alone               → FIRE locally
+    //   5. Anything else                                         → pass through
     //
     // The edge-function guard remains in place as a backup. This is the
     // primary defense.
@@ -1296,7 +1297,9 @@ export default function CoachScreen() {
       // body part, we log [pending-injury] replaced so the live-bug
       // signature ("9" applied to old hammy instead of new shoulder)
       // is provable from logs. The latest pending always wins.
-      const bodyPart = extractBodyPart(userMessage.content);
+      const bodyPart = guardResult.kind === 'red_flag_hard_stop'
+        ? null
+        : extractBodyPart(userMessage.content);
       if (bodyPart) {
         const prior = pendingInjuryRef.current;
         const isReplacement =
@@ -1323,7 +1326,7 @@ export default function CoachScreen() {
       const assistantMessage: Message = {
         id: `${Date.now()}-guard`,
         role: 'assistant',
-        content: guardResult.reply, // exactly SEVERITY_QUESTION
+        content: guardResult.reply,
       };
       setMessages((prev) => [...prev, userMessage, assistantMessage]);
       setInputValue('');

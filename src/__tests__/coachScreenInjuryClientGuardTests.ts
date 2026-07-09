@@ -15,6 +15,8 @@
 
 import {
   SEVERITY_QUESTION,
+  RED_FLAG_URGENT_MEDICAL_REPLY,
+  RED_FLAG_PHYSIO_MEDICAL_REPLY,
   checkInjuryClarificationGuard,
   GuardMessage,
 } from '../utils/injuryClarificationGuard';
@@ -40,13 +42,53 @@ function ok(label: string, condition: boolean): void {
 function simulateClientGuard(
   prior: GuardMessage[],
   newUserContent: string,
-): { fired: boolean; reply?: string; reason: string } {
+): { fired: boolean; reply?: string; reason: string; kind?: string } {
   const history: GuardMessage[] = [
     ...prior,
     { role: 'user', content: newUserContent },
   ];
   const r = checkInjuryClarificationGuard(history);
-  return { fired: r.fired, reply: r.reply, reason: r.reason };
+  return { fired: r.fired, reply: r.reply, reason: r.reason, kind: r.kind };
+}
+
+function simulateWouldStorePendingBodyPart(input: string): boolean {
+  const r = checkInjuryClarificationGuard([{ role: 'user', content: input }]);
+  return r.fired && r.kind !== 'red_flag_hard_stop';
+}
+
+// ─── Red-flag hard stops (must fire locally, no API request) ───
+{
+  console.log('\n[0] Red-flag hard stops');
+
+  const urgent = [
+    "chest hurts and I'm dizzy, 4/10",
+    'short of breath and chest tight',
+    'my leg is numb/tingling',
+  ];
+  for (const input of urgent) {
+    const r = simulateClientGuard([], input);
+    ok(`"${input}" → client guard hard-stops`, r.fired === true);
+    ok(`"${input}" → red-flag kind`, r.kind === 'red_flag_hard_stop');
+    ok(`"${input}" → urgent medical advice`, r.reply === RED_FLAG_URGENT_MEDICAL_REPLY);
+    ok(`"${input}" → not severity clarifier`, r.reply !== SEVERITY_QUESTION);
+  }
+
+  const structural = [
+    'I heard a pop in my hamstring',
+    "I can't bear weight",
+  ];
+  for (const input of structural) {
+    const r = simulateClientGuard([], input);
+    ok(`"${input}" → client guard hard-stops`, r.fired === true);
+    ok(`"${input}" → red-flag kind`, r.kind === 'red_flag_hard_stop');
+    ok(`"${input}" → physio/medical advice`, r.reply === RED_FLAG_PHYSIO_MEDICAL_REPLY);
+    ok(`"${input}" → not severity clarifier`, r.reply !== SEVERITY_QUESTION);
+  }
+
+  ok(
+    '"I heard a pop in my hamstring" → no pending injury body part stored',
+    simulateWouldStorePendingBodyPart('I heard a pop in my hamstring') === false,
+  );
 }
 
 // ─── Spec validation cases (verbatim from request) ───
@@ -175,13 +217,13 @@ function simulateClientGuard(
   }
 }
 
-// ─── Severity-already-present cases ───
+// ─── Severity-already-present non-red-flag cases ───
 {
-  console.log('\n[E] Severity present → never fires (LLM adjusts program)');
+  console.log('\n[E] Severity present without red flags → does not fire (LLM adjusts program)');
   const cases: string[] = [
     'My hammy is a 6/10',
     'sharp 8/10 in my left hammy',
-    "calf is killing me, can't walk",
+    'calf is killing me, 7/10',
     'really bad pain in my groin',
     'mild tweak in my shoulder',
     'hammy is cooked, 7/10', // body+desc but severity present → no fire

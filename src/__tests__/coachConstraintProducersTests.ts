@@ -145,6 +145,17 @@ section('[6] soreness producer — adductor → adductor bucket');
   eq('groin → adductor bucket', c?.bucket, 'adductor');
 }
 
+section('[6b] soreness producer — hip → adductor bucket');
+{
+  const c = buildSorenessConstraintFromIntent(
+    intent('soreness', { bodyPart: 'hip', severity: 6 }),
+    NOW,
+  );
+  ok('not null', !!c);
+  eq('hip → adductor bucket', c?.bucket, 'adductor');
+  eq('hip soreness affects current week at severity 6', c?.modifierAffects, ['current_week']);
+}
+
 section('[7] soreness producer — unmapped body part returns null');
 {
   const c = buildSorenessConstraintFromIntent(

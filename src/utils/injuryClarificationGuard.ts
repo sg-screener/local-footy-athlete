@@ -15,6 +15,7 @@
  * keyword lists, severity patterns, or decision tree must be applied to both.
  *
  * Decision tree (matches the STRICT OVERRIDE in the system prompt):
+ *   red-flag symptom                              → FIRE hard-stop medical/physio advice
  *   hasSeverity=true                              → no fire (LLM does program adjustment)
  *   hasLocation + hasNegativeDescriptor           → FIRE (high-priority shortcut: "hammy cooked")
  *   isInjury=false                                → no fire (LLM handles; body-part alone NO LONGER fires)
@@ -24,6 +25,71 @@
  */
 
 export const SEVERITY_QUESTION = 'How bad is it? Rough pain out of 10.';
+
+export const RED_FLAG_URGENT_MEDICAL_REPLY =
+  'Stop training now. Chest, breathing, dizziness/fainting, numbness/tingling, weakness, or head symptoms need urgent medical advice. Please get checked now, and call emergency services if symptoms are severe, worsening, or you feel unsafe.';
+
+export const RED_FLAG_PHYSIO_MEDICAL_REPLY =
+  'Stop training now and do not run or lift through this. A pop/snap/tear, severe swelling, inability to bear weight, or severe pain after an acute incident needs a physio or medical assessment before training it again.';
+
+export type RedFlagAdviceLevel = 'urgent_medical' | 'physio_medical';
+
+export interface RedFlagDetection {
+  advice: RedFlagAdviceLevel;
+  reason: string;
+  reply: string;
+}
+
+const URGENT_MEDICAL_RED_FLAG_PATTERNS: ReadonlyArray<[RegExp, string]> = [
+  [/\bchest\s+(?:pain|hurt|hurts|tight|tightness|pressure|crush|crushing)\b/i, 'chest symptom'],
+  [/\b(?:pain|tightness|pressure)\s+(?:in|around|through)\s+(?:my\s+)?chest\b/i, 'chest symptom'],
+  [/\b(?:shortness\s+of\s+breath|short\s+of\s+breath|trouble\s+breathing|difficulty\s+breathing|hard\s+to\s+breathe|struggl(?:e|ing)\s+to\s+breathe|breathless|breathing\s+issues?)\b/i, 'breathing symptom'],
+  [/\b(?:can't|cant|cannot)\s+breathe\b/i, 'breathing symptom'],
+  [/\b(?:dizzy|dizziness|faint(?:ed|ing)?|lightheaded|light-headed|black(?:ing|ed)?\s+out|pass(?:ing|ed)?\s+out)\b/i, 'dizziness/fainting symptom'],
+  [/\b(?:numb|numbness|tingl(?:e|ing)|pins\s+and\s+needles|loss\s+of\s+feeling|can't\s+feel|cant\s+feel|cannot\s+feel)\b/i, 'numbness/tingling symptom'],
+  [/\b(?:limb\s+weakness|weakness\s+in\s+(?:my\s+)?(?:arm|leg|hand|foot)|loss\s+of\s+power|lost\s+power|can't\s+(?:move|lift)\s+(?:my\s+)?(?:arm|leg)|cant\s+(?:move|lift)\s+(?:my\s+)?(?:arm|leg)|cannot\s+(?:move|lift)\s+(?:my\s+)?(?:arm|leg))\b/i, 'weakness/loss of power symptom'],
+  [/\b(?:concussion|concussed|head\s+knock|head\s+injury|head\s+clash|hit\s+my\s+head|knocked\s+my\s+head)\b/i, 'head/concussion symptom'],
+  [/\bheadache\b.{0,60}\b(?:dizzy|dizziness|vomit|vomiting|nausea|blurred\s+vision|confusion|memory\s+loss)\b/i, 'head/concussion symptom'],
+];
+
+const PHYSIO_MEDICAL_RED_FLAG_PATTERNS: ReadonlyArray<[RegExp, string]> = [
+  [/\b(?:heard|felt)\s+(?:a\s+)?(?:pop|snap|tear)\b/i, 'pop/snap/tear symptom'],
+  [/\bfelt\s+(?:it|something|that)\s+(?:pop|snap|tear)\b/i, 'pop/snap/tear symptom'],
+  [/\b(?:it|something)\s+(?:popped|snapped|tore)\b/i, 'pop/snap/tear symptom'],
+  [/\b(?:tore|torn)\s+(?:my\s+)?(?:hamstring|hammy|calf|quad|groin|adductor|knee|ankle|achilles|shoulder|pec|bicep|tricep)\b/i, 'tear symptom'],
+  [/\b(?:can't|cant|cannot|unable\s+to)\s+(?:bear|put)\s+(?:any\s+)?weight\b/i, 'cannot bear weight'],
+  [/\b(?:can't|cant|cannot|unable\s+to)\s+walk\b/i, 'cannot walk'],
+  [/\b(?:barely\s+walk|can't\s+stand|cant\s+stand|cannot\s+stand)\b/i, 'cannot bear weight'],
+  [/\b(?:severe|massive|major|huge|rapid|bad)\s+swelling\b/i, 'severe swelling'],
+  [/\bswelling\b.{0,30}\b(?:severe|massive|major|huge|rapid|bad)\b/i, 'severe swelling'],
+  [/\bgiv(?:e|ing|en)?\s+way\b/i, 'major loss of function'],
+  [/\b(?:severe|sharp|stabbing|excruciating|agony|intense|really\s+bad)\b.{0,80}\b(?:after|from|during|when)\b.{0,80}\b(?:fall|collision|tackle|twist|rolled|landed|landing|hit|knock|contact|incident|accident)\b/i, 'severe pain after acute incident'],
+  [/\b(?:fall|collision|tackle|twist|rolled|landed|landing|hit|knock|contact|incident|accident)\b.{0,80}\b(?:severe|sharp|stabbing|excruciating|agony|intense|really\s+bad)\b/i, 'severe pain after acute incident'],
+];
+
+export function detectRedFlagSymptoms(text: string): RedFlagDetection | null {
+  if (!text || typeof text !== 'string') return null;
+  const normalized = text.replace(/[’`]/g, "'");
+  for (const [pattern, reason] of URGENT_MEDICAL_RED_FLAG_PATTERNS) {
+    if (pattern.test(normalized)) {
+      return {
+        advice: 'urgent_medical',
+        reason,
+        reply: RED_FLAG_URGENT_MEDICAL_REPLY,
+      };
+    }
+  }
+  for (const [pattern, reason] of PHYSIO_MEDICAL_RED_FLAG_PATTERNS) {
+    if (pattern.test(normalized)) {
+      return {
+        advice: 'physio_medical',
+        reason,
+        reply: RED_FLAG_PHYSIO_MEDICAL_REPLY,
+      };
+    }
+  }
+  return null;
+}
 
 // Tokens that mark a message as injury context. Word-boundary matched against
 // the NORMALIZED haystack (see normalizeText). The gate is OR-based (keyword
@@ -243,6 +309,8 @@ export interface ClarificationGuardResult {
   reply?: string;
   reason: string;
   signals?: InjurySignals;
+  kind?: 'severity_clarifier' | 'red_flag_hard_stop';
+  redFlag?: RedFlagDetection;
 }
 
 export interface GuardMessage {
@@ -279,9 +347,23 @@ export function checkInjuryClarificationGuard(
     return { fired: false, reason: 'last turn is not a user message' };
   }
 
+  const redFlag = detectRedFlagSymptoms(last.content);
   const signals = detectInjurySignals(last.content);
 
-  // 1. Severity already provided → proceed to LLM (it'll do program
+  // 1. Red-flag symptoms are safety hard stops. They must not reach
+  //    the normal severity clarifier or severity-known injury engine.
+  if (redFlag) {
+    return {
+      fired: true,
+      reply: redFlag.reply,
+      reason: `red-flag symptom → hard stop (${redFlag.reason})`,
+      kind: 'red_flag_hard_stop',
+      redFlag,
+      signals,
+    };
+  }
+
+  // 2. Severity already provided → proceed to LLM (it'll do program
   //    adjustment or ask for location if missing). Severity check ALWAYS
   //    runs first so a severity-bearing follow-up always passes through.
   if (signals.hasSeverity) {
@@ -292,7 +374,7 @@ export function checkInjuryClarificationGuard(
     };
   }
 
-  // 2. HIGH-PRIORITY SHORTCUT: body part + negative descriptor → FIRE.
+  // 3. HIGH-PRIORITY SHORTCUT: body part + negative descriptor → FIRE.
   //    Catches normal athlete language without an explicit injury keyword:
   //    "hammy cooked", "shoulder feels off", "calf is gone", "groin pinged".
   //    This runs BEFORE the keyword/phrase gate so a body+descriptor message
@@ -305,11 +387,12 @@ export function checkInjuryClarificationGuard(
       reply: SEVERITY_QUESTION,
       reason:
         'body part + negative descriptor → ask severity (high-priority shortcut)',
+      kind: 'severity_clarifier',
       signals,
     };
   }
 
-  // 3. Gate: from here on we require an injury keyword or phrase pattern.
+  // 4. Gate: from here on we require an injury keyword or phrase pattern.
   //    Body-part alone NO LONGER fires (was a false-positive vector:
   //    "rolled out my hammy", "calves are fine", "back squats today").
   if (!signals.isInjury) {
@@ -321,7 +404,7 @@ export function checkInjuryClarificationGuard(
     };
   }
 
-  // 4. Injury kw/phrase + body part → FIRE. Each new body-part mention is
+  // 5. Injury kw/phrase + body part → FIRE. Each new body-part mention is
   //    a fresh injury report; never suppressed by prior history (so
   //    "Tweaked my shoulder" after a prior hammy clarifier still fires for
   //    the shoulder).
@@ -331,11 +414,12 @@ export function checkInjuryClarificationGuard(
       reply: SEVERITY_QUESTION,
       reason:
         'injury kw/phrase + location, severity missing → ask severity (fresh body part)',
+      kind: 'severity_clarifier',
       signals,
     };
   }
 
-  // 5. Injury kw/phrase, no body part → severity-first default with
+  // 6. Injury kw/phrase, no body part → severity-first default with
   //    loop-safety. If the most recent assistant turn already asked a
   //    clarifier, the current message is likely a reply to it ("I'm sore",
   //    "yeah", etc.). Fall through to the LLM rather than re-asking.
@@ -361,6 +445,7 @@ export function checkInjuryClarificationGuard(
     fired: true,
     reply: SEVERITY_QUESTION,
     reason: 'injury kw/phrase, no body part, no severity → severity-first default',
+    kind: 'severity_clarifier',
     signals,
   };
 }

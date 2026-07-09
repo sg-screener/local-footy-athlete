@@ -60,6 +60,47 @@ interface Message {
 
 const GUARD_SEVERITY_QUESTION = 'How bad is it? Rough pain out of 10.';
 
+const GUARD_RED_FLAG_URGENT_MEDICAL_REPLY =
+  'Stop training now. Chest, breathing, dizziness/fainting, numbness/tingling, weakness, or head symptoms need urgent medical advice. Please get checked now, and call emergency services if symptoms are severe, worsening, or you feel unsafe.';
+
+const GUARD_RED_FLAG_PHYSIO_MEDICAL_REPLY =
+  'Stop training now and do not run or lift through this. A pop/snap/tear, severe swelling, inability to bear weight, or severe pain after an acute incident needs a physio or medical assessment before training it again.';
+
+type GuardRedFlagAdviceLevel = 'urgent_medical' | 'physio_medical';
+
+interface GuardRedFlagDetection {
+  advice: GuardRedFlagAdviceLevel;
+  reason: string;
+  reply: string;
+}
+
+const GUARD_URGENT_MEDICAL_RED_FLAG_PATTERNS: Array<[RegExp, string]> = [
+  [/\bchest\s+(?:pain|hurt|hurts|tight|tightness|pressure|crush|crushing)\b/i, 'chest symptom'],
+  [/\b(?:pain|tightness|pressure)\s+(?:in|around|through)\s+(?:my\s+)?chest\b/i, 'chest symptom'],
+  [/\b(?:shortness\s+of\s+breath|short\s+of\s+breath|trouble\s+breathing|difficulty\s+breathing|hard\s+to\s+breathe|struggl(?:e|ing)\s+to\s+breathe|breathless|breathing\s+issues?)\b/i, 'breathing symptom'],
+  [/\b(?:can't|cant|cannot)\s+breathe\b/i, 'breathing symptom'],
+  [/\b(?:dizzy|dizziness|faint(?:ed|ing)?|lightheaded|light-headed|black(?:ing|ed)?\s+out|pass(?:ing|ed)?\s+out)\b/i, 'dizziness/fainting symptom'],
+  [/\b(?:numb|numbness|tingl(?:e|ing)|pins\s+and\s+needles|loss\s+of\s+feeling|can't\s+feel|cant\s+feel|cannot\s+feel)\b/i, 'numbness/tingling symptom'],
+  [/\b(?:limb\s+weakness|weakness\s+in\s+(?:my\s+)?(?:arm|leg|hand|foot)|loss\s+of\s+power|lost\s+power|can't\s+(?:move|lift)\s+(?:my\s+)?(?:arm|leg)|cant\s+(?:move|lift)\s+(?:my\s+)?(?:arm|leg)|cannot\s+(?:move|lift)\s+(?:my\s+)?(?:arm|leg))\b/i, 'weakness/loss of power symptom'],
+  [/\b(?:concussion|concussed|head\s+knock|head\s+injury|head\s+clash|hit\s+my\s+head|knocked\s+my\s+head)\b/i, 'head/concussion symptom'],
+  [/\bheadache\b.{0,60}\b(?:dizzy|dizziness|vomit|vomiting|nausea|blurred\s+vision|confusion|memory\s+loss)\b/i, 'head/concussion symptom'],
+];
+
+const GUARD_PHYSIO_MEDICAL_RED_FLAG_PATTERNS: Array<[RegExp, string]> = [
+  [/\b(?:heard|felt)\s+(?:a\s+)?(?:pop|snap|tear)\b/i, 'pop/snap/tear symptom'],
+  [/\bfelt\s+(?:it|something|that)\s+(?:pop|snap|tear)\b/i, 'pop/snap/tear symptom'],
+  [/\b(?:it|something)\s+(?:popped|snapped|tore)\b/i, 'pop/snap/tear symptom'],
+  [/\b(?:tore|torn)\s+(?:my\s+)?(?:hamstring|hammy|calf|quad|groin|adductor|knee|ankle|achilles|shoulder|pec|bicep|tricep)\b/i, 'tear symptom'],
+  [/\b(?:can't|cant|cannot|unable\s+to)\s+(?:bear|put)\s+(?:any\s+)?weight\b/i, 'cannot bear weight'],
+  [/\b(?:can't|cant|cannot|unable\s+to)\s+walk\b/i, 'cannot walk'],
+  [/\b(?:barely\s+walk|can't\s+stand|cant\s+stand|cannot\s+stand)\b/i, 'cannot bear weight'],
+  [/\b(?:severe|massive|major|huge|rapid|bad)\s+swelling\b/i, 'severe swelling'],
+  [/\bswelling\b.{0,30}\b(?:severe|massive|major|huge|rapid|bad)\b/i, 'severe swelling'],
+  [/\bgiv(?:e|ing|en)?\s+way\b/i, 'major loss of function'],
+  [/\b(?:severe|sharp|stabbing|excruciating|agony|intense|really\s+bad)\b.{0,80}\b(?:after|from|during|when)\b.{0,80}\b(?:fall|collision|tackle|twist|rolled|landed|landing|hit|knock|contact|incident|accident)\b/i, 'severe pain after acute incident'],
+  [/\b(?:fall|collision|tackle|twist|rolled|landed|landing|hit|knock|contact|incident|accident)\b.{0,80}\b(?:severe|sharp|stabbing|excruciating|agony|intense|really\s+bad)\b/i, 'severe pain after acute incident'],
+];
+
 // KEEP IN SYNC with src/utils/injuryClarificationGuard.ts.
 // Curated athlete vocabulary; OR-gate with body parts means we don't need
 // every conjugation ("my hammy hurts" still fires via body-part branch).
@@ -226,10 +267,35 @@ function guardDetectSignals(text: string): GuardSignals {
   return { isInjury, hasLocation, hasSeverity, hasNegativeDescriptor };
 }
 
+function guardDetectRedFlagSymptoms(text: string): GuardRedFlagDetection | null {
+  if (!text || typeof text !== 'string') return null;
+  const normalized = text.replace(/[’`]/g, "'");
+  for (const [pattern, reason] of GUARD_URGENT_MEDICAL_RED_FLAG_PATTERNS) {
+    if (pattern.test(normalized)) {
+      return {
+        advice: 'urgent_medical',
+        reason,
+        reply: GUARD_RED_FLAG_URGENT_MEDICAL_REPLY,
+      };
+    }
+  }
+  for (const [pattern, reason] of GUARD_PHYSIO_MEDICAL_RED_FLAG_PATTERNS) {
+    if (pattern.test(normalized)) {
+      return {
+        advice: 'physio_medical',
+        reason,
+        reply: GUARD_RED_FLAG_PHYSIO_MEDICAL_REPLY,
+      };
+    }
+  }
+  return null;
+}
+
 interface GuardResult {
   fired: boolean;
   reply?: string;
   reason: string;
+  kind?: 'severity_clarifier' | 'red_flag_hard_stop';
 }
 
 function checkInjuryClarificationGuard(messages: Message[] | undefined): GuardResult {
@@ -238,7 +304,17 @@ function checkInjuryClarificationGuard(messages: Message[] | undefined): GuardRe
   if (!last || last.role !== 'user' || typeof last.content !== 'string') {
     return { fired: false, reason: 'last turn is not a user message' };
   }
+  const redFlag = guardDetectRedFlagSymptoms(last.content);
   const signals = guardDetectSignals(last.content);
+
+  if (redFlag) {
+    return {
+      fired: true,
+      reply: redFlag.reply,
+      reason: `red-flag symptom → hard stop (${redFlag.reason})`,
+      kind: 'red_flag_hard_stop',
+    };
+  }
 
   // 1. Severity already provided → fall through to LLM.
   if (signals.hasSeverity) return { fired: false, reason: 'severity already provided' };
@@ -252,6 +328,7 @@ function checkInjuryClarificationGuard(messages: Message[] | undefined): GuardRe
       fired: true,
       reply: GUARD_SEVERITY_QUESTION,
       reason: 'body part + negative descriptor → ask severity (high-priority shortcut)',
+      kind: 'severity_clarifier',
     };
   }
 
@@ -265,7 +342,12 @@ function checkInjuryClarificationGuard(messages: Message[] | undefined): GuardRe
   // 4. Injury kw/phrase + body part → FIRE. Each new body-part mention is
   //    a fresh injury report and is never suppressed by history.
   if (signals.hasLocation) {
-    return { fired: true, reply: GUARD_SEVERITY_QUESTION, reason: 'injury kw/phrase + location, severity missing (fresh body part)' };
+    return {
+      fired: true,
+      reply: GUARD_SEVERITY_QUESTION,
+      reason: 'injury kw/phrase + location, severity missing (fresh body part)',
+      kind: 'severity_clarifier',
+    };
   }
 
   // 5. Injury kw/phrase, no body part → severity-first default with
@@ -284,7 +366,12 @@ function checkInjuryClarificationGuard(messages: Message[] | undefined): GuardRe
     break;
   }
 
-  return { fired: true, reply: GUARD_SEVERITY_QUESTION, reason: 'injury kw/phrase, no body part — severity-first default' };
+  return {
+    fired: true,
+    reply: GUARD_SEVERITY_QUESTION,
+    reason: 'injury kw/phrase, no body part — severity-first default',
+    kind: 'severity_clarifier',
+  };
 }
 
 // ─── INJURY-INTENT CLASSIFIER FALLBACK ──────────────────────────────────

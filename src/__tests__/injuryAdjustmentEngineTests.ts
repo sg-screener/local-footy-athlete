@@ -298,6 +298,14 @@ console.log('\n[3c] extractInjuryContext — gates on severity only');
   eq('no injury signal → null', extractInjuryContext('quad day 6/10 reps'), null);
 }
 
+console.log('\n[3d] extractInjuryContext — red flags do not become normal injury buckets');
+{
+  eq('chest + dizzy 4/10 → null', extractInjuryContext("chest hurts and I'm dizzy, 4/10"), null);
+  eq('numb/tingling leg → null', extractInjuryContext('my leg is numb/tingling'), null);
+  eq('hamstring pop 4/10 → null', extractInjuryContext('I heard a pop in my hamstring, 4/10'), null);
+  eq("can't bear weight → null", extractInjuryContext("I can't bear weight"), null);
+}
+
 // ─── 4. Engine — mild severity avoids exact trigger ───
 
 console.log('\n[4] applyInjuryAdjustment — severity 3/10 avoids exact trigger');
@@ -338,6 +346,11 @@ console.log('\n[5] applyInjuryAdjustment — declines unparseable inputs');
   eq(
     'no severity → fired false',
     applyInjuryAdjustment({ message: 'hammy hurts', todayISO: TODAY_ISO }).fired,
+    false,
+  );
+  eq(
+    'red flag with severity → fired false',
+    applyInjuryAdjustment({ message: "chest hurts and I'm dizzy, 4/10", todayISO: TODAY_ISO }).fired,
     false,
   );
 }

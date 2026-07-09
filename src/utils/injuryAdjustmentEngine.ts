@@ -31,6 +31,7 @@
 
 import {
   detectInjurySignals,
+  detectRedFlagSymptoms,
   normalizeText,
   BODY_PARTS,
 } from './injuryClarificationGuard';
@@ -240,6 +241,7 @@ export function extractBodyPart(text: string): string | null {
 // ─── Composite parser: full injury context ───
 
 export function extractInjuryContext(text: string): InjuryContext | null {
+  if (detectRedFlagSymptoms(text)) return null;
   const signals = detectInjurySignals(text);
   // Needs an injury signal OR negative descriptor to discriminate intent
   // (otherwise any "6/10" message would fire). Body part is OPTIONAL —

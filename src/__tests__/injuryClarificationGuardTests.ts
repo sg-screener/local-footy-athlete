@@ -11,7 +11,10 @@
 
 import {
   SEVERITY_QUESTION,
+  RED_FLAG_URGENT_MEDICAL_REPLY,
+  RED_FLAG_PHYSIO_MEDICAL_REPLY,
   detectInjurySignals,
+  detectRedFlagSymptoms,
   normalizeText,
   checkInjuryClarificationGuard,
   GuardMessage,
@@ -37,6 +40,35 @@ function user(content: string): GuardMessage {
 }
 function asst(content: string): GuardMessage {
   return { role: 'assistant', content };
+}
+
+// ─── 0. Red-flag hard stops run before severity clarification ───
+{
+  console.log('\n[0] Red-flag hard stops');
+  const cases: Array<[string, 'urgent_medical' | 'physio_medical']> = [
+    ["chest hurts and I'm dizzy, 4/10", 'urgent_medical'],
+    ['short of breath and chest tight', 'urgent_medical'],
+    ['my leg is numb/tingling', 'urgent_medical'],
+    ['I heard a pop in my hamstring', 'physio_medical'],
+    ["I can't bear weight", 'physio_medical'],
+    ["I can't walk", 'physio_medical'],
+    ['my knee has severe swelling', 'physio_medical'],
+    ['suspected concussion after a head knock', 'urgent_medical'],
+  ];
+  for (const [input, advice] of cases) {
+    const r = checkInjuryClarificationGuard([user(input)]);
+    ok(`"${input}" → guard hard-stops`, r.fired === true);
+    ok(`"${input}" → kind is red_flag_hard_stop`, r.kind === 'red_flag_hard_stop');
+    ok(`"${input}" → does not ask severity`, r.reply !== SEVERITY_QUESTION && !/how bad/i.test(r.reply ?? ''));
+    ok(`"${input}" → reply says stop training`, /stop training/i.test(r.reply ?? ''));
+    ok(`"${input}" → detector advice is ${advice}`, r.redFlag?.advice === advice);
+    if (advice === 'urgent_medical') {
+      ok(`"${input}" → urgent medical reply`, r.reply === RED_FLAG_URGENT_MEDICAL_REPLY && /urgent medical/i.test(r.reply ?? ''));
+    } else {
+      ok(`"${input}" → physio/medical reply`, r.reply === RED_FLAG_PHYSIO_MEDICAL_REPLY && /physio|medical assessment/i.test(r.reply ?? ''));
+    }
+    ok(`"${input}" → exported detector matches`, detectRedFlagSymptoms(input)?.advice === advice);
+  }
 }
 
 // ─── 1. Validation contract from the user spec ───
@@ -67,7 +99,7 @@ function asst(content: string): GuardMessage {
   const cases: string[] = [
     'My hamstring is a 7/10',
     'sharp 8/10 in my left hammy',
-    "calf is killing me, can't walk",
+    'calf is killing me, 7/10',
     'really bad pain in my groin',
     'mild tweak in my shoulder',
     'minor strain in my quad',
@@ -282,14 +314,19 @@ function asst(content: string): GuardMessage {
     ['my ankel is sore', 'ankel → ankle normalization'],
     ['achelies playing up', 'achelies → achilles normalization'],
     ['tweeked my back', 'tweeked → tweaked normalization'],
-    ['something popped in my knee', 'phrase pattern "something popped"'],
-    ['felt it pop', 'phrase pattern "felt it pop"'],
     ['my grain is cooked', 'grain → groin typo normalization'],
   ];
   for (const [input, why] of fires) {
     const r = checkInjuryClarificationGuard([user(input)]);
     ok(`"${input}" → fires (${why})`, r.fired === true);
     ok(`"${input}" → reply is severity question`, r.reply === SEVERITY_QUESTION);
+  }
+
+  const redFlagFires = ['something popped in my knee', 'felt it pop'];
+  for (const input of redFlagFires) {
+    const r = checkInjuryClarificationGuard([user(input)]);
+    ok(`"${input}" → hard-stops, not normal severity clarifier`, r.kind === 'red_flag_hard_stop');
+    ok(`"${input}" → physio/medical advice`, r.reply === RED_FLAG_PHYSIO_MEDICAL_REPLY);
   }
 
   // Severity given → no fire, even with slang/misspellings.

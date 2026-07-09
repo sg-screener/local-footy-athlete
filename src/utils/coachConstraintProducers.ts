@@ -61,8 +61,8 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
   groin: 'adductor',
   adductor: 'adductor',
   adductors: 'adductor',
-  hip: 'lowerBack',
-  hips: 'lowerBack',
+  hip: 'adductor',
+  hips: 'adductor',
 
   back: 'lowerBack',
   'lower back': 'lowerBack',
