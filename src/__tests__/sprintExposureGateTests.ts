@@ -246,6 +246,25 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
 {
   const gate = evaluateSprintExposureGate({
     phase: 'Pre-season',
+    teamTrainingDays: [2],
+    gameOrPracticeMatchDays: [6],
+    weekKind: 'deload',
+    readinessAllowsSprint: true,
+    injuryAllowsSprint: true,
+  });
+  eq('pre-season deload still counts team/game anchors',
+    gate.anchorSprintCodExposures,
+    2,
+    JSON.stringify(gate));
+  eq('pre-season deload denies only app-added sprint',
+    gate.allowStandaloneSprint,
+    false,
+    JSON.stringify(gate));
+}
+
+{
+  const gate = evaluateSprintExposureGate({
+    phase: 'Pre-season',
     readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
@@ -292,6 +311,22 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
   });
   eq('late off-season may allow one app-added sprint if healthy', late.allowStandaloneSprint, true, JSON.stringify(late));
   eq('late off-season target is one sprint/COD exposure', late.target, 1, JSON.stringify(late));
+
+  const lateDeload = evaluateSprintExposureGate({
+    phase: 'Off-season',
+    offseasonSubphase: 'late_offseason',
+    weekKind: 'deload',
+    readinessAllowsSprint: true,
+    injuryAllowsSprint: true,
+  });
+  eq('late off-season deload denies app-added sprint',
+    lateDeload.allowStandaloneSprint,
+    false,
+    JSON.stringify(lateDeload));
+  eq('late off-season deload keeps the late-offseason speed target visible',
+    lateDeload.target,
+    1,
+    JSON.stringify(lateDeload));
 
   const afterTopUp = evaluateSprintExposureGate({
     phase: 'Off-season',
@@ -502,7 +537,12 @@ console.log('\n-- SP-3. Late off-season sprint subphase --');
   });
   const early = planFor(p, [], { miniCycleNumber: 1, weekInBlock: 1, weekNumber: 1 });
   const mid = planFor(p, [], { miniCycleNumber: 1, weekInBlock: 3, weekNumber: 3 });
-  const late = planFor(p, [], { miniCycleNumber: 1, weekInBlock: 4, weekNumber: 4 });
+  const late = planFor(p, [], {
+    miniCycleNumber: 1,
+    weekInBlock: 4,
+    weekNumber: 4,
+    weekKind: 'build',
+  });
   eq('early off-season generation denies app-added sprint',
     speedWorkouts(builtWorkoutsFor(early, p)).length,
     0,
@@ -515,10 +555,33 @@ console.log('\n-- SP-3. Late off-season sprint subphase --');
     speedWorkouts(builtWorkoutsFor(late, p)).length,
     1,
     planText(late));
+  const lateDeload = planFor(p, [], {
+    miniCycleNumber: 1,
+    weekInBlock: 4,
+    weekNumber: 4,
+    weekKind: 'deload',
+  });
+  eq('late off-season deload generation denies app-added sprint',
+    speedWorkouts(builtWorkoutsFor(lateDeload, p)).length,
+    0,
+    planText(lateDeload));
   ok('healthy non-sprint off-season week still has useful strength',
     early.weeklyPlan.some((session) => !!session.strengthPattern) &&
     early.weeklyPlan.length >= 4,
     planText(early));
+}
+
+{
+  const p = profile({
+    seasonPhase: 'Pre-season',
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+  });
+  const plan = planFor(p, [], { weekKind: 'deload' });
+  eq('pre-season deload generation denies app-added sprint micro-dose',
+    speedWorkouts(builtWorkoutsFor(plan, p)).length,
+    0,
+    planText(plan));
 }
 
 for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle', 'hip']) {
@@ -532,6 +595,7 @@ for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle
     miniCycleNumber: 1,
     weekInBlock: 4,
     weekNumber: 4,
+    weekKind: 'build',
   });
   eq(`late off-season ${bodyPart} issue denies sprint when unsafe`,
     speedWorkouts(builtWorkoutsFor(late, p)).length,
@@ -593,9 +657,9 @@ for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle
     week1Speed.length,
     0,
     week1Speed.map((workout) => workout.name).join(' | '));
-  eq('generated off-season block can add late week 4 speed',
+  eq('generated off-season block keeps deload week 4 sprint-free',
     week4Speed.length,
-    1,
+    0,
     week4Speed.map((workout) => workout.name).join(' | '));
 }
 

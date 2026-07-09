@@ -1973,6 +1973,7 @@ function buildWeeklyPlan(
         readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
         injuryAllowsSprint: !blocksConditioningCategoryForGeneration('sprint'),
         offseasonSubphase,
+        weekKind: inputs.weekKind,
       });
     }
 
@@ -4639,6 +4640,7 @@ function buildWeeklyPlan(
       readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
       injuryAllowsSprint: !lowerLimbSprintBlocked,
       offseasonSubphase,
+      weekKind: inputs.weekKind,
     });
 
     if (plannedSprintRows === 0 && gate.allowStandaloneSprint) {
@@ -5950,6 +5952,9 @@ function buildAIConstraints(
   if (inputs.seasonPhase === 'Off-season' && offseasonSubphase !== 'late_offseason') {
     sprintLoading = 'do-not-add';
   }
+  if (inputs.weekKind === 'deload') {
+    sprintLoading = 'do-not-add';
+  }
   if (activeReadiness?.avoidSprint || lowerLimbGenerationIssue) {
     sprintLoading = 'do-not-add';
   }
@@ -6033,6 +6038,9 @@ function buildAIConstraints(
     } else {
       notes.push('EARLY/MID OFF-SEASON: do not add sprint work yet. Prioritise strength, size, base conditioning, recovery, and controlled movement quality.');
     }
+  }
+  if (inputs.weekKind === 'deload') {
+    notes.push('DELOAD WEEK: do not add app-side sprint or true-speed work. Keep sprint/COD exposure only from existing team training, practice match, or game anchors.');
   }
   if (inputs.seasonPhase === 'In-season') {
     notes.push('IN-SEASON: Anchor ENTIRE week to game day (G). All scheduling is G-relative, NOT fixed weekdays.');

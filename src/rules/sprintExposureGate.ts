@@ -1,4 +1,4 @@
-import type { Workout } from '../types/domain';
+import type { WeekKind, Workout } from '../types/domain';
 import {
   BIBLE_WEEKLY_CAPS,
   countWeeklyExposures,
@@ -18,7 +18,8 @@ export type SprintExposureGateReason =
   | 'offseason_late_shortfall'
   | 'offseason_target_met'
   | 'offseason_app_topup_already_added'
-  | 'offseason_no_late_flag';
+  | 'offseason_no_late_flag'
+  | 'deload_week';
 
 export interface SprintExposureGateContext {
   phase: SprintExposureGatePhase;
@@ -28,6 +29,7 @@ export interface SprintExposureGateContext {
   readinessAllowsSprint?: boolean;
   injuryAllowsSprint?: boolean;
   offseasonSubphase?: OffseasonSubphase | null;
+  weekKind?: WeekKind | null;
 }
 
 export interface SprintExposureGateDecision {
@@ -69,6 +71,9 @@ export function evaluateSprintExposureGate(
   }
   if (context.readinessAllowsSprint === false) {
     return { ...base, allowStandaloneSprint: false, reason: 'readiness_denied' };
+  }
+  if (context.weekKind === 'deload') {
+    return { ...base, allowStandaloneSprint: false, reason: 'deload_week' };
   }
   if (context.phase === 'Off-season') {
     if (context.offseasonSubphase !== 'late_offseason') {
