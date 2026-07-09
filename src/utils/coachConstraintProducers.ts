@@ -124,6 +124,13 @@ export function bucketToRegion(bucket: InjuryBucket): ConstraintRegion {
 const FATIGUE_ID = 'fatigue-active';
 const SCHEDULE_ID = 'schedule-busy-week';
 
+interface ProducerContext {
+  /** Raw user turn, used only to infer day-vs-week scope. */
+  userMessage?: string;
+  /** Selected program date when the chat turn was sent. */
+  selectedDateISO?: string;
+}
+
 function sorenessId(bucket: InjuryBucket | 'unknown'): string {
   return `soreness-${bucket}`;
 }
@@ -139,6 +146,68 @@ function clampSeverity(n: unknown, fallback: number): number {
   return Math.max(1, Math.min(10, Math.round(n)));
 }
 
+function isoDate(value: string | undefined): string {
+  if (value && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
+  return new Date().toISOString().slice(0, 10);
+}
+
+function addDaysISO(dateISO: string, days: number): string {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const dt = new Date(y, m - 1, d + days, 12);
+  const mm = String(dt.getMonth() + 1).padStart(2, '0');
+  const dd = String(dt.getDate()).padStart(2, '0');
+  return `${dt.getFullYear()}-${mm}-${dd}`;
+}
+
+function mondayForDate(dateISO: string): string {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const dt = new Date(y, m - 1, d, 12);
+  const dow = dt.getDay();
+  const diff = dow === 0 ? -6 : 1 - dow;
+  return addDaysISO(dateISO, diff);
+}
+
+function weekEndForDate(dateISO: string): string {
+  return addDaysISO(mondayForDate(dateISO), 6);
+}
+
+function selectedDateForIntent(
+  intent: CoachIntent,
+  nowISO: string,
+  context?: ProducerContext,
+): string {
+  return isoDate(
+    intent.payload?.requestedDate ??
+    intent.payload?.targetDate ??
+    context?.selectedDateISO ??
+    nowISO,
+  );
+}
+
+function textForScope(intent: CoachIntent, context?: ProducerContext): string {
+  return [
+    context?.userMessage,
+    intent.payload?.concern,
+    intent.payload?.scope,
+    intent.payload?.requestedSession,
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function fatigueIsWeekScoped(
+  intent: CoachIntent,
+  severity: number,
+  context?: ProducerContext,
+): boolean {
+  const text = textForScope(intent, context);
+  const explicitlyToday = /\b(today|tonight|this\s+morning|this\s+arvo|this\s+afternoon)\b/i.test(text);
+  const explicitlyWeek =
+    /\b(cooked|wrecked|smoked|fried|load\s+reduced|recovery\s+mode|this\s+week|week|weekly)\b/i.test(text);
+  return (
+    explicitlyWeek ||
+    (severity >= 7 && !explicitlyToday)
+  );
+}
+
 // ─── Producers ──────────────────────────────────────────────────────
 
 /**
@@ -148,8 +217,11 @@ function clampSeverity(n: unknown, fallback: number): number {
 export function buildFatigueConstraintFromIntent(
   intent: CoachIntent,
   nowISO: string = new Date().toISOString(),
+  context?: ProducerContext,
 ): ActiveFatigueConstraint {
   const severity = clampSeverity(intent.payload?.severity, 5);
+  const selectedDate = selectedDateForIntent(intent, nowISO, context);
+  const weekScoped = fatigueIsWeekScoped(intent, severity, context);
   return {
     id: FATIGUE_ID,
     type: 'fatigue',
@@ -157,6 +229,15 @@ export function buildFatigueConstraintFromIntent(
     status: 'active',
     startDate: nowISO,
     lastUpdatedAt: nowISO,
+    reasonLabel: 'Fatigue',
+    source: 'coach',
+    ...(weekScoped ? {} : { appliesToDate: selectedDate }),
+    expiresAt: weekScoped ? weekEndForDate(selectedDate) : selectedDate,
+    modifierTitle: weekScoped ? 'Load reduced this week' : 'Recovery mode active',
+    modifierBody: weekScoped
+      ? 'Your week has been adjusted because you said you were cooked.'
+      : 'Your training load is reduced today while you recover.',
+    modifierAffects: [weekScoped ? 'current_week' : 'current_day'],
     // Noun-phrase form: these strings are joined under an "Avoid:"
     // header by the truth-gate composer, so they must read as things
     // the athlete should NOT do (not as claims of action the engine
@@ -181,12 +262,15 @@ export function buildFatigueConstraintFromIntent(
 export function buildSorenessConstraintFromIntent(
   intent: CoachIntent,
   nowISO: string = new Date().toISOString(),
+  context?: ProducerContext,
 ): ActiveSorenessConstraint | null {
   const rawBodyPart = intent.payload?.bodyPart;
   const bucket = bodyPartToBucket(rawBodyPart);
   if (!bucket) return null;
   const severity = clampSeverity(intent.payload?.severity, 4);
   const bodyPart = (rawBodyPart ?? bucket).trim().toLowerCase();
+  const selectedDate = selectedDateForIntent(intent, nowISO, context);
+  const mild = severity <= 5;
   return {
     id: sorenessId(bucket),
     type: 'soreness',
@@ -196,6 +280,15 @@ export function buildSorenessConstraintFromIntent(
     status: 'active',
     startDate: nowISO,
     lastUpdatedAt: nowISO,
+    reasonLabel: `${bodyPart} soreness`,
+    source: 'coach',
+    ...(mild ? { appliesToDate: selectedDate } : {}),
+    expiresAt: mild ? selectedDate : weekEndForDate(selectedDate),
+    modifierTitle: `${bodyPart.charAt(0).toUpperCase()}${bodyPart.slice(1)} soreness active`,
+    modifierBody: mild
+      ? `Your program is keeping ${bodyPart} work pain-free today.`
+      : `Your program is managing soreness around ${bodyPart}.`,
+    modifierAffects: [mild ? 'current_day' : 'current_week'],
     rules: severity >= 6
       ? [`heavy ${bodyPart} loading until soreness drops`]
       : [`high ${bodyPart} volume this week`],
@@ -210,8 +303,11 @@ export function buildSorenessConstraintFromIntent(
 export function buildBusyWeekConstraintFromIntent(
   intent: CoachIntent,
   nowISO: string = new Date().toISOString(),
+  context?: ProducerContext,
 ): ActiveScheduleConstraint {
   const severity = clampSeverity(intent.payload?.severity, 5);
+  const selectedDate = selectedDateForIntent(intent, nowISO, context);
+  const weekStartISO = mondayForDate(selectedDate);
   return {
     id: SCHEDULE_ID,
     type: 'schedule',
@@ -219,6 +315,13 @@ export function buildBusyWeekConstraintFromIntent(
     status: 'active',
     startDate: nowISO,
     lastUpdatedAt: nowISO,
+    reasonLabel: 'Busy week',
+    source: 'coach',
+    weekStartISO,
+    expiresAt: addDaysISO(weekStartISO, 6),
+    modifierTitle: 'Busy week adjustment active',
+    modifierBody: 'Your week has been reduced around your schedule.',
+    modifierAffects: ['current_week'],
     // Noun-phrase form for the truth-gate "Avoid:" header.
     rules: severity >= 7
       ? ['max-effort sessions this week', 'long accessory blocks']

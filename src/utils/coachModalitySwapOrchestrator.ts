@@ -44,6 +44,7 @@ import {
 import type { ConditioningModality } from '../data/exerciseTags';
 import type { CoachReferenceResolution } from './coachReferenceResolver';
 import { logger } from './logger';
+import { constraintAppliesToDate } from './readinessConstraints';
 
 export type ModalitySwapOutcomeKind =
   | 'applied'
@@ -397,7 +398,7 @@ function verifyProjections(args: {
   const cuStore = useCoachUpdatesStore.getState();
   const baseState = buildScheduleStateImperative();
   const activeConstraints = (cuStore.activeConstraints ?? []).filter(
-    (c) => c.status !== 'resolved',
+    (c) => c.status !== 'resolved' && constraintAppliesToDate(c as any, args.todayISO),
   );
   const stateWithConstraints = { ...baseState, activeConstraints };
 

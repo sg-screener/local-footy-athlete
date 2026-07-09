@@ -667,6 +667,7 @@ function legacyActiveInjuryConstraint(injury: InjuryState): ActiveInjuryConstrai
     rules: Array.isArray(injury.rules) ? [...injury.rules] : [],
     safeFocus: [],
     advice: [],
+    modifierAffects: ['current_week', 'future_generation'],
   };
 }
 

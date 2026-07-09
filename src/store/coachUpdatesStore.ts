@@ -291,6 +291,21 @@ export type ActiveConstraint =
   | ActiveMissedSessionConstraint
   | ActivePreferenceConstraint;
 
+const INJURY_MODIFIER_AFFECTS: ActiveConstraintModifierAffect[] = [
+  'current_week',
+  'future_generation',
+];
+
+function withDefaultModifierMetadata(c: ActiveConstraint): ActiveConstraint {
+  if (c.type !== 'injury') return c;
+  return {
+    ...c,
+    modifierAffects: Array.isArray(c.modifierAffects) && c.modifierAffects.length > 0
+      ? [...c.modifierAffects]
+      : [...INJURY_MODIFIER_AFFECTS],
+  };
+}
+
 interface CoachUpdatesState {
   /** weekStartISO → CoachUpdate. One per week. */
   updatesByWeek: Record<string, CoachUpdate>;
@@ -441,18 +456,20 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           rules: Array.isArray(state.rules) ? [...state.rules] : [],
           safeFocus: [],
           advice: [],
+          modifierAffects: [...INJURY_MODIFIER_AFFECTS],
         };
         const existing = get().activeConstraints.filter((c) => c.id !== id);
         set({ activeConstraints: [...existing, next] });
       },
 
       upsertActiveConstraint: (c) => {
-        const filtered = get().activeConstraints.filter((x) => x.id !== c.id);
-        set({ activeConstraints: [...filtered, c] });
+        const nextConstraint = withDefaultModifierMetadata(c);
+        const filtered = get().activeConstraints.filter((x) => x.id !== nextConstraint.id);
+        set({ activeConstraints: [...filtered, nextConstraint] });
         // Mirror back to legacy activeInjury when the constraint is
         // an injury — pick the most recently-touched as "primary".
-        if (c.type === 'injury') {
-          const allInjuries = [...filtered, c]
+        if (nextConstraint.type === 'injury') {
+          const allInjuries = [...filtered, nextConstraint]
             .filter((x): x is ActiveInjuryConstraint => x.type === 'injury' && x.status !== 'resolved');
           const primary = allInjuries.sort((a, b) =>
             (b.lastUpdatedAt || '').localeCompare(a.lastUpdatedAt || ''),
@@ -509,8 +526,9 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
       },
 
       setActiveConstraints: (constraints) => {
-        set({ activeConstraints: [...constraints] });
-        const primary = constraints
+        const nextConstraints = constraints.map(withDefaultModifierMetadata);
+        set({ activeConstraints: [...nextConstraints] });
+        const primary = nextConstraints
           .filter((c): c is ActiveInjuryConstraint => c.type === 'injury' && c.status !== 'resolved')
           .sort((a, b) => (b.lastUpdatedAt || '').localeCompare(a.lastUpdatedAt || ''))[0];
         if (primary) {

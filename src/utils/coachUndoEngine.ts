@@ -48,6 +48,7 @@ import type { Workout, OverrideContext } from '../types/domain';
 import type { ConditioningModality } from '../data/exerciseTags';
 import type { BikeLabel } from './coachModalitySwap';
 import { logger } from './logger';
+import { constraintAppliesToDate } from './readinessConstraints';
 
 // ─── Public types ───────────────────────────────────────────────────
 
@@ -264,7 +265,7 @@ function defaultVerifyDate(args: {
     const cuStore = useCoachUpdatesStore.getState();
     const baseState = buildScheduleStateImperative();
     const activeConstraints = (cuStore.activeConstraints ?? []).filter(
-      (c) => c.status !== 'resolved',
+      (c) => c.status !== 'resolved' && constraintAppliesToDate(c as any, todayISO),
     );
     const stateWithConstraints = { ...baseState, activeConstraints };
     const monday = mondayOfISO(date);

@@ -32,6 +32,7 @@ import {
   type AppliedChange,
 } from './verifiedCoachCommunication';
 import { formatExerciseDisplayName } from './exerciseDisplay';
+import { constraintAppliesToDate } from './readinessConstraints';
 
 export interface WeeklyCoachUpdateView {
   weekStartISO: string;
@@ -125,6 +126,9 @@ function capitalise(s: string): string {
 
 function reasonLine(c: ActiveConstraint): string {
   const labelled = (c as ActiveConstraint & { reasonLabel?: string }).reasonLabel;
+  if (c.type === 'fatigue' && labelled === 'Fatigue') {
+    return `Fatigue — ${c.severity}/10`;
+  }
   if (labelled && 'severity' in c) {
     return `${labelled} - ${c.severity}/10`;
   }
@@ -207,7 +211,8 @@ export function buildWeeklyCoachUpdateFromConstraints(
   const visibleDates = new Set(input.visibleWeek.map((d) => d.date));
   const constraints = activeFilter(input.activeConstraints).filter((c) => {
     const scopedDate = (c as ActiveConstraint & { appliesToDate?: string }).appliesToDate;
-    return !scopedDate || visibleDates.has(scopedDate);
+    if (scopedDate && !visibleDates.has(scopedDate)) return false;
+    return Array.from(visibleDates).some((date) => constraintAppliesToDate(c as any, date));
   });
   if (constraints.length === 0) return null;
 

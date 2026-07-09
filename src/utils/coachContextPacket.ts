@@ -35,6 +35,7 @@ import {
   targetFrameFromReferenceTarget,
 } from './coachTargetFrame';
 import { buildProgramEditDraft } from './coachProgramEditDraft';
+import { constraintAppliesToDate } from './readinessConstraints';
 
 const RECENT_HISTORY_LIMIT = 8;
 
@@ -73,7 +74,7 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
   const cuStore = useCoachUpdatesStore.getState();
   const activeInjury = cuStore.activeInjury ?? null;
   const activeConstraints = (cuStore.activeConstraints ?? []).filter(
-    (c) => c.status !== 'resolved',
+    (c) => c.status !== 'resolved' && constraintAppliesToDate(c as any, input.todayISO),
   );
   const programStore = useProgramStore.getState();
   const projectedState = {

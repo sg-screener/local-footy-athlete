@@ -53,6 +53,9 @@ section('[1] fatigue producer — defaults severity 5 when missing');
   eq('status active', c.status, 'active');
   eq('id is fatigue-active', c.id, 'fatigue-active');
   eq('startDate uses nowISO', c.startDate, NOW);
+  eq('tired today affects current day', c.modifierAffects, ['current_day']);
+  eq('tired today expires end of day', c.expiresAt, '2026-04-26');
+  eq('tired today scoped to today', c.appliesToDate, '2026-04-26');
   ok('rules non-empty', c.rules.length > 0);
   ok('safeFocus non-empty', c.safeFocus.length > 0);
 }
@@ -61,8 +64,24 @@ section('[2] fatigue producer — severe (sev 9) emits hard advice');
 {
   const c = buildFatigueConstraintFromIntent(intent('fatigue', { severity: 9 }), NOW);
   eq('severity clamped/passed 9', c.severity, 9);
+  eq('cooked fatigue affects current week', c.modifierAffects, ['current_week']);
+  eq('cooked fatigue expires end of selected week', c.expiresAt, '2026-04-26');
+  eq('cooked fatigue has load-reduced title', c.modifierTitle, 'Load reduced this week');
   ok('rules mention drop max-effort', c.rules.some((r) => /max-effort/i.test(r)));
   ok('advice mentions sleep + food', c.advice.some((a) => /sleep|food/i.test(a)));
+}
+
+section('[2b] fatigue producer — cooked wording is week-scoped even with estimated severity');
+{
+  const c = buildFatigueConstraintFromIntent(
+    intent('fatigue', { severity: 5 }),
+    NOW,
+    { userMessage: "I'm cooked this week", selectedDateISO: '2026-04-22' },
+  );
+  eq('estimated severity preserved', c.severity, 5);
+  eq('cooked wording affects week', c.modifierAffects, ['current_week']);
+  eq('selected week ends Sunday', c.expiresAt, '2026-04-26');
+  eq('no day-only scope for cooked week', c.appliesToDate, undefined);
 }
 
 section('[3] fatigue producer — clamps invalid severity');
@@ -99,6 +118,21 @@ section('[5] soreness producer — hammy → hamstring bucket');
   );
   ok('not null', !!c);
   eq('hammies → hamstring bucket', c?.bucket, 'hamstring');
+  eq('mild soreness affects current day', c?.modifierAffects, ['current_day']);
+  eq('mild soreness expires end of day', c?.expiresAt, '2026-04-26');
+  eq('mild soreness scoped to today', c?.appliesToDate, '2026-04-26');
+}
+
+section('[5b] soreness producer — moderate soreness expires at selected week end');
+{
+  const c = buildSorenessConstraintFromIntent(
+    intent('soreness', { bodyPart: 'quads', severity: 6 }),
+    NOW,
+    { selectedDateISO: '2026-04-22' },
+  );
+  eq('moderate soreness affects current week', c?.modifierAffects, ['current_week']);
+  eq('moderate soreness expires selected week end', c?.expiresAt, '2026-04-26');
+  eq('moderate soreness is not day-only', c?.appliesToDate, undefined);
 }
 
 section('[6] soreness producer — adductor → adductor bucket');
@@ -139,6 +173,9 @@ section('[9] busy-week producer — defaults severity 5');
   eq('type schedule', c.type, 'schedule');
   eq('severity defaults to 5', c.severity, 5);
   eq('id is schedule-busy-week', c.id, 'schedule-busy-week');
+  eq('busy week affects current week', c.modifierAffects, ['current_week']);
+  eq('busy week starts selected week', c.weekStartISO, '2026-04-20');
+  eq('busy week expires end of selected week', c.expiresAt, '2026-04-26');
   ok('rules non-empty (moderate guidance)', c.rules.length > 0);
 }
 

@@ -8,6 +8,13 @@ import {
   clearActiveCoachNote,
 } from '../utils/activeCoachNotes';
 import {
+  buildBusyWeekConstraintFromIntent,
+  buildFatigueConstraintFromIntent,
+  buildSorenessConstraintFromIntent,
+} from '../utils/coachConstraintProducers';
+import type { CoachIntent, CoachIntentKind } from '../utils/coachIntent';
+import { buildGenerationConstraintContext } from '../utils/generationConstraints';
+import {
   useCoachUpdatesStore,
   type ActiveConstraint,
   type ActivePreferenceConstraint,
@@ -48,6 +55,15 @@ function ok(name: string, condition: unknown, detail?: unknown) {
 
 function eq(name: string, actual: unknown, expected: unknown) {
   ok(name, JSON.stringify(actual) === JSON.stringify(expected), { expected, actual });
+}
+
+function intent(kind: CoachIntentKind, payload: Record<string, any> = {}): CoachIntent {
+  return {
+    intent: kind,
+    confidence: 1,
+    needsClarification: false,
+    payload,
+  };
 }
 
 function resetStores() {
@@ -154,6 +170,32 @@ function restWorkout(date: string): Workout {
   };
 }
 
+function visibleChangedWorkout(
+  date: string,
+  coachNotes: string[],
+  exerciseName = 'Trap Bar Deadlift',
+): ActiveProgramModifierVisibleDay {
+  return {
+    date,
+    dayOfWeek: new Date(`${date}T12:00:00`).getDay(),
+    workout: {
+      id: `workout-${date}`,
+      microcycleId: 'test-microcycle',
+      dayOfWeek: new Date(`${date}T12:00:00`).getDay(),
+      name: 'Lower Strength',
+      description: 'Lower Strength',
+      durationMinutes: 60,
+      intensity: 'Moderate',
+      workoutType: 'Strength',
+      sessionTier: 'core',
+      coachNotes,
+      exercises: [{ exercise: { name: exerciseName } }] as any,
+      createdAt: '2026-07-06T00:00:00Z',
+      updatedAt: '2026-07-06T00:00:00Z',
+    } as any,
+  };
+}
+
 console.log('activeCoachNotesTests');
 
 console.log('\n[1] hidden when no active modifiers exist');
@@ -225,6 +267,150 @@ console.log('\n[2] note read model preserves active constraint types');
   ok('preference body names affected exercise', /Bench Press/.test(notes[2].body), notes[2].body);
   eq('schedule restriction note type', notes[3].type, 'coach_restriction');
   eq('schedule restriction clear action label', notes[3].actions[0].label, 'Clear adjustment');
+}
+
+console.log('\n[2b] chat-created active constraints with visible effects create Coach Notes');
+{
+  resetStores();
+  const todayISO = '2026-07-06';
+  const nowISO = '2026-07-06T09:00:00.000Z';
+
+  const tired = buildFatigueConstraintFromIntent(
+    intent('fatigue', { severity: 5 }),
+    nowISO,
+    { userMessage: "I'm tired today", selectedDateISO: todayISO },
+  );
+  const tiredNotes = selectActiveCoachNotes({
+    activeConstraints: [tired],
+    todayISO,
+    visibleWeekDays: [
+      visibleChangedWorkout(todayISO, ['Caution: reduced accessories today.']),
+    ],
+  });
+  ok('chat tired constraint creates visible note when it changes program',
+    tiredNotes.some((note) => note.title === 'Recovery mode active'));
+  eq('tired today expiry is end of day', tired.expiresAt, todayISO);
+
+  const sore = buildSorenessConstraintFromIntent(
+    intent('soreness', { bodyPart: 'quads', severity: 4 }),
+    nowISO,
+    { userMessage: 'quads are sore today', selectedDateISO: todayISO },
+  );
+  ok('soreness producer resolved quads', !!sore);
+  const soreNotes = selectActiveCoachNotes({
+    activeConstraints: sore ? [sore] : [],
+    todayISO,
+    visibleWeekDays: [
+      visibleChangedWorkout(todayISO, ['Caution: reduced hard conditioning for quads soreness.']),
+    ],
+  });
+  ok('chat soreness constraint creates visible note when it changes program',
+    soreNotes.some((note) => note.title === 'Quads soreness active'));
+  eq('mild soreness expiry is end of day', sore?.expiresAt, todayISO);
+
+  const cooked = buildFatigueConstraintFromIntent(
+    intent('fatigue', { severity: 8 }),
+    nowISO,
+    { userMessage: "I'm cooked this week", selectedDateISO: todayISO },
+  );
+  const cookedNotes = selectActiveCoachNotes({
+    activeConstraints: [cooked],
+    todayISO,
+    visibleWeekDays: [
+      visibleChangedWorkout(todayISO, ['Caution: reduced hard conditioning and optional volume.']),
+    ],
+  });
+  ok('cooked/load-reduced constraint creates visible note',
+    cookedNotes.some((note) => note.title === 'Load reduced this week'));
+
+  const busy = buildBusyWeekConstraintFromIntent(
+    intent('busy_week', { severity: 7 }),
+    nowISO,
+    { userMessage: 'busy week at work', selectedDateISO: todayISO },
+  );
+  const busyNotes = selectActiveCoachNotes({
+    activeConstraints: [busy],
+    todayISO,
+    visibleWeekDays: [
+      visibleChangedWorkout(todayISO, ['Caution: limited week, optional accessories reduced.']),
+    ],
+  });
+  ok('busy week constraint creates visible note',
+    busyNotes.some((note) => note.title === 'Busy week adjustment active'));
+
+  useCoachUpdatesStore.getState().setActiveInjury({
+    bodyPart: 'hamstring',
+    bucket: 'hamstring',
+    severity: 6,
+    initialSeverity: 6,
+    status: 'active',
+    rules: ['sprinting'],
+    startDate: nowISO,
+    lastUpdatedAt: nowISO,
+    createdAt: nowISO,
+    history: [],
+  });
+  const injuryConstraint = useCoachUpdatesStore.getState().activeConstraints.find(
+    (constraint) => constraint.type === 'injury',
+  ) as ActiveConstraint | undefined;
+  eq('chat injury mirror has visible-affect metadata',
+    (injuryConstraint as any)?.modifierAffects, ['current_week', 'future_generation']);
+  eq('chat injury does not auto-expire like tiredness',
+    (injuryConstraint as any)?.expiresAt, undefined);
+  const injuryNotes = selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    todayISO,
+    visibleWeekDays: [
+      visibleChangedWorkout(todayISO, ['Removed: sprinting reduced for hamstring issue.']),
+    ],
+  });
+  ok('chat injury creates visible note when it affects program',
+    injuryNotes.some((note) => note.title === 'Hamstring issue active'));
+}
+
+console.log('\n[2c] expired and cleared chat constraints stop affecting the program');
+{
+  resetStores();
+  const todayISO = '2026-07-06';
+  const nextDayISO = '2026-07-07';
+  const nowISO = '2026-07-06T09:00:00.000Z';
+  const tired = buildFatigueConstraintFromIntent(
+    intent('fatigue', { severity: 5 }),
+    nowISO,
+    { userMessage: "I'm tired today", selectedDateISO: todayISO },
+  );
+  eq('expired tired note hidden next day', selectActiveCoachNotes({
+    activeConstraints: [tired],
+    todayISO: nextDayISO,
+    visibleWeekDays: [
+      visibleChangedWorkout(todayISO, ['Caution: reduced accessories today.']),
+    ],
+  }), []);
+  eq('expired tired constraint excluded from generation context',
+    buildGenerationConstraintContext({ activeConstraints: [tired], todayISO: nextDayISO }),
+    undefined);
+
+  const cooked = buildFatigueConstraintFromIntent(
+    intent('fatigue', { severity: 8 }),
+    nowISO,
+    { userMessage: "I'm cooked this week", selectedDateISO: todayISO },
+  );
+  useCoachUpdatesStore.getState().setActiveConstraints([cooked]);
+  const notes = selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    todayISO,
+  });
+  ok('load-reduced note exists before clear', notes.some((note) => note.title === 'Load reduced this week'));
+  const note = notes.find((candidate) => candidate.title === 'Load reduced this week');
+  const result = clearActiveCoachNote(note?.id ?? '');
+  eq('cleared chat status source', result.cleared?.sourceId, cooked.id);
+  eq('clearing note removes active constraint', useCoachUpdatesStore.getState().activeConstraints, []);
+  eq('clearing note removes generation effect',
+    buildGenerationConstraintContext({
+      activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+      todayISO,
+    }),
+    undefined);
 }
 
 console.log('\n[3] clearing one injury leaves other active injuries alone');

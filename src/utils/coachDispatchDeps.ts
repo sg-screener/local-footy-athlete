@@ -369,7 +369,10 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
 
       switch (kind) {
         case 'fatigue': {
-          const c = buildFatigueConstraintFromIntent(intent, nowISO);
+          const c = buildFatigueConstraintFromIntent(intent, nowISO, {
+            userMessage: packet.userMessage,
+            selectedDateISO: packet.todayISO,
+          });
           upsert(c);
           logger.debug('[non-injury-constraint] fatigue_applied', {
             id: c.id,
@@ -379,7 +382,10 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
           return { reply: guidanceReply(c), mutated: true };
         }
         case 'soreness': {
-          const c = buildSorenessConstraintFromIntent(intent, nowISO);
+          const c = buildSorenessConstraintFromIntent(intent, nowISO, {
+            userMessage: packet.userMessage,
+            selectedDateISO: packet.todayISO,
+          });
           if (!c) {
             logger.debug('[non-injury-constraint] soreness_skipped', {
               reason: 'no_body_part',
@@ -400,7 +406,10 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
           return { reply: guidanceReply(c), mutated: true };
         }
         case 'busy_week': {
-          const c = buildBusyWeekConstraintFromIntent(intent, nowISO);
+          const c = buildBusyWeekConstraintFromIntent(intent, nowISO, {
+            userMessage: packet.userMessage,
+            selectedDateISO: packet.todayISO,
+          });
           upsert(c);
           logger.debug('[non-injury-constraint] busy_week_applied', {
             id: c.id,
