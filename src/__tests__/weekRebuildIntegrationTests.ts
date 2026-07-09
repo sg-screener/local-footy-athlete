@@ -80,6 +80,12 @@ const IN_SEASON: Partial<OnboardingData> = {
   usualGameDay: 'Saturday',
 };
 
+const IN_SEASON_SIX_DAY: Partial<OnboardingData> = {
+  ...IN_SEASON,
+  trainingDaysPerWeek: 6,
+  preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+};
+
 const PRESEASON_NO_TEAM_4_DAY: Partial<OnboardingData> = {
   seasonPhase: 'Pre-season',
   trainingDaysPerWeek: 4,
@@ -95,7 +101,7 @@ const PRESEASON_NO_TEAM_4_DAY: Partial<OnboardingData> = {
 };
 
 // Live calendar marks for the simulated environment.
-let markedDays: Record<string, 'game' | 'rest'> = {};
+let markedDays: ScheduleState['markedDays'] = {};
 
 /** Resolve a week Monday from the LIVE stores (as production does). */
 function resolveLiveWeek(mondayISO: string, seasonPhase: string, gameDay?: string): ResolvedDay[] {
@@ -147,6 +153,31 @@ function addSaturdayGame(profile: Partial<OnboardingData>, satDate: string) {
 }
 
 const dayOf = (week: ResolvedDay[], date: string) => week.find((d) => d.date === date);
+
+function visibleWeekSignature(week: ResolvedDay[]): string {
+  const identityKeys = new Set([
+    'id',
+    'microcycleId',
+    'workoutId',
+    'exerciseId',
+    'createdAt',
+    'updatedAt',
+  ]);
+  return JSON.stringify(week, (key, value) => identityKeys.has(key) ? undefined : value);
+}
+
+function weekShapeSignature(week: ResolvedDay[]): string {
+  return JSON.stringify(week.map((day) => ({
+    date: day.date,
+    source: day.source,
+    indicator: day.indicator,
+    name: day.workout?.name ?? null,
+    workoutType: day.workout?.workoutType ?? null,
+    sessionTier: day.workout?.sessionTier ?? null,
+    conditioningCategory: day.workout?.conditioningCategory ?? null,
+    hasCombinedConditioning: day.workout?.hasCombinedConditioning ?? false,
+  })));
+}
 
 // ═════════════════════════════════════════════════════════════════════
 function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
@@ -417,6 +448,63 @@ console.log('\n── Week-scoped practice match overlay does not pollute future
     selectedAfterRemove.every((d) => d.workout?.workoutType !== 'Game') &&
     selectedAfterRemove.every((d) => !/gunshow/i.test(d.workout?.name ?? '')),
     selectedAfterRemove.map((d) => `${d.short}:${d.source}:${d.workout?.name ?? 'OFF'}`).join(' | '));
+}
+
+// ═════════════════════════════════════════════════════════════════════
+console.log('\n── Week-scoped bye shape does not leak into adjacent in-season game weeks ──');
+{
+  resetWorld();
+  const seeded = rebuildLocalWeek({ baseProfile: IN_SEASON_SIX_DAY as OnboardingData });
+  const blockStart = seeded.program.startDate.split('T')[0];
+  const wk1Mon = blockStart;
+  const wk2Mon = addDays(blockStart, 7);
+  const wk2Sat = addDays(blockStart, 12);
+  const wk3Mon = addDays(blockStart, 14);
+  const baseTemplateSignature = JSON.stringify(useProgramStore.getState().currentMicrocycle?.workouts ?? []);
+  const priorGameBefore = resolveLiveWeek(wk1Mon, 'In-season', 'Saturday');
+  const selectedGameBefore = resolveLiveWeek(wk2Mon, 'In-season', 'Saturday');
+  const futureGameBefore = resolveLiveWeek(wk3Mon, 'In-season', 'Saturday');
+
+  const remove = rebuildLocalWeek({
+    baseProfile: IN_SEASON_SIX_DAY as OnboardingData,
+    newGameDay: null,
+    scope: 'weekOverlay',
+    targetDate: wk2Sat,
+    commitGameMark: () => { markedDays[wk2Sat] = 'noGame'; },
+  });
+  const selectedBye = resolveLiveWeek(wk2Mon, 'In-season', 'Saturday');
+  const priorGameAfterRemove = resolveLiveWeek(wk1Mon, 'In-season', 'Saturday');
+  const futureGameAfterRemove = resolveLiveWeek(wk3Mon, 'In-season', 'Saturday');
+  const overlayKeysAfterRemove = Object.keys(useProgramStore.getState().weekScopedOverlays);
+
+  ok('removing one regular game creates only the selected-week bye overlay',
+    remove.overlay?.reason === 'one_off_no_game' &&
+      JSON.stringify(overlayKeysAfterRemove) === JSON.stringify([wk2Mon]),
+    JSON.stringify({ overlay: remove.overlay, keys: overlayKeysAfterRemove }));
+  ok('selected week becomes a bye without a fixture',
+    selectedBye.every((day) => day.workout?.workoutType !== 'Game') &&
+      /lower body strength/i.test(dayOf(selectedBye, wk2Sat)?.workout?.name ?? ''),
+    selectedBye.map((day) => `${day.short}:${day.workout?.name ?? 'OFF'}`).join(' | '));
+  ok('previous game week is byte-identical after selected-week bye generation',
+    visibleWeekSignature(priorGameAfterRemove) === visibleWeekSignature(priorGameBefore));
+  ok('future game week is byte-identical after selected-week bye generation',
+    visibleWeekSignature(futureGameAfterRemove) === visibleWeekSignature(futureGameBefore));
+  ok('adjacent game weeks retain their Saturday game anchors',
+    dayOf(priorGameAfterRemove, addDays(blockStart, 5))?.workout?.workoutType === 'Game' &&
+      dayOf(futureGameAfterRemove, addDays(blockStart, 19))?.workout?.workoutType === 'Game');
+  ok('bye overlay does not replace the shared game-week template',
+    JSON.stringify(useProgramStore.getState().currentMicrocycle?.workouts ?? []) === baseTemplateSignature);
+
+  const restore = addSaturdayGame(IN_SEASON_SIX_DAY, wk2Sat);
+  const selectedGameAfterRestore = resolveLiveWeek(wk2Mon, 'In-season', 'Saturday');
+  const overlayKeysAfterRestore = Object.keys(useProgramStore.getState().weekScopedOverlays);
+  ok('restoring the game returns the selected week to its original visible shape',
+    weekShapeSignature(selectedGameAfterRestore) === weekShapeSignature(selectedGameBefore),
+    `before=${weekShapeSignature(selectedGameBefore)}\nafter=${weekShapeSignature(selectedGameAfterRestore)}`);
+  ok('restoring the game replaces rather than duplicates the selected-week overlay',
+    restore.overlay?.reason === 'one_off_game' &&
+      JSON.stringify(overlayKeysAfterRestore) === JSON.stringify([wk2Mon]),
+    JSON.stringify({ overlay: restore.overlay, keys: overlayKeysAfterRestore }));
 }
 
 resetWorld();

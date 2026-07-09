@@ -223,6 +223,18 @@ console.log('\n[3] missing expected shape falls back safely');
 console.log('\n[4] registered expectations and scenario count stay stable');
 {
   ok('S1 has a registered expected week shape', !!expectedWeekShapeForScenarioId('S1'));
+  const s4 = expectedWeekShapeForScenarioId('S4');
+  const e1 = expectedWeekShapeForScenarioId('E1');
+  ok('S4 has a registered healthy 2TT bye shape',
+    s4?.counts?.hardDays === 3 &&
+    s4.counts.mainStrength === 2 &&
+    s4.counts.conditioning === 2 &&
+    s4.counts.sprintCod === 2 &&
+    s4.anchors?.fixtureDays?.length === 0,
+    s4);
+  eq('E1 uses the same expected shape after game removal',
+    { ...e1, id: 'S4' },
+    s4);
   eq('scenario count does not change', scenarioIdsFromHarness().length, 17);
 }
 

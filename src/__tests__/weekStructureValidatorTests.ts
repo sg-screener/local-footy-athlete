@@ -384,13 +384,13 @@ console.log('\n── 6. Bye week logic ──');
   ok('in-season no-game week derives byeWeek=true',
     flags.byeWeek === true && strengthOver[0]?.data?.byeWeek === true,
     `flags=${JSON.stringify(flags)} findings=${ids(r.findings)}`);
-  ok('S4/E1-style accessory day is gunshow, so main strength count is 5 not 6',
+  ok('overloaded bye accessory day is gunshow, so main strength count is 5 not 6',
     r.counts.mainStrengthExposures === 5 && r.counts.gunshowSessions === 1,
     `strength=${r.counts.mainStrengthExposures}, gunshow=${r.counts.gunshowSessions}`);
-  ok('S4/E1-style bye +1 strength finding is softened to info',
+  ok('bye +1 strength finding is softened to info',
     strengthOver.length === 1 && strengthOver[0].severity === 'info',
     ids(r.findings));
-  ok('S4/E1-style bye 5 hard days finding is info',
+  ok('bye 5 hard days finding is info',
     hardDaysOver.length === 1 && hardDaysOver[0].severity === 'info',
     ids(r.findings));
 }
@@ -418,21 +418,24 @@ console.log('\n── 6. Bye week logic ──');
     `flags=${JSON.stringify(preFlags)} findings=${ids(preReport.findings)}`);
 }
 {
-  // Bye week: 5 strength (over by 1) → info; unders suppressed.
+  // Bye week: a clear 6-hard-day overload stays strong; unders remain suppressed.
   const days = week({
-    0: [lower()], 1: [upper('pull')], 2: [lower()], 3: [upper('push')],
-    4: [mkWorkout({ name: 'Full Body Strength', description: 'full body: squat, push, pull', exercises: [mkEx('Trap Bar Deadlift'), mkEx('Bench Press')] })],
-    5: [metcon()],
+    0: [lower()], 1: [lower()], 2: [lower()], 3: [lower()], 4: [lower()], 5: [lower()],
   });
   const r = validateProgramWeek({ days, profile: PROFILE, weekFlags: { byeWeek: true } });
   const strengthOver = byRule(r.findings, 'cap_maxMainStrengthSessions_over');
-  ok('bye week +1 strength overshoot → downgraded to info',
-    strengthOver.length === 1 && strengthOver[0].severity === 'info', ids(r.findings));
+  ok('bye week major strength overshoot remains strong',
+    strengthOver.length === 1 && strengthOver[0].severity === 'strong', ids(r.findings));
   ok('bye week suppresses under/min nags',
     r.findings.every((f) => !f.ruleId.includes('under')), ids(r.findings));
   const hardDaysOver = byRule(r.findings, 'cap_maxHardDays_over');
-  ok('bye week major overshoot still reported (hard days over by ≥2 stays strong)',
-    hardDaysOver.length === 0 || hardDaysOver[0].severity !== 'info' || (hardDaysOver[0].data?.observed as number) - (hardDaysOver[0].data?.limit as number) <= 1,
+  ok('bye week 6-hard-day overshoot stays strong',
+    hardDaysOver.length === 1 &&
+      hardDaysOver[0].severity === 'strong' &&
+      hardDaysOver[0].data?.observed === 6,
+    ids(r.findings));
+  ok('bye hard-day cap never requires a hard_stop allowance',
+    hardDaysOver.every((finding) => finding.severity !== 'hard_stop'),
     ids(r.findings));
 }
 

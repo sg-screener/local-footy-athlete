@@ -32,6 +32,32 @@ export interface ExpectedWeekShape {
 
 const DAY_ORDER: WeekShapeDayLabel[] = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+const HEALTHY_TWO_TEAM_TRAINING_BYE: Omit<ExpectedWeekShape, 'id'> = {
+  days: {
+    Mon: 'gunshow/prehab',
+    Tue: 'team training + upper strength',
+    Wed: 'recovery',
+    Thu: 'team training',
+    Fri: 'recovery',
+    Sat: 'lower strength',
+    Sun: 'rest',
+  },
+  counts: {
+    hardDays: 3,
+    mainStrength: 2,
+    conditioning: 2,
+    running: 2,
+    sprintCod: 2,
+  },
+  anchors: {
+    teamTrainingDays: ['Tue', 'Thu'],
+    fixtureDays: [],
+    fixtureLabel: 'game',
+  },
+  hardDays: ['Tue', 'Thu', 'Sat'],
+  stackedDays: ['Tue: team training + upper strength'],
+};
+
 const EXPECTED_WEEK_SHAPES: Record<string, ExpectedWeekShape> = {
   S1: {
     id: 'S1',
@@ -63,6 +89,14 @@ const EXPECTED_WEEK_SHAPES: Record<string, ExpectedWeekShape> = {
       'Tue: team training + upper strength',
       'Thu: team training + upper strength',
     ],
+  },
+  S4: {
+    id: 'S4',
+    ...HEALTHY_TWO_TEAM_TRAINING_BYE,
+  },
+  E1: {
+    id: 'E1',
+    ...HEALTHY_TWO_TEAM_TRAINING_BYE,
   },
 };
 

@@ -67,6 +67,9 @@ console.log('\n[1] allowed findings are explicit, scenario-scoped, and reasoned'
     ok(`${policy.scenarioId}:${policy.ruleId} has a stable matcher`, policy.ruleId.trim().length > 0);
     ok(`${policy.scenarioId}:${policy.ruleId} does not allow hard_stop`, policy.severity !== 'hard_stop');
   }
+  ok('healthy bye scenarios have no allowed findings',
+    WEEK_PLAN_QA_ALLOWED_FINDINGS.every((policy) => policy.scenarioId !== 'S4' && policy.scenarioId !== 'E1'),
+    WEEK_PLAN_QA_ALLOWED_FINDINGS);
 }
 
 console.log('\n[2] allowed info finding is classified and rendered without failing');
