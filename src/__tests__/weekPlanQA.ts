@@ -39,15 +39,17 @@ import {
   validateProgramWeek,
   deriveWeekValidationFlags,
   validatorDaysFromResolvedWeek,
+  type WeekValidationReport,
 } from '../rules/weekStructureValidator';
 import { isTeamTrainingSession } from '../utils/teamTraining';
-import type { DayOfWeek, OnboardingData, Workout, Microcycle, TrainingProgram, SeasonPhase } from '../types/domain';
+import type { DayOfWeek, OnboardingData, Workout, Microcycle, TrainingProgram, SeasonPhase, WeekKind } from '../types/domain';
 import {
   metadataForScenario,
   scenarioContextLine,
   scenarioDisplayLabel,
   scenarioTocLine,
 } from './weekPlanQA/scenarioMetadata';
+import { renderWeekShapeSummary } from './weekPlanQA/weekShapeSummary';
 
 // ═══════════════════════════════════════════════════
 // TYPES
@@ -528,10 +530,12 @@ function printScenario(
   plan: CoachingPlan,
   resolvedWeek: ResolvedDay[] | null,
   assertions: AssertionResult[],
+  validationReport: WeekValidationReport | null,
 ) {
   const metadata = metadataForScenario(scenario);
   const gameDay = scenario.onboarding.gameDay || 'none';
   const teamDays = (scenario.onboarding.teamTrainingDays || []).join(', ') || 'none';
+  const weekKind = (scenario.onboarding as Partial<OnboardingData> & { weekKind?: WeekKind }).weekKind;
 
   console.log(`\n${'═'.repeat(72)}`);
   console.log(`  ${scenarioDisplayLabel(scenario)}`);
@@ -547,6 +551,15 @@ function printScenario(
     console.log(`  Edit: ${scenario.editOps.join(' → ')}`);
   }
   console.log(`  Readiness: ${plan.readiness}  |  Core: ${plan.coreSessions}  Optional: ${plan.optionalSessions}  Recovery: ${plan.recoverySessions}`);
+  console.log(`${'─'.repeat(72)}`);
+  console.log(renderWeekShapeSummary({
+    resolvedWeek,
+    validationReport,
+    seasonPhase: scenario.onboarding.seasonPhase,
+    gameDay,
+    teamTrainingDays: scenario.onboarding.teamTrainingDays,
+    weekKind,
+  }));
   console.log(`${'─'.repeat(72)}`);
 
   // ── Coaching Plan table ──
@@ -883,6 +896,7 @@ for (const scenario of scenarios) {
   // assertions below DO count: they guard against harness-induced false
   // positives, not against genuine findings.
   const findingLines: string[] = [];
+  let validationReport: WeekValidationReport | null = null;
   if (resolvedWeek) {
     try {
       const validatorDays = validatorDaysFromResolvedWeek(resolvedWeek);
@@ -897,6 +911,7 @@ for (const scenario of scenarios) {
         profile: validatorProfile,
         weekFlags: deriveWeekValidationFlags({ days: validatorDays, profile: validatorProfile }),
       });
+      validationReport = report;
       if (report.findings.length > 0) {
         findingLines.push('  📖 Bible validator findings (report-only, not failures):');
         for (const f of report.findings) {
@@ -963,7 +978,7 @@ for (const scenario of scenarios) {
     }
   }
 
-  printScenario(scenario, plan, resolvedWeek, assertions);
+  printScenario(scenario, plan, resolvedWeek, assertions, validationReport);
   for (const line of findingLines) console.log(line);
 
   for (const a of assertions) {
