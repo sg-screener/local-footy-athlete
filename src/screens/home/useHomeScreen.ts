@@ -16,6 +16,13 @@ import {
   decideSweepForCurrentStores,
   rebuildLocalWeek,
 } from '../../utils/weekRebuild';
+import {
+  fixtureKindForPhase,
+  gameChangeActionFromRebuild,
+  resolvedDaysToGameChangeRows,
+  upsertGameChangeCoachNoteFromDiff,
+  weekRebuildResultToGameChangeRows,
+} from '../../utils/gameChangeCoachNotes';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { applyPhaseShift } from '../../utils/profileMutations';
 import { selectActiveCoachNotes } from '../../utils/activeCoachNotes';
@@ -558,6 +565,9 @@ export function useHomeScreen() {
   ): Promise<boolean> => {
     clearRebuildError();
     try {
+      const beforeRows = options?.targetDate
+        ? resolvedDaysToGameChangeRows(weekDays)
+        : [];
       if (__DEV__) {
         logger.debug('[GameChange] Canonical local rebuild:', { newGameDay });
       }
@@ -576,6 +586,26 @@ export function useHomeScreen() {
         clearOverlayDate: options?.clearOverlayDate,
         commitGameMark,
       });
+      if (options?.targetDate) {
+        const afterRows = weekRebuildResultToGameChangeRows({
+          result,
+          targetDate: options.targetDate,
+          newGameDay,
+        });
+        upsertGameChangeCoachNoteFromDiff({
+          action: gameChangeActionFromRebuild({
+            newGameDay,
+            clearOverlayDate: options.clearOverlayDate,
+          }),
+          fixtureKind: fixtureKindForPhase(currentPhase),
+          targetDate: options.targetDate,
+          previousDate: options.clearOverlayDate,
+          weekStartISO: afterRows[0]?.date ?? options.targetDate,
+          before: beforeRows,
+          after: afterRows,
+          todayISO: todayISOLocal(),
+        });
+      }
       alertGameConflicts(result.sweep.conflictsRemoved);
       return true;
     } catch (err: any) {
