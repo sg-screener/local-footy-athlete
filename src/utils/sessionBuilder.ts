@@ -31,6 +31,11 @@ import type {
   SessionTier,
   AttachedConditioningKind,
 } from '../types/domain';
+import type {
+  FeedbackCompletion,
+  FeedbackFeeling,
+  SessionFeedback,
+} from '../store/programStore';
 import {
   POOL_REGISTRY,
   type PoolExercise,
@@ -623,6 +628,134 @@ import {
   type ConditioningProgressionOutput,
 } from './conditioningProgressionRules';
 import { calculateConditioningLoad } from './progressionHelpers';
+
+export interface ConditioningProgressionData {
+  sessionFeedback?: Record<string, SessionFeedback>;
+}
+
+function feedbackFeelingToConditioningRPE(feeling?: FeedbackFeeling | null): number | null {
+  switch (feeling) {
+    case 'very_easy': return 3;
+    case 'easy': return 4;
+    case 'good': return 6;
+    case 'hard': return 8;
+    case 'very_hard': return 9;
+    default: return null;
+  }
+}
+
+function conditioningComponentCompletion(feedback: SessionFeedback): FeedbackCompletion | null {
+  const component = feedback.components?.find((entry) => entry.kind === 'conditioning');
+  if (component) return component.completion;
+  if (feedback.conditioning) return feedback.completion;
+  return null;
+}
+
+function hasConditioningFeedback(feedback: SessionFeedback): boolean {
+  return conditioningComponentCompletion(feedback) !== null;
+}
+
+function completionQualityFromFeedback(
+  completion: FeedbackCompletion | null,
+): ConditioningProgressionInput['completionQuality'] {
+  if (completion === 'skipped') return 'failed';
+  if (completion === 'partial') return 'partial';
+  return 'full';
+}
+
+function recentConditioningFeedback(
+  feedbackMap: Record<string, SessionFeedback> | undefined,
+  beforeDate: string,
+): SessionFeedback | null {
+  if (!feedbackMap) return null;
+  return Object.values(feedbackMap)
+    .filter((feedback) => feedback.dateStr < beforeDate)
+    .filter(hasConditioningFeedback)
+    .sort((a, b) => b.dateStr.localeCompare(a.dateStr))[0] ?? null;
+}
+
+function mondayForISO(dateISO: string): string {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const date = new Date(y, m - 1, d, 12, 0, 0, 0);
+  const dow = date.getDay();
+  const mondayOffset = dow === 0 ? -6 : -(dow - 1);
+  date.setDate(date.getDate() + mondayOffset);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function addDaysISO(dateISO: string, days: number): string {
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const date = new Date(y, m - 1, d, 12, 0, 0, 0);
+  date.setDate(date.getDate() + days);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function conditioningTierForFeedback(feedback: SessionFeedback): string {
+  const sessionName = feedback.conditioning?.sessionName ?? '';
+  const exact = CONDITIONING_META[sessionName]?.tier;
+  if (exact) return exact;
+  if (feedback.conditioning?.intervalsCompleted || feedback.conditioning?.roundsCompleted) return 'B-low';
+  if (feedback.conditioning?.totalTimeMinutes) return 'C';
+  return 'C';
+}
+
+function previousWeekConditioningLoad(
+  feedbackMap: Record<string, SessionFeedback> | undefined,
+  dateStr: string,
+): number {
+  if (!feedbackMap) return 0;
+  const thisMonday = mondayForISO(dateStr);
+  const previousMonday = addDaysISO(thisMonday, -7);
+  const previousSunday = addDaysISO(thisMonday, -1);
+  const sessions = Object.values(feedbackMap)
+    .filter((feedback) => feedback.dateStr >= previousMonday && feedback.dateStr <= previousSunday)
+    .filter(hasConditioningFeedback)
+    .map((feedback) => ({ tier: conditioningTierForFeedback(feedback) }));
+  return calculateConditioningLoad(sessions);
+}
+
+function primaryConditioningRow(exercises: WorkoutExercise[]): WorkoutExercise | null {
+  const workRows = exercises.filter((exercise) => {
+    const name = `${exercise.exercise?.name ?? ''} ${exercise.notes ?? ''}`.toLowerCase();
+    return !/\bwarm-?up\b|\bcool\s*down\b|\beasy\b/.test(name);
+  });
+  return workRows.sort((a, b) => {
+    const aScore = a.prescribedSets + (a.restSeconds > 0 ? 1 : 0);
+    const bScore = b.prescribedSets + (b.restSeconds > 0 ? 1 : 0);
+    return bScore - aScore;
+  })[0] ?? exercises[0] ?? null;
+}
+
+export function deriveConditioningProgressionInputOverrides(args: {
+  feedback: SessionFeedback | null;
+  exercises: WorkoutExercise[];
+  baseDuration: number;
+}): Partial<ConditioningProgressionInput> {
+  const { feedback, exercises, baseDuration } = args;
+  if (!feedback) return {};
+
+  const completion = conditioningComponentCompletion(feedback);
+  const conditioningLog = feedback.conditioning;
+  const primaryRow = primaryConditioningRow(exercises);
+  const rpe = conditioningLog?.rpe ?? feedback.difficulty ?? feedbackFeelingToConditioningRPE(feedback.feeling);
+
+  return {
+    hasRecentFeedback: true,
+    completionQuality: completionQualityFromFeedback(completion),
+    recentRPE: rpe ?? 6,
+    sorenessLevel: feedback.soreness,
+    currentReps: conditioningLog?.roundsCompleted ?? conditioningLog?.intervalsCompleted ?? primaryRow?.prescribedRepsMax ?? 6,
+    currentIntervals: conditioningLog?.intervalsCompleted ?? conditioningLog?.roundsCompleted ?? primaryRow?.prescribedSets ?? 4,
+    currentDuration: conditioningLog?.totalTimeMinutes ?? baseDuration,
+    currentRest: primaryRow?.restSeconds ?? 60,
+  };
+}
 
 // ─── Conditioning Session Templates ───
 //
@@ -2633,6 +2766,7 @@ export function buildAerobicFlushFinisher(
  * @param seasonPhase     - Current season phase
  * @param weekLog         - Conditioning + strength sessions already placed this week
  * @param microcycleId    - ID to stamp on the workout
+ * @param progressionData - Optional feedback/history inputs for progression
  */
 export function buildConditioningSession(
   dateStr: string,
@@ -2641,6 +2775,7 @@ export function buildConditioningSession(
   seasonPhase: SeasonPhase,
   weekLog: WeekLog,
   microcycleId: string,
+  progressionData: ConditioningProgressionData = {},
 ): Workout | null {
   // Build conditioning context
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -2700,11 +2835,18 @@ export function buildConditioningSession(
   // Resolve progression adjustments for this conditioning session.
   // The builder applies adjustments to duration/reps/intervals/rest.
   const baseDuration = conditioningDuration(result.tier);
+  const recentFeedback = recentConditioningFeedback(progressionData.sessionFeedback, dateStr);
+  const realInputOverrides = deriveConditioningProgressionInputOverrides({
+    feedback: recentFeedback,
+    exercises,
+    baseDuration,
+  });
   const progressionInput: ConditioningProgressionInput = {
     tier: result.tier,
     readiness: weekLog.readiness,
     recentRPE: 6, // default — no session history available at resolve time
     completionQuality: 'full', // default — assume previous session was completed
+    hasRecentFeedback: false,
     hasAvoidInjury: Object.values(activeInjuries).some(s => s === 'avoid'),
     hasModifyInjury: Object.values(activeInjuries).some(s => s === 'caution'),
     seasonPhase,
@@ -2714,11 +2856,12 @@ export function buildConditioningSession(
     highFatigueStrengthThisWeek: weekLog.strengthSessions.some(s => s.fatigue === 'high'),
     lastSessionProgressed: false, // default — no history tracking yet
     weeklyLoad: calculateConditioningLoad(weekLog.sessions),
-    previousWeekLoad: 0, // default — no previous week available at resolve time
+    previousWeekLoad: previousWeekConditioningLoad(progressionData.sessionFeedback, dateStr),
     currentReps: 6,         // sensible defaults for cap enforcement
     currentIntervals: 4,
     currentDuration: baseDuration,
     currentRest: result.tier === 'A' ? 120 : 60,
+    ...realInputOverrides,
   };
 
   const progression = resolveConditioningProgression(progressionInput);

@@ -1378,6 +1378,7 @@ export function resolveWeekWithConditioning(
       state.seasonPhase,
       weekLog,
       microcycleIdForDate(day.date, state),
+      { sessionFeedback: feedbackMap },
     );
 
     if (condWorkout) {

@@ -43,6 +43,10 @@ export interface ConditioningProgressionInput {
   readiness: ReadinessLevel;
   recentRPE: number;
   completionQuality: CompletionQuality;
+  /** True when recentRPE/completion came from an athlete log instead of fallback defaults. */
+  hasRecentFeedback?: boolean;
+  /** Post-session soreness from structured feedback, when available. */
+  sorenessLevel?: 'none' | 'mild' | 'moderate' | 'high';
   /** Active injuries with 'avoid' or 'modify' affecting this modality. */
   hasAvoidInjury: boolean;
   hasModifyInjury: boolean;
@@ -207,6 +211,33 @@ export function resolveConditioningProgression(
     if (increase > 0.35) {
       state = 'maintain';
       note = 'Conditioning load spike detected - progression paused this week';
+    }
+  }
+
+  // ── Feedback guard: logged average/hard/missed sessions do not progress ──
+  if (state === 'build') {
+    if (input.completionQuality === 'failed') {
+      state = 'hold';
+      note = 'Missed conditioning - hold, no catch-up overload';
+    } else if (input.completionQuality === 'partial') {
+      state = 'hold';
+      note = 'Partial conditioning completion - hold next dose';
+    } else if (
+      input.hasRecentFeedback &&
+      (input.recentRPE >= 8 || input.sorenessLevel === 'moderate' || input.sorenessLevel === 'high')
+    ) {
+      state = 'hold';
+      note = 'Conditioning feedback was hard - hold next dose';
+    } else if (
+      input.hasRecentFeedback &&
+      input.recentRPE >= 6 &&
+      input.recentRPE < 8
+    ) {
+      state = 'maintain';
+      note = 'Conditioning feedback was solid - repeat';
+    } else if (input.hasRecentFeedback && input.readiness === 'low') {
+      state = 'maintain';
+      note = 'Low readiness - conditioning progression paused';
     }
   }
 
