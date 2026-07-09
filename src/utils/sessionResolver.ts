@@ -58,6 +58,12 @@ import {
 import { findMatchingFeedback, deriveAdaptation } from './feedbackAdapter';
 import type { SessionFeedback } from '../store/programStore';
 import { logger } from './logger';
+import {
+  getProgramBlockStateForDate,
+  selectMicrocycleForDate,
+} from './programBlockState';
+
+export { computeBlockBounds } from './programBlockState';
 
 // ─── Input/Output Types ───
 
@@ -214,52 +220,6 @@ function isInBlock(dateStr: string, program: TrainingProgram | null): boolean {
   const start = program.startDate.split('T')[0];
   const end = program.endDate.split('T')[0];
   return dateStr >= start && dateStr <= end;
-}
-
-// ─── Block Boundary Computation ───
-//
-// Aligns training blocks to calendar week boundaries (Mon-Sun).
-//
-// Rule: "The week the user starts in is Week 1. Then give them the next
-// 3 full weeks, ending on Sunday."
-//
-// This means:
-//   - Block start = Monday of the week containing the actual start date
-//   - Block end = Sunday of the 3rd full week after the start week
-//   - Start week counts as Week 1 (even if partial)
-//   - Total span = 4 calendar weeks (Mon→Sun × 4 = 28 days)
-//
-// Examples:
-//   Start Monday    7 Apr → block = 7 Apr (Mon) – 4 May (Sun) → 4 full weeks
-//   Start Thursday 10 Apr → block = 7 Apr (Mon) – 4 May (Sun) → partial W1 + 3 full
-//   Start Saturday 12 Apr → block = 7 Apr (Mon) – 4 May (Sun) → partial W1 + 3 full
-//   Start Sunday   13 Apr → block = 7 Apr (Mon) – 4 May (Sun) → 1 day of W1 + 3 full
-
-/**
- * Compute week-aligned block start (Monday) and end (Sunday) from
- * any start date. Returns ISO date strings (YYYY-MM-DD).
- *
- * Exported so generateProgram and defaultProgram can share the same
- * boundary logic instead of ad-hoc date arithmetic.
- */
-export function computeBlockBounds(startDate: Date): { blockStart: string; blockEnd: string } {
-  // Find Monday of the week containing startDate
-  const dow = startDate.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-  const daysToMonday = dow === 0 ? -6 : -(dow - 1);
-  const monday = new Date(startDate);
-  monday.setDate(startDate.getDate() + daysToMonday);
-  monday.setHours(12, 0, 0, 0);
-
-  // Block end = 27 days later (4 calendar weeks: Mon→Sun × 4)
-  // Mon + 27 days = Sunday of 4th week
-  const endSunday = new Date(monday);
-  endSunday.setDate(monday.getDate() + 27);
-  endSunday.setHours(12, 0, 0, 0);
-
-  return {
-    blockStart: formatDate(monday),
-    blockEnd: formatDate(endSunday),
-  };
 }
 
 /** Get ISO date string for Monday of the week containing today, offset by N weeks. */
@@ -772,6 +732,14 @@ function getWeekScopedTemplateWorkout(
   };
 }
 
+function microcycleIdForDate(date: string, state: ScheduleState): string {
+  return selectMicrocycleForDate(
+    state.currentProgram,
+    state.currentMicrocycle,
+    date,
+  )?.id || 'derived';
+}
+
 /**
  * Resolver-level injury filter pass — applied AFTER priority
  * resolution + after conditioning / recovery layering. Walks the full
@@ -817,7 +785,12 @@ function applyInjuryFilterPass(
  *   7. No workout
  */
 function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
-  const { currentProgram, currentMicrocycle, manualOverrides, markedDays } = state;
+  const { currentProgram, manualOverrides, markedDays } = state;
+  const currentMicrocycle = selectMicrocycleForDate(
+    currentProgram,
+    state.currentMicrocycle,
+    date,
+  );
   const dow = dateToDayOfWeek(date);
   const today = formatDate(new Date());
   const inBlock = isInBlock(date, currentProgram);
@@ -1094,11 +1067,16 @@ export function resolveWeekWithConditioning(
   // (previous weeks). Use the workout name/type from the template by dayOfWeek.
   if (state.currentMicrocycle) {
     for (const fb of allFeedbackSorted) {
-      if (!workoutTypeByDate[fb.dateStr] && state.currentMicrocycle.workouts) {
+      const fbMicrocycle = selectMicrocycleForDate(
+        state.currentProgram,
+        state.currentMicrocycle,
+        fb.dateStr,
+      );
+      if (!workoutTypeByDate[fb.dateStr] && fbMicrocycle?.workouts) {
         const [fy, fm, fd] = fb.dateStr.split('-').map(Number);
         const fbDate = new Date(fy, fm - 1, fd);
         const fbDow = fbDate.getDay();
-        const matchingWorkout = state.currentMicrocycle.workouts.find(
+        const matchingWorkout = fbMicrocycle.workouts.find(
           (w: Workout) => w.dayOfWeek === fbDow
         );
         if (matchingWorkout) {
@@ -1131,6 +1109,13 @@ export function resolveWeekWithConditioning(
         day.date,
       );
       const adaptation = deriveAdaptation(matchedFeedback);
+      const blockState = state.currentProgram
+        ? getProgramBlockStateForDate({
+            dateISO: day.date,
+            programStartISO: state.currentProgram.startDate,
+            seasonPhase: state.seasonPhase,
+          })
+        : undefined;
 
       const progressionCtx = buildProgressionContext(
         state.seasonPhase!,
@@ -1144,6 +1129,7 @@ export function resolveWeekWithConditioning(
         lastFeedbackFeeling,
         priorFeedback.slice(0, 4), // analysis window for pattern biases
         adaptation.explanation ? adaptation : null,
+        { blockState },
       );
 
       // Build last-performed-weight map from weight overrides (dates before today)
@@ -1259,7 +1245,7 @@ export function resolveWeekWithConditioning(
           buildDerivedSession(
             'prehab_accessories',
             g2Day.date,
-            state.currentMicrocycle?.id || 'derived',
+            microcycleIdForDate(g2Day.date, state),
             'Pre-game window - avoiding upper-body stacking with G-1',
             state.athleteContext,
           ),
@@ -1360,7 +1346,7 @@ export function resolveWeekWithConditioning(
       state.athleteContext,
       state.seasonPhase,
       weekLog,
-      state.currentMicrocycle?.id || 'derived',
+      microcycleIdForDate(day.date, state),
     );
 
     if (condWorkout) {
@@ -1460,7 +1446,7 @@ export function resolveWeekWithConditioning(
       const recoveryWorkout = buildDerivedSession(
         recoveryResult.derivedType,
         day.date,
-        state.currentMicrocycle?.id || 'derived',
+        microcycleIdForDate(day.date, state),
         `Scheduled recovery - ${recoveryResult.category}`,
         state.athleteContext,
       );

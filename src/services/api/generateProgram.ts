@@ -7,8 +7,11 @@ import {
   type AIConstraints,
 } from '../../utils/coachingEngine';
 import { todayISOLocal } from '../../utils/appDate';
-import { computeBlockBounds } from '../../utils/sessionResolver';
 import { getAthletePrefs } from '../../store/athletePreferencesStore';
+import {
+  buildBlockWeekStates,
+  computeBlockBounds,
+} from '../../utils/programBlockState';
 import {
   getClientEnvConfig,
   logMissingClientEnv,
@@ -63,6 +66,65 @@ export class ProgramGenError extends Error {
 
 export interface GenerateProgramFromProfileOptions {
   todayISO?: string;
+  /** 1-based training block number. Defaults to 1 for a fresh generated block. */
+  blockNumber?: number;
+}
+
+type CoachGeneratedWorkouts = Parameters<typeof buildWorkoutsFromCoach>[0];
+type AthletePoolPrefsArg = Parameters<typeof buildWorkoutsFromCoach>[5];
+
+function dateAtNoonISO(dateISO: string): string {
+  return new Date(`${dateISO}T12:00:00`).toISOString();
+}
+
+function dateFromOption(todayISO?: string): Date {
+  return todayISO ? new Date(`${todayISO}T12:00:00`) : new Date();
+}
+
+function buildGeneratedMicrocycles(args: {
+  coachWorkouts: CoachGeneratedWorkouts;
+  plan: CoachingPlan;
+  profile: OnboardingData;
+  programId: string;
+  microcyclePrefix: string;
+  blockStartISO: string;
+  blockNumber?: number;
+  athletePrefs: AthletePoolPrefsArg;
+}): Microcycle[] {
+  const states = buildBlockWeekStates({
+    blockStartISO: args.blockStartISO,
+    blockNumber: args.blockNumber ?? 1,
+    seasonPhase: args.profile.seasonPhase,
+  });
+
+  return states.map((blockState) => {
+    const microcycleId = `${args.microcyclePrefix}-${blockState.weekNumber}`;
+    const workouts = buildWorkoutsFromCoach(
+      args.coachWorkouts,
+      microcycleId,
+      args.plan.weeklyPlan,
+      args.profile,
+      {
+        miniCycleNumber: blockState.miniCycleNumber,
+        weekInBlock: blockState.weekInBlock,
+        weekStartISO: blockState.weekStart,
+      },
+      args.athletePrefs,
+    );
+
+    return {
+      id: microcycleId,
+      programId: args.programId,
+      weekNumber: blockState.weekNumber,
+      startDate: dateAtNoonISO(blockState.weekStart),
+      endDate: dateAtNoonISO(blockState.weekEnd),
+      miniCycleNumber: blockState.miniCycleNumber,
+      intensityMultiplier: blockState.intensityMultiplier,
+      workouts,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  });
 }
 
 /**
@@ -101,15 +163,22 @@ export function generateProgramLocally(
     gameDay: generationProfile.usualGameDay || generationProfile.gameDay || null,
   });
 
-  const workouts = buildWorkoutsFromCoach(
-    [],
-    'mc-ai-1',
-    plan.weeklyPlan,
-    generationProfile,
-    { miniCycleNumber: 1, weekInBlock: 1 },
-    getAthletePrefs(),
-  );
-  if (!workouts.length) {
+  const today = dateFromOption(options.todayISO);
+  const { blockStart, blockEnd } = computeBlockBounds(today);
+  const startDate = new Date(blockStart + 'T12:00:00');
+  const endDate = new Date(blockEnd + 'T12:00:00');
+  const microcycles = buildGeneratedMicrocycles({
+    coachWorkouts: [],
+    plan,
+    profile: generationProfile,
+    programId: 'prog-ai-1',
+    microcyclePrefix: 'mc-ai',
+    blockStartISO: blockStart,
+    blockNumber: options.blockNumber ?? 1,
+    athletePrefs: getAthletePrefs(),
+  });
+  const firstMicrocycle = microcycles[0];
+  if (!firstMicrocycle?.workouts.length) {
     throw new ProgramGenError(
       'bad_response',
       'The app could not rebuild your week. Please try again.',
@@ -117,24 +186,6 @@ export function generateProgramLocally(
       true,
     );
   }
-
-  const today = new Date();
-  const { blockStart, blockEnd } = computeBlockBounds(today);
-  const startDate = new Date(blockStart + 'T12:00:00');
-  const endDate = new Date(blockEnd + 'T12:00:00');
-
-  const microcycle: Microcycle = {
-    id: 'mc-ai-1',
-    programId: 'prog-ai-1',
-    weekNumber: 1,
-    startDate: startDate.toISOString(),
-    endDate: new Date(startDate.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString(),
-    miniCycleNumber: 1,
-    intensityMultiplier: 1.0,
-    workouts,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
 
   const localPhaseMap: Record<string, string> = {
     'Off-season': 'Base-Building',
@@ -152,7 +203,7 @@ export function generateProgramLocally(
     endDate: endDate.toISOString(),
     primaryFocus: generationProfile.motivation || 'Strength and Conditioning',
     isActive: true,
-    microcycles: [microcycle],
+    microcycles,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -793,19 +844,20 @@ export async function generateProgramFromProfile(
   // Convert the AI workout JSON into app domain types.
   // Pass the coaching engine's weeklyPlan so structural fields (tier, intensity)
   // are enforced deterministically — the AI is not trusted for these.
-  // Cross-cycle variation: first program generation always starts at
-  // block 1, week 1 of the rotation. Regenerations mid-program are
-  // driven from CoachScreen with the ongoing microcycle's values.
-  let workouts;
+  let microcycles: Microcycle[];
   try {
-    workouts = buildWorkoutsFromCoach(
-      result.programUpdate.workouts,
-      'mc-ai-1',
-      plan.weeklyPlan,
-      generationProfile,
-      { miniCycleNumber: 1, weekInBlock: 1 },
-      getAthletePrefs(),
-    );
+    const today = dateFromOption(options.todayISO);
+    const { blockStart } = computeBlockBounds(today);
+    microcycles = buildGeneratedMicrocycles({
+      coachWorkouts: result.programUpdate.workouts,
+      plan,
+      profile: generationProfile,
+      programId: 'prog-ai-1',
+      microcyclePrefix: 'mc-ai',
+      blockStartISO: blockStart,
+      blockNumber: options.blockNumber ?? 1,
+      athletePrefs: getAthletePrefs(),
+    });
   } catch (normaliseErr: any) {
     const diagnostic = `generated program normalisation failed: ${errorDiagnostic(normaliseErr)}`;
     logger.error('[ProgramGen] Generated program normalisation failed before client acceptance', {
@@ -834,6 +886,7 @@ export async function generateProgramFromProfile(
     );
   }
 
+  const workouts = microcycles[0]?.workouts ?? [];
   if (!workouts.length) {
     const diagnostic = 'generated program normalisation returned zero workouts';
     logger.error('[ProgramGen] Generated program rejected after normalisation', {
@@ -878,23 +931,10 @@ export async function generateProgramFromProfile(
   // Build dates — aligned to calendar week boundaries (Mon-Sun).
   // The week containing "today" is Week 1. Block runs through
   // the Sunday of the 3rd full week after (4 weeks total).
-  const today = new Date();
+  const today = dateFromOption(options.todayISO);
   const { blockStart, blockEnd } = computeBlockBounds(today);
   const startDate = new Date(blockStart + 'T12:00:00');
   const endDate = new Date(blockEnd + 'T12:00:00');
-
-  const microcycle: Microcycle = {
-    id: 'mc-ai-1',
-    programId: 'prog-ai-1',
-    weekNumber: 1,
-    startDate: startDate.toISOString(),
-    endDate: new Date(startDate.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString(),
-    miniCycleNumber: 1,
-    intensityMultiplier: 1.0,
-    workouts,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
 
   const phaseMap: Record<string, string> = {
     'Off-season': 'Base-Building',
@@ -912,7 +952,7 @@ export async function generateProgramFromProfile(
     endDate: endDate.toISOString(),
     primaryFocus: generationProfile.motivation || 'Strength and Conditioning',
     isActive: true,
-    microcycles: [microcycle],
+    microcycles,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

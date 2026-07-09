@@ -48,10 +48,13 @@ import {
   extractExposureHistory,
   extractSlotExposureHistory,
   deriveCompletionQuality,
+  countConsecutiveBuildWeeks,
+  estimateWeeksSinceDeload,
 } from './progressionHelpers';
 import type { FeedbackFeeling, SessionFeedback } from '../store/programStore';
 import { analyzeFeedbackPatterns, applyPatternBiases } from './feedbackPatterns';
 import { type AdaptationResult, applyReadinessBias } from './feedbackAdapter';
+import type { ProgramBlockState } from './programBlockState';
 
 // ─── Feedback → Domain Feeling Bridge ───
 
@@ -140,6 +143,16 @@ export const DEFAULT_PROGRESSION_CONTEXT: StrengthProgressionContext = {
   workoutHistory: [],
   loadIncrementKg: 2.5,
 };
+
+export interface BuildProgressionContextOptions {
+  blockState?: Pick<
+    ProgramBlockState,
+    'weekInBlock' | 'weeksSinceDeload' | 'consecutiveBuildWeeks'
+  >;
+  missedSessionsThisWeek?: number;
+  weeksOffTraining?: number;
+  recentDeloadTrigger?: 'overreach' | null;
+}
 
 // ─── Exercise Role Classification ───
 
@@ -536,6 +549,7 @@ export function buildProgressionContext(
   feedbackFeeling?: FeedbackFeeling | null,
   recentFeedback: SessionFeedback[] = [],
   adaptation?: AdaptationResult | null,
+  options: BuildProgressionContextOptions = {},
 ): StrengthProgressionContext {
   // Compute game proximity
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -586,6 +600,15 @@ export function buildProgressionContext(
     adjustedReadiness = applyReadinessBias(adjustedReadiness, adaptation);
   }
 
+  const historyWeeksSinceDeload = estimateWeeksSinceDeload(workoutHistory);
+  const historyBuildWeeks = countConsecutiveBuildWeeks(workoutHistory);
+  const weeksSinceDeload = historyWeeksSinceDeload > 0
+    ? historyWeeksSinceDeload
+    : options.blockState?.weeksSinceDeload ?? DEFAULT_PROGRESSION_CONTEXT.weeksSinceDeload;
+  const consecutiveBuildWeeks = historyBuildWeeks > 0
+    ? historyBuildWeeks
+    : options.blockState?.consecutiveBuildWeeks ?? DEFAULT_PROGRESSION_CONTEXT.consecutiveBuildWeeks;
+
   const baseCtx: StrengthProgressionContext = {
     seasonPhase,
     readiness: adjustedReadiness,
@@ -594,11 +617,11 @@ export function buildProgressionContext(
     doubleGameWeek,
     injuryAvoidFlag,
     sessionFeeling,
-    missedSessionsThisWeek: 0,
-    weeksSinceDeload: 2,       // safe default
-    consecutiveBuildWeeks: 2,  // safe default
-    weeksOffTraining: 0,
-    recentDeloadTrigger: null,
+    missedSessionsThisWeek: options.missedSessionsThisWeek ?? 0,
+    weeksSinceDeload,
+    consecutiveBuildWeeks,
+    weeksOffTraining: options.weeksOffTraining ?? 0,
+    recentDeloadTrigger: options.recentDeloadTrigger ?? null,
     workoutHistory,
     // Explicit adaptation overrides — applied directly in applyStrengthProgression
     adaptationVolumeAdjustment: adaptation?.volumeAdjustment ?? 0,

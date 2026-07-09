@@ -14,8 +14,8 @@ import {
   WorkoutType,
 } from '../types/domain';
 import type { SessionAllocation } from '../utils/coachingEngine';
-import { computeBlockBounds } from '../utils/sessionResolver';
 import { logger } from '../utils/logger';
+import { addDaysISO, computeBlockBounds } from '../utils/programBlockState';
 import { applyLoadEstimates } from '../utils/loadEstimation';
 import {
   buildConditioningTemplate,
@@ -1031,11 +1031,16 @@ export function buildWorkoutsFromCoach(
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(coachWorkouts, weeklyPlan);
 
   // ── Build a synthetic dateStr for deterministic variety ──
-  // AI-generated workouts don't have a real date at build time,
-  // so we use today + dayOfWeek offset for template hashing.
+  // Generated workouts are day-of-week keyed. When the caller passes a
+  // weekStartISO, hash against that real generated week; legacy callers fall
+  // back to today's week for backward compatibility.
   const today = new Date();
   const todayDow = today.getDay(); // 0=Sun
   function syntheticDateStr(dayOfWeek: number): string {
+    if (rotationContext?.weekStartISO) {
+      const mondayBasedOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      return addDaysISO(rotationContext.weekStartISO, mondayBasedOffset);
+    }
     const offset = ((dayOfWeek - todayDow) + 7) % 7;
     const d = new Date(today);
     d.setDate(d.getDate() + offset);

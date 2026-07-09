@@ -80,6 +80,8 @@ export interface RotationContext {
   miniCycleNumber: number;
   /** 1-based week-within-block (1..4). Optional; only drives accessory rotation. */
   weekInBlock?: number;
+  /** Monday ISO date for this generated week. Optional; drives date-based conditioning variety. */
+  weekStartISO?: string;
 }
 
 // ─── Per-Athlete Overrides (Refinement 3) ───
