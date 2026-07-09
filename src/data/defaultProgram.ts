@@ -20,6 +20,7 @@ import { addDaysISO, computeBlockBounds } from '../utils/programBlockState';
 import { applyLoadEstimates } from '../utils/loadEstimation';
 import {
   buildConditioningTemplate,
+  condEx,
   conditioningFlavourToExerciseName,
   conditioningCategoryToExerciseName,
   conditioningWorkoutType,
@@ -1032,6 +1033,63 @@ function buildSpeedBlock(
   };
 }
 
+function buildExercisesForSpeedBlock(
+  speedBlock: SpeedBlock | undefined,
+  dateStr: string,
+): WorkoutExercise[] {
+  if (!speedBlock) {
+    return buildConditioningTemplate('Free Sprint Session', dateStr, {
+      variant: 'micro_dose',
+    });
+  }
+
+  const prefix = `speed-${dateStr}-${speedBlock.id}`;
+  if (speedBlock.id.startsWith('late_offseason_low_risk_acceleration')) {
+    return [
+      condEx(`${prefix}-warmup`, 'Speed warm-up', 1, 1, 1, 1, 0,
+        '8-10min easy movement, skips, marches and 2-3 relaxed build-ups'),
+      distanceSpeedEx(`${prefix}-accels`, 'Short hills or controlled accelerations (10-15m)', 2, 4, 10, 15, 90,
+        '4-6 x 10-15m. Full walk-back rest. Crisp reps only, not grindy.'),
+    ];
+  }
+  if (speedBlock.id.startsWith('late_offseason_acceleration_build')) {
+    return [
+      condEx(`${prefix}-warmup`, 'Speed warm-up', 1, 1, 1, 1, 0,
+        '10min easy movement, sprint drills and 3 relaxed 10m build-ups'),
+      distanceSpeedEx(`${prefix}-accels`, 'Acceleration build reps (10-20m)', 2, 4, 10, 20, 120,
+        '4-6 x 10-20m accelerations. Full walk-back rest. Stop before speed drops.'),
+    ];
+  }
+  if (speedBlock.id.startsWith('late_offseason_build_up_intro')) {
+    return [
+      condEx(`${prefix}-warmup`, 'Speed warm-up', 1, 1, 1, 1, 0,
+        '10-12min easy movement, drills and 3 relaxed build-ups'),
+      distanceSpeedEx(`${prefix}-buildups`, 'Smooth build-ups (20-30m)', 2, 3, 20, 30, 150,
+        '3-5 x 20-30m build-ups. Smooth, not all-out. Full rest between reps.'),
+    ];
+  }
+
+  return buildConditioningTemplate('Free Sprint Session', dateStr, {
+    variant: 'micro_dose',
+  });
+}
+
+function distanceSpeedEx(
+  id: string,
+  name: string,
+  order: number,
+  sets: number,
+  repsMin: number,
+  repsMax: number,
+  rest: number,
+  notes: string,
+): WorkoutExercise {
+  return {
+    ...condEx(id, name, order, sets, repsMin, repsMax, rest, notes),
+    prescriptionType: 'distance',
+  };
+}
+
 function stripConditioningSuffix(focus: string): string {
   return focus
     .replace(/\s+\+\s+.*(?:conditioning|finisher|interval|aerobic|tempo|sprint|zone\s*2).*$/i, '')
@@ -1525,7 +1583,9 @@ export function buildWorkoutsFromCoach(
               rotationContext?.miniCycleNumber,
             )
           : conditioningFlavourToExerciseName(planEntry.conditioningFlavour!, dateStr));
-      const condExercises = resolved?.exercises
+      const condExercises = isStandaloneSpeed
+        ? buildExercisesForSpeedBlock(planEntry.speedBlock, dateStr)
+        : resolved?.exercises
         ?? buildConditioningTemplate(exerciseName, dateStr, {
           feel: planEntry.conditioningFeel as ConditioningFeel | undefined,
           ergModality: planEntry.ergModality as ErgModality | undefined,
@@ -1740,9 +1800,7 @@ export function buildWorkoutsFromCoach(
     let resolvedSpeedBlock: SpeedBlock | undefined;
     if (planEntry?.speedWorkKind === 'true_speed' && planEntry.speedPlacement === 'pre_lift') {
       const dateStr = syntheticDateStr(cw.dayOfWeek);
-      const speedExercises = buildConditioningTemplate('Free Sprint Session', dateStr, {
-        variant: 'micro_dose',
-      });
+      const speedExercises = buildExercisesForSpeedBlock(planEntry.speedBlock, dateStr);
       for (let i = 0; i < speedExercises.length; i++) {
         speedExercises[i].workoutId = workoutId;
         speedExercises[i].exerciseOrder = i + 1;

@@ -38,6 +38,7 @@ import {
   resolveOffseasonSubphase,
   type OffseasonSubphase,
 } from '../rules/offseasonSubphase';
+import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import type {
   GenerationConstraintContext,
   GenerationInjuryConstraint,
@@ -796,6 +797,19 @@ function createQualitySpeedMicroDoseBlock(placement: SpeedBlockPlacement): Speed
       sprintCodExposure: true,
     },
   };
+}
+
+function createSpeedTopUpBlock(
+  placement: SpeedBlockPlacement,
+  inputs: CoachingInputs,
+  offseasonSubphase: OffseasonSubphase | null,
+): SpeedBlock {
+  return createLateOffseasonSpeedBlock(placement, {
+    seasonPhase: inputs.seasonPhase,
+    offseasonSubphase,
+    weekNumber: inputs.weekNumber,
+    weekInBlock: inputs.weekInBlock,
+  }) ?? createQualitySpeedMicroDoseBlock(placement);
 }
 
 // ─── Weekly Plan Builder (Game-Day Relative) ───
@@ -1975,10 +1989,6 @@ function buildWeeklyPlan(
         offseasonSubphase,
         weekKind: inputs.weekKind,
       });
-    }
-
-    function qualitySpeedMicroDoseBlock(placement: SpeedBlockPlacement): SpeedBlock {
-      return createQualitySpeedMicroDoseBlock(placement);
     }
 
     // ── H-GAME: game-week proximity protection (ANY phase) ──
@@ -4240,10 +4250,11 @@ function buildWeeklyPlan(
         target.ergModality = undefined;
         target.speedWorkKind = 'true_speed';
         target.speedPlacement = 'pre_lift';
-        target.speedBlock = qualitySpeedMicroDoseBlock('pre_lift');
+        const speedBlock = createSpeedTopUpBlock('pre_lift', inputs, offseasonSubphase);
+        target.speedBlock = speedBlock;
         target.isHardExposure = true;
         target.stressLevel = 'high';
-        target.focus = `Quality speed micro-dose + ${strengthFocus}`;
+        target.focus = `${speedBlock.title} + ${strengthFocus}`;
         st.condCategories.sprint++;
         return true;
       };
@@ -4279,8 +4290,9 @@ function buildWeeklyPlan(
         target.conditioningVariant = variant;
         target.speedWorkKind = 'true_speed';
         target.speedPlacement = 'standalone';
-        target.speedBlock = qualitySpeedMicroDoseBlock('standalone');
-        target.focus = 'Quality speed micro-dose - 4-6 x 10-20m accelerations, full walk-back rest';
+        const speedBlock = createSpeedTopUpBlock('standalone', inputs, offseasonSubphase);
+        target.speedBlock = speedBlock;
+        target.focus = `${speedBlock.title} - ${speedBlock.prescription}`;
       } else {
         attachPreLiftSpeedMicroDose();
       }
@@ -4686,10 +4698,11 @@ function buildWeeklyPlan(
         target.ergModality = undefined;
         target.speedWorkKind = 'true_speed';
         target.speedPlacement = 'pre_lift';
-        target.speedBlock = createQualitySpeedMicroDoseBlock('pre_lift');
+        const speedBlock = createSpeedTopUpBlock('pre_lift', inputs, offseasonSubphase);
+        target.speedBlock = speedBlock;
         target.isHardExposure = true;
         target.stressLevel = 'high';
-        target.focus = `Quality speed micro-dose + ${strengthFocus}`;
+        target.focus = `${speedBlock.title} + ${strengthFocus}`;
       }
     }
   }

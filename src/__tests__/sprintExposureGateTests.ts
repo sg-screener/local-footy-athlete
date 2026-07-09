@@ -24,6 +24,7 @@ import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { evaluateSprintExposureGate } from '../rules/sprintExposureGate';
 import { resolveOffseasonSubphase } from '../rules/offseasonSubphase';
+import { selectLateOffseasonSpeedTemplate } from '../rules/speedTemplates';
 import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
 
 const TODAY = '2026-07-06';
@@ -624,6 +625,7 @@ for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle
     miniCycleNumber: 1,
     weekInBlock: 4,
     weekNumber: 4,
+    weekKind: 'build',
   });
   const speed = speedWorkouts(builtWorkoutsFor(lateHealthy, p))[0];
   ok('late off-season sprint is not a finisher',
@@ -661,6 +663,94 @@ for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle
     week4Speed.length,
     0,
     week4Speed.map((workout) => workout.name).join(' | '));
+}
+
+console.log('\n-- SP-4. Late off-season speed templates --');
+
+{
+  const first = selectLateOffseasonSpeedTemplate({
+    seasonPhase: 'Off-season',
+    offseasonSubphase: 'late_offseason',
+    weekNumber: 4,
+  });
+  eq('first late off-season build exposure selects low-risk acceleration',
+    first?.id,
+    'late_offseason_low_risk_acceleration',
+    JSON.stringify(first));
+
+  const second = selectLateOffseasonSpeedTemplate({
+    seasonPhase: 'Off-season',
+    offseasonSubphase: 'late_offseason',
+    weekNumber: 5,
+  });
+  eq('later late off-season exposure can progress to acceleration build',
+    second?.id,
+    'late_offseason_acceleration_build',
+    JSON.stringify(second));
+
+  const third = selectLateOffseasonSpeedTemplate({
+    seasonPhase: 'Off-season',
+    offseasonSubphase: 'late_offseason',
+    weekNumber: 6,
+  });
+  eq('later late off-season exposure can progress to build-up intro',
+    third?.id,
+    'late_offseason_build_up_intro',
+    JSON.stringify(third));
+}
+
+{
+  const p = profile({
+    seasonPhase: 'Off-season',
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    gameDay: undefined,
+  });
+  const firstPlan = planFor(p, [], {
+    miniCycleNumber: 1,
+    weekInBlock: 4,
+    weekNumber: 4,
+    weekKind: 'build',
+  });
+  const firstSpeed = speedWorkouts(builtWorkoutsFor(firstPlan, p))[0];
+  ok('late_offseason build week selects a late off-season speed template when gate allows',
+    firstSpeed?.speedBlock?.id.startsWith('late_offseason_') ?? false,
+    JSON.stringify(firstSpeed?.speedBlock));
+  ok('first late_offseason generated speed uses low-risk acceleration template',
+    firstSpeed?.speedBlock?.id.startsWith('late_offseason_low_risk_acceleration') ?? false,
+    JSON.stringify(firstSpeed?.speedBlock));
+  ok('low-risk acceleration rows use hills or controlled short acceleration',
+    (firstSpeed?.exercises ?? []).some((exercise) =>
+      /short hills|controlled accelerations|10-15m/i.test(exercise.exercise?.name ?? '') &&
+      exercise.prescriptionType === 'distance',
+    ),
+    firstSpeed?.exercises.map((exercise) => `${exercise.exercise?.name}:${exercise.prescriptionType}`).join(' | '));
+
+  const laterPlan = planFor(p, [], {
+    miniCycleNumber: 2,
+    weekInBlock: 1,
+    weekNumber: 5,
+    weekKind: 'build',
+  });
+  const laterSpeed = speedWorkouts(builtWorkoutsFor(laterPlan, p))[0];
+  ok('later late_offseason generated speed uses acceleration build when week position is available',
+    laterSpeed?.speedBlock?.id.startsWith('late_offseason_acceleration_build') ?? false,
+    JSON.stringify(laterSpeed?.speedBlock));
+
+  if (firstSpeed) {
+    const counts = countWeeklyExposures([{ date: TODAY, workout: firstSpeed }]);
+    eq('late off-season speed template counts as sprint/COD exposure',
+      counts.sprintCodExposures,
+      1,
+      JSON.stringify(counts.byCategory));
+    eq('late off-season speed template does not count as conditioning',
+      counts.conditioningExposures,
+      0,
+      JSON.stringify(counts.byCategory));
+  } else {
+    ok('late off-season speed template counts as sprint/COD exposure', false, 'no speed workout generated');
+    ok('late off-season speed template does not count as conditioning', false, 'no speed workout generated');
+  }
 }
 
 {
