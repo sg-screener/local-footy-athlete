@@ -134,6 +134,7 @@ console.log('\n[1] readable week-shape summary includes Mon-Sun sessions, counts
   ok('includes running exposure count', output.includes('Running:'));
   ok('includes sprint/COD exposure count', output.includes('Sprint/COD:'));
   ok('includes week kind when available', output.includes('Week kind: build'));
+  ok('includes week context', output.includes('Week context: Pre-season practice match week | Deload: no'));
   ok('includes team/practice anchors', output.includes('Anchors: TT Tue, Thu; practice match Sat'));
   ok('includes stacked-day summary', output.includes('Stacked days: Tue: team training + upper strength'));
   ok('includes G-1 light note', output.includes('Fri kept light before Sat practice match.'));

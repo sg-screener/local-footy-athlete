@@ -41,6 +41,7 @@ import {
   type WeekDayInput,
   type WeeklyExposureCounts,
 } from './weeklyExposureCounts';
+import { resolveWeekContext } from './weekContext';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -131,16 +132,17 @@ function isGameWorkout(w: Workout | null | undefined): boolean {
 export function deriveWeekValidationFlags(input: Pick<ValidateProgramWeekInput, 'days' | 'anchors' | 'profile' | 'weekFlags'>): NonNullable<ValidateProgramWeekInput['weekFlags']> {
   const explicit = input.weekFlags ?? {};
   const weekDates = new Set(input.days.map((d) => d.date));
-  const hasGameThisWeek =
+  const hasFixtureThisWeek =
     input.days.some((d) => d.workouts.some(isGameWorkout)) ||
     (input.anchors?.gameDates ?? []).some((d) => weekDates.has(d));
-  const derivedByeWeek =
-    input.profile?.seasonPhase === 'In-season' &&
-    !hasGameThisWeek;
+  const context = resolveWeekContext({
+    seasonPhase: input.profile?.seasonPhase,
+    hasFixture: hasFixtureThisWeek,
+  });
 
   return {
     ...explicit,
-    byeWeek: explicit.byeWeek ?? derivedByeWeek,
+    byeWeek: explicit.byeWeek ?? context.isByeWeek,
   };
 }
 

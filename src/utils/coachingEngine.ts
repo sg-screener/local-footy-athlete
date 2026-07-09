@@ -39,6 +39,7 @@ import {
   type OffseasonSubphase,
 } from '../rules/offseasonSubphase';
 import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
+import { resolveWeekContext } from '../rules/weekContext';
 import type {
   GenerationConstraintContext,
   GenerationInjuryConstraint,
@@ -855,7 +856,13 @@ function buildWeeklyPlan(
   });
 
   const isInSeason = inputs.seasonPhase === 'In-season';
-  const hasGameThisWeek = isInSeason && gameDayNum !== null;
+  const weekContext = resolveWeekContext({
+    seasonPhase: inputs.seasonPhase,
+    hasFixture: gameDayNum !== null,
+    gameDay: inputs.gameDay,
+    weekKind: inputs.weekKind,
+  });
+  const hasGameThisWeek = weekContext.kind === 'in_season_game_week';
   const generationConstraints = inputs.generationConstraints;
   const activeReadiness = generationConstraints?.readiness;
   const offseasonSubphase = resolveOffseasonSubphase({
@@ -1110,7 +1117,7 @@ function buildWeeklyPlan(
     // Add all assigned CORE sessions to plan
     Array.from(assigned.values()).forEach(session => plan.push(session));
 
-  } else if (isInSeason && !hasGameThisWeek) {
+  } else if (weekContext.isByeWeek) {
     // ─── In-season NO GAME (bye week / game removed) ───
     //
     // PHILOSOPHY:

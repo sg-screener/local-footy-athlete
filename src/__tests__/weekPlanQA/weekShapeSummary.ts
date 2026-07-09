@@ -2,6 +2,7 @@ import type { SeasonPhase, WeekKind } from '../../types/domain';
 import type { ResolvedDay } from '../../utils/sessionResolver';
 import type { WeekValidationReport } from '../../rules/weekStructureValidator';
 import type { ClassifiedDay, ClassifiedUnit } from '../../rules/weeklyExposureCounts';
+import { resolveWeekContext } from '../../rules/weekContext';
 
 const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
@@ -18,6 +19,7 @@ export interface WeekShapeCountsSummary {
 export interface WeekShapeSnapshot {
   days: Partial<Record<WeekShapeDayLabel, string>>;
   tiers: Partial<Record<WeekShapeDayLabel, string>>;
+  weekContext: string;
   counts: WeekShapeCountsSummary | null;
   anchors: {
     teamTrainingDays: WeekShapeDayLabel[];
@@ -94,6 +96,19 @@ function tierLabel(day: ResolvedDay): string {
 
 function fixtureLabel(phase?: SeasonPhase): string {
   return phase === 'Pre-season' ? 'practice match' : 'game';
+}
+
+function weekContextLabel(input: WeekShapeSummaryInput): string {
+  const gameDates = input.validationReport?.anchorsUsed.gameDates ?? [];
+  const hasWeekLevelFixture = input.validationReport
+    ? gameDates.length > 0
+    : !!input.gameDay && input.gameDay !== 'none';
+  const context = resolveWeekContext({
+    seasonPhase: input.seasonPhase,
+    hasFixture: hasWeekLevelFixture,
+    weekKind: input.weekKind,
+  });
+  return `${context.displayLabel} | Deload: ${context.isDeloadWeek ? 'yes' : 'no'}`;
 }
 
 function configuredDayLabel(day: string): string {
@@ -224,6 +239,7 @@ export function buildWeekShapeSnapshot(input: WeekShapeSummaryInput): WeekShapeS
   return {
     days,
     tiers,
+    weekContext: weekContextLabel(input),
     counts,
     anchors: {
       teamTrainingDays,
@@ -258,6 +274,7 @@ export function buildWeekShapeSummaryLines(input: WeekShapeSummaryInput): string
   }
 
   const counts = input.validationReport?.counts;
+  lines.push(`  Week context: ${weekContextLabel(input)}`);
   lines.push('');
   lines.push('  COUNTS:');
   if (counts) {
