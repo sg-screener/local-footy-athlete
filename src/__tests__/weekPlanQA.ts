@@ -42,12 +42,20 @@ import {
 } from '../rules/weekStructureValidator';
 import { isTeamTrainingSession } from '../utils/teamTraining';
 import type { DayOfWeek, OnboardingData, Workout, Microcycle, TrainingProgram, SeasonPhase } from '../types/domain';
+import {
+  metadataForScenario,
+  scenarioContextLine,
+  scenarioDisplayLabel,
+  scenarioTocLine,
+} from './weekPlanQA/scenarioMetadata';
 
 // ═══════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════
 
 interface Scenario {
+  /** Stable legacy scenario ID retained for docs and backwards-compatible output. */
+  id: string;
   name: string;
   /** Onboarding data for buildCoachingPlan */
   onboarding: Partial<OnboardingData>;
@@ -521,13 +529,20 @@ function printScenario(
   resolvedWeek: ResolvedDay[] | null,
   assertions: AssertionResult[],
 ) {
+  const metadata = metadataForScenario(scenario);
   const gameDay = scenario.onboarding.gameDay || 'none';
   const teamDays = (scenario.onboarding.teamTrainingDays || []).join(', ') || 'none';
 
   console.log(`\n${'═'.repeat(72)}`);
-  console.log(`  ${scenario.name}`);
+  console.log(`  ${scenarioDisplayLabel(scenario)}`);
   console.log(`${'═'.repeat(72)}`);
-  console.log(`  Season: ${scenario.onboarding.seasonPhase}  |  Game: ${gameDay}  |  Team: ${teamDays}`);
+  console.log(`  ${scenarioContextLine(scenario)}`);
+  console.log(`  Legacy config: ${scenario.name}`);
+  console.log(`  Scenario intent: ${metadata.scenarioIntent}`);
+  if (metadata.notes) {
+    console.log(`  Notes: ${metadata.notes}`);
+  }
+  console.log(`  Raw config: Season: ${scenario.onboarding.seasonPhase}  |  Game: ${gameDay}  |  Team: ${teamDays}`);
   if (scenario.editOps) {
     console.log(`  Edit: ${scenario.editOps.join(' → ')}`);
   }
@@ -624,10 +639,12 @@ const BASE_PROFILE: Partial<OnboardingData> = {
 const scenarios: Scenario[] = [
   // ── Game day permutations ──
   {
+    id: 'S1',
     name: 'S1: In-season, Saturday game (baseline)',
     onboarding: { ...BASE_PROFILE, seasonPhase: 'In-season', gameDay: 'Saturday' },
   },
   {
+    id: 'S2',
     name: 'S2: In-season, Sunday game',
     onboarding: {
       ...BASE_PROFILE,
@@ -638,6 +655,7 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    id: 'S3',
     name: 'S3: In-season, Friday night game',
     onboarding: {
       ...BASE_PROFILE,
@@ -648,6 +666,7 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    id: 'S4',
     name: 'S4: In-season, NO game (bye week)',
     onboarding: {
       ...BASE_PROFILE,
@@ -660,10 +679,12 @@ const scenarios: Scenario[] = [
 
   // ── Off-season ──
   {
+    id: 'S5',
     name: 'S5: Off-season, 5 days, team Tue+Thu',
     onboarding: { ...BASE_PROFILE, seasonPhase: 'Off-season', gameDay: undefined },
   },
   {
+    id: 'S6',
     name: 'S6: Off-season, 4 days, no team training',
     onboarding: {
       seasonPhase: 'Off-season',
@@ -679,6 +700,7 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    id: 'S7',
     name: 'S7: Off-season, 6 days, team Mon+Wed+Fri',
     onboarding: {
       seasonPhase: 'Off-season',
@@ -697,6 +719,7 @@ const scenarios: Scenario[] = [
 
   // ── Team training combos ──
   {
+    id: 'S8',
     name: 'S8: In-season Sat game, team Mon+Wed (not typical Tue+Thu)',
     onboarding: {
       ...BASE_PROFILE,
@@ -706,6 +729,7 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    id: 'S9',
     name: 'S9: In-season Sat game, team Tue only',
     onboarding: {
       ...BASE_PROFILE,
@@ -716,6 +740,7 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    id: 'S10',
     name: 'S10: In-season Sat game, team Tue+Wed+Thu (3 consecutive)',
     onboarding: {
       ...BASE_PROFILE,
@@ -728,16 +753,19 @@ const scenarios: Scenario[] = [
 
   // ── Pre-season ──
   {
+    id: 'S11',
     name: 'S11: Pre-season, Sat game, 5 days',
     onboarding: { ...BASE_PROFILE, seasonPhase: 'Pre-season', gameDay: 'Saturday' },
   },
   {
+    id: 'S12',
     name: 'S12: Pre-season, no game, 5 days',
     onboarding: { ...BASE_PROFILE, seasonPhase: 'Pre-season', gameDay: undefined },
   },
 
   // ── Edit-driven: remove game ──
   {
+    id: 'E1',
     name: 'E1: Remove game — Sat game → no game',
     onboarding: {
       ...BASE_PROFILE,
@@ -752,6 +780,7 @@ const scenarios: Scenario[] = [
 
   // ── Edit-driven: move game ──
   {
+    id: 'E2',
     name: 'E2: Move game — Sat → Sun',
     onboarding: {
       ...BASE_PROFILE,
@@ -766,6 +795,7 @@ const scenarios: Scenario[] = [
 
   // ── Edit-driven: add game back ──
   {
+    id: 'E3',
     name: 'E3: Add game back — no game → Sat game',
     onboarding: { ...BASE_PROFILE, seasonPhase: 'In-season', gameDay: 'Saturday' },
     editFrom: 'E1',
@@ -774,6 +804,7 @@ const scenarios: Scenario[] = [
 
   // ── Edge cases ──
   {
+    id: 'S13',
     name: 'S13: In-season, 3 days only (Mon/Wed/Fri), Sat game',
     onboarding: {
       seasonPhase: 'In-season',
@@ -790,6 +821,7 @@ const scenarios: Scenario[] = [
     },
   },
   {
+    id: 'S14',
     name: 'S14: In-season, low readiness, injuries',
     onboarding: {
       seasonPhase: 'In-season',
@@ -824,6 +856,12 @@ console.log('╚═════════════════════�
 console.log(`\nScenarios: ${scenarios.length}`);
 console.log(`Block: ${BLOCK_START} → ${BLOCK_END}`);
 console.log(`Test week: ${TEST_MONDAY} (Mon)`);
+console.log('\nScenario catalog:');
+console.log('  ID   Human-readable name                                      Scenario intent');
+console.log('  ' + '─'.repeat(108));
+for (const scenario of scenarios) {
+  console.log(`  ${scenarioTocLine(scenario)}`);
+}
 
 for (const scenario of scenarios) {
   const inputs = onboardingToCoachingInputs(scenario.onboarding as OnboardingData);
@@ -835,7 +873,7 @@ for (const scenario of scenarios) {
     const schedState = buildScheduleState(inputs, plan, undefined, scenario.calendarOverrides, scenario.onboarding.preferredTrainingDays);
     resolvedWeek = resolveWeekWithConditioning(TEST_MONDAY, schedState);
   } catch (err: any) {
-    console.log(`\n⚠️ Resolver error for "${scenario.name}": ${err.message}`);
+    console.log(`\n⚠️ Resolver error for "${scenarioDisplayLabel(scenario)}": ${err.message}`);
   }
 
   const assertions = runAssertions(plan, resolvedWeek, scenario);
@@ -953,7 +991,7 @@ if (totalFailed > 0) {
     const assertions = runAssertions(plan, resolvedWeek, scenario);
     const failures = assertions.filter(a => !a.passed);
     if (failures.length > 0) {
-      console.log(`  ${scenario.name}:`);
+      console.log(`  ${scenarioDisplayLabel(scenario)}:`);
       for (const f of failures) {
         console.log(`    ❌ ${f.rule}: ${f.detail}`);
       }
