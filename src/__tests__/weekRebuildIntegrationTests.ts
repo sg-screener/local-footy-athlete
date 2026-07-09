@@ -80,6 +80,20 @@ const IN_SEASON: Partial<OnboardingData> = {
   usualGameDay: 'Saturday',
 };
 
+const PRESEASON_NO_TEAM_4_DAY: Partial<OnboardingData> = {
+  seasonPhase: 'Pre-season',
+  trainingDaysPerWeek: 4,
+  preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+  teamTrainingDaysPerWeek: 0,
+  teamTrainingDays: [],
+  teamTrainingIntensity: 'Moderate',
+  sprintExposure: 'Occasionally',
+  conditioningLevel: 'Good',
+  recentTrainingLoad: 'Pretty consistent',
+  injuries: [],
+  motivation: 'Build the base',
+};
+
 // Live calendar marks for the simulated environment.
 let markedDays: Record<string, 'game' | 'rest'> = {};
 
@@ -90,6 +104,7 @@ function resolveLiveWeek(mondayISO: string, seasonPhase: string, gameDay?: strin
     currentProgram: ps.currentProgram,
     currentMicrocycle: ps.currentMicrocycle,
     manualOverrides: ps.dateOverrides,
+    weekScopedOverlays: ps.weekScopedOverlays,
     markedDays,
     athleteContext: DEFAULT_ATHLETE_CONTEXT,
     seasonPhase: seasonPhase as ScheduleState['seasonPhase'],
@@ -102,6 +117,7 @@ function resolveLiveWeek(mondayISO: string, seasonPhase: string, gameDay?: strin
 
 function resetWorld() {
   useProgramStore.getState().clearManualOverrides();
+  useProgramStore.getState().clearWeekScopedOverlays();
   useCoachUpdatesStore.setState((s: unknown) => ({
     ...(s as object),
     activeConstraints: [],
@@ -124,6 +140,8 @@ function addSaturdayGame(profile: Partial<OnboardingData>, satDate: string) {
   return rebuildLocalWeek({
     baseProfile: profile as OnboardingData,
     newGameDay: 'Saturday',
+    scope: 'weekOverlay',
+    targetDate: satDate,
     commitGameMark: () => { markedDays[satDate] = 'game'; },
   });
 }
@@ -315,6 +333,92 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
 
 runRemovalMatrix('PRE-SEASON', PRESEASON);
 runRemovalMatrix('IN-SEASON (G)', IN_SEASON);
+
+// ═════════════════════════════════════════════════════════════════════
+console.log('\n── Week-scoped practice match overlay does not pollute future no-game weeks ──');
+{
+  const program = seed(PRESEASON_NO_TEAM_4_DAY);
+  const baseTemplateSignature = (useProgramStore.getState().currentMicrocycle?.workouts ?? [])
+    .map((w) => `${w.dayOfWeek}:${w.name}:${w.workoutType}`)
+    .sort()
+    .join('|');
+  const blockStart = program.startDate.split('T')[0];
+  const wk2Mon = addDays(blockStart, 7);
+  const wk2Sat = addDays(blockStart, 12);
+  const wk3Mon = addDays(blockStart, 14);
+
+  const futureBefore = resolveLiveWeek(wk3Mon, 'Pre-season', undefined);
+  const futureBeforeSig = futureBefore
+    .map((d) => `${d.dayOfWeek}:${d.workout?.name ?? 'OFF'}:${d.workout?.workoutType ?? 'OFF'}`)
+    .join('|');
+
+  // Athlete blocks Monday in the selected future week before adding a practice match.
+  useProgramStore.getState().setManualOverride(wk2Mon, {
+    id: `away-${wk2Mon}`,
+    microcycleId: 'manual',
+    dayOfWeek: 1,
+    name: 'Rest — away',
+    description: 'Cleared while away.',
+    durationMinutes: 0,
+    intensity: 'Light',
+    workoutType: 'Recovery',
+    sessionTier: 'recovery',
+    exercises: [],
+    createdAt: '',
+    updatedAt: '',
+  } as never, { intent: 'program_adjustment', label: 'Away' });
+
+  const rebuild = addSaturdayGame(PRESEASON_NO_TEAM_4_DAY, wk2Sat);
+  const selected = resolveLiveWeek(wk2Mon, 'Pre-season', 'Saturday');
+  const futureAfter = resolveLiveWeek(wk3Mon, 'Pre-season', undefined);
+  const futureAfterSig = futureAfter
+    .map((d) => `${d.dayOfWeek}:${d.workout?.name ?? 'OFF'}:${d.workout?.workoutType ?? 'OFF'}`)
+    .join('|');
+  const overlays = useProgramStore.getState().weekScopedOverlays;
+  const afterTemplateSignature = (useProgramStore.getState().currentMicrocycle?.workouts ?? [])
+    .map((w) => `${w.dayOfWeek}:${w.name}:${w.workoutType}`)
+    .sort()
+    .join('|');
+
+  ok('selected week gets a week-scoped overlay',
+    !!rebuild.overlay && Object.keys(overlays).includes(wk2Mon),
+    JSON.stringify({ overlay: rebuild.overlay?.weekStart, keys: Object.keys(overlays) }));
+  ok('selected week Saturday renders as Game Day',
+    dayOf(selected, wk2Sat)?.workout?.workoutType === 'Game',
+    dayOf(selected, wk2Sat)?.workout?.name);
+  ok('selected week Monday away override still wins over the overlay',
+    dayOf(selected, wk2Mon)?.source === 'manual' &&
+    /away|rest/i.test(dayOf(selected, wk2Mon)?.workout?.name ?? ''),
+    `${dayOf(selected, wk2Mon)?.source}: ${dayOf(selected, wk2Mon)?.workout?.name}`);
+  ok('future no-game week signature is unchanged after adding the match',
+    futureAfterSig === futureBeforeSig,
+    `before=${futureBeforeSig}\nafter=${futureAfterSig}`);
+  ok('future no-game week does not inherit the selected week overlay',
+    !Object.keys(overlays).includes(wk3Mon) &&
+    futureAfter.every((d) => d.workout?.workoutType !== 'Game') &&
+    futureAfter.every((d) => !/gunshow/i.test(d.workout?.name ?? '')),
+    futureAfter.map((d) => `${d.short}:${d.workout?.name ?? 'OFF'}`).join(' | '));
+  ok('base currentMicrocycle template was not replaced by the with-game candidate',
+    afterTemplateSignature === baseTemplateSignature,
+    `before=${baseTemplateSignature}\nafter=${afterTemplateSignature}`);
+
+  const remove = rebuildLocalWeek({
+    baseProfile: PRESEASON_NO_TEAM_4_DAY as OnboardingData,
+    newGameDay: null,
+    scope: 'weekOverlay',
+    targetDate: wk2Sat,
+    commitGameMark: () => { delete markedDays[wk2Sat]; },
+  });
+  ok('removing the practice match clears the selected-week overlay',
+    !remove.overlay && !Object.keys(useProgramStore.getState().weekScopedOverlays).includes(wk2Mon),
+    JSON.stringify(useProgramStore.getState().weekScopedOverlays));
+  const selectedAfterRemove = resolveLiveWeek(wk2Mon, 'Pre-season', undefined);
+  ok('removed match week returns to base no-game shape aside from the manual Monday away edit',
+    selectedAfterRemove.every((d) => d.workout?.workoutType !== 'Game') &&
+    selectedAfterRemove.every((d) => !/gunshow/i.test(d.workout?.name ?? '')),
+    selectedAfterRemove.map((d) => `${d.short}:${d.source}:${d.workout?.name ?? 'OFF'}`).join(' | '));
+}
+
 resetWorld();
 
 // ═════════════════════════════════════════════════════════════════════

@@ -358,6 +358,17 @@ export interface Workout {
   updatedAt: string;
 }
 
+export interface WeekScopedWorkoutOverlay {
+  id: string;
+  weekStart: string;
+  weekEnd: string;
+  anchorDate: string | null;
+  reason: 'one_off_game' | 'one_off_no_game';
+  workoutsByDate: Record<string, Workout | null>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * A single conditioning prescription option.
  *

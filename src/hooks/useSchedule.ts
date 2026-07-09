@@ -83,6 +83,7 @@ function useScheduleState(): ScheduleState & {
   const currentProgram = useProgramStore((s) => s.currentProgram);
   const currentMicrocycle = useProgramStore((s) => s.currentMicrocycle);
   const manualOverrides = useProgramStore((s) => s.dateOverrides);
+  const weekScopedOverlays = useProgramStore((s) => s.weekScopedOverlays);
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
   const markedDays = useCalendarStore((s) => s.markedDays);
@@ -148,6 +149,7 @@ function useScheduleState(): ScheduleState & {
     currentProgram,
     currentMicrocycle,
     manualOverrides: manualOverrides || {},
+    weekScopedOverlays: weekScopedOverlays || {},
     markedDays: markedDays || {},
     athleteContext,
     seasonPhase,

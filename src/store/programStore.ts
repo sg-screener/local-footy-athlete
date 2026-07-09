@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { TrainingProgram, Microcycle, Workout, WorkoutExercise, OverrideContext } from '../types/domain';
+import {
+  TrainingProgram,
+  Microcycle,
+  Workout,
+  WorkoutExercise,
+  OverrideContext,
+  WeekScopedWorkoutOverlay,
+} from '../types/domain';
 import { logger } from '../utils/logger';
 import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
 import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
@@ -94,6 +101,17 @@ interface ProgramState {
   overrideContexts: Record<string, OverrideContext>;
 
   /**
+   * System-authored week overlays.
+   *
+   * Used for one-off game / practice-match rebuilds: the selected week can
+   * use the engine's with-game/no-game candidate without mutating the shared
+   * base program template that future weeks resolve from.
+   *
+   * Key: Monday ISO date for the overlay week.
+   */
+  weekScopedOverlays: Record<string, WeekScopedWorkoutOverlay>;
+
+  /**
    * Session feedback — lightweight post-session capture.
    * Key: ISO date 'YYYY-MM-DD'. Value: SessionFeedback.
    * Fed into progression context on subsequent sessions.
@@ -142,6 +160,13 @@ interface ProgramState {
   /** Dismiss a stale-override warning (user chose "keep") */
   dismissStaleWarning: (date: string) => void;
 
+  /** Set/replace a system-authored week overlay */
+  setWeekScopedOverlay: (overlay: WeekScopedWorkoutOverlay) => void;
+  /** Remove a system-authored week overlay by Monday ISO key */
+  removeWeekScopedOverlay: (weekStart: string) => void;
+  /** Clear all system-authored week overlays */
+  clearWeekScopedOverlays: () => void;
+
   /** Save session feedback for a date */
   setSessionFeedback: (date: string, feedback: SessionFeedback) => void;
   /** Remove feedback for a date */
@@ -166,6 +191,7 @@ export const useProgramStore = create<ProgramState>()(
       error: null,
       dateOverrides: {},
       overrideContexts: {},
+      weekScopedOverlays: {},
       sessionFeedback: {},
       weightOverrides: {},
 
@@ -184,6 +210,7 @@ export const useProgramStore = create<ProgramState>()(
           currentProgram: program,
           currentMicrocycle: null,
           todayWorkout: null,
+          weekScopedOverlays: {},
         }),
 
       setCurrentMicrocycle: (microcycle) => set({ currentMicrocycle: microcycle }),
@@ -260,6 +287,23 @@ export const useProgramStore = create<ProgramState>()(
             [date]: { intent: 'dismissed' },
           },
         })),
+
+      setWeekScopedOverlay: (overlay) =>
+        set((state) => ({
+          weekScopedOverlays: {
+            ...state.weekScopedOverlays,
+            [overlay.weekStart]: overlay,
+          },
+        })),
+
+      removeWeekScopedOverlay: (weekStart) =>
+        set((state) => {
+          const updated = { ...state.weekScopedOverlays };
+          delete updated[weekStart];
+          return { weekScopedOverlays: updated };
+        }),
+
+      clearWeekScopedOverlays: () => set({ weekScopedOverlays: {} }),
 
       addExerciseToWorkout: (workoutId, exercise) =>
         set((state) => {
@@ -356,6 +400,7 @@ export const useProgramStore = create<ProgramState>()(
           error: null,
           dateOverrides: {},
           overrideContexts: {},
+          weekScopedOverlays: {},
           sessionFeedback: {},
           weightOverrides: {},
         });

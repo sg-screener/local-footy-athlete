@@ -32,6 +32,7 @@ import type {
   ReadinessLevel,
   DayOfWeek,
   GameDay,
+  WeekScopedWorkoutOverlay,
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import {
@@ -64,6 +65,8 @@ export interface ScheduleState {
   currentProgram: TrainingProgram | null;
   currentMicrocycle: Microcycle | null;
   manualOverrides: Record<string, Workout>;
+  /** System-authored selected-week overlays; manual overrides still outrank these. */
+  weekScopedOverlays?: Record<string, WeekScopedWorkoutOverlay>;
   markedDays: Record<string, CalendarDayType>;
   /** Athlete profile context for adaptive derived sessions. */
   athleteContext: AthleteContext;
@@ -749,6 +752,26 @@ function buildDay(
   };
 }
 
+function getWeekScopedTemplateWorkout(
+  date: string,
+  state: ScheduleState,
+): { hasOverlay: boolean; workout: Workout | null; overlay: WeekScopedWorkoutOverlay | null } {
+  const weekStart = getMondayForDate(date);
+  const overlay = state.weekScopedOverlays?.[weekStart] ?? null;
+  if (!overlay) return { hasOverlay: false, workout: null, overlay: null };
+  if (date < overlay.weekStart || date > overlay.weekEnd) {
+    return { hasOverlay: false, workout: null, overlay: null };
+  }
+  if (!Object.prototype.hasOwnProperty.call(overlay.workoutsByDate, date)) {
+    return { hasOverlay: false, workout: null, overlay: null };
+  }
+  return {
+    hasOverlay: true,
+    workout: overlay.workoutsByDate[date] ?? null,
+    overlay,
+  };
+}
+
 /**
  * Resolver-level injury filter pass — applied AFTER priority
  * resolution + after conditioning / recovery layering. Walks the full
@@ -838,12 +861,17 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     return buildDay(date, dow, today, createVirtualGameStub(date, dow), 'game');
   }
 
+  const overlayTemplate = getWeekScopedTemplateWorkout(date, state);
+
   // ── No block data → nothing to resolve ──
-  if (!inBlock || !currentMicrocycle) {
+  if (!inBlock || (!currentMicrocycle && !overlayTemplate.hasOverlay)) {
     return buildDay(date, dow, today, null, 'none');
   }
 
-  const templateWorkout = currentMicrocycle.workouts.find(w => w.dayOfWeek === dow) || null;
+  const templateWorkout = overlayTemplate.hasOverlay
+    ? overlayTemplate.workout
+    : currentMicrocycle?.workouts.find(w => w.dayOfWeek === dow) || null;
+  const templateMicrocycleId = overlayTemplate.overlay?.id ?? currentMicrocycle?.id ?? 'derived';
 
   // ── Priority 4: Game proximity rules (G+1 recovery, G-1 Gunshow, G-2 moderate) ──
   // Evaluated BEFORE freed-game-slot so that a moved game's G+1 takes priority
@@ -855,7 +883,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   const effectiveTemplate = (templateWorkout?.workoutType === 'Game' && !mark)
     ? null  // template game without calendar mark → treat as empty for proximity
     : templateWorkout;
-  const proximityResult = applyGameProximity(date, effectiveTemplate, gameDates, currentMicrocycle.id, state.athleteContext);
+  const proximityResult = applyGameProximity(date, effectiveTemplate, gameDates, templateMicrocycleId, state.athleteContext);
   if (proximityResult) {
     logger.debug(`[RESOLVER-PROXIMITY] date=${date} dow=${dow} → ${proximityResult.name} (tier=${proximityResult.sessionTier})`);
     return buildDay(date, dow, today, proximityResult, 'gameProximity');
@@ -867,7 +895,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   // immediately-following Monday gets a forced Recovery (Lower is dropped,
   // not made up). Only fires on Mon directly after a one-off Sun mark —
   // future weeks have no such mark and are unaffected.
-  const compressedRecovery = applyCompressedWeekMondayRecovery(date, state, currentMicrocycle.id);
+  const compressedRecovery = applyCompressedWeekMondayRecovery(date, state, templateMicrocycleId);
   if (compressedRecovery) {
     logger.debug(`[RESOLVER-COMPRESSED-WEEK] date=${date} dow=${dow} → forced Recovery (post-Sun-game compression)`);
     return buildDay(date, dow, today, compressedRecovery, 'gameProximity');
@@ -897,7 +925,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
       logger.debug(`[RESOLVER-FREED-GAME] other games remain this week -> returning prehab`);
       return buildDay(
         date, dow, today,
-        buildDerivedSession('prehab_accessories', date, currentMicrocycle.id, 'Freed game slot', state.athleteContext),
+        buildDerivedSession('prehab_accessories', date, templateMicrocycleId, 'Freed game slot', state.athleteContext),
         'gameProximity',
       );
     } else {
@@ -919,7 +947,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   ) {
     return buildDay(
       date, dow, today,
-      buildDerivedSession('recovery', date, currentMicrocycle.id, 'Scheduled recovery - active', state.athleteContext),
+      buildDerivedSession('recovery', date, templateMicrocycleId, 'Scheduled recovery - active', state.athleteContext),
       'template',
     );
   }

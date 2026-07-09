@@ -525,12 +525,10 @@ export function useHomeScreen() {
   // shape (the in-season NO-game branch produces a fundamentally different
   // Saturday — core lower + conditioning peak, not a G+1 recovery slot).
   //
-  // This helper runs the same pipeline as onboarding and phase-shift —
-  // generateProgramFromProfile + AI enrichment — but passes a *temporary*
-  // profile override instead of persisting the game change to profile state.
-  // The athlete's `usualGameDay` stays intact so future weeks keep their
-  // virtual-game overlay; only the current program template reflects the
-  // per-week game state.
+  // This helper runs the deterministic local generation path with a
+  // temporary game/no-game profile, then commits only a week-scoped overlay.
+  // The athlete's `usualGameDay` and the shared base program template stay
+  // intact so future weeks resolve from the normal recurring structure.
   //
   //   newGameDay === null          → bye week (engine runs NO-game branch)
   //   newGameDay === DayOfWeek     → game on that day (engine runs WITH-game branch)
@@ -545,8 +543,8 @@ export function useHomeScreen() {
   // locally via generateProgramLocally \u2014 same coaching engine, same
   // normaliser, no network. Because the build is synchronous and pure,
   // atomicity falls out naturally: we build FIRST, and only if that
-  // succeeds do we commit the program AND run the caller's game-mark
-  // commit (setGameDay / setNoGame) together. On failure nothing is
+  // succeeds do we commit the selected-week overlay AND run the caller's
+  // game-mark commit (setGameDay / setNoGame) together. On failure nothing is
   // touched \u2014 no more "Game Day card shows but the week didn't reshape".
   //
   // Returns true when the rebuild + commit succeeded so callers can gate
@@ -554,6 +552,7 @@ export function useHomeScreen() {
   const rebuildForGameChange = async (
     newGameDay: DayOfWeek | null,
     commitGameMark?: () => void,
+    options?: { targetDate: string; clearOverlayDate?: string },
   ): Promise<boolean> => {
     clearRebuildError();
     try {
@@ -565,11 +564,14 @@ export function useHomeScreen() {
       // override with ownership metadata, every live Coach Note
       // constraint, the new game anchors), builds the candidate week,
       // decides the preservation sweep with the pure policy, and commits
-      // game mark + program + sweep ATOMICALLY. Throws before any state
+      // game mark + week overlay + sweep ATOMICALLY. Throws before any state
       // change on failure \u2014 no half-applied weeks possible.
       const result = rebuildLocalWeek({
         baseProfile: onboardingData,
         newGameDay,
+        scope: 'weekOverlay',
+        targetDate: options?.targetDate,
+        clearOverlayDate: options?.clearOverlayDate,
         commitGameMark,
       });
       alertGameConflicts(result.sweep.conflictsRemoved);
@@ -586,7 +588,7 @@ export function useHomeScreen() {
               {
                 text: 'Try again',
                 onPress: () => {
-                  void rebuildForGameChange(newGameDay, commitGameMark);
+                  void rebuildForGameChange(newGameDay, commitGameMark, options);
                 },
               },
             ]
@@ -651,35 +653,30 @@ export function useHomeScreen() {
         return;
       }
 
-      // Move: remove from old date, set on new date.
-      removeGameDay(fromDate);
-      // Clean up stale game-proximity overrides for the old game.
-      const { overrideContexts, removeManualOverride } = useProgramStore.getState();
-      for (const [date, ctx] of Object.entries(overrideContexts)) {
-        if (ctx.intent === 'gameProximity' && ctx.relatedGameDate === fromDate) {
-          removeManualOverride(date);
-        }
-      }
-      setGameDay(targetDate);
       setMode({ type: 'normal' });
       setSelectedIdx(idx);
 
-      // NO structural rebuild on a one-off move. The shared microcycle template
-      // is anchored to profile.usualGameDay (e.g. Saturday). Rebuilding it
-      // around the moved day would reshape EVERY future week to the new DOW
-      // (Mon=Recovery, Fri=Push, etc.) even though the recurring game day
-      // hasn't changed — leaving future Saturdays still labelled GAME but
-      // the surrounding days running the wrong-shape template.
-      //
-      // Instead, the resolver handles the local reshape via:
-      //   - the explicit 'game' mark on the new date (Week A only)
-      //   - applyGameProximity firing G+1 / G-1 / G-2 around that mark
-      //   - virtual-Saturday suppression when the week has another game mark
-      // Future weeks ignore the one-off mark (see getEffectiveGameDates'
-      // dow-based scoping in sessionResolver.ts).
-      //
-      // If the user wants to permanently change their recurring game day,
-      // that goes through the phase-shift modal, which IS a profile mutation.
+      const commitMove = () => {
+        removeGameDay(fromDate);
+        // Clean up stale game-proximity overrides for the old game.
+        const { overrideContexts, removeManualOverride } = useProgramStore.getState();
+        for (const [date, ctx] of Object.entries(overrideContexts)) {
+          if (ctx.intent === 'gameProximity' && ctx.relatedGameDate === fromDate) {
+            removeManualOverride(date);
+          }
+        }
+        setGameDay(targetDate);
+      };
+
+      if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
+        const targetName = DAY_NUM_TO_NAME[day.dayOfWeek];
+        await rebuildForGameChange(targetName, commitMove, {
+          targetDate,
+          clearOverlayDate: fromDate,
+        });
+      } else {
+        commitMove();
+      }
       return;
     }
 
@@ -699,7 +696,9 @@ export function useHomeScreen() {
       // rebuild fails, no Game Day card appears over an unchanged week.
       if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
         const targetName = DAY_NUM_TO_NAME[day.dayOfWeek];
-        await rebuildForGameChange(targetName, () => setGameDay(day.date));
+        await rebuildForGameChange(targetName, () => setGameDay(day.date), {
+          targetDate: day.date,
+        });
       } else {
         // No game-aware engine branch for this phase — mark only.
         setGameDay(day.date);
@@ -1237,7 +1236,9 @@ export function useHomeScreen() {
     // a core peak + conditioning day). Pre-season practice matches use the
     // same anchor logic.
     if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
-      await rebuildForGameChange(null, commitRemoval);
+      await rebuildForGameChange(null, commitRemoval, {
+        targetDate: removedDate,
+      });
     } else {
       commitRemoval();
     }
