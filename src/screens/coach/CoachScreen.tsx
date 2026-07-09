@@ -96,6 +96,7 @@ import {
   shouldCreateSemanticProgramEditDraftAdapter,
 } from '../../config/env';
 import { logger } from '../../utils/logger';
+import { resolveEquipmentAvailability } from '../../utils/equipmentAvailability';
 import { setCoachReady } from '../../navigation/smokeNavState';
 import { getSmokeInitialRoute } from '../../utils/smokeBootstrap';
 import { navigationRef } from '../../navigation/navigationRef';
@@ -1964,6 +1965,7 @@ export default function CoachScreen() {
               sessionDurationMinutes: onboardingData.sessionDurationMinutes,
               trainingLocation: onboardingData.trainingLocation,
               equipment: onboardingData.equipment,
+              resolvedEquipmentTags: resolveEquipmentAvailability(onboardingData),
               experienceLevel: onboardingData.experienceLevel,
               squatStrength: onboardingData.squatStrength,
               benchStrength: onboardingData.benchStrength,

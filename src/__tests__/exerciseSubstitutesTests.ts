@@ -21,6 +21,7 @@ import {
   formatSubstitutesForLLM,
   type SubstituteCandidate,
 } from '../utils/exerciseSubstitutes';
+import { equipmentTagsToSubstituteEquipmentClasses } from '../utils/equipmentAvailability';
 
 let pass = 0;
 let fail = 0;
@@ -154,6 +155,15 @@ function names(cands: ReadonlyArray<SubstituteCandidate>): string[] {
     'no barbell candidates returned',
     result.every((c) => c.equipment !== 'barbell'),
     `candidates with equipment: ${result.map((c) => `${c.name}(${c.equipment})`).join(', ')}`,
+  );
+
+  const fromTags = getSubstituteCandidates('Bench Press', {
+    availableEquipment: equipmentTagsToSubstituteEquipmentClasses(['bodyweight', 'dumbbells']),
+  });
+  ok(
+    'canonical EquipmentTag bridge also excludes barbell candidates',
+    fromTags.length >= 1 && fromTags.every((c) => c.equipment !== 'barbell'),
+    `candidates with equipment: ${fromTags.map((c) => `${c.name}(${c.equipment})`).join(', ')}`,
   );
 }
 

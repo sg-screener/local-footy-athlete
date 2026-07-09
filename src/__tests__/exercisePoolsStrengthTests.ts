@@ -28,6 +28,7 @@ import {
   type AthletePoolPrefs,
 } from '../data/exercisePoolsStrength';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
+import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
 
 // ─── Simple test runner ───
 
@@ -947,6 +948,52 @@ section('14. Athlete overrides (prefs filter / bias)');
     `Prefs + session avoid: first AI squat → pinned Box Squat (got "${first}")`);
   assert(second !== first,
     `Prefs + session avoid: second AI squat ≠ first (got both "${first}")`);
+
+  // ── 14.12 Equipment filter: full gym leaves barbell anchor unchanged ──
+  const fullGymBench = applyPoolRotation(
+    'Bench Press',
+    ctx,
+    undefined,
+    { excluded: [], pinned: [], availableEquipment: FULL_GYM_EQUIPMENT },
+  );
+  assert(fullGymBench === 'Bench Press',
+    `Full gym availableEquipment preserves Bench Press anchor (got "${fullGymBench}")`);
+
+  // ── 14.13 Equipment filter: dumbbells-only falls to same-slot DB accessory ──
+  const dbWarnings: string[] = [];
+  console.warn = (msg: string) => { dbWarnings.push(msg); };
+  try {
+    const dbOnlyBench = applyPoolRotation(
+      'Bench Press',
+      ctx,
+      undefined,
+      { excluded: [], pinned: [], availableEquipment: ['bodyweight', 'dumbbells'] },
+    );
+    assert(dbOnlyBench === 'DB Bench Press',
+      `Dumbbells-only Bench Press rotates to DB Bench Press (got "${dbOnlyBench}")`);
+    assert(dbWarnings.some((w) => w.includes('[pool-equipment-role-fallback]')),
+      `Dumbbells-only role fallback logs structured warning (got ${JSON.stringify(dbWarnings)})`);
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  // ── 14.14 Equipment filter: bodyweight-only avoids barbell where sibling pool can cover ──
+  const bwWarnings: string[] = [];
+  console.warn = (msg: string) => { bwWarnings.push(msg); };
+  try {
+    const bwOnlyBench = applyPoolRotation(
+      'Bench Press',
+      ctx,
+      undefined,
+      { excluded: [], pinned: [], availableEquipment: ['bodyweight'] },
+    );
+    assert(bwOnlyBench !== 'Bench Press' && bwOnlyBench !== 'Incline Bench' && bwOnlyBench !== 'Close Grip Bench',
+      `Bodyweight-only Bench Press avoids barbell anchor when fallback exists (got "${bwOnlyBench}")`);
+    assert(bwWarnings.some((w) => w.includes('[pool-equipment-role-fallback]')),
+      `Bodyweight-only role fallback logs structured warning (got ${JSON.stringify(bwWarnings)})`);
+  } finally {
+    console.warn = originalWarn;
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────

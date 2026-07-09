@@ -30,7 +30,9 @@
  */
 
 import { EXERCISE_TAGS, type MovementPattern, type InjuryKey } from './exerciseTags';
+import type { EquipmentTag } from './exercisePools';
 import type { WeekKind } from '../types/domain';
+import { EXERCISE_LOAD_MAP, type EquipmentClass } from '../utils/loadEstimation';
 
 // ─── Types ───
 
@@ -133,6 +135,8 @@ export interface AthletePoolPrefs {
    * (historical, free-text). Mutates often; lives in a separate store.
    */
   activeInjuries?: readonly InjuryKey[];
+  /** Canonical equipment tags available for this generated week/session. */
+  availableEquipment?: readonly EquipmentTag[];
 }
 
 // ─── Movement Pattern → Slot Map ───
@@ -596,12 +600,18 @@ function walkEntries(
 function applyPrefsToPool(
   pool: PoolDefinition,
   prefs: AthletePoolPrefs,
-): { effective: PoolEntry[]; excludedCount: number; injuryCount: number } {
+): {
+  effective: PoolEntry[];
+  excludedCount: number;
+  injuryCount: number;
+  equipmentCount: number;
+} {
   const excludedSet = new Set(prefs.excluded);
   const activeInjuries = prefs.activeInjuries ?? [];
 
   let excludedCount = 0;
   let injuryCount = 0;
+  let equipmentCount = 0;
 
   const kept: PoolEntry[] = [];
   for (const entry of pool.entries) {
@@ -618,6 +628,10 @@ function applyPrefsToPool(
           continue;
         }
       }
+    }
+    if (!entryAllowedByEquipment(entry, prefs.availableEquipment)) {
+      equipmentCount++;
+      continue;
     }
     kept.push(entry);
   }
@@ -647,13 +661,54 @@ function applyPrefsToPool(
         })
       : withCautionLast;
 
-  return { effective, excludedCount, injuryCount };
+  return { effective, excludedCount, injuryCount, equipmentCount };
 }
 
 function isCautionFor(name: string, activeInjuries: readonly InjuryKey[]): boolean {
   const tag = EXERCISE_TAGS[name];
   if (!tag) return false;
   return activeInjuries.some((k) => tag.injury[k] === 'caution');
+}
+
+function equipmentClassesForTags(
+  tags: readonly EquipmentTag[] | undefined,
+): ReadonlySet<EquipmentClass> | null {
+  if (!tags || tags.length === 0) return null;
+  const out = new Set<EquipmentClass>();
+  for (const tag of tags) {
+    if (tag === 'bodyweight') out.add('bodyweight');
+    else if (tag === 'dumbbells') out.add('dumbbell');
+    else if (tag === 'barbell') out.add('barbell');
+    else if (tag === 'cables') out.add('cable');
+    else if (tag === 'machine') out.add('machine');
+    else if (tag === 'kettlebell') out.add('kettlebell');
+  }
+  return out;
+}
+
+function entryAllowedByEquipment(
+  entry: PoolEntry,
+  availableEquipment: readonly EquipmentTag[] | undefined,
+): boolean {
+  const allowed = equipmentClassesForTags(availableEquipment);
+  if (!allowed) return true;
+  const klass = EXERCISE_LOAD_MAP[entry.name]?.equipment;
+  if (!klass) return true;
+  return klass === 'bodyweight' || allowed.has(klass);
+}
+
+function entriesAllowedByEquipment(
+  pool: PoolDefinition,
+  prefs: AthletePoolPrefs | undefined,
+): PoolEntry[] {
+  if (!prefs?.availableEquipment?.length) return pool.entries;
+  return pool.entries.filter((entry) =>
+    entryAllowedByEquipment(entry, prefs.availableEquipment),
+  );
+}
+
+function siblingRole(role: PoolRole): PoolRole {
+  return role === 'anchor' ? 'accessory' : 'anchor';
 }
 
 /**
@@ -683,14 +738,14 @@ export function selectPoolEntryAvoiding(
   if (pool.entries.length === 1) return pool.entries[0];
 
   if (prefs) {
-    const { effective, excludedCount, injuryCount } = applyPrefsToPool(pool, prefs);
+    const { effective, excludedCount, injuryCount, equipmentCount } = applyPrefsToPool(pool, prefs);
     if (effective.length === 0) {
       // Fall through to raw pool; surface why via structured log so an
       // operator can see which prefs collapsed the slot.
       // eslint-disable-next-line no-console
       console.warn(
         `[pool-override-fallback] slot=${pool.slot} filtered=0 → using raw pool ` +
-          `(excluded=${excludedCount}, injury=${injuryCount})`,
+          `(excluded=${excludedCount}, injury=${injuryCount}, equipment=${equipmentCount})`,
       );
     } else {
       return walkEntries(effective, pool.role, ctx, avoid);
@@ -732,13 +787,34 @@ export function applyPoolRotation(
   if (!classification) return suggestedName;
 
   const { slot, role } = classification;
-  const pool = getPool(slot, role);
+  let selectedRole = role;
+  let pool = getPool(slot, role);
   // Defensive: pool shape allows empty entries for accessory-only slots
   // (e.g. isolation_lower.anchor is []). classifyPoolSlot's guards should
   // prevent routing here, but fall through untouched if we ever do land
   // on an empty pool rather than throwing.
   if (pool.entries.length === 0) return suggestedName;
-  const key = `${slot}:${role}`;
+  if (
+    prefs?.availableEquipment?.length &&
+    entriesAllowedByEquipment(pool, prefs).length === 0
+  ) {
+    const fallbackRole = siblingRole(role);
+    const fallbackPool = getPool(slot, fallbackRole);
+    if (
+      fallbackPool.entries.length > 0 &&
+      entriesAllowedByEquipment(fallbackPool, prefs).length > 0
+    ) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[pool-equipment-role-fallback] slot=${slot} role=${role} filtered=0 by equipment ` +
+          `→ using ${fallbackRole}`,
+      );
+      pool = fallbackPool;
+      selectedRole = fallbackRole;
+    }
+  }
+
+  const key = `${slot}:${selectedRole}`;
 
   let avoid: Set<string>;
   if (usedInSession) {

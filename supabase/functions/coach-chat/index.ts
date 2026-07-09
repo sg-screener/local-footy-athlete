@@ -503,6 +503,7 @@ interface AthleteProfile {
   sessionDurationMinutes?: number;
   trainingLocation?: string;
   equipment?: string[];
+  resolvedEquipmentTags?: string[];
   experienceLevel?: string;
   squatStrength?: string;
   benchStrength?: string;
@@ -1256,6 +1257,9 @@ function buildAthleteProfileContext(profile: AthleteProfile): string {
   if (profile.sessionDurationMinutes) lines.push(`- Session duration: ${profile.sessionDurationMinutes} minutes`);
   if (profile.trainingLocation) lines.push(`- Training location: ${profile.trainingLocation}`);
   if (profile.equipment?.length) lines.push(`- Equipment: ${profile.equipment.join(", ")}`);
+  if (profile.resolvedEquipmentTags?.length) {
+    lines.push(`- Canonical available equipment tags: ${profile.resolvedEquipmentTags.join(", ")} (source of truth for exercise selection)`);
+  }
   if (profile.experienceLevel) lines.push(`- Gym experience: ${profile.experienceLevel}`);
   if (profile.squatStrength) lines.push(`- Squat strength: ${profile.squatStrength}`);
   if (profile.benchStrength) lines.push(`- Bench strength: ${profile.benchStrength}`);
@@ -1317,7 +1321,11 @@ function buildLeanAthleteContext(profile: AthleteProfile): string {
       lines.push('Eligible for contrast pairs (max 1 per CORE session).');
     }
   }
-  if (profile.equipment?.length) lines.push(`Equipment: ${profile.equipment.join(', ')}`);
+  if (profile.resolvedEquipmentTags?.length) {
+    lines.push(`Equipment tags: ${profile.resolvedEquipmentTags.join(', ')}`);
+  } else if (profile.equipment?.length) {
+    lines.push(`Equipment: ${profile.equipment.join(', ')}`);
+  }
   if (profile.injuries?.length) {
     const injuryStrs = profile.injuries.map(i => {
       const parts = [i.bodyArea];
@@ -1758,21 +1766,7 @@ async function callCoachLLMAPI(messages: Message[], coachNotes: string[] = [], a
         // for the client.
         const exerciseName = (toolBlock.input?.exercise || '').toString();
         const injuries = buildInjuryMapForSubstitutes(athleteProfile?.injuries);
-        // Athlete's available equipment is best-effort: profile.equipment
-        // is a free-text list. We map common entries to EmbeddedEquipment.
-        let availableEquipment: EmbeddedEquipment[] | undefined;
-        if (athleteProfile?.equipment?.length) {
-          const eqLower = athleteProfile.equipment.map((e) => e.toLowerCase());
-          const map: Array<[string, EmbeddedEquipment]> = [
-            ['barbell', 'barbell'], ['dumbbell', 'dumbbell'], ['kettlebell', 'kettlebell'],
-            ['cable', 'cable'], ['machine', 'machine'], ['bodyweight', 'bodyweight'],
-          ];
-          const detected = new Set<EmbeddedEquipment>();
-          for (const [needle, klass] of map) {
-            if (eqLower.some((e) => e.includes(needle))) detected.add(klass);
-          }
-          if (detected.size > 0) availableEquipment = Array.from(detected);
-        }
+        const availableEquipment = embeddedEquipmentFromProfile(athleteProfile);
 
         // Optional explicit overhead-pull constraint hinted by the model.
         const reasonText = (toolBlock.input?.reason || '').toString().toLowerCase();
@@ -2118,6 +2112,30 @@ interface EmbeddedSubstitute {
   differsOn: DiffAxis[];
   equipment: EmbeddedEquipment | null;
   reason?: string;
+}
+
+function embeddedEquipmentFromProfile(profile?: AthleteProfile): EmbeddedEquipment[] | undefined {
+  const detected = new Set<EmbeddedEquipment>();
+  for (const tag of profile?.resolvedEquipmentTags ?? []) {
+    if (tag === 'bodyweight') detected.add('bodyweight');
+    else if (tag === 'dumbbells') detected.add('dumbbell');
+    else if (tag === 'barbell') detected.add('barbell');
+    else if (tag === 'cables') detected.add('cable');
+    else if (tag === 'machine') detected.add('machine');
+    else if (tag === 'kettlebell') detected.add('kettlebell');
+  }
+  if (detected.size > 0) return Array.from(detected);
+
+  if (!profile?.equipment?.length) return undefined;
+  const eqLower = profile.equipment.map((e) => e.toLowerCase());
+  const map: Array<[string, EmbeddedEquipment]> = [
+    ['barbell', 'barbell'], ['dumbbell', 'dumbbell'], ['kettlebell', 'kettlebell'],
+    ['cable', 'cable'], ['machine', 'machine'], ['bodyweight', 'bodyweight'],
+  ];
+  for (const [needle, klass] of map) {
+    if (eqLower.some((e) => e.includes(needle))) detected.add(klass);
+  }
+  return detected.size > 0 ? Array.from(detected) : undefined;
 }
 
 // Compute a single dominant reason — mirrors src/utils/exerciseSubstitutes:computeReason.

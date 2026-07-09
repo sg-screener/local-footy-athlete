@@ -49,7 +49,7 @@ function liveStoreProvider(): CoachRevisionTemplateContext {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { useCalendarStore } = require('../store/calendarStore');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { inferEquipment } = require('./sessionBuilder');
+    const { resolveEquipmentAvailability } = require('./equipmentAvailability');
 
     const onboardingData = useProfileStore.getState().onboardingData;
     const markedDays = useCalendarStore.getState().markedDays ?? {};
@@ -59,7 +59,7 @@ function liveStoreProvider(): CoachRevisionTemplateContext {
     const athlete: AthleteContext = onboardingData
       ? {
           injuries: onboardingData.injuries || [],
-          equipmentTags: inferEquipment(trainingLocation),
+          equipmentTags: resolveEquipmentAvailability(onboardingData),
           trainingLocation,
           onboardingData,
         }

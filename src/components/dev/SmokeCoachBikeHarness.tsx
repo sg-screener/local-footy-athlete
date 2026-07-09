@@ -156,12 +156,13 @@ function useHarnessScheduleState(): any {
     useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
 
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { inferEquipment, DEFAULT_ATHLETE_CONTEXT } = require('../../utils/sessionBuilder');
+  const { DEFAULT_ATHLETE_CONTEXT } = require('../../utils/sessionBuilder');
+  const { resolveEquipmentAvailability } = require('../../utils/equipmentAvailability');
   const trainingLocation = onboardingData?.trainingLocation || 'Commercial gym';
   const athleteContext = onboardingData
     ? {
         injuries: onboardingData.injuries || [],
-        equipmentTags: inferEquipment(trainingLocation),
+        equipmentTags: resolveEquipmentAvailability(onboardingData),
         trainingLocation,
         onboardingData,
       }

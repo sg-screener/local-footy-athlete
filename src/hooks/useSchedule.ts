@@ -29,10 +29,10 @@ import {
 import { logger } from '../utils/logger';
 import type { ScheduleState, ResolvedDay } from '../utils/sessionResolver';
 import {
-  inferEquipment,
   DEFAULT_ATHLETE_CONTEXT,
   type AthleteContext,
 } from '../utils/sessionBuilder';
+import { resolveEquipmentAvailability } from '../utils/equipmentAvailability';
 import {
   buildExtraConstraintsForVisibleProgram,
   buildProgramTabProjectedWeek,
@@ -57,7 +57,7 @@ function useAthleteContext(): AthleteContext {
 
   return {
     injuries: onboardingData.injuries || [],
-    equipmentTags: inferEquipment(trainingLocation),
+    equipmentTags: resolveEquipmentAvailability(onboardingData),
     trainingLocation,
     onboardingData,
   };

@@ -30,9 +30,9 @@ import {
 } from '../../utils/scheduleDebug';
 import type { ResolvedDay, ScheduleState } from '../../utils/sessionResolver';
 import {
-  inferEquipment,
   DEFAULT_ATHLETE_CONTEXT,
 } from '../../utils/sessionBuilder';
+import { resolveEquipmentAvailability } from '../../utils/equipmentAvailability';
 
 // ═══════════════════════════════════════════════
 // PROPS
@@ -57,7 +57,7 @@ function useScheduleState(): ScheduleState {
 
   const trainingLocation = onboardingData?.trainingLocation || 'Commercial gym';
   const athleteContext = onboardingData
-    ? { injuries: onboardingData.injuries || [], equipmentTags: inferEquipment(trainingLocation), trainingLocation }
+    ? { injuries: onboardingData.injuries || [], equipmentTags: resolveEquipmentAvailability(onboardingData), trainingLocation }
     : DEFAULT_ATHLETE_CONTEXT;
 
   const seasonPhase = onboardingData?.seasonPhase || null;

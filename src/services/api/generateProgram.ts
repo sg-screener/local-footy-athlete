@@ -24,11 +24,13 @@ import {
 import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
 import { attachRecoveryAddonsToWeek } from '../../utils/recoveryAddonBuilder';
 import type { ReadinessSignal } from '../../utils/readiness';
+import type { EquipmentTag } from '../../data/exercisePools';
 import {
   getClientEnvConfig,
   logMissingClientEnv,
 } from '../../config/env';
 import { logger } from '../../utils/logger';
+import { resolveEquipmentAvailability } from '../../utils/equipmentAvailability';
 import {
   getProgrammingRoleBias,
   normalizeOnboardingRole,
@@ -130,6 +132,7 @@ function buildGeneratedMicrocycles(args: {
   blockStartISO: string;
   blockNumber?: number;
   athletePrefs: AthletePoolPrefsArg;
+  availableEquipmentTags: readonly EquipmentTag[];
   generationConstraints?: GenerationConstraintContext;
 }): Microcycle[] {
   const states = buildBlockWeekStates({
@@ -161,7 +164,10 @@ function buildGeneratedMicrocycles(args: {
         weekKind: blockState.weekKind,
         intensityMultiplier: blockState.intensityMultiplier,
       },
-      args.athletePrefs,
+      {
+        ...args.athletePrefs,
+        availableEquipment: args.availableEquipmentTags,
+      },
     );
     const workouts = attachRecoveryAddonsToWeek({
       workouts: baseWorkouts,
@@ -217,6 +223,11 @@ export function generateProgramLocally(
     normalizeOnboardingRole(onboardingData),
     generationConstraints,
   );
+  const resolvedEquipmentTags = resolveEquipmentAvailability(
+    generationProfile,
+    options.activeConstraints ?? null,
+    availabilityDateISO,
+  );
   const coachingInputs = onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO,
     generationConstraints,
@@ -247,6 +258,7 @@ export function generateProgramLocally(
       getAthletePrefs(),
       generationConstraints,
     ),
+    availableEquipmentTags: resolvedEquipmentTags,
     generationConstraints,
   });
   const firstMicrocycle = microcycles[0];
@@ -381,12 +393,13 @@ export function buildProgramGenerationRequestDiagnostics(
   plan?: CoachingPlan,
   message?: string,
   env: ReturnType<typeof getClientEnvConfig> = getClientEnvConfig(),
+  resolvedEquipmentTags: readonly EquipmentTag[] = resolveEquipmentAvailability(onboardingData),
 ): Record<string, unknown> {
   const generationProfile = normalizeOnboardingRole(onboardingData);
   const derivedPlan = plan ?? buildCoachingPlan(onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO: todayISOLocal(),
   }));
-  const derivedMessage = message ?? buildGenerationPrompt(generationProfile, derivedPlan);
+  const derivedMessage = message ?? buildGenerationPrompt(generationProfile, derivedPlan, resolvedEquipmentTags);
   const roleContext = buildRoleContext(generationProfile);
   const profileFields = Object.keys(generationProfile).sort();
   const profileFieldDiagnostics = getProgramGenerationProfileFieldDiagnostics(generationProfile);
@@ -399,7 +412,10 @@ export function buildProgramGenerationRequestDiagnostics(
   };
   const payloadForSize = {
     messages: [{ role: 'user', content: derivedMessage }],
-    athleteProfile: generationProfile,
+    athleteProfile: {
+      ...generationProfile,
+      resolvedEquipmentTags,
+    },
     roleContext,
     coachingPlan: derivedPlan.constraints,
     mode: 'generate',
@@ -438,6 +454,7 @@ export function buildProgramGenerationRequestDiagnostics(
         sessionDurationMinutes: generationProfile.sessionDurationMinutes ?? null,
         trainingLocation: generationProfile.trainingLocation ?? null,
         equipmentCount: generationProfile.equipment?.length ?? 0,
+        resolvedEquipmentTags,
         goalsCount: generationProfile.goals?.length ?? 0,
         injuriesCount: generationProfile.injuries?.length ?? 0,
         conditioningLevel: generationProfile.conditioningLevel ?? null,
@@ -617,6 +634,11 @@ export async function generateProgramFromProfile(
     normalizeOnboardingRole(onboardingData),
     generationConstraints,
   );
+  const resolvedEquipmentTags = resolveEquipmentAvailability(
+    generationProfile,
+    options.activeConstraints ?? null,
+    availabilityDateISO,
+  );
   if (!env.isReady) {
     logMissingClientEnv('generateProgramFromProfile', env);
     throw new ProgramGenError(
@@ -643,12 +665,13 @@ export async function generateProgramFromProfile(
   });
 
   // ─── Step 2: Build AI prompt from coaching plan ───
-  const message = buildGenerationPrompt(generationProfile, plan);
+  const message = buildGenerationPrompt(generationProfile, plan, resolvedEquipmentTags);
   const requestDiagnostics = buildProgramGenerationRequestDiagnostics(
     generationProfile,
     plan,
     message,
     env,
+    resolvedEquipmentTags,
   );
 
   const promptWords = message.split(/\s+/).length;
@@ -688,7 +711,10 @@ export async function generateProgramFromProfile(
 
   const requestBody = {
     messages: [{ role: 'user', content: message }],
-    athleteProfile: generationProfile,
+    athleteProfile: {
+      ...generationProfile,
+      resolvedEquipmentTags,
+    },
     roleContext: buildRoleContext(generationProfile),
     coachingPlan: plan.constraints,
     mode: 'generate',
@@ -941,6 +967,7 @@ export async function generateProgramFromProfile(
         getAthletePrefs(),
         generationConstraints,
       ),
+      availableEquipmentTags: resolvedEquipmentTags,
       generationConstraints,
     });
   } catch (normaliseErr: any) {
@@ -1080,7 +1107,11 @@ const DAY_MAP: Record<string, number> = {
  *
  * Previously ~120 lines / ~1500 words. Now ~40 lines / ~400 words.
  */
-function buildGenerationPrompt(data: OnboardingData, plan: CoachingPlan): string {
+function buildGenerationPrompt(
+  data: OnboardingData,
+  plan: CoachingPlan,
+  resolvedEquipmentTags: readonly EquipmentTag[] = resolveEquipmentAvailability(data),
+): string {
   const c = plan.constraints;
   const parts: string[] = [];
 
@@ -1123,9 +1154,17 @@ function buildGenerationPrompt(data: OnboardingData, plan: CoachingPlan): string
   }
 
   const setupConstraints = formatAvailabilityConstraintsForPrompt(data);
+  const rawEquipment = data.equipment?.filter(Boolean) ?? [];
   if (setupConstraints.length > 0) {
     parts.push('\nPROGRAM SETUP CONSTRAINTS:');
     setupConstraints.forEach((line) => parts.push(`• ${line}`));
+  }
+  parts.push('\nEQUIPMENT AVAILABILITY:');
+  parts.push(`• Canonical available equipment tags: ${resolvedEquipmentTags.join(', ')}.`);
+  if (rawEquipment.length > 0) {
+    parts.push(`• Raw checklist values: ${rawEquipment.join(', ')}. Use the canonical tags above as the source of truth.`);
+  } else {
+    parts.push(`• Raw checklist is empty; canonical tags are inferred from trainingLocation=${data.trainingLocation ?? 'Commercial gym'}.`);
   }
 
   // ─── Safety notes (engine-generated, always relevant) ───

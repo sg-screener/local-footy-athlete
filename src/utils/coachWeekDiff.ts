@@ -34,7 +34,8 @@ import {
   type ScheduleState,
   type ResolvedDay,
 } from './sessionResolver';
-import { inferEquipment, DEFAULT_ATHLETE_CONTEXT } from './sessionBuilder';
+import { DEFAULT_ATHLETE_CONTEXT } from './sessionBuilder';
+import { resolveEquipmentAvailability } from './equipmentAvailability';
 import { useProgramStore } from '../store/programStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useProfileStore } from '../store/profileStore';
@@ -121,9 +122,7 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
   const athleteContext = onboardingData
     ? {
         injuries: onboardingData.injuries || [],
-        equipmentTags: inferEquipment(
-          onboardingData.trainingLocation || 'Commercial gym',
-        ),
+        equipmentTags: resolveEquipmentAvailability(onboardingData),
         trainingLocation: onboardingData.trainingLocation || 'Commercial gym',
         onboardingData,
       }
