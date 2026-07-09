@@ -158,6 +158,21 @@ export type CoachMessageRole = 'user' | 'assistant';
 export type IntensityLevel = 'Light' | 'Moderate' | 'High' | 'Maximal';
 
 /**
+ * Attached conditioning kind for strength + conditioning days.
+ *
+ * `hasCombinedConditioning` remains the backward-compatible presence flag.
+ * This field distinguishes the Bible's attached-conditioning dose:
+ *   - finisher: small add-on after strength, usually 8-15min, skippable
+ *   - component: proper planned conditioning block, usually 20-30min
+ *   - speed_component / recovery_addon: reserved typed placeholders
+ */
+export type AttachedConditioningKind =
+  | 'finisher'
+  | 'component'
+  | 'speed_component'
+  | 'recovery_addon';
+
+/**
  * Override Context — structured metadata for manual overrides.
  *
  * When a manual override is created because of game proximity (e.g. coach
@@ -302,6 +317,8 @@ export interface Workout {
   // Combined S+C metadata — set when session pairs strength + conditioning
   /** True when this day has a conditioning block appended after the strength block. */
   hasCombinedConditioning?: boolean;
+  /** Dose/type of the attached conditioning block when `hasCombinedConditioning` is true. */
+  attachedConditioningKind?: AttachedConditioningKind;
   /** Conditioning flavour for combined or standalone conditioning sessions. */
   conditioningFlavour?: 'aerobic' | 'tempo' | 'high-intensity';
   /**
@@ -407,6 +424,8 @@ export interface ConditioningOption {
 export interface ConditioningBlock {
   /** Intent of the session — all options share this intent. */
   intent: 'aerobic' | 'tempo' | 'high-intensity';
+  /** Dose/type when this block is attached to a strength session. */
+  attachedKind?: AttachedConditioningKind;
   /**
    * Equivalent conditioning choices for this session. When length === 1
    * the renderer shows a single prescription; when length > 1 it shows

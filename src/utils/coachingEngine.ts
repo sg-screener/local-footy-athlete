@@ -24,6 +24,7 @@ import type {
   SprintExposure,
   RecentTrainingLoad,
   TeamTrainingIntensity,
+  AttachedConditioningKind,
 } from '../types/domain';
 import { logger } from './logger';
 import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
@@ -72,6 +73,8 @@ export interface SessionAllocation {
   isHardExposure: boolean;
   /** When true, this day has a conditioning block appended after the strength block. */
   hasCombinedConditioning?: boolean;
+  /** Finisher vs proper conditioning component for attached S+C work. */
+  attachedConditioningKind?: AttachedConditioningKind;
   /** Conditioning flavour for COND or S+C days — guides the resolver/builder. */
   conditioningFlavour?: 'aerobic' | 'tempo' | 'high-intensity';
   /**
@@ -1835,6 +1838,35 @@ function buildWeeklyPlan(
       | { allow: true; category: CondCategory; downgraded: boolean; offFeetOnly?: boolean }
       | { allow: false; reason: string };
 
+    function isHardConditioningCategory(category: CondCategory): boolean {
+      return category === 'vo2' || category === 'glycolytic' || category === 'sprint';
+    }
+
+    function attachedKindFor(
+      category: CondCategory,
+      strengthContext: FinisherStrengthContext,
+    ): AttachedConditioningKind {
+      if (
+        strengthContext === 'upper' &&
+        (category === 'tempo' || category === 'vo2' || category === 'glycolytic')
+      ) {
+        return 'component';
+      }
+      return 'finisher';
+    }
+
+    function attachedConditioningCredit(kind: AttachedConditioningKind): number {
+      return kind === 'component' ? 1.0 : 0.75;
+    }
+
+    function hardAttachedComponentCount(): number {
+      return plan.filter((s) =>
+        s.attachedConditioningKind === 'component' &&
+        s.conditioningCategory !== undefined &&
+        isHardConditioningCategory(s.conditioningCategory as CondCategory)
+      ).length;
+    }
+
     function planHighStressDayCount(): number {
       const highDows = new Set<number>();
       for (const s of plan) {
@@ -1972,6 +2004,14 @@ function buildWeeklyPlan(
       // Low readiness still goes all the way down to aerobic.
       if (isHardCategory) {
         if (readiness === 'low') return easy(true);
+        if (
+          strengthContext !== 'standalone' &&
+          inputs.seasonPhase === 'Off-season' &&
+          isHardConditioningCategory(requestedCategory) &&
+          hardAttachedComponentCount() >= 1
+        ) {
+          return { allow: true, category: 'tempo', downgraded: true };
+        }
         if (planHighStressDayCount() >= 4) {
           return { allow: true, category: 'tempo', downgraded: true };
         }
@@ -1987,13 +2027,16 @@ function buildWeeklyPlan(
           requestedCategory: CondCategory;
           category: CondCategory;
           downgraded: boolean;
+          attachedKind: AttachedConditioningKind;
           offFeetOnly?: boolean;
         }
       | { attach: false; reason: string };
 
     function steadyAerobicFinisherCount(): number {
       return plan.filter((s) =>
-        s.hasCombinedConditioning && s.conditioningCategory === 'aerobic_base'
+        s.hasCombinedConditioning &&
+        (s.attachedConditioningKind ?? 'finisher') === 'finisher' &&
+        s.conditioningCategory === 'aerobic_base'
       ).length;
     }
 
@@ -2016,7 +2059,8 @@ function buildWeeklyPlan(
       }
 
       const category = decision.category;
-      if (category === 'aerobic_base') {
+      const attachedKind = attachedKindFor(category, args.strengthContext);
+      if (attachedKind === 'finisher' && category === 'aerobic_base') {
         if (steadyAerobicFinisherCount() >= MAX_STEADY_AEROBIC_FINISHERS) {
           return { attach: false, reason: 'steady_aerobic_finisher_cap' };
         }
@@ -2027,6 +2071,7 @@ function buildWeeklyPlan(
         requestedCategory: args.requestedCategory,
         category,
         downgraded: decision.downgraded,
+        attachedKind,
         offFeetOnly: decision.offFeetOnly,
       };
     }
@@ -3069,32 +3114,34 @@ function buildWeeklyPlan(
       flavour: CondFlavour,
       category: CondCategory,
       useNonRunning: boolean,
+      attachedKind: AttachedConditioningKind = 'finisher',
     ): string {
+      const noun = attachedKind === 'component' ? 'conditioning component' : 'finisher';
       if (category === 'aerobic_base') {
         return useNonRunning
-          ? 'easy off-feet aerobic finisher (bike steady or row/ski intervals, 15-25min)'
-          : 'aerobic base finisher (20min zone 2)';
+          ? `easy off-feet aerobic ${noun} (bike steady or row/ski intervals, ${attachedKind === 'component' ? '20-30min' : '8-15min'})`
+          : `aerobic base ${noun} (${attachedKind === 'component' ? '20-30min' : '8-15min'} zone 2)`;
       }
       if (category === 'tempo') {
         // 4B: TRUE tempo — controlled repeat efforts, 6-7/10, medium.
         return useNonRunning
-          ? 'tempo conditioning finisher (bike/row/ski, controlled repeat efforts 6-7/10, 10-15min)'
-          : 'tempo conditioning finisher (controlled repeat efforts 6-7/10, 10-15min)';
+          ? `tempo ${noun} (bike/row/ski, controlled repeat efforts 6-7/10, ${attachedKind === 'component' ? '20-30min' : '10-15min'})`
+          : `tempo ${noun} (controlled repeat efforts 6-7/10, ${attachedKind === 'component' ? '20-30min' : '10-15min'})`;
       }
       if (category === 'sprint') {
         return useNonRunning
-          ? 'sprint conditioning finisher (bike/rower/ski erg, quality, ≤15min)'
-          : 'sprint conditioning finisher (quality, ≤15min)';
+          ? `sprint ${noun} (bike/rower/ski erg, quality, ${attachedKind === 'component' ? '20-30min' : '≤15min'})`
+          : `sprint ${noun} (quality, ${attachedKind === 'component' ? '20-30min' : '≤15min'})`;
       }
       if (category === 'vo2') {
         return useNonRunning
-          ? 'VO2 / hard repeat effort finisher (bike/rower intervals, 15min)'
-          : 'VO2 / hard repeat effort finisher (15min intervals)';
+          ? `VO2 conditioning component (bike/rower hard repeat efforts, ${attachedKind === 'component' ? '20-30min' : '15min'})`
+          : `VO2 conditioning component (hard repeat efforts, ${attachedKind === 'component' ? '20-30min' : '15min'})`;
       }
       // glycolytic
       return useNonRunning
-        ? 'high-intensity conditioning finisher (bike/rower intervals, 15min)'
-        : 'high-intensity conditioning finisher (15min intervals)';
+        ? `${attachedKind === 'component' ? 'high-intensity conditioning component' : 'high-intensity finisher'} (bike/rower repeat efforts, ${attachedKind === 'component' ? '20-30min' : '15min'})`
+        : `${attachedKind === 'component' ? 'high-intensity conditioning component' : 'high-intensity finisher'} (repeat efforts, ${attachedKind === 'component' ? '20-30min' : '15min'})`;
     }
 
     // ── Determine strength subtype for S+C ──
@@ -3428,7 +3475,8 @@ function buildWeeklyPlan(
           // ski erg) — even the easy finisher spares the legs.
           const lowerStrengthSC = isLower(bestSCStrength);
           const useNonRunning = lowerStrengthSC;
-          const condLabel = buildCondLabel(flavour, category, useNonRunning);
+          const attachedKind = decision.attachedKind;
+          const condLabel = buildCondLabel(flavour, category, useNonRunning, attachedKind);
           // B1/B2: stress from the PLACED components (not the pickers, which
           // are stateful): lower/FB strength half or HARD conditioning half
           // → high; upper + easy aerobic / tempo (4B: medium) → medium.
@@ -3444,6 +3492,7 @@ function buildWeeklyPlan(
             dayOfWeek: slot.dayName,
             isHardExposure: true,
             hasCombinedConditioning: true,
+            attachedConditioningKind: attachedKind,
             conditioningFlavour: flavour,
             conditioningCategory: category,
             strengthPattern: buildStrengthPattern(bestSCStrength),
@@ -3452,7 +3501,7 @@ function buildWeeklyPlan(
 
           // Update state for BOTH strength and conditioning
           st.coreStrengthCount++;
-          st.condCount += 0.75;
+          st.condCount += attachedConditioningCredit(attachedKind);
           st.condFlavours[flavour]++;
           st.condCategories[category]++;
           // Pattern count for the strength component
@@ -3632,15 +3681,17 @@ function buildWeeklyPlan(
           s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
           s.strengthPattern === 'full_body';
         const useNonRunning = lowerStrengthSC;
-        const condLabel = buildCondLabel(flavour, category, useNonRunning);
+        const attachedKind = decision.attachedKind;
+        const condLabel = buildCondLabel(flavour, category, useNonRunning, attachedKind);
         plan[i] = {
           ...s,
           focus: `${s.focus} + ${condLabel}`,
           hasCombinedConditioning: true,
+          attachedConditioningKind: attachedKind,
           conditioningFlavour: flavour,
           conditioningCategory: category,
         };
-        st.condCount += 0.75;
+        st.condCount += attachedConditioningCredit(attachedKind);
         st.condFlavours[flavour]++;
         st.condCategories[category]++;
         if (slotPos !== undefined) {
@@ -3762,7 +3813,67 @@ function buildWeeklyPlan(
           st.lastCondDay = prevLastCondDay;
           st.lastCondCategory = prevLastCondCategory;
         }
-        void lastCondPos; void lastCondCat; // silence unused
+      }
+      void lastCondPos; void lastCondCat; // silence unused
+    }
+
+    // ── Post-validation: off-season 4-day exposure preservation ──
+    // Components count as full conditioning exposures, but they must not make
+    // the engine drop useful easy lower flushes. If a no-team off-season week
+    // still has pure strength days and room under the steady-finisher cap,
+    // add only easy aerobic finishers until conditioning exposure count
+    // matches the strength-day count. This preserves useful exposure without
+    // converting duplicate filler into hidden hard work.
+    if (inputs.seasonPhase === 'Off-season' && teamDayNumSet.size === 0 && core >= 4) {
+      const targetAttachedExposureCount = Math.min(core, condTarget);
+      const currentAttachedExposureCount = () =>
+        plan.filter((s) => !!s.conditioningCategory || !!s.hasCombinedConditioning).length;
+      const pureStrength = plan
+        .map((s, i) => ({ s, i }))
+        .filter(({ s }) =>
+          s.tier === 'core' &&
+          !!s.strengthPattern &&
+          !s.hasCombinedConditioning &&
+          !s.conditioningFlavour &&
+          !s.conditioningCategory
+        )
+        .sort((a, b) => {
+          const aLower = strengthContextOf(a.s.strengthPattern) !== 'upper' ? 0 : 1;
+          const bLower = strengthContextOf(b.s.strengthPattern) !== 'upper' ? 0 : 1;
+          if (aLower !== bLower) return aLower - bLower;
+          const aDay = a.s.dayOfWeek ? dayNameToNumber(a.s.dayOfWeek) : 99;
+          const bDay = b.s.dayOfWeek ? dayNameToNumber(b.s.dayOfWeek) : 99;
+          return aDay - bDay;
+        });
+
+      for (const { s } of pureStrength) {
+        if (currentAttachedExposureCount() >= targetAttachedExposureCount) break;
+        const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
+        if (dayNum < 0) continue;
+        const slotPos = trainingOrder(dayNum);
+        const decision = shouldAttachFinisher({
+          dayNum,
+          requestedCategory: 'aerobic_base',
+          strengthContext: strengthContextOf(s.strengthPattern),
+        });
+        if (!decision.attach) continue;
+        const category = decision.category;
+        const flavour = categoryToFlavour(category);
+        const attachedKind = decision.attachedKind;
+        const lowerStrengthSC =
+          s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
+          s.strengthPattern === 'full_body';
+        const useNonRunning = lowerStrengthSC;
+        s.focus = `${s.focus} + ${buildCondLabel(flavour, category, useNonRunning, attachedKind)}`;
+        s.hasCombinedConditioning = true;
+        s.attachedConditioningKind = attachedKind;
+        s.conditioningFlavour = flavour;
+        s.conditioningCategory = category;
+        st.condCount += attachedConditioningCredit(attachedKind);
+        st.condFlavours[flavour]++;
+        st.condCategories[category]++;
+        st.lastCondDay = slotPos;
+        st.lastCondCategory = category;
       }
     }
 
@@ -4373,6 +4484,7 @@ function applyInSeasonConditioningFloor(
     const isLower =
       s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined';
     s.hasCombinedConditioning = true;
+    s.attachedConditioningKind = 'finisher';
     s.conditioningCategory = 'aerobic_base';
     s.conditioningFlavour = 'aerobic';
     if (isLower) {
@@ -4602,6 +4714,7 @@ function enforceInSeasonPushPullBalance(
         chosen.conditioningVariant = undefined;
         chosen.ergModality = undefined;
         chosen.hasCombinedConditioning = false;
+        chosen.attachedConditioningKind = undefined;
         succeeded = true;
       }
     }
@@ -4646,6 +4759,7 @@ function enforceInSeasonPushPullBalance(
         tdChosen.conditioningVariant = undefined;
         tdChosen.ergModality = undefined;
         tdChosen.hasCombinedConditioning = false;
+        tdChosen.attachedConditioningKind = undefined;
         succeeded = true;
       }
     }
@@ -5168,9 +5282,13 @@ function enforceFieldLoadStreak(plan: SessionAllocation[]): void {
     // Standalone conditioning is the most replaceable field-load day.
     const standalone = !!(s.conditioningFlavour || s.conditioningCategory) && !s.hasCombinedConditioning;
     if (standalone) return true;
-    // Combined conditioning on a non-hard-exposure day is also breakable
-    // (we can strip the conditioning tail and keep the strength).
-    if (s.hasCombinedConditioning && !s.isHardExposure) return true;
+    // Only small finishers are breakable. Proper attached components are
+    // planned conditioning work and must not be stripped by finisher cleanup.
+    if (
+      s.hasCombinedConditioning &&
+      (s.attachedConditioningKind ?? 'finisher') === 'finisher' &&
+      !s.isHardExposure
+    ) return true;
     return false;
   };
 
@@ -5187,6 +5305,7 @@ function enforceFieldLoadStreak(plan: SessionAllocation[]): void {
       s.conditioningFeel = undefined;
       s.conditioningVariant = undefined;
       s.ergModality = undefined;
+      s.attachedConditioningKind = undefined;
       s.isHardExposure = false;
       // Standalone conditioning demoted to mobility is no longer a
       // strength exposure — clear any carried-over pattern (defensive;
@@ -5196,6 +5315,7 @@ function enforceFieldLoadStreak(plan: SessionAllocation[]): void {
     }
     if (s.hasCombinedConditioning) {
       s.hasCombinedConditioning = false;
+      s.attachedConditioningKind = undefined;
       s.conditioningFlavour = undefined;
       s.conditioningCategory = undefined;
       s.conditioningFeel = undefined;

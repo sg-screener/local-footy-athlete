@@ -8,6 +8,7 @@ import {
   SessionTier,
   OnboardingData,
   SeasonPhase,
+  AttachedConditioningKind,
   ConditioningBlock,
   IntensityLevel,
   WorkoutType,
@@ -977,6 +978,7 @@ function validatePairings(
 function buildConditioningBlock(
   flavour: 'aerobic' | 'tempo' | 'high-intensity',
   condBlock: WorkoutExercise[],
+  attachedKind?: AttachedConditioningKind,
 ): ConditioningBlock | undefined {
   if (!condBlock || condBlock.length === 0) return undefined;
 
@@ -992,6 +994,7 @@ function buildConditioningBlock(
 
   return {
     intent: flavour,
+    ...(attachedKind ? { attachedKind } : {}),
     options: [
       {
         title: headlineName,
@@ -1578,6 +1581,7 @@ export function buildWorkoutsFromCoach(
       const condBlock = resolved?.exercises
         ?? buildConditioningTemplate(condExName, dateStr, {
           combined: true,
+          attachedConditioningKind: planEntry.attachedConditioningKind ?? 'finisher',
           strengthRegion: inferStrengthRegionFromFocus(planEntry.focus),
           feel: planEntry.conditioningFeel as ConditioningFeel | undefined,
           ergModality: planEntry.ergModality as ErgModality | undefined,
@@ -1599,6 +1603,7 @@ export function buildWorkoutsFromCoach(
       resolvedConditioningBlock = buildConditioningBlock(
         planEntry.conditioningFlavour,
         condBlock,
+        planEntry.attachedConditioningKind ?? 'finisher',
       );
 
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} COMBINED S+C — strength=${strengthBlock.length} exercises (AI) + conditioning="${condExName}"${resolved?.shiftedFromRun ? ' [SHIFTED off-feet]' : ''} (template, ${condBlock.length} exercises)`);
@@ -1624,6 +1629,7 @@ export function buildWorkoutsFromCoach(
       workoutType: normalizeGeneratedWorkoutType(cw, planEntry),
       sessionTier: canonicalTier,
       ...(planEntry?.hasCombinedConditioning ? { hasCombinedConditioning: true } : {}),
+      ...(planEntry?.attachedConditioningKind ? { attachedConditioningKind: planEntry.attachedConditioningKind } : {}),
       ...(planEntry?.conditioningFlavour ? { conditioningFlavour: planEntry.conditioningFlavour } : {}),
       ...(planEntry?.conditioningCategory ? { conditioningCategory: planEntry.conditioningCategory } : {}),
       ...(resolvedConditioningBlock ? { conditioningBlock: resolvedConditioningBlock } : {}),

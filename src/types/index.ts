@@ -16,6 +16,7 @@ export type {
   ScheduleEventType,
   CoachMessageRole,
   IntensityLevel,
+  AttachedConditioningKind,
 } from './domain';
 
 export type {

@@ -39,6 +39,8 @@ import {
   onboardingToCoachingInputs,
   type SessionAllocation,
 } from '../utils/coachingEngine';
+import { buildWorkoutsFromCoach } from '../data/defaultProgram';
+import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
 import type { OnboardingData } from '../types/domain';
 
 // ─── Harness ─────────────────────────────────────────────────────────
@@ -62,6 +64,10 @@ const isLowerish = (s: SessionAllocation) =>
   s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
   s.strengthPattern === 'full_body';
 const hasFinisher = (s: SessionAllocation) => !!s.hasCombinedConditioning;
+const isAttachedFinisher = (s: SessionAllocation) =>
+  !!s.hasCombinedConditioning && (s.attachedConditioningKind ?? 'finisher') === 'finisher';
+const isAttachedComponent = (s: SessionAllocation) =>
+  !!s.hasCombinedConditioning && s.attachedConditioningKind === 'component';
 // "Above easy" — anything that is not easy aerobic (tempo counts: a
 // lower day / low-readiness week must not even carry tempo).
 const finisherAboveEasy = (s: SessionAllocation) =>
@@ -71,7 +77,12 @@ const finisherHard = (s: SessionAllocation) =>
   !!s.conditioningCategory && s.conditioningCategory !== 'aerobic_base' &&
   s.conditioningCategory !== 'tempo';
 const steadyAerobicFinishers = (plan: SessionAllocation[]) =>
-  plan.filter((s) => hasFinisher(s) && s.conditioningCategory === 'aerobic_base');
+  plan.filter((s) => isAttachedFinisher(s) && s.conditioningCategory === 'aerobic_base');
+
+const DAY_NUM: Record<string, number> = {
+  Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+  Thursday: 4, Friday: 5, Saturday: 6,
+};
 
 const OFF_SEASON_BASE: Partial<OnboardingData> = {
   seasonPhase: 'Off-season', trainingDaysPerWeek: 4,
@@ -142,6 +153,13 @@ console.log('\n── 2. Lower/hinge days: easy off-feet aerobic only ──');
     ok('lower-day finishers are labelled off-feet easy aerobic',
       lowerFinishers.every((s) => /off-feet aerobic/i.test(s.focus)),
       lowerFinishers.map((s) => s.focus).join(' | '));
+    ok('lower/hinge/full attached conditioning is typed as finisher, not component',
+      lowerFinishers.every((s) => (s.attachedConditioningKind ?? 'finisher') === 'finisher'),
+      lowerFinishers.map((s) => `${s.dayOfWeek}: ${s.attachedConditioningKind ?? 'missing'}`).join(' | '));
+    const lowerComponents = plan.filter((s) => isLowerish(s) && isAttachedComponent(s));
+    ok('lower/hinge/full never receives an attached conditioning component',
+      lowerComponents.length === 0,
+      lowerComponents.map((s) => `${s.dayOfWeek}: ${s.focus}`).join(' | '));
   }
 }
 
@@ -266,16 +284,42 @@ console.log('\n── 6. Upper + hard non-sprint allowed only when gates pass �
     sprintExposure: '2+ times per week',
   });
   const hardFinishers = plan.filter((s) => hasFinisher(s) && finisherHard(s));
-  ok('eligible clean off-season upper path produces at least one VO2/glyco finisher',
+  const hardComponents = hardFinishers.filter(isAttachedComponent);
+  ok('eligible clean off-season upper path produces at least one VO2/glyco component',
     hardFinishers.some((s) => s.conditioningCategory === 'vo2' || s.conditioningCategory === 'glycolytic'),
     plan.map((s) => `${s.dayOfWeek}:${s.strengthPattern ?? '-'}:${s.conditioningCategory ?? '-'}`).join(' | '));
-  ok('any hard finisher sits on an upper day only',
+  ok('hard attached conditioning is typed as component',
+    hardComponents.length >= 1 && hardFinishers.every(isAttachedComponent),
+    hardFinishers.map((s) => `${s.dayOfWeek}: ${s.attachedConditioningKind ?? 'missing'}: ${s.focus}`).join(' | '));
+  ok('off-season v1 has max one hard attached conditioning component',
+    hardComponents.length <= 1,
+    hardComponents.map((s) => `${s.dayOfWeek}: ${s.conditioningCategory}`).join(' | '));
+  ok('any hard component sits on an upper day only',
     hardFinishers.every((s) => !isLowerish(s)),
     hardFinishers.map((s) => `${s.dayOfWeek}: ${s.strengthPattern}: ${s.focus}`).join(' | '));
   const tempoFinishers = plan.filter((s) => hasFinisher(s) && s.conditioningCategory === 'tempo');
-  ok('any tempo finisher sits on an upper day only',
+  ok('any tempo attached component sits on an upper day only',
     tempoFinishers.every((s) => !isLowerish(s)),
     tempoFinishers.map((s) => `${s.dayOfWeek}: ${s.strengthPattern}: ${s.focus}`).join(' | '));
+
+  const hardComponent = hardComponents[0];
+  if (hardComponent?.dayOfWeek) {
+    const workouts = buildWorkoutsFromCoach([], 'mc-attached-kind', plan);
+    const workout = workouts.find((w) => w.dayOfWeek === DAY_NUM[hardComponent.dayOfWeek!]);
+    ok('built workout carries attachedConditioningKind=component',
+      workout?.attachedConditioningKind === 'component',
+      `${workout?.name}: ${workout?.attachedConditioningKind ?? 'missing'}`);
+    ok('conditioningBlock carries attachedKind=component',
+      workout?.conditioningBlock?.attachedKind === 'component',
+      JSON.stringify(workout?.conditioningBlock));
+    const counts = countWeeklyExposures([{ date: '2026-07-06', workout: workout ?? null }]);
+    ok('hard component counts as a hard exposure',
+      counts.hardExposures >= 1 && counts.byCategory.hard_conditioning === 1,
+      JSON.stringify({ hardExposures: counts.hardExposures, byCategory: counts.byCategory }));
+    ok('component counts as a full conditioning exposure',
+      counts.conditioningExposures === 1 && counts.extraConditioningSessions === 1,
+      JSON.stringify({ conditioning: counts.conditioningExposures, extra: counts.extraConditioningSessions }));
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════════
@@ -421,6 +465,9 @@ console.log('\n── 9. 4B content layer: mappings + true tempo templates ─�
       TEMPO_TEMPLATES.includes(name), name);
   }
 
+  const textOfRows = (rows: ReturnType<typeof sb.buildConditioningTemplate>) =>
+    rows.map((e) => `${e.exercise?.name} ${e.notes}`).join(' ');
+
   // Combined tempo finisher: small (≤2 rows), 6-7/10 language, erg-based.
   const finisher = sb.buildCombinedConditioningTemplate('tempo', '2026-07-06', 'upper', undefined, 'row');
   ok('combined tempo finisher builds rows', finisher.length >= 1 && finisher.length <= 2,
@@ -430,6 +477,24 @@ console.log('\n── 9. 4B content layer: mappings + true tempo templates ─�
     /6-7\/10/.test(finText), finText.slice(0, 160));
   ok('combined tempo finisher is not VO2/hard-labelled',
     !/vo2|8-9\/10|9\/10/i.test(finText), finText.slice(0, 160));
+
+  const tempoComponent = sb.buildAttachedConditioningComponentTemplate('tempo', '2026-07-06', 'upper', 'grindy', 'row');
+  const tempoComponentText = textOfRows(tempoComponent);
+  ok('attached tempo component is larger than the compact finisher',
+    tempoComponent.length >= 2 && /20-24min|20-30min|component/i.test(tempoComponentText),
+    tempoComponentText.slice(0, 220));
+  ok('attached tempo component uses component wording',
+    /conditioning component/i.test(tempoComponentText),
+    tempoComponentText.slice(0, 220));
+
+  const vo2Component = sb.buildAttachedConditioningComponentTemplate('vo2', '2026-07-06', 'upper', 'grindy', 'bike');
+  const vo2ComponentText = textOfRows(vo2Component);
+  ok('attached VO2 component has honest component label',
+    /VO2 conditioning component/i.test(vo2ComponentText) && /8-9\/10/.test(vo2ComponentText),
+    vo2ComponentText.slice(0, 220));
+  ok('attached VO2 component is bigger than a finisher dose',
+    /20-30min component|4 x 3min|5 x 2min/i.test(vo2ComponentText),
+    vo2ComponentText.slice(0, 220));
 
   // Standalone templates all build; off-feet erg template honours modality.
   for (const t of TEMPO_TEMPLATES) {
@@ -456,8 +521,6 @@ console.log('\n── 9. 4B content layer: mappings + true tempo templates ─�
   const longBike = sb.buildConditioningTemplate('Long Nasal Run', '2026-07-06', { ergModality: 'bike' });
   const longRow = sb.buildConditioningTemplate('Long Nasal Run', '2026-07-06', { ergModality: 'row' });
   const longSki = sb.buildConditioningTemplate('Long Nasal Run', '2026-07-06', { ergModality: 'ski' });
-  const textOfRows = (rows: ReturnType<typeof sb.buildConditioningTemplate>) =>
-    rows.map((e) => `${e.exercise?.name} ${e.notes}`).join(' ');
   const bikeText = textOfRows([...combinedBike, ...longBike]);
   ok('bike can still be prescribed as 20+ minutes steady',
     /\b(?:2[0-9]|3[0-9]|4[0-9])min zone 2 on Assault Bike\b/i.test(bikeText) &&

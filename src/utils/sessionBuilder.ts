@@ -29,6 +29,7 @@ import type {
   IntensityLevel,
   WorkoutType,
   SessionTier,
+  AttachedConditioningKind,
 } from '../types/domain';
 import {
   POOL_REGISTRY,
@@ -1135,6 +1136,11 @@ export function buildConditioningTemplate(
      * avoided. 'mixed' = row+ski combo.
      */
     ergModality?: ErgModality;
+    /**
+     * Attached dose model for combined strength + conditioning days.
+     * Defaults to 'finisher' for backward compatibility.
+     */
+    attachedConditioningKind?: AttachedConditioningKind;
   },
 ): WorkoutExercise[] {
   // Sprint-rescue micro-dose / reduced-volume sessions short-circuit to
@@ -1158,9 +1164,14 @@ export function buildConditioningTemplate(
   if (opts?.combined) {
     const category = getTemplateCategory(exerciseName);
     if (category) {
-      const scaled = buildCombinedConditioningTemplate(
-        category, dateStr, opts.strengthRegion, opts.feel, opts.ergModality,
-      );
+      const attachedKind = opts.attachedConditioningKind ?? 'finisher';
+      const scaled = attachedKind === 'component'
+        ? buildAttachedConditioningComponentTemplate(
+            category, dateStr, opts.strengthRegion, opts.feel, opts.ergModality,
+          )
+        : buildCombinedConditioningTemplate(
+            category, dateStr, opts.strengthRegion, opts.feel, opts.ergModality,
+          );
       if (
         category !== 'aerobic_base' &&
         opts.strengthRegion !== 'lower' &&
@@ -1481,6 +1492,133 @@ export function buildCombinedConditioningTemplate(
             pairingNote ?? 'Conversational pace',
           )),
       ];
+  }
+}
+
+/**
+ * Build a proper attached conditioning component for S+C days.
+ *
+ * Components are larger than finishers and should read like planned
+ * conditioning work, not filler appended to chase volume.
+ */
+export function buildAttachedConditioningComponentTemplate(
+  category: ConditioningCategory,
+  dateStr: string,
+  strengthRegion?: 'lower' | 'upper' | 'full',
+  feel?: ConditioningFeel,
+  ergModality?: ErgModality,
+): WorkoutExercise[] {
+  const hash = conditioningDateHash(dateStr);
+  const prefix = `cond-${dateStr}-component`;
+  const allMods = ['bike', 'row', 'ski'] as const;
+  const legSparingMods = ['ski', 'row', 'bike'] as const;
+  const isLowerPairing = strengthRegion === 'lower' || strengthRegion === 'full';
+  const modPool = isLowerPairing ? legSparingMods : allMods;
+  const mod = ergModality && ergModality !== 'mixed'
+    ? ergModality
+    : modPool[hash % modPool.length];
+  const selectedErgModality: ErgModality = ergModality === 'mixed' ? 'mixed' : mod;
+  const modLabel = modLabelFromErgSelection(selectedErgModality);
+  const pairingNote = isLowerPairing ? LOWER_BODY_MACHINE_NOTE : undefined;
+
+  switch (category) {
+    case 'aerobic_base': {
+      const duration = 25 + (hash % 2) * 5; // 25 or 30 min
+      const prescription = aerobicErgPrescription(selectedErgModality, duration, 'zone 2');
+      return [
+        condEx(`${prefix}-aero`, `Aerobic conditioning component (${prescription.title})`, 1, prescription.sets, 1, 1, prescription.restSeconds,
+          noteLines(
+            prescription.workLine,
+            prescription.restLine,
+            '5-6/10 effort',
+            pairingNote ?? 'Conversational pace',
+            'Full conditioning component, not a small finisher',
+          )),
+      ];
+    }
+    case 'tempo': {
+      const rounds = feel === 'sharp' ? 10 : feel === 'flowing' ? 12 : 11; // 20-24min including easy floats
+      return [
+        condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
+          shortWarmup(modLabel)),
+        condEx(`${prefix}-tempo`, `Tempo conditioning component ${rounds} x (1min on / 1min easy) - ${modLabel}`, 2, rounds, 1, 1, 60,
+          noteLines(
+            `${rounds} x 1min on / 1min easy on ${modLabel}`,
+            '20-24min total tempo block',
+            '6-7/10 on the work - controlled repeat efforts',
+            'Full conditioning component, not a small finisher',
+            pairingNote,
+          )),
+      ];
+    }
+    case 'vo2': {
+      const variantIdx = feel === 'sharp' ? 1 : feel === 'flowing' ? 2 : 0;
+      const [reps, workSec, restSec, label] =
+        variantIdx === 1 ? [5, 120, 120, '5 x 2min']
+        : variantIdx === 2 ? [4, 150, 150, '4 x 2.5min']
+        : [4, 180, 120, '4 x 3min'];
+      return [
+        condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
+          shortWarmup(modLabel)),
+        condEx(`${prefix}-vo2`, `VO2 conditioning component (${label} - ${modLabel})`, 2, reps as number, 1, 1, restSec as number,
+          noteLines(
+            `${label} hard on ${modLabel}`,
+            easyBetweenReps(restSec as number),
+            `${Math.round((reps as number) * (workSec as number) / 60)}min hard work inside a 20-30min component`,
+            '8-9/10 effort',
+            pairingNote,
+          )),
+      ];
+    }
+    case 'glycolytic': {
+      const variantIdx = feel === 'sharp' ? 1 : feel === 'flowing' ? 2 : 0;
+      if (variantIdx === 1) {
+        return [
+          condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
+            shortWarmup(modLabel)),
+          condEx(`${prefix}-glyco-sharp`, `High-intensity conditioning component 12 x 30s - ${modLabel}`, 2, 12, 1, 1, 90,
+            noteLines(
+              `12 x 30s hard on ${modLabel}`,
+              '90s easy between reps',
+              '8-9/10 repeat efforts',
+              'Full conditioning component, not a small finisher',
+              pairingNote,
+            )),
+        ];
+      }
+      if (variantIdx === 2) {
+        return [
+          condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
+            shortWarmup(modLabel)),
+          condEx(`${prefix}-glyco-flow`, `High-intensity conditioning component 40:20 x 3 rounds - ${modLabel}`, 2, 3, 1, 1, 120,
+            noteLines(
+              `40s hard / 20s easy x 4min on ${modLabel}`,
+              '3 rounds, 2min easy between rounds',
+              '8-9/10 repeat efforts',
+              `${masIntensityLabel(40)} target`,
+              pairingNote,
+            )),
+        ];
+      }
+      return [
+        condEx(`${prefix}-warmup`, `${modLabel} warm-up`, 1, 1, 1, 1, 0,
+          shortWarmup(modLabel)),
+        condEx(`${prefix}-glyco-grind`, `High-intensity conditioning component 5 x 2min - ${modLabel}`, 2, 5, 1, 1, 120,
+          noteLines(
+            `5 x 2min hard on ${modLabel}`,
+            '2min easy between reps',
+            '8-9/10 repeat efforts',
+            'Full conditioning component, not a small finisher',
+            pairingNote,
+          )),
+      ];
+    }
+    case 'sprint':
+      // Placeholder only. The engine should not request attached sprint in v1;
+      // if legacy data does, keep the existing compact sprint template.
+      return buildCombinedConditioningTemplate(category, dateStr, strengthRegion, feel, ergModality);
+    default:
+      return buildCombinedConditioningTemplate('aerobic_base', dateStr, strengthRegion, feel, ergModality);
   }
 }
 
