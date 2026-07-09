@@ -647,157 +647,218 @@ function printScenario(
 // SCENARIOS
 // ═══════════════════════════════════════════════════
 
-const BASE_PROFILE: Partial<OnboardingData> = {
-  trainingDaysPerWeek: 5,
-  preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-  teamTrainingDaysPerWeek: 2,
-  teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingIntensity: 'Hard',
-  sprintExposure: '2+ times per week',
-  conditioningLevel: 'Good',
-  recentTrainingLoad: 'Very consistent',
-  injuries: [],
-  motivation: 'Get stronger, Run faster',
-};
+const STANDARD_AVAILABLE_DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const SIX_DAY_AVAILABLE_DAYS: DayOfWeek[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const STANDARD_TEAM_DAYS: DayOfWeek[] = ['Tuesday', 'Thursday'];
+
+function buildAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
+  return {
+    trainingDaysPerWeek: 5,
+    preferredTrainingDays: [...STANDARD_AVAILABLE_DAYS],
+    teamTrainingDaysPerWeek: 2,
+    teamTrainingDays: [...STANDARD_TEAM_DAYS],
+    teamTrainingIntensity: 'Hard',
+    sprintExposure: '2+ times per week',
+    conditioningLevel: 'Good',
+    recentTrainingLoad: 'Very consistent',
+    injuries: [],
+    motivation: 'Get stronger, Run faster',
+    ...overrides,
+  };
+}
+
+function inSeasonStandardAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
+  return buildAthlete({
+    seasonPhase: 'In-season',
+    gameDay: 'Saturday',
+    ...overrides,
+  });
+}
+
+function preSeasonStandardAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
+  return buildAthlete({
+    seasonPhase: 'Pre-season',
+    gameDay: 'Saturday',
+    ...overrides,
+  });
+}
+
+function offSeasonStandardAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
+  return buildAthlete({
+    seasonPhase: 'Off-season',
+    gameDay: undefined,
+    ...overrides,
+  });
+}
+
+function offSeasonLowAvailabilityAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
+  return {
+    seasonPhase: 'Off-season',
+    trainingDaysPerWeek: 4,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday', 'Saturday'],
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    conditioningLevel: 'Good',
+    recentTrainingLoad: 'Pretty consistent',
+    injuries: [],
+    motivation: 'Get stronger',
+    gameDay: undefined,
+    ...overrides,
+  };
+}
+
+function offSeasonThreeTeamDaysAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
+  return {
+    seasonPhase: 'Off-season',
+    trainingDaysPerWeek: 6,
+    preferredTrainingDays: [...SIX_DAY_AVAILABLE_DAYS],
+    teamTrainingDaysPerWeek: 3,
+    teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+    teamTrainingIntensity: 'Moderate',
+    conditioningLevel: 'Good',
+    recentTrainingLoad: 'Very consistent',
+    injuries: [],
+    motivation: 'Get stronger',
+    gameDay: undefined,
+    ...overrides,
+  };
+}
+
+function inSeasonLowAvailabilityAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
+  return {
+    seasonPhase: 'In-season',
+    trainingDaysPerWeek: 3,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+    teamTrainingDaysPerWeek: 2,
+    teamTrainingDays: [...STANDARD_TEAM_DAYS],
+    teamTrainingIntensity: 'Hard',
+    conditioningLevel: 'Average',
+    recentTrainingLoad: 'Pretty consistent',
+    injuries: [],
+    motivation: 'Get stronger',
+    gameDay: 'Saturday',
+    ...overrides,
+  };
+}
+
+function injuryReadinessConstrainedAthlete(overrides: Partial<OnboardingData> = {}): Partial<OnboardingData> {
+  return {
+    seasonPhase: 'In-season',
+    trainingDaysPerWeek: 4,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
+    teamTrainingDaysPerWeek: 2,
+    teamTrainingDays: [...STANDARD_TEAM_DAYS],
+    teamTrainingIntensity: 'Hard',
+    conditioningLevel: 'Poor',
+    recentTrainingLoad: 'Hardly at all',
+    injuries: [
+      { bodyArea: 'Knee', description: 'Knee pain when running', severity: 'Moderate', whenItHurts: 'Running' },
+      { bodyArea: 'Shoulder', description: 'Mild shoulder niggle', severity: 'Mild', whenItHurts: 'Lifting' },
+    ],
+    motivation: 'Get stronger',
+    gameDay: 'Saturday',
+    ...overrides,
+  };
+}
 
 const scenarios: Scenario[] = [
   // ── Game day permutations ──
   {
     id: 'S1',
     name: 'S1: In-season, Saturday game (baseline)',
-    onboarding: { ...BASE_PROFILE, seasonPhase: 'In-season', gameDay: 'Saturday' },
+    onboarding: inSeasonStandardAthlete(),
   },
   {
     id: 'S2',
     name: 'S2: In-season, Sunday game',
-    onboarding: {
-      ...BASE_PROFILE,
-      seasonPhase: 'In-season',
+    onboarding: inSeasonStandardAthlete({
       gameDay: 'Sunday',
-      preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      preferredTrainingDays: [...SIX_DAY_AVAILABLE_DAYS],
       trainingDaysPerWeek: 6,
-    },
+    }),
   },
   {
     id: 'S3',
     name: 'S3: In-season, Friday night game',
-    onboarding: {
-      ...BASE_PROFILE,
-      seasonPhase: 'In-season',
+    onboarding: inSeasonStandardAthlete({
       gameDay: 'Friday',
       preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Saturday'],
       trainingDaysPerWeek: 5,
-    },
+    }),
   },
   {
     id: 'S4',
     name: 'S4: In-season, NO game (bye week)',
-    onboarding: {
-      ...BASE_PROFILE,
-      seasonPhase: 'In-season',
+    onboarding: inSeasonStandardAthlete({
       gameDay: undefined,
-      preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      preferredTrainingDays: [...SIX_DAY_AVAILABLE_DAYS],
       trainingDaysPerWeek: 6,
-    },
+    }),
   },
 
   // ── Off-season ──
   {
     id: 'S5',
     name: 'S5: Off-season, 5 days, team Tue+Thu',
-    onboarding: { ...BASE_PROFILE, seasonPhase: 'Off-season', gameDay: undefined },
+    onboarding: offSeasonStandardAthlete(),
   },
   {
     id: 'S6',
     name: 'S6: Off-season, 4 days, no team training',
-    onboarding: {
-      seasonPhase: 'Off-season',
-      trainingDaysPerWeek: 4,
-      preferredTrainingDays: ['Monday', 'Wednesday', 'Friday', 'Saturday'],
-      teamTrainingDaysPerWeek: 0,
-      teamTrainingDays: [],
-      conditioningLevel: 'Good',
-      recentTrainingLoad: 'Pretty consistent',
-      injuries: [],
-      motivation: 'Get stronger',
-      gameDay: undefined,
-    },
+    onboarding: offSeasonLowAvailabilityAthlete(),
   },
   {
     id: 'S7',
     name: 'S7: Off-season, 6 days, team Mon+Wed+Fri',
-    onboarding: {
-      seasonPhase: 'Off-season',
-      trainingDaysPerWeek: 6,
-      preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-      teamTrainingDaysPerWeek: 3,
-      teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
-      teamTrainingIntensity: 'Moderate',
-      conditioningLevel: 'Good',
-      recentTrainingLoad: 'Very consistent',
-      injuries: [],
-      motivation: 'Get stronger',
-      gameDay: undefined,
-    },
+    onboarding: offSeasonThreeTeamDaysAthlete(),
   },
 
   // ── Team training combos ──
   {
     id: 'S8',
     name: 'S8: In-season Sat game, team Mon+Wed (not typical Tue+Thu)',
-    onboarding: {
-      ...BASE_PROFILE,
-      seasonPhase: 'In-season',
-      gameDay: 'Saturday',
+    onboarding: inSeasonStandardAthlete({
       teamTrainingDays: ['Monday', 'Wednesday'],
-    },
+    }),
   },
   {
     id: 'S9',
     name: 'S9: In-season Sat game, team Tue only',
-    onboarding: {
-      ...BASE_PROFILE,
-      seasonPhase: 'In-season',
-      gameDay: 'Saturday',
+    onboarding: inSeasonStandardAthlete({
       teamTrainingDaysPerWeek: 1,
       teamTrainingDays: ['Tuesday'],
-    },
+    }),
   },
   {
     id: 'S10',
     name: 'S10: In-season Sat game, team Tue+Wed+Thu (3 consecutive)',
-    onboarding: {
-      ...BASE_PROFILE,
-      seasonPhase: 'In-season',
-      gameDay: 'Saturday',
+    onboarding: inSeasonStandardAthlete({
       teamTrainingDaysPerWeek: 3,
       teamTrainingDays: ['Tuesday', 'Wednesday', 'Thursday'],
-    },
+    }),
   },
 
   // ── Pre-season ──
   {
     id: 'S11',
     name: 'S11: Pre-season, Sat game, 5 days',
-    onboarding: { ...BASE_PROFILE, seasonPhase: 'Pre-season', gameDay: 'Saturday' },
+    onboarding: preSeasonStandardAthlete(),
   },
   {
     id: 'S12',
     name: 'S12: Pre-season, no game, 5 days',
-    onboarding: { ...BASE_PROFILE, seasonPhase: 'Pre-season', gameDay: undefined },
+    onboarding: preSeasonStandardAthlete({ gameDay: undefined }),
   },
 
   // ── Edit-driven: remove game ──
   {
     id: 'E1',
     name: 'E1: Remove game — Sat game → no game',
-    onboarding: {
-      ...BASE_PROFILE,
-      seasonPhase: 'In-season',
+    onboarding: inSeasonStandardAthlete({
       gameDay: undefined, // game removed
-      preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      preferredTrainingDays: [...SIX_DAY_AVAILABLE_DAYS],
       trainingDaysPerWeek: 6,
-    },
+    }),
     editFrom: 'S1',
     editOps: ['Removed Saturday game from calendar', 'Saturday now available for training'],
   },
@@ -806,13 +867,11 @@ const scenarios: Scenario[] = [
   {
     id: 'E2',
     name: 'E2: Move game — Sat → Sun',
-    onboarding: {
-      ...BASE_PROFILE,
-      seasonPhase: 'In-season',
+    onboarding: inSeasonStandardAthlete({
       gameDay: 'Sunday',
-      preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      preferredTrainingDays: [...SIX_DAY_AVAILABLE_DAYS],
       trainingDaysPerWeek: 6,
-    },
+    }),
     editFrom: 'S1',
     editOps: ['Moved game from Saturday to Sunday', 'Saturday now available for training'],
   },
@@ -821,7 +880,7 @@ const scenarios: Scenario[] = [
   {
     id: 'E3',
     name: 'E3: Add game back — no game → Sat game',
-    onboarding: { ...BASE_PROFILE, seasonPhase: 'In-season', gameDay: 'Saturday' },
+    onboarding: inSeasonStandardAthlete(),
     editFrom: 'E1',
     editOps: ['Re-added Saturday game to calendar', 'Saturday returns to game day'],
   },
@@ -830,39 +889,12 @@ const scenarios: Scenario[] = [
   {
     id: 'S13',
     name: 'S13: In-season, 3 days only (Mon/Wed/Fri), Sat game',
-    onboarding: {
-      seasonPhase: 'In-season',
-      trainingDaysPerWeek: 3,
-      preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
-      teamTrainingDaysPerWeek: 2,
-      teamTrainingDays: ['Tuesday', 'Thursday'],
-      teamTrainingIntensity: 'Hard',
-      conditioningLevel: 'Average',
-      recentTrainingLoad: 'Pretty consistent',
-      injuries: [],
-      motivation: 'Get stronger',
-      gameDay: 'Saturday',
-    },
+    onboarding: inSeasonLowAvailabilityAthlete(),
   },
   {
     id: 'S14',
     name: 'S14: In-season, low readiness, injuries',
-    onboarding: {
-      seasonPhase: 'In-season',
-      trainingDaysPerWeek: 4,
-      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
-      teamTrainingDaysPerWeek: 2,
-      teamTrainingDays: ['Tuesday', 'Thursday'],
-      teamTrainingIntensity: 'Hard',
-      conditioningLevel: 'Poor',
-      recentTrainingLoad: 'Hardly at all',
-      injuries: [
-        { bodyArea: 'Knee', description: 'Knee pain when running', severity: 'Moderate', whenItHurts: 'Running' },
-        { bodyArea: 'Shoulder', description: 'Mild shoulder niggle', severity: 'Mild', whenItHurts: 'Lifting' },
-      ],
-      motivation: 'Get stronger',
-      gameDay: 'Saturday',
-    },
+    onboarding: injuryReadinessConstrainedAthlete(),
   },
 ];
 

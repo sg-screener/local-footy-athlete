@@ -56,8 +56,28 @@ console.log('\n[2] metadata stays in lockstep with the harness scenario list');
 {
   const harnessIds = scenarioIdsFromHarness();
   const metadataIds = WEEK_PLAN_QA_SCENARIO_METADATA.map((entry) => entry.id);
+  const metadataNames = WEEK_PLAN_QA_SCENARIO_METADATA.map((entry) => entry.humanName);
   eq('scenario count does not change', harnessIds.length, 17);
   eq('metadata IDs match harness IDs', metadataIds, harnessIds);
+  eq('human-readable scenario names stay stable', metadataNames, [
+    'In-season, Saturday game, two team trainings',
+    'In-season, Sunday game, six-day availability',
+    'In-season, Friday night game',
+    'In-season bye week',
+    'Off-season, five days, team Tuesday/Thursday',
+    'Off-season four-day low availability',
+    'Off-season six days with three team trainings',
+    'In-season, Saturday game, team Monday/Wednesday',
+    'In-season, Saturday game, one team training',
+    'In-season, Saturday game, three consecutive team trainings',
+    'Pre-season with Saturday practice match',
+    'Pre-season, no practice match',
+    'Edit flow, remove Saturday game',
+    'Edit flow, move Saturday game to Sunday',
+    'Edit flow, add Saturday game back',
+    'In-season low availability with Saturday game',
+    'In-season low readiness with injuries',
+  ]);
 }
 
 console.log('\n[3] QA output helpers include ID, name, context, and intent');
