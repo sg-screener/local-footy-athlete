@@ -1,8 +1,9 @@
 /**
  * Moved-Game Scoping Regression Tests
  *
- * Verifies the bug fix where a one-off game move (Sat → Sun) leaked into
- * future weeks' resolver, reshaping their structure around a Sunday anchor.
+ * Verifies one-off game marks stay scoped without losing true cross-week
+ * protection. A one-off Sunday game must protect the following Monday,
+ * while weeks 2+ away remain unchanged.
  *
  * Bug:
  *   getEffectiveGameDates() unconditionally pulled every 'game' mark from
@@ -10,10 +11,10 @@
  *   shift(-1) for G+1 recovery, it found Week A's moved Sunday game —
  *   even though the user only intended that move for Week A.
  *
- * Fix:
- *   Explicit 'game' marks whose dow !== usualGameDay are scoped to the
- *   Mon–Sun window of the centerDate being resolved. Recurring marks
- *   (dow === usualGameDay) remain unconditional.
+ * Contract:
+ *   Explicit one-off 'game' marks are visible to proximity in their own
+ *   Mon–Sun week and within ±2 calendar days across a week boundary.
+ *   Recurring/virtual Saturday games still behave as the normal anchor.
  *
  * Run:  sucrase-node src/__tests__/movedGameScopingTests.ts
  */
@@ -27,6 +28,8 @@ import {
   type ResolvedDay,
 } from '../utils/sessionResolver';
 import type { Workout, IntensityLevel } from '../types/domain';
+import { classifyDaySessions } from '../rules/sessionTaxonomy';
+import { classifySessionStress } from '../rules/stressClassification';
 
 let passed = 0;
 let failed = 0;
@@ -125,6 +128,54 @@ function makeMovedGameState(): ScheduleState {
   };
 }
 
+function makeState(args: {
+  seasonPhase: 'In-season' | 'Pre-season';
+  usualGameDay?: 'Saturday';
+  markedDays: ScheduleState['markedDays'];
+  includeSundayLower?: boolean;
+}): ScheduleState {
+  const workouts = [
+    makeWorkout(1, 'Lower Body', 'High', 'core'),
+    makeWorkout(2, 'Upper Pull', 'Moderate', 'core'),
+    makeWorkout(4, 'Upper Push', 'Moderate', 'core'),
+    makeWorkout(5, 'Arms / Pump', 'Light', 'optional'),
+  ];
+  if (args.includeSundayLower) {
+    workouts.push(makeWorkout(0, 'Lower Body', 'High', 'core'));
+  }
+  return {
+    currentProgram: {
+      id: 'test-prog',
+      userId: 'u',
+      startDate: '2026-04-06',
+      endDate: '2026-05-03',
+      microcycles: [],
+      createdAt: '2026-04-01T00:00:00Z',
+    } as unknown as ScheduleState['currentProgram'],
+    currentMicrocycle: {
+      id: 'test-micro',
+      programId: 'test-prog',
+      weekNumber: 1,
+      startDate: '2026-04-06',
+      endDate: '2026-04-12',
+      workouts,
+    } as unknown as ScheduleState['currentMicrocycle'],
+    manualOverrides: {},
+    markedDays: args.markedDays,
+    athleteContext: {
+      injuries: [],
+      equipmentTags: [
+        'bodyweight', 'dumbbells', 'barbell', 'cables', 'bands',
+        'bench', 'foam_roller', 'bike_or_treadmill', 'machine',
+      ],
+      trainingLocation: 'Commercial gym',
+    } as ScheduleState['athleteContext'],
+    seasonPhase: args.seasonPhase,
+    usualGameDay: args.usualGameDay,
+    readiness: 'medium',
+  };
+}
+
 function findDay(week: ResolvedDay[], dateStr: string): ResolvedDay | undefined {
   return week.find((d) => d.date === dateStr);
 }
@@ -139,9 +190,83 @@ function isGame(day: ResolvedDay | undefined): boolean {
   return !!(day && day.workout && day.workout.workoutType === 'Game');
 }
 
+function isHard(day: ResolvedDay | undefined): boolean {
+  if (!day?.workout) return false;
+  return classifyDaySessions(day.workout).some((unit) =>
+    unit.category !== 'team_training' &&
+    unit.category !== 'game' &&
+    classifySessionStress(unit, day.workout!) === 'high',
+  );
+}
+
 console.log('\n═════════════════════════════════════════════════════');
 console.log('  Moved-Game Scoping Regression Tests');
 console.log('═════════════════════════════════════════════════════');
+
+// ─── Cross-week G+1 with next-week bye/noGame ───
+console.log('\n=== Cross-week G+1 — Sunday one-off game, next Saturday bye ===');
+{
+  const state = makeState({
+    seasonPhase: 'In-season',
+    usualGameDay: 'Saturday',
+    markedDays: {
+      '2026-04-12': 'game',
+      '2026-04-18': 'noGame',
+    } as ScheduleState['markedDays'],
+  });
+  const week = resolveWeekWithConditioning('2026-04-13', state);
+  const mon = findDay(week, '2026-04-13');
+  const sat = findDay(week, '2026-04-18');
+
+  assert(isRecovery(mon), 'Next-week Monday after Sunday one-off game is recovery/light, not heavy lower');
+  assert(mon?.source === 'gameProximity', 'Next-week Monday is protected by shared game proximity');
+  assert(sat?.workout?.workoutType !== 'Game', 'Next Saturday noGame/bye suppresses the recurring game');
+}
+
+// ─── Cross-week G+1 for pre-season practice match ───
+console.log('\n=== Cross-week G+1 — pre-season Sunday practice match ===');
+{
+  const state = makeState({
+    seasonPhase: 'Pre-season',
+    markedDays: { '2026-04-12': 'game' } as ScheduleState['markedDays'],
+  });
+  const week = resolveWeekWithConditioning('2026-04-13', state);
+  const mon = findDay(week, '2026-04-13');
+
+  assert(isRecovery(mon), 'Pre-season Sunday practice match protects next Monday as recovery/light');
+  assert(mon?.source === 'gameProximity', 'Pre-season cross-week G+1 uses shared proximity');
+}
+
+// ─── Removing the one-off mark restores the template ───
+console.log('\n=== Removed Sunday one-off game — Monday returns to template ===');
+{
+  const state = makeState({
+    seasonPhase: 'In-season',
+    usualGameDay: 'Saturday',
+    markedDays: { '2026-04-18': 'noGame' } as ScheduleState['markedDays'],
+  });
+  const week = resolveWeekWithConditioning('2026-04-13', state);
+  const mon = findDay(week, '2026-04-13');
+
+  assert(mon?.workout?.name === 'Lower Body', 'Monday returns to normal lower template when Sunday game mark is removed');
+  assert(mon?.source === 'template', 'Removed one-off game leaves Monday as template source');
+}
+
+// ─── Mirror direction: Monday one-off protects previous Sunday G-1 ───
+console.log('\n=== Cross-week G-1 — one-off Monday game protects previous Sunday ===');
+{
+  const state = makeState({
+    seasonPhase: 'In-season',
+    usualGameDay: 'Saturday',
+    includeSundayLower: true,
+    markedDays: { '2026-04-13': 'game' } as ScheduleState['markedDays'],
+  });
+  const week = resolveWeekWithConditioning('2026-04-06', state);
+  const sun = findDay(week, '2026-04-12');
+
+  assert(!isHard(sun), 'Previous Sunday G-1 before one-off Monday game is not hard');
+  assert(sun?.workout?.name !== 'Lower Body', 'Previous Sunday lower template is displaced by game proximity');
+}
 
 // ─── Week A (the moved week) ───
 console.log('\n=== Week A (2026-04-06 Mon) — moved game Sat→Sun ===');
@@ -155,8 +280,8 @@ console.log('\n=== Week A (2026-04-06 Mon) — moved game Sat→Sun ===');
   assert(!isGame(sat), 'Week A Saturday is NOT a game (virtual Sat suppressed by same-week explicit Sun mark)');
 }
 
-// ─── Week B: recurring Sat with compressed-week Mon recovery ───
-console.log('\n=== Week B (2026-04-13 Mon) — recurring Saturday game, compressed turnaround ===');
+// ─── Week B: recurring Sat plus cross-week G+1 from moved Sunday ───
+console.log('\n=== Week B (2026-04-13 Mon) — recurring Saturday game, cross-week G+1 ===');
 {
   const state = makeMovedGameState();
   const week = resolveWeekWithConditioning('2026-04-13', state);
@@ -172,9 +297,9 @@ console.log('\n=== Week B (2026-04-13 Mon) — recurring Saturday game, compress
 
   assert(isGame(sat), 'Week B Saturday is the recurring game');
 
-  // The ONE compressed-week change: Mon = Recovery
-  assert(isRecovery(mon), 'Week B Mon IS recovery (compressed-week rule — Sun→Sat = 6 days)');
-  assert(mon?.source === 'gameProximity', 'Week B Mon source is gameProximity (compressed-week rule)');
+  // The cross-week proximity change: Mon = Recovery
+  assert(isRecovery(mon), 'Week B Mon IS recovery (shared proximity — previous day was a one-off Sunday game)');
+  assert(mon?.source === 'gameProximity', 'Week B Mon source is gameProximity (shared proximity)');
 
   // Tue/Wed/Thu/Fri must match the SAME resolution they would in a normal Saturday week.
   // We assert the structural shape (template/proximity sources + matching pattern), not

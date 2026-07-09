@@ -200,6 +200,7 @@ export function buildWeekScopedWorkoutOverlay(args: {
  *   • an override ON a game date always conflicts (manual overrides
  *     outrank the game mark at resolve time — it would hide the game);
  *   • HIGH-stress content on G-1 or G-2 conflicts;
+ *   • HIGH-stress content on G+1 conflicts;
  *   • light/medium edits near the game are Bible-legal and survive.
  */
 export function overrideConflictsWithGameWindow(
@@ -210,7 +211,7 @@ export function overrideConflictsWithGameWindow(
   for (const g of gameDates) {
     const diff = isoDayDiff(date, g);
     if (diff === 0) return true;
-    if (diff === 1 || diff === 2) {
+    if (diff === 1 || diff === 2 || diff === -1) {
       const units = classifyDaySessions(workout);
       const hard = units.some(
         (u) =>

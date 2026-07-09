@@ -389,6 +389,26 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
   ok('manual override ON the game date is removed (would hide Game Day)',
     sweep3.conflictsRemoved.some((c) => c.date === week2Saturday), JSON.stringify(sweep3));
 
+  // Cross-week G+1: a one-off Sunday game in the selected week protects
+  // the following Monday. Heavy user edits there are removed/reported;
+  // light recovery edits survive.
+  const oneOffSunday = addDays(blockStart, 6);
+  ps.setManualOverride(week2Monday,
+    mkOverride(week2Monday, 'Lower Body Strength', { intensity: 'High' }),
+    { intent: 'dismissed', label: 'Added session' });
+  const sweep4 = clearManualOverridesPreservingActiveModifiers(blockStart, { gameDates: [oneOffSunday] });
+  ok('high-stress manual override on cross-week G+1 is removed as a game conflict',
+    sweep4.cleared.includes(week2Monday) &&
+    sweep4.conflictsRemoved.some((c) => c.date === week2Monday),
+    JSON.stringify(sweep4));
+
+  ps.setManualOverride(week2Monday,
+    mkOverride(week2Monday, 'Recovery Flow', { workoutType: 'Recovery', sessionTier: 'recovery', intensity: 'Light' }),
+    { intent: 'dismissed', label: 'Swapped session' });
+  const sweep5 = clearManualOverridesPreservingActiveModifiers(blockStart, { gameDates: [oneOffSunday] });
+  ok('light recovery override on cross-week G+1 is preserved',
+    sweep5.preserved.includes(week2Monday), JSON.stringify(sweep5));
+
   useProgramStore.getState().clearManualOverrides();
 }
 

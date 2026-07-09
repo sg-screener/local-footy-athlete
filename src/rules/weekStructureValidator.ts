@@ -78,6 +78,8 @@ export interface ValidateProgramWeekInput {
     gameDates?: string[];
     /** Last week's game date — lets G+1 protection cover Monday. */
     previousGameDate?: string;
+    /** Next week's game date — lets G-1/G-2 protection cover Sat/Sun. */
+    nextGameDate?: string;
     teamTrainingDates?: string[];
   };
   profile?: StressContext & { seasonPhase?: SeasonPhase };
@@ -233,7 +235,11 @@ export function validateProgramWeek(input: ValidateProgramWeekInput): WeekValida
   const observedTT = classified
     .filter((cw) => cw.units.some((u) => u.category === 'team_training'))
     .map((cw) => cw.date);
-  const gameDates = Array.from(new Set([...(input.anchors?.gameDates ?? []), ...observedGames])).sort();
+  const gameDates = Array.from(new Set([
+    ...(input.anchors?.gameDates ?? []),
+    ...(input.anchors?.nextGameDate ? [input.anchors.nextGameDate] : []),
+    ...observedGames,
+  ])).sort();
   const teamTrainingDates = Array.from(new Set([...(input.anchors?.teamTrainingDates ?? []), ...observedTT])).sort();
 
   // Counts + caps via the Phase 1 counters.
@@ -656,9 +662,19 @@ export function logAllocationWeekValidation(
     }));
 
     const profile = { ...(opts.profile ?? {}), seasonPhase: opts.seasonPhase ?? undefined };
+    const anchors: ValidateProgramWeekInput['anchors'] = {};
+    if (gameDayName === 'Sunday') {
+      anchors.previousGameDate = addDaysISO(REF_MONDAY, -1);
+    }
+    if (gameDayName === 'Monday') {
+      anchors.nextGameDate = addDaysISO(REF_MONDAY, 7);
+    } else if (gameDayName === 'Tuesday') {
+      anchors.nextGameDate = addDaysISO(REF_MONDAY, 8);
+    }
     return logWeekValidation(
       {
         days,
+        anchors: Object.keys(anchors).length > 0 ? anchors : undefined,
         profile,
         weekFlags: deriveWeekValidationFlags({ days, profile }),
       },

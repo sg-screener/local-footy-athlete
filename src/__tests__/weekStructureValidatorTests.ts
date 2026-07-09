@@ -149,6 +149,16 @@ console.log('\n── 2. G-1 rules (Friday before Saturday game) ──');
   const r = validateProgramWeek({ days, profile: PROFILE });
   ok('G-1 gunshow → no finding', byRule(r.findings, 'g1_not_light').length === 0, ids(r.findings));
 }
+{
+  // Next week's Monday game → current Sunday is cross-week G-1.
+  const days = week({ 6: [metcon()] });
+  const r = validateProgramWeek({
+    days, profile: PROFILE,
+    anchors: { nextGameDate: '2026-06-08' },
+  });
+  const f = byRule(r.findings, 'g1_not_light');
+  ok('nextGameDate protects Sunday (G-1) → strong', f.length === 1 && f[0].dates.join() === '2026-06-07', ids(r.findings));
+}
 
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 3. G-2 rules (Thursday before Saturday game) ──');

@@ -267,7 +267,9 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       dayOf(after, wk2Mon)?.workout?.name);
   }
 
-  // ── D. Move Monday's session to the empty Sunday (plain move) ──
+  // ── D. Move Monday's session to Sunday; adding a Saturday game makes that
+  // destination G+1, so the hard moved session is cleared/reported.
+  // Light Sunday additions are covered in E below.
   {
     seed(profile);
     const wk2Sun = addDays(blockStart, 13);
@@ -280,14 +282,16 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
     });
     ok(`[D] move applied: ${res.message ?? ''}`, res.ok === true, JSON.stringify(res.rejected));
 
-    addSaturdayGame(profile, wk2Sat);
+    const rebuild = addSaturdayGame(profile, wk2Sat);
     const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
     ok('[D] original Monday does not resurrect (stays rest/moved-away)',
       dayOf(after, wk2Mon)?.source === 'manual' &&
       !/lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
       `${dayOf(after, wk2Mon)?.source}: ${dayOf(after, wk2Mon)?.workout?.name}`);
-    ok('[D] moved content still on its destination day',
-      dayOf(after, wk2Sun)?.source === 'manual', `${dayOf(after, wk2Sun)?.source}: ${dayOf(after, wk2Sun)?.workout?.name}`);
+    ok('[D] hard moved content onto G+1 is cleared/reported',
+      rebuild.sweep.conflictsRemoved.some((c) => c.date === wk2Sun) &&
+      dayOf(after, wk2Sun)?.source === 'gameProximity',
+      `${dayOf(after, wk2Sun)?.source}: ${dayOf(after, wk2Sun)?.workout?.name} sweep=${JSON.stringify(rebuild.sweep)}`);
   }
 
   // ── E. Manually added session: safe one preserved, G-1 hard one resolved ──

@@ -203,6 +203,12 @@ function shiftDate(dateStr: string, days: number): string {
   return addDays(dateStr, days);
 }
 
+function isoDayDiff(a: string, b: string): number {
+  return Math.round(
+    (new Date(`${b}T12:00:00`).getTime() - new Date(`${a}T12:00:00`).getTime()) / 86400000,
+  );
+}
+
 /**
  * Build a map of exerciseId → last performed weight from weight overrides.
  * Only considers dates strictly before `beforeDate`.
@@ -474,13 +480,12 @@ function getAllGameDates(markedDays: Record<string, CalendarDayType>): Set<strin
  * G-1/G-2/G+1 proximity rules never fire for virtual Saturdays because
  * getAllGameDates only scans explicit marks.
  *
- * Explicit 'game' marks are scoped by day-of-week:
+ * Explicit 'game' marks are scoped by day-of-week + proximity:
  *   - Recurring marks (dow === usualGameDay)  → unconditional, all weeks see them.
- *   - One-off / moved marks (dow !== usualGameDay) → ONLY count for the week
- *     they live in (the Mon–Sun window containing centerDate). Without this
- *     scoping, a one-off Sunday mark in Week A leaks into Week B's proximity
- *     checks (Mon shift -1 = prior Sun) and reshapes future weeks around an
- *     anchor that no longer exists outside its own week.
+ *   - One-off / moved marks (dow !== usualGameDay, or no recurring game active)
+ *     → count for their own Mon–Sun week AND for dates within ±2 days of the
+ *     mark. This keeps true cross-week G+1/G-1/G-2 protection without letting
+ *     one-off marks reshape weeks 2+ away.
  *
  * Virtual games are included only for weeks where the virtual game is not
  * suppressed (no 'noGame'/'rest' on the day itself, no other explicit 'game'
@@ -500,23 +505,26 @@ function getEffectiveGameDates(
   const recurringActive = isVirtualGameEnabled(state) && virtualDow !== undefined;
 
   // Bounds for one-off scoping (Mon–Sun of centerDate's week).
-  const centerMonday = recurringActive ? getMondayForDate(centerDate) : null;
-  const centerSunday = centerMonday ? addDays(centerMonday, 6) : null;
+  const centerMonday = getMondayForDate(centerDate);
+  const centerSunday = addDays(centerMonday, 6);
 
   // Loop 1: explicit 'game' marks. Recurring marks (dow === usualGameDay) are
-  // included for any centerDate. One-off marks (different dow) only count for
-  // their own Mon–Sun week — otherwise a moved Sunday game in Week A would
-  // anchor proximity calcs in Week B/C/D.
+  // included for any centerDate. One-off marks (different dow, or pre-season
+  // practice matches with no recurring game) count only for their own Mon–Sun
+  // week and for the adjacent ±2-day proximity window.
   for (const [date, type] of Object.entries(markedDays)) {
     if (type !== 'game') continue;
     if (recurringActive) {
       const dow = dateToDayOfWeek(date);
       const isRecurring = dow === virtualDow;
-      if (!isRecurring) {
-        // One-off override — scope to centerDate's week only.
-        if (date < centerMonday! || date > centerSunday!) continue;
+      if (isRecurring) {
+        games.add(date);
+        continue;
       }
     }
+    const sameWeek = date >= centerMonday && date <= centerSunday;
+    const adjacentProtectionWindow = Math.abs(isoDayDiff(centerDate, date)) <= 2;
+    if (!sameWeek && !adjacentProtectionWindow) continue;
     games.add(date);
   }
 
@@ -556,28 +564,31 @@ function applyGameProximity(
   gameDates: Set<string>,
   microcycleId: string,
   athlete: AthleteContext,
+  explicitGameDates: Set<string> = new Set(),
 ): Workout | null {
   // G+1: day after a game → recovery (even if no template workout)
-  if (gameDates.has(shiftDate(date, -1))) {
+  const previousDate = shiftDate(date, -1);
+  if (gameDates.has(previousDate)) {
     if (!templateWorkout || (templateWorkout.sessionTier !== 'recovery' && templateWorkout.workoutType !== 'Game')) {
-      // GUARD: never replace a protected core exposure with recovery.
-      // The engine placed this session here for a reason (required exposure).
-      // Template workouts passed to this function always have source='template'.
-      if (isProtectedCoreExposure(templateWorkout)) {
+      // GUARD: never replace protected core exposure for virtual/recurring
+      // proximity. Explicit calendar game/practice-match marks are different:
+      // Bible G+1 wins, so the core session is dropped rather than made up.
+      if (isProtectedCoreExposure(templateWorkout) && !explicitGameDates.has(previousDate)) {
         if (IS_DEV) {
           logger.debug(
             `[resolver] BLOCKED G+1 recovery replacing protected core "${templateWorkout!.name}" on ${date}`
           );
         }
-        return null; // keep the template as-is
+      } else {
+        return buildDerivedSession('recovery', date, microcycleId, 'Post-game recovery', athlete);
       }
-      return buildDerivedSession('recovery', date, microcycleId, 'Post-game recovery', athlete);
     }
   }
 
   // G-1: day before a game → Gunshow (light upper-body pump)
   // BUT preserve recovery sessions and rest days (fatigue/injury flexibility)
-  if (gameDates.has(shiftDate(date, 1))) {
+  const nextDate = shiftDate(date, 1);
+  if (gameDates.has(nextDate)) {
     // Keep recovery as-is
     if (templateWorkout?.sessionTier === 'recovery' || templateWorkout?.workoutType === 'Recovery') {
       return null;
@@ -586,18 +597,19 @@ function applyGameProximity(
     if (templateWorkout?.workoutType === 'Game') {
       return null;
     }
-    // GUARD: never replace a protected core exposure with Gunshow.
-    // The engine placed this session (e.g. Lower Strength on G-1) deliberately.
-    if (isProtectedCoreExposure(templateWorkout)) {
+    // GUARD: never replace protected core exposure for virtual/recurring
+    // proximity. Explicit one-off games can move across week boundaries, and
+    // the Bible says G-1 must be light, so they may displace the core session.
+    if (isProtectedCoreExposure(templateWorkout) && !explicitGameDates.has(nextDate)) {
       if (IS_DEV) {
         logger.debug(
           `[resolver] BLOCKED G-1 Gunshow replacing protected core "${templateWorkout!.name}" on ${date}`
         );
       }
-      return null; // keep the template as-is
+    } else {
+      // Everything else → Gunshow (derivedType key remains 'arms_pump')
+      return buildDerivedSession('arms_pump', date, microcycleId, 'Pre-game day', athlete);
     }
-    // Everything else → Gunshow (derivedType key remains 'arms_pump')
-    return buildDerivedSession('arms_pump', date, microcycleId, 'Pre-game day', athlete);
   }
 
   if (!templateWorkout) return null;
@@ -621,79 +633,6 @@ function applyGameProximity(
   }
 
   return null; // no proximity effect
-}
-
-/**
- * Compressed-week Monday recovery.
- *
- * When the user moves a single game to Sunday (one-off, dow !== usualGameDay)
- * AND the next game is ≤6 days later (e.g. the recurring Saturday following
- * a moved Sunday game = 6-day turnaround), the body still needs the
- * Monday post-game flush — but the standard G+1 rule does NOT fire here
- * because `getEffectiveGameDates` correctly week-scopes the one-off mark
- * to its own Mon–Sun window, so Week B's gameDates excludes Week A's Sun.
- *
- * That week-scoping is the right default (prevents one-off marks from
- * reshaping all future weeks). This rule is the targeted exception: the
- * specific Monday immediately after a one-off Sunday game gets recovery,
- * regardless of week boundary, when the upcoming turnaround is compressed.
- *
- * Rules baked in:
- *   - Mon-only.
- *   - Bypasses the protected-core guard: Lower is INTENTIONALLY dropped
- *     for the compressed week (no makeup attempt).
- *   - Strictly week-after-Sun-game scoped: rule looks at THIS Mon's
- *     prior day only. Future weeks have no Sun mark → rule doesn't fire,
- *     guaranteeing zero leakage.
- *   - Push/pull weekly balance is maintained by the engine's
- *     enforceInSeasonPushPullBalance pass (Wed=Push, Fri=Pull stay intact).
- */
-function applyCompressedWeekMondayRecovery(
-  date: string,
-  state: ScheduleState,
-  microcycleId: string,
-): Workout | null {
-  // Mon-only.
-  if (dateToDayOfWeek(date) !== 1) return null;
-
-  // Needs an in-season recurring anchor for the "one-off" discrimination.
-  if (state.seasonPhase !== 'In-season') return null;
-  const usualGameDay = resolveEffectiveGameDay(state.usualGameDay, state.gameDay);
-  if (!usualGameDay) return null;
-  const usualDow = DOW_TO_NUM[usualGameDay];
-
-  const markedDays = state.markedDays || {};
-  const priorDate = addDays(date, -1);
-
-  // Prior day must have an EXPLICIT one-off game mark.
-  if (markedDays[priorDate] !== 'game') return null;
-  const priorDow = dateToDayOfWeek(priorDate);
-  if (priorDow === usualDow) return null; // Sun-recurring → normal G+1 already covers it
-
-  // Look forward up to 6 days from priorDate for the next game (explicit or
-  // virtual). 6 days = the compressed Sun→Sat turnaround threshold.
-  for (let offset = 1; offset <= 6; offset++) {
-    const probe = addDays(priorDate, offset);
-    if (markedDays[probe] === 'game') {
-      return buildDerivedSession(
-        'recovery', date, microcycleId,
-        'Compressed-week recovery (post-Sun game, short turnaround)',
-        state.athleteContext,
-      );
-    }
-    if (dateToDayOfWeek(probe) === usualDow) {
-      const m = markedDays[probe];
-      if (m === 'noGame' || m === 'rest') continue;
-      if (weekHasExplicitGameMark(probe, markedDays)) continue;
-      return buildDerivedSession(
-        'recovery', date, microcycleId,
-        'Compressed-week recovery (post-Sun game, short turnaround)',
-        state.athleteContext,
-      );
-    }
-  }
-
-  return null;
 }
 
 // ─── Indicator Helper ───
@@ -870,25 +809,21 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
   // fires on Fri (G-1) + Thu (G-2) + Sun (G+1) even when Saturday is virtual
   // and not explicitly marked in calendarStore.
   const gameDates = getEffectiveGameDates(state, date);
+  const explicitGameDates = getAllGameDates(markedDays || {});
   const effectiveTemplate = (templateWorkout?.workoutType === 'Game' && !mark)
     ? null  // template game without calendar mark → treat as empty for proximity
     : templateWorkout;
-  const proximityResult = applyGameProximity(date, effectiveTemplate, gameDates, templateMicrocycleId, state.athleteContext);
+  const proximityResult = applyGameProximity(
+    date,
+    effectiveTemplate,
+    gameDates,
+    templateMicrocycleId,
+    state.athleteContext,
+    explicitGameDates,
+  );
   if (proximityResult) {
     logger.debug(`[RESOLVER-PROXIMITY] date=${date} dow=${dow} → ${proximityResult.name} (tier=${proximityResult.sessionTier})`);
     return buildDay(date, dow, today, proximityResult, 'gameProximity');
-  }
-
-  // ── Priority 4b: Compressed-week Monday recovery ──
-  // Targeted exception to the week-scoped one-off rule: when the user
-  // moves a single game to Sunday and the next game is within 6 days, the
-  // immediately-following Monday gets a forced Recovery (Lower is dropped,
-  // not made up). Only fires on Mon directly after a one-off Sun mark —
-  // future weeks have no such mark and are unaffected.
-  const compressedRecovery = applyCompressedWeekMondayRecovery(date, state, templateMicrocycleId);
-  if (compressedRecovery) {
-    logger.debug(`[RESOLVER-COMPRESSED-WEEK] date=${date} dow=${dow} → forced Recovery (post-Sun-game compression)`);
-    return buildDay(date, dow, today, compressedRecovery, 'gameProximity');
   }
 
   // ── Priority 5: Template says game but calendar doesn't (freed slot) ──
@@ -1199,12 +1134,10 @@ export function resolveWeekWithConditioning(
   // Convert the later G+1 recovery to rest before conditioning/recovery passes
   // so neither pass attempts to fill it.
   //
-  // GUARD: only fire when the week actually contains ≥2 games. The
-  // compressed-week Mon recovery rule places recovery with source
-  // 'gameProximity' too — without this guard, a single-game week with a
-  // compressed-Mon recovery (after a moved Sun in the prior week) would
-  // be misread as a double-game week, and the legitimate Sun G+1 would
-  // get downgraded to full rest.
+  // GUARD: only fire when the week actually contains ≥2 games. Cross-week
+  // G+1 proximity can place Monday recovery from a prior-week Sunday game;
+  // without this guard, that single outside-week anchor could be misread
+  // as a double-game week and a legitimate in-week G+1 would be downgraded.
   const result = [...baseDays];
   const today = formatDate(new Date());
   const weekMonday = mondayStr;
