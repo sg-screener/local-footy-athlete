@@ -15,7 +15,7 @@ import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { removeInjuryOverridesForWeek } from './applyAdjustmentEvents';
-import { getMondayStr } from './sessionResolver';
+import { getMondayForDate, getMondayStr } from './sessionResolver';
 import { decideOverrideSweep } from './weekRebuild';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { todayISOLocal } from './appDate';
@@ -522,6 +522,7 @@ function deloadWeekModifier(
     payload: {
       weekKind: 'deload',
       weekStart: evidence.weekStart,
+      lifecycleKey: `week_kind:deload:${evidence.weekStart}`,
     },
   };
 }
@@ -540,6 +541,66 @@ function expiresAt(c: ActiveConstraint | null | undefined): string | undefined {
 function isExpiredActiveConstraint(c: ActiveConstraint, todayISO: string): boolean {
   const end = expiresAt(c);
   return Boolean(end && end < todayISO);
+}
+
+function weekStartFromVisibleDays(
+  days: readonly ActiveProgramModifierVisibleDay[] | null | undefined,
+): string | null {
+  const firstDate = days?.find((day) => typeof day.date === 'string' && day.date.trim())?.date;
+  return firstDate ? getMondayForDate(firstDate) : null;
+}
+
+function workoutLifecycleLabel(day: ActiveProgramModifierVisibleDay | undefined): string {
+  const workout = day?.workout;
+  if (!workout) return 'Off';
+  if (workout.workoutType === 'Game') return 'Game Day';
+  return workout.name?.trim() || 'Off';
+}
+
+function gameChangeProofStillVisible(
+  c: ActiveConstraint,
+  days: readonly ActiveProgramModifierVisibleDay[] | null | undefined,
+): boolean {
+  const proof = (c as any)?.noteProof;
+  if (!days || proof?.kind !== 'game_change' || !Array.isArray(proof.after)) return true;
+  const visibleByDate = new Map(days.map((day) => [day.date, day]));
+  return proof.after.every((row: any) => {
+    if (typeof row?.date !== 'string') return false;
+    const visible = visibleByDate.get(row.date);
+    if (!visible) return false;
+    const expectedLabel = row.workoutType === 'Game'
+      ? 'Game Day'
+      : (typeof row.workoutName === 'string' && row.workoutName.trim() ? row.workoutName.trim() : 'Off');
+    if (workoutLifecycleLabel(visible) !== expectedLabel) return false;
+    const visibleType = visible.workout?.workoutType ?? null;
+    return (row.workoutType ?? null) === visibleType;
+  });
+}
+
+function activeConstraintVisibleInSnapshot(
+  c: ActiveConstraint,
+  snapshot: ActiveProgramModifierSnapshot,
+): boolean {
+  const weekStartISO = (c as any)?.weekStartISO;
+  const visibleWeekStart = weekStartFromVisibleDays(snapshot.visibleWeekDays);
+  if (typeof weekStartISO === 'string' && weekStartISO.trim() && visibleWeekStart && weekStartISO !== visibleWeekStart) {
+    return false;
+  }
+  return gameChangeProofStillVisible(c, snapshot.visibleWeekDays);
+}
+
+function activeConstraintLifecycleKey(
+  c: ActiveConstraint,
+  source: ActiveProgramModifierSource,
+): string {
+  const proofKey = (c as any)?.noteProof?.lifecycleKey;
+  if (typeof proofKey === 'string' && proofKey.trim()) return `${source}:${proofKey}`;
+  const weekStartISO = (c as any)?.weekStartISO;
+  if (c.type === 'schedule' && typeof weekStartISO === 'string' && weekStartISO.trim()) {
+    const owner = String((c as any).source ?? c.type);
+    return `${source}:${owner}:${weekStartISO}`;
+  }
+  return `${source}:${c.id}`;
 }
 
 export interface RebuildOverrideSweepResult {
@@ -641,6 +702,7 @@ function injuryModifier(
     ],
     payload: {
       constraintId: c.id,
+      lifecycleKey: activeConstraintLifecycleKey(c, source),
       bodyPart: c.bodyPart,
       region: c.region,
       severityBand: c.severityBand,
@@ -701,6 +763,7 @@ function statusModifier(
         ],
     payload: {
       constraintId: c.id,
+      lifecycleKey: activeConstraintLifecycleKey(sourceConstraint, source),
       date: 'appliesToDate' in c ? c.appliesToDate : undefined,
       expiresAt: expiresAt(sourceConstraint),
       overrideDates: linkedOverrideDates(sourceConstraint),
@@ -744,6 +807,7 @@ function preferenceModifier(
     ],
     payload: {
       constraintId: c.id,
+      lifecycleKey: activeConstraintLifecycleKey(c, source),
       exercise: c.exercise,
       alternative: c.alternative,
       focus: c.focus,
@@ -910,6 +974,7 @@ export function selectActiveProgramModifiers(
 
   for (const constraint of activeConstraints) {
     if (!constraint || constraint.status === 'resolved') continue;
+    if (!activeConstraintVisibleInSnapshot(constraint, snapshot)) continue;
     if (constraint.type === 'injury') {
       addUnique(
         out,

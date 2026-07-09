@@ -132,6 +132,21 @@ export interface ActiveConstraintModifierMetadata {
   expiresAt?: string;
 }
 
+export interface ActiveConstraintGameChangeProofRow {
+  date: string;
+  workoutName: string | null;
+  workoutType: string | null;
+  sessionTier?: string | null;
+}
+
+export interface ActiveConstraintNoteProof {
+  kind: 'game_change';
+  /** Stable owner key for dedupe/update: one game-change note per affected week. */
+  lifecycleKey: string;
+  changedDates: string[];
+  after: ActiveConstraintGameChangeProofRow[];
+}
+
 export interface ActiveInjuryConstraint extends ActiveConstraintModifierMetadata {
   id: string;
   type: 'injury';
@@ -215,6 +230,8 @@ export interface ActiveScheduleConstraint extends ActiveConstraintModifierMetada
   appliesToDate?: string;
   /** Optional Mon-Sun ISO of the affected week. */
   weekStartISO?: string;
+  /** Visible proof used to suppress stale week-scoped Coach Notes. */
+  noteProof?: ActiveConstraintNoteProof;
   /** Optional cap on total sessions for the week. */
   maxSessionsThisWeek?: number;
   rules: string[];

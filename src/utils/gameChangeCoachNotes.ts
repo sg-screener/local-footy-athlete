@@ -102,6 +102,15 @@ function unique(lines: string[]): string[] {
   return Array.from(new Set(lines.map((line) => line.trim()).filter(Boolean)));
 }
 
+function resolveChangedDates(input: GameChangeCoachNoteInput): string[] {
+  const beforeByDate = sameDateRows(input.before);
+  const afterByDate = sameDateRows(input.after);
+  return Array.from(new Set([
+    ...input.before.map((row) => row.date),
+    ...input.after.map((row) => row.date),
+  ])).filter((date) => rowChanged(beforeByDate.get(date), afterByDate.get(date)));
+}
+
 function actionSentence(input: GameChangeCoachNoteInput): string {
   const fixture = input.fixtureKind === 'practice_match' ? 'practice match' : 'game';
   if (input.action === 'added') {
@@ -117,10 +126,7 @@ function actionSentence(input: GameChangeCoachNoteInput): string {
 function concreteEffects(input: GameChangeCoachNoteInput): string[] {
   const beforeByDate = sameDateRows(input.before);
   const afterByDate = sameDateRows(input.after);
-  const changedDates = Array.from(new Set([
-    ...input.before.map((row) => row.date),
-    ...input.after.map((row) => row.date),
-  ])).filter((date) => rowChanged(beforeByDate.get(date), afterByDate.get(date)));
+  const changedDates = resolveChangedDates(input);
   if (changedDates.length === 0) return [];
 
   const lines: string[] = [];
@@ -162,6 +168,7 @@ export function buildGameChangeCoachNoteConstraint(
 ): ActiveScheduleConstraint | null {
   const effects = concreteEffects(input);
   if (effects.length === 0) return null;
+  const changed = resolveChangedDates(input);
 
   const nowISO = input.todayISO ?? new Date().toISOString();
   const title = input.fixtureKind === 'practice_match'
@@ -185,6 +192,19 @@ export function buildGameChangeCoachNoteConstraint(
     modifierBody: [actionSentence(input), ...effects].join(' '),
     modifierAffects: ['current_week'],
     expiresAt: weekEnd(input.weekStartISO),
+    noteProof: {
+      kind: 'game_change',
+      lifecycleKey: `game-change:${input.weekStartISO}`,
+      changedDates: changed,
+      after: input.after
+        .filter((row) => changed.includes(row.date))
+        .map((row) => ({
+          date: row.date,
+          workoutName: row.workoutName,
+          workoutType: row.workoutType,
+          sessionTier: row.sessionTier ?? null,
+        })),
+    },
   };
 }
 

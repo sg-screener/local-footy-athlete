@@ -33,10 +33,30 @@ export interface ClearActiveCoachNoteResult {
   rebuildRequired: boolean;
 }
 
+function lifecycleKey(modifier: ActiveProgramModifier): string {
+  const key = modifier.payload?.lifecycleKey;
+  return typeof key === 'string' && key.trim()
+    ? `${modifier.source}:${key}`
+    : `${modifier.source}:${modifier.sourceId}`;
+}
+
+function dedupeModifiersByLifecycle(
+  modifiers: readonly ActiveProgramModifier[],
+): ActiveProgramModifier[] {
+  const byKey = new Map<string, ActiveProgramModifier>();
+  for (const modifier of modifiers) {
+    if (!shouldCreateCoachNote(modifier)) continue;
+    const key = lifecycleKey(modifier);
+    if (byKey.has(key)) byKey.delete(key);
+    byKey.set(key, modifier);
+  }
+  return Array.from(byKey.values());
+}
+
 export function buildCoachNotesFromModifiers(
   modifiers: readonly ActiveProgramModifier[],
 ): ActiveCoachNote[] {
-  return modifiers.filter(shouldCreateCoachNote).map((modifier) => ({
+  return dedupeModifiersByLifecycle(modifiers).map((modifier) => ({
     id: `coach-note:${modifier.id}`,
     modifierId: modifier.id,
     constraintId: modifier.sourceId,
