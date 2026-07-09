@@ -167,6 +167,7 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
     usualGameDay,
     gameDay,
     readiness,
+    blockState: programState.blockState || null,
     sessionFeedback: programState.sessionFeedback || {},
     weightOverrides: programState.weightOverrides || {},
     availableDayNumbers,

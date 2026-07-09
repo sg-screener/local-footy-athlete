@@ -182,6 +182,13 @@ export function resolveProgression(input: ProgressionInput): ProgressionOutput {
     note = 'Build downgraded to hold - trend is declining';
   }
 
+  // Multiple misses reduce expectations without punishing the athlete:
+  // hold steady instead of trying to "catch up" with extra load or volume.
+  if (state === 'build' && input.missedSessionsThisWeek >= 2) {
+    state = 'hold';
+    note = 'Multiple missed sessions this week - hold, no catch-up overload';
+  }
+
   // ── Step 8: Overreach decision (off-season only) ──
   if (
     state === 'build' &&
@@ -297,6 +304,21 @@ function buildBuildOutput(note: string, input: ProgressionInput): ProgressionOut
       setsDelta: 'none',
       rpeDelta: 'none',
       note: note + ' - failed completion, dropping load one step',
+    };
+  }
+
+  if (
+    input.sessionFeeling === 'Average' ||
+    input.sessionFeeling === 'Sore' ||
+    input.sessionFeeling === 'Cooked' ||
+    input.recentRPE >= 8
+  ) {
+    return {
+      state: 'build',
+      loadDelta: 'none',
+      setsDelta: 'none',
+      rpeDelta: input.sessionFeeling === 'Average' ? 'none' : 'pull',
+      note: note + ' - feedback says repeat before progressing',
     };
   }
 

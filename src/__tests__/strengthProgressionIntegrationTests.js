@@ -257,7 +257,9 @@ const upperResult = applyStrengthProgression(upperWorkout, DEFAULT_PROGRESSION_C
 
 // Bench Press should be modified (primary strength)
 const benchEx = upperResult.exercises.find(e => e.exercise?.name === 'Bench Press');
-assert(benchEx.notes != null && benchEx.notes.includes('[build]'), 'Bench Press has progression note');
+assert(benchEx != null, 'Bench Press exists');
+assert(upperResult._progressionResults['Bench Press']?.state === 'build',
+  'Bench Press has progression metadata');
 
 // Bicep Curl should be unchanged
 const curlEx = upperResult.exercises.find(e => e.exercise?.name === 'Bicep Curl (Dumbbell)');
@@ -414,8 +416,8 @@ const mondaySquat = mondayDay.workout.exercises.find(
   e => e.exercise?.name === 'Back Squat'
 );
 assert(mondaySquat != null, 'Monday workout includes Back Squat');
-assert(mondaySquat.notes != null && mondaySquat.notes.includes('['),
-  'Back Squat has progression note applied');
+assert(mondayDay.workout._progressionResults?.['Back Squat'] != null,
+  'Back Squat has progression metadata applied');
 
 // Check that Band Pallof Press (core) was NOT modified
 const mondayPallof = mondayDay.workout.exercises.find(
@@ -433,8 +435,8 @@ const wedBench = wedDay.workout.exercises.find(
   e => e.exercise?.name === 'Bench Press'
 );
 assert(wedBench != null, 'Wednesday includes Bench Press');
-assert(wedBench.notes != null && wedBench.notes.includes('['),
-  'Bench Press has progression note');
+assert(wedDay.workout._progressionResults?.['Bench Press'] != null,
+  'Bench Press has progression metadata');
 
 // Wednesday Bicep Curl should be untouched
 const wedCurl = wedDay.workout.exercises.find(
@@ -521,8 +523,8 @@ const injMonday = injuryWeek[0];
 if (injMonday.workout && injMonday.workout.workoutType === 'Strength') {
   const injSquat = injMonday.workout.exercises.find(e => e.exercise?.name === 'Back Squat');
   if (injSquat) {
-    assert(injSquat.notes != null && injSquat.notes.includes('[deload]'),
-      'Injury avoid flag → exercises get [deload] note');
+    assert(injMonday.workout._progressionResults?.['Back Squat']?.state === 'deload',
+      'Injury avoid flag → exercises get deload metadata');
   } else {
     assert(true, 'Back Squat may have been filtered out by injury — acceptable');
   }

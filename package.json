@@ -24,6 +24,7 @@
     "test:game-local-rebuild": "sucrase-node src/__tests__/gameChangeLocalRebuildTests.ts",
     "test:week-rebuild": "sucrase-node src/__tests__/weekRebuildIntegrationTests.ts",
     "test:block-state": "sucrase-node src/__tests__/programBlockStateTests.ts",
+    "test:strength-progression-inputs": "sucrase-node src/__tests__/strengthProgressionInputsTests.ts",
     "test:weekly-readiness": "sucrase-node src/__tests__/weeklyReadinessCardTests.ts",
     "test:finisher-eligibility": "sucrase-node src/__tests__/finisherEligibilityTests.ts",
     "test:variation": "sucrase-node src/__tests__/variedProgramPersonaTests.ts",

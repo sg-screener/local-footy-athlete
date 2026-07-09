@@ -84,6 +84,7 @@ function useScheduleState(): ScheduleState & {
   const currentMicrocycle = useProgramStore((s) => s.currentMicrocycle);
   const manualOverrides = useProgramStore((s) => s.dateOverrides);
   const weekScopedOverlays = useProgramStore((s) => s.weekScopedOverlays);
+  const blockState = useProgramStore((s) => s.blockState);
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
   const markedDays = useCalendarStore((s) => s.markedDays);
@@ -156,6 +157,7 @@ function useScheduleState(): ScheduleState & {
     usualGameDay,
     gameDay,
     readiness,
+    blockState,
     sessionFeedback: sessionFeedback || {},
     weightOverrides: weightOverrides || {},
     availableDayNumbers,

@@ -31,6 +31,7 @@ import type {
   ReadinessLevel,
   SessionFeeling,
   LoggedWorkout,
+  LoggedSet,
 } from '../types/domain';
 import { EXERCISE_TAGS, type ExerciseTag, type Region } from '../data/exerciseTags';
 import {
@@ -51,7 +52,7 @@ import {
   countConsecutiveBuildWeeks,
   estimateWeeksSinceDeload,
 } from './progressionHelpers';
-import type { FeedbackFeeling, SessionFeedback } from '../store/programStore';
+import type { FeedbackCompletion, FeedbackFeeling, SessionFeedback } from '../store/programStore';
 import { analyzeFeedbackPatterns, applyPatternBiases } from './feedbackPatterns';
 import { type AdaptationResult, applyReadinessBias } from './feedbackAdapter';
 import type { ProgramBlockState } from './programBlockState';
@@ -63,20 +64,119 @@ import type { ProgramBlockState } from './programBlockState';
  *
  *   very_easy → Strong  (felt easy = body is strong / well-recovered)
  *   easy      → Good    (comfortable effort)
- *   good      → Good    (neutral / appropriate difficulty)
+ *   good      → Average (neutral / appropriate difficulty = repeat)
  *   hard      → Sore    (fatigued / beat up)
  *   very_hard → Cooked  (smashed / needs recovery)
  */
 const FEEDBACK_TO_SESSION_FEELING: Record<FeedbackFeeling, SessionFeeling> = {
   very_easy: 'Strong',
   easy: 'Good',
-  good: 'Good',
+  good: 'Average',
   hard: 'Sore',
   very_hard: 'Cooked',
 };
 
 export function feedbackFeelingToSessionFeeling(fb: FeedbackFeeling): SessionFeeling {
   return FEEDBACK_TO_SESSION_FEELING[fb] ?? 'Good';
+}
+
+function atNoon(dateISO: string): Date {
+  return new Date(`${dateISO}T12:00:00`);
+}
+
+function formatDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function mondayForDate(dateISO: string): string {
+  const d = atNoon(dateISO);
+  const dow = d.getDay();
+  const mondayOffset = dow === 0 ? -6 : -(dow - 1);
+  d.setDate(d.getDate() + mondayOffset);
+  return formatDate(d);
+}
+
+function strengthCompletion(feedback: SessionFeedback): FeedbackCompletion {
+  const strengthComponent = feedback.components?.find((component) => component.kind === 'strength');
+  return strengthComponent?.completion ?? feedback.completion;
+}
+
+function completedSetCount(completion: FeedbackCompletion, prescribedSets: number): number {
+  const targetSets = Math.max(0, Math.floor(prescribedSets || 0));
+  if (completion === 'skipped') return 0;
+  if (completion === 'partial') return Math.max(1, Math.ceil(targetSets / 2));
+  return targetSets;
+}
+
+function feedbackStrengthSets(
+  feedback: SessionFeedback,
+  loggedWorkoutId: string,
+): LoggedSet[] {
+  const completion = strengthCompletion(feedback);
+  if (completion === 'skipped') return [];
+
+  const sets: LoggedSet[] = [];
+  for (const lift of feedback.strength ?? []) {
+    const setCount = completedSetCount(completion, lift.prescribedSets);
+    const reps = Math.max(1, lift.prescribedRepsMax || lift.prescribedRepsMin || 1);
+    for (let setNumber = 1; setNumber <= setCount; setNumber++) {
+      sets.push({
+        id: `${loggedWorkoutId}-${lift.exerciseId}-${setNumber}`,
+        loggedWorkoutId,
+        // The progression helpers key local feedback history by canonical exerciseId.
+        workoutExerciseId: lift.exerciseId,
+        setNumber,
+        actualReps: reps,
+        actualWeightKg: lift.weightKg ?? undefined,
+        createdAt: `${feedback.dateStr}T12:00:00.000Z`,
+        updatedAt: `${feedback.dateStr}T12:00:00.000Z`,
+      });
+    }
+  }
+  return sets;
+}
+
+export function deriveMissedStrengthSessionsThisWeek(
+  feedbackMap: Record<string, SessionFeedback>,
+  beforeDate: string,
+): number {
+  const weekStart = mondayForDate(beforeDate);
+  return Object.values(feedbackMap).filter((feedback) => (
+    feedback.dateStr >= weekStart &&
+    feedback.dateStr < beforeDate &&
+    strengthCompletion(feedback) === 'skipped'
+  )).length;
+}
+
+export function buildStrengthWorkoutHistoryFromFeedback(
+  feedbackMap: Record<string, SessionFeedback>,
+  beforeDate: string,
+): LoggedWorkout[] {
+  return Object.values(feedbackMap)
+    .filter((feedback) => feedback.dateStr < beforeDate)
+    .filter((feedback) => (feedback.strength?.length ?? 0) > 0 || strengthCompletion(feedback) === 'skipped')
+    .sort((a, b) => b.dateStr.localeCompare(a.dateStr))
+    .map((feedback): LoggedWorkout => {
+      const loggedWorkoutId = `feedback-strength-${feedback.dateStr}`;
+      const completion = strengthCompletion(feedback);
+      return {
+        id: loggedWorkoutId,
+        userId: 'local',
+        workoutId: loggedWorkoutId,
+        loggedDate: feedback.dateStr,
+        completedAt: completion === 'skipped' ? undefined : `${feedback.dateStr}T12:00:00.000Z`,
+        sessionFeeling: feedback.feeling ? feedbackFeelingToSessionFeeling(feedback.feeling) : undefined,
+        notes: feedback.notes,
+        completed: completion !== 'skipped',
+        synced: true,
+        sets: feedbackStrengthSets(feedback, loggedWorkoutId),
+        createdAt: `${feedback.dateStr}T12:00:00.000Z`,
+        updatedAt: `${feedback.dateStr}T12:00:00.000Z`,
+      };
+    });
 }
 
 // ─── Types ───

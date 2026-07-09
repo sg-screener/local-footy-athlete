@@ -33,6 +33,7 @@ import type {
   DayOfWeek,
   GameDay,
   WeekScopedWorkoutOverlay,
+  LoggedWorkout,
 } from '../types/domain';
 import type { CalendarDayType } from '../store/calendarStore';
 import {
@@ -48,7 +49,9 @@ import type { WeekLog } from './conditioningRules';
 import { resolveRecovery } from './recoveryRules';
 import {
   applyStrengthProgression,
+  buildStrengthWorkoutHistoryFromFeedback,
   buildProgressionContext,
+  deriveMissedStrengthSessionsThisWeek,
 } from './strengthProgressionIntegration';
 import {
   analyzeFeedbackPatterns,
@@ -60,7 +63,9 @@ import type { SessionFeedback } from '../store/programStore';
 import { logger } from './logger';
 import {
   getProgramBlockStateForDate,
+  getStoredBlockStateForDate,
   selectMicrocycleForDate,
+  type StoredProgramBlockState,
 } from './programBlockState';
 
 export { computeBlockBounds } from './programBlockState';
@@ -94,6 +99,10 @@ export interface ScheduleState {
   readiness: ReadinessLevel;
   /** Session feedback keyed by ISO date. Used to feed feeling/patterns into progression. */
   sessionFeedback?: Record<string, SessionFeedback>;
+  /** Logged strength history, newest first, when already available to the caller. */
+  workoutHistory?: LoggedWorkout[];
+  /** Persisted block state from ProgramStore when available. */
+  blockState?: StoredProgramBlockState | null;
   /**
    * Per-session weight overrides from the athlete.
    * Key: ISO date → exerciseId → performed weight (null = bodyweight).
@@ -159,6 +168,9 @@ export interface ResolvedDay {
 }
 
 // ─── Constants ───
+
+declare const __DEV__: boolean | undefined;
+const IS_DEV = typeof __DEV__ !== 'undefined' && __DEV__;
 
 const DAY_SHORT: Record<number, string> = {
   0: 'SUN', 1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT',
@@ -323,7 +335,7 @@ export function canReplaceSession(
   if (source !== 'template' && source !== 'manual') return true;
 
   if (isProtectedCoreExposure(workout)) {
-    if (__DEV__) {
+    if (IS_DEV) {
       logger.debug(
         `[resolver] BLOCKED replacement of protected core "${workout.name}" ` +
         `(tier=${workout.sessionTier}, source=${source}) on ${date} — context: ${context}`
@@ -547,7 +559,7 @@ function applyGameProximity(
       // The engine placed this session here for a reason (required exposure).
       // Template workouts passed to this function always have source='template'.
       if (isProtectedCoreExposure(templateWorkout)) {
-        if (__DEV__) {
+        if (IS_DEV) {
           logger.debug(
             `[resolver] BLOCKED G+1 recovery replacing protected core "${templateWorkout!.name}" on ${date}`
           );
@@ -572,7 +584,7 @@ function applyGameProximity(
     // GUARD: never replace a protected core exposure with Gunshow.
     // The engine placed this session (e.g. Lower Strength on G-1) deliberately.
     if (isProtectedCoreExposure(templateWorkout)) {
-      if (__DEV__) {
+      if (IS_DEV) {
         logger.debug(
           `[resolver] BLOCKED G-1 Gunshow replacing protected core "${templateWorkout!.name}" on ${date}`
         );
@@ -1109,13 +1121,33 @@ export function resolveWeekWithConditioning(
         day.date,
       );
       const adaptation = deriveAdaptation(matchedFeedback);
-      const blockState = state.currentProgram
-        ? getProgramBlockStateForDate({
+      const blockState = state.blockState
+        ? getStoredBlockStateForDate(
+            state.blockState,
+            day.date,
+            state.seasonPhase,
+          )
+        : state.currentProgram
+          ? getProgramBlockStateForDate({
             dateISO: day.date,
             programStartISO: state.currentProgram.startDate,
             seasonPhase: state.seasonPhase,
           })
-        : undefined;
+          : undefined;
+
+      const providedWorkoutHistory = (state.workoutHistory ?? [])
+        .filter((workout) => workout.loggedDate < day.date)
+        .sort((a, b) => b.loggedDate.localeCompare(a.loggedDate));
+      const feedbackWorkoutHistory = buildStrengthWorkoutHistoryFromFeedback(
+        feedbackMap,
+        day.date,
+      );
+      const workoutHistory = [...providedWorkoutHistory, ...feedbackWorkoutHistory]
+        .sort((a, b) => b.loggedDate.localeCompare(a.loggedDate));
+      const missedSessionsThisWeek = deriveMissedStrengthSessionsThisWeek(
+        feedbackMap,
+        day.date,
+      );
 
       const progressionCtx = buildProgressionContext(
         state.seasonPhase!,
@@ -1124,12 +1156,11 @@ export function resolveWeekWithConditioning(
         day.date,
         injuries,
         state.markedDays || {},
-        // workoutHistory: empty default — caller can provide via extended state
-        [],
+        workoutHistory,
         lastFeedbackFeeling,
         priorFeedback.slice(0, 4), // analysis window for pattern biases
         adaptation.explanation ? adaptation : null,
-        { blockState },
+        { blockState, missedSessionsThisWeek },
       );
 
       // Build last-performed-weight map from weight overrides (dates before today)
@@ -1475,7 +1506,7 @@ export function resolveWeekWithConditioning(
         const dayMark = (state.markedDays || {})[day.date];
         if (dayMark === 'rest' || dayMark === 'noGame') continue; // user bye-out respected
         if (day.workout?.workoutType === 'Game') continue; // already a game
-        if (__DEV__) {
+        if (IS_DEV) {
           logger.warn(
             `[resolver] Game-day LOCK overriding ${day.date} ` +
             `source=${day.source} workout="${day.workout?.name ?? 'null'}" → virtual Game`,
@@ -1518,7 +1549,7 @@ export function resolveWeekWithConditioning(
     }
     for (const idx of gameIndices) {
       if (idx === keepIdx) continue;
-      if (__DEV__) {
+      if (IS_DEV) {
         logger.warn(
           `[resolver] Max-1-Game guard downgrading duplicate Game on ${result[idx].date} ` +
           `(source=${result[idx].source}) — keeping ${result[keepIdx].date} (source=${result[keepIdx].source})`,
