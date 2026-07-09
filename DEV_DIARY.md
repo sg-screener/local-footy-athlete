@@ -838,3 +838,42 @@ sessions, strength stacking onto occupied days, and the sprint category
 once the running rules are signed off.
 
 ---
+
+## Thursday 9 July 2026 — the Bible moves in, and the big audit
+
+**The reset.** Sam called time on bug-by-bug screenshot fixes. Today was
+about the whole system: how far is the app from actually implementing
+his full programming rulebook?
+
+**The Bible lives in the repo now.** Sam's complete "LFA Programming
+Rules" — every section from season phases to injury bands to the
+Section 17 addendum — is committed verbatim at
+`docs/LFA_PROGRAMMING_BIBLE.md` (4,365 lines). Until today only a
+finisher addendum existed as a file; the rest lived in chat history.
+Now every future change can cite chapter and verse.
+
+**The audit.** Three deep code sweeps compared the engine to the Bible,
+area by area. Short version: the safety brain is genuinely good — game
+protection, team-training rules, honest coach notes. But the *value*
+brain has holes, and they explain why programs still feel flat:
+
+- One bug means the hardest conditioning sessions (4x4s, 1km repeats)
+  can literally never be generated. Slots quietly fall back to easy
+  aerobic work. That's a big chunk of the "boring erg filler" feel.
+- The app never prescribes sprinting to a realistic athlete.
+- Sets and reps don't change with the season phase, even though the
+  rules for that are already written into the codebase — just not
+  plugged in.
+- Week 4 of a block is identical to week 1: no progression, deloads
+  can't fire, new-block variation never triggers.
+- Feeling "a bit flat" today deletes your main lift instead of just
+  trimming the extras.
+
+**The plan.** A full roadmap is at
+`docs/BIBLE_IMPLEMENTATION_ROADMAP_2026-07-09.md` — five phases, each
+slice with files, owner, tests and risk. Next three moves: unblock the
+hard-conditioning bug, wire the phase-based sets/reps, then give
+low-availability athletes real conditioning on strength days. The first
+Codex prompt is written and ready to fire.
+
+No code changed today — by design. Audit first, then surgery.
