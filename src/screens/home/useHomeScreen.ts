@@ -44,6 +44,10 @@ import {
 } from '../../utils/missedSessions';
 import { todayISOLocal } from '../../utils/appDate';
 import {
+  getProgramBlockStateForDate,
+  getStoredBlockStateForDate,
+} from '../../utils/programBlockState';
+import {
   loadReductionModifierIdForDate,
   recoveryModeModifierIdForDate,
 } from '../../utils/tapProgramModifiers';
@@ -200,11 +204,38 @@ export function useHomeScreen() {
 
   // Program store
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
+  const currentProgram = useProgramStore((s) => s.currentProgram);
+  const blockState = useProgramStore((s) => s.blockState);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
   const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
   const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
   const modalityPreferences = useCoachPreferencesStore((s) => s.modalityPreferences);
   const readinessSignalsByDate = useReadinessStore((s) => s.signalsByDate);
+  const visibleWeekStart = weekDays[0]?.date;
+  const visibleWeekKind = useMemo(() => {
+    if (!visibleWeekStart) return undefined;
+    const exactMicrocycle = currentProgram?.microcycles?.find((microcycle) => {
+      const start = microcycle.startDate.split('T')[0];
+      const end = microcycle.endDate.split('T')[0];
+      return visibleWeekStart >= start && visibleWeekStart <= end;
+    });
+    if (exactMicrocycle?.weekKind) return exactMicrocycle.weekKind;
+    if (blockState) {
+      return getStoredBlockStateForDate(
+        blockState,
+        visibleWeekStart,
+        currentPhase,
+      ).weekKind;
+    }
+    if (currentProgram?.startDate) {
+      return getProgramBlockStateForDate({
+        dateISO: visibleWeekStart,
+        programStartISO: currentProgram.startDate,
+        seasonPhase: currentPhase,
+      }).weekKind;
+    }
+    return undefined;
+  }, [blockState, currentPhase, currentProgram, visibleWeekStart]);
   const coachNotes = useMemo(
     () => selectActiveCoachNotes({
       activeConstraints,
@@ -213,6 +244,7 @@ export function useHomeScreen() {
       modalityPreferences,
       onboardingData,
       readinessSignalsByDate,
+      weekKind: visibleWeekKind,
       visibleWeekDays: weekDays,
     }),
     [
@@ -222,6 +254,7 @@ export function useHomeScreen() {
       modalityPreferences,
       onboardingData,
       readinessSignalsByDate,
+      visibleWeekKind,
       weekDays,
     ],
   );

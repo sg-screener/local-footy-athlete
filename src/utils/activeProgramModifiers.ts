@@ -25,6 +25,7 @@ import type { AthletePoolPrefs } from '../data/exercisePoolsStrength';
 import type {
   OnboardingData,
   ProgramAvailabilityConstraint,
+  WeekKind,
   Workout,
 } from '../types/domain';
 import type { InjuryState } from './injuryProgression';
@@ -42,7 +43,8 @@ export type ActiveProgramModifierSource =
   | 'athlete_preferences'
   | 'modality_preferences'
   | 'profile_availability'
-  | 'readiness_signal';
+  | 'readiness_signal'
+  | 'week_kind';
 
 export type ActiveProgramModifierActionKind =
   | 'clear_injury'
@@ -80,13 +82,28 @@ export interface ActiveProgramModifierSnapshot {
   onboardingData?: OnboardingData | null;
   readinessSignalsByDate?: Record<string, ReadinessSignal> | null;
   todayISO?: string;
+  weekKind?: WeekKind | null;
   visibleWeekDays?: readonly ActiveProgramModifierVisibleDay[] | null;
 }
 
 export interface ActiveProgramModifierVisibleDay {
   date: string;
   dayOfWeek?: number;
-  workout?: Pick<Workout, 'name' | 'workoutType' | 'sessionTier' | 'coachNotes' | 'exercises'> | null;
+  workout?: Pick<
+    Workout,
+    | 'name'
+    | 'description'
+    | 'workoutType'
+    | 'sessionTier'
+    | 'coachNotes'
+    | 'exercises'
+    | 'conditioningCategory'
+    | 'conditioningFlavour'
+    | 'hasCombinedConditioning'
+    | 'speedBlock'
+    | 'conditioningBlock'
+    | 'recoveryAddons'
+  > | null;
 }
 
 export interface ClearActiveProgramModifierResult {
@@ -356,6 +373,157 @@ function proofGateReadinessModifier(
   const body = deterministicReadinessBody(c, visibleEffects(visibleWeekDays));
   if (!body) return null;
   return { ...modifier, body };
+}
+
+interface DeloadVisibleEvidence {
+  weekStart: string;
+  proofText: string;
+  hasReductionProof: boolean;
+  hasMainStrengthPreserved: boolean;
+  hasSetsReduced: boolean;
+  hasLoadOrIntensityReduced: boolean;
+  hasAccessoriesTrimmed: boolean;
+  hasHardConditioningRemoved: boolean;
+  hasSprintIntensityRemoved: boolean;
+  hasEasyRecoveryPreserved: boolean;
+}
+
+function workoutText(day: ActiveProgramModifierVisibleDay): string {
+  const workout = day.workout;
+  if (!workout) return '';
+  const exerciseText = (workout.exercises ?? []).map((row: any) => [
+    row?.exercise?.name,
+    row?.exerciseId,
+    row?.notes,
+    row?.prescriptionType,
+    typeof row?.prescribedSets === 'number' ? `${row.prescribedSets} sets` : null,
+    typeof row?.prescribedWeightKg === 'number' ? `${row.prescribedWeightKg} kg` : null,
+  ].filter(Boolean).join(' '));
+  const conditioningText = [
+    workout.conditioningCategory,
+    workout.conditioningFlavour,
+    workout.hasCombinedConditioning ? 'combined conditioning' : null,
+    workout.speedBlock?.title,
+    workout.speedBlock?.label,
+    workout.speedBlock?.prescription,
+    ...(workout.speedBlock?.notes ?? []),
+    ...(workout.conditioningBlock?.options ?? []).flatMap((option) => [
+      option.title,
+      option.description,
+    ]),
+    ...(workout.recoveryAddons ?? []).flatMap((addon) => [
+      addon.title,
+      addon.label,
+      addon.focusArea,
+      addon.placementNote,
+    ]),
+  ];
+  return [
+    workout.name,
+    workout.description,
+    workout.workoutType,
+    workout.sessionTier,
+    ...(workout.coachNotes ?? []),
+    ...exerciseText,
+    ...conditioningText,
+  ].filter(Boolean).join(' ');
+}
+
+function visibleDeloadEvidence(
+  days: readonly ActiveProgramModifierVisibleDay[],
+): DeloadVisibleEvidence {
+  const proofText = days.map(workoutText).join(' ').toLowerCase();
+  const weekStart = days[0]?.date ?? todayISOLocal();
+  const hasDeloadMarker = /\bdeload\b|lighter week|lower fatigue/.test(proofText);
+  const hasMainStrengthPreserved =
+    /\b(squat|deadlift|trap bar|rdl|hinge|bench|press|row|pull[-\s]?up|split squat|lunge|hip thrust)\b/.test(proofText) &&
+    !/\b(training paused|full pause|bedridden)\b/.test(proofText);
+  const hasSetsReduced =
+    /\b(sets?|volume)\b[^.]*\b(reduced|trimmed|lowered|pulled back|dropped)\b/.test(proofText) ||
+    /\b(reduced|trimmed|lowered|pulled back|dropped)\b[^.]*\b(sets?|volume)\b/.test(proofText);
+  const hasLoadOrIntensityReduced =
+    /\b(load|intensity|rpe|effort)\b[^.]*\b(reduced|lowered|capped|controlled|pulled back|6-\d|leave reps in reserve)\b/.test(proofText) ||
+    /\b(reduced|lowered|capped|controlled|pulled back)\b[^.]*\b(load|intensity|rpe|effort)\b/.test(proofText) ||
+    /\bdeload week:\s*keep rpe\b/.test(proofText);
+  const hasAccessoriesTrimmed =
+    /\b(accessor(?:y|ies)|finisher|extras?|optional)\b[^.]*\b(removed|trimmed|reduced|dropped|pulled back)\b/.test(proofText) ||
+    /\b(removed|trimmed|reduced|dropped|pulled back)\b[^.]*\b(accessor(?:y|ies)|finisher|extras?|optional)\b/.test(proofText);
+  const hasHardConditioningRemoved =
+    /\b(hard conditioning|conditioning|intervals?|metcon|assault bike)\b[^.]*\b(removed|trimmed|reduced|dropped|out)\b/.test(proofText) ||
+    /\b(removed|trimmed|reduced|dropped|no)\b[^.]*\b(hard conditioning|conditioning|intervals?|metcon|assault bike)\b/.test(proofText);
+  const hasSprintIntensityRemoved =
+    /\b(sprint|speed|cod|change of direction|vo2|glycolytic|repeated sprint)\b[^.]*\b(removed|trimmed|reduced|dropped|out)\b/.test(proofText) ||
+    /\b(removed|trimmed|reduced|dropped|no)\b[^.]*\b(sprint|speed|cod|change of direction|vo2|glycolytic|repeated sprint)\b/.test(proofText);
+  const hasEasyRecoveryPreserved =
+    /\b(easy|recovery|mobility|flush|zone 2|aerobic|tempo)\b/.test(proofText);
+
+  return {
+    weekStart,
+    proofText,
+    hasReductionProof: hasDeloadMarker && (
+      hasSetsReduced ||
+      hasLoadOrIntensityReduced ||
+      hasAccessoriesTrimmed ||
+      hasHardConditioningRemoved ||
+      hasSprintIntensityRemoved
+    ),
+    hasMainStrengthPreserved,
+    hasSetsReduced,
+    hasLoadOrIntensityReduced,
+    hasAccessoriesTrimmed,
+    hasHardConditioningRemoved,
+    hasSprintIntensityRemoved,
+    hasEasyRecoveryPreserved,
+  };
+}
+
+function deloadBody(evidence: DeloadVisibleEvidence): string | null {
+  if (!evidence.hasReductionProof) return null;
+  const lines: string[] = ['This is a deload week.'];
+  if (evidence.hasMainStrengthPreserved) {
+    lines.push('Main strength patterns stay in.');
+  }
+  if (evidence.hasSetsReduced) {
+    lines.push('Sets or volume are reduced.');
+  }
+  if (evidence.hasLoadOrIntensityReduced) {
+    lines.push('Load or intensity is pulled back.');
+  }
+  if (evidence.hasAccessoriesTrimmed) {
+    lines.push('Accessories or finishers are trimmed.');
+  }
+  if (evidence.hasSprintIntensityRemoved) {
+    lines.push('Sprint, VO2 or glycolytic work is out this week.');
+  } else if (evidence.hasHardConditioningRemoved) {
+    lines.push('Hard conditioning is out this week.');
+  }
+  if (evidence.hasEasyRecoveryPreserved) {
+    lines.push('Easy recovery work stays in.');
+  }
+  return lines.join(' ');
+}
+
+function deloadWeekModifier(
+  snapshot: ActiveProgramModifierSnapshot,
+): ActiveProgramModifier | null {
+  if (snapshot.weekKind !== 'deload' || !snapshot.visibleWeekDays?.length) return null;
+  const evidence = visibleDeloadEvidence(snapshot.visibleWeekDays);
+  const body = deloadBody(evidence);
+  if (!body) return null;
+  return {
+    id: modifierId('week_kind', `deload:${evidence.weekStart}`),
+    source: 'week_kind',
+    sourceId: `deload:${evidence.weekStart}`,
+    type: 'temporary_status',
+    title: 'Deload week active',
+    body,
+    affects: ['current_week'],
+    actions: [],
+    payload: {
+      weekKind: 'deload',
+      weekStart: evidence.weekStart,
+    },
+  };
 }
 
 function linkedOverrideDates(c: ActiveConstraint | null | undefined): string[] {
@@ -781,6 +949,8 @@ export function selectActiveProgramModifiers(
       ),
     );
   }
+
+  addUnique(out, seen, deloadWeekModifier(snapshot));
 
   for (const [key, pref] of Object.entries(snapshot.modalityPreferences ?? {})) {
     addUnique(out, seen, modalityModifier(key, pref));
