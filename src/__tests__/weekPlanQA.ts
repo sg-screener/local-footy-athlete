@@ -51,6 +51,14 @@ import {
 } from './weekPlanQA/scenarioMetadata';
 import { renderExpectedWeekShapeDiff } from './weekPlanQA/weekShapeDiff';
 import { renderWeekShapeSummary } from './weekPlanQA/weekShapeSummary';
+import {
+  WEEK_PLAN_QA_ALLOWED_FINDINGS,
+  classifyValidatorFindings,
+  findUnusedAllowedFindingPolicies,
+  findingSummary,
+  renderAllowedFinding,
+  validateAllowedFindingPolicy,
+} from './weekPlanQA/allowedFindings';
 
 // ═══════════════════════════════════════════════════
 // TYPES
@@ -904,6 +912,8 @@ const scenarios: Scenario[] = [
 
 let totalPassed = 0;
 let totalFailed = 0;
+const usedAllowedFindingPolicyKeys = new Set<string>();
+const qaPolicyFailures: string[] = [];
 
 console.log('╔══════════════════════════════════════════════════════════════════════╗');
 console.log('║              WEEK PLAN QA HARNESS — STRUCTURAL TESTS               ║');
@@ -917,6 +927,20 @@ console.log('  ID   Human-readable name                                      Sce
 console.log('  ' + '─'.repeat(108));
 for (const scenario of scenarios) {
   console.log(`  ${scenarioTocLine(scenario)}`);
+}
+
+const allowedFindingPolicyErrors = validateAllowedFindingPolicy(
+  WEEK_PLAN_QA_ALLOWED_FINDINGS,
+  scenarios.map((scenario) => scenario.id),
+);
+if (allowedFindingPolicyErrors.length > 0) {
+  console.log('\nAllowed finding policy errors:');
+  for (const error of allowedFindingPolicyErrors) {
+    const line = `  ❌ ${error}`;
+    console.log(line);
+    qaPolicyFailures.push(line);
+  }
+  totalFailed += allowedFindingPolicyErrors.length;
 }
 
 for (const scenario of scenarios) {
@@ -934,10 +958,10 @@ for (const scenario of scenarios) {
 
   const assertions = runAssertions(plan, resolvedWeek, scenario);
 
-  // ── Phase 2 rules kernel: Bible validator findings (REPORT-ONLY) ──
-  // Findings never affect QA pass/fail — observability only. Two FIDELITY
-  // assertions below DO count: they guard against harness-induced false
-  // positives, not against genuine findings.
+  // ── Phase 2 rules kernel: Bible validator findings ──
+  // Findings are now policy-gated: scenario-scoped allowed findings print
+  // with a reason, while unlisted findings fail loudly. The two FIDELITY
+  // assertions below still guard against harness-induced false positives.
   const findingLines: string[] = [];
   let validationReport: WeekValidationReport | null = null;
   if (resolvedWeek) {
@@ -956,9 +980,23 @@ for (const scenario of scenarios) {
       });
       validationReport = report;
       if (report.findings.length > 0) {
-        findingLines.push('  📖 Bible validator findings (report-only, not failures):');
-        for (const f of report.findings) {
-          findingLines.push(`     [${f.severity}] ${f.ruleId}: ${f.message}`);
+        const classifiedFindings = classifyValidatorFindings(scenario.id, report.findings);
+        findingLines.push('  📖 Bible validator findings:');
+        for (const match of classifiedFindings.allowed) {
+          usedAllowedFindingPolicyKeys.add(match.policyKey);
+          findingLines.push(...renderAllowedFinding(match, scenarioDisplayLabel(scenario)));
+        }
+        for (const finding of classifiedFindings.unallowed) {
+          const summary = findingSummary(finding);
+          findingLines.push(`     ❌ Unallowed finding: ${summary}`);
+          qaPolicyFailures.push(`${scenarioDisplayLabel(scenario)}: ${summary}`);
+        }
+        if (classifiedFindings.unallowed.length > 0) {
+          assertions.push({
+            rule: 'Bible validator findings are explicitly allowed',
+            passed: false,
+            detail: classifiedFindings.unallowed.map(findingSummary).join('; '),
+          });
         }
       } else {
         findingLines.push('  📖 Bible validator: no findings');
@@ -1030,6 +1068,25 @@ for (const scenario of scenarios) {
   }
 }
 
+const staleAllowedFindings = findUnusedAllowedFindingPolicies(usedAllowedFindingPolicyKeys, WEEK_PLAN_QA_ALLOWED_FINDINGS);
+console.log('\nAllowed findings policy:');
+if (usedAllowedFindingPolicyKeys.size === 0) {
+  console.log('  No allowed findings used.');
+} else {
+  console.log(`  Allowed findings used: ${usedAllowedFindingPolicyKeys.size}`);
+}
+if (staleAllowedFindings.length > 0) {
+  console.log('  ❌ Stale allowed finding policy entries:');
+  for (const policy of staleAllowedFindings) {
+    const line = `  ❌ ${policy.scenarioId} ${policy.ruleId} (${policy.severity ?? 'any severity'}) no longer matched a validator finding.`;
+    console.log(line);
+    qaPolicyFailures.push(line);
+  }
+  totalFailed += staleAllowedFindings.length;
+} else {
+  console.log('  No stale allowed findings.');
+}
+
 // ── Summary ──
 console.log(`\n${'═'.repeat(72)}`);
 console.log(`  SUMMARY: ${totalPassed} passed, ${totalFailed} failed across ${scenarios.length} scenarios`);
@@ -1037,6 +1094,12 @@ console.log(`${'═'.repeat(72)}`);
 
 if (totalFailed > 0) {
   console.log('\n  ❌ FAILURES:');
+  if (qaPolicyFailures.length > 0) {
+    console.log('  QA allowed-finding policy:');
+    for (const failure of qaPolicyFailures) {
+      console.log(`    ${failure}`);
+    }
+  }
   // Re-run assertions just for failures
   for (const scenario of scenarios) {
     const inputs = onboardingToCoachingInputs(scenario.onboarding as OnboardingData);
