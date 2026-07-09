@@ -1,8 +1,8 @@
 /**
  * phaseRepSchemes.ts — Programming Bible main-lift set/rep tables as DATA.
  *
- * Phase 1 rules kernel (DATA ONLY — not consumed by the engine yet).
- * Wiring these into strength generation is Phase 3 and needs its own plan.
+ * Consumed by the deterministic workout builder. Keep this as the single
+ * source of truth for phase-aware strength prescriptions.
  *
  * Bible source: Section 5 (Strength programming rules).
  *   In-season:  main lifts 2-4 sets of 2-4 reps (3x3 base). Upper push

@@ -7,6 +7,7 @@ import {
   UserProfile,
   SessionTier,
   OnboardingData,
+  SeasonPhase,
   ConditioningBlock,
   IntensityLevel,
   WorkoutType,
@@ -29,12 +30,20 @@ import {
   type ConditioningFeel,
   type ConditioningVariant,
 } from '../utils/sessionBuilder';
+import {
+  ACCESSORY_REP_GUIDELINES,
+  MAIN_LIFT_REP_SCHEMES,
+  type AccessoryGuideline,
+  type RepScheme,
+} from '../rules/phaseRepSchemes';
 import { resolveSessionDisplayName } from '../utils/sessionNaming';
 import {
   applyPoolRotation,
+  classifyPoolSlot,
   findPoolEntry,
   type RotationContext,
   type AthletePoolPrefs,
+  type PoolSlotKey,
 } from './exercisePoolsStrength';
 import { isTeamTrainingItem } from '../utils/teamTraining';
 
@@ -480,13 +489,24 @@ function createDefaultMicrocycle(programId: string, onboardingData?: OnboardingD
     // Sunday: Rest day (no workout)
   ];
 
+  const phaseAwareWorkouts = onboardingData?.seasonPhase
+    ? workouts.map((workout) => ({
+        ...workout,
+        exercises: applyPhaseRepSchemesToWorkoutExercises(workout.exercises, {
+          seasonPhase: onboardingData.seasonPhase,
+          workoutName: workout.name,
+          workoutType: workout.workoutType,
+        }),
+      }))
+    : workouts;
+
   // Apply intelligent load estimates if onboarding data is available
   const finalWorkouts = onboardingData
-    ? workouts.map(w => ({
+    ? phaseAwareWorkouts.map(w => ({
         ...w,
         exercises: applyLoadEstimates(w.exercises, onboardingData),
       }))
-    : workouts;
+    : phaseAwareWorkouts;
 
   return {
     id: 'mc-1',
@@ -563,6 +583,138 @@ type CoachGeneratedWorkoutInput = {
     pairType?: string;
   }>;
 };
+
+type PhasePrescriptionContext = {
+  seasonPhase?: SeasonPhase;
+  workoutName?: string;
+  workoutType?: string;
+  planEntry?: SessionAllocation | null;
+};
+
+const MAIN_LIFT_POOL_SLOTS = new Set<PoolSlotKey>([
+  'squat',
+  'hinge',
+  'horizontal_push',
+  'vertical_push',
+  'horizontal_pull',
+  'vertical_pull',
+]);
+
+const REP_ACCESSORY_POOL_SLOTS = new Set<PoolSlotKey>([
+  'squat',
+  'hinge',
+  'horizontal_push',
+  'vertical_push',
+  'horizontal_pull',
+  'vertical_pull',
+  'isolation_upper',
+  'isolation_lower',
+]);
+
+function baseSetsFromScheme(scheme: RepScheme): number {
+  const match = /^(\d+)x/i.exec(scheme.base);
+  const parsed = match ? Number(match[1]) : 3;
+  return Math.min(scheme.setsMax, Math.max(scheme.setsMin, parsed || 3));
+}
+
+function clampInt(value: unknown, min: number, max: number, fallback: number): number {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return fallback;
+  return Math.min(max, Math.max(min, Math.round(n)));
+}
+
+function mainLiftSchemeForSlot(
+  slot: PoolSlotKey,
+  seasonPhase: SeasonPhase,
+): RepScheme | null {
+  const schemes = MAIN_LIFT_REP_SCHEMES[seasonPhase];
+  if (slot === 'squat' || slot === 'hinge') return schemes.lower;
+  if (slot === 'horizontal_push' || slot === 'vertical_push') return schemes.upperPush;
+  if (slot === 'horizontal_pull' || slot === 'vertical_pull') return schemes.upperPull;
+  return null;
+}
+
+function accessoryGuidelineForExercise(
+  exerciseName: string,
+  slot: PoolSlotKey,
+  context: PhasePrescriptionContext,
+): AccessoryGuideline {
+  const text = `${exerciseName} ${context.workoutName ?? ''} ${context.planEntry?.focus ?? ''}`;
+  if (/nordic/i.test(exerciseName)) return ACCESSORY_REP_GUIDELINES.nordics;
+  if (slot === 'isolation_upper' || /gunshow|pump|arms?|bicep|tricep|curl|pushdown|lateral raise|rear delt|face pull/i.test(text)) {
+    return ACCESSORY_REP_GUIDELINES.pump;
+  }
+  return ACCESSORY_REP_GUIDELINES.general;
+}
+
+function isAccessoryPrescriptionContext(context: PhasePrescriptionContext): boolean {
+  if (context.planEntry?.strengthPattern || context.planEntry?.hasCombinedConditioning) return false;
+  const text = `${context.workoutName ?? ''} ${context.workoutType ?? ''} ${context.planEntry?.focus ?? ''}`;
+  return /\b(gunshow|prehab|pump|accessor|trunk|arms?|bicep|tricep|delts?)\b/i.test(text);
+}
+
+function isStrengthPrescriptionContext(context: PhasePrescriptionContext): boolean {
+  if (!context.seasonPhase) return false;
+  const planEntry = context.planEntry;
+
+  if (planEntry?.conditioningFlavour && !planEntry.hasCombinedConditioning) return false;
+  if (planEntry?.tier === 'recovery') return false;
+
+  const text = `${context.workoutName ?? ''} ${context.workoutType ?? ''} ${planEntry?.focus ?? ''}`;
+  if (/\b(recovery|mobility|foam rolling|conditioning|aerobic|tempo|sprint|interval|game)\b/i.test(text) &&
+      !/\b(strength|upper|lower|push|pull|squat|hinge|full body|gunshow|accessor|prehab|pump)\b/i.test(text)) {
+    return false;
+  }
+
+  if (planEntry?.strengthPattern) return true;
+  if (planEntry?.hasCombinedConditioning) return true;
+  return /\b(strength|upper|lower|push|pull|squat|hinge|full body|gunshow|accessor|prehab|pump)\b/i.test(text);
+}
+
+function applyPhaseRepSchemeToExercise(
+  exercise: WorkoutExercise,
+  context: PhasePrescriptionContext,
+): WorkoutExercise {
+  if (!isStrengthPrescriptionContext(context) || exercise.prescriptionType && exercise.prescriptionType !== 'reps') {
+    return exercise;
+  }
+
+  const seasonPhase = context.seasonPhase!;
+  const exerciseName = exercise.exercise?.name ?? '';
+  const classification = classifyPoolSlot(exerciseName);
+  if (!classification) return exercise;
+
+  const { slot, role } = classification;
+  const accessoryContext = isAccessoryPrescriptionContext(context);
+  if (!accessoryContext && role === 'anchor' && MAIN_LIFT_POOL_SLOTS.has(slot)) {
+    const scheme = mainLiftSchemeForSlot(slot, seasonPhase);
+    if (!scheme) return exercise;
+    return {
+      ...exercise,
+      prescribedSets: baseSetsFromScheme(scheme),
+      prescribedRepsMin: scheme.repsMin,
+      prescribedRepsMax: scheme.repsMax,
+    };
+  }
+
+  if (!REP_ACCESSORY_POOL_SLOTS.has(slot)) return exercise;
+  const guideline = accessoryGuidelineForExercise(exerciseName, slot, context);
+  if (guideline.unit !== 'reps') return exercise;
+  const setsFallback = Math.min(guideline.setsMax, Math.max(guideline.setsMin, exercise.prescribedSets || guideline.setsMin));
+  return {
+    ...exercise,
+    prescribedSets: clampInt(exercise.prescribedSets, guideline.setsMin, guideline.setsMax, setsFallback),
+    prescribedRepsMin: guideline.min,
+    prescribedRepsMax: guideline.max,
+  };
+}
+
+function applyPhaseRepSchemesToWorkoutExercises(
+  exercises: WorkoutExercise[],
+  context: PhasePrescriptionContext,
+): WorkoutExercise[] {
+  return exercises.map((exercise) => applyPhaseRepSchemeToExercise(exercise, context));
+}
 
 /**
  * Day name → JS dayOfWeek number (0=Sun..6=Sat).
@@ -1372,11 +1524,17 @@ export function buildWorkoutsFromCoach(
 
     // Validate superset pairings (deterministic rules)
     const validatedExercises = validatePairings(aiExercises, canonicalTier);
+    const phaseAwareExercises = applyPhaseRepSchemesToWorkoutExercises(validatedExercises, {
+      seasonPhase: onboardingData?.seasonPhase,
+      workoutName: cw.name,
+      workoutType: cw.workoutType,
+      planEntry,
+    });
 
     // Apply load estimates for exercises missing weights
     let finalExercises = onboardingData
-      ? applyLoadEstimates(validatedExercises, onboardingData)
-      : validatedExercises;
+      ? applyLoadEstimates(phaseAwareExercises, onboardingData)
+      : phaseAwareExercises;
 
     // Resolved conditioning block — assembled below for combined S+C days.
     let resolvedConditioningBlock: ConditioningBlock | undefined;
