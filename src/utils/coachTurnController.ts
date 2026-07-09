@@ -1,5 +1,5 @@
 import { generateProgramFromProfile } from '../services/api/generateProgram';
-import { useProgramStore } from '../store/programStore';
+import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
@@ -2613,7 +2613,10 @@ async function executeSetupEditInController(args: {
     todayISO: input.todayISO,
     getOnboardingData: () => useProfileStore.getState().onboardingData,
     updateOnboardingData: (patch) => useProfileStore.getState().updateOnboardingData(patch),
-    generateProgramFromProfile,
+    generateProgramFromProfile: (profile, options) => generateProgramFromProfile(profile, {
+      ...options,
+      blockNumber: options?.blockNumber ?? getCurrentBlockNumberForGeneration(options?.todayISO ?? input.todayISO),
+    }),
     setCurrentProgram: (program) => useProgramStore.getState().setCurrentProgram(program),
     setCurrentMicrocycle: (microcycle) => useProgramStore.getState().setCurrentMicrocycle(microcycle),
     setTodayWorkout: (workout) => useProgramStore.getState().setTodayWorkout(workout),

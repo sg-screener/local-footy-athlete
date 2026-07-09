@@ -30,6 +30,13 @@ export interface ProgramBlockState {
   consecutiveBuildWeeks: number;
 }
 
+export interface StoredProgramBlockState {
+  /** Monday ISO date for the block this program is currently using. */
+  blockStartDate: string;
+  /** 1-based block / mini-cycle number. */
+  blockNumber: number;
+}
+
 function formatDate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -51,6 +58,10 @@ function daysBetween(startISO: string, endISO: string): number {
   const start = atNoon(startISO);
   const end = atNoon(endISO);
   return Math.round((end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000));
+}
+
+function todayISO(): string {
+  return formatDate(new Date());
 }
 
 /**
@@ -82,6 +93,29 @@ export function getMondayISOForDate(dateISO: string): string {
   return formatDate(d);
 }
 
+function getWeekOffset(blockStartDate: string, dateISO: string): number {
+  const blockMonday = getMondayISOForDate(blockStartDate.split('T')[0]);
+  const dateMonday = getMondayISOForDate(dateISO.split('T')[0]);
+  return Math.max(0, Math.floor(daysBetween(blockMonday, dateMonday) / DAYS_PER_WEEK));
+}
+
+export function getWeekInBlock(blockStartDate: string, dateISO: string): number {
+  return (getWeekOffset(blockStartDate, dateISO) % WEEKS_PER_BLOCK) + 1;
+}
+
+export function getWeeksSinceDeload(blockStartDate: string, dateISO: string): number {
+  return getWeekInBlock(blockStartDate, dateISO) - 1;
+}
+
+export function getBlockNumberForDate(
+  blockStartDate: string,
+  blockNumber: number,
+  dateISO: string,
+): number {
+  const baseBlockNumber = Math.max(1, Math.floor(blockNumber || 1));
+  return baseBlockNumber + Math.floor(getWeekOffset(blockStartDate, dateISO) / WEEKS_PER_BLOCK);
+}
+
 export function resolveIntensityMultiplier(
   seasonPhase: SeasonPhase | null | undefined,
   weekInBlock: number,
@@ -94,23 +128,24 @@ export function resolveIntensityMultiplier(
 export function getProgramBlockStateForDate(args: {
   dateISO: string;
   programStartISO: string;
+  blockNumber?: number;
   seasonPhase?: SeasonPhase | null;
 }): ProgramBlockState {
   const programStart = args.programStartISO.split('T')[0];
   const anchorBounds = computeBlockBounds(atNoon(programStart));
-  const offsetDays = Math.max(0, daysBetween(anchorBounds.blockStart, args.dateISO));
-  const blockIndex = Math.floor(offsetDays / DAYS_PER_BLOCK);
-  const dayInBlock = offsetDays % DAYS_PER_BLOCK;
-  const weekInBlock = Math.floor(dayInBlock / DAYS_PER_WEEK) + 1;
-  const weekNumber = Math.floor(offsetDays / DAYS_PER_WEEK) + 1;
+  const offsetWeeks = getWeekOffset(anchorBounds.blockStart, args.dateISO);
+  const blockIndex = Math.floor(offsetWeeks / WEEKS_PER_BLOCK);
+  const weekInBlock = (offsetWeeks % WEEKS_PER_BLOCK) + 1;
+  const blockNumber = Math.max(1, Math.floor(args.blockNumber ?? 1)) + blockIndex;
+  const weekNumber = (blockNumber - 1) * WEEKS_PER_BLOCK + weekInBlock;
   const blockStart = addDaysISO(anchorBounds.blockStart, blockIndex * DAYS_PER_BLOCK);
   const blockEnd = addDaysISO(blockStart, DAYS_PER_BLOCK - 1);
   const weekStart = addDaysISO(blockStart, (weekInBlock - 1) * DAYS_PER_WEEK);
   const weekEnd = addDaysISO(weekStart, DAYS_PER_WEEK - 1);
 
   return {
-    blockNumber: blockIndex + 1,
-    miniCycleNumber: blockIndex + 1,
+    blockNumber,
+    miniCycleNumber: blockNumber,
     weekInBlock,
     weekNumber,
     blockStart,
@@ -119,6 +154,46 @@ export function getProgramBlockStateForDate(args: {
     weekEnd,
     intensityMultiplier: resolveIntensityMultiplier(args.seasonPhase, weekInBlock),
     weeksSinceDeload: weekInBlock - 1,
+    consecutiveBuildWeeks: Math.max(0, weekInBlock - 1),
+  };
+}
+
+export function deriveStoredBlockStateFromProgram(
+  program: TrainingProgram | null,
+  dateISO: string = todayISO(),
+): StoredProgramBlockState {
+  const sourceDate = program?.startDate ?? program?.createdAt ?? dateISO;
+  const blockStartDate = computeBlockBounds(atNoon(sourceDate.split('T')[0])).blockStart;
+  const blockNumber = Math.max(1, Math.floor(program?.microcycles?.[0]?.miniCycleNumber ?? 1));
+  return { blockStartDate, blockNumber };
+}
+
+export function getStoredBlockStateForDate(
+  state: StoredProgramBlockState,
+  dateISO: string,
+  seasonPhase?: SeasonPhase | null,
+): ProgramBlockState {
+  const weekInBlock = getWeekInBlock(state.blockStartDate, dateISO);
+  const blockNumber = getBlockNumberForDate(state.blockStartDate, state.blockNumber, dateISO);
+  const blockOffset = blockNumber - state.blockNumber;
+  const blockStart = addDaysISO(
+    getMondayISOForDate(state.blockStartDate),
+    blockOffset * DAYS_PER_BLOCK,
+  );
+  const blockEnd = addDaysISO(blockStart, DAYS_PER_BLOCK - 1);
+  const weekStart = addDaysISO(blockStart, (weekInBlock - 1) * DAYS_PER_WEEK);
+  const weekEnd = addDaysISO(weekStart, DAYS_PER_WEEK - 1);
+  return {
+    blockNumber,
+    miniCycleNumber: blockNumber,
+    weekInBlock,
+    weekNumber: (blockNumber - 1) * WEEKS_PER_BLOCK + weekInBlock,
+    blockStart,
+    blockEnd,
+    weekStart,
+    weekEnd,
+    intensityMultiplier: resolveIntensityMultiplier(seasonPhase, weekInBlock),
+    weeksSinceDeload: getWeeksSinceDeload(state.blockStartDate, dateISO),
     consecutiveBuildWeeks: Math.max(0, weekInBlock - 1),
   };
 }

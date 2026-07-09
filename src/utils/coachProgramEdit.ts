@@ -1723,7 +1723,7 @@ export interface ExecuteProgramSetupEditInput {
   updateOnboardingData: (patch: Partial<OnboardingData>) => void;
   generateProgramFromProfile: (
     profile: OnboardingData,
-    options?: { todayISO?: string },
+    options?: { todayISO?: string; blockNumber?: number },
   ) => Promise<TrainingProgram>;
   setCurrentProgram: (program: TrainingProgram | null) => void;
   setCurrentMicrocycle: (microcycle: TrainingProgram['microcycles'][number] | null) => void;

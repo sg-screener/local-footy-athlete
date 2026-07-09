@@ -10,6 +10,11 @@ import {
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
 import { logger } from '../utils/logger';
+import {
+  deriveStoredBlockStateFromProgram,
+  getBlockNumberForDate,
+  type StoredProgramBlockState,
+} from '../utils/programBlockState';
 import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
 import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 import type { SessionComponentKind } from '../utils/sessionComponents';
@@ -78,6 +83,7 @@ interface ProgramState {
   isGenerating: boolean;
   isLoading: boolean;
   error: string | null;
+  blockState: StoredProgramBlockState | null;
 
   /**
    * Manual workout overrides — ONLY for explicit human/coach edits.
@@ -133,6 +139,8 @@ interface ProgramState {
   weightOverrides: Record<string, Record<string, number | null>>;
 
   setCurrentProgram: (program: TrainingProgram | null) => void;
+  setBlockState: (blockState: StoredProgramBlockState | null) => void;
+  ensureBlockState: (dateISO?: string) => StoredProgramBlockState;
   setCurrentMicrocycle: (microcycle: Microcycle | null) => void;
   setTodayWorkout: (workout: Workout | null) => void;
   setGenerating: (generating: boolean) => void;
@@ -189,6 +197,7 @@ export const useProgramStore = create<ProgramState>()(
       isGenerating: false,
       isLoading: false,
       error: null,
+      blockState: null,
       dateOverrides: {},
       overrideContexts: {},
       weekScopedOverlays: {},
@@ -206,12 +215,25 @@ export const useProgramStore = create<ProgramState>()(
       // clearManualOverrides() where a true fresh slate is intended
       // (onboarding completion, program create, profile reset).
       setCurrentProgram: (program) =>
-        set({
+        set(() => ({
           currentProgram: program,
           currentMicrocycle: null,
           todayWorkout: null,
           weekScopedOverlays: {},
-        }),
+          blockState: program
+            ? deriveStoredBlockStateFromProgram(program, undefined)
+            : null,
+        })),
+
+      setBlockState: (blockState) => set({ blockState }),
+
+      ensureBlockState: (dateISO) => {
+        const state = useProgramStore.getState();
+        if (state.blockState) return state.blockState;
+        const derived = deriveStoredBlockStateFromProgram(state.currentProgram, dateISO);
+        useProgramStore.setState({ blockState: derived });
+        return derived;
+      },
 
       setCurrentMicrocycle: (microcycle) => set({ currentMicrocycle: microcycle }),
 
@@ -398,6 +420,7 @@ export const useProgramStore = create<ProgramState>()(
           isGenerating: false,
           isLoading: false,
           error: null,
+          blockState: null,
           dateOverrides: {},
           overrideContexts: {},
           weekScopedOverlays: {},
@@ -409,9 +432,28 @@ export const useProgramStore = create<ProgramState>()(
     {
       name: 'program-store',
       storage: createJSONStorage(() => AsyncStorage),
+      merge: (persisted, current) => {
+        const persistedState = (persisted as Partial<ProgramState> | undefined) ?? {};
+        const merged = { ...current, ...persistedState } as ProgramState;
+        if (!merged.blockState) {
+          merged.blockState = deriveStoredBlockStateFromProgram(merged.currentProgram);
+        }
+        return merged;
+      },
     },
   ),
 );
+
+export function getCurrentBlockNumberForGeneration(dateISO?: string): number {
+  const state = useProgramStore.getState();
+  const blockState = state.blockState ?? state.ensureBlockState(dateISO);
+  const targetISO = dateISO ?? new Date().toISOString().split('T')[0];
+  return getBlockNumberForDate(
+    blockState.blockStartDate,
+    blockState.blockNumber,
+    targetISO,
+  );
+}
 
 /**
  * Get the most recent performed weight for an exercise (across all dates).

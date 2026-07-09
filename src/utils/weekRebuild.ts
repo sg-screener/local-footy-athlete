@@ -47,7 +47,7 @@ import type {
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { applyGameDayChange } from './profileMutations';
 import { addDays, computeGameDatesForBlock, getMondayForDate } from './sessionResolver';
-import { useProgramStore } from '../store/programStore';
+import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/programStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { classifySessionStress } from '../rules/stressClassification';
@@ -401,7 +401,10 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
 
   // 1. Candidate week from base programming rules (throws on failure —
   //    nothing has been committed yet).
-  const program = generateProgramLocally(profile, { todayISO });
+  const program = generateProgramLocally(profile, {
+    todayISO,
+    blockNumber: getCurrentBlockNumberForGeneration(todayISO),
+  });
 
   // 2. Canonical context + pure sweep decision.
   const context = collectWeekRebuildContext({

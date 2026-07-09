@@ -4,7 +4,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useResolvedWeek } from '../../hooks/useSchedule';
 import { useStaleOverrides } from '../../hooks/useStaleOverrides';
 import { useCalendarStore } from '../../store/calendarStore';
-import { useProgramStore } from '../../store/programStore';
+import { getCurrentBlockNumberForGeneration, useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
@@ -297,7 +297,9 @@ export function useHomeScreen() {
   // overrides and user manual edits survive; system junk is cleared.
   const runRebuild = async (profileOverride?: typeof onboardingData) => {
     const profile = profileOverride ?? onboardingData;
-    const program = await generateProgramFromProfile(profile);
+    const program = await generateProgramFromProfile(profile, {
+      blockNumber: getCurrentBlockNumberForGeneration(),
+    });
     const sweep = decideSweepForCurrentStores(program, profile);
     commitRebuiltProgram(program, {
       preserve: sweep.preserve,
@@ -660,7 +662,8 @@ export function useHomeScreen() {
         removeGameDay(fromDate);
         // Clean up stale game-proximity overrides for the old game.
         const { overrideContexts, removeManualOverride } = useProgramStore.getState();
-        for (const [date, ctx] of Object.entries(overrideContexts)) {
+        for (const [date, ctxValue] of Object.entries(overrideContexts)) {
+          const ctx = ctxValue as { intent?: string; relatedGameDate?: string };
           if (ctx.intent === 'gameProximity' && ctx.relatedGameDate === fromDate) {
             removeManualOverride(date);
           }
@@ -1222,7 +1225,8 @@ export function useHomeScreen() {
 
       // Clean up stale game-proximity overrides (same pattern as CalendarScreen).
       const { overrideContexts, removeManualOverride } = useProgramStore.getState();
-      for (const [date, ctx] of Object.entries(overrideContexts)) {
+      for (const [date, ctxValue] of Object.entries(overrideContexts)) {
+        const ctx = ctxValue as { intent?: string; relatedGameDate?: string };
         if (ctx.intent === 'gameProximity' && ctx.relatedGameDate === removedDate) {
           removeManualOverride(date);
         }

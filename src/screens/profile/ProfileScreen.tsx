@@ -14,7 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/profileStore';
-import { useProgramStore } from '../../store/programStore';
+import { getCurrentBlockNumberForGeneration, useProgramStore } from '../../store/programStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
@@ -528,7 +528,9 @@ export default function ProfileScreen() {
     setSetupSheetStep('building');
     setIsSetupUpdating(true);
     try {
-      const program = await generateProgramFromProfile(nextProfile);
+      const program = await generateProgramFromProfile(nextProfile, {
+        blockNumber: getCurrentBlockNumberForGeneration(),
+      });
       updateOnboardingData(patch);
       setCurrentProgram(program);
       if (program.microcycles && program.microcycles.length > 0) {
