@@ -25,6 +25,9 @@ import type {
   RecentTrainingLoad,
   TeamTrainingIntensity,
   AttachedConditioningKind,
+  SpeedBlock,
+  SpeedBlockPlacement,
+  SpeedWorkKind,
 } from '../types/domain';
 import { logger } from './logger';
 import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
@@ -125,6 +128,10 @@ export interface SessionAllocation {
    * same erg twice unless forced.
    */
   ergModality?: 'bike' | 'bike_erg' | 'row' | 'ski' | 'mixed';
+  /** True speed work is not conditioning; it travels as a typed speed block. */
+  speedWorkKind?: SpeedWorkKind;
+  speedPlacement?: SpeedBlockPlacement;
+  speedBlock?: SpeedBlock;
   /**
    * Set by pre-season post-validation when this slot falls on a
    * scheduled team training day. Downstream renderers MUST treat this
@@ -751,6 +758,29 @@ function gOffset(dayNum: number, gameDayNum: number | null): number {
   // Special case: day after game = G+1
   if (diff === -6) return 1; // e.g. Sunday (0) after Saturday (6) game
   return diff;
+}
+
+function createQualitySpeedMicroDoseBlock(placement: SpeedBlockPlacement): SpeedBlock {
+  return {
+    id: `preseason-quality-speed-micro-dose-${placement}`,
+    title: 'Quality Speed Micro-dose',
+    label: 'Speed Micro-dose',
+    kind: 'true_speed',
+    placement,
+    durationMinutes: 15,
+    prescription: '4-6 x 10-20m accelerations or build-ups, full walk-back rest',
+    notes: [
+      'Do this fresh before any fatigue work.',
+      'Stop if speed or mechanics drop.',
+    ],
+    counting: {
+      hardExposure: true,
+      mainStrength: false,
+      conditioningCredit: 'none',
+      createsHardDay: true,
+      sprintCodExposure: true,
+    },
+  };
 }
 
 // ─── Weekly Plan Builder (Game-Day Relative) ───
@@ -1921,6 +1951,10 @@ function buildWeeklyPlan(
         readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
         injuryAllowsSprint: !blocksConditioningCategoryForGeneration('sprint'),
       });
+    }
+
+    function qualitySpeedMicroDoseBlock(placement: SpeedBlockPlacement): SpeedBlock {
+      return createQualitySpeedMicroDoseBlock(placement);
     }
 
     // ── H-GAME: game-week proximity protection (ANY phase) ──
@@ -4069,7 +4103,8 @@ function buildWeeklyPlan(
     //      ignore sprint-protection safely.
     // In off-season or team/game-loaded weeks, the exposure gate below
     // drops sprint honestly rather than hiding it inside a finisher.
-    if (useCategoryPlanner && st.condCategories.sprint === 0 &&
+    if (useCategoryPlanner &&
+        !plan.some((session) => session.conditioningCategory === 'sprint' || session.speedWorkKind === 'true_speed') &&
         sprintExposureGate(0).allowStandaloneSprint) {
       // Gather conditioning slots in chronological order. Use the original
       // slot positions (daySlots index == plan index at this point because
@@ -4117,38 +4152,89 @@ function buildWeeklyPlan(
         return decision.allow && decision.category === 'sprint';
       });
 
+      const attachPreLiftSpeedMicroDose = (): boolean => {
+        const ordered = plan
+          .map((session, index) => ({ session, index }))
+          .filter(({ session }) => {
+            if (!session.dayOfWeek) return false;
+            if (session.isTeamDay) return false;
+            if (session.speedWorkKind) return false;
+            if (session.strengthPattern !== 'push' &&
+                session.strengthPattern !== 'pull' &&
+                session.strengthPattern !== 'upper_combined') {
+              return false;
+            }
+
+            const dayNum = dayNameToNumber(session.dayOfWeek);
+            if (dayNum < 0) return false;
+            if (teamDayNumSet.has(dayNum)) return false;
+            const prevD = (dayNum + 6) % 7;
+            const nextD = (dayNum + 1) % 7;
+            if (teamDayNumSet.has(prevD) || teamDayNumSet.has(nextD)) return false;
+            if (isGameWeek && gameDayNum !== null) {
+              const offset = gOffset(dayNum, gameDayNum);
+              if (offset === 0 || offset === -1 || offset === -2) return false;
+            }
+            const previousSession = plan.find((other) =>
+              other.dayOfWeek && dayNameToNumber(other.dayOfWeek) === prevD);
+            if (previousSession?.strengthPattern === 'lower' ||
+                previousSession?.strengthPattern === 'lower_combined' ||
+                previousSession?.strengthPattern === 'full_body') {
+              return false;
+            }
+            return true;
+          })
+          .sort((a, b) => {
+            const da = dayNameToNumber(a.session.dayOfWeek ?? '');
+            const db = dayNameToNumber(b.session.dayOfWeek ?? '');
+            return trainingOrder(da) - trainingOrder(db) || a.index - b.index;
+          });
+
+        const target = ordered[0]?.session;
+        if (!target) return false;
+        const previousCategory = target.conditioningCategory as CondCategory | undefined;
+        if (previousCategory && st.condCategories[previousCategory] > 0) {
+          st.condCategories[previousCategory]--;
+        }
+        if (target.conditioningFlavour && st.condFlavours[target.conditioningFlavour as CondFlavour] > 0) {
+          st.condFlavours[target.conditioningFlavour as CondFlavour]--;
+        }
+        if (target.hasCombinedConditioning) {
+          st.condCount = Math.max(
+            0,
+            st.condCount - attachedConditioningCredit(target.attachedConditioningKind ?? 'finisher'),
+          );
+        }
+        const strengthFocus = target.focus.split(' + ')[0] || target.focus;
+        target.hasCombinedConditioning = false;
+        target.attachedConditioningKind = undefined;
+        target.conditioningFlavour = undefined;
+        target.conditioningCategory = undefined;
+        target.conditioningVariant = undefined;
+        target.conditioningFeel = undefined;
+        target.conditioningOffFeet = undefined;
+        target.ergModality = undefined;
+        target.speedWorkKind = 'true_speed';
+        target.speedPlacement = 'pre_lift';
+        target.speedBlock = qualitySpeedMicroDoseBlock('pre_lift');
+        target.isHardExposure = true;
+        target.stressLevel = 'high';
+        target.focus = `Quality speed micro-dose + ${strengthFocus}`;
+        st.condCategories.sprint++;
+        return true;
+      };
+
       if (rescueEligible.length > 0) {
-        // Tier 1: slide-earlier — first unblocked slot.
-        let chosen = rescueEligible.find(cs => {
+        // SP-2: every app-added pre-season sprint top-up is a tiny
+        // true-speed micro-dose. We still prefer the first slot that is
+        // not chronologically glued to vo2/glycolytic work, but we no
+        // longer upgrade the dose into "reduced sprint conditioning".
+        const chosen = rescueEligible.find(cs => {
           const adjacent = cs.slotPos === cs.prevPos + 1;
           const blocking = cs.prevCat === 'vo2' || cs.prevCat === 'glycolytic';
           return !(adjacent && blocking);
-        });
-        let variant: 'standard' | 'reduced' | 'micro_dose' = 'standard';
-        if (!chosen) {
-          // Tier 2/3: everything is adjacent to a vo2/glyco predecessor.
-          // Pick the earliest slot. If the slot is a standalone core
-          // conditioning day, use reduced volume; if it's combined (already
-          // a short dose) OR sandwiched between two blocking slots, drop
-          // to micro-dose.
-          chosen = rescueEligible[0];
-          const isCombined = !!plan[chosen.planIdx].hasCombinedConditioning;
-          variant = isCombined ? 'micro_dose' : 'reduced';
-        }
-        // ── Cross-week micro-dose guard ──
-        // Sam's rule: never schedule micro-dose sprint two weeks in a row.
-        // If last week's sprint was micro-dose, force at least 'reduced'
-        // this week — even on a combined day where that means a tighter
-        // squeeze on the finisher. Sprint EXPOSURE quality trumps the
-        // legs-twice concern here because the athlete already had a
-        // deload-level sprint exposure last week.
-        if (variant === 'micro_dose' && inputs.previousWeekSprintVariant === 'micro_dose') {
-          variant = 'reduced';
-          logger.debug(
-            '[SprintRescue] Cross-week guard: previous week was micro_dose ' +
-            '- upgrading this week from micro_dose → reduced.'
-          );
-        }
+        }) ?? rescueEligible[0];
+        const variant: 'micro_dose' = 'micro_dose';
 
         const target = plan[chosen.planIdx];
         const prevCat = target.conditioningCategory as CondCategory;
@@ -4167,24 +4253,12 @@ function buildWeeklyPlan(
           target.conditioningFlavour = 'high-intensity';
         }
         target.conditioningVariant = variant;
-        // Update focus copy so UI reflects the sprint retrofit.
-        if (target.hasCombinedConditioning) {
-          // Preserve strength focus prefix; replace conditioning suffix.
-          const parts = target.focus.split(' + ');
-          const strengthFocus = parts[0];
-          const suffix = variant === 'micro_dose'
-            ? 'sprint micro-dose finisher (3×10s flying, ~8min)'
-            : variant === 'reduced'
-              ? 'sprint finisher (reduced volume, ≤10min)'
-              : 'sprint conditioning finisher (quality, ≤15min)';
-          target.focus = `${strengthFocus} + ${suffix}`;
-        } else {
-          target.focus = variant === 'micro_dose'
-            ? 'Conditioning - sprint micro-dose (3×10s flying, ~10min)'
-            : variant === 'reduced'
-              ? 'Conditioning - sprint (reduced volume, ~12min)'
-              : buildFocus('COND', 'high-intensity', 'sprint');
-        }
+        target.speedWorkKind = 'true_speed';
+        target.speedPlacement = 'standalone';
+        target.speedBlock = qualitySpeedMicroDoseBlock('standalone');
+        target.focus = 'Quality speed micro-dose - 4-6 x 10-20m accelerations, full walk-back rest';
+      } else {
+        attachPreLiftSpeedMicroDose();
       }
     }
 
@@ -4509,6 +4583,88 @@ function buildWeeklyPlan(
   // (5) Pre-season strength-streak cap (existing rule) ───────────────────
   if (phaseIsPreSeason) {
     enforcePreSeasonCoreStreak(adjusted, teamDaySetTail);
+  }
+
+  // (6) SP-2 quality speed top-up placement.
+  // If the sprint exposure gate still allows one app-added pre-season
+  // exposure after the shared tail has finished reshaping the week, attach
+  // it as first-in-session true speed on an upper day. This keeps sprint work
+  // out of conditioning and avoids finishers.
+  if (phaseIsPreSeason) {
+    const plannedSprintRows = adjusted.filter((session) =>
+      session.speedWorkKind === 'true_speed' || session.conditioningCategory === 'sprint',
+    ).length;
+    const lowerLimbSprintBlocked = activeInjuries.some((injury) => {
+      const lowerLimb =
+        injury.region === 'lower_body' ||
+        injury.injuryKeys.some((key) =>
+          key === 'hamstring' || key === 'knee' || key === 'calf' ||
+          key === 'ankle' || key === 'adductor' || key === 'pubalgia',
+        );
+      const triggerText = `${injury.bodyPart} ${injury.bucket ?? ''} ${injury.triggers.join(' ')}`.toLowerCase();
+      const sprintTrigger =
+        /\b(sprint|speed|max velocity|running|cod|change of direction|cutting|jumping)\b/.test(triggerText);
+      return lowerLimb && (injury.removeRiskyWork || injury.pauseAffectedTraining || sprintTrigger);
+    });
+    const preSeasonGameDayNum = inputs.hasGame && gameDayNum !== null ? gameDayNum : null;
+    const gate = evaluateSprintExposureGate({
+      phase: inputs.seasonPhase,
+      teamTrainingDays: Array.from(teamDaySetTail),
+      gameOrPracticeMatchDays: preSeasonGameDayNum !== null ? [preSeasonGameDayNum] : [],
+      plannedOnFeetSprintExposures: plannedSprintRows,
+      readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
+      injuryAllowsSprint: !lowerLimbSprintBlocked,
+    });
+
+    if (plannedSprintRows === 0 && gate.allowStandaloneSprint) {
+      const target = adjusted
+        .map((session, index) => ({ session, index }))
+        .filter(({ session }) => {
+          if (!session.dayOfWeek || session.isTeamDay || session.speedWorkKind) return false;
+          if (session.strengthPattern !== 'push' &&
+              session.strengthPattern !== 'pull' &&
+              session.strengthPattern !== 'upper_combined') {
+            return false;
+          }
+          const dayNum = dayNameToNumber(session.dayOfWeek);
+          if (dayNum < 0 || teamDaySetTail.has(dayNum)) return false;
+          const prevDay = (dayNum + 6) % 7;
+          const nextDay = (dayNum + 1) % 7;
+          if (teamDaySetTail.has(prevDay) || teamDaySetTail.has(nextDay)) return false;
+          if (preSeasonGameDayNum !== null) {
+            const offset = gOffset(dayNum, preSeasonGameDayNum);
+            if (offset === 0 || offset === -1 || offset === -2) return false;
+          }
+          const previousSession = adjusted.find((other) =>
+            other.dayOfWeek && dayNameToNumber(other.dayOfWeek) === prevDay);
+          return previousSession?.strengthPattern !== 'lower' &&
+            previousSession?.strengthPattern !== 'lower_combined' &&
+            previousSession?.strengthPattern !== 'full_body';
+        })
+        .sort((a, b) => {
+          const da = dayNameToNumber(a.session.dayOfWeek ?? '');
+          const db = dayNameToNumber(b.session.dayOfWeek ?? '');
+          return (da === 0 ? 7 : da) - (db === 0 ? 7 : db) || a.index - b.index;
+        })[0]?.session;
+
+      if (target) {
+        const strengthFocus = target.focus.split(' + ')[0] || target.focus;
+        target.hasCombinedConditioning = false;
+        target.attachedConditioningKind = undefined;
+        target.conditioningFlavour = undefined;
+        target.conditioningCategory = undefined;
+        target.conditioningVariant = undefined;
+        target.conditioningFeel = undefined;
+        target.conditioningOffFeet = undefined;
+        target.ergModality = undefined;
+        target.speedWorkKind = 'true_speed';
+        target.speedPlacement = 'pre_lift';
+        target.speedBlock = createQualitySpeedMicroDoseBlock('pre_lift');
+        target.isHardExposure = true;
+        target.stressLevel = 'high';
+        target.focus = `Quality speed micro-dose + ${strengthFocus}`;
+      }
+    }
   }
 
   // Final sort (weekend-peak / field-load / core-streak may have mutated)

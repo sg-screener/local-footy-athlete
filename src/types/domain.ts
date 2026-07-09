@@ -174,6 +174,36 @@ export type AttachedConditioningKind =
   | 'speed_component'
   | 'recovery_addon';
 
+export type SpeedWorkKind =
+  | 'true_speed'
+  | 'repeated_sprint'
+  | 'cod';
+
+export type SpeedBlockPlacement =
+  | 'standalone'
+  | 'pre_lift';
+
+export interface SpeedBlockCountingFence {
+  hardExposure: true;
+  mainStrength: false;
+  conditioningCredit: 'none';
+  createsHardDay: true;
+  sprintCodExposure: true;
+}
+
+export interface SpeedBlock {
+  id: string;
+  title: string;
+  label: string;
+  kind: SpeedWorkKind;
+  placement: SpeedBlockPlacement;
+  durationMinutes: number;
+  prescription: string;
+  notes?: string[];
+  exerciseIds?: string[];
+  counting: SpeedBlockCountingFence;
+}
+
 export type RecoveryAddonKind =
   | 'mobility'
   | 'trunk'
@@ -386,6 +416,12 @@ export interface Workout {
    * not a peer within the same finisher).
    */
   conditioningBlock?: ConditioningBlock;
+
+  /**
+   * Low-volume true speed/COD work. This is not a conditioning block and
+   * must not be rendered or counted as a finisher/component.
+   */
+  speedBlock?: SpeedBlock;
 
   /**
    * Short display label for coach-added conditioning shown on weekly cards.

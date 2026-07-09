@@ -1762,10 +1762,9 @@ export function buildAttachedConditioningComponentTemplate(
 // ════════════════════════════════════════════════════════════════════
 
 /**
- * Sprint micro-dose — the absolute last-resort sprint exposure. 3–4
- * flying sprints only, long recovery, ~8–10min including warm-up.
- * Low enough volume that placing it the day after vo2/glycolytic is
- * still safe (no meaningful fatigue contribution).
+ * Quality sprint micro-dose - short accelerations/build-ups only, long
+ * recovery, ~10-15min including warm-up. This is true speed exposure,
+ * not repeated-sprint conditioning.
  */
 function buildSprintMicroDose(
   dateStr: string,
@@ -1773,16 +1772,18 @@ function buildSprintMicroDose(
 ): WorkoutExercise[] {
   const hash = conditioningDateHash(dateStr);
   const prefix = `cond-${dateStr}`;
-  const reps = 3 + (hash % 2); // 3 or 4
+  const reps = 4 + (hash % 3); // 4, 5, or 6
+  const distance = hash % 2 === 0 ? 10 : 20;
   void combined;
   return [
-    condEx(`${prefix}-warmup`, 'Sprint warm-up (short)', 1, 1, 1, 1, 0,
-      '6min easy jog + 2 x 20m build-ups'),
-    condEx(`${prefix}-micro`, `${reps} × 10s flying sprint (micro-dose)`, 2, reps, 1, 1, 180,
+    condEx(`${prefix}-warmup`, 'Quality speed warm-up (short)', 1, 1, 1, 1, 0,
+      '6-8min easy movement prep + 2 x 20m progressive build-ups'),
+    condEx(`${prefix}-micro`, `${reps} x ${distance}m acceleration build-ups (micro-dose)`, 2, reps, 1, 1, 120,
       noteLines(
-        `${reps} x 10s flying sprint`,
-        '3min walk-back between reps',
-        'Max speed, full quality',
+        `${reps} x ${distance}m accelerations or smooth build-ups`,
+        'Walk-back / 90-120s between reps',
+        'Fast and crisp, not grindy',
+        'Stop if speed or mechanics drop',
       )),
   ];
 }

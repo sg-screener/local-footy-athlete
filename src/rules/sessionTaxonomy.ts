@@ -283,6 +283,11 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
     units.push({ category: 'team_training', modality: 'running', reason: 'team-day detection (teamTraining.ts / name prefix)' });
   }
 
+  const hasTrueSpeedBlock = workout.speedBlock?.kind === 'true_speed';
+  if (hasTrueSpeedBlock) {
+    units.push({ category: 'sprint', modality: 'running', reason: 'speedBlock.kind=true_speed' });
+  }
+
   // ── Recovery (only when the WHOLE session is recovery-tier) ──
   const looksRecovery =
     wt === 'Recovery' || workout.sessionTier === 'recovery' || RECOVERY_RX.test(workout.name ?? '');
@@ -357,7 +362,9 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
 
   // ── Conditioning unit(s) ──
   let condCat: SessionCategory | null = null;
-  if (WORKOUT_TYPE_CONDITIONING[wt]) {
+  if (hasTrueSpeedBlock) {
+    condCat = null;
+  } else if (WORKOUT_TYPE_CONDITIONING[wt]) {
     condCat = WORKOUT_TYPE_CONDITIONING[wt];
     // Flush-Out is the Bible's low-stress flush — keep aerobic_base.
   } else if (wt === 'Conditioning' || workout.hasCombinedConditioning || workout.conditioningBlock) {

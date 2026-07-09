@@ -11,6 +11,7 @@ import {
   AttachedConditioningKind,
   ConditioningBlock,
   IntensityLevel,
+  SpeedBlock,
   WorkoutType,
 } from '../types/domain';
 import type { SessionAllocation } from '../utils/coachingEngine';
@@ -754,6 +755,7 @@ function buildPlanLookup(
 
 function fallbackWorkoutTypeForPlanEntry(entry: SessionAllocation): string {
   if (entry.isTeamDay) return 'Team Training';
+  if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) return 'Sprint-Intervals';
   if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(entry.focus)) {
     return 'Recovery';
   }
@@ -764,6 +766,9 @@ function fallbackWorkoutTypeForPlanEntry(entry: SessionAllocation): string {
 
 function fallbackNameForPlanEntry(entry: SessionAllocation): string {
   if (entry.isTeamDay) return 'Team Training';
+  if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) {
+    return entry.speedBlock?.title ?? 'Quality Speed Micro-dose';
+  }
   if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(entry.focus)) {
     return 'Recovery Session';
   }
@@ -787,6 +792,9 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
   if (entry.isTeamDay && !lower) return [];
   if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(lower)) {
     return [{ name: 'Mobility Flow', sets: 1, repsMin: 10, repsMax: 15, notes: 'Easy mobility and recovery work' }];
+  }
+  if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) {
+    return [{ name: entry.speedBlock?.title ?? 'Quality Speed Micro-dose', sets: 1, repsMin: 1, repsMax: 1 }];
   }
   if (entry.conditioningFlavour && !entry.hasCombinedConditioning) {
     return [{ name: 'Conditioning', sets: 1, repsMin: 1, repsMax: 1 }];
@@ -1013,6 +1021,17 @@ function buildConditioningBlock(
   };
 }
 
+function buildSpeedBlock(
+  planEntry: SessionAllocation,
+  speedExercises: WorkoutExercise[],
+): SpeedBlock | undefined {
+  if (!planEntry.speedBlock) return undefined;
+  return {
+    ...planEntry.speedBlock,
+    exerciseIds: speedExercises.map((exercise) => exercise.id),
+  };
+}
+
 function stripConditioningSuffix(focus: string): string {
   return focus
     .replace(/\s+\+\s+.*(?:conditioning|finisher|interval|aerobic|tempo|sprint|zone\s*2).*$/i, '')
@@ -1151,6 +1170,7 @@ export function buildWorkoutsFromCoach(
     if (planEntry?.isTeamDay || raw === 'team' || raw === 'team training') {
       return 'Team Training';
     }
+    if (planEntry?.speedWorkKind === 'true_speed' && !planEntry.strengthPattern) return 'Sprint-Intervals';
     if (raw === 'strength') return 'Strength';
     if (raw === 'conditioning') return 'Conditioning';
     if (raw === 'recovery') return 'Recovery';
@@ -1164,6 +1184,7 @@ export function buildWorkoutsFromCoach(
     // Older generate-mode schema incorrectly described workoutType as a tier.
     // Treat those values as sessionTier only and infer the app-level type.
     if (raw === 'core' || raw === 'optional') {
+      if (planEntry?.speedWorkKind === 'true_speed' && !planEntry.strengthPattern) return 'Sprint-Intervals';
       if (planEntry?.conditioningFlavour && !planEntry.hasCombinedConditioning) {
         return 'Conditioning';
       }
@@ -1484,16 +1505,19 @@ export function buildWorkoutsFromCoach(
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // STANDALONE CONDITIONING — fully deterministic, AI exercises IGNORED
+    // STANDALONE CONDITIONING / TRUE SPEED - deterministic, AI exercises ignored
     // ──────────────────────────────────────────────────────────────────────
+    const isStandaloneSpeed = planEntry?.speedWorkKind === 'true_speed' && !planEntry.strengthPattern;
     const isStandaloneConditioning = planEntry
       && planEntry.conditioningFlavour
       && !planEntry.hasCombinedConditioning;
 
-    if (isStandaloneConditioning) {
+    if (isStandaloneConditioning || isStandaloneSpeed) {
       const resolved = conditioningByDow.get(cw.dayOfWeek);
       const dateStr = syntheticDateStr(cw.dayOfWeek);
-      const exerciseName = resolved?.exerciseName
+      const exerciseName = isStandaloneSpeed
+        ? 'Free Sprint Session'
+        : resolved?.exerciseName
         ?? (planEntry.conditioningCategory
           ? conditioningCategoryToExerciseName(
               planEntry.conditioningCategory,
@@ -1523,13 +1547,20 @@ export function buildWorkoutsFromCoach(
       })?.exercise?.name;
       const displayName = resolved?.shiftedFromRun || isReducedAerobicBase
         ? (headlineExerciseName || exerciseName)
-        : exerciseName;
-      const condWorkoutType = resolved?.shiftedFromRun
+        : isStandaloneSpeed
+          ? (planEntry.speedBlock?.title ?? 'Quality Speed Micro-dose')
+          : exerciseName;
+      const condWorkoutType = isStandaloneSpeed
+        ? 'Sprint-Intervals'
+        : resolved?.shiftedFromRun
         || isReducedAerobicBase
         ? 'Conditioning'
         : conditioningWorkoutType(exerciseName);
+      const speedBlock = isStandaloneSpeed
+        ? buildSpeedBlock(planEntry, condExercises)
+        : undefined;
 
-      logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} STANDALONE CONDITIONING — flavour="${planEntry.conditioningFlavour}" → template="${exerciseName}"${resolved?.shiftedFromRun ? ' [SHIFTED off-feet]' : ''} (AI exercises IGNORED: ${cw.exercises.length} discarded)`);
+      logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} ${isStandaloneSpeed ? 'STANDALONE SPEED' : 'STANDALONE CONDITIONING'} - flavour="${planEntry.conditioningFlavour}" -> template="${exerciseName}"${resolved?.shiftedFromRun ? ' [SHIFTED off-feet]' : ''} (AI exercises IGNORED: ${cw.exercises.length} discarded)`);
 
       return {
         id: workoutId,
@@ -1548,11 +1579,14 @@ export function buildWorkoutsFromCoach(
         intensity: canonicalIntensity,
         workoutType: condWorkoutType as any,
         sessionTier: canonicalTier,
-        conditioningFlavour: planEntry.conditioningFlavour,
-        // 4B: carry the energy-system category onto the workout so the
-        // rules kernel classifies from the typed field (tempo → medium),
-        // not just the flavour fallback.
-        conditioningCategory: planEntry.conditioningCategory,
+        ...(!isStandaloneSpeed ? { conditioningFlavour: planEntry.conditioningFlavour } : {}),
+        // 4B: carry the energy-system category onto conditioning workouts
+        // so the rules kernel classifies from the typed field. True speed
+        // uses speedBlock instead, so it never looks like conditioning.
+        ...(!isStandaloneSpeed && planEntry.conditioningCategory
+          ? { conditioningCategory: planEntry.conditioningCategory }
+          : {}),
+        ...(speedBlock ? { speedBlock } : {}),
         durationMinutes: 0,
         exercises: condExercises,
         createdAt: new Date().toISOString(),
@@ -1703,6 +1737,24 @@ export function buildWorkoutsFromCoach(
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} aiName="${cw.name}" aiType="${cw.workoutType}" aiTier="${cw.sessionTier}" → canonicalTier="${canonicalTier}" intensity="${canonicalIntensity}" planEntry=${planEntry ? `"${planEntry.tier} / ${planEntry.focus?.substring(0, 40)}"` : 'NONE'}`);
     }
 
+    let resolvedSpeedBlock: SpeedBlock | undefined;
+    if (planEntry?.speedWorkKind === 'true_speed' && planEntry.speedPlacement === 'pre_lift') {
+      const dateStr = syntheticDateStr(cw.dayOfWeek);
+      const speedExercises = buildConditioningTemplate('Free Sprint Session', dateStr, {
+        variant: 'micro_dose',
+      });
+      for (let i = 0; i < speedExercises.length; i++) {
+        speedExercises[i].workoutId = workoutId;
+        speedExercises[i].exerciseOrder = i + 1;
+      }
+      finalExercises = finalExercises.map((exercise) => ({
+        ...exercise,
+        exerciseOrder: exercise.exerciseOrder + speedExercises.length,
+      }));
+      finalExercises = [...speedExercises, ...finalExercises];
+      resolvedSpeedBlock = buildSpeedBlock(planEntry, speedExercises);
+    }
+
     return {
       id: workoutId,
       microcycleId,
@@ -1725,6 +1777,7 @@ export function buildWorkoutsFromCoach(
       ...(planEntry?.conditioningFlavour ? { conditioningFlavour: planEntry.conditioningFlavour } : {}),
       ...(planEntry?.conditioningCategory ? { conditioningCategory: planEntry.conditioningCategory } : {}),
       ...(resolvedConditioningBlock ? { conditioningBlock: resolvedConditioningBlock } : {}),
+      ...(resolvedSpeedBlock ? { speedBlock: resolvedSpeedBlock } : {}),
       durationMinutes: 0,
       exercises: finalExercises,
       createdAt: new Date().toISOString(),

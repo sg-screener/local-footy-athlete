@@ -19,6 +19,7 @@ import {
   applyGenerationConstraintsToProfile,
   buildGenerationConstraintContext,
 } from '../utils/generationConstraints';
+import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { evaluateSprintExposureGate } from '../rules/sprintExposureGate';
 import { countWeeklyExposures } from '../rules/weeklyExposureCounts';
 
@@ -140,8 +141,20 @@ function planText(plan: CoachingPlan): string {
       session.conditioningCategory,
       session.conditioningVariant,
       session.attachedConditioningKind,
+      session.speedWorkKind,
     ].filter(Boolean).join(' '),
   ).join(' | ');
+}
+
+function builtWorkoutsFor(
+  plan: CoachingPlan,
+  profileData: OnboardingData = BASE_PROFILE,
+): Workout[] {
+  return buildWorkoutsFromCoach([], 'sp-speed-micro-dose', plan.weeklyPlan, profileData);
+}
+
+function speedWorkouts(workouts: Workout[]): Workout[] {
+  return workouts.filter((workout) => workout.speedBlock?.kind === 'true_speed');
 }
 
 function workoutFromAllocation(session: SessionAllocation, index: number): Workout {
@@ -348,6 +361,144 @@ for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle
   ok('healthy normal pre-season week stays within sprint/COD cap',
     exposureCounts(healthy).sprintCodExposures <= 3,
     planText(healthy));
+}
+
+console.log('\n-- SP-2. Quality sprint micro-dose output --');
+
+{
+  const p = profile({
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+  });
+  const plan = planFor(p);
+  const workouts = builtWorkoutsFor(plan, p);
+  const speed = speedWorkouts(workouts);
+  eq('pre-season with 0 anchor exposures may add one quality sprint micro-dose',
+    speed.length,
+    1,
+    workouts.map((workout) => `${workout.dayOfWeek}: ${workout.name}`).join(' | '));
+  ok('speed micro-dose has acceleration/build-up prescription',
+    /10-20m|acceleration|build-up/i.test(speed[0]?.speedBlock?.prescription ?? '') &&
+    (speed[0]?.exercises ?? []).some((exercise) => /acceleration|build-up/i.test(exercise.exercise?.name ?? '')),
+    JSON.stringify(speed[0]?.speedBlock));
+}
+
+{
+  const p = profile({
+    teamTrainingDaysPerWeek: 1,
+    teamTrainingDays: ['Wednesday'],
+  });
+  const plan = planFor(p);
+  const speed = speedWorkouts(builtWorkoutsFor(plan, p));
+  ok('pre-season with 1 anchor exposure adds at most one quality sprint micro-dose',
+    speed.length <= 1,
+    speed.map((workout) => workout.name).join(' | '));
+}
+
+{
+  const p = profile({
+    teamTrainingDaysPerWeek: 2,
+    teamTrainingDays: ['Tuesday', 'Thursday'],
+  });
+  const plan = planFor(p);
+  eq('pre-season with 2+ anchor exposures adds no sprint micro-dose',
+    speedWorkouts(builtWorkoutsFor(plan, p)).length,
+    0,
+    planText(plan));
+}
+
+{
+  const p = profile({
+    seasonPhase: 'In-season',
+    teamTrainingDaysPerWeek: 2,
+    teamTrainingDays: ['Tuesday', 'Thursday'],
+    gameDay: 'Saturday',
+  });
+  const plan = planFor(p);
+  eq('in-season still adds no extra sprint micro-dose',
+    speedWorkouts(builtWorkoutsFor(plan, p)).length,
+    0,
+    planText(plan));
+}
+
+{
+  const p = profile({
+    seasonPhase: 'Off-season',
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    gameDay: undefined,
+  });
+  const plan = planFor(p);
+  eq('off-season still adds no sprint until late off-season model exists',
+    speedWorkouts(builtWorkoutsFor(plan, p)).length,
+    0,
+    planText(plan));
+}
+
+{
+  const p = profile();
+  const plan = planFor(p);
+  const speed = speedWorkouts(builtWorkoutsFor(plan, p))[0];
+  ok('sprint micro-dose appears before fatigue, not after lower/conditioning',
+    !!speed &&
+    !speed.hasCombinedConditioning &&
+    !speed.exercises.some((exercise) => /squat|hinge|deadlift|rdl|conditioning interval/i.test(exercise.exercise?.name ?? '')),
+    speed?.exercises.map((exercise) => exercise.exercise?.name).join(' | '));
+  ok('sprint micro-dose is not a finisher',
+    !!speed &&
+    !speed.hasCombinedConditioning &&
+    speed.attachedConditioningKind === undefined,
+    JSON.stringify({ hasCombined: speed?.hasCombinedConditioning, attached: speed?.attachedConditioningKind }));
+  ok('sprint micro-dose is not conditioning',
+    !!speed &&
+    speed.conditioningBlock === undefined &&
+    speed.conditioningCategory === undefined &&
+    speed.conditioningFlavour === undefined,
+    JSON.stringify({
+      category: speed?.conditioningCategory,
+      flavour: speed?.conditioningFlavour,
+      block: speed?.conditioningBlock,
+    }));
+}
+
+{
+  const p = profile();
+  const plan = planFor(p);
+  const speed = speedWorkouts(builtWorkoutsFor(plan, p))[0];
+  const counts = countWeeklyExposures([{ date: TODAY, workout: speed }]);
+  eq('sprint micro-dose counts as sprint/COD exposure', counts.sprintCodExposures, 1, JSON.stringify(counts.byCategory));
+  eq('sprint micro-dose does not count as conditioning', counts.conditioningExposures, 0, JSON.stringify(counts.byCategory));
+  eq('sprint micro-dose does not count as extra conditioning', counts.extraConditioningSessions, 0, JSON.stringify(counts.byCategory));
+}
+
+{
+  const p = profile({
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    gameDay: 'Saturday',
+  });
+  const plan = planFor(p);
+  const badGameWindow = speedWorkouts(builtWorkoutsFor(plan, p))
+    .filter((workout) => workout.dayOfWeek === 4 || workout.dayOfWeek === 5);
+  eq('G-1/G-2 placement is denied for sprint micro-dose',
+    badGameWindow.length,
+    0,
+    badGameWindow.map((workout) => `${workout.dayOfWeek}: ${workout.name}`).join(' | '));
+}
+
+{
+  const p = profile();
+  const injured = planFor(p, [injury('hamstring', 5)]);
+  eq('unsafe injury denies sprint micro-dose',
+    speedWorkouts(builtWorkoutsFor(injured, p)).length,
+    0,
+    planText(injured));
+
+  const cooked = planFor(p, [fatigue(5)]);
+  eq('low readiness denies sprint micro-dose',
+    speedWorkouts(builtWorkoutsFor(cooked, p)).length,
+    0,
+    planText(cooked));
 }
 
 if (fail > 0) {
