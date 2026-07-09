@@ -8,10 +8,20 @@ import {
 } from '../../utils/coachingEngine';
 import { todayISOLocal } from '../../utils/appDate';
 import { getAthletePrefs } from '../../store/athletePreferencesStore';
+import { useCoachUpdatesStore, type ActiveConstraint } from '../../store/coachUpdatesStore';
+import { useReadinessStore } from '../../store/readinessStore';
 import {
   buildBlockWeekStates,
   computeBlockBounds,
 } from '../../utils/programBlockState';
+import {
+  applyGenerationConstraintsToProfile,
+  buildGenerationConstraintContext,
+  mergeAthletePrefsWithGenerationConstraints,
+  type GenerationConstraintContext,
+} from '../../utils/generationConstraints';
+import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
+import type { ReadinessSignal } from '../../utils/readiness';
 import {
   getClientEnvConfig,
   logMissingClientEnv,
@@ -68,6 +78,13 @@ export interface GenerateProgramFromProfileOptions {
   todayISO?: string;
   /** 1-based training block number. Defaults to 1 for a fresh generated block. */
   blockNumber?: number;
+  /**
+   * Active injury/readiness constraints to feed into generation before the
+   * week is built. When omitted, generation reads the current local stores.
+   */
+  activeConstraints?: readonly ActiveConstraint[];
+  readinessSignal?: ReadinessSignal | null;
+  generationConstraints?: GenerationConstraintContext;
 }
 
 type CoachGeneratedWorkouts = Parameters<typeof buildWorkoutsFromCoach>[0];
@@ -79,6 +96,26 @@ function dateAtNoonISO(dateISO: string): string {
 
 function dateFromOption(todayISO?: string): Date {
   return todayISO ? new Date(`${todayISO}T12:00:00`) : new Date();
+}
+
+function resolveGenerationConstraints(
+  options: GenerateProgramFromProfileOptions,
+  todayISO: string,
+): GenerationConstraintContext | undefined {
+  if (options.generationConstraints) return options.generationConstraints;
+  const storedConstraints = options.activeConstraints ??
+    (useCoachUpdatesStore.getState().activeConstraints ?? []);
+  const readinessSignal = options.readinessSignal !== undefined
+    ? options.readinessSignal
+    : useReadinessStore.getState().signalsByDate?.[todayISO] ?? null;
+  const readinessConstraints = buildReadinessActiveConstraints(readinessSignal);
+  const byId = new Map<string, ActiveConstraint>();
+  for (const constraint of storedConstraints) byId.set(constraint.id, constraint);
+  for (const constraint of readinessConstraints) byId.set(constraint.id, constraint);
+  return buildGenerationConstraintContext({
+    activeConstraints: Array.from(byId.values()),
+    todayISO,
+  });
 }
 
 function buildGeneratedMicrocycles(args: {
@@ -155,15 +192,23 @@ export function generateProgramLocally(
   onboardingData: OnboardingData,
   options: GenerateProgramFromProfileOptions = {},
 ): TrainingProgram {
-  const generationProfile = normalizeOnboardingRole(onboardingData);
   const availabilityDateISO = options.todayISO ?? todayISOLocal();
-  const coachingInputs = onboardingToCoachingInputs(generationProfile, { availabilityDateISO });
+  const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
+  const generationProfile = applyGenerationConstraintsToProfile(
+    normalizeOnboardingRole(onboardingData),
+    generationConstraints,
+  );
+  const coachingInputs = onboardingToCoachingInputs(generationProfile, {
+    availabilityDateISO,
+    generationConstraints,
+  });
   const plan = buildCoachingPlan(coachingInputs);
 
   logger.debug('[ProgramGen] Local deterministic build', {
     readiness: plan.readiness,
     coreSessions: plan.coreSessions,
     gameDay: generationProfile.usualGameDay || generationProfile.gameDay || null,
+    activeConstraints: generationConstraints?.activeConstraintIds ?? [],
   });
 
   const today = dateFromOption(options.todayISO);
@@ -178,7 +223,10 @@ export function generateProgramLocally(
     microcyclePrefix: 'mc-ai',
     blockStartISO: blockStart,
     blockNumber: options.blockNumber ?? 1,
-    athletePrefs: getAthletePrefs(),
+    athletePrefs: mergeAthletePrefsWithGenerationConstraints(
+      getAthletePrefs(),
+      generationConstraints,
+    ),
   });
   const firstMicrocycle = microcycles[0];
   if (!firstMicrocycle?.workouts.length) {
@@ -542,7 +590,12 @@ export async function generateProgramFromProfile(
 ): Promise<TrainingProgram> {
   const env = getClientEnvConfig();
   const devBuild = isDevBuild();
-  const generationProfile = normalizeOnboardingRole(onboardingData);
+  const availabilityDateISO = options.todayISO ?? todayISOLocal();
+  const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
+  const generationProfile = applyGenerationConstraintsToProfile(
+    normalizeOnboardingRole(onboardingData),
+    generationConstraints,
+  );
   if (!env.isReady) {
     logMissingClientEnv('generateProgramFromProfile', env);
     throw new ProgramGenError(
@@ -554,8 +607,10 @@ export async function generateProgramFromProfile(
   }
 
   // ─── Step 1: Deterministic coaching logic ───
-  const availabilityDateISO = options.todayISO ?? todayISOLocal();
-  const coachingInputs = onboardingToCoachingInputs(generationProfile, { availabilityDateISO });
+  const coachingInputs = onboardingToCoachingInputs(generationProfile, {
+    availabilityDateISO,
+    generationConstraints,
+  });
   const plan = buildCoachingPlan(coachingInputs);
 
   logger.debug('[ProgramGen] Coaching plan built', {
@@ -563,6 +618,7 @@ export async function generateProgramFromProfile(
     coreSessions: plan.coreSessions,
     optionalSessions: plan.optionalSessions,
     recoverySessions: plan.recoverySessions,
+    activeConstraints: generationConstraints?.activeConstraintIds ?? [],
   });
 
   // ─── Step 2: Build AI prompt from coaching plan ───
@@ -859,7 +915,10 @@ export async function generateProgramFromProfile(
       microcyclePrefix: 'mc-ai',
       blockStartISO: blockStart,
       blockNumber: options.blockNumber ?? 1,
-      athletePrefs: getAthletePrefs(),
+      athletePrefs: mergeAthletePrefsWithGenerationConstraints(
+        getAthletePrefs(),
+        generationConstraints,
+      ),
     });
   } catch (normaliseErr: any) {
     const diagnostic = `generated program normalisation failed: ${errorDiagnostic(normaliseErr)}`;

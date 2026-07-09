@@ -29,6 +29,11 @@ import type {
 import { logger } from './logger';
 import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
 import { logAllocationWeekValidation } from '../rules/weekStructureValidator';
+import type {
+  GenerationConstraintContext,
+  GenerationInjuryConstraint,
+  GenerationReadinessTier,
+} from './generationConstraints';
 
 // ─── Input Types ───
 
@@ -46,6 +51,7 @@ export interface CoachingInputs {
   goals: string[];
   hasGame: boolean;
   gameDay?: string;
+  generationConstraints?: GenerationConstraintContext;
   /**
    * Sprint-variant used in the PREVIOUS week, if known. Enables the
    * cross-week guard: if last week used a micro-dose sprint, this week
@@ -62,6 +68,7 @@ export interface OnboardingToCoachingInputsOptions {
    * windows are not compared with the machine clock.
    */
   availabilityDateISO?: string;
+  generationConstraints?: GenerationConstraintContext;
 }
 
 // ─── Output Types ───
@@ -314,6 +321,20 @@ export function calculateReadiness(inputs: CoachingInputs): {
     level = 'high';
   }
 
+  const activeReadiness = inputs.generationConstraints?.readiness;
+  if (activeReadiness) {
+    const before = level;
+    if (activeReadiness.tier === 'full_pause' || activeReadiness.tier === 'major_reduction') {
+      level = 'low';
+    } else if (activeReadiness.tier === 'moderate_reduction' && level === 'high') {
+      level = 'medium';
+    }
+    factors.push(
+      `Active readiness constraint (${activeReadiness.label ?? activeReadiness.tier}, ${activeReadiness.severity}/10) ` +
+      `applied before generation${before !== level ? `: ${before} → ${level}` : ''}`,
+    );
+  }
+
   return { level, factors };
 }
 
@@ -439,6 +460,14 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
 
   // Step 4: Core session count
   let coreRange = getCoreSessionCount(inputs.seasonPhase, readiness);
+  const activeReadinessTier = inputs.generationConstraints?.readiness?.tier;
+  if (activeReadinessTier === 'full_pause') {
+    coreRange = { min: 0, max: 0 };
+  } else if (activeReadinessTier === 'major_reduction') {
+    coreRange = { min: Math.min(coreRange.min, 1), max: Math.min(coreRange.max, 2) };
+  } else if (activeReadinessTier === 'moderate_reduction') {
+    coreRange = { min: Math.min(coreRange.min, 2), max: Math.min(coreRange.max, 3) };
+  }
 
   // ── H-PRE-8: structure priority (4 strength exposures) ──
   // Pre-season with ≥2 team days, no game, and at least 5 training days
@@ -455,7 +484,8 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     inputs.seasonPhase === 'Pre-season' &&
     (inputs.teamTrainingDays || []).length >= 2 &&
     !inputs.hasGame &&
-    inputs.availableDays >= 5;
+    inputs.availableDays >= 5 &&
+    (!activeReadinessTier || activeReadinessTier === 'slight_reduction');
   if (shouldTarget4Strength) {
     if (readiness === 'medium') coreRange = { min: 3, max: 4 };
     else if (readiness === 'high') coreRange = { min: 4, max: 4 };
@@ -496,7 +526,8 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     (inputs.teamTrainingDays || []).length >= 2 &&
     inputs.availableDays >= 5 &&
     readiness !== 'low' &&
-    !hasSevereInjury;
+    !hasSevereInjury &&
+    (!activeReadinessTier || activeReadinessTier === 'slight_reduction');
   if (shouldTarget3Strength) {
     coreRange = { min: 3, max: 3 };
   }
@@ -517,7 +548,8 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     (inputs.teamTrainingDays || []).length >= 2 &&
     inputs.availableDays >= 5 &&
     readiness !== 'low' &&
-    !hasSevereInjury;
+    !hasSevereInjury &&
+    (!activeReadinessTier || activeReadinessTier === 'slight_reduction');
   if (shouldTarget3StrengthPreSeasonGame) {
     coreRange = { min: 3, max: 3 };
   }
@@ -764,6 +796,52 @@ function buildWeeklyPlan(
 
   const isInSeason = inputs.seasonPhase === 'In-season';
   const hasGameThisWeek = isInSeason && gameDayNum !== null;
+  const generationConstraints = inputs.generationConstraints;
+  const activeReadiness = generationConstraints?.readiness;
+
+  const readinessTierRank = (tier: GenerationReadinessTier | undefined): number => {
+    switch (tier) {
+      case 'full_pause': return 4;
+      case 'major_reduction': return 3;
+      case 'moderate_reduction': return 2;
+      case 'slight_reduction': return 1;
+      default: return 0;
+    }
+  };
+  const readinessAtLeast = (tier: GenerationReadinessTier): boolean =>
+    readinessTierRank(activeReadiness?.tier) >= readinessTierRank(tier);
+  const activeInjuries = generationConstraints?.injuries ?? [];
+  const injuryMatches = (
+    injury: GenerationInjuryConstraint,
+    pattern: RegExp,
+  ): boolean => pattern.test(`${injury.bodyPart} ${injury.bucket ?? ''}`.toLowerCase());
+  const hasInjury = (pattern: RegExp, minSeverity = 1): boolean =>
+    activeInjuries.some((injury) => injury.severity >= minSeverity && injuryMatches(injury, pattern));
+  const hasPausedInjury = (pattern: RegExp): boolean =>
+    activeInjuries.some((injury) => injury.pauseAffectedTraining && injuryMatches(injury, pattern));
+  const lowerLimbIssue = (minSeverity = 1): boolean =>
+    activeInjuries.some((injury) =>
+      injury.severity >= minSeverity &&
+      (injury.region === 'lower_body' ||
+        injury.injuryKeys.some((key) =>
+          key === 'hamstring' || key === 'knee' || key === 'calf' ||
+          key === 'ankle' || key === 'adductor' || key === 'pubalgia',
+        )),
+    );
+  const activeTriggerText = activeInjuries
+    .flatMap((injury) => injury.triggers)
+    .join(' ')
+    .toLowerCase();
+
+  if (activeReadiness?.fullPause) {
+    return daySlots.map((slot) => ({
+      tier: 'recovery',
+      focus: 'Recovery only - full pause until symptoms settle',
+      dayOfWeek: slot.dayName,
+      isHardExposure: false,
+      stressLevel: 'low',
+    }));
+  }
 
   if (hasGameThisWeek) {
     // ─── In-season WITH game: G-relative placement with spacing intelligence ───
@@ -1206,7 +1284,7 @@ function buildWeeklyPlan(
     // Does this phase use category-based distribution?
     const useCategoryPlanner =
       inputs.seasonPhase === 'Off-season' || inputs.seasonPhase === 'Pre-season';
-    const categoryPriority = inputs.seasonPhase === 'Pre-season'
+    let categoryPriority = inputs.seasonPhase === 'Pre-season'
       ? CATEGORY_PRIORITY_PRE
       : CATEGORY_PRIORITY_OFF;
 
@@ -1231,6 +1309,72 @@ function buildWeeklyPlan(
     // "Heavy lower" = any dedicated lower or combined lower session. Blocked
     // on team days under H-PRE-2. FB is NOT heavy lower (moderate mixed load).
     function isHeavyLower(c: CandidateType): boolean { return c === 'L-sq' || c === 'L-hi' || c === 'L-co'; }
+    const shoulderIssue = (minSeverity = 1): boolean =>
+      hasInjury(/\b(shoulder|pec|rotator)\b/, minSeverity);
+    const hamstringIssue = (minSeverity = 1): boolean =>
+      hasInjury(/\b(hamstring|hammy)\b/, minSeverity);
+    const kneeIssue = (minSeverity = 1): boolean =>
+      hasInjury(/\b(knee|patella|acl|mcl|meniscus)\b/, minSeverity);
+    const lowerBackIssue = (minSeverity = 1): boolean =>
+      hasInjury(/\b(lower back|lowerback|lumbar)\b/, minSeverity);
+    const triggersMention = (pattern: RegExp): boolean => pattern.test(activeTriggerText);
+
+    function blocksStrengthCandidateForGeneration(c: CandidateType | undefined): boolean {
+      if (!c || activeInjuries.length === 0) return false;
+      const pushLoaded = c === 'U-pu' || c === 'U-co' || c === 'FB';
+      const upperLoaded = c === 'U-pu' || c === 'U-pl' || c === 'U-co' || c === 'FB';
+      const hingeLoaded = c === 'L-hi' || c === 'L-co' || c === 'FB';
+      const kneeDominant = c === 'L-sq' || c === 'L-co' || c === 'FB';
+      const lowerLoaded = c === 'L-sq' || c === 'L-hi' || c === 'L-co' || c === 'FB';
+
+      if (hasPausedInjury(/\b(shoulder|pec|rotator)\b/) && upperLoaded) return true;
+      if (shoulderIssue(4) && pushLoaded) return true;
+      if (shoulderIssue(1) && triggersMention(/\b(press|bench|overhead|dip|push)\b/) && pushLoaded) return true;
+
+      if (hasPausedInjury(/\b(hamstring|hammy)\b/) && lowerLoaded) return true;
+      if (hamstringIssue(4) && hingeLoaded) return true;
+      if (hamstringIssue(1) && triggersMention(/\b(hinge|rdl|deadlift|nordic|sprint|running)\b/) && hingeLoaded) return true;
+
+      if (hasPausedInjury(/\b(knee|patella|acl|mcl|meniscus)\b/) && lowerLoaded) return true;
+      if (kneeIssue(4) && kneeDominant) return true;
+      if (kneeIssue(1) && triggersMention(/\b(deep|squat|jump|plyo|cod|change of direction)\b/) && kneeDominant) return true;
+
+      if (lowerBackIssue(4) && (hingeLoaded || c === 'L-sq')) return true;
+      return false;
+    }
+
+    function blocksConditioningCategoryForGeneration(category: CondCategory): boolean {
+      if (activeReadiness?.avoidHardConditioning &&
+          (category === 'sprint' || category === 'vo2' || category === 'glycolytic')) {
+        return true;
+      }
+      if (category === 'sprint' && (
+        activeReadiness?.avoidSprint ||
+        lowerLimbIssue(4) ||
+        (lowerLimbIssue(1) && triggersMention(/\b(sprint|speed|max velocity|running|cod|change of direction)\b/))
+      )) {
+        return true;
+      }
+      if ((category === 'vo2' || category === 'glycolytic') &&
+          (hamstringIssue(4) || kneeIssue(4) || lowerLimbIssue(6))) {
+        return true;
+      }
+      return false;
+    }
+
+    function easyConditioningProps(category: CondCategory): Partial<SessionAllocation> {
+      if (category !== 'aerobic_base') return {};
+      if (!activeReadiness?.avoidHardConditioning && !lowerLimbIssue(4)) return {};
+      return {
+        conditioningVariant: 'reduced',
+        ...(lowerLimbIssue(4) ? { ergModality: 'bike' as const } : {}),
+      };
+    }
+
+    categoryPriority = categoryPriority.filter((category) =>
+      !blocksConditioningCategoryForGeneration(category),
+    );
+    if (categoryPriority.length === 0) categoryPriority = ['aerobic_base'];
 
     // ── Pattern-based targets ──
     //
@@ -1286,7 +1430,7 @@ function buildWeeklyPlan(
     let condTarget = Math.max(core, 4);
     if (inputs.availableDays <= 3) condTarget = 3;
     else if (inputs.conditioningLevel === 'Poor') condTarget = Math.max(3, core);
-    if ((inputs as any).readinessOverride === 'low' || core <= 2) {
+    if (readinessAtLeast('moderate_reduction') || activeReadiness?.avoidHardConditioning || core <= 2) {
       condTarget = Math.max(3, condTarget - 1);
     }
     condTarget = Math.max(3, Math.min(5, condTarget));
@@ -1436,6 +1580,9 @@ function buildWeeklyPlan(
 
     function scoreStructure(struct: StructureTemplate): number {
       let score = 0;
+      for (const s of struct) {
+        if (blocksStrengthCandidateForGeneration(s)) score -= 250;
+      }
 
       // Pattern coverage
       let sq = 0, hi = 0, pu = 0, pl = 0;
@@ -1931,6 +2078,9 @@ function buildWeeklyPlan(
         requestedCategory = 'tempo';
         laddered = true;
       }
+      if (blocksConditioningCategoryForGeneration(requestedCategory)) {
+        return easy(true);
+      }
       const isHardCategory = requestedCategory !== 'aerobic_base';
 
       // Game window (any phase reaching this allocator).
@@ -2185,6 +2335,7 @@ function buildWeeklyPlan(
 
       // H-GAME: pre-game protection is a hard rule in every mode.
       if (violatesGameProximity(c, dayNum)) return true;
+      if (blocksStrengthCandidateForGeneration(c)) return true;
 
       // ── H-PRE-1: No separate conditioning on a team training day ──
       // Team training IS the field-load session. Adding standalone COND or
@@ -3159,7 +3310,9 @@ function buildWeeklyPlan(
 
       // In structure mode: pick from the remaining queue items
       if (useStructureMode && strengthQueue.length > 0) {
-        const available = [...new Set(strengthQueue)];
+        const available = [...new Set(strengthQueue)]
+          .filter((candidate) => !blocksStrengthCandidateForGeneration(candidate));
+        if (available.length === 0) return 'U-pl';
         // Sort: lowest pattern count first, then pairing bias, then region
         // spacing, then alternation. Pairing bias ranks ABOVE region spacing
         // because a bad sprint/glyco+lower pairing hammers the legs within
@@ -3209,7 +3362,7 @@ function buildWeeklyPlan(
       }
 
       // Free-form fallback (core ≥ 5): original pattern-balance logic
-      const patterns: { type: CandidateType; count: number; alternates: boolean }[] = [
+      const patterns = ([
         {
           type: 'L-sq', count: st.sqCount,
           alternates: st.lastLowerSubtype !== null && st.lastLowerSubtype !== 'L-sq',
@@ -3226,7 +3379,9 @@ function buildWeeklyPlan(
           type: 'U-pl', count: st.plCount,
           alternates: st.lastUpperSubtype !== null && st.lastUpperSubtype !== 'U-pl',
         },
-      ];
+      ] as Array<{ type: CandidateType; count: number; alternates: boolean }>)
+        .filter((candidate) => !blocksStrengthCandidateForGeneration(candidate.type));
+      if (patterns.length === 0) return 'U-pl';
       patterns.sort((a, b) => {
         if (a.count !== b.count) return a.count - b.count;
         if (a.alternates !== b.alternates) return a.alternates ? -1 : 1;
@@ -3302,8 +3457,11 @@ function buildWeeklyPlan(
       // If remaining slots == remaining queue items, every remaining slot
       // MUST place a strength session. Override rest slots and soft preferences.
       const slotsRemaining = daySlots.length - slotIdx;
-      const queueMustComplete = useStructureMode && strengthQueue.length > 0
-        && strengthQueue.length >= slotsRemaining;
+      const safeStrengthQueue = strengthQueue.filter((candidate) =>
+        !blocksStrengthCandidateForGeneration(candidate),
+      );
+      const queueMustComplete = useStructureMode && safeStrengthQueue.length > 0
+        && safeStrengthQueue.length >= slotsRemaining;
 
       // Build candidate list: in structure mode, limit strength to queue items.
       // Rest slots only allow COND/ACC/REC — UNLESS queue completion is forced.
@@ -3314,7 +3472,7 @@ function buildWeeklyPlan(
         // Rest/conditioning slot — no strength allowed
         slotCandidates = useSixDaySpreadRhythm ? ['REC', 'ACC'] : ['COND', 'ACC', 'REC'];
       } else if (useStructureMode) {
-        const uniqueStrength = [...new Set(strengthQueue)] as CandidateType[];
+        const uniqueStrength = [...new Set(safeStrengthQueue)] as CandidateType[];
         if (queueMustComplete) {
           // Must place strength — only strength candidates + S+C
           slotCandidates = [
@@ -3356,6 +3514,7 @@ function buildWeeklyPlan(
           // queue-must-complete mode — never force a required movement
           // into the G-1/G-2 window; move it or drop it instead.
           if (violatesGameProximity(candidate, slot.num)) continue;
+          if (blocksStrengthCandidateForGeneration(candidate)) continue;
           // H-PRE-1: no conditioning on team day
           if (onTeamDay2 && (candidate === 'COND' || candidate === 'S+C')) continue;
           // H-PRE-2 / H-TEAM-LOWER: no heavy lower on team day — ANY phase
@@ -3395,6 +3554,7 @@ function buildWeeklyPlan(
           if (candidate === 'ACC' || candidate === 'REC') continue;
           if (candidate === 'S+C') {
             const scType = pickSCStrengthType(pos2);
+            if (blocksStrengthCandidateForGeneration(scType)) continue;
             // Check H6 and H1 for S+C
             if (st.coreStrengthCount + 1 > core) continue;
             // H1 stress-aware (B2): only high-stress S+C extends the run.
@@ -3419,6 +3579,7 @@ function buildWeeklyPlan(
         if (candidate === 'S+C') {
           const slotPos = trainingOrder(slot.num);
           scStrength = pickSCStrengthType(slotPos);
+          if (blocksStrengthCandidateForGeneration(scStrength)) continue;
           if (!queueMustComplete && violatesHard(scStrength, slot.num)) continue;
           // H-GAME on the strength half applies in EVERY mode (a lower
           // strength component on G-2 is still a hard lower session).
@@ -3572,6 +3733,7 @@ function buildWeeklyPlan(
           isHardExposure: condTier === 'core' && flavour === 'high-intensity',
           conditioningFlavour: flavour,
           conditioningCategory: category,
+          ...easyConditioningProps(category),
           ...(category === 'tempo' ? { conditioningOffFeet: tempoOffFeet } : {}),
           stressLevel: condStress,
         });
@@ -3796,6 +3958,7 @@ function buildWeeklyPlan(
           isHardExposure: flavour === 'high-intensity',
           conditioningFlavour: flavour,
           conditioningCategory: category,
+          ...easyConditioningProps(category),
           ...(category === 'tempo' ? { conditioningOffFeet: promoTempoOffFeet } : {}),
           // tempo is MEDIUM stress (4B); only vo2/glyco/sprint are high.
           stressLevel: category !== 'aerobic_base' && category !== 'tempo'
@@ -3901,7 +4064,8 @@ function buildWeeklyPlan(
     // finisher onto S11's hinge-heavy Monday lower — a forbidden pairing,
     // adjacent to Tuesday team training (H-PRE-3 bypass), and a 4th
     // sprint/COD exposure on a week that already has 2×TT + game.
-    if (useCategoryPlanner && st.condCategories.sprint === 0 && !isGameWeek) {
+    if (useCategoryPlanner && st.condCategories.sprint === 0 && !isGameWeek &&
+        !blocksConditioningCategoryForGeneration('sprint')) {
       // Gather conditioning slots in chronological order. Use the original
       // slot positions (daySlots index == plan index at this point because
       // the sort-by-day happens later, below).
@@ -4179,17 +4343,21 @@ function buildWeeklyPlan(
       const hasLco = plan.some(s => s.tier === 'core' && isLcoFocus(s.focus));
       const hasUco = plan.some(s => s.tier === 'core' && isUcoFocus(s.focus));
 
-      if (sqSessions.length >= 1 && hiSessions.length === 0 && !hasFb && !hasLco) {
+      if (sqSessions.length >= 1 && hiSessions.length === 0 && !hasFb && !hasLco &&
+          !blocksStrengthCandidateForGeneration('L-co')) {
         sqSessions[0].focus = buildFocus('L-co');
         sqSessions[0].strengthPattern = buildStrengthPattern('L-co');
-      } else if (hiSessions.length >= 1 && sqSessions.length === 0 && !hasFb && !hasLco) {
+      } else if (hiSessions.length >= 1 && sqSessions.length === 0 && !hasFb && !hasLco &&
+          !blocksStrengthCandidateForGeneration('L-co')) {
         hiSessions[0].focus = buildFocus('L-co');
         hiSessions[0].strengthPattern = buildStrengthPattern('L-co');
       }
-      if (puSessions.length >= 1 && plSessions.length === 0 && !hasFb && !hasUco) {
+      if (puSessions.length >= 1 && plSessions.length === 0 && !hasFb && !hasUco &&
+          !blocksStrengthCandidateForGeneration('U-co')) {
         puSessions[0].focus = buildFocus('U-co');
         puSessions[0].strengthPattern = buildStrengthPattern('U-co');
-      } else if (plSessions.length >= 1 && puSessions.length === 0 && !hasFb && !hasUco) {
+      } else if (plSessions.length >= 1 && puSessions.length === 0 && !hasFb && !hasUco &&
+          !blocksStrengthCandidateForGeneration('U-co')) {
         plSessions[0].focus = buildFocus('U-co');
         plSessions[0].strengthPattern = buildStrengthPattern('U-co');
       }
@@ -5569,6 +5737,16 @@ function buildAIConstraints(
 
   // Sprint loading strategy
   let sprintLoading: AIConstraints['sprintLoading'] = 'allowed';
+  const activeReadiness = inputs.generationConstraints?.readiness;
+  const activeInjuries = inputs.generationConstraints?.injuries ?? [];
+  const lowerLimbGenerationIssue = activeInjuries.some((injury) =>
+    injury.severity >= 4 &&
+    (injury.region === 'lower_body' ||
+      injury.injuryKeys.some((key) =>
+        key === 'hamstring' || key === 'knee' || key === 'calf' ||
+        key === 'ankle' || key === 'adductor' || key === 'pubalgia',
+      )),
+  );
   if (inputs.sprintExposure === 'No sprint training') {
     sprintLoading = readiness === 'low' ? 'do-not-add' : 'conservative';
   }
@@ -5576,11 +5754,16 @@ function buildAIConstraints(
     // In-season: footy training IS the running
     sprintLoading = 'do-not-add';
   }
+  if (activeReadiness?.avoidSprint || lowerLimbGenerationIssue) {
+    sprintLoading = 'do-not-add';
+  }
 
   // Conditioning loading
   let conditioningLoading: AIConstraints['conditioningLoading'] = 'full';
   if (inputs.seasonPhase === 'In-season') {
     conditioningLoading = 'light-only'; // No extra running in-season
+  } else if (activeReadiness?.preferRecovery || activeReadiness?.avoidHardConditioning) {
+    conditioningLoading = activeReadiness.preferRecovery ? 'light-only' : 'moderate';
   } else if (readiness === 'low') {
     conditioningLoading = 'moderate';
   }
@@ -5608,6 +5791,19 @@ function buildAIConstraints(
     }
     return parts.join(' - ');
   });
+  for (const injury of activeInjuries) {
+    injuryRestrictions.push(
+      `${injury.bodyPart} active ${injury.severity}/10 (${injury.severityBand}) - ` +
+      `triggers: ${injury.triggers.join(', ') || 'not specified'} - ` +
+      (injury.pauseAffectedTraining
+        ? 'ACTION: pause affected training only; keep clearly unaffected strength and easy conditioning'
+        : injury.removeRiskyWork
+          ? 'ACTION: remove risky affected work; keep unaffected strength and easy conditioning'
+          : injury.reduceAffectedWork
+            ? 'ACTION: reduce/swap affected work; keep safe work'
+            : 'ACTION: avoid exact trigger only; keep normal safe training'),
+    );
+  }
 
   // Ramp-up flag
   const rampUp =
@@ -5749,6 +5945,7 @@ export function onboardingToCoachingInputs(
     // Prefer the new usualGameDay (full DayOfWeek) over the legacy gameDay field
     // so the in-season phase-shift flow drives game-proximity scheduling immediately.
     gameDay: data.usualGameDay || data.gameDay,
+    generationConstraints: options.generationConstraints,
   };
 }
 
