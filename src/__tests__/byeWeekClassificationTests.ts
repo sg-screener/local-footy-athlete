@@ -4,6 +4,7 @@ import {
   buildCoachingPlan,
   onboardingToCoachingInputs,
 } from '../utils/coachingEngine';
+import type { GenerationConstraintContext } from '../utils/generationConstraints';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import {
   addDays,
@@ -85,14 +86,28 @@ interface GeneratedWeek {
   weeklyPlan: ReturnType<typeof buildCoachingPlan>['weeklyPlan'];
 }
 
-function generatedWeek(profile: Partial<OnboardingData>, options: { gameDayMark?: string; weekKind?: WeekKind } = {}): GeneratedWeek {
-  const inputs = onboardingToCoachingInputs(profile as OnboardingData, { weekKind: options.weekKind });
+interface GeneratedWeekOptions {
+  gameDayMark?: string;
+  weekKind?: WeekKind;
+  generationConstraints?: GenerationConstraintContext;
+}
+
+function generatedWeek(profile: Partial<OnboardingData>, options: GeneratedWeekOptions = {}): GeneratedWeek {
+  const inputs = onboardingToCoachingInputs(profile as OnboardingData, {
+    weekKind: options.weekKind,
+    generationConstraints: options.generationConstraints,
+  });
   const plan = buildCoachingPlan(inputs);
   const workouts = buildWorkoutsFromCoach(
     [],
     'mc-bye-context',
     plan.weeklyPlan,
     profile as OnboardingData,
+    options.weekKind ? {
+      miniCycleNumber: 1,
+      weekStartISO: BLOCK_START,
+      weekKind: options.weekKind,
+    } : undefined,
   );
   const microcycle: Microcycle = {
     id: 'mc-bye-context',
@@ -164,6 +179,73 @@ function generatedWeek(profile: Partial<OnboardingData>, options: { gameDayMark?
 function dayLabel(dateISO: string): string {
   return DAY_NAMES[new Date(`${dateISO}T12:00:00Z`).getUTCDay()].slice(0, 3);
 }
+
+const APP_CONDITIONING_CATEGORIES = new Set([
+  'aerobic_base',
+  'tempo_conditioning',
+  'hard_conditioning',
+]);
+
+function appConditioningDays(week: GeneratedWeek) {
+  return week.report.counts.days.filter((day) =>
+    day.units.some((unit) => APP_CONDITIONING_CATEGORIES.has(unit.category)),
+  );
+}
+
+function hasRealConditioningMetadata(week: GeneratedWeek): boolean {
+  return appConditioningDays(week).every((classifiedDay) => {
+    const workout = week.resolvedWeek.find((day) => day.date === classifiedDay.date)?.workout;
+    if (!workout?.conditioningCategory || !workout.conditioningFlavour) return false;
+    if (workout.hasCombinedConditioning) {
+      return workout.attachedConditioningKind === 'component' &&
+        !!workout.conditioningBlock?.options.length &&
+        workout.conditioningBlock.options.every((option) =>
+          option.exerciseIds.length > 0 &&
+          (/\b\d+(?:-\d+)?\s*min/i.test(`${option.title} ${option.description}`) ||
+            /\b\d+\s*x\s*\d+s\b/i.test(`${option.title} ${option.description}`)),
+        );
+    }
+    return workout.workoutType === 'Conditioning' && workout.exercises.length > 0;
+  });
+}
+
+const COOKED_READINESS: GenerationConstraintContext = {
+  activeConstraintIds: ['fatigue-cooked'],
+  injuries: [],
+  activeInjuryKeys: [],
+  readiness: {
+    id: 'fatigue-cooked',
+    sourceType: 'fatigue',
+    severity: 6,
+    tier: 'moderate_reduction',
+    label: 'Cooked',
+    avoidSprint: true,
+    avoidHardConditioning: true,
+    reduceHardExtras: true,
+    preferRecovery: false,
+    fullPause: false,
+  },
+};
+
+const RESTRICTED_HAMSTRING: GenerationConstraintContext = {
+  activeConstraintIds: ['injury-hamstring'],
+  activeInjuryKeys: ['hamstring'],
+  injuries: [{
+    id: 'injury-hamstring',
+    sourceType: 'injury',
+    bodyPart: 'Hamstring',
+    bucket: 'hamstring',
+    region: 'lower_body',
+    severity: 6,
+    severityBand: 'major',
+    onboardingSeverity: 'Severe',
+    triggers: ['sprinting', 'hinging'],
+    reduceAffectedWork: true,
+    removeRiskyWork: true,
+    pauseAffectedTraining: false,
+    injuryKeys: ['hamstring'],
+  }],
+};
 
 console.log('byeWeekClassificationTests');
 
@@ -311,6 +393,82 @@ console.log('\n[4] bye-week Saturday metadata and counting stay honest');
   ok('later game generation does not inherit bye Saturday metadata',
     !/bye-week gym top-up/i.test(`${gameSaturday?.name ?? ''} ${gameSaturday?.description ?? ''}`),
     gameSaturday);
+}
+
+console.log('\n[5] healthy bye-week shapes use team-training count without adding sprint');
+{
+  const twoTeam = generatedWeek(baseProfile());
+  eq('2TT bye has two main strength sessions', twoTeam.report.counts.mainStrengthExposures, 2);
+  ok('2TT bye stays within the hard-day cap', twoTeam.report.counts.hardDays <= 4, twoTeam.report.counts);
+  eq('2TT bye adds no app conditioning', twoTeam.report.counts.extraConditioningSessions, 0);
+  eq('2TT bye sprint/COD comes only from team training', twoTeam.report.counts.sprintCodExposures, 2);
+
+  const oneTeam = generatedWeek(baseProfile({
+    teamTrainingDaysPerWeek: 1,
+    teamTrainingDays: ['Tuesday'],
+  }));
+  eq('1TT bye has two main strength sessions', oneTeam.report.counts.mainStrengthExposures, 2);
+  eq('1TT bye adds one useful conditioning top-up', oneTeam.report.counts.extraConditioningSessions, 1);
+  ok('1TT bye stays within the hard-day cap', oneTeam.report.counts.hardDays <= 4, oneTeam.report.counts);
+  eq('1TT bye adds no sprint/COD beyond the team anchor', oneTeam.report.counts.sprintCodExposures, 1);
+  ok('1TT conditioning top-up has real component metadata', hasRealConditioningMetadata(oneTeam), oneTeam.resolvedWeek);
+
+  const zeroTeam = generatedWeek(baseProfile({
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+  }));
+  eq('0TT bye has two main strength sessions', zeroTeam.report.counts.mainStrengthExposures, 2);
+  eq('0TT bye adds one careful conditioning top-up', zeroTeam.report.counts.extraConditioningSessions, 1);
+  ok('0TT bye stays within the hard-day cap', zeroTeam.report.counts.hardDays <= 4, zeroTeam.report.counts);
+  eq('0TT bye adds no sprint/COD', zeroTeam.report.counts.sprintCodExposures, 0);
+  ok('0TT conditioning top-up has real component metadata', hasRealConditioningMetadata(zeroTeam), zeroTeam.resolvedWeek);
+}
+
+console.log('\n[6] cooked, injury-restricted and deload byes use the lighter shape');
+{
+  const lowReadiness = generatedWeek(baseProfile({
+    conditioningLevel: 'Poor',
+    recentTrainingLoad: 'Hardly at all',
+  }));
+  ok('low-readiness bye keeps at most one main strength session',
+    lowReadiness.report.counts.mainStrengthExposures <= 1,
+    lowReadiness.report.counts);
+  eq('low-readiness bye does not add conditioning', lowReadiness.report.counts.extraConditioningSessions, 0);
+  ok('low-readiness bye keeps Saturday light',
+    lowReadiness.report.counts.days.find((day) => dayLabel(day.date) === 'Sat')?.units.every((unit) =>
+      unit.category === 'recovery' || unit.category === 'gunshow_prehab' || unit.category === 'rest'),
+    lowReadiness.report.counts.days);
+
+  const cooked = generatedWeek(baseProfile(), { generationConstraints: COOKED_READINESS });
+  ok('cooked bye keeps at most one main strength session', cooked.report.counts.mainStrengthExposures <= 1, cooked.report.counts);
+  eq('cooked bye trims the conditioning top-up', cooked.report.counts.extraConditioningSessions, 0);
+  eq('cooked bye preserves team sprint/COD anchors only', cooked.report.counts.sprintCodExposures, 2);
+
+  const injured = generatedWeek(baseProfile(), { generationConstraints: RESTRICTED_HAMSTRING });
+  ok('injury-restricted bye keeps safe upper work',
+    injured.report.counts.days.some((day) => day.units.some((unit) => unit.category === 'upper_strength')),
+    injured.report.counts.days);
+  ok('injury-restricted bye does not force lower strength',
+    !injured.report.counts.days.some((day) => day.units.some((unit) => unit.category === 'lower_strength')),
+    injured.report.counts.days);
+  eq('injury-restricted bye does not add conditioning', injured.report.counts.extraConditioningSessions, 0);
+
+  const deload = generatedWeek(baseProfile({
+    teamTrainingDaysPerWeek: 1,
+    teamTrainingDays: ['Tuesday'],
+  }), { weekKind: 'deload' });
+  ok('deload bye keeps at most one main strength session', deload.report.counts.mainStrengthExposures <= 1, deload.report.counts);
+  eq('deload bye adds no conditioning top-up', deload.report.counts.extraConditioningSessions, 0);
+  eq('deload bye adds no sprint/COD beyond team training', deload.report.counts.sprintCodExposures, 1);
+  ok('deload bye context remains distinct from bye classification', resolveWeekContext({
+    seasonPhase: 'In-season',
+    hasFixture: false,
+    weekKind: 'deload',
+  }).isByeWeek && resolveWeekContext({
+    seasonPhase: 'In-season',
+    hasFixture: false,
+    weekKind: 'deload',
+  }).isDeloadWeek);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

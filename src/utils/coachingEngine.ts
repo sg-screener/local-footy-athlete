@@ -716,15 +716,31 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     }
   }
 
+  const generatedWeekContext = resolveWeekContext({
+    seasonPhase: inputs.seasonPhase,
+    hasFixture: inputs.hasGame,
+    gameDay: inputs.gameDay,
+    weekKind: inputs.weekKind,
+  });
+  const plannedCoreSessions = generatedWeekContext.isByeWeek
+    ? weeklyPlan.filter((session) => !!session.strengthPattern).length
+    : actualCore;
+  const plannedOptionalSessions = generatedWeekContext.isByeWeek
+    ? weeklyPlan.filter((session) => session.tier === 'optional').length
+    : optionalSessions;
+  const plannedRecoverySessions = generatedWeekContext.isByeWeek
+    ? weeklyPlan.filter((session) => session.tier === 'recovery').length
+    : recoverySessions;
+
   // Build AI constraints
   const constraints = buildAIConstraints(
     inputs,
     readiness,
     hardCap,
     existingHard,
-    actualCore,
-    optionalSessions,
-    recoverySessions
+    plannedCoreSessions,
+    plannedOptionalSessions,
+    plannedRecoverySessions
   );
 
   // Phase 2 rules kernel — LOG-ONLY Bible weekly-structure validation of
@@ -745,9 +761,9 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     hardExposureCap: hardCap,
     existingHardExposures: existingHard,
     remainingHardBudget: remainingBudget,
-    coreSessions: actualCore,
-    optionalSessions,
-    recoverySessions,
+    coreSessions: plannedCoreSessions,
+    optionalSessions: plannedOptionalSessions,
+    recoverySessions: plannedRecoverySessions,
     weeklyPlan,
     constraints,
   };
@@ -906,6 +922,20 @@ function buildWeeklyPlan(
     .flatMap((injury) => injury.triggers)
     .join(' ')
     .toLowerCase();
+  const hasRiskRestrictedInjury = activeInjuries.some((injury) =>
+    injury.removeRiskyWork || injury.pauseAffectedTraining,
+  );
+  const hasSevereProfileInjury = (inputs.injuries ?? []).some((injury) =>
+    injury.severity === 'Severe',
+  );
+  const lighterByeWeek = weekContext.isByeWeek && (
+    inputs.weekKind === 'deload' ||
+    readiness === 'low' ||
+    readinessAtLeast('moderate_reduction') ||
+    !!activeReadiness?.preferRecovery ||
+    hasRiskRestrictedInjury ||
+    hasSevereProfileInjury
+  );
 
   if (activeReadiness?.fullPause) {
     return daySlots.map((slot) => ({
@@ -1120,162 +1150,179 @@ function buildWeeklyPlan(
   } else if (weekContext.isByeWeek) {
     // ─── In-season NO GAME (bye week / game removed) ───
     //
-    // PHILOSOPHY:
-    //   No game = freed recovery window. Use it to build, not coast.
-    //   Saturday becomes a primary lower-body strength top-up. Conditioning
-    //   is only claimed when a real typed conditioning component is attached.
-    //   Sunday stays recovery/off — athletes expect a rest day here.
-    //
-    // PLACEMENT:
-    //   1. Early-week core sessions: standard lower/upper alternation
-    //   2. Saturday: core lower-body strength top-up (the "bonus" session)
-    //   3. Sunday: always off / recovery (never gets a session)
-    //   4. Remaining days: optional → recovery as normal
-    //
-    // This re-optimises the week around the absence of game-day fatigue
-    // rather than just removing the game and leaving a weird structure.
+    // Team training remains the week anchor. Healthy byes carry two main
+    // strength exposures; only 0-1 team-training weeks may add one real,
+    // typed conditioning component. Cooked, injury-restricted and deload
+    // byes use the freed game slot for lower-fatigue work instead.
+    type ByeSlot = (typeof daySlots)[number];
+    const allocations = new Map<string, SessionAllocation>();
+    const teamSlots = daySlots.filter((slot) => slot.isTeamDay);
+    const nonTeamSlots = daySlots.filter((slot) => !slot.isTeamDay && slot.dayName !== 'Sunday');
+    const orderedNonTeam = [...nonTeamSlots].sort((a, b) => trainingOrder(a.num) - trainingOrder(b.num));
+    const restrictedLower = activeInjuries.some((injury) =>
+      (injury.region === 'lower_body' || injury.region === 'back_midline') &&
+      (injury.removeRiskyWork || injury.pauseAffectedTraining),
+    );
+    const restrictedUpper = activeInjuries.some((injury) =>
+      injury.region === 'upper_body' &&
+      (injury.removeRiskyWork || injury.pauseAffectedTraining),
+    );
 
-    // Partition days: Saturday gets special handling, Sunday is always off
-    const saturdaySlot = daySlots.find(d => d.dayName === 'Saturday');
-    const sundaySlot = daySlots.find(d => d.dayName === 'Sunday');
-    const regularSlots = daySlots.filter(d => d.dayName !== 'Saturday' && d.dayName !== 'Sunday');
-
-    // If Sunday is in the plan, force it to recovery
-    if (sundaySlot) {
-      plan.push({
-        tier: 'recovery',
-        focus: 'Full rest or light walk',
-        dayOfWeek: 'Sunday',
-        isHardExposure: false,
-      });
-    }
-
-    let coreCount = 0;
-    let optCount = 0;
-    let recCount = 0;
-
-    // Place core sessions on regular (non-Sat/Sun) days.
-    // Saturday already covers lower strength, so regular days need:
-    //   - Non-team days → lower body (gym legs without team fatigue)
-    //   - Team days → upper body (pair with team running/drills)
-    // This ensures balanced upper/lower distribution.
-    const regularCoreTarget = core - (saturdaySlot ? 1 : 0);
-
-    // Separate non-team and team slots to place lower first, upper second
-    const nonTeamSlots = regularSlots.filter(s => !s.isTeamDay);
-    const teamSlots = regularSlots.filter(s => s.isTeamDay);
-    const orderedForCore = [...nonTeamSlots, ...teamSlots]; // lower-first, then upper
-
-    // Upper push/pull alternation (planning-time, not post-resolve).
-    // When multiple upper core slots are placed in the same week we must emit
-    // distinct push/pull focus strings so canonical naming renders "Upper Push"
-    // and "Upper Pull" (not two vague "Upper Body Strength" cells).
-    //
-    // Convention: first upper slot encountered (earlier in week, higher exposure)
-    // → PULL; second → PUSH; subsequent alternate. Matches the 3-core with-game
-    // branch where hard pull sits earlier (G−4) and moderate push sits later (G−2).
-    //
-    // IMPORTANT: team days are promoted to `tier: 'core'` later by the universal
-    // team-day label pass (search for "(2) Universal team-day label"), which
-    // wraps them as "Team training + <focus>". They therefore contribute to the
-    // week's effective upper exposure even though they start as optional/recovery
-    // here. We pre-assign push/pull focus to team days up-front so the tail pass
-    // finds a specific pattern to prepend onto, not a vague hypertrophy string.
-    let upperCount = 0;
-    const nextUpperAllocation = (): { focus: string; pattern: 'push' | 'pull' } => {
-      const pattern = upperCount % 2 === 0 ? 'pull' : 'push';
-      upperCount++;
-      return {
-        focus: pattern === 'pull'
-          ? 'Upper body - pull emphasis'
-          : 'Upper body - push emphasis',
-        pattern,
-      };
-    };
-
-    // Pre-seed alternation: walk TEAM slots in calendar order and record which
-    // pattern each will carry. The main loop below reads from this map when it
-    // hits a team day so the very-first non-team upper day picks up the NEXT
-    // pattern in the sequence, not a duplicate of Tue/Thu.
-    const teamDayUpperFocus = new Map<string, { focus: string; pattern: 'push' | 'pull' }>();
-    for (const ts of teamSlots) {
-      teamDayUpperFocus.set(ts.dayName, nextUpperAllocation());
-    }
-
-    for (const slot of regularSlots) {
-      // Team days: always emit push/pull upper focus at engine time (tail pass
-      // will later promote tier to core + prepend "Team training + ").
-      if (slot.isTeamDay) {
-        const teamAlloc = teamDayUpperFocus.get(slot.dayName)!;
-        plan.push({
-          tier: 'optional', // tier promoted to 'core' by team-day label pass
-          focus: teamAlloc.focus,
-          dayOfWeek: slot.dayName,
-          isHardExposure: false,
-          // Mark isTeamDay up-front so adjacency enforcement (which runs
-          // BEFORE the team-day label pass) doesn't demote the push/pull
-          // focus to mobility — the team-day label pass would then
-          // wholesale-replace mobility with "Team training — field session",
-          // discarding our specific push/pull emphasis.
-          isTeamDay: true,
-          strengthPattern: teamAlloc.pattern,
-        });
-        continue;
-      }
-
-      // Non-team days: allocate core slots by priority order.
-      const coreIdx = orderedForCore.indexOf(slot);
-      const isCoreCandidateByOrder = coreIdx >= 0 && coreIdx < regularCoreTarget;
-
-      if (isCoreCandidateByOrder && coreCount < regularCoreTarget) {
-        // Non-team day: lower if we need it, upper otherwise
-        // With Saturday covering lower, first non-team day should also be lower
-        // only if we have enough core budget (2+ regular cores).
-        // With 1 regular core: just upper (Saturday handles lower).
-        const lowerPlaced = plan.some(p => p.focus.toLowerCase().includes('lower'));
-        const useLower = (!lowerPlaced && !saturdaySlot) ||
-                         (!lowerPlaced && regularCoreTarget >= 2);
-        if (useLower) {
-          plan.push({
-            tier: 'core',
-            focus: 'Lower body strength',
-            dayOfWeek: slot.dayName,
-            isHardExposure: true,
-            strengthPattern: 'lower',
-          });
-        } else {
-          const alloc = nextUpperAllocation();
-          plan.push({
-            tier: 'core',
-            focus: alloc.focus,
-            dayOfWeek: slot.dayName,
-            isHardExposure: true,
-            strengthPattern: alloc.pattern,
-          });
-        }
-        coreCount++;
-      } else if (optCount < optional) {
-        plan.push({ tier: 'optional', focus: getOptionalFocus(inputs), dayOfWeek: slot.dayName, isHardExposure: false });
-        optCount++;
-      } else if (recCount < recovery) {
-        plan.push({ tier: 'recovery', focus: 'Mobility, foam rolling, light movement', dayOfWeek: slot.dayName, isHardExposure: false });
-        recCount++;
-      }
-    }
-
-    // Saturday: core lower-body strength top-up.
-    // This is the "bonus" session freed up by no game day.
-    // Lower body emphasis because the athlete isn't accumulating game-day
-    // lower body fatigue this week, so there's capacity to train it harder.
-    if (saturdaySlot) {
-      plan.push({
+    const setTeamAnchor = (slot: ByeSlot): void => {
+      allocations.set(slot.dayName, {
         tier: 'core',
-        focus: 'Lower body strength (bye-week gym top-up)',
-        dayOfWeek: 'Saturday',
+        focus: 'Team training - field session (sprint, skills and contact)',
+        dayOfWeek: slot.dayName,
+        isHardExposure: false,
+        isTeamDay: true,
+        stressLevel: 'high',
+      });
+    };
+    const setLowerStrength = (slot: ByeSlot): void => {
+      allocations.set(slot.dayName, {
+        tier: 'core',
+        focus: slot.dayName === 'Saturday'
+          ? 'Lower body strength (bye-week gym top-up)'
+          : 'Lower body strength (bye-week maintenance)',
+        dayOfWeek: slot.dayName,
         isHardExposure: true,
         strengthPattern: 'lower',
+        stressLevel: 'high',
       });
-      coreCount++;
+    };
+    const setUpperStrength = (slot: ByeSlot, withConditioning: boolean): void => {
+      allocations.set(slot.dayName, {
+        tier: 'core',
+        focus: withConditioning
+          ? 'Upper body - combined push + pull + controlled VO2 conditioning component (20-24min off-feet)'
+          : 'Upper body - combined push + pull (balanced, moderate intensity)',
+        dayOfWeek: slot.dayName,
+        isHardExposure: withConditioning,
+        strengthPattern: 'upper_combined',
+        stressLevel: withConditioning ? 'high' : 'medium',
+        ...(slot.isTeamDay ? { isTeamDay: true } : {}),
+        ...(withConditioning ? {
+          hasCombinedConditioning: true,
+          attachedConditioningKind: 'component' as const,
+          conditioningFlavour: 'high-intensity' as const,
+          conditioningCategory: 'vo2' as const,
+          conditioningVariant: 'reduced' as const,
+          conditioningFeel: 'sharp' as const,
+          conditioningOffFeet: true,
+          ergModality: 'bike' as const,
+        } : {}),
+      });
+    };
+    const setFullBodyStrength = (slot: ByeSlot): void => {
+      allocations.set(slot.dayName, {
+        tier: 'core',
+        focus: 'Basic full body strength (lighter bye week - controlled volume)',
+        dayOfWeek: slot.dayName,
+        isHardExposure: false,
+        strengthPattern: 'full_body',
+        stressLevel: 'medium',
+      });
+    };
+    const firstFree = (slots: ByeSlot[]): ByeSlot | undefined =>
+      slots.find((slot) => !allocations.has(slot.dayName));
+    const mostSpacedFree = (slots: ByeSlot[], anchors: ByeSlot[]): ByeSlot | undefined =>
+      slots
+        .filter((slot) => !allocations.has(slot.dayName))
+        .sort((a, b) => {
+          const spacing = (slot: ByeSlot): number => anchors.length === 0
+            ? 7
+            : Math.min(...anchors.map((anchor) => Math.abs(slot.num - anchor.num)));
+          return spacing(b) - spacing(a) || trainingOrder(a.num) - trainingOrder(b.num);
+        })[0];
+
+    teamSlots.forEach(setTeamAnchor);
+
+    if (lighterByeWeek) {
+      // Keep one useful strength exposure where possible, but do not force the
+      // affected region or create a new hard day around existing team load.
+      if (teamSlots.length > 0 && !restrictedUpper) {
+        setUpperStrength(teamSlots[0], false);
+      } else if (teamSlots.length === 0 && !restrictedLower && !restrictedUpper) {
+        const slot = firstFree(orderedNonTeam);
+        if (slot) setFullBodyStrength(slot);
+      } else if (!restrictedLower) {
+        const slot = firstFree(orderedNonTeam);
+        if (slot) setLowerStrength(slot);
+      } else if (!restrictedUpper) {
+        const slot = firstFree(orderedNonTeam);
+        if (slot) setUpperStrength(slot, false);
+      }
+    } else {
+      // Healthy bye: two main strength exposures. With two team anchors the
+      // upper session rides one team day; with 0-1 anchors a separate upper
+      // day can carry the sole conditioning top-up as a proper component.
+      const allowConditioningTopUp =
+        teamSlots.length <= 1 &&
+        !activeReadiness?.avoidHardConditioning &&
+        !hasRiskRestrictedInjury;
+      let lowerSlot: ByeSlot | undefined;
+      if (!restrictedLower) {
+        lowerSlot = teamSlots.length > 0
+          ? nonTeamSlots.find((slot) => slot.dayName === 'Saturday') ?? firstFree(orderedNonTeam)
+          : firstFree(orderedNonTeam);
+        if (lowerSlot) setLowerStrength(lowerSlot);
+      }
+
+      if (!restrictedUpper) {
+        if (teamSlots.length >= 2) {
+          setUpperStrength(teamSlots[0], false);
+        } else if (allowConditioningTopUp) {
+          const free = orderedNonTeam.filter((slot) => !allocations.has(slot.dayName));
+          const upperSlot = teamSlots.length === 0
+            ? free.find((slot) => slot.dayName === 'Saturday') ?? mostSpacedFree(free, lowerSlot ? [lowerSlot] : [])
+            : mostSpacedFree(free, [...teamSlots, ...(lowerSlot ? [lowerSlot] : [])]);
+          if (upperSlot) setUpperStrength(upperSlot, true);
+        } else {
+          const upperSlot = teamSlots[0] ?? mostSpacedFree(orderedNonTeam, lowerSlot ? [lowerSlot] : []);
+          if (upperSlot) setUpperStrength(upperSlot, false);
+        }
+      }
+    }
+
+    let supportSlotsRemaining = lighterByeWeek && (
+      inputs.weekKind === 'deload' || activeReadiness?.preferRecovery
+    ) ? 0 : 1;
+    for (const slot of daySlots) {
+      const existing = allocations.get(slot.dayName);
+      if (existing) {
+        plan.push(existing);
+        continue;
+      }
+      if (slot.dayName === 'Sunday') {
+        plan.push({
+          tier: 'recovery',
+          focus: 'Full rest or light walk',
+          dayOfWeek: slot.dayName,
+          isHardExposure: false,
+          stressLevel: 'low',
+        });
+      } else if (supportSlotsRemaining > 0) {
+        plan.push({
+          tier: 'optional',
+          focus: lighterByeWeek
+            ? 'Low-fatigue trunk, mobility and prehab (lighter bye week)'
+            : 'Low-fatigue support - trunk, calves, groin, shoulder prehab',
+          dayOfWeek: slot.dayName,
+          isHardExposure: false,
+          stressLevel: 'low',
+        });
+        supportSlotsRemaining--;
+      } else {
+        plan.push({
+          tier: 'recovery',
+          focus: lighterByeWeek
+            ? 'Recovery and mobility (lighter bye week)'
+            : 'Mobility, foam rolling, light movement',
+          dayOfWeek: slot.dayName,
+          isHardExposure: false,
+          stressLevel: 'low',
+        });
+      }
     }
 
   } else {
@@ -4610,7 +4657,7 @@ function buildWeeklyPlan(
   // including any conditioning floor mutations. Per Sam's priority rule,
   // this pass *can* override the conditioning floor — strength balance
   // wins over a conditioning slot.
-  if (isInSeason) {
+  if (isInSeason && !weekContext.isByeWeek) {
     enforceInSeasonPushPullBalance(adjusted, inputs);
   }
 

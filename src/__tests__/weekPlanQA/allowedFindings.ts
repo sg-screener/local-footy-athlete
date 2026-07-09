@@ -31,20 +31,6 @@ export const WEEK_PLAN_QA_ALLOWED_FINDINGS: readonly AllowedFindingPolicy[] = [
     reason: 'Friday game week compresses conditioning room; the week still protects game freshness and keeps team/game anchors.',
   },
   {
-    scenarioId: 'S4',
-    ruleId: 'cap_maxMainStrengthSessions_over',
-    severity: 'info',
-    status: 'expected',
-    reason: 'Bye week can be used as a mini pre-season, so the current QA expectation allows extra strength exposure.',
-  },
-  {
-    scenarioId: 'S4',
-    ruleId: 'cap_maxHardDays_over',
-    severity: 'info',
-    status: 'expected',
-    reason: 'Bible allows bye weeks to train harder or deload; this scenario guards the harder bye-week shape.',
-  },
-  {
     scenarioId: 'S6',
     ruleId: 'cap_sprintCodExposures_under',
     severity: 'info',
@@ -64,20 +50,6 @@ export const WEEK_PLAN_QA_ALLOWED_FINDINGS: readonly AllowedFindingPolicy[] = [
     severity: 'soft',
     status: 'temporarily-tolerated',
     reason: 'The extra sprint/COD exposure comes from team/game anchors in an overloaded club week, not app-added speed work.',
-  },
-  {
-    scenarioId: 'E1',
-    ruleId: 'cap_maxMainStrengthSessions_over',
-    severity: 'info',
-    status: 'expected',
-    reason: 'Removing the game creates a bye-style week; the scenario preserves the current harder no-game structure.',
-  },
-  {
-    scenarioId: 'E1',
-    ruleId: 'cap_maxHardDays_over',
-    severity: 'info',
-    status: 'expected',
-    reason: 'Removing the game creates a bye-style week, where the Bible allows training harder as a mini pre-season.',
   },
   {
     scenarioId: 'S13',

@@ -290,9 +290,9 @@ export const inseason_g1ArmsOrRecovery: Invariant = ({ inputs, plan }) => {
 };
 
 /**
- * No-game in-season weeks: Saturday must be a real CORE top-up, not recovery.
- * It may be lower strength or typed conditioning, but wording alone is never
- * enough to prove conditioning content.
+ * No-game in-season weeks: Saturday must be an honest top-up when the athlete
+ * is ready, or an honest recovery/support slot when readiness, injury or
+ * deload state calls for the lighter bye shape.
  */
 export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
   if (inputs.seasonPhase !== 'In-season') return null;
@@ -302,7 +302,7 @@ export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
   const sat = plan.weeklyPlan.find((s) => s.dayOfWeek === 'Saturday');
   if (!sat) {
     return {
-      rule: 'NO-game in-season: Saturday = core top-up',
+      rule: 'NO-game in-season: Saturday = honest top-up or reset',
       passed: false,
       detail: 'Saturday is in selectedDays but missing from plan entirely',
     };
@@ -315,12 +315,27 @@ export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
     !!sat.conditioningFlavour &&
     (!sat.hasCombinedConditioning || sat.attachedConditioningKind === 'component');
   const isPeakLike = sat.tier === 'core' && (isLowerStrengthTopUp || isTypedConditioningTopUp);
+  const readinessTier = inputs.generationConstraints?.readiness?.tier;
+  const isLighterBye =
+    plan.readiness === 'low' ||
+    inputs.weekKind === 'deload' ||
+    readinessTier === 'moderate_reduction' ||
+    readinessTier === 'major_reduction' ||
+    readinessTier === 'full_pause' ||
+    (inputs.generationConstraints?.injuries ?? []).some((injury) =>
+      injury.removeRiskyWork || injury.pauseAffectedTraining);
+  const isLightReset =
+    !sat.isHardExposure &&
+    !sat.conditioningCategory &&
+    !sat.conditioningFlavour &&
+    (sat.tier === 'recovery' || sat.tier === 'optional');
+  const passed = isLighterBye ? isLightReset : isPeakLike;
   return {
-    rule: 'NO-game in-season: Saturday = core top-up',
-    passed: isPeakLike,
-    detail: isPeakLike
+    rule: 'NO-game in-season: Saturday = honest top-up or reset',
+    passed,
+    detail: passed
       ? `Saturday: ${sat.focus.substring(0, 60)}`
-      : `Saturday: [${sat.tier}] "${sat.focus}" (expected lower strength or typed conditioning)`,
+      : `Saturday: [${sat.tier}] "${sat.focus}" (expected typed top-up or light reset)`,
   };
 };
 
