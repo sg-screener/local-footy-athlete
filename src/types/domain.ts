@@ -174,6 +174,46 @@ export type AttachedConditioningKind =
   | 'speed_component'
   | 'recovery_addon';
 
+export type RecoveryAddonKind =
+  | 'mobility'
+  | 'trunk'
+  | 'carries'
+  | 'prehab'
+  | 'breathing';
+
+export interface RecoveryAddonExercise {
+  id: string;
+  name: string;
+  prescription: string;
+  notes?: string;
+  source?: 'exercise_pool' | 'mobility_flow_template' | 'local';
+}
+
+export interface RecoveryAddonCountingFence {
+  hardExposure: false;
+  mainStrength: false;
+  conditioningCredit: 'none';
+  createsHardDay: false;
+  sprintCodExposure: false;
+}
+
+export interface RecoveryAddonBlock {
+  id: string;
+  title: string;
+  label: string;
+  kind: RecoveryAddonKind;
+  focusArea: string;
+  optional: true;
+  skipPolicy: 'no_penalty';
+  durationMinutes: number;
+  exercises: RecoveryAddonExercise[];
+  placementNote?: string;
+  restrictions?: string[];
+  cautions?: string[];
+  templateId?: string;
+  counting: RecoveryAddonCountingFence;
+}
+
 /**
  * Override Context — structured metadata for manual overrides.
  *
@@ -369,6 +409,13 @@ export interface Workout {
    * this as the authoritative "what coach changed" list.
    */
   coachNotes?: string[];
+
+  /**
+   * Optional low-fatigue support work attached after the main session.
+   * This is display/programming content only: it is not main strength,
+   * hard conditioning, sprint/COD, or a completion component.
+   */
+  recoveryAddons?: RecoveryAddonBlock[];
 
   // Exercises
   exercises: WorkoutExercise[];

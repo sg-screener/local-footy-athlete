@@ -21,6 +21,7 @@ import {
   type GenerationConstraintContext,
 } from '../../utils/generationConstraints';
 import { buildReadinessActiveConstraints } from '../../utils/readinessConstraints';
+import { attachRecoveryAddonsToWeek } from '../../utils/recoveryAddonBuilder';
 import type { ReadinessSignal } from '../../utils/readiness';
 import {
   getClientEnvConfig,
@@ -127,6 +128,7 @@ function buildGeneratedMicrocycles(args: {
   blockStartISO: string;
   blockNumber?: number;
   athletePrefs: AthletePoolPrefsArg;
+  generationConstraints?: GenerationConstraintContext;
 }): Microcycle[] {
   const states = buildBlockWeekStates({
     blockStartISO: args.blockStartISO,
@@ -136,7 +138,7 @@ function buildGeneratedMicrocycles(args: {
 
   return states.map((blockState) => {
     const microcycleId = `${args.microcyclePrefix}-${blockState.weekNumber}`;
-    const workouts = buildWorkoutsFromCoach(
+    const baseWorkouts = buildWorkoutsFromCoach(
       args.coachWorkouts,
       microcycleId,
       args.plan.weeklyPlan,
@@ -150,6 +152,12 @@ function buildGeneratedMicrocycles(args: {
       },
       args.athletePrefs,
     );
+    const workouts = attachRecoveryAddonsToWeek({
+      workouts: baseWorkouts,
+      profile: args.profile,
+      weekKind: blockState.weekKind,
+      generationConstraints: args.generationConstraints,
+    });
 
     return {
       id: microcycleId,
@@ -227,6 +235,7 @@ export function generateProgramLocally(
       getAthletePrefs(),
       generationConstraints,
     ),
+    generationConstraints,
   });
   const firstMicrocycle = microcycles[0];
   if (!firstMicrocycle?.workouts.length) {
@@ -919,6 +928,7 @@ export async function generateProgramFromProfile(
         getAthletePrefs(),
         generationConstraints,
       ),
+      generationConstraints,
     });
   } catch (normaliseErr: any) {
     const diagnostic = `generated program normalisation failed: ${errorDiagnostic(normaliseErr)}`;

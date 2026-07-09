@@ -25,6 +25,7 @@ import {
   buildGuidedInjuryConstraint,
   type GuidedInjuryFlowResult,
 } from '../../utils/guidedInjuryControl';
+import type { RecoveryAddonBlock } from '../../types/domain';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useDayWorkout } from './useDayWorkout';
@@ -1098,6 +1099,8 @@ export default function DayWorkoutScreenV2() {
           />
         )}
 
+        <RecoveryAddonSection addons={workout.recoveryAddons ?? []} />
+
         {/* ── Post-finish: feedback → success moment → auto-dismiss ── */}
         {isFinished && date ? (
           <View style={styles.feedbackSection}>
@@ -1663,6 +1666,51 @@ function RecoveryBlock({
           </Card>
         );
       })}
+    </View>
+  );
+}
+
+interface RecoveryAddonSectionProps {
+  addons: RecoveryAddonBlock[];
+}
+function RecoveryAddonSection({ addons }: RecoveryAddonSectionProps) {
+  if (addons.length === 0) return null;
+
+  return (
+    <View style={styles.recoveryAddonSection}>
+      <SectionLabel style={styles.sectionLabel}>Optional Recovery Add-on</SectionLabel>
+      {addons.map((addon) => (
+        <Card
+          key={addon.id}
+          tone="default"
+          radius="lg"
+          padding="md"
+          style={styles.recoveryAddonCard}
+        >
+          <View style={styles.recoveryAddonHeader}>
+            <View style={styles.recoveryAddonTitleWrap}>
+              <Text style={styles.recoveryAddonEyebrow}>{addon.label}</Text>
+              <Text style={styles.recoveryAddonTitle}>{addon.durationMinutes} min support work</Text>
+            </View>
+            <Text style={styles.recoveryAddonPill}>Optional</Text>
+          </View>
+          {addon.placementNote ? (
+            <Text style={styles.recoveryAddonMeta}>{addon.placementNote}</Text>
+          ) : null}
+          <View style={styles.recoveryAddonExercises}>
+            {addon.exercises.map((exercise) => (
+              <View key={exercise.id} style={styles.recoveryAddonExercise}>
+                <Text style={styles.recoveryAddonExerciseName}>{exercise.name}</Text>
+                <Text style={styles.recoveryAddonPrescription}>{exercise.prescription}</Text>
+                {exercise.notes ? (
+                  <Text style={styles.recoveryAddonNotes}>{exercise.notes}</Text>
+                ) : null}
+              </View>
+            ))}
+          </View>
+          <Text style={styles.recoveryAddonSkip}>Skip with no penalty if it adds fatigue.</Text>
+        </Card>
+      ))}
     </View>
   );
 }
@@ -2902,6 +2950,85 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.3,
+  },
+  recoveryAddonSection: {
+    marginTop: spacing.xl,
+    gap: spacing.sm,
+  },
+  recoveryAddonCard: {
+    borderColor: 'rgba(200, 255, 0, 0.16)',
+    backgroundColor: 'rgba(200, 255, 0, 0.045)',
+  },
+  recoveryAddonHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  recoveryAddonTitleWrap: {
+    flex: 1,
+    gap: 2,
+  },
+  recoveryAddonEyebrow: {
+    color: '#A7A7A7',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  recoveryAddonTitle: {
+    color: '#F2F2F2',
+    fontSize: 15,
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+  recoveryAddonPill: {
+    color: colors.accent.lime,
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  recoveryAddonMeta: {
+    color: '#9A9A9A',
+    fontSize: 12.5,
+    fontWeight: '500',
+    lineHeight: 18,
+    marginBottom: spacing.sm,
+  },
+  recoveryAddonExercises: {
+    gap: spacing.sm,
+  },
+  recoveryAddonExercise: {
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.06)',
+    gap: 2,
+  },
+  recoveryAddonExerciseName: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '800',
+    lineHeight: 18,
+  },
+  recoveryAddonPrescription: {
+    color: colors.accent.lime,
+    fontSize: 13,
+    fontWeight: '700',
+    lineHeight: 18,
+  },
+  recoveryAddonNotes: {
+    color: '#7A7A7A',
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+  recoveryAddonSkip: {
+    color: '#6E6E6E',
+    fontSize: 11.5,
+    fontWeight: '600',
+    lineHeight: 16,
+    marginTop: spacing.sm,
   },
 
   // ── Conditioning (pure) ──
