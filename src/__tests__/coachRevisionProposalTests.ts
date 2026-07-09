@@ -24,6 +24,7 @@ import {
   type CoachVisibleSectionSnapshot,
   type CoachVisibleWeekSnapshot,
 } from '../utils/coachRevisionProposal';
+import { coachRevisionValidationPolicyForWeek } from '../utils/coachRevisionPolicy';
 
 const MON = '2026-07-06';
 const TUE = '2026-07-07';
@@ -148,6 +149,23 @@ function teamTrainingWorkout(): Workout {
     createdAt: '',
     updatedAt: '',
   };
+}
+
+function gameWorkout(): Workout {
+  return {
+    id: 'game-wednesday',
+    microcycleId: 'mc',
+    dayOfWeek: 3,
+    name: 'Game Day',
+    description: 'Fixture',
+    durationMinutes: 120,
+    intensity: 'High',
+    workoutType: 'Game',
+    sessionTier: 'core',
+    exercises: [],
+    createdAt: '',
+    updatedAt: '',
+  } as Workout;
 }
 
 function visibleDay(date: string, workout: Workout | null): ResolvedDay {
@@ -345,9 +363,10 @@ section('[6] invented hidden ID');
   ok('unknown section rejected', result.issues.some((entry) => entry.code === 'unknown_section_id'));
 }
 
-section('[7] replace team training with conditioning requires confirmation');
+section('[7] generic replacement of team training is rejected by anchor policy');
 {
-  const before = snapshot([visibleDay(TUE, teamTrainingWorkout())]);
+  const visibleWeek = [visibleDay(TUE, teamTrainingWorkout())];
+  const before = snapshot(visibleWeek);
   const team = daySnap(before, TUE);
   const after = clone(team);
   after.workout = {
@@ -382,10 +401,16 @@ section('[7] replace team training with conditioning requires confirmation');
   const result = validateCoachRevisionDiff({
     before,
     proposal: p,
-    policy: { allowedAddedSectionKinds: ['conditioning'] },
+    policy: {
+      ...coachRevisionValidationPolicyForWeek(visibleWeek, TUE),
+      allowedAddedSectionKinds: ['conditioning'],
+    },
   });
 
-  eq('requires confirmation', result.status, 'needs_confirmation');
+  eq('generic team replacement rejected', result.status, 'invalid');
+  ok('protected anchor issue reported',
+    result.issues.some((entry) => entry.code === 'protected_anchor_changed'),
+    result.issues);
   ok('classified as replace/remove+add', result.diff.dateDiffs[0].sectionDiffs.some((entry) => entry.kind === 'removed' && entry.sectionKind === 'session'));
   ok('conditioning addition visible', result.diff.dateDiffs[0].sectionDiffs.some((entry) => entry.kind === 'added' && entry.sectionKind === 'conditioning'));
 
@@ -448,6 +473,28 @@ section('[7] replace team training with conditioning requires confirmation');
     ok('unknown_item_id names the forged item',
       result.issues.some((entry) => entry.code === 'unknown_item_id' && entry.ref === 'item:forged:extra-squat'),
       result.issues);
+  }
+
+  section('[7d] game anchor removal is rejected by shared policy');
+  {
+    const gameWeek = [visibleDay(WED, gameWorkout())];
+    const gameBefore = snapshot(gameWeek);
+    const gameAfter = clone(daySnap(gameBefore, WED));
+    gameAfter.workout = null;
+    const gameProposal = proposal({
+      intent: { intent: 'remove', targetDomain: 'session', actionScope: 'whole_session' },
+      dates: [WED],
+      revisedDays: [gameAfter],
+    });
+    const gameResult = validateCoachRevisionDiff({
+      before: gameBefore,
+      proposal: gameProposal,
+      policy: coachRevisionValidationPolicyForWeek(gameWeek, WED),
+    });
+    eq('game removal rejected', gameResult.status, 'invalid');
+    ok('game protected anchor issue reported',
+      gameResult.issues.some((entry) => entry.code === 'protected_anchor_changed'),
+      gameResult.issues);
   }
 }
 

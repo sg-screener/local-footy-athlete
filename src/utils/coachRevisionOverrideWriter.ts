@@ -341,7 +341,17 @@ function buildStackedTemplateOverride(
     durationMinutes += templateWorkout.durationMinutes ?? 0;
   }
 
+  const templateTitle = stack.templateSections[0]?.title ?? null;
+  const baseIsTeamTrainingOnly =
+    String(base.workoutType ?? '').toLowerCase() === 'team training' &&
+    /^team training$/i.test(String(base.name ?? '').trim());
+  const nextName =
+    baseIsTeamTrainingOnly && templateTitle
+      ? `Team Training + ${templateTitle}`
+      : base.name;
+
   return cloneWorkout(base, {
+    name: nextName,
     exercises,
     durationMinutes,
     hasCombinedConditioning: !!conditioningBlock,

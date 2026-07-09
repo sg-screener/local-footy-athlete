@@ -17,6 +17,9 @@ import type { ResolvedDay } from './sessionResolver';
 import {
   coachRevisionSectionBodySignature,
   snapshotProjectedDay,
+  type CoachRevisionProtectedAnchor,
+  type CoachVisibleDaySnapshot,
+  type CoachVisibleSectionSnapshot,
 } from './coachRevisionProposal';
 import {
   buildCoachRevisionTemplateSection,
@@ -59,7 +62,76 @@ export function coachRevisionValidationPolicyForWeek(
     allowedTemplateSectionSignatures: standard,
     byeOnlyTemplateSectionSignatures: [] as string[],
     byeUnlockedDates: byeUnlockedDatesForWeek(visibleWeek),
+    protectedAnchors: protectedAnchorsForVisibleWeek(visibleWeek),
   };
+}
+
+export function protectedAnchorsForVisibleWeek(
+  visibleWeek: ResolvedDay[],
+): CoachRevisionProtectedAnchor[] {
+  return uniqueAnchors(
+    visibleWeek.flatMap((day) =>
+      protectedAnchorsForDaySnapshot(snapshotProjectedDay(day))),
+  );
+}
+
+export function protectedAnchorRefsForDaySnapshot(
+  day: CoachVisibleDaySnapshot,
+): string[] {
+  return protectedAnchorsForDaySnapshot(day).map((anchor) => anchor.ref);
+}
+
+export function protectedAnchorsForDaySnapshot(
+  day: CoachVisibleDaySnapshot,
+): CoachRevisionProtectedAnchor[] {
+  if (!day.workout) return [];
+  const anchors: CoachRevisionProtectedAnchor[] = [];
+
+  if (visibleDayLooksLikeGame(day)) {
+    anchors.push({
+      date: day.date,
+      kind: 'game',
+      ref: day.workout.id,
+      label: day.workout.title || 'Game day',
+    });
+  }
+
+  for (const section of day.workout.sections) {
+    if (!sectionLooksLikeTeamTraining(section)) continue;
+    anchors.push({
+      date: day.date,
+      kind: 'team_training',
+      ref: section.id,
+      label: section.title || 'Team Training',
+    });
+  }
+
+  return uniqueAnchors(anchors);
+}
+
+function sectionLooksLikeTeamTraining(
+  section: CoachVisibleSectionSnapshot,
+): boolean {
+  if (section.kind !== 'session') return false;
+  const haystack = [
+    section.title,
+    ...section.items.flatMap((item) => [item.title, item.description ?? '']),
+  ].join(' ').toLowerCase();
+  return /\bteam training\b/.test(haystack);
+}
+
+function uniqueAnchors(
+  anchors: CoachRevisionProtectedAnchor[],
+): CoachRevisionProtectedAnchor[] {
+  const seen = new Set<string>();
+  const out: CoachRevisionProtectedAnchor[] = [];
+  for (const anchor of anchors) {
+    const key = `${anchor.date}:${anchor.kind}:${anchor.ref}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(anchor);
+  }
+  return out;
 }
 
 /** Dates belonging to visible weeks that contain NO game day. Coaching

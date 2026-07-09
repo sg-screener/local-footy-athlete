@@ -115,6 +115,13 @@ function hasVisibleConditioningContent(workout: Workout): boolean {
 
 export function isConditioningOnlyWorkout(workout: Workout): boolean {
   if (workout.workoutType === 'Recovery' || workout.workoutType === 'Game') return false;
+  if (
+    workout.workoutType === 'Team Training' ||
+    (workout as any).isTeamDay === true ||
+    /\bteam training\b/i.test(workout.name || '')
+  ) {
+    return false;
+  }
 
   const names = exerciseNames(workout);
   const hasConditioningType = isConditioningTypedWorkout(workout);

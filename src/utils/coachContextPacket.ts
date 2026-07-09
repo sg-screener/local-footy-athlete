@@ -18,7 +18,7 @@
  */
 
 import type { ResolvedDay } from './sessionResolver';
-import { getMondayStr, addDays } from './sessionResolver';
+import { getMondayStrForDate, addDays } from './sessionResolver';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useProgramStore } from '../store/programStore';
@@ -68,7 +68,7 @@ export interface BuildPacketInput {
  */
 export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPacket {
   const state = buildScheduleStateImperative();
-  const monday = getMondayStr(0);
+  const monday = getMondayStrForDate(input.todayISO);
   const nextMonday = addDays(monday, 7);
 
   const cuStore = useCoachUpdatesStore.getState();

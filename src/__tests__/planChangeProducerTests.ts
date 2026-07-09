@@ -139,6 +139,21 @@ function gameWorkout(dayOfWeek: number): Workout {
   } as Workout;
 }
 
+function practiceMatchWorkout(dayOfWeek: number): Workout {
+  return {
+    ...strengthWorkout('workout-practice-match', 'Practice Match', dayOfWeek),
+    workoutType: 'Practice Match' as any,
+    exercises: [],
+  } as Workout;
+}
+
+function teamStrengthWorkout(id: string, name: string, dayOfWeek: number): Workout {
+  return {
+    ...strengthWorkout(id, name, dayOfWeek),
+    workoutType: 'Team Training',
+  } as Workout;
+}
+
 function visibleDay(date: string, workout: Workout | null): ResolvedDay {
   const dow = new Date(`${date}T12:00:00`).getDay();
   return {
@@ -683,10 +698,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   console.log('\n[12] bin scopes: multi-session days bin by part, team training included');
 
   // Team + strength combined day (Tue of a bye-style week).
-  const teamStrength: Workout = {
-    ...strengthWorkout('workout-team-tue', 'Team Training + Upper Push', 2),
-    workoutType: 'Team Training',
-  } as Workout;
+  const teamStrength = teamStrengthWorkout('workout-team-tue', 'Team Training + Upper Push', 2);
 
   // Combined S+C day: two strength rows + one conditioning row linked via
   // conditioningBlock.
@@ -732,8 +744,8 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     plain.binScopes.map((s) => s.id), ['whole_day']);
 
   const team = listPlanChangeOptionsForDay({ visibleWeek: week, date: '2026-06-30', todayISO: TODAY });
-  eq('[12] team+strength day offers gym / team / whole',
-    team.binScopes.map((s) => s.id).sort(), ['strength', 'team', 'whole_day']);
+  eq('[12] team+strength day offers gym / team only',
+    team.binScopes.map((s) => s.id).sort(), ['strength', 'team']);
 
   const sc = listPlanChangeOptionsForDay({ visibleWeek: week, date: TODAY, todayISO: TODAY });
   eq('[12] S+C day offers strength / conditioning / whole',
@@ -1099,6 +1111,121 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     setManualOverride: () => { throw new Error('must not write'); },
   });
   ok('[16] no matching days refuses', !nothing.ok, nothing);
+}
+
+{
+  console.log('\n[17] protected anchors in edit paths');
+  const teamDate = '2026-06-30';
+  const gameDate = '2026-07-04';
+  const sourceDate = THU;
+  const week: ResolvedDay[] = [
+    visibleDay(MON, strengthWorkout('anchor-lower', 'Lower Body Strength', 1)),
+    visibleDay(teamDate, teamStrengthWorkout('anchor-team', 'Team Training + Upper Push', 2)),
+    visibleDay(TODAY, null),
+    visibleDay(sourceDate, strengthWorkout('anchor-upper', 'Upper Push', 4)),
+    visibleDay('2026-07-03', null),
+    visibleDay(gameDate, practiceMatchWorkout(6)),
+    visibleDay('2026-07-05', null),
+  ];
+
+  const teamOptions = listPlanChangeOptionsForDay({ visibleWeek: week, date: teamDate, todayISO: TODAY });
+  eq('[17] team day is editable but offers no move destinations',
+    teamOptions.moveDestinations.length, 0);
+  eq('[17] team-only protected bin scopes omit whole-day',
+    teamOptions.binScopes.map((s) => s.id).sort(), ['strength', 'team']);
+
+  const practiceOptions = listPlanChangeOptionsForDay({ visibleWeek: week, date: gameDate, todayISO: TODAY });
+  eq('[17] practice match day is game-locked', practiceOptions.locked, 'game_day');
+
+  const teamSwap = buildPlanChangeProposal({
+    kind: 'swap_template',
+    date: teamDate,
+    templateId: 'easy_zone2_bike',
+  }, { visibleWeek: week });
+  ok('[17] team-day swap builds a revision',
+    !('error' in teamSwap) && teamSwap.kind === 'revision',
+    teamSwap);
+  if (!('error' in teamSwap) && teamSwap.kind === 'revision') {
+    ok('[17] team-day swap protects the team section',
+      teamSwap.userIntent.protectedRefs.length > 0,
+      teamSwap.userIntent.protectedRefs);
+    ok('[17] team-day swap preserves a visible team section',
+      teamSwap.revisedDays[0].workout?.sections.some((section) =>
+        section.kind === 'session' && /team training/i.test(section.title)),
+      teamSwap.revisedDays[0].workout?.sections);
+    eq('[17] team-day swap validates',
+      validateProposal(teamSwap, week).status, 'valid');
+  }
+
+  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const swapResult = applyPlanChange({
+    change: { kind: 'swap_template', date: teamDate, templateId: 'easy_zone2_bike' },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => writes.push({ date, workout }),
+  });
+  ok('[17] team-day swap applies', swapResult.ok, swapResult);
+  const projected = buildCoachRevisionWeekSnapshotFromProjectedDays([
+    visibleDay(teamDate, writes[0]?.workout ?? null),
+  ]).days[0];
+  eq('[17] no duplicate team anchor after swap',
+    (projected.workout?.sections ?? []).filter((section) =>
+      section.kind === 'session' && /team training/i.test(section.title)).length,
+    1);
+  ok('[17] replacement content still appears next to team training',
+    (projected.workout?.sections ?? []).some((section) => section.kind === 'conditioning'),
+    projected.workout?.sections);
+
+  const practiceSwap = buildPlanChangeProposal({
+    kind: 'swap_template',
+    date: gameDate,
+    templateId: 'easy_zone2_bike',
+  }, { visibleWeek: week });
+  ok('[17] practice-match swap is refused',
+    'error' in practiceSwap && practiceSwap.error === 'protected_anchor_day',
+    practiceSwap);
+
+  const gameWeek = [
+    visibleDay(MON, strengthWorkout('game-source', 'Lower Body Strength', 1)),
+    visibleDay(gameDate, gameWorkout(6)),
+  ];
+  const gameSwap = buildPlanChangeProposal({
+    kind: 'swap_template',
+    date: gameDate,
+    templateId: 'easy_zone2_bike',
+  }, { visibleWeek: gameWeek });
+  ok('[17] game-day swap is refused',
+    'error' in gameSwap && gameSwap.error === 'protected_anchor_day',
+    gameSwap);
+
+  const moveTeam = buildPlanChangeProposal({
+    kind: 'move_session',
+    fromDate: sourceDate,
+    toDate: teamDate,
+  }, { visibleWeek: week });
+  ok('[17] move onto team training day is refused',
+    'error' in moveTeam && moveTeam.error === 'protected_anchor_day',
+    moveTeam);
+
+  const movePractice = buildPlanChangeProposal({
+    kind: 'move_session',
+    fromDate: sourceDate,
+    toDate: gameDate,
+  }, { visibleWeek: week });
+  ok('[17] move onto practice-match day is refused',
+    'error' in movePractice && movePractice.error === 'protected_anchor_day',
+    movePractice);
+
+  const clearWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const clearResult = applyPlanChange({
+    change: { kind: 'clear_days', dates: [teamDate, sourceDate, gameDate] },
+    visibleWeek: week,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => clearWrites.push({ date, workout }),
+  });
+  ok('[17] clear_days skips anchors and clears normal sessions',
+    clearResult.ok && clearWrites.map((write) => write.date).join(',') === sourceDate,
+    { clearResult, clearWrites });
 }
 
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);

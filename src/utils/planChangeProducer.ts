@@ -22,8 +22,10 @@ import {
   COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
   snapshotProjectedDay,
   type CoachRevisionProposal,
+  type CoachRevisionProtectedAnchorKind,
   type CoachRevisionSectionKind,
   type CoachVisibleDaySnapshot,
+  type CoachVisibleSectionSnapshot,
   type CoachVisibleWorkoutSnapshot,
 } from './coachRevisionProposal';
 import {
@@ -35,6 +37,7 @@ import {
 import {
   byeUnlockedDatesForWeek,
   coachRevisionValidationPolicyForWeek,
+  protectedAnchorsForDaySnapshot,
 } from './coachRevisionPolicy';
 import { applyCoachRevisionDateOverrides } from './coachRevisionOverrideWriter';
 
@@ -146,6 +149,21 @@ function visibleSessionKindsForSnapshot(
   snap: CoachVisibleDaySnapshot,
 ): VisibleSessionKind[] {
   return visibleSessionKindsForWorkout(snap.workout);
+}
+
+function hasProtectedAnchors(snap: CoachVisibleDaySnapshot): boolean {
+  return protectedAnchorsForDaySnapshot(snap).length > 0;
+}
+
+function protectedSectionsToPreserve(
+  snap: CoachVisibleDaySnapshot,
+): CoachVisibleSectionSnapshot[] {
+  const refs = new Set(
+    protectedAnchorsForDaySnapshot(snap)
+      .filter((anchor) => anchor.kind === 'team_training')
+      .map((anchor) => anchor.ref),
+  );
+  return (snap.workout?.sections ?? []).filter((section) => refs.has(section.id));
 }
 
 function categoryAddsSessionKind(category: PlanChangeCategoryId): VisibleSessionKind {
@@ -278,14 +296,16 @@ export function listPlanChangeOptionsForDay(args: {
     .map((id) => ({ id, ...CATEGORY_COPY[id] }));
 
   const hasSession = snap.workout !== null;
-  // Every non-game day in horizon is a destination. Rest days come first
+  const sourceHasProtectedAnchors = hasProtectedAnchors(snap);
+  // Every non-anchor day in horizon is a destination. Rest days come first
   // (a plain move); occupied days follow (an atomic two-day swap).
-  const moveDestinations: PlanChangeMoveDestination[] = hasSession
+  const moveDestinations: PlanChangeMoveDestination[] =
+    hasSession && !sourceHasProtectedAnchors
     ? args.visibleWeek
         .filter((candidate) =>
           candidate.date !== args.date &&
           isWithinEditHorizon(candidate.date, args.todayISO) &&
-          !visibleDayLooksLikeGame(snapshotProjectedDay(candidate)))
+          !hasProtectedAnchors(snapshotProjectedDay(candidate)))
         .map((candidate) => ({
           date: candidate.date,
           occupiedBy: snapshotProjectedDay(candidate).workout?.title ?? null,
@@ -371,10 +391,15 @@ function binScopesForSnapshot(
   const kinds = Array.from(
     new Set((snap.workout?.sections ?? []).map((section) => section.kind)),
   );
-  if (kinds.length < 2) return [WHOLE_DAY_SCOPE];
   const parts = kinds
     .map((kind) => BIN_SCOPE_FOR_SECTION_KIND[kind])
     .filter((scope): scope is PlanChangeBinScope => !!scope);
+  const anchors = protectedAnchorsForDaySnapshot(snap);
+  if (anchors.some((anchor) => anchor.kind === 'team_training')) {
+    return parts;
+  }
+  if (anchors.length > 0) return [];
+  if (kinds.length < 2) return [WHOLE_DAY_SCOPE];
   return [...parts, WHOLE_DAY_SCOPE];
 }
 
@@ -512,12 +537,27 @@ export function buildPlanChangeProposal(
     return day ? snapshotProjectedDay(day) : null;
   };
 
+  const protectedRefsForDates = (
+    dates: string[],
+    excludedKinds: CoachRevisionProtectedAnchorKind[] = [],
+  ): string[] => {
+    const excluded = new Set(excludedKinds);
+    return Array.from(new Set(dates.flatMap((date) => {
+      const snap = daySnap(date);
+      if (!snap) return [];
+      return protectedAnchorsForDaySnapshot(snap)
+        .filter((anchor) => !excluded.has(anchor.kind))
+        .map((anchor) => anchor.ref);
+    })));
+  };
+
   const revision = (args: {
     intent: 'add' | 'remove' | 'replace' | 'move';
     targetDomain: 'session' | 'conditioning' | 'recovery' | 'strength' | 'team_training';
     dates: string[];
     revisedDays: CoachVisibleDaySnapshot[];
     explanation: string;
+    protectedRefs?: string[];
     actionScope?:
       | 'whole_session'
       | 'strength_section'
@@ -534,7 +574,7 @@ export function buildPlanChangeProposal(
       targetDomain: args.targetDomain,
       actionScope: args.actionScope ?? 'whole_session',
       targetDates: args.dates,
-      protectedRefs: [],
+      protectedRefs: args.protectedRefs ?? protectedRefsForDates(args.dates),
       requiresConfirmation: false,
       reason: `plan_change_sheet:${change.kind}`,
     },
@@ -569,17 +609,31 @@ export function buildPlanChangeProposal(
       if (!before?.workout) return { error: 'nothing_to_remove' };
       const scope = change.scope ?? 'whole_day';
       const removeKind = sectionKindForBinScope(scope);
+      const anchors = protectedAnchorsForDaySnapshot(before);
+      if (anchors.some((anchor) => anchor.kind === 'game')) {
+        return { error: 'protected_anchor_day' };
+      }
+      if (scope === 'whole_day' && anchors.length > 0) {
+        return { error: 'protected_anchor_day' };
+      }
 
       // Whole day (or a partial scope that would leave nothing): rest.
       const surviving = removeKind
         ? before.workout.sections.filter((section) => section.kind !== removeKind)
         : [];
       if (!removeKind || surviving.length === 0) {
+        if (anchors.length > 0 && scope !== 'team') {
+          return { error: 'protected_anchor_day' };
+        }
         return revision({
           intent: 'remove',
-          targetDomain: 'session',
+          targetDomain: scope === 'team' ? 'team_training' : 'session',
+          actionScope: scope === 'team' ? 'session' : 'whole_session',
           dates: [change.date],
           revisedDays: [{ date: change.date, workout: null }],
+          protectedRefs: scope === 'team'
+            ? protectedRefsForDates([change.date], ['team_training'])
+            : protectedRefsForDates([change.date]),
           explanation: 'Sheet: remove session',
         });
       }
@@ -618,19 +672,30 @@ export function buildPlanChangeProposal(
             sections: surviving,
           },
         }],
+        protectedRefs: partialScope === 'team'
+          ? protectedRefsForDates([change.date], ['team_training'])
+          : protectedRefsForDates([change.date]),
         explanation: `Sheet: bin ${scope} only`,
       });
     }
     case 'swap_template': {
       const before = daySnap(change.date);
       if (!before?.workout) return { error: 'nothing_to_swap' };
+      if (visibleDayLooksLikeGame(before)) return { error: 'protected_anchor_day' };
       const workout = templateWorkoutSnapshot(change.templateId, change.date);
       if (!workout) return { error: 'unknown_template' };
+      const anchorSections = protectedSectionsToPreserve(before);
+      const revisedWorkout = anchorSections.length > 0
+        ? {
+            ...workout,
+            sections: [...workout.sections, ...anchorSections],
+          }
+        : workout;
       return revision({
         intent: 'replace',
         targetDomain: 'session',
         dates: [change.date],
-        revisedDays: [{ date: change.date, workout }],
+        revisedDays: [{ date: change.date, workout: revisedWorkout }],
         explanation: `Sheet: swap in ${workout.title}`,
       });
     }
@@ -648,6 +713,7 @@ export function buildPlanChangeProposal(
       // (otherwise this would silently become a pure-template replacement
       // in the writer).
       if (before.workout) {
+        if (visibleDayLooksLikeGame(before)) return { error: 'protected_anchor_day' };
         const kinds = visibleSessionKindsForWorkout(before.workout);
         const addedKind = templateAddsSessionKind(definition.category);
         if (before.workout.sections.length === 0 || kinds.length === 0) {
@@ -696,7 +762,7 @@ export function buildPlanChangeProposal(
     }
     case 'shutdown_week': {
       // Bed-ridden: everything from today to the end of the date's week
-      // becomes rest. Games are left alone (their own flow owns them),
+      // becomes rest. Anchors are left alone (their own flows own them),
       // past days are history, rest days need nothing.
       const monday = getMondayForDate(change.date);
       const cutoff = ctx.todayISO ?? change.date;
@@ -704,7 +770,7 @@ export function buildPlanChangeProposal(
         if (getMondayForDate(day.date) !== monday) return false;
         if (day.date < cutoff) return false;
         const snap = snapshotProjectedDay(day);
-        return snap.workout !== null && !visibleDayLooksLikeGame(snap);
+        return snap.workout !== null && !hasProtectedAnchors(snap);
       });
       if (toClear.length === 0) return { error: 'nothing_to_clear' };
       return revision({
@@ -717,15 +783,15 @@ export function buildPlanChangeProposal(
     }
     case 'clear_days': {
       // Away / holiday: clear the exact days the athlete picked. Only
-      // real, non-game sessions inside the visible week are cleared —
-      // rest days and games are skipped. All-or-nothing like every other
+      // real, non-anchor sessions inside the visible week are cleared —
+      // rest days and anchors are skipped. All-or-nothing like every other
       // producer change; an empty result is an honest error, never a
       // silent no-op.
       const wanted = new Set(change.dates);
       const toClear = ctx.visibleWeek.filter((day) => {
         if (!wanted.has(day.date)) return false;
         const snap = snapshotProjectedDay(day);
-        return snap.workout !== null && !visibleDayLooksLikeGame(snap);
+        return snap.workout !== null && !hasProtectedAnchors(snap);
       });
       if (toClear.length === 0) return { error: 'nothing_to_clear' };
       return revision({
@@ -741,6 +807,9 @@ export function buildPlanChangeProposal(
       const destination = daySnap(change.toDate);
       if (!source?.workout) return { error: 'nothing_to_move' };
       if (!destination) return { error: 'not_visible' };
+      if (hasProtectedAnchors(source) || hasProtectedAnchors(destination)) {
+        return { error: 'protected_anchor_day' };
+      }
       // Occupied destination = the two days SWAP atomically (sheet v2);
       // empty destination = plain move, source becomes rest.
       return revision({

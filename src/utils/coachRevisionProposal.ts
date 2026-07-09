@@ -260,6 +260,15 @@ export interface CoachRevisionValidationIssue {
   ref?: string;
 }
 
+export type CoachRevisionProtectedAnchorKind = 'team_training' | 'game';
+
+export interface CoachRevisionProtectedAnchor {
+  date: string;
+  kind: CoachRevisionProtectedAnchorKind;
+  ref: string;
+  label: string;
+}
+
 export type CoachRevisionValidationResult =
   | {
       status: 'valid';
@@ -284,6 +293,7 @@ export type CoachRevisionValidationResult =
 export interface CoachRevisionValidationPolicy {
   allowedChangedDates?: string[];
   allowedAddedSectionKinds?: CoachRevisionSectionKind[];
+  protectedAnchors?: CoachRevisionProtectedAnchor[];
   /** App-side registry authorization: canonical BODY signatures (id-stripped)
    *  of template sections that may be added. The model must echo a template
    *  byte-exactly or the addition is unknown content. */
@@ -447,6 +457,11 @@ export function validateCoachRevisionDiff(args: {
     proposal: args.proposal,
   });
   issues.push(...protectedResult);
+  issues.push(...validatePolicyProtectedAnchors({
+    before: args.before,
+    proposal: args.proposal,
+    anchors: args.policy?.protectedAnchors ?? [],
+  }));
 
   // Moves authorize their destination additions through the conservation
   // invariant (validateMoveConservation) — everything added must have left
@@ -668,6 +683,58 @@ function validateProtectedRefs(args: {
     }
   }
   return issues;
+}
+
+function validatePolicyProtectedAnchors(args: {
+  before: CoachVisibleWeekSnapshot;
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
+  anchors: CoachRevisionProtectedAnchor[];
+}): CoachRevisionValidationIssue[] {
+  const issues: CoachRevisionValidationIssue[] = [];
+  if (args.anchors.length === 0) return issues;
+
+  const revisedDates = new Set(args.proposal.revisedDays.map((day) => day.date));
+  const seen = new Set<string>();
+  for (const anchor of args.anchors) {
+    if (!revisedDates.has(anchor.date)) continue;
+    const key = `${anchor.date}:${anchor.kind}:${anchor.ref}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const beforeSignature = findRefSignature(args.before.days, anchor.ref);
+    const afterSignature = findRefSignature(args.proposal.revisedDays, anchor.ref);
+    if (!beforeSignature) {
+      issues.push(issue(
+        'protected_anchor_missing_before',
+        `Protected ${anchor.kind} anchor ${anchor.ref} was not visible before the edit.`,
+        anchor.date,
+        anchor.ref,
+      ));
+      continue;
+    }
+    if (beforeSignature === afterSignature) continue;
+    if (isExplicitProtectedAnchorEdit(args.proposal, anchor)) continue;
+    issues.push(issue(
+      'protected_anchor_changed',
+      `${anchor.label} is a protected ${anchor.kind === 'game' ? 'game' : 'team training'} anchor and cannot be changed by this revision.`,
+      anchor.date,
+      anchor.ref,
+    ));
+  }
+  return issues;
+}
+
+function isExplicitProtectedAnchorEdit(
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>,
+  anchor: CoachRevisionProtectedAnchor,
+): boolean {
+  if (anchor.kind !== 'team_training') return false;
+  return (
+    proposal.userIntent.targetDomain === 'team_training' &&
+    proposal.userIntent.actionScope === 'session' &&
+    proposal.userIntent.targetDates.includes(anchor.date) &&
+    proposal.scope.dates.includes(anchor.date)
+  );
 }
 
 function validateAddedRefs(args: {

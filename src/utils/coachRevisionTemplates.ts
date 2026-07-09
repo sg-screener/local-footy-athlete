@@ -464,10 +464,10 @@ export function buildCoachRevisionTemplateSection(
   return snapshot.workout?.sections[0] ?? null;
 }
 
-/** True when a visible day looks like a game day. Bye detection: a week
- *  whose visible days contain NO game day is a bye week, which unlocks the
- *  work-capacity templates. Detection is name/type based for now — the
- *  snapshot does not carry sessionTier (future improvement). */
+/** True when a visible day looks like a game or practice-match day. Bye
+ *  detection: a week whose visible days contain NO game day is a bye week,
+ *  which unlocks the work-capacity templates. Detection is name/type based
+ *  for now — the snapshot does not carry sessionTier (future improvement). */
 export function visibleDayLooksLikeGame(day: {
   workout: { title?: string; workoutType?: string; name?: string } | null;
 }): boolean {
@@ -477,7 +477,7 @@ export function visibleDayLooksLikeGame(day: {
     (day.workout as any).name ?? '',
     day.workout.workoutType ?? '',
   ].join(' ').toLowerCase();
-  return haystack.includes('game');
+  return /\bgame\b/.test(haystack) || /\bpractice[-\s]+match\b/.test(haystack);
 }
 
 /** Extract the template id when a SINGLE section is registry-owned (all
