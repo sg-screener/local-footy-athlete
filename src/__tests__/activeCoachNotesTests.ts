@@ -83,6 +83,7 @@ function injury(id: string, bodyPart: string, severity: number): ActiveConstrain
     rules: ['sprinting', 'change of direction'],
     safeFocus: [],
     advice: [],
+    modifierAffects: ['current_week', 'future_generation'],
   } as ActiveConstraint;
 }
 
@@ -97,6 +98,7 @@ function fatigue(severity: number): ActiveConstraint {
     rules: ['max-effort lifts', 'hard conditioning + sprints'],
     safeFocus: ['Easy aerobic conditioning'],
     advice: [],
+    modifierAffects: ['current_week'],
   };
 }
 
@@ -131,6 +133,7 @@ function scheduleRestriction(): ActiveConstraint {
     rules: ['Friday unavailable', 'reduced sprint exposure'],
     safeFocus: ['Short, targeted sessions'],
     advice: [],
+    modifierAffects: ['current_week'],
   };
 }
 
@@ -162,6 +165,45 @@ console.log('\n[1] hidden when no active modifiers exist');
     buildActiveCoachNotes([{ ...fatigue(5), status: 'resolved' } as ActiveConstraint]),
     [],
   );
+}
+
+console.log('\n[1b] truth gate suppresses profile facts and zero-diff notes');
+{
+  resetStores();
+  const profileOnlyNotes = selectActiveCoachNotes({
+    onboardingData: {
+      firstName: 'Sam',
+      position: 'Midfielder',
+      seasonPhase: 'Pre-season',
+      goals: ['speed'],
+      teamTrainingDays: ['Tuesday', 'Thursday'],
+      gameDay: 'Saturday',
+      trainingLocation: 'Commercial gym',
+    } as any,
+    todayISO: '2026-07-06',
+  });
+  eq('normal onboarding/profile facts produce no notes', profileOnlyNotes, []);
+  eq('normal season/team/game facts by themselves produce no notes', profileOnlyNotes, []);
+
+  const withProof = fatigue(7) as ActiveConstraint & { modifierAffects?: unknown };
+  const { modifierAffects: _effectProof, ...withoutProof } = withProof;
+  eq(
+    'zero-diff active constraint does not create a new note',
+    buildActiveCoachNotes([withoutProof as ActiveConstraint]),
+    [],
+  );
+  eq(
+    'claimed change without effect proof is suppressed',
+    buildActiveCoachNotes([{
+      ...withoutProof,
+      modifierTitle: 'Load reduced this week',
+      modifierBody: 'Your week has been adjusted.',
+    } as ActiveConstraint]),
+    [],
+  );
+
+  const notes = buildActiveCoachNotes([fatigue(7)]);
+  ok('legitimate note with visible-effect proof is preserved', notes.some((note) => note.title === 'Recovery mode active'));
 }
 
 console.log('\n[2] note read model preserves active constraint types');

@@ -137,6 +137,12 @@ function isAffect(value: unknown): value is ActiveProgramModifierAffect {
     value === 'future_generation';
 }
 
+export function shouldCreateCoachNote(
+  modifier: Pick<ActiveProgramModifier, 'affects'>,
+): boolean {
+  return modifier.affects.some(isAffect);
+}
+
 function modifierString(c: ActiveConstraint, key: 'modifierTitle' | 'modifierBody'): string | null {
   const value = (c as ActiveConstraint & Record<string, unknown>)[key];
   return typeof value === 'string' && value.trim() ? value.trim() : null;
@@ -149,7 +155,7 @@ function modifierAffects(
   const value = (c as ActiveConstraint & { modifierAffects?: unknown }).modifierAffects;
   if (!Array.isArray(value)) return fallback;
   const parsed = value.filter(isAffect);
-  return parsed.length > 0 ? parsed : fallback;
+  return parsed;
 }
 
 function linkedOverrideDates(c: ActiveConstraint | null | undefined): string[] {
@@ -258,7 +264,9 @@ function injuryModifier(
     title: c.modifierTitle ?? (isSerious ? 'Training paused for injury' : `${displayPart} issue active`),
     body: c.modifierBody ?? fallbackBody,
     severity: c.severity,
-    affects: c.modifierAffects ?? ['current_week', 'future_generation'],
+    affects: source === 'legacy_active_injury'
+      ? ['current_week', 'future_generation']
+      : modifierAffects(c, []),
     actions: [
       { kind: 'clear_injury', label: isSerious ? "I've been cleared" : "I'm all good now" },
       { kind: 'update_injury', label: isSerious ? 'Update issue' : 'Update injury' },
@@ -303,8 +311,6 @@ function statusModifier(
           `Your program is being adjusted around this constraint.`,
           `Limits: ${listPreview(rules, 'normal loading')}.`,
         ]);
-  const fallbackAffects: ActiveProgramModifierAffect[] =
-    'appliesToDate' in c && c.appliesToDate ? ['current_day'] : ['current_week'];
   const sourceConstraint = c as ActiveConstraint;
 
   return {
@@ -315,7 +321,7 @@ function statusModifier(
     title: modifierString(sourceConstraint, 'modifierTitle') ?? fallbackTitle,
     body: modifierString(sourceConstraint, 'modifierBody') ?? fallbackBody,
     severity: 'severity' in c ? c.severity : undefined,
-    affects: modifierAffects(sourceConstraint, fallbackAffects),
+    affects: modifierAffects(sourceConstraint, []),
     actions: isCoachRestriction
       ? [
           { kind: 'clear_adjustment', label: 'Clear adjustment' },
@@ -498,7 +504,7 @@ function addUnique(
   seen: Set<string>,
   modifier: ActiveProgramModifier | null,
 ) {
-  if (!modifier || seen.has(modifier.id)) return;
+  if (!modifier || seen.has(modifier.id) || !shouldCreateCoachNote(modifier)) return;
   seen.add(modifier.id);
   out.push(modifier);
 }

@@ -2,6 +2,7 @@ import {
   clearActiveProgramModifier,
   selectActiveProgramModifiers,
   getActiveProgramModifiers,
+  shouldCreateCoachNote,
   type ActiveProgramModifier,
   type ActiveProgramModifierAction,
   type ActiveProgramModifierActionKind,
@@ -35,7 +36,7 @@ export interface ClearActiveCoachNoteResult {
 export function buildCoachNotesFromModifiers(
   modifiers: readonly ActiveProgramModifier[],
 ): ActiveCoachNote[] {
-  return modifiers.map((modifier) => ({
+  return modifiers.filter(shouldCreateCoachNote).map((modifier) => ({
     id: `coach-note:${modifier.id}`,
     modifierId: modifier.id,
     constraintId: modifier.sourceId,
