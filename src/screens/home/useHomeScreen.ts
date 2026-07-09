@@ -213,6 +213,7 @@ export function useHomeScreen() {
       modalityPreferences,
       onboardingData,
       readinessSignalsByDate,
+      visibleWeekDays: weekDays,
     }),
     [
       activeConstraints,
@@ -221,6 +222,7 @@ export function useHomeScreen() {
       modalityPreferences,
       onboardingData,
       readinessSignalsByDate,
+      weekDays,
     ],
   );
 

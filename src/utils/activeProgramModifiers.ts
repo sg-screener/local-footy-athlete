@@ -80,6 +80,13 @@ export interface ActiveProgramModifierSnapshot {
   onboardingData?: OnboardingData | null;
   readinessSignalsByDate?: Record<string, ReadinessSignal> | null;
   todayISO?: string;
+  visibleWeekDays?: readonly ActiveProgramModifierVisibleDay[] | null;
+}
+
+export interface ActiveProgramModifierVisibleDay {
+  date: string;
+  dayOfWeek?: number;
+  workout?: Pick<Workout, 'name' | 'workoutType' | 'sessionTier' | 'coachNotes' | 'exercises'> | null;
 }
 
 export interface ClearActiveProgramModifierResult {
@@ -156,6 +163,199 @@ function modifierAffects(
   if (!Array.isArray(value)) return fallback;
   const parsed = value.filter(isAffect);
   return parsed;
+}
+
+interface VisibleEffectSummary {
+  changedNotes: string[];
+  changedText: string;
+  visibleText: string;
+  hasRemoved: boolean;
+  hasReplacement: boolean;
+  hasCaution: boolean;
+  hasSprint: boolean;
+  hasCod: boolean;
+  hasHinge: boolean;
+  hasNordic: boolean;
+  hasPressing: boolean;
+  hasKneeDominant: boolean;
+  hasJump: boolean;
+  hasGroinAdductor: boolean;
+  hasHardConditioning: boolean;
+  hasAccessoryOrFinisher: boolean;
+  hasRecoveryChange: boolean;
+  hasSafeLowerBikeCore: boolean;
+  hasSafeUpperBike: boolean;
+}
+
+function visibleEffects(days: readonly ActiveProgramModifierVisibleDay[]): VisibleEffectSummary {
+  const notes = days.flatMap((day) => day.workout?.coachNotes ?? []);
+  const changedNotes = notes.filter((note) =>
+    /\b(Removed:|Replaced|Caution:|Lightened|Switched to recovery|Rebuilt for|limited|reduced)/i.test(note),
+  );
+  const changedText = changedNotes.join(' ').toLowerCase();
+  const visibleText = days.map((day) => {
+    const workout = day.workout;
+    const exerciseNames = (workout?.exercises ?? [])
+      .map((row: any) => row?.exercise?.name)
+      .filter(Boolean)
+      .join(' ');
+    return [
+      workout?.name,
+      workout?.workoutType,
+      workout?.sessionTier,
+      exerciseNames,
+      ...(workout?.coachNotes ?? []),
+    ].filter(Boolean).join(' ');
+  }).join(' ').toLowerCase();
+  return {
+    changedNotes,
+    changedText,
+    visibleText,
+    hasRemoved: /\bremoved:/.test(changedText),
+    hasReplacement: /\breplaced\b/.test(changedText),
+    hasCaution: /\bcaution:|limited|reduced/.test(changedText),
+    hasSprint: /\b(sprints?|speed|high[-\s]?speed|flying\s*\d|running)\b/.test(changedText),
+    hasCod: /\b(change of direction|cod|cutting|agility)\b/.test(changedText),
+    hasHinge: /\b(hinge|deadlift|rdl|trap bar|posterior chain)\b/.test(changedText),
+    hasNordic: /\b(nordic|hamstring curl|hamstring)\b/.test(changedText),
+    hasPressing: /\b(press|bench|overhead|dip|push[-\s]?up|push)\b/.test(changedText),
+    hasKneeDominant: /\b(squat|lunge|split squat|step[-\s]?down|knee)\b/.test(changedText),
+    hasJump: /\b(jump|plyo|bound|hop)\b/.test(changedText),
+    hasGroinAdductor: /\b(groin|adductor|copenhagen|lateral|cutting|change of direction|cod)\b/.test(changedText),
+    hasHardConditioning: /\b(hard conditioning|conditioning|interval|metcon|sprint|speed|hard erg|assault bike)\b/.test(changedText),
+    hasAccessoryOrFinisher: /\b(accessor|finisher|extra|optional|volume|sets|lightened|caution:)\b/.test(changedText),
+    hasRecoveryChange: /\b(recovery|switched to recovery|rest|easy aerobic|easy conditioning|mobility)\b/.test(changedText),
+    hasSafeLowerBikeCore: /\b(lower|squat|hinge|bike|core|trunk)\b/.test(visibleText),
+    hasSafeUpperBike: /\b(upper|bench|row|pull|press|bike|off[-\s]?feet|core|trunk)\b/.test(visibleText),
+  };
+}
+
+function hasLinkedProgramEffect(c: ActiveConstraint): boolean {
+  return linkedOverrideDates(c).length > 0;
+}
+
+function hasAnyVisibleEffect(summary: VisibleEffectSummary): boolean {
+  return summary.changedNotes.length > 0;
+}
+
+function effectSentence(parts: string[]): string {
+  return parts.map((part) => `${part}.`).join(' ');
+}
+
+function deterministicInjuryBody(
+  c: ActiveInjuryConstraint,
+  summary: VisibleEffectSummary,
+): string | null {
+  if (!hasAnyVisibleEffect(summary)) return null;
+  const bucket = String(c.bucket || c.bodyPart || '').toLowerCase();
+  const bodyPart = capitaliseWords(displayBodyPart(c));
+  const effects: string[] = [];
+  const paused = c.adjustmentLevel === 'training_paused' || c.seriousSymptoms === true || c.severity >= 8;
+
+  if (paused && (summary.hasRemoved || summary.hasRecoveryChange)) {
+    effects.push('affected training was paused or reduced');
+  }
+  if (bucket.includes('hamstring')) {
+    if (summary.hasSprint) effects.push('sprinting was reduced');
+    if (summary.hasHinge || summary.hasNordic) effects.push('heavy hinging or Nordics were reduced');
+  } else if (bucket.includes('adductor') || bucket.includes('groin')) {
+    if (summary.hasCod || summary.hasGroinAdductor) effects.push('COD, adductor or lateral work was reduced');
+  } else if (bucket.includes('shoulder')) {
+    if (summary.hasPressing) effects.push('pressing or overhead work was reduced or swapped');
+  } else if (bucket.includes('knee')) {
+    if (summary.hasKneeDominant || summary.hasCod || summary.hasJump) {
+      effects.push('knee-dominant, jumping or COD work was reduced');
+    }
+  }
+
+  if (summary.hasReplacement && effects.length === 0) {
+    effects.push('affected exercises were swapped');
+  }
+  if ((summary.hasRemoved || summary.hasCaution) && effects.length === 0) {
+    effects.push('affected work was reduced');
+  }
+  if (effects.length === 0) return null;
+
+  const safeLine =
+    bucket.includes('shoulder') && summary.hasSafeLowerBikeCore
+      ? 'Lower-body, bike or core work stayed in where safe.'
+      : (bucket.includes('hamstring') || bucket.includes('knee') || bucket.includes('adductor') || bucket.includes('groin')) && summary.hasSafeUpperBike
+        ? 'Upper-body, bike or core work stayed in where safe.'
+        : '';
+
+  return sentence([
+    `${bodyPart} issue active.`,
+    effectSentence(effects),
+    safeLine,
+  ]);
+}
+
+function deterministicReadinessBody(
+  c: Exclude<ActiveConstraint, ActiveInjuryConstraint | ActivePreferenceConstraint>,
+  summary: VisibleEffectSummary,
+): string | null {
+  const linkedEffect = hasLinkedProgramEffect(c as ActiveConstraint);
+  if (!hasAnyVisibleEffect(summary) && !linkedEffect) return null;
+  if (c.type === 'missed_session') return null;
+  if (linkedEffect && !hasAnyVisibleEffect(summary)) {
+    return modifierString(c as ActiveConstraint, 'modifierBody') ?? 'Your program was changed for recovery or load management.';
+  }
+
+  const parts: string[] = [];
+  if (summary.hasRecoveryChange) {
+    parts.push('training was changed to recovery or easy work');
+  }
+  if (summary.hasHardConditioning || summary.hasSprint) {
+    parts.push('hard conditioning or sprint work was reduced');
+  }
+  if (summary.hasAccessoryOrFinisher || summary.hasCaution) {
+    parts.push('extras, accessories or intensity were trimmed');
+  }
+  if (summary.hasRemoved && parts.length === 0) {
+    parts.push('hard work was reduced');
+  }
+  if (parts.length === 0) return null;
+
+  if (c.type === 'soreness') {
+    return sentence([
+      `${capitaliseWords(displayBodyPart(c))} soreness active.`,
+      effectSentence(parts),
+      'Pain-free work stayed in where possible.',
+    ]);
+  }
+
+  const title = modifierString(c as ActiveConstraint, 'modifierTitle') ?? c.reasonLabel ?? '';
+  const isFlat = c.type === 'fatigue' && (c.severity <= 3 || /flat|feeling flat/i.test(title));
+  const isCooked = c.type === 'fatigue' && (c.severity >= 7 || /cooked|load reduced/i.test(title));
+  const lead = isCooked
+    ? "You said you're cooked."
+    : isFlat
+      ? "You said you're flat today."
+      : 'Readiness adjustment active.';
+  return sentence([lead, effectSentence(parts)]);
+}
+
+function proofGateInjuryModifier(
+  modifier: ActiveProgramModifier,
+  c: ActiveInjuryConstraint,
+  visibleWeekDays: readonly ActiveProgramModifierVisibleDay[] | null | undefined,
+): ActiveProgramModifier | null {
+  if (!visibleWeekDays) return modifier;
+  const body = deterministicInjuryBody(c, visibleEffects(visibleWeekDays));
+  if (!body) return null;
+  return { ...modifier, body };
+}
+
+function proofGateReadinessModifier(
+  modifier: ActiveProgramModifier | null,
+  c: Exclude<ActiveConstraint, ActiveInjuryConstraint | ActivePreferenceConstraint>,
+  visibleWeekDays: readonly ActiveProgramModifierVisibleDay[] | null | undefined,
+): ActiveProgramModifier | null {
+  if (!modifier) return null;
+  if (!visibleWeekDays || (c.type !== 'fatigue' && c.type !== 'soreness')) return modifier;
+  const body = deterministicReadinessBody(c, visibleEffects(visibleWeekDays));
+  if (!body) return null;
+  return { ...modifier, body };
 }
 
 function linkedOverrideDates(c: ActiveConstraint | null | undefined): string[] {
@@ -526,9 +726,13 @@ export function selectActiveProgramModifiers(
     addUnique(
       out,
       seen,
-      injuryModifier(
+      proofGateInjuryModifier(
+        injuryModifier(
+          legacyActiveInjuryConstraint(snapshot.activeInjury),
+          'legacy_active_injury',
+        ),
         legacyActiveInjuryConstraint(snapshot.activeInjury),
-        'legacy_active_injury',
+        snapshot.visibleWeekDays,
       ),
     );
   }
@@ -539,19 +743,43 @@ export function selectActiveProgramModifiers(
   for (const constraint of activeConstraints) {
     if (!constraint || constraint.status === 'resolved') continue;
     if (constraint.type === 'injury') {
-      addUnique(out, seen, injuryModifier(constraint, 'active_constraint'));
+      addUnique(
+        out,
+        seen,
+        proofGateInjuryModifier(
+          injuryModifier(constraint, 'active_constraint'),
+          constraint,
+          snapshot.visibleWeekDays,
+        ),
+      );
     } else if (constraint.type === 'preference') {
       if (constraint.exercise) activePreferenceExercises.add(constraint.exercise);
       if (constraint.alternative) activePreferenceAlternatives.add(constraint.alternative);
       addUnique(out, seen, preferenceModifier(constraint));
     } else {
-      addUnique(out, seen, statusModifier(constraint, 'active_constraint'));
+      addUnique(
+        out,
+        seen,
+        proofGateReadinessModifier(
+          statusModifier(constraint, 'active_constraint') as ActiveProgramModifier,
+          constraint,
+          snapshot.visibleWeekDays,
+        ),
+      );
     }
   }
 
   const todaySignal = snapshot.readinessSignalsByDate?.[todayISO];
   for (const constraint of buildReadinessActiveConstraints(todaySignal)) {
-    addUnique(out, seen, statusModifier(constraint as any, 'readiness_signal'));
+    addUnique(
+      out,
+      seen,
+      proofGateReadinessModifier(
+        statusModifier(constraint as any, 'readiness_signal') as ActiveProgramModifier,
+        constraint as any,
+        snapshot.visibleWeekDays,
+      ),
+    );
   }
 
   for (const [key, pref] of Object.entries(snapshot.modalityPreferences ?? {})) {
