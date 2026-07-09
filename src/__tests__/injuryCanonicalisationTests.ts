@@ -105,7 +105,7 @@ section('[2] Known aliases canonicalise (no null buckets)');
     ['groin', 'adductor'],
     ['adductor', 'adductor'],
     ['adductors', 'adductor'],
-    ['hip', 'lowerBack'],            // proxy
+    ['hip', 'adductor'],             // lower-limb/groin proxy
     ['back', 'lowerBack'],
     ['lower back', 'lowerBack'],
     ['lower-back', 'lowerBack'],

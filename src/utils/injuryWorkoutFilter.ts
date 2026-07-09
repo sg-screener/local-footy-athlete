@@ -212,7 +212,7 @@ export function applyInjuryFilterToWorkout(
   const replacements: Array<{ from: string; to: string }> = [];
 
   if (tierRemovesExercises(tier) && sessionRisk !== 'LOW') {
-    const removeCaution = injury.severity >= 6;
+    const removeCaution = tier === 'strict' || tier === 'severe';
     filteredExercises = exercises.map((ex) => {
       const name = ex.exercise?.name || '';
       const r = classifyExerciseForBucket(name, bucket);

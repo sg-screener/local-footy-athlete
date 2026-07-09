@@ -57,6 +57,13 @@ import {
   type InjuryKey,
 } from '../data/exerciseTags';
 import { logger } from './logger';
+import {
+  injurySeverityAvoidsExactTriggers,
+  injurySeverityPausesAffectedTraining,
+  injurySeverityRecommendsPhysio,
+  injurySeverityReducesAffectedWork,
+  injurySeverityRemovesRiskyWork,
+} from '../rules/injurySeverityBands';
 
 // ─────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -399,18 +406,16 @@ export function buildEvent(
 // later translate into store writes.
 //
 // Behaviour summary (matches build spec):
-//   - severity < 5            → applied=false, no events, "no change required"
-//   - severity ≥ 5 + bodyPart → walk future resolved sessions (date >= today),
-//                                emit events for risky exercises / sessions
-//                                / running-based conditioning
-//   - severity ≥ 7            → caution-rated exercises also removed
-//   - severity ≥ 8 + ≥50%
+//   - 1-3 + bodyPart          → avoid exact risky triggers where tagged
+//   - 4-5 + bodyPart          → reduce affected work, keep safe work
+//   - 6-7                     → remove risky/caution work + recommend advice
+//   - 8-10 + ≥50%
 //     risky session            → emit set_session_recovery for the whole day
 //   - lower-limb               → emit swap_conditioning_modality for any
 //                                 future running-based conditioning session
 //   - empty event list +
 //     ≥1 future session        → fallback: emit a visible event on the next
-//                                 future trainable session (recovery if ≥7,
+//                                 future trainable session (recovery for 8-10,
 //                                 lighten otherwise) so the coach reply
 //                                 always references at least one real change
 //   - no future sessions       → applied=false, no events, "no future sessions"
@@ -466,8 +471,8 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
   groin: 'adductor',
   adductor: 'adductor',
   adductors: 'adductor',
-  hip: 'lowerBack',
-  hips: 'lowerBack',
+  hip: 'adductor',
+  hips: 'adductor',
 
   // back
   back: 'lowerBack',
@@ -850,13 +855,11 @@ const EMPTY_FORBID: InjuryPolicy['forbid'] = {
  * Build the global injury policy for a (bucket, severity) pair. Pure
  * function — depends only on its inputs.
  *
- * Severity tiers:
- *   5–6 — protective: forbid the strong-load exposures, preserve almost
- *         everything else
- *   7   — aggressive: forbid most loaded work in the bucket's region;
- *         physio recommended
- *   8+  — recovery-leaning: forbid all loaded work; physio strongly
- *         recommended
+ * Bible severity bands:
+ *   1–3 — avoid exact risky triggers where tagged; preserve most work
+ *   4–5 — reduce affected work; preserve safe work
+ *   6–7 — remove risky/caution work; physio/medical advice recommended
+ *   8+  — pause affected work where the session is heavily risky
  *
  * Unknown bucket → severity-anchored generic policy with no specific
  * forbid flags (the chooser already handles unknown via fallback).
@@ -865,17 +868,20 @@ export function buildInjuryPolicy(
   bucket: InjuryBucket | null,
   severity: number,
 ): InjuryPolicy {
-  const isHigh = severity >= 7;
-  const isSerious = severity >= 8;
+  const isHigh = injurySeverityRemovesRiskyWork(severity);
+  const isSerious = injurySeverityPausesAffectedTraining(severity);
+  const shouldRefer = injurySeverityRecommendsPhysio(severity);
+  const shouldReduce = injurySeverityReducesAffectedWork(severity);
 
   // Closing-advice helpers — same phrasing across buckets.
   const physioSoft = "If it's not improving in a few days, worth getting a physio to look at it.";
   const physioHard = 'Get a physio to look at it.';
+  const closingAdvice = shouldRefer ? physioHard : shouldReduce ? physioSoft : null;
 
   if (!bucket) {
     const rules: string[] = [];
     rules.push('Pull back from anything that aggravates it');
-    if (isHigh) rules.push('Skip loaded sessions until pain settles');
+    if (isSerious) rules.push('Skip loaded sessions until pain settles');
     return {
       bucket: null,
       severity,
@@ -885,8 +891,10 @@ export function buildInjuryPolicy(
         'Easy mobility or low-impact recovery work instead of loaded training',
       ],
       preserveText: ['Easy mobility', 'Recovery work'],
-      closingAdvice: isHigh
+      closingAdvice: shouldRefer
         ? 'Worth getting it looked at by a physio.'
+        : shouldReduce
+        ? physioSoft
         : null,
     };
   }
@@ -915,7 +923,7 @@ export function buildInjuryPolicy(
         : ['Upper body', 'Low-load accessories', 'Recovery work'];
       return {
         bucket, severity, forbid, globalRules: rules, replacements, preserveText: preserve,
-        closingAdvice: isHigh ? physioHard : physioSoft,
+        closingAdvice,
       };
     }
 
@@ -944,7 +952,7 @@ export function buildInjuryPolicy(
         preserveText: isSerious
           ? ['Upper body', 'Recovery work']
           : ['Upper body', 'Hinge work (light)', 'Low-load accessories', 'Recovery work'],
-        closingAdvice: isHigh ? physioHard : physioSoft,
+        closingAdvice,
       };
     }
 
@@ -969,7 +977,7 @@ export function buildInjuryPolicy(
           'Seated calf isometrics instead of loaded calf raises',
         ],
         preserveText: ['Upper body', 'Hip-dominant lower work', 'Recovery work'],
-        closingAdvice: isHigh ? physioHard : physioSoft,
+        closingAdvice,
       };
     }
 
@@ -994,7 +1002,7 @@ export function buildInjuryPolicy(
           'Linear-only patterning instead of cutting drills',
         ],
         preserveText: ['Upper body', 'Low-impact lower work', 'Recovery work'],
-        closingAdvice: isHigh ? physioHard : physioSoft,
+        closingAdvice,
       };
     }
 
@@ -1020,7 +1028,7 @@ export function buildInjuryPolicy(
             : []),
         ],
         preserveText: ['Upper body', 'Light bilateral lower work', 'Recovery work'],
-        closingAdvice: isHigh ? physioHard : physioSoft,
+        closingAdvice,
       };
     }
 
@@ -1046,7 +1054,7 @@ export function buildInjuryPolicy(
         preserveText: isSerious
           ? ['Lower body', 'Recovery work']
           : ['Lower body', 'Light upper accessories', 'Recovery work'],
-        closingAdvice: isHigh ? physioHard : physioSoft,
+        closingAdvice,
       };
     }
 
@@ -1068,7 +1076,7 @@ export function buildInjuryPolicy(
           'Light isometric or band work instead of loaded gripping',
         ],
         preserveText: ['Lower body', 'Recovery work'],
-        closingAdvice: isHigh ? physioHard : physioSoft,
+        closingAdvice,
       };
     }
 
@@ -1095,7 +1103,7 @@ export function buildInjuryPolicy(
         preserveText: isSerious
           ? ['Recovery work', 'Light mobility']
           : ['Upper body', 'Light unilateral lower (no axial load)', 'Recovery work'],
-        closingAdvice: isHigh ? physioHard : physioSoft,
+        closingAdvice,
       };
     }
   }
@@ -1143,12 +1151,20 @@ function empathyLine(severity: number, bodyPart: string): string {
   // know what's hurting. Keeps the reply grounded in what the athlete
   // actually told us.
   if (bodyPart === 'unknown') {
-    if (severity >= 8) return `Got it - ${severity}/10 is serious, pulling things right back.`;
-    if (severity >= 6) return `Got it - ${severity}/10 is enough to pull things back a bit.`;
+    if (injurySeverityPausesAffectedTraining(severity)) {
+      return `Got it - ${severity}/10 is serious, pulling things right back.`;
+    }
+    if (injurySeverityRecommendsPhysio(severity)) {
+      return `Got it - ${severity}/10 is enough to pull things back a bit.`;
+    }
     return `Got it - ${severity}/10, let's ease off for a few days.`;
   }
-  if (severity >= 8) return `That's a serious one - let's pull back hard on the ${bodyPart}.`;
-  if (severity >= 6) return `Sounds rough - let's take pressure off the ${bodyPart} this week.`;
+  if (injurySeverityPausesAffectedTraining(severity)) {
+    return `That's a serious one - let's pull back hard on the ${bodyPart}.`;
+  }
+  if (injurySeverityRecommendsPhysio(severity)) {
+    return `Sounds rough - let's take pressure off the ${bodyPart} this week.`;
+  }
   return `Got it - let's protect the ${bodyPart} for a few days.`;
 }
 
@@ -1281,10 +1297,10 @@ function buildInjuryReply(
 }
 
 /**
- * Honest reply for when severity ≥ 5 but no future session this week
+ * Honest reply for when an injury has no future session this week
  * actually loads the injured area. Used by rule 3 — never fabricate a
  * change on a recovery / unrelated session just to satisfy the
- * "applied=true if severity ≥ 5" reflex.
+ * "always fabricate a change" reflex.
  *
  * Surfaces the global policy rules even when we made no changes — the
  * athlete still needs to know what to avoid in pickup play / training
@@ -1336,28 +1352,16 @@ function handleInjuryIntent(
 
   const { bodyPart, severity } = payload;
 
-  // ── 2. Severity gate ─────────────────────────────────────────────────
-  if (severity < 5) {
-    return {
-      applied: false,
-      events: [],
-      rejected,
-      reply: `${bodyPart} ${severity}/10 - that's manageable, no program change required. Train through it and we'll watch how it tracks.`,
-    };
-  }
-
-  // ── 3. Map body-part → bucket (optional) ─────────────────────────────
+  // ── 2. Map body-part → bucket (optional) ─────────────────────────────
   //
   // 'unknown' bodyPart (no token found upstream) and bodyParts not in our
-  // bucket map both fall through to a region-agnostic protective fallback:
-  // the engine still emits ≥1 event when severity ≥ 5. We never tell the
-  // athlete "I can't help" once severity is provided — that contract is
-  // enforced by the empty-events fallback in step 7 below.
+  // bucket map both fall through to a region-agnostic protective fallback
+  // once the severity band is high enough to justify a generic reduction.
   const bucket = bodyPart === 'unknown' ? null : resolveInjuryBucket(bodyPart);
   if (bodyPart !== 'unknown' && !bucket) {
     // Body part was named but not in our map (e.g. "forelimb"). Note the
     // rejection for telemetry but continue down the fallback path so we
-    // still mutate the program — the contract is "act when severity ≥ 5".
+    // still mutate the program when the severity band warrants a generic fallback.
     rejected.push({
       kind: 'unknown_body_part',
       reason: `body part '${bodyPart}' is not in the injury bucket map - using region-agnostic fallback`,
@@ -1366,7 +1370,7 @@ function handleInjuryIntent(
 
   const region: InjuryRegion | null = bucket ? classifyRegion(bucket) : null;
 
-  // ── 3.5 Build global injury policy (week-wide constraints) ───────────
+  // ── 2.5 Build global injury policy (week-wide constraints) ───────────
   //
   // The policy is the single source of truth for "what NOT to do this
   // week" (forbid flags) and for the reply's "This week:" / "Keep:"
@@ -1375,7 +1379,7 @@ function handleInjuryIntent(
   // an event when policy.forbid.sprinting is true gets a fallback note.
   const policy = buildInjuryPolicy(bucket, severity);
 
-  // ── 4. No future sessions in current week ────────────────────────────
+  // ── 3. No future sessions in current week ────────────────────────────
   const adjustableDays = futureDays.filter((d) => isAdjustableWorkout(d.workout));
   if (adjustableDays.length === 0) {
     const replyBodyPart = bucket ? bodyPart : 'unknown';
@@ -1387,20 +1391,12 @@ function handleInjuryIntent(
     };
   }
 
-  // ── 5. Severity tier flags ───────────────────────────────────────────
-  //
-  // Threshold rationale:
-  //   sev ≥ 5  — remove 'avoid'-tagged exposure (the strong cases:
-  //              RDL/deadlift for hammy, depth-jumps for knee, …)
-  //   sev ≥ 6  — also remove 'caution'-tagged exposure (NEW). The user
-  //              spec is "what specific stress is being removed" — at
-  //              6/10 the engine should target the actual exposure
-  //              (e.g. pressing for shoulder), not a generic lighten.
-  //   sev ≥ 8  — escalate to recovery shell on heavy-risk sessions.
-  const removeAvoid = severity >= 5;
-  const removeCaution = severity >= 6;
-  const recoveryShellActive = severity >= 8;
-  const fallbackUsesRecovery = severity >= 7;
+  // ── 4. Severity band flags ───────────────────────────────────────────
+  const removeAvoid = injurySeverityAvoidsExactTriggers(severity);
+  const removeCaution = injurySeverityRemovesRiskyWork(severity);
+  const recoveryShellActive = injurySeverityPausesAffectedTraining(severity);
+  const fallbackUsesRecovery = injurySeverityPausesAffectedTraining(severity);
+  const canUseGenericFallback = injurySeverityReducesAffectedWork(severity);
 
   const events: AdjustmentEvent[] = [];
 
@@ -1550,7 +1546,7 @@ function handleInjuryIntent(
     }
 
     // ── (4) Generic relevant session — lighten or recover ───────────────
-    if (bucket && isSessionRelevantToBucket(workout, bucket)) {
+    if (bucket && canUseGenericFallback && isSessionRelevantToBucket(workout, bucket)) {
       const useRecovery = fallbackUsesRecovery;
       const reason = `${bucket} ${severity}/10 - protective fallback (no specific exposure tagged on this day)`;
       events.push(
@@ -1569,9 +1565,9 @@ function handleInjuryIntent(
   // ── 7. Unknown bucket fallback ──────────────────────────────────────
   //
   // When bodyPart is 'unknown' / unmapped we have no way to score
-  // relevance, but the contract is still "act when severity ≥ 5". Pick
-  // the first non-recovery adjustable day and emit lighten/recover.
-  if (events.length === 0 && !bucket) {
+  // relevance. Only moderate+ bands get a generic lighten/recover fallback;
+  // mild 1-3 needs an exact trigger, which we cannot infer here.
+  if (events.length === 0 && !bucket && canUseGenericFallback) {
     const target = adjustableDays.find(
       (d) => d.workout != null && !isRecoverySession(d.workout),
     );

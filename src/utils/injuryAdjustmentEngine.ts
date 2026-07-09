@@ -13,9 +13,9 @@
  *           a grounded, diff-only response
  *
  * RULES (matches the build spec)
- *   1. Severity ≥ 5 with a known body part → engine fires.
- *   2. Severity < 5 / no body part / no severity → engine declines (caller
- *      falls through to the existing client guard / LLM path).
+ *   1. Active severity with a known body part → engine fires.
+ *   2. No body part / no severity → engine declines (caller falls through
+ *      to the existing client guard / LLM path).
  *   3. Edits are TODAY-FORWARD only. Past sessions are never mutated.
  *   4. Mutations go through `applyCoachAction` so no store wiring leaks here.
  *   5. The reply is built from the actual filtered diff. If nothing landed:
@@ -54,6 +54,12 @@ import {
   type ResolvedDay,
 } from './sessionResolver';
 import { logger } from './logger';
+import {
+  hasActiveInjurySeverity,
+  injurySeverityAvoidsExactTriggers,
+  injurySeverityPausesAffectedTraining,
+  injurySeverityRemovesRiskyWork,
+} from '../rules/injurySeverityBands';
 
 // ─── Types ───
 
@@ -130,10 +136,9 @@ const BODY_PART_TO_BUCKET: Readonly<Record<string, InjuryBucket>> = {
 
   // ─ Groin / adductor ─
   groin: 'adductor',
-  // hip injuries are most often labrum/flexor — lowerBack ratings protect
-  // axial loading and heavy hinging which is the relevant restriction
-  hip: 'lowerBack',
-  hips: 'lowerBack',
+  // hip/groin sits closer to adductor restrictions than lower-back loading.
+  hip: 'adductor',
+  hips: 'adductor',
 
   // ─ Back ─
   back: 'lowerBack',
@@ -318,8 +323,8 @@ function avoidThisWeekBullets(bucket: InjuryBucket): string {
 // ─── Empathy line ───
 
 function empathyLine(severity: number, bodyPart: string): string {
-  if (severity >= 8) return `That's a serious one - let's pull back hard on the ${bodyPart}.`;
-  if (severity >= 6) return `Sounds rough - let's take pressure off the ${bodyPart} this week.`;
+  if (injurySeverityPausesAffectedTraining(severity)) return `That's a serious one - let's pull back hard on the ${bodyPart}.`;
+  if (injurySeverityRemovesRiskyWork(severity)) return `Sounds rough - let's take pressure off the ${bodyPart} this week.`;
   return `Got it - let's protect the ${bodyPart} for a few days.`;
 }
 
@@ -347,12 +352,12 @@ export function applyInjuryAdjustment(
     };
   }
 
-  // Only severity ≥ 5 triggers automatic mutations. Lower-severity messages
-  // fall through to the LLM (which can give lighter advice).
-  if (context.severity < 5) {
+  // Active severity triggers automatic protection; the canonical band helper
+  // owns the 1-10 boundary.
+  if (!hasActiveInjurySeverity(context.severity)) {
     return {
       fired: false,
-      reason: `severity ${context.severity}/10 < threshold (5)`,
+      reason: `severity ${context.severity}/10 is not active`,
       context,
     };
   }
@@ -396,18 +401,23 @@ export function applyInjuryAdjustment(
       else if (rating === 'caution') cautionNames.push(name);
     }
 
-    // Severity tiers:
-    //   ≥ 5:  remove every 'avoid'
-    //   ≥ 7:  also remove every 'caution'
-    //   ≥ 8:  if ≥ 50% of session is risky, swap whole day to recovery shell
+    // Severity bands:
+    //   1-3:  remove exact 'avoid' triggers where present
+    //   4-5:  reduce affected work via avoid-trigger removal/fallback
+    //   6-7:  also remove caution-rated risky work
+    //   8-10: if ≥ 50% of session is risky, swap whole day to recovery shell
     const removeNames =
-      context.severity >= 7
+      injurySeverityRemovesRiskyWork(context.severity)
         ? [...avoidNames, ...cautionNames]
-        : [...avoidNames];
+        : injurySeverityAvoidsExactTriggers(context.severity)
+        ? [...avoidNames]
+        : [];
 
     const totalRiskShare = removeNames.length / Math.max(1, exercises.length);
     const useRecoveryShell =
-      context.severity >= 8 && totalRiskShare >= 0.5 && removeNames.length >= 2;
+      injurySeverityPausesAffectedTraining(context.severity) &&
+      totalRiskShare >= 0.5 &&
+      removeNames.length >= 2;
 
     if (useRecoveryShell) {
       actions.push({

@@ -35,6 +35,13 @@
 
 import type { Workout, WorkoutExercise } from '../types/domain';
 import { logger } from './logger';
+import {
+  classifyBibleInjurySeverity,
+  injurySeverityPausesAffectedTraining,
+  injurySeverityRecommendsPhysio,
+  injurySeverityRemovesRiskyWork,
+  injurySeverityReducesAffectedWork,
+} from '../rules/injurySeverityBands';
 
 // ─── Exposure taxonomy ──────────────────────────────────────────────
 
@@ -380,22 +387,37 @@ export function classifyExerciseExposures(rawName: string): Exposure[] {
 
 // ─── Constraint builders ────────────────────────────────────────────
 
-export function severityToTier(severity: number): 'minor' | 'moderate' | 'severe' {
-  if (severity >= 7) return 'severe';
-  if (severity >= 4) return 'moderate';
+type ExposureSeverityTier = 'minor' | 'moderate' | 'severe';
+
+export function severityToTier(severity: number): ExposureSeverityTier {
+  const band = classifyBibleInjurySeverity(severity).band;
+  if (band === 'pause_affected_8_10' || band === 'restrict_and_refer_6_7') {
+    return 'severe';
+  }
+  if (band === 'reduce_affected_4_5') return 'moderate';
   return 'minor';
 }
 
 const PHYSIO_HARD = 'Get this assessed by a physio so we know what you can safely reload.';
 const PHYSIO_SOFT = "If it's not improving in a few days, worth getting a physio to look at it.";
 
-function regionToBlockedRegional(region: ConstraintRegion, severity: number): {
+function generalSeverityToTier(severity: number): ExposureSeverityTier {
+  if (severity >= 7) return 'severe';
+  if (severity >= 4) return 'moderate';
+  return 'minor';
+}
+
+function regionToBlockedRegional(
+  region: ConstraintRegion,
+  severity: number,
+  tierOverride?: ExposureSeverityTier,
+): {
   blocked: Exposure[];
   limited: Exposure[];
   allowed: Exposure[];
   safeFocus: string[];
 } {
-  const tier = severityToTier(severity);
+  const tier = tierOverride ?? severityToTier(severity);
   const generalSafe: Exposure[] = [
     'trunk', 'anti_rotation', 'mobility', 'recovery', 'easy_erg', 'low_load_accessory',
   ];
@@ -636,10 +658,10 @@ export function buildInjuryConstraint(args: {
   const region = args.region;
   const severity = args.severity;
   const tier = severityToTier(severity);
-  const sets = regionToBlockedRegional(region, severity);
+  const sets = regionToBlockedRegional(region, severity, tier);
   const advice: string[] = [];
-  if (tier === 'severe') advice.push(PHYSIO_HARD);
-  else if (tier === 'moderate') advice.push(PHYSIO_SOFT);
+  if (injurySeverityRecommendsPhysio(severity)) advice.push(PHYSIO_HARD);
+  else if (injurySeverityReducesAffectedWork(severity)) advice.push(PHYSIO_SOFT);
 
   return {
     id: args.id ?? `injury-${region}-${Date.now()}`,
@@ -667,7 +689,7 @@ export function buildFatigueConstraint(args: {
   startDate?: string;
 }): Constraint {
   const severity = args.severity;
-  const tier = severityToTier(severity);
+  const tier = generalSeverityToTier(severity);
   const blocked: Exposure[] = [];
   const limited: Exposure[] = [];
   if (tier === 'severe') {
@@ -714,7 +736,7 @@ export function buildSorenessConstraint(args: {
 }): Constraint {
   // Soreness is one tier lower than the equivalent injury.
   const downscaled = Math.max(1, args.severity - 2);
-  const sets = regionToBlockedRegional(args.region, downscaled);
+  const sets = regionToBlockedRegional(args.region, downscaled, generalSeverityToTier(downscaled));
   return {
     id: args.id ?? `soreness-${args.region}-${Date.now()}`,
     type: 'soreness',
@@ -742,7 +764,7 @@ export function buildScheduleConstraint(args: {
   startDate?: string;
 }): Constraint {
   const severity = args.severity;
-  const tier = severityToTier(severity);
+  const tier = generalSeverityToTier(severity);
   const blocked: Exposure[] = [];
   const limited: Exposure[] = [];
   if (tier === 'severe') {
@@ -807,8 +829,8 @@ export function buildMissedSessionConstraint(args: {
  *
  *   if any constraint blocks an exposure the exercise has → REMOVE
  *   else if any constraint LIMITS an exposure:
- *     - severity ≥ 7 (severe) → REMOVE
- *     - else                  → LIMIT
+ *     - injury 6+ or non-injury severe → REMOVE
+ *     - else                           → LIMIT
  *   else → KEEP
  *
  * Multiple constraints — most conservative wins.
@@ -831,7 +853,12 @@ export function scoreExerciseAgainstConstraints(
   }
 
   const blockHits: Array<{ exposure: Exposure; constraintId: string }> = [];
-  const limitHits: Array<{ exposure: Exposure; constraintId: string; severity: number }> = [];
+  const limitHits: Array<{
+    exposure: Exposure;
+    constraintId: string;
+    severity: number;
+    constraintType: ConstraintType;
+  }> = [];
 
   for (const c of constraints) {
     if (c.status === 'resolved') continue;
@@ -839,7 +866,12 @@ export function scoreExerciseAgainstConstraints(
       if (c.blockedExposures.includes(e)) {
         blockHits.push({ exposure: e, constraintId: c.id });
       } else if (c.limitedExposures.includes(e)) {
-        limitHits.push({ exposure: e, constraintId: c.id, severity: c.severity ?? 5 });
+        limitHits.push({
+          exposure: e,
+          constraintId: c.id,
+          severity: c.severity ?? 5,
+          constraintType: c.type,
+        });
       }
     }
   }
@@ -858,8 +890,11 @@ export function scoreExerciseAgainstConstraints(
   if (limitHits.length > 0) {
     const exps = Array.from(new Set(limitHits.map((h) => h.exposure)));
     const ids = Array.from(new Set(limitHits.map((h) => h.constraintId)));
-    const maxSeverity = Math.max(...limitHits.map((h) => h.severity));
-    if (maxSeverity >= 7) {
+    const shouldRemoveLimited = limitHits.some((h) =>
+      h.constraintType === 'injury'
+        ? injurySeverityRemovesRiskyWork(h.severity)
+        : generalSeverityToTier(h.severity) === 'severe');
+    if (shouldRemoveLimited) {
       return {
         decision: 'remove',
         matchedExposures: exposures,
@@ -927,7 +962,8 @@ export function classifySessionAgainstConstraints(
   let action: SessionAction = 'unchanged';
   if (impact === 'none') action = 'unchanged';
   else if (totalScored > 0 && removedNames.length / totalScored >= 0.75) {
-    action = constraints.some((c) => c.type === 'injury' && (c.severity ?? 0) >= 7)
+    action = constraints.some((c) =>
+      c.type === 'injury' && injurySeverityPausesAffectedTraining(c.severity ?? 0))
       ? 'recovery'
       : 'rebuild';
   } else if (impact === 'high') action = 'rebuild';

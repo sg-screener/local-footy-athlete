@@ -76,6 +76,7 @@ import {
   daysBetween,
   type InjuryState,
 } from '../utils/injuryProgression';
+import { hasActiveInjurySeverity } from '../rules/injurySeverityBands';
 
 function ex(name: string, sets = 3): any {
   const id = `ex-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
@@ -175,7 +176,7 @@ function runProgression(message: string): { applied: number; replyKind: string }
   removeInjuryOverridesForWeek(monday);
   const newSev = outcome.newSeverity;
   let applied = 0;
-  if (newSev >= 5) {
+  if (hasActiveInjurySeverity(newSev)) {
     const result = applyProgramAdjustment(
       {
         intent: 'injury', todayISO: FIXED_TODAY,
@@ -199,7 +200,7 @@ function runProgression(message: string): { applied: number; replyKind: string }
       });
     }
   } else {
-    // sub-threshold — engine declines, deactivate card
+    // resolved/zero — engine declines, deactivate card
     useCoachUpdatesStore.getState().deactivateCoachUpdate(monday);
   }
   useCoachUpdatesStore.getState().transitionInjuryStatus({
@@ -299,24 +300,24 @@ section('[3] Hammy 6/10 → "better" 4/10 → restrictions ease');
   const r = runProgression('4/10');
   eq('follow-up classified as improving', r.replyKind, 'improving');
 
-  // Severity 4 is sub-threshold for the engine — no overrides written
-  // back. That's the desired outcome for "improving below trigger".
+  // Severity 4 remains an active moderate band: reduce affected work,
+  // but do not treat it as cleared.
+  ok('severity 4 re-applies lighter restrictions', r.applied >= 1);
   const afterOverrides = Object.keys(useProgramStore.getState().dateOverrides).sort();
-  eq('after improving: zero overrides remain', afterOverrides.length, 0);
+  ok('after improving: overrides remain', afterOverrides.length >= 1);
 
   // Status updated.
   const state = useCoachUpdatesStore.getState().activeInjury;
   ok('status = improving', state?.status === 'improving');
   eq('severity = 4', state?.severity, 4);
 
-  // Card deactivated when sub-threshold (no useful rules at <5).
-  ok('card deactivated when below threshold', getActiveCoachUpdate(FIXED_MONDAY) === null);
+  ok('card remains active at 4/10', getActiveCoachUpdate(FIXED_MONDAY) != null);
 }
 
 // ─────────────────────────────────────────────────────────────────────
 // 4. SCENARIO: hammy 6/10 → "better" but still 5/10 → engine fires gentler
 // ─────────────────────────────────────────────────────────────────────
-section('[4] Hammy 6/10 → "5/10" → engine still fires (above threshold)');
+section('[4] Hammy 6/10 → "5/10" → engine still fires in moderate band');
 {
   resetAll();
   baseWeekDef = {

@@ -276,12 +276,9 @@ section('[6] No card written when visible_diff = false');
   // pre-existing card, then running through a scenario where no
   // visible diff occurs.
   //
-  // Easiest construction: set up a week where the engine emits exactly
-  // one event but applyAdjustmentEvents rejects it (date out of week).
+  // Easiest construction: set up a week with no adjustable future sessions.
   resetAll();
-  baseWeekDef = {
-    4: workout('Team Training', { workoutType: 'Team Training', exercises: [] }),
-  };
+  baseWeekDef = {};
   // Pre-populate a card from a prior turn so we can verify it's NOT
   // overwritten by a no-effect turn.
   useCoachUpdatesStore.getState().upsertCoachUpdate(FIXED_MONDAY, {
@@ -292,9 +289,9 @@ section('[6] No card written when visible_diff = false');
   });
   const before = getActiveCoachUpdate(FIXED_MONDAY);
 
-  // Now run a hammy 3/10 which the engine declines (severity gate).
-  // Engine emits zero events → apply.applied=0 → no upsert.
-  runHandleSendMirror('hammy', 3);
+  // Now run a hammy 6/10 with no adjustable sessions.
+  // Engine emits zero events -> apply.applied=0 -> no upsert.
+  runHandleSendMirror('hammy', 6);
 
   const after = getActiveCoachUpdate(FIXED_MONDAY);
   ok(

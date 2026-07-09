@@ -170,9 +170,9 @@ section('[3] Hamstring 7/10 — heavy lower / jump / hinge / sprint removed');
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// 4. HAMSTRING 5-6 — heavy back squat / box jump LIMITED, not green
+// 4. HAMSTRING 6 — risky lower work removed, not green
 // ═════════════════════════════════════════════════════════════════════
-section('[4] Hamstring 6/10 — heavy back squat + box jump limited/blocked, not blindly green');
+section('[4] Hamstring 6/10 — risky lower work removed, not blindly green');
 {
   const c = buildInjuryConstraint({ region: 'hamstring', severity: 6 });
   // Sprint, hinge, nordic, plyo, hamstring_dominant blocked.
@@ -183,10 +183,10 @@ section('[4] Hamstring 6/10 — heavy back squat + box jump limited/blocked, not
     const d = scoreExerciseAgainstConstraints(name, [c]);
     ok(`${name} → remove (moderate)`, d.decision === 'remove', d.reason);
   }
-  // Heavy back squat → LIMITED (flagged caution), not blindly kept.
+  // Heavy back squat → removed at 6/10 because Bible 6-7 removes risky work.
   {
     const d = scoreExerciseAgainstConstraints('Back Squat', [c]);
-    ok('Back Squat → limit (heavy lower/squat flagged at moderate)', d.decision === 'limit', d.reason);
+    ok('Back Squat → remove (heavy lower/squat risky at 6/10)', d.decision === 'remove', d.reason);
   }
   // Goblet Squat (no heavy load implied) → keep.
   {
@@ -499,7 +499,7 @@ section('[18] severityToTier — boundaries');
 eq('1 → minor', severityToTier(1), 'minor');
 eq('3 → minor', severityToTier(3), 'minor');
 eq('4 → moderate', severityToTier(4), 'moderate');
-eq('6 → moderate', severityToTier(6), 'moderate');
+eq('6 → severe', severityToTier(6), 'severe');
 eq('7 → severe', severityToTier(7), 'severe');
 eq('10 → severe', severityToTier(10), 'severe');
 
@@ -560,7 +560,9 @@ section('[22] Physio advice tiers');
   const moderate = buildInjuryConstraint({ region: 'shoulder', severity: 5 });
   const minor = buildInjuryConstraint({ region: 'shoulder', severity: 2 });
   ok('severe → hard physio advice', !!severe.advice && severe.advice.some((a) => /so we know/i.test(a)));
-  ok('moderate → soft physio advice', !!moderate.advice && moderate.advice.some((a) => /not improving/i.test(a)));
+  const limiting = buildInjuryConstraint({ region: 'shoulder', severity: 6 });
+  ok('limiting 6/10 → hard physio advice', !!limiting.advice && limiting.advice.some((a) => /so we know/i.test(a)));
+  ok('moderate 5/10 → soft physio advice', !!moderate.advice && moderate.advice.some((a) => /not improving/i.test(a)));
   ok('minor → no physio advice', !minor.advice || minor.advice.length === 0);
 }
 

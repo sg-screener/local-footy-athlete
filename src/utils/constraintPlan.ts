@@ -49,6 +49,11 @@ import {
   type ProgramValidationResult,
 } from './exposureEngine';
 import type { Workout } from '../types/domain';
+import {
+  injurySeverityRecommendsPhysio,
+  injurySeverityReducesAffectedWork,
+  injurySeverityRemovesRiskyWork,
+} from '../rules/injurySeverityBands';
 
 // ─── ConstraintPlan type ────────────────────────────────────────────
 
@@ -186,7 +191,10 @@ function dedupeOrdered<T>(items: T[]): T[] {
 function buildAvoidLabels(c: Constraint): string[] {
   const severity = c.severity ?? 0;
   const exposures = new Set<Exposure>(c.blockedExposures);
-  if (severity >= 7) {
+  const includeLimited = c.type === 'injury'
+    ? injurySeverityRemovesRiskyWork(severity)
+    : severity >= 7;
+  if (includeLimited) {
     for (const e of c.limitedExposures) exposures.add(e);
   }
 
@@ -347,8 +355,8 @@ const UPDATE_PROMPT = 'Update coach when it improves, worsens, or clears.';
 
 function buildAdviceForInjury(c: ActiveInjuryConstraint): string[] {
   const out: string[] = [];
-  if (c.severity >= 7) out.push(PHYSIO_HARD);
-  else if (c.severity >= 4) out.push(PHYSIO_SOFT);
+  if (injurySeverityRecommendsPhysio(c.severity)) out.push(PHYSIO_HARD);
+  else if (injurySeverityReducesAffectedWork(c.severity)) out.push(PHYSIO_SOFT);
   // Carry through any extra advice from the active constraint store.
   for (const a of c.advice ?? []) {
     if (!out.includes(a)) out.push(a);

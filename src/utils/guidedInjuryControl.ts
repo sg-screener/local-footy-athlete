@@ -1,5 +1,10 @@
 import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 import type { InjuryBucket } from './injuryAdjustmentEngine';
+import {
+  classifyBibleInjurySeverity,
+  injurySeverityPausesAffectedTraining,
+  injurySeverityRecommendsPhysio,
+} from '../rules/injurySeverityBands';
 
 export type GuidedInjuryRegion = 'upper_body' | 'lower_body' | 'back_midline' | 'other';
 export type GuidedInjurySeverityBand = 'mild' | 'slight' | 'moderate' | 'avoid';
@@ -100,13 +105,39 @@ export function guidedInjuryBucketForArea(area: string): InjuryBucket | null {
   if (/elbow/.test(key)) return 'elbow';
   if (/wrist|hand/.test(key)) return 'wrist';
   if (/groin|adductor/.test(key)) return 'adductor';
-  if (/hip/.test(key)) return 'lowerBack';
+  if (/hip/.test(key)) return 'adductor';
   if (/hamstring|hammy/.test(key)) return 'hamstring';
   if (/knee|quad/.test(key)) return 'knee';
   if (/calf|achilles/.test(key)) return 'calf';
   if (/ankle|foot/.test(key)) return 'ankle';
   if (/lower back|upper back|back|midline|abs|side/.test(key)) return 'lowerBack';
   return null;
+}
+
+function guidedSeverityBandForSeverity(severity: number): GuidedInjurySeverityBand {
+  switch (classifyBibleInjurySeverity(severity).band) {
+    case 'avoid_trigger_1_3':
+      return 'mild';
+    case 'reduce_affected_4_5':
+      return 'slight';
+    case 'restrict_and_refer_6_7':
+      return 'moderate';
+    case 'pause_affected_8_10':
+      return 'avoid';
+  }
+}
+
+function guidedAdjustmentForSeverity(severity: number): GuidedInjuryAdjustmentLevel {
+  switch (classifyBibleInjurySeverity(severity).band) {
+    case 'avoid_trigger_1_3':
+      return 'minimal';
+    case 'reduce_affected_4_5':
+      return 'slight';
+    case 'restrict_and_refer_6_7':
+      return 'moderate';
+    case 'pause_affected_8_10':
+      return 'training_paused';
+  }
 }
 
 function displayArea(area: string): string {
@@ -170,7 +201,14 @@ export function buildGuidedInjuryConstraint(
   const now = new Date().toISOString();
   const bucket = guidedInjuryBucketForArea(result.area);
   const key = bucket ?? normaliseKey(result.area);
-  const trainingPaused = result.adjustmentLevel === 'training_paused' || result.seriousSymptoms;
+  const bandFromSeverity = guidedSeverityBandForSeverity(result.severity);
+  const adjustmentFromSeverity = guidedAdjustmentForSeverity(result.severity);
+  const trainingPaused = injurySeverityPausesAffectedTraining(result.severity) || result.seriousSymptoms;
+  const effectiveResult: GuidedInjuryFlowResult = {
+    ...result,
+    severityBand: trainingPaused ? 'avoid' : bandFromSeverity,
+    adjustmentLevel: trainingPaused ? 'training_paused' : adjustmentFromSeverity,
+  };
   return {
     id: opts.existingId ?? `injury-${key}`,
     type: 'injury',
@@ -182,19 +220,19 @@ export function buildGuidedInjuryConstraint(
     lastUpdatedAt: now,
     source: 'guided_injury_flow',
     region: result.region,
-    severityBand: trainingPaused ? 'avoid' : result.severityBand,
-    adjustmentLevel: trainingPaused ? 'training_paused' : result.adjustmentLevel,
+    severityBand: effectiveResult.severityBand,
+    adjustmentLevel: effectiveResult.adjustmentLevel,
     triggers: [...result.triggers],
     seriousSymptoms: result.seriousSymptoms,
     seriousSymptom: result.seriousSymptom,
     modifierTitle: trainingPaused ? 'Training paused for injury' : undefined,
-    modifierBody: modifierBody(result),
+    modifierBody: modifierBody(effectiveResult),
     modifierAffects: ['current_week', 'future_generation'],
-    rules: rulesFor({ ...result, adjustmentLevel: trainingPaused ? 'training_paused' : result.adjustmentLevel }),
+    rules: rulesFor(effectiveResult),
     safeFocus: safeFocusFor(result.region, trainingPaused),
     advice: trainingPaused
       ? ['Stop affected training and get proper medical or physio advice.']
-      : result.severityBand === 'avoid'
+      : injurySeverityRecommendsPhysio(result.severity)
         ? ['Get medical or physio advice if this is not already being managed.']
         : [],
   };

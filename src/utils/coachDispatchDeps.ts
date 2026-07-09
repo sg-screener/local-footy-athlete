@@ -20,6 +20,10 @@ import {
   eventToBullet,
 } from './programAdjustmentEngine';
 import {
+  hasActiveInjurySeverity,
+  injurySeverityPausesAffectedTraining,
+} from '../rules/injurySeverityBands';
+import {
   applyAdjustmentEvents,
   removeInjuryOverridesForWeek,
 } from './applyAdjustmentEvents';
@@ -127,10 +131,10 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       const policy = buildInjuryPolicy(cardBucket, severity);
       const nowISO = new Date().toISOString();
 
-      // ── ACTIVE INJURY SEED (UNCONDITIONAL when severity ≥ 5) ────
+      // ── ACTIVE INJURY SEED (UNCONDITIONAL when severity is active) ────
       // Persistent constraint drives future-week filtering even when
       // the current week had nothing to mutate.
-      if (severity >= 5) {
+      if (hasActiveInjurySeverity(severity)) {
         const existing = useCoachUpdatesStore.getState().activeInjury;
         const newState: InjuryState = existing && existing.bodyPart.toLowerCase() === bodyPart.toLowerCase()
           ? {
@@ -229,7 +233,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       const beforeByDate: Record<string, ReturnType<typeof snapshotVisibleWorkout>> = {};
       for (const d of beforeWeek) beforeByDate[d.date] = snapshotVisibleWorkout(d.workout);
 
-      if (newSeverity >= 5) {
+      if (hasActiveInjurySeverity(newSeverity)) {
         const result = applyProgramAdjustment(
           {
             intent: 'injury',
@@ -260,7 +264,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
 
       const trendWord = outcome.kind === 'improving' ? 'improving' : 'worse';
       const reason = `${partTitle} ${trendWord} - ${newSeverity}/10`;
-      if (newSeverity < 5) {
+      if (!hasActiveInjurySeverity(newSeverity)) {
         useCoachUpdatesStore.getState().deactivateCoachUpdate(monday);
       } else if (appliedCount > 0 && visibleDiffDetected) {
         useCoachUpdatesStore.getState().upsertCoachUpdate(monday, {
@@ -273,11 +277,9 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       });
 
       if (outcome.kind === 'improving') {
-        return newSeverity < 5
-          ? `Good - ${current.bodyPart} ${newSeverity}/10 is light enough to train through. Easing the restrictions off this week.`
-          : `Good - ${current.bodyPart} easing to ${newSeverity}/10. Pulling back some of the load restrictions.`;
+        return `Good - ${current.bodyPart} easing to ${newSeverity}/10. Pulling back some of the load restrictions.`;
       }
-      return newSeverity >= 8
+      return injurySeverityPausesAffectedTraining(newSeverity)
         ? `Sorry to hear - ${current.bodyPart} ${newSeverity}/10 is serious. Pulling things back hard.`
         : `Sorry to hear - ${current.bodyPart} worse at ${newSeverity}/10. Tightening the restrictions.`;
     },

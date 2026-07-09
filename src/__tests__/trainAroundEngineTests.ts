@@ -85,7 +85,7 @@ section('[1] severityToTier');
 eq('1/10 → minor', severityToTier(1), 'minor');
 eq('3/10 → minor', severityToTier(3), 'minor');
 eq('4/10 → moderate', severityToTier(4), 'moderate');
-eq('6/10 → moderate', severityToTier(6), 'moderate');
+eq('6/10 → severe', severityToTier(6), 'severe');
 eq('7/10 → severe', severityToTier(7), 'severe');
 eq('10/10 → severe', severityToTier(10), 'severe');
 

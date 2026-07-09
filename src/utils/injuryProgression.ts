@@ -16,6 +16,7 @@
 
 import { parseSeverityNumber } from './injuryAdjustmentEngine';
 import type { InjuryBucket } from './programAdjustmentEngine';
+import { classifyBibleInjurySeverity } from '../rules/injurySeverityBands';
 
 /** Status surfaced on the Coach Update card and stored in InjuryState. */
 export type InjuryStatus = 'active' | 'improving' | 'resolved';
@@ -24,20 +25,26 @@ export type InjuryStatus = 'active' | 'improving' | 'resolved';
  * Restriction tier — how aggressively the engine + resolver should
  * modify the program for a given pain level.
  *
- *   severe (7-10) — full restrictions, recovery escalation possible
- *   strict (5-6)  — no sprinting, remove tagged risky work
- *   relaxed (3-4) — limit sprint volume, light hinge OK, coachNotes only
- *   light (1-2)   — advisory: ease back into normal volume
+ *   severe (8-10) — pause affected training where needed
+ *   strict (6-7)  — no risky work + physio/medical advice
+ *   relaxed (4-5) — reduce affected work, coachNotes only
+ *   light (1-3)   — avoid exact trigger, advisory notes
  *   none (0)      — no modifications (fully restored)
  */
 export type RestrictionTier = 'severe' | 'strict' | 'relaxed' | 'light' | 'none';
 
 export function severityToTier(severity: number): RestrictionTier {
   if (severity <= 0) return 'none';
-  if (severity <= 2) return 'light';
-  if (severity <= 4) return 'relaxed';
-  if (severity <= 6) return 'strict';
-  return 'severe';
+  switch (classifyBibleInjurySeverity(severity).band) {
+    case 'avoid_trigger_1_3':
+      return 'light';
+    case 'reduce_affected_4_5':
+      return 'relaxed';
+    case 'restrict_and_refer_6_7':
+      return 'strict';
+    case 'pause_affected_8_10':
+      return 'severe';
+  }
 }
 
 /**

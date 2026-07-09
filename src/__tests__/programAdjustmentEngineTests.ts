@@ -489,7 +489,7 @@ section('10. Injury handler — payload validation');
   // Unknown body part on an empty week → still applied=false because there
   // are no adjustable future sessions (NOT because the body part is unknown).
   // Rejection is recorded for telemetry but the engine's contract is
-  // "act when severity ≥ 5 AND there's something to act on".
+  // "act when severity is active AND there's something to act on".
   resetResolver();
   const result = applyProgramAdjustment(
     makeRequest({
@@ -602,7 +602,7 @@ section('10. Injury handler — payload validation');
   ok('missing bodyPart: ≥1 event', result.events.length >= 1);
 }
 
-section('10.1 Severity gate');
+section('10.1 Mild severity avoids exact trigger');
 
 {
   resetResolver();
@@ -611,13 +611,16 @@ section('10.1 Severity gate');
     2: { name: 'Wed Lower', exercises: [{ name: 'RDLs' }] }, // today
   });
   const result = applyProgramAdjustment(
-    injuryRequest('hamstring', 3),
+    injuryRequest('hamstring', 2),
     emptyScheduleState(),
   );
-  eq('severity 3/10: applied=false', result.applied, false);
-  eq('severity 3/10: zero events', result.events.length, 0);
-  ok('severity 3/10: reply notes no change', /no program change|manageable/i.test(result.reply));
-  ok('severity 3/10: shape stable', isStableShape(result));
+  eq('severity 2/10: applied=true', result.applied, true);
+  ok('severity 2/10: targets RDLs',
+    result.events.some((e) => e.before === 'RDLs'),
+    JSON.stringify(result.events));
+  ok('severity 2/10: does not pause the session',
+    !result.events.some((e) => e.kind === 'set_session_recovery'));
+  ok('severity 2/10: shape stable', isStableShape(result));
 }
 
 section('10.2 Hamstring 6/10 — RDLs flagged avoid');
@@ -946,8 +949,8 @@ section('10.13 applied=true ↔ events.length > 0 invariant');
 {
   // Sweep across a small grid of severities to confirm the invariant.
   const cases: Array<{ sev: number; expectApplied: boolean }> = [
-    { sev: 1, expectApplied: false },
-    { sev: 4, expectApplied: false },
+    { sev: 1, expectApplied: true },
+    { sev: 4, expectApplied: true },
     { sev: 5, expectApplied: true },
     { sev: 6, expectApplied: true },
     { sev: 7, expectApplied: true },
@@ -1722,7 +1725,7 @@ section('10.17d Reply structure — hammy 6/10 with team training');
   );
   ok(
     'reply: ends with "Program updated"',
-    /Program updated — check your week\.\s*$/.test(result.reply),
+    /Program updated [-—] check your week\.\s*$/.test(result.reply),
   );
   ok(
     'reply: section order — This week before Program changes',
@@ -1886,18 +1889,18 @@ section('10.17h Consistency: tagged + team + running cond all addressed');
   );
 }
 
-section('10.17i Severity 7+ closing advice escalates to "Get a physio"');
+section('10.17i Severity 6+ closing advice escalates to "Get a physio"');
 
 {
-  const p7 = buildInjuryPolicy('hamstring' as any, 7);
-  ok(
-    'hamstring 7: closing advice = "Get a physio"',
-    p7.closingAdvice != null && /^Get a physio/i.test(p7.closingAdvice as string),
-  );
   const p6 = buildInjuryPolicy('hamstring' as any, 6);
   ok(
-    "hamstring 6: closing advice = soft physio suggestion",
-    p6.closingAdvice != null && /worth getting a physio/i.test(p6.closingAdvice as string),
+    'hamstring 6: closing advice = "Get a physio"',
+    p6.closingAdvice != null && /^Get a physio/i.test(p6.closingAdvice as string),
+  );
+  const p5 = buildInjuryPolicy('hamstring' as any, 5);
+  ok(
+    "hamstring 5: closing advice = soft physio suggestion",
+    p5.closingAdvice != null && /worth getting a physio/i.test(p5.closingAdvice as string),
   );
 }
 

@@ -22,6 +22,7 @@
 import type { Workout, WorkoutExercise } from '../types/domain';
 import type { InjuryBucket } from './programAdjustmentEngine';
 import { logger } from './logger';
+import { classifyBibleInjurySeverity } from '../rules/injurySeverityBands';
 
 // ─── Type system ─────────────────────────────────────────────────────
 
@@ -71,8 +72,11 @@ export interface TrainAroundPolicy {
 }
 
 export function severityToTier(severity: number): InjurySeverityTier {
-  if (severity >= 7) return 'severe';
-  if (severity >= 4) return 'moderate';
+  const band = classifyBibleInjurySeverity(severity).band;
+  if (band === 'pause_affected_8_10' || band === 'restrict_and_refer_6_7') {
+    return 'severe';
+  }
+  if (band === 'reduce_affected_4_5') return 'moderate';
   return 'minor';
 }
 

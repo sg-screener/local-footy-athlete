@@ -274,8 +274,8 @@ console.log('\n[3b] extractInjuryContext — proxy mappings');
   eq('quad → knee', extractInjuryContext('quad strain 6/10')?.bucket, 'knee');
   // Glute → hamstring (posterior chain proxy)
   eq('glute → hamstring', extractInjuryContext('glute strain 6/10')?.bucket, 'hamstring');
-  // Hip → lowerBack
-  eq('hip → lowerBack', extractInjuryContext('hip pain 6/10')?.bucket, 'lowerBack');
+  // Hip → adductor (lower-limb/groin proxy)
+  eq('hip → adductor', extractInjuryContext('hip pain 6/10')?.bucket, 'adductor');
   // Pec → shoulder
   eq('pec → shoulder', extractInjuryContext('pec strain 6/10')?.bucket, 'shoulder');
   // Foot → ankle
@@ -298,9 +298,9 @@ console.log('\n[3c] extractInjuryContext — gates on severity only');
   eq('no injury signal → null', extractInjuryContext('quad day 6/10 reps'), null);
 }
 
-// ─── 4. Engine — severity gating ───
+// ─── 4. Engine — mild severity avoids exact trigger ───
 
-console.log('\n[4] applyInjuryAdjustment — severity < 5 declines');
+console.log('\n[4] applyInjuryAdjustment — severity 3/10 avoids exact trigger');
 {
   reset();
   baseWeekFixture = buildBaseWeek({
@@ -310,9 +310,18 @@ console.log('\n[4] applyInjuryAdjustment — severity < 5 declines');
     message: 'hammy hurts 3/10',
     todayISO: TODAY_ISO,
   });
-  eq('fired = false', result.fired, false);
-  ok('reason mentions threshold', /< threshold/.test(result.reason));
-  eq('no overrides written', overrideCalls.length, 0);
+  eq('fired = true', result.fired, true);
+  const monChange = result.diff?.changedDays.find((d) => d.date === '2026-04-27');
+  ok(
+    'RDLs removed as exact trigger',
+    monChange ? !monChange.after.exerciseNames.includes('RDLs') : false,
+    JSON.stringify(monChange?.after.exerciseNames),
+  );
+  ok(
+    'Back Squat remains',
+    monChange ? monChange.after.exerciseNames.includes('Back Squat') : false,
+    JSON.stringify(monChange?.after.exerciseNames),
+  );
 }
 
 console.log('\n[5] applyInjuryAdjustment — declines unparseable inputs');
@@ -373,7 +382,7 @@ console.log('\n[6] Hamstring 6/10 — RDLs removed (avoid)');
   );
   ok(
     'reply ends with "Program updated"',
-    /Program updated — check your week\./.test(result.reply || ''),
+    /Program updated [-—] check your week\./.test(result.reply || ''),
   );
 }
 
@@ -398,14 +407,13 @@ console.log('\n[7] Lower-back 6/10 — Back Squat removed (avoid)');
   );
 }
 
-// ─── 8. Engine — Knee 6/10 (only caution exercises) → fallback lightens ───
+// ─── 8. Engine — Knee 6/10 removes caution-rated risky work ───
 
-console.log('\n[8] Knee 6/10 — no avoid hits → fallback session-lighten kicks in');
+console.log('\n[8] Knee 6/10 — caution-rated work is removed');
 {
   reset();
-  // Back Squat = caution for knee, RDLs = good for knee → at sev 6 nothing
-  // is removed by per-exercise pass, so the mandatory fallback should
-  // lighten the next core session.
+  // Back Squat = caution for knee, RDLs = good for knee → at sev 6 the
+  // limiting band removes caution-rated risky work.
   baseWeekFixture = buildBaseWeek({
     1: workout('Lower Strength', [ex('Back Squat', 4), ex('RDLs', 3)]),
   });
@@ -419,11 +427,17 @@ console.log('\n[8] Knee 6/10 — no avoid hits → fallback session-lighten kick
     result.diff?.hasChanges === true,
     `reply was: ${result.reply}`,
   );
+  const monChange = result.diff?.changedDays.find((d) => d.date === '2026-04-27');
+  ok(
+    'Back Squat removed at 6/10',
+    monChange ? !monChange.after.exerciseNames.includes('Back Squat') : false,
+    JSON.stringify(monChange?.after.exerciseNames),
+  );
 }
 
-// ─── 9. Engine — Severity 7/10 also removes "caution" exercises ───
+// ─── 9. Engine — Severity 6/10 also removes "caution" exercises ───
 
-console.log('\n[9] Hamstring 7/10 — caution exercises also dropped');
+console.log('\n[9] Hamstring 6/10 — caution exercises also dropped');
 {
   reset();
   // Trap Bar Deadlift hamstring='caution'; RDLs hamstring='avoid'
@@ -435,7 +449,7 @@ console.log('\n[9] Hamstring 7/10 — caution exercises also dropped');
     ]),
   });
   const result = applyInjuryAdjustment({
-    message: 'hamstring hurts 7/10',
+    message: 'hamstring hurts 6/10',
     todayISO: TODAY_ISO,
   });
   ok('engine fired', result.fired);
@@ -445,7 +459,7 @@ console.log('\n[9] Hamstring 7/10 — caution exercises also dropped');
     monChange ? !monChange.after.exerciseNames.includes('RDLs') : false,
   );
   ok(
-    'Trap Bar Deadlift removed (caution at sev≥7)',
+    'Trap Bar Deadlift removed (caution at 6/10)',
     monChange ? !monChange.after.exerciseNames.includes('Trap Bar Deadlift') : false,
     JSON.stringify(monChange?.after.exerciseNames),
   );
@@ -583,10 +597,8 @@ console.log('\n[14] Upper-limb (shoulder) + running session → run untouched');
     todayISO: TODAY_ISO,
   });
   ok('engine fired', result.fired);
-  // We're not asserting whether the upper session was touched — the engine's
-  // per-exercise pass at sev 6 leaves caution alone, so a fallback may
-  // lighten Mon. The contract under test here is: NO override on Tue from
-  // a no_running rule.
+  // We're not asserting the exact upper-session edit here. The contract under
+  // test is: NO override on Tue from a no_running rule.
   const tueChange = result.diff?.changedDays.find((d) => d.date === '2026-04-28');
   ok(
     'Tuesday running session untouched (upper-limb injury)',

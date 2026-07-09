@@ -2,15 +2,9 @@
  * injurySeverityBands.ts — the Programming Bible's canonical injury
  * severity bands (Section 8 / Section 17.G).
  *
- * Phase 1 rules kernel (READ-ONLY / NOT YET WIRED).
- *
- * ⚠ These bands are DEFINED here but deliberately NOT consumed by the
- * live injury engine yet. The live engine (exposureEngine.severityToTier,
- * injuryAdjustmentEngine) currently breaks at 4/7 with action thresholds
- * at 5/7/8. Migrating live behaviour onto these bands is the
- * injury/fatigue alignment phase (Phase 5) and needs its own plan —
- * approved decision 2026-07-08: Bible bands win long-term, no behaviour
- * change in Phase 1.
+ * This module is the single source of truth for injury severity bands.
+ * Consumers may map these bands onto their local action names, but they
+ * should not own their own numeric thresholds.
  *
  * Bible bands:
  *   1-3 /10  keep most training, avoid the exact trigger only
@@ -73,4 +67,32 @@ export function classifyBibleInjurySeverity(severity: number): BibleInjurySeveri
   const info = BIBLE_INJURY_SEVERITY_BANDS.find((b) => s >= b.min && s <= b.max);
   // Bands cover 1-10 exhaustively; fallback keeps TS happy.
   return info ?? BIBLE_INJURY_SEVERITY_BANDS[BIBLE_INJURY_SEVERITY_BANDS.length - 1];
+}
+
+export function hasActiveInjurySeverity(severity: number): boolean {
+  return Number.isFinite(severity) && severity > 0;
+}
+
+export function injurySeverityAvoidsExactTriggers(severity: number): boolean {
+  return hasActiveInjurySeverity(severity);
+}
+
+export function injurySeverityReducesAffectedWork(severity: number): boolean {
+  const band = classifyBibleInjurySeverity(severity).band;
+  return band === 'reduce_affected_4_5' ||
+    band === 'restrict_and_refer_6_7' ||
+    band === 'pause_affected_8_10';
+}
+
+export function injurySeverityRemovesRiskyWork(severity: number): boolean {
+  const band = classifyBibleInjurySeverity(severity).band;
+  return band === 'restrict_and_refer_6_7' || band === 'pause_affected_8_10';
+}
+
+export function injurySeverityPausesAffectedTraining(severity: number): boolean {
+  return classifyBibleInjurySeverity(severity).pauseAffectedTraining;
+}
+
+export function injurySeverityRecommendsPhysio(severity: number): boolean {
+  return classifyBibleInjurySeverity(severity).recommendPhysio;
 }
