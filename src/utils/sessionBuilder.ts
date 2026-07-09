@@ -645,7 +645,8 @@ function feedbackFeelingToConditioningRPE(feeling?: FeedbackFeeling | null): num
 }
 
 function conditioningComponentCompletion(feedback: SessionFeedback): FeedbackCompletion | null {
-  const component = feedback.components?.find((entry) => entry.kind === 'conditioning');
+  const component = feedback.components?.find((entry) => entry.kind === 'conditioning')
+    ?? feedback.components?.find((entry) => entry.kind === 'finisher');
   if (component) return component.completion;
   if (feedback.conditioning) return feedback.completion;
   return null;

@@ -193,6 +193,34 @@ console.log('\n-- Conditioning progression real inputs --');
 }
 
 {
+  const feedback: SessionFeedback = {
+    dateStr: '2026-07-07',
+    completion: 'full',
+    feeling: 'good',
+    soreness: 'none',
+    components: [
+      {
+        componentId: 'strength',
+        kind: 'strength',
+        label: 'strength work',
+        completion: 'full',
+      },
+      {
+        componentId: 'finisher',
+        kind: 'finisher',
+        label: 'finisher',
+        completion: 'skipped',
+      },
+    ],
+  };
+  const workout = buildFor(feedback);
+  ok('skipped finisher holds conditioning while the session aggregate remains full',
+    feedback.completion === 'full' && workout?._progressionState === 'hold');
+  ok('skipped finisher cannot create positive conditioning progression',
+    !hasPositiveProgression(workout?._progressionAdjustment));
+}
+
+{
   const output = resolveConditioningProgression({
     tier: 'B-high',
     readiness: 'high',

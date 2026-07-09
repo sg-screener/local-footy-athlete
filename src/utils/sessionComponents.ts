@@ -8,13 +8,21 @@ export type SessionComponentKind =
   | 'strength'
   | 'conditioning'
   | 'team_training'
+  | 'speed'
+  | 'finisher'
+  | 'recovery_addon'
   | 'recovery'
   | 'session';
+
+export type SessionComponentCompletionPolicy =
+  | 'required'
+  | 'optional_no_penalty';
 
 export interface SessionComponent {
   id: SessionComponentKind;
   kind: SessionComponentKind;
   label: string;
+  completionPolicy: SessionComponentCompletionPolicy;
 }
 
 const CONDITIONING_TYPES = new Set([
@@ -60,6 +68,14 @@ function isRecoveryWorkout(workout: Partial<Workout>): boolean {
 
 function isStandaloneConditioningWorkout(workout: Partial<Workout>): boolean {
   return workoutTypeHasConditioning(workout) && !isRecoveryWorkout(workout);
+}
+
+function hasSpeedBlock(workout: Partial<Workout>): boolean {
+  return !!workout.speedBlock;
+}
+
+function hasRecoveryAddon(workout: Partial<Workout>): boolean {
+  return (workout.recoveryAddons ?? []).some((addon) => addon.exercises.length > 0);
 }
 
 function conditioningIdsFromBlock(workout: Partial<Workout>, rows: any[]): Set<string> {
@@ -134,34 +150,90 @@ export function getSessionComponents(
   workout: Partial<Workout> | null | undefined,
 ): SessionComponent[] {
   if (!workout) {
-    return [{ id: 'session', kind: 'session', label: 'session' }];
+    return [{
+      id: 'session',
+      kind: 'session',
+      label: 'session',
+      completionPolicy: 'required',
+    }];
   }
 
   const teamState = getTeamTrainingWorkoutState(workout);
   const { strengthRows, conditioningRows } = getSessionComponentRows(workout);
   const components: SessionComponent[] = [];
 
+  if (hasSpeedBlock(workout)) {
+    components.push({
+      id: 'speed',
+      kind: 'speed',
+      label: 'speed work',
+      completionPolicy: 'required',
+    });
+  }
+
   if (strengthRows.length > 0) {
-    components.push({ id: 'strength', kind: 'strength', label: 'strength work' });
+    components.push({
+      id: 'strength',
+      kind: 'strength',
+      label: 'strength work',
+      completionPolicy: 'required',
+    });
   }
 
   if (
     conditioningRows.length > 0 ||
     (isStandaloneConditioningWorkout(workout) && !teamState.isTeamTrainingOnly)
   ) {
-    components.push({ id: 'conditioning', kind: 'conditioning', label: 'conditioning' });
+    const isFinisher = workout.attachedConditioningKind === 'finisher';
+    components.push(isFinisher
+      ? {
+          id: 'finisher',
+          kind: 'finisher',
+          label: 'finisher',
+          completionPolicy: 'optional_no_penalty',
+        }
+      : {
+          id: 'conditioning',
+          kind: 'conditioning',
+          label: 'conditioning',
+          completionPolicy: 'required',
+        });
   }
 
   if (teamState.hasTeamTraining || workoutNameHasTeamTraining(workout)) {
-    components.push({ id: 'team_training', kind: 'team_training', label: 'team training' });
+    components.push({
+      id: 'team_training',
+      kind: 'team_training',
+      label: 'team training',
+      completionPolicy: 'required',
+    });
   }
 
   if (components.length === 0 && isRecoveryWorkout(workout)) {
-    components.push({ id: 'recovery', kind: 'recovery', label: 'recovery work' });
+    components.push({
+      id: 'recovery',
+      kind: 'recovery',
+      label: 'recovery work',
+      completionPolicy: 'required',
+    });
+  }
+
+  if (hasRecoveryAddon(workout)) {
+    components.push({
+      id: 'recovery_addon',
+      kind: 'recovery_addon',
+      label: 'recovery add-on',
+      completionPolicy: 'optional_no_penalty',
+    });
   }
 
   if (components.length === 0) {
-    components.push({ id: 'session', kind: 'session', label: 'session' });
+    components.push({
+      id: 'session',
+      kind: 'session',
+      label: 'session',
+      completionPolicy: 'required',
+    });
   }
 
   return components;
@@ -178,6 +250,9 @@ export function componentQuestionLabel(
   }
   if (component.kind === 'conditioning') return 'Did you complete the conditioning?';
   if (component.kind === 'team_training') return 'Did you complete team training?';
+  if (component.kind === 'speed') return 'Did you complete the speed work?';
+  if (component.kind === 'finisher') return 'Did you complete the finisher?';
+  if (component.kind === 'recovery_addon') return 'Did you complete the recovery add-on?';
   if (component.kind === 'recovery') return 'Did you complete the recovery work?';
   return 'Did you complete it?';
 }
@@ -186,6 +261,9 @@ function componentReasonSubject(component: SessionComponent): string {
   if (component.kind === 'strength') return 'the strength work';
   if (component.kind === 'conditioning') return 'the conditioning';
   if (component.kind === 'team_training') return 'team training';
+  if (component.kind === 'speed') return 'the speed work';
+  if (component.kind === 'finisher') return 'the finisher';
+  if (component.kind === 'recovery_addon') return 'the recovery add-on';
   if (component.kind === 'recovery') return 'the recovery work';
   return 'the session';
 }

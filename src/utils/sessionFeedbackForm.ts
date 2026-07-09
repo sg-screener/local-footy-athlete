@@ -261,8 +261,16 @@ export function deriveAggregateCompletion(
 
   const values = components.map((component) => componentCompletions?.[component.id] ?? null);
   if (values.some((value) => value === null)) return null;
-  if (values.every((value) => value === 'full')) return 'full';
-  if (values.every((value) => value === 'skipped')) return 'skipped';
+
+  const completionBearingValues = components
+    .filter((component) => component.completionPolicy === 'required')
+    .map((component) => componentCompletions?.[component.id] ?? null);
+  const aggregateValues = completionBearingValues.length > 0
+    ? completionBearingValues
+    : values;
+
+  if (aggregateValues.every((value) => value === 'full')) return 'full';
+  if (aggregateValues.every((value) => value === 'skipped')) return 'skipped';
   return 'partial';
 }
 

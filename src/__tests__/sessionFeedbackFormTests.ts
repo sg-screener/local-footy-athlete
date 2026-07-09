@@ -8,6 +8,7 @@ import {
   buildSessionFeedbackPayload,
   canSaveFeedbackDraft,
   componentReasonsFromFeedback,
+  deriveAggregateCompletion,
   getVisibleFeedbackSections,
   sanitizeFeedbackDraftForCompletion,
   sanitizeFeedbackDraftForComponents,
@@ -538,6 +539,96 @@ section('11. Component feedback projects to matching future session type');
   assert(match?.completion === 'skipped', 'future strength adaptation sees strength skipped');
   assert(!('feeling' in (match || {})), 'skipped strength projection omits team-training feel');
   assert(deriveAdaptation(match).volumeAdjustment === -1, 'strength skipped holds progression back');
+}
+
+section('12. Optional components save without penalising the main session');
+{
+  const finisherComponents = getSessionComponents({
+    name: 'Upper Pull + Aerobic Finisher',
+    workoutType: 'Strength',
+    hasCombinedConditioning: true,
+    attachedConditioningKind: 'finisher',
+    exercises: [
+      { id: 'we-row', exerciseId: 'ex-row', exercise: { name: 'Chest Supported Row' } },
+      { id: 'we-bike', exerciseId: 'ex-bike', exercise: { name: 'Easy Bike Finisher' } },
+    ],
+    conditioningBlock: { options: [{ title: 'Finisher', exerciseIds: ['we-bike'] }] },
+  } as any);
+  const finisherCompletions = { strength: 'full', finisher: 'skipped' } as const;
+  assert(
+    deriveAggregateCompletion(finisherComponents, finisherCompletions, null) === 'full',
+    'skipped finisher does not mark the whole session partial or missed',
+  );
+  const finisherPayload = buildSessionFeedbackPayload({
+    dateStr: '2026-07-10',
+    completion: 'full',
+    components: finisherComponents,
+    componentCompletions: finisherCompletions,
+    componentReasons: {
+      strength: { partialReason: null, skipReason: null },
+      finisher: { partialReason: null, skipReason: 'busy_no_time' },
+    },
+    feeling: 'good',
+    soreness: 'none',
+    partialReason: null,
+    skipReason: null,
+  });
+  assert(finisherPayload?.completion === 'full', 'finisher-skipped payload keeps main session complete');
+  assert(
+    finisherPayload?.components?.find((entry) => entry.kind === 'finisher')?.completion === 'skipped',
+    'finisher skip is still stored honestly',
+  );
+
+  const addonComponents = getSessionComponents({
+    name: 'Lower Body Strength',
+    workoutType: 'Strength',
+    exercises: [{ id: 'we-squat', exerciseId: 'ex-squat', exercise: { name: 'Back Squat' } }],
+    recoveryAddons: [{
+      id: 'addon-1',
+      exercises: [{ id: 'bird-dog', name: 'Bird Dog', prescription: '2 x 6/side' }],
+    }],
+  } as any);
+  const addonCompletions = { strength: 'full', recovery_addon: 'skipped' } as const;
+  const addonPayload = buildSessionFeedbackPayload({
+    dateStr: '2026-07-10',
+    completion: deriveAggregateCompletion(addonComponents, addonCompletions, null),
+    components: addonComponents,
+    componentCompletions: addonCompletions,
+    componentReasons: {
+      strength: { partialReason: null, skipReason: null },
+      recovery_addon: { partialReason: null, skipReason: 'busy_no_time' },
+    },
+    feeling: 'good',
+    soreness: 'none',
+    partialReason: null,
+    skipReason: null,
+  });
+  assert(addonPayload?.completion === 'full', 'skipped recovery add-on has no session completion penalty');
+  assert(
+    addonPayload?.components?.find((entry) => entry.kind === 'recovery_addon')?.completion === 'skipped',
+    'recovery add-on skip is still stored honestly',
+  );
+
+  const cleaned = sanitizeFeedbackDraftForComponents(
+    {
+      completion: 'partial',
+      componentCompletions: { strength: 'full', speed: 'skipped', recovery_addon: 'partial' },
+      componentReasons: {
+        strength: { partialReason: null, skipReason: null },
+        speed: { partialReason: null, skipReason: 'sore_tight' },
+        recovery_addon: { partialReason: 'ran_out_of_time', skipReason: null },
+      },
+      feeling: 'good',
+      soreness: 'none',
+      partialReason: null,
+      skipReason: null,
+    },
+    addonComponents.filter((component) => component.kind === 'strength'),
+  );
+  assert(cleaned.componentCompletions?.speed === undefined, 'removed speed answer is cleared');
+  assert(cleaned.componentReasons?.speed === undefined, 'removed speed reason is cleared');
+  assert(cleaned.componentCompletions?.recovery_addon === undefined, 'removed add-on answer is cleared');
+  assert(cleaned.componentReasons?.recovery_addon === undefined, 'removed add-on reason is cleared');
 }
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);

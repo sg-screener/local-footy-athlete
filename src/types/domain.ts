@@ -449,7 +449,8 @@ export interface Workout {
   /**
    * Optional low-fatigue support work attached after the main session.
    * This is display/programming content only: it is not main strength,
-   * hard conditioning, sprint/COD, or a completion component.
+   * hard conditioning, or sprint/COD. It may be logged as an optional,
+   * no-penalty feedback component without changing those counting fences.
    */
   recoveryAddons?: RecoveryAddonBlock[];
 

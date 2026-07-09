@@ -370,7 +370,7 @@ section('[7] injury/readiness constraints downgrade add-ons');
     addonText(cooked));
 }
 
-section('[8] recovery_addons keep zero-credit fences and no feedback component');
+section('[8] recovery_addons keep zero-credit fences and optional logging');
 {
   const after = attach({ workouts: baseWeek(), phase: 'Off-season' });
   const addons = allAddons(after);
@@ -391,8 +391,9 @@ section('[8] recovery_addons keep zero-credit fences and no feedback component')
   const strippedComponentKinds = getSessionComponents(
     workoutWithAddon ? ({ ...workoutWithAddon, recoveryAddons: undefined } as Workout) : null,
   ).map((component) => component.kind);
-  ok('recovery add-on does not become a feedback/session component',
-    componentKinds.join(',') === strippedComponentKinds.join(','),
+  ok('recovery add-on becomes an optional feedback component only',
+    componentKinds.includes('recovery_addon') &&
+      !strippedComponentKinds.includes('recovery_addon'),
     `${componentKinds.join(',')} vs ${strippedComponentKinds.join(',')}`);
 
   const strippedCounts = countWeeklyExposures(countInput(withoutAddons(after)));

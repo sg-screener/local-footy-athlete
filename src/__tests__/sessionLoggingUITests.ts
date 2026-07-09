@@ -35,6 +35,10 @@ const feedbackForm = fs.readFileSync(
   path.resolve(__dirname, '..', 'utils', 'sessionFeedbackForm.ts'),
   'utf8',
 );
+const sessionComponents = fs.readFileSync(
+  path.resolve(__dirname, '..', 'utils', 'sessionComponents.ts'),
+  'utf8',
+);
 
 console.log('\n=== 1. Main finish CTA is not gated by team training ===');
 assert(!/!isFinished\s*&&\s*!hasTeamTraining/.test(classic), 'Classic finish CTA is not hidden by team training');
@@ -92,6 +96,28 @@ assert(
     skippedTransition.includes('feeling: null') &&
     skippedTransition.includes('soreness: null'),
   'skipped transition clears hidden feel and soreness state',
+);
+
+console.log('\n=== 5. Combined sessions expose only resolved component questions ===');
+assert(
+  /sessionComponents\.map\(\(component\)/.test(feedbackPanel),
+  'feedback panel renders one completion group per resolved component',
+);
+assert(
+  /Did you complete the speed work\?/.test(sessionComponents),
+  'speed block has a dedicated completion question',
+);
+assert(
+  /Did you complete the finisher\?/.test(sessionComponents),
+  'finisher has a dedicated completion question',
+);
+assert(
+  /Did you complete the recovery add-on\?/.test(sessionComponents),
+  'recovery add-on has a dedicated completion question',
+);
+assert(
+  /completionPolicy: 'optional_no_penalty'/.test(sessionComponents),
+  'optional add-ons use the no-penalty completion policy',
 );
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);
