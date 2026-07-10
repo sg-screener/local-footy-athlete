@@ -18,6 +18,42 @@ import {
 import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
 import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 import type { SessionComponentKind } from '../utils/sessionComponents';
+import { todayISOLocal } from '../utils/appDate';
+
+/**
+ * ProgramStore is the final persistence boundary for every generated/edit
+ * path. Dynamic loading avoids a store-initialisation cycle while ensuring the
+ * same validator runs for program, overlay, and manual-override writes.
+ */
+function postValidateProgram(program: TrainingProgram): TrainingProgram {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../utils/postGenerationConstraintValidation')
+    .validateLiveProgramWrite(program);
+}
+
+function postValidateMicrocycle(microcycle: Microcycle): Microcycle {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../utils/postGenerationConstraintValidation')
+    .validateLiveMicrocycleWrite(microcycle);
+}
+
+function postValidateWorkout(date: string, workout: Workout): Workout {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../utils/postGenerationConstraintValidation')
+    .validateLiveWorkoutWrite(date, workout);
+}
+
+function postValidateNullableWorkout(date: string, workout: Workout | null): Workout | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../utils/postGenerationConstraintValidation')
+    .validateLiveNullableWorkoutWrite(date, workout);
+}
+
+function postValidateWeekOverlay(overlay: WeekScopedWorkoutOverlay): WeekScopedWorkoutOverlay {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../utils/postGenerationConstraintValidation')
+    .validateLiveWeekOverlayWrite(overlay);
+}
 
 // ─── Session Feedback ───
 
@@ -214,16 +250,18 @@ export const useProgramStore = create<ProgramState>()(
       // (utils/weekRebuild.decideOverrideSweep) or an EXPLICIT
       // clearManualOverrides() where a true fresh slate is intended
       // (onboarding completion, program create, profile reset).
-      setCurrentProgram: (program) =>
+      setCurrentProgram: (program) => {
+        const validatedProgram = program ? postValidateProgram(program) : null;
         set(() => ({
-          currentProgram: program,
+          currentProgram: validatedProgram,
           currentMicrocycle: null,
           todayWorkout: null,
           weekScopedOverlays: {},
-          blockState: program
-            ? deriveStoredBlockStateFromProgram(program, undefined)
+          blockState: validatedProgram
+            ? deriveStoredBlockStateFromProgram(validatedProgram, undefined)
             : null,
-        })),
+        }));
+      },
 
       setBlockState: (blockState) => set({ blockState }),
 
@@ -235,9 +273,15 @@ export const useProgramStore = create<ProgramState>()(
         return derived;
       },
 
-      setCurrentMicrocycle: (microcycle) => set({ currentMicrocycle: microcycle }),
+      setCurrentMicrocycle: (microcycle) => set({
+        currentMicrocycle: microcycle ? postValidateMicrocycle(microcycle) : null,
+      }),
 
-      setTodayWorkout: (workout) => set({ todayWorkout: workout }),
+      setTodayWorkout: (workout) => set({
+        todayWorkout: workout
+          ? postValidateNullableWorkout(todayISOLocal(), workout)
+          : null,
+      }),
 
       setGenerating: (generating) => set({ isGenerating: generating }),
 
@@ -248,9 +292,12 @@ export const useProgramStore = create<ProgramState>()(
       setManualOverride: (date, workout, context?) => {
         // Raw storage primitive. User-facing tap/coach edit paths must run
         // pre-commit risk checks before reaching this; undo/rebuild/system
-        // cleanup paths intentionally keep direct access.
+        // cleanup paths intentionally keep direct access. The final active-
+        // constraint validator still runs here so no producer can reintroduce
+        // unsafe work after its own checks.
+        const validatedWorkout = postValidateWorkout(date, workout);
         set((state) => ({
-          dateOverrides: { ...state.dateOverrides, [date]: workout },
+          dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },
           overrideContexts: context
             ? { ...state.overrideContexts, [date]: context }
             : state.overrideContexts,
@@ -314,13 +361,15 @@ export const useProgramStore = create<ProgramState>()(
           },
         })),
 
-      setWeekScopedOverlay: (overlay) =>
+      setWeekScopedOverlay: (overlay) => {
+        const validatedOverlay = postValidateWeekOverlay(overlay);
         set((state) => ({
           weekScopedOverlays: {
             ...state.weekScopedOverlays,
-            [overlay.weekStart]: overlay,
+            [validatedOverlay.weekStart]: validatedOverlay,
           },
-        })),
+        }));
+      },
 
       removeWeekScopedOverlay: (weekStart) =>
         set((state) => {
@@ -343,15 +392,18 @@ export const useProgramStore = create<ProgramState>()(
             };
           });
 
-          const updatedMicrocycle = {
+          const updatedMicrocycle = postValidateMicrocycle({
             ...state.currentMicrocycle,
             workouts: updatedWorkouts,
-          };
+          });
 
           // Also update todayWorkout if it's the same workout
           const updatedToday =
             state.todayWorkout?.id === workoutId
-              ? { ...state.todayWorkout, exercises: [...state.todayWorkout.exercises, exercise] }
+              ? postValidateNullableWorkout(
+                  todayISOLocal(),
+                  { ...state.todayWorkout, exercises: [...state.todayWorkout.exercises, exercise] },
+                )
               : state.todayWorkout;
 
           return {
@@ -396,16 +448,19 @@ export const useProgramStore = create<ProgramState>()(
           return false;
         }
 
-        const updatedMicrocycle = {
+        const updatedMicrocycle = postValidateMicrocycle({
           ...state.currentMicrocycle,
           workouts: updatedWorkouts,
           updatedAt: new Date().toISOString(),
-        };
+        });
 
         // Also update todayWorkout if it falls on the same dayOfWeek
         const todayDay = new Date().getDay();
         const updatedToday = todayDay === dayOfWeek
-          ? updatedWorkouts.find((w) => w.dayOfWeek === dayOfWeek) || state.todayWorkout
+          ? postValidateNullableWorkout(
+              todayISOLocal(),
+              updatedMicrocycle.workouts.find((w) => w.dayOfWeek === dayOfWeek) || state.todayWorkout,
+            )
           : state.todayWorkout;
 
         useProgramStore.setState({

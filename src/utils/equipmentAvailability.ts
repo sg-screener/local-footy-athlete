@@ -166,6 +166,55 @@ function tagsForChecklistOption(raw: string): readonly EquipmentTag[] | null {
   return null;
 }
 
+/**
+ * Resolve one athlete-visible exercise requirement onto the same equipment
+ * tags used by generation. Unknown labels deliberately return null so a final
+ * safety pass never deletes work it cannot classify confidently.
+ */
+export function equipmentTagsForRequirement(
+  raw: string,
+): readonly EquipmentTag[] | null {
+  const value = String(raw ?? '').trim();
+  if (!value) return [];
+  const normalized = normalizedOptionKey(value);
+
+  if (/^(barbell|trap_bar|rack|squat_rack|barbell_and_rack)$/.test(normalized)) {
+    return ['barbell'];
+  }
+  if (/^(dumbbell|dumbbells|db)$/.test(normalized)) return ['dumbbells'];
+  if (/^(cable|cables|cable_machine)$/.test(normalized)) return ['cables'];
+  if (/^(machine|machines|leg_press|hamstring_curl|knee_extension)$/.test(normalized)) {
+    return ['machine'];
+  }
+  if (/^(band|bands|resistance_band|resistance_bands)$/.test(normalized)) return ['bands'];
+  if (/^(bench)$/.test(normalized)) return ['bench'];
+  if (/^(pullup_bar|pull_up_bar)$/.test(normalized)) return ['pullup_bar'];
+  if (/^(kettlebell|kettlebells|kb)$/.test(normalized)) return ['kettlebell'];
+  if (/^(bike|treadmill|cardio_equipment|bike_or_treadmill|rower|ski_erg)$/.test(normalized)) {
+    return ['bike_or_treadmill'];
+  }
+  if (/^(foam_roller)$/.test(normalized)) return ['foam_roller'];
+  if (/^(bodyweight|none|no_equipment)$/.test(normalized)) return ['bodyweight'];
+
+  const mapped = tagsForChecklistOption(value);
+  if (!mapped || mapped.length === 0) return null;
+  return mapped;
+}
+
+/** True when every recognised requirement is present; unknown labels pass. */
+export function equipmentRequirementsAreAvailable(
+  requirements: readonly string[] | null | undefined,
+  available: readonly EquipmentTag[],
+): boolean {
+  const availableSet = new Set(available);
+  for (const requirement of requirements ?? []) {
+    const tags = equipmentTagsForRequirement(requirement);
+    if (tags === null) continue;
+    if (tags.length > 0 && !tags.some((tag) => availableSet.has(tag))) return false;
+  }
+  return true;
+}
+
 function fallbackTrainingLocation(profile: EquipmentAvailabilityProfile): TrainingLocation {
   return profile?.trainingLocation ?? 'Commercial gym';
 }

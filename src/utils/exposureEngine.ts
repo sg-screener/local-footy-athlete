@@ -467,8 +467,9 @@ function regionToBlockedRegional(
       const limited: Exposure[] = [];
       if (tier === 'severe') {
         blocked.push(
-          'sprint', 'high_speed_running', 'plyometric', 'explosive_lower',
-          'hinge', 'heavy_hinge', 'posterior_chain', 'hamstring_dominant',
+          'sprint', 'high_speed_running', 'acceleration', 'change_of_direction',
+          'running', 'plyometric', 'explosive_lower', 'hinge', 'heavy_hinge',
+          'posterior_chain', 'hamstring_dominant',
         );
         // Heavy back squats load the hamstring eccentrically at depth —
         // limit at severe so they stay flagged but don't blanket-block
@@ -497,8 +498,8 @@ function regionToBlockedRegional(
       if (tier === 'severe') {
         blocked.push(
           'plyometric', 'explosive_lower', 'sprint', 'high_speed_running',
-          'change_of_direction', 'squat', 'lunge', 'knee_dominant',
-          'heavy_squat',
+          'acceleration', 'running', 'change_of_direction', 'squat', 'lunge',
+          'knee_dominant', 'heavy_squat',
         );
       } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push('plyometric', 'sprint', 'change_of_direction');
@@ -544,8 +545,8 @@ function regionToBlockedRegional(
       const limited: Exposure[] = [];
       if (tier === 'severe') {
         blocked.push(
-          'sprint', 'high_speed_running', 'change_of_direction',
-          'adductor_groin', 'lunge', 'plyometric',
+          'sprint', 'high_speed_running', 'acceleration', 'running',
+          'change_of_direction', 'adductor_groin', 'lunge', 'plyometric',
         );
       } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push('sprint', 'change_of_direction', 'adductor_groin');
@@ -565,8 +566,8 @@ function regionToBlockedRegional(
       const limited: Exposure[] = [];
       if (tier === 'severe') {
         blocked.push(
-          'heavy_squat', 'heavy_hinge', 'lunge', 'sprint',
-          'plyometric', 'change_of_direction',
+          'heavy_squat', 'heavy_hinge', 'lunge', 'sprint', 'acceleration',
+          'running', 'plyometric', 'change_of_direction',
         );
         limited.push('hip_dominant');
       } else if (tier === 'limiting' || tier === 'moderate') {

@@ -30,3 +30,30 @@ export function shouldCollapseWorkoutToRest(
 ): boolean {
   return !!workout && !hasMeaningfulWorkoutContent(workout);
 }
+
+/**
+ * Persistable Rest shell for write boundaries whose schema requires a Workout.
+ * Visible projection subsequently represents this honest empty shell as null.
+ */
+export function collapseWorkoutToRest(workout: Workout): Workout {
+  return {
+    ...workout,
+    name: 'Rest',
+    description: 'Rest day.',
+    durationMinutes: 0,
+    intensity: 'Light',
+    workoutType: 'Rest' as any,
+    sessionTier: 'recovery',
+    hasCombinedConditioning: false,
+    attachedConditioningKind: undefined,
+    conditioningFlavour: undefined,
+    conditioningCategory: undefined,
+    conditioningBlock: undefined,
+    coachAddedConditioningLabel: undefined,
+    speedBlock: undefined,
+    powerBlock: undefined,
+    recoveryAddons: undefined,
+    exercises: [],
+    ...({ isTeamDay: false } as any),
+  };
+}
