@@ -71,7 +71,13 @@ const PRESEASON: Partial<OnboardingData> = {
   motivation: 'Get stronger',
 };
 
-type ReadinessOption = 'tired_today' | 'cooked_week' | 'sore_today' | 'sick_week';
+type ReadinessOption =
+  | 'tired_today'
+  | 'poor_sleep_today'
+  | 'poor_sleep_week'
+  | 'cooked_week'
+  | 'sore_today'
+  | 'sick_week';
 
 const applyReadiness = (kind: ReadinessOption, anchorISO: string, todayISO: string) =>
   kind === 'sick_week'
@@ -82,7 +88,19 @@ const applyReadiness = (kind: ReadinessOption, anchorISO: string, todayISO: stri
         payload: { date: anchorISO, todayISO, recoveryScope: 'week' },
         requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
       }, { todayISO })
-    : executeProgramControlAction({
+    : kind === 'poor_sleep_today' || kind === 'poor_sleep_week'
+      ? executeProgramControlAction({
+          type: 'set_poor_sleep_status',
+          source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+          scope: kind === 'poor_sleep_week' ? 'current_week' : 'today_only',
+          payload: {
+            date: kind === 'poor_sleep_week' ? anchorISO : todayISO,
+            todayISO,
+            pattern: kind === 'poor_sleep_week' ? 'repeated' : 'single_night',
+          },
+          requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+        }, { todayISO })
+      : executeProgramControlAction({
         type: 'set_fatigue_status',
         source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
         scope: kind === 'cooked_week' ? 'current_week' : 'today_only',
@@ -112,6 +130,20 @@ console.log('\n── 1. Every wellbeing option uses its existing deterministic 
     JSON.stringify(tiredSignal));
   ok('tired today does not create a week load-reduction modifier',
     !useCoachUpdatesStore.getState().activeConstraints.some((x) => x.id === loadReductionModifierIdForDate(futureMonday)));
+
+  resetWorld();
+  const poorSleepToday = applyReadiness('poor_sleep_today', futureMonday, todayISO);
+  const oneNight: any = useCoachUpdatesStore.getState().activeConstraints[0];
+  ok('poor sleep last night creates a typed today-only readiness constraint',
+    poorSleepToday.ok && oneNight?.readinessKind === 'poor_sleep' &&
+      oneNight?.readinessPattern === 'single_night' && oneNight?.appliesToDate === todayISO);
+
+  resetWorld();
+  const poorSleepWeek = applyReadiness('poor_sleep_week', futureMonday, todayISO);
+  const repeated: any = useCoachUpdatesStore.getState().activeConstraints[0];
+  ok('repeated poor sleep creates a typed week readiness constraint',
+    poorSleepWeek.ok && repeated?.readinessKind === 'poor_sleep' &&
+      repeated?.readinessPattern === 'repeated' && repeated?.expiresAt === addDays(futureMonday, 6));
 
   resetWorld();
   const sore = applyReadiness('sore_today', futureMonday, todayISO);
@@ -272,13 +304,15 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     cardBlock.includes('{isNormal && (') && !cardBlock.includes('showPracticeMatchCTA') && !cardBlock.includes('currentPhase'));
   ok('tapping opens the readiness sheet (state wiring present)',
     src.includes('setReadinessVisible(true)') && src.includes('home-week-readiness-sheet'));
-  ok('sheet offers all six athlete-facing options',
+  ok('sheet offers all eight athlete-facing options',
     src.includes('Just a bit tired today') && src.includes('Cooked / need an easier week') &&
+    src.includes('Poor sleep last night') && src.includes('Poor sleep for a few nights') &&
     src.includes('Sore or tight') &&
     src.includes('Sick / run down') && src.includes('Niggle or injury') &&
     src.includes('Short on time'));
   ok('sheet maps readiness choices to distinct deterministic routes',
     src.includes("onApply('tired_today')") && src.includes("onApply('cooked_week')") &&
+    src.includes("onApply('poor_sleep_today')") && src.includes("onApply('poor_sleep_week')") &&
     src.includes("onApply('sore_today')") && src.includes("onApply('sick_week')") &&
     src.includes('onPress={onInjury}') && src.includes('onPress={onShortTime}'));
   ok('short-on-time hands off to the existing Busy/Away sheet',
@@ -296,6 +330,7 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   const hookSrc = fs.readFileSync(`${__dirname}/../screens/home/useHomeScreen.ts`, 'utf8') as string;
   ok('hook keeps today and week scopes distinct',
     hookSrc.includes("scope: kind === 'cooked_week' ? 'current_week' : 'today_only'") &&
+    hookSrc.includes("kind === 'poor_sleep_week' ? 'current_week' : 'today_only'") &&
     hookSrc.includes("kind === 'sore_today'") && hookSrc.includes("kind === 'sick_week'"));
   ok('update cleanup is limited to readiness signal and the selected week readiness IDs',
     hookSrc.includes("modifier.source === 'readiness_signal' || weekReadinessIds.has(modifier.sourceId)"));

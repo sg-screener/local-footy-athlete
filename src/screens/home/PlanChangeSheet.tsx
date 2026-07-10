@@ -75,6 +75,7 @@ type Step =
   | { kind: 'confirm_remove'; scope: PlanChangeBinScopeId; label: string }
   | { kind: 'pick_wellbeing' }
   | { kind: 'pick_tired' }
+  | { kind: 'pick_sleep' }
   | { kind: 'pick_sick' }
   | { kind: 'confirm_shutdown' }
   | { kind: 'result'; ok: boolean; message: string };
@@ -171,6 +172,7 @@ export function PlanChangeSheet({
   const WELLBEING_STEP_KINDS: Step['kind'][] = [
     'pick_wellbeing',
     'pick_tired',
+    'pick_sleep',
     'pick_sick',
     'confirm_shutdown',
   ];
@@ -408,6 +410,25 @@ export function PlanChangeSheet({
     });
   };
 
+  const applyPoorSleep = (pattern: 'single_night' | 'repeated') => {
+    const result = executeProgramControlAction({
+      type: 'set_poor_sleep_status',
+      source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
+      scope: pattern === 'repeated' ? 'current_week' : 'today_only',
+      payload: { date: todayISO, todayISO, pattern },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    }, { todayISO });
+    setStep({
+      kind: 'result',
+      ok: result.ok,
+      message: pattern === 'repeated'
+        ? 'Noted. Hard work is reduced this week while useful safe training stays in.'
+        : 'Noted. Today trims hard extras first and keeps the useful work where safe.',
+    });
+  };
+
   const applyRoughSick = () => {
     const result = executeProgramControlAction({
       type: 'set_recovery_mode',
@@ -615,6 +636,11 @@ export function PlanChangeSheet({
             onPress={() => setStep({ kind: 'pick_tired' })}
           />
           <MenuOption
+            label="I slept poorly"
+            sub="One bad night or a repeated pattern"
+            onPress={() => setStep({ kind: 'pick_sleep' })}
+          />
+          <MenuOption
             label="I'm sick"
             sub="From light sniffle to bed-ridden"
             onPress={() => setStep({ kind: 'pick_sick' })}
@@ -646,6 +672,23 @@ export function PlanChangeSheet({
             label="Absolutely cooked"
             sub="Today drops to recovery level"
             onPress={() => applyTired('cooked')}
+          />
+          <BackRow onPress={() => setStep({ kind: 'pick_wellbeing' })} />
+        </View>
+      )}
+
+      {step.kind === 'pick_sleep' && (
+        <View>
+          <Text style={styles.sectionLabel}>How long has sleep been poor?</Text>
+          <MenuOption
+            label="Just last night"
+            sub="A small adjustment for today"
+            onPress={() => applyPoorSleep('single_night')}
+          />
+          <MenuOption
+            label="A few nights in a row"
+            sub="Reduce hard load for this week"
+            onPress={() => applyPoorSleep('repeated')}
           />
           <BackRow onPress={() => setStep({ kind: 'pick_wellbeing' })} />
         </View>

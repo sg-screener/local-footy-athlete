@@ -391,13 +391,20 @@ function deterministicReadinessBody(
   }
 
   const title = modifierString(c as ActiveConstraint, 'modifierTitle') ?? c.reasonLabel ?? '';
+  const poorSleepPattern = c.type === 'fatigue' && c.readinessKind === 'poor_sleep'
+    ? c.readinessPattern
+    : undefined;
   const isFlat = c.type === 'fatigue' && (c.severity <= 3 || /flat|feeling flat/i.test(title));
   const isCooked = c.type === 'fatigue' && (c.severity >= 7 || /cooked|load reduced/i.test(title));
-  const lead = isCooked
-    ? "You said you're cooked."
-    : isFlat
-      ? "You said you're flat today."
-      : 'Readiness adjustment active.';
+  const lead = poorSleepPattern === 'repeated'
+    ? 'Repeated poor sleep adjustment active.'
+    : poorSleepPattern === 'single_night'
+      ? 'Poor sleep adjustment active today.'
+      : isCooked
+        ? "You said you're cooked."
+        : isFlat
+          ? "You said you're flat today."
+          : 'Readiness adjustment active.';
   return sentence([lead, effectSentence(parts)]);
 }
 

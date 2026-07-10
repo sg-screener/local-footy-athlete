@@ -42,6 +42,11 @@ import {
   assessTapSwapCandidateSafety,
   resolveTapSwapEnvironment,
 } from './tapSwapHierarchy';
+import {
+  buildPoorSleepReadinessConstraint,
+  isPoorSleepConstraint,
+  type PoorSleepPattern,
+} from './readinessConstraints';
 
 export type ProgramControlActionType =
   | 'swap_session'
@@ -54,6 +59,7 @@ export type ProgramControlActionType =
   | 'set_recovery_mode'
   | 'clear_recovery_mode'
   | 'set_fatigue_status'
+  | 'set_poor_sleep_status'
   | 'clear_fatigue_status'
   | 'set_injury_modifier'
   | 'clear_injury_modifier'
@@ -152,6 +158,11 @@ export type ProgramControlAction =
       date: string;
       todayISO?: string;
       level: 'spark' | 'cooked' | 'low_energy' | 'not_right' | 'sore' | 'worse';
+    }>
+  | ProgramControlActionBase<'set_poor_sleep_status', {
+      date: string;
+      todayISO?: string;
+      pattern: PoorSleepPattern;
     }>
   | ProgramControlActionBase<'clear_fatigue_status', { noteId?: string; modifierId?: string; date?: string }>
   | ProgramControlActionBase<'set_injury_modifier', { constraint?: ActiveInjuryConstraint }>
@@ -651,6 +662,25 @@ export function executeProgramControlAction(
         ok: true,
         changedProgram: true,
         requiresRebuild: false,
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'set_poor_sleep_status': {
+      const store = useCoachUpdatesStore.getState();
+      for (const constraint of store.activeConstraints.filter(isPoorSleepConstraint)) {
+        store.removeActiveConstraint(constraint.id);
+      }
+      const constraint = buildPoorSleepReadinessConstraint({
+        date: action.payload.date,
+        pattern: action.payload.pattern,
+      });
+      store.upsertActiveConstraint(constraint);
+      return {
+        ok: true,
+        changedProgram: true,
+        requiresRebuild: false,
+        createdModifierIds: [constraint.id],
         fallbackToCoach: false,
         route: route.route,
       };

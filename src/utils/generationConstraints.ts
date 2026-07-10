@@ -215,7 +215,15 @@ function readinessFromConstraint(
   const severity = clampSeverity(c.severity);
   const text = `${c.reasonLabel ?? ''} ${(c.rules ?? []).join(' ')} ${(c.safeFocus ?? []).join(' ')}`.toLowerCase();
   const bedridden = /\b(bedridden|severe symptoms|can't get out of bed|cannot get out of bed)\b/.test(text);
-  const tier = readinessTierFor(severity, text, bedridden);
+  const fatigue = constraint.type === 'fatigue' ? constraint as ActiveFatigueConstraint : null;
+  const poorSleepPattern = fatigue?.readinessKind === 'poor_sleep'
+    ? fatigue.readinessPattern
+    : undefined;
+  const tier = poorSleepPattern === 'single_night'
+    ? 'slight_reduction'
+    : poorSleepPattern === 'repeated'
+      ? 'moderate_reduction'
+      : readinessTierFor(severity, text, bedridden);
   return {
     id: c.id,
     sourceType: constraint.type,

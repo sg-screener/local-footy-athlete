@@ -183,6 +183,10 @@ export interface ActiveFatigueConstraint extends ActiveConstraintModifierMetadat
   reasonLabel?: string;
   /** Optional origin for derived/non-chat constraints. */
   source?: 'coach' | 'readiness' | 'tap';
+  /** Typed readiness reason for deterministic non-chat flows. */
+  readinessKind?: 'poor_sleep';
+  /** One poor night is day-scoped; repeated poor sleep is week-scoped. */
+  readinessPattern?: 'single_night' | 'repeated';
   /** Optional single-day scope. If present, projection only applies on this date. */
   appliesToDate?: string;
   rules: string[];

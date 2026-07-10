@@ -37,6 +37,7 @@ import {
   loadReductionModifierIdForDate,
   recoveryModeModifierIdForDate,
 } from '../../utils/tapProgramModifiers';
+import { poorSleepConstraintId } from '../../utils/readinessConstraints';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import {
   WEEK_DAYS,
@@ -184,6 +185,7 @@ export default function HomeScreenV2() {
     const ids = [
       recoveryModeModifierIdForDate(weekAnchorISO),
       loadReductionModifierIdForDate(weekAnchorISO),
+      poorSleepConstraintId(weekAnchorISO, 'repeated'),
     ];
     const match = readinessActiveConstraints.find((c: any) => {
       if (!ids.includes(c.id)) return false;
@@ -196,6 +198,17 @@ export default function HomeScreenV2() {
         isRecovery: match.id === ids[0],
         title: String(match.modifierTitle ?? match.reasonLabel ?? 'Readiness adjusted'),
         scope: 'week' as const,
+      };
+    }
+    const todayPoorSleepId = poorSleepConstraintId(todayISO, 'single_night');
+    const todayPoorSleep = readinessActiveConstraints.find((c: any) =>
+      c.id === todayPoorSleepId && !(c.expiresAt && c.expiresAt < todayISO));
+    if (isThisWeek && todayPoorSleep) {
+      return {
+        id: todayPoorSleep.id as string,
+        isRecovery: false,
+        title: String(todayPoorSleep.modifierTitle ?? 'Poor sleep adjustment active'),
+        scope: 'today' as const,
       };
     }
     if (!isThisWeek || !todayReadinessModifier) return null;
@@ -1686,6 +1699,16 @@ function WeekReadinessSheet({
             label="Just a bit tired today"
             icon={pulseIcon('#FFC247')}
             onPress={() => onApply('tired_today')}
+          />
+          <SheetOption
+            label="Poor sleep last night"
+            icon={pulseIcon('#FFC247')}
+            onPress={() => onApply('poor_sleep_today')}
+          />
+          <SheetOption
+            label="Poor sleep for a few nights"
+            icon={pulseIcon('#FF7A85')}
+            onPress={() => onApply('poor_sleep_week')}
           />
           <SheetOption
             label="Cooked / need an easier week"

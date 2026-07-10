@@ -57,6 +57,7 @@ import {
   loadReductionModifierIdForDate,
   recoveryModeModifierIdForDate,
 } from '../../utils/tapProgramModifiers';
+import { poorSleepConstraintId } from '../../utils/readinessConstraints';
 import {
   WEEK_DAYS,
   DAY_NUM_TO_NAME,
@@ -72,6 +73,8 @@ type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown
 type HomeQuickStatusAction = 'busy_week_reduce';
 export type WeekReadinessAction =
   | 'tired_today'
+  | 'poor_sleep_today'
+  | 'poor_sleep_week'
   | 'cooked_week'
   | 'sore_today'
   | 'sick_week';
@@ -1043,6 +1046,8 @@ export function useHomeScreen() {
     const weekReadinessIds = new Set([
       loadReductionModifierIdForDate(anchorDateISO),
       recoveryModeModifierIdForDate(anchorDateISO),
+      poorSleepConstraintId(todayISO, 'single_night'),
+      poorSleepConstraintId(anchorDateISO, 'repeated'),
     ]);
     const existingWellbeing = getActiveProgramModifiers(todayISO).filter((modifier) =>
       modifier.source === 'readiness_signal' || weekReadinessIds.has(modifier.sourceId));
@@ -1070,7 +1075,21 @@ export function useHomeScreen() {
           createsActiveModifier: true,
           oneOffOnly: false,
         }, { todayISO })
-      : executeProgramControlAction({
+      : kind === 'poor_sleep_today' || kind === 'poor_sleep_week'
+        ? executeProgramControlAction({
+            type: 'set_poor_sleep_status',
+            source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+            scope: kind === 'poor_sleep_week' ? 'current_week' : 'today_only',
+            payload: {
+              date: kind === 'poor_sleep_week' ? anchorDateISO : todayISO,
+              todayISO,
+              pattern: kind === 'poor_sleep_week' ? 'repeated' : 'single_night',
+            },
+            requiresRebuild: false,
+            createsActiveModifier: true,
+            oneOffOnly: false,
+          }, { todayISO })
+        : executeProgramControlAction({
           type: 'set_fatigue_status',
           source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
           scope: kind === 'cooked_week' ? 'current_week' : 'today_only',
