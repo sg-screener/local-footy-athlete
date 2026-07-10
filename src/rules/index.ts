@@ -14,6 +14,8 @@ export * from './injurySeverityBands';
 export * from './phaseRepSchemes';
 export * from './weekStructureValidator';
 export * from './recoveryAddonCoverage';
+export * from './offseasonSubphase';
+export * from './offseasonSubphasePolicy';
 export * from './sprintExposureGate';
 
 // Role bias mapper already lives in utils/roleBuckets (5 user-facing roles
