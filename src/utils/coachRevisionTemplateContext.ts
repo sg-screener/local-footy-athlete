@@ -49,17 +49,28 @@ function liveStoreProvider(): CoachRevisionTemplateContext {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { useCalendarStore } = require('../store/calendarStore');
     // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { resolveEquipmentAvailability } = require('./equipmentAvailability');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { todayISOLocal } = require('./appDate');
 
     const onboardingData = useProfileStore.getState().onboardingData;
     const markedDays = useCalendarStore.getState().markedDays ?? {};
+    const activeConstraints =
+      useCoachUpdatesStore.getState().activeConstraints ?? [];
+    const todayISO = todayISOLocal();
 
     const trainingLocation =
       onboardingData?.trainingLocation || 'Commercial gym';
     const athlete: AthleteContext = onboardingData
       ? {
           injuries: onboardingData.injuries || [],
-          equipmentTags: resolveEquipmentAvailability(onboardingData),
+          equipmentTags: resolveEquipmentAvailability(
+            onboardingData,
+            activeConstraints,
+            todayISO,
+          ),
           trainingLocation,
           onboardingData,
         }

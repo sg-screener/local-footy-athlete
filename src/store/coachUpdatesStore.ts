@@ -30,6 +30,7 @@ import type {
   InjuryHistoryEntry,
   InjuryStatus,
 } from '../utils/injuryProgression';
+import type { EquipmentTag } from '../data/exercisePools';
 
 export type CoachUpdateSource = 'coach' | 'uae';
 
@@ -111,6 +112,7 @@ export type ActiveConstraintType =
   | 'fatigue'
   | 'soreness'
   | 'schedule'
+  | 'equipment'
   | 'missed_session'
   | 'preference';
 
@@ -239,6 +241,25 @@ export interface ActiveScheduleConstraint extends ActiveConstraintModifierMetada
   advice: string[];
 }
 
+export interface ActiveEquipmentConstraint extends ActiveConstraintModifierMetadata {
+  id: string;
+  type: 'equipment';
+  /** only = use only these tags plus bodyweight; without = subtract these tags. */
+  mode: 'only' | 'without';
+  tags: EquipmentTag[];
+  severity: number;
+  status: InjuryStatus;
+  startDate: string;
+  lastUpdatedAt: string;
+  source: 'tap' | 'chat' | 'system';
+  reasonLabel?: string;
+  /** Program surfaces this equipment modifier is changing. Required to avoid hidden effects. */
+  modifierAffects: ActiveConstraintModifierAffect[];
+  rules: string[];
+  safeFocus: string[];
+  advice: string[];
+}
+
 /**
  * Missed-session constraint — informational. Surfaces a Coach Update
  * card so the athlete sees the missed day was acknowledged. Does not
@@ -288,6 +309,7 @@ export type ActiveConstraint =
   | ActiveFatigueConstraint
   | ActiveSorenessConstraint
   | ActiveScheduleConstraint
+  | ActiveEquipmentConstraint
   | ActiveMissedSessionConstraint
   | ActivePreferenceConstraint;
 
@@ -296,7 +318,20 @@ const INJURY_MODIFIER_AFFECTS: ActiveConstraintModifierAffect[] = [
   'future_generation',
 ];
 
+const EQUIPMENT_MODIFIER_AFFECTS: ActiveConstraintModifierAffect[] = [
+  'current_week',
+  'future_generation',
+];
+
 function withDefaultModifierMetadata(c: ActiveConstraint): ActiveConstraint {
+  if (c.type === 'equipment') {
+    return {
+      ...c,
+      modifierAffects: Array.isArray(c.modifierAffects) && c.modifierAffects.length > 0
+        ? [...c.modifierAffects]
+        : [...EQUIPMENT_MODIFIER_AFFECTS],
+    };
+  }
   if (c.type !== 'injury') return c;
   return {
     ...c,

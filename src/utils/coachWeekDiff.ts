@@ -117,12 +117,23 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
   const calendarState = useCalendarStore.getState();
   const profileState = useProfileStore.getState();
   const onboardingData = profileState.onboardingData;
+  const todayISO = getTodayISOLocal();
+
+  // Injury / constraint state — read lazily via require to avoid circular imports.
+  // The same active constraint array also carries equipment limits.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
+  const coachUpdatesState = useCoachUpdatesStore.getState();
 
   // AthleteContext (matches useAthleteContext)
   const athleteContext = onboardingData
     ? {
         injuries: onboardingData.injuries || [],
-        equipmentTags: resolveEquipmentAvailability(onboardingData),
+        equipmentTags: resolveEquipmentAvailability(
+          onboardingData,
+          coachUpdatesState.activeConstraints ?? [],
+          todayISO,
+        ),
         trainingLocation: onboardingData.trainingLocation || 'Commercial gym',
         onboardingData,
       }
@@ -131,7 +142,6 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
   const seasonPhase = onboardingData?.seasonPhase || null;
   const usualGameDay = onboardingData?.usualGameDay;
   const gameDay = onboardingData?.gameDay;
-  const todayISO = getTodayISOLocal();
   const todayReadinessSignal =
     useReadinessStore.getState().signalsByDate[todayISO];
   const readiness = deriveProfileReadiness(onboardingData);
@@ -144,13 +154,6 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
           .filter((n: number | undefined) => n !== undefined)
       : undefined;
 
-  // Injury state — read lazily via require to avoid a circular import
-  // with the engine module that defines InjuryBucket. The resolver only
-  // reads four fields (bodyPart/bucket/severity/status) so the loose
-  // typing on the ScheduleState side is safe.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
-  const coachUpdatesState = useCoachUpdatesStore.getState();
   const activeInjury = coachUpdatesState.activeInjury ?? null;
   const readinessActiveConstraints = buildReadinessActiveConstraints(
     todayReadinessSignal,

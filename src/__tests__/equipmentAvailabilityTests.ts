@@ -4,14 +4,24 @@
  * Run: npx sucrase-node src/__tests__/equipmentAvailabilityTests.ts
  */
 
+(global as any).window = {
+  localStorage: {
+    getItem: () => null,
+    setItem: () => undefined,
+    removeItem: () => undefined,
+  },
+};
+
 import type { OnboardingData } from '../types/domain';
 import {
   EQUIPMENT_CHECKLIST_OPTION_TAGS,
   FULL_GYM_EQUIPMENT,
+  buildActiveEquipmentConstraint,
   equipmentTagsToSubstituteEquipmentClasses,
   resolveEquipmentAvailability,
 } from '../utils/equipmentAvailability';
 import { buildProgramGenerationRequestDiagnostics } from '../services/api/generateProgram';
+import { useCoachUpdatesStore, type ActiveEquipmentConstraint } from '../store/coachUpdatesStore';
 
 let pass = 0;
 let fail = 0;
@@ -157,6 +167,168 @@ section('4. Generation diagnostics serialize resolved equipment');
     JSON.stringify(diagnostics).includes('resolvedEquipmentTags'),
     'generation diagnostics payload serializes resolvedEquipmentTags',
   );
+}
+
+section('5. Equipment constraints apply to availability');
+{
+  const profile: OnboardingData = {
+    trainingLocation: 'Commercial gym',
+    equipment: ['Full Gym'],
+  };
+  const onlyDb: ActiveEquipmentConstraint = buildActiveEquipmentConstraint({
+    id: 'equipment-db-only',
+    mode: 'only',
+    tags: ['dumbbells'],
+    source: 'chat',
+    nowISO: '2026-04-22T09:00:00.000Z',
+    scope: 'this_week',
+    modifierAffects: ['current_week'],
+  });
+  const resolvedOnly = resolveEquipmentAvailability(profile, [onlyDb], '2026-04-23');
+  assert(
+    sameSet(resolvedOnly, ['bodyweight', 'dumbbells']),
+    `mode=only restricts to bodyweight + selected tags (got ${resolvedOnly.join(', ')})`,
+  );
+  assert(
+    onlyDb.expiresAt === '2026-04-26',
+    `this-week equipment constraint expires Sunday (got ${onlyDb.expiresAt})`,
+  );
+
+  const withoutBarbellMachines = buildActiveEquipmentConstraint({
+    id: 'equipment-no-barbell-machines',
+    mode: 'without',
+    tags: ['barbell', 'machine', 'bodyweight'],
+    source: 'tap',
+    nowISO: '2026-04-22T09:00:00.000Z',
+    scope: 'open_ended',
+  });
+  const resolvedWithout = resolveEquipmentAvailability(profile, [withoutBarbellMachines], '2026-05-20');
+  assert(resolvedWithout.includes('bodyweight'), 'bodyweight remains available even if a without constraint names it');
+  assert(!resolvedWithout.includes('barbell'), 'mode=without subtracts unavailable barbell');
+  assert(!resolvedWithout.includes('machine'), 'mode=without subtracts unavailable machine');
+  assert(resolvedWithout.includes('dumbbells'), 'mode=without keeps unrelated baseline equipment');
+}
+
+section('6. Equipment constraint expiry lifecycle');
+{
+  const profile: OnboardingData = {
+    trainingLocation: 'Commercial gym',
+    equipment: ['Full Gym'],
+  };
+  const weekOnly = buildActiveEquipmentConstraint({
+    id: 'equipment-week-only',
+    mode: 'only',
+    tags: ['dumbbells'],
+    source: 'chat',
+    nowISO: '2026-04-22T09:00:00.000Z',
+    scope: 'this_week',
+  });
+  assert(
+    resolveEquipmentAvailability(profile, [weekOnly], '2026-04-26').includes('dumbbells') &&
+      !resolveEquipmentAvailability(profile, [weekOnly], '2026-04-26').includes('barbell'),
+    'this-week constraint applies through week end',
+  );
+  const afterWeek = resolveEquipmentAvailability(profile, [weekOnly], '2026-04-27');
+  assert(afterWeek.includes('barbell'), 'expired this-week constraint no longer affects next week');
+
+  const awayRange = buildActiveEquipmentConstraint({
+    id: 'equipment-away-range',
+    mode: 'only',
+    tags: ['bodyweight', 'bands'],
+    source: 'system',
+    nowISO: '2026-05-01T09:00:00.000Z',
+    scope: 'date_range',
+    rangeEndDate: '2026-05-10',
+  });
+  assert(awayRange.expiresAt === '2026-05-10', `away-range expires at range end (got ${awayRange.expiresAt})`);
+  assert(!resolveEquipmentAvailability(profile, [awayRange], '2026-05-10').includes('barbell'),
+    'away-range applies on range end date');
+  assert(resolveEquipmentAvailability(profile, [awayRange], '2026-05-11').includes('barbell'),
+    'away-range no longer affects after range end');
+
+  const openEnded = buildActiveEquipmentConstraint({
+    id: 'equipment-open-ended',
+    mode: 'without',
+    tags: ['barbell'],
+    source: 'chat',
+    nowISO: '2026-04-22T09:00:00.000Z',
+    scope: 'open_ended',
+  });
+  assert(openEnded.expiresAt === undefined, 'open-ended equipment constraint has no auto expiry');
+  assert(!resolveEquipmentAvailability(profile, [openEnded], '2026-10-01').includes('barbell'),
+    'open-ended equipment constraint persists until cleared');
+
+  const futureStart = buildActiveEquipmentConstraint({
+    id: 'equipment-future-start',
+    mode: 'only',
+    tags: ['bands'],
+    source: 'system',
+    startDate: '2026-06-01',
+    nowISO: '2026-05-20T09:00:00.000Z',
+    scope: 'open_ended',
+  });
+  assert(resolveEquipmentAvailability(profile, [futureStart], '2026-05-31').includes('barbell'),
+    'future-start equipment constraint does not affect dates before startDate');
+  assert(!resolveEquipmentAvailability(profile, [futureStart], '2026-06-01').includes('barbell'),
+    'future-start equipment constraint applies on startDate');
+}
+
+section('7. Store lifecycle and modifier metadata');
+{
+  const profile: OnboardingData = {
+    trainingLocation: 'Commercial gym',
+    equipment: ['Full Gym'],
+  };
+  useCoachUpdatesStore.getState().setActiveConstraints([]);
+  const constraint = buildActiveEquipmentConstraint({
+    id: 'equipment-store-db-only',
+    mode: 'only',
+    tags: ['dumbbells'],
+    source: 'chat',
+    nowISO: '2026-04-22T09:00:00.000Z',
+    scope: 'this_week',
+    modifierAffects: ['current_week'],
+  });
+  useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
+  const stored = useCoachUpdatesStore.getState().activeConstraints[0];
+  assert(stored?.type === 'equipment', 'equipment constraint type is accepted by store');
+  assert(
+    sameSet((stored as ActiveEquipmentConstraint).modifierAffects, ['current_week']),
+    'store preserves provided equipment modifierAffects',
+  );
+  const constrained = resolveEquipmentAvailability(
+    profile,
+    useCoachUpdatesStore.getState().activeConstraints,
+    '2026-04-23',
+  );
+  assert(!constrained.includes('barbell'), 'stored equipment constraint affects resolver');
+  useCoachUpdatesStore.getState().removeActiveConstraint('equipment-store-db-only');
+  const restored = resolveEquipmentAvailability(
+    profile,
+    useCoachUpdatesStore.getState().activeConstraints,
+    '2026-04-23',
+  );
+  assert(restored.includes('barbell'), 'clearing equipment constraint restores baseline availability');
+
+  const missingAffects = {
+    ...buildActiveEquipmentConstraint({
+      id: 'equipment-default-affects',
+      mode: 'without',
+      tags: ['barbell'],
+      source: 'system',
+      nowISO: '2026-04-22T09:00:00.000Z',
+      scope: 'open_ended',
+    }),
+    modifierAffects: undefined,
+  } as any;
+  useCoachUpdatesStore.getState().upsertActiveConstraint(missingAffects);
+  const defaulted = useCoachUpdatesStore.getState().activeConstraints
+    .find((c) => c.id === 'equipment-default-affects') as ActiveEquipmentConstraint | undefined;
+  assert(
+    sameSet(defaulted?.modifierAffects ?? [], ['current_week', 'future_generation']),
+    'store defaults missing equipment modifierAffects to visible current/future metadata',
+  );
+  useCoachUpdatesStore.getState().setActiveConstraints([]);
 }
 
 console.log(`\n[equipmentAvailability] ${pass} passed, ${fail} failed`);

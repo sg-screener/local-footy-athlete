@@ -50,6 +50,10 @@ import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
  */
 function useAthleteContext(): AthleteContext {
   const onboardingData = useProfileStore((s) => s.onboardingData);
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
+  const activeConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
+  const todayISO = todayISOLocal();
 
   if (!onboardingData) return DEFAULT_ATHLETE_CONTEXT;
 
@@ -57,7 +61,7 @@ function useAthleteContext(): AthleteContext {
 
   return {
     injuries: onboardingData.injuries || [],
-    equipmentTags: resolveEquipmentAvailability(onboardingData),
+    equipmentTags: resolveEquipmentAvailability(onboardingData, activeConstraints, todayISO),
     trainingLocation,
     onboardingData,
   };

@@ -102,11 +102,10 @@ function dateFromOption(todayISO?: string): Date {
   return todayISO ? new Date(`${todayISO}T12:00:00`) : new Date();
 }
 
-function resolveGenerationConstraints(
+function collectActiveConstraintsForGeneration(
   options: GenerateProgramFromProfileOptions,
   todayISO: string,
-): GenerationConstraintContext | undefined {
-  if (options.generationConstraints) return options.generationConstraints;
+): ActiveConstraint[] {
   const storedConstraints = options.activeConstraints ??
     (useCoachUpdatesStore.getState().activeConstraints ?? []);
   const readinessSignal = options.readinessSignal !== undefined
@@ -116,8 +115,17 @@ function resolveGenerationConstraints(
   const byId = new Map<string, ActiveConstraint>();
   for (const constraint of storedConstraints) byId.set(constraint.id, constraint);
   for (const constraint of readinessConstraints) byId.set(constraint.id, constraint);
+  return Array.from(byId.values());
+}
+
+function resolveGenerationConstraints(
+  options: GenerateProgramFromProfileOptions,
+  todayISO: string,
+): GenerationConstraintContext | undefined {
+  if (options.generationConstraints) return options.generationConstraints;
+  const activeConstraints = collectActiveConstraintsForGeneration(options, todayISO);
   return buildGenerationConstraintContext({
-    activeConstraints: Array.from(byId.values()),
+    activeConstraints,
     todayISO,
   });
 }
@@ -218,6 +226,7 @@ export function generateProgramLocally(
   options: GenerateProgramFromProfileOptions = {},
 ): TrainingProgram {
   const availabilityDateISO = options.todayISO ?? todayISOLocal();
+  const activeConstraintsForGeneration = collectActiveConstraintsForGeneration(options, availabilityDateISO);
   const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
   const generationProfile = applyGenerationConstraintsToProfile(
     normalizeOnboardingRole(onboardingData),
@@ -225,7 +234,7 @@ export function generateProgramLocally(
   );
   const resolvedEquipmentTags = resolveEquipmentAvailability(
     generationProfile,
-    options.activeConstraints ?? null,
+    activeConstraintsForGeneration,
     availabilityDateISO,
   );
   const coachingInputs = onboardingToCoachingInputs(generationProfile, {
@@ -629,6 +638,7 @@ export async function generateProgramFromProfile(
   const env = getClientEnvConfig();
   const devBuild = isDevBuild();
   const availabilityDateISO = options.todayISO ?? todayISOLocal();
+  const activeConstraintsForGeneration = collectActiveConstraintsForGeneration(options, availabilityDateISO);
   const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
   const generationProfile = applyGenerationConstraintsToProfile(
     normalizeOnboardingRole(onboardingData),
@@ -636,7 +646,7 @@ export async function generateProgramFromProfile(
   );
   const resolvedEquipmentTags = resolveEquipmentAvailability(
     generationProfile,
-    options.activeConstraints ?? null,
+    activeConstraintsForGeneration,
     availabilityDateISO,
   );
   if (!env.isReady) {

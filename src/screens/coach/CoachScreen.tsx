@@ -1965,7 +1965,11 @@ export default function CoachScreen() {
               sessionDurationMinutes: onboardingData.sessionDurationMinutes,
               trainingLocation: onboardingData.trainingLocation,
               equipment: onboardingData.equipment,
-              resolvedEquipmentTags: resolveEquipmentAvailability(onboardingData),
+              resolvedEquipmentTags: resolveEquipmentAvailability(
+                onboardingData,
+                useCoachUpdatesStore.getState().activeConstraints ?? [],
+                todayISOLocal(),
+              ),
               experienceLevel: onboardingData.experienceLevel,
               squatStrength: onboardingData.squatStrength,
               benchStrength: onboardingData.benchStrength,

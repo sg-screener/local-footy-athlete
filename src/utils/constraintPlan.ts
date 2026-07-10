@@ -344,6 +344,9 @@ function activeIssueLabel(c: ActiveConstraint): string {
   if (c.type === 'preference') {
     return c.label || 'Training preference';
   }
+  if (c.type === 'equipment') {
+    return c.reasonLabel || 'Equipment availability';
+  }
   // missed_session
   const label = c.sessionName ? c.sessionName : 'session';
   return `Missed ${label}`;

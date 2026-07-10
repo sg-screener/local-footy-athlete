@@ -54,10 +54,14 @@ function useScheduleState(): ScheduleState {
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
   const markedDays = useCalendarStore((s) => s.markedDays);
   const onboardingData = useProfileStore((s) => s.onboardingData);
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useCoachUpdatesStore } = require('../../store/coachUpdatesStore');
+  const activeConstraints =
+    useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
 
   const trainingLocation = onboardingData?.trainingLocation || 'Commercial gym';
   const athleteContext = onboardingData
-    ? { injuries: onboardingData.injuries || [], equipmentTags: resolveEquipmentAvailability(onboardingData), trainingLocation }
+    ? { injuries: onboardingData.injuries || [], equipmentTags: resolveEquipmentAvailability(onboardingData, activeConstraints), trainingLocation }
     : DEFAULT_ATHLETE_CONTEXT;
 
   const seasonPhase = onboardingData?.seasonPhase || null;

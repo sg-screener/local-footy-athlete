@@ -162,7 +162,7 @@ function useHarnessScheduleState(): any {
   const athleteContext = onboardingData
     ? {
         injuries: onboardingData.injuries || [],
-        equipmentTags: resolveEquipmentAvailability(onboardingData),
+        equipmentTags: resolveEquipmentAvailability(onboardingData, activeConstraints),
         trainingLocation,
         onboardingData,
       }
