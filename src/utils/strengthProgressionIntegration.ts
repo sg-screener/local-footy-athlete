@@ -105,6 +105,28 @@ function strengthCompletion(feedback: SessionFeedback): FeedbackCompletion {
   return strengthComponent?.completion ?? feedback.completion;
 }
 
+/**
+ * Is this feedback for a session that actually contained gym strength work?
+ *
+ * Used to keep strength progression / miss detection from counting team
+ * training or conditioning-only sessions as gym strength (Bible: "team
+ * training completion does not imply gym strength completion").
+ *
+ * Rules:
+ *   • has an explicit 'strength' component → yes
+ *   • carries a strength performance snapshot → yes
+ *   • has components but NONE is strength (e.g. team / conditioning only) → no
+ *   • legacy feedback with no components → yes (backward compatible)
+ */
+function isStrengthSessionFeedback(feedback: SessionFeedback): boolean {
+  if ((feedback.strength?.length ?? 0) > 0) return true;
+  const components = feedback.components;
+  if (components && components.length > 0) {
+    return components.some((component) => component.kind === 'strength');
+  }
+  return true; // no component breakdown → treat as strength (legacy behaviour)
+}
+
 function completedSetCount(completion: FeedbackCompletion, prescribedSets: number): number {
   const targetSets = Math.max(0, Math.floor(prescribedSets || 0));
   if (completion === 'skipped') return 0;
@@ -121,8 +143,15 @@ function feedbackStrengthSets(
 
   const sets: LoggedSet[] = [];
   for (const lift of feedback.strength ?? []) {
-    const setCount = completedSetCount(completion, lift.prescribedSets);
-    const reps = Math.max(1, lift.prescribedRepsMax || lift.prescribedRepsMin || 1);
+    // Prefer REAL logged data (actual completed-set count / reps) when the
+    // snapshot carries it; otherwise fall back to the prescribed-derived
+    // approximation from the feedback completion.
+    const setCount = typeof lift.completedSets === 'number'
+      ? Math.max(0, Math.floor(lift.completedSets))
+      : completedSetCount(completion, lift.prescribedSets);
+    const reps = typeof lift.actualReps === 'number' && lift.actualReps > 0
+      ? lift.actualReps
+      : Math.max(1, lift.prescribedRepsMax || lift.prescribedRepsMin || 1);
     for (let setNumber = 1; setNumber <= setCount; setNumber++) {
       sets.push({
         id: `${loggedWorkoutId}-${lift.exerciseId}-${setNumber}`,
@@ -148,6 +177,7 @@ export function deriveMissedStrengthSessionsThisWeek(
   return Object.values(feedbackMap).filter((feedback) => (
     feedback.dateStr >= weekStart &&
     feedback.dateStr < beforeDate &&
+    isStrengthSessionFeedback(feedback) &&
     strengthCompletion(feedback) === 'skipped'
   )).length;
 }
@@ -158,6 +188,7 @@ export function buildStrengthWorkoutHistoryFromFeedback(
 ): LoggedWorkout[] {
   return Object.values(feedbackMap)
     .filter((feedback) => feedback.dateStr < beforeDate)
+    .filter((feedback) => isStrengthSessionFeedback(feedback))
     .filter((feedback) => (feedback.strength?.length ?? 0) > 0 || strengthCompletion(feedback) === 'skipped')
     .sort((a, b) => b.dateStr.localeCompare(a.dateStr))
     .map((feedback): LoggedWorkout => {

@@ -1,4 +1,4 @@
-import type { Workout, WorkoutExercise } from '../types/domain';
+import type { LoggedSet, Workout, WorkoutExercise } from '../types/domain';
 import { getExerciseTags, type MovementPattern } from '../data/exerciseTags';
 
 export type StrengthLogCompletion = 'full' | 'partial' | 'skipped';
@@ -12,6 +12,16 @@ export interface StrengthExercisePerformanceLog {
   prescribedRepsMax: number;
   weightKg?: number | null;
   completion: StrengthLogCompletion;
+  /**
+   * ACTUAL performance captured from the workout log (real logged sets),
+   * when available. Progression prefers these over the prescribed snapshot;
+   * both are omitted when the athlete didn't log per-set detail, in which case
+   * progression falls back to the prescribed values above.
+   */
+  /** Number of sets actually logged/completed for this lift. */
+  completedSets?: number;
+  /** Representative reps actually achieved (conservative — see builder). */
+  actualReps?: number;
 }
 
 const MAIN_STRENGTH_MOVEMENTS = new Set<MovementPattern>([
@@ -52,10 +62,39 @@ function resolvedWeightKg(
   return undefined;
 }
 
+/**
+ * Summarise the real logged sets for one lift into (completedSets, actualReps,
+ * topWeightKg). `actualReps` is the MINIMUM reps across logged working sets —
+ * a conservative "what they actually held" so one strong set never drives
+ * over-progression. Returns null when no usable per-set detail was logged.
+ */
+function summariseLoggedSets(
+  loggedSets: LoggedSet[] | undefined,
+): { completedSets: number; actualReps?: number; topWeightKg?: number } | null {
+  if (!loggedSets || loggedSets.length === 0) return null;
+  const repsValues = loggedSets
+    .map((s) => (typeof s.actualReps === 'number' ? s.actualReps : undefined))
+    .filter((r): r is number => typeof r === 'number' && r > 0);
+  const weightValues = loggedSets
+    .map((s) => (typeof s.actualWeightKg === 'number' ? s.actualWeightKg : undefined))
+    .filter((weight): weight is number => typeof weight === 'number' && weight > 0);
+  return {
+    completedSets: loggedSets.length,
+    actualReps: repsValues.length > 0 ? Math.min(...repsValues) : undefined,
+    topWeightKg: weightValues.length > 0 ? Math.max(...weightValues) : undefined,
+  };
+}
+
 export function buildStrengthPerformanceLogs(
   workout: Workout | null | undefined,
   weightOverrides: Record<string, number | null> | undefined,
   completion: StrengthLogCompletion,
+  /**
+   * Optional real logged sets keyed by workoutExerciseId (from the workout log
+   * store). When present, actual completed-set count / reps / top load are
+   * captured so progression can prefer them over the prescribed snapshot.
+   */
+  loggedSetsByWorkoutExerciseId?: Record<string, LoggedSet[]>,
 ): StrengthExercisePerformanceLog[] {
   if (!workout || (workout.workoutType !== 'Strength' && workout.workoutType !== 'Mixed')) {
     return [];
@@ -63,14 +102,21 @@ export function buildStrengthPerformanceLogs(
 
   return (workout.exercises ?? [])
     .filter((exercise, index) => isMainStrengthExercise(exercise, index))
-    .map((exercise) => ({
-      exerciseId: exercise.exerciseId,
-      workoutExerciseId: exercise.id,
-      exerciseName: exercise.exercise?.name ?? exercise.exerciseId,
-      prescribedSets: Number(exercise.prescribedSets) || 0,
-      prescribedRepsMin: Number(exercise.prescribedRepsMin) || 0,
-      prescribedRepsMax: Number(exercise.prescribedRepsMax) || 0,
-      weightKg: resolvedWeightKg(exercise, weightOverrides),
-      completion,
-    }));
+    .map((exercise) => {
+      const logged = summariseLoggedSets(loggedSetsByWorkoutExerciseId?.[exercise.id]);
+      const prescribedWeight = resolvedWeightKg(exercise, weightOverrides);
+      return {
+        exerciseId: exercise.exerciseId,
+        workoutExerciseId: exercise.id,
+        exerciseName: exercise.exercise?.name ?? exercise.exerciseId,
+        prescribedSets: Number(exercise.prescribedSets) || 0,
+        prescribedRepsMin: Number(exercise.prescribedRepsMin) || 0,
+        prescribedRepsMax: Number(exercise.prescribedRepsMax) || 0,
+        // Prefer the real top logged load; fall back to the prescribed snapshot.
+        weightKg: logged?.topWeightKg ?? prescribedWeight,
+        completion,
+        ...(logged ? { completedSets: logged.completedSets } : {}),
+        ...(logged?.actualReps !== undefined ? { actualReps: logged.actualReps } : {}),
+      };
+    });
 }
