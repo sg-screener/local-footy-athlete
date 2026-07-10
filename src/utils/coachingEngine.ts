@@ -30,9 +30,18 @@ import type {
   SpeedWorkKind,
   WeekKind,
   ExperienceLevel,
+  IntensityLevel,
+  RecoveryAddonBlock,
+  Workout,
+  WorkoutType,
 } from '../types/domain';
 import { logger } from './logger';
 import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
+import {
+  classifyVisibleSession,
+  type VisibleSessionClassification,
+} from '../rules/sessionClassificationAdapter';
+import type { StressContext } from '../rules/stressClassification';
 import { logAllocationWeekValidation } from '../rules/weekStructureValidator';
 import { evaluateSprintExposureGate } from '../rules/sprintExposureGate';
 import {
@@ -197,14 +206,108 @@ export interface SessionAllocation {
 
   /**
    * B1 (2026-07-08): stress classification of this allocation, recorded at
-   * placement time by the scorer. Mirrors the Phase 1 rules kernel
-   * semantics (src/rules/stressClassification): upper strength = medium;
-   * lower / full-body / hard conditioning / sprint = high; accessories,
-   * recovery and easy aerobic = low/medium. Consumed by the consecutive
-   * high-stress guards (H1 / H-PRE-5). Team days are high anchors
-   * regardless of this field.
+   * placement time by the scorer and projected again after generation.
+   * Mirrors the rules kernel semantics in stressClassification. Consumed by
+   * the consecutive high-stress guards (H1 / H-PRE-5).
    */
   stressLevel?: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Structural generation-side view accepted by the shared visible-session
+ * classifier. `strengthPattern` is the typed source of truth when present;
+ * focus text is only used for non-strength/support session shapes.
+ */
+export interface GenerationSessionClassificationInput {
+  focus: string;
+  tier: SessionTier;
+  isTeamDay?: boolean;
+  strengthPattern?: SessionAllocation['strengthPattern'];
+  hasCombinedConditioning?: boolean;
+  attachedConditioningKind?: AttachedConditioningKind;
+  conditioningFlavour?: SessionAllocation['conditioningFlavour'];
+  conditioningCategory?: SessionAllocation['conditioningCategory'];
+  speedBlock?: SpeedBlock;
+  recoveryAddons?: RecoveryAddonBlock[];
+  workoutType?: WorkoutType;
+  intensity?: IntensityLevel;
+}
+
+function canonicalStrengthClassificationName(
+  pattern: SessionAllocation['strengthPattern'],
+): string | null {
+  switch (pattern) {
+    case 'lower':
+    case 'lower_combined':
+      return 'Lower Body Strength';
+    case 'push':
+    case 'pull':
+    case 'upper_combined':
+      return 'Upper Body Strength';
+    case 'full_body':
+      return 'Full Body Strength';
+    default:
+      return null;
+  }
+}
+
+/**
+ * Project a generation allocation/candidate through the canonical rules
+ * adapter without depending on its pre-existing stressLevel flag.
+ */
+export function classifyGenerationSession(
+  input: GenerationSessionClassificationInput,
+  context: StressContext = {},
+): VisibleSessionClassification {
+  const canonicalStrengthName = canonicalStrengthClassificationName(input.strengthPattern);
+  const name = canonicalStrengthName ?? input.focus;
+  const hardConditioning =
+    input.conditioningCategory === 'vo2' ||
+    input.conditioningCategory === 'glycolytic' ||
+    input.conditioningCategory === 'sprint';
+  const hasStandaloneConditioning =
+    !input.strengthPattern &&
+    (!!input.conditioningCategory || !!input.conditioningFlavour);
+  const workoutType = input.workoutType ?? (
+    input.isTeamDay
+      ? 'Team Training'
+      : input.tier === 'recovery'
+        ? 'Recovery'
+        : input.hasCombinedConditioning
+          ? 'Mixed'
+          : hasStandaloneConditioning
+            ? 'Conditioning'
+            : 'Strength'
+  );
+  const intensity = input.intensity ?? (
+    input.speedBlock || hardConditioning
+      ? 'High'
+      : input.tier === 'recovery' || input.tier === 'optional'
+        ? 'Light'
+        : 'Moderate'
+  );
+  const workout: Workout & { isTeamDay?: boolean } = {
+    id: 'generation-classification',
+    microcycleId: 'generation-classification',
+    dayOfWeek: 1,
+    name,
+    description: name,
+    durationMinutes: 45,
+    intensity,
+    workoutType,
+    sessionTier: input.tier,
+    hasCombinedConditioning: input.hasCombinedConditioning,
+    attachedConditioningKind: input.attachedConditioningKind,
+    conditioningFlavour: input.conditioningFlavour,
+    conditioningCategory: input.conditioningCategory,
+    speedBlock: input.speedBlock,
+    recoveryAddons: input.recoveryAddons,
+    exercises: [],
+    createdAt: '',
+    updatedAt: '',
+  };
+  if (input.isTeamDay) workout.isTeamDay = true;
+  return classifyVisibleSession(workout, context);
 }
 
 export interface CoachingPlan {
@@ -752,6 +855,21 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     }
   }
 
+  // Final generation projection: post-validation passes may have changed a
+  // focus, component, speed block, or team-day label after initial placement.
+  // Reclassify the returned session shape once so stressLevel cannot drift
+  // from the shared kernel. This is metadata-only; scheduling flags and the
+  // generated week structure remain owned by the existing engine passes.
+  const finalClassificationContext: StressContext = {
+    experienceLevel: inputs.experienceLevel,
+    conditioningLevel: inputs.conditioningLevel,
+    teamTrainingIntensity: inputs.teamTrainingIntensity,
+  };
+  for (const session of weeklyPlan) {
+    const stress = classifyGenerationSession(session, finalClassificationContext).stressLevel;
+    if (stress) session.stressLevel = stress;
+  }
+
   const generatedWeekContext = resolveWeekContext({
     seasonPhase: inputs.seasonPhase,
     hasFixture: inputs.hasGame,
@@ -884,6 +1002,11 @@ function buildWeeklyPlan(
   readiness: ReadinessLevel = 'medium',
 ): SessionAllocation[] {
   const plan: SessionAllocation[] = [];
+  const classificationContext: StressContext = {
+    experienceLevel: inputs.experienceLevel,
+    conditioningLevel: inputs.conditioningLevel,
+    teamTrainingIntensity: inputs.teamTrainingIntensity,
+  };
   const trainingAgePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
   const days = [...inputs.selectedDays];
   const gameDayNum = inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null;
@@ -2162,7 +2285,8 @@ function buildWeeklyPlan(
 
     // ── B2 (2026-07-08): stress-aware streak state update ──
     // st.consecutiveCoreCalendarDays / st.prevSlotWasCore now track
-    // consecutive HIGH-STRESS calendar days (team days always high),
+    // consecutive HIGH-STRESS calendar days (team-day stress comes from the
+    // shared classifier and its configured training intensity),
     // not "any core strength day". Medium/low days (upper strength,
     // easy aerobic, accessories, recovery) RESET the run — they are the
     // relative-recovery days that make the surrounding high days safe.
@@ -2239,8 +2363,16 @@ function buildWeeklyPlan(
           if (d >= 0) highDows.add(d);
         }
       }
-      // Team days are high anchors whether or not they're placed yet.
-      for (const d of teamDayNumSet) highDows.add(d);
+      // Include future team anchors using the configured training intensity;
+      // Light skills/touch sessions are MEDIUM in the shared kernel.
+      const teamAnchorStress = classifyGenerationSession({
+        focus: 'Team Training',
+        tier: 'core',
+        isTeamDay: true,
+      }, classificationContext).stressLevel;
+      if (teamAnchorStress === 'high') {
+        for (const d of teamDayNumSet) highDows.add(d);
+      }
       if (isGameWeek && gameDayNum !== null) highDows.add(gameDayNum);
       return highDows.size;
     }
@@ -2536,27 +2668,66 @@ function buildWeeklyPlan(
       return 'upper';
     }
 
-    // ── B1 (2026-07-08): candidate stress table ──
-    // Mirrors the Phase 1 rules kernel (src/rules/stressClassification):
-    // upper strength is MEDIUM stress — it does not deserve the same
-    // protection as lower/full-body/hard-conditioning/sprint. Team
-    // training days and games are HIGH anchors, handled at slot level.
-    function candidateStress(c: CandidateType, pos: number): 'high' | 'medium' | 'low' {
-      if (c === 'U-pu' || c === 'U-pl' || c === 'U-co') return 'medium';
-      if (c === 'L-sq' || c === 'L-hi' || c === 'L-co' || c === 'FB') return 'high';
-      if (c === 'S+C') {
-        const scType = pickSCStrengthType(pos);
-        if (isLower(scType)) return 'high'; // lower or FB strength half
-        const cat = pickCondCategory(pos);
-        // aerobic_base AND tempo are medium (4B) — only vo2/glycolytic/
-        // sprint conditioning halves push the day to high stress.
-        return cat === 'aerobic_base' || cat === 'tempo' ? 'medium' : 'high';
-      }
-      if (c === 'COND') {
-        const cat = pickCondCategory(pos);
-        return cat === 'aerobic_base' || cat === 'tempo' ? 'medium' : 'high';
-      }
-      return 'low'; // ACC / REC
+    // ── Shared candidate classification ───────────────────────────────
+    // Candidate selection stays local to the scorer; category, stress,
+    // hard-day contribution and strength region come from the same adapter
+    // used by visible workouts. Moderate full-body therefore stays MEDIUM,
+    // upper stays MEDIUM, and Light team training does not become HIGH.
+    function candidateClassification(
+      c: CandidateType,
+      pos: number,
+      onTeamDay = false,
+    ): VisibleSessionClassification {
+      const strengthCandidate = c === 'S+C'
+        ? pickSCStrengthType(pos)
+        : STRENGTH_CANDIDATES.includes(c) ? c : undefined;
+      const category = c === 'COND' || c === 'S+C'
+        ? pickCondCategory(pos)
+        : undefined;
+      const flavour = category ? categoryToFlavour(category) : undefined;
+      const attachedKind = c === 'S+C' && strengthCandidate && category
+        ? attachedKindFor(category, strengthContextOf(strengthCandidate))
+        : undefined;
+      const focus = c === 'S+C' && strengthCandidate
+        ? buildFocus(strengthCandidate)
+        : buildFocus(c, flavour, category);
+
+      return classifyGenerationSession({
+        focus,
+        tier: c === 'REC' ? 'recovery' : c === 'ACC' ? 'optional' : 'core',
+        isTeamDay: onTeamDay,
+        strengthPattern: strengthCandidate
+          ? buildStrengthPattern(strengthCandidate)
+          : undefined,
+        hasCombinedConditioning: c === 'S+C',
+        attachedConditioningKind: attachedKind,
+        conditioningFlavour: flavour,
+        conditioningCategory: category,
+      }, classificationContext);
+    }
+
+    function candidateStress(
+      c: CandidateType,
+      pos: number,
+      onTeamDay = false,
+    ): 'high' | 'medium' | 'low' {
+      return candidateClassification(c, pos, onTeamDay).stressLevel ?? 'low';
+    }
+
+    function candidateStrengthRegion(
+      c: CandidateType,
+      pos: number,
+    ): 'upper' | 'lower' | null {
+      const strengthCandidate = c === 'S+C'
+        ? pickSCStrengthType(pos)
+        : STRENGTH_CANDIDATES.includes(c) ? c : undefined;
+      if (!strengthCandidate) return null;
+      const region = classifyGenerationSession({
+        focus: buildFocus(strengthCandidate),
+        tier: 'core',
+        strengthPattern: buildStrengthPattern(strengthCandidate),
+      }, classificationContext).strengthRegion;
+      return region === 'upper' || region === 'lower' ? region : null;
     }
 
     // ── Hard constraint check ──
@@ -2648,9 +2819,9 @@ function buildWeeklyPlan(
       // H1 (stress-aware, B2 2026-07-08): no 3+ consecutive HIGH-STRESS
       // calendar days. Upper strength is medium stress and no longer
       // extends or is blocked by the streak — TT + Wed upper + TT is a
-      // legal, Bible-approved shape. Lower / full-body / hard conditioning
-      // remain protected exactly as before.
-      if (candidateStress(c, pos) === 'high') {
+      // legal, Bible-approved shape. Lower and hard conditioning remain
+      // protected; moderate full-body follows the shared kernel as MEDIUM.
+      if (candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high') {
         const runIfPlaced = isConsecutiveDay && st.prevSlotWasCore
           ? st.consecutiveCoreCalendarDays + 1
           : 1;
@@ -2683,7 +2854,7 @@ function buildWeeklyPlan(
           if (c === 'L-hi' || c === 'L-co') return true;
           if ((c === 'COND' || c === 'S+C') && pickCondCategory(pos) !== 'aerobic_base') return true;
           if (c === 'S+C' && isLower(pickSCStrengthType(pos))) return true;
-          if (isPreSeason && candidateStress(c, pos) === 'high') {
+          if (isPreSeason && candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high') {
             const controlledFbException = c === 'FB' && core <= 2;
             if (!controlledFbException) return true;
           }
@@ -2693,7 +2864,7 @@ function buildWeeklyPlan(
       // H-PRE-5 is stress-aware (B2): only HIGH-stress candidates extend or
       // are blocked by the consecutive run; placed sessions count via their
       // recorded stressLevel (legacy fallback: core tier).
-      if (isPreSeason && candidateStress(c, pos) === 'high') {
+      if (isPreSeason && candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high') {
         let streak = 1; // the candidate day itself
         // Walk backward
         for (let back = 1; back < 7; back++) {
@@ -2911,19 +3082,7 @@ function buildWeeklyPlan(
       // If region rules gated on `c` alone, S+C with scStrength='U-pu'
       // would bypass Upper penalties and land Upper on days that region
       // sequencing meant to protect for Lower.
-      const effectiveRegion: 'upper' | 'lower' | null =
-        (c === 'U-pu' || c === 'U-pl' || c === 'U-co')
-          ? 'upper'
-          : (c === 'L-sq' || c === 'L-hi' || c === 'L-co')
-            ? 'lower'
-            : c === 'S+C'
-              ? (() => {
-                  const sc = pickSCStrengthType(pos);
-                  if (sc === 'U-pu' || sc === 'U-pl' || sc === 'U-co') return 'upper';
-                  if (sc === 'L-sq' || sc === 'L-hi' || sc === 'L-co') return 'lower';
-                  return null;
-                })()
-              : null;
+      const effectiveRegion = candidateStrengthRegion(c, pos);
 
       // ── Pattern exposure need ──
       // Each pattern (sq, hi, pu, pl) gets an equal share of core budget.
@@ -3646,9 +3805,7 @@ function buildWeeklyPlan(
       pos: number,
       isConsecutiveDay: boolean,
     ): void {
-      // B1: upper strength is MEDIUM stress; lower / FB are HIGH.
-      const strengthStress: 'high' | 'medium' = slot.isTeamDay || isLower(candidate)
-        ? 'high' : 'medium';
+      const strengthStress = candidateStress(candidate, pos, slot.isTeamDay);
       plan.push({
         tier: 'core',
         focus: buildFocus(candidate),
@@ -3779,7 +3936,7 @@ function buildWeeklyPlan(
             if (st.coreStrengthCount + 1 > core) continue;
           }
           // H1: 3+ consecutive HIGH-stress days (stress-aware, B2)
-          if (candidateStress(candidate, pos2) === 'high') {
+          if (candidateStress(candidate, pos2, slot.isTeamDay) === 'high') {
             const run = isConsec && st.prevSlotWasCore
               ? st.consecutiveCoreCalendarDays + 1 : 1;
             if (run >= 3) continue;
@@ -3794,7 +3951,7 @@ function buildWeeklyPlan(
               if (candidate === 'L-hi' || candidate === 'L-co') continue;
               if ((candidate === 'COND' || candidate === 'S+C') && pickCondCategory(pos2) !== 'aerobic_base') continue;
               if (candidate === 'S+C' && isLower(pickSCStrengthType(pos2))) continue;
-              if (isPreSeason && candidateStress(candidate, pos2) === 'high' &&
+              if (isPreSeason && candidateStress(candidate, pos2, slot.isTeamDay) === 'high' &&
                   !(candidate === 'FB' && core <= 2)) continue;
             }
           }
@@ -3809,7 +3966,7 @@ function buildWeeklyPlan(
             // Check H6 and H1 for S+C
             if (st.coreStrengthCount + 1 > core) continue;
             // H1 stress-aware (B2): only high-stress S+C extends the run.
-            if (candidateStress('S+C', pos2) === 'high') {
+            if (candidateStress('S+C', pos2, slot.isTeamDay) === 'high') {
               const run = isConsec && st.prevSlotWasCore
                 ? st.consecutiveCoreCalendarDays + 1 : 1;
               if (run >= 3) continue;
@@ -3890,14 +4047,16 @@ function buildWeeklyPlan(
           const useNonRunning = lowerStrengthSC || conditioningProps.conditioningOffFeet === true;
           const attachedKind = decision.attachedKind;
           const condLabel = buildCondLabel(flavour, category, useNonRunning, attachedKind);
-          // B1/B2: stress from the PLACED components (not the pickers, which
-          // are stateful): lower/FB strength half or HARD conditioning half
-          // → high; upper + easy aerobic / tempo (4B: medium) → medium.
-          // Team day → high.
-          const scStress: 'high' | 'medium' = slot.isTeamDay ||
-            isLower(bestSCStrength) ||
-            (category !== 'aerobic_base' && category !== 'tempo')
-            ? 'high' : 'medium';
+          const scStress = classifyGenerationSession({
+            focus: strengthFocus,
+            tier: 'core',
+            isTeamDay: slot.isTeamDay,
+            strengthPattern: buildStrengthPattern(bestSCStrength),
+            hasCombinedConditioning: true,
+            attachedConditioningKind: attachedKind,
+            conditioningFlavour: flavour,
+            conditioningCategory: category,
+          }, classificationContext).stressLevel ?? 'low';
 
           plan.push({
             tier: 'core',
@@ -3967,12 +4126,6 @@ function buildWeeklyPlan(
         const condTier = isRestSlot || offseasonPolicy?.subphase === 'early_offseason'
           ? 'optional'
           : 'core';
-        // B1/B2: hard conditioning is HIGH stress; easy aerobic AND tempo
-        // (4B: medium by definition) are medium; optional-tier (rest-slot)
-        // conditioning is a light dose.
-        const condStress: 'high' | 'medium' = slot.isTeamDay ||
-          (condTier === 'core' && category !== 'aerobic_base' && category !== 'tempo')
-          ? 'high' : 'medium';
         // 4B standalone tempo modality: off-feet first unless the week
         // genuinely supports quality running tempo (pre-season only).
         const tempoOffFeet = category === 'tempo' &&
@@ -3982,6 +4135,13 @@ function buildWeeklyPlan(
               ? ' — off-feet (bike/row/ski)'
               : ' — running-based OK this week')
           : buildFocus('COND', flavour, category);
+        const condStress = classifyGenerationSession({
+          focus: condFocus,
+          tier: condTier as SessionTier,
+          isTeamDay: slot.isTeamDay,
+          conditioningFlavour: flavour,
+          conditioningCategory: category,
+        }, classificationContext).stressLevel ?? 'low';
         plan.push({
           tier: condTier as SessionTier,
           focus: condFocus,
@@ -4007,28 +4167,29 @@ function buildWeeklyPlan(
         placeStrengthCandidate(bestCandidate, slot, pos, isConsecutiveDay);
 
       } else if (bestCandidate === 'ACC') {
+        const accessoryStress = candidateStress('ACC', pos, slot.isTeamDay);
         plan.push({
           tier: 'optional',
           focus: buildFocus('ACC'),
           dayOfWeek: slot.dayName,
           isHardExposure: false,
-          stressLevel: slot.isTeamDay ? 'high' : 'low',
+          stressLevel: accessoryStress,
         });
         st.optCount++;
-        // B2: a bare/light team day is still a HIGH-stress anchor.
-        updateStressStreak(slot.isTeamDay ? 'high' : 'low', isConsecutiveDay);
+        updateStressStreak(accessoryStress, isConsecutiveDay);
 
       } else {
         // REC or fallback
+        const recoveryStress = candidateStress('REC', pos, slot.isTeamDay);
         plan.push({
           tier: 'recovery',
           focus: buildFocus('REC'),
           dayOfWeek: slot.dayName,
           isHardExposure: false,
-          stressLevel: slot.isTeamDay ? 'high' : 'low',
+          stressLevel: recoveryStress,
         });
         st.recCount++;
-        updateStressStreak(slot.isTeamDay ? 'high' : 'low', isConsecutiveDay);
+        updateStressStreak(recoveryStress, isConsecutiveDay);
       }
 
       // ── Update structure queue: remove placed strength type ──
@@ -4220,8 +4381,17 @@ function buildWeeklyPlan(
               ? ' — off-feet (bike/row/ski)'
               : ' — running-based OK this week')
           : buildFocus('COND', flavour, category);
+        const promoTier: SessionTier = offseasonPolicy?.subphase === 'early_offseason'
+          ? 'optional'
+          : 'core';
+        const promoStress = classifyGenerationSession({
+          focus: promoFocus,
+          tier: promoTier,
+          conditioningFlavour: flavour,
+          conditioningCategory: category,
+        }, classificationContext).stressLevel ?? 'low';
         plan[i] = {
-          tier: offseasonPolicy?.subphase === 'early_offseason' ? 'optional' : 'core',
+          tier: promoTier,
           focus: promoFocus,
           dayOfWeek: plan[i].dayOfWeek,
           isHardExposure: flavour === 'high-intensity',
@@ -4229,9 +4399,7 @@ function buildWeeklyPlan(
           conditioningCategory: category,
           ...easyConditioningProps(category),
           ...(category === 'tempo' ? { conditioningOffFeet: promoTempoOffFeet } : {}),
-          // tempo is MEDIUM stress (4B); only vo2/glyco/sprint are high.
-          stressLevel: category !== 'aerobic_base' && category !== 'tempo'
-            ? 'high' : 'medium',
+          stressLevel: promoStress,
         };
         st.condCount += 1.0;
         st.condFlavours[flavour]++;
@@ -5421,16 +5589,15 @@ function getSessionRegion(session: SessionAllocation): SessionRegion {
   // Recovery tier is always neutral — it's restorative, not loading
   if (session.tier === 'recovery') return 'neutral';
 
-  // Standalone full body or conditioning → neutral (doesn't cluster either region)
-  // Use startsWith to avoid catching combined S+C days where "conditioning" appears
-  // in the appended finisher text (e.g. "Hip-dominant lower... + tempo conditioning finisher")
-  if (focus.startsWith('full body') || focus.startsWith('conditioning')) return 'neutral';
+  // Main strength region comes from the shared classifier. Full-body remains
+  // neutral for this particular adjacency policy: it deliberately does not
+  // cluster either single region.
+  const sharedRegion = classifyGenerationSession(session).strengthRegion;
+  if (sharedRegion === 'lower' || sharedRegion === 'upper') return sharedRegion;
+  if (sharedRegion === 'full_body') return 'neutral';
 
-  // Explicit lower body patterns — check BEFORE upper since "lower" is unambiguous
-  if (focus.includes('lower body') || focus.includes('hip-dominant lower') || focus.includes('squat') || focus.includes('hinge') || focus.includes('leg')) return 'lower';
-
-  // Explicit upper body patterns — push, pull, arms, etc.
-  if (focus.includes('upper body') || focus.includes('pull') || focus.includes('push')) return 'upper';
+  // Accessory-only region is a separate fatigue-placement policy. It is not
+  // main-strength credit, so retain the existing low-fatigue distinctions.
   if (focus.includes('arm') || focus.includes('pump') || focus.includes('bicep') || focus.includes('tricep')) return 'upper';
 
   // Low-fatigue accessories that span both regions (trunk, calves, groin,

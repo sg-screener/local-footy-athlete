@@ -20,6 +20,7 @@
     "test:pools": "sucrase-node src/__tests__/exercisePoolsStrengthTests.ts",
     "test:rules-kernel": "sucrase-node src/__tests__/rulesKernelTests.ts",
     "test:session-classification": "sucrase-node src/__tests__/sessionClassificationAdapterTests.ts",
+    "test:generation-classification": "sucrase-node src/__tests__/generationClassificationAdapterTests.ts",
     "test:week-validator": "sucrase-node src/__tests__/weekStructureValidatorTests.ts",
     "test:stress-placement": "sucrase-node src/__tests__/stressAwarePlacementTests.ts",
     "test:game-local-rebuild": "sucrase-node src/__tests__/gameChangeLocalRebuildTests.ts",
