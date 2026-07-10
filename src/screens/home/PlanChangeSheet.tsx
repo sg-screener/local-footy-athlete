@@ -3,6 +3,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/common/Text';
 import { Button, Sheet } from '../../components/ui';
 import { useProgramStore } from '../../store';
+import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
+import { useProfileStore } from '../../store/profileStore';
 import { todayISOLocal } from '../../utils/appDate';
 import type { ResolvedDay } from '../../utils/sessionResolver';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
@@ -13,7 +15,7 @@ import {
 import {
   applyPlanChange,
   listPlanChangeOptionsForDay,
-  planChangeWarningForCategory,
+  previewPlanChangeRisk,
   type PlanChange,
   type PlanChangeBinScopeId,
   type PlanChangeCategoryId,
@@ -21,6 +23,7 @@ import {
 } from '../../utils/planChangeProducer';
 import { executeProgramControlAction } from '../../utils/programControlActions';
 import type { TapRecoveryModifierScope } from '../../utils/tapProgramModifiers';
+import type { ProgramEditRiskFinding } from '../../utils/programEditRiskAssessment';
 
 /**
  * PlanChangeSheet — the tap-first change door (ATHLETE_CHANGE_VOCABULARY.md
@@ -55,10 +58,17 @@ type Step =
   | { kind: 'pick_strength'; mode: 'swap' | 'add'; returnTo: StepBackTarget }
   | {
       kind: 'confirm_warning';
-      mode: 'swap' | 'add';
-      category: PlanChangeCategoryId;
-      message: string;
-      returnTo: StepBackTarget;
+      change: PlanChange;
+      title: string;
+      reasons: string[];
+      closeOnSuccess?: boolean;
+      backStep: Step;
+    }
+  | {
+      kind: 'block_warning';
+      title: string;
+      reasons: string[];
+      backStep: Step;
     }
   | { kind: 'pick_destination' }
   | { kind: 'pick_bin_scope' }
@@ -82,11 +92,55 @@ function weekdayLabel(dateISO: string): string {
   return day.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' });
 }
 
+function riskReason(finding: ProgramEditRiskFinding): string {
+  const observed = typeof finding.data?.observed === 'number' ? finding.data.observed : null;
+  switch (finding.ruleId) {
+    case 'cap_maxHardDays_over':
+      return observed
+        ? `This gives you ${observed} hard days this week. That's the upper edge.`
+        : 'This pushes your hard days above the clean weekly target.';
+    case 'cap_maxMainStrengthSessions_over':
+      return observed
+        ? `This gives you ${observed} main strength sessions this week. That's more than the normal cap.`
+        : 'This pushes main strength above the normal weekly cap.';
+    case 'cap_maxRunningExposures_over':
+      return 'This adds more running than the weekly cap.';
+    case 'cap_sprintCodExposures_over':
+      return 'This adds more sprint/COD than the week needs.';
+    case 'g1_hard_work':
+    case 'g1_not_light':
+      return 'This puts hard work one day before your game. Not recommended.';
+    case 'g2_hard_lower':
+    case 'g2_hard_conditioning':
+    case 'g2_sprint_cod':
+      return 'This puts hard work too close to game day.';
+    case 'g_plus1_hard_work':
+      return 'This adds hard work the day after your game, when recovery should win.';
+    case 'game_day_hard_work':
+      return "This puts hard training on game day, so it can't be applied.";
+    case 'protected_anchor_edit_blocked':
+    case 'protected_game_anchor_removed':
+    case 'protected_team_training_anchor_removed':
+      return "This would remove a protected team/game anchor, so it can't be applied.";
+    case 'active_injury_hard_stop':
+      return "There's an active medical/injury hard stop, so normal training edits are paused.";
+    default:
+      return finding.message;
+  }
+}
+
+function riskReasons(findings: ProgramEditRiskFinding[]): string[] {
+  const reasons = findings.map(riskReason);
+  return Array.from(new Set(reasons)).slice(0, 3);
+}
+
 export function PlanChangeSheet({
   visible, date, weekDays, onClose, onAskCoach,
 }: PlanChangeSheetProps) {
   const [step, setStep] = useState<Step>({ kind: 'menu' });
   const [injuryFlowVisible, setInjuryFlowVisible] = useState(false);
+  const onboardingData = useProfileStore((state) => state.onboardingData);
+  const activeConstraints = useCoachUpdatesStore((state) => state.activeConstraints);
 
   // Fresh menu every time the sheet opens for a (new) day.
   useEffect(() => {
@@ -134,11 +188,36 @@ export function PlanChangeSheet({
     selectedWorkoutName === 'recovery';
   const hasEditableSession = !!options?.hasSession && !isRestOrRecoveryDay;
 
+  const commitPlanChange = (
+    change: PlanChange,
+    opts?: {
+      closeOnSuccess?: boolean;
+    },
+  ) => {
+    const result = applyPlanChange({
+      change,
+      visibleWeek: weekDays,
+      todayISO,
+      setManualOverride: (overrideDate, workout, context) =>
+        useProgramStore.getState().setManualOverride(overrideDate, workout, context),
+    });
+    if (result.ok && opts?.closeOnSuccess) {
+      // Destructive flows (bin) skip the result screen: the change is
+      // already confirmed, so close straight back to the weekly plan.
+      // The host's onClose handles any needed navigation (e.g. the
+      // session screen goBacks when its workout no longer exists).
+      onClose();
+      return;
+    }
+    setStep({ kind: 'result', ok: result.ok, message: result.message });
+  };
+
   const apply = (
     change: PlanChange,
     opts?: {
       closeOnSuccess?: boolean;
       recoveryModifierScope?: TapRecoveryModifierScope;
+      backStep?: Step;
     },
   ) => {
     if (opts?.recoveryModifierScope && 'date' in change) {
@@ -172,29 +251,73 @@ export function PlanChangeSheet({
       return;
     }
 
-    const result = applyPlanChange({
+    const preview = previewPlanChangeRisk({
       change,
       visibleWeek: weekDays,
       todayISO,
-      setManualOverride: (overrideDate, workout, context) =>
-        useProgramStore.getState().setManualOverride(overrideDate, workout, context),
+      profile: onboardingData,
+      activeConstraints,
     });
-    if (result.ok && opts?.closeOnSuccess) {
-      // Destructive flows (bin) skip the result screen: the change is
-      // already confirmed, so close straight back to the weekly plan.
-      // The host's onClose handles any needed navigation (e.g. the
-      // session screen goBacks when its workout no longer exists).
-      onClose();
+    if (!preview.ok) {
+      setStep({ kind: 'result', ok: false, message: preview.message });
       return;
     }
-    setStep({ kind: 'result', ok: result.ok, message: result.message });
+    const backStep = opts?.backStep ?? { kind: 'edit_session' };
+    if (preview.assessment.decision === 'block') {
+      setStep({
+        kind: 'block_warning',
+        title: "Can't apply this edit",
+        reasons: riskReasons(preview.assessment.findings),
+        backStep,
+      });
+      return;
+    }
+    if (preview.assessment.decision === 'confirm') {
+      setStep({
+        kind: 'confirm_warning',
+        change,
+        title: 'Check this first',
+        reasons: riskReasons(preview.assessment.findings),
+        closeOnSuccess: opts?.closeOnSuccess,
+        backStep,
+      });
+      return;
+    }
+    commitPlanChange(change, opts);
   };
 
-  const applyCategory = (mode: 'swap' | 'add', category: PlanChangeCategoryId) =>
+  const pickerBackStep = (
+    mode: 'swap' | 'add',
+    returnTo: StepBackTarget,
+  ): Step =>
+    mode === 'add'
+      ? { kind: 'pick_add_kind', returnTo }
+      : { kind: 'pick_category', mode, returnTo };
+
+  const categoryBackStep = (
+    mode: 'swap' | 'add',
+    category: PlanChangeCategoryId,
+    returnTo: StepBackTarget,
+  ): Step => {
+    if (category.startsWith('conditioning_')) {
+      return { kind: 'pick_conditioning', mode, returnTo };
+    }
+    if (category.startsWith('strength_') || category === 'accessories') {
+      return { kind: 'pick_strength', mode, returnTo };
+    }
+    return pickerBackStep(mode, returnTo);
+  };
+
+  const applyCategory = (
+    mode: 'swap' | 'add',
+    category: PlanChangeCategoryId,
+    returnTo: StepBackTarget,
+  ) =>
     apply(
       mode === 'swap'
         ? { kind: 'swap_category', date, category }
         : { kind: 'add_category', date, category },
+      { backStep: categoryBackStep(mode, category, returnTo) },
     );
 
   const startAdd = (returnTo: StepBackTarget) => {
@@ -218,32 +341,14 @@ export function PlanChangeSheet({
     });
   };
 
-  const pickerBackStep = (
-    mode: 'swap' | 'add',
-    returnTo: StepBackTarget,
-  ): Step =>
-    mode === 'add'
-      ? { kind: 'pick_add_kind', returnTo }
-      : { kind: 'pick_category', mode, returnTo };
-
-  // Athlete override principle: nothing is blocked, but the coach gets a
-  // word in first. If the producer flags this pick (hard session on a game
-  // week / already a heavy week), route through a warning step.
+  // Athlete override principle: safe edits commit, risky edits route
+  // through the shared pre-commit risk assessor.
   const chooseCategory = (
     mode: 'swap' | 'add',
     category: PlanChangeCategoryId,
     returnTo: StepBackTarget,
   ) => {
-    const warning = planChangeWarningForCategory({
-      category,
-      date,
-      visibleWeek: weekDays,
-    });
-    if (warning) {
-      setStep({ kind: 'confirm_warning', mode, category, message: warning.message, returnTo });
-      return;
-    }
-    applyCategory(mode, category);
+    applyCategory(mode, category, returnTo);
   };
 
   // Bin entry point: multi-session days pick WHICH part first; single-part
@@ -690,18 +795,34 @@ export function PlanChangeSheet({
         </View>
       )}
 
-      {/* Advisory warning — the athlete can always proceed; the coach just
-          gets a word in first (game-week freshness / burnout volume). */}
+      {/* Pre-commit risk warning. Confirm-level findings can continue;
+          hard stops cannot be overridden from this tap flow. */}
       {step.kind === 'confirm_warning' && (
         <View>
-          <Text style={styles.confirmText}>{step.message}</Text>
+          <Text style={styles.blockingTitle}>{step.title}</Text>
+          {step.reasons.map((reason) => (
+            <Text key={reason} style={styles.confirmText}>{reason}</Text>
+          ))}
           <MenuOption
-            label="Add it anyway - I'm good"
-            onPress={() => applyCategory(step.mode, step.category)}
+            label="Continue"
+            onPress={() => commitPlanChange(step.change, { closeOnSuccess: step.closeOnSuccess })}
           />
-          <BackRow
-            onPress={() =>
-              setStep({ kind: 'pick_conditioning', mode: step.mode, returnTo: step.returnTo })}
+          <MenuOption
+            label="Cancel"
+            onPress={() => setStep(step.backStep)}
+          />
+        </View>
+      )}
+
+      {step.kind === 'block_warning' && (
+        <View>
+          <Text style={styles.blockingTitle}>{step.title}</Text>
+          {step.reasons.map((reason) => (
+            <Text key={reason} style={styles.confirmText}>{reason}</Text>
+          ))}
+          <MenuOption
+            label="OK"
+            onPress={() => setStep(step.backStep)}
           />
         </View>
       )}

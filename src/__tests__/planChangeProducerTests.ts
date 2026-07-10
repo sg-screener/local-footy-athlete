@@ -26,6 +26,7 @@ import {
   listPlanChangeOptionsForDay,
   pickTemplateForCategory,
   planChangeWarningForCategory,
+  previewPlanChangeRisk,
   type PlanChange,
 } from '../utils/planChangeProducer';
 
@@ -187,6 +188,18 @@ function gameWeek(): ResolvedDay[] {
     visibleDay('2026-07-07', strengthWorkout('workout-tue2', 'Upper Pull', 2)),
     visibleDay('2026-07-08', null),
     visibleDay('2026-07-09', null),
+    visibleDay('2026-07-10', null),
+    visibleDay(NEXT_SAT, gameWorkout(6)),
+    visibleDay('2026-07-12', null),
+  ];
+}
+
+function fourHardGameWeek(): ResolvedDay[] {
+  return [
+    visibleDay('2026-07-06', strengthWorkout('workout-mon-risk', 'Lower Body Strength', 1)),
+    visibleDay('2026-07-07', teamStrengthWorkout('workout-tt-risk-1', 'Team Training', 2)),
+    visibleDay('2026-07-08', null),
+    visibleDay('2026-07-09', teamStrengthWorkout('workout-tt-risk-2', 'Team Training', 4)),
     visibleDay('2026-07-10', null),
     visibleDay(NEXT_SAT, gameWorkout(6)),
     visibleDay('2026-07-12', null),
@@ -541,6 +554,16 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     /onAskCoach\(`About \$\{weekdayLabel\(date\)\}: `\)/.test(sheet.slice(askCoachIdx, wellbeingIdx))
       && /label="I'm not 100%"[\s\S]{0,140}setStep\(\{ kind: 'pick_wellbeing' \}\)/.test(menuBlock)
       && /label="Something else - ask the coach"[\s\S]{0,120}onPress=\{askCoach\}/.test(menuBlock));
+  ok('[9] PlanChangeSheet previews risk before committing tap edits',
+    /previewPlanChangeRisk\(\{[\s\S]*change,[\s\S]*visibleWeek: weekDays[\s\S]*activeConstraints/.test(sheet)
+      && sheet.indexOf('previewPlanChangeRisk') < sheet.indexOf('commitPlanChange(change'));
+  ok('[9] PlanChangeSheet no longer imports legacy category-only warnings',
+    !/planChangeWarningForCategory/.test(sheet));
+  ok('[9] confirm warnings continue through the commit helper',
+    /step\.kind === 'confirm_warning'[\s\S]*label="Continue"[\s\S]*commitPlanChange\(step\.change/.test(sheet));
+  ok('[9] block warnings offer no override path',
+    /step\.kind === 'block_warning'[\s\S]*label="OK"[\s\S]*setStep\(step\.backStep\)/.test(sheet)
+      && !/block_warning[\s\S]*commitPlanChange/.test(sheet.slice(sheet.indexOf("step.kind === 'block_warning'"), sheet.indexOf("step.kind === 'pick_destination'"))));
 }
 
 {
@@ -1226,6 +1249,102 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[17] clear_days skips anchors and clears normal sessions',
     clearResult.ok && clearWrites.map((write) => write.date).join(',') === sourceDate,
     { clearResult, clearWrites });
+}
+
+{
+  console.log('\n[18] pre-commit risk preview for tap edits');
+
+  const safeWeek = byeWeek();
+  const safePreview = previewPlanChangeRisk({
+    change: { kind: 'swap_category', date: THU, category: 'conditioning_light' },
+    visibleWeek: safeWeek,
+    todayISO: TODAY,
+  });
+  ok('[18] safe tap edit previews as allow',
+    safePreview.ok && safePreview.assessment.decision === 'allow',
+    safePreview.assessment);
+  const safeWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const safeApply = applyPlanChange({
+    change: { kind: 'swap_category', date: THU, category: 'conditioning_light' },
+    visibleWeek: safeWeek,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => safeWrites.push({ date, workout }),
+  });
+  ok('[18] safe tap edit commits normally',
+    safeApply.ok && safeWrites.length === 1 && safeWrites[0].date === THU,
+    { safeApply, safeWrites });
+
+  const gPlusOneWeek = gameWeek();
+  const confirmPreview = previewPlanChangeRisk({
+    change: { kind: 'add_category', date: '2026-07-12', category: 'conditioning_hard' },
+    visibleWeek: gPlusOneWeek,
+    todayISO: TODAY,
+    profile: { seasonPhase: 'In-season' },
+  });
+  const confirmWrites: Array<{ date: string; workout: Workout | null }> = [];
+  ok('[18] strong risk tap edit previews as confirm',
+    confirmPreview.ok &&
+      confirmPreview.assessment.decision === 'confirm' &&
+      confirmPreview.assessment.findings.some((finding) => finding.ruleId === 'g_plus1_hard_work'),
+    confirmPreview.assessment);
+  ok('[18] preview does not call setManualOverride before confirmation',
+    confirmWrites.length === 0,
+    confirmWrites);
+  const confirmedApply = applyPlanChange({
+    change: { kind: 'add_category', date: '2026-07-12', category: 'conditioning_hard' },
+    visibleWeek: gPlusOneWeek,
+    todayISO: TODAY,
+    setManualOverride: (date, workout) => confirmWrites.push({ date, workout }),
+  });
+  ok('[18] confirming applies the risky edit',
+    confirmedApply.ok && confirmWrites.length === 1 && confirmWrites[0].date === '2026-07-12',
+    { confirmedApply, confirmWrites });
+
+  const cancelledWrites: Array<{ date: string; workout: Workout | null }> = [];
+  previewPlanChangeRisk({
+    change: { kind: 'add_category', date: '2026-07-12', category: 'conditioning_hard' },
+    visibleWeek: gPlusOneWeek,
+    todayISO: TODAY,
+  });
+  ok('[18] cancelling after preview leaves the plan untouched',
+    cancelledWrites.length === 0,
+    cancelledWrites);
+
+  const gMinusOnePreview = previewPlanChangeRisk({
+    change: { kind: 'add_category', date: '2026-07-10', category: 'strength_lower' },
+    visibleWeek: gPlusOneWeek,
+    todayISO: TODAY,
+    profile: { seasonPhase: 'In-season' },
+  });
+  ok('[18] hard lower on G-1 blocks',
+    gMinusOnePreview.ok &&
+      gMinusOnePreview.assessment.decision === 'block' &&
+      gMinusOnePreview.assessment.findings.some((finding) => finding.ruleId === 'g1_hard_work'),
+    gMinusOnePreview.assessment);
+
+  const fifthHardPreview = previewPlanChangeRisk({
+    change: { kind: 'add_category', date: '2026-07-08', category: 'conditioning_hard' },
+    visibleWeek: fourHardGameWeek(),
+    todayISO: TODAY,
+    profile: { seasonPhase: 'In-season' },
+  });
+  ok('[18] adding 5th hard day confirms, not blocks',
+    fifthHardPreview.ok &&
+      fifthHardPreview.assessment.decision === 'confirm' &&
+      fifthHardPreview.assessment.findings.some((finding) => finding.ruleId === 'cap_maxHardDays_over') &&
+      fifthHardPreview.assessment.highestLevel !== 'hard_stop',
+    fifthHardPreview.assessment);
+
+  const protectedPreview = previewPlanChangeRisk({
+    change: { kind: 'remove_session', date: NEXT_SAT },
+    visibleWeek: gPlusOneWeek,
+    todayISO: TODAY,
+  });
+  ok('[18] deleting protected game anchor blocks',
+    protectedPreview.ok &&
+      protectedPreview.assessment.decision === 'block' &&
+      protectedPreview.assessment.findings.some((finding) => finding.ruleId === 'protected_anchor_edit_blocked'),
+    protectedPreview.assessment);
 }
 
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);

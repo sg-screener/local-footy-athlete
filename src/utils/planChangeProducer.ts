@@ -18,6 +18,7 @@ import type { ResolvedDay } from './sessionResolver';
 import { getMondayForDate } from './sessionResolver';
 import { splitSessionName } from './sessionNaming';
 import type { OverrideContext, Workout } from '../types/domain';
+import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import {
   COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
   snapshotProjectedDay,
@@ -39,7 +40,15 @@ import {
   coachRevisionValidationPolicyForWeek,
   protectedAnchorsForDaySnapshot,
 } from './coachRevisionPolicy';
-import { applyCoachRevisionDateOverrides } from './coachRevisionOverrideWriter';
+import {
+  applyCoachRevisionDateOverrides,
+  type CoachRevisionOverrideRejection,
+} from './coachRevisionOverrideWriter';
+import {
+  assessProgramEditRisk,
+  type ProgramEditRiskAssessment,
+} from './programEditRiskAssessment';
+import type { ValidateProgramWeekInput, ValidatorDayInput } from '../rules/weekStructureValidator';
 
 // ── Edit horizon ──
 // Sam 2026-07-03: athletes change this week and at most the next two —
@@ -840,6 +849,176 @@ export interface PlanChangeApplyResult {
   rejected: Array<{ date: string | null; code: string; reason: string }>;
 }
 
+export interface PlanChangeRiskPreviewResult {
+  ok: boolean;
+  message: string;
+  appliedDates: string[];
+  rejected: Array<{ date: string | null; code: string; reason: string }>;
+  proposedWeek: ResolvedDay[];
+  assessment: ProgramEditRiskAssessment;
+}
+
+function validationPolicyForPlanChange(
+  visibleWeek: ResolvedDay[],
+  todayISO: string,
+) {
+  return {
+    ...coachRevisionValidationPolicyForWeek(visibleWeek, todayISO),
+    requireConfirmationForAdds: false,
+  };
+}
+
+function rejectedForResult(
+  rejected: CoachRevisionOverrideRejection[],
+): PlanChangeApplyResult['rejected'] {
+  return rejected.map((entry) => ({
+    date: entry.date ?? null,
+    code: entry.code,
+    reason: entry.reason,
+  }));
+}
+
+function validatorDaysFromVisibleWeek(week: ResolvedDay[]): ValidatorDayInput[] {
+  return week.map((day) => ({
+    date: day.date,
+    workouts: day.workout ? [day.workout] : [],
+  }));
+}
+
+function withPreviewWrites(
+  visibleWeek: ResolvedDay[],
+  writes: Array<{ date: string; workout: Workout }>,
+): ResolvedDay[] {
+  const byDate = new Map(writes.map((write) => [write.date, write.workout]));
+  return visibleWeek.map((day) => (
+    byDate.has(day.date)
+      ? {
+          ...day,
+          workout: byDate.get(day.date) ?? null,
+          source: 'manual' as const,
+        }
+      : day
+  ));
+}
+
+function blockedAssessmentForBuildError(
+  change: PlanChange,
+  error: string,
+): ProgramEditRiskAssessment | null {
+  if (error !== 'protected_anchor_day') return null;
+  const date =
+    'date' in change
+      ? change.date
+      : change.kind === 'move_session'
+      ? change.fromDate
+      : null;
+  return {
+    decision: 'block',
+    highestLevel: 'hard_stop',
+    findings: [{
+      ruleId: 'protected_anchor_edit_blocked',
+      level: 'hard_stop',
+      message: 'This would remove or replace a protected game/team anchor, so it cannot be applied from this edit flow.',
+      dates: date ? [date] : [],
+      sessions: [],
+      canOverride: false,
+      source: 'program_edit_guard',
+      bibleRef: 'Section 16 App / AI rules; Section 17.E',
+      data: { error },
+    }],
+    introducedRuleIds: ['protected_anchor_edit_blocked'],
+    worsenedRuleIds: [],
+  };
+}
+
+export function previewPlanChangeRisk(args: {
+  change: PlanChange;
+  visibleWeek: ResolvedDay[];
+  todayISO: string;
+  profile?: ValidateProgramWeekInput['profile'];
+  activeConstraints?: readonly ActiveConstraint[];
+}): PlanChangeRiskPreviewResult {
+  const proposal = buildPlanChangeProposal(args.change, {
+    visibleWeek: args.visibleWeek,
+    todayISO: args.todayISO,
+  });
+  if ('error' in proposal) {
+    const blocked = blockedAssessmentForBuildError(args.change, proposal.error);
+    if (blocked) {
+      return {
+        ok: true,
+        message: blocked.findings[0]?.message ?? "That change can't be applied here.",
+        appliedDates: [],
+        rejected: [],
+        proposedWeek: args.visibleWeek,
+        assessment: blocked,
+      };
+    }
+    return {
+      ok: false,
+      message: `That change isn't possible here (${proposal.error}).`,
+      appliedDates: [],
+      rejected: [],
+      proposedWeek: args.visibleWeek,
+      assessment: {
+        decision: 'allow',
+        highestLevel: 'info',
+        findings: [],
+        introducedRuleIds: [],
+        worsenedRuleIds: [],
+      },
+    };
+  }
+
+  const preview = applyCoachRevisionDateOverrides({
+    proposal,
+    visibleWeek: args.visibleWeek,
+    todayISO: args.todayISO,
+    validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
+  });
+  if (preview.applied.length === 0 || preview.rejected.length > 0) {
+    return {
+      ok: false,
+      message: "I couldn't safely make that change, so the plan is untouched.",
+      appliedDates: preview.applied.map((write) => write.date),
+      rejected: rejectedForResult(preview.rejected),
+      proposedWeek: args.visibleWeek,
+      assessment: {
+        decision: 'allow',
+        highestLevel: 'info',
+        findings: [],
+        introducedRuleIds: [],
+        worsenedRuleIds: [],
+      },
+    };
+  }
+
+  const proposedWeek = withPreviewWrites(args.visibleWeek, preview.applied);
+  const current = {
+    days: validatorDaysFromVisibleWeek(args.visibleWeek),
+    profile: args.profile,
+  };
+  const proposed = {
+    days: validatorDaysFromVisibleWeek(proposedWeek),
+    profile: args.profile,
+  };
+  const assessment = assessProgramEditRisk({
+    current,
+    proposed,
+    activeConstraints: args.activeConstraints,
+    todayISO: args.todayISO,
+  });
+
+  return {
+    ok: true,
+    message: 'Preview ready.',
+    appliedDates: preview.applied.map((write) => write.date),
+    rejected: [],
+    proposedWeek,
+    assessment,
+  };
+}
+
 export function applyPlanChange(args: {
   change: PlanChange;
   visibleWeek: ResolvedDay[];
@@ -867,10 +1046,7 @@ export function applyPlanChange(args: {
     proposal,
     visibleWeek: args.visibleWeek,
     todayISO: args.todayISO,
-    validationPolicy: {
-      ...coachRevisionValidationPolicyForWeek(args.visibleWeek, args.todayISO),
-      requireConfirmationForAdds: false,
-    },
+    validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
     setManualOverride: args.setManualOverride,
   });
 
@@ -879,11 +1055,7 @@ export function applyPlanChange(args: {
       ok: false,
       message: "I couldn't safely make that change, so the plan is untouched.",
       appliedDates: apply.applied.map((write) => write.date),
-      rejected: apply.rejected.map((entry) => ({
-        date: entry.date ?? null,
-        code: entry.code,
-        reason: entry.reason,
-      })),
+      rejected: rejectedForResult(apply.rejected),
     };
   }
 

@@ -305,14 +305,14 @@ export function buildCoachRevisionTemplateWorkout(
     name: def.label,
     description: def.description,
     durationMinutes: def.durationMinutes,
-    intensity: def.category === 'work_capacity' ? 'Moderate' : 'Light',
+    intensity: def.category === 'work_capacity' ? 'High' : 'Light',
     workoutType: 'Conditioning',
     sessionTier: 'optional',
     hasCombinedConditioning: false,
-    conditioningFlavour: 'aerobic',
-    conditioningCategory: 'aerobic_base',
+    conditioningFlavour: def.category === 'work_capacity' ? 'high-intensity' : 'aerobic',
+    conditioningCategory: def.category === 'work_capacity' ? 'glycolytic' : 'aerobic_base',
     conditioningBlock: {
-      intent: 'aerobic',
+      intent: def.category === 'work_capacity' ? 'high-intensity' : 'aerobic',
       options: [{
         title: def.label,
         description: def.description,

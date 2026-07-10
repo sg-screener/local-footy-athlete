@@ -146,7 +146,7 @@ export function applyCoachRevisionDateOverrides(
   // post-apply visible week (both coach-chat and tap-sheet doors funnel
   // through this writer). logWeekValidation is throw-proof and has no
   // side effects; it cannot change or block this result.
-  if (built.length > 0) {
+  if (built.length > 0 && input.setManualOverride) {
     const overrideByDate = new Map(built.map((w) => [w.date, w.workout]));
     logWeekValidation(
       {
