@@ -4,6 +4,8 @@ import {
   countWeeklyExposures,
 } from './weeklyExposureCounts';
 import type { OffseasonSubphase } from './offseasonSubphase';
+import type { PreseasonSubphase } from './preseasonSubphase';
+import { getPreseasonSubphasePolicy } from './preseasonSubphasePolicy';
 
 export type SprintExposureGatePhase = 'Off-season' | 'Pre-season' | 'In-season';
 
@@ -29,6 +31,7 @@ export interface SprintExposureGateContext {
   readinessAllowsSprint?: boolean;
   injuryAllowsSprint?: boolean;
   offseasonSubphase?: OffseasonSubphase | null;
+  preseasonSubphase?: PreseasonSubphase | null;
   weekKind?: WeekKind | null;
 }
 
@@ -52,9 +55,15 @@ export function evaluateSprintExposureGate(
 ): SprintExposureGateDecision {
   const plannedOnFeetSprintExposures = Math.max(0, context.plannedOnFeetSprintExposures ?? 0);
   const anchorSprintCodExposures = countAnchorSprintCodExposures(context);
+  const preseasonPolicy = context.phase === 'Pre-season' && context.preseasonSubphase
+    ? getPreseasonSubphasePolicy(context.preseasonSubphase, {
+        teamTrainingExposures: uniqueDays(context.teamTrainingDays ?? []).length,
+        hasPracticeMatch: uniqueDays(context.gameOrPracticeMatchDays ?? []).length > 0,
+      })
+    : null;
   const target = context.phase === 'Off-season' && context.offseasonSubphase === 'late_offseason'
     ? LATE_OFFSEASON_SPRINT_COD_TARGET
-    : SPRINT_COD_TARGET;
+    : preseasonPolicy?.speedSprint.targetExposures ?? SPRINT_COD_TARGET;
   const currentSprintCodExposures = anchorSprintCodExposures + plannedOnFeetSprintExposures;
   const remainingSprintCodExposures = Math.max(0, target - currentSprintCodExposures);
   const base = {
@@ -96,7 +105,13 @@ export function evaluateSprintExposureGate(
         : 'inseason_extra_sprint_disabled',
     };
   }
-  if (anchorSprintCodExposures >= SPRINT_COD_TARGET || currentSprintCodExposures >= SPRINT_COD_TARGET) {
+  if (
+    preseasonPolicy?.speedSprint.practiceMatchSatisfiesTarget &&
+    uniqueDays(context.gameOrPracticeMatchDays ?? []).length > 0
+  ) {
+    return { ...base, allowStandaloneSprint: false, reason: 'preseason_target_met' };
+  }
+  if (anchorSprintCodExposures >= target || currentSprintCodExposures >= target) {
     return { ...base, allowStandaloneSprint: false, reason: 'preseason_target_met' };
   }
   if (plannedOnFeetSprintExposures >= APP_SPRINT_TOPUP_LIMIT) {

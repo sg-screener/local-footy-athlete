@@ -105,6 +105,7 @@
     "test:readiness": "sucrase-node src/__tests__/readinessSignalTests.ts",
     "test:strength-sequencing": "sucrase-node src/__tests__/strengthSequencingTests.ts",
     "test:off-season-sequencing": "npm run test:strength-sequencing",
+    "test:preseason-subphase": "sucrase-node src/__tests__/preseasonSubphaseTests.ts",
     "smoke:coach-bike-flow": "node scripts/smoke-coach-bike-flow.js",
     "smoke:coach-bike-flow:fresh": "node scripts/smoke-coach-bike-flow-fresh.js",
     "dev:coach-semantic-active": "EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE=active EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE=1 expo start --clear"

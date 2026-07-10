@@ -52,6 +52,11 @@ import {
   getOffseasonSubphasePolicy,
   type OffseasonConditioningCategory,
 } from '../rules/offseasonSubphasePolicy';
+import {
+  resolvePreseasonSubphase,
+  type PreseasonSubphase,
+} from '../rules/preseasonSubphase';
+import { getPreseasonSubphasePolicy } from '../rules/preseasonSubphasePolicy';
 import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import { resolveWeekContext } from '../rules/weekContext';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
@@ -83,6 +88,7 @@ export interface CoachingInputs {
   weekInBlock?: number;
   weekKind?: WeekKind;
   offseasonSubphase?: OffseasonSubphase;
+  preseasonSubphase?: PreseasonSubphase;
   generationConstraints?: GenerationConstraintContext;
   /**
    * Sprint-variant used in the PREVIOUS week, if known. Enables the
@@ -105,6 +111,7 @@ export interface OnboardingToCoachingInputsOptions {
   weekInBlock?: number;
   weekKind?: WeekKind;
   offseasonSubphase?: OffseasonSubphase;
+  preseasonSubphase?: PreseasonSubphase;
   generationConstraints?: GenerationConstraintContext;
 }
 
@@ -591,6 +598,19 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   const offseasonPolicy = offseasonSubphase
     ? getOffseasonSubphasePolicy(offseasonSubphase, { readiness })
     : null;
+  const preseasonSubphase = resolvePreseasonSubphase({
+    seasonPhase: inputs.seasonPhase,
+    explicitSubphase: inputs.preseasonSubphase,
+    weekInBlock: inputs.weekInBlock,
+    weekNumber: inputs.weekNumber,
+  });
+  const preseasonPolicy = preseasonSubphase
+    ? getPreseasonSubphasePolicy(preseasonSubphase, {
+        readiness,
+        teamTrainingExposures: inputs.teamTrainingDays.length,
+        hasPracticeMatch: inputs.hasGame,
+      })
+    : null;
 
   // Step 2: Existing hard exposures from team environment
   const { count: existingHard, breakdown: hardBreakdown } = countTeamHardExposures(inputs);
@@ -704,6 +724,13 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     (!activeReadinessTier || activeReadinessTier === 'slight_reduction');
   if (shouldTarget3StrengthPreSeasonGame) {
     coreRange = { min: 3, max: 3 };
+  }
+
+  if (preseasonPolicy) {
+    coreRange = {
+      min: Math.min(coreRange.min, preseasonPolicy.strength.coreSessionCap),
+      max: Math.min(coreRange.max, preseasonPolicy.strength.coreSessionCap),
+    };
   }
 
   if (trainingAgePolicy.maxCoreSessions !== null) {
@@ -1050,6 +1077,19 @@ function buildWeeklyPlan(
   });
   const offseasonPolicy = offseasonSubphase
     ? getOffseasonSubphasePolicy(offseasonSubphase, { readiness })
+    : null;
+  const preseasonSubphase = resolvePreseasonSubphase({
+    seasonPhase: inputs.seasonPhase,
+    explicitSubphase: inputs.preseasonSubphase,
+    weekInBlock: inputs.weekInBlock,
+    weekNumber: inputs.weekNumber,
+  });
+  const preseasonPolicy = preseasonSubphase
+    ? getPreseasonSubphasePolicy(preseasonSubphase, {
+        readiness,
+        teamTrainingExposures: teamDayNums.length,
+        hasPracticeMatch: inputs.hasGame,
+      })
     : null;
 
   const readinessTierRank = (tier: GenerationReadinessTier | undefined): number => {
@@ -1569,8 +1609,9 @@ function buildWeeklyPlan(
             category !== offseasonPolicy.conditioning.defaultCategory),
         ]
       : ['aerobic_base', 'tempo'];
-    const CATEGORY_PRIORITY_PRE: CondCategory[] =
-      ['vo2', 'glycolytic', 'aerobic_base', 'sprint'];
+    const CATEGORY_PRIORITY_PRE: CondCategory[] = preseasonPolicy
+      ? [...preseasonPolicy.conditioning.categoryPriority]
+      : ['vo2', 'glycolytic', 'aerobic_base', 'sprint'];
 
     // Does this phase use category-based distribution?
     const useCategoryPlanner =
@@ -1645,6 +1686,16 @@ function buildWeeklyPlan(
       ) {
         return true;
       }
+      if (
+        preseasonPolicy &&
+        isHardConditioningCategory(category) &&
+        plan.filter((session) =>
+          session.conditioningCategory !== undefined &&
+          isHardConditioningCategory(session.conditioningCategory as CondCategory)
+        ).length >= preseasonPolicy.conditioning.hardSessionCap
+      ) {
+        return true;
+      }
       if (activeReadiness?.avoidHardConditioning &&
           (category === 'sprint' || category === 'vo2' || category === 'glycolytic')) {
         return true;
@@ -1677,10 +1728,14 @@ function buildWeeklyPlan(
       return readiness !== 'high' || !conditioningReady || lowerLimbIssue(1) || profileLowerLimbIssue;
     }
 
-    function easyConditioningProps(category: CondCategory): Partial<SessionAllocation> {
-      if (category !== 'aerobic_base') return {};
-      const conditioningOffFeet = policyRequiresOffFeetAerobic();
-      const reduced = activeReadiness?.avoidHardConditioning || lowerLimbIssue(4);
+    function conditioningPolicyProps(category: CondCategory): Partial<SessionAllocation> {
+      const aerobic = category === 'aerobic_base';
+      const conditioningOffFeet = aerobic && policyRequiresOffFeetAerobic();
+      const reduced =
+        activeReadiness?.avoidHardConditioning ||
+        lowerLimbIssue(4) ||
+        (preseasonPolicy?.conditioning.hardDose === 'reduced' &&
+          isHardConditioningCategory(category));
       if (!conditioningOffFeet && !reduced) return {};
       return {
         ...(reduced ? { conditioningVariant: 'reduced' as const } : {}),
@@ -1769,20 +1824,26 @@ function buildWeeklyPlan(
       // cumulative load when team training is present).
       condTarget = Math.min(4, condTarget);
     }
+    if (preseasonPolicy) {
+      condTarget = Math.min(condTarget, preseasonPolicy.conditioning.targetCap);
+    }
 
     // ── Conditioning feasibility ──
     const standaloneSlotsAvailable = Math.max(0, daySlots.length - core);
-    // Pre-season with team days: floor is 1 (team training covers the bulk
-    // of field load; the one standalone conditioning guarantees VO2 or
-    // aerobic base doesn't disappear entirely). Otherwise 2 as before.
-    const MIN_COND_FLOOR = offseasonPolicy?.subphase === 'early_offseason'
-      ? (readiness === 'low' || inputs.availableDays <= 2 ? 0 : 1)
-      : (isPreSeason && hasTeamDays) ? 1 : 2;
+    // The pre-season policy owns the app-side floor because team training
+    // and practice matches already count as conditioning. Legacy phases keep
+    // their established floor below.
+    const MIN_COND_FLOOR = preseasonPolicy
+      ? preseasonPolicy.conditioning.minimumAppExposures
+      : offseasonPolicy?.subphase === 'early_offseason'
+        ? (readiness === 'low' || inputs.availableDays <= 2 ? 0 : 1)
+        : (isPreSeason && hasTeamDays) ? 1 : 2;
     const condViaStandaloneMax = Math.min(standaloneSlotsAvailable, condTarget);
     const condShortfall = Math.max(0, MIN_COND_FLOOR - condViaStandaloneMax);
     const minCombinedDays = condShortfall > 0 ? Math.ceil(condShortfall / 0.75) : 0;
-    const avoidEarlyCombined =
+    const avoidCombinedDays =
       trainingAgePolicy.avoidCombinedStrengthConditioning ||
+      preseasonPolicy?.sessions.combinedStrengthConditioning === 'avoid' ||
       (offseasonPolicy?.sessions.lowAvailabilityCombinedDays === 'avoid' &&
         (inputs.availableDays <= 4 || readiness === 'low'));
 
@@ -2249,6 +2310,7 @@ function buildWeeklyPlan(
         readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
         injuryAllowsSprint: !blocksConditioningCategoryForGeneration('sprint'),
         offseasonSubphase,
+        preseasonSubphase,
         weekKind: inputs.weekKind,
       });
     }
@@ -2971,9 +3033,11 @@ function buildWeeklyPlan(
 
       // Pass 1 — zone priority among UNCOVERED categories (respecting block).
       if (zone) {
-        const rankedForZone = inputs.seasonPhase === 'Off-season'
-          ? categoryPriority
-          : zonePriority[zone];
+        const rankedForZone =
+          inputs.seasonPhase === 'Off-season' ||
+          (preseasonSubphase !== null && preseasonSubphase !== 'mid_preseason')
+            ? categoryPriority
+            : zonePriority[zone];
         for (const c of rankedForZone) {
           if (!placementPool.includes(c)) continue;
           if (!allow(c)) continue;
@@ -3906,7 +3970,7 @@ function buildWeeklyPlan(
       }
 
       for (const candidate of slotCandidates) {
-        if (candidate === 'S+C' && avoidEarlyCombined) continue;
+        if (candidate === 'S+C' && avoidCombinedDays) continue;
         // In queue-must-complete mode, relax H3 (lower spacing) to avoid
         // dropping required movements. H1 (3+ consecutive) and H2 (same
         // subtype spacing) still enforced — they protect against injury.
@@ -4043,7 +4107,7 @@ function buildWeeklyPlan(
           // Lower-body S+C always prefers off-feet modality (bike / rower /
           // ski erg) — even the easy finisher spares the legs.
           const lowerStrengthSC = isLower(bestSCStrength);
-          const conditioningProps = easyConditioningProps(category);
+          const conditioningProps = conditioningPolicyProps(category);
           const useNonRunning = lowerStrengthSC || conditioningProps.conditioningOffFeet === true;
           const attachedKind = decision.attachedKind;
           const condLabel = buildCondLabel(flavour, category, useNonRunning, attachedKind);
@@ -4149,7 +4213,7 @@ function buildWeeklyPlan(
           isHardExposure: condTier === 'core' && flavour === 'high-intensity',
           conditioningFlavour: flavour,
           conditioningCategory: category,
-          ...easyConditioningProps(category),
+          ...conditioningPolicyProps(category),
           ...(category === 'tempo' ? { conditioningOffFeet: tempoOffFeet } : {}),
           stressLevel: condStress,
         });
@@ -4210,7 +4274,7 @@ function buildWeeklyPlan(
     // If conditioning is below the absolute floor (2 exposures), convert
     // pure-strength sessions to S+C combined days. This is the safety net:
     // the scorer should handle this in-loop, but if it doesn't, we enforce here.
-    if (st.condCount < MIN_COND_FLOOR && !avoidEarlyCombined) {
+    if (st.condCount < MIN_COND_FLOOR && !avoidCombinedDays) {
       // Find pure-strength sessions that can become S+C (no existing conditioning)
       const convertible = plan
         .map((s, i) => ({ s, i }))
@@ -4266,7 +4330,7 @@ function buildWeeklyPlan(
         const lowerStrengthSC =
           s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
           s.strengthPattern === 'full_body';
-        const conditioningProps = easyConditioningProps(category);
+        const conditioningProps = conditioningPolicyProps(category);
         const useNonRunning = lowerStrengthSC || conditioningProps.conditioningOffFeet === true;
         const attachedKind = decision.attachedKind;
         const condLabel = buildCondLabel(flavour, category, useNonRunning, attachedKind);
@@ -4290,11 +4354,13 @@ function buildWeeklyPlan(
     }
 
     // ── Post-validation: H5b — promote ACC/REC to standalone conditioning ──
-    // Early off-season keeps the subphase target and the optional status of
-    // easy aerobic support. Other phases retain the established floor of 3.
-    const standalonePromotionTarget = offseasonPolicy?.subphase === 'early_offseason'
-      ? condTarget
-      : 3;
+    // Subphase-aware phases use their capped app-conditioning target. Legacy
+    // phases retain the established promotion floor of 3.
+    const standalonePromotionTarget = preseasonPolicy
+      ? Math.min(3, condTarget)
+      : offseasonPolicy?.subphase === 'early_offseason'
+        ? condTarget
+        : 3;
     if (st.condCount < standalonePromotionTarget) {
       const promotable = plan
         .map((s, i) => ({ s, i }))
@@ -4381,7 +4447,9 @@ function buildWeeklyPlan(
               ? ' — off-feet (bike/row/ski)'
               : ' — running-based OK this week')
           : buildFocus('COND', flavour, category);
-        const promoTier: SessionTier = offseasonPolicy?.subphase === 'early_offseason'
+        const promoTier: SessionTier =
+          offseasonPolicy?.subphase === 'early_offseason' ||
+          preseasonSubphase === 'early_preseason'
           ? 'optional'
           : 'core';
         const promoStress = classifyGenerationSession({
@@ -4397,7 +4465,7 @@ function buildWeeklyPlan(
           isHardExposure: flavour === 'high-intensity',
           conditioningFlavour: flavour,
           conditioningCategory: category,
-          ...easyConditioningProps(category),
+          ...conditioningPolicyProps(category),
           ...(category === 'tempo' ? { conditioningOffFeet: promoTempoOffFeet } : {}),
           stressLevel: promoStress,
         };
@@ -4463,7 +4531,7 @@ function buildWeeklyPlan(
         const lowerStrengthSC =
           s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
           s.strengthPattern === 'full_body';
-        const conditioningProps = easyConditioningProps(category);
+        const conditioningProps = conditioningPolicyProps(category);
         const useNonRunning = lowerStrengthSC || conditioningProps.conditioningOffFeet === true;
         s.focus = `${s.focus} + ${buildCondLabel(flavour, category, useNonRunning, attachedKind)}`;
         s.hasCombinedConditioning = true;
@@ -5010,6 +5078,7 @@ function buildWeeklyPlan(
       readinessAllowsSprint: readiness === 'high' && !activeReadiness?.avoidSprint,
       injuryAllowsSprint: !lowerLimbSprintBlocked,
       offseasonSubphase,
+      preseasonSubphase,
       weekKind: inputs.weekKind,
     });
 
@@ -6607,6 +6676,7 @@ export function onboardingToCoachingInputs(
     weekInBlock: options.weekInBlock,
     weekKind: options.weekKind,
     offseasonSubphase: options.offseasonSubphase,
+    preseasonSubphase: options.preseasonSubphase,
     generationConstraints: options.generationConstraints,
   };
 }
