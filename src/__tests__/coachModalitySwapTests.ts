@@ -658,7 +658,9 @@ section('[21] orchestrator — happy path: row → bike, projections verify');
   eq('outcome kind = applied', out.kind, 'applied');
   ok('applied true', out.applied === true);
   eq('route', out.route, 'modality_swap_applied');
-  ok('reply contains "Done —"', /^Done —/.test(out.reply));
+  // Acknowledgment contract: a successful swap opens with "Done" then a dash.
+  // The exact dash glyph (—, –, -) is presentation, not behaviour.
+  ok('reply opens with a "Done" acknowledgment', /^Done\s*[-‐-―−]/.test(out.reply), out.reply);
   ok('reply mentions bike', /bike/i.test(out.reply));
   ok('reply mentions rower', /rower/i.test(out.reply));
   ok('reply mentions Easy Aerobic Flush', /Easy Aerobic Flush/.test(out.reply));

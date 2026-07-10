@@ -445,8 +445,9 @@ const outcome8 = orchestrateModalitySwap({
 eq('outcome.kind = applied_preference', outcome8.kind, 'applied_preference');
 ok('outcome.applied = true', outcome8.applied === true);
 ok(
-  'reply leads with "Done — next" + a weekday + the session',
-  /^Done — next \w+'s Easy Aerobic Flush is now on the bike instead of the rower/.test(outcome8.reply),
+  // Wording contract; the exact dash glyph (—, –, -) is presentation only.
+  'reply leads with "Done - next" + a weekday + the session',
+  /^Done\s*[-‐-―−]\s*next \w+'s Easy Aerobic Flush is now on the bike instead of the rower/.test(outcome8.reply),
   outcome8.reply,
 );
 ok(

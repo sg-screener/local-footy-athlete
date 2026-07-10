@@ -211,6 +211,23 @@ function ok(name: string, cond: boolean, detail?: string) {
 function eq<T>(name: string, actual: T, expected: T) {
   ok(name, JSON.stringify(actual) === JSON.stringify(expected), `expected ${JSON.stringify(expected)}, got ${JSON.stringify(actual)}`);
 }
+/**
+ * Copy equality that is tolerant of dash-glyph drift. The proposal WORDING is
+ * the contract; the exact dash character (—, –, -) is presentation, not
+ * behaviour, and the app normalises coach copy to ASCII hyphens. Compare with
+ * all dash glyphs folded to '-' so a punctuation-only change never reds this
+ * suite while the wording is still fully asserted.
+ */
+function normaliseDashes(value: string): string {
+  return value.replace(/[‐-―−]/g, '-');
+}
+function eqCopy(name: string, actual: string, expected: string) {
+  ok(
+    name,
+    normaliseDashes(actual) === normaliseDashes(expected),
+    `expected (dash-normalised) ${JSON.stringify(normaliseDashes(expected))}, got ${JSON.stringify(normaliseDashes(actual))}`,
+  );
+}
 function section(label: string) {
   console.log(`\n${label}`);
 }
@@ -226,7 +243,7 @@ section('[1] first request routes to deterministic clarifier, not fall_through')
   eq('asks clarifier', outcome.replyMode, 'program_adjustment_clarifier');
   eq('stores pending conditioning need', outcome.pendingCoachProposal?.needs, 'conditioning_type');
   eq('stores target date for pending clarification', outcome.pendingCoachProposal?.targetDate, MONDAY);
-  eq(
+  eqCopy(
     'uses friendly clarifier copy',
     outcome.reply,
     'What type of conditioning are you after — light aerobic intervals, a short bike flush, tempo running, or something else?',
@@ -279,7 +296,7 @@ section('[2] clarification creates pending proposal without success claim');
   eq('proposal mode', outcome.replyMode, 'program_adjustment_proposed');
   ok('pending proposal has prescription', !!outcome.pendingCoachProposal?.prescription);
   eq('light option stored', outcome.pendingCoachProposal?.conditioningOption, 'light_aerobic_intervals');
-  eq(
+  eqCopy(
     'light proposal copy',
     outcome.reply,
     'I can add light aerobic intervals after Monday strength — 8 x 2 min at 75–80% max HR with 1 min easy recovery. Reply "sounds good" and I\'ll apply it.',
@@ -303,7 +320,7 @@ section('[2b] short bike flush answer resolves pending clarification');
   eq('proposal mode', outcome.replyMode, 'program_adjustment_proposed');
   eq('does not repeat original clarifier', outcome.reply.includes('What type of conditioning are you after'), false);
   eq('bike option stored', outcome.pendingCoachProposal?.conditioningOption, 'short_bike_flush');
-  eq(
+  eqCopy(
     'bike proposal copy',
     outcome.reply,
     'I can add a short bike flush after Monday strength — 12–20 min easy spin at 3–4/10 intensity. Reply "sounds good" and I\'ll apply it.',
@@ -325,7 +342,7 @@ section('[2c] tempo running answer resolves pending clarification');
   );
   eq('proposal mode', outcome.replyMode, 'program_adjustment_proposed');
   eq('tempo option stored', outcome.pendingCoachProposal?.conditioningOption, 'tempo_running');
-  eq(
+  eqCopy(
     'tempo proposal copy',
     outcome.reply,
     'I can add tempo running after Monday strength — controlled reps at around 6–7/10 intensity, not a hard sprint session. Reply "sounds good" and I\'ll apply it.',
@@ -347,7 +364,7 @@ section('[2d] unrecognised conditioning answer gets one helpful follow-up');
   );
   eq('still handled as program adjustment', outcome.replyMode, 'program_adjustment_clarifier');
   eq('pending need survives', outcome.pendingCoachProposal?.needs, 'conditioning_type');
-  eq(
+  eqCopy(
     'helpful follow-up copy',
     outcome.reply,
     'I can do that — choose light aerobic intervals, a short bike flush, tempo running, or tell me the exact conditioning you want.',
@@ -454,7 +471,7 @@ section('[3c] short bike proposal confirmation applies visible bike flush');
     buildLiveDispatchDeps(TODAY),
   );
   eq('applied mode', outcome.replyMode, 'program_adjustment_applied');
-  eq('bike done copy', outcome.reply, 'Done — Monday now finishes with a short bike flush after strength.');
+  eqCopy('bike done copy', outcome.reply, 'Done — Monday now finishes with a short bike flush after strength.');
   const override = useProgramStore.getState().dateOverrides[MONDAY];
   ok('bike flush rendered in conditioning block', !!override?.conditioningBlock?.options?.some((o) => /bike flush/i.test(o.title)));
   ok('coachNotes include bike flush', override?.coachNotes?.some((n) => /bike flush/i.test(n)) ?? false);

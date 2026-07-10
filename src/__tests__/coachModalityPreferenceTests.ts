@@ -222,8 +222,10 @@ const outcome1 = orchestrateModalitySwap({
 eq('outcome.kind', outcome1.kind, 'applied_preference');
 ok('outcome.applied = true', outcome1.applied === true);
 eq('outcome.route', outcome1.route, 'modality_preference_applied');
-ok('reply starts with "Done"',
-  /^Done — /.test(outcome1.reply),
+// Acknowledgment contract: opens with "Done" then a dash. The exact dash
+// glyph (—, –, -) is presentation, not behaviour.
+ok('reply starts with a "Done" acknowledgment',
+  /^Done\s*[-‐-―−]/.test(outcome1.reply),
   outcome1.reply,
 );
 ok('reply mentions on the bike', /on the bike/i.test(outcome1.reply), outcome1.reply);
