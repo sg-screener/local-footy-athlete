@@ -224,6 +224,7 @@ console.log('\n[4] registered expectations and scenario count stay stable');
 {
   ok('S1 has a registered expected week shape', !!expectedWeekShapeForScenarioId('S1'));
   const s4 = expectedWeekShapeForScenarioId('S4');
+  const s6 = expectedWeekShapeForScenarioId('S6');
   const e1 = expectedWeekShapeForScenarioId('E1');
   ok('S4 has a registered healthy 2TT bye shape',
     s4?.counts?.hardDays === 3 &&
@@ -235,6 +236,14 @@ console.log('\n[4] registered expectations and scenario count stay stable');
   eq('E1 uses the same expected shape after game removal',
     { ...e1, id: 'S4' },
     s4);
+  ok('S6 locks the early off-season strength/support shape',
+    s6?.counts?.mainStrength === 3 &&
+    s6.counts.conditioning === 1 &&
+    s6.counts.running === 0 &&
+    s6.counts.sprintCod === 0 &&
+    s6.days?.Wed === 'easy conditioning' &&
+    s6.stackedDays?.length === 0,
+    s6);
   eq('scenario count does not change', scenarioIdsFromHarness().length, 17);
 }
 

@@ -24,6 +24,7 @@ import {
   onboardingToCoachingInputs,
   type CoachingInputs,
   type CoachingPlan,
+  type OnboardingToCoachingInputsOptions,
   type SessionAllocation,
 } from '../utils/coachingEngine';
 import {
@@ -42,6 +43,7 @@ import {
   type WeekValidationReport,
 } from '../rules/weekStructureValidator';
 import { isTeamTrainingSession } from '../utils/teamTraining';
+import { resolveOffseasonSubphase } from '../rules/offseasonSubphase';
 import type { DayOfWeek, OnboardingData, Workout, Microcycle, TrainingProgram, SeasonPhase, WeekKind } from '../types/domain';
 import {
   metadataForScenario,
@@ -70,6 +72,7 @@ interface Scenario {
   name: string;
   /** Onboarding data for buildCoachingPlan */
   onboarding: Partial<OnboardingData>;
+  coachingOptions?: Partial<OnboardingToCoachingInputsOptions>;
   /** If set, override markedDays for resolver (game/rest calendar marks) */
   calendarOverrides?: Record<string, 'game' | 'rest'>;
   /** For edit-driven scenarios: base scenario name to derive from */
@@ -812,8 +815,14 @@ const scenarios: Scenario[] = [
   },
   {
     id: 'S6',
-    name: 'S6: Off-season, 4 days, no team training',
+    name: 'S6: Early off-season week 1, 4 days, no team training',
     onboarding: offSeasonLowAvailabilityAthlete(),
+    coachingOptions: {
+      miniCycleNumber: 1,
+      weekInBlock: 1,
+      weekNumber: 1,
+      weekKind: 'build',
+    },
   },
   {
     id: 'S7',
@@ -944,8 +953,18 @@ if (allowedFindingPolicyErrors.length > 0) {
 }
 
 for (const scenario of scenarios) {
-  const inputs = onboardingToCoachingInputs(scenario.onboarding as OnboardingData);
+  const inputs = onboardingToCoachingInputs(
+    scenario.onboarding as OnboardingData,
+    scenario.coachingOptions,
+  );
   const plan = buildCoachingPlan(inputs);
+  const offseasonSubphase = resolveOffseasonSubphase({
+    seasonPhase: inputs.seasonPhase,
+    explicitSubphase: inputs.offseasonSubphase,
+    miniCycleNumber: inputs.miniCycleNumber,
+    weekInBlock: inputs.weekInBlock,
+    weekNumber: inputs.weekNumber,
+  });
 
   // Build schedule state and resolve week with conditioning
   let resolvedWeek: ResolvedDay[] | null = null;
@@ -1023,18 +1042,46 @@ for (const scenario of scenarios) {
           : `FALSE POSITIVE: ${ttFalsePositives.map((f) => `${f.ruleId}@${f.dates.join(',')}`).join('; ')}`,
       });
 
-      // Conditioning coverage floor: an off-season athlete must never get a
-      // ZERO/near-zero conditioning week just because strength fills every
-      // preferred day — the engine's S+C combined-day machinery (H5a +
-      // in-loop scorer) must deliver at least the MIN_COND_FLOOR of 2.
-      // (On-feet sprint finishers count as sprint exposure, not
-      // conditioning, so the floor here is 2, not the 3-5 Bible range.)
+      // Conditioning coverage floor: established off-season weeks retain the
+      // two-exposure floor. Early off-season intentionally accepts one easy
+      // aerobic support session when availability is limited.
       if (scenario.onboarding.seasonPhase === 'Off-season') {
         const condCount = report.counts.conditioningExposures;
+        const conditioningFloor = offseasonSubphase === 'early_offseason' ? 1 : 2;
         assertions.push({
-          rule: 'Off-season conditioning floor (≥2 exposures incl. S+C finishers)',
-          passed: condCount >= 2,
+          rule: `Off-season conditioning floor (>=${conditioningFloor} exposure${conditioningFloor === 1 ? '' : 's'})`,
+          passed: condCount >= conditioningFloor,
           detail: `conditioning exposures: ${condCount}`,
+        });
+      }
+
+      if (offseasonSubphase === 'early_offseason') {
+        const hardConditioning = plan.weeklyPlan.filter((session) =>
+          session.conditioningCategory === 'sprint' ||
+          session.conditioningCategory === 'vo2' ||
+          session.conditioningCategory === 'glycolytic' ||
+          session.conditioningFlavour === 'high-intensity');
+        assertions.push({
+          rule: 'Early off-season has no hard conditioning',
+          passed: hardConditioning.length === 0,
+          detail: hardConditioning.length === 0 ? 'clean' : hardConditioning.map((session) => session.focus).join('; '),
+        });
+        assertions.push({
+          rule: 'Early off-season has no default running exposure',
+          passed: report.counts.runningExposures === 0,
+          detail: `running exposures: ${report.counts.runningExposures}`,
+        });
+        assertions.push({
+          rule: 'Early off-season has no sprint/COD exposure',
+          passed: report.counts.sprintCodExposures === 0,
+          detail: `sprint/COD exposures: ${report.counts.sprintCodExposures}`,
+        });
+        assertions.push({
+          rule: 'Early off-season keeps useful strength plus optional/recovery support',
+          passed:
+            plan.weeklyPlan.filter((session) => session.tier === 'core' && !!session.strengthPattern).length >= 2 &&
+            plan.weeklyPlan.some((session) => session.tier === 'optional' || session.tier === 'recovery'),
+          detail: `core strength: ${plan.weeklyPlan.filter((session) => session.tier === 'core' && !!session.strengthPattern).length}; support: ${plan.weeklyPlan.filter((session) => session.tier === 'optional' || session.tier === 'recovery').length}`,
         });
       }
     } catch (err: any) {

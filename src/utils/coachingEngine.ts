@@ -474,6 +474,16 @@ export function getCoreSessionCount(
 export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // Step 1: Readiness
   const { level: readiness, factors: readinessFactors } = calculateReadiness(inputs);
+  const offseasonSubphase = resolveOffseasonSubphase({
+    seasonPhase: inputs.seasonPhase,
+    explicitSubphase: inputs.offseasonSubphase,
+    miniCycleNumber: inputs.miniCycleNumber,
+    weekInBlock: inputs.weekInBlock,
+    weekNumber: inputs.weekNumber,
+  });
+  const offseasonPolicy = offseasonSubphase
+    ? getOffseasonSubphasePolicy(offseasonSubphase, { readiness })
+    : null;
 
   // Step 2: Existing hard exposures from team environment
   const { count: existingHard, breakdown: hardBreakdown } = countTeamHardExposures(inputs);
@@ -484,6 +494,13 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
 
   // Step 4: Core session count
   let coreRange = getCoreSessionCount(inputs.seasonPhase, readiness);
+  if (offseasonPolicy?.subphase === 'early_offseason') {
+    const earlyCoreTarget = Math.min(
+      inputs.availableDays,
+      readiness === 'low' || inputs.availableDays <= 3 ? 2 : 3,
+    );
+    coreRange = { min: earlyCoreTarget, max: earlyCoreTarget };
+  }
   const activeReadinessTier = inputs.generationConstraints?.readiness?.tier;
   if (activeReadinessTier === 'full_pause') {
     coreRange = { min: 0, max: 0 };
@@ -598,7 +615,9 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   const extraDays = Math.max(0, inputs.availableDays - actualCore);
   // Optional sessions — even low readiness athletes get at least 1 optional session
   // if they have extra days. Training stimulus > pure recovery for adaptation.
-  const optionalSessions = Math.min(extraDays, readiness === 'low' ? 1 : readiness === 'medium' ? 2 : 2);
+  const optionalSessions = offseasonPolicy?.subphase === 'early_offseason'
+    ? Math.min(extraDays, 1)
+    : Math.min(extraDays, readiness === 'low' ? 1 : readiness === 'medium' ? 2 : 2);
   const recoverySessions = Math.max(0, extraDays - optionalSessions);
 
   // Build weekly plan
@@ -1590,6 +1609,9 @@ function buildWeeklyPlan(
       condTarget = Math.max(3, condTarget - 1);
     }
     condTarget = Math.max(3, Math.min(5, condTarget));
+    if (offseasonPolicy?.subphase === 'early_offseason') {
+      condTarget = readiness === 'low' ? 1 : 2;
+    }
 
     // Pre-season conditioning volume reduction.
     // Team training provides significant field load (sprints, drills, long
@@ -1610,10 +1632,15 @@ function buildWeeklyPlan(
     // Pre-season with team days: floor is 1 (team training covers the bulk
     // of field load; the one standalone conditioning guarantees VO2 or
     // aerobic base doesn't disappear entirely). Otherwise 2 as before.
-    const MIN_COND_FLOOR = (isPreSeason && hasTeamDays) ? 1 : 2;
+    const MIN_COND_FLOOR = offseasonPolicy?.subphase === 'early_offseason'
+      ? (readiness === 'low' || inputs.availableDays <= 2 ? 0 : 1)
+      : (isPreSeason && hasTeamDays) ? 1 : 2;
     const condViaStandaloneMax = Math.min(standaloneSlotsAvailable, condTarget);
     const condShortfall = Math.max(0, MIN_COND_FLOOR - condViaStandaloneMax);
     const minCombinedDays = condShortfall > 0 ? Math.ceil(condShortfall / 0.75) : 0;
+    const avoidEarlyCombined =
+      offseasonPolicy?.sessions.lowAvailabilityCombinedDays === 'avoid' &&
+      (inputs.availableDays <= 4 || readiness === 'low');
 
     // Finishers are useful add-ons, not hidden second sessions. Keep the
     // conditioning target intact, but do not let repeated steady aerobic
@@ -3694,6 +3721,7 @@ function buildWeeklyPlan(
       }
 
       for (const candidate of slotCandidates) {
+        if (candidate === 'S+C' && avoidEarlyCombined) continue;
         // In queue-must-complete mode, relax H3 (lower spacing) to avoid
         // dropping required movements. H1 (3+ consecutive) and H2 (same
         // subtype spacing) still enforced — they protect against injury.
@@ -3906,8 +3934,11 @@ function buildWeeklyPlan(
         const category = condDecision.category;
         const flavour = categoryToFlavour(category);
         // Rest-slot conditioning is optional — breaks up core streaks and
-        // gives the athlete flexibility. Non-rest-slot conditioning stays core.
-        const condTier = isRestSlot ? 'optional' : 'core';
+        // gives the athlete flexibility. Early off-season aerobic work is also
+        // support rather than compulsory volume.
+        const condTier = isRestSlot || offseasonPolicy?.subphase === 'early_offseason'
+          ? 'optional'
+          : 'core';
         // B1/B2: hard conditioning is HIGH stress; easy aerobic AND tempo
         // (4B: medium by definition) are medium; optional-tier (rest-slot)
         // conditioning is a light dose.
@@ -3990,7 +4021,7 @@ function buildWeeklyPlan(
     // If conditioning is below the absolute floor (2 exposures), convert
     // pure-strength sessions to S+C combined days. This is the safety net:
     // the scorer should handle this in-loop, but if it doesn't, we enforce here.
-    if (st.condCount < MIN_COND_FLOOR) {
+    if (st.condCount < MIN_COND_FLOOR && !avoidEarlyCombined) {
       // Find pure-strength sessions that can become S+C (no existing conditioning)
       const convertible = plan
         .map((s, i) => ({ s, i }))
@@ -4070,8 +4101,12 @@ function buildWeeklyPlan(
     }
 
     // ── Post-validation: H5b — promote ACC/REC to standalone conditioning ──
-    // If still short of 3 conditioning exposures, promote optional/recovery slots.
-    if (st.condCount < 3) {
+    // Early off-season keeps the subphase target and the optional status of
+    // easy aerobic support. Other phases retain the established floor of 3.
+    const standalonePromotionTarget = offseasonPolicy?.subphase === 'early_offseason'
+      ? condTarget
+      : 3;
+    if (st.condCount < standalonePromotionTarget) {
       const promotable = plan
         .map((s, i) => ({ s, i }))
         .filter(({ s }) => s.tier === 'optional' || s.tier === 'recovery')
@@ -4117,7 +4152,7 @@ function buildWeeklyPlan(
       }
 
       for (const { i } of promotable) {
-        if (st.condCount >= 3) break;
+        if (st.condCount >= standalonePromotionTarget) break;
         const slotPos = i < daySlots.length ? trainingOrder(daySlots[i].num) : undefined;
         // Reset state for this promotion: compute predecessor cat/day based on
         // chronologically previous conditioning placement.
@@ -4158,7 +4193,7 @@ function buildWeeklyPlan(
               : ' — running-based OK this week')
           : buildFocus('COND', flavour, category);
         plan[i] = {
-          tier: 'core',
+          tier: offseasonPolicy?.subphase === 'early_offseason' ? 'optional' : 'core',
           focus: promoFocus,
           dayOfWeek: plan[i].dayOfWeek,
           isHardExposure: flavour === 'high-intensity',

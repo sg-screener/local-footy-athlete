@@ -126,6 +126,10 @@ for (const weekNumber of [1, 2]) {
   const workouts = buildWeek(plan);
   const cats = categories(plan);
   const counts = exposureCounts(workouts);
+  const coreStrength = plan.weeklyPlan.filter((session) =>
+    session.tier === 'core' && !!session.strengthPattern);
+  const supportRecovery = plan.weeklyPlan.filter((session) =>
+    session.tier === 'optional' || session.tier === 'recovery');
 
   ok(`week ${weekNumber} uses aerobic_base only`,
     cats.length > 0 && cats.every((category) => category === 'aerobic_base'),
@@ -143,6 +147,12 @@ for (const weekNumber of [1, 2]) {
   ok(`week ${weekNumber} builds visible off-feet aerobic work`,
     /bike|row|ski/i.test(workoutText(workouts)) && !/Long Nasal Run/.test(workoutText(workouts)),
     workoutText(workouts));
+  ok(`week ${weekNumber} keeps 2-3 useful core strength sessions`,
+    coreStrength.length >= 2 && coreStrength.length <= 3,
+    planText(plan));
+  ok(`week ${weekNumber} includes optional/support or recovery work`,
+    supportRecovery.length >= 1,
+    planText(plan));
 }
 
 console.log('\n[2] early low readiness and low availability');
@@ -158,6 +168,17 @@ console.log('\n[2] early low readiness and low availability');
       lowPlan.weeklyPlan.every((session) =>
         session.conditioningFlavour !== 'high-intensity' && session.speedWorkKind !== 'true_speed'),
     lowPlan.weeklyPlan);
+  ok('low-readiness early week caps core strength at two sessions',
+    lowPlan.weeklyPlan.filter((session) =>
+      session.tier === 'core' && !!session.strengthPattern).length <= 2,
+    planText(lowPlan));
+  ok('low-readiness early week has at least two recovery/support days',
+    lowPlan.weeklyPlan.filter((session) =>
+      session.tier === 'optional' || session.tier === 'recovery').length >= 2,
+    planText(lowPlan));
+  ok('low-readiness early week still contains useful strength work',
+    lowPlan.weeklyPlan.some((session) => !!session.strengthPattern),
+    planText(lowPlan));
 
   const shortProfile = profile({
     trainingDaysPerWeek: 2,
@@ -166,11 +187,28 @@ console.log('\n[2] early low readiness and low availability');
   const shortPlan = planFor(1, shortProfile);
   const combined = shortPlan.weeklyPlan.filter((session) => session.hasCombinedConditioning);
   ok('low availability does not create brutal early S+C days',
-    combined.every((session) =>
-      session.conditioningCategory === 'aerobic_base' &&
-      session.attachedConditioningKind === 'finisher' &&
-      session.conditioningFlavour !== 'high-intensity'),
+    combined.length === 0,
     combined);
+  ok('low availability keeps two useful strength sessions instead of compressing more work',
+    shortPlan.weeklyPlan.filter((session) => !!session.strengthPattern).length === 2,
+    planText(shortPlan));
+
+  const fourDayPlan = planFor(1, profile({
+    trainingDaysPerWeek: 4,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday', 'Saturday'],
+    recentTrainingLoad: 'Pretty consistent',
+  }));
+  ok('four-day early week keeps three core strength sessions',
+    fourDayPlan.weeklyPlan.filter((session) =>
+      session.tier === 'core' && !!session.strengthPattern).length === 3,
+    planText(fourDayPlan));
+  ok('four-day early week keeps one optional aerobic support session',
+    fourDayPlan.weeklyPlan.filter((session) =>
+      session.tier === 'optional' && session.conditioningCategory === 'aerobic_base').length === 1,
+    planText(fourDayPlan));
+  ok('four-day early week does not stack conditioning onto strength',
+    !fourDayPlan.weeklyPlan.some((session) => session.hasCombinedConditioning),
+    planText(fourDayPlan));
 }
 
 console.log('\n[3] mid and late category breadth');
@@ -186,6 +224,10 @@ console.log('\n[3] mid and late category breadth');
     !mid.weeklyPlan.some((session) =>
       session.conditioningCategory === 'sprint' || session.speedWorkKind === 'true_speed'),
     mid.weeklyPlan);
+  ok('mid bridges back toward normal off-season core volume',
+    mid.weeklyPlan.filter((session) =>
+      session.tier === 'core' && !!session.strengthPattern).length >= 3,
+    planText(mid));
 
   const lateProfile = profile({
     trainingDaysPerWeek: 7,

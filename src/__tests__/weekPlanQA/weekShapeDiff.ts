@@ -94,6 +94,32 @@ const EXPECTED_WEEK_SHAPES: Record<string, ExpectedWeekShape> = {
     id: 'S4',
     ...HEALTHY_TWO_TEAM_TRAINING_BYE,
   },
+  S6: {
+    id: 'S6',
+    days: {
+      Mon: 'full body strength',
+      Tue: 'rest',
+      Wed: 'easy conditioning',
+      Thu: 'rest',
+      Fri: 'upper strength',
+      Sat: 'lower strength',
+      Sun: 'rest',
+    },
+    counts: {
+      hardDays: { max: 1, label: 'at most 1' },
+      mainStrength: 3,
+      conditioning: 1,
+      running: 0,
+      sprintCod: 0,
+    },
+    anchors: {
+      teamTrainingDays: [],
+      fixtureDays: [],
+      fixtureLabel: 'game',
+    },
+    hardDays: ['Sat'],
+    stackedDays: [],
+  },
   E1: {
     id: 'E1',
     ...HEALTHY_TWO_TEAM_TRAINING_BYE,

@@ -60,12 +60,13 @@ export const WEEK_PLAN_QA_SCENARIO_METADATA: WeekPlanQAScenarioMetadata[] = [
   },
   {
     id: 'S6',
-    humanName: 'Off-season four-day low availability',
+    humanName: 'Early off-season four-day low availability',
     phase: 'Off-season',
-    scenarioIntent: 'Guards four-day off-season strength and conditioning coverage without team training.',
+    scenarioIntent: 'Guards week-one strength/support structure with no running, sprint/COD or hard conditioning.',
     gameDay: 'none',
     teamTrainingDays: [],
     availabilitySummary: '4 available days: Monday, Wednesday, Friday, Saturday',
+    notes: 'Explicit early_offseason week 1 scenario.',
   },
   {
     id: 'S7',

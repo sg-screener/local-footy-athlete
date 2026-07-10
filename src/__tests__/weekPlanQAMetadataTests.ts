@@ -65,7 +65,7 @@ console.log('\n[2] metadata stays in lockstep with the harness scenario list');
     'In-season, Friday night game',
     'In-season bye week',
     'Off-season, five days, team Tuesday/Thursday',
-    'Off-season four-day low availability',
+    'Early off-season four-day low availability',
     'Off-season six days with three team trainings',
     'In-season, Saturday game, team Monday/Wednesday',
     'In-season, Saturday game, one team training',

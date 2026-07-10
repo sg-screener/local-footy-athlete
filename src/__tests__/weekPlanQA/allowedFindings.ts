@@ -38,6 +38,13 @@ export const WEEK_PLAN_QA_ALLOWED_FINDINGS: readonly AllowedFindingPolicy[] = [
     reason: 'Early off-season low-availability scenario intentionally has no sprint/COD anchor or app-added speed.',
   },
   {
+    scenarioId: 'S6',
+    ruleId: 'cap_conditioningExposures_under',
+    severity: 'info',
+    status: 'expected',
+    reason: 'Early off-season keeps one optional off-feet aerobic-base session instead of compressing extra conditioning into four available days.',
+  },
+  {
     scenarioId: 'S10',
     ruleId: 'cap_maxHardDays_over',
     severity: 'soft',
