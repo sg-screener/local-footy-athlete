@@ -9,6 +9,7 @@
 
 export * from './sessionTaxonomy';
 export * from './stressClassification';
+export * from './sessionClassificationAdapter';
 export * from './weeklyExposureCounts';
 export * from './injurySeverityBands';
 export * from './phaseRepSchemes';

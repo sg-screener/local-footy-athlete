@@ -30,17 +30,11 @@
 import type { Workout } from '../types/domain';
 import { logger } from '../utils/logger';
 import {
-  classifyDaySessions,
-  MAIN_STRENGTH_CATEGORIES,
-  CONDITIONING_CATEGORIES,
-  type SessionCategory,
-  type SessionUnit,
-} from './sessionTaxonomy';
-import {
-  classifySessionStress,
-  type StressContext,
-  type StressLevel,
-} from './stressClassification';
+  classifyVisibleSession,
+  type ClassifiedVisibleSessionUnit,
+} from './sessionClassificationAdapter';
+import type { SessionCategory } from './sessionTaxonomy';
+import type { StressContext } from './stressClassification';
 
 // ─── Bible default weekly caps (Section 17.B) ────────────────────────
 
@@ -86,9 +80,8 @@ export function dayWorkouts(day: WeekDayInput): Workout[] {
   return list.filter((w): w is Workout => !!w);
 }
 
-export interface ClassifiedUnit extends SessionUnit {
-  stress: StressLevel;
-}
+/** Backward-compatible name for consumers of the weekly report. */
+export type ClassifiedUnit = ClassifiedVisibleSessionUnit;
 
 export interface ClassifiedDay {
   date: string;
@@ -149,42 +142,23 @@ export function countWeeklyExposures(
     const workoutsForDay = dayWorkouts(day);
     const units: ClassifiedUnit[] = [];
     for (const w of workoutsForDay) {
-      for (const u of classifyDaySessions(w)) {
-        units.push({ ...u, stress: classifySessionStress(u, w, ctx) });
-      }
+      const classification = classifyVisibleSession(w, ctx);
+      units.push(...classification.units);
+
+      hardExposures += classification.contributions.hardExposures;
+      mainStrength += classification.contributions.mainStrength;
+      conditioning += classification.contributions.conditioning;
+      extraConditioning += classification.contributions.extraConditioning;
+      running += classification.contributions.running;
+      sprintCod += classification.contributions.sprintCod;
+      gunshow += classification.contributions.gunshow;
+      recovery += classification.contributions.recovery;
+      teamTraining += classification.contributions.teamAnchors;
+      games += classification.contributions.gameAnchors;
     }
 
     for (const u of units) {
       byCategory[u.category] = (byCategory[u.category] ?? 0) + 1;
-      if (u.stress === 'high') hardExposures += 1;
-
-      const onFeet = u.modality === 'running' || u.modality === 'mixed';
-
-      if (MAIN_STRENGTH_CATEGORIES.has(u.category)) mainStrength += 1;
-      if (u.category === 'gunshow_prehab') gunshow += 1;
-      if (u.category === 'recovery') recovery += 1;
-      if (u.category === 'team_training') teamTraining += 1;
-      if (u.category === 'game') games += 1;
-
-      // Running exposures (on-feet load only).
-      if (u.category === 'game' || u.category === 'team_training') running += 1;
-      else if (u.category === 'sprint' && onFeet) running += 1;
-      else if (CONDITIONING_CATEGORIES.has(u.category) && onFeet) running += 1;
-
-      // Sprint/COD exposures.
-      if (u.category === 'game' || u.category === 'team_training') sprintCod += 1;
-      else if (u.category === 'sprint' && onFeet) sprintCod += 1;
-
-      // Conditioning exposures.
-      const isAppConditioning =
-        CONDITIONING_CATEGORIES.has(u.category) ||
-        (u.category === 'sprint' && !onFeet);
-      if (isAppConditioning) {
-        conditioning += 1;
-        extraConditioning += 1;
-      } else if (u.category === 'game' || u.category === 'team_training') {
-        conditioning += 1;
-      }
     }
 
     classifiedDays.push({

@@ -25,16 +25,12 @@ import type { Workout, SeasonPhase, DayOfWeek } from '../types/domain';
 import { logger } from '../utils/logger';
 import { classifyExerciseExposures, type Exposure } from '../utils/exposureEngine';
 import { isTeamTrainingSession } from '../utils/teamTraining';
+import type { SessionUnit } from './sessionTaxonomy';
+import type { StressContext } from './stressClassification';
 import {
-  classifyDaySessions,
-  type SessionCategory,
-  type SessionUnit,
-} from './sessionTaxonomy';
-import {
-  classifySessionStress,
-  type StressContext,
-  type StressLevel,
-} from './stressClassification';
+  classifyVisibleSession,
+  type ClassifiedVisibleSessionUnit,
+} from './sessionClassificationAdapter';
 import {
   countWeeklyExposures,
   auditWeekAgainstCaps,
@@ -111,7 +107,7 @@ const SEVERITY_RANK: Record<FindingSeverity, number> = {
 interface ClassifiedWorkout {
   date: string;
   workout: Workout;
-  units: Array<SessionUnit & { stress: StressLevel }>;
+  units: ClassifiedVisibleSessionUnit[];
   exposures: Set<Exposure>;
 }
 
@@ -212,10 +208,7 @@ export function validateProgramWeek(input: ValidateProgramWeekInput): WeekValida
       classified.push({
         date: day.date,
         workout: w,
-        units: classifyDaySessions(w).map((u) => ({
-          ...u,
-          stress: classifySessionStress(u, w, profile),
-        })),
+        units: classifyVisibleSession(w, profile).units,
         exposures: workoutExposureSet(w),
       });
     }

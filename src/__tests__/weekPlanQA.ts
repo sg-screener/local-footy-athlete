@@ -42,6 +42,10 @@ import {
   validatorDaysFromResolvedWeek,
   type WeekValidationReport,
 } from '../rules/weekStructureValidator';
+import {
+  classifyVisibleSession,
+  type SessionRegion,
+} from '../rules/sessionClassificationAdapter';
 import { isTeamTrainingSession } from '../utils/teamTraining';
 import { resolveOffseasonSubphase } from '../rules/offseasonSubphase';
 import type { DayOfWeek, OnboardingData, Workout, Microcycle, TrainingProgram, SeasonPhase, WeekKind } from '../types/domain';
@@ -87,8 +91,6 @@ interface AssertionResult {
   detail: string;
 }
 
-type Region = 'upper' | 'lower' | 'neutral';
-
 // ═══════════════════════════════════════════════════
 // CONSTANTS
 // ═══════════════════════════════════════════════════
@@ -114,35 +116,48 @@ function monFirstDayIndex(value: string | undefined): number {
 }
 
 // ═══════════════════════════════════════════════════
-// REGION CLASSIFICATION (mirrors coachingEngine)
+// REGION CLASSIFICATION (shared rules-kernel adapter)
 // ═══════════════════════════════════════════════════
 
-function classifyRegion(session: SessionAllocation | Workout | null, focusOverride?: string): Region {
-  if (!session) return 'neutral';
-  const focus = (focusOverride || ('focus' in session ? session.focus : '') || ('name' in session ? session.name : '')).toLowerCase();
-  const tier = 'tier' in session ? session.tier : ('sessionTier' in session ? (session as Workout).sessionTier : '');
-
-  if (tier === 'recovery') return 'neutral';
-  if (focus.includes('full body') || focus.includes('conditioning') || focus.includes('aerobic')) return 'neutral';
-  if (focus.includes('game') || focus.includes('sprint') || focus.includes('mas ') || focus.includes('metcon')) return 'neutral';
-  if (focus.includes('flush') || focus.includes('easy ') || focus.includes('tempo')) return 'neutral';
-  if (focus.includes('flog') || focus.includes('circuit')) return 'neutral';
-  if (focus.includes('6x1km') || focus.includes('row interval') || focus.includes('ski') || focus.includes('bike')) return 'neutral';
-
-  if (focus.includes('lower body') || focus.includes('squat') || focus.includes('hinge') || focus.includes('leg')) return 'lower';
-
-  if (focus.includes('upper body') || focus.includes('pull') || focus.includes('push')) return 'upper';
-  if (focus.includes('arm') || focus.includes('pump') || focus.includes('bicep') || focus.includes('tricep')) return 'upper';
-  if (focus.includes('accessor') || focus.includes('prehab') || focus.includes('trunk') || focus.includes('shoulder')) return 'upper';
-  if (focus.includes('hypertrophy')) return 'upper';
-
-  if (focus.includes('mobility') || focus.includes('foam') || focus.includes('recovery') || focus.includes('rest')) return 'neutral';
-
-  return 'neutral';
+function allocationAsVisibleWorkout(session: SessionAllocation): Workout {
+  const workout: Workout & { isTeamDay?: boolean } = {
+    id: 'qa-classification',
+    microcycleId: 'qa-classification',
+    dayOfWeek: dayIndex(session.dayOfWeek),
+    name: session.focus,
+    description: session.focus,
+    durationMinutes: session.tier === 'recovery' ? 30 : 45,
+    intensity: session.stressLevel === 'high' || session.isHardExposure
+      ? 'High'
+      : session.stressLevel === 'low' || session.tier === 'optional'
+        ? 'Light'
+        : 'Moderate',
+    workoutType: session.tier === 'recovery' ? 'Recovery' : 'Strength',
+    sessionTier: session.tier,
+    hasCombinedConditioning: session.hasCombinedConditioning,
+    attachedConditioningKind: session.attachedConditioningKind,
+    conditioningFlavour: session.conditioningFlavour,
+    conditioningCategory: session.conditioningCategory,
+    speedBlock: session.speedBlock,
+    exercises: [],
+    createdAt: '',
+    updatedAt: '',
+  };
+  if (session.isTeamDay) workout.isTeamDay = true;
+  return workout;
 }
 
-function regionLabel(r: Region): string {
-  return r === 'upper' ? 'UPR' : r === 'lower' ? 'LWR' : '---';
+function classifyRegion(session: SessionAllocation | Workout | null): SessionRegion {
+  if (!session) return 'none';
+  const workout = 'focus' in session ? allocationAsVisibleWorkout(session) : session;
+  return classifyVisibleSession(workout).strengthRegion;
+}
+
+function regionLabel(r: SessionRegion): string {
+  if (r === 'upper') return 'UPR';
+  if (r === 'lower') return 'LWR';
+  if (r === 'full_body') return 'FUL';
+  return '---';
 }
 
 // ═══════════════════════════════════════════════════
@@ -208,7 +223,7 @@ function runAssertions(
   {
     let maxRun = 0;
     let currentRun = 0;
-    let currentRegion: Region = 'neutral';
+    let currentRegion: SessionRegion = 'none';
     let prevDayIdx = -99;
     let worstRun = '';
 
@@ -216,14 +231,14 @@ function runAssertions(
       const dayIdx = monFirstDayIndex(s.dayOfWeek);
       const region = classifyRegion(s);
 
-      if (region !== 'neutral' && region === currentRegion && dayIdx - prevDayIdx === 1) {
+      if (region !== 'none' && region === currentRegion && dayIdx - prevDayIdx === 1) {
         currentRun++;
-      } else if (region !== 'neutral') {
+      } else if (region !== 'none') {
         currentRegion = region;
         currentRun = 1;
       } else {
         currentRun = 0;
-        currentRegion = 'neutral';
+        currentRegion = 'none';
       }
 
       if (currentRun > maxRun) {
