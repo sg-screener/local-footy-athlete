@@ -31,8 +31,12 @@
 
 import { EXERCISE_TAGS, type MovementPattern, type InjuryKey } from './exerciseTags';
 import type { EquipmentTag } from './exercisePools';
-import type { WeekKind } from '../types/domain';
+import type { ExperienceLevel, WeekKind } from '../types/domain';
 import { EXERCISE_LOAD_MAP, type EquipmentClass } from '../utils/loadEstimation';
+import {
+  resolveTrainingAgePolicy,
+  type TrainingAgePoolSlot,
+} from '../rules/trainingAgePolicy';
 
 // ─── Types ───
 
@@ -137,6 +141,8 @@ export interface AthletePoolPrefs {
   activeInjuries?: readonly InjuryKey[];
   /** Canonical equipment tags available for this generated week/session. */
   availableEquipment?: readonly EquipmentTag[];
+  /** Profile training age used to keep deterministic pool choices learnable. */
+  experienceLevel?: ExperienceLevel;
 }
 
 // ─── Movement Pattern → Slot Map ───
@@ -711,6 +717,25 @@ function siblingRole(role: PoolRole): PoolRole {
   return role === 'anchor' ? 'accessory' : 'anchor';
 }
 
+function trainingAgePoolForSlot(
+  slot: PoolSlotKey,
+  prefs: AthletePoolPrefs | undefined,
+): PoolDefinition | null {
+  const policy = resolveTrainingAgePolicy(prefs?.experienceLevel);
+  if (policy.level !== 'new') return null;
+  const priority = policy.exercisePriority[slot as TrainingAgePoolSlot];
+  if (!priority?.length) return null;
+
+  // New athletes keep one stable curriculum across the block. Using one
+  // synthetic anchor pool also lets main and secondary rows share the same
+  // within-session avoidance set, so they cannot collapse to duplicates.
+  return {
+    slot,
+    role: 'anchor',
+    entries: priority.map((name) => ({ name, loadRatio: 0 })),
+  };
+}
+
 /**
  * Same as selectPoolEntry, but skips entries whose names appear in `avoid`.
  * Used to prevent duplicate picks when multiple AI-suggested exercises in a
@@ -789,6 +814,11 @@ export function applyPoolRotation(
   const { slot, role } = classification;
   let selectedRole = role;
   let pool = getPool(slot, role);
+  const trainingAgePool = trainingAgePoolForSlot(slot, prefs);
+  if (trainingAgePool) {
+    pool = trainingAgePool;
+    selectedRole = trainingAgePool.role;
+  }
   // Defensive: pool shape allows empty entries for accessory-only slots
   // (e.g. isolation_lower.anchor is []). classifyPoolSlot's guards should
   // prevent routing here, but fall through untouched if we ever do land

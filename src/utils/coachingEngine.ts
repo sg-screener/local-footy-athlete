@@ -29,6 +29,7 @@ import type {
   SpeedBlockPlacement,
   SpeedWorkKind,
   WeekKind,
+  ExperienceLevel,
 } from '../types/domain';
 import { logger } from './logger';
 import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
@@ -44,6 +45,7 @@ import {
 } from '../rules/offseasonSubphasePolicy';
 import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import { resolveWeekContext } from '../rules/weekContext';
+import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import type {
   GenerationConstraintContext,
   GenerationInjuryConstraint,
@@ -62,6 +64,7 @@ export interface CoachingInputs {
   sprintExposure: SprintExposure | undefined;
   conditioningLevel: ConditioningLevel | undefined;
   recentTrainingLoad: RecentTrainingLoad | undefined;
+  experienceLevel: ExperienceLevel | undefined;
   injuries: OnboardingInjury[];
   goals: string[];
   hasGame: boolean;
@@ -474,6 +477,7 @@ export function getCoreSessionCount(
 export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // Step 1: Readiness
   const { level: readiness, factors: readinessFactors } = calculateReadiness(inputs);
+  const trainingAgePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
   const offseasonSubphase = resolveOffseasonSubphase({
     seasonPhase: inputs.seasonPhase,
     explicitSubphase: inputs.offseasonSubphase,
@@ -489,7 +493,11 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   const { count: existingHard, breakdown: hardBreakdown } = countTeamHardExposures(inputs);
 
   // Step 3: Hard exposure cap
-  const hardCap = getHardExposureCap(inputs.seasonPhase, readiness);
+  const phaseHardCap = getHardExposureCap(inputs.seasonPhase, readiness);
+  const trainingAgeHardCap = trainingAgePolicy.maxHardExposures?.[inputs.seasonPhase];
+  const hardCap = trainingAgeHardCap === undefined
+    ? phaseHardCap
+    : Math.min(phaseHardCap, trainingAgeHardCap);
   const remainingBudget = Math.max(0, hardCap - existingHard);
 
   // Step 4: Core session count
@@ -595,6 +603,13 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     coreRange = { min: 3, max: 3 };
   }
 
+  if (trainingAgePolicy.maxCoreSessions !== null) {
+    coreRange = {
+      min: Math.min(coreRange.min, trainingAgePolicy.maxCoreSessions),
+      max: Math.min(coreRange.max, trainingAgePolicy.maxCoreSessions),
+    };
+  }
+
   // In-season: not all CORE sessions are hard exposures. The G−2 push session is CORE
   // (non-negotiable for movement balance) but moderate intensity — it doesn't consume
   // hard budget the way a heavy lower body or pull session does.
@@ -615,9 +630,12 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   const extraDays = Math.max(0, inputs.availableDays - actualCore);
   // Optional sessions — even low readiness athletes get at least 1 optional session
   // if they have extra days. Training stimulus > pure recovery for adaptation.
-  const optionalSessions = offseasonPolicy?.subphase === 'early_offseason'
+  const normalOptionalSessions = offseasonPolicy?.subphase === 'early_offseason'
     ? Math.min(extraDays, 1)
     : Math.min(extraDays, readiness === 'low' ? 1 : readiness === 'medium' ? 2 : 2);
+  const optionalSessions = trainingAgePolicy.maxOptionalSessions === null
+    ? normalOptionalSessions
+    : Math.min(normalOptionalSessions, trainingAgePolicy.maxOptionalSessions);
   const recoverySessions = Math.max(0, extraDays - optionalSessions);
 
   // Build weekly plan
@@ -866,6 +884,7 @@ function buildWeeklyPlan(
   readiness: ReadinessLevel = 'medium',
 ): SessionAllocation[] {
   const plan: SessionAllocation[] = [];
+  const trainingAgePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
   const days = [...inputs.selectedDays];
   const gameDayNum = inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null;
   const teamDayNums = (inputs.teamTrainingDays || []).map(dayNameToNumber).filter(d => d >= 0);
@@ -1279,6 +1298,7 @@ function buildWeeklyPlan(
       // day can carry the sole conditioning top-up as a proper component.
       const allowConditioningTopUp =
         teamSlots.length <= 1 &&
+        !trainingAgePolicy.avoidCombinedStrengthConditioning &&
         !activeReadiness?.avoidHardConditioning &&
         !hasRiskRestrictedInjury;
       let lowerSlot: ByeSlot | undefined;
@@ -1639,8 +1659,9 @@ function buildWeeklyPlan(
     const condShortfall = Math.max(0, MIN_COND_FLOOR - condViaStandaloneMax);
     const minCombinedDays = condShortfall > 0 ? Math.ceil(condShortfall / 0.75) : 0;
     const avoidEarlyCombined =
-      offseasonPolicy?.sessions.lowAvailabilityCombinedDays === 'avoid' &&
-      (inputs.availableDays <= 4 || readiness === 'low');
+      trainingAgePolicy.avoidCombinedStrengthConditioning ||
+      (offseasonPolicy?.sessions.lowAvailabilityCombinedDays === 'avoid' &&
+        (inputs.availableDays <= 4 || readiness === 'low'));
 
     // Finishers are useful add-ons, not hidden second sessions. Keep the
     // conditioning target intact, but do not let repeated steady aerobic
@@ -2275,6 +2296,13 @@ function buildWeeklyPlan(
         laddered = true;
       }
       if (blocksConditioningCategoryForGeneration(requestedCategory)) {
+        return easy(true);
+      }
+      if (
+        trainingAgePolicy.avoidCombinedStrengthConditioning &&
+        strengthContext !== 'standalone' &&
+        requestedCategory !== 'aerobic_base'
+      ) {
         return easy(true);
       }
       const isHardCategory = requestedCategory !== 'aerobic_base';
@@ -6110,6 +6138,7 @@ function buildAIConstraints(
   optional: number,
   recovery: number
 ): AIConstraints {
+  const trainingAgePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
   // Lower body loading strategy — injuries MODIFY movement selection, not eliminate training.
   // 'avoid' is reserved for severe + constant pain only. Otherwise we train around it.
   let lowerBodyLoading: AIConstraints['lowerBodyLoading'] = 'normal';
@@ -6286,7 +6315,7 @@ function buildAIConstraints(
     injuryRestrictions,
     priorities: inputs.goals || [],
     rampUp,
-    maxExercisesPerSession: 6,
+    maxExercisesPerSession: trainingAgePolicy.maxExercisesPerStrengthSession,
     notes,
   };
 }
@@ -6344,6 +6373,7 @@ export function onboardingToCoachingInputs(
     sprintExposure: data.sprintExposure,
     conditioningLevel: data.conditioningLevel,
     recentTrainingLoad: data.recentTrainingLoad,
+    experienceLevel: data.experienceLevel,
     injuries: data.injuries || [],
     goals: data.motivation ? data.motivation.split(', ') : [],
     // hasGame means "a specific game is scheduled this week" — it must NOT be

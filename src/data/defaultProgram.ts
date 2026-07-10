@@ -20,6 +20,8 @@ import { addDaysISO, computeBlockBounds } from '../utils/programBlockState';
 import {
   applyLoadEstimates,
   EXERCISE_LOAD_MAP,
+  estimateStartingWeight,
+  isTrueBodyweightExercise,
   resolveExerciseName,
   roundToEquipment,
 } from '../utils/loadEstimation';
@@ -49,6 +51,7 @@ import {
   resolveOffseasonSubphase,
   type OffseasonSubphase,
 } from '../rules/offseasonSubphase';
+import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
   applyStrengthDeloadToExercises,
   deloadConditioningCategory,
@@ -129,6 +132,28 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     updatedAt: new Date().toISOString(),
   },
   {
+    id: 'ex-bodyweight-squat',
+    name: 'Bodyweight Squat',
+    description: 'Controlled squat pattern for technique and range',
+    exerciseType: 'Compound',
+    muscleGroups: ['Quadriceps', 'Glutes'],
+    equipmentRequired: [],
+    difficultyLevel: 'Beginner',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'ex-glute-bridge',
+    name: 'Glute Bridge',
+    description: 'Bodyweight hip extension and hinge pattern',
+    exerciseType: 'Compound',
+    muscleGroups: ['Glutes', 'Hamstrings'],
+    equipmentRequired: [],
+    difficultyLevel: 'Beginner',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
     id: 'ex-calf-raises',
     name: 'Calf Raises',
     description: 'Standing calf raise',
@@ -171,6 +196,17 @@ export const DEFAULT_EXERCISES: Exercise[] = [
     muscleGroups: ['Back', 'Biceps'],
     equipmentRequired: ['Dumbbells'],
     difficultyLevel: 'Intermediate',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'ex-inverted-row',
+    name: 'Inverted Row (Bodyweight)',
+    description: 'Bodyweight row with an adjustable torso angle',
+    exerciseType: 'Compound',
+    muscleGroups: ['Back', 'Biceps'],
+    equipmentRequired: [],
+    difficultyLevel: 'Beginner',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
@@ -525,7 +561,15 @@ function createDefaultMicrocycle(programId: string, onboardingData?: OnboardingD
   const finalWorkouts = onboardingData
     ? phaseAwareWorkouts.map(w => ({
         ...w,
-        exercises: applyLoadEstimates(w.exercises, onboardingData),
+        exercises: applyTrainingAgePrescription(
+          applyLoadEstimates(w.exercises, onboardingData),
+          onboardingData,
+          {
+            seasonPhase: onboardingData.seasonPhase,
+            workoutName: w.name,
+            workoutType: w.workoutType,
+          },
+        ),
       }))
     : phaseAwareWorkouts;
 
@@ -803,6 +847,88 @@ function applySubphaseMainLiftLoadMultiplier(
         )
       : Math.round((weight * multiplier) / 2.5) * 2.5;
     return { ...exercise, prescribedWeightKg: adjustedWeight };
+  });
+}
+
+function appendBeginnerTechniqueIntent(
+  notes: string | undefined,
+  targetRpeMin: number,
+  targetRpeMax: number,
+): string {
+  let next = notes ?? '';
+  if (!new RegExp(`Target RPE ${targetRpeMin}-${targetRpeMax}`, 'i').test(next)) {
+    next = `${next}${next ? ' ' : ''}Target RPE ${targetRpeMin}-${targetRpeMax}.`;
+  }
+  const technique = 'Use controlled technique and stop well before failure.';
+  if (!next.includes(technique)) next = `${next}${next ? ' ' : ''}${technique}`;
+  return next;
+}
+
+function applyTrainingAgePrescription(
+  exercises: WorkoutExercise[],
+  onboardingData: OnboardingData,
+  context: PhasePrescriptionContext,
+): WorkoutExercise[] {
+  const policy = resolveTrainingAgePolicy(onboardingData.experienceLevel);
+  if (
+    policy.level !== 'new' ||
+    !isStrengthPrescriptionContext(context) ||
+    policy.maxSetsPerExercise === null ||
+    policy.compoundRepMin === null ||
+    policy.compoundRepMax === null ||
+    policy.targetRpeMin === null ||
+    policy.targetRpeMax === null
+  ) {
+    return exercises;
+  }
+
+  return exercises.map((exercise) => {
+    if (exercise.prescriptionType && exercise.prescriptionType !== 'reps') return exercise;
+    const exerciseName = exercise.exercise?.name ?? '';
+    const classification = classifyPoolSlot(exerciseName);
+    if (!classification) return exercise;
+
+    const compound = MAIN_LIFT_POOL_SLOTS.has(classification.slot);
+    const repsMin = compound
+      ? Math.min(
+          policy.compoundRepMax,
+          Math.max(policy.compoundRepMin, exercise.prescribedRepsMin),
+        )
+      : exercise.prescribedRepsMin;
+    const repsMax = compound
+      ? Math.max(
+          repsMin,
+          Math.min(policy.compoundRepMax, exercise.prescribedRepsMax),
+        )
+      : exercise.prescribedRepsMax;
+
+    let prescribedWeightKg = exercise.prescribedWeightKg;
+    if (!isTrueBodyweightExercise(exerciseName)) {
+      const estimated = estimateStartingWeight(exerciseName, onboardingData);
+      const equipment = EXERCISE_LOAD_MAP[resolveExerciseName(exerciseName)]?.equipment;
+      if (estimated && equipment) {
+        const beginnerCap = roundToEquipment(
+          estimated * policy.initialLoadMultiplier,
+          equipment,
+        );
+        prescribedWeightKg = prescribedWeightKg && prescribedWeightKg > 0
+          ? Math.min(prescribedWeightKg, beginnerCap)
+          : beginnerCap;
+      }
+    }
+
+    return {
+      ...exercise,
+      prescribedSets: Math.max(1, Math.min(policy.maxSetsPerExercise, exercise.prescribedSets || 1)),
+      prescribedRepsMin: repsMin,
+      prescribedRepsMax: repsMax,
+      prescribedWeightKg,
+      notes: appendBeginnerTechniqueIntent(
+        exercise.notes,
+        policy.targetRpeMin,
+        policy.targetRpeMax,
+      ),
+    };
   });
 }
 
@@ -1284,6 +1410,14 @@ export function buildWorkoutsFromCoach(
    */
   athletePrefs?: AthletePoolPrefs,
 ): Workout[] {
+  const effectiveAthletePrefs = onboardingData?.experienceLevel
+    ? {
+        excluded: athletePrefs?.excluded ?? [],
+        pinned: athletePrefs?.pinned ?? [],
+        ...athletePrefs,
+        experienceLevel: onboardingData.experienceLevel,
+      }
+    : athletePrefs;
   const offseasonSubphase = resolveOffseasonSubphase({
     seasonPhase: onboardingData?.seasonPhase,
     miniCycleNumber: rotationContext?.miniCycleNumber,
@@ -1296,7 +1430,7 @@ export function buildWorkoutsFromCoach(
   const effectiveWeeklyPlan = weeklyPlan
     ? weeklyPlan.map((entry) => applyRequiredOffFeetEquipmentFallback(
         deloadPlanEntry(entry, deloadPolicy),
-        athletePrefs?.availableEquipment,
+        effectiveAthletePrefs?.availableEquipment,
       ))
     : undefined;
   const planLookup = effectiveWeeklyPlan ? buildPlanLookup(effectiveWeeklyPlan) : null;
@@ -1829,7 +1963,7 @@ export function buildWorkoutsFromCoach(
       // rotation-selected pool variant when applicable. Non-pool exercises
       // (carry, core, isolation, anything untagged) pass through unchanged.
       const resolvedName = rotationContext && poolUsage
-        ? applyPoolRotation(ex.name, rotationContext, poolUsage, athletePrefs)
+        ? applyPoolRotation(ex.name, rotationContext, poolUsage, effectiveAthletePrefs)
         : ex.name;
       const exercise = findOrCreateExercise(resolvedName);
       return {
@@ -1873,6 +2007,15 @@ export function buildWorkoutsFromCoach(
       workoutType: cw.workoutType,
       planEntry,
     });
+    if (onboardingData) {
+      finalExercises = applyTrainingAgePrescription(finalExercises, onboardingData, {
+        seasonPhase: onboardingData.seasonPhase,
+        offseasonSubphase,
+        workoutName: cw.name,
+        workoutType: cw.workoutType,
+        planEntry,
+      });
+    }
 
     // Resolved conditioning block — assembled below for combined S+C days.
     let resolvedConditioningBlock: ConditioningBlock | undefined;

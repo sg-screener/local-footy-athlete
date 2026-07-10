@@ -192,6 +192,13 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: SAFE,
   },
 
+  'Bodyweight Squat': {
+    movement: 'squat', region: 'lower', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'high', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
+    injury: SAFE,
+  },
+
   'Bulgarian Split Squats': {
     movement: 'lunge', region: 'lower', load: 'moderate', fatigue: 'high',
     doms: 'high', stability: 'moderate', unilateral: true,
@@ -298,6 +305,13 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     movement: 'hinge', region: 'lower', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'caution',
+    injury: inj({ pubalgia: 'caution' }),
+  },
+
+  'Glute Bridge': {
+    movement: 'hinge', region: 'lower', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'high', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
     injury: inj({ pubalgia: 'caution' }),
   },
 

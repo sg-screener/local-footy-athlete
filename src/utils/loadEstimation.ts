@@ -107,6 +107,8 @@ export const TRUE_BODYWEIGHT_EXERCISES = new Set([
   'Inverted Rows',
   'Inverted Row (Bodyweight)',
   'Chin-Up Negative (Slow)',
+  'Bodyweight Squat',
+  'Glute Bridge',
   // Lower body BW / plyo
   'Vertical Jump',
   'Countermovement Jump',
@@ -163,6 +165,8 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Step Ups':               { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
   'Tempo Step-Up':          { anchor: 'squat', ratio: 0.15, equipment: 'dumbbell' },
   'Goblet Squat':           { anchor: 'squat', ratio: 0.22, equipment: 'dumbbell' },
+  'Bodyweight Squat':       { anchor: 'squat', ratio: 0.00, equipment: 'bodyweight' },
+  'Glute Bridge':           { anchor: 'squat', ratio: 0.00, equipment: 'bodyweight' },
   'Single-Leg RDL':         { anchor: 'squat', ratio: 0.15, equipment: 'dumbbell' },
   'Kettlebell Swings':      { anchor: 'squat', ratio: 0.20, equipment: 'kettlebell' },
 
