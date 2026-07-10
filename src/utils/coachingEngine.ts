@@ -6065,23 +6065,28 @@ function optimiseStrengthLoadSequence(
 //   2. Core non-hard-exposure, non-team session → demote to optional
 //
 // Notes:
-//   - We identify "consecutive" via calendar day numbers (dayNameToNumber),
-//     not plan array order, so Friday + Saturday are consecutive regardless
-//     of where they sit in the selected training days array.
+//   - We identify "consecutive" via Monday→Sunday week positions derived
+//     from dayNameToNumber, not plan array order, so Friday + Saturday are
+//     consecutive without treating Sunday as the day before Monday.
 //   - We leave `isTeamDay === true` slots untouched no matter what.
 function enforcePreSeasonCoreStreak(
   plan: SessionAllocation[],
   teamDayNumSet: Set<number>
 ): SessionAllocation[] {
   if (!plan || plan.length === 0) return plan;
-  // Sort a shallow view by calendar day for streak detection
+  // Sort a shallow view in the program's Monday→Sunday week order.
+  // `dayNameToNumber` returns Sunday=0; sorting that value directly makes
+  // Sunday appear before Monday and creates a false cross-boundary streak.
   const byDay = [...plan]
-    .map(s => ({ ref: s, dayNum: s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1 }))
+    .map(s => {
+      const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
+      return { ref: s, dayNum, weekPos: dayNum === 0 ? 7 : dayNum };
+    })
     .filter(x => x.dayNum >= 0)
-    .sort((a, b) => a.dayNum - b.dayNum);
+    .sort((a, b) => a.weekPos - b.weekPos);
 
   // Build an ordered array of CONSECUTIVE-calendar core entries.
-  // Two entries are consecutive if their dayNum differs by exactly 1.
+  // Two entries are consecutive if their Monday→Sunday position differs by 1.
   // We want to find runs of ≥4 and downgrade one slot.
   // Perform multiple passes in case one downgrade isn't enough.
   for (let pass = 0; pass < 3; pass++) {
@@ -6096,7 +6101,7 @@ function enforcePreSeasonCoreStreak(
         curr.ref.tier !== 'core' ||
         !prev ||
         prev.ref.tier !== 'core' ||
-        curr.dayNum - prev.dayNum !== 1;
+        curr.weekPos - prev.weekPos !== 1;
       if (breaks) {
         // Run [runStart, i-1] ended
         const runLen = i - runStart;
@@ -6327,9 +6332,12 @@ function enforceFieldLoadStreak(plan: SessionAllocation[]): void {
   // streaks that only separate after a mid-run demotion.
   for (let pass = 0; pass < 3; pass++) {
     const byDay = [...plan]
-      .map(s => ({ ref: s, dayNum: s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1 }))
+      .map(s => {
+        const dayNum = s.dayOfWeek ? dayNameToNumber(s.dayOfWeek) : -1;
+        return { ref: s, dayNum, weekPos: dayNum === 0 ? 7 : dayNum };
+      })
       .filter(x => x.dayNum >= 0)
-      .sort((a, b) => a.dayNum - b.dayNum);
+      .sort((a, b) => a.weekPos - b.weekPos);
 
     let runStart = 0;
     let broke = false;
@@ -6341,7 +6349,7 @@ function enforceFieldLoadStreak(plan: SessionAllocation[]): void {
         || !isFieldLoad(curr.ref)
         || !prev
         || !isFieldLoad(prev.ref)
-        || curr.dayNum - prev.dayNum !== 1;
+        || curr.weekPos - prev.weekPos !== 1;
 
       if (ends) {
         const runLen = i - runStart;

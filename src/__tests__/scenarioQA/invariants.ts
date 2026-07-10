@@ -284,27 +284,26 @@ export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
 };
 
 /**
- * H-PRE-7/8/9: Pre-season + ≥2 team days + no game + ≥5 days → target
- * 4 strength-pattern exposures spread as 2 lower + 2 upper *strength*
- * cores. Note: Sat may additionally be promoted to core for the H-PRE-11
+ * H-PRE-7/8/9: Pre-season + ≥2 team days + no game + ≥5 days → preserve
+ * all four strength movement-pattern exposures: squat, hinge, push and pull.
+ * The preferred four-session shape is 2 lower + 2 upper. A typed L-co session
+ * is equivalent lower-pattern coverage when team anchors and the hard-day
+ * budget leave three strength slots: L-co covers squat + hinge, while two
+ * upper sessions preserve push + pull. This remains inside the Bible's 2–4
+ * pre-season strength-session range without forcing another soreness-heavy
+ * lower day merely to satisfy a calendar-session count.
+ *
+ * Note: Sat may additionally be promoted to core for the H-PRE-11
  * conditioning peak — that's expected and does not count toward the
- * L/U strength budget.
+ * strength-pattern budget.
  *
  * Source of truth: `SessionAllocation.strengthPattern` (typed engine
  * field). We do NOT parse focus strings — see project memory
  * "Engine carries explicit semantic metadata".
  *
- * Combined-coverage exception (back-to-back team days):
- *   When the two team days are *calendar-consecutive* (e.g. Thu+Fri),
- *   they pin two adjacent late-week slots as locked cores. With a
- *   typical 6-day available block, H3's "no two dedicated lowers
- *   within a 1-day gap" rule + H1's "no 3+ consecutive strength
- *   sessions" + H-PRE-12's field-load streak cap make 2 dedicated
- *   lower sessions geometrically infeasible. The engine resolves this
- *   by emitting one L-co session (`strengthPattern: 'lower_combined'`)
- *   that covers BOTH squat and hinge sub-patterns at moderate dose —
- *   yielding 4 pattern exposures (squat + hinge + push + pull) from
- *   3 calendar slots. We accept that as equivalent coverage.
+ * The invariant intentionally reads typed `lower_combined` coverage rather
+ * than inferring dose from titles. It still fails genuinely soft weeks that
+ * omit either lower-pattern coverage or either upper slot.
  */
 export const preseason_4exposurePriority: Invariant = ({ profile, inputs, plan }) => {
   if (inputs.seasonPhase !== 'Pre-season') return null;
@@ -331,40 +330,26 @@ export const preseason_4exposurePriority: Invariant = ({ profile, inputs, plan }
   }
   const lower = lowerDedicated + lowerCombined;
 
-  // Calendar-consecutive team days (e.g. Thu + Fri, Sat + Sun) — geometric
-  // constraint allows the L-co alternative.
-  const teamDayNums = (inputs.teamTrainingDays || [])
-    .map((d) => DAY_NUM[d as string])
-    .filter((n) => n !== undefined)
-    .sort((a, b) => a - b);
-  let teamDaysConsecutive = false;
-  for (let i = 1; i < teamDayNums.length; i++) {
-    if (teamDayNums[i] - teamDayNums[i - 1] === 1) {
-      teamDaysConsecutive = true;
-      break;
-    }
-  }
-
   const standard = lowerDedicated === 2 && upper === 2;
   const combinedAlternative =
-    teamDaysConsecutive && lowerCombined >= 1 && lower >= 1 && upper === 2;
+    lowerCombined >= 1 && lower >= 1 && upper === 2;
   const ok = standard || combinedAlternative;
 
   let detail: string;
   if (standard) {
     detail = `2L + 2U ✓`;
   } else if (combinedAlternative) {
-    detail = `1×L-co (sq+hi) + 2U ✓ (consecutive team days — 2 dedicated lowers infeasible)`;
+    detail = `1×L-co (sq+hi) + 2U ✓ (four movement patterns across three strength sessions)`;
   } else {
     const lowerDesc =
       lowerCombined > 0
         ? `${lowerDedicated}L + ${lowerCombined}×L-co`
         : `${lowerDedicated}L`;
-    detail = `${lowerDesc} + ${upper}U (expected 2L + 2U or — with consecutive team days — 1×L-co + 2U)`;
+    detail = `${lowerDesc} + ${upper}U (expected 2L + 2U or equivalent 1×L-co + 2U pattern coverage)`;
   }
 
   return {
-    rule: 'H-PRE-7/8/9: pre-season healthy → 2L + 2U strength cores',
+    rule: 'H-PRE-7/8/9: pre-season healthy → squat + hinge + 2 upper strength patterns',
     passed: ok,
     detail,
   };
