@@ -561,6 +561,17 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
     ok(`${contentWorkout.name} typed content is not collapsed`,
       !!contentProjected.day.workout,
       `projected=${contentProjected.day.workout?.name ?? 'Rest'}`);
+    if (contentWorkout === powerOnly) {
+      eq('powerBlock title survives visible projection',
+        contentProjected.day.workout?.powerBlock?.title,
+        'Power Primer');
+      eq('powerBlock prescription survives visible projection',
+        contentProjected.day.workout?.powerBlock?.prescription,
+        '3 x 3 jumps');
+      eq('powerBlock exercise option survives visible projection',
+        contentProjected.day.workout?.powerBlock?.options?.[0]?.name,
+        'Vertical Jump');
+    }
   }
 }
 

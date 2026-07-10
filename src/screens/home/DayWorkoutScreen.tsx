@@ -17,6 +17,7 @@ import ExerciseVideoModal from '../../components/ExerciseVideoModal';
 import { SessionExplanationBanner } from '../../components/SessionExplanationBanner';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
+import { PowerPrimerSection } from '../../components/PowerPrimerSection';
 import type { DesignVersion } from '../../store/uiStore';
 import DayWorkoutScreenV2 from './DayWorkoutScreenV2';
 import { useDayWorkout } from './useDayWorkout';
@@ -184,7 +185,9 @@ function DayWorkoutScreenClassic() {
               : workout.workoutType;
             const countFragment =
               count > 0 ? `${count} exercise${count !== 1 ? 's' : ''}` : '';
-            const combined = [countFragment, typeText].filter(Boolean).join(' · ');
+            const combined = [countFragment, workout.powerBlock?.title, typeText]
+              .filter(Boolean)
+              .join(' · ');
             if (!combined && !explanation) return null;
             return (
               <View style={styles.subtitleRow}>
@@ -277,6 +280,9 @@ function DayWorkoutScreenClassic() {
             {workout.description}
           </Text>
         ) : null}
+
+        {/* Typed pre-lift power work stays visible and separate from strength. */}
+        <PowerPrimerSection block={workout.powerBlock} />
 
         {isConditioning ? (
           /* ─── Conditioning layout: session phases as descriptive blocks ─── */

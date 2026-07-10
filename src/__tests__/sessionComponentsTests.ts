@@ -139,8 +139,47 @@ section('4. Optional finisher is its own component');
   );
 }
 
-section('5. Speed and recovery add-on metadata become honest components');
+section('5. Power, speed and recovery add-on metadata become honest components');
 {
+  const powerAndUpper = {
+    name: 'Upper Strength',
+    workoutType: 'Strength',
+    exercises: [ex('we-bench', 'Bench Press')],
+    powerBlock: {
+      id: 'power-1',
+      title: 'Power Primer',
+      placement: 'pre_lift',
+      prescription: '3 x 3 — full rest, fast & sharp',
+      options: [{ name: 'Explosive Push-up', sets: 3, repsMin: 3, repsMax: 3 }],
+      notes: ['Do this fresh.'],
+      counting: {
+        hardExposure: false,
+        mainStrength: false,
+        conditioningCredit: 'none',
+        isFinisher: false,
+      },
+    },
+  };
+  const powerComponents = getSessionComponents(powerAndUpper as any);
+  assert(kinds(powerAndUpper as any).join(',') === 'power,strength', 'power + upper detects both components');
+  assert(
+    componentQuestionLabel(powerComponents[0], powerComponents.length) === 'Did you complete the power work?',
+    'power gets a separate completion question',
+  );
+  assert(
+    componentSkipReasonLabel(powerComponents[0]) === 'Why did you skip the power work?',
+    'power skip reason copy is component-specific',
+  );
+  assert(
+    powerComponents[0].completionPolicy === 'required',
+    'programmed power is completion-bearing but remains separate from strength',
+  );
+  assert(
+    !kinds(powerAndUpper as any).some((kind) =>
+      kind === 'conditioning' || kind === 'finisher' || kind === 'recovery_addon'),
+    'power does not masquerade as conditioning, finisher, or recovery add-on',
+  );
+
   const speedAndUpper = {
     name: 'Upper Strength + Speed',
     workoutType: 'Strength',
@@ -229,11 +268,12 @@ section('6. Removed components disappear');
     workoutType: 'Strength',
     exercises: [ex('we-row', 'Chest Supported Row')],
     speedBlock: undefined,
+    powerBlock: undefined,
     recoveryAddons: [],
   };
   assert(
     kinds(optionalComponentsRemoved as any).join(',') === 'strength',
-    'removed speed and recovery add-on metadata do not leave feedback fields',
+    'removed power, speed and recovery add-on metadata do not leave feedback fields',
   );
 }
 

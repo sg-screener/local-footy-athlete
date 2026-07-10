@@ -17,6 +17,7 @@ import { SessionExplanationBanner } from '../../components/SessionExplanationBan
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
+import { PowerPrimerSection } from '../../components/PowerPrimerSection';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { shortWeekdayDateLabel } from '../../utils/appDate';
 import { executeProgramControlAction } from '../../utils/programControlActions';
@@ -922,7 +923,7 @@ export default function DayWorkoutScreenV2() {
   const dateFragment = date ? shortWeekdayDateLabel(date) : '';
   const countFragment =
     metaCount > 0 ? `${metaCount} exercise${metaCount !== 1 ? 's' : ''}` : '';
-  const combinedSubtitle = [dateFragment, countFragment, subtitleText]
+  const combinedSubtitle = [dateFragment, countFragment, workout.powerBlock?.title, subtitleText]
     .filter(Boolean)
     .join(' · ');
 
@@ -1079,6 +1080,9 @@ export default function DayWorkoutScreenV2() {
             {workout.description}
           </Text>
         ) : null}
+
+        {/* Typed pre-lift power work stays visible and separate from strength. */}
+        <PowerPrimerSection block={workout.powerBlock} />
 
         {/* ── Main body: three render branches ── */}
         {isConditioning ? (

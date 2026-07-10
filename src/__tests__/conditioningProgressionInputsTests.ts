@@ -221,6 +221,35 @@ console.log('\n-- Conditioning progression real inputs --');
 }
 
 {
+  const feedback: SessionFeedback = {
+    dateStr: '2026-07-07',
+    completion: 'full',
+    feeling: 'easy',
+    soreness: 'none',
+    components: [
+      {
+        componentId: 'power',
+        kind: 'power',
+        label: 'power work',
+        completion: 'full',
+      },
+      {
+        componentId: 'strength',
+        kind: 'strength',
+        label: 'strength work',
+        completion: 'full',
+      },
+    ],
+  };
+  const baseline = buildFor();
+  const workout = buildFor(feedback);
+  ok('power completion does not become conditioning feedback',
+    workout?._progressionState === baseline?._progressionState);
+  ok('power completion does not change conditioning progression',
+    JSON.stringify(workout?._progressionAdjustment) === JSON.stringify(baseline?._progressionAdjustment));
+}
+
+{
   const output = resolveConditioningProgression({
     tier: 'B-high',
     readiness: 'high',

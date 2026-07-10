@@ -5,6 +5,7 @@ import {
 } from './teamTraining';
 
 export type SessionComponentKind =
+  | 'power'
   | 'strength'
   | 'conditioning'
   | 'team_training'
@@ -72,6 +73,10 @@ function isStandaloneConditioningWorkout(workout: Partial<Workout>): boolean {
 
 function hasSpeedBlock(workout: Partial<Workout>): boolean {
   return !!workout.speedBlock;
+}
+
+function hasPowerBlock(workout: Partial<Workout>): boolean {
+  return !!workout.powerBlock;
 }
 
 function hasRecoveryAddon(workout: Partial<Workout>): boolean {
@@ -162,6 +167,15 @@ export function getSessionComponents(
   const { strengthRows, conditioningRows } = getSessionComponentRows(workout);
   const components: SessionComponent[] = [];
 
+  if (hasPowerBlock(workout)) {
+    components.push({
+      id: 'power',
+      kind: 'power',
+      label: 'power work',
+      completionPolicy: 'required',
+    });
+  }
+
   if (hasSpeedBlock(workout)) {
     components.push({
       id: 'speed',
@@ -248,6 +262,7 @@ export function componentQuestionLabel(
       ? 'Did you complete it?'
       : 'Did you complete the strength work?';
   }
+  if (component.kind === 'power') return 'Did you complete the power work?';
   if (component.kind === 'conditioning') return 'Did you complete the conditioning?';
   if (component.kind === 'team_training') return 'Did you complete team training?';
   if (component.kind === 'speed') return 'Did you complete the speed work?';
@@ -258,6 +273,7 @@ export function componentQuestionLabel(
 }
 
 function componentReasonSubject(component: SessionComponent): string {
+  if (component.kind === 'power') return 'the power work';
   if (component.kind === 'strength') return 'the strength work';
   if (component.kind === 'conditioning') return 'the conditioning';
   if (component.kind === 'team_training') return 'team training';

@@ -631,6 +631,93 @@ section('12. Optional components save without penalising the main session');
   assert(cleaned.componentReasons?.recovery_addon === undefined, 'removed add-on reason is cleared');
 }
 
+section('13. Power primer completion stays separate from strength and conditioning');
+{
+  const powerComponents = getSessionComponents({
+    name: 'Upper Body Strength',
+    workoutType: 'Strength',
+    exercises: [{ id: 'we-bench', exerciseId: 'ex-bench', exercise: { name: 'Bench Press' } }],
+    powerBlock: {
+      id: 'power-1',
+      title: 'Power Primer',
+      placement: 'pre_lift',
+      prescription: '3 x 3 — full rest, fast & sharp',
+      options: [{ name: 'Explosive Push-up', sets: 3, repsMin: 3, repsMax: 3 }],
+      notes: ['Stop if reps slow down.'],
+      counting: {
+        hardExposure: false,
+        mainStrength: false,
+        conditioningCredit: 'none',
+        isFinisher: false,
+      },
+    },
+  } as any);
+  const completions = { power: 'skipped', strength: 'full' } as const;
+  assert(
+    deriveAggregateCompletion(
+      powerComponents,
+      { power: 'full', strength: 'full' },
+      null,
+    ) === 'full',
+    'completed power and strength log as a fully completed session',
+  );
+  assert(
+    deriveAggregateCompletion(
+      powerComponents,
+      { power: 'partial', strength: 'full' },
+      null,
+    ) === 'partial',
+    'partial power is represented independently from completed strength',
+  );
+  assert(
+    deriveAggregateCompletion(powerComponents, completions, null) === 'partial',
+    'skipped power makes the combined session partial, not skipped',
+  );
+
+  const payload = buildSessionFeedbackPayload({
+    dateStr: '2026-07-11',
+    completion: 'partial',
+    components: powerComponents,
+    componentCompletions: completions,
+    componentReasons: {
+      power: { partialReason: null, skipReason: 'sore_tight' },
+      strength: { partialReason: null, skipReason: null },
+    },
+    feeling: 'good',
+    soreness: 'mild',
+    partialReason: null,
+    skipReason: null,
+    difficulty: 9,
+    conditioning: { sessionName: 'Should not save', rpe: 9 },
+    strength: [{
+      exerciseId: 'ex-bench',
+      workoutExerciseId: 'we-bench',
+      exerciseName: 'Bench Press',
+      prescribedSets: 3,
+      prescribedRepsMin: 6,
+      prescribedRepsMax: 8,
+      completion: 'full',
+    }],
+  });
+  assert(payload?.completion === 'partial', 'power skip does not mark the whole strength session skipped');
+  assert(
+    payload?.components?.find((entry) => entry.kind === 'power')?.completion === 'skipped',
+    'power skip is stored honestly on its own component',
+  );
+  assert(
+    payload?.components?.find((entry) => entry.kind === 'strength')?.completion === 'full',
+    'strength completion remains full when only power is skipped',
+  );
+  assert((payload?.strength ?? []).length === 1, 'completed strength still saves its performance log');
+  assert(!('conditioning' in (payload || {})), 'power feedback does not save conditioning performance');
+  assert(!('difficulty' in (payload || {})), 'power feedback does not save conditioning RPE');
+  assert(
+    !payload?.components?.some((entry) =>
+      entry.kind === 'conditioning' || entry.kind === 'finisher' || entry.kind === 'recovery_addon'),
+    'power completion creates no conditioning, finisher, or recovery component',
+  );
+}
+
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.log('\nFailures:');

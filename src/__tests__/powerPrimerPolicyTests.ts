@@ -25,6 +25,7 @@ import {
   onboardingToCoachingInputs,
 } from '../utils/coachingEngine';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
+import { buildWeekScopedWorkoutOverlay } from '../utils/weekRebuild';
 
 let pass = 0;
 let fail = 0;
@@ -191,6 +192,23 @@ function workoutsFor(
   const powerNames = /vertical jump|explosive push|pogo|medicine ball|broad jump|box jump/i;
   const leaked = ws.some((w) => w.exercises.some((ex) => powerNames.test(ex.exercise?.name || '')));
   ok('power moves never leak into workout.exercises', !leaked);
+
+  const overlay = buildWeekScopedWorkoutOverlay({
+    program: {
+      id: 'power-overlay-program',
+      microcycles: [{ id: 'power-overlay-microcycle', workouts: [withPower[0]] }],
+    } as any,
+    weekStart: '2026-07-06',
+    anchorDate: '2026-07-11',
+    reason: 'one_off_game',
+  });
+  const clonedPower = Object.values(overlay.workoutsByDate)
+    .find((workout) => !!workout?.powerBlock)
+    ?.powerBlock;
+  ok('week rebuild overlay preserves powerBlock title', clonedPower?.title === pb?.title);
+  ok('week rebuild overlay preserves powerBlock prescription', clonedPower?.prescription === pb?.prescription);
+  ok('week rebuild overlay preserves powerBlock exercise options',
+    JSON.stringify(clonedPower?.options) === JSON.stringify(pb?.options));
 }
 
 // Deload week → no powerBlock even for a suitable athlete.
