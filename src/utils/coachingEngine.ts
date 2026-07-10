@@ -38,6 +38,10 @@ import {
   resolveOffseasonSubphase,
   type OffseasonSubphase,
 } from '../rules/offseasonSubphase';
+import {
+  getOffseasonSubphasePolicy,
+  type OffseasonConditioningCategory,
+} from '../rules/offseasonSubphasePolicy';
 import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import { resolveWeekContext } from '../rules/weekContext';
 import type {
@@ -122,12 +126,7 @@ export interface SessionAllocation {
    * Currently only meaningful for sprint sessions.
    */
   conditioningVariant?: 'standard' | 'reduced' | 'micro_dose';
-  /**
-   * 4B: standalone tempo modality law — when true, the builder must use
-   * an off-feet (bike/row/ski) tempo template. Typed field so the
-   * decision travels on the plan entry (single representation), never
-   * parsed back out of focus text.
-   */
+  /** When true, the builder must keep this conditioning block off-feet. */
   conditioningOffFeet?: boolean;
   /**
    * Feel/density tag for the session — used by the builder to pick a
@@ -888,6 +887,9 @@ function buildWeeklyPlan(
     weekInBlock: inputs.weekInBlock,
     weekNumber: inputs.weekNumber,
   });
+  const offseasonPolicy = offseasonSubphase
+    ? getOffseasonSubphasePolicy(offseasonSubphase, { readiness })
+    : null;
 
   const readinessTierRank = (tier: GenerationReadinessTier | undefined): number => {
     switch (tier) {
@@ -1357,7 +1359,7 @@ function buildWeeklyPlan(
     // controlled repeat efforts at 6-7/10, worked but composed. Medium
     // stress — NOT a hard exposure, NOT easy aerobic. The old mislabelled
     // "tempo" (vo2 wearing a tempo label) is gone; vo2/glycolytic stay hard.
-    type CondCategory = 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
+    type CondCategory = OffseasonConditioningCategory;
     // L-co / U-co are combined-region sessions used in pre-season when
     // the week only has room for a single lower or single upper slot.
     // They carry BOTH movement patterns (squat+hinge in one L-co, push+pull
@@ -1394,10 +1396,17 @@ function buildWeeklyPlan(
     // slots and breaking the signed-off weekly rhythm (Sunday-off
     // regression in strengthSequencingTests). Coverage pressure is
     // structural; tempo is opportunistic.
-    // Sprint is deliberately absent from off-season automatic placement
-    // until the late-off-season speed-block model exists.
-    const CATEGORY_PRIORITY_OFF: CondCategory[] =
-      ['aerobic_base', 'vo2', 'glycolytic'];
+    // Off-season category availability comes from the shared subphase
+    // policy. Sprint remains outside the conditioning pool because the
+    // existing late-off-season speed gate owns true-speed placement.
+    const CATEGORY_PRIORITY_OFF: CondCategory[] = offseasonPolicy
+      ? [
+          offseasonPolicy.conditioning.defaultCategory,
+          ...offseasonPolicy.conditioning.allowedCategories.filter((category) =>
+            category !== 'sprint' &&
+            category !== offseasonPolicy.conditioning.defaultCategory),
+        ]
+      : ['aerobic_base', 'tempo'];
     const CATEGORY_PRIORITY_PRE: CondCategory[] =
       ['vo2', 'glycolytic', 'aerobic_base', 'sprint'];
 
@@ -1464,6 +1473,16 @@ function buildWeeklyPlan(
     }
 
     function blocksConditioningCategoryForGeneration(category: CondCategory): boolean {
+      if (
+        offseasonPolicy &&
+        isHardConditioningCategory(category) &&
+        plan.filter((session) =>
+          session.conditioningCategory !== undefined &&
+          isHardConditioningCategory(session.conditioningCategory as CondCategory)
+        ).length >= offseasonPolicy.conditioning.hardSessionCap
+      ) {
+        return true;
+      }
       if (activeReadiness?.avoidHardConditioning &&
           (category === 'sprint' || category === 'vo2' || category === 'glycolytic')) {
         return true;
@@ -1482,11 +1501,28 @@ function buildWeeklyPlan(
       return false;
     }
 
+    function policyRequiresOffFeetAerobic(): boolean {
+      if (!offseasonPolicy) return false;
+      if (!offseasonPolicy.running.allowedBySubphase) return true;
+      if (offseasonPolicy.running.enabledByDefault) {
+        return readiness === 'low' || lowerLimbIssue(4);
+      }
+      const conditioningReady =
+        inputs.conditioningLevel === 'Good' || inputs.conditioningLevel === 'Elite';
+      const profileLowerLimbIssue = inputs.injuries.some((injury) =>
+        /hamstring|calf|achilles|knee|ankle|groin|quad|hip|shin|foot|glute/i
+          .test(`${injury.bodyArea} ${injury.description}`));
+      return readiness !== 'high' || !conditioningReady || lowerLimbIssue(1) || profileLowerLimbIssue;
+    }
+
     function easyConditioningProps(category: CondCategory): Partial<SessionAllocation> {
       if (category !== 'aerobic_base') return {};
-      if (!activeReadiness?.avoidHardConditioning && !lowerLimbIssue(4)) return {};
+      const conditioningOffFeet = policyRequiresOffFeetAerobic();
+      const reduced = activeReadiness?.avoidHardConditioning || lowerLimbIssue(4);
+      if (!conditioningOffFeet && !reduced) return {};
       return {
-        conditioningVariant: 'reduced',
+        ...(reduced ? { conditioningVariant: 'reduced' as const } : {}),
+        ...(conditioningOffFeet ? { conditioningOffFeet: true } : {}),
         ...(lowerLimbIssue(4) ? { ergModality: 'bike' as const } : {}),
       };
     }
@@ -2366,7 +2402,15 @@ function buildWeeklyPlan(
       strengthContext: FinisherStrengthContext;
     }): FinisherAttachDecision {
       const denied: Array<{ category: CondCategory; reason: string }> = [];
-      for (const requestedCategory of pickPlacementCondCategories(args.slotPos)) {
+      const requestedCategories = pickPlacementCondCategories(args.slotPos);
+      if (
+        inputs.seasonPhase === 'Off-season' &&
+        teamDayNumSet.has(args.dayNum) &&
+        requestedCategories[0] !== 'aerobic_base'
+      ) {
+        return { attach: false, reason: 'team_day_non_aerobic_request' };
+      }
+      for (const requestedCategory of requestedCategories) {
         const decision = shouldAttachFinisher({
           dayNum: args.dayNum,
           requestedCategory,
@@ -2701,7 +2745,10 @@ function buildWeeklyPlan(
 
       // Pass 1 — zone priority among UNCOVERED categories (respecting block).
       if (zone) {
-        for (const c of zonePriority[zone]) {
+        const rankedForZone = inputs.seasonPhase === 'Off-season'
+          ? categoryPriority
+          : zonePriority[zone];
+        for (const c of rankedForZone) {
           if (!placementPool.includes(c)) continue;
           if (!allow(c)) continue;
           if (st.condCategories[c] === 0) pushUniqueCategory(out, c);
@@ -3223,11 +3270,23 @@ function buildWeeklyPlan(
             : 'late';
           const zoneFavoured: Record<typeof zone, CondCategory[]> =
             inputs.seasonPhase === 'Off-season'
-              ? {
-                  early: ['vo2', 'glycolytic'],
-                  mid:   ['vo2', 'glycolytic'],
-                  late:  ['aerobic_base'],
-                }
+              ? offseasonPolicy?.subphase === 'early_offseason'
+                ? {
+                    early: ['aerobic_base'],
+                    mid:   ['aerobic_base'],
+                    late:  ['aerobic_base'],
+                  }
+                : offseasonPolicy?.subphase === 'mid_offseason'
+                  ? {
+                      early: ['tempo'],
+                      mid:   ['tempo'],
+                      late:  ['aerobic_base'],
+                    }
+                  : {
+                      early: ['vo2', 'glycolytic'],
+                      mid:   ['tempo'],
+                      late:  ['aerobic_base'],
+                    }
               : {
                   early: ['vo2', 'glycolytic'],
                   mid:   ['sprint'],
@@ -3435,14 +3494,15 @@ function buildWeeklyPlan(
     // Position-aware: avoids picking a type that creates consecutive same-region.
     function pickSCStrengthType(currentPos?: number): CandidateType {
       // Peek at the conditioning category that would pair with this slot
-      // so we can bias pattern selection toward non-lower when pairing
-      // against sprint or glycolytic (protects the legs from a double hit
-      // even with ergometer swap). Only a tie-breaker — pattern coverage
+      // so we can bias pattern selection toward non-lower for any work above
+      // easy aerobic. Lower combined days use the shared easy-aerobic-only
+      // law; choosing upper here avoids selecting tempo/hard work and then
+      // immediately downgrading it. Only a tie-breaker — pattern coverage
       // and region spacing still win.
       const pairedCat = useCategoryPlanner
         ? pickCondCategory(currentPos)
         : null;
-      const avoidLower = pairedCat === 'sprint' || pairedCat === 'glycolytic';
+      const avoidLower = pairedCat !== null && pairedCat !== 'aerobic_base';
 
       // In structure mode: pick from the remaining queue items
       if (useStructureMode && strengthQueue.length > 0) {
@@ -3460,9 +3520,8 @@ function buildWeeklyPlan(
           const bCount = patternCount(b);
           if (aCount !== bCount) return aCount - bCount;
 
-          // Category-aware pairing bias: when conditioning is sprint or
-          // glycolytic, prefer non-lower strength patterns (upper / FB)
-          // to reduce bad pairings.
+          // Category-aware pairing bias: when conditioning is above easy
+          // aerobic, prefer non-lower strength patterns (upper / FB).
           if (avoidLower) {
             const aIsLower = isLower(a) && a !== 'FB';
             const bIsLower = isLower(b) && b !== 'FB';
@@ -3771,7 +3830,8 @@ function buildWeeklyPlan(
           // Lower-body S+C always prefers off-feet modality (bike / rower /
           // ski erg) — even the easy finisher spares the legs.
           const lowerStrengthSC = isLower(bestSCStrength);
-          const useNonRunning = lowerStrengthSC;
+          const conditioningProps = easyConditioningProps(category);
+          const useNonRunning = lowerStrengthSC || conditioningProps.conditioningOffFeet === true;
           const attachedKind = decision.attachedKind;
           const condLabel = buildCondLabel(flavour, category, useNonRunning, attachedKind);
           // B1/B2: stress from the PLACED components (not the pickers, which
@@ -3792,6 +3852,7 @@ function buildWeeklyPlan(
             attachedConditioningKind: attachedKind,
             conditioningFlavour: flavour,
             conditioningCategory: category,
+            ...conditioningProps,
             strengthPattern: buildStrengthPattern(bestSCStrength),
             stressLevel: scStress,
           });
@@ -3955,7 +4016,14 @@ function buildWeeklyPlan(
           const off = gOffset(dayNum, gameDayNum);
           return off !== 0 && off !== -1 && off !== -2;
         })
-        .reverse();  // prefer later-in-week sessions
+        .sort((a, b) => {
+          if (offseasonPolicy?.conditioning.allowedCategories.includes('tempo')) {
+            const aUpper = strengthContextOf(a.s.strengthPattern) === 'upper' ? 0 : 1;
+            const bUpper = strengthContextOf(b.s.strengthPattern) === 'upper' ? 0 : 1;
+            if (aUpper !== bUpper) return aUpper - bUpper;
+          }
+          return b.i - a.i; // otherwise prefer later-in-week sessions
+        });
 
       for (const { s, i } of convertible) {
         if (st.condCount >= MIN_COND_FLOOR) break;
@@ -3978,7 +4046,8 @@ function buildWeeklyPlan(
         const lowerStrengthSC =
           s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
           s.strengthPattern === 'full_body';
-        const useNonRunning = lowerStrengthSC;
+        const conditioningProps = easyConditioningProps(category);
+        const useNonRunning = lowerStrengthSC || conditioningProps.conditioningOffFeet === true;
         const attachedKind = decision.attachedKind;
         const condLabel = buildCondLabel(flavour, category, useNonRunning, attachedKind);
         plan[i] = {
@@ -3988,6 +4057,7 @@ function buildWeeklyPlan(
           attachedConditioningKind: attachedKind,
           conditioningFlavour: flavour,
           conditioningCategory: category,
+          ...conditioningProps,
         };
         st.condCount += attachedConditioningCredit(attachedKind);
         st.condFlavours[flavour]++;
@@ -4162,12 +4232,14 @@ function buildWeeklyPlan(
         const lowerStrengthSC =
           s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
           s.strengthPattern === 'full_body';
-        const useNonRunning = lowerStrengthSC;
+        const conditioningProps = easyConditioningProps(category);
+        const useNonRunning = lowerStrengthSC || conditioningProps.conditioningOffFeet === true;
         s.focus = `${s.focus} + ${buildCondLabel(flavour, category, useNonRunning, attachedKind)}`;
         s.hasCombinedConditioning = true;
         s.attachedConditioningKind = attachedKind;
         s.conditioningFlavour = flavour;
         s.conditioningCategory = category;
+        Object.assign(s, conditioningProps);
         st.condCount += attachedConditioningCredit(attachedKind);
         st.condFlavours[flavour]++;
         st.condCategories[category]++;

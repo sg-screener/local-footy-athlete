@@ -1142,6 +1142,47 @@ function deloadPlanEntry(
   };
 }
 
+function applyRequiredOffFeetEquipmentFallback(
+  entry: SessionAllocation,
+  availableEquipment: AthletePoolPrefs['availableEquipment'],
+): SessionAllocation {
+  const hasKnownOffFeetEquipment =
+    availableEquipment === undefined || availableEquipment.includes('bike_or_treadmill');
+  if (!entry.conditioningOffFeet || hasKnownOffFeetEquipment) return entry;
+
+  if (entry.hasCombinedConditioning || entry.strengthPattern) {
+    const strengthFocus = stripConditioningSuffix(entry.focus);
+    return {
+      ...entry,
+      focus: strengthFocus || entry.focus,
+      hasCombinedConditioning: false,
+      attachedConditioningKind: undefined,
+      conditioningFlavour: undefined,
+      conditioningCategory: undefined,
+      conditioningVariant: undefined,
+      conditioningFeel: undefined,
+      conditioningOffFeet: undefined,
+      ergModality: undefined,
+    };
+  }
+
+  return {
+    ...entry,
+    tier: 'recovery',
+    focus: 'Mobility, foam rolling, light movement',
+    isHardExposure: false,
+    stressLevel: 'low',
+    hasCombinedConditioning: false,
+    attachedConditioningKind: undefined,
+    conditioningFlavour: undefined,
+    conditioningCategory: undefined,
+    conditioningVariant: undefined,
+    conditioningFeel: undefined,
+    conditioningOffFeet: undefined,
+    ergModality: undefined,
+  };
+}
+
 export function buildWorkoutsFromCoach(
   coachWorkouts: CoachGeneratedWorkoutInput[],
   microcycleId: string = 'mc-1',
@@ -1169,7 +1210,10 @@ export function buildWorkoutsFromCoach(
     rotationContext?.weekKind,
   );
   const effectiveWeeklyPlan = weeklyPlan
-    ? weeklyPlan.map((entry) => deloadPlanEntry(entry, deloadPolicy))
+    ? weeklyPlan.map((entry) => applyRequiredOffFeetEquipmentFallback(
+        deloadPlanEntry(entry, deloadPolicy),
+        athletePrefs?.availableEquipment,
+      ))
     : undefined;
   const planLookup = effectiveWeeklyPlan ? buildPlanLookup(effectiveWeeklyPlan) : null;
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(coachWorkouts, effectiveWeeklyPlan);
@@ -1416,12 +1460,12 @@ export function buildWorkoutsFromCoach(
         || cat === 'tempo' // 4B: combined tempo finishers are erg-based
         || (cat === 'sprint' && strengthRegion === 'lower')
       );
-    // Standalone aerobic_base (Long Nasal Run) MAY pick an erg. When we
-    // have an unused erg available, hint it to bias away from run to
-    // spread modality load across the week — but only after run exposure
-    // has already been used once, so we preserve running as the default.
+    // Standalone aerobic_base (Long Nasal Run) MAY pick an erg. A typed
+    // off-feet decision makes that mandatory; otherwise the existing
+    // rotation may still bias toward an unused erg.
     const willUseErgStandaloneAero =
-      !isCombined && cat === 'aerobic_base' && usedErgs.size < 3;
+      !isCombined && cat === 'aerobic_base' &&
+      (planEntry.conditioningOffFeet === true || usedErgs.size < 3);
     let ergHint: ErgModality | undefined;
     if (willUseErgCombined) {
       const pool: ErgModality[] =
@@ -1443,8 +1487,14 @@ export function buildWorkoutsFromCoach(
         ?? pool.find(m => m !== (isConsecutiveDayErg ? lastErg : undefined))
         ?? pool[0];
       usedErgs.add(ergHint);
-    } else if (willUseErgStandaloneAero && planEntry.ergModality) {
-      ergHint = planEntry.ergModality as ErgModality;
+    } else if (
+      willUseErgStandaloneAero &&
+      (planEntry.ergModality || planEntry.conditioningOffFeet)
+    ) {
+      const pool: ErgModality[] = ['bike', 'row', 'ski'];
+      ergHint = planEntry.ergModality as ErgModality | undefined
+        ?? pool.find((modality) => !usedErgs.has(modality))
+        ?? pool[0];
       usedErgs.add(ergHint);
     }
     // Persist on plan entry so downstream code (and any diagnostic output)
@@ -1459,11 +1509,15 @@ export function buildWorkoutsFromCoach(
     const templateErgModality = (ergHint ?? planEntry.ergModality) as ErgModality | undefined;
     const isConsecutive = cw.dayOfWeek - prevDow === 1;
     const candidateIsRun = isRunningBasedConditioning(candidateName);
+    const forcedOffFeet =
+      planEntry.conditioningOffFeet === true &&
+      candidateIsRun &&
+      templateErgModality !== undefined;
     const isProtectedSpeed = SPEED_SPRINT_TEMPLATES.has(candidateName);
     // A day counts as run-exposure if EITHER the conditioning candidate
     // is run-based OR the athlete has team training on the same day
     // (team = sprints + skills + contact = running).
-    const dayIsRun = candidateIsRun || isTeamDay;
+    const dayIsRun = (candidateIsRun && !forcedOffFeet) || isTeamDay;
 
     // Update running streak of CONSECUTIVE run-exposure days.
     if (dayIsRun && isConsecutive) {
@@ -1542,7 +1596,7 @@ export function buildWorkoutsFromCoach(
           ergModality: templateErgModality,
           variant: planEntry.conditioningVariant as ConditioningVariant | undefined,
         }),
-        shiftedFromRun: false,
+        shiftedFromRun: forcedOffFeet,
       };
     }
 

@@ -37,6 +37,7 @@
 import {
   buildCoachingPlan,
   onboardingToCoachingInputs,
+  type OnboardingToCoachingInputsOptions,
   type SessionAllocation,
 } from '../utils/coachingEngine';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
@@ -56,8 +57,11 @@ function ok(name: string, cond: boolean, detail?: string) {
   }
 }
 
-function planFor(profile: Partial<OnboardingData>): SessionAllocation[] {
-  return buildCoachingPlan(onboardingToCoachingInputs(profile as OnboardingData)).weeklyPlan;
+function planFor(
+  profile: Partial<OnboardingData>,
+  options: Partial<OnboardingToCoachingInputsOptions> = {},
+): SessionAllocation[] {
+  return buildCoachingPlan(onboardingToCoachingInputs(profile as OnboardingData, options)).weeklyPlan;
 }
 
 const isLowerish = (s: SessionAllocation) =>
@@ -90,6 +94,21 @@ const OFF_SEASON_BASE: Partial<OnboardingData> = {
   teamTrainingDaysPerWeek: 0, teamTrainingDays: [],
   conditioningLevel: 'Good', recentTrainingLoad: 'Pretty consistent',
   injuries: [], motivation: 'Get stronger',
+};
+
+const LATE_OFFSEASON: Partial<OnboardingToCoachingInputsOptions> = {
+  offseasonSubphase: 'late_offseason',
+  weekNumber: 4,
+  weekInBlock: 4,
+  weekKind: 'build',
+};
+
+const LATE_OFFSEASON_HARD_ELIGIBLE: Partial<OnboardingData> = {
+  ...OFF_SEASON_BASE,
+  preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday'],
+  recentTrainingLoad: 'Pretty consistent',
+  conditioningLevel: 'Good',
+  sprintExposure: 'Occasionally',
 };
 
 // ═════════════════════════════════════════════════════════════════════
@@ -168,8 +187,8 @@ console.log('\n── 2b. Off-season 4-day keeps useful conditioning, skips only
 {
   const plan = planFor(OFF_SEASON_BASE);
   const conditioning = plan.filter((s) => !!s.conditioningCategory);
-  ok('S6 can still include conditioning on all 4 training days',
-    conditioning.length === 4,
+  ok('S6 keeps a useful 3-4 conditioning exposures without filler',
+    conditioning.length >= 3 && conditioning.length <= 4,
     plan.map((s) => `${s.dayOfWeek}:${s.conditioningCategory ?? '-'}`).join(' | '));
   ok('S6 does not attach more than 2 steady aerobic finishers',
     steadyAerobicFinishers(plan).length <= 2,
@@ -274,15 +293,10 @@ console.log('\n── 5. Label / flavour / category / stress consistency ──'
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 6. Upper + hard non-sprint allowed only when gates pass ──');
 {
-  // Healthy, high readiness, no TT, plenty of headroom: upper days can now
+  // Healthy, no TT, late off-season and enough headroom: upper days can now
   // carry vo2/glycolytic directly. The old flavour round-trip used to lose
   // this by resolving high-intensity back to sprint/tempo.
-  const plan = planFor({
-    ...OFF_SEASON_BASE,
-    recentTrainingLoad: 'Very consistent',
-    conditioningLevel: 'Elite',
-    sprintExposure: '2+ times per week',
-  });
+  const plan = planFor(LATE_OFFSEASON_HARD_ELIGIBLE, LATE_OFFSEASON);
   const hardFinishers = plan.filter((s) => hasFinisher(s) && finisherHard(s));
   const hardComponents = hardFinishers.filter(isAttachedComponent);
   ok('eligible clean off-season upper path produces at least one VO2/glyco component',
@@ -328,7 +342,7 @@ console.log('\n── 7. Category-native hard work survives; TT weeks stay conse
   // S6 (no TT, no game): hard category picks must reach eligibility as
   // vo2/glycolytic and survive when allowed — not round-trip through
   // high-intensity flavour and collapse to sprint/tempo/aerobic.
-  const s6 = planFor(OFF_SEASON_BASE);
+  const s6 = planFor(LATE_OFFSEASON_HARD_ELIGIBLE, LATE_OFFSEASON);
   const s6Hard = s6.filter((s) =>
     s.conditioningCategory === 'vo2' || s.conditioningCategory === 'glycolytic');
   ok('S6: VO2/glyco is reachable in a clean off-season week',
