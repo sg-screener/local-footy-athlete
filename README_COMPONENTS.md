@@ -39,7 +39,7 @@ A complete, production-ready component library for the Local Footy Athlete React
 ### Summary & Reference Documents
 
 - **COMPONENTS_SUMMARY.txt** - Complete overview of all components
-- **IMPLEMENTATION_CHECKLIST.md** - Full checklist of completed features
+- **docs/archive/legacy-handoffs-2026-07-10/IMPLEMENTATION_CHECKLIST.md** - Archived feature checklist
 - **QUICK_REFERENCE.txt** - Quick reference card for development
 
 ## Quick Start
@@ -131,7 +131,7 @@ src/components/common/
 Root Documentation:
 ├── README_COMPONENTS.md       ← This file
 ├── COMPONENTS_SUMMARY.txt     ← Full overview
-├── IMPLEMENTATION_CHECKLIST.md ← Feature checklist
+├── docs/archive/legacy-handoffs-2026-07-10/IMPLEMENTATION_CHECKLIST.md ← Archived feature checklist
 └── QUICK_REFERENCE.txt        ← Quick reference
 ```
 
@@ -338,7 +338,7 @@ For detailed information:
 - **Specifications**: `src/components/common/COMPONENT_FEATURES.md`
 - **Visual Reference**: `src/components/common/VISUAL_GUIDE.md`
 - **Quick Reference**: `QUICK_REFERENCE.txt`
-- **Implementation**: `IMPLEMENTATION_CHECKLIST.md`
+- **Implementation**: `docs/archive/legacy-handoffs-2026-07-10/IMPLEMENTATION_CHECKLIST.md`
 - **Overview**: `COMPONENTS_SUMMARY.txt`
 
 ## Summary

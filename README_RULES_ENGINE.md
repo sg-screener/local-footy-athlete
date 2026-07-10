@@ -21,8 +21,8 @@ A complete implementation of the core business logic that powers personalized tr
 
 **Documentation:**
 - `SC_RULES_ENGINE.md` - Technical reference
-- `RULES_ENGINE_IMPLEMENTATION.md` - Implementation guide
-- `RULES_ENGINE_FILES_SUMMARY.txt` - Quick overview
+- `docs/archive/legacy-handoffs-2026-07-10/RULES_ENGINE_IMPLEMENTATION.md` - Archived implementation guide
+- `docs/archive/legacy-handoffs-2026-07-10/RULES_ENGINE_FILES_SUMMARY.txt` - Archived quick overview
 
 ## Key Features
 
@@ -57,7 +57,7 @@ A complete implementation of the core business logic that powers personalized tr
 ### 1. Review Documentation
 ```
 Read SC_RULES_ENGINE.md for technical overview
-Read RULES_ENGINE_IMPLEMENTATION.md for step-by-step guide
+Read docs/archive/legacy-handoffs-2026-07-10/RULES_ENGINE_IMPLEMENTATION.md for the archived step-by-step guide
 ```
 
 ### 2. Deploy Edge Functions
@@ -235,8 +235,9 @@ local-footy-athlete/
 │   ├── rulesEngine.ts (609 lines)
 │   └── calculations.ts (484 lines)
 ├── SC_RULES_ENGINE.md
-├── RULES_ENGINE_IMPLEMENTATION.md
-└── RULES_ENGINE_FILES_SUMMARY.txt
+└── docs/archive/legacy-handoffs-2026-07-10/
+    ├── RULES_ENGINE_IMPLEMENTATION.md
+    └── RULES_ENGINE_FILES_SUMMARY.txt
 ```
 
 ## Performance
@@ -305,7 +306,7 @@ curl -X POST http://localhost:54321/functions/v1/coach-send-message \
 
 ## Support & References
 
-- **Documentation:** SC_RULES_ENGINE.md, RULES_ENGINE_IMPLEMENTATION.md
+- **Documentation:** SC_RULES_ENGINE.md, docs/archive/legacy-handoffs-2026-07-10/RULES_ENGINE_IMPLEMENTATION.md
 - **AFL Coaching:** https://coaches.aflpa.com.au/
 - **S&C Standards:** Australian Strength & Conditioning Association
 - **Claude API:** https://api.anthropic.com

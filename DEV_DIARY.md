@@ -877,3 +877,26 @@ low-availability athletes real conditioning on strength days. The first
 Codex prompt is written and ready to fire.
 
 No code changed today — by design. Audit first, then surgery.
+
+---
+
+## Thursday 9–Friday 10 July 2026 — Bible implementation and beta hardening
+
+**The audit became the program.** Over two concentrated days, the Bible roadmap
+was implemented and then re-audited end to end. Progression and deloads,
+injury/readiness substitution, `recovery_addons`, the speed model, deterministic
+Coach Notes, bye-week handling, QA scenarios, and the signed-off product/UI
+polish all moved from plans into tested behaviour.
+
+The final audit pass closed the less visible gaps: modifier truth and expiry,
+chat red-flag hard stops, protected game/team anchors, mixed S+C progression,
+conditioning hygiene and cross-week game windows, canonical equipment
+availability and temporary limitations, pre-commit edit warnings, early
+off-season policy, beginner programming, in-season accessory dosing, and
+conditioning-component protection during balance repair.
+
+**Beta state.** The important programming paths now share deterministic rules,
+visible reasons, and regression coverage. The July 9 audits and implementation
+plans are preserved under `docs/`; stale root handoffs are archived under
+`docs/archive/legacy-handoffs-2026-07-10/` so the repository starts from the
+Bible instead of old snapshots.
