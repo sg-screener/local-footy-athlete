@@ -541,6 +541,71 @@ section('[4e] remove_exercise collapses strength-only session when no content re
   eq('exercises empty', written.exercises.length, 0);
 }
 
+// ──────────────────────────────────────────────────────────────────────────
+// 4f. remove_exercise — typed power/recovery content prevents collapse
+// ────────────────────────────────────────────────────────────────────────
+
+section('[4f] remove_exercise preserves remaining typed session content');
+for (const kind of ['power', 'recovery_addon'] as const) {
+  const workout = strengthWorkout('Supported Strength', [ex('Back Squat', 4)]);
+  if (kind === 'power') {
+    workout.powerBlock = {
+      id: 'power',
+      kind: 'primer',
+      family: 'lower',
+      title: 'Power Primer',
+      prescription: '3 x 3 jumps',
+      placement: 'pre_lift',
+      options: [{
+        name: 'Vertical Jump',
+        sets: 3,
+        repsMin: 3,
+        repsMax: 3,
+        equipmentRequired: [],
+      }],
+      notes: [],
+      counting: {
+        hardExposure: false,
+        mainStrength: false,
+        conditioningCredit: 'none',
+        isFinisher: false,
+      },
+    };
+  } else {
+    workout.recoveryAddons = [{
+      id: 'addon',
+      title: 'Mobility Reset',
+      label: 'Mobility',
+      kind: 'mobility',
+      focusArea: 'mobility_reset',
+      optional: true,
+      skipPolicy: 'no_penalty',
+      durationMinutes: 8,
+      exercises: [{ id: 'mobility', name: 'Hip Mobility', prescription: '5 min' }],
+      counting: {
+        hardExposure: false,
+        mainStrength: false,
+        conditioningCredit: 'none',
+        createsHardDay: false,
+        sprintCodExposure: false,
+      },
+    }];
+  }
+  const week = buildBaseWeek({ 4: workout });
+  const spy = makeSpy();
+  const result = applyAdjustmentEvents([
+    event('remove_exercise', '2026-04-30', 'remove final strength', 'Back Squat'),
+  ], makeOpts(week, spy));
+
+  eq(`${kind}: one applied`, result.applied.length, 1);
+  eq(`${kind}: session title preserved`, spy.calls[0].workout.name, 'Supported Strength');
+  eq(`${kind}: strength row removed`, spy.calls[0].workout.exercises.length, 0);
+  ok(`${kind}: typed content preserved`,
+    kind === 'power'
+      ? !!spy.calls[0].workout.powerBlock
+      : (spy.calls[0].workout.recoveryAddons ?? []).length === 1);
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // 5. mark_session_optional — flips tier without touching exercises
 // ─────────────────────────────────────────────────────────────────────────

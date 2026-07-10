@@ -55,6 +55,7 @@ import {
   type ModalityPreference,
 } from '../store/coachPreferencesStore';
 import { applyModalityPreferenceToWorkout } from './coachModalitySwap';
+import { shouldCollapseWorkoutToRest } from './workoutContent';
 
 /** Map InjuryBucket → ConstraintRegion. Conservative defaults. */
 const BUCKET_TO_REGION: Record<InjuryBucket, ConstraintRegion> = {
@@ -115,37 +116,8 @@ function isGame(workout: Workout): boolean {
   return (workout as any).workoutType === 'Game';
 }
 
-function isRestLikeShell(workout: Workout): boolean {
-  const name = String(workout.name ?? '').trim();
-  const type = String((workout as any).workoutType ?? '').trim();
-  const tier = String((workout as any).sessionTier ?? '').trim();
-  return (
-    /^(rest|rest day)$/i.test(name) ||
-    /^rest$/i.test(type) ||
-    /^removed$/i.test(type) ||
-    /^removed$/i.test(tier)
-  );
-}
-
-function isAllowedContentlessSession(workout: Workout): boolean {
-  const type = String((workout as any).workoutType ?? '').trim();
-  if (type === 'Game' || type === 'Team Training' || (workout as any).isTeamDay === true) {
-    return true;
-  }
-  return isRecovery(workout) && !isRestLikeShell(workout);
-}
-
-function shouldCollapseEmptyVisibleWorkout(workout: Workout): boolean {
-  if (isRestLikeShell(workout)) return true;
-  if (isAllowedContentlessSession(workout)) return false;
-  return (
-    (workout.exercises ?? []).length === 0 &&
-    (workout.conditioningBlock?.options ?? []).length === 0
-  );
-}
-
 function collapseEmptyVisibleWorkoutShell(day: ResolvedDay): ResolvedDay {
-  if (!day.workout || !shouldCollapseEmptyVisibleWorkout(day.workout)) return day;
+  if (!shouldCollapseWorkoutToRest(day.workout)) return day;
   return {
     ...day,
     workout: null,

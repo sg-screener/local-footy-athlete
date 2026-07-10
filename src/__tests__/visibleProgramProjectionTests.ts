@@ -67,6 +67,10 @@ function wk(name: string, dow: number, exercises: any[], opts: any = {}): Workou
     conditioningCategory: opts.conditioningCategory,
     conditioningBlock: opts.conditioningBlock,
     coachAddedConditioningLabel: opts.coachAddedConditioningLabel,
+    speedBlock: opts.speedBlock,
+    powerBlock: opts.powerBlock,
+    recoveryAddons: opts.recoveryAddons,
+    isTeamDay: opts.isTeamDay,
     exercises, createdAt: '', updatedAt: '',
     coachNotes: opts.coachNotes,
   } as Workout;
@@ -457,6 +461,19 @@ section('[15] Easy Aerobic Flush stays the visible title, not generic Aerobic Ba
 section('[16] Empty training shells project as Rest, not clickable sessions');
 {
   const wed = '2026-05-06';
+  const emptyStrength = wk('Lower Strength', 3, [], {
+    workoutType: 'Strength',
+    sessionTier: 'core',
+    coachNotes: ['Removed: Back Squat'],
+  });
+  const strengthProjected = projectVisibleDay({
+    day: day(wed, emptyStrength, 'manual'),
+    activeInjury: null,
+    todayISO: TODAY_ISO,
+  });
+  eq('empty strength shell collapses despite stale coach note', strengthProjected.day.workout, null);
+  eq('empty strength shell source becomes rest', strengthProjected.day.source, 'rest' as any);
+
   const emptyFlush = wk('Easy Aerobic Flush', 3, [], {
     workoutType: 'Conditioning',
     sessionTier: 'optional',
@@ -485,7 +502,7 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   eq('Program tab projection does not show empty Easy Aerobic Flush shell', programWed?.workout, null);
   eq('Detail projection does not open empty Easy Aerobic Flush shell', detailWed.workout, null);
 
-  const recovery = wk('Recovery Session', 3, [], {
+  const recovery = wk('Recovery Session', 3, [ex('Mobility Flow')], {
     workoutType: 'Recovery',
     sessionTier: 'recovery',
   });
@@ -494,10 +511,60 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
     activeInjury: null,
     todayISO: TODAY_ISO,
   });
-  eq('valid recovery shell is preserved', recoveryProjected.day.workout?.name, 'Recovery Session');
+  eq('recovery session with real mobility content is preserved', recoveryProjected.day.workout?.name, 'Recovery Session');
+
+  for (const anchor of [
+    wk('Team Training', 3, [], { workoutType: 'Team Training', isTeamDay: true }),
+    wk('Game Day', 3, [], { workoutType: 'Game' }),
+    wk('Practice Match', 3, [], { workoutType: 'Game' }),
+  ]) {
+    const anchored = projectVisibleDay({
+      day: day(wed, anchor, 'template'),
+      activeInjury: null,
+      todayISO: TODAY_ISO,
+    });
+    eq(`${anchor.name} anchor is not collapsed`, anchored.day.workout?.name, anchor.name);
+  }
+
+  const conditioningOnly = wk('Conditioning Component', 3, [], {
+    workoutType: 'Conditioning',
+    conditioningBlock: {
+      intent: 'aerobic',
+      options: [{ title: 'Easy Bike', description: '20 min easy bike', exerciseIds: [] }],
+    },
+  });
+  const speedOnly = wk('Speed Exposure', 3, [], {
+    speedBlock: { id: 'speed', title: 'Speed', prescription: '4 x 20m' },
+  });
+  const powerOnly = wk('Power Primer', 3, [], {
+    powerBlock: {
+      id: 'power',
+      title: 'Power Primer',
+      prescription: '3 x 3 jumps',
+      options: [{ name: 'Vertical Jump', sets: 3, repsMin: 3, repsMax: 3 }],
+    },
+  });
+  const addonOnly = wk('Mobility Support', 3, [], {
+    recoveryAddons: [{
+      id: 'addon',
+      title: 'Mobility Reset',
+      label: 'Mobility',
+      exercises: [{ id: 'mobility', name: 'Hip Mobility', prescription: '5 min' }],
+    }],
+  });
+  for (const contentWorkout of [conditioningOnly, speedOnly, powerOnly, addonOnly]) {
+    const contentProjected = projectVisibleDay({
+      day: day(wed, contentWorkout, 'manual'),
+      activeInjury: null,
+      todayISO: TODAY_ISO,
+    });
+    ok(`${contentWorkout.name} typed content is not collapsed`,
+      !!contentProjected.day.workout,
+      `projected=${contentProjected.day.workout?.name ?? 'Rest'}`);
+  }
 }
 
-section('[16b] Cooked readiness substitutes recovery before collapsing to rest');
+section('[16b] Cooked readiness does not leave an empty recovery shell');
 {
   const hardOnly = wk('Hard Conditioning', 3, [
     ex('10m Sprint'),
@@ -513,9 +580,8 @@ section('[16b] Cooked readiness substitutes recovery before collapsing to rest')
     extraConstraints: [buildFatigueConstraint({ severity: 8 })],
     todayISO: TODAY_ISO,
   });
-  eq('cooked all-hard session becomes recovery', projected.day.workout?.name, 'Recovery Session');
-  eq('cooked recovery substitution stays visible', projected.day.workout?.workoutType, 'Recovery' as any);
-  ok('cooked recovery substitution is not hard', projected.day.workout?.intensity === 'Light');
+  eq('cooked all-hard session with no recovery content collapses to Rest', projected.day.workout, null);
+  eq('cooked collapsed source is rest', projected.day.source, 'rest' as any);
 }
 
 section('[17] Strength removed from mixed session re-derives conditioning display');

@@ -57,6 +57,7 @@ import {
   type BikeLabel,
 } from './coachModalitySwap';
 import { CONDITIONING_META, type ConditioningModality } from '../data/exerciseTags';
+import { hasMeaningfulWorkoutContent } from './workoutContent';
 
 // ─────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -198,22 +199,6 @@ function appendCoachNote(
   return [...existing, note];
 }
 
-function hasMeaningfulTrainingContent(workout: Workout): boolean {
-  if ((workout.conditioningBlock?.options ?? []).length > 0) return true;
-  if ((workout.exercises ?? []).length > 0) return true;
-
-  const type = String(workout.workoutType ?? '').trim();
-  const tier = String((workout as any).sessionTier ?? '').trim();
-  if (type === 'Game' || type === 'Team Training' || (workout as any).isTeamDay === true) {
-    return true;
-  }
-  if (type === 'Recovery' && tier !== 'removed' && !/^rest$/i.test(workout.name ?? '')) {
-    return true;
-  }
-
-  return false;
-}
-
 function buildRestShellAfterContentRemoval(
   current: Workout,
   note: string,
@@ -240,7 +225,7 @@ function cleanupEmptyWorkoutAfterRemoval(
   next: Workout,
   note: string,
 ): Workout {
-  return hasMeaningfulTrainingContent(next)
+  return hasMeaningfulWorkoutContent(next)
     ? next
     : buildRestShellAfterContentRemoval(current, note);
 }
