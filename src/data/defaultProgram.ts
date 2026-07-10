@@ -40,6 +40,7 @@ import {
 } from '../utils/sessionBuilder';
 import {
   ACCESSORY_REP_GUIDELINES,
+  LOWER_SECONDARY_REP_GUIDELINES,
   resolveMainLiftRepSchemes,
   type AccessoryGuideline,
   type RepScheme,
@@ -680,11 +681,15 @@ function accessoryGuidelineForExercise(
   exerciseName: string,
   slot: PoolSlotKey,
   context: PhasePrescriptionContext,
+  isLowerSecondary: boolean,
 ): AccessoryGuideline {
   const text = `${exerciseName} ${context.workoutName ?? ''} ${context.planEntry?.focus ?? ''}`;
   if (/nordic/i.test(exerciseName)) return ACCESSORY_REP_GUIDELINES.nordics;
   if (slot === 'isolation_upper' || /gunshow|pump|arms?|bicep|tricep|curl|pushdown|lateral raise|rear delt|face pull/i.test(text)) {
     return ACCESSORY_REP_GUIDELINES.pump;
+  }
+  if (isLowerSecondary && context.seasonPhase) {
+    return LOWER_SECONDARY_REP_GUIDELINES[context.seasonPhase];
   }
   return ACCESSORY_REP_GUIDELINES.general;
 }
@@ -741,7 +746,15 @@ function applyPhaseRepSchemeToExercise(
   }
 
   if (!REP_ACCESSORY_POOL_SLOTS.has(slot)) return exercise;
-  const guideline = accessoryGuidelineForExercise(exerciseName, slot, context);
+  const lowerSecondary =
+    (slot === 'squat' || slot === 'hinge') &&
+    (role === 'accessory' || accessoryContext);
+  const guideline = accessoryGuidelineForExercise(
+    exerciseName,
+    slot,
+    context,
+    lowerSecondary,
+  );
   if (guideline.unit !== 'reps') return exercise;
   const setsFallback = Math.min(guideline.setsMax, Math.max(guideline.setsMin, exercise.prescribedSets || guideline.setsMin));
   return {

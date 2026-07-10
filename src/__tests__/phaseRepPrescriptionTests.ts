@@ -115,9 +115,58 @@ section('[3] accessories and gunshow stay accessory-style');
     ],
   }], 'mc-phase-accessory', undefined, profile('In-season'));
   const splitSquat = findExercise(lowerWithAccessory, 'Bulgarian Split Squats');
-  ok('accessories remain accessory-style reps',
-    splitSquat?.prescribedSets === 3 && splitSquat.prescribedRepsMin === 8 && splitSquat.prescribedRepsMax === 15,
+  ok('in-season Bulgarian split squats use lower-soreness accessory reps',
+    splitSquat?.prescribedSets === 3 && splitSquat.prescribedRepsMin === 6 && splitSquat.prescribedRepsMax === 8,
     reps(splitSquat));
+
+  const [inSeasonLunges] = buildWorkoutsFromCoach([{
+    dayOfWeek: 4,
+    name: 'Lower Strength',
+    workoutType: 'Strength',
+    sessionTier: 'core',
+    exercises: [
+      { name: 'Back Squat', sets: 3, repsMin: 3, repsMax: 4 },
+      { name: 'Walking Lunges', sets: 3, repsMin: 12, repsMax: 15 },
+    ],
+  }], 'mc-phase-lunges', undefined, profile('In-season'));
+  const walkingLunges = findExercise(inSeasonLunges, 'Walking Lunges');
+  ok('in-season lunge-style work is not forced to 8-15 reps',
+    walkingLunges?.prescribedSets === 3 && walkingLunges.prescribedRepsMin === 6 && walkingLunges.prescribedRepsMax === 8,
+    reps(walkingLunges));
+
+  const [preSeasonAccessory] = buildWorkoutsFromCoach([{
+    dayOfWeek: 4,
+    name: 'Lower Strength',
+    workoutType: 'Strength',
+    sessionTier: 'core',
+    exercises: [
+      { name: 'Back Squat', sets: 3, repsMin: 5, repsMax: 6 },
+      { name: 'Bulgarian Split Squats', sets: 3, repsMin: 12, repsMax: 15 },
+    ],
+  }], 'mc-phase-pre-accessory', undefined, profile('Pre-season'));
+  const preSeasonSplitSquat = findExercise(preSeasonAccessory, 'Bulgarian Split Squats');
+  ok('pre-season lower accessories use a moderate bridge range',
+    preSeasonSplitSquat?.prescribedSets === 3 &&
+      preSeasonSplitSquat.prescribedRepsMin === 6 &&
+      preSeasonSplitSquat.prescribedRepsMax === 10,
+    reps(preSeasonSplitSquat));
+
+  const [offSeasonAccessory] = buildWorkoutsFromCoach([{
+    dayOfWeek: 4,
+    name: 'Lower Strength',
+    workoutType: 'Strength',
+    sessionTier: 'core',
+    exercises: [
+      { name: 'Back Squat', sets: 3, repsMin: 6, repsMax: 8 },
+      { name: 'Bulgarian Split Squats', sets: 3, repsMin: 8, repsMax: 12 },
+    ],
+  }], 'mc-phase-off-accessory', undefined, profile('Off-season'));
+  const offSeasonSplitSquat = findExercise(offSeasonAccessory, 'Bulgarian Split Squats');
+  ok('off-season lower accessories retain hypertrophy-style reps',
+    offSeasonSplitSquat?.prescribedSets === 3 &&
+      offSeasonSplitSquat.prescribedRepsMin === 8 &&
+      offSeasonSplitSquat.prescribedRepsMax === 15,
+    reps(offSeasonSplitSquat));
 
   const [gunshow] = buildWorkoutsFromCoach([{
     dayOfWeek: 5,
@@ -146,7 +195,7 @@ section('[3] accessories and gunshow stay accessory-style');
     exercises: [{ name: 'Bench Press', sets: 3, repsMin: 5, repsMax: 5 }],
   }], 'mc-phase-prehab', undefined, profile('In-season'));
   const accessoryBench = findExercise(prehabAccessory, 'Bench Press');
-  ok('accessory/prehab context does not use main-lift reps',
+  ok('in-season upper accessory work can retain higher reps',
     accessoryBench?.prescribedSets === 3 && accessoryBench.prescribedRepsMin === 8 && accessoryBench.prescribedRepsMax === 15,
     reps(accessoryBench));
 }
