@@ -35,7 +35,7 @@ import {
   normalizeText,
   BODY_PARTS,
 } from './injuryClarificationGuard';
-import { getExerciseTags, type ExerciseTag } from '../data/exerciseTags';
+import type { ExerciseTag } from '../data/exerciseTags';
 import {
   applyCoachAction,
   type CoachAction,
@@ -61,6 +61,7 @@ import {
   injurySeverityPausesAffectedTraining,
   injurySeverityRemovesRiskyWork,
 } from '../rules/injurySeverityBands';
+import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 import { getReplacementForBucket } from './injurySessionClassifier';
 
 // ─── Types ───
@@ -277,20 +278,6 @@ function todayISOLocal(): string {
 
 // ─── Per-exercise classification ───
 
-type RiskClassification = 'avoid' | 'caution' | 'good' | 'unknown';
-
-function classifyExerciseForBucket(
-  exerciseName: string,
-  bucket: InjuryBucket,
-): RiskClassification {
-  const tags = getExerciseTags(exerciseName);
-  if (!tags) return 'unknown';
-  const rating = tags.injury[bucket];
-  if (rating === 'avoid') return 'avoid';
-  if (rating === 'caution') return 'caution';
-  return 'good';
-}
-
 // ─── Avoid-this-week templated guidance ───
 
 /**
@@ -399,7 +386,7 @@ export function applyInjuryAdjustment(
     for (const ex of exercises) {
       const name: string = ex.exercise?.name || '';
       if (!name) continue;
-      const rating = classifyExerciseForBucket(name, context.bucket);
+      const rating = classifyExerciseRiskForBucket(name, context.bucket);
       if (rating === 'avoid') avoidNames.push(name);
       else if (rating === 'caution') cautionNames.push(name);
     }

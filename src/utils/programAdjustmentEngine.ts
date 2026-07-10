@@ -64,6 +64,7 @@ import {
   injurySeverityReducesAffectedWork,
   injurySeverityRemovesRiskyWork,
 } from '../rules/injurySeverityBands';
+import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 
 // ─────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -542,23 +543,6 @@ export function resolveInjuryBucket(bodyPart: string): InjuryBucket | null {
 }
 
 /**
- * Per-exercise risk classification for a given bucket. Reads
- * `exerciseTags.injury[bucket]`. Returns 'unknown' if the exercise is not
- * tagged — we never act on unknown.
- */
-type RiskRating = 'avoid' | 'caution' | 'good' | 'unknown';
-
-function classifyExercise(name: string, bucket: InjuryBucket): RiskRating {
-  if (!name) return 'unknown';
-  const tag = getExerciseTags(name);
-  if (!tag) return 'unknown';
-  const rating = tag.injury[bucket];
-  if (rating === 'avoid') return 'avoid';
-  if (rating === 'caution') return 'caution';
-  return 'good';
-}
-
-/**
  * Detect whether a workout is conditioning-flavoured AND running-based.
  * Used to fire `swap_conditioning_modality` for lower-limb injuries.
  */
@@ -675,7 +659,7 @@ function isSessionRelevantToBucket(
   for (const ex of exercises) {
     const name = (ex as any).exercise?.name || '';
     if (!name) continue;
-    const rating = classifyExercise(name, bucket);
+    const rating = classifyExerciseRiskForBucket(name, bucket);
     if (rating === 'avoid' || rating === 'caution') return true;
   }
 
@@ -1428,7 +1412,7 @@ function handleInjuryIntent(
       for (const ex of exercises) {
         const name: string = (ex as any).exercise?.name || '';
         if (!name) continue;
-        const rating = classifyExercise(name, bucket);
+        const rating = classifyExerciseRiskForBucket(name, bucket);
         if (rating === 'avoid') avoidNames.push(name);
         else if (rating === 'caution') cautionNames.push(name);
       }

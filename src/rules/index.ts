@@ -12,6 +12,7 @@ export * from './stressClassification';
 export * from './sessionClassificationAdapter';
 export * from './weeklyExposureCounts';
 export * from './injurySeverityBands';
+export * from './injuryExerciseRisk';
 export * from './phaseRepSchemes';
 export * from './weekStructureValidator';
 export * from './recoveryAddonCoverage';

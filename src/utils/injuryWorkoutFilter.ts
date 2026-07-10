@@ -28,13 +28,14 @@
  */
 
 import type { Workout, WorkoutExercise } from '../types/domain';
-import { getExerciseTags } from '../data/exerciseTags';
+import { getExerciseTags, type InjuryKey } from '../data/exerciseTags';
 import {
   severityToTier,
   tierIsActive,
   tierRemovesExercises,
   type RestrictionTier,
 } from './injuryProgression';
+import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 
 /** Loose shape — matches what ScheduleState surfaces. */
 export interface ActiveInjuryLike {
@@ -116,21 +117,6 @@ function getTierNote(bucket: string | null, tier: RestrictionTier): string | nul
   return null;
 }
 
-/**
- * Classify an exercise against a bucket. Wraps `getExerciseTags`
- * defensively — if the exercise isn't tagged, treat it as 'unknown'
- * (i.e. don't act on it).
- */
-function classifyExerciseForBucket(name: string, bucket: string): 'avoid' | 'caution' | 'good' | 'unknown' {
-  if (!name) return 'unknown';
-  const tag = getExerciseTags(name);
-  if (!tag) return 'unknown';
-  const rating = (tag.injury as any)[bucket];
-  if (rating === 'avoid') return 'avoid';
-  if (rating === 'caution') return 'caution';
-  return 'good';
-}
-
 function isTeamTrainingName(name: string): boolean {
   const n = (name || '').trim().toLowerCase();
   return (
@@ -173,7 +159,7 @@ export function applyInjuryFilterToWorkout(
   const tier2 = (workout as any).sessionTier;
   if (tier2 === 'recovery') return workout;
 
-  const bucket = injury.bucket;
+  const bucket = injury.bucket as InjuryKey;
   const isLowerLimb = LOWER_BUCKETS.has(bucket);
   const isUpperLimb = UPPER_BUCKETS.has(bucket);
   const tierNote = getTierNote(bucket, tier);
@@ -183,7 +169,11 @@ export function applyInjuryFilterToWorkout(
   const exercises: WorkoutExercise[] = workout.exercises ?? [];
   const isTeam = isTeamTrainingName(workout.name);
   const hasRiskyExercise = exercises.some((ex) => {
-    const r = classifyExerciseForBucket((ex.exercise?.name || ''), bucket);
+    const r = classifyExerciseRiskForBucket(
+      ex.exercise?.name || '',
+      bucket,
+      injury.severity,
+    );
     return r === 'avoid' || r === 'caution';
   });
   const isRunningCond = wt === 'Conditioning';
@@ -218,7 +208,7 @@ export function applyInjuryFilterToWorkout(
       .filter(Boolean);
     filteredExercises = exercises.map((ex) => {
       const name = ex.exercise?.name || '';
-      const r = classifyExerciseForBucket(name, bucket);
+      const r = classifyExerciseRiskForBucket(name, bucket, injury.severity);
       const isRisky =
         r === 'avoid' || (removeCaution && r === 'caution');
       if (!isRisky) return ex;

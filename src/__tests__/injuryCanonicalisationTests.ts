@@ -24,6 +24,7 @@ import { resolveInjuryBucket } from '../utils/programAdjustmentEngine';
 import { applyInjuryFilterToWorkout } from '../utils/injuryWorkoutFilter';
 import type { InjuryState } from '../utils/injuryProgression';
 import type { Workout } from '../types/domain';
+import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 
 let pass = 0;
 let fail = 0;
@@ -260,6 +261,81 @@ section('[7] activeInjury bucket=hamstring filters Deadlift across many weeks');
     ok(`week+${weekIdx}: Nordic Lower gone`, !names.includes('Nordic Lower'));
     ok(`week+${weekIdx}: RDLs gone`, !names.includes('RDLs'));
   }
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// 8. Canonical severity boundary only escalates heavy hamstring hinges.
+// ──────────────────────────────────────────────────────────────────────
+section('[8] hamstring limiting band escalates heavy hinge only');
+{
+  eq(
+    'severity 5 keeps Deadlift at caution',
+    classifyExerciseRiskForBucket('Deadlift', 'hamstring', 5),
+    'caution',
+  );
+  eq(
+    'severity 6 escalates high-load Deadlift to avoid',
+    classifyExerciseRiskForBucket('Deadlift', 'hamstring', 6),
+    'avoid',
+  );
+  eq(
+    'severity 6 does not escalate controlled Single-Leg RDL to avoid',
+    classifyExerciseRiskForBucket('Single-Leg RDL', 'hamstring', 6),
+    'caution',
+  );
+  eq(
+    'severity 6 keeps unaffected Bench Press good',
+    classifyExerciseRiskForBucket('Bench Press', 'hamstring', 6),
+    'good',
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// 9. Limiting keeps safe work; severe allows only unaffected/easy swaps.
+// ────────────────────────────────────────────────────────────────────
+section('[9] severity 6 preserves safe work; severity 9 pauses affected alternatives');
+{
+  const mixed = wk('Mixed Strength', 1, [
+    ex('Deadlift'),
+    ex('Nordic Lower'),
+    ex('Bench Press'),
+    ex('Goblet Squat'),
+  ]);
+  const injury = (severity: number): InjuryState => ({
+    bodyPart: 'hammy',
+    bucket: 'hamstring' as any,
+    severity,
+    initialSeverity: severity,
+    status: 'active',
+    rules: [],
+    startDate: '2026-04-29T10:00:00Z',
+    createdAt: '2026-04-29T10:00:00Z',
+    lastUpdatedAt: '2026-04-29T10:00:00Z',
+    history: [],
+  });
+
+  const limiting = applyInjuryFilterToWorkout(mixed, injury(6));
+  const limitingNames = limiting.exercises.map((row) => row.exercise?.name);
+  ok('severity 6 removes heavy hinge and Nordic',
+    !limitingNames.includes('Deadlift') && !limitingNames.includes('Nordic Lower'),
+    JSON.stringify(limitingNames));
+  ok('severity 6 preserves unaffected upper and safe squat work',
+    limitingNames.includes('Bench Press') && limitingNames.includes('Goblet Squat'),
+    JSON.stringify(limitingNames));
+  ok('severity 6 may retain a safe affected-area alternative instead of pausing',
+    limitingNames.includes('Hip Thrusts'),
+    JSON.stringify(limitingNames));
+
+  const severe = applyInjuryFilterToWorkout(mixed, injury(9));
+  const severeNames = severe.exercises.map((row) => row.exercise?.name);
+  ok('severity 9 removes all affected hinge/Nordic work and alternatives',
+    !severeNames.includes('Deadlift') &&
+      !severeNames.includes('Nordic Lower') &&
+      !severeNames.includes('Hip Thrusts'),
+    JSON.stringify(severeNames));
+  ok('severity 9 still preserves clearly unaffected upper work',
+    severeNames.includes('Bench Press'),
+    JSON.stringify(severeNames));
 }
 
 // ─── Summary ───

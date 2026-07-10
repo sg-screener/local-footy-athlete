@@ -27,6 +27,7 @@ import type { Workout } from '../types/domain';
 import { getExerciseTags, getConditioningMeta } from '../data/exerciseTags';
 import type { InjuryBucket } from './programAdjustmentEngine';
 import { injurySeverityPausesAffectedTraining } from '../rules/injurySeverityBands';
+import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 
 // ─── Risk class ─────────────────────────────────────────────────────
 
@@ -64,16 +65,6 @@ function isRunningCond(workout: Workout): boolean {
   return /sprint|run|interval|mas\b|km/i.test(workout.name || '');
 }
 
-function ratingFor(name: string, bucket: InjuryBucket): 'avoid' | 'caution' | 'good' | 'unknown' {
-  if (!name) return 'unknown';
-  const tag = getExerciseTags(name);
-  if (!tag) return 'unknown';
-  const r = (tag.injury as any)[bucket];
-  if (r === 'avoid') return 'avoid';
-  if (r === 'caution') return 'caution';
-  return 'good';
-}
-
 /**
  * Classify how risky a session is for a given injury bucket.
  *
@@ -105,7 +96,7 @@ export function classifySessionRisk(workout: Workout, bucket: InjuryBucket): Ses
   let avoidCount = 0;
   let cautionCount = 0;
   for (const ex of exercises) {
-    const r = ratingFor(ex.exercise?.name || '', bucket);
+    const r = classifyExerciseRiskForBucket(ex.exercise?.name || '', bucket);
     if (r === 'avoid') avoidCount++;
     else if (r === 'caution') cautionCount++;
   }
