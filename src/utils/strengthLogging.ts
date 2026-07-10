@@ -85,6 +85,39 @@ function summariseLoggedSets(
   };
 }
 
+/**
+ * Collect the real logged sets for a workout from the workout-log store,
+ * keyed by workoutExerciseId, ready to feed `buildStrengthPerformanceLogs`.
+ *
+ * Only sets belonging to THIS workout's active logging session are trusted
+ * (guards against stale sets from a different session). Returns undefined when
+ * there is nothing usable — so the caller cleanly falls back to the prescribed
+ * snapshot.
+ */
+export function collectLoggedStrengthSets(
+  workout: Workout | null | undefined,
+  loggedSets: Map<string, LoggedSet[]> | Record<string, LoggedSet[]> | undefined | null,
+  activeWorkoutId?: string | null,
+): Record<string, LoggedSet[]> | undefined {
+  if (!workout || !loggedSets) return undefined;
+  // Stale-session guard: if an active workout is known and it isn't this one,
+  // its logged sets don't describe this workout.
+  if (activeWorkoutId && activeWorkoutId !== workout.id) return undefined;
+
+  const entries = loggedSets instanceof Map
+    ? Array.from(loggedSets.entries())
+    : Object.entries(loggedSets);
+  const validIds = new Set((workout.exercises ?? []).map((exercise) => exercise.id));
+
+  const record: Record<string, LoggedSet[]> = {};
+  for (const [workoutExerciseId, sets] of entries) {
+    if (validIds.has(workoutExerciseId) && Array.isArray(sets) && sets.length > 0) {
+      record[workoutExerciseId] = sets;
+    }
+  }
+  return Object.keys(record).length > 0 ? record : undefined;
+}
+
 export function buildStrengthPerformanceLogs(
   workout: Workout | null | undefined,
   weightOverrides: Record<string, number | null> | undefined,

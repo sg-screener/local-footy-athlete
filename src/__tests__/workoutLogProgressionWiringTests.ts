@@ -11,7 +11,7 @@
 
 import type { LoggedSet, Workout, WorkoutExercise } from '../types/domain';
 import type { SessionFeedback } from '../store/programStore';
-import { buildStrengthPerformanceLogs } from '../utils/strengthLogging';
+import { buildStrengthPerformanceLogs, collectLoggedStrengthSets } from '../utils/strengthLogging';
 import {
   buildStrengthWorkoutHistoryFromFeedback,
   deriveMissedStrengthSessionsThisWeek,
@@ -195,6 +195,47 @@ function condRow(): WorkoutExercise[] {
 {
   ok('repeat recommender fires on repeated misses', shouldRecommendRepeatWeek({ plannedSessions: 5, completedSessions: 1 }));
   ok('repeat recommender quiet on a good week', !shouldRecommendRepeatWeek({ plannedSessions: 5, completedSessions: 5 }));
+}
+
+// ── 14. collectLoggedStrengthSets bridges the store → builder ──
+{
+  const workout = strengthWorkout(); // has exercise id 'we-1'
+  const map = new Map<string, LoggedSet[]>([
+    ['we-1', [loggedSet(1, 5, 100), loggedSet(2, 4, 100)]],
+    ['stale-id', [loggedSet(1, 9, 999)]], // not part of this workout → ignored
+  ]);
+
+  const record = collectLoggedStrengthSets(workout, map, 'w');
+  ok('collects logged sets for this workout keyed by exercise id', !!record && !!record['we-1'] && record['we-1'].length === 2);
+  ok('ignores sets for exercises not in this workout', !!record && record['stale-id'] === undefined);
+
+  // Fed straight into the builder → real actuals captured.
+  const logs = buildStrengthPerformanceLogs(workout, {}, 'full', record);
+  ok('end-to-end: builder captures collected actual sets', logs[0].completedSets === 2 && logs[0].actualReps === 4);
+}
+
+// ── 15. Stale / missing logged sets → collector returns undefined (fallback) ──
+{
+  const workout = strengthWorkout();
+  const map = new Map<string, LoggedSet[]>([['we-1', [loggedSet(1, 5, 100)]]]);
+  ok('stale active workout id → undefined (fallback)', collectLoggedStrengthSets(workout, map, 'a-different-workout') === undefined);
+  ok('no logged sets → undefined (fallback)', collectLoggedStrengthSets(workout, new Map(), 'w') === undefined);
+  ok('null logged sets → undefined (fallback)', collectLoggedStrengthSets(workout, null, 'w') === undefined);
+
+  // Builder with undefined logged sets keeps prescribed fallback.
+  const logs = buildStrengthPerformanceLogs(workout, {}, 'full', undefined);
+  ok('builder with no collected sets falls back to prescribed', logs[0].completedSets === undefined && logs[0].actualReps === undefined);
+}
+
+// ── 16. Production wire: SessionFeedbackPanel passes logged sets from the store ──
+{
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const fs = require('fs');
+  const src = fs.readFileSync('src/components/SessionFeedbackPanel.tsx', 'utf8');
+  ok('panel imports collectLoggedStrengthSets', /collectLoggedStrengthSets/.test(src));
+  ok('panel reads the workout-log store', /useWorkoutLogStore\.getState\(\)/.test(src));
+  ok('panel passes collected logged sets into buildStrengthPerformanceLogs',
+    /buildStrengthPerformanceLogs\(\s*workout,\s*weightOverrides,\s*strengthCompletion,\s*loggedStrengthSets\s*\)/s.test(src));
 }
 
 console.log(`\nWorkout-log progression wiring tests: ${pass} passed, ${fail} failed`);

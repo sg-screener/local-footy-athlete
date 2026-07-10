@@ -74,7 +74,8 @@ import {
   getSessionComponents,
   type SessionComponent,
 } from '../utils/sessionComponents';
-import { buildStrengthPerformanceLogs } from '../utils/strengthLogging';
+import { buildStrengthPerformanceLogs, collectLoggedStrengthSets } from '../utils/strengthLogging';
+import { useWorkoutLogStore } from '../store/workoutLogStore';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
@@ -473,9 +474,15 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
       strengthComponentCompletion === 'full' || strengthComponentCompletion === 'partial'
         ? strengthComponentCompletion
         : null;
+    const logState = useWorkoutLogStore.getState();
+    const loggedStrengthSets = collectLoggedStrengthSets(
+      workout,
+      logState.loggedSets,
+      logState.activeWorkout?.id,
+    );
     const strength = !strengthCompletion
       ? []
-      : buildStrengthPerformanceLogs(workout, weightOverrides, strengthCompletion);
+      : buildStrengthPerformanceLogs(workout, weightOverrides, strengthCompletion, loggedStrengthSets);
     const feedback = buildSessionFeedbackPayload({
       dateStr: date,
       completion: activeCompletion,
