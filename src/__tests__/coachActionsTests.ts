@@ -24,6 +24,39 @@
 // React Native global used by some imports — mock for Node.
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+// Weekly actions intentionally resolve the current Mon-Sun window. Freeze the
+// suite clock so those tests stay aligned with their 2026-04-20 fixtures.
+const RealDate = Date;
+const FIXED_NOW = '2026-04-26T12:00:00';
+
+class FixedDate extends RealDate {
+  constructor(...args: any[]) {
+    if (args.length === 0) {
+      super(FIXED_NOW);
+      return;
+    }
+    if (args.length === 1) {
+      super(args[0]);
+      return;
+    }
+    super(
+      args[0],
+      args[1],
+      args[2] ?? 1,
+      args[3] ?? 0,
+      args[4] ?? 0,
+      args[5] ?? 0,
+      args[6] ?? 0,
+    );
+  }
+
+  static now(): number {
+    return new RealDate(FIXED_NOW).getTime();
+  }
+}
+
+global.Date = FixedDate as DateConstructor;
+
 import * as sessionResolver from '../utils/sessionResolver';
 import * as coachWeekDiff from '../utils/coachWeekDiff';
 import { useProgramStore } from '../store/programStore';
@@ -369,8 +402,8 @@ console.log('\n[coachActions] remove_exercise (not found)');
 console.log('\n[coachActions] add_weekly_override (reduce_lower_volume)');
 {
   reset();
-  // Today is 2026-04-26 (Sunday) per env. Monday 2026-04-20 → Sunday 2026-04-26.
-  // Wait — Sunday is dow=0, so daysToMonday = -6 → Mon=2026-04-20.
+  // The fixed suite clock is Sunday 2026-04-26, so the current week is
+  // Monday 2026-04-20 through Sunday 2026-04-26.
   // We'll seed two days: Mon (lower) + Wed (upper) and verify only Mon mutates.
   setFixture('2026-04-20', makeWorkout('Lower Strength', [
     makeExercise('Back Squat', 4),
