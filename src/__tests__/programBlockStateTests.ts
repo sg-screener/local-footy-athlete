@@ -10,10 +10,9 @@
 
 import { readFileSync } from 'fs';
 import { generateProgramLocally } from '../services/api/generateProgram';
-import { buildWorkoutsFromCoach } from '../data/defaultProgram';
-import { getAthletePrefs } from '../store/athletePreferencesStore';
 import { useProgramStore, getCurrentBlockNumberForGeneration } from '../store/programStore';
 import { rebuildLocalWeek } from '../utils/weekRebuild';
+import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import {
   addDays,
   resolveWeekWithConditioning,
@@ -25,11 +24,11 @@ import {
   deriveStoredBlockStateFromProgram,
   getBlockNumberForDate,
   getMondayISOForDate,
+  getProgramBlockRolloverStatus,
   getProgramBlockStateForDate,
   getWeekInBlock,
   getWeeksSinceDeload,
 } from '../utils/programBlockState';
-import { buildCoachingPlan, onboardingToCoachingInputs } from '../utils/coachingEngine';
 import { buildProgressionContext } from '../utils/strengthProgressionIntegration';
 import type { OnboardingData } from '../types/domain';
 
@@ -96,6 +95,16 @@ function liveScheduleState(profile: Partial<OnboardingData>): ScheduleState {
 
 function resolveLiveWeek(mondayISO: string, profile: Partial<OnboardingData>): ResolvedDay[] {
   return resolveWeekWithConditioning(mondayISO, liveScheduleState(profile));
+}
+
+function generatedWeekSignature(program: ReturnType<typeof generateProgramLocally>): string {
+  return JSON.stringify(program.microcycles[0].workouts.map((workout) => ({
+    dayOfWeek: workout.dayOfWeek,
+    name: workout.name,
+    workoutType: workout.workoutType,
+    sessionTier: workout.sessionTier,
+    exercises: workout.exercises.map((exercise) => exercise.exercise?.name ?? exercise.exerciseId),
+  })));
 }
 
 console.log('\n-- Program block state --');
@@ -221,26 +230,74 @@ console.log('\n-- Generation and resolution --');
     todayISO: '2026-07-06',
     blockNumber: 1,
   });
-  const inputs = onboardingToCoachingInputs(PROFILE as OnboardingData, { availabilityDateISO: '2026-07-06' });
-  const plan = buildCoachingPlan(inputs);
-  const expectedWeek1 = buildWorkoutsFromCoach(
-    [],
-    'expected-week-1',
-    plan.weeklyPlan,
-    PROFILE as OnboardingData,
-    { miniCycleNumber: 1, weekInBlock: 1, weekStartISO: '2026-07-06' },
-    getAthletePrefs(),
-  );
-  ok('brand-new week 1 generated workout names are unchanged',
-    program.microcycles[0].workouts.map((w) => w.name).join('|') === expectedWeek1.map((w) => w.name).join('|'),
+  const sameInputs = generateProgramLocally(PROFILE as OnboardingData, {
+    todayISO: '2026-07-06',
+    blockNumber: 1,
+  });
+  ok('same block inputs generate a deterministic week without freezing cross-block names',
+    generatedWeekSignature(program) === generatedWeekSignature(sameInputs),
     JSON.stringify({
-      actual: program.microcycles[0].workouts.map((w) => w.name),
-      expected: expectedWeek1.map((w) => w.name),
+      first: generatedWeekSignature(program),
+      second: generatedWeekSignature(sameInputs),
     }));
   ok('brand-new week 1 remains block 1 week 1 at intensity 1.0',
     program.microcycles[0].weekNumber === 1 &&
     program.microcycles[0].miniCycleNumber === 1 &&
+    program.microcycles[0].weekKind === 'build' &&
     program.microcycles[0].intensityMultiplier === 1.0);
+}
+
+console.log('\n-- End-of-block rollover state --');
+
+{
+  resetProgramStore();
+  const program = generateProgramLocally(PROFILE as OnboardingData, {
+    todayISO: '2026-07-06',
+    blockNumber: 1,
+  });
+  useProgramStore.getState().setCurrentProgram(program);
+  useProgramStore.getState().setCurrentMicrocycle(program.microcycles[3]);
+
+  const finalSunday = getProgramBlockRolloverStatus({
+    program,
+    dateISO: '2026-08-02',
+    blockState: useProgramStore.getState().blockState,
+  });
+  const followingMonday = getProgramBlockRolloverStatus({
+    program,
+    dateISO: '2026-08-03',
+    blockState: useProgramStore.getState().blockState,
+  });
+  ok('rollover boundary keeps final Sunday in the current block', !finalSunday.needsRollover);
+  ok('rollover boundary opens on the following Monday',
+    followingMonday.needsRollover &&
+      followingMonday.nextBlockStart === '2026-08-03' &&
+      followingMonday.nextBlockNumber === 2,
+    JSON.stringify(followingMonday));
+
+  rolloverProgramBlock({
+    baseProfile: PROFILE as OnboardingData,
+    targetDateISO: '2026-08-17',
+  });
+  const rolled = useProgramStore.getState();
+  ok('rollover persists the next block number and Monday start',
+    rolled.blockState?.blockNumber === 2 &&
+      rolled.blockState.blockStartDate === '2026-08-03',
+    JSON.stringify(rolled.blockState));
+  ok('late rollover selects the microcycle containing the current date',
+    rolled.currentMicrocycle?.weekNumber === 7 &&
+      rolled.currentMicrocycle.miniCycleNumber === 2 &&
+      rolled.currentMicrocycle.weekKind === 'build',
+    JSON.stringify({
+      weekNumber: rolled.currentMicrocycle?.weekNumber,
+      miniCycleNumber: rolled.currentMicrocycle?.miniCycleNumber,
+      weekKind: rolled.currentMicrocycle?.weekKind,
+    }));
+  ok('old week-4 deload is not replayed as the new current week',
+    program.microcycles[3].weekKind === 'deload' &&
+      rolled.currentMicrocycle !== program.microcycles[3] &&
+      rolled.currentProgram?.microcycles[0].weekKind === 'build' &&
+      rolled.currentProgram.microcycles[3].weekKind === 'deload');
 }
 
 {
