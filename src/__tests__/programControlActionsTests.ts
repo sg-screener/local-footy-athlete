@@ -20,6 +20,10 @@ import {
 } from '../utils/tapProgramModifiers';
 import { buildGuidedInjuryConstraint } from '../utils/guidedInjuryControl';
 import { scheduleModifierIdForDate } from '../utils/programControlActions';
+import {
+  resolveEquipmentAvailability,
+  temporaryEquipmentConstraintIdForDate,
+} from '../utils/equipmentAvailability';
 
 let pass = 0;
 let fail = 0;
@@ -316,6 +320,132 @@ console.log('\n[5] clear recovery modifier removes linked program override');
   eq('linked date override removed', useProgramStore.getState().dateOverrides, {});
   eq('active constraints empty', useCoachUpdatesStore.getState().activeConstraints, []);
   eq('no Coach fallback', result.fallbackToCoach, false);
+}
+
+console.log('\n[5b] temporary equipment presets create and clear active equipment constraints');
+{
+  resetStores();
+  const date = '2026-07-06';
+  const todayISO = date;
+  useProfileStore.setState({
+    onboardingData: { trainingLocation: 'Commercial gym', equipment: ['Full Gym'] },
+  } as any);
+
+  const bodyweight = executeProgramControlAction(baseAction(
+    'set_equipment_modifier',
+    { presetId: 'bodyweight_only', date, todayISO },
+    { scope: 'current_week', createsActiveModifier: true },
+  ), { todayISO });
+  let equipment = useCoachUpdatesStore.getState().activeConstraints
+    .find((constraint: any) => constraint.type === 'equipment') as any;
+  eq('bodyweight preset succeeds', bodyweight.ok, true);
+  eq('bodyweight preset requests rebuild', bodyweight.requiresRebuild, true);
+  eq('bodyweight mode only', equipment?.mode, 'only');
+  eq('bodyweight tags', equipment?.tags, ['bodyweight']);
+  ok('bodyweight Coach Note appears', selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    todayISO,
+  }).some((note) => note.title === 'Bodyweight-only training active'));
+  eq('bodyweight resolver reflects limitation',
+    resolveEquipmentAvailability(
+      useProfileStore.getState().onboardingData,
+      useCoachUpdatesStore.getState().activeConstraints,
+      todayISO,
+    ),
+    ['bodyweight']);
+  eq('baseline profile equipment unchanged after bodyweight preset',
+    useProfileStore.getState().onboardingData.equipment,
+    ['Full Gym']);
+
+  const dumbbells = executeProgramControlAction(baseAction(
+    'set_equipment_modifier',
+    { presetId: 'dumbbells_only', date, todayISO },
+    { scope: 'current_week', createsActiveModifier: true },
+  ), { todayISO });
+  equipment = useCoachUpdatesStore.getState().activeConstraints
+    .find((constraint: any) => constraint.type === 'equipment') as any;
+  eq('dumbbell preset succeeds', dumbbells.ok, true);
+  eq('dumbbell preset updates same weekly equipment id',
+    equipment?.id,
+    temporaryEquipmentConstraintIdForDate(date));
+  eq('dumbbell tags include bodyweight + dumbbells',
+    equipment?.tags,
+    ['bodyweight', 'dumbbells']);
+
+  const noBarbell = executeProgramControlAction(baseAction(
+    'set_equipment_modifier',
+    { presetId: 'no_barbell_rack', date, todayISO },
+    { scope: 'current_week', createsActiveModifier: true },
+  ), { todayISO });
+  equipment = useCoachUpdatesStore.getState().activeConstraints
+    .find((constraint: any) => constraint.type === 'equipment') as any;
+  eq('no barbell preset succeeds', noBarbell.ok, true);
+  eq('no barbell mode without', equipment?.mode, 'without');
+  eq('no barbell tags', equipment?.tags, ['barbell']);
+
+  const noMachines = executeProgramControlAction(baseAction(
+    'set_equipment_modifier',
+    { presetId: 'no_machines_cables', date, todayISO },
+    { scope: 'current_week', createsActiveModifier: true },
+  ), { todayISO });
+  equipment = useCoachUpdatesStore.getState().activeConstraints
+    .find((constraint: any) => constraint.type === 'equipment') as any;
+  eq('no machines/cables preset succeeds', noMachines.ok, true);
+  eq('no machines/cables mode without', equipment?.mode, 'without');
+  eq('no machines/cables tags', equipment?.tags, ['machine', 'cables']);
+
+  const noCardio = executeProgramControlAction(baseAction(
+    'set_equipment_modifier',
+    { presetId: 'no_erg_cardio', date, todayISO },
+    { scope: 'current_week', createsActiveModifier: true },
+  ), { todayISO });
+  equipment = useCoachUpdatesStore.getState().activeConstraints
+    .find((constraint: any) => constraint.type === 'equipment') as any;
+  eq('no erg/cardio preset succeeds', noCardio.ok, true);
+  eq('no erg/cardio mode without', equipment?.mode, 'without');
+  eq('no erg/cardio tags', equipment?.tags, ['bike_or_treadmill']);
+
+  const busyConstraint = {
+    id: 'busy-test',
+    type: 'schedule',
+    severity: 5,
+    status: 'active',
+    startDate: date,
+    lastUpdatedAt: `${date}T09:00:00.000Z`,
+    reasonLabel: 'Busy week',
+    source: 'tap',
+    rules: ['long sessions'],
+    safeFocus: ['Short sessions'],
+    advice: [],
+    modifierAffects: ['current_week'],
+  } as any;
+  const injuryConstraint = buildGuidedInjuryConstraint({
+    region: 'lower_body',
+    area: 'Hamstring',
+    severity: 6,
+    severityBand: 'moderate',
+    adjustmentLevel: 'moderate',
+    triggers: ['Sprinting'],
+    seriousSymptoms: false,
+  }, { todayISO });
+  useCoachUpdatesStore.getState().setActiveConstraints([
+    ...useCoachUpdatesStore.getState().activeConstraints,
+    busyConstraint,
+    injuryConstraint,
+  ]);
+  const clear = executeProgramControlAction(baseAction(
+    'set_equipment_modifier',
+    { presetId: 'back_to_normal', date, todayISO },
+    { scope: 'current_week', createsActiveModifier: false },
+  ), { todayISO });
+  const remaining = useCoachUpdatesStore.getState().activeConstraints;
+  eq('back to normal succeeds', clear.ok, true);
+  eq('back to normal requests rebuild when equipment cleared', clear.requiresRebuild, true);
+  ok('back to normal clears equipment only', !remaining.some((constraint: any) => constraint.type === 'equipment'));
+  ok('busy constraint remains after equipment clear', remaining.some((constraint: any) => constraint.id === 'busy-test'));
+  ok('injury constraint remains after equipment clear', remaining.some((constraint: any) => constraint.type === 'injury'));
+  ok('baseline profile equipment unchanged after clear',
+    JSON.stringify(useProfileStore.getState().onboardingData.equipment) === JSON.stringify(['Full Gym']));
 }
 
 console.log('\n[6] routine setup action is guided, not Coach fallback');

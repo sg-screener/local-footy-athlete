@@ -790,6 +790,7 @@ console.log('\n[9b] Program/Home quick actions use guided no-chat fallbacks');
   const classicPath = path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreen.tsx');
   const quickSheetPath = path.resolve(__dirname, '..', 'screens', 'home', 'HomeQuickActionSheet.tsx');
   const constantsPath = path.resolve(__dirname, '..', 'screens', 'home', 'homeScreenConstants.ts');
+  const equipmentSheetPath = path.resolve(__dirname, '..', 'screens', 'home', 'EquipmentLimitationSheet.tsx');
   const stalePath = path.resolve(__dirname, '..', 'components', 'StaleOverrideBanner.tsx');
   const hookPath = path.resolve(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts');
   const sheetPath = path.resolve(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx');
@@ -797,6 +798,7 @@ console.log('\n[9b] Program/Home quick actions use guided no-chat fallbacks');
   const classicSrc = fs.readFileSync(classicPath, 'utf8');
   const quickSheetSrc = fs.readFileSync(quickSheetPath, 'utf8');
   const constantsSrc = fs.readFileSync(constantsPath, 'utf8');
+  const equipmentSheetSrc = fs.readFileSync(equipmentSheetPath, 'utf8');
   const staleSrc = fs.readFileSync(stalePath, 'utf8');
   const hookSrc = fs.readFileSync(hookPath, 'utf8');
   const sheetSrc = fs.readFileSync(sheetPath, 'utf8');
@@ -807,6 +809,12 @@ console.log('\n[9b] Program/Home quick actions use guided no-chat fallbacks');
   ok('classic quick action chips do not pass action.prefill to Coach', !/handleMessageCoach\(action\.prefill\)|handleQuickAction\(action\.prefill\)/.test(classicSrc));
   ok('missed-session quick action has guided sheet', /testID="home-missed-session-sheet"[\s\S]*Move it to another day[\s\S]*Skip it[\s\S]*Replace it with recovery[\s\S]*Message the coach/.test(quickSheetSrc));
   ok('busy-week quick action has guided sheet', /testID="home-busy-week-sheet"[\s\S]*Reduce this week[\s\S]*Pick unavailable days[\s\S]*Keep program as-is[\s\S]*Message the coach/.test(quickSheetSrc));
+  ok('missing-equipment quick action opens local equipment sheet',
+    /action\.id === 'missing_equipment'[\s\S]*<EquipmentLimitationSheet/.test(quickSheetSrc));
+  ok('temporary equipment sheet has preset options',
+    /testID="home-equipment-limitation-sheet"[\s\S]*TEMPORARY_EQUIPMENT_PRESETS/.test(equipmentSheetSrc));
+  ok('temporary equipment presets route through ProgramControlAction',
+    /type:\s*'set_equipment_modifier'/.test(hookSrc));
   ok('busy-week reduction routes through ProgramControlAction', /type:\s*'set_schedule_modifier'/.test(hookSrc));
   ok('quick action detail fallback requires explicit Message coach tap', /I need a bit more detail[\s\S]*Message the coach[\s\S]*Cancel/.test(quickSheetSrc));
   ok('stale override Review opens a guided review sheet', /testID="stale-override-review-sheet"[\s\S]*Keep this change[\s\S]*Clear this change[\s\S]*Update this change[\s\S]*Message the coach/.test(staleSrc));

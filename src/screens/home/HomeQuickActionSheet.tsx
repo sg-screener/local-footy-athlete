@@ -6,7 +6,9 @@ import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import type { HomeQuickAction } from './homeScreenConstants';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
+import { EquipmentLimitationSheet } from './EquipmentLimitationSheet';
 import type { GuidedInjuryFlowResult } from '../../utils/guidedInjuryControl';
+import type { TemporaryEquipmentPresetId } from '../../utils/equipmentAvailability';
 
 interface HomeQuickActionSheetProps {
   visible: boolean;
@@ -15,6 +17,7 @@ interface HomeQuickActionSheetProps {
   onOpenDayControls: () => void;
   onOpenProgramSetup: () => void;
   onApplyBusyWeekReduction: () => void;
+  onApplyEquipmentPreset: (presetId: TemporaryEquipmentPresetId) => void | Promise<void>;
   onApplyGuidedInjury: (result: GuidedInjuryFlowResult) => void | Promise<void>;
   onMessageCoach: (prefill: string) => void;
 }
@@ -26,6 +29,7 @@ export function HomeQuickActionSheet({
   onOpenDayControls,
   onOpenProgramSetup,
   onApplyBusyWeekReduction,
+  onApplyEquipmentPreset,
   onApplyGuidedInjury,
   onMessageCoach,
 }: HomeQuickActionSheetProps) {
@@ -92,7 +96,20 @@ export function HomeQuickActionSheet({
     );
   }
 
-  if (needsDetail || action.id === 'missing_equipment') {
+  if (action.id === 'missing_equipment') {
+    return (
+      <EquipmentLimitationSheet
+        visible={visible}
+        onClose={onClose}
+        onApply={async (presetId) => {
+          await onApplyEquipmentPreset(presetId);
+          onClose();
+        }}
+      />
+    );
+  }
+
+  if (needsDetail) {
     return (
       <Sheet visible={visible} onClose={onClose} testID="home-quick-action-detail-sheet">
         {detailFallback}

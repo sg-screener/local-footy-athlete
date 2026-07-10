@@ -51,6 +51,22 @@ const HOME_CONSTANTS_PATH = path.resolve(
   'homeScreenConstants.ts',
 );
 const homeConstants = fs.readFileSync(HOME_CONSTANTS_PATH, 'utf8');
+const HOME_V2_PATH = path.resolve(
+  __dirname,
+  '..',
+  'screens',
+  'home',
+  'HomeScreenV2.tsx',
+);
+const homeV2 = fs.readFileSync(HOME_V2_PATH, 'utf8');
+const EQUIPMENT_SHEET_PATH = path.resolve(
+  __dirname,
+  '..',
+  'screens',
+  'home',
+  'EquipmentLimitationSheet.tsx',
+);
+const equipmentSheet = fs.readFileSync(EQUIPMENT_SHEET_PATH, 'utf8');
 
 // ═════════════════════════════════════════════════════════════════════
 // 1. The actual file rendered by the Profile tab contains the MVP sections
@@ -247,7 +263,7 @@ ok(
 );
 ok(
   'setup update rebuilds from patched profile before committing stores',
-  /const program = await generateProgramFromProfile\(nextProfile\)/.test(src)
+  /const program = await generateProgramFromProfile\(nextProfile,/.test(src)
     && /updateOnboardingData\(patch\)/.test(src)
     && /setCurrentProgram\(program\)/.test(src)
     && /clearManualOverrides\(\)/.test(src),
@@ -597,6 +613,14 @@ ok('old Program chip label removed', !/No access to equipment/.test(homeConstant
 ok(
   'Missing equipment chip has requested Coach prefill',
   /prefill:\s*"I’m missing equipment for my program — "/.test(homeConstants),
+);
+ok(
+  'Program screen has temporary equipment entry',
+  /testID="home-equipment-limitation-entry"[\s\S]*Missing equipment\?/.test(homeV2),
+);
+ok(
+  'temporary equipment sheet is local and preset-driven',
+  /testID="home-equipment-limitation-sheet"[\s\S]*TEMPORARY_EQUIPMENT_PRESETS/.test(equipmentSheet),
 );
 
 // ─── Summary ───

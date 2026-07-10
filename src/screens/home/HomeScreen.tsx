@@ -92,6 +92,7 @@ function HomeScreenClassic() {
     handleOpenProgramSetup,
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,
+    handleApplyEquipmentPreset,
     staleByDate,
     weekHasGame,
     showAddGameCTA,
@@ -480,6 +481,8 @@ function HomeScreenClassic() {
         onOpenDayControls={openSelectedDayControls}
         onOpenProgramSetup={handleOpenProgramSetup}
         onApplyBusyWeekReduction={() => void handleApplyHomeQuickStatus('busy_week_reduce')}
+        onApplyEquipmentPreset={(presetId) =>
+          void handleApplyEquipmentPreset(presetId, selectedQuickActionDate ?? undefined)}
         onApplyGuidedInjury={handleApplyGuidedInjury}
         onMessageCoach={handleMessageCoach}
       />

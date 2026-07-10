@@ -14,6 +14,24 @@ import { inferEquipment } from './sessionBuilder';
 export type EquipmentAvailabilityProfile =
   Pick<OnboardingData, 'equipment' | 'trainingLocation'> | null | undefined;
 
+export type TemporaryEquipmentPresetId =
+  | 'bodyweight_only'
+  | 'dumbbells_only'
+  | 'home_hotel_gym'
+  | 'no_barbell_rack'
+  | 'no_machines_cables'
+  | 'no_erg_cardio'
+  | 'back_to_normal';
+
+export interface TemporaryEquipmentPreset {
+  id: TemporaryEquipmentPresetId;
+  label: string;
+  sub: string;
+  mode?: ActiveEquipmentConstraint['mode'];
+  tags: readonly EquipmentTag[];
+  clearsActiveEquipment?: boolean;
+}
+
 export const FULL_GYM_EQUIPMENT: readonly EquipmentTag[] = [
   'bodyweight',
   'dumbbells',
@@ -74,6 +92,58 @@ export const EQUIPMENT_CHECKLIST_OPTION_TAGS: Readonly<Record<string, readonly E
   ...CURRENT_CHECKLIST_OPTION_TAGS,
 };
 
+export const TEMPORARY_EQUIPMENT_PRESETS: readonly TemporaryEquipmentPreset[] = [
+  {
+    id: 'bodyweight_only',
+    label: 'Bodyweight only',
+    sub: 'Use bodyweight options this week',
+    mode: 'only',
+    tags: ['bodyweight'],
+  },
+  {
+    id: 'dumbbells_only',
+    label: 'Dumbbells only',
+    sub: 'Use dumbbell/bodyweight options this week',
+    mode: 'only',
+    tags: ['bodyweight', 'dumbbells'],
+  },
+  {
+    id: 'home_hotel_gym',
+    label: 'Home / hotel gym',
+    sub: 'Use bodyweight, dumbbells and bands this week',
+    mode: 'only',
+    tags: ['bodyweight', 'dumbbells', 'bands'],
+  },
+  {
+    id: 'no_barbell_rack',
+    label: 'No barbell/rack',
+    sub: 'Avoid barbell work this week',
+    mode: 'without',
+    tags: ['barbell'],
+  },
+  {
+    id: 'no_machines_cables',
+    label: 'No machines/cables',
+    sub: 'Avoid machine and cable work this week',
+    mode: 'without',
+    tags: ['machine', 'cables'],
+  },
+  {
+    id: 'no_erg_cardio',
+    label: 'No erg/cardio machines',
+    sub: 'Avoid cardio-machine options this week',
+    mode: 'without',
+    tags: ['bike_or_treadmill'],
+  },
+  {
+    id: 'back_to_normal',
+    label: 'Back to normal',
+    sub: 'Clear the temporary equipment limit',
+    tags: [],
+    clearsActiveEquipment: true,
+  },
+];
+
 function addUnique(tags: EquipmentTag[], next: readonly EquipmentTag[]): void {
   for (const tag of next) {
     if (!tags.includes(tag)) tags.push(tag);
@@ -119,6 +189,15 @@ function endOfWeekISO(dateISO: string): string {
   const dow = date.getDay();
   const daysToSunday = dow === 0 ? 0 : 7 - dow;
   date.setDate(date.getDate() + daysToSunday);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function startOfWeekISO(dateISO: string): string {
+  const [y, m, d] = dateISO.slice(0, 10).split('-').map(Number);
+  const date = new Date(y, m - 1, d, 12, 0, 0, 0);
+  const dow = date.getDay();
+  const daysFromMonday = dow === 0 ? 6 : dow - 1;
+  date.setDate(date.getDate() - daysFromMonday);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
@@ -168,6 +247,43 @@ export function buildActiveEquipmentConstraint(args: {
     safeFocus: [],
     advice: [],
   };
+}
+
+export function temporaryEquipmentConstraintIdForDate(dateISO: string): string {
+  return `equipment-temporary:${startOfWeekISO(dateISO)}`;
+}
+
+export function temporaryEquipmentPresetById(
+  presetId: TemporaryEquipmentPresetId,
+): TemporaryEquipmentPreset {
+  const preset = TEMPORARY_EQUIPMENT_PRESETS.find((candidate) => candidate.id === presetId);
+  if (!preset) {
+    throw new Error(`Unknown temporary equipment preset: ${presetId}`);
+  }
+  return preset;
+}
+
+export function buildTemporaryEquipmentConstraint(args: {
+  presetId: Exclude<TemporaryEquipmentPresetId, 'back_to_normal'>;
+  date: string;
+  todayISO?: string;
+  source?: ActiveEquipmentConstraint['source'];
+}): ActiveEquipmentConstraint {
+  const preset = temporaryEquipmentPresetById(args.presetId);
+  if (!preset.mode || preset.clearsActiveEquipment) {
+    throw new Error(`Temporary equipment preset cannot build a constraint: ${args.presetId}`);
+  }
+  return buildActiveEquipmentConstraint({
+    id: temporaryEquipmentConstraintIdForDate(args.date),
+    mode: preset.mode,
+    tags: preset.tags,
+    source: args.source ?? 'tap',
+    startDate: args.date,
+    nowISO: args.todayISO,
+    scope: 'this_week',
+    modifierAffects: ['current_week'],
+    reasonLabel: preset.label,
+  });
 }
 
 export function upsertActiveEquipmentConstraint(

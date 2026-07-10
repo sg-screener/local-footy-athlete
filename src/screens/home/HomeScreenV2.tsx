@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { PlanChangeSheet } from './PlanChangeSheet';
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
+import { EquipmentLimitationSheet } from './EquipmentLimitationSheet';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import Svg, { Path } from 'react-native-svg';
@@ -98,6 +99,7 @@ export default function HomeScreenV2() {
     handleFinishTeamSession,
     handleMessageCoach,
     handleApplyGuidedInjury,
+    handleApplyEquipmentPreset,
     handleApplyBusyWeekReduce,
     handleApplyAwayDays,
     handleApplyWeekReadiness,
@@ -168,6 +170,7 @@ export default function HomeScreenV2() {
   } | null>(null);
   const [injuryFlowNote, setInjuryFlowNote] = useState<ActiveCoachNote | null>(null);
   const [busyAwayVisible, setBusyAwayVisible] = useState(false);
+  const [equipmentVisible, setEquipmentVisible] = useState(false);
 
   // ── Weekly readiness ("I'm not 100%") — week-level card ──
   // Active state is derived from the EXISTING tap modifiers for the
@@ -458,6 +461,23 @@ export default function HomeScreenV2() {
           </Pressable>
         )}
 
+        {isNormal && (
+          <Pressable
+            onPress={() => setEquipmentVisible(true)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+            testID="home-equipment-limitation-entry"
+          >
+            <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
+              <View style={styles.busyAwayRow}>
+                <View style={[styles.busyAwayIcon, styles.equipmentIconTint]}>
+                  <MaterialCommunityIcons name="dumbbell" size={14} color="#C6FF6B" />
+                </View>
+                <Text style={styles.busyAwayText}>Missing equipment?</Text>
+              </View>
+            </Card>
+          </Pressable>
+        )}
+
         {isNormal && showPracticeMatchCTA && (
           <Pressable
             onPress={handlePracticeMatchPress}
@@ -560,6 +580,15 @@ export default function HomeScreenV2() {
         onAwayDays={async (dates) => {
           await handleApplyAwayDays(dates);
           setBusyAwayVisible(false);
+        }}
+      />
+
+      <EquipmentLimitationSheet
+        visible={equipmentVisible}
+        onClose={() => setEquipmentVisible(false)}
+        onApply={async (presetId) => {
+          await handleApplyEquipmentPreset(presetId, weekAnchorISO);
+          setEquipmentVisible(false);
         }}
       />
 
@@ -2170,6 +2199,7 @@ const styles = StyleSheet.create({
   practiceMatchIconTint: { backgroundColor: 'rgba(255, 194, 71, 0.12)' },
   // Weekly readiness card = same treatment with a wellbeing tint.
   readinessIconTint: { backgroundColor: 'rgba(255, 122, 133, 0.12)' },
+  equipmentIconTint: { backgroundColor: 'rgba(198, 255, 107, 0.12)' },
   busyAwayEmpty: {
     color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 20,
     marginVertical: spacing.sm,

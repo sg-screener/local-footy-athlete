@@ -1,6 +1,7 @@
 import { useProgramStore } from '../store/programStore';
 import {
   useCoachUpdatesStore,
+  type ActiveEquipmentConstraint,
   type ActiveInjuryConstraint,
   type ActiveScheduleConstraint,
 } from '../store/coachUpdatesStore';
@@ -29,6 +30,12 @@ import {
   withActiveProgramModifierContext,
   type TapRecoveryModifierScope,
 } from './tapProgramModifiers';
+import {
+  buildTemporaryEquipmentConstraint,
+  temporaryEquipmentPresetById,
+  upsertActiveEquipmentConstraint,
+  type TemporaryEquipmentPresetId,
+} from './equipmentAvailability';
 
 export type ProgramControlActionType =
   | 'swap_session'
@@ -44,6 +51,7 @@ export type ProgramControlActionType =
   | 'clear_fatigue_status'
   | 'set_injury_modifier'
   | 'clear_injury_modifier'
+  | 'set_equipment_modifier'
   | 'set_schedule_modifier'
   | 'update_lfa_days'
   | 'update_team_training_days'
@@ -142,6 +150,11 @@ export type ProgramControlAction =
   | ProgramControlActionBase<'clear_fatigue_status', { noteId?: string; modifierId?: string; date?: string }>
   | ProgramControlActionBase<'set_injury_modifier', { constraint?: ActiveInjuryConstraint }>
   | ProgramControlActionBase<'clear_injury_modifier', { noteId?: string; modifierId?: string }>
+  | ProgramControlActionBase<'set_equipment_modifier', {
+      presetId: TemporaryEquipmentPresetId;
+      date: string;
+      todayISO?: string;
+    }>
   | ProgramControlActionBase<'set_schedule_modifier', {
       date: string;
       todayISO?: string;
@@ -612,6 +625,42 @@ export function executeProgramControlAction(
         changedProgram: true,
         requiresRebuild: false,
         createdModifierIds: [action.payload.constraint!.id],
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
+    case 'set_equipment_modifier': {
+      const todayISO = action.payload.todayISO ?? context.todayISO ?? action.payload.date;
+      const preset = temporaryEquipmentPresetById(action.payload.presetId);
+      if (preset.clearsActiveEquipment) {
+        const store = useCoachUpdatesStore.getState();
+        const equipmentConstraints = store.activeConstraints
+          .filter((constraint): constraint is ActiveEquipmentConstraint => constraint.type === 'equipment');
+        for (const constraint of equipmentConstraints) {
+          store.removeActiveConstraint(constraint.id);
+        }
+        return {
+          ok: true,
+          changedProgram: equipmentConstraints.length > 0,
+          requiresRebuild: equipmentConstraints.length > 0,
+          clearedModifierIds: equipmentConstraints.map((constraint) =>
+            `program-modifier:active_constraint:${constraint.id}`),
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
+      const constraint = buildTemporaryEquipmentConstraint({
+        presetId: action.payload.presetId as Exclude<TemporaryEquipmentPresetId, 'back_to_normal'>,
+        date: action.payload.date,
+        todayISO,
+        source: 'tap',
+      });
+      const result = upsertActiveEquipmentConstraint(constraint);
+      return {
+        ok: true,
+        changedProgram: true,
+        requiresRebuild: result.rebuildRequired,
+        createdModifierIds: [result.modifierId],
         fallbackToCoach: false,
         route: route.route,
       };

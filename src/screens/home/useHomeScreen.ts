@@ -35,6 +35,7 @@ import {
   type ProgramControlActionResult,
   type ProgramControlStatusUpdate,
 } from '../../utils/programControlActions';
+import type { TemporaryEquipmentPresetId } from '../../utils/equipmentAvailability';
 import {
   buildGuidedInjuryConstraint,
   type GuidedInjuryFlowResult,
@@ -933,6 +934,32 @@ export function useHomeScreen() {
     }
   }, [handleProgramControlResult]);
 
+  const handleApplyEquipmentPreset = useCallback(async (
+    presetId: TemporaryEquipmentPresetId,
+    anchorDateISO?: string,
+  ) => {
+    const todayISO = todayISOLocal();
+    const result = executeProgramControlAction({
+      type: 'set_equipment_modifier',
+      source: {
+        screen: 'program_tab',
+        surface: 'equipment_limitation_sheet',
+        initiatedBy: 'tap',
+      },
+      scope: 'current_week',
+      payload: {
+        presetId,
+        date: anchorDateISO ?? weekDays[0]?.date ?? todayISO,
+        todayISO,
+      },
+      requiresRebuild: false,
+      createsActiveModifier: presetId !== 'back_to_normal',
+      oneOffOnly: false,
+    }, { todayISO });
+    await handleProgramControlResult(result);
+    return result;
+  }, [handleProgramControlResult, weekDays]);
+
   // ── Busy week / Away / Holiday (vocab group 5) ──
   // "Busy" reduces the whole current week; "Away" clears the exact days
   // the athlete picked and records an Away Coach Note that restores them
@@ -1394,6 +1421,7 @@ export function useHomeScreen() {
     handleOpenProgramSetup,
     handleApplyHomeQuickStatus,
     handleApplyGuidedInjury,
+    handleApplyEquipmentPreset,
 
     // Busy / away + missed sessions (vocab groups 5 + 2)
     handleApplyBusyWeekReduce,
