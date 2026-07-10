@@ -67,6 +67,7 @@ import {
 import {
   computeTestingBias,
   composeProgrammingBias,
+  type ComposedProgrammingBias,
 } from '../rules/testingBias';
 import {
   decidePowerPrimer,
@@ -645,6 +646,25 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         hasPracticeMatch: inputs.hasGame,
       })
     : null;
+  const isBeginner = trainingAgePolicy.level === 'new';
+  const programmingBias = composeProgrammingBias(
+    computeProgrammingBias({
+      role: inputs.role,
+      goals: inputs.goals,
+      phase: inputs.seasonPhase,
+      isBeginner,
+    }),
+    computeTestingBias({
+      phase: inputs.seasonPhase,
+      squatStrength: inputs.squatStrength,
+      benchStrength: inputs.benchStrength,
+      conditioningLevel: inputs.conditioningLevel,
+      sprintExposure: inputs.sprintExposure,
+      biggestLimitation: inputs.biggestLimitation,
+      injuries: inputs.injuries,
+      isBeginner,
+    }),
+  );
 
   // Step 2: Existing hard exposures from team environment
   const { count: existingHard, breakdown: hardBreakdown } = countTeamHardExposures(inputs);
@@ -813,7 +833,14 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   logger.debug('[ENGINE-TRACE] readiness:', readiness);
   logger.debug('[ENGINE-TRACE] coreRange:', JSON.stringify(coreRange), '→ actualCore:', actualCore);
   logger.debug('[ENGINE-TRACE] optional:', optionalSessions, 'recovery:', recoverySessions);
-  const weeklyPlan = buildWeeklyPlan(inputs, actualCore, optionalSessions, recoverySessions, readiness);
+  const weeklyPlan = buildWeeklyPlan(
+    inputs,
+    actualCore,
+    optionalSessions,
+    recoverySessions,
+    readiness,
+    programmingBias,
+  );
   logger.debug('[ENGINE-TRACE] ═══ weeklyPlan output ═══');
   weeklyPlan.forEach(s => logger.debug(`[ENGINE-TRACE]   ${s.dayOfWeek}: [${s.tier}] ${s.focus}${s.isHardExposure ? ' (HARD)' : ''}`));
 
@@ -827,15 +854,8 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // where injury/readiness/game-proximity/deload/beginner policy says no.
   {
     const powerGameDayNum = inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null;
-    const powerBiasNudge = (() => {
-      const b = computeProgrammingBias({
-        role: inputs.role,
-        goals: inputs.goals,
-        phase: inputs.seasonPhase,
-        isBeginner: trainingAgePolicy.level === 'new',
-      });
-      return b.speedBias > 0 || b.strengthBias > 0;
-    })();
+    const powerBiasNudge =
+      programmingBias.speedBias > 0 || programmingBias.strengthBias > 0;
     const powerInjuries: PowerInjuryInput[] = inputs.injuries.map((injury) => ({
       area: `${injury.bodyArea ?? ''} ${injury.description ?? ''}`,
       severity: injury.severity === 'Severe' ? 8 : injury.severity === 'Moderate' ? 5 : 3,
@@ -1106,7 +1126,8 @@ function buildWeeklyPlan(
   optional: number,
   recovery: number,
   /** Profile-derived readiness — read by finisherEligibility (4A). */
-  readiness: ReadinessLevel = 'medium',
+  readiness: ReadinessLevel,
+  programmingBias: ComposedProgrammingBias,
 ): SessionAllocation[] {
   const plan: SessionAllocation[] = [];
   const classificationContext: StressContext = {
@@ -1836,27 +1857,16 @@ function buildWeeklyPlan(
     // a blocked category. Neutral profiles are an identity no-op. Only the
     // off- and pre-season planner consumes categoryPriority, so in-season stays
     // freshness-first regardless of bias.
-    const roleGoalBias = computeProgrammingBias({
-      role: inputs.role,
-      goals: inputs.goals,
-      phase: inputs.seasonPhase,
-      isBeginner: trainingAgePolicy.level === 'new',
-    });
-    const testingBias = computeTestingBias({
-      phase: inputs.seasonPhase,
-      squatStrength: inputs.squatStrength,
-      benchStrength: inputs.benchStrength,
-      conditioningLevel: inputs.conditioningLevel,
-      sprintExposure: inputs.sprintExposure,
-      biggestLimitation: inputs.biggestLimitation,
-      injuries: inputs.injuries,
-      isBeginner: trainingAgePolicy.level === 'new',
-    });
-    const programmingBias = composeProgrammingBias(roleGoalBias, testingBias);
+    // Team-training weeks keep their established field-load-driven order: the
+    // anchor already supplies conditioning/sprint/COD exposure, so a profile
+    // preference must not reshuffle the fragile gym structure around it.
+    const conditioningBiasPreference = teamDayNums.length === 0
+      ? programmingBias.conditioningCategoryPreference
+      : {};
     if (useCategoryPlanner) {
       categoryPriority = applyConditioningCategoryBias(
         categoryPriority,
-        programmingBias.conditioningCategoryPreference,
+        conditioningBiasPreference,
       );
     }
 
@@ -2111,8 +2121,8 @@ function buildWeeklyPlan(
       // Small regional-dose tie-break within the approved structures. FB
       // contributes half to both regions, and injury blocks above remain two
       // orders of magnitude larger than this preference.
-      score += (sq + hi) * testingBias.lowerStrengthBias * TESTING_STRUCTURE_WEIGHT;
-      score += (pu + pl) * testingBias.upperStrengthBias * TESTING_STRUCTURE_WEIGHT;
+      score += (sq + hi) * programmingBias.lowerStrengthBias * TESTING_STRUCTURE_WEIGHT;
+      score += (pu + pl) * programmingBias.upperStrengthBias * TESTING_STRUCTURE_WEIGHT;
 
       // Lower body MUST be present — massive penalty if missing
       const hasLower = struct.some(s => s === 'L-sq' || s === 'L-hi');
@@ -3156,7 +3166,10 @@ function buildWeeklyPlan(
           inputs.seasonPhase === 'Off-season' ||
           (preseasonSubphase !== null && preseasonSubphase !== 'mid_preseason')
             ? categoryPriority
-            : zonePriority[zone];
+            : applyConditioningCategoryBias(
+                zonePriority[zone],
+                conditioningBiasPreference,
+              );
         for (const c of rankedForZone) {
           if (!placementPool.includes(c)) continue;
           if (!allow(c)) continue;
@@ -3241,7 +3254,7 @@ function buildWeeklyPlan(
     const W_SC_PAIRING_BAD = 35; // soft penalty for lower+glyco / lower+sprint
     const W_SEQUENCE_REGION = 25; // H-PRE-10: standalone-slot region preference vs team-day upper
     const W_TESTING_REGION = 50; // 10% max bias => at most a 5-point tie-break
-    const W_TESTING_ACCESSORY = 20; // 10% max bias => at most a 2-point support nudge
+    const W_PROGRAMMING_STRENGTH = 20; // 15% max bias => at most a 3-point safe-choice nudge
 
     // Helper: count for a specific pattern
     function patternCount(c: CandidateType): number {
@@ -3273,9 +3286,12 @@ function buildWeeklyPlan(
       // alter the strength budget, or outrank the surrounding safety and
       // structure rules.
       if (effectiveRegion === 'lower') {
-        score += testingBias.lowerStrengthBias * W_TESTING_REGION;
+        score += programmingBias.lowerStrengthBias * W_TESTING_REGION;
       } else if (effectiveRegion === 'upper') {
-        score += testingBias.upperStrengthBias * W_TESTING_REGION;
+        score += programmingBias.upperStrengthBias * W_TESTING_REGION;
+      }
+      if (isStrength(c)) {
+        score += programmingBias.strengthBias * W_PROGRAMMING_STRENGTH;
       }
 
       // ── Pattern exposure need ──
@@ -3407,7 +3423,7 @@ function buildWeeklyPlan(
         }
       }
 
-      if (c === 'ACC') score += 5 + testingBias.accessoryBias * W_TESTING_ACCESSORY;
+      if (c === 'ACC') score += 5;
       if (c === 'REC') score += 3;
 
       // ── Global pattern balance urgency ──

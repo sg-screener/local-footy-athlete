@@ -24,9 +24,11 @@ import {
 import type { GenerationConstraintContext } from './generationConstraints';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
-  applyRecoveryAddonTestingBias,
+  applyRecoveryAddonBias,
+  composeProgrammingBias,
   computeTestingBias,
 } from '../rules/testingBias';
+import { computeProgrammingBias } from '../rules/programmingBias';
 
 const ZERO_CREDIT = {
   hardExposure: false,
@@ -152,6 +154,7 @@ export function attachRecoveryAddonsToWeek(args: AttachRecoveryAddonsArgs): Work
   const sortedRecommendations = [...plan.recommendations]
     .filter((recommendation) => recommendation.status !== 'avoid' && recommendation.target.max > 0)
     .sort((a, b) => focusRank(plan.mode, a.focusArea) - focusRank(plan.mode, b.focusArea));
+  const isBeginner = resolveTrainingAgePolicy(args.profile.experienceLevel).level === 'new';
   const testingBias = computeTestingBias({
     phase,
     squatStrength: args.profile.squatStrength,
@@ -160,11 +163,18 @@ export function attachRecoveryAddonsToWeek(args: AttachRecoveryAddonsArgs): Work
     sprintExposure: args.profile.sprintExposure,
     biggestLimitation: args.profile.biggestLimitation,
     injuries: args.profile.injuries,
-    isBeginner: resolveTrainingAgePolicy(args.profile.experienceLevel).level === 'new',
+    isBeginner,
   });
-  const biasedRecommendations = applyRecoveryAddonTestingBias(
+  const roleGoalBias = computeProgrammingBias({
+    role: args.profile.position,
+    goals: args.profile.motivation ? args.profile.motivation.split(', ') : [],
+    phase,
+    isBeginner,
+  });
+  const programmingBias = composeProgrammingBias(roleGoalBias, testingBias);
+  const biasedRecommendations = applyRecoveryAddonBias(
     sortedRecommendations,
-    testingBias,
+    programmingBias.recoveryAddonFocusPreference,
   );
 
   const next = stripEmptyRecoveryAddons(args.workouts);

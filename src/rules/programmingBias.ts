@@ -6,25 +6,22 @@
  * The athlete's football role and training goals should *nudge* deterministic
  * programming by a small amount (~5–15%) — never override it. This module is a
  * pure, side-effect-free helper that maps (role, goals, phase) → a small bias
- * vector plus an optional conditioning-category preference used to re-order the
- * (already gate-filtered) conditioning category priority list.
+ * vector plus bounded preferences used to re-order already-safe conditioning
+ * categories and recovery add-on recommendations.
  *
  * SAFETY MODEL (why this is safe to consume)
  * ------------------------------------------
  *  - Bias is SMALL. Every numeric output is clamped to ±`MAX_BIAS` (15%).
  *  - Bias is PHASE-SCALED. Off-season expresses the most bias, pre-season less,
- *    in-season the least (`PHASE_SCALE`). `phaseAdjustedWeight` exposes the
- *    global scalar so consumers can see how much bias is live this phase.
- *  - The ONLY thing wired into session selection is
- *    `conditioningCategoryPreference`, and it is applied by
+ *    in-season the least (`PHASE_SCALE`). The global scalar is retained only
+ *    inside the explicitly debug-only observability object.
+ *  - `conditioningCategoryPreference` is applied by
  *    `applyConditioningCategoryBias` which RE-ORDERS an existing list — it can
  *    never ADD a category. Because the engine filters categories through the
  *    injury / readiness / deload / cap gates BEFORE the re-order, those gates
  *    always win: a category the gate removed can never be re-introduced by bias.
- *  - The conditioning-category preference is GOAL-driven, not role-driven. A
- *    default athlete (no goals, no explicit role) gets an EMPTY preference, so
- *    the re-order is an identity no-op and existing rotation behaviour is
- *    untouched. Role only modulates the *exposed* bias magnitudes.
+ *  - Role and goal preferences are phase-scaled and bounded. A default athlete
+ *    gets empty preferences, so all re-order helpers are identity no-ops.
  *  - Beginner policy dampens all bias and zeroes aggressive (speed) bias.
  *  - Equipment constraints live in exercise selection and are never touched
  *    here — bias only expresses category *preference*, not equipment choice.
@@ -33,8 +30,10 @@
 import type { SeasonPhase } from '../types/domain';
 import { getProgrammingRoleBias } from '../utils/roleBuckets';
 import type { OffseasonConditioningCategory } from './offseasonSubphasePolicy';
+import type { RecoveryAddonFocusArea } from './recoveryAddonCoverage';
 
 export type BiasConditioningCategory = OffseasonConditioningCategory;
+export type RecoveryAddonFocusPreference = Partial<Record<RecoveryAddonFocusArea, number>>;
 
 export interface ProgrammingBiasInputs {
   /** Raw athlete role/position (normalised internally). Undefined => no role
@@ -51,21 +50,17 @@ export interface ProgrammingBiasInputs {
 export interface ProgrammingBias {
   /** Preference nudge toward strength/heavy work (−0.15..+0.15). */
   strengthBias: number;
-  /** Preference nudge toward aerobic/running conditioning (−0.15..+0.15). */
-  conditioningBias: number;
   /** Preference nudge toward speed/acceleration work (−0.15..+0.15). */
   speedBias: number;
-  /** Preference nudge toward prehab / recovery add-ons (−0.15..+0.15). */
-  recoveryAddonBias: number;
-  /** Preference nudge toward accessory / hypertrophy volume (−0.15..+0.15). */
-  accessoryBias: number;
-  /** Global phase scalar in [0,1] applied to every bias (off > pre > in). */
-  phaseAdjustedWeight: number;
-  /** Optional per-category weight used to re-order the conditioning priority
-   *  list. Empty when there is no goal-driven conditioning direction. */
+  /** Bounded weights used to re-order an already-safe conditioning list. */
   conditioningCategoryPreference: Partial<Record<BiasConditioningCategory, number>>;
-  /** Human-readable reasons, for tests/debug/coach transparency. */
-  notes: string[];
+  /** Bounded weights used to re-order already-safe recovery add-on coverage. */
+  recoveryAddonFocusPreference: RecoveryAddonFocusPreference;
+  /** Observability only. No programming consumer reads these fields. */
+  debug: {
+    phaseAdjustedWeight: number;
+    reasons: string[];
+  };
 }
 
 /** Largest magnitude any single bias output can reach. */
@@ -129,9 +124,26 @@ function roleHasContent(role: unknown): boolean {
   return String(role ?? '').trim().length > 0;
 }
 
-/** Role emphasis (exposed magnitudes only — role never drives category order). */
-function roleEmphasis(role: unknown): { emphasis: Emphasis; note: string | null } {
-  if (!roleHasContent(role)) return { emphasis: ZERO_EMPHASIS, note: null };
+type ConditioningDirection = 'aerobic' | 'speed' | null;
+type SupportDirection = 'durability' | 'freshness' | 'strength_support' | null;
+
+interface BiasDirection {
+  emphasis: Emphasis;
+  conditioningDirection: ConditioningDirection;
+  supportDirection: SupportDirection;
+  note: string | null;
+}
+
+/** Role emphasis plus the safe lists it may nudge. */
+function roleEmphasis(role: unknown): BiasDirection {
+  if (!roleHasContent(role)) {
+    return {
+      emphasis: ZERO_EMPHASIS,
+      conditioningDirection: null,
+      supportDirection: null,
+      note: null,
+    };
+  }
   // getProgrammingRoleBias collapses high_forward_back → outside_runner and
   // returns the default bucket for unknown input; we only reach here when a
   // role was explicitly provided.
@@ -140,88 +152,98 @@ function roleEmphasis(role: unknown): { emphasis: Emphasis; note: string | null 
     case 'inside_mid':
       return {
         emphasis: { ...ZERO_EMPHASIS, conditioning: 0.75, recovery: 0.25 },
+        conditioningDirection: 'aerobic',
+        supportDirection: 'durability',
         note: 'Inside-mid role: slight aerobic/running-capacity lean',
       };
     case 'outside_runner':
       return {
         emphasis: { ...ZERO_EMPHASIS, speed: 0.75, conditioning: 0.5 },
+        conditioningDirection: 'speed',
+        supportDirection: null,
         note: 'Outside/high role: slight speed + running lean',
       };
     case 'key_position_ruck_tall':
       return {
         emphasis: { ...ZERO_EMPHASIS, strength: 0.75, accessory: 0.5 },
+        conditioningDirection: null,
+        supportDirection: 'strength_support',
         note: 'Key-position/ruck role: slight strength + accessory lean',
       };
     case 'small_forward_back':
       return {
         emphasis: { ...ZERO_EMPHASIS, speed: 0.5, recovery: 0.25 },
+        conditioningDirection: 'speed',
+        supportDirection: 'durability',
         note: 'Small forward/back role: slight speed + durability lean',
       };
     default:
-      return { emphasis: ZERO_EMPHASIS, note: null };
+      return {
+        emphasis: ZERO_EMPHASIS,
+        conditioningDirection: null,
+        supportDirection: null,
+        note: null,
+      };
   }
 }
 
-type GoalDirection = 'aerobic' | 'speed' | null;
-
 /** Map one goal token to an emphasis delta + optional conditioning direction. */
-function goalEmphasis(key: string): { emphasis: Partial<Emphasis>; direction: GoalDirection; note: string | null } {
+function goalEmphasis(key: string): Omit<BiasDirection, 'emphasis'> & { emphasis: Partial<Emphasis> } {
   const has = (...needles: string[]) => needles.some((n) => key.includes(n));
 
   // Durability / injury resilience — trunk/adductor/calf/hamstring/recovery lean.
   if (has('injury', 'durab', 'resilien', 'prehab', 'robust', 'bulletproof', 'stay healthy')) {
-    return { emphasis: { recovery: 1 }, direction: null, note: 'Durability goal: recovery/prehab lean' };
+    return { emphasis: { recovery: 1 }, conditioningDirection: null, supportDirection: 'durability', note: 'Durability goal: recovery/prehab lean' };
   }
   // Freshness — freshness-first, low intensity, no hard bias.
   if (has('fresh', 'recover', 'feel good')) {
-    return { emphasis: { recovery: 0.5 }, direction: null, note: 'Freshness goal: light recovery lean' };
+    return { emphasis: { recovery: 0.5 }, conditioningDirection: null, supportDirection: 'freshness', note: 'Freshness goal: light recovery lean' };
   }
   // Explosiveness / power — some strength + some speed.
   if (has('power', 'explos')) {
-    return { emphasis: { strength: 0.5, speed: 0.5 }, direction: 'speed', note: 'Power goal: strength + speed lean' };
+    return { emphasis: { strength: 0.5, speed: 0.5 }, conditioningDirection: 'speed', supportDirection: 'strength_support', note: 'Power goal: strength + speed lean' };
   }
   // Speed / acceleration — aggressive; gate + beginner policy still govern.
   if (has('speed', 'accel', 'quick', 'faster', 'fast', 'pace', 'top end', 'burst')) {
-    return { emphasis: { speed: 1 }, direction: 'speed', note: 'Speed goal: acceleration lean (gate still governs)' };
+    return { emphasis: { speed: 1 }, conditioningDirection: 'speed', supportDirection: null, note: 'Speed goal: acceleration lean (gate still governs)' };
   }
   // Aerobic / endurance — clearly aerobic; drives the category re-order.
   if (has('aerobic', 'endurance', 'engine', 'cardio', 'running capacity', 'gas tank', 'tempo', 'stamina')) {
-    return { emphasis: { conditioning: 1, recovery: 0.25 }, direction: 'aerobic', note: 'Aerobic goal: running-capacity lean' };
+    return { emphasis: { conditioning: 1, recovery: 0.25 }, conditioningDirection: 'aerobic', supportDirection: 'freshness', note: 'Aerobic goal: running-capacity lean' };
   }
   // Size / muscle — accessory/hypertrophy lean (mostly off-season).
   if (has('muscle', 'size', 'mass', 'hypertroph', 'bigger', 'build')) {
-    return { emphasis: { strength: 0.5, accessory: 1 }, direction: null, note: 'Size goal: strength + accessory lean' };
+    return { emphasis: { strength: 0.5, accessory: 1 }, conditioningDirection: null, supportDirection: 'strength_support', note: 'Size goal: strength + accessory lean' };
   }
   // Strength — heavy work lean.
   if (has('strong', 'strength')) {
-    // "Get stronger & fitter" also mentions fitness — add a light conditioning
-    // lean but NO aerobic direction (generic "fitter" is not clearly aerobic).
+    // Generic "fitter" is not clearly aerobic, so strength+fitness remains a
+    // strength nudge with balanced conditioning rather than inventing a mode.
     const fitness = has('fit', 'fitter', 'condition');
     return {
-      emphasis: fitness ? { strength: 1, accessory: 0.25, conditioning: 0.5 } : { strength: 1, accessory: 0.25 },
-      direction: null,
-      note: fitness ? 'Strength+fitness goal: strength lean, light conditioning' : 'Strength goal: strength lean',
+      emphasis: { strength: 1, accessory: 0.25 },
+      conditioningDirection: null,
+      supportDirection: 'strength_support',
+      note: fitness ? 'Strength+fitness goal: strength lean, balanced conditioning' : 'Strength goal: strength lean',
     };
   }
   // General "fitter/fitness" without strength — light balanced conditioning.
   if (has('fit', 'fitter', 'condition')) {
-    return { emphasis: { conditioning: 0.5 }, direction: null, note: 'Fitness goal: light conditioning lean' };
+    return { emphasis: {}, conditioningDirection: null, supportDirection: null, note: 'General fitness goal: balanced default' };
   }
   // Performance-flavoured goals — tiny balanced lean, no direction.
   if (has('senior', 'dominate', 'elite', 'compete', 'perform', 'best')) {
-    return { emphasis: { strength: 0.25, speed: 0.25 }, direction: null, note: 'Performance goal: tiny balanced lean' };
+    return { emphasis: { strength: 0.25, speed: 0.25 }, conditioningDirection: null, supportDirection: null, note: 'Performance goal: tiny balanced lean' };
   }
   // Consistency / general fitness / other — neutral.
-  return { emphasis: {}, direction: null, note: null };
+  return { emphasis: {}, conditioningDirection: null, supportDirection: null, note: null };
 }
 
 /**
  * Compute the deterministic role + goal programming bias.
  *
- * The result is a small, phase-scaled preference vector. The only field the
- * engine consumes for selection is `conditioningCategoryPreference` (via
- * `applyConditioningCategoryBias`); the rest are exposed for transparency,
- * tests, and future consumers.
+ * The result contains only active decision inputs plus an explicitly debug-only
+ * observability object. Numeric preference weights are percentages (0..0.15).
  */
 export function computeProgrammingBias(inputs: ProgrammingBiasInputs): ProgrammingBias {
   const { role, goals, phase, isBeginner = false } = inputs;
@@ -234,21 +256,34 @@ export function computeProgrammingBias(inputs: ProgrammingBiasInputs): Programmi
   // ── Accumulate raw emphasis from role + goals ──
   let emphasis: Emphasis = ZERO_EMPHASIS;
 
-  const { emphasis: rEmph, note: rNote } = roleEmphasis(role);
+  const {
+    emphasis: rEmph,
+    conditioningDirection: roleConditioningDirection,
+    supportDirection: roleSupportDirection,
+    note: rNote,
+  } = roleEmphasis(role);
   emphasis = addEmphasis(emphasis, rEmph);
   if (rNote) notes.push(rNote);
 
-  let aerobicDirection = false;
-  let speedDirection = false;
+  let aerobicDirection = roleConditioningDirection === 'aerobic';
+  let speedDirection = roleConditioningDirection === 'speed';
+  const supportDirections = new Set<Exclude<SupportDirection, null>>();
+  if (roleSupportDirection) supportDirections.add(roleSupportDirection);
 
   for (const raw of goals ?? []) {
     const key = normaliseGoalKey(raw);
     if (!key) continue;
-    const { emphasis: gEmph, direction, note } = goalEmphasis(key);
+    const {
+      emphasis: gEmph,
+      conditioningDirection,
+      supportDirection,
+      note,
+    } = goalEmphasis(key);
     emphasis = addEmphasis(emphasis, gEmph);
     if (note) notes.push(note);
-    if (direction === 'aerobic') aerobicDirection = true;
-    if (direction === 'speed') speedDirection = true;
+    if (conditioningDirection === 'aerobic') aerobicDirection = true;
+    if (conditioningDirection === 'speed') speedDirection = true;
+    if (supportDirection) supportDirections.add(supportDirection);
   }
 
   // ── Beginner policy: aggressive bias is suppressed entirely ──
@@ -268,34 +303,61 @@ export function computeProgrammingBias(inputs: ProgrammingBiasInputs): Programmi
   const accessoryBias = toBias(emphasis.accessory);
 
   // ── Conditioning-category preference (goal-driven; empty by default) ──
-  // Weights only order categories relative to each other; magnitude is not
-  // consumed beyond ordering. Aerobic and speed directions are independent so
-  // an athlete who wants both gets both leaned up (still gate-limited).
+  // Weights retain the phase-scaled 0..15% magnitude. The consumer treats them
+  // as a bounded score nudge, never as permission to add a category.
   const conditioningCategoryPreference: Partial<Record<BiasConditioningCategory, number>> = {};
-  if (aerobicDirection) {
-    conditioningCategoryPreference.aerobic_base = 2;
-    conditioningCategoryPreference.tempo = 1;
+  if (aerobicDirection && conditioningBias > 0) {
+    conditioningCategoryPreference.aerobic_base = conditioningBias;
+    conditioningCategoryPreference.tempo = clampBias(conditioningBias * 0.5);
     notes.push('Conditioning preference: aerobic_base > tempo (where phase/gate allow)');
   }
-  if (speedDirection) {
+  if (speedDirection && speedBias > 0) {
     // Sprint is the strongest speed expression but is owned by the sprint gate;
     // re-ordering only affects categories the gate already permitted.
-    conditioningCategoryPreference.sprint = (conditioningCategoryPreference.sprint ?? 0) + 2;
-    conditioningCategoryPreference.vo2 = (conditioningCategoryPreference.vo2 ?? 0) + 1;
+    conditioningCategoryPreference.sprint = Math.max(
+      conditioningCategoryPreference.sprint ?? 0,
+      speedBias,
+    );
+    conditioningCategoryPreference.vo2 = Math.max(
+      conditioningCategoryPreference.vo2 ?? 0,
+      clampBias(speedBias * 0.5),
+    );
     notes.push('Conditioning preference: sprint/vo2 leaned up (gate still governs)');
+  }
+
+  const recoveryAddonFocusPreference: RecoveryAddonFocusPreference = {};
+  const addFocuses = (focuses: readonly RecoveryAddonFocusArea[], weight: number): void => {
+    for (const focus of focuses) {
+      recoveryAddonFocusPreference[focus] = Math.max(
+        recoveryAddonFocusPreference[focus] ?? 0,
+        weight,
+      );
+    }
+  };
+  if (supportDirections.has('durability') && recoveryAddonBias > 0) {
+    addFocuses(
+      ['trunk_core', 'adductors_groin', 'calves_tib_ankles', 'hamstring_light_prehab'],
+      recoveryAddonBias,
+    );
+  }
+  if (supportDirections.has('freshness') && recoveryAddonBias > 0) {
+    addFocuses(['mobility_reset', 'trunk_core'], recoveryAddonBias);
+  }
+  if (supportDirections.has('strength_support') && accessoryBias > 0) {
+    addFocuses(['carries', 'shoulder_scap', 'trunk_core'], accessoryBias);
   }
 
   if (notes.length === 0) notes.push('No role/goal bias — balanced default');
 
   return {
     strengthBias,
-    conditioningBias,
     speedBias,
-    recoveryAddonBias,
-    accessoryBias,
-    phaseAdjustedWeight,
     conditioningCategoryPreference,
-    notes,
+    recoveryAddonFocusPreference,
+    debug: {
+      phaseAdjustedWeight,
+      reasons: notes,
+    },
   };
 }
 
@@ -314,8 +376,13 @@ export function applyConditioningCategoryBias<T extends BiasConditioningCategory
   if (ordered.length <= 1) return [...ordered];
   const keys = Object.keys(preference);
   if (keys.length === 0) return [...ordered];
+  const BIAS_ORDER_SCALE = 35;
   return ordered
-    .map((cat, index) => ({ cat, index, weight: preference[cat] ?? 0 }))
-    .sort((a, b) => b.weight - a.weight || a.index - b.index)
+    .map((cat, index) => ({
+      cat,
+      index,
+      score: index - (preference[cat] ?? 0) * BIAS_ORDER_SCALE,
+    }))
+    .sort((a, b) => a.score - b.score || a.index - b.index)
     .map((entry) => entry.cat);
 }

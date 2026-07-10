@@ -14,7 +14,7 @@ import type {
   Workout,
 } from '../types/domain';
 import {
-  applyRecoveryAddonTestingBias,
+  applyRecoveryAddonBias,
   composeProgrammingBias,
   computeTestingBias,
 } from '../rules/testingBias';
@@ -56,14 +56,10 @@ function eq(name: string, actual: unknown, expected: unknown): void {
 }
 
 function allNeutral(bias: ReturnType<typeof computeTestingBias>): boolean {
-  return [
-    bias.lowerStrengthBias,
-    bias.upperStrengthBias,
-    bias.aerobicBias,
-    bias.speedBias,
-    bias.recoveryAddonBias,
-    bias.accessoryBias,
-  ].every((value) => value === 0);
+  return [bias.lowerStrengthBias, bias.upperStrengthBias, bias.speedBias]
+    .every((value) => value === 0) &&
+    Object.keys(bias.conditioningCategoryPreference).length === 0 &&
+    Object.keys(bias.recoveryAddonFocusPreference).length === 0;
 }
 
 const BASE_PROFILE: OnboardingData = {
@@ -93,10 +89,12 @@ function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
 function planFor(
   data: OnboardingData,
   generationConstraints?: GenerationConstraintContext,
+  options: { weekInBlock?: number } = {},
 ): CoachingPlan {
   return buildCoachingPlan(onboardingToCoachingInputs(data, {
     availabilityDateISO: TODAY,
     generationConstraints,
+    weekInBlock: options.weekInBlock,
   }));
 }
 
@@ -158,6 +156,19 @@ console.log('\n[1] neutral and balanced signals');
   const missing = computeTestingBias({ phase: 'Off-season' });
   ok('missing testing data is neutral', allNeutral(missing), missing);
   eq('missing testing data has no conditioning preference', missing.conditioningCategoryPreference, {});
+  ok('testing output contains only consumed fields plus explicit debug data',
+    Object.keys(missing).sort().join(',') === [
+      'conditioningCategoryPreference',
+      'debug',
+      'lowerStrengthBias',
+      'recoveryAddonFocusPreference',
+      'speedBias',
+      'upperStrengthBias',
+    ].sort().join(','),
+    Object.keys(missing));
+  ok('neutral testing reason is explicitly debug-only',
+    missing.debug.reasons.some((reason) => /neutral bias/i.test(reason)),
+    missing.debug.reasons);
 
   const balanced = computeTestingBias({
     phase: 'Off-season',
@@ -186,7 +197,9 @@ console.log('\n[2] strength imbalance signals are small and regional');
   });
   ok('weak lower signal creates lower bias', weakLower.lowerStrengthBias > 0, weakLower);
   eq('weak lower does not create upper bias', weakLower.upperStrengthBias, 0);
-  ok('weak lower adds small accessory/support bias', weakLower.accessoryBias > 0, weakLower);
+  ok('weak lower adds small lower-support preference',
+    (weakLower.recoveryAddonFocusPreference.hamstring_light_prehab ?? 0) > 0,
+    weakLower);
   ok('weak lower bias stays at or below 10%', weakLower.lowerStrengthBias <= 0.1, weakLower);
 
   const weakUpper = computeTestingBias({
@@ -196,7 +209,9 @@ console.log('\n[2] strength imbalance signals are small and regional');
   });
   ok('weak upper signal creates upper bias', weakUpper.upperStrengthBias > 0, weakUpper);
   eq('weak upper does not create lower bias', weakUpper.lowerStrengthBias, 0);
-  ok('weak upper adds small accessory bias', weakUpper.accessoryBias > 0, weakUpper);
+  ok('weak upper adds small upper-support preference',
+    (weakUpper.recoveryAddonFocusPreference.shoulder_scap ?? 0) > 0,
+    weakUpper);
 
   const neutralPlan = planFor(profile());
   const weakLowerPlan = planFor(profile({
@@ -212,7 +227,10 @@ console.log('\n[2] strength imbalance signals are small and regional');
 console.log('\n[3] aerobic and speed testing gaps only re-order permitted categories');
 {
   const aerobic = computeTestingBias({ phase: 'Off-season', conditioningLevel: 'Poor' });
-  ok('poor aerobic signal creates small aerobic bias', aerobic.aerobicBias > 0 && aerobic.aerobicBias <= 0.1, aerobic);
+  ok('poor aerobic signal creates small bounded category preference',
+    (aerobic.conditioningCategoryPreference.aerobic_base ?? 0) > 0 &&
+      (aerobic.conditioningCategoryPreference.aerobic_base ?? 0) <= 0.1,
+    aerobic);
   const categories: BiasConditioningCategory[] = ['vo2', 'tempo', 'aerobic_base'];
   const aerobicOrder = applyConditioningCategoryBias(categories, aerobic.conditioningCategoryPreference);
   eq('poor aerobic signal favours aerobic base where available', aerobicOrder[0], 'aerobic_base');
@@ -225,6 +243,26 @@ console.log('\n[3] aerobic and speed testing gaps only re-order permitted catego
   ok('speed testing bias preserves the gate-filtered category set',
     speedOrder.length === gateFiltered.length && gateFiltered.every((category) => speedOrder.includes(category)),
     speedOrder);
+
+  const poorAerobicPlan = planFor(profile({
+    seasonPhase: 'Pre-season',
+    position: undefined,
+    motivation: 'Stay consistent',
+    conditioningLevel: 'Poor',
+    trainingDaysPerWeek: 5,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+  }), undefined, { weekInBlock: 2 });
+  const poorCategories = poorAerobicPlan.weeklyPlan
+    .map((session) => session.conditioningCategory)
+    .filter(Boolean);
+  ok('poor aerobic testing signal reaches safe pre-season category selection',
+    poorCategories.some((category) => category === 'aerobic_base' || category === 'tempo'),
+    planText(poorAerobicPlan));
+  ok('poor aerobic nudge does not add sessions beyond availability',
+    poorAerobicPlan.weeklyPlan.length <= 5,
+    planText(poorAerobicPlan));
 }
 
 console.log('\n[4] phase scaling and beginner policy');
@@ -275,9 +313,21 @@ console.log('\n[5] role/goal + testing compose without doubling');
     sprintExposure: 'No sprint training',
   });
   const combined = composeProgrammingBias(roleGoal, testing);
-  ok('composed speed bias stays capped at 15%', combined.speedBias <= 0.15, combined);
-  eq('same sprint preference uses max rather than summing', combined.conditioningCategoryPreference.sprint, 2);
-  ok('composition preserves testing reasons', combined.testingNotes.some((note) => /speed/i.test(note)), combined.testingNotes);
+  const combinedActiveWeights = [
+    combined.strengthBias,
+    combined.speedBias,
+    combined.lowerStrengthBias,
+    combined.upperStrengthBias,
+    ...Object.values(combined.conditioningCategoryPreference),
+    ...Object.values(combined.recoveryAddonFocusPreference),
+  ];
+  ok('all composed role/goal/testing outputs stay capped at 15%',
+    combinedActiveWeights.every((weight) => Math.abs(weight) <= 0.15),
+    combined);
+  eq('same sprint preference uses max rather than summing', combined.conditioningCategoryPreference.sprint, 0.15);
+  ok('composition preserves testing reasons in explicit debug data',
+    combined.testingDebug.reasons.some((note) => /speed/i.test(note)),
+    combined.testingDebug.reasons);
 }
 
 console.log('\n[6] robustness signal favours safe prehab without creating hard exposure');
@@ -286,15 +336,17 @@ console.log('\n[6] robustness signal favours safe prehab without creating hard e
     phase: 'Off-season',
     biggestLimitation: 'Injury history',
   });
-  ok('injury history creates recovery add-on bias', robustness.recoveryAddonBias > 0, robustness);
-  const ordered = applyRecoveryAddonTestingBias([
+  ok('injury history creates a bounded recovery add-on preference',
+    (robustness.recoveryAddonFocusPreference.hamstring_light_prehab ?? 0) > 0,
+    robustness);
+  const ordered = applyRecoveryAddonBias([
     { focusArea: 'mobility_reset' as const },
     { focusArea: 'hamstring_light_prehab' as const },
     { focusArea: 'trunk_core' as const },
-  ], robustness);
-  eq('robustness bias moves trunk/prehab ahead of generic mobility',
-    ordered.map((item) => item.focusArea),
-    ['trunk_core', 'hamstring_light_prehab', 'mobility_reset']);
+  ], robustness.recoveryAddonFocusPreference);
+  ok('robustness bias moves trunk/prehab ahead of generic mobility',
+    ordered.at(-1)?.focusArea === 'mobility_reset',
+    ordered.map((item) => item.focusArea));
 
   const before = [
     workout(1, 'Lower Strength'),
@@ -310,6 +362,42 @@ console.log('\n[6] robustness signal favours safe prehab without creating hard e
   });
   ok('injury-history profile favours robustness/prehab coverage',
     addonFocus(after).includes('hamstring_light_prehab'), addonFocus(after));
+
+  const neutralSupport = attachRecoveryAddonsToWeek({
+    workouts: before,
+    profile: profile({
+      position: undefined,
+      motivation: 'Stay consistent',
+      biggestLimitation: undefined,
+    }),
+    weekKind: 'build',
+  });
+  const sizeSupport = attachRecoveryAddonsToWeek({
+    workouts: before,
+    profile: profile({
+      position: undefined,
+      motivation: 'Build muscle and size',
+      biggestLimitation: undefined,
+    }),
+    weekKind: 'build',
+  });
+  const durabilitySupport = attachRecoveryAddonsToWeek({
+    workouts: before,
+    profile: profile({
+      position: undefined,
+      motivation: 'Stay injury-free and durable',
+      biggestLimitation: undefined,
+    }),
+    weekKind: 'build',
+  });
+  ok('strength/size goal changes safe support ordering without adding a session',
+    addonFocus(sizeSupport).join(',') !== addonFocus(neutralSupport).join(',') &&
+      sizeSupport.length === neutralSupport.length,
+    { neutral: addonFocus(neutralSupport), size: addonFocus(sizeSupport) });
+  ok('durability goal changes safe prehab ordering without adding a hard day',
+    addonFocus(durabilitySupport).join(',') !== addonFocus(neutralSupport).join(',') &&
+      addonFocus(durabilitySupport).includes('hamstring_light_prehab'),
+    { neutral: addonFocus(neutralSupport), durability: addonFocus(durabilitySupport) });
   const beforeCounts = countWeeklyExposures(before.map((item, index) => ({
     date: `2026-07-${String(6 + index).padStart(2, '0')}`,
     workout: item,

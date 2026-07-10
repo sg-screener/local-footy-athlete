@@ -21,6 +21,7 @@ import type { RecoveryAddonFocusArea } from './recoveryAddonCoverage';
 import type {
   BiasConditioningCategory,
   ProgrammingBias,
+  RecoveryAddonFocusPreference,
 } from './programmingBias';
 
 export interface TestingBiasInputs {
@@ -37,22 +38,20 @@ export interface TestingBiasInputs {
 export interface TestingBias {
   lowerStrengthBias: number;
   upperStrengthBias: number;
-  aerobicBias: number;
   speedBias: number;
-  recoveryAddonBias: number;
-  accessoryBias: number;
-  phaseAdjustedWeight: number;
   conditioningCategoryPreference: Partial<Record<BiasConditioningCategory, number>>;
-  recoveryAddonFocusPreference: RecoveryAddonFocusArea[];
-  notes: string[];
+  recoveryAddonFocusPreference: RecoveryAddonFocusPreference;
+  /** Observability only. No programming consumer reads these fields. */
+  debug: {
+    phaseAdjustedWeight: number;
+    reasons: string[];
+  };
 }
 
 export interface ComposedProgrammingBias extends ProgrammingBias {
   lowerStrengthBias: number;
   upperStrengthBias: number;
-  aerobicBias: number;
-  testingNotes: string[];
-  recoveryAddonFocusPreference: RecoveryAddonFocusArea[];
+  testingDebug: TestingBias['debug'];
 }
 
 const TESTING_MAX_BIAS = 0.1;
@@ -64,16 +63,6 @@ const PHASE_SCALE: Record<SeasonPhase, number> = {
   'Pre-season': 0.6,
   'In-season': 0.3,
 };
-
-const ROBUSTNESS_FOCUS: RecoveryAddonFocusArea[] = [
-  'trunk_core',
-  'adductors_groin',
-  'calves_tib_ankles',
-  'hamstring_light_prehab',
-  'shoulder_scap',
-  'mobility_reset',
-  'carries',
-];
 
 function clamp(value: number, max: number): number {
   return Math.round(Math.max(-max, Math.min(max, value)) * 1e4) / 1e4 || 0;
@@ -118,6 +107,10 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
   let speed = 0;
   let recovery = 0;
   let accessory = 0;
+  let weakLowerSignal = false;
+  let weakUpperSignal = false;
+  let robustnessSignal = false;
+  let mobilitySignal = false;
 
   const lowerBand = squatBand(inputs.squatStrength);
   const upperBand = benchBand(inputs.benchStrength);
@@ -126,10 +119,12 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
     if (gap >= 2) {
       lower += 1;
       accessory += 0.5;
+      weakLowerSignal = true;
       notes.push('Testing: lower strength trails upper by a clear margin');
     } else if (gap <= -2) {
       upper += 1;
       accessory += 0.5;
+      weakUpperSignal = true;
       notes.push('Testing: upper strength trails lower by a clear margin');
     }
   }
@@ -160,10 +155,12 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
     case 'Injury history':
       recovery += 1;
       accessory += 0.25;
+      robustnessSignal = true;
       notes.push('Limitation: injury history — robustness/prehab lean');
       break;
     case 'Mobility':
       recovery += 0.5;
+      mobilitySignal = true;
       notes.push('Limitation: mobility — recovery add-on lean');
       break;
     default:
@@ -172,6 +169,7 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
 
   if ((inputs.injuries ?? []).length > 0) {
     recovery += 0.75;
+    robustnessSignal = true;
     notes.push('Profile injury history: recovery/prehab coverage lean');
   }
 
@@ -194,12 +192,40 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
 
   const conditioningCategoryPreference: Partial<Record<BiasConditioningCategory, number>> = {};
   if (aerobicBias > 0) {
-    conditioningCategoryPreference.aerobic_base = 2;
-    conditioningCategoryPreference.tempo = 1;
+    conditioningCategoryPreference.aerobic_base = aerobicBias;
+    conditioningCategoryPreference.tempo = clamp(aerobicBias * 0.5, TESTING_MAX_BIAS);
   }
   if (speedBias > 0) {
-    conditioningCategoryPreference.sprint = 2;
-    conditioningCategoryPreference.vo2 = 1;
+    conditioningCategoryPreference.sprint = speedBias;
+    conditioningCategoryPreference.vo2 = clamp(speedBias * 0.5, TESTING_MAX_BIAS);
+  }
+
+  const recoveryAddonFocusPreference: RecoveryAddonFocusPreference = {};
+  const addFocuses = (focuses: readonly RecoveryAddonFocusArea[], weight: number): void => {
+    for (const focus of focuses) {
+      recoveryAddonFocusPreference[focus] = Math.max(
+        recoveryAddonFocusPreference[focus] ?? 0,
+        weight,
+      );
+    }
+  };
+  if (weakLowerSignal && accessoryBias > 0) {
+    addFocuses(
+      ['trunk_core', 'adductors_groin', 'calves_tib_ankles', 'hamstring_light_prehab'],
+      accessoryBias,
+    );
+  }
+  if (weakUpperSignal && accessoryBias > 0) {
+    addFocuses(['shoulder_scap', 'trunk_core', 'carries'], accessoryBias);
+  }
+  if (robustnessSignal && recoveryAddonBias > 0) {
+    addFocuses(
+      ['trunk_core', 'adductors_groin', 'calves_tib_ankles', 'hamstring_light_prehab'],
+      recoveryAddonBias,
+    );
+  }
+  if (mobilitySignal && recoveryAddonBias > 0) {
+    addFocuses(['mobility_reset', 'trunk_core'], recoveryAddonBias);
   }
 
   if (notes.length === 0) notes.push('No clear testing imbalance — neutral bias');
@@ -207,14 +233,13 @@ export function computeTestingBias(inputs: TestingBiasInputs): TestingBias {
   return {
     lowerStrengthBias,
     upperStrengthBias,
-    aerobicBias,
     speedBias,
-    recoveryAddonBias,
-    accessoryBias,
-    phaseAdjustedWeight,
     conditioningCategoryPreference,
-    recoveryAddonFocusPreference: recoveryAddonBias > 0 ? [...ROBUSTNESS_FOCUS] : [],
-    notes,
+    recoveryAddonFocusPreference,
+    debug: {
+      phaseAdjustedWeight,
+      reasons: notes,
+    },
   };
 }
 
@@ -230,45 +255,57 @@ function mergeCategoryPreferences(
   return out;
 }
 
+function mergeRecoveryAddonPreferences(
+  roleGoal: ProgrammingBias['recoveryAddonFocusPreference'],
+  testing: TestingBias['recoveryAddonFocusPreference'],
+): ProgrammingBias['recoveryAddonFocusPreference'] {
+  const out: ProgrammingBias['recoveryAddonFocusPreference'] = { ...roleGoal };
+  for (const focus of Object.keys(testing) as RecoveryAddonFocusArea[]) {
+    // Max, not sum: matching role/goal/testing signals remain one bounded nudge.
+    out[focus] = Math.max(out[focus] ?? 0, testing[focus] ?? 0);
+  }
+  return out;
+}
+
 /** Compose role/goal and testing vectors while retaining the global 15% cap. */
 export function composeProgrammingBias(
   roleGoal: ProgrammingBias,
   testing: TestingBias,
 ): ComposedProgrammingBias {
-  const regionalStrength = Math.max(testing.lowerStrengthBias, testing.upperStrengthBias);
   return {
     ...roleGoal,
-    strengthBias: clamp(roleGoal.strengthBias + regionalStrength, COMPOSED_MAX_BIAS),
-    conditioningBias: clamp(roleGoal.conditioningBias + testing.aerobicBias, COMPOSED_MAX_BIAS),
+    strengthBias: clamp(roleGoal.strengthBias, COMPOSED_MAX_BIAS),
     speedBias: clamp(roleGoal.speedBias + testing.speedBias, COMPOSED_MAX_BIAS),
-    recoveryAddonBias: clamp(roleGoal.recoveryAddonBias + testing.recoveryAddonBias, COMPOSED_MAX_BIAS),
-    accessoryBias: clamp(roleGoal.accessoryBias + testing.accessoryBias, COMPOSED_MAX_BIAS),
     lowerStrengthBias: testing.lowerStrengthBias,
     upperStrengthBias: testing.upperStrengthBias,
-    aerobicBias: testing.aerobicBias,
     conditioningCategoryPreference: mergeCategoryPreferences(
       roleGoal.conditioningCategoryPreference,
       testing.conditioningCategoryPreference,
     ),
-    recoveryAddonFocusPreference: [...testing.recoveryAddonFocusPreference],
-    testingNotes: [...testing.notes],
-    notes: [...roleGoal.notes, ...testing.notes],
+    recoveryAddonFocusPreference: mergeRecoveryAddonPreferences(
+      roleGoal.recoveryAddonFocusPreference,
+      testing.recoveryAddonFocusPreference,
+    ),
+    testingDebug: {
+      phaseAdjustedWeight: testing.debug.phaseAdjustedWeight,
+      reasons: [...testing.debug.reasons],
+    },
   };
 }
 
-/** Stable re-order of already-safe recovery add-on recommendations. */
-export function applyRecoveryAddonTestingBias<T extends { focusArea: RecoveryAddonFocusArea }>(
+/** Bounded stable re-order of already-safe recovery add-on recommendations. */
+export function applyRecoveryAddonBias<T extends { focusArea: RecoveryAddonFocusArea }>(
   ordered: readonly T[],
-  testing: TestingBias,
+  preference: RecoveryAddonFocusPreference,
 ): T[] {
-  if (testing.recoveryAddonBias <= 0 || testing.recoveryAddonFocusPreference.length === 0) {
-    return [...ordered];
-  }
-  const rank = new Map(
-    testing.recoveryAddonFocusPreference.map((focus, index) => [focus, index]),
-  );
+  if (Object.keys(preference).length === 0) return [...ordered];
+  const BIAS_ORDER_SCALE = 25;
   return ordered
-    .map((item, index) => ({ item, index, rank: rank.get(item.focusArea) ?? 99 }))
-    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map((item, index) => ({
+      item,
+      index,
+      score: index - (preference[item.focusArea] ?? 0) * BIAS_ORDER_SCALE,
+    }))
+    .sort((a, b) => a.score - b.score || a.index - b.index)
     .map(({ item }) => item);
 }
