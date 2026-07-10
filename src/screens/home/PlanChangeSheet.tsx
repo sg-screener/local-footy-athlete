@@ -109,7 +109,7 @@ function riskReason(finding: ProgramEditRiskFinding): string {
       return 'This adds more sprint/COD than the week needs.';
     case 'g1_hard_work':
     case 'g1_not_light':
-      return 'This puts hard work one day before your game. Not recommended.';
+      return "This puts hard work one day before your game, so it can't be applied. Choose a lighter session or another day.";
     case 'g2_hard_lower':
     case 'g2_hard_conditioning':
     case 'g2_sprint_cod':
@@ -117,13 +117,13 @@ function riskReason(finding: ProgramEditRiskFinding): string {
     case 'g_plus1_hard_work':
       return 'This adds hard work the day after your game, when recovery should win.';
     case 'game_day_hard_work':
-      return "This puts hard training on game day, so it can't be applied.";
+      return "This puts hard training on game day, so it can't be applied. Choose a recovery session or another day.";
     case 'protected_anchor_edit_blocked':
     case 'protected_game_anchor_removed':
     case 'protected_team_training_anchor_removed':
-      return "This would remove a protected team/game anchor, so it can't be applied.";
+      return "This would remove a protected team/game anchor, so it can't be applied. Use the team/game controls to change that anchor.";
     case 'active_injury_hard_stop':
-      return "There's an active medical/injury hard stop, so normal training edits are paused.";
+      return "There's an active medical/injury hard stop, so normal training edits are paused. Choose recovery or clear it once you're ready.";
     default:
       return finding.message;
   }

@@ -497,8 +497,12 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   const binScopeIdx = sheet.indexOf("step.kind === 'pick_bin_scope'");
   const wellbeingIdx = sheet.indexOf("step.kind === 'pick_wellbeing'");
   const askCoachIdx = sheet.indexOf('const askCoach = () =>');
+  const confirmWarningIdx = sheet.indexOf("step.kind === 'confirm_warning'");
+  const blockWarningIdx = sheet.indexOf("step.kind === 'block_warning'");
   const menuBlock = sheet.slice(menuIdx, editIdx);
   const editBlock = sheet.slice(editIdx, categoryIdx);
+  const confirmWarningBlock = sheet.slice(confirmWarningIdx, blockWarningIdx);
+  const blockWarningBlock = sheet.slice(blockWarningIdx, destinationIdx);
 
   ok('[9] PlanChangeSheet has an explicit edit_session step',
     /\| \{ kind: 'edit_session' \}/.test(sheet));
@@ -561,9 +565,19 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     !/planChangeWarningForCategory/.test(sheet));
   ok('[9] confirm warnings continue through the commit helper',
     /step\.kind === 'confirm_warning'[\s\S]*label="Continue"[\s\S]*commitPlanChange\(step\.change/.test(sheet));
+  ok('[9] tap warning copy is readable and coach-like',
+    /This gives you \$\{observed\} hard days this week\. That's the upper edge\./.test(sheet)
+      && /This puts hard work one day before your game/.test(sheet)
+      && !/program invalid/i.test(confirmWarningBlock));
+  ok('[9] one risky tap edit renders one Continue and one Cancel action',
+    (confirmWarningBlock.match(/label="Continue"/g) ?? []).length === 1
+      && (confirmWarningBlock.match(/label="Cancel"/g) ?? []).length === 1);
   ok('[9] block warnings offer no override path',
-    /step\.kind === 'block_warning'[\s\S]*label="OK"[\s\S]*setStep\(step\.backStep\)/.test(sheet)
-      && !/block_warning[\s\S]*commitPlanChange/.test(sheet.slice(sheet.indexOf("step.kind === 'block_warning'"), sheet.indexOf("step.kind === 'pick_destination'"))));
+    /label="OK"[\s\S]*setStep\(step\.backStep\)/.test(blockWarningBlock)
+      && !/label="Continue"|commitPlanChange/.test(blockWarningBlock));
+  ok('[9] tap hard-stop copy offers a safer next action',
+    /Choose a lighter session or another day/.test(sheet)
+      && /Use the team\/game controls to change that anchor/.test(sheet));
 }
 
 {

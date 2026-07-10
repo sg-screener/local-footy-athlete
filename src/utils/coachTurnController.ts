@@ -1922,7 +1922,10 @@ function withCoachRevisionRiskWarning(
   assessment: ProgramEditRiskAssessment,
 ): string {
   const reasons = coachRevisionRiskReasons(assessment);
-  return `${baseQuestion}\n\nHeads up: ${reasons.join(' ')} Continue? (yes / no)`;
+  const confirmationQuestion = /\(yes \/ no\)\s*$/i.test(baseQuestion.trim())
+    ? baseQuestion.trim()
+    : `${baseQuestion.trim()} Continue? (yes / no)`;
+  return `Heads up: ${reasons.join(' ')}\n\n${confirmationQuestion}`;
 }
 
 function coachRevisionRiskBlockReply(assessment: ProgramEditRiskAssessment): string {

@@ -1691,6 +1691,9 @@ async function run() {
     ok('[26] resume asks the real confirmation question',
       /Want me to swap in Easy Zone 2 Bike on 2026-07-02\? \(yes \/ no\)/.test(second.reply),
       { reply: second.reply, route: (second.debug as CoachTurnDebug | null)?.route });
+    ok('[26] safe revision has no risk warning',
+      !/Heads up:/.test(second.reply),
+      second.reply);
     ok('[26] stored proposal in pending envelope',
       !!second.pending?.coachRevisionProposalEnvelope?.proposal,
       second.pending);
@@ -1728,8 +1731,18 @@ async function run() {
       visibleDate: FRIDAY,
     });
     ok('[27] risky revision asks for confirmation',
-      /5th main strength|hard days|upper edge|Continue\?/.test(first.reply),
+      /5th main strength|hard days|upper edge/.test(first.reply),
       first.reply);
+    ok('[27] risk reason is readable, not a validator code',
+      /Heads up: This would (?:add a 5th main strength session|give you \d+ hard days)/.test(first.reply)
+        && !/cap_max|hard_stop|program invalid/i.test(first.reply),
+      first.reply);
+    eq('[27] one risky revision creates one warning lead-in',
+      (first.reply.match(/Heads up:/g) ?? []).length,
+      1);
+    eq('[27] one risky revision creates one yes/no prompt',
+      (first.reply.match(/\(yes \/ no\)/gi) ?? []).length,
+      1);
     ok('[27] pending stores exact proposal',
       !!first.pending?.coachRevisionProposalEnvelope?.proposal,
       first.pending);
