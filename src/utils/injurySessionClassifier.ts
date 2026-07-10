@@ -469,24 +469,48 @@ export function getReplacementForBucket(
   return getReplacementChoiceForBucket(exerciseName, bucket, severity, avoidNames)?.name ?? null;
 }
 
+/**
+ * Return every safe curated choice in Bible hierarchy order.
+ *
+ * Resolver/generation callers normally need only the first choice, while
+ * tap surfaces need the ordered ladder so they can apply equipment and
+ * readiness filters without recreating the injury substitution table.
+ */
+export function getReplacementChoicesForBucket(
+  exerciseName: string,
+  bucket: InjuryBucket,
+  severity: number = 6,
+  avoidNames: readonly string[] = [],
+): InjuryReplacementChoice[] {
+  const avoided = new Set(avoidNames.map((name) => name.toLowerCase()));
+  const seen = new Set<string>();
+  const choices: InjuryReplacementChoice[] = [];
+  for (const candidate of candidatesForExercise(exerciseName, bucket)) {
+    const key = candidate.name.toLowerCase();
+    if (avoided.has(key) || seen.has(key)) continue;
+    if (!candidateIsAllowedBySeverity(candidate, severity)) continue;
+    if (!isSafeCandidate(candidate, bucket)) continue;
+    seen.add(key);
+    choices.push({
+      name: candidate.name,
+      hierarchyTier: candidate.hierarchyTier,
+    });
+  }
+  return choices;
+}
+
 export function getReplacementChoiceForBucket(
   exerciseName: string,
   bucket: InjuryBucket,
   severity: number = 6,
   avoidNames: readonly string[] = [],
 ): InjuryReplacementChoice | null {
-  const avoided = new Set(avoidNames.map((name) => name.toLowerCase()));
-  const candidates = candidatesForExercise(exerciseName, bucket);
-  for (const candidate of candidates) {
-    if (avoided.has(candidate.name.toLowerCase())) continue;
-    if (!candidateIsAllowedBySeverity(candidate, severity)) continue;
-    if (!isSafeCandidate(candidate, bucket)) continue;
-    return {
-      name: candidate.name,
-      hierarchyTier: candidate.hierarchyTier,
-    };
-  }
-  return null;
+  return getReplacementChoicesForBucket(
+    exerciseName,
+    bucket,
+    severity,
+    avoidNames,
+  )[0] ?? null;
 }
 
 /**

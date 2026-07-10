@@ -6,6 +6,7 @@ import {
   type ActiveScheduleConstraint,
 } from '../store/coachUpdatesStore';
 import { useReadinessStore } from '../store/readinessStore';
+import { useProfileStore } from '../store/profileStore';
 import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain';
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
 import {
@@ -37,6 +38,10 @@ import {
   upsertActiveEquipmentConstraint,
   type TemporaryEquipmentPresetId,
 } from './equipmentAvailability';
+import {
+  assessTapSwapCandidateSafety,
+  resolveTapSwapEnvironment,
+} from './tapSwapHierarchy';
 
 export type ProgramControlActionType =
   | 'swap_session'
@@ -480,6 +485,27 @@ export function executeProgramControlAction(
 
   switch (action.type) {
     case 'swap_exercise': {
+      const activeConstraints = useCoachUpdatesStore.getState().activeConstraints;
+      const environment = resolveTapSwapEnvironment({
+        date: action.payload.date,
+        profile: useProfileStore.getState().onboardingData,
+        activeConstraints,
+        readinessSignal: useReadinessStore.getState().signalsByDate[action.payload.date],
+      });
+      const safety = assessTapSwapCandidateSafety(
+        action.payload.toExercise!.name,
+        environment,
+      );
+      if (!safety.safe) {
+        return {
+          ok: false,
+          changedProgram: false,
+          requiresRebuild: false,
+          message: safety.reason,
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
       const result = replaceExerciseAtDate({
         date: action.payload.date,
         fromExercise: action.payload.fromExercise,

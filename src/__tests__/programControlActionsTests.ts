@@ -716,6 +716,118 @@ console.log('\n[14] partial guided swap payload keeps a renderable prescription'
   eq('replacement inherits reps max', replacement?.prescribedRepsMax, 8);
 }
 
+console.log('\n[14b] tap swap safety checks run before manual override writes');
+{
+  resetStores();
+  const date = '2026-07-06';
+  seedStrengthWorkout(date);
+  const shoulder = buildGuidedInjuryConstraint({
+    region: 'upper_body',
+    area: 'Shoulder',
+    severity: 7,
+    severityBand: 'moderate',
+    adjustmentLevel: 'moderate',
+    triggers: ['Pressing'],
+    seriousSymptoms: false,
+  }, { todayISO: date });
+  useCoachUpdatesStore.getState().upsertActiveConstraint(shoulder);
+
+  let result = executeProgramControlAction(baseAction(
+    'swap_exercise',
+    {
+      date,
+      fromExercise: 'Bench Press',
+      fromExerciseId: 'we-bench-press',
+      toExercise: { name: 'DB Bench Press', sets: 3, repsMin: 8, repsMax: 10 },
+    },
+    { scope: 'today_only', oneOffOnly: true },
+  ));
+  eq('active shoulder issue blocks another caution-rated press', result.ok, false);
+  eq('unsafe shoulder swap writes no override', useProgramStore.getState().dateOverrides[date], undefined);
+
+  result = executeProgramControlAction(baseAction(
+    'swap_exercise',
+    {
+      date,
+      fromExercise: 'Bench Press',
+      fromExerciseId: 'we-bench-press',
+      toExercise: { name: 'Landmine Press', sets: 3, repsMin: 8, repsMax: 10 },
+    },
+    { scope: 'today_only', oneOffOnly: true },
+  ));
+  eq('active shoulder issue allows a tag-verified safe press', result.ok, true);
+  ok('safe swap keeps manual edit ownership',
+    useProgramStore.getState().overrideContexts[date]?.label === 'Exercise swap',
+    useProgramStore.getState().overrideContexts[date]);
+}
+
+console.log('\n[14c] equipment and shared hard-stop risk gates still win');
+{
+  resetStores();
+  const date = '2026-07-06';
+  seedStrengthWorkout(date);
+  executeProgramControlAction(baseAction(
+    'set_equipment_modifier',
+    { presetId: 'no_barbell_rack', date, todayISO: date },
+    { scope: 'current_week', createsActiveModifier: true },
+  ), { todayISO: date });
+  let result = executeProgramControlAction(baseAction(
+    'swap_exercise',
+    {
+      date,
+      fromExercise: 'Back Squat',
+      fromExerciseId: 'we-back-squat',
+      toExercise: { name: 'Front Squat', sets: 3, repsMin: 8, repsMax: 10 },
+    },
+    { scope: 'today_only', oneOffOnly: true },
+  ));
+  eq('no-barbell constraint blocks a barbell tap replacement', result.ok, false);
+  eq('unsafe equipment swap writes no override', useProgramStore.getState().dateOverrides[date], undefined);
+
+  result = executeProgramControlAction(baseAction(
+    'swap_exercise',
+    {
+      date,
+      fromExercise: 'Back Squat',
+      fromExerciseId: 'we-back-squat',
+      toExercise: { name: 'Bodyweight Squat', sets: 3, repsMin: 8, repsMax: 10 },
+    },
+    { scope: 'today_only', oneOffOnly: true },
+  ));
+  eq('no-barbell constraint allows a bodyweight tap replacement', result.ok, true);
+}
+
+{
+  resetStores();
+  const date = '2026-07-06';
+  seedStrengthWorkout(date);
+  const severeKnee = buildGuidedInjuryConstraint({
+    region: 'lower_body',
+    area: 'Knee',
+    severity: 9,
+    severityBand: 'avoid',
+    adjustmentLevel: 'training_paused',
+    triggers: [],
+    seriousSymptoms: false,
+  }, { todayISO: date });
+  useCoachUpdatesStore.getState().upsertActiveConstraint(severeKnee);
+  const result = executeProgramControlAction(baseAction(
+    'swap_exercise',
+    {
+      date,
+      fromExercise: 'Bench Press',
+      fromExerciseId: 'we-bench-press',
+      toExercise: { name: 'Landmine Press', sets: 3, repsMin: 8, repsMax: 10 },
+    },
+    { scope: 'today_only', oneOffOnly: true },
+  ));
+  eq('exercise tap cannot bypass the shared active-injury hard stop', result.ok, false);
+  ok('hard-stop message is surfaced',
+    /injury|medical|stop/i.test(result.message ?? ''),
+    result.message);
+  eq('hard-stop exercise tap writes no override', useProgramStore.getState().dateOverrides[date], undefined);
+}
+
 console.log('\n[15] add exercise adds one block and refuses duplicates');
 {
   resetStores();

@@ -23,8 +23,20 @@ import { executeProgramControlAction } from '../../utils/programControlActions';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 import {
   buildGuidedInjuryConstraint,
+  guidedInjuryBucketForArea,
   type GuidedInjuryFlowResult,
 } from '../../utils/guidedInjuryControl';
+import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
+import { useProfileStore } from '../../store/profileStore';
+import { useReadinessStore } from '../../store/readinessStore';
+import {
+  getTapSwapChoices,
+  resolveTapSwapEnvironment,
+  type TapSwapChoice,
+  type TapSwapHierarchyTier,
+  type TapSwapPrimaryInjury,
+  type TapSwapReason,
+} from '../../utils/tapSwapHierarchy';
 import type { RecoveryAddonBlock } from '../../types/domain';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
@@ -65,6 +77,19 @@ type SuggestedExercise = {
   perSide?: boolean;
   restSeconds?: number;
 };
+
+type SuggestedSwap =
+  | {
+      kind: 'exercise';
+      suggestion: SuggestedExercise;
+      hierarchyTier: TapSwapHierarchyTier;
+      reason: string;
+    }
+  | {
+      kind: 'rest';
+      hierarchyTier: 'rest';
+      reason: string;
+    };
 
 type ExercisePickAction = 'swap' | 'remove' | 'concern';
 type ExerciseConcern = 'No equipment' | 'Too hard / too easy';
@@ -125,7 +150,7 @@ type ExerciseEditStep =
   | {
       kind: 'confirm_swap';
       exercise: EditableExercise;
-      suggestion: SuggestedExercise;
+      suggestion: SuggestedSwap;
       reason: SwapReason | ExerciseConcern | 'Injury / pain';
       injuryArea?: InjuryArea;
       injurySeverity?: InjurySeverity;
@@ -222,67 +247,42 @@ function baseSuggestion(
   };
 }
 
-function nameMatches(name: string, pattern: RegExp): boolean {
-  return pattern.test(name.toLowerCase());
+function tapSwapReason(reason: SwapReason | ExerciseConcern): TapSwapReason {
+  if (reason === 'No equipment') return 'no_equipment';
+  if (reason === 'Injury / pain') return 'injury_or_pain';
+  if (reason === 'Too hard' || reason === 'Too hard / too easy') return 'too_hard';
+  if (reason === 'Too easy') return 'too_easy';
+  if (reason === "Don't like it") return 'preference';
+  return 'other';
 }
 
-function suggestExerciseReplacement(
-  exercise: EditableExercise,
-  reason: SwapReason | ExerciseConcern,
-): SuggestedExercise | null {
-  const name = exercise.name;
-  const noEquipment = reason === 'No equipment';
-  const tooEasy = reason === 'Too easy';
-  const raw = exercise.raw;
-
-  if (reason === 'Other') return null;
-
-  if (noEquipment) {
-    if (nameMatches(name, /bench|chest|press|push/)) return baseSuggestion('Push-Ups', raw);
-    if (nameMatches(name, /squat|lunge|split|leg press/)) return baseSuggestion('Bodyweight Split Squat', raw, { perSide: true });
-    if (nameMatches(name, /deadlift|rdl|hinge|hip thrust/)) return baseSuggestion('Single-Leg Glute Bridge', raw, { perSide: true });
-    if (nameMatches(name, /row|pull|chin|lat/)) return baseSuggestion('Band Row', raw);
-    if (nameMatches(name, /core|plank|dead bug|pallof/)) return baseSuggestion('Dead Bug', raw);
-  }
-
-  if (tooEasy) {
-    if (nameMatches(name, /push-up|push up/)) return baseSuggestion('Feet-Elevated Push-Ups', raw);
-    if (nameMatches(name, /plank/)) return baseSuggestion('RKC Plank', raw, { prescriptionType: 'duration', repsMin: 20, repsMax: 30 });
-    if (nameMatches(name, /goblet squat|split squat/)) return baseSuggestion('Rear-Foot Elevated Split Squat', raw, { perSide: true });
-  }
-
-  if (nameMatches(name, /bench|chest press/)) return baseSuggestion('DB Floor Press', raw);
-  if (nameMatches(name, /overhead press|shoulder press|military press/)) return baseSuggestion('Landmine Press', raw);
-  if (nameMatches(name, /squat|leg press/)) return baseSuggestion('Goblet Squat', raw);
-  if (nameMatches(name, /deadlift|rdl|hinge/)) return baseSuggestion('Hip Thrust', raw);
-  if (nameMatches(name, /lunge|split squat/)) return baseSuggestion('Step-Ups', raw, { perSide: true });
-  if (nameMatches(name, /pull-up|pull up|chin-up|chin up/)) return baseSuggestion('Lat Pulldown', raw);
-  if (nameMatches(name, /row/)) return baseSuggestion('Chest-Supported Row', raw);
-  if (nameMatches(name, /curl/)) return baseSuggestion('Hammer Curl', raw);
-  if (nameMatches(name, /triceps|pressdown|extension/)) return baseSuggestion('Cable Pressdown', raw);
-  if (nameMatches(name, /plank|dead bug|pallof|core/)) return baseSuggestion('Pallof Press', raw);
-  return null;
+function injurySeverityNumber(severity: InjurySeverity): number {
+  if (severity === 'Mild') return 2;
+  if (severity === 'Moderate') return 6;
+  return 9;
 }
 
-function suggestExerciseForInjury(
+function suggestedSwapFromChoice(
   exercise: EditableExercise,
-  area: InjuryArea,
-  severity: InjurySeverity,
-): SuggestedExercise | null {
-  if (severity === 'Severe') return null;
-  const name = exercise.name;
-  const raw = exercise.raw;
-  if (['Shoulder', 'Elbow', 'Wrist'].includes(area)) {
-    if (nameMatches(name, /bench|chest|press/)) return baseSuggestion('Neutral-Grip DB Floor Press', raw);
-    if (nameMatches(name, /pull-up|pull up|chin-up|chin up/)) return baseSuggestion('Chest-Supported Row', raw);
-    if (nameMatches(name, /row/)) return baseSuggestion('Cable Row', raw);
+  choice: TapSwapChoice,
+): SuggestedSwap {
+  if (choice.kind === 'rest' || !choice.name) {
+    return {
+      kind: 'rest',
+      hierarchyTier: 'rest',
+      reason: choice.reason,
+    };
   }
-  if (['Lower back', 'Hip', 'Groin', 'Knee', 'Hamstring', 'Ankle'].includes(area)) {
-    if (nameMatches(name, /deadlift|rdl|hinge/)) return baseSuggestion('Hip Thrust', raw);
-    if (nameMatches(name, /squat|leg press/)) return baseSuggestion('Goblet Squat', raw);
-    if (nameMatches(name, /lunge|split squat/)) return baseSuggestion('Step-Ups', raw, { perSide: true });
-  }
-  return suggestExerciseReplacement(exercise, 'Too hard');
+  return {
+    kind: 'exercise',
+    suggestion: baseSuggestion(
+      choice.name,
+      exercise.raw,
+      choice.prescription ?? {},
+    ),
+    hierarchyTier: choice.hierarchyTier,
+    reason: choice.reason,
+  };
 }
 
 function guidedAreaToExerciseArea(area: string): InjuryArea {
@@ -468,29 +468,46 @@ export default function DayWorkoutScreenV2() {
     setInjuryFlowExercise(exercise);
   }, []);
 
+  const suggestTapSwap = React.useCallback(
+    (
+      exercise: EditableExercise,
+      reason: SwapReason | ExerciseConcern,
+      primaryInjury: TapSwapPrimaryInjury | null = null,
+    ): SuggestedSwap => {
+      const dateISO = date ?? new Date().toISOString().slice(0, 10);
+      const environment = resolveTapSwapEnvironment({
+        date: dateISO,
+        profile: useProfileStore.getState().onboardingData,
+        activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+        readinessSignal: useReadinessStore.getState().signalsByDate[dateISO],
+        primaryInjury,
+      });
+      const choice = getTapSwapChoices({
+        originalExercise: exercise.name,
+        reason: tapSwapReason(reason),
+        environment,
+        primaryInjury,
+        existingExerciseNames: editableExercises.map((item) => item.name),
+      })[0];
+      return suggestedSwapFromChoice(exercise, choice);
+    },
+    [date, editableExercises],
+  );
+
   const prepareSwap = React.useCallback(
     (exercise: EditableExercise, reason: SwapReason) => {
       if (reason === 'Injury / pain') {
         openExerciseInjuryFlow(exercise);
         return;
       }
-      const suggestion = suggestExerciseReplacement(exercise, reason);
-      if (!suggestion) {
-        showExerciseEditFallback(
-          'Message the coach',
-          'I need a bit more detail before changing this safely.',
-          `Swap ${exercise.name}. Reason: ${reason}. Session: ${workoutLabel}. Date: ${dateLabel}.`,
-        );
-        return;
-      }
       setExerciseEditStep({
         kind: 'confirm_swap',
         exercise,
-        suggestion,
+        suggestion: suggestTapSwap(exercise, reason),
         reason,
       });
     },
-    [dateLabel, openExerciseInjuryFlow, showExerciseEditFallback, workoutLabel],
+    [openExerciseInjuryFlow, suggestTapSwap],
   );
 
   const prepareAdd = React.useCallback(
@@ -512,46 +529,32 @@ export default function DayWorkoutScreenV2() {
   const prepareConcern = React.useCallback(
     (exercise: EditableExercise, concern: ExerciseConcern) => {
       const reason: SwapReason = concern === 'No equipment' ? 'No equipment' : 'Too hard';
-      const suggestion = suggestExerciseReplacement(exercise, reason);
-      if (!suggestion) {
-        showExerciseEditFallback(
-          'Message the coach',
-          'I need a bit more detail before changing this safely.',
-          `Change ${exercise.name} in ${workoutLabel} on ${dateLabel}. Reason: ${concern}.`,
-        );
-        return;
-      }
       setExerciseEditStep({
         kind: 'confirm_swap',
         exercise,
-        suggestion,
+        suggestion: suggestTapSwap(exercise, reason),
         reason: concern,
       });
     },
-    [dateLabel, showExerciseEditFallback, workoutLabel],
+    [suggestTapSwap],
   );
 
   const prepareInjurySwap = React.useCallback(
     (exercise: EditableExercise, area: InjuryArea, severity: InjurySeverity) => {
-      const suggestion = suggestExerciseForInjury(exercise, area, severity);
-      if (!suggestion) {
-        showExerciseEditFallback(
-          'Message the coach',
-          'I need a bit more detail before changing this safely.',
-          `Change ${exercise.name} in ${workoutLabel} on ${dateLabel} because my ${area.toLowerCase()} is bothering me (${severity.toLowerCase()}).`,
-        );
-        return;
-      }
+      const bucket = guidedInjuryBucketForArea(area);
+      const primaryInjury = bucket
+        ? { bucket, severity: injurySeverityNumber(severity) }
+        : null;
       setExerciseEditStep({
         kind: 'confirm_swap',
         exercise,
-        suggestion,
+        suggestion: suggestTapSwap(exercise, 'Injury / pain', primaryInjury),
         reason: 'Injury / pain',
         injuryArea: area,
         injurySeverity: severity,
       });
     },
-    [dateLabel, showExerciseEditFallback, workoutLabel],
+    [suggestTapSwap],
   );
 
   const applyExerciseGuidedInjury = React.useCallback(
@@ -585,52 +588,66 @@ export default function DayWorkoutScreenV2() {
 
       const area = guidedAreaToExerciseArea(result.area);
       const severity = guidedSeverityToExerciseSeverity(result);
-      const suggestion = suggestExerciseForInjury(exercise, area, severity);
-      if (suggestion) {
-        setExerciseEditStep({
-          kind: 'confirm_swap',
-          exercise,
-          suggestion,
-          reason: 'Injury / pain',
-          injuryArea: area,
-          injurySeverity: severity,
-        });
-        return;
-      }
-
+      const primaryInjury = constraint.bucket
+        ? { bucket: constraint.bucket as TapSwapPrimaryInjury['bucket'], severity: constraint.severity }
+        : null;
       setExerciseEditStep({
-        kind: 'result',
-        ok: true,
-        title: 'Injury adjustment active',
-        message: 'Coach Notes will show this injury adjustment until you clear it.',
+        kind: 'confirm_swap',
+        exercise,
+        suggestion: suggestTapSwap(exercise, 'Injury / pain', primaryInjury),
+        reason: 'Injury / pain',
+        injuryArea: area,
+        injurySeverity: severity,
       });
     },
-    [date, injuryFlowExercise],
+    [date, injuryFlowExercise, suggestTapSwap],
   );
 
   const applySwapToday = React.useCallback(
     (step: Extract<ExerciseEditStep, { kind: 'confirm_swap' }>) => {
       if (!date) return;
-      const result = executeProgramControlAction({
-        type: 'swap_exercise',
-        source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
-        scope: 'today_only',
-        payload: {
-          date,
-          fromExercise: step.exercise.name,
-          fromExerciseId: step.exercise.targetId,
-          toExercise: step.suggestion,
-        },
-        requiresRebuild: false,
-        createsActiveModifier: false,
-        oneOffOnly: true,
-      });
+      const result = step.suggestion.kind === 'rest'
+        ? executeProgramControlAction({
+            type: 'remove_exercise',
+            source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
+            scope: 'today_only',
+            payload: {
+              date,
+              exercise: step.exercise.name,
+              exerciseId: step.exercise.targetId,
+            },
+            requiresRebuild: false,
+            createsActiveModifier: false,
+            oneOffOnly: true,
+          })
+        : executeProgramControlAction({
+            type: 'swap_exercise',
+            source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
+            scope: 'today_only',
+            payload: {
+              date,
+              fromExercise: step.exercise.name,
+              fromExerciseId: step.exercise.targetId,
+              toExercise: step.suggestion.suggestion,
+            },
+            requiresRebuild: false,
+            createsActiveModifier: false,
+            oneOffOnly: true,
+          });
       if (result.ok) {
+        if (step.suggestion.kind === 'rest') {
+          setExerciseEditStep({
+            kind: 'future_scope',
+            action: 'remove',
+            exercise: step.exercise,
+          });
+          return;
+        }
         setExerciseEditStep({
           kind: 'future_scope',
           action: 'swap',
           exercise: step.exercise,
-          suggestion: step.suggestion,
+          suggestion: step.suggestion.suggestion,
           reason: step.reason,
           injuryArea: step.injuryArea,
           injurySeverity: step.injurySeverity,
@@ -2159,16 +2176,26 @@ function ExerciseEditSheet({
             />
           </>
         );
-      case 'confirm_swap':
+      case 'confirm_swap': {
+        const isRestFallback = step.suggestion.kind === 'rest';
+        const replacement = step.suggestion.kind === 'exercise'
+          ? step.suggestion.suggestion
+          : null;
         return (
           <>
             <Text style={styles.exerciseEditBody}>
-              Replace {displayExerciseName(step.exercise.name)} with {displayExerciseName(step.suggestion.name)} for today’s session.
+              {isRestFallback
+                ? `No safe useful substitute is available for ${displayExerciseName(step.exercise.name)}. Remove this exercise and rest the slot for today.`
+                : `Replace ${displayExerciseName(step.exercise.name)} with ${displayExerciseName(replacement?.name)} for today’s session.`}
             </Text>
             <View style={styles.exerciseEditSuggestionCard}>
-              <Text style={styles.exerciseEditSuggestionName}>{displayExerciseName(step.suggestion.name)}</Text>
+              <Text style={styles.exerciseEditSuggestionName}>
+                {isRestFallback ? 'Rest this exercise slot' : displayExerciseName(replacement?.name)}
+              </Text>
               <Text style={styles.exerciseEditSuggestionMeta}>
-                {suggestionPrescription(step.suggestion)}
+                {isRestFallback
+                  ? 'Rest is only used because no safe useful work remains.'
+                  : suggestionPrescription(replacement!)}
               </Text>
             </View>
             <Button
@@ -2186,6 +2213,7 @@ function ExerciseEditSheet({
             />
           </>
         );
+      }
       case 'confirm_add':
         return (
           <>

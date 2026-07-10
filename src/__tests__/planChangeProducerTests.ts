@@ -480,6 +480,10 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     /kind: 'coach_fallback'/.test(dayWorkoutSrc)
       && /I need a bit more detail before changing this safely\./.test(dayWorkoutSrc)
       && /label="Message the coach"/.test(dayWorkoutSrc));
+  ok('[9] tap exercise swaps use the Bible hierarchy adapter, not local regex tables',
+    /getTapSwapChoices/.test(dayWorkoutSrc)
+      && /resolveTapSwapEnvironment/.test(dayWorkoutSrc)
+      && !/function suggestExerciseReplacement|function suggestExerciseForInjury|function nameMatches/.test(dayWorkoutSrc));
   ok('[9] injury/pain exercise edits open the guided injury flow',
     /<GuidedInjuryFlowSheet\b/.test(dayWorkoutSrc)
       && /reason === 'Injury \/ pain'[\s\S]*openExerciseInjuryFlow\(exercise\)/.test(dayWorkoutSrc)
