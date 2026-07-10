@@ -42,6 +42,17 @@ export interface StoredProgramBlockState {
   blockNumber: number;
 }
 
+export interface ProgramBlockRolloverStatus {
+  needsRollover: boolean;
+  targetDateISO: string;
+  currentBlockStart: string | null;
+  currentBlockEnd: string | null;
+  currentBlockNumber: number | null;
+  nextBlockStart: string | null;
+  nextBlockEnd: string | null;
+  nextBlockNumber: number | null;
+}
+
 function formatDate(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -96,6 +107,60 @@ export function getMondayISOForDate(dateISO: string): string {
   const mondayOffset = dow === 0 ? -6 : -(dow - 1);
   d.setDate(d.getDate() + mondayOffset);
   return formatDate(d);
+}
+
+/** First Monday strictly after the supplied date. */
+export function getNextMondayAfterDate(dateISO: string): string {
+  return addDaysISO(getMondayISOForDate(dateISO), DAYS_PER_WEEK);
+}
+
+/**
+ * Pure end-of-block detection. The generated program window is authoritative:
+ * week 4 remains active through its final Sunday and rollover begins only when
+ * the selected/current date is after that boundary.
+ */
+export function getProgramBlockRolloverStatus(args: {
+  program: TrainingProgram | null;
+  dateISO: string;
+  blockState?: StoredProgramBlockState | null;
+}): ProgramBlockRolloverStatus {
+  const targetDateISO = args.dateISO.split('T')[0];
+  if (!args.program) {
+    return {
+      needsRollover: false,
+      targetDateISO,
+      currentBlockStart: null,
+      currentBlockEnd: null,
+      currentBlockNumber: null,
+      nextBlockStart: null,
+      nextBlockEnd: null,
+      nextBlockNumber: null,
+    };
+  }
+
+  const currentBlockStart = args.program.startDate.split('T')[0];
+  const currentBlockEnd = args.program.endDate.split('T')[0];
+  const currentBlockNumber = Math.max(
+    1,
+    Math.floor(
+      args.blockState?.blockNumber ??
+      args.program.microcycles?.[0]?.miniCycleNumber ??
+      1,
+    ),
+  );
+  const nextBlockStart = getNextMondayAfterDate(currentBlockEnd);
+  const nextBlockEnd = addDaysISO(nextBlockStart, DAYS_PER_BLOCK - 1);
+
+  return {
+    needsRollover: targetDateISO > currentBlockEnd,
+    targetDateISO,
+    currentBlockStart,
+    currentBlockEnd,
+    currentBlockNumber,
+    nextBlockStart,
+    nextBlockEnd,
+    nextBlockNumber: currentBlockNumber + 1,
+  };
 }
 
 function getWeekOffset(blockStartDate: string, dateISO: string): number {

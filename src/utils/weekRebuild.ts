@@ -320,6 +320,8 @@ export interface RebuildLocalWeekArgs {
   /** undefined = rebuild with profile as-is; null = remove game; day = set game. */
   newGameDay?: DayOfWeek | null;
   todayISO?: string;
+  /** Explicit lifecycle block number; normal rebuilds derive it from store state. */
+  blockNumber?: number;
   /**
    * block:       replace the shared program template (full rebuild / phase shift)
    * weekOverlay: keep the base template and commit only a selected-week overlay.
@@ -404,7 +406,7 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
   //    nothing has been committed yet).
   const program = generateProgramLocally(profile, {
     todayISO,
-    blockNumber: getCurrentBlockNumberForGeneration(todayISO),
+    blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(todayISO),
   });
 
   // 2. Canonical context + pure sweep decision.

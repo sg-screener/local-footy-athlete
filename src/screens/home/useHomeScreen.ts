@@ -49,8 +49,10 @@ import {
 import { todayISOLocal } from '../../utils/appDate';
 import {
   getProgramBlockStateForDate,
+  getProgramBlockRolloverStatus,
   getStoredBlockStateForDate,
 } from '../../utils/programBlockState';
+import { rolloverProgramBlock } from '../../utils/programBlockRollover';
 import {
   loadReductionModifierIdForDate,
   recoveryModeModifierIdForDate,
@@ -189,9 +191,11 @@ export function useHomeScreen() {
   const [rebuildErrorCanRetry, setRebuildErrorCanRetry] = useState(true);
   const [rebuildMsgIdx, setRebuildMsgIdx] = useState(0);
   const rebuildMsgOpacity = useRef(new Animated.Value(1)).current;
+  const rolloverAttemptRef = useRef<string | null>(null);
 
   // Profile store
   const onboardingData = useProfileStore((s) => s.onboardingData);
+  const isOnboardingComplete = useProfileStore((s) => s.isOnboardingComplete);
   const updateOnboardingData = useProfileStore((s) => s.updateOnboardingData);
 
   // ── Phase-shift state ──
@@ -226,6 +230,49 @@ export function useHomeScreen() {
     return getActiveProgramModifiers(todayISO)
       .find((modifier) => modifier.source === 'readiness_signal') ?? null;
   }, [readinessSignalsByDate]);
+  const rolloverTargetDateISO = todayISOLocal();
+
+  // Program lifecycle boundary: once the stored four-week window has ended,
+  // advance through the canonical deterministic block rebuild. A stale app
+  // several blocks behind advances one block per render until today is inside
+  // the active window, preserving the required block-by-block rotation.
+  useEffect(() => {
+    if (!isOnboardingComplete || isRebuilding) return;
+
+    const status = getProgramBlockRolloverStatus({
+      program: currentProgram,
+      dateISO: rolloverTargetDateISO,
+      blockState,
+    });
+    if (!status.needsRollover) {
+      rolloverAttemptRef.current = null;
+      return;
+    }
+
+    const attemptKey = [
+      currentProgram?.id ?? 'no-program',
+      status.currentBlockEnd ?? 'no-end',
+      rolloverTargetDateISO,
+    ].join(':');
+    if (rolloverAttemptRef.current === attemptKey) return;
+    rolloverAttemptRef.current = attemptKey;
+
+    try {
+      rolloverProgramBlock({
+        baseProfile: onboardingData,
+        targetDateISO: rolloverTargetDateISO,
+      });
+    } catch (error) {
+      logger.error('[programBlockRollover] automatic rollover failed', error);
+    }
+  }, [
+    blockState,
+    currentProgram,
+    isOnboardingComplete,
+    isRebuilding,
+    onboardingData,
+    rolloverTargetDateISO,
+  ]);
   const visibleWeekStart = weekDays[0]?.date;
   const visibleWeekKind = useMemo(() => {
     if (!visibleWeekStart) return undefined;
