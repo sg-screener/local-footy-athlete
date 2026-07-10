@@ -4789,9 +4789,9 @@ function buildWeeklyPlan(
   // the placement branch only emits one upper slot, AND any future
   // configuration where push/pull go missing. Runs LAST among the
   // in-season post-validation steps so it sees the final session shape
-  // including any conditioning floor mutations. Per Sam's priority rule,
-  // this pass *can* override the conditioning floor — strength balance
-  // wins over a conditioning slot.
+  // including any conditioning floor mutations. The repair may consume a
+  // finisher or standalone conditioning slot, but proper components remain
+  // protected and any valid conditioning removal re-checks the floor.
   if (isInSeason && !weekContext.isByeWeek) {
     enforceInSeasonPushPullBalance(adjusted, inputs);
   }
@@ -5173,9 +5173,10 @@ function applyInSeasonConditioningFloor(
 // session covers both (strengthPattern === 'full_body'); a 2-core upper
 // session can cover both via 'upper_combined'.
 //
-// Priority rule per Sam: STRENGTH BALANCE > CONDITIONING. If the only
-// candidate slot to host the missing pattern currently carries optional
-// conditioning, the conditioning is sacrificed to restore balance.
+// Strength balance can consume low-value filler or a finisher. Proper
+// conditioning components are planned work and cannot be sacrificed by this
+// repair. If standalone conditioning must be consumed, the existing in-season
+// floor is run again before returning.
 //
 // Fix strategies (first that succeeds wins, retried per missing pattern):
 //   (1) Promote an existing single-pattern upper to 'upper_combined' —
@@ -5184,7 +5185,8 @@ function applyInSeasonConditioningFloor(
 //       free-standing AND team-day-anchored uppers.
 //   (2) Find a non-team, non-core, outside-48h candidate (G−3/G−4/G−5)
 //       and promote to a moderate upper carrying the missing pattern.
-//       Drops any conditioning on the slot.
+//       Prefers empty filler, then finishers, then standalone conditioning;
+//       attached components are not candidates.
 //   (3) Team-day overlay (last resort) — when no non-team slot exists,
 //       layer the missing pattern onto an existing team day. Per Sam:
 //       "team days are NOT untouchable" — adding a light/moderate upper
@@ -5199,7 +5201,7 @@ function applyInSeasonConditioningFloor(
 // branch couldn't find an upperSlot at all). Iter 1 adds one pattern via
 // Strategy 2 or 3; iter 2 then promotes that newly-added single pattern
 // to upper_combined via Strategy 1 to cover the other side.
-function enforceInSeasonPushPullBalance(
+export function enforceInSeasonPushPullBalance(
   plan: SessionAllocation[],
   inputs: CoachingInputs,
 ): void {
@@ -5239,6 +5241,47 @@ function enforceInSeasonPushPullBalance(
       // Furthest from game first (most negative offset = smallest value).
       return offsetOf(a)! - offsetOf(b)!;
     });
+  type ConditioningOwnership = 'none' | 'finisher' | 'standalone' | 'component';
+  const conditioningOwnership = (session: SessionAllocation): ConditioningOwnership => {
+    if (session.attachedConditioningKind === 'component') return 'component';
+    if (session.hasCombinedConditioning || session.attachedConditioningKind === 'finisher') {
+      return 'finisher';
+    }
+    if (session.conditioningCategory || session.conditioningFlavour) return 'standalone';
+    return 'none';
+  };
+  const conditioningRemovalCost = (session: SessionAllocation): number => {
+    switch (conditioningOwnership(session)) {
+      case 'none': return 0;
+      case 'finisher': return 1;
+      case 'standalone': return 2;
+      case 'component': return 3;
+    }
+  };
+  const sortByRepairCost = (arr: SessionAllocation[]): SessionAllocation[] => {
+    const chronological = sortByEarliest(arr);
+    const chronologicalIndex = new Map(chronological.map((session, index) => [session, index]));
+    return arr.slice().sort((a, b) =>
+      conditioningRemovalCost(a) - conditioningRemovalCost(b) ||
+      (chronologicalIndex.get(a) ?? 0) - (chronologicalIndex.get(b) ?? 0));
+  };
+  const clearRemovableConditioning = (session: SessionAllocation): boolean => {
+    const ownership = conditioningOwnership(session);
+    if (ownership === 'none' || ownership === 'component') return false;
+    session.conditioningCategory = undefined;
+    session.conditioningFlavour = undefined;
+    session.conditioningFeel = undefined;
+    session.conditioningVariant = undefined;
+    session.conditioningOffFeet = undefined;
+    session.ergModality = undefined;
+    session.hasCombinedConditioning = false;
+    session.attachedConditioningKind = undefined;
+    return true;
+  };
+  let removedConditioning = false;
+  const recheckConditioningFloor = (): void => {
+    if (removedConditioning) applyInSeasonConditioningFloor(plan, inputs);
+  };
 
   // Up to 2 iterations: handles the both-missing case where iter 1 plants
   // one pattern and iter 2 promotes it to upper_combined for the other.
@@ -5255,7 +5298,10 @@ function enforceInSeasonPushPullBalance(
         s.strengthPattern === 'upper_combined' ||
         s.strengthPattern === 'full_body',
     );
-    if (hasPush && hasPull) return;
+    if (hasPush && hasPull) {
+      recheckConditioningFloor();
+      return;
+    }
 
     const missing: 'push' | 'pull' = !hasPush ? 'push' : 'pull';
     const oppositePattern: 'push' | 'pull' =
@@ -5271,8 +5317,12 @@ function enforceInSeasonPushPullBalance(
       const teamPrefix = focus.startsWith('Team training + ')
         ? 'Team training + '
         : '';
-      const condMatch = focus.match(/( \+ easy aerobic finisher.*)$/);
-      const condSuffix = condMatch ? condMatch[1] : '';
+      const withoutTeamPrefix = teamPrefix ? focus.slice(teamPrefix.length) : focus;
+      const suffixStart = withoutTeamPrefix.indexOf(' + ');
+      const condSuffix =
+        conditioningOwnership(promotable) !== 'none' && suffixStart >= 0
+          ? withoutTeamPrefix.slice(suffixStart)
+          : '';
       promotable.focus = `${teamPrefix}Upper body - combined push + pull (balanced, moderate intensity - restored for push/pull coverage)${condSuffix}`;
       promotable.strengthPattern = 'upper_combined';
       succeeded = true;
@@ -5284,9 +5334,11 @@ function enforceInSeasonPushPullBalance(
         .filter(s => !!s.dayOfWeek)
         .filter(s => !isTeamSlot(s))
         .filter(s => s.tier !== 'core')
-        .filter(s => !inProximityWindow(s));
+        .filter(s => !inProximityWindow(s))
+        .filter(s => conditioningOwnership(s) !== 'component');
       if (candidates.length > 0) {
-        const chosen = sortByEarliest(candidates)[0];
+        const chosen = sortByRepairCost(candidates)[0];
+        removedConditioning = clearRemovableConditioning(chosen) || removedConditioning;
         chosen.tier = 'core';
         chosen.focus =
           missing === 'push'
@@ -5294,14 +5346,6 @@ function enforceInSeasonPushPullBalance(
             : 'Upper body - pull emphasis (moderate intensity - added for push/pull balance)';
         chosen.strengthPattern = missing;
         chosen.isHardExposure = false;
-        // Strength balance > conditioning: drop any conditioning here.
-        chosen.conditioningCategory = undefined;
-        chosen.conditioningFlavour = undefined;
-        chosen.conditioningFeel = undefined;
-        chosen.conditioningVariant = undefined;
-        chosen.ergModality = undefined;
-        chosen.hasCombinedConditioning = false;
-        chosen.attachedConditioningKind = undefined;
         succeeded = true;
       }
     }
@@ -5322,6 +5366,7 @@ function enforceInSeasonPushPullBalance(
             s.strengthPattern !== 'lower_combined',
         )
         .filter(s => s.strengthPattern !== missing) // guard against duplicate
+        .filter(s => conditioningOwnership(s) !== 'component')
         .filter(s => {
           // Don't overlay on G−1 (captain's run), G−2 (pre-game),
           // G (game), G+1 (post-game). G−3 / G−4 / G−5 are eligible.
@@ -5329,7 +5374,8 @@ function enforceInSeasonPushPullBalance(
           return !inProximityWindow(s);
         });
       if (teamCandidates.length > 0) {
-        const tdChosen = sortByEarliest(teamCandidates)[0];
+        const tdChosen = sortByRepairCost(teamCandidates)[0];
+        removedConditioning = clearRemovableConditioning(tdChosen) || removedConditioning;
         const layerLabel =
           missing === 'push'
             ? 'Upper body - push emphasis (light/moderate, layered onto team day)'
@@ -5338,15 +5384,6 @@ function enforceInSeasonPushPullBalance(
         tdChosen.focus = `Team training + ${layerLabel}`;
         tdChosen.strengthPattern = missing;
         tdChosen.isHardExposure = false;
-        // Strength balance > conditioning here too — clear any conditioning
-        // overlay on the team day so the focus stays single-purpose.
-        tdChosen.conditioningCategory = undefined;
-        tdChosen.conditioningFlavour = undefined;
-        tdChosen.conditioningFeel = undefined;
-        tdChosen.conditioningVariant = undefined;
-        tdChosen.ergModality = undefined;
-        tdChosen.hasCombinedConditioning = false;
-        tdChosen.attachedConditioningKind = undefined;
         succeeded = true;
       }
     }
@@ -5362,9 +5399,11 @@ function enforceInSeasonPushPullBalance(
           `selected_days=[${inputs.selectedDays.join(', ')}] ` +
           `gameDay=${inputs.gameDay ?? 'none'}.`,
       );
+      recheckConditioningFloor();
       return;
     }
   }
+  recheckConditioningFloor();
 }
 
 // ─── Region Classification ───
