@@ -469,11 +469,16 @@ function buildRestOverride(source: Workout): Workout {
     workoutType: 'Rest' as any,
     sessionTier: 'recovery',
     hasCombinedConditioning: false,
+    attachedConditioningKind: undefined,
     conditioningFlavour: undefined,
     conditioningCategory: undefined,
     conditioningBlock: undefined,
     coachAddedConditioningLabel: undefined,
+    speedBlock: undefined,
+    powerBlock: undefined,
+    recoveryAddons: undefined,
     exercises: [],
+    ...({ isTeamDay: false } as any),
   });
 }
 

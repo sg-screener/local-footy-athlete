@@ -131,6 +131,73 @@ function strengthWorkout(): Workout {
   };
 }
 
+function mixedWorkoutWithTypedBlocks(): Workout {
+  return {
+    ...mixedWorkout(),
+    speedBlock: {
+      id: 'speed-primer',
+      title: 'Speed Primer',
+      label: 'Speed',
+      kind: 'true_speed',
+      placement: 'pre_lift',
+      durationMinutes: 8,
+      prescription: '3 x 10m accelerations',
+      counting: {
+        hardExposure: true,
+        mainStrength: false,
+        conditioningCredit: 'none',
+        createsHardDay: true,
+        sprintCodExposure: true,
+      },
+    },
+    powerBlock: {
+      id: 'power-primer',
+      kind: 'primer',
+      family: 'lower',
+      title: 'Power Primer',
+      prescription: '3 x 3 — full rest, fast & sharp',
+      placement: 'pre_lift',
+      options: [{
+        name: 'Vertical Jump',
+        sets: 3,
+        repsMin: 3,
+        repsMax: 3,
+        equipmentRequired: [],
+      }],
+      notes: ['Do this fresh before the main lifts.'],
+      counting: {
+        hardExposure: false,
+        mainStrength: false,
+        conditioningCredit: 'none',
+        isFinisher: false,
+      },
+    },
+    recoveryAddons: [{
+      id: 'recovery-addon',
+      title: 'Mobility reset',
+      label: 'Mobility',
+      kind: 'mobility',
+      focusArea: 'hips',
+      optional: true,
+      skipPolicy: 'no_penalty',
+      durationMinutes: 5,
+      exercises: [{
+        id: 'hip-mobility',
+        name: 'Hip Mobility',
+        prescription: '2 minutes',
+      }],
+      placementNote: 'After training if useful.',
+      counting: {
+        hardExposure: false,
+        mainStrength: false,
+        conditioningCredit: 'none',
+        createsHardDay: false,
+        sprintCodExposure: false,
+      },
+    }],
+  };
+}
+
 function visibleDay(date: string, workout: Workout | null): ResolvedDay {
   return {
     date,
@@ -258,7 +325,7 @@ section('[2] approved conditioning removal writes strength-only override');
 
 section('[3] approved whole-session removal writes rest shell that projects as rest');
 {
-  const visibleWeek = [visibleDay(MON, mixedWorkout())];
+  const visibleWeek = [visibleDay(MON, mixedWorkoutWithTypedBlocks())];
   const before = snapshot(visibleWeek);
   const after = clone(daySnap(before, MON));
   after.workout = null;
@@ -274,6 +341,9 @@ section('[3] approved whole-session removal writes rest shell that projects as r
   eq('one write', writes.length, 1);
   eq('rest shell written', writes[0].workout.name, 'Rest');
   eq('projection matches accepted rest revision', result.applied[0].projectedDay, after);
+  ok('rest shell clears speedBlock', !writes[0].workout.speedBlock);
+  ok('rest shell clears powerBlock', !writes[0].workout.powerBlock);
+  ok('rest shell clears recovery add-ons', !writes[0].workout.recoveryAddons?.length);
 }
 
 section('[4] approved conservative reduction writes reduced prescription');
@@ -423,7 +493,7 @@ section('[8] contract violations still reject, and the reason names the divergen
 
 section('[9] whole-day move writes both days atomically with donor rows');
 {
-  const visibleWeek = [visibleDay(MON, mixedWorkout()), visibleDay(TUE, null)];
+  const visibleWeek = [visibleDay(MON, mixedWorkoutWithTypedBlocks()), visibleDay(TUE, null)];
   const before = snapshot(visibleWeek);
   const monday = daySnap(before, MON);
   const dest = clone(monday);
@@ -442,9 +512,14 @@ section('[9] whole-day move writes both days atomically with donor rows');
   const mondayWrite = writes.find((entry) => entry.date === MON);
   const tuesdayWrite = writes.find((entry) => entry.date === TUE);
   eq('source becomes rest', mondayWrite?.workout.workoutType, 'Rest');
+  ok('source rest clears typed blocks',
+    !mondayWrite?.workout.speedBlock &&
+    !mondayWrite?.workout.powerBlock &&
+    !mondayWrite?.workout.recoveryAddons?.length);
   ok('destination carries donor rows',
     (tuesdayWrite?.workout.exercises?.length ?? 0) === (mixedWorkout().exercises?.length ?? -1),
     tuesdayWrite?.workout.exercises?.length);
+  ok('destination carries donor powerBlock', !!tuesdayWrite?.workout.powerBlock);
   eq('destination dayOfWeek follows the date', tuesdayWrite?.workout.dayOfWeek, 2);
 }
 
