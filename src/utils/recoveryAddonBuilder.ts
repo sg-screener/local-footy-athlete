@@ -29,6 +29,7 @@ import {
   computeTestingBias,
 } from '../rules/testingBias';
 import { computeProgrammingBias } from '../rules/programmingBias';
+import { attachRecoveryAddonEffectEvidence } from './deterministicCoachNoteFactory';
 
 const ZERO_CREDIT = {
   hardExposure: false,
@@ -172,32 +173,80 @@ export function attachRecoveryAddonsToWeek(args: AttachRecoveryAddonsArgs): Work
     isBeginner,
   });
   const programmingBias = composeProgrammingBias(roleGoalBias, testingBias);
+  const roleGoalRecommendations = applyRecoveryAddonBias(
+    sortedRecommendations,
+    roleGoalBias.recoveryAddonFocusPreference,
+  );
   const biasedRecommendations = applyRecoveryAddonBias(
     sortedRecommendations,
     programmingBias.recoveryAddonFocusPreference,
   );
 
+  const next = attachRecommendationsToWeek({
+    workouts: args.workouts,
+    recommendations: biasedRecommendations,
+    targetCount,
+    phase,
+    weekKind: args.weekKind ?? 'build',
+    gameDay,
+  });
+  if (Object.keys(testingBias.recoveryAddonFocusPreference).length === 0) return next;
+
+  const baseline = attachRecommendationsToWeek({
+    workouts: args.workouts,
+    recommendations: roleGoalRecommendations,
+    targetCount,
+    phase,
+    weekKind: args.weekKind ?? 'build',
+    gameDay,
+  });
+  const changedIndex = next.findIndex((workout, index) =>
+    recoveryAddonShape(workout) !== recoveryAddonShape(baseline[index]),
+  );
+  if (changedIndex < 0) return next;
+  const focusAreas = (next[changedIndex].recoveryAddons ?? []).map((addon) => addon.focusArea);
+  if (focusAreas.length === 0) return next;
+  next[changedIndex] = attachRecoveryAddonEffectEvidence({
+    workout: next[changedIndex],
+    seed: {
+      kind: 'testing_bias',
+      reason: 'testing_robustness',
+      ownerKey: 'testing-profile-recovery-support',
+    },
+    focusAreas,
+  });
+  return next;
+}
+
+function attachRecommendationsToWeek(args: {
+  workouts: Workout[];
+  recommendations: readonly RecoveryAddonCoverageRecommendation[];
+  targetCount: number;
+  phase: SeasonPhase;
+  weekKind: WeekKind;
+  gameDay: DayOfWeek | null;
+}): Workout[] {
   const next = stripEmptyRecoveryAddons(args.workouts);
   const assignedByWorkout = new Map<string, number>();
   let attached = 0;
 
-  for (const recommendation of biasedRecommendations) {
-    if (attached >= targetCount) break;
+  for (const recommendation of args.recommendations) {
+    if (attached >= args.targetCount) break;
 
     const candidate = bestPlacement({
       workouts: next,
       recommendation,
-      phase,
-      weekKind: args.weekKind ?? 'build',
-      gameDay,
+      phase: args.phase,
+      weekKind: args.weekKind,
+      gameDay: args.gameDay,
       assignedByWorkout,
     });
     if (!candidate) continue;
 
     const addon = buildRecoveryAddon({
       recommendation,
-      phase,
-      weekKind: args.weekKind ?? 'build',
+      phase: args.phase,
+      weekKind: args.weekKind,
       daysUntilGame: candidate.daysUntilGame,
       slotIndex: assignedByWorkout.get(candidate.workout.id) ?? 0,
     });
@@ -218,6 +267,14 @@ export function attachRecoveryAddonsToWeek(args: AttachRecoveryAddonsArgs): Work
   }
 
   return next;
+}
+
+function recoveryAddonShape(workout: Workout | undefined): string {
+  return JSON.stringify((workout?.recoveryAddons ?? []).map((addon) => ({
+    id: addon.id,
+    focusArea: addon.focusArea,
+    exerciseIds: addon.exercises.map((exercise) => exercise.id),
+  })));
 }
 
 function stripEmptyRecoveryAddons(workouts: Workout[]): Workout[] {

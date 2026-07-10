@@ -37,6 +37,8 @@ import type {
   RecoveryAddonBlock,
   Workout,
   WorkoutType,
+  DeterministicCoachNoteEffectReason,
+  DeterministicCoachNoteEffectSeed,
 } from '../types/domain';
 import { logger } from './logger';
 import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
@@ -253,6 +255,12 @@ export interface SessionAllocation {
    * extra session.
    */
   powerPrimer?: PowerPrimerSpec;
+
+  /**
+   * Typed provenance for system Coach Notes. The workout builder converts
+   * these seeds into visible-shape proof; they never alter this allocation.
+   */
+  deterministicCoachNoteEffects?: DeterministicCoachNoteEffectSeed[];
 }
 
 /**
@@ -388,6 +396,83 @@ export interface AIConstraints {
   rampUp: boolean;
   maxExercisesPerSession: number;
   notes: string[];
+}
+
+function appendAllocationCoachNoteEffect(
+  allocation: SessionAllocation | undefined,
+  seed: DeterministicCoachNoteEffectSeed,
+): void {
+  if (!allocation) return;
+  const current = allocation.deterministicCoachNoteEffects ?? [];
+  if (current.some((row) => row.kind === seed.kind && row.ownerKey === seed.ownerKey)) return;
+  allocation.deterministicCoachNoteEffects = [...current, seed];
+}
+
+function allocationEffectSignature(allocation: SessionAllocation | undefined): string {
+  if (!allocation) return 'none';
+  return JSON.stringify({
+    dayOfWeek: allocation.dayOfWeek,
+    tier: allocation.tier,
+    focus: allocation.focus,
+    strengthPattern: allocation.strengthPattern,
+    conditioningCategory: allocation.conditioningCategory,
+    conditioningFlavour: allocation.conditioningFlavour,
+    conditioningVariant: allocation.conditioningVariant,
+    conditioningOffFeet: allocation.conditioningOffFeet,
+    hasCombinedConditioning: allocation.hasCombinedConditioning,
+    speedWorkKind: allocation.speedWorkKind,
+    isTeamDay: allocation.isTeamDay,
+  });
+}
+
+interface PlanShapeDifference {
+  actual: SessionAllocation;
+  baseline: SessionAllocation | undefined;
+}
+
+function firstPlanShapeDifference(
+  actual: readonly SessionAllocation[],
+  baseline: readonly SessionAllocation[],
+): PlanShapeDifference | undefined {
+  const baselineByDay = new Map(baseline.map((row) => [row.dayOfWeek, row]));
+  const changed = actual.find((row) =>
+    allocationEffectSignature(row) !== allocationEffectSignature(baselineByDay.get(row.dayOfWeek))
+  );
+  return changed
+    ? { actual: changed, baseline: baselineByDay.get(changed.dayOfWeek) }
+    : undefined;
+}
+
+function hasActiveTestingBias(bias: ReturnType<typeof computeTestingBias>): boolean {
+  return bias.lowerStrengthBias > 0 ||
+    bias.upperStrengthBias > 0 ||
+    bias.speedBias > 0 ||
+    Object.keys(bias.conditioningCategoryPreference).length > 0 ||
+    Object.keys(bias.recoveryAddonFocusPreference).length > 0;
+}
+
+function testingEffectReason(
+  bias: ReturnType<typeof computeTestingBias>,
+  difference: PlanShapeDifference,
+): DeterministicCoachNoteEffectReason | null {
+  if (difference.actual.strengthPattern !== difference.baseline?.strengthPattern) {
+    if (bias.lowerStrengthBias > bias.upperStrengthBias) return 'testing_lower_strength';
+    if (bias.upperStrengthBias > bias.lowerStrengthBias) return 'testing_upper_strength';
+  }
+  if (difference.actual.conditioningCategory !== difference.baseline?.conditioningCategory) {
+    if (
+      (difference.actual.conditioningCategory === 'aerobic_base' ||
+        difference.actual.conditioningCategory === 'tempo') &&
+      (bias.conditioningCategoryPreference.aerobic_base ?? 0) > 0
+    ) {
+      return 'testing_aerobic';
+    }
+    if (bias.speedBias > 0) return 'testing_speed';
+  }
+  if (difference.actual.speedWorkKind !== difference.baseline?.speedWorkKind && bias.speedBias > 0) {
+    return 'testing_speed';
+  }
+  return null;
 }
 
 // ─── Step 1: Determine Readiness ───
@@ -647,24 +732,23 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
       })
     : null;
   const isBeginner = trainingAgePolicy.level === 'new';
-  const programmingBias = composeProgrammingBias(
-    computeProgrammingBias({
-      role: inputs.role,
-      goals: inputs.goals,
-      phase: inputs.seasonPhase,
-      isBeginner,
-    }),
-    computeTestingBias({
-      phase: inputs.seasonPhase,
-      squatStrength: inputs.squatStrength,
-      benchStrength: inputs.benchStrength,
-      conditioningLevel: inputs.conditioningLevel,
-      sprintExposure: inputs.sprintExposure,
-      biggestLimitation: inputs.biggestLimitation,
-      injuries: inputs.injuries,
-      isBeginner,
-    }),
-  );
+  const roleGoalBias = computeProgrammingBias({
+    role: inputs.role,
+    goals: inputs.goals,
+    phase: inputs.seasonPhase,
+    isBeginner,
+  });
+  const testingBias = computeTestingBias({
+    phase: inputs.seasonPhase,
+    squatStrength: inputs.squatStrength,
+    benchStrength: inputs.benchStrength,
+    conditioningLevel: inputs.conditioningLevel,
+    sprintExposure: inputs.sprintExposure,
+    biggestLimitation: inputs.biggestLimitation,
+    injuries: inputs.injuries,
+    isBeginner,
+  });
+  const programmingBias = composeProgrammingBias(roleGoalBias, testingBias);
 
   // Step 2: Existing hard exposures from team environment
   const { count: existingHard, breakdown: hardBreakdown } = countTeamHardExposures(inputs);
@@ -1003,6 +1087,91 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     gameDay: inputs.gameDay,
     weekKind: inputs.weekKind,
   });
+
+  // ── Deterministic Coach Note effect evidence ──────────────────────────
+  // Testing notes require a real counterfactual plan difference. Rebuild the
+  // same safe planner with role/goal bias intact but testing neutral, then
+  // mark only the first allocation whose visible shape actually changed.
+  // Game weeks are intentionally excluded: their post-allocation freshness
+  // validators own additional mutations that a pre-validation counterfactual
+  // cannot prove safely.
+  if (
+    hasActiveTestingBias(testingBias) &&
+    inputs.seasonPhase !== 'In-season' &&
+    !inputs.hasGame
+  ) {
+    const neutralTestingBias = computeTestingBias({
+      phase: inputs.seasonPhase,
+      isBeginner,
+    });
+    const baselinePlan = buildWeeklyPlan(
+      inputs,
+      actualCore,
+      optionalSessions,
+      recoverySessions,
+      readiness,
+      composeProgrammingBias(roleGoalBias, neutralTestingBias),
+    );
+    const difference = firstPlanShapeDifference(weeklyPlan, baselinePlan);
+    const reason = difference ? testingEffectReason(testingBias, difference) : null;
+    if (difference && reason) {
+      appendAllocationCoachNoteEffect(difference.actual, {
+        kind: 'testing_bias',
+        reason,
+        ownerKey: 'testing-profile-plan-shape',
+      });
+    }
+  }
+
+  // Pre-season subphase notes are only stamped when a typed dose decision is
+  // visible. A normal phase/subphase value by itself remains silent.
+  if (
+    preseasonSubphase &&
+    (preseasonSubphase === 'early_preseason' || preseasonSubphase === 'late_preseason')
+  ) {
+    const shapedAllocation = weeklyPlan.find((session) =>
+      session.conditioningVariant === 'reduced',
+    );
+    appendAllocationCoachNoteEffect(shapedAllocation, {
+      kind: 'subphase_policy',
+      reason: preseasonSubphase,
+      ownerKey: 'preseason-subphase-dose',
+    });
+  }
+
+  if (offseasonSubphase) {
+    const shapedAllocation = offseasonSubphase === 'late_offseason'
+      ? weeklyPlan.find((session) =>
+          !!session.speedWorkKind ||
+          session.conditioningCategory === 'vo2' ||
+          session.conditioningCategory === 'glycolytic',
+        )
+      : weeklyPlan.find((session) =>
+          session.conditioningOffFeet === true || session.conditioningVariant === 'reduced',
+        );
+    appendAllocationCoachNoteEffect(shapedAllocation, {
+      kind: 'subphase_policy',
+      reason: offseasonSubphase,
+      ownerKey: 'offseason-subphase-dose',
+    });
+  }
+
+  // Bye weeks use a dedicated allocation branch, so any returned training
+  // shape is direct evidence that the missing fixture changed the week.
+  if (generatedWeekContext.isByeWeek) {
+    const recoveryBye = weeklyPlan.every((session) =>
+      !session.isHardExposure && !session.conditioningCategory,
+    );
+    const shapedAllocation = weeklyPlan.find((session) =>
+      !!session.strengthPattern || !!session.conditioningCategory,
+    ) ?? weeklyPlan[0];
+    appendAllocationCoachNoteEffect(shapedAllocation, {
+      kind: 'bye_week',
+      reason: recoveryBye ? 'bye_recovery' : 'bye_build',
+      ownerKey: 'in-season-bye-shape',
+    });
+  }
+
   const plannedCoreSessions = generatedWeekContext.isByeWeek
     ? weeklyPlan.filter((session) => !!session.strengthPattern).length
     : actualCore;

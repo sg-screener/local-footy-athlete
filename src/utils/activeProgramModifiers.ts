@@ -22,6 +22,7 @@ import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { todayISOLocal } from './appDate';
 import { formatExerciseDisplayName } from './exerciseDisplay';
 import { logger } from './logger';
+import { buildDeterministicCoachNoteDescriptors } from './deterministicCoachNoteFactory';
 import type { AthletePoolPrefs } from '../data/exercisePoolsStrength';
 import type {
   OnboardingData,
@@ -45,7 +46,8 @@ export type ActiveProgramModifierSource =
   | 'modality_preferences'
   | 'profile_availability'
   | 'readiness_signal'
-  | 'week_kind';
+  | 'week_kind'
+  | 'program_effect';
 
 export type ActiveProgramModifierActionKind =
   | 'clear_injury'
@@ -102,8 +104,10 @@ export interface ActiveProgramModifierVisibleDay {
     | 'conditioningFlavour'
     | 'hasCombinedConditioning'
     | 'speedBlock'
+    | 'powerBlock'
     | 'conditioningBlock'
     | 'recoveryAddons'
+    | 'deterministicCoachNoteEvidence'
   > | null;
 }
 
@@ -581,6 +585,25 @@ function deloadWeekModifier(
       lifecycleKey: `week_kind:deload:${evidence.weekStart}`,
     },
   };
+}
+
+function deterministicProgramEffectModifiers(
+  snapshot: ActiveProgramModifierSnapshot,
+): ActiveProgramModifier[] {
+  return buildDeterministicCoachNoteDescriptors(snapshot.visibleWeekDays).map((descriptor) => ({
+    id: modifierId('program_effect', descriptor.sourceId),
+    source: 'program_effect',
+    sourceId: descriptor.sourceId,
+    type: 'temporary_status',
+    title: descriptor.title,
+    body: descriptor.body,
+    affects: descriptor.affects,
+    actions: [],
+    payload: {
+      lifecycleKey: descriptor.lifecycleKey,
+      generated: true,
+    },
+  }));
 }
 
 function linkedOverrideDates(c: ActiveConstraint | null | undefined): string[] {
@@ -1176,6 +1199,9 @@ export function selectActiveProgramModifiers(
   }
 
   addUnique(out, seen, deloadWeekModifier(snapshot));
+  for (const modifier of deterministicProgramEffectModifiers(snapshot)) {
+    addUnique(out, seen, modifier);
+  }
 
   for (const [key, pref] of Object.entries(snapshot.modalityPreferences ?? {})) {
     addUnique(out, seen, modalityModifier(key, pref));

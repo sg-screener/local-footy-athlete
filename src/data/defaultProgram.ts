@@ -75,6 +75,11 @@ import {
   type PoolSlotKey,
 } from './exercisePoolsStrength';
 import { isTeamTrainingItem } from '../utils/teamTraining';
+import {
+  attachPrescriptionEffectEvidence,
+  attachSessionEffectEvidence,
+  buildPrescriptionEffectEvidence,
+} from '../utils/deterministicCoachNoteFactory';
 
 /**
  * Default exercises used in the training program
@@ -1979,7 +1984,7 @@ export function buildWorkoutsFromCoach(
 
       logger.debug(`[BUILDER-TRACE] day=${cw.dayOfWeek} ${isStandaloneSpeed ? 'STANDALONE SPEED' : 'STANDALONE CONDITIONING'} - flavour="${planEntry.conditioningFlavour}" -> template="${exerciseName}"${resolved?.shiftedFromRun ? ' [SHIFTED off-feet]' : ''} (AI exercises IGNORED: ${cw.exercises.length} discarded)`);
 
-      return {
+      const standaloneWorkout: Workout = {
         id: workoutId,
         microcycleId,
         dayOfWeek: cw.dayOfWeek,
@@ -2009,6 +2014,10 @@ export function buildWorkoutsFromCoach(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as Workout;
+      return attachSessionEffectEvidence(
+        standaloneWorkout,
+        planEntry.deterministicCoachNoteEffects,
+      );
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -2077,7 +2086,9 @@ export function buildWorkoutsFromCoach(
       workoutType: cw.workoutType,
       planEntry,
     });
+    let beginnerPrescriptionEvidence = null;
     if (onboardingData) {
+      const beforeTrainingAge = finalExercises;
       finalExercises = applyTrainingAgePrescription(finalExercises, onboardingData, {
         seasonPhase: onboardingData.seasonPhase,
         offseasonSubphase,
@@ -2085,6 +2096,17 @@ export function buildWorkoutsFromCoach(
         workoutType: cw.workoutType,
         planEntry,
       });
+      if (resolveTrainingAgePolicy(onboardingData.experienceLevel).level === 'new') {
+        beginnerPrescriptionEvidence = buildPrescriptionEffectEvidence({
+          seed: {
+            kind: 'beginner_policy',
+            reason: 'beginner_conservative_prescription',
+            ownerKey: `training-age:${cw.dayOfWeek}`,
+          },
+          before: beforeTrainingAge,
+          after: finalExercises,
+        });
+      }
     }
 
     // Resolved conditioning block — assembled below for combined S+C days.
@@ -2200,7 +2222,7 @@ export function buildWorkoutsFromCoach(
       );
     }
 
-    return {
+    const builtWorkout: Workout = {
       id: workoutId,
       microcycleId,
       dayOfWeek: cw.dayOfWeek,
@@ -2229,6 +2251,13 @@ export function buildWorkoutsFromCoach(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+    return attachPrescriptionEffectEvidence(
+      attachSessionEffectEvidence(
+        builtWorkout,
+        planEntry?.deterministicCoachNoteEffects,
+      ),
+      beginnerPrescriptionEvidence,
+    );
   });
 }
 

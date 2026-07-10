@@ -72,6 +72,10 @@ import {
   BIBLE_WEEKLY_CAPS,
   countWeeklyExposures,
 } from '../rules/weeklyExposureCounts';
+import {
+  attachPrescriptionEffectEvidence,
+  buildPrescriptionEffectEvidence,
+} from './deterministicCoachNoteFactory';
 
 export { computeBlockBounds } from './programBlockState';
 
@@ -1109,11 +1113,31 @@ export function resolveWeekWithConditioning(
         day.date,
       );
 
-      const progressedWorkout = applyStrengthProgression(
+      let progressedWorkout: Workout = applyStrengthProgression(
         day.workout,
         progressionCtx,
         Object.keys(lastPerformedWeights).length > 0 ? lastPerformedWeights : undefined,
       );
+
+      if (adaptation.explanation) {
+        const adaptationReason = adaptation.volumeAdjustment < 0
+          ? 'adaptation_reduced'
+          : adaptation.volumeAdjustment > 0
+            ? 'adaptation_increased'
+            : 'adaptation_held';
+        progressedWorkout = attachPrescriptionEffectEvidence(
+          progressedWorkout,
+          buildPrescriptionEffectEvidence({
+            seed: {
+              kind: 'progression_adaptation',
+              reason: adaptationReason,
+              ownerKey: `session-feedback:${matchedFeedback?.dateStr ?? day.date}:${day.workout.workoutType}`,
+            },
+            before: day.workout.exercises,
+            after: progressedWorkout.exercises,
+          }),
+        );
+      }
 
       // Attach adaptation explanation as metadata for UI consumption
       if (adaptation.explanation) {

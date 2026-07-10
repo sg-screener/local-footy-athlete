@@ -160,6 +160,80 @@ export type CoachMessageRole = 'user' | 'assistant';
 export type IntensityLevel = 'Light' | 'Moderate' | 'High' | 'Maximal';
 
 /**
+ * Typed proof that an already-owned deterministic rule materially shaped a
+ * visible workout. Coach Notes consume this evidence; the evidence never
+ * changes programming itself.
+ */
+export type DeterministicCoachNoteEffectKind =
+  | 'progression_adaptation'
+  | 'beginner_policy'
+  | 'testing_bias'
+  | 'subphase_policy'
+  | 'bye_week';
+
+export type DeterministicCoachNoteEffectReason =
+  | 'adaptation_reduced'
+  | 'adaptation_held'
+  | 'adaptation_increased'
+  | 'beginner_conservative_prescription'
+  | 'testing_lower_strength'
+  | 'testing_upper_strength'
+  | 'testing_aerobic'
+  | 'testing_speed'
+  | 'testing_robustness'
+  | 'early_offseason'
+  | 'mid_offseason'
+  | 'late_offseason'
+  | 'early_preseason'
+  | 'mid_preseason'
+  | 'late_preseason'
+  | 'bye_build'
+  | 'bye_recovery';
+
+export interface DeterministicCoachNoteEffectSeed {
+  kind: DeterministicCoachNoteEffectKind;
+  reason: DeterministicCoachNoteEffectReason;
+  /** Stable decision owner, used for evidence replacement before week dedupe. */
+  ownerKey: string;
+}
+
+export interface DeterministicPrescriptionProofRow {
+  exerciseId: string;
+  exerciseName: string;
+  prescribedSets: number;
+  prescribedRepsMin: number;
+  prescribedRepsMax: number;
+  prescribedWeightKg?: number;
+  restSeconds: number;
+  notes?: string;
+}
+
+export type DeterministicCoachNoteEffectProof =
+  | {
+      type: 'prescription';
+      rows: DeterministicPrescriptionProofRow[];
+    }
+  | {
+      type: 'session_shape';
+      name: string;
+      workoutType: WorkoutType;
+      sessionTier?: SessionTier;
+      conditioningCategory?: Workout['conditioningCategory'];
+      exerciseNames: string[];
+      hasSpeedBlock: boolean;
+      hasPowerBlock: boolean;
+    }
+  | {
+      type: 'recovery_addon';
+      focusAreas: string[];
+    };
+
+export interface DeterministicCoachNoteEffectEvidence
+  extends DeterministicCoachNoteEffectSeed {
+  proof: DeterministicCoachNoteEffectProof;
+}
+
+/**
  * Attached conditioning kind for strength + conditioning days.
  *
  * `hasCombinedConditioning` remains the backward-compatible presence flag.
@@ -498,6 +572,13 @@ export interface Workout {
    * this as the authoritative "what coach changed" list.
    */
   coachNotes?: string[];
+
+  /**
+   * Deterministic, truth-gated provenance for system Coach Notes. These rows
+   * describe effects already present in this workout; they are not modifiers
+   * and cannot alter generation, scoring, or placement.
+   */
+  deterministicCoachNoteEvidence?: DeterministicCoachNoteEffectEvidence[];
 
   /**
    * Optional low-fatigue support work attached after the main session.
