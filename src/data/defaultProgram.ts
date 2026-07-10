@@ -17,7 +17,12 @@ import {
 import type { SessionAllocation } from '../utils/coachingEngine';
 import { logger } from '../utils/logger';
 import { addDaysISO, computeBlockBounds } from '../utils/programBlockState';
-import { applyLoadEstimates } from '../utils/loadEstimation';
+import {
+  applyLoadEstimates,
+  EXERCISE_LOAD_MAP,
+  resolveExerciseName,
+  roundToEquipment,
+} from '../utils/loadEstimation';
 import {
   buildConditioningTemplate,
   condEx,
@@ -35,10 +40,14 @@ import {
 } from '../utils/sessionBuilder';
 import {
   ACCESSORY_REP_GUIDELINES,
-  MAIN_LIFT_REP_SCHEMES,
+  resolveMainLiftRepSchemes,
   type AccessoryGuideline,
   type RepScheme,
 } from '../rules/phaseRepSchemes';
+import {
+  resolveOffseasonSubphase,
+  type OffseasonSubphase,
+} from '../rules/offseasonSubphase';
 import {
   applyStrengthDeloadToExercises,
   deloadConditioningCategory,
@@ -597,6 +606,7 @@ type CoachGeneratedWorkoutInput = {
 
 type PhasePrescriptionContext = {
   seasonPhase?: SeasonPhase;
+  offseasonSubphase?: OffseasonSubphase | null;
   workoutName?: string;
   workoutType?: string;
   planEntry?: SessionAllocation | null;
@@ -622,6 +632,15 @@ const REP_ACCESSORY_POOL_SLOTS = new Set<PoolSlotKey>([
   'isolation_lower',
 ]);
 
+const MIN_SUBPHASE_LOAD_BY_EQUIPMENT = {
+  barbell: 20,
+  dumbbell: 5,
+  cable: 5,
+  machine: 10,
+  kettlebell: 8,
+  bodyweight: 0,
+} as const;
+
 function baseSetsFromScheme(scheme: RepScheme): number {
   const match = /^(\d+)x/i.exec(scheme.base);
   const parsed = match ? Number(match[1]) : 3;
@@ -637,12 +656,24 @@ function clampInt(value: unknown, min: number, max: number, fallback: number): n
 function mainLiftSchemeForSlot(
   slot: PoolSlotKey,
   seasonPhase: SeasonPhase,
+  offseasonSubphase?: OffseasonSubphase | null,
 ): RepScheme | null {
-  const schemes = MAIN_LIFT_REP_SCHEMES[seasonPhase];
+  const schemes = resolveMainLiftRepSchemes(seasonPhase, offseasonSubphase);
   if (slot === 'squat' || slot === 'hinge') return schemes.lower;
   if (slot === 'horizontal_push' || slot === 'vertical_push') return schemes.upperPush;
   if (slot === 'horizontal_pull' || slot === 'vertical_pull') return schemes.upperPull;
   return null;
+}
+
+function appendRepSchemeIntent(
+  notes: string | undefined,
+  scheme: RepScheme,
+): string | undefined {
+  if (scheme.targetRpeMin === undefined || scheme.targetRpeMax === undefined) return notes;
+  const target = `Target RPE ${scheme.targetRpeMin}-${scheme.targetRpeMax}. ${scheme.intent}`;
+  if (!notes) return target;
+  if (notes.includes(target)) return notes;
+  return `${notes} ${target}`;
 }
 
 function accessoryGuidelineForExercise(
@@ -698,13 +729,14 @@ function applyPhaseRepSchemeToExercise(
   const { slot, role } = classification;
   const accessoryContext = isAccessoryPrescriptionContext(context);
   if (!accessoryContext && role === 'anchor' && MAIN_LIFT_POOL_SLOTS.has(slot)) {
-    const scheme = mainLiftSchemeForSlot(slot, seasonPhase);
+    const scheme = mainLiftSchemeForSlot(slot, seasonPhase, context.offseasonSubphase);
     if (!scheme) return exercise;
     return {
       ...exercise,
       prescribedSets: baseSetsFromScheme(scheme),
       prescribedRepsMin: scheme.repsMin,
       prescribedRepsMax: scheme.repsMax,
+      notes: appendRepSchemeIntent(exercise.notes, scheme),
     };
   }
 
@@ -725,6 +757,40 @@ function applyPhaseRepSchemesToWorkoutExercises(
   context: PhasePrescriptionContext,
 ): WorkoutExercise[] {
   return exercises.map((exercise) => applyPhaseRepSchemeToExercise(exercise, context));
+}
+
+function applySubphaseMainLiftLoadMultiplier(
+  exercises: WorkoutExercise[],
+  context: PhasePrescriptionContext,
+): WorkoutExercise[] {
+  if (context.seasonPhase !== 'Off-season' || !context.offseasonSubphase) return exercises;
+  if (!isStrengthPrescriptionContext(context) || isAccessoryPrescriptionContext(context)) return exercises;
+
+  return exercises.map((exercise) => {
+    const name = exercise.exercise?.name ?? '';
+    const classification = classifyPoolSlot(name);
+    if (!classification || classification.role !== 'anchor' || !MAIN_LIFT_POOL_SLOTS.has(classification.slot)) {
+      return exercise;
+    }
+    const scheme = mainLiftSchemeForSlot(
+      classification.slot,
+      context.seasonPhase!,
+      context.offseasonSubphase,
+    );
+    const multiplier = scheme?.loadMultiplier ?? 1;
+    const weight = exercise.prescribedWeightKg ?? 0;
+    if (multiplier >= 1 || weight <= 0) return exercise;
+
+    const resolvedName = resolveExerciseName(name);
+    const equipment = EXERCISE_LOAD_MAP[resolvedName]?.equipment;
+    const adjustedWeight = equipment
+      ? Math.max(
+          MIN_SUBPHASE_LOAD_BY_EQUIPMENT[equipment],
+          roundToEquipment(weight * multiplier, equipment),
+        )
+      : Math.round((weight * multiplier) / 2.5) * 2.5;
+    return { ...exercise, prescribedWeightKg: adjustedWeight };
+  });
 }
 
 /**
@@ -1205,6 +1271,11 @@ export function buildWorkoutsFromCoach(
    */
   athletePrefs?: AthletePoolPrefs,
 ): Workout[] {
+  const offseasonSubphase = resolveOffseasonSubphase({
+    seasonPhase: onboardingData?.seasonPhase,
+    miniCycleNumber: rotationContext?.miniCycleNumber,
+    weekInBlock: rotationContext?.weekInBlock,
+  });
   const deloadPolicy = resolveDeloadWeekPolicy(
     onboardingData?.seasonPhase,
     rotationContext?.weekKind,
@@ -1772,6 +1843,7 @@ export function buildWorkoutsFromCoach(
     const validatedExercises = validatePairings(aiExercises, canonicalTier);
     const phaseAwareExercises = applyPhaseRepSchemesToWorkoutExercises(validatedExercises, {
       seasonPhase: onboardingData?.seasonPhase,
+      offseasonSubphase,
       workoutName: cw.name,
       workoutType: cw.workoutType,
       planEntry,
@@ -1781,6 +1853,13 @@ export function buildWorkoutsFromCoach(
     let finalExercises = onboardingData
       ? applyLoadEstimates(phaseAwareExercises, onboardingData)
       : phaseAwareExercises;
+    finalExercises = applySubphaseMainLiftLoadMultiplier(finalExercises, {
+      seasonPhase: onboardingData?.seasonPhase,
+      offseasonSubphase,
+      workoutName: cw.name,
+      workoutType: cw.workoutType,
+      planEntry,
+    });
 
     // Resolved conditioning block — assembled below for combined S+C days.
     let resolvedConditioningBlock: ConditioningBlock | undefined;

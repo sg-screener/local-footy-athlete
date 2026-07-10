@@ -97,8 +97,8 @@ section('[2] AI-normalised main lifts are phase-aware');
     exercises: [{ name: 'Back Squat', sets: 4, repsMin: 3, repsMax: 5 }],
   }], 'mc-phase-off', undefined, profile('Off-season'));
   const offSquat = findExercise(offSeasonLower, 'Back Squat');
-  ok('off-season main lift uses 6-8 style reps',
-    offSquat?.prescribedSets === 3 && offSquat.prescribedRepsMin === 6 && offSquat.prescribedRepsMax === 8,
+  ok('off-season without week context uses the resolver\'s mid-phase 6-10 bridge',
+    offSquat?.prescribedSets === 3 && offSquat.prescribedRepsMin === 6 && offSquat.prescribedRepsMax === 10,
     reps(offSquat));
 }
 
@@ -149,6 +149,72 @@ section('[3] accessories and gunshow stay accessory-style');
   ok('accessory/prehab context does not use main-lift reps',
     accessoryBench?.prescribedSets === 3 && accessoryBench.prescribedRepsMin === 8 && accessoryBench.prescribedRepsMax === 15,
     reps(accessoryBench));
+}
+
+section('[4] off-season subphases materialise their strength bias');
+{
+  const lowerPlan: SessionAllocation[] = [{
+    dayOfWeek: 'Monday',
+    tier: 'core',
+    focus: 'Lower body - squat emphasis (quad-dominant: squat, lunge, leg press)',
+    isHardExposure: true,
+    strengthPattern: 'lower',
+    stressLevel: 'high',
+  }];
+
+  let earlyWeight = 0;
+  for (const weekInBlock of [1, 2]) {
+    const [early] = buildWorkoutsFromCoach(
+      [],
+      `mc-phase-early-${weekInBlock}`,
+      lowerPlan,
+      profile('Off-season'),
+      { miniCycleNumber: 1, weekInBlock, weekKind: 'build' },
+    );
+    const squat = findExercise(early, 'Back Squat');
+    ok(`early off-season week ${weekInBlock} uses 8-12 main-lift reps`,
+      squat?.prescribedSets === 3 && squat.prescribedRepsMin === 8 && squat.prescribedRepsMax === 12,
+      reps(squat));
+    ok(`early off-season week ${weekInBlock} targets RPE 6-7`,
+      /Target RPE 6-7/i.test(squat?.notes ?? ''),
+      squat?.notes);
+    ok(`early off-season week ${weekInBlock} avoids grindy 6-8 lower work`,
+      !(squat?.prescribedRepsMin === 6 && squat.prescribedRepsMax === 8),
+      reps(squat));
+    if (weekInBlock === 1) earlyWeight = squat?.prescribedWeightKg ?? 0;
+  }
+
+  const [mid] = buildWorkoutsFromCoach(
+    [],
+    'mc-phase-mid',
+    lowerPlan,
+    profile('Off-season'),
+    { miniCycleNumber: 1, weekInBlock: 3, weekKind: 'build' },
+  );
+  const midSquat = findExercise(mid, 'Back Squat');
+  ok('mid off-season uses a 6-10 bridge prescription',
+    midSquat?.prescribedSets === 3 && midSquat.prescribedRepsMin === 6 && midSquat.prescribedRepsMax === 10,
+    reps(midSquat));
+  ok('mid off-season targets controlled RPE 6-8',
+    /Target RPE 6-8/i.test(midSquat?.notes ?? ''),
+    midSquat?.notes);
+
+  const [late] = buildWorkoutsFromCoach(
+    [],
+    'mc-phase-late',
+    lowerPlan,
+    profile('Off-season'),
+    { miniCycleNumber: 1, weekInBlock: 4, weekKind: 'build' },
+  );
+  const lateSquat = findExercise(late, 'Back Squat');
+  ok('late off-season preserves the existing lower 3x6-8 prescription',
+    lateSquat?.prescribedSets === 3 && lateSquat.prescribedRepsMin === 6 && lateSquat.prescribedRepsMax === 8,
+    reps(lateSquat));
+  ok('starting loads bridge upward from early to mid to late',
+    earlyWeight > 0 &&
+      earlyWeight < (midSquat?.prescribedWeightKg ?? 0) &&
+      (midSquat?.prescribedWeightKg ?? 0) < (lateSquat?.prescribedWeightKg ?? 0),
+    `early=${earlyWeight}, mid=${midSquat?.prescribedWeightKg}, late=${lateSquat?.prescribedWeightKg}`);
 }
 
 console.log(`\n${'═'.repeat(60)}`);

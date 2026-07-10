@@ -15,6 +15,10 @@
  */
 
 import type { SeasonPhase } from '../types/domain';
+import {
+  getOffseasonSubphasePolicy,
+} from './offseasonSubphasePolicy';
+import type { OffseasonSubphase } from './offseasonSubphase';
 
 export interface RepScheme {
   setsMin: number;
@@ -25,6 +29,11 @@ export interface RepScheme {
   base: string;
   /** Bible intensity guidance for the phase. */
   intent: string;
+  /** Optional materialised effort target for subphase-aware prescriptions. */
+  targetRpeMin?: number;
+  targetRpeMax?: number;
+  /** Starting-load adjustment relative to the existing phase estimate. */
+  loadMultiplier?: number;
 }
 
 export interface PhaseMainLiftSchemes {
@@ -54,6 +63,73 @@ export const MAIN_LIFT_REP_SCHEMES: Record<SeasonPhase, PhaseMainLiftSchemes> = 
     upperPull: { setsMin: 2, setsMax: 4, repsMin: 6, repsMax: 12, base: '3x8', intent: OFF_SEASON_INTENT },
   },
 };
+
+function offseasonSubphaseSchemes(
+  subphase: OffseasonSubphase,
+): PhaseMainLiftSchemes {
+  const policy = getOffseasonSubphasePolicy(subphase);
+  const rpe = {
+    targetRpeMin: policy.strength.targetRpeMin,
+    targetRpeMax: policy.strength.targetRpeMax,
+  };
+
+  if (subphase === 'early_offseason') {
+    const scheme: RepScheme = {
+      setsMin: 2,
+      setsMax: 3,
+      repsMin: policy.strength.repsMin,
+      repsMax: policy.strength.repsMax,
+      base: '3x10',
+      intent: 'Early off-season body-armour work: smooth, controlled reps; leave 3-4 reps in reserve.',
+      loadMultiplier: 0.75,
+      ...rpe,
+    };
+    return { lower: scheme, upperPush: scheme, upperPull: scheme };
+  }
+
+  if (subphase === 'mid_offseason') {
+    const common = {
+      setsMin: 2,
+      setsMax: 4,
+      repsMax: policy.strength.repsMax,
+      base: '3x8',
+      intent: 'Mid off-season bridge work: controlled strength volume; leave 2-4 reps in reserve.',
+      loadMultiplier: 0.9,
+      ...rpe,
+    };
+    return {
+      lower: { ...common, repsMin: policy.strength.repsMin },
+      upperPush: { ...common, repsMin: policy.strength.repsMin },
+      upperPull: { ...common, repsMin: Math.max(8, policy.strength.repsMin) },
+    };
+  }
+
+  const legacy = MAIN_LIFT_REP_SCHEMES['Off-season'];
+  const lateIntent = 'Late off-season strength work: build toward pre-season without training to failure.';
+  return {
+    lower: { ...legacy.lower, ...rpe, intent: lateIntent, loadMultiplier: 1 },
+    upperPush: { ...legacy.upperPush, ...rpe, intent: lateIntent, loadMultiplier: 1 },
+    upperPull: { ...legacy.upperPull, ...rpe, intent: lateIntent, loadMultiplier: 1 },
+  };
+}
+
+export const OFFSEASON_SUBPHASE_MAIN_LIFT_REP_SCHEMES: Readonly<
+  Record<OffseasonSubphase, PhaseMainLiftSchemes>
+> = {
+  early_offseason: offseasonSubphaseSchemes('early_offseason'),
+  mid_offseason: offseasonSubphaseSchemes('mid_offseason'),
+  late_offseason: offseasonSubphaseSchemes('late_offseason'),
+};
+
+export function resolveMainLiftRepSchemes(
+  seasonPhase: SeasonPhase,
+  offseasonSubphase?: OffseasonSubphase | null,
+): PhaseMainLiftSchemes {
+  if (seasonPhase === 'Off-season' && offseasonSubphase) {
+    return OFFSEASON_SUBPHASE_MAIN_LIFT_REP_SCHEMES[offseasonSubphase];
+  }
+  return MAIN_LIFT_REP_SCHEMES[seasonPhase];
+}
 
 export interface AccessoryGuideline {
   setsMin: number;
