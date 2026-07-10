@@ -28,6 +28,10 @@ import { getExerciseTags, getConditioningMeta } from '../data/exerciseTags';
 import type { InjuryBucket } from './programAdjustmentEngine';
 import { injurySeverityPausesAffectedTraining } from '../rules/injurySeverityBands';
 import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
+import {
+  compareSafeTrainingFallbackTiers,
+  type SafeTrainingFallbackTier,
+} from '../rules/conflictResolutionHierarchy';
 
 // ─── Risk class ─────────────────────────────────────────────────────
 
@@ -123,11 +127,7 @@ export function classifySessionRisk(workout: Workout, bucket: InjuryBucket): Ses
 // every candidate against the injury tags before returning it, so a
 // nominally-similar swap that is still risky gets skipped.
 
-export type SubstitutionHierarchyTier =
-  | 'same_movement_pattern'
-  | 'similar_muscle_group'
-  | 'unaffected_body_area'
-  | 'recovery_easy_conditioning';
+export type SubstitutionHierarchyTier = Exclude<SafeTrainingFallbackTier, 'rest'>;
 
 export interface InjuryReplacementChoice {
   name: string;
@@ -487,7 +487,8 @@ export function getReplacementChoicesForBucket(
       hierarchyTier: candidate.hierarchyTier,
     });
   }
-  return choices;
+  return choices.sort((left, right) =>
+    compareSafeTrainingFallbackTiers(left.hierarchyTier, right.hierarchyTier));
 }
 
 export function getReplacementChoiceForBucket(

@@ -41,6 +41,11 @@ import {
   injurySeverityRecommendsPhysio,
   injurySeverityReducesAffectedWork,
 } from '../rules/injurySeverityBands';
+import {
+  PROGRAMMING_DECISION_TIERS,
+  compareHierarchyTiers,
+  type ProgrammingHierarchyTier,
+} from '../rules/conflictResolutionHierarchy';
 
 // ─── Exposure taxonomy ──────────────────────────────────────────────
 
@@ -102,6 +107,34 @@ export type ConstraintType =
   | 'equipment'
   | 'preference'
   | 'game_proximity';
+
+const CONSTRAINT_HIERARCHY_TIER: Record<ConstraintType, ProgrammingHierarchyTier> = {
+  injury: PROGRAMMING_DECISION_TIERS.injurySafety,
+  game_proximity: PROGRAMMING_DECISION_TIERS.gameAnchor,
+  schedule: PROGRAMMING_DECISION_TIERS.scheduleAvailability,
+  missed_session: PROGRAMMING_DECISION_TIERS.scheduleAvailability,
+  equipment: PROGRAMMING_DECISION_TIERS.equipmentAvailability,
+  fatigue: PROGRAMMING_DECISION_TIERS.readinessSafety,
+  soreness: PROGRAMMING_DECISION_TIERS.readinessSafety,
+  preference: PROGRAMMING_DECISION_TIERS.exercisePreference,
+};
+
+export function getConstraintHierarchyTier(
+  type: ConstraintType,
+): ProgrammingHierarchyTier {
+  return CONSTRAINT_HIERARCHY_TIER[type];
+}
+
+function orderConstraintsByHierarchy(constraints: readonly Constraint[]): Constraint[] {
+  return constraints
+    .map((constraint, index) => ({ constraint, index }))
+    .sort((left, right) =>
+      compareHierarchyTiers(
+        getConstraintHierarchyTier(left.constraint.type),
+        getConstraintHierarchyTier(right.constraint.type),
+      ) || left.index - right.index)
+    .map(({ constraint }) => constraint);
+}
 
 export type ConstraintRegion =
   | 'shoulder'
@@ -859,7 +892,7 @@ export function scoreExerciseAgainstConstraints(
     constraintType: ConstraintType;
   }> = [];
 
-  for (const c of constraints) {
+  for (const c of orderConstraintsByHierarchy(constraints)) {
     if (c.status === 'resolved') continue;
     for (const e of exposures) {
       if (c.blockedExposures.includes(e)) {

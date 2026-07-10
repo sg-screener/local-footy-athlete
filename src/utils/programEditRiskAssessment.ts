@@ -11,6 +11,14 @@ import {
   classifyVisibleSession,
   type ClassifiedVisibleSessionUnit,
 } from '../rules/sessionClassificationAdapter';
+import {
+  PROGRAMMING_DECISION_TIERS,
+  compareHierarchyTiers,
+  compareProgrammingRiskLevels,
+  getProgrammingEditDecision,
+  getProgrammingRiskRank,
+  type ProgrammingHierarchyTier,
+} from '../rules/conflictResolutionHierarchy';
 
 export type ProgramEditRiskDecision = 'allow' | 'confirm' | 'block';
 export type ProgramEditRiskLevel = FindingSeverity;
@@ -27,6 +35,8 @@ export interface ProgramEditRiskFinding {
   sessions: string[];
   canOverride: boolean;
   source: ProgramEditRiskSource;
+  /** Global §17.K concern that owns this finding. */
+  hierarchyTier?: ProgrammingHierarchyTier;
   bibleRef?: string;
   data?: Record<string, unknown>;
 }
@@ -48,20 +58,6 @@ export interface AssessProgramEditRiskInput {
   activeConstraints?: readonly ActiveConstraint[];
   todayISO?: string;
 }
-
-const LEVEL_RANK: Record<ProgramEditRiskLevel, number> = {
-  info: 0,
-  soft: 1,
-  strong: 2,
-  hard_stop: 3,
-};
-
-const DECISION_BY_LEVEL: Record<ProgramEditRiskLevel, ProgramEditRiskDecision> = {
-  info: 'allow',
-  soft: 'confirm',
-  strong: 'confirm',
-  hard_stop: 'block',
-};
 
 function addDaysISO(dateISO: string, n: number): string {
   const d = new Date(`${dateISO}T12:00:00Z`);
@@ -95,15 +91,67 @@ function findingMagnitude(finding: ProgramEditRiskFinding): number {
     firstNumber(finding.data?.observed) ??
     firstNumber(finding.data?.severity) ??
     firstNumber(finding.data?.score) ??
-    LEVEL_RANK[finding.level]
+    -getProgrammingRiskRank(finding.level)
   );
 }
 
 function isWorseThan(proposed: ProgramEditRiskFinding, current: ProgramEditRiskFinding): boolean {
-  const proposedRank = LEVEL_RANK[proposed.level];
-  const currentRank = LEVEL_RANK[current.level];
-  if (proposedRank !== currentRank) return proposedRank > currentRank;
+  const riskOrder = compareProgrammingRiskLevels(proposed.level, current.level);
+  if (riskOrder !== 0) return riskOrder < 0;
   return findingMagnitude(proposed) > findingMagnitude(current);
+}
+
+function hierarchyTierForWeekFinding(finding: WeekFinding): ProgrammingHierarchyTier {
+  if (finding.ruleId.startsWith('g1_') ||
+      finding.ruleId.startsWith('g2_') ||
+      finding.ruleId.startsWith('g_plus1_')) {
+    return PROGRAMMING_DECISION_TIERS.gameAnchor;
+  }
+  if (finding.ruleId.startsWith('tt_')) {
+    return PROGRAMMING_DECISION_TIERS.teamTrainingAnchor;
+  }
+  if (finding.ruleId.startsWith('cap_') || finding.ruleId.startsWith('double_')) {
+    return PROGRAMMING_DECISION_TIERS.weeklyCaps;
+  }
+  return PROGRAMMING_DECISION_TIERS.aiSuggestion;
+}
+
+export function getProgramEditFindingHierarchyTier(
+  finding: ProgramEditRiskFinding,
+): ProgrammingHierarchyTier {
+  if (finding.hierarchyTier) return finding.hierarchyTier;
+  if (finding.ruleId === 'active_injury_hard_stop') {
+    return finding.data?.seriousSymptoms === true
+      ? PROGRAMMING_DECISION_TIERS.redFlagMedicalStop
+      : PROGRAMMING_DECISION_TIERS.injurySafety;
+  }
+  if (finding.ruleId.startsWith('protected_') || finding.ruleId.startsWith('game_day_') ||
+      finding.ruleId.startsWith('g1_') || finding.ruleId.startsWith('g2_') ||
+      finding.ruleId.startsWith('g_plus1_')) {
+    return PROGRAMMING_DECISION_TIERS.gameAnchor;
+  }
+  if (finding.ruleId.startsWith('tt_')) {
+    return PROGRAMMING_DECISION_TIERS.teamTrainingAnchor;
+  }
+  if (finding.ruleId.startsWith('cap_') || finding.ruleId.startsWith('double_')) {
+    return PROGRAMMING_DECISION_TIERS.weeklyCaps;
+  }
+  return finding.level === 'hard_stop'
+    ? PROGRAMMING_DECISION_TIERS.redFlagMedicalStop
+    : PROGRAMMING_DECISION_TIERS.aiSuggestion;
+}
+
+/** Stronger risk first, then the higher-priority §17.K concern. */
+export function compareProgramEditRiskFindings(
+  a: ProgramEditRiskFinding,
+  b: ProgramEditRiskFinding,
+): number {
+  const riskOrder = compareProgrammingRiskLevels(a.level, b.level);
+  if (riskOrder !== 0) return riskOrder;
+  return compareHierarchyTiers(
+    getProgramEditFindingHierarchyTier(a),
+    getProgramEditFindingHierarchyTier(b),
+  );
 }
 
 function toRiskFinding(finding: WeekFinding): ProgramEditRiskFinding {
@@ -115,6 +163,7 @@ function toRiskFinding(finding: WeekFinding): ProgramEditRiskFinding {
     sessions: [...finding.sessions],
     canOverride: finding.canOverride,
     source: 'week_structure_validator',
+    hierarchyTier: hierarchyTierForWeekFinding(finding),
     bibleRef: finding.bibleRef,
     data: finding.data,
   };
@@ -211,6 +260,9 @@ function protectedAnchorFindings(
       sessions: [anchor.kind === 'game' ? 'Game Day' : 'Team Training'],
       canOverride: false,
       source: 'program_edit_guard',
+      hierarchyTier: anchor.kind === 'game'
+        ? PROGRAMMING_DECISION_TIERS.gameAnchor
+        : PROGRAMMING_DECISION_TIERS.teamTrainingAnchor,
       bibleRef: 'Section 16 App / AI rules; Section 17.E',
       data: { anchorKind: anchor.kind },
     });
@@ -239,6 +291,7 @@ function gameDayHardStopFindings(input: ValidateProgramWeekInput): ProgramEditRi
           sessions: [workout.name],
           canOverride: false,
           source: 'program_edit_guard',
+          hierarchyTier: PROGRAMMING_DECISION_TIERS.gameAnchor,
           bibleRef: 'Section 16 Game day / in-season rules; Section 17.C',
           data: { category: unit.category, stress: unit.stress },
         });
@@ -267,6 +320,7 @@ function gMinusOneHardStopFindings(input: ValidateProgramWeekInput): ProgramEdit
           sessions: [workout.name],
           canOverride: false,
           source: 'program_edit_guard',
+          hierarchyTier: PROGRAMMING_DECISION_TIERS.gameAnchor,
           bibleRef: 'Section 17.C G-1; Section 17.F Hard stop',
           data: { gameDate, category: unit.category, stress: unit.stress },
         });
@@ -302,6 +356,9 @@ function activeConstraintHardStops(
       sessions: [],
       canOverride: false,
       source: 'active_constraint',
+      hierarchyTier: constraint.seriousSymptoms === true
+        ? PROGRAMMING_DECISION_TIERS.redFlagMedicalStop
+        : PROGRAMMING_DECISION_TIERS.injurySafety,
       bibleRef: 'Section 17.F Hard stop; Section 17.G',
       data: {
         constraintId: constraint.id,
@@ -359,11 +416,11 @@ function collectFindings(
   for (const finding of visible) {
     const key = findingKey(finding);
     const existing = deduped.get(key);
-    if (!existing || LEVEL_RANK[finding.level] > LEVEL_RANK[existing.level]) {
+    if (!existing || compareProgramEditRiskFindings(finding, existing) < 0) {
       deduped.set(key, finding);
     }
   }
-  return Array.from(deduped.values()).sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level]);
+  return Array.from(deduped.values()).sort(compareProgramEditRiskFindings);
 }
 
 function compareFindings(
@@ -390,7 +447,7 @@ function compareFindings(
       worsened.add(finding.ruleId);
     }
   }
-  surfaced.sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level]);
+  surfaced.sort(compareProgramEditRiskFindings);
   return {
     surfaced,
     introducedRuleIds: Array.from(introduced).sort(),
@@ -400,7 +457,7 @@ function compareFindings(
 
 function highestLevel(findings: readonly ProgramEditRiskFinding[]): ProgramEditRiskLevel {
   return findings.reduce<ProgramEditRiskLevel>((highest, finding) => (
-    LEVEL_RANK[finding.level] > LEVEL_RANK[highest] ? finding.level : highest
+    compareProgrammingRiskLevels(finding.level, highest) < 0 ? finding.level : highest
   ), 'info');
 }
 
@@ -410,7 +467,7 @@ export function assessProgramEditRisk(input: AssessProgramEditRiskInput): Progra
   const comparison = compareFindings(currentFindings, proposedFindings);
   const level = highestLevel(comparison.surfaced);
   return {
-    decision: DECISION_BY_LEVEL[level],
+    decision: getProgrammingEditDecision(level),
     highestLevel: level,
     findings: comparison.surfaced,
     introducedRuleIds: comparison.introducedRuleIds,

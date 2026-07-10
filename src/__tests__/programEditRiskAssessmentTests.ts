@@ -262,6 +262,9 @@ console.log('\n[7] 5 hard days confirm, not block');
   ok('5 hard days returns confirm', assessment.decision === 'confirm', ruleList(assessment));
   ok('5 hard days is not block', assessment.highestLevel !== 'hard_stop', ruleList(assessment));
   ok('cap finding is soft', byRule(assessment, 'cap_maxHardDays_over')[0]?.level === 'soft', ruleList(assessment));
+  ok('cap finding declares the weekly-load hierarchy tier',
+    byRule(assessment, 'cap_maxHardDays_over')[0]?.hierarchyTier === 'weekly_load_caps',
+    ruleList(assessment));
 }
 
 console.log('\n[8] existing noisy week plus safe edit allows');
@@ -336,6 +339,24 @@ console.log('\n[10] protected anchors and red-flag constraints');
   });
   ok('red-flag active constraint blocks normal edits', assessment.decision === 'block', ruleList(assessment));
   ok('red-flag finding is hard_stop', byRule(assessment, 'active_injury_hard_stop')[0]?.level === 'hard_stop', ruleList(assessment));
+
+  const gameConflict = cleanWeek();
+  gameConflict[5].workouts = [game(), lower()];
+  const ordered = assessProgramEditRisk({
+    current: input(cleanWeek()),
+    proposed: input(gameConflict),
+    activeConstraints: [injury],
+    todayISO: '2026-06-01',
+  });
+  ok('red-flag hard stop is surfaced before game-protection hard stop',
+    ordered.findings[0]?.ruleId === 'active_injury_hard_stop',
+    ruleList(ordered));
+  ok('red-flag finding declares the hard-stop safety hierarchy tier',
+    ordered.findings[0]?.hierarchyTier === 'hard_stop_safety',
+    ruleList(ordered));
+  ok('game-day finding declares the game-protection hierarchy tier',
+    byRule(ordered, 'game_day_hard_work')[0]?.hierarchyTier === 'game_day_protection',
+    ruleList(ordered));
 }
 
 console.log(`\nprogramEditRiskAssessmentTests: ${pass} passed, ${fail} failed`);

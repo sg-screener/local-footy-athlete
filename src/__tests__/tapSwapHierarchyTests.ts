@@ -15,6 +15,7 @@ import {
   getTapSwapChoices,
   resolveTapSwapEnvironment,
 } from '../utils/tapSwapHierarchy';
+import { getSafeTrainingFallbackRank } from '../rules/conflictResolutionHierarchy';
 
 let pass = 0;
 let fail = 0;
@@ -69,6 +70,11 @@ console.log('\n-- Bible tap swap hierarchy --');
     'same_movement_pattern');
   ok('safe normal swap does not repeat Bench Press',
     choices[0]?.name !== 'Bench Press',
+    choices);
+  ok('tap choices follow the canonical safe fallback order',
+    choices.every((choice, index) => index === 0 ||
+      getSafeTrainingFallbackRank(choices[index - 1].hierarchyTier) <=
+        getSafeTrainingFallbackRank(choice.hierarchyTier)),
     choices);
 }
 

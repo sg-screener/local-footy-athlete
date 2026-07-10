@@ -10,10 +10,15 @@ import { getMondayForDate, type ResolvedDay } from './sessionResolver';
 import { buildProgramTabProjectedWeek } from './visibleProgramReadModel';
 import {
   assessProgramEditRisk,
+  compareProgramEditRiskFindings,
   type ProgramEditRiskAssessment,
   type ProgramEditRiskFinding,
   type ProgramEditRiskLevel,
 } from './programEditRiskAssessment';
+import {
+  compareProgrammingRiskLevels,
+  getProgrammingEditDecision,
+} from '../rules/conflictResolutionHierarchy';
 
 export interface ProgramEditWrite {
   date: string;
@@ -39,13 +44,6 @@ export type ProgramEditWriteGuardResult =
       assessment: ProgramEditRiskAssessment;
       message: string;
     };
-
-const LEVEL_RANK: Record<ProgramEditRiskLevel, number> = {
-  info: 0,
-  soft: 1,
-  strong: 2,
-  hard_stop: 3,
-};
 
 function addDaysISO(dateISO: string, days: number): string {
   const [y, m, d] = dateISO.split('-').map(Number);
@@ -216,22 +214,17 @@ function combineAssessments(assessments: readonly ProgramEditRiskAssessment[]): 
         [...finding.sessions].sort().join(','),
       ].join('|');
       const existing = findingsByKey.get(key);
-      if (!existing || LEVEL_RANK[finding.level] > LEVEL_RANK[existing.level]) {
+      if (!existing || compareProgramEditRiskFindings(finding, existing) < 0) {
         findingsByKey.set(key, finding);
       }
     }
   }
   const findings = Array.from(findingsByKey.values())
-    .sort((a, b) => LEVEL_RANK[b.level] - LEVEL_RANK[a.level]);
+    .sort(compareProgramEditRiskFindings);
   const highestLevel = findings.reduce<ProgramEditRiskLevel>((level, finding) => (
-    LEVEL_RANK[finding.level] > LEVEL_RANK[level] ? finding.level : level
+    compareProgrammingRiskLevels(finding.level, level) < 0 ? finding.level : level
   ), 'info');
-  const decision =
-    highestLevel === 'hard_stop'
-      ? 'block'
-      : highestLevel === 'strong' || highestLevel === 'soft'
-        ? 'confirm'
-        : 'allow';
+  const decision = getProgrammingEditDecision(highestLevel);
   return {
     decision,
     highestLevel,

@@ -27,6 +27,10 @@ import {
 } from './loadEstimation';
 import { deriveScheduleReadiness, type ReadinessSignal } from './readiness';
 import { filterConstraintsForDate } from './readinessConstraints';
+import {
+  compareSafeTrainingFallbackTiers,
+  type SafeTrainingFallbackTier,
+} from '../rules/conflictResolutionHierarchy';
 
 export type TapSwapReason =
   | 'no_equipment'
@@ -36,7 +40,7 @@ export type TapSwapReason =
   | 'preference'
   | 'other';
 
-export type TapSwapHierarchyTier = SubstitutionHierarchyTier | 'rest';
+export type TapSwapHierarchyTier = SafeTrainingFallbackTier;
 
 export interface TapSwapPrimaryInjury {
   bucket: InjuryBucket;
@@ -377,7 +381,8 @@ function dedupeChoices(choices: readonly TapSwapChoice[]): TapSwapChoice[] {
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  });
+  }).sort((left, right) =>
+    compareSafeTrainingFallbackTiers(left.hierarchyTier, right.hierarchyTier));
 }
 
 /**

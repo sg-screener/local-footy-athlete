@@ -28,6 +28,7 @@ import {
   buildInjuryConstraint,
   buildFatigueConstraint,
   buildSorenessConstraint,
+  getConstraintHierarchyTier,
   severityToTier,
   type Constraint,
   type Exposure,
@@ -294,6 +295,9 @@ section('[9] Soreness — milder than injury at same severity');
 // ═════════════════════════════════════════════════════════════════════
 section('[10] Multi-constraint — most conservative wins');
 {
+  eq('equipment constraint maps above preference in the canonical hierarchy',
+    [getConstraintHierarchyTier('equipment'), getConstraintHierarchyTier('preference')],
+    ['athlete_availability', 'user_preference']);
   const sho = buildInjuryConstraint({ region: 'shoulder', severity: 8 });
   const fat = buildFatigueConstraint({ severity: 8 });
   // Bench Press blocked by shoulder, kept by fatigue → blocked wins.
@@ -311,6 +315,15 @@ section('[10] Multi-constraint — most conservative wins');
   {
     const d = scoreExerciseAgainstConstraints('Easy Bike Zone 2', [sho, fat]);
     ok('Easy Bike kept under both', d.decision === 'keep');
+  }
+  // Attribution is ordered by the canonical §17.K concern, not caller order.
+  {
+    const readinessFirst = buildFatigueConstraint({ id: 'readiness-priority', severity: 8 });
+    const injurySecond = buildInjuryConstraint({ id: 'injury-priority', region: 'hamstring', severity: 8 });
+    const d = scoreExerciseAgainstConstraints('10m Sprint', [readinessFirst, injurySecond]);
+    eq('injury attribution outranks readiness attribution',
+      d.triggeringConstraintIds,
+      ['injury-priority', 'readiness-priority']);
   }
 }
 
