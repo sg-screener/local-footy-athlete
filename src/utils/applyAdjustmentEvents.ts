@@ -97,6 +97,8 @@ export interface ApplyOptions {
    * injury/UAE contract.
    */
   allowPastDates?: boolean;
+  /** Explicit owner intent when the caller already knows the adjustment domain. */
+  overrideIntent?: OverrideContext['intent'];
 }
 
 export interface AppliedAdjustment {
@@ -276,6 +278,25 @@ export function removeInjuryOverridesForWeek(weekStartISO: string): string[] {
   }
   logger.debug('[pipeline] removeInjuryOverridesForWeek', {
     weekStartISO,
+    cleared,
+  });
+  return cleared;
+}
+
+/** Clear legacy injury-authored overrides from today forward across weeks. */
+export function removeInjuryOverridesFromDate(startDateISO: string): string[] {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDateISO)) return [];
+  const store = useProgramStore.getState();
+  const cleared: string[] = [];
+  for (const [date, ctx] of Object.entries(store.overrideContexts ?? {})) {
+    if (date < startDateISO) continue;
+    if ((ctx as OverrideContext)?.intent !== 'injury') continue;
+    store.removeManualOverride(date);
+    cleared.push(date);
+  }
+  cleared.sort();
+  logger.debug('[pipeline] removeInjuryOverridesFromDate', {
+    startDateISO,
     cleared,
   });
   return cleared;
@@ -1746,7 +1767,7 @@ export function applyAdjustmentEvents(
         ev.kind === 'reduce_strength_block',
     );
     const ctx: OverrideContext = {
-      intent: isProgramAdjustment ? 'program_adjustment' : 'injury',
+      intent: opts.overrideIntent ?? (isProgramAdjustment ? 'program_adjustment' : 'injury'),
       label: lastReason || (isProgramAdjustment ? 'Program adjustment' : 'Injury-driven adjustment'),
     };
     setOverride(date, working, ctx);

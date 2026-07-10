@@ -562,6 +562,64 @@ console.log('\n[4] legacy activeInjury alias still renders and clears');
   eq('legacy activeInjury is nulled', useCoachUpdatesStore.getState().activeInjury, null);
 }
 
+console.log('\n[4b] clearing the last injury flushes current/future injury effects only');
+{
+  resetStores();
+  const todayISO = todayISOLocal();
+  const futureInjuryDate = '9999-12-31';
+  const futureBusyDate = '9999-12-30';
+  const pastInjuryDate = '2000-01-01';
+  const equipment = buildActiveEquipmentConstraint({
+    id: 'equipment-stays-active',
+    mode: 'without',
+    tags: ['barbell'],
+    source: 'tap',
+    nowISO: `${todayISO}T09:00:00.000Z`,
+    scope: 'open_ended',
+    modifierAffects: ['current_week', 'future_generation'],
+  });
+  useCoachUpdatesStore.getState().setActiveConstraints([
+    injury('injury-clear-future', 'groin', 6),
+    fatigue(7),
+    scheduleRestriction(),
+    equipment,
+  ]);
+  useProgramStore.getState().setManualOverride(todayISO, restWorkout(todayISO), {
+    intent: 'injury',
+    label: 'current injury override',
+  });
+  useProgramStore.getState().setManualOverride(futureInjuryDate, restWorkout(futureInjuryDate), {
+    intent: 'injury',
+    label: 'future injury override',
+  });
+  useProgramStore.getState().setManualOverride(pastInjuryDate, restWorkout(pastInjuryDate), {
+    intent: 'injury',
+    label: 'past injury history',
+  });
+  useProgramStore.getState().setManualOverride(
+    futureBusyDate,
+    restWorkout(futureBusyDate),
+    withActiveProgramModifierContext(
+      { intent: 'program_adjustment', label: 'busy override' },
+      'schedule-busy-week',
+    ),
+  );
+
+  const injuryNote = buildActiveCoachNotes(
+    useCoachUpdatesStore.getState().activeConstraints,
+  ).find((note) => note.constraintId === 'injury-clear-future');
+  clearActiveCoachNote(injuryNote?.id ?? '');
+
+  const program = useProgramStore.getState();
+  ok('current injury override is cleared', !program.dateOverrides[todayISO]);
+  ok('future injury override is cleared', !program.dateOverrides[futureInjuryDate]);
+  ok('past injury history is preserved', !!program.dateOverrides[pastInjuryDate]);
+  ok('unrelated busy override is preserved', !!program.dateOverrides[futureBusyDate]);
+  eq('unrelated modifiers remain active',
+    useCoachUpdatesStore.getState().activeConstraints.map((constraint) => constraint.id).sort(),
+    ['equipment-stays-active', 'fatigue-active', 'schedule-busy-week']);
+}
+
 console.log('\n[5] clearing future exercise preference updates Profile-backed state');
 {
   resetStores();

@@ -215,6 +215,36 @@ console.log('\n-- Generation re-entry constraints --');
 }
 
 {
+  const cooked = planFor([
+    fatigue(8, 'Very cooked', ['very cooked', 'remove hard work', 'prefer recovery']),
+  ]);
+  const text = planText(cooked);
+  ok('cooked readiness keeps recovery/easy/safe work instead of an empty week',
+    cooked.weeklyPlan.some((session) =>
+      session.tier === 'recovery' ||
+      session.tier === 'optional' ||
+      session.conditioningCategory === 'aerobic_base' ||
+      !!session.strengthPattern),
+    text);
+  ok('cooked readiness does not force hard conditioning or sprint',
+    categories(cooked).every((category) => category === 'aerobic_base' || category === 'tempo') &&
+      !/true_speed|sprint/i.test(text),
+    text);
+}
+
+{
+  const sick = planFor([
+    fatigue(8, 'Recovery mode active', ['sick', 'recovery mode', 'easy work only']),
+  ]);
+  const text = planText(sick);
+  ok('sick recovery mode keeps only safe light structure',
+    sick.weeklyPlan.some((session) => session.tier === 'recovery') &&
+      categories(sick).every((category) => category === 'aerobic_base' || category === 'tempo') &&
+      !/true_speed|sprint/i.test(text),
+    text);
+}
+
+{
   const hamstringProgram = generateProgramLocally(BASE_PROFILE, {
     todayISO: TODAY,
     blockNumber: 1,

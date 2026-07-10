@@ -39,7 +39,6 @@ import {
   classifyBibleInjurySeverity,
   injurySeverityPausesAffectedTraining,
   injurySeverityRecommendsPhysio,
-  injurySeverityRemovesRiskyWork,
   injurySeverityReducesAffectedWork,
 } from '../rules/injurySeverityBands';
 
@@ -387,13 +386,12 @@ export function classifyExerciseExposures(rawName: string): Exposure[] {
 
 // ─── Constraint builders ────────────────────────────────────────────
 
-type ExposureSeverityTier = 'minor' | 'moderate' | 'severe';
+type ExposureSeverityTier = 'minor' | 'moderate' | 'limiting' | 'severe';
 
 export function severityToTier(severity: number): ExposureSeverityTier {
   const band = classifyBibleInjurySeverity(severity).band;
-  if (band === 'pause_affected_8_10' || band === 'restrict_and_refer_6_7') {
-    return 'severe';
-  }
+  if (band === 'pause_affected_8_10') return 'severe';
+  if (band === 'restrict_and_refer_6_7') return 'limiting';
   if (band === 'reduce_affected_4_5') return 'moderate';
   return 'minor';
 }
@@ -445,7 +443,7 @@ function regionToBlockedRegional(
         if (region === 'wrist') blocked.push('wrist_loading');
         if (region === 'elbow') blocked.push('elbow_loading');
         limited.push('horizontal_pull', 'vertical_pull');
-      } else if (tier === 'moderate') {
+      } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push('overhead_loading', 'explosive_push');
         limited.push(
           'horizontal_press', 'vertical_press', 'shoulder_isolation',
@@ -476,7 +474,7 @@ function regionToBlockedRegional(
         // limit at severe so they stay flagged but don't blanket-block
         // unloaded knee-dominant work.
         limited.push('heavy_squat', 'heavy_lower_strength');
-      } else if (tier === 'moderate') {
+      } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push(
           'sprint', 'high_speed_running', 'plyometric', 'explosive_lower',
           'heavy_hinge', 'hamstring_dominant',
@@ -502,7 +500,7 @@ function regionToBlockedRegional(
           'change_of_direction', 'squat', 'lunge', 'knee_dominant',
           'heavy_squat',
         );
-      } else if (tier === 'moderate') {
+      } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push('plyometric', 'sprint', 'change_of_direction');
         limited.push('squat', 'lunge', 'knee_dominant', 'heavy_squat');
       } else {
@@ -524,7 +522,7 @@ function regionToBlockedRegional(
           'sprint', 'high_speed_running', 'running', 'plyometric',
           'explosive_lower', 'calf_achilles', 'change_of_direction',
         );
-      } else if (tier === 'moderate') {
+      } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push('sprint', 'plyometric', 'calf_achilles', 'high_speed_running');
         limited.push('running');
       } else {
@@ -549,7 +547,7 @@ function regionToBlockedRegional(
           'sprint', 'high_speed_running', 'change_of_direction',
           'adductor_groin', 'lunge', 'plyometric',
         );
-      } else if (tier === 'moderate') {
+      } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push('sprint', 'change_of_direction', 'adductor_groin');
         limited.push('lunge', 'plyometric');
       } else {
@@ -571,7 +569,7 @@ function regionToBlockedRegional(
           'plyometric', 'change_of_direction',
         );
         limited.push('hip_dominant');
-      } else if (tier === 'moderate') {
+      } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push('sprint', 'plyometric');
         limited.push('lunge', 'heavy_squat', 'heavy_hinge', 'hip_dominant');
       } else {
@@ -592,7 +590,7 @@ function regionToBlockedRegional(
           'sprint', 'high_speed_running', 'plyometric',
           'change_of_direction', 'lunge', 'running',
         );
-      } else if (tier === 'moderate') {
+      } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push('sprint', 'plyometric', 'change_of_direction');
         limited.push('lunge', 'running');
       } else {
@@ -617,7 +615,7 @@ function regionToBlockedRegional(
           'heavy_pull', 'heavy_lower_strength', 'hinge', 'posterior_chain',
         );
         limited.push('squat', 'overhead_loading');
-      } else if (tier === 'moderate') {
+      } else if (tier === 'limiting' || tier === 'moderate') {
         blocked.push('heavy_hinge', 'heavy_pull', 'axial_loading');
         limited.push('heavy_squat', 'loaded_carry', 'hinge');
       } else {
@@ -829,7 +827,7 @@ export function buildMissedSessionConstraint(args: {
  *
  *   if any constraint blocks an exposure the exercise has → REMOVE
  *   else if any constraint LIMITS an exposure:
- *     - injury 6+ or non-injury severe → REMOVE
+ *     - injury 8+ or non-injury severe → REMOVE
  *     - else                           → LIMIT
  *   else → KEEP
  *
@@ -892,7 +890,7 @@ export function scoreExerciseAgainstConstraints(
     const ids = Array.from(new Set(limitHits.map((h) => h.constraintId)));
     const shouldRemoveLimited = limitHits.some((h) =>
       h.constraintType === 'injury'
-        ? injurySeverityRemovesRiskyWork(h.severity)
+        ? injurySeverityPausesAffectedTraining(h.severity)
         : generalSeverityToTier(h.severity) === 'severe');
     if (shouldRemoveLimited) {
       return {
@@ -933,6 +931,25 @@ function isGame(workout: Workout): boolean {
   return (workout as any).workoutType === 'Game';
 }
 
+function recoverySubstitution(workout: Workout, coachNotes: string[]): Workout {
+  return {
+    ...workout,
+    name: 'Recovery Session',
+    description: 'Recovery, mobility, or an easy walk. Keep this light while readiness returns.',
+    durationMinutes: 20,
+    intensity: 'Light',
+    workoutType: 'Recovery',
+    sessionTier: 'recovery',
+    hasCombinedConditioning: false,
+    conditioningFlavour: undefined,
+    conditioningCategory: undefined,
+    conditioningBlock: undefined,
+    coachAddedConditioningLabel: undefined,
+    exercises: [],
+    coachNotes,
+  };
+}
+
 export function classifySessionAgainstConstraints(
   workout: Workout,
   constraints: Constraint[],
@@ -963,7 +980,9 @@ export function classifySessionAgainstConstraints(
   if (impact === 'none') action = 'unchanged';
   else if (totalScored > 0 && removedNames.length / totalScored >= 0.75) {
     action = constraints.some((c) =>
-      c.type === 'injury' && injurySeverityPausesAffectedTraining(c.severity ?? 0))
+      (c.type === 'injury' && injurySeverityPausesAffectedTraining(c.severity ?? 0)) ||
+      ((c.type === 'fatigue' || c.type === 'schedule') &&
+        generalSeverityToTier(c.severity ?? 0) === 'severe'))
       ? 'recovery'
       : 'rebuild';
   } else if (impact === 'high') action = 'rebuild';
@@ -1050,8 +1069,14 @@ export function applyConstraintsToSession(
     kept: classification.keptNames,
   });
 
+  const hasConditioningContent = (workout.conditioningBlock?.options ?? []).length > 0;
+  const projectedWorkout =
+    classification.action === 'recovery' && newExercises.length === 0 && !hasConditioningContent
+      ? recoverySubstitution(workout, coachNotes)
+      : { ...workout, exercises: newExercises, coachNotes };
+
   return {
-    workout: { ...workout, exercises: newExercises, coachNotes },
+    workout: projectedWorkout,
     classification,
     applied: classification.removedNames.length > 0 || classification.limitedNames.length > 0,
   };

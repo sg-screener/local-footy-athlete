@@ -245,7 +245,7 @@ section('[6] Severity tier transitions affect all future weeks');
   // Tier matrix: at each severity, every future week renders consistently.
   const tierCases: Array<[number, 'has' | 'no']> = [
     [6, 'no'],   // strict tier — RDLs removed
-    [4, 'has'],  // relaxed tier — RDLs back, notes only
+    [4, 'no'],   // relaxed tier — aggravating RDL is safely swapped, session remains
     [1, 'has'],  // light tier — RDLs back, gradual note
     [0, 'has'],  // resolved — template
   ];
@@ -263,6 +263,12 @@ section('[6] Severity tier transitions affect all future weeks');
         `sev ${severity} on ${monday}: RDLs ${expectRDLs === 'has' ? 'present' : 'gone'}`,
         hasRDLs === (expectRDLs === 'has'),
       );
+      if (severity === 4) {
+        ok(
+          `sev 4 on ${monday}: safe lower session content remains`,
+          (friOfWeek?.workout?.exercises.length ?? 0) === 2,
+        );
+      }
     }
   }
 }

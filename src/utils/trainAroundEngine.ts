@@ -22,7 +22,10 @@
 import type { Workout, WorkoutExercise } from '../types/domain';
 import type { InjuryBucket } from './programAdjustmentEngine';
 import { logger } from './logger';
-import { classifyBibleInjurySeverity } from '../rules/injurySeverityBands';
+import {
+  classifyBibleInjurySeverity,
+  injurySeverityRecommendsPhysio,
+} from '../rules/injurySeverityBands';
 
 // ─── Type system ─────────────────────────────────────────────────────
 
@@ -73,10 +76,8 @@ export interface TrainAroundPolicy {
 
 export function severityToTier(severity: number): InjurySeverityTier {
   const band = classifyBibleInjurySeverity(severity).band;
-  if (band === 'pause_affected_8_10' || band === 'restrict_and_refer_6_7') {
-    return 'severe';
-  }
-  if (band === 'reduce_affected_4_5') return 'moderate';
+  if (band === 'pause_affected_8_10') return 'severe';
+  if (band === 'restrict_and_refer_6_7' || band === 'reduce_affected_4_5') return 'moderate';
   return 'minor';
 }
 
@@ -753,7 +754,14 @@ export function getTrainAroundPolicy(
   const tier = severityToTier(severity);
   const entry = POLICY_TABLE[bucket]?.[tier];
   if (!entry) return null;
-  return { bucket, severityTier: tier, ...entry };
+  return {
+    bucket,
+    severityTier: tier,
+    ...entry,
+    physioAdvice: injurySeverityRecommendsPhysio(severity)
+      ? PHYSIO_HARD
+      : entry.physioAdvice,
+  };
 }
 
 // ─── Per-exercise decision ──────────────────────────────────────────

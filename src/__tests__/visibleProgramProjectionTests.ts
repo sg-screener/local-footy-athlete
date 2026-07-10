@@ -26,6 +26,7 @@ import {
 import type { ResolvedDay } from '../utils/sessionResolver';
 import type { Workout } from '../types/domain';
 import type { InjuryState } from '../utils/injuryProgression';
+import { buildFatigueConstraint } from '../utils/exposureEngine';
 
 // ─── Harness ───
 let pass = 0;
@@ -494,6 +495,27 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
     todayISO: TODAY_ISO,
   });
   eq('valid recovery shell is preserved', recoveryProjected.day.workout?.name, 'Recovery Session');
+}
+
+section('[16b] Cooked readiness substitutes recovery before collapsing to rest');
+{
+  const hardOnly = wk('Hard Conditioning', 3, [
+    ex('10m Sprint'),
+    ex('Box Jump'),
+    ex('Bike Intervals'),
+  ], {
+    workoutType: 'Conditioning',
+    sessionTier: 'core',
+  });
+  const projected = projectVisibleDay({
+    day: day('2026-05-06', hardOnly, 'template'),
+    activeInjury: null,
+    extraConstraints: [buildFatigueConstraint({ severity: 8 })],
+    todayISO: TODAY_ISO,
+  });
+  eq('cooked all-hard session becomes recovery', projected.day.workout?.name, 'Recovery Session');
+  eq('cooked recovery substitution stays visible', projected.day.workout?.workoutType, 'Recovery' as any);
+  ok('cooked recovery substitution is not hard', projected.day.workout?.intensity === 'Light');
 }
 
 section('[17] Strength removed from mixed session re-derives conditioning display');

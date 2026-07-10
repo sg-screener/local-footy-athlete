@@ -85,9 +85,16 @@ section('[1] severityToTier');
 eq('1/10 → minor', severityToTier(1), 'minor');
 eq('3/10 → minor', severityToTier(3), 'minor');
 eq('4/10 → moderate', severityToTier(4), 'moderate');
-eq('6/10 → severe', severityToTier(6), 'severe');
-eq('7/10 → severe', severityToTier(7), 'severe');
+eq('6/10 → moderate movement restrictions', severityToTier(6), 'moderate');
+eq('7/10 → moderate movement restrictions', severityToTier(7), 'moderate');
 eq('10/10 → severe', severityToTier(10), 'severe');
+
+{
+  const limiting = getTrainAroundPolicy('shoulder', 6);
+  ok('6/10 still carries firm physio advice',
+    !!limiting?.physioAdvice && /assessed by a physio/i.test(limiting.physioAdvice),
+    limiting?.physioAdvice);
+}
 
 // ─────────────────────────────────────────────────────────────────────
 // 2. Movement classifier — AI-named variants must map correctly

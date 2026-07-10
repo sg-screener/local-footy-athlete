@@ -150,13 +150,13 @@ section('[2] Shoulder 8/10 — pressing/overhead/explosive push REMOVED');
 }
 
 // ═════════════════════════════════════════════════════════════════════
-// 3. HAMSTRING 7/10 — heavy lower / jump / hinge / sprint REMOVED
+// 3. HAMSTRING 7/10 — risky work removed, heavy squat limited
 // ═════════════════════════════════════════════════════════════════════
-section('[3] Hamstring 7/10 — heavy lower / jump / hinge / sprint removed');
+section('[3] Hamstring 7/10 — risky work removed, heavy squat limited');
 {
   const c = buildInjuryConstraint({ region: 'hamstring', severity: 7 });
   for (const name of [
-    'Back Squat', 'Box Jump', 'Trap Bar Deadlift', 'Nordic Lower',
+    'Box Jump', 'Trap Bar Deadlift', 'Nordic Lower',
     'Slider Hamstring Curl', 'Romanian Deadlift', '10m Sprint',
     'Tempo Run', 'Hill Sprints',
   ]) {
@@ -166,6 +166,10 @@ section('[3] Hamstring 7/10 — heavy lower / jump / hinge / sprint removed');
   for (const name of ['Bench Press', 'Lateral Raise', 'Push Press', 'Pull-Up']) {
     const d = scoreExerciseAgainstConstraints(name, [c]);
     ok(`${name} → keep (upper unaffected)`, d.decision === 'keep', d.reason);
+  }
+  {
+    const d = scoreExerciseAgainstConstraints('Back Squat', [c]);
+    ok('Back Squat → limit at 7/10', d.decision === 'limit', d.reason);
   }
 }
 
@@ -183,10 +187,10 @@ section('[4] Hamstring 6/10 — risky lower work removed, not blindly green');
     const d = scoreExerciseAgainstConstraints(name, [c]);
     ok(`${name} → remove (moderate)`, d.decision === 'remove', d.reason);
   }
-  // Heavy back squat → removed at 6/10 because Bible 6-7 removes risky work.
+  // Heavy back squat stays visible with a load/range caution at 6/10.
   {
     const d = scoreExerciseAgainstConstraints('Back Squat', [c]);
-    ok('Back Squat → remove (heavy lower/squat risky at 6/10)', d.decision === 'remove', d.reason);
+    ok('Back Squat → limit (heavy lower/squat caution at 6/10)', d.decision === 'limit', d.reason);
   }
   // Goblet Squat (no heavy load implied) → keep.
   {
@@ -499,8 +503,8 @@ section('[18] severityToTier — boundaries');
 eq('1 → minor', severityToTier(1), 'minor');
 eq('3 → minor', severityToTier(3), 'minor');
 eq('4 → moderate', severityToTier(4), 'moderate');
-eq('6 → severe', severityToTier(6), 'severe');
-eq('7 → severe', severityToTier(7), 'severe');
+eq('6 → limiting', severityToTier(6), 'limiting');
+eq('7 → limiting', severityToTier(7), 'limiting');
 eq('10 → severe', severityToTier(10), 'severe');
 
 // ═════════════════════════════════════════════════════════════════════
@@ -513,11 +517,32 @@ section('[19] Back 6/10 — moderate calibration');
     const d = scoreExerciseAgainstConstraints(name, [c]);
     ok(`${name} → remove`, d.decision === 'remove', d.reason);
   }
-  // Back Squat → limited at moderate, not blocked.
+  // Axial loading keeps a heavy back squat out for a limiting back issue.
   {
     const d = scoreExerciseAgainstConstraints('Back Squat', [c]);
-    ok('Back Squat @ back 6/10 → limit (heavy_squat amber)', d.decision === 'limit' || d.decision === 'remove');
+    ok('Back Squat @ back 6/10 → remove (axial loading)', d.decision === 'remove', d.reason);
   }
+}
+
+// ═════════════════════════════════════════════════════════════════════
+// 19b. LIMITING IS NOT A SEVERE PAUSE
+// ═════════════════════════════════════════════════════════════════════
+section('[19b] Shoulder 6/10 limits safe affected work; 9/10 pauses it');
+{
+  const limiting = buildInjuryConstraint({ region: 'shoulder', severity: 6 });
+  const severe = buildInjuryConstraint({ region: 'shoulder', severity: 9 });
+  const limitingBench = scoreExerciseAgainstConstraints('Bench Press', [limiting]);
+  const severeBench = scoreExerciseAgainstConstraints('Bench Press', [severe]);
+  ok('Bench Press @ shoulder 6/10 stays limited', limitingBench.decision === 'limit', limitingBench.reason);
+  ok('Bench Press @ shoulder 9/10 is removed', severeBench.decision === 'remove', severeBench.reason);
+
+  const limitingSession = applyConstraintsToSession(
+    wk('Upper Push', [ex('Bench Press'), ex('Goblet Squat')]),
+    [limiting],
+  );
+  const limitingNames = limitingSession.workout.exercises.map((exercise: any) => exercise.exercise?.name);
+  ok('6/10 keeps limited affected work visible', limitingNames.includes('Bench Press'), limitingNames.join(', '));
+  ok('6/10 keeps safe unaffected work visible', limitingNames.includes('Goblet Squat'), limitingNames.join(', '));
 }
 
 // ═════════════════════════════════════════════════════════════════════

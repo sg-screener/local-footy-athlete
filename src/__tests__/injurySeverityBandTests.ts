@@ -207,8 +207,10 @@ eq('progression 4/10 tier', progressionSeverityToTier(4), 'relaxed');
 eq('progression 6/10 tier', progressionSeverityToTier(6), 'strict');
 eq('progression 9/10 tier', progressionSeverityToTier(9), 'severe');
 eq('exposure 4/10 tier', exposureSeverityToTier(4), 'moderate');
-eq('exposure 6/10 tier', exposureSeverityToTier(6), 'severe');
-eq('train-around 6/10 tier', trainAroundSeverityToTier(6), 'severe');
+eq('exposure 6/10 tier', exposureSeverityToTier(6), 'limiting');
+eq('exposure 9/10 tier', exposureSeverityToTier(9), 'severe');
+eq('train-around 6/10 tier', trainAroundSeverityToTier(6), 'moderate');
+eq('train-around 9/10 tier', trainAroundSeverityToTier(9), 'severe');
 eq('program hip bucket uses lower-limb proxy', resolveInjuryBucket('hip'), 'adductor');
 eq('guided hip bucket uses lower-limb proxy', guidedInjuryBucketForArea('Hip / groin'), 'adductor');
 
@@ -303,8 +305,8 @@ console.log('\n-- Program adjustment behaviour --');
     workout('Fri Push', [ex('Bench Press'), ex('Goblet Squat')]),
     { bodyPart: 'shoulder', bucket: 'shoulder', severity: 6, status: 'active' },
   );
-  ok('resolver filter removes risky work at 6/10',
-    !filtered.exercises.some((exercise) => exercise.exercise?.name === 'Bench Press'),
+  ok('resolver filter keeps limited pressing work at 6/10',
+    filtered.exercises.some((exercise) => exercise.exercise?.name === 'Bench Press'),
     JSON.stringify(filtered.exercises.map((exercise) => exercise.exercise?.name)));
   ok('resolver filter keeps safe unaffected work',
     filtered.exercises.some((exercise) => exercise.exercise?.name === 'Goblet Squat'));

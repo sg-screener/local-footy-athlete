@@ -530,13 +530,12 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
       },
 
       removeActiveConstraint: (id) => {
+        const removed = get().activeConstraints.find((c) => c.id === id);
         const remaining = get().activeConstraints.filter((c) => c.id !== id);
         set({ activeConstraints: remaining });
-        // If the legacy slot referenced the removed constraint, recompute.
-        const legacyId =
-          get().activeInjury &&
-          `injury-${(get().activeInjury!.bucket || get().activeInjury!.bodyPart || 'unknown').toLowerCase()}`;
-        if (legacyId === id) {
+        // activeInjury is a derived alias. Recompute whenever any injury is
+        // removed; constraint ids are not required to use the legacy format.
+        if (removed?.type === 'injury') {
           const fallbackInjury = remaining.find(
             (c): c is ActiveInjuryConstraint => c.type === 'injury' && c.status !== 'resolved',
           );

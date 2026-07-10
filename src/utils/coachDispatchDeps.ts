@@ -25,6 +25,7 @@ import {
 } from '../rules/injurySeverityBands';
 import {
   applyAdjustmentEvents,
+  removeInjuryOverridesFromDate,
   removeInjuryOverridesForWeek,
 } from './applyAdjustmentEvents';
 import { buildScheduleStateImperative } from './coachWeekDiff';
@@ -93,7 +94,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
         } as any,
         buildScheduleStateImperative(),
       );
-      const apply = applyAdjustmentEvents(result.events, { todayISO });
+      const apply = applyAdjustmentEvents(result.events, { todayISO, overrideIntent: 'injury' });
 
       // 3. AFTER snapshot + visible-diff verification.
       const afterWeek = resolveWeekWithConditioning(
@@ -206,7 +207,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       const partTitle = capitalize(current.bodyPart);
 
       if (outcome.kind === 'resolved') {
-        removeInjuryOverridesForWeek(monday);
+        removeInjuryOverridesFromDate(todayISO);
         useCoachUpdatesStore.getState().deactivateCoachUpdate(monday);
         useCoachUpdatesStore.getState().transitionInjuryStatus({
           toStatus: 'resolved', severity: 0, note, timestamp: nowISO,
@@ -244,7 +245,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
           } as any,
           buildScheduleStateImperative(),
         );
-        const apply = applyAdjustmentEvents(result.events, { todayISO });
+        const apply = applyAdjustmentEvents(result.events, { todayISO, overrideIntent: 'injury' });
         appliedCount = apply.applied.length;
         const afterWeek = resolveWeekWithConditioning(monday, buildScheduleStateImperative());
         const afterByDate: Record<string, ReturnType<typeof snapshotVisibleWorkout>> = {};
@@ -313,7 +314,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
         } as any,
         buildScheduleStateImperative(),
       );
-      const apply = applyAdjustmentEvents(result.events, { todayISO });
+      const apply = applyAdjustmentEvents(result.events, { todayISO, overrideIntent: 'injury' });
       const afterWeek = resolveWeekWithConditioning(monday, buildScheduleStateImperative());
       const afterByDate: Record<string, ReturnType<typeof snapshotVisibleWorkout>> = {};
       for (const d of afterWeek) afterByDate[d.date] = snapshotVisibleWorkout(d.workout);
@@ -445,14 +446,9 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
         useCoachUpdatesStore.getState().removeActiveConstraint(id);
       }
 
-      // 2. Wipe injury overrides for the current week if any cleared
-      //    constraint was an injury — the resolver-level filter
-      //    already stops applying, but the manual overrides need to
-      //    be flushed so the visible week reverts immediately.
+      // 2. Once the last injury source clears, remove legacy injury-authored
+      //    overrides from today forward so future weeks cannot stay stale.
       const anyInjuryCleared = cleared.some((c) => c.type === 'injury');
-      if (anyInjuryCleared) {
-        removeInjuryOverridesForWeek(monday);
-      }
 
       // 3. Deactivate the Coach Update card for the current week if
       //    no active constraints remain. (HomeScreen card derives
@@ -461,6 +457,12 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       //    fixes.)
       const remaining = useCoachUpdatesStore.getState().activeConstraints ?? [];
       const remainingActive = remaining.filter((c) => c.status !== 'resolved');
+      const hasRemainingInjury = remainingActive.some((c) => c.type === 'injury') ||
+        useCoachUpdatesStore.getState().activeInjury?.status === 'active' ||
+        useCoachUpdatesStore.getState().activeInjury?.status === 'improving';
+      if (anyInjuryCleared && !hasRemainingInjury) {
+        removeInjuryOverridesFromDate(todayISO);
+      }
       if (remainingActive.length === 0) {
         useCoachUpdatesStore.getState().deactivateCoachUpdate(monday);
       }

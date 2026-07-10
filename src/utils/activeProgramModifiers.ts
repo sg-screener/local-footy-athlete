@@ -15,7 +15,7 @@ import {
 import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
 import { useReadinessStore } from '../store/readinessStore';
-import { removeInjuryOverridesForWeek } from './applyAdjustmentEvents';
+import { removeInjuryOverridesFromDate } from './applyAdjustmentEvents';
 import { getMondayForDate, getMondayStr } from './sessionResolver';
 import { decideOverrideSweep } from './weekRebuild';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
@@ -1223,6 +1223,17 @@ function removeOverridesForModifierSource(
   return cleared;
 }
 
+function mergeClearedOverrideDates(...groups: readonly string[][]): string[] {
+  return Array.from(new Set(groups.flat())).sort();
+}
+
+function hasLiveInjurySource(): boolean {
+  const store = useCoachUpdatesStore.getState();
+  return store.activeConstraints.some((constraint) =>
+    constraint.type === 'injury' && constraint.status !== 'resolved') ||
+    (!!store.activeInjury && store.activeInjury.status !== 'resolved');
+}
+
 export function clearActiveProgramModifier(
   modifierIdToClear: string,
 ): ClearActiveProgramModifierResult {
@@ -1245,12 +1256,20 @@ export function clearActiveProgramModifier(
     if (existing) {
       clearedOverrideDates = removeOverridesForModifierSource(modifier.sourceId, existing);
       store.removeActiveConstraint(modifier.sourceId);
-      if (existing.type === 'injury') removeInjuryOverridesForWeek(getMondayStr(0));
+      if (existing.type === 'injury' && !hasLiveInjurySource()) {
+        clearedOverrideDates = mergeClearedOverrideDates(
+          clearedOverrideDates,
+          removeInjuryOverridesFromDate(todayISOLocal()),
+        );
+      }
       if (existing.type === 'equipment') rebuildRequired = true;
     } else if (store.activeInjury) {
       clearedOverrideDates = removeOverridesForModifierSource(modifier.sourceId, null);
       store.setActiveInjury(null);
-      removeInjuryOverridesForWeek(getMondayStr(0));
+      clearedOverrideDates = mergeClearedOverrideDates(
+        clearedOverrideDates,
+        removeInjuryOverridesFromDate(todayISOLocal()),
+      );
     }
     if (modifier.type === 'exercise_adjustment') {
       const prefStore = useAthletePreferencesStore.getState();
@@ -1262,7 +1281,7 @@ export function clearActiveProgramModifier(
     }
   } else if (modifier.source === 'legacy_active_injury') {
     useCoachUpdatesStore.getState().setActiveInjury(null);
-    removeInjuryOverridesForWeek(getMondayStr(0));
+    clearedOverrideDates = removeInjuryOverridesFromDate(todayISOLocal());
   } else if (modifier.source === 'athlete_preferences') {
     const prefStore = useAthletePreferencesStore.getState();
     const exercise = modifier.payload?.exercise;

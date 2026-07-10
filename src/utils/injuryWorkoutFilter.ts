@@ -212,7 +212,7 @@ export function applyInjuryFilterToWorkout(
   const replacements: Array<{ from: string; to: string }> = [];
 
   if ((tierRemovesExercises(tier) || tier === 'relaxed') && sessionRisk !== 'LOW') {
-    const removeCaution = tier === 'strict' || tier === 'severe';
+    const removeCaution = tier === 'severe';
     const existingNames = exercises
       .map((ex) => String(ex.exercise?.name ?? '').trim())
       .filter(Boolean);

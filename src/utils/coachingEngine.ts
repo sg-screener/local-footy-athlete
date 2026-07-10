@@ -4869,6 +4869,34 @@ function buildWeeklyPlan(
     }
   }
 
+  // Major readiness reductions keep safe/easy work, but app-authored hard
+  // sessions become visible recovery substitutions instead of disappearing.
+  // Team anchors remain intact; full_pause already returns recovery above.
+  if (activeReadiness?.tier === 'major_reduction') {
+    adjusted = adjusted.map((session) => {
+      if (!session.isHardExposure || session.isTeamDay) return session;
+      return {
+        ...session,
+        tier: 'recovery',
+        focus: 'Recovery / easy movement - keep this light while readiness returns',
+        isHardExposure: false,
+        stressLevel: 'low',
+        strengthPattern: undefined,
+        hasCombinedConditioning: false,
+        attachedConditioningKind: undefined,
+        conditioningFlavour: undefined,
+        conditioningCategory: undefined,
+        conditioningVariant: undefined,
+        conditioningFeel: undefined,
+        conditioningOffFeet: undefined,
+        ergModality: undefined,
+        speedWorkKind: undefined,
+        speedPlacement: undefined,
+        speedBlock: undefined,
+      };
+    });
+  }
+
   // Final sort (weekend-peak / field-load / core-streak may have mutated)
   adjusted.sort((a, b) => dayNameToNumber(a.dayOfWeek || '') - dayNameToNumber(b.dayOfWeek || ''));
 

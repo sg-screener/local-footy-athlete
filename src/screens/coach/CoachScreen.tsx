@@ -502,7 +502,7 @@ function handleInjuryProgression(
       } as any,
       buildScheduleStateImperative(),
     );
-    const apply = applyAdjustmentEvents(result.events, { todayISO });
+    const apply = applyAdjustmentEvents(result.events, { todayISO, overrideIntent: 'injury' });
     appliedCount = apply.applied.length;
 
     const afterWeek = sessionResolverMod.resolveWeekWithConditioning(
@@ -1411,7 +1411,7 @@ export default function CoachScreen() {
 
       // Translate events → real overrides. The helper rejects past-date
       // events and dates outside the resolved week.
-      const apply = applyAdjustmentEvents(result.events, { todayISO });
+      const apply = applyAdjustmentEvents(result.events, { todayISO, overrideIntent: 'injury' });
 
       // [pipeline] step 2 — apply outcome from applyAdjustmentEvents.
       logger.debug('[pipeline] applyAdjustmentEvents result', {
