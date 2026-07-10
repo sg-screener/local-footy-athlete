@@ -57,6 +57,10 @@ import {
   type PreseasonSubphase,
 } from '../rules/preseasonSubphase';
 import { getPreseasonSubphasePolicy } from '../rules/preseasonSubphasePolicy';
+import {
+  computeProgrammingBias,
+  applyConditioningCategoryBias,
+} from '../rules/programmingBias';
 import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import { resolveWeekContext } from '../rules/weekContext';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
@@ -81,6 +85,12 @@ export interface CoachingInputs {
   experienceLevel: ExperienceLevel | undefined;
   injuries: OnboardingInjury[];
   goals: string[];
+  /**
+   * Athlete football role/position (raw). Optional: when absent, role
+   * contributes NO programming bias (it is treated as "not provided", never
+   * as a default). Consumed only by the small deterministic role/goal bias.
+   */
+  role?: string;
   hasGame: boolean;
   gameDay?: string;
   weekNumber?: number;
@@ -1748,6 +1758,27 @@ function buildWeeklyPlan(
       !blocksConditioningCategoryForGeneration(category),
     );
     if (categoryPriority.length === 0) categoryPriority = ['aerobic_base'];
+
+    // ── Role/goal bias (small, phase-scaled, override-safe) ──
+    // Re-order the conditioning category priority by the athlete's role/goal
+    // preference. This runs AFTER the injury/readiness/deload/cap filter above,
+    // so bias can only re-order categories the gates already permitted — it
+    // never re-introduces a blocked category. Default athletes (no goal-driven
+    // direction) get an empty preference => identity no-op. Only the off- and
+    // pre-season category planner consumes categoryPriority, so in-season stays
+    // freshness-first regardless of bias.
+    const programmingBias = computeProgrammingBias({
+      role: inputs.role,
+      goals: inputs.goals,
+      phase: inputs.seasonPhase,
+      isBeginner: trainingAgePolicy.level === 'new',
+    });
+    if (useCategoryPlanner) {
+      categoryPriority = applyConditioningCategoryBias(
+        categoryPriority,
+        programmingBias.conditioningCategoryPreference,
+      );
+    }
 
     // ── Pattern-based targets ──
     //
@@ -6658,6 +6689,7 @@ export function onboardingToCoachingInputs(
     experienceLevel: data.experienceLevel,
     injuries: data.injuries || [],
     goals: data.motivation ? data.motivation.split(', ') : [],
+    role: data.position,
     // hasGame means "a specific game is scheduled this week" — it must NOT be
     // a proxy for "phase has team-level context". Previously this was
     // `seasonPhase === 'In-season' || seasonPhase === 'Pre-season'` which made
