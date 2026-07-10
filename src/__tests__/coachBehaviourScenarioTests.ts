@@ -617,17 +617,22 @@ const TODAY_DOW = isoToDow(TODAY);
 const MONDAY_IS_PAST = TODAY_DOW > 1; // true except on Monday itself
 
 const scenarios: Scenario[] = [
-  // ── 1. Bare "Monday" after Monday has passed → next Monday one-off ──
+  // ── 1. Bare "Monday" after Monday has passed → recurring, NOT collapsed ──
+  // A bare weekday whose occurrence this week has already passed must NOT be
+  // silently auto-advanced onto next week — that would make "Monday" mean the
+  // same date as "next Monday" (see scenario 1b). The router instead treats a
+  // passed bare weekday as a RECURRING change (add to Mondays), anchored on
+  // this week's Monday, and the turn controller separately offers a
+  // "do you mean next Monday?" clarifier for the stale reference.
   ...(MONDAY_IS_PAST ? [{
-    name: 'Bare "Monday" after Monday has passed → next Monday one-off',
+    name: 'Bare "Monday" after Monday has passed → recurring (not collapsed to next Monday)',
     turns: [
       {
         user: "Can you add some cardio to Monday's session?",
         expectRouterModeIn: ['mutate'],
         expectRouterOperation: 'add_conditioning',
-        expectTargetIsFuture: true,
-        expectTargetDow: 1, // Monday
-        expectScope: 'one_off',
+        expectTargetDow: 1, // Monday (this week's, as the recurring anchor)
+        expectScope: 'recurring',
         expectReplyNotContains: [
           'in the past',
           "can't change it",

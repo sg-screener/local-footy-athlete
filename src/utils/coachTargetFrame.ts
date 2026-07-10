@@ -78,7 +78,7 @@ const DOW_BY_NAME: Record<string, number> = {
   tue: 2, tues: 2, tuesday: 2, tuesdays: 2,
   wed: 3, weds: 3, wednesday: 3, wednesdays: 3,
   thu: 4, thur: 4, thurs: 4, thursday: 4, thursdays: 4,
-  fri: 5, friday: 5,
+  fri: 5, friday: 5, fridays: 5,
   sat: 6, saturday: 6, saturdays: 6,
 };
 
@@ -572,7 +572,21 @@ function firstExplicitDate(
   if (/^tomorrow$/.test(token)) return addDays(todayISO, 1);
   const dow = dowFromToken(token);
   if (dow == null) return null;
-  return dateForDow(dow, visibleWeek, todayISO);
+
+  const thisWeekDate = dateForDow(dow, visibleWeek, todayISO);
+  const lower = message.toLowerCase();
+
+  // Explicit "next <weekday>" / "next week" → the occurrence one week on, so
+  // "next Monday" never collapses onto this week's Monday.
+  if (new RegExp(`\\bnext\\s+(?:week\\b|${DAY_PATTERN})`, 'i').test(lower)) {
+    return addDays(thisWeekDate, 7);
+  }
+  // Bare weekday (no "next"/"last") keeps this week's occurrence — even if it
+  // has already passed. A passed bare weekday is deliberately NOT auto-advanced
+  // to next week here: that would collapse "Monday" onto "next Monday". The
+  // stale-date case is instead surfaced to the athlete as a "do you mean next
+  // Monday?" clarifier by the turn controller.
+  return thisWeekDate;
 }
 
 function dateForDow(dow: number, visibleWeek: ResolvedDay[], todayISO: string): string {
