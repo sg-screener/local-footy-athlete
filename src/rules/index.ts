@@ -21,6 +21,7 @@ export * from './preseasonSubphase';
 export * from './preseasonSubphasePolicy';
 export * from './sprintExposureGate';
 export * from './programmingBias';
+export * from './testingBias';
 export * from './powerPrimerPolicy';
 
 // Role bias mapper already lives in utils/roleBuckets (5 user-facing roles

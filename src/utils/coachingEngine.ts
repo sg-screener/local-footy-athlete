@@ -31,6 +31,9 @@ import type {
   WeekKind,
   ExperienceLevel,
   IntensityLevel,
+  SquatStrength,
+  BenchStrength,
+  BiggestLimitation,
   RecoveryAddonBlock,
   Workout,
   WorkoutType,
@@ -62,6 +65,10 @@ import {
   applyConditioningCategoryBias,
 } from '../rules/programmingBias';
 import {
+  computeTestingBias,
+  composeProgrammingBias,
+} from '../rules/testingBias';
+import {
   decidePowerPrimer,
   type PowerPrimerSpec,
   type PowerInjuryInput,
@@ -88,6 +95,9 @@ export interface CoachingInputs {
   conditioningLevel: ConditioningLevel | undefined;
   recentTrainingLoad: RecentTrainingLoad | undefined;
   experienceLevel: ExperienceLevel | undefined;
+  squatStrength?: SquatStrength;
+  benchStrength?: BenchStrength;
+  biggestLimitation?: BiggestLimitation;
   injuries: OnboardingInjury[];
   goals: string[];
   /**
@@ -1819,20 +1829,30 @@ function buildWeeklyPlan(
     );
     if (categoryPriority.length === 0) categoryPriority = ['aerobic_base'];
 
-    // ── Role/goal bias (small, phase-scaled, override-safe) ──
-    // Re-order the conditioning category priority by the athlete's role/goal
-    // preference. This runs AFTER the injury/readiness/deload/cap filter above,
-    // so bias can only re-order categories the gates already permitted — it
-    // never re-introduces a blocked category. Default athletes (no goal-driven
-    // direction) get an empty preference => identity no-op. Only the off- and
-    // pre-season category planner consumes categoryPriority, so in-season stays
+    // ── Role/goal + testing bias (small, phase-scaled, override-safe) ──
+    // Re-order conditioning priorities using the bounded composed preference.
+    // This runs AFTER the injury/readiness/deload/cap filter above, so it can
+    // only re-order categories the gates already permitted and never restores
+    // a blocked category. Neutral profiles are an identity no-op. Only the
+    // off- and pre-season planner consumes categoryPriority, so in-season stays
     // freshness-first regardless of bias.
-    const programmingBias = computeProgrammingBias({
+    const roleGoalBias = computeProgrammingBias({
       role: inputs.role,
       goals: inputs.goals,
       phase: inputs.seasonPhase,
       isBeginner: trainingAgePolicy.level === 'new',
     });
+    const testingBias = computeTestingBias({
+      phase: inputs.seasonPhase,
+      squatStrength: inputs.squatStrength,
+      benchStrength: inputs.benchStrength,
+      conditioningLevel: inputs.conditioningLevel,
+      sprintExposure: inputs.sprintExposure,
+      biggestLimitation: inputs.biggestLimitation,
+      injuries: inputs.injuries,
+      isBeginner: trainingAgePolicy.level === 'new',
+    });
+    const programmingBias = composeProgrammingBias(roleGoalBias, testingBias);
     if (useCategoryPlanner) {
       categoryPriority = applyConditioningCategoryBias(
         categoryPriority,
@@ -2057,6 +2077,8 @@ function buildWeeklyPlan(
       }
     }
 
+    const TESTING_STRUCTURE_WEIGHT = 50; // 10% max bias => 5-point dose tie-break
+
     function scoreStructure(struct: StructureTemplate): number {
       let score = 0;
       for (const s of struct) {
@@ -2085,6 +2107,12 @@ function buildWeeklyPlan(
       if (sq > 0 && hi > 0) score += 15;
       // Reward having both upper patterns (push + pull)
       if (pu > 0 && pl > 0) score += 15;
+
+      // Small regional-dose tie-break within the approved structures. FB
+      // contributes half to both regions, and injury blocks above remain two
+      // orders of magnitude larger than this preference.
+      score += (sq + hi) * testingBias.lowerStrengthBias * TESTING_STRUCTURE_WEIGHT;
+      score += (pu + pl) * testingBias.upperStrengthBias * TESTING_STRUCTURE_WEIGHT;
 
       // Lower body MUST be present — massive penalty if missing
       const hasLower = struct.some(s => s === 'L-sq' || s === 'L-hi');
@@ -3212,6 +3240,8 @@ function buildWeeklyPlan(
     // CHOICE EXISTS, without overriding category coverage (top rule).
     const W_SC_PAIRING_BAD = 35; // soft penalty for lower+glyco / lower+sprint
     const W_SEQUENCE_REGION = 25; // H-PRE-10: standalone-slot region preference vs team-day upper
+    const W_TESTING_REGION = 50; // 10% max bias => at most a 5-point tie-break
+    const W_TESTING_ACCESSORY = 20; // 10% max bias => at most a 2-point support nudge
 
     // Helper: count for a specific pattern
     function patternCount(c: CandidateType): number {
@@ -3238,6 +3268,15 @@ function buildWeeklyPlan(
       // would bypass Upper penalties and land Upper on days that region
       // sequencing meant to protect for Lower.
       const effectiveRegion = candidateStrengthRegion(c, pos);
+
+      // Testing imbalance is a tie-break only. It cannot create a candidate,
+      // alter the strength budget, or outrank the surrounding safety and
+      // structure rules.
+      if (effectiveRegion === 'lower') {
+        score += testingBias.lowerStrengthBias * W_TESTING_REGION;
+      } else if (effectiveRegion === 'upper') {
+        score += testingBias.upperStrengthBias * W_TESTING_REGION;
+      }
 
       // ── Pattern exposure need ──
       // Each pattern (sq, hi, pu, pl) gets an equal share of core budget.
@@ -3368,7 +3407,7 @@ function buildWeeklyPlan(
         }
       }
 
-      if (c === 'ACC') score += 5;
+      if (c === 'ACC') score += 5 + testingBias.accessoryBias * W_TESTING_ACCESSORY;
       if (c === 'REC') score += 3;
 
       // ── Global pattern balance urgency ──
@@ -6747,6 +6786,9 @@ export function onboardingToCoachingInputs(
     conditioningLevel: data.conditioningLevel,
     recentTrainingLoad: data.recentTrainingLoad,
     experienceLevel: data.experienceLevel,
+    squatStrength: data.squatStrength,
+    benchStrength: data.benchStrength,
+    biggestLimitation: data.biggestLimitation,
     injuries: data.injuries || [],
     goals: data.motivation ? data.motivation.split(', ') : [],
     role: data.position,

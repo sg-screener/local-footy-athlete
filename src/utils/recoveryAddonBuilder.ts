@@ -22,6 +22,11 @@ import {
   type MobilityFlowTemplate,
 } from '../data/mobilityFlowTemplates';
 import type { GenerationConstraintContext } from './generationConstraints';
+import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
+import {
+  applyRecoveryAddonTestingBias,
+  computeTestingBias,
+} from '../rules/testingBias';
 
 const ZERO_CREDIT = {
   hardExposure: false,
@@ -147,12 +152,26 @@ export function attachRecoveryAddonsToWeek(args: AttachRecoveryAddonsArgs): Work
   const sortedRecommendations = [...plan.recommendations]
     .filter((recommendation) => recommendation.status !== 'avoid' && recommendation.target.max > 0)
     .sort((a, b) => focusRank(plan.mode, a.focusArea) - focusRank(plan.mode, b.focusArea));
+  const testingBias = computeTestingBias({
+    phase,
+    squatStrength: args.profile.squatStrength,
+    benchStrength: args.profile.benchStrength,
+    conditioningLevel: args.profile.conditioningLevel,
+    sprintExposure: args.profile.sprintExposure,
+    biggestLimitation: args.profile.biggestLimitation,
+    injuries: args.profile.injuries,
+    isBeginner: resolveTrainingAgePolicy(args.profile.experienceLevel).level === 'new',
+  });
+  const biasedRecommendations = applyRecoveryAddonTestingBias(
+    sortedRecommendations,
+    testingBias,
+  );
 
   const next = stripEmptyRecoveryAddons(args.workouts);
   const assignedByWorkout = new Map<string, number>();
   let attached = 0;
 
-  for (const recommendation of sortedRecommendations) {
+  for (const recommendation of biasedRecommendations) {
     if (attached >= targetCount) break;
 
     const candidate = bestPlacement({
