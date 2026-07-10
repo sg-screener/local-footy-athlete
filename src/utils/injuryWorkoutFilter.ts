@@ -36,6 +36,7 @@ import {
   type RestrictionTier,
 } from './injuryProgression';
 import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
+import { stageReintroductionSeverity } from '../rules/injuryReintroduction';
 
 /** Loose shape — matches what ScheduleState surfaces. */
 export interface ActiveInjuryLike {
@@ -43,6 +44,13 @@ export interface ActiveInjuryLike {
   bucket: string | null;
   severity: number;
   status: 'active' | 'improving' | 'resolved';
+  /**
+   * Recent PEAK / previous severity for this injury, if known. When the
+   * athlete is improving from a higher severity, reintroduction staging keeps
+   * the previous band's risky-work exclusions in place for one more step, so a
+   * downgrade never instantly reintroduces the highest-risk affected work.
+   */
+  priorSeverity?: number | null;
 }
 
 /** Per-bucket tier-aware notes for the resolver-level filter. */
@@ -150,7 +158,14 @@ export function applyInjuryFilterToWorkout(
 ): Workout {
   if (!injury) return workout;
   if (injury.status === 'resolved') return workout;
-  const tier = severityToTier(injury.severity);
+  // Staged reintroduction: while improving from a higher recent severity, the
+  // restriction pipeline uses an EFFECTIVE severity that relaxes by at most one
+  // band per step. No prior severity ⇒ effective === reported (no-op).
+  const effectiveSeverity = stageReintroductionSeverity({
+    currentSeverity: injury.severity,
+    priorSeverity: injury.priorSeverity,
+  });
+  const tier = severityToTier(effectiveSeverity);
   if (!tierIsActive(tier)) return workout;
   if (!injury.bucket) return workout;
 
@@ -172,7 +187,7 @@ export function applyInjuryFilterToWorkout(
     const r = classifyExerciseRiskForBucket(
       ex.exercise?.name || '',
       bucket,
-      injury.severity,
+      effectiveSeverity,
     );
     return r === 'avoid' || r === 'caution';
   });
@@ -208,13 +223,13 @@ export function applyInjuryFilterToWorkout(
       .filter(Boolean);
     filteredExercises = exercises.map((ex) => {
       const name = ex.exercise?.name || '';
-      const r = classifyExerciseRiskForBucket(name, bucket, injury.severity);
+      const r = classifyExerciseRiskForBucket(name, bucket, effectiveSeverity);
       const isRisky =
         r === 'avoid' || (removeCaution && r === 'caution');
       if (!isRisky) return ex;
 
       // Prefer a curated replacement; fall back to removal when none.
-      const replacement = getReplacementForBucket(name, bucket, injury.severity, existingNames);
+      const replacement = getReplacementForBucket(name, bucket, effectiveSeverity, existingNames);
       if (replacement) {
         replacements.push({ from: name, to: replacement });
         return ex.exercise

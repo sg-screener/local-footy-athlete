@@ -94,6 +94,13 @@ export interface InjuryState {
   severity: number;
   /** Severity at first report — keeps the trend interpretable. */
   initialSeverity: number;
+  /**
+   * The immediately-previous severity, recorded when the athlete improves.
+   * Drives staged reintroduction: a downgrade relaxes at most one band from
+   * this value rather than snapping to the new (lower) severity. Absent on a
+   * fresh report or when severity is stable/worsening.
+   */
+  priorSeverity?: number;
   status: InjuryStatus;
   /**
    * Snapshot of `buildInjuryPolicy(...).globalRules` at the last

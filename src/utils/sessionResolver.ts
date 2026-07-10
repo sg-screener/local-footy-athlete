@@ -148,6 +148,8 @@ export interface ScheduleState {
     severity: number;
     status: 'active' | 'improving' | 'resolved';
     rules?: string[];
+    /** Recent peak/previous severity — drives staged reintroduction. */
+    priorSeverity?: number | null;
   } | null;
 }
 

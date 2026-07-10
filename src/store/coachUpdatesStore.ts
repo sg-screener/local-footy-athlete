@@ -155,6 +155,8 @@ export interface ActiveInjuryConstraint extends ActiveConstraintModifierMetadata
   bodyPart: string;
   bucket: InjuryState['bucket'];
   severity: number;
+  /** Immediately-previous severity when improving — drives staged reintroduction. */
+  priorSeverity?: number;
   status: InjuryStatus;
   startDate: string;
   lastUpdatedAt: string;
@@ -478,14 +480,32 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           }
           return;
         }
-        set({ activeInjury: state });
         const id = `injury-${(state.bucket || state.bodyPart || 'unknown').toLowerCase()}`;
+        // Staged reintroduction: when this update improves on a previous
+        // severity for the same injury, record that previous value so the
+        // restriction pipeline relaxes at most one band at a time. Respect a
+        // caller-provided priorSeverity (guided flow); otherwise derive it from
+        // the value being replaced. Cleared/worsening/stable reports carry none.
+        const prevConstraint = get().activeConstraints.find(
+          (c): c is ActiveInjuryConstraint => c.id === id && c.type === 'injury',
+        );
+        const prevSeverity = prevConstraint?.severity ?? get().activeInjury?.severity;
+        const priorSeverity =
+          typeof state.priorSeverity === 'number'
+            ? state.priorSeverity
+            : typeof prevSeverity === 'number' && state.severity > 0 && state.severity < prevSeverity
+              ? prevSeverity
+              : undefined;
+        const stateWithPrior: InjuryState =
+          priorSeverity === undefined ? state : { ...state, priorSeverity };
+        set({ activeInjury: stateWithPrior });
         const next: ActiveInjuryConstraint = {
           id,
           type: 'injury',
           bodyPart: state.bodyPart,
           bucket: state.bucket,
           severity: state.severity,
+          ...(priorSeverity === undefined ? {} : { priorSeverity }),
           status: state.status,
           startDate: state.startDate,
           lastUpdatedAt: state.lastUpdatedAt,

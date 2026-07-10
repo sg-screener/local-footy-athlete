@@ -20,6 +20,7 @@ import {
   injurySeverityRemovesRiskyWork,
   type BibleInjurySeverityBand,
 } from '../rules/injurySeverityBands';
+import { stageReintroductionSeverity } from '../rules/injuryReintroduction';
 import { constraintAppliesToDate } from './readinessConstraints';
 
 export type GenerationReadinessTier =
@@ -40,7 +41,14 @@ export interface GenerationInjuryConstraint {
   bodyPart: string;
   bucket?: string;
   region: GenerationInjuryRegion;
+  /** Reported severity (for display / trend). */
   severity: number;
+  /**
+   * Severity the restriction pipeline actually uses. Equals `severity` unless
+   * the athlete is improving from a higher recent severity, in which case
+   * staged reintroduction holds it one band above the reported value.
+   */
+  effectiveSeverity: number;
   severityBand: BibleInjurySeverityBand;
   onboardingSeverity: InjurySeverity;
   triggers: string[];
@@ -83,7 +91,7 @@ export function buildGenerationConstraintContext(args: {
   const readiness = strongestReadinessConstraint(live);
   const activeInjuryKeys = Array.from(new Set(
     injuries
-      .filter((injury) => injury.severity >= 4)
+      .filter((injury) => injury.effectiveSeverity >= 4)
       .flatMap((injury) => injury.injuryKeys),
   ));
 
@@ -146,6 +154,7 @@ function injuryFromConstraint(
       bodyPart: constraint.bodyPart,
       bucket: constraint.bucket,
       severity: constraint.severity,
+      priorSeverity: constraint.priorSeverity,
       region: constraint.region,
       triggers: constraint.triggers ?? triggerTextFromConstraint(constraint),
     });
@@ -173,11 +182,19 @@ function buildInjuryLikeConstraint(args: {
   bodyPart: string;
   bucket?: string;
   severity: number;
+  priorSeverity?: number;
   region?: ActiveInjuryConstraint['region'];
   triggers: string[];
 }): GenerationInjuryConstraint {
   const severity = clampSeverity(args.severity);
-  const band = classifyBibleInjurySeverity(severity).band;
+  // Staged reintroduction: while improving, restrictions are computed from an
+  // effective severity that relaxes at most one band per step. No prior
+  // severity ⇒ effective === reported (exact no-op for fresh injuries).
+  const effectiveSeverity = clampSeverity(stageReintroductionSeverity({
+    currentSeverity: severity,
+    priorSeverity: args.priorSeverity,
+  }));
+  const band = classifyBibleInjurySeverity(effectiveSeverity).band;
   const bodyPart = normaliseBodyPart(args.bodyPart || args.bucket || 'injury');
   const bucket = args.bucket ? String(args.bucket) : undefined;
   return {
@@ -187,12 +204,13 @@ function buildInjuryLikeConstraint(args: {
     bucket,
     region: args.region ?? inferRegion(bodyPart, bucket),
     severity,
+    effectiveSeverity,
     severityBand: band,
-    onboardingSeverity: onboardingSeverityForNumeric(severity),
+    onboardingSeverity: onboardingSeverityForNumeric(effectiveSeverity),
     triggers: Array.from(new Set(args.triggers.map((trigger) => trigger.trim()).filter(Boolean))),
-    reduceAffectedWork: injurySeverityReducesAffectedWork(severity),
-    removeRiskyWork: injurySeverityRemovesRiskyWork(severity),
-    pauseAffectedTraining: injurySeverityPausesAffectedTraining(severity),
+    reduceAffectedWork: injurySeverityReducesAffectedWork(effectiveSeverity),
+    removeRiskyWork: injurySeverityRemovesRiskyWork(effectiveSeverity),
+    pauseAffectedTraining: injurySeverityPausesAffectedTraining(effectiveSeverity),
     injuryKeys: injuryKeysFor(bodyPart, bucket),
   };
 }
