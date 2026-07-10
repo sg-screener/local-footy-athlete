@@ -12,6 +12,8 @@ import {
   ConditioningBlock,
   IntensityLevel,
   SpeedBlock,
+  PowerBlock,
+  PowerBlockOption,
   WorkoutType,
 } from '../types/domain';
 import {
@@ -1241,6 +1243,87 @@ function buildSpeedBlock(
   };
 }
 
+/**
+ * Render the engine's typed power-primer intent into a display PowerBlock.
+ *
+ * The concrete exercise is chosen here (where equipment is known). Bodyweight
+ * jumps / explosive push-ups are the primary option and always available, so
+ * equipment can only ADD a medicine-ball variant — it can never force an
+ * unavailable implement. The block is intentionally NOT added to
+ * `workout.exercises` and carries a counting fence marking it non-conditioning,
+ * non-finisher, non-hard.
+ */
+function buildPowerBlock(
+  spec: NonNullable<SessionAllocation['powerPrimer']>,
+  workoutId: string,
+  availableEquipment: ReadonlyArray<string> | undefined,
+): PowerBlock {
+  const hasMedBall = (availableEquipment ?? []).some((e) => /med(icine)?[\s_-]*ball/i.test(e));
+  const repsLabel = spec.repsMin === spec.repsMax ? `${spec.repsMin}` : `${spec.repsMin}-${spec.repsMax}`;
+  const options: PowerBlockOption[] = [];
+
+  if (spec.family === 'lower') {
+    options.push({
+      name: spec.reduced ? 'Pogo Jumps' : 'Vertical Jump',
+      sets: spec.sets,
+      repsMin: spec.repsMin,
+      repsMax: spec.repsMax,
+      equipmentRequired: [],
+    });
+    if (hasMedBall && !spec.reduced) {
+      options.push({
+        name: 'Medicine Ball Overhead Throw',
+        sets: spec.sets,
+        repsMin: spec.repsMin,
+        repsMax: spec.repsMax,
+        equipmentRequired: ['Medicine Ball'],
+      });
+    }
+  } else {
+    options.push({
+      name: 'Explosive Push-up',
+      sets: spec.sets,
+      repsMin: spec.repsMin,
+      repsMax: spec.repsMax,
+      equipmentRequired: [],
+    });
+    if (hasMedBall) {
+      options.push({
+        name: 'Medicine Ball Chest Pass',
+        sets: spec.sets,
+        repsMin: spec.repsMin,
+        repsMax: spec.repsMax,
+        equipmentRequired: ['Medicine Ball'],
+      });
+    }
+  }
+
+  const notes = [
+    'Do this fresh, early in the session — before the main lifts.',
+    'Every rep fast and sharp. Stop or reduce if reps get slow or sloppy.',
+  ];
+  if (spec.kind === 'contrast') {
+    notes.push('Contrast: perform sharply straight after your heavy set, then rest fully before the next round.');
+  }
+
+  return {
+    id: `power-${workoutId}`,
+    kind: spec.kind,
+    family: spec.family,
+    title: spec.kind === 'contrast' ? 'Contrast Power' : 'Power Primer',
+    prescription: `${spec.sets} x ${repsLabel} — full rest, fast & sharp`,
+    placement: 'pre_lift',
+    options,
+    notes,
+    counting: {
+      hardExposure: false,
+      mainStrength: false,
+      conditioningCredit: 'none',
+      isFinisher: false,
+    },
+  };
+}
+
 function buildExercisesForSpeedBlock(
   speedBlock: SpeedBlock | undefined,
   dateStr: string,
@@ -2104,6 +2187,19 @@ export function buildWorkoutsFromCoach(
       resolvedSpeedBlock = buildSpeedBlock(planEntry, speedExercises);
     }
 
+    // ── Power primer (Bible § Power work) ──
+    // Rendered as a distinct block, NOT interleaved into exercises. Skipped on
+    // deload weeks even if the engine stamped it, so a deload never carries
+    // fatiguing power.
+    let resolvedPowerBlock: PowerBlock | undefined;
+    if (planEntry?.powerPrimer && !deloadPolicy) {
+      resolvedPowerBlock = buildPowerBlock(
+        planEntry.powerPrimer,
+        workoutId,
+        effectiveAthletePrefs?.availableEquipment ?? onboardingData?.equipment,
+      );
+    }
+
     return {
       id: workoutId,
       microcycleId,
@@ -2127,6 +2223,7 @@ export function buildWorkoutsFromCoach(
       ...(planEntry?.conditioningCategory ? { conditioningCategory: planEntry.conditioningCategory } : {}),
       ...(resolvedConditioningBlock ? { conditioningBlock: resolvedConditioningBlock } : {}),
       ...(resolvedSpeedBlock ? { speedBlock: resolvedSpeedBlock } : {}),
+      ...(resolvedPowerBlock ? { powerBlock: resolvedPowerBlock } : {}),
       durationMinutes: 0,
       exercises: finalExercises,
       createdAt: new Date().toISOString(),

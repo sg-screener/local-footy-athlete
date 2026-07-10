@@ -61,6 +61,11 @@ import {
   computeProgrammingBias,
   applyConditioningCategoryBias,
 } from '../rules/programmingBias';
+import {
+  decidePowerPrimer,
+  type PowerPrimerSpec,
+  type PowerInjuryInput,
+} from '../rules/powerPrimerPolicy';
 import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import { resolveWeekContext } from '../rules/weekContext';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
@@ -228,6 +233,15 @@ export interface SessionAllocation {
    * the consecutive high-stress guards (H1 / H-PRE-5).
    */
   stressLevel?: 'high' | 'medium' | 'low';
+
+  /**
+   * Low-dose power/explosive primer decided by `decidePowerPrimer`. Present
+   * only on suitable strength sessions when phase, game proximity, readiness,
+   * injury, deload and beginner gates all allow it. Rendered downstream as a
+   * separate `powerBlock` — never conditioning, never a finisher, never an
+   * extra session.
+   */
+  powerPrimer?: PowerPrimerSpec;
 }
 
 /**
@@ -792,6 +806,52 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   const weeklyPlan = buildWeeklyPlan(inputs, actualCore, optionalSessions, recoverySessions, readiness);
   logger.debug('[ENGINE-TRACE] ═══ weeklyPlan output ═══');
   weeklyPlan.forEach(s => logger.debug(`[ENGINE-TRACE]   ${s.dayOfWeek}: [${s.tier}] ${s.focus}${s.isHardExposure ? ' (HARD)' : ''}`));
+
+  // ── Power / contrast primer stamping (Bible § Power work) ──
+  // A small, fresh-only, high-quality power layer. The DECISION lives in the
+  // engine (which owns readiness, injury, game proximity, deload, beginner and
+  // phase); the RENDERER turns the stamped spec into a separate `powerBlock`.
+  // Only suitable strength sessions are considered — team-only/conditioning/
+  // recovery days have no strengthPattern and are skipped. All gates that can
+  // veto power live in `decidePowerPrimer`, so this loop can never force power
+  // where injury/readiness/game-proximity/deload/beginner policy says no.
+  {
+    const powerGameDayNum = inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null;
+    const powerBiasNudge = (() => {
+      const b = computeProgrammingBias({
+        role: inputs.role,
+        goals: inputs.goals,
+        phase: inputs.seasonPhase,
+        isBeginner: trainingAgePolicy.level === 'new',
+      });
+      return b.speedBias > 0 || b.strengthBias > 0;
+    })();
+    const powerInjuries: PowerInjuryInput[] = inputs.injuries.map((injury) => ({
+      area: `${injury.bodyArea ?? ''} ${injury.description ?? ''}`,
+      severity: injury.severity === 'Severe' ? 8 : injury.severity === 'Moderate' ? 5 : 3,
+    }));
+    const powerExperienced =
+      inputs.experienceLevel === '2-5 years' || inputs.experienceLevel === '5+ years';
+    for (const alloc of weeklyPlan) {
+      if (!alloc.strengthPattern) continue;
+      const dayNum = alloc.dayOfWeek ? dayNameToNumber(alloc.dayOfWeek) : null;
+      const off = inputs.hasGame && dayNum !== null ? gOffset(dayNum, powerGameDayNum) : -99;
+      const primer = decidePowerPrimer({
+        phase: inputs.seasonPhase,
+        strengthPattern: alloc.strengthPattern,
+        hasGame: inputs.hasGame,
+        gOffset: off,
+        isTeamDay: !!alloc.isTeamDay,
+        readiness,
+        isDeload: inputs.weekKind === 'deload',
+        isBeginner: trainingAgePolicy.level === 'new',
+        experienced: powerExperienced,
+        injuries: powerInjuries,
+        powerGoalNudge: powerBiasNudge,
+      });
+      if (primer) alloc.powerPrimer = primer;
+    }
+  }
 
   // ── Post-generation validation: required exposures ──
   // In-season with game: validate movement coverage based on core count.

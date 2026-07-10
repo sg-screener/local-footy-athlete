@@ -204,6 +204,51 @@ export interface SpeedBlock {
   counting: SpeedBlockCountingFence;
 }
 
+/**
+ * Low-dose power / explosive primer block (Bible § Power work).
+ *
+ * This is NOT conditioning and NOT a finisher. It is a small, fast, high-quality
+ * block placed EARLY in a strength session (or paired as contrast with the main
+ * lift). It carries its own counting fence so it is never counted as a
+ * conditioning component or a hard exposure. Rendered as a distinct block — it
+ * is intentionally kept OUT of `workout.exercises` so exercise-name classifiers
+ * never confuse a jump/throw with a strength or conditioning row.
+ */
+export type PowerFamily = 'lower' | 'upper';
+export type PowerKind = 'primer' | 'contrast';
+
+export interface PowerBlockOption {
+  /** Display name, e.g. "Vertical Jump" or "Explosive Push-up". */
+  name: string;
+  sets: number;
+  repsMin: number;
+  repsMax: number;
+  /** Equipment the option needs; empty = bodyweight. */
+  equipmentRequired: string[];
+}
+
+export interface PowerBlockCountingFence {
+  hardExposure: false;
+  mainStrength: false;
+  conditioningCredit: 'none';
+  isFinisher: false;
+}
+
+export interface PowerBlock {
+  id: string;
+  kind: PowerKind;
+  family: PowerFamily;
+  /** Display title, e.g. "Power Primer" or "Contrast Power". */
+  title: string;
+  /** One-line prescription summary, e.g. "3 x 3 — full rest, fast & sharp". */
+  prescription: string;
+  /** Always fresh / early in the session. */
+  placement: 'pre_lift';
+  options: PowerBlockOption[];
+  notes: string[];
+  counting: PowerBlockCountingFence;
+}
+
 export type RecoveryAddonKind =
   | 'mobility'
   | 'trunk'
@@ -422,6 +467,14 @@ export interface Workout {
    * must not be rendered or counted as a finisher/component.
    */
   speedBlock?: SpeedBlock;
+
+  /**
+   * Low-dose power/explosive primer (Bible § Power work). Fresh, high-quality,
+   * placed early. Not conditioning, not a finisher, not counted as a hard
+   * exposure. Kept out of `exercises` so classifiers never confuse it with
+   * strength or conditioning rows.
+   */
+  powerBlock?: PowerBlock;
 
   /**
    * Short display label for coach-added conditioning shown on weekly cards.
