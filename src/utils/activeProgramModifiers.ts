@@ -2,6 +2,7 @@ import {
   useCoachUpdatesStore,
   type ActiveConstraint,
   type ActiveConstraintModifierAffect,
+  type ActiveEquipmentConstraint,
   type ActiveInjuryConstraint,
   type ActivePreferenceConstraint,
   type ActiveSorenessConstraint,
@@ -148,6 +149,54 @@ function listPreview(values: readonly string[] | undefined, fallback: string): s
   if (!values || values.length === 0) return fallback;
   const preview = values.slice(0, 2).join('; ');
   return values.length > 2 ? `${preview}; more` : preview;
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+}
+
+function equipmentLabel(tag: string): string {
+  switch (tag) {
+    case 'bodyweight':
+      return 'bodyweight';
+    case 'dumbbells':
+      return 'dumbbell';
+    case 'barbell':
+      return 'barbell';
+    case 'machine':
+      return 'machine';
+    case 'cables':
+      return 'cable';
+    case 'bands':
+      return 'band';
+    case 'kettlebell':
+      return 'kettlebell';
+    case 'bench':
+      return 'bench';
+    case 'bike_or_treadmill':
+      return 'cardio machine';
+    case 'foam_roller':
+      return 'foam roller';
+    default:
+      return tag.replace(/[_-]+/g, ' ');
+  }
+}
+
+function equipmentList(tags: readonly string[]): string {
+  const labels = uniqueStrings(tags.map(equipmentLabel));
+  if (labels.length === 0) return 'available equipment';
+  if (labels.length === 1) return labels[0];
+  if (labels.length === 2) return `${labels[0]}/${labels[1]}`;
+  return `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+}
+
+function dayName(dateISO: string | undefined): string | null {
+  if (!dateISO) return null;
+  const [y, m, d] = dateISO.slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][
+    new Date(y, m - 1, d, 12).getDay()
+  ];
 }
 
 function isBeforeISO(left: string | undefined, right: string): boolean {
@@ -772,6 +821,107 @@ function statusModifier(
   };
 }
 
+function equipmentHasVisibleProof(
+  c: ActiveEquipmentConstraint,
+  visibleWeekDays: readonly ActiveProgramModifierVisibleDay[] | null | undefined,
+): boolean {
+  if (!visibleWeekDays?.length) return false;
+  const equipmentText = uniqueStrings([
+    ...c.tags.map(equipmentLabel),
+    c.mode === 'without' ? 'without' : 'only',
+  ]).join('|');
+  const tagPattern = equipmentText ? new RegExp(`\\b(${equipmentText})\\b`, 'i') : null;
+  return visibleWeekDays.some((day) => {
+    const text = workoutText(day);
+    if (!text) return false;
+    const hasAdjustment = /\b(replaced|swapped|removed|limited|available equipment|bodyweight|dumbbell|barbell|machine|cable|band)\b/i.test(text);
+    return hasAdjustment && (!tagPattern || tagPattern.test(text));
+  });
+}
+
+function equipmentModifierBody(
+  c: ActiveEquipmentConstraint,
+  affects: readonly ActiveProgramModifierAffect[],
+  visibleProof: boolean,
+): string {
+  const endDay = dayName(expiresAt(c));
+  const hasFuture = affects.includes('future_generation');
+  const hasCurrent = affects.includes('current_week') || affects.includes('current_day');
+  const until = endDay ? ` until ${endDay}` : '';
+
+  if (c.mode === 'only') {
+    const allowed = uniqueStrings(['bodyweight', ...c.tags]);
+    const bodyweightOnly = allowed.length === 1 && allowed[0] === 'bodyweight';
+    if (bodyweightOnly) {
+      return endDay
+        ? `Bodyweight-only training active until ${endDay}.`
+        : 'Bodyweight-only training stays active until you clear this.';
+    }
+
+    const options = equipmentList(allowed);
+    if (visibleProof) {
+      return `Limited equipment active. Visible sessions are using ${options} options where needed.`;
+    }
+    if (hasFuture && !hasCurrent) {
+      return `Limited equipment active. Future sessions will use ${options} options until you clear this.`;
+    }
+    return `Limited equipment active. Sessions will use ${options} options${until || ' this week'}.`;
+  }
+
+  const unavailable = uniqueStrings(c.tags.filter((tag) => tag !== 'bodyweight'));
+  const blocked = equipmentList(unavailable);
+  if (visibleProof) {
+    return `Limited equipment active. Visible sessions are avoiding ${blocked} where needed.`;
+  }
+  if (hasFuture && !hasCurrent) {
+    return `Limited equipment active. Future sessions will avoid ${blocked} until you clear this.`;
+  }
+  if (unavailable.length === 1) {
+    const label = equipmentLabel(unavailable[0]);
+    return `No ${label} available. ${capitaliseWords(label)} lifts will be swapped where needed.`;
+  }
+  return `Limited equipment active. Sessions will avoid ${blocked} where needed${until || ' this week'}.`;
+}
+
+function equipmentModifier(
+  c: ActiveEquipmentConstraint,
+  source: ActiveProgramModifierSource = 'active_constraint',
+  visibleWeekDays?: readonly ActiveProgramModifierVisibleDay[] | null,
+): ActiveProgramModifier {
+  const affects = modifierAffects(c, []);
+  const unavailable = uniqueStrings(c.tags.filter((tag) => tag !== 'bodyweight'));
+  const allowed = uniqueStrings(['bodyweight', ...c.tags]);
+  const title = c.mode === 'only' && allowed.length === 1 && allowed[0] === 'bodyweight'
+    ? 'Bodyweight-only training active'
+    : c.mode === 'without' && unavailable.length === 1
+      ? `No ${equipmentLabel(unavailable[0])} available`
+      : 'Limited equipment active';
+
+  return {
+    id: modifierId(source, c.id),
+    source,
+    sourceId: c.id,
+    type: 'coach_restriction',
+    title: modifierString(c, 'modifierTitle') ?? title,
+    body: modifierString(c, 'modifierBody') ??
+      equipmentModifierBody(c, affects, equipmentHasVisibleProof(c, visibleWeekDays)),
+    severity: c.severity,
+    affects,
+    actions: [
+      { kind: 'clear_adjustment', label: 'Clear adjustment' },
+      { kind: 'update_adjustment', label: 'Update' },
+    ],
+    payload: {
+      constraintId: c.id,
+      lifecycleKey: activeConstraintLifecycleKey(c, source),
+      mode: c.mode,
+      tags: [...c.tags],
+      expiresAt: expiresAt(c),
+      rebuildRequired: true,
+    },
+  };
+}
+
 function preferenceModifier(
   c: ActivePreferenceConstraint,
   source: ActiveProgramModifierSource = 'active_constraint',
@@ -990,6 +1140,8 @@ export function selectActiveProgramModifiers(
       if (constraint.exercise) activePreferenceExercises.add(constraint.exercise);
       if (constraint.alternative) activePreferenceAlternatives.add(constraint.alternative);
       addUnique(out, seen, preferenceModifier(constraint));
+    } else if (constraint.type === 'equipment') {
+      addUnique(out, seen, equipmentModifier(constraint, 'active_constraint', snapshot.visibleWeekDays));
     } else {
       addUnique(
         out,
@@ -1094,6 +1246,7 @@ export function clearActiveProgramModifier(
       clearedOverrideDates = removeOverridesForModifierSource(modifier.sourceId, existing);
       store.removeActiveConstraint(modifier.sourceId);
       if (existing.type === 'injury') removeInjuryOverridesForWeek(getMondayStr(0));
+      if (existing.type === 'equipment') rebuildRequired = true;
     } else if (store.activeInjury) {
       clearedOverrideDates = removeOverridesForModifierSource(modifier.sourceId, null);
       store.setActiveInjury(null);

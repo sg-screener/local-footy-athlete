@@ -7,16 +7,23 @@ import {
   selectActiveCoachNotes,
   clearActiveCoachNote,
 } from '../utils/activeCoachNotes';
+import { selectActiveProgramModifiers } from '../utils/activeProgramModifiers';
 import {
   buildBusyWeekConstraintFromIntent,
   buildFatigueConstraintFromIntent,
   buildSorenessConstraintFromIntent,
 } from '../utils/coachConstraintProducers';
+import {
+  buildActiveEquipmentConstraint,
+  resolveEquipmentAvailability,
+  upsertActiveEquipmentConstraint,
+} from '../utils/equipmentAvailability';
 import type { CoachIntent, CoachIntentKind } from '../utils/coachIntent';
 import { buildGenerationConstraintContext } from '../utils/generationConstraints';
 import {
   useCoachUpdatesStore,
   type ActiveConstraint,
+  type ActiveEquipmentConstraint,
   type ActivePreferenceConstraint,
 } from '../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../store/athletePreferencesStore';
@@ -411,6 +418,103 @@ console.log('\n[2c] expired and cleared chat constraints stop affecting the prog
       todayISO,
     }),
     undefined);
+}
+
+console.log('\n[2d] equipment constraints create truthful Coach Notes and clear with rebuild');
+{
+  resetStores();
+  const todayISO = '2026-07-06';
+  const profile = { trainingLocation: 'Commercial gym', equipment: ['Full Gym'] } as any;
+  const bodyweightOnly = buildActiveEquipmentConstraint({
+    id: 'equipment-bodyweight-only',
+    mode: 'only',
+    tags: ['bodyweight'],
+    source: 'chat',
+    nowISO: '2026-07-06T09:00:00.000Z',
+    scope: 'this_week',
+    modifierAffects: ['current_week'],
+  });
+  const upsertResult = upsertActiveEquipmentConstraint(bodyweightOnly);
+  const modifiers = selectActiveProgramModifiers({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    todayISO,
+  });
+  const notes = selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    todayISO,
+  });
+  const note = notes.find((candidate) => candidate.constraintId === bodyweightOnly.id);
+
+  eq('creating equipment constraint reports rebuild metadata', upsertResult.rebuildRequired, true);
+  ok('active equipment constraint creates visible Coach Note', Boolean(note));
+  eq('equipment note has valid modifierAffects',
+    modifiers.find((modifier) => modifier.sourceId === bodyweightOnly.id)?.affects,
+    ['current_week']);
+  ok('bodyweight-only copy is truthful',
+    /Bodyweight-only training active until Sunday/.test(note?.body ?? ''),
+    note?.body);
+
+  const clearResult = clearActiveCoachNote(note?.id ?? '');
+  eq('clearing equipment note reports rebuild metadata', clearResult.rebuildRequired, true);
+  eq('clearing equipment note clears backing constraint', useCoachUpdatesStore.getState().activeConstraints, []);
+  eq('no orphan equipment note after clear',
+    selectActiveCoachNotes({ activeConstraints: useCoachUpdatesStore.getState().activeConstraints, todayISO }),
+    []);
+  ok('cleared equipment constraint no longer affects resolved availability',
+    resolveEquipmentAvailability(profile, useCoachUpdatesStore.getState().activeConstraints, todayISO).includes('barbell'));
+
+  const noBarbell = buildActiveEquipmentConstraint({
+    id: 'equipment-no-barbell',
+    mode: 'without',
+    tags: ['barbell'],
+    source: 'tap',
+    nowISO: '2026-07-06T09:00:00.000Z',
+    scope: 'open_ended',
+    modifierAffects: ['current_week', 'future_generation'],
+  });
+  useCoachUpdatesStore.getState().setActiveConstraints([noBarbell]);
+  const noBarbellNote = selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    todayISO,
+  })[0];
+  eq('without-barbell note title is truthful', noBarbellNote.title, 'No barbell available');
+  ok('without-barbell note copy is truthful future-tense',
+    /Barbell lifts will be swapped where needed/.test(noBarbellNote.body),
+    noBarbellNote.body);
+
+  const futureOnly = buildActiveEquipmentConstraint({
+    id: 'equipment-future-db-only',
+    mode: 'only',
+    tags: ['dumbbells'],
+    source: 'system',
+    nowISO: '2026-07-06T09:00:00.000Z',
+    scope: 'open_ended',
+    modifierAffects: ['future_generation'],
+  });
+  useCoachUpdatesStore.getState().setActiveConstraints([futureOnly]);
+  const futureNote = selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    todayISO,
+  })[0];
+  ok('no current visible proof uses future-tense copy',
+    /Future sessions will use bodyweight\/dumbbell options until you clear this/.test(futureNote.body),
+    futureNote.body);
+  ok('future-only copy does not falsely claim a completed swap',
+    !/\b(swapped|replaced|removed)\b/i.test(futureNote.body),
+    futureNote.body);
+
+  const expired = {
+    ...bodyweightOnly,
+    id: 'equipment-expired',
+    expiresAt: '2026-07-05',
+  } as ActiveEquipmentConstraint;
+  eq('expired equipment constraint does not show note',
+    selectActiveCoachNotes({ activeConstraints: [expired], todayISO }),
+    []);
+
+  eq('normal baseline equipment setup does not create persistent note',
+    selectActiveCoachNotes({ onboardingData: profile, todayISO }),
+    []);
 }
 
 console.log('\n[3] clearing one injury leaves other active injuries alone');

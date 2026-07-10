@@ -1,8 +1,11 @@
 import type { EquipmentTag } from '../data/exercisePools';
+import {
+  useCoachUpdatesStore,
+  type ActiveEquipmentConstraint,
+} from '../store/coachUpdatesStore';
 import type {
   ActiveConstraint,
   ActiveConstraintModifierAffect,
-  ActiveEquipmentConstraint,
 } from '../store/coachUpdatesStore';
 import type { OnboardingData, TrainingLocation } from '../types/domain';
 import type { EquipmentClass } from './loadEstimation';
@@ -164,6 +167,21 @@ export function buildActiveEquipmentConstraint(args: {
     rules: [],
     safeFocus: [],
     advice: [],
+  };
+}
+
+export function upsertActiveEquipmentConstraint(
+  constraint: ActiveEquipmentConstraint,
+): {
+  constraint: ActiveEquipmentConstraint;
+  modifierId: string;
+  rebuildRequired: true;
+} {
+  useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
+  return {
+    constraint,
+    modifierId: `program-modifier:active_constraint:${constraint.id}`,
+    rebuildRequired: true,
   };
 }
 
