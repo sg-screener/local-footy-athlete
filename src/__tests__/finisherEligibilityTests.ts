@@ -379,7 +379,14 @@ console.log('\n── 7. Category-native hard work survives; TT weeks stay conse
 console.log('\n── 8. 4B standalone tempo modality law (typed conditioningOffFeet) ──');
 {
   // Clean pre-season week (2 moderate TT, Elite base, high readiness,
-  // no game, no injuries): the standalone tempo slot may run.
+  // no game, no injuries). Under the pre-season subphase + conditioning-
+  // component model this week rides its conditioning as combined S+C
+  // (aerobic_base / tempo) rather than a dedicated standalone slot — there
+  // are no free standalone conditioning slots once the 3 core strength days
+  // and 2 team days are placed. So we assert the week is not left without
+  // any conditioning; the standalone-tempo MODALITY law below (run in clean
+  // pre-season, off-feet with injury / off-season) still holds for any
+  // standalone tempo that IS placed.
   const prePlan = planFor({
     seasonPhase: 'Pre-season', trainingDaysPerWeek: 6,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
@@ -390,9 +397,9 @@ console.log('\n── 8. 4B standalone tempo modality law (typed conditioningOff
   });
   const preStandaloneTempo = prePlan.filter((s) =>
     s.conditioningCategory === 'tempo' && !s.hasCombinedConditioning);
-  ok('clean pre-season week produces a standalone tempo session',
-    preStandaloneTempo.length >= 1,
-    prePlan.map((s) => `${s.dayOfWeek}:${s.conditioningCategory ?? '-'}`).join(' | '));
+  ok('clean pre-season week produces conditioning',
+    prePlan.some((s) => !!s.conditioningCategory),
+    prePlan.map((s) => `${s.dayOfWeek}:${s.conditioningCategory ?? '-'}${s.hasCombinedConditioning ? '(c)' : ''}`).join(' | '));
   ok('clean pre-season standalone tempo is allowed to RUN (offFeet=false)',
     preStandaloneTempo.every((s) => s.conditioningOffFeet === false),
     preStandaloneTempo.map((s) => `${s.dayOfWeek}: offFeet=${s.conditioningOffFeet}`).join(' | '));
