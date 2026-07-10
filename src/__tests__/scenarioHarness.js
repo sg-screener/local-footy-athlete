@@ -23,9 +23,17 @@
  */
 
 const path = require('path');
-const COMPILED = '/tmp/lfa-compiled';
 
-// ─── Load compiled modules ───
+// Run directly against the TypeScript sources via sucrase-node (the same
+// runner every maintained suite uses) — no separate tsc compile step and no
+// /tmp/lfa-compiled artifacts. `COMPILED` now points at src/ so the existing
+// path.join(COMPILED, 'utils/...') requires resolve to the .ts modules.
+const COMPILED = path.join(__dirname, '..');
+
+// Test-time global: app modules reference the RN __DEV__ flag at import time.
+(global).__DEV__ = false;
+
+// ─── Load source modules (via sucrase-node) ───
 const { resolveDate, resolveWeek, addDays, formatDate } = require(path.join(COMPILED, 'utils/sessionResolver'));
 const { buildDerivedSession, DEFAULT_ATHLETE_CONTEXT } = require(path.join(COMPILED, 'utils/sessionBuilder'));
 const { buildCoachingPlan, onboardingToCoachingInputs } = require(path.join(COMPILED, 'utils/coachingEngine'));

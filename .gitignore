@@ -15,3 +15,8 @@ supabase/.temp/
 web-build/
 .env
 .env.local
+
+# Test-harness build output — regenerated, never committed. The maintained
+# test scripts run TypeScript directly via sucrase-node; this only appears if
+# the legacy tsc compile is invoked manually.
+.qa-compiled/
