@@ -14,7 +14,10 @@ import {
   SpeedBlock,
   WorkoutType,
 } from '../types/domain';
-import type { SessionAllocation } from '../utils/coachingEngine';
+import {
+  classifyGenerationSession,
+  type SessionAllocation,
+} from '../utils/coachingEngine';
 import { logger } from '../utils/logger';
 import { addDaysISO, computeBlockBounds } from '../utils/programBlockState';
 import {
@@ -1453,31 +1456,15 @@ export function buildWorkoutsFromCoach(
     return d.toISOString().split('T')[0];
   }
 
-  // Infer strength region from a SessionAllocation.focus string on
-  // combined S+C days. Used by the conditioning builder to force
-  // ergometer modality when pairing a lower lift with sprint/glycolytic
-  // work, so we don't hammer the legs twice in one session.
-  // Mirrors the keyword checks in coachingEngine.getSessionRegion, scoped
-  // to the strength fragment (everything before the "+ ... finisher" suffix).
-  function inferStrengthRegionFromFocus(
-    focus: string | undefined,
+  // The conditioning builder uses the shared generation projection to decide
+  // whether a combined day needs an off-feet modality. Typed strengthPattern
+  // wins; legacy focus text is handled by the same adapter fallback.
+  function strengthRegionForPlanEntry(
+    entry: SessionAllocation,
   ): 'lower' | 'upper' | 'full' | undefined {
-    if (!focus) return undefined;
-    const strengthPart = focus.split('+')[0].toLowerCase();
-    if (
-      strengthPart.includes('lower body') ||
-      strengthPart.includes('hip-dominant lower') ||
-      strengthPart.includes('squat') ||
-      strengthPart.includes('hinge') ||
-      strengthPart.includes('leg')
-    ) return 'lower';
-    if (
-      strengthPart.includes('upper body') ||
-      strengthPart.includes('push') ||
-      strengthPart.includes('pull')
-    ) return 'upper';
-    if (strengthPart.includes('full body')) return 'full';
-    return undefined;
+    const region = classifyGenerationSession(entry).strengthRegion;
+    if (region === 'full_body') return 'full';
+    return region === 'lower' || region === 'upper' ? region : undefined;
   }
 
   function normalizeGeneratedWorkoutType(
@@ -1653,7 +1640,7 @@ export function buildWorkoutsFromCoach(
     // "hip-dominant" / "squat" / "hinge" / "leg" all count as lower.
     const strengthRegion: 'lower' | 'upper' | 'full' | undefined =
       !isCombined ? undefined
-      : inferStrengthRegionFromFocus(planEntry.focus);
+      : strengthRegionForPlanEntry(planEntry);
 
     // ── Assign feel (density/psychological character) per session ──
     // Deterministic per date + category so sessions feel distinct but
@@ -2064,7 +2051,7 @@ export function buildWorkoutsFromCoach(
         ?? buildConditioningTemplate(condExName, dateStr, {
           combined: true,
           attachedConditioningKind: planEntry.attachedConditioningKind ?? 'finisher',
-          strengthRegion: inferStrengthRegionFromFocus(planEntry.focus),
+          strengthRegion: strengthRegionForPlanEntry(planEntry),
           feel: planEntry.conditioningFeel as ConditioningFeel | undefined,
           ergModality: planEntry.ergModality as ErgModality | undefined,
           variant: planEntry.conditioningVariant as ConditioningVariant | undefined,

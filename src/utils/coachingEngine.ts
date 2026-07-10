@@ -5581,9 +5581,16 @@ export function enforceInSeasonPushPullBalance(
 // same-region exposures. Optional sessions still count — even light
 // upper accessories contribute to upper-body fatigue accumulation.
 
-type SessionRegion = 'upper' | 'lower' | 'neutral';
+export type GenerationAdjacencyRegion = 'upper' | 'lower' | 'neutral';
 
-function getSessionRegion(session: SessionAllocation): SessionRegion {
+/**
+ * Region used by the generation adjacency policy. Main-strength region comes
+ * from the shared Bible classifier; accessory-only fatigue remains an
+ * explicitly separate placement concern.
+ */
+export function classifyGenerationAdjacencyRegion(
+  session: SessionAllocation,
+): GenerationAdjacencyRegion {
   const focus = session.focus.toLowerCase();
 
   // Recovery tier is always neutral — it's restorative, not loading
@@ -5676,7 +5683,7 @@ function strengthSequenceKind(session: SessionAllocation): StrengthSequenceKind 
   }
 }
 
-function strengthBodyRegion(kind: StrengthSequenceKind): SessionRegion {
+function strengthBodyRegion(kind: StrengthSequenceKind): GenerationAdjacencyRegion {
   switch (kind) {
     case 'squat':
     case 'hinge':
@@ -6198,9 +6205,9 @@ function enforceAdjacentRegionLimit(
     let changed = false;
 
     for (let i = 2; i < result.length; i++) {
-      const regionA = getSessionRegion(result[i - 2]);
-      const regionB = getSessionRegion(result[i - 1]);
-      const regionC = getSessionRegion(result[i]);
+      const regionA = classifyGenerationAdjacencyRegion(result[i - 2]);
+      const regionB = classifyGenerationAdjacencyRegion(result[i - 1]);
+      const regionC = classifyGenerationAdjacencyRegion(result[i]);
 
       // Only care about non-neutral runs of 3
       if (regionA === 'neutral' || regionB === 'neutral' || regionC === 'neutral') continue;
@@ -6264,7 +6271,7 @@ function enforceAdjacentRegionLimit(
         // teamDayNumSet so the guard holds even though `isTeamDay` isn't
         // populated on the SessionAllocation at this stage.
         if (isTeamDay(result[i]) !== isTeamDay(result[j])) continue;
-        const candidateRegion = getSessionRegion(result[j]);
+        const candidateRegion = classifyGenerationAdjacencyRegion(result[j]);
         if (candidateRegion === offendingRegion) continue;
 
         const candidateDayNum = dayNameToNumber(result[j].dayOfWeek || '');
@@ -6274,8 +6281,8 @@ function enforceAdjacentRegionLimit(
         const jNext = j < result.length - 1 ? result[j + 1] : null;
         const jPrevDay = jPrev ? dayNameToNumber(jPrev.dayOfWeek || '') : -99;
         const jNextDay = jNext ? dayNameToNumber(jNext.dayOfWeek || '') : -99;
-        const jPrevRegion = jPrev ? getSessionRegion(jPrev) : 'neutral';
-        const jNextRegion = jNext ? getSessionRegion(jNext) : 'neutral';
+        const jPrevRegion = jPrev ? classifyGenerationAdjacencyRegion(jPrev) : 'neutral';
+        const jNextRegion = jNext ? classifyGenerationAdjacencyRegion(jNext) : 'neutral';
 
         const adjBefore = (candidateDayNum - jPrevDay === 1) && jPrevRegion === offendingRegion;
         const adjAfter = (jNextDay - candidateDayNum === 1) && jNextRegion === offendingRegion;

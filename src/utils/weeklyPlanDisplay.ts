@@ -28,7 +28,9 @@
  * flavour map aligns with these categories).
  */
 
-import { splitSessionName } from './sessionNaming';
+import type { Workout, WorkoutType } from '../types/domain';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import { hasConditioningText, splitSessionName } from './sessionNaming';
 import { getTemplateCategory } from './sessionBuilder';
 
 export type ConditioningDisplayCategory =
@@ -47,21 +49,116 @@ interface WeeklyDisplayWorkout {
   exercises?: Array<{ exercise?: { name?: string } | null } | null> | null;
 }
 
-// Taxonomy membership by name. Checked in this order — Flush Out before
-// the generic easy patterns (flush names contain "easy"), Sprint before
-// Hard ("Max Effort Sprint Accumulation" would otherwise match "max").
+// Flush Out is a weekly-plan presentation distinction inside the kernel's
+// aerobic_base category, not a separate Bible exposure classification.
 const FLUSH_OUT = /flush\s*out|easy aerobic flush/i;
-const SPRINT = /sprint/i;
-const HARD =
-  /emom|metcon|tabata|mas\s*15|repeat|fartlek|4\s*x\s*4|vo2|1km|work.?capacity/i;
-const AEROBIC =
-  /nasal|zone\s*2|easy (?:bike|row|ski|swim|spin)|flush run|long run|aerobic/i;
+// Old work-capacity cards can lack the typed conditioningCategory that new
+// templates carry. Feed that one legacy display signal into the adapter.
+const LEGACY_WORK_CAPACITY = /\bemom\b|work.?capacity/i;
 
 function conditioningTextFor(workout: WeeklyDisplayWorkout): string {
   const names = (workout.exercises ?? [])
     .map((row) => row?.exercise?.name ?? '')
     .filter(Boolean);
   return [workout.name ?? '', ...names].join(' ');
+}
+
+function templateCategoryFor(
+  workout: WeeklyDisplayWorkout,
+): Workout['conditioningCategory'] | undefined {
+  const names = [
+    workout.name ?? '',
+    ...(workout.exercises ?? []).map((row) => row?.exercise?.name ?? ''),
+  ].filter(Boolean);
+  for (const name of names) {
+    const category = getTemplateCategory(name);
+    if (category) return category;
+  }
+  return undefined;
+}
+
+function asVisibleWorkout(
+  input: WeeklyDisplayWorkout,
+  assumeConditioning: boolean,
+): Workout {
+  const name = String(input.name ?? '').trim() || 'Conditioning';
+  const text = conditioningTextFor(input);
+  const typedCategory = input.conditioningCategory as Workout['conditioningCategory'] | undefined;
+  const conditioningCategory =
+    typedCategory ??
+    templateCategoryFor(input) ??
+    (LEGACY_WORK_CAPACITY.test(text) ? 'glycolytic' : undefined);
+  const hasConditioningSignal =
+    assumeConditioning ||
+    !!conditioningCategory ||
+    !!input.conditioningFlavour ||
+    hasConditioningText(text);
+  const typedStandaloneConditioning =
+    !input.hasCombinedConditioning &&
+    (!!conditioningCategory || !!input.conditioningFlavour);
+  const workoutType = (
+    input.sessionTier === 'recovery' || input.workoutType === 'Recovery'
+      ? 'Recovery'
+      : typedStandaloneConditioning
+        ? 'Conditioning'
+        : input.workoutType ?? (hasConditioningSignal ? 'Conditioning' : 'Strength')
+  ) as WorkoutType;
+  const hardConditioning =
+    conditioningCategory === 'vo2' ||
+    conditioningCategory === 'glycolytic' ||
+    conditioningCategory === 'sprint';
+
+  return {
+    id: 'weekly-plan-display-classification',
+    microcycleId: 'weekly-plan-display-classification',
+    dayOfWeek: 1,
+    name,
+    description: name,
+    durationMinutes: 30,
+    intensity: hardConditioning ? 'High' : input.sessionTier === 'recovery' ? 'Light' : 'Moderate',
+    workoutType,
+    sessionTier: input.sessionTier as Workout['sessionTier'],
+    hasCombinedConditioning: input.hasCombinedConditioning,
+    conditioningFlavour: input.conditioningFlavour as Workout['conditioningFlavour'],
+    conditioningCategory,
+    exercises: (input.exercises ?? []).filter(Boolean) as Workout['exercises'],
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
+function conditioningClassification(
+  workout: WeeklyDisplayWorkout,
+  assumeConditioning: boolean,
+) {
+  const visibleWorkout = asVisibleWorkout(workout, assumeConditioning);
+  const hasStructuredClassification =
+    !!workout.conditioningCategory ||
+    !!workout.conditioningFlavour ||
+    !!templateCategoryFor(workout) ||
+    LEGACY_WORK_CAPACITY.test(conditioningTextFor(workout));
+  if (hasStructuredClassification) {
+    return classifyVisibleSession(visibleWorkout);
+  }
+
+  // Legacy display inputs can have only a descriptive name plus the generic
+  // Conditioning type. Probe the name through the kernel before its generic
+  // intensity fallback; typed fields above always take priority.
+  const nameClassification = classifyVisibleSession({
+    ...visibleWorkout,
+    workoutType: 'Technical',
+    conditioningCategory: undefined,
+    conditioningFlavour: undefined,
+  });
+  if (nameClassification.units.some((unit) =>
+    unit.category === 'aerobic_base' ||
+    unit.category === 'tempo_conditioning' ||
+    unit.category === 'hard_conditioning' ||
+    unit.category === 'sprint'
+  )) {
+    return nameClassification;
+  }
+  return classifyVisibleSession(visibleWorkout);
 }
 
 /** Category for a conditioning-family workout, from its name + exercise
@@ -73,24 +170,9 @@ export function classifyConditioningWorkout(
   const text = conditioningTextFor(workout);
 
   if (FLUSH_OUT.test(text)) return 'Flush Out';
-  if (SPRINT.test(text)) return 'Sprint Work';
-  if (HARD.test(text)) return 'Hard Conditioning';
-  if (AEROBIC.test(text)) return 'Aerobic Base';
-
-  // Engine classification (per-exercise template names).
-  for (const row of workout.exercises ?? []) {
-    const category = row?.exercise?.name
-      ? getTemplateCategory(row.exercise.name)
-      : null;
-    if (category === 'sprint') return 'Sprint Work';
-    if (category === 'vo2' || category === 'glycolytic') return 'Hard Conditioning';
-    if (category === 'aerobic_base') return 'Aerobic Base';
-  }
-  const workoutCategory = workout.conditioningCategory;
-  if (workoutCategory === 'sprint') return 'Sprint Work';
-  if (workoutCategory === 'vo2' || workoutCategory === 'glycolytic') {
-    return 'Hard Conditioning';
-  }
+  const categories = conditioningClassification(workout, true).categories;
+  if (categories.includes('sprint')) return 'Sprint Work';
+  if (categories.includes('hard_conditioning')) return 'Hard Conditioning';
 
   return 'Aerobic Base';
 }
@@ -98,12 +180,12 @@ export function classifyConditioningWorkout(
 /** Is this a STANDALONE conditioning day (not combined, not recovery)? */
 function isStandaloneConditioning(workout: WeeklyDisplayWorkout): boolean {
   if (workout.hasCombinedConditioning) return false;
-  const workoutType = String(workout.workoutType ?? '');
-  if (workoutType === 'Recovery') return false;
-  return (
-    /conditioning|aerobic|tempo|speed|hiit|flush|sprint|interval|run|metcon|mas/i.test(
-      workoutType,
-    ) || !!workout.conditioningFlavour
+  if (workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery') return false;
+  return conditioningClassification(workout, false).units.some((unit) =>
+    unit.category === 'aerobic_base' ||
+    unit.category === 'tempo_conditioning' ||
+    unit.category === 'hard_conditioning' ||
+    unit.category === 'sprint'
   );
 }
 

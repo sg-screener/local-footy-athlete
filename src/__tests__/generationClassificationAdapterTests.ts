@@ -6,6 +6,7 @@
 
 import {
   buildCoachingPlan,
+  classifyGenerationAdjacencyRegion,
   classifyGenerationSession,
   onboardingToCoachingInputs,
   type GenerationSessionClassificationInput,
@@ -115,6 +116,15 @@ for (const test of [
 eq('complete beginner upper follows kernel context shift',
   classify({ focus: 'Upper', strengthPattern: 'push' }, { experienceLevel: 'Complete beginner' }).stressLevel,
   'high');
+eq('generation adjacency reporting shares typed main-strength regions', [
+  classifyGenerationAdjacencyRegion({ focus: 'misleading text', tier: 'core', strengthPattern: 'lower' }),
+  classifyGenerationAdjacencyRegion({ focus: 'misleading text', tier: 'core', strengthPattern: 'push' }),
+  classifyGenerationAdjacencyRegion({ focus: 'misleading text', tier: 'core', strengthPattern: 'full_body' }),
+], ['lower', 'upper', 'neutral']);
+eq('accessory fatigue remains a separate adjacency policy', [
+  classifyGenerationAdjacencyRegion({ focus: 'Gunshow arm pump', tier: 'optional' }),
+  classifyGenerationAdjacencyRegion({ focus: 'Low-fatigue accessories - trunk, calves, groin, shoulder prehab', tier: 'optional' }),
+], ['upper', 'neutral']);
 
 console.log('\n[2] team and fixture anchors use shared stress/exposure rules');
 {

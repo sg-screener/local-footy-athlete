@@ -7,8 +7,10 @@ import {
   type ValidatorDayInput,
   type WeekFinding,
 } from '../rules/weekStructureValidator';
-import { classifyDaySessions, type SessionCategory } from '../rules/sessionTaxonomy';
-import { classifySessionStress, type StressLevel } from '../rules/stressClassification';
+import {
+  classifyVisibleSession,
+  type ClassifiedVisibleSessionUnit,
+} from '../rules/sessionClassificationAdapter';
 
 export type ProgramEditRiskDecision = 'allow' | 'confirm' | 'block';
 export type ProgramEditRiskLevel = FindingSeverity;
@@ -132,14 +134,8 @@ function workoutsByDate(days: readonly ValidatorDayInput[]): Map<string, Workout
 function workoutUnits(
   workout: Workout,
   profile: ValidateProgramWeekInput['profile'],
-): Array<{
-  category: SessionCategory;
-  stress: StressLevel;
-}> {
-  return classifyDaySessions(workout).map((unit) => ({
-    category: unit.category,
-    stress: classifySessionStress(unit, workout, profile ?? {}),
-  }));
+): ClassifiedVisibleSessionUnit[] {
+  return classifyVisibleSession(workout, profile ?? {}).units;
 }
 
 function observedAnchorDates(input: ValidateProgramWeekInput, category: 'game' | 'team_training'): string[] {
@@ -147,7 +143,9 @@ function observedAnchorDates(input: ValidateProgramWeekInput, category: 'game' |
   for (const day of input.days) {
     if (day.workouts.some((workout) => (
       Boolean(workout) &&
-      classifyDaySessions(workout).some((unit) => unit.category === category)
+      (category === 'game'
+        ? classifyVisibleSession(workout).anchors.game
+        : classifyVisibleSession(workout).anchors.teamTraining)
     ))) {
       dates.add(day.date);
     }
@@ -180,7 +178,10 @@ function hasAnchor(input: ValidateProgramWeekInput, anchor: { kind: 'game' | 'te
   ));
 }
 
-function isHardStopCategory(category: SessionCategory, stress: StressLevel): boolean {
+function isHardStopCategory(
+  category: ClassifiedVisibleSessionUnit['category'],
+  stress: ClassifiedVisibleSessionUnit['stress'],
+): boolean {
   return (
     category === 'lower_strength' ||
     category === 'hard_conditioning' ||
@@ -189,7 +190,7 @@ function isHardStopCategory(category: SessionCategory, stress: StressLevel): boo
   );
 }
 
-function hardStopLabel(category: SessionCategory): string {
+function hardStopLabel(category: ClassifiedVisibleSessionUnit['category']): string {
   return category.replace(/_/g, ' ');
 }
 

@@ -21,7 +21,10 @@
  */
 
 import type { Invariant, InvariantContext } from './types';
-import type { SessionAllocation } from '../../utils/coachingEngine';
+import {
+  classifyGenerationAdjacencyRegion as classifyRegion,
+  type SessionAllocation,
+} from '../../utils/coachingEngine';
 
 const DAY_ORDER: ReadonlyArray<string> = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
@@ -30,12 +33,6 @@ const DAY_ORDER: ReadonlyArray<string> = [
 const DAY_NUM: Record<string, number> = {
   Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
 };
-
-// ─────────────────────────────────────────────────────────────────
-// Region classification (mirrors weekPlanQA.ts)
-// ─────────────────────────────────────────────────────────────────
-
-type Region = 'upper' | 'lower' | 'neutral';
 
 /**
  * Classify a session's *strength exposure* — returns the specific movement
@@ -80,59 +77,6 @@ function classifyStrengthExposure(s: SessionAllocation): 'lower' | 'push' | 'pul
     case 'full_body': return 'lower';
     default: return null;
   }
-}
-
-function classifyRegion(s: SessionAllocation): Region {
-  const focus = (s.focus || '').toLowerCase();
-  if (s.tier === 'recovery') return 'neutral';
-
-  // Low-fatigue accessory work spans both regions (trunk, calves, groin,
-  // shoulder prehab) and is intentionally region-NEUTRAL — it must not
-  // trip the "max 2 consecutive same-region" guard. Mirrors the engine's
-  // classifyFocusRegion (coachingEngine.ts ~line 3446) so invariants and
-  // the runtime adjacency pass agree on what counts as a region exposure.
-  if (focus.startsWith('low-fatigue accessor')) return 'neutral';
-
-  // Strong region signals come FIRST — engine often produces strings like
-  // "Hip-dominant lower (...) + tempo conditioning finisher" where the
-  // primary stimulus is lower body and conditioning is just a finisher.
-  // Classify by primary stimulus, not by the presence of a finisher tag.
-  if (
-    focus.includes('lower body') ||
-    focus.includes('lower (') ||
-    focus.includes('squat') ||
-    focus.includes('hinge') ||
-    focus.includes('hip-dominant') ||
-    focus.includes('quad-dominant') ||
-    focus.includes('leg') ||
-    focus.includes('rdl') ||
-    focus.includes('hip thrust')
-  ) return 'lower';
-
-  if (
-    focus.includes('upper body') ||
-    focus.includes('upper (') ||
-    focus.includes('pull') ||
-    focus.includes('push') ||
-    focus.includes('arm') ||
-    focus.includes('pump') ||
-    focus.includes('bicep') ||
-    focus.includes('tricep') ||
-    focus.includes('accessor') ||
-    focus.includes('prehab') ||
-    focus.includes('trunk') ||
-    focus.includes('shoulder') ||
-    focus.includes('hypertrophy')
-  ) return 'upper';
-
-  // Only after region checks fail do we fall through to neutral signals.
-  if (focus.includes('full body')) return 'neutral';
-  if (focus.includes('conditioning') || focus.includes('aerobic')) return 'neutral';
-  if (focus.includes('game') || focus.includes('sprint') || focus.includes('mas ') || focus.includes('metcon')) return 'neutral';
-  if (focus.includes('flush') || focus.includes('easy ') || focus.includes('tempo')) return 'neutral';
-  if (focus.includes('flog') || focus.includes('circuit')) return 'neutral';
-  if (focus.includes('mobility') || focus.includes('foam') || focus.includes('recovery') || focus.includes('rest')) return 'neutral';
-  return 'neutral';
 }
 
 function sorted(plan: InvariantContext['plan']): SessionAllocation[] {

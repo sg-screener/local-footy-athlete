@@ -21,6 +21,7 @@ declare global {
 
 import {
   buildCoachingPlan,
+  classifyGenerationSession,
   onboardingToCoachingInputs,
   type CoachingInputs,
   type CoachingPlan,
@@ -119,38 +120,11 @@ function monFirstDayIndex(value: string | undefined): number {
 // REGION CLASSIFICATION (shared rules-kernel adapter)
 // ═══════════════════════════════════════════════════
 
-function allocationAsVisibleWorkout(session: SessionAllocation): Workout {
-  const workout: Workout & { isTeamDay?: boolean } = {
-    id: 'qa-classification',
-    microcycleId: 'qa-classification',
-    dayOfWeek: dayIndex(session.dayOfWeek),
-    name: session.focus,
-    description: session.focus,
-    durationMinutes: session.tier === 'recovery' ? 30 : 45,
-    intensity: session.stressLevel === 'high' || session.isHardExposure
-      ? 'High'
-      : session.stressLevel === 'low' || session.tier === 'optional'
-        ? 'Light'
-        : 'Moderate',
-    workoutType: session.tier === 'recovery' ? 'Recovery' : 'Strength',
-    sessionTier: session.tier,
-    hasCombinedConditioning: session.hasCombinedConditioning,
-    attachedConditioningKind: session.attachedConditioningKind,
-    conditioningFlavour: session.conditioningFlavour,
-    conditioningCategory: session.conditioningCategory,
-    speedBlock: session.speedBlock,
-    exercises: [],
-    createdAt: '',
-    updatedAt: '',
-  };
-  if (session.isTeamDay) workout.isTeamDay = true;
-  return workout;
-}
-
 function classifyRegion(session: SessionAllocation | Workout | null): SessionRegion {
   if (!session) return 'none';
-  const workout = 'focus' in session ? allocationAsVisibleWorkout(session) : session;
-  return classifyVisibleSession(workout).strengthRegion;
+  return 'focus' in session
+    ? classifyGenerationSession(session).strengthRegion
+    : classifyVisibleSession(session).strengthRegion;
 }
 
 function regionLabel(r: SessionRegion): string {

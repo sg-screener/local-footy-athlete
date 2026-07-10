@@ -3,7 +3,7 @@ import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
-import { classifyDaySessions } from '../rules/sessionTaxonomy';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { ValidateProgramWeekInput, ValidatorDayInput } from '../rules/weekStructureValidator';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
@@ -67,7 +67,7 @@ function workoutLooksLikeGame(workout: Workout | null | undefined): boolean {
   if (workout.workoutType === 'Game' || (workout as { sessionTier?: unknown }).sessionTier === 'game') {
     return true;
   }
-  return classifyDaySessions(workout).some((unit) => unit.category === 'game');
+  return classifyVisibleSession(workout).anchors.game;
 }
 
 function gameDatesFromWeek(week: readonly ResolvedDay[]): string[] {
@@ -81,7 +81,7 @@ function teamTrainingDatesFromWeek(week: readonly ResolvedDay[]): string[] {
   return week
     .filter((day) =>
       day.workout
-        ? classifyDaySessions(day.workout).some((unit) => unit.category === 'team_training')
+        ? classifyVisibleSession(day.workout).anchors.teamTraining
         : false,
     )
     .map((day) => day.date)

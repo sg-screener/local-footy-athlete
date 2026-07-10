@@ -119,6 +119,13 @@ eq('unknown easy conditioning defaults to Aerobic Base',
 eq('engine category field wins when names are silent',
   classifyConditioningWorkout({ name: 'Session 3', conditioningCategory: 'glycolytic' } as any),
   'Hard Conditioning');
+eq('typed category beats a misleading legacy name',
+  classifyConditioningWorkout({
+    name: 'Sprint-labelled easy bike',
+    workoutType: 'Conditioning',
+    conditioningCategory: 'aerobic_base',
+  } as any),
+  'Aerobic Base');
 
 console.log(`\nweeklyPlanDisplayTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
