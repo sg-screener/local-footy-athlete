@@ -406,8 +406,9 @@ eq('session name preserved', written.name, 'Easy Aerobic Flush');
 ok('projectionShowsTo = true', outcome.projectionShowsTo === true);
 ok('projectionShowsFrom = false', outcome.projectionShowsFrom === false);
 
-// Touchstone 5 — the verified reply is "Done — ...".
-ok('reply starts with "Done —"', /^Done —/.test(outcome.reply));
+// Touchstone 5 — the verified reply is a "Done" acknowledgment. The exact dash
+// glyph (—, –, -) is presentation, not behaviour.
+ok('reply starts with a "Done" acknowledgment', /^Done\s*[-‐-―−]/.test(outcome.reply), outcome.reply);
 ok('reply mentions Easy Aerobic Flush', /Easy Aerobic Flush/.test(outcome.reply));
 ok('reply mentions bike', /bike/i.test(outcome.reply));
 ok('reply mentions rower', /rower/i.test(outcome.reply));

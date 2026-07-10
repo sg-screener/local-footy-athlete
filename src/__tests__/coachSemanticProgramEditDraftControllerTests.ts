@@ -43,8 +43,14 @@ import {
   getResolvedVisibleProgramForDate,
 } from '../utils/visibleProgramReadModel';
 
-const TODAY = '2026-06-24';
+// "Today" is anchored to the FIRST day of the fixture week (Monday) so every
+// referenced target day (Mon–Thu) is today-or-future. Previously TODAY was
+// Wednesday while drafts targeted Monday/Tuesday — internally-past dates that
+// (correctly) trip the controller's stale-target-date clarifier and masked the
+// draft-carry / defer / supersede behaviour these tests actually exercise. The
+// seeded smoke program is unchanged (its block still starts on this Monday).
 const MONDAY = '2026-06-22';
+const TODAY = MONDAY;
 const TUESDAY = '2026-06-23';
 const WEDNESDAY = '2026-06-24';
 const THURSDAY = '2026-06-25';
