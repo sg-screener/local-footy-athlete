@@ -520,7 +520,7 @@ export interface WeekScopedWorkoutOverlay {
   weekStart: string;
   weekEnd: string;
   anchorDate: string | null;
-  reason: 'one_off_game' | 'one_off_no_game';
+  reason: 'one_off_game' | 'one_off_no_game' | 'repeat_week';
   workoutsByDate: Record<string, Workout | null>;
   createdAt: string;
   updatedAt: string;
