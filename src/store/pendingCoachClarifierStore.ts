@@ -44,6 +44,7 @@ import type {
   CoachRevisionIntent,
   CoachRevisionProposal,
 } from '../utils/coachRevisionProposal';
+import type { ProgramEditRiskAssessment } from '../utils/programEditRiskAssessment';
 import type { DayOfWeek } from '../types/domain';
 
 /**
@@ -166,6 +167,11 @@ export interface PendingCoachRevisionProposalEnvelope {
   /** Accumulated clarification rounds, oldest first. The last entry has
    *  answer: null while its question is outstanding. */
   clarifications?: PendingCoachRevisionClarification[];
+  /** Risk warning accepted/awaiting acceptance for this exact proposal. */
+  riskConfirmation?: {
+    signature: string;
+    assessment: ProgramEditRiskAssessment;
+  };
 }
 
 export interface PendingClarificationSlot {

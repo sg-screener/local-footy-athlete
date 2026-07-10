@@ -100,6 +100,7 @@ import {
 import { getMondayForDate } from './sessionResolver';
 import {
   buildCoachRevisionDiff,
+  type CoachRevisionDiff,
   buildCoachRevisionWeekSnapshotFromProjectedDays,
   coachRevisionSectionBodySignature,
   snapshotProjectedDay,
@@ -123,6 +124,13 @@ import {
 import {
   applyCoachRevisionDateOverrides,
 } from './coachRevisionOverrideWriter';
+import {
+  assessProgramEditRisk,
+  type ProgramEditRiskAssessment,
+  type ProgramEditRiskFinding,
+  type ProgramEditRiskLevel,
+} from './programEditRiskAssessment';
+import type { ValidateProgramWeekInput, ValidatorDayInput } from '../rules/weekStructureValidator';
 import { logger } from './logger';
 
 export interface CoachTurnMessage {
@@ -318,6 +326,16 @@ function pendingDiagnosticSummary(pending: PendingCoachClarifier | null | undefi
             protectedRefs: pending.coachRevisionProposalEnvelope.partialIntent?.protectedRefs ?? [],
             clarificationRounds:
               pending.coachRevisionProposalEnvelope.clarifications?.length ?? 0,
+            riskConfirmation:
+              pending.coachRevisionProposalEnvelope.riskConfirmation
+                ? {
+                    signature: pending.coachRevisionProposalEnvelope.riskConfirmation.signature,
+                    decision: pending.coachRevisionProposalEnvelope.riskConfirmation.assessment.decision,
+                    highestLevel: pending.coachRevisionProposalEnvelope.riskConfirmation.assessment.highestLevel,
+                    ruleIds: pending.coachRevisionProposalEnvelope.riskConfirmation.assessment.findings
+                      .map((finding) => finding.ruleId),
+                  }
+                : null,
           }
         : null,
       storedProgramEdit: programEditDiagnosticSummary(pending.programEdit),
@@ -915,6 +933,7 @@ function pendingCoachRevisionContinuationId(args: {
 function pendingCoachRevisionEnvelopeFromProposal(args: {
   proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
   originalMessage: string;
+  riskConfirmation?: PendingCoachRevisionProposalEnvelope['riskConfirmation'];
 }): PendingCoachRevisionProposalEnvelope {
   return {
     source: 'semantic',
@@ -922,6 +941,7 @@ function pendingCoachRevisionEnvelopeFromProposal(args: {
     continuationId: pendingCoachRevisionContinuationId(args),
     partialIntent: args.proposal.userIntent,
     proposal: args.proposal,
+    riskConfirmation: args.riskConfirmation,
   };
 }
 
@@ -1012,19 +1032,36 @@ const COACH_REVISION_MAX_CLARIFY_ROUNDS = 3;
  *  (template replacements): store the FULL proposal so "yes" applies exactly
  *  what was offered — never a regeneration that could drift. */
 function capturePendingConfirmationFromCoachRevision(args: {
-  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'needs_confirmation' }>;
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
+  diff: CoachRevisionDiff;
   originalMessage: string;
+  riskAssessment?: ProgramEditRiskAssessment | null;
+  riskSignature?: string | null;
 }): { pending: Omit<PendingCoachClarifier, 'createdAt'>; question: string } {
-  const proposal = args.result.proposal;
+  const proposal = args.proposal;
+  const riskConfirmation =
+    args.riskAssessment && args.riskSignature
+      ? {
+          signature: args.riskSignature,
+          assessment: args.riskAssessment,
+        }
+      : undefined;
   const envelope = pendingCoachRevisionEnvelopeFromProposal({
     proposal,
     originalMessage: args.originalMessage,
+    riskConfirmation,
   });
-  const date = args.result.diff.changedDates[0] ?? proposal.scope.dates[0] ?? 'that day';
-  const addedTitle = args.result.diff.dateDiffs
+  const date = args.diff.changedDates[0] ?? proposal.scope.dates[0] ?? 'that day';
+  const addedTitle = args.diff.dateDiffs
     .flatMap((entry) => entry.sectionDiffs)
     .find((section) => section.kind === 'added')?.after?.title;
-  const question = `Want me to swap in ${addedTitle ?? 'that session'} on ${date}? (yes / no)`;
+  const riskOnlyPrompt = riskConfirmation && !addedTitle;
+  const baseQuestion = riskOnlyPrompt
+    ? 'I can make that change, but it adds risk to the week.'
+    : `Want me to swap in ${addedTitle ?? 'that session'} on ${date}? (yes / no)`;
+  const question = riskConfirmation
+    ? withCoachRevisionRiskWarning(baseQuestion, riskConfirmation.assessment)
+    : baseQuestion;
   const operation = coachRevisionPendingOperation(proposal.userIntent);
   return {
     question,
@@ -1046,7 +1083,9 @@ function capturePendingConfirmationFromCoachRevision(args: {
         proposedCandidate: { label: 'Yes', value: 'confirm', answerType: 'confirmation' },
         candidateOptions: ['Yes', 'No'],
         partialCoachRevision: envelope,
-        reason: 'coach_revision_requires_confirmation',
+        reason: riskConfirmation
+          ? 'coach_revision_risk_confirmation'
+          : 'coach_revision_requires_confirmation',
       },
     },
   };
@@ -1062,16 +1101,22 @@ function capturePendingConfirmationFromCoachRevision(args: {
  */
 function enterCoachRevisionConfirmationTransaction(args: {
   input: CoachTurnControllerInput;
-  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'needs_confirmation' }>;
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
+  diff: CoachRevisionDiff;
   originalMessage: string;
   route: string;
   referenceStatus: string | null;
   referenceTargetDate: string | null;
   referenceTargetName: string | null;
+  riskAssessment?: ProgramEditRiskAssessment | null;
+  riskSignature?: string | null;
 }): CoachTurnControllerResult {
   const confirmationPending = capturePendingConfirmationFromCoachRevision({
-    result: args.result,
+    proposal: args.proposal,
+    diff: args.diff,
     originalMessage: args.originalMessage,
+    riskAssessment: args.riskAssessment,
+    riskSignature: args.riskSignature,
   });
   usePendingCoachClarifierStore.getState().setPending(confirmationPending.pending);
   emitCoachTurnDiagnostic('pending_set_coach_revision_confirmation', {
@@ -1799,6 +1844,265 @@ function isSupportedDevActiveCoachRevision(
     return false;
   }
   return true;
+}
+
+const RISK_LEVEL_RANK: Record<ProgramEditRiskLevel, number> = {
+  info: 0,
+  soft: 1,
+  strong: 2,
+  hard_stop: 3,
+};
+
+function emptyCoachRevisionRiskAssessment(): ProgramEditRiskAssessment {
+  return {
+    decision: 'allow',
+    highestLevel: 'info',
+    findings: [],
+    introducedRuleIds: [],
+    worsenedRuleIds: [],
+  };
+}
+
+function coachRevisionRiskSignature(assessment: ProgramEditRiskAssessment): string {
+  return assessment.findings
+    .map((finding) => [
+      finding.ruleId,
+      finding.level,
+      [...finding.dates].sort().join(','),
+      [...finding.sessions].sort().join(','),
+      finding.message,
+    ].join('|'))
+    .sort()
+    .join('||');
+}
+
+function coachRevisionRiskReason(finding: ProgramEditRiskFinding): string {
+  const observed =
+    typeof finding.data?.observed === 'number' ? finding.data.observed : null;
+  if (finding.ruleId === 'cap_maxHardDays_over') {
+    return `This would give you ${observed ?? 'too many'} hard days this week. I would not apply that without confirmation.`;
+  }
+  if (finding.ruleId === 'cap_maxMainStrengthSessions_over') {
+    return `This would add a 5th main strength session. That is the upper edge.`;
+  }
+  if (finding.ruleId === 'cap_maxRunningExposures_over') {
+    return 'This adds more running than the weekly cap.';
+  }
+  if (finding.ruleId === 'cap_sprintCodExposures_over') {
+    return 'This adds more sprint/COD exposure than the week is set up for.';
+  }
+  if (finding.ruleId === 'g1_hard_work' || finding.ruleId === 'g1_not_light') {
+    return 'This puts hard work one day before your game.';
+  }
+  if (finding.ruleId === 'g2_hard_work' || finding.ruleId === 'g2_hard_lower') {
+    return 'This puts hard work two days before your game.';
+  }
+  if (finding.ruleId === 'g_plus1_hard_work' || finding.ruleId === 'g_plus1_not_light') {
+    return 'This adds hard work the day after your game.';
+  }
+  if (finding.ruleId === 'game_day_hard_work') {
+    return 'This puts hard training on game day.';
+  }
+  if (/^protected_.*_anchor_removed$/.test(finding.ruleId)) {
+    return 'This would remove a protected team/game anchor.';
+  }
+  if (finding.ruleId === 'active_injury_hard_stop') {
+    return 'A serious injury or medical-stop adjustment is active.';
+  }
+  return finding.message;
+}
+
+function coachRevisionRiskReasons(assessment: ProgramEditRiskAssessment): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const finding of assessment.findings) {
+    const reason = coachRevisionRiskReason(finding);
+    if (seen.has(reason)) continue;
+    seen.add(reason);
+    out.push(reason);
+    if (out.length >= 3) break;
+  }
+  return out.length > 0 ? out : ['This change makes the week riskier than it is now.'];
+}
+
+function withCoachRevisionRiskWarning(
+  baseQuestion: string,
+  assessment: ProgramEditRiskAssessment,
+): string {
+  const reasons = coachRevisionRiskReasons(assessment);
+  return `${baseQuestion}\n\nHeads up: ${reasons.join(' ')} Continue? (yes / no)`;
+}
+
+function coachRevisionRiskBlockReply(assessment: ProgramEditRiskAssessment): string {
+  const reason = coachRevisionRiskReasons(assessment)[0];
+  if (/one day before your game/i.test(reason)) {
+    return "This puts hard work one day before your game, so I'm not applying it. I can help choose a lighter option instead.";
+  }
+  if (/game day/i.test(reason)) {
+    return "This puts hard training on game day, so I'm not applying it. I can help pick a recovery or light option instead.";
+  }
+  if (/protected team\/game anchor/i.test(reason)) {
+    return "This would remove a protected team/game anchor, so it can't be applied from the coach revision flow.";
+  }
+  if (/injury|medical-stop/i.test(reason)) {
+    return "A serious injury or medical-stop adjustment is active, so I'm not treating this as a normal training edit.";
+  }
+  return `${reason} So I'm not applying it. I can help choose a safer alternative.`;
+}
+
+function validatorDaysFromResolvedWeek(days: readonly NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']>[number][]): ValidatorDayInput[] {
+  return days.map((day) => ({
+    date: day.date,
+    workouts: [day.workout],
+  }));
+}
+
+function gameDatesFromResolvedWeek(
+  days: readonly NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']>[number][],
+): string[] {
+  return days
+    .filter((day) => {
+      const workout = day.workout;
+      if (!workout) return false;
+      return String(workout.workoutType ?? '') === 'Game' || /^game\b/i.test(workout.name ?? '');
+    })
+    .map((day) => day.date);
+}
+
+function withCoachRevisionPreviewWrites(
+  visibleWeek: NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']>,
+  writes: readonly { date: string; workout: NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']>[number]['workout'] }[],
+): NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']> {
+  const byDate = new Map(writes.map((write) => [write.date, write.workout]));
+  return visibleWeek.map((day) => (
+    byDate.has(day.date)
+      ? { ...day, workout: byDate.get(day.date) ?? null }
+      : day
+  ));
+}
+
+function combineCoachRevisionRiskAssessments(
+  assessments: readonly ProgramEditRiskAssessment[],
+): ProgramEditRiskAssessment {
+  if (assessments.length === 0) return emptyCoachRevisionRiskAssessment();
+  const findingsByKey = new Map<string, ProgramEditRiskFinding>();
+  const introduced = new Set<string>();
+  const worsened = new Set<string>();
+  let highestLevel: ProgramEditRiskLevel = 'info';
+  for (const assessment of assessments) {
+    if (RISK_LEVEL_RANK[assessment.highestLevel] > RISK_LEVEL_RANK[highestLevel]) {
+      highestLevel = assessment.highestLevel;
+    }
+    for (const ruleId of assessment.introducedRuleIds) introduced.add(ruleId);
+    for (const ruleId of assessment.worsenedRuleIds) worsened.add(ruleId);
+    for (const finding of assessment.findings) {
+      const key = [
+        finding.ruleId,
+        [...finding.dates].sort().join(','),
+        [...finding.sessions].sort().join(','),
+      ].join('|');
+      const existing = findingsByKey.get(key);
+      if (!existing || RISK_LEVEL_RANK[finding.level] > RISK_LEVEL_RANK[existing.level]) {
+        findingsByKey.set(key, finding);
+      }
+    }
+  }
+  const findings = Array.from(findingsByKey.values())
+    .sort((a, b) => RISK_LEVEL_RANK[b.level] - RISK_LEVEL_RANK[a.level]);
+  highestLevel = findings.reduce<ProgramEditRiskLevel>((level, finding) => (
+    RISK_LEVEL_RANK[finding.level] > RISK_LEVEL_RANK[level] ? finding.level : level
+  ), 'info');
+  const decision =
+    highestLevel === 'hard_stop'
+      ? 'block'
+      : highestLevel === 'strong' || highestLevel === 'soft'
+        ? 'confirm'
+        : 'allow';
+  return {
+    decision,
+    highestLevel,
+    findings,
+    introducedRuleIds: Array.from(introduced).sort(),
+    worsenedRuleIds: Array.from(worsened).sort(),
+  };
+}
+
+function assessCoachRevisionProposalRisk(args: {
+  input: CoachTurnControllerInput;
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
+  diff: CoachRevisionDiff;
+  visibleWeek: NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']>;
+}): {
+  ok: true;
+  assessment: ProgramEditRiskAssessment;
+  signature: string;
+} | {
+  ok: false;
+  route: string;
+  reply: string;
+} {
+  const preview = applyCoachRevisionDateOverrides({
+    proposal: args.proposal,
+    visibleWeek: args.visibleWeek,
+    todayISO: args.input.todayISO,
+    validationPolicy: {
+      ...coachRevisionValidationPolicyForWeek(args.visibleWeek, args.input.todayISO),
+      requireConfirmationForAdds: false,
+    },
+  });
+  if (preview.applied.length === 0 || preview.rejected.length > 0) {
+    return {
+      ok: false,
+      route: 'coach-revision-proposal-risk-preview-rejected',
+      reply: "I couldn't safely preview that revision, so I left the plan unchanged.",
+    };
+  }
+
+  const proposedWeek = withCoachRevisionPreviewWrites(args.visibleWeek, preview.applied);
+  const changedWeekStarts = Array.from(new Set(
+    (args.diff.changedDates.length > 0
+      ? args.diff.changedDates
+      : preview.applied.map((write) => write.date))
+      .map((date) => getMondayForDate(date)),
+  ));
+  const profile = {
+    ...(useProfileStore.getState().onboardingData as ValidateProgramWeekInput['profile']),
+    seasonPhase:
+      useProgramStore.getState().currentProgram?.programPhase ??
+      (useProfileStore.getState().onboardingData as ValidateProgramWeekInput['profile'])?.seasonPhase,
+  } as ValidateProgramWeekInput['profile'];
+  const activeConstraints = useCoachUpdatesStore.getState().activeConstraints;
+  const allowProtectedAnchorChanges =
+    args.proposal.userIntent.targetDomain === 'team_training';
+  const assessments = changedWeekStarts.map((weekStart) => {
+    const currentDays = args.visibleWeek.filter((day) => getMondayForDate(day.date) === weekStart);
+    const proposedDays = proposedWeek.filter((day) => getMondayForDate(day.date) === weekStart);
+    const gameDates = Array.from(new Set([
+      ...gameDatesFromResolvedWeek(currentDays),
+      ...gameDatesFromResolvedWeek(proposedDays),
+    ])).sort();
+    return assessProgramEditRisk({
+      current: {
+        days: validatorDaysFromResolvedWeek(currentDays),
+        profile,
+        anchors: { gameDates },
+      },
+      proposed: {
+        days: validatorDaysFromResolvedWeek(proposedDays),
+        profile,
+        anchors: { gameDates },
+      },
+      allowProtectedAnchorChanges,
+      activeConstraints,
+      todayISO: args.input.todayISO,
+    });
+  });
+  const assessment = combineCoachRevisionRiskAssessments(assessments);
+  return {
+    ok: true,
+    assessment,
+    signature: coachRevisionRiskSignature(assessment),
+  };
 }
 
 function applyDevActiveCoachRevision(args: {
@@ -2780,8 +3084,8 @@ export async function handleCoachTurn(
           proposal: storedProposal,
           policy: coachRevisionValidationPolicyForWeek(visibleWeek, input.todayISO),
         });
-        usePendingCoachClarifierStore.getState().clearPending();
         if (validation.status !== 'valid' && validation.status !== 'needs_confirmation') {
+          usePendingCoachClarifierStore.getState().clearPending();
           input.setLastCoachDebug({
             intent: 'coach_revision_proposal',
             route: 'pending-coach-revision-confirm-stale',
@@ -2817,6 +3121,64 @@ export async function handleCoachTurn(
           },
           confidence: storedProposal.confidence,
         };
+        const risk = assessCoachRevisionProposalRisk({
+          input,
+          proposal: storedProposal,
+          diff: validation.diff,
+          visibleWeek,
+        });
+        if (risk.ok === false) {
+          usePendingCoachClarifierStore.getState().clearPending();
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: `pending-${risk.route}`,
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: storedProposal.scope.dates[0] ?? null,
+            referenceTargetName: null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(input, `pending-${risk.route}`, risk.reply);
+        }
+        if (risk.assessment.decision === 'block') {
+          usePendingCoachClarifierStore.getState().clearPending();
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: 'pending-coach-revision-risk-blocked',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: storedProposal.scope.dates[0] ?? null,
+            referenceTargetName: null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(
+            input,
+            'pending-coach-revision-risk-blocked',
+            coachRevisionRiskBlockReply(risk.assessment),
+          );
+        }
+        if (
+          risk.assessment.decision === 'confirm' &&
+          pendingRevisionAnswer.envelope.riskConfirmation?.signature !== risk.signature
+        ) {
+          return enterCoachRevisionConfirmationTransaction({
+            input,
+            proposal: storedProposal,
+            diff: validation.diff,
+            originalMessage: pendingRevisionAnswer.envelope.originalUserWording,
+            route: 'pending-coach-revision-risk-confirmation-updated',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: storedProposal.scope.dates[0] ?? null,
+            referenceTargetName: null,
+            riskAssessment: risk.assessment,
+            riskSignature: risk.signature,
+          });
+        }
+        usePendingCoachClarifierStore.getState().clearPending();
         const applied = applyDevActiveCoachRevision({
           input,
           packet,
@@ -2913,6 +3275,62 @@ export async function handleCoachTurn(
               ? [pendingRevisionAnswer.targetDate]
               : [],
           });
+          const risk = assessCoachRevisionProposalRisk({
+            input,
+            proposal: revisionResult.proposal,
+            diff: revisionResult.diff,
+            visibleWeek,
+          });
+          if (risk.ok === false) {
+            usePendingCoachClarifierStore.getState().clearPending();
+            input.setLastCoachDebug({
+              intent: 'coach_revision_proposal',
+              route: `pending-${risk.route}`,
+              referenceStatus: packet.referenceResolution?.status ?? null,
+              referenceTargetDate: pendingRevisionAnswer.targetDate,
+              referenceTargetName: null,
+              mutationLike: true,
+              legacyCalled: false,
+              replySource: 'deterministic',
+              applied: false,
+            });
+            return replyAndFinish(input, `pending-${risk.route}`, risk.reply);
+          }
+          if (risk.assessment.decision === 'block') {
+            usePendingCoachClarifierStore.getState().clearPending();
+            input.setLastCoachDebug({
+              intent: 'coach_revision_proposal',
+              route: 'pending-coach-revision-risk-blocked',
+              referenceStatus: packet.referenceResolution?.status ?? null,
+              referenceTargetDate: pendingRevisionAnswer.targetDate,
+              referenceTargetName: null,
+              mutationLike: true,
+              legacyCalled: false,
+              replySource: 'deterministic',
+              applied: false,
+            });
+            return replyAndFinish(
+              input,
+              'pending-coach-revision-risk-blocked',
+              coachRevisionRiskBlockReply(risk.assessment),
+            );
+          }
+          if (risk.assessment.decision === 'confirm') {
+            return enterCoachRevisionConfirmationTransaction({
+              input,
+              proposal: revisionResult.proposal,
+              diff: revisionResult.diff,
+              originalMessage:
+                pendingRevisionAnswer.envelope?.originalUserWording ??
+                input.userMessage.content,
+              route: 'pending-coach-revision-risk-confirmation',
+              referenceStatus: packet.referenceResolution?.status ?? null,
+              referenceTargetDate: pendingRevisionAnswer.targetDate,
+              referenceTargetName: null,
+              riskAssessment: risk.assessment,
+              riskSignature: risk.signature,
+            });
+          }
           const applied = applyDevActiveCoachRevision({
             input,
             packet,
@@ -3003,9 +3421,33 @@ export async function handleCoachTurn(
           // Same transaction owner as the fresh-message path — a resume that
           // needs confirmation stores the proposal and asks yes/no; it never
           // discards the athlete's choice.
+          const visibleWeek = visibleDaysForCoachRevisionProposal({
+            packet,
+            todayISO: input.todayISO,
+            includeDates: revisionResult.proposal.scope.dates,
+          });
+          const risk = assessCoachRevisionProposalRisk({
+            input,
+            proposal: revisionResult.proposal,
+            diff: revisionResult.diff,
+            visibleWeek,
+          });
+          if (risk.ok === false) {
+            usePendingCoachClarifierStore.getState().clearPending();
+            return replyAndFinish(input, `pending-${risk.route}`, risk.reply);
+          }
+          if (risk.assessment.decision === 'block') {
+            usePendingCoachClarifierStore.getState().clearPending();
+            return replyAndFinish(
+              input,
+              'pending-coach-revision-risk-blocked',
+              coachRevisionRiskBlockReply(risk.assessment),
+            );
+          }
           return enterCoachRevisionConfirmationTransaction({
             input,
-            result: revisionResult,
+            proposal: revisionResult.proposal,
+            diff: revisionResult.diff,
             originalMessage:
               pendingRevisionAnswer.envelope?.originalUserWording ??
               input.userMessage.content,
@@ -3013,6 +3455,8 @@ export async function handleCoachTurn(
             referenceStatus: packet.referenceResolution?.status ?? null,
             referenceTargetDate: pendingRevisionAnswer.targetDate,
             referenceTargetName: null,
+            riskAssessment: risk.assessment.decision === 'confirm' ? risk.assessment : null,
+            riskSignature: risk.assessment.decision === 'confirm' ? risk.signature : null,
           });
         }
         usePendingCoachClarifierStore.getState().clearPending();
@@ -3732,10 +4176,67 @@ export async function handleCoachTurn(
             staleRevisionClarifier.askedQuestion,
           );
         }
+        const visibleWeek = uniqueResolvedDays([
+          ...(packet.currentWeek ?? []),
+          ...(packet.nextWeek ?? []),
+        ]);
+        const risk = assessCoachRevisionProposalRisk({
+          input,
+          proposal: revisionResult.proposal,
+          diff: revisionResult.diff,
+          visibleWeek,
+        });
+        if (risk.ok === false) {
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: risk.route,
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+            referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(input, risk.route, risk.reply);
+        }
+        if (risk.assessment.decision === 'block') {
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: 'coach-revision-proposal-risk-blocked',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+            referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(
+            input,
+            'coach-revision-proposal-risk-blocked',
+            coachRevisionRiskBlockReply(risk.assessment),
+          );
+        }
+        if (risk.assessment.decision === 'confirm') {
+          return enterCoachRevisionConfirmationTransaction({
+            input,
+            proposal: revisionResult.proposal,
+            diff: revisionResult.diff,
+            originalMessage: input.userMessage.content,
+            route: 'coach-revision-proposal-risk-confirmation',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+            referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+            riskAssessment: risk.assessment,
+            riskSignature: risk.signature,
+          });
+        }
         const applied = applyDevActiveCoachRevision({
           input,
           packet,
           result: revisionResult,
+          visibleWeek,
         });
         input.setLastCoachDebug({
           intent: 'coach_revision_proposal',
@@ -3753,14 +4254,60 @@ export async function handleCoachTurn(
         // Confirmation is a TRANSACTION, not a dead end: store the validated
         // proposal so "yes" applies it and "no" cancels it. Shared owner with
         // the pending-resume path.
+        const visibleWeek = visibleDaysForCoachRevisionProposal({
+          packet,
+          todayISO: input.todayISO,
+          includeDates: revisionResult.proposal.scope.dates,
+        });
+        const risk = assessCoachRevisionProposalRisk({
+          input,
+          proposal: revisionResult.proposal,
+          diff: revisionResult.diff,
+          visibleWeek,
+        });
+        if (risk.ok === false) {
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: risk.route,
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+            referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(input, risk.route, risk.reply);
+        }
+        if (risk.assessment.decision === 'block') {
+          input.setLastCoachDebug({
+            intent: 'coach_revision_proposal',
+            route: 'coach-revision-proposal-risk-blocked',
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+            referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+            mutationLike: true,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: false,
+          });
+          return replyAndFinish(
+            input,
+            'coach-revision-proposal-risk-blocked',
+            coachRevisionRiskBlockReply(risk.assessment),
+          );
+        }
         return enterCoachRevisionConfirmationTransaction({
           input,
-          result: revisionResult,
+          proposal: revisionResult.proposal,
+          diff: revisionResult.diff,
           originalMessage: input.userMessage.content,
           route: 'coach-revision-proposal-needs-confirmation',
           referenceStatus: packet.referenceResolution?.status ?? null,
           referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
           referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+          riskAssessment: risk.assessment.decision === 'confirm' ? risk.assessment : null,
+          riskSignature: risk.assessment.decision === 'confirm' ? risk.signature : null,
         });
       } else if (revisionResult.kind === 'clarify') {
         // Store the clarification transaction so the athlete's next short

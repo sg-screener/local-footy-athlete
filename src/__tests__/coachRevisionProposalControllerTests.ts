@@ -9,6 +9,7 @@
 
 import type { Microcycle, TrainingProgram, Workout } from '../types/domain';
 import { useCoachContextStateStore } from '../store/coachContextStateStore';
+import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { usePendingCoachClarifierStore } from '../store/pendingCoachClarifierStore';
 import { useProgramStore } from '../store/programStore';
 import {
@@ -38,6 +39,8 @@ const TODAY = '2026-07-01';
 const PAST_MONDAY = '2026-06-29';
 const NEXT_MONDAY = '2026-07-06';
 const THURSDAY = '2026-07-02';
+const FRIDAY = '2026-07-03';
+const SATURDAY = '2026-07-04';
 
 let pass = 0;
 let fail = 0;
@@ -150,6 +153,7 @@ function mixedWorkout(args: {
 function seedProgram() {
   useProgramStore.getState().clear();
   useCoachContextStateStore.getState().clearCoachContext();
+  useCoachUpdatesStore.getState().clearAllCoachUpdates();
   usePendingCoachClarifierStore.getState().clearPending();
   const microcycle: Microcycle = {
     id: 'mc-1',
@@ -220,6 +224,7 @@ function teamPlusLiftWorkout(): Workout {
 function seedTeamThursdayProgram() {
   useProgramStore.getState().clear();
   useCoachContextStateStore.getState().clearCoachContext();
+  useCoachUpdatesStore.getState().clearAllCoachUpdates();
   usePendingCoachClarifierStore.getState().clearPending();
   const microcycle: Microcycle = {
     id: 'mc-1',
@@ -257,6 +262,7 @@ function seedTeamThursdayProgram() {
 function seedSingleMicrocycleProgram() {
   useProgramStore.getState().clear();
   useCoachContextStateStore.getState().clearCoachContext();
+  useCoachUpdatesStore.getState().clearAllCoachUpdates();
   usePendingCoachClarifierStore.getState().clearPending();
   const microcycle: Microcycle = {
     id: 'mc-only',
@@ -289,6 +295,229 @@ function seedSingleMicrocycleProgram() {
   };
   useProgramStore.getState().setCurrentProgram(program);
   useProgramStore.getState().setCurrentMicrocycle(microcycle);
+}
+
+function teamTrainingWorkout(id: string, dayOfWeek: number): Workout {
+  const workout = {
+    id,
+    microcycleId: 'mc-risk',
+    dayOfWeek,
+    name: 'Team Training',
+    description: 'Club field session',
+    durationMinutes: 90,
+    intensity: 'High',
+    workoutType: 'Team Training',
+    sessionTier: 'core',
+    exercises: [],
+    createdAt: '',
+    updatedAt: '',
+  } as Workout;
+  (workout as unknown as { isTeamDay: boolean }).isTeamDay = true;
+  return workout;
+}
+
+function gameWorkout(id = 'risk-sat-game', dayOfWeek = 6): Workout {
+  return {
+    id,
+    microcycleId: 'mc-risk',
+    dayOfWeek,
+    name: 'Game Day',
+    description: 'Fixture',
+    durationMinutes: 90,
+    intensity: 'High',
+    workoutType: 'Game',
+    sessionTier: 'core',
+    exercises: [],
+    createdAt: '',
+    updatedAt: '',
+  } as Workout;
+}
+
+function seedRiskWeekProgram(args: { withGame?: boolean } = {}) {
+  useProgramStore.getState().clear();
+  useCoachContextStateStore.getState().clearCoachContext();
+  useCoachUpdatesStore.getState().clearAllCoachUpdates();
+  usePendingCoachClarifierStore.getState().clearPending();
+  const workouts: Workout[] = [
+    mixedWorkout({ id: 'risk-mon-lower', dayOfWeek: 1 }),
+    teamTrainingWorkout('risk-tue-team', 2),
+    teamTrainingWorkout('risk-thu-team', 4),
+  ];
+  if (args.withGame) workouts.push(gameWorkout());
+  const microcycle: Microcycle = {
+    id: 'mc-risk',
+    programId: 'program-risk',
+    weekNumber: 1,
+    startDate: '2026-06-29',
+    endDate: '2026-07-05',
+    miniCycleNumber: 1,
+    intensityMultiplier: 1,
+    workouts,
+    createdAt: '',
+    updatedAt: '',
+  };
+  const program: TrainingProgram = {
+    id: 'program-risk',
+    userId: 'user-1',
+    name: 'Risk Week Program',
+    description: '',
+    programPhase: 'In-Season',
+    startDate: '2026-06-29',
+    endDate: '2026-07-26',
+    microcycles: [microcycle],
+    primaryFocus: 'Test',
+    isActive: true,
+    createdAt: '',
+    updatedAt: '',
+  };
+  useProgramStore.getState().setCurrentProgram(program);
+  useProgramStore.getState().setCurrentMicrocycle(microcycle);
+}
+
+function seedStrengthCapWeekProgram() {
+  useProgramStore.getState().clear();
+  useCoachContextStateStore.getState().clearCoachContext();
+  useCoachUpdatesStore.getState().clearAllCoachUpdates();
+  usePendingCoachClarifierStore.getState().clearPending();
+  const microcycle: Microcycle = {
+    id: 'mc-strength-cap',
+    programId: 'program-strength-cap',
+    weekNumber: 1,
+    startDate: '2026-06-29',
+    endDate: '2026-07-05',
+    miniCycleNumber: 1,
+    intensityMultiplier: 1,
+    workouts: [
+      mixedWorkout({ id: 'cap-mon-strength', dayOfWeek: 1 }),
+      mixedWorkout({ id: 'cap-tue-strength', dayOfWeek: 2 }),
+      mixedWorkout({ id: 'cap-wed-strength', dayOfWeek: 3 }),
+      mixedWorkout({ id: 'cap-thu-strength', dayOfWeek: 4 }),
+    ],
+    createdAt: '',
+    updatedAt: '',
+  };
+  const program: TrainingProgram = {
+    id: 'program-strength-cap',
+    userId: 'user-1',
+    name: 'Strength Cap Program',
+    description: '',
+    programPhase: 'In-Season',
+    startDate: '2026-06-29',
+    endDate: '2026-07-26',
+    microcycles: [microcycle],
+    primaryFocus: 'Test',
+    isActive: true,
+    createdAt: '',
+    updatedAt: '',
+  };
+  useProgramStore.getState().setCurrentProgram(program);
+  useProgramStore.getState().setCurrentMicrocycle(microcycle);
+}
+
+function seedThursdayLowerGameProgram() {
+  useProgramStore.getState().clear();
+  useCoachContextStateStore.getState().clearCoachContext();
+  useCoachUpdatesStore.getState().clearAllCoachUpdates();
+  usePendingCoachClarifierStore.getState().clearPending();
+  const microcycle: Microcycle = {
+    id: 'mc-g1-move',
+    programId: 'program-g1-move',
+    weekNumber: 1,
+    startDate: '2026-06-29',
+    endDate: '2026-07-05',
+    miniCycleNumber: 1,
+    intensityMultiplier: 1,
+    workouts: [
+      mixedWorkout({ id: 'g1-thu-lower', dayOfWeek: 4 }),
+      gameWorkout('g1-sat-game'),
+    ],
+    createdAt: '',
+    updatedAt: '',
+  };
+  const program: TrainingProgram = {
+    id: 'program-g1-move',
+    userId: 'user-1',
+    name: 'G-1 Move Program',
+    description: '',
+    programPhase: 'In-Season',
+    startDate: '2026-06-29',
+    endDate: '2026-07-26',
+    microcycles: [microcycle],
+    primaryFocus: 'Test',
+    isActive: true,
+    createdAt: '',
+    updatedAt: '',
+  };
+  useProgramStore.getState().setCurrentProgram(program);
+  useProgramStore.getState().setCurrentMicrocycle(microcycle);
+  useProgramStore.getState().setManualOverride(
+    SATURDAY,
+    gameWorkout('manual-g1-sat-game'),
+    { intent: 'program_adjustment', label: 'test:g1_game_anchor' },
+  );
+}
+
+function templateProposal(args: {
+  input: SemanticCoachRevisionProposalAdapterInput;
+  targetDate: string;
+  templateId: string;
+  intent?: CoachRevisionIntent['intent'];
+  targetDomain?: CoachRevisionIntent['targetDomain'];
+}): CoachRevisionProposal {
+  const section = buildCoachRevisionTemplateSection(args.templateId, args.targetDate);
+  if (!section) throw new Error(`Missing template section ${args.templateId}`);
+  return {
+    schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
+    kind: 'revision',
+    source: 'semantic',
+    confidence: 0.92,
+    userIntent: {
+      intent: args.intent ?? 'add',
+      targetDomain: args.targetDomain ?? 'strength',
+      actionScope: 'session',
+      targetDates: [args.targetDate],
+      protectedRefs: [],
+      allowedAddedSectionKinds: [section.kind],
+      requiresConfirmation: true,
+      reason: 'controller_risk_template_test',
+    },
+    scope: { mode: 'single_day', dates: [args.targetDate] },
+    revisedDays: [{
+      date: args.targetDate,
+      workout: {
+        id: `template-${args.templateId}`,
+        title: section.title,
+        workoutType: section.kind === 'strength' ? 'Strength' : 'Conditioning',
+        sections: [section],
+      },
+    }],
+    explanation: 'controller_risk_template_test',
+  };
+}
+
+function moveThursdaySessionToFridayProposal(
+  input: SemanticCoachRevisionProposalAdapterInput,
+): CoachRevisionProposal {
+  const thursday = dayByDate(input, THURSDAY);
+  const moved = clone(thursday);
+  moved.date = FRIDAY;
+  return {
+    schemaVersion: COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
+    kind: 'revision',
+    source: 'semantic',
+    confidence: 0.92,
+    userIntent: {
+      intent: 'move',
+      targetDomain: 'session',
+      actionScope: 'whole_session',
+      targetDates: [THURSDAY, FRIDAY],
+      protectedRefs: [],
+      reason: 'controller_risk_move_test',
+    },
+    scope: { mode: 'visible_week', dates: [THURSDAY, FRIDAY] },
+    revisedDays: [{ date: THURSDAY, workout: null }, moved],
+    explanation: 'controller_risk_move_test',
+  };
 }
 
 function reduceStrengthAt(
@@ -1480,6 +1709,120 @@ async function run() {
       { reply: third.reply, route: (third.debug as CoachTurnDebug | null)?.route });
     ok('[26] override written', !!third.dateOverrides[THURSDAY], third.dateOverrides);
     eq('[26] pending cleared', usePendingCoachClarifierStore.getState().pending, null);
+  }
+
+  {
+    // §17F Slice 3: a risky coach revision must create a pending
+    // confirmation with the exact proposal + surfaced risk findings, and
+    // must not write until the athlete confirms.
+    const adapter = new RecordingRevisionAdapter((input) =>
+      templateProposal({
+        input,
+        targetDate: FRIDAY,
+        templateId: 'strength_lower',
+      }));
+    const first = await runControllerTurn({
+      message: 'add a fifth strength session Friday',
+      adapter,
+      seedFn: seedStrengthCapWeekProgram,
+      visibleDate: FRIDAY,
+    });
+    ok('[27] risky revision asks for confirmation',
+      /5th main strength|hard days|upper edge|Continue\?/.test(first.reply),
+      first.reply);
+    ok('[27] pending stores exact proposal',
+      !!first.pending?.coachRevisionProposalEnvelope?.proposal,
+      first.pending);
+    ok('[27] pending stores risk assessment',
+      !!first.pending?.coachRevisionProposalEnvelope?.riskConfirmation?.assessment.findings.length,
+      first.pending?.coachRevisionProposalEnvelope?.riskConfirmation);
+    ok('[27] no write before risk confirmation',
+      !first.dateOverrides[FRIDAY],
+      first.dateOverrides);
+
+    const second = await runControllerTurn({
+      message: 'Yes',
+      adapter,
+      seed: false,
+      visibleDate: FRIDAY,
+    });
+    eq('[27] yes uses stored proposal, no regeneration', adapter.calls.length, 1);
+    ok('[27] yes applies unchanged confirmed risk',
+      /^Done\./.test(second.reply),
+      { reply: second.reply, route: (second.debug as CoachTurnDebug | null)?.route });
+    ok('[27] override written after confirmation',
+      !!second.dateOverrides[FRIDAY],
+      second.dateOverrides);
+    eq('[27] pending cleared after confirmed apply',
+      usePendingCoachClarifierStore.getState().pending,
+      null);
+  }
+
+  {
+    // §17F Slice 3: hard stops cannot become pending confirmations.
+    // Lower strength on G-1 before a Saturday game is blocked before write.
+    const adapter = new RecordingRevisionAdapter(moveThursdaySessionToFridayProposal);
+    const result = await runControllerTurn({
+      message: 'move Thursday lower body to Friday',
+      adapter,
+      seedFn: seedThursdayLowerGameProgram,
+      visibleDate: FRIDAY,
+    });
+    ok('[28] G-1 hard lower is blocked',
+      /one day before your game|not applying/.test(result.reply),
+      result.reply);
+    ok('[28] no pending confirmation for hard stop',
+      !result.pending,
+      result.pending);
+    ok('[28] hard stop not written',
+      !result.dateOverrides[FRIDAY],
+      result.dateOverrides);
+  }
+
+  {
+    // §17F Slice 3: "yes" re-runs the risk gate against current state.
+    // A structural confirmation that was safe can become a hard stop if the
+    // week changes before the athlete confirms.
+    const adapter = new RecordingRevisionAdapter((input) =>
+      templateProposal({
+        input,
+        targetDate: FRIDAY,
+        templateId: 'metcon_offlegs',
+        targetDomain: 'conditioning',
+      }));
+    const first = await runControllerTurn({
+      message: 'add hard conditioning Friday',
+      adapter,
+      seedFn: () => seedRiskWeekProgram({ withGame: false }),
+      visibleDate: FRIDAY,
+    });
+    ok('[29] initial safe add asks normal confirmation',
+      /Want me to swap in MetCon - Off-Legs on 2026-07-03/.test(first.reply),
+      first.reply);
+    ok('[29] no target write before confirmation',
+      !first.dateOverrides[FRIDAY],
+      first.dateOverrides);
+
+    useProgramStore.getState().setManualOverride(
+      SATURDAY,
+      gameWorkout('manual-sat-game'),
+      { intent: 'program_adjustment', label: 'test:add_game_before_confirm' },
+    );
+    const second = await runControllerTurn({
+      message: 'Yes',
+      adapter,
+      seed: false,
+      visibleDate: FRIDAY,
+    });
+    ok('[29] escalated yes is rejected',
+      /one day before your game|not applying/.test(second.reply),
+      { reply: second.reply, route: (second.debug as CoachTurnDebug | null)?.route });
+    ok('[29] target edit still not written after escalation',
+      !second.dateOverrides[FRIDAY],
+      second.dateOverrides);
+    eq('[29] pending cleared after hard-stop escalation',
+      usePendingCoachClarifierStore.getState().pending,
+      null);
   }
 
   {
