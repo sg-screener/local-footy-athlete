@@ -147,6 +147,59 @@ function strengthWorkout(exercises: WorkoutExercise[] = [
   };
 }
 
+function lowerStrengthWorkout(date = '2026-07-06'): Workout {
+  return {
+    ...strengthWorkout([
+      exerciseRow('Back Squat', 0),
+      exerciseRow('RDL', 1),
+    ]),
+    id: `lower-strength-${date}`,
+    name: 'Lower Body Strength',
+    description: 'Heavy lower strength',
+    intensity: 'High',
+  };
+}
+
+function gameWorkout(date = '2026-07-11'): Workout {
+  return {
+    id: `game-${date}`,
+    microcycleId: 'test-microcycle',
+    dayOfWeek: 6,
+    name: 'Game Day',
+    description: 'Fixture',
+    durationMinutes: 90,
+    intensity: 'High',
+    workoutType: 'Game',
+    sessionTier: 'game',
+    exercises: [],
+    createdAt: '2026-07-06T00:00:00Z',
+    updatedAt: '2026-07-06T00:00:00Z',
+  };
+}
+
+function resolvedDay(date: string, workout: Workout | null): any {
+  return {
+    date,
+    dayOfWeek: new Date(`${date}T12:00:00Z`).getUTCDay(),
+    short: date,
+    isToday: false,
+    source: workout ? 'template' : 'none',
+    workout,
+  };
+}
+
+function visibleWeekForRiskTests(): any[] {
+  return [
+    resolvedDay('2026-07-06', null),
+    resolvedDay('2026-07-07', null),
+    resolvedDay('2026-07-08', null),
+    resolvedDay('2026-07-09', lowerStrengthWorkout('2026-07-09')),
+    resolvedDay('2026-07-10', null),
+    resolvedDay('2026-07-11', gameWorkout('2026-07-11')),
+    resolvedDay('2026-07-12', null),
+  ];
+}
+
 function seedStrengthWorkout(date = '2026-07-06') {
   void date;
   useProgramStore.setState({
@@ -1005,6 +1058,38 @@ console.log('\n[26] busy and away schedule ids are distinct');
   const todayISO = todayISOLocal();
   ok('ids differ', scheduleModifierIdForDate(todayISO, 'busy') !== scheduleModifierIdForDate(todayISO, 'away'));
   ok('away id namespaced', /tap-schedule-away:/.test(scheduleModifierIdForDate(todayISO, 'away')));
+}
+
+console.log('\n[27] direct program-control plan changes block hard-stops before override writes');
+{
+  resetStores();
+  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const visibleWeek = visibleWeekForRiskTests();
+  const move = executeProgramControlAction(baseAction(
+    'move_session',
+    { fromDate: '2026-07-09', toDate: '2026-07-10' },
+    { scope: 'today_only', oneOffOnly: true },
+  ), {
+    todayISO: '2026-07-06',
+    visibleWeek,
+    setManualOverride: (date, workout) => writes.push({ date, workout }),
+  });
+  eq('G-1 lower move blocked', move.ok, false);
+  ok('move block explains game proximity', /before.*game|G-1|day before/i.test(move.message ?? ''), move.message);
+  eq('move wrote no overrides', writes, []);
+
+  const removeGame = executeProgramControlAction(baseAction(
+    'bin_session',
+    { date: '2026-07-11', scope: 'whole_day' },
+    { scope: 'today_only', oneOffOnly: true },
+  ), {
+    todayISO: '2026-07-06',
+    visibleWeek,
+    setManualOverride: (date, workout) => writes.push({ date, workout }),
+  });
+  eq('protected game removal blocked', removeGame.ok, false);
+  ok('anchor block mentions protected/game', /protected|game/i.test(removeGame.message ?? ''), removeGame.message);
+  eq('game removal wrote no overrides', writes, []);
 }
 
 console.log('\nSummary');

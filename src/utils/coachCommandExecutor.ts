@@ -91,6 +91,7 @@ import {
   type CoachPlanChangeKind,
   type CoachTrainingIntent,
 } from './coachPlan';
+import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
 
 // ─── Public types ───────────────────────────────────────────────────
 
@@ -630,7 +631,7 @@ function runUndoLastChange(
 
   return {
     kind: 'mutated',
-    reply: 'Done - I undid the last change.',
+    reply: 'Done — I undid the last change.',
     applied: true,
     route: `undo_last_change:applied:${entry.mutationKind}`,
     progress: stages,
@@ -3103,6 +3104,22 @@ function runAddSession(
     calendarMark: beforeCalendarMark,
     visibleWorkout: beforeWorkout,
   };
+  const proposedAddedWorkout = buildAddedSessionWorkout(
+    sourceWorkout,
+    targetDate,
+    payload.reason ?? 'coach add_session',
+  );
+  const riskRejection = hardStopRiskRejection({
+    writes: [{ date: targetDate, workout: proposedAddedWorkout }],
+    todayISO: input.todayISO,
+    visibleWeek: visibleWeekBefore,
+    route: 'risk_blocked:add_session',
+    progress: stages,
+  });
+  if (riskRejection) {
+    tick('composing_reply');
+    return riskRejection;
+  }
 
   tick('applying_change');
   const applyResult = applyAdd(
@@ -3313,6 +3330,17 @@ function runRemoveSession(
     calendarMark: beforeCalendarMark,
     visibleWorkout: beforeWorkout,
   };
+  const riskRejection = hardStopRiskRejection({
+    writes: [{ date: targetDate, workout: null }],
+    todayISO: input.todayISO,
+    visibleWeek: visibleWeekBefore,
+    route: 'risk_blocked:remove_session',
+    progress: stages,
+  });
+  if (riskRejection) {
+    tick('composing_reply');
+    return riskRejection;
+  }
 
   tick('applying_change');
   const applyResult = applyRemove(
@@ -3674,6 +3702,58 @@ function appendSessionCoachNote(workout: Workout, note: string): string[] {
   return notes;
 }
 
+function cloneWorkoutForRisk(
+  workout: Workout,
+  targetDate: string,
+  overrides: Partial<Workout> = {},
+): Workout {
+  const clone: Workout = JSON.parse(JSON.stringify(workout));
+  return {
+    ...clone,
+    ...overrides,
+    dayOfWeek: new Date(`${targetDate}T12:00:00`).getDay(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function buildMoveRestShellForRisk(
+  sourceWorkout: Workout,
+  sourceDate: string,
+  destDate: string,
+): Workout {
+  return cloneWorkoutForRisk(sourceWorkout, sourceDate, {
+    name: 'Rest',
+    description: `Coach moved this session to ${destDate}.`,
+    workoutType: 'Recovery',
+    sessionTier: 'recovery',
+    exercises: [],
+    conditioningBlock: undefined,
+    hasCombinedConditioning: false,
+  } as Partial<Workout>);
+}
+
+function hardStopRiskRejection(args: {
+  writes: readonly ProgramEditWrite[];
+  todayISO: string;
+  visibleWeek?: readonly ResolvedDay[];
+  route: string;
+  progress: ProgressStage[];
+}): ExecutionResult | null {
+  const guard = guardProgramEditWritesForHardStops({
+    writes: args.writes,
+    todayISO: args.todayISO,
+    visibleWeek: args.visibleWeek,
+  });
+  if (guard.ok !== false) return null;
+  return {
+    kind: 'rejected',
+    reply: guard.message,
+    applied: false,
+    route: args.route,
+    progress: args.progress,
+  };
+}
+
 function verifyRenderedAddSession(args: {
   targetDate: string;
   sourceWorkout: Workout;
@@ -4031,6 +4111,40 @@ function runMoveSession(
   // entries before the move runs. Restoring both is what undoes the swap
   // (or restores the source's workout while removing the dest write).
   const beforeOverrideMap = takeDateOverrideSnapshots(input, [sourceDate, destDate]);
+  const destWorkout = snapshotBefore(destDate);
+  const sourceWeek = safeVisibleWeekForMonday(visibleWeek, getMondayForDate(sourceDate));
+  const destWeek = safeVisibleWeekForMonday(visibleWeek, getMondayForDate(destDate));
+  const visibleWeekForRisk = Array.from(
+    new Map([...sourceWeek, ...destWeek].map((day) => [day.date, day])).values(),
+  );
+  const riskWrites: ProgramEditWrite[] = [
+    {
+      date: destDate,
+      workout: cloneWorkoutForRisk(sourceWorkout, destDate),
+    },
+  ];
+  if (payload.swap === true && destWorkout) {
+    riskWrites.push({
+      date: sourceDate,
+      workout: cloneWorkoutForRisk(destWorkout, sourceDate),
+    });
+  } else {
+    riskWrites.push({
+      date: sourceDate,
+      workout: buildMoveRestShellForRisk(sourceWorkout, sourceDate, destDate),
+    });
+  }
+  const riskRejection = hardStopRiskRejection({
+    writes: riskWrites,
+    todayISO: input.todayISO,
+    visibleWeek: visibleWeekForRisk,
+    route: 'risk_blocked:move_session',
+    progress: stages,
+  });
+  if (riskRejection) {
+    tick('composing_reply');
+    return riskRejection;
+  }
 
   // ── 5. Apply the move. ─────────────────────────────────────────
   tick('applying_change');
@@ -4209,7 +4323,7 @@ function composeMoveSessionResult(args: {
 
   return {
     kind: 'mutated',
-    reply: `Done - I moved ${weekdayName(sourceDate)}'s session to ${weekdayName(destDate)}.`,
+    reply: `Done — I moved ${weekdayName(sourceDate)}'s session to ${weekdayName(destDate)}.`,
     applied: true,
     route: 'move_session:applied',
     progress: stages,

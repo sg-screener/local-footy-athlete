@@ -245,13 +245,17 @@ export const useProgramStore = create<ProgramState>()(
 
       setError: (error) => set({ error }),
 
-      setManualOverride: (date, workout, context?) =>
+      setManualOverride: (date, workout, context?) => {
+        // Raw storage primitive. User-facing tap/coach edit paths must run
+        // pre-commit risk checks before reaching this; undo/rebuild/system
+        // cleanup paths intentionally keep direct access.
         set((state) => ({
           dateOverrides: { ...state.dateOverrides, [date]: workout },
           overrideContexts: context
             ? { ...state.overrideContexts, [date]: context }
             : state.overrideContexts,
-        })),
+        }));
+      },
 
       removeManualOverride: (date) =>
         set((state) => {

@@ -1855,6 +1855,9 @@ export function applyMoveSession(
   input: ApplyMoveSessionInput,
   opts: ApplyOptions,
 ): ApplyMoveSessionResult {
+  // Internal write primitive: user-facing coach/tap callers run the shared
+  // program-edit risk guard before this function. System adjustment paths
+  // keep using the primitive directly for rebuild/cleanup ownership.
   const { todayISO } = opts;
   const buildState = opts.buildState || defaultBuildState;
   const resolveWeek = opts.resolveWeek || resolveWeekWithConditioning;

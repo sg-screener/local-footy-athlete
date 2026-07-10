@@ -44,11 +44,9 @@ import {
   applyCoachRevisionDateOverrides,
   type CoachRevisionOverrideRejection,
 } from './coachRevisionOverrideWriter';
-import {
-  assessProgramEditRisk,
-  type ProgramEditRiskAssessment,
-} from './programEditRiskAssessment';
-import type { ValidateProgramWeekInput, ValidatorDayInput } from '../rules/weekStructureValidator';
+import type { ProgramEditRiskAssessment } from './programEditRiskAssessment';
+import { assessProgramEditWrites } from './programEditWriteGuard';
+import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 
 // ── Edit horizon ──
 // Sam 2026-07-03: athletes change this week and at most the next two —
@@ -878,13 +876,6 @@ function rejectedForResult(
   }));
 }
 
-function validatorDaysFromVisibleWeek(week: ResolvedDay[]): ValidatorDayInput[] {
-  return week.map((day) => ({
-    date: day.date,
-    workouts: day.workout ? [day.workout] : [],
-  }));
-}
-
 function withPreviewWrites(
   visibleWeek: ResolvedDay[],
   writes: Array<{ date: string; workout: Workout }>,
@@ -994,20 +985,22 @@ export function previewPlanChangeRisk(args: {
   }
 
   const proposedWeek = withPreviewWrites(args.visibleWeek, preview.applied);
-  const current = {
-    days: validatorDaysFromVisibleWeek(args.visibleWeek),
+  const assessment = assessProgramEditWrites({
+    writes: preview.applied.map((write) => ({
+      date: write.date,
+      workout: write.workout,
+    })),
+    visibleWeek: args.visibleWeek,
     profile: args.profile,
-  };
-  const proposed = {
-    days: validatorDaysFromVisibleWeek(proposedWeek),
-    profile: args.profile,
-  };
-  const assessment = assessProgramEditRisk({
-    current,
-    proposed,
     activeConstraints: args.activeConstraints,
     todayISO: args.todayISO,
-  });
+  }) ?? {
+    decision: 'allow',
+    highestLevel: 'info',
+    findings: [],
+    introducedRuleIds: [],
+    worsenedRuleIds: [],
+  };
 
   return {
     ok: true,

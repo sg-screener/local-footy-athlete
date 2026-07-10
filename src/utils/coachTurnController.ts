@@ -125,12 +125,11 @@ import {
   applyCoachRevisionDateOverrides,
 } from './coachRevisionOverrideWriter';
 import {
-  assessProgramEditRisk,
   type ProgramEditRiskAssessment,
   type ProgramEditRiskFinding,
-  type ProgramEditRiskLevel,
 } from './programEditRiskAssessment';
-import type { ValidateProgramWeekInput, ValidatorDayInput } from '../rules/weekStructureValidator';
+import { assessProgramEditWrites } from './programEditWriteGuard';
+import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { logger } from './logger';
 
 export interface CoachTurnMessage {
@@ -1846,13 +1845,6 @@ function isSupportedDevActiveCoachRevision(
   return true;
 }
 
-const RISK_LEVEL_RANK: Record<ProgramEditRiskLevel, number> = {
-  info: 0,
-  soft: 1,
-  strong: 2,
-  hard_stop: 3,
-};
-
 function emptyCoachRevisionRiskAssessment(): ProgramEditRiskAssessment {
   return {
     decision: 'allow',
@@ -1950,83 +1942,6 @@ function coachRevisionRiskBlockReply(assessment: ProgramEditRiskAssessment): str
   return `${reason} So I'm not applying it. I can help choose a safer alternative.`;
 }
 
-function validatorDaysFromResolvedWeek(days: readonly NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']>[number][]): ValidatorDayInput[] {
-  return days.map((day) => ({
-    date: day.date,
-    workouts: [day.workout],
-  }));
-}
-
-function gameDatesFromResolvedWeek(
-  days: readonly NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']>[number][],
-): string[] {
-  return days
-    .filter((day) => {
-      const workout = day.workout;
-      if (!workout) return false;
-      return String(workout.workoutType ?? '') === 'Game' || /^game\b/i.test(workout.name ?? '');
-    })
-    .map((day) => day.date);
-}
-
-function withCoachRevisionPreviewWrites(
-  visibleWeek: NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']>,
-  writes: readonly { date: string; workout: NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']>[number]['workout'] }[],
-): NonNullable<ReturnType<typeof buildCoachContextPacket>['currentWeek']> {
-  const byDate = new Map(writes.map((write) => [write.date, write.workout]));
-  return visibleWeek.map((day) => (
-    byDate.has(day.date)
-      ? { ...day, workout: byDate.get(day.date) ?? null }
-      : day
-  ));
-}
-
-function combineCoachRevisionRiskAssessments(
-  assessments: readonly ProgramEditRiskAssessment[],
-): ProgramEditRiskAssessment {
-  if (assessments.length === 0) return emptyCoachRevisionRiskAssessment();
-  const findingsByKey = new Map<string, ProgramEditRiskFinding>();
-  const introduced = new Set<string>();
-  const worsened = new Set<string>();
-  let highestLevel: ProgramEditRiskLevel = 'info';
-  for (const assessment of assessments) {
-    if (RISK_LEVEL_RANK[assessment.highestLevel] > RISK_LEVEL_RANK[highestLevel]) {
-      highestLevel = assessment.highestLevel;
-    }
-    for (const ruleId of assessment.introducedRuleIds) introduced.add(ruleId);
-    for (const ruleId of assessment.worsenedRuleIds) worsened.add(ruleId);
-    for (const finding of assessment.findings) {
-      const key = [
-        finding.ruleId,
-        [...finding.dates].sort().join(','),
-        [...finding.sessions].sort().join(','),
-      ].join('|');
-      const existing = findingsByKey.get(key);
-      if (!existing || RISK_LEVEL_RANK[finding.level] > RISK_LEVEL_RANK[existing.level]) {
-        findingsByKey.set(key, finding);
-      }
-    }
-  }
-  const findings = Array.from(findingsByKey.values())
-    .sort((a, b) => RISK_LEVEL_RANK[b.level] - RISK_LEVEL_RANK[a.level]);
-  highestLevel = findings.reduce<ProgramEditRiskLevel>((level, finding) => (
-    RISK_LEVEL_RANK[finding.level] > RISK_LEVEL_RANK[level] ? finding.level : level
-  ), 'info');
-  const decision =
-    highestLevel === 'hard_stop'
-      ? 'block'
-      : highestLevel === 'strong' || highestLevel === 'soft'
-        ? 'confirm'
-        : 'allow';
-  return {
-    decision,
-    highestLevel,
-    findings,
-    introducedRuleIds: Array.from(introduced).sort(),
-    worsenedRuleIds: Array.from(worsened).sort(),
-  };
-}
-
 function assessCoachRevisionProposalRisk(args: {
   input: CoachTurnControllerInput;
   proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>;
@@ -2058,13 +1973,6 @@ function assessCoachRevisionProposalRisk(args: {
     };
   }
 
-  const proposedWeek = withCoachRevisionPreviewWrites(args.visibleWeek, preview.applied);
-  const changedWeekStarts = Array.from(new Set(
-    (args.diff.changedDates.length > 0
-      ? args.diff.changedDates
-      : preview.applied.map((write) => write.date))
-      .map((date) => getMondayForDate(date)),
-  ));
   const profile = {
     ...(useProfileStore.getState().onboardingData as ValidateProgramWeekInput['profile']),
     seasonPhase:
@@ -2074,30 +1982,17 @@ function assessCoachRevisionProposalRisk(args: {
   const activeConstraints = useCoachUpdatesStore.getState().activeConstraints;
   const allowProtectedAnchorChanges =
     args.proposal.userIntent.targetDomain === 'team_training';
-  const assessments = changedWeekStarts.map((weekStart) => {
-    const currentDays = args.visibleWeek.filter((day) => getMondayForDate(day.date) === weekStart);
-    const proposedDays = proposedWeek.filter((day) => getMondayForDate(day.date) === weekStart);
-    const gameDates = Array.from(new Set([
-      ...gameDatesFromResolvedWeek(currentDays),
-      ...gameDatesFromResolvedWeek(proposedDays),
-    ])).sort();
-    return assessProgramEditRisk({
-      current: {
-        days: validatorDaysFromResolvedWeek(currentDays),
-        profile,
-        anchors: { gameDates },
-      },
-      proposed: {
-        days: validatorDaysFromResolvedWeek(proposedDays),
-        profile,
-        anchors: { gameDates },
-      },
-      allowProtectedAnchorChanges,
-      activeConstraints,
-      todayISO: args.input.todayISO,
-    });
-  });
-  const assessment = combineCoachRevisionRiskAssessments(assessments);
+  const assessment = assessProgramEditWrites({
+    writes: preview.applied.map((write) => ({
+      date: write.date,
+      workout: write.workout,
+    })),
+    visibleWeek: args.visibleWeek,
+    profile,
+    allowProtectedAnchorChanges,
+    activeConstraints,
+    todayISO: args.input.todayISO,
+  }) ?? emptyCoachRevisionRiskAssessment();
   return {
     ok: true,
     assessment,

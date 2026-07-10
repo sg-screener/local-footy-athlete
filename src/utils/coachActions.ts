@@ -43,6 +43,7 @@ import {
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { resolveExerciseName } from './loadEstimation';
 import { formatExerciseDisplayName } from './exerciseDisplay';
+import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
 import type { Workout, WorkoutExercise } from '../types/domain';
 
 // ─── Types ───
@@ -377,6 +378,22 @@ function cloneWorkout(w: Workout, overrides: Partial<Workout> = {}): Workout {
   };
 }
 
+function blockedByHardStopRisk(
+  writes: readonly ProgramEditWrite[],
+  todayISO?: string,
+): ActionResult | null {
+  const datedWrites = writes.filter((write) => Boolean(write.date));
+  if (datedWrites.length === 0) return null;
+  const guard = guardProgramEditWritesForHardStops({
+    writes: datedWrites,
+    todayISO: todayISO ?? datedWrites.map((write) => write.date).sort()[0],
+  });
+  if (guard.ok === false) {
+    return { success: false, reason: guard.message };
+  }
+  return null;
+}
+
 // ─── Actions ───
 
 /**
@@ -406,6 +423,8 @@ export function lightenSession(input: LightenSessionInput): ActionResult {
     if (workoutsAreEquivalent(current, recoveryShell)) {
       return { success: false, reason: `${date} is already a recovery day.` };
     }
+    const blocked = blockedByHardStopRisk([{ date, workout: recoveryShell }], date);
+    if (blocked) return blocked;
     setManualOverride(date, recoveryShell, { intent: 'dismissed', label: 'Coach-lightened' });
     return { success: true };
   }
@@ -422,6 +441,8 @@ export function lightenSession(input: LightenSessionInput): ActionResult {
   if (workoutsAreEquivalent(current, lightened)) {
     return { success: false, reason: `${date} is already at minimum load.` };
   }
+  const blocked = blockedByHardStopRisk([{ date, workout: lightened }], date);
+  if (blocked) return blocked;
   setManualOverride(date, lightened, { intent: 'dismissed', label: 'Coach-lightened' });
   return { success: true };
 }
@@ -451,17 +472,25 @@ export function moveSession(input: MoveSessionInput): ActionResult {
     dayOfWeek: newDow,
     description: (fromWorkout.description || '').trim() + ` [Moved from ${fromDate}]`,
   });
-  setManualOverride(toDate, movedWorkout, { intent: 'dismissed', label: 'Moved session' });
 
   // Source date: if there was a workout there, write it to the original
   // toDate slot (full swap). If not, just clear the source so it resolves
   // as rest / template default.
+  const riskWrites: ProgramEditWrite[] = [{ date: toDate, workout: movedWorkout }];
+  let swappedIn: Workout | null = null;
   if (toWorkout) {
     const sourceDow = new Date(fromDate + 'T12:00:00').getDay();
-    const swappedIn = cloneWorkout(toWorkout, {
+    swappedIn = cloneWorkout(toWorkout, {
       dayOfWeek: sourceDow,
       description: (toWorkout.description || '').trim() + ` [Swapped from ${toDate}]`,
     });
+    riskWrites.push({ date: fromDate, workout: swappedIn });
+  }
+  const blocked = blockedByHardStopRisk(riskWrites, [fromDate, toDate].sort()[0]);
+  if (blocked) return blocked;
+
+  setManualOverride(toDate, movedWorkout, { intent: 'dismissed', label: 'Moved session' });
+  if (swappedIn) {
     setManualOverride(fromDate, swappedIn, { intent: 'dismissed', label: 'Swapped session' });
   } else {
     // Empty target → just clear the source so the resolver's default applies
@@ -487,6 +516,8 @@ export function makeSessionOptional(input: MakeSessionOptionalInput): ActionResu
     sessionTier: 'optional',
     description: (current.description || '').trim() + ' [Marked optional]',
   });
+  const blocked = blockedByHardStopRisk([{ date, workout: optional }], date);
+  if (blocked) return blocked;
   setManualOverride(date, optional, { intent: 'dismissed', label: 'Marked optional' });
   return { success: true };
 }
@@ -578,6 +609,8 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `"${fromExercise}" already matches the requested swap on ${date}.` };
   }
+  const blocked = blockedByHardStopRisk([{ date, workout: newWorkout }], date);
+  if (blocked) return blocked;
   setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise swap' });
   return { success: true };
 }
@@ -604,6 +637,8 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
       if (workoutsAreEquivalent(current, newWorkout)) {
         return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
       }
+      const blocked = blockedByHardStopRisk([{ date, workout: newWorkout }], date);
+      if (blocked) return blocked;
       setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise removed' });
       return { success: true };
     }
@@ -631,6 +666,8 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
   }
+  const blocked = blockedByHardStopRisk([{ date, workout: newWorkout }], date);
+  if (blocked) return blocked;
   setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise removed' });
   return { success: true };
 }
@@ -703,6 +740,8 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `Adding ${displayName} on ${date} produced no change.` };
   }
+  const blocked = blockedByHardStopRisk([{ date, workout: newWorkout }], date);
+  if (blocked) return blocked;
   setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise added' });
   return { success: true };
 }

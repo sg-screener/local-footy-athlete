@@ -10,6 +10,7 @@ import type { OverrideContext, Workout, WorkoutExercise } from '../types/domain'
 import { getMondayForDate, type ResolvedDay } from './sessionResolver';
 import {
   applyPlanChange,
+  previewPlanChangeRisk,
   type PlanChange,
   type PlanChangeBinScopeId,
   type PlanChangeCategoryId,
@@ -404,6 +405,22 @@ function executePlanChangeAction(
       { route: 'guided_follow_up_sheet', reason: 'Visible week context is required.' },
       'Cannot safely apply this day/session action without the current visible week.',
     );
+  }
+  const risk = previewPlanChangeRisk({
+    change,
+    visibleWeek: context.visibleWeek,
+    todayISO: context.todayISO,
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+  });
+  if (risk.ok && risk.assessment.decision === 'block') {
+    return {
+      ok: false,
+      changedProgram: false,
+      requiresRebuild: false,
+      message: risk.assessment.findings[0]?.message ?? "That edit can't be applied safely.",
+      fallbackToCoach: false,
+      route: route.route,
+    };
   }
   const result = applyPlanChange({
     change,
