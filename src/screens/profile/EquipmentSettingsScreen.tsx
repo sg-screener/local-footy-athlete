@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   View,
   StyleSheet,
   Pressable,
@@ -14,6 +15,9 @@ import { SelectableTile } from '../../components/common';
 import { useProfileStore } from '../../store/profileStore';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { saveBaselineEquipmentSelection } from '../../utils/equipmentAvailability';
+import { todayISOLocal } from '../../utils/appDate';
+import { rebuildLocalWeek } from '../../utils/weekRebuild';
 
 const EQUIPMENT_OPTIONS = [
   'Full Gym',
@@ -48,7 +52,23 @@ export const EquipmentSettingsScreen: React.FC = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      updateOnboardingData({ equipment: selectedEquipment });
+      const todayISO = todayISOLocal();
+      const result = saveBaselineEquipmentSelection({
+        profile: onboardingData,
+        selectedEquipment,
+        dateISO: todayISO,
+        updateOnboardingData,
+        refreshProgram: (nextProfile) => {
+          rebuildLocalWeek({
+            baseProfile: nextProfile,
+            todayISO,
+          });
+        },
+      });
+      Alert.alert(
+        result.rebuildRequired ? 'Equipment updated' : 'Equipment saved',
+        result.message,
+      );
       navigation.goBack();
     } catch (error) {
       console.error('Error updating equipment:', error);

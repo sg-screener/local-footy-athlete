@@ -67,6 +67,14 @@ const EQUIPMENT_SHEET_PATH = path.resolve(
   'EquipmentLimitationSheet.tsx',
 );
 const equipmentSheet = fs.readFileSync(EQUIPMENT_SHEET_PATH, 'utf8');
+const EQUIPMENT_SETTINGS_PATH = path.resolve(
+  __dirname,
+  '..',
+  'screens',
+  'profile',
+  'EquipmentSettingsScreen.tsx',
+);
+const equipmentSettings = fs.readFileSync(EQUIPMENT_SETTINGS_PATH, 'utf8');
 
 // ═════════════════════════════════════════════════════════════════════
 // 1. The actual file rendered by the Profile tab contains the MVP sections
@@ -621,6 +629,25 @@ ok(
 ok(
   'temporary equipment sheet is local and preset-driven',
   /testID="home-equipment-limitation-sheet"[\s\S]*TEMPORARY_EQUIPMENT_PRESETS/.test(equipmentSheet),
+);
+
+section('[12] Baseline equipment settings save is rebuild-aware');
+ok(
+  'EquipmentSettingsScreen uses baseline equipment save helper',
+  /saveBaselineEquipmentSelection/.test(equipmentSettings),
+);
+ok(
+  'EquipmentSettingsScreen refreshes through canonical local rebuild',
+  /rebuildLocalWeek\(\{[\s\S]*baseProfile:\s*nextProfile[\s\S]*todayISO/.test(equipmentSettings),
+);
+ok(
+  'EquipmentSettingsScreen does not use chat or active equipment constraints',
+  !/upsertActiveEquipmentConstraint|setActiveConstraints|selectActiveCoachNotes|generateProgramFromProfile/.test(equipmentSettings),
+);
+ok(
+  'EquipmentSettingsScreen uses simple save confirmation copy',
+  /Equipment updated[\s\S]*Equipment saved/.test(equipmentSettings)
+    && /Equipment updated\. Your program was refreshed\.|result\.message/.test(equipmentSettings),
 );
 
 // ─── Summary ───

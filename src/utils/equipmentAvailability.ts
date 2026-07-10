@@ -377,6 +377,80 @@ export function resolveEquipmentAvailability(
   return applyEquipmentConstraints(tags, constraints, dateISO ?? localTodayISO());
 }
 
+function sameEquipmentTagSet(
+  left: readonly EquipmentTag[],
+  right: readonly EquipmentTag[],
+): boolean {
+  return left.length === right.length && left.every((tag) => right.includes(tag));
+}
+
+export interface BaselineEquipmentSavePlan {
+  selectedEquipment: string[];
+  nextProfile: OnboardingData;
+  previousResolvedEquipment: EquipmentTag[];
+  nextResolvedEquipment: EquipmentTag[];
+  resolvedEquipmentChanged: boolean;
+  rebuildRequired: boolean;
+  message: 'Equipment updated. Your program was refreshed.' | 'Equipment saved.';
+}
+
+export interface BaselineEquipmentSaveResult extends BaselineEquipmentSavePlan {
+  profileUpdated: true;
+  refreshed: boolean;
+}
+
+export function buildBaselineEquipmentSavePlan(
+  profile: OnboardingData,
+  selectedEquipment: readonly string[],
+  dateISO: string = localTodayISO(),
+): BaselineEquipmentSavePlan {
+  const selected = selectedEquipment.map((item) => String(item));
+  const nextProfile: OnboardingData = {
+    ...profile,
+    equipment: selected,
+  };
+  const previousResolvedEquipment = resolveEquipmentAvailability(profile, null, dateISO);
+  const nextResolvedEquipment = resolveEquipmentAvailability(nextProfile, null, dateISO);
+  const resolvedEquipmentChanged = !sameEquipmentTagSet(
+    previousResolvedEquipment,
+    nextResolvedEquipment,
+  );
+  return {
+    selectedEquipment: selected,
+    nextProfile,
+    previousResolvedEquipment,
+    nextResolvedEquipment,
+    resolvedEquipmentChanged,
+    rebuildRequired: resolvedEquipmentChanged,
+    message: resolvedEquipmentChanged
+      ? 'Equipment updated. Your program was refreshed.'
+      : 'Equipment saved.',
+  };
+}
+
+export function saveBaselineEquipmentSelection(args: {
+  profile: OnboardingData;
+  selectedEquipment: readonly string[];
+  dateISO?: string;
+  updateOnboardingData: (data: Pick<OnboardingData, 'equipment'>) => void;
+  refreshProgram?: (nextProfile: OnboardingData) => void;
+}): BaselineEquipmentSaveResult {
+  const plan = buildBaselineEquipmentSavePlan(
+    args.profile,
+    args.selectedEquipment,
+    args.dateISO,
+  );
+  if (plan.rebuildRequired) {
+    args.refreshProgram?.(plan.nextProfile);
+  }
+  args.updateOnboardingData({ equipment: plan.selectedEquipment });
+  return {
+    ...plan,
+    profileUpdated: true,
+    refreshed: plan.rebuildRequired && typeof args.refreshProgram === 'function',
+  };
+}
+
 export function equipmentTagsToSubstituteEquipmentClasses(
   tags: readonly EquipmentTag[] | null | undefined,
 ): EquipmentClass[] {
