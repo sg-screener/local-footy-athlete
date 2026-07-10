@@ -333,6 +333,37 @@ function buildRoleContext(data: OnboardingData) {
   };
 }
 
+export interface ProgramGenerationEdgePayload {
+  messages: Array<{ role: 'user'; content: string }>;
+  athleteProfile: OnboardingData & { resolvedEquipmentTags: EquipmentTag[] };
+  roleContext: ReturnType<typeof buildRoleContext>;
+  coachingPlan: AIConstraints;
+  mode: 'generate';
+}
+
+/**
+ * Single request-shape owner for full edge generation. Equipment has already
+ * been resolved from onboarding plus active constraints before it reaches this
+ * boundary; raw profile equipment remains alongside it for old edge fallbacks.
+ */
+export function buildProgramGenerationEdgePayload(args: {
+  generationProfile: OnboardingData;
+  message: string;
+  coachingPlan: AIConstraints;
+  resolvedEquipmentTags: readonly EquipmentTag[];
+}): ProgramGenerationEdgePayload {
+  return {
+    messages: [{ role: 'user', content: args.message }],
+    athleteProfile: {
+      ...args.generationProfile,
+      resolvedEquipmentTags: [...args.resolvedEquipmentTags],
+    },
+    roleContext: buildRoleContext(args.generationProfile),
+    coachingPlan: args.coachingPlan,
+    mode: 'generate',
+  };
+}
+
 const REQUIRED_PROGRAM_GEN_PROFILE_FIELDS: Array<keyof OnboardingData> = [
   'firstName',
   'heightCm',
@@ -419,16 +450,12 @@ export function buildProgramGenerationRequestDiagnostics(
     coachingPlan: '[coaching constraints object]',
     mode: 'generate',
   };
-  const payloadForSize = {
-    messages: [{ role: 'user', content: derivedMessage }],
-    athleteProfile: {
-      ...generationProfile,
-      resolvedEquipmentTags,
-    },
-    roleContext,
+  const payloadForSize = buildProgramGenerationEdgePayload({
+    generationProfile,
+    message: derivedMessage,
     coachingPlan: derivedPlan.constraints,
-    mode: 'generate',
-  };
+    resolvedEquipmentTags,
+  });
 
   return {
     endpoint: env.coachChatEndpoint || '(missing)',
@@ -719,16 +746,12 @@ export async function generateProgramFromProfile(
   // UI layer. We always throw `ProgramGenError` whose `userMessage` is safe
   // copy; raw payload previews are gated behind debug logging only.
 
-  const requestBody = {
-    messages: [{ role: 'user', content: message }],
-    athleteProfile: {
-      ...generationProfile,
-      resolvedEquipmentTags,
-    },
-    roleContext: buildRoleContext(generationProfile),
+  const requestBody = buildProgramGenerationEdgePayload({
+    generationProfile,
+    message,
     coachingPlan: plan.constraints,
-    mode: 'generate',
-  };
+    resolvedEquipmentTags,
+  });
 
   let response: Response;
   try {

@@ -15,7 +15,11 @@
  * - NO RPE tracking
  *
  * POST /generate-program
- * Body: { user_id: string, program_phase?: ProgramPhase }
+ * Body: {
+ *   user_id: string,
+ *   program_phase?: ProgramPhase,
+ *   resolvedEquipmentTags?: CanonicalEquipmentTag[]
+ * }
  *
  * Response:
  * {
@@ -49,6 +53,11 @@ import {
   IntensityLevel,
   WorkoutType,
 } from '../shared/types.ts';
+import {
+  edgeExerciseRequirementsAreAvailable,
+  normalizeResolvedEquipmentTags,
+  type CanonicalEquipmentTag,
+} from '../shared/equipment.ts';
 
 /**
  * Sam's AFL S&C Rules Configuration - Mini-Cycle Programming Edition
@@ -295,7 +304,13 @@ Deno.serve(async (req: Request) => {
     }
 
     const { user_id, program_phase } = body;
-    log('generate-program', 'Received request', { user_id, program_phase });
+    const resolvedEquipmentTags = normalizeResolvedEquipmentTags(body.resolvedEquipmentTags);
+    log('generate-program', 'Received request', {
+      user_id,
+      program_phase,
+      equipmentSource: resolvedEquipmentTags ? 'resolved_tags' : 'legacy_profile',
+      resolvedEquipmentTags: resolvedEquipmentTags ?? [],
+    });
 
     // Create Supabase client
     const supabase = createSupabaseClient();
@@ -391,7 +406,8 @@ Deno.serve(async (req: Request) => {
         exercises,
         phaseConfig,
         DEFAULT_RULES_CONFIG,
-        miniCycle.miniCycleNumber
+        miniCycle.miniCycleNumber,
+        resolvedEquipmentTags,
       );
       miniCycleExerciseMaps[miniCycle.miniCycleNumber] = miniCycleExercises;
 
@@ -563,7 +579,8 @@ function preSelectExercisesForMiniCycle(
   allExercises: any[],
   phaseConfig: any,
   rulesConfig: RulesConfig,
-  miniCycleNumber: number
+  miniCycleNumber: number,
+  resolvedEquipmentTags: readonly CanonicalEquipmentTag[] | null,
 ): Record<string, string[]> {
   const miniCycleExercises: Record<string, string[]> = {};
 
@@ -573,7 +590,8 @@ function preSelectExercisesForMiniCycle(
       allExercises,
       focus,
       userProfile,
-      rulesConfig
+      rulesConfig,
+      resolvedEquipmentTags,
     );
 
     if (filteredExercises.length === 0) {
@@ -721,17 +739,17 @@ function filterExercisesForWorkout(
   exercises: any[],
   focus: string,
   userProfile: DbUserProfile,
-  rulesConfig: RulesConfig
+  rulesConfig: RulesConfig,
+  resolvedEquipmentTags: readonly CanonicalEquipmentTag[] | null,
 ): any[] {
   let filtered = exercises;
 
   // Filter by available equipment
-  filtered = filtered.filter((ex) => {
-    const required = ex.equipment_required || [];
-    if (required.includes('Barbell') && !userProfile.has_barbell) return false;
-    if (required.includes('Dumbbells') && !userProfile.has_dumbbells) return false;
-    return true;
-  });
+  filtered = filtered.filter((ex) => edgeExerciseRequirementsAreAvailable({
+    requirements: ex.equipment_required || [],
+    resolvedEquipmentTags: resolvedEquipmentTags ?? undefined,
+    legacyProfile: userProfile,
+  }));
 
   // Filter out exercises restricted by injuries
   const restrictions = rulesConfig.injuryRestrictions;

@@ -4,6 +4,7 @@
  */
 
 import { Database } from '../../../src/types/supabase';
+import type { CanonicalEquipmentTag } from './equipment.ts';
 
 export type DbUserProfile = Database['public']['Tables']['user_profiles']['Row'];
 export type DbTrainingProgram = Database['public']['Tables']['training_programs']['Row'];
@@ -86,6 +87,8 @@ export enum DifficultyLevel {
 export interface GenerateProgramRequest {
   user_id: string;
   program_phase?: ProgramPhase;
+  /** Canonical client-resolved availability; preferred over legacy DB booleans. */
+  resolvedEquipmentTags?: CanonicalEquipmentTag[];
 }
 
 export interface GenerateProgramResponse {
