@@ -55,7 +55,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'easy_zone2_row',
     label: 'Easy Zone 2 Row',
-    description: '3 x 8min zone 2 row, 2min easy between blocks',
+    description: '3 x 8min zone 2 row, 2min complete rest between blocks',
     category: 'flush',
     byeOnly: false,
     durationMinutes: 28,
@@ -63,7 +63,7 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
   {
     templateId: 'easy_zone2_ski',
     label: 'Easy Zone 2 Ski Erg',
-    description: '3 x 8min zone 2 SkiErg, 2min easy between blocks',
+    description: '3 x 8min zone 2 SkiErg, 2min complete rest between blocks',
     category: 'flush',
     byeOnly: false,
     durationMinutes: 28,
@@ -258,7 +258,7 @@ function conditioningRowsForTemplate(def: CoachRevisionTemplateDefinition): Cond
       repsMin: 8,
       repsMax: 8,
       restSeconds: 120,
-      notes: '3 x 8min zone 2 on Rower. 2min easy between blocks. Smooth, conversational rhythm.',
+      notes: '3 x 8min zone 2 on Rower. 2min complete rest between blocks. Smooth, conversational rhythm.',
     }];
   }
   if (def.templateId === 'easy_zone2_ski') {
@@ -269,7 +269,7 @@ function conditioningRowsForTemplate(def: CoachRevisionTemplateDefinition): Cond
       repsMin: 8,
       repsMax: 8,
       restSeconds: 120,
-      notes: '3 x 8min zone 2 on SkiErg. 2min easy between blocks. Relaxed rhythm, no grind.',
+      notes: '3 x 8min zone 2 on SkiErg. 2min complete rest between blocks. Relaxed rhythm, no grind.',
     }];
   }
   return [{

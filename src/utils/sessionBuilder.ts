@@ -786,6 +786,27 @@ export function conditioningDateHash(dateStr: string): number {
   return Math.abs(hash);
 }
 
+/**
+ * Default easy-aerobic erg policy, expressed as ten deterministic buckets:
+ * Bike 40%, mixed erg 40%, RowErg 10%, SkiErg 10%.
+ *
+ * Callers provide an existing deterministic hash. Explicit plan/athlete
+ * modality choices must be resolved before this fallback is used.
+ */
+export function selectDefaultAerobicErgModalityFromHash(
+  hash: number,
+): Exclude<ErgModality, 'bike_erg'> {
+  const weightedBuckets = [
+    'bike', 'bike', 'bike', 'bike',
+    'mixed', 'mixed', 'mixed', 'mixed',
+    'row',
+    'ski',
+  ] as const;
+  const normalizedHash = Number.isFinite(hash) ? Math.abs(Math.trunc(hash)) : 0;
+  const bucket = normalizedHash % weightedBuckets.length;
+  return weightedBuckets[bucket];
+}
+
 /** Helper: build a WorkoutExercise for conditioning. */
 export function condEx(
   id: string,
@@ -890,15 +911,18 @@ function aerobicErgPrescription(
   const blockMin = desiredMinutes <= 20 ? 10 : 8;
   const blocks = desiredMinutes <= 20 ? 2 : Math.max(3, Math.floor(desiredMinutes / blockMin));
   const actualTotal = blocks * blockMin;
+  const mixedTitle = `${blocks} x ${blockMin}min ${label} Mixed Erg Block`;
   const workLine = mod === 'mixed'
-    ? `${blocks} x ${blockMin}min ${label}, alternating Rower and SkiErg`
+    ? `${blocks} x ${blockMin}min ${label}, alternating Bike and Rower/SkiErg`
     : `${blocks} x ${blockMin}min ${label} on ${modLabel}`;
   return {
-    title: `${blocks} x ${blockMin}min ${label} ${modLabel}`,
+    title: mod === 'mixed'
+      ? mixedTitle
+      : `${blocks} x ${blockMin}min ${label} ${modLabel}`,
     workLine,
     sets: blocks,
     restSeconds: 120,
-    restLine: `2min easy between blocks (${actualTotal}min total work)`,
+    restLine: `2min complete rest between blocks (${actualTotal}min total work)`,
   };
 }
 
@@ -1267,7 +1291,8 @@ export function buildConditioningTemplate(
      * Explicit ergometer modality to use when running is off. Overrides
      * the default hash-based rotation. Used for weekly erg tracking so
      * the same modality isn't repeated twice in a week when it can be
-     * avoided. 'mixed' = row+ski combo.
+     * avoided. For aerobic work, 'mixed' combines bike with row/ski;
+     * harder erg templates retain their existing row+ski interpretation.
      */
     ergModality?: ErgModality;
     /**
@@ -1349,10 +1374,7 @@ function buildReducedAerobicBase(
 ): WorkoutExercise[] {
   const hash = conditioningDateHash(dateStr);
   const prefix = `cond-${dateStr}`;
-  const modalities = ['bike', 'row', 'ski'] as const;
-  const mod = ergModality === 'row' || ergModality === 'bike' || ergModality === 'ski'
-    ? ergModality
-    : modalities[hash % modalities.length];
+  const mod = ergModality ?? selectDefaultAerobicErgModalityFromHash(hash);
   const duration = 20 + (hash % 3) * 5; // 20, 25, or 30 min
   const prescription = aerobicErgPrescription(mod, duration, 'easy');
   return [
@@ -1398,7 +1420,8 @@ export function buildCombinedConditioningTemplate(
 ): WorkoutExercise[] {
   const hash = conditioningDateHash(dateStr);
   const prefix = `cond-${dateStr}`;
-  // Default modality rotation (bike / row / ski) for variety.
+  // Non-aerobic erg rotation remains evenly varied. Aerobic-base defaults
+  // use the shared 40/40/10/10 policy below.
   const allMods = ['bike', 'row', 'ski'] as const;
   // Leg-sparing subset — SkiErg and Row are more upper-biased than Bike
   // for pure glycolytic/power work. We include bike too (it's still off-
@@ -1406,11 +1429,15 @@ export function buildCombinedConditioningTemplate(
   const legSparingMods = ['ski', 'row', 'bike'] as const;
   const isLowerPairing = strengthRegion === 'lower';
   const modPool = isLowerPairing ? legSparingMods : allMods;
-  // 'mixed' = row + ski combo block. Otherwise use explicit mod or hash rotation.
+  // Mixed aerobic work combines bike + row/ski; harder categories retain
+  // their existing row+ski mixed block. Explicit modality still wins.
+  const defaultModality = category === 'aerobic_base'
+    ? selectDefaultAerobicErgModalityFromHash(hash)
+    : modPool[hash % modPool.length];
   const mod = ergModality && ergModality !== 'mixed'
     ? ergModality
-    : modPool[hash % modPool.length];
-  const isMixed = ergModality === 'mixed';
+    : defaultModality;
+  const isMixed = ergModality === 'mixed' || (!ergModality && defaultModality === 'mixed');
   const selectedErgModality: ErgModality = isMixed ? 'mixed' : mod;
   const modLabel = modLabelFromErgSelection(selectedErgModality);
   const pairingNote = isLowerPairing ? LOWER_BODY_MACHINE_NOTE : undefined;
@@ -1431,7 +1458,7 @@ export function buildCombinedConditioningTemplate(
             prescription.restLine,
             '5-6/10 effort',
             isLowerPairing
-              ? 'Machine options: Bike or Assault Bike can be continuous; Rower or SkiErg should be 3 x 8min with 2min easy.'
+              ? 'Machine options: Bike or Assault Bike can be continuous; Rower or SkiErg should be 3 x 8min with 2min complete rest.'
               : undefined,
             isLowerPairing ? LOWER_BODY_MACHINE_NOTE : 'Conversational pace',
           )),
@@ -1654,10 +1681,16 @@ export function buildAttachedConditioningComponentTemplate(
   const legSparingMods = ['ski', 'row', 'bike'] as const;
   const isLowerPairing = strengthRegion === 'lower' || strengthRegion === 'full';
   const modPool = isLowerPairing ? legSparingMods : allMods;
+  const defaultModality = category === 'aerobic_base'
+    ? selectDefaultAerobicErgModalityFromHash(hash)
+    : modPool[hash % modPool.length];
   const mod = ergModality && ergModality !== 'mixed'
     ? ergModality
-    : modPool[hash % modPool.length];
-  const selectedErgModality: ErgModality = ergModality === 'mixed' ? 'mixed' : mod;
+    : defaultModality;
+  const selectedErgModality: ErgModality =
+    ergModality === 'mixed' || (!ergModality && defaultModality === 'mixed')
+      ? 'mixed'
+      : mod;
   const modLabel = modLabelFromErgSelection(selectedErgModality);
   const pairingNote = isLowerPairing ? LOWER_BODY_MACHINE_NOTE : undefined;
 
@@ -2220,10 +2253,8 @@ function buildConditioningTemplateRaw(
     case 'Long Nasal Run': {
       // Bucket: Aerobic base
       // Purpose: Build engine + recovery
-      // Variation: rotate modality (run / bike / row / ski) and structure
-      // (steady vs fartlek-style surges) by date hash so aerobic base
-      // doesn't feel identical week-to-week. Run gets the highest weight
-      // because AFL is a running sport.
+      // Variation: default to the shared deterministic 40/40/10/10
+      // bike/mixed/row/ski policy. Structure still varies by date hash.
       // ergModality hint from the weekly scheduler can force a specific
       // erg to avoid repeating a modality already used this week.
       const duration = 35 + (hash % 3) * 5; // 35–45 min
@@ -2243,19 +2274,9 @@ function buildConditioningTemplateRaw(
         modLabel = 'Row + SkiErg';
         ergPrescription = aerobicErgPrescription('mixed', duration, 'zone 2');
       } else {
-        const modVariant = hash % 5;
-        if (modVariant === 0 || modVariant === 1) {
-          modLabel = 'run';
-        } else if (modVariant === 2) {
-          modLabel = 'Assault Bike';
-          ergPrescription = aerobicErgPrescription('bike', duration, 'zone 2');
-        } else if (modVariant === 3) {
-          modLabel = 'Rower';
-          ergPrescription = aerobicErgPrescription('row', duration, 'zone 2');
-        } else {
-          modLabel = 'SkiErg';
-          ergPrescription = aerobicErgPrescription('ski', duration, 'zone 2');
-        }
+        const defaultModality = selectDefaultAerobicErgModalityFromHash(hash);
+        modLabel = modLabelFromErgSelection(defaultModality);
+        ergPrescription = aerobicErgPrescription(defaultModality, duration, 'zone 2');
       }
       // Structure variant: drive by feel if supplied, else hash.
       //   flowing → pure steady    (default aerobic character)

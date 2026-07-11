@@ -31,6 +31,7 @@ import {
   conditioningCategoryToExerciseName,
   conditioningDateHash,
   DEFAULT_ATHLETE_CONTEXT,
+  selectDefaultAerobicErgModalityFromHash,
 } from '../utils/sessionBuilder';
 import {
   resolveWeekWithConditioning,
@@ -187,6 +188,79 @@ section('5. aerobic_base is 1:1');
 }
 
 // ─────────────────────────────────────────────────────────────────
+// Section 5b: default aerobic modality is a deterministic weighted
+// 10-bucket policy. Explicit modalities are tested again at the program
+// builder boundary below so this remains fallback-only.
+// ─────────────────────────────────────────────────────────────────
+section('5b. aerobic modality defaults are weighted and deterministic');
+{
+  const picks = Array.from(
+    { length: 10 },
+    (_, hash) => selectDefaultAerobicErgModalityFromHash(hash),
+  );
+  const count = (modality: string): number =>
+    picks.filter((pick) => pick === modality).length;
+
+  assert(count('bike') === 4, `weighted buckets contain 40% bike (got ${picks.join(', ')})`);
+  assert(count('mixed') === 4, `weighted buckets contain 40% mixed (got ${picks.join(', ')})`);
+  assert(count('row') === 1, `weighted buckets contain 10% row (got ${picks.join(', ')})`);
+  assert(count('ski') === 1, `weighted buckets contain 10% ski (got ${picks.join(', ')})`);
+  assert(
+    selectDefaultAerobicErgModalityFromHash(37) ===
+      selectDefaultAerobicErgModalityFromHash(37),
+    'same hash always returns the same aerobic modality',
+  );
+
+  const firstSeedFor = (wanted: 'bike' | 'mixed' | 'row' | 'ski'): string => {
+    for (let i = 0; i < 100; i++) {
+      const seed = `aerobic-default-${i}`;
+      if (selectDefaultAerobicErgModalityFromHash(conditioningDateHash(seed)) === wanted) {
+        return seed;
+      }
+    }
+    throw new Error(`No deterministic seed found for ${wanted}`);
+  };
+  const textOf = (rows: ReturnType<typeof buildConditioningTemplate>): string =>
+    rows.map((row) => `${row.exercise?.name ?? ''}\n${row.notes ?? ''}`).join('\n');
+
+  const bikeText = textOf(buildConditioningTemplate('Long Nasal Run', firstSeedFor('bike')));
+  const mixedSeed = firstSeedFor('mixed');
+  const mixedText = textOf(buildConditioningTemplate('Long Nasal Run', mixedSeed));
+  const rowText = textOf(buildConditioningTemplate('Long Nasal Run', firstSeedFor('row')));
+  const skiText = textOf(buildConditioningTemplate('Long Nasal Run', firstSeedFor('ski')));
+  assert(/Assault Bike/i.test(bikeText), `bike bucket builds bike zone 2 (got "${bikeText}")`);
+  assert(
+    /Mixed Erg Block/i.test(mixedText) && /Bike and Rower\/SkiErg/i.test(mixedText),
+    `mixed bucket builds bike + row/ski blocks (got "${mixedText}")`,
+  );
+  assert(/Rower/i.test(rowText), `row bucket builds RowErg intervals (got "${rowText}")`);
+  assert(/SkiErg/i.test(skiText), `ski bucket builds SkiErg intervals (got "${skiText}")`);
+  assert(
+    mixedText === textOf(buildConditioningTemplate('Long Nasal Run', mixedSeed)),
+    'same aerobic template inputs produce identical modality and prescription',
+  );
+
+  for (const [label, text] of [
+    ['mixed', mixedText],
+    ['row', rowText],
+    ['ski', skiText],
+  ] as const) {
+    assert(
+      !/\b(?:1[1-9]|[2-9]\d)min zone 2 on (?:Rower|SkiErg)/i.test(text),
+      `${label} default has no continuous Row/Ski block longer than 10min`,
+    );
+    assert(
+      /2min complete rest between blocks/i.test(text),
+      `${label} default uses complete rest between aerobic blocks (got "${text}")`,
+    );
+    assert(
+      !/easy between blocks/i.test(text),
+      `${label} default does not prescribe easy work during between-block rest`,
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────
 // Section 6: Backward-compat — miniCycleNumber omitted falls back to
 // the date-hash path. Same date → same template (legacy determinism).
 // ─────────────────────────────────────────────────────────────────
@@ -330,7 +404,7 @@ section('8. combined lower + aerobic-base copy');
     `combined aerobic title is concise (got "${title}")`,
   );
   assert(
-    notes.includes('Machine options: Bike or Assault Bike can be continuous; Rower or SkiErg should be 3 x 8min with 2min easy.'),
+    notes.includes('Machine options: Bike or Assault Bike can be continuous; Rower or SkiErg should be 3 x 8min with 2min complete rest.'),
     'combined aerobic notes mention machine options clearly',
   );
   assert(
@@ -349,6 +423,39 @@ section('8. combined lower + aerobic-base copy');
     !/Combined S\+C day|abbreviated conditioning dose|Can also be completed|Intensity:/i.test(notes),
     `combined aerobic notes avoid technical/duplicate copy (got "${notes}")`,
   );
+}
+
+// ─────────────────────────────────────────────────────────────────
+// Section 8b: explicit plan modality wins before weighted defaults.
+// ─────────────────────────────────────────────────────────────────
+section('8b. explicit aerobic modality remains authoritative');
+{
+  const explicitPlan: SessionAllocation[] = [{
+    tier: 'core',
+    focus: 'Lower strength + easy aerobic finisher',
+    dayOfWeek: 'Monday',
+    isHardExposure: false,
+    strengthPattern: 'lower',
+    hasCombinedConditioning: true,
+    attachedConditioningKind: 'finisher',
+    conditioningFlavour: 'aerobic',
+    conditioningCategory: 'aerobic_base',
+    ergModality: 'ski',
+  }];
+  const [workout] = buildWorkoutsFromCoach([], 'mc-explicit-aerobic-modality', explicitPlan, undefined, {
+    miniCycleNumber: 1,
+    weekInBlock: 1,
+    weekStartISO: '2026-06-01',
+  });
+  const text = workout.exercises
+    .map((row) => `${row.exercise?.name ?? ''}\n${row.notes ?? ''}`)
+    .join('\n');
+  assert(/SkiErg/i.test(text), `explicit SkiErg survives weekly default selection (got "${text}")`);
+  assert(
+    !/\b(?:1[1-9]|[2-9]\d)min zone 2 on SkiErg/i.test(text),
+    'explicit SkiErg remains intervalised for longer zone-2 work',
+  );
+  assert(/2min complete rest between blocks/i.test(text), 'explicit SkiErg uses complete rest');
 }
 
 // ─────────────────────────────────────────────────────────────────

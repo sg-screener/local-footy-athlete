@@ -40,6 +40,7 @@ import {
   switchToOffFeetModality,
   tagAsShiftedFromRun,
   conditioningDateHash,
+  selectDefaultAerobicErgModalityFromHash,
   SPEED_SPRINT_TEMPLATES,
   type ErgModality,
   type ConditioningFeel,
@@ -1753,16 +1754,32 @@ export function buildWorkoutsFromCoach(
         || cat === 'tempo' // 4B: combined tempo finishers are erg-based
         || (cat === 'sprint' && strengthRegion === 'lower')
       );
-    // Standalone aerobic_base (Long Nasal Run) MAY pick an erg. A typed
-    // off-feet decision makes that mandatory; otherwise the existing
-    // rotation may still bias toward an unused erg.
+    // Standalone aerobic_base uses the same deterministic weighted erg
+    // default as combined zone-2 work. Explicit/off-feet decisions remain
+    // authoritative, and weekly repeat avoidance only affects fallback.
     const willUseErgStandaloneAero =
       !isCombined && cat === 'aerobic_base' &&
       (planEntry.conditioningOffFeet === true || usedErgs.size < 3);
     let ergHint: ErgModality | undefined;
-    if (willUseErgCombined) {
-      const pool: ErgModality[] =
-        (strengthRegion === 'lower' && (cat === 'sprint' || cat === 'glycolytic'))
+    const explicitErg = planEntry.ergModality as ErgModality | undefined;
+    if (explicitErg && (willUseErgCombined || (!isCombined && cat === 'aerobic_base'))) {
+      // Typed engine/athlete choice always wins over default weighting and
+      // weekly variety. This was previously overwritten on combined days.
+      ergHint = explicitErg;
+      usedErgs.add(ergHint);
+    } else if (willUseErgCombined) {
+      const weightedAerobicDefault = selectDefaultAerobicErgModalityFromHash(
+        conditioningDateHash(dateStr),
+      );
+      const weightedAerobicFallbacks: Record<Exclude<ErgModality, 'bike_erg'>, ErgModality[]> = {
+        bike: ['bike', 'mixed', 'row', 'ski'],
+        mixed: ['mixed', 'bike', 'row', 'ski'],
+        row: ['row', 'bike', 'mixed', 'ski'],
+        ski: ['ski', 'mixed', 'bike', 'row'],
+      };
+      const pool: ErgModality[] = cat === 'aerobic_base'
+        ? weightedAerobicFallbacks[weightedAerobicDefault]
+        : (strengthRegion === 'lower' && (cat === 'sprint' || cat === 'glycolytic'))
           ? ['ski', 'row', 'bike', 'mixed']
           : ['bike', 'row', 'ski', 'mixed'];
       // Preference order:
@@ -1780,14 +1797,18 @@ export function buildWorkoutsFromCoach(
         ?? pool.find(m => m !== (isConsecutiveDayErg ? lastErg : undefined))
         ?? pool[0];
       usedErgs.add(ergHint);
-    } else if (
-      willUseErgStandaloneAero &&
-      (planEntry.ergModality || planEntry.conditioningOffFeet)
-    ) {
-      const pool: ErgModality[] = ['bike', 'row', 'ski'];
-      ergHint = planEntry.ergModality as ErgModality | undefined
-        ?? pool.find((modality) => !usedErgs.has(modality))
-        ?? pool[0];
+    } else if (willUseErgStandaloneAero) {
+      const weightedDefault = selectDefaultAerobicErgModalityFromHash(
+        conditioningDateHash(dateStr),
+      );
+      const pool: ErgModality[] = weightedDefault === 'bike'
+        ? ['bike', 'mixed', 'row', 'ski']
+        : weightedDefault === 'mixed'
+          ? ['mixed', 'bike', 'row', 'ski']
+          : weightedDefault === 'row'
+            ? ['row', 'bike', 'mixed', 'ski']
+            : ['ski', 'mixed', 'bike', 'row'];
+      ergHint = pool.find((modality) => !usedErgs.has(modality)) ?? pool[0];
       usedErgs.add(ergHint);
     }
     // Persist on plan entry so downstream code (and any diagnostic output)

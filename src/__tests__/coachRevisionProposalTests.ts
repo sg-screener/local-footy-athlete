@@ -891,7 +891,10 @@ section('[15b] row/ski flush templates are intervalised, bike remains continuous
     /3 x 8min zone 2 Rower/i.test(textOfWorkout(row)));
   eq('easy_zone2_row uses three blocks', rowMain?.prescribedSets, 3);
   eq('easy_zone2_row uses 8min work blocks', rowMain?.prescribedRepsMin, 8);
-  eq('easy_zone2_row uses 2min easy rest', rowMain?.restSeconds, 120);
+  eq('easy_zone2_row uses 2min complete rest', rowMain?.restSeconds, 120);
+  ok('easy_zone2_row copy says complete rest',
+    /2min complete rest between blocks/i.test(textOfWorkout(row)) &&
+      !/easy between blocks/i.test(textOfWorkout(row)));
 
   const ski = buildCoachRevisionTemplateWorkout('easy_zone2_ski', MON);
   const skiMain = ski?.exercises?.[0];
@@ -899,7 +902,10 @@ section('[15b] row/ski flush templates are intervalised, bike remains continuous
     /3 x 8min zone 2 SkiErg/i.test(textOfWorkout(ski)));
   eq('easy_zone2_ski uses three blocks', skiMain?.prescribedSets, 3);
   eq('easy_zone2_ski uses 8min work blocks', skiMain?.prescribedRepsMin, 8);
-  eq('easy_zone2_ski uses 2min easy rest', skiMain?.restSeconds, 120);
+  eq('easy_zone2_ski uses 2min complete rest', skiMain?.restSeconds, 120);
+  ok('easy_zone2_ski copy says complete rest',
+    /2min complete rest between blocks/i.test(textOfWorkout(ski)) &&
+      !/easy between blocks/i.test(textOfWorkout(ski)));
 
   const bike = buildCoachRevisionTemplateWorkout('easy_zone2_bike', MON);
   const bikeMain = bike?.exercises?.[0];
