@@ -890,6 +890,7 @@ Accessories upper: skull crushers, tricep pushdowns, bicep curls, lateral raises
 Accessories lower: Nordic lowers, hamstring curls, knee extensions, calf raises, tib raises, Copenhagen plank, crab walks, back extension.
 
 PATTERN RULES:
+- The WEEKLY PLAN line's MAIN PATTERNS are authoritative for main lifts. Do not add another session's main pattern; small opposite-pattern accessories are allowed only when clearly secondary.
 - No same primary pattern on consecutive training days.
 - No back squat + trap bar DL same day (axial overload). Pair bilateral with unilateral, squat with hinge.
 - Pull max 2x/week, push max 2-3x/week, heavy hinge max 2x/week, heavy squat max 2x/week.
@@ -936,6 +937,7 @@ NEVER program: Olympic lifts (cleans, snatches). Use jump squats for explosive s
 CONDITIONING (only if constraints allow):
 - Off-season: finish CORE sessions with 20-30min conditioning. Hit all 3 energy systems across the week.
 - In-season: no extra running. Optional conditioning = off-leg only (bike, rower, ski erg).
+- Never hide conditioning or power work inside ordinary strength exercises when the WEEKLY PLAN did not assign that component. Early off-season optional weeks have no power, jumps, explosive push-ups, contrast work, running or hard conditioning.
 
 === OUTPUT CONTRACT — STRICTLY ENFORCED ===
 
@@ -985,6 +987,10 @@ const UPDATE_PROGRAM_TOOL = {
         items: {
           type: "object" as const,
           properties: {
+            planEntryId: {
+              type: "string" as const,
+              description: "Exact stable planEntryId copied from the WEEKLY PLAN line.",
+            },
             dayOfWeek: {
               type: "number" as const,
               description: "1 = Monday, 7 = Sunday.",
@@ -1031,7 +1037,7 @@ const UPDATE_PROGRAM_TOOL = {
               },
             },
           },
-          required: ["dayOfWeek", "name", "workoutType", "exercises"],
+          required: ["planEntryId", "dayOfWeek", "name", "workoutType", "exercises"],
         },
       },
     },

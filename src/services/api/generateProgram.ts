@@ -31,6 +31,7 @@ import {
 } from '../../config/env';
 import { logger } from '../../utils/logger';
 import { resolveEquipmentAvailability } from '../../utils/equipmentAvailability';
+import { getSessionComponents } from '../../utils/sessionComponents';
 import {
   getProgrammingRoleBias,
   normalizeOnboardingRole,
@@ -160,7 +161,7 @@ function resolveGenerationConstraints(
   });
 }
 
-function buildGeneratedMicrocycles(args: {
+export function buildGeneratedMicrocycles(args: {
   coachWorkouts: CoachGeneratedWorkouts;
   plan: CoachingPlan;
   coachingInputs?: CoachingInputs;
@@ -179,7 +180,7 @@ function buildGeneratedMicrocycles(args: {
     seasonPhase: args.profile.seasonPhase,
   });
 
-  return states.map((blockState) => {
+  return states.map((blockState, stateIndex) => {
     const microcycleId = `${args.microcyclePrefix}-${blockState.weekNumber}`;
     const weekPlan = args.coachingInputs
       ? buildCoachingPlan({
@@ -190,8 +191,12 @@ function buildGeneratedMicrocycles(args: {
           weekKind: blockState.weekKind,
         })
       : args.plan;
+    // An edge response describes exactly the block state sent in its prompt:
+    // week 1. Never replay that single array against week 2-4 allocations.
+    // Later weeks use their own deterministic plan/fallback content.
+    const sourceCoachWorkouts = stateIndex === 0 ? args.coachWorkouts : [];
     const baseWorkouts = buildWorkoutsFromCoach(
-      args.coachWorkouts,
+      sourceCoachWorkouts,
       microcycleId,
       weekPlan.weeklyPlan,
       args.profile,
@@ -213,6 +218,43 @@ function buildGeneratedMicrocycles(args: {
       weekKind: blockState.weekKind,
       generationConstraints: args.generationConstraints,
     });
+
+    if (isDevBuild()) {
+      const sourceByDay = new Map(sourceCoachWorkouts.map((workout) => [workout.dayOfWeek, workout]));
+      const planByDay = new Map(
+        weekPlan.weeklyPlan
+          .filter((entry) => !!entry.dayOfWeek)
+          .map((entry) => [DAY_MAP[entry.dayOfWeek!], entry]),
+      );
+      logger.warn('[ProgramGen][dev] Microcycle plan-entry alignment', {
+        microcycleId,
+        weekNumber: blockState.weekNumber,
+        sourceMode: stateIndex === 0 ? 'edge_exact_week' : 'deterministic_week_fallback',
+        days: workouts.map((workout) => {
+          const source = sourceByDay.get(workout.dayOfWeek);
+          const entry = planByDay.get(workout.dayOfWeek);
+          const finalRowNames = new Set(
+            workout.exercises.map((row) => String(row.exercise?.name ?? '').toLowerCase()),
+          );
+          return {
+            dayOfWeek: workout.dayOfWeek,
+            sourceGeneratedWorkout: source?.name ?? null,
+            sourcePlanEntryId: source?.planEntryId ?? null,
+            matchedPlanEntryId: entry?.planEntryId ?? null,
+            intendedStrengthPatterns: entry?.strengthPatternContributions ?? [],
+            finalTier: workout.sessionTier ?? null,
+            finalComponents: getSessionComponents(workout).map((component) => component.kind),
+            finalWorkoutType: workout.workoutType,
+            removedOrReplacedSourceRows: (source?.exercises ?? [])
+              .map((row) => row.name)
+              .filter((name) => !finalRowNames.has(String(name).toLowerCase())),
+            fallbackReason: stateIndex === 0
+              ? source ? null : 'edge_omitted_day'
+              : 'edge_week_not_replayed_across_microcycles',
+          };
+        }),
+      });
+    }
 
     return {
       id: microcycleId,
@@ -545,9 +587,11 @@ export function buildProgramGenerationRequestDiagnostics(
       recoverySessions: derivedPlan.recoverySessions,
       constraintNoteCount: derivedPlan.constraints.notes.length,
       weeklyPlan: derivedPlan.weeklyPlan.map((session) => ({
+        planEntryId: session.planEntryId,
         dayOfWeek: session.dayOfWeek,
         tier: session.tier,
         focus: session.focus,
+        strengthPatternContributions: session.strengthPatternContributions ?? [],
         isHardExposure: session.isHardExposure,
       })),
     },
@@ -561,6 +605,7 @@ interface CoachResponse {
   reply: string;
   programUpdate?: {
     workouts: Array<{
+      planEntryId?: string;
       dayOfWeek: number;
       name: string;
       workoutType: string;
@@ -1184,7 +1229,7 @@ const DAY_MAP: Record<string, number> = {
  *
  * Previously ~120 lines / ~1500 words. Now ~40 lines / ~400 words.
  */
-function buildGenerationPrompt(
+export function buildGenerationPrompt(
   data: OnboardingData,
   plan: CoachingPlan,
   resolvedEquipmentTags: readonly EquipmentTag[] = resolveEquipmentAvailability(data),
@@ -1221,13 +1266,22 @@ function buildGenerationPrompt(
           gLabel = diff === 0 ? ' (GAME DAY)' : ` (G${diff > 0 ? '+' : ''}${diff})`;
         }
       }
-      parts.push(`  ${session.dayOfWeek || 'TBD'}${gLabel}: [${session.tier.toUpperCase()}] ${session.focus}${session.isHardExposure ? ' (HARD)' : ''}`);
+      const patternLabel = session.strengthPatternContributions?.length
+        ? ` [MAIN PATTERNS: ${session.strengthPatternContributions.join(' + ')}]`
+        : '';
+      parts.push(`  ${session.dayOfWeek || 'TBD'}${gLabel}: planEntryId=${session.planEntryId ?? 'missing'} [${session.tier.toUpperCase()}]${patternLabel} ${session.focus}${session.isHardExposure ? ' (HARD)' : ''}`);
     });
     const expectedDayNumbers = plan.weeklyPlan
       .map((session) => session.dayOfWeek ? DAY_MAP[session.dayOfWeek] : null)
       .filter((day): day is number => day !== null);
     parts.push(`\nReturn exactly one workout object for every WEEKLY PLAN line above. Do not omit optional, recovery, team-training, or Saturday sessions. Expected numeric dayOfWeek values: ${expectedDayNumbers.join(', ')}.`);
+    parts.push('Copy each planEntryId exactly into its workout object. Generate main strength work only for that line\'s MAIN PATTERNS. Minor balancing accessories are okay, but do not add another session\'s main pattern.');
+    parts.push('Do not put conditioning, running, ergs, jumps, plyometrics, explosive presses or contrast work inside ordinary strength exercises unless the WEEKLY PLAN explicitly assigns that component. The client enforces this contract.');
     parts.push('\nFollow the above tiers EXACTLY. Do NOT promote OPTIONAL/RECOVERY to CORE.');
+  }
+
+  if (data.seasonPhase === 'Off-season' && plan.weeklyPlan.every((session) => session.tier === 'optional')) {
+    parts.push('\nEARLY OFF-SEASON WEEKS 1-2: every session is OPTIONAL; use 8-12 rep body-armour strength and easy off-feet aerobic/base work only. No running, power, jumps, explosive push-ups or contrast pairings.');
   }
 
   const setupConstraints = formatAvailabilityConstraintsForPrompt(data);

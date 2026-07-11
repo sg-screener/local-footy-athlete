@@ -187,6 +187,22 @@ assert(
   /exercises=\{conditioningExercises\}/.test(v2),
   'V2 conditioning phases render only resolved conditioning rows',
 );
+const classicConditioningRenderer = classic.slice(
+  classic.indexOf('const renderConditioningRow ='),
+  classic.indexOf('return (', classic.indexOf('const renderConditioningRow =') + 1000),
+);
+const v2ConditioningRenderer = v2.slice(
+  v2.indexOf('function ConditioningRow('),
+  v2.indexOf('function TeamTrainingBlock', v2.indexOf('function ConditioningRow(')),
+);
+assert(
+  !/weightControl|prescribedWeightKg|formatWeight/.test(classicConditioningRenderer),
+  'Classic conditioning rows never render kilogram controls',
+);
+assert(
+  !/weightControl|prescribedWeightKg|formatWeight/.test(v2ConditioningRenderer),
+  'V2 conditioning rows never render kilogram controls',
+);
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);
 if (fail > 0) {

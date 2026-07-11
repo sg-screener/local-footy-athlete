@@ -126,8 +126,8 @@ for (const weekNumber of [1, 2]) {
   const workouts = buildWeek(plan);
   const cats = categories(plan);
   const counts = exposureCounts(workouts);
-  const coreStrength = plan.weeklyPlan.filter((session) =>
-    session.tier === 'core' && !!session.strengthPattern);
+  const optionalStrength = plan.weeklyPlan.filter((session) =>
+    session.tier === 'optional' && !!session.strengthPattern);
   const supportRecovery = plan.weeklyPlan.filter((session) =>
     session.tier === 'optional' || session.tier === 'recovery');
 
@@ -147,8 +147,9 @@ for (const weekNumber of [1, 2]) {
   ok(`week ${weekNumber} builds visible off-feet aerobic work`,
     /bike|row|ski/i.test(workoutText(workouts)) && !/Long Nasal Run/.test(workoutText(workouts)),
     workoutText(workouts));
-  ok(`week ${weekNumber} keeps 2-3 useful core strength sessions`,
-    coreStrength.length >= 2 && coreStrength.length <= 3,
+  ok(`week ${weekNumber} keeps 2-3 useful optional strength sessions`,
+    optionalStrength.length >= 2 && optionalStrength.length <= 3 &&
+      plan.weeklyPlan.every((session) => session.tier === 'optional'),
     planText(plan));
   ok(`week ${weekNumber} includes optional/support or recovery work`,
     supportRecovery.length >= 1,
@@ -198,9 +199,10 @@ console.log('\n[2] early low readiness and low availability');
     preferredTrainingDays: ['Monday', 'Wednesday', 'Friday', 'Saturday'],
     recentTrainingLoad: 'Pretty consistent',
   }));
-  ok('four-day early week keeps three core strength sessions',
+  ok('four-day early week keeps three optional strength sessions',
     fourDayPlan.weeklyPlan.filter((session) =>
-      session.tier === 'core' && !!session.strengthPattern).length === 3,
+      session.tier === 'optional' && !!session.strengthPattern).length === 3 &&
+      fourDayPlan.weeklyPlan.every((session) => session.tier === 'optional'),
     planText(fourDayPlan));
   ok('four-day early week keeps one optional aerobic support session',
     fourDayPlan.weeklyPlan.filter((session) =>

@@ -85,6 +85,11 @@ import {
   buildPrescriptionEffectEvidence,
 } from '../utils/deterministicCoachNoteFactory';
 import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
+import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
+import {
+  mainPatternsForLegacyStrengthPattern,
+  type MainStrengthPattern,
+} from '../rules/strengthPatternContributions';
 
 /**
  * Default exercises used in the training program
@@ -646,7 +651,8 @@ export function findOrCreateExercise(name: string): Exercise {
   };
 }
 
-type CoachGeneratedWorkoutInput = {
+export type CoachGeneratedWorkoutInput = {
+  planEntryId?: string;
   dayOfWeek: number;
   name: string;
   workoutType: string;
@@ -787,7 +793,7 @@ function applyPhaseRepSchemeToExercise(
 
   const seasonPhase = context.seasonPhase!;
   const exerciseName = exercise.exercise?.name ?? '';
-  const classification = classifyPoolSlot(exerciseName);
+  const classification = classifyPoolSlot(resolveExerciseName(exerciseName));
   if (!classification) return exercise;
 
   const { slot, role } = classification;
@@ -840,7 +846,7 @@ function applySubphaseMainLiftLoadMultiplier(
 
   return exercises.map((exercise) => {
     const name = exercise.exercise?.name ?? '';
-    const classification = classifyPoolSlot(name);
+    const classification = classifyPoolSlot(resolveExerciseName(name));
     if (!classification || classification.role !== 'anchor' || !MAIN_LIFT_POOL_SLOTS.has(classification.slot)) {
       return exercise;
     }
@@ -974,6 +980,33 @@ function buildPlanLookup(
   return lookup;
 }
 
+function buildPlanIdentityLookup(
+  weeklyPlan: SessionAllocation[],
+): Map<string, SessionAllocation> {
+  return new Map(
+    weeklyPlan
+      .filter((entry): entry is SessionAllocation & { planEntryId: string } => !!entry.planEntryId)
+      .map((entry) => [entry.planEntryId, entry]),
+  );
+}
+
+function resolveGeneratedPlanEntry(
+  workout: Pick<CoachGeneratedWorkoutInput, 'dayOfWeek' | 'planEntryId'>,
+  planIdentityLookup: Map<string, SessionAllocation> | null,
+  planLookup: Map<number, SessionAllocation> | null,
+): SessionAllocation | null {
+  const identityMatch = workout.planEntryId
+    ? planIdentityLookup?.get(workout.planEntryId)
+    : undefined;
+  if (
+    identityMatch?.dayOfWeek &&
+    PLAN_DAY_MAP[identityMatch.dayOfWeek] === workout.dayOfWeek
+  ) {
+    return identityMatch;
+  }
+  return planLookup?.get(workout.dayOfWeek) ?? null;
+}
+
 function fallbackWorkoutTypeForPlanEntry(entry: SessionAllocation): string {
   if (entry.isTeamDay) return 'Team Training';
   if (entry.speedWorkKind === 'true_speed' && !entry.strengthPattern) return 'Sprint-Intervals';
@@ -1009,6 +1042,8 @@ function fallbackNameForPlanEntry(entry: SessionAllocation): string {
 function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGeneratedWorkoutInput['exercises'] {
   const strengthText = strengthFocusForPlanEntry(entry);
   const lower = strengthText.toLowerCase();
+  const contributions = entry.strengthPatternContributions ??
+    mainPatternsForLegacyStrengthPattern(entry.strengthPattern);
 
   if (entry.isTeamDay && !lower) return [];
   if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(lower)) {
@@ -1030,6 +1065,43 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
       { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
       { name: 'Calf Raises', sets: 2, repsMin: 10, repsMax: 15 },
       { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
+    ];
+  }
+  if (contributions.includes('hinge') && contributions.includes('pull')) {
+    return [
+      { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
+      { name: 'Pull-Ups', sets: 3, repsMin: 8, repsMax: 12 },
+      { name: 'Hamstring Curl', sets: 2, repsMin: 10, repsMax: 12 },
+      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
+      { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12 },
+    ];
+  }
+  if (contributions.length === 1 && contributions[0] === 'hinge') {
+    return [
+      { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
+      { name: 'Hip Thrusts', sets: 3, repsMin: 8, repsMax: 12 },
+      { name: 'Hamstring Curl', sets: 2, repsMin: 10, repsMax: 12 },
+    ];
+  }
+  if (contributions.length === 1 && contributions[0] === 'squat') {
+    return [
+      { name: 'Back Squat', sets: 3, repsMin: 8, repsMax: 10 },
+      { name: 'Reverse Lunges', sets: 3, repsMin: 8, repsMax: 12 },
+      { name: 'Leg Extension', sets: 2, repsMin: 10, repsMax: 12 },
+    ];
+  }
+  if (contributions.length === 1 && contributions[0] === 'pull') {
+    return [
+      { name: 'Pull-Ups', sets: 3, repsMin: 8, repsMax: 12 },
+      { name: 'Chest Supported Row', sets: 3, repsMin: 8, repsMax: 12 },
+      { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
+    ];
+  }
+  if (contributions.length === 1 && contributions[0] === 'push') {
+    return [
+      { name: 'Overhead Press', sets: 3, repsMin: 8, repsMax: 10 },
+      { name: 'Incline DB Bench', sets: 3, repsMin: 8, repsMax: 12 },
+      { name: 'Lateral Raise', sets: 2, repsMin: 12, repsMax: 15 },
     ];
   }
   if (/hip-dominant|hinge|rdl|hamstring/i.test(lower)) {
@@ -1090,6 +1162,7 @@ function completeCoachWorkoutsFromPlan(
     const dayOfWeek = PLAN_DAY_MAP[entry.dayOfWeek];
     if (dayOfWeek === undefined || existingDows.has(dayOfWeek)) continue;
     additions.push({
+      planEntryId: entry.planEntryId,
       dayOfWeek,
       name: fallbackNameForPlanEntry(entry),
       workoutType: fallbackWorkoutTypeForPlanEntry(entry),
@@ -1530,6 +1603,9 @@ export function buildWorkoutsFromCoach(
       ))
     : undefined;
   const planLookup = effectiveWeeklyPlan ? buildPlanLookup(effectiveWeeklyPlan) : null;
+  const planIdentityLookup = effectiveWeeklyPlan
+    ? buildPlanIdentityLookup(effectiveWeeklyPlan)
+    : null;
   const edgeProvidedDays = new Set(coachWorkouts.map((workout) => workout.dayOfWeek));
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(coachWorkouts, effectiveWeeklyPlan);
 
@@ -1696,7 +1772,7 @@ export function buildWorkoutsFromCoach(
   let runStreak = 0;
   let prevDow = -2;
   for (const cw of sortedCw) {
-    const planEntry = planLookup?.get(cw.dayOfWeek) ?? null;
+    const planEntry = resolveGeneratedPlanEntry(cw, planIdentityLookup, planLookup);
     const isTeamDay = !!planEntry?.isTeamDay;
     const isConsecutiveFromPrev = cw.dayOfWeek - prevDow === 1;
 
@@ -1774,7 +1850,20 @@ export function buildWorkoutsFromCoach(
       !isCombined && cat === 'aerobic_base' &&
       (planEntry.conditioningOffFeet === true || usedErgs.size < 3);
     let ergHint: ErgModality | undefined;
-    const explicitErg = planEntry.ergModality as ErgModality | undefined;
+    const generatedModality = (cw.exercises ?? [])
+      .map((exercise, index) => classifyGeneratedWorkoutRow({
+        name: exercise.name,
+        sets: exercise.sets,
+        repsMax: exercise.repsMax,
+        index,
+      }))
+      .find((classification) => classification.kind === 'conditioning')
+      ?.conditioningModality;
+    const generatedErg = generatedModality === 'bike' || generatedModality === 'row' ||
+      generatedModality === 'ski' || generatedModality === 'mixed'
+      ? generatedModality
+      : undefined;
+    const explicitErg = (planEntry.ergModality as ErgModality | undefined) ?? generatedErg;
     if (explicitErg && (willUseErgCombined || (!isCombined && cat === 'aerobic_base'))) {
       // Typed engine/athlete choice always wins over default weighting and
       // weekly variety. This was previously overwritten on combined days.
@@ -1933,7 +2022,7 @@ export function buildWorkoutsFromCoach(
 
   return completedCoachWorkouts.map((cw) => {
     const workoutId = `w-coach-${cw.dayOfWeek}`;
-    const planEntry = planLookup?.get(cw.dayOfWeek) ?? null;
+    const planEntry = resolveGeneratedPlanEntry(cw, planIdentityLookup, planLookup);
     const aiTier = (cw.sessionTier as SessionTier) || undefined;
     let canonicalTier: SessionTier | undefined;
     let canonicalIntensity: 'Light' | 'Moderate' | 'High' = 'Moderate';
@@ -2035,6 +2124,7 @@ export function buildWorkoutsFromCoach(
         intensity: canonicalIntensity,
         workoutType: condWorkoutType as any,
         sessionTier: canonicalTier,
+        ...(planEntry.planEntryId ? { planEntryId: planEntry.planEntryId } : {}),
         ...(!isStandaloneSpeed ? { conditioningFlavour: planEntry.conditioningFlavour } : {}),
         // 4B: carry the energy-system category onto conditioning workouts
         // so the rules kernel classifies from the typed field. True speed
@@ -2070,23 +2160,144 @@ export function buildWorkoutsFromCoach(
         workoutType: (ex as any).workoutType,
       }),
     );
+    const assignedContributions = new Set<MainStrengthPattern>(
+      planEntry?.strengthPatternContributions ??
+      mainPatternsForLegacyStrengthPattern(planEntry?.strengthPattern),
+    );
+    const classifiedRows = filteredAiExercises.map((exercise, index) => ({
+      exercise,
+      index,
+      classification: classifyGeneratedWorkoutRow({
+        name: exercise.name,
+        sets: exercise.sets,
+        repsMax: exercise.repsMax,
+        index,
+      }),
+    }));
+    const generatedRecoveryRows = classifiedRows.filter(
+      (row) => row.classification.kind === 'recovery_addon' && !!planEntry?.strengthPattern,
+    );
+    const removedRows: Array<{ name: string; reason: string }> = [];
+    const acceptedAiExercises = classifiedRows.flatMap((row) => {
+      const { exercise, classification, index } = row;
+      if (classification.kind === 'power') {
+        // Legacy/test-only callers without a deterministic plan have no power
+        // policy context to enforce. Production edge generation always passes
+        // the exact plan entry, which remains authoritative.
+        if (!planEntry) return [exercise];
+        removedRows.push({ name: exercise.name, reason: 'raw_power_owned_by_power_policy' });
+        return [];
+      }
+      if (classification.kind === 'conditioning') {
+        if (!planEntry) return [exercise];
+        removedRows.push({
+          name: exercise.name,
+          reason: planEntry?.hasCombinedConditioning
+            ? offseasonSubphase === 'early_offseason' && classification.hardConditioning
+              ? 'downgraded_to_early_offseason_aerobic_component'
+              : 'promoted_to_typed_conditioning_component'
+            : 'conditioning_not_assigned_by_deterministic_plan',
+        });
+        return [];
+      }
+      if (classification.kind === 'recovery_addon') {
+        if (!planEntry?.strengthPattern) return [exercise];
+        removedRows.push({ name: exercise.name, reason: 'promoted_to_recovery_addon' });
+        return [];
+      }
+
+      const rowPattern = classification.mainPattern;
+      if (rowPattern && assignedContributions.size > 0 && !assignedContributions.has(rowPattern)) {
+        const minorBalancingPull =
+          assignedContributions.size === 1 &&
+          assignedContributions.has('push') &&
+          rowPattern === 'pull' &&
+          index >= 2;
+        const minorPosteriorAccessory =
+          assignedContributions.size === 1 &&
+          assignedContributions.has('squat') &&
+          rowPattern === 'hinge' &&
+          index >= 2 &&
+          classification.kind === 'strength_accessory';
+        const minorCrossPatternAccessory =
+          classification.kind === 'strength_accessory' && index >= 2;
+        if (!minorBalancingPull && !minorPosteriorAccessory && !minorCrossPatternAccessory) {
+          removedRows.push({
+            name: exercise.name,
+            reason: `main_pattern_drift:${rowPattern}->${Array.from(assignedContributions).join('+')}`,
+          });
+          return [];
+        }
+      }
+
+      if (exercise.pairType === 'contrast') {
+        const { supersetGroup, supersetOrder, pairType, ...plainExercise } = exercise;
+        removedRows.push({ name: exercise.name, reason: 'stale_raw_contrast_pairing_removed' });
+        return [plainExercise];
+      }
+      return [exercise];
+    });
+
+    if (removedRows.length > 0) {
+      logger.warn('[ProgramGen] Canonical generated-row enforcement', {
+        microcycleId,
+        dayOfWeek: cw.dayOfWeek,
+        sourceWorkout: cw.name,
+        planEntryId: planEntry?.planEntryId ?? null,
+        intendedPatterns: Array.from(assignedContributions),
+        removalsOrPromotions: removedRows,
+      });
+    }
+
+    const representedPatterns = new Set<MainStrengthPattern>(
+      acceptedAiExercises
+        .flatMap((exercise, index) => {
+          const classification = classifyGeneratedWorkoutRow({
+          name: exercise.name,
+          sets: exercise.sets,
+          repsMax: exercise.repsMax,
+          index,
+          });
+          return classification.kind === 'strength_main' && classification.mainPattern
+            ? [classification.mainPattern]
+            : [];
+        }),
+    );
+    const missingPatterns = Array.from(assignedContributions).filter(
+      (pattern) => !representedPatterns.has(pattern),
+    );
+    const patternFallbackRows: CoachGeneratedWorkoutInput['exercises'] = missingPatterns.flatMap((pattern) => {
+      const match = fallbackExercisesForPlanEntry(planEntry!)
+        .find((exercise, index) => classifyGeneratedWorkoutRow({
+          name: exercise.name,
+          sets: exercise.sets,
+          repsMax: exercise.repsMax,
+          index,
+        }).mainPattern === pattern);
+      return match ? [match] : [];
+    });
     const requiresStrengthContent =
       edgeProvidedDays.has(cw.dayOfWeek) &&
-      planEntry?.tier === 'core' &&
-      !!planEntry.strengthPattern &&
-      !/\b(gunshow|prehab|pump|accessor|low-fatigue)\b/i.test(`${cw.name} ${planEntry.focus}`);
+      !!planEntry?.strengthPattern &&
+      !/\b(gunshow|prehab|pump|accessor|low-fatigue)\b/i.test(`${cw.name} ${planEntry?.focus ?? ''}`);
     // Preserve any plausible strength/support row from the edge. Fall back
     // only for an empty shell or a payload made entirely of conditioning
     // rows; the normaliser must not discard unusual but valid strength work.
-    const aiHasStrengthContent = filteredAiExercises.some(
-      (exercise) => !isConditioningOnlyText(exercise.name),
-    );
+    const aiHasStrengthContent = acceptedAiExercises.some((exercise, index) => {
+      const kind = classifyGeneratedWorkoutRow({
+        name: exercise.name,
+        sets: exercise.sets,
+        repsMax: exercise.repsMax,
+        index,
+      }).kind;
+      return kind === 'strength_main' || kind === 'strength_accessory';
+    });
     const fallbackStrengthExercises = requiresStrengthContent && !aiHasStrengthContent
       ? fallbackExercisesForPlanEntry(planEntry!)
       : [];
-    const sourceAiExercises = fallbackStrengthExercises.length > 0
+    const sourceAiExercises: CoachGeneratedWorkoutInput['exercises'] = fallbackStrengthExercises.length > 0
       ? fallbackStrengthExercises
-      : filteredAiExercises;
+      : [...acceptedAiExercises, ...patternFallbackRows];
 
     if (fallbackStrengthExercises.length > 0) {
       logger.warn('[ProgramGen] Edge workout lacked strength content required by deterministic plan; using safe plan fallback', {
@@ -2282,6 +2493,32 @@ export function buildWorkoutsFromCoach(
       );
     }
 
+    const canonicalRecoveryAddons = generatedRecoveryRows.length > 0
+      ? [{
+          id: `generated-recovery-${workoutId}`,
+          title: 'Optional Recovery Add-on',
+          label: 'Recovery',
+          kind: 'mobility' as const,
+          focusArea: 'General recovery',
+          optional: true as const,
+          skipPolicy: 'no_penalty' as const,
+          durationMinutes: 5,
+          exercises: generatedRecoveryRows.map(({ exercise }, index) => ({
+            id: `generated-recovery-${workoutId}-${index}`,
+            name: exercise.name,
+            prescription: exercise.notes || `${exercise.sets} x ${exercise.repsMin}-${exercise.repsMax}`,
+            source: 'local' as const,
+          })),
+          counting: {
+            hardExposure: false as const,
+            mainStrength: false as const,
+            conditioningCredit: 'none' as const,
+            createsHardDay: false as const,
+            sprintCodExposure: false as const,
+          },
+        }]
+      : undefined;
+
     const builtWorkout: Workout = {
       id: workoutId,
       microcycleId,
@@ -2300,6 +2537,10 @@ export function buildWorkoutsFromCoach(
       intensity: canonicalIntensity,
       workoutType: normalizedWorkoutType,
       sessionTier: canonicalTier,
+      ...(planEntry?.planEntryId ? { planEntryId: planEntry.planEntryId } : {}),
+      ...(planEntry?.strengthPatternContributions?.length
+        ? { strengthPatternContributions: [...planEntry.strengthPatternContributions] }
+        : {}),
       ...(planEntry?.hasCombinedConditioning ? { hasCombinedConditioning: true } : {}),
       ...(planEntry?.attachedConditioningKind ? { attachedConditioningKind: planEntry.attachedConditioningKind } : {}),
       ...(planEntry?.conditioningFlavour ? { conditioningFlavour: planEntry.conditioningFlavour } : {}),
@@ -2307,6 +2548,7 @@ export function buildWorkoutsFromCoach(
       ...(resolvedConditioningBlock ? { conditioningBlock: resolvedConditioningBlock } : {}),
       ...(resolvedSpeedBlock ? { speedBlock: resolvedSpeedBlock } : {}),
       ...(resolvedPowerBlock ? { powerBlock: resolvedPowerBlock } : {}),
+      ...(canonicalRecoveryAddons ? { recoveryAddons: canonicalRecoveryAddons } : {}),
       durationMinutes: 0,
       exercises: finalExercises,
       createdAt: new Date().toISOString(),

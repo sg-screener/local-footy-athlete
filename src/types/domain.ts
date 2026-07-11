@@ -506,6 +506,11 @@ export interface Workout {
   workoutType: WorkoutType;
   sessionTier?: SessionTier;
 
+  /** Stable deterministic allocation identity used during generated-week normalisation. */
+  planEntryId?: string;
+  /** Main weekly-pattern credit owned by the deterministic plan, not inferred from accessories. */
+  strengthPatternContributions?: Array<'squat' | 'hinge' | 'push' | 'pull'>;
+
   // Combined S+C metadata — set when session pairs strength + conditioning
   /** True when this day has a conditioning block appended after the strength block. */
   hasCombinedConditioning?: boolean;

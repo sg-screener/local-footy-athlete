@@ -79,6 +79,12 @@ import {
 import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import { resolveWeekContext } from '../rules/weekContext';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
+import {
+  mainPatternsForLegacyStrengthPattern,
+  stablePlanEntryId,
+  strengthPatternLedger,
+  type MainStrengthPattern,
+} from '../rules/strengthPatternContributions';
 import type {
   GenerationConstraintContext,
   GenerationInjuryConstraint,
@@ -238,6 +244,11 @@ export interface SessionAllocation {
    *   'full_body'       — covers squat/hinge + push + pull in one session
    */
   strengthPattern?: 'lower' | 'lower_combined' | 'push' | 'pull' | 'upper_combined' | 'full_body';
+
+  /** Exact main-pattern credit. This is narrower than a display label such as Full Body. */
+  strengthPatternContributions?: MainStrengthPattern[];
+  /** Stable identity for generated workout matching and diagnostics. */
+  planEntryId?: string;
 
   /**
    * B1 (2026-07-08): stress classification of this allocation, recorded at
@@ -1027,6 +1038,117 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     }
   }
 
+  // ── Early off-season authoritative pattern/component contract ──
+  // The first two weeks are optional body-armour work. For a healthy
+  // six-day/no-anchor week the three strength slots divide the four main
+  // patterns deliberately: hinge+pull, push, squat. "Full Body" remains a
+  // useful display label for the first slot, but no longer grants the AI an
+  // unrestricted squat+hinge+push+pull licence.
+  const isEarlyOffseason = inputs.seasonPhase === 'Off-season' &&
+    offseasonSubphase === 'early_offseason';
+  if (isEarlyOffseason) {
+    const strengthAllocations = weeklyPlan
+      .filter((session) => !!session.strengthPattern && !session.isTeamDay)
+      .sort((a, b) =>
+        dayNameToNumber(a.dayOfWeek ?? '') - dayNameToNumber(b.dayOfWeek ?? ''));
+
+    const intended = [
+      {
+        strengthPattern: 'full_body' as const,
+        contributions: ['hinge', 'pull'] as MainStrengthPattern[],
+        focus: 'Full body strength - lower hinge + upper pull body-armour emphasis',
+      },
+      {
+        strengthPattern: 'push' as const,
+        contributions: ['push'] as MainStrengthPattern[],
+        focus: 'Upper body - push emphasis (body-armour volume)',
+      },
+      {
+        strengthPattern: 'lower' as const,
+        contributions: ['squat'] as MainStrengthPattern[],
+        focus: 'Lower body - squat emphasis (body-armour volume)',
+      },
+    ];
+
+    if (!inputs.hasGame && inputs.teamTrainingDaysPerWeek === 0) {
+      intended.forEach((shape, index) => {
+        const allocation = strengthAllocations[index];
+        if (!allocation) return;
+        allocation.strengthPattern = shape.strengthPattern;
+        allocation.strengthPatternContributions = [...shape.contributions];
+        allocation.focus = shape.focus;
+        allocation.isHardExposure = false;
+
+        // Six available days can support three useful S+C body-armour slots
+        // without adding hard work. Conditioning remains easy, off-feet and
+        // component-level; lower-availability early weeks retain their existing
+        // standalone layout.
+        if (inputs.availableDays >= 6 && readiness !== 'low') {
+          allocation.hasCombinedConditioning = true;
+          allocation.attachedConditioningKind = 'component';
+          allocation.conditioningFlavour = 'aerobic';
+          allocation.conditioningCategory = 'aerobic_base';
+          allocation.conditioningOffFeet = true;
+          allocation.focus += ' + easy off-feet aerobic conditioning component';
+        }
+      });
+    }
+
+    // Bible: everything in weeks 1-2 is optional. Recovery/mobility identity
+    // still comes from the typed workout content; tier communicates ownership.
+    for (const allocation of weeklyPlan) {
+      allocation.tier = 'optional';
+      allocation.isHardExposure = false;
+    }
+  }
+
+  // Populate exact contributions and stable identities for every phase. A
+  // legacy single-lower allocation needs its typed focus to disambiguate
+  // squat from hinge; other legacy patterns map directly.
+  for (const allocation of weeklyPlan) {
+    if (!allocation.strengthPatternContributions?.length && allocation.strengthPattern) {
+      if (allocation.strengthPattern === 'lower') {
+        allocation.strengthPatternContributions = /hinge|hip-dominant|rdl|hamstring/i.test(allocation.focus)
+          ? ['hinge']
+          : ['squat'];
+      } else {
+        allocation.strengthPatternContributions = mainPatternsForLegacyStrengthPattern(
+          allocation.strengthPattern,
+        );
+      }
+    }
+    allocation.planEntryId = stablePlanEntryId({
+      weekNumber: inputs.weekNumber,
+      dayOfWeek: allocation.dayOfWeek,
+      contributions: allocation.strengthPatternContributions,
+      kind: allocation.isTeamDay
+        ? 'team'
+        : allocation.strengthPattern
+          ? 'strength'
+          : allocation.conditioningCategory ?? allocation.tier,
+    });
+  }
+
+  if (
+    isEarlyOffseason && !inputs.hasGame && inputs.teamTrainingDaysPerWeek === 0 &&
+    weeklyPlan.filter((session) => !!session.strengthPattern).length >= 3
+  ) {
+    const ledger = strengthPatternLedger(weeklyPlan);
+    if (
+      ledger.hinge < 1 || ledger.pull < 1 || ledger.push < 1 || ledger.squat < 1 ||
+      ledger.push > 1
+    ) {
+      logger.error('[ProgramGen] Early off-season main-pattern invariant failed', {
+        ledger,
+        plan: weeklyPlan.map((session) => ({
+          dayOfWeek: session.dayOfWeek,
+          planEntryId: session.planEntryId,
+          contributions: session.strengthPatternContributions,
+        })),
+      });
+    }
+  }
+
   // ── Final power / contrast primer stamping (Bible § Power work) ──
   // This runs only after allocation repair/validation. Earlier placement can
   // change strength sessions into conditioning/support shapes, so power must
@@ -1170,13 +1292,19 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     });
   }
 
-  const plannedCoreSessions = generatedWeekContext.isByeWeek
+  const plannedCoreSessions = isEarlyOffseason
+    ? 0
+    : generatedWeekContext.isByeWeek
     ? weeklyPlan.filter((session) => !!session.strengthPattern).length
     : actualCore;
-  const plannedOptionalSessions = generatedWeekContext.isByeWeek
+  const plannedOptionalSessions = isEarlyOffseason
+    ? weeklyPlan.length
+    : generatedWeekContext.isByeWeek
     ? weeklyPlan.filter((session) => session.tier === 'optional').length
     : optionalSessions;
-  const plannedRecoverySessions = generatedWeekContext.isByeWeek
+  const plannedRecoverySessions = isEarlyOffseason
+    ? 0
+    : generatedWeekContext.isByeWeek
     ? weeklyPlan.filter((session) => session.tier === 'recovery').length
     : recoverySessions;
 

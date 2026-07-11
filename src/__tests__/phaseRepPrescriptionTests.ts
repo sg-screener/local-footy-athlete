@@ -97,8 +97,8 @@ section('[2] AI-normalised main lifts are phase-aware');
     exercises: [{ name: 'Back Squat', sets: 4, repsMin: 3, repsMax: 5 }],
   }], 'mc-phase-off', undefined, profile('Off-season'));
   const offSquat = findExercise(offSeasonLower, 'Back Squat');
-  ok('off-season without week context uses the resolver\'s mid-phase 6-10 bridge',
-    offSquat?.prescribedSets === 3 && offSquat.prescribedRepsMin === 6 && offSquat.prescribedRepsMax === 10,
+  ok('off-season without week context uses conservative early body-armour reps',
+    offSquat?.prescribedSets === 3 && offSquat.prescribedRepsMin === 8 && offSquat.prescribedRepsMax === 12,
     reps(offSquat));
 }
 

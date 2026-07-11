@@ -274,13 +274,18 @@ function fakeSession(dayOfWeek: string, focus: string, pattern: SessionAllocatio
   };
 }
 
-section('[1] Off-season Mon-Fri prefers push/hinge/recovery/pull/squat');
+section('[1] Early off-season Mon-Fri uses hinge+pull/push/squat body-armour ledger');
 {
   const plan = buildCoachingPlan(baseInputs('Off-season')).weeklyPlan;
   eq(
-    'off-season default sequence',
+    'early off-season default sequence',
     strengthKindsByDay(plan),
-    ['push', 'hinge', 'neutral', 'pull', 'squat'],
+    ['full_body', 'neutral', 'push', 'neutral', 'squat'],
+  );
+  ok(
+    'early off-season sessions are all optional',
+    plan.every((session) => session.tier === 'optional'),
+    shape(plan),
   );
   assertNoAdjacentStrengthRegionPairs('off-season has no adjacent same-region strength pair', plan);
   assertLowerStrengthSpacing('off-season lower strength days are separated', plan);

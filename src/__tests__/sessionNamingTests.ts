@@ -313,7 +313,7 @@ eq(
   'Recovery Flow',
 );
 
-section('[3] Off-season 4-day display labels match structural plan');
+section('[3] Early off-season 4-day display labels match structural plan');
 
 {
   const plan = buildCoachingPlan(offSeasonFourDayInputs()).weeklyPlan;
@@ -323,9 +323,9 @@ section('[3] Off-season 4-day display labels match structural plan');
     .map(displayLabelForAllocation);
 
   eq(
-    'S6 off-season 4-day no-team-training display labels',
+    'S6 early off-season 4-day no-team-training display labels',
     labels,
-    ['Upper Push', 'Lower Hinge', 'Upper Pull', 'Lower Squat'],
+    ['Full Body Strength', 'Upper Push', 'Lower Squat'],
   );
 
   const actualFullBodyCount = plan.filter((session) => session.strengthPattern === 'full_body').length;
@@ -345,15 +345,20 @@ section('[4] Program builder names engine-built sessions from typed metadata');
   const labels = workouts
     .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
     .map((workout) => workout.name);
+  const strengthLabels = workouts
+    .filter((workout) => workout.strengthPatternContributions?.length)
+    .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+    .map((workout) => workout.name);
 
   eq(
-    'Program-screen workout names for S6',
-    labels,
-    ['Upper Push', 'Lower Hinge', 'Upper Pull', 'Lower Squat'],
+    'Program-screen strength workout names for S6',
+    strengthLabels,
+    ['Full Body Strength', 'Upper Push', 'Lower Squat'],
   );
   ok(
-    'Program-screen S6 has no false Full Body Strength labels',
-    labels.every((label) => label !== 'Full Body Strength'),
+    'Program-screen S6 keeps standalone aerobic support separate',
+    workouts.some((workout) => workout.workoutType === 'Conditioning') &&
+      labels.length === 4,
     labels.join(' | '),
   );
 }

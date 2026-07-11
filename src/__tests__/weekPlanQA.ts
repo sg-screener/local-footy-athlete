@@ -1075,9 +1075,10 @@ for (const scenario of scenarios) {
         assertions.push({
           rule: 'Early off-season keeps useful strength plus optional/recovery support',
           passed:
-            plan.weeklyPlan.filter((session) => session.tier === 'core' && !!session.strengthPattern).length >= 2 &&
-            plan.weeklyPlan.some((session) => session.tier === 'optional' || session.tier === 'recovery'),
-          detail: `core strength: ${plan.weeklyPlan.filter((session) => session.tier === 'core' && !!session.strengthPattern).length}; support: ${plan.weeklyPlan.filter((session) => session.tier === 'optional' || session.tier === 'recovery').length}`,
+            plan.weeklyPlan.filter((session) => !!session.strengthPattern).length >= 2 &&
+            plan.weeklyPlan.some((session) =>
+              !session.strengthPattern && (session.tier === 'optional' || session.tier === 'recovery')),
+          detail: `useful strength: ${plan.weeklyPlan.filter((session) => !!session.strengthPattern).length}; non-strength support: ${plan.weeklyPlan.filter((session) => !session.strengthPattern && (session.tier === 'optional' || session.tier === 'recovery')).length}`,
         });
       }
     } catch (err: any) {
