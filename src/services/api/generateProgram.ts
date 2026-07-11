@@ -102,6 +102,36 @@ function dateFromOption(todayISO?: string): Date {
   return todayISO ? new Date(`${todayISO}T12:00:00`) : new Date();
 }
 
+/**
+ * Build the exact coaching plan used by the first generated microcycle.
+ *
+ * Pre-season/off-season policies can change by block week. The edge prompt
+ * and the client normaliser must therefore share the same block-state input;
+ * otherwise the model can fill a mid-block mixed session which the client
+ * later interprets as an early-block standalone conditioning day.
+ */
+export function buildInitialGeneratedCoachingPlan(args: {
+  coachingInputs: CoachingInputs;
+  profile: Pick<OnboardingData, 'seasonPhase'>;
+  todayISO?: string;
+  blockNumber?: number;
+}): CoachingPlan {
+  const { blockStart } = computeBlockBounds(dateFromOption(args.todayISO));
+  const [firstState] = buildBlockWeekStates({
+    blockStartISO: blockStart,
+    blockNumber: args.blockNumber ?? 1,
+    seasonPhase: args.profile.seasonPhase,
+  });
+  if (!firstState) return buildCoachingPlan(args.coachingInputs);
+  return buildCoachingPlan({
+    ...args.coachingInputs,
+    miniCycleNumber: firstState.miniCycleNumber,
+    weekInBlock: firstState.weekInBlock,
+    weekNumber: firstState.weekNumber,
+    weekKind: firstState.weekKind,
+  });
+}
+
 function collectActiveConstraintsForGeneration(
   options: GenerateProgramFromProfileOptions,
   todayISO: string,
@@ -241,7 +271,12 @@ export function generateProgramLocally(
     availabilityDateISO,
     generationConstraints,
   });
-  const plan = buildCoachingPlan(coachingInputs);
+  const plan = buildInitialGeneratedCoachingPlan({
+    coachingInputs,
+    profile: generationProfile,
+    todayISO: options.todayISO,
+    blockNumber: options.blockNumber,
+  });
 
   logger.debug('[ProgramGen] Local deterministic build', {
     readiness: plan.readiness,
@@ -436,9 +471,13 @@ export function buildProgramGenerationRequestDiagnostics(
   resolvedEquipmentTags: readonly EquipmentTag[] = resolveEquipmentAvailability(onboardingData),
 ): Record<string, unknown> {
   const generationProfile = normalizeOnboardingRole(onboardingData);
-  const derivedPlan = plan ?? buildCoachingPlan(onboardingToCoachingInputs(generationProfile, {
+  const derivedInputs = onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO: todayISOLocal(),
-  }));
+  });
+  const derivedPlan = plan ?? buildInitialGeneratedCoachingPlan({
+    coachingInputs: derivedInputs,
+    profile: generationProfile,
+  });
   const derivedMessage = message ?? buildGenerationPrompt(generationProfile, derivedPlan, resolvedEquipmentTags);
   const roleContext = buildRoleContext(generationProfile);
   const profileFields = Object.keys(generationProfile).sort();
@@ -691,7 +730,12 @@ export async function generateProgramFromProfile(
     availabilityDateISO,
     generationConstraints,
   });
-  const plan = buildCoachingPlan(coachingInputs);
+  const plan = buildInitialGeneratedCoachingPlan({
+    coachingInputs,
+    profile: generationProfile,
+    todayISO: options.todayISO,
+    blockNumber: options.blockNumber,
+  });
 
   logger.debug('[ProgramGen] Coaching plan built', {
     readiness: plan.readiness,

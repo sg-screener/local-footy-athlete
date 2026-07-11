@@ -36,6 +36,7 @@ import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { useProgramStore } from '../store/programStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import type { OnboardingData } from '../types/domain';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 
 // Late-bound requires: these modules sit in an import cycle under the CJS
 // test runner; their exports resolve only after the graph settles.
@@ -487,7 +488,10 @@ console.log('\n── Week-scoped bye shape does not leak into adjacent in-seaso
     JSON.stringify({ overlay: remove.overlay, keys: overlayKeysAfterRemove }));
   ok('selected week becomes a bye without a fixture',
     selectedBye.every((day) => day.workout?.workoutType !== 'Game') &&
-      /lower body strength/i.test(dayOf(selectedBye, wk2Sat)?.workout?.name ?? ''),
+      (() => {
+        const saturday = classifyVisibleSession(dayOf(selectedBye, wk2Sat)?.workout);
+        return saturday.contributions.mainStrength === 1 && saturday.strengthRegion === 'lower';
+      })(),
     selectedBye.map((day) => `${day.short}:${day.workout?.name ?? 'OFF'}`).join(' | '));
   ok('previous game week is byte-identical after selected-week bye generation',
     visibleWeekSignature(priorGameAfterRemove) === visibleWeekSignature(priorGameBefore));

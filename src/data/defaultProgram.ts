@@ -66,7 +66,10 @@ import {
   resolveDeloadWeekPolicy,
   type DeloadWeekPolicy,
 } from '../rules/deloadWeekRules';
-import { resolveSessionDisplayName } from '../utils/sessionNaming';
+import {
+  isConditioningOnlyText,
+  resolveSessionDisplayName,
+} from '../utils/sessionNaming';
 import {
   applyPoolRotation,
   classifyPoolSlot,
@@ -1526,6 +1529,7 @@ export function buildWorkoutsFromCoach(
       ))
     : undefined;
   const planLookup = effectiveWeeklyPlan ? buildPlanLookup(effectiveWeeklyPlan) : null;
+  const edgeProvidedDays = new Set(coachWorkouts.map((workout) => workout.dayOfWeek));
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(coachWorkouts, effectiveWeeklyPlan);
 
   // ── Build a synthetic dateStr for deterministic variety ──
@@ -1563,10 +1567,18 @@ export function buildWorkoutsFromCoach(
     const raw = String(cw.workoutType || '').trim().toLowerCase();
     const text = `${cw.name || ''} ${planEntry?.focus || ''}`.toLowerCase();
 
+    // The deterministic plan owns structure. Resolve typed anchors/components
+    // before considering the edge-provided label so a Mixed session cannot be
+    // downgraded to Conditioning merely because the model chose that enum.
     if (planEntry?.isTeamDay || raw === 'team' || raw === 'team training') {
       return 'Team Training';
     }
     if (planEntry?.speedWorkKind === 'true_speed' && !planEntry.strengthPattern) return 'Sprint-Intervals';
+    if (planEntry?.tier === 'recovery') return 'Recovery';
+    if (planEntry?.hasCombinedConditioning && planEntry.conditioningFlavour) return 'Mixed';
+    if (planEntry?.conditioningFlavour && !planEntry.hasCombinedConditioning) return 'Conditioning';
+    if (planEntry?.strengthPattern) return 'Strength';
+
     if (raw === 'strength') return 'Strength';
     if (raw === 'conditioning') return 'Conditioning';
     if (raw === 'recovery') return 'Recovery';
@@ -2050,13 +2062,39 @@ export function buildWorkoutsFromCoach(
       ? new Map<string, Set<string>>()
       : undefined;
 
-    const sourceAiExercises = (cw.exercises ?? []).filter((ex) =>
+    const filteredAiExercises = (cw.exercises ?? []).filter((ex) =>
       !isTeamTrainingItem({
         name: ex.name,
         exerciseName: ex.name,
         workoutType: (ex as any).workoutType,
       }),
     );
+    const requiresStrengthContent =
+      edgeProvidedDays.has(cw.dayOfWeek) &&
+      planEntry?.tier === 'core' &&
+      !!planEntry.strengthPattern &&
+      !/\b(gunshow|prehab|pump|accessor|low-fatigue)\b/i.test(`${cw.name} ${planEntry.focus}`);
+    // Preserve any plausible strength/support row from the edge. Fall back
+    // only for an empty shell or a payload made entirely of conditioning
+    // rows; the normaliser must not discard unusual but valid strength work.
+    const aiHasStrengthContent = filteredAiExercises.some(
+      (exercise) => !isConditioningOnlyText(exercise.name),
+    );
+    const fallbackStrengthExercises = requiresStrengthContent && !aiHasStrengthContent
+      ? fallbackExercisesForPlanEntry(planEntry!)
+      : [];
+    const sourceAiExercises = fallbackStrengthExercises.length > 0
+      ? fallbackStrengthExercises
+      : filteredAiExercises;
+
+    if (fallbackStrengthExercises.length > 0) {
+      logger.warn('[ProgramGen] Edge workout lacked strength content required by deterministic plan; using safe plan fallback', {
+        dayOfWeek: cw.dayOfWeek,
+        workoutName: cw.name,
+        strengthPattern: planEntry?.strengthPattern,
+        receivedExercises: filteredAiExercises.map((exercise) => exercise.name),
+      });
+    }
 
     const aiExercises: WorkoutExercise[] = sourceAiExercises.map((ex, index) => {
       // Cross-cycle variation: rewrite AI-suggested name to the

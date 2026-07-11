@@ -75,6 +75,7 @@
     "test:session-feedback-form": "sucrase-node src/__tests__/sessionFeedbackFormTests.ts",
     "test:session-logging-ui": "sucrase-node src/__tests__/sessionLoggingUITests.ts",
     "test:session-naming": "sucrase-node src/__tests__/sessionNamingTests.ts",
+    "test:generated-program-normalizer": "sucrase-node src/__tests__/generatedProgramNormalizerTests.ts",
     "test:env-config": "sucrase-node src/__tests__/envConfigTests.ts",
     "test:logger": "sucrase-node src/__tests__/loggerTests.ts",
     "test:request-program-adjustment": "sucrase-node src/__tests__/programAdjustmentRequestTests.ts",
