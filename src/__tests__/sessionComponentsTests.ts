@@ -8,8 +8,10 @@ import {
   componentPartialReasonLabel,
   componentQuestionLabel,
   componentSkipReasonLabel,
+  getSessionComponentRows,
   getSessionComponents,
 } from '../utils/sessionComponents';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 
 let pass = 0;
 let fail = 0;
@@ -292,6 +294,57 @@ section('7. Single-component non-strength sessions');
     exercises: [ex('we-run', 'Zone 2 Run')],
   };
   assert(kinds(conditioningOnly).join(',') === 'conditioning', 'conditioning only detects conditioning');
+}
+
+section('8. Trunk/support rows do not masquerade as conditioning phases');
+{
+  const aerobicRows = [
+    ex('we-bike', 'Bike Tempo'),
+    ex('we-rowerg', 'RowErg Intervals'),
+  ];
+  const workout = {
+    id: 'tempo-with-support',
+    microcycleId: 'mc-1',
+    name: 'Bike Tempo',
+    dayOfWeek: 'Monday',
+    orderIndex: 0,
+    workoutType: 'Conditioning',
+    exercises: [
+      ...aerobicRows,
+      ex('we-pallof', 'Pallof Press'),
+      ex('we-side-plank', 'Side Plank'),
+    ],
+  };
+  const rows = getSessionComponentRows(workout as any);
+
+  assert(
+    rows.conditioningRows.map((row) => row.exercise.name).join(',') === 'Bike Tempo,RowErg Intervals',
+    'conditioning phases contain only the actual aerobic rows',
+  );
+  assert(
+    rows.supportRows.map((row) => row.exercise.name).join(',') === 'Pallof Press,Side Plank',
+    'Pallof Press and Side Plank are separated into trunk/support rows',
+  );
+  assert(
+    kinds(workout as any).join(',') === 'support,conditioning',
+    'standalone conditioning exposes a separate support component',
+  );
+
+  const baseClassification = classifyVisibleSession({
+    ...workout,
+    exercises: aerobicRows,
+  } as any);
+  const supportedClassification = classifyVisibleSession(workout as any);
+  assert(
+    supportedClassification.contributions.conditioning
+      === baseClassification.contributions.conditioning,
+    'adding trunk/support does not inflate conditioning exposure',
+  );
+  assert(
+    supportedClassification.contributions.hardDay
+      === baseClassification.contributions.hardDay,
+    'adding trunk/support does not create another hard-day contribution',
+  );
 }
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);

@@ -37,6 +37,7 @@
  */
 
 import type { SeasonPhase, ReadinessLevel } from '../types/domain';
+import type { OffseasonSubphase } from './offseasonSubphase';
 
 export type PowerFamily = 'lower' | 'upper';
 export type PowerKind = 'primer' | 'contrast';
@@ -64,6 +65,8 @@ export interface PowerInjuryInput {
 
 export interface PowerPrimerContext {
   phase: SeasonPhase;
+  /** Required for aggressive off-season power; missing context is early/safe. */
+  offseasonSubphase?: OffseasonSubphase | null;
   /** Strength pattern of the session — power only attaches to strength days. */
   strengthPattern?: 'lower' | 'lower_combined' | 'push' | 'pull' | 'upper_combined' | 'full_body';
   /** Whether a real game is scheduled this week. */
@@ -135,6 +138,15 @@ export function decidePowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | nu
   if (ctx.isDeload) return null;
   if (ctx.readiness === 'low') return null;
 
+  // ── Off-season progression ──
+  // Missing subphase is deliberately treated as early off-season. Power is
+  // rebuilt progressively: none early, primer-only mid, contrast eligibility
+  // only late after every other safety gate passes.
+  const offseasonSubphase = ctx.phase === 'Off-season'
+    ? (ctx.offseasonSubphase ?? 'early_offseason')
+    : null;
+  if (offseasonSubphase === 'early_offseason') return null;
+
   const family = familyFromPattern(ctx.strengthPattern);
   const regionSeverity = regionInjurySeverity(family, ctx.injuries);
   if (regionSeverity >= INJURY_BLOCK_SEVERITY) return null; // injury wins
@@ -176,7 +188,11 @@ export function decidePowerPrimer(ctx: PowerPrimerContext): PowerPrimerSpec | nu
   // Off-season is the best time to build power → contrast by default when
   // eligible. Pre-season only upgrades to contrast when the athlete's goal
   // actually pulls toward power (nudge, not force).
-  const useContrast = contrastEligible && (ctx.phase === 'Off-season' || ctx.powerGoalNudge);
+  const offseasonContrastEligible =
+    ctx.phase === 'Off-season' && offseasonSubphase === 'late_offseason';
+  const useContrast = contrastEligible && (offseasonContrastEligible || (
+    ctx.phase === 'Pre-season' && ctx.powerGoalNudge
+  ));
 
   if (useContrast) {
     return spec('contrast', family, 3, 3, 5, false, `${ctx.phase} contrast power (fresh, high quality)`);

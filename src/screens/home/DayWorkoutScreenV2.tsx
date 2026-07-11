@@ -13,11 +13,11 @@ import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import ExerciseVideoModal from '../../components/ExerciseVideoModal';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
-import { SessionExplanationBanner } from '../../components/SessionExplanationBanner';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
 import { PowerPrimerSection } from '../../components/PowerPrimerSection';
+import { TrunkSupportSection } from '../../components/TrunkSupportSection';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { shortWeekdayDateLabel } from '../../utils/appDate';
 import { executeProgramControlAction } from '../../utils/programControlActions';
@@ -362,8 +362,7 @@ function suggestionPrescription(suggestion: SuggestedExercise): string {
  * DayWorkoutScreenV2 — redesigned session screen matching HomeScreenV2.
  *
  * ## Design direction
- * - Bolder header: muted eyebrow ("MONDAY"), big title, session-type subtitle,
- *   "Why this session" as a lime accent link.
+ * - Bolder header: muted eyebrow ("MONDAY"), big title and session-type subtitle.
  * - Exercise cards: larger readable names, integrated accent play IconButton,
  *   cleaner two-column stats grid (Sets×Reps | Weight), polished segmented
  *   weight control, collapsible coaching cues.
@@ -385,13 +384,10 @@ export default function DayWorkoutScreenV2() {
     routeWorkoutId,
     workout,
     staleWarning,
-    explanation,
     selectedExercise,
     setSelectedExercise,
     expandedCues,
     toggleCue,
-    showExplanation,
-    setShowExplanation,
     isFinished,
     justSaved,
     editingWeightId,
@@ -414,6 +410,8 @@ export default function DayWorkoutScreenV2() {
     isCombinedDay,
     hasTeamTraining,
     strengthExercises,
+    supportExercises,
+    conditioningExercises,
     conditioningOptions,
     conditioningRowCount,
   } = useDayWorkout();
@@ -956,21 +954,7 @@ export default function DayWorkoutScreenV2() {
           />
         </View>
         <View style={styles.headerContent}>
-          {/*
-           * Pro mode header: title → single metadata sentence.
-           *
-           * Metadata and the "Why" link are rendered as ONE <Text> so
-           * they flow inline as a single sentence:
-           *     6 exercises · Strength · Why this session →
-           * The Why span is an inner <Text onPress> — tappable but
-           * entirely unstyled as a UI chrome (no background, no border,
-           * no padding). Visually it reads as a link embedded in the
-           * metadata sentence, not a separate CTA.
-           *
-           * Allowing natural wrap (no numberOfLines) lets small screens
-           * break the line if absolutely necessary; on any modern iPhone
-           * the full sentence fits one line.
-           */}
+          {/* Pro mode header: title → single metadata sentence. */}
           <Text
             style={styles.headerTitle}
             numberOfLines={2}
@@ -996,19 +980,9 @@ export default function DayWorkoutScreenV2() {
           {smokeCoachBikeFlow
             ? renderDayWorkoutSmokeContractMarkers(smokeContract)
             : null}
-          {(combinedSubtitle || explanation) ? (
+          {combinedSubtitle ? (
             <Text style={styles.headerSubtitle}>
               {combinedSubtitle}
-              {combinedSubtitle && explanation ? ' · ' : null}
-              {explanation ? (
-                <Text
-                  style={styles.whyLink}
-                  onPress={() => setShowExplanation(!showExplanation)}
-                  suppressHighlighting
-                >
-                  Why this session →
-                </Text>
-              ) : null}
             </Text>
           ) : null}
           {/*
@@ -1039,18 +1013,6 @@ export default function DayWorkoutScreenV2() {
         keyboardShouldPersistTaps="handled"
         onScrollBeginDrag={handleScrollBeginDrag}
       >
-        {/* Explanation banner */}
-        {showExplanation && explanation ? (
-          <View style={styles.banner}>
-            <SessionExplanationBanner
-              headline={explanation.headline}
-              body={explanation.body}
-              visible={true}
-              onToggle={() => setShowExplanation(false)}
-            />
-          </View>
-        ) : null}
-
         {/* Stale override warning */}
         {staleWarning ? (
           <View style={styles.banner}>
@@ -1087,7 +1049,7 @@ export default function DayWorkoutScreenV2() {
         {/* ── Main body: three render branches ── */}
         {isConditioning ? (
           <ConditioningPhases
-            exercises={workout.exercises ?? []}
+            exercises={conditioningExercises}
             onChangeExercise={openSpecificExerciseEditor}
           />
         ) : isRecovery ? (
@@ -1119,6 +1081,8 @@ export default function DayWorkoutScreenV2() {
             onChangeExercise={openSpecificExerciseEditor}
           />
         )}
+
+        <TrunkSupportSection rows={supportExercises} />
 
         <RecoveryAddonSection addons={workout.recoveryAddons ?? []} />
 
@@ -2588,17 +2552,6 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     letterSpacing: 0.1,
     marginTop: 3,
-  },
-  // Why link — inline span inside the metadata Text. Same fontSize and
-  // weight as the metadata so it flows as part of the sentence. Only
-  // the colour distinguishes it: lime at ~0.85 alpha (baked into the
-  // rgba so it works reliably on nested inline Text, where the opacity
-  // prop can be unpredictable). No background, no border, no padding —
-  // this is a link inside text, not a CTA.
-  whyLink: {
-    color: 'rgba(200, 255, 0, 0.85)',
-    fontSize: 13,
-    fontWeight: '500',
   },
   // Change-door link — mirrors HomeScreenV2's makeChangeLink/-Text so the
   // change vocabulary looks identical on every surface it appears on.

@@ -3,10 +3,13 @@ import {
   getTeamTrainingWorkoutState,
   isTeamTrainingItem,
 } from './teamTraining';
+import { getExerciseTags } from '../data/exerciseTags';
+import { resolveExerciseName } from './loadEstimation';
 
 export type SessionComponentKind =
   | 'power'
   | 'strength'
+  | 'support'
   | 'conditioning'
   | 'team_training'
   | 'speed'
@@ -83,6 +86,17 @@ function hasRecoveryAddon(workout: Partial<Workout>): boolean {
   return (workout.recoveryAddons ?? []).some((addon) => addon.exercises.length > 0);
 }
 
+/**
+ * Typed trunk/support ownership. Core rows remain visible training content,
+ * but they are not conditioning phases and do not earn conditioning credit.
+ */
+export function isTrunkSupportRow(row: any): boolean {
+  const name = String(row?.exercise?.name ?? row?.name ?? '').trim();
+  if (!name) return false;
+  const canonicalName = resolveExerciseName(name);
+  return getExerciseTags(canonicalName)?.movement === 'core';
+}
+
 function conditioningIdsFromBlock(workout: Partial<Workout>, rows: any[]): Set<string> {
   const ids = new Set<string>();
   const rowIds = new Set(rows.map((row) => row?.id).filter(Boolean));
@@ -119,11 +133,12 @@ function legacyConditioningTailIds(workout: Partial<Workout>, rows: any[]): Set<
 
 export function getSessionComponentRows(workout: Partial<Workout> | null | undefined): {
   strengthRows: any[];
+  supportRows: any[];
   conditioningRows: any[];
   teamTrainingRows: any[];
 } {
   if (!workout) {
-    return { strengthRows: [], conditioningRows: [], teamTrainingRows: [] };
+    return { strengthRows: [], supportRows: [], conditioningRows: [], teamTrainingRows: [] };
   }
 
   const teamState = getTeamTrainingWorkoutState(workout);
@@ -136,16 +151,21 @@ export function getSessionComponentRows(workout: Partial<Workout> | null | undef
     ? new Set<string>()
     : legacyConditioningTailIds(workout, renderableRows);
   const conditioningIds = new Set([...blockConditioningIds, ...legacyConditioningIds]);
+  const supportRows = isRecoveryWorkout(workout)
+    ? []
+    : renderableRows.filter(isTrunkSupportRow);
+  const supportIds = new Set(supportRows.map((row) => row?.id).filter(Boolean));
 
   const conditioningRows = isStandaloneConditioningWorkout(workout)
-    ? renderableRows
-    : renderableRows.filter((row) => conditioningIds.has(row?.id));
+    ? renderableRows.filter((row) => !supportIds.has(row?.id))
+    : renderableRows.filter((row) => conditioningIds.has(row?.id) && !supportIds.has(row?.id));
   const strengthRows = isStandaloneConditioningWorkout(workout) || isRecoveryWorkout(workout)
     ? []
-    : renderableRows.filter((row) => !conditioningIds.has(row?.id));
+    : renderableRows.filter((row) => !conditioningIds.has(row?.id) && !supportIds.has(row?.id));
 
   return {
     strengthRows,
+    supportRows,
     conditioningRows,
     teamTrainingRows: teamState.teamTrainingItems ?? [],
   };
@@ -164,7 +184,7 @@ export function getSessionComponents(
   }
 
   const teamState = getTeamTrainingWorkoutState(workout);
-  const { strengthRows, conditioningRows } = getSessionComponentRows(workout);
+  const { strengthRows, supportRows, conditioningRows } = getSessionComponentRows(workout);
   const components: SessionComponent[] = [];
 
   if (hasPowerBlock(workout)) {
@@ -191,6 +211,15 @@ export function getSessionComponents(
       kind: 'strength',
       label: 'strength work',
       completionPolicy: 'required',
+    });
+  }
+
+  if (supportRows.length > 0) {
+    components.push({
+      id: 'support',
+      kind: 'support',
+      label: 'trunk/support work',
+      completionPolicy: 'optional_no_penalty',
     });
   }
 
@@ -263,6 +292,7 @@ export function componentQuestionLabel(
       : 'Did you complete the strength work?';
   }
   if (component.kind === 'power') return 'Did you complete the power work?';
+  if (component.kind === 'support') return 'Did you complete the trunk/support work?';
   if (component.kind === 'conditioning') return 'Did you complete the conditioning?';
   if (component.kind === 'team_training') return 'Did you complete team training?';
   if (component.kind === 'speed') return 'Did you complete the speed work?';
@@ -275,6 +305,7 @@ export function componentQuestionLabel(
 function componentReasonSubject(component: SessionComponent): string {
   if (component.kind === 'power') return 'the power work';
   if (component.kind === 'strength') return 'the strength work';
+  if (component.kind === 'support') return 'the trunk/support work';
   if (component.kind === 'conditioning') return 'the conditioning';
   if (component.kind === 'team_training') return 'team training';
   if (component.kind === 'speed') return 'the speed work';

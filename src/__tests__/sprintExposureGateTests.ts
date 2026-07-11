@@ -282,9 +282,9 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
   eq('off-season week 4 resolves late',
     resolveOffseasonSubphase({ seasonPhase: 'Off-season', miniCycleNumber: 1, weekInBlock: 4 }),
     'late_offseason');
-  eq('unknown off-season week defaults to mid',
+  eq('unknown off-season week defaults conservatively to early',
     resolveOffseasonSubphase({ seasonPhase: 'Off-season' }),
-    'mid_offseason');
+    'early_offseason');
 }
 
 {

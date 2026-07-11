@@ -328,6 +328,106 @@ section('[3] typed running/speed/power content is filtered and empty shells coll
   ok('all-content removal collapses honestly', result.workout === null && result.collapsedToRest);
 }
 
+section('[3b] final content owns power and contrast identity without active constraints');
+{
+  const contrastPower = {
+    id: 'power-final-content',
+    kind: 'contrast' as const,
+    family: 'lower' as const,
+    title: 'Contrast Power',
+    prescription: '3 x 3',
+    placement: 'pre_lift' as const,
+    options: [{
+      name: 'Vertical Jump', sets: 3, repsMin: 3, repsMax: 3, equipmentRequired: [],
+    }],
+    notes: ['Contrast: pair this with the heavy lift.'],
+    counting: {
+      hardExposure: false,
+      mainStrength: false,
+      conditioningCredit: 'none' as const,
+      isFinisher: false,
+    },
+  };
+
+  const conditioningOnly = workout('Bike Tempo', 1, [exercise('Bike Tempo')], {
+    workoutType: 'Conditioning',
+    powerBlock: contrastPower,
+  });
+  const conditioningResult = validateWorkoutAgainstActiveConstraints({
+    workout: conditioningOnly,
+    date: MON,
+    todayISO: TODAY,
+    activeConstraints: [],
+    profile: FULL_GYM,
+  });
+  ok('conditioning-only final workout loses stale power metadata',
+    !conditioningResult.workout?.powerBlock && names(conditioningResult.workout).includes('Bike Tempo'),
+    conditioningResult.workout);
+  ok('alignment reports power removal even without active constraints',
+    conditioningResult.changed && conditioningResult.removedComponents.includes('power'),
+    conditioningResult);
+
+  const lightLower = workout('Lower Support', 2, [exercise('Goblet Squat')], {
+    powerBlock: contrastPower,
+  });
+  const lightResult = validateWorkoutAgainstActiveConstraints({
+    workout: lightLower,
+    date: TUE,
+    todayISO: TODAY,
+    activeConstraints: [],
+    profile: FULL_GYM,
+  });
+  ok('contrast without a heavy same-family main lift becomes Power Primer',
+    lightResult.workout?.powerBlock?.kind === 'primer'
+      && lightResult.workout.powerBlock.title === 'Power Primer',
+    lightResult.workout?.powerBlock);
+
+  const heavySquat = {
+    ...exercise('Back Squat', ['Barbell']),
+    prescribedRepsMin: 4,
+    prescribedRepsMax: 5,
+    prescribedWeightKg: 100,
+  };
+  const heavyLower = workout('Lower Strength', 2, [heavySquat], {
+    powerBlock: contrastPower,
+  });
+  const heavyResult = validateWorkoutAgainstActiveConstraints({
+    workout: heavyLower,
+    date: TUE,
+    todayISO: TODAY,
+    activeConstraints: [],
+    profile: FULL_GYM,
+  });
+  ok('real heavy same-family lift preserves Contrast Power',
+    heavyResult.workout?.powerBlock?.kind === 'contrast' && !heavyResult.changed,
+    heavyResult.workout?.powerBlock);
+
+  const emptyPowerShell = workout('Power Only Shell', 2, [], { powerBlock: contrastPower });
+  const emptyResult = validateWorkoutAgainstActiveConstraints({
+    workout: emptyPowerShell,
+    date: TUE,
+    todayISO: TODAY,
+    activeConstraints: [],
+    profile: FULL_GYM,
+  });
+  ok('power-only shell with no final strength collapses honestly',
+    emptyResult.workout === null && emptyResult.collapsedToRest,
+    emptyResult);
+
+  const equipmentStripped = validateWorkoutAgainstActiveConstraints({
+    workout: heavyLower,
+    date: TUE,
+    todayISO: TODAY,
+    activeConstraints: [noBarbell()],
+    profile: FULL_GYM,
+  });
+  ok('post-filter alignment removes power when equipment strips its paired lift',
+    equipmentStripped.workout === null
+      && equipmentStripped.collapsedToRest
+      && equipmentStripped.removedComponents.includes('power'),
+    equipmentStripped);
+}
+
 section('[4] equipment constraints filter unavailable work without removing safe work');
 {
   const candidate = workout('Full Body', 1, [

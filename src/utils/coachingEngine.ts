@@ -928,45 +928,6 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   logger.debug('[ENGINE-TRACE] ═══ weeklyPlan output ═══');
   weeklyPlan.forEach(s => logger.debug(`[ENGINE-TRACE]   ${s.dayOfWeek}: [${s.tier}] ${s.focus}${s.isHardExposure ? ' (HARD)' : ''}`));
 
-  // ── Power / contrast primer stamping (Bible § Power work) ──
-  // A small, fresh-only, high-quality power layer. The DECISION lives in the
-  // engine (which owns readiness, injury, game proximity, deload, beginner and
-  // phase); the RENDERER turns the stamped spec into a separate `powerBlock`.
-  // Only suitable strength sessions are considered — team-only/conditioning/
-  // recovery days have no strengthPattern and are skipped. All gates that can
-  // veto power live in `decidePowerPrimer`, so this loop can never force power
-  // where injury/readiness/game-proximity/deload/beginner policy says no.
-  {
-    const powerGameDayNum = inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null;
-    const powerBiasNudge =
-      programmingBias.speedBias > 0 || programmingBias.strengthBias > 0;
-    const powerInjuries: PowerInjuryInput[] = inputs.injuries.map((injury) => ({
-      area: `${injury.bodyArea ?? ''} ${injury.description ?? ''}`,
-      severity: injury.severity === 'Severe' ? 8 : injury.severity === 'Moderate' ? 5 : 3,
-    }));
-    const powerExperienced =
-      inputs.experienceLevel === '2-5 years' || inputs.experienceLevel === '5+ years';
-    for (const alloc of weeklyPlan) {
-      if (!alloc.strengthPattern) continue;
-      const dayNum = alloc.dayOfWeek ? dayNameToNumber(alloc.dayOfWeek) : null;
-      const off = inputs.hasGame && dayNum !== null ? gOffset(dayNum, powerGameDayNum) : -99;
-      const primer = decidePowerPrimer({
-        phase: inputs.seasonPhase,
-        strengthPattern: alloc.strengthPattern,
-        hasGame: inputs.hasGame,
-        gOffset: off,
-        isTeamDay: !!alloc.isTeamDay,
-        readiness,
-        isDeload: inputs.weekKind === 'deload',
-        isBeginner: trainingAgePolicy.level === 'new',
-        experienced: powerExperienced,
-        injuries: powerInjuries,
-        powerGoalNudge: powerBiasNudge,
-      });
-      if (primer) alloc.powerPrimer = primer;
-    }
-  }
-
   // ── Post-generation validation: required exposures ──
   // In-season with game: validate movement coverage based on core count.
   //   1-core → must be full body (covers lower + push + pull in one session)
@@ -1063,6 +1024,43 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
           logger.error('[ENGINE-VALIDATE] INVARIANT VIOLATION: game week has no lower coverage and no safe slot to swap to full body');
         }
       }
+    }
+  }
+
+  // ── Final power / contrast primer stamping (Bible § Power work) ──
+  // This runs only after allocation repair/validation. Earlier placement can
+  // change strength sessions into conditioning/support shapes, so power must
+  // attach to the final typed intent rather than stale initial allocation.
+  {
+    const powerGameDayNum = inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null;
+    const powerBiasNudge =
+      programmingBias.speedBias > 0 || programmingBias.strengthBias > 0;
+    const powerInjuries: PowerInjuryInput[] = inputs.injuries.map((injury) => ({
+      area: `${injury.bodyArea ?? ''} ${injury.description ?? ''}`,
+      severity: injury.severity === 'Severe' ? 8 : injury.severity === 'Moderate' ? 5 : 3,
+    }));
+    const powerExperienced =
+      inputs.experienceLevel === '2-5 years' || inputs.experienceLevel === '5+ years';
+    for (const alloc of weeklyPlan) {
+      delete alloc.powerPrimer;
+      if (!alloc.strengthPattern) continue;
+      const dayNum = alloc.dayOfWeek ? dayNameToNumber(alloc.dayOfWeek) : null;
+      const off = inputs.hasGame && dayNum !== null ? gOffset(dayNum, powerGameDayNum) : -99;
+      const primer = decidePowerPrimer({
+        phase: inputs.seasonPhase,
+        offseasonSubphase,
+        strengthPattern: alloc.strengthPattern,
+        hasGame: inputs.hasGame,
+        gOffset: off,
+        isTeamDay: !!alloc.isTeamDay,
+        readiness,
+        isDeload: inputs.weekKind === 'deload',
+        isBeginner: trainingAgePolicy.level === 'new',
+        experienced: powerExperienced,
+        injuries: powerInjuries,
+        powerGoalNudge: powerBiasNudge,
+      });
+      if (primer) alloc.powerPrimer = primer;
     }
   }
 

@@ -1050,6 +1050,13 @@ for (const scenario of scenarios) {
           session.conditioningCategory === 'vo2' ||
           session.conditioningCategory === 'glycolytic' ||
           session.conditioningFlavour === 'high-intensity');
+        // Team training / games are real running and sprint/COD exposure, but
+        // early off-season must not add those exposures itself. Missing week
+        // context now resolves conservatively to early even for profiles that
+        // still retain club anchors, so assert the app-added remainder.
+        const anchorRunning = report.counts.teamTrainingSessions + report.counts.games;
+        const appRunningExposures = Math.max(0, report.counts.runningExposures - anchorRunning);
+        const appSprintCodExposures = Math.max(0, report.counts.sprintCodExposures - anchorRunning);
         assertions.push({
           rule: 'Early off-season has no hard conditioning',
           passed: hardConditioning.length === 0,
@@ -1057,13 +1064,13 @@ for (const scenario of scenarios) {
         });
         assertions.push({
           rule: 'Early off-season has no default running exposure',
-          passed: report.counts.runningExposures === 0,
-          detail: `running exposures: ${report.counts.runningExposures}`,
+          passed: appRunningExposures === 0,
+          detail: `app-added running exposures: ${appRunningExposures}; anchors: ${anchorRunning}`,
         });
         assertions.push({
           rule: 'Early off-season has no sprint/COD exposure',
-          passed: report.counts.sprintCodExposures === 0,
-          detail: `sprint/COD exposures: ${report.counts.sprintCodExposures}`,
+          passed: appSprintCodExposures === 0,
+          detail: `app-added sprint/COD exposures: ${appSprintCodExposures}; anchors: ${anchorRunning}`,
         });
         assertions.push({
           rule: 'Early off-season keeps useful strength plus optional/recovery support',

@@ -43,6 +43,10 @@ const powerPrimerSection = fs.readFileSync(
   path.resolve(__dirname, '..', 'components', 'PowerPrimerSection.tsx'),
   'utf8',
 );
+const trunkSupportSection = fs.readFileSync(
+  path.resolve(__dirname, '..', 'components', 'TrunkSupportSection.tsx'),
+  'utf8',
+);
 
 console.log('\n=== 1. Main finish CTA is not gated by team training ===');
 assert(!/!isFinished\s*&&\s*!hasTeamTraining/.test(classic), 'Classic finish CTA is not hidden by team training');
@@ -154,6 +158,35 @@ assert(/\{option\.name\}/.test(powerPrimerSection), 'power exercise name is rend
 assert(/option\.sets/.test(powerPrimerSection) && /option\.repsMin/.test(powerPrimerSection),
   'power sets and reps are rendered');
 assert(/block\.notes\.map/.test(powerPrimerSection), 'power notes/rest copy are rendered');
+
+console.log('\n=== 7. Trunk/support is visible and explanation UI is removed ===');
+assert(
+  /<TrunkSupportSection rows=\{supportExercises\} \/>/.test(classic),
+  'Classic renders the resolved trunk/support rows in their own section',
+);
+assert(
+  /<TrunkSupportSection rows=\{supportExercises\} \/>/.test(v2),
+  'V2 renders the resolved trunk/support rows in their own section',
+);
+assert(/testID="trunk-support-section"/.test(trunkSupportSection), 'trunk/support has a visible test seam');
+assert(/>Trunk \/ Support</.test(trunkSupportSection), 'trunk/support section is labelled honestly');
+assert(/row\?\.exercise\?\.name/.test(trunkSupportSection), 'trunk/support exercise names are rendered');
+assert(
+  !/SessionExplanationBanner|Why this session/i.test(classic),
+  'Classic has no Why this session link or explanation panel',
+);
+assert(
+  !/SessionExplanationBanner|Why this session/i.test(v2),
+  'V2 has no Why this session link or explanation panel',
+);
+assert(
+  /conditioningExercises\.map/.test(classic),
+  'Classic conditioning phases render only resolved conditioning rows',
+);
+assert(
+  /exercises=\{conditioningExercises\}/.test(v2),
+  'V2 conditioning phases render only resolved conditioning rows',
+);
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);
 if (fail > 0) {

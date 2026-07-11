@@ -42,6 +42,7 @@ import {
   hasMeaningfulWorkoutContent,
 } from './workoutContent';
 import { todayISOLocal } from './appDate';
+import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
 
 export interface ActiveConstraintValidationInput {
   workout: Workout | null;
@@ -244,38 +245,56 @@ export function validateWorkoutAgainstActiveConstraints(
   });
 
   if (!input.workout || input.date < input.todayISO) return unchanged(input.workout);
+  const powerAlignment = alignPowerBlockToFinalWorkoutContent(input.workout);
+  const alignedWorkout = powerAlignment.workout;
+  const alignmentRemovedComponents: ActiveConstraintValidationResult['removedComponents'] =
+    powerAlignment.action === 'removed' ? ['power'] : [];
+  const alignedResult = (): ActiveConstraintValidationResult => ({
+    ...unchanged(alignedWorkout),
+    changed: powerAlignment.action !== 'unchanged',
+    removedComponents: alignmentRemovedComponents,
+  });
   const active = liveConstraintsForDate(input.activeConstraints, input.date);
-  if (active.length === 0) return unchanged(input.workout);
+  if (active.length === 0) {
+    if (powerAlignment.action === 'removed' && !hasMeaningfulWorkoutContent(alignedWorkout)) {
+      return {
+        ...alignedResult(),
+        workout: null,
+        collapsedToRest: true,
+      };
+    }
+    return alignedResult();
+  }
 
-  const classification = classifyVisibleSession(input.workout);
+  const classification = classifyVisibleSession(alignedWorkout);
   if (classification.anchors.game || classification.anchors.teamTraining) {
     return {
-      ...unchanged(input.workout),
+      ...alignedResult(),
       preservedAnchor: true,
       activeConstraintIds: active.map((constraint) => constraint.id),
     };
   }
 
-  if (isGlobalHardStop(active, input.date) && !isRecoveryWorkout(input.workout)) {
+  if (isGlobalHardStop(active, input.date) && !isRecoveryWorkout(alignedWorkout)) {
     return {
       workout: null,
       changed: true,
       collapsedToRest: true,
       preservedAnchor: false,
       activeConstraintIds: active.map((constraint) => constraint.id),
-      removedExerciseNames: (input.workout.exercises ?? [])
+      removedExerciseNames: (alignedWorkout.exercises ?? [])
         .map((row) => row.exercise?.name ?? '')
         .filter(Boolean),
       removedComponents: [
-        ...(input.workout.conditioningBlock ? ['conditioning' as const] : []),
-        ...(input.workout.speedBlock ? ['speed' as const] : []),
-        ...(input.workout.powerBlock ? ['power' as const] : []),
-        ...(input.workout.recoveryAddons?.length ? ['recovery_addon' as const] : []),
+        ...(alignedWorkout.conditioningBlock ? ['conditioning' as const] : []),
+        ...(alignedWorkout.speedBlock ? ['speed' as const] : []),
+        ...(alignedWorkout.powerBlock || alignmentRemovedComponents.includes('power') ? ['power' as const] : []),
+        ...(alignedWorkout.recoveryAddons?.length ? ['recovery_addon' as const] : []),
       ],
     };
   }
 
-  let workout = input.workout;
+  let workout = alignedWorkout;
   const beforeNames = new Set(
     (workout.exercises ?? []).map((row) => row.exercise?.name ?? '').filter(Boolean),
   );
@@ -318,7 +337,15 @@ export function validateWorkoutAgainstActiveConstraints(
     constraints: engineConstraints,
     availableEquipment,
   });
-  workout = componentResult.workout;
+  const finalPowerAlignment = alignPowerBlockToFinalWorkoutContent(componentResult.workout);
+  workout = finalPowerAlignment.workout;
+  const finalAlignmentRemovedComponents: ActiveConstraintValidationResult['removedComponents'] =
+    finalPowerAlignment.action === 'removed' ? ['power'] : [];
+  const removedComponents = Array.from(new Set([
+    ...alignmentRemovedComponents,
+    ...componentResult.removedComponents,
+    ...finalAlignmentRemovedComponents,
+  ])) as ActiveConstraintValidationResult['removedComponents'];
 
   const afterNames = new Set(
     (workout.exercises ?? []).map((row) => row.exercise?.name ?? '').filter(Boolean),
@@ -332,7 +359,7 @@ export function validateWorkoutAgainstActiveConstraints(
       preservedAnchor: false,
       activeConstraintIds: active.map((constraint) => constraint.id),
       removedExerciseNames,
-      removedComponents: componentResult.removedComponents,
+      removedComponents,
     };
   }
 
@@ -343,7 +370,7 @@ export function validateWorkoutAgainstActiveConstraints(
     preservedAnchor: false,
     activeConstraintIds: active.map((constraint) => constraint.id),
     removedExerciseNames,
-    removedComponents: componentResult.removedComponents,
+    removedComponents,
   };
 }
 

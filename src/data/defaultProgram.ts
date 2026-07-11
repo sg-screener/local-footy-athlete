@@ -84,6 +84,7 @@ import {
   attachSessionEffectEvidence,
   buildPrescriptionEffectEvidence,
 } from '../utils/deterministicCoachNoteFactory';
+import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
 
 /**
  * Default exercises used in the training program
@@ -2311,13 +2312,14 @@ export function buildWorkoutsFromCoach(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    return attachPrescriptionEffectEvidence(
+    const decoratedWorkout = attachPrescriptionEffectEvidence(
       attachSessionEffectEvidence(
         builtWorkout,
         planEntry?.deterministicCoachNoteEffects,
       ),
       beginnerPrescriptionEvidence,
     );
+    return alignPowerBlockToFinalWorkoutContent(decoratedWorkout).workout;
   });
 }
 

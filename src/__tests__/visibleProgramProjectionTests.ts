@@ -539,9 +539,19 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
   const powerOnly = wk('Power Primer', 3, [], {
     powerBlock: {
       id: 'power',
+      kind: 'primer',
+      family: 'lower',
       title: 'Power Primer',
+      placement: 'pre_lift',
       prescription: '3 x 3 jumps',
-      options: [{ name: 'Vertical Jump', sets: 3, repsMin: 3, repsMax: 3 }],
+      options: [{ name: 'Vertical Jump', sets: 3, repsMin: 3, repsMax: 3, equipmentRequired: [] }],
+      notes: [],
+      counting: {
+        hardExposure: false,
+        mainStrength: false,
+        conditioningCredit: 'none',
+        isFinisher: false,
+      },
     },
   });
   const addonOnly = wk('Mobility Support', 3, [], {
@@ -552,7 +562,7 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
       exercises: [{ id: 'mobility', name: 'Hip Mobility', prescription: '5 min' }],
     }],
   });
-  for (const contentWorkout of [conditioningOnly, speedOnly, powerOnly, addonOnly]) {
+  for (const contentWorkout of [conditioningOnly, speedOnly, addonOnly]) {
     const contentProjected = projectVisibleDay({
       day: day(wed, contentWorkout, 'manual'),
       activeInjury: null,
@@ -561,18 +571,38 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
     ok(`${contentWorkout.name} typed content is not collapsed`,
       !!contentProjected.day.workout,
       `projected=${contentProjected.day.workout?.name ?? 'Rest'}`);
-    if (contentWorkout === powerOnly) {
-      eq('powerBlock title survives visible projection',
-        contentProjected.day.workout?.powerBlock?.title,
-        'Power Primer');
-      eq('powerBlock prescription survives visible projection',
-        contentProjected.day.workout?.powerBlock?.prescription,
-        '3 x 3 jumps');
-      eq('powerBlock exercise option survives visible projection',
-        contentProjected.day.workout?.powerBlock?.options?.[0]?.name,
-        'Vertical Jump');
-    }
   }
+
+  const invalidPowerProjected = projectVisibleDay({
+    day: day(wed, powerOnly, 'manual'),
+    activeInjury: null,
+    todayISO: TODAY_ISO,
+  });
+  eq('power-only shell without final strength collapses to Rest',
+    invalidPowerProjected.day.workout,
+    null);
+
+  const squat = ex('Back Squat');
+  squat.prescribedRepsMin = 4;
+  squat.prescribedRepsMax = 5;
+  squat.prescribedWeightKg = 100;
+  const validPower = wk('Lower Strength', 3, [squat], {
+    powerBlock: powerOnly.powerBlock,
+  });
+  const validPowerProjected = projectVisibleDay({
+    day: day(wed, validPower, 'manual'),
+    activeInjury: null,
+    todayISO: TODAY_ISO,
+  });
+  eq('valid strength-linked powerBlock title survives visible projection',
+    validPowerProjected.day.workout?.powerBlock?.title,
+    'Power Primer');
+  eq('valid strength-linked powerBlock prescription survives visible projection',
+    validPowerProjected.day.workout?.powerBlock?.prescription,
+    '3 x 3 jumps');
+  eq('valid strength-linked powerBlock exercise option survives visible projection',
+    validPowerProjected.day.workout?.powerBlock?.options?.[0]?.name,
+    'Vertical Jump');
 }
 
 section('[16b] Cooked readiness does not leave an empty recovery shell');
@@ -700,6 +730,38 @@ section('[18] Conditioning removed from mixed session clears stale conditioning 
   ok('conditioning no longer appears as a visible item',
     !directItems.some((item) => item.domain === 'conditioning'),
     JSON.stringify(directItems));
+}
+
+section('[19] Tempo titles follow the rendered modality, not stale running metadata');
+{
+  function projectedTempoTitle(rowNames: string | string[]): string | undefined {
+    const rows = (Array.isArray(rowNames) ? rowNames : [rowNames]).map(ex);
+    const workout = wk('Tempo Running', 2, rows, {
+      workoutType: 'Tempo-Run',
+      conditioningFlavour: 'tempo',
+      conditioningCategory: 'tempo',
+      conditioningBlock: {
+        options: [{
+          title: 'Tempo Running',
+          description: 'Stale planned title',
+          exerciseIds: rows.map((row) => row.id),
+        }],
+      },
+    });
+    return projectVisibleDay({
+      day: day('2026-07-07', workout, 'manual'),
+      activeInjury: null,
+      todayISO: TODAY_ISO,
+    }).day.workout?.name;
+  }
+
+  eq('bike tempo is titled Bike Tempo', projectedTempoTitle('Bike Tempo Intervals'), 'Bike Tempo');
+  eq('RowErg tempo is titled RowErg Tempo', projectedTempoTitle('RowErg Tempo Intervals'), 'RowErg Tempo');
+  eq('SkiErg tempo is titled SkiErg Tempo', projectedTempoTitle('SkiErg Tempo Intervals'), 'SkiErg Tempo');
+  eq('mixed bike + row tempo is titled Off-Feet Tempo',
+    projectedTempoTitle(['Bike Tempo Intervals', 'RowErg Aerobic Flush']),
+    'Off-Feet Tempo');
+  eq('real running tempo remains Tempo Running', projectedTempoTitle('Tempo Run'), 'Tempo Running');
 }
 
 // ─── Summary ───

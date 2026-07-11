@@ -37,7 +37,11 @@ export function resolveOffseasonSubphase(
     return 'mid_offseason';
   }
 
-  return 'mid_offseason';
+  // Missing block/week context must choose the least aggressive policy.
+  // Callers that want mid/late behaviour must provide explicit progression
+  // state; otherwise a brand-new/post-season athlete could receive running,
+  // hard conditioning or contrast work intended for later in the phase.
+  return 'early_offseason';
 }
 
 function positiveInteger(value: number | null | undefined): number | undefined {

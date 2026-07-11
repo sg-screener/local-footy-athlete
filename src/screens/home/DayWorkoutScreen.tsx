@@ -14,10 +14,10 @@ import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import ExerciseVideoModal from '../../components/ExerciseVideoModal';
-import { SessionExplanationBanner } from '../../components/SessionExplanationBanner';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
 import { PowerPrimerSection } from '../../components/PowerPrimerSection';
+import { TrunkSupportSection } from '../../components/TrunkSupportSection';
 import type { DesignVersion } from '../../store/uiStore';
 import DayWorkoutScreenV2 from './DayWorkoutScreenV2';
 import { useDayWorkout } from './useDayWorkout';
@@ -68,13 +68,10 @@ function DayWorkoutScreenClassic() {
     date,
     workout,
     staleWarning,
-    explanation,
     selectedExercise,
     setSelectedExercise,
     expandedCues,
     toggleCue,
-    showExplanation,
-    setShowExplanation,
     isFinished,
     justSaved,
     editingWeightId,
@@ -97,6 +94,8 @@ function DayWorkoutScreenClassic() {
     isCombinedDay,
     hasTeamTraining,
     strengthExercises,
+    supportExercises,
+    conditioningExercises,
     conditioningOptions,
     conditioningRowCount,
   } = useDayWorkout();
@@ -188,27 +187,12 @@ function DayWorkoutScreenClassic() {
             const combined = [countFragment, workout.powerBlock?.title, typeText]
               .filter(Boolean)
               .join(' · ');
-            if (!combined && !explanation) return null;
+            if (!combined) return null;
             return (
               <View style={styles.subtitleRow}>
-                {combined ? (
-                  <Text style={styles.subtitleText} numberOfLines={1}>
-                    {combined}
-                  </Text>
-                ) : (
-                  <View style={{ flex: 1 }} />
-                )}
-                {explanation ? (
-                  <Pressable
-                    onPress={() => setShowExplanation(!showExplanation)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    style={styles.whyLinkWrap}
-                  >
-                    <Text style={styles.whyLink} numberOfLines={1}>
-                      Why this session →
-                    </Text>
-                  </Pressable>
-                ) : null}
+                <Text style={styles.subtitleText} numberOfLines={1}>
+                  {combined}
+                </Text>
               </View>
             );
           })()}
@@ -221,18 +205,6 @@ function DayWorkoutScreenClassic() {
         keyboardShouldPersistTaps="handled"
         onScrollBeginDrag={handleScrollBeginDrag}
       >
-        {/* Explanation banner */}
-        {showExplanation && explanation ? (
-          <View style={{ marginBottom: spacing.md }}>
-            <SessionExplanationBanner
-              headline={explanation.headline}
-              body={explanation.body}
-              visible={true}
-              onToggle={() => setShowExplanation(false)}
-            />
-          </View>
-        ) : null}
-
         {/* Stale override warning */}
         {staleWarning && (
           <StaleOverrideBanner
@@ -287,7 +259,7 @@ function DayWorkoutScreenClassic() {
         {isConditioning ? (
           /* ─── Conditioning layout: session phases as descriptive blocks ─── */
           <View style={styles.section}>
-            {(workout.exercises ?? []).map((exercise) => {
+            {conditioningExercises.map((exercise) => {
               const phaseName = exercise.exercise?.name || 'Phase';
               const phaseDisplayName = displayExerciseName(phaseName, 'Phase');
               const description = exercise.notes || exercise.exercise?.description || '';
@@ -595,6 +567,8 @@ function DayWorkoutScreenClassic() {
           </View>
         )}
 
+        <TrunkSupportSection rows={supportExercises} />
+
         <RecoveryAddonSection addons={workout.recoveryAddons ?? []} />
 
         {/* Post-finish: feedback panel, or "Session logged" success moment. */}
@@ -708,16 +682,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     letterSpacing: 0.1,
-  },
-  whyLinkWrap: {
-    flexShrink: 0,                  // never clip the CTA
-  },
-  // Why link — softened to read as a supporting link, matching V2 Pro mode.
-  whyLink: {
-    color: colors.accent.lime,
-    fontSize: 13,
-    fontWeight: '600',
-    opacity: 0.72,
   },
   scrollContent: {
     paddingHorizontal: spacing.md,

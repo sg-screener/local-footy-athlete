@@ -3,7 +3,6 @@ import { Keyboard, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useResolvedDay } from '../../hooks/useSchedule';
 import { useIsOverrideStale } from '../../hooks/useStaleOverrides';
-import { useSessionExplanation } from '../../hooks/useSessionExplanation';
 import { useProgramStore } from '../../store/programStore';
 import { useProfileStore } from '../../store/profileStore';
 import { useCoachContextStateStore } from '../../store/coachContextStateStore';
@@ -11,7 +10,6 @@ import { extractModalitiesFromSession } from '../../utils/coachReferenceResolver
 import { isTrueBodyweightExercise, estimateStartingWeight } from '../../utils/loadEstimation';
 import {
   DESCRIPTIVE_CONDITIONING_TYPES,
-  LEGACY_CONDITIONING_KEYWORDS,
   LEGACY_FLAVOUR_TITLE,
   DAY_NAMES,
 } from './dayWorkoutHelpers';
@@ -20,6 +18,7 @@ import {
   getTeamTrainingWorkoutState,
   normalizeTeamTrainingWorkoutForDisplay,
 } from '../../utils/teamTraining';
+import { getSessionComponentRows } from '../../utils/sessionComponents';
 
 // Enable LayoutAnimation on Android (idempotent — safe to call multiple times).
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -65,7 +64,6 @@ export function useDayWorkout() {
   // ─── UI state local to the screen ───
   const [selectedExercise, setSelectedExercise] = useState<string | null>(null);
   const [expandedCues, setExpandedCues] = useState<Record<string, boolean>>({});
-  const [showExplanation, setShowExplanation] = useState(false);
   const [isFinished, setIsFinished] = useState<boolean>(startFinished);
   // `justSaved` drives the post-save success moment. When the feedback panel
   // calls `handleFeedbackSaved` we flip this on, swap the feedback Card for
@@ -82,7 +80,6 @@ export function useDayWorkout() {
     [rawWorkout],
   );
   const staleWarning = useIsOverrideStale(date);
-  const explanation = useSessionExplanation(resolved);
 
   /** Toggle coaching cue visibility for an exercise. */
   const toggleCue = useCallback((exerciseId: string) => {
@@ -354,6 +351,8 @@ export function useDayWorkout() {
         isConditioning: false,
         isCombinedDay: false,
         strengthExercises: [] as any[],
+        supportExercises: [] as any[],
+        conditioningExercises: [] as any[],
         conditioningOptions: [] as ResolvedConditioningOption[],
         conditioningRowCount: 0,
       };
@@ -394,55 +393,36 @@ export function useDayWorkout() {
     const isCombinedDay =
       !!workout.hasCombinedConditioning && !isConditioning && !isRecovery;
     const condBlock = workout.conditioningBlock;
-
-    let strengthExercises = teamState.renderableExercises.slice();
+    const componentRows = getSessionComponentRows(workout);
+    const strengthExercises = componentRows.strengthRows;
+    const supportExercises = componentRows.supportRows;
+    const conditioningExercises = componentRows.conditioningRows;
     let conditioningOptions: ResolvedConditioningOption[] = [];
 
     if (isCombinedDay && condBlock) {
       // Structured path — drive rows from resolved exerciseIds only.
-      const ownedIds = new Set<string>();
       conditioningOptions = condBlock.options.map((opt: any) => {
         const optIds = new Set<string>(opt.exerciseIds);
-        for (const id of opt.exerciseIds) ownedIds.add(id);
         return {
           title: opt.title,
           description: opt.description,
-          rows: strengthExercises.filter((ex: any) => optIds.has(ex.id)),
+          rows: conditioningExercises.filter((ex: any) => optIds.has(ex.id)),
         };
       });
-      strengthExercises = strengthExercises.filter((ex: any) => !ownedIds.has(ex.id));
-    } else if (isCombinedDay && strengthExercises.length > 0) {
-      // Legacy fallback — walk backwards through the exercise list to find
-      // the conditioning tail, then render it as a single synthesized option
-      // keyed on `conditioningFlavour`.
-      let splitIdx = strengthExercises.length;
-      for (let i = strengthExercises.length - 1; i >= 0; i--) {
-        const name = strengthExercises[i].exercise?.name || '';
-        const notes = strengthExercises[i].notes || '';
-        if (
-          LEGACY_CONDITIONING_KEYWORDS.test(name) ||
-          LEGACY_CONDITIONING_KEYWORDS.test(notes)
-        ) {
-          splitIdx = i;
-        } else {
-          break;
-        }
-      }
-      if (splitIdx < strengthExercises.length) {
-        const tail = strengthExercises.slice(splitIdx);
-        const legacyTitle =
-          (workout.conditioningFlavour &&
-            LEGACY_FLAVOUR_TITLE[workout.conditioningFlavour]) ||
-          'Conditioning';
-        conditioningOptions = [
-          {
-            title: legacyTitle,
-            description: '',
-            rows: tail,
-          },
-        ];
-        strengthExercises = strengthExercises.slice(0, splitIdx);
-      }
+    } else if (isCombinedDay && conditioningExercises.length > 0) {
+      // Legacy fallback uses the shared component owner to separate the tail;
+      // trunk/support rows cannot leak into conditioning.
+      const legacyTitle =
+        (workout.conditioningFlavour &&
+          LEGACY_FLAVOUR_TITLE[workout.conditioningFlavour]) ||
+        'Conditioning';
+      conditioningOptions = [
+        {
+          title: legacyTitle,
+          description: '',
+          rows: conditioningExercises,
+        },
+      ];
     }
 
     const conditioningRowCount = conditioningOptions.reduce(
@@ -459,6 +439,8 @@ export function useDayWorkout() {
       isCombinedDay,
       hasTeamTraining,
       strengthExercises,
+      supportExercises,
+      conditioningExercises,
       conditioningOptions,
       conditioningRowCount,
     };
@@ -472,15 +454,12 @@ export function useDayWorkout() {
     // Resolved data
     workout,
     staleWarning,
-    explanation,
 
     // UI state
     selectedExercise,
     setSelectedExercise,
     expandedCues,
     toggleCue,
-    showExplanation,
-    setShowExplanation,
     isFinished,
     justSaved,
 
