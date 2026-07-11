@@ -16,6 +16,7 @@ import {
   templateIdFromSection,
 } from './coachRevisionTemplates';
 import { logWeekValidation } from '../rules/weekStructureValidator';
+import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
 
 export interface CoachRevisionOverrideWrite {
   date: string;
@@ -258,6 +259,10 @@ export function buildWorkoutOverrideFromRevision(args: {
   // The override belongs to the destination date regardless of where the
   // rows came from.
   workout = { ...workout, dayOfWeek: isoDateToDayOfWeek(args.revisedDay.date) ?? workout.dayOfWeek };
+  // Proposal shape is not persistence truth. Canonicalise before the visible
+  // round-trip check so a transformed/rejected request cannot be reported as
+  // though its malformed representation was written unchanged.
+  workout = validateLiveWorkoutWrite(args.revisedDay.date, workout);
 
   const projected = projectVisibleDay({
     day: {

@@ -26,6 +26,7 @@
 
 import {
   STRENGTH_POOLS,
+  applyPoolRotation,
   type PoolSlotKey,
   type RotationContext,
 } from '../data/exercisePoolsStrength';
@@ -129,20 +130,15 @@ function simulateMultiBlock(blocks: number): Capture {
     for (const slot of SLOTS) capture[slot].push([]);
     for (let w = 1; w <= 4; w++) {
       const ctx: RotationContext = { miniCycleNumber: mc, weekInBlock: w };
-      // dayOfWeek 1..SLOTS.length. With 10 slots after the upper split we
-      // deliberately exceed a 7-day week — buildWorkoutsFromCoach's synthetic
-      // date generator wraps via `((dow - today) + 7) % 7`, and the ID key
-      // `w-coach-${dow}` is just a string, so overshooting the week is fine.
-      // This is purely a per-slot capture harness, not a realistic plan.
+      // This is a pool-rotation harness, not a persisted workout. Power rows
+      // now correctly disappear at the canonical workout boundary, so test
+      // the plyo pool (and every other pool) at its actual ownership layer.
       const sessions = SLOTS.map((slot, idx) => slotSession(slot, idx + 1));
-      const workouts = buildWorkoutsFromCoach(
-        sessions, `mc-${mc}-w${w}`, undefined, undefined, ctx,
-      );
       for (let i = 0; i < SLOTS.length; i++) {
         const slot = SLOTS[i];
-        const workout = workouts[i];
-        const anchorName = workout.exercises[0].exercise?.name ?? '<unknown>';
-        const accessoryName = workout.exercises[1].exercise?.name ?? '<unknown>';
+        const usage = new Map<string, Set<string>>();
+        const anchorName = applyPoolRotation(sessions[i].exercises[0].name, ctx, usage);
+        const accessoryName = applyPoolRotation(sessions[i].exercises[1].name, ctx, usage);
         capture[slot][mc - 1].push({ anchor: anchorName, accessory: accessoryName });
       }
     }

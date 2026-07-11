@@ -365,7 +365,11 @@ section('[4] approved conservative reduction writes reduced prescription');
 
   eq('one write', writes.length, 1);
   eq('no rejects', result.rejected.length, 0);
-  eq('projection matches accepted reduction', result.applied[0].projectedDay, after);
+  ok('projection canonicalises the stale generic title after reduction',
+    result.applied[0].projectedDay.workout?.title === 'Upper Body Strength' &&
+      result.applied[0].projectedDay.workout?.sections[0]?.items.every((item) =>
+        item.prescription?.sets === 2),
+    result.applied[0].projectedDay);
   ok('sets reduced in override', writes[0].workout.exercises.every((row: any) => row.prescribedSets === 2), writes[0].workout.exercises);
 }
 

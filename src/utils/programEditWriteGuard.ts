@@ -19,6 +19,7 @@ import {
   compareProgrammingRiskLevels,
   getProgrammingEditDecision,
 } from '../rules/conflictResolutionHierarchy';
+import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
 
 export interface ProgramEditWrite {
   date: string;
@@ -237,7 +238,12 @@ function combineAssessments(assessments: readonly ProgramEditRiskAssessment[]): 
 export function assessProgramEditWrites(
   input: ProgramEditWriteGuardInput,
 ): ProgramEditRiskAssessment | null {
-  const writes = input.writes.filter((write) => /^\d{4}-\d{2}-\d{2}$/.test(write.date));
+  const writes = input.writes
+    .filter((write) => /^\d{4}-\d{2}-\d{2}$/.test(write.date))
+    .map((write) => ({
+      ...write,
+      workout: write.workout ? validateLiveWorkoutWrite(write.date, write.workout) : null,
+    }));
   if (writes.length === 0) return null;
   const weekStarts = Array.from(new Set(writes.map((write) => getMondayForDate(write.date)))).sort();
   const profile = buildProfile(input.profile);

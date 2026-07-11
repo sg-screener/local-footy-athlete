@@ -1,9 +1,10 @@
 /**
- * Final active-constraint safety boundary for persisted program writes.
+ * Final canonicalisation and active-constraint boundary for program writes.
  *
- * Generation and edit producers still own programming intent. This module only
- * re-applies the existing canonical injury/exposure/equipment rules immediately
- * before a Workout, Microcycle, Program, or week overlay is stored.
+ * Generation and edit producers still own programming intent. This module
+ * converts their output to the canonical workout shape, applies the existing
+ * injury/exposure/equipment rules, then canonicalises the surviving content
+ * again immediately before storage.
  */
 
 import type {
@@ -20,6 +21,7 @@ import type {
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useProfileStore } from '../store/profileStore';
 import { useReadinessStore } from '../store/readinessStore';
+import { useCalendarStore } from '../store/calendarStore';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { applyInjuryFilterToWorkout } from './injuryWorkoutFilter';
 import {
@@ -43,13 +45,22 @@ import {
 } from './workoutContent';
 import { todayISOLocal } from './appDate';
 import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
+import {
+  finaliseWorkoutAfterMutation,
+  type WorkoutCanonicalisationContext,
+} from './workoutCanonicalisation';
+import { resolveOffseasonSubphase } from '../rules/offseasonSubphase';
+import { deriveScheduleReadiness } from './readiness';
+import { getWeekInBlock } from './programBlockState';
+import { resolveWeekKind } from '../rules/deloadWeekRules';
 
 export interface ActiveConstraintValidationInput {
   workout: Workout | null;
   date: string;
   todayISO: string;
   activeConstraints: readonly ActiveConstraint[];
-  profile?: Pick<OnboardingData, 'equipment' | 'trainingLocation'> | null;
+  profile?: OnboardingData | null;
+  canonicalContext?: WorkoutCanonicalisationContext;
 }
 
 export interface ActiveConstraintValidationResult {
@@ -244,19 +255,41 @@ export function validateWorkoutAgainstActiveConstraints(
     removedComponents: [],
   });
 
-  if (!input.workout || input.date < input.todayISO) return unchanged(input.workout);
-  const powerAlignment = alignPowerBlockToFinalWorkoutContent(input.workout);
+  if (!input.workout) return unchanged(input.workout);
+  const canonical = finaliseWorkoutAfterMutation(input.workout, {
+    ...input.canonicalContext,
+    date: input.date,
+    profile: input.profile,
+    phase: input.canonicalContext?.phase ?? input.profile?.seasonPhase,
+  });
+  const canonicalRemovedNames = canonical.actions
+    .filter((action) => action.kind === 'row_removed' && !!action.item)
+    .map((action) => action.item!);
+  const canonicalRemovedPower = canonical.actions.some((action) => action.kind === 'power_removed');
+  if (input.date < input.todayISO) {
+    return {
+      ...unchanged(canonical.workout),
+      changed: canonical.changed,
+      removedExerciseNames: canonicalRemovedNames,
+      removedComponents: canonicalRemovedPower ? ['power'] : [],
+    };
+  }
+  const powerAlignment = alignPowerBlockToFinalWorkoutContent(canonical.workout);
   const alignedWorkout = powerAlignment.workout;
   const alignmentRemovedComponents: ActiveConstraintValidationResult['removedComponents'] =
     powerAlignment.action === 'removed' ? ['power'] : [];
   const alignedResult = (): ActiveConstraintValidationResult => ({
     ...unchanged(alignedWorkout),
-    changed: powerAlignment.action !== 'unchanged',
-    removedComponents: alignmentRemovedComponents,
+    changed: canonical.changed || powerAlignment.action !== 'unchanged',
+    removedExerciseNames: canonicalRemovedNames,
+    removedComponents: Array.from(new Set([
+      ...(canonicalRemovedPower ? ['power' as const] : []),
+      ...alignmentRemovedComponents,
+    ])),
   });
   const active = liveConstraintsForDate(input.activeConstraints, input.date);
   if (active.length === 0) {
-    if (powerAlignment.action === 'removed' && !hasMeaningfulWorkoutContent(alignedWorkout)) {
+    if (!hasMeaningfulWorkoutContent(alignedWorkout)) {
       return {
         ...alignedResult(),
         workout: null,
@@ -285,12 +318,13 @@ export function validateWorkoutAgainstActiveConstraints(
       removedExerciseNames: (alignedWorkout.exercises ?? [])
         .map((row) => row.exercise?.name ?? '')
         .filter(Boolean),
-      removedComponents: [
+      removedComponents: Array.from(new Set([
+        ...(canonicalRemovedPower ? ['power' as const] : []),
         ...(alignedWorkout.conditioningBlock ? ['conditioning' as const] : []),
         ...(alignedWorkout.speedBlock ? ['speed' as const] : []),
         ...(alignedWorkout.powerBlock || alignmentRemovedComponents.includes('power') ? ['power' as const] : []),
         ...(alignedWorkout.recoveryAddons?.length ? ['recovery_addon' as const] : []),
-      ],
+      ])),
     };
   }
 
@@ -337,20 +371,39 @@ export function validateWorkoutAgainstActiveConstraints(
     constraints: engineConstraints,
     availableEquipment,
   });
-  const finalPowerAlignment = alignPowerBlockToFinalWorkoutContent(componentResult.workout);
-  workout = finalPowerAlignment.workout;
-  const finalAlignmentRemovedComponents: ActiveConstraintValidationResult['removedComponents'] =
-    finalPowerAlignment.action === 'removed' ? ['power'] : [];
+  // Constraints are allowed to remove planned work. Re-run the same shape
+  // canonicaliser afterwards, but never restore content that safety just
+  // removed. This keeps type/name/components honest without fighting injury,
+  // readiness or equipment policy.
+  const postConstraintCanonical = finaliseWorkoutAfterMutation(componentResult.workout, {
+    ...input.canonicalContext,
+    date: input.date,
+    profile: input.profile,
+    phase: input.canonicalContext?.phase ?? input.profile?.seasonPhase,
+    restoreMissingPlanPatterns: false,
+  });
+  workout = postConstraintCanonical.workout;
+  const postCanonicalRemovedNames = postConstraintCanonical.actions
+    .filter((action) => action.kind === 'row_removed' && !!action.item)
+    .map((action) => action.item!);
+  const postCanonicalRemovedPower = postConstraintCanonical.actions.some(
+    (action) => action.kind === 'power_removed',
+  );
   const removedComponents = Array.from(new Set([
+    ...(canonicalRemovedPower ? ['power' as const] : []),
     ...alignmentRemovedComponents,
     ...componentResult.removedComponents,
-    ...finalAlignmentRemovedComponents,
+    ...(postCanonicalRemovedPower ? ['power' as const] : []),
   ])) as ActiveConstraintValidationResult['removedComponents'];
 
   const afterNames = new Set(
     (workout.exercises ?? []).map((row) => row.exercise?.name ?? '').filter(Boolean),
   );
-  const removedExerciseNames = Array.from(beforeNames).filter((name) => !afterNames.has(name));
+  const removedExerciseNames = Array.from(new Set([
+    ...canonicalRemovedNames,
+    ...postCanonicalRemovedNames,
+    ...Array.from(beforeNames).filter((name) => !afterNames.has(name)),
+  ]));
   if (!hasMeaningfulWorkoutContent(workout)) {
     return {
       workout: null,
@@ -365,7 +418,7 @@ export function validateWorkoutAgainstActiveConstraints(
 
   return {
     workout,
-    changed: workout !== input.workout,
+    changed: canonical.changed || postConstraintCanonical.changed || workout !== canonical.workout,
     collapsedToRest: false,
     preservedAnchor: false,
     activeConstraintIds: active.map((constraint) => constraint.id),
@@ -394,20 +447,62 @@ function dateForWorkout(microcycle: Microcycle, workout: Workout): string {
   return addDaysISO(start, offset);
 }
 
+function isoDayDiff(date: string, gameDate: string): number {
+  const [dy, dm, dd] = date.slice(0, 10).split('-').map(Number);
+  const [gy, gm, gd] = gameDate.slice(0, 10).split('-').map(Number);
+  return Math.round(
+    (Date.UTC(dy, dm - 1, dd) - Date.UTC(gy, gm - 1, gd)) / 86_400_000,
+  );
+}
+
+function gameProximityContext(
+  date: string,
+  gameDates: readonly string[],
+): Pick<WorkoutCanonicalisationContext, 'hasGame' | 'gOffset'> {
+  const offsets = gameDates.map((gameDate) => isoDayDiff(date, gameDate))
+    .filter((offset) => offset >= -6 && offset <= 1)
+    .sort((a, b) => Math.abs(a) - Math.abs(b));
+  return offsets.length > 0
+    ? { hasGame: true, gOffset: offsets[0] }
+    : { hasGame: false };
+}
+
 export function validateMicrocycleAgainstActiveConstraints(args: {
   microcycle: Microcycle;
   todayISO: string;
   activeConstraints: readonly ActiveConstraint[];
-  profile?: Pick<OnboardingData, 'equipment' | 'trainingLocation'> | null;
+  profile?: OnboardingData | null;
+  canonicalContext?: WorkoutCanonicalisationContext;
 }): Microcycle {
   let changed = false;
+  const datedWorkouts = args.microcycle.workouts.map((workout) => ({
+    date: dateForWorkout(args.microcycle, workout),
+    workout,
+  }));
+  const gameDates = datedWorkouts
+    .filter(({ workout }) => classifyVisibleSession(workout).anchors.game)
+    .map(({ date }) => date);
   const workouts = args.microcycle.workouts.map((workout) => {
+    const date = dateForWorkout(args.microcycle, workout);
     const result = validateWorkoutAgainstActiveConstraints({
       workout,
-      date: dateForWorkout(args.microcycle, workout),
+      date,
       todayISO: args.todayISO,
       activeConstraints: args.activeConstraints,
       profile: args.profile,
+      canonicalContext: {
+        ...args.canonicalContext,
+        phase: args.canonicalContext?.phase ?? args.profile?.seasonPhase,
+        offseasonSubphase: args.canonicalContext?.offseasonSubphase ??
+          resolveOffseasonSubphase({
+            seasonPhase: args.profile?.seasonPhase,
+            weekInBlock: ((args.microcycle.weekNumber - 1) % 4) + 1,
+          }),
+        weekKind: args.canonicalContext?.weekKind ?? args.microcycle.weekKind,
+        ...gameProximityContext(date, gameDates),
+        planIntentValid: !!workout.planEntryId,
+        referenceWorkout: workout,
+      },
     });
     if (result.changed) changed = true;
     return result.workout ?? collapseWorkoutToRest(workout);
@@ -419,7 +514,7 @@ export function validateProgramAgainstActiveConstraints(args: {
   program: TrainingProgram;
   todayISO: string;
   activeConstraints: readonly ActiveConstraint[];
-  profile?: Pick<OnboardingData, 'equipment' | 'trainingLocation'> | null;
+  profile?: OnboardingData | null;
 }): TrainingProgram {
   let changed = false;
   const microcycles = args.program.microcycles.map((microcycle) => {
@@ -434,7 +529,8 @@ export function validateWeekOverlayAgainstActiveConstraints(args: {
   overlay: WeekScopedWorkoutOverlay;
   todayISO: string;
   activeConstraints: readonly ActiveConstraint[];
-  profile?: Pick<OnboardingData, 'equipment' | 'trainingLocation'> | null;
+  profile?: OnboardingData | null;
+  canonicalContext?: WorkoutCanonicalisationContext;
 }): WeekScopedWorkoutOverlay {
   let changed = false;
   const workoutsByDate = Object.fromEntries(
@@ -468,6 +564,75 @@ function liveValidationContext(): {
   };
 }
 
+function liveWorkoutCanonicalisationContext(
+  date: string,
+  workout: Workout,
+  profile: OnboardingData,
+): WorkoutCanonicalisationContext {
+  // Dynamic access avoids making ProgramStore statically import itself through
+  // this final write module.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const state = require('../store/programStore').useProgramStore.getState();
+  const datedProgramWorkouts: Array<{ date: string; workout: Workout }> =
+    (state.currentProgram?.microcycles ?? []).flatMap((microcycle: Microcycle) =>
+      (microcycle.workouts ?? []).map((candidate) => ({
+        date: dateForWorkout(microcycle, candidate),
+        workout: candidate,
+      })),
+    );
+  const allProgramWorkouts = datedProgramWorkouts.map(({ workout: candidate }) => candidate);
+  const referenceWorkout = workout.planEntryId
+    ? allProgramWorkouts.find((candidate) => candidate.planEntryId === workout.planEntryId) ?? null
+    : null;
+  const planIntentValid = !!workout.planEntryId && !!referenceWorkout;
+  const blockStart = state.blockState?.blockStartDate ??
+    state.currentProgram?.startDate?.slice(0, 10);
+  const weekInBlock = blockStart ? getWeekInBlock(blockStart, date) : undefined;
+  const signal = useReadinessStore.getState().signalsByDate?.[date] ?? null;
+  const gameDates = new Set(
+    datedProgramWorkouts
+      .filter(({ workout: candidate }) => classifyVisibleSession(candidate).anchors.game)
+      .map(({ date: gameDate }) => gameDate),
+  );
+  if (classifyVisibleSession(workout).anchors.game) gameDates.add(date);
+  const markedDays = useCalendarStore.getState().markedDays ?? {};
+  for (const [markedDate, kind] of Object.entries(markedDays)) {
+    if (kind === 'game') gameDates.add(markedDate);
+  }
+  const usualGameDay = profile.usualGameDay ??
+    (profile.gameDay !== 'Varies' ? profile.gameDay : undefined);
+  if (profile.seasonPhase === 'In-season' && usualGameDay) {
+    const dayNumbers: Record<string, number> = {
+      Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3,
+      Thursday: 4, Friday: 5, Saturday: 6,
+    };
+    const dateDow = new Date(`${date.slice(0, 10)}T12:00:00`).getDay();
+    const monday = addDaysISO(date, -((dateDow + 6) % 7));
+    const virtualGameDate = addDaysISO(monday, (dayNumbers[usualGameDay] + 6) % 7);
+    const sunday = addDaysISO(monday, 6);
+    const explicitGameThisWeek = Array.from(gameDates).some((gameDate) =>
+      gameDate >= monday && gameDate <= sunday,
+    );
+    if (!explicitGameThisWeek && !['noGame', 'rest'].includes(markedDays[virtualGameDate])) {
+      gameDates.add(virtualGameDate);
+    }
+  }
+  return {
+    date,
+    phase: profile.seasonPhase,
+    offseasonSubphase: resolveOffseasonSubphase({
+      seasonPhase: profile.seasonPhase,
+      weekInBlock,
+    }),
+    weekKind: weekInBlock ? resolveWeekKind(profile.seasonPhase, weekInBlock) : undefined,
+    readiness: deriveScheduleReadiness({ onboardingData: profile, signal }),
+    ...gameProximityContext(date, Array.from(gameDates)),
+    profile,
+    planIntentValid,
+    referenceWorkout,
+  };
+}
+
 /** Live-store wrappers used by ProgramStore's four final write primitives. */
 export function validateLiveProgramWrite(program: TrainingProgram): TrainingProgram {
   return validateProgramAgainstActiveConstraints({ ...liveValidationContext(), program });
@@ -479,7 +644,12 @@ export function validateLiveMicrocycleWrite(microcycle: Microcycle): Microcycle 
 
 export function validateLiveWorkoutWrite(date: string, workout: Workout): Workout {
   const context = liveValidationContext();
-  const result = validateWorkoutAgainstActiveConstraints({ ...context, date, workout });
+  const result = validateWorkoutAgainstActiveConstraints({
+    ...context,
+    date,
+    workout,
+    canonicalContext: liveWorkoutCanonicalisationContext(date, workout, context.profile),
+  });
   return result.workout ?? collapseWorkoutToRest(workout);
 }
 
@@ -489,14 +659,31 @@ export function validateLiveNullableWorkoutWrite(
 ): Workout | null {
   if (!workout) return null;
   const context = liveValidationContext();
-  return validateWorkoutAgainstActiveConstraints({ ...context, date, workout }).workout;
+  return validateWorkoutAgainstActiveConstraints({
+    ...context,
+    date,
+    workout,
+    canonicalContext: liveWorkoutCanonicalisationContext(date, workout, context.profile),
+  }).workout;
 }
 
 export function validateLiveWeekOverlayWrite(
   overlay: WeekScopedWorkoutOverlay,
 ): WeekScopedWorkoutOverlay {
-  return validateWeekOverlayAgainstActiveConstraints({
-    ...liveValidationContext(),
-    overlay,
-  });
+  const context = liveValidationContext();
+  let changed = false;
+  const workoutsByDate = Object.fromEntries(
+    Object.entries(overlay.workoutsByDate).map(([date, workout]) => {
+      if (!workout) return [date, null];
+      const result = validateWorkoutAgainstActiveConstraints({
+        ...context,
+        date,
+        workout,
+        canonicalContext: liveWorkoutCanonicalisationContext(date, workout, context.profile),
+      });
+      if (result.changed) changed = true;
+      return [date, result.workout];
+    }),
+  );
+  return changed ? { ...overlay, workoutsByDate } : overlay;
 }

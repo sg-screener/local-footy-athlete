@@ -43,6 +43,7 @@ import {
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import { resolveExerciseName } from './loadEstimation';
 import { formatExerciseDisplayName } from './exerciseDisplay';
+import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
 import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
 import type { Workout, WorkoutExercise } from '../types/domain';
 
@@ -609,9 +610,16 @@ export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `"${fromExercise}" already matches the requested swap on ${date}.` };
   }
-  const blocked = blockedByHardStopRisk([{ date, workout: newWorkout }], date);
+  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+  if (workoutsAreEquivalent(current, canonicalWorkout)) {
+    return {
+      success: false,
+      reason: `That swap is not valid for the programmed session, so ${fromExercise} was kept.`,
+    };
+  }
+  const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise swap' });
+  setManualOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise swap' });
   return { success: true };
 }
 
@@ -637,9 +645,13 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
       if (workoutsAreEquivalent(current, newWorkout)) {
         return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
       }
-      const blocked = blockedByHardStopRisk([{ date, workout: newWorkout }], date);
+      const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+      if (workoutsAreEquivalent(current, canonicalWorkout)) {
+        return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
+      }
+      const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
       if (blocked) return blocked;
-      setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise removed' });
+      setManualOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
       return { success: true };
     }
   }
@@ -666,9 +678,13 @@ export function removeExerciseAtDate(input: RemoveExerciseInput): ActionResult {
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `Removing "${exercise}" on ${date} produced no change.` };
   }
-  const blocked = blockedByHardStopRisk([{ date, workout: newWorkout }], date);
+  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+  if (workoutsAreEquivalent(current, canonicalWorkout)) {
+    return { success: false, reason: `That removal would break the programmed session, so it was not applied.` };
+  }
+  const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise removed' });
+  setManualOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise removed' });
   return { success: true };
 }
 
@@ -740,9 +756,16 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
   if (workoutsAreEquivalent(current, newWorkout)) {
     return { success: false, reason: `Adding ${displayName} on ${date} produced no change.` };
   }
-  const blocked = blockedByHardStopRisk([{ date, workout: newWorkout }], date);
+  const canonicalWorkout = validateLiveWorkoutWrite(date, newWorkout);
+  if (workoutsAreEquivalent(current, canonicalWorkout)) {
+    return {
+      success: false,
+      reason: `${displayName} is not valid for this session under the current programming policy.`,
+    };
+  }
+  const blocked = blockedByHardStopRisk([{ date, workout: canonicalWorkout }], date);
   if (blocked) return blocked;
-  setManualOverride(date, newWorkout, { intent: 'dismissed', label: 'Exercise added' });
+  setManualOverride(date, canonicalWorkout, { intent: 'dismissed', label: 'Exercise added' });
   return { success: true };
 }
 

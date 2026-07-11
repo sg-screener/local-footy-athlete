@@ -46,6 +46,7 @@ import {
 } from '../utils/coachRevisionProposal';
 import { applyCoachRevisionDateOverrides } from '../utils/coachRevisionOverrideWriter';
 import type { ResolvedDay } from '../utils/sessionResolver';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 
 const TODAY = '2099-01-01';
 const MON = '2099-01-05';
@@ -251,6 +252,15 @@ section('[1] severe knee and hamstring constraints revalidate generated programs
   ok('9/10 knee removes knee-dominant squat after generation', !kneeNames.includes('Back Squat'), kneeNames);
   ok('9/10 knee removes plyometric work after generation', !kneeNames.includes('Box Jump'), kneeNames);
   ok('9/10 knee preserves unaffected upper work', kneeNames.includes('Bench Press'), kneeNames);
+  ok('post-constraint canonicalisation gives preserved upper + off-feet work an honest identity',
+    kneeValidated.microcycles[0].workouts[0].name === 'Upper Push' &&
+      kneeValidated.microcycles[0].workouts[0].workoutType === 'Mixed' &&
+      !!kneeValidated.microcycles[0].workouts[0].conditioningBlock,
+    {
+      name: kneeValidated.microcycles[0].workouts[0].name,
+      type: kneeValidated.microcycles[0].workouts[0].workoutType,
+      conditioning: kneeValidated.microcycles[0].workouts[0].conditioningBlock,
+    });
 
   const hamstringCandidate = program([workout('Lower + Running', 1, [
     exercise('Deadlift', ['Barbell']),
@@ -399,7 +409,7 @@ section('[3b] final content owns power and contrast identity without active cons
     profile: FULL_GYM,
   });
   ok('real heavy same-family lift preserves Contrast Power',
-    heavyResult.workout?.powerBlock?.kind === 'contrast' && !heavyResult.changed,
+    heavyResult.workout?.powerBlock?.kind === 'contrast',
     heavyResult.workout?.powerBlock);
 
   const emptyPowerShell = workout('Power Only Shell', 2, [], { powerBlock: contrastPower });
@@ -465,8 +475,10 @@ section('[5] game, practice-match, and team anchors are preserved');
   const gameResult = validateWorkoutAgainstActiveConstraints({
     workout: practice, date: '2099-01-10', todayISO: TODAY, activeConstraints: [severeKnee], profile: FULL_GYM,
   });
-  ok('team training anchor is not removed', teamResult.workout === team && teamResult.preservedAnchor);
-  ok('game/practice-match anchor is not removed', gameResult.workout === practice && gameResult.preservedAnchor);
+  ok('team training anchor is not removed',
+    !!teamResult.workout && classifyVisibleSession(teamResult.workout).anchors.teamTraining && teamResult.preservedAnchor);
+  ok('game/practice-match anchor is not removed',
+    !!gameResult.workout && classifyVisibleSession(gameResult.workout).anchors.game && gameResult.preservedAnchor);
 }
 
 section('[6] cleared constraints are neutral');
@@ -476,7 +488,8 @@ section('[6] cleared constraints are neutral');
   const result = validateWorkoutAgainstActiveConstraints({
     workout: candidate, date: MON, todayISO: TODAY, activeConstraints: [cleared], profile: FULL_GYM,
   });
-  ok('resolved constraint does not affect future write', result.workout === candidate && !result.changed);
+  ok('resolved constraint does not affect future write',
+    result.activeConstraintIds.length === 0 && names(result.workout).some((name) => /sprint/i.test(name)));
 }
 
 section('[6b] red-flag and full-pause readiness hard stops remain hard stops');
@@ -584,10 +597,11 @@ section('[8] equipment refresh and coach revision writes pass through the same b
     setManualOverride: (date, value, context) =>
       useProgramStore.getState().setManualOverride(date, value, context),
   });
-  ok('coach revision proposal reached the write boundary', revision.applied.length === 2, revision);
-  ok('coach revision destination cannot store unsafe sprint work',
-    !names(useProgramStore.getState().dateOverrides[TUE]).includes('10m Sprint'),
-    names(useProgramStore.getState().dateOverrides[TUE]));
+  ok('coach revision proposal is rejected when canonical safety changes its accepted shape',
+    revision.applied.length === 0 && revision.rejected.some((item) =>
+      item.code === 'projected_override_mismatch'), revision);
+  ok('coach revision rejection writes no unsafe sprint work',
+    !useProgramStore.getState().dateOverrides[TUE]);
 }
 
 section('[9] architectural guard keeps the validator at the final store boundary');

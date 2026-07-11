@@ -84,12 +84,11 @@ import {
   attachSessionEffectEvidence,
   buildPrescriptionEffectEvidence,
 } from '../utils/deterministicCoachNoteFactory';
-import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
 import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
 import {
   mainPatternsForLegacyStrengthPattern,
-  type MainStrengthPattern,
 } from '../rules/strengthPatternContributions';
+import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 
 /**
  * Default exercises used in the training program
@@ -1609,6 +1608,29 @@ export function buildWorkoutsFromCoach(
   const edgeProvidedDays = new Set(coachWorkouts.map((workout) => workout.dayOfWeek));
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(coachWorkouts, effectiveWeeklyPlan);
 
+  const finaliseBuiltWorkout = (
+    workout: Workout,
+    planEntry: SessionAllocation | null,
+  ): Workout => {
+    const result = finaliseWorkoutAfterMutation(workout, {
+      phase: onboardingData?.seasonPhase,
+      offseasonSubphase,
+      weekKind: rotationContext?.weekKind,
+      profile: onboardingData,
+      planIntentValid: !!planEntry?.planEntryId &&
+        workout.planEntryId === planEntry.planEntryId,
+    });
+    if (result.actions.length > 0) {
+      logger.warn('[WorkoutCanonicalisation] Generated workout finalised', {
+        microcycleId,
+        dayOfWeek: workout.dayOfWeek,
+        planEntryId: workout.planEntryId ?? null,
+        actions: result.actions,
+      });
+    }
+    return result.workout;
+  };
+
   // ── Build a synthetic dateStr for deterministic variety ──
   // Generated workouts are day-of-week keyed. When the caller passes a
   // weekStartISO, hash against that real generated week; legacy callers fall
@@ -2138,10 +2160,10 @@ export function buildWorkoutsFromCoach(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as Workout;
-      return attachSessionEffectEvidence(
+      return finaliseBuiltWorkout(attachSessionEffectEvidence(
         standaloneWorkout,
         planEntry.deterministicCoachNoteEffects,
-      );
+      ), planEntry);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -2160,13 +2182,8 @@ export function buildWorkoutsFromCoach(
         workoutType: (ex as any).workoutType,
       }),
     );
-    const assignedContributions = new Set<MainStrengthPattern>(
-      planEntry?.strengthPatternContributions ??
-      mainPatternsForLegacyStrengthPattern(planEntry?.strengthPattern),
-    );
     const classifiedRows = filteredAiExercises.map((exercise, index) => ({
       exercise,
-      index,
       classification: classifyGeneratedWorkoutRow({
         name: exercise.name,
         sets: exercise.sets,
@@ -2174,108 +2191,6 @@ export function buildWorkoutsFromCoach(
         index,
       }),
     }));
-    const generatedRecoveryRows = classifiedRows.filter(
-      (row) => row.classification.kind === 'recovery_addon' && !!planEntry?.strengthPattern,
-    );
-    const removedRows: Array<{ name: string; reason: string }> = [];
-    const acceptedAiExercises = classifiedRows.flatMap((row) => {
-      const { exercise, classification, index } = row;
-      if (classification.kind === 'power') {
-        // Legacy/test-only callers without a deterministic plan have no power
-        // policy context to enforce. Production edge generation always passes
-        // the exact plan entry, which remains authoritative.
-        if (!planEntry) return [exercise];
-        removedRows.push({ name: exercise.name, reason: 'raw_power_owned_by_power_policy' });
-        return [];
-      }
-      if (classification.kind === 'conditioning') {
-        if (!planEntry) return [exercise];
-        removedRows.push({
-          name: exercise.name,
-          reason: planEntry?.hasCombinedConditioning
-            ? offseasonSubphase === 'early_offseason' && classification.hardConditioning
-              ? 'downgraded_to_early_offseason_aerobic_component'
-              : 'promoted_to_typed_conditioning_component'
-            : 'conditioning_not_assigned_by_deterministic_plan',
-        });
-        return [];
-      }
-      if (classification.kind === 'recovery_addon') {
-        if (!planEntry?.strengthPattern) return [exercise];
-        removedRows.push({ name: exercise.name, reason: 'promoted_to_recovery_addon' });
-        return [];
-      }
-
-      const rowPattern = classification.mainPattern;
-      if (rowPattern && assignedContributions.size > 0 && !assignedContributions.has(rowPattern)) {
-        const minorBalancingPull =
-          assignedContributions.size === 1 &&
-          assignedContributions.has('push') &&
-          rowPattern === 'pull' &&
-          index >= 2;
-        const minorPosteriorAccessory =
-          assignedContributions.size === 1 &&
-          assignedContributions.has('squat') &&
-          rowPattern === 'hinge' &&
-          index >= 2 &&
-          classification.kind === 'strength_accessory';
-        const minorCrossPatternAccessory =
-          classification.kind === 'strength_accessory' && index >= 2;
-        if (!minorBalancingPull && !minorPosteriorAccessory && !minorCrossPatternAccessory) {
-          removedRows.push({
-            name: exercise.name,
-            reason: `main_pattern_drift:${rowPattern}->${Array.from(assignedContributions).join('+')}`,
-          });
-          return [];
-        }
-      }
-
-      if (exercise.pairType === 'contrast') {
-        const { supersetGroup, supersetOrder, pairType, ...plainExercise } = exercise;
-        removedRows.push({ name: exercise.name, reason: 'stale_raw_contrast_pairing_removed' });
-        return [plainExercise];
-      }
-      return [exercise];
-    });
-
-    if (removedRows.length > 0) {
-      logger.warn('[ProgramGen] Canonical generated-row enforcement', {
-        microcycleId,
-        dayOfWeek: cw.dayOfWeek,
-        sourceWorkout: cw.name,
-        planEntryId: planEntry?.planEntryId ?? null,
-        intendedPatterns: Array.from(assignedContributions),
-        removalsOrPromotions: removedRows,
-      });
-    }
-
-    const representedPatterns = new Set<MainStrengthPattern>(
-      acceptedAiExercises
-        .flatMap((exercise, index) => {
-          const classification = classifyGeneratedWorkoutRow({
-          name: exercise.name,
-          sets: exercise.sets,
-          repsMax: exercise.repsMax,
-          index,
-          });
-          return classification.kind === 'strength_main' && classification.mainPattern
-            ? [classification.mainPattern]
-            : [];
-        }),
-    );
-    const missingPatterns = Array.from(assignedContributions).filter(
-      (pattern) => !representedPatterns.has(pattern),
-    );
-    const patternFallbackRows: CoachGeneratedWorkoutInput['exercises'] = missingPatterns.flatMap((pattern) => {
-      const match = fallbackExercisesForPlanEntry(planEntry!)
-        .find((exercise, index) => classifyGeneratedWorkoutRow({
-          name: exercise.name,
-          sets: exercise.sets,
-          repsMax: exercise.repsMax,
-          index,
-        }).mainPattern === pattern);
-      return match ? [match] : [];
-    });
     const requiresStrengthContent =
       edgeProvidedDays.has(cw.dayOfWeek) &&
       !!planEntry?.strengthPattern &&
@@ -2283,21 +2198,14 @@ export function buildWorkoutsFromCoach(
     // Preserve any plausible strength/support row from the edge. Fall back
     // only for an empty shell or a payload made entirely of conditioning
     // rows; the normaliser must not discard unusual but valid strength work.
-    const aiHasStrengthContent = acceptedAiExercises.some((exercise, index) => {
-      const kind = classifyGeneratedWorkoutRow({
-        name: exercise.name,
-        sets: exercise.sets,
-        repsMax: exercise.repsMax,
-        index,
-      }).kind;
-      return kind === 'strength_main' || kind === 'strength_accessory';
-    });
+    const aiHasStrengthContent = classifiedRows.some(({ classification }) =>
+      classification.kind === 'strength_main' || classification.kind === 'strength_accessory');
     const fallbackStrengthExercises = requiresStrengthContent && !aiHasStrengthContent
       ? fallbackExercisesForPlanEntry(planEntry!)
       : [];
     const sourceAiExercises: CoachGeneratedWorkoutInput['exercises'] = fallbackStrengthExercises.length > 0
       ? fallbackStrengthExercises
-      : [...acceptedAiExercises, ...patternFallbackRows];
+      : filteredAiExercises;
 
     if (fallbackStrengthExercises.length > 0) {
       logger.warn('[ProgramGen] Edge workout lacked strength content required by deterministic plan; using safe plan fallback', {
@@ -2388,24 +2296,16 @@ export function buildWorkoutsFromCoach(
     // COMBINED S+C — AI strength + deterministic conditioning appended
     // ──────────────────────────────────────────────────────────────────────
     if (planEntry?.hasCombinedConditioning && planEntry.conditioningFlavour) {
-      // Strip any AI-generated conditioning exercises from the strength block.
-      // The AI sometimes adds conditioning filler — we replace it entirely.
-      // Walk backwards from the tail (same logic as DayWorkoutScreen) to find
-      // where conditioning exercises start, then chop them off.
-      const COND_KEYWORDS = /finisher|zone\s*2|aerobic|tempo|interval|conditioning|repeat\s*effort|threshold|MAS|sprint|jog|run|bike|row|ski|swim/i;
-      let splitIdx = finalExercises.length;
-      for (let i = finalExercises.length - 1; i >= 0; i--) {
-        const name = finalExercises[i].exercise?.name || '';
-        const notes = finalExercises[i].notes || '';
-        if (COND_KEYWORDS.test(name) || COND_KEYWORDS.test(notes)) {
-          splitIdx = i;
-        } else {
-          break; // stop as soon as we hit a non-conditioning exercise
-        }
-      }
-      const rawStrengthBlock = splitIdx > 0
-        ? finalExercises.slice(0, splitIdx)
-        : finalExercises;
+      // Deterministic plan conditioning replaces edge-authored conditioning.
+      // Classification is shared with the final post-mutation path; location
+      // inside the raw exercise array is irrelevant.
+      const rawStrengthBlock = finalExercises.filter((exercise, index) =>
+        classifyGeneratedWorkoutRow({
+          name: exercise.exercise?.name ?? '',
+          sets: exercise.prescribedSets,
+          repsMax: exercise.prescribedRepsMax,
+          index,
+        }).kind !== 'conditioning');
       const strengthBlock = deloadPolicy
         ? applyStrengthDeloadToExercises(rawStrengthBlock, deloadPolicy)
         : rawStrengthBlock;
@@ -2493,32 +2393,6 @@ export function buildWorkoutsFromCoach(
       );
     }
 
-    const canonicalRecoveryAddons = generatedRecoveryRows.length > 0
-      ? [{
-          id: `generated-recovery-${workoutId}`,
-          title: 'Optional Recovery Add-on',
-          label: 'Recovery',
-          kind: 'mobility' as const,
-          focusArea: 'General recovery',
-          optional: true as const,
-          skipPolicy: 'no_penalty' as const,
-          durationMinutes: 5,
-          exercises: generatedRecoveryRows.map(({ exercise }, index) => ({
-            id: `generated-recovery-${workoutId}-${index}`,
-            name: exercise.name,
-            prescription: exercise.notes || `${exercise.sets} x ${exercise.repsMin}-${exercise.repsMax}`,
-            source: 'local' as const,
-          })),
-          counting: {
-            hardExposure: false as const,
-            mainStrength: false as const,
-            conditioningCredit: 'none' as const,
-            createsHardDay: false as const,
-            sprintCodExposure: false as const,
-          },
-        }]
-      : undefined;
-
     const builtWorkout: Workout = {
       id: workoutId,
       microcycleId,
@@ -2548,7 +2422,6 @@ export function buildWorkoutsFromCoach(
       ...(resolvedConditioningBlock ? { conditioningBlock: resolvedConditioningBlock } : {}),
       ...(resolvedSpeedBlock ? { speedBlock: resolvedSpeedBlock } : {}),
       ...(resolvedPowerBlock ? { powerBlock: resolvedPowerBlock } : {}),
-      ...(canonicalRecoveryAddons ? { recoveryAddons: canonicalRecoveryAddons } : {}),
       durationMinutes: 0,
       exercises: finalExercises,
       createdAt: new Date().toISOString(),
@@ -2561,7 +2434,7 @@ export function buildWorkoutsFromCoach(
       ),
       beginnerPrescriptionEvidence,
     );
-    return alignPowerBlockToFinalWorkoutContent(decoratedWorkout).workout;
+    return finaliseBuiltWorkout(decoratedWorkout, planEntry);
   });
 }
 

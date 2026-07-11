@@ -858,6 +858,57 @@ console.log('\n[coachActions] add_exercise (append to date override)');
   eq('new exercise order follows existing rows', exercises[1]?.exerciseOrder, 1);
 }
 
+console.log('\n[coachActions] add_exercise canonicalises Bike Zone 2 as conditioning');
+{
+  reset();
+  const date = '2026-04-27';
+  setFixture(date, makeWorkout('Upper Push', [makeExercise('Bench Press', 4)]));
+  const result = addExerciseAtDate({
+    date,
+    exercise: { name: 'Bike Zone 2 - 15 min', sets: 1, repsMin: 1, repsMax: 1, weight: 75 },
+  });
+  eq('Bike add succeeds through canonical edit path', result.success, true);
+  const written = overrideCalls[0]?.workout;
+  eq('Bike add makes the session Mixed', written?.workoutType, 'Mixed' as any);
+  ok('Bike add creates a typed conditioning block', !!written?.conditioningBlock?.options.length);
+  const conditioningIds = new Set(
+    written?.conditioningBlock?.options.flatMap((option) => option.exerciseIds) ?? [],
+  );
+  const bike = written?.exercises.find((item) => conditioningIds.has(item.id));
+  ok('Bike conditioning has no kilogram prescription', !!bike && !bike.prescribedWeightKg);
+}
+
+console.log('\n[coachActions] add_exercise rejects raw power that policy removes');
+{
+  reset();
+  const date = '2026-04-27';
+  setFixture(date, makeWorkout('Upper Push', [makeExercise('Bench Press', 4)]));
+  const result = addExerciseAtDate({
+    date,
+    exercise: { name: 'Broad Jump', sets: 3, repsMin: 3, repsMax: 3 },
+  });
+  eq('raw Broad Jump add reports no applied change', result.success, false);
+  ok('raw Broad Jump rejection explains programming policy', /programming policy/i.test(result.reason ?? ''));
+  eq('raw Broad Jump rejection writes no override', overrideCalls.length, 0);
+}
+
+console.log('\n[coachActions] add_exercise keeps trunk support without fake conditioning');
+{
+  reset();
+  const date = '2026-04-27';
+  setFixture(date, makeWorkout('Upper Push', [makeExercise('Bench Press', 4)]));
+  const result = addExerciseAtDate({
+    date,
+    exercise: { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12 },
+  });
+  eq('Pallof add succeeds', result.success, true);
+  const written = overrideCalls[0]?.workout;
+  ok('Pallof remains a visible exercise',
+    written?.exercises.some((item) => item.exercise?.name === 'Pallof Press') ?? false);
+  ok('Pallof does not create conditioning or Mixed identity',
+    !written?.conditioningBlock && written?.workoutType !== 'Mixed' && written?.workoutType !== 'Conditioning');
+}
+
 // 28. ban_exercise_globally — alias resolves to canonical before persisting
 console.log('\n[coachActions] ban_exercise_globally (alias-resolved canonical)');
 {
