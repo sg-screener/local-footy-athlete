@@ -4090,6 +4090,17 @@ The app can program up to:
 3-5 conditioning exposures per week
 This depends on phase, team training, game day, fitness level, injury status and readiness.
 In-season, team training and games count as conditioning load.
+Default easy-aerobic modality weighting
+When there is no explicit athlete modality preference and the app is choosing a default modality for easy aerobic, aerobic_base or zone-2 work, use a deterministic weighted selection:
+
+* Bike: 40%
+* Mixed erg block: 40%
+* RowErg: 10%
+* SkiErg: 10%
+
+Bike and mixed erg work are the preferred defaults for steady aerobic work when the required equipment is available. RowErg and SkiErg remain valid rotation options, but should not dominate long easy-aerobic defaults.
+A mixed erg block may include bike plus RowErg or SkiErg. No continuous RowErg or SkiErg block should be longer than 10 minutes. Longer RowErg or SkiErg aerobic work must be intervalised, with complete rest between aerobic blocks rather than easy work during the rest period.
+This weighting is a deterministic fallback, not runtime randomness. A specific programmed modality, an explicit athlete preference and equipment availability override the default weighting.
 Running exposure
 Running exposure includes:
 Game
