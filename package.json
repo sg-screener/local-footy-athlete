@@ -105,6 +105,7 @@
     "smoke:coach-revision-proposal": "sucrase-node scripts/smoke-coach-revision-proposal.ts",
     "test:readiness": "sucrase-node src/__tests__/readinessSignalTests.ts",
     "test:strength-sequencing": "sucrase-node src/__tests__/strengthSequencingTests.ts",
+    "test:weekly-spacing": "sucrase-node src/__tests__/weeklySessionSpacingTests.ts",
     "test:off-season-sequencing": "npm run test:strength-sequencing",
     "test:preseason-subphase": "sucrase-node src/__tests__/preseasonSubphaseTests.ts",
     "test:tap-swap-hierarchy": "sucrase-node src/__tests__/tapSwapHierarchyTests.ts",

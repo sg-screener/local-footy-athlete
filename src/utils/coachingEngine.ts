@@ -2425,13 +2425,22 @@ function buildWeeklyPlan(
     const hasSundaySlot = daySlots.some(s => s.dayName === 'Sunday');
     const usePreSeasonRhythm =
       isPreSeason && hasTeamDays && daySlots.length >= 5;
-    const useSixDaySpreadRhythm =
+    const useNoAnchorSpreadRhythm =
       !hasGameThisWeek &&
+      teamDayNums.length === 0 &&
       daySlots.length >= 6 &&
       inputs.availableDays >= 6 &&
       daySlots.some(s => s.dayName === 'Saturday');
-    const useDistributedRhythm = usePreSeasonRhythm || useSixDaySpreadRhythm;
-    const maxDistributedRestSlots = useDistributedRhythm
+    const preserveAnchoredSixDayRhythm =
+      !hasGameThisWeek &&
+      teamDayNums.length > 0 &&
+      daySlots.length >= 6 &&
+      inputs.availableDays >= 6 &&
+      daySlots.some(s => s.dayName === 'Saturday');
+    const useDistributedRhythm = usePreSeasonRhythm || useNoAnchorSpreadRhythm;
+    const maxDistributedRestSlots = useNoAnchorSpreadRhythm
+      ? (offseasonPolicy?.subphase === 'early_offseason' ? 3 : 2)
+      : useDistributedRhythm
       // Pre-season wants 3 on / 1 off / 2 on / 1 off. If Sunday is not an
       // available slot, keep one in-week recovery break and leave the extra
       // slack for conditioning/support rather than creating train/rest/train
@@ -2445,7 +2454,26 @@ function buildWeeklyPlan(
 
     // Default rest indices, before team-day reconciliation.
     const defaultRestIndices: number[] = [];
-    if (useDistributedRhythm && restCount > 0) {
+    if (useNoAnchorSpreadRhythm && restCount > 0) {
+      // No team/game anchors: distribute low/support slots as separators,
+      // not as an end-of-week tail. Six/seven-day early off-season weeks
+      // therefore get a train / low / train / low / train rhythm. A third
+      // early-off-season buffer uses Sunday (or the final available day).
+      const separatorIndices = [1, 3];
+      for (const index of separatorIndices) {
+        if (index < daySlots.length && defaultRestIndices.length < restCount) {
+          defaultRestIndices.push(index);
+        }
+      }
+      if (defaultRestIndices.length < restCount) {
+        const sundayIdx = daySlots.findIndex(s => s.dayName === 'Sunday');
+        const finalIdx = sundayIdx >= 0 ? sundayIdx : daySlots.length - 1;
+        if (!defaultRestIndices.includes(finalIdx)) defaultRestIndices.push(finalIdx);
+      }
+      for (let i = daySlots.length - 1; defaultRestIndices.length < restCount && i >= 0; i--) {
+        if (!defaultRestIndices.includes(i)) defaultRestIndices.push(i);
+      }
+    } else if (useDistributedRhythm && restCount > 0) {
       const midweekBreakIdx = Math.min(3, daySlots.length - 1);
       defaultRestIndices.push(midweekBreakIdx);
       if (restCount >= 2) {
@@ -4256,7 +4284,9 @@ function buildWeeklyPlan(
 
       if (isRestSlot) {
         // Rest/conditioning slot — no strength allowed
-        slotCandidates = useSixDaySpreadRhythm ? ['REC', 'ACC'] : ['COND', 'ACC', 'REC'];
+        slotCandidates = useNoAnchorSpreadRhythm || preserveAnchoredSixDayRhythm
+          ? ['REC', 'ACC']
+          : ['COND', 'ACC', 'REC'];
       } else if (useStructureMode) {
         const uniqueStrength = [...new Set(safeStrengthQueue)] as CandidateType[];
         if (queueMustComplete) {
@@ -4277,7 +4307,11 @@ function buildWeeklyPlan(
         slotCandidates = [...ALL_CANDIDATES];
       }
 
-      if (useSixDaySpreadRhythm && slotIdx < 3 && !slot.isTeamDay) {
+      // Team-anchored six-day weeks retain their established pre-season/
+      // off-season allocation path. The front-loading defect belongs to
+      // anchor-free weeks; changing this branch can squeeze conditioning
+      // around immutable team days.
+      if (preserveAnchoredSixDayRhythm && slotIdx < 3 && !slot.isTeamDay) {
         const trainingCandidates = slotCandidates.filter((candidate) =>
           candidate !== 'REC' && candidate !== 'ACC'
         );
