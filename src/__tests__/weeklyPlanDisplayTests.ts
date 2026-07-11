@@ -41,6 +41,8 @@ console.log('weeklyPlanDisplayTests');
 console.log('\n[1] strength / fixed days pass through canonically');
 eq('Upper Push', weeklyPlanTitle({ name: 'Upper Push', workoutType: 'Strength' }), 'Upper Push');
 eq('Lower Squat', weeklyPlanTitle({ name: 'Lower Squat', workoutType: 'Strength' }), 'Lower Squat');
+eq('Lower Body Strength', weeklyPlanTitle({ name: 'Lower Body Strength', workoutType: 'Strength' }), 'Lower Body Strength');
+eq('Upper Body Strength', weeklyPlanTitle({ name: 'Upper Body Strength', workoutType: 'Strength' }), 'Upper Body Strength');
 eq('Full Body Strength', weeklyPlanTitle({ name: 'Full Body Strength', workoutType: 'Strength' }), 'Full Body Strength');
 eq('team day leads with the strength half',
   weeklyPlanTitle({ name: 'Team Training + Upper Push', workoutType: 'Team Training' }), 'Upper Push');
@@ -103,11 +105,13 @@ eq('combined EMOM context is Hard Conditioning',
   combinedConditioningCategoryLabel(combinedHard), 'Hard Conditioning');
 
 const combinedLegacy = {
-  name: 'Lower Squat',
+  name: 'Lower Body Strength',
   workoutType: 'Strength',
   hasCombinedConditioning: true,
   conditioningFlavour: 'aerobic',
 } as any;
+eq('mixed lower title stays Lower Body Strength',
+  weeklyPlanTitle(combinedLegacy), 'Lower Body Strength');
 eq('legacy flavour-only combined context is Aerobic Base',
   combinedConditioningCategoryLabel(combinedLegacy), 'Aerobic Base');
 eq('non-combined day has no context',

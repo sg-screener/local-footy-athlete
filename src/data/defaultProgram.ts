@@ -2229,6 +2229,7 @@ export function buildWorkoutsFromCoach(
       name: resolveSessionDisplayName({
         name: cw.name,
         focus: planEntry?.focus,
+        exercises: finalExercises,
         strengthPattern: planEntry?.strengthPattern,
         isTeamDay: planEntry?.isTeamDay,
         conditioningFlavour: planEntry?.conditioningFlavour,

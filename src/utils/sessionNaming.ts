@@ -53,6 +53,15 @@ export interface SessionNameInput {
   name?: string;
   /** Optional explicit patterns. When present, overrides text inference. */
   movementPatterns?: MovementPattern[];
+  /**
+   * Final visible exercise rows. When the typed intent is a generic lower or
+   * upper session, meaningful main-pattern evidence can make the display name
+   * more specific (or broader) without changing workout classification.
+   */
+  exercises?: ReadonlyArray<{
+    name?: string;
+    exercise?: { name?: string | null } | null;
+  } | null>;
   /** Typed engine strength pattern. Used before any legacy text inference. */
   strengthPattern?: StrengthPatternMetadata;
   /** Team-day flag — when true, name ALWAYS leads with "Team Training". */
@@ -73,6 +82,20 @@ const PATTERN_PROBES: Array<[MovementPattern, RegExp]> = [
   // so push requires a more specific token: push/bench/OHP/overhead press/dips/push-up.
   ['push',  /\bpush\b|\bbench\b|\bohp\b|overhead press|\bdips?\b|push[- ]?up/],
   ['pull',  /\bpull\b|\brow\b|chin[- ]?up|pull[- ]?up|face pull|lat pulldown|pulldown/],
+];
+
+/**
+ * Main-pattern probes for content-aware display identity. These deliberately
+ * exclude support-only work such as Face Pulls, Nordics and lunges: one small
+ * support exercise must not turn a genuine Upper Push or Lower Hinge session
+ * into a mixed-region title. Direct anchors such as Box Squat + Hip Thrust or
+ * Bench Press + Cable Row are meaningful evidence of both patterns.
+ */
+const MEANINGFUL_EXERCISE_PATTERN_PROBES: Array<[MovementPattern, RegExp]> = [
+  ['squat', /\b(?:back|front|box|goblet|hack|belt|zercher|safety(?: bar)?)?\s*squats?\b|\bleg press\b/i],
+  ['hinge', /\b(?:trap bar\s+)?deadlifts?\b|\bromanian deadlifts?\b|\brdls?\b|\bhip thrusts?\b|\bgood mornings?\b|\bkettlebell swings?\b/i],
+  ['push', /\bbench press\b|\boverhead press\b|\bshoulder press\b|\blandmine press\b|\bohp\b|\bdips?\b|\bpush[- ]?ups?\b/i],
+  ['pull', /\b(?:cable|dumbbell|barbell|machine|seated|chest[- ]?supported|inverted|pendlay|t[- ]?bar|bent[- ]?over|single[- ]?arm)\s+rows?\b|\brows\b|\bpull[- ]?ups?\b|\bchin[- ]?ups?\b|\b(?:lat |neutral[- ]?grip |single[- ]?arm )?pulldowns?\b/i],
 ];
 
 /**
@@ -112,7 +135,9 @@ export function strengthTextForMovementInference(text: string | undefined): stri
   let match: RegExpExecArray | null;
   while ((match = plusSeparator.exec(text))) {
     const tail = text.slice(match.index + match[0].length);
-    if (hasConditioningText(tail)) {
+    const nextPlus = tail.search(/\s\+\s/);
+    const immediatePart = nextPlus >= 0 ? tail.slice(0, nextPlus) : tail;
+    if (hasConditioningText(immediatePart) && !hasExplicitStrengthText(immediatePart)) {
       return text.slice(0, match.index).trim();
     }
   }
@@ -120,7 +145,9 @@ export function strengthTextForMovementInference(text: string | undefined): stri
   const dashSeparator = /\s[—–-]\s/g;
   while ((match = dashSeparator.exec(text))) {
     const tail = text.slice(match.index + match[0].length);
-    if (hasConditioningText(tail) && !hasExplicitStrengthText(tail)) {
+    const nextDash = tail.search(/\s[—–-]\s/);
+    const immediatePart = nextDash >= 0 ? tail.slice(0, nextDash) : tail;
+    if (hasConditioningText(immediatePart) && !hasExplicitStrengthText(immediatePart)) {
       return text.slice(0, match.index).trim();
     }
   }
@@ -155,6 +182,21 @@ export function inferStrengthMovementPatterns(text: string | undefined): Movemen
   return inferMovementPatterns(strengthText);
 }
 
+export function inferMeaningfulExerciseMovementPatterns(
+  exercises: SessionNameInput['exercises'],
+): MovementPattern[] {
+  const found = new Set<MovementPattern>();
+  for (const row of exercises ?? []) {
+    const name = String(row?.exercise?.name ?? row?.name ?? '').trim();
+    if (!name) continue;
+    for (const [pattern, probe] of MEANINGFUL_EXERCISE_PATTERN_PROBES) {
+      if (probe.test(name)) found.add(pattern);
+    }
+  }
+  return (['squat', 'hinge', 'push', 'pull'] as MovementPattern[])
+    .filter((pattern) => found.has(pattern));
+}
+
 function lowerPatternDetailsFromText(text: string | undefined): MovementPattern[] {
   return inferStrengthMovementPatterns(text).filter(
     (pattern): pattern is 'squat' | 'hinge' => pattern === 'squat' || pattern === 'hinge',
@@ -183,6 +225,23 @@ export function movementPatternsFromStrengthPattern(
     default:
       return [];
   }
+}
+
+function movementPatternsFromVisibleContent(input: SessionNameInput): MovementPattern[] {
+  if (!input.exercises?.length) return [];
+  const sourceText = strengthTextForMovementInference(input.focus || input.name);
+  const isStrengthIntent = !!input.strengthPattern || hasExplicitStrengthText(sourceText);
+  if (!isStrengthIntent) return [];
+
+  // Combined/full-body metadata is already explicit and must remain stable.
+  if (
+    input.strengthPattern === 'lower_combined' ||
+    input.strengthPattern === 'upper_combined' ||
+    input.strengthPattern === 'full_body'
+  ) {
+    return [];
+  }
+  return inferMeaningfulExerciseMovementPatterns(input.exercises);
 }
 
 /**
@@ -233,28 +292,46 @@ function fallbackFromText(text: string | undefined): string {
  * Precedence:
  *   1. Team-day priority prefix (always leads).
  *   2. Explicit movementPatterns (when provided, overrides inference).
- *   3. Typed strengthPattern from the engine/session allocation.
- *   4. Inferred patterns from strength-scoped focus (legacy fallback).
- *   5. Inferred patterns from strength-scoped name (AI-generated fallback).
- *   6. Cleaned name/focus pass-through (for conditioning / recovery / other).
+ *   3. Meaningful patterns from final visible exercises for generic strength.
+ *   4. Typed strengthPattern from the engine/session allocation.
+ *   5. Inferred patterns from strength-scoped focus (legacy fallback).
+ *   6. Inferred patterns from strength-scoped name (AI-generated fallback).
+ *   7. Cleaned name/focus pass-through (for conditioning / recovery / other).
  */
 export function resolveSessionDisplayName(input: SessionNameInput): string {
   const isTeam = !!input.isTeamDay;
+  const existingName = (input.name || '').trim();
+  const auxiliaryText = `${input.name ?? ''} ${input.focus ?? ''}`;
   const isStandaloneConditioning =
     !!input.conditioningFlavour && !input.hasCombinedConditioning;
+
+  // Recovery and accessory identities are already honest domain labels. They
+  // must never be promoted to main strength from words in mobility/prehab rows.
+  if (!isTeam && input.tier === 'recovery') {
+    return existingName || fallbackFromText(input.focus) || 'Recovery';
+  }
+  if (
+    !isTeam &&
+    !input.strengthPattern &&
+    /\b(gunshow|prehab|accessor|pump|mobility|recovery)\b/i.test(auxiliaryText)
+  ) {
+    return existingName || fallbackFromText(input.focus) || 'Session';
+  }
 
   // A standalone conditioning slot may be a row/bike/run prescription even
   // when the planner focus still carries a stale strength label. Do not let
   // "row" infer "Upper Pull" for an erg session.
   if (!isTeam && isStandaloneConditioning) {
-    const existingName = (input.name || '').trim();
     if (existingName) return existingName;
   }
 
   // Step 1: determine strength label (if any).
   let patterns: MovementPattern[] = [];
+  const visibleContentPatterns = movementPatternsFromVisibleContent(input);
   if (input.movementPatterns && input.movementPatterns.length > 0) {
     patterns = input.movementPatterns;
+  } else if (visibleContentPatterns.length > 0) {
+    patterns = visibleContentPatterns;
   } else if (input.strengthPattern) {
     patterns = movementPatternsFromStrengthPattern(
       input.strengthPattern,
@@ -278,7 +355,6 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
   if (strengthLabel) return strengthLabel;
 
   // Step 4: conditioning / recovery / other — pass through name (or cleaned focus).
-  const existingName = (input.name || '').trim();
   if (existingName) return existingName;
   const cleaned = fallbackFromText(input.focus);
   if (cleaned) return cleaned;

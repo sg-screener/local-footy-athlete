@@ -13,10 +13,15 @@ import {
   type SessionAllocation,
 } from '../utils/coachingEngine';
 import {
+  inferMeaningfulExerciseMovementPatterns,
   inferStrengthMovementPatterns,
   movementPatternsFromStrengthPattern,
   resolveSessionDisplayName,
 } from '../utils/sessionNaming';
+import {
+  combinedConditioningCategoryLabel,
+  weeklyPlanTitle,
+} from '../utils/weeklyPlanDisplay';
 
 let pass = 0;
 let fail = 0;
@@ -180,8 +185,135 @@ eq(
   movementPatternsFromStrengthPattern('lower', lowerHingeWithFinisher),
   ['hinge'],
 );
+eq(
+  'lower squat + hinge text keeps both strength patterns before conditioning',
+  inferStrengthMovementPatterns(
+    'Lower body strength (squat + hinge) + easy aerobic finisher (bike/row/ski)',
+  ),
+  ['squat', 'hinge'],
+);
+eq(
+  'upper push + pull text keeps both strength patterns before conditioning',
+  inferStrengthMovementPatterns(
+    'Upper body strength (push + pull) + easy aerobic finisher (bike/row/ski)',
+  ),
+  ['push', 'pull'],
+);
 
-section('[2] Off-season 4-day display labels match structural plan');
+section('[2] Final visible strength content refines generic display identity');
+
+const lowerMixedExercises = [
+  { name: 'Box Squat' },
+  { name: 'Hip Thrusts' },
+  { name: 'Nordic Lowers' },
+  { name: 'Copenhagen Plank' },
+  { name: 'Tib Raises' },
+];
+
+eq(
+  'meaningful exercise inference sees the squat and hip-extension anchors only',
+  inferMeaningfulExerciseMovementPatterns(lowerMixedExercises),
+  ['squat', 'hinge'],
+);
+eq(
+  'generic lower with squat + hinge displays Lower Body Strength',
+  resolveSessionDisplayName({
+    name: 'Lower Strength',
+    exercises: lowerMixedExercises,
+  }),
+  'Lower Body Strength',
+);
+eq(
+  'pure squat-dominant lower remains Lower Squat',
+  resolveSessionDisplayName({
+    name: 'Lower Strength',
+    strengthPattern: 'lower',
+    exercises: [{ name: 'Box Squat' }, { name: 'Leg Press' }, { name: 'Tib Raises' }],
+  }),
+  'Lower Squat',
+);
+eq(
+  'pure hinge-dominant lower remains Lower Hinge',
+  resolveSessionDisplayName({
+    name: 'Lower Strength',
+    strengthPattern: 'lower',
+    exercises: [{ name: 'Romanian Deadlift' }, { name: 'Hip Thrust' }, { name: 'Nordic Lower' }],
+  }),
+  'Lower Hinge',
+);
+eq(
+  'typed full-body intent remains Full Body Strength',
+  resolveSessionDisplayName({
+    name: 'Full Body',
+    strengthPattern: 'full_body',
+    exercises: [{ name: 'Box Squat' }, { name: 'Bench Press' }],
+  }),
+  'Full Body Strength',
+);
+eq(
+  'upper push plus support-only Face Pull remains Upper Push',
+  resolveSessionDisplayName({
+    name: 'Upper Strength',
+    strengthPattern: 'push',
+    exercises: [{ name: 'Bench Press' }, { name: 'Shoulder Press' }, { name: 'Face Pull' }],
+  }),
+  'Upper Push',
+);
+eq(
+  'upper push plus attached easy row conditioning remains Upper Push',
+  resolveSessionDisplayName({
+    name: 'Upper Strength',
+    strengthPattern: 'push',
+    hasCombinedConditioning: true,
+    conditioningFlavour: 'aerobic',
+    exercises: [{ name: 'Bench Press' }, { name: 'Easy Zone 2 Row' }],
+  }),
+  'Upper Push',
+);
+eq(
+  'pure upper pull remains Upper Pull',
+  resolveSessionDisplayName({
+    name: 'Upper Strength',
+    strengthPattern: 'pull',
+    exercises: [{ name: 'Cable Row' }, { name: 'Pull-Up' }],
+  }),
+  'Upper Pull',
+);
+eq(
+  'generic upper with main push + pull anchors displays Upper Body Strength',
+  resolveSessionDisplayName({
+    name: 'Upper Strength',
+    exercises: [{ name: 'Bench Press' }, { name: 'Cable Row' }],
+  }),
+  'Upper Body Strength',
+);
+eq(
+  'Gunshow is not promoted to main upper strength',
+  resolveSessionDisplayName({
+    name: 'Gunshow',
+    exercises: [{ name: 'Dumbbell Curl' }, { name: 'Triceps Pushdown' }],
+  }),
+  'Gunshow',
+);
+eq(
+  'prehab identity is not promoted to main strength',
+  resolveSessionDisplayName({
+    name: 'Prehab & Accessories',
+    exercises: [{ name: 'Face Pull' }, { name: 'Copenhagen Plank' }],
+  }),
+  'Prehab & Accessories',
+);
+eq(
+  'recovery-tier identity remains recovery',
+  resolveSessionDisplayName({
+    name: 'Recovery Flow',
+    tier: 'recovery',
+    exercises: [{ name: 'Mobility Flow' }],
+  }),
+  'Recovery Flow',
+);
+
+section('[3] Off-season 4-day display labels match structural plan');
 
 {
   const plan = buildCoachingPlan(offSeasonFourDayInputs()).weeklyPlan;
@@ -205,7 +337,7 @@ section('[2] Off-season 4-day display labels match structural plan');
   );
 }
 
-section('[3] Program builder names engine-built sessions from typed metadata');
+section('[4] Program builder names engine-built sessions from typed metadata');
 
 {
   const plan = buildCoachingPlan(offSeasonFourDayInputs()).weeklyPlan;
@@ -223,6 +355,59 @@ section('[3] Program builder names engine-built sessions from typed metadata');
     'Program-screen S6 has no false Full Body Strength labels',
     labels.every((label) => label !== 'Full Body Strength'),
     labels.join(' | '),
+  );
+}
+
+section('[5] Edge-normalised mixed session keeps one honest visible identity');
+
+{
+  const plan: SessionAllocation[] = [{
+    dayOfWeek: 'Monday',
+    tier: 'core',
+    focus: 'Lower body strength (squat + hinge) + easy aerobic finisher (bike/row/ski)',
+    isHardExposure: true,
+    strengthPattern: 'lower',
+    stressLevel: 'high',
+    hasCombinedConditioning: true,
+    attachedConditioningKind: 'finisher',
+    conditioningFlavour: 'aerobic',
+    conditioningCategory: 'aerobic_base',
+  }];
+  const [workout] = buildWorkoutsFromCoach([{
+    dayOfWeek: 1,
+    name: 'Lower Strength',
+    workoutType: 'Mixed',
+    sessionTier: 'core',
+    exercises: lowerMixedExercises.map((exercise) => ({
+      ...exercise,
+      sets: 3,
+      repsMin: 5,
+      repsMax: 8,
+    })),
+  }], 'mc-edge-lower-name', plan);
+  const visibleStrengthNames = workout.exercises.map((row) => row.exercise?.name ?? '');
+
+  eq(
+    'edge Lower Strength with squat + hip thrust normalises to Lower Body Strength',
+    workout.name,
+    'Lower Body Strength',
+  );
+  eq('mixed workout type remains Mixed', workout.workoutType, 'Mixed');
+  ok(
+    'naming leaves the edge-provided squat, hinge and support content visible',
+    ['Box Squat', 'Hip Thrusts', 'Nordic Lower', 'Copenhagen Plank', 'Tib Raises']
+      .every((name) => visibleStrengthNames.includes(name)),
+    visibleStrengthNames.join(' | '),
+  );
+  eq(
+    'weekly card title agrees with the workout detail identity',
+    weeklyPlanTitle(workout),
+    workout.name,
+  );
+  eq(
+    'attached conditioning stays a separate Aerobic Base subtitle',
+    combinedConditioningCategoryLabel(workout),
+    'Aerobic Base',
   );
 }
 
