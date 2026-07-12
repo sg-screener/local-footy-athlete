@@ -17,6 +17,7 @@
     "test:qa:local": "npm run test:qa",
     "test:bounds": "sucrase-node src/__tests__/blockBoundsTests.js",
     "qa:athlete": "sucrase-node src/__tests__/scenarioQA/index.ts",
+    "test:bible": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleConformance/runSlice1.ts",
     "test:pools": "sucrase-node src/__tests__/exercisePoolsStrengthTests.ts",
     "test:rules-kernel": "sucrase-node src/__tests__/rulesKernelTests.ts",
     "test:programming-hierarchy": "sucrase-node src/__tests__/conflictResolutionHierarchyTests.ts",
