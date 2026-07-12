@@ -22,6 +22,7 @@ import {
   combinedConditioningCategoryLabel,
   weeklyPlanTitle,
 } from '../utils/weeklyPlanDisplay';
+import { createStrengthIntent } from '../rules/strengthPatternContributions';
 
 let pass = 0;
 let fail = 0;
@@ -111,6 +112,7 @@ function displayLabelForAllocation(session: SessionAllocation): string {
   return resolveSessionDisplayName({
     focus: session.focus,
     strengthPattern: session.strengthPattern,
+    strengthIntent: session.strengthIntent,
     isTeamDay: session.isTeamDay,
     conditioningFlavour: session.conditioningFlavour,
     hasCombinedConditioning: session.hasCombinedConditioning,
@@ -161,8 +163,21 @@ eq(
   'Upper Pull',
 );
 eq(
-  'true full body still displays Full Body Strength',
+  'ambiguous legacy full-body metadata does not invent four pattern credits',
   display({ focus: fullBodyWithFinisher, strengthPattern: 'full_body' }),
+  'Full body',
+);
+eq(
+  'typed full body displays Full Body Strength',
+  display({
+    focus: fullBodyWithFinisher,
+    strengthPattern: 'full_body',
+    strengthIntent: createStrengthIntent({
+      archetype: 'full_body',
+      primaryPattern: 'squat',
+      plannedPatterns: ['squat', 'push', 'pull'],
+    }),
+  }),
   'Full Body Strength',
 );
 eq(
@@ -246,6 +261,11 @@ eq(
   resolveSessionDisplayName({
     name: 'Full Body',
     strengthPattern: 'full_body',
+    strengthIntent: createStrengthIntent({
+      archetype: 'full_body',
+      primaryPattern: 'squat',
+      plannedPatterns: ['squat', 'push', 'pull'],
+    }),
     exercises: [{ name: 'Box Squat' }, { name: 'Bench Press' }],
   }),
   'Full Body Strength',

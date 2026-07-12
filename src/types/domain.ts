@@ -3,6 +3,11 @@
  * Core business logic and data models
  */
 
+import type {
+  StrengthIntent,
+  StrengthIntentDiagnostic,
+} from '../rules/strengthPatternContributions';
+
 // Footy role buckets for athletes. The legacy exact positions remain in the
 // type so old persisted profiles can be read and normalized at the app edge.
 export type RoleBucket = 'inside_mid' | 'outside_runner' | 'key_position_ruck_tall' | 'high_forward_back' | 'small_forward_back';
@@ -508,7 +513,11 @@ export interface Workout {
 
   /** Stable deterministic allocation identity used during generated-week normalisation. */
   planEntryId?: string;
-  /** Main weekly-pattern credit owned by the deterministic plan, not inferred from accessories. */
+  /** Canonical planned/effective strength contract. Existing typed intent always wins. */
+  strengthIntent?: StrengthIntent;
+  /** Development/audit proof for planned patterns absent after final filtering. */
+  strengthIntentDiagnostics?: StrengthIntentDiagnostic[];
+  /** @deprecated Compatibility projection of strengthIntent.plannedPatterns. */
   strengthPatternContributions?: Array<'squat' | 'hinge' | 'push' | 'pull'>;
 
   // Combined S+C metadata — set when session pairs strength + conditioning

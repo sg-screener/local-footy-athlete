@@ -521,6 +521,8 @@ try {
       hasCombinedConditioning: s.hasCombinedConditioning,
       conditioningFlavour: s.conditioningFlavour,
       conditioningCategory: s.conditioningCategory,
+      strengthIntent: s.strengthIntent,
+      strengthPatternContributions: s.strengthPatternContributions,
     });
     (w as unknown as { id: string; dayOfWeek: number }).id = `w-live-${idx}`;
     (w as unknown as { dayOfWeek: number }).dayOfWeek = dayNum >= 0 ? dayNum : 0;

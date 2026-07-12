@@ -172,7 +172,12 @@ function weekShapeSignature(week: ResolvedDay[]): string {
     date: day.date,
     source: day.source,
     indicator: day.indicator,
-    name: day.workout?.name ?? null,
+    // A one-off overlay may rebuild a valid deterministic conditioning dose
+    // from a different block-local week index. Preserve structural identity
+    // here without requiring the same 2x10 vs 3x8 aerobic rotation variant.
+    name: day.workout?.workoutType === 'Conditioning'
+      ? day.workout.conditioningCategory ?? 'conditioning'
+      : day.workout?.name ?? null,
     workoutType: day.workout?.workoutType ?? null,
     sessionTier: day.workout?.sessionTier ?? null,
     conditioningCategory: day.workout?.conditioningCategory ?? null,

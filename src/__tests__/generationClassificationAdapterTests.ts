@@ -17,6 +17,7 @@ import type {
   RecoveryAddonBlock,
   SpeedBlock,
 } from '../types/domain';
+import { createStrengthIntent } from '../rules/strengthPatternContributions';
 
 let pass = 0;
 let fail = 0;
@@ -98,6 +99,11 @@ for (const test of [
   const result = classify({
     focus: `${test.pattern} candidate`,
     strengthPattern: test.pattern,
+    strengthIntent: test.pattern === 'full_body'
+      ? createStrengthIntent({
+          archetype: 'full_body', primaryPattern: 'squat', plannedPatterns: ['squat', 'push', 'pull'],
+        })
+      : undefined,
   });
   ok(`${test.pattern} maps to ${test.category}`,
     result.categories.includes(test.category), result.categories);
@@ -119,8 +125,15 @@ eq('complete beginner upper follows kernel context shift',
 eq('generation adjacency reporting shares typed main-strength regions', [
   classifyGenerationAdjacencyRegion({ focus: 'misleading text', tier: 'core', strengthPattern: 'lower' }),
   classifyGenerationAdjacencyRegion({ focus: 'misleading text', tier: 'core', strengthPattern: 'push' }),
-  classifyGenerationAdjacencyRegion({ focus: 'misleading text', tier: 'core', strengthPattern: 'full_body' }),
-], ['lower', 'upper', 'neutral']);
+  classifyGenerationAdjacencyRegion({
+    focus: 'misleading text',
+    tier: 'core',
+    strengthPattern: 'full_body',
+    strengthIntent: createStrengthIntent({
+      archetype: 'full_body', primaryPattern: 'hinge', plannedPatterns: ['hinge', 'push', 'pull'],
+    }),
+  }),
+], ['lower', 'upper', 'full_body']);
 eq('accessory fatigue remains a separate adjacency policy', [
   classifyGenerationAdjacencyRegion({ focus: 'Gunshow arm pump', tier: 'optional' }),
   classifyGenerationAdjacencyRegion({ focus: 'Low-fatigue accessories - trunk, calves, groin, shoulder prehab', tier: 'optional' }),

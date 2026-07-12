@@ -374,9 +374,9 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
   ok('edge prompt carries stable plan-entry ids and authoritative main patterns',
     earlyPlan.weeklyPlan.every((entry) =>
       !!entry.planEntryId && earlyPrompt.includes(`planEntryId=${entry.planEntryId}`)) &&
-      earlyPrompt.includes('[MAIN PATTERNS: hinge + pull]') &&
-      earlyPrompt.includes('[MAIN PATTERNS: push]') &&
-      earlyPrompt.includes('[MAIN PATTERNS: squat]'),
+      earlyPrompt.includes('archetype=full_body; primary=hinge; planned=hinge+pull') &&
+      earlyPrompt.includes('archetype=upper; primary=push; planned=push') &&
+      earlyPrompt.includes('archetype=lower; primary=squat; planned=squat'),
     earlyPrompt);
   ok('edge prompt states the early optional/no-power/no-running contract',
     /every session is OPTIONAL/i.test(earlyPrompt) &&

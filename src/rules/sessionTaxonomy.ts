@@ -31,6 +31,10 @@ import {
 } from '../utils/sessionNaming';
 import { isTeamTrainingSession } from '../utils/teamTraining';
 import { classifyExerciseExposures } from '../utils/exposureEngine';
+import {
+  normalizeStrengthIntent,
+  strengthRegionsForPatterns,
+} from './strengthPatternContributions';
 
 // ─── Taxonomy ────────────────────────────────────────────────────────
 
@@ -314,15 +318,26 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
     return exName ? classifyExerciseExposures(exName).some((e) => STRENGTH_EXPOSURES.has(e)) : false;
   });
   const hasMainLiftExerciseProof = hasMainLiftExercises(workout);
+  const typedEffectivePatterns = workout.strengthIntent
+    ? normalizeStrengthIntent(workout.strengthIntent).effectivePatterns
+    : [];
+  const typedRegions = strengthRegionsForPatterns(typedEffectivePatterns);
+  const typedStrengthCat: SessionCategory | null = typedRegions.length === 2
+    ? 'full_body_strength'
+    : typedRegions[0] === 'lower'
+      ? 'lower_strength'
+      : typedRegions[0] === 'upper'
+        ? 'upper_strength'
+        : null;
   const nameIsConditioning =
-    hasConditioningText(workout.name ?? '') &&
+    !typedStrengthCat && hasConditioningText(workout.name ?? '') &&
     !hasExplicitStrengthText(text);
   // Gunshow-named sessions ("Gunshow", "Prehab & Accessories") infer
   // strength from the NAME only — their descriptions legitimately mention
   // pattern words (face pulls, calves) without being strength sessions.
   const workoutName = workout.name ?? '';
   const nameLooksAccessorySupport =
-    ACCESSORY_SUPPORT_NAME_RX.test(workoutName) &&
+    !typedStrengthCat && ACCESSORY_SUPPORT_NAME_RX.test(workoutName) &&
     !hasMainStrengthNameProof(workoutName);
   const nameLooksGunshow = GUNSHOW_RX.test(workoutName) || nameLooksAccessorySupport;
   const hasStrengthProofForSession = nameLooksGunshow
@@ -331,7 +346,7 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
   const strengthSourceText = nameLooksGunshow && !hasMainLiftExerciseProof
     ? workoutName
     : text;
-  const strengthCat =
+  const strengthCat = typedStrengthCat ??
     strengthCategoryFrom(strengthSourceText, {
       allowRegionNameFallback: !nameLooksGunshow || hasMainLiftExerciseProof,
     }) ??
@@ -343,7 +358,7 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
   const isStrengthSession =
     strengthCat &&
     (wt === 'Strength' || wt === 'Mixed' || wt === 'Team Training' || isTeamDay) &&
-    (hasStrengthProofForSession || !nameIsConditioning);
+    (typedEffectivePatterns.length > 0 || hasStrengthProofForSession || !nameIsConditioning);
   if (isStrengthSession) {
     units.push({ category: strengthCat!, modality: 'none', reason: `movement patterns → ${strengthCat}` });
   }

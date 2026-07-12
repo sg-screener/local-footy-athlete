@@ -27,6 +27,7 @@ import type {
   Microcycle,
   TrainingProgram,
 } from '../types/domain';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 
 // ─── Types ───
 
@@ -128,18 +129,15 @@ function getAffectedWeekDates(changedDate: string, blockStart: string, blockEnd:
 // ─── Classification Helpers ───
 
 function isLowerDominant(workout: Workout): boolean {
-  const name = workout.name.toLowerCase();
-  return name.includes('lower') || name.includes('leg') || name.includes('squat') || name.includes('hinge');
+  const region = classifyVisibleSession(workout).strengthRegion;
+  return region === 'lower' || region === 'full_body';
 }
 
 function isLowerOrHeavy(workout: Workout): boolean {
-  const name = workout.name.toLowerCase();
+  const region = classifyVisibleSession(workout).strengthRegion;
   return (
-    name.includes('lower') ||
-    name.includes('leg') ||
-    name.includes('squat') ||
-    name.includes('hinge') ||
-    name.includes('full body') ||
+    region === 'lower' ||
+    region === 'full_body' ||
     workout.intensity === 'High'
   );
 }

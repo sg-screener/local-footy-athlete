@@ -46,6 +46,8 @@ import {
 import { getAllTaggedExercises, EXERCISE_TAGS, CONDITIONING_META } from '../data/exerciseTags';
 import { applyHardFilters, buildFilterContext, type FilterContext } from './exerciseFilter';
 import { selectExercises, buildIntent, findSubstitute } from './exerciseScorer';
+import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
+import { resolveLegacyStrengthIntent } from '../rules/strengthPatternContributions';
 import { applyLoadEstimates } from './loadEstimation';
 import { MAS_FALLBACK_NOTE, masIntensityLabel } from './masCopy';
 
@@ -503,9 +505,30 @@ export function buildTagAwareSession(
   const allTagged = getAllTaggedExercises();
   const candidates = applyHardFilters(allTagged, filterCtx);
 
-  // Build intent from the template workout's name/type
+  // Canonical typed strength intent owns composition. Name/type parsing is
+  // retained only for legacy templates that have not crossed the ingress yet.
   const exerciseCount = templateWorkout.exercises.length || 5;
-  const intent = buildIntent(templateWorkout.name, templateWorkout.workoutType, exerciseCount);
+  const contentPatterns = templateWorkout.exercises
+    .map((row, index) => classifyGeneratedWorkoutRow({
+      name: row.exercise?.name ?? row.exerciseId,
+      sets: row.prescribedSets,
+      repsMax: row.prescribedRepsMax,
+      index,
+    }))
+    .filter((classification) => classification.kind === 'strength_main' && !!classification.mainPattern)
+    .map((classification) => classification.mainPattern!);
+  const legacyIngress = resolveLegacyStrengthIntent({
+    strengthIntent: templateWorkout.strengthIntent,
+    strengthPatternContributions: templateWorkout.strengthPatternContributions,
+    contentPatterns,
+    name: templateWorkout.name,
+  });
+  const intent = buildIntent(
+    templateWorkout.name,
+    templateWorkout.workoutType,
+    exerciseCount,
+    legacyIngress.intent ?? undefined,
+  );
 
   // Score and select
   const selected = selectExercises(candidates, intent, filterCtx, weekExercises);

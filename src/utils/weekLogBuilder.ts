@@ -23,6 +23,7 @@ import type { ConditioningTier } from '../data/exerciseTags';
 import type { CalendarDayType } from '../store/calendarStore';
 import type { ReadinessLevel } from '../types/domain';
 import { CONDITIONING_META } from '../data/exerciseTags';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 
 // ─── Public API ───
 
@@ -59,11 +60,12 @@ export function buildWeekLog(
   for (const day of resolvedDays) {
     if (!day.workout) continue;
 
-    if (day.workout.workoutType === 'Team Training') {
+    const classification = classifyVisibleSession(day.workout);
+    if (classification.anchors.teamTraining) {
       teamTrainingCount++;
     }
 
-    if (day.workout.workoutType === 'Strength') {
+    if (classification.contributions.mainStrength > 0) {
       strengthSessions.push({
         dateStr: day.date,
         fatigue: intensityToFatigue(day.workout.intensity),

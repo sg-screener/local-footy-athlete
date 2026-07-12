@@ -32,6 +32,7 @@ import {
 import { logger } from '../../utils/logger';
 import { resolveEquipmentAvailability } from '../../utils/equipmentAvailability';
 import { getSessionComponents } from '../../utils/sessionComponents';
+import type { StrengthIntent } from '../../rules/strengthPatternContributions';
 import {
   getProgrammingRoleBias,
   normalizeOnboardingRole,
@@ -241,7 +242,12 @@ export function buildGeneratedMicrocycles(args: {
             sourceGeneratedWorkout: source?.name ?? null,
             sourcePlanEntryId: source?.planEntryId ?? null,
             matchedPlanEntryId: entry?.planEntryId ?? null,
-            intendedStrengthPatterns: entry?.strengthPatternContributions ?? [],
+            planEntryId: entry?.planEntryId ?? null,
+            archetype: entry?.strengthIntent?.archetype ?? null,
+            primaryStrengthPattern: entry?.strengthIntent?.primaryPattern ?? null,
+            plannedStrengthPatterns: entry?.strengthIntent?.plannedPatterns ?? [],
+            effectiveStrengthPatterns: workout.strengthIntent?.effectivePatterns ?? [],
+            strengthPatternChanges: workout.strengthIntentDiagnostics ?? [],
             finalTier: workout.sessionTier ?? null,
             finalComponents: getSessionComponents(workout).map((component) => component.kind),
             finalWorkoutType: workout.workoutType,
@@ -591,6 +597,7 @@ export function buildProgramGenerationRequestDiagnostics(
         dayOfWeek: session.dayOfWeek,
         tier: session.tier,
         focus: session.focus,
+        strengthIntent: session.strengthIntent ?? null,
         strengthPatternContributions: session.strengthPatternContributions ?? [],
         isHardExposure: session.isHardExposure,
       })),
@@ -606,6 +613,7 @@ interface CoachResponse {
   programUpdate?: {
     workouts: Array<{
       planEntryId?: string;
+      strengthIntent?: StrengthIntent;
       dayOfWeek: number;
       name: string;
       workoutType: string;
@@ -1266,8 +1274,9 @@ export function buildGenerationPrompt(
           gLabel = diff === 0 ? ' (GAME DAY)' : ` (G${diff > 0 ? '+' : ''}${diff})`;
         }
       }
-      const patternLabel = session.strengthPatternContributions?.length
-        ? ` [MAIN PATTERNS: ${session.strengthPatternContributions.join(' + ')}]`
+      const intent = session.strengthIntent;
+      const patternLabel = intent
+        ? ` [STRENGTH INTENT: archetype=${intent.archetype}; primary=${intent.primaryPattern ?? 'none'}; planned=${intent.plannedPatterns.join('+') || 'none'}]`
         : '';
       parts.push(`  ${session.dayOfWeek || 'TBD'}${gLabel}: planEntryId=${session.planEntryId ?? 'missing'} [${session.tier.toUpperCase()}]${patternLabel} ${session.focus}${session.isHardExposure ? ' (HARD)' : ''}`);
     });
@@ -1275,7 +1284,7 @@ export function buildGenerationPrompt(
       .map((session) => session.dayOfWeek ? DAY_MAP[session.dayOfWeek] : null)
       .filter((day): day is number => day !== null);
     parts.push(`\nReturn exactly one workout object for every WEEKLY PLAN line above. Do not omit optional, recovery, team-training, or Saturday sessions. Expected numeric dayOfWeek values: ${expectedDayNumbers.join(', ')}.`);
-    parts.push('Copy each planEntryId exactly into its workout object. Generate main strength work only for that line\'s MAIN PATTERNS. Minor balancing accessories are okay, but do not add another session\'s main pattern.');
+    parts.push('Copy each planEntryId exactly into its workout object. STRENGTH INTENT is authoritative: use its primary pattern for main-lift emphasis and include meaningful lower-dose work for every other planned pattern. Do not infer exact pattern credit from focus or names. Minor balancing accessories are okay, but do not add another session\'s main pattern.');
     parts.push('Do not put conditioning, running, ergs, jumps, plyometrics, explosive presses or contrast work inside ordinary strength exercises unless the WEEKLY PLAN explicitly assigns that component. The client enforces this contract.');
     parts.push('\nFollow the above tiers EXACTLY. Do NOT promote OPTIONAL/RECOVERY to CORE.');
   }

@@ -38,6 +38,11 @@ import {
   type FatigueLevel,
 } from '../data/exerciseTags';
 import type { FilterContext } from './exerciseFilter';
+import {
+  normalizeStrengthIntent,
+  type MainStrengthPattern,
+  type StrengthIntent,
+} from '../rules/strengthPatternContributions';
 
 // ─── Session Intent ───
 
@@ -492,7 +497,88 @@ export function buildIntent(
   workoutName: string,
   workoutType: string,
   exerciseCount: number = 5,
+  strengthIntent?: StrengthIntent,
 ): SessionIntent {
+  if (strengthIntent) {
+    const intent = normalizeStrengthIntent(strengthIntent);
+    const patterns = intent.effectivePatterns.length > 0
+      ? intent.effectivePatterns
+      : intent.plannedPatterns;
+    if (patterns.length > 0) {
+      const preferred = (pattern: MainStrengthPattern): MovementPattern[] => {
+        switch (pattern) {
+          case 'squat': return ['squat'];
+          case 'hinge': return ['hinge'];
+          case 'push': return ['horizontal_push', 'vertical_push'];
+          case 'pull': return ['horizontal_pull', 'vertical_pull'];
+        }
+      };
+      const targetMovements = Array.from(new Set([
+        ...patterns.flatMap(preferred),
+        ...(patterns.includes('squat') ? ['lunge' as MovementPattern] : []),
+      ]));
+      const primary = intent.primaryPattern && patterns.includes(intent.primaryPattern)
+        ? intent.primaryPattern
+        : patterns[0];
+      const slots: SlotDef[] = [{
+        role: 'primary',
+        preferredMovements: preferred(primary),
+        maxLoad: null,
+        maxFatigue: null,
+        requireUnilateral: false,
+      }];
+      for (const pattern of patterns.filter((pattern) => pattern !== primary)) {
+        slots.push({
+          role: 'secondary',
+          preferredMovements: preferred(pattern),
+          maxLoad: 'moderate',
+          maxFatigue: null,
+          requireUnilateral: null,
+        });
+      }
+      if (patterns.includes('squat') && slots.length < exerciseCount) {
+        slots.push({
+          role: 'unilateral',
+          preferredMovements: ['lunge', 'squat'],
+          maxLoad: 'moderate',
+          maxFatigue: 'moderate',
+          requireUnilateral: true,
+        });
+      }
+      while (slots.length < exerciseCount) {
+        slots.push({
+          role: slots.length === exerciseCount - 1 ? 'finisher' : 'accessory',
+          preferredMovements: targetMovements,
+          maxLoad: 'low',
+          maxFatigue: 'moderate',
+          requireUnilateral: null,
+        });
+      }
+      return {
+        targetMovements,
+        targetRegion: intent.archetype === 'full_body' ? null : intent.archetype,
+        exerciseCount,
+        slots,
+      };
+    }
+  }
+  if (/strength/i.test(workoutType)) {
+    // Ambiguous legacy strength shells must not invent squat+hinge+push+pull.
+    // The session-builder ingress supplies typed content-derived intent when
+    // real main rows exist; otherwise keep this a conservative support shell.
+    return {
+      targetMovements: ['core', 'carry'],
+      targetRegion: null,
+      exerciseCount,
+      slots: Array.from({ length: exerciseCount }, (_, index): SlotDef => ({
+        role: index === 0 ? 'primary' : index === exerciseCount - 1 ? 'finisher' : 'accessory',
+        preferredMovements: ['core', 'carry'],
+        maxLoad: 'low',
+        maxFatigue: 'low',
+        requireUnilateral: null,
+      })),
+    };
+  }
   const name = workoutName.toLowerCase();
 
   // ── Lower Strength ──

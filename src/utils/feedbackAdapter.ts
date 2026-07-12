@@ -26,6 +26,7 @@
 import type { SessionFeedback, FeedbackSoreness } from '../store/programStore';
 import type { Workout, WorkoutType, SessionFeeling, ReadinessLevel } from '../types/domain';
 import { feedbackComponentKindForWorkoutType } from './sessionComponents';
+import { normalizeStrengthIntent } from '../rules/strengthPatternContributions';
 
 // ─── Types ───
 
@@ -75,6 +76,19 @@ function normalizeWorkoutCategory(workoutType: WorkoutType | string): string {
   return t;
 }
 
+type FeedbackMatchTarget = WorkoutType | string | Workout;
+
+function workoutMatchCategory(target: FeedbackMatchTarget): string {
+  if (typeof target === 'string') return normalizeWorkoutCategory(target);
+  if (target.strengthIntent) {
+    const intent = normalizeStrengthIntent(target.strengthIntent);
+    if (intent.effectivePatterns.length > 0) {
+      return `strength:${intent.effectivePatterns.join('+')}`;
+    }
+  }
+  return normalizeWorkoutCategory(target.workoutType);
+}
+
 /**
  * Find the most recent feedback entry for a matching session type.
  *
@@ -85,13 +99,13 @@ function normalizeWorkoutCategory(workoutType: WorkoutType | string): string {
  * @param lookbackDays - How many days back to search (default: 14)
  */
 export function findMatchingFeedback(
-  targetType: WorkoutType | string,
+  targetType: FeedbackMatchTarget,
   allFeedback: Record<string, SessionFeedback>,
-  allWorkouts: Record<string, string>, // date → workoutType
+  allWorkouts: Record<string, FeedbackMatchTarget>,
   currentDate: string,
   lookbackDays: number = 14,
 ): SessionFeedback | null {
-  const targetCategory = normalizeWorkoutCategory(targetType);
+  const targetCategory = workoutMatchCategory(targetType);
   const [y, m, d] = currentDate.split('-').map(Number);
   const current = new Date(y, m - 1, d);
 
@@ -106,7 +120,7 @@ export function findMatchingFeedback(
     const wType = allWorkouts[checkStr];
     if (!wType) continue;
 
-    if (normalizeWorkoutCategory(wType) === targetCategory) {
+    if (workoutMatchCategory(wType) === targetCategory) {
       best = projectFeedbackForWorkoutType(fb, targetType);
       break; // most recent match
     }
@@ -117,9 +131,13 @@ export function findMatchingFeedback(
 
 function projectFeedbackForWorkoutType(
   feedback: SessionFeedback,
-  workoutType: WorkoutType | string,
+  workoutType: FeedbackMatchTarget,
 ): SessionFeedback {
-  const targetKind = feedbackComponentKindForWorkoutType(String(workoutType));
+  const targetKind = typeof workoutType !== 'string' && workoutType.strengthIntent?.effectivePatterns.length
+    ? 'strength'
+    : feedbackComponentKindForWorkoutType(
+        typeof workoutType === 'string' ? workoutType : workoutType.workoutType,
+      );
   const component = targetKind
     ? feedback.components?.find((entry) => entry.kind === targetKind)
     : null;

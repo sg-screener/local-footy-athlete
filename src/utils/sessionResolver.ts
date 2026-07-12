@@ -61,6 +61,7 @@ import {
 } from './feedbackPatterns';
 import { findMatchingFeedback, deriveAdaptation } from './feedbackAdapter';
 import type { SessionFeedback } from '../store/programStore';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { logger } from './logger';
 import {
   getProgramBlockStateForDate,
@@ -287,8 +288,8 @@ function toDateString(year: number, month: number, day: number): string {
 // ─── Classification Helpers (from blockAdjuster) ───
 
 function isLowerDominant(workout: Workout): boolean {
-  const name = workout.name.toLowerCase();
-  return name.includes('lower') || name.includes('leg') || name.includes('squat') || name.includes('hinge');
+  const region = classifyVisibleSession(workout).strengthRegion;
+  return region === 'lower' || region === 'full_body';
 }
 
 // ─── Core Exposure Protection ───
@@ -1015,10 +1016,10 @@ export function resolveWeekWithConditioning(
 
   // Build a workout-type-by-date map for session type matching.
   // Uses resolved base days + template workouts to map dates → workoutType.
-  const workoutTypeByDate: Record<string, string> = {};
+  const workoutByDate: Record<string, Workout> = {};
   for (const day of baseDays) {
     if (day.workout) {
-      workoutTypeByDate[day.date] = day.workout.workoutType;
+      workoutByDate[day.date] = day.workout;
     }
   }
   // Also include historical dates from feedback that have no resolved day
@@ -1030,7 +1031,7 @@ export function resolveWeekWithConditioning(
         state.currentMicrocycle,
         fb.dateStr,
       );
-      if (!workoutTypeByDate[fb.dateStr] && fbMicrocycle?.workouts) {
+      if (!workoutByDate[fb.dateStr] && fbMicrocycle?.workouts) {
         const [fy, fm, fd] = fb.dateStr.split('-').map(Number);
         const fbDate = new Date(fy, fm - 1, fd);
         const fbDow = fbDate.getDay();
@@ -1038,7 +1039,7 @@ export function resolveWeekWithConditioning(
           (w: Workout) => w.dayOfWeek === fbDow
         );
         if (matchingWorkout) {
-          workoutTypeByDate[fb.dateStr] = matchingWorkout.workoutType;
+          workoutByDate[fb.dateStr] = matchingWorkout;
         }
       }
     }
@@ -1061,9 +1062,9 @@ export function resolveWeekWithConditioning(
 
       // Session-type-matched adaptation (from new difficulty/soreness fields)
       const matchedFeedback = findMatchingFeedback(
-        day.workout.workoutType,
+        day.workout,
         feedbackMap,
-        workoutTypeByDate,
+        workoutByDate,
         day.date,
       );
       const adaptation = deriveAdaptation(matchedFeedback);

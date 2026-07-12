@@ -41,7 +41,11 @@ import type {
   DeterministicCoachNoteEffectSeed,
 } from '../types/domain';
 import { logger } from './logger';
-import { inferMovementPatterns, type MovementPattern } from './sessionNaming';
+import {
+  canonicalStrengthLabel,
+  inferMovementPatterns,
+  type MovementPattern,
+} from './sessionNaming';
 import {
   classifyVisibleSession,
   type VisibleSessionClassification,
@@ -80,10 +84,14 @@ import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import { resolveWeekContext } from '../rules/weekContext';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
+  createStrengthIntent,
   mainPatternsForLegacyStrengthPattern,
+  normalizeStrengthIntent,
   stablePlanEntryId,
+  strengthRegionsForPatterns,
   strengthPatternLedger,
   type MainStrengthPattern,
+  type StrengthIntent,
 } from '../rules/strengthPatternContributions';
 import type {
   GenerationConstraintContext,
@@ -210,42 +218,15 @@ export interface SessionAllocation {
    */
   isTeamDay?: boolean;
   /**
-   * Explicit strength-movement pattern loaded on this session. This is
-   * the single source of truth for "is this session a strength
-   * exposure" and must be populated by the engine at placement time for
-   * every intentional strength loading (lower/push/pull/full_body).
-   *
-   * Critical: this field is ORTHOGONAL to `tier`. The universal
-   * team-day label pass promotes team days to `tier: 'core'` without
-   * layering strength — those days have `strengthPattern: undefined`
-   * and must NOT be counted as strength exposures. Likewise, an
-   * optional gunshow / arms-pump day is not a strength exposure even
-   * if the focus text mentions "upper body".
-   *
-   * Consumers (invariants, analytics, UI badges): read THIS field, not
-   * the focus string, to measure H-IS-3 / H-PRE-6 / H-PRE-7/8/9
-   * coverage. Team-label pass and any other tier-promotion logic MUST
-   * NOT set or clear this field — only the original strength placement
-   * (including the in-season emergency-promotion path) may set it.
-   *
-   * Values:
-   *   'lower'           — dedicated lower-body strength loading a SINGLE
-   *                        sub-pattern (L-sq squat-emphasis OR L-hi hinge-
-   *                        emphasis) — used by single-region session types
-   *   'lower_combined'  — squat + hinge in one session at moderate dose
-   *                        (pre-season L-co). Covers BOTH lower sub-patterns
-   *                        in a single calendar slot — see H-PRE-7/8/9
-   *                        invariant which accepts this when calendar
-   *                        geometry (back-to-back team days + H3 spacing)
-   *                        makes 2 dedicated lower sessions infeasible.
-   *   'push'            — upper push emphasis
-   *   'pull'            — upper pull emphasis
-   *   'upper_combined'  — push + pull in one session (pre-season U-co)
-   *   'full_body'       — covers squat/hinge + push + pull in one session
+   * @deprecated Compatibility/display projection only. Exact allocation
+   * ownership lives in strengthIntent; consumers must not reconstruct exact
+   * patterns from this enum, focus text, workout names or plan-entry tokens.
    */
   strengthPattern?: 'lower' | 'lower_combined' | 'push' | 'pull' | 'upper_combined' | 'full_body';
 
-  /** Exact main-pattern credit. This is narrower than a display label such as Full Body. */
+  /** Canonical allocation-owned planned/effective strength contract. */
+  strengthIntent?: StrengthIntent;
+  /** @deprecated Compatibility projection of strengthIntent.plannedPatterns. */
   strengthPatternContributions?: MainStrengthPattern[];
   /** Stable identity for generated workout matching and diagnostics. */
   planEntryId?: string;
@@ -274,15 +255,28 @@ export interface SessionAllocation {
   deterministicCoachNoteEffects?: DeterministicCoachNoteEffectSeed[];
 }
 
+function plannedPatternsForAllocation(
+  allocation: SessionAllocation,
+): MainStrengthPattern[] {
+  if (allocation.strengthIntent) {
+    return normalizeStrengthIntent(allocation.strengthIntent).plannedPatterns;
+  }
+  if (allocation.strengthPatternContributions?.length) {
+    return [...allocation.strengthPatternContributions];
+  }
+  return mainPatternsForLegacyStrengthPattern(allocation.strengthPattern);
+}
+
 /**
  * Structural generation-side view accepted by the shared visible-session
- * classifier. `strengthPattern` is the typed source of truth when present;
- * focus text is only used for non-strength/support session shapes.
+ * classifier. `strengthIntent` is authoritative; legacy strengthPattern and
+ * focus are compatibility inputs only when typed intent is absent.
  */
 export interface GenerationSessionClassificationInput {
   focus: string;
   tier: SessionTier;
   isTeamDay?: boolean;
+  strengthIntent?: StrengthIntent;
   strengthPattern?: SessionAllocation['strengthPattern'];
   hasCombinedConditioning?: boolean;
   attachedConditioningKind?: AttachedConditioningKind;
@@ -320,7 +314,16 @@ export function classifyGenerationSession(
   input: GenerationSessionClassificationInput,
   context: StressContext = {},
 ): VisibleSessionClassification {
-  const canonicalStrengthName = canonicalStrengthClassificationName(input.strengthPattern);
+  const normalizedIntent = input.strengthIntent
+    ? normalizeStrengthIntent(input.strengthIntent)
+    : null;
+  const canonicalStrengthName = normalizedIntent
+    ? canonicalStrengthLabel(
+        normalizedIntent.effectivePatterns.length > 0
+          ? normalizedIntent.effectivePatterns
+          : normalizedIntent.plannedPatterns,
+      )
+    : canonicalStrengthClassificationName(input.strengthPattern);
   const name = canonicalStrengthName ?? input.focus;
   const hardConditioning =
     input.conditioningCategory === 'vo2' ||
@@ -357,6 +360,8 @@ export function classifyGenerationSession(
     intensity,
     workoutType,
     sessionTier: input.tier,
+    strengthIntent: normalizedIntent ?? undefined,
+    strengthPatternContributions: normalizedIntent?.plannedPatterns,
     hasCombinedConditioning: input.hasCombinedConditioning,
     attachedConditioningKind: input.attachedConditioningKind,
     conditioningFlavour: input.conditioningFlavour,
@@ -426,6 +431,9 @@ function allocationEffectSignature(allocation: SessionAllocation | undefined): s
     tier: allocation.tier,
     focus: allocation.focus,
     strengthPattern: allocation.strengthPattern,
+    strengthIntent: allocation.strengthIntent
+      ? normalizeStrengthIntent(allocation.strengthIntent)
+      : null,
     conditioningCategory: allocation.conditioningCategory,
     conditioningFlavour: allocation.conditioningFlavour,
     conditioningVariant: allocation.conditioningVariant,
@@ -957,6 +965,12 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
           logger.debug(`[ENGINE-VALIDATE] Emergency relabel: ${soleCore.dayOfWeek} → basic full body`);
           soleCore.focus = 'Basic full body (1 squat/hinge + 1 push + 1 pull - cover all patterns, moderate volume)';
           soleCore.strengthPattern = 'full_body';
+          const lower: MainStrengthPattern = (inputs.weekNumber ?? 1) % 2 === 0 ? 'hinge' : 'squat';
+          soleCore.strengthIntent = createStrengthIntent({
+            archetype: 'full_body',
+            primaryPattern: lower,
+            plannedPatterns: [lower, 'push', 'pull'],
+          });
         }
       }
     } else {
@@ -984,6 +998,9 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
           promotable.focus = 'Upper body - push emphasis (moderate intensity, emergency promotion)';
           promotable.isHardExposure = false;
           promotable.strengthPattern = 'push';
+          promotable.strengthIntent = createStrengthIntent({
+            archetype: 'upper', primaryPattern: 'push', plannedPatterns: ['push'],
+          });
         }
       }
       if (!hasLower) {
@@ -1003,14 +1020,16 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     const gNum = dayNameToNumber(inputs.gameDay);
     if (gNum !== null && gNum >= 0) {
       const gymCores = weeklyPlan.filter(s => s.tier === 'core' && !s.isTeamDay);
-      const hasLowerCoverage = gymCores.some(s =>
-        s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
-        s.strengthPattern === 'full_body' ||
-        /lower|squat|hinge|full body/i.test(s.focus));
+      const hasLowerCoverage = gymCores.some((s) =>
+        plannedPatternsForAllocation(s).some(
+          (pattern) => pattern === 'squat' || pattern === 'hinge',
+        ));
       if (!hasLowerCoverage) {
         const trainingOrderNum = (n: number) => (n === 0 ? 7 : n);
         const swap = gymCores
-          .filter(s => s.dayOfWeek && /upper|push|pull/i.test(s.focus))
+          .filter((s) => s.dayOfWeek && plannedPatternsForAllocation(s).some(
+            (pattern) => pattern === 'push' || pattern === 'pull',
+          ))
           .filter(s => {
             const d = dayNameToNumber(s.dayOfWeek!);
             return d !== null && d >= 0 && gOffset(d, gNum) <= -3; // safely clear of the game
@@ -1022,6 +1041,12 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
           logger.debug(`[ENGINE-VALIDATE] Game-week lower coverage: ${swap.dayOfWeek} upper → basic full body (H-GAME squeezed lower out of the week)`);
           swap.focus = 'Basic full body (1 squat/hinge + 1 push + 1 pull - cover all patterns, moderate volume)';
           swap.strengthPattern = 'full_body';
+          const lower: MainStrengthPattern = (inputs.weekNumber ?? 1) % 2 === 0 ? 'hinge' : 'squat';
+          swap.strengthIntent = createStrengthIntent({
+            archetype: 'full_body',
+            primaryPattern: lower,
+            plannedPatterns: [lower, 'push', 'pull'],
+          });
           // Pairing rule (2026-07-08): full body + EASY AEROBIC only. The
           // upper session being swapped may carry a harder finisher
           // (tempo/sprint) that was legal for upper — downgrade it rather
@@ -1076,6 +1101,15 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         if (!allocation) return;
         allocation.strengthPattern = shape.strengthPattern;
         allocation.strengthPatternContributions = [...shape.contributions];
+        allocation.strengthIntent = createStrengthIntent({
+          archetype: shape.strengthPattern === 'full_body'
+            ? 'full_body'
+            : shape.strengthPattern === 'lower'
+              ? 'lower'
+              : 'upper',
+          primaryPattern: shape.contributions[0] ?? null,
+          plannedPatterns: shape.contributions,
+        });
         allocation.focus = shape.focus;
         allocation.isHardExposure = false;
 
@@ -1102,21 +1136,40 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     }
   }
 
-  // Populate exact contributions and stable identities for every phase. A
-  // legacy single-lower allocation needs its typed focus to disambiguate
-  // squat from hinge; other legacy patterns map directly.
+  // Populate the canonical allocation-owned contract and stable identities.
+  // No focus/name parsing is permitted here: exact patterns come from the
+  // allocator's typed shape. Legacy fields are compatibility projections only.
   for (const allocation of weeklyPlan) {
-    if (!allocation.strengthPatternContributions?.length && allocation.strengthPattern) {
-      if (allocation.strengthPattern === 'lower') {
-        allocation.strengthPatternContributions = /hinge|hip-dominant|rdl|hamstring/i.test(allocation.focus)
-          ? ['hinge']
-          : ['squat'];
-      } else {
-        allocation.strengthPatternContributions = mainPatternsForLegacyStrengthPattern(
-          allocation.strengthPattern,
-        );
+    if (allocation.strengthIntent) {
+      allocation.strengthIntent = normalizeStrengthIntent(allocation.strengthIntent);
+    } else if (allocation.strengthPattern) {
+      const explicit = allocation.strengthPatternContributions?.length
+        ? allocation.strengthPatternContributions
+        : mainPatternsForLegacyStrengthPattern(allocation.strengthPattern);
+      const defaultLower: MainStrengthPattern = (inputs.weekNumber ?? 1) % 2 === 0 ? 'hinge' : 'squat';
+      const planned: MainStrengthPattern[] = explicit.length > 0
+        ? explicit
+        : allocation.strengthPattern === 'lower'
+          ? [defaultLower]
+          : allocation.strengthPattern === 'full_body'
+            ? [defaultLower, 'push', 'pull']
+            : [];
+      const archetype = allocation.strengthPattern === 'full_body'
+        ? 'full_body'
+        : allocation.strengthPattern === 'lower' || allocation.strengthPattern === 'lower_combined'
+          ? 'lower'
+          : 'upper';
+      if (planned.length > 0) {
+        allocation.strengthIntent = createStrengthIntent({
+          archetype,
+          primaryPattern: planned[0],
+          plannedPatterns: planned,
+        });
       }
     }
+    allocation.strengthPatternContributions = allocation.strengthIntent
+      ? [...allocation.strengthIntent.plannedPatterns]
+      : undefined;
     allocation.planEntryId = stablePlanEntryId({
       weekNumber: inputs.weekNumber,
       dayOfWeek: allocation.dayOfWeek,
@@ -1571,13 +1624,27 @@ function buildWeeklyPlan(
           dayOfWeek: lowerSlot.dayName,
           isHardExposure: true,
           strengthPattern: 'full_body',
+          strengthIntent: createStrengthIntent({
+            archetype: 'full_body',
+            primaryPattern: (inputs.weekNumber ?? 1) % 2 === 0 ? 'hinge' : 'squat',
+            plannedPatterns: [
+              (inputs.weekNumber ?? 1) % 2 === 0 ? 'hinge' : 'squat',
+              'push',
+              'pull',
+            ],
+          }),
         });
       } else {
         // 2+ CORE — dedicate this slot to lower, upper comes in Steps 2+3
         assigned.set(lowerSlot.dayName, {
           tier: 'core', focus: 'Lower body strength (squat + hinge)',
           dayOfWeek: lowerSlot.dayName, isHardExposure: true,
-          strengthPattern: 'lower',
+          strengthPattern: 'lower_combined',
+          strengthIntent: createStrengthIntent({
+            archetype: 'lower',
+            primaryPattern: (inputs.weekNumber ?? 1) % 2 === 0 ? 'hinge' : 'squat',
+            plannedPatterns: ['squat', 'hinge'],
+          }),
         });
       }
     }
@@ -1679,27 +1746,24 @@ function buildWeeklyPlan(
         }
       }
     } else if (core >= 2 && upperSlot) {
-      // ── 2-core: single upper slot — commit to push OR pull by position ──
-      // Earlier design merged both into "Balanced upper (push + pull)" but that
-      // flows through canonical naming as the vague "Upper Body Strength".
-      // Sam's rule: plan the split at generation time, don't rename post-resolve.
-      //
-      // Positional convention (mirrors 3-core branch):
-      //   G−2 (late week, moderate) → PUSH emphasis (low CNS load pre-game)
-      //   G−4/−5 (early week, hard) → PULL emphasis (horizontal pull is higher RPE)
-      //
-      // Trade-off: 2-core weeks only cover one upper pattern. Rotation across
-      // weeks happens naturally as the slot position drifts block-to-block;
-      // within-week "balance" is sacrificed for label clarity.
+      // ── 2-core: one balanced upper slot ──
+      // Bible/engine contract: lower + balanced upper. Primary emphasis may
+      // reflect slot position, while the secondary pattern remains meaningful.
       const isLateWeekSlot = upperSlot.offset === -2;
+      const upperPrimary: MainStrengthPattern = isLateWeekSlot ? 'push' : 'pull';
       assigned.set(upperSlot.dayName, {
         tier: 'core',
         focus: isLateWeekSlot
-          ? 'Upper body - push emphasis (moderate intensity, low fatigue - maintain strength, keep CNS sharp)'
-          : 'Upper body - pull emphasis',
+          ? 'Upper body - balanced push + pull (push primary, moderate intensity, low fatigue)'
+          : 'Upper body - balanced pull + push (pull primary, moderate intensity)',
         dayOfWeek: upperSlot.dayName,
         isHardExposure: !isLateWeekSlot,
-        strengthPattern: isLateWeekSlot ? 'push' : 'pull',
+        strengthPattern: 'upper_combined',
+        strengthIntent: createStrengthIntent({
+          archetype: 'upper',
+          primaryPattern: upperPrimary,
+          plannedPatterns: ['push', 'pull'],
+        }),
       });
     }
 
@@ -3174,12 +3238,18 @@ function buildWeeklyPlan(
       };
     }
 
-    /** Map a strength candidate/pattern to the eligibility context. */
-    function strengthContextOf(c: CandidateType | SessionAllocation['strengthPattern']): FinisherStrengthContext {
-      if (c === 'L-hi' || c === 'lower') return 'hinge';
-      if (c === 'L-sq' || c === 'L-co' || c === 'lower_combined') return 'lower';
-      if (c === 'FB' || c === 'full_body') return 'full';
+    /** Map an exact strength candidate to the eligibility context. */
+    function strengthContextOf(c: CandidateType): FinisherStrengthContext {
+      if (c === 'L-hi') return 'hinge';
+      if (c === 'L-sq' || c === 'L-co') return 'lower';
+      if (c === 'FB') return 'full';
       return 'upper';
+    }
+
+    function strengthContextForAllocation(s: SessionAllocation): FinisherStrengthContext {
+      const regions = strengthRegionsForPatterns(plannedPatternsForAllocation(s));
+      if (regions.length === 2) return 'full';
+      return regions[0] === 'lower' ? 'lower' : 'upper';
     }
 
     // ── Shared candidate classification ───────────────────────────────
@@ -3213,6 +3283,9 @@ function buildWeeklyPlan(
         strengthPattern: strengthCandidate
           ? buildStrengthPattern(strengthCandidate)
           : undefined,
+        strengthIntent: strengthCandidate
+          ? buildStrengthIntent(strengthCandidate)
+          : undefined,
         hasCombinedConditioning: c === 'S+C',
         attachedConditioningKind: attachedKind,
         conditioningFlavour: flavour,
@@ -3240,6 +3313,7 @@ function buildWeeklyPlan(
         focus: buildFocus(strengthCandidate),
         tier: 'core',
         strengthPattern: buildStrengthPattern(strengthCandidate),
+        strengthIntent: buildStrengthIntent(strengthCandidate),
       }, classificationContext).strengthRegion;
       return region === 'upper' || region === 'lower' ? region : null;
     }
@@ -4190,6 +4264,34 @@ function buildWeeklyPlan(
       }
     }
 
+    function buildStrengthIntent(c: CandidateType): StrengthIntent | undefined {
+      const alternatingLower: MainStrengthPattern = (inputs.weekNumber ?? 1) % 2 === 0
+        ? 'hinge'
+        : 'squat';
+      switch (c) {
+        case 'L-sq':
+          return createStrengthIntent({ archetype: 'lower', primaryPattern: 'squat', plannedPatterns: ['squat'] });
+        case 'L-hi':
+          return createStrengthIntent({ archetype: 'lower', primaryPattern: 'hinge', plannedPatterns: ['hinge'] });
+        case 'L-co':
+          return createStrengthIntent({ archetype: 'lower', primaryPattern: 'squat', plannedPatterns: ['squat', 'hinge'] });
+        case 'U-pu':
+          return createStrengthIntent({ archetype: 'upper', primaryPattern: 'push', plannedPatterns: ['push'] });
+        case 'U-pl':
+          return createStrengthIntent({ archetype: 'upper', primaryPattern: 'pull', plannedPatterns: ['pull'] });
+        case 'U-co':
+          return createStrengthIntent({ archetype: 'upper', primaryPattern: 'push', plannedPatterns: ['push', 'pull'] });
+        case 'FB':
+          return createStrengthIntent({
+            archetype: 'full_body',
+            primaryPattern: alternatingLower,
+            plannedPatterns: [alternatingLower, 'push', 'pull'],
+          });
+        default:
+          return undefined;
+      }
+    }
+
     // ── Conditioning label builder (S+C combined sessions) ────────────────
     //
     // Centralised so both the main-loop S+C placement and the H5a fallback
@@ -4345,6 +4447,7 @@ function buildWeeklyPlan(
         dayOfWeek: slot.dayName,
         isHardExposure: true,
         strengthPattern: buildStrengthPattern(candidate),
+        strengthIntent: buildStrengthIntent(candidate),
         stressLevel: strengthStress,
       });
       st.coreStrengthCount++;
@@ -4591,6 +4694,7 @@ function buildWeeklyPlan(
             tier: 'core',
             isTeamDay: slot.isTeamDay,
             strengthPattern: buildStrengthPattern(bestSCStrength),
+            strengthIntent: buildStrengthIntent(bestSCStrength),
             hasCombinedConditioning: true,
             attachedConditioningKind: attachedKind,
             conditioningFlavour: flavour,
@@ -4608,6 +4712,7 @@ function buildWeeklyPlan(
             conditioningCategory: category,
             ...conditioningProps,
             strengthPattern: buildStrengthPattern(bestSCStrength),
+            strengthIntent: buildStrengthIntent(bestSCStrength),
             stressLevel: scStress,
           });
 
@@ -4777,8 +4882,8 @@ function buildWeeklyPlan(
         })
         .sort((a, b) => {
           if (offseasonPolicy?.conditioning.allowedCategories.includes('tempo')) {
-            const aUpper = strengthContextOf(a.s.strengthPattern) === 'upper' ? 0 : 1;
-            const bUpper = strengthContextOf(b.s.strengthPattern) === 'upper' ? 0 : 1;
+            const aUpper = strengthContextForAllocation(a.s) === 'upper' ? 0 : 1;
+            const bUpper = strengthContextForAllocation(b.s) === 'upper' ? 0 : 1;
             if (aUpper !== bUpper) return aUpper - bUpper;
           }
           return b.i - a.i; // otherwise prefer later-in-week sessions
@@ -4795,16 +4900,16 @@ function buildWeeklyPlan(
         const decision = shouldAttachBestFinisher({
           dayNum,
           slotPos,
-          strengthContext: strengthContextOf(s.strengthPattern),
+          strengthContext: strengthContextForAllocation(s),
         });
         if (!decision.attach) continue;
         const category = decision.category;
         const flavour = categoryToFlavour(category);
         // Lower-body sessions always take the off-feet modality — even
         // the easy finisher spares legs that just squatted/hinged.
-        const lowerStrengthSC =
-          s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
-          s.strengthPattern === 'full_body';
+        const lowerStrengthSC = plannedPatternsForAllocation(s).some(
+          (pattern) => pattern === 'squat' || pattern === 'hinge',
+        );
         const conditioningProps = conditioningPolicyProps(category);
         const useNonRunning = lowerStrengthSC || conditioningProps.conditioningOffFeet === true;
         const attachedKind = decision.attachedKind;
@@ -4981,8 +5086,8 @@ function buildWeeklyPlan(
           !s.conditioningCategory
         )
         .sort((a, b) => {
-          const aLower = strengthContextOf(a.s.strengthPattern) !== 'upper' ? 0 : 1;
-          const bLower = strengthContextOf(b.s.strengthPattern) !== 'upper' ? 0 : 1;
+          const aLower = strengthContextForAllocation(a.s) !== 'upper' ? 0 : 1;
+          const bLower = strengthContextForAllocation(b.s) !== 'upper' ? 0 : 1;
           if (aLower !== bLower) return aLower - bLower;
           const aDay = a.s.dayOfWeek ? dayNameToNumber(a.s.dayOfWeek) : 99;
           const bDay = b.s.dayOfWeek ? dayNameToNumber(b.s.dayOfWeek) : 99;
@@ -4997,15 +5102,15 @@ function buildWeeklyPlan(
         const decision = shouldAttachFinisher({
           dayNum,
           requestedCategory: 'aerobic_base',
-          strengthContext: strengthContextOf(s.strengthPattern),
+          strengthContext: strengthContextForAllocation(s),
         });
         if (!decision.attach) continue;
         const category = decision.category;
         const flavour = categoryToFlavour(category);
         const attachedKind = decision.attachedKind;
-        const lowerStrengthSC =
-          s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined' ||
-          s.strengthPattern === 'full_body';
+        const lowerStrengthSC = plannedPatternsForAllocation(s).some(
+          (pattern) => pattern === 'squat' || pattern === 'hinge',
+        );
         const conditioningProps = conditioningPolicyProps(category);
         const useNonRunning = lowerStrengthSC || conditioningProps.conditioningOffFeet === true;
         s.focus = `${s.focus} + ${buildCondLabel(flavour, category, useNonRunning, attachedKind)}`;
@@ -5094,9 +5199,9 @@ function buildWeeklyPlan(
             if (!session.dayOfWeek) return false;
             if (session.isTeamDay) return false;
             if (session.speedWorkKind) return false;
-            if (session.strengthPattern !== 'push' &&
-                session.strengthPattern !== 'pull' &&
-                session.strengthPattern !== 'upper_combined') {
+            if (!plannedPatternsForAllocation(session).some(
+              (pattern) => pattern === 'push' || pattern === 'pull',
+            )) {
               return false;
             }
 
@@ -5112,9 +5217,9 @@ function buildWeeklyPlan(
             }
             const previousSession = plan.find((other) =>
               other.dayOfWeek && dayNameToNumber(other.dayOfWeek) === prevD);
-            if (previousSession?.strengthPattern === 'lower' ||
-                previousSession?.strengthPattern === 'lower_combined' ||
-                previousSession?.strengthPattern === 'full_body') {
+            if (previousSession && plannedPatternsForAllocation(previousSession).some(
+              (pattern) => pattern === 'squat' || pattern === 'hinge',
+            )) {
               return false;
             }
             return true;
@@ -5363,19 +5468,23 @@ function buildWeeklyPlan(
           !blocksStrengthCandidateForGeneration('L-co')) {
         sqSessions[0].focus = buildFocus('L-co');
         sqSessions[0].strengthPattern = buildStrengthPattern('L-co');
+        sqSessions[0].strengthIntent = buildStrengthIntent('L-co');
       } else if (hiSessions.length >= 1 && sqSessions.length === 0 && !hasFb && !hasLco &&
           !blocksStrengthCandidateForGeneration('L-co')) {
         hiSessions[0].focus = buildFocus('L-co');
         hiSessions[0].strengthPattern = buildStrengthPattern('L-co');
+        hiSessions[0].strengthIntent = buildStrengthIntent('L-co');
       }
       if (puSessions.length >= 1 && plSessions.length === 0 && !hasFb && !hasUco &&
           !blocksStrengthCandidateForGeneration('U-co')) {
         puSessions[0].focus = buildFocus('U-co');
         puSessions[0].strengthPattern = buildStrengthPattern('U-co');
+        puSessions[0].strengthIntent = buildStrengthIntent('U-co');
       } else if (plSessions.length >= 1 && puSessions.length === 0 && !hasFb && !hasUco &&
           !blocksStrengthCandidateForGeneration('U-co')) {
         plSessions[0].focus = buildFocus('U-co');
         plSessions[0].strengthPattern = buildStrengthPattern('U-co');
+        plSessions[0].strengthIntent = buildStrengthIntent('U-co');
       }
     }
 
@@ -5562,9 +5671,9 @@ function buildWeeklyPlan(
         .map((session, index) => ({ session, index }))
         .filter(({ session }) => {
           if (!session.dayOfWeek || session.isTeamDay || session.speedWorkKind) return false;
-          if (session.strengthPattern !== 'push' &&
-              session.strengthPattern !== 'pull' &&
-              session.strengthPattern !== 'upper_combined') {
+          if (!plannedPatternsForAllocation(session).some(
+            (pattern) => pattern === 'push' || pattern === 'pull',
+          )) {
             return false;
           }
           const dayNum = dayNameToNumber(session.dayOfWeek);
@@ -5578,9 +5687,9 @@ function buildWeeklyPlan(
           }
           const previousSession = adjusted.find((other) =>
             other.dayOfWeek && dayNameToNumber(other.dayOfWeek) === prevDay);
-          return previousSession?.strengthPattern !== 'lower' &&
-            previousSession?.strengthPattern !== 'lower_combined' &&
-            previousSession?.strengthPattern !== 'full_body';
+          return !previousSession || !plannedPatternsForAllocation(previousSession).some(
+            (pattern) => pattern === 'squat' || pattern === 'hinge',
+          );
         })
         .sort((a, b) => {
           const da = dayNameToNumber(a.session.dayOfWeek ?? '');
@@ -5780,8 +5889,9 @@ function applyInSeasonConditioningFloor(
   // Lower-body pairing forces non-running modality (Sam's hard rule:
   // "Lower + conditioning → MUST be non-running").
   function attachSCFinisher(s: SessionAllocation, durationCap: '15min' | '20min'): void {
-    const isLower =
-      s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined';
+    const isLower = plannedPatternsForAllocation(s).some(
+      (pattern) => pattern === 'squat' || pattern === 'hinge',
+    );
     s.hasCombinedConditioning = true;
     s.attachedConditioningKind = 'finisher';
     s.conditioningCategory = 'aerobic_base';
@@ -5862,7 +5972,7 @@ function applyInSeasonConditioningFloor(
     const stateOf = (s: SessionAllocation | undefined): string => {
       if (!s) return 'absent';
       if (isTeamSlot(s)) return `${s.dayOfWeek}:team`;
-      if (s.tier === 'core' && s.strengthPattern) {
+      if (s.tier === 'core' && plannedPatternsForAllocation(s).length > 0) {
         return s.hasCombinedConditioning ? `${s.dayOfWeek}:combined` : `${s.dayOfWeek}:eligible-${s.strengthPattern}`;
       }
       return `${s.dayOfWeek}:tier=${s.tier}/pat=${s.strengthPattern ?? 'none'}`;
@@ -5998,18 +6108,8 @@ export function enforceInSeasonPushPullBalance(
   // Up to 2 iterations: handles the both-missing case where iter 1 plants
   // one pattern and iter 2 promotes it to upper_combined for the other.
   for (let iter = 0; iter < 2; iter++) {
-    const hasPush = plan.some(
-      s =>
-        s.strengthPattern === 'push' ||
-        s.strengthPattern === 'upper_combined' ||
-        s.strengthPattern === 'full_body',
-    );
-    const hasPull = plan.some(
-      s =>
-        s.strengthPattern === 'pull' ||
-        s.strengthPattern === 'upper_combined' ||
-        s.strengthPattern === 'full_body',
-    );
+    const hasPush = plan.some((s) => plannedPatternsForAllocation(s).includes('push'));
+    const hasPull = plan.some((s) => plannedPatternsForAllocation(s).includes('pull'));
     if (hasPush && hasPull) {
       recheckConditioningFloor();
       return;
@@ -6021,9 +6121,10 @@ export function enforceInSeasonPushPullBalance(
     let succeeded = false;
 
     // ── Strategy 1: Promote single-pattern upper → upper_combined ──────
-    const promotable = plan.find(
-      s => s.tier === 'core' && s.strengthPattern === oppositePattern,
-    );
+    const promotable = plan.find((s) => {
+      const patterns = plannedPatternsForAllocation(s);
+      return s.tier === 'core' && patterns.length === 1 && patterns[0] === oppositePattern;
+    });
     if (promotable) {
       const focus = promotable.focus;
       const teamPrefix = focus.startsWith('Team training + ')
@@ -6037,6 +6138,11 @@ export function enforceInSeasonPushPullBalance(
           : '';
       promotable.focus = `${teamPrefix}Upper body - combined push + pull (balanced, moderate intensity - restored for push/pull coverage)${condSuffix}`;
       promotable.strengthPattern = 'upper_combined';
+      promotable.strengthIntent = createStrengthIntent({
+        archetype: 'upper',
+        primaryPattern: oppositePattern,
+        plannedPatterns: ['push', 'pull'],
+      });
       succeeded = true;
     }
 
@@ -6057,6 +6163,9 @@ export function enforceInSeasonPushPullBalance(
             ? 'Upper body - push emphasis (moderate intensity - added for push/pull balance)'
             : 'Upper body - pull emphasis (moderate intensity - added for push/pull balance)';
         chosen.strengthPattern = missing;
+        chosen.strengthIntent = createStrengthIntent({
+          archetype: 'upper', primaryPattern: missing, plannedPatterns: [missing],
+        });
         chosen.isHardExposure = false;
         succeeded = true;
       }
@@ -6072,12 +6181,10 @@ export function enforceInSeasonPushPullBalance(
       const teamCandidates = plan
         .filter(s => !!s.dayOfWeek)
         .filter(s => isTeamSlot(s))
-        .filter(
-          s =>
-            s.strengthPattern !== 'lower' &&
-            s.strengthPattern !== 'lower_combined',
-        )
-        .filter(s => s.strengthPattern !== missing) // guard against duplicate
+        .filter((s) => !plannedPatternsForAllocation(s).some(
+          (pattern) => pattern === 'squat' || pattern === 'hinge',
+        ))
+        .filter(s => !plannedPatternsForAllocation(s).includes(missing)) // guard against duplicate
         .filter(s => conditioningOwnership(s) !== 'component')
         .filter(s => {
           // Don't overlay on G−1 (captain's run), G−2 (pre-game),
@@ -6095,6 +6202,9 @@ export function enforceInSeasonPushPullBalance(
         tdChosen.tier = 'core';
         tdChosen.focus = `Team training + ${layerLabel}`;
         tdChosen.strengthPattern = missing;
+        tdChosen.strengthIntent = createStrengthIntent({
+          archetype: 'upper', primaryPattern: missing, plannedPatterns: [missing],
+        });
         tdChosen.isHardExposure = false;
         succeeded = true;
       }
@@ -6125,7 +6235,14 @@ export function enforceInSeasonPushPullBalance(
 // same-region exposures. Optional sessions still count — even light
 // upper accessories contribute to upper-body fatigue accumulation.
 
-export type GenerationAdjacencyRegion = 'upper' | 'lower' | 'neutral';
+export type GenerationAdjacencyRegion = 'upper' | 'lower' | 'full_body' | 'neutral';
+
+function adjacencyRegionIncludes(
+  region: GenerationAdjacencyRegion,
+  target: 'upper' | 'lower',
+): boolean {
+  return region === target || region === 'full_body';
+}
 
 /**
  * Region used by the generation adjacency policy. Main-strength region comes
@@ -6140,12 +6257,18 @@ export function classifyGenerationAdjacencyRegion(
   // Recovery tier is always neutral — it's restorative, not loading
   if (session.tier === 'recovery') return 'neutral';
 
-  // Main strength region comes from the shared classifier. Full-body remains
-  // neutral for this particular adjacency policy: it deliberately does not
-  // cluster either single region.
+  if (session.strengthIntent) {
+    const regions = strengthRegionsForPatterns(
+      normalizeStrengthIntent(session.strengthIntent).effectivePatterns,
+    );
+    if (regions.length === 2) return 'full_body';
+    if (regions[0]) return regions[0];
+  }
+
+  // Legacy fallback only: live allocations carry typed effective patterns.
   const sharedRegion = classifyGenerationSession(session).strengthRegion;
   if (sharedRegion === 'lower' || sharedRegion === 'upper') return sharedRegion;
-  if (sharedRegion === 'full_body') return 'neutral';
+  if (sharedRegion === 'full_body') return 'full_body';
 
   // Accessory-only region is a separate fatigue-placement policy. It is not
   // main-strength credit, so retain the existing low-fatigue distinctions.
@@ -6187,6 +6310,18 @@ interface StrengthSequenceOptions {
 }
 
 function strengthSequenceKind(session: SessionAllocation): StrengthSequenceKind {
+  if (session.strengthIntent) {
+    const intent = normalizeStrengthIntent(session.strengthIntent);
+    const patterns = intent.effectivePatterns;
+    const hasSquat = patterns.includes('squat');
+    const hasHinge = patterns.includes('hinge');
+    const hasPush = patterns.includes('push');
+    const hasPull = patterns.includes('pull');
+    if ((hasSquat || hasHinge) && (hasPush || hasPull)) return 'full_body';
+    if (hasSquat && hasHinge) return 'lower_combined';
+    if (hasPush && hasPull) return 'upper_combined';
+    return intent.primaryPattern ?? 'neutral';
+  }
   const strengthPart = (session.focus || '').replace(
     /\s\+\s.*(?:conditioning|finisher|interval|aerobic|tempo|sprint|zone 2).*/i,
     '',
@@ -6237,6 +6372,8 @@ function strengthBodyRegion(kind: StrengthSequenceKind): GenerationAdjacencyRegi
     case 'pull':
     case 'upper_combined':
       return 'upper';
+    case 'full_body':
+      return 'full_body';
     default:
       return 'neutral';
   }
@@ -6273,7 +6410,10 @@ export function scoreStrengthSequence(plan: SessionAllocation[]): number {
     const prevRegion = strengthBodyRegion(prevKind);
     const currRegion = strengthBodyRegion(currKind);
 
-    if (prevRegion !== 'neutral' && prevRegion === currRegion) {
+    const regionsOverlap =
+      (adjacencyRegionIncludes(prevRegion, 'lower') && adjacencyRegionIncludes(currRegion, 'lower')) ||
+      (adjacencyRegionIncludes(prevRegion, 'upper') && adjacencyRegionIncludes(currRegion, 'upper'));
+    if (regionsOverlap) {
       score += 100;
     }
 
@@ -6660,6 +6800,8 @@ function enforceFieldLoadStreak(plan: SessionAllocation[]): void {
       // strength exposure — clear any carried-over pattern (defensive;
       // standalone COND shouldn't have one).
       s.strengthPattern = undefined;
+      s.strengthIntent = undefined;
+      s.strengthPatternContributions = undefined;
       return;
     }
     if (s.hasCombinedConditioning) {
@@ -6761,9 +6903,20 @@ function enforceAdjacentRegionLimit(
       const regionB = classifyGenerationAdjacencyRegion(result[i - 1]);
       const regionC = classifyGenerationAdjacencyRegion(result[i]);
 
-      // Only care about non-neutral runs of 3
+      // Only care about runs sharing an actual upper or lower region. Full
+      // body overlaps both; it is never neutral merely because it is composite.
       if (regionA === 'neutral' || regionB === 'neutral' || regionC === 'neutral') continue;
-      if (regionA !== regionB || regionB !== regionC) continue;
+      const offendingRegion: 'upper' | 'lower' | null =
+        adjacencyRegionIncludes(regionA, 'lower') &&
+        adjacencyRegionIncludes(regionB, 'lower') &&
+        adjacencyRegionIncludes(regionC, 'lower')
+          ? 'lower'
+          : adjacencyRegionIncludes(regionA, 'upper') &&
+            adjacencyRegionIncludes(regionB, 'upper') &&
+            adjacencyRegionIncludes(regionC, 'upper')
+            ? 'upper'
+            : null;
+      if (!offendingRegion) continue;
 
       // Check they're actually consecutive days (not e.g. Mon, Wed, Fri)
       const dayA = dayNameToNumber(result[i - 2].dayOfWeek || '');
@@ -6771,7 +6924,6 @@ function enforceAdjacentRegionLimit(
       const dayC = dayNameToNumber(result[i].dayOfWeek || '');
       if (dayB - dayA !== 1 || dayC - dayB !== 1) continue;
 
-      const offendingRegion = regionC;
       let fixed = false;
 
       // ── Strategy 1: Demote an optional session in the run to neutral ──
@@ -6795,6 +6947,8 @@ function enforceAdjacentRegionLimit(
             // Mobility ≠ strength exposure — drop any pattern the session
             // previously carried so invariants don't over-count.
             strengthPattern: undefined,
+            strengthIntent: undefined,
+            strengthPatternContributions: undefined,
           };
           fixed = true;
           changed = true;
@@ -6824,7 +6978,7 @@ function enforceAdjacentRegionLimit(
         // populated on the SessionAllocation at this stage.
         if (isTeamDay(result[i]) !== isTeamDay(result[j])) continue;
         const candidateRegion = classifyGenerationAdjacencyRegion(result[j]);
-        if (candidateRegion === offendingRegion) continue;
+        if (adjacencyRegionIncludes(candidateRegion, offendingRegion)) continue;
 
         const candidateDayNum = dayNameToNumber(result[j].dayOfWeek || '');
 
@@ -6836,8 +6990,8 @@ function enforceAdjacentRegionLimit(
         const jPrevRegion = jPrev ? classifyGenerationAdjacencyRegion(jPrev) : 'neutral';
         const jNextRegion = jNext ? classifyGenerationAdjacencyRegion(jNext) : 'neutral';
 
-        const adjBefore = (candidateDayNum - jPrevDay === 1) && jPrevRegion === offendingRegion;
-        const adjAfter = (jNextDay - candidateDayNum === 1) && jNextRegion === offendingRegion;
+        const adjBefore = (candidateDayNum - jPrevDay === 1) && adjacencyRegionIncludes(jPrevRegion, offendingRegion);
+        const adjAfter = (jNextDay - candidateDayNum === 1) && adjacencyRegionIncludes(jNextRegion, offendingRegion);
         if (adjBefore && adjAfter) continue;
 
         // Swap day assignments (not array positions)
@@ -6869,6 +7023,11 @@ function enforceAdjacentRegionLimit(
         // Keep strengthPattern in sync with the flipped focus — it's the
         // engine's source of truth for "what movement is loaded today".
         strengthPattern: newPattern,
+        strengthIntent: createStrengthIntent({
+          archetype: offendingRegion === 'upper' ? 'lower' : 'upper',
+          primaryPattern: offendingRegion === 'upper' ? 'squat' : 'push',
+          plannedPatterns: [offendingRegion === 'upper' ? 'squat' : 'push'],
+        }),
       };
       changed = true;
       break;

@@ -67,6 +67,7 @@ import {
   type DeloadWeekPolicy,
 } from '../rules/deloadWeekRules';
 import {
+  canonicalStrengthLabel,
   isConditioningOnlyText,
   resolveSessionDisplayName,
 } from '../utils/sessionNaming';
@@ -87,6 +88,8 @@ import {
 import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
 import {
   mainPatternsForLegacyStrengthPattern,
+  normalizeStrengthIntent,
+  type StrengthIntent,
 } from '../rules/strengthPatternContributions';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 
@@ -652,6 +655,7 @@ export function findOrCreateExercise(name: string): Exercise {
 
 export type CoachGeneratedWorkoutInput = {
   planEntryId?: string;
+  strengthIntent?: StrengthIntent;
   dayOfWeek: number;
   name: string;
   workoutType: string;
@@ -1030,18 +1034,18 @@ function fallbackNameForPlanEntry(entry: SessionAllocation): string {
   // through to a main-lift label — the resolver's G-1 pass expects a light
   // session here, and "Gunshow" is the canonical athlete-facing name.
   if (/accessor|prehab|gunshow|pump|low-fatigue/i.test(entry.focus)) return 'Gunshow';
-  if (/hip-dominant|hinge|RDL|hamstring/i.test(entry.focus)) return 'Lower Hinge';
-  if (/squat|quad|lower body/i.test(entry.focus)) return 'Lower Squat';
-  if (/pull|row|pull-up/i.test(entry.focus)) return 'Upper Pull';
-  if (/push|bench|OHP|dip/i.test(entry.focus)) return 'Upper Push';
-  if (/full body/i.test(entry.focus)) return 'Full Body';
+  if (entry.strengthIntent) {
+    return canonicalStrengthLabel(
+      normalizeStrengthIntent(entry.strengthIntent).effectivePatterns,
+    ) ?? 'Strength Session';
+  }
   return 'Strength Session';
 }
 
 function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGeneratedWorkoutInput['exercises'] {
   const strengthText = strengthFocusForPlanEntry(entry);
   const lower = strengthText.toLowerCase();
-  const contributions = entry.strengthPatternContributions ??
+  const contributions = entry.strengthIntent?.plannedPatterns ?? entry.strengthPatternContributions ??
     mainPatternsForLegacyStrengthPattern(entry.strengthPattern);
 
   if (entry.isTeamDay && !lower) return [];
@@ -1066,7 +1070,7 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
       { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
     ];
   }
-  if (contributions.includes('hinge') && contributions.includes('pull')) {
+  if (contributions.length === 2 && contributions.includes('hinge') && contributions.includes('pull')) {
     return [
       { name: 'RDLs', sets: 3, repsMin: 8, repsMax: 10 },
       { name: 'Pull-Ups', sets: 3, repsMin: 8, repsMax: 12 },
@@ -1074,6 +1078,43 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
       { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
       { name: 'Pallof Press', sets: 2, repsMin: 10, repsMax: 12 },
     ];
+  }
+  if (entry.strengthIntent?.archetype === 'full_body') {
+    const lowerName = contributions.includes('hinge') ? 'RDLs' : 'Back Squat';
+    return [
+      { name: lowerName, sets: 3, repsMin: 5, repsMax: 8 },
+      { name: 'Bench Press', sets: 3, repsMin: 6, repsMax: 8 },
+      { name: 'Single-Arm DB Row', sets: 3, repsMin: 8, repsMax: 10 },
+      { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
+    ];
+  }
+  if (contributions.includes('squat') && contributions.includes('hinge')) {
+    const squatPrimary = entry.strengthIntent?.primaryPattern !== 'hinge';
+    return squatPrimary
+      ? [
+          { name: 'Back Squat', sets: 3, repsMin: 5, repsMax: 8 },
+          { name: 'RDLs', sets: 2, repsMin: 8, repsMax: 10, notes: 'Secondary maintenance dose' },
+          { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
+        ]
+      : [
+          { name: 'RDLs', sets: 3, repsMin: 5, repsMax: 8 },
+          { name: 'Goblet Squat', sets: 2, repsMin: 8, repsMax: 10, notes: 'Secondary maintenance dose' },
+          { name: 'Pallof Press', sets: 2, repsMin: 8, repsMax: 12 },
+        ];
+  }
+  if (contributions.includes('push') && contributions.includes('pull')) {
+    const pushPrimary = entry.strengthIntent?.primaryPattern !== 'pull';
+    return pushPrimary
+      ? [
+          { name: 'Bench Press', sets: 3, repsMin: 5, repsMax: 8 },
+          { name: 'Chest Supported Row', sets: 3, repsMin: 8, repsMax: 10 },
+          { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
+        ]
+      : [
+          { name: 'Pull-Ups', sets: 3, repsMin: 5, repsMax: 8 },
+          { name: 'Incline DB Bench', sets: 3, repsMin: 8, repsMax: 10 },
+          { name: 'Face Pulls', sets: 2, repsMin: 12, repsMax: 15 },
+        ];
   }
   if (contributions.length === 1 && contributions[0] === 'hinge') {
     return [
@@ -1162,6 +1203,7 @@ function completeCoachWorkoutsFromPlan(
     if (dayOfWeek === undefined || existingDows.has(dayOfWeek)) continue;
     additions.push({
       planEntryId: entry.planEntryId,
+      strengthIntent: entry.strengthIntent,
       dayOfWeek,
       name: fallbackNameForPlanEntry(entry),
       workoutType: fallbackWorkoutTypeForPlanEntry(entry),
@@ -2137,6 +2179,7 @@ export function buildWorkoutsFromCoach(
           name: displayName,
           focus: planEntry?.focus,
           strengthPattern: planEntry?.strengthPattern,
+          strengthIntent: planEntry?.strengthIntent,
           isTeamDay: planEntry?.isTeamDay,
           conditioningFlavour: planEntry?.conditioningFlavour,
           hasCombinedConditioning: planEntry?.hasCombinedConditioning,
@@ -2212,6 +2255,7 @@ export function buildWorkoutsFromCoach(
         dayOfWeek: cw.dayOfWeek,
         workoutName: cw.name,
         strengthPattern: planEntry?.strengthPattern,
+        strengthIntent: planEntry?.strengthIntent,
         receivedExercises: filteredAiExercises.map((exercise) => exercise.name),
       });
     }
@@ -2393,6 +2437,9 @@ export function buildWorkoutsFromCoach(
       );
     }
 
+    // Deterministic plan intent always wins. Edge-authored typed intent is
+    // accepted only for legacy/no-plan callers; names/focus never reconstruct it.
+    const canonicalStrengthIntent = planEntry?.strengthIntent ?? cw.strengthIntent;
     const builtWorkout: Workout = {
       id: workoutId,
       microcycleId,
@@ -2402,6 +2449,7 @@ export function buildWorkoutsFromCoach(
         focus: planEntry?.focus,
         exercises: finalExercises,
         strengthPattern: planEntry?.strengthPattern,
+        strengthIntent: canonicalStrengthIntent,
         isTeamDay: planEntry?.isTeamDay,
         conditioningFlavour: planEntry?.conditioningFlavour,
         hasCombinedConditioning: planEntry?.hasCombinedConditioning,
@@ -2412,6 +2460,9 @@ export function buildWorkoutsFromCoach(
       workoutType: normalizedWorkoutType,
       sessionTier: canonicalTier,
       ...(planEntry?.planEntryId ? { planEntryId: planEntry.planEntryId } : {}),
+      ...(canonicalStrengthIntent
+        ? { strengthIntent: normalizeStrengthIntent(canonicalStrengthIntent) }
+        : {}),
       ...(planEntry?.strengthPatternContributions?.length
         ? { strengthPatternContributions: [...planEntry.strengthPatternContributions] }
         : {}),

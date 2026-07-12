@@ -25,59 +25,19 @@ import {
   classifyGenerationAdjacencyRegion as classifyRegion,
   type SessionAllocation,
 } from '../../utils/coachingEngine';
+import { strengthPatternLedger } from '../../rules/strengthPatternContributions';
 
 const DAY_ORDER: ReadonlyArray<string> = [
   'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
 ];
 
+function plannedPatterns(session: SessionAllocation) {
+  return session.strengthIntent?.plannedPatterns ?? session.strengthPatternContributions ?? [];
+}
+
 const DAY_NUM: Record<string, number> = {
   Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6,
 };
-
-/**
- * Classify a session's *strength exposure* — returns the specific movement
- * pattern it loads, or null if the session isn't a strength core.
- *
- * Source of truth: `SessionAllocation.strengthPattern`, populated by the
- * engine at every intentional strength-placement site. We deliberately
- * do NOT parse the `focus` string here — doing so conflated "tier = core"
- * with "strength exposure", because the universal team-day label pass
- * promotes every team day to `tier: 'core'` (captain's run, post-game
- * recovery) even though those days carry no strength stimulus.
- *
- * Mapping:
- *   'lower'           → 'lower'
- *   'lower_combined'  → reported as 'lower' (L-co covers BOTH squat + hinge;
- *                       callers that need to recognise the combined-coverage
- *                       case — H-PRE-7/8/9 in particular — read
- *                       strengthPattern directly to detect L-co)
- *   'push'            → 'push'
- *   'pull'            → 'pull'
- *   'upper_combined'  → reported as 'push' (covers push pattern — callers
- *                       treat U-co as covering BOTH push and pull; see
- *                       H-IS-3 invariant which also awards a pull below)
- *   'full_body'       → reported as 'lower' (covers lower — full body
- *                       additionally covers push + pull; invariants that
- *                       need push/pull credit from FB handle it directly)
- *
- * The H-IS-3 invariant (1L + 1push + 1pull) tolerates FB / U-co via
- * explicit handling in its body, not here.
- */
-function classifyStrengthExposure(s: SessionAllocation): 'lower' | 'push' | 'pull' | null {
-  if (s.tier !== 'core') return null;
-  switch (s.strengthPattern) {
-    case 'lower': return 'lower';
-    case 'lower_combined': return 'lower';
-    case 'push': return 'push';
-    case 'pull': return 'pull';
-    // U-co / FB coverage semantics are handled by individual invariants
-    // that check strengthPattern directly; this helper returns the
-    // *primary* pattern for the narrow 1L/1push/1pull counter.
-    case 'upper_combined': return 'push';
-    case 'full_body': return 'lower';
-    default: return null;
-  }
-}
 
 function sorted(plan: InvariantContext['plan']): SessionAllocation[] {
   return [...plan.weeklyPlan].sort(
@@ -191,20 +151,17 @@ export const inseason_3exposurePriority: Invariant = ({ profile, inputs, plan })
   if (plan.readiness === 'low') return null;
   if (hasSevereInjury(profile)) return null;
 
-  let lower = 0, push = 0, pull = 0;
-  for (const s of plan.weeklyPlan) {
-    const ex = classifyStrengthExposure(s);
-    if (ex === 'lower') lower++;
-    else if (ex === 'push') push++;
-    else if (ex === 'pull') pull++;
-  }
-  const ok = lower === 1 && push === 1 && pull === 1;
+  const ledger = strengthPatternLedger(
+    plan.weeklyPlan.filter((session) => session.tier === 'core'),
+    'planned',
+  );
+  const ok = ledger.squat >= 1 && ledger.hinge >= 1 && ledger.push >= 1 && ledger.pull >= 1;
   return {
-    rule: 'H-IS-3: healthy in-season → 1 Lower + 1 Push + 1 Pull',
+    rule: 'H-IS-3: healthy in-season → squat + hinge + push + pull',
     passed: ok,
     detail: ok
-      ? `1L + 1push + 1pull ✓`
-      : `${lower}L + ${push}push + ${pull}pull (expected 1+1+1 — a strength pattern is missing or doubled)`,
+      ? `squat + hinge + push + pull ✓`
+      : `squat=${ledger.squat}, hinge=${ledger.hinge}, push=${ledger.push}, pull=${ledger.pull}`,
   };
 };
 
@@ -252,8 +209,7 @@ export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
     };
   }
   const isLowerStrengthTopUp =
-    sat.strengthPattern === 'lower' &&
-    sat.focus.toLowerCase().includes('lower');
+    plannedPatterns(sat).some((pattern) => pattern === 'squat' || pattern === 'hinge');
   const isTypedConditioningTopUp =
     !!sat.conditioningCategory &&
     !!sat.conditioningFlavour &&
@@ -297,9 +253,8 @@ export const inseason_noGameSatPeak: Invariant = ({ inputs, plan }) => {
  * conditioning peak — that's expected and does not count toward the
  * strength-pattern budget.
  *
- * Source of truth: `SessionAllocation.strengthPattern` (typed engine
- * field). We do NOT parse focus strings — see project memory
- * "Engine carries explicit semantic metadata".
+ * Source of truth: `SessionAllocation.strengthIntent.plannedPatterns`.
+ * We do not parse focus strings or collapse combined sessions to a primary.
  *
  * The invariant intentionally reads typed `lower_combined` coverage rather
  * than inferring dose from titles. It still fails genuinely soft weeks that
@@ -316,17 +271,11 @@ export const preseason_4exposurePriority: Invariant = ({ profile, inputs, plan }
   let lowerDedicated = 0, lowerCombined = 0, upper = 0;
   for (const s of plan.weeklyPlan) {
     if (s.tier !== 'core') continue;
-    switch (s.strengthPattern) {
-      case 'lower': lowerDedicated++; break;
-      case 'lower_combined': lowerCombined++; break;
-      case 'push':
-      case 'pull':
-      case 'upper_combined': upper++; break;
-      // 'full_body' is a single slot covering all patterns; counted
-      // toward both lower and upper exposure for this invariant.
-      case 'full_body': lowerDedicated++; upper++; break;
-      default: break;
-    }
+    const patterns = plannedPatterns(s);
+    const lowerCount = Number(patterns.includes('squat')) + Number(patterns.includes('hinge'));
+    if (lowerCount >= 2) lowerCombined++;
+    else if (lowerCount === 1) lowerDedicated++;
+    if (patterns.includes('push') || patterns.includes('pull')) upper++;
   }
   const lower = lowerDedicated + lowerCombined;
 
@@ -591,9 +540,7 @@ export const inseason_minOneConditioningWhenSafe: Invariant = ({ profile, inputs
   const g4Blocked =
     !g4 ||
     teamDays.has(g4.dayOfWeek as any) ||
-    !(g4.strengthPattern === 'push' ||
-      g4.strengthPattern === 'pull' ||
-      g4.strengthPattern === 'upper_combined');
+    !plannedPatterns(g4).some((pattern) => pattern === 'push' || pattern === 'pull');
   if (g3Blocked && g4Blocked) return null;
 
   // Now assert: at least one session has typed conditioning fields.
@@ -681,8 +628,7 @@ export const inseason_aerobicOnlyDuringGameWeek: Invariant = ({ inputs, plan }) 
 /**
  * In-season push/pull balance: every in-season week must carry at least
  * 1 push exposure and 1 pull exposure. A single full_body or upper_combined
- * session covers both. Source of truth: `strengthPattern` (typed engine
- * field, never parse focus strings).
+ * session covers both. Source of truth: the typed planned-pattern ledger.
  *
  * Why an invariant alongside the engine pass: catches drift if anyone ever
  * adds a new in-season placement branch that emits one upper pattern only.
@@ -691,18 +637,8 @@ export const inseason_aerobicOnlyDuringGameWeek: Invariant = ({ inputs, plan }) 
  */
 export const inseason_pushPullBalance: Invariant = ({ inputs, plan }) => {
   if (inputs.seasonPhase !== 'In-season') return null;
-  const hasPush = plan.weeklyPlan.some(
-    (s) =>
-      s.strengthPattern === 'push' ||
-      s.strengthPattern === 'upper_combined' ||
-      s.strengthPattern === 'full_body',
-  );
-  const hasPull = plan.weeklyPlan.some(
-    (s) =>
-      s.strengthPattern === 'pull' ||
-      s.strengthPattern === 'upper_combined' ||
-      s.strengthPattern === 'full_body',
-  );
+  const hasPush = plan.weeklyPlan.some((s) => plannedPatterns(s).includes('push'));
+  const hasPull = plan.weeklyPlan.some((s) => plannedPatterns(s).includes('pull'));
   const ok = hasPush && hasPull;
   return {
     rule: 'In-season → ≥1 push exposure AND ≥1 pull exposure',
@@ -710,8 +646,8 @@ export const inseason_pushPullBalance: Invariant = ({ inputs, plan }) => {
     detail: ok
       ? `push=${hasPush ? '✓' : '✗'} pull=${hasPull ? '✓' : '✗'}`
       : `push=${hasPush ? '✓' : '✗'} pull=${hasPull ? '✓' : '✗'} — patterns: ${plan.weeklyPlan
-          .filter((s) => s.strengthPattern)
-          .map((s) => `${s.dayOfWeek}:${s.strengthPattern}`)
+          .filter((s) => plannedPatterns(s).length > 0)
+          .map((s) => `${s.dayOfWeek}:${plannedPatterns(s).join('+')}`)
           .join(', ') || 'none'}`,
   };
 };
@@ -729,8 +665,9 @@ export const inseason_lowerSCNonRunning: Invariant = ({ inputs, plan }) => {
   const violations: string[] = [];
   for (const s of plan.weeklyPlan) {
     if (!s.hasCombinedConditioning) continue;
-    const isLower =
-      s.strengthPattern === 'lower' || s.strengthPattern === 'lower_combined';
+    const isLower = plannedPatterns(s).some(
+      (pattern) => pattern === 'squat' || pattern === 'hinge',
+    );
     if (!isLower) continue;
     if (!s.ergModality) {
       violations.push(`${s.dayOfWeek}: lower S+C without ergModality`);

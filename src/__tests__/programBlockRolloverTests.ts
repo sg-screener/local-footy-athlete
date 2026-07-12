@@ -297,7 +297,14 @@ console.log('\n-- Deterministic next-block state and persistence --');
   ok('new block starts at build week 1 rather than replaying old deload state',
     next.microcycles[0].weekNumber === 5 &&
       next.microcycles[0].weekKind === 'build' &&
-      after.currentMicrocycle === next.microcycles[0]);
+      after.currentMicrocycle?.id === next.microcycles[0].id,
+    JSON.stringify({
+      weekNumber: next.microcycles[0].weekNumber,
+      weekKind: next.microcycles[0].weekKind,
+      selectedId: after.currentMicrocycle?.id,
+      firstId: next.microcycles[0].id,
+      sameSelectedMicrocycle: after.currentMicrocycle?.id === next.microcycles[0].id,
+    }));
   ok('in-season new block keeps kernel-correct build state in week 4',
     next.microcycles[3].weekNumber === 8 && next.microcycles[3].weekKind === 'build');
   const resolvedFirstWeek = resolveWeekWithConditioning('2026-08-03', {

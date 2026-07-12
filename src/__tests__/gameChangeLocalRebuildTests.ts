@@ -336,13 +336,49 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
   const week2Friday = addDays(blockStart, 11); // G-1 for week-2 Saturday game
   const now = new Date().toISOString();
 
-  const mkOverride = (date: string, name: string, extra: Partial<Workout> = {}): Workout => ({
-    id: `manual-${date}`, microcycleId: 'mc-ai-1',
-    dayOfWeek: new Date(`${date}T12:00:00`).getDay(),
-    name, description: name, durationMinutes: 40, intensity: 'Moderate',
-    workoutType: 'Strength', sessionTier: 'core', exercises: [],
-    createdAt: now, updatedAt: now, ...extra,
-  } as Workout);
+  const mkOverride = (date: string, name: string, extra: Partial<Workout> = {}): Workout => {
+    const isRest = /^(?:rest|recovery flow)$/i.test(name);
+    const rowName = /metcon/i.test(name)
+      ? 'Hard Assault Bike Intervals'
+      : /lower/i.test(name)
+        ? 'Back Squat'
+        : /upper pull/i.test(name)
+          ? 'Pull-Ups'
+          : /gunshow/i.test(name)
+            ? 'Bicep Curls'
+            : 'Mobility Flow';
+    const rows = isRest ? [] : [{
+      id: `row-${date}`,
+      workoutId: `manual-${date}`,
+      exerciseId: `exercise-${date}`,
+      exerciseOrder: 1,
+      prescribedSets: 3,
+      prescribedRepsMin: 6,
+      prescribedRepsMax: 8,
+      prescribedWeightKg: 0,
+      restSeconds: 60,
+      exercise: {
+        id: `exercise-${date}`,
+        name: rowName,
+        description: rowName,
+        exerciseType: 'Compound',
+        muscleGroups: [],
+        equipmentRequired: [],
+        difficultyLevel: 'Intermediate',
+        createdAt: now,
+        updatedAt: now,
+      },
+      createdAt: now,
+      updatedAt: now,
+    }];
+    return {
+      id: `manual-${date}`, microcycleId: 'mc-ai-1',
+      dayOfWeek: new Date(`${date}T12:00:00`).getDay(),
+      name, description: name, durationMinutes: 40, intensity: 'Moderate',
+      workoutType: 'Strength', sessionTier: 'core', exercises: rows,
+      createdAt: now, updatedAt: now, ...extra,
+    } as Workout;
+  };
 
   const ps = useProgramStore.getState();
   // Manual BIN (coachActions writes intent 'dismissed'): Monday cleared.
@@ -368,7 +404,7 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
     sweep.conflictsRemoved.some((c) => c.date === week2Friday),
     JSON.stringify(sweep));
   ok('conflict removal is reported (never silent)',
-    sweep.conflictsRemoved.length === 1 && /metcon/i.test(sweep.conflictsRemoved[0].name),
+    sweep.conflictsRemoved.length === 1 && /metcon|hard assault bike/i.test(sweep.conflictsRemoved[0].name),
     JSON.stringify(sweep.conflictsRemoved));
 
   // Light manual edit NEAR the game (gunshow swap on G-1) is Bible-legal → survives.

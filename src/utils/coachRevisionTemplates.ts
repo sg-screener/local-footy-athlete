@@ -11,6 +11,10 @@
  */
 
 import type { Workout } from '../types/domain';
+import {
+  createStrengthIntent,
+  type StrengthIntent,
+} from '../rules/strengthPatternContributions';
 import type { ResolvedDay } from './sessionResolver';
 import {
   snapshotProjectedDay,
@@ -38,6 +42,8 @@ export interface CoachRevisionTemplateDefinition {
   /** Engine name handed to buildTagAwareSession's intent builder
    *  (strength category only). */
   engineName?: string;
+  /** Exact typed contract for engine-built strength templates. */
+  strengthIntent?: StrengthIntent;
   /** Derived-session type for buildDerivedSession (accessories only). */
   derivedType?: 'arms_pump' | 'prehab_accessories';
 }
@@ -134,6 +140,9 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     durationMinutes: 60,
     dynamic: true,
     engineName: 'Upper Push',
+    strengthIntent: createStrengthIntent({
+      archetype: 'upper', primaryPattern: 'push', plannedPatterns: ['push'],
+    }),
   },
   {
     templateId: 'strength_upper_pull',
@@ -144,6 +153,9 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     durationMinutes: 60,
     dynamic: true,
     engineName: 'Upper Pull',
+    strengthIntent: createStrengthIntent({
+      archetype: 'upper', primaryPattern: 'pull', plannedPatterns: ['pull'],
+    }),
   },
   {
     templateId: 'strength_lower',
@@ -154,6 +166,9 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     durationMinutes: 60,
     dynamic: true,
     engineName: 'Lower Body Strength',
+    strengthIntent: createStrengthIntent({
+      archetype: 'lower', primaryPattern: 'squat', plannedPatterns: ['squat', 'hinge'],
+    }),
   },
   {
     templateId: 'strength_full_body',
@@ -164,6 +179,9 @@ const TEMPLATE_DEFINITIONS: CoachRevisionTemplateDefinition[] = [
     durationMinutes: 60,
     dynamic: true,
     engineName: 'Full Body',
+    strengthIntent: createStrengthIntent({
+      archetype: 'full_body', primaryPattern: 'squat', plannedPatterns: ['squat', 'push', 'pull'],
+    }),
   },
   // ── Accessories: pump + prehab derived sessions ──
   {
@@ -443,6 +461,7 @@ function buildEngineTemplateWorkout(
       intensity: 'Moderate',
       workoutType: 'Strength',
       sessionTier: 'core',
+      strengthIntent: def.strengthIntent,
       exercises: [],
       createdAt: '',
       updatedAt: '',

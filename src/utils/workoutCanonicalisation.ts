@@ -20,7 +20,14 @@ import {
   classifyGeneratedWorkoutRow,
   type GeneratedWorkoutRowClassification,
 } from '../rules/generatedWorkoutRowClassification';
-import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
+import {
+  createStrengthIntent,
+  inferStrengthArchetype,
+  resolveLegacyStrengthIntent,
+  withEffectiveStrengthPatterns,
+  type MainStrengthPattern,
+  type StrengthIntent,
+} from '../rules/strengthPatternContributions';
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
@@ -37,6 +44,7 @@ export type WorkoutCanonicalisationAction = {
     | 'pairing_removed'
     | 'power_removed'
     | 'power_downgraded'
+    | 'effective_pattern_removed'
     | 'plan_intent_cleared'
     | 'type_changed'
     | 'name_changed'
@@ -437,10 +445,22 @@ export function finaliseWorkoutAfterMutation(
     /\b(?:gunshow|prehab|pump|accessor|low-fatigue)\b/i.test(
       `${workout.name} ${workout.description ?? ''}`,
     );
-  const intendedPatterns = planIntentValid && !supportOnlyIdentity
-    ? new Set(workout.strengthPatternContributions ?? [])
+  const initialMainPatterns = domainPatterns(classified.filter((row) => !row.linkedConditioning));
+  const trustExistingTypedIntent = !!workout.strengthIntent &&
+    (!workout.planEntryId || planIntentValid);
+  const ingress = resolveLegacyStrengthIntent({
+    strengthIntent: trustExistingTypedIntent ? workout.strengthIntent : undefined,
+    strengthPatternContributions: planIntentValid
+      ? workout.strengthPatternContributions
+      : undefined,
+    contentPatterns: initialMainPatterns,
+    name: workout.name,
+  });
+  let canonicalIntent: StrengthIntent | null = supportOnlyIdentity ? null : ingress.intent;
+  const intendedPatterns = planIntentValid && canonicalIntent
+    ? new Set(canonicalIntent.plannedPatterns)
     : new Set<MainStrengthPattern>();
-  if (supportOnlyIdentity && workout.strengthPatternContributions?.length) {
+  if (supportOnlyIdentity && (workout.strengthIntent || workout.strengthPatternContributions?.length)) {
     actions.push({
       kind: 'plan_intent_cleared',
       item: workout.planEntryId,
@@ -448,9 +468,14 @@ export function finaliseWorkoutAfterMutation(
         ? 'rest_session_has_no_main_strength_contribution'
         : 'support_session_has_no_main_strength_contribution',
     });
-    workout = { ...workout, strengthPatternContributions: undefined };
+    workout = {
+      ...workout,
+      strengthIntent: undefined,
+      strengthPatternContributions: undefined,
+    };
+    canonicalIntent = null;
   }
-  if (!planIntentValid && (workout.planEntryId || workout.strengthPatternContributions?.length)) {
+  if (!planIntentValid && workout.planEntryId) {
     actions.push({
       kind: 'plan_intent_cleared',
       item: workout.planEntryId,
@@ -461,6 +486,7 @@ export function finaliseWorkoutAfterMutation(
       planEntryId: undefined,
       strengthPatternContributions: undefined,
     };
+    canonicalIntent = ingress.intent;
   }
 
   const conditioningRows: ClassifiedRow[] = [];
@@ -545,6 +571,40 @@ export function finaliseWorkoutAfterMutation(
   const finalStrengthPatterns = domainPatterns(
     finalClassified.filter((row) => !row.linkedConditioning),
   );
+  if (!canonicalIntent && finalStrengthPatterns.length > 0) {
+    const archetype = inferStrengthArchetype(finalStrengthPatterns);
+    canonicalIntent = archetype
+      ? createStrengthIntent({
+          archetype,
+          plannedPatterns: finalStrengthPatterns,
+          effectivePatterns: finalStrengthPatterns,
+        })
+      : null;
+  }
+  const finalStrengthIntent = canonicalIntent
+    ? withEffectiveStrengthPatterns(canonicalIntent, finalStrengthPatterns)
+    : null;
+  const strengthIntentDiagnostics = [] as NonNullable<Workout['strengthIntentDiagnostics']>;
+  if (canonicalIntent) {
+    for (const planned of canonicalIntent.plannedPatterns) {
+      if (!finalStrengthIntent?.effectivePatterns.includes(planned)) {
+        actions.push({
+          kind: 'effective_pattern_removed',
+          item: planned,
+          reason: context.restoreMissingPlanPatterns === false
+            ? 'removed_by_final_constraint_validation'
+            : 'planned_pattern_absent_from_final_main_content',
+        });
+        strengthIntentDiagnostics.push({
+          pattern: planned,
+          change: 'removed',
+          reason: context.restoreMissingPlanPatterns === false
+            ? 'removed_by_final_constraint_validation'
+            : 'planned_pattern_absent_from_final_main_content',
+        });
+      }
+    }
+  }
   const hasStrength = finalStrengthPatterns.length > 0;
   const hasConditioning = !!finalConditioningBlock?.options.length;
   const anchorClassification = classifyVisibleSession(workout);
@@ -574,7 +634,7 @@ export function finaliseWorkoutAfterMutation(
     ? workout.name
     : hasStrength
       ? canonicalStrengthName(
-          intendedPatterns.size > 0 ? Array.from(intendedPatterns) : finalStrengthPatterns,
+          finalStrengthIntent?.effectivePatterns ?? finalStrengthPatterns,
           anchorClassification.anchors.teamTraining,
         ) ?? workout.name
       : workout.name;
@@ -613,6 +673,13 @@ export function finaliseWorkoutAfterMutation(
     name: canonicalName,
     workoutType,
     exercises: finalRows,
+    strengthIntent: finalStrengthIntent ?? undefined,
+    strengthIntentDiagnostics: strengthIntentDiagnostics.length > 0
+      ? strengthIntentDiagnostics
+      : undefined,
+    strengthPatternContributions: finalStrengthIntent
+      ? [...finalStrengthIntent.plannedPatterns]
+      : undefined,
     recoveryAddons: generatedRecoveryAddon
       ? [...(workout.recoveryAddons ?? []), generatedRecoveryAddon]
       : workout.recoveryAddons,

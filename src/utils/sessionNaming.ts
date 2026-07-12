@@ -33,6 +33,12 @@
  *   any "X + Team Training" ordering, any "L-co" / "U-co" code.
  */
 
+import {
+  normalizeStrengthIntent,
+  resolveLegacyStrengthIntent,
+  type StrengthIntent,
+} from '../rules/strengthPatternContributions';
+
 export type MovementPattern = 'squat' | 'hinge' | 'push' | 'pull';
 
 export type StrengthPatternMetadata =
@@ -64,6 +70,8 @@ export interface SessionNameInput {
   } | null>;
   /** Typed engine strength pattern. Used before any legacy text inference. */
   strengthPattern?: StrengthPatternMetadata;
+  /** Canonical typed contract. When present, no display text may override it. */
+  strengthIntent?: StrengthIntent;
   /** Team-day flag — when true, name ALWAYS leads with "Team Training". */
   isTeamDay?: boolean;
   /** Presence of a conditioning flavour marks this as a conditioning-bearing session. */
@@ -163,12 +171,6 @@ export function strengthTextForMovementInference(text: string | undefined): stri
 export function inferMovementPatterns(text: string | undefined): MovementPattern[] {
   if (!text) return [];
   const t = text.toLowerCase();
-  // Short-circuit: explicit "full body" phrasing → all four patterns.
-  // The engine's FB focus string also enumerates squat/hinge/push/pull, so
-  // either path reaches "Full Body Strength" via canonicalStrengthLabel.
-  if (/\bfull[- ]?body\b/.test(t)) {
-    return ['squat', 'hinge', 'push', 'pull'];
-  }
   const found: MovementPattern[] = [];
   for (const [pattern, rx] of PATTERN_PROBES) {
     if (rx.test(t)) found.push(pattern);
@@ -210,7 +212,7 @@ export function movementPatternsFromStrengthPattern(
   switch (strengthPattern) {
     case 'lower': {
       const lowerDetails = lowerPatternDetailsFromText(sourceText);
-      return lowerDetails.length > 0 ? lowerDetails : ['squat', 'hinge'];
+      return lowerDetails;
     }
     case 'lower_combined':
       return ['squat', 'hinge'];
@@ -221,7 +223,10 @@ export function movementPatternsFromStrengthPattern(
     case 'upper_combined':
       return ['push', 'pull'];
     case 'full_body':
-      return ['squat', 'hinge', 'push', 'pull'];
+      // Full-body is layout metadata, not an exact contribution ledger.
+      // New callers provide strengthIntent; ambiguous legacy callers must use
+      // visible main content or retain their existing display name.
+      return [];
     default:
       return [];
   }
@@ -312,6 +317,7 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
   }
   if (
     !isTeam &&
+    !input.strengthIntent &&
     !input.strengthPattern &&
     /\b(gunshow|prehab|accessor|pump|mobility|recovery)\b/i.test(auxiliaryText)
   ) {
@@ -327,21 +333,24 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
 
   // Step 1: determine strength label (if any).
   let patterns: MovementPattern[] = [];
-  const visibleContentPatterns = movementPatternsFromVisibleContent(input);
-  if (input.movementPatterns && input.movementPatterns.length > 0) {
-    patterns = input.movementPatterns;
-  } else if (visibleContentPatterns.length > 0) {
-    patterns = visibleContentPatterns;
-  } else if (input.strengthPattern) {
-    patterns = movementPatternsFromStrengthPattern(
-      input.strengthPattern,
-      input.focus || input.name,
-    );
+  const typedIntent = input.strengthIntent
+    ? normalizeStrengthIntent(input.strengthIntent)
+    : null;
+  if (typedIntent) {
+    patterns = [...typedIntent.effectivePatterns];
   } else {
-    patterns = inferStrengthMovementPatterns(input.focus);
-    if (patterns.length === 0) {
-      patterns = inferStrengthMovementPatterns(input.name);
-    }
+    const visibleContentPatterns = movementPatternsFromVisibleContent(input);
+    const legacyFocus = strengthTextForMovementInference(input.focus);
+    const legacyName = strengthTextForMovementInference(input.name);
+    const legacy = resolveLegacyStrengthIntent({
+      strengthPattern: input.strengthPattern,
+      contentPatterns: input.movementPatterns?.length
+        ? input.movementPatterns
+        : visibleContentPatterns,
+      focus: isConditioningOnlyText(legacyFocus) ? undefined : legacyFocus,
+      name: isConditioningOnlyText(legacyName) ? undefined : legacyName,
+    });
+    patterns = legacy.intent?.effectivePatterns ?? [];
   }
   const strengthLabel = canonicalStrengthLabel(patterns);
 

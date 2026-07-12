@@ -29,6 +29,7 @@ import {
   previewPlanChangeRisk,
   type PlanChange,
 } from '../utils/planChangeProducer';
+import { createStrengthIntent } from '../rules/strengthPatternContributions';
 
 const TODAY = '2026-07-01'; // Wednesday
 const MON = '2026-06-29';
@@ -85,6 +86,14 @@ function ex(name: string, id: string, sets = 3): any {
 }
 
 function strengthWorkout(id: string, name: string, dayOfWeek: number): Workout {
+  const isPush = /upper push/i.test(name);
+  const isPull = /upper pull/i.test(name);
+  const patterns = isPush ? ['push'] as const : isPull ? ['pull'] as const : ['squat', 'hinge'] as const;
+  const rows = isPush
+    ? [ex('Bench Press', `${id}-push`, 3), ex('Tricep Pushdown', `${id}-tricep`, 2)]
+    : isPull
+      ? [ex('Pull Up', `${id}-pull`, 3), ex('Chest Supported Row', `${id}-row`, 3)]
+      : [ex('Back Squat', `${id}-squat`, 4), ex('Romanian Deadlift', `${id}-hinge`, 2)];
   return {
     id,
     microcycleId: 'mc',
@@ -95,7 +104,12 @@ function strengthWorkout(id: string, name: string, dayOfWeek: number): Workout {
     intensity: 'Moderate',
     workoutType: 'Strength',
     sessionTier: 'core',
-    exercises: [ex('Back Squat', `${id}-squat`, 4), ex('Pull Up', `${id}-pull`, 3)],
+    strengthIntent: createStrengthIntent({
+      archetype: isPush || isPull ? 'upper' : 'lower',
+      primaryPattern: patterns[0],
+      plannedPatterns: patterns,
+    }),
+    exercises: rows,
     createdAt: '',
     updatedAt: '',
   } as Workout;
@@ -136,6 +150,7 @@ function gameWorkout(dayOfWeek: number): Workout {
   return {
     ...strengthWorkout('workout-game', 'Game Day', dayOfWeek),
     workoutType: 'Game',
+    strengthIntent: undefined,
     exercises: [],
   } as Workout;
 }
@@ -144,6 +159,7 @@ function practiceMatchWorkout(dayOfWeek: number): Workout {
   return {
     ...strengthWorkout('workout-practice-match', 'Practice Match', dayOfWeek),
     workoutType: 'Practice Match' as any,
+    strengthIntent: undefined,
     exercises: [],
   } as Workout;
 }

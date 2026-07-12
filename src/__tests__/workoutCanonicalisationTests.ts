@@ -296,7 +296,9 @@ section('[7] stable plan identity moves with the workout, never the weekday');
     planEntryId: 'missing-plan-entry',
   }, { phase: 'Pre-season', planIntentValid: false });
   ok('stale plan identity is cleared rather than weekday-remapped',
-    !stale.workout.planEntryId && !stale.workout.strengthPatternContributions);
+    !stale.workout.planEntryId);
+  eq('stale legacy workout is re-owned once from meaningful content',
+    stale.workout.strengthIntent?.effectivePatterns, ['push']);
   ok('stale-plan diagnostic is explicit', stale.actions.some((action) =>
     action.reason === 'plan_entry_absent_or_stale'));
 }
