@@ -242,6 +242,8 @@ const tuesday = workoutOn('Tuesday');
 const friday = workoutOn('Friday');
 const saturday = workoutOn('Saturday');
 
+// Broad smoke coverage; exact cross-stage ledgers live under Bible rules
+// ALL-COMP-MIXED-01 and ALL-COMP-TEAM-01 in `npm run test:bible`.
 ok('Lower Hinge retains meaningful lower strength rows', strengthNames(tuesday).length >= 3, strengthNames(tuesday));
 ok('Lower Hinge retains a separate conditioning block', !!tuesday.conditioningBlock?.options.length);
 eq('Lower Hinge is structurally Mixed despite wrong edge enum', tuesday.workoutType, 'Mixed' as any);

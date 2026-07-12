@@ -26,7 +26,12 @@ export function renderConformanceFailure(failure: InvariantFailure): string {
   if (extra) lines.push(extra);
   if (failure.planEntryId) lines.push(`ENTRY     ${failure.planEntryId}${failure.day ? ` (${failure.day})` : ''}`);
   else if (failure.day) lines.push(`DAY       ${failure.day}`);
+  if (failure.weekComponents) lines.push(`WEEK      ${compact(failure.weekComponents)}`);
+  if (failure.detailComponents) lines.push(`DETAIL    ${compact(failure.detailComponents)}`);
+  if (failure.row) lines.push(`ROW       ${failure.row}`);
   lines.push(`PATH      ${failure.path}`);
-  if (failure.detail) lines.push(`DETAIL    ${failure.detail}`);
+  if (failure.detail) {
+    lines.push(`${failure.detailComponents ? 'NOTE      ' : 'DETAIL    '}${failure.detail}`);
+  }
   return lines.join('\n');
 }

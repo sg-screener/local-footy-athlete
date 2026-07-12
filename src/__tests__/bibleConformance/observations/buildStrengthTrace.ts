@@ -32,6 +32,9 @@ import {
 import { deriveVisibleWorkoutIdentity } from '../../../utils/visibleWorkoutIdentity';
 import type {
   ObservedStrengthSession,
+  ComponentGoldenScenario,
+  ComponentScenarioTrace,
+  HarnessSessionComponent,
   StrengthArchetype,
   StrengthGoldenScenario,
   StrengthPattern,
@@ -50,6 +53,23 @@ const DAY_NUMBERS: Record<string, number> = {
   Saturday: 6,
 };
 const PATTERN_ORDER: StrengthPattern[] = ['squat', 'hinge', 'push', 'pull'];
+const COMPONENT_ORDER: HarnessSessionComponent[] = [
+  'strength',
+  'conditioning',
+  'team_training',
+  'power',
+  'trunk_support',
+  'recovery',
+];
+
+export interface StrengthTraceBuildOptions {
+  transformGeneratedWeek?: (args: {
+    workouts: Workout[];
+    profile: OnboardingData;
+    plan: CoachingPlan;
+    state: ProgramBlockState;
+  }) => Workout[];
+}
 
 function canonicalPatterns(patterns: readonly string[] | undefined): StrengthPattern[] {
   const values = new Set(patterns ?? []);
@@ -60,6 +80,28 @@ function rowNames(rows: readonly any[]): string[] {
   return rows
     .map((row) => String(row?.exercise?.name ?? row?.name ?? '').trim())
     .filter(Boolean);
+}
+
+function harnessComponents(rawKinds: readonly string[]): HarnessSessionComponent[] {
+  const mapped = new Set<HarnessSessionComponent>();
+  for (const kind of rawKinds) {
+    if (kind === 'strength') mapped.add('strength');
+    else if (kind === 'conditioning' || kind === 'finisher') mapped.add('conditioning');
+    else if (kind === 'team_training') mapped.add('team_training');
+    else if (kind === 'power') mapped.add('power');
+    else if (kind === 'support') mapped.add('trunk_support');
+    else if (kind === 'recovery' || kind === 'recovery_addon') mapped.add('recovery');
+  }
+  return COMPONENT_ORDER.filter((component) => mapped.has(component));
+}
+
+function allocationComponents(session: SessionAllocation): HarnessSessionComponent[] {
+  const components: HarnessSessionComponent[] = [];
+  if ((session.strengthIntent?.plannedPatterns.length ?? 0) > 0) components.push('strength');
+  if (session.hasCombinedConditioning || session.conditioningCategory) components.push('conditioning');
+  if (session.isTeamDay) components.push('team_training');
+  if (session.powerBlock) components.push('power');
+  return COMPONENT_ORDER.filter((component) => components.includes(component));
 }
 
 function dateForDay(weekStart: string, day: string): string {
@@ -93,11 +135,14 @@ function allocationSnapshot(
     ...contractFields(session),
     tier: session.tier,
     workoutType: null,
-    components: [],
+    components: allocationComponents(session),
+    rawComponentKinds: [],
     exerciseNames: [],
     strengthRowNames: [],
     conditioningRowNames: [],
     supportRowNames: [],
+    teamTrainingRowNames: [],
+    recoveryAddonNames: [],
     visibleItemDomains: [],
     visibleTitle: null,
     visibleSubtitle: null,
@@ -115,6 +160,7 @@ function workoutSnapshot(args: {
 }): ObservedStrengthSession {
   const rows = getSessionComponentRows(args.workout);
   const identity = deriveVisibleWorkoutIdentity(args.workout);
+  const rawComponentKinds = getSessionComponents(args.workout).map((component) => component.kind);
   return {
     stage: args.stage,
     weekNumber: args.state.weekNumber,
@@ -125,11 +171,15 @@ function workoutSnapshot(args: {
     ...contractFields(args.workout),
     tier: args.workout.sessionTier ?? null,
     workoutType: args.workout.workoutType,
-    components: getSessionComponents(args.workout).map((component) => component.kind),
+    components: harnessComponents(rawComponentKinds),
+    rawComponentKinds,
     exerciseNames: rowNames(args.workout.exercises ?? []),
     strengthRowNames: rowNames(rows.strengthRows),
     conditioningRowNames: rowNames(rows.conditioningRows),
     supportRowNames: rowNames(rows.supportRows),
+    teamTrainingRowNames: rowNames(rows.teamTrainingRows),
+    recoveryAddonNames: (args.workout.recoveryAddons ?? []).flatMap((addon) =>
+      addon.exercises.map((exercise) => exercise.name)),
     visibleItemDomains: args.includeVisibleItems
       ? extractVisibleProgramItemsFromWorkout(args.workout).map((item) => item.domain)
       : [],
@@ -211,6 +261,7 @@ function scheduleState(args: {
 /** Build the four-stage trace using only exported production return values. */
 export function buildStrengthScenarioTrace(
   scenario: StrengthGoldenScenario,
+  options: StrengthTraceBuildOptions = {},
 ): StrengthScenarioTrace {
   const startedAt = performance.now();
   if (scenario.timezone !== 'Australia/Melbourne') {
@@ -244,7 +295,7 @@ export function buildStrengthScenarioTrace(
     mutateAllocationFocus(scenario, plan);
     plans.push(plan);
     const microcycleId = `bible:${scenario.id}:w${state.weekNumber}`;
-    const workouts = buildWorkoutsFromCoach(
+    let workouts = buildWorkoutsFromCoach(
       [],
       microcycleId,
       plan.weeklyPlan,
@@ -258,6 +309,9 @@ export function buildStrengthScenarioTrace(
       },
       { availableEquipment: equipment },
     );
+    if (options.transformGeneratedWeek) {
+      workouts = options.transformGeneratedWeek({ workouts, profile, plan, state });
+    }
     mutateWorkoutName(scenario, workouts);
     const focusByPlanEntryId = new Map(
       plan.weeklyPlan.map((session) => [session.planEntryId ?? '', session.focus]),
@@ -358,6 +412,122 @@ export function buildStrengthScenarioTrace(
       generated_fallback: generatedFallback,
       visible_week: visibleWeek,
       visible_detail: visibleDetail,
+    },
+    runtimeMs: performance.now() - startedAt,
+  };
+}
+
+/**
+ * Direct canonical-fixture boundary for component cases that normal scheduling
+ * intentionally removes (for example an in-season G-1 Gunshow). The fixture
+ * still travels through the real weekly and detail projection paths.
+ */
+export function buildSingleWorkoutFixtureTrace(args: {
+  scenario: ComponentGoldenScenario;
+  allocation: SessionAllocation;
+  workout: Workout;
+}): ComponentScenarioTrace {
+  const startedAt = performance.now();
+  const { scenario, allocation: allocationInput, workout } = args;
+  const profile = scenario.profile as OnboardingData;
+  const date = new Date(`${scenario.referenceDate}T12:00:00`);
+  const { blockStart, blockEnd } = computeBlockBounds(date);
+  const state = buildBlockWeekStates({
+    blockStartISO: blockStart,
+    blockNumber: 1,
+    seasonPhase: profile.seasonPhase,
+  })[0];
+  const plan = buildCoachingPlan({
+    ...onboardingToCoachingInputs(profile, { availabilityDateISO: scenario.referenceDate }),
+    miniCycleNumber: state.miniCycleNumber,
+    weekInBlock: state.weekInBlock,
+    weekNumber: state.weekNumber,
+    weekKind: state.weekKind,
+  });
+  const microcycle: Microcycle = {
+    id: workout.microcycleId,
+    programId: `bible:${scenario.id}`,
+    weekNumber: 1,
+    startDate: `${state.weekStart}T12:00:00`,
+    endDate: `${state.weekEnd}T12:00:00`,
+    miniCycleNumber: state.miniCycleNumber,
+    weekKind: state.weekKind,
+    intensityMultiplier: state.intensityMultiplier,
+    workouts: [workout],
+    createdAt: `${scenario.referenceDate}T00:00:00`,
+    updatedAt: `${scenario.referenceDate}T00:00:00`,
+  };
+  const program: TrainingProgram = {
+    id: `bible:${scenario.id}`,
+    userId: 'bible-harness',
+    name: scenario.description,
+    description: scenario.description,
+    programPhase: profile.seasonPhase ?? 'In-Season',
+    startDate: `${blockStart}T12:00:00`,
+    endDate: `${blockEnd}T12:00:00`,
+    microcycles: [microcycle],
+    primaryFocus: 'Bible component conformance',
+    isActive: true,
+    createdAt: `${scenario.referenceDate}T00:00:00`,
+    updatedAt: `${scenario.referenceDate}T00:00:00`,
+  };
+  const stateInput = scheduleState({
+    profile,
+    program,
+    microcycle,
+    plan,
+    blockStart,
+    referenceDate: scenario.referenceDate,
+  });
+  const focusByPlanEntryId = new Map([[allocationInput.planEntryId ?? '', allocationInput.focus]]);
+  const generated = workoutSnapshot({
+    stage: 'generated_fallback',
+    workout,
+    state,
+    focusByPlanEntryId,
+  });
+  const weeklyDay = buildProgramTabProjectedWeek({
+    mondayISO: state.weekStart,
+    todayISO: scenario.referenceDate,
+    state: stateInput,
+    overrideContexts: {},
+    modalityPreferences: {},
+  }).find((day) => day.workout?.planEntryId === workout.planEntryId);
+  const detailDay = buildDayWorkoutProjectedDay({
+    date: dateForDay(state.weekStart, scenario.target.day),
+    todayISO: scenario.referenceDate,
+    state: stateInput,
+    overrideContext: undefined,
+    modalityPreferences: {},
+  });
+  const weekly = weeklyDay?.workout
+    ? [workoutSnapshot({
+        stage: 'visible_week',
+        workout: weeklyDay.workout,
+        state,
+        date: weeklyDay.date,
+        focusByPlanEntryId,
+        includeVisibleItems: true,
+      })]
+    : [];
+  const detail = detailDay.workout?.planEntryId === workout.planEntryId
+    ? [workoutSnapshot({
+        stage: 'visible_detail',
+        workout: detailDay.workout,
+        state,
+        date: detailDay.date,
+        focusByPlanEntryId,
+        includeVisibleItems: true,
+      })]
+    : [];
+
+  return {
+    scenario,
+    sessions: {
+      allocation: [allocationSnapshot(allocationInput, state)],
+      generated_fallback: [generated],
+      visible_week: weekly,
+      visible_detail: detail,
     },
     runtimeMs: performance.now() - startedAt,
   };

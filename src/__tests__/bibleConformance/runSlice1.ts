@@ -5,16 +5,29 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { STRENGTH_BIBLE_RULES } from './expectations/strengthRules';
+import { COMPONENT_BIBLE_RULES } from './expectations/componentRules';
 import { verifyExpectationImportBoundary } from './expectations/importBoundaryTests';
 import { STRENGTH_GOLDEN_SCENARIOS } from './scenarios/strengthGoldens';
+import { COMPONENT_GOLDEN_SCENARIOS } from './scenarios/componentGoldens';
 import { buildStrengthScenarioTrace } from './observations/buildStrengthTrace';
+import { buildComponentScenarioTrace } from './observations/buildComponentTrace';
 import {
   evaluateStrengthTrace,
   STRENGTH_INVARIANT_IDS,
 } from './invariants/strengthIntentInvariants';
+import {
+  COMPONENT_INVARIANT_IDS,
+  evaluateComponentTrace,
+} from './invariants/sessionComponentInvariants';
 import { renderConformanceFailure } from './report/renderConformanceFailure';
 import { runMutationAcceptanceTest } from './mutationAcceptanceTests';
+import {
+  COMPONENT_MUTATION_IDS,
+  runComponentMutationAcceptanceTests,
+} from './componentMutationAcceptanceTests';
 import type {
+  ComponentGoldenScenario,
+  ComponentScenarioTrace,
   InvariantFailure,
   StrengthGoldenScenario,
   StrengthScenarioTrace,
@@ -48,6 +61,17 @@ function verifyRuleRegistry(repoRoot: string): void {
     }
     if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
   }
+  if (COMPONENT_BIBLE_RULES.length !== 7) {
+    fail(`Expected exactly seven Slice 2 component rules, found ${COMPONENT_BIBLE_RULES.length}`);
+  }
+  const componentIds = new Set(COMPONENT_BIBLE_RULES.map((rule) => rule.id));
+  if (componentIds.size !== COMPONENT_BIBLE_RULES.length) fail('Component Bible rule IDs must be unique');
+  for (const rule of COMPONENT_BIBLE_RULES) {
+    if (!bible.includes(rule.anchorQuote)) {
+      fail(`${rule.id} anchor quote is no longer present in the Programming Bible`);
+    }
+    if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
+  }
 }
 
 function verifyFailureRenderer(): void {
@@ -72,11 +96,31 @@ function verifyFailureRenderer(): void {
   for (const fragment of required) {
     if (!report.includes(fragment)) fail(`Failure renderer omitted: ${fragment}`);
   }
+  const componentReport = renderConformanceFailure({
+    invariantId: 'INV_WEEK_DETAIL_COMPONENT_AGREEMENT',
+    ruleId: 'ALL-COMP-PROJECTION-01',
+    scenarioId: 'mixed-strength-aerobic',
+    stage: 'visible_detail',
+    expected: ['strength', 'conditioning'],
+    actual: ['strength'],
+    missing: ['conditioning'],
+    extra: [],
+    path: 'visible program projection',
+    planEntryId: 'pe_monday_lower',
+    weekComponents: ['strength', 'conditioning'],
+    detailComponents: ['strength'],
+  });
+  for (const fragment of [
+    'RULE      ALL-COMP-PROJECTION-01',
+    'ENTRY     pe_monday_lower',
+    'WEEK      [strength, conditioning]',
+    'DETAIL    [strength]',
+  ]) {
+    if (!componentReport.includes(fragment)) fail(`Component failure renderer omitted: ${fragment}`);
+  }
 }
 
-function buildTraceWithoutRoutineProductionLogs(
-  scenario: StrengthGoldenScenario,
-): StrengthScenarioTrace {
+function withoutRoutineProductionLogs<T>(build: () => T): T {
   const originalLog = console.log;
   const originalWarn = console.warn;
   const filtered = (sink: typeof console.log) => (...args: unknown[]) => {
@@ -87,11 +131,23 @@ function buildTraceWithoutRoutineProductionLogs(
   console.log = filtered(originalLog);
   console.warn = filtered(originalWarn);
   try {
-    return buildStrengthScenarioTrace(scenario);
+    return build();
   } finally {
     console.log = originalLog;
     console.warn = originalWarn;
   }
+}
+
+function buildTraceWithoutRoutineProductionLogs(
+  scenario: StrengthGoldenScenario,
+): StrengthScenarioTrace {
+  return withoutRoutineProductionLogs(() => buildStrengthScenarioTrace(scenario));
+}
+
+function buildComponentTraceWithoutRoutineProductionLogs(
+  scenario: ComponentGoldenScenario,
+): ComponentScenarioTrace {
+  return withoutRoutineProductionLogs(() => buildComponentScenarioTrace(scenario));
 }
 
 function stageRank(stage: StrengthTraceStage): number {
@@ -103,7 +159,7 @@ function main(): void {
   const repoRoot = path.resolve(__dirname, '../../..');
   const expectationsDir = path.join(__dirname, 'expectations');
 
-  console.log('Bible conformance harness — Slice 1 strength intent');
+  console.log('Bible conformance harness — Slices 1–2 strength and session components');
   console.log('Reference date: 2026-03-23 | Timezone: Australia/Melbourne');
 
   const boundary = verifyExpectationImportBoundary(expectationsDir);
@@ -114,12 +170,19 @@ function main(): void {
   if (STRENGTH_GOLDEN_SCENARIOS.length !== 3) {
     fail(`Expected exactly three strength goldens, found ${STRENGTH_GOLDEN_SCENARIOS.length}`);
   }
+  if (COMPONENT_GOLDEN_SCENARIOS.length !== 5) {
+    fail(`Expected exactly five component goldens, found ${COMPONENT_GOLDEN_SCENARIOS.length}`);
+  }
 
   const allFailures: InvariantFailure[] = [];
-  const appliedInvariantIds = new Set<string>();
-  let invariantApplicationPasses = 0;
-  let invariantApplications = 0;
-  let scenarioPasses = 0;
+  const strengthAppliedInvariantIds = new Set<string>();
+  const componentAppliedInvariantIds = new Set<string>();
+  let strengthInvariantApplicationPasses = 0;
+  let strengthInvariantApplications = 0;
+  let componentInvariantApplicationPasses = 0;
+  let componentInvariantApplications = 0;
+  let strengthScenarioPasses = 0;
+  let componentScenarioPasses = 0;
 
   for (const scenario of STRENGTH_GOLDEN_SCENARIOS) {
     if (scenario.referenceDate !== '2026-03-23' || scenario.timezone !== 'Australia/Melbourne') {
@@ -130,20 +193,44 @@ function main(): void {
     const failures = results.flatMap((result) => result.failures);
     for (const result of results) {
       if (!result.applied) continue;
-      appliedInvariantIds.add(result.invariantId);
-      invariantApplications++;
-      if (result.failures.length === 0) invariantApplicationPasses++;
+      strengthAppliedInvariantIds.add(result.invariantId);
+      strengthInvariantApplications++;
+      if (result.failures.length === 0) strengthInvariantApplicationPasses++;
     }
     allFailures.push(...failures);
-    if (failures.length === 0) scenarioPasses++;
+    if (failures.length === 0) strengthScenarioPasses++;
+    console.log(`  ${failures.length === 0 ? 'PASS' : 'FAIL'} ${scenario.id} (${trace.runtimeMs.toFixed(1)}ms)`);
+  }
+
+  for (const scenario of COMPONENT_GOLDEN_SCENARIOS) {
+    if (scenario.referenceDate !== '2026-03-23' || scenario.timezone !== 'Australia/Melbourne') {
+      fail(`${scenario.id} must own the fixed Slice 2 date and timezone`);
+    }
+    const trace = buildComponentTraceWithoutRoutineProductionLogs(scenario);
+    const results = evaluateComponentTrace(trace);
+    const failures = results.flatMap((result) => result.failures);
+    for (const entry of results) {
+      if (!entry.applied) continue;
+      componentAppliedInvariantIds.add(entry.invariantId);
+      componentInvariantApplications++;
+      if (entry.failures.length === 0) componentInvariantApplicationPasses++;
+    }
+    allFailures.push(...failures);
+    if (failures.length === 0) componentScenarioPasses++;
     console.log(`  ${failures.length === 0 ? 'PASS' : 'FAIL'} ${scenario.id} (${trace.runtimeMs.toFixed(1)}ms)`);
   }
 
   const missingInvariantImplementations = STRENGTH_INVARIANT_IDS.filter(
-    (id) => !appliedInvariantIds.has(id),
+    (id) => !strengthAppliedInvariantIds.has(id),
   );
   if (missingInvariantImplementations.length > 0) {
     fail(`Invariant(s) never applied: ${missingInvariantImplementations.join(', ')}`);
+  }
+  const missingComponentInvariantImplementations = COMPONENT_INVARIANT_IDS.filter(
+    (id) => !componentAppliedInvariantIds.has(id),
+  );
+  if (missingComponentInvariantImplementations.length > 0) {
+    fail(`Component invariant(s) never applied: ${missingComponentInvariantImplementations.join(', ')}`);
   }
 
   const coveredRules = new Set(STRENGTH_BIBLE_RULES.flatMap((rule) =>
@@ -151,11 +238,19 @@ function main(): void {
       STRENGTH_GOLDEN_SCENARIOS.some((scenario) => scenario.id === scenarioId),
     ).length > 0 ? [rule.id] : [],
   ));
+  const coveredComponentRules = new Set(COMPONENT_BIBLE_RULES.flatMap((rule) =>
+    rule.applicableScenarios.some((scenarioId) =>
+      COMPONENT_GOLDEN_SCENARIOS.some((scenario) => scenario.id === scenarioId)) ? [rule.id] : [],
+  ));
   const failedRules = new Set(allFailures.map((failure) => failure.ruleId));
-  const rulePasses = Array.from(coveredRules).filter((ruleId) => !failedRules.has(ruleId)).length;
+  const strengthRulePasses = Array.from(coveredRules).filter((ruleId) => !failedRules.has(ruleId)).length;
+  const componentRulePasses = Array.from(coveredComponentRules).filter((ruleId) => !failedRules.has(ruleId)).length;
   const failedInvariants = new Set(allFailures.map((failure) => failure.invariantId));
-  const invariantPasses = STRENGTH_INVARIANT_IDS.filter(
-    (invariantId) => appliedInvariantIds.has(invariantId) && !failedInvariants.has(invariantId),
+  const strengthInvariantPasses = STRENGTH_INVARIANT_IDS.filter(
+    (invariantId) => strengthAppliedInvariantIds.has(invariantId) && !failedInvariants.has(invariantId),
+  ).length;
+  const componentInvariantPasses = COMPONENT_INVARIANT_IDS.filter(
+    (invariantId) => componentAppliedInvariantIds.has(invariantId) && !failedInvariants.has(invariantId),
   ).length;
 
   if (allFailures.length > 0) {
@@ -167,35 +262,53 @@ function main(): void {
     }
   }
 
-  let mutationKills = 0;
-  let mutationReport = '';
+  let strengthMutationKills = 0;
+  let componentMutationKills = 0;
+  let strengthMutationReport = '';
+  let componentMutationReports: string[] = [];
   if (allFailures.length === 0) {
     const mutation = runMutationAcceptanceTest();
-    mutationKills = mutation.killed ? 1 : 0;
-    mutationReport = mutation.report;
+    strengthMutationKills = mutation.killed ? 1 : 0;
+    strengthMutationReport = mutation.report;
     console.log('  PASS mutation composite-lower-single-winner killed at allocation');
+    const componentMutations = runComponentMutationAcceptanceTests();
+    componentMutationKills = componentMutations.filter((entry) => entry.killed).length;
+    componentMutationReports = componentMutations.map((entry) => entry.report);
+    for (const entry of componentMutations) {
+      console.log(`  PASS mutation ${entry.mutationId} killed at ${entry.firstDivergenceStage}`);
+    }
   }
 
   const totalMs = performance.now() - startedAt;
+  const scenarioPasses = strengthScenarioPasses + componentScenarioPasses;
+  const scenarioTotal = STRENGTH_GOLDEN_SCENARIOS.length + COMPONENT_GOLDEN_SCENARIOS.length;
+  const rulePasses = strengthRulePasses + componentRulePasses;
+  const ruleTotal = STRENGTH_BIBLE_RULES.length + COMPONENT_BIBLE_RULES.length;
+  const mutationKills = strengthMutationKills + componentMutationKills;
+  const mutationTotal = 1 + COMPONENT_MUTATION_IDS.length;
   console.log('\nSummary');
-  console.log(`  Scenarios:  ${scenarioPasses}/${STRENGTH_GOLDEN_SCENARIOS.length}`);
-  console.log(`  Rules:      ${rulePasses}/${STRENGTH_BIBLE_RULES.length}`);
-  console.log(`  Invariants: ${invariantPasses}/${STRENGTH_INVARIANT_IDS.length} (${invariantApplicationPasses}/${invariantApplications} applications)`);
-  console.log(`  Mutations:  ${mutationKills}/1 killed`);
+  console.log(`  Scenarios:         ${scenarioPasses}/${scenarioTotal} (strength ${strengthScenarioPasses}/${STRENGTH_GOLDEN_SCENARIOS.length}, component ${componentScenarioPasses}/${COMPONENT_GOLDEN_SCENARIOS.length})`);
+  console.log(`  Rules:             ${rulePasses}/${ruleTotal}`);
+  console.log(`  Strength rules:    ${strengthRulePasses}/${STRENGTH_BIBLE_RULES.length}`);
+  console.log(`  Component rules:   ${componentRulePasses}/${COMPONENT_BIBLE_RULES.length}`);
+  console.log(`  Strength invariants:  ${strengthInvariantPasses}/${STRENGTH_INVARIANT_IDS.length} (${strengthInvariantApplicationPasses}/${strengthInvariantApplications} applications)`);
+  console.log(`  Component invariants: ${componentInvariantPasses}/${COMPONENT_INVARIANT_IDS.length} (${componentInvariantApplicationPasses}/${componentInvariantApplications} applications)`);
+  console.log(`  Mutations:         ${mutationKills}/${mutationTotal} killed`);
   console.log(`  Boundary:   ${boundary.checkedFiles.length} expectation file(s), 0 forbidden imports`);
   console.log(`  Runtime:    ${totalMs.toFixed(1)}ms (target <${TARGET_RUNTIME_MS}ms)`);
 
-  if (mutationReport) {
-    console.log('\nMutation first-divergence proof');
-    console.log(mutationReport);
+  if (strengthMutationReport) {
+    console.log('\nMutation first-divergence proofs');
+    console.log(strengthMutationReport);
+    for (const report of componentMutationReports) console.log(`\n${report}`);
   }
   if (totalMs > WARNING_RUNTIME_MS) {
-    console.warn(`Bible Slice 1 runtime warning: ${totalMs.toFixed(1)}ms exceeds ${WARNING_RUNTIME_MS}ms`);
+    console.warn(`Bible harness runtime warning: ${totalMs.toFixed(1)}ms exceeds ${WARNING_RUNTIME_MS}ms`);
   }
   if (totalMs > HARD_RUNTIME_MS) {
-    fail(`Bible Slice 1 runtime ${totalMs.toFixed(1)}ms exceeds hard ceiling ${HARD_RUNTIME_MS}ms`);
+    fail(`Bible harness runtime ${totalMs.toFixed(1)}ms exceeds hard ceiling ${HARD_RUNTIME_MS}ms`);
   }
-  if (allFailures.length > 0 || mutationKills !== 1) process.exit(1);
+  if (allFailures.length > 0 || mutationKills !== mutationTotal) process.exit(1);
 }
 
 try {
