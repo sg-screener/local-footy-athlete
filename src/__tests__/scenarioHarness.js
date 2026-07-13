@@ -60,6 +60,9 @@ function makeWorkout(opts) {
     intensity: opts.intensity || 'High',
     workoutType: opts.workoutType || 'Strength',
     sessionTier: opts.sessionTier || 'core',
+    planEntryId: opts.planEntryId,
+    strengthIntent: opts.strengthIntent,
+    strengthPatternContributions: opts.strengthPatternContributions,
     exercises: opts.exercises || [],
     createdAt: now,
     updatedAt: now,
@@ -736,7 +739,21 @@ const GOLDEN_SCENARIOS = [
         templateWorkouts: [
           makeWorkout({ dayOfWeek: 1, name: 'Upper Pull', sessionTier: 'core', intensity: 'High' }),
           makeWorkout({ dayOfWeek: 3, name: 'Upper Push', sessionTier: 'core', intensity: 'Moderate' }),
-          makeWorkout({ dayOfWeek: 4, name: 'Lower Strength', sessionTier: 'core', intensity: 'High' }),
+          makeWorkout({
+            dayOfWeek: 4,
+            name: 'Lower Strength',
+            sessionTier: 'core',
+            intensity: 'High',
+            planEntryId: 'golden:g2:lower',
+            strengthIntent: {
+              archetype: 'lower',
+              primaryPattern: 'squat',
+              plannedPatterns: ['squat', 'hinge'],
+              effectivePatterns: ['squat', 'hinge'],
+            },
+            strengthPatternContributions: ['squat', 'hinge'],
+            exercises: makeExercisesForFocus('Lower Strength', 4),
+          }),
           makeWorkout({ dayOfWeek: 6, name: 'Game Day', workoutType: 'Game', sessionTier: 'core', intensity: 'High' }),
         ],
       });

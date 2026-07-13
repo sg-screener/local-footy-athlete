@@ -1,13 +1,12 @@
 /**
  * Fatigue Stacking Guard Tests
  *
- * Verifies that the pre-game fatigue-stacking guard in
- * resolveWeekWithConditioning correctly detects and resolves
- * G-1 / G-2 upper-body conflicts.
+ * Verifies that the pre-game fatigue guard protects G-1 while retaining
+ * Bible-supported controlled upper-body work at G-2.
  *
  * Key scenario: Game on Sunday → G-1 = Saturday (Gunshow)
- *   If Friday (G-2) is Upper Pull/Push, the guard should downgrade
- *   Friday to Prehab & Accessories to avoid back-to-back upper stress.
+ *   Friday (G-2) upper work may remain: the Bible explicitly treats upper
+ *   body there as medium stress while prohibiting heavy lower/speed extras.
  */
 
 // ─── Imports ───
@@ -98,7 +97,7 @@ function dayByDow(week, dow) {
 }
 
 // ─── Test 1: Game on Sunday — G-1 is Saturday, G-2 is Friday (Upper Pull) ───
-console.log('\n=== Test 1: Game moved to Sunday — Friday Upper Pull should be downgraded ===');
+console.log('\n=== Test 1: Game moved to Sunday — controlled Friday Upper Pull may remain ===');
 {
   // Game moved from Saturday to Sunday:
   // Template still has Game on Saturday (dow=6), but calendar mark is on Sunday
@@ -126,14 +125,10 @@ console.log('\n=== Test 1: Game moved to Sunday — Friday Upper Pull should be 
     `Saturday (G-1) should be Gunshow (got ${sat.workout?.name})`
   );
 
-  // Friday (G-2) should NOT be upper-body — should be downgraded to Prehab
+  // Friday (G-2) controlled upper work is Bible-supported.
   assert(
-    fri.workout?.name !== 'Upper Pull',
-    `Friday (G-2) should not remain Upper Pull (got ${fri.workout?.name})`
-  );
-  assert(
-    fri.workout?.name === 'Prehab & Accessories',
-    `Friday (G-2) should be Prehab & Accessories (got ${fri.workout?.name})`
+    fri.workout?.name === 'Upper Pull',
+    `Friday (G-2) controlled Upper Pull should remain (got ${fri.workout?.name})`
   );
 }
 
@@ -182,8 +177,8 @@ console.log('\n=== Test 2: Normal Saturday game — Friday (G-1) Arms, Thursday 
   );
 }
 
-// ─── Test 3: Game on Saturday — G-2 is Upper Push ───
-console.log('\n=== Test 3: Saturday game, Thursday Upper Push (G-2) should be downgraded ===');
+// ─── Test 3: Game on Saturday — controlled G-2 Upper Push may remain ───
+console.log('\n=== Test 3: Saturday game, controlled Thursday Upper Push may remain ===');
 {
   const state = makeState({
     markedDays: {
@@ -214,10 +209,10 @@ console.log('\n=== Test 3: Saturday game, Thursday Upper Push (G-2) should be do
     `Friday (G-1) should be Gunshow (got ${fri.workout?.name})`
   );
 
-  // Thursday (G-2) is Upper Push B — upper conflict with Gunshow, should downgrade
+  // G-2 upper work is medium/light and may sit alongside the normal club load.
   assert(
-    thu.workout?.name === 'Prehab & Accessories',
-    `Thursday (G-2) Upper Push B should be downgraded to Prehab (got ${thu.workout?.name})`
+    thu.workout?.name === 'Upper Push B',
+    `Thursday (G-2) controlled Upper Push B should remain (got ${thu.workout?.name})`
   );
 }
 
@@ -280,8 +275,8 @@ console.log('\n=== Test 5: Game on Sunday, Friday is Lower Body — no conflict 
   );
 }
 
-// ─── Test 6: Shoulder day on G-2 should be downgraded ───
-console.log('\n=== Test 6: Shoulder session on G-2 conflicts with Gunshow on G-1 ===');
+// ─── Test 6: Controlled shoulder day on G-2 may remain ───
+console.log('\n=== Test 6: Controlled shoulder session on G-2 may remain ===');
 {
   const state = makeState({
     markedDays: {
@@ -303,8 +298,8 @@ console.log('\n=== Test 6: Shoulder session on G-2 conflicts with Gunshow on G-1
   console.log(`  FRI: ${fri.source} → ${fri.workout?.name}`);
 
   assert(
-    fri.workout?.name === 'Prehab & Accessories',
-    `Friday "Shoulders & Press" should be downgraded to Prehab (got ${fri.workout?.name})`
+    fri.workout?.name === 'Shoulders & Press',
+    `Friday G-2 controlled shoulders should remain (got ${fri.workout?.name})`
   );
 }
 

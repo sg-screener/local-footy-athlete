@@ -29,6 +29,9 @@ export function renderConformanceFailure(failure: InvariantFailure): string {
   if (failure.weekComponents) lines.push(`WEEK      ${compact(failure.weekComponents)}`);
   if (failure.detailComponents) lines.push(`DETAIL    ${compact(failure.detailComponents)}`);
   if (failure.row) lines.push(`ROW       ${failure.row}`);
+  if (failure.evidence) {
+    lines.push(`EVIDENCE  ${failure.evidence.length > 0 ? failure.evidence.join(', ') : 'none'}`);
+  }
   lines.push(`PATH      ${failure.path}`);
   if (failure.detail) {
     lines.push(`${failure.detailComponents ? 'NOTE      ' : 'DETAIL    '}${failure.detail}`);
