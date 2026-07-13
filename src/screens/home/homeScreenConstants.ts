@@ -67,25 +67,17 @@ export const NEXT_PHASE: Record<SeasonPhase, SeasonPhase> = {
   'Pre-season': 'In-season',
 };
 
-type ConditioningLabelWorkout = Pick<
-  Workout,
-  | 'hasCombinedConditioning'
-  | 'conditioningFlavour'
-  | 'coachAddedConditioningLabel'
-  | 'conditioningBlock'
->;
+type ConditioningLabelWorkout = Partial<Workout>;
 
 export function getConditioningContextLabel(
   workout: ConditioningLabelWorkout | null | undefined,
 ): string | null {
-  if (!workout?.hasCombinedConditioning) return null;
-  // Weekly plan speaks in categories (Sam's taxonomy, 2026-07-04): the
-  // combined-day context reads "+ Hard Conditioning", not the session
-  // name. The real session shows inside the day. Single owner:
-  // weeklyPlanDisplay.
+  if (!workout) return null;
+  // Structure/purpose identity and dose have one owner. Placement remains a
+  // card concern: attached labels receive "+"; standalone doses do not.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { combinedConditioningCategoryLabel } = require('../../utils/weeklyPlanDisplay');
-  return combinedConditioningCategoryLabel(workout);
+  const { weeklyPlanContextLabel } = require('../../utils/weeklyPlanDisplay');
+  return weeklyPlanContextLabel(workout);
 }
 
 function normaliseDisplayLabel(label: string | null | undefined): string {

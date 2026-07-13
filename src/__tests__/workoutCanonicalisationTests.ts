@@ -123,7 +123,7 @@ section('[1] raw conditioning becomes a canonical component');
     rows.conditioningRows.length === 1 && rows.strengthRows.length === 1, rows);
   eq('strength plus promoted conditioning becomes Mixed', result.workout.workoutType, 'Mixed' as any);
   ok('weekly identity exposes aerobic conditioning',
-    combinedConditioningCategoryLabel(result.workout) === 'Aerobic Base');
+    combinedConditioningCategoryLabel(result.workout) === 'Continuous Aerobic');
   ok('promoted conditioning has no kilogram prescription',
     rows.conditioningRows.every((item) => !item.prescribedWeightKg));
   ok('diagnostics explain the promotion', result.actions.some((action) =>
@@ -229,7 +229,7 @@ section('[5] final components own type and modality-honest title');
   ok('remaining conditioning stays visible and load-free',
     getSessionComponentRows(withoutStrength.workout).conditioningRows.length === 1 &&
       !getSessionComponentRows(withoutStrength.workout).conditioningRows[0].prescribedWeightKg);
-  eq('stale Tempo Running name becomes actual Bike Tempo', withoutStrength.workout.name, 'Bike Tempo');
+  eq('stale Tempo Running name becomes structure-based tempo identity', withoutStrength.workout.name, 'Tempo Intervals');
 }
 
 section('[6] deterministic plan intent rejects main drift but permits minor balance');

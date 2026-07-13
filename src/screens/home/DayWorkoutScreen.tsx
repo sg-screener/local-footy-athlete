@@ -32,6 +32,7 @@ import {
   formatConditioningRowPrescription,
 } from './dayWorkoutHelpers';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
+import { deriveVisibleWorkoutIdentity } from '../../utils/visibleWorkoutIdentity';
 import type { RecoveryAddonBlock } from '../../types/domain';
 
 // ── Design-version flag ──
@@ -119,6 +120,7 @@ function DayWorkoutScreenClassic() {
       </SafeAreaView>
     );
   }
+  const visibleWorkoutTitle = deriveVisibleWorkoutIdentity(workout).title;
 
   // Render helper — keeps main and flush sub-blocks using identical row
   // markup so the only differences are title + description at the card level.
@@ -164,7 +166,7 @@ function DayWorkoutScreenClassic() {
          */}
         <View style={styles.headerContent}>
           <Text variant="h2" color={colors.text.primary} style={styles.headerTitle}>
-            {workout.name}
+            {visibleWorkoutTitle}
           </Text>
           {(() => {
             // Team-only days never show an exercise count — the session

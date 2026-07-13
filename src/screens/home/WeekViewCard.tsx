@@ -12,6 +12,7 @@ import { Text } from '../../components/common/Text';
 import type { Workout } from '../../types/domain';
 import { splitSessionName } from '../../utils/sessionNaming';
 import { getConditioningContextLabel } from './homeScreenConstants';
+import { weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
 
 import { format } from 'date-fns';
 
@@ -25,6 +26,8 @@ import { format } from 'date-fns';
  * status. For everything else we pass the canonical name through.
  */
 function getShortLabel(workout: Workout): string {
+  const projected = weeklyPlanTitle(workout);
+  if (projected) return projected;
   const name = (workout.name || '').trim();
   if (!name) return workout.workoutType || 'Workout';
   const { title, context } = splitSessionName(name);
@@ -102,7 +105,7 @@ export const WeekViewCard = ({ weekWorkouts, onDayPress }: WeekViewCardProps) =>
                       style={styles.conditioningLabel}
                       numberOfLines={1}
                     >
-                      + {conditioningContext}
+                      {day.workout.hasCombinedConditioning || day.workout.conditioningBlock?.attachedKind ? '+ ' : ''}{conditioningContext}
                     </Text>
                   </View>
                 );

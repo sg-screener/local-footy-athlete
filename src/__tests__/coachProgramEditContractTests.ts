@@ -1483,9 +1483,9 @@ const programScreenVisible = getResolvedVisibleProgramForDate({
   modalityPreferences: {},
 });
 const programScreenConditioningItems = programScreenVisible.conditioningItems;
-eq('program screen resolver sees Wednesday Easy Aerobic Flush',
+eq('program screen resolver sees Wednesday Aerobic Flush identity',
   programScreenVisible.day.workout?.name,
-  'Easy Aerobic Flush');
+  'Aerobic Flush');
 eq('program screen resolver sees exactly one visible conditioning item',
   programScreenConditioningItems.length,
   1);

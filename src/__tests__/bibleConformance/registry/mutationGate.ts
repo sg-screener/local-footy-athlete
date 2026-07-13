@@ -2,6 +2,7 @@ import { runMutationAcceptanceTest } from '../mutationAcceptanceTests';
 import { runComponentMutationAcceptanceTests } from '../componentMutationAcceptanceTests';
 import { runSlice3MutationAcceptanceTests } from '../slice3MutationAcceptanceTests';
 import { runSlice4MutationAcceptanceTests } from '../slice4MutationAcceptanceTests';
+import { runConditioningIdentityMutationAcceptanceTests } from '../conditioningIdentityMutationAcceptanceTests';
 import { SMOKE_MUTATIONS, verifyMutationCatalogue } from './mutationCatalogue';
 import type { MutationGateResult } from '../types';
 
@@ -27,6 +28,7 @@ export function runSmokeMutationGate(): MutationGateResult[] {
     id: entry.mutationId, active: entry.mutationActive, killed: entry.killed, restored: entry.restored,
     invariantId: entry.invariantId, firstStage: entry.firstDivergenceStage, report: entry.report,
   })));
+  results.push(...runConditioningIdentityMutationAcceptanceTests());
   const expected = SMOKE_MUTATIONS.map((entry) => entry.id).sort();
   const actual = results.map((entry) => entry.id).sort();
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {

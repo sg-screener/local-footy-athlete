@@ -19,6 +19,7 @@ import {
   normalizeTeamTrainingWorkoutForDisplay,
 } from '../../utils/teamTraining';
 import { getSessionComponentRows } from '../../utils/sessionComponents';
+import { projectConditioningVisibleIdentity } from '../../utils/conditioningVisibleIdentity';
 
 // Enable LayoutAnimation on Android (idempotent — safe to call multiple times).
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -393,6 +394,7 @@ export function useDayWorkout() {
     const isCombinedDay =
       !!workout.hasCombinedConditioning && !isConditioning && !isRecovery;
     const condBlock = workout.conditioningBlock;
+    const conditioningIdentity = projectConditioningVisibleIdentity(workout);
     const componentRows = getSessionComponentRows(workout);
     const strengthExercises = componentRows.strengthRows;
     const supportExercises = componentRows.supportRows;
@@ -404,7 +406,7 @@ export function useDayWorkout() {
       conditioningOptions = condBlock.options.map((opt: any) => {
         const optIds = new Set<string>(opt.exerciseIds);
         return {
-          title: opt.title,
+          title: conditioningIdentity?.attachedLabel ?? opt.title,
           description: opt.description,
           rows: conditioningExercises.filter((ex: any) => optIds.has(ex.id)),
         };
@@ -418,7 +420,7 @@ export function useDayWorkout() {
         'Conditioning';
       conditioningOptions = [
         {
-          title: legacyTitle,
+          title: conditioningIdentity?.attachedLabel ?? legacyTitle,
           description: '',
           rows: conditioningExercises,
         },

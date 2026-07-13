@@ -1,237 +1,113 @@
 /**
- * weeklyPlanDisplay — SINGLE owner of what a day is CALLED on the weekly
- * plan (Sam's taxonomy, signed off 2026-07-04).
- *
- * The weekly plan speaks in categories; the session screen speaks in
- * specifics. "Erg EMOM — 10-15 cal" is what you DO (inside the session);
- * "Hard Conditioning" is what your week LOOKS like (the plan row).
- *
- * Weekly labels:
- *   Strength      — Full Body Strength, Upper/Lower Body Strength,
- *                   Upper Push, Upper Pull, Lower Squat, Lower Hinge
- *                   (canonical names pass through unchanged)
- *   Accessories   — Prehab & Accessories renders as "Accessories";
- *                   Gunshow keeps its name (it earned it)
- *   Fixed days    — Game Day, Team Training, Rest (unchanged)
- *   Recovery      — any recovery-tier session renders as "Recovery"
- *   Conditioning  — one of four categories:
- *     Aerobic Base       easy engine building (nasal runs, zone 2, easy
- *                        erg/swim work)
- *     Flush Out          rejuvenation only (flush-out intervals, easy
- *                        aerobic flush)
- *     Sprint Work        quality speed, tiny volume, never fatigued
- *     Hard Conditioning  VO2 / lactate / work capacity — the stuff that
- *                        genuinely hurts
- *
- * Combined days keep the "<Strength title> + <conditioning category>"
- * pattern (context label handled by getConditioningContextLabel, whose
- * flavour map aligns with these categories).
+ * Weekly plan display owns placement; conditioningVisibleIdentity owns every
+ * canonical conditioning label and dose.
  */
 
-import type { Workout, WorkoutType } from '../types/domain';
-import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
-import { hasConditioningText, splitSessionName } from './sessionNaming';
-import { getTemplateCategory } from './sessionBuilder';
+import type { Workout } from '../types/domain';
+import {
+  projectConditioningVisibleIdentity,
+  type ConditioningVisibleIdentity,
+} from './conditioningVisibleIdentity';
+import { splitSessionName } from './sessionNaming';
 
-export type ConditioningDisplayCategory =
-  | 'Aerobic Base'
-  | 'Flush Out'
-  | 'Sprint Work'
-  | 'Hard Conditioning';
+export type ConditioningDisplayCategory = ConditioningVisibleIdentity['primaryLabel'];
 
-interface WeeklyDisplayWorkout {
+export type WeeklyDisplayWorkout = Partial<Workout> & {
   name?: string | null;
   workoutType?: string | null;
   sessionTier?: string | null;
-  hasCombinedConditioning?: boolean;
-  conditioningFlavour?: string | null;
-  conditioningCategory?: string | null;
-  exercises?: Array<{ exercise?: { name?: string } | null } | null> | null;
+};
+
+function legacyConditioningText(workout: WeeklyDisplayWorkout): string {
+  return [
+    workout.name,
+    workout.description,
+    ...(workout.exercises ?? []).flatMap((row: any) => [
+      row?.exercise?.name,
+      row?.exercise?.description,
+      row?.notes,
+    ]),
+  ].filter(Boolean).join(' ');
 }
 
-// Flush Out is a weekly-plan presentation distinction inside the kernel's
-// aerobic_base category, not a separate Bible exposure classification.
-const FLUSH_OUT = /flush\s*out|easy aerobic flush/i;
-// Old work-capacity cards can lack the typed conditioningCategory that new
-// templates carry. Feed that one legacy display signal into the adapter.
-const LEGACY_WORK_CAPACITY = /\bemom\b|work.?capacity/i;
-
-function conditioningTextFor(workout: WeeklyDisplayWorkout): string {
-  const names = (workout.exercises ?? [])
-    .map((row) => row?.exercise?.name ?? '')
-    .filter(Boolean);
-  return [workout.name ?? '', ...names].join(' ');
-}
-
-function templateCategoryFor(
-  workout: WeeklyDisplayWorkout,
-): Workout['conditioningCategory'] | undefined {
-  const names = [
-    workout.name ?? '',
-    ...(workout.exercises ?? []).map((row) => row?.exercise?.name ?? ''),
-  ].filter(Boolean);
-  for (const name of names) {
-    const category = getTemplateCategory(name);
-    if (category) return category;
+/** Controlled display-only fallback for genuinely legacy, untyped records. */
+function legacyConditioningLabel(workout: WeeklyDisplayWorkout): ConditioningDisplayCategory {
+  const text = legacyConditioningText(workout);
+  if (/\b(?:sprint|speed|flying)\b/i.test(text)) return 'Speed Conditioning';
+  if (/\b(?:vo2|glycolytic|tabata|mas|hard|all[-\s]?out|work.?capacity|emom)\b/i.test(text)) {
+    return 'Hard Intervals';
   }
-  return undefined;
-}
-
-function asVisibleWorkout(
-  input: WeeklyDisplayWorkout,
-  assumeConditioning: boolean,
-): Workout {
-  const name = String(input.name ?? '').trim() || 'Conditioning';
-  const text = conditioningTextFor(input);
-  const typedCategory = input.conditioningCategory as Workout['conditioningCategory'] | undefined;
-  const conditioningCategory =
-    typedCategory ??
-    templateCategoryFor(input) ??
-    (LEGACY_WORK_CAPACITY.test(text) ? 'glycolytic' : undefined);
-  const hasConditioningSignal =
-    assumeConditioning ||
-    !!conditioningCategory ||
-    !!input.conditioningFlavour ||
-    hasConditioningText(text);
-  const typedStandaloneConditioning =
-    !input.hasCombinedConditioning &&
-    (!!conditioningCategory || !!input.conditioningFlavour);
-  const workoutType = (
-    input.sessionTier === 'recovery' || input.workoutType === 'Recovery'
-      ? 'Recovery'
-      : typedStandaloneConditioning
-        ? 'Conditioning'
-        : input.workoutType ?? (hasConditioningSignal ? 'Conditioning' : 'Strength')
-  ) as WorkoutType;
-  const hardConditioning =
-    conditioningCategory === 'vo2' ||
-    conditioningCategory === 'glycolytic' ||
-    conditioningCategory === 'sprint';
-
-  return {
-    id: 'weekly-plan-display-classification',
-    microcycleId: 'weekly-plan-display-classification',
-    dayOfWeek: 1,
-    name,
-    description: name,
-    durationMinutes: 30,
-    intensity: hardConditioning ? 'High' : input.sessionTier === 'recovery' ? 'Light' : 'Moderate',
-    workoutType,
-    sessionTier: input.sessionTier as Workout['sessionTier'],
-    hasCombinedConditioning: input.hasCombinedConditioning,
-    conditioningFlavour: input.conditioningFlavour as Workout['conditioningFlavour'],
-    conditioningCategory,
-    exercises: (input.exercises ?? []).filter(Boolean) as Workout['exercises'],
-    createdAt: '',
-    updatedAt: '',
-  };
-}
-
-function conditioningClassification(
-  workout: WeeklyDisplayWorkout,
-  assumeConditioning: boolean,
-) {
-  const visibleWorkout = asVisibleWorkout(workout, assumeConditioning);
-  const hasStructuredClassification =
-    !!workout.conditioningCategory ||
-    !!workout.conditioningFlavour ||
-    !!templateCategoryFor(workout) ||
-    LEGACY_WORK_CAPACITY.test(conditioningTextFor(workout));
-  if (hasStructuredClassification) {
-    return classifyVisibleSession(visibleWorkout);
+  if (/\btempo\b/i.test(text)) return 'Tempo Intervals';
+  if (/\b(?:aerobic\s+flush|flush(?:\s+out)?)\b/i.test(text)) return 'Aerobic Flush';
+  if (/\brecovery\b/i.test(text)) return 'Recovery Conditioning';
+  const repeated = text.match(/\b(\d+)\s*(?:x|×)\s*\(?\s*(\d+(?:\.\d+)?)\s*(?:min|minute|sec|second|s)\b/i);
+  if (repeated) {
+    const duration = Number(repeated[2]);
+    const seconds = /(?:sec|second|s)\b/i.test(repeated[0]) && !/min|minute/i.test(repeated[0])
+      ? duration
+      : duration * 60;
+    return seconds >= 180 ? 'Long Aerobic Intervals' : 'Short Aerobic Intervals';
   }
-
-  // Legacy display inputs can have only a descriptive name plus the generic
-  // Conditioning type. Probe the name through the kernel before its generic
-  // intensity fallback; typed fields above always take priority.
-  const nameClassification = classifyVisibleSession({
-    ...visibleWorkout,
-    workoutType: 'Technical',
-    conditioningCategory: undefined,
-    conditioningFlavour: undefined,
-  });
-  if (nameClassification.units.some((unit) =>
-    unit.category === 'aerobic_base' ||
-    unit.category === 'tempo_conditioning' ||
-    unit.category === 'hard_conditioning' ||
-    unit.category === 'sprint'
-  )) {
-    return nameClassification;
-  }
-  return classifyVisibleSession(visibleWorkout);
+  if (/\b\d+(?:\.\d+)?\s*(?:min|minute)s?\b/i.test(text)) return 'Continuous Aerobic';
+  return 'Aerobic Conditioning';
 }
 
-/** Category for a conditioning-family workout, from its name + exercise
- *  names (registry + generation share these), the engine's internal
- *  energy-system classification as backstop, then intensity. */
+/** Canonical structure/purpose identity, with a legacy fallback only when no typed owner exists. */
 export function classifyConditioningWorkout(
   workout: WeeklyDisplayWorkout,
 ): ConditioningDisplayCategory {
-  const text = conditioningTextFor(workout);
-
-  if (FLUSH_OUT.test(text)) return 'Flush Out';
-  const categories = conditioningClassification(workout, true).categories;
-  if (categories.includes('sprint')) return 'Sprint Work';
-  if (categories.includes('hard_conditioning')) return 'Hard Conditioning';
-
-  return 'Aerobic Base';
+  return projectConditioningVisibleIdentity(workout as Partial<Workout>)?.primaryLabel ??
+    legacyConditioningLabel(workout);
 }
 
-/** Is this a STANDALONE conditioning day (not combined, not recovery)? */
-function isStandaloneConditioning(workout: WeeklyDisplayWorkout): boolean {
-  if (workout.hasCombinedConditioning) return false;
-  if (workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery') return false;
-  return conditioningClassification(workout, false).units.some((unit) =>
-    unit.category === 'aerobic_base' ||
-    unit.category === 'tempo_conditioning' ||
-    unit.category === 'hard_conditioning' ||
-    unit.category === 'sprint'
-  );
+export function conditioningIdentityForWeeklyPlan(
+  workout: WeeklyDisplayWorkout | null | undefined,
+): ConditioningVisibleIdentity | null {
+  if (!workout) return null;
+  return projectConditioningVisibleIdentity(workout as Partial<Workout>);
 }
 
-/**
- * Category label for the conditioning HALF of a combined day — the
- * "+ Hard Conditioning" context under a strength title. Classifies from
- * the conditioning block's option titles (the real sessions), falling
- * back to the flavour for legacy combined days.
- */
+/** Structure label for the conditioning half of an attached session. */
 export function combinedConditioningCategoryLabel(
-  workout: WeeklyDisplayWorkout & {
-    conditioningBlock?: {
-      options?: Array<{ title?: string; description?: string }>;
-    } | null;
-    coachAddedConditioningLabel?: string | null;
-  },
+  workout: WeeklyDisplayWorkout,
 ): ConditioningDisplayCategory | null {
-  if (!workout?.hasCombinedConditioning) return null;
-  const optionText = (workout.conditioningBlock?.options ?? [])
-    .map((option) => `${option.title ?? ''} ${option.description ?? ''}`)
-    .join(' ');
-  const text = `${workout.coachAddedConditioningLabel ?? ''} ${optionText}`.trim();
-  return classifyConditioningWorkout({
-    name: text || workout.conditioningFlavour || 'aerobic',
-  });
+  if (!workout?.hasCombinedConditioning && !workout?.conditioningBlock?.attachedKind) return null;
+  return projectConditioningVisibleIdentity(workout as Partial<Workout>)?.attachedLabel ??
+    legacyConditioningLabel(workout);
 }
 
-/**
- * The title a workout shows on the WEEKLY PLAN. Strength splits, games
- * and team days pass through canonically; recovery-tier days read
- * "Recovery"; standalone conditioning reads as its category; the prehab
- * day reads "Accessories". The session screen keeps the real name.
- */
+function isStandaloneConditioning(workout: WeeklyDisplayWorkout): boolean {
+  if (workout.hasCombinedConditioning || workout.conditioningBlock?.attachedKind) return false;
+  return !!projectConditioningVisibleIdentity(workout as Partial<Workout>) ||
+    /\b(?:conditioning|aerobic|tempo|interval|sprint|run|flush)\b/i.test(
+      `${workout.workoutType ?? ''} ${workout.name ?? ''}`,
+    );
+}
+
+/** Primary title shown on the weekly plan. */
 export function weeklyPlanTitle(workout: WeeklyDisplayWorkout): string {
   const name = String(workout.name ?? '').trim();
   if (!name) return '';
 
-  const isRecovery =
-    workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery';
-  if (isRecovery) return 'Recovery';
+  const identity = projectConditioningVisibleIdentity(workout as Partial<Workout>);
+  if (identity && isStandaloneConditioning(workout)) return identity.primaryLabel;
 
+  const isRecovery = workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery';
+  if (isRecovery) return 'Recovery';
   if (name === 'Prehab & Accessories') return 'Accessories';
 
-  if (isStandaloneConditioning(workout)) {
-    return classifyConditioningWorkout(workout);
-  }
-
+  if (isStandaloneConditioning(workout)) return legacyConditioningLabel(workout);
   return splitSessionName(name).title || name;
+}
+
+/** Secondary weekly line: attached family, or standalone canonical dose. */
+export function weeklyPlanContextLabel(
+  workout: WeeklyDisplayWorkout | null | undefined,
+): string | null {
+  if (!workout) return null;
+  const identity = projectConditioningVisibleIdentity(workout as Partial<Workout>);
+  if (workout.hasCombinedConditioning || workout.conditioningBlock?.attachedKind) {
+    return identity?.attachedLabel ?? legacyConditioningLabel(workout);
+  }
+  return identity?.doseLabel ?? null;
 }

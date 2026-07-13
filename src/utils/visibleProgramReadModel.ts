@@ -18,6 +18,7 @@ import {
 } from './coachModalitySwap';
 import type { ConditioningModality } from '../data/exerciseTags';
 import { getTeamTrainingWorkoutState } from './teamTraining';
+import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
 
 export type VisibleProgramItemDomain =
   | 'conditioning'
@@ -28,6 +29,9 @@ export type VisibleProgramItemDomain =
 export interface VisibleProgramItem {
   id: string;
   title: string;
+  /** Session-level conditioning identity; item title remains targetable prescription copy. */
+  structureLabel?: string;
+  doseLabel?: string;
   domain: VisibleProgramItemDomain;
   modality: ConditioningModality | null;
   durationMinutes: number | null;
@@ -214,6 +218,7 @@ export function extractVisibleProgramItemsFromWorkout(
     workoutType === 'Speed' ||
     workoutType === 'HIIT' ||
     /(?:flush|sprint|interval|run|metcon|conditioning|tempo|mas)/i.test(workoutType);
+  const conditioningIdentity = projectConditioningVisibleIdentity(workout as any);
 
   const addItem = (item: VisibleProgramItem) => {
     const key = `${item.domain}:${item.id}`;
@@ -246,6 +251,8 @@ export function extractVisibleProgramItemsFromWorkout(
     addItem({
       id: exerciseIds[0] ?? `conditioning-option:${normaliseVisibleItemKey(title)}`,
       title,
+      structureLabel: conditioningIdentity?.primaryLabel,
+      doseLabel: conditioningIdentity?.doseLabel,
       domain: isRecovery && !isStackedConditioningTemplate ? 'recovery' : 'conditioning',
       modality: inferModalityFromName(text),
       durationMinutes: extractVisibleDurationMinutes(text, linkedExercises),

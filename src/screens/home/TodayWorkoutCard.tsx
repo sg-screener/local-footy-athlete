@@ -17,6 +17,7 @@ import { splitSessionName as splitWorkoutName } from '../../utils/sessionNaming'
 import { getConditioningContextLabel } from './homeScreenConstants';
 import { getTeamTrainingWorkoutState } from '../../utils/teamTraining';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
+import { weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
 
 interface TodayWorkoutCardProps {
   workout: Workout;
@@ -94,7 +95,7 @@ export const TodayWorkoutCard = ({
             />
             {conditioningContext && (
               <Badge
-                label={`+ ${conditioningContext}`}
+                label={`${workout.hasCombinedConditioning || workout.conditioningBlock?.attachedKind ? '+ ' : ''}${conditioningContext}`}
                 color={colors.intensity.moderate}
                 size="sm"
               />
@@ -109,7 +110,7 @@ export const TodayWorkoutCard = ({
 
         {/* Workout title */}
         <Text variant="h3" style={styles.title}>
-          {splitWorkoutName(workout.name).title}
+          {weeklyPlanTitle(workout)}
         </Text>
         {splitWorkoutName(workout.name).context && (
           <Text style={styles.titleContext}>

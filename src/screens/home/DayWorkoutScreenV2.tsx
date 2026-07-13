@@ -59,6 +59,7 @@ import {
   formatConditioningRowPrescription,
 } from './dayWorkoutHelpers';
 import { isTeamTrainingItem } from '../../utils/teamTraining';
+import { deriveVisibleWorkoutIdentity } from '../../utils/visibleWorkoutIdentity';
 
 type EditableExercise = {
   key: string;
@@ -897,6 +898,7 @@ export default function DayWorkoutScreenV2() {
       </SafeAreaView>
     );
   }
+  const visibleWorkoutTitle = deriveVisibleWorkoutIdentity(workout).title;
 
   // Header subtitle — "Recovery", "Upper Push", "Upper Push + Conditioning", etc.
   const subtitleText = isRecovery
@@ -959,9 +961,9 @@ export default function DayWorkoutScreenV2() {
             style={styles.headerTitle}
             numberOfLines={2}
             testID="day-workout-title"
-            accessibilityLabel={`Workout: ${workout.name}`}
+            accessibilityLabel={`Workout: ${visibleWorkoutTitle}`}
           >
-            {workout.name}
+            {visibleWorkoutTitle}
           </Text>
           {/*
             DayWorkout smoke contract markers — mounted in the EXACT
@@ -1029,7 +1031,7 @@ export default function DayWorkoutScreenV2() {
             exercise removed/replaced/focus list is hidden by default. */}
         <CoachNoteBanner
           notes={workout.coachNotes ?? []}
-          workoutName={workout.name}
+          workoutName={visibleWorkoutTitle}
           workoutType={workout.workoutType}
         />
 

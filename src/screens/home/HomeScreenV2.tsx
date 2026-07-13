@@ -1059,7 +1059,11 @@ function DayRow({
     title,
     hasWorkout ? getConditioningContextLabel(day.workout) : null,
   );
-  const contextLabel = ctx ?? (conditioningContext ? `+ ${conditioningContext}` : null);
+  const hasAttachedConditioning = !!day.workout?.hasCombinedConditioning ||
+    !!day.workout?.conditioningBlock?.attachedKind;
+  const contextLabel = ctx ?? (conditioningContext
+    ? `${hasAttachedConditioning ? '+ ' : ''}${conditioningContext}`
+    : null);
   const isAttachedContextLine = contextLabel?.startsWith('+ ') ?? false;
   const titleIcon = titleIconKind({ hasWorkout, isGame, title, workout: day.workout });
   const contextIcon = contextIconKind(contextLabel);

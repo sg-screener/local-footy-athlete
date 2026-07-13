@@ -20,6 +20,7 @@ import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { splitSessionName } from '../../utils/sessionNaming';
 import { visibleWorkoutItemCountLabel } from '../../utils/visibleProgramReadModel';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
+import { weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
 import type { DesignVersion } from '../../store/uiStore';
 import HomeScreenV2 from './HomeScreenV2';
 import { useHomeScreen } from './useHomeScreen';
@@ -277,7 +278,7 @@ function HomeScreenClassic() {
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
-                        {splitWorkoutName(day.workout!.name).title}
+                        {weeklyPlanTitle(day.workout!)}
                       </Text>
                       {/* Paired line: ALWAYS prefer the context suffix from the
                           resolved workout.name (e.g. "+ Team Training", "+ Conditioning")
@@ -312,7 +313,7 @@ function HomeScreenClassic() {
                               style={styles.combinedCondLabel}
                               numberOfLines={1}
                             >
-                              + {conditioningContext}
+                              {day.workout!.hasCombinedConditioning || day.workout!.conditioningBlock?.attachedKind ? '+ ' : ''}{conditioningContext}
                             </Text>
                           );
                         }

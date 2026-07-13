@@ -11,7 +11,7 @@ import { evaluateGeneratedPropertyCase } from './observations/evaluateGeneratedP
 import { evaluateMetamorphicSuite } from './observations/evaluateMetamorphicRelations';
 import { verifyShrinkerAcceptance, shrinkGeneratedFailure } from './shrink/deterministicShrinker';
 import { runSlice5MutationAcceptanceTests } from './slice5MutationAcceptanceTests';
-import { verifyMutationCatalogue, MUTATION_CATALOGUE } from './registry/mutationCatalogue';
+import { verifyMutationCatalogue, MUTATION_CATALOGUE, SMOKE_MUTATIONS } from './registry/mutationCatalogue';
 import { verifyExpectationImportBoundary } from './expectations/importBoundaryTests';
 import { buildCoverageReport } from './registry/coverageRegistry';
 import { writeCoverageArtifacts } from './report/generateCoverageReport';
@@ -146,7 +146,7 @@ function main(): void {
 
   const mutationStarted = performance.now();
   const newMutations = options.mutations === 'full' ? runSlice5MutationAcceptanceTests() : [];
-  const acceptedMutationCount = options.mutations === 'none' ? 0 : 33;
+  const acceptedMutationCount = options.mutations === 'none' ? 0 : SMOKE_MUTATIONS.length;
   const mutationDenominator = options.mutations === 'full' ? MUTATION_CATALOGUE.length : acceptedMutationCount;
   console.log(`  PASS mutations ${acceptedMutationCount + newMutations.length}/${mutationDenominator} active and killed (${(performance.now() - mutationStarted).toFixed(1)}ms)`);
 

@@ -429,7 +429,7 @@ section('[14] Conditioning-only Wednesday row uses final conditioning identity')
   ok('DayWorkout subtitle source is Conditioning', dayWed.workout?.workoutType === 'Conditioning');
 }
 
-section('[15] Easy Aerobic Flush stays the visible title, not generic Aerobic Base');
+section('[15] Aerobic Flush stays the visible purpose, not a generic aerobic fallback');
 {
   const wed = '2026-05-06';
   const flush = wk('Easy Aerobic Flush (25min Rower)', 3, [
@@ -453,8 +453,8 @@ section('[15] Easy Aerobic Flush stays the visible title, not generic Aerobic Ba
     state,
   });
 
-  eq('Program tab title keeps recovery-biased identity', programWed?.workout?.name, 'Easy Aerobic Flush');
-  eq('DayWorkout title matches Program tab', dayWed.workout?.name, 'Easy Aerobic Flush');
+  eq('Program tab title keeps flush identity', programWed?.workout?.name, 'Aerobic Flush');
+  eq('DayWorkout title matches Program tab', dayWed.workout?.name, 'Aerobic Flush');
   ok('title is not generic Aerobic Base', programWed?.workout?.name !== 'Aerobic Base');
 }
 
@@ -629,6 +629,7 @@ section('[17] Strength removed from mixed session re-derives conditioning displa
 {
   const mon = '2026-07-06';
   const bike = ex('25min zone 2 bike');
+  bike.prescribedSets = 1;
   const staleMixedShell = wk('Lower Body Strength', 1, [bike], {
     workoutType: 'Strength',
     hasCombinedConditioning: true,
@@ -650,14 +651,15 @@ section('[17] Strength removed from mixed session re-derives conditioning displa
   });
   const directItems = extractVisibleProgramItemsFromWorkout(direct.day.workout);
   ok('direct projection keeps conditioning visible',
-    directItems.some((item) => item.domain === 'conditioning' && /flush|bike|zone\s*2/i.test(item.title)),
+    directItems.some((item) =>
+      item.domain === 'conditioning' && item.structureLabel === 'Continuous Aerobic'),
     JSON.stringify(directItems));
   ok('direct projection removes visible strength section',
     !directItems.some((item) => item.domain === 'strength'),
     JSON.stringify(directItems));
   eq('direct projection does not keep stale strength title',
     direct.day.workout?.name,
-    'Easy Aerobic Flush');
+    'Continuous Aerobic');
   eq('direct projection changes detail branch to Conditioning',
     direct.day.workout?.workoutType,
     'Conditioning' as any);
@@ -683,7 +685,7 @@ section('[17] Strength removed from mixed session re-derives conditioning displa
     detailMon.workout?.name);
   eq('Program tab no longer shows Lower Body Strength',
     programMon?.workout?.name,
-    'Easy Aerobic Flush');
+    'Continuous Aerobic');
   eq('detail projection uses conditioning branch, not empty Strength branch',
     detailMon.workout?.workoutType,
     'Conditioning' as any);
@@ -732,7 +734,7 @@ section('[18] Conditioning removed from mixed session clears stale conditioning 
     JSON.stringify(directItems));
 }
 
-section('[19] Tempo titles follow the rendered modality, not stale running metadata');
+section('[19] Tempo purpose stays stable while detail rows retain modality');
 {
   function projectedTempoTitle(rowNames: string | string[]): string | undefined {
     const rows = (Array.isArray(rowNames) ? rowNames : [rowNames]).map(ex);
@@ -755,13 +757,13 @@ section('[19] Tempo titles follow the rendered modality, not stale running metad
     }).day.workout?.name;
   }
 
-  eq('bike tempo is titled Bike Tempo', projectedTempoTitle('Bike Tempo Intervals'), 'Bike Tempo');
-  eq('RowErg tempo is titled RowErg Tempo', projectedTempoTitle('RowErg Tempo Intervals'), 'RowErg Tempo');
-  eq('SkiErg tempo is titled SkiErg Tempo', projectedTempoTitle('SkiErg Tempo Intervals'), 'SkiErg Tempo');
-  eq('mixed bike + row tempo is titled Off-Feet Tempo',
+  eq('bike tempo uses purpose identity', projectedTempoTitle('Bike Tempo Intervals'), 'Tempo Intervals');
+  eq('RowErg tempo uses purpose identity', projectedTempoTitle('RowErg Tempo Intervals'), 'Tempo Intervals');
+  eq('SkiErg tempo uses purpose identity', projectedTempoTitle('SkiErg Tempo Intervals'), 'Tempo Intervals');
+  eq('mixed bike + row tempo uses the same purpose identity',
     projectedTempoTitle(['Bike Tempo Intervals', 'RowErg Aerobic Flush']),
-    'Off-Feet Tempo');
-  eq('real running tempo remains Tempo Running', projectedTempoTitle('Tempo Run'), 'Tempo Running');
+    'Tempo Intervals');
+  eq('real running tempo shares the weekly purpose identity', projectedTempoTitle('Tempo Run'), 'Tempo Intervals');
 }
 
 // ─── Summary ───

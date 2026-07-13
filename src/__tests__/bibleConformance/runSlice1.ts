@@ -93,8 +93,8 @@ function verifyRuleRegistry(repoRoot: string): void {
     }
     if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
   }
-  if (SLICE4_BIBLE_RULES.length !== 15) {
-    fail(`Expected exactly fifteen Slice 4 Bible/canonical rules, found ${SLICE4_BIBLE_RULES.length}`);
+  if (SLICE4_BIBLE_RULES.length !== 20) {
+    fail(`Expected exactly twenty Slice 4 Bible/canonical rules, found ${SLICE4_BIBLE_RULES.length}`);
   }
   const slice4Ids = new Set(SLICE4_BIBLE_RULES.map((rule) => rule.id));
   if (slice4Ids.size !== SLICE4_BIBLE_RULES.length) fail('Slice 4 rule IDs must be unique');

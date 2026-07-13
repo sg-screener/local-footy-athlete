@@ -430,9 +430,9 @@ section('[5] Edge-normalised mixed session keeps one honest visible identity');
     workout.name,
   );
   eq(
-    'attached conditioning stays a separate Aerobic Base subtitle',
+    'attached conditioning stays a separate structure subtitle',
     combinedConditioningCategoryLabel(workout),
-    'Aerobic Base',
+    'Long Aerobic Intervals',
   );
 }
 

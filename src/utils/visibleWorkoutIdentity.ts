@@ -1,5 +1,6 @@
 import type { Workout, WorkoutType } from '../types/domain';
 import { classifyExerciseExposures, type Exposure } from './exposureEngine';
+import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
 import { getSessionComponentRows } from './sessionComponents';
 
 export interface VisibleWorkoutIdentity {
@@ -148,59 +149,6 @@ export function isConditioningOnlyWorkout(workout: Workout): boolean {
   return hasConditioningExposure || hasConditioningType;
 }
 
-function titleFromConditioningWorkout(workout: Workout): string {
-  const blockTitle = workout.conditioningBlock?.options?.[0]?.title?.trim();
-
-  const primary = exerciseNames(workout).find((name) =>
-    !/warm[-\s]?up|cool[-\s]?down|cooldown/i.test(name),
-  ) ?? exerciseNames(workout)[0] ?? '';
-  const text = `${primary} ${workout.name} ${blockTitle ?? ''}`.trim();
-  const conditioningNames = getSessionComponentRows(workout).conditioningRows
-    .map((row) => String(row?.exercise?.name ?? '').trim())
-    .filter(Boolean);
-  const actualText = conditioningNames.join(' ');
-  const sawRunning = conditioningNames.some((name) => {
-    const exposures = classifyExerciseExposures(name);
-    return exposures.includes('running') ||
-      exposures.includes('sprint') ||
-      exposures.includes('high_speed_running');
-  });
-  const sawBike = /\b(?:bike|cycling|assault\s*bike|echo\s*bike|airbike)\b/i.test(actualText);
-  const sawRow = /\b(?:row|rower|rowing\s*erg|rowerg)\b/i.test(actualText);
-  const sawSki = /\b(?:ski|ski[-\s]?erg|skierg)\b/i.test(actualText);
-  const tempoIntent = workout.conditioningCategory === 'tempo' ||
-    workout.conditioningFlavour === 'tempo' ||
-    /\btempo\b/i.test(text);
-
-  // Modality evidence from rendered conditioning rows owns the tempo title.
-  // Stale names/types must never call an off-feet session "running".
-  if (tempoIntent) {
-    if (sawRunning) return 'Tempo Running';
-    const offFeetModes = [sawBike, sawRow, sawSki].filter(Boolean).length;
-    if (sawBike && offFeetModes === 1) return 'Bike Tempo';
-    if (sawRow && offFeetModes === 1) return 'RowErg Tempo';
-    if (sawSki && offFeetModes === 1) return 'SkiErg Tempo';
-    if (offFeetModes > 1) return 'Off-Feet Tempo';
-    return 'Tempo Conditioning';
-  }
-
-  if (blockTitle) return blockTitle;
-
-  if (/\bzone\s*2\b/i.test(text) && /\b(row|rower|rowing\s*erg)\b/i.test(text)) {
-    return 'Zone 2 Row';
-  }
-  if (/\bzone\s*2\b/i.test(text) && /\b(bike|cycling|assault\s*bike|echo\s*bike|airbike)\b/i.test(text)) {
-    return 'Zone 2 Bike';
-  }
-  if (/\beasy\s+aerobic\s+flush\b/i.test(text)) return 'Easy Aerobic Flush';
-  if (/\bzone\s*2\b/i.test(text)) return 'Zone 2 Conditioning';
-  if (/\baerobic\b/i.test(text)) return 'Aerobic Base';
-  if (/\binterval/i.test(text)) return 'Conditioning Intervals';
-  if (/\b(row|rower|rowing\s*erg)\b/i.test(text)) return 'Row Conditioning';
-  if (/\b(bike|cycling|assault\s*bike|echo\s*bike|airbike)\b/i.test(text)) return 'Bike Conditioning';
-  return 'Conditioning';
-}
-
 export function deriveVisibleWorkoutIdentity(workout: Workout): VisibleWorkoutIdentity {
   const isConditioningOnly = isConditioningOnlyWorkout(workout);
   if (!isConditioningOnly) {
@@ -210,9 +158,10 @@ export function deriveVisibleWorkoutIdentity(workout: Workout): VisibleWorkoutId
       isConditioningOnly: false,
     };
   }
+  const conditioningIdentity = projectConditioningVisibleIdentity(workout);
   return {
-    title: titleFromConditioningWorkout(workout),
-    subtitle: 'Conditioning',
+    title: conditioningIdentity?.primaryLabel ?? 'Aerobic Conditioning',
+    subtitle: conditioningIdentity?.doseLabel ?? 'Conditioning',
     isConditioningOnly: true,
   };
 }

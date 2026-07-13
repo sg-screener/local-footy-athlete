@@ -461,8 +461,10 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
   ok('weekly-card identity preserves strength title and surfaces aerobic context',
     /full body/i.test(monday.name) && /upper push/i.test(wednesday.name) &&
       /lower squat/i.test(fridayEarly.name) &&
-      [monday, wednesday, fridayEarly].every((workout) =>
-        combinedConditioningCategoryLabel(workout) === 'Aerobic Base'),
+      JSON.stringify([monday, wednesday, fridayEarly].map((workout) =>
+        combinedConditioningCategoryLabel(workout))) === JSON.stringify([
+          'Continuous Aerobic', 'Long Aerobic Intervals', 'Continuous Aerobic',
+        ]),
     [monday, wednesday, fridayEarly].map((workout) => ({
       name: workout.name,
       conditioning: combinedConditioningCategoryLabel(workout),

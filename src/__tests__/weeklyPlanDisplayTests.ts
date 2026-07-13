@@ -1,19 +1,10 @@
-/**
- * weeklyPlanDisplayTests — Sam's weekly-plan taxonomy (2026-07-04).
- *
- * The weekly plan speaks in categories; the session screen speaks in
- * specifics. This suite pins every session in the inventory to its
- * approved category so a renamed template or a new session can't
- * silently mislabel the week.
- *
- * Run: ./node_modules/.bin/sucrase-node src/__tests__/weeklyPlanDisplayTests.ts
- */
-
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 
+import type { Workout, WorkoutExercise } from '../types/domain';
 import {
   classifyConditioningWorkout,
   combinedConditioningCategoryLabel,
+  weeklyPlanContextLabel,
   weeklyPlanTitle,
 } from '../utils/weeklyPlanDisplay';
 
@@ -28,108 +19,158 @@ function eq(name: string, actual: unknown, expected: unknown) {
   } else {
     fail++;
     failures.push(name);
-    console.log(`  FAIL ${name}`);
-    console.log(`       expected ${JSON.stringify(expected)} got ${JSON.stringify(actual)}`);
+    console.log(`  FAIL ${name}: expected ${JSON.stringify(expected)} got ${JSON.stringify(actual)}`);
   }
 }
 
-const conditioning = (name: string, workoutType = 'Conditioning') =>
-  ({ name, workoutType }) as any;
+function row(name: string, order: number, sets = 1, restSeconds = 0): WorkoutExercise {
+  return {
+    id: `row-${order}`,
+    workoutId: 'display',
+    exerciseId: `exercise-${order}`,
+    exerciseOrder: order,
+    prescribedSets: sets,
+    prescribedRepsMin: 1,
+    prescribedRepsMax: 1,
+    restSeconds,
+    exercise: {
+      id: `exercise-${order}`,
+      name,
+      description: name,
+      muscleGroups: [],
+      exerciseType: 'Cardio',
+      equipmentRequired: [],
+      difficultyLevel: 'Intermediate',
+      createdAt: '',
+      updatedAt: '',
+    },
+    createdAt: '',
+    updatedAt: '',
+  };
+}
+
+function conditioning(
+  workName: string,
+  overrides: Partial<Workout> = {},
+): Workout {
+  const rows = overrides.exercises ?? [row(workName, 1)];
+  return {
+    id: 'display',
+    microcycleId: 'display-mc',
+    dayOfWeek: 2,
+    name: 'Generic conditioning template',
+    description: '',
+    durationMinutes: 40,
+    intensity: 'Moderate',
+    workoutType: 'Conditioning',
+    conditioningCategory: 'aerobic_base',
+    conditioningFlavour: 'aerobic',
+    conditioningBlock: {
+      intent: 'aerobic',
+      options: [{ title: 'Generic template', description: '', exerciseIds: rows.map((value) => value.id) }],
+    },
+    exercises: rows,
+    createdAt: '',
+    updatedAt: '',
+    ...overrides,
+  };
+}
 
 console.log('weeklyPlanDisplayTests');
 
-console.log('\n[1] strength / fixed days pass through canonically');
+console.log('\n[1] non-conditioning weekly titles are preserved');
 eq('Upper Push', weeklyPlanTitle({ name: 'Upper Push', workoutType: 'Strength' }), 'Upper Push');
-eq('Lower Squat', weeklyPlanTitle({ name: 'Lower Squat', workoutType: 'Strength' }), 'Lower Squat');
-eq('Lower Body Strength', weeklyPlanTitle({ name: 'Lower Body Strength', workoutType: 'Strength' }), 'Lower Body Strength');
-eq('Upper Body Strength', weeklyPlanTitle({ name: 'Upper Body Strength', workoutType: 'Strength' }), 'Upper Body Strength');
 eq('Full Body Strength', weeklyPlanTitle({ name: 'Full Body Strength', workoutType: 'Strength' }), 'Full Body Strength');
-eq('team day leads with the strength half',
-  weeklyPlanTitle({ name: 'Team Training + Upper Push', workoutType: 'Team Training' }), 'Upper Push');
-eq('team-only day', weeklyPlanTitle({ name: 'Team Training', workoutType: 'Team Training' }), 'Team Training');
-eq('Game Day', weeklyPlanTitle({ name: 'Game Day', workoutType: 'Game' }), 'Game Day');
-eq('Gunshow keeps its name', weeklyPlanTitle({ name: 'Gunshow', workoutType: 'Strength' }), 'Gunshow');
-eq('Prehab & Accessories reads as Accessories',
-  weeklyPlanTitle({ name: 'Prehab & Accessories', workoutType: 'Strength' }), 'Accessories');
+eq('team strength leads', weeklyPlanTitle({ name: 'Team Training + Upper Push', workoutType: 'Team Training' }), 'Upper Push');
+eq('team only', weeklyPlanTitle({ name: 'Team Training', workoutType: 'Team Training' }), 'Team Training');
+eq('game', weeklyPlanTitle({ name: 'Game Day', workoutType: 'Game' }), 'Game Day');
+eq('accessories', weeklyPlanTitle({ name: 'Prehab & Accessories', workoutType: 'Strength' }), 'Accessories');
+eq('recovery without conditioning stays Recovery', weeklyPlanTitle({ name: 'Recovery Flow', workoutType: 'Recovery' }), 'Recovery');
 
-console.log('\n[2] recovery-tier days read as Recovery');
-eq('Recovery Session', weeklyPlanTitle({ name: 'Recovery Session', workoutType: 'Recovery' }), 'Recovery');
-eq('Recovery Flow (tier)', weeklyPlanTitle({ name: 'Recovery Flow', workoutType: 'Recovery', sessionTier: 'recovery' }), 'Recovery');
+console.log('\n[2] standalone structure owns title and dose');
+const continuous = conditioning('40min zone 2 Assault Bike');
+eq('continuous title', weeklyPlanTitle(continuous), 'Continuous Aerobic');
+eq('continuous dose', weeklyPlanContextLabel(continuous), '40 min steady');
 
-console.log('\n[3] Aerobic Base family');
-for (const name of [
-  'Long Nasal Run', 'Flush Run', 'Easy Bike', 'Easy Row', 'Easy Ski',
-  'Easy Swim', 'Easy Zone 2 Bike', 'Easy Zone 2 Row', 'Easy Zone 2 Ski Erg',
-]) {
-  eq(name, weeklyPlanTitle(conditioning(name)), 'Aerobic Base');
-}
+const long = conditioning('5 x 8min zone 2 Rower', {
+  exercises: [row('5 x 8min zone 2 Rower', 1, 5, 120)],
+});
+eq('long title', weeklyPlanTitle(long), 'Long Aerobic Intervals');
+eq('long dose', weeklyPlanContextLabel(long), '5 × 8 min');
 
-console.log('\n[4] Flush Out family');
-for (const name of [
-  'Flush Out - 30:30 Intervals', 'Flush Out - 1min On / 1min Off',
-  'Flush Out - 2min On / 1min Off', 'Easy Aerobic Flush',
-]) {
-  eq(name, weeklyPlanTitle(conditioning(name)), 'Flush Out');
-}
+const short = conditioning('12 x 1min aerobic work on SkiErg', {
+  exercises: [row('12 x 1min aerobic work on SkiErg', 1, 12, 60)],
+});
+eq('short title', weeklyPlanTitle(short), 'Short Aerobic Intervals');
+eq('short dose', weeklyPlanContextLabel(short), '12 × 1 min');
 
-console.log('\n[5] Sprint Work family');
-for (const name of [
-  'Flying Sprints', 'Free Sprint Session', 'Max Effort Sprint Accumulation',
-  'Sprint Micro-Dose',
-]) {
-  eq(name, weeklyPlanTitle(conditioning(name)), 'Sprint Work');
-}
-
-console.log('\n[6] Hard Conditioning family');
-for (const name of [
-  '4x4 VO2', '1km Repeat Intervals', 'MAS 15:15 Blocks', 'Tabata Intervals',
-  'Inverse Tabata', '200m/400m Repeat Runs', 'Footy Fartlek',
-  'MetCon - Off-Legs', 'Erg EMOM - 10-15 cal',
-]) {
-  eq(name, weeklyPlanTitle(conditioning(name)), 'Hard Conditioning');
-}
-
-console.log('\n[7] combined days: strength title + conditioning category context');
-const combinedHard = {
-  name: 'Upper Pull',
-  workoutType: 'Strength',
-  hasCombinedConditioning: true,
-  conditioningFlavour: 'aerobic',
+console.log('\n[3] typed intent outranks identical interval duration');
+const tempo = conditioning('5 x 2min on Bike', {
+  conditioningCategory: 'tempo',
+  conditioningFlavour: 'tempo',
   conditioningBlock: {
-    intent: 'work_capacity',
-    options: [{ title: 'Erg EMOM - 10-15 cal', description: 'hard erg efforts' }],
+    intent: 'tempo',
+    options: [{ title: 'Stale Aerobic Base', description: '', exerciseIds: ['row-1'] }],
   },
-} as any;
-eq('combined title stays strength', weeklyPlanTitle(combinedHard), 'Upper Pull');
-eq('combined EMOM context is Hard Conditioning',
-  combinedConditioningCategoryLabel(combinedHard), 'Hard Conditioning');
+  exercises: [row('5 x 2min on Bike', 1, 5, 60)],
+});
+eq('tempo title', weeklyPlanTitle(tempo), 'Tempo Intervals');
+eq('tempo never Aerobic Base', classifyConditioningWorkout(tempo), 'Tempo Intervals');
+eq('tempo dose', weeklyPlanContextLabel(tempo), '5 × 2 min');
 
-const combinedLegacy = {
-  name: 'Lower Body Strength',
-  workoutType: 'Strength',
+const hard = conditioning('5 x 2min on Bike', {
+  conditioningCategory: 'vo2', conditioningFlavour: 'high-intensity',
+  conditioningBlock: { intent: 'high-intensity', options: [{ title: 'Intervals', description: '', exerciseIds: ['row-1'] }] },
+  exercises: [row('5 x 2min on Bike', 1, 5, 60)],
+});
+eq('hard title', weeklyPlanTitle(hard), 'Hard Intervals');
+
+const speed = conditioning('8 x 15sec Assault Bike sprints', {
+  conditioningCategory: 'sprint', conditioningFlavour: 'high-intensity',
+  conditioningBlock: { intent: 'high-intensity', options: [{ title: 'Sprints', description: '', exerciseIds: ['row-1'] }] },
+  exercises: [row('8 x 15sec Assault Bike sprints', 1, 8, 120)],
+});
+eq('speed title', weeklyPlanTitle(speed), 'Speed Conditioning');
+
+console.log('\n[4] flush/recovery purpose and fallback are honest');
+eq('flush', weeklyPlanTitle(conditioning('20min Easy Aerobic Flush')), 'Aerobic Flush');
+const recovery = conditioning('20min recovery conditioning', {
+  workoutType: 'Recovery', sessionTier: 'recovery',
+});
+eq('recovery conditioning', weeklyPlanTitle(recovery), 'Recovery Conditioning');
+const fallback = conditioning('Easy cyclical work');
+eq('canonical unknown structure fallback', weeklyPlanTitle(fallback), 'Aerobic Conditioning');
+
+console.log('\n[5] attached placement preserves primary title');
+const attached = conditioning('3 x 8min zone 2 RowErg', {
+  name: 'Full Body Strength',
+  workoutType: 'Mixed',
   hasCombinedConditioning: true,
-  conditioningFlavour: 'aerobic',
-} as any;
-eq('mixed lower title stays Lower Body Strength',
-  weeklyPlanTitle(combinedLegacy), 'Lower Body Strength');
-eq('legacy flavour-only combined context is Aerobic Base',
-  combinedConditioningCategoryLabel(combinedLegacy), 'Aerobic Base');
-eq('non-combined day has no context',
-  combinedConditioningCategoryLabel({ name: 'Upper Push' } as any), null);
+  attachedConditioningKind: 'component',
+  conditioningBlock: {
+    intent: 'aerobic', attachedKind: 'component',
+    options: [{ title: 'RowErg aerobic', description: '', exerciseIds: ['row-1'] }],
+  },
+  exercises: [row('3 x 8min zone 2 RowErg', 1, 3, 120)],
+});
+eq('attached keeps strength title', weeklyPlanTitle(attached), 'Full Body Strength');
+eq('attached context is structure only', combinedConditioningCategoryLabel(attached), 'Long Aerobic Intervals');
+eq('attached weekly context omits dose', weeklyPlanContextLabel(attached), 'Long Aerobic Intervals');
 
-console.log('\n[8] classification backstops');
-eq('unknown easy conditioning defaults to Aerobic Base',
-  classifyConditioningWorkout(conditioning('Mystery Session')), 'Aerobic Base');
-eq('engine category field wins when names are silent',
-  classifyConditioningWorkout({ name: 'Session 3', conditioningCategory: 'glycolytic' } as any),
-  'Hard Conditioning');
-eq('typed category beats a misleading legacy name',
-  classifyConditioningWorkout({
-    name: 'Sprint-labelled easy bike',
-    workoutType: 'Conditioning',
-    conditioningCategory: 'aerobic_base',
-  } as any),
-  'Aerobic Base');
+console.log('\n[6] modality copy is non-authoritative');
+for (const modality of ['Bike', 'RowErg', 'SkiErg', 'Bike + RowErg']) {
+  const value = conditioning(`3 x 8min aerobic on ${modality}`, {
+    exercises: [row(`3 x 8min aerobic on ${modality}`, 1, 3, 120)],
+  });
+  eq(`${modality} family`, weeklyPlanTitle(value), 'Long Aerobic Intervals');
+  eq(`${modality} dose`, weeklyPlanContextLabel(value), '3 × 8 min');
+}
+
+console.log('\n[7] controlled legacy fallback never revives Aerobic Base');
+eq('legacy VO2', classifyConditioningWorkout({ name: '4x4 VO2' }), 'Hard Intervals');
+eq('legacy tempo', classifyConditioningWorkout({ name: '5 x 2min tempo' }), 'Tempo Intervals');
+eq('legacy long aerobic', classifyConditioningWorkout({ name: '3 x 8min aerobic' }), 'Long Aerobic Intervals');
+eq('legacy unknown', classifyConditioningWorkout({ name: 'Mystery conditioning' }), 'Aerobic Conditioning');
 
 console.log(`\nweeklyPlanDisplayTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {

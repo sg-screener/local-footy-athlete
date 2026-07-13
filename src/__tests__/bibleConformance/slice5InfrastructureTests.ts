@@ -31,13 +31,13 @@ const shrink = verifyShrinkerAcceptance();
 check('shrinker returns a smaller same-failure witness', shrink.reduced);
 
 verifyMutationCatalogue();
-check('mutation registry preserves 33 accepted smoke probes', SMOKE_MUTATIONS.length === 33);
-check('mutation registry adds twelve full probes', MUTATION_CATALOGUE.length === 40);
+check('mutation registry preserves 49 accepted smoke probes', SMOKE_MUTATIONS.length === 49);
+check('mutation registry adds twelve full probes', MUTATION_CATALOGUE.length === 61);
 
 const reportA = buildCoverageReport(seed, pairA);
 const reportB = buildCoverageReport(seed, pairB);
 check('coverage JSON model is deterministic', JSON.stringify(reportA) === JSON.stringify(reportB));
-check('coverage registry has 45 rules and no missing mutation rationale', reportA.rules.length === 45 && reportA.rules.every((rule) => rule.mutationIds.length > 0 || rule.exemptions.length > 0));
+check('coverage registry has 53 rules and no missing mutation rationale', reportA.rules.length === 53 && reportA.rules.every((rule) => rule.mutationIds.length > 0 || rule.exemptions.length > 0));
 check('coverage Markdown is deterministic', renderCoverageMarkdown(reportA) === renderCoverageMarkdown(reportB));
 
 const boundary = verifyExpectationImportBoundary(path.join(__dirname, 'expectations'));

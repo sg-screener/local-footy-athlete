@@ -1,4 +1,5 @@
 import type { Workout } from '../types/domain';
+import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
 
 export type ConditioningLogMode =
   | 'run'
@@ -141,7 +142,10 @@ export function getConditioningLoggingConfig(
   workout: Workout | null | undefined,
 ): ConditioningLoggingConfig {
   const text = workoutText(workout);
-  const title = workout?.conditioningBlock?.options?.[0]?.title || workout?.name || 'Conditioning';
+  const title = projectConditioningVisibleIdentity(workout)?.primaryLabel ||
+    workout?.conditioningBlock?.options?.[0]?.title ||
+    workout?.name ||
+    'Conditioning';
 
   if (!workout) {
     return { level: 'none', title, fields: [] };
