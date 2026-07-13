@@ -38,6 +38,7 @@ import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { useProgramStore } from '../store/programStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { todayISOLocal } from '../utils/appDate';
+import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 
 let pass = 0;
 let fail = 0;
@@ -189,6 +190,17 @@ const OFFSEASON: Partial<OnboardingData> = {
   motivation: 'Build the base',
 };
 
+const PRESEASON_NO_ANCHORS: Partial<OnboardingData> = {
+  ...OFFSEASON,
+  seasonPhase: 'Pre-season',
+  trainingDaysPerWeek: 6,
+  preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  trainingLocation: 'Commercial gym',
+  equipment: ['Full Gym'],
+  conditioningLevel: 'Elite',
+  recentTrainingLoad: 'Very consistent',
+};
+
 const today = todayISOLocal();
 const thisMonday = getMondayForDate(today);
 const nextMonday = addDays(thisMonday, 7);
@@ -257,6 +269,40 @@ const nextMonday = addDays(thisMonday, 7);
   ok('user manual edit is preserved by the sweep', res.sweep.preserve.includes(userDate), res.sweep.preserve.join(','));
   ok('cleared junk override no longer in store', !useProgramStore.getState().dateOverrides?.[junkDate]);
   ok('preserved user edit still in store', !!useProgramStore.getState().dateOverrides?.[userDate]);
+}
+
+// ── 12. Repeat Week preserves the corrected target-week contract ──
+{
+  resetWorld();
+  const rebuilt = rebuildLocalWeek({
+    baseProfile: PRESEASON_NO_ANCHORS as OnboardingData,
+    newGameDay: null,
+    todayISO: today,
+  });
+  useProgramStore.getState().setCurrentProgram(rebuilt.program);
+  const sourceWeekStart = getMondayForDate(rebuilt.program.startDate.slice(0, 10));
+  const targetWeekStart = addDays(sourceWeekStart, 7);
+  repeatWeekIntoNextWeek({
+    baseProfile: PRESEASON_NO_ANCHORS as OnboardingData,
+    sourceWeekDate: sourceWeekStart,
+    todayISO: today,
+  });
+  const overlay = useProgramStore.getState().weekScopedOverlays?.[targetWeekStart];
+  const contract = overlay?.exposureContract;
+  const workouts = Object.values(overlay?.workoutsByDate ?? {})
+    .filter((workout): workout is Workout => !!workout);
+  const validation = contract
+    ? evaluateEffectiveWeekExposureContract(contract, workouts, targetWeekStart)
+    : null;
+  ok('Repeat Week carries and validates the corrected 4/4/1 pre-season policy',
+    contract?.strength.targetCount === 4 &&
+      contract.conditioning.targetCount === 4 &&
+      contract.sprintCod.targetCount === 1 &&
+      validation?.accepted === true &&
+      validation.ledger.achieved.main_strength === 4 &&
+      validation.ledger.achieved.conditioning === 4 &&
+      validation.ledger.achieved.sprint_cod >= 1,
+    JSON.stringify({ contract, validation }));
 }
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);

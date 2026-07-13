@@ -37,6 +37,7 @@ import { useProgramStore } from '../store/programStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import type { OnboardingData } from '../types/domain';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 
 // Late-bound requires: these modules sit in an import cycle under the CJS
 // test runner; their exports resolve only after the graph settles.
@@ -99,6 +100,16 @@ const PRESEASON_NO_TEAM_4_DAY: Partial<OnboardingData> = {
   recentTrainingLoad: 'Pretty consistent',
   injuries: [],
   motivation: 'Build the base',
+};
+
+const PRESEASON_NO_ANCHOR_6_DAY: Partial<OnboardingData> = {
+  ...PRESEASON_NO_TEAM_4_DAY,
+  trainingDaysPerWeek: 6,
+  preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  trainingLocation: 'Commercial gym',
+  equipment: ['Full Gym'],
+  conditioningLevel: 'Elite',
+  recentTrainingLoad: 'Very consistent',
 };
 
 // Live calendar marks for the simulated environment.
@@ -518,6 +529,34 @@ console.log('\n── Week-scoped bye shape does not leak into adjacent in-seaso
     restore.overlay?.reason === 'one_off_game' &&
       JSON.stringify(overlayKeysAfterRestore) === JSON.stringify([wk2Mon]),
     JSON.stringify({ overlay: restore.overlay, keys: overlayKeysAfterRestore }));
+}
+
+resetWorld();
+
+// ═════════════════════════════════════════════════════════════════════
+console.log('\n── Rebuild preserves corrected pre-season frequency ──');
+{
+  const rebuilt = seed(PRESEASON_NO_ANCHOR_6_DAY);
+  const accepted = rebuilt.microcycles.every((week) => {
+    const contract = week.exposureContract;
+    if (!contract) return false;
+    const validation = evaluateEffectiveWeekExposureContract(
+      contract,
+      week.workouts,
+      week.startDate.slice(0, 10),
+    );
+    const healthyBuild = week.weekKind !== 'deload';
+    return contract.strength.targetCount === 4 &&
+      (!healthyBuild || contract.conditioning.targetCount === 4) &&
+      contract.sprintCod.targetCount === 1 &&
+      validation.accepted &&
+      validation.ledger.achieved.main_strength === 4 &&
+      (!healthyBuild || validation.ledger.achieved.conditioning === 4) &&
+      validation.ledger.achieved.sprint_cod >= 1;
+  });
+  ok('canonical rebuild carries and validates corrected 4/4/1 pre-season policy',
+    accepted,
+    JSON.stringify(rebuilt.microcycles.map((week) => week.exposureContract)));
 }
 
 resetWorld();

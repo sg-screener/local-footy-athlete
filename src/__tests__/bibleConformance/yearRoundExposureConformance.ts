@@ -172,6 +172,9 @@ export function runYearRoundExposureConformance(
     }), { offseasonSubphase: 'late_offseason', weekNumber: 3, weekInBlock: 3 }), 'late_offseason'],
     ['early pre-season', planFor(profile({ seasonPhase: 'Pre-season' }), { preseasonSubphase: 'early_preseason', weekNumber: 1, weekInBlock: 1 }), 'early_preseason'],
     ['mid pre-season', planFor(profile({ seasonPhase: 'Pre-season' }), { preseasonSubphase: 'mid_preseason', weekNumber: 2, weekInBlock: 2 }), 'mid_preseason'],
+    ['late pre-season', planFor(profile({ seasonPhase: 'Pre-season' }), {
+      preseasonSubphase: 'late_preseason', weekNumber: 4, weekInBlock: 4, weekKind: 'build',
+    }), 'late_preseason'],
     ['late pre-season deload', planFor(profile({ seasonPhase: 'Pre-season' }), {
       preseasonSubphase: 'late_preseason', weekNumber: 4, weekInBlock: 4, weekKind: 'deload',
     }), 'late_preseason'],
@@ -183,6 +186,122 @@ export function runYearRoundExposureConformance(
     }
     scenarios++;
   }
+
+  // Corrected policy: healthy no-anchor early/mid/late pre-season all own
+  // and finish the same 4 strength / 4 conditioning / 1 sprint frequency.
+  for (const name of ['early pre-season', 'mid pre-season', 'late pre-season']) {
+    const plan = phasePlans.find(([candidate]) => candidate === name)?.[1];
+    if (!plan?.weeklyExposureContract) throw new Error(`${name}: missing corrected contract`);
+    const validation = evaluateAllocationExposureContract(plan.weeklyExposureContract, plan.weeklyPlan);
+    const contract = plan.weeklyExposureContract;
+    if (
+      contract.strength.targetCount !== 4 ||
+      contract.conditioning.targetCount !== 4 ||
+      contract.sprintCod.targetCount !== 1
+    ) throw new Error(`${name}: expected corrected 4/4/1 contract`);
+    if (
+      validation.ledger.achieved.main_strength !== 4 ||
+      validation.ledger.achieved.conditioning !== 4 ||
+      validation.ledger.achieved.sprint_cod < 1
+    ) throw new Error(`${name}: final allocation did not finish 4/4/1`);
+    if (contract.reductions.some((entry) => entry.metric === 'weekly_exposure_count')) {
+      throw new Error(`${name}: healthy normal availability received an unauthorised frequency reduction`);
+    }
+    scenarios++;
+  }
+
+  const preSeasonWithTeam = planFor(profile({
+    seasonPhase: 'Pre-season',
+    teamTrainingDaysPerWeek: 2,
+    teamTrainingDays: ['Tuesday', 'Thursday'],
+  }), { preseasonSubphase: 'early_preseason', weekNumber: 1, weekInBlock: 1 });
+  requireAcceptedAllocation('pre-season with team anchors', preSeasonWithTeam);
+  const preTeamContract = preSeasonWithTeam.weeklyExposureContract!;
+  const preTeamLedger = evaluateAllocationExposureContract(
+    preTeamContract,
+    preSeasonWithTeam.weeklyPlan,
+  ).ledger;
+  if (
+    preTeamContract.conditioning.targetCount !== 4 ||
+    preTeamContract.conditioning.creditedTeamTrainingCount !== 2 ||
+    preTeamContract.conditioning.additionalRequiredCount !== 2 ||
+    preTeamLedger.achieved.conditioning !== 4 ||
+    preTeamContract.sprintCod.targetCount !== 1 ||
+    preTeamContract.sprintCod.additionalRequiredCount !== 0 ||
+    preTeamLedger.additionalSprintCodCount !== 0
+  ) throw new Error('pre-season anchor credit changed the total target or added unnecessary app sprint');
+  scenarios++;
+
+  const earlyOff = phasePlans.find(([name]) => name === 'early off-season')![1];
+  const midOff = phasePlans.find(([name]) => name === 'mid off-season')![1];
+  const lateOff = phasePlans.find(([name]) => name === 'late off-season')![1];
+  for (const [name, plan, expected] of [
+    ['early off-season', earlyOff, 0],
+    ['mid off-season', midOff, 1],
+    ['late off-season', lateOff, 1],
+  ] as const) {
+    const validation = evaluateAllocationExposureContract(plan.weeklyExposureContract!, plan.weeklyPlan);
+    if (plan.weeklyExposureContract!.sprintCod.targetCount !== expected) {
+      throw new Error(`${name}: incorrect sprint floor`);
+    }
+    if (expected === 0 ? validation.ledger.achieved.sprint_cod !== 0 : validation.ledger.achieved.sprint_cod < 1) {
+      throw new Error(`${name}: final sprint allocation did not match its floor`);
+    }
+    scenarios++;
+  }
+
+  const constrainedMidOff = planFor(profile({
+    trainingDaysPerWeek: 2,
+    preferredTrainingDays: ['Monday', 'Tuesday'],
+  }), { offseasonSubphase: 'mid_offseason', weekNumber: 2, weekInBlock: 2 });
+  requireAcceptedAllocation('two-day mid off-season', constrainedMidOff);
+  const constrainedMidOffResult = evaluateAllocationExposureContract(
+    constrainedMidOff.weeklyExposureContract!,
+    constrainedMidOff.weeklyPlan,
+  );
+  if (
+    constrainedMidOff.weeklyExposureContract!.sprintCod.targetCount !== 1 ||
+    constrainedMidOffResult.ledger.achieved.sprint_cod < 1 ||
+    !constrainedMidOff.weeklyPlan.some((session) => session.speedBlock?.placement === 'pre_lift')
+  ) throw new Error('two-day mid off-season did not consolidate its sprint floor onto an existing session');
+  scenarios++;
+
+  const gameWeek = phasePlans.find(([name]) => name === 'in-season game week')![1];
+  const byeBuild = phasePlans.find(([name]) => name === 'in-season bye build')![1];
+  const byeRecovery = phasePlans.find(([name]) => name === 'in-season bye recovery')![1];
+  const gameSprint = evaluateAllocationExposureContract(gameWeek.weeklyExposureContract!, gameWeek.weeklyPlan).ledger;
+  if (
+    gameWeek.weeklyExposureContract!.sprintCod.targetCount !== 1 ||
+    gameWeek.weeklyExposureContract!.sprintCod.additionalRequiredCount !== 0 ||
+    gameSprint.additionalSprintCodCount !== 0 ||
+    gameSprint.achieved.sprint_cod < 1
+  ) throw new Error('in-season game/team anchor did not satisfy the one-exposure floor cleanly');
+  const byeBuildSprint = evaluateAllocationExposureContract(
+    byeBuild.weeklyExposureContract!,
+    byeBuild.weeklyPlan,
+  ).ledger;
+  if (
+    byeBuild.weeklyExposureContract!.sprintCod.targetCount !== 1 ||
+    byeBuild.weeklyExposureContract!.sprintCod.additionalRequiredCount !== 1 ||
+    byeBuildSprint.additionalSprintCodCount < 1
+  ) throw new Error('in-season no-anchor bye build omitted its app sprint exposure');
+  if (!byeRecovery.weeklyExposureContract!.reductions.some((entry) =>
+    entry.domain === 'sprint_cod' && entry.reason === 'bye_recovery_mode' &&
+    entry.metric === 'weekly_exposure_count' && entry.from === 1 && entry.to === 0
+  )) throw new Error('bye recovery mode omitted its explicit sprint reduction');
+  const deload = phasePlans.find(([name]) => name === 'late pre-season deload')![1];
+  const deloadSprint = evaluateAllocationExposureContract(
+    deload.weeklyExposureContract!,
+    deload.weeklyPlan,
+  ).ledger;
+  if (
+    deload.weeklyExposureContract!.sprintCod.targetCount !== 1 ||
+    deloadSprint.achieved.sprint_cod < 1 ||
+    deload.weeklyExposureContract!.reductions.some((entry) =>
+      entry.domain === 'sprint_cod' && entry.reason === 'deload_policy' &&
+      entry.metric === 'weekly_exposure_count')
+  ) throw new Error('deload deleted the sprint floor instead of preserving reduced-dose exposure');
+  scenarios += 4;
 
   // Fixed reproduction: the previous warning-only in-season placement now
   // has one additional conditioning exposure or an explicit reduction.
@@ -280,12 +399,15 @@ export function runYearRoundExposureConformance(
   }
   scenarios++;
 
-  // Fixed reproduction: no-anchor mid-pre-season owns and places both sprint
-  // exposures through the contract.
+  // Fixed reproduction: no-anchor mid-pre-season owns and places the shared
+  // one-exposure sprint floor through the contract.
   const midPre = phasePlans.find(([name]) => name === 'mid pre-season')![1];
   const midPreValidation = evaluateAllocationExposureContract(midPre.weeklyExposureContract!, midPre.weeklyPlan);
-  if (midPreValidation.ledger.achieved.sprint_cod < 2) {
-    throw new Error('mid pre-season no-anchor week did not place two sprint/COD exposures');
+  if (
+    midPre.weeklyExposureContract!.sprintCod.targetCount !== 1 ||
+    midPreValidation.ledger.achieved.sprint_cod < 1
+  ) {
+    throw new Error('mid pre-season no-anchor week did not place the sprint/COD floor');
   }
   scenarios++;
 

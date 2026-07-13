@@ -135,7 +135,10 @@ function planFor(
 }
 
 function sprintSessions(plan: CoachingPlan): SessionAllocation[] {
-  return plan.weeklyPlan.filter((session) => session.conditioningCategory === 'sprint');
+  return plan.weeklyPlan.filter((session) =>
+    session.speedBlock?.kind === 'true_speed' ||
+    session.speedWorkKind === 'true_speed' ||
+    session.conditioningCategory === 'sprint');
 }
 
 function planText(plan: CoachingPlan): string {
@@ -182,6 +185,7 @@ function workoutFromAllocation(session: SessionAllocation, index: number): Worko
     attachedConditioningKind: session.attachedConditioningKind,
     conditioningFlavour: session.conditioningFlavour,
     conditioningCategory: session.conditioningCategory,
+    speedBlock: session.speedBlock,
     exercises: [],
     createdAt: now,
     updatedAt: now,
@@ -219,8 +223,8 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
-  eq('pre-season 1 team training allows one top-up', gate.allowStandaloneSprint, true, JSON.stringify(gate));
-  eq('one existing team sprint exposure leaves one target exposure', gate.remainingSprintCodExposures, 1, JSON.stringify(gate));
+  eq('pre-season 1 team training satisfies the sprint floor', gate.allowStandaloneSprint, false, JSON.stringify(gate));
+  eq('one existing team sprint exposure leaves no required remainder', gate.remainingSprintCodExposures, 0, JSON.stringify(gate));
 
   const afterTopUp = evaluateSprintExposureGate({
     phase: 'Pre-season',
@@ -229,7 +233,8 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
-  eq('pre-season 1 team training allows at most one top-up', afterTopUp.allowStandaloneSprint, false, JSON.stringify(afterTopUp));
+  eq('pre-season does not add a top-up after its anchor already met the floor',
+    afterTopUp.allowStandaloneSprint, false, JSON.stringify(afterTopUp));
 }
 
 {
@@ -257,7 +262,7 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     gate.anchorSprintCodExposures,
     2,
     JSON.stringify(gate));
-  eq('pre-season deload denies only app-added sprint',
+  eq('pre-season deload adds no sprint when anchors already meet the floor',
     gate.allowStandaloneSprint,
     false,
     JSON.stringify(gate));
@@ -302,7 +307,8 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
-  eq('mid off-season denies app-added sprint for now', mid.allowStandaloneSprint, false, JSON.stringify(mid));
+  eq('mid off-season allows one app sprint when the floor is unresolved', mid.allowStandaloneSprint, true, JSON.stringify(mid));
+  eq('mid off-season target is one sprint/COD exposure', mid.target, 1, JSON.stringify(mid));
 
   const late = evaluateSprintExposureGate({
     phase: 'Off-season',
@@ -320,9 +326,9 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
     readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
-  eq('late off-season deload denies app-added sprint',
+  eq('late off-season deload preserves a reduced-dose app sprint',
     lateDeload.allowStandaloneSprint,
-    false,
+    true,
     JSON.stringify(lateDeload));
   eq('late off-season deload keeps the late-offseason speed target visible',
     lateDeload.target,
@@ -349,6 +355,17 @@ console.log('\n-- SP-1. Sprint exposure gate rule --');
   });
   eq('in-season 2 team trainings plus game deny extra sprint', gate.allowStandaloneSprint, false, JSON.stringify(gate));
   eq('in-season anchors count as 3 sprint/COD exposures', gate.anchorSprintCodExposures, 3, JSON.stringify(gate));
+}
+
+{
+  const gate = evaluateSprintExposureGate({
+    phase: 'In-season',
+    readinessAllowsSprint: true,
+    injuryAllowsSprint: true,
+  });
+  eq('in-season without a qualifying anchor requires one app sprint',
+    gate.allowStandaloneSprint, true, JSON.stringify(gate));
+  eq('in-season shared sprint/COD floor is one', gate.target, 1, JSON.stringify(gate));
 }
 
 {
@@ -382,8 +399,8 @@ console.log('\n-- SP-1. Generation consults the gate --');
     teamTrainingDaysPerWeek: 1,
     teamTrainingDays: ['Wednesday'],
   }));
-  ok('pre-season with 1 team training allows at most 1 app sprint top-up',
-    sprintSessions(plan).length <= 1,
+  eq('pre-season with 1 team training adds no app sprint top-up',
+    sprintSessions(plan).length, 0,
     planText(plan));
 }
 
@@ -401,8 +418,8 @@ console.log('\n-- SP-1. Generation consults the gate --');
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
   }));
-  ok('pre-season with 0 team/game exposures may add up to one sprint if healthy',
-    sprintSessions(plan).length <= 1,
+  eq('pre-season with 0 team/game exposures adds one sprint if healthy',
+    sprintSessions(plan).length, 1,
     planText(plan));
 }
 
@@ -429,7 +446,9 @@ for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle
 {
   const plan = planFor(profile());
   const bad = sprintSessions(plan).filter((session) =>
-    session.hasCombinedConditioning || session.attachedConditioningKind === 'finisher',
+    !session.speedBlock ||
+    session.speedBlock.counting.conditioningCredit !== 'none' ||
+    (session.speedBlock.placement !== 'pre_lift' && session.speedBlock.placement !== 'standalone'),
   );
   eq('sprint/COD is never placed as a finisher', bad.length, 0, planText(plan));
 }
@@ -548,9 +567,9 @@ console.log('\n-- SP-3. Late off-season sprint subphase --');
     speedWorkouts(builtWorkoutsFor(early, p)).length,
     0,
     planText(early));
-  eq('mid off-season generation denies app-added sprint for now',
+  eq('mid off-season generation adds one quality sprint micro-dose',
     speedWorkouts(builtWorkoutsFor(mid, p)).length,
-    0,
+    1,
     planText(mid));
   eq('late off-season generation may add one quality sprint micro-dose',
     speedWorkouts(builtWorkoutsFor(late, p)).length,
@@ -562,9 +581,9 @@ console.log('\n-- SP-3. Late off-season sprint subphase --');
     weekNumber: 4,
     weekKind: 'deload',
   });
-  eq('late off-season deload generation denies app-added sprint',
+  eq('late off-season deload generation preserves a sprint micro-dose',
     speedWorkouts(builtWorkoutsFor(lateDeload, p)).length,
-    0,
+    1,
     planText(lateDeload));
   ok('healthy non-sprint off-season week still has useful strength',
     early.weeklyPlan.some((session) => !!session.strengthPattern) &&
@@ -579,9 +598,9 @@ console.log('\n-- SP-3. Late off-season sprint subphase --');
     teamTrainingDays: [],
   });
   const plan = planFor(p, [], { weekKind: 'deload' });
-  eq('pre-season deload generation denies app-added sprint micro-dose',
+  eq('pre-season deload generation preserves an app sprint micro-dose',
     speedWorkouts(builtWorkoutsFor(plan, p)).length,
-    0,
+    1,
     planText(plan));
 }
 
@@ -628,17 +647,17 @@ for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle
     weekKind: 'build',
   });
   const speed = speedWorkouts(builtWorkoutsFor(lateHealthy, p))[0];
-  ok('late off-season sprint is not a finisher',
+  ok('late off-season sprint is a pre-fatigue speed block, not a conditioning finisher',
     !!speed &&
-    !speed.hasCombinedConditioning &&
-    speed.attachedConditioningKind === undefined,
-    JSON.stringify({ hasCombined: speed?.hasCombinedConditioning, attached: speed?.attachedConditioningKind }));
-  ok('late off-season sprint is not conditioning',
+    speed.speedBlock?.placement === 'pre_lift' &&
+    speed.speedBlock.counting.conditioningCredit === 'none',
+    JSON.stringify(speed?.speedBlock));
+  ok('late off-season sprint remains distinct from any separately required conditioning component',
     !!speed &&
-    speed.conditioningBlock === undefined &&
-    speed.conditioningCategory === undefined &&
-    speed.conditioningFlavour === undefined,
+    speed.speedBlock?.counting.sprintCodExposure === true &&
+    speed.speedBlock.counting.conditioningCredit === 'none',
     JSON.stringify({
+      speed: speed?.speedBlock,
       category: speed?.conditioningCategory,
       flavour: speed?.conditioningFlavour,
       block: speed?.conditioningBlock,
@@ -659,9 +678,9 @@ for (const bodyPart of ['hamstring', 'groin', 'calf', 'Achilles', 'knee', 'ankle
     week1Speed.length,
     0,
     week1Speed.map((workout) => workout.name).join(' | '));
-  eq('generated off-season block keeps deload week 4 sprint-free',
+  eq('generated off-season block preserves one sprint in deload week 4',
     week4Speed.length,
-    0,
+    1,
     week4Speed.map((workout) => workout.name).join(' | '));
 }
 
@@ -743,13 +762,13 @@ console.log('\n-- SP-4. Late off-season speed templates --');
       counts.sprintCodExposures,
       1,
       JSON.stringify(counts.byCategory));
-    eq('late off-season speed template does not count as conditioning',
-      counts.conditioningExposures,
-      0,
+    eq('late off-season speed template carries no conditioning credit itself',
+      firstSpeed.speedBlock?.counting.conditioningCredit,
+      'none',
       JSON.stringify(counts.byCategory));
   } else {
     ok('late off-season speed template counts as sprint/COD exposure', false, 'no speed workout generated');
-    ok('late off-season speed template does not count as conditioning', false, 'no speed workout generated');
+    ok('late off-season speed template carries no conditioning credit itself', false, 'no speed workout generated');
   }
 }
 

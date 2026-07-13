@@ -155,7 +155,8 @@ eq('non-pre-season phases do not resolve a pre-season subphase',
     hasPracticeMatch: true,
   });
   eq('early pre-season uses reduced hard-conditioning dose', early.conditioning.hardDose, 'reduced');
-  eq('early pre-season avoids large combined days', early.sessions.combinedStrengthConditioning, 'avoid');
+  eq('early pre-season permits controlled combined components to preserve 4/4 frequency',
+    early.sessions.combinedStrengthConditioning, 'normal');
   eq('mid pre-season keeps the full strength build ceiling', mid.strength.coreSessionCap, 4);
   eq('late practice-match week adds no app-side hard conditioning', lateMatch.conditioning.hardSessionCap, 0);
   eq('late practice match satisfies sprint/COD top-up need', lateMatch.speedSprint.practiceMatchSatisfiesTarget, true);
@@ -181,8 +182,8 @@ console.log('\n-- Sprint/COD top-up by pre-season subphase --');
     readinessAllowsSprint: true,
     injuryAllowsSprint: true,
   });
-  eq('mid pre-season retains the Bible target of two sprint/COD exposures', mid.target, 2);
-  eq('mid pre-season may fill a genuine one-exposure gap', mid.allowStandaloneSprint, true);
+  eq('mid pre-season uses the shared one-exposure sprint/COD floor', mid.target, 1);
+  eq('one mid pre-season team anchor satisfies the sprint/COD floor', mid.allowStandaloneSprint, false);
 
   const lateMatch = evaluateSprintExposureGate({
     phase: 'Pre-season',

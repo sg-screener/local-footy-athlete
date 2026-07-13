@@ -13,6 +13,7 @@ import {
   buildPreseasonWeeklyExposureContract,
   evaluatePreseasonExposureContract,
 } from '../rules/preseasonExposureContract';
+import { evaluateAllocationExposureContract } from '../rules/weeklyExposureContract';
 import {
   buildGenerationPrompt,
   buildInitialGeneratedCoachingPlan,
@@ -115,6 +116,8 @@ console.log('\n-- Typed contract and exact six-day blueprint --');
   eq('healthy contract requires four total conditioning exposures', contract.conditioning.targetCount, 4);
   eq('two team anchors receive exactly two conditioning credits', contract.conditioning.creditedTeamTrainingCount, 2);
   eq('two real app conditioning components remain required', contract.conditioning.additionalRequiredCount, 2);
+  eq('shared sprint/COD minimum remains one', contract.sprintCod.targetCount, 1);
+  eq('team anchors leave no app sprint/COD remainder', contract.sprintCod.additionalRequiredCount, 0);
   eq('four hard days remains a preference', contract.hardDays.preferredCount, 4);
   eq('five hard days is explicitly permitted', contract.hardDays.permittedCount, 5);
   eq('hard-day preference is not encoded as a hard maximum', contract.hardDays.isHardMaximum, false);
@@ -168,6 +171,37 @@ for (let week = 1; week <= 4; week++) {
   eq(`${label} ledger preserves two full rest days`, ledger.fullRestDayCount, 2);
 }
 
+console.log('\n-- Healthy no-anchor phase frequency --');
+for (const [label, week] of [
+  ['early pre-season', 1],
+  ['mid pre-season', 2],
+  ['late pre-season', 4],
+] as const) {
+  const plan = planFor({
+    ...EXACT_PROFILE,
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+  }, week, 'build');
+  if (!plan.weeklyExposureContract) throw new Error(`${label} omitted its exposure contract`);
+  const final = evaluateAllocationExposureContract(plan.weeklyExposureContract, plan.weeklyPlan);
+  eq(`${label} contract owns the healthy 4/4/1 targets`, [
+    plan.weeklyExposureContract.strength.targetCount,
+    plan.weeklyExposureContract.conditioning.targetCount,
+    plan.weeklyExposureContract.sprintCod.targetCount,
+  ], [4, 4, 1]);
+  eq(`${label} finishes with exactly four strength and conditioning exposures`, [
+    final.ledger.achieved.main_strength,
+    final.ledger.achieved.conditioning,
+  ], [4, 4]);
+  ok(`${label} finishes with a genuine sprint/high-speed exposure`,
+    final.ledger.achieved.sprint_cod >= 1 &&
+      plan.weeklyPlan.some((entry) => entry.speedBlock?.kind === 'true_speed'),
+    { ledger: final.ledger, plan: plan.weeklyPlan });
+  eq(`${label} healthy contract has no frequency reduction`,
+    plan.weeklyExposureContract.reductions.filter((entry) =>
+      entry.metric === 'weekly_exposure_count'), []);
+}
+
 console.log('\n-- Edge prompt and deterministic fallback share the contract --');
 {
   const inputs = onboardingToCoachingInputs(EXACT_PROFILE, { availabilityDateISO: '2026-07-13' });
@@ -195,8 +229,8 @@ console.log('\n-- Edge prompt and deterministic fallback share the contract --')
     })));
   const prompt = buildGenerationPrompt(EXACT_PROFILE, edge, FULL_GYM_EQUIPMENT);
   ok('edge prompt receives the exact pre-season exposure contract',
-    prompt.includes('strength=3 [squat+hinge+push+pull]') &&
-      prompt.includes('conditioning=3 (team credit=2, game/practice credit=0, additional components=1)') &&
+    prompt.includes('strength=4 [squat+hinge+push+pull]') &&
+      prompt.includes('conditioning=4 (team credit=2, game/practice credit=0, additional components=2)') &&
       prompt.includes('preferred hard days=4, permitted=5'), prompt);
   ok('edge prompt carries stable planEntryIds and component ownership',
     edge.weeklyPlan.every((entry) => !!entry.planEntryId && prompt.includes(entry.planEntryId!)), prompt);
@@ -285,6 +319,27 @@ for (const scenario of constrained) {
   ok('deload owns an explicit typed dose reduction',
     deload.weeklyExposureContract?.reductions.some((entry) => entry.reason === 'deload_policy') === true,
     deload.weeklyExposureContract?.reductions);
+  eq('deload preserves the sprint/COD exposure floor',
+    deload.weeklyExposureContract?.sprintCod.targetCount, 1);
+  ok('deload team anchors satisfy the sprint/high-speed floor without an app top-up',
+    evaluateAllocationExposureContract(
+      deload.weeklyExposureContract!,
+      deload.weeklyPlan,
+    ).ledger.achieved.sprint_cod >= 1 &&
+      !deload.weeklyPlan.some((entry) => entry.speedBlock?.kind === 'true_speed'),
+    deload.weeklyPlan);
+
+  const noAnchorDeload = planFor({
+    ...EXACT_PROFILE,
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+  }, 4, 'deload');
+  assertContractSatisfied('no-anchor deload', noAnchorDeload);
+  eq('no-anchor deload preserves the sprint/COD exposure floor',
+    noAnchorDeload.weeklyExposureContract?.sprintCod.targetCount, 1);
+  ok('no-anchor deload places a reduced-dose sprint/high-speed exposure',
+    noAnchorDeload.weeklyPlan.some((entry) => entry.speedBlock?.kind === 'true_speed'),
+    noAnchorDeload.weeklyPlan);
 }
 
 console.log(`\nweeklyExposureContractTests: ${pass} passed, ${fail} failed`);

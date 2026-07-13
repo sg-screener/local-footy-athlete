@@ -15,13 +15,13 @@ export type SprintExposureGateReason =
   | 'preseason_app_topup_already_added'
   | 'readiness_denied'
   | 'injury_denied'
-  | 'inseason_extra_sprint_disabled'
+  | 'inseason_shortfall'
   | 'inseason_target_met'
-  | 'offseason_late_shortfall'
+  | 'inseason_app_topup_already_added'
+  | 'offseason_shortfall'
   | 'offseason_target_met'
   | 'offseason_app_topup_already_added'
-  | 'offseason_no_late_flag'
-  | 'deload_week';
+  | 'early_offseason';
 
 export interface SprintExposureGateContext {
   phase: SprintExposureGatePhase;
@@ -47,7 +47,6 @@ export interface SprintExposureGateDecision {
 }
 
 const SPRINT_COD_TARGET = BIBLE_WEEKLY_CAPS.sprintCodExposures.min;
-const LATE_OFFSEASON_SPRINT_COD_TARGET = 1;
 const APP_SPRINT_TOPUP_LIMIT = 1;
 
 export function evaluateSprintExposureGate(
@@ -61,8 +60,11 @@ export function evaluateSprintExposureGate(
         hasPracticeMatch: uniqueDays(context.gameOrPracticeMatchDays ?? []).length > 0,
       })
     : null;
-  const target = context.phase === 'Off-season' && context.offseasonSubphase === 'late_offseason'
-    ? LATE_OFFSEASON_SPRINT_COD_TARGET
+  const target = context.phase === 'Off-season'
+    ? context.offseasonSubphase === 'early_offseason' || context.offseasonSubphase === null ||
+      context.offseasonSubphase === undefined
+      ? 0
+      : SPRINT_COD_TARGET
     : preseasonPolicy?.speedSprint.targetExposures ?? SPRINT_COD_TARGET;
   const currentSprintCodExposures = anchorSprintCodExposures + plannedOnFeetSprintExposures;
   const remainingSprintCodExposures = Math.max(0, target - currentSprintCodExposures);
@@ -81,12 +83,9 @@ export function evaluateSprintExposureGate(
   if (context.readinessAllowsSprint === false) {
     return { ...base, allowStandaloneSprint: false, reason: 'readiness_denied' };
   }
-  if (context.weekKind === 'deload') {
-    return { ...base, allowStandaloneSprint: false, reason: 'deload_week' };
-  }
   if (context.phase === 'Off-season') {
-    if (context.offseasonSubphase !== 'late_offseason') {
-      return { ...base, allowStandaloneSprint: false, reason: 'offseason_no_late_flag' };
+    if (target === 0) {
+      return { ...base, allowStandaloneSprint: false, reason: 'early_offseason' };
     }
     if (anchorSprintCodExposures >= target || currentSprintCodExposures >= target) {
       return { ...base, allowStandaloneSprint: false, reason: 'offseason_target_met' };
@@ -94,16 +93,16 @@ export function evaluateSprintExposureGate(
     if (plannedOnFeetSprintExposures >= APP_SPRINT_TOPUP_LIMIT) {
       return { ...base, allowStandaloneSprint: false, reason: 'offseason_app_topup_already_added' };
     }
-    return { ...base, allowStandaloneSprint: true, reason: 'offseason_late_shortfall' };
+    return { ...base, allowStandaloneSprint: true, reason: 'offseason_shortfall' };
   }
   if (context.phase === 'In-season') {
-    return {
-      ...base,
-      allowStandaloneSprint: false,
-      reason: currentSprintCodExposures >= SPRINT_COD_TARGET
-        ? 'inseason_target_met'
-        : 'inseason_extra_sprint_disabled',
-    };
+    if (currentSprintCodExposures >= target) {
+      return { ...base, allowStandaloneSprint: false, reason: 'inseason_target_met' };
+    }
+    if (plannedOnFeetSprintExposures >= APP_SPRINT_TOPUP_LIMIT) {
+      return { ...base, allowStandaloneSprint: false, reason: 'inseason_app_topup_already_added' };
+    }
+    return { ...base, allowStandaloneSprint: true, reason: 'inseason_shortfall' };
   }
   if (
     preseasonPolicy?.speedSprint.practiceMatchSatisfiesTarget &&

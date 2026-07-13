@@ -45,8 +45,8 @@ export const BIBLE_WEEKLY_CAPS = {
   conditioningExposures: { min: 3, max: 5 },
   /** "No more than 4 running exposures per week programmed by the app." */
   maxRunningExposures: 4,
-  /** "2-3 sprint/COD exposures per week max." */
-  sprintCodExposures: { min: 2, max: 3 },
+  /** One genuine weekly exposure from mid off-season onward; 2-3 remains the usual maximum. */
+  sprintCodExposures: { min: 1, max: 3 },
   /**
    * Hard days (Sam's clarified intent, 2026-07-08):
    *   4 = clean programming target (audit flags above this),
@@ -246,7 +246,7 @@ export function auditWeekAgainstCaps(counts: WeeklyExposureCounts): CapFinding[]
     findings.push({
       cap: 'sprintCodExposures', kind: 'under',
       observed: counts.sprintCodExposures, limit: caps.sprintCodExposures.min,
-      detail: `${counts.sprintCodExposures} sprint/COD exposures (Bible target ≥ ${caps.sprintCodExposures.min}; expected off-season early)`,
+      detail: `${counts.sprintCodExposures} sprint/COD exposures (Bible target ≥ ${caps.sprintCodExposures.min}; zero is valid only in early off-season or with an authorised reduction)`,
     });
   }
 

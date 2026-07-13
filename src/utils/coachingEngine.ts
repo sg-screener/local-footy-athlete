@@ -1246,6 +1246,20 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
           ? 'strength'
           : allocation.conditioningCategory ?? allocation.tier,
     });
+
+    // Speed placement is owned by this final typed component shape. Earlier
+    // phase planning can legitimately turn a standalone row into a strength
+    // row; align the block here so workout projection cannot discard an
+    // exposure that allocation validation counted.
+    if (allocation.speedBlock && allocation.speedWorkKind === 'true_speed') {
+      const placement: SpeedBlockPlacement = allocation.strengthIntent
+        ? 'pre_lift'
+        : 'standalone';
+      allocation.speedPlacement = placement;
+      if (allocation.speedBlock.placement !== placement) {
+        allocation.speedBlock = { ...allocation.speedBlock, placement };
+      }
+    }
   }
 
   if (
@@ -5283,8 +5297,8 @@ function buildWeeklyPlan(
     }
 
     // ── Post-validation: sprint-rescue ──
-    // Pre-season no-game weeks may need an explicit standalone sprint
-    // exposure. If the main loop plus H5a/H5b left sprint uncovered,
+    // A no-anchor week with an unresolved typed sprint floor may need an
+    // explicit app exposure. If the main loop plus H5a/H5b left it uncovered,
     // retrofit it using Sam's fallback chain:
     //   1. Slide earlier — pick the EARLIEST conditioning slot whose
     //      chronological predecessor (if any) isn't vo2/glycolytic, and
@@ -5296,8 +5310,8 @@ function buildWeeklyPlan(
     //      conditioning with a blocking predecessor), convert it to a
     //      3–4×10s flying-sprint micro-dose that's low enough volume to
     //      ignore sprint-protection safely.
-    // In off-season or team/game-loaded weeks, the exposure gate below
-    // drops sprint honestly rather than hiding it inside a finisher.
+    // Anchor-loaded weeks and authorised reductions are resolved by the gate;
+    // sprint is never hidden inside a finisher.
     if (useCategoryPlanner &&
         !plan.some((session) => session.conditioningCategory === 'sprint' || session.speedWorkKind === 'true_speed') &&
         sprintExposureGate(0).allowStandaloneSprint) {
@@ -5332,12 +5346,12 @@ function buildWeeklyPlan(
       // path, with two extra v1 rules:
       //   • it may only retarget STANDALONE conditioning slots — sprint is
       //     never hidden inside a strength-day finisher;
-      //   • if no slot passes (off-season with no late-block model, any
-      //     week where team training/games already provide sprint
-      //     exposure, readiness below high), sprint is dropped HONESTLY
-      //     for the week rather than forced somewhere unsafe.
+      //   • if no slot passes, the shared contract repair either finds a safe
+      //     placement or rejects the unresolved week.
       const rescueEligible = condSlots.filter(cs => {
-        if (plan[cs.planIdx].hasCombinedConditioning) return false; // finishers are off-limits
+        const session = plan[cs.planIdx];
+        if (session.hasCombinedConditioning) return false; // finishers are off-limits
+        if (plannedPatternsForAllocation(session).length > 0) return false;
         const dayNum = cs.slotPos === 7 ? 0 : cs.slotPos;
         const decision = finisherEligibility({
           dayNum,
@@ -6187,7 +6201,12 @@ function buildWeeklyPlan(
           if (weeklyExposureContract.anchors.gameDay !== null) {
             return gOffset(day, weeklyExposureContract.anchors.gameDay) <= -4;
           }
-          return false;
+          // In no-game weeks the typed contract has already accounted for
+          // readiness, injury and phase reductions. A constrained schedule
+          // may contain lower/full-body sessions only, so keep those existing
+          // training days eligible for a pre-lift micro-dose instead of
+          // rejecting an otherwise feasible weekly contract.
+          return true;
         })
         .sort((left, right) =>
           trainingOrder(dayNameToNumber(left.dayOfWeek ?? '')) -

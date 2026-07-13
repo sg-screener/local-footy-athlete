@@ -20,6 +20,7 @@ import {
   type WeekValidationReport,
 } from '../rules/weekStructureValidator';
 import { resolveWeekContext } from '../rules/weekContext';
+import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 import { buildWeekShapeSnapshot } from './weekPlanQA/weekShapeSummary';
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
@@ -84,6 +85,8 @@ interface GeneratedWeek {
   report: WeekValidationReport;
   flags: ReturnType<typeof deriveWeekValidationFlags>;
   weeklyPlan: ReturnType<typeof buildCoachingPlan>['weeklyPlan'];
+  workouts: Microcycle['workouts'];
+  exposureContract: ReturnType<typeof buildCoachingPlan>['weeklyExposureContract'];
 }
 
 interface GeneratedWeekOptions {
@@ -173,7 +176,14 @@ function generatedWeek(profile: Partial<OnboardingData>, options: GeneratedWeekO
     profile: validatorProfile,
     weekFlags: flags,
   });
-  return { resolvedWeek, report, flags, weeklyPlan: plan.weeklyPlan };
+  return {
+    resolvedWeek,
+    report,
+    flags,
+    weeklyPlan: plan.weeklyPlan,
+    workouts,
+    exposureContract: plan.weeklyExposureContract,
+  };
 }
 
 function dayLabel(dateISO: string): string {
@@ -296,7 +306,17 @@ console.log('\n[2] generated in-season no-game weeks derive bye context at 2TT /
     ok(`${c.label}: validator derives byeWeek=true`, week.flags.byeWeek === true, week.flags);
     ok(`${c.label}: no game/practice-match anchor`, week.report.anchorsUsed.gameDates.length === 0, week.report.anchorsUsed);
     eq(`${c.label}: team training anchors still count`, week.report.anchorsUsed.teamTrainingDates.map(dayLabel), c.teamDays.map((day) => day.slice(0, 3)));
-    eq(`${c.label}: sprint/COD exposure comes from team anchors`, week.report.counts.sprintCodExposures, c.perWeek);
+    eq(`${c.label}: sprint/COD floor comes from anchors or one app exposure`,
+      week.report.counts.sprintCodExposures, Math.max(1, c.perWeek));
+    if (c.perWeek === 0) {
+      ok(`${c.label}: final effective week validates its app sprint exposure`,
+        !!week.exposureContract && evaluateEffectiveWeekExposureContract(
+          week.exposureContract,
+          week.workouts,
+          BLOCK_START,
+        ).accepted,
+        week.workouts);
+    }
   }
 }
 
@@ -395,7 +415,7 @@ console.log('\n[4] bye-week Saturday metadata and counting stay honest');
     gameSaturday);
 }
 
-console.log('\n[5] healthy bye-week shapes use team-training count without adding sprint');
+console.log('\n[5] healthy bye-week shapes use anchor credit before adding sprint');
 {
   const twoTeam = generatedWeek(baseProfile());
   eq('2TT bye has two main strength sessions', twoTeam.report.counts.mainStrengthExposures, 2);
@@ -420,7 +440,7 @@ console.log('\n[5] healthy bye-week shapes use team-training count without addin
   eq('0TT bye has two main strength sessions', zeroTeam.report.counts.mainStrengthExposures, 2);
   eq('0TT bye adds one careful conditioning top-up', zeroTeam.report.counts.extraConditioningSessions, 1);
   ok('0TT bye stays within the hard-day cap', zeroTeam.report.counts.hardDays <= 4, zeroTeam.report.counts);
-  eq('0TT bye adds no sprint/COD', zeroTeam.report.counts.sprintCodExposures, 0);
+  eq('0TT bye adds one app sprint/COD exposure', zeroTeam.report.counts.sprintCodExposures, 1);
   ok('0TT conditioning top-up has real component metadata', hasRealConditioningMetadata(zeroTeam), zeroTeam.resolvedWeek);
 }
 

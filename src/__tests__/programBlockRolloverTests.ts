@@ -45,6 +45,7 @@ import {
   type ScheduleState,
 } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
+import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 
 let pass = 0;
 let fail = 0;
@@ -91,6 +92,19 @@ const OFF_SEASON_PROFILE: OnboardingData = {
   trainingDaysPerWeek: 4,
   preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Friday'],
   teamTrainingIntensity: 'Moderate',
+};
+
+const PRE_SEASON_NO_ANCHOR_PROFILE: OnboardingData = {
+  ...IN_SEASON_PROFILE,
+  seasonPhase: 'Pre-season',
+  gameDay: undefined,
+  usualGameDay: undefined,
+  teamTrainingDaysPerWeek: 0,
+  teamTrainingDays: [],
+  trainingDaysPerWeek: 6,
+  preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+  equipment: ['Full Gym'],
+  conditioningLevel: 'Elite',
 };
 
 function resetStores(): void {
@@ -382,6 +396,39 @@ console.log('\n-- Block-to-block exercise variation and automatic trigger --');
       result.program.microcycles[3].weekKind === 'deload');
   ok('late app open selects the microcycle containing the current date',
     useProgramStore.getState().currentMicrocycle?.weekNumber === 7);
+}
+
+{
+  resetStores();
+  const first = generateProgramLocally(PRE_SEASON_NO_ANCHOR_PROFILE, {
+    todayISO: '2026-07-06',
+    blockNumber: 1,
+  });
+  useProgramStore.getState().setCurrentProgram(first);
+  const result = rolloverProgramBlock({
+    baseProfile: PRE_SEASON_NO_ANCHOR_PROFILE,
+    targetDateISO: '2026-08-03',
+  });
+  const corrected = result.program?.microcycles.every((week) => {
+    const contract = week.exposureContract;
+    if (!contract) return false;
+    const validation = evaluateEffectiveWeekExposureContract(
+      contract,
+      week.workouts,
+      week.startDate.slice(0, 10),
+    );
+    const healthyBuild = week.weekKind !== 'deload';
+    return contract.strength.targetCount === 4 &&
+      (!healthyBuild || contract.conditioning.targetCount === 4) &&
+      contract.sprintCod.targetCount === 1 &&
+      validation.accepted &&
+      validation.ledger.achieved.main_strength === 4 &&
+      (!healthyBuild || validation.ledger.achieved.conditioning === 4) &&
+      validation.ledger.achieved.sprint_cod >= 1;
+  }) === true;
+  ok('pre-season rollover carries and validates corrected 4/4/1 exposure policy',
+    corrected,
+    JSON.stringify(result.program?.microcycles.map((week) => week.exposureContract)));
 }
 
 {

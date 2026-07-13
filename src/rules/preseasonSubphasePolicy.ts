@@ -74,14 +74,16 @@ function basePolicy(
   teamTrainingExposures: number,
   hasPracticeMatch: boolean,
 ): PreseasonSubphasePolicy {
+  const anchorExposures = teamTrainingExposures + (hasPracticeMatch ? 1 : 0);
+  const minimumAppExposures = Math.max(0, 4 - anchorExposures);
   if (subphase === 'early_preseason') {
     return {
       subphase,
       conditioning: {
         categoryPriority: ['aerobic_base', 'tempo', 'vo2'],
         hardSessionCap: 1,
-        targetCap: teamTrainingExposures > 0 ? 2 : 3,
-        minimumAppExposures: 1,
+        targetCap: 4,
+        minimumAppExposures,
         hardDose: 'reduced',
       },
       speedSprint: {
@@ -89,15 +91,15 @@ function basePolicy(
         practiceMatchSatisfiesTarget: true,
       },
       strength: {
-        coreSessionCap: 3,
+        coreSessionCap: 4,
         volumeBias: 'moderate',
       },
       sessions: {
-        combinedStrengthConditioning: 'avoid',
+        combinedStrengthConditioning: 'normal',
       },
       reasons: [
         'Early pre-season rebuilds running and conditioning progressively from aerobic and tempo work.',
-        'One controlled hard-conditioning exposure is enough; large combined S+C days stay out.',
+        'One controlled hard-conditioning exposure is enough; remaining conditioning uses lower-cost prescriptions.',
         'Team training or a practice match supplies the first sprint/COD exposure.',
       ],
     };
@@ -110,12 +112,12 @@ function basePolicy(
         categoryPriority: ['vo2', 'glycolytic', 'aerobic_base', 'sprint'],
         hardSessionCap: 1,
         targetCap: 4,
-        minimumAppExposures: teamTrainingExposures > 0 ? 1 : 2,
+        minimumAppExposures,
         hardDose: 'standard',
       },
       speedSprint: {
-        targetExposures: 2,
-        practiceMatchSatisfiesTarget: false,
+        targetExposures: 1,
+        practiceMatchSatisfiesTarget: true,
       },
       strength: {
         coreSessionCap: 4,
@@ -136,16 +138,16 @@ function basePolicy(
     conditioning: {
       categoryPriority: ['tempo', 'aerobic_base', 'vo2', 'glycolytic'],
       hardSessionCap: hasPracticeMatch || teamTrainingExposures >= 2 ? 0 : 1,
-      targetCap: hasPracticeMatch ? 1 : teamTrainingExposures >= 2 ? 2 : 3,
-      minimumAppExposures: hasPracticeMatch ? 0 : teamTrainingExposures > 0 ? 1 : 2,
+      targetCap: 4,
+      minimumAppExposures,
       hardDose: 'reduced',
     },
     speedSprint: {
-      targetExposures: 2,
+      targetExposures: 1,
       practiceMatchSatisfiesTarget: true,
     },
     strength: {
-      coreSessionCap: 3,
+      coreSessionCap: 4,
       volumeBias: 'controlled',
     },
     sessions: {

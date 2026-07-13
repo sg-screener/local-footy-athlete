@@ -43,7 +43,9 @@ export interface WeeklyExposureContractInput {
   activeInjuries?: ReadonlyArray<{
     region: 'lower_body' | 'upper_body' | 'back_midline' | 'other';
     pauseAffectedTraining: boolean;
+    removeRiskyWork?: boolean;
     effectiveSeverity?: number;
+    triggers?: readonly string[];
     injuryKeys?: readonly string[];
   }>;
   /** Explicit caller decision; omitted lets readiness/injury choose the mode. */
@@ -75,7 +77,6 @@ function createBaseContract(
   const fixtureCredit = input.hasGame && input.gameDay !== null ? 1 : 0;
   const anchorCredit = teamDays.length + fixtureCredit;
   const conditioningRequired = Math.max(targets.conditioning.required, anchorCredit);
-  const sprintRequired = Math.max(targets.sprintCod.required, Math.min(3, anchorCredit));
   const strengthTarget = input.readiness === 'high'
     ? targets.strength.preferredMax
     : targets.strength.preferredMin;
@@ -109,11 +110,11 @@ function createBaseContract(
       allowCombinedStrengthConditioning: targets.allowCombined,
     },
     sprintCod: {
-      targetCount: Math.max(targets.sprintCod.preferredMin, Math.min(3, anchorCredit)),
-      required: sprintRequired,
+      targetCount: targets.sprintCod.preferredMin,
+      required: targets.sprintCod.required,
       preferred: {
-        min: Math.max(targets.sprintCod.preferredMin, Math.min(3, anchorCredit)),
-        max: Math.max(targets.sprintCod.preferredMax, Math.min(3, anchorCredit)),
+        min: targets.sprintCod.preferredMin,
+        max: targets.sprintCod.preferredMax,
       },
       creditedTeamTrainingCount: teamDays.length,
       creditedGameOrPracticeMatchCount: fixtureCredit,
@@ -290,6 +291,18 @@ function applyCommonSafetyReductions(
     }
   }
 
+  const activeInjuryBlocksSprint = (input.activeInjuries ?? []).some((injury) => {
+    if (injury.region !== 'lower_body' && injury.region !== 'back_midline') return false;
+    const sprintTrigger = /\b(sprint|speed|max velocity|running|cod|change of direction|cutting|jumping)\b/i
+      .test((injury.triggers ?? []).join(' '));
+    return injury.pauseAffectedTraining || injury.removeRiskyWork === true || sprintTrigger;
+  });
+  if (activeInjuryBlocksSprint) {
+    contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit),
+      'injury_restriction',
+      'An active lower-body or back restriction explicitly removes app-authored sprint/COD.');
+  }
+
   if (input.seasonPhase === 'Pre-season' && teamDays.length > 0 && nonTeamDays.length === 0) {
     contract.strength.requiredPatterns = contract.strength.required > 0 ? ['push', 'pull'] : [];
     addExposureReduction(contract.reductions, {
@@ -306,6 +319,9 @@ function applyCommonSafetyReductions(
     contract = reduceAllocationTarget(contract, 'main_strength', Math.min(contract.strength.targetCount, input.maxStrengthSessions),
       'training_age_limit',
       'Training-age policy consolidates the weekly strength dose.');
+    if (input.maxStrengthSessions <= 2) {
+      contract.conditioning.allowCombinedStrengthConditioning = false;
+    }
   }
 
   contract = reduceAllocationTarget(contract, 'main_strength', Math.min(contract.strength.targetCount, selected.length),
@@ -352,8 +368,6 @@ function applyCommonSafetyReductions(
         detail: 'The phase deload policy reduces session intensity while retaining safe movement-pattern frequency.',
       });
     }
-    contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'deload_policy',
-      'Deload policy removes app-authored sprint/COD while preserving anchor credit.');
     const appConditioningBeforeDeload = Math.max(
       0,
       contract.conditioning.targetCount - anchorCredit,
@@ -411,8 +425,8 @@ export function buildInSeasonGameWeekExposureContract(
     subphase: 'game_week',
     strength: { required: 2, preferredMin: 2, preferredMax: 3 },
     conditioning: { required: Math.max(3, anchorCount), preferredMin: Math.max(3, anchorCount), preferredMax: Math.max(3, anchorCount) },
-    // Game/team anchors own in-season sprint exposure; never force an app top-up.
-    sprintCod: { required: Math.min(3, anchorCount), preferredMin: Math.min(3, anchorCount), preferredMax: Math.min(3, anchorCount) },
+    // The game/team anchors satisfy the shared floor without inflating it.
+    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
     fullRest: { required: 1, preferredMin: 1, preferredMax: 2 },
     allowCombined: true,
     preferredHardDays: 4,
@@ -445,7 +459,7 @@ export function buildInSeasonByeBuildExposureContract(
     subphase: 'bye_build',
     strength: { required: 2, preferredMin: 2, preferredMax: 3 },
     conditioning: { required: Math.max(1, teams + (teams <= 1 ? 1 : 0)), preferredMin: Math.max(1, teams + (teams <= 1 ? 1 : 0)), preferredMax: Math.max(2, teams) },
-    sprintCod: { required: teams, preferredMin: teams, preferredMax: Math.max(teams, 1) },
+    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
     fullRest: { required: 1, preferredMin: 1, preferredMax: 2 },
     allowCombined: true,
     preferredHardDays: 4,
@@ -462,14 +476,15 @@ export function buildInSeasonByeRecoveryExposureContract(
     subphase: 'bye_recovery',
     strength: { required: 1, preferredMin: 1, preferredMax: 1 },
     conditioning: { required: teams, preferredMin: teams, preferredMax: teams },
-    sprintCod: { required: teams, preferredMin: teams, preferredMax: teams },
+    sprintCod: { required: 0, preferredMin: 0, preferredMax: 0 },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 3 },
     allowCombined: false,
     preferredHardDays: 2,
     permittedHardDays: 4,
   });
   for (const domain of ['main_strength', 'conditioning', 'sprint_cod'] as WeeklyExposureDomain[]) {
-    const before = domain === 'main_strength' ? 2 : teams + 1;
+    const before = domain === 'main_strength' ? 2 :
+      domain === 'conditioning' ? teams + 1 : 1;
     const after = domain === 'main_strength' ? contract.strength.required :
       domain === 'conditioning' ? contract.conditioning.required : contract.sprintCod.required;
     addExposureReduction(contract.reductions, {
@@ -516,7 +531,7 @@ export function buildMidOffseasonExposureContract(
     mode: 'mid_offseason', subphase: 'mid_offseason',
     strength: { required: 3, preferredMin: 3, preferredMax: 4 },
     conditioning: { required: 3, preferredMin: 3, preferredMax: 4 },
-    sprintCod: { required: 0, preferredMin: 0, preferredMax: 0 },
+    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
     allowCombined: true,
     preferredHardDays: 4,
@@ -573,11 +588,7 @@ function buildPreseasonBase(
     }
     contract = reduceAllocationTarget(contract, 'conditioning', anchorCredit, 'practice_match_load',
       'The practice match supplies game-like conditioning load.');
-    const matchSatisfiesSprint = targets.mode !== 'mid_preseason';
-    if (matchSatisfiesSprint) {
-      contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'practice_match_load',
-        'The practice match supplies the phase sprint/COD exposure.');
-    }
+    // The practice match is already canonical sprint/high-speed anchor credit.
   }
   contract = applyCommonSafetyReductions(contract, input);
   if (input.hasGame && input.gameDay !== null) {
@@ -603,11 +614,11 @@ export function buildEarlyPreseasonExposureContract(
 ): WeeklyExposureContract {
   return buildPreseasonBase(input, {
     mode: 'early_preseason', subphase: 'early_preseason',
-    strength: { required: 3, preferredMin: 3, preferredMax: 3 },
-    conditioning: { required: 3, preferredMin: 3, preferredMax: 4 },
+    strength: { required: 4, preferredMin: 4, preferredMax: 4 },
+    conditioning: { required: 4, preferredMin: 4, preferredMax: 4 },
     sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
-    allowCombined: false,
+    allowCombined: true,
     preferredHardDays: 4,
     permittedHardDays: 5,
   });
@@ -620,7 +631,7 @@ export function buildMidPreseasonExposureContract(
     mode: 'mid_preseason', subphase: 'mid_preseason',
     strength: { required: 4, preferredMin: 4, preferredMax: 4 },
     conditioning: { required: 4, preferredMin: 4, preferredMax: 4 },
-    sprintCod: { required: 2, preferredMin: 2, preferredMax: 2 },
+    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
     allowCombined: true,
     preferredHardDays: 4,
@@ -633,9 +644,9 @@ export function buildLatePreseasonExposureContract(
 ): WeeklyExposureContract {
   return buildPreseasonBase(input, {
     mode: 'late_preseason', subphase: 'late_preseason',
-    strength: { required: 3, preferredMin: 3, preferredMax: 3 },
-    conditioning: { required: 3, preferredMin: 3, preferredMax: 3 },
-    sprintCod: { required: 2, preferredMin: 2, preferredMax: 2 },
+    strength: { required: 4, preferredMin: 4, preferredMax: 4 },
+    conditioning: { required: 4, preferredMin: 4, preferredMax: 4 },
+    sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 2 },
     allowCombined: true,
     preferredHardDays: 4,
