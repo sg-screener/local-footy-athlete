@@ -575,3 +575,133 @@ export interface Slice3MutationAcceptanceResult {
   firstDivergenceStage: Slice3TraceStage;
   report: string;
 }
+
+// ─── Slice 5 deterministic generation and coverage ────────────────────────
+
+export type RegisteredRuleId = BibleRuleId | ComponentRuleId | Slice3RuleId | Slice4RuleId;
+
+export type GeneratedDomain =
+  | 'strength'
+  | 'components'
+  | 'conditioning'
+  | 'power'
+  | 'constraints'
+  | 'placement'
+  | 'edits';
+
+export interface PairwiseScenario {
+  id: string;
+  seed: string;
+  referenceDate: '2026-03-23';
+  timezone: 'Australia/Melbourne';
+  phase: 'in_season' | 'early_offseason' | 'mid_offseason' | 'late_offseason' | 'early_preseason' | 'later_preseason';
+  game: 'none' | 'saturday' | 'sunday' | 'bye';
+  teamSessions: 0 | 1 | 2;
+  availability: 2 | 3 | 4 | 6;
+  experience: 'beginner' | 'experienced';
+  readiness: 'low' | 'normal' | 'high';
+  restriction: 'none' | 'upper' | 'hamstring';
+  equipment: 'minimal' | 'home' | 'commercial';
+  role: 'inside' | 'outside';
+  goal: 'strength' | 'speed_conditioning';
+  duration: 'short' | 'normal' | 'long';
+}
+
+export interface PairwiseCoverageResult {
+  scenarios: PairwiseScenario[];
+  coveredPairs: number;
+  totalPairs: number;
+  percentage: number;
+  unsupported: string[];
+}
+
+export interface GeneratedPropertyCase {
+  id: string;
+  seed: string;
+  domain: GeneratedDomain;
+  referenceDate: '2026-03-23';
+  timezone: 'Australia/Melbourne';
+  data: Record<string, unknown>;
+}
+
+export interface GeneratedCheckResult {
+  id: string;
+  domain: GeneratedDomain;
+  ruleIds: RegisteredRuleId[];
+  invariant: string;
+  passed: boolean;
+  stage: string;
+  expected: unknown;
+  actual: unknown;
+  detail?: string;
+}
+
+export interface MetamorphicRelationSpec {
+  id: string;
+  description: string;
+  domain: GeneratedDomain;
+  ruleIds: RegisteredRuleId[];
+  smoke: boolean;
+}
+
+export type MutationTier = 'smoke' | 'full';
+
+export interface MutationSpec {
+  id: string;
+  description: string;
+  affectedRuleIds: RegisteredRuleId[];
+  expectedInvariantIds: string[];
+  expectedFirstStage?: string;
+  tier: MutationTier;
+  injectionMethod: string;
+}
+
+export interface MutationGateResult {
+  id: string;
+  active: boolean;
+  killed: boolean;
+  restored: boolean;
+  invariantId: string;
+  firstStage: string;
+  report: string;
+}
+
+export type CoverageStatus = 'none' | 'partial' | 'full' | 'not_applicable';
+
+export interface RuleCoverageRecord {
+  ruleId: RegisteredRuleId;
+  section: string;
+  anchorQuote: string;
+  category: string;
+  applicableScenarios: string[];
+  fixedGolden: CoverageStatus;
+  pairwise: CoverageStatus;
+  property: CoverageStatus;
+  pathEquivalence: CoverageStatus;
+  persistence: CoverageStatus;
+  metamorphic: CoverageStatus;
+  mutation: CoverageStatus;
+  productionPaths: string[];
+  lastResult: 'pass' | 'fail';
+  coverageGaps: string[];
+  mutationIds: string[];
+  exemptions: string[];
+}
+
+export interface BibleCoverageReport {
+  schemaVersion: 1;
+  seed: string;
+  referenceDate: '2026-03-23';
+  timezone: 'Australia/Melbourne';
+  rules: RuleCoverageRecord[];
+  summary: {
+    ruleCount: number;
+    categoryCounts: Record<string, number>;
+    coverageCounts: Record<string, Record<CoverageStatus, number>>;
+    productionPaths: string[];
+    mutationScore: { killed: number; total: number; percentage: number };
+    pairwise: { coveredPairs: number; totalPairs: number; percentage: number; scenarios: number; unsupported: string[] };
+    runtimeBudget: { everyCommitMs: number; extendedMs: number; measuredRuntimeInTerminalOnly: true };
+  };
+  limitations: string[];
+}

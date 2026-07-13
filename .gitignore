@@ -20,3 +20,6 @@ web-build/
 # test scripts run TypeScript directly via sucrase-node; this only appears if
 # the legacy tsc compile is invoked manually.
 .qa-compiled/
+
+# Deterministic executable Bible-conformance reports (regenerated on demand).
+test-results/bible-conformance/

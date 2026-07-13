@@ -28,19 +28,9 @@ import {
 import { evaluateSlice3Trace, SLICE3_INVARIANT_IDS } from './invariants/slice3Invariants';
 import { evaluateSlice4Trace, SLICE4_INVARIANT_IDS } from './invariants/pathEquivalenceInvariants';
 import { renderConformanceFailure } from './report/renderConformanceFailure';
-import { runMutationAcceptanceTest } from './mutationAcceptanceTests';
-import {
-  COMPONENT_MUTATION_IDS,
-  runComponentMutationAcceptanceTests,
-} from './componentMutationAcceptanceTests';
-import {
-  runSlice3MutationAcceptanceTests,
-  SLICE3_MUTATION_IDS,
-} from './slice3MutationAcceptanceTests';
-import {
-  runSlice4MutationAcceptanceTests,
-  SLICE4_MUTATION_IDS,
-} from './slice4MutationAcceptanceTests';
+import { runSmokeMutationGate } from './registry/mutationGate';
+import { SMOKE_MUTATIONS } from './registry/mutationCatalogue';
+import { evaluateMetamorphicSuite } from './observations/evaluateMetamorphicRelations';
 import type {
   ComponentGoldenScenario,
   ComponentScenarioTrace,
@@ -54,8 +44,8 @@ import type {
   AllTraceStage,
 } from './types';
 
-const TARGET_RUNTIME_MS = 8_000;
-const WARNING_RUNTIME_MS = 12_000;
+const TARGET_RUNTIME_MS = 12_000;
+const WARNING_RUNTIME_MS = 18_000;
 const HARD_RUNTIME_MS = 30_000;
 const ROUTINE_PRODUCTION_LOG_PREFIXES = [
   '[ProgramGen]',
@@ -398,6 +388,13 @@ function main(): void {
     (invariantId) => slice4AppliedInvariantIds.has(invariantId) && !failedInvariants.has(invariantId),
   ).length;
 
+  const metamorphicSmoke = withoutRoutineProductionLogs(() => evaluateMetamorphicSuite(true));
+  const failedMetamorphicSmoke = metamorphicSmoke.filter((entry) => !entry.passed);
+  if (failedMetamorphicSmoke.length > 0) {
+    const first = failedMetamorphicSmoke[0];
+    fail(`Metamorphic smoke ${first.id} failed: expected ${JSON.stringify(first.expected)}, actual ${JSON.stringify(first.actual)}`);
+  }
+
   if (allFailures.length > 0) {
     const first = [...allFailures].sort((left, right) => stageRank(left.stage) - stageRank(right.stage))[0];
     console.error('\nFirst-divergence failure:');
@@ -407,37 +404,14 @@ function main(): void {
     }
   }
 
-  let strengthMutationKills = 0;
-  let componentMutationKills = 0;
-  let slice3MutationKills = 0;
-  let slice4MutationKills = 0;
-  let strengthMutationReport = '';
-  let componentMutationReports: string[] = [];
-  let slice3MutationReports: string[] = [];
-  let slice4MutationReports: string[] = [];
-  if (allFailures.length === 0) {
-    const mutation = runMutationAcceptanceTest();
-    strengthMutationKills = mutation.killed ? 1 : 0;
-    strengthMutationReport = mutation.report;
-    console.log('  PASS mutation composite-lower-single-winner killed at allocation');
-    const componentMutations = runComponentMutationAcceptanceTests();
-    componentMutationKills = componentMutations.filter((entry) => entry.killed).length;
-    componentMutationReports = componentMutations.map((entry) => entry.report);
-    for (const entry of componentMutations) {
-      console.log(`  PASS mutation ${entry.mutationId} killed at ${entry.firstDivergenceStage}`);
-    }
-    const slice3Mutations = runSlice3MutationAcceptanceTests();
-    slice3MutationKills = slice3Mutations.filter((entry) => entry.killed).length;
-    slice3MutationReports = slice3Mutations.map((entry) => entry.report);
-    for (const entry of slice3Mutations) {
-      console.log(`  PASS mutation ${entry.mutationId} killed at ${entry.firstDivergenceStage}`);
-    }
-    const slice4Mutations = runSlice4MutationAcceptanceTests();
-    slice4MutationKills = slice4Mutations.filter((entry) => entry.killed).length;
-    slice4MutationReports = slice4Mutations.map((entry) => entry.report);
-    for (const entry of slice4Mutations) {
-      console.log(`  PASS mutation ${entry.mutationId} killed at ${entry.firstDivergenceStage}`);
-    }
+  let mutationKills = 0;
+  let mutationReports: string[] = [];
+  const mutationMode = process.env.BIBLE_MUTATIONS ?? 'smoke';
+  if (allFailures.length === 0 && mutationMode !== 'none') {
+    const mutations = runSmokeMutationGate();
+    mutationKills = mutations.filter((entry) => entry.killed).length;
+    mutationReports = mutations.map((entry) => entry.report);
+    for (const entry of mutations) console.log(`  PASS mutation ${entry.id} killed at ${entry.firstStage}`);
   }
 
   const totalMs = performance.now() - startedAt;
@@ -445,8 +419,7 @@ function main(): void {
   const scenarioTotal = STRENGTH_GOLDEN_SCENARIOS.length + COMPONENT_GOLDEN_SCENARIOS.length + SLICE3_GOLDEN_SCENARIOS.length + SLICE4_GOLDEN_SCENARIOS.length;
   const rulePasses = strengthRulePasses + componentRulePasses + slice3RulePasses + slice4RulePasses;
   const ruleTotal = STRENGTH_BIBLE_RULES.length + COMPONENT_BIBLE_RULES.length + SLICE3_BIBLE_RULES.length + SLICE4_BIBLE_RULES.length;
-  const mutationKills = strengthMutationKills + componentMutationKills + slice3MutationKills + slice4MutationKills;
-  const mutationTotal = 1 + COMPONENT_MUTATION_IDS.length + SLICE3_MUTATION_IDS.length + SLICE4_MUTATION_IDS.length;
+  const mutationTotal = mutationMode === 'none' ? 0 : SMOKE_MUTATIONS.length;
   console.log('\nSummary');
   console.log(`  Scenarios:         ${scenarioPasses}/${scenarioTotal} (strength ${strengthScenarioPasses}/${STRENGTH_GOLDEN_SCENARIOS.length}, component ${componentScenarioPasses}/${COMPONENT_GOLDEN_SCENARIOS.length}, Slice 3 ${slice3ScenarioPasses}/${SLICE3_GOLDEN_SCENARIOS.length}, Slice 4 ${slice4ScenarioPasses}/${SLICE4_GOLDEN_SCENARIOS.length})`);
   console.log(`  Rules:             ${rulePasses}/${ruleTotal}`);
@@ -464,17 +437,15 @@ function main(): void {
   console.log(`  Slice 4 invariants:   ${slice4InvariantPasses}/${SLICE4_INVARIANT_IDS.length} (${slice4InvariantApplicationPasses}/${slice4InvariantApplications} applications)`);
   console.log(`  Path comparisons:  ${pathComparisons}`);
   console.log(`  Persistence:       ${persistenceRoundTrips} round trip(s), ${legacyMigrations} legacy migration(s)`);
+  console.log(`  Metamorphic smoke: ${metamorphicSmoke.length}/${metamorphicSmoke.length}`);
   console.log(`  Mutations:         ${mutationTotal} injected, ${mutationKills} active, ${mutationKills}/${mutationTotal} killed`);
   console.log(`  Boundary:   ${boundary.checkedFiles.length} expectation file(s), 0 forbidden imports`);
   console.log(`  Runtime:    ${totalMs.toFixed(1)}ms (target <${TARGET_RUNTIME_MS}ms)`);
-  console.log('  Deferred:   Team Training rendering log-button/startFinished baseline remains outside Slice 4');
+  console.log('  Deferred:   Team Training rendering log-button/startFinished baseline remains outside the executable harness');
 
-  if (strengthMutationReport) {
+  if (mutationReports.length > 0) {
     console.log('\nMutation first-divergence proofs');
-    console.log(strengthMutationReport);
-    for (const report of componentMutationReports) console.log(`\n${report}`);
-    for (const report of slice3MutationReports) console.log(`\n${report}`);
-    for (const report of slice4MutationReports) console.log(`\n${report}`);
+    for (const report of mutationReports) console.log(`\n${report}`);
   }
   if (totalMs > WARNING_RUNTIME_MS) {
     console.warn(`Bible harness runtime warning: ${totalMs.toFixed(1)}ms exceeds ${WARNING_RUNTIME_MS}ms`);

@@ -200,7 +200,20 @@ function applyTypedComponentValidation(args: {
     const availableRowIds = new Set((workout.exercises ?? []).map((row) => row.id));
     const removeRowIds = new Set<string>();
     const options = workout.conditioningBlock.options.flatMap((option) => {
-      if (textIsRemovedByConstraints(`${option.title} ${option.description}`, args.constraints)) {
+      const displayText = `${option.title} ${option.description}`;
+      const typedModality = (option as typeof option & { modality?: string }).modality;
+      const isRunning = typedModality === 'running' || /\b(?:run|running|jog)\b/i.test(displayText);
+      const typedExposure = workout.conditioningBlock?.intent === 'high-intensity'
+        ? isRunning
+          ? 'hard running sprint high speed running repeat efforts'
+          : 'hard off-feet conditioning repeat efforts'
+        : workout.conditioningBlock?.intent === 'tempo'
+          ? isRunning ? 'tempo running' : 'off-feet tempo conditioning'
+          : isRunning ? 'easy aerobic running' : 'easy off-feet aerobic conditioning';
+      // Typed modality/intent owns exposure. Copy remains supporting context,
+      // so a generic title such as "Running intervals" cannot hide hard
+      // running from an active lower-limb restriction.
+      if (textIsRemovedByConstraints(`${typedExposure} ${displayText}`, args.constraints)) {
         for (const id of option.exerciseIds) removeRowIds.add(id);
         return [];
       }
