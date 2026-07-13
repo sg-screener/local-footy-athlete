@@ -82,8 +82,8 @@ function verifyRuleRegistry(repoRoot: string): void {
     }
     if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
   }
-  if (SLICE3_BIBLE_RULES.length !== 18) {
-    fail(`Expected exactly eighteen Slice 3 Bible rules, found ${SLICE3_BIBLE_RULES.length}`);
+  if (SLICE3_BIBLE_RULES.length !== 22) {
+    fail(`Expected exactly twenty-two Slice 3 Bible rules, found ${SLICE3_BIBLE_RULES.length}`);
   }
   const slice3Ids = new Set(SLICE3_BIBLE_RULES.map((rule) => rule.id));
   if (slice3Ids.size !== SLICE3_BIBLE_RULES.length) fail('Slice 3 Bible rule IDs must be unique');
@@ -222,8 +222,8 @@ function main(): void {
   if (COMPONENT_GOLDEN_SCENARIOS.length !== 5) {
     fail(`Expected exactly five component goldens, found ${COMPONENT_GOLDEN_SCENARIOS.length}`);
   }
-  if (SLICE3_GOLDEN_SCENARIOS.length !== 10) {
-    fail(`Expected exactly ten Slice 3 goldens, found ${SLICE3_GOLDEN_SCENARIOS.length}`);
+  if (SLICE3_GOLDEN_SCENARIOS.length !== 14) {
+    fail(`Expected exactly fourteen Slice 3 goldens, found ${SLICE3_GOLDEN_SCENARIOS.length}`);
   }
   if (SLICE4_GOLDEN_SCENARIOS.length !== 12) {
     fail(`Expected exactly twelve Slice 4 goldens, found ${SLICE4_GOLDEN_SCENARIOS.length}`);
@@ -287,8 +287,10 @@ function main(): void {
   }
 
   for (const scenario of SLICE3_GOLDEN_SCENARIOS) {
-    if (scenario.referenceDate !== '2026-03-23' || scenario.timezone !== 'Australia/Melbourne') {
-      fail(`${scenario.id} must own the fixed Slice 3 date and timezone`);
+    const expectedDate = scenario.id.startsWith('early-offseason-') && scenario.id !== 'early-offseason-healthy'
+      ? '2026-07-13' : '2026-03-23';
+    if (scenario.referenceDate !== expectedDate || scenario.timezone !== 'Australia/Melbourne') {
+      fail(`${scenario.id} must own its fixed Slice 3 date and timezone`);
     }
     const trace = buildSlice3TraceWithoutRoutineProductionLogs(scenario);
     const results = evaluateSlice3Trace(trace);

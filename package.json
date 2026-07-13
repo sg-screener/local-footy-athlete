@@ -38,6 +38,7 @@
     "test:finisher-eligibility": "sucrase-node src/__tests__/finisherEligibilityTests.ts",
     "test:variation": "sucrase-node src/__tests__/variedProgramPersonaTests.ts",
     "test:conditioning-rotation": "sucrase-node src/__tests__/conditioningRotationTests.ts",
+    "test:conditioning-equipment-consistency": "sucrase-node src/__tests__/conditioningEquipmentConsistencyTests.ts",
     "test:coach-prompt": "sucrase-node src/__tests__/coachPromptContractTests.ts",
     "test:injury-guard": "sucrase-node src/__tests__/injuryClarificationGuardTests.ts",
     "test:injury-client-guard": "sucrase-node src/__tests__/coachScreenInjuryClientGuardTests.ts",

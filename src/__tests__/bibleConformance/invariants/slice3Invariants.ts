@@ -400,6 +400,85 @@ function weekDetailAgreement(trace: Slice3ScenarioTrace): InvariantCheckResult {
   }));
 }
 
+function crossMicrocycleConditioning(trace: Slice3ScenarioTrace): InvariantCheckResult {
+  const id = 'INV_EARLY_OFFSEASON_CROSS_MICROCYCLE_CONDITIONING' as const;
+  const applied = applies(trace, 'early-offseason-legacy-commercial', 'early-offseason-modern-full-gym');
+  const edge = stage(trace, 'generated_fallback');
+  const fallback = stage(trace, 'resolved_effective');
+  const valid = edge.conditioning.length > 0 && fallback.conditioning.length === edge.conditioning.length &&
+    edge.components.includes('conditioning') && fallback.components.includes('conditioning');
+  return one(id, trace, applied, valid, () => failure({
+    trace, invariantId: id, ruleId: 'OS-COND-CROSS-WEEK-01', stage: 'generated_fallback',
+    expected: 'allocated feasible conditioning preserved in both early-off-season microcycles',
+    actual: { week1: edge.conditioning.length, week2: fallback.conditioning.length },
+    missing: edge.conditioning.length === 0 ? ['week_1_conditioning']
+      : fallback.conditioning.length === 0 ? ['week_2_conditioning'] : [],
+  }));
+}
+
+function pathConditioningEquivalent(trace: Slice3ScenarioTrace): InvariantCheckResult {
+  const id = 'INV_EDGE_FALLBACK_CONDITIONING_EQUIVALENCE' as const;
+  const applied = applies(trace,
+    'early-offseason-legacy-commercial', 'early-offseason-modern-full-gym',
+    'early-offseason-explicit-no-cardio', 'early-offseason-row-only');
+  const edge = stage(trace, 'generated_fallback');
+  const fallback = stage(trace, 'resolved_effective');
+  const shape = (entry: HarnessConditioningEntry) => `${entry.intent}:${entry.intensity}:${entry.offFeet}`;
+  const valid = equalSet(edge.conditioning.map(shape), fallback.conditioning.map(shape)) &&
+    edge.conditioning.length === fallback.conditioning.length &&
+    edge.components.includes('conditioning') === fallback.components.includes('conditioning');
+  return one(id, trace, applied, valid, () => failure({
+    trace, invariantId: id, ruleId: 'ALL-COND-PATH-EQUIV-01', stage: 'resolved_effective',
+    expected: { conditioning: edge.conditioning.map(shape), present: edge.components.includes('conditioning') },
+    actual: { conditioning: fallback.conditioning.map(shape), present: fallback.components.includes('conditioning') },
+    missing: missing(edge.conditioning.map(shape), fallback.conditioning.map(shape)),
+    extra: missing(fallback.conditioning.map(shape), edge.conditioning.map(shape)),
+  }));
+}
+
+function feasibilitySingleOwner(trace: Slice3ScenarioTrace): InvariantCheckResult {
+  const id = 'INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER' as const;
+  const applied = applies(trace,
+    'early-offseason-legacy-commercial', 'early-offseason-modern-full-gym',
+    'early-offseason-explicit-no-cardio', 'early-offseason-row-only');
+  const names: Slice3TraceStage[] = ['allocation', 'generated_fallback', 'resolved_effective', 'visible_week', 'visible_detail', 'weekly_accounting'];
+  const observations = names.map((name) => stage(trace, name));
+  const baselineAllowed = observations[0].conditioningFeasibility?.allowedModalities ?? [];
+  const valid = observations.every((observed) =>
+    observed.conditioningFeasibility?.owner === 'conditioningFeasibility' &&
+    equalSet(observed.conditioningFeasibility.allowedModalities, baselineAllowed) &&
+    (observed.stage === 'weekly_accounting' || observed.conditioning.every((entry) => entry.modality === 'mixed_off_feet'
+      ? baselineAllowed.includes('bike') && baselineAllowed.some((value) => value === 'row' || value === 'ski')
+      : entry.modality === 'other' || baselineAllowed.includes(entry.modality)))) &&
+    (baselineAllowed.length > 0 || observations.every((observed) => observed.conditioning.length === 0));
+  const invalid = observations.find((observed) =>
+    observed.conditioningFeasibility?.owner !== 'conditioningFeasibility') ?? observations[0];
+  return one(id, trace, applied, valid, () => failure({
+    trace, invariantId: id, ruleId: 'ALL-COND-FEASIBILITY-01', stage: invalid.stage,
+    expected: { owner: 'conditioningFeasibility', allowedModalities: baselineAllowed },
+    actual: invalid.conditioningFeasibility ?? null,
+    missing: ['consistent_feasible_conditioning_owner'],
+    detail: 'One typed feasibility decision must own prompt, edge, fallback and later-microcycle conditioning.',
+  }));
+}
+
+function noteRequiresVisibleEffect(trace: Slice3ScenarioTrace): InvariantCheckResult {
+  const id = 'INV_SUBPHASE_NOTE_REQUIRES_VISIBLE_EFFECT' as const;
+  const applied = applies(trace,
+    'early-offseason-legacy-commercial', 'early-offseason-modern-full-gym',
+    'early-offseason-explicit-no-cardio', 'early-offseason-row-only');
+  const observed = stage(trace, 'resolved_effective');
+  const proof = observed.conditioningFeasibility;
+  const valid = !!proof && proof.noteTruthful && (!proof.noteVisible || (
+    observed.conditioning.length > 0 && observed.conditioning.every((entry) => entry.offFeet && entry.intensity === 'easy')));
+  return one(id, trace, applied, valid, () => failure({
+    trace, invariantId: id, ruleId: 'ALL-COND-NOTE-TRUTH-01', stage: 'resolved_effective',
+    expected: 'conditioning note only when final visible easy off-feet conditioning exists',
+    actual: { conditioning: observed.conditioning, proof },
+    missing: proof?.noteVisible && observed.conditioning.length === 0 ? ['visible_conditioning_evidence'] : [],
+  }));
+}
+
 export const SLICE3_INVARIANT_IDS: readonly Slice3InvariantId[] = [
   'INV_CONDITIONING_LEDGER_CONSERVED', 'INV_MODALITY_IDENTITY_HONEST',
   'INV_EARLY_OFFSEASON_CONDITIONING_SAFE', 'INV_MULTI_MODALITY_NO_COLLAPSE',
@@ -411,12 +490,18 @@ export const SLICE3_INVARIANT_IDS: readonly Slice3InvariantId[] = [
   'INV_READINESS_TRANSFORMATION_VALID', 'INV_STRENGTH_FATIGUE_CREDIT_CONSERVED',
   'INV_CONDITIONING_EXPOSURE_CREDIT_CONSERVED', 'INV_EFFECTIVE_REGION_CREDIT_VALID',
   'INV_WEEKLY_CAPS_RESPECTED', 'INV_WEEK_DETAIL_CONDITIONING_POWER_AGREEMENT',
+  'INV_EARLY_OFFSEASON_CROSS_MICROCYCLE_CONDITIONING',
+  'INV_EDGE_FALLBACK_CONDITIONING_EQUIVALENCE',
+  'INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER',
+  'INV_SUBPHASE_NOTE_REQUIRES_VISIBLE_EFFECT',
 ];
 
 export function evaluateSlice3Trace(trace: Slice3ScenarioTrace): InvariantCheckResult[] {
   // Specific structural checks precede generic conservation checks so mutation
   // probes report the domain owner rather than a downstream symptom.
   return [
+    crossMicrocycleConditioning(trace), pathConditioningEquivalent(trace),
+    feasibilitySingleOwner(trace), noteRequiresVisibleEffect(trace),
     multiModality(trace), powerPhase(trace), contrastValid(trace), modalityHonest(trace),
     g2Protected(trace), unaffectedPreserved(trace), equipmentCompatible(trace),
     strengthFatigue(trace), anchorCredit(trace), conditioningExposure(trace),

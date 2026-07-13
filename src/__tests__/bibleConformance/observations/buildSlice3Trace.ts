@@ -14,6 +14,7 @@ import { getSessionComponents } from '../../../utils/sessionComponents';
 import { resolveDate, type ResolvedDay, type ScheduleState } from '../../../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../../../utils/sessionBuilder';
 import { buildSingleWorkoutFixtureTrace } from './buildStrengthTrace';
+import { buildConditioningEquipmentTrace, isConditioningEquipmentScenario } from './buildConditioningEquipmentTrace';
 import type {
   ComponentGoldenScenario,
   HarnessConditioningEntry,
@@ -685,6 +686,32 @@ function applyMutation(trace: Slice3ScenarioTrace, mutation?: Slice3MutationId):
     effective.exerciseNames.push('Back Squat');
   } else if (mutation === 'trunk_creates_conditioning' && accounting) {
     accounting.conditioning += 1; accounting.hardConditioning += 1;
+  } else if (mutation === 'legacy_list_exhaustive') {
+    for (const stage of [clone.stages.allocation, generated, effective, week, detail]) {
+      if (!stage) continue;
+      stage.conditioning = [];
+      stage.components = stage.components.filter((item) => item !== 'conditioning');
+      if (stage.conditioningFeasibility) {
+        stage.conditioningFeasibility.allowedModalities = [];
+        stage.conditioningFeasibility.statuses = ['removed'];
+        stage.conditioningFeasibility.reasons = ['no_permitted_conditioning_modality'];
+      }
+    }
+  } else if (mutation === 'edge_restores_unavailable_bike' && generated) {
+    generated.conditioning = [{ modality: 'bike', intent: 'aerobic_base', intensity: 'easy', offFeet: true }];
+    if (!generated.components.includes('conditioning')) generated.components.push('conditioning');
+  } else if ((mutation === 'fallback_drops_feasible_conditioning' || mutation === 'second_week_conditioning_loss') && effective) {
+    for (const stage of [effective, week, detail]) {
+      if (!stage) continue;
+      stage.conditioning = [];
+      stage.components = stage.components.filter((item) => item !== 'conditioning');
+    }
+  } else if (mutation === 'stale_subphase_note_survives' && effective?.conditioningFeasibility) {
+    for (const stage of [effective, week, detail]) {
+      if (!stage?.conditioningFeasibility) continue;
+      stage.conditioningFeasibility.noteVisible = true;
+      stage.conditioningFeasibility.noteTruthful = false;
+    }
   }
   return clone;
 }
@@ -693,6 +720,9 @@ export function buildSlice3ScenarioTrace(
   scenario: Slice3GoldenScenario,
   mutation?: Slice3MutationId,
 ): Slice3ScenarioTrace {
+  if (isConditioningEquipmentScenario(scenario)) {
+    return applyMutation(buildConditioningEquipmentTrace(scenario), mutation);
+  }
   const startedAt = performance.now();
   const built = fixture(scenario);
   const projections = projectionObservations(scenario, built.effective, built.profile, built.date);

@@ -39,6 +39,7 @@ import type {
   WorkoutType,
   DeterministicCoachNoteEffectReason,
   DeterministicCoachNoteEffectSeed,
+  ConditioningFeasibilityDecision,
 } from '../types/domain';
 import { logger } from './logger';
 import {
@@ -205,6 +206,8 @@ export interface SessionAllocation {
    * same erg twice unless forced.
    */
   ergModality?: 'bike' | 'bike_erg' | 'row' | 'ski' | 'mixed';
+  /** Canonical equipment/safety feasibility result consumed by every generator. */
+  conditioningFeasibility?: ConditioningFeasibilityDecision;
   /** True speed work is not conditioning; it travels as a typed speed block. */
   speedWorkKind?: SpeedWorkKind;
   speedPlacement?: SpeedBlockPlacement;
@@ -391,6 +394,11 @@ export interface CoachingPlan {
   optionalSessions: number;
   recoverySessions: number;
   weeklyPlan: SessionAllocation[];
+
+  // Typed phase context owned by the allocation that produced this plan.
+  // Downstream prompt/fallback feasibility must not reconstruct it from copy.
+  offseasonSubphase?: OffseasonSubphase | null;
+  preseasonSubphase?: PreseasonSubphase | null;
 
   // Constraints for AI
   constraints: AIConstraints;
@@ -1394,6 +1402,8 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     optionalSessions: plannedOptionalSessions,
     recoverySessions: plannedRecoverySessions,
     weeklyPlan,
+    offseasonSubphase,
+    preseasonSubphase,
     constraints,
   };
 }

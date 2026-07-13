@@ -92,6 +92,8 @@ import {
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
+import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
+import { resolveWeeklyConditioningFeasibility } from '../rules/conditioningFeasibility';
 
 /**
  * Default exercises used in the training program
@@ -1557,47 +1559,6 @@ function deloadPlanEntry(
   };
 }
 
-function applyRequiredOffFeetEquipmentFallback(
-  entry: SessionAllocation,
-  availableEquipment: AthletePoolPrefs['availableEquipment'],
-): SessionAllocation {
-  const hasKnownOffFeetEquipment =
-    availableEquipment === undefined || availableEquipment.includes('bike_or_treadmill');
-  if (!entry.conditioningOffFeet || hasKnownOffFeetEquipment) return entry;
-
-  if (entry.hasCombinedConditioning || entry.strengthPattern) {
-    const strengthFocus = stripConditioningSuffix(entry.focus);
-    return {
-      ...entry,
-      focus: strengthFocus || entry.focus,
-      hasCombinedConditioning: false,
-      attachedConditioningKind: undefined,
-      conditioningFlavour: undefined,
-      conditioningCategory: undefined,
-      conditioningVariant: undefined,
-      conditioningFeel: undefined,
-      conditioningOffFeet: undefined,
-      ergModality: undefined,
-    };
-  }
-
-  return {
-    ...entry,
-    tier: 'recovery',
-    focus: 'Mobility, foam rolling, light movement',
-    isHardExposure: false,
-    stressLevel: 'low',
-    hasCombinedConditioning: false,
-    attachedConditioningKind: undefined,
-    conditioningFlavour: undefined,
-    conditioningCategory: undefined,
-    conditioningVariant: undefined,
-    conditioningFeel: undefined,
-    conditioningOffFeet: undefined,
-    ergModality: undefined,
-  };
-}
-
 export function buildWorkoutsFromCoach(
   coachWorkouts: CoachGeneratedWorkoutInput[],
   microcycleId: string = 'mc-1',
@@ -1637,18 +1598,59 @@ export function buildWorkoutsFromCoach(
     onboardingData?.seasonPhase,
     rotationContext?.weekKind,
   );
+  const profileEquipment = resolveEquipmentCapabilities(onboardingData);
+  const availableEquipment = effectiveAthletePrefs?.availableEquipment ?? profileEquipment.tags;
+  const conditioningModalities = effectiveAthletePrefs?.conditioningModalities ?? (
+    effectiveAthletePrefs?.availableEquipment
+      ? effectiveAthletePrefs.availableEquipment.includes('bike_or_treadmill')
+        ? profileEquipment.conditioningModalities.length > 0
+          ? profileEquipment.conditioningModalities
+          : ['bike', 'row', 'ski', 'treadmill']
+        : []
+      : profileEquipment.conditioningModalities
+  );
+  const equipmentCapabilities = {
+    ...profileEquipment,
+    tags: [...availableEquipment],
+    conditioningModalities: [...conditioningModalities],
+  };
   const effectiveWeeklyPlan = weeklyPlan
-    ? weeklyPlan.map((entry) => applyRequiredOffFeetEquipmentFallback(
-        deloadPlanEntry(entry, deloadPolicy),
-        effectiveAthletePrefs?.availableEquipment,
-      ))
+    ? resolveWeeklyConditioningFeasibility(
+        weeklyPlan.map((entry) => deloadPlanEntry(entry, deloadPolicy)),
+        {
+          phase: onboardingData?.seasonPhase,
+          offseasonSubphase,
+          equipment: equipmentCapabilities,
+          profile: onboardingData,
+        },
+      )
     : undefined;
   const planLookup = effectiveWeeklyPlan ? buildPlanLookup(effectiveWeeklyPlan) : null;
   const planIdentityLookup = effectiveWeeklyPlan
     ? buildPlanIdentityLookup(effectiveWeeklyPlan)
     : null;
-  const edgeProvidedDays = new Set(coachWorkouts.map((workout) => workout.dayOfWeek));
-  const completedCoachWorkouts = completeCoachWorkoutsFromPlan(coachWorkouts, effectiveWeeklyPlan);
+  const feasibleCoachWorkouts = coachWorkouts.flatMap((workout) => {
+    const planEntry = resolveGeneratedPlanEntry(workout, planIdentityLookup, planLookup);
+    if (planEntry?.conditioningFeasibility?.status !== 'removed') return [workout];
+    const strengthRemains = !!planEntry.strengthPattern ||
+      !!planEntry.strengthIntent?.plannedPatterns.length;
+    if (!strengthRemains) return [];
+    return [{
+      ...workout,
+      exercises: (workout.exercises ?? []).filter((exercise, index) =>
+        classifyGeneratedWorkoutRow({
+          name: exercise.name,
+          sets: exercise.sets,
+          repsMax: exercise.repsMax,
+          index,
+        }).kind !== 'conditioning'),
+    }];
+  });
+  const edgeProvidedDays = new Set(feasibleCoachWorkouts.map((workout) => workout.dayOfWeek));
+  const completedCoachWorkouts = completeCoachWorkoutsFromPlan(
+    feasibleCoachWorkouts,
+    effectiveWeeklyPlan,
+  );
 
   const finaliseBuiltWorkout = (
     workout: Workout,
@@ -2197,16 +2199,20 @@ export function buildWorkoutsFromCoach(
         ...(!isStandaloneSpeed && planEntry.conditioningCategory
           ? { conditioningCategory: planEntry.conditioningCategory }
           : {}),
+        ...(planEntry.conditioningFeasibility
+          ? { conditioningFeasibility: planEntry.conditioningFeasibility }
+          : {}),
         ...(speedBlock ? { speedBlock } : {}),
         durationMinutes: 0,
         exercises: condExercises,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as Workout;
-      return finaliseBuiltWorkout(attachSessionEffectEvidence(
-        standaloneWorkout,
+      const finalWorkout = finaliseBuiltWorkout(standaloneWorkout, planEntry);
+      return attachSessionEffectEvidence(
+        finalWorkout,
         planEntry.deterministicCoachNoteEffects,
-      ), planEntry);
+      );
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -2470,6 +2476,9 @@ export function buildWorkoutsFromCoach(
       ...(planEntry?.attachedConditioningKind ? { attachedConditioningKind: planEntry.attachedConditioningKind } : {}),
       ...(planEntry?.conditioningFlavour ? { conditioningFlavour: planEntry.conditioningFlavour } : {}),
       ...(planEntry?.conditioningCategory ? { conditioningCategory: planEntry.conditioningCategory } : {}),
+      ...(planEntry?.conditioningFeasibility
+        ? { conditioningFeasibility: planEntry.conditioningFeasibility }
+        : {}),
       ...(resolvedConditioningBlock ? { conditioningBlock: resolvedConditioningBlock } : {}),
       ...(resolvedSpeedBlock ? { speedBlock: resolvedSpeedBlock } : {}),
       ...(resolvedPowerBlock ? { powerBlock: resolvedPowerBlock } : {}),
@@ -2478,14 +2487,14 @@ export function buildWorkoutsFromCoach(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    const decoratedWorkout = attachPrescriptionEffectEvidence(
+    const finalWorkout = finaliseBuiltWorkout(builtWorkout, planEntry);
+    return attachPrescriptionEffectEvidence(
       attachSessionEffectEvidence(
-        builtWorkout,
+        finalWorkout,
         planEntry?.deterministicCoachNoteEffects,
       ),
       beginnerPrescriptionEvidence,
     );
-    return finaliseBuiltWorkout(decoratedWorkout, planEntry);
   });
 }
 

@@ -22,6 +22,7 @@ import {
   buildTemporaryEquipmentConstraint,
   equipmentTagsToSubstituteEquipmentClasses,
   resolveEquipmentAvailability,
+  resolveEquipmentCapabilities,
   saveBaselineEquipmentSelection,
 } from '../utils/equipmentAvailability';
 import { buildProgramGenerationRequestDiagnostics } from '../services/api/generateProgram';
@@ -105,6 +106,37 @@ section('2. Fallback and bodyweight invariants');
   assert(legacy.includes('cables'), 'legacy cable_machine checklist value maps to cables');
   assert(legacy.includes('machine'), 'legacy machine-specific checklist value maps to machine');
   assert(legacy.includes('bands'), 'legacy bands checklist value maps to bands');
+
+  const legacyCommercial = resolveEquipmentCapabilities({
+    trainingLocation: 'Commercial gym',
+    equipment: ['barbell', 'dumbbells', 'squat_rack', 'cable_machine', 'bands'],
+  });
+  assert(
+    legacyCommercial.source === 'legacy_positive_plus_location' &&
+      sameSet(legacyCommercial.conditioningModalities, ['bike', 'row', 'ski', 'treadmill']),
+    'legacy positive Commercial-gym checklist is supplemented by location capabilities',
+  );
+
+  const completeNoCardio = resolveEquipmentCapabilities({
+    trainingLocation: 'Commercial gym',
+    equipment: ['Dumbbells Only'],
+    equipmentSelectionCompleteness: 'complete',
+  });
+  assert(
+    completeNoCardio.conditioningModalities.length === 0 &&
+      !completeNoCardio.tags.includes('bike_or_treadmill'),
+    'complete no-cardio selection outranks Commercial-gym location baseline',
+  );
+
+  const rowOnly = resolveEquipmentCapabilities({
+    trainingLocation: 'Commercial gym',
+    equipment: ['RowErg'],
+    equipmentSelectionCompleteness: 'complete',
+  });
+  assert(
+    sameSet(rowOnly.conditioningModalities, ['row']),
+    'complete RowErg-only selection exposes exactly one off-feet modality',
+  );
 }
 
 section('3. Full gym and substitution class bridge');
@@ -212,6 +244,22 @@ section('5. Equipment constraints apply to availability');
   assert(!resolvedWithout.includes('barbell'), 'mode=without subtracts unavailable barbell');
   assert(!resolvedWithout.includes('machine'), 'mode=without subtracts unavailable machine');
   assert(resolvedWithout.includes('dumbbells'), 'mode=without keeps unrelated baseline equipment');
+
+  const noCardio = buildTemporaryEquipmentConstraint({
+    presetId: 'no_erg_cardio',
+    date: '2026-04-23',
+    todayISO: '2026-04-23T09:00:00.000Z',
+  });
+  const constrainedCapabilities = resolveEquipmentCapabilities(profile, [noCardio], '2026-04-23');
+  assert(
+    constrainedCapabilities.conditioningModalities.length === 0,
+    'temporary no-cardio constraint overrides Full Gym conditioning capabilities',
+  );
+  const restoredCapabilities = resolveEquipmentCapabilities(profile, [], '2026-04-23');
+  assert(
+    sameSet(restoredCapabilities.conditioningModalities, ['bike', 'row', 'ski', 'treadmill']),
+    'clearing temporary no-cardio constraint restores baseline modalities',
+  );
 }
 
 section('5b. Temporary equipment preset mapping');
@@ -408,9 +456,13 @@ section('8. Baseline equipment save/rebuild behaviour');
       unchangedRefreshCalled = true;
     },
   });
-  assert(unchanged.rebuildRequired === false, 'unchanged resolved equipment does not trigger fake rebuild');
-  assert(unchangedRefreshCalled === false, 'unchanged resolved equipment does not refresh program');
-  assert(unchanged.message === 'Equipment saved.', 'unchanged baseline save uses simple saved copy');
+  assert(unchanged.rebuildRequired === true, 'modern exhaustive save replaces ambiguous legacy positive baseline');
+  assert(unchangedRefreshCalled === true, 'legacy-to-modern capability change refreshes program');
+  assert(unchanged.message === 'Equipment updated. Your program was refreshed.', 'legacy-to-modern save reports refresh');
+  assert(
+    unchanged.nextProfile.equipmentSelectionCompleteness === 'complete',
+    'modern equipment save records authoritative completeness',
+  );
 
   useCoachUpdatesStore.getState().setActiveConstraints([]);
   const plan = buildBaselineEquipmentSavePlan(baseline, ['Bodyweight Only'], date);

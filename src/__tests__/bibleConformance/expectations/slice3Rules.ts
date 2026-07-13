@@ -129,4 +129,32 @@ export const SLICE3_BIBLE_RULES: readonly Slice3Rule[] = [
     applicableScenarios: ['inseason-mixed-team-accounting'],
     expectation: { maxMainStrength: 4, maxRunning: 4, maxSprintCod: 3, maxHardDays: 4 },
   },
+  {
+    id: 'OS-COND-CROSS-WEEK-01', category: 'conditioning', section: 'Off-season conditioning continuity',
+    anchorQuote: 'early off season = no running and only light aerobic work / base building work.',
+    statement: 'Equivalent early off-season allocations retain the same feasible conditioning contract across microcycles, independent of generation path.',
+    applicableScenarios: ['early-offseason-legacy-commercial', 'early-offseason-modern-full-gym'],
+    expectation: { preserveAllocatedFeasibleComponent: true, exactSessionCountNotRequired: true },
+  },
+  {
+    id: 'ALL-COND-PATH-EQUIV-01', category: 'conditioning', section: 'Deterministic programming authority',
+    anchorQuote: 'The app should feel like a smart S&C coach in the background:',
+    statement: 'Edge and deterministic fallback paths consume the same feasible allocation and cannot disagree about conditioning presence.',
+    applicableScenarios: ['early-offseason-legacy-commercial', 'early-offseason-modern-full-gym', 'early-offseason-explicit-no-cardio', 'early-offseason-row-only'],
+    expectation: { equivalentComponentLedger: true },
+  },
+  {
+    id: 'ALL-COND-FEASIBILITY-01', category: 'constraint', section: 'Equipment-aware conditioning',
+    anchorQuote: 'Do not force normal gym programming if they are away from equipment.',
+    statement: 'One typed feasibility owner resolves, replaces or removes planned conditioning before every generation path.',
+    applicableScenarios: ['early-offseason-legacy-commercial', 'early-offseason-modern-full-gym', 'early-offseason-explicit-no-cardio', 'early-offseason-row-only'],
+    expectation: { singleOwner: 'conditioningFeasibility', treadmillOffFeet: false, explicitAbsenceWins: true },
+  },
+  {
+    id: 'ALL-COND-NOTE-TRUTH-01', category: 'conditioning', section: 'Coach Notes explain visible changes',
+    anchorQuote: 'Coach Notes explain what changed and why.',
+    statement: 'A conditioning-specific subphase note requires matching final visible typed conditioning content.',
+    applicableScenarios: ['early-offseason-legacy-commercial', 'early-offseason-modern-full-gym', 'early-offseason-explicit-no-cardio', 'early-offseason-row-only'],
+    expectation: { visibleEffectRequired: true },
+  },
 ];

@@ -23,6 +23,12 @@ export type SubscriptionStatus = 'free' | 'trial' | 'active' | 'cancelled' | 'ex
 // Training location types
 export type TrainingLocation = 'Commercial gym' | 'Home gym' | 'Club gym' | 'Outdoor';
 
+/** Whether profile equipment is an exhaustive user declaration or legacy positive-only data. */
+export type EquipmentSelectionCompleteness = 'complete' | 'legacy_incomplete';
+
+/** Canonical conditioning-machine capabilities; treadmill is deliberately not off-feet. */
+export type ConditioningEquipmentModality = 'bike' | 'row' | 'ski' | 'treadmill';
+
 // Onboarding types for new user setup
 export type AgeRange = 'Under 18' | '18-22' | '22-26' | '26-30' | '30+';
 
@@ -104,6 +110,11 @@ export interface OnboardingData {
   sessionDurationMinutes?: SessionDuration;
   trainingLocation?: TrainingLocation;
   equipment?: string[];
+  /**
+   * Modern saves are exhaustive. Legacy/default itemised lists only prove
+   * positive availability and may be supplemented by the location baseline.
+   */
+  equipmentSelectionCompleteness?: EquipmentSelectionCompleteness;
   experienceLevel?: ExperienceLevel;
   squatStrength?: SquatStrength;
   benchStrength?: BenchStrength;
@@ -202,6 +213,21 @@ export interface DeterministicCoachNoteEffectSeed {
   ownerKey: string;
 }
 
+export type ConditioningFeasibilityReason =
+  | 'available_capability'
+  | 'deterministic_available_replacement'
+  | 'no_permitted_off_feet_modality'
+  | 'readiness_blocks_conditioning';
+
+/** Serializable allocation-owned result consumed by edge and fallback generation. */
+export interface ConditioningFeasibilityDecision {
+  status: 'feasible' | 'replaced' | 'removed';
+  requestedModality?: 'bike' | 'bike_erg' | 'row' | 'ski' | 'mixed';
+  resolvedModality?: 'bike' | 'bike_erg' | 'row' | 'ski' | 'mixed';
+  allowedModalities: Array<'bike' | 'row' | 'ski' | 'mixed'>;
+  reason: ConditioningFeasibilityReason;
+}
+
 export interface DeterministicPrescriptionProofRow {
   exerciseId: string;
   exerciseName: string;
@@ -224,6 +250,8 @@ export type DeterministicCoachNoteEffectProof =
       workoutType: WorkoutType;
       sessionTier?: SessionTier;
       conditioningCategory?: Workout['conditioningCategory'];
+      hasConditioningComponent: boolean;
+      conditioningModalities: string[];
       exerciseNames: string[];
       hasSpeedBlock: boolean;
       hasPowerBlock: boolean;
@@ -537,6 +565,8 @@ export interface Workout {
    * the old mislabelled VO2 work; vo2/glycolytic remain hard.
    */
   conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
+  /** Final allocation feasibility decision; display fields never override it. */
+  conditioningFeasibility?: ConditioningFeasibilityDecision;
 
   /**
    * Resolved conditioning block — single source of truth for the renderer.

@@ -31,6 +31,7 @@ import type {
   InjuryStatus,
 } from '../utils/injuryProgression';
 import type { EquipmentTag } from '../data/exercisePools';
+import type { ConditioningEquipmentModality } from '../types/domain';
 
 export type CoachUpdateSource = 'coach' | 'uae';
 
@@ -253,6 +254,8 @@ export interface ActiveEquipmentConstraint extends ActiveConstraintModifierMetad
   /** only = use only these tags plus bodyweight; without = subtract these tags. */
   mode: 'only' | 'without';
   tags: EquipmentTag[];
+  /** Optional exact conditioning-machine subset for no-bike/no-row style limits. */
+  conditioningModalities?: ConditioningEquipmentModality[];
   severity: number;
   status: InjuryStatus;
   startDate: string;

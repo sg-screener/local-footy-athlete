@@ -28,7 +28,11 @@ export type Slice3ScenarioId =
   | 'hamstring-restriction-mixed'
   | 'equipment-no-barbell-lower'
   | 'low-readiness-downgrade'
-  | 'multi-modality-conditioning';
+  | 'multi-modality-conditioning'
+  | 'early-offseason-legacy-commercial'
+  | 'early-offseason-modern-full-gym'
+  | 'early-offseason-explicit-no-cardio'
+  | 'early-offseason-row-only';
 
 export type AllBibleScenarioId = BibleScenarioId | Slice3ScenarioId;
 
@@ -92,7 +96,11 @@ export type Slice3RuleId =
   | 'ALL-EXPOSURE-STRENGTH-01'
   | 'ALL-EXPOSURE-COND-01'
   | 'ALL-EXPOSURE-REGION-01'
-  | 'ALL-EXPOSURE-CAPS-01';
+  | 'ALL-EXPOSURE-CAPS-01'
+  | 'OS-COND-CROSS-WEEK-01'
+  | 'ALL-COND-PATH-EQUIV-01'
+  | 'ALL-COND-FEASIBILITY-01'
+  | 'ALL-COND-NOTE-TRUTH-01';
 
 export type Slice4RuleId =
   | 'ALL-PATH-EQUIV-01'
@@ -184,7 +192,11 @@ export type Slice3InvariantId =
   | 'INV_CONDITIONING_EXPOSURE_CREDIT_CONSERVED'
   | 'INV_EFFECTIVE_REGION_CREDIT_VALID'
   | 'INV_WEEKLY_CAPS_RESPECTED'
-  | 'INV_WEEK_DETAIL_CONDITIONING_POWER_AGREEMENT';
+  | 'INV_WEEK_DETAIL_CONDITIONING_POWER_AGREEMENT'
+  | 'INV_EARLY_OFFSEASON_CROSS_MICROCYCLE_CONDITIONING'
+  | 'INV_EDGE_FALLBACK_CONDITIONING_EQUIVALENCE'
+  | 'INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER'
+  | 'INV_SUBPHASE_NOTE_REQUIRES_VISIBLE_EFFECT';
 
 export type Slice4InvariantId =
   | 'INV_EQUIVALENT_CANONICAL_LEDGER'
@@ -260,7 +272,7 @@ export interface HarnessTransformEvidence {
 export interface Slice3GoldenScenario {
   id: Slice3ScenarioId;
   description: string;
-  referenceDate: '2026-03-23';
+  referenceDate: '2026-03-23' | '2026-07-13';
   timezone: 'Australia/Melbourne';
   fixtureKind: Slice3ScenarioId;
   ruleIds: Slice3RuleId[];
@@ -300,6 +312,15 @@ export interface Slice3StageObservation {
   visibleSubtitle: string | null;
   evidence: HarnessTransformEvidence[];
   accounting?: HarnessExposureLedger;
+  conditioningFeasibility?: {
+    owner: 'conditioningFeasibility';
+    decisions: number;
+    statuses: Array<'feasible' | 'replaced' | 'removed'>;
+    reasons: string[];
+    allowedModalities: string[];
+    noteVisible: boolean;
+    noteTruthful: boolean;
+  };
 }
 
 export interface Slice3ScenarioTrace {
@@ -563,7 +584,12 @@ export type Slice3MutationId =
   | 'g2_heavy_survives'
   | 'constraint_drops_unrelated'
   | 'equipment_incompatible_survives'
-  | 'trunk_creates_conditioning';
+  | 'trunk_creates_conditioning'
+  | 'legacy_list_exhaustive'
+  | 'edge_restores_unavailable_bike'
+  | 'fallback_drops_feasible_conditioning'
+  | 'second_week_conditioning_loss'
+  | 'stale_subphase_note_survives';
 
 export interface Slice3MutationAcceptanceResult {
   mutationId: Slice3MutationId;

@@ -146,7 +146,7 @@ function main(): void {
 
   const mutationStarted = performance.now();
   const newMutations = options.mutations === 'full' ? runSlice5MutationAcceptanceTests() : [];
-  const acceptedMutationCount = options.mutations === 'none' ? 0 : 28;
+  const acceptedMutationCount = options.mutations === 'none' ? 0 : 33;
   const mutationDenominator = options.mutations === 'full' ? MUTATION_CATALOGUE.length : acceptedMutationCount;
   console.log(`  PASS mutations ${acceptedMutationCount + newMutations.length}/${mutationDenominator} active and killed (${(performance.now() - mutationStarted).toFixed(1)}ms)`);
 

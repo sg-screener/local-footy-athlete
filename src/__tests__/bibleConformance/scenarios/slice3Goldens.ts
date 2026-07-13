@@ -47,4 +47,28 @@ export const SLICE3_GOLDEN_SCENARIOS: readonly Slice3GoldenScenario[] = [
   golden('multi-modality-conditioning', 'Typed tempo conditioning choices containing both bike and RowErg modalities.', [
     'ALL-COND-MODALITY-01', 'ALL-COND-MULTI-01',
   ]),
+  {
+    id: 'early-offseason-legacy-commercial', fixtureKind: 'early-offseason-legacy-commercial',
+    description: 'Legacy positive Commercial-gym checklist across edge Week 1 and fallback Week 2.',
+    referenceDate: '2026-07-13', timezone: 'Australia/Melbourne',
+    ruleIds: ['OS-COND-CROSS-WEEK-01', 'ALL-COND-PATH-EQUIV-01', 'ALL-COND-FEASIBILITY-01', 'ALL-COND-NOTE-TRUTH-01'],
+  },
+  {
+    id: 'early-offseason-modern-full-gym', fixtureKind: 'early-offseason-modern-full-gym',
+    description: 'Complete modern Full Gym selection across edge Week 1 and fallback Week 2.',
+    referenceDate: '2026-07-13', timezone: 'Australia/Melbourne',
+    ruleIds: ['OS-COND-CROSS-WEEK-01', 'ALL-COND-PATH-EQUIV-01', 'ALL-COND-FEASIBILITY-01', 'ALL-COND-NOTE-TRUTH-01'],
+  },
+  {
+    id: 'early-offseason-explicit-no-cardio', fixtureKind: 'early-offseason-explicit-no-cardio',
+    description: 'Complete modern no-cardio selection rejects edge Bike and fallback conditioning equally.',
+    referenceDate: '2026-07-13', timezone: 'Australia/Melbourne',
+    ruleIds: ['ALL-COND-PATH-EQUIV-01', 'ALL-COND-FEASIBILITY-01', 'ALL-COND-NOTE-TRUTH-01'],
+  },
+  {
+    id: 'early-offseason-row-only', fixtureKind: 'early-offseason-row-only',
+    description: 'One permitted RowErg modality replaces unavailable defaults deterministically in every path.',
+    referenceDate: '2026-07-13', timezone: 'Australia/Melbourne',
+    ruleIds: ['ALL-COND-PATH-EQUIV-01', 'ALL-COND-FEASIBILITY-01', 'ALL-COND-NOTE-TRUTH-01'],
+  },
 ];

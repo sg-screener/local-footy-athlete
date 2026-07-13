@@ -1,4 +1,9 @@
-import { OnboardingData, TrainingProgram, Microcycle } from '../../types/domain';
+import {
+  OnboardingData,
+  TrainingProgram,
+  Microcycle,
+  type ConditioningEquipmentModality,
+} from '../../types/domain';
 import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
 import {
   buildCoachingPlan,
@@ -30,9 +35,15 @@ import {
   logMissingClientEnv,
 } from '../../config/env';
 import { logger } from '../../utils/logger';
-import { resolveEquipmentAvailability } from '../../utils/equipmentAvailability';
+import {
+  resolveEquipmentAvailability,
+  resolveEquipmentCapabilities,
+} from '../../utils/equipmentAvailability';
 import { getSessionComponents } from '../../utils/sessionComponents';
 import type { StrengthIntent } from '../../rules/strengthPatternContributions';
+import { resolveWeeklyConditioningFeasibility } from '../../rules/conditioningFeasibility';
+import { resolveOffseasonSubphase } from '../../rules/offseasonSubphase';
+import { resolvePreseasonSubphase } from '../../rules/preseasonSubphase';
 import {
   getProgrammingRoleBias,
   normalizeOnboardingRole,
@@ -173,6 +184,7 @@ export function buildGeneratedMicrocycles(args: {
   blockNumber?: number;
   athletePrefs: AthletePoolPrefsArg;
   availableEquipmentTags: readonly EquipmentTag[];
+  availableConditioningModalities?: readonly ConditioningEquipmentModality[];
   generationConstraints?: GenerationConstraintContext;
 }): Microcycle[] {
   const states = buildBlockWeekStates({
@@ -183,7 +195,7 @@ export function buildGeneratedMicrocycles(args: {
 
   return states.map((blockState, stateIndex) => {
     const microcycleId = `${args.microcyclePrefix}-${blockState.weekNumber}`;
-    const weekPlan = args.coachingInputs
+    const allocatedWeekPlan = args.coachingInputs
       ? buildCoachingPlan({
           ...args.coachingInputs,
           miniCycleNumber: blockState.miniCycleNumber,
@@ -192,6 +204,40 @@ export function buildGeneratedMicrocycles(args: {
           weekKind: blockState.weekKind,
         })
       : args.plan;
+    const profileEquipment = resolveEquipmentCapabilities(args.profile);
+    const equipment = {
+      ...profileEquipment,
+      tags: [...args.availableEquipmentTags],
+      conditioningModalities: [...(
+        args.availableConditioningModalities ??
+        (args.availableEquipmentTags.includes('bike_or_treadmill')
+          ? profileEquipment.conditioningModalities
+          : [])
+      )],
+    };
+    const weekPlan: CoachingPlan = {
+      ...allocatedWeekPlan,
+      weeklyPlan: resolveWeeklyConditioningFeasibility(
+        allocatedWeekPlan.weeklyPlan,
+        {
+          phase: args.profile.seasonPhase,
+          offseasonSubphase: resolveOffseasonSubphase({
+            seasonPhase: args.profile.seasonPhase,
+            miniCycleNumber: blockState.miniCycleNumber,
+            weekInBlock: blockState.weekInBlock,
+            weekNumber: blockState.weekNumber,
+          }),
+          preseasonSubphase: resolvePreseasonSubphase({
+            seasonPhase: args.profile.seasonPhase,
+            weekInBlock: blockState.weekInBlock,
+            weekNumber: blockState.weekNumber,
+          }),
+          equipment,
+          profile: args.profile,
+          generationConstraints: args.generationConstraints,
+        },
+      ),
+    };
     // An edge response describes exactly the block state sent in its prompt:
     // week 1. Never replay that single array against week 2-4 allocations.
     // Later weeks use their own deterministic plan/fallback content.
@@ -211,6 +257,7 @@ export function buildGeneratedMicrocycles(args: {
       {
         ...args.athletePrefs,
         availableEquipment: args.availableEquipmentTags,
+        conditioningModalities: equipment.conditioningModalities,
       },
     );
     const workouts = attachRecoveryAddonsToWeek({
@@ -310,11 +357,12 @@ export function generateProgramLocally(
     normalizeOnboardingRole(onboardingData),
     generationConstraints,
   );
-  const resolvedEquipmentTags = resolveEquipmentAvailability(
+  const resolvedEquipment = resolveEquipmentCapabilities(
     generationProfile,
     activeConstraintsForGeneration,
     availabilityDateISO,
   );
+  const resolvedEquipmentTags = resolvedEquipment.tags;
   const coachingInputs = onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO,
     generationConstraints,
@@ -351,6 +399,7 @@ export function generateProgramLocally(
       generationConstraints,
     ),
     availableEquipmentTags: resolvedEquipmentTags,
+    availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
   });
   const firstMicrocycle = microcycles[0];
@@ -418,7 +467,10 @@ function buildRoleContext(data: OnboardingData) {
 
 export interface ProgramGenerationEdgePayload {
   messages: Array<{ role: 'user'; content: string }>;
-  athleteProfile: OnboardingData & { resolvedEquipmentTags: EquipmentTag[] };
+  athleteProfile: OnboardingData & {
+    resolvedEquipmentTags: EquipmentTag[];
+    resolvedConditioningModalities: ConditioningEquipmentModality[];
+  };
   roleContext: ReturnType<typeof buildRoleContext>;
   coachingPlan: AIConstraints;
   mode: 'generate';
@@ -434,12 +486,17 @@ export function buildProgramGenerationEdgePayload(args: {
   message: string;
   coachingPlan: AIConstraints;
   resolvedEquipmentTags: readonly EquipmentTag[];
+  resolvedConditioningModalities?: readonly ConditioningEquipmentModality[];
 }): ProgramGenerationEdgePayload {
   return {
     messages: [{ role: 'user', content: args.message }],
     athleteProfile: {
       ...args.generationProfile,
       resolvedEquipmentTags: [...args.resolvedEquipmentTags],
+      resolvedConditioningModalities: [...(
+        args.resolvedConditioningModalities ??
+        resolveEquipmentCapabilities(args.generationProfile).conditioningModalities
+      )],
     },
     roleContext: buildRoleContext(args.generationProfile),
     coachingPlan: args.coachingPlan,
@@ -517,6 +574,8 @@ export function buildProgramGenerationRequestDiagnostics(
   message?: string,
   env: ReturnType<typeof getClientEnvConfig> = getClientEnvConfig(),
   resolvedEquipmentTags: readonly EquipmentTag[] = resolveEquipmentAvailability(onboardingData),
+  resolvedConditioningModalities: readonly ConditioningEquipmentModality[] =
+    resolveEquipmentCapabilities(onboardingData).conditioningModalities,
 ): Record<string, unknown> {
   const generationProfile = normalizeOnboardingRole(onboardingData);
   const derivedInputs = onboardingToCoachingInputs(generationProfile, {
@@ -526,7 +585,12 @@ export function buildProgramGenerationRequestDiagnostics(
     coachingInputs: derivedInputs,
     profile: generationProfile,
   });
-  const derivedMessage = message ?? buildGenerationPrompt(generationProfile, derivedPlan, resolvedEquipmentTags);
+  const derivedMessage = message ?? buildGenerationPrompt(
+    generationProfile,
+    derivedPlan,
+    resolvedEquipmentTags,
+    resolvedConditioningModalities,
+  );
   const roleContext = buildRoleContext(generationProfile);
   const profileFields = Object.keys(generationProfile).sort();
   const profileFieldDiagnostics = getProgramGenerationProfileFieldDiagnostics(generationProfile);
@@ -542,6 +606,7 @@ export function buildProgramGenerationRequestDiagnostics(
     message: derivedMessage,
     coachingPlan: derivedPlan.constraints,
     resolvedEquipmentTags,
+    resolvedConditioningModalities,
   });
 
   return {
@@ -578,6 +643,7 @@ export function buildProgramGenerationRequestDiagnostics(
         trainingLocation: generationProfile.trainingLocation ?? null,
         equipmentCount: generationProfile.equipment?.length ?? 0,
         resolvedEquipmentTags,
+        resolvedConditioningModalities,
         goalsCount: generationProfile.goals?.length ?? 0,
         injuriesCount: generationProfile.injuries?.length ?? 0,
         conditioningLevel: generationProfile.conditioningLevel ?? null,
@@ -763,11 +829,12 @@ export async function generateProgramFromProfile(
     normalizeOnboardingRole(onboardingData),
     generationConstraints,
   );
-  const resolvedEquipmentTags = resolveEquipmentAvailability(
+  const resolvedEquipment = resolveEquipmentCapabilities(
     generationProfile,
     activeConstraintsForGeneration,
     availabilityDateISO,
   );
+  const resolvedEquipmentTags = resolvedEquipment.tags;
   if (!env.isReady) {
     logMissingClientEnv('generateProgramFromProfile', env);
     throw new ProgramGenError(
@@ -799,13 +866,19 @@ export async function generateProgramFromProfile(
   });
 
   // ─── Step 2: Build AI prompt from coaching plan ───
-  const message = buildGenerationPrompt(generationProfile, plan, resolvedEquipmentTags);
+  const message = buildGenerationPrompt(
+    generationProfile,
+    plan,
+    resolvedEquipmentTags,
+    resolvedEquipment.conditioningModalities,
+  );
   const requestDiagnostics = buildProgramGenerationRequestDiagnostics(
     generationProfile,
     plan,
     message,
     env,
     resolvedEquipmentTags,
+    resolvedEquipment.conditioningModalities,
   );
 
   const promptWords = message.split(/\s+/).length;
@@ -848,6 +921,7 @@ export async function generateProgramFromProfile(
     message,
     coachingPlan: plan.constraints,
     resolvedEquipmentTags,
+    resolvedConditioningModalities: resolvedEquipment.conditioningModalities,
   });
 
   let response: Response;
@@ -1098,6 +1172,7 @@ export async function generateProgramFromProfile(
         generationConstraints,
       ),
       availableEquipmentTags: resolvedEquipmentTags,
+      availableConditioningModalities: resolvedEquipment.conditioningModalities,
       generationConstraints,
     });
   } catch (normaliseErr: any) {
@@ -1241,9 +1316,28 @@ export function buildGenerationPrompt(
   data: OnboardingData,
   plan: CoachingPlan,
   resolvedEquipmentTags: readonly EquipmentTag[] = resolveEquipmentAvailability(data),
+  resolvedConditioningModalities?: readonly ConditioningEquipmentModality[],
 ): string {
   const c = plan.constraints;
   const parts: string[] = [];
+  const profileEquipment = resolveEquipmentCapabilities(data);
+  const equipment = {
+    ...profileEquipment,
+    tags: [...resolvedEquipmentTags],
+    conditioningModalities: [...(
+      resolvedConditioningModalities ??
+      (resolvedEquipmentTags.includes('bike_or_treadmill')
+        ? profileEquipment.conditioningModalities
+        : [])
+    )],
+  };
+  const weeklyPlan = resolveWeeklyConditioningFeasibility(plan.weeklyPlan, {
+    phase: data.seasonPhase,
+    offseasonSubphase: plan.offseasonSubphase ?? resolveOffseasonSubphase({ seasonPhase: data.seasonPhase }),
+    preseasonSubphase: plan.preseasonSubphase ?? resolvePreseasonSubphase({ seasonPhase: data.seasonPhase }),
+    equipment,
+    profile: data,
+  });
 
   parts.push('Generate my initial training program using the update_program tool.');
 
@@ -1256,14 +1350,14 @@ export function buildGenerationPrompt(
   }
 
   // ─── Weekly skeleton from coaching engine ───
-  if (plan.weeklyPlan.length > 0) {
+  if (weeklyPlan.length > 0) {
     parts.push('\nWEEKLY PLAN (from coaching engine — fill each session with exercises):');
     // Prefer the new DayOfWeek-typed usualGameDay; fall back to legacy gameDay.
     // Without this, the G-offset labels disagree with the engine's weeklyPlan
     // (engine already uses usualGameDay via onboardingToCoachingInputs).
     const effectiveGameDay = data.usualGameDay || data.gameDay;
     const gameDayNum = effectiveGameDay ? DAY_MAP[effectiveGameDay] : null;
-    plan.weeklyPlan.forEach((session) => {
+    weeklyPlan.forEach((session) => {
       let gLabel = '';
       if (gameDayNum !== null && session.dayOfWeek) {
         const dayNum = DAY_MAP[session.dayOfWeek];
@@ -1278,9 +1372,13 @@ export function buildGenerationPrompt(
       const patternLabel = intent
         ? ` [STRENGTH INTENT: archetype=${intent.archetype}; primary=${intent.primaryPattern ?? 'none'}; planned=${intent.plannedPatterns.join('+') || 'none'}]`
         : '';
-      parts.push(`  ${session.dayOfWeek || 'TBD'}${gLabel}: planEntryId=${session.planEntryId ?? 'missing'} [${session.tier.toUpperCase()}]${patternLabel} ${session.focus}${session.isHardExposure ? ' (HARD)' : ''}`);
+      const feasibility = session.conditioningFeasibility;
+      const feasibilityLabel = feasibility
+        ? ` [CONDITIONING FEASIBILITY: ${feasibility.status}; allowed=${feasibility.allowedModalities.join('+') || 'none'}; resolved=${feasibility.resolvedModality ?? 'default'}]`
+        : '';
+      parts.push(`  ${session.dayOfWeek || 'TBD'}${gLabel}: planEntryId=${session.planEntryId ?? 'missing'} [${session.tier.toUpperCase()}]${patternLabel}${feasibilityLabel} ${session.focus}${session.isHardExposure ? ' (HARD)' : ''}`);
     });
-    const expectedDayNumbers = plan.weeklyPlan
+    const expectedDayNumbers = weeklyPlan
       .map((session) => session.dayOfWeek ? DAY_MAP[session.dayOfWeek] : null)
       .filter((day): day is number => day !== null);
     parts.push(`\nReturn exactly one workout object for every WEEKLY PLAN line above. Do not omit optional, recovery, team-training, or Saturday sessions. Expected numeric dayOfWeek values: ${expectedDayNumbers.join(', ')}.`);
@@ -1289,7 +1387,7 @@ export function buildGenerationPrompt(
     parts.push('\nFollow the above tiers EXACTLY. Do NOT promote OPTIONAL/RECOVERY to CORE.');
   }
 
-  if (data.seasonPhase === 'Off-season' && plan.weeklyPlan.every((session) => session.tier === 'optional')) {
+  if (data.seasonPhase === 'Off-season' && weeklyPlan.every((session) => session.tier === 'optional')) {
     parts.push('\nEARLY OFF-SEASON WEEKS 1-2: every session is OPTIONAL; use 8-12 rep body-armour strength and easy off-feet aerobic/base work only. No running, power, jumps, explosive push-ups or contrast pairings.');
   }
 
@@ -1301,6 +1399,7 @@ export function buildGenerationPrompt(
   }
   parts.push('\nEQUIPMENT AVAILABILITY:');
   parts.push(`• Canonical available equipment tags: ${resolvedEquipmentTags.join(', ')}.`);
+  parts.push(`• Canonical conditioning modalities: ${equipment.conditioningModalities.join(', ') || 'none'}. These are authoritative; treadmill is not off-feet.`);
   if (rawEquipment.length > 0) {
     parts.push(`• Raw checklist values: ${rawEquipment.join(', ')}. Use the canonical tags above as the source of truth.`);
   } else {

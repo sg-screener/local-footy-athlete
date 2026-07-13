@@ -18,6 +18,11 @@ export const MUTATION_CATALOGUE: readonly MutationSpec[] = [
   { id: 'constraint_drops_unrelated', description: 'Constraint removes unaffected content.', affectedRuleIds: ['ALL-CONSTRAINT-AFFECTED-ONLY-01'], expectedInvariantIds: ['INV_UNAFFECTED_CONTENT_PRESERVED'], tier: 'smoke', injectionMethod: 'isolated Slice 3 trace transform' },
   { id: 'equipment_incompatible_survives', description: 'Unavailable equipment survives.', affectedRuleIds: ['ALL-EQUIPMENT-COMPATIBLE-01'], expectedInvariantIds: ['INV_EQUIPMENT_COMPATIBLE'], tier: 'smoke', injectionMethod: 'isolated Slice 3 trace transform' },
   { id: 'trunk_creates_conditioning', description: 'Trunk adds conditioning exposure.', affectedRuleIds: ['ALL-EXPOSURE-COND-01'], expectedInvariantIds: ['INV_CONDITIONING_EXPOSURE_CREDIT_CONSERVED'], tier: 'smoke', injectionMethod: 'isolated Slice 3 trace transform' },
+  { id: 'legacy_list_exhaustive', description: 'Legacy positive equipment list is treated as exhaustive.', affectedRuleIds: ['OS-COND-CROSS-WEEK-01', 'ALL-COND-FEASIBILITY-01'], expectedInvariantIds: ['INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER'], tier: 'smoke', injectionMethod: 'isolated equipment-feasibility trace transform' },
+  { id: 'edge_restores_unavailable_bike', description: 'Edge output restores unavailable Bike conditioning.', affectedRuleIds: ['ALL-COND-PATH-EQUIV-01', 'ALL-COND-FEASIBILITY-01'], expectedInvariantIds: ['INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER'], tier: 'smoke', injectionMethod: 'isolated edge-path ledger transform' },
+  { id: 'fallback_drops_feasible_conditioning', description: 'Fallback deletes feasible conditioning.', affectedRuleIds: ['ALL-COND-PATH-EQUIV-01', 'OS-COND-CROSS-WEEK-01'], expectedInvariantIds: ['INV_EARLY_OFFSEASON_CROSS_MICROCYCLE_CONDITIONING'], tier: 'smoke', injectionMethod: 'isolated fallback-path ledger transform' },
+  { id: 'second_week_conditioning_loss', description: 'Week 2 loses conditioning retained by Week 1.', affectedRuleIds: ['OS-COND-CROSS-WEEK-01'], expectedInvariantIds: ['INV_EARLY_OFFSEASON_CROSS_MICROCYCLE_CONDITIONING'], tier: 'smoke', injectionMethod: 'isolated cross-microcycle ledger transform' },
+  { id: 'stale_subphase_note_survives', description: 'Conditioning note survives after final conditioning removal.', affectedRuleIds: ['ALL-COND-NOTE-TRUTH-01'], expectedInvariantIds: ['INV_SUBPHASE_NOTE_REQUIRES_VISIBLE_EFFECT'], tier: 'smoke', injectionMethod: 'isolated final-evidence transform' },
   { id: 'ai_drops_conditioning', description: 'AI fixture drops conditioning.', affectedRuleIds: ['ALL-PATH-EQUIV-01'], expectedInvariantIds: ['INV_EQUIVALENT_CANONICAL_LEDGER'], tier: 'smoke', injectionMethod: 'isolated Slice 4 path transform' },
   { id: 'rebuild_joins_by_weekday', description: 'Rebuild joins by weekday.', affectedRuleIds: ['ALL-REBUILD-IDEMPOTENT-01'], expectedInvariantIds: ['INV_PLAN_ENTRY_JOIN_STABLE_ACROSS_PATHS'], tier: 'smoke', injectionMethod: 'isolated Slice 4 path transform' },
   { id: 'repeat_drops_conditioning', description: 'Repeat Week loses conditioning.', affectedRuleIds: ['ALL-REPEAT-CONSERVE-01'], expectedInvariantIds: ['INV_REPEAT_WEEK_CONSERVES_CONTRACT'], tier: 'smoke', injectionMethod: 'isolated Slice 4 path transform' },
@@ -51,6 +56,6 @@ export const FULL_MUTATIONS = MUTATION_CATALOGUE;
 export function verifyMutationCatalogue(): void {
   const ids = new Set(MUTATION_CATALOGUE.map((entry) => entry.id));
   if (ids.size !== MUTATION_CATALOGUE.length) throw new Error('Mutation catalogue IDs must be unique');
-  if (SMOKE_MUTATIONS.length !== 28) throw new Error(`Expected 28 accepted smoke mutations, found ${SMOKE_MUTATIONS.length}`);
-  if (MUTATION_CATALOGUE.length < 38) throw new Error(`Expected at least 38 total mutations, found ${MUTATION_CATALOGUE.length}`);
+  if (SMOKE_MUTATIONS.length !== 33) throw new Error(`Expected 33 accepted smoke mutations, found ${SMOKE_MUTATIONS.length}`);
+  if (MUTATION_CATALOGUE.length < 43) throw new Error(`Expected at least 43 total mutations, found ${MUTATION_CATALOGUE.length}`);
 }

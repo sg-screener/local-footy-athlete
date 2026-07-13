@@ -31,6 +31,7 @@
 
 import { EXERCISE_TAGS, type MovementPattern, type InjuryKey } from './exerciseTags';
 import type { EquipmentTag } from './exercisePools';
+import type { ConditioningEquipmentModality } from '../types/domain';
 import type { ExperienceLevel, WeekKind } from '../types/domain';
 import { EXERCISE_LOAD_MAP, type EquipmentClass } from '../utils/loadEstimation';
 import {
@@ -141,6 +142,8 @@ export interface AthletePoolPrefs {
   activeInjuries?: readonly InjuryKey[];
   /** Canonical equipment tags available for this generated week/session. */
   availableEquipment?: readonly EquipmentTag[];
+  /** Exact conditioning-machine capabilities resolved with the same constraints. */
+  conditioningModalities?: readonly ConditioningEquipmentModality[];
   /** Profile training age used to keep deterministic pool choices learnable. */
   experienceLevel?: ExperienceLevel;
 }

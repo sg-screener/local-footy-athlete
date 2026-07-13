@@ -26,6 +26,11 @@ const MUTATION_CASES: Record<Slice3MutationId, {
   constraint_drops_unrelated: { scenarioId: 'hamstring-restriction-mixed', invariantId: 'INV_UNAFFECTED_CONTENT_PRESERVED' },
   equipment_incompatible_survives: { scenarioId: 'equipment-no-barbell-lower', invariantId: 'INV_EQUIPMENT_COMPATIBLE' },
   trunk_creates_conditioning: { scenarioId: 'inseason-mixed-team-accounting', invariantId: 'INV_CONDITIONING_EXPOSURE_CREDIT_CONSERVED' },
+  legacy_list_exhaustive: { scenarioId: 'early-offseason-legacy-commercial', invariantId: 'INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER' },
+  edge_restores_unavailable_bike: { scenarioId: 'early-offseason-explicit-no-cardio', invariantId: 'INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER' },
+  fallback_drops_feasible_conditioning: { scenarioId: 'early-offseason-modern-full-gym', invariantId: 'INV_EARLY_OFFSEASON_CROSS_MICROCYCLE_CONDITIONING' },
+  second_week_conditioning_loss: { scenarioId: 'early-offseason-legacy-commercial', invariantId: 'INV_EARLY_OFFSEASON_CROSS_MICROCYCLE_CONDITIONING' },
+  stale_subphase_note_survives: { scenarioId: 'early-offseason-explicit-no-cardio', invariantId: 'INV_SUBPHASE_NOTE_REQUIRES_VISIBLE_EFFECT' },
 };
 
 function assertGreen(trace: Slice3ScenarioTrace, label: string): void {

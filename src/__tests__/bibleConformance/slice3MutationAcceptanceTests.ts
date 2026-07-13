@@ -15,6 +15,11 @@ export const SLICE3_MUTATION_IDS: readonly Slice3MutationId[] = [
   'constraint_drops_unrelated',
   'equipment_incompatible_survives',
   'trunk_creates_conditioning',
+  'legacy_list_exhaustive',
+  'edge_restores_unavailable_bike',
+  'fallback_drops_feasible_conditioning',
+  'second_week_conditioning_loss',
+  'stale_subphase_note_survives',
 ];
 
 export function runSlice3MutationAcceptanceTests(): Slice3MutationAcceptanceResult[] {

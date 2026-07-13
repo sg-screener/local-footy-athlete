@@ -5,7 +5,7 @@ import { runSlice4MutationAcceptanceTests } from '../slice4MutationAcceptanceTes
 import { SMOKE_MUTATIONS, verifyMutationCatalogue } from './mutationCatalogue';
 import type { MutationGateResult } from '../types';
 
-/** Registry-driven dispatcher for all 28 accepted isolated mutation probes. */
+/** Registry-driven dispatcher for all accepted isolated mutation probes. */
 export function runSmokeMutationGate(): MutationGateResult[] {
   verifyMutationCatalogue();
   const composite = runMutationAcceptanceTest();

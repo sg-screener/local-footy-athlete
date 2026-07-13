@@ -9,6 +9,9 @@ import type {
   Workout,
   WorkoutExercise,
 } from '../types/domain';
+import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
+import type { ConditioningModality } from '../data/exerciseTags';
+import { getSessionComponentRows } from './sessionComponents';
 
 type DeterministicCoachNoteVisibleWorkout = Pick<
   Workout,
@@ -16,6 +19,7 @@ type DeterministicCoachNoteVisibleWorkout = Pick<
   | 'workoutType'
   | 'sessionTier'
   | 'conditioningCategory'
+  | 'conditioningBlock'
   | 'exercises'
   | 'speedBlock'
   | 'powerBlock'
@@ -96,12 +100,23 @@ export function buildPrescriptionEffectEvidence(args: {
 }
 
 function sessionShapeProof(workout: Workout): DeterministicCoachNoteEffectEvidence['proof'] {
+  const conditioningRows = getSessionComponentRows(workout).conditioningRows;
+  const conditioningModalities = Array.from(new Set(conditioningRows
+    .map((row, index) => classifyGeneratedWorkoutRow({
+      name: row.exercise?.name ?? '',
+      sets: row.prescribedSets,
+      repsMax: row.prescribedRepsMax,
+      index,
+    }).conditioningModality)
+    .filter((modality): modality is ConditioningModality => !!modality)));
   return {
     type: 'session_shape',
     name: workout.name,
     workoutType: workout.workoutType,
     sessionTier: workout.sessionTier,
     conditioningCategory: workout.conditioningCategory,
+    hasConditioningComponent: conditioningRows.length > 0,
+    conditioningModalities,
     exerciseNames: workout.exercises.map((row) => row.exercise?.name ?? row.exerciseId),
     hasSpeedBlock: !!workout.speedBlock,
     hasPowerBlock: !!workout.powerBlock,
@@ -177,7 +192,7 @@ function evidenceStillVisible(
     const current = new Set((workout.recoveryAddons ?? []).map((addon) => addon.focusArea));
     return proof.focusAreas.length > 0 && proof.focusAreas.every((focus) => current.has(focus));
   }
-  return workout.name === proof.name &&
+  const shapeStillVisible = workout.name === proof.name &&
     workout.workoutType === proof.workoutType &&
     workout.sessionTier === proof.sessionTier &&
     workout.conditioningCategory === proof.conditioningCategory &&
@@ -185,6 +200,13 @@ function evidenceStillVisible(
       proof.exerciseNames.join('\u0000') &&
     !!workout.speedBlock === proof.hasSpeedBlock &&
     !!workout.powerBlock === proof.hasPowerBlock;
+  if (!shapeStillVisible) return false;
+  if (evidence.reason === 'early_offseason' || evidence.reason === 'mid_offseason') {
+    return proof.hasConditioningComponent &&
+      proof.conditioningModalities.length > 0 &&
+      proof.conditioningModalities.every((modality) => modality !== 'run');
+  }
+  return true;
 }
 
 function mondayFor(dateISO: string): string {

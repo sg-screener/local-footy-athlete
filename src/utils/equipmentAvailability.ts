@@ -7,12 +7,17 @@ import type {
   ActiveConstraint,
   ActiveConstraintModifierAffect,
 } from '../store/coachUpdatesStore';
-import type { OnboardingData, TrainingLocation } from '../types/domain';
+import type {
+  ConditioningEquipmentModality,
+  EquipmentSelectionCompleteness,
+  OnboardingData,
+  TrainingLocation,
+} from '../types/domain';
 import type { EquipmentClass } from './loadEstimation';
 import { inferEquipment } from './sessionBuilder';
 
 export type EquipmentAvailabilityProfile =
-  Pick<OnboardingData, 'equipment' | 'trainingLocation'> | null | undefined;
+  Pick<OnboardingData, 'equipment' | 'trainingLocation' | 'equipmentSelectionCompleteness'> | null | undefined;
 
 export type TemporaryEquipmentPresetId =
   | 'bodyweight_only'
@@ -85,6 +90,12 @@ const LEGACY_AND_ALIAS_OPTION_TAGS: Record<string, readonly EquipmentTag[]> = {
   machines: ['machine'],
   bench: ['bench'],
   cardio_equipment: ['bike_or_treadmill'],
+  Bike: ['bike_or_treadmill'],
+  'Stationary Bike': ['bike_or_treadmill'],
+  RowErg: ['bike_or_treadmill'],
+  Rower: ['bike_or_treadmill'],
+  SkiErg: ['bike_or_treadmill'],
+  Treadmill: ['bike_or_treadmill'],
 };
 
 export const EQUIPMENT_CHECKLIST_OPTION_TAGS: Readonly<Record<string, readonly EquipmentTag[]>> = {
@@ -164,6 +175,85 @@ function tagsForChecklistOption(raw: string): readonly EquipmentTag[] | null {
   }
 
   return null;
+}
+
+const LEGACY_POSITIVE_KEYS = new Set([
+  'barbell', 'dumbbells', 'squat_rack', 'pullup_bar', 'cable_machine',
+  'hamstring_curl', 'knee_extension', 'bands', 'kettlebell', 'kettlebells',
+  'machine', 'machines', 'bench', 'cardio_equipment',
+]);
+
+const ALL_CONDITIONING_MODALITIES: readonly ConditioningEquipmentModality[] = [
+  'bike', 'row', 'ski', 'treadmill',
+];
+
+const LOCATION_CONDITIONING_MODALITIES: Readonly<Record<TrainingLocation, readonly ConditioningEquipmentModality[]>> = {
+  'Commercial gym': ALL_CONDITIONING_MODALITIES,
+  'Club gym': ALL_CONDITIONING_MODALITIES,
+  'Home gym': [],
+  Outdoor: [],
+};
+
+export type EquipmentCapabilitySource =
+  | 'location_baseline'
+  | 'legacy_positive_plus_location'
+  | 'complete_selection';
+
+export interface ResolvedEquipmentCapabilities {
+  tags: EquipmentTag[];
+  conditioningModalities: ConditioningEquipmentModality[];
+  selectionCompleteness: EquipmentSelectionCompleteness;
+  source: EquipmentCapabilitySource;
+}
+
+function inferredSelectionCompleteness(
+  profile: EquipmentAvailabilityProfile,
+  checklist: readonly string[],
+): EquipmentSelectionCompleteness {
+  const explicit = profile?.equipmentSelectionCompleteness;
+  if (explicit) return explicit;
+  if (checklist.length === 0) return 'legacy_incomplete';
+  if (checklist.some((value) => CURRENT_CHECKLIST_OPTION_TAGS[value] !== undefined)) {
+    return 'complete';
+  }
+  return checklist.every((value) => LEGACY_POSITIVE_KEYS.has(normalizedOptionKey(value)))
+    ? 'legacy_incomplete'
+    : 'complete';
+}
+
+function conditioningModalitiesForOption(raw: string): readonly ConditioningEquipmentModality[] {
+  const normalized = normalizedOptionKey(raw);
+  if (/^(full_gym|gym|fullgym|cardio_equipment)$/.test(normalized)) {
+    return ALL_CONDITIONING_MODALITIES;
+  }
+  if (/^(bike|stationary_bike|assault_bike|air_bike|bikeerg|bike_erg)$/.test(normalized)) return ['bike'];
+  if (/^(rowerg|row_erg|rower|rowing_erg)$/.test(normalized)) return ['row'];
+  if (/^(skierg|ski_erg)$/.test(normalized)) return ['ski'];
+  if (/^(treadmill)$/.test(normalized)) return ['treadmill'];
+  return [];
+}
+
+function applyConditioningModalityConstraints(
+  baseline: ConditioningEquipmentModality[],
+  constraints: readonly unknown[] | null | undefined,
+  dateISO: string,
+): ConditioningEquipmentModality[] {
+  let modalities = [...baseline];
+  for (const constraint of constraints ?? []) {
+    if (!isActiveEquipmentConstraint(constraint)) continue;
+    if (!equipmentConstraintAppliesToDate(constraint, dateISO)) continue;
+    const declared = (constraint as ActiveEquipmentConstraint & {
+      conditioningModalities?: ConditioningEquipmentModality[];
+    }).conditioningModalities;
+    if (constraint.mode === 'only') {
+      if (!constraint.tags.includes('bike_or_treadmill')) modalities = [];
+      if (declared) modalities = modalities.filter((modality) => declared.includes(modality));
+    } else {
+      if (constraint.tags.includes('bike_or_treadmill')) modalities = [];
+      if (declared) modalities = modalities.filter((modality) => !declared.includes(modality));
+    }
+  }
+  return Array.from(new Set(modalities));
 }
 
 /**
@@ -256,6 +346,7 @@ export function buildActiveEquipmentConstraint(args: {
   id: string;
   mode: ActiveEquipmentConstraint['mode'];
   tags: readonly EquipmentTag[];
+  conditioningModalities?: readonly ConditioningEquipmentModality[];
   source: ActiveEquipmentConstraint['source'];
   startDate?: string;
   nowISO?: string;
@@ -281,6 +372,9 @@ export function buildActiveEquipmentConstraint(args: {
     type: 'equipment',
     mode: args.mode,
     tags,
+    ...(args.conditioningModalities
+      ? { conditioningModalities: [...args.conditioningModalities] }
+      : {}),
     severity: 0,
     status: 'active',
     startDate,
@@ -396,19 +490,28 @@ function applyEquipmentConstraints(
   return tags;
 }
 
-export function resolveEquipmentAvailability(
+export function resolveEquipmentCapabilities(
   profile: EquipmentAvailabilityProfile,
   constraints?: readonly unknown[] | null,
   dateISO?: string,
-): EquipmentTag[] {
-  const tags: EquipmentTag[] = ['bodyweight'];
+): ResolvedEquipmentCapabilities {
+  const effectiveDate = dateISO ?? localTodayISO();
   const checklist = (profile?.equipment ?? [])
     .map((item) => String(item ?? '').trim())
     .filter(Boolean);
+  const completeness = inferredSelectionCompleteness(profile, checklist);
+  const source: EquipmentCapabilitySource = checklist.length === 0
+    ? 'location_baseline'
+    : completeness === 'legacy_incomplete'
+      ? 'legacy_positive_plus_location'
+      : 'complete_selection';
+  const tags: EquipmentTag[] = ['bodyweight'];
+  const location = fallbackTrainingLocation(profile);
+  const modalities: ConditioningEquipmentModality[] = [];
 
-  if (checklist.length === 0) {
-    addUnique(tags, inferEquipment(fallbackTrainingLocation(profile)));
-    return applyEquipmentConstraints(tags, constraints, dateISO ?? localTodayISO());
+  if (checklist.length === 0 || completeness === 'legacy_incomplete') {
+    addUnique(tags, inferEquipment(location));
+    modalities.push(...LOCATION_CONDITIONING_MODALITIES[location]);
   }
 
   let recognized = 0;
@@ -417,13 +520,35 @@ export function resolveEquipmentAvailability(
     if (!mapped) continue;
     recognized++;
     addUnique(tags, mapped);
+    modalities.push(...conditioningModalitiesForOption(option));
   }
 
   if (recognized === 0) {
-    addUnique(tags, inferEquipment(fallbackTrainingLocation(profile)));
+    addUnique(tags, inferEquipment(location));
+    modalities.push(...LOCATION_CONDITIONING_MODALITIES[location]);
   }
 
-  return applyEquipmentConstraints(tags, constraints, dateISO ?? localTodayISO());
+  const constrainedTags = applyEquipmentConstraints(tags, constraints, effectiveDate);
+  const constrainedModalities = applyConditioningModalityConstraints(
+    Array.from(new Set(modalities)), constraints, effectiveDate,
+  );
+  const finalTags = constrainedModalities.length > 0
+    ? Array.from(new Set([...constrainedTags, 'bike_or_treadmill' as const]))
+    : constrainedTags.filter((tag) => tag !== 'bike_or_treadmill');
+  return {
+    tags: finalTags,
+    conditioningModalities: constrainedModalities,
+    selectionCompleteness: completeness,
+    source,
+  };
+}
+
+export function resolveEquipmentAvailability(
+  profile: EquipmentAvailabilityProfile,
+  constraints?: readonly unknown[] | null,
+  dateISO?: string,
+): EquipmentTag[] {
+  return resolveEquipmentCapabilities(profile, constraints, dateISO).tags;
 }
 
 function sameEquipmentTagSet(
@@ -457,6 +582,7 @@ export function buildBaselineEquipmentSavePlan(
   const nextProfile: OnboardingData = {
     ...profile,
     equipment: selected,
+    equipmentSelectionCompleteness: 'complete',
   };
   const previousResolvedEquipment = resolveEquipmentAvailability(profile, null, dateISO);
   const nextResolvedEquipment = resolveEquipmentAvailability(nextProfile, null, dateISO);
@@ -481,7 +607,9 @@ export function saveBaselineEquipmentSelection(args: {
   profile: OnboardingData;
   selectedEquipment: readonly string[];
   dateISO?: string;
-  updateOnboardingData: (data: Pick<OnboardingData, 'equipment'>) => void;
+  updateOnboardingData: (
+    data: Pick<OnboardingData, 'equipment' | 'equipmentSelectionCompleteness'>,
+  ) => void;
   refreshProgram?: (nextProfile: OnboardingData) => void;
 }): BaselineEquipmentSaveResult {
   const plan = buildBaselineEquipmentSavePlan(
@@ -492,7 +620,10 @@ export function saveBaselineEquipmentSelection(args: {
   if (plan.rebuildRequired) {
     args.refreshProgram?.(plan.nextProfile);
   }
-  args.updateOnboardingData({ equipment: plan.selectedEquipment });
+  args.updateOnboardingData({
+    equipment: plan.selectedEquipment,
+    equipmentSelectionCompleteness: 'complete',
+  });
   return {
     ...plan,
     profileUpdated: true,
