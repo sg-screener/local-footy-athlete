@@ -77,12 +77,6 @@ function createBaseContract(
   const fixtureCredit = input.hasGame && input.gameDay !== null ? 1 : 0;
   const anchorCredit = teamDays.length + fixtureCredit;
   const conditioningRequired = Math.max(targets.conditioning.required, anchorCredit);
-  const strengthTarget = input.readiness === 'high'
-    ? targets.strength.preferredMax
-    : targets.strength.preferredMin;
-  const conditioningTarget = input.readiness === 'high'
-    ? targets.conditioning.preferredMax
-    : targets.conditioning.preferredMin;
   return {
     protocolVersion: 1,
     identity: {
@@ -93,12 +87,12 @@ function createBaseContract(
     },
     strength: {
       requiredPatterns: targets.strength.required > 0 ? [...ALL_PATTERNS] : [],
-      targetCount: strengthTarget,
+      targetCount: targets.strength.required,
       required: targets.strength.required,
       preferred: { min: targets.strength.preferredMin, max: targets.strength.preferredMax },
     },
     conditioning: {
-      targetCount: Math.max(conditioningTarget, anchorCredit),
+      targetCount: conditioningRequired,
       required: conditioningRequired,
       preferred: {
         min: Math.max(targets.conditioning.preferredMin, anchorCredit),
@@ -106,11 +100,11 @@ function createBaseContract(
       },
       creditedTeamTrainingCount: teamDays.length,
       creditedGameOrPracticeMatchCount: fixtureCredit,
-      additionalRequiredCount: Math.max(0, conditioningTarget - anchorCredit),
+      additionalRequiredCount: Math.max(0, conditioningRequired - anchorCredit),
       allowCombinedStrengthConditioning: targets.allowCombined,
     },
     sprintCod: {
-      targetCount: targets.sprintCod.preferredMin,
+      targetCount: targets.sprintCod.required,
       required: targets.sprintCod.required,
       preferred: {
         min: targets.sprintCod.preferredMin,
@@ -118,7 +112,7 @@ function createBaseContract(
       },
       creditedTeamTrainingCount: teamDays.length,
       creditedGameOrPracticeMatchCount: fixtureCredit,
-      additionalRequiredCount: Math.max(0, targets.sprintCod.preferredMin - anchorCredit),
+      additionalRequiredCount: Math.max(0, targets.sprintCod.required - anchorCredit),
     },
     anchors: {
       teamTrainingDays: teamDays,
@@ -457,7 +451,7 @@ export function buildInSeasonByeBuildExposureContract(
   return withFrequencyOnlyStrengthRequirement(applyCommonSafetyReductions(createBaseContract(input, {
     mode: 'in_season_bye_build',
     subphase: 'bye_build',
-    strength: { required: 2, preferredMin: 2, preferredMax: 3 },
+    strength: { required: 2, preferredMin: 3, preferredMax: 4 },
     conditioning: { required: Math.max(1, teams + (teams <= 1 ? 1 : 0)), preferredMin: Math.max(1, teams + (teams <= 1 ? 1 : 0)), preferredMax: Math.max(2, teams) },
     sprintCod: { required: 1, preferredMin: 1, preferredMax: 1 },
     fullRest: { required: 1, preferredMin: 1, preferredMax: 2 },
@@ -511,7 +505,7 @@ export function buildInSeasonExposureContract(
 export function buildEarlyOffseasonExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
-  return applyCommonSafetyReductions(createBaseContract(input, {
+  const contract = createBaseContract(input, {
     mode: 'early_offseason', subphase: 'early_offseason',
     // Bible first 1-2 weeks: everything is optional. Preferred work remains explicit.
     strength: { required: 0, preferredMin: 2, preferredMax: 3 },
@@ -521,7 +515,31 @@ export function buildEarlyOffseasonExposureContract(
     allowCombined: false,
     preferredHardDays: 2,
     permittedHardDays: 4,
-  }), input);
+  });
+  const available = uniqueExposureDays(input.selectedDayNumbers).length;
+  const anchorCredit = contract.conditioning.creditedTeamTrainingCount +
+    contract.conditioning.creditedGameOrPracticeMatchCount;
+  // Early off-season deliberately selects only optional body-armour and
+  // light-aerobic work that the non-anchor availability can actually hold.
+  const phaseStrengthTarget = Math.min(
+    Math.max(0, available - anchorCredit),
+    input.readiness === 'low' || available <= 3 ? 2 : 3,
+  );
+  const phaseConditioningTarget = Math.max(
+    contract.conditioning.required,
+    Math.min(
+      input.readiness === 'high' ? 2 : 1,
+      Math.max(0, available - phaseStrengthTarget),
+    ),
+  );
+  contract.strength.targetCount = phaseStrengthTarget;
+  contract.conditioning.targetCount = phaseConditioningTarget;
+  contract.conditioning.additionalRequiredCount = Math.max(
+    0,
+    phaseConditioningTarget - contract.conditioning.creditedTeamTrainingCount -
+      contract.conditioning.creditedGameOrPracticeMatchCount,
+  );
+  return applyCommonSafetyReductions(contract, input);
 }
 
 export function buildMidOffseasonExposureContract(

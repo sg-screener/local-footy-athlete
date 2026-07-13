@@ -106,7 +106,7 @@ const headline = wedWorkout?.exercises.find((ex) => ex.exercise?.name)?.exercise
 const notes = wedWorkout?.exercises.map((ex) => ex.notes).filter(Boolean).join('\n') ?? '';
 
 assert(!!wedWorkout, 'Wednesday workout is built');
-assert(/Easy Aerobic Flush/i.test(wedWorkout?.name ?? ''), 'visible workout name is Easy Aerobic Flush');
+assert(/^Aerobic Flush$/i.test(wedWorkout?.name ?? ''), 'visible workout name is canonical Aerobic Flush');
 assert(/Easy Aerobic Flush/i.test(headline), 'headline exercise is Easy Aerobic Flush');
 assert(
   /3 x 8min easy Rower/i.test(headline) ||

@@ -90,6 +90,7 @@ import {
 } from '../rules/preseasonExposureContract';
 import {
   evaluateAllocationExposureContract,
+  withPlannerSelectedExposureTargets,
   type WeeklyExposureContract,
 } from '../rules/weeklyExposureContract';
 import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
@@ -796,7 +797,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // Year-round weekly demand is decided once, before weekday placement.
   // Phase/subphase builders own targets and authorised reductions; the
   // allocator, generators and validators receive the same typed object.
-  const weeklyExposureContract = buildWeeklyExposureContract({
+  let weeklyExposureContract = buildWeeklyExposureContract({
     seasonPhase: inputs.seasonPhase,
     readiness,
     selectedDayNumbers: inputs.selectedDays.map(dayNameToNumber),
@@ -847,12 +848,16 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // range. Required and preferred exposure are deliberately not collapsed
   // into one exact count (for example, healthy off-season remains 3 required
   // with a valid fourth preferred strength exposure).
+  const maySelectPreferredStrength =
+    activeReadinessTier !== 'full_pause' && activeReadinessTier !== 'major_reduction';
   coreRange = {
     min: weeklyExposureContract.strength.targetCount,
-    max: Math.max(
-      weeklyExposureContract.strength.targetCount,
-      Math.min(coreRange.max, weeklyExposureContract.strength.preferred.max),
-    ),
+    max: maySelectPreferredStrength
+      ? Math.max(
+          weeklyExposureContract.strength.targetCount,
+          Math.min(coreRange.max, weeklyExposureContract.strength.preferred.max),
+        )
+      : weeklyExposureContract.strength.targetCount,
   };
 
   // ── H-PRE-8: structure priority (4 strength exposures) ──
@@ -1138,6 +1143,11 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   const isEarlyOffseason = inputs.seasonPhase === 'Off-season' &&
     offseasonSubphase === 'early_offseason';
   if (isEarlyOffseason) {
+    // Equipment feasibility still needs the planned component to produce its
+    // typed removal trace; readiness/full-pause reductions block selection.
+    const phaseConditioningBlockedForSafety = weeklyExposureContract.reductions.some((entry) =>
+      entry.domain === 'conditioning' && entry.metric === 'weekly_exposure_count' &&
+      entry.reason !== 'equipment_infeasibility');
     const strengthAllocations = weeklyPlan
       .filter((session) => !!session.strengthPattern && !session.isTeamDay)
       .sort((a, b) =>
@@ -1183,7 +1193,10 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         // without adding hard work. Conditioning remains easy, off-feet and
         // component-level; lower-availability early weeks retain their existing
         // standalone layout.
-        if (inputs.availableDays >= 6 && readiness !== 'low') {
+        if (
+          inputs.availableDays >= 6 && readiness !== 'low' &&
+          !phaseConditioningBlockedForSafety
+        ) {
           allocation.hasCombinedConditioning = true;
           allocation.attachedConditioningKind = 'component';
           allocation.conditioningFlavour = 'aerobic';
@@ -1425,6 +1438,14 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
       ownerKey: 'in-season-bye-shape',
     });
   }
+
+  // Capture the final phase-owned allocation after all deterministic phase
+  // shaping. Only work the planner actually selected becomes enforceable;
+  // advisory preferred ranges never create a repair target on their own.
+  weeklyExposureContract = withPlannerSelectedExposureTargets(
+    weeklyExposureContract,
+    weeklyPlan,
+  );
 
   const plannedCoreSessions = isEarlyOffseason
     ? 0

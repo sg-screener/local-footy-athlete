@@ -83,7 +83,7 @@ export interface WeeklyExposureContract {
   };
   strength: {
     requiredPatterns: MainStrengthPattern[];
-    /** Allocation target retained as a named field for the phase allocators. */
+    /** Enforceable target: required floor plus only work deliberately selected by the phase planner. */
     targetCount: number;
     required: number;
     preferred: ExposureRange;
@@ -160,7 +160,6 @@ export interface WeeklyExposureLedger {
 export type WeeklyExposureViolationCode =
   | 'missing_strength_pattern'
   | 'required_exposure_shortfall'
-  | 'preferred_exposure_shortfall_without_reason'
   | 'team_anchor_credit_mismatch'
   | 'fixture_anchor_credit_mismatch'
   | 'hard_day_limit_exceeded'
@@ -291,19 +290,14 @@ function requiredForDomain(contract: WeeklyExposureContract, domain: WeeklyExpos
   return contract.fullRest.required;
 }
 
-function preferredForDomain(contract: WeeklyExposureContract, domain: WeeklyExposureDomain): ExposureRange {
-  if (domain === 'main_strength') return contract.strength.preferred;
-  if (domain === 'conditioning') return contract.conditioning.preferred;
-  if (domain === 'sprint_cod') return contract.sprintCod.preferred;
-  return contract.fullRest.preferred;
-}
-
-function hasReductionForDomain(
+function enforceableForDomain(
   contract: WeeklyExposureContract,
   domain: WeeklyExposureDomain,
-): boolean {
-  return contract.reductions.some((reduction) =>
-    reduction.domain === domain && reduction.metric === 'weekly_exposure_count');
+): number {
+  if (domain === 'main_strength') return contract.strength.targetCount;
+  if (domain === 'conditioning') return contract.conditioning.targetCount;
+  if (domain === 'sprint_cod') return contract.sprintCod.targetCount;
+  return contract.fullRest.required;
 }
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -436,6 +430,76 @@ export function ledgerFromAllocations(
   };
 }
 
+/**
+ * Promote only exposure the phase planner actually selected into the
+ * enforceable target. Preferred ranges remain advisory and cannot create work
+ * by themselves; this capture happens after phase allocation and before final
+ * effective-week validation.
+ */
+export function withPlannerSelectedExposureTargets(
+  source: WeeklyExposureContract,
+  allocations: readonly WeeklyExposureAllocationLike[],
+): WeeklyExposureContract {
+  const contract = structuredContractClone(source);
+  const ledger = ledgerFromAllocations(contract, allocations);
+  const mayPromote = (domain: WeeklyExposureDomain): boolean =>
+    !contract.reductions.some((entry) =>
+      entry.domain === domain && entry.metric === 'weekly_exposure_count');
+  const selectedTarget = (
+    required: number,
+    current: number,
+    achieved: number,
+  ): number => Math.max(required, current, achieved);
+  const selectedAnchoredTarget = (
+    required: number,
+    current: number,
+    creditedAnchors: number,
+    selectedAdditional: number,
+  ): number => {
+    const baselineAdditional = Math.max(0, current - creditedAnchors);
+    return selectedAdditional > baselineAdditional
+      ? Math.max(required, current, creditedAnchors + selectedAdditional)
+      : Math.max(required, current);
+  };
+
+  if (mayPromote('main_strength')) {
+    contract.strength.targetCount = selectedTarget(
+      contract.strength.required,
+      contract.strength.targetCount,
+      ledger.achieved.main_strength,
+    );
+  }
+  if (mayPromote('conditioning')) {
+    contract.conditioning.targetCount = selectedAnchoredTarget(
+      contract.conditioning.required,
+      contract.conditioning.targetCount,
+      contract.conditioning.creditedTeamTrainingCount +
+        contract.conditioning.creditedGameOrPracticeMatchCount,
+      ledger.additionalConditioningCount,
+    );
+  }
+  if (mayPromote('sprint_cod')) {
+    contract.sprintCod.targetCount = selectedAnchoredTarget(
+      contract.sprintCod.required,
+      contract.sprintCod.targetCount,
+      contract.sprintCod.creditedTeamTrainingCount +
+        contract.sprintCod.creditedGameOrPracticeMatchCount,
+      ledger.additionalSprintCodCount,
+    );
+  }
+  contract.conditioning.additionalRequiredCount = Math.max(
+    0,
+    contract.conditioning.targetCount - contract.conditioning.creditedTeamTrainingCount -
+      contract.conditioning.creditedGameOrPracticeMatchCount,
+  );
+  contract.sprintCod.additionalRequiredCount = Math.max(
+    0,
+    contract.sprintCod.targetCount - contract.sprintCod.creditedTeamTrainingCount -
+      contract.sprintCod.creditedGameOrPracticeMatchCount,
+  );
+  return contract;
+}
+
 function dateForDow(weekStartISO: string, dow: number): string {
   const mondayOffset = dow === 0 ? 6 : dow - 1;
   const value = new Date(`${weekStartISO.slice(0, 10)}T12:00:00`);
@@ -530,20 +594,12 @@ export function evaluateWeeklyExposureContract(
   ];
   for (const domain of domains) {
     const achieved = ledger.achieved[domain];
-    const required = requiredForDomain(contract, domain);
-    const preferred = preferredForDomain(contract, domain);
-    if (achieved < required) {
+    const enforceable = enforceableForDomain(contract, domain);
+    if (achieved < enforceable) {
       unresolved.push({
         code: 'required_exposure_shortfall',
         domain,
-        expected: required,
-        actual: achieved,
-      });
-    } else if (achieved < preferred.min && !hasReductionForDomain(contract, domain)) {
-      unresolved.push({
-        code: 'preferred_exposure_shortfall_without_reason',
-        domain,
-        expected: preferred,
+        expected: enforceable,
         actual: achieved,
       });
     }
@@ -631,13 +687,12 @@ export function reconcileWeeklyExposureContractToLedger(
   for (const domain of reducible) {
     const actual = ledger.achieved[domain];
     const required = requiredForDomain(contract, domain);
-    const preferred = preferredForDomain(contract, domain);
     const allocationTarget = domain === 'main_strength'
       ? contract.strength.targetCount
       : domain === 'conditioning'
         ? contract.conditioning.targetCount
         : contract.sprintCod.targetCount;
-    const from = Math.max(required, preferred.min, allocationTarget);
+    const from = Math.max(required, allocationTarget);
     if (domain === 'main_strength') {
       const missingRequiredPattern = contract.strength.requiredPatterns.some(
         (pattern) => !ledger.strengthPatterns.includes(pattern),
@@ -668,20 +723,12 @@ export function reconcileWeeklyExposureContractToLedger(
     if (domain === 'main_strength') {
       contract.strength.required = Math.min(required, actual);
       contract.strength.targetCount = actual;
-      contract.strength.preferred = {
-        min: Math.min(preferred.min, actual),
-        max: Math.min(preferred.max, actual),
-      };
       contract.strength.requiredPatterns = contract.strength.required > 0
         ? [...ledger.strengthPatterns]
         : [];
     } else if (domain === 'conditioning') {
       contract.conditioning.required = Math.min(required, actual);
       contract.conditioning.targetCount = actual;
-      contract.conditioning.preferred = {
-        min: Math.min(preferred.min, actual),
-        max: Math.min(preferred.max, actual),
-      };
       contract.conditioning.additionalRequiredCount = Math.max(
         0,
         actual - contract.conditioning.creditedTeamTrainingCount -
@@ -690,10 +737,6 @@ export function reconcileWeeklyExposureContractToLedger(
     } else {
       contract.sprintCod.required = Math.min(required, actual);
       contract.sprintCod.targetCount = actual;
-      contract.sprintCod.preferred = {
-        min: Math.min(preferred.min, actual),
-        max: Math.min(preferred.max, actual),
-      };
       contract.sprintCod.additionalRequiredCount = Math.max(
         0,
         actual - contract.sprintCod.creditedTeamTrainingCount -

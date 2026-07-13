@@ -187,6 +187,81 @@ export function runYearRoundExposureConformance(
     scenarios++;
   }
 
+  // Shared required-versus-preferred ownership: raw phase requirements are
+  // enforceable, advisory ranges cannot invent work, and only exposure already
+  // selected by the phase planner is promoted into targetCount.
+  const ownershipRepresentatives = [
+    'in-season game week',
+    'in-season bye build',
+    'in-season bye recovery',
+    'mid off-season',
+    'early pre-season',
+  ] as const;
+  for (const name of ownershipRepresentatives) {
+    const plan = phasePlans.find(([candidate]) => candidate === name)?.[1];
+    const contract = plan?.weeklyExposureContract;
+    if (!plan || !contract) throw new Error(`${name}: missing ownership representative`);
+    const validation = evaluateAllocationExposureContract(contract, plan.weeklyPlan);
+    const targets = [
+      [contract.strength.required, contract.strength.targetCount],
+      [contract.conditioning.required, contract.conditioning.targetCount],
+      [contract.sprintCod.required, contract.sprintCod.targetCount],
+    ];
+    if (!validation.accepted || targets.some(([required, target]) => target < required)) {
+      throw new Error(`${name}: required/preferred ownership drifted`);
+    }
+    scenarios++;
+  }
+
+  const advisoryBye = phasePlans.find(([name]) => name === 'in-season bye build')![1];
+  const advisoryByeContract = advisoryBye.weeklyExposureContract!;
+  const advisoryByeValidation = evaluateAllocationExposureContract(
+    advisoryByeContract,
+    advisoryBye.weeklyPlan,
+  );
+  if (
+    advisoryByeContract.strength.required !== 2 ||
+    advisoryByeContract.strength.targetCount !== 2 ||
+    advisoryByeContract.strength.preferred.min !== 3 ||
+    advisoryByeContract.strength.preferred.max !== 4 ||
+    advisoryByeContract.conditioning.targetCount !== advisoryByeContract.conditioning.required ||
+    !advisoryByeValidation.accepted ||
+    advisoryByeValidation.ledger.achieved.main_strength !== 2
+  ) throw new Error('healthy bye advisory ranges became compulsory allocation targets');
+  properties++;
+
+  const selectedMidOff = phasePlans.find(([name]) => name === 'mid off-season')![1];
+  const selectedMidOffContract = selectedMidOff.weeklyExposureContract!;
+  const selectedMidOffValidation = evaluateAllocationExposureContract(
+    selectedMidOffContract,
+    selectedMidOff.weeklyPlan,
+  );
+  if (
+    selectedMidOffContract.strength.required !== 3 ||
+    selectedMidOffContract.strength.targetCount !== 4 ||
+    selectedMidOffValidation.ledger.achieved.main_strength !== 4 ||
+    !selectedMidOffValidation.accepted
+  ) throw new Error('phase-planner-selected preferred strength was not preserved as enforceable');
+  properties++;
+
+  const forcedPreferredMaximum: WeeklyExposureContract = {
+    ...advisoryByeContract,
+    strength: {
+      ...advisoryByeContract.strength,
+      targetCount: advisoryByeContract.strength.preferred.max,
+    },
+  };
+  const forcedPreferredResult = evaluateAllocationExposureContract(
+    forcedPreferredMaximum,
+    advisoryBye.weeklyPlan,
+  );
+  if (forcedPreferredResult.accepted || !forcedPreferredResult.unresolvedShortfalls.some(
+    (entry) => entry.code === 'required_exposure_shortfall' &&
+      entry.domain === 'main_strength' &&
+      entry.expected === advisoryByeContract.strength.preferred.max,
+  )) throw new Error('preferred-maximum target mutation survived shared validation');
+  mutations++;
+
   // Corrected policy: healthy no-anchor early/mid/late pre-season all own
   // and finish the same 4 strength / 4 conditioning / 1 sprint frequency.
   for (const name of ['early pre-season', 'mid pre-season', 'late pre-season']) {
@@ -457,5 +532,5 @@ export function runYearRoundExposureConformance(
   }
   mutations++;
 
-  return { scenarios, rules: 12, properties, mutations };
+  return { scenarios, rules: 13, properties, mutations };
 }

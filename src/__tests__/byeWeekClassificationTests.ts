@@ -20,6 +20,7 @@ import {
   type WeekValidationReport,
 } from '../rules/weekStructureValidator';
 import { resolveWeekContext } from '../rules/weekContext';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 import { buildWeekShapeSnapshot } from './weekPlanQA/weekShapeSummary';
 
@@ -362,7 +363,7 @@ console.log('\n[4] bye-week Saturday metadata and counting stay honest');
       !saturdayAllocation.conditioningCategory,
     saturdayAllocation);
   ok('resolved Saturday never shows conditioning wording without conditioning metadata',
-    /lower body strength/i.test(saturdayText) &&
+    /\blower squat\b/i.test(saturdayText) &&
       !/conditioning|aerobic|tempo|interval|sprint|finisher/i.test(saturdayText) &&
       !saturday?.workout?.conditioningCategory &&
       !saturday?.workout?.conditioningFlavour &&
@@ -392,12 +393,25 @@ console.log('\n[4] bye-week Saturday metadata and counting stay honest');
     running: week.report.counts.runningExposures,
     sprintCod: week.report.counts.sprintCodExposures,
   });
-  ok('S4/E1-style accessory/gunshow does not inflate main strength',
-    week.report.counts.gunshowSessions >= 1,
-    {
-      mainStrength: week.report.counts.mainStrengthExposures,
-      gunshow: week.report.counts.gunshowSessions,
-    });
+  const gunshowWorkouts = week.workouts.filter((workout) =>
+    classifyVisibleSession(workout).contributions.gunshow > 0);
+  ok('optional gunshow/accessory work never counts as main strength when present',
+    gunshowWorkouts.every((workout) =>
+      classifyVisibleSession(workout).contributions.mainStrength === 0),
+    gunshowWorkouts);
+  const withoutGunshow = week.workouts.filter((workout) =>
+    classifyVisibleSession(workout).contributions.gunshow === 0);
+  const withoutGunshowValidation = week.exposureContract
+    ? evaluateEffectiveWeekExposureContract(
+        week.exposureContract,
+        withoutGunshow,
+        BLOCK_START,
+      )
+    : null;
+  ok('absence of optional gunshow/accessory work does not invalidate a compliant bye week',
+    withoutGunshowValidation?.accepted === true &&
+      withoutGunshowValidation.ledger.achieved.main_strength === 2,
+    withoutGunshowValidation);
 
   const gameSaturday = generatedWeek(baseProfile({
     gameDay: 'Saturday',
@@ -419,6 +433,17 @@ console.log('\n[5] healthy bye-week shapes use anchor credit before adding sprin
 {
   const twoTeam = generatedWeek(baseProfile());
   eq('2TT bye has two main strength sessions', twoTeam.report.counts.mainStrengthExposures, 2);
+  const twoTeamFinal = evaluateEffectiveWeekExposureContract(
+    twoTeam.exposureContract!,
+    twoTeam.workouts,
+    BLOCK_START,
+  );
+  ok('2TT final validation accepts the required floor below its advisory preferred range',
+    twoTeamFinal.accepted &&
+      twoTeamFinal.ledger.achieved.main_strength === 2 &&
+      twoTeam.exposureContract?.strength.targetCount === 2 &&
+      twoTeam.exposureContract.strength.preferred.min === 3,
+    twoTeamFinal);
   ok('2TT bye stays within the hard-day cap', twoTeam.report.counts.hardDays <= 4, twoTeam.report.counts);
   eq('2TT bye adds no app conditioning', twoTeam.report.counts.extraConditioningSessions, 0);
   eq('2TT bye sprint/COD comes only from team training', twoTeam.report.counts.sprintCodExposures, 2);
