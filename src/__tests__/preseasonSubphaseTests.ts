@@ -201,12 +201,16 @@ const earlyPlan = planFor(BASE_PROFILE, {
   weekNumber: 1,
   weekKind: 'build',
 });
-ok('early pre-season caps strength at a moderate three sessions',
-  strengthSessions(earlyPlan).length <= 3,
+eq('early pre-season exposure contract keeps four meaningful strength sessions',
+  strengthSessions(earlyPlan).length,
+  4);
+ok('early pre-season exposure contract covers squat, hinge, push and pull',
+  (['squat', 'hinge', 'push', 'pull'] as const).every((pattern) =>
+    earlyPlan.some((session) => session.strengthIntent?.plannedPatterns?.includes(pattern))),
   planText(earlyPlan));
-eq('early pre-season avoids huge combined S+C days',
+eq('early pre-season places the two app conditioning remainders on valid strength days',
   earlyPlan.filter((session) => session.hasCombinedConditioning).length,
-  0);
+  2);
 ok('early pre-season keeps hard conditioning controlled',
   hardConditioning(earlyPlan).length <= 1 &&
     hardConditioning(earlyPlan).every((session) => session.conditioningVariant === 'reduced'),

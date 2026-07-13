@@ -183,19 +183,19 @@ console.log('\n── 2. Lower/hinge days: easy off-feet aerobic only ──');
 }
 
 // ═════════════════════════════════════════════════════════════════════
-console.log('\n── 2b. Off-season 4-day keeps useful conditioning, skips only filler ──');
+console.log('\n── 2b. Early off-season 4-day respects the progressive conditioning cap ──');
 {
   const plan = planFor(OFF_SEASON_BASE);
   const conditioning = plan.filter((s) => !!s.conditioningCategory);
-  ok('S6 keeps a useful 3-4 conditioning exposures without filler',
-    conditioning.length >= 3 && conditioning.length <= 4,
+  ok('S6 keeps the single early-block conditioning exposure without filler',
+    conditioning.length === 1,
     plan.map((s) => `${s.dayOfWeek}:${s.conditioningCategory ?? '-'}`).join(' | '));
   ok('S6 does not attach more than 2 steady aerobic finishers',
     steadyAerobicFinishers(plan).length <= 2,
     steadyAerobicFinishers(plan).map((s) => `${s.dayOfWeek}: ${s.focus}`).join(' | '));
   const upperFinishers = plan.filter((s) => !isLowerish(s) && hasFinisher(s));
-  ok('S6 upper days still carry meaningful tempo/moderate conditioning when safe',
-    upperFinishers.some((s) => s.conditioningCategory === 'tempo' || finisherHard(s)),
+  ok('S6 early-block upper days do not bypass the progressive aerobic policy',
+    upperFinishers.every((s) => s.conditioningCategory === 'aerobic_base'),
     upperFinishers.map((s) => `${s.dayOfWeek}: ${s.conditioningCategory}: ${s.focus}`).join(' | '));
   ok('S6 no longer uses the old generic bike/row/ski 15-20min steady label',
     plan.every((s) => !/bike\/row\/ski,\s*15-20min/i.test(s.focus)),

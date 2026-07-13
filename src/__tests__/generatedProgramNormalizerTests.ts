@@ -173,22 +173,20 @@ const midPlan = buildCoachingPlan({
 const edgeWorkouts = [
   {
     dayOfWeek: 1,
-    name: 'Team Training + Upper Push',
+    name: 'Team Training + Upper Pull',
     workoutType: 'Team Training',
     sessionTier: 'core',
-    exercises: [exercise('Bench Press'), exercise('Overhead Press'), exercise('Dips')],
+    exercises: [exercise('Pull-Ups'), exercise('Barbell Row'), exercise('Face Pulls')],
   },
   {
     dayOfWeek: 2,
-    name: 'Lower Hinge + Easy Off-Feet Aerobic',
-    // Deliberately wrong edge enum: deterministic component structure wins.
-    workoutType: 'Conditioning',
+    name: 'Lower Squat',
+    workoutType: 'Strength',
     sessionTier: 'core',
     exercises: [
-      exercise('Romanian Deadlift'),
-      exercise('Hip Thrusts'),
+      exercise('Back Squat'),
+      exercise('Bulgarian Split Squats'),
       exercise('Nordic Lower'),
-      exercise('Easy Zone 2 Bike'),
     ],
   },
   {
@@ -207,20 +205,26 @@ const edgeWorkouts = [
   },
   {
     dayOfWeek: 5,
-    name: 'Upper Pull',
-    workoutType: 'Strength',
+    name: 'Upper Push + Easy Off-Feet Aerobic',
+    // Deliberately wrong edge enum: deterministic component structure wins.
+    workoutType: 'Conditioning',
     sessionTier: 'core',
-    exercises: [exercise('Pull-Ups'), exercise('Barbell Row'), exercise('Face Pulls')],
+    exercises: [
+      exercise('Bench Press'),
+      exercise('Overhead Press'),
+      exercise('Dips'),
+      exercise('Easy Zone 2 Bike'),
+    ],
   },
   {
     dayOfWeek: 6,
-    name: 'Lower Squat + Easy Off-Feet Aerobic',
+    name: 'Lower Hinge + Easy Off-Feet Aerobic',
     workoutType: 'Mixed',
     sessionTier: 'core',
     exercises: [
-      exercise('Back Squat'),
-      exercise('Bulgarian Split Squats'),
-      exercise('Leg Extension'),
+      exercise('Romanian Deadlift'),
+      exercise('Hip Thrusts'),
+      exercise('Nordic Lower'),
       exercise('Easy Zone 2 Bike'),
     ],
   },
@@ -244,20 +248,21 @@ const saturday = workoutOn('Saturday');
 
 // Broad smoke coverage; exact cross-stage ledgers live under Bible rules
 // ALL-COMP-MIXED-01 and ALL-COMP-TEAM-01 in `npm run test:bible`.
-ok('Lower Hinge retains meaningful lower strength rows', strengthNames(tuesday).length >= 3, strengthNames(tuesday));
-ok('Lower Hinge retains a separate conditioning block', !!tuesday.conditioningBlock?.options.length);
-eq('Lower Hinge is structurally Mixed despite wrong edge enum', tuesday.workoutType, 'Mixed' as any);
-ok('Lower Squat retains meaningful lower strength rows', strengthNames(saturday).length >= 3, strengthNames(saturday));
-ok('Lower Squat retains a separate conditioning block', !!saturday.conditioningBlock?.options.length);
-eq('Lower Squat remains structurally Mixed', saturday.workoutType, 'Mixed' as any);
-ok('Upper Pull remains visible strength', classifyVisibleSession(friday).contributions.mainStrength === 1, friday);
-ok('Team Training + Upper Push preserves the anchor', classifyVisibleSession(workoutOn('Monday')).anchors.teamTraining);
-ok('Team Training + Upper Push preserves upper strength', classifyVisibleSession(workoutOn('Monday')).contributions.mainStrength === 1);
+ok('Lower Squat retains meaningful lower strength rows', strengthNames(tuesday).length >= 3, strengthNames(tuesday));
+eq('Lower Squat remains strength-only when the contract allocates no component', tuesday.workoutType, 'Strength' as any);
+ok('Upper Push retains meaningful strength rows', strengthNames(friday).length >= 3, strengthNames(friday));
+ok('Upper Push retains a separate conditioning block', !!friday.conditioningBlock?.options.length);
+eq('Upper Push is structurally Mixed despite wrong edge enum', friday.workoutType, 'Mixed' as any);
+ok('Lower Hinge retains meaningful lower strength rows', strengthNames(saturday).length >= 3, strengthNames(saturday));
+ok('Lower Hinge retains a separate conditioning block', !!saturday.conditioningBlock?.options.length);
+eq('Lower Hinge remains structurally Mixed', saturday.workoutType, 'Mixed' as any);
+ok('Team Training + Upper Pull preserves the anchor', classifyVisibleSession(workoutOn('Monday')).anchors.teamTraining);
+ok('Team Training + Upper Pull preserves upper strength', classifyVisibleSession(workoutOn('Monday')).contributions.mainStrength === 1);
 
-const visibleTuesday = visible(tuesday, '2026-07-14');
+const visibleFriday = visible(friday, '2026-07-17');
 const visibleSaturday = visible(saturday, '2026-07-18');
-ok('visible projection does not flatten Lower Hinge to Aerobic Base', !!visibleTuesday && visibleTuesday.workoutType === 'Mixed' && strengthNames(visibleTuesday).length >= 3, visibleTuesday);
-ok('visible projection does not flatten Lower Squat to Aerobic Base', !!visibleSaturday && visibleSaturday.workoutType === 'Mixed' && strengthNames(visibleSaturday).length >= 3, visibleSaturday);
+ok('visible projection preserves Upper Push plus conditioning', !!visibleFriday && visibleFriday.workoutType === 'Mixed' && strengthNames(visibleFriday).length >= 3, visibleFriday);
+ok('visible projection preserves Lower Hinge plus conditioning', !!visibleSaturday && visibleSaturday.workoutType === 'Mixed' && strengthNames(visibleSaturday).length >= 3, visibleSaturday);
 
 const usefulStrength = built.reduce(
   (total, workout) => total + classifyVisibleSession(workout).contributions.mainStrength,

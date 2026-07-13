@@ -85,6 +85,13 @@ import { createLateOffseasonSpeedBlock } from '../rules/speedTemplates';
 import { resolveWeekContext } from '../rules/weekContext';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import {
+  buildPreseasonExposureBlueprint,
+  buildPreseasonWeeklyExposureContract,
+  evaluatePreseasonExposureContract,
+  type PreseasonStrengthSlotIdentity,
+  type PreseasonWeeklyExposureContract,
+} from '../rules/preseasonExposureContract';
+import {
   createStrengthIntent,
   mainPatternsForLegacyStrengthPattern,
   normalizeStrengthIntent,
@@ -400,6 +407,9 @@ export interface CoachingPlan {
   offseasonSubphase?: OffseasonSubphase | null;
   preseasonSubphase?: PreseasonSubphase | null;
 
+  /** Pre-placement source of truth for pre-season weekly exposure demand. */
+  preseasonExposureContract?: PreseasonWeeklyExposureContract | null;
+
   // Constraints for AI
   constraints: AIConstraints;
 }
@@ -420,6 +430,7 @@ export interface AIConstraints {
   rampUp: boolean;
   maxExercisesPerSession: number;
   notes: string[];
+  preseasonExposureContract?: PreseasonWeeklyExposureContract | null;
 }
 
 function appendAllocationCoachNoteEffect(
@@ -777,6 +788,23 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   });
   const programmingBias = composeProgrammingBias(roleGoalBias, testingBias);
 
+  // Pre-season weekly demand is decided once, before weekday placement.
+  // The allocator, prompt and final validator all receive this same typed
+  // object; no later layer reconstructs exposure needs from focus copy.
+  const preseasonExposureContract = buildPreseasonWeeklyExposureContract({
+    seasonPhase: inputs.seasonPhase,
+    readiness,
+    selectedDayNumbers: inputs.selectedDays.map(dayNameToNumber),
+    teamTrainingDayNumbers: (inputs.teamTrainingDays ?? []).map(dayNameToNumber),
+    hasGame: inputs.hasGame,
+    gameDay: inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null,
+    weekKind: inputs.weekKind,
+    activeReadinessTier: inputs.generationConstraints?.readiness?.tier,
+    maxStrengthSessions: trainingAgePolicy.maxCoreSessions,
+    profileInjuries: inputs.injuries,
+    activeInjuries: inputs.generationConstraints?.injuries,
+  });
+
   // Step 2: Existing hard exposures from team environment
   const { count: existingHard, breakdown: hardBreakdown } = countTeamHardExposures(inputs);
 
@@ -892,10 +920,18 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   }
 
   if (preseasonPolicy) {
-    coreRange = {
-      min: Math.min(coreRange.min, preseasonPolicy.strength.coreSessionCap),
-      max: Math.min(coreRange.max, preseasonPolicy.strength.coreSessionCap),
-    };
+    // Subphase still owns volume/intensity. The exposure contract owns the
+    // healthy weekly structure, so early/late dose caps cannot silently erase
+    // a required strength contribution.
+    coreRange = preseasonExposureContract
+      ? {
+          min: preseasonExposureContract.strength.targetCount,
+          max: preseasonExposureContract.strength.targetCount,
+        }
+      : {
+          min: Math.min(coreRange.min, preseasonPolicy.strength.coreSessionCap),
+          max: Math.min(coreRange.max, preseasonPolicy.strength.coreSessionCap),
+        };
   }
 
   if (trainingAgePolicy.maxCoreSessions !== null) {
@@ -951,6 +987,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     recoverySessions,
     readiness,
     programmingBias,
+    preseasonExposureContract,
   );
   logger.debug('[ENGINE-TRACE] ═══ weeklyPlan output ═══');
   weeklyPlan.forEach(s => logger.debug(`[ENGINE-TRACE]   ${s.dayOfWeek}: [${s.tier}] ${s.focus}${s.isHardExposure ? ' (HARD)' : ''}`));
@@ -1292,6 +1329,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
       recoverySessions,
       readiness,
       composeProgrammingBias(roleGoalBias, neutralTestingBias),
+      preseasonExposureContract,
     );
     const difference = firstPlanShapeDifference(weeklyPlan, baselinePlan);
     const reason = difference ? testingEffectReason(testingBias, difference) : null;
@@ -1377,7 +1415,8 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     existingHard,
     plannedCoreSessions,
     plannedOptionalSessions,
-    plannedRecoverySessions
+    plannedRecoverySessions,
+    preseasonExposureContract,
   );
 
   // Phase 2 rules kernel — LOG-ONLY Bible weekly-structure validation of
@@ -1404,6 +1443,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     weeklyPlan,
     offseasonSubphase,
     preseasonSubphase,
+    preseasonExposureContract,
     constraints,
   };
 }
@@ -1486,6 +1526,7 @@ function buildWeeklyPlan(
   /** Profile-derived readiness — read by finisherEligibility (4A). */
   readiness: ReadinessLevel,
   programmingBias: ComposedProgrammingBias,
+  preseasonExposureContract: PreseasonWeeklyExposureContract | null,
 ): SessionAllocation[] {
   const plan: SessionAllocation[] = [];
   const classificationContext: StressContext = {
@@ -2044,6 +2085,15 @@ function buildWeeklyPlan(
       | 'COND' | 'S+C'
       | 'ACC' | 'REC';
 
+    const preseasonExposureBlueprint =
+      preseasonExposureContract && !inputs.hasGame
+        ? buildPreseasonExposureBlueprint({
+            contract: preseasonExposureContract,
+            selectedDayNumbers: daySlots.map((slot) => slot.num),
+            weekNumber: inputs.weekNumber,
+          })
+        : null;
+
     const STRENGTH_CANDIDATES: CandidateType[] = ['L-sq', 'L-hi', 'U-pu', 'U-pl', 'FB', 'L-co', 'U-co'];
     // Free-form candidate list excludes combined-region types: L-co / U-co
     // only enter the plan via an approved structure queue, never via the
@@ -2288,34 +2338,22 @@ function buildWeeklyPlan(
       return teamDayNumSet.has(prevDay) || teamDayNumSet.has(nextDay);
     };
 
-    // Conditioning target: at least as many conditioning exposures as strength,
-    // minimum 3, baseline 4, high-end 5
-    let condTarget = Math.max(core, 4);
-    if (inputs.availableDays <= 3) condTarget = 3;
-    else if (inputs.conditioningLevel === 'Poor') condTarget = Math.max(3, core);
-    if (readinessAtLeast('moderate_reduction') || activeReadiness?.avoidHardConditioning || core <= 2) {
-      condTarget = Math.max(3, condTarget - 1);
-    }
-    condTarget = Math.max(3, Math.min(5, condTarget));
-    if (offseasonPolicy?.subphase === 'early_offseason') {
-      condTarget = readiness === 'low' ? 1 : 2;
-    }
-
-    // Pre-season conditioning volume reduction.
-    // Team training provides significant field load (sprints, drills, long
-    // aerobic exposure). Each team day in pre-season substitutes for roughly
-    // one standalone conditioning exposure — so drop the target and the cap
-    // accordingly. Floor at 2 to keep at least some gym-side conditioning
-    // variety (usually a VO2/glyco day and an aerobic base flush).
-    if (isPreSeason && hasTeamDays) {
-      const reduction = Math.min(2, teamDayNumSet.size);
-      condTarget = Math.max(2, condTarget - reduction);
-      // Pre-season also caps the top end at 4 (off-season's 5 is too much
-      // cumulative load when team training is present).
-      condTarget = Math.min(4, condTarget);
-    }
-    if (preseasonPolicy) {
-      condTarget = Math.min(condTarget, preseasonPolicy.conditioning.targetCap);
+    // App-conditioning demand. Pre-season receives the exact remainder from
+    // the pre-placement exposure contract (total target minus team credit).
+    // Other phases retain their established target calculation.
+    let condTarget = preseasonExposureContract
+      ? preseasonExposureContract.conditioning.additionalRequiredCount
+      : Math.max(core, 4);
+    if (!preseasonExposureContract) {
+      if (inputs.availableDays <= 3) condTarget = 3;
+      else if (inputs.conditioningLevel === 'Poor') condTarget = Math.max(3, core);
+      if (readinessAtLeast('moderate_reduction') || activeReadiness?.avoidHardConditioning || core <= 2) {
+        condTarget = Math.max(3, condTarget - 1);
+      }
+      condTarget = Math.max(3, Math.min(5, condTarget));
+      if (offseasonPolicy?.subphase === 'early_offseason') {
+        condTarget = readiness === 'low' ? 1 : 2;
+      }
     }
 
     // ── Conditioning feasibility ──
@@ -2323,7 +2361,9 @@ function buildWeeklyPlan(
     // The pre-season policy owns the app-side floor because team training
     // and practice matches already count as conditioning. Legacy phases keep
     // their established floor below.
-    const MIN_COND_FLOOR = preseasonPolicy
+    const MIN_COND_FLOOR = preseasonExposureContract
+      ? preseasonExposureContract.conditioning.additionalRequiredCount
+      : preseasonPolicy
       ? preseasonPolicy.conditioning.minimumAppExposures
       : offseasonPolicy?.subphase === 'early_offseason'
         ? (readiness === 'low' || inputs.availableDays <= 2 ? 0 : 1)
@@ -2331,11 +2371,14 @@ function buildWeeklyPlan(
     const condViaStandaloneMax = Math.min(standaloneSlotsAvailable, condTarget);
     const condShortfall = Math.max(0, MIN_COND_FLOOR - condViaStandaloneMax);
     const minCombinedDays = condShortfall > 0 ? Math.ceil(condShortfall / 0.75) : 0;
-    const avoidCombinedDays =
-      trainingAgePolicy.avoidCombinedStrengthConditioning ||
-      preseasonPolicy?.sessions.combinedStrengthConditioning === 'avoid' ||
-      (offseasonPolicy?.sessions.lowAvailabilityCombinedDays === 'avoid' &&
-        (inputs.availableDays <= 4 || readiness === 'low'));
+    const avoidCombinedDays = preseasonExposureContract
+      ? !preseasonExposureContract.conditioning.allowCombinedStrengthConditioning
+      : (
+          trainingAgePolicy.avoidCombinedStrengthConditioning ||
+          preseasonPolicy?.sessions.combinedStrengthConditioning === 'avoid' ||
+          (offseasonPolicy?.sessions.lowAvailabilityCombinedDays === 'avoid' &&
+            (inputs.availableDays <= 4 || readiness === 'low'))
+        );
 
     // Finishers are useful add-ons, not hidden second sessions. Keep the
     // conditioning target intact, but do not let repeated steady aerobic
@@ -2772,6 +2815,35 @@ function buildWeeklyPlan(
       // post-validation can now actually find a slot.
     }
 
+    const candidateForExposureIdentity = (
+      identity: PreseasonStrengthSlotIdentity,
+    ): CandidateType => {
+      switch (identity) {
+        case 'squat': return 'L-sq';
+        case 'hinge': return 'L-hi';
+        case 'push': return 'U-pu';
+        case 'pull': return 'U-pl';
+        case 'lower_combined': return 'L-co';
+        case 'upper_combined': return 'U-co';
+      }
+    };
+    const exposureStrengthByDay = new Map<number, CandidateType>();
+    const exposureConditioningDays = new Set<number>();
+    if (preseasonExposureBlueprint) {
+      restSlotIndices.clear();
+      for (const day of preseasonExposureBlueprint.restDays) {
+        const slotIndex = daySlots.findIndex((slot) => slot.num === day);
+        if (slotIndex >= 0) restSlotIndices.add(slotIndex);
+      }
+      for (const entry of preseasonExposureBlueprint.strength) {
+        exposureStrengthByDay.set(entry.day, candidateForExposureIdentity(entry.identity));
+      }
+      preseasonExposureBlueprint.conditioningDays.forEach((day) =>
+        exposureConditioningDays.add(day));
+      strengthQueue = preseasonExposureBlueprint.strength
+        .map((entry) => candidateForExposureIdentity(entry.identity));
+    }
+
     // ── Scorer state ──
     interface ScorerState {
       consecutiveCoreCalendarDays: number;
@@ -2922,6 +2994,15 @@ function buildWeeklyPlan(
       category: CondCategory,
       strengthContext: FinisherStrengthContext,
     ): AttachedConditioningKind {
+      // Exposure-contract work is a real planned component. It must receive
+      // full conditioning credit even when the safe pairing is easy aerobic
+      // beside lower strength; this is not decorative finisher volume.
+      if (
+        preseasonExposureContract &&
+        st.condCount < preseasonExposureContract.conditioning.additionalRequiredCount
+      ) {
+        return 'component';
+      }
       if (
         strengthContext === 'upper' &&
         (category === 'tempo' || category === 'vo2' || category === 'glycolytic')
@@ -3334,6 +3415,11 @@ function buildWeeklyPlan(
       const isConsecutiveDay = pos === st.prevSlotDayNum + 1;
       const onTeamDay = isPreSeason && teamDayNumSet.has(dayNum);
       const adjacentTeamDay = isPreSeason && isAdjacentToTeamDay(pos);
+      const exposureRequiredStrength = exposureStrengthByDay.get(dayNum);
+      const contractOwnsCandidate = !!exposureRequiredStrength && (
+        c === exposureRequiredStrength ||
+        (c === 'S+C' && pickSCStrengthType(pos) === exposureRequiredStrength)
+      );
 
       // H-GAME: pre-game protection is a hard rule in every mode.
       if (violatesGameProximity(c, dayNum)) return true;
@@ -3419,7 +3505,7 @@ function buildWeeklyPlan(
       // extends or is blocked by the streak — TT + Wed upper + TT is a
       // legal, Bible-approved shape. Lower and hard conditioning remain
       // protected; moderate full-body follows the shared kernel as MEDIUM.
-      if (candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high') {
+      if (!contractOwnsCandidate && candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high') {
         const runIfPlaced = isConsecutiveDay && st.prevSlotWasCore
           ? st.consecutiveCoreCalendarDays + 1
           : 1;
@@ -3449,10 +3535,19 @@ function buildWeeklyPlan(
         const prevDay = (dayNum + 6) % 7;
         const nextDay = (dayNum + 1) % 7;
         if (teamDayNumSet.has(prevDay) && teamDayNumSet.has(nextDay)) {
-          if (c === 'L-hi' || c === 'L-co') return true;
-          if ((c === 'COND' || c === 'S+C') && pickCondCategory(pos) !== 'aerobic_base') return true;
-          if (c === 'S+C' && isLower(pickSCStrengthType(pos))) return true;
-          if (isPreSeason && candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high') {
+          // A healthy exposure-first week may deliberately consolidate a
+          // required lower session between two anchors (for example
+          // Team–Lower–Team). The contract permits five training days and
+          // preserves the following recovery break; optional work never gets
+          // this exemption.
+          if (!contractOwnsCandidate && (c === 'L-hi' || c === 'L-co')) return true;
+          if (!contractOwnsCandidate && (c === 'COND' || c === 'S+C') && pickCondCategory(pos) !== 'aerobic_base') return true;
+          if (!contractOwnsCandidate && c === 'S+C' && isLower(pickSCStrengthType(pos))) return true;
+          if (
+            !contractOwnsCandidate &&
+            isPreSeason &&
+            candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high'
+          ) {
             const controlledFbException = c === 'FB' && core <= 2;
             if (!controlledFbException) return true;
           }
@@ -3462,7 +3557,11 @@ function buildWeeklyPlan(
       // H-PRE-5 is stress-aware (B2): only HIGH-stress candidates extend or
       // are blocked by the consecutive run; placed sessions count via their
       // recorded stressLevel (legacy fallback: core tier).
-      if (isPreSeason && candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high') {
+      if (
+        isPreSeason &&
+        !contractOwnsCandidate &&
+        candidateStress(c, pos, teamDayNumSet.has(dayNum)) === 'high'
+      ) {
         let streak = 1; // the candidate day itself
         // Walk backward
         for (let back = 1; back < 7; back++) {
@@ -4352,6 +4451,11 @@ function buildWeeklyPlan(
     // ── Determine strength subtype for S+C ──
     // Position-aware: avoids picking a type that creates consecutive same-region.
     function pickSCStrengthType(currentPos?: number): CandidateType {
+      if (currentPos !== undefined && preseasonExposureBlueprint) {
+        const slot = daySlots.find((entry) => trainingOrder(entry.num) === currentPos);
+        const required = slot ? exposureStrengthByDay.get(slot.num) : undefined;
+        if (required) return required;
+      }
       // Peek at the conditioning category that would pair with this slot
       // so we can bias pattern selection toward non-lower for any work above
       // easy aerobic. Lower combined days use the shared easy-aerobic-only
@@ -4513,7 +4617,7 @@ function buildWeeklyPlan(
       const safeStrengthQueue = strengthQueue.filter((candidate) =>
         !blocksStrengthCandidateForGeneration(candidate),
       );
-      const queueMustComplete = useStructureMode && safeStrengthQueue.length > 0
+      const queueMustComplete = !preseasonExposureBlueprint && useStructureMode && safeStrengthQueue.length > 0
         && safeStrengthQueue.length >= slotsRemaining;
 
       // Build candidate list: in structure mode, limit strength to queue items.
@@ -4557,8 +4661,28 @@ function buildWeeklyPlan(
         slotCandidates = trainingCandidates.length > 0 ? trainingCandidates : ['COND'];
       }
 
+      // Exposure-first pre-season placement: the typed blueprint has already
+      // allocated anchors, required strength and remaining conditioning.
+      // Scoring still chooses safe category/dose, but it cannot exchange a
+      // required slot for Recovery or an accessory placeholder.
+      if (preseasonExposureBlueprint) {
+        const requiredStrength = exposureStrengthByDay.get(slot.num);
+        const requiresConditioning = exposureConditioningDays.has(slot.num);
+        if (requiredStrength) {
+          slotCandidates = requiresConditioning ? ['S+C'] : [requiredStrength];
+        } else if (requiresConditioning) {
+          slotCandidates = ['COND'];
+        } else {
+          slotCandidates = ['REC'];
+        }
+      }
+
       for (const candidate of slotCandidates) {
-        if (candidate === 'S+C' && avoidCombinedDays) continue;
+        if (
+          candidate === 'S+C' &&
+          avoidCombinedDays &&
+          !exposureConditioningDays.has(slot.num)
+        ) continue;
         // In queue-must-complete mode, relax H3 (lower spacing) to avoid
         // dropping required movements. H1 (3+ consecutive) and H2 (same
         // subtype spacing) still enforced — they protect against injury.
@@ -4638,7 +4762,7 @@ function buildWeeklyPlan(
         let scStrength: CandidateType | undefined;
         if (candidate === 'S+C') {
           const slotPos = trainingOrder(slot.num);
-          scStrength = pickSCStrengthType(slotPos);
+          scStrength = exposureStrengthByDay.get(slot.num) ?? pickSCStrengthType(slotPos);
           if (blocksStrengthCandidateForGeneration(scStrength)) continue;
           if (!queueMustComplete && violatesHard(scStrength, slot.num)) continue;
           // H-GAME on the strength half applies in EVERY mode (a lower
@@ -4946,7 +5070,9 @@ function buildWeeklyPlan(
     // ── Post-validation: H5b — promote ACC/REC to standalone conditioning ──
     // Subphase-aware phases use their capped app-conditioning target. Legacy
     // phases retain the established promotion floor of 3.
-    const standalonePromotionTarget = preseasonPolicy
+    const standalonePromotionTarget = preseasonExposureContract
+      ? condTarget
+      : preseasonPolicy
       ? Math.min(3, condTarget)
       : offseasonPolicy?.subphase === 'early_offseason'
         ? condTarget
@@ -5242,28 +5368,34 @@ function buildWeeklyPlan(
 
         const target = ordered[0]?.session;
         if (!target) return false;
+        const preserveContractComponent = !!preseasonExposureContract &&
+          target.attachedConditioningKind === 'component';
         const previousCategory = target.conditioningCategory as CondCategory | undefined;
-        if (previousCategory && st.condCategories[previousCategory] > 0) {
-          st.condCategories[previousCategory]--;
+        if (!preserveContractComponent) {
+          if (previousCategory && st.condCategories[previousCategory] > 0) {
+            st.condCategories[previousCategory]--;
+          }
+          if (target.conditioningFlavour && st.condFlavours[target.conditioningFlavour as CondFlavour] > 0) {
+            st.condFlavours[target.conditioningFlavour as CondFlavour]--;
+          }
+          if (target.hasCombinedConditioning) {
+            st.condCount = Math.max(
+              0,
+              st.condCount - attachedConditioningCredit(target.attachedConditioningKind ?? 'finisher'),
+            );
+          }
+          target.hasCombinedConditioning = false;
+          target.attachedConditioningKind = undefined;
+          target.conditioningFlavour = undefined;
+          target.conditioningCategory = undefined;
+          target.conditioningVariant = undefined;
+          target.conditioningFeel = undefined;
+          target.conditioningOffFeet = undefined;
+          target.ergModality = undefined;
         }
-        if (target.conditioningFlavour && st.condFlavours[target.conditioningFlavour as CondFlavour] > 0) {
-          st.condFlavours[target.conditioningFlavour as CondFlavour]--;
-        }
-        if (target.hasCombinedConditioning) {
-          st.condCount = Math.max(
-            0,
-            st.condCount - attachedConditioningCredit(target.attachedConditioningKind ?? 'finisher'),
-          );
-        }
-        const strengthFocus = target.focus.split(' + ')[0] || target.focus;
-        target.hasCombinedConditioning = false;
-        target.attachedConditioningKind = undefined;
-        target.conditioningFlavour = undefined;
-        target.conditioningCategory = undefined;
-        target.conditioningVariant = undefined;
-        target.conditioningFeel = undefined;
-        target.conditioningOffFeet = undefined;
-        target.ergModality = undefined;
+        const strengthFocus = preserveContractComponent
+          ? target.focus
+          : target.focus.split(' + ')[0] || target.focus;
         target.speedWorkKind = 'true_speed';
         target.speedPlacement = 'pre_lift';
         const speedBlock = createSpeedTopUpBlock('pre_lift', inputs, offseasonSubphase);
@@ -5557,7 +5689,15 @@ function buildWeeklyPlan(
   // so the guard always evaluates `false !== false` → swap permitted.
   // The consequence is a team day can silently lose its session when a
   // 3-consecutive-same-region run includes it.
-  let adjusted = enforceAdjacentRegionLimit(plan, teamDaySetTail);
+  const contractOwnedStrengthDays = phaseIsPreSeason && preseasonExposureContract
+    ? new Set(
+        plan
+          .filter((session) => plannedPatternsForAllocation(session).length > 0)
+          .map((session) => dayNameToNumber(session.dayOfWeek ?? ''))
+          .filter((dayNum) => dayNum >= 0),
+      )
+    : new Set<number>();
+  let adjusted = enforceAdjacentRegionLimit(plan, teamDaySetTail, contractOwnedStrengthDays);
   adjusted = optimiseStrengthLoadSequence(adjusted, {
     teamDayNumSet: teamDaySetTail,
     hasGameThisWeek,
@@ -5708,15 +5848,21 @@ function buildWeeklyPlan(
         })[0]?.session;
 
       if (target) {
-        const strengthFocus = target.focus.split(' + ')[0] || target.focus;
-        target.hasCombinedConditioning = false;
-        target.attachedConditioningKind = undefined;
-        target.conditioningFlavour = undefined;
-        target.conditioningCategory = undefined;
-        target.conditioningVariant = undefined;
-        target.conditioningFeel = undefined;
-        target.conditioningOffFeet = undefined;
-        target.ergModality = undefined;
+        const preserveContractComponent = !!preseasonExposureContract &&
+          target.attachedConditioningKind === 'component';
+        const strengthFocus = preserveContractComponent
+          ? target.focus
+          : target.focus.split(' + ')[0] || target.focus;
+        if (!preserveContractComponent) {
+          target.hasCombinedConditioning = false;
+          target.attachedConditioningKind = undefined;
+          target.conditioningFlavour = undefined;
+          target.conditioningCategory = undefined;
+          target.conditioningVariant = undefined;
+          target.conditioningFeel = undefined;
+          target.conditioningOffFeet = undefined;
+          target.ergModality = undefined;
+        }
         target.speedWorkKind = 'true_speed';
         target.speedPlacement = 'pre_lift';
         const speedBlock = createSpeedTopUpBlock('pre_lift', inputs, offseasonSubphase);
@@ -5759,46 +5905,69 @@ function buildWeeklyPlan(
   // Final sort (weekend-peak / field-load / core-streak may have mutated)
   adjusted.sort((a, b) => dayNameToNumber(a.dayOfWeek || '') - dayNameToNumber(b.dayOfWeek || ''));
 
-  // ── Pre-season conditioning-zero diagnostic ───────────────────────────
-  //
-  // Conditioning is allowed to land at zero ONLY when there's a structural
-  // reason (every non-team slot was either rest, hard strength, or blocked
-  // by H-PRE-1/3). This block is the "never silently drop" guard Sam asked
-  // for: when a pre-season week with healthy readiness ends with no
-  // conditioning despite both H5a (S+C conversion) and H5b (ACC/REC promo)
-  // running, we emit a structured warning that names exactly which slots
-  // were filled with what — so the next regression of this kind shows up
-  // in dev logs instead of going silent. In-season weeks aren't covered
-  // here (their structural rules genuinely permit weeks with no standalone
-  // conditioning around game days).
-  if (phaseIsPreSeason) {
-    const condSessionCount = adjusted.filter(s =>
-      !!s.conditioningCategory || !!s.hasCombinedConditioning,
-    ).length;
-    if (condSessionCount === 0) {
-      const teamDayList = [...teamDaySetTail]
-        .map(d => DAY_NAMES[d])
-        .join(', ');
-      const slotSummary = adjusted
-        .map(s => {
-          const cond = s.hasCombinedConditioning
-            ? '+cond'
-            : s.conditioningCategory ? `cond:${s.conditioningCategory}` : '';
-          const team = s.isTeamDay ? '(team)' : '';
-          return `${s.dayOfWeek}=${s.tier}${team}${cond ? `[${cond}]` : ''}`;
-        })
-        .join(', ');
-      // eslint-disable-next-line no-console
-      logger.warn(
-        '[engine] Pre-season week landed at 0 conditioning — both standalone ' +
-        'placement AND S+C fallback were exhausted. ' +
-        `team_days=[${teamDayList || 'none'}] ` +
-        `selected_days=[${inputs.selectedDays.join(', ')}] ` +
-        `core=${(adjusted.filter(s => s.tier === 'core' && s.isHardExposure).length)} ` +
-        `week_shape={${slotSummary}}. ` +
-        'If you see this, file a bug — the engine should have found at ' +
-        'least one valid conditioning slot OR a valid S+C pairing.'
+  // Final pre-season acceptance boundary. A deterministic allocation that
+  // misses its own typed contract is not a valid week and must never be
+  // stored/displayed as if a warning were sufficient.
+  if (phaseIsPreSeason && preseasonExposureContract) {
+    let validation = evaluatePreseasonExposureContract(
+      preseasonExposureContract,
+      adjusted,
+    );
+    const conditioningShortfall = Math.max(
+      0,
+      preseasonExposureContract.conditioning.targetCount -
+        validation.ledger.conditioningExposureCount,
+    );
+    if (conditioningShortfall > 0) {
+      const restHeadroom = Math.max(
+        0,
+        validation.ledger.fullRestDayCount -
+          preseasonExposureContract.recovery.minimumFullRestDays,
       );
+      const promotable = adjusted
+        .filter((session) => {
+          if (!session.dayOfWeek || session.isTeamDay || session.tier !== 'recovery') return false;
+          const day = dayNameToNumber(session.dayOfWeek);
+          if (day < 0 || day === preseasonExposureContract.anchors.gameDay) return false;
+          return true;
+        })
+        .sort((a, b) => {
+          const aDay = dayNameToNumber(a.dayOfWeek ?? '');
+          const bDay = dayNameToNumber(b.dayOfWeek ?? '');
+          return trainingOrder(aDay) - trainingOrder(bDay);
+        });
+      const repairCount = Math.min(conditioningShortfall, restHeadroom, promotable.length);
+      for (let index = 0; index < repairCount; index++) {
+        const session = promotable[index];
+        session.tier = 'core';
+        session.focus = 'Conditioning - aerobic base / zone 2 (steady state, conversational pace)';
+        session.isHardExposure = false;
+        session.stressLevel = 'low';
+        session.conditioningFlavour = 'aerobic';
+        session.conditioningCategory = 'aerobic_base';
+      }
+      validation = evaluatePreseasonExposureContract(
+        preseasonExposureContract,
+        adjusted,
+      );
+    }
+    if (validation.violations.length > 0) {
+      const detail = validation.violations
+        .map((violation) => `${violation.code}:${JSON.stringify(violation.actual)}`)
+        .join(', ');
+      logger.error('[engine] Pre-season exposure contract rejected allocation', {
+        contract: preseasonExposureContract,
+        ledger: validation.ledger,
+        violations: validation.violations,
+        allocations: adjusted.map((session) => ({
+          day: session.dayOfWeek,
+          focus: session.focus,
+          strength: session.strengthIntent?.plannedPatterns ?? [],
+          conditioning: session.conditioningCategory ?? null,
+          team: !!session.isTeamDay,
+        })),
+      });
+      throw new Error(`Pre-season exposure contract unresolved (${detail})`);
     }
   }
 
@@ -6887,6 +7056,7 @@ function enforceFieldLoadStreak(plan: SessionAllocation[]): void {
 function enforceAdjacentRegionLimit(
   plan: SessionAllocation[],
   teamDayNumSet: Set<number> = new Set(),
+  protectedStrengthDayNumSet: Set<number> = new Set(),
 ): SessionAllocation[] {
   if (plan.length <= 2) return plan;
 
@@ -6901,6 +7071,10 @@ function enforceAdjacentRegionLimit(
   const isTeamDay = (s: SessionAllocation): boolean => {
     const d = dayNameToNumber(s.dayOfWeek || '');
     return d >= 0 && teamDayNumSet.has(d);
+  };
+  const ownsProtectedStrength = (s: SessionAllocation): boolean => {
+    const d = dayNameToNumber(s.dayOfWeek || '');
+    return d >= 0 && protectedStrengthDayNumSet.has(d);
   };
 
   // We may need multiple passes since a swap can create new adjacency.
@@ -6948,6 +7122,7 @@ function enforceAdjacentRegionLimit(
       // the load-reduction intent).
       for (const idx of [i - 1, i, i - 2]) {
         if (isTeamDay(result[idx])) continue;
+        if (ownsProtectedStrength(result[idx])) continue;
         if (result[idx].tier === 'optional') {
           result[idx] = {
             ...result[idx],
@@ -6982,6 +7157,10 @@ function enforceAdjacentRegionLimit(
       // preserves team-day semantics.
       for (let j = 0; j < result.length; j++) {
         if (j >= i - 2 && j <= i) continue; // skip the violating trio
+        // The exposure contract owns both the pattern and its day. Moving
+        // either endpoint would make this placement heuristic a second
+        // allocator and can silently erase required weekly coverage.
+        if (ownsProtectedStrength(result[i]) || ownsProtectedStrength(result[j])) continue;
         // Team-day boundary guard: swap endpoints must be same-class
         // (team↔team or non-team↔non-team). Checked against the immutable
         // teamDayNumSet so the guard holds even though `isTeamDay` isn't
@@ -7022,6 +7201,10 @@ function enforceAdjacentRegionLimit(
       // Flip the middle to create: upper → LOWER → upper.
       // Pick a specific upper pattern (push by default) to stay consistent with
       // canonical naming — vague "Upper body strength" is not emitted anywhere.
+      // A contract-owned pattern is authoritative. If fixed club anchors make
+      // three same-region days unavoidable, retain the typed exposure and let
+      // the final contract validator report the honest constrained structure.
+      if (ownsProtectedStrength(result[i - 1])) continue;
       const newFocus = offendingRegion === 'upper'
         ? 'Lower body strength'
         : 'Upper body - push emphasis';
@@ -7070,7 +7253,8 @@ function buildAIConstraints(
   existingHard: number,
   core: number,
   optional: number,
-  recovery: number
+  recovery: number,
+  preseasonExposureContract: PreseasonWeeklyExposureContract | null,
 ): AIConstraints {
   const trainingAgePolicy = resolveTrainingAgePolicy(inputs.experienceLevel);
   // Lower body loading strategy — injuries MODIFY movement selection, not eliminate training.
@@ -7251,6 +7435,7 @@ function buildAIConstraints(
     rampUp,
     maxExercisesPerSession: trainingAgePolicy.maxExercisesPerStrengthSession,
     notes,
+    preseasonExposureContract,
   };
 }
 

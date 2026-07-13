@@ -286,8 +286,16 @@ section('[1] severe knee and hamstring constraints revalidate generated programs
 section('[1b] typed hard-running intent cannot hide behind generic conditioning copy');
 {
   const runningRow = exercise('Running intervals 20min');
-  const candidate = workout('Generic Intervals', 1, [runningRow, exercise('Push-Up')], {
+  const candidate = workout('Generic Intervals', 1, [runningRow, exercise('Bench Press')], {
+    planEntryId: 'test:typed-mixed-push-conditioning',
     workoutType: 'Mixed',
+    strengthIntent: {
+      archetype: 'upper',
+      primaryPattern: 'push',
+      plannedPatterns: ['push'],
+      effectivePatterns: ['push'],
+    },
+    strengthPatternContributions: ['push'],
     conditioningCategory: 'vo2',
     conditioningFlavour: 'high-intensity',
     conditioningBlock: {
@@ -310,7 +318,7 @@ section('[1b] typed hard-running intent cannot hide behind generic conditioning 
   ok('9/10 hamstring removes typed high-intensity running when copy omits sprint wording',
     !result.workout?.conditioningBlock && !names(result.workout).includes('Running intervals 20min'), result.workout);
   ok('typed hard-running removal preserves unaffected upper work',
-    names(result.workout).includes('Push-Up'), names(result.workout));
+    names(result.workout).includes('Bench Press'), names(result.workout));
 }
 
 section('[2] limiting injury is restrictive, not a full pause');

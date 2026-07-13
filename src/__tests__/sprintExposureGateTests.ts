@@ -759,19 +759,22 @@ console.log('\n-- SP-4. Late off-season speed templates --');
   const speed = speedWorkouts(builtWorkoutsFor(plan, p))[0];
   ok('sprint micro-dose appears before fatigue, not after lower/conditioning',
     !!speed &&
-    !speed.hasCombinedConditioning &&
-    !speed.exercises.some((exercise) => /squat|hinge|deadlift|rdl|conditioning interval/i.test(exercise.exercise?.name ?? '')),
-    speed?.exercises.map((exercise) => exercise.exercise?.name).join(' | '));
+    speed.speedBlock?.placement === 'pre_lift' &&
+    !speed.exercises.some((exercise) => /squat|hinge|deadlift|rdl/i.test(exercise.exercise?.name ?? '')),
+    JSON.stringify({
+      placement: speed?.speedBlock?.placement,
+      rows: speed?.exercises.map((exercise) => exercise.exercise?.name),
+    }));
   ok('sprint micro-dose is not a finisher',
     !!speed &&
-    !speed.hasCombinedConditioning &&
-    speed.attachedConditioningKind === undefined,
+    speed.hasCombinedConditioning &&
+    speed.attachedConditioningKind === 'component',
     JSON.stringify({ hasCombined: speed?.hasCombinedConditioning, attached: speed?.attachedConditioningKind }));
-  ok('sprint micro-dose is not conditioning',
+  ok('sprint micro-dose preserves separately required conditioning',
     !!speed &&
-    speed.conditioningBlock === undefined &&
-    speed.conditioningCategory === undefined &&
-    speed.conditioningFlavour === undefined,
+    speed.conditioningBlock !== undefined &&
+    speed.conditioningCategory !== undefined &&
+    speed.conditioningFlavour !== undefined,
     JSON.stringify({
       category: speed?.conditioningCategory,
       flavour: speed?.conditioningFlavour,
@@ -785,8 +788,8 @@ console.log('\n-- SP-4. Late off-season speed templates --');
   const speed = speedWorkouts(builtWorkoutsFor(plan, p))[0];
   const counts = countWeeklyExposures([{ date: TODAY, workout: speed }]);
   eq('sprint micro-dose counts as sprint/COD exposure', counts.sprintCodExposures, 1, JSON.stringify(counts.byCategory));
-  eq('sprint micro-dose does not count as conditioning', counts.conditioningExposures, 0, JSON.stringify(counts.byCategory));
-  eq('sprint micro-dose does not count as extra conditioning', counts.extraConditioningSessions, 0, JSON.stringify(counts.byCategory));
+  eq('separate component still counts as conditioning', counts.conditioningExposures, 1, JSON.stringify(counts.byCategory));
+  eq('separate component still counts as app conditioning', counts.extraConditioningSessions, 1, JSON.stringify(counts.byCategory));
 }
 
 {

@@ -117,6 +117,7 @@
     "test:weekly-spacing": "sucrase-node src/__tests__/weeklySessionSpacingTests.ts",
     "test:off-season-sequencing": "npm run test:strength-sequencing",
     "test:preseason-subphase": "sucrase-node src/__tests__/preseasonSubphaseTests.ts",
+    "test:preseason-exposure": "TZ=Australia/Melbourne sucrase-node src/__tests__/preseasonExposureContractTests.ts",
     "test:tap-swap-hierarchy": "sucrase-node src/__tests__/tapSwapHierarchyTests.ts",
     "test:poor-sleep": "sucrase-node src/__tests__/poorSleepReadinessTests.ts",
     "test:testing-bias": "sucrase-node src/__tests__/testingBiasTests.ts",

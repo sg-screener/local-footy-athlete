@@ -1352,6 +1352,19 @@ export function buildGenerationPrompt(
   // ─── Weekly skeleton from coaching engine ───
   if (weeklyPlan.length > 0) {
     parts.push('\nWEEKLY PLAN (from coaching engine — fill each session with exercises):');
+    if (c.preseasonExposureContract) {
+      const exposure = c.preseasonExposureContract;
+      parts.push(
+        `PRE-SEASON EXPOSURE CONTRACT: strength=${exposure.strength.targetCount} ` +
+        `[${exposure.strength.requiredPatterns.join('+')}]; conditioning=${exposure.conditioning.targetCount} ` +
+        `(team credit=${exposure.conditioning.creditedTeamTrainingCount}, ` +
+        `additional components=${exposure.conditioning.additionalRequiredCount}); ` +
+        `preferred hard days=${exposure.hardDays.preferredCount}, ` +
+        `permitted=${exposure.hardDays.permittedCount}; ` +
+        `minimum full rest days=${exposure.recovery.minimumFullRestDays}.`,
+      );
+      parts.push('This contract and the planEntryId skeleton below are authoritative. Do not omit or downgrade an allocated strength or conditioning component.');
+    }
     // Prefer the new DayOfWeek-typed usualGameDay; fall back to legacy gameDay.
     // Without this, the G-offset labels disagree with the engine's weeklyPlan
     // (engine already uses usualGameDay via onboardingToCoachingInputs).

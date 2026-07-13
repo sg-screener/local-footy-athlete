@@ -8,6 +8,7 @@ import { STRENGTH_BIBLE_RULES } from './expectations/strengthRules';
 import { COMPONENT_BIBLE_RULES } from './expectations/componentRules';
 import { SLICE3_BIBLE_RULES } from './expectations/slice3Rules';
 import { SLICE4_BIBLE_RULES } from './expectations/slice4Rules';
+import { PRESEASON_EXPOSURE_RULES } from './expectations/preseasonExposureRules';
 import { verifyExpectationImportBoundary } from './expectations/importBoundaryTests';
 import { STRENGTH_GOLDEN_SCENARIOS } from './scenarios/strengthGoldens';
 import { COMPONENT_GOLDEN_SCENARIOS } from './scenarios/componentGoldens';
@@ -27,6 +28,11 @@ import {
 } from './invariants/sessionComponentInvariants';
 import { evaluateSlice3Trace, SLICE3_INVARIANT_IDS } from './invariants/slice3Invariants';
 import { evaluateSlice4Trace, SLICE4_INVARIANT_IDS } from './invariants/pathEquivalenceInvariants';
+import {
+  evaluatePreseasonExposureWitness,
+  PRESEASON_EXPOSURE_INVARIANT_IDS,
+} from './invariants/preseasonExposureInvariants';
+import { buildPreseasonExposureWitness } from './observations/buildPreseasonExposureWitness';
 import { renderConformanceFailure } from './report/renderConformanceFailure';
 import { runSmokeMutationGate } from './registry/mutationGate';
 import { SMOKE_MUTATIONS } from './registry/mutationCatalogue';
@@ -99,6 +105,19 @@ function verifyRuleRegistry(repoRoot: string): void {
   const slice4Ids = new Set(SLICE4_BIBLE_RULES.map((rule) => rule.id));
   if (slice4Ids.size !== SLICE4_BIBLE_RULES.length) fail('Slice 4 rule IDs must be unique');
   for (const rule of SLICE4_BIBLE_RULES) {
+    if (!bible.includes(rule.anchorQuote)) {
+      fail(`${rule.id} anchor quote is no longer present in the Programming Bible`);
+    }
+    if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
+  }
+  if (PRESEASON_EXPOSURE_RULES.length !== 6) {
+    fail(`Expected exactly six pre-season exposure rules, found ${PRESEASON_EXPOSURE_RULES.length}`);
+  }
+  const preseasonIds = new Set(PRESEASON_EXPOSURE_RULES.map((rule) => rule.id));
+  if (preseasonIds.size !== PRESEASON_EXPOSURE_RULES.length) {
+    fail('Pre-season exposure rule IDs must be unique');
+  }
+  for (const rule of PRESEASON_EXPOSURE_RULES) {
     if (!bible.includes(rule.anchorQuote)) {
       fail(`${rule.id} anchor quote is no longer present in the Programming Bible`);
     }
@@ -215,6 +234,13 @@ function main(): void {
   if (boundary.violations.length > 0) fail(boundary.violations.join('\n'));
   verifyRuleRegistry(repoRoot);
   verifyFailureRenderer();
+
+  const preseasonWitness = withoutRoutineProductionLogs(() => buildPreseasonExposureWitness());
+  const preseasonFailures = evaluatePreseasonExposureWitness(preseasonWitness);
+  if (preseasonFailures.length > 0) {
+    fail(`Pre-season exposure invariant failure: ${JSON.stringify(preseasonFailures[0])}`);
+  }
+  console.log('  PASS preseason-exposure-first-six-day (typed contract, final ledger, edge/fallback)');
 
   if (STRENGTH_GOLDEN_SCENARIOS.length !== 3) {
     fail(`Expected exactly three strength goldens, found ${STRENGTH_GOLDEN_SCENARIOS.length}`);
@@ -417,10 +443,10 @@ function main(): void {
   }
 
   const totalMs = performance.now() - startedAt;
-  const scenarioPasses = strengthScenarioPasses + componentScenarioPasses + slice3ScenarioPasses + slice4ScenarioPasses;
-  const scenarioTotal = STRENGTH_GOLDEN_SCENARIOS.length + COMPONENT_GOLDEN_SCENARIOS.length + SLICE3_GOLDEN_SCENARIOS.length + SLICE4_GOLDEN_SCENARIOS.length;
-  const rulePasses = strengthRulePasses + componentRulePasses + slice3RulePasses + slice4RulePasses;
-  const ruleTotal = STRENGTH_BIBLE_RULES.length + COMPONENT_BIBLE_RULES.length + SLICE3_BIBLE_RULES.length + SLICE4_BIBLE_RULES.length;
+  const scenarioPasses = strengthScenarioPasses + componentScenarioPasses + slice3ScenarioPasses + slice4ScenarioPasses + 1;
+  const scenarioTotal = STRENGTH_GOLDEN_SCENARIOS.length + COMPONENT_GOLDEN_SCENARIOS.length + SLICE3_GOLDEN_SCENARIOS.length + SLICE4_GOLDEN_SCENARIOS.length + 1;
+  const rulePasses = strengthRulePasses + componentRulePasses + slice3RulePasses + slice4RulePasses + PRESEASON_EXPOSURE_RULES.length;
+  const ruleTotal = STRENGTH_BIBLE_RULES.length + COMPONENT_BIBLE_RULES.length + SLICE3_BIBLE_RULES.length + SLICE4_BIBLE_RULES.length + PRESEASON_EXPOSURE_RULES.length;
   const mutationTotal = mutationMode === 'none' ? 0 : SMOKE_MUTATIONS.length;
   console.log('\nSummary');
   console.log(`  Scenarios:         ${scenarioPasses}/${scenarioTotal} (strength ${strengthScenarioPasses}/${STRENGTH_GOLDEN_SCENARIOS.length}, component ${componentScenarioPasses}/${COMPONENT_GOLDEN_SCENARIOS.length}, Slice 3 ${slice3ScenarioPasses}/${SLICE3_GOLDEN_SCENARIOS.length}, Slice 4 ${slice4ScenarioPasses}/${SLICE4_GOLDEN_SCENARIOS.length})`);
@@ -433,10 +459,12 @@ function main(): void {
   console.log(`  Constraint rules:  ${SLICE3_BIBLE_RULES.filter((rule) => rule.category === 'constraint' && !failedRules.has(rule.id)).length}/${SLICE3_BIBLE_RULES.filter((rule) => rule.category === 'constraint').length}`);
   console.log(`  Exposure rules:    ${SLICE3_BIBLE_RULES.filter((rule) => rule.category === 'exposure' && !failedRules.has(rule.id)).length}/${SLICE3_BIBLE_RULES.filter((rule) => rule.category === 'exposure').length}`);
   console.log(`  Equivalence rules: ${slice4RulePasses}/${SLICE4_BIBLE_RULES.length}`);
+  console.log(`  Pre-season rules:  ${PRESEASON_EXPOSURE_RULES.length}/${PRESEASON_EXPOSURE_RULES.length}`);
   console.log(`  Strength invariants:  ${strengthInvariantPasses}/${STRENGTH_INVARIANT_IDS.length} (${strengthInvariantApplicationPasses}/${strengthInvariantApplications} applications)`);
   console.log(`  Component invariants: ${componentInvariantPasses}/${COMPONENT_INVARIANT_IDS.length} (${componentInvariantApplicationPasses}/${componentInvariantApplications} applications)`);
   console.log(`  Slice 3 invariants:   ${slice3InvariantPasses}/${SLICE3_INVARIANT_IDS.length} (${slice3InvariantApplicationPasses}/${slice3InvariantApplications} applications)`);
   console.log(`  Slice 4 invariants:   ${slice4InvariantPasses}/${SLICE4_INVARIANT_IDS.length} (${slice4InvariantApplicationPasses}/${slice4InvariantApplications} applications)`);
+  console.log(`  Pre-season invariants:${PRESEASON_EXPOSURE_INVARIANT_IDS.length}/${PRESEASON_EXPOSURE_INVARIANT_IDS.length}`);
   console.log(`  Path comparisons:  ${pathComparisons}`);
   console.log(`  Persistence:       ${persistenceRoundTrips} round trip(s), ${legacyMigrations} legacy migration(s)`);
   console.log(`  Metamorphic smoke: ${metamorphicSmoke.length}/${metamorphicSmoke.length}`);

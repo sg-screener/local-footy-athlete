@@ -377,7 +377,7 @@ export function classifyDaySessions(workout: Workout | null | undefined): Sessio
 
   // ── Conditioning unit(s) ──
   let condCat: SessionCategory | null = null;
-  if (hasTrueSpeedBlock) {
+  if (hasTrueSpeedBlock && workout.attachedConditioningKind !== 'component') {
     condCat = null;
   } else if (WORKOUT_TYPE_CONDITIONING[wt]) {
     condCat = WORKOUT_TYPE_CONDITIONING[wt];

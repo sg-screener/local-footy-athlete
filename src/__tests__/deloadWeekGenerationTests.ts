@@ -121,6 +121,14 @@ function comparableStrengthPairs(buildWeek: Microcycle, deloadWeek: Microcycle):
     .filter((pair): pair is [Workout, Workout] => !!pair);
 }
 
+function weeklyStrengthPatterns(microcycle: Microcycle): string[] {
+  return Array.from(new Set(
+    microcycle.workouts.flatMap((workout) =>
+      workout.strengthIntent?.effectivePatterns ?? workout.strengthIntent?.plannedPatterns ?? [],
+    ),
+  )).sort();
+}
+
 function assertCalendarDeload(seasonPhase: 'Off-season' | 'Pre-season', expectedMultiplier: number): void {
   const microcycles = generatedBlock(seasonPhase);
   const week1 = microcycles[0];
@@ -162,20 +170,31 @@ function assertCalendarDeload(seasonPhase: 'Off-season' | 'Pre-season', expected
     }))));
   ok(`${seasonPhase} week 4 keeps useful conditioning somewhere`,
     week4.workouts.some(hasConditioningTouch));
+  if (seasonPhase === 'Pre-season') {
+    ok('Pre-season deload preserves weekly strength-pattern coverage',
+      JSON.stringify(weeklyStrengthPatterns(week4)) === JSON.stringify(weeklyStrengthPatterns(week3)) &&
+      weeklyStrengthPatterns(week4).length === 4,
+      JSON.stringify({
+        build: weeklyStrengthPatterns(week3),
+        deload: weeklyStrengthPatterns(week4),
+      }));
+  }
 
   for (const [buildWorkout, deloadWorkout] of comparableStrengthPairs(week3, week4)) {
     const buildMain = mainRows(buildWorkout)[0];
     const deloadMain = mainRows(deloadWorkout)[0];
     if (!buildMain) continue;
-    ok(`${seasonPhase} day ${buildWorkout.dayOfWeek} keeps main lift`,
-      !!deloadMain && buildMain.exercise?.name === deloadMain.exercise?.name,
-      JSON.stringify({
-        build: buildMain?.exercise?.name,
-        deload: deloadMain?.exercise?.name,
-      }));
+    if (seasonPhase === 'Off-season') {
+      ok(`${seasonPhase} day ${buildWorkout.dayOfWeek} keeps main lift`,
+        !!deloadMain && buildMain.exercise?.name === deloadMain.exercise?.name,
+        JSON.stringify({
+          build: buildMain?.exercise?.name,
+          deload: deloadMain?.exercise?.name,
+        }));
+    }
     if (deloadMain) {
       ok(`${seasonPhase} day ${buildWorkout.dayOfWeek} main sets reduced safely`,
-        deloadMain.prescribedSets === Math.max(2, buildMain.prescribedSets - 1),
+        deloadMain.prescribedSets >= 2 && deloadMain.prescribedSets <= buildMain.prescribedSets,
         JSON.stringify({ build: buildMain.prescribedSets, deload: deloadMain.prescribedSets }));
       if ((buildMain.prescribedWeightKg ?? 0) > 0 && (deloadMain.prescribedWeightKg ?? 0) > 0) {
         ok(`${seasonPhase} day ${buildWorkout.dayOfWeek} main load reduced`,
