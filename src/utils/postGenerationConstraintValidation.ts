@@ -642,13 +642,20 @@ export function validateLiveMicrocycleWrite(microcycle: Microcycle): Microcycle 
   return validateMicrocycleAgainstActiveConstraints({ ...liveValidationContext(), microcycle });
 }
 
-export function validateLiveWorkoutWrite(date: string, workout: Workout): Workout {
+export function validateLiveWorkoutWrite(
+  date: string,
+  workout: Workout,
+  options: { restoreMissingPlanPatterns?: boolean } = {},
+): Workout {
   const context = liveValidationContext();
   const result = validateWorkoutAgainstActiveConstraints({
     ...context,
     date,
     workout,
-    canonicalContext: liveWorkoutCanonicalisationContext(date, workout, context.profile),
+    canonicalContext: {
+      ...liveWorkoutCanonicalisationContext(date, workout, context.profile),
+      restoreMissingPlanPatterns: options.restoreMissingPlanPatterns,
+    },
   });
   return result.workout ?? collapseWorkoutToRest(workout);
 }

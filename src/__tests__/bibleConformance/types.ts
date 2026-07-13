@@ -32,6 +32,39 @@ export type Slice3ScenarioId =
 
 export type AllBibleScenarioId = BibleScenarioId | Slice3ScenarioId;
 
+export type Slice4ScenarioId =
+  | 'generation-ai-fallback-equivalence'
+  | 'noop-inseason-week-rebuild'
+  | 'repeat-rich-week'
+  | 'block-rollover-contract'
+  | 'coach-add-bike-zone2'
+  | 'coach-remove-contrast-lift'
+  | 'direct-add-pallof'
+  | 'move-combined-lower'
+  | 'swap-upper-and-lower'
+  | 'canonical-program-rehydrate'
+  | 'legacy-program-rehydrate'
+  | 'post-rehydrate-edit-rebuild';
+
+export type ConformancePathId =
+  | 'deterministic_generation'
+  | 'ai_fixture_normalisation'
+  | 'no_op_week_rebuild'
+  | 'selected_week_rebuild'
+  | 'repeat_week'
+  | 'block_rollover'
+  | 'coach_revision'
+  | 'direct_exercise_edit'
+  | 'conditioning_edit'
+  | 'workout_move'
+  | 'workout_swap'
+  | 'tap_swap'
+  | 'constraint_refresh'
+  | 'store_rehydrate'
+  | 'legacy_store_rehydrate';
+
+export type AllBibleScenarioIdV4 = AllBibleScenarioId | Slice4ScenarioId;
+
 export type ComponentRuleId =
   | 'ALL-COMP-MIXED-01'
   | 'ALL-COMP-TEAM-01'
@@ -61,6 +94,20 @@ export type Slice3RuleId =
   | 'ALL-EXPOSURE-REGION-01'
   | 'ALL-EXPOSURE-CAPS-01';
 
+export type Slice4RuleId =
+  | 'ALL-PATH-EQUIV-01'
+  | 'ALL-REBUILD-IDEMPOTENT-01'
+  | 'ALL-REPEAT-CONSERVE-01'
+  | 'ALL-ROLLOVER-CONSERVE-01'
+  | 'ALL-EDIT-CANONICAL-01'
+  | 'ALL-MOVE-IDENTITY-01'
+  | 'ALL-SWAP-IDENTITY-01'
+  | 'ALL-STORE-ROUNDTRIP-01'
+  | 'ALL-STORE-IDEMPOTENT-01'
+  | 'ALL-LEGACY-HYDRATE-01'
+  | 'ALL-STORE-SCALAR-NONAUTH-01'
+  | 'ALL-POST-REHYDRATE-WRITE-01';
+
 export type StrengthPattern = 'squat' | 'hinge' | 'push' | 'pull';
 export type StrengthArchetype = 'lower' | 'upper' | 'full_body';
 
@@ -82,6 +129,17 @@ export type Slice3TraceStage =
   | StrengthTraceStage
   | 'resolved_effective'
   | 'weekly_accounting';
+
+export type Slice4TraceStage =
+  | 'path_input'
+  | 'path_output'
+  | 'stored_before_rehydrate'
+  | 'rehydrated'
+  | 'rehydrated_twice'
+  | 'post_rehydrate_edit'
+  | 'post_rehydrate_rebuild';
+
+export type AllTraceStage = Slice3TraceStage | Slice4TraceStage;
 
 export type StrengthInvariantId =
   | 'INV_PLANNED_CONTRACT_CONSERVED'
@@ -128,7 +186,28 @@ export type Slice3InvariantId =
   | 'INV_WEEKLY_CAPS_RESPECTED'
   | 'INV_WEEK_DETAIL_CONDITIONING_POWER_AGREEMENT';
 
+export type Slice4InvariantId =
+  | 'INV_EQUIVALENT_CANONICAL_LEDGER'
+  | 'INV_EQUIVALENT_VISIBLE_WEEK'
+  | 'INV_EQUIVALENT_VISIBLE_DETAIL'
+  | 'INV_EQUIVALENT_EXPOSURE_CREDIT'
+  | 'INV_NOOP_REBUILD_IDEMPOTENT'
+  | 'INV_REPEAT_WEEK_CONSERVES_CONTRACT'
+  | 'INV_ROLLOVER_ONLY_AUTHORISED_CHANGE'
+  | 'INV_EDIT_USES_CANONICAL_FINALISER'
+  | 'INV_MOVE_PRESERVES_PLAN_IDENTITY'
+  | 'INV_SWAP_PRESERVES_BOTH_IDENTITIES'
+  | 'INV_STORE_ROUNDTRIP_CONSERVED'
+  | 'INV_STORE_REHYDRATE_IDEMPOTENT'
+  | 'INV_LEGACY_MIGRATION_CANONICAL'
+  | 'INV_MODERN_TYPED_INTENT_WINS'
+  | 'INV_SCALAR_FIELDS_NON_AUTHORITATIVE_AFTER_HYDRATE'
+  | 'INV_POST_REHYDRATE_EDIT_EQUIVALENT'
+  | 'INV_POST_REHYDRATE_REBUILD_EQUIVALENT'
+  | 'INV_PLAN_ENTRY_JOIN_STABLE_ACROSS_PATHS';
+
 export type AllBibleInvariantId = BibleInvariantId | Slice3InvariantId;
+export type AllBibleInvariantIdV4 = AllBibleInvariantId | Slice4InvariantId;
 
 export interface HarnessConditioningEntry {
   modality: 'running' | 'bike' | 'row' | 'ski' | 'mixed_off_feet' | 'other';
@@ -226,6 +305,67 @@ export interface Slice3StageObservation {
 export interface Slice3ScenarioTrace {
   scenario: Slice3GoldenScenario;
   stages: Partial<Record<Slice3TraceStage, Slice3StageObservation>>;
+  runtimeMs: number;
+}
+
+export interface HarnessCanonicalWorkoutLedger {
+  planEntryId: string;
+  dayOfWeek: number;
+  archetype: StrengthArchetype | null;
+  primaryPattern: StrengthPattern | null;
+  plannedPatterns: StrengthPattern[];
+  effectivePatterns: StrengthPattern[];
+  components: HarnessSessionComponent[];
+  strengthRows: string[];
+  conditioning: HarnessConditioningEntry[];
+  power: HarnessPowerIntent;
+  supportRows: string[];
+  recoveryAddons: string[];
+  sessionTier: string | null;
+  workoutType: string | null;
+  visibleTitle: string | null;
+  visibleSubtitle: string | null;
+}
+
+export interface HarnessCanonicalWeekLedger {
+  workouts: HarnessCanonicalWorkoutLedger[];
+  exposure: HarnessExposureLedger;
+  visibleWeekComponents: HarnessSessionComponent[];
+  visibleDetailComponents: HarnessSessionComponent[];
+}
+
+export interface Slice4GoldenScenario {
+  id: Slice4ScenarioId;
+  description: string;
+  referenceDate: '2026-03-23';
+  timezone: 'Australia/Melbourne';
+  pathIds: ConformancePathId[];
+  ruleIds: Slice4RuleId[];
+  expected: Record<string, unknown>;
+}
+
+export interface Slice4Rule {
+  id: Slice4RuleId;
+  category: 'generation' | 'rebuild' | 'edit' | 'identity' | 'persistence';
+  section: string;
+  anchorQuote: string;
+  statement: string;
+  applicableScenarios: Slice4ScenarioId[];
+  expectation: Record<string, unknown>;
+}
+
+export interface Slice4PathObservation {
+  pathId: ConformancePathId;
+  stage: Slice4TraceStage;
+  ledger: HarnessCanonicalWeekLedger;
+  persistence?: { key: string; version: number; mergeRuns: number; legacy: boolean };
+  authorisedChanges: string[];
+  runtimeMs: number;
+}
+
+export interface Slice4ScenarioTrace {
+  scenario: Slice4GoldenScenario;
+  observations: Slice4PathObservation[];
   runtimeMs: number;
 }
 
@@ -338,10 +478,10 @@ export interface ComponentScenarioTrace {
 }
 
 export interface InvariantFailure {
-  invariantId: AllBibleInvariantId;
-  ruleId: BibleRuleId | ComponentRuleId | Slice3RuleId;
-  scenarioId: AllBibleScenarioId;
-  stage: Slice3TraceStage;
+  invariantId: AllBibleInvariantIdV4;
+  ruleId: BibleRuleId | ComponentRuleId | Slice3RuleId | Slice4RuleId;
+  scenarioId: AllBibleScenarioIdV4;
+  stage: AllTraceStage;
   expected: unknown;
   actual: unknown;
   missing: string[];
@@ -354,13 +494,42 @@ export interface InvariantFailure {
   detailComponents?: HarnessSessionComponent[];
   row?: string;
   evidence?: string[];
+  conformancePath?: ConformancePathId;
+  before?: unknown;
+  after?: unknown;
+  persistence?: string;
 }
 
 export interface InvariantCheckResult {
-  invariantId: AllBibleInvariantId;
-  scenarioId: AllBibleScenarioId;
+  invariantId: AllBibleInvariantIdV4;
+  scenarioId: AllBibleScenarioIdV4;
   applied: boolean;
   failures: InvariantFailure[];
+}
+
+export type Slice4MutationId =
+  | 'ai_drops_conditioning'
+  | 'rebuild_joins_by_weekday'
+  | 'repeat_drops_conditioning'
+  | 'move_replaces_plan_id'
+  | 'swap_keeps_destination_ids'
+  | 'rehydrate_drops_second_pattern'
+  | 'workout_type_overwrites_components'
+  | 'stale_name_restores_pattern'
+  | 'second_hydration_mutates'
+  | 'coach_bike_stays_strength_row'
+  | 'contrast_survives_lift_removal'
+  | 'post_rehydrate_rebuild_drops_component';
+
+export interface Slice4MutationAcceptanceResult {
+  mutationId: Slice4MutationId;
+  killed: boolean;
+  mutationActive: boolean;
+  restored: boolean;
+  invariantId: Slice4InvariantId | Slice3InvariantId;
+  scenarioId: Slice4ScenarioId;
+  firstDivergenceStage: Slice4TraceStage;
+  report: string;
 }
 
 export interface MutationAcceptanceResult {

@@ -1,9 +1,10 @@
 import type { InvariantFailure } from '../types';
 
 function compact(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.join(', ')}]`;
-  if (value && typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+  const rendered = Array.isArray(value)
+    ? `[${value.join(', ')}]`
+    : value && typeof value === 'object' ? JSON.stringify(value) : String(value);
+  return rendered.length > 280 ? `${rendered.slice(0, 277)}...` : rendered;
 }
 
 function contributionLine(label: 'LOSS' | 'EXTRA', values: readonly string[]): string | null {
@@ -32,6 +33,9 @@ export function renderConformanceFailure(failure: InvariantFailure): string {
   if (failure.evidence) {
     lines.push(`EVIDENCE  ${failure.evidence.length > 0 ? failure.evidence.join(', ') : 'none'}`);
   }
+  if (failure.before !== undefined) lines.push(`BEFORE    ${compact(failure.before)}`);
+  if (failure.after !== undefined) lines.push(`AFTER     ${compact(failure.after)}`);
+  if (failure.persistence) lines.push(`PERSIST   ${failure.persistence}`);
   lines.push(`PATH      ${failure.path}`);
   if (failure.detail) {
     lines.push(`${failure.detailComponents ? 'NOTE      ' : 'DETAIL    '}${failure.detail}`);

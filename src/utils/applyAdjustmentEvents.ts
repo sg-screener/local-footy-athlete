@@ -1851,8 +1851,10 @@ function buildMovedWorkoutForDest(
   source: Workout,
   reason: string,
   fromDate: string,
+  destinationDate: string,
 ): Workout {
   return cloneWorkout(source, {
+    dayOfWeek: new Date(`${destinationDate}T12:00:00`).getDay(),
     coachNotes: appendCoachNote(source, `Moved from ${fromDate}: ${reason}`),
   });
 }
@@ -2001,8 +2003,12 @@ export function applyMoveSession(
         intent: 'program_adjustment',
         label: `Coach swap from ${input.sourceDate}`,
       };
-      const newSource = buildMovedWorkoutForDest(destWorkoutBefore, reason, input.destDate);
-      const newDest = buildMovedWorkoutForDest(sourceWorkoutBefore, reason, input.sourceDate);
+      const newSource = buildMovedWorkoutForDest(
+        destWorkoutBefore, reason, input.destDate, input.sourceDate,
+      );
+      const newDest = buildMovedWorkoutForDest(
+        sourceWorkoutBefore, reason, input.sourceDate, input.destDate,
+      );
       setOverride(input.sourceDate, newSource, ctxA);
       setOverride(input.destDate, newDest, ctxB);
       applied.push({
@@ -2026,7 +2032,9 @@ export function applyMoveSession(
   }
 
   // ── One-way move ───────────────────────────────────────────────
-  const newDest = buildMovedWorkoutForDest(sourceWorkoutBefore, reason, input.sourceDate);
+  const newDest = buildMovedWorkoutForDest(
+    sourceWorkoutBefore, reason, input.sourceDate, input.destDate,
+  );
   const newSource = buildRestShellForMove(sourceWorkoutBefore, reason, input.destDate);
   const ctxSource: OverrideContext = {
     intent: 'program_adjustment',

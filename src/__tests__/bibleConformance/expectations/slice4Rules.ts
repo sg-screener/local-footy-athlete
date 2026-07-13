@@ -1,0 +1,79 @@
+import type { Slice4Rule } from '../types';
+
+/** Literal path/persistence expectations. Production path helpers are forbidden here. */
+export const SLICE4_BIBLE_RULES: readonly Slice4Rule[] = [
+  {
+    id: 'ALL-PATH-EQUIV-01', category: 'generation', section: 'Deterministic authority',
+    anchorQuote: 'The visible AI chat should not be the main way program changes happen.',
+    statement: 'AI-shaped input and deterministic fallback converge on the same canonical typed plan.',
+    applicableScenarios: ['generation-ai-fallback-equivalence'],
+    expectation: { patterns: ['squat', 'hinge'], components: ['strength', 'conditioning'], power: 'none' },
+  },
+  {
+    id: 'ALL-REBUILD-IDEMPOTENT-01', category: 'rebuild', section: 'Program modification rules',
+    anchorQuote: 'The app changes the program.',
+    statement: 'An unchanged rebuild preserves canonical meaning and ownership.',
+    applicableScenarios: ['noop-inseason-week-rebuild'], expectation: { unauthorisedChanges: 0 },
+  },
+  {
+    id: 'ALL-REPEAT-CONSERVE-01', category: 'rebuild', section: 'Progression and repeating',
+    anchorQuote: 'Do not progress just because a week passed.',
+    statement: 'Repeat Week carries canonical content forward without stale raw-row regression.',
+    applicableScenarios: ['repeat-rich-week'], expectation: { preserveComponents: true, preserveIntent: true },
+  },
+  {
+    id: 'ALL-ROLLOVER-CONSERVE-01', category: 'rebuild', section: 'Block progression',
+    anchorQuote: 'Do not progress multiple variables at once.',
+    statement: 'Block rollover changes dose/variation only through authorised progression and retains useful typed structure.',
+    applicableScenarios: ['block-rollover-contract'], expectation: { requiredPatterns: ['squat', 'hinge', 'push', 'pull'] },
+  },
+  {
+    id: 'ALL-EDIT-CANONICAL-01', category: 'edit', section: 'Add to day and exercise edits',
+    anchorQuote: 'Do not hide hard work inside a day and pretend it is easy.',
+    statement: 'Coach/direct edits use the generation canonical finaliser and honest component ownership.',
+    applicableScenarios: ['coach-add-bike-zone2', 'coach-remove-contrast-lift', 'direct-add-pallof'],
+    expectation: { canonicalFinaliser: true },
+  },
+  {
+    id: 'ALL-MOVE-IDENTITY-01', category: 'identity', section: 'Move session',
+    anchorQuote: 'Do not lose the session.',
+    statement: 'A moved workout carries its allocation identity and full canonical contract.',
+    applicableScenarios: ['move-combined-lower'], expectation: { planIdentityTravels: true },
+  },
+  {
+    id: 'ALL-SWAP-IDENTITY-01', category: 'identity', section: 'Session swap',
+    anchorQuote: 'Session swap means changing the type of session on a day.',
+    statement: 'Occupied workout swaps exchange placement without exchanging workout-owned identity.',
+    applicableScenarios: ['swap-upper-and-lower'], expectation: { preserveBothIdentities: true },
+  },
+  {
+    id: 'ALL-STORE-ROUNDTRIP-01', category: 'persistence', section: 'Deterministic program ownership',
+    anchorQuote: 'The app changes the program.',
+    statement: 'The actual persisted store envelope and merge preserve a modern canonical program.',
+    applicableScenarios: ['canonical-program-rehydrate'], expectation: { storageKey: 'program-store', version: 0 },
+  },
+  {
+    id: 'ALL-STORE-IDEMPOTENT-01', category: 'persistence', section: 'Deterministic program ownership',
+    anchorQuote: 'The same key ideas run through the whole year:',
+    statement: 'Applying the real persistence merge twice does not change canonical meaning.',
+    applicableScenarios: ['canonical-program-rehydrate', 'legacy-program-rehydrate'], expectation: { secondMergeChanges: 0 },
+  },
+  {
+    id: 'ALL-LEGACY-HYDRATE-01', category: 'persistence', section: 'Backward-compatible canonical ingress',
+    anchorQuote: 'Keep most training the same.',
+    statement: 'Legacy explicit contributions migrate once without scalar/name over-credit.',
+    applicableScenarios: ['legacy-program-rehydrate'], expectation: { plannedPatterns: ['squat', 'hinge'], migrations: 1 },
+  },
+  {
+    id: 'ALL-STORE-SCALAR-NONAUTH-01', category: 'persistence', section: 'Canonical typed ownership',
+    anchorQuote: 'Do not hide hard work inside a day and pretend it is easy.',
+    statement: 'Modern typed components and intent beat stale workout type, name, focus, scalar and ID tokens.',
+    applicableScenarios: ['canonical-program-rehydrate', 'legacy-program-rehydrate'], expectation: { typedIntentWins: true },
+  },
+  {
+    id: 'ALL-POST-REHYDRATE-WRITE-01', category: 'persistence', section: 'Program modification rules',
+    anchorQuote: 'User taps what they want.',
+    statement: 'Edits and rebuilds after reopening converge with their non-persisted equivalents.',
+    applicableScenarios: ['post-rehydrate-edit-rebuild'], expectation: { editEquivalent: true, rebuildEquivalent: true },
+  },
+];

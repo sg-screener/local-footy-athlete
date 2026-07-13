@@ -37,10 +37,14 @@ function postValidateMicrocycle(microcycle: Microcycle): Microcycle {
     .validateLiveMicrocycleWrite(microcycle);
 }
 
-function postValidateWorkout(date: string, workout: Workout): Workout {
+function postValidateWorkout(
+  date: string,
+  workout: Workout,
+  options: { restoreMissingPlanPatterns?: boolean } = {},
+): Workout {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../utils/postGenerationConstraintValidation')
-    .validateLiveWorkoutWrite(date, workout);
+    .validateLiveWorkoutWrite(date, workout, options);
 }
 
 function postValidateNullableWorkout(date: string, workout: Workout | null): Workout | null {
@@ -53,6 +57,94 @@ function postValidateWeekOverlay(overlay: WeekScopedWorkoutOverlay): WeekScopedW
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../utils/postGenerationConstraintValidation')
     .validateLiveWeekOverlayWrite(overlay);
+}
+
+/**
+ * Persistence is a legacy ingress boundary, not a second programming owner.
+ * Old store envelopes may pre-date typed strength intent and canonical
+ * component sections, so rehydrate them once through the same finaliser used
+ * by generation and edits. Existing modern typed intent wins inside that
+ * finaliser; display/scalar fields are compatibility inputs only.
+ */
+function canonicaliseHydratedWorkout(
+  workout: Workout,
+  phase?: string,
+  weekKind?: Microcycle['weekKind'],
+): Workout {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { finaliseWorkoutAfterMutation } = require('../utils/workoutCanonicalisation');
+  const canonicalPhase = /pre/i.test(phase ?? '')
+    ? 'Pre-season'
+    : /off/i.test(phase ?? '')
+      ? 'Off-season'
+      : /in/i.test(phase ?? '')
+        ? 'In-season'
+        : undefined;
+  return finaliseWorkoutAfterMutation(workout, {
+    phase: canonicalPhase,
+    weekKind,
+    // Persisted allocation ownership is legitimate ingress. This preserves
+    // explicit legacy contribution arrays even before plan-entry IDs existed.
+    planIntentValid: true,
+    referenceWorkout: workout,
+  }).workout;
+}
+
+function canonicaliseHydratedMicrocycle(
+  microcycle: Microcycle,
+  phase?: string,
+): Microcycle {
+  const workouts = (microcycle.workouts ?? []).map((workout) =>
+    canonicaliseHydratedWorkout(workout, phase, microcycle.weekKind));
+  return { ...microcycle, workouts };
+}
+
+function canonicaliseHydratedProgram(program: TrainingProgram): TrainingProgram {
+  return {
+    ...program,
+    microcycles: (program.microcycles ?? []).map((microcycle) =>
+      canonicaliseHydratedMicrocycle(microcycle, program.programPhase)),
+  };
+}
+
+function canonicaliseHydratedState(
+  persistedState: Partial<ProgramState>,
+): Partial<ProgramState> {
+  const phase = persistedState.currentProgram?.programPhase;
+  const currentProgram = persistedState.currentProgram
+    ? canonicaliseHydratedProgram(persistedState.currentProgram)
+    : persistedState.currentProgram;
+  const currentMicrocycle = persistedState.currentMicrocycle
+    ? canonicaliseHydratedMicrocycle(persistedState.currentMicrocycle, phase)
+    : persistedState.currentMicrocycle;
+  const dateOverrides = persistedState.dateOverrides
+    ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
+        date,
+        canonicaliseHydratedWorkout(workout, phase),
+      ]))
+    : persistedState.dateOverrides;
+  const weekScopedOverlays = persistedState.weekScopedOverlays
+    ? Object.fromEntries(Object.entries(persistedState.weekScopedOverlays).map(([weekStart, overlay]) => [
+        weekStart,
+        {
+          ...overlay,
+          workoutsByDate: Object.fromEntries(Object.entries(overlay.workoutsByDate).map(([date, workout]) => [
+            date,
+            workout ? canonicaliseHydratedWorkout(workout, phase) : null,
+          ])),
+        },
+      ]))
+    : persistedState.weekScopedOverlays;
+  return {
+    ...persistedState,
+    currentProgram,
+    currentMicrocycle,
+    todayWorkout: persistedState.todayWorkout
+      ? canonicaliseHydratedWorkout(persistedState.todayWorkout, phase)
+      : persistedState.todayWorkout,
+    dateOverrides,
+    weekScopedOverlays,
+  };
 }
 
 // ─── Session Feedback ───
@@ -295,7 +387,12 @@ export const useProgramStore = create<ProgramState>()(
         // cleanup paths intentionally keep direct access. The final active-
         // constraint validator still runs here so no producer can reintroduce
         // unsafe work after its own checks.
-        const validatedWorkout = postValidateWorkout(date, workout);
+        const validatedWorkout = postValidateWorkout(date, workout, {
+          // A manual override is the explicit edited result. Preserve planned
+          // intent for diagnostics, but never resurrect content the edit
+          // deliberately removed.
+          restoreMissingPlanPatterns: false,
+        });
         set((state) => ({
           dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },
           overrideContexts: context
@@ -492,7 +589,9 @@ export const useProgramStore = create<ProgramState>()(
       name: 'program-store',
       storage: createJSONStorage(() => AsyncStorage),
       merge: (persisted, current) => {
-        const persistedState = (persisted as Partial<ProgramState> | undefined) ?? {};
+        const persistedState = canonicaliseHydratedState(
+          (persisted as Partial<ProgramState> | undefined) ?? {},
+        );
         const merged = { ...current, ...persistedState } as ProgramState;
         if (!merged.blockState) {
           merged.blockState = deriveStoredBlockStateFromProgram(merged.currentProgram);
