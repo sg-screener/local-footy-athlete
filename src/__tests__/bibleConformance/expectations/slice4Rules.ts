@@ -128,8 +128,8 @@ export const SLICE4_BIBLE_RULES: readonly Slice4Rule[] = [
   {
     id: 'ALL-COND-DOSE-DESCRIPTOR-01', category: 'identity', section: 'Conditioning session structure',
     anchorQuote: 'Duration: Usually 15-45 minutes depending on phase, fitness level and weekly load.',
-    statement: 'Standalone dose copy reflects meaningful work and ignores warm-up and cool-down.',
+    statement: 'Canonical dose metadata reflects meaningful work and ignores warm-up and cool-down, while weekly cards remain structure-only.',
     applicableScenarios: ['standalone-conditioning-ownership'],
-    expectation: { doseFromMainWork: true },
+    expectation: { doseFromMainWork: true, weeklyDoseHidden: true },
   },
 ];

@@ -13,11 +13,10 @@ import { Button } from '../../components/common/Button';
 import { Badge } from '../../components/common/Badge';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import type { Workout } from '../../types/domain';
-import { splitSessionName as splitWorkoutName } from '../../utils/sessionNaming';
 import { getConditioningContextLabel } from './homeScreenConstants';
 import { getTeamTrainingWorkoutState } from '../../utils/teamTraining';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
-import { weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
+import { weeklyPlanSecondaryLabel, weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
 
 interface TodayWorkoutCardProps {
   workout: Workout;
@@ -38,6 +37,7 @@ export const TodayWorkoutCard = ({
   const displayExercises = teamState.renderableExercises.slice(0, 4);
   const moreExercises = Math.max(0, exerciseCount - 4);
   const conditioningContext = getConditioningContextLabel(workout);
+  const titleContext = conditioningContext ? null : weeklyPlanSecondaryLabel(workout);
 
   // Calculate estimated volume
   const estimatedDuration = workout.durationMinutes || 45;
@@ -112,9 +112,9 @@ export const TodayWorkoutCard = ({
         <Text variant="h3" style={styles.title}>
           {weeklyPlanTitle(workout)}
         </Text>
-        {splitWorkoutName(workout.name).context && (
+        {titleContext && (
           <Text style={styles.titleContext}>
-            {splitWorkoutName(workout.name).context}
+            {titleContext}
           </Text>
         )}
 

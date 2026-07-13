@@ -32,6 +32,14 @@ const HOME_CLASSIC = fs.readFileSync(
   path.resolve(__dirname, '..', 'screens', 'home', 'HomeScreen.tsx'),
   'utf8',
 );
+const TODAY_CARD = fs.readFileSync(
+  path.resolve(__dirname, '..', 'screens', 'home', 'TodayWorkoutCard.tsx'),
+  'utf8',
+);
+const WEEK_CARD = fs.readFileSync(
+  path.resolve(__dirname, '..', 'screens', 'home', 'WeekViewCard.tsx'),
+  'utf8',
+);
 const READINESS_QUICK_CHECK = fs.readFileSync(
   path.resolve(__dirname, '..', 'components', 'ReadinessQuickCheck.tsx'),
   'utf8',
@@ -42,6 +50,10 @@ const DAY_V2 = fs.readFileSync(
 );
 const USE_HOME_SCREEN = fs.readFileSync(
   path.resolve(__dirname, '..', 'screens', 'home', 'useHomeScreen.ts'),
+  'utf8',
+);
+const USE_DAY_WORKOUT = fs.readFileSync(
+  path.resolve(__dirname, '..', 'screens', 'home', 'useDayWorkout.ts'),
   'utf8',
 );
 
@@ -224,17 +236,17 @@ section('[8] HomeScreenV2 - Program rows keep active modifier copy out of week c
       && /rowIcon:\s*{[\s\S]{0,60}opacity:\s*0\.95/.test(HOME_V2),
   );
   ok(
-    'HomeScreenV2 maps Aerobic Base to pulse and Flush Out to refresh icons',
-    /case 'aerobic base':[\s\S]{0,80}return 'pulse'/.test(HOME_V2)
-      && /case 'flush out':[\s\S]{0,80}return 'refresh'/.test(HOME_V2)
+    'HomeScreenV2 routes all conditioning labels through the original pulse icon owner',
+    /weeklyConditioningIconKind/.test(HOME_V2)
+      && /const conditioningKind = weeklyConditioningIconKind\(key\)/.test(HOME_V2)
       && /case 'pulse':[\s\S]{0,120}<Path d="M3 12h4l2-5 4 10 2-5h6" \/>/.test(HOME_V2)
-      && /case 'refresh':[\s\S]{0,220}<Path d="M20 11a8 8 0 00-14\.3-4\.9L4 8" \/>/.test(HOME_V2)
       && !new RegExp('w' + 'ind|g' + 'auge').test(HOME_V2),
   );
   ok(
-    'HomeScreenV2 maps Sprint Work to bolt and Hard Conditioning to flame',
-    /case 'sprint work':[\s\S]{0,80}return 'bolt'/.test(HOME_V2)
-      && /case 'hard conditioning':[\s\S]{0,80}return 'flame'/.test(HOME_V2),
+    'HomeScreenV2 no longer selects family-specific conditioning glyphs',
+    !/case 'flush out':[\s\S]{0,80}return 'refresh'/.test(HOME_V2)
+      && !/case 'sprint work':[\s\S]{0,80}return 'bolt'/.test(HOME_V2)
+      && !/case 'hard conditioning':[\s\S]{0,80}return 'flame'/.test(HOME_V2),
   );
   ok(
     'HomeScreenV2 maps team, game, recovery, and strength title icons without data changes',
@@ -407,6 +419,32 @@ section('[8] HomeScreenV2 - Program rows keep active modifier copy out of week c
     'HomeScreenV2 gives GAME visual badge precedence over session tier badge',
     v2GameBadgeIdx >= 0 && v2TierBadgeIdx > v2GameBadgeIdx,
     `indices game=${v2GameBadgeIdx} tier=${v2TierBadgeIdx}`,
+  );
+}
+
+section('[8b] Weekly cards hide conditioning dose while detail keeps prescription');
+{
+  ok(
+    'classic and V2 weekly rows use the shared weekly secondary projection',
+    /weeklyPlanSecondaryLabel\(day\.workout\)/.test(HOME_CLASSIC)
+      && /weeklyPlanSecondaryLabel\(day\.workout\)/.test(HOME_V2),
+  );
+  ok(
+    'Today and Week cards consume attached-only weekly conditioning context',
+    /const titleContext = conditioningContext \? null : weeklyPlanSecondaryLabel\(workout\)/.test(TODAY_CARD)
+      && /getConditioningContextLabel\(day\.workout\)/.test(WEEK_CARD),
+  );
+  ok(
+    'weekly card sources never render doseLabel directly',
+    ![HOME_CLASSIC, HOME_V2, TODAY_CARD, WEEK_CARD].some((source) => /\.doseLabel\b/.test(source)),
+  );
+  ok(
+    'workout detail keeps conditioning description and linked prescription rows',
+    /description: opt\.description/.test(USE_DAY_WORKOUT)
+      && /rows: conditioningExercises\.filter/.test(USE_DAY_WORKOUT)
+      && /conditioningOptions\.map/.test(DAY_V2)
+      && /opt\.description/.test(DAY_V2)
+      && /opt\.rows\.map/.test(DAY_V2),
   );
 }
 

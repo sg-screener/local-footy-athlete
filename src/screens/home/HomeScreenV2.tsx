@@ -19,8 +19,11 @@ import { SelectableTile } from '../../components/common';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
 import { Button, Card, Sheet, Badge, IconButton } from '../../components/ui';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
-import { splitSessionName } from '../../utils/sessionNaming';
-import { weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
+import {
+  weeklyConditioningIconKind,
+  weeklyPlanSecondaryLabel,
+  weeklyPlanTitle,
+} from '../../utils/weeklyPlanDisplay';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
 import { spacing, borderRadius } from '../../theme/spacing';
 import { useHomeScreen, type WeekReadinessAction } from './useHomeScreen';
@@ -43,7 +46,6 @@ import {
   WEEK_DAYS,
   DAY_SHORT,
   NEXT_PHASE,
-  getConditioningContextLabel,
   suppressDuplicateWorkoutContext,
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
@@ -775,24 +777,9 @@ function displayLabelKey(label: string | null | undefined): string {
     .replace(/\s+/g, ' ');
 }
 
-function conditioningIconKind(label: string | null | undefined): RowIconKind | null {
-  switch (displayLabelKey(label)) {
-    case 'aerobic base':
-      return 'pulse';
-    case 'flush out':
-      return 'refresh';
-    case 'sprint work':
-      return 'bolt';
-    case 'hard conditioning':
-      return 'flame';
-    default:
-      return null;
-  }
-}
-
 function displayLabelIconKind(label: string | null | undefined): RowIconKind | null {
   const key = displayLabelKey(label);
-  const conditioningKind = conditioningIconKind(key);
+  const conditioningKind = weeklyConditioningIconKind(key);
   if (conditioningKind) return conditioningKind;
 
   if (key === 'game' || key === 'game day') return 'game';
@@ -1042,11 +1029,8 @@ function DayRow({
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
   const rowTone = emphasized ? 'accent' : 'default';
-  // Weekly plan speaks in categories: strength splits pass through
-  // canonically, standalone conditioning reads as its category (Aerobic
-  // Base / Flush Out / Sprint Work / Hard Conditioning), recovery days
-  // read "Recovery". The real session name lives inside the day.
-  const parsed = hasWorkout ? splitSessionName(day.workout.name) : null;
+  // Weekly plan speaks in structure/purpose identities. Prescription copy
+  // remains inside the workout detail screen.
   const title = hasWorkout ? weeklyPlanTitle(day.workout) : null;
   const accentColor = getDayRowAccentColor({
     hasWorkout,
@@ -1054,16 +1038,10 @@ function DayRow({
     sessionTier: day.workout?.sessionTier,
     title,
   });
-  const ctx = suppressDuplicateWorkoutContext(title, parsed?.context);
-  const conditioningContext = suppressDuplicateWorkoutContext(
+  const contextLabel = suppressDuplicateWorkoutContext(
     title,
-    hasWorkout ? getConditioningContextLabel(day.workout) : null,
+    hasWorkout ? weeklyPlanSecondaryLabel(day.workout) : null,
   );
-  const hasAttachedConditioning = !!day.workout?.hasCombinedConditioning ||
-    !!day.workout?.conditioningBlock?.attachedKind;
-  const contextLabel = ctx ?? (conditioningContext
-    ? `${hasAttachedConditioning ? '+ ' : ''}${conditioningContext}`
-    : null);
   const isAttachedContextLine = contextLabel?.startsWith('+ ') ?? false;
   const titleIcon = titleIconKind({ hasWorkout, isGame, title, workout: day.workout });
   const contextIcon = contextIconKind(contextLabel);

@@ -35,7 +35,7 @@ interface WorkStructure {
   structured: boolean;
 }
 
-const LABELS: Record<ConditioningStructureFamily, string> = {
+export const CONDITIONING_VISIBLE_LABELS: Readonly<Record<ConditioningStructureFamily, string>> = {
   continuous_aerobic: 'Continuous Aerobic',
   long_aerobic_intervals: 'Long Aerobic Intervals',
   short_aerobic_intervals: 'Short Aerobic Intervals',
@@ -178,7 +178,7 @@ function identity(
   family: ConditioningStructureFamily,
   structure: WorkStructure,
 ): ConditioningVisibleIdentity {
-  const label = LABELS[family];
+  const label = CONDITIONING_VISIBLE_LABELS[family];
   const dose = doseLabel(family, structure);
   return {
     structureFamily: family,

@@ -200,7 +200,8 @@ eq('visible item carries shared family without losing prescription title', {
 
 const standaloneTempo = sameDoseTempo;
 eq('standalone primary owns shared family', weeklyPlanTitle(standaloneTempo), 'Tempo Intervals');
-eq('standalone secondary owns dose', weeklyPlanContextLabel(standaloneTempo), '5 × 2 min');
+eq('standalone weekly card omits dose', weeklyPlanContextLabel(standaloneTempo), null);
+eq('canonical identity retains dose internally', projectConditioningVisibleIdentity(standaloneTempo)?.doseLabel, '5 × 2 min');
 eq('detail identity agrees', deriveVisibleWorkoutIdentity(standaloneTempo), {
   title: 'Tempo Intervals', subtitle: '5 × 2 min', isConditioningOnly: true,
 });
@@ -212,7 +213,8 @@ eq('JSON roundtrip family', projectConditioningVisibleIdentity(hydrated), projec
 const repeat = buildRepeatWeekOverlay({ sourceWorkouts: [standaloneTempo], targetWeekStart: '2026-08-10' });
 const repeated = Object.values(repeat.workoutsByDate).find(Boolean) as Workout;
 eq('Repeat Week family', weeklyPlanTitle(repeated), 'Tempo Intervals');
-eq('Repeat Week dose', weeklyPlanContextLabel(repeated), '5 × 2 min');
+eq('Repeat Week weekly card omits dose', weeklyPlanContextLabel(repeated), null);
+eq('Repeat Week detail identity retains dose', deriveVisibleWorkoutIdentity(repeated).subtitle, '5 × 2 min');
 
 console.log('\n[7] exact four-week off-season visible regression');
 const profile: OnboardingData = {
@@ -246,10 +248,10 @@ function entry(weekIndex: number, planEntryId: string): Workout | undefined {
 
 for (const [label, value, primary, secondary] of [
   ['W1 Monday', entry(0, 'w1:monday:none:strength'), 'Full Body Strength', 'Long Aerobic Intervals'],
-  ['W1 Tuesday', entry(0, 'w1:tuesday:none:aerobic-base'), 'Continuous Aerobic', '40 min steady'],
+  ['W1 Tuesday', entry(0, 'w1:tuesday:none:aerobic-base'), 'Continuous Aerobic', null],
   ['W1 Wednesday', entry(0, 'w1:wednesday:none:strength'), 'Upper Push', 'Long Aerobic Intervals'],
   ['W1 Friday', entry(0, 'w1:friday:none:strength'), 'Lower Squat', 'Long Aerobic Intervals'],
-  ['W2 Tuesday', entry(1, 'w2:tuesday:none:aerobic-base'), 'Long Aerobic Intervals', '5 × 8 min'],
+  ['W2 Tuesday', entry(1, 'w2:tuesday:none:aerobic-base'), 'Long Aerobic Intervals', null],
 ] as const) {
   ok(`${label} exists`, !!value);
   if (value) {

@@ -17,10 +17,9 @@ import { spacing, borderRadius } from '../../theme/spacing';
 import { Text } from '../../components/common/Text';
 import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
-import { splitSessionName } from '../../utils/sessionNaming';
 import { visibleWorkoutItemCountLabel } from '../../utils/visibleProgramReadModel';
 import { isTeamTrainingOnlyWorkout } from '../../utils/teamTraining';
-import { weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
+import { weeklyPlanSecondaryLabel, weeklyPlanTitle } from '../../utils/weeklyPlanDisplay';
 import type { DesignVersion } from '../../store/uiStore';
 import HomeScreenV2 from './HomeScreenV2';
 import { useHomeScreen } from './useHomeScreen';
@@ -30,7 +29,6 @@ import {
   WEEK_DAYS,
   DAY_SHORT,
   NEXT_PHASE,
-  getConditioningContextLabel,
   suppressDuplicateWorkoutContext,
   REBUILD_MESSAGES,
   PHASE_SHIFT_MESSAGES,
@@ -42,12 +40,6 @@ import {
 const ScheduleDebugPanel = __DEV__
   ? require('../../components/dev/ScheduleDebugPanel').ScheduleDebugPanel
   : null;
-
-// Local alias: the canonical splitter lives in utils/sessionNaming.
-// Session names reaching the UI are already canonical (e.g.
-// "Upper Push", "Team Training + Upper Pull") so we only need to split on
-// the single authoritative " + " separator.
-const splitWorkoutName = splitSessionName;
 
 // ── Design-version flag ──
 // Hardcoded to 'v2' so the app opens directly into the redesigned Home
@@ -280,40 +272,26 @@ function HomeScreenClassic() {
                       >
                         {weeklyPlanTitle(day.workout!)}
                       </Text>
-                      {/* Paired line: ALWAYS prefer the context suffix from the
-                          resolved workout.name (e.g. "+ Team Training", "+ Conditioning")
-                          so the weekly card matches the day-detail page. Only fall back
-                          to the engine-plan conditioningFlavour flag when the name has
-                          no suffix — otherwise stale flags like "high-intensity" can
-                          override a post-resolver change to "+ Team Training". */}
+                      {/* Weekly secondary copy is projected centrally so
+                          standalone conditioning never leaks prescription dose. */}
                       {(() => {
-                        const parsedName = splitWorkoutName(day.workout!.name);
-                        const nameContext = suppressDuplicateWorkoutContext(
-                          parsedName.title,
-                          parsedName.context,
+                        const secondary = suppressDuplicateWorkoutContext(
+                          weeklyPlanTitle(day.workout!),
+                          weeklyPlanSecondaryLabel(day.workout),
                         );
-                        if (nameContext) {
+                        if (secondary) {
+                          const isAttachedConditioning =
+                            !!day.workout!.hasCombinedConditioning ||
+                            !!day.workout!.conditioningBlock?.attachedKind;
                           return (
                             <Text
-                              style={styles.workoutContext}
+                              style={isAttachedConditioning
+                                ? styles.combinedCondLabel
+                                : styles.workoutContext}
                               numberOfLines={1}
                               ellipsizeMode="tail"
                             >
-                              {nameContext}
-                            </Text>
-                          );
-                        }
-                        const conditioningContext = suppressDuplicateWorkoutContext(
-                          parsedName.title,
-                          getConditioningContextLabel(day.workout),
-                        );
-                        if (conditioningContext) {
-                          return (
-                            <Text
-                              style={styles.combinedCondLabel}
-                              numberOfLines={1}
-                            >
-                              {day.workout!.hasCombinedConditioning || day.workout!.conditioningBlock?.attachedKind ? '+ ' : ''}{conditioningContext}
+                              {secondary}
                             </Text>
                           );
                         }

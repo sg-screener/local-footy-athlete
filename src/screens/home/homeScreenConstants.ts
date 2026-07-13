@@ -73,8 +73,8 @@ export function getConditioningContextLabel(
   workout: ConditioningLabelWorkout | null | undefined,
 ): string | null {
   if (!workout) return null;
-  // Structure/purpose identity and dose have one owner. Placement remains a
-  // card concern: attached labels receive "+"; standalone doses do not.
+  // Weekly conditioning context is attached-only. Standalone prescriptions
+  // remain available to workout detail and logging paths, never week cards.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { weeklyPlanContextLabel } = require('../../utils/weeklyPlanDisplay');
   return weeklyPlanContextLabel(workout);

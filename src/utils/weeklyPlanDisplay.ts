@@ -5,12 +5,24 @@
 
 import type { Workout } from '../types/domain';
 import {
+  CONDITIONING_VISIBLE_LABELS,
   projectConditioningVisibleIdentity,
   type ConditioningVisibleIdentity,
 } from './conditioningVisibleIdentity';
 import { splitSessionName } from './sessionNaming';
 
 export type ConditioningDisplayCategory = ConditioningVisibleIdentity['primaryLabel'];
+
+export const WEEKLY_CONDITIONING_ICON_KIND = 'pulse' as const;
+
+const WEEKLY_CONDITIONING_LABEL_KEYS = new Set([
+  ...Object.values(CONDITIONING_VISIBLE_LABELS),
+  // Controlled legacy display labels use the same original Aerobic Base icon.
+  'Aerobic Base',
+  'Flush Out',
+  'Sprint Work',
+  'Hard Conditioning',
+].map((label) => label.toLowerCase()));
 
 export type WeeklyDisplayWorkout = Partial<Workout> & {
   name?: string | null;
@@ -28,6 +40,20 @@ function legacyConditioningText(workout: WeeklyDisplayWorkout): string {
       row?.notes,
     ]),
   ].filter(Boolean).join(' ');
+}
+
+/** One icon family owns every conditioning identity on weekly cards. */
+export function weeklyConditioningIconKind(
+  label: string | null | undefined,
+): typeof WEEKLY_CONDITIONING_ICON_KIND | null {
+  const key = String(label ?? '')
+    .replace(/^\+\s*/, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  return WEEKLY_CONDITIONING_LABEL_KEYS.has(key)
+    ? WEEKLY_CONDITIONING_ICON_KIND
+    : null;
 }
 
 /** Controlled display-only fallback for genuinely legacy, untyped records. */
@@ -100,7 +126,7 @@ export function weeklyPlanTitle(workout: WeeklyDisplayWorkout): string {
   return splitSessionName(name).title || name;
 }
 
-/** Secondary weekly line: attached family, or standalone canonical dose. */
+/** Weekly conditioning context exists only when conditioning is attached. */
 export function weeklyPlanContextLabel(
   workout: WeeklyDisplayWorkout | null | undefined,
 ): string | null {
@@ -109,5 +135,19 @@ export function weeklyPlanContextLabel(
   if (workout.hasCombinedConditioning || workout.conditioningBlock?.attachedKind) {
     return identity?.attachedLabel ?? legacyConditioningLabel(workout);
   }
-  return identity?.doseLabel ?? null;
+  return null;
+}
+
+/** Complete secondary line for weekly cards, with conditioning placement enforced. */
+export function weeklyPlanSecondaryLabel(
+  workout: WeeklyDisplayWorkout | null | undefined,
+): string | null {
+  if (!workout) return null;
+  const conditioningContext = weeklyPlanContextLabel(workout);
+  if (conditioningContext) return `+ ${conditioningContext}`;
+
+  const identity = projectConditioningVisibleIdentity(workout as Partial<Workout>);
+  if (identity && isStandaloneConditioning(workout)) return null;
+
+  return splitSessionName(String(workout.name ?? '')).context;
 }
