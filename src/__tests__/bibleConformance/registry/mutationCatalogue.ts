@@ -35,6 +35,12 @@ export const MUTATION_CATALOGUE: readonly MutationSpec[] = [
   { id: 'coach_bike_stays_strength_row', description: 'Coach Bike row stays in strength.', affectedRuleIds: ['ALL-EDIT-CANONICAL-01'], expectedInvariantIds: ['INV_EDIT_USES_CANONICAL_FINALISER'], tier: 'smoke', injectionMethod: 'isolated Slice 4 edit transform' },
   { id: 'contrast_survives_lift_removal', description: 'Contrast metadata survives lift removal.', affectedRuleIds: ['ALL-PWR-CONTENT-01'], expectedInvariantIds: ['INV_EDIT_USES_CANONICAL_FINALISER'], tier: 'smoke', injectionMethod: 'isolated Slice 4 edit transform' },
   { id: 'post_rehydrate_rebuild_drops_component', description: 'Post-hydrate rebuild loses a component.', affectedRuleIds: ['ALL-POST-REHYDRATE-WRITE-01'], expectedInvariantIds: ['INV_POST_REHYDRATE_REBUILD_EQUIVALENT'], tier: 'smoke', injectionMethod: 'isolated Slice 4 persistence transform' },
+  { id: 'rowerg_creates_pull_credit', description: 'Conditioning-domain RowErg text appears as a strength row.', affectedRuleIds: ['ALL-LEGACY-INFERENCE-BOUNDARY-01'], expectedInvariantIds: ['INV_CONDITIONING_ROW_NO_STRENGTH_CREDIT'], tier: 'smoke', injectionMethod: 'isolated standalone-conditioning ledger transform' },
+  { id: 'skierg_tempo_gains_pullups', description: 'Standalone SkiErg tempo gains Pull-Ups and effective pull credit.', affectedRuleIds: ['ALL-COND-STANDALONE-OWNERSHIP-01'], expectedInvariantIds: ['INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN'], tier: 'smoke', injectionMethod: 'isolated standalone-conditioning ledger transform' },
+  { id: 'standalone_conditioning_becomes_mixed', description: 'Standalone conditioning is retyped as Mixed.', affectedRuleIds: ['ALL-COND-STANDALONE-OWNERSHIP-01'], expectedInvariantIds: ['INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN'], tier: 'smoke', injectionMethod: 'isolated standalone-conditioning ledger transform' },
+  { id: 'warmup_becomes_conditioning_headline', description: 'A warm-up row becomes the canonical conditioning headline.', affectedRuleIds: ['ALL-COND-HEADLINE-01'], expectedInvariantIds: ['INV_CONDITIONING_HEADLINE_USES_WORK'], tier: 'smoke', injectionMethod: 'isolated canonical headline transform' },
+  { id: 'modern_no_strength_overwritten', description: 'Modern typed no-strength ownership is overwritten by legacy pull inference.', affectedRuleIds: ['ALL-LEGACY-INFERENCE-BOUNDARY-01'], expectedInvariantIds: ['INV_MODERN_TYPED_OWNERSHIP_WINS'], tier: 'smoke', injectionMethod: 'isolated standalone-conditioning ownership transform' },
+  { id: 'rehydrate_reintroduces_standalone_strength', description: 'Store rehydrate reintroduces strength into standalone conditioning.', affectedRuleIds: ['ALL-COND-STANDALONE-OWNERSHIP-01'], expectedInvariantIds: ['INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN'], tier: 'smoke', injectionMethod: 'isolated persisted standalone-conditioning transform' },
 
   { id: 'second_injury_ignored', description: 'Second active injury is ignored.', affectedRuleIds: ['ALL-CONSTRAINT-AFFECTED-ONLY-01'], expectedInvariantIds: ['INV_MULTI_CONSTRAINT_PRESERVED'], tier: 'full', injectionMethod: 'isolated canonical constraint witness transform' },
   { id: 'second_equipment_ignored', description: 'Second equipment constraint is ignored.', affectedRuleIds: ['ALL-EQUIPMENT-COMPATIBLE-01'], expectedInvariantIds: ['INV_MULTI_EQUIPMENT_PRESERVED'], tier: 'full', injectionMethod: 'isolated canonical constraint witness transform' },
@@ -56,6 +62,6 @@ export const FULL_MUTATIONS = MUTATION_CATALOGUE;
 export function verifyMutationCatalogue(): void {
   const ids = new Set(MUTATION_CATALOGUE.map((entry) => entry.id));
   if (ids.size !== MUTATION_CATALOGUE.length) throw new Error('Mutation catalogue IDs must be unique');
-  if (SMOKE_MUTATIONS.length !== 33) throw new Error(`Expected 33 accepted smoke mutations, found ${SMOKE_MUTATIONS.length}`);
+  if (SMOKE_MUTATIONS.length !== 39) throw new Error(`Expected 39 accepted smoke mutations, found ${SMOKE_MUTATIONS.length}`);
   if (MUTATION_CATALOGUE.length < 43) throw new Error(`Expected at least 43 total mutations, found ${MUTATION_CATALOGUE.length}`);
 }

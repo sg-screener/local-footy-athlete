@@ -205,6 +205,7 @@ export function canonicalWorkoutLedger(workout: Workout): HarnessCanonicalWorkou
     recoveryAddons: canonicalStrings((workout.recoveryAddons ?? []).map((addon: any) => addon.name ?? addon.title ?? addon.id)),
     sessionTier: workout.sessionTier ?? null, workoutType: workout.workoutType ?? null,
     visibleTitle: identity.title, visibleSubtitle: String(identity.subtitle ?? ''),
+    conditioningHeadline: workout.conditioningBlock?.options[0]?.title ?? null,
   };
 }
 

@@ -34,6 +34,23 @@ function modernWorkouts(): Workout[] {
   const canonicalLower = finaliseWorkoutAfterMutation(lower, {
     phase: 'In-season', planIntentValid: true, referenceWorkout: lower,
   }).workout;
+  const standaloneId = 'persist-modern-standalone-tempo';
+  const warmup = pathExercise(standaloneId, 0, 'SkiErg warm-up');
+  const work = pathExercise(standaloneId, 1, 'Tempo Intervals 5 x 2min SkiErg');
+  const cooldown = pathExercise(standaloneId, 2, 'SkiErg cool-down');
+  const standalone = finaliseWorkoutAfterMutation({
+    ...pathWorkout({
+      id: standaloneId,
+      dayOfWeek: 3,
+      name: 'Bike/Row/Ski Tempo Intervals',
+      exercises: [warmup, work, cooldown],
+      workoutType: 'Strength',
+    }),
+    conditioningCategory: 'tempo',
+    conditioningFlavour: 'tempo',
+  }, {
+    phase: 'Off-season', offseasonSubphase: 'mid_offseason', planIntentValid: true,
+  }).workout;
   return [
     {
       ...canonicalLower,
@@ -41,6 +58,7 @@ function modernWorkouts(): Workout[] {
       ...({ strengthPattern: 'push', focus: 'Upper Push' } as any),
     },
     finaliseWorkoutAfterMutation(team, { phase: 'In-season', planIntentValid: true, referenceWorkout: team }).workout,
+    standalone,
   ];
 }
 

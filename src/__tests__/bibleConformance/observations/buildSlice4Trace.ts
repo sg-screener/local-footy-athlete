@@ -130,6 +130,45 @@ function generationObservations(): Slice4PathObservation[] {
   ];
 }
 
+function standaloneConditioningObservations(): Slice4PathObservation[] {
+  const plan: SessionAllocation[] = [{
+    dayOfWeek: 'Monday', tier: 'core', focus: 'Bike/Row/Ski Tempo Intervals',
+    isHardExposure: false, planEntryId: 'w3:monday:none:tempo',
+    conditioningCategory: 'tempo', conditioningFlavour: 'tempo',
+    conditioningOffFeet: true, ergModality: 'ski',
+  } as SessionAllocation];
+  const profile = {
+    ...PATH_PROFILE,
+    seasonPhase: 'Off-season' as const,
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    usualGameDay: undefined,
+  };
+  const rotation = {
+    miniCycleNumber: 1,
+    weekInBlock: 3,
+    weekStartISO: '2026-07-27',
+    weekKind: 'build' as const,
+  };
+  const started = performance.now();
+  const fallback = buildWorkoutsFromCoach(
+    [], 'slice4:standalone:fallback', plan, profile, rotation,
+  );
+  const fallbackMs = performance.now() - started;
+  const aiStarted = performance.now();
+  const ai = buildWorkoutsFromCoach([{
+    dayOfWeek: 1,
+    name: 'Upper Pull Row Tempo',
+    workoutType: 'Strength' as any,
+    sessionTier: 'core',
+    exercises: [{ name: 'Pull-Ups', sets: 3, repsMin: 6, repsMax: 8 }],
+  } as any], 'slice4:standalone:ai', plan, profile, rotation);
+  return [
+    observation('deterministic_generation', 'path_output', canonicalWeekLedger(fallback), fallbackMs),
+    observation('ai_fixture_normalisation', 'path_output', canonicalWeekLedger(ai), performance.now() - aiStarted),
+  ];
+}
+
 function rebuildObservations(): Slice4PathObservation[] {
   resetStore();
   const started = performance.now();
@@ -319,6 +358,29 @@ export function applySlice4Mutation(
     const rebuilt = clone.observations.find((entry) => entry.stage === 'post_rehydrate_rebuild')
       ?.ledger.workouts.find((workout) => workout.components.includes('conditioning'));
     if (rebuilt) rebuilt.components = rebuilt.components.filter((value) => value !== 'conditioning');
+  } else if (mutation === 'rowerg_creates_pull_credit' && firstWorkout) {
+    firstWorkout.strengthRows.push('RowErg tempo intervals');
+  } else if (mutation === 'skierg_tempo_gains_pullups' && firstWorkout) {
+    firstWorkout.components.push('strength');
+    firstWorkout.strengthRows.push('Pull-Ups');
+    firstWorkout.effectivePatterns.push('pull');
+  } else if (mutation === 'standalone_conditioning_becomes_mixed' && firstWorkout) {
+    firstWorkout.workoutType = 'Mixed';
+  } else if (mutation === 'warmup_becomes_conditioning_headline' && firstWorkout) {
+    firstWorkout.conditioningHeadline = 'SkiErg warm-up';
+  } else if (mutation === 'modern_no_strength_overwritten' && firstWorkout) {
+    firstWorkout.archetype = 'upper';
+    firstWorkout.primaryPattern = 'pull';
+    firstWorkout.plannedPatterns = ['pull'];
+  } else if (mutation === 'rehydrate_reintroduces_standalone_strength') {
+    const standalone = clone.observations.find((entry) => entry.stage === 'rehydrated')
+      ?.ledger.workouts.find((workout) => workout.planEntryId.includes('standalone'));
+    if (standalone) {
+      standalone.components.push('strength');
+      standalone.strengthRows.push('Pull-Ups');
+      standalone.effectivePatterns.push('pull');
+      standalone.workoutType = 'Mixed';
+    }
   }
   return clone;
 }
@@ -330,6 +392,7 @@ export function buildSlice4ScenarioTrace(
   const started = performance.now();
   let observations: Slice4PathObservation[];
   if (scenario.id === 'generation-ai-fallback-equivalence') observations = generationObservations();
+  else if (scenario.id === 'standalone-conditioning-ownership') observations = standaloneConditioningObservations();
   else if (scenario.id === 'noop-inseason-week-rebuild') observations = rebuildObservations();
   else if (scenario.id === 'repeat-rich-week') observations = repeatObservations();
   else if (scenario.id === 'block-rollover-contract') observations = rolloverObservations();

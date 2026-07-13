@@ -161,12 +161,102 @@ export interface LegacyStrengthIntentInput {
   contentPatterns?: readonly MainStrengthPattern[] | null;
   focus?: string | null;
   name?: string | null;
+  /**
+   * Free-text inference is migration-only. Production callers must obtain
+   * this value from shouldUseLegacyStrengthInference so modern plan/component
+   * ownership cannot be overwritten by a display string.
+   */
+  allowTextInference?: boolean;
+  /** Legacy scalar enums share the same controlled ingress boundary as text. */
+  allowScalarInference?: boolean;
 }
 
 export interface LegacyStrengthIntentResolution {
   intent: StrengthIntent | null;
   diagnostics: string[];
   source: 'typed' | 'contributions' | 'enum' | 'content' | 'text' | 'none';
+}
+
+export interface StrengthOwnershipBoundaryInput {
+  strengthIntent?: StrengthIntent | null;
+  strengthPatternContributions?: readonly MainStrengthPattern[] | null;
+  /** The planEntryId was joined to the allocated entry for this workout. */
+  hasMatchedPlanEntry?: boolean;
+  /** A plan/provenance identity exists, even if the join is now stale. */
+  hasModernPlanIdentity?: boolean;
+  /** Typed allocation/components say conditioning is the standalone owner. */
+  standaloneConditioning?: boolean;
+  /** Classified final-domain rows contain conditioning and no main strength. */
+  canonicalConditioningOnly?: boolean;
+  /** Registry/classified final-domain rows contain real main strength. */
+  hasCanonicalMainStrengthRows?: boolean;
+}
+
+export interface StrengthOwnershipBoundaryResolution {
+  owner:
+    | 'typed_strength'
+    | 'typed_no_strength'
+    | 'canonical_strength_rows'
+    | 'modern_unowned'
+    | 'legacy';
+  allowCanonicalRowInference: boolean;
+  allowLegacyTextInference: boolean;
+}
+
+/**
+ * Central ownership boundary between modern canonical data and legacy text.
+ *
+ * Typed allocation wins. A matched modern plan with no strength contract is
+ * an explicit no-strength decision, not missing information. Canonical row
+ * domains may migrate genuine legacy strength, while free text is consulted
+ * only when neither modern provenance nor canonical row evidence exists.
+ */
+export function resolveStrengthOwnershipBoundary(
+  input: StrengthOwnershipBoundaryInput,
+): StrengthOwnershipBoundaryResolution {
+  const typedIntentPatterns = input.strengthIntent
+    ? normalizeStrengthIntent(input.strengthIntent).plannedPatterns
+    : [];
+  if (typedIntentPatterns.length > 0 || normalizeStrengthPatterns(input.strengthPatternContributions).length > 0) {
+    return {
+      owner: 'typed_strength',
+      allowCanonicalRowInference: false,
+      allowLegacyTextInference: false,
+    };
+  }
+  if (input.strengthIntent || input.hasMatchedPlanEntry || input.standaloneConditioning || input.canonicalConditioningOnly) {
+    return {
+      owner: 'typed_no_strength',
+      allowCanonicalRowInference: false,
+      allowLegacyTextInference: false,
+    };
+  }
+  if (input.hasCanonicalMainStrengthRows) {
+    return {
+      owner: 'canonical_strength_rows',
+      allowCanonicalRowInference: true,
+      allowLegacyTextInference: false,
+    };
+  }
+  if (input.hasModernPlanIdentity) {
+    return {
+      owner: 'modern_unowned',
+      allowCanonicalRowInference: true,
+      allowLegacyTextInference: false,
+    };
+  }
+  return {
+    owner: 'legacy',
+    allowCanonicalRowInference: true,
+    allowLegacyTextInference: true,
+  };
+}
+
+/** True only for genuinely legacy records lacking modern or canonical ownership. */
+export function shouldUseLegacyStrengthInference(
+  input: StrengthOwnershipBoundaryInput,
+): boolean {
+  return resolveStrengthOwnershipBoundary(input).allowLegacyTextInference;
 }
 
 function legacyArchetype(
@@ -211,9 +301,12 @@ export function resolveLegacyStrengthIntent(
     };
   }
 
-  const enumPatterns = mainPatternsForLegacyStrengthPattern(input.strengthPattern);
+  const legacyStrengthPattern = input.allowScalarInference === false
+    ? undefined
+    : input.strengthPattern;
+  const enumPatterns = mainPatternsForLegacyStrengthPattern(legacyStrengthPattern);
   if (enumPatterns.length > 0) {
-    const archetype = legacyArchetype(input.strengthPattern, enumPatterns)!;
+    const archetype = legacyArchetype(legacyStrengthPattern, enumPatterns)!;
     return {
       intent: createStrengthIntent({ archetype, plannedPatterns: enumPatterns }),
       diagnostics: [],
@@ -223,7 +316,7 @@ export function resolveLegacyStrengthIntent(
 
   const contentPatterns = normalizeStrengthPatterns(input.contentPatterns);
   if (contentPatterns.length > 0) {
-    const archetype = legacyArchetype(input.strengthPattern, contentPatterns) ?? inferStrengthArchetype(contentPatterns);
+    const archetype = legacyArchetype(legacyStrengthPattern, contentPatterns) ?? inferStrengthArchetype(contentPatterns);
     return {
       intent: archetype ? createStrengthIntent({
         archetype,
@@ -235,9 +328,13 @@ export function resolveLegacyStrengthIntent(
     };
   }
 
+  if (input.allowTextInference === false) {
+    return { intent: null, diagnostics: [], source: 'none' };
+  }
+
   const legacyText = `${input.focus ?? ''} ${input.name ?? ''}`;
   if (
-    (input.strengthPattern === 'full_body' || /\bfull[- ]?body\b/i.test(legacyText)) &&
+    (legacyStrengthPattern === 'full_body' || /\bfull[- ]?body\b/i.test(legacyText)) &&
     /\bsquat\s*(?:\/|or)\s*hinge\b/i.test(legacyText)
   ) {
     return {
@@ -248,7 +345,7 @@ export function resolveLegacyStrengthIntent(
   }
   const textPatterns = patternsFromLegacyText(legacyText);
   if (textPatterns.length > 0) {
-    const archetype = legacyArchetype(input.strengthPattern, textPatterns) ?? inferStrengthArchetype(textPatterns);
+    const archetype = legacyArchetype(legacyStrengthPattern, textPatterns) ?? inferStrengthArchetype(textPatterns);
     return {
       intent: archetype ? createStrengthIntent({ archetype, plannedPatterns: textPatterns }) : null,
       diagnostics: ['ambiguous_legacy_strength_intent_derived_from_text'],
@@ -256,10 +353,10 @@ export function resolveLegacyStrengthIntent(
     };
   }
 
-  const ambiguous = !!input.strengthPattern;
+  const ambiguous = !!legacyStrengthPattern;
   return {
     intent: null,
-    diagnostics: ambiguous ? [`ambiguous_legacy_strength_intent:${input.strengthPattern}`] : [],
+    diagnostics: ambiguous ? [`ambiguous_legacy_strength_intent:${legacyStrengthPattern}`] : [],
     source: 'none',
   };
 }

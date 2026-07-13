@@ -93,8 +93,8 @@ function verifyRuleRegistry(repoRoot: string): void {
     }
     if (rule.applicableScenarios.length === 0) fail(`${rule.id} has no declared golden scenario`);
   }
-  if (SLICE4_BIBLE_RULES.length !== 12) {
-    fail(`Expected exactly twelve Slice 4 Bible/canonical rules, found ${SLICE4_BIBLE_RULES.length}`);
+  if (SLICE4_BIBLE_RULES.length !== 15) {
+    fail(`Expected exactly fifteen Slice 4 Bible/canonical rules, found ${SLICE4_BIBLE_RULES.length}`);
   }
   const slice4Ids = new Set(SLICE4_BIBLE_RULES.map((rule) => rule.id));
   if (slice4Ids.size !== SLICE4_BIBLE_RULES.length) fail('Slice 4 rule IDs must be unique');
@@ -225,8 +225,8 @@ function main(): void {
   if (SLICE3_GOLDEN_SCENARIOS.length !== 14) {
     fail(`Expected exactly fourteen Slice 3 goldens, found ${SLICE3_GOLDEN_SCENARIOS.length}`);
   }
-  if (SLICE4_GOLDEN_SCENARIOS.length !== 12) {
-    fail(`Expected exactly twelve Slice 4 goldens, found ${SLICE4_GOLDEN_SCENARIOS.length}`);
+  if (SLICE4_GOLDEN_SCENARIOS.length !== 13) {
+    fail(`Expected exactly thirteen Slice 4 goldens, found ${SLICE4_GOLDEN_SCENARIOS.length}`);
   }
 
   const allFailures: InvariantFailure[] = [];

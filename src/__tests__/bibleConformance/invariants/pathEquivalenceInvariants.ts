@@ -46,6 +46,7 @@ function workoutSemantic(workout: HarnessCanonicalWorkoutLedger, includePlanId =
     supportRows: workout.supportRows,
     recoveryAddons: workout.recoveryAddons,
     sessionTier: workout.sessionTier,
+    conditioningHeadline: workout.conditioningHeadline,
   };
 }
 
@@ -320,6 +321,91 @@ function postRehydrate(trace: Slice4ScenarioTrace, rebuild: boolean): InvariantC
   }));
 }
 
+function conditioningRowsStayConditioning(trace: Slice4ScenarioTrace): InvariantCheckResult {
+  const id = 'INV_CONDITIONING_ROW_NO_STRENGTH_CREDIT' as const;
+  const applied = applies(trace, 'standalone-conditioning-ownership');
+  const observed = trace.observations.find((entry) => entry.stage === 'path_output')!;
+  const workout = observed.ledger.workouts[0];
+  const conditioningStrengthRows = workout.strengthRows.filter((row) =>
+    /\b(?:rowerg|rower|skierg|ski\s*erg|aerobic|tempo\s+interval)\b/i.test(row));
+  return check(id, trace, applied, conditioningStrengthRows.length === 0, () => failure({
+    trace, invariantId: id, ruleId: 'ALL-LEGACY-INFERENCE-BOUNDARY-01', observed,
+    expected: { conditioningStrengthRows: [] }, actual: { conditioningStrengthRows },
+    extra: conditioningStrengthRows,
+  }));
+}
+
+function standaloneConditioningOwnsNoStrength(trace: Slice4ScenarioTrace): InvariantCheckResult {
+  const id = 'INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN' as const;
+  const applied = applies(trace, 'standalone-conditioning-ownership', 'canonical-program-rehydrate');
+  const observed = trace.scenario.id === 'canonical-program-rehydrate'
+    ? observation(trace, 'rehydrated')
+    : trace.observations.find((entry) => entry.stage === 'path_output')!;
+  const candidates = observed.ledger.workouts.filter((workout) =>
+    workout.conditioning.length > 0 &&
+    (workout.planEntryId.includes('standalone') ||
+      workout.planEntryId === 'w3:monday:none:tempo' ||
+      workout.plannedPatterns.length === 0));
+  const valid = candidates.length > 0 && candidates.every((workout) =>
+    !workout.components.includes('strength') &&
+    workout.effectivePatterns.length === 0 &&
+    workout.strengthRows.length === 0 &&
+    workout.workoutType === 'Conditioning');
+  return check(id, trace, applied, valid, () => failure({
+    trace, invariantId: id, ruleId: 'ALL-COND-STANDALONE-OWNERSHIP-01', observed,
+    expected: { components: ['conditioning'], effectivePatterns: [], strengthRows: [], workoutType: 'Conditioning' },
+    actual: candidates.map(workoutSemantic),
+    missing: candidates.length === 0 ? ['standalone_conditioning'] : [],
+    extra: candidates.flatMap((workout) => [
+      ...(workout.components.includes('strength') ? ['strength'] : []),
+      ...workout.effectivePatterns,
+      ...workout.strengthRows,
+      ...(workout.workoutType === 'Mixed' || workout.workoutType === 'Strength' ? [workout.workoutType] : []),
+    ]),
+  }));
+}
+
+function modernNoStrengthOwnershipWins(trace: Slice4ScenarioTrace): InvariantCheckResult {
+  const id = 'INV_MODERN_TYPED_OWNERSHIP_WINS' as const;
+  const applied = applies(trace, 'standalone-conditioning-ownership');
+  const observed = trace.observations.find((entry) => entry.stage === 'path_output')!;
+  const workout = observed.ledger.workouts[0];
+  const valid = workout.plannedPatterns.length === 0 && workout.archetype === null &&
+    !/Upper Pull/i.test(workout.visibleTitle ?? '');
+  return check(id, trace, applied, valid, () => failure({
+    trace, invariantId: id, ruleId: 'ALL-LEGACY-INFERENCE-BOUNDARY-01', observed,
+    expected: { plannedPatterns: [], archetype: null, forbiddenTitle: 'Upper Pull' },
+    actual: workoutSemantic(workout),
+    extra: [...workout.plannedPatterns, ...(/Upper Pull/i.test(workout.visibleTitle ?? '') ? ['Upper Pull'] : [])],
+  }));
+}
+
+function conditioningHeadlineUsesWork(trace: Slice4ScenarioTrace): InvariantCheckResult {
+  const id = 'INV_CONDITIONING_HEADLINE_USES_WORK' as const;
+  const applied = applies(trace, 'standalone-conditioning-ownership');
+  const observed = trace.observations.find((entry) => entry.stage === 'path_output')!;
+  const headline = observed.ledger.workouts[0].conditioningHeadline ?? '';
+  const valid = !!headline && !/warm[- ]?up|cool[- ]?down/i.test(headline) &&
+    /tempo|interval|conditioning/i.test(headline);
+  return check(id, trace, applied, valid, () => failure({
+    trace, invariantId: id, ruleId: 'ALL-COND-HEADLINE-01', observed,
+    expected: { headline: 'meaningful conditioning work' }, actual: { headline },
+    extra: /warm[- ]?up|cool[- ]?down/i.test(headline) ? [headline] : [],
+  }));
+}
+
+function legacyMigrationIdempotent(trace: Slice4ScenarioTrace): InvariantCheckResult {
+  const id = 'INV_LEGACY_MIGRATION_IDEMPOTENT' as const;
+  const applied = applies(trace, 'legacy-program-rehydrate');
+  const once = observation(trace, 'rehydrated');
+  const twice = observation(trace, 'rehydrated_twice');
+  return check(id, trace, applied, same(weekSemantic(once.ledger), weekSemantic(twice.ledger)), () => failure({
+    trace, invariantId: id, ruleId: 'ALL-LEGACY-INFERENCE-BOUNDARY-01', observed: twice,
+    expected: weekSemantic(once.ledger), actual: weekSemantic(twice.ledger),
+    missing: ['idempotent_legacy_strength_migration'],
+  }));
+}
+
 export const SLICE4_INVARIANT_IDS: readonly Slice4InvariantId[] = [
   'INV_EQUIVALENT_CANONICAL_LEDGER', 'INV_EQUIVALENT_VISIBLE_WEEK',
   'INV_EQUIVALENT_VISIBLE_DETAIL', 'INV_EQUIVALENT_EXPOSURE_CREDIT',
@@ -331,6 +417,11 @@ export const SLICE4_INVARIANT_IDS: readonly Slice4InvariantId[] = [
   'INV_SCALAR_FIELDS_NON_AUTHORITATIVE_AFTER_HYDRATE',
   'INV_POST_REHYDRATE_EDIT_EQUIVALENT', 'INV_POST_REHYDRATE_REBUILD_EQUIVALENT',
   'INV_PLAN_ENTRY_JOIN_STABLE_ACROSS_PATHS',
+  'INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN',
+  'INV_CONDITIONING_ROW_NO_STRENGTH_CREDIT',
+  'INV_MODERN_TYPED_OWNERSHIP_WINS',
+  'INV_CONDITIONING_HEADLINE_USES_WORK',
+  'INV_LEGACY_MIGRATION_IDEMPOTENT',
 ];
 
 export function evaluateSlice4Trace(trace: Slice4ScenarioTrace): InvariantCheckResult[] {
@@ -338,6 +429,11 @@ export function evaluateSlice4Trace(trace: Slice4ScenarioTrace): InvariantCheckR
     invariantId, scenarioId: trace.scenario.id, applied: false, failures: [],
   });
   return [
+    applies(trace, 'standalone-conditioning-ownership') ? conditioningRowsStayConditioning(trace) : inactive('INV_CONDITIONING_ROW_NO_STRENGTH_CREDIT'),
+    applies(trace, 'standalone-conditioning-ownership', 'canonical-program-rehydrate') ? standaloneConditioningOwnsNoStrength(trace) : inactive('INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN'),
+    applies(trace, 'standalone-conditioning-ownership') ? modernNoStrengthOwnershipWins(trace) : inactive('INV_MODERN_TYPED_OWNERSHIP_WINS'),
+    applies(trace, 'standalone-conditioning-ownership') ? conditioningHeadlineUsesWork(trace) : inactive('INV_CONDITIONING_HEADLINE_USES_WORK'),
+    applies(trace, 'legacy-program-rehydrate') ? legacyMigrationIdempotent(trace) : inactive('INV_LEGACY_MIGRATION_IDEMPOTENT'),
     applies(trace, 'generation-ai-fallback-equivalence', 'noop-inseason-week-rebuild', 'repeat-rich-week')
       ? planJoin(trace) : inactive('INV_PLAN_ENTRY_JOIN_STABLE_ACROSS_PATHS'),
     applies(trace, 'generation-ai-fallback-equivalence') ? equivalentCanonical(trace) : inactive('INV_EQUIVALENT_CANONICAL_LEDGER'),

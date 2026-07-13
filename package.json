@@ -82,6 +82,7 @@
     "test:strength-intent": "sucrase-node src/__tests__/strengthIntentContractTests.ts",
     "test:generated-program-normalizer": "sucrase-node src/__tests__/generatedProgramNormalizerTests.ts",
     "test:workout-canonicalisation": "sucrase-node src/__tests__/workoutCanonicalisationTests.ts",
+    "test:standalone-conditioning-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/standaloneConditioningOwnershipTests.ts",
     "test:env-config": "sucrase-node src/__tests__/envConfigTests.ts",
     "test:logger": "sucrase-node src/__tests__/loggerTests.ts",
     "test:request-program-adjustment": "sucrase-node src/__tests__/programAdjustmentRequestTests.ts",

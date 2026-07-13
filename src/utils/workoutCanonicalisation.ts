@@ -24,6 +24,7 @@ import {
   createStrengthIntent,
   inferStrengthArchetype,
   resolveLegacyStrengthIntent,
+  resolveStrengthOwnershipBoundary,
   withEffectiveStrengthPatterns,
   type MainStrengthPattern,
   type StrengthIntent,
@@ -242,25 +243,48 @@ function buildCanonicalConditioningBlock(args: {
   const finalIds = new Set(args.finalRows.map((row) => row.id));
   const conditioningIds = args.rows.map(({ row }) => row.id).filter((id) => finalIds.has(id));
   if (conditioningIds.length === 0) return undefined;
-  const first = args.finalRows.find((row) => conditioningIds.includes(row.id));
-  const title = rowName(first!) || 'Conditioning';
   const existingOptions = args.workout.conditioningBlock?.options ?? [];
   const retainedOptions = existingOptions.flatMap((option) => {
     const exerciseIds = (option.exerciseIds ?? []).filter((id) => conditioningIds.includes(id));
     return exerciseIds.length > 0 ? [{ ...option, exerciseIds }] : [];
   });
+  const isWarmupOrCooldown = (value: string): boolean =>
+    /\b(?:warm[- ]?up|cool[- ]?down|cooldown)\b/i.test(value);
+  const existingHeadline = retainedOptions[0]?.title?.trim();
+  const mainWorkRow = args.finalRows.find((row) =>
+    conditioningIds.includes(row.id) && !isWarmupOrCooldown(rowName(row)));
+  const intent = conditioningIntent(args.workout, args.rows, args.earlyOffseason);
+  const modalities = Array.from(new Set(args.rows
+    .map(({ classification }) => classification.conditioningModality)
+    .filter((value): value is NonNullable<typeof value> => !!value)));
+  const modalityLabel = modalities.length === 1
+    ? ({ bike: 'Bike', row: 'RowErg', ski: 'SkiErg', run: 'Running', swim: 'Swimming', mixed: 'Mixed' } as const)[modalities[0]]
+    : modalities.length > 1
+      ? 'Mixed'
+      : '';
+  const intentLabel = intent === 'tempo'
+    ? 'Tempo Conditioning'
+    : intent === 'high-intensity'
+      ? 'Hard Conditioning'
+      : 'Aerobic Conditioning';
+  const typedFallback = `${modalityLabel} ${intentLabel}`.trim() || 'Conditioning';
+  const title = existingHeadline && !isWarmupOrCooldown(existingHeadline)
+    ? existingHeadline
+    : (mainWorkRow ? rowName(mainWorkRow) : '') || typedFallback;
   const covered = new Set(retainedOptions.flatMap((option) => option.exerciseIds));
   const promoted = conditioningIds.filter((id) => !covered.has(id));
   const options = retainedOptions.length > 0
     ? retainedOptions.map((option, index) => index === 0 && promoted.length > 0
-      ? { ...option, exerciseIds: [...option.exerciseIds, ...promoted] }
-      : option)
+      ? { ...option, title, exerciseIds: [...option.exerciseIds, ...promoted] }
+      : index === 0 && isWarmupOrCooldown(option.title)
+        ? { ...option, title }
+        : option)
     : [{ title, description: '', exerciseIds: conditioningIds }];
   if (args.earlyOffseason) {
     options[0] = { ...options[0], title, description: '' };
   }
   return {
-    intent: conditioningIntent(args.workout, args.rows, args.earlyOffseason),
+    intent,
     ...(args.workout.conditioningBlock?.attachedKind || args.workout.attachedConditioningKind
       ? { attachedKind: args.workout.conditioningBlock?.attachedKind ?? args.workout.attachedConditioningKind }
       : {}),
@@ -441,22 +465,47 @@ export function finaliseWorkoutAfterMutation(
   const planIntentValid = context.planIntentValid ?? !!workout.planEntryId;
   const explicitRestIdentity = workout.workoutType === ('Rest' as WorkoutType) ||
     /^rest(?:\s+day)?$/i.test(workout.name.trim());
-  const supportOnlyIdentity = explicitRestIdentity ||
+  const supportOnlyTextHint =
     /\b(?:gunshow|prehab|pump|accessor|low-fatigue)\b/i.test(
       `${workout.name} ${workout.description ?? ''}`,
     );
   const initialMainPatterns = domainPatterns(classified.filter((row) => !row.linkedConditioning));
+  const hasCanonicalConditioningRows = classified.some((row) =>
+    row.linkedConditioning || row.classification.kind === 'conditioning');
   const trustExistingTypedIntent = !!workout.strengthIntent &&
     (!workout.planEntryId || planIntentValid);
+  const trustedContributions = !workout.planEntryId || planIntentValid
+    ? workout.strengthPatternContributions
+    : undefined;
+  const standaloneConditioningOwnership = !workout.hasCombinedConditioning && !!(
+    workout.conditioningBlock || workout.conditioningCategory || workout.conditioningFlavour
+  );
+  const ownership = resolveStrengthOwnershipBoundary({
+    strengthIntent: trustExistingTypedIntent ? workout.strengthIntent : undefined,
+    strengthPatternContributions: trustedContributions,
+    hasMatchedPlanEntry: !!workout.planEntryId && planIntentValid,
+    hasModernPlanIdentity: !!workout.planEntryId,
+    standaloneConditioning: standaloneConditioningOwnership,
+    canonicalConditioningOnly: hasCanonicalConditioningRows && initialMainPatterns.length === 0,
+    hasCanonicalMainStrengthRows: initialMainPatterns.length > 0,
+  });
+  const supportOnlyIdentity = explicitRestIdentity || (
+    supportOnlyTextHint &&
+    ownership.owner !== 'typed_strength' &&
+    ownership.owner !== 'canonical_strength_rows'
+  );
   const ingress = resolveLegacyStrengthIntent({
     strengthIntent: trustExistingTypedIntent ? workout.strengthIntent : undefined,
-    strengthPatternContributions: planIntentValid
-      ? workout.strengthPatternContributions
-      : undefined,
-    contentPatterns: initialMainPatterns,
+    strengthPatternContributions: trustedContributions,
+    contentPatterns: ownership.allowCanonicalRowInference ? initialMainPatterns : undefined,
     name: workout.name,
+    allowTextInference: ownership.allowLegacyTextInference,
+    allowScalarInference: ownership.allowLegacyTextInference,
   });
-  let canonicalIntent: StrengthIntent | null = supportOnlyIdentity ? null : ingress.intent;
+  const authoritativeNoStrength = ownership.owner === 'typed_no_strength';
+  let canonicalIntent: StrengthIntent | null = supportOnlyIdentity || authoritativeNoStrength
+    ? null
+    : ingress.intent;
   const intendedPatterns = planIntentValid && canonicalIntent
     ? new Set(canonicalIntent.plannedPatterns)
     : new Set<MainStrengthPattern>();
@@ -509,6 +558,32 @@ export function finaliseWorkoutAfterMutation(
     if (item.classification.kind === 'recovery_addon' && !sourceIsRecovery) {
       recoveryAddonRows.push(item);
       actions.push({ kind: 'row_promoted', item: name, reason: 'promoted_to_recovery_addon' });
+      continue;
+    }
+    if (
+      standaloneConditioningOwnership &&
+      item.classification.kind === 'strength_accessory' &&
+      item.classification.reason === 'unknown_strength_accessory'
+    ) {
+      conditioningRows.push(item);
+      actions.push({
+        kind: 'row_promoted',
+        item: name,
+        reason: 'standalone_conditioning_domain_owns_unclassified_row',
+      });
+      continue;
+    }
+    if (
+      (authoritativeNoStrength && item.classification.kind === 'strength_main') ||
+      (standaloneConditioningOwnership && item.classification.kind === 'strength_accessory')
+    ) {
+      actions.push({
+        kind: 'row_removed',
+        item: name,
+        reason: standaloneConditioningOwnership
+          ? 'standalone_conditioning_has_no_strength_ownership'
+          : 'modern_plan_has_no_strength_ownership',
+      });
       continue;
     }
     const pattern = item.classification.mainPattern;
@@ -571,7 +646,7 @@ export function finaliseWorkoutAfterMutation(
   const finalStrengthPatterns = domainPatterns(
     finalClassified.filter((row) => !row.linkedConditioning),
   );
-  if (!canonicalIntent && finalStrengthPatterns.length > 0) {
+  if (!canonicalIntent && ownership.allowCanonicalRowInference && finalStrengthPatterns.length > 0) {
     const archetype = inferStrengthArchetype(finalStrengthPatterns);
     canonicalIntent = archetype
       ? createStrengthIntent({

@@ -47,7 +47,10 @@ import { getAllTaggedExercises, EXERCISE_TAGS, CONDITIONING_META } from '../data
 import { applyHardFilters, buildFilterContext, type FilterContext } from './exerciseFilter';
 import { selectExercises, buildIntent, findSubstitute } from './exerciseScorer';
 import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
-import { resolveLegacyStrengthIntent } from '../rules/strengthPatternContributions';
+import {
+  resolveLegacyStrengthIntent,
+  resolveStrengthOwnershipBoundary,
+} from '../rules/strengthPatternContributions';
 import { applyLoadEstimates } from './loadEstimation';
 import { MAS_FALLBACK_NOTE, masIntensityLabel } from './masCopy';
 
@@ -508,20 +511,36 @@ export function buildTagAwareSession(
   // Canonical typed strength intent owns composition. Name/type parsing is
   // retained only for legacy templates that have not crossed the ingress yet.
   const exerciseCount = templateWorkout.exercises.length || 5;
-  const contentPatterns = templateWorkout.exercises
+  const contentClassifications = templateWorkout.exercises
     .map((row, index) => classifyGeneratedWorkoutRow({
       name: row.exercise?.name ?? row.exerciseId,
       sets: row.prescribedSets,
       repsMax: row.prescribedRepsMax,
       index,
-    }))
+    }));
+  const contentPatterns = contentClassifications
     .filter((classification) => classification.kind === 'strength_main' && !!classification.mainPattern)
     .map((classification) => classification.mainPattern!);
+  const ownership = resolveStrengthOwnershipBoundary({
+    strengthIntent: templateWorkout.strengthIntent,
+    strengthPatternContributions: templateWorkout.strengthPatternContributions,
+    hasModernPlanIdentity: !!templateWorkout.planEntryId,
+    standaloneConditioning: !templateWorkout.hasCombinedConditioning && !!(
+      templateWorkout.conditioningBlock ||
+      templateWorkout.conditioningCategory ||
+      templateWorkout.conditioningFlavour
+    ),
+    canonicalConditioningOnly: contentClassifications.some((classification) =>
+      classification.kind === 'conditioning') && contentPatterns.length === 0,
+    hasCanonicalMainStrengthRows: contentPatterns.length > 0,
+  });
   const legacyIngress = resolveLegacyStrengthIntent({
     strengthIntent: templateWorkout.strengthIntent,
     strengthPatternContributions: templateWorkout.strengthPatternContributions,
-    contentPatterns,
+    contentPatterns: ownership.allowCanonicalRowInference ? contentPatterns : undefined,
     name: templateWorkout.name,
+    allowTextInference: ownership.allowLegacyTextInference,
+    allowScalarInference: ownership.allowLegacyTextInference,
   });
   const intent = buildIntent(
     templateWorkout.name,

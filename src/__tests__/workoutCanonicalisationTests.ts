@@ -382,7 +382,24 @@ section('[9] explicit Rest keeps plan identity without restoring removed trainin
   eq('Rest retains the allocated identity used by edit/rebuild ownership',
     rest.workout.planEntryId, 'w1:monday:hinge:strength');
   ok('Rest clears pattern credit and never resurrects its planned lift',
-    !rest.workout.strengthPatternContributions?.length && rest.workout.exercises.length === 0);
+      !rest.workout.strengthPatternContributions?.length && rest.workout.exercises.length === 0);
+}
+
+section('[10] support copy cannot erase authoritative strength ownership');
+{
+  const typedPush = finaliseWorkoutAfterMutation(workout('Prehab and mobility', [
+    row('Bench Press', 0),
+  ], {
+    strengthIntent: {
+      archetype: 'upper', primaryPattern: 'push',
+      plannedPatterns: ['push'], effectivePatterns: ['push'],
+    },
+    strengthPatternContributions: ['push'],
+  }), { phase: 'Pre-season' });
+  ok('support-like name cannot clear typed push intent or its real main row',
+    typedPush.workout.strengthIntent?.effectivePatterns.includes('push') === true &&
+    typedPush.workout.exercises.some((item) => item.exercise?.name === 'Bench Press'),
+    typedPush.workout);
 }
 
 console.log(`\nworkoutCanonicalisationTests: ${pass} passed, ${fail} failed`);

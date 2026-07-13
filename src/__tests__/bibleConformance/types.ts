@@ -48,7 +48,8 @@ export type Slice4ScenarioId =
   | 'swap-upper-and-lower'
   | 'canonical-program-rehydrate'
   | 'legacy-program-rehydrate'
-  | 'post-rehydrate-edit-rebuild';
+  | 'post-rehydrate-edit-rebuild'
+  | 'standalone-conditioning-ownership';
 
 export type ConformancePathId =
   | 'deterministic_generation'
@@ -114,7 +115,10 @@ export type Slice4RuleId =
   | 'ALL-STORE-IDEMPOTENT-01'
   | 'ALL-LEGACY-HYDRATE-01'
   | 'ALL-STORE-SCALAR-NONAUTH-01'
-  | 'ALL-POST-REHYDRATE-WRITE-01';
+  | 'ALL-POST-REHYDRATE-WRITE-01'
+  | 'ALL-COND-STANDALONE-OWNERSHIP-01'
+  | 'ALL-LEGACY-INFERENCE-BOUNDARY-01'
+  | 'ALL-COND-HEADLINE-01';
 
 export type StrengthPattern = 'squat' | 'hinge' | 'push' | 'pull';
 export type StrengthArchetype = 'lower' | 'upper' | 'full_body';
@@ -216,7 +220,12 @@ export type Slice4InvariantId =
   | 'INV_SCALAR_FIELDS_NON_AUTHORITATIVE_AFTER_HYDRATE'
   | 'INV_POST_REHYDRATE_EDIT_EQUIVALENT'
   | 'INV_POST_REHYDRATE_REBUILD_EQUIVALENT'
-  | 'INV_PLAN_ENTRY_JOIN_STABLE_ACROSS_PATHS';
+  | 'INV_PLAN_ENTRY_JOIN_STABLE_ACROSS_PATHS'
+  | 'INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN'
+  | 'INV_CONDITIONING_ROW_NO_STRENGTH_CREDIT'
+  | 'INV_MODERN_TYPED_OWNERSHIP_WINS'
+  | 'INV_CONDITIONING_HEADLINE_USES_WORK'
+  | 'INV_LEGACY_MIGRATION_IDEMPOTENT';
 
 export type AllBibleInvariantId = BibleInvariantId | Slice3InvariantId;
 export type AllBibleInvariantIdV4 = AllBibleInvariantId | Slice4InvariantId;
@@ -346,6 +355,7 @@ export interface HarnessCanonicalWorkoutLedger {
   workoutType: string | null;
   visibleTitle: string | null;
   visibleSubtitle: string | null;
+  conditioningHeadline: string | null;
 }
 
 export interface HarnessCanonicalWeekLedger {
@@ -540,7 +550,13 @@ export type Slice4MutationId =
   | 'second_hydration_mutates'
   | 'coach_bike_stays_strength_row'
   | 'contrast_survives_lift_removal'
-  | 'post_rehydrate_rebuild_drops_component';
+  | 'post_rehydrate_rebuild_drops_component'
+  | 'rowerg_creates_pull_credit'
+  | 'skierg_tempo_gains_pullups'
+  | 'standalone_conditioning_becomes_mixed'
+  | 'warmup_becomes_conditioning_headline'
+  | 'modern_no_strength_overwritten'
+  | 'rehydrate_reintroduces_standalone_strength';
 
 export interface Slice4MutationAcceptanceResult {
   mutationId: Slice4MutationId;

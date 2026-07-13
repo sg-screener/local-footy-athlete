@@ -76,4 +76,25 @@ export const SLICE4_BIBLE_RULES: readonly Slice4Rule[] = [
     statement: 'Edits and rebuilds after reopening converge with their non-persisted equivalents.',
     applicableScenarios: ['post-rehydrate-edit-rebuild'], expectation: { editEquivalent: true, rebuildEquivalent: true },
   },
+  {
+    id: 'ALL-COND-STANDALONE-OWNERSHIP-01', category: 'generation', section: 'Conditioning finisher rules',
+    anchorQuote: 'A finisher is not the same as a conditioning component.',
+    statement: 'A modern standalone conditioning allocation cannot gain strength ownership during generation or later canonical writes.',
+    applicableScenarios: ['standalone-conditioning-ownership', 'canonical-program-rehydrate'],
+    expectation: { components: ['conditioning'], forbiddenPatterns: ['squat', 'hinge', 'push', 'pull'] },
+  },
+  {
+    id: 'ALL-LEGACY-INFERENCE-BOUNDARY-01', category: 'persistence', section: 'App / AI rules',
+    anchorQuote: 'Do not let AI invent random sets and reps outside the rules.',
+    statement: 'Canonical typed ownership and row domains beat legacy name/focus inference; genuine legacy strength migrates once.',
+    applicableScenarios: ['standalone-conditioning-ownership', 'legacy-program-rehydrate'],
+    expectation: { modernOwnershipWins: true, legacyMigrationIdempotent: true },
+  },
+  {
+    id: 'ALL-COND-HEADLINE-01', category: 'generation', section: 'Conditioning finisher rules',
+    anchorQuote: 'A finisher should have a clear purpose:',
+    statement: 'Canonical conditioning headlines come from meaningful work rather than warm-up or cool-down rows.',
+    applicableScenarios: ['standalone-conditioning-ownership'],
+    expectation: { headlineFromMainWork: true },
+  },
 ];

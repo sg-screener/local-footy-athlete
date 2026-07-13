@@ -25,6 +25,12 @@ const CASES: Record<Slice4MutationId, { scenarioId: Slice4ScenarioId; invariantI
   coach_bike_stays_strength_row: { scenarioId: 'coach-add-bike-zone2', invariantId: 'INV_EDIT_USES_CANONICAL_FINALISER' },
   contrast_survives_lift_removal: { scenarioId: 'coach-remove-contrast-lift', invariantId: 'INV_EDIT_USES_CANONICAL_FINALISER' },
   post_rehydrate_rebuild_drops_component: { scenarioId: 'post-rehydrate-edit-rebuild', invariantId: 'INV_POST_REHYDRATE_REBUILD_EQUIVALENT' },
+  rowerg_creates_pull_credit: { scenarioId: 'standalone-conditioning-ownership', invariantId: 'INV_CONDITIONING_ROW_NO_STRENGTH_CREDIT' },
+  skierg_tempo_gains_pullups: { scenarioId: 'standalone-conditioning-ownership', invariantId: 'INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN' },
+  standalone_conditioning_becomes_mixed: { scenarioId: 'standalone-conditioning-ownership', invariantId: 'INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN' },
+  warmup_becomes_conditioning_headline: { scenarioId: 'standalone-conditioning-ownership', invariantId: 'INV_CONDITIONING_HEADLINE_USES_WORK' },
+  modern_no_strength_overwritten: { scenarioId: 'standalone-conditioning-ownership', invariantId: 'INV_MODERN_TYPED_OWNERSHIP_WINS' },
+  rehydrate_reintroduces_standalone_strength: { scenarioId: 'canonical-program-rehydrate', invariantId: 'INV_STANDALONE_CONDITIONING_NO_STRENGTH_GAIN' },
 };
 
 function projection(trace: Slice4ScenarioTrace): string {

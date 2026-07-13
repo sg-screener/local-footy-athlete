@@ -36,6 +36,7 @@
 import {
   normalizeStrengthIntent,
   resolveLegacyStrengthIntent,
+  shouldUseLegacyStrengthInference,
   type StrengthIntent,
 } from '../rules/strengthPatternContributions';
 
@@ -342,6 +343,16 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
     const visibleContentPatterns = movementPatternsFromVisibleContent(input);
     const legacyFocus = strengthTextForMovementInference(input.focus);
     const legacyName = strengthTextForMovementInference(input.name);
+    const allowLegacyTextInference = shouldUseLegacyStrengthInference({
+      strengthIntent: input.strengthIntent,
+      standaloneConditioning: isStandaloneConditioning,
+      canonicalConditioningOnly: !!input.exercises?.length &&
+        visibleContentPatterns.length === 0 &&
+        input.exercises.every((row) => isConditioningOnlyText(
+          row?.exercise?.name ?? row?.name ?? '',
+        )),
+      hasCanonicalMainStrengthRows: visibleContentPatterns.length > 0,
+    });
     const legacy = resolveLegacyStrengthIntent({
       strengthPattern: input.strengthPattern,
       contentPatterns: input.movementPatterns?.length
@@ -349,6 +360,8 @@ export function resolveSessionDisplayName(input: SessionNameInput): string {
         : visibleContentPatterns,
       focus: isConditioningOnlyText(legacyFocus) ? undefined : legacyFocus,
       name: isConditioningOnlyText(legacyName) ? undefined : legacyName,
+      allowTextInference: allowLegacyTextInference,
+      allowScalarInference: allowLegacyTextInference,
     });
     patterns = legacy.intent?.effectivePatterns ?? [];
   }

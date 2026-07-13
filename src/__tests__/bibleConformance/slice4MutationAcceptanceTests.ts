@@ -9,6 +9,9 @@ export const SLICE4_MUTATION_IDS: readonly Slice4MutationId[] = [
   'workout_type_overwrites_components', 'stale_name_restores_pattern',
   'second_hydration_mutates', 'coach_bike_stays_strength_row',
   'contrast_survives_lift_removal', 'post_rehydrate_rebuild_drops_component',
+  'rowerg_creates_pull_credit', 'skierg_tempo_gains_pullups',
+  'standalone_conditioning_becomes_mixed', 'warmup_becomes_conditioning_headline',
+  'modern_no_strength_overwritten', 'rehydrate_reintroduces_standalone_strength',
 ];
 
 export function runSlice4MutationAcceptanceTests(): Slice4MutationAcceptanceResult[] {

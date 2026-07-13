@@ -12,6 +12,8 @@ import {
   createStrengthIntent,
   normalizeStrengthIntent,
   resolveLegacyStrengthIntent,
+  resolveStrengthOwnershipBoundary,
+  shouldUseLegacyStrengthInference,
   strengthIntentsEqual,
   strengthPatternLedger,
 } from '../rules/strengthPatternContributions';
@@ -154,6 +156,30 @@ eq('legacy full-body derives exact patterns from real main content',
     contentPatterns: ['hinge', 'push', 'pull'],
   }).intent?.plannedPatterns,
   ['hinge', 'push', 'pull']);
+ok('matched modern plan with no strength is authoritative no-strength ownership',
+  resolveStrengthOwnershipBoundary({
+    hasMatchedPlanEntry: true,
+    hasModernPlanIdentity: true,
+    canonicalConditioningOnly: true,
+  }).owner === 'typed_no_strength');
+ok('modern standalone conditioning cannot use legacy name inference',
+  !shouldUseLegacyStrengthInference({
+    hasModernPlanIdentity: true,
+    standaloneConditioning: true,
+  }));
+eq('modern ownership guard also blocks a stale legacy strength scalar',
+  resolveLegacyStrengthIntent({
+    strengthPattern: 'pull',
+    name: 'Row conditioning',
+    allowScalarInference: false,
+    allowTextInference: false,
+  }).intent,
+  null);
+ok('canonical main rows migrate strength without enabling free-text inference',
+  resolveStrengthOwnershipBoundary({ hasCanonicalMainStrengthRows: true }).allowCanonicalRowInference &&
+  !shouldUseLegacyStrengthInference({ hasCanonicalMainStrengthRows: true }));
+ok('free-text inference remains available only to genuinely unowned legacy data',
+  shouldUseLegacyStrengthInference({}));
 
 console.log('\n[2] Allocation and four-microcycle ledgers');
 for (let week = 1; week <= 4; week++) {
