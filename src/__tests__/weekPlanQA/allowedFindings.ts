@@ -58,20 +58,6 @@ export const WEEK_PLAN_QA_ALLOWED_FINDINGS: readonly AllowedFindingPolicy[] = [
     status: 'temporarily-tolerated',
     reason: 'The extra sprint/COD exposure comes from team/game anchors in an overloaded club week, not app-added speed work.',
   },
-  {
-    scenarioId: 'S13',
-    ruleId: 'min_strength_under',
-    severity: 'info',
-    status: 'expected',
-    reason: 'Low availability leaves only a minimum viable strength dose while team training and game anchors stay protected.',
-  },
-  {
-    scenarioId: 'S14',
-    ruleId: 'min_strength_under',
-    severity: 'info',
-    status: 'expected',
-    reason: 'Low readiness plus active injury history intentionally reduces strength dose to preserve safe useful work.',
-  },
 ];
 
 export function allowedFindingPolicyKey(policy: AllowedFindingPolicy): string {

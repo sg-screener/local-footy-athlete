@@ -19,6 +19,7 @@ import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
 import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 import type { SessionComponentKind } from '../utils/sessionComponents';
 import { todayISOLocal } from '../utils/appDate';
+import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 
 /**
  * ProgramStore is the final persistence boundary for every generated/edit
@@ -57,6 +58,29 @@ function postValidateWeekOverlay(overlay: WeekScopedWorkoutOverlay): WeekScopedW
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../utils/postGenerationConstraintValidation')
     .validateLiveWeekOverlayWrite(overlay);
+}
+
+function resolveDateMutationExposureContract(
+  date: string,
+  workout: Workout,
+): { weekStart: string; contract: WeeklyExposureContract } | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../utils/postGenerationConstraintValidation')
+    .resolveLiveDateMutationExposureContract(date, workout);
+}
+
+function resolveEditedWeekExposureContract(
+  weekStart: string,
+): { weekStart: string; contract: WeeklyExposureContract } | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  return require('../utils/postGenerationConstraintValidation')
+    .resolveLiveEditedWeekExposureContract(weekStart);
+}
+
+function mondayForDate(date: string): string {
+  const value = new Date(`${date.slice(0, 10)}T12:00:00`);
+  value.setDate(value.getDate() - ((value.getDay() + 6) % 7));
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
 }
 
 /**
@@ -245,6 +269,9 @@ interface ProgramState {
    */
   weekScopedOverlays: Record<string, WeekScopedWorkoutOverlay>;
 
+  /** Target-week contracts reconciled by explicit date-level edits. */
+  exposureContractsByWeek: Record<string, WeeklyExposureContract>;
+
   /**
    * Session feedback — lightweight post-session capture.
    * Key: ISO date 'YYYY-MM-DD'. Value: SessionFeedback.
@@ -329,6 +356,7 @@ export const useProgramStore = create<ProgramState>()(
       dateOverrides: {},
       overrideContexts: {},
       weekScopedOverlays: {},
+      exposureContractsByWeek: {},
       sessionFeedback: {},
       weightOverrides: {},
 
@@ -349,10 +377,21 @@ export const useProgramStore = create<ProgramState>()(
           currentMicrocycle: null,
           todayWorkout: null,
           weekScopedOverlays: {},
+          exposureContractsByWeek: {},
           blockState: validatedProgram
             ? deriveStoredBlockStateFromProgram(validatedProgram, undefined)
             : null,
         }));
+        if (validatedProgram) {
+          const refreshed = new Map<string, WeeklyExposureContract>();
+          for (const date of Object.keys(useProgramStore.getState().dateOverrides)) {
+            const weekStart = mondayForDate(date);
+            if (refreshed.has(weekStart)) continue;
+            const resolution = resolveEditedWeekExposureContract(weekStart);
+            if (resolution) refreshed.set(weekStart, resolution.contract);
+          }
+          useProgramStore.setState({ exposureContractsByWeek: Object.fromEntries(refreshed) });
+        }
       },
 
       setBlockState: (blockState) => set({ blockState }),
@@ -393,24 +432,52 @@ export const useProgramStore = create<ProgramState>()(
           // deliberately removed.
           restoreMissingPlanPatterns: false,
         });
+        const exposureResolution = resolveDateMutationExposureContract(date, validatedWorkout);
         set((state) => ({
           dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },
+          exposureContractsByWeek: exposureResolution
+            ? {
+                ...state.exposureContractsByWeek,
+                [exposureResolution.weekStart]: exposureResolution.contract,
+              }
+            : state.exposureContractsByWeek,
           overrideContexts: context
             ? { ...state.overrideContexts, [date]: context }
             : state.overrideContexts,
         }));
       },
 
-      removeManualOverride: (date) =>
+      removeManualOverride: (date) => {
+        const weekStart = mondayForDate(date);
         set((state) => {
           const updatedOverrides = { ...state.dateOverrides };
           delete updatedOverrides[date];
           const updatedContexts = { ...state.overrideContexts };
           delete updatedContexts[date];
-          return { dateOverrides: updatedOverrides, overrideContexts: updatedContexts };
-        }),
+          const exposureContractsByWeek = { ...state.exposureContractsByWeek };
+          delete exposureContractsByWeek[weekStart];
+          return {
+            dateOverrides: updatedOverrides,
+            overrideContexts: updatedContexts,
+            exposureContractsByWeek,
+          };
+        });
+        const resolution = resolveEditedWeekExposureContract(weekStart);
+        if (resolution) {
+          useProgramStore.setState((state) => ({
+            exposureContractsByWeek: {
+              ...state.exposureContractsByWeek,
+              [weekStart]: resolution.contract,
+            },
+          }));
+        }
+      },
 
-      clearManualOverrides: () => set({ dateOverrides: {}, overrideContexts: {} }),
+      clearManualOverrides: () => set({
+        dateOverrides: {},
+        overrideContexts: {},
+        exposureContractsByWeek: {},
+      }),
 
       setSessionFeedback: (date, feedback) =>
         set((state) => ({
@@ -580,6 +647,7 @@ export const useProgramStore = create<ProgramState>()(
           dateOverrides: {},
           overrideContexts: {},
           weekScopedOverlays: {},
+          exposureContractsByWeek: {},
           sessionFeedback: {},
           weightOverrides: {},
         });

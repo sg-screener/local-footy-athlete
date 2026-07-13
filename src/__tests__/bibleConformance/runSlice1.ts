@@ -33,6 +33,7 @@ import {
   PRESEASON_EXPOSURE_INVARIANT_IDS,
 } from './invariants/preseasonExposureInvariants';
 import { buildPreseasonExposureWitness } from './observations/buildPreseasonExposureWitness';
+import { runYearRoundExposureConformance } from './yearRoundExposureConformance';
 import { renderConformanceFailure } from './report/renderConformanceFailure';
 import { runSmokeMutationGate } from './registry/mutationGate';
 import { SMOKE_MUTATIONS } from './registry/mutationCatalogue';
@@ -58,6 +59,7 @@ const ROUTINE_PRODUCTION_LOG_PREFIXES = [
   '[WorkoutCanonicalisation]',
   '[engine]',
   '[ENGINE-',
+  '[pool-',
 ];
 
 function fail(message: string): never {
@@ -241,6 +243,12 @@ function main(): void {
     fail(`Pre-season exposure invariant failure: ${JSON.stringify(preseasonFailures[0])}`);
   }
   console.log('  PASS preseason-exposure-first-six-day (typed contract, final ledger, edge/fallback)');
+  const yearRoundExposure = withoutRoutineProductionLogs(() =>
+    runYearRoundExposureConformance(repoRoot));
+  console.log(
+    `  PASS year-round-exposure-contract (${yearRoundExposure.scenarios} scenarios, ` +
+      `${yearRoundExposure.properties} properties, ${yearRoundExposure.mutations} mutations)`,
+  );
 
   if (STRENGTH_GOLDEN_SCENARIOS.length !== 3) {
     fail(`Expected exactly three strength goldens, found ${STRENGTH_GOLDEN_SCENARIOS.length}`);
@@ -443,11 +451,12 @@ function main(): void {
   }
 
   const totalMs = performance.now() - startedAt;
-  const scenarioPasses = strengthScenarioPasses + componentScenarioPasses + slice3ScenarioPasses + slice4ScenarioPasses + 1;
-  const scenarioTotal = STRENGTH_GOLDEN_SCENARIOS.length + COMPONENT_GOLDEN_SCENARIOS.length + SLICE3_GOLDEN_SCENARIOS.length + SLICE4_GOLDEN_SCENARIOS.length + 1;
-  const rulePasses = strengthRulePasses + componentRulePasses + slice3RulePasses + slice4RulePasses + PRESEASON_EXPOSURE_RULES.length;
-  const ruleTotal = STRENGTH_BIBLE_RULES.length + COMPONENT_BIBLE_RULES.length + SLICE3_BIBLE_RULES.length + SLICE4_BIBLE_RULES.length + PRESEASON_EXPOSURE_RULES.length;
-  const mutationTotal = mutationMode === 'none' ? 0 : SMOKE_MUTATIONS.length;
+  const scenarioPasses = strengthScenarioPasses + componentScenarioPasses + slice3ScenarioPasses + slice4ScenarioPasses + 1 + yearRoundExposure.scenarios;
+  const scenarioTotal = STRENGTH_GOLDEN_SCENARIOS.length + COMPONENT_GOLDEN_SCENARIOS.length + SLICE3_GOLDEN_SCENARIOS.length + SLICE4_GOLDEN_SCENARIOS.length + 1 + yearRoundExposure.scenarios;
+  const rulePasses = strengthRulePasses + componentRulePasses + slice3RulePasses + slice4RulePasses + PRESEASON_EXPOSURE_RULES.length + yearRoundExposure.rules;
+  const ruleTotal = STRENGTH_BIBLE_RULES.length + COMPONENT_BIBLE_RULES.length + SLICE3_BIBLE_RULES.length + SLICE4_BIBLE_RULES.length + PRESEASON_EXPOSURE_RULES.length + yearRoundExposure.rules;
+  const mutationTotal = (mutationMode === 'none' ? 0 : SMOKE_MUTATIONS.length) + yearRoundExposure.mutations;
+  const totalMutationKills = mutationKills + yearRoundExposure.mutations;
   console.log('\nSummary');
   console.log(`  Scenarios:         ${scenarioPasses}/${scenarioTotal} (strength ${strengthScenarioPasses}/${STRENGTH_GOLDEN_SCENARIOS.length}, component ${componentScenarioPasses}/${COMPONENT_GOLDEN_SCENARIOS.length}, Slice 3 ${slice3ScenarioPasses}/${SLICE3_GOLDEN_SCENARIOS.length}, Slice 4 ${slice4ScenarioPasses}/${SLICE4_GOLDEN_SCENARIOS.length})`);
   console.log(`  Rules:             ${rulePasses}/${ruleTotal}`);
@@ -460,6 +469,7 @@ function main(): void {
   console.log(`  Exposure rules:    ${SLICE3_BIBLE_RULES.filter((rule) => rule.category === 'exposure' && !failedRules.has(rule.id)).length}/${SLICE3_BIBLE_RULES.filter((rule) => rule.category === 'exposure').length}`);
   console.log(`  Equivalence rules: ${slice4RulePasses}/${SLICE4_BIBLE_RULES.length}`);
   console.log(`  Pre-season rules:  ${PRESEASON_EXPOSURE_RULES.length}/${PRESEASON_EXPOSURE_RULES.length}`);
+  console.log(`  Year-round exposure rules: ${yearRoundExposure.rules}/${yearRoundExposure.rules}`);
   console.log(`  Strength invariants:  ${strengthInvariantPasses}/${STRENGTH_INVARIANT_IDS.length} (${strengthInvariantApplicationPasses}/${strengthInvariantApplications} applications)`);
   console.log(`  Component invariants: ${componentInvariantPasses}/${COMPONENT_INVARIANT_IDS.length} (${componentInvariantApplicationPasses}/${componentInvariantApplications} applications)`);
   console.log(`  Slice 3 invariants:   ${slice3InvariantPasses}/${SLICE3_INVARIANT_IDS.length} (${slice3InvariantApplicationPasses}/${slice3InvariantApplications} applications)`);
@@ -468,7 +478,8 @@ function main(): void {
   console.log(`  Path comparisons:  ${pathComparisons}`);
   console.log(`  Persistence:       ${persistenceRoundTrips} round trip(s), ${legacyMigrations} legacy migration(s)`);
   console.log(`  Metamorphic smoke: ${metamorphicSmoke.length}/${metamorphicSmoke.length}`);
-  console.log(`  Mutations:         ${mutationTotal} injected, ${mutationKills} active, ${mutationKills}/${mutationTotal} killed`);
+  console.log(`  Exposure properties:${yearRoundExposure.properties}/${yearRoundExposure.properties}`);
+  console.log(`  Mutations:         ${mutationTotal} injected, ${totalMutationKills} active, ${totalMutationKills}/${mutationTotal} killed`);
   console.log(`  Boundary:   ${boundary.checkedFiles.length} expectation file(s), 0 forbidden imports`);
   console.log(`  Runtime:    ${totalMs.toFixed(1)}ms (target <${TARGET_RUNTIME_MS}ms)`);
   console.log('  Deferred:   Team Training rendering log-button/startFinished baseline remains outside the executable harness');
@@ -483,7 +494,7 @@ function main(): void {
   if (totalMs > HARD_RUNTIME_MS) {
     fail(`Bible harness runtime ${totalMs.toFixed(1)}ms exceeds hard ceiling ${HARD_RUNTIME_MS}ms`);
   }
-  if (allFailures.length > 0 || mutationKills !== mutationTotal) process.exit(1);
+  if (allFailures.length > 0 || totalMutationKills !== mutationTotal) process.exit(1);
 }
 
 try {

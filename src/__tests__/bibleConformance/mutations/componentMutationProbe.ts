@@ -80,7 +80,7 @@ function runComponentMutation(mutationId: Exclude<ComponentMutationId, 'full_bod
   try {
     if (mutationId === 'drop_mixed_conditioning') {
       moduleValue[exportName] = (...args: any[]) => original(...args).map((workout: any) => {
-        if (workout.planEntryId !== 'w1:wednesday:none:strength') return workout;
+        if (workout.planEntryId !== baseline.planEntryId) return workout;
         const conditioningIds = new Set(
           (workout.conditioningBlock?.options ?? []).flatMap((option: any) => option.exerciseIds ?? []),
         );

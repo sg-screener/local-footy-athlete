@@ -188,6 +188,7 @@ export function buildWeekScopedWorkoutOverlay(args: {
     weekEnd: addDays(args.weekStart, 6),
     anchorDate: args.anchorDate,
     reason: args.reason,
+    exposureContract: sourceMicrocycle.exposureContract,
     workoutsByDate,
     createdAt: now,
     updatedAt: now,
@@ -404,9 +405,10 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
 
   // 1. Candidate week from base programming rules (throws on failure —
   //    nothing has been committed yet).
+  const generationDate = scope === 'weekOverlay' ? targetWeekStart! : todayISO;
   const program = generateProgramLocally(profile, {
-    todayISO,
-    blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(todayISO),
+    todayISO: generationDate,
+    blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(generationDate),
   });
 
   // 2. Canonical context + pure sweep decision.

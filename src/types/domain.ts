@@ -512,6 +512,9 @@ export interface Microcycle {
   intensityMultiplier: number; // 0.7-1.3 typical range
   weekKind?: WeekKind;
 
+  /** Phase-owned weekly exposure intent accepted against final effective content. */
+  exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;
+
   // Workouts in this week
   workouts: Workout[];
 
@@ -646,6 +649,8 @@ export interface WeekScopedWorkoutOverlay {
   weekEnd: string;
   anchorDate: string | null;
   reason: 'one_off_game' | 'one_off_no_game' | 'repeat_week';
+  /** Re-resolved for this target week; never inherited blindly from the source week. */
+  exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;
   workoutsByDate: Record<string, Workout | null>;
   createdAt: string;
   updatedAt: string;

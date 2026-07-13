@@ -205,6 +205,8 @@ const nextMonday = addDays(thisMonday, 7);
 
   const overlay = useProgramStore.getState().weekScopedOverlays?.[nextMonday];
   ok('repeat_week overlay committed to the target week', !!overlay && overlay.reason === 'repeat_week');
+  ok('repeat_week overlay carries the target week exposure contract',
+    overlay?.exposureContract?.identity.phase === 'Off-season');
   ok('overlay has training-day entries copied from source', Object.keys(overlay?.workoutsByDate ?? {}).length >= 1);
 
   // Block rollover is NOT advanced: program object + block length unchanged.

@@ -46,6 +46,7 @@ export function buildPreseasonExposureWitness(): PreseasonExposureWitness {
     weekInBlock: 1,
     weekNumber: 1,
     weekKind: 'build',
+    preseasonSubphase: 'mid_preseason',
   });
   const fallback = buildCoachingPlan(inputs);
   const edge = buildInitialGeneratedCoachingPlan({
@@ -54,11 +55,11 @@ export function buildPreseasonExposureWitness(): PreseasonExposureWitness {
     todayISO: '2026-07-13',
     blockNumber: 1,
   });
-  if (!fallback.preseasonExposureContract || !edge.preseasonExposureContract) {
+  if (!fallback.weeklyExposureContract || !edge.weeklyExposureContract) {
     throw new Error('Pre-season witness omitted its typed exposure contract');
   }
   const validation = evaluatePreseasonExposureContract(
-    fallback.preseasonExposureContract,
+    fallback.weeklyExposureContract,
     fallback.weeklyPlan,
   );
   const friday = fallback.weeklyPlan.find((entry) => entry.dayOfWeek === 'Friday');
@@ -79,32 +80,32 @@ export function buildPreseasonExposureWitness(): PreseasonExposureWitness {
 
   return {
     validationViolationCount: validation.violations.length,
-    requiredPatterns: [...fallback.preseasonExposureContract.strength.requiredPatterns],
+    requiredPatterns: [...fallback.weeklyExposureContract.strength.requiredPatterns],
     actualPatterns: [...validation.ledger.strengthPatterns],
-    conditioningTarget: fallback.preseasonExposureContract.conditioning.targetCount,
+    conditioningTarget: fallback.weeklyExposureContract.conditioning.targetCount,
     creditedTeamTraining: validation.ledger.teamTrainingCount,
     requiredAdditionalConditioning:
-      fallback.preseasonExposureContract.conditioning.additionalRequiredCount,
+      fallback.weeklyExposureContract.conditioning.additionalRequiredCount,
     actualAdditionalConditioning: validation.ledger.additionalConditioningCount,
     recoveryDisplacedRequiredExposure:
       thursday?.tier === 'recovery' && validation.ledger.additionalConditioningCount <
-        fallback.preseasonExposureContract.conditioning.additionalRequiredCount,
+        fallback.weeklyExposureContract.conditioning.additionalRequiredCount,
     safeConditioningPairAvailable: !!friday && !!saturday,
     safeConditioningPairUsed:
       friday?.hasCombinedConditioning === true && saturday?.hasCombinedConditioning === true,
-    preferredHardDays: fallback.preseasonExposureContract.hardDays.preferredCount,
-    permittedHardDays: fallback.preseasonExposureContract.hardDays.permittedCount,
+    preferredHardDays: fallback.weeklyExposureContract.hardDays.preferredCount,
+    permittedHardDays: fallback.weeklyExposureContract.hardDays.permittedCount,
     actualHardDays: validation.ledger.hardDayCount,
     fiveHardDayStructureAccepted:
       validation.ledger.hardDayCount === 5 && validation.violations.length === 0,
     teamOnlySessionHasStrengthCredit:
       (teamOnly?.strengthIntent?.plannedPatterns.length ?? 0) > 0,
-    edgeContract: edge.preseasonExposureContract,
-    fallbackContract: fallback.preseasonExposureContract,
+    edgeContract: edge.weeklyExposureContract,
+    fallbackContract: fallback.weeklyExposureContract,
     edgeComponentShape: componentShape(edge),
     fallbackComponentShape: componentShape(fallback),
     reductionsAreTyped: !!reduced && reduced.reductions.length > 0 &&
-      reduced.reductions.every((entry) => !!entry.domain && !!entry.code && entry.reason.trim().length > 0),
+      reduced.reductions.every((entry) => !!entry.domain && !!entry.reason && entry.detail.trim().length > 0),
     zeroAdditionalConditioningAuthorised: !!allTeamCredit &&
       allTeamCredit.conditioning.additionalRequiredCount === 0 &&
       allTeamCredit.conditioning.creditedTeamTrainingCount >= allTeamCredit.conditioning.targetCount,

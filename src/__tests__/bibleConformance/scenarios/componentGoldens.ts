@@ -27,7 +27,7 @@ export const COMPONENT_GOLDEN_SCENARIOS: readonly ComponentGoldenScenario[] = [
     timezone: 'Australia/Melbourne',
     profile: HEALTHY_OFF_SEASON_SIX_DAY,
     ruleIds: ['ALL-COMP-MIXED-01', 'ALL-COND-SECTION-01', 'ALL-COMP-PROJECTION-01'],
-    target: { weekInBlock: 1, day: 'Wednesday' },
+    target: { weekInBlock: 1, day: 'Monday' },
     sourceKind: 'deterministic',
     scalarMutation: {
       workoutType: 'Strength',

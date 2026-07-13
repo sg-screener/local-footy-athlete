@@ -206,6 +206,9 @@ console.log('\n-- Deterministic next-block state and persistence --');
     blockNumber: 1,
   });
   const sourceWorkout = program.microcycles[0].workouts[0];
+  const safeThursdayWorkout = program.microcycles[0].workouts.find(
+    (workout) => workout.dayOfWeek === 4,
+  ) ?? sourceWorkout;
   useProgramStore.getState().setCurrentProgram(program);
   useProgramStore.getState().setCurrentMicrocycle(program.microcycles[3]);
 
@@ -245,7 +248,7 @@ console.log('\n-- Deterministic next-block state and persistence --');
   );
   useProgramStore.getState().setManualOverride(
     '2026-08-06',
-    makeOverride(sourceWorkout, '2026-08-06', 'Legacy system leftover'),
+    makeOverride(safeThursdayWorkout, '2026-08-06', 'Legacy system leftover'),
   );
 
   const oldOverlay = makeOverlay('2026-07-27', '2026-08-02');
@@ -343,7 +346,13 @@ console.log('\n-- Deterministic next-block state and persistence --');
     JSON.stringify(result.sweep));
 
   ok('expired old overlay does not leak into the new block', !after.weekScopedOverlays[oldOverlay.weekStart]);
-  ok('future exact-week overlay survives rollover', after.weekScopedOverlays[futureOverlay.weekStart] === futureOverlay);
+  const survivingFutureOverlay = after.weekScopedOverlays[futureOverlay.weekStart];
+  ok('future exact-week overlay survives rollover with its target-week contract',
+    survivingFutureOverlay?.id === futureOverlay.id &&
+      survivingFutureOverlay.reason === futureOverlay.reason &&
+      JSON.stringify(survivingFutureOverlay.workoutsByDate) ===
+        JSON.stringify(futureOverlay.workoutsByDate) &&
+      !!survivingFutureOverlay.exposureContract);
   ok('feedback history survives rollover', after.sessionFeedback['2026-07-30']?.feeling === 'easy');
   ok('performed weights survive rollover', after.weightOverrides['2026-07-30']?.['back-squat'] === 100);
   const history = buildStrengthWorkoutHistoryFromFeedback(after.sessionFeedback, next.startDate);

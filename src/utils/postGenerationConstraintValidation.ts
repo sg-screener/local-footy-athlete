@@ -51,8 +51,17 @@ import {
 } from './workoutCanonicalisation';
 import { resolveOffseasonSubphase } from '../rules/offseasonSubphase';
 import { deriveScheduleReadiness } from './readiness';
-import { getWeekInBlock } from './programBlockState';
+import { getWeekInBlock, selectMicrocycleForDate } from './programBlockState';
 import { resolveWeekKind } from '../rules/deloadWeekRules';
+import {
+  evaluateEffectiveWeekExposureContract,
+  reconcileWeeklyExposureContractToLedger,
+  type WeeklyExposureContract,
+} from '../rules/weeklyExposureContract';
+import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
+import { resolvePreseasonSubphase } from '../rules/preseasonSubphase';
+import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
+import { resolveEquipmentCapabilities } from './equipmentAvailability';
 
 export interface ActiveConstraintValidationInput {
   workout: Workout | null;
@@ -460,6 +469,245 @@ function dateForWorkout(microcycle: Microcycle, workout: Workout): string {
   return addDaysISO(start, offset);
 }
 
+const EXPOSURE_DAY_NUMBERS: Readonly<Record<string, number>> = {
+  Sunday: 0,
+  Monday: 1,
+  Tuesday: 2,
+  Wednesday: 3,
+  Thursday: 4,
+  Friday: 5,
+  Saturday: 6,
+};
+
+function reResolveContractForActiveConstraints(args: {
+  contract: WeeklyExposureContract;
+  microcycle: Microcycle;
+  activeConstraints: readonly ActiveConstraint[];
+  profile?: OnboardingData | null;
+  teamTrainingDayNumbers?: readonly number[];
+  hasGame?: boolean;
+  gameDay?: number | null;
+}): WeeklyExposureContract {
+  const profile = args.profile;
+  if (!profile) return args.contract;
+  const teamTrainingDayNumbers = args.teamTrainingDayNumbers
+    ? Array.from(new Set(args.teamTrainingDayNumbers)).sort((a, b) => a - b)
+    : args.contract.anchors.teamTrainingDays;
+  const hasGame = args.hasGame ?? args.contract.anchors.gameDay !== null;
+  const gameDay = hasGame
+    ? args.gameDay !== undefined ? args.gameDay : args.contract.anchors.gameDay
+    : null;
+  const anchorsChanged =
+    JSON.stringify(teamTrainingDayNumbers) !==
+      JSON.stringify([...args.contract.anchors.teamTrainingDays].sort((a, b) => a - b)) ||
+    hasGame !== (args.contract.anchors.gameDay !== null) ||
+    gameDay !== args.contract.anchors.gameDay;
+  if (args.activeConstraints.length === 0 && !anchorsChanged) return args.contract;
+  const weekStart = args.microcycle.startDate.slice(0, 10);
+  const generationContext = buildGenerationConstraintContext({
+    activeConstraints: args.activeConstraints,
+    todayISO: weekStart,
+  });
+
+  const selected = new Set<number>();
+  for (const day of profile.preferredTrainingDays ?? []) {
+    const number = EXPOSURE_DAY_NUMBERS[day];
+    if (number !== undefined) selected.add(number);
+  }
+  const hasDeclaredAvailability = selected.size > 0;
+  for (const day of teamTrainingDayNumbers) selected.add(day);
+  // Legacy profiles may not retain preferred weekdays. Their generated
+  // microcycle is the best available record of the declared schedulable set;
+  // this only supplies availability, never achieved exposure.
+  if (!hasDeclaredAvailability) {
+    for (const workout of args.microcycle.workouts) selected.add(workout.dayOfWeek);
+  }
+
+  const equipment = resolveEquipmentCapabilities(
+    profile,
+    args.activeConstraints,
+    weekStart,
+  );
+  const readinessSignal = useReadinessStore.getState().signalsByDate?.[weekStart] ?? null;
+  const readiness = profile.conditioningLevel || profile.recentTrainingLoad
+    ? deriveScheduleReadiness({ onboardingData: profile, signal: readinessSignal })
+    : args.contract.strength.targetCount >= args.contract.strength.preferred.max
+      ? 'high'
+      : 'medium';
+  const subphase = args.contract.identity.subphase;
+  const offseasonSubphase =
+    subphase === 'early_offseason' ||
+    subphase === 'mid_offseason' ||
+    subphase === 'late_offseason'
+      ? subphase
+      : null;
+  const preseasonSubphase =
+    subphase === 'early_preseason' ||
+    subphase === 'mid_preseason' ||
+    subphase === 'late_preseason'
+      ? subphase
+      : null;
+  return buildWeeklyExposureContract({
+    seasonPhase: args.contract.identity.phase,
+    readiness,
+    selectedDayNumbers: Array.from(selected),
+    teamTrainingDayNumbers,
+    hasGame,
+    gameDay,
+    weekKind: args.contract.identity.weekKind,
+    offseasonSubphase: resolveOffseasonSubphase({
+      seasonPhase: args.contract.identity.phase,
+      explicitSubphase: offseasonSubphase,
+      weekInBlock: ((args.microcycle.weekNumber - 1) % 4) + 1,
+      weekNumber: args.microcycle.weekNumber,
+    }),
+    preseasonSubphase: resolvePreseasonSubphase({
+      seasonPhase: args.contract.identity.phase,
+      explicitSubphase: preseasonSubphase,
+      weekInBlock: ((args.microcycle.weekNumber - 1) % 4) + 1,
+      weekNumber: args.microcycle.weekNumber,
+    }),
+    activeReadinessTier: generationContext?.readiness?.tier,
+    maxStrengthSessions: profile.experienceLevel
+      ? resolveTrainingAgePolicy(profile.experienceLevel).maxCoreSessions
+      : null,
+    appConditioningFeasible: equipment.conditioningModalities.length > 0,
+    profileInjuries: profile.injuries,
+    activeInjuries: generationContext?.injuries,
+    byeMode: args.contract.identity.mode === 'in_season_bye_recovery'
+      ? 'recovery'
+      : args.contract.identity.mode === 'in_season_bye_build'
+        ? 'build'
+        : undefined,
+  });
+}
+
+function assertEffectiveMicrocycleExposure(microcycle: Microcycle): void {
+  if (!microcycle.exposureContract) return;
+  const validation = evaluateEffectiveWeekExposureContract(
+    microcycle.exposureContract,
+    microcycle.workouts,
+    microcycle.startDate.slice(0, 10),
+  );
+  if (validation.accepted) return;
+  const detail = validation.unresolvedShortfalls
+    .map((entry) => `${entry.code}:${entry.domain ?? 'safety'}=${JSON.stringify(entry.actual)}`)
+    .join(', ');
+  throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
+}
+
+function reconcileContractForSafetyTransformations(args: {
+  contract: WeeklyExposureContract;
+  workouts: readonly Workout[];
+  weekStart: string;
+  activeConstraints: readonly ActiveConstraint[];
+}): WeeklyExposureContract {
+  const validation = evaluateEffectiveWeekExposureContract(
+    args.contract,
+    args.workouts,
+    args.weekStart,
+  );
+  if (validation.accepted) return args.contract;
+  const generationContext = buildGenerationConstraintContext({
+    activeConstraints: args.activeConstraints,
+    todayISO: args.weekStart,
+  });
+  const hasEquipmentConstraint = args.activeConstraints.some(
+    (constraint) => constraint.type === 'equipment' && constraint.status !== 'resolved',
+  );
+  const reason = generationContext?.injuries.length
+    ? 'injury_restriction' as const
+    : generationContext?.readiness
+      ? 'low_readiness' as const
+      : hasEquipmentConstraint
+        ? 'equipment_infeasibility' as const
+        : null;
+  if (!reason) return args.contract;
+  return reconcileWeeklyExposureContractToLedger(
+    args.contract,
+    validation.ledger,
+    reason,
+    'The final active safety/feasibility transformation reduced this target week.',
+  );
+}
+
+function resolveLiveDateMutationExposure(args: {
+  date: string;
+  workout: Workout;
+  context: ReturnType<typeof liveValidationContext>;
+}): { weekStart: string; contract: WeeklyExposureContract } | null {
+  const state = require('../store/programStore').useProgramStore.getState();
+  const microcycle = selectMicrocycleForDate(
+    state.currentProgram,
+    state.currentMicrocycle,
+    args.date,
+  );
+  if (!microcycle?.exposureContract) return null;
+  const weekStart = addDaysISO(args.date, -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7));
+  const overlay = state.weekScopedOverlays?.[weekStart] as WeekScopedWorkoutOverlay | undefined;
+  const contract = state.exposureContractsByWeek?.[weekStart] ??
+    overlay?.exposureContract ?? microcycle.exposureContract;
+  const workouts: Workout[] = [];
+  for (let offset = 0; offset < 7; offset++) {
+    const date = addDaysISO(weekStart, offset);
+    const dow = new Date(`${date}T12:00:00`).getDay();
+    const hasOverlayEntry = !!overlay && Object.prototype.hasOwnProperty.call(
+      overlay.workoutsByDate,
+      date,
+    );
+    const workout = date === args.date
+      ? args.workout
+      : state.dateOverrides?.[date] ?? (
+          hasOverlayEntry
+            ? overlay!.workoutsByDate[date]
+            : microcycle.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null
+        );
+    if (workout) workouts.push(workout);
+  }
+  const editedDay = new Date(`${args.date}T12:00:00`).getDay();
+  const editedClassification = classifyVisibleSession(args.workout);
+  const originalGameDay = contract.anchors.gameDay;
+  const explicitlyChangedGameAnchor =
+    editedClassification.anchors.game || editedDay === originalGameDay;
+  const resolvedGameDay = editedClassification.anchors.game
+    ? editedDay
+    : explicitlyChangedGameAnchor
+      ? null
+      : originalGameDay;
+  let resolvedContract = reResolveContractForActiveConstraints({
+    contract,
+    microcycle,
+    activeConstraints: args.context.activeConstraints,
+    profile: args.context.profile,
+    teamTrainingDayNumbers: workouts
+      .filter((candidate) => classifyVisibleSession(candidate).anchors.teamTraining)
+      .map((candidate) => candidate.dayOfWeek),
+    hasGame: resolvedGameDay !== null,
+    gameDay: resolvedGameDay,
+  });
+  let validation = evaluateEffectiveWeekExposureContract(
+    resolvedContract,
+    workouts,
+    weekStart,
+  );
+  if (!validation.accepted) {
+    resolvedContract = reconcileWeeklyExposureContractToLedger(
+      resolvedContract,
+      validation.ledger,
+      'explicit_user_override',
+      `An explicit coach/user edit changed the effective target-week exposure on ${args.date}.`,
+    );
+    validation = evaluateEffectiveWeekExposureContract(resolvedContract, workouts, weekStart);
+  }
+  if (!validation.accepted) {
+    const detail = validation.unresolvedShortfalls
+      .map((entry) => `${entry.code}:${entry.domain ?? 'safety'}=${JSON.stringify(entry.actual)}`)
+      .join(', ');
+    throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
+  }
+  return { weekStart, contract: resolvedContract };
+}
+
 function isoDayDiff(date: string, gameDate: string): number {
   const [dy, dm, dd] = date.slice(0, 10).split('-').map(Number);
   const [gy, gm, gd] = gameDate.slice(0, 10).split('-').map(Number);
@@ -520,7 +768,32 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
     if (result.changed) changed = true;
     return result.workout ?? collapseWorkoutToRest(workout);
   });
-  return changed ? { ...args.microcycle, workouts } : args.microcycle;
+  let exposureContract = args.microcycle.exposureContract
+    ? reResolveContractForActiveConstraints({
+        contract: args.microcycle.exposureContract,
+        microcycle: args.microcycle,
+        activeConstraints: args.activeConstraints,
+        profile: args.profile,
+        teamTrainingDayNumbers: workouts
+          .filter((workout) => classifyVisibleSession(workout).anchors.teamTraining)
+          .map((workout) => workout.dayOfWeek),
+      })
+    : undefined;
+  if (exposureContract) {
+    exposureContract = reconcileContractForSafetyTransformations({
+      contract: exposureContract,
+      workouts,
+      weekStart: args.microcycle.startDate.slice(0, 10),
+      activeConstraints: args.activeConstraints,
+    });
+  }
+  const contractChanged = exposureContract !== args.microcycle.exposureContract &&
+    JSON.stringify(exposureContract) !== JSON.stringify(args.microcycle.exposureContract);
+  const validated = changed || contractChanged
+    ? { ...args.microcycle, workouts, exposureContract }
+    : args.microcycle;
+  assertEffectiveMicrocycleExposure(validated);
+  return validated;
 }
 
 export function validateProgramAgainstActiveConstraints(args: {
@@ -670,7 +943,38 @@ export function validateLiveWorkoutWrite(
       restoreMissingPlanPatterns: options.restoreMissingPlanPatterns,
     },
   });
-  return result.workout ?? collapseWorkoutToRest(workout);
+  const validated = result.workout ?? collapseWorkoutToRest(workout);
+  return validated;
+}
+
+/** Resolve and validate the contract owned by an explicit date override. */
+export function resolveLiveDateMutationExposureContract(
+  date: string,
+  workout: Workout,
+): { weekStart: string; contract: WeeklyExposureContract } | null {
+  return resolveLiveDateMutationExposure({
+    date,
+    workout,
+    context: liveValidationContext(),
+  });
+}
+
+export function resolveLiveEditedWeekExposureContract(
+  weekStart: string,
+): { weekStart: string; contract: WeeklyExposureContract } | null {
+  const state = require('../store/programStore').useProgramStore.getState();
+  const weekEnd = addDaysISO(weekStart, 6);
+  const dates = Object.keys(state.dateOverrides ?? {})
+    .filter((date) => date >= weekStart && date <= weekEnd)
+    .sort();
+  const date = dates[dates.length - 1];
+  const workout = date ? state.dateOverrides[date] as Workout | undefined : undefined;
+  if (!date || !workout) return null;
+  return resolveLiveDateMutationExposure({
+    date,
+    workout,
+    context: liveValidationContext(),
+  });
 }
 
 export function validateLiveNullableWorkoutWrite(
@@ -705,5 +1009,112 @@ export function validateLiveWeekOverlayWrite(
       return [date, result.workout];
     }),
   );
-  return changed ? { ...overlay, workoutsByDate } : overlay;
+  const validatedOverlay = changed ? { ...overlay, workoutsByDate } : overlay;
+  const state = require('../store/programStore').useProgramStore.getState();
+  const baseMicrocycle = (state.currentProgram?.microcycles ?? []).find(
+    (microcycle: Microcycle) =>
+      overlay.weekStart >= microcycle.startDate.slice(0, 10) &&
+      overlay.weekStart <= microcycle.endDate.slice(0, 10),
+  ) ?? (
+    state.currentMicrocycle &&
+    overlay.weekStart >= state.currentMicrocycle.startDate.slice(0, 10) &&
+    overlay.weekStart <= state.currentMicrocycle.endDate.slice(0, 10)
+      ? state.currentMicrocycle
+      : null
+  );
+  const exposureContract = state.exposureContractsByWeek?.[overlay.weekStart] ??
+    validatedOverlay.exposureContract ?? baseMicrocycle?.exposureContract;
+  if (!exposureContract) return validatedOverlay;
+
+  const effectiveWorkouts: Workout[] = [];
+  for (let offset = 0; offset < 7; offset++) {
+    const date = addDaysISO(overlay.weekStart, offset);
+    const manual = state.dateOverrides?.[date] as Workout | undefined;
+    const hasOverlayEntry = Object.prototype.hasOwnProperty.call(workoutsByDate, date);
+    const dow = new Date(`${date}T12:00:00`).getDay();
+    const workout = manual ?? (
+      hasOverlayEntry
+        ? workoutsByDate[date]
+        : baseMicrocycle?.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null
+    );
+    if (workout) effectiveWorkouts.push(workout);
+  }
+  const targetMicrocycle: Microcycle = {
+    ...(baseMicrocycle ?? {
+      id: validatedOverlay.id,
+      programId: state.currentProgram?.id ?? 'overlay-program',
+      weekNumber: 1,
+      miniCycleNumber: 1,
+      intensityMultiplier: 1,
+      startDate: `${overlay.weekStart}T12:00:00.000Z`,
+      endDate: `${overlay.weekEnd}T12:00:00.000Z`,
+      workouts: [],
+      createdAt: validatedOverlay.createdAt,
+      updatedAt: validatedOverlay.updatedAt,
+    }),
+    exposureContract,
+    workouts: effectiveWorkouts,
+  };
+  const explicitWeekEdits = Object.entries(state.dateOverrides ?? {})
+    .filter(([date]) => date >= overlay.weekStart && date <= overlay.weekEnd) as Array<[string, Workout]>;
+  const explicitGameEdit = explicitWeekEdits.find(([, workout]) =>
+    classifyVisibleSession(workout).anchors.game,
+  );
+  const originalGameDate = exposureContract.anchors.gameDay === null
+    ? null
+    : addDaysISO(overlay.weekStart, (exposureContract.anchors.gameDay + 6) % 7);
+  const explicitlyRemovedOriginalGame = !!originalGameDate &&
+    Object.prototype.hasOwnProperty.call(state.dateOverrides ?? {}, originalGameDate);
+  const targetGameDay = explicitGameEdit
+    ? new Date(`${explicitGameEdit[0]}T12:00:00`).getDay()
+    : explicitlyRemovedOriginalGame
+      ? null
+      : exposureContract.anchors.gameDay;
+  let resolvedContract = reResolveContractForActiveConstraints({
+    contract: exposureContract,
+    microcycle: targetMicrocycle,
+    activeConstraints: context.activeConstraints,
+    profile: context.profile,
+    teamTrainingDayNumbers: effectiveWorkouts
+      .filter((workout) => classifyVisibleSession(workout).anchors.teamTraining)
+      .map((workout) => workout.dayOfWeek),
+    hasGame: targetGameDay !== null,
+    gameDay: targetGameDay,
+  });
+  resolvedContract = reconcileContractForSafetyTransformations({
+    contract: resolvedContract,
+    workouts: effectiveWorkouts,
+    weekStart: overlay.weekStart,
+    activeConstraints: context.activeConstraints,
+  });
+  let validation = evaluateEffectiveWeekExposureContract(
+    resolvedContract,
+    effectiveWorkouts,
+    overlay.weekStart,
+  );
+  const hasExplicitDateEdit = Object.keys(state.dateOverrides ?? {}).some(
+    (date) => date >= overlay.weekStart && date <= overlay.weekEnd,
+  );
+  if (!validation.accepted && hasExplicitDateEdit) {
+    resolvedContract = reconcileWeeklyExposureContractToLedger(
+      resolvedContract,
+      validation.ledger,
+      'explicit_user_override',
+      'A preserved explicit date edit changes this rebuilt target week.',
+    );
+    validation = evaluateEffectiveWeekExposureContract(
+      resolvedContract,
+      effectiveWorkouts,
+      overlay.weekStart,
+    );
+  }
+  if (!validation.accepted) {
+    assertEffectiveMicrocycleExposure({
+      ...targetMicrocycle,
+      exposureContract: resolvedContract,
+    });
+  }
+  return resolvedContract === validatedOverlay.exposureContract
+    ? validatedOverlay
+    : { ...validatedOverlay, exposureContract: resolvedContract };
 }

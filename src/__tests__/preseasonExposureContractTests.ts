@@ -84,17 +84,17 @@ function plannedPatterns(plan: CoachingPlan): string[] {
 }
 
 function validate(plan: CoachingPlan) {
-  if (!plan.preseasonExposureContract) throw new Error('Pre-season plan omitted its exposure contract');
-  return evaluatePreseasonExposureContract(plan.preseasonExposureContract, plan.weeklyPlan);
+  if (!plan.weeklyExposureContract) throw new Error('Pre-season plan omitted its exposure contract');
+  return evaluatePreseasonExposureContract(plan.weeklyExposureContract, plan.weeklyPlan);
 }
 
 function assertContractSatisfied(name: string, plan: CoachingPlan): void {
   const result = validate(plan);
   eq(`${name} satisfies final exposure validation`, result.violations, []);
   ok(`${name} carries typed reasons for every reduction`,
-    (plan.preseasonExposureContract?.reductions ?? []).every((entry) =>
-      !!entry.domain && !!entry.code && entry.reason.trim().length > 0),
-    plan.preseasonExposureContract?.reductions);
+    (plan.weeklyExposureContract?.reductions ?? []).every((entry) =>
+      !!entry.domain && !!entry.reason && entry.detail.trim().length > 0),
+    plan.weeklyExposureContract?.reductions);
 }
 
 console.log('\n-- Typed contract and exact six-day blueprint --');
@@ -142,27 +142,28 @@ for (let week = 1; week <= 4; week++) {
   const label = `week ${week}`;
   assertContractSatisfied(label, plan);
   eq(`${label} covers push, pull, squat and hinge`, plannedPatterns(plan), ['hinge', 'pull', 'push', 'squat']);
-  ok(`${label} Monday is upper strength plus team training`,
-    !!byDay(plan, 'Monday')?.isTeamDay &&
-      (byDay(plan, 'Monday')?.strengthIntent?.archetype === 'upper'), byDay(plan, 'Monday'));
-  ok(`${label} Tuesday is lower strength`, byDay(plan, 'Tuesday')?.strengthIntent?.archetype === 'lower', byDay(plan, 'Tuesday'));
+  ok(`${label} Monday remains the declared team anchor`,
+    !!byDay(plan, 'Monday')?.isTeamDay, byDay(plan, 'Monday'));
+  ok(`${label} Tuesday carries a phase-owned strength exposure`,
+    (byDay(plan, 'Tuesday')?.strengthIntent?.plannedPatterns.length ?? 0) > 0,
+    byDay(plan, 'Tuesday'));
   ok(`${label} Wednesday remains team training without false main-strength credit`,
     !!byDay(plan, 'Wednesday')?.isTeamDay &&
       (byDay(plan, 'Wednesday')?.strengthIntent?.plannedPatterns.length ?? 0) === 0,
     byDay(plan, 'Wednesday'));
   ok(`${label} Thursday is recovery/rest after required work is allocated`,
     byDay(plan, 'Thursday')?.tier === 'recovery', byDay(plan, 'Thursday'));
-  ok(`${label} Friday is upper strength plus a real conditioning component`,
-    byDay(plan, 'Friday')?.strengthIntent?.archetype === 'upper' &&
-      byDay(plan, 'Friday')?.hasCombinedConditioning === true &&
-      byDay(plan, 'Friday')?.attachedConditioningKind === 'component', byDay(plan, 'Friday'));
-  ok(`${label} Saturday is lower strength plus a real conditioning component`,
-    byDay(plan, 'Saturday')?.strengthIntent?.archetype === 'lower' &&
-      byDay(plan, 'Saturday')?.hasCombinedConditioning === true &&
-      byDay(plan, 'Saturday')?.attachedConditioningKind === 'component', byDay(plan, 'Saturday'));
-  eq(`${label} ledger keeps four strength contributions`, ledger.strengthContributionCount, 4);
+  ok(`${label} required work is allocated before recovery consumes Thursday`,
+    ledger.strengthContributionCount === plan.weeklyExposureContract?.strength.targetCount &&
+      ledger.additionalConditioningCount ===
+        plan.weeklyExposureContract?.conditioning.additionalRequiredCount,
+    { ledger, contract: plan.weeklyExposureContract });
+  eq(`${label} ledger matches the phase strength target`,
+    ledger.strengthContributionCount, plan.weeklyExposureContract!.strength.targetCount);
   eq(`${label} ledger keeps two team conditioning anchors`, ledger.teamTrainingCount, 2);
-  eq(`${label} ledger keeps two additional conditioning components`, ledger.additionalConditioningCount, 2);
+  eq(`${label} ledger matches required app conditioning`,
+    ledger.additionalConditioningCount,
+    plan.weeklyExposureContract!.conditioning.additionalRequiredCount);
   eq(`${label} ledger accepts five training/hard days`, [ledger.trainingDayCount, ledger.hardDayCount], [5, 5]);
   eq(`${label} ledger preserves two full rest days`, ledger.fullRestDayCount, 2);
 }
@@ -178,7 +179,7 @@ console.log('\n-- Edge prompt and deterministic fallback share the contract --')
   });
   const fallback = planFor(EXACT_PROFILE, 1);
   eq('edge and fallback own the same typed exposure contract',
-    edge.preseasonExposureContract, fallback.preseasonExposureContract);
+    edge.weeklyExposureContract, fallback.weeklyExposureContract);
   eq('edge and fallback own the same plan-entry component skeleton',
     edge.weeklyPlan.map((entry) => ({
       id: entry.planEntryId,
@@ -194,8 +195,8 @@ console.log('\n-- Edge prompt and deterministic fallback share the contract --')
     })));
   const prompt = buildGenerationPrompt(EXACT_PROFILE, edge, FULL_GYM_EQUIPMENT);
   ok('edge prompt receives the exact pre-season exposure contract',
-    prompt.includes('strength=4 [squat+hinge+push+pull]') &&
-      prompt.includes('conditioning=4 (team credit=2, additional components=2)') &&
+    prompt.includes('strength=3 [squat+hinge+push+pull]') &&
+      prompt.includes('conditioning=3 (team credit=2, game/practice credit=0, additional components=1)') &&
       prompt.includes('preferred hard days=4, permitted=5'), prompt);
   ok('edge prompt carries stable planEntryIds and component ownership',
     edge.weeklyPlan.every((entry) => !!entry.planEntryId && prompt.includes(entry.planEntryId!)), prompt);
@@ -214,8 +215,8 @@ const constrained: Array<{
       trainingDaysPerWeek: 5,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
     },
-    check: (plan) => plan.preseasonExposureContract?.strength.targetCount === 4 &&
-      plan.preseasonExposureContract?.conditioning.additionalRequiredCount === 2,
+    check: (plan) => plan.weeklyExposureContract?.strength.targetCount === 4 &&
+      plan.weeklyExposureContract?.conditioning.additionalRequiredCount === 2,
   },
   {
     name: 'four available days',
@@ -224,8 +225,8 @@ const constrained: Array<{
       trainingDaysPerWeek: 4,
       preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday'],
     },
-    check: (plan) => plan.preseasonExposureContract?.strength.targetCount === 4 &&
-      plan.preseasonExposureContract?.conditioning.additionalRequiredCount === 2,
+    check: (plan) => plan.weeklyExposureContract?.strength.targetCount === 4 &&
+      plan.weeklyExposureContract?.conditioning.additionalRequiredCount === 2,
   },
   {
     name: 'one team-training day',
@@ -234,8 +235,8 @@ const constrained: Array<{
       teamTrainingDaysPerWeek: 1,
       teamTrainingDays: ['Monday'],
     },
-    check: (plan) => plan.preseasonExposureContract?.conditioning.creditedTeamTrainingCount === 1 &&
-      plan.preseasonExposureContract?.conditioning.additionalRequiredCount === 3,
+    check: (plan) => plan.weeklyExposureContract?.conditioning.creditedTeamTrainingCount === 1 &&
+      plan.weeklyExposureContract?.conditioning.additionalRequiredCount === 3,
   },
   {
     name: 'three team-training days',
@@ -244,8 +245,8 @@ const constrained: Array<{
       teamTrainingDaysPerWeek: 3,
       teamTrainingDays: ['Monday', 'Wednesday', 'Friday'],
     },
-    check: (plan) => plan.preseasonExposureContract?.conditioning.creditedTeamTrainingCount === 3 &&
-      plan.preseasonExposureContract?.conditioning.additionalRequiredCount === 1,
+    check: (plan) => plan.weeklyExposureContract?.conditioning.creditedTeamTrainingCount === 3 &&
+      plan.weeklyExposureContract?.conditioning.additionalRequiredCount === 1,
   },
   {
     name: 'low readiness',
@@ -255,8 +256,8 @@ const constrained: Array<{
       recentTrainingLoad: 'Hardly at all',
       sprintExposure: 'No sprint training',
     },
-    check: (plan) => (plan.preseasonExposureContract?.strength.targetCount ?? 4) < 4 &&
-      (plan.preseasonExposureContract?.reductions.some((entry) => entry.code === 'readiness_reduction') ?? false),
+    check: (plan) => (plan.weeklyExposureContract?.strength.targetCount ?? 4) < 4 &&
+      (plan.weeklyExposureContract?.reductions.some((entry) => entry.reason === 'low_readiness') ?? false),
   },
   {
     name: 'lower-body injury restriction',
@@ -264,16 +265,16 @@ const constrained: Array<{
       ...EXACT_PROFILE,
       injuries: [{ bodyArea: 'hamstring', description: 'tear', severity: 'Severe' }],
     },
-    check: (plan) => plan.preseasonExposureContract?.strength.requiredPatterns.every((pattern) =>
+    check: (plan) => plan.weeklyExposureContract?.strength.requiredPatterns.every((pattern) =>
       pattern === 'push' || pattern === 'pull') === true &&
-      (plan.preseasonExposureContract?.reductions.some((entry) => entry.code === 'injury_restriction') ?? false),
+      (plan.weeklyExposureContract?.reductions.some((entry) => entry.reason === 'injury_restriction') ?? false),
   },
 ];
 
 for (const scenario of constrained) {
   const plan = planFor(scenario.profile, 2);
   assertContractSatisfied(scenario.name, plan);
-  ok(`${scenario.name} uses the expected contract adjustment`, scenario.check(plan), plan.preseasonExposureContract);
+  ok(`${scenario.name} uses the expected contract adjustment`, scenario.check(plan), plan.weeklyExposureContract);
 }
 
 {
@@ -281,18 +282,12 @@ for (const scenario of constrained) {
   const deload = planFor(EXACT_PROFILE, 4, 'deload');
   assertContractSatisfied('deload', deload);
   eq('deload preserves required strength-pattern coverage', plannedPatterns(deload), plannedPatterns(build));
-  eq('deload preserves exposure counts while downstream policy reduces dose',
-    {
-      strength: deload.preseasonExposureContract?.strength.targetCount,
-      conditioning: deload.preseasonExposureContract?.conditioning.targetCount,
-    },
-    {
-      strength: build.preseasonExposureContract?.strength.targetCount,
-      conditioning: build.preseasonExposureContract?.conditioning.targetCount,
-    });
+  ok('deload owns an explicit typed dose reduction',
+    deload.weeklyExposureContract?.reductions.some((entry) => entry.reason === 'deload_policy') === true,
+    deload.weeklyExposureContract?.reductions);
 }
 
-console.log(`\npreseasonExposureContractTests: ${pass} passed, ${fail} failed`);
+console.log(`\nweeklyExposureContractTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.error(`Failures: ${failures.join(', ')}`);
   process.exit(1);

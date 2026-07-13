@@ -39,8 +39,11 @@ import type {
   Workout,
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
+import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
+import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine';
 import { addDays, getMondayForDate } from './sessionResolver';
-import { selectMicrocycleForDate } from './programBlockState';
+import { getProgramBlockStateForDate, selectMicrocycleForDate } from './programBlockState';
+import { resolveEquipmentCapabilities } from './equipmentAvailability';
 import { collectWeekRebuildContext, decideOverrideSweep, type OverrideSweepDecision } from './weekRebuild';
 import { useProgramStore } from '../store/programStore';
 import { todayISOLocal } from './appDate';
@@ -107,6 +110,8 @@ export interface BuildRepeatWeekOverlayArgs {
    * date within the target week.
    */
   targetWinningWorkoutsByDate?: Record<string, Workout>;
+  /** Contract resolved for the target week; never copied from the source. */
+  targetExposureContract?: WeeklyExposureContract;
 }
 
 /**
@@ -140,6 +145,7 @@ export function buildRepeatWeekOverlay(args: BuildRepeatWeekOverlayArgs): WeekSc
     weekEnd: addDays(args.targetWeekStart, 6),
     anchorDate: null,
     reason: 'repeat_week',
+    exposureContract: args.targetExposureContract,
     workoutsByDate,
     createdAt: now,
     updatedAt: now,
@@ -199,6 +205,34 @@ function anchorDowsForProfile(profile: OnboardingData): number[] {
   return Array.from(dows);
 }
 
+function gameDowForProfile(profile: OnboardingData): number[] {
+  const gameDay = (profile.usualGameDay || profile.gameDay) as DayOfWeek | undefined;
+  return gameDay && gameDay in DAY_NAME_TO_NUM ? [DAY_NAME_TO_NUM[gameDay]] : [];
+}
+
+function resolveRepeatTargetExposureContract(args: {
+  profile: OnboardingData;
+  program: TrainingProgram;
+  targetWeekStart: string;
+}): WeeklyExposureContract {
+  const blockState = getProgramBlockStateForDate({
+    dateISO: args.targetWeekStart,
+    programStartISO: args.program.startDate,
+    blockNumber: args.program.microcycles?.[0]?.miniCycleNumber ?? 1,
+    seasonPhase: args.profile.seasonPhase,
+  });
+  const equipment = resolveEquipmentCapabilities(args.profile, [], args.targetWeekStart);
+  const inputs = onboardingToCoachingInputs(args.profile, {
+    availabilityDateISO: args.targetWeekStart,
+    miniCycleNumber: blockState.miniCycleNumber,
+    weekInBlock: blockState.weekInBlock,
+    weekNumber: blockState.weekNumber,
+    weekKind: blockState.weekKind,
+    appConditioningFeasible: equipment.conditioningModalities.length > 0,
+  });
+  return buildCoachingPlan(inputs).weeklyExposureContract!;
+}
+
 /**
  * Repeat the source week into the next week, committed as a `repeat_week`
  * overlay through the shared sweep policy. Synchronous; reads the live stores.
@@ -224,6 +258,7 @@ export function repeatWeekIntoNextWeek(args: {
 
   // Preserve any existing target-week one-off game so it keeps winning.
   const existingTargetOverlay = useProgramStore.getState().weekScopedOverlays?.[targetWeekStart];
+  const targetMicrocycle = selectMicrocycleForDate(program, null, targetWeekStart);
   const targetWinningWorkoutsByDate: Record<string, Workout> = {};
   if (existingTargetOverlay && existingTargetOverlay.reason === 'one_off_game') {
     for (const [date, workout] of Object.entries(existingTargetOverlay.workoutsByDate)) {
@@ -234,8 +269,21 @@ export function repeatWeekIntoNextWeek(args: {
   const overlay = buildRepeatWeekOverlay({
     sourceWorkouts,
     targetWeekStart,
-    targetAnchorDows: anchorDowsForProfile(args.baseProfile),
+    // With an in-program target, its base anchor workouts win. Immediately
+    // beyond the current window there is no base team workout to fall through
+    // to, so retain the repeated recurring team session and omit only game
+    // content (fixture credit is projected by the target contract).
+    targetAnchorDows: targetMicrocycle
+      ? anchorDowsForProfile(args.baseProfile)
+      : gameDowForProfile(args.baseProfile),
     targetWinningWorkoutsByDate,
+    targetExposureContract:
+      existingTargetOverlay?.exposureContract ?? targetMicrocycle?.exposureContract ??
+        resolveRepeatTargetExposureContract({
+          profile: args.baseProfile,
+          program,
+          targetWeekStart,
+        }),
   });
 
   // Shared sweep policy — preserve manual edits / live-constraint overrides,

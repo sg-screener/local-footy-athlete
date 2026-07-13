@@ -44,6 +44,7 @@ import type { StrengthIntent } from '../../rules/strengthPatternContributions';
 import { resolveWeeklyConditioningFeasibility } from '../../rules/conditioningFeasibility';
 import { resolveOffseasonSubphase } from '../../rules/offseasonSubphase';
 import { resolvePreseasonSubphase } from '../../rules/preseasonSubphase';
+import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
 import {
   getProgrammingRoleBias,
   normalizeOnboardingRole,
@@ -198,6 +199,9 @@ export function buildGeneratedMicrocycles(args: {
     const allocatedWeekPlan = args.coachingInputs
       ? buildCoachingPlan({
           ...args.coachingInputs,
+          appConditioningFeasible: args.availableConditioningModalities !== undefined
+            ? args.availableConditioningModalities.length > 0
+            : args.coachingInputs.appConditioningFeasible,
           miniCycleNumber: blockState.miniCycleNumber,
           weekInBlock: blockState.weekInBlock,
           weekNumber: blockState.weekNumber,
@@ -266,6 +270,26 @@ export function buildGeneratedMicrocycles(args: {
       weekKind: blockState.weekKind,
       generationConstraints: args.generationConstraints,
     });
+    const exposureContract = weekPlan.weeklyExposureContract;
+    if (exposureContract) {
+      const finalValidation = evaluateEffectiveWeekExposureContract(
+        exposureContract,
+        workouts,
+        blockState.weekStart,
+      );
+      if (!finalValidation.accepted) {
+        const detail = finalValidation.unresolvedShortfalls
+          .map((entry) => `${entry.code}:${entry.domain ?? 'safety'}=${JSON.stringify(entry.actual)}`)
+          .join(', ');
+        logger.error('[ProgramGen] Final effective-week exposure rejection', {
+          weekNumber: blockState.weekNumber,
+          contract: exposureContract,
+          ledger: finalValidation.ledger,
+          unresolvedShortfalls: finalValidation.unresolvedShortfalls,
+        });
+        throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
+      }
+    }
 
     if (isDevBuild()) {
       const sourceByDay = new Map(sourceCoachWorkouts.map((workout) => [workout.dayOfWeek, workout]));
@@ -317,6 +341,7 @@ export function buildGeneratedMicrocycles(args: {
       endDate: dateAtNoonISO(blockState.weekEnd),
       miniCycleNumber: blockState.miniCycleNumber,
       weekKind: blockState.weekKind,
+      exposureContract,
       intensityMultiplier: blockState.intensityMultiplier,
       workouts,
       createdAt: new Date().toISOString(),
@@ -366,6 +391,7 @@ export function generateProgramLocally(
   const coachingInputs = onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO,
     generationConstraints,
+    appConditioningFeasible: resolvedEquipment.conditioningModalities.length > 0,
   });
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,
@@ -849,6 +875,7 @@ export async function generateProgramFromProfile(
   const coachingInputs = onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO,
     generationConstraints,
+    appConditioningFeasible: resolvedEquipment.conditioningModalities.length > 0,
   });
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,
@@ -1352,13 +1379,15 @@ export function buildGenerationPrompt(
   // ─── Weekly skeleton from coaching engine ───
   if (weeklyPlan.length > 0) {
     parts.push('\nWEEKLY PLAN (from coaching engine — fill each session with exercises):');
-    if (c.preseasonExposureContract) {
-      const exposure = c.preseasonExposureContract;
+    if (c.weeklyExposureContract) {
+      const exposure = c.weeklyExposureContract;
       parts.push(
-        `PRE-SEASON EXPOSURE CONTRACT: strength=${exposure.strength.targetCount} ` +
+        `WEEKLY EXPOSURE CONTRACT (${exposure.identity.mode}): strength=${exposure.strength.targetCount} ` +
         `[${exposure.strength.requiredPatterns.join('+')}]; conditioning=${exposure.conditioning.targetCount} ` +
         `(team credit=${exposure.conditioning.creditedTeamTrainingCount}, ` +
+        `game/practice credit=${exposure.conditioning.creditedGameOrPracticeMatchCount}, ` +
         `additional components=${exposure.conditioning.additionalRequiredCount}); ` +
+        `sprint/COD=${exposure.sprintCod.targetCount}; ` +
         `preferred hard days=${exposure.hardDays.preferredCount}, ` +
         `permitted=${exposure.hardDays.permittedCount}; ` +
         `minimum full rest days=${exposure.recovery.minimumFullRestDays}.`,
