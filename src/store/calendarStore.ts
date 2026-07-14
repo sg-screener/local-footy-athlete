@@ -23,6 +23,17 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type CalendarDayType = 'game' | 'rest' | 'noGame';
 
+function commitMark(date: string, mark: CalendarDayType | null, expectedCurrentMark?: CalendarDayType): void {
+  // Dynamic loading keeps the accepted transaction owner above the legacy
+  // compatibility mirror without creating a store-initialisation cycle.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  require('./acceptedStateTransaction').commitCalendarMarkTransaction({
+    date,
+    mark,
+    expectedCurrentMark,
+  });
+}
+
 interface CalendarState {
   // Map of date string → day type
   markedDays: Record<string, CalendarDayType>;
@@ -54,41 +65,17 @@ export const useCalendarStore = create<CalendarState>()(
       markedDays: {},
       selectedDate: null,
 
-      setGameDay: (date) =>
-        set((state) => ({
-          markedDays: { ...state.markedDays, [date]: 'game' },
-        })),
+      setGameDay: (date) => commitMark(date, 'game'),
 
-      removeGameDay: (date) =>
-        set((state) => {
-          const updated = { ...state.markedDays };
-          if (updated[date] === 'game') delete updated[date];
-          return { markedDays: updated };
-        }),
+      removeGameDay: (date) => commitMark(date, null, 'game'),
 
-      setRestDay: (date) =>
-        set((state) => ({
-          markedDays: { ...state.markedDays, [date]: 'rest' },
-        })),
+      setRestDay: (date) => commitMark(date, 'rest'),
 
-      removeRestDay: (date) =>
-        set((state) => {
-          const updated = { ...state.markedDays };
-          if (updated[date] === 'rest') delete updated[date];
-          return { markedDays: updated };
-        }),
+      removeRestDay: (date) => commitMark(date, null, 'rest'),
 
-      setNoGame: (date) =>
-        set((state) => ({
-          markedDays: { ...state.markedDays, [date]: 'noGame' },
-        })),
+      setNoGame: (date) => commitMark(date, 'noGame'),
 
-      removeNoGame: (date) =>
-        set((state) => {
-          const updated = { ...state.markedDays };
-          if (updated[date] === 'noGame') delete updated[date];
-          return { markedDays: updated };
-        }),
+      removeNoGame: (date) => commitMark(date, null, 'noGame'),
 
       setSelectedDate: (date) => set({ selectedDate: date }),
 
@@ -110,22 +97,58 @@ export const useCalendarStore = create<CalendarState>()(
         return gameDays[0] || null;
       },
 
-      clearAllGames: () =>
-        set((state) => {
-          const updated: Record<string, CalendarDayType> = {};
-          for (const [date, type] of Object.entries(state.markedDays)) {
-            if (type === 'game' || type === 'noGame') continue;
-            updated[date] = type;
+      clearAllGames: () => {
+        const current = get().markedDays;
+        const updated: Record<string, CalendarDayType> = {};
+        const affectedDates: string[] = [];
+        for (const [date, type] of Object.entries(current)) {
+          if (type === 'game' || type === 'noGame') {
+            affectedDates.push(date);
+            continue;
           }
-          return { markedDays: updated };
-        }),
+          updated[date] = type;
+        }
+        if (affectedDates.length === 0) return;
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitCalendarStateTransaction({
+          reason: 'calendar:clear_all_games',
+          markedDays: updated,
+          affectedDates,
+          fixtureChangedDates: affectedDates,
+        });
+      },
 
-      clear: () => set({ markedDays: {}, selectedDate: null }),
+      clear: () => {
+        const affectedDates = Object.keys(get().markedDays);
+        if (affectedDates.length > 0) {
+          // eslint-disable-next-line @typescript-eslint/no-var-requires
+          require('./acceptedStateTransaction').commitCalendarStateTransaction({
+            reason: 'calendar:clear',
+            markedDays: {},
+            affectedDates,
+            fixtureChangedDates: affectedDates,
+          });
+        }
+        set({ selectedDate: null });
+      },
     }),
     {
       name: 'calendar-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ markedDays: state.markedDays }),
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) return;
+        const affectedDates = Object.keys(state.markedDays);
+        if (affectedDates.length === 0) return;
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitCalendarStateTransaction({
+          reason: 'calendar:hydration_acceptance',
+          markedDays: state.markedDays,
+          affectedDates,
+          fixtureChangedDates: affectedDates.filter((date) =>
+            state.markedDays[date] === 'game' || state.markedDays[date] === 'noGame'),
+        });
+      },
     }
   )
 );

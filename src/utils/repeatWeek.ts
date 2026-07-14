@@ -35,6 +35,7 @@
 import type {
   DayOfWeek,
   OnboardingData,
+  OverrideContext,
   TrainingProgram,
   Workout,
   WeekScopedWorkoutOverlay,
@@ -53,6 +54,7 @@ import { resolveEquipmentCapabilities } from './equipmentAvailability';
 import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
 import { collectWeekRebuildContext, decideOverrideSweep, type OverrideSweepDecision } from './weekRebuild';
 import { useProgramStore } from '../store/programStore';
+import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import { todayISOLocal } from './appDate';
 import { logger } from './logger';
 
@@ -365,11 +367,26 @@ export function repeatWeekIntoNextWeek(args: {
   });
   const sweep = decideOverrideSweep(context);
 
-  const store = useProgramStore.getState();
-  store.setWeekScopedOverlay(overlay);
-  for (const date of sweep.clear) {
-    store.removeManualOverride(date);
-  }
+  const state = useProgramStore.getState();
+  const cleared = new Set(sweep.clear);
+  const dateOverrides = Object.fromEntries(
+    Object.entries(state.dateOverrides).filter(([date]) => !cleared.has(date)),
+  ) as Record<string, Workout>;
+  const overrideContexts = Object.fromEntries(
+    Object.entries(state.overrideContexts).filter(([date]) => !cleared.has(date)),
+  ) as Record<string, OverrideContext>;
+  commitAcceptedStateTransaction({
+    reason: `repeat_week:${sourceWeekStart}:${targetWeekStart}`,
+    program: {
+      weekScopedOverlays: {
+        ...state.weekScopedOverlays,
+        [targetWeekStart]: overlay,
+      },
+      dateOverrides,
+      overrideContexts,
+    },
+    validateWeekStarts: [targetWeekStart, ...sweep.clear.map(getMondayForDate)],
+  });
 
   logger.debug('[repeatWeek] committed repeat_week overlay', {
     sourceWeekStart,
@@ -383,5 +400,14 @@ export function repeatWeekIntoNextWeek(args: {
 
 /** Clear a previously-committed repeat-week overlay for the given target week. */
 export function clearRepeatWeek(targetWeekStart: string): void {
-  useProgramStore.getState().removeWeekScopedOverlay(getMondayForDate(targetWeekStart.split('T')[0]));
+  const weekStart = getMondayForDate(targetWeekStart.split('T')[0]);
+  const state = useProgramStore.getState();
+  if (!Object.prototype.hasOwnProperty.call(state.weekScopedOverlays, weekStart)) return;
+  const overlays = { ...state.weekScopedOverlays };
+  delete overlays[weekStart];
+  commitAcceptedStateTransaction({
+    reason: `repeat_week:clear:${weekStart}`,
+    program: { weekScopedOverlays: overlays },
+    validateWeekStarts: [weekStart],
+  });
 }

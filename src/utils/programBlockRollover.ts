@@ -16,10 +16,10 @@ import type {
 import { useProgramStore } from '../store/programStore';
 import {
   getProgramBlockRolloverStatus,
-  selectMicrocycleForDate,
   type ProgramBlockRolloverStatus,
 } from './programBlockState';
 import {
+  commitRebuiltProgram,
   rebuildLocalWeek,
   type OverrideSweepDecision,
 } from './weekRebuild';
@@ -88,30 +88,16 @@ export function rolloverProgramBlock(args: {
     todayISO: status.nextBlockStart,
     blockNumber: status.nextBlockNumber ?? undefined,
     scope: 'block',
+    commit: false,
   });
-
-  // The canonical block commit intentionally clears week overlays. Restore
-  // only future exact-week overlays after the new shared template is in place.
-  for (const overlay of Object.values(relevantOverlays)) {
-    useProgramStore.getState().setWeekScopedOverlay(overlay);
-  }
-
-  // Canonical rebuilds select week 1 by default. If the app was unopened for
-  // part of the new block, point direct store consumers at the microcycle that
-  // actually contains the triggering date; the full resolver does this too.
-  const targetMicrocycle = selectMicrocycleForDate(
-    result.program,
-    null,
-    targetDateISO,
-  );
-  if (targetMicrocycle) {
-    const store = useProgramStore.getState();
-    store.setCurrentMicrocycle(targetMicrocycle);
-    const targetDayOfWeek = new Date(`${targetDateISO}T12:00:00`).getDay();
-    store.setTodayWorkout(
-      targetMicrocycle.workouts.find((workout) => workout.dayOfWeek === targetDayOfWeek) ?? null,
-    );
-  }
+  // The new program, phase clock, selected week/day and every still-relevant
+  // future overlay are validated as one candidate and published once. One
+  // invalid restored week aborts the complete rollover.
+  commitRebuiltProgram(result.program, result.sweep, {
+    weekScopedOverlays: relevantOverlays,
+    selectedDate: targetDateISO,
+    reason: `program_rollover:${status.nextBlockStart}`,
+  });
 
   logger.debug('[programBlockRollover] committed', {
     previousBlockNumber: status.currentBlockNumber,

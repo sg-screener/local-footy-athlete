@@ -19,6 +19,7 @@ import {
   type Section18Finding,
 } from './section18EffectiveWeekEvaluator';
 import { finaliseSection18SafetyWeek } from './section18SafetyFinaliser';
+import { applyGenerationSafetyToSection18Contract } from './section18SafetyPolicy';
 import type {
   Section18AuthorisedReduction,
   WeeklyExposureContractV2,
@@ -152,7 +153,12 @@ export function resolveFinalVisibleSection18Week(args: {
   };
   const fixture = args.contract.anchors.find((anchor) =>
     anchor.kind === 'game' || anchor.kind === 'practice_match');
-  if (fixture) markedDays[dateForDay(weekStart, fixture.dayOfWeek)] = 'game';
+  if (fixture) {
+    const fixtureDate = dateForDay(weekStart, fixture.dayOfWeek);
+    if (!Object.prototype.hasOwnProperty.call(markedDays, fixtureDate)) {
+      markedDays[fixtureDate] = 'game';
+    }
+  }
   if (!fixture && args.contract.identity.mode.startsWith('in_season_bye')) {
     const profileGameDay = args.profile?.usualGameDay ?? args.profile?.gameDay;
     const gameDayIndex = profileGameDay ? DAY_NAMES.indexOf(profileGameDay as typeof DAY_NAMES[number]) : -1;
@@ -526,6 +532,18 @@ function resolveCandidate(args: {
     });
     contract = lastEvaluation.contract;
     if (lastEvaluation.blockingViolations.length === 0) {
+      // Repairs (notably weekly power selection) can append a typed reduction
+      // after the initial safety projection. Refresh the derived safety view
+      // before persistence so hydrating this already-accepted contract is a
+      // fixed point rather than adding safety reasons on the second pass.
+      contract = applyGenerationSafetyToSection18Contract({ contract });
+      lastEvaluation = evaluateSection18EffectiveWeek({
+        contract,
+        workouts: lastVisible,
+        weekStart: args.input.weekStart,
+      });
+      contract = lastEvaluation.contract;
+      if (lastEvaluation.blockingViolations.length > 0) continue;
       return {
         status: repairs.length > 0 ? 'repaired' : 'accepted',
         contract,

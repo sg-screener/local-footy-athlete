@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+  DayOfWeek,
   TrainingProgram,
   Microcycle,
   OnboardingData,
@@ -23,7 +24,11 @@ import type { SessionComponentKind } from '../utils/sessionComponents';
 import { todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
+  buildSection18WeeklyExposureContractV2,
   migrateLegacyWeeklyExposureContractV2,
+  resolveSection18PhasePlannerSelection,
+  type Section18Subphase,
+  type Section18WeekMode,
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
@@ -36,6 +41,11 @@ import {
   resolveSeasonPhaseClock,
   type SeasonPhaseClock,
 } from '../rules/seasonPhaseClock';
+import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import type { CalendarDayType } from './calendarStore';
+import type { ReadinessSignal } from '../utils/readiness';
+import type { ActiveConstraint } from './coachUpdatesStore';
+import type { InjuryState } from '../utils/injuryProgression';
 
 /**
  * ProgramStore is the final persistence boundary for every generated/edit
@@ -131,11 +141,179 @@ function canonicaliseHydratedWorkout(
   }).workout;
 }
 
+function hydratedWorkoutNeedsIngressCanonicalisation(workout: Workout): boolean {
+  const hasStrength = !!workout.strengthIntent?.effectivePatterns.length ||
+    !!workout.strengthPatternContributions?.length ||
+    workout.exercises.some((row) => row.section18Evidence?.role === 'main_strength');
+  const hasConditioning = !!workout.conditioningBlock ||
+    workout.section18Evidence?.conditioningRole !== undefined ||
+    workout.hasCombinedConditioning === true;
+  return (
+    (!!workout.strengthPatternContributions?.length && !workout.strengthIntent) ||
+    (hasStrength && hasConditioning && workout.workoutType !== 'Mixed')
+  );
+}
+
+export class Section18LegacyMigrationError extends Error {
+  readonly code = 'section18_legacy_migration_failed';
+
+  constructor(message: string) {
+    super(message);
+    this.name = 'Section18LegacyMigrationError';
+  }
+}
+
+function legacyModeFor(args: {
+  phase: 'In-season' | 'Off-season' | 'Pre-season';
+  subphase: Section18Subphase | null;
+  hasFixture: boolean;
+}): { mode: Section18WeekMode; anchorState: 'game' | 'bye' | 'practice_match' | 'none'; declaredSubphase: Section18Subphase } {
+  if (args.phase === 'In-season') {
+    return args.hasFixture
+      ? { mode: 'in_season_game_week', anchorState: 'game', declaredSubphase: 'game_week' }
+      : { mode: 'in_season_bye_build', anchorState: 'bye', declaredSubphase: 'bye_build' };
+  }
+  if (args.phase === 'Off-season') {
+    if (
+      args.subphase !== 'early_offseason' &&
+      args.subphase !== 'mid_offseason' &&
+      args.subphase !== 'late_offseason'
+    ) {
+      throw new Section18LegacyMigrationError('Contractless Off-season week has no trustworthy phase-clock subphase.');
+    }
+    return { mode: args.subphase, anchorState: 'none', declaredSubphase: args.subphase };
+  }
+  if (args.hasFixture) {
+    return {
+      mode: 'practice_match_week',
+      anchorState: 'practice_match',
+      declaredSubphase: 'practice_match_week',
+    };
+  }
+  if (
+    args.subphase !== 'early_preseason' &&
+    args.subphase !== 'mid_preseason' &&
+    args.subphase !== 'late_preseason'
+  ) {
+    throw new Section18LegacyMigrationError('Contractless Pre-season week has no trustworthy phase-clock subphase.');
+  }
+  return { mode: args.subphase, anchorState: 'none', declaredSubphase: args.subphase };
+}
+
+function deriveContractlessLegacyContract(args: {
+  microcycle: Microcycle;
+  selectedPhase: 'In-season' | 'Off-season' | 'Pre-season' | null;
+  phaseResolution: ReturnType<typeof resolveSeasonPhaseClock> | null;
+}): WeeklyExposureContractV2 {
+  if (!args.selectedPhase || !args.phaseResolution) {
+    throw new Section18LegacyMigrationError('Contractless week has no trustworthy persisted phase clock.');
+  }
+  const workouts = args.microcycle.workouts ?? [];
+  const teamTrainingDays = workouts
+    .filter((workout) => classifyVisibleSession(workout).anchors.teamTraining)
+    .map((workout) => workout.dayOfWeek);
+  const fixture = workouts.find((workout) => classifyVisibleSession(workout).anchors.game);
+  const identity = legacyModeFor({
+    phase: args.selectedPhase,
+    subphase: args.phaseResolution.subphase,
+    hasFixture: !!fixture,
+  });
+  const availableDayCount = new Set(workouts.map((workout) => workout.dayOfWeek)).size;
+  const selection = resolveSection18PhasePlannerSelection({
+    mode: identity.mode,
+    readiness: 'medium',
+    availableDayCount,
+    teamTrainingCount: new Set(teamTrainingDays).size,
+    weekKind: args.phaseResolution.weekKind,
+  });
+  return buildSection18WeeklyExposureContractV2({
+    seasonPhase: args.selectedPhase,
+    declaredSubphase: identity.declaredSubphase,
+    mode: identity.mode,
+    blockNumber: args.microcycle.miniCycleNumber,
+    weekInBlock: ((Math.max(1, args.microcycle.weekNumber) - 1) % 4) + 1,
+    globalWeek: args.microcycle.weekNumber,
+    phaseWeek: args.phaseResolution.phaseWeekNumber,
+    phaseEntryWeekStartISO: args.phaseResolution.clock.phaseEntryWeekStartISO,
+    phaseClockSelectedPhase: args.phaseResolution.clock.selectedPhase,
+    phaseWeekProvenance: 'preserved_persisted_state',
+    weekKind: args.phaseResolution.weekKind,
+    anchorState: identity.anchorState,
+    teamTrainingDays,
+    fixtureDay: fixture?.dayOfWeek ?? null,
+    participationProvenance: 'legacy_unknown',
+    currentProductionClaimsAnchorCredit: false,
+    readiness: 'medium',
+    plannerSelected: {
+      mainStrength: selection.mainStrength,
+      optionalMainStrength: selection.optionalMainStrength,
+      coreConditioning: selection.coreConditioning,
+      optionalFlush: selection.optionalFlush,
+      optionalRecoveryAerobic: selection.optionalRecoveryAerobic,
+      sprintHighSpeed: selection.sprintHighSpeed,
+      powerPrimers: workouts.filter((workout) => !!workout.powerBlock).length,
+    },
+    prohibitedPatternProvenance: 'legacy_missing',
+    source: 'legacy_migration',
+  });
+}
+
+const LEGACY_DAY_NAMES: DayOfWeek[] = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+/**
+ * ProgramStore and ProfileStore hydrate independently. A contractless program
+ * therefore cannot assume the profile has already supplied its scheduling
+ * geometry when the accepted-week migration runs. The persisted workout days
+ * are trustworthy evidence that those days belonged to the old program; they
+ * are not anchor-participation evidence and never create reductions or credit.
+ */
+function legacyMigrationFallbackProfile(args: {
+  profile?: OnboardingData | null;
+  microcycle: Microcycle;
+  contract: WeeklyExposureContractV2;
+}): OnboardingData {
+  const persistedDays = Array.from(new Set(
+    (args.microcycle.workouts ?? [])
+      .map((workout) => workout.dayOfWeek)
+      .filter((day) => Number.isInteger(day) && day >= 0 && day <= 6),
+  )).sort((left, right) => (left === 0 ? 7 : left) - (right === 0 ? 7 : right));
+  const persistedDayNames = persistedDays.map((day) => LEGACY_DAY_NAMES[day]);
+  const profileDays = args.profile?.preferredTrainingDays?.filter(Boolean) ?? [];
+  const profileFrequency = args.profile?.trainingDaysPerWeek;
+  return {
+    ...(args.profile ?? {}),
+    seasonPhase: args.contract.identity.seasonPhase,
+    trainingDaysPerWeek: profileFrequency && profileFrequency > 0
+      ? profileFrequency
+      : persistedDays.length,
+    preferredTrainingDays: profileDays.length > 0
+      ? profileDays
+      : persistedDayNames,
+    // Contractless selection above deliberately uses the conservative medium
+    // tier. These values are generation-only defaults that reproduce that
+    // already-owned decision when the independently persisted profile has not
+    // hydrated yet; they are never written back as athlete answers.
+    recentTrainingLoad: args.profile?.recentTrainingLoad ?? 'Pretty consistent',
+    conditioningLevel: args.profile?.conditioningLevel ?? 'Good',
+    injuries: args.profile?.injuries ?? [],
+  };
+}
+
 function canonicaliseHydratedMicrocycle(
   microcycle: Microcycle,
   phase?: string,
   phaseClock?: SeasonPhaseClock,
+  profile?: OnboardingData | null,
 ): Microcycle {
+  const contractWasMissing = !microcycle.exposureContractV2 && !microcycle.exposureContract;
   const selectedPhase = phaseClock?.selectedPhase ?? (
     /pre/i.test(phase ?? '') ? 'Pre-season' :
       /off|base/i.test(phase ?? '') ? 'Off-season' :
@@ -157,6 +335,13 @@ function canonicaliseHydratedMicrocycle(
         })
       : undefined
   );
+  if (!exposureContractV2) {
+    exposureContractV2 = deriveContractlessLegacyContract({
+      microcycle,
+      selectedPhase,
+      phaseResolution,
+    });
+  }
   if (exposureContractV2 && phaseResolution) {
     const expectedSubphase = exposureContractV2.identity.anchorState === 'practice_match'
       ? 'practice_match_week'
@@ -175,7 +360,18 @@ function canonicaliseHydratedMicrocycle(
       },
     };
   }
-  let workouts = microcycle.workouts ?? [];
+  // Legacy row/contribution ownership must be translated before the weekly
+  // evaluator can count it, but this is only ingress normalisation: the
+  // complete resulting week still has to pass safety and the accepted-week
+  // gateway below before any hydrated state can publish.
+  let workouts = (microcycle.workouts ?? []).map((workout) =>
+    contractWasMissing || hydratedWorkoutNeedsIngressCanonicalisation(workout)
+      ? canonicaliseHydratedWorkout(
+          workout,
+          selectedPhase ?? phase,
+          phaseResolution?.weekKind ?? microcycle.weekKind,
+        )
+      : workout);
   if (exposureContractV2) {
     exposureContractV2 = applyGenerationSafetyToSection18Contract({
       contract: exposureContractV2,
@@ -191,17 +387,38 @@ function canonicaliseHydratedMicrocycle(
       },
     });
     // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fallbackProfile = exposureContractV2.source === 'legacy_migration'
+      ? legacyMigrationFallbackProfile({
+          profile,
+          microcycle,
+          contract: safety.contract,
+        })
+      : profile;
     const accepted = require('../rules/section18AcceptedWeekGateway')
       .requireSection18AcceptedWeek({
         contract: safety.contract,
         workouts: safety.workouts,
         weekStart: microcycle.startDate.slice(0, 10),
+        profile,
+        regenerate: fallbackProfile
+          ? () => require('../utils/postGenerationConstraintValidation')
+              .buildSection18ProductionFallbackCandidate({
+                contract: safety.contract,
+                weekStart: microcycle.startDate.slice(0, 10),
+                profile: fallbackProfile,
+              })
+          : undefined,
+        safeFallback: fallbackProfile
+          ? () => require('../utils/postGenerationConstraintValidation')
+              .buildSection18ProductionFallbackCandidate({
+                contract: safety.contract,
+                weekStart: microcycle.startDate.slice(0, 10),
+                profile: fallbackProfile,
+              })
+          : undefined,
       });
     workouts = accepted.canonicalWorkouts;
     exposureContractV2 = accepted.contract;
-  } else {
-    workouts = workouts.map((workout) =>
-      canonicaliseHydratedWorkout(workout, phase, phaseResolution?.weekKind ?? microcycle.weekKind));
   }
   return {
     ...microcycle,
@@ -216,7 +433,10 @@ function canonicaliseHydratedMicrocycle(
   };
 }
 
-export function canonicaliseHydratedProgram(program: TrainingProgram): TrainingProgram {
+export function canonicaliseHydratedProgram(
+  program: TrainingProgram,
+  profile?: OnboardingData | null,
+): TrainingProgram {
   const clockedProgram = ensureProgramSeasonPhaseClock(program);
   return {
     ...clockedProgram,
@@ -225,6 +445,7 @@ export function canonicaliseHydratedProgram(program: TrainingProgram): TrainingP
         microcycle,
         clockedProgram.programPhase,
         clockedProgram.seasonPhaseClock,
+        profile,
       )),
   };
 }
@@ -252,11 +473,12 @@ export function canonicaliseHydratedState(
     programAlreadyAccepted?: boolean;
     activeConstraints?: readonly import('./coachUpdatesStore').ActiveConstraint[];
     profile?: OnboardingData | null;
+    markedDays?: Readonly<Record<string, CalendarDayType>>;
     validateWeekStarts?: readonly string[];
   } = {},
 ): Partial<ProgramState> {
   let currentProgram = persistedState.currentProgram && !options.programAlreadyAccepted
-    ? canonicaliseHydratedProgram(persistedState.currentProgram)
+    ? canonicaliseHydratedProgram(persistedState.currentProgram, options.profile)
     : persistedState.currentProgram;
   if (currentProgram && options.activeConstraints) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -274,6 +496,7 @@ export function canonicaliseHydratedState(
         persistedState.currentMicrocycle,
         phase,
         currentProgram?.seasonPhaseClock,
+        options.profile,
       )
     : persistedState.currentMicrocycle;
   if (currentMicrocycle && options.activeConstraints) {
@@ -287,9 +510,19 @@ export function canonicaliseHydratedState(
       });
   }
   let weekScopedOverlays = persistedState.weekScopedOverlays
-    ? Object.fromEntries(Object.entries(persistedState.weekScopedOverlays).map(([weekStart, overlay]) => [
+      ? Object.fromEntries(Object.entries(persistedState.weekScopedOverlays).map(([weekStart, overlay]) => [
         weekStart,
         (() => {
+          if (
+            !overlay.exposureContractV2 &&
+            !overlay.exposureContract &&
+            Object.keys(overlay.workoutsByDate ?? {}).length === 0
+          ) {
+            // Empty future owner placeholders carry no material programming
+            // yet. Preserve them byte-for-byte until their target week gains
+            // a base contract during rebuild/rollover materialisation.
+            return overlay;
+          }
           let exposureContractV2 = overlay.exposureContractV2 ?? (
             overlay.exposureContract
               ? migrateLegacyWeeklyExposureContractV2(overlay.exposureContract)
@@ -344,7 +577,14 @@ export function canonicaliseHydratedState(
   let dateOverrides = persistedState.dateOverrides
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
         date,
-        canonicaliseHydratedSafetyWorkout(workout, safetyContractForDate(date), phase),
+        {
+          ...canonicaliseHydratedSafetyWorkout(workout, safetyContractForDate(date), phase),
+          // Date-keyed overrides own a concrete calendar day. Older edit
+          // writers used the 1..7 coaching convention (Sunday=7), whereas
+          // Workout uses JavaScript 0..6. Normalise at ingress so the weekly
+          // gateway cannot mistake a valid Sunday override for a missing day.
+          dayOfWeek: new Date(`${date.slice(0, 10)}T12:00:00`).getDay(),
+        },
       ]))
     : persistedState.dateOverrides;
 
@@ -402,6 +642,15 @@ export function canonicaliseHydratedState(
         contract,
         workouts: Array.from(effectiveByDate.values()),
         weekStart,
+        profile: options.profile,
+        resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>
+          require('../rules/section18AcceptedWeekGateway').resolveFinalVisibleSection18Week({
+            contract,
+            workouts: candidateWorkouts,
+            weekStart,
+            profile: options.profile,
+            scheduleState: { markedDays: { ...(options.markedDays ?? {}) } },
+          }),
       });
     const acceptedByDay = new Map<number, Workout>(
       accepted.canonicalWorkouts.map((workout: Workout) => [workout.dayOfWeek, workout]),
@@ -428,6 +677,26 @@ export function canonicaliseHydratedState(
         workoutsByDate: overlayWorkouts,
         exposureContractV2: accepted.contract,
       };
+    } else {
+      // The accepted contract is the persisted ledger for a base-owned week.
+      // Repairs may live in explicit date overrides, but the corresponding
+      // achieved/reduction ledger must not remain stranded in the transient
+      // gateway result.
+      if (currentProgram && baseMicrocycle) {
+        currentProgram = {
+          ...currentProgram,
+          microcycles: currentProgram.microcycles.map((microcycle) =>
+            microcycle.id === baseMicrocycle.id
+              ? { ...microcycle, exposureContractV2: accepted.contract }
+              : microcycle),
+        };
+      }
+      if (currentMicrocycle && currentMicrocycle.id === baseMicrocycle?.id) {
+        currentMicrocycle = {
+          ...currentMicrocycle,
+          exposureContractV2: accepted.contract,
+        };
+      }
     }
   }
   return {
@@ -503,7 +772,16 @@ export interface SessionFeedback {
   notes?: string;
 }
 
-interface ProgramState {
+export interface AcceptedMaterialContext {
+  markedDays: Record<string, CalendarDayType>;
+  readinessSignalsByDate: Record<string, ReadinessSignal>;
+  activeConstraints: ActiveConstraint[];
+  activeInjury: InjuryState | null;
+  revision: number;
+  lastTransaction: string | null;
+}
+
+export interface ProgramState {
   currentProgram: TrainingProgram | null;
   currentMicrocycle: Microcycle | null;
   todayWorkout: Workout | null;
@@ -511,6 +789,14 @@ interface ProgramState {
   isLoading: boolean;
   error: string | null;
   blockState: StoredProgramBlockState | null;
+
+  /**
+   * One accepted material snapshot for all inputs that can change the visible
+   * Section 18 week. Calendar/readiness/constraint stores are compatibility
+   * mirrors; athlete-visible projection reads this context with the program
+   * surfaces published in the same ProgramStore state replacement.
+   */
+  acceptedMaterialContext: AcceptedMaterialContext;
 
   /**
    * Manual workout overrides — ONLY for explicit human/coach edits.
@@ -631,6 +917,14 @@ export const useProgramStore = create<ProgramState>()(
       isLoading: false,
       error: null,
       blockState: null,
+      acceptedMaterialContext: {
+        markedDays: {},
+        readinessSignalsByDate: {},
+        activeConstraints: [],
+        activeInjury: null,
+        revision: 0,
+        lastTransaction: null,
+      },
       dateOverrides: {},
       overrideContexts: {},
       weekScopedOverlays: {},
@@ -667,33 +961,33 @@ export const useProgramStore = create<ProgramState>()(
               currentProgram: candidateProgram,
               dateOverrides: candidateOverrides,
               overrideContexts: candidateOverrideContexts,
-            }, { programAlreadyAccepted: true })
+            }, {
+              programAlreadyAccepted: true,
+              profile: require('./profileStore').useProfileStore.getState().onboardingData,
+            })
           : null;
         const validatedProgram = acceptedSurfaces?.currentProgram ?? candidateProgram;
         const validatedOverrides = acceptedSurfaces?.dateOverrides ?? candidateOverrides;
         const validatedOverrideContexts = acceptedSurfaces?.overrideContexts ?? candidateOverrideContexts;
-        set(() => ({
-          currentProgram: validatedProgram,
-          currentMicrocycle: null,
-          todayWorkout: null,
-          dateOverrides: validatedOverrides,
-          overrideContexts: validatedOverrideContexts,
-          weekScopedOverlays: {},
-          exposureContractsByWeek: {},
-          blockState: validatedProgram
-            ? deriveStoredBlockStateFromProgram(validatedProgram, undefined)
-            : null,
-        }));
-        if (validatedProgram) {
-          const refreshed = new Map<string, WeeklyExposureContract>();
-          for (const date of Object.keys(useProgramStore.getState().dateOverrides)) {
-            const weekStart = mondayForDate(date);
-            if (refreshed.has(weekStart)) continue;
-            const resolution = resolveEditedWeekExposureContract(weekStart);
-            if (resolution) refreshed.set(weekStart, resolution.contract);
-          }
-          useProgramStore.setState({ exposureContractsByWeek: Object.fromEntries(refreshed) });
-        }
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: 'program:replace',
+          program: {
+            currentProgram: validatedProgram,
+            currentMicrocycle: null,
+            todayWorkout: null,
+            dateOverrides: validatedOverrides,
+            overrideContexts: validatedOverrideContexts,
+            weekScopedOverlays: {},
+            exposureContractsByWeek: {},
+            blockState: validatedProgram
+              ? deriveStoredBlockStateFromProgram(validatedProgram, undefined)
+              : null,
+          },
+          programAlreadyAccepted: true,
+          validateWeekStarts: validatedProgram?.microcycles.map((microcycle) =>
+            microcycle.startDate.slice(0, 10)) ?? [],
+        });
       },
 
       setBlockState: (blockState) => set({ blockState }),
@@ -706,15 +1000,28 @@ export const useProgramStore = create<ProgramState>()(
         return derived;
       },
 
-      setCurrentMicrocycle: (microcycle) => set({
-        currentMicrocycle: microcycle ? postValidateMicrocycle(microcycle) : null,
-      }),
+      setCurrentMicrocycle: (microcycle) => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: 'program:select_microcycle',
+          program: {
+            currentMicrocycle: microcycle ? postValidateMicrocycle(microcycle) : null,
+          },
+          validateWeekStarts: microcycle ? [microcycle.startDate.slice(0, 10)] : [],
+        });
+      },
 
-      setTodayWorkout: (workout) => set({
-        todayWorkout: workout
-          ? postValidateNullableWorkout(todayISOLocal(), workout)
-          : null,
-      }),
+      setTodayWorkout: (workout) => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: 'program:set_today_workout',
+          program: {
+            todayWorkout: workout
+              ? postValidateNullableWorkout(todayISOLocal(), workout)
+              : null,
+          },
+        });
+      },
 
       setGenerating: (generating) => set({ isGenerating: generating }),
 
@@ -728,25 +1035,34 @@ export const useProgramStore = create<ProgramState>()(
         // cleanup paths intentionally keep direct access. The final active-
         // constraint validator still runs here so no producer can reintroduce
         // unsafe work after its own checks.
-        const validatedWorkout = postValidateWorkout(date, workout, {
+        const validatedWorkout = {
+          ...postValidateWorkout(date, workout, {
           // A manual override is the explicit edited result. Preserve planned
           // intent for diagnostics, but never resurrect content the edit
           // deliberately removed.
-          restoreMissingPlanPatterns: false,
-        });
+            restoreMissingPlanPatterns: false,
+          }),
+          dayOfWeek: new Date(`${date.slice(0, 10)}T12:00:00`).getDay(),
+        };
         const exposureResolution = resolveDateMutationExposureContract(date, validatedWorkout);
-        set((state) => ({
-          dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },
-          exposureContractsByWeek: exposureResolution
-            ? {
-                ...state.exposureContractsByWeek,
-                [exposureResolution.weekStart]: exposureResolution.contract,
-              }
-            : state.exposureContractsByWeek,
-          overrideContexts: context
-            ? { ...state.overrideContexts, [date]: context }
-            : state.overrideContexts,
-        }));
+        const state = useProgramStore.getState();
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: `override:set:${date}`,
+          program: {
+            dateOverrides: { ...state.dateOverrides, [date]: validatedWorkout },
+            exposureContractsByWeek: exposureResolution
+              ? {
+                  ...state.exposureContractsByWeek,
+                  [exposureResolution.weekStart]: exposureResolution.contract,
+                }
+              : state.exposureContractsByWeek,
+            overrideContexts: context
+              ? { ...state.overrideContexts, [date]: context }
+              : state.overrideContexts,
+          },
+          validateWeekStarts: [mondayForDate(date)],
+        });
       },
 
       removeManualOverride: (date) => {
@@ -757,47 +1073,33 @@ export const useProgramStore = create<ProgramState>()(
         delete updatedOverrides[date];
         const updatedContexts = { ...state.overrideContexts };
         delete updatedContexts[date];
-        const accepted = canonicaliseHydratedState({
-          currentProgram: state.currentProgram,
-          currentMicrocycle: state.currentMicrocycle,
-          todayWorkout: state.todayWorkout,
-          dateOverrides: updatedOverrides,
-          overrideContexts: updatedContexts,
-          weekScopedOverlays: state.weekScopedOverlays,
-        }, {
-          programAlreadyAccepted: true,
-          validateWeekStarts: [weekStart],
-        });
         const exposureContractsByWeek = { ...state.exposureContractsByWeek };
-        if (!Object.keys(accepted.dateOverrides ?? {}).some((candidate) =>
+        if (!Object.keys(updatedOverrides).some((candidate) =>
           mondayForDate(candidate) === weekStart)) delete exposureContractsByWeek[weekStart];
-        set({
-          dateOverrides: accepted.dateOverrides ?? {},
-          overrideContexts: accepted.overrideContexts ?? {},
-          weekScopedOverlays: accepted.weekScopedOverlays ?? {},
-          exposureContractsByWeek,
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: `override:remove:${date}`,
+          program: {
+            dateOverrides: updatedOverrides,
+            overrideContexts: updatedContexts,
+            exposureContractsByWeek,
+          },
+          validateWeekStarts: [weekStart],
         });
       },
 
       clearManualOverrides: () => {
         const state = useProgramStore.getState();
         const affectedWeeks = Array.from(new Set(Object.keys(state.dateOverrides).map(mondayForDate)));
-        const accepted = canonicaliseHydratedState({
-          currentProgram: state.currentProgram,
-          currentMicrocycle: state.currentMicrocycle,
-          todayWorkout: state.todayWorkout,
-          dateOverrides: {},
-          overrideContexts: {},
-          weekScopedOverlays: state.weekScopedOverlays,
-        }, {
-          programAlreadyAccepted: true,
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: 'override:clear_all',
+          program: {
+            dateOverrides: {},
+            overrideContexts: {},
+            exposureContractsByWeek: {},
+          },
           validateWeekStarts: affectedWeeks,
-        });
-        set({
-          dateOverrides: accepted.dateOverrides ?? {},
-          overrideContexts: accepted.overrideContexts ?? {},
-          weekScopedOverlays: accepted.weekScopedOverlays ?? {},
-          exposureContractsByWeek: {},
         });
       },
 
@@ -849,12 +1151,18 @@ export const useProgramStore = create<ProgramState>()(
 
       setWeekScopedOverlay: (overlay) => {
         const validatedOverlay = postValidateWeekOverlay(overlay);
-        set((state) => ({
-          weekScopedOverlays: {
-            ...state.weekScopedOverlays,
-            [validatedOverlay.weekStart]: validatedOverlay,
+        const state = useProgramStore.getState();
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: `overlay:set:${validatedOverlay.weekStart}`,
+          program: {
+            weekScopedOverlays: {
+              ...state.weekScopedOverlays,
+              [validatedOverlay.weekStart]: validatedOverlay,
+            },
           },
-        }));
+          validateWeekStarts: [validatedOverlay.weekStart],
+        });
       },
 
       removeWeekScopedOverlay: (weekStart) => {
@@ -862,42 +1170,22 @@ export const useProgramStore = create<ProgramState>()(
         if (!Object.prototype.hasOwnProperty.call(state.weekScopedOverlays, weekStart)) return;
         const updated = { ...state.weekScopedOverlays };
         delete updated[weekStart];
-        const accepted = canonicaliseHydratedState({
-          currentProgram: state.currentProgram,
-          currentMicrocycle: state.currentMicrocycle,
-          todayWorkout: state.todayWorkout,
-          dateOverrides: state.dateOverrides,
-          overrideContexts: state.overrideContexts,
-          weekScopedOverlays: updated,
-        }, {
-          programAlreadyAccepted: true,
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: `overlay:remove:${weekStart}`,
+          program: { weekScopedOverlays: updated },
           validateWeekStarts: [weekStart],
-        });
-        set({
-          dateOverrides: accepted.dateOverrides ?? {},
-          overrideContexts: accepted.overrideContexts ?? {},
-          weekScopedOverlays: accepted.weekScopedOverlays ?? {},
         });
       },
 
       clearWeekScopedOverlays: () => {
         const state = useProgramStore.getState();
         const affectedWeeks = Object.keys(state.weekScopedOverlays);
-        const accepted = canonicaliseHydratedState({
-          currentProgram: state.currentProgram,
-          currentMicrocycle: state.currentMicrocycle,
-          todayWorkout: state.todayWorkout,
-          dateOverrides: state.dateOverrides,
-          overrideContexts: state.overrideContexts,
-          weekScopedOverlays: {},
-        }, {
-          programAlreadyAccepted: true,
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: 'overlay:clear_all',
+          program: { weekScopedOverlays: {} },
           validateWeekStarts: affectedWeeks,
-        });
-        set({
-          dateOverrides: accepted.dateOverrides ?? {},
-          overrideContexts: accepted.overrideContexts ?? {},
-          weekScopedOverlays: accepted.weekScopedOverlays ?? {},
         });
       },
 
@@ -1001,6 +1289,14 @@ export const useProgramStore = create<ProgramState>()(
           isLoading: false,
           error: null,
           blockState: null,
+          acceptedMaterialContext: {
+            markedDays: {},
+            readinessSignalsByDate: {},
+            activeConstraints: [],
+            activeInjury: null,
+            revision: 0,
+            lastTransaction: null,
+          },
           dateOverrides: {},
           overrideContexts: {},
           weekScopedOverlays: {},
@@ -1014,8 +1310,34 @@ export const useProgramStore = create<ProgramState>()(
       name: 'program-store',
       storage: createJSONStorage(() => AsyncStorage),
       merge: (persisted, current) => {
+        const incoming = (persisted as Partial<ProgramState> | undefined) ?? {};
+        const acceptedContext = incoming.acceptedMaterialContext;
+        const readinessConstraints = acceptedContext
+          ? Object.values(acceptedContext.readinessSignalsByDate ?? {}).flatMap((signal) =>
+              require('../utils/readinessConstraints').buildReadinessActiveConstraints(signal))
+          : [];
+        const constraintsById = new Map<string, ActiveConstraint>();
+        for (const constraint of [
+          ...(acceptedContext?.activeConstraints ?? []),
+          ...readinessConstraints,
+        ]) constraintsById.set(constraint.id, constraint);
         const persistedState = canonicaliseHydratedState(
-          (persisted as Partial<ProgramState> | undefined) ?? {},
+          incoming,
+          {
+            profile: require('./profileStore').useProfileStore.getState().onboardingData,
+            markedDays: acceptedContext?.markedDays,
+            activeConstraints: constraintsById.size > 0
+              ? Array.from(constraintsById.values())
+              : undefined,
+            validateWeekStarts: [
+              ...(incoming.currentProgram?.microcycles ?? []).map((microcycle) =>
+                microcycle.startDate.slice(0, 10)),
+              ...(incoming.currentMicrocycle
+                ? [incoming.currentMicrocycle.startDate.slice(0, 10)]
+                : []),
+              ...Object.keys(incoming.weekScopedOverlays ?? {}),
+            ],
+          },
         );
         const merged = { ...current, ...persistedState } as ProgramState;
         if (!merged.blockState) {
@@ -1025,11 +1347,22 @@ export const useProgramStore = create<ProgramState>()(
       },
       onRehydrateStorage: () => (_state, error) => {
         if (error) return;
-        // Both hydration orders are safe: persisted Contract v2 was conformed
-        // in merge, then currently-active constraints are projected once the
-        // Zustand state is live.
-        require('../utils/postGenerationConstraintValidation')
-          .revalidateLiveStoredProgramSafety();
+        const hydrated = useProgramStore.getState();
+        // Publish the complete hydrated/migrated program and material context
+        // through the same coordinator used at runtime. Legacy store hydration
+        // may happen before or after this; their own hooks re-enter this
+        // boundary with the staged mirror state.
+        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+          reason: 'program:hydration_acceptance',
+          validateWeekStarts: [
+            ...(hydrated.currentProgram?.microcycles ?? []).map((microcycle) =>
+              microcycle.startDate.slice(0, 10)),
+            ...(hydrated.currentMicrocycle
+              ? [hydrated.currentMicrocycle.startDate.slice(0, 10)]
+              : []),
+            ...Object.keys(hydrated.weekScopedOverlays ?? {}),
+          ],
+        });
       },
     },
   ),

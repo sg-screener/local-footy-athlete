@@ -50,9 +50,13 @@ import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
  */
 function useAthleteContext(): AthleteContext {
   const onboardingData = useProfileStore((s) => s.onboardingData);
+  const acceptedContext = useProgramStore((s) => s.acceptedMaterialContext);
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
-  const activeConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
+  const mirroredConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
+  const activeConstraints = acceptedContext.revision > 0
+    ? acceptedContext.activeConstraints
+    : mirroredConstraints;
   const todayISO = todayISOLocal();
 
   if (!onboardingData) return DEFAULT_ATHLETE_CONTEXT;
@@ -91,7 +95,11 @@ function useScheduleState(): ScheduleState & {
   const blockState = useProgramStore((s) => s.blockState);
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const weightOverrides = useProgramStore((s) => s.weightOverrides);
-  const markedDays = useCalendarStore((s) => s.markedDays);
+  const acceptedContext = useProgramStore((s) => s.acceptedMaterialContext);
+  const mirroredMarkedDays = useCalendarStore((s) => s.markedDays);
+  const markedDays = acceptedContext.revision > 0
+    ? acceptedContext.markedDays
+    : mirroredMarkedDays;
   const athleteContext = useAthleteContext();
   const onboardingData = useProfileStore((s) => s.onboardingData);
   // Reactive subscription on the recurring modality preference store.
@@ -112,12 +120,18 @@ function useScheduleState(): ScheduleState & {
   // bug where Deadlift / Nordic Lower kept showing after hammy 6/10).
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
-  const activeInjury = useCoachUpdatesStore((s: any) => s.activeInjury);
+  const mirroredActiveInjury = useCoachUpdatesStore((s: any) => s.activeInjury);
   // Subscribe to the FULL activeConstraints[] too. Non-injury entries
   // (fatigue / soreness / schedule / missed_session) flow through the
   // visible-program projection's `extraConstraints` seam — see
   // useResolvedDay / useResolvedWeek below.
-  const coachActiveConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
+  const mirroredCoachActiveConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
+  const activeInjury = acceptedContext.revision > 0
+    ? acceptedContext.activeInjury
+    : mirroredActiveInjury;
+  const coachActiveConstraints = acceptedContext.revision > 0
+    ? acceptedContext.activeConstraints
+    : mirroredCoachActiveConstraints;
 
   // Season phase from onboarding — null if not yet completed
   const seasonPhase = useProfileStore((s) => s.onboardingData?.seasonPhase) || null;
@@ -142,12 +156,18 @@ function useScheduleState(): ScheduleState & {
   // `medium`. Today's quick signal is applied as a date-scoped constraint
   // below so it doesn't reshape the whole week.
   const todayISO = todayISOLocal();
-  const todayReadinessSignal = useReadinessStore(
+  const mirroredTodayReadinessSignal = useReadinessStore(
     (s) => s.signalsByDate[todayISO],
   );
-  const readinessActiveConstraints = buildReadinessActiveConstraints(
-    todayReadinessSignal,
-  );
+  const todayReadinessSignal = acceptedContext.revision > 0
+    ? acceptedContext.readinessSignalsByDate[todayISO]
+    : mirroredTodayReadinessSignal;
+  // Structural readiness changes are already materialised through the
+  // accepted-state transaction. Keep constraints here only for legacy state
+  // that predates the accepted material context.
+  const readinessActiveConstraints = acceptedContext.revision > 0
+    ? []
+    : buildReadinessActiveConstraints(todayReadinessSignal);
   const readiness = deriveProfileReadiness(onboardingData);
 
   return {

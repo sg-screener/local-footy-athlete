@@ -48,11 +48,20 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { applyGameDayChange } from './profileMutations';
 import { addDays, computeGameDatesForBlock, getMondayForDate } from './sessionResolver';
 import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/programStore';
+import {
+  commitAcceptedStateTransaction,
+  proposeFixtureMarkedDays,
+  type AcceptedProgramSurfaces,
+} from '../store/acceptedStateTransaction';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { classifySessionStress } from '../rules/stressClassification';
 import { migrateLegacyWeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { todayISOLocal } from './appDate';
+import {
+  deriveStoredBlockStateFromProgram,
+  selectMicrocycleForDate,
+} from './programBlockState';
 import { logger } from './logger';
 
 // ─── Canonical context ───────────────────────────────────────────────
@@ -342,10 +351,14 @@ export interface RebuildLocalWeekArgs {
   targetDate?: string;
   /** Optional old game date whose overlay should be cleared during a move. */
   clearOverlayDate?: string;
+  /** Stage the fixture mark in the same accepted snapshot as this rebuild. */
+  manageCalendarFixture?: boolean;
+  /** Build only. Used by rollover so future overlays join the same commit. */
+  commit?: boolean;
   /**
-   * Calendar-mark mutation(s) that belong to this change (setGameDay /
-   * removeGameDay + noGame marks). Executed INSIDE the commit, after the
-   * candidate build succeeded — never before.
+   * Compatibility notification for older callers/tests. Production fixture
+   * writes use manageCalendarFixture; this callback runs only after the
+   * accepted snapshot has committed and must not mutate material stores.
    */
   commitGameMark?: () => void;
 }
@@ -369,6 +382,15 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
       : applyGameDayChange(args.baseProfile, args.newGameDay);
 
   const targetWeekStart = targetDate ? getMondayForDate(targetDate) : null;
+  const shouldCommit = args.commit !== false;
+  const proposedMarkedDays = args.manageCalendarFixture && targetDate
+    ? proposeFixtureMarkedDays({
+        profile: args.baseProfile,
+        targetDate,
+        newGameDay: args.newGameDay ?? null,
+        previousFixtureDate: args.clearOverlayDate,
+      })
+    : undefined;
   const gameDatesOverride =
     scope === 'weekOverlay' && args.newGameDay
       ? [targetDate!]
@@ -398,11 +420,14 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
     });
     const sweep = decideOverrideSweep(context);
 
-    args.commitGameMark?.();
-    commitWeekScopedOverlay(null, sweep, {
-      targetWeekStart: targetWeekStart!,
-      clearOverlayDate: args.clearOverlayDate,
-    });
+    if (shouldCommit) {
+      commitWeekScopedOverlay(null, sweep, {
+        targetWeekStart: targetWeekStart!,
+        clearOverlayDate: args.clearOverlayDate,
+        markedDays: proposedMarkedDays,
+      });
+      args.commitGameMark?.();
+    }
 
     logger.debug('[weekRebuild] cleared week-scoped overlay', {
       weekStart: targetWeekStart,
@@ -433,8 +458,7 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
   });
   const sweep = decideOverrideSweep(context);
 
-  // 3. Atomic commit: game mark + program + sweep together.
-  args.commitGameMark?.();
+  // 3. Atomic commit: proposed marks + program/overlay + sweep together.
   let overlay: WeekScopedWorkoutOverlay | undefined;
   if (scope === 'weekOverlay') {
     overlay = buildWeekScopedWorkoutOverlay({
@@ -443,12 +467,16 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
       anchorDate: args.newGameDay ? targetDate! : null,
       reason: args.newGameDay ? 'one_off_game' : 'one_off_no_game',
     });
-    commitWeekScopedOverlay(overlay, sweep, {
-      clearOverlayDate: args.clearOverlayDate,
-    });
-  } else {
+    if (shouldCommit) {
+      commitWeekScopedOverlay(overlay, sweep, {
+        clearOverlayDate: args.clearOverlayDate,
+        markedDays: proposedMarkedDays,
+      });
+    }
+  } else if (shouldCommit) {
     commitRebuiltProgram(program, sweep);
   }
+  if (shouldCommit) args.commitGameMark?.();
 
   logger.debug('[weekRebuild] committed', {
     scope,
@@ -469,20 +497,58 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
 export function commitRebuiltProgram(
   program: TrainingProgram,
   sweep: OverrideSweepDecision,
+  options: {
+    markedDays?: Record<string, import('../store/calendarStore').CalendarDayType>;
+    weekScopedOverlays?: Record<string, WeekScopedWorkoutOverlay>;
+    selectedDate?: string;
+    reason?: string;
+  } = {},
 ): void {
-  const programStore = useProgramStore.getState();
-  // Sweep decisions are part of the candidate effective state. Validate and
-  // commit the rebuilt program plus cleared stale overrides atomically so a
-  // doomed pre-sweep combination can neither block a valid rebuild nor leak a
-  // partial mutation.
-  programStore.setCurrentProgram(program, { clearOverrideDates: sweep.clear });
-  if (program.microcycles && program.microcycles.length > 0) {
-    const first = program.microcycles[0];
-    programStore.setCurrentMicrocycle(first);
-    const dow = new Date().getDay();
-    const todayWorkout = first.workouts?.find((w) => w.dayOfWeek === dow);
-    if (todayWorkout) programStore.setTodayWorkout(todayWorkout);
-  }
+  const proposal = buildRebuiltProgramSurfaces(program, sweep, options);
+  commitAcceptedStateTransaction({
+    reason: options.reason ?? 'week_rebuild:block',
+    program: proposal,
+    markedDays: options.markedDays,
+    programAlreadyAccepted: true,
+    validateWeekStarts: [
+      ...program.microcycles.map((microcycle) => microcycle.startDate.slice(0, 10)),
+      ...Object.keys(proposal.weekScopedOverlays ?? {}),
+    ],
+  });
+}
+
+/** Pure in-memory surface composition shared by rebuild and rollover. */
+export function buildRebuiltProgramSurfaces(
+  program: TrainingProgram,
+  sweep: OverrideSweepDecision,
+  options: {
+    weekScopedOverlays?: Record<string, WeekScopedWorkoutOverlay>;
+    selectedDate?: string;
+  } = {},
+): Partial<AcceptedProgramSurfaces> {
+  const state = useProgramStore.getState();
+  const cleared = new Set(sweep.clear);
+  const dateOverrides = Object.fromEntries(
+    Object.entries(state.dateOverrides).filter(([date]) => !cleared.has(date)),
+  ) as Record<string, Workout>;
+  const overrideContexts = Object.fromEntries(
+    Object.entries(state.overrideContexts).filter(([date]) => !cleared.has(date)),
+  ) as Record<string, OverrideContext>;
+  const selected = options.selectedDate
+    ? selectMicrocycleForDate(program, null, options.selectedDate)
+    : program.microcycles[0] ?? null;
+  const selectedDate = options.selectedDate ?? todayISOLocal();
+  const selectedDow = new Date(`${selectedDate}T12:00:00`).getDay();
+  return {
+    currentProgram: program,
+    currentMicrocycle: selected,
+    todayWorkout: selected?.workouts.find((workout) => workout.dayOfWeek === selectedDow) ?? null,
+    blockState: deriveStoredBlockStateFromProgram(program, selectedDate),
+    dateOverrides,
+    overrideContexts,
+    weekScopedOverlays: options.weekScopedOverlays ?? {},
+    exposureContractsByWeek: {},
+  };
 }
 
 function commitWeekScopedOverlay(
@@ -491,28 +557,55 @@ function commitWeekScopedOverlay(
   options?: {
     targetWeekStart?: string;
     clearOverlayDate?: string;
+    markedDays?: Record<string, import('../store/calendarStore').CalendarDayType>;
   },
 ): void {
-  const programStore = useProgramStore.getState();
+  const state = useProgramStore.getState();
+  const overlays = { ...state.weekScopedOverlays };
   if (options?.clearOverlayDate) {
-    programStore.removeWeekScopedOverlay(getMondayForDate(options.clearOverlayDate));
+    delete overlays[getMondayForDate(options.clearOverlayDate)];
   }
   if (overlay) {
-    programStore.setWeekScopedOverlay(overlay);
+    overlays[overlay.weekStart] = overlay;
   } else if (options?.targetWeekStart) {
-    programStore.removeWeekScopedOverlay(options.targetWeekStart);
+    delete overlays[options.targetWeekStart];
   }
-  for (const date of sweep.clear) {
-    programStore.removeManualOverride(date);
-  }
+  const cleared = new Set(sweep.clear);
+  const dateOverrides = Object.fromEntries(
+    Object.entries(state.dateOverrides).filter(([date]) => !cleared.has(date)),
+  ) as Record<string, Workout>;
+  const overrideContexts = Object.fromEntries(
+    Object.entries(state.overrideContexts).filter(([date]) => !cleared.has(date)),
+  ) as Record<string, OverrideContext>;
+  const affectedWeeks = new Set<string>([
+    ...(overlay ? [overlay.weekStart] : []),
+    ...(options?.targetWeekStart ? [options.targetWeekStart] : []),
+    ...(options?.clearOverlayDate ? [getMondayForDate(options.clearOverlayDate)] : []),
+    ...sweep.clear.map(getMondayForDate),
+  ]);
+  commitAcceptedStateTransaction({
+    reason: 'week_rebuild:overlay',
+    program: { weekScopedOverlays: overlays, dateOverrides, overrideContexts },
+    markedDays: options?.markedDays,
+    validateWeekStarts: Array.from(affectedWeeks),
+  });
 }
 
 export function clearWeekScopedOverlayForDate(args: {
   targetDate: string;
-  commitGameMark?: () => void;
+  markedDays?: Record<string, import('../store/calendarStore').CalendarDayType>;
 }): void {
-  args.commitGameMark?.();
-  useProgramStore.getState().removeWeekScopedOverlay(getMondayForDate(args.targetDate));
+  const weekStart = getMondayForDate(args.targetDate);
+  const state = useProgramStore.getState();
+  if (!Object.prototype.hasOwnProperty.call(state.weekScopedOverlays, weekStart)) return;
+  const overlays = { ...state.weekScopedOverlays };
+  delete overlays[weekStart];
+  commitAcceptedStateTransaction({
+    reason: `week_rebuild:clear_overlay:${weekStart}`,
+    program: { weekScopedOverlays: overlays },
+    markedDays: args.markedDays,
+    validateWeekStarts: [weekStart],
+  });
 }
 
 /**

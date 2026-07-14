@@ -50,7 +50,7 @@ import {
   type WorkoutCanonicalisationContext,
 } from './workoutCanonicalisation';
 import { resolveOffseasonSubphase } from '../rules/offseasonSubphase';
-import { deriveScheduleReadiness } from './readiness';
+import { deriveScheduleReadiness, type ReadinessSignal } from './readiness';
 import { selectMicrocycleForDate } from './programBlockState';
 import { resolveSeasonPhaseClock } from '../rules/seasonPhaseClock';
 import {
@@ -581,7 +581,12 @@ function reResolveContractForActiveConstraints(args: {
     profile,
     generationConstraints: generationContext,
   });
-  const readinessSignal = useReadinessStore.getState().signalsByDate?.[weekStart] ?? null;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const acceptedContext = require('../store/programStore').useProgramStore.getState()
+    .acceptedMaterialContext;
+  const readinessSignal = (acceptedContext?.revision > 0
+    ? acceptedContext.readinessSignalsByDate
+    : useReadinessStore.getState().signalsByDate)?.[weekStart] ?? null;
   const readiness = profile.conditioningLevel || profile.recentTrainingLoad
     ? deriveScheduleReadiness({ onboardingData: profile, signal: readinessSignal })
     : args.contract.strength.targetCount >= args.contract.strength.preferred.max
@@ -763,9 +768,21 @@ export function buildSection18ProductionFallbackCandidate(args: {
     // Dynamic loading prevents generation from importing its final persistence
     // boundary. This path is invoked only after the primary candidate fails.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const unknownAnchorCredit = args.contract.source === 'legacy_migration' &&
+      args.contract.anchors.some((anchor) => anchor.participation === 'unknown');
     const generated = require('../services/api/generateProgram').generateProgramLocally({
       ...args.profile,
       seasonPhase: args.contract.identity.seasonPhase,
+      // Unknown legacy participation cannot be used to reduce app-authored
+      // work. Generate the conservative fallback without anchor credit; the
+      // accepted resolver restores the persisted fixture/team anchors from
+      // Contract v2, still as unknown/uncredited.
+      ...(unknownAnchorCredit ? {
+        teamTrainingDaysPerWeek: 0,
+        teamTrainingDays: [],
+        usualGameDay: undefined,
+        gameDay: undefined,
+      } : {}),
     }, {
       todayISO: blockStart,
       blockNumber: args.contract.identity.blockNumber ?? 1,
@@ -786,9 +803,245 @@ export function buildSection18ProductionFallbackCandidate(args: {
     const target = generated.microcycles.find((microcycle) =>
       microcycle.startDate.slice(0, 10) === args.weekStart.slice(0, 10));
     if (!target) return null;
+    let workouts = target.workouts;
+    const weekOrder = (dayOfWeek: number): number => dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const isAppCore = (workout: Workout): boolean => {
+      const role = workout.section18Evidence?.conditioningRole ?? workout.section18ConditioningRole;
+      return role === 'required_core' || role === 'planner_selected_core' || role === 'core';
+    };
+    if (unknownAnchorCredit) {
+      const fixtureDays = new Set(args.contract.anchors
+        .filter((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
+        .map((anchor) => anchor.dayOfWeek));
+      const fixtureDay = Array.from(fixtureDays)[0];
+      const distanceBeforeFixture = (dayOfWeek: number): number =>
+        fixtureDay === undefined ? 7 : weekOrder(fixtureDay) - weekOrder(dayOfWeek);
+      for (const source of workouts.filter((workout) =>
+        distanceBeforeFixture(workout.dayOfWeek) < 3)) {
+        const hasCore = isAppCore(source);
+        if (!hasCore && !source.speedBlock) continue;
+        const candidates = workouts
+          .filter((workout) => !fixtureDays.has(workout.dayOfWeek))
+          .filter((workout) => distanceBeforeFixture(workout.dayOfWeek) >= 3)
+          .filter((workout) => !hasCore || !isAppCore(workout))
+          .sort((left, right) =>
+            Number(classifyVisibleSession(right).contributions.mainStrength > 0) -
+              Number(classifyVisibleSession(left).contributions.mainStrength > 0) ||
+            left.dayOfWeek - right.dayOfWeek);
+        const targetWorkout = candidates[0];
+        if (!targetWorkout) continue;
+        const mergedId = targetWorkout.id;
+        const sourceRows = (source.exercises ?? []).map((exercise, index) => ({
+          ...exercise,
+          id: `${exercise.id}:legacy-fallback:${targetWorkout.dayOfWeek}:${index}`,
+          workoutId: mergedId,
+          exerciseOrder: (targetWorkout.exercises?.length ?? 0) + index + 1,
+        }));
+        workouts = workouts.map((workout) => workout.id === targetWorkout.id
+          ? {
+              ...workout,
+              exercises: [...(workout.exercises ?? []), ...sourceRows],
+              ...(hasCore ? {
+                hasCombinedConditioning: true,
+                attachedConditioningKind: 'component' as const,
+                conditioningFlavour: source.conditioningFlavour,
+                conditioningCategory: source.conditioningCategory,
+                conditioningFeasibility: source.conditioningFeasibility,
+                conditioningBlock: source.conditioningBlock,
+                section18ConditioningRole: source.section18ConditioningRole,
+                section18Evidence: source.section18Evidence,
+              } : {}),
+              ...(source.speedBlock ? { speedBlock: source.speedBlock } : {}),
+            }
+          : workout);
+      }
+    }
+    if (args.contract.source === 'legacy_migration') {
+      const fixtureDays = new Set(args.contract.anchors
+        .filter((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
+        .map((anchor) => anchor.dayOfWeek));
+      const fixtureDay = Array.from(fixtureDays)[0];
+      const safeBeforeFixture = (workout: Workout): boolean => fixtureDay === undefined ||
+        weekOrder(fixtureDay) - weekOrder(workout.dayOfWeek) >= 3;
+      const hasMainStrength = (workout: Workout): boolean =>
+        workout.exercises.some((row) => row.section18Evidence?.role === 'main_strength') ||
+        (!!workout.strengthIntent?.effectivePatterns.length &&
+          !classifyVisibleSession(workout).anchors.teamTraining &&
+          !classifyVisibleSession(workout).anchors.game);
+      const selectedMainStrength = args.contract.mainStrength.exposure.plannerSelectionKind === 'core'
+        ? args.contract.mainStrength.exposure.plannerSelectedTarget ??
+          args.contract.mainStrength.exposure.requiredMinimum
+        : args.contract.mainStrength.exposure.requiredMinimum;
+      while (workouts.filter(hasMainStrength).length < selectedMainStrength) {
+        const source = workouts
+          .filter(hasMainStrength)
+          .sort((left, right) =>
+            (right.strengthIntent?.effectivePatterns.length ?? 0) -
+              (left.strengthIntent?.effectivePatterns.length ?? 0) ||
+            weekOrder(left.dayOfWeek) - weekOrder(right.dayOfWeek))[0];
+        const targetWorkout = workouts
+          .filter((workout) => !hasMainStrength(workout))
+          .filter((workout) => !fixtureDays.has(workout.dayOfWeek))
+          .filter(safeBeforeFixture)
+          .sort((left, right) =>
+            Number(left.workoutType === 'Rest') - Number(right.workoutType === 'Rest') ||
+            weekOrder(left.dayOfWeek) - weekOrder(right.dayOfWeek))[0];
+        if (!source || !targetWorkout) break;
+        const sourceRows = source.exercises.filter((row) =>
+          row.section18Evidence?.role === 'main_strength');
+        if (sourceRows.length === 0) break;
+        const clonedRows = sourceRows.map((row, index) => ({
+          ...row,
+          id: `${row.id}:legacy-strength-fallback:${targetWorkout.dayOfWeek}:${index}`,
+          workoutId: targetWorkout.id,
+          exerciseOrder: targetWorkout.exercises.length + index + 1,
+        }));
+        workouts = workouts.map((workout) => workout.id === targetWorkout.id
+          ? {
+              ...workout,
+              name: workout.workoutType === 'Rest'
+                ? source.name
+                : `${workout.name} + Strength`,
+              workoutType: workout.conditioningBlock ? 'Mixed' : 'Strength',
+              sessionTier: 'core',
+              intensity: workout.intensity === 'High' || workout.intensity === 'Maximal'
+                ? workout.intensity
+                : 'Moderate',
+              durationMinutes: workout.durationMinutes + Math.max(30, source.durationMinutes),
+              exercises: [...workout.exercises, ...clonedRows],
+              strengthIntent: source.strengthIntent,
+              strengthPatternContributions: source.strengthPatternContributions,
+            }
+          : workout);
+      }
+      const cloneConditioningOnto = (source: Workout, targetWorkout: Workout): Workout => {
+        const conditioningIds = new Set(source.conditioningBlock?.options
+          .flatMap((option) => option.exerciseIds) ?? []);
+        const sourceRows = (source.exercises ?? []).filter((row) =>
+          row.section18Evidence?.role === 'conditioning' || conditioningIds.has(row.id));
+        const idMap = new Map<string, string>();
+        const clonedRows = sourceRows.map((row, index) => {
+          const id = `${row.id}:legacy-fallback:${targetWorkout.dayOfWeek}:${index}`;
+          idMap.set(row.id, id);
+          return {
+            ...row,
+            id,
+            workoutId: targetWorkout.id,
+            exerciseOrder: (targetWorkout.exercises?.length ?? 0) + index + 1,
+          };
+        });
+        const conditioningBlock = source.conditioningBlock
+          ? {
+              ...source.conditioningBlock,
+              options: source.conditioningBlock.options.map((option) => ({
+                ...option,
+                exerciseIds: option.exerciseIds
+                  .map((id) => idMap.get(id))
+                  .filter((id): id is string => !!id),
+              })),
+            }
+          : undefined;
+        return {
+          ...targetWorkout,
+          workoutType: targetWorkout.workoutType === 'Rest' ? source.workoutType : 'Mixed',
+          sessionTier: 'core',
+          intensity: targetWorkout.intensity === 'High' || targetWorkout.intensity === 'Maximal' ||
+            source.intensity === 'High' || source.intensity === 'Maximal'
+            ? 'High'
+            : 'Moderate',
+          durationMinutes: targetWorkout.durationMinutes + Math.max(15, source.durationMinutes),
+          exercises: [...(targetWorkout.exercises ?? []), ...clonedRows],
+          hasCombinedConditioning: true,
+          attachedConditioningKind: source.attachedConditioningKind ?? 'component',
+          conditioningFlavour: source.conditioningFlavour,
+          conditioningCategory: source.conditioningCategory,
+          conditioningFeasibility: source.conditioningFeasibility,
+          conditioningBlock,
+          section18ConditioningRole: source.section18ConditioningRole ?? 'planner_selected_core',
+          section18Evidence: source.section18Evidence ?? {
+            protocolVersion: 1,
+            conditioningRole: 'planner_selected_core',
+            conditioningStress: 'moderate',
+            provenance: 'planner_and_canonical_content',
+          },
+        };
+      };
+      const requiredAppCore = Math.max(
+        args.contract.conditioning.core.requiredMinimum,
+        (args.contract.conditioning.core.plannerSelectionKind === 'core'
+          ? args.contract.conditioning.core.plannerSelectedTarget ?? 0
+          : 0) - args.contract.anchors.filter((anchor) =>
+            anchor.participation === 'normal_unrestricted').length,
+      );
+      while (workouts.filter(isAppCore).length < requiredAppCore) {
+        const source = workouts.filter(isAppCore)
+          .sort((left, right) => weekOrder(left.dayOfWeek) - weekOrder(right.dayOfWeek))[0];
+        if (!source) break;
+        const targetWorkout = workouts
+          .filter((workout) => !isAppCore(workout))
+          .filter((workout) => !fixtureDays.has(workout.dayOfWeek))
+          .filter(safeBeforeFixture)
+          .sort((left, right) =>
+            Number(left.workoutType === 'Rest') - Number(right.workoutType === 'Rest') ||
+            Number(classifyVisibleSession(right).contributions.mainStrength > 0) -
+              Number(classifyVisibleSession(left).contributions.mainStrength > 0) ||
+            weekOrder(left.dayOfWeek) - weekOrder(right.dayOfWeek))[0];
+        if (!targetWorkout) break;
+        workouts = workouts.map((workout) => workout.id === targetWorkout.id
+          ? cloneConditioningOnto(source, workout)
+          : workout);
+      }
+      const requiredSprint = args.contract.sprintHighSpeed.exposure.requiredMinimum;
+      const sprintCount = workouts.filter((workout) => !!workout.speedBlock).length;
+      if (sprintCount < requiredSprint) {
+        const speedTarget = workouts
+          .filter((workout) => !fixtureDays.has(workout.dayOfWeek))
+          .filter(safeBeforeFixture)
+          .filter((workout) => workout.workoutType !== 'Rest')
+          .sort((left, right) =>
+            Number(classifyVisibleSession(right).contributions.mainStrength > 0) -
+              Number(classifyVisibleSession(left).contributions.mainStrength > 0) ||
+            weekOrder(left.dayOfWeek) - weekOrder(right.dayOfWeek))[0];
+        if (speedTarget) {
+          workouts = workouts.map((workout) => workout.id === speedTarget.id
+            ? {
+                ...workout,
+                speedBlock: {
+                  id: `legacy-migration-speed:${args.weekStart}:${workout.dayOfWeek}`,
+                  title: 'Acceleration Exposure',
+                  label: 'Acceleration',
+                  kind: 'true_speed',
+                  placement: 'pre_lift',
+                  durationMinutes: 12,
+                  prescription: '4–6 × 10–20 m controlled accelerations, full walk-back recovery',
+                  notes: ['Keep every rep crisp and stop before speed drops.'],
+                  counting: {
+                    hardExposure: true,
+                    mainStrength: false,
+                    conditioningCredit: 'none',
+                    createsHardDay: true,
+                    sprintCodExposure: true,
+                  },
+                },
+              }
+            : workout);
+        }
+      }
+    }
+    const strengthMaximum = args.contract.mainStrength.exposure.permittedMaximum;
+    if (args.contract.source === 'legacy_migration' && strengthMaximum !== null) {
+      const strengthDays = workouts
+        .filter((workout) => classifyVisibleSession(workout).contributions.mainStrength > 0)
+        .sort((left, right) => right.dayOfWeek - left.dayOfWeek);
+      const removeDays = new Set(
+        strengthDays.slice(strengthMaximum).map((workout) => workout.dayOfWeek),
+      );
+      workouts = workouts.map((workout) =>
+        removeDays.has(workout.dayOfWeek) ? collapseWorkoutToRest(workout) : workout);
+    }
     return {
       contract: JSON.parse(JSON.stringify(args.contract)) as WeeklyExposureContractV2,
-      workouts: target.workouts,
+      workouts,
     };
   } catch {
     return null;
@@ -1005,12 +1258,21 @@ function liveValidationContext(
   activeConstraints: ActiveConstraint[];
   profile: OnboardingData;
 } {
+  // ProgramStore owns the accepted material snapshot. The legacy stores are
+  // mirrors used only before the first accepted transaction/hydration.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const accepted = require('../store/programStore').useProgramStore.getState()
+    .acceptedMaterialContext;
+  const hasAcceptedContext = accepted?.revision > 0;
   const activeById = new Map<string, ActiveConstraint>();
   for (const constraint of activeConstraintsOverride ??
-    useCoachUpdatesStore.getState().activeConstraints ?? []) {
+    (hasAcceptedContext ? accepted.activeConstraints : useCoachUpdatesStore.getState().activeConstraints) ?? []) {
     activeById.set(constraint.id, constraint);
   }
-  for (const signal of Object.values(useReadinessStore.getState().signalsByDate ?? {})) {
+  const readinessSignals = hasAcceptedContext
+    ? accepted.readinessSignalsByDate
+    : useReadinessStore.getState().signalsByDate;
+  for (const signal of Object.values(readinessSignals ?? {}) as ReadinessSignal[]) {
     for (const constraint of buildReadinessActiveConstraints(signal)) {
       activeById.set(constraint.id, constraint);
     }
@@ -1049,14 +1311,19 @@ function liveWorkoutCanonicalisationContext(
     persistedClock: state.currentProgram?.seasonPhaseClock,
     legacyProgram: state.currentProgram,
   });
-  const signal = useReadinessStore.getState().signalsByDate?.[date] ?? null;
+  const acceptedContext = state.acceptedMaterialContext;
+  const signal = (acceptedContext?.revision > 0
+    ? acceptedContext.readinessSignalsByDate
+    : useReadinessStore.getState().signalsByDate)?.[date] ?? null;
   const gameDates = new Set(
     datedProgramWorkouts
       .filter(({ workout: candidate }) => classifyVisibleSession(candidate).anchors.game)
       .map(({ date: gameDate }) => gameDate),
   );
   if (classifyVisibleSession(workout).anchors.game) gameDates.add(date);
-  const markedDays = useCalendarStore.getState().markedDays ?? {};
+  const markedDays = acceptedContext?.revision > 0
+    ? acceptedContext.markedDays
+    : useCalendarStore.getState().markedDays ?? {};
   for (const [markedDate, kind] of Object.entries(markedDays)) {
     if (kind === 'game') gameDates.add(markedDate);
   }
@@ -1497,10 +1764,13 @@ export function stageLiveStoredProgramSafety(
   };
 }
 
-/** Commit a previously staged projection in one ProgramStore write. */
+/** Commit a previously staged projection through the accepted-state owner. */
 export function commitLiveStoredProgramSafetyProjection(
   projection: LiveStoredProgramSafetyProjection | null,
 ): void {
   if (!projection) return;
-  require('../store/programStore').useProgramStore.setState(projection);
+  require('../store/acceptedStateTransaction').commitAcceptedStateTransaction({
+    reason: 'constraint:live_safety_projection',
+    program: projection,
+  });
 }

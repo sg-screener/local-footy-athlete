@@ -22,50 +22,64 @@ interface ReadinessState {
 
 export const useReadinessStore = create<ReadinessState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       signalsByDate: {},
 
-      setReadinessSignal: (date, signal) =>
-        set((state) => {
-          const previous = state.signalsByDate[date];
-          const next: ReadinessSignal = {
-            ...previous,
-            ...signal,
-            date,
-            source: signal.source ?? previous?.source ?? 'quick_check',
-            updatedAt: new Date().toISOString(),
-          };
-          return {
-            signalsByDate: {
-              ...state.signalsByDate,
-              [date]: next,
-            },
-          };
-        }),
+      setReadinessSignal: (date, signal) => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitReadinessSignalTransaction({
+          date,
+          patch: signal,
+        });
+      },
 
-      clearReadinessSignal: (date) =>
-        set((state) => {
-          const next = { ...state.signalsByDate };
-          delete next[date];
-          return { signalsByDate: next };
-        }),
+      clearReadinessSignal: (date) => {
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitReadinessSignalTransaction({
+          date,
+          patch: null,
+        });
+      },
 
-      pruneBefore: (dateISO) =>
-        set((state) => {
-          const entries = Object.entries(state.signalsByDate).filter(
-            ([date]) => date >= dateISO,
-          );
-          if (entries.length === Object.keys(state.signalsByDate).length) {
-            return state; // nothing dormant to drop
-          }
-          return { signalsByDate: Object.fromEntries(entries) };
-        }),
+      pruneBefore: (dateISO) => {
+        const current = get().signalsByDate;
+        const entries = Object.entries(current).filter(([date]) => date >= dateISO);
+        if (entries.length === Object.keys(current).length) return;
+        const next = Object.fromEntries(entries);
+        const affectedDates = Object.keys(current).filter((date) => date < dateISO);
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitReadinessStateTransaction({
+          reason: `readiness:prune:${dateISO}`,
+          readinessSignalsByDate: next,
+          affectedDates,
+        });
+      },
 
-      clear: () => set({ signalsByDate: {} }),
+      clear: () => {
+        const affectedDates = Object.keys(get().signalsByDate);
+        if (affectedDates.length === 0) return;
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitReadinessStateTransaction({
+          reason: 'readiness:clear',
+          readinessSignalsByDate: {},
+          affectedDates,
+        });
+      },
     }),
     {
       name: 'readiness-store',
       storage: createJSONStorage(() => AsyncStorage),
+      onRehydrateStorage: () => (state, error) => {
+        if (error || !state) return;
+        const affectedDates = Object.keys(state.signalsByDate);
+        if (affectedDates.length === 0) return;
+        // eslint-disable-next-line @typescript-eslint/no-var-requires
+        require('./acceptedStateTransaction').commitReadinessStateTransaction({
+          reason: 'readiness:hydration_acceptance',
+          readinessSignalsByDate: state.signalsByDate,
+          affectedDates,
+        });
+      },
     },
   ),
 );

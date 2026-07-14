@@ -444,17 +444,36 @@ function commitConstraintProgramTransaction(
   proposedConstraints: readonly ActiveConstraint[],
   commitConstraintState: () => void,
 ): void {
-  // Stage first. Any throw leaves both stores unchanged.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const boundary = require('../utils/postGenerationConstraintValidation');
-  const projection = boundary.stageLiveStoredProgramSafety(proposedConstraints);
-  boundary.commitLiveStoredProgramSafetyProjection(projection);
   safetyProjectionInProgress = true;
   try {
+    // Retain the established pure projection seam (including its failure
+    // boundary) but give publication to the accepted-state coordinator. No
+    // ProgramStore surface or compatibility mirror changes until both stages
+    // have succeeded.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const projection = require('../utils/postGenerationConstraintValidation')
+      .stageLiveStoredProgramSafety(proposedConstraints);
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+      reason: 'constraint:update',
+      program: projection ?? undefined,
+      activeConstraints: [...proposedConstraints],
+      activeInjury: legacyInjuryForConstraints(
+        proposedConstraints,
+        getAcceptedInjuryHistory(),
+      ),
+    });
     commitConstraintState();
   } finally {
     safetyProjectionInProgress = false;
   }
+}
+
+function getAcceptedInjuryHistory(): InjuryHistoryEntry[] | undefined {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const context = require('./programStore').useProgramStore.getState()
+    .acceptedMaterialContext;
+  return context?.activeInjury?.history;
 }
 
 export const useCoachUpdatesStore = create<CoachUpdatesState>()(
@@ -675,13 +694,14 @@ useCoachUpdatesStore.subscribe((state, previous) => {
   if (state.activeConstraints === previous.activeConstraints || safetyProjectionInProgress) return;
   safetyProjectionInProgress = true;
   try {
-    // Dynamic loading keeps store initialisation acyclic. The validator reads
-    // the already-committed constraint state and projects it through the same
-    // final safety boundary used by generation, rebuilds and edits.
+    // External persistence hydration writes only the legacy mirror. Publish
+    // the accepted constraint/program combination as one material snapshot.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const boundary = require('../utils/postGenerationConstraintValidation');
-    const projection = boundary.stageLiveStoredProgramSafety(state.activeConstraints);
-    boundary.commitLiveStoredProgramSafetyProjection(projection);
+    require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+      reason: 'constraint:external_hydration',
+      activeConstraints: [...state.activeConstraints],
+      activeInjury: state.activeInjury,
+    });
   } catch (error) {
     // Persistence hydration is the one external state replacement that can
     // bypass the action methods above. Roll it back if the paired program

@@ -19,6 +19,20 @@ import {
 import type { ConditioningModality } from '../data/exerciseTags';
 import { getTeamTrainingWorkoutState } from './teamTraining';
 import { projectConditioningVisibleIdentity } from './conditioningVisibleIdentity';
+import { selectMicrocycleForDate } from './programBlockState';
+
+function hasAcceptedWeekContract(
+  state: ScheduleState,
+  date: string,
+): boolean {
+  const weekStart = getMondayForDate(date);
+  if (state.weekScopedOverlays?.[weekStart]?.exposureContractV2) return true;
+  return !!selectMicrocycleForDate(
+    state.currentProgram,
+    state.currentMicrocycle,
+    date,
+  )?.exposureContractV2;
+}
 
 export type VisibleProgramItemDomain =
   | 'conditioning'
@@ -100,6 +114,9 @@ export function buildProgramTabProjectedWeek(args: {
     args.modalityPreferences ??
     useCoachPreferencesStore.getState().modalityPreferences;
   return rawWeek.map((day) => {
+    if (hasAcceptedWeekContract(args.state, day.date)) {
+      return day;
+    }
     const dayActiveConstraints = filterConstraintsForDate(
       args.state.activeConstraints ?? [],
       day.date,
@@ -126,6 +143,9 @@ export function buildDayWorkoutProjectedDay(args: {
   modalityPreferences?: Record<string, any>;
 }): ResolvedDay {
   const raw = resolveDateWithConditioning(args.date, args.state);
+  if (hasAcceptedWeekContract(args.state, args.date)) {
+    return raw;
+  }
   const dayActiveConstraints = filterConstraintsForDate(
     args.state.activeConstraints ?? [],
     args.date,

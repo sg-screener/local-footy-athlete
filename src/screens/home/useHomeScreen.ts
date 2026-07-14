@@ -183,7 +183,7 @@ export function useHomeScreen() {
   const [mode, setMode] = useState<InteractionMode>({ type: 'normal' });
 
   // Calendar store actions
-  const { setGameDay, removeGameDay, setNoGame, clearAllGames } = useCalendarStore();
+  const { setGameDay, removeGameDay, clearAllGames } = useCalendarStore();
 
   // ── Rebuild state ──
   const [rebuildModalVisible, setRebuildModalVisible] = useState(false);
@@ -662,7 +662,6 @@ export function useHomeScreen() {
   // their own follow-up state (mode/selection) on it.
   const rebuildForGameChange = async (
     newGameDay: DayOfWeek | null,
-    commitGameMark?: () => void,
     options?: { targetDate: string; clearOverlayDate?: string },
   ): Promise<boolean> => {
     clearRebuildError();
@@ -686,7 +685,7 @@ export function useHomeScreen() {
         scope: 'weekOverlay',
         targetDate: options?.targetDate,
         clearOverlayDate: options?.clearOverlayDate,
-        commitGameMark,
+        manageCalendarFixture: true,
       });
       if (options?.targetDate) {
         const afterRows = weekRebuildResultToGameChangeRows({
@@ -722,7 +721,7 @@ export function useHomeScreen() {
               {
                 text: 'Try again',
                 onPress: () => {
-                  void rebuildForGameChange(newGameDay, commitGameMark, options);
+                  void rebuildForGameChange(newGameDay, options);
                 },
               },
             ]
@@ -790,27 +789,16 @@ export function useHomeScreen() {
       setMode({ type: 'normal' });
       setSelectedIdx(idx);
 
-      const commitMove = () => {
-        removeGameDay(fromDate);
-        // Clean up stale game-proximity overrides for the old game.
-        const { overrideContexts, removeManualOverride } = useProgramStore.getState();
-        for (const [date, ctxValue] of Object.entries(overrideContexts)) {
-          const ctx = ctxValue as { intent?: string; relatedGameDate?: string };
-          if (ctx.intent === 'gameProximity' && ctx.relatedGameDate === fromDate) {
-            removeManualOverride(date);
-          }
-        }
-        setGameDay(targetDate);
-      };
-
       if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
         const targetName = DAY_NUM_TO_NAME[day.dayOfWeek];
-        await rebuildForGameChange(targetName, commitMove, {
+        await rebuildForGameChange(targetName, {
           targetDate,
           clearOverlayDate: fromDate,
         });
       } else {
-        commitMove();
+        // setGameDay owns the same-week single-fixture invariant, so this is
+        // one gated calendar/program transaction rather than remove + add.
+        setGameDay(targetDate);
       }
       return;
     }
@@ -831,7 +819,7 @@ export function useHomeScreen() {
       // rebuild fails, no Game Day card appears over an unchanged week.
       if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
         const targetName = DAY_NUM_TO_NAME[day.dayOfWeek];
-        await rebuildForGameChange(targetName, () => setGameDay(day.date), {
+        await rebuildForGameChange(targetName, {
           targetDate: day.date,
         });
       } else {
@@ -1362,56 +1350,6 @@ export function useHomeScreen() {
     const removedDate = gameModalDate;
     closeGameModal();
 
-    // ATOMIC (2026-07-08): all calendar-mark mutations run INSIDE the
-    // deterministic rebuild's success path, so a failed rebuild never
-    // leaves the game half-removed over an unchanged week.
-    const commitRemoval = () => {
-      removeGameDay(removedDate);
-
-      // In-season: the week's virtual game (rendered on the effective game
-      // day) would otherwise re-appear after we remove any explicit 'game'
-      // mark. Plant a 'noGame' marker on the virtual game's date inside
-      // this week so the bye sticks until the user explicitly adds another
-      // game. Uses the same usualGameDay → gameDay fallback as
-      // useResolvedWeek so onboarded-only profiles (gameDay set,
-      // usualGameDay missing) also get the bye marker.
-      if (currentPhase === 'In-season') {
-        const legacyGameDay = onboardingData.gameDay;
-        const effectiveGameDay: DayOfWeek | undefined =
-          (onboardingData.usualGameDay as DayOfWeek | undefined) ||
-          (legacyGameDay === 'Friday' ||
-          legacyGameDay === 'Saturday' ||
-          legacyGameDay === 'Sunday'
-            ? (legacyGameDay as DayOfWeek)
-            : undefined);
-        if (effectiveGameDay) {
-          const DOW_NUM: Record<DayOfWeek, number> = {
-            Sunday: 0,
-            Monday: 1,
-            Tuesday: 2,
-            Wednesday: 3,
-            Thursday: 4,
-            Friday: 5,
-            Saturday: 6,
-          };
-          const virtualDow = DOW_NUM[effectiveGameDay];
-          const virtualDay = weekDays.find((d) => d.dayOfWeek === virtualDow);
-          if (virtualDay) {
-            setNoGame(virtualDay.date);
-          }
-        }
-      }
-
-      // Clean up stale game-proximity overrides (same pattern as CalendarScreen).
-      const { overrideContexts, removeManualOverride } = useProgramStore.getState();
-      for (const [date, ctxValue] of Object.entries(overrideContexts)) {
-        const ctx = ctxValue as { intent?: string; relatedGameDate?: string };
-        if (ctx.intent === 'gameProximity' && ctx.relatedGameDate === removedDate) {
-          removeManualOverride(date);
-        }
-      }
-    };
-
     // Structural rebuild: the calendar override alone only hides the game
     // marker — the engine's weeklyPlan still reflects the WITH-game branch,
     // so Saturday would otherwise render as the G+1 recovery template.
@@ -1419,11 +1357,11 @@ export function useHomeScreen() {
     // a core peak + conditioning day). Pre-season practice matches use the
     // same anchor logic.
     if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
-      await rebuildForGameChange(null, commitRemoval, {
+      await rebuildForGameChange(null, {
         targetDate: removedDate,
       });
     } else {
-      commitRemoval();
+      removeGameDay(removedDate);
     }
   };
 

@@ -1,4 +1,5 @@
 import type { Workout } from '../../../types/domain';
+import { buildSection18WeeklyExposureContractV2 } from '../../../rules/weeklyExposureContractV2';
 import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
 import {
   canonicalWeekLedger,
@@ -27,9 +28,8 @@ function modernWorkouts(): Workout[] {
   });
   const teamId = 'persist-modern-team';
   const team = pathWorkout({
-    id: teamId, dayOfWeek: 2, name: 'Team Training + Upper Pull',
-    patterns: ['pull'], primary: 'pull', workoutType: 'Team Training', team: true,
-    exercises: [pathExercise(teamId, 0, 'Pull-Ups'), pathExercise(teamId, 1, 'Chest Supported Row')],
+    id: teamId, dayOfWeek: 2, name: 'Team Training',
+    workoutType: 'Team Training', team: true,
   });
   const canonicalLower = finaliseWorkoutAfterMutation(lower, {
     phase: 'In-season', planIntentValid: true, referenceWorkout: lower,
@@ -51,6 +51,38 @@ function modernWorkouts(): Workout[] {
   }, {
     phase: 'Off-season', offseasonSubphase: 'mid_offseason', planIntentValid: true,
   }).workout;
+  const upperId = 'persist-modern-z-upper';
+  const upper = finaliseWorkoutAfterMutation({
+    ...pathWorkout({
+      id: upperId, dayOfWeek: 4, name: 'Upper Strength + Tempo',
+      patterns: ['push', 'pull'], primary: 'push',
+      exercises: [
+        pathExercise(upperId, 0, 'Bench Press'),
+        pathExercise(upperId, 1, 'Chest Supported Row'),
+      ],
+      conditioning: [{ title: 'Row Tempo 5 x 3min', modality: 'row', intent: 'tempo' }],
+    }),
+    speedBlock: {
+      id: `${upperId}:speed`, title: 'Acceleration Exposure', label: 'Acceleration',
+      kind: 'true_speed', placement: 'pre_lift', durationMinutes: 10,
+      prescription: '4–6 × 10–20 m controlled accelerations, full recovery',
+      counting: {
+        hardExposure: true, mainStrength: false, conditioningCredit: 'none',
+        createsHardDay: true, sprintCodExposure: true,
+      },
+    },
+  }, { phase: 'In-season', planIntentValid: true }).workout;
+  const fullId = 'persist-modern-z-full';
+  const full = finaliseWorkoutAfterMutation(pathWorkout({
+    id: fullId, dayOfWeek: 5, name: 'Full Body Strength',
+    patterns: ['squat', 'hinge', 'push', 'pull'], primary: 'hinge',
+    exercises: [
+      pathExercise(fullId, 0, 'Front Squat'),
+      pathExercise(fullId, 1, 'Romanian Deadlift'),
+      pathExercise(fullId, 2, 'Incline Dumbbell Press'),
+      pathExercise(fullId, 3, 'Pull-Ups'),
+    ],
+  }), { phase: 'In-season', planIntentValid: true }).workout;
   return [
     {
       ...canonicalLower,
@@ -59,6 +91,8 @@ function modernWorkouts(): Workout[] {
     },
     finaliseWorkoutAfterMutation(team, { phase: 'In-season', planIntentValid: true, referenceWorkout: team }).workout,
     standalone,
+    upper,
+    full,
   ];
 }
 
@@ -73,14 +107,68 @@ function legacyWorkouts(): Workout[] {
     ],
     conditioning: [{ title: 'Bike Zone 2 25min', modality: 'bike' }],
   });
-  return [{
+  const legacyLower: Workout = {
     ...workout,
     strengthIntent: undefined,
     // Explicit old contribution ownership must beat the misleading name/type.
     strengthPatternContributions: ['squat', 'hinge'],
     workoutType: 'Strength',
     ...({ strengthPattern: 'lower', focus: 'Upper Push' } as any),
-  }];
+  };
+  const upperId = 'persist-legacy-z-upper';
+  const upper = finaliseWorkoutAfterMutation(pathWorkout({
+    id: upperId, dayOfWeek: 2, name: 'Upper Strength + Tempo',
+    patterns: ['push', 'pull'], primary: 'push',
+    exercises: [
+      pathExercise(upperId, 0, 'Bench Press'),
+      pathExercise(upperId, 1, 'Chest Supported Row'),
+    ],
+    conditioning: [{ title: 'Row Tempo 5 x 3min', modality: 'row', intent: 'tempo' }],
+  }), { phase: 'In-season', planIntentValid: true }).workout;
+  const fullId = 'persist-legacy-z-full';
+  const full = finaliseWorkoutAfterMutation({
+    ...pathWorkout({
+      id: fullId, dayOfWeek: 3, name: 'Full Body Strength + Tempo',
+      patterns: ['squat', 'hinge', 'push', 'pull'], primary: 'hinge',
+      exercises: [
+        pathExercise(fullId, 0, 'Front Squat'),
+        pathExercise(fullId, 1, 'Romanian Deadlift'),
+        pathExercise(fullId, 2, 'Incline Dumbbell Press'),
+        pathExercise(fullId, 3, 'Pull-Ups'),
+      ],
+      conditioning: [{ title: 'Bike Tempo 4 x 4min', modality: 'bike', intent: 'tempo' }],
+    }),
+    speedBlock: {
+      id: `${fullId}:speed`, title: 'Acceleration Exposure', label: 'Acceleration',
+      kind: 'true_speed', placement: 'pre_lift', durationMinutes: 10,
+      prescription: '4–6 × 10–20 m controlled accelerations, full recovery',
+      counting: {
+        hardExposure: true, mainStrength: false, conditioningCredit: 'none',
+        createsHardDay: true, sprintCodExposure: true,
+      },
+    },
+  }, { phase: 'In-season', planIntentValid: true }).workout;
+  const conditioningId = 'persist-legacy-z-conditioning';
+  const conditioning = finaliseWorkoutAfterMutation(pathWorkout({
+    id: conditioningId, dayOfWeek: 4, name: 'Tempo Conditioning',
+    conditioning: [{ title: 'SkiErg Tempo 6 x 2min', modality: 'ski', intent: 'tempo' }],
+  }), { phase: 'In-season', planIntentValid: true }).workout;
+  return [legacyLower, upper, full, conditioning];
+}
+
+function modernContract() {
+  return buildSection18WeeklyExposureContractV2({
+    seasonPhase: 'In-season', declaredSubphase: 'bye_build',
+    mode: 'in_season_bye_build', weekKind: 'build', anchorState: 'bye',
+    teamTrainingDays: [2], readiness: 'medium',
+    participationProvenance: 'legacy_unknown',
+    currentProductionClaimsAnchorCredit: false,
+    plannerSelected: {
+      mainStrength: 3, coreConditioning: 3, sprintHighSpeed: 1,
+      powerPrimers: 1,
+    },
+    prohibitedPatternProvenance: 'legacy_missing',
+  });
 }
 
 async function run(scenarioId: string) {
@@ -94,8 +182,16 @@ async function run(scenarioId: string) {
 
   const legacy = scenarioId === 'legacy-program-rehydrate';
   const workouts = legacy ? legacyWorkouts() : modernWorkouts();
-  const program = pathProgram(workouts);
-  const microcycle = pathMicrocycle(workouts);
+  const contract = legacy ? undefined : modernContract();
+  const baseProgram = pathProgram(workouts);
+  const program = {
+    ...baseProgram,
+    microcycles: baseProgram.microcycles.map((entry) => ({
+      ...entry,
+      exposureContractV2: contract,
+    })),
+  };
+  const microcycle = { ...pathMicrocycle(workouts), exposureContractV2: contract };
   const envelope = {
     state: {
       currentProgram: program, currentMicrocycle: microcycle, todayWorkout: workouts[0],
