@@ -26,6 +26,12 @@ import { generateProgramLocally } from '../services/api/generateProgram';
 import { addDaysISO } from '../utils/programBlockState';
 import { todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import {
+  normalizeAcceptedArray,
+  normalizeAcceptedKeyedMap,
+  normalizeAcceptedMaterialContext,
+  normalizeAcceptedProgramSurfaces,
+} from './acceptedStateColdStart';
 
 export type AcceptedProgramSurfaces = Pick<
   ProgramState,
@@ -77,28 +83,22 @@ const PROGRAM_SURFACE_KEYS: Array<keyof AcceptedProgramSurfaces> = [
 ];
 
 function programSurfaces(state: ProgramState): AcceptedProgramSurfaces {
-  return {
-    currentProgram: state.currentProgram,
-    currentMicrocycle: state.currentMicrocycle,
-    todayWorkout: state.todayWorkout,
-    blockState: state.blockState,
-    dateOverrides: state.dateOverrides,
-    overrideContexts: state.overrideContexts,
-    weekScopedOverlays: state.weekScopedOverlays,
-    exposureContractsByWeek: state.exposureContractsByWeek,
-  };
+  return normalizeAcceptedProgramSurfaces(state);
 }
 
 function materialContext(state: ProgramState): AcceptedMaterialContext {
-  if (state.acceptedMaterialContext.revision > 0) return state.acceptedMaterialContext;
-  return {
-    markedDays: { ...useCalendarStore.getState().markedDays },
-    readinessSignalsByDate: { ...useReadinessStore.getState().signalsByDate },
-    activeConstraints: [...(useCoachUpdatesStore.getState().activeConstraints ?? [])],
+  const accepted = normalizeAcceptedMaterialContext(state.acceptedMaterialContext);
+  if (accepted.revision > 0) return accepted;
+  return normalizeAcceptedMaterialContext({
+    markedDays: normalizeAcceptedKeyedMap(useCalendarStore.getState().markedDays),
+    readinessSignalsByDate: normalizeAcceptedKeyedMap(
+      useReadinessStore.getState().signalsByDate,
+    ),
+    activeConstraints: normalizeAcceptedArray(useCoachUpdatesStore.getState().activeConstraints),
     activeInjury: useCoachUpdatesStore.getState().activeInjury ?? null,
     revision: 0,
     lastTransaction: null,
-  };
+  });
 }
 
 function validationConstraints(
@@ -118,7 +118,7 @@ function materialisedProgramPatch(
   base: AcceptedProgramSurfaces,
   patch: Partial<AcceptedProgramSurfaces> | undefined,
 ): AcceptedProgramSurfaces {
-  return { ...base, ...(patch ?? {}) };
+  return normalizeAcceptedProgramSurfaces({ ...base, ...(patch ?? {}) });
 }
 
 function materialiseFixtureMarksForCandidate(args: {
@@ -191,16 +191,18 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
   weekStarts: readonly string[];
   profile?: OnboardingData | null;
 }): void {
+  const surfaces = normalizeAcceptedProgramSurfaces(args.surfaces);
+  const context = normalizeAcceptedMaterialContext(args.context);
   const profile = args.profile ?? useProfileStore.getState().onboardingData;
   for (const weekStart of Array.from(new Set(args.weekStarts.map((week) => week.slice(0, 10))))) {
-    const overlay = args.surfaces.weekScopedOverlays[weekStart];
-    const microcycle = args.surfaces.currentProgram?.microcycles.find((candidate) =>
+    const overlay = surfaces.weekScopedOverlays[weekStart];
+    const microcycle = surfaces.currentProgram?.microcycles.find((candidate) =>
       weekStart >= candidate.startDate.slice(0, 10) &&
       weekStart <= candidate.endDate.slice(0, 10)) ?? (
-      args.surfaces.currentMicrocycle &&
-      weekStart >= args.surfaces.currentMicrocycle.startDate.slice(0, 10) &&
-      weekStart <= args.surfaces.currentMicrocycle.endDate.slice(0, 10)
-        ? args.surfaces.currentMicrocycle
+      surfaces.currentMicrocycle &&
+      weekStart >= surfaces.currentMicrocycle.startDate.slice(0, 10) &&
+      weekStart <= surfaces.currentMicrocycle.endDate.slice(0, 10)
+        ? surfaces.currentMicrocycle
         : null
     );
     const contract = overlay?.exposureContractV2 ?? microcycle?.exposureContractV2;
@@ -209,7 +211,7 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
     for (let offset = 0; offset < 7; offset++) {
       const date = addDaysISO(weekStart, offset);
       const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
-      const manual = args.surfaces.dateOverrides[date];
+      const manual = surfaces.dateOverrides[date];
       const hasOverlay = !!overlay && Object.prototype.hasOwnProperty.call(
         overlay.workoutsByDate,
         date,
@@ -228,7 +230,7 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
         workouts,
         weekStart,
         profile,
-        scheduleState: { markedDays: args.context.markedDays },
+        scheduleState: { markedDays: context.markedDays },
       });
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const evaluation = require('../rules/section18EffectiveWeekEvaluator')
@@ -255,18 +257,22 @@ export function stageAcceptedStateTransaction(
 ): AcceptedStateTransactionResult {
   const current = useProgramStore.getState();
   const priorContext = materialContext(current);
-  const context: AcceptedMaterialContext = {
-    markedDays: { ...(proposal.markedDays ?? priorContext.markedDays) },
-    readinessSignalsByDate: {
-      ...(proposal.readinessSignalsByDate ?? priorContext.readinessSignalsByDate),
-    },
-    activeConstraints: [...(proposal.activeConstraints ?? priorContext.activeConstraints)],
+  const context = normalizeAcceptedMaterialContext({
+    markedDays: proposal.markedDays === undefined
+      ? priorContext.markedDays
+      : proposal.markedDays,
+    readinessSignalsByDate: proposal.readinessSignalsByDate === undefined
+      ? priorContext.readinessSignalsByDate
+      : proposal.readinessSignalsByDate,
+    activeConstraints: proposal.activeConstraints === undefined
+      ? priorContext.activeConstraints
+      : proposal.activeConstraints,
     activeInjury: proposal.activeInjury === undefined
       ? priorContext.activeInjury
       : proposal.activeInjury,
     revision: priorContext.revision + 1,
     lastTransaction: proposal.reason,
-  };
+  });
   const profile = proposal.profile ?? useProfileStore.getState().onboardingData;
   const candidate = materialiseFixtureMarksForCandidate({
     candidate: materialisedProgramPatch(programSurfaces(current), proposal.program),

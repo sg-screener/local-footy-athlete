@@ -10,7 +10,11 @@ import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { logger } from './logger';
-import { seedOnboardingProgram } from './onboardingCompletion';
+import {
+  logOnboardingPipelineError,
+  seedOnboardingProgram,
+  toOnboardingPipelineError,
+} from './onboardingCompletion';
 
 export const DEV_TEST_ONBOARDING_DATA: OnboardingData = {
   firstName: 'Sam',
@@ -148,13 +152,57 @@ export async function runDevOnboardingSkip(args: {
     program = DEFAULT_PROGRAM;
   }
 
-  seedOnboardingProgram({
-    onboardingData,
-    program,
-    programStore,
-    calendarStore: args.calendarStore,
-  });
-  profileStore.completeOnboarding();
+  try {
+    seedOnboardingProgram({
+      onboardingData,
+      program,
+      programStore,
+      calendarStore: args.calendarStore,
+    });
+  } catch (error) {
+    const pipelineError = toOnboardingPipelineError(
+      error,
+      'accepted_state_transaction',
+      'store_generated_program',
+    );
+    logOnboardingPipelineError('Dev-skip program installation failed', pipelineError);
+    if (pipelineError.stage !== 'section18_acceptance' || program === DEFAULT_PROGRAM) {
+      throw pipelineError;
+    }
+    usedFallback = true;
+    logger.warn('[dev-onboarding-skip] Using DEFAULT_PROGRAM after Section 18 rejection', {
+      stage: pipelineError.stage,
+      diagnostic: pipelineError.message,
+    });
+    try {
+      seedOnboardingProgram({
+        onboardingData,
+        program: DEFAULT_PROGRAM,
+        programStore,
+        calendarStore: args.calendarStore,
+      });
+      program = DEFAULT_PROGRAM;
+    } catch (fallbackError) {
+      const fallbackPipelineError = toOnboardingPipelineError(
+        fallbackError,
+        'accepted_state_transaction',
+        'store_default_program_after_acceptance_failure',
+      );
+      logOnboardingPipelineError('Dev-skip DEFAULT_PROGRAM installation failed', fallbackPipelineError);
+      throw fallbackPipelineError;
+    }
+  }
+  try {
+    profileStore.completeOnboarding();
+  } catch (error) {
+    const pipelineError = toOnboardingPipelineError(
+      error,
+      'onboarding_navigation',
+      'complete_onboarding',
+    );
+    logOnboardingPipelineError('Dev-skip onboarding completion failed', pipelineError);
+    throw pipelineError;
+  }
   logger.info('[dev-skip] completeOnboarding called');
 
   return { program, onboardingData, usedFallback };

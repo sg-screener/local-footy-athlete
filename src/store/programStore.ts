@@ -43,9 +43,65 @@ import {
 } from '../rules/seasonPhaseClock';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
-import type { ReadinessSignal } from '../utils/readiness';
 import type { ActiveConstraint } from './coachUpdatesStore';
-import type { InjuryState } from '../utils/injuryProgression';
+import {
+  createEmptyAcceptedMaterialContext,
+  normalizeAcceptedMaterialContext,
+  normalizeAcceptedProgramSurfaces,
+  type AcceptedMaterialContext,
+} from './acceptedStateColdStart';
+
+export type { AcceptedMaterialContext } from './acceptedStateColdStart';
+
+export class ProgramPersistenceError extends Error {
+  readonly code = 'program_persistence_failed' as const;
+  readonly originalStack: string | null;
+
+  constructor(public readonly operation: 'read' | 'write' | 'remove', cause: unknown) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'ProgramPersistenceError';
+    this.originalStack = cause instanceof Error ? cause.stack ?? null : null;
+  }
+}
+
+function programPersistenceFailure(
+  operation: ProgramPersistenceError['operation'],
+  cause: unknown,
+): ProgramPersistenceError {
+  const error = new ProgramPersistenceError(operation, cause);
+  logger.error('[ProgramStore][persistence] Persistence failed', {
+    stage: 'persistence',
+    operation,
+    errorName: cause instanceof Error ? cause.name : typeof cause,
+    message: error.message,
+    stack: error.originalStack,
+  });
+  return error;
+}
+
+const programStateStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    try {
+      return await AsyncStorage.getItem(name);
+    } catch (error) {
+      throw programPersistenceFailure('read', error);
+    }
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(name, value);
+    } catch (error) {
+      throw programPersistenceFailure('write', error);
+    }
+  },
+  removeItem: async (name: string): Promise<void> => {
+    try {
+      await AsyncStorage.removeItem(name);
+    } catch (error) {
+      throw programPersistenceFailure('remove', error);
+    }
+  },
+};
 
 /**
  * ProgramStore is the final persistence boundary for every generated/edit
@@ -772,15 +828,6 @@ export interface SessionFeedback {
   notes?: string;
 }
 
-export interface AcceptedMaterialContext {
-  markedDays: Record<string, CalendarDayType>;
-  readinessSignalsByDate: Record<string, ReadinessSignal>;
-  activeConstraints: ActiveConstraint[];
-  activeInjury: InjuryState | null;
-  revision: number;
-  lastTransaction: string | null;
-}
-
 export interface ProgramState {
   currentProgram: TrainingProgram | null;
   currentMicrocycle: Microcycle | null;
@@ -917,14 +964,7 @@ export const useProgramStore = create<ProgramState>()(
       isLoading: false,
       error: null,
       blockState: null,
-      acceptedMaterialContext: {
-        markedDays: {},
-        readinessSignalsByDate: {},
-        activeConstraints: [],
-        activeInjury: null,
-        revision: 0,
-        lastTransaction: null,
-      },
+      acceptedMaterialContext: createEmptyAcceptedMaterialContext(),
       dateOverrides: {},
       overrideContexts: {},
       weekScopedOverlays: {},
@@ -946,7 +986,7 @@ export const useProgramStore = create<ProgramState>()(
         const candidateProgram = program
           ? postValidateProgram(ensureProgramSeasonPhaseClock(program))
           : null;
-        const priorState = useProgramStore.getState();
+        const priorState = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         const clearedDates = new Set(options?.clearOverrideDates ?? []);
         const candidateOverrides = clearedDates.size > 0
           ? Object.fromEntries(Object.entries(priorState.dateOverrides).filter(([date]) =>
@@ -993,7 +1033,7 @@ export const useProgramStore = create<ProgramState>()(
       setBlockState: (blockState) => set({ blockState }),
 
       ensureBlockState: (dateISO) => {
-        const state = useProgramStore.getState();
+        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         if (state.blockState) return state.blockState;
         const derived = deriveStoredBlockStateFromProgram(state.currentProgram, dateISO);
         useProgramStore.setState({ blockState: derived });
@@ -1045,7 +1085,7 @@ export const useProgramStore = create<ProgramState>()(
           dayOfWeek: new Date(`${date.slice(0, 10)}T12:00:00`).getDay(),
         };
         const exposureResolution = resolveDateMutationExposureContract(date, validatedWorkout);
-        const state = useProgramStore.getState();
+        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           reason: `override:set:${date}`,
@@ -1066,7 +1106,7 @@ export const useProgramStore = create<ProgramState>()(
       },
 
       removeManualOverride: (date) => {
-        const state = useProgramStore.getState();
+        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         if (!Object.prototype.hasOwnProperty.call(state.dateOverrides, date)) return;
         const weekStart = mondayForDate(date);
         const updatedOverrides = { ...state.dateOverrides };
@@ -1089,7 +1129,7 @@ export const useProgramStore = create<ProgramState>()(
       },
 
       clearManualOverrides: () => {
-        const state = useProgramStore.getState();
+        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         const affectedWeeks = Array.from(new Set(Object.keys(state.dateOverrides).map(mondayForDate)));
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
@@ -1151,7 +1191,7 @@ export const useProgramStore = create<ProgramState>()(
 
       setWeekScopedOverlay: (overlay) => {
         const validatedOverlay = postValidateWeekOverlay(overlay);
-        const state = useProgramStore.getState();
+        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           reason: `overlay:set:${validatedOverlay.weekStart}`,
@@ -1166,7 +1206,7 @@ export const useProgramStore = create<ProgramState>()(
       },
 
       removeWeekScopedOverlay: (weekStart) => {
-        const state = useProgramStore.getState();
+        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         if (!Object.prototype.hasOwnProperty.call(state.weekScopedOverlays, weekStart)) return;
         const updated = { ...state.weekScopedOverlays };
         delete updated[weekStart];
@@ -1179,7 +1219,7 @@ export const useProgramStore = create<ProgramState>()(
       },
 
       clearWeekScopedOverlays: () => {
-        const state = useProgramStore.getState();
+        const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         const affectedWeeks = Object.keys(state.weekScopedOverlays);
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
@@ -1289,14 +1329,7 @@ export const useProgramStore = create<ProgramState>()(
           isLoading: false,
           error: null,
           blockState: null,
-          acceptedMaterialContext: {
-            markedDays: {},
-            readinessSignalsByDate: {},
-            activeConstraints: [],
-            activeInjury: null,
-            revision: 0,
-            lastTransaction: null,
-          },
+          acceptedMaterialContext: createEmptyAcceptedMaterialContext(),
           dateOverrides: {},
           overrideContexts: {},
           weekScopedOverlays: {},
@@ -1308,24 +1341,29 @@ export const useProgramStore = create<ProgramState>()(
     }),
     {
       name: 'program-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => programStateStorage),
       merge: (persisted, current) => {
-        const incoming = (persisted as Partial<ProgramState> | undefined) ?? {};
-        const acceptedContext = incoming.acceptedMaterialContext;
-        const readinessConstraints = acceptedContext
-          ? Object.values(acceptedContext.readinessSignalsByDate ?? {}).flatMap((signal) =>
+        const incomingRaw = (persisted as Partial<ProgramState> | undefined) ?? {};
+        const acceptedContext = normalizeAcceptedMaterialContext(incomingRaw.acceptedMaterialContext);
+        const incoming = {
+          ...incomingRaw,
+          ...normalizeAcceptedProgramSurfaces(incomingRaw),
+          acceptedMaterialContext: acceptedContext,
+        };
+        const readinessConstraints = acceptedContext.revision > 0
+          ? Object.values(acceptedContext.readinessSignalsByDate).flatMap((signal) =>
               require('../utils/readinessConstraints').buildReadinessActiveConstraints(signal))
           : [];
         const constraintsById = new Map<string, ActiveConstraint>();
         for (const constraint of [
-          ...(acceptedContext?.activeConstraints ?? []),
+          ...acceptedContext.activeConstraints,
           ...readinessConstraints,
         ]) constraintsById.set(constraint.id, constraint);
         const persistedState = canonicaliseHydratedState(
           incoming,
           {
             profile: require('./profileStore').useProfileStore.getState().onboardingData,
-            markedDays: acceptedContext?.markedDays,
+            markedDays: acceptedContext.markedDays,
             activeConstraints: constraintsById.size > 0
               ? Array.from(constraintsById.values())
               : undefined,

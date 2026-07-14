@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ReadinessSignal } from '../utils/readiness';
+import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
 
 interface ReadinessState {
   signalsByDate: Record<string, ReadinessSignal>;
@@ -69,6 +70,14 @@ export const useReadinessStore = create<ReadinessState>()(
     {
       name: 'readiness-store',
       storage: createJSONStorage(() => AsyncStorage),
+      merge: (persisted, current) => {
+        const incoming = (persisted as Partial<ReadinessState> | undefined) ?? {};
+        return {
+          ...current,
+          ...incoming,
+          signalsByDate: normalizeAcceptedKeyedMap<ReadinessSignal>(incoming.signalsByDate),
+        };
+      },
       onRehydrateStorage: () => (state, error) => {
         if (error || !state) return;
         const affectedDates = Object.keys(state.signalsByDate);

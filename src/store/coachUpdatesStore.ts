@@ -25,6 +25,11 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  normalizeAcceptedArray,
+  normalizeAcceptedKeyedMap,
+  normalizeAcceptedMaterialContext,
+} from './acceptedStateColdStart';
 import type {
   InjuryState,
   InjuryHistoryEntry,
@@ -686,12 +691,36 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
     {
       name: 'coach-updates',
       storage: createJSONStorage(() => AsyncStorage),
+      merge: (persisted, current) => {
+        const incoming = (persisted as Partial<CoachUpdatesState> | undefined) ?? {};
+        const context = normalizeAcceptedMaterialContext({
+          activeConstraints: incoming.activeConstraints,
+          activeInjury: incoming.activeInjury,
+        });
+        return {
+          ...current,
+          ...incoming,
+          updatesByWeek: normalizeAcceptedKeyedMap<CoachUpdate>(incoming.updatesByWeek),
+          activeConstraints: context.activeConstraints,
+          activeInjury: context.activeInjury,
+        };
+      },
     },
   ),
 );
 
 useCoachUpdatesStore.subscribe((state, previous) => {
   if (state.activeConstraints === previous.activeConstraints || safetyProjectionInProgress) return;
+  const activeConstraints = normalizeAcceptedArray<ActiveConstraint>(state.activeConstraints);
+  const priorConstraints = normalizeAcceptedArray<ActiveConstraint>(previous.activeConstraints);
+  const activeInjury = normalizeAcceptedMaterialContext({
+    activeConstraints,
+    activeInjury: state.activeInjury,
+  }).activeInjury;
+  const priorInjury = normalizeAcceptedMaterialContext({
+    activeConstraints: priorConstraints,
+    activeInjury: previous.activeInjury,
+  }).activeInjury;
   safetyProjectionInProgress = true;
   try {
     // External persistence hydration writes only the legacy mirror. Publish
@@ -699,16 +728,19 @@ useCoachUpdatesStore.subscribe((state, previous) => {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     require('./acceptedStateTransaction').commitAcceptedStateTransaction({
       reason: 'constraint:external_hydration',
-      activeConstraints: [...state.activeConstraints],
-      activeInjury: state.activeInjury,
+      activeConstraints,
+      activeInjury,
     });
+    if (state.activeConstraints !== activeConstraints || state.activeInjury !== activeInjury) {
+      useCoachUpdatesStore.setState({ activeConstraints, activeInjury });
+    }
   } catch (error) {
     // Persistence hydration is the one external state replacement that can
     // bypass the action methods above. Roll it back if the paired program
     // projection cannot be accepted.
     useCoachUpdatesStore.setState({
-      activeConstraints: previous.activeConstraints,
-      activeInjury: previous.activeInjury,
+      activeConstraints: priorConstraints,
+      activeInjury: priorInjury,
     });
     throw error;
   } finally {

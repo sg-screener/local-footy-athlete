@@ -24,7 +24,11 @@ import {
   generateProgramFromProfile,
   getProgramGenerationProfileFieldDiagnostics,
 } from '../../services/api/generateProgram';
-import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
+import {
+  logOnboardingPipelineError,
+  seedOnboardingProgram,
+  toOnboardingPipelineError,
+} from '../../utils/onboardingCompletion';
 import { logger } from '../../utils/logger';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
@@ -255,16 +259,17 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
     setPhase('generating');
     setErrorMessage('');
 
+    let program: typeof DEFAULT_PROGRAM;
     try {
-      const program = await generateProgramFromProfile(onboardingData);
-      seedProgram(program);
-      transitionToReady();
+      program = await generateProgramFromProfile(onboardingData);
     } catch (err: any) {
       const programGenError = err instanceof ProgramGenError ? err : null;
-      logger.error('[ProgramGen] FAILED:', {
+      logger.error('[Onboarding][generation] Program generation failed', {
+        stage: 'generation',
         message: err?.message || String(err),
         kind: programGenError?.kind ?? 'unknown',
         diagnostic: programGenError?.diagnostic ?? null,
+        stack: err instanceof Error ? err.stack ?? null : null,
       });
 
       // Overload errors: show error state with retry — don't silently fallback
@@ -285,9 +290,46 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
           missingProfileFields: getProgramGenerationProfileFieldDiagnostics(onboardingData),
         });
       }
-      seedProgram(DEFAULT_PROGRAM);
-      transitionToReady();
+      program = DEFAULT_PROGRAM;
     }
+
+    try {
+      seedProgram(program);
+    } catch (error) {
+      const pipelineError = toOnboardingPipelineError(
+        error,
+        'accepted_state_transaction',
+        'store_generated_program',
+      );
+      logOnboardingPipelineError('Program installation failed', pipelineError);
+      if (pipelineError.stage === 'section18_acceptance' && program !== DEFAULT_PROGRAM) {
+        if (isDevBuild()) {
+          logger.warn('[ProgramGen][dev] Using DEFAULT_PROGRAM fallback after Section 18 rejection', {
+            stage: pipelineError.stage,
+            diagnostic: pipelineError.message,
+          });
+        }
+        try {
+          seedProgram(DEFAULT_PROGRAM);
+        } catch (fallbackError) {
+          const fallbackPipelineError = toOnboardingPipelineError(
+            fallbackError,
+            'accepted_state_transaction',
+            'store_default_program_after_acceptance_failure',
+          );
+          logOnboardingPipelineError('DEFAULT_PROGRAM installation failed', fallbackPipelineError);
+          setErrorMessage('Your program was created, but it could not be saved. Please try again.');
+          setPhase('error');
+          return;
+        }
+      } else {
+        setErrorMessage('Your program was created, but it could not be saved. Please try again.');
+        setPhase('error');
+        return;
+      }
+    }
+
+    transitionToReady();
   };
 
   // Cross-fade from the generating group to the ready group. We:
@@ -338,7 +380,18 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
   };
 
   const handleStartTraining = () => {
-    completeOnboarding();
+    try {
+      completeOnboarding();
+    } catch (error) {
+      const pipelineError = toOnboardingPipelineError(
+        error,
+        'onboarding_navigation',
+        'complete_onboarding',
+      );
+      logOnboardingPipelineError('Onboarding completion/navigation failed', pipelineError);
+      setErrorMessage('Your program is saved, but onboarding could not finish. Please try again.');
+      setPhase('error');
+    }
   };
 
   const handleRetry = () => {

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
 
 /**
  * Calendar Store — Game Day Management
@@ -136,6 +137,14 @@ export const useCalendarStore = create<CalendarState>()(
       name: 'calendar-storage',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ markedDays: state.markedDays }),
+      merge: (persisted, current) => {
+        const incoming = (persisted as Partial<CalendarState> | undefined) ?? {};
+        return {
+          ...current,
+          ...incoming,
+          markedDays: normalizeAcceptedKeyedMap<CalendarDayType>(incoming.markedDays),
+        };
+      },
       onRehydrateStorage: () => (state, error) => {
         if (error || !state) return;
         const affectedDates = Object.keys(state.markedDays);
