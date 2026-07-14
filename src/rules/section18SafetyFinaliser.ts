@@ -116,6 +116,13 @@ function safePatternFallbackRow(
     prescribedWeightKg: 0,
     restSeconds: 90,
     notes: 'Safe pattern coverage retained while the active reduction remains in force.',
+    section18Evidence: {
+      protocolVersion: 1,
+      role: 'main_strength',
+      strengthPattern: pattern,
+      mainStrengthPattern: pattern,
+      provenance: 'canonical_row_classifier',
+    },
     exercise: {
       id: `section18-safe-${pattern}`,
       name,
@@ -387,7 +394,7 @@ export function finaliseSection18SafetyWeek(args: {
           ...source,
           id: `${destination.id}:safety-consolidated:${pattern}`,
           workoutId: destination.id,
-          exerciseOrder: destination.exercises.length + 1,
+          exerciseOrder: 1,
         };
         workouts[destinationIndex] = conformWorkout({
           workout: {
@@ -396,7 +403,13 @@ export function finaliseSection18SafetyWeek(args: {
             strengthIntent: undefined,
             strengthIntentDiagnostics: undefined,
             strengthPatternContributions: undefined,
-            exercises: [...destination.exercises, cloned],
+            exercises: [
+              cloned,
+              ...destination.exercises.map((row, index) => ({
+                ...row,
+                exerciseOrder: index + 2,
+              })),
+            ],
           },
           contract: args.contract,
           canonicalContext: args.canonicalContext,
@@ -509,6 +522,7 @@ export function finaliseSection18SafetyWeek(args: {
         const destinationIndex = workouts.findIndex((workout) => workout.dayOfWeek === day);
         if (destinationIndex < 0) continue;
         const destination = workouts[destinationIndex];
+        const restored = safePatternFallbackRow(destination, pattern);
         workouts[destinationIndex] = conformWorkout({
           workout: {
             ...destination,
@@ -517,8 +531,11 @@ export function finaliseSection18SafetyWeek(args: {
             strengthIntentDiagnostics: undefined,
             strengthPatternContributions: undefined,
             exercises: [
-              ...destination.exercises,
-              safePatternFallbackRow(destination, pattern),
+              { ...restored, exerciseOrder: 1 },
+              ...destination.exercises.map((row, index) => ({
+                ...row,
+                exerciseOrder: index + 2,
+              })),
             ],
           },
           contract: args.contract,

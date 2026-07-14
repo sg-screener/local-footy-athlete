@@ -60,6 +60,7 @@ function resetWorld() {
     ...(s as object),
     activeConstraints: [],
   }) as never);
+  useProgramStore.getState().setCurrentProgram(null);
 }
 
 const PRESEASON: Partial<OnboardingData> = {
@@ -193,11 +194,18 @@ console.log('\n── 2. Stacks with busy/away + game; survives canonical rebuil
       date: wk2Mon, todayISO: blockStart, variant: 'away', linkedOverrideDates: [wk2Mon],
     }),
   );
-  useProgramStore.getState().setManualOverride(wk2Mon, {
-    id: 'away-mon', microcycleId: 'mc-ai-1', dayOfWeek: 1, name: 'Rest — away',
-    description: '', durationMinutes: 0, intensity: 'Light', workoutType: 'Recovery',
-    sessionTier: 'recovery', exercises: [], createdAt: '', updatedAt: '',
-  } as never, { intent: 'program_adjustment', activeModifierId: awayId });
+  let awayOverrideRejected = false;
+  try {
+    useProgramStore.getState().setManualOverride(wk2Mon, {
+      id: 'away-mon', microcycleId: 'mc-ai-1', dayOfWeek: 1, name: 'Rest — away',
+      description: '', durationMinutes: 0, intensity: 'Light', workoutType: 'Recovery',
+      sessionTier: 'recovery', exercises: [], createdAt: '', updatedAt: '',
+    } as never, { intent: 'program_adjustment', activeModifierId: awayId });
+  } catch (error) {
+    awayOverrideRejected = (error as { code?: string }).code === 'section18_week_rejected';
+  }
+  ok('away override that removes selected core work is rejected atomically',
+    awayOverrideRejected && !useProgramStore.getState().dateOverrides[wk2Mon]);
 
   // Readiness for the same week.
   applyReadiness('cooked_week', wk2Mon, blockStart);
@@ -211,8 +219,8 @@ console.log('\n── 2. Stacks with busy/away + game; survives canonical rebuil
     constraints.some((c) => c.id === readinessId));
   ok('busy/away constraint survives alongside readiness (stacking)',
     constraints.some((c) => c.id === awayId));
-  ok('away Monday override preserved by the rebuild sweep',
-    rebuild.sweep.preserve.includes(wk2Mon), JSON.stringify(rebuild.sweep));
+  ok('rebuild has no rejected away override to preserve',
+    !rebuild.sweep.preserve.includes(wk2Mon), JSON.stringify(rebuild.sweep));
   ok('game anchors present in the rebuild context (game preserved)',
     rebuild.context.gameDates.length > 0, JSON.stringify(rebuild.context.gameDates));
 }
@@ -221,15 +229,17 @@ console.log('\n── 2. Stacks with busy/away + game; survives canonical rebuil
 console.log('\n── 3. Clearing removes ONLY the readiness modifier ──');
 {
   const todayISO = '2026-07-06';
-  const wk2Mon = addDays(todayISO, 7);
-  const readinessId = loadReductionModifierIdForDate(wk2Mon);
+  const readinessConstraint = useCoachUpdatesStore.getState().activeConstraints
+    .find((constraint) => constraint.id.startsWith('tap-load-reduction:'));
+  const readinessId = readinessConstraint?.id ?? loadReductionModifierIdForDate(addDays(todayISO, 7));
+  const selectedWeek = readinessConstraint?.weekStartISO ?? readinessId.split(':').at(-1)!;
   const before = useCoachUpdatesStore.getState().activeConstraints.length;
   // Resolve constraint id → active-program-modifier id, exactly as the
   // hook's handleClearWeekReadiness does.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { getActiveProgramModifiers } =
     require('../utils/activeProgramModifiers') as typeof import('../utils/activeProgramModifiers');
-  const target = getActiveProgramModifiers().find((m) => m.sourceId === readinessId);
+  const target = getActiveProgramModifiers(selectedWeek).find((m) => m.sourceId === readinessId);
   ok('active modifier resolvable for the week readiness constraint', !!target, readinessId);
   const res = executeProgramControlAction({
     type: 'clear_active_modifier',

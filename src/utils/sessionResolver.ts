@@ -600,6 +600,11 @@ function applyGameProximity(
     if (templateWorkout?.sessionTier === 'recovery' || templateWorkout?.workoutType === 'Recovery') {
       return null;
     }
+    // A canonical explicit-rest stub is a final accepted-week decision. Keep
+    // it empty so optional G-1 gunshow work cannot erase the true-rest floor.
+    if (templateWorkout?.workoutType === 'Rest' && templateWorkout.exercises.length === 0) {
+      return null;
+    }
     // Keep game as-is (shouldn't happen but guard)
     if (templateWorkout?.workoutType === 'Game') {
       return null;
@@ -867,6 +872,19 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
       logger.debug(`[RESOLVER-FREED-GAME] no games this week -> returning none (freed for conditioning)`);
       return buildDay(date, dow, today, null, 'none');
     }
+  }
+
+  // Accepted-week rest stubs are persisted scheduling decisions, not visible
+  // sessions. Keep the day empty and mark it as rest so the later
+  // conditioning/recovery fill passes cannot claim it.
+  if (
+    templateWorkout?.workoutType === 'Rest' &&
+    templateWorkout.exercises.length === 0 &&
+    !templateWorkout.powerBlock &&
+    !templateWorkout.conditioningBlock &&
+    !templateWorkout.speedBlock
+  ) {
+    return buildDay(date, dow, today, null, 'rest');
   }
 
   // ── Priority 6a: Recovery template → replace with derived pool session ──
@@ -1251,6 +1269,23 @@ export function resolveWeekWithConditioning(
         );
       }
     }
+  }
+
+  // Contract v2 is the final owner of selected core, optional work and true
+  // rest for an accepted week. Game-proximity and progression have already
+  // resolved above; the legacy gap-fill passes below must not invent a new
+  // conditioning or recovery session after the accepted-week gateway.
+  const section18Microcycle = selectMicrocycleForDate(
+    state.currentProgram,
+    state.currentMicrocycle,
+    mondayStr,
+  );
+  const section18Overlay = state.weekScopedOverlays?.[mondayStr];
+  if (section18Overlay?.exposureContractV2 || section18Microcycle?.exposureContractV2) {
+    return result.map((day) =>
+      !day.workout && day.source === 'none'
+        ? buildDay(day.date, day.dayOfWeek, today, null, 'rest')
+        : day);
   }
 
   // Pass 2: progressive conditioning placement

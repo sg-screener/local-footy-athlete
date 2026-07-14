@@ -833,6 +833,10 @@ export function buildSection18WeeklyExposureContractV2(
   const powerRemoval = powerEligible
     ? null
     : policy.power.removalReason ?? (prohibited.length === ALL_PATTERNS.length ? 'full_pattern_restriction' : 'ineligible');
+  const selectedAppCoreCapacity = Math.max(
+    0,
+    (input.plannerSelected.coreConditioning ?? conditioningRequired) - anchors.length,
+  );
 
   return {
     protocolVersion: WEEKLY_EXPOSURE_CONTRACT_V2_VERSION,
@@ -923,8 +927,14 @@ export function buildSection18WeeklyExposureContractV2(
       legacyUnknownAchievedCount: null,
       requiredCoreStress: policy.conditioning.stress,
       intensityPolicy: {
-        requiredAppMediumHardMinimum: policy.conditioning.requiredAppMediumHardMinimum,
-        requiredAppHardMinimum: policy.conditioning.requiredAppHardMinimum,
+        requiredAppMediumHardMinimum: Math.min(
+          policy.conditioning.requiredAppMediumHardMinimum,
+          selectedAppCoreCapacity,
+        ),
+        requiredAppHardMinimum: Math.min(
+          policy.conditioning.requiredAppHardMinimum,
+          selectedAppCoreCapacity,
+        ),
         permittedHardCoreMaximum: policy.conditioning.permittedHardCoreMaximum,
       },
       achievedByStress: { light: null, moderate: null, hard: null, unknown: null },
@@ -995,14 +1005,20 @@ export function refreshSection18SafetyPolicy(
   >> = {},
 ): WeeklyExposureContractV2 {
   const contract = JSON.parse(JSON.stringify(source)) as WeeklyExposureContractV2;
+  const persistedCookedReadiness = contract.authorisedReductions.some((entry) =>
+    entry.reason === 'low_readiness' && (
+      entry.metric === 'main_strength_frequency' ||
+      entry.metric === 'conditioning_core_frequency' ||
+      entry.metric === 'session_intensity_percent' ||
+      entry.metric === 'session_volume'
+    ));
   contract.safety = buildSafetyPolicy({
     mode: contract.identity.mode,
     weekKind: contract.identity.weekKind,
     prohibitedPatterns: contract.strengthPatterns.prohibitedPatterns,
     requiredSafePatterns: contract.strengthPatterns.requiredSafePatterns,
     reductions: contract.authorisedReductions,
-    cookedReadiness: overrides.cookedReadiness ??
-      contract.safety?.reasons?.includes('low_readiness') ?? false,
+    cookedReadiness: overrides.cookedReadiness ?? persistedCookedReadiness,
     prohibitedSprintHighSpeed: overrides.prohibitedSprintHighSpeed ??
       contract.safety?.prohibitedSprintHighSpeed,
     prohibitedPower: overrides.prohibitedPower ?? contract.power.eligible === false,

@@ -1271,7 +1271,25 @@ export function clearActiveProgramModifier(
   modifierIdToClear: string,
 ): ClearActiveProgramModifierResult {
   const modifiers = getActiveProgramModifiers();
-  const modifier = modifiers.find((m) => m.id === modifierIdToClear) ?? null;
+  let modifier = modifiers.find((m) => m.id === modifierIdToClear) ?? null;
+  if (!modifier) {
+    // A selected future week can surface an active constraint before it is
+    // effective for today's program. Resolve that explicit stable modifier id
+    // in the constraint's own time window so Clear targets the stored typed
+    // source instead of depending on the wall-clock projection.
+    const constraint = useCoachUpdatesStore.getState().activeConstraints.find((candidate) =>
+      modifierId('active_constraint', candidate.id) === modifierIdToClear);
+    if (constraint) {
+      const scopedConstraint = constraint as ActiveConstraint & {
+        appliesToDate?: string;
+        weekStartISO?: string;
+      };
+      const effectiveDate = scopedConstraint.appliesToDate ?? scopedConstraint.weekStartISO ??
+        scopedConstraint.startDate ?? todayISOLocal();
+      modifier = getActiveProgramModifiers(effectiveDate)
+        .find((candidate) => candidate.id === modifierIdToClear) ?? null;
+    }
+  }
   if (!modifier) {
     return {
       cleared: null,

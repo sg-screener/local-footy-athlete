@@ -11,9 +11,9 @@
  * …then rebuild through the ONE canonical door (rebuildLocalWeek) and
  * assert on the RESOLVED week from the live stores.
  *
- * Invariant under test (Sam, 2026-07-08): no rebuild may forget active
- * context. A user-removed day only returns if the user clears the owning
- * adjustment, or the rebuild explicitly reports a game-window conflict.
+ * Invariant under test: a valid user edit survives rebuild context, while an
+ * edit that would break the authoritative Section 18 selected week is rejected
+ * atomically before either the override or its Coach Note can be stored.
  *
  * global.fetch is poisoned — any network use fails the whole suite.
  *
@@ -207,7 +207,8 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
   const wk2Wed = addDays(blockStart, 9);
   const wk2Sat = addDays(blockStart, 12);
 
-  // ── A. Busy/Away: remove FUTURE-week Monday via the real action ──
+  // ── A. Busy/Away: removing selected core Monday without a compensating
+  // replan is rejected atomically by the accepted-week boundary. ──
   {
     const visibleWeek = resolveLiveWeek(wk2Mon, profile.seasonPhase!, undefined);
     const result = executeProgramControlAction({
@@ -224,24 +225,24 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       createsActiveModifier: true,
       oneOffOnly: false,
     }, { visibleWeek, todayISO });
-    ok(`[A] away action applied (${result.route})`, result.ok === true, JSON.stringify(result));
+    ok(`[A] invalid away action rejected (${result.route})`, result.ok === false, JSON.stringify(result));
 
     const before = resolveLiveWeek(wk2Mon, profile.seasonPhase!, undefined);
-    ok('[A] Monday cleared before rebuild',
-      !/lower|upper|strength/i.test(dayOf(before, wk2Mon)?.workout?.name ?? ''),
+    ok('[A] rejected away action leaves Monday unchanged',
+      /lower|upper|strength/i.test(dayOf(before, wk2Mon)?.workout?.name ?? ''),
       dayOf(before, wk2Mon)?.workout?.name ?? '(off)');
 
     const rebuild = addSaturdayGame(profile, wk2Sat);
     const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
-    ok('[A] Monday STAYS removed after adding Saturday game',
-      !/lower|upper|full body|strength session/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
+    ok('[A] game rebuild retains a valid Monday core session',
+      /lower|upper|full body|strength session/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
       `${dayOf(after, wk2Mon)?.source}: ${dayOf(after, wk2Mon)?.workout?.name ?? '(off)'}`);
     ok('[A] Saturday is Game Day', dayOf(after, wk2Sat)?.workout?.workoutType === 'Game');
     const fri = after.find((d) => d.dayOfWeek === 5);
     ok('[A] Friday (G-1) light', !fri?.workout || fri.workout.sessionTier !== 'core',
       `${fri?.workout?.sessionTier}: ${fri?.workout?.name}`);
-    ok('[A] away Coach Note still active',
-      useCoachUpdatesStore.getState().activeConstraints.some((c) => String(c.id).includes('away')));
+    ok('[A] rejected away action creates no Coach Note',
+      !useCoachUpdatesStore.getState().activeConstraints.some((c) => String(c.id).includes('away')));
     ok('[A] no conflicts reported (away Monday is G-5, safe)',
       rebuild.sweep.conflictsRemoved.length === 0, JSON.stringify(rebuild.sweep.conflictsRemoved));
   }
@@ -256,13 +257,15 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       todayISO,
       setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
     });
-    ok(`[B] bin applied: ${res.message ?? ''}`, res.ok === true, JSON.stringify(res.rejected));
+    ok(`[B] invalid bin rejected: ${res.message ?? ''}`,
+      res.ok === false && res.rejected?.some((entry) => entry.code === 'section18_week_rejected') === true,
+      JSON.stringify(res.rejected));
 
     addSaturdayGame(profile, wk2Sat);
     const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
-    ok('[B] binned Monday does NOT resurrect after adding the game',
-      dayOf(after, wk2Mon)?.source === 'manual' &&
-      !/lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
+    ok('[B] rejected bin leaves the rebuilt Monday valid and non-manual',
+      dayOf(after, wk2Mon)?.source !== 'manual' &&
+      /lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
       `${dayOf(after, wk2Mon)?.source}: ${dayOf(after, wk2Mon)?.workout?.name}`);
   }
 
@@ -276,12 +279,14 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       todayISO,
       setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
     });
-    ok(`[C] swap-to-recovery applied: ${res.message ?? ''}`, res.ok === true, JSON.stringify(res.rejected));
+    ok(`[C] invalid recovery swap rejected: ${res.message ?? ''}`,
+      res.ok === false && res.rejected?.some((entry) => entry.code === 'section18_week_rejected') === true,
+      JSON.stringify(res.rejected));
 
     addSaturdayGame(profile, wk2Sat);
     const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
-    ok('[C] Monday stays recovery — does not return as lower strength',
-      !/lower|squat|hinge/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
+    ok('[C] rejected recovery swap leaves Monday strength intact',
+      /lower|squat|hinge/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
       dayOf(after, wk2Mon)?.workout?.name);
   }
 
@@ -298,16 +303,18 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       todayISO,
       setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
     });
-    ok(`[D] move applied: ${res.message ?? ''}`, res.ok === true, JSON.stringify(res.rejected));
+    ok(`[D] invalid move rejected: ${res.message ?? ''}`,
+      res.ok === false && res.rejected?.some((entry) => entry.code === 'section18_week_rejected') === true,
+      JSON.stringify(res.rejected));
 
     const rebuild = addSaturdayGame(profile, wk2Sat);
     const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
-    ok('[D] original Monday does not resurrect (stays rest/moved-away)',
-      dayOf(after, wk2Mon)?.source === 'manual' &&
-      !/lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
+    ok('[D] rejected move leaves original Monday unchanged',
+      dayOf(after, wk2Mon)?.source !== 'manual' &&
+      /lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
       `${dayOf(after, wk2Mon)?.source}: ${dayOf(after, wk2Mon)?.workout?.name}`);
-    ok('[D] hard moved content onto G+1 is cleared/reported',
-      rebuild.sweep.conflictsRemoved.some((c) => c.date === wk2Sun) &&
+    ok('[D] rejected move stores no destination requiring a sweep',
+      rebuild.sweep.conflictsRemoved.length === 0 &&
       dayOf(after, wk2Sun)?.source === 'gameProximity',
       `${dayOf(after, wk2Sun)?.source}: ${dayOf(after, wk2Sun)?.workout?.name} sweep=${JSON.stringify(rebuild.sweep)}`);
   }
@@ -363,11 +370,11 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       useCoachUpdatesStore.getState().activeConstraints.some((c) => c.id === 'tap-recovery-mode:integration'));
   }
 
-  // ── H. Refresh/rebuild again: preservation is idempotent ──
+  // ── H. Refresh/rebuild again: rejection is idempotent ──
   {
     seed(profile);
     const visibleWeek = resolveLiveWeek(wk2Mon, profile.seasonPhase!, undefined);
-    applyPlanChange({
+    const rejected = applyPlanChange({
       change: { kind: 'remove_session', date: wk2Mon },
       visibleWeek,
       todayISO,
@@ -375,11 +382,15 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
     });
     addSaturdayGame(profile, wk2Sat);
     const second = addSaturdayGame(profile, wk2Sat); // "refresh" — rebuild again
-    ok('[H] second rebuild still preserves the removed Monday',
-      second.sweep.preserve.includes(wk2Mon), JSON.stringify(second.sweep));
+    ok('[H] repeated invalid removal is rejected before rebuild',
+      rejected.ok === false && rejected.rejected?.some((entry) =>
+        entry.code === 'section18_week_rejected') === true,
+      JSON.stringify(rejected.rejected));
+    ok('[H] second rebuild has no rejected override to preserve',
+      !second.sweep.preserve.includes(wk2Mon), JSON.stringify(second.sweep));
     const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
-    ok('[H] resolved week still shows Monday removed',
-      !/lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
+    ok('[H] resolved week still shows valid Monday core work',
+      /lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
       dayOf(after, wk2Mon)?.workout?.name);
   }
 }
@@ -405,8 +416,11 @@ console.log('\n── Week-scoped practice match overlay does not pollute future
     .map((d) => `${d.dayOfWeek}:${d.workout?.name ?? 'OFF'}:${d.workout?.workoutType ?? 'OFF'}`)
     .join('|');
 
-  // Athlete blocks Monday in the selected future week before adding a practice match.
-  useProgramStore.getState().setManualOverride(wk2Mon, {
+  // A direct write cannot block selected Monday core work without a valid
+  // compensating replan.
+  let awayWriteRejected = false;
+  try {
+    useProgramStore.getState().setManualOverride(wk2Mon, {
     id: `away-${wk2Mon}`,
     microcycleId: 'manual',
     dayOfWeek: 1,
@@ -419,7 +433,12 @@ console.log('\n── Week-scoped practice match overlay does not pollute future
     exercises: [],
     createdAt: '',
     updatedAt: '',
-  } as never, { intent: 'program_adjustment', label: 'Away' });
+    } as never, { intent: 'program_adjustment', label: 'Away' });
+  } catch (error) {
+    awayWriteRejected = (error as { code?: string }).code === 'section18_week_rejected';
+  }
+  ok('direct invalid away override is rejected atomically',
+    awayWriteRejected && !useProgramStore.getState().dateOverrides[wk2Mon]);
 
   const rebuild = addSaturdayGame(PRESEASON_NO_TEAM_4_DAY, wk2Sat);
   const selected = resolveLiveWeek(wk2Mon, 'Pre-season', 'Saturday');
@@ -439,9 +458,9 @@ console.log('\n── Week-scoped practice match overlay does not pollute future
   ok('selected week Saturday renders as Game Day',
     dayOf(selected, wk2Sat)?.workout?.workoutType === 'Game',
     dayOf(selected, wk2Sat)?.workout?.name);
-  ok('selected week Monday away override still wins over the overlay',
-    dayOf(selected, wk2Mon)?.source === 'manual' &&
-    /away|rest/i.test(dayOf(selected, wk2Mon)?.workout?.name ?? ''),
+  ok('selected week retains valid Monday after rejected away override',
+    dayOf(selected, wk2Mon)?.source !== 'manual' &&
+    !/away|rest/i.test(dayOf(selected, wk2Mon)?.workout?.name ?? ''),
     `${dayOf(selected, wk2Mon)?.source}: ${dayOf(selected, wk2Mon)?.workout?.name}`);
   ok('future no-game week signature is unchanged after adding the match',
     futureAfterSig === futureBeforeSig,

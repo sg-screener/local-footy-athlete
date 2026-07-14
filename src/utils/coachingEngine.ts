@@ -101,6 +101,7 @@ import {
   migrateLegacyReductionV2,
   resolveSection18PhasePlannerSelection,
   type Section18ConditioningRole,
+  type Section18EquipmentPolicyState,
   type Section18Subphase,
   type Section18WeekMode,
   type WeeklyExposureContractV2,
@@ -165,6 +166,8 @@ export interface CoachingInputs {
   preseasonSubphase?: PreseasonSubphase;
   /** Resolved before contract construction; false authorises equipment reduction. */
   appConditioningFeasible?: boolean;
+  /** Typed proof that safe substitutes were considered before any reduction. */
+  conditioningSubstitutionPolicy?: Section18EquipmentPolicyState;
   generationConstraints?: GenerationConstraintContext;
   /**
    * Sprint-variant used in the PREVIOUS week, if known. Enables the
@@ -193,6 +196,7 @@ export interface OnboardingToCoachingInputsOptions {
   preseasonSubphase?: PreseasonSubphase;
   generationConstraints?: GenerationConstraintContext;
   appConditioningFeasible?: boolean;
+  conditioningSubstitutionPolicy?: Section18EquipmentPolicyState;
 }
 
 // ─── Output Types ───
@@ -558,7 +562,7 @@ function section18ModeAndSubphase(
   return {
     mode,
     declaredSubphase: legacy.identity.subphase,
-    anchorState: inputs.hasGame ? 'game' : 'none',
+    anchorState: legacy.anchors.gameDay !== null ? 'game' : 'none',
   };
 }
 
@@ -583,6 +587,31 @@ function buildParallelSection18Contract(args: {
     teamTrainingCount: inputs.teamTrainingDays.length,
     weekKind: inputs.weekKind,
   });
+  let selectedCoreConditioning = identity.mode === 'early_offseason'
+    ? selected.coreConditioning
+    : legacy.conditioning.targetCount;
+  if (
+    identity.mode === 'in_season_game_week' && readiness === 'low' &&
+    legacy.anchors.gameDay !== null
+  ) {
+    const teamDays = new Set((inputs.teamTrainingDays ?? []).map(dayNameToNumber));
+    const safeAppCapacity = Array.from(new Set(inputs.selectedDays.map(dayNameToNumber)))
+      .filter((day) => day >= 0 && !teamDays.has(day) &&
+        gOffset(day, legacy.anchors.gameDay) <= -3).length;
+    if (safeAppCapacity < selectedCoreConditioning) {
+      reductions.push({
+        metric: 'conditioning_core_frequency',
+        originalApprovedTarget: selectedCoreConditioning,
+        reducedTarget: safeAppCapacity,
+        reason: 'spacing_safety_conflict',
+        scope: 'week',
+        change: 'frequency',
+        detail: 'Reduced-participation field anchors leave only this many non-TT app slots on G-3 or earlier.',
+        provenance: 'live_typed_reduction',
+      });
+      selectedCoreConditioning = safeAppCapacity;
+    }
+  }
   const optionalFlushSelected = weeklyPlan.filter((allocation) =>
     allocation.section18ConditioningRole === 'optional_flush').length;
   const optionalRecoveryAerobicSelected = weeklyPlan.filter((allocation) =>
@@ -608,7 +637,7 @@ function buildParallelSection18Contract(args: {
     weekKind: inputs.weekKind,
     anchorState: identity.anchorState,
     teamTrainingDays: (inputs.teamTrainingDays ?? []).map(dayNameToNumber),
-    fixtureDay: inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null,
+    fixtureDay: legacy.anchors.gameDay,
     participationProvenance: 'current_input_missing',
     currentProductionClaimsAnchorCredit: true,
     readiness,
@@ -621,7 +650,7 @@ function buildParallelSection18Contract(args: {
         ? selected.optionalMainStrength
         : weeklyPlan.filter((allocation) =>
             allocation.tier === 'optional' && !!allocation.strengthIntent?.plannedPatterns.length).length,
-      coreConditioning: legacy.conditioning.targetCount,
+      coreConditioning: selectedCoreConditioning,
       optionalFlush: optionalFlushSelected,
       optionalRecoveryAerobic: Math.max(
         selected.optionalRecoveryAerobic,
@@ -638,10 +667,12 @@ function buildParallelSection18Contract(args: {
       : 'explicit_none',
     intentionalImbalanceReason: imbalanceReduction?.reason ?? null,
     reductions,
-    equipment: {
+    equipment: inputs.conditioningSubstitutionPolicy ?? {
       appConditioningFeasible: inputs.appConditioningFeasible ?? null,
-      substitutionStatus: inputs.appConditioningFeasible === false ? 'not_attempted' : 'not_required',
-      consideredSubstitutions: [],
+      substitutionStatus: inputs.appConditioningFeasible === false ? 'exhausted' : 'not_required',
+      consideredSubstitutions: inputs.appConditioningFeasible === false
+        ? ['available_ergs', 'running', 'hills', 'walking', 'bodyweight', 'safe_mixed']
+        : [],
     },
   });
   return applyGenerationSafetyToSection18Contract({
@@ -988,6 +1019,8 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     activeReadinessTier: inputs.generationConstraints?.readiness?.tier,
     maxStrengthSessions: trainingAgePolicy.maxCoreSessions,
     appConditioningFeasible: inputs.appConditioningFeasible,
+    attemptedConditioningSubstitutions:
+      inputs.conditioningSubstitutionPolicy?.consideredSubstitutions,
     profileInjuries: inputs.injuries,
     activeInjuries: inputs.generationConstraints?.injuries,
   });
@@ -1417,7 +1450,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     weeklyExposureContract,
     weeklyPlan,
   );
-  if (!finalPhaseAllocationValidation.accepted) {
+  if (!finalPhaseAllocationValidation.accepted && !phasePlannerContractV2) {
     throw new Error(
       `Final phase-owned allocation unresolved (${finalPhaseAllocationValidation.unresolvedShortfalls
         .map((violation) =>
@@ -6705,12 +6738,17 @@ function buildWeeklyPlan(
       validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
     }
 
-    if (!validation.accepted) {
+    // Contract v2 owns the selected phase target and the final accepted-week
+    // gateway. The compatibility contract cannot veto a v2 allocation merely
+    // because it cannot represent newer participation, rest or stacked-credit
+    // semantics; legacy-only plans retain the historical assertion here.
+    if (!validation.accepted && !section18Contract) {
       const detail = validation.unresolvedShortfalls
         .map((violation) => `${violation.code}:${violation.domain ?? 'safety'}=${JSON.stringify(violation.actual)}`)
         .join(', ');
       logger.error('[engine] Weekly exposure contract rejected allocation', {
         contract: weeklyExposureContract,
+        section18Contract,
         ledger: validation.ledger,
         unresolvedShortfalls: validation.unresolvedShortfalls,
         allocations: adjusted.map((session) => ({
@@ -6823,13 +6861,21 @@ function applySection18ConditioningAllocation(
     return;
   }
 
+  const creditedAnchors = contract.anchors.filter((anchor) =>
+    anchor.participation === 'normal_unrestricted' &&
+    anchor.currentProductionClaim.conditioning).length;
   const requiredApp = Math.max(
     0,
-    contract.conditioning.core.requiredMinimum -
-      legacy.conditioning.creditedTeamTrainingCount -
-      legacy.conditioning.creditedGameOrPracticeMatchCount,
+    contract.conditioning.core.requiredMinimum - creditedAnchors,
   );
-  const selectedApp = legacy.conditioning.additionalRequiredCount;
+  const selectedApp = Math.max(
+    requiredApp,
+    (contract.conditioning.core.plannerSelectedTarget ??
+      contract.conditioning.core.requiredMinimum) - creditedAnchors,
+  );
+  const allowCombinedForSelectedCore =
+    legacy.conditioning.allowCombinedStrengthConditioning ||
+    contract.safety.lighterStrengthRequired;
   const protectedOptional = (session: SessionAllocation): boolean =>
     fixtureOffset(session) === -2 && session.conditioningCategory === 'aerobic_base';
   const existingEligible = plan
@@ -6841,7 +6887,7 @@ function applySection18ConditioningAllocation(
   if (missing > 0) {
     const candidates = plan
       .filter((session) => !session.isTeamDay && !hasConditioning(session) && fixtureSafe(session))
-      .filter((session) => legacy.conditioning.allowCombinedStrengthConditioning || !hasStrength(session))
+      .filter((session) => allowCombinedForSelectedCore || !hasStrength(session))
       .sort((left, right) =>
         Number(!(left.tier === 'optional' || left.tier === 'recovery')) -
           Number(!(right.tier === 'optional' || right.tier === 'recovery')) ||
@@ -8260,6 +8306,7 @@ export function onboardingToCoachingInputs(
     preseasonSubphase: options.preseasonSubphase,
     generationConstraints: options.generationConstraints,
     appConditioningFeasible: options.appConditioningFeasible,
+    conditioningSubstitutionPolicy: options.conditioningSubstitutionPolicy,
   };
 }
 

@@ -50,6 +50,7 @@ import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine'
 import { addDays, getMondayForDate } from './sessionResolver';
 import { getProgramBlockStateForDate, selectMicrocycleForDate } from './programBlockState';
 import { resolveEquipmentCapabilities } from './equipmentAvailability';
+import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
 import { collectWeekRebuildContext, decideOverrideSweep, type OverrideSweepDecision } from './weekRebuild';
 import { useProgramStore } from '../store/programStore';
 import { todayISOLocal } from './appDate';
@@ -232,6 +233,13 @@ function resolveRepeatTargetExposureContracts(args: {
     seasonPhaseClock: args.program.seasonPhaseClock,
   });
   const equipment = resolveEquipmentCapabilities(args.profile, [], args.targetWeekStart);
+  const substitutionPolicy = resolveConditioningSubstitutionPolicy({
+    phase: args.profile.seasonPhase,
+    offseasonSubphase: blockState.phaseResolution.offseasonSubphase,
+    preseasonSubphase: blockState.phaseResolution.preseasonSubphase,
+    equipment,
+    profile: args.profile,
+  });
   const inputs = onboardingToCoachingInputs(args.profile, {
     availabilityDateISO: args.targetWeekStart,
     miniCycleNumber: blockState.miniCycleNumber,
@@ -243,7 +251,8 @@ function resolveRepeatTargetExposureContracts(args: {
     phaseClockProvenance: blockState.phaseResolution.provenance,
     offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
     preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
-    appConditioningFeasible: equipment.conditioningModalities.length > 0,
+    appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
+    conditioningSubstitutionPolicy: substitutionPolicy,
   });
   const plan = buildCoachingPlan(inputs);
   const workouts = buildWorkoutsFromCoach(

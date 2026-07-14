@@ -183,18 +183,21 @@ function workoutsFor(
   weekKind?: 'deload',
   weekInBlock: number = 4,
 ) {
+  const offseasonSubphase = weekInBlock <= 2 ? 'early_offseason' : 'mid_offseason';
   const plan = buildCoachingPlan(onboardingToCoachingInputs(data, {
     availabilityDateISO: '2026-07-06',
     miniCycleNumber: 1,
     weekNumber: weekInBlock,
     weekInBlock,
     weekKind,
+    offseasonSubphase,
   })).weeklyPlan;
   return buildWorkoutsFromCoach([], 'mc-1', plan, data, {
     miniCycleNumber: 1,
     weekInBlock,
     weekStartISO: '2026-07-06',
     weekKind,
+    offseasonSubphase,
   });
 }
 

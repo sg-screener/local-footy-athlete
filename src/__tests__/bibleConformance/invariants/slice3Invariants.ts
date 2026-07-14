@@ -450,7 +450,10 @@ function feasibilitySingleOwner(trace: Slice3ScenarioTrace): InvariantCheckResul
     (observed.stage === 'weekly_accounting' || observed.conditioning.every((entry) => entry.modality === 'mixed_off_feet'
       ? baselineAllowed.includes('bike') && baselineAllowed.some((value) => value === 'row' || value === 'ski')
       : entry.modality === 'other' || baselineAllowed.includes(entry.modality)))) &&
-    (baselineAllowed.length > 0 || observations.every((observed) => observed.conditioning.length === 0));
+    (baselineAllowed.length > 0 || observations.every((observed) =>
+      observed.conditioning.length > 0 &&
+      observed.conditioning.every((entry) => entry.modality === 'other') &&
+      observed.conditioningFeasibility?.statuses.every((status) => status === 'replaced')));
   const invalid = observations.find((observed) =>
     observed.conditioningFeasibility?.owner !== 'conditioningFeasibility') ?? observations[0];
   return one(id, trace, applied, valid, () => failure({
@@ -475,7 +478,10 @@ function noteRequiresVisibleEffect(trace: Slice3ScenarioTrace): InvariantCheckRe
     trace, invariantId: id, ruleId: 'ALL-COND-NOTE-TRUTH-01', stage: 'resolved_effective',
     expected: 'conditioning note only when final visible easy off-feet conditioning exists',
     actual: { conditioning: observed.conditioning, proof },
-    missing: proof?.noteVisible && observed.conditioning.length === 0 ? ['visible_conditioning_evidence'] : [],
+    missing: proof?.noteVisible && (
+      observed.conditioning.length === 0 ||
+      !observed.conditioning.every((entry) => entry.offFeet && entry.intensity === 'easy')
+    ) ? ['matching_visible_off_feet_conditioning_evidence'] : [],
   }));
 }
 

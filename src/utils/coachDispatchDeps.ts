@@ -339,7 +339,10 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
     },
 
     applyNonInjuryConstraint(kind, intent, packet) {
-      const nowISO = new Date().toISOString();
+      // The packet date is the app's authoritative local "today". Using the
+      // wall clock here makes replayed/fixed-date turns create future-dated
+      // constraints that cannot apply to the week the athlete edited.
+      const nowISO = `${packet.todayISO.slice(0, 10)}T12:00:00.000Z`;
       const upsert = useCoachUpdatesStore.getState().upsertActiveConstraint;
 
       // Truth-gate: detect whether the athlete actually stated a

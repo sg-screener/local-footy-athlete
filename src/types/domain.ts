@@ -217,8 +217,23 @@ export interface DeterministicCoachNoteEffectSeed {
 export type ConditioningFeasibilityReason =
   | 'available_capability'
   | 'deterministic_available_replacement'
+  | 'safe_equivalent_substitution'
   | 'no_permitted_off_feet_modality'
+  | 'no_safe_equivalent_substitute'
   | 'readiness_blocks_conditioning';
+
+export type ConditioningSubstitutionFamily =
+  | 'selected_modality'
+  | 'bike'
+  | 'row'
+  | 'ski'
+  | 'mixed'
+  | 'treadmill'
+  | 'outdoor_running'
+  | 'hill_running_or_walking'
+  | 'brisk_walking'
+  | 'bodyweight_circuit'
+  | 'safe_mixed_modal';
 
 /** Serializable allocation-owned result consumed by edge and fallback generation. */
 export interface ConditioningFeasibilityDecision {
@@ -226,6 +241,11 @@ export interface ConditioningFeasibilityDecision {
   requestedModality?: 'bike' | 'bike_erg' | 'row' | 'ski' | 'mixed';
   resolvedModality?: 'bike' | 'bike_erg' | 'row' | 'ski' | 'mixed';
   allowedModalities: Array<'bike' | 'row' | 'ski' | 'mixed'>;
+  /** Ordered proof that substitution was attempted before removal/reduction. */
+  attemptedSubstitutionFamilies?: ConditioningSubstitutionFamily[];
+  resolvedSubstitutionFamily?: ConditioningSubstitutionFamily;
+  /** Stable machine-readable reason detail for reduction ledgers and QA. */
+  feasibilityDetail?: string;
   reason: ConditioningFeasibilityReason;
 }
 

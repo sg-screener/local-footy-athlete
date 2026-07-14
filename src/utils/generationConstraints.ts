@@ -81,9 +81,14 @@ export interface GenerationConstraintContext {
 export function buildGenerationConstraintContext(args: {
   activeConstraints?: readonly ActiveConstraint[] | null;
   todayISO: string;
+  periodEndISO?: string;
 }): GenerationConstraintContext | undefined {
   const live = (args.activeConstraints ?? []).filter((constraint) =>
-    constraint.status !== 'resolved' && constraintAppliesToDate(constraint as any, args.todayISO),
+    constraint.status !== 'resolved' && (
+      args.periodEndISO
+        ? constraintOverlapsPeriod(constraint as any, args.todayISO, args.periodEndISO)
+        : constraintAppliesToDate(constraint as any, args.todayISO)
+    ),
   );
   const injuries = live
     .map((constraint) => injuryFromConstraint(constraint))
@@ -102,6 +107,28 @@ export function buildGenerationConstraintContext(args: {
     readiness,
     activeInjuryKeys,
   };
+}
+
+function constraintOverlapsPeriod(
+  constraint: ActiveConstraint | any,
+  periodStartISO: string,
+  periodEndISO: string,
+): boolean {
+  const periodStart = periodStartISO.slice(0, 10);
+  const periodEnd = periodEndISO.slice(0, 10);
+  if (typeof constraint?.appliesToDate === 'string') {
+    const exact = constraint.appliesToDate.slice(0, 10);
+    return exact >= periodStart && exact <= periodEnd;
+  }
+  const starts = typeof constraint?.weekStartISO === 'string'
+    ? constraint.weekStartISO.slice(0, 10)
+    : typeof constraint?.startDate === 'string'
+      ? constraint.startDate.slice(0, 10)
+      : null;
+  const expires = typeof constraint?.expiresAt === 'string'
+    ? constraint.expiresAt.slice(0, 10)
+    : null;
+  return !(starts && starts > periodEnd) && !(expires && expires < periodStart);
 }
 
 export function applyGenerationConstraintsToProfile(

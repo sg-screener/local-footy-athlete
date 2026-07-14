@@ -262,7 +262,20 @@ export function buildWorkoutOverrideFromRevision(args: {
   // Proposal shape is not persistence truth. Canonicalise before the visible
   // round-trip check so a transformed/rejected request cannot be reported as
   // though its malformed representation was written unchanged.
-  workout = validateLiveWorkoutWrite(args.revisedDay.date, workout);
+  try {
+    workout = validateLiveWorkoutWrite(args.revisedDay.date, workout);
+  } catch (error) {
+    const typed = error as { code?: string; userMessage?: string };
+    if (typed?.code === 'section18_week_rejected') {
+      return {
+        ok: false,
+        code: typed.code,
+        reason: typed.userMessage ??
+          'We couldn’t safely build your week from your current settings. Please review your availability, readiness and injury information.',
+      };
+    }
+    throw error;
+  }
 
   const projected = projectVisibleDay({
     day: {

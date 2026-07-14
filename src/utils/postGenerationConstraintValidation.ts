@@ -55,7 +55,6 @@ import { selectMicrocycleForDate } from './programBlockState';
 import { resolveSeasonPhaseClock } from '../rules/seasonPhaseClock';
 import {
   evaluateEffectiveWeekExposureContract,
-  reconcileWeeklyExposureContractToLedger,
   type WeeklyExposureContract,
 } from '../rules/weeklyExposureContract';
 import {
@@ -71,6 +70,8 @@ import {
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { finaliseSection18SafetyWeek } from '../rules/section18SafetyFinaliser';
+import { requireSection18AcceptedWeek } from '../rules/section18AcceptedWeekGateway';
+import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
 
 export interface ActiveConstraintValidationInput {
   workout: Workout | null;
@@ -549,6 +550,7 @@ function reResolveContractForActiveConstraints(args: {
   const generationContext = buildGenerationConstraintContext({
     activeConstraints: args.activeConstraints,
     todayISO: weekStart,
+    periodEndISO: args.microcycle.endDate.slice(0, 10),
   });
 
   const selected = new Set<number>();
@@ -570,6 +572,12 @@ function reResolveContractForActiveConstraints(args: {
     args.activeConstraints,
     weekStart,
   );
+  const substitutionPolicy = resolveConditioningSubstitutionPolicy({
+    phase: args.contract.identity.phase,
+    equipment,
+    profile,
+    generationConstraints: generationContext,
+  });
   const readinessSignal = useReadinessStore.getState().signalsByDate?.[weekStart] ?? null;
   const readiness = profile.conditioningLevel || profile.recentTrainingLoad
     ? deriveScheduleReadiness({ onboardingData: profile, signal: readinessSignal })
@@ -609,7 +617,8 @@ function reResolveContractForActiveConstraints(args: {
     maxStrengthSessions: profile.experienceLevel
       ? resolveTrainingAgePolicy(profile.experienceLevel).maxCoreSessions
       : null,
-    appConditioningFeasible: equipment.conditioningModalities.length > 0,
+    appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
+    attemptedConditioningSubstitutions: substitutionPolicy.consideredSubstitutions,
     profileInjuries: profile.injuries,
     activeInjuries: generationContext?.injuries,
     byeMode: args.contract.identity.mode === 'in_season_bye_recovery'
@@ -634,34 +643,6 @@ function assertEffectiveMicrocycleExposure(microcycle: Microcycle): void {
   throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
 }
 
-function reconcileContractForSafetyTransformations(args: {
-  contract: WeeklyExposureContract;
-  workouts: readonly Workout[];
-  weekStart: string;
-  activeConstraints: readonly ActiveConstraint[];
-}): WeeklyExposureContract {
-  const validation = evaluateEffectiveWeekExposureContract(
-    args.contract,
-    args.workouts,
-    args.weekStart,
-  );
-  if (validation.accepted) return args.contract;
-  const hasEquipmentConstraint = args.activeConstraints.some(
-    (constraint) => constraint.type === 'equipment' && constraint.status !== 'resolved',
-  );
-  // Injury/readiness reductions are authored before construction and remain
-  // authoritative. Never rewrite them to match an unsafe final ledger. The
-  // legacy equipment feasibility behavior remains outside this safety slice.
-  const reason = hasEquipmentConstraint ? 'equipment_infeasibility' as const : null;
-  if (!reason) return args.contract;
-  return reconcileWeeklyExposureContractToLedger(
-    args.contract,
-    validation.ledger,
-    reason,
-    'The final active safety/feasibility transformation reduced this target week.',
-  );
-}
-
 function resolveLiveDateMutationExposure(args: {
   date: string;
   workout: Workout;
@@ -673,6 +654,15 @@ function resolveLiveDateMutationExposure(args: {
     state.currentMicrocycle,
     args.date,
   );
+  const v2Overlay = state.weekScopedOverlays?.[
+    addDaysISO(args.date, -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7))
+  ] as WeekScopedWorkoutOverlay | undefined;
+  if (microcycle?.exposureContractV2 || v2Overlay?.exposureContractV2) {
+    // Contract v2 was already enforced by finaliseLiveDateCandidateAgainstWeek.
+    // The legacy ledger cannot represent stacked same-day credits and must
+    // not become a second, contradictory commit authority.
+    return null;
+  }
   if (!microcycle?.exposureContract) return null;
   const weekStart = addDaysISO(args.date, -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7));
   const overlay = state.weekScopedOverlays?.[weekStart] as WeekScopedWorkoutOverlay | undefined;
@@ -716,20 +706,11 @@ function resolveLiveDateMutationExposure(args: {
     hasGame: resolvedGameDay !== null,
     gameDay: resolvedGameDay,
   });
-  let validation = evaluateEffectiveWeekExposureContract(
+  const validation = evaluateEffectiveWeekExposureContract(
     resolvedContract,
     workouts,
     weekStart,
   );
-  if (!validation.accepted) {
-    resolvedContract = reconcileWeeklyExposureContractToLedger(
-      resolvedContract,
-      validation.ledger,
-      'explicit_user_override',
-      `An explicit coach/user edit changed the effective target-week exposure on ${args.date}.`,
-    );
-    validation = evaluateEffectiveWeekExposureContract(resolvedContract, workouts, weekStart);
-  }
   if (!validation.accepted) {
     const detail = validation.unresolvedShortfalls
       .map((entry) => `${entry.code}:${entry.domain ?? 'safety'}=${JSON.stringify(entry.actual)}`)
@@ -771,6 +752,7 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
   const generationContext = buildGenerationConstraintContext({
     activeConstraints: args.activeConstraints,
     todayISO: weekStart,
+    periodEndISO: args.microcycle.endDate.slice(0, 10),
   });
   const forceFullPause = args.activeConstraints.some((constraint) =>
     constraint.type === 'injury' && constraint.status !== 'resolved' &&
@@ -842,14 +824,6 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
           .map((workout) => workout.dayOfWeek),
       })
     : undefined;
-  if (exposureContract) {
-    exposureContract = reconcileContractForSafetyTransformations({
-      contract: exposureContract,
-      workouts,
-      weekStart: args.microcycle.startDate.slice(0, 10),
-      activeConstraints: args.activeConstraints,
-    });
-  }
   let safetyWorkouts = workouts;
   if (exposureContractV2) {
     const safety = finaliseSection18SafetyWeek({
@@ -865,6 +839,14 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
     });
     safetyWorkouts = safety.workouts;
     exposureContractV2 = safety.contract;
+    const accepted = requireSection18AcceptedWeek({
+      contract: exposureContractV2,
+      workouts: safetyWorkouts,
+      weekStart,
+      profile: args.profile,
+    });
+    safetyWorkouts = accepted.canonicalWorkouts;
+    exposureContractV2 = accepted.contract;
   }
   const contractChanged = (
     exposureContract !== args.microcycle.exposureContract &&
@@ -874,7 +856,7 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
   const validated = changed || contractChanged || workoutsChanged
     ? { ...args.microcycle, workouts: safetyWorkouts, exposureContract, exposureContractV2 }
     : args.microcycle;
-  assertEffectiveMicrocycleExposure(validated);
+  if (!validated.exposureContractV2) assertEffectiveMicrocycleExposure(validated);
   return validated;
 }
 
@@ -908,7 +890,33 @@ export function validateWeekOverlayAgainstActiveConstraints(args: {
       return [date, result.workout];
     }),
   );
-  return changed ? { ...args.overlay, workoutsByDate } : args.overlay;
+  let validated = changed ? { ...args.overlay, workoutsByDate } : args.overlay;
+  const contract = validated.exposureContractV2 ?? (
+    validated.exposureContract
+      ? migrateLegacyWeeklyExposureContractV2(validated.exposureContract)
+      : undefined
+  );
+  if (contract) {
+    const accepted = requireSection18AcceptedWeek({
+      contract,
+      workouts: Object.values(workoutsByDate).filter((workout): workout is Workout => !!workout),
+      weekStart: validated.weekStart,
+      profile: args.profile,
+    });
+    const byDay = new Map(accepted.canonicalWorkouts.map((workout) => [workout.dayOfWeek, workout]));
+    workoutsByDate = Object.fromEntries(
+      Object.keys(workoutsByDate).map((date) => {
+        const day = new Date(`${date}T12:00:00`).getDay();
+        return [date, byDay.get(day) ?? null];
+      }),
+    );
+    validated = {
+      ...validated,
+      exposureContractV2: accepted.contract,
+      workoutsByDate,
+    };
+  }
+  return validated;
 }
 
 function liveValidationContext(): {
@@ -1012,7 +1020,17 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
     state.currentMicrocycle,
     args.date,
   );
-  if (!microcycle) return args.workout;
+  if (
+    !microcycle ||
+    args.date < microcycle.startDate.slice(0, 10) ||
+    args.date > microcycle.endDate.slice(0, 10)
+  ) {
+    // A future override outside the currently materialised block has no
+    // approved target-week contract yet. Preserve it for the rebuild/rollover
+    // path, which composes and gates it once that target week exists; never
+    // validate it against the nearest/current microcycle by accident.
+    return args.workout;
+  }
   const weekStart = addDaysISO(
     args.date,
     -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7),
@@ -1031,6 +1049,7 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
   const generationContext = buildGenerationConstraintContext({
     activeConstraints: args.context.activeConstraints,
     todayISO: weekStart,
+    periodEndISO: addDaysISO(weekStart, 6),
   });
   contract = applyGenerationSafetyToSection18Contract({
     contract,
@@ -1060,17 +1079,18 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
   // The candidate is deliberately last: an explicit edit may not displace
   // already-authorised sessions to bypass a safety frequency ceiling.
   workouts.push(args.workout);
-  const safety = finaliseSection18SafetyWeek({
+  const accepted = requireSection18AcceptedWeek({
     contract,
     workouts,
     weekStart,
-    canonicalContext: {
-      phase: args.context.profile.seasonPhase,
-      profile: args.context.profile,
-    },
+    profile: args.context.profile,
+    // A single-date store primitive cannot atomically persist repairs to
+    // other dates. Reject cross-day repair needs; week/overlay writers can
+    // use the full deterministic repair loop.
+    maxRepairAttempts: 1,
   });
-  return [...safety.workouts].reverse().find((workout) => workout.id === args.workout.id) ??
-    [...safety.workouts].reverse().find((workout) => workout.dayOfWeek === args.workout.dayOfWeek) ??
+  return [...accepted.canonicalWorkouts].reverse().find((workout) => workout.id === args.workout.id) ??
+    [...accepted.canonicalWorkouts].reverse().find((workout) => workout.dayOfWeek === args.workout.dayOfWeek) ??
     collapseWorkoutToRest(args.workout);
 }
 
@@ -1137,6 +1157,23 @@ export function validateLiveNullableWorkoutWrite(
   workout: Workout | null,
 ): Workout | null {
   if (!workout) return null;
+  const state = require('../store/programStore').useProgramStore.getState();
+  const storedCandidates: Workout[] = [
+    ...(state.currentProgram?.microcycles.flatMap((microcycle: Microcycle) => microcycle.workouts) ?? []),
+    ...(state.currentMicrocycle?.workouts ?? []),
+    ...Object.values(state.dateOverrides ?? {}) as Workout[],
+    ...Object.values(state.weekScopedOverlays ?? {}).flatMap((overlay) =>
+      Object.values((overlay as WeekScopedWorkoutOverlay).workoutsByDate)
+        .filter((candidate): candidate is Workout => !!candidate)),
+  ];
+  if (storedCandidates.some((candidate) =>
+    candidate.id === workout.id && JSON.stringify(candidate) === JSON.stringify(workout))) {
+    // todayWorkout is a cache/reference when it points at content already
+    // accepted on another persisted surface. Re-evaluating it against the
+    // machine's current date would invent a different target week (notably in
+    // fixed-date rebuild and rollover flows).
+    return workout;
+  }
   const context = liveValidationContext();
   const validated = validateWorkoutAgainstActiveConstraints({
     ...context,
@@ -1205,6 +1242,7 @@ export function validateLiveWeekOverlayWrite(
   const generationContext = buildGenerationConstraintContext({
     activeConstraints: context.activeConstraints,
     todayISO: overlay.weekStart,
+    periodEndISO: overlay.weekEnd,
   });
   if (exposureContractV2) {
     exposureContractV2 = applyGenerationSafetyToSection18Contract({
@@ -1214,17 +1252,14 @@ export function validateLiveWeekOverlayWrite(
         constraint.type === 'injury' && constraint.status !== 'resolved' &&
         constraint.seriousSymptoms === true),
     });
-    const safety = finaliseSection18SafetyWeek({
+    const accepted = requireSection18AcceptedWeek({
       contract: exposureContractV2,
       workouts: effectiveWorkouts,
       weekStart: overlay.weekStart,
-      canonicalContext: {
-        phase: context.profile.seasonPhase,
-        profile: context.profile,
-      },
+      profile: context.profile,
     });
     const beforeSafety = effectiveWorkouts;
-    effectiveWorkouts = safety.workouts;
+    effectiveWorkouts = accepted.canonicalWorkouts;
     const safeByDay = new Map(effectiveWorkouts.map((workout) => [workout.dayOfWeek, workout]));
     for (let offset = 0; offset < 7; offset++) {
       const date = addDaysISO(overlay.weekStart, offset);
@@ -1241,10 +1276,10 @@ export function validateLiveWeekOverlayWrite(
     validatedOverlay = {
       ...validatedOverlay,
       workoutsByDate,
-      exposureContractV2: safety.contract,
+      exposureContractV2: accepted.contract,
     };
   }
-  if (!exposureContract) return validatedOverlay;
+  if (!exposureContract || !!persistedExposureContractV2) return validatedOverlay;
   const targetMicrocycle: Microcycle = {
     ...(baseMicrocycle ?? {
       id: validatedOverlay.id,
@@ -1276,7 +1311,7 @@ export function validateLiveWeekOverlayWrite(
     : explicitlyRemovedOriginalGame
       ? null
       : exposureContract.anchors.gameDay;
-  let resolvedContract = reResolveContractForActiveConstraints({
+  const resolvedContract = reResolveContractForActiveConstraints({
     contract: exposureContract,
     microcycle: targetMicrocycle,
     activeConstraints: context.activeConstraints,
@@ -1287,33 +1322,11 @@ export function validateLiveWeekOverlayWrite(
     hasGame: targetGameDay !== null,
     gameDay: targetGameDay,
   });
-  resolvedContract = reconcileContractForSafetyTransformations({
-    contract: resolvedContract,
-    workouts: effectiveWorkouts,
-    weekStart: overlay.weekStart,
-    activeConstraints: context.activeConstraints,
-  });
-  let validation = evaluateEffectiveWeekExposureContract(
+  const validation = evaluateEffectiveWeekExposureContract(
     resolvedContract,
     effectiveWorkouts,
     overlay.weekStart,
   );
-  const hasExplicitDateEdit = Object.keys(state.dateOverrides ?? {}).some(
-    (date) => date >= overlay.weekStart && date <= overlay.weekEnd,
-  );
-  if (!validation.accepted && hasExplicitDateEdit) {
-    resolvedContract = reconcileWeeklyExposureContractToLedger(
-      resolvedContract,
-      validation.ledger,
-      'explicit_user_override',
-      'A preserved explicit date edit changes this rebuilt target week.',
-    );
-    validation = evaluateEffectiveWeekExposureContract(
-      resolvedContract,
-      effectiveWorkouts,
-      overlay.weekStart,
-    );
-  }
   if (!validation.accepted) {
     assertEffectiveMicrocycleExposure({
       ...targetMicrocycle,

@@ -174,8 +174,19 @@ export function isReadinessConstraint(c: ActiveConstraint | null | undefined): b
 }
 
 export function constraintAppliesToDate(c: ActiveConstraint | any, date: string): boolean {
-  if (typeof c?.expiresAt === 'string' && c.expiresAt < date) return false;
-  return !c?.appliesToDate || c.appliesToDate === date;
+  const target = date.slice(0, 10);
+  if (typeof c?.expiresAt === 'string' && c.expiresAt.slice(0, 10) < target) return false;
+  if (typeof c?.appliesToDate === 'string') return c.appliesToDate.slice(0, 10) === target;
+  // Week-scoped schedule modifiers must not rewrite an earlier block merely
+  // because their expiry is later. This also keeps future readiness/injury
+  // reports from time-travelling into already-authored weeks.
+  const starts = typeof c?.weekStartISO === 'string'
+    ? c.weekStartISO.slice(0, 10)
+    : typeof c?.startDate === 'string'
+      ? c.startDate.slice(0, 10)
+      : null;
+  if (starts && starts > target) return false;
+  return true;
 }
 
 export function filterConstraintsForDate<T extends ActiveConstraint | any>(

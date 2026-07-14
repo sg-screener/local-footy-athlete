@@ -510,7 +510,7 @@ export function buildSingleWorkoutFixtureTrace(args: {
         includeVisibleItems: true,
       })]
     : [];
-  const detail = detailDay.workout?.planEntryId === workout.planEntryId
+  const detail = detailDay.workout && detailDay.workout.planEntryId === workout.planEntryId
     ? [workoutSnapshot({
         stage: 'visible_detail',
         workout: detailDay.workout,

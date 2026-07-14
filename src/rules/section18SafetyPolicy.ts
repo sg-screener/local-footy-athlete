@@ -172,8 +172,17 @@ export function applyGenerationSafetyToSection18Contract(args: {
   }
 
   const readiness = context?.readiness;
+  // A sprint-only restriction may also cause the weekly power selector to
+  // record a zero primer budget. Neither reduction means the athlete is
+  // globally "cooked". Only strength, conditioning or session-dose
+  // reductions may carry cooked-readiness ownership across validation passes.
   const persistedLowReadiness = contract.authorisedReductions.some((entry) =>
-    entry.reason === 'low_readiness' && entry.metric !== 'sprint_high_speed_frequency');
+    entry.reason === 'low_readiness' && (
+      entry.metric === 'main_strength_frequency' ||
+      entry.metric === 'conditioning_core_frequency' ||
+      entry.metric === 'session_intensity_percent' ||
+      entry.metric === 'session_volume'
+    ));
   const persistedAppSprintRestriction = contract.authorisedReductions.some((entry) =>
     entry.reason === 'low_readiness' && entry.metric === 'sprint_high_speed_frequency');
   const cookedReadiness = readiness?.tier === 'moderate_reduction' ||
@@ -256,6 +265,19 @@ export function applyGenerationSafetyToSection18Contract(args: {
       reducedTarget: contract.anchors.length,
       reason: 'low_readiness',
       detail: 'Slight readiness restriction removes app-authored sprint while preserving normal healthy anchor credit.',
+    });
+  }
+  if (
+    cookedReadiness &&
+    !contract.authorisedReductions.some((entry) =>
+      entry.metric === 'sprint_high_speed_frequency' &&
+      (entry.reason === 'low_readiness' || entry.reason === 'full_pause'))
+  ) {
+    addReduction(contract, {
+      metric: 'sprint_high_speed_frequency',
+      reducedTarget: 0,
+      reason: fullPause ? 'full_pause' : 'low_readiness',
+      detail: 'Persisted cooked-readiness ownership removes sprint/high-speed exposure and anchor credit.',
     });
   }
 

@@ -133,6 +133,8 @@ export interface ActiveConstraintModifierMetadata {
   linkedOverrideDates?: string[];
   /** ISO date after which this temporary constraint is no longer active. */
   expiresAt?: string;
+  /** Optional Monday boundary for a future or current week-scoped modifier. */
+  weekStartISO?: string;
 }
 
 export interface ActiveConstraintGameChangeProofRow {

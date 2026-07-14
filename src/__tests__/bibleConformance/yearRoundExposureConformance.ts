@@ -17,6 +17,7 @@ import {
   type WeeklyExposureContract,
   type WeeklyExposureLedger,
 } from '../../rules/weeklyExposureContract';
+import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
 
 export interface YearRoundExposureConformanceTotals {
   scenarios: number;
@@ -474,9 +475,25 @@ export function runYearRoundExposureConformance(
     teamTrainingDays: ['Tuesday', 'Thursday'],
   }), { todayISO: '2026-07-13' });
   for (const week of noCardio.microcycles) {
-    requireFinalAccepted('equipment-restricted pre-season', week.exposureContract, week.workouts, week.startDate.slice(0, 10));
-    if (!week.exposureContract?.reductions.some((entry) => entry.reason === 'equipment_infeasibility')) {
-      throw new Error('equipment-restricted week omitted equipment_infeasibility');
+    if (!week.exposureContractV2) throw new Error('equipment-restricted week omitted Contract v2');
+    const final = evaluateSection18EffectiveWeek({
+      contract: week.exposureContractV2,
+      workouts: week.workouts,
+      weekStart: week.startDate.slice(0, 10),
+    });
+    if (
+      final.blockingViolations.length > 0 ||
+      final.ledger.conditioning.coreCount !==
+        week.exposureContractV2.conditioning.core.plannerSelectedTarget
+    ) {
+      throw new Error(`equipment-restricted pre-season: ${JSON.stringify(final.blockingViolations)}`);
+    }
+    if (
+      week.exposureContractV2.equipment.substitutionStatus !== 'substituted' ||
+      week.exposureContractV2.authorisedReductions.some((entry) =>
+        entry.reason === 'equipment_infeasibility')
+    ) {
+      throw new Error('equipment-restricted week reduced frequency before safe substitution');
     }
   }
   scenarios++;

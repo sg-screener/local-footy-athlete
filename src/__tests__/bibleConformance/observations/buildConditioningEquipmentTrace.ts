@@ -9,7 +9,6 @@ import { resolveEquipmentCapabilities } from '../../../utils/equipmentAvailabili
 import { buildDeterministicCoachNoteDescriptors } from '../../../utils/deterministicCoachNoteFactory';
 import { getSessionComponentRows, getSessionComponents } from '../../../utils/sessionComponents';
 import { extractVisibleProgramItemsFromWorkout } from '../../../utils/visibleProgramReadModel';
-import { classifyGeneratedWorkoutRow } from '../../../rules/generatedWorkoutRowClassification';
 import type {
   HarnessConditioningEntry,
   HarnessExposureLedger,
@@ -89,7 +88,7 @@ function conditioningEntry(workout: Workout): HarnessConditioningEntry[] {
         : workout.conditioningCategory === 'tempo' ? 'tempo' : 'intervals',
       intensity: workout.conditioningCategory === 'aerobic_base' ? 'easy'
         : workout.conditioningCategory === 'tempo' ? 'moderate' : 'hard',
-      offFeet: modality !== 'running',
+      offFeet: ['bike', 'row', 'ski', 'mixed_off_feet'].includes(modality),
     };
   });
 }
@@ -109,10 +108,7 @@ function stage(args: {
       .filter((item) => item.domain === 'conditioning').length
     : args.view === 'detail'
       ? selected.flatMap((workout) => getSessionComponentRows(workout).conditioningRows)
-        .filter((row, index) => classifyGeneratedWorkoutRow({
-          name: row.exercise?.name ?? '', sets: row.prescribedSets,
-          repsMax: row.prescribedRepsMax, index,
-        }).kind === 'conditioning').length
+        .length
       : conditioning.length;
   const statuses = selected.flatMap((workout) => workout.conditioningFeasibility?.status
     ? [workout.conditioningFeasibility.status] : []);

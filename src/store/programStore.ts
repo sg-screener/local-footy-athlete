@@ -11,6 +11,7 @@ import {
 } from '../types/domain';
 import { logger } from '../utils/logger';
 import {
+  addDaysISO,
   deriveStoredBlockStateFromProgram,
   getBlockNumberForDate,
   type StoredProgramBlockState,
@@ -188,8 +189,15 @@ function canonicaliseHydratedMicrocycle(
         section18EvidenceMode: 'preserve_legacy_unknown',
       },
     });
-    workouts = safety.workouts;
-    exposureContractV2 = safety.contract;
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const accepted = require('../rules/section18AcceptedWeekGateway')
+      .requireSection18AcceptedWeek({
+        contract: safety.contract,
+        workouts: safety.workouts,
+        weekStart: microcycle.startDate.slice(0, 10),
+      });
+    workouts = accepted.canonicalWorkouts;
+    exposureContractV2 = accepted.contract;
   } else {
     workouts = workouts.map((workout) =>
       canonicaliseHydratedWorkout(workout, phase, phaseResolution?.weekKind ?? microcycle.weekKind));
@@ -237,21 +245,22 @@ function canonicaliseHydratedSafetyWorkout(
     : canonicaliseHydratedWorkout(workout, phase);
 }
 
-function canonicaliseHydratedState(
+export function canonicaliseHydratedState(
   persistedState: Partial<ProgramState>,
+  options: { programAlreadyAccepted?: boolean } = {},
 ): Partial<ProgramState> {
-  const currentProgram = persistedState.currentProgram
+  const currentProgram = persistedState.currentProgram && !options.programAlreadyAccepted
     ? canonicaliseHydratedProgram(persistedState.currentProgram)
     : persistedState.currentProgram;
   const phase = currentProgram?.seasonPhaseClock?.selectedPhase ?? currentProgram?.programPhase;
-  const currentMicrocycle = persistedState.currentMicrocycle
+  const currentMicrocycle = persistedState.currentMicrocycle && !options.programAlreadyAccepted
     ? canonicaliseHydratedMicrocycle(
         persistedState.currentMicrocycle,
         phase,
         currentProgram?.seasonPhaseClock,
       )
     : persistedState.currentMicrocycle;
-  const weekScopedOverlays = persistedState.weekScopedOverlays
+  let weekScopedOverlays = persistedState.weekScopedOverlays
     ? Object.fromEntries(Object.entries(persistedState.weekScopedOverlays).map(([weekStart, overlay]) => [
         weekStart,
         (() => {
@@ -295,12 +304,87 @@ function canonicaliseHydratedState(
     }
     return undefined;
   };
-  const dateOverrides = persistedState.dateOverrides
+  let dateOverrides = persistedState.dateOverrides
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
         date,
         canonicaliseHydratedSafetyWorkout(workout, safetyContractForDate(date), phase),
       ]))
     : persistedState.dateOverrides;
+
+  // A migrated overlay or date override can make an otherwise-valid base
+  // microcycle invalid. Rebuild the actual precedence-ordered week here and
+  // pass that effective candidate through the same accepted-week gateway.
+  // Any deterministic cross-day repair is persisted back into the surface
+  // that owns the changed date, so hydration cannot merely validate the base
+  // program while retaining an invalid visible override.
+  const hydratedWeekStarts = new Set<string>([
+    ...Object.keys(weekScopedOverlays ?? {}),
+    ...Object.keys(dateOverrides ?? {}).map(mondayForDate),
+  ]);
+  for (const weekStart of hydratedWeekStarts) {
+    const overlay = weekScopedOverlays?.[weekStart];
+    const baseMicrocycle = currentProgram?.microcycles.find((microcycle) =>
+      weekStart >= microcycle.startDate.slice(0, 10) &&
+      weekStart <= microcycle.endDate.slice(0, 10)) ?? (
+      currentMicrocycle &&
+      weekStart >= currentMicrocycle.startDate.slice(0, 10) &&
+      weekStart <= currentMicrocycle.endDate.slice(0, 10)
+        ? currentMicrocycle
+        : undefined
+    );
+    const contract = overlay?.exposureContractV2 ?? baseMicrocycle?.exposureContractV2;
+    if (!contract) continue;
+
+    const effectiveByDate = new Map<string, Workout>();
+    for (let offset = 0; offset < 7; offset++) {
+      const date = addDaysISO(weekStart, offset);
+      const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+      const manual = dateOverrides?.[date];
+      const hasOverlayEntry = !!overlay && Object.prototype.hasOwnProperty.call(
+        overlay.workoutsByDate,
+        date,
+      );
+      const workout = manual ?? (
+        hasOverlayEntry
+          ? overlay!.workoutsByDate[date]
+          : baseMicrocycle?.workouts.find((candidate) => candidate.dayOfWeek === dayOfWeek) ?? null
+      );
+      if (workout) effectiveByDate.set(date, workout);
+    }
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const accepted = require('../rules/section18AcceptedWeekGateway')
+      .requireSection18AcceptedWeek({
+        contract,
+        workouts: Array.from(effectiveByDate.values()),
+        weekStart,
+      });
+    const acceptedByDay = new Map<number, Workout>(
+      accepted.canonicalWorkouts.map((workout: Workout) => [workout.dayOfWeek, workout]),
+    );
+    const overlayWorkouts = overlay ? { ...overlay.workoutsByDate } : null;
+    for (let offset = 0; offset < 7; offset++) {
+      const date = addDaysISO(weekStart, offset);
+      const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+      const before = effectiveByDate.get(date) ?? null;
+      const after = acceptedByDay.get(dayOfWeek) ?? null;
+      if (JSON.stringify(before) === JSON.stringify(after)) continue;
+      if (dateOverrides && Object.prototype.hasOwnProperty.call(dateOverrides, date)) {
+        if (after) dateOverrides[date] = after;
+        else delete dateOverrides[date];
+      } else if (overlayWorkouts) {
+        overlayWorkouts[date] = after;
+      } else if (after) {
+        dateOverrides = { ...(dateOverrides ?? {}), [date]: after };
+      }
+    }
+    if (overlay && overlayWorkouts && weekScopedOverlays) {
+      weekScopedOverlays[weekStart] = {
+        ...overlay,
+        workoutsByDate: overlayWorkouts,
+        exposureContractV2: accepted.contract,
+      };
+    }
+  }
   return {
     ...persistedState,
     currentProgram,
@@ -439,7 +523,10 @@ interface ProgramState {
    */
   weightOverrides: Record<string, Record<string, number | null>>;
 
-  setCurrentProgram: (program: TrainingProgram | null) => void;
+  setCurrentProgram: (
+    program: TrainingProgram | null,
+    options?: { clearOverrideDates?: readonly string[] },
+  ) => void;
   setBlockState: (blockState: StoredProgramBlockState | null) => void;
   ensureBlockState: (dateISO?: string) => StoredProgramBlockState;
   setCurrentMicrocycle: (microcycle: Microcycle | null) => void;
@@ -516,14 +603,36 @@ export const useProgramStore = create<ProgramState>()(
       // (utils/weekRebuild.decideOverrideSweep) or an EXPLICIT
       // clearManualOverrides() where a true fresh slate is intended
       // (onboarding completion, program create, profile reset).
-      setCurrentProgram: (program) => {
-        const validatedProgram = program
+      setCurrentProgram: (program, options) => {
+        const candidateProgram = program
           ? postValidateProgram(ensureProgramSeasonPhaseClock(program))
           : null;
+        const priorState = useProgramStore.getState();
+        const clearedDates = new Set(options?.clearOverrideDates ?? []);
+        const candidateOverrides = clearedDates.size > 0
+          ? Object.fromEntries(Object.entries(priorState.dateOverrides).filter(([date]) =>
+              !clearedDates.has(date)))
+          : priorState.dateOverrides;
+        const candidateOverrideContexts = clearedDates.size > 0
+          ? Object.fromEntries(Object.entries(priorState.overrideContexts).filter(([date]) =>
+              !clearedDates.has(date)))
+          : priorState.overrideContexts;
+        const acceptedSurfaces = candidateProgram
+          ? canonicaliseHydratedState({
+              currentProgram: candidateProgram,
+              dateOverrides: candidateOverrides,
+              overrideContexts: candidateOverrideContexts,
+            }, { programAlreadyAccepted: true })
+          : null;
+        const validatedProgram = acceptedSurfaces?.currentProgram ?? candidateProgram;
+        const validatedOverrides = acceptedSurfaces?.dateOverrides ?? candidateOverrides;
+        const validatedOverrideContexts = acceptedSurfaces?.overrideContexts ?? candidateOverrideContexts;
         set(() => ({
           currentProgram: validatedProgram,
           currentMicrocycle: null,
           todayWorkout: null,
+          dateOverrides: validatedOverrides,
+          overrideContexts: validatedOverrideContexts,
           weekScopedOverlays: {},
           exposureContractsByWeek: {},
           blockState: validatedProgram

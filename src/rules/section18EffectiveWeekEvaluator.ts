@@ -7,6 +7,7 @@
  */
 
 import type { Workout } from '../types/domain';
+import { classifyVisibleSession } from './sessionClassificationAdapter';
 import { normalizeStrengthIntent, type MainStrengthPattern } from './strengthPatternContributions';
 import type {
   AnchorParticipationState,
@@ -310,6 +311,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     for (const workout of dayWorkouts) {
       if (typedWorkoutActive(workout)) activeDays.add(day);
       if (workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery') dayRecovery = true;
+      const visibleClassification = classifyVisibleSession(workout);
       const rowResult = rowPatternCounts(workout);
       const sessionPatterns = PATTERNS.filter((pattern) => rowResult.counts[pattern] > 0);
       if (sessionPatterns.length > 0) {
@@ -360,7 +362,11 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
           legacyUnknown += 1;
         }
         if (conditioning.stress === 'hard') dayHard = true;
-        else if (conditioning.role === 'core' && conditioning.stress === 'moderate') dayModerate = true;
+        else if (
+          (conditioning.role === 'core' || conditioning.role === 'required_core' ||
+            conditioning.role === 'planner_selected_core') &&
+          conditioning.stress === 'moderate'
+        ) dayModerate = true;
       }
 
       if (workout.speedBlock?.kind === 'true_speed') {
@@ -372,6 +378,26 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
         primerCount += 1;
         primerSources.push({ dayOfWeek: day, family: workout.powerBlock.family });
         dayPower = true;
+      }
+
+      // The final resolver may materialise legacy pool sessions (for example
+      // Gunshow, Long Run, or Recovery) that correctly carry no Section 18
+      // exposure credit. Their visible stress still owns the day ledger.
+      // This fallback classifies the day only; it never promotes untyped work
+      // into strength, conditioning, sprint, or power credit.
+      if (!dayMain && !conditioning && !daySprint && !dayPower) {
+        if (
+          dayAccessory ||
+          visibleClassification.contributions.gunshow > 0 ||
+          visibleClassification.contributions.recovery > 0
+        ) {
+          dayRecovery = true;
+          dayAccessory = visibleClassification.contributions.gunshow > 0;
+        } else if (visibleClassification.stressLevel === 'high') {
+          dayHard = true;
+        } else if (visibleClassification.stressLevel === 'medium') {
+          dayModerate = true;
+        }
       }
     }
 
@@ -566,14 +592,24 @@ function assessContract(
   contract.restStress.achievedActiveRecoveryCount = ledger.restStress.activeRecoveryDays.length;
   contract.restStress.achievedModerateDayCount = ledger.restStress.moderateDays.length;
   contract.restStress.achievedHardDayCount = ledger.restStress.hardDays.length;
+  const appHardDayCount = ledger.restStress.hardDays.filter((day) =>
+    !ledger.restStress.anchorHardDays.includes(day)).length;
+  const provenAnchorExcess = Math.max(
+    0,
+    ledger.restStress.hardDays.length - Math.max(
+      contract.restStress.normalProgrammedHardDayMaximum,
+      appHardDayCount,
+    ),
+  );
   contract.restStress.unavoidableAnchorCausedExcess = Math.min(
     contract.restStress.authorisedUnavoidableAnchorExcess,
     Math.max(0, ledger.restStress.hardDays.length - contract.restStress.normalProgrammedHardDayMaximum),
+    provenAnchorExcess,
   );
   contract.restStress.hardDayMaximumBreach = Math.max(
     0,
     ledger.restStress.hardDays.length - contract.restStress.normalProgrammedHardDayMaximum -
-      contract.restStress.authorisedUnavoidableAnchorExcess,
+      contract.restStress.unavoidableAnchorCausedExcess,
   );
   return contract;
 }
@@ -826,16 +862,21 @@ export function evaluateSection18EffectiveWeek(
         .map((day) => dateForDay(input.weekStart, day)),
     });
   }
-  for (const pattern of contract.strengthPatterns.requiredSafePatterns) {
-    if (ledger.strengthPatterns.meaningfulMainLiftCount[pattern] > 0) continue;
-    addFinding(findings, {
-      code: 'pattern_restore_failure', severity: 'blocking', domain: 'strength_patterns',
-      expected: `at least one meaningful ${pattern} main lift`, actual: 0,
-      detail: `Safe weekly ${pattern} coverage was not restored by a later session.`,
-      evidence: [],
-    });
+  const patternCoverageSelected = contract.mainStrength.exposure.plannerSelectedTarget > 0 &&
+    !contract.safety.fullPause;
+  if (patternCoverageSelected) {
+    for (const pattern of contract.strengthPatterns.requiredSafePatterns) {
+      if (ledger.strengthPatterns.meaningfulMainLiftCount[pattern] > 0) continue;
+      addFinding(findings, {
+        code: 'pattern_restore_failure', severity: 'blocking', domain: 'strength_patterns',
+        expected: `at least one meaningful ${pattern} main lift`, actual: 0,
+        detail: `Safe weekly ${pattern} coverage was not restored by a later session.`,
+        evidence: [],
+      });
+    }
   }
-  if (contract.strengthPatterns.balanceExpectation === 'equal_or_near_equal' &&
+  if (patternCoverageSelected &&
+      contract.strengthPatterns.balanceExpectation === 'equal_or_near_equal' &&
       !contract.strengthPatterns.intentionalImbalanceReason) {
     const relevant = contract.strengthPatterns.requiredSafePatterns.map((pattern) =>
       ledger.strengthPatterns.meaningfulMainLiftCount[pattern]);
@@ -914,13 +955,13 @@ export function evaluateSection18EffectiveWeek(
   const hardBreach = Math.max(
     0,
     ledger.restStress.hardDays.length - contract.restStress.normalProgrammedHardDayMaximum -
-      contract.restStress.authorisedUnavoidableAnchorExcess,
+      (contract.restStress.unavoidableAnchorCausedExcess ?? 0),
   );
   if (hardBreach > 0) {
     addFinding(findings, {
       code: 'hard_day_breach', severity: 'blocking', domain: 'hard_days',
       expected: contract.restStress.normalProgrammedHardDayMaximum +
-        contract.restStress.authorisedUnavoidableAnchorExcess,
+        (contract.restStress.unavoidableAnchorCausedExcess ?? 0),
       actual: ledger.restStress.hardDays.length,
       detail: 'Hard-day maximum is exceeded without typed unavoidable anchor authorisation.',
       evidence: ledger.restStress.hardDays.map((day) => dateForDay(input.weekStart, day)),

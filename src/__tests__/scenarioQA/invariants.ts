@@ -575,21 +575,30 @@ export const inseason_no48hConditioning: Invariant = ({ inputs, plan }) => {
 export const inseason_aerobicOnlyDuringGameWeek: Invariant = ({ inputs, plan }) => {
   if (inputs.seasonPhase !== 'In-season') return null;
   if (!inputs.hasGame) return null;
-  const teamCount = (inputs.teamTrainingDays || []).length;
-  const expectedAppCore = Math.max(0, 2 - teamCount);
+  const contract = plan.weeklyExposureContractV2;
+  const qualifyingAnchorCredit = contract?.anchors.filter((anchor) =>
+    anchor.participation === 'normal_unrestricted' &&
+    anchor.currentProductionClaim.conditioning).length ?? 0;
+  const selectedTarget = contract?.conditioning.core.plannerSelectedTarget ??
+    contract?.conditioning.core.requiredMinimum ?? 0;
+  const expectedAppCore = Math.max(0, selectedTarget - qualifyingAnchorCredit);
+  const hardMinimum = contract?.conditioning.intensityPolicy.requiredAppHardMinimum ?? 0;
+  const mediumHardMinimum = contract?.conditioning.intensityPolicy.requiredAppMediumHardMinimum ?? 0;
   const core = plan.weeklyPlan.filter((session) =>
     !session.isTeamDay && (
       session.section18ConditioningRole === 'required_core' ||
       session.section18ConditioningRole === 'planner_selected_core'
     ));
   const violations: string[] = [];
-  for (const session of core) {
-    const category = session.conditioningCategory;
-    const hard = category === 'vo2' || category === 'glycolytic' || category === 'sprint';
-    const mediumHard = hard || category === 'tempo';
-    if ((teamCount === 1 && !hard) || (teamCount === 0 && !mediumHard)) {
-      violations.push(`${session.dayOfWeek}: ${category ?? 'none'}`);
-    }
+  const hardCount = core.filter((session) =>
+    session.conditioningCategory === 'vo2' || session.conditioningCategory === 'glycolytic' ||
+    session.conditioningCategory === 'sprint').length;
+  const mediumHardCount = core.filter((session) =>
+    session.conditioningCategory === 'tempo' || session.conditioningCategory === 'vo2' ||
+    session.conditioningCategory === 'glycolytic' || session.conditioningCategory === 'sprint').length;
+  if (hardCount < hardMinimum) violations.push(`hard core ${hardCount}<${hardMinimum}`);
+  if (mediumHardCount < mediumHardMinimum) {
+    violations.push(`medium-hard core ${mediumHardCount}<${mediumHardMinimum}`);
   }
   for (const session of plan.weeklyPlan) {
     if (session.section18ConditioningRole === 'optional_flush' &&
@@ -635,11 +644,9 @@ export const inseason_pushPullBalance: Invariant = ({ inputs, plan }) => {
 };
 
 /**
- * Lower-body S+C must use a non-running modality during in-season game
- * weeks. Sam's S+C fallback rule: pairing aerobic running with squat/hinge
- * compounds running stress on legs that just took heavy load. Bike / rower
- * / ski erg delivers the same energy-system stimulus with much lower
- * soft-tissue load. The helper sets `ergModality='mixed'` on these cells.
+ * Lower-body S+C must carry an off-feet requirement during in-season game
+ * weeks. The typed equipment resolver owns the concrete available erg after
+ * allocation; the planner owns this non-running intent.
  */
 export const inseason_lowerSCNonRunning: Invariant = ({ inputs, plan }) => {
   if (inputs.seasonPhase !== 'In-season') return null;
@@ -651,16 +658,16 @@ export const inseason_lowerSCNonRunning: Invariant = ({ inputs, plan }) => {
       (pattern) => pattern === 'squat' || pattern === 'hinge',
     );
     if (!isLower) continue;
-    if (!s.ergModality) {
-      violations.push(`${s.dayOfWeek}: lower S+C without ergModality`);
+    if (s.conditioningOffFeet !== true) {
+      violations.push(`${s.dayOfWeek}: lower S+C without off-feet intent`);
     }
   }
   return {
-    rule: 'In-season lower-body S+C → ergModality (non-running) required',
+    rule: 'In-season lower-body S+C → off-feet conditioning required',
     passed: violations.length === 0,
     detail:
       violations.length === 0
-        ? 'all lower S+C cells use non-running modality (or none exist)'
+        ? 'all lower S+C cells carry off-feet intent (or none exist)'
         : violations.join('; '),
   };
 };

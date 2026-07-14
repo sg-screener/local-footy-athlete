@@ -234,14 +234,22 @@ function checkTrunkNotConditioning(trace: ComponentScenarioTrace): InvariantChec
     const missingSupport = difference(componentRule.expectation.supportRows, observed?.supportRowNames ?? []);
     const falseConditioningRows = (observed?.conditioningRowNames ?? []).filter((name) =>
       componentRule.expectation.supportRows.includes(name));
-    const falseConditioning = observed?.components.includes('conditioning') ?? false;
+    // A real typed conditioning component may independently share the same
+    // constrained full-body day. The invariant is causal: trunk rows must not
+    // be the rows manufacturing that component.
+    const falseConditioning = observed?.components.includes('conditioning') === true &&
+      (observed?.conditioningRowNames.length ?? 0) === 0;
     if (!observed?.components.includes('trunk_support') || missingSupport.length > 0 || falseConditioning || falseConditioningRows.length > 0) {
       failures.push(failure({
         trace,
         invariantId,
         ruleId: componentRule.id,
         stage,
-        expected: { component: 'trunk_support', rows: componentRule.expectation.supportRows },
+        expected: {
+          component: 'trunk_support',
+          rows: componentRule.expectation.supportRows,
+          conditioningRowsExclude: componentRule.expectation.supportRows,
+        },
         actual: observed ? {
           components: observed.components,
           supportRows: observed.supportRowNames,

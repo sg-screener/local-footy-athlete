@@ -148,7 +148,7 @@ export const SLICE3_BIBLE_RULES: readonly Slice3Rule[] = [
     anchorQuote: 'Do not force normal gym programming if they are away from equipment.',
     statement: 'One typed feasibility owner resolves, replaces or removes planned conditioning before every generation path.',
     applicableScenarios: ['early-offseason-legacy-commercial', 'early-offseason-modern-full-gym', 'early-offseason-explicit-no-cardio', 'early-offseason-row-only'],
-    expectation: { singleOwner: 'conditioningFeasibility', treadmillOffFeet: false, explicitAbsenceWins: true },
+    expectation: { singleOwner: 'conditioningFeasibility', treadmillOffFeet: false, substituteBeforeReduction: true },
   },
   {
     id: 'ALL-COND-NOTE-TRUTH-01', category: 'conditioning', section: 'Coach Notes explain visible changes',

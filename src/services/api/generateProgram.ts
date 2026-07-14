@@ -3,6 +3,7 @@ import {
   TrainingProgram,
   Microcycle,
   type ConditioningEquipmentModality,
+  type Workout,
 } from '../../types/domain';
 import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
 import {
@@ -41,10 +42,12 @@ import {
 } from '../../utils/equipmentAvailability';
 import { getSessionComponents } from '../../utils/sessionComponents';
 import type { StrengthIntent } from '../../rules/strengthPatternContributions';
-import { resolveWeeklyConditioningFeasibility } from '../../rules/conditioningFeasibility';
+import {
+  resolveConditioningSubstitutionPolicy,
+  resolveWeeklyConditioningFeasibility,
+} from '../../rules/conditioningFeasibility';
 import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
-import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
-import { finaliseSection18SafetyWeek } from '../../rules/section18SafetyFinaliser';
+import { requireSection18AcceptedWeek } from '../../rules/section18AcceptedWeekGateway';
 import {
   getProgrammingRoleBias,
   normalizeOnboardingRole,
@@ -233,6 +236,7 @@ export function buildGeneratedMicrocycles(args: {
   availableEquipmentTags: readonly EquipmentTag[];
   availableConditioningModalities?: readonly ConditioningEquipmentModality[];
   generationConstraints?: GenerationConstraintContext;
+  activeConstraints?: readonly ActiveConstraint[];
 }): Microcycle[] {
   const states = buildBlockWeekStates({
     blockStartISO: args.blockStartISO,
@@ -243,12 +247,46 @@ export function buildGeneratedMicrocycles(args: {
 
   return states.map((blockState, stateIndex) => {
     const microcycleId = `${args.microcyclePrefix}-${blockState.weekNumber}`;
+    const generationConstraints = args.activeConstraints
+      ? buildGenerationConstraintContext({
+          activeConstraints: args.activeConstraints,
+          todayISO: blockState.weekStart,
+          periodEndISO: blockState.weekEnd,
+        })
+      : args.generationConstraints;
+    const profile = applyGenerationConstraintsToProfile(args.profile, generationConstraints);
+    const profileEquipment = resolveEquipmentCapabilities(
+      profile,
+      args.activeConstraints,
+      blockState.weekStart,
+    );
+    const equipment = args.activeConstraints
+      ? profileEquipment
+      : {
+          ...profileEquipment,
+          tags: [...args.availableEquipmentTags],
+          conditioningModalities: [...(
+            args.availableConditioningModalities ??
+            (args.availableEquipmentTags.includes('bike_or_treadmill')
+              ? profileEquipment.conditioningModalities
+              : [])
+          )],
+        };
+    const substitutionPolicy = resolveConditioningSubstitutionPolicy({
+      phase: profile.seasonPhase,
+      offseasonSubphase: blockState.phaseResolution.offseasonSubphase,
+      preseasonSubphase: blockState.phaseResolution.preseasonSubphase,
+      equipment,
+      profile,
+      generationConstraints,
+    });
     const allocatedWeekPlan = args.coachingInputs
       ? buildCoachingPlan({
           ...args.coachingInputs,
-          appConditioningFeasible: args.availableConditioningModalities !== undefined
-            ? args.availableConditioningModalities.length > 0
-            : args.coachingInputs.appConditioningFeasible,
+          generationConstraints,
+          injuries: profile.injuries ?? [],
+          appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
+          conditioningSubstitutionPolicy: substitutionPolicy,
           miniCycleNumber: blockState.miniCycleNumber,
           weekInBlock: blockState.weekInBlock,
           weekNumber: blockState.weekNumber,
@@ -261,28 +299,17 @@ export function buildGeneratedMicrocycles(args: {
           preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
         })
       : args.plan;
-    const profileEquipment = resolveEquipmentCapabilities(args.profile);
-    const equipment = {
-      ...profileEquipment,
-      tags: [...args.availableEquipmentTags],
-      conditioningModalities: [...(
-        args.availableConditioningModalities ??
-        (args.availableEquipmentTags.includes('bike_or_treadmill')
-          ? profileEquipment.conditioningModalities
-          : [])
-      )],
-    };
     const weekPlan: CoachingPlan = {
       ...allocatedWeekPlan,
       weeklyPlan: resolveWeeklyConditioningFeasibility(
         allocatedWeekPlan.weeklyPlan,
         {
-          phase: args.profile.seasonPhase,
+          phase: profile.seasonPhase,
           offseasonSubphase: blockState.phaseResolution.offseasonSubphase,
           preseasonSubphase: blockState.phaseResolution.preseasonSubphase,
           equipment,
-          profile: args.profile,
-          generationConstraints: args.generationConstraints,
+          profile,
+          generationConstraints,
         },
       ),
     };
@@ -290,48 +317,55 @@ export function buildGeneratedMicrocycles(args: {
     // week 1. Never replay that single array against week 2-4 allocations.
     // Later weeks use their own deterministic plan/fallback content.
     const sourceCoachWorkouts = stateIndex === 0 ? args.coachWorkouts : [];
-    const baseWorkouts = buildWorkoutsFromCoach(
-      sourceCoachWorkouts,
-      microcycleId,
-      weekPlan.weeklyPlan,
-      args.profile,
-      {
-        miniCycleNumber: blockState.miniCycleNumber,
-        weekInBlock: blockState.weekInBlock,
-        weekStartISO: blockState.weekStart,
+    const buildCanonicalCandidate = (source: typeof sourceCoachWorkouts): Workout[] =>
+      attachRecoveryAddonsToWeek({
+        workouts: buildWorkoutsFromCoach(
+          source,
+          microcycleId,
+          weekPlan.weeklyPlan,
+          profile,
+          {
+            miniCycleNumber: blockState.miniCycleNumber,
+            weekInBlock: blockState.weekInBlock,
+            weekStartISO: blockState.weekStart,
+            weekKind: blockState.weekKind,
+            intensityMultiplier: blockState.intensityMultiplier,
+            offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
+          },
+          {
+            ...mergeAthletePrefsWithGenerationConstraints(args.athletePrefs, generationConstraints),
+            availableEquipment: equipment.tags,
+            conditioningModalities: equipment.conditioningModalities,
+          },
+        ),
+        profile,
         weekKind: blockState.weekKind,
-        intensityMultiplier: blockState.intensityMultiplier,
-        offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
-      },
-      {
-        ...args.athletePrefs,
-        availableEquipment: args.availableEquipmentTags,
-        conditioningModalities: equipment.conditioningModalities,
-      },
-    );
-    let workouts = attachRecoveryAddonsToWeek({
-      workouts: baseWorkouts,
-      profile: args.profile,
-      weekKind: blockState.weekKind,
-      generationConstraints: args.generationConstraints,
-    });
+        generationConstraints,
+      });
+    let workouts = buildCanonicalCandidate(sourceCoachWorkouts);
     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
     if (exposureContractV2) {
-      const safety = finaliseSection18SafetyWeek({
+      const accepted = requireSection18AcceptedWeek({
         contract: exposureContractV2,
         workouts,
         weekStart: blockState.weekStart,
-        canonicalContext: {
-          phase: args.profile.seasonPhase,
-          weekKind: blockState.weekKind,
-          profile: args.profile,
-        },
+        profile,
+        regenerate: stateIndex === 0 && sourceCoachWorkouts.length > 0
+          ? () => ({
+              contract: exposureContractV2!,
+              workouts: buildCanonicalCandidate([]),
+            })
+          : undefined,
       });
-      workouts = safety.workouts;
-      exposureContractV2 = safety.contract;
+      workouts = accepted.canonicalWorkouts;
+      exposureContractV2 = accepted.contract;
     }
     const exposureContract = weekPlan.weeklyExposureContract;
-    if (exposureContract) {
+    // Contract v2 is the accepted-week authority. The legacy ledger cannot
+    // represent two valid credits stacked on one day (for example TT plus an
+    // app core block), so it remains a compatibility gate only when v2 is
+    // absent.
+    if (exposureContract && !exposureContractV2) {
       const finalValidation = evaluateEffectiveWeekExposureContract(
         exposureContract,
         workouts,
@@ -350,21 +384,6 @@ export function buildGeneratedMicrocycles(args: {
         throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
       }
     }
-    if (exposureContractV2) {
-      const observation = evaluateSection18EffectiveWeek({
-        contract: exposureContractV2,
-        workouts,
-        weekStart: blockState.weekStart,
-      });
-      if (observation.findings.length > 0) {
-        logger.warn('[ProgramGen] Section 18 observe-only findings', {
-          weekNumber: blockState.weekNumber,
-          blocking: observation.blockingViolations.map((finding) => finding.code),
-          advisory: observation.advisories.map((finding) => finding.code),
-        });
-      }
-    }
-
     if (isDevBuild()) {
       const sourceByDay = new Map(sourceCoachWorkouts.map((workout) => [workout.dayOfWeek, workout]));
       const planByDay = new Map(
@@ -455,8 +474,9 @@ export function generateProgramLocally(
   const { blockStart, blockEnd } = computeBlockBounds(today);
   const activeConstraintsForGeneration = collectActiveConstraintsForGeneration(options, availabilityDateISO);
   const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
+  const baseProfile = normalizeOnboardingRole(onboardingData);
   const generationProfile = applyGenerationConstraintsToProfile(
-    normalizeOnboardingRole(onboardingData),
+    baseProfile,
     generationConstraints,
   );
   const resolvedEquipment = resolveEquipmentCapabilities(
@@ -466,10 +486,17 @@ export function generateProgramLocally(
   );
   const resolvedEquipmentTags = resolvedEquipment.tags;
   const phaseResolution = generationPhaseResolution(generationProfile, blockStart, options);
+  const substitutionPolicy = resolveConditioningSubstitutionPolicy({
+    phase: generationProfile.seasonPhase,
+    equipment: resolvedEquipment,
+    profile: baseProfile,
+    generationConstraints,
+  });
   const coachingInputs = onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO,
     generationConstraints,
-    appConditioningFeasible: resolvedEquipment.conditioningModalities.length > 0,
+    appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
+    conditioningSubstitutionPolicy: substitutionPolicy,
     phaseWeekNumber: phaseResolution.phaseWeekNumber,
     phaseClock: phaseResolution.clock,
     phaseClockProvenance: phaseResolution.provenance,
@@ -497,19 +524,17 @@ export function generateProgramLocally(
     coachWorkouts: [],
     plan,
     coachingInputs,
-    profile: generationProfile,
+    profile: baseProfile,
     programId: 'prog-ai-1',
     microcyclePrefix: 'mc-ai',
     blockStartISO: blockStart,
     blockNumber: options.blockNumber ?? 1,
     seasonPhaseClock: phaseResolution.clock,
-    athletePrefs: mergeAthletePrefsWithGenerationConstraints(
-      getAthletePrefs(),
-      generationConstraints,
-    ),
+    athletePrefs: getAthletePrefs(),
     availableEquipmentTags: resolvedEquipmentTags,
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
+    activeConstraints: activeConstraintsForGeneration,
   });
   const firstMicrocycle = microcycles[0];
   if (!firstMicrocycle?.workouts.length) {
@@ -941,8 +966,9 @@ export async function generateProgramFromProfile(
   const availabilityDateISO = options.todayISO ?? todayISOLocal();
   const activeConstraintsForGeneration = collectActiveConstraintsForGeneration(options, availabilityDateISO);
   const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
+  const baseProfile = normalizeOnboardingRole(onboardingData);
   const generationProfile = applyGenerationConstraintsToProfile(
-    normalizeOnboardingRole(onboardingData),
+    baseProfile,
     generationConstraints,
   );
   const resolvedEquipment = resolveEquipmentCapabilities(
@@ -958,6 +984,12 @@ export async function generateProgramFromProfile(
     generationBounds.blockStart,
     options,
   );
+  const substitutionPolicy = resolveConditioningSubstitutionPolicy({
+    phase: generationProfile.seasonPhase,
+    equipment: resolvedEquipment,
+    profile: generationProfile,
+    generationConstraints,
+  });
   if (!env.isReady) {
     logMissingClientEnv('generateProgramFromProfile', env);
     throw new ProgramGenError(
@@ -972,7 +1004,8 @@ export async function generateProgramFromProfile(
   const coachingInputs = onboardingToCoachingInputs(generationProfile, {
     availabilityDateISO,
     generationConstraints,
-    appConditioningFeasible: resolvedEquipment.conditioningModalities.length > 0,
+    appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
+    conditioningSubstitutionPolicy: substitutionPolicy,
     phaseWeekNumber: phaseResolution.phaseWeekNumber,
     phaseClock: phaseResolution.clock,
     phaseClockProvenance: phaseResolution.provenance,
@@ -1292,19 +1325,17 @@ export async function generateProgramFromProfile(
       coachWorkouts: result.programUpdate.workouts,
       plan,
       coachingInputs,
-      profile: generationProfile,
+      profile: baseProfile,
       programId: 'prog-ai-1',
       microcyclePrefix: 'mc-ai',
       blockStartISO: blockStart,
       blockNumber: options.blockNumber ?? 1,
       seasonPhaseClock: phaseResolution.clock,
-      athletePrefs: mergeAthletePrefsWithGenerationConstraints(
-        getAthletePrefs(),
-        generationConstraints,
-      ),
+      athletePrefs: getAthletePrefs(),
       availableEquipmentTags: resolvedEquipmentTags,
       availableConditioningModalities: resolvedEquipment.conditioningModalities,
       generationConstraints,
+      activeConstraints: activeConstraintsForGeneration,
     });
   } catch (normaliseErr: any) {
     const diagnostic = `generated program normalisation failed: ${errorDiagnostic(normaliseErr)}`;

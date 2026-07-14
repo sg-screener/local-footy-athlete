@@ -93,7 +93,10 @@ import {
 } from '../rules/strengthPatternContributions';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
-import { resolveWeeklyConditioningFeasibility } from '../rules/conditioningFeasibility';
+import {
+  applyResolvedConditioningSubstitution,
+  resolveWeeklyConditioningFeasibility,
+} from '../rules/conditioningFeasibility';
 
 /**
  * Default exercises used in the training program
@@ -2214,7 +2217,9 @@ export function buildWorkoutsFromCoach(
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       } as Workout;
-      const finalWorkout = finaliseBuiltWorkout(standaloneWorkout, planEntry);
+      const finalWorkout = applyResolvedConditioningSubstitution(
+        finaliseBuiltWorkout(standaloneWorkout, planEntry),
+      );
       return attachSessionEffectEvidence(
         finalWorkout,
         planEntry.deterministicCoachNoteEffects,
@@ -2496,7 +2501,9 @@ export function buildWorkoutsFromCoach(
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-    const finalWorkout = finaliseBuiltWorkout(builtWorkout, planEntry);
+    const finalWorkout = applyResolvedConditioningSubstitution(
+      finaliseBuiltWorkout(builtWorkout, planEntry),
+    );
     return attachPrescriptionEffectEvidence(
       attachSessionEffectEvidence(
         finalWorkout,

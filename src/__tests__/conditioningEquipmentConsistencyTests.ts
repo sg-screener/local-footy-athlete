@@ -114,6 +114,10 @@ function hasConditioning(workout: Workout): boolean {
     getSessionComponentRows(workout).conditioningRows.length > 0;
 }
 
+function conditioningCount(workouts: readonly Workout[]): number {
+  return strengthConditioning(workouts).filter(hasConditioning).length;
+}
+
 console.log('conditioningEquipmentConsistencyTests');
 
 console.log('\n[1] legacy and modern Commercial-gym profiles converge');
@@ -124,10 +128,10 @@ console.log('\n[1] legacy and modern Commercial-gym profiles converge');
     ok(`${label} resolves normal commercial cardio capability`,
       ['bike', 'row', 'ski'].every((modality) => result.equipment.conditioningModalities.includes(modality as any)),
       result.equipment);
-    ok(`${label} Week 1 retains three attached conditioning components`,
-      strengthConditioning(result.microcycles[0].workouts).every(hasConditioning));
-    ok(`${label} Week 2 retains three attached conditioning components`,
-      strengthConditioning(result.microcycles[1].workouts).every(hasConditioning));
+    ok(`${label} Week 1 retains the two phase-selected optional aerobic components`,
+      conditioningCount(result.microcycles[0].workouts) === 2);
+    ok(`${label} Week 2 retains the two phase-selected optional aerobic components`,
+      conditioningCount(result.microcycles[1].workouts) === 2);
   }
 }
 
@@ -138,15 +142,22 @@ console.log('\n[2] explicit no-cardio and temporary no-cardio are authoritative'
   }));
   ok('explicit complete no-cardio has no conditioning capability',
     explicit.equipment.conditioningModalities.length === 0);
-  ok('edge Bike rows cannot restore removed Week 1 conditioning',
-    strengthConditioning(explicit.microcycles[0].workouts).every((workout) => !hasConditioning(workout)));
-  ok('fallback also removes infeasible Week 2 conditioning',
-    strengthConditioning(explicit.microcycles[1].workouts).every((workout) => !hasConditioning(workout)));
-  ok('no-cardio Coach Note is suppressed when conditioning is absent',
-    buildDeterministicCoachNoteDescriptors(explicit.microcycles[1].workouts.map((workout) => ({
+  ok('edge Bike rows become safe Week 1 non-machine substitutes',
+    conditioningCount(explicit.microcycles[0].workouts) === 2 &&
+      explicit.microcycles[0].workouts.filter(hasConditioning).every((workout) =>
+        workout.conditioningFeasibility?.status === 'replaced' &&
+        !['bike', 'row', 'ski', 'treadmill'].includes(
+          workout.conditioningFeasibility.resolvedSubstitutionFamily ?? '',
+        )));
+  ok('fallback retains the same two safe Week 2 substitutes',
+    conditioningCount(explicit.microcycles[1].workouts) === 2 &&
+      explicit.microcycles[1].workouts.filter(hasConditioning).every((workout) =>
+        workout.conditioningFeasibility?.status === 'replaced'));
+  ok('non-off-feet substitutes suppress the deterministic off-feet Coach Note',
+    !buildDeterministicCoachNoteDescriptors(explicit.microcycles[1].workouts.map((workout) => ({
       date: `2026-07-${String(19 + workout.dayOfWeek).padStart(2, '0')}`,
       workout,
-    }))).every((note) => note.title !== 'Early off-season focus'));
+    }))).some((note) => note.title === 'Early off-season focus'));
 
   const temporary = buildTemporaryEquipmentConstraint({
     presetId: 'no_erg_cardio', date: REFERENCE_DATE,
@@ -157,7 +168,7 @@ console.log('\n[2] explicit no-cardio and temporary no-cardio are authoritative'
     constrained.equipment.conditioningModalities.length === 0);
   const cleared = generate(profile(), []);
   ok('clearing temporary missing cardio restores current planning capability',
-    strengthConditioning(cleared.microcycles[1].workouts).every(hasConditioning));
+    conditioningCount(cleared.microcycles[1].workouts) === 2);
 }
 
 console.log('\n[3] one available off-feet modality replaces deterministically');
@@ -185,20 +196,22 @@ console.log('\n[4] fixed four-week block uses one feasibility owner and honest p
   ok('exact regression builds four microcycles', result.microcycles.length === 4);
   ok('Weeks 1 and 2 share early policy and conditioning presence',
     result.microcycles.slice(0, 2).every((microcycle) =>
-      strengthConditioning(microcycle.workouts).every(hasConditioning)));
+      conditioningCount(microcycle.workouts) === 2));
   ok('all subphases persist feasibility diagnostics on planned conditioning',
     result.microcycles.every((microcycle) => microcycle.workouts.every((workout) =>
       !workout.conditioningCategory || !!workout.conditioningFeasibility)));
   const early = result.microcycles.slice(0, 2).flatMap((microcycle) =>
     strengthConditioning(microcycle.workouts));
-  ok('weekly-card items and detail rows both expose conditioning once', early.every((workout) => {
+  const earlyConditioning = early.filter(hasConditioning);
+  ok('weekly-card items and detail rows both expose phase-selected conditioning once',
+    earlyConditioning.length === 4 && earlyConditioning.every((workout) => {
     const weekly = extractVisibleProgramItemsFromWorkout(workout)
       .filter((item) => item.domain === 'conditioning');
     const detail = getSessionComponentRows(workout).conditioningRows;
     const componentKinds = getSessionComponents(workout).map((component) => component.kind);
     return weekly.length === 1 && detail.length > 0 &&
       componentKinds.filter((kind) => kind === 'conditioning').length === 1;
-  }));
+    }));
   const week2Notes = buildDeterministicCoachNoteDescriptors(
     result.microcycles[1].workouts.map((workout) => ({
       date: `2026-07-${String(19 + workout.dayOfWeek).padStart(2, '0')}`,

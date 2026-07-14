@@ -221,6 +221,9 @@ console.log('\n-- Deterministic next-block state and persistence --');
     blockNumber: 1,
   });
   const sourceWorkout = program.microcycles[0].workouts[0];
+  const sourceTuesdayWorkout = program.microcycles[0].workouts.find(
+    (workout) => workout.dayOfWeek === 2,
+  ) ?? sourceWorkout;
   const safeThursdayWorkout = program.microcycles[0].workouts.find(
     (workout) => workout.dayOfWeek === 4,
   ) ?? sourceWorkout;
@@ -253,7 +256,7 @@ console.log('\n-- Deterministic next-block state and persistence --');
   );
   useProgramStore.getState().setManualOverride(
     '2026-08-04',
-    makeOverride(sourceWorkout, '2026-08-04', 'Constraint-owned Tuesday'),
+    makeOverride(sourceTuesdayWorkout, '2026-08-04', 'Constraint-owned Tuesday'),
     { intent: 'program_adjustment', activeModifierId: liveConstraint.id },
   );
   useProgramStore.getState().setManualOverride(
@@ -367,7 +370,7 @@ console.log('\n-- Deterministic next-block state and persistence --');
       survivingFutureOverlay.reason === futureOverlay.reason &&
       JSON.stringify(survivingFutureOverlay.workoutsByDate) ===
         JSON.stringify(futureOverlay.workoutsByDate) &&
-      !!survivingFutureOverlay.exposureContract);
+      !!survivingFutureOverlay.exposureContractV2);
   ok('feedback history survives rollover', after.sessionFeedback['2026-07-30']?.feeling === 'easy');
   ok('performed weights survive rollover', after.weightOverrides['2026-07-30']?.['back-squat'] === 100);
   const history = buildStrengthWorkoutHistoryFromFeedback(after.sessionFeedback, next.startDate);

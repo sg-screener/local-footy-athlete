@@ -308,7 +308,7 @@ run('scenario', '11 Repeat Week cannot copy prohibited content into the target w
   assert(!allPatterns(result).includes('squat') && !allPatterns(result).includes('hinge'), 'Repeat Week copied prohibited work');
 });
 
-run('scenario', '12 rebuild and rollover-style revalidation preserve prohibitions and reductions', () => {
+run('scenario', '12 rebuild and rollover-style revalidation reject a deficient final week', () => {
   const contract = baseContract();
   const microcycle: Microcycle = {
     id: 'rebuild', programId: 'program', weekNumber: 2, miniCycleNumber: 1,
@@ -321,10 +321,13 @@ run('scenario', '12 rebuild and rollover-style revalidation preserve prohibition
     status: 'active', startDate: WEEK_START, lastUpdatedAt: NOW, seriousSymptoms: false,
     rules: [], safeFocus: [], advice: [],
   };
-  const once = validateMicrocycleAgainstActiveConstraints({ microcycle, todayISO: WEEK_START, activeConstraints: [active] });
-  const twice = validateMicrocycleAgainstActiveConstraints({ microcycle: JSON.parse(JSON.stringify(once)), todayISO: WEEK_START, activeConstraints: [active] });
-  assert(JSON.stringify(once) === JSON.stringify(twice), 'second rebuild/rollover pass weakened safety');
-  assert(twice.exposureContractV2?.safety.prohibitedPatterns.includes('squat'), 'prohibition was not persisted');
+  let rejected = false;
+  try {
+    validateMicrocycleAgainstActiveConstraints({ microcycle, todayISO: WEEK_START, activeConstraints: [active] });
+  } catch (error) {
+    rejected = (error as { code?: string }).code === 'section18_week_rejected';
+  }
+  assert(rejected, 'rebuild/rollover stored a week that was safe-filtered below its approved core targets');
 });
 
 run('scenario', '13 rehydration cannot restore prohibited content or power', () => {

@@ -40,6 +40,8 @@ export interface WeeklyExposureContractInput {
   maxStrengthSessions?: number | null;
   /** False means the resolved equipment set cannot deliver an app conditioning block. */
   appConditioningFeasible?: boolean;
+  /** Ordered substitution proof recorded when feasibility is exhausted. */
+  attemptedConditioningSubstitutions?: readonly string[];
   profileInjuries?: ReadonlyArray<{
     bodyArea: string;
     description?: string;
@@ -367,7 +369,7 @@ function applyCommonSafetyReductions(
 
   if (input.appConditioningFeasible === false && contract.conditioning.additionalRequiredCount > 0) {
     contract = reduceAllocationTarget(contract, 'conditioning', anchorCredit, 'equipment_infeasibility',
-      'Resolved equipment capabilities cannot deliver a safe app conditioning modality.');
+      `No safe equivalent app-conditioning modality remained after attempts: ${(input.attemptedConditioningSubstitutions ?? []).join(', ') || 'none recorded'}.`);
   }
 
   if (!contract.conditioning.allowCombinedStrengthConditioning) {

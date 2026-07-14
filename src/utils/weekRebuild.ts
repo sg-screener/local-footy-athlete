@@ -471,16 +471,17 @@ export function commitRebuiltProgram(
   sweep: OverrideSweepDecision,
 ): void {
   const programStore = useProgramStore.getState();
-  programStore.setCurrentProgram(program);
+  // Sweep decisions are part of the candidate effective state. Validate and
+  // commit the rebuilt program plus cleared stale overrides atomically so a
+  // doomed pre-sweep combination can neither block a valid rebuild nor leak a
+  // partial mutation.
+  programStore.setCurrentProgram(program, { clearOverrideDates: sweep.clear });
   if (program.microcycles && program.microcycles.length > 0) {
     const first = program.microcycles[0];
     programStore.setCurrentMicrocycle(first);
     const dow = new Date().getDay();
     const todayWorkout = first.workouts?.find((w) => w.dayOfWeek === dow);
     if (todayWorkout) programStore.setTodayWorkout(todayWorkout);
-  }
-  for (const date of sweep.clear) {
-    programStore.removeManualOverride(date);
   }
 }
 
