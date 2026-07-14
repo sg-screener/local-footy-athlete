@@ -39,6 +39,7 @@ import { useProgramStore } from '../store/programStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { todayISOLocal } from '../utils/appDate';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
+import { observeOverlaySection18 } from '../utils/section18ProgramObservation';
 
 let pass = 0;
 let fail = 0;
@@ -219,6 +220,8 @@ const nextMonday = addDays(thisMonday, 7);
   ok('repeat_week overlay committed to the target week', !!overlay && overlay.reason === 'repeat_week');
   ok('repeat_week overlay carries the target week exposure contract',
     overlay?.exposureContract?.identity.phase === 'Off-season');
+  ok('repeat_week overlay carries the target Section 18 contract',
+    overlay?.exposureContractV2?.protocolVersion === 2);
   ok('overlay has training-day entries copied from source', Object.keys(overlay?.workoutsByDate ?? {}).length >= 1);
 
   // Block rollover is NOT advanced: program object + block length unchanged.
@@ -294,6 +297,9 @@ const nextMonday = addDays(thisMonday, 7);
   const validation = contract
     ? evaluateEffectiveWeekExposureContract(contract, workouts, targetWeekStart)
     : null;
+  const fallbackMicrocycle = useProgramStore.getState().currentProgram?.microcycles.find((week) =>
+    week.startDate.slice(0, 10) === targetWeekStart);
+  const section18 = overlay ? observeOverlaySection18(overlay, fallbackMicrocycle) : null;
   ok('Repeat Week carries and validates the corrected 4/4/1 pre-season policy',
     contract?.strength.targetCount === 4 &&
       contract.conditioning.targetCount === 4 &&
@@ -303,6 +309,11 @@ const nextMonday = addDays(thisMonday, 7);
       validation.ledger.achieved.conditioning === 4 &&
       validation.ledger.achieved.sprint_cod >= 1,
     JSON.stringify({ contract, validation }));
+  ok('Repeat Week is observable through the shared Section 18 ledger',
+    section18?.contract.protocolVersion === 2 &&
+      section18.enforcement === 'observe_only' &&
+      section18.ledger.mainStrength.achievedCount === validation?.ledger.achieved.main_strength &&
+      section18.ledger.conditioning.coreCount === validation?.ledger.achieved.conditioning);
 }
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);

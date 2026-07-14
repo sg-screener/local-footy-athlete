@@ -150,6 +150,7 @@ export type WorkoutType =
   | 'Sprint-Intervals'
   | 'Team Training'
   | 'Game'
+  | 'Rest'
   | 'Nordic-4x4'
   | 'Long-Run'
   | 'MetCon'
@@ -515,6 +516,12 @@ export interface Microcycle {
   /** Phase-owned weekly exposure intent accepted against final effective content. */
   exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;
 
+  /**
+   * Section 18 policy observation contract. This runs alongside the legacy
+   * acceptance contract until the final commit-gateway slice is approved.
+   */
+  exposureContractV2?: import('../rules/weeklyExposureContractV2').WeeklyExposureContractV2;
+
   // Workouts in this week
   workouts: Workout[];
 
@@ -635,6 +642,9 @@ export interface Workout {
    */
   recoveryAddons?: RecoveryAddonBlock[];
 
+  /** Typed Section 18 component evidence; display copy never overrides it. */
+  section18Evidence?: import('../rules/weeklyExposureContractV2').WorkoutSection18Evidence;
+
   // Exercises
   exercises: WorkoutExercise[];
 
@@ -651,6 +661,8 @@ export interface WeekScopedWorkoutOverlay {
   reason: 'one_off_game' | 'one_off_no_game' | 'repeat_week';
   /** Re-resolved for this target week; never inherited blindly from the source week. */
   exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;
+  /** Parallel Section 18 policy contract for observational evaluation. */
+  exposureContractV2?: import('../rules/weeklyExposureContractV2').WeeklyExposureContractV2;
   workoutsByDate: Record<string, Workout | null>;
   createdAt: string;
   updatedAt: string;
@@ -719,6 +731,9 @@ export interface WorkoutExercise {
   prescribedRepsMin: number;
   prescribedRepsMax: number;
   prescribedWeightKg?: number;
+
+  /** Typed canonical row-domain evidence for Section 18 evaluation. */
+  section18Evidence?: import('../rules/weeklyExposureContractV2').WorkoutExerciseSection18Evidence;
 
   /**
    * How to interpret the reps numbers:

@@ -9,10 +9,15 @@ import type { MainStrengthPattern } from './strengthPatternContributions';
 import { countWeeklyExposures, type WeekDayInput } from './weeklyExposureCounts';
 
 /**
- * Year-round weekly exposure protocol.
+ * Legacy/incomplete year-round weekly exposure protocol.
  *
  * Phase builders own the numbers and authorised reductions. This module owns
  * only the common representation, canonical counting and acceptance law.
+ *
+ * NOTE: Contract v2 + the independent Section 18 evaluator run alongside
+ * this module. This validator remains the production write gate temporarily,
+ * but cannot express Section 18 maxima, participation, optional/core identity,
+ * prohibited patterns, weekly power or true active-recovery semantics.
  * Power intentionally does not appear: Bible power work is eligibility based,
  * not a numeric weekly minimum.
  */

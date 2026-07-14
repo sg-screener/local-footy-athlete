@@ -38,6 +38,7 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import type { OnboardingData } from '../types/domain';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
+import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
 
 // Late-bound requires: these modules sit in an import cycle under the CJS
 // test runner; their exports resolve only after the graph settles.
@@ -557,6 +558,9 @@ console.log('\n── Rebuild preserves corrected pre-season frequency ──');
   ok('canonical rebuild carries and validates corrected 4/4/1 pre-season policy',
     accepted,
     JSON.stringify(rebuilt.microcycles.map((week) => week.exposureContract)));
+  ok('canonical rebuild emits an observable Section 18 contract for every week',
+    rebuilt.microcycles.every((week) =>
+      week.exposureContractV2?.protocolVersion === 2 && !!observeMicrocycleSection18(week)));
 }
 
 resetWorld();

@@ -45,6 +45,7 @@ import { resolveWeeklyConditioningFeasibility } from '../../rules/conditioningFe
 import { resolveOffseasonSubphase } from '../../rules/offseasonSubphase';
 import { resolvePreseasonSubphase } from '../../rules/preseasonSubphase';
 import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
+import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
 import {
   getProgrammingRoleBias,
   normalizeOnboardingRole,
@@ -290,6 +291,21 @@ export function buildGeneratedMicrocycles(args: {
         throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
       }
     }
+    const exposureContractV2 = weekPlan.weeklyExposureContractV2;
+    if (exposureContractV2) {
+      const observation = evaluateSection18EffectiveWeek({
+        contract: exposureContractV2,
+        workouts,
+        weekStart: blockState.weekStart,
+      });
+      if (observation.findings.length > 0) {
+        logger.warn('[ProgramGen] Section 18 observe-only findings', {
+          weekNumber: blockState.weekNumber,
+          blocking: observation.blockingViolations.map((finding) => finding.code),
+          advisory: observation.advisories.map((finding) => finding.code),
+        });
+      }
+    }
 
     if (isDevBuild()) {
       const sourceByDay = new Map(sourceCoachWorkouts.map((workout) => [workout.dayOfWeek, workout]));
@@ -342,6 +358,7 @@ export function buildGeneratedMicrocycles(args: {
       miniCycleNumber: blockState.miniCycleNumber,
       weekKind: blockState.weekKind,
       exposureContract,
+      exposureContractV2,
       intensityMultiplier: blockState.intensityMultiplier,
       workouts,
       createdAt: new Date().toISOString(),

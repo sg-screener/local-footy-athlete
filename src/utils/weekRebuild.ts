@@ -51,6 +51,7 @@ import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/pr
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
 import { classifySessionStress } from '../rules/stressClassification';
+import { migrateLegacyWeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { todayISOLocal } from './appDate';
 import { logger } from './logger';
 
@@ -189,6 +190,15 @@ export function buildWeekScopedWorkoutOverlay(args: {
     anchorDate: args.anchorDate,
     reason: args.reason,
     exposureContract: sourceMicrocycle.exposureContract,
+    exposureContractV2: sourceMicrocycle.exposureContractV2 ?? (
+      sourceMicrocycle.exposureContract
+        ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {
+            blockNumber: sourceMicrocycle.miniCycleNumber,
+            weekInBlock: ((Math.max(1, sourceMicrocycle.weekNumber) - 1) % 4) + 1,
+            globalWeek: sourceMicrocycle.weekNumber,
+          })
+        : undefined
+    ),
     workoutsByDate,
     createdAt: now,
     updatedAt: now,

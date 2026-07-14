@@ -40,6 +40,7 @@ import type {
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
+import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine';
 import { addDays, getMondayForDate } from './sessionResolver';
 import { getProgramBlockStateForDate, selectMicrocycleForDate } from './programBlockState';
@@ -112,6 +113,8 @@ export interface BuildRepeatWeekOverlayArgs {
   targetWinningWorkoutsByDate?: Record<string, Workout>;
   /** Contract resolved for the target week; never copied from the source. */
   targetExposureContract?: WeeklyExposureContract;
+  /** Parallel Section 18 target-week contract. */
+  targetExposureContractV2?: WeeklyExposureContractV2;
 }
 
 /**
@@ -146,6 +149,7 @@ export function buildRepeatWeekOverlay(args: BuildRepeatWeekOverlayArgs): WeekSc
     anchorDate: null,
     reason: 'repeat_week',
     exposureContract: args.targetExposureContract,
+    exposureContractV2: args.targetExposureContractV2,
     workoutsByDate,
     createdAt: now,
     updatedAt: now,
@@ -210,11 +214,11 @@ function gameDowForProfile(profile: OnboardingData): number[] {
   return gameDay && gameDay in DAY_NAME_TO_NUM ? [DAY_NAME_TO_NUM[gameDay]] : [];
 }
 
-function resolveRepeatTargetExposureContract(args: {
+function resolveRepeatTargetExposureContracts(args: {
   profile: OnboardingData;
   program: TrainingProgram;
   targetWeekStart: string;
-}): WeeklyExposureContract {
+}): { legacy: WeeklyExposureContract; v2: WeeklyExposureContractV2 } {
   const blockState = getProgramBlockStateForDate({
     dateISO: args.targetWeekStart,
     programStartISO: args.program.startDate,
@@ -230,7 +234,11 @@ function resolveRepeatTargetExposureContract(args: {
     weekKind: blockState.weekKind,
     appConditioningFeasible: equipment.conditioningModalities.length > 0,
   });
-  return buildCoachingPlan(inputs).weeklyExposureContract!;
+  const plan = buildCoachingPlan(inputs);
+  return {
+    legacy: plan.weeklyExposureContract!,
+    v2: plan.weeklyExposureContractV2!,
+  };
 }
 
 /**
@@ -266,6 +274,17 @@ export function repeatWeekIntoNextWeek(args: {
     }
   }
 
+  const resolvedTargetContracts = (
+    !existingTargetOverlay?.exposureContract && !targetMicrocycle?.exposureContract
+  ) || (
+    !existingTargetOverlay?.exposureContractV2 && !targetMicrocycle?.exposureContractV2
+  )
+    ? resolveRepeatTargetExposureContracts({
+        profile: args.baseProfile,
+        program,
+        targetWeekStart,
+      })
+    : null;
   const overlay = buildRepeatWeekOverlay({
     sourceWorkouts,
     targetWeekStart,
@@ -279,11 +298,10 @@ export function repeatWeekIntoNextWeek(args: {
     targetWinningWorkoutsByDate,
     targetExposureContract:
       existingTargetOverlay?.exposureContract ?? targetMicrocycle?.exposureContract ??
-        resolveRepeatTargetExposureContract({
-          profile: args.baseProfile,
-          program,
-          targetWeekStart,
-        }),
+        resolvedTargetContracts!.legacy,
+    targetExposureContractV2:
+      existingTargetOverlay?.exposureContractV2 ?? targetMicrocycle?.exposureContractV2 ??
+        resolvedTargetContracts?.v2,
   });
 
   // Shared sweep policy — preserve manual edits / live-constraint overrides,

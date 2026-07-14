@@ -182,7 +182,10 @@ function reduceAllocationTarget(
   return contract;
 }
 
-function restrictedPatterns(input: WeeklyExposureContractInput): Set<MainStrengthPattern> {
+/** Shared typed constraint projection; policy consumers must not reclassify injuries independently. */
+export function resolveRestrictedMainStrengthPatterns(
+  input: Pick<WeeklyExposureContractInput, 'activeInjuries' | 'profileInjuries'>,
+): Set<MainStrengthPattern> {
   const restricted = new Set<MainStrengthPattern>();
   for (const injury of input.activeInjuries ?? []) {
     if (!injury.pauseAffectedTraining && (injury.effectiveSeverity ?? 0) < 6) continue;
@@ -263,7 +266,7 @@ function applyCommonSafetyReductions(
     contract.conditioning.allowCombinedStrengthConditioning = false;
   }
 
-  const blockedPatterns = restrictedPatterns(input);
+  const blockedPatterns = resolveRestrictedMainStrengthPatterns(input);
   if (blockedPatterns.size > 0) {
     const allowed = ALL_PATTERNS.filter((pattern) => !blockedPatterns.has(pattern));
     contract.strength.requiredPatterns = contract.strength.required > 0 ? allowed : [];

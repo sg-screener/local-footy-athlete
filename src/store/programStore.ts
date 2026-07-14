@@ -20,6 +20,7 @@ import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 import type { SessionComponentKind } from '../utils/sessionComponents';
 import { todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
+import { migrateLegacyWeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 
 /**
  * ProgramStore is the final persistence boundary for every generated/edit
@@ -111,6 +112,7 @@ function canonicaliseHydratedWorkout(
     // explicit legacy contribution arrays even before plan-entry IDs existed.
     planIntentValid: true,
     referenceWorkout: workout,
+    section18EvidenceMode: 'preserve_legacy_unknown',
   }).workout;
 }
 
@@ -120,7 +122,16 @@ function canonicaliseHydratedMicrocycle(
 ): Microcycle {
   const workouts = (microcycle.workouts ?? []).map((workout) =>
     canonicaliseHydratedWorkout(workout, phase, microcycle.weekKind));
-  return { ...microcycle, workouts };
+  const exposureContractV2 = microcycle.exposureContractV2 ?? (
+    microcycle.exposureContract
+      ? migrateLegacyWeeklyExposureContractV2(microcycle.exposureContract, {
+          blockNumber: microcycle.miniCycleNumber,
+          weekInBlock: ((Math.max(1, microcycle.weekNumber) - 1) % 4) + 1,
+          globalWeek: microcycle.weekNumber,
+        })
+      : undefined
+  );
+  return { ...microcycle, workouts, exposureContractV2 };
 }
 
 function canonicaliseHydratedProgram(program: TrainingProgram): TrainingProgram {
@@ -152,6 +163,11 @@ function canonicaliseHydratedState(
         weekStart,
         {
           ...overlay,
+          exposureContractV2: overlay.exposureContractV2 ?? (
+            overlay.exposureContract
+              ? migrateLegacyWeeklyExposureContractV2(overlay.exposureContract)
+              : undefined
+          ),
           workoutsByDate: Object.fromEntries(Object.entries(overlay.workoutsByDate).map(([date, workout]) => [
             date,
             workout ? canonicaliseHydratedWorkout(workout, phase) : null,

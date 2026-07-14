@@ -93,7 +93,17 @@ import {
   withPlannerSelectedExposureTargets,
   type WeeklyExposureContract,
 } from '../rules/weeklyExposureContract';
-import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
+import {
+  buildWeeklyExposureContract,
+  resolveRestrictedMainStrengthPatterns,
+} from '../rules/weeklyExposureContractBuilders';
+import {
+  buildSection18WeeklyExposureContractV2,
+  migrateLegacyReductionV2,
+  type Section18Subphase,
+  type Section18WeekMode,
+  type WeeklyExposureContractV2,
+} from '../rules/weeklyExposureContractV2';
 import {
   createStrengthIntent,
   mainPatternsForLegacyStrengthPattern,
@@ -416,6 +426,9 @@ export interface CoachingPlan {
   /** Pre-placement source of truth for year-round weekly exposure demand. */
   weeklyExposureContract?: WeeklyExposureContract | null;
 
+  /** Parallel Section 18 policy contract; observational until the commit-gateway slice. */
+  weeklyExposureContractV2?: WeeklyExposureContractV2 | null;
+
   // Constraints for AI
   constraints: AIConstraints;
 }
@@ -466,6 +479,130 @@ function allocationEffectSignature(allocation: SessionAllocation | undefined): s
     hasCombinedConditioning: allocation.hasCombinedConditioning,
     speedWorkKind: allocation.speedWorkKind,
     isTeamDay: allocation.isTeamDay,
+  });
+}
+
+function section18ModeAndSubphase(
+  inputs: CoachingInputs,
+  legacy: WeeklyExposureContract,
+  readiness: ReadinessLevel,
+): { mode: Section18WeekMode; declaredSubphase: Section18Subphase; anchorState: 'game' | 'bye' | 'practice_match' | 'none' } {
+  if (inputs.seasonPhase === 'Pre-season' && inputs.hasGame) {
+    return {
+      mode: 'practice_match_week',
+      declaredSubphase: legacy.identity.subphase,
+      anchorState: 'practice_match',
+    };
+  }
+  if (inputs.seasonPhase === 'In-season') {
+    if (inputs.hasGame) {
+      return {
+        mode: 'in_season_game_week',
+        declaredSubphase: legacy.identity.subphase,
+        anchorState: 'game',
+      };
+    }
+    const tier = inputs.generationConstraints?.readiness?.tier;
+    const meaningfulInjury = (inputs.generationConstraints?.injuries ?? []).some((injury) =>
+      injury.removeRiskyWork || injury.pauseAffectedTraining) ||
+      (inputs.injuries ?? []).some((injury) => injury.severity === 'Severe');
+    const recoveryMode = inputs.weekKind === 'deload' || readiness === 'low' ||
+      tier === 'moderate_reduction' || tier === 'major_reduction' || tier === 'full_pause' ||
+      inputs.generationConstraints?.readiness?.preferRecovery === true || meaningfulInjury;
+    return {
+      mode: recoveryMode ? 'in_season_bye_recovery' : 'in_season_bye_build',
+      declaredSubphase: legacy.identity.subphase,
+      anchorState: 'bye',
+    };
+  }
+  const phaseWeek = Math.max(1, inputs.weekNumber ?? (
+    inputs.miniCycleNumber && inputs.weekInBlock
+      ? (inputs.miniCycleNumber - 1) * 4 + inputs.weekInBlock
+      : 1
+  ));
+  const mode: Section18WeekMode = inputs.seasonPhase === 'Off-season'
+    ? phaseWeek <= 2
+      ? 'early_offseason'
+      : phaseWeek <= 4
+        ? 'mid_offseason'
+        : 'late_offseason'
+    : phaseWeek === 1
+      ? 'early_preseason'
+      : phaseWeek <= 3
+        ? 'mid_preseason'
+        : 'late_preseason';
+  return {
+    mode,
+    declaredSubphase: legacy.identity.subphase,
+    anchorState: inputs.hasGame ? 'game' : 'none',
+  };
+}
+
+function buildParallelSection18Contract(args: {
+  inputs: CoachingInputs;
+  readiness: ReadinessLevel;
+  weeklyPlan: readonly SessionAllocation[];
+  legacy: WeeklyExposureContract;
+}): WeeklyExposureContractV2 {
+  const { inputs, readiness, weeklyPlan, legacy } = args;
+  const identity = section18ModeAndSubphase(inputs, legacy, readiness);
+  const reductions = legacy.reductions.map((entry) =>
+    migrateLegacyReductionV2(entry, 'live_typed_reduction'));
+  const prohibitedPatterns = Array.from(resolveRestrictedMainStrengthPatterns({
+    activeInjuries: inputs.generationConstraints?.injuries,
+    profileInjuries: inputs.injuries,
+  }));
+  const optionalFlushSelected = weeklyPlan.filter((allocation) =>
+    (allocation.tier === 'optional' || allocation.tier === 'recovery') &&
+    allocation.conditioningCategory === 'aerobic_base').length;
+  const imbalanceReduction = legacy.reductions.find((entry) =>
+    entry.reason === 'injury_restriction' || entry.reason === 'low_readiness' ||
+    entry.reason === 'insufficient_availability' || entry.reason === 'training_age_limit');
+  const readinessTier = inputs.generationConstraints?.readiness?.tier;
+  const cookedReadiness = readinessTier === 'moderate_reduction' ||
+    readinessTier === 'major_reduction' || readinessTier === 'full_pause';
+
+  return buildSection18WeeklyExposureContractV2({
+    seasonPhase: inputs.seasonPhase,
+    declaredSubphase: identity.declaredSubphase,
+    mode: identity.mode,
+    blockNumber: inputs.miniCycleNumber ?? null,
+    weekInBlock: inputs.weekInBlock ?? null,
+    globalWeek: inputs.weekNumber ?? null,
+    phaseWeek: null,
+    phaseWeekProvenance: 'program_block_derived',
+    weekKind: inputs.weekKind,
+    anchorState: identity.anchorState,
+    teamTrainingDays: (inputs.teamTrainingDays ?? []).map(dayNameToNumber),
+    fixtureDay: inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null,
+    participationProvenance: 'current_input_missing',
+    currentProductionClaimsAnchorCredit: true,
+    readiness,
+    cookedReadiness,
+    plannerSelected: {
+      mainStrength: legacy.strength.targetCount,
+      optionalMainStrength: identity.mode === 'early_offseason'
+        ? legacy.strength.targetCount
+        : weeklyPlan.filter((allocation) =>
+            allocation.tier === 'optional' && !!allocation.strengthIntent?.plannedPatterns.length).length,
+      coreConditioning: legacy.conditioning.targetCount,
+      optionalFlush: optionalFlushSelected,
+      sprintHighSpeed: legacy.sprintCod.targetCount,
+      powerPrimers: weeklyPlan.filter((allocation) => !!allocation.powerPrimer).length,
+    },
+    prohibitedPatterns,
+    prohibitedPatternProvenance: prohibitedPatterns.length > 0
+      ? inputs.generationConstraints?.injuries?.length
+        ? 'active_constraints'
+        : 'profile_injury'
+      : 'explicit_none',
+    intentionalImbalanceReason: imbalanceReduction?.reason ?? null,
+    reductions,
+    equipment: {
+      appConditioningFeasible: inputs.appConditioningFeasible ?? null,
+      substitutionStatus: inputs.appConditioningFeasible === false ? 'not_attempted' : 'not_required',
+      consideredSubstitutions: [],
+    },
   });
 }
 
@@ -1446,6 +1583,12 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     weeklyExposureContract,
     weeklyPlan,
   );
+  const weeklyExposureContractV2 = buildParallelSection18Contract({
+    inputs,
+    readiness,
+    weeklyPlan,
+    legacy: weeklyExposureContract,
+  });
 
   const plannedCoreSessions = isEarlyOffseason
     ? 0
@@ -1500,6 +1643,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     offseasonSubphase,
     preseasonSubphase,
     weeklyExposureContract,
+    weeklyExposureContractV2,
     constraints,
   };
 }

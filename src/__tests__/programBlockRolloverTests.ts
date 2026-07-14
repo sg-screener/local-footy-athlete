@@ -46,6 +46,7 @@ import {
 } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
+import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
 
 let pass = 0;
 let fail = 0;
@@ -429,6 +430,9 @@ console.log('\n-- Block-to-block exercise variation and automatic trigger --');
   ok('pre-season rollover carries and validates corrected 4/4/1 exposure policy',
     corrected,
     JSON.stringify(result.program?.microcycles.map((week) => week.exposureContract)));
+  ok('rollover emits an observable Section 18 contract for every new week',
+    result.program?.microcycles.every((week) =>
+      week.exposureContractV2?.protocolVersion === 2 && !!observeMicrocycleSection18(week)) === true);
 }
 
 {

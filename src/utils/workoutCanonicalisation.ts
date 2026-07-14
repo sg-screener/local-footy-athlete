@@ -32,6 +32,10 @@ import {
 import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import { alignPowerBlockToFinalWorkoutContent } from '../rules/powerBlockContentAlignment';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
+import {
+  withSection18WorkoutEvidence,
+  type Section18EvidenceMode,
+} from '../rules/section18WorkoutEvidence';
 import { canonicalStrengthLabel } from './sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
 import { collapseWorkoutToRest, hasMeaningfulWorkoutContent } from './workoutContent';
@@ -71,6 +75,8 @@ export interface WorkoutCanonicalisationContext {
   referenceWorkout?: Workout | null;
   /** False for a final safety pass after constraints intentionally removed work. */
   restoreMissingPlanPatterns?: boolean;
+  /** Legacy hydration preserves missing evidence as unknown; modern paths infer it canonically. */
+  section18EvidenceMode?: Section18EvidenceMode;
 }
 
 export interface WorkoutCanonicalisationResult {
@@ -790,6 +796,11 @@ export function finaliseWorkoutAfterMutation(
     actions.push({ kind: 'collapsed_to_rest', reason: 'no_meaningful_final_content' });
     workout = collapseWorkoutToRest(workout);
   }
+  workout = withSection18WorkoutEvidence(
+    workout,
+    context.section18EvidenceMode ?? 'infer',
+    context.planIntentValid === false ? 'explicit_mutation' : 'planner_and_canonical_content',
+  );
   return {
     workout,
     changed: originalJson !== JSON.stringify(workout),
