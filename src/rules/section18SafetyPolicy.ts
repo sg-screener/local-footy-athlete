@@ -125,11 +125,13 @@ function applyReductionProjections(contract: WeeklyExposureContractV2): void {
 function participationForConstraint(args: {
   existing: AnchorParticipationState;
   explicit: boolean;
+  legacyUnknown: boolean;
   hasFieldRestriction: boolean;
   lowerBodyRestriction: boolean;
   readinessRestriction: boolean;
 }): AnchorParticipationState {
   if (args.explicit && args.existing !== 'normal_unrestricted') return args.existing;
+  if (args.legacyUnknown) return 'unknown';
   if (!args.hasFieldRestriction) {
     return args.explicit ? args.existing : 'normal_unrestricted';
   }
@@ -296,6 +298,12 @@ export function applyGenerationSafetyToSection18Contract(args: {
     const participation = participationForConstraint({
       existing: anchor.participation,
       explicit: anchor.participationProvenance === 'explicit',
+      legacyUnknown: anchor.participationProvenance !== 'explicit' && (
+        contract.source === 'legacy_migration' ||
+        anchor.participationProvenance === 'legacy_unknown' ||
+        anchor.participationProvenance === 'healthy_legacy_assumption' ||
+        anchor.participationProvenance === 'current_input_missing'
+      ),
       hasFieldRestriction,
       lowerBodyRestriction,
       readinessRestriction: readinessFieldRestriction,
@@ -307,11 +315,11 @@ export function applyGenerationSafetyToSection18Contract(args: {
       participationProvenance: anchor.participationProvenance === 'explicit' &&
         participation === anchor.participation
         ? 'explicit'
-        : hasFieldRestriction
+        : participation === 'unknown'
+          ? 'legacy_unknown'
+          : hasFieldRestriction
           ? 'derived_active_constraint'
-          : contract.source === 'legacy_migration'
-            ? 'healthy_legacy_assumption'
-            : 'derived_healthy_unrestricted',
+          : 'derived_healthy_unrestricted',
       currentProductionClaim: {
         conditioning: normal,
         sprintHighSpeed: normal,

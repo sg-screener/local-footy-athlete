@@ -350,12 +350,16 @@ export function buildGeneratedMicrocycles(args: {
         workouts,
         weekStart: blockState.weekStart,
         profile,
-        regenerate: stateIndex === 0 && sourceCoachWorkouts.length > 0
-          ? () => ({
-              contract: exposureContractV2!,
-              workouts: buildCanonicalCandidate([]),
-            })
-          : undefined,
+        // Edge-authored and deterministic candidates both regenerate from the
+        // same phase-owned plan before the final safe fallback is considered.
+        regenerate: () => ({
+          contract: exposureContractV2!,
+          workouts: buildCanonicalCandidate([]),
+        }),
+        safeFallback: () => ({
+          contract: exposureContractV2!,
+          workouts: buildCanonicalCandidate([]),
+        }),
       });
       workouts = accepted.canonicalWorkouts;
       exposureContractV2 = accepted.contract;

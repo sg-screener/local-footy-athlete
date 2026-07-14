@@ -263,10 +263,10 @@ const nextMonday = addDays(thisMonday, 7);
   const ps = useProgramStore.getState();
   const junkDate = addDays(thisMonday, 1);
   const userDate = addDays(thisMonday, 3);
-  const stub = (name: string): Workout => w(1, 'Strength', name);
+  const stub = (dayOfWeek: number, name: string): Workout => w(dayOfWeek, 'Strength', name);
   // A system 'gameProximity' override (dead system junk) + a real user edit.
-  ps.setManualOverride(junkDate, stub('junk'), { intent: 'gameProximity' });
-  ps.setManualOverride(userDate, stub('user edit'), { intent: 'dismissed' });
+  ps.setManualOverride(junkDate, stub(2, 'junk'), { intent: 'gameProximity' });
+  ps.setManualOverride(userDate, stub(4, 'user edit'), { intent: 'dismissed' });
 
   const res = repeatWeekIntoNextWeek({ baseProfile: OFFSEASON as OnboardingData, sourceWeekDate: thisMonday, todayISO: today });
   ok('system-junk override is swept (cleared)', res.sweep.clear.includes(junkDate), res.sweep.clear.join(','));

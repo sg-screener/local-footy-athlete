@@ -51,6 +51,8 @@ export function collapseWorkoutToRest(workout: Workout): Workout {
     attachedConditioningKind: undefined,
     conditioningFlavour: undefined,
     conditioningCategory: undefined,
+    section18ConditioningRole: undefined,
+    section18Evidence: undefined,
     conditioningBlock: undefined,
     coachAddedConditioningLabel: undefined,
     speedBlock: undefined,

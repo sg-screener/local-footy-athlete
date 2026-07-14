@@ -414,6 +414,49 @@ interface CoachUpdatesState {
   setActiveConstraints: (constraints: ActiveConstraint[]) => void;
 }
 
+let safetyProjectionInProgress = false;
+
+function legacyInjuryForConstraints(
+  constraints: readonly ActiveConstraint[],
+  history: readonly InjuryHistoryEntry[] = [],
+): InjuryState | null {
+  const primary = constraints
+    .filter((constraint): constraint is ActiveInjuryConstraint =>
+      constraint.type === 'injury' && constraint.status !== 'resolved')
+    .sort((left, right) =>
+      (right.lastUpdatedAt || '').localeCompare(left.lastUpdatedAt || ''))[0];
+  if (!primary) return null;
+  return {
+    bodyPart: primary.bodyPart,
+    bucket: primary.bucket,
+    severity: primary.severity,
+    initialSeverity: primary.severity,
+    status: primary.status,
+    rules: Array.isArray(primary.rules) ? [...primary.rules] : [],
+    startDate: primary.startDate,
+    lastUpdatedAt: primary.lastUpdatedAt,
+    createdAt: primary.startDate,
+    history: [...history],
+  };
+}
+
+function commitConstraintProgramTransaction(
+  proposedConstraints: readonly ActiveConstraint[],
+  commitConstraintState: () => void,
+): void {
+  // Stage first. Any throw leaves both stores unchanged.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const boundary = require('../utils/postGenerationConstraintValidation');
+  const projection = boundary.stageLiveStoredProgramSafety(proposedConstraints);
+  boundary.commitLiveStoredProgramSafetyProjection(projection);
+  safetyProjectionInProgress = true;
+  try {
+    commitConstraintState();
+  } finally {
+    safetyProjectionInProgress = false;
+  }
+}
+
 export const useCoachUpdatesStore = create<CoachUpdatesState>()(
   persist(
     (set, get) => ({
@@ -464,7 +507,8 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
         }),
 
       clearAllCoachUpdates: () =>
-        set({ updatesByWeek: {}, activeInjury: null, activeConstraints: [] }),
+        commitConstraintProgramTransaction([], () =>
+          set({ updatesByWeek: {}, activeInjury: null, activeConstraints: [] })),
 
       setActiveInjury: (state) => {
         // Write-through: the legacy single-slot setter ALSO mirrors
@@ -475,14 +519,18 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           // for the same body part — but other injury constraints
           // (e.g. shoulder when this clears hammy) survive.
           const prior = get().activeInjury;
-          set({ activeInjury: null });
-          if (prior) {
-            const id = `injury-${(prior.bucket || prior.bodyPart || 'unknown').toLowerCase()}`;
-            const remaining = get().activeConstraints.filter(
-              (c) => c.id !== id,
-            );
-            set({ activeConstraints: remaining });
-          }
+          const id = prior
+            ? `injury-${(prior.bucket || prior.bodyPart || 'unknown').toLowerCase()}`
+            : null;
+          const remaining = id
+            ? get().activeConstraints.filter((constraint) => constraint.id !== id)
+            : get().activeConstraints;
+          const nextActiveInjury = legacyInjuryForConstraints(
+            remaining,
+            get().activeInjury?.history,
+          );
+          commitConstraintProgramTransaction(remaining, () =>
+            set({ activeInjury: nextActiveInjury, activeConstraints: remaining }));
           return;
         }
         const id = `injury-${(state.bucket || state.bodyPart || 'unknown').toLowerCase()}`;
@@ -503,7 +551,6 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
               : undefined;
         const stateWithPrior: InjuryState =
           priorSeverity === undefined ? state : { ...state, priorSeverity };
-        set({ activeInjury: stateWithPrior });
         const next: ActiveInjuryConstraint = {
           id,
           type: 'injury',
@@ -523,94 +570,53 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           modifierAffects: [...INJURY_MODIFIER_AFFECTS],
         };
         const existing = get().activeConstraints.filter((c) => c.id !== id);
-        set({ activeConstraints: [...existing, next] });
+        const nextConstraints = [...existing, next];
+        commitConstraintProgramTransaction(nextConstraints, () =>
+          set({ activeInjury: stateWithPrior, activeConstraints: nextConstraints }));
       },
 
       upsertActiveConstraint: (c) => {
         const nextConstraint = withDefaultModifierMetadata(c);
         const filtered = get().activeConstraints.filter((x) => x.id !== nextConstraint.id);
-        set({ activeConstraints: [...filtered, nextConstraint] });
+        const nextConstraints = [...filtered, nextConstraint];
         // Mirror back to legacy activeInjury when the constraint is
         // an injury — pick the most recently-touched as "primary".
         if (nextConstraint.type === 'injury') {
-          const allInjuries = [...filtered, nextConstraint]
-            .filter((x): x is ActiveInjuryConstraint => x.type === 'injury' && x.status !== 'resolved');
-          const primary = allInjuries.sort((a, b) =>
-            (b.lastUpdatedAt || '').localeCompare(a.lastUpdatedAt || ''),
-          )[0];
-          if (primary) {
-            const legacy: InjuryState = {
-              bodyPart: primary.bodyPart,
-              bucket: primary.bucket,
-              severity: primary.severity,
-              initialSeverity: primary.severity,
-              status: primary.status,
-              rules: Array.isArray(primary.rules) ? [...primary.rules] : [],
-              startDate: primary.startDate,
-              lastUpdatedAt: primary.lastUpdatedAt,
-              createdAt: primary.startDate,
-              history: get().activeInjury?.history ?? [],
-            };
-            set({ activeInjury: legacy });
-          } else {
-            set({ activeInjury: null });
-          }
+          const legacy = legacyInjuryForConstraints(
+            nextConstraints,
+            get().activeInjury?.history,
+          );
+          commitConstraintProgramTransaction(nextConstraints, () =>
+            set({ activeConstraints: nextConstraints, activeInjury: legacy }));
+        } else {
+          commitConstraintProgramTransaction(nextConstraints, () =>
+            set({ activeConstraints: nextConstraints }));
         }
       },
 
       removeActiveConstraint: (id) => {
         const removed = get().activeConstraints.find((c) => c.id === id);
         const remaining = get().activeConstraints.filter((c) => c.id !== id);
-        set({ activeConstraints: remaining });
         // activeInjury is a derived alias. Recompute whenever any injury is
         // removed; constraint ids are not required to use the legacy format.
         if (removed?.type === 'injury') {
-          const fallbackInjury = remaining.find(
-            (c): c is ActiveInjuryConstraint => c.type === 'injury' && c.status !== 'resolved',
-          );
-          if (fallbackInjury) {
-            const legacy: InjuryState = {
-              bodyPart: fallbackInjury.bodyPart,
-              bucket: fallbackInjury.bucket,
-              severity: fallbackInjury.severity,
-              initialSeverity: fallbackInjury.severity,
-              status: fallbackInjury.status,
-              rules: Array.isArray(fallbackInjury.rules) ? [...fallbackInjury.rules] : [],
-              startDate: fallbackInjury.startDate,
-              lastUpdatedAt: fallbackInjury.lastUpdatedAt,
-              createdAt: fallbackInjury.startDate,
-              history: [],
-            };
-            set({ activeInjury: legacy });
-          } else {
-            set({ activeInjury: null });
-          }
+          const legacy = legacyInjuryForConstraints(remaining);
+          commitConstraintProgramTransaction(remaining, () =>
+            set({ activeConstraints: remaining, activeInjury: legacy }));
+        } else {
+          commitConstraintProgramTransaction(remaining, () =>
+            set({ activeConstraints: remaining }));
         }
       },
 
       setActiveConstraints: (constraints) => {
         const nextConstraints = constraints.map(withDefaultModifierMetadata);
-        set({ activeConstraints: [...nextConstraints] });
-        const primary = nextConstraints
-          .filter((c): c is ActiveInjuryConstraint => c.type === 'injury' && c.status !== 'resolved')
-          .sort((a, b) => (b.lastUpdatedAt || '').localeCompare(a.lastUpdatedAt || ''))[0];
-        if (primary) {
-          const legacy: InjuryState = {
-            bodyPart: primary.bodyPart,
-            bucket: primary.bucket,
-            severity: primary.severity,
-            initialSeverity: primary.severity,
-            status: primary.status,
-            rules: Array.isArray(primary.rules) ? [...primary.rules] : [],
-            startDate: primary.startDate,
-            lastUpdatedAt: primary.lastUpdatedAt,
-            createdAt: primary.startDate,
-            history: get().activeInjury?.history ?? [],
-          };
-          set({ activeInjury: legacy });
-        } else {
-          set({ activeInjury: null });
-        }
+        const legacy = legacyInjuryForConstraints(
+          nextConstraints,
+          get().activeInjury?.history,
+        );
+        commitConstraintProgramTransaction(nextConstraints, () =>
+          set({ activeConstraints: [...nextConstraints], activeInjury: legacy }));
       },
 
       transitionInjuryStatus: ({ toStatus, severity, note, timestamp }) => {
@@ -642,7 +648,19 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           lastUpdatedAt: nowISO,
           history: [...current.history, entry],
         };
-        set({ activeInjury: next });
+        const id = `injury-${(current.bucket || current.bodyPart || 'unknown').toLowerCase()}`;
+        const nextConstraints = get().activeConstraints.map((constraint) =>
+          constraint.id === id && constraint.type === 'injury'
+            ? {
+                ...constraint,
+                severity,
+                status: toStatus,
+                rules: refreshedRules,
+                lastUpdatedAt: nowISO,
+              }
+            : constraint);
+        commitConstraintProgramTransaction(nextConstraints, () =>
+          set({ activeInjury: next, activeConstraints: nextConstraints }));
         return next;
       },
     }),
@@ -653,7 +671,6 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
   ),
 );
 
-let safetyProjectionInProgress = false;
 useCoachUpdatesStore.subscribe((state, previous) => {
   if (state.activeConstraints === previous.activeConstraints || safetyProjectionInProgress) return;
   safetyProjectionInProgress = true;
@@ -662,7 +679,18 @@ useCoachUpdatesStore.subscribe((state, previous) => {
     // the already-committed constraint state and projects it through the same
     // final safety boundary used by generation, rebuilds and edits.
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require('../utils/postGenerationConstraintValidation').revalidateLiveStoredProgramSafety();
+    const boundary = require('../utils/postGenerationConstraintValidation');
+    const projection = boundary.stageLiveStoredProgramSafety(state.activeConstraints);
+    boundary.commitLiveStoredProgramSafetyProjection(projection);
+  } catch (error) {
+    // Persistence hydration is the one external state replacement that can
+    // bypass the action methods above. Roll it back if the paired program
+    // projection cannot be accepted.
+    useCoachUpdatesStore.setState({
+      activeConstraints: previous.activeConstraints,
+      activeInjury: previous.activeInjury,
+    });
+    throw error;
   } finally {
     safetyProjectionInProgress = false;
   }

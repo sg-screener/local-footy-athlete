@@ -299,6 +299,8 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
 
   for (let day = 0; day <= 6; day++) {
     const dayWorkouts = workoutsByDay.get(day) ?? [];
+    const typedAnchorDeniesHardCredit = input.contract.anchors.some((anchor) =>
+      anchor.dayOfWeek === day && !normalParticipation(anchor));
     let dayHard = anchorHardDays.includes(day);
     let dayModerate = false;
     let dayRecovery = false;
@@ -393,7 +395,10 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
         ) {
           dayRecovery = true;
           dayAccessory = visibleClassification.contributions.gunshow > 0;
-        } else if (visibleClassification.stressLevel === 'high') {
+        } else if (
+          visibleClassification.stressLevel === 'high' &&
+          !typedAnchorDeniesHardCredit
+        ) {
           dayHard = true;
         } else if (visibleClassification.stressLevel === 'medium') {
           dayModerate = true;

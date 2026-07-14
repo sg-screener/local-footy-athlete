@@ -144,6 +144,7 @@ function baseContract(args: {
     anchorState: mode.startsWith('in_season_bye') ? 'bye' : 'game',
     teamTrainingDays: [2],
     teamParticipation: args.teamParticipation,
+    participationProvenance: 'derived_healthy_unrestricted',
     fixtureDay: null,
     readiness: args.readiness ?? 'medium',
     cookedReadiness: args.readiness === 'low',

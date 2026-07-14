@@ -638,7 +638,10 @@ function buildParallelSection18Contract(args: {
     anchorState: identity.anchorState,
     teamTrainingDays: (inputs.teamTrainingDays ?? []).map(dayNameToNumber),
     fixtureDay: legacy.anchors.gameDay,
-    participationProvenance: 'current_input_missing',
+    // This is a live planner decision with the current profile/constraint
+    // context in hand. Persisted or genuinely missing participation must use
+    // current_input_missing and remains unknown at the safety boundary.
+    participationProvenance: 'derived_healthy_unrestricted',
     currentProductionClaimsAnchorCredit: true,
     readiness,
     cookedReadiness,
@@ -6848,9 +6851,14 @@ function applySection18ConditioningAllocation(
       else clearConditioning(session);
     });
     let remaining = Math.max(0, optionalRecoveryTarget - existing.length);
+    const preserveByeRecoveryRest = contract.identity.mode === 'in_season_bye_recovery';
     const optionalCandidates = plan
-      .filter((session) => !session.isTeamDay && !hasConditioning(session) && !hasStrength(session))
+      .filter((session) => !session.isTeamDay && !hasConditioning(session) &&
+        (preserveByeRecoveryRest || !hasStrength(session)))
       .sort((left, right) =>
+        (preserveByeRecoveryRest
+          ? Number(!hasStrength(left)) - Number(!hasStrength(right))
+          : 0) ||
         Number(left.tier !== 'recovery') - Number(right.tier !== 'recovery') ||
         inTrainingOrder(left, right));
     for (const session of optionalCandidates) {
@@ -6880,13 +6888,15 @@ function applySection18ConditioningAllocation(
     fixtureOffset(session) === -2 && session.conditioningCategory === 'aerobic_base';
   const existingEligible = plan
     .filter((session) => hasConditioning(session) && !session.isTeamDay &&
-      fixtureSafe(session) && !protectedOptional(session))
+      fixtureSafe(session) && !protectedOptional(session) &&
+      !(session.speedBlock && !hasStrength(session)))
     .sort(inTrainingOrder);
   const selectedCore: SessionAllocation[] = existingEligible.slice(0, selectedApp);
   const missing = Math.max(0, selectedApp - selectedCore.length);
   if (missing > 0) {
     const candidates = plan
-      .filter((session) => !session.isTeamDay && !hasConditioning(session) && fixtureSafe(session))
+      .filter((session) => !session.isTeamDay && !hasConditioning(session) &&
+        !session.speedBlock && fixtureSafe(session))
       .filter((session) => allowCombinedForSelectedCore || !hasStrength(session))
       .sort((left, right) =>
         Number(!(left.tier === 'optional' || left.tier === 'recovery')) -

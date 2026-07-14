@@ -70,7 +70,10 @@ import {
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { finaliseSection18SafetyWeek } from '../rules/section18SafetyFinaliser';
-import { requireSection18AcceptedWeek } from '../rules/section18AcceptedWeekGateway';
+import {
+  requireSection18AcceptedWeek,
+  type Section18AcceptedWeekCandidate,
+} from '../rules/section18AcceptedWeekGateway';
 import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
 
 export interface ActiveConstraintValidationInput {
@@ -740,6 +743,58 @@ function gameProximityContext(
     : { hasGame: false };
 }
 
+/**
+ * Rebuild a target week from its persisted phase clock and Contract v2.
+ * The returned candidate deliberately retains the caller's approved contract;
+ * deterministic generation may improve placement, but it cannot lower the
+ * selected phase targets to make a deficient week pass.
+ */
+export function buildSection18ProductionFallbackCandidate(args: {
+  contract: WeeklyExposureContractV2;
+  weekStart: string;
+  profile?: OnboardingData | null;
+  activeConstraints?: readonly ActiveConstraint[];
+}): Section18AcceptedWeekCandidate | null {
+  if (!args.profile) return null;
+  const weekInBlock = Math.max(1, args.contract.identity.weekInBlock ?? 1);
+  const blockStart = addDaysISO(args.weekStart, -7 * (weekInBlock - 1));
+  const phaseEntryWeekStartISO = args.contract.identity.phaseEntryWeekStartISO ?? blockStart;
+  try {
+    // Dynamic loading prevents generation from importing its final persistence
+    // boundary. This path is invoked only after the primary candidate fails.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const generated = require('../services/api/generateProgram').generateProgramLocally({
+      ...args.profile,
+      seasonPhase: args.contract.identity.seasonPhase,
+    }, {
+      todayISO: blockStart,
+      blockNumber: args.contract.identity.blockNumber ?? 1,
+      activeConstraints: [...(args.activeConstraints ?? [])],
+      previousProgram: null,
+      seasonPhaseClock: {
+        protocolVersion: 1,
+        selectedPhase: args.contract.identity.seasonPhase,
+        phaseEntryWeekStartISO,
+        // Contract v2 stores resolution provenance rather than the clock's
+        // original user/migration provenance. Reconstructing that persisted
+        // clock is therefore a deterministic migration, never a new phase
+        // change.
+        originProvenance: 'deterministic_legacy_migration',
+        persistenceProvenance: 'preserved_persisted_state',
+      },
+    }) as TrainingProgram;
+    const target = generated.microcycles.find((microcycle) =>
+      microcycle.startDate.slice(0, 10) === args.weekStart.slice(0, 10));
+    if (!target) return null;
+    return {
+      contract: JSON.parse(JSON.stringify(args.contract)) as WeeklyExposureContractV2,
+      workouts: target.workouts,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function validateMicrocycleAgainstActiveConstraints(args: {
   microcycle: Microcycle;
   todayISO: string;
@@ -844,6 +899,18 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
       workouts: safetyWorkouts,
       weekStart,
       profile: args.profile,
+      regenerate: () => buildSection18ProductionFallbackCandidate({
+        contract: exposureContractV2!,
+        weekStart,
+        profile: args.profile,
+        activeConstraints: args.activeConstraints,
+      }),
+      safeFallback: () => buildSection18ProductionFallbackCandidate({
+        contract: exposureContractV2!,
+        weekStart,
+        profile: args.profile,
+        activeConstraints: args.activeConstraints,
+      }),
     });
     safetyWorkouts = accepted.canonicalWorkouts;
     exposureContractV2 = accepted.contract;
@@ -902,6 +969,18 @@ export function validateWeekOverlayAgainstActiveConstraints(args: {
       workouts: Object.values(workoutsByDate).filter((workout): workout is Workout => !!workout),
       weekStart: validated.weekStart,
       profile: args.profile,
+      regenerate: () => buildSection18ProductionFallbackCandidate({
+        contract,
+        weekStart: validated.weekStart,
+        profile: args.profile,
+        activeConstraints: args.activeConstraints,
+      }),
+      safeFallback: () => buildSection18ProductionFallbackCandidate({
+        contract,
+        weekStart: validated.weekStart,
+        profile: args.profile,
+        activeConstraints: args.activeConstraints,
+      }),
     });
     const byDay = new Map(accepted.canonicalWorkouts.map((workout) => [workout.dayOfWeek, workout]));
     workoutsByDate = Object.fromEntries(
@@ -919,13 +998,16 @@ export function validateWeekOverlayAgainstActiveConstraints(args: {
   return validated;
 }
 
-function liveValidationContext(): {
+function liveValidationContext(
+  activeConstraintsOverride?: readonly ActiveConstraint[],
+): {
   todayISO: string;
   activeConstraints: ActiveConstraint[];
   profile: OnboardingData;
 } {
   const activeById = new Map<string, ActiveConstraint>();
-  for (const constraint of useCoachUpdatesStore.getState().activeConstraints ?? []) {
+  for (const constraint of activeConstraintsOverride ??
+    useCoachUpdatesStore.getState().activeConstraints ?? []) {
     activeById.set(constraint.id, constraint);
   }
   for (const signal of Object.values(useReadinessStore.getState().signalsByDate ?? {})) {
@@ -1257,6 +1339,18 @@ export function validateLiveWeekOverlayWrite(
       workouts: effectiveWorkouts,
       weekStart: overlay.weekStart,
       profile: context.profile,
+      regenerate: () => buildSection18ProductionFallbackCandidate({
+        contract: exposureContractV2!,
+        weekStart: overlay.weekStart,
+        profile: context.profile,
+        activeConstraints: context.activeConstraints,
+      }),
+      safeFallback: () => buildSection18ProductionFallbackCandidate({
+        contract: exposureContractV2!,
+        weekStart: overlay.weekStart,
+        profile: context.profile,
+        activeConstraints: context.activeConstraints,
+      }),
     });
     const beforeSafety = effectiveWorkouts;
     effectiveWorkouts = accepted.canonicalWorkouts;
@@ -1348,38 +1442,65 @@ export function validateLiveWeekOverlayWrite(
  */
 export function revalidateLiveStoredProgramSafety(): void {
   const liveContext = liveValidationContext();
-  if (!liveContext.activeConstraints.some((constraint) =>
-    constraint.status !== 'resolved' &&
-    constraint.type !== 'missed_session' && constraint.type !== 'preference')) {
-    // Clearing a constraint never restores training content. Persisted Contract
-    // v2 already keeps the reduction conservative until an explicit rebuild;
-    // there is no new safety restriction to project on this mutation.
-    return;
-  }
-  const programStore = require('../store/programStore').useProgramStore;
-  const state = programStore.getState();
-  const currentProgram = state.currentProgram
-    ? validateLiveProgramWrite(state.currentProgram)
-    : null;
-  const currentMicrocycle = state.currentMicrocycle
-    ? validateLiveMicrocycleWrite(state.currentMicrocycle)
-    : null;
-  programStore.setState({ currentProgram, currentMicrocycle });
+  const projection = stageLiveStoredProgramSafety(liveContext.activeConstraints);
+  commitLiveStoredProgramSafetyProjection(projection);
+}
 
-  const weekScopedOverlays = Object.fromEntries(
-    Object.entries(state.weekScopedOverlays ?? {}).map(([weekStart, overlay]) => [
-      weekStart,
-      validateLiveWeekOverlayWrite(overlay as WeekScopedWorkoutOverlay),
-    ]),
-  );
-  const dateOverrides = Object.fromEntries(
-    Object.entries(state.dateOverrides ?? {}).map(([date, workout]) => [
-      date,
-      validateLiveWorkoutWrite(date, workout as Workout, { restoreMissingPlanPatterns: false }),
-    ]),
-  );
-  const todayWorkout = state.todayWorkout
-    ? validateLiveNullableWorkoutWrite(todayISOLocal(), state.todayWorkout)
-    : null;
-  programStore.setState({ weekScopedOverlays, dateOverrides, todayWorkout });
+export interface LiveStoredProgramSafetyProjection {
+  currentProgram: TrainingProgram | null;
+  currentMicrocycle: Microcycle | null;
+  todayWorkout: Workout | null;
+  dateOverrides: Record<string, Workout>;
+  overrideContexts: Record<string, import('../types/domain').OverrideContext>;
+  weekScopedOverlays: Record<string, WeekScopedWorkoutOverlay>;
+}
+
+/**
+ * Stage every persisted program surface against a proposed constraint set.
+ * This function is intentionally pure with respect to both Zustand stores:
+ * callers may commit the returned projection only after every effective week
+ * has passed the accepted-week gateway.
+ */
+export function stageLiveStoredProgramSafety(
+  proposedConstraints: readonly ActiveConstraint[],
+): LiveStoredProgramSafetyProjection | null {
+  const context = liveValidationContext(proposedConstraints);
+  const safetyConstraints = context.activeConstraints.filter((constraint) =>
+    constraint.status !== 'resolved' &&
+    constraint.type !== 'missed_session' && constraint.type !== 'preference');
+  if (safetyConstraints.length === 0) {
+    // Constraint clearing is deliberately conservative. The already-reduced
+    // visible program remains untouched until the user explicitly rebuilds.
+    return null;
+  }
+  const programStore = require('../store/programStore');
+  const state = programStore.useProgramStore.getState();
+  const staged = programStore.canonicaliseHydratedState({
+    currentProgram: state.currentProgram,
+    currentMicrocycle: state.currentMicrocycle,
+    todayWorkout: state.todayWorkout,
+    dateOverrides: state.dateOverrides,
+    overrideContexts: state.overrideContexts,
+    weekScopedOverlays: state.weekScopedOverlays,
+  }, {
+    programAlreadyAccepted: true,
+    activeConstraints: context.activeConstraints,
+    profile: context.profile,
+  });
+  return {
+    currentProgram: staged.currentProgram ?? null,
+    currentMicrocycle: staged.currentMicrocycle ?? null,
+    todayWorkout: staged.todayWorkout ?? null,
+    dateOverrides: staged.dateOverrides ?? {},
+    overrideContexts: staged.overrideContexts ?? {},
+    weekScopedOverlays: staged.weekScopedOverlays ?? {},
+  };
+}
+
+/** Commit a previously staged projection in one ProgramStore write. */
+export function commitLiveStoredProgramSafetyProjection(
+  projection: LiveStoredProgramSafetyProjection | null,
+): void {
+  if (!projection) return;
+  require('../store/programStore').useProgramStore.setState(projection);
 }

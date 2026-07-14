@@ -29,6 +29,7 @@ import {
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
 import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
 import {
+  buildSection18ProductionFallbackCandidate,
   validateMicrocycleAgainstActiveConstraints,
   validateProgramAgainstActiveConstraints,
   validateWeekOverlayAgainstActiveConstraints,
@@ -40,6 +41,17 @@ import {
   useProgramStore,
 } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
+import {
+  useCoachUpdatesStore,
+  type ActiveConstraint,
+} from '../store/coachUpdatesStore';
+import {
+  migrateLegacyWeeklyExposureContractV2,
+  type AnchorParticipationState,
+  type Section18AnchorContract,
+  type WeeklyExposureContractV2,
+} from '../rules/weeklyExposureContractV2';
+import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 
 const WEEK_START = '2026-07-13';
 const NOW = '2026-07-13T00:00:00.000Z';
@@ -49,7 +61,9 @@ const TEAM_DAYS = ['Tuesday', 'Thursday', 'Wednesday'] as const;
 let pass = 0;
 let fail = 0;
 const failures: string[] = [];
-let repeatWriteRejected = false;
+let rebuildFallbackAccepted = false;
+let repeatWriteAccepted = false;
+let rolloverFallbackAccepted = false;
 let coachWriteRejected = false;
 let fiveHardRejected = false;
 let selectedTargetPreserved = false;
@@ -229,6 +243,214 @@ function rejected(action: () => unknown): boolean {
     return error instanceof Section18WeekAcceptanceError ||
       (error as { code?: string }).code === 'section18_week_rejected';
   }
+}
+
+function dateForWeekDay(weekStart: string, dayOfWeek: number): string {
+  const date = new Date(`${weekStart.slice(0, 10)}T12:00:00`);
+  date.setDate(date.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  return date.toISOString().slice(0, 10);
+}
+
+function strengthWithoutConditioning(source: Workout, id: string): Workout {
+  return {
+    ...clone(source),
+    id,
+    name: 'Strength Only',
+    workoutType: 'Strength',
+    hasCombinedConditioning: false,
+    attachedConditioningKind: undefined,
+    conditioningBlock: undefined,
+    conditioningCategory: undefined,
+    conditioningFlavour: undefined,
+    section18ConditioningRole: undefined,
+    section18Evidence: {
+      protocolVersion: 1,
+      conditioningRole: 'none',
+      conditioningStress: 'unknown',
+      provenance: 'explicit_mutation',
+    },
+    exercises: source.exercises.filter((row) =>
+      row.section18Evidence?.role !== 'conditioning'),
+  };
+}
+
+function minimalAnchorWorkout(anchor: Section18AnchorContract): Workout {
+  const team = anchor.kind === 'team_training';
+  return {
+    id: `typed-anchor-${anchor.id}`,
+    microcycleId: 'typed-anchor-week',
+    dayOfWeek: anchor.dayOfWeek,
+    name: team ? 'Team Training' : anchor.kind === 'practice_match' ? 'Practice Match' : 'Game Day',
+    description: '',
+    durationMinutes: 60,
+    intensity: 'High',
+    workoutType: team ? 'Team Training' : 'Game',
+    sessionTier: 'core',
+    section18Evidence: {
+      protocolVersion: 1,
+      conditioningRole: 'none',
+      conditioningStress: 'unknown',
+      provenance: 'explicit_mutation',
+    },
+    exercises: [],
+    createdAt: NOW,
+    updatedAt: NOW,
+  };
+}
+
+function resetLiveStores(value: ReturnType<typeof program>): void {
+  useProgramStore.getState().clear();
+  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null });
+  useProfileStore.getState().updateOnboardingData(value.profile);
+  useProgramStore.getState().setCurrentProgram(clone(value.program));
+}
+
+function precedenceSnapshot(): string {
+  const state = useProgramStore.getState();
+  return JSON.stringify({
+    dateOverrides: state.dateOverrides,
+    overrideContexts: state.overrideContexts,
+    weekScopedOverlays: state.weekScopedOverlays,
+    exposureContractsByWeek: state.exposureContractsByWeek,
+  });
+}
+
+function coreConditioningWorkout(value: ReturnType<typeof program>): Workout {
+  const week = firstWeek(value);
+  const visible = resolveFinalVisibleSection18Week({
+    contract: week.exposureContractV2!,
+    workouts: week.workouts,
+    weekStart: week.startDate.slice(0, 10),
+    profile: value.profile,
+  });
+  const source = visible.find((workout) => {
+    const role = workout.section18Evidence?.conditioningRole ?? workout.section18ConditioningRole;
+    return role === 'required_core' || role === 'planner_selected_core' || role === 'core';
+  });
+  if (!source) throw new Error('fixture has no core conditioning workout');
+  return source;
+}
+
+function removeConditioningFromWorkout(source: Workout, id: string): Workout {
+  return source.exercises.some((row) => row.section18Evidence?.role === 'main_strength')
+    ? strengthWithoutConditioning(source, id)
+    : { ...restStub(source), id };
+}
+
+function additionalCoreConditioning(source: Workout, dayOfWeek: number, id: string): Workout {
+  return {
+    ...clone(source),
+    id,
+    dayOfWeek,
+    name: 'Additional Core Conditioning',
+    workoutType: 'Conditioning',
+    sessionTier: 'core',
+    planEntryId: undefined,
+    strengthIntent: undefined,
+    strengthIntentDiagnostics: undefined,
+    strengthPatternContributions: undefined,
+    powerBlock: undefined,
+    speedBlock: undefined,
+    recoveryAddons: undefined,
+    hasCombinedConditioning: false,
+    attachedConditioningKind: undefined,
+    exercises: source.exercises
+      .filter((row) => row.section18Evidence?.role === 'conditioning')
+      .map((row) => ({ ...clone(row), workoutId: id })),
+  };
+}
+
+function installOverrideDependency(value: ReturnType<typeof program>): { extraDate: string } {
+  resetLiveStores(value);
+  const base = firstWeek(value);
+  const source = coreConditioningWorkout(value);
+  const extraDate = dateForWeekDay(base.startDate.slice(0, 10), 3);
+  useProgramStore.getState().setManualOverride(
+    extraDate,
+    additionalCoreConditioning(source, 3, 'manual-fourth-core'),
+    { intent: 'program_adjustment' },
+  );
+  const sourceDate = dateForWeekDay(base.startDate.slice(0, 10), source.dayOfWeek);
+  useProgramStore.getState().setWeekScopedOverlay({
+    id: 'overlay-removes-core',
+    weekStart: base.startDate.slice(0, 10),
+    weekEnd: base.endDate.slice(0, 10),
+    anchorDate: null,
+    reason: 'repeat_week',
+    exposureContract: base.exposureContract ? clone(base.exposureContract) : undefined,
+    exposureContractV2: base.exposureContractV2 ? clone(base.exposureContractV2) : undefined,
+    workoutsByDate: { [sourceDate]: removeConditioningFromWorkout(source, 'overlay-without-core') },
+    createdAt: NOW,
+    updatedAt: NOW,
+  });
+  return { extraDate };
+}
+
+function installOverlayDependency(value: ReturnType<typeof program>): { weekStart: string } {
+  resetLiveStores(value);
+  const base = firstWeek(value);
+  const source = coreConditioningWorkout(value);
+  const weekStart = base.startDate.slice(0, 10);
+  const extraDate = dateForWeekDay(weekStart, 3);
+  useProgramStore.getState().setWeekScopedOverlay({
+    id: 'overlay-fourth-core',
+    weekStart,
+    weekEnd: base.endDate.slice(0, 10),
+    anchorDate: null,
+    reason: 'repeat_week',
+    exposureContract: base.exposureContract ? clone(base.exposureContract) : undefined,
+    exposureContractV2: base.exposureContractV2 ? clone(base.exposureContractV2) : undefined,
+    workoutsByDate: { [extraDate]: additionalCoreConditioning(source, 3, 'overlay-fourth-core-workout') },
+    createdAt: NOW,
+    updatedAt: NOW,
+  });
+  const sourceDate = dateForWeekDay(weekStart, source.dayOfWeek);
+  useProgramStore.getState().setManualOverride(
+    sourceDate,
+    removeConditioningFromWorkout(source, 'manual-without-core'),
+    { intent: 'program_adjustment' },
+  );
+  return { weekStart };
+}
+
+function redFlagConstraint(id = 'section18-full-pause'): ActiveConstraint {
+  return {
+    id,
+    type: 'injury',
+    bodyPart: 'Head/neck',
+    bucket: null,
+    severity: 10,
+    status: 'active',
+    startDate: WEEK_START,
+    lastUpdatedAt: NOW,
+    seriousSymptoms: true,
+    seriousSymptom: 'red flag',
+    rules: ['Pause training'],
+    safeFocus: ['Recovery guidance only'],
+    advice: [],
+    modifierAffects: ['current_week', 'future_generation'],
+  } as ActiveConstraint;
+}
+
+function anchorEvaluation(
+  source: WeeklyExposureContractV2,
+  participation: (anchor: Section18AnchorContract) => AnchorParticipationState,
+) {
+  const contract = applyGenerationSafetyToSection18Contract({
+    contract: {
+      ...clone(source),
+      anchors: source.anchors.map((anchor) => ({
+        ...clone(anchor),
+        participation: participation(anchor),
+        participationProvenance: participation(anchor) === 'unknown' ? 'legacy_unknown' : 'explicit',
+      })),
+    },
+  });
+  return evaluateSection18EffectiveWeek({
+    contract,
+    workouts: contract.anchors.map(minimalAnchorWorkout),
+    weekStart: WEEK_START,
+  });
 }
 
 console.log('\n-- 32 fixed final Section 18 conformance regressions --');
@@ -419,25 +641,40 @@ check('21 generation cannot store a blocking final-visible violation',
   visibleEvaluation(pre).blockingViolations.length === 0);
 {
   const base = firstWeek(mid);
-  check('22 rebuild cannot store a blocking final-visible violation', rejected(() =>
-    validateMicrocycleAgainstActiveConstraints({
-      microcycle: { ...clone(base), workouts: allRest(base.workouts) },
-      todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
-    })));
+  const rebuilt = validateMicrocycleAgainstActiveConstraints({
+    microcycle: { ...clone(base), workouts: allRest(base.workouts) },
+    todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
+  });
+  rebuildFallbackAccepted = evaluateSection18EffectiveWeek({
+    contract: rebuilt.exposureContractV2!, workouts: rebuilt.workouts, weekStart: WEEK_START,
+  }).blockingViolations.length === 0;
+  check('22 rebuild repairs a blocking final-visible candidate through production fallback',
+    rebuildFallbackAccepted);
   const repeat = buildRepeatWeekOverlay({
     sourceWorkouts: allRest(base.workouts),
     targetWeekStart: WEEK_START,
     targetExposureContractV2: clone(base.exposureContractV2!),
   });
-  repeatWriteRejected = rejected(() => validateWeekOverlayAgainstActiveConstraints({
-      overlay: repeat, todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
-    }));
-  check('23 Repeat Week cannot store a blocking violation', repeatWriteRejected);
-  check('24 rollover cannot store a blocking violation', rejected(() =>
-    validateProgramAgainstActiveConstraints({
-      program: { ...clone(mid.program), microcycles: [{ ...clone(base), workouts: allRest(base.workouts) }] },
-      todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
-    })));
+  const repairedRepeat = validateWeekOverlayAgainstActiveConstraints({
+    overlay: repeat, todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
+  });
+  repeatWriteAccepted = evaluateSection18EffectiveWeek({
+    contract: repairedRepeat.exposureContractV2!,
+    workouts: Object.values(repairedRepeat.workoutsByDate).filter((workout): workout is Workout => !!workout),
+    weekStart: WEEK_START,
+  }).blockingViolations.length === 0;
+  check('23 Repeat Week repairs a blocking candidate through the accepted fallback', repeatWriteAccepted);
+  const repairedRollover = validateProgramAgainstActiveConstraints({
+    program: { ...clone(mid.program), microcycles: [{ ...clone(base), workouts: allRest(base.workouts) }] },
+    todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
+  });
+  const repairedRolloverWeek = repairedRollover.microcycles[0];
+  rolloverFallbackAccepted = evaluateSection18EffectiveWeek({
+    contract: repairedRolloverWeek.exposureContractV2!,
+    workouts: repairedRolloverWeek.workouts,
+    weekStart: WEEK_START,
+  }).blockingViolations.length === 0;
+  check('24 rollover repairs a blocking candidate through production fallback', rolloverFallbackAccepted);
 }
 {
   useProfileStore.getState().updateOnboardingData(mid.profile);
@@ -592,10 +829,7 @@ check('P6 visible minimum rest is enforced', [game, byeRecovery].every((value) =
 check('P7 app programming never creates an unjustified fifth hard day', generated.every((value) =>
   !visibleEvaluation(value).blockingViolations.some((finding) => finding.code === 'hard_day_breach')));
 check('P8 every stored materially changed week passed the gateway',
-  rejected(() => validateMicrocycleAgainstActiveConstraints({
-    microcycle: { ...clone(firstWeek(mid)), workouts: allRest(firstWeek(mid).workouts) },
-    todayISO: WEEK_START, activeConstraints: [], profile: mid.profile,
-  })));
+  rebuildFallbackAccepted && repeatWriteAccepted && rolloverFallbackAccepted);
 check('P9 repairs preserve required core work',
   gameEvaluation.ledger.mainStrength.achievedCount >= gameEvaluation.contract.mainStrength.exposure.requiredMinimum &&
   gameEvaluation.ledger.conditioning.coreCount >= gameEvaluation.contract.conditioning.core.requiredMinimum);
@@ -624,7 +858,7 @@ const mutationChecks: Array<[string, boolean]> = [
   ['M3 treating recovery as rest is killed', !gameEvaluation.ledger.restStress.trueFullRestDays.includes(0)],
   ['M4 observing raw instead of visible week is killed', firstWeek(game).exposureContractV2?.restStress.achievedTrueFullRestCount === gameEvaluation.ledger.restStress.trueFullRestDays.length],
   ['M5 allowing five hard days without proof is killed', fiveHardRejected],
-  ['M6 bypassing Repeat Week gateway is killed', repeatWriteRejected],
+  ['M6 bypassing Repeat Week gateway is killed', repeatWriteAccepted],
   ['M7 bypassing Coach edits is killed', coachWriteRejected],
   ['M8 lowering selected targets is killed', selectedTargetPreserved],
   ['M9 storing after warning-only validation is killed', typedRejectionObserved],
@@ -632,8 +866,381 @@ const mutationChecks: Array<[string, boolean]> = [
 ];
 for (const [name, condition] of mutationChecks) check(name, condition);
 
+console.log('\n-- Twenty final-boundary corrective regressions --');
+
+let overrideRemovalAtomic = false;
+let overrideClearAtomic = false;
+let overlayRemovalAtomic = false;
+let overlayClearAtomic = false;
+let futureActivationGated = false;
+let fullPauseAtomic = false;
+let failedConstraintAtomic = false;
+let conservativeClear = false;
+let legacyUnknownStable = false;
+let unknownAnchorUncredited = false;
+let typedAnchorHardOwnership = false;
+let normalAnchorCredited = false;
+let byeRecoveryPreserved = false;
+let severeUpperAccepted = false;
+let substitutionBeforeReduction = false;
+let regenerationBeforeFallback = false;
+let fallbackPassedGateway = false;
+let fallbackPreservedContract = false;
+let fallbackDeterministic = false;
+let hydrationParticipationStable = false;
+
+{
+  const { extraDate } = installOverrideDependency(mid);
+  const before = precedenceSnapshot();
+  const wasRejected = rejected(() => useProgramStore.getState().removeManualOverride(extraDate));
+  overrideRemovalAtomic = wasRejected && precedenceSnapshot() === before &&
+    !!useProgramStore.getState().dateOverrides[extraDate];
+  check('33 removing an override cannot create and store a core shortfall', overrideRemovalAtomic);
+}
+{
+  installOverrideDependency(mid);
+  const before = precedenceSnapshot();
+  const wasRejected = rejected(() => useProgramStore.getState().clearManualOverrides());
+  overrideClearAtomic = wasRejected && precedenceSnapshot() === before;
+  check('34 clearing all overrides is atomic', overrideClearAtomic);
+}
+{
+  const { weekStart } = installOverlayDependency(mid);
+  const before = precedenceSnapshot();
+  const wasRejected = rejected(() => useProgramStore.getState().removeWeekScopedOverlay(weekStart));
+  overlayRemovalAtomic = wasRejected && precedenceSnapshot() === before &&
+    !!useProgramStore.getState().weekScopedOverlays[weekStart];
+  check('35 removing an overlay cannot create and store a core shortfall', overlayRemovalAtomic);
+}
+{
+  installOverlayDependency(mid);
+  const before = precedenceSnapshot();
+  const wasRejected = rejected(() => useProgramStore.getState().clearWeekScopedOverlays());
+  overlayClearAtomic = wasRejected && precedenceSnapshot() === before;
+  check('36 clearing all overlays is atomic', overlayClearAtomic);
+}
+{
+  resetLiveStores(mid);
+  const futureStart = '2026-08-10';
+  const futureProgram = generateProgramLocally(mid.profile, {
+    todayISO: futureStart,
+    previousProgram: null,
+    seasonPhaseClock: {
+      protocolVersion: 1,
+      selectedPhase: 'Off-season',
+      phaseEntryWeekStartISO: '2026-06-29',
+      originProvenance: 'explicit_user_phase_change',
+    },
+  });
+  const futureWeek = futureProgram.microcycles[0];
+  const victim = futureWeek.workouts.find((workout) =>
+    workout.exercises.some((row) => row.section18Evidence?.role === 'main_strength'))!;
+  const futureDate = dateForWeekDay(futureWeek.startDate.slice(0, 10), victim.dayOfWeek);
+  useProgramStore.getState().setManualOverride(
+    futureDate,
+    restStub(victim),
+    { intent: 'program_adjustment' },
+  );
+  const previousProgramId = useProgramStore.getState().currentProgram?.id;
+  const activationRejected = rejected(() =>
+    useProgramStore.getState().setCurrentProgram(clone(futureProgram)));
+  if (activationRejected) {
+    futureActivationGated = useProgramStore.getState().currentProgram?.id === previousProgramId &&
+      !!useProgramStore.getState().dateOverrides[futureDate];
+  } else {
+    const stored = useProgramStore.getState();
+    const materialised = stored.currentProgram!.microcycles[0];
+    const effective = materialised.workouts.map((workout) =>
+      stored.dateOverrides[dateForWeekDay(materialised.startDate.slice(0, 10), workout.dayOfWeek)] ?? workout);
+    futureActivationGated = evaluateSection18EffectiveWeek({
+      contract: materialised.exposureContractV2!,
+      workouts: effective,
+      weekStart: materialised.startDate.slice(0, 10),
+    }).blockingViolations.length === 0;
+  }
+  check('37 future-dated override is gated when it first becomes material', futureActivationGated);
+}
+
+const pauseConstraint = redFlagConstraint();
+let pausedProgramSnapshot = '';
+{
+  resetLiveStores(mid);
+  useCoachUpdatesStore.getState().upsertActiveConstraint(pauseConstraint);
+  const storedProgram = useProgramStore.getState().currentProgram!;
+  pausedProgramSnapshot = JSON.stringify(storedProgram);
+  const pausedWeek = storedProgram.microcycles[0];
+  const evaluation = evaluateSection18EffectiveWeek({
+    contract: pausedWeek.exposureContractV2!,
+    workouts: pausedWeek.workouts,
+    weekStart: pausedWeek.startDate.slice(0, 10),
+  });
+  fullPauseAtomic = useCoachUpdatesStore.getState().activeConstraints.some((entry) =>
+    entry.id === pauseConstraint.id) &&
+    pausedWeek.workouts.every((workout) =>
+      workout.workoutType === 'Rest' || workout.workoutType === 'Recovery' || workout.workoutType === 'Flush-Out') &&
+    evaluation.ledger.mainStrength.achievedCount === 0 &&
+    evaluation.ledger.conditioning.coreCount === 0 &&
+    evaluation.ledger.sprintHighSpeed.achievedCount === 0 &&
+    evaluation.ledger.power.achievedPrimerCount === 0 &&
+    evaluation.blockingViolations.length === 0;
+  check('38 full-pause constraint and recovery-only program commit together', fullPauseAtomic, evaluation);
+
+  useCoachUpdatesStore.getState().removeActiveConstraint(pauseConstraint.id);
+  conservativeClear = useCoachUpdatesStore.getState().activeConstraints.every((entry) =>
+    entry.id !== pauseConstraint.id) && JSON.stringify(useProgramStore.getState().currentProgram) === pausedProgramSnapshot;
+  check('40 clearing a constraint does not silently restore training', conservativeClear);
+}
+{
+  resetLiveStores(mid);
+  const boundary = require('../utils/postGenerationConstraintValidation') as {
+    stageLiveStoredProgramSafety: (constraints: readonly ActiveConstraint[]) => unknown;
+  };
+  const originalStage = boundary.stageLiveStoredProgramSafety;
+  const beforeProgram = JSON.stringify(useProgramStore.getState().currentProgram);
+  const beforeConstraints = JSON.stringify(useCoachUpdatesStore.getState().activeConstraints);
+  let threw = false;
+  try {
+    boundary.stageLiveStoredProgramSafety = () => {
+      throw new Error('injected projection failure');
+    };
+    useCoachUpdatesStore.getState().upsertActiveConstraint(redFlagConstraint('injected-failure'));
+  } catch {
+    threw = true;
+  } finally {
+    boundary.stageLiveStoredProgramSafety = originalStage;
+  }
+  failedConstraintAtomic = threw &&
+    JSON.stringify(useProgramStore.getState().currentProgram) === beforeProgram &&
+    JSON.stringify(useCoachUpdatesStore.getState().activeConstraints) === beforeConstraints;
+  check('39 failed constraint projection commits neither constraint nor program', failedConstraintAtomic);
+}
+
+const migratedLegacy = applyGenerationSafetyToSection18Contract({
+  contract: migrateLegacyWeeklyExposureContractV2(firstWeek(game).exposureContract!, {
+    blockNumber: 1,
+    weekInBlock: 1,
+    globalWeek: 1,
+  }),
+});
+const migratedLegacyAgain = applyGenerationSafetyToSection18Contract({
+  contract: clone(migratedLegacy),
+});
+const missingParticipation = applyGenerationSafetyToSection18Contract({
+  contract: {
+    ...clone(firstWeek(game).exposureContractV2!),
+    anchors: firstWeek(game).exposureContractV2!.anchors.map((anchor) => ({
+      ...clone(anchor),
+      participation: 'normal_unrestricted',
+      participationProvenance: 'current_input_missing',
+    })),
+  },
+});
+legacyUnknownStable = migratedLegacy.anchors.length > 0 && migratedLegacy.anchors.every((anchor) =>
+  anchor.participation === 'unknown' &&
+  anchor.participationProvenance === 'legacy_unknown' &&
+  !anchor.currentProductionClaim.conditioning &&
+  !anchor.currentProductionClaim.sprintHighSpeed &&
+  !anchor.currentProductionClaim.hardDay) &&
+  JSON.stringify(migratedLegacy) === JSON.stringify(migratedLegacyAgain) &&
+  missingParticipation.anchors.every((anchor) =>
+    anchor.participation === 'unknown' && anchor.participationProvenance === 'legacy_unknown');
+check('41 legacy anchors remain deterministic unknown rather than invented healthy participation', legacyUnknownStable);
+
+const unknownEvaluation = evaluateSection18EffectiveWeek({
+  contract: migratedLegacy,
+  workouts: migratedLegacy.anchors.map(minimalAnchorWorkout),
+  weekStart: WEEK_START,
+});
+unknownAnchorUncredited = unknownEvaluation.ledger.conditioning.anchorCoreCount === 0 &&
+  unknownEvaluation.ledger.sprintHighSpeed.achievedCount === 0 &&
+  unknownEvaluation.ledger.restStress.anchorHardDays.length === 0 &&
+  unknownEvaluation.ledger.restStress.hardDays.length === 0;
+check('42 unknown anchors receive no conditioning, sprint or hard-day credit', unknownAnchorUncredited, unknownEvaluation.ledger);
+
+const typedDeniedEvaluation = anchorEvaluation(
+  firstWeek(game).exposureContractV2!,
+  (anchor) => anchor.kind === 'team_training' ? 'modified' : 'reduced_running',
+);
+typedAnchorHardOwnership = typedDeniedEvaluation.ledger.anchors.every((anchor) =>
+  !anchor.conditioningCredited && !anchor.sprintCredited && !anchor.hardDayCredited) &&
+  typedDeniedEvaluation.ledger.restStress.hardDays.length === 0;
+check('43 modified TT and reduced-running game cannot regain hard credit through visible fallback',
+  typedAnchorHardOwnership, typedDeniedEvaluation.ledger);
+
+const normalEvaluation = anchorEvaluation(
+  firstWeek(game).exposureContractV2!,
+  () => 'normal_unrestricted',
+);
+normalAnchorCredited = normalEvaluation.ledger.anchors.length > 0 &&
+  normalEvaluation.ledger.anchors.every((anchor) =>
+    anchor.conditioningCredited && anchor.sprintCredited && anchor.hardDayCredited) &&
+  normalEvaluation.ledger.conditioning.anchorCoreCount === normalEvaluation.ledger.anchors.length;
+check('44 normal unrestricted anchors retain approved credit', normalAnchorCredited, normalEvaluation.ledger);
+
+const byeRecoveryEvaluation = visibleEvaluation(byeRecovery);
+byeRecoveryPreserved = byeRecoveryEvaluation.ledger.mainStrength.achievedCount === 2 &&
+  byeRecoveryEvaluation.ledger.conditioning.optionalRecoveryAerobicCount >= 1 &&
+  byeRecoveryEvaluation.ledger.conditioning.optionalRecoveryAerobicCount <= 2 &&
+  byeRecoveryEvaluation.ledger.restStress.trueFullRestDays.length >= 2 &&
+  byeRecoveryEvaluation.ledger.power.achievedPrimerCount === 0;
+check('45 bye-recovery 0TT retains selected recovery aerobic and two true rests',
+  byeRecoveryPreserved, byeRecoveryEvaluation.ledger);
+
+const severeUpper = program({
+  phase: 'Off-season',
+  phaseEntry: '2026-06-15',
+  injuries: [{ bodyArea: 'Shoulder', description: 'No loaded pushing', severity: 'Severe' }],
+});
+const severeUpperEvaluation = visibleEvaluation(severeUpper);
+severeUpperAccepted = severeUpperEvaluation.contract.identity.mode === 'late_offseason' &&
+  severeUpperEvaluation.ledger.mainStrength.achievedCount === 3 &&
+  severeUpperEvaluation.ledger.conditioning.coreCount === 4 &&
+  severeUpperEvaluation.ledger.strengthPatterns.meaningfulMainLiftCount.push === 0 &&
+  severeUpperEvaluation.ledger.strengthPatterns.meaningfulMainLiftCount.pull > 0 &&
+  severeUpperEvaluation.blockingViolations.length === 0;
+check('46 severe upper injury produces a valid safe late-off-season S3/C4 week',
+  severeUpperAccepted, severeUpperEvaluation);
+
+substitutionBeforeReduction = firstWeek(limitedMid).exposureContractV2?.equipment.substitutionStatus === 'substituted' &&
+  firstWeek(limitedMid).exposureContractV2?.equipment.appConditioningFeasible === true &&
+  !firstWeek(limitedMid).exposureContractV2?.authorisedReductions.some((entry) =>
+    entry.metric === 'conditioning_core_frequency' && entry.reason === 'equipment_infeasibility');
+check('47 safe substitution is attempted before conditioning reduction', substitutionBeforeReduction);
+
+const fallbackOrder: string[] = [];
+const fallbackBase = firstWeek(mid);
+const runProductionFallback = () => runSection18AcceptedWeekGateway({
+  contract: clone(fallbackBase.exposureContractV2!),
+  workouts: allRest(fallbackBase.workouts),
+  weekStart: fallbackBase.startDate.slice(0, 10),
+  profile: mid.profile,
+  resolveVisibleWorkouts: (workouts) => [...workouts],
+  maxRepairAttempts: 2,
+  regenerate: () => {
+    fallbackOrder.push('regenerate');
+    return {
+      contract: clone(fallbackBase.exposureContractV2!),
+      workouts: allRest(fallbackBase.workouts),
+    };
+  },
+  safeFallback: () => {
+    fallbackOrder.push('fallback');
+    return buildSection18ProductionFallbackCandidate({
+      contract: clone(fallbackBase.exposureContractV2!),
+      weekStart: fallbackBase.startDate.slice(0, 10),
+      profile: mid.profile,
+      activeConstraints: [],
+    });
+  },
+});
+const productionFallback = runProductionFallback();
+regenerationBeforeFallback = fallbackOrder.join(',') === 'regenerate,fallback';
+check('48 production regeneration is attempted before fallback', regenerationBeforeFallback, fallbackOrder);
+fallbackPassedGateway = productionFallback.status !== 'rejected' &&
+  productionFallback.repairs.some((repair) => repair.kind === 'safe_fallback_candidate') &&
+  productionFallback.evaluation.blockingViolations.length === 0;
+check('49 production fallback passes the same accepted-week gateway', fallbackPassedGateway, productionFallback);
+fallbackPreservedContract = productionFallback.contract.mainStrength.exposure.plannerSelectedTarget ===
+  fallbackBase.exposureContractV2?.mainStrength.exposure.plannerSelectedTarget &&
+  productionFallback.contract.conditioning.core.plannerSelectedTarget ===
+  fallbackBase.exposureContractV2?.conditioning.core.plannerSelectedTarget;
+check('50 fallback cannot lower the approved contract', fallbackPreservedContract);
+fallbackOrder.length = 0;
+const productionFallbackAgain = runProductionFallback();
+const fallbackSignature = (result: typeof productionFallback) => JSON.stringify({
+  status: result.status,
+  attempts: result.attempts,
+  selectedStrength: result.contract.mainStrength.exposure.plannerSelectedTarget,
+  selectedConditioning: result.contract.conditioning.core.plannerSelectedTarget,
+  strength: result.evaluation.ledger.mainStrength.achievedCount,
+  conditioning: result.evaluation.ledger.conditioning.coreCount,
+  sprint: result.evaluation.ledger.sprintHighSpeed.achievedCount,
+  power: result.evaluation.ledger.power.achievedPrimerCount,
+  blocking: result.evaluation.blockingViolations.map((finding) => finding.code),
+});
+fallbackDeterministic = productionFallback.attempts <= 2 && productionFallbackAgain.attempts <= 2 &&
+  fallbackOrder.join(',') === 'regenerate,fallback' &&
+  fallbackSignature(productionFallback) === fallbackSignature(productionFallbackAgain);
+check('51 fallback and repair terminate deterministically', fallbackDeterministic);
+
+{
+  const persisted = clone(mid.program);
+  const week = persisted.microcycles[0];
+  const contract = week.exposureContractV2!;
+  const unknownAnchor: Section18AnchorContract = {
+    id: 'persisted-legacy-tt',
+    kind: 'team_training',
+    dayOfWeek: 3,
+    participation: 'normal_unrestricted',
+    participationProvenance: 'healthy_legacy_assumption',
+    currentProductionClaim: { conditioning: true, sprintHighSpeed: true, hardDay: true },
+    creditPolicy: {
+      conditioningRequiresNormalParticipation: true,
+      sprintRequiresNormalHighSpeedParticipation: true,
+      hardDayRequiresNormalHardParticipation: true,
+      formalPowerPrimerCredit: false,
+    },
+  };
+  week.exposureContractV2 = {
+    ...contract,
+    source: 'legacy_migration',
+    anchors: [...contract.anchors, unknownAnchor],
+  };
+  const anchorWorkout = minimalAnchorWorkout(unknownAnchor);
+  const existingIndex = week.workouts.findIndex((workout) => workout.dayOfWeek === unknownAnchor.dayOfWeek);
+  if (existingIndex >= 0) week.workouts[existingIndex] = anchorWorkout;
+  else week.workouts.push(anchorWorkout);
+  const hydratedOnce = canonicaliseHydratedProgram(persisted);
+  const hydratedTwice = canonicaliseHydratedProgram(clone(hydratedOnce));
+  const onceWeek = hydratedOnce.microcycles[0];
+  const twiceWeek = hydratedTwice.microcycles[0];
+  const onceEvaluation = evaluateSection18EffectiveWeek({
+    contract: onceWeek.exposureContractV2!, workouts: onceWeek.workouts, weekStart: WEEK_START,
+  });
+  const twiceEvaluation = evaluateSection18EffectiveWeek({
+    contract: twiceWeek.exposureContractV2!, workouts: twiceWeek.workouts, weekStart: WEEK_START,
+  });
+  const onceAnchor = onceWeek.exposureContractV2!.anchors.find((anchor) => anchor.id === unknownAnchor.id);
+  const twiceAnchor = twiceWeek.exposureContractV2!.anchors.find((anchor) => anchor.id === unknownAnchor.id);
+  hydrationParticipationStable = onceAnchor?.participation === 'unknown' &&
+    onceAnchor.participationProvenance === 'legacy_unknown' &&
+    twiceAnchor?.participation === 'unknown' &&
+    twiceAnchor.participationProvenance === 'legacy_unknown' &&
+    onceEvaluation.blockingViolations.length === 0 &&
+    twiceEvaluation.blockingViolations.length === 0 &&
+    JSON.stringify(onceEvaluation.ledger) === JSON.stringify(twiceEvaluation.ledger);
+  check('52 rehydration preserves participation state and accepted-week semantics',
+    hydrationParticipationStable, { onceAnchor, twiceAnchor, onceEvaluation, twiceEvaluation });
+}
+
+console.log('\n-- Final-boundary properties --');
+check('P12 destructive precedence mutations cannot bypass validation',
+  overrideRemovalAtomic && overrideClearAtomic && overlayRemovalAtomic && overlayClearAtomic);
+check('P13 constraint and program state never commit partially', fullPauseAtomic && failedConstraintAtomic);
+check('P14 unknown participation never gains automatic anchor credit', unknownAnchorUncredited);
+check('P15 typed participation owns hard-day classification', typedAnchorHardOwnership && normalAnchorCredited);
+check('P16 selected recovery work is not deleted solely to satisfy rest', byeRecoveryPreserved);
+check('P17 safe feasible constrained weeks do not reject without regeneration/fallback', severeUpperAccepted);
+check('P18 all fallbacks pass the same gateway', fallbackPassedGateway && fallbackPreservedContract);
+check('P19 failed gateway transactions preserve the previous accepted state',
+  overrideRemovalAtomic && overlayRemovalAtomic && failedConstraintAtomic);
+
+console.log('\n-- Final-boundary mutation witnesses --');
+const finalBoundaryMutations: Array<[string, boolean]> = [
+  ['M11 bypassing gateway during override deletion is killed', overrideRemovalAtomic && overrideClearAtomic],
+  ['M12 bypassing gateway during overlay deletion is killed', overlayRemovalAtomic && overlayClearAtomic],
+  ['M13 committing constraint before program validation is killed', failedConstraintAtomic],
+  ['M14 restoring healthy_legacy_assumption is killed', legacyUnknownStable && hydrationParticipationStable],
+  ['M15 classifying all visible TT/game labels as hard is killed', typedAnchorHardOwnership],
+  ['M16 removing bye-recovery flush for rest is killed', byeRecoveryPreserved],
+  ['M17 skipping constrained regeneration is killed', regenerationBeforeFallback],
+  ['M18 accepting fallback without gateway evaluation is killed', fallbackPassedGateway],
+  ['M19 lowering the contract during fallback is killed', fallbackPreservedContract],
+];
+for (const [name, condition] of finalBoundaryMutations) check(name, condition);
+
 console.log(`\nsection18AcceptedWeekGatewayTests: ${pass} passed, ${fail} failed`);
-console.log('SECTION18_ACCEPTED_WEEK_TOTALS scenarios=32 properties=11 mutations=10 cross_paths=1');
+console.log('SECTION18_ACCEPTED_WEEK_TOTALS scenarios=52 properties=19 mutations=19 cross_paths=1');
 if (fail > 0) {
   console.log(`Failures:\n${failures.map((failure) => `  - ${failure}`).join('\n')}`);
   process.exit(1);

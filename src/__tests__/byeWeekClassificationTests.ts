@@ -503,7 +503,8 @@ console.log('\n[6] recovery and injury-constrained byes retain their typed struc
   ok('injury-restricted bye does not force lower strength',
     !injured.report.counts.days.some((day) => day.units.some((unit) => unit.category === 'lower_strength')),
     injured.report.counts.days);
-  eq('injury-restricted build still fills its safe conditioning target', injured.report.counts.extraConditioningSessions, 1);
+  eq('injury-restricted build replaces uncredited modified anchors with three safe app exposures',
+    injured.report.counts.extraConditioningSessions, 3);
 
   const deload = generatedWeek(baseProfile({
     teamTrainingDaysPerWeek: 1,
