@@ -101,6 +101,7 @@ export interface Section18EffectiveWeekLedger {
   conditioning: {
     coreCount: number;
     optionalFlushCount: number;
+    optionalRecoveryAerobicCount: number;
     optionalNonCoreCount: number;
     legacyUnknownCount: number;
     appCoreCount: number;
@@ -239,6 +240,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
   let legacyFallbacks = 0;
   let coreConditioning = 0;
   let optionalFlush = 0;
+  let optionalRecoveryAerobic = 0;
   let optionalNonCore = 0;
   let legacyUnknown = 0;
   let appCore = 0;
@@ -253,13 +255,19 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     workoutsByDay.set(workout.dayOfWeek, list);
   }
 
+  let creditedAnchorIndex = 0;
   const anchors: Section18AnchorLedgerRow[] = input.contract.anchors.map((anchor) => {
     activeDays.add(anchor.dayOfWeek);
     const credited = normalParticipation(anchor);
     if (credited) {
+      const role: Section18ConditioningRole = creditedAnchorIndex <
+        input.contract.conditioning.core.requiredMinimum
+        ? 'required_core'
+        : 'planner_selected_core';
+      creditedAnchorIndex++;
       conditioningCredits.push({
         dayOfWeek: anchor.dayOfWeek,
-        role: 'core',
+        role,
         stress: 'hard',
         source: anchor.kind,
         participation: anchor.participation,
@@ -332,14 +340,20 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
           stress: conditioning.stress,
           source: 'app',
         });
-        if (conditioning.role === 'core') {
+        if (
+          conditioning.role === 'core' || conditioning.role === 'required_core' ||
+          conditioning.role === 'planner_selected_core'
+        ) {
           coreConditioning += 1;
           appCore += 1;
           dayCoreConditioning = true;
         } else if (conditioning.role === 'optional_flush') {
           optionalFlush += 1;
           dayRecovery = true;
-        } else if (conditioning.role === 'optional_noncore') {
+        } else if (conditioning.role === 'optional_recovery_aerobic') {
+          optionalRecoveryAerobic += 1;
+          dayRecovery = true;
+        } else if ((conditioning.role as string) === 'optional_noncore') {
           optionalNonCore += 1;
         } else if (conditioning.role === 'legacy_unknown') {
           legacyUnknown += 1;
@@ -389,6 +403,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     conditioning: {
       coreCount: coreConditioning,
       optionalFlushCount: optionalFlush,
+      optionalRecoveryAerobicCount: optionalRecoveryAerobic,
       optionalNonCoreCount: optionalNonCore,
       legacyUnknownCount: legacyUnknown,
       appCoreCount: appCore,
@@ -513,6 +528,8 @@ function assessContract(
     ...ledger.strengthPatterns.meaningfulMainLiftCount,
   };
   contract.conditioning.optionalFlush.achievedCount = ledger.conditioning.optionalFlushCount;
+  contract.conditioning.optionalRecoveryAerobic.achievedCount =
+    ledger.conditioning.optionalRecoveryAerobicCount;
   contract.conditioning.optionalNonCoreAchievedCount = ledger.conditioning.optionalNonCoreCount;
   contract.conditioning.legacyUnknownAchievedCount = ledger.conditioning.legacyUnknownCount;
   contract.conditioning.achievedByStress = { ...ledger.conditioning.byStress };
@@ -665,7 +682,8 @@ export function evaluateSection18EffectiveWeek(
   });
 
   const totalConditioningForOptionalMaximum = ledger.conditioning.coreCount +
-    ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalNonCoreCount +
+    ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalRecoveryAerobicCount +
+      ledger.conditioning.optionalNonCoreCount +
     ledger.conditioning.legacyUnknownCount;
   if (
     contract.conditioning.core.plannerSelectionKind === 'optional' &&
@@ -677,18 +695,19 @@ export function evaluateSection18EffectiveWeek(
       expected: contract.conditioning.core.permittedMaximum,
       actual: totalConditioningForOptionalMaximum,
       detail: 'Selected optional conditioning exceeds the phase maximum.',
-      evidence: [`core=${ledger.conditioning.coreCount}`, `optional=${ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalNonCoreCount}`, `legacyUnknown=${ledger.conditioning.legacyUnknownCount}`],
+      evidence: [`core=${ledger.conditioning.coreCount}`, `optional=${ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalRecoveryAerobicCount + ledger.conditioning.optionalNonCoreCount}`, `legacyUnknown=${ledger.conditioning.legacyUnknownCount}`],
     });
   }
 
   if (ledger.conditioning.coreCount < contract.conditioning.core.requiredMinimum &&
-      ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalNonCoreCount > 0) {
+      ledger.conditioning.optionalFlushCount + ledger.conditioning.optionalRecoveryAerobicCount +
+        ledger.conditioning.optionalNonCoreCount > 0) {
     addFinding(findings, {
       code: 'optional_work_replacing_required_work', severity: 'blocking', domain: 'conditioning',
       expected: contract.conditioning.core.requiredMinimum,
       actual: ledger.conditioning.coreCount,
       detail: 'Optional/non-core conditioning is present while required core conditioning remains short.',
-      evidence: [`optionalFlush=${ledger.conditioning.optionalFlushCount}`, `optionalNonCore=${ledger.conditioning.optionalNonCoreCount}`],
+      evidence: [`optionalFlush=${ledger.conditioning.optionalFlushCount}`, `optionalRecovery=${ledger.conditioning.optionalRecoveryAerobicCount}`, `optionalNonCore=${ledger.conditioning.optionalNonCoreCount}`],
     });
   }
   if (ledger.conditioning.optionalFlushCount > 0 &&

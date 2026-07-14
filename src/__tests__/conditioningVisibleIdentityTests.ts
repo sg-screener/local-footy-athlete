@@ -246,39 +246,45 @@ function entry(weekIndex: number, planEntryId: string): Workout | undefined {
   return program.microcycles[weekIndex].workouts.find((value) => value.planEntryId === planEntryId);
 }
 
-for (const [label, value, primary, secondary] of [
-  ['W1 Monday', entry(0, 'w1:monday:none:strength'), 'Full Body Strength', 'Long Aerobic Intervals'],
-  ['W1 Tuesday', entry(0, 'w1:tuesday:none:aerobic-base'), 'Continuous Aerobic', null],
-  ['W1 Wednesday', entry(0, 'w1:wednesday:none:strength'), 'Upper Push', 'Long Aerobic Intervals'],
-  ['W1 Friday', entry(0, 'w1:friday:none:strength'), 'Lower Squat', 'Long Aerobic Intervals'],
-  ['W2 Tuesday', entry(1, 'w2:tuesday:none:aerobic-base'), 'Long Aerobic Intervals', null],
+for (const [label, value, primary] of [
+  ['W1 Monday', entry(0, 'w1:monday:none:strength'), 'Full Body Strength'],
+  ['W1 Wednesday', entry(0, 'w1:wednesday:none:strength'), 'Upper Push'],
+  ['W2 Monday', entry(1, 'w2:monday:none:strength'), 'Full Body Strength'],
+  ['W2 Wednesday', entry(1, 'w2:wednesday:none:strength'), 'Upper Push'],
 ] as const) {
   ok(`${label} exists`, !!value);
   if (value) {
-    eq(`${label} primary`, weeklyPlanTitle(value), primary);
-    eq(`${label} secondary`, weeklyPlanContextLabel(value), secondary);
+    eq(`${label} primary strength survives`, weeklyPlanTitle(value), primary);
+    eq(`${label} optional aerobic context`, weeklyPlanContextLabel(value), 'Aerobic Flush');
+    eq(`${label} typed optional ownership`, value.section18ConditioningRole, 'optional_recovery_aerobic');
   }
 }
 
-const week3Tempo = entry(2, 'w3:monday:none:tempo');
-const week4Tempo = entry(3, 'w4:tuesday:none:vo2');
-const week2AttachedIdentities = program.microcycles[1].workouts
-  .filter((value) => value.hasCombinedConditioning)
-  .map((value) => projectConditioningVisibleIdentity(value));
-ok('W2 attached 30min steady projects Continuous Aerobic',
-  week2AttachedIdentities.some((value) =>
-    value?.primaryLabel === 'Continuous Aerobic' && value.doseLabel === '30 min steady'),
-  week2AttachedIdentities);
-ok('W2 attached 3 x 8 projects Long Aerobic Intervals',
-  week2AttachedIdentities.some((value) =>
-    value?.primaryLabel === 'Long Aerobic Intervals' && value.doseLabel === '3 × 8 min'),
-  week2AttachedIdentities);
-for (const [label, value] of [['W3 tempo', week3Tempo], ['W4 tempo', week4Tempo]] as const) {
-  ok(`${label} exists`, !!value);
-  if (value) {
-    eq(`${label} visible family`, weeklyPlanTitle(value), 'Tempo Intervals');
-    ok(`${label} never Aerobic Base`, weeklyPlanTitle(value) !== 'Aerobic Base');
-  }
+for (const weekIndex of [0, 1]) {
+  const identities = program.microcycles[weekIndex].workouts
+    .filter((value) => value.section18ConditioningRole === 'optional_recovery_aerobic')
+    .map((value) => projectConditioningVisibleIdentity(value));
+  ok(`W${weekIndex + 1} selects one or two optional aerobic sessions`,
+    identities.length >= 1 && identities.length <= 2, identities);
+  ok(`W${weekIndex + 1} optional sessions remain flush/recovery identities`,
+    identities.every((value) => value?.structureFamily === 'aerobic_flush'), identities);
+  ok(`W${weekIndex + 1} contains no core conditioning ownership`,
+    program.microcycles[weekIndex].workouts.every((value) =>
+      value.section18ConditioningRole !== 'required_core' &&
+      value.section18ConditioningRole !== 'planner_selected_core'));
+}
+
+for (const weekIndex of [2, 3]) {
+  const core = program.microcycles[weekIndex].workouts.filter((value) =>
+    value.section18ConditioningRole === 'required_core' ||
+    value.section18ConditioningRole === 'planner_selected_core');
+  const identities = core.map((value) => projectConditioningVisibleIdentity(value));
+  eq(`W${weekIndex + 1} mid-off-season core conditioning count`, core.length, 3);
+  ok(`W${weekIndex + 1} core conditioning retains canonical identity`,
+    identities.every((value) => !!value && value.structureFamily !== 'aerobic_flush'), identities);
+  ok(`W${weekIndex + 1} has at most one hard/tempo development exposure`,
+    identities.filter((value) => value?.structureFamily === 'tempo_intervals').length <= 1,
+    identities);
 }
 
 console.log(`\nconditioningVisibleIdentityTests: ${pass} passed, ${fail} failed`);

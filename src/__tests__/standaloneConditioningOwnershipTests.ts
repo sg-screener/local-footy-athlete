@@ -6,7 +6,6 @@ import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { OnboardingData, Workout, WorkoutExercise } from '../types/domain';
 import { buildRepeatWeekOverlay } from '../utils/repeatWeek';
 import { getSessionComponentRows, getSessionComponents } from '../utils/sessionComponents';
-import { weeklyPlanTitle } from '../utils/weeklyPlanDisplay';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 
 let pass = 0;
@@ -194,44 +193,47 @@ const profile: OnboardingData = {
 };
 const program = generateProgramLocally(profile, { todayISO: '2026-07-13' });
 ok('exact regression generates four microcycles', program.microcycles.length === 4, program.microcycles.length);
-const week3Monday = program.microcycles[2].workouts.find((value) =>
-  value.planEntryId === 'w3:monday:none:tempo');
-ok('Week 3 standalone tempo entry exists', !!week3Monday,
-  program.microcycles[2].workouts.map((value) => value.planEntryId));
-if (week3Monday) {
-  assertConditioningOnly('Week 3 Monday', week3Monday);
-  ok('Week 3 Monday weekly title is not Upper Pull', weeklyPlanTitle(week3Monday) !== 'Upper Pull', weeklyPlanTitle(week3Monday));
-  ok('Week 3 Monday headline is meaningful work',
-    !/warm[- ]?up|cool[- ]?down/i.test(week3Monday.conditioningBlock?.options[0]?.title ?? '') &&
-    /(?:2min|interval)/i.test(week3Monday.conditioningBlock?.options[0]?.title ?? ''),
-    week3Monday.conditioningBlock?.options[0]?.title);
-}
-
-const week4Standalone = program.microcycles[3].workouts.find((value) =>
-  value.planEntryId === 'w4:tuesday:none:vo2');
-ok('Week 4 standalone conditioning entry exists', !!week4Standalone,
-  program.microcycles[3].workouts.map((value) => value.planEntryId));
-if (week4Standalone) {
-  assertConditioningOnly('Week 4 Tuesday', week4Standalone);
-  ok('Week 4 headline is not warm-up/cool-down',
-    !/warm[- ]?up|cool[- ]?down/i.test(week4Standalone.conditioningBlock?.options[0]?.title ?? ''),
-    week4Standalone.conditioningBlock?.options[0]?.title);
+const coreConditioningRoles = new Set(['required_core', 'planner_selected_core']);
+for (const [label, microcycle] of [
+  ['Week 3', program.microcycles[2]],
+  ['Week 4', program.microcycles[3]],
+] as const) {
+  const mainStrength = microcycle.workouts.filter((value) => !!value.strengthIntent);
+  const coreConditioning = microcycle.workouts.filter((value) =>
+    coreConditioningRoles.has(value.section18ConditioningRole ?? ''));
+  ok(`${label} keeps the mid-off-season S4 default`, mainStrength.length === 4,
+    mainStrength.map((value) => value.planEntryId));
+  ok(`${label} keeps C3 within the approved C3-4 range`, coreConditioning.length === 3,
+    coreConditioning.map((value) => value.planEntryId));
+  ok(`${label} core conditioning may be combined after strength is allocated`,
+    coreConditioning.every((value) =>
+      value.hasCombinedConditioning === true &&
+      !!value.strengthIntent &&
+      components(value).includes('strength') &&
+      components(value).includes('conditioning')),
+    coreConditioning.map((value) => ({
+      id: value.planEntryId,
+      role: value.section18ConditioningRole,
+      components: components(value),
+    })));
+  ok(`${label} has no legacy weekday-owned standalone core entry`,
+    coreConditioning.every((value) => value.workoutType !== 'Conditioning'),
+    coreConditioning.map((value) => ({ id: value.planEntryId, type: value.workoutType })));
 }
 
 console.log('\n[5] Repeat and rebuild preserve standalone ownership');
-if (week3Monday) {
-  const overlay = buildRepeatWeekOverlay({
-    sourceWorkouts: [week3Monday],
-    targetWeekStart: '2026-08-10',
-  });
-  const repeated = Object.values(overlay.workoutsByDate).find(Boolean) as Workout | undefined;
-  ok('Repeat Week retains standalone workout', !!repeated);
-  if (repeated) assertConditioningOnly('repeated Week 3 tempo', repeated);
-  const rebuilt = generateProgramLocally(profile, { todayISO: '2026-07-13' })
-    .microcycles[2].workouts.find((value) => value.planEntryId === week3Monday.planEntryId);
-  ok('deterministic rebuild retains standalone workout', !!rebuilt);
-  if (rebuilt) assertConditioningOnly('rebuilt Week 3 tempo', rebuilt);
-}
+const overlay = buildRepeatWeekOverlay({
+  sourceWorkouts: [modernSki],
+  targetWeekStart: '2026-08-10',
+});
+const repeated = Object.values(overlay.workoutsByDate).find(Boolean) as Workout | undefined;
+ok('Repeat Week retains standalone workout', !!repeated);
+if (repeated) assertConditioningOnly('repeated standalone tempo', repeated);
+const rebuilt = finaliseWorkoutAfterMutation(modernSki, {
+  phase: 'Off-season', offseasonSubphase: 'mid_offseason', planIntentValid: true,
+}).workout;
+assertConditioningOnly('canonically rebuilt standalone tempo', rebuilt);
+ok('canonical standalone rebuild is idempotent', JSON.stringify(rebuilt) === JSON.stringify(modernSki));
 
 console.log(`\nstandaloneConditioningOwnershipTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {

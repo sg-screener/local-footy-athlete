@@ -253,9 +253,11 @@ function checkFullBodyExactLedger(trace: StrengthScenarioTrace): InvariantCheckR
           ? (stage === 'allocation' ? row.plannedPatterns : row.effectivePatterns)
           : [];
         const lower = patterns.filter((pattern) => pattern === 'squat' || pattern === 'hinge');
-        const expectedDescription = 'exactly one of squat/hinge plus push and pull';
-        const valid = !!row && row.archetype === 'full_body' && lower.length === 1 &&
-          patterns.includes('push') && patterns.includes('pull') && patterns.length === 3;
+        const expectedDescription = 'squat, hinge, push and pull';
+        const valid = !!row && row.archetype === 'full_body' &&
+          lower.length === rule.expectation.lowerPatternCount &&
+          patterns.includes('push') && patterns.includes('pull') &&
+          patterns.length === rule.expectation.lowerPatternCount + 2;
         if (!valid) {
           failures.push(failure({
             trace,
@@ -265,10 +267,12 @@ function checkFullBodyExactLedger(trace: StrengthScenarioTrace): InvariantCheckR
             expected: expectedDescription,
             actual: row ? { archetype: row.archetype, patterns } : null,
             missing: [
-              ...(lower.length === 0 ? ['one lower pattern'] : []),
+              ...(lower.length < rule.expectation.lowerPatternCount ? ['complete lower-pattern coverage'] : []),
               ...(['push', 'pull'] as StrengthPattern[]).filter((pattern) => !patterns.includes(pattern)),
             ],
-            extra: lower.length > 1 ? lower.slice(1) : [],
+            extra: lower.length > rule.expectation.lowerPatternCount
+              ? lower.slice(rule.expectation.lowerPatternCount)
+              : [],
             planEntryId: row?.planEntryId,
             day,
             detail: 'Scenario applicability is declared by the golden, not inferred from actual archetype.',

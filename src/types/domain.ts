@@ -648,6 +648,9 @@ export interface Workout {
   /** Typed Section 18 component evidence; display copy never overrides it. */
   section18Evidence?: import('../rules/weeklyExposureContractV2').WorkoutSection18Evidence;
 
+  /** Planner-owned conditioning identity preserved into canonical evidence. */
+  section18ConditioningRole?: import('../rules/weeklyExposureContractV2').Section18ConditioningRole;
+
   // Exercises
   exercises: WorkoutExercise[];
 

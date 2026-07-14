@@ -58,9 +58,12 @@ export type AnchorParticipationState =
   | 'unknown';
 
 export type Section18ConditioningRole =
-  | 'core'
+  | 'required_core'
+  | 'planner_selected_core'
   | 'optional_flush'
-  | 'optional_noncore'
+  | 'optional_recovery_aerobic'
+  /** Persisted Contract v2 data from before core ownership was split. */
+  | 'core'
   | 'legacy_unknown'
   | 'none';
 
@@ -253,6 +256,12 @@ export interface WeeklyExposureContractV2 {
       plannerSelectedCount: number | null;
       achievedCount: number | null;
     };
+    optionalRecoveryAerobic: {
+      permitted: boolean;
+      preferredRange: Section18Range;
+      plannerSelectedCount: number | null;
+      achievedCount: number | null;
+    };
     optionalNonCoreAchievedCount: number | null;
     legacyUnknownAchievedCount: number | null;
     requiredCoreStress: Section18ConditioningStress[];
@@ -339,6 +348,7 @@ export interface Section18ContractV2Input {
     optionalMainStrength?: number;
     coreConditioning: number | null;
     optionalFlush?: number | null;
+    optionalRecoveryAerobic?: number | null;
     sprintHighSpeed: number | null;
     powerPrimers: number | null;
   };
@@ -556,14 +566,41 @@ interface Section18ModePolicy {
   selectionKind: Section18PlannerSelectionKind;
 }
 
+export interface Section18PhasePlannerSelectionInput {
+  mode: Section18WeekMode;
+  readiness: ReadinessLevel;
+  availableDayCount: number;
+  teamTrainingCount: number;
+  weekKind?: WeekKind;
+  /** Explicit typed ceiling resolved by training-age/readiness/injury ownership. */
+  mainStrengthFrequencyCeiling?: number | null;
+  conditioningCoreFrequencyCeiling?: number | null;
+  sprintHighSpeedFrequencyCeiling?: number | null;
+}
+
+export interface Section18PhasePlannerSelection {
+  mainStrength: number;
+  coreConditioning: number;
+  sprintHighSpeed: number;
+  optionalMainStrength: number;
+  optionalFlush: number;
+  optionalRecoveryAerobic: number;
+  appCoreConditioning: number;
+  requiredAppMediumHardMinimum: number;
+  requiredAppHardMinimum: number;
+}
+
 /** Section 18 table translated directly; no legacy builder constants are read. */
-function policyFor(input: Section18ContractV2Input): Section18ModePolicy {
+function policyFor(input: Pick<
+  Section18ContractV2Input,
+  'mode' | 'teamTrainingDays' | 'cookedReadiness' | 'readiness' | 'weekKind'
+>): Section18ModePolicy {
   const tt = uniqueDays(input.teamTrainingDays).length;
   const noPower = input.cookedReadiness || input.readiness === 'low' || input.weekKind === 'deload';
   switch (input.mode) {
     case 'in_season_game_week':
       return {
-        strength: { required: 2, defaultTarget: 2, preferred: { min: 2, max: 3 }, max: 4 },
+        strength: { required: 2, defaultTarget: 3, preferred: { min: 2, max: 3 }, max: 4 },
         conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 3 }, max: 3, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: tt === 1 ? 1 : 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: !noPower, preferred: { min: 0, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
@@ -647,6 +684,93 @@ function policyFor(input: Section18ContractV2Input): Section18ModePolicy {
   }
 }
 
+function clampSelectedTarget(
+  target: number,
+  maximum: number | null,
+  explicitCeiling: number | null | undefined,
+): number {
+  return Math.max(0, Math.min(
+    target,
+    maximum ?? Number.POSITIVE_INFINITY,
+    explicitCeiling ?? Number.POSITIVE_INFINITY,
+  ));
+}
+
+/**
+ * Section 18 phase-owned selection. This runs before weekday allocation, so
+ * old geometry, optional work and support placeholders cannot choose the
+ * weekly targets. Typed safety/training-age ceilings may constrain a default;
+ * the legacy contract records the corresponding reduction reason.
+ */
+export function resolveSection18PhasePlannerSelection(
+  input: Section18PhasePlannerSelectionInput,
+): Section18PhasePlannerSelection {
+  const teamTrainingCount = Math.max(0, Math.floor(input.teamTrainingCount));
+  const availableDayCount = Math.max(0, Math.floor(input.availableDayCount));
+  const policy = policyFor({
+    mode: input.mode,
+    teamTrainingDays: Array.from({ length: teamTrainingCount }, (_, index) => index),
+    readiness: input.readiness,
+    cookedReadiness: input.readiness === 'low',
+    weekKind: input.weekKind,
+  });
+  const recoveryMode = input.mode === 'in_season_bye_recovery';
+  const earlyOffseason = input.mode === 'early_offseason';
+  const strongByeBuild = input.mode === 'in_season_bye_build' &&
+    input.readiness === 'high' && teamTrainingCount <= 1 && availableDayCount >= 4;
+
+  const unconstrainedStrength = earlyOffseason
+    ? Math.min(policy.strength.max, availableDayCount, input.readiness === 'high' ? 3 : 2)
+    : strongByeBuild
+      ? 4
+      : policy.strength.defaultTarget;
+  const strengthCapacity = earlyOffseason
+    ? availableDayCount
+    : Number.POSITIVE_INFINITY;
+  const mainStrength = clampSelectedTarget(
+    Math.min(unconstrainedStrength, strengthCapacity),
+    policy.strength.max,
+    input.mainStrengthFrequencyCeiling,
+  );
+
+  const coreConditioning = clampSelectedTarget(
+    recoveryMode ? teamTrainingCount : policy.conditioning.defaultTarget,
+    policy.conditioning.max,
+    input.conditioningCoreFrequencyCeiling,
+  );
+  const sprintHighSpeed = clampSelectedTarget(
+    policy.sprint.required,
+    policy.sprint.max,
+    input.sprintHighSpeedFrequencyCeiling,
+  );
+  const optionalRecoveryAerobic = recoveryMode
+    ? teamTrainingCount === 0 && availableDayCount > mainStrength
+      ? Math.min(1, availableDayCount - mainStrength)
+      : teamTrainingCount === 1 && availableDayCount > mainStrength
+        ? 1
+        : 0
+    : earlyOffseason
+      ? Math.min(
+          input.readiness === 'high' && teamTrainingCount < 3 ? 2 : 1,
+          Math.max(0, availableDayCount - mainStrength),
+        )
+      : 0;
+
+  return {
+    mainStrength,
+    coreConditioning,
+    sprintHighSpeed,
+    optionalMainStrength: earlyOffseason ? mainStrength : 0,
+    optionalFlush: 0,
+    optionalRecoveryAerobic,
+    appCoreConditioning: Math.max(0, coreConditioning - teamTrainingCount - (
+      input.mode === 'in_season_game_week' || input.mode === 'practice_match_week' ? 1 : 0
+    )),
+    requiredAppMediumHardMinimum: policy.conditioning.requiredAppMediumHardMinimum,
+    requiredAppHardMinimum: policy.conditioning.requiredAppHardMinimum,
+  };
+}
+
 function reducedTarget(
   reductions: readonly Section18AuthorisedReduction[],
   metric: Section18ReductionMetric,
@@ -678,6 +802,7 @@ export function buildSection18WeeklyExposureContractV2(
   const optionalFlushSelected = selectedKind === 'optional'
     ? input.plannerSelected.coreConditioning
     : input.plannerSelected.optionalFlush ?? 0;
+  const optionalRecoveryAerobicSelected = input.plannerSelected.optionalRecoveryAerobic ?? 0;
   const powerEligible = policy.power.eligible && prohibited.length < ALL_PATTERNS.length;
   const powerRemoval = powerEligible
     ? null
@@ -756,6 +881,16 @@ export function buildSection18WeeklyExposureContractV2(
         permitted: policy.conditioning.optionalFlush.max > 0,
         preferredRange: policy.conditioning.optionalFlush,
         plannerSelectedCount: optionalFlushSelected,
+        achievedCount: null,
+      },
+      optionalRecoveryAerobic: {
+        permitted: input.mode === 'in_season_bye_recovery' || input.mode === 'early_offseason',
+        preferredRange: input.mode === 'in_season_bye_recovery'
+          ? policy.conditioning.optionalFlush
+          : input.mode === 'early_offseason'
+            ? policy.conditioning.preferred
+            : { min: 0, max: 0 },
+        plannerSelectedCount: optionalRecoveryAerobicSelected,
         achievedCount: null,
       },
       optionalNonCoreAchievedCount: null,

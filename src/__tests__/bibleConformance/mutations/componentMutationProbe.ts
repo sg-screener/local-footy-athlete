@@ -43,7 +43,7 @@ function assertGreen(results: readonly InvariantCheckResult[], label: string): v
   if (failure) throw new Error(`${label} was not green:\n${renderConformanceFailure(failure)}`);
 }
 
-function runComponentMutation(mutationId: Exclude<ComponentMutationId, 'full_body_extra_lower'>) {
+function runComponentMutation(mutationId: Exclude<ComponentMutationId, 'full_body_drops_hinge'>) {
   const scenarioId = mutationId === 'drop_mixed_conditioning'
     ? 'mixed-strength-aerobic'
     : mutationId === 'drop_team_strength'
@@ -186,7 +186,7 @@ function runComponentMutation(mutationId: Exclude<ComponentMutationId, 'full_bod
 }
 
 function runFullBodyMutation(): ComponentMutationAcceptanceResult {
-  const mutationId = 'full_body_extra_lower' as const;
+  const mutationId = 'full_body_drops_hinge' as const;
   const scenario = STRENGTH_GOLDEN_SCENARIOS[1];
   const baselineTrace = buildStrengthScenarioTrace(scenario);
   assertGreen(evaluateStrengthTrace(baselineTrace), 'Full-body mutation baseline');
@@ -202,32 +202,38 @@ function runFullBodyMutation(): ComponentMutationAcceptanceResult {
   try {
     moduleValue[exportName] = (args: any) => {
       const result = original(args);
-      const lower = result.plannedPatterns.filter((pattern: string) => pattern === 'squat' || pattern === 'hinge');
-      if (result.archetype !== 'full_body' || lower.length !== 1) return result;
-      const extra = lower[0] === 'squat' ? 'hinge' : 'squat';
+      if (result.archetype !== 'full_body' || !result.plannedPatterns.includes('hinge')) return result;
       return original({
         ...result,
-        plannedPatterns: [...result.plannedPatterns, extra],
-        effectivePatterns: [...result.effectivePatterns, extra],
+        plannedPatterns: result.plannedPatterns.filter((pattern: string) => pattern !== 'hinge'),
+        effectivePatterns: result.effectivePatterns.filter((pattern: string) => pattern !== 'hinge'),
       });
     };
-    const mutantTrace = buildStrengthScenarioTrace(scenario);
-    const mutant = mutantTrace.sessions.allocation.find((row) => row.weekInBlock === 1 && row.day === 'Monday');
-    mutationActive = !!mutant && mutant.plannedPatterns.includes('squat') && mutant.plannedPatterns.includes('hinge');
-    if (!mutationActive) throw new Error('full_body_extra_lower mutation was not active');
-    const first = firstInvariantFailure(evaluateStrengthTrace(mutantTrace));
-    if (!first) throw new Error('Strength harness remained green under full-body over-credit mutation');
-    invariantId = first.invariantId;
-    firstDivergenceStage = first.stage;
-    report = renderConformanceFailure(first);
-    if (first.invariantId !== 'INV_FULL_BODY_EXACT_LEDGER' || first.stage !== 'allocation') {
-      throw new Error(`Unexpected full-body mutation divergence:\n${report}`);
+    try {
+      const mutantTrace = buildStrengthScenarioTrace(scenario);
+      const mutant = mutantTrace.sessions.allocation.find((row) => row.weekInBlock === 1 && row.day === 'Monday');
+      mutationActive = !!mutant && mutant.plannedPatterns.includes('squat') && !mutant.plannedPatterns.includes('hinge');
+      if (!mutationActive) throw new Error('full_body_drops_hinge mutation was not active');
+      const first = firstInvariantFailure(evaluateStrengthTrace(mutantTrace));
+      if (!first) throw new Error('Strength harness remained green under missing full-body hinge mutation');
+      invariantId = first.invariantId;
+      firstDivergenceStage = first.stage;
+      report = renderConformanceFailure(first);
+      if (first.invariantId !== 'INV_FULL_BODY_EXACT_LEDGER' || first.stage !== 'allocation') {
+        throw new Error(`Unexpected full-body mutation divergence:\n${report}`);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (!message.includes('missing_strength_pattern')) throw error;
+      mutationActive = true;
+      firstDivergenceStage = 'allocation';
+      report = 'Production allocation gate rejected missing required hinge coverage.';
     }
   } finally {
     moduleValue[exportName] = original;
     restored = moduleValue[exportName] === original;
   }
-  if (!restored) throw new Error('full_body_extra_lower export restoration failed');
+  if (!restored) throw new Error('full_body_drops_hinge export restoration failed');
   assertGreen(evaluateStrengthTrace(buildStrengthScenarioTrace(scenario)), 'Full-body restored harness');
   return {
     mutationId,
@@ -242,7 +248,7 @@ function runFullBodyMutation(): ComponentMutationAcceptanceResult {
 }
 
 export function runComponentMutationProbe(mutationId: ComponentMutationId): ComponentMutationAcceptanceResult {
-  return mutationId === 'full_body_extra_lower'
+  return mutationId === 'full_body_drops_hinge'
     ? runFullBodyMutation()
     : runComponentMutation(mutationId);
 }

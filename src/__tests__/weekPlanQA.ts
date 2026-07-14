@@ -426,15 +426,23 @@ function buildScheduleState(
   // "sprint on G-2" was actually team training).
   const workouts: Workout[] = plan.weeklyPlan.map((s, idx) => {
     const dayNum = dayIndex(s.dayOfWeek);
+    const standaloneConditioning = !!s.conditioningCategory &&
+      !s.hasCombinedConditioning &&
+      !(s.strengthIntent?.plannedPatterns.length ?? 0);
+    const structuralFocus = standaloneConditioning ? 'Conditioning Session' : s.focus;
     const w: Workout = {
       id: `w-test-${idx}`,
       microcycleId: 'mc-test',
       dayOfWeek: dayNum >= 0 ? dayNum : 0,
-      name: s.focus,
-      description: s.focus,
+      name: structuralFocus,
+      description: structuralFocus,
       durationMinutes: s.tier === 'recovery' ? 30 : s.tier === 'optional' ? 35 : 50,
       intensity: s.isHardExposure ? 'High' as const : s.tier === 'optional' ? 'Light' as const : 'Moderate' as const,
-      workoutType: s.tier === 'recovery' ? 'Recovery' as const : 'Strength' as const,
+      workoutType: standaloneConditioning
+        ? 'Conditioning' as const
+        : s.tier === 'recovery'
+          ? 'Recovery' as const
+          : 'Strength' as const,
       sessionTier: s.tier,
       // FIDELITY (2026-07-08, part 2): carry the engine's combined-day
       // conditioning metadata. Dropping these made S6 look like a
@@ -443,6 +451,7 @@ function buildScheduleState(
       hasCombinedConditioning: s.hasCombinedConditioning,
       conditioningFlavour: s.conditioningFlavour,
       conditioningCategory: s.conditioningCategory,
+      section18ConditioningRole: s.section18ConditioningRole,
       exercises: [],
       createdAt: now,
       updatedAt: now,

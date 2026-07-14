@@ -12,7 +12,7 @@ export const COMPONENT_MUTATION_IDS: readonly ComponentMutationId[] = [
   'drop_team_strength',
   'trunk_as_conditioning',
   'accessory_main_credit',
-  'full_body_extra_lower',
+  'full_body_drops_hinge',
 ];
 
 export function runComponentMutationAcceptanceTests(): ComponentMutationAcceptanceResult[] {

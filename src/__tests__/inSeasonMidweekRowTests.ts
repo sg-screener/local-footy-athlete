@@ -41,23 +41,38 @@ const tueThuSatInputs: CoachingInputs = {
   gameDay: 'Saturday',
 };
 
-section('1. Tue/Thu team + Saturday game makes Wednesday recovery-biased');
+section('1. Tue/Thu team + Saturday game does not invent compulsory conditioning');
 const plan = buildCoachingPlan(tueThuSatInputs);
 const wedPlan = plan.weeklyPlan.find((s) => s.dayOfWeek === 'Wednesday');
+const appCore = plan.weeklyPlan.filter((session) =>
+  !session.isTeamDay &&
+  (session.section18ConditioningRole === 'required_core' ||
+    session.section18ConditioningRole === 'planner_selected_core'));
 
 assert(!!wedPlan, 'Wednesday allocation exists');
-assert(wedPlan?.tier === 'optional', 'Wednesday remains optional');
-assert(wedPlan?.conditioningCategory === 'aerobic_base', 'Wednesday keeps aerobic_base intent');
-assert(wedPlan?.conditioningVariant === 'reduced', 'Wednesday uses reduced aerobic dose');
-assert(wedPlan?.ergModality === 'row', 'Wednesday is explicitly off-feet row by default');
+assert(plan.weeklyExposureContract?.conditioning.targetCount === 3, 'core conditioning target remains three');
+assert(plan.weeklyExposureContract?.conditioning.creditedTeamTrainingCount === 2, 'both genuine team sessions receive core credit');
+assert(plan.weeklyExposureContract?.conditioning.creditedGameOrPracticeMatchCount === 1, 'game receives one core credit');
+assert(plan.weeklyExposureContract?.conditioning.additionalRequiredCount === 0, 'the planner selects no compulsory app conditioning');
+assert(appCore.length === 0, 'no app session is classified as core conditioning');
+assert(!wedPlan?.conditioningCategory, 'Wednesday does not gain an unexplained conditioning prescription');
+assert(!wedPlan?.section18ConditioningRole, 'Wednesday has no false core-or-optional conditioning ownership');
 assert(wedPlan?.isHardExposure === false, 'Wednesday is not a hard exposure');
-assert(/Easy Aerobic Flush/i.test(wedPlan?.focus ?? ''), 'focus names recovery-biased flush');
-assert(/20[–-]30min/i.test(wedPlan?.focus ?? ''), 'focus caps dose at 20-30min');
-assert(/3[–-]4\/10/i.test(wedPlan?.focus ?? ''), 'focus uses 3-4/10 intensity');
-assert(!/Skip if legs feel heavy|Thursday quality|optional bike\/row/i.test(wedPlan?.focus ?? ''), 'focus avoids verbose skip guidance');
-assert(!/40min|5[–-]6\/10/i.test(wedPlan?.focus ?? ''), 'focus does not prescribe 40min at 5-6/10');
+assert(wedPlan?.tier === 'optional' || wedPlan?.tier === 'recovery', 'Wednesday remains low-priority capacity');
 
-section('2. Builder renders the reduced aerobic flush as the visible workout');
+section('2. Builder preserves an explicitly selected optional flush');
+const optionalFlush: SessionAllocation = {
+  tier: 'optional',
+  focus: 'Easy Aerobic Flush - 20-30min easy row, 3-4/10.',
+  dayOfWeek: 'Wednesday',
+  isHardExposure: false,
+  conditioningCategory: 'aerobic_base',
+  conditioningFlavour: 'aerobic',
+  conditioningVariant: 'reduced',
+  conditioningOffFeet: true,
+  ergModality: 'row',
+  section18ConditioningRole: 'optional_flush',
+};
 const coachWorkouts = [
   {
     dayOfWeek: 2,
@@ -90,7 +105,7 @@ const weeklyPlan: SessionAllocation[] = [
     isHardExposure: true,
     isTeamDay: true,
   },
-  wedPlan!,
+  optionalFlush,
   {
     tier: 'core',
     focus: 'Team Training',

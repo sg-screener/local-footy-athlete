@@ -355,7 +355,9 @@ console.log('\n[4] bye-week Saturday metadata and counting stay honest');
   const saturdayUnits = week.report.counts.days.find((day) => day.date === saturday?.date)?.units ?? [];
   const saturdayCategories = saturdayUnits.map((unit) => unit.category);
   ok('Saturday allocation is explicitly strength-only',
-    saturdayAllocation?.strengthPattern === 'lower' &&
+    saturdayAllocation?.strengthPattern === 'lower_combined' &&
+      saturdayAllocation.strengthIntent?.plannedPatterns.includes('squat') &&
+      saturdayAllocation.strengthIntent?.plannedPatterns.includes('hinge') &&
       !/conditioning|aerobic|tempo|interval|sprint|finisher/i.test(saturdayAllocation.focus) &&
       !saturdayAllocation.hasCombinedConditioning &&
       !saturdayAllocation.attachedConditioningKind &&
@@ -363,7 +365,7 @@ console.log('\n[4] bye-week Saturday metadata and counting stay honest');
       !saturdayAllocation.conditioningCategory,
     saturdayAllocation);
   ok('resolved Saturday never shows conditioning wording without conditioning metadata',
-    /\blower squat\b/i.test(saturdayText) &&
+    /\blower (?:body strength|squat)\b/i.test(saturdayText) &&
       !/conditioning|aerobic|tempo|interval|sprint|finisher/i.test(saturdayText) &&
       !saturday?.workout?.conditioningCategory &&
       !saturday?.workout?.conditioningFlavour &&
@@ -410,7 +412,7 @@ console.log('\n[4] bye-week Saturday metadata and counting stay honest');
     : null;
   ok('absence of optional gunshow/accessory work does not invalidate a compliant bye week',
     withoutGunshowValidation?.accepted === true &&
-      withoutGunshowValidation.ledger.achieved.main_strength === 2,
+      withoutGunshowValidation.ledger.achieved.main_strength === 3,
     withoutGunshowValidation);
 
   const gameSaturday = generatedWeek(baseProfile({
@@ -429,32 +431,36 @@ console.log('\n[4] bye-week Saturday metadata and counting stay honest');
     gameSaturday);
 }
 
-console.log('\n[5] healthy bye-week shapes use anchor credit before adding sprint');
+console.log('\n[5] healthy bye-build shapes use phase targets and anchor credit');
 {
   const twoTeam = generatedWeek(baseProfile());
-  eq('2TT bye has two main strength sessions', twoTeam.report.counts.mainStrengthExposures, 2);
+  eq('2TT bye has the normal three main strength sessions', twoTeam.report.counts.mainStrengthExposures, 3);
   const twoTeamFinal = evaluateEffectiveWeekExposureContract(
     twoTeam.exposureContract!,
     twoTeam.workouts,
     BLOCK_START,
   );
-  ok('2TT final validation accepts the required floor below its advisory preferred range',
+  ok('2TT final validation accepts the planner-selected normal target',
     twoTeamFinal.accepted &&
-      twoTeamFinal.ledger.achieved.main_strength === 2 &&
-      twoTeam.exposureContract?.strength.targetCount === 2 &&
+      twoTeamFinal.ledger.achieved.main_strength === 3 &&
+      twoTeam.exposureContract?.strength.targetCount === 3 &&
       twoTeam.exposureContract.strength.preferred.min === 3,
     twoTeamFinal);
-  ok('2TT bye stays within the hard-day cap', twoTeam.report.counts.hardDays <= 4, twoTeam.report.counts);
-  eq('2TT bye adds no app conditioning', twoTeam.report.counts.extraConditioningSessions, 0);
+  ok('2TT bye stays within the selected hard-day boundary',
+    twoTeam.report.counts.hardDays <= (twoTeam.exposureContract?.hardDays.permittedCount ?? 0),
+    twoTeam.report.counts);
+  eq('2TT bye adds one app conditioning exposure', twoTeam.report.counts.extraConditioningSessions, 1);
   eq('2TT bye sprint/COD comes only from team training', twoTeam.report.counts.sprintCodExposures, 2);
 
   const oneTeam = generatedWeek(baseProfile({
     teamTrainingDaysPerWeek: 1,
     teamTrainingDays: ['Tuesday'],
   }));
-  eq('1TT bye has two main strength sessions', oneTeam.report.counts.mainStrengthExposures, 2);
-  eq('1TT bye adds one useful conditioning top-up', oneTeam.report.counts.extraConditioningSessions, 1);
-  ok('1TT bye stays within the hard-day cap', oneTeam.report.counts.hardDays <= 4, oneTeam.report.counts);
+  eq('1TT strong bye may select four main strength sessions', oneTeam.report.counts.mainStrengthExposures, 4);
+  eq('1TT bye adds two useful conditioning top-ups', oneTeam.report.counts.extraConditioningSessions, 2);
+  ok('1TT bye stays within the selected hard-day boundary',
+    oneTeam.report.counts.hardDays <= (oneTeam.exposureContract?.hardDays.permittedCount ?? 0),
+    oneTeam.report.counts);
   eq('1TT bye adds no sprint/COD beyond the team anchor', oneTeam.report.counts.sprintCodExposures, 1);
   ok('1TT conditioning top-up has real component metadata', hasRealConditioningMetadata(oneTeam), oneTeam.resolvedWeek);
 
@@ -462,22 +468,23 @@ console.log('\n[5] healthy bye-week shapes use anchor credit before adding sprin
     teamTrainingDaysPerWeek: 0,
     teamTrainingDays: [],
   }));
-  eq('0TT bye has two main strength sessions', zeroTeam.report.counts.mainStrengthExposures, 2);
-  eq('0TT bye adds one careful conditioning top-up', zeroTeam.report.counts.extraConditioningSessions, 1);
-  ok('0TT bye stays within the hard-day cap', zeroTeam.report.counts.hardDays <= 4, zeroTeam.report.counts);
+  eq('0TT strong bye may select four main strength sessions', zeroTeam.report.counts.mainStrengthExposures, 4);
+  eq('0TT bye adds three core conditioning exposures', zeroTeam.report.counts.extraConditioningSessions, 3);
+  ok('0TT bye stays within the selected hard-day boundary',
+    zeroTeam.report.counts.hardDays <= (zeroTeam.exposureContract?.hardDays.permittedCount ?? 0),
+    zeroTeam.report.counts);
   eq('0TT bye adds one app sprint/COD exposure', zeroTeam.report.counts.sprintCodExposures, 1);
   ok('0TT conditioning top-up has real component metadata', hasRealConditioningMetadata(zeroTeam), zeroTeam.resolvedWeek);
 }
 
-console.log('\n[6] cooked, injury-restricted and deload byes use the lighter shape');
+console.log('\n[6] recovery and injury-constrained byes retain their typed structure');
 {
   const lowReadiness = generatedWeek(baseProfile({
     conditioningLevel: 'Poor',
     recentTrainingLoad: 'Hardly at all',
   }));
-  ok('low-readiness bye keeps at most one main strength session',
-    lowReadiness.report.counts.mainStrengthExposures <= 1,
-    lowReadiness.report.counts);
+  eq('low-readiness bye keeps exactly two lighter main strength sessions',
+    lowReadiness.report.counts.mainStrengthExposures, 2);
   eq('low-readiness bye does not add conditioning', lowReadiness.report.counts.extraConditioningSessions, 0);
   ok('low-readiness bye keeps Saturday light',
     lowReadiness.report.counts.days.find((day) => dayLabel(day.date) === 'Sat')?.units.every((unit) =>
@@ -485,7 +492,7 @@ console.log('\n[6] cooked, injury-restricted and deload byes use the lighter sha
     lowReadiness.report.counts.days);
 
   const cooked = generatedWeek(baseProfile(), { generationConstraints: COOKED_READINESS });
-  ok('cooked bye keeps at most one main strength session', cooked.report.counts.mainStrengthExposures <= 1, cooked.report.counts);
+  eq('cooked bye keeps exactly two lighter main strength sessions', cooked.report.counts.mainStrengthExposures, 2);
   eq('cooked bye trims the conditioning top-up', cooked.report.counts.extraConditioningSessions, 0);
   eq('cooked bye preserves team sprint/COD anchors only', cooked.report.counts.sprintCodExposures, 2);
 
@@ -496,14 +503,14 @@ console.log('\n[6] cooked, injury-restricted and deload byes use the lighter sha
   ok('injury-restricted bye does not force lower strength',
     !injured.report.counts.days.some((day) => day.units.some((unit) => unit.category === 'lower_strength')),
     injured.report.counts.days);
-  eq('injury-restricted bye does not add conditioning', injured.report.counts.extraConditioningSessions, 0);
+  eq('injury-restricted build still fills its safe conditioning target', injured.report.counts.extraConditioningSessions, 1);
 
   const deload = generatedWeek(baseProfile({
     teamTrainingDaysPerWeek: 1,
     teamTrainingDays: ['Tuesday'],
   }), { weekKind: 'deload' });
-  ok('deload bye keeps at most one main strength session', deload.report.counts.mainStrengthExposures <= 1, deload.report.counts);
-  eq('deload bye adds no conditioning top-up', deload.report.counts.extraConditioningSessions, 0);
+  eq('deload bye keeps exactly two lighter main strength sessions', deload.report.counts.mainStrengthExposures, 2);
+  eq('1TT deload bye allows one optional light aerobic top-up', deload.report.counts.extraConditioningSessions, 1);
   eq('deload bye adds no sprint/COD beyond team training', deload.report.counts.sprintCodExposures, 1);
   ok('deload bye context remains distinct from bye classification', resolveWeekContext({
     seasonPhase: 'In-season',

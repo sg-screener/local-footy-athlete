@@ -41,6 +41,7 @@ import type {
 } from '../types/domain';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine';
 import { addDays, getMondayForDate } from './sessionResolver';
 import { getProgramBlockStateForDate, selectMicrocycleForDate } from './programBlockState';
@@ -218,7 +219,7 @@ function resolveRepeatTargetExposureContracts(args: {
   profile: OnboardingData;
   program: TrainingProgram;
   targetWeekStart: string;
-}): { legacy: WeeklyExposureContract; v2: WeeklyExposureContractV2 } {
+}): { legacy: WeeklyExposureContract; v2: WeeklyExposureContractV2; workouts: Workout[] } {
   const blockState = getProgramBlockStateForDate({
     dateISO: args.targetWeekStart,
     programStartISO: args.program.startDate,
@@ -241,10 +242,35 @@ function resolveRepeatTargetExposureContracts(args: {
     appConditioningFeasible: equipment.conditioningModalities.length > 0,
   });
   const plan = buildCoachingPlan(inputs);
+  const workouts = buildWorkoutsFromCoach(
+    [],
+    `repeat-target:${args.targetWeekStart}`,
+    plan.weeklyPlan,
+    args.profile,
+    {
+      miniCycleNumber: blockState.miniCycleNumber,
+      weekInBlock: blockState.weekInBlock,
+      weekStartISO: blockState.weekStart,
+      weekKind: blockState.weekKind,
+      intensityMultiplier: blockState.intensityMultiplier,
+      offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
+    },
+  );
   return {
     legacy: plan.weeklyExposureContract!,
     v2: plan.weeklyExposureContractV2!,
+    workouts,
   };
+}
+
+function exposureTableSignature(contract: WeeklyExposureContract | null | undefined): string {
+  if (!contract) return 'missing';
+  return JSON.stringify({
+    mode: contract.identity.mode,
+    strength: contract.strength.targetCount,
+    conditioning: contract.conditioning.targetCount,
+    sprintCod: contract.sprintCod.targetCount,
+  });
 }
 
 /**
@@ -291,8 +317,19 @@ export function repeatWeekIntoNextWeek(args: {
         targetWeekStart,
       })
     : null;
+  const targetExposureContract =
+    existingTargetOverlay?.exposureContract ?? targetMicrocycle?.exposureContract ??
+      resolvedTargetContracts!.legacy;
+  const targetExposureContractV2 =
+    existingTargetOverlay?.exposureContractV2 ?? targetMicrocycle?.exposureContractV2 ??
+      resolvedTargetContracts?.v2;
+  const targetTableChanged = exposureTableSignature(sourceMicrocycle?.exposureContract) !==
+    exposureTableSignature(targetExposureContract);
+  const phaseOwnedSourceWorkouts = targetTableChanged
+    ? targetMicrocycle?.workouts ?? resolvedTargetContracts?.workouts ?? sourceWorkouts
+    : sourceWorkouts;
   const overlay = buildRepeatWeekOverlay({
-    sourceWorkouts,
+    sourceWorkouts: phaseOwnedSourceWorkouts,
     targetWeekStart,
     // With an in-program target, its base anchor workouts win. Immediately
     // beyond the current window there is no base team workout to fall through
@@ -302,12 +339,8 @@ export function repeatWeekIntoNextWeek(args: {
       ? anchorDowsForProfile(args.baseProfile)
       : gameDowForProfile(args.baseProfile),
     targetWinningWorkoutsByDate,
-    targetExposureContract:
-      existingTargetOverlay?.exposureContract ?? targetMicrocycle?.exposureContract ??
-        resolvedTargetContracts!.legacy,
-    targetExposureContractV2:
-      existingTargetOverlay?.exposureContractV2 ?? targetMicrocycle?.exposureContractV2 ??
-        resolvedTargetContracts?.v2,
+    targetExposureContract,
+    targetExposureContractV2,
   });
 
   // Shared sweep policy — preserve manual edits / live-constraint overrides,

@@ -356,8 +356,8 @@ export function applySlice4Mutation(
   } else if (mutation === 'contrast_survives_lift_removal' && firstWorkout) firstWorkout.power = { kind: 'contrast', explosiveFamily: 'lower', heavyLiftFamily: 'lower', heavyLiftPresent: false };
   else if (mutation === 'post_rehydrate_rebuild_drops_component') {
     const rebuilt = clone.observations.find((entry) => entry.stage === 'post_rehydrate_rebuild')
-      ?.ledger.workouts.find((workout) => workout.components.includes('conditioning'));
-    if (rebuilt) rebuilt.components = rebuilt.components.filter((value) => value !== 'conditioning');
+      ?.ledger.workouts.find((workout) => workout.components.includes('strength'));
+    if (rebuilt) rebuilt.components = rebuilt.components.filter((value) => value !== 'strength');
   } else if (mutation === 'rowerg_creates_pull_credit' && firstWorkout) {
     firstWorkout.strengthRows.push('RowErg tempo intervals');
   } else if (mutation === 'skierg_tempo_gains_pullups' && firstWorkout) {

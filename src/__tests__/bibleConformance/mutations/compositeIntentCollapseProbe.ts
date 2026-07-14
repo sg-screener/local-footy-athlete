@@ -40,13 +40,11 @@ export function runCompositeIntentCollapseProbe(): MutationAcceptanceResult {
   try {
     strengthModule.createStrengthIntent = (args: any) => {
       const planned = Array.isArray(args.plannedPatterns) ? [...args.plannedPatterns] : [];
-      const combinedLower = planned.length === 2 &&
-        planned.includes('squat') && planned.includes('hinge');
-      if (!combinedLower) return original(args);
+      if (!planned.includes('hinge')) return original(args);
       return original({
         ...args,
-        plannedPatterns: ['squat'],
-        effectivePatterns: ['squat'],
+        plannedPatterns: planned.filter((pattern) => pattern !== 'hinge'),
+        effectivePatterns: planned.filter((pattern) => pattern !== 'hinge'),
       });
     };
 

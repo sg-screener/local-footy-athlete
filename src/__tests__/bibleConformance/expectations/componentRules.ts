@@ -32,7 +32,7 @@ export const COMPONENT_BIBLE_RULES: readonly BibleComponentRule[] = [
     expectation: {
       kind: 'trunk_support',
       supportRows: ['Pallof Press'],
-      strengthPatterns: ['squat', 'push', 'pull'],
+      strengthPatterns: ['squat', 'hinge', 'push', 'pull'],
       forbiddenComponents: ['conditioning'],
     },
   },
@@ -52,7 +52,7 @@ export const COMPONENT_BIBLE_RULES: readonly BibleComponentRule[] = [
     applicableScenarios: ['mixed-strength-aerobic'],
     expectation: {
       kind: 'conditioning_section',
-      conditioningRows: ['Aerobic conditioning component (3 x 8min zone 2 Mixed Erg Block)'],
+      conditioningRows: ['Easy Aerobic Flush (2 x 10min easy Mixed Erg Block)'],
     },
   },
   {

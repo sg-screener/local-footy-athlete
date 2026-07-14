@@ -496,18 +496,7 @@ export const preseason_conditioningFloor: Invariant = ({ profile, inputs, plan }
   };
 };
 
-/**
- * In-season WITH-game conditioning floor: when the trigger gate matches
- * (≥5 days, ≤2 team days, healthy, no severe injuries), the engine's
- * `applyInSeasonConditioningFloor` post-validation pass MUST place at
- * least one aerobic_base session.
- *
- * Skip caveat: when the engine's placement priority is exhausted (G−3 is
- * a team day AND G−4 is non-upper / team), the helper legitimately can't
- * land — we don't fail those structurally-infeasible cases. Detection:
- * read the same trigger conditions the engine uses, then check whether
- * G−3 and G−4 are both blocked. If both blocked → return null (skip).
- */
+/** Section 18 game-week app-conditioning remainder after genuine TT/game credit. */
 export const inseason_minOneConditioningWhenSafe: Invariant = ({ profile, inputs, plan }) => {
   if (inputs.seasonPhase !== 'In-season') return null;
   if (!inputs.hasGame || !inputs.gameDay) return null;
@@ -516,7 +505,6 @@ export const inseason_minOneConditioningWhenSafe: Invariant = ({ profile, inputs
   if (plan.readiness !== 'high') return null;
   if (hasSevereInjury(profile)) return null;
 
-  // Helper: g-offset relative to game day (mirrors engine's gOffset).
   const gNum = DAY_NUM[inputs.gameDay];
   if (gNum === undefined) return null;
   const offsetOf = (dayName: string): number => {
@@ -529,37 +517,20 @@ export const inseason_minOneConditioningWhenSafe: Invariant = ({ profile, inputs
     return diff;
   };
 
-  // Are both placement-priority slots blocked? If so the engine cannot
-  // physically land conditioning — we skip the assertion.
-  const teamDays = new Set(profile.teamTrainingDays || []);
-  const sessionAt = (off: number) =>
-    plan.weeklyPlan.find((s) => s.dayOfWeek && offsetOf(s.dayOfWeek) === off);
-  const g3 = sessionAt(-3);
-  const g4 = sessionAt(-4);
-  const g3Blocked = !g3 || teamDays.has(g3.dayOfWeek as any) || g3.tier === 'core';
-  const g4Blocked =
-    !g4 ||
-    teamDays.has(g4.dayOfWeek as any) ||
-    !plannedPatterns(g4).some((pattern) => pattern === 'push' || pattern === 'pull');
-  if (g3Blocked && g4Blocked) return null;
-
-  // Now assert: at least one session has typed conditioning fields.
-  const condCells: string[] = [];
-  for (const s of plan.weeklyPlan) {
-    if (s.conditioningCategory || s.hasCombinedConditioning) {
-      const tag = s.hasCombinedConditioning
-        ? `S+C(${s.conditioningCategory ?? '?'})`
-        : `COND(${s.conditioningCategory ?? '?'})`;
-      condCells.push(`${s.dayOfWeek}:${tag}`);
-    }
-  }
-  const ok = condCells.length >= 1;
+  const expectedAppCore = Math.max(0, 2 - (inputs.teamTrainingDays || []).length);
+  const appCore = plan.weeklyPlan.filter((session) =>
+    !session.isTeamDay && (
+      session.section18ConditioningRole === 'required_core' ||
+      session.section18ConditioningRole === 'planner_selected_core'
+    ));
+  const placementSafe = appCore.every((session) =>
+    !!session.dayOfWeek && offsetOf(session.dayOfWeek) <= -3);
+  const ok = appCore.length === expectedAppCore && placementSafe;
   return {
-    rule: 'In-season + game + ≤2 team + healthy → ≥1 conditioning when safe',
+    rule: 'In-season game week → app core equals 2 minus genuine TT credit',
     passed: ok,
-    detail: ok
-      ? `${condCells.length} conditioning cell(s): ${condCells.join('; ')}`
-      : `0 conditioning cells; G−3=${g3?.dayOfWeek ?? '—'} blocked=${g3Blocked}, G−4=${g4?.dayOfWeek ?? '—'} blocked=${g4Blocked}`,
+    detail: `expected app core=${expectedAppCore}; actual=${appCore.map((session) =>
+      `${session.dayOfWeek}:${session.conditioningCategory}:${session.section18ConditioningRole}`).join('; ') || 'none'}`,
   };
 };
 
@@ -600,28 +571,39 @@ export const inseason_no48hConditioning: Invariant = ({ inputs, plan }) => {
   };
 };
 
-/**
- * In-season game-week: any conditioning placed must be aerobic_base.
- * Sprint / VO2 / glycolytic are pre-season fitness-building flavours and
- * have no place inside a game-week microcycle.
- */
+/** Section 18 preserves hard/medium-hard top-up intensity and light optional flush identity. */
 export const inseason_aerobicOnlyDuringGameWeek: Invariant = ({ inputs, plan }) => {
   if (inputs.seasonPhase !== 'In-season') return null;
   if (!inputs.hasGame) return null;
+  const teamCount = (inputs.teamTrainingDays || []).length;
+  const expectedAppCore = Math.max(0, 2 - teamCount);
+  const core = plan.weeklyPlan.filter((session) =>
+    !session.isTeamDay && (
+      session.section18ConditioningRole === 'required_core' ||
+      session.section18ConditioningRole === 'planner_selected_core'
+    ));
   const violations: string[] = [];
-  for (const s of plan.weeklyPlan) {
-    if (!s.conditioningCategory) continue;
-    if (s.conditioningCategory !== 'aerobic_base') {
-      violations.push(`${s.dayOfWeek}: ${s.conditioningCategory}`);
+  for (const session of core) {
+    const category = session.conditioningCategory;
+    const hard = category === 'vo2' || category === 'glycolytic' || category === 'sprint';
+    const mediumHard = hard || category === 'tempo';
+    if ((teamCount === 1 && !hard) || (teamCount === 0 && !mediumHard)) {
+      violations.push(`${session.dayOfWeek}: ${category ?? 'none'}`);
+    }
+  }
+  for (const session of plan.weeklyPlan) {
+    if (session.section18ConditioningRole === 'optional_flush' &&
+        session.conditioningCategory !== 'aerobic_base') {
+      violations.push(`${session.dayOfWeek}: optional flush=${session.conditioningCategory ?? 'none'}`);
     }
   }
   return {
-    rule: 'In-season game week → conditioning category must be aerobic_base',
-    passed: violations.length === 0,
+    rule: 'In-season game week → required top-up intensity remains hard/medium-hard',
+    passed: core.length === expectedAppCore && violations.length === 0,
     detail:
-      violations.length === 0
-        ? 'all conditioning is aerobic_base (or none)'
-        : `non-aerobic flavours found: ${violations.join('; ')}`,
+      violations.length === 0 && core.length === expectedAppCore
+        ? `app core=${core.length}; approved intensity retained`
+        : `expected app core=${expectedAppCore}; actual=${core.length}; violations=${violations.join('; ') || 'none'}`,
   };
 };
 

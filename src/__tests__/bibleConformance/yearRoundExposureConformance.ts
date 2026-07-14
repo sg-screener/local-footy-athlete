@@ -221,13 +221,13 @@ export function runYearRoundExposureConformance(
   );
   if (
     advisoryByeContract.strength.required !== 2 ||
-    advisoryByeContract.strength.targetCount !== 2 ||
+    advisoryByeContract.strength.targetCount !== 4 ||
     advisoryByeContract.strength.preferred.min !== 3 ||
     advisoryByeContract.strength.preferred.max !== 4 ||
     advisoryByeContract.conditioning.targetCount !== advisoryByeContract.conditioning.required ||
     !advisoryByeValidation.accepted ||
-    advisoryByeValidation.ledger.achieved.main_strength !== 2
-  ) throw new Error('healthy bye advisory ranges became compulsory allocation targets');
+    advisoryByeValidation.ledger.achieved.main_strength !== 4
+  ) throw new Error('strong low-TT bye did not preserve the phase-owned fourth strength selection');
   properties++;
 
   const selectedMidOff = phasePlans.find(([name]) => name === 'mid off-season')![1];
@@ -244,22 +244,21 @@ export function runYearRoundExposureConformance(
   ) throw new Error('phase-planner-selected preferred strength was not preserved as enforceable');
   properties++;
 
-  const forcedPreferredMaximum: WeeklyExposureContract = {
-    ...advisoryByeContract,
-    strength: {
-      ...advisoryByeContract.strength,
-      targetCount: advisoryByeContract.strength.preferred.max,
-    },
-  };
+  let retainedByeStrength = 0;
+  const restoredOldByeS2 = advisoryBye.weeklyPlan.filter((session) => {
+    if ((session.strengthIntent?.plannedPatterns.length ?? 0) === 0) return true;
+    retainedByeStrength++;
+    return retainedByeStrength <= 2;
+  });
   const forcedPreferredResult = evaluateAllocationExposureContract(
-    forcedPreferredMaximum,
-    advisoryBye.weeklyPlan,
+    advisoryByeContract,
+    restoredOldByeS2,
   );
   if (forcedPreferredResult.accepted || !forcedPreferredResult.unresolvedShortfalls.some(
     (entry) => entry.code === 'required_exposure_shortfall' &&
       entry.domain === 'main_strength' &&
-      entry.expected === advisoryByeContract.strength.preferred.max,
-  )) throw new Error('preferred-maximum target mutation survived shared validation');
+      entry.expected === advisoryByeContract.strength.targetCount,
+  )) throw new Error('restored old bye S2 default survived shared validation');
   mutations++;
 
   // Corrected policy: healthy no-anchor early/mid/late pre-season all own

@@ -1050,7 +1050,7 @@ function fallbackExercisesForPlanEntry(entry: SessionAllocation): CoachGenerated
   const contributions = entry.strengthIntent?.plannedPatterns ?? entry.strengthPatternContributions ??
     mainPatternsForLegacyStrengthPattern(entry.strengthPattern);
 
-  if (entry.isTeamDay && !lower) return [];
+  if (entry.isTeamDay && contributions.length === 0) return [];
   if (entry.tier === 'recovery' || /recovery|mobility|foam rolling/i.test(lower)) {
     return [{ name: 'Mobility Flow', sets: 1, repsMin: 10, repsMax: 15, notes: 'Easy mobility and recovery work' }];
   }
@@ -1630,11 +1630,13 @@ export function buildWorkoutsFromCoach(
     : null;
   const feasibleCoachWorkouts = coachWorkouts.flatMap((workout) => {
     const planEntry = resolveGeneratedPlanEntry(workout, planIdentityLookup, planLookup);
-    if (planEntry?.conditioningFeasibility?.status !== 'removed') return [workout];
+    const plannerOwnsConditioning = !!planEntry?.conditioningCategory ||
+      planEntry?.hasCombinedConditioning === true;
+    const conditioningRemoved = planEntry?.conditioningFeasibility?.status === 'removed';
+    if (!planEntry || (plannerOwnsConditioning && !conditioningRemoved)) return [workout];
     const strengthRemains = !!planEntry.strengthPattern ||
       !!planEntry.strengthIntent?.plannedPatterns.length;
-    if (!strengthRemains) return [];
-    return [{
+    const withoutUnselectedConditioning = {
       ...workout,
       exercises: (workout.exercises ?? []).filter((exercise, index) =>
         classifyGeneratedWorkoutRow({
@@ -1643,7 +1645,9 @@ export function buildWorkoutsFromCoach(
           repsMax: exercise.repsMax,
           index,
         }).kind !== 'conditioning'),
-    }];
+    };
+    if (!strengthRemains && withoutUnselectedConditioning.exercises.length === 0) return [];
+    return [withoutUnselectedConditioning];
   });
   const edgeProvidedDays = new Set(feasibleCoachWorkouts.map((workout) => workout.dayOfWeek));
   const completedCoachWorkouts = completeCoachWorkoutsFromPlan(
@@ -2198,6 +2202,9 @@ export function buildWorkoutsFromCoach(
         ...(!isStandaloneSpeed && planEntry.conditioningCategory
           ? { conditioningCategory: planEntry.conditioningCategory }
           : {}),
+        ...(!isStandaloneSpeed && planEntry.section18ConditioningRole
+          ? { section18ConditioningRole: planEntry.section18ConditioningRole }
+          : {}),
         ...(planEntry.conditioningFeasibility
           ? { conditioningFeasibility: planEntry.conditioningFeasibility }
           : {}),
@@ -2475,6 +2482,9 @@ export function buildWorkoutsFromCoach(
       ...(planEntry?.attachedConditioningKind ? { attachedConditioningKind: planEntry.attachedConditioningKind } : {}),
       ...(planEntry?.conditioningFlavour ? { conditioningFlavour: planEntry.conditioningFlavour } : {}),
       ...(planEntry?.conditioningCategory ? { conditioningCategory: planEntry.conditioningCategory } : {}),
+      ...(planEntry?.section18ConditioningRole
+        ? { section18ConditioningRole: planEntry.section18ConditioningRole }
+        : {}),
       ...(planEntry?.conditioningFeasibility
         ? { conditioningFeasibility: planEntry.conditioningFeasibility }
         : {}),

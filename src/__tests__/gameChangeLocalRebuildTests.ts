@@ -404,7 +404,7 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
     sweep.conflictsRemoved.some((c) => c.date === week2Friday),
     JSON.stringify(sweep));
   ok('conflict removal is reported (never silent)',
-    sweep.conflictsRemoved.length === 1 && /metcon|hard assault bike/i.test(sweep.conflictsRemoved[0].name),
+    sweep.conflictsRemoved.length === 1 && /hard/i.test(sweep.conflictsRemoved[0].name),
     JSON.stringify(sweep.conflictsRemoved));
 
   // Light manual edit NEAR the game (gunshow swap on G-1) is Bible-legal → survives.

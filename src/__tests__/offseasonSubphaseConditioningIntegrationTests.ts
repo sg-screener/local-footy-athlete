@@ -63,6 +63,7 @@ function planFor(
     miniCycleNumber: 1,
     weekInBlock: weekNumber,
     weekNumber,
+    phaseWeekNumber: weekNumber,
     weekKind: 'build',
   }));
 }
@@ -222,10 +223,13 @@ console.log('\n[3] mid and late category breadth');
     midCategories.includes('tempo') &&
       midCategories.every((category) => category === 'aerobic_base' || category === 'tempo'),
     planText(mid));
-  ok('mid still blocks sprint',
-    !mid.weeklyPlan.some((session) =>
-      session.conditioningCategory === 'sprint' || session.speedWorkKind === 'true_speed'),
-    mid.weeklyPlan);
+  const midSprint = mid.weeklyPlan.filter((session) => session.speedWorkKind === 'true_speed');
+  ok('mid selects one controlled full-quality sprint exposure',
+    midSprint.length === 1 &&
+      midSprint.every((session) =>
+        (session.speedBlock?.durationMinutes ?? Infinity) <= 15 &&
+        session.speedBlock?.notes.some((note) => /stop if speed or mechanics drop/i.test(note))),
+    midSprint);
   ok('mid bridges back toward normal off-season core volume',
     mid.weeklyPlan.filter((session) =>
       session.tier === 'core' && !!session.strengthPattern).length >= 3,
@@ -237,7 +241,7 @@ console.log('\n[3] mid and late category breadth');
       'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
     ],
   });
-  const late = planFor(4, lateProfile);
+  const late = planFor(5, lateProfile);
   const lateCategories = categories(late);
   ok('late permits a broader conditioning category',
     lateCategories.some((category) => category !== 'aerobic_base'),

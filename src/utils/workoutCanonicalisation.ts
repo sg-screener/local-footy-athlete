@@ -802,6 +802,7 @@ export function finaliseWorkoutAfterMutation(
           conditioningBlock: undefined,
           conditioningFlavour: undefined,
           conditioningCategory: undefined,
+          section18ConditioningRole: undefined,
           attachedConditioningKind: undefined,
           hasCombinedConditioning: false,
           coachAddedConditioningLabel: undefined,

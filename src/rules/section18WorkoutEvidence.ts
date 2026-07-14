@@ -8,6 +8,7 @@
 
 import type { Workout, WorkoutExercise } from '../types/domain';
 import { classifyGeneratedWorkoutRow } from './generatedWorkoutRowClassification';
+import { normalizeStrengthIntent } from './strengthPatternContributions';
 import type {
   Section18ConditioningRole,
   Section18ConditioningStress,
@@ -55,12 +56,22 @@ function hasConditioning(workout: Workout): boolean {
 
 function conditioningRole(workout: Workout): Section18ConditioningRole {
   if (!hasConditioning(workout)) return 'none';
-  if (workout.sessionTier === 'optional' || workout.sessionTier === 'recovery') {
-    return workout.conditioningCategory === 'aerobic_base'
-      ? 'optional_flush'
-      : 'optional_noncore';
+  if (
+    workout.section18ConditioningRole === 'required_core' ||
+    workout.section18ConditioningRole === 'planner_selected_core'
+  ) {
+    // The detailed planner owner remains serialised on the workout. Canonical
+    // evidence keeps the existing aggregate `core` role consumed by the
+    // unchanged Section 18 safety finaliser and effective-week observer.
+    return 'core';
   }
-  return 'core';
+  if (workout.section18ConditioningRole) return workout.section18ConditioningRole;
+  if (workout.sessionTier === 'recovery') return 'optional_recovery_aerobic';
+  if (workout.sessionTier === 'optional' && workout.conditioningCategory === 'aerobic_base') {
+    return 'optional_flush';
+  }
+  if (workout.sessionTier === 'optional') return 'legacy_unknown';
+  return 'planner_selected_core';
 }
 
 function conditioningStress(
@@ -68,7 +79,7 @@ function conditioningStress(
   role: Section18ConditioningRole,
 ): Section18ConditioningStress {
   if (role === 'none') return 'unknown';
-  if (role === 'optional_flush') return 'light';
+  if (role === 'optional_flush' || role === 'optional_recovery_aerobic') return 'light';
   switch (workout.conditioningCategory) {
     case 'vo2':
     case 'glycolytic':
@@ -119,12 +130,31 @@ export function withSection18WorkoutEvidence(
   }
 
   const role = conditioningRole(workout);
+  const plannedPatterns = workout.strengthIntent
+    ? new Set(normalizeStrengthIntent(workout.strengthIntent).effectivePatterns)
+    : null;
+  const creditedPatterns = new Set<string>();
   return {
     ...workout,
-    exercises: (workout.exercises ?? []).map((row, index) => ({
-      ...row,
-      section18Evidence: inferredRowEvidence(row, index),
-    })),
+    exercises: (workout.exercises ?? []).map((row, index) => {
+      let evidence = inferredRowEvidence(row, index);
+      if (plannedPatterns && evidence.role === 'main_strength') {
+        const pattern = evidence.mainStrengthPattern;
+        const ownsContribution = !!pattern &&
+          plannedPatterns.has(pattern) &&
+          !creditedPatterns.has(pattern);
+        if (ownsContribution) {
+          creditedPatterns.add(pattern);
+        } else {
+          evidence = {
+            ...evidence,
+            role: 'strength_accessory',
+            mainStrengthPattern: null,
+          };
+        }
+      }
+      return { ...row, section18Evidence: evidence };
+    }),
     section18Evidence: {
       protocolVersion: 1,
       conditioningRole: role,

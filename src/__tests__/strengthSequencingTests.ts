@@ -227,7 +227,11 @@ function maxConsecutiveCoreDays(plan: SessionAllocation[]): number {
   return max;
 }
 
-function assertConditioningPairing(name: string, plan: SessionAllocation[]) {
+function assertConditioningPairing(
+  name: string,
+  plan: SessionAllocation[],
+  requireCombinedConditioning = true,
+) {
   const lowerHighIntensityCombined = plan.filter(s =>
     strengthRegion(strengthKind(s)) === 'lower'
     && s.hasCombinedConditioning
@@ -235,8 +239,12 @@ function assertConditioningPairing(name: string, plan: SessionAllocation[]) {
   );
 
   ok(
-    `${name} includes combined conditioning where planned`,
-    plan.some(s => s.hasCombinedConditioning),
+    requireCombinedConditioning
+      ? `${name} includes combined conditioning where planned`
+      : `${name} includes optional conditioning without requiring a strength pairing`,
+    requireCombinedConditioning
+      ? plan.some(s => s.hasCombinedConditioning)
+      : plan.some(s => !!s.conditioningCategory),
     shape(plan),
   );
   ok(
@@ -290,7 +298,7 @@ section('[1] Early off-season Mon-Fri uses hinge+pull/push/squat body-armour led
   assertNoAdjacentStrengthRegionPairs('off-season has no adjacent same-region strength pair', plan);
   assertLowerStrengthSpacing('off-season lower strength days are separated', plan);
   assertNoPullHingeAdjacency('off-season has no pull/hinge adjacency', plan);
-  assertConditioningPairing('off-season', plan);
+  assertConditioningPairing('off-season', plan, false);
 }
 
 section('[2] Pre-season no-game uses the same posterior-chain guard');

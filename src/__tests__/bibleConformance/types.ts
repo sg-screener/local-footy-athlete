@@ -597,7 +597,7 @@ export type ComponentMutationId =
   | 'drop_team_strength'
   | 'trunk_as_conditioning'
   | 'accessory_main_credit'
-  | 'full_body_extra_lower';
+  | 'full_body_drops_hinge';
 
 export interface ComponentMutationAcceptanceResult extends MutationAcceptanceResult {
   mutationId: ComponentMutationId;

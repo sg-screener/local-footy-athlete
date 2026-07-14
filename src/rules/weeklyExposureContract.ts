@@ -147,6 +147,7 @@ export interface WeeklyExposureAllocationLike {
   conditioningCategory?: string;
   hasCombinedConditioning?: boolean;
   attachedConditioningKind?: string;
+  section18ConditioningRole?: import('./weeklyExposureContractV2').Section18ConditioningRole;
   speedBlock?: SpeedBlock;
 }
 
@@ -397,7 +398,11 @@ export function ledgerFromAllocations(
       planned.forEach((pattern) => patterns.add(pattern));
     }
     if (allocation.conditioningCategory || allocation.hasCombinedConditioning) {
-      conditioningDays.add(day);
+      const role = allocation.section18ConditioningRole;
+      if (
+        role === undefined || role === 'core' || role === 'required_core' ||
+        role === 'planner_selected_core'
+      ) conditioningDays.add(day);
       activeDays.add(day);
     }
     if (allocation.speedBlock) {
@@ -535,6 +540,7 @@ export function ledgerFromEffectiveWorkouts(
   const patterns = new Set<MainStrengthPattern>();
   const activeDays = new Set<number>();
   const sprintDays = new Set<number>();
+  const appCoreConditioningDays = new Set<number>();
   const hardDays = new Set<number>();
   for (const workout of workouts) {
     const classification = classifyVisibleSession(workout);
@@ -549,6 +555,16 @@ export function ledgerFromEffectiveWorkouts(
       classification.anchors.game || classification.anchors.teamTraining
     ) activeDays.add(workout.dayOfWeek);
     if (workout.speedBlock) sprintDays.add(workout.dayOfWeek);
+    if (
+      classification.contributions.conditioning > 0 &&
+      !classification.anchors.teamTraining && !classification.anchors.game
+    ) {
+      const role = workout.section18Evidence?.conditioningRole;
+      if (
+        role === undefined || role === 'core' || role === 'required_core' ||
+        role === 'planner_selected_core'
+      ) appCoreConditioningDays.add(workout.dayOfWeek);
+    }
     if (classification.contributions.hardDay > 0) hardDays.add(workout.dayOfWeek);
   }
   if (missingProjectedFixtureCredit > 0 && contract.anchors.gameDay !== null) {
@@ -559,7 +575,7 @@ export function ledgerFromEffectiveWorkouts(
   return {
     achieved: {
       main_strength: counts.mainStrengthExposures,
-      conditioning: counts.conditioningExposures + missingProjectedFixtureCredit,
+      conditioning: counts.teamTrainingSessions + projectedFixtureCredit + appCoreConditioningDays.size,
       sprint_cod: counts.sprintCodExposures + missingProjectedFixtureCredit,
       full_rest: fullRestDays.length,
     },
@@ -568,7 +584,7 @@ export function ledgerFromEffectiveWorkouts(
     ),
     teamTrainingCredit: counts.teamTrainingSessions,
     gameOrPracticeMatchCredit: projectedFixtureCredit,
-    additionalConditioningCount: counts.extraConditioningSessions,
+    additionalConditioningCount: appCoreConditioningDays.size,
     additionalSprintCodCount: sprintDays.size,
     hardDayCount: hardDays.size,
     activeTrainingDays: Array.from(activeDays).sort((a, b) => trainingOrder(a) - trainingOrder(b)),

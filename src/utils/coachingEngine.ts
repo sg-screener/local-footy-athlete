@@ -90,7 +90,6 @@ import {
 } from '../rules/preseasonExposureContract';
 import {
   evaluateAllocationExposureContract,
-  withPlannerSelectedExposureTargets,
   type WeeklyExposureContract,
 } from '../rules/weeklyExposureContract';
 import {
@@ -100,6 +99,8 @@ import {
 import {
   buildSection18WeeklyExposureContractV2,
   migrateLegacyReductionV2,
+  resolveSection18PhasePlannerSelection,
+  type Section18ConditioningRole,
   type Section18Subphase,
   type Section18WeekMode,
   type WeeklyExposureContractV2,
@@ -213,6 +214,8 @@ export interface SessionAllocation {
    * efforts at 6-7/10 — medium stress, never a hard exposure.
    */
   conditioningCategory?: 'aerobic_base' | 'tempo' | 'sprint' | 'vo2' | 'glycolytic';
+  /** Section 18 ownership; canonical construction must preserve this identity. */
+  section18ConditioningRole?: Section18ConditioningRole;
   /**
    * Volume variant of the conditioning block:
    *   - 'standard'  : normal template volume (default)
@@ -304,6 +307,18 @@ function plannedPatternsForAllocation(
     return [...allocation.strengthPatternContributions];
   }
   return mainPatternsForLegacyStrengthPattern(allocation.strengthPattern);
+}
+
+function effectivePatternsForAllocation(
+  allocation: SessionAllocation,
+): MainStrengthPattern[] {
+  if (allocation.strengthIntent) {
+    const intent = normalizeStrengthIntent(allocation.strengthIntent);
+    return intent.effectivePatterns.length > 0
+      ? intent.effectivePatterns
+      : intent.plannedPatterns;
+  }
+  return plannedPatternsForAllocation(allocation);
 }
 
 /**
@@ -498,12 +513,11 @@ function allocationEffectSignature(allocation: SessionAllocation | undefined): s
 function section18ModeAndSubphase(
   inputs: CoachingInputs,
   legacy: WeeklyExposureContract,
-  readiness: ReadinessLevel,
 ): { mode: Section18WeekMode; declaredSubphase: Section18Subphase; anchorState: 'game' | 'bye' | 'practice_match' | 'none' } {
   if (inputs.seasonPhase === 'Pre-season' && inputs.hasGame) {
     return {
       mode: 'practice_match_week',
-      declaredSubphase: legacy.identity.subphase,
+      declaredSubphase: 'practice_match_week',
       anchorState: 'practice_match',
     };
   }
@@ -515,31 +529,32 @@ function section18ModeAndSubphase(
         anchorState: 'game',
       };
     }
-    const tier = inputs.generationConstraints?.readiness?.tier;
-    const meaningfulInjury = (inputs.generationConstraints?.injuries ?? []).some((injury) =>
-      injury.removeRiskyWork || injury.pauseAffectedTraining) ||
-      (inputs.injuries ?? []).some((injury) => injury.severity === 'Severe');
-    const recoveryMode = inputs.weekKind === 'deload' || readiness === 'low' ||
-      tier === 'moderate_reduction' || tier === 'major_reduction' || tier === 'full_pause' ||
-      inputs.generationConstraints?.readiness?.preferRecovery === true || meaningfulInjury;
     return {
-      mode: recoveryMode ? 'in_season_bye_recovery' : 'in_season_bye_build',
+      // The legacy compatibility contract has already resolved readiness,
+      // injury and week-kind ownership. Reusing that canonical decision keeps
+      // Contract v2 and allocation on one bye mode instead of reinterpreting
+      // the same constraint state a second time.
+      mode: legacy.identity.mode === 'in_season_bye_recovery'
+        ? 'in_season_bye_recovery'
+        : 'in_season_bye_build',
       declaredSubphase: legacy.identity.subphase,
       anchorState: 'bye',
     };
   }
-  const phaseWeek = Math.max(1, inputs.phaseWeekNumber ?? 1);
-  const mode: Section18WeekMode = inputs.seasonPhase === 'Off-season'
-    ? phaseWeek <= 2
-      ? 'early_offseason'
-      : phaseWeek <= 4
-        ? 'mid_offseason'
-        : 'late_offseason'
-    : phaseWeek === 1
-      ? 'early_preseason'
-      : phaseWeek <= 3
-        ? 'mid_preseason'
-        : 'late_preseason';
+  const phaseWeek = inputs.phaseWeekNumber;
+  const mode: Section18WeekMode = phaseWeek === null || phaseWeek === undefined
+    ? legacy.identity.mode
+    : inputs.seasonPhase === 'Off-season'
+      ? phaseWeek <= 2
+        ? 'early_offseason'
+        : phaseWeek <= 4
+          ? 'mid_offseason'
+          : 'late_offseason'
+      : phaseWeek === 1
+        ? 'early_preseason'
+        : phaseWeek <= 3
+          ? 'mid_preseason'
+          : 'late_preseason';
   return {
     mode,
     declaredSubphase: legacy.identity.subphase,
@@ -554,16 +569,24 @@ function buildParallelSection18Contract(args: {
   legacy: WeeklyExposureContract;
 }): WeeklyExposureContractV2 {
   const { inputs, readiness, weeklyPlan, legacy } = args;
-  const identity = section18ModeAndSubphase(inputs, legacy, readiness);
+  const identity = section18ModeAndSubphase(inputs, legacy);
   const reductions = legacy.reductions.map((entry) =>
     migrateLegacyReductionV2(entry, 'live_typed_reduction'));
   const prohibitedPatterns = Array.from(resolveRestrictedMainStrengthPatterns({
     activeInjuries: inputs.generationConstraints?.injuries,
     profileInjuries: inputs.injuries,
   }));
+  const selected = resolveSection18PhasePlannerSelection({
+    mode: identity.mode,
+    readiness,
+    availableDayCount: inputs.selectedDays.length,
+    teamTrainingCount: inputs.teamTrainingDays.length,
+    weekKind: inputs.weekKind,
+  });
   const optionalFlushSelected = weeklyPlan.filter((allocation) =>
-    (allocation.tier === 'optional' || allocation.tier === 'recovery') &&
-    allocation.conditioningCategory === 'aerobic_base').length;
+    allocation.section18ConditioningRole === 'optional_flush').length;
+  const optionalRecoveryAerobicSelected = weeklyPlan.filter((allocation) =>
+    allocation.section18ConditioningRole === 'optional_recovery_aerobic').length;
   const imbalanceReduction = legacy.reductions.find((entry) =>
     entry.reason === 'injury_restriction' || entry.reason === 'low_readiness' ||
     entry.reason === 'insufficient_availability' || entry.reason === 'training_age_limit');
@@ -591,13 +614,19 @@ function buildParallelSection18Contract(args: {
     readiness,
     cookedReadiness,
     plannerSelected: {
-      mainStrength: legacy.strength.targetCount,
+      mainStrength: identity.mode === 'early_offseason'
+        ? selected.mainStrength
+        : legacy.strength.targetCount,
       optionalMainStrength: identity.mode === 'early_offseason'
-        ? legacy.strength.targetCount
+        ? selected.optionalMainStrength
         : weeklyPlan.filter((allocation) =>
             allocation.tier === 'optional' && !!allocation.strengthIntent?.plannedPatterns.length).length,
       coreConditioning: legacy.conditioning.targetCount,
       optionalFlush: optionalFlushSelected,
+      optionalRecoveryAerobic: Math.max(
+        selected.optionalRecoveryAerobic,
+        optionalRecoveryAerobicSelected,
+      ),
       sprintHighSpeed: legacy.sprintCod.targetCount,
       powerPrimers: weeklyPlan.filter((allocation) => !!allocation.powerPrimer).length,
     },
@@ -962,6 +991,12 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     profileInjuries: inputs.injuries,
     activeInjuries: inputs.generationConstraints?.injuries,
   });
+  const phasePlannerContractV2 = buildParallelSection18Contract({
+    inputs,
+    readiness,
+    weeklyPlan: [],
+    legacy: weeklyExposureContract,
+  });
 
   // Step 2: Existing hard exposures from team environment
   const { count: existingHard, breakdown: hardBreakdown } = countTeamHardExposures(inputs);
@@ -1163,6 +1198,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     readiness,
     programmingBias,
     weeklyExposureContract,
+    phasePlannerContractV2,
   );
   logger.debug('[ENGINE-TRACE] ═══ weeklyPlan output ═══');
   weeklyPlan.forEach(s => logger.debug(`[ENGINE-TRACE]   ${s.dayOfWeek}: [${s.tier}] ${s.focus}${s.isHardExposure ? ' (HARD)' : ''}`));
@@ -1189,7 +1225,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
           soleCore.strengthIntent = createStrengthIntent({
             archetype: 'full_body',
             primaryPattern: lower,
-            plannedPatterns: [lower, 'push', 'pull'],
+            plannedPatterns: ['squat', 'hinge', 'push', 'pull'],
           });
         }
       }
@@ -1265,7 +1301,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
           swap.strengthIntent = createStrengthIntent({
             archetype: 'full_body',
             primaryPattern: lower,
-            plannedPatterns: [lower, 'push', 'pull'],
+            plannedPatterns: ['squat', 'hinge', 'push', 'pull'],
           });
           // Pairing rule (2026-07-08): full body + EASY AEROBIC only. The
           // upper session being swapped may carry a harder finisher
@@ -1344,7 +1380,8 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         // standalone layout.
         if (
           inputs.availableDays >= 6 && readiness !== 'low' &&
-          !phaseConditioningBlockedForSafety
+          !phaseConditioningBlockedForSafety &&
+          index < (phasePlannerContractV2.conditioning.optionalRecoveryAerobic.plannerSelectedCount ?? 0)
         ) {
           allocation.hasCombinedConditioning = true;
           allocation.attachedConditioningKind = 'component';
@@ -1364,6 +1401,31 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
     }
   }
 
+  // Phase-specific shaping above may move or combine typed work after the
+  // shared repair pass. Reconcile conditioning ownership one final time at
+  // the existing Contract v2 boundary before canonical identities are
+  // stamped, then reject any resulting exposure shortfall. This prevents
+  // optional early/recovery aerobic work or a game-week intensity adjustment
+  // from re-entering canonical construction as untyped legacy core work.
+  applySection18ConditioningAllocation(
+    weeklyPlan,
+    inputs,
+    weeklyExposureContract,
+    phasePlannerContractV2,
+  );
+  const finalPhaseAllocationValidation = evaluateAllocationExposureContract(
+    weeklyExposureContract,
+    weeklyPlan,
+  );
+  if (!finalPhaseAllocationValidation.accepted) {
+    throw new Error(
+      `Final phase-owned allocation unresolved (${finalPhaseAllocationValidation.unresolvedShortfalls
+        .map((violation) =>
+          `${violation.code}:${violation.domain ?? 'safety'}=${JSON.stringify(violation.actual)}`)
+        .join(', ')})`,
+    );
+  }
+
   // Populate the canonical allocation-owned contract and stable identities.
   // No focus/name parsing is permitted here: exact patterns come from the
   // allocator's typed shape. Legacy fields are compatibility projections only.
@@ -1380,7 +1442,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
         : allocation.strengthPattern === 'lower'
           ? [defaultLower]
           : allocation.strengthPattern === 'full_body'
-            ? [defaultLower, 'push', 'pull']
+            ? ['squat', 'hinge', 'push', 'pull']
             : [];
       const archetype = allocation.strengthPattern === 'full_body'
         ? 'full_body'
@@ -1527,6 +1589,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
       readiness,
       composeProgrammingBias(roleGoalBias, neutralTestingBias),
       weeklyExposureContract,
+      phasePlannerContractV2,
     );
     const difference = firstPlanShapeDifference(weeklyPlan, baselinePlan);
     const reason = difference ? testingEffectReason(testingBias, difference) : null;
@@ -1591,10 +1654,6 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   // Capture the final phase-owned allocation after all deterministic phase
   // shaping. Only work the planner actually selected becomes enforceable;
   // advisory preferred ranges never create a repair target on their own.
-  weeklyExposureContract = withPlannerSelectedExposureTargets(
-    weeklyExposureContract,
-    weeklyPlan,
-  );
   const weeklyExposureContractV2 = buildParallelSection18Contract({
     inputs,
     readiness,
@@ -1739,6 +1798,7 @@ function buildWeeklyPlan(
   readiness: ReadinessLevel,
   programmingBias: ComposedProgrammingBias,
   weeklyExposureContract: WeeklyExposureContract | null,
+  section18Contract: WeeklyExposureContractV2 | null,
 ): SessionAllocation[] {
   const plan: SessionAllocation[] = [];
   const classificationContext: StressContext = {
@@ -1887,11 +1947,7 @@ function buildWeeklyPlan(
           strengthIntent: createStrengthIntent({
             archetype: 'full_body',
             primaryPattern: (inputs.weekNumber ?? 1) % 2 === 0 ? 'hinge' : 'squat',
-            plannedPatterns: [
-              (inputs.weekNumber ?? 1) % 2 === 0 ? 'hinge' : 'squat',
-              'push',
-              'pull',
-            ],
+            plannedPatterns: ['squat', 'hinge', 'push', 'pull'],
           }),
         });
       } else {
@@ -2109,7 +2165,12 @@ function buildWeeklyPlan(
           : 'Lower body strength (bye-week maintenance)',
         dayOfWeek: slot.dayName,
         isHardExposure: true,
-        strengthPattern: 'lower',
+        strengthPattern: 'lower_combined',
+        strengthIntent: createStrengthIntent({
+          archetype: 'lower',
+          primaryPattern: 'squat',
+          plannedPatterns: ['squat', 'hinge'],
+        }),
         stressLevel: 'high',
       });
     };
@@ -2122,6 +2183,11 @@ function buildWeeklyPlan(
         dayOfWeek: slot.dayName,
         isHardExposure: withConditioning,
         strengthPattern: 'upper_combined',
+        strengthIntent: createStrengthIntent({
+          archetype: 'upper',
+          primaryPattern: 'push',
+          plannedPatterns: ['push', 'pull'],
+        }),
         stressLevel: withConditioning ? 'high' : 'medium',
         ...(slot.isTeamDay ? { isTeamDay: true } : {}),
         ...(withConditioning ? {
@@ -2143,6 +2209,11 @@ function buildWeeklyPlan(
         dayOfWeek: slot.dayName,
         isHardExposure: false,
         strengthPattern: 'full_body',
+        strengthIntent: createStrengthIntent({
+          archetype: 'full_body',
+          primaryPattern: 'squat',
+          plannedPatterns: ['squat', 'hinge', 'push', 'pull'],
+        }),
         stressLevel: 'medium',
       });
     };
@@ -3131,9 +3202,10 @@ function buildWeeklyPlan(
     //   Game day / G-1: block all core strength (incl. FB and S+C) and all
     //     conditioning. The slot falls through to ACC/REC (light
     //     accessories / recovery) — the Bible's accepted G-1 content.
-    //   G-2: block dedicated heavy lower (L-sq/L-hi/L-co, incl. as the
-    //     strength half of S+C) and any non-easy conditioning. Upper
-    //     strength, FB (moderate mixed dose) and easy aerobic stay legal.
+    //   G-2: block every lower-bearing session (including FB) and any
+    //     non-easy conditioning. Upper strength and easy aerobic stay legal.
+    //     This matches the shared exposure evaluator: a moderate label does
+    //     not erase the squat/hinge contribution carried by full-body work.
     function violatesGameProximity(c: CandidateType, dayNum: number): boolean {
       if (!inputs.hasGame || gameDayNum === null) return false;
       const offset = gOffset(dayNum, gameDayNum);
@@ -3141,7 +3213,7 @@ function buildWeeklyPlan(
         return isStrength(c) || isConditioning(c);
       }
       if (offset === -2) {
-        if (isHeavyLower(c)) return true;
+        if (isHeavyLower(c) || c === 'FB') return true;
         if (c === 'COND' || c === 'S+C') {
           const wouldPickCat = pickCondCategory(trainingOrder(dayNum));
           if (wouldPickCat !== 'aerobic_base') return true;
@@ -4601,7 +4673,7 @@ function buildWeeklyPlan(
           return createStrengthIntent({
             archetype: 'full_body',
             primaryPattern: alternatingLower,
-            plannedPatterns: [alternatingLower, 'push', 'pull'],
+            plannedPatterns: ['squat', 'hinge', 'push', 'pull'],
           });
         default:
           return undefined;
@@ -5955,9 +6027,9 @@ function buildWeeklyPlan(
   // for pre-season, off-season, no-game, low-readiness, or 3+ team-day
   // configurations. `isInSeason` + `hasGameThisWeek` were declared at
   // line ~646 in this same function scope.
-  if (hasGameThisWeek) {
-    applyInSeasonConditioningFloor(adjusted, inputs);
-  }
+  // Contract v2 owns core-versus-optional conditioning below. The former
+  // game-week helper used readiness/weekday heuristics and could turn a
+  // required hard top-up into optional aerobic work.
 
   // (2.6) In-season push/pull balance safety net ──────────────────────────
   // Hard rule: every in-season week must carry at least 1 push exposure
@@ -6116,13 +6188,34 @@ function buildWeeklyPlan(
   // is repaired before low-value support work; anything still unresolved is
   // rejected instead of becoming a warning-only stored week.
   if (weeklyExposureContract) {
-    const isSafeRepairDay = (session: SessionAllocation): boolean => {
-      if (!session.dayOfWeek || session.isTeamDay) return false;
+    if (section18Contract) {
+      applySection18ConditioningAllocation(
+        adjusted,
+        inputs,
+        weeklyExposureContract,
+        section18Contract,
+      );
+    }
+    const isSafeRepairDay = (
+      session: SessionAllocation,
+      allowTeamStrengthStack = false,
+      proposedPatterns: readonly MainStrengthPattern[] = plannedPatternsForAllocation(session),
+    ): boolean => {
+      if (!session.dayOfWeek || (session.isTeamDay && !allowTeamStrengthStack)) return false;
       const day = dayNameToNumber(session.dayOfWeek);
       if (day < 0 || day === weeklyExposureContract.anchors.gameDay) return false;
       if (weeklyExposureContract.anchors.gameDay !== null) {
         const offset = gOffset(day, weeklyExposureContract.anchors.gameDay);
-        if (offset === -2 || offset === -1 || offset === 0 || offset === 1) return false;
+        if (offset === -1 || offset === 0 || offset === 1) return false;
+        if (offset === -2) {
+          const hasLower = proposedPatterns.some(
+            (pattern) => pattern === 'squat' || pattern === 'hinge',
+          );
+          const hasHardConditioning = session.conditioningCategory === 'vo2' ||
+            session.conditioningCategory === 'glycolytic' ||
+            session.conditioningCategory === 'sprint';
+          if (hasLower || hasHardConditioning || !!session.speedBlock) return false;
+        }
       }
       return true;
     };
@@ -6155,14 +6248,43 @@ function buildWeeklyPlan(
           : plannedPatterns.length > 1
             ? 'upper_combined'
             : plannedPatterns[0] as 'push' | 'pull';
-      session.focus = archetype === 'lower'
+      const strengthFocus = archetype === 'lower'
         ? 'Lower body strength - combined squat + hinge coverage'
         : archetype === 'upper'
           ? 'Upper body strength - combined push + pull coverage'
           : 'Full body strength - squat/hinge + push/pull coverage';
-      session.isHardExposure = hasLower;
-      session.stressLevel = hasLower ? 'high' : 'medium';
+      session.focus = session.isTeamDay
+        ? `Team training + ${strengthFocus}`
+        : strengthFocus;
+      session.isHardExposure = session.isTeamDay || hasLower;
+      session.stressLevel = session.isTeamDay || hasLower ? 'high' : 'medium';
     };
+
+    const hasPatternConstraint = weeklyExposureContract.reductions.some((reduction) =>
+      reduction.domain === 'main_strength' &&
+      reduction.metric === 'strength_pattern_count');
+    if (hasPatternConstraint) {
+      const permitted = new Set(weeklyExposureContract.strength.requiredPatterns);
+      for (const session of adjusted) {
+        const current = effectivePatternsForAllocation(session);
+        if (current.length === 0) continue;
+        const safe = current.filter((pattern) => permitted.has(pattern));
+        if (safe.length === current.length) continue;
+        if (safe.length > 0) {
+          assignRequiredStrength(session, safe);
+        } else {
+          session.strengthIntent = undefined;
+          session.strengthPattern = undefined;
+          session.strengthPatternContributions = undefined;
+          if (!session.isTeamDay && !session.conditioningCategory && !session.speedBlock) {
+            session.tier = 'recovery';
+            session.focus = 'Recovery and mobility - active strength restriction';
+            session.isHardExposure = false;
+            session.stressLevel = 'low';
+          }
+        }
+      }
+    }
 
     let validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
     for (const violation of validation.unresolvedShortfalls) {
@@ -6171,35 +6293,54 @@ function buildWeeklyPlan(
         dayNameToNumber(candidate.dayOfWeek ?? '') === violation.day,
       );
       if (!session || session.isTeamDay) continue;
-      let removedUnsafeSurplus = false;
+      let removedUnsafeExposure = false;
       const currentPatterns = plannedPatternsForAllocation(session);
-      if (session.conditioningCategory &&
-          validation.ledger.achieved.conditioning > weeklyExposureContract.conditioning.targetCount) {
+      const sessionDay = dayNameToNumber(session.dayOfWeek ?? '');
+      const offset = weeklyExposureContract.anchors.gameDay === null
+        ? null
+        : gOffset(sessionDay, weeklyExposureContract.anchors.gameDay);
+      const hasLower = currentPatterns.some(
+        (pattern) => pattern === 'squat' || pattern === 'hinge',
+      );
+      const hardConditioning = session.conditioningCategory === 'vo2' ||
+        session.conditioningCategory === 'glycolytic' ||
+        session.conditioningCategory === 'sprint';
+      const conditioningUnsafe = !!session.conditioningCategory && (
+        offset === -1 || offset === 0 || offset === 1 ||
+        (offset === -2 && hardConditioning)
+      );
+      if (conditioningUnsafe) {
         session.hasCombinedConditioning = false;
         session.attachedConditioningKind = undefined;
         session.conditioningFlavour = undefined;
         session.conditioningCategory = undefined;
+        session.section18ConditioningRole = undefined;
         session.conditioningVariant = undefined;
         session.conditioningFeel = undefined;
         session.conditioningOffFeet = undefined;
         session.ergModality = undefined;
-        removedUnsafeSurplus = true;
+        removedUnsafeExposure = true;
       }
-      if (session.speedBlock &&
-          validation.ledger.achieved.sprint_cod > weeklyExposureContract.sprintCod.targetCount) {
+      const speedUnsafe = !!session.speedBlock && (
+        offset === -2 || offset === -1 || offset === 0 || offset === 1
+      );
+      if (speedUnsafe) {
         session.speedWorkKind = undefined;
         session.speedPlacement = undefined;
         session.speedBlock = undefined;
-        removedUnsafeSurplus = true;
+        removedUnsafeExposure = true;
       }
-      if (currentPatterns.length > 0 &&
-          validation.ledger.achieved.main_strength > weeklyExposureContract.strength.targetCount) {
+      const strengthUnsafe = currentPatterns.length > 0 && (
+        offset === -1 || offset === 0 || offset === 1 ||
+        (offset === -2 && hasLower)
+      );
+      if (strengthUnsafe) {
         session.strengthIntent = undefined;
         session.strengthPattern = undefined;
         session.strengthPatternContributions = undefined;
-        removedUnsafeSurplus = true;
+        removedUnsafeExposure = true;
       }
-      if (removedUnsafeSurplus &&
+      if (removedUnsafeExposure &&
           !plannedPatternsForAllocation(session).length &&
           !session.conditioningCategory && !session.speedBlock) {
         session.tier = 'recovery';
@@ -6207,13 +6348,70 @@ function buildWeeklyPlan(
         session.isHardExposure = false;
         session.stressLevel = 'low';
       }
-      if (removedUnsafeSurplus) {
+      if (removedUnsafeExposure) {
         validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
       }
     }
     let missingPatterns = weeklyExposureContract.strength.requiredPatterns.filter(
       (pattern) => !validation.ledger.strengthPatterns.includes(pattern),
     );
+
+    // Restore missing members of an already-selected strength family before
+    // consuming another day. A safe squat day can also carry hinge, and a
+    // safe push day can also carry pull. This is the phase-owned pattern
+    // repair promised by Section 18 and is especially important when a
+    // fixture leaves only upper work legal at G-2.
+    for (const missing of [...missingPatterns]) {
+      const lower = missing === 'squat' || missing === 'hinge';
+      const host = adjusted.find((session) => {
+        if (session.isTeamDay) return false;
+        const current = effectivePatternsForAllocation(session);
+        if (current.length === 0 || current.includes(missing)) return false;
+        const sameFamily = current.some((pattern) => lower
+          ? pattern === 'squat' || pattern === 'hinge'
+          : pattern === 'push' || pattern === 'pull');
+        const proposed = [...new Set([...current, missing])];
+        return sameFamily && isSafeRepairDay(session, false, proposed);
+      });
+      if (!host) continue;
+      assignRequiredStrength(host, [
+        ...new Set([...plannedPatternsForAllocation(host), missing]),
+      ]);
+      validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
+      missingPatterns = weeklyExposureContract.strength.requiredPatterns.filter(
+        (pattern) => !validation.ledger.strengthPatterns.includes(pattern),
+      );
+    }
+
+    // When the contract has already reduced frequency to the available safe
+    // lift count, restore remaining cross-family patterns inside those lifts
+    // instead of demanding another day. This is the constrained full-body
+    // form of the same Section 18 broadening rule used above.
+    if (missingPatterns.length > 0 &&
+        validation.ledger.achieved.main_strength >= weeklyExposureContract.strength.targetCount) {
+      for (const missing of [...missingPatterns]) {
+        const host = adjusted
+          .filter((session) => {
+            const current = effectivePatternsForAllocation(session);
+            if (current.length === 0 || current.includes(missing)) return false;
+            const proposed = [...new Set([...current, missing])];
+            return isSafeRepairDay(session, true, proposed);
+          })
+          .sort((left, right) =>
+            Number(!!left.isTeamDay) - Number(!!right.isTeamDay) ||
+            effectivePatternsForAllocation(left).length - effectivePatternsForAllocation(right).length ||
+            trainingOrder(dayNameToNumber(left.dayOfWeek ?? '')) -
+              trainingOrder(dayNameToNumber(right.dayOfWeek ?? '')))[0];
+        if (!host) continue;
+        assignRequiredStrength(host, [
+          ...new Set([...plannedPatternsForAllocation(host), missing]),
+        ]);
+        validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
+        missingPatterns = weeklyExposureContract.strength.requiredPatterns.filter(
+          (pattern) => !validation.ledger.strengthPatterns.includes(pattern),
+        );
+      }
+    }
 
     // Meeting the frequency count is not enough when the typed contract also
     // owns safe required patterns. Prefer replacing a redundant or explicitly
@@ -6251,6 +6449,15 @@ function buildWeeklyPlan(
     );
     if (missingPatterns.length > 0) strengthShortfall = Math.max(1, strengthShortfall);
     if (strengthShortfall > 0) {
+      const repairPatternFrequencies = new Map<MainStrengthPattern, number>();
+      for (const candidate of adjusted) {
+        for (const pattern of effectivePatternsForAllocation(candidate)) {
+          repairPatternFrequencies.set(
+            pattern,
+            (repairPatternFrequencies.get(pattern) ?? 0) + 1,
+          );
+        }
+      }
       let conditioningSurplus = Math.max(
         0,
         validation.ledger.achieved.conditioning -
@@ -6260,19 +6467,32 @@ function buildWeeklyPlan(
         .filter((session) => {
           const lowValueTier = session.tier === 'recovery' || session.tier === 'optional';
           const ownsConditioning = !!session.conditioningCategory;
-          return isSafeRepairDay(session) &&
+          const teamStrengthStack = session.isTeamDay && !ownsConditioning;
+          const canHostRequiredPattern = weeklyExposureContract.strength.requiredPatterns.some(
+            (pattern) => isSafeRepairDay(session, true, [pattern]),
+          );
+          return canHostRequiredPattern &&
             plannedPatternsForAllocation(session).length === 0 &&
             !session.speedBlock &&
-            ((lowValueTier && (
+            (teamStrengthStack || (lowValueTier && (
               !ownsConditioning || weeklyExposureContract.conditioning.allowCombinedStrengthConditioning
-            )) || (ownsConditioning && conditioningSurplus > 0));
+            )) || (ownsConditioning && (
+              weeklyExposureContract.conditioning.allowCombinedStrengthConditioning ||
+              conditioningSurplus > 0
+            )));
         })
         .sort((left, right) => {
+          const leftCanHostMissing = missingPatterns.some((pattern) =>
+            isSafeRepairDay(left, true, [pattern]));
+          const rightCanHostMissing = missingPatterns.some((pattern) =>
+            isSafeRepairDay(right, true, [pattern]));
           const leftSurplusConditioning = !!left.conditioningCategory &&
             left.tier !== 'recovery' && left.tier !== 'optional';
           const rightSurplusConditioning = !!right.conditioningCategory &&
             right.tier !== 'recovery' && right.tier !== 'optional';
-          return Number(leftSurplusConditioning) - Number(rightSurplusConditioning) ||
+          return Number(!leftCanHostMissing) - Number(!rightCanHostMissing) ||
+            Number(!!left.isTeamDay) - Number(!!right.isTeamDay) ||
+            Number(leftSurplusConditioning) - Number(rightSurplusConditioning) ||
             trainingOrder(dayNameToNumber(left.dayOfWeek ?? '')) -
               trainingOrder(dayNameToNumber(right.dayOfWeek ?? ''));
         });
@@ -6295,16 +6515,39 @@ function buildWeeklyPlan(
         const upperMissing = missingPatterns.filter(
           (pattern) => pattern === 'push' || pattern === 'pull',
         );
-        const plannedPatterns: MainStrengthPattern[] = lowerMissing.length > 0
-          ? lowerMissing.splice(0, lowerMissing.length)
-          : upperMissing.length > 0
-            ? upperMissing.splice(0, upperMissing.length)
-            : ['push', 'pull'];
+        const orderedMissing = [...lowerMissing, ...upperMissing];
+        const orderedBalanced = [...weeklyExposureContract.strength.requiredPatterns]
+          .sort((left, right) =>
+            (repairPatternFrequencies.get(left) ?? 0) -
+            (repairPatternFrequencies.get(right) ?? 0));
+        const compatibleMissing = orderedMissing.filter((pattern) =>
+          isSafeRepairDay(session, true, [pattern]));
+        const firstMissing = compatibleMissing[0];
+        const firstMissingIsLower = firstMissing === 'squat' || firstMissing === 'hinge';
+        const selectedMissingFamily = firstMissing
+          ? compatibleMissing.filter((pattern) => firstMissingIsLower
+            ? pattern === 'squat' || pattern === 'hinge'
+            : pattern === 'push' || pattern === 'pull')
+          : [];
+        const selectedBalanced = orderedBalanced.find((pattern) =>
+          isSafeRepairDay(session, true, [pattern]));
+        const plannedPatterns: MainStrengthPattern[] = selectedMissingFamily.length > 0
+          ? selectedMissingFamily
+          : selectedBalanced
+            ? [selectedBalanced]
+            : [];
+        if (plannedPatterns.length === 0) continue;
         for (const pattern of plannedPatterns) {
           const index = missingPatterns.indexOf(pattern);
           if (index >= 0) missingPatterns.splice(index, 1);
         }
         assignRequiredStrength(session, plannedPatterns);
+        for (const pattern of plannedPatterns) {
+          repairPatternFrequencies.set(
+            pattern,
+            (repairPatternFrequencies.get(pattern) ?? 0) + 1,
+          );
+        }
         strengthShortfall--;
       }
       validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
@@ -6452,6 +6695,16 @@ function buildWeeklyPlan(
       validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
     }
 
+    if (section18Contract) {
+      applySection18ConditioningAllocation(
+        adjusted,
+        inputs,
+        weeklyExposureContract,
+        section18Contract,
+      );
+      validation = evaluateAllocationExposureContract(weeklyExposureContract, adjusted);
+    }
+
     if (!validation.accepted) {
       const detail = validation.unresolvedShortfalls
         .map((violation) => `${violation.code}:${violation.domain ?? 'safety'}=${JSON.stringify(violation.actual)}`)
@@ -6465,6 +6718,7 @@ function buildWeeklyPlan(
           focus: session.focus,
           strength: session.strengthIntent?.plannedPatterns ?? [],
           conditioning: session.conditioningCategory ?? null,
+          conditioningOwnership: session.section18ConditioningRole ?? null,
           speed: session.speedBlock?.kind ?? null,
           team: !!session.isTeamDay,
         })),
@@ -6476,197 +6730,177 @@ function buildWeeklyPlan(
   return adjusted;
 }
 
-// ─── In-season conditioning floor (with-game weeks only) ─────────────────
-//
-// Inserts up to 2 supplementary aerobic_base conditioning sessions into an
-// in-season with-game plan. Mutates the plan in place. Pre-season /
-// off-season / no-game branches are NEVER touched.
-//
-// Conditioning targets per Sam's coaching policy:
-//   - 1 team day:   1 core (Wed standalone OR Tue S+C) + 1 optional (Mon)  = 2 cond
-//   - 2 team days:  0–1 core (only when Wed is a non-team day)  + 1 optional (Mon)
-//                                                                        = 1–2 cond
-//   - 3+ team days: gate trips → 0 cond (saturation rule)
-//
-// Tier rules:
-//   CORE
-//     - Place standalone aerobic_base on Wednesday (G−3) when Wed is a
-//       non-team training day and not already a core strength slot.
-//       If Wednesday sits between Tue/Thu team training, bias it toward
-//       recovery: 20–30min easy bike/row, optional, 3–4/10.
-//     - When Wed is unavailable (team day OR not in selectedDays) AND
-//       teamCount ≤ 1, fall back to Tuesday (G−4) as an S+C aerobic
-//       finisher attached to an existing strength session.
-//     - When Wed is unavailable AND teamCount ≥ 2, SKIP core (per Sam:
-//       2 team days = 1 optional only when Wed is busy).
-//   OPTIONAL
-//     - Always attempt Monday (G−5), regardless of whether core landed.
-//     - Required when teamCount ≥ 2 + Wed is busy (it's the only
-//       conditioning the week gets).
-//     - S+C aerobic finisher attached to Monday's strength session.
-//     - Lower-body pairing → non-running modality (bike/rower/ski erg) so
-//       running stress doesn't compound on legs that just took heavy
-//       squat/hinge.
-//     - Upper-body pairing → running OK (legs fresh).
-//
-// Hard guards (always enforced):
-//   - Never modify a session with isTeamDay=true.
-//   - Never place anything on G−2, G−1, G, G+1 (48h game-proximity).
-//   - Conditioning category MUST be 'aerobic_base' (no sprint/vo2/glycolytic).
-//   - Don't double-up: if any session already carries conditioning, exit.
-//
-// Trigger gate (all must hold; otherwise exit silently):
-//   in-season + has game + teamCount ≤ 2 + ≥5 available days +
-//   readiness === 'high' + no severe injury + plan has zero conditioning.
-//
-// Diagnostic: only emits a structured warning when NEITHER core nor
-// optional could land — i.e. zero conditioning was placed despite the
-// gate matching. Routine "core skipped because Wed is team and 2-team
-// case" is the expected path and emits no warning.
-function applyInSeasonConditioningFloor(
+function applySection18ConditioningAllocation(
   plan: SessionAllocation[],
   inputs: CoachingInputs,
+  legacy: WeeklyExposureContract,
+  contract: WeeklyExposureContractV2,
 ): void {
-  // ── Trigger gate ────────────────────────────────────────────────────
-  if (inputs.seasonPhase !== 'In-season') return;
-  if (!inputs.hasGame) return;
-  const teamDays = inputs.teamTrainingDays || [];
-  if (teamDays.length > 2) return;
-  if (inputs.availableDays < 5) return;
-  const { level: readiness } = calculateReadiness(inputs);
-  if (readiness !== 'high') return;
-  const hasSevere = (inputs.injuries || []).some(i => i.severity === 'Severe');
-  if (hasSevere) return;
-  const alreadyHasCond = plan.some(
-    s => !!s.conditioningCategory || !!s.hasCombinedConditioning,
-  );
-  if (alreadyHasCond) return;
-
-  // ── Day-offset map ──────────────────────────────────────────────────
-  const gameDayNum = inputs.gameDay ? dayNameToNumber(inputs.gameDay) : null;
-  if (gameDayNum === null) return;
-  const teamDayNumSet = new Set(
-    teamDays.map(dayNameToNumber).filter(d => d >= 0),
-  );
-  const isTeamSlot = (s: SessionAllocation): boolean => {
-    if (s.isTeamDay) return true;
-    if (!s.dayOfWeek) return false;
-    return teamDayNumSet.has(dayNameToNumber(s.dayOfWeek));
+  const hasConditioning = (session: SessionAllocation): boolean =>
+    !!session.conditioningCategory || !!session.hasCombinedConditioning;
+  const hasStrength = (session: SessionAllocation): boolean =>
+    plannedPatternsForAllocation(session).length > 0;
+  const fixtureDay = legacy.anchors.gameDay;
+  const day = (session: SessionAllocation): number =>
+    dayNameToNumber(session.dayOfWeek ?? '');
+  const fixtureOffset = (session: SessionAllocation): number | null =>
+    fixtureDay === null ? null : gOffset(day(session), fixtureDay);
+  const fixtureSafe = (session: SessionAllocation): boolean => {
+    const offset = fixtureOffset(session);
+    return offset === null || offset <= -3;
   };
-  const byOffset = new Map<number, SessionAllocation>();
-  for (const s of plan) {
-    if (!s.dayOfWeek) continue;
-    const dn = dayNameToNumber(s.dayOfWeek);
-    if (dn < 0) continue;
-    const off = gOffset(dn, gameDayNum);
-    if (off === -3 || off === -4 || off === -5) {
-      byOffset.set(off, s);
+  const inTrainingOrder = (left: SessionAllocation, right: SessionAllocation): number => {
+    const leftOffset = fixtureOffset(left);
+    const rightOffset = fixtureOffset(right);
+    if (leftOffset !== null && rightOffset !== null && leftOffset !== rightOffset) {
+      return leftOffset - rightOffset;
     }
-  }
-  const teamCount = teamDays.length;
+    const leftDay = day(left);
+    const rightDay = day(right);
+    return (leftDay === 0 ? 7 : leftDay) - (rightDay === 0 ? 7 : rightDay);
+  };
+  const clearConditioning = (session: SessionAllocation): void => {
+    session.hasCombinedConditioning = false;
+    session.attachedConditioningKind = undefined;
+    session.conditioningFlavour = undefined;
+    session.conditioningCategory = undefined;
+    session.conditioningVariant = undefined;
+    session.conditioningFeel = undefined;
+    session.conditioningOffFeet = undefined;
+    session.ergModality = undefined;
+    session.section18ConditioningRole = undefined;
+  };
+  const applyCategory = (
+    session: SessionAllocation,
+    category: NonNullable<SessionAllocation['conditioningCategory']>,
+  ): void => {
+    const strength = hasStrength(session);
+    session.conditioningCategory = category;
+    session.conditioningFlavour = category === 'tempo'
+      ? 'tempo'
+      : category === 'aerobic_base'
+        ? 'aerobic'
+        : 'high-intensity';
+    session.hasCombinedConditioning = strength;
+    session.attachedConditioningKind = strength ? 'component' : undefined;
+    if (strength) session.conditioningOffFeet = true;
+    if (!strength) session.tier = 'core';
+  };
+  const applyOptionalRecovery = (session: SessionAllocation): void => {
+    const strength = hasStrength(session);
+    applyCategory(session, 'aerobic_base');
+    session.section18ConditioningRole = 'optional_recovery_aerobic';
+    session.conditioningVariant = 'reduced';
+    if (!strength) session.tier = 'optional';
+    session.isHardExposure = strength ? session.isHardExposure : false;
+    session.stressLevel = strength ? session.stressLevel : 'low';
+  };
 
-  // S+C label builder — pairs aerobic finisher with strength session.
-  // Sets typed conditioning fields and the human-readable focus suffix.
-  // Lower-body pairing forces non-running modality (Sam's hard rule:
-  // "Lower + conditioning → MUST be non-running").
-  function attachSCFinisher(s: SessionAllocation, durationCap: '15min' | '20min'): void {
-    const isLower = plannedPatternsForAllocation(s).some(
-      (pattern) => pattern === 'squat' || pattern === 'hinge',
+  const optionalRecoveryTarget = Math.max(
+    0,
+    contract.conditioning.optionalRecoveryAerobic.plannerSelectedCount ?? 0,
+  );
+  const optionalOnlyMode = contract.identity.mode === 'early_offseason' ||
+    contract.identity.mode === 'in_season_bye_recovery';
+  if (optionalOnlyMode) {
+    const existing = plan.filter((session) => hasConditioning(session) && !session.isTeamDay)
+      .sort(inTrainingOrder);
+    existing.forEach((session, index) => {
+      if (index < optionalRecoveryTarget) applyOptionalRecovery(session);
+      else clearConditioning(session);
+    });
+    let remaining = Math.max(0, optionalRecoveryTarget - existing.length);
+    const optionalCandidates = plan
+      .filter((session) => !session.isTeamDay && !hasConditioning(session) && !hasStrength(session))
+      .sort((left, right) =>
+        Number(left.tier !== 'recovery') - Number(right.tier !== 'recovery') ||
+        inTrainingOrder(left, right));
+    for (const session of optionalCandidates) {
+      if (remaining <= 0) break;
+      applyOptionalRecovery(session);
+      remaining--;
+    }
+    return;
+  }
+
+  const requiredApp = Math.max(
+    0,
+    contract.conditioning.core.requiredMinimum -
+      legacy.conditioning.creditedTeamTrainingCount -
+      legacy.conditioning.creditedGameOrPracticeMatchCount,
+  );
+  const selectedApp = legacy.conditioning.additionalRequiredCount;
+  const protectedOptional = (session: SessionAllocation): boolean =>
+    fixtureOffset(session) === -2 && session.conditioningCategory === 'aerobic_base';
+  const existingEligible = plan
+    .filter((session) => hasConditioning(session) && !session.isTeamDay &&
+      fixtureSafe(session) && !protectedOptional(session))
+    .sort(inTrainingOrder);
+  const selectedCore: SessionAllocation[] = existingEligible.slice(0, selectedApp);
+  const missing = Math.max(0, selectedApp - selectedCore.length);
+  if (missing > 0) {
+    const candidates = plan
+      .filter((session) => !session.isTeamDay && !hasConditioning(session) && fixtureSafe(session))
+      .filter((session) => legacy.conditioning.allowCombinedStrengthConditioning || !hasStrength(session))
+      .sort((left, right) =>
+        Number(!(left.tier === 'optional' || left.tier === 'recovery')) -
+          Number(!(right.tier === 'optional' || right.tier === 'recovery')) ||
+        inTrainingOrder(left, right));
+    selectedCore.push(...candidates.slice(0, missing));
+  }
+
+  const hardMinimum = contract.conditioning.intensityPolicy.requiredAppHardMinimum;
+  const mediumHardMinimum = contract.conditioning.intensityPolicy.requiredAppMediumHardMinimum;
+  const hardMaximum = contract.conditioning.intensityPolicy.permittedHardCoreMaximum;
+  let hardCount = 0;
+  selectedCore.forEach((session, index) => {
+    let category = session.conditioningCategory ?? 'aerobic_base';
+    if (index < hardMinimum) category = 'vo2';
+    else if (index < mediumHardMinimum && category === 'aerobic_base') category = 'tempo';
+    const hardCategory = category === 'vo2' || category === 'glycolytic' || category === 'sprint';
+    if (hardCategory && hardMaximum !== null && hardCount >= hardMaximum && index >= hardMinimum) {
+      category = 'tempo';
+    }
+    if (category === 'vo2' || category === 'glycolytic' || category === 'sprint') hardCount++;
+    applyCategory(session, category);
+    session.section18ConditioningRole = index < requiredApp
+      ? 'required_core'
+      : 'planner_selected_core';
+    if (category === 'vo2' || category === 'glycolytic' || category === 'sprint') {
+      session.isHardExposure = true;
+      session.stressLevel = 'high';
+    } else if (!hasStrength(session)) {
+      session.isHardExposure = false;
+      session.stressLevel = 'medium';
+    }
+  });
+
+  const selectedSet = new Set(selectedCore);
+  let optionalFlushes = 0;
+  for (const session of plan.filter((candidate) => hasConditioning(candidate) && !candidate.isTeamDay)) {
+    if (selectedSet.has(session)) continue;
+    const offset = fixtureOffset(session);
+    const optionalFixtureSafe = offset === null || offset <= -3 || (
+      offset === -2 &&
+      !hasStrength(session) &&
+      !session.speedBlock
     );
-    s.hasCombinedConditioning = true;
-    s.attachedConditioningKind = 'finisher';
-    s.conditioningCategory = 'aerobic_base';
-    s.conditioningFlavour = 'aerobic';
-    if (isLower) {
-      s.ergModality = 'mixed'; // bike / rower / ski erg
-      s.focus = `${s.focus} + easy aerobic finisher (bike steady or row/ski intervals, ≤${durationCap}, low intensity)`;
-    } else {
-      // Upper / non-strength day — running OK (legs are fresh).
-      s.focus = `${s.focus} + easy aerobic finisher (≤${durationCap}, low intensity)`;
-    }
-  }
-
-  // ── CORE TIER ────────────────────────────────────────────────────────
-  // Wed (G−3) standalone preferred; Tue (G−4) S+C is the fallback ONLY
-  // when teamCount ≤ 1. The 2-team case deliberately skips core when Wed
-  // is busy — Sam's policy: "2 team days → 1 optional only when Wed is a
-  // team day".
-  let corePlaced = false;
-  const g3 = byOffset.get(-3);
-  const g3Eligible =
-    !!g3 && !isTeamSlot(g3) && g3.tier !== 'core';
-  if (g3Eligible) {
-    const wedBetweenTueThuTeam =
-      teamDayNumSet.has(dayNameToNumber('Tuesday')) &&
-      teamDayNumSet.has(dayNameToNumber('Thursday')) &&
-      gameDayNum === dayNameToNumber('Saturday');
-    g3!.tier = 'optional';
-    g3!.focus = wedBetweenTueThuTeam
-      ? 'Easy Aerobic Flush - 20-30min easy bike/row, 3-4/10.'
-      : 'Aerobic base - 25-35min easy run/erg, low intensity.';
-    g3!.conditioningCategory = 'aerobic_base';
-    g3!.conditioningFlavour = 'aerobic';
-    if (wedBetweenTueThuTeam) {
-      g3!.conditioningVariant = 'reduced';
-      g3!.ergModality = 'row';
-    }
-    g3!.isHardExposure = false;
-    corePlaced = true;
-  } else if (teamCount <= 1) {
-    // Tue fallback — 1-team or 0-team weeks only.
-    const g4 = byOffset.get(-4);
     if (
-      g4 &&
-      !isTeamSlot(g4) &&
-      !g4.hasCombinedConditioning &&
-      g4.tier === 'core' &&
-      !!g4.strengthPattern
+      session.conditioningCategory === 'aerobic_base' &&
+      optionalFixtureSafe &&
+      optionalFlushes < contract.conditioning.optionalFlush.preferredRange.max
     ) {
-      // Pair S+C with whatever strength pattern Tue carries — upper or
-      // lower. Lower triggers non-running modality automatically.
-      attachSCFinisher(g4, '15min');
-      corePlaced = true;
+      session.section18ConditioningRole = 'optional_flush';
+      session.conditioningVariant = 'reduced';
+      optionalFlushes++;
+    } else {
+      clearConditioning(session);
     }
   }
 
-  // ── OPTIONAL TIER ────────────────────────────────────────────────────
-  // Always attempt Mon (G−5) regardless of core status. For 2-team-Wed-busy
-  // weeks this is the only conditioning exposure the engine plants.
-  let optionalPlaced = false;
-  const g5 = byOffset.get(-5);
-  if (
-    g5 &&
-    !isTeamSlot(g5) &&
-    g5.tier === 'core' &&
-    !!g5.strengthPattern &&
-    !g5.hasCombinedConditioning
-  ) {
-    attachSCFinisher(g5, '20min');
-    optionalPlaced = true;
-  }
-
-  // ── Diagnostic ───────────────────────────────────────────────────────
-  // Only warn when NEITHER tier landed. "Core skipped because Wed is team
-  // in a 2-team week" is Sam's expected path; that yields optionalPlaced=true
-  // and skips the warning.
-  if (!corePlaced && !optionalPlaced) {
-    const stateOf = (s: SessionAllocation | undefined): string => {
-      if (!s) return 'absent';
-      if (isTeamSlot(s)) return `${s.dayOfWeek}:team`;
-      if (s.tier === 'core' && plannedPatternsForAllocation(s).length > 0) {
-        return s.hasCombinedConditioning ? `${s.dayOfWeek}:combined` : `${s.dayOfWeek}:eligible-${s.strengthPattern}`;
-      }
-      return `${s.dayOfWeek}:tier=${s.tier}/pat=${s.strengthPattern ?? 'none'}`;
-    };
-    // eslint-disable-next-line no-console
-    logger.debug(
-      '[engine] Legacy in-season conditioning placement produced no top-up; shared contract repair/rejection owns acceptance. ' +
-        `G-3=${stateOf(g3)} G-4=${stateOf(byOffset.get(-4))} G-5=${stateOf(g5)} ` +
-        `team_days=[${teamDays.join(', ') || 'none'}] ` +
-        `selected_days=[${inputs.selectedDays.join(', ')}] ` +
-        `gameDay=${inputs.gameDay}.`,
-    );
-  }
+  // A genuine anchor already satisfies the sprint floor in these modes; the
+  // sprint repair below only sees a shortfall when no such credit exists.
+  void inputs;
 }
 
 // ─── In-season push/pull balance safety net ──────────────────────────────
@@ -6783,7 +7017,9 @@ export function enforceInSeasonPushPullBalance(
   };
   let removedConditioning = false;
   const recheckConditioningFloor = (): void => {
-    if (removedConditioning) applyInSeasonConditioningFloor(plan, inputs);
+    // The shared Section 18 allocator runs after pattern repair and restores
+    // any required core component from the phase-owned target.
+    void removedConditioning;
   };
 
   // Up to 2 iterations: handles the both-missing case where iter 1 plants
