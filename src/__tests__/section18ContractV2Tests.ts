@@ -11,6 +11,7 @@ import {
 import {
   buildSection18WeeklyExposureContractV2,
   migrateLegacyWeeklyExposureContractV2,
+  section18PhaseTableSignature,
   type AnchorParticipationState,
   type Section18AuthorisedReduction,
   type Section18ConditioningRole,
@@ -24,6 +25,7 @@ import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuil
 import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
 import type { MainStrengthPattern } from '../rules/strengthPatternContributions';
+import { canonicaliseHydratedProgram } from '../store/programStore';
 
 let pass = 0;
 let fail = 0;
@@ -258,6 +260,26 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
     week.exposureContractV2?.anchors.every((anchor) =>
       anchor.participation === 'normal_unrestricted' &&
       anchor.participationProvenance === 'derived_healthy_unrestricted') === true);
+  ok('generated Contract v2 independently satisfies every planner-selected core target',
+    generated.microcycles.every((candidate) => {
+      const observation = observeMicrocycleSection18(candidate);
+      return observation !== null && [
+        observation.contract.mainStrength.exposure,
+        observation.contract.conditioning.core,
+        observation.contract.sprintHighSpeed.exposure,
+      ].every((policy) => policy.plannerSelectionKind !== 'core' ||
+        policy.unresolvedPlannerSelectedShortfall === 0);
+    }));
+
+  const beforeHydrationSignatures = generated.microcycles.map((candidate) =>
+    section18PhaseTableSignature(candidate.exposureContractV2));
+  const rehydrated = canonicaliseHydratedProgram(
+    JSON.parse(JSON.stringify(generated)) as typeof generated,
+  );
+  ok('rehydration preserves every phase-owned Contract v2 selected-target signature',
+    JSON.stringify(rehydrated.microcycles.map((candidate) =>
+      section18PhaseTableSignature(candidate.exposureContractV2))) ===
+      JSON.stringify(beforeHydrationSignatures));
 
   const legacy = buildWeeklyExposureContract({
     seasonPhase: 'Pre-season', readiness: 'medium', selectedDayNumbers: [1, 2, 3, 4, 5, 6],
@@ -509,20 +531,42 @@ property('P1 achieved above a permitted maximum is always detected',
     strength(3, ['squat', 'hinge', 'push', 'pull']),
     strength(5, ['squat', 'hinge', 'push', 'pull']),
   ]);
-  property('P2 default miss is advisory, not a required shortfall',
-    has(result, 'default_target_miss', 'main_strength') &&
-    !result.findings.some((finding) => finding.code === 'required_minimum_shortfall' && finding.domain === 'main_strength'));
+  property('P2 selected target above the floor remains independently enforceable',
+    has(result, 'planner_selected_target_miss', 'main_strength') &&
+    !has(result, 'required_minimum_shortfall', 'main_strength') &&
+    result.contract.mainStrength.exposure.unresolvedMinimumShortfall === 0 &&
+    result.contract.mainStrength.exposure.unresolvedPlannerSelectedShortfall === 1);
 }
-property('P3 optional work cannot satisfy a core requirement',
+{
+  const c = contract('late_offseason', {
+    plannerSelected: {
+      mainStrength: 3, coreConditioning: 4, optionalFlush: 0,
+      sprintHighSpeed: 1, powerPrimers: 0,
+    },
+  });
+  const result = evaluate(c, [
+    strength(1, ['squat', 'hinge', 'push', 'pull']),
+    strength(3, ['squat', 'hinge', 'push', 'pull']),
+    strength(5, ['squat', 'hinge', 'push', 'pull']),
+  ]);
+  property('P3 required, selected and default target outcomes stay distinct',
+    result.contract.mainStrength.exposure.requiredMinimum === 3 &&
+    result.contract.mainStrength.exposure.plannerSelectedTarget === 3 &&
+    result.contract.mainStrength.exposure.defaultTarget === 4 &&
+    result.contract.mainStrength.exposure.unresolvedMinimumShortfall === 0 &&
+    result.contract.mainStrength.exposure.unresolvedPlannerSelectedShortfall === 0 &&
+    has(result, 'default_target_miss', 'main_strength'));
+}
+property('P4 optional work cannot satisfy a core requirement',
   witnesses.flushAsCore.ledger.conditioning.coreCount === 2 && has(witnesses.flushAsCore, 'optional_work_replacing_required_work'));
-property('P4 recovery days can never become full-rest days',
+property('P5 recovery days can never become full-rest days',
   witnesses.recoveryRest.ledger.restStress.activeRecoveryDays.length === 4 &&
   witnesses.recoveryRest.ledger.restStress.trueFullRestDays.length === 1);
-property('P5 prohibited patterns cannot be silently accepted',
+property('P6 prohibited patterns cannot be silently accepted',
   has(witnesses.prohibitedPattern, 'prohibited_pattern_breach'));
-property('P6 unknown/modified participation cannot receive sprint credit',
+property('P7 unknown/modified participation cannot receive sprint credit',
   witnesses.modifiedTt.ledger.sprintHighSpeed.achievedCount === 0);
-property('P7 reduced frequency cannot be exceeded silently',
+property('P8 reduced frequency cannot be exceeded silently',
   has(witnesses.reductionAndPower, 'reduction_contradiction'));
 {
   const c = contract('mid_offseason');
@@ -530,7 +574,7 @@ property('P7 reduced frequency cannot be exceeded silently',
     strength(1, ['squat', 'hinge', 'push', 'pull'], { repeated: { push: 4 } }),
     strength(3, ['squat', 'hinge', 'pull']),
   ]);
-  property('P8 balance uses meaningful main-lift counts',
+  property('P9 balance uses meaningful main-lift counts',
     result.ledger.strengthPatterns.meaningfulMainLiftCount.push === 4 && has(result, 'pattern_imbalance'));
 }
 {
@@ -538,7 +582,7 @@ property('P7 reduced frequency cannot be exceeded silently',
     teamTrainingDays: [2], teamParticipation: normalParticipation(2), currentProductionClaimsAnchorCredit: true,
   });
   const result = evaluate(c, []);
-  property('P9 field anchors never count as formal power primers',
+  property('P10 field anchors never count as formal power primers',
     result.ledger.power.fieldActionPrimerCredit === 0 && result.ledger.power.achievedPrimerCount === 0);
 }
 
@@ -596,6 +640,19 @@ let mutationCount = 0;
   const mutant = cloneObservation(witnesses.reductionAndPower);
   mutant.findings = mutant.findings.filter((finding) => finding.code !== 'reduction_contradiction');
   killed('accept reduction overshoot', has(mutant, 'reduction_contradiction'));
+}
+{
+  mutationCount += 1;
+  const c = contract('late_offseason');
+  const mutant = cloneObservation(evaluate(c, [
+    strength(1, ['squat', 'hinge', 'push', 'pull']),
+    strength(3, ['squat', 'hinge', 'push', 'pull']),
+    strength(5, ['squat', 'hinge', 'push', 'pull']),
+  ]));
+  mutant.findings = mutant.findings.filter((finding) =>
+    finding.code !== 'planner_selected_target_miss');
+  killed('accept required floor as the planner-selected target',
+    has(mutant, 'planner_selected_target_miss'));
 }
 
 console.log(`\nsection18ContractV2Tests: ${pass} passed, ${fail} failed`);

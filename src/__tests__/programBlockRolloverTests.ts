@@ -431,8 +431,13 @@ console.log('\n-- Block-to-block exercise variation and automatic trigger --');
     corrected,
     JSON.stringify(result.program?.microcycles.map((week) => week.exposureContract)));
   ok('rollover emits an observable Section 18 contract for every new week',
-    result.program?.microcycles.every((week) =>
-      week.exposureContractV2?.protocolVersion === 2 && !!observeMicrocycleSection18(week)) === true);
+    result.program?.microcycles.every((week) => {
+      const observation = observeMicrocycleSection18(week);
+      return week.exposureContractV2?.protocolVersion === 2 && observation !== null &&
+        observation.contract.mainStrength.exposure.unresolvedPlannerSelectedShortfall === 0 &&
+        observation.contract.conditioning.core.unresolvedPlannerSelectedShortfall === 0 &&
+        observation.contract.sprintHighSpeed.exposure.unresolvedPlannerSelectedShortfall === 0;
+    }) === true);
 }
 
 {

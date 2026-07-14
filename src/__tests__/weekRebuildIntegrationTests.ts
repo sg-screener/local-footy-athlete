@@ -559,8 +559,13 @@ console.log('\n── Rebuild preserves corrected pre-season frequency ──');
     accepted,
     JSON.stringify(rebuilt.microcycles.map((week) => week.exposureContract)));
   ok('canonical rebuild emits an observable Section 18 contract for every week',
-    rebuilt.microcycles.every((week) =>
-      week.exposureContractV2?.protocolVersion === 2 && !!observeMicrocycleSection18(week)));
+    rebuilt.microcycles.every((week) => {
+      const observation = observeMicrocycleSection18(week);
+      return week.exposureContractV2?.protocolVersion === 2 && observation !== null &&
+        observation.contract.mainStrength.exposure.unresolvedPlannerSelectedShortfall === 0 &&
+        observation.contract.conditioning.core.unresolvedPlannerSelectedShortfall === 0 &&
+        observation.contract.sprintHighSpeed.exposure.unresolvedPlannerSelectedShortfall === 0;
+    }));
 }
 
 resetWorld();

@@ -114,6 +114,8 @@ export interface Section18NumericPolicy {
   plannerSelectionKind: Section18PlannerSelectionKind;
   achievedCount: number | null;
   unresolvedMinimumShortfall: number | null;
+  /** Core selection is independently enforceable above the required floor. */
+  unresolvedPlannerSelectedShortfall: number | null;
   maximumBreach: number | null;
 }
 
@@ -474,8 +476,32 @@ function numericPolicy(args: {
     plannerSelectionKind: args.selectionKind ?? 'core',
     achievedCount: null,
     unresolvedMinimumShortfall: null,
+    unresolvedPlannerSelectedShortfall: null,
     maximumBreach: null,
   };
+}
+
+/**
+ * Stable Section 18 signature for cross-path phase-table comparisons.
+ *
+ * Contract v2 is the phase-planner authority. Legacy targetCount projections
+ * must not decide whether Repeat Week may retain source prescriptions. Early
+ * Off-season keeps optional main-strength selection explicit without turning
+ * it into an enforceable core target.
+ */
+export function section18PhaseTableSignature(
+  contract: WeeklyExposureContractV2 | null | undefined,
+): string {
+  if (!contract) return 'missing';
+  const mainStrength = contract.mainStrength.exposure.plannerSelectionKind === 'optional'
+    ? contract.mainStrength.optionalMainStrengthSelected
+    : contract.mainStrength.exposure.plannerSelectedTarget;
+  return JSON.stringify({
+    mode: contract.identity.mode,
+    mainStrength,
+    coreConditioning: contract.conditioning.core.plannerSelectedTarget,
+    sprintHighSpeed: contract.sprintHighSpeed.exposure.plannerSelectedTarget,
+  });
 }
 
 function expectedSubphase(input: Section18ContractV2Input): Section18Subphase | null {

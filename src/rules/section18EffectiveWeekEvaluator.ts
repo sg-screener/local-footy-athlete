@@ -23,6 +23,7 @@ export type Section18FindingSeverity = 'blocking' | 'advisory';
 
 export type Section18FindingCode =
   | 'required_minimum_shortfall'
+  | 'planner_selected_target_miss'
   | 'default_target_miss'
   | 'maximum_breach'
   | 'optional_work_replacing_required_work'
@@ -447,6 +448,8 @@ function evaluateNumeric(args: {
   actual: number;
   required: number;
   defaultTarget: number;
+  plannerSelectedTarget: number | null;
+  plannerSelectionKind: WeeklyExposureContractV2['mainStrength']['exposure']['plannerSelectionKind'];
   maximum: number | null;
   reductions: readonly Section18AuthorisedReduction[];
   reductionMetric: Section18ReductionMetric;
@@ -461,6 +464,20 @@ function evaluateNumeric(args: {
       expected: args.required,
       actual: args.actual,
       detail: `${args.label} is below the Section 18 required minimum.`,
+      evidence: args.evidence ?? [],
+    });
+  } else if (
+    args.plannerSelectionKind === 'core' &&
+    args.plannerSelectedTarget !== null &&
+    args.actual < args.plannerSelectedTarget
+  ) {
+    addFinding(args.findings, {
+      code: 'planner_selected_target_miss',
+      severity: 'blocking',
+      domain: args.domain,
+      expected: args.plannerSelectedTarget,
+      actual: args.actual,
+      detail: `${args.label} meets the floor but misses the phase planner's selected core target.`,
       evidence: args.evidence ?? [],
     });
   } else if (
@@ -517,6 +534,10 @@ function assessContract(
   const assess = (policy: WeeklyExposureContractV2['mainStrength']['exposure'], actual: number) => {
     policy.achievedCount = actual;
     policy.unresolvedMinimumShortfall = Math.max(0, policy.requiredMinimum - actual);
+    policy.unresolvedPlannerSelectedShortfall = policy.plannerSelectionKind === 'core' &&
+      policy.plannerSelectedTarget !== null
+      ? Math.max(0, policy.plannerSelectedTarget - actual)
+      : null;
     policy.maximumBreach = policy.permittedMaximum === null
       ? 0
       : Math.max(0, actual - policy.permittedMaximum);
@@ -650,6 +671,8 @@ export function evaluateSection18EffectiveWeek(
     actual: strengthTotalForMaximum,
     required: contract.mainStrength.exposure.requiredMinimum,
     defaultTarget: contract.mainStrength.exposure.defaultTarget,
+    plannerSelectedTarget: contract.mainStrength.exposure.plannerSelectedTarget,
+    plannerSelectionKind: contract.mainStrength.exposure.plannerSelectionKind,
     maximum: contract.mainStrength.exposure.permittedMaximum,
     reductions: contract.mainStrength.reductions,
     reductionMetric: 'main_strength_frequency',
@@ -673,6 +696,8 @@ export function evaluateSection18EffectiveWeek(
     actual: ledger.conditioning.coreCount,
     required: contract.conditioning.core.requiredMinimum,
     defaultTarget: contract.conditioning.core.defaultTarget,
+    plannerSelectedTarget: contract.conditioning.core.plannerSelectedTarget,
+    plannerSelectionKind: contract.conditioning.core.plannerSelectionKind,
     maximum: contract.conditioning.core.permittedMaximum,
     reductions: contract.conditioning.reductions,
     reductionMetric: 'conditioning_core_frequency',
@@ -767,6 +792,8 @@ export function evaluateSection18EffectiveWeek(
     actual: ledger.sprintHighSpeed.achievedCount,
     required: contract.sprintHighSpeed.exposure.requiredMinimum,
     defaultTarget: contract.sprintHighSpeed.exposure.defaultTarget,
+    plannerSelectedTarget: contract.sprintHighSpeed.exposure.plannerSelectedTarget,
+    plannerSelectionKind: contract.sprintHighSpeed.exposure.plannerSelectionKind,
     maximum: contract.sprintHighSpeed.exposure.permittedMaximum,
     reductions: contract.sprintHighSpeed.reductions,
     reductionMetric: 'sprint_high_speed_frequency',

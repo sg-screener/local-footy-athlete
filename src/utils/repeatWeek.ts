@@ -40,7 +40,11 @@ import type {
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
-import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import {
+  migrateLegacyWeeklyExposureContractV2,
+  section18PhaseTableSignature,
+  type WeeklyExposureContractV2,
+} from '../rules/weeklyExposureContractV2';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine';
 import { addDays, getMondayForDate } from './sessionResolver';
@@ -263,16 +267,6 @@ function resolveRepeatTargetExposureContracts(args: {
   };
 }
 
-function exposureTableSignature(contract: WeeklyExposureContract | null | undefined): string {
-  if (!contract) return 'missing';
-  return JSON.stringify({
-    mode: contract.identity.mode,
-    strength: contract.strength.targetCount,
-    conditioning: contract.conditioning.targetCount,
-    sprintCod: contract.sprintCod.targetCount,
-  });
-}
-
 /**
  * Repeat the source week into the next week, committed as a `repeat_week`
  * overlay through the shared sweep policy. Synchronous; reads the live stores.
@@ -323,8 +317,17 @@ export function repeatWeekIntoNextWeek(args: {
   const targetExposureContractV2 =
     existingTargetOverlay?.exposureContractV2 ?? targetMicrocycle?.exposureContractV2 ??
       resolvedTargetContracts?.v2;
-  const targetTableChanged = exposureTableSignature(sourceMicrocycle?.exposureContract) !==
-    exposureTableSignature(targetExposureContract);
+  const sourceExposureContractV2 = sourceMicrocycle?.exposureContractV2 ?? (
+    sourceMicrocycle?.exposureContract
+      ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {
+          blockNumber: sourceMicrocycle.miniCycleNumber,
+          weekInBlock: ((Math.max(1, sourceMicrocycle.weekNumber) - 1) % 4) + 1,
+          globalWeek: sourceMicrocycle.weekNumber,
+        })
+      : undefined
+  );
+  const targetTableChanged = section18PhaseTableSignature(sourceExposureContractV2) !==
+    section18PhaseTableSignature(targetExposureContractV2);
   const phaseOwnedSourceWorkouts = targetTableChanged
     ? targetMicrocycle?.workouts ?? resolvedTargetContracts?.workouts ?? sourceWorkouts
     : sourceWorkouts;

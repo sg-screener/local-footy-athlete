@@ -23,7 +23,7 @@
   throw new Error('NETWORK DISABLED — repeat week must be fully local');
 };
 
-import type { OnboardingData, Workout } from '../types/domain';
+import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import {
   buildRepeatWeekOverlay,
   shouldRecommendRepeatWeek,
@@ -40,6 +40,7 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { todayISOLocal } from '../utils/appDate';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 import { observeOverlaySection18 } from '../utils/section18ProgramObservation';
+import { section18PhaseTableSignature } from '../rules/weeklyExposureContractV2';
 
 let pass = 0;
 let fail = 0;
@@ -313,7 +314,61 @@ const nextMonday = addDays(thisMonday, 7);
     section18?.contract.protocolVersion === 2 &&
       section18.enforcement === 'observe_only' &&
       section18.ledger.mainStrength.achievedCount === validation?.ledger.achieved.main_strength &&
-      section18.ledger.conditioning.coreCount === validation?.ledger.achieved.conditioning);
+      section18.ledger.conditioning.coreCount === validation?.ledger.achieved.conditioning &&
+      section18.contract.mainStrength.exposure.unresolvedPlannerSelectedShortfall === 0 &&
+      section18.contract.conditioning.core.unresolvedPlannerSelectedShortfall === 0 &&
+      section18.contract.sprintHighSpeed.exposure.unresolvedPlannerSelectedShortfall === 0);
+}
+
+// ── 13. Contract v2, not a stale legacy projection, owns phase regeneration ──
+{
+  resetWorld();
+  const rebuilt = rebuildLocalWeek({
+    baseProfile: OFFSEASON as OnboardingData,
+    newGameDay: null,
+    todayISO: today,
+  });
+  const program = JSON.parse(JSON.stringify(rebuilt.program)) as TrainingProgram;
+  const source = program.microcycles[1];
+  const target = program.microcycles[2];
+  const sourceWeekStart = source.startDate.slice(0, 10);
+  const targetWeekStart = target.startDate.slice(0, 10);
+  // Simulate a stale compatibility projection. Contract v2 still carries the
+  // authoritative early -> mid Off-season table change.
+  target.exposureContract = source.exposureContract
+    ? JSON.parse(JSON.stringify(source.exposureContract))
+    : undefined;
+  ok('Repeat regression fixture has distinct Contract v2 phase signatures',
+    section18PhaseTableSignature(source.exposureContractV2) !==
+      section18PhaseTableSignature(target.exposureContractV2));
+
+  useProgramStore.setState({
+    currentProgram: program,
+    currentMicrocycle: source,
+    weekScopedOverlays: {},
+  });
+  repeatWeekIntoNextWeek({
+    baseProfile: OFFSEASON as OnboardingData,
+    sourceWeekDate: sourceWeekStart,
+    todayISO: today,
+  });
+  const overlay = useProgramStore.getState().weekScopedOverlays[targetWeekStart];
+  const targetIds = target.workouts.map((workout) => workout.id);
+  const copied = Object.values(overlay?.workoutsByDate ?? {})
+    .filter((workout): workout is Workout => !!workout);
+  ok('Repeat regenerates from target-phase workouts when Contract v2 signatures differ',
+    copied.length > 0 && copied.every((workout) =>
+      targetIds.some((id) => workout.id.startsWith(`${id}:repeat-week:`))),
+    copied.map((workout) => workout.id).join(','));
+
+  const observation = overlay ? observeOverlaySection18(overlay, target) : null;
+  ok('regenerated Repeat Week satisfies the target planner-selected core contract',
+    observation?.contract.identity.mode === 'mid_offseason' &&
+      observation.contract.mainStrength.exposure.unresolvedPlannerSelectedShortfall === 0 &&
+      observation.contract.conditioning.core.unresolvedPlannerSelectedShortfall === 0 &&
+      !observation.blockingViolations.some((finding) =>
+        finding.code === 'planner_selected_target_miss'),
+    JSON.stringify(observation?.findings));
 }
 
 console.log(`\nSummary: ${pass} passed, ${fail} failed`);
