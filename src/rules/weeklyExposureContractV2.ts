@@ -17,6 +17,10 @@ import type {
   WeeklyExposureReduction,
   WeeklyExposureReductionReason,
 } from './weeklyExposureContract';
+import {
+  resolveSeasonSubphaseAtPhaseWeek,
+  type SeasonPhaseClockResolutionProvenance,
+} from './seasonPhaseClock';
 
 export const WEEKLY_EXPOSURE_CONTRACT_V2_VERSION = 2 as const;
 
@@ -170,7 +174,9 @@ export interface Section18Identity {
   globalWeek: number | null;
   /** Time since phase entry. Null until the product persists that clock. */
   phaseWeek: number | null;
-  phaseWeekProvenance: 'explicit_phase_clock' | 'program_block_derived' | 'legacy_unknown';
+  phaseEntryWeekStartISO: string | null;
+  phaseClockSelectedPhase: SeasonPhase | null;
+  phaseWeekProvenance: SeasonPhaseClockResolutionProvenance | 'legacy_unknown';
   weekKind: WeekKind;
   anchorState: Section18AnchorState;
 }
@@ -315,6 +321,8 @@ export interface Section18ContractV2Input {
   weekInBlock?: number | null;
   globalWeek?: number | null;
   phaseWeek?: number | null;
+  phaseEntryWeekStartISO?: string | null;
+  phaseClockSelectedPhase?: SeasonPhase | null;
   phaseWeekProvenance?: Section18Identity['phaseWeekProvenance'];
   weekKind?: WeekKind;
   anchorState: Section18AnchorState;
@@ -461,23 +469,17 @@ function numericPolicy(args: {
 }
 
 function expectedSubphase(input: Section18ContractV2Input): Section18Subphase | null {
-  const phaseWeek = input.phaseWeek ?? input.globalWeek ?? (
-    input.blockNumber && input.weekInBlock
-      ? (input.blockNumber - 1) * 4 + input.weekInBlock
-      : null
-  );
+  const phaseWeek = input.phaseWeek;
   if (input.seasonPhase === 'Off-season') {
-    if (!phaseWeek) return null;
-    if (phaseWeek <= 2) return 'early_offseason';
-    if (phaseWeek <= 4) return 'mid_offseason';
-    return 'late_offseason';
+    return phaseWeek
+      ? resolveSeasonSubphaseAtPhaseWeek(input.seasonPhase, phaseWeek)
+      : null;
   }
   if (input.seasonPhase === 'Pre-season') {
     if (input.anchorState === 'practice_match') return 'practice_match_week';
-    if (!phaseWeek) return null;
-    if (phaseWeek === 1) return 'early_preseason';
-    if (phaseWeek <= 3) return 'mid_preseason';
-    return 'late_preseason';
+    return phaseWeek
+      ? resolveSeasonSubphaseAtPhaseWeek(input.seasonPhase, phaseWeek)
+      : null;
   }
   if (input.anchorState === 'game') return 'game_week';
   return input.mode === 'in_season_bye_recovery' ? 'bye_recovery' : 'bye_build';
@@ -708,7 +710,9 @@ export function buildSection18WeeklyExposureContractV2(
       weekInBlock: input.weekInBlock ?? null,
       globalWeek: input.globalWeek ?? null,
       phaseWeek: input.phaseWeek ?? null,
-      phaseWeekProvenance: input.phaseWeekProvenance ?? 'program_block_derived',
+      phaseEntryWeekStartISO: input.phaseEntryWeekStartISO ?? null,
+      phaseClockSelectedPhase: input.phaseClockSelectedPhase ?? null,
+      phaseWeekProvenance: input.phaseWeekProvenance ?? 'legacy_unknown',
       weekKind: input.weekKind ?? 'build',
       anchorState: input.anchorState,
     },
@@ -910,6 +914,8 @@ export function migrateLegacyWeeklyExposureContractV2(
     weekInBlock: identity.weekInBlock,
     globalWeek: identity.globalWeek,
     phaseWeek: null,
+    phaseEntryWeekStartISO: null,
+    phaseClockSelectedPhase: null,
     phaseWeekProvenance: 'legacy_unknown',
     weekKind: legacy.identity.weekKind,
     anchorState: anchorStateFromLegacy(legacy),

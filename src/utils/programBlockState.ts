@@ -3,6 +3,11 @@ import {
   resolveWeekIntensityMultiplier,
   resolveWeekKind,
 } from '../rules/deloadWeekRules';
+import {
+  resolveSeasonPhaseClock,
+  type SeasonPhaseClock,
+  type SeasonPhaseClockResolution,
+} from '../rules/seasonPhaseClock';
 
 export const WEEKS_PER_BLOCK = 4;
 const DAYS_PER_WEEK = 7;
@@ -30,6 +35,10 @@ export interface ProgramBlockState {
   weekEnd: string;
   /** Metadata consumed by existing microcycle/progression machinery. */
   weekKind: WeekKind;
+  /** Canonical phase-age result for this target calendar week. */
+  phaseClock: SeasonPhaseClock;
+  phaseResolution: SeasonPhaseClockResolution;
+  phaseWeekNumber: number;
   intensityMultiplier: number;
   weeksSinceDeload: number;
   consecutiveBuildWeeks: number;
@@ -188,12 +197,41 @@ export function getBlockNumberForDate(
 
 export function resolveIntensityMultiplier(
   seasonPhase: SeasonPhase | null | undefined,
-  weekInBlock: number,
+  phaseWeekNumber: number,
 ): number {
   return resolveWeekIntensityMultiplier(
     seasonPhase,
-    resolveWeekKind(seasonPhase, weekInBlock),
+    resolveWeekKind(seasonPhase, phaseWeekNumber),
   );
+}
+
+function phaseProgressionCounters(
+  seasonPhase: SeasonPhase | null | undefined,
+  phaseWeekNumber: number,
+  fallbackWeekInBlock: number,
+): { weeksSinceDeload: number; consecutiveBuildWeeks: number } {
+  const cycleWeek = seasonPhase === 'Pre-season'
+    ? ((phaseWeekNumber - 1) % WEEKS_PER_BLOCK) + 1
+    : seasonPhase === 'Off-season' && phaseWeekNumber > WEEKS_PER_BLOCK
+      ? ((phaseWeekNumber - WEEKS_PER_BLOCK - 1) % WEEKS_PER_BLOCK) + 1
+      : seasonPhase === 'Off-season'
+        ? phaseWeekNumber
+        : fallbackWeekInBlock;
+  return {
+    weeksSinceDeload: Math.max(0, cycleWeek - 1),
+    consecutiveBuildWeeks: Math.max(0, cycleWeek - 1),
+  };
+}
+
+function clockFromEffectiveStart(
+  selectedPhase: SeasonPhase,
+  effectiveWeekStartISO: string,
+  persistedClock?: SeasonPhaseClock | null,
+): SeasonPhaseClock {
+  return persistedClock ?? resolveSeasonPhaseClock({
+    selectedPhase,
+    targetWeekStartISO: effectiveWeekStartISO,
+  }).clock;
 }
 
 export function getProgramBlockStateForDate(args: {
@@ -201,6 +239,7 @@ export function getProgramBlockStateForDate(args: {
   programStartISO: string;
   blockNumber?: number;
   seasonPhase?: SeasonPhase | null;
+  seasonPhaseClock?: SeasonPhaseClock | null;
 }): ProgramBlockState {
   const programStart = args.programStartISO.split('T')[0];
   const anchorBounds = computeBlockBounds(atNoon(programStart));
@@ -214,7 +253,19 @@ export function getProgramBlockStateForDate(args: {
   const weekStart = addDaysISO(blockStart, (weekInBlock - 1) * DAYS_PER_WEEK);
   const weekEnd = addDaysISO(weekStart, DAYS_PER_WEEK - 1);
 
-  const weekKind = resolveWeekKind(args.seasonPhase, weekInBlock);
+  const seasonPhase = args.seasonPhase ?? args.seasonPhaseClock?.selectedPhase ?? 'In-season';
+  const seasonPhaseClock = clockFromEffectiveStart(
+    seasonPhase,
+    anchorBounds.blockStart,
+    args.seasonPhaseClock,
+  );
+  const phaseResolution = resolveSeasonPhaseClock({
+    selectedPhase: seasonPhase,
+    targetWeekStartISO: weekStart,
+    persistedClock: seasonPhaseClock,
+  });
+  const weekKind = phaseResolution.weekKind;
+  const counters = phaseProgressionCounters(seasonPhase, phaseResolution.phaseWeekNumber, weekInBlock);
   return {
     blockNumber,
     miniCycleNumber: blockNumber,
@@ -225,9 +276,11 @@ export function getProgramBlockStateForDate(args: {
     weekStart,
     weekEnd,
     weekKind,
-    intensityMultiplier: resolveWeekIntensityMultiplier(args.seasonPhase, weekKind),
-    weeksSinceDeload: weekInBlock - 1,
-    consecutiveBuildWeeks: Math.max(0, weekInBlock - 1),
+    phaseClock: phaseResolution.clock,
+    phaseResolution,
+    phaseWeekNumber: phaseResolution.phaseWeekNumber,
+    intensityMultiplier: resolveWeekIntensityMultiplier(seasonPhase, weekKind),
+    ...counters,
   };
 }
 
@@ -245,6 +298,7 @@ export function getStoredBlockStateForDate(
   state: StoredProgramBlockState,
   dateISO: string,
   seasonPhase?: SeasonPhase | null,
+  seasonPhaseClock?: SeasonPhaseClock | null,
 ): ProgramBlockState {
   const weekInBlock = getWeekInBlock(state.blockStartDate, dateISO);
   const blockNumber = getBlockNumberForDate(state.blockStartDate, state.blockNumber, dateISO);
@@ -256,7 +310,19 @@ export function getStoredBlockStateForDate(
   const blockEnd = addDaysISO(blockStart, DAYS_PER_BLOCK - 1);
   const weekStart = addDaysISO(blockStart, (weekInBlock - 1) * DAYS_PER_WEEK);
   const weekEnd = addDaysISO(weekStart, DAYS_PER_WEEK - 1);
-  const weekKind = resolveWeekKind(seasonPhase, weekInBlock);
+  const selectedPhase = seasonPhase ?? seasonPhaseClock?.selectedPhase ?? 'In-season';
+  const effectiveClock = clockFromEffectiveStart(
+    selectedPhase,
+    state.blockStartDate,
+    seasonPhaseClock,
+  );
+  const phaseResolution = resolveSeasonPhaseClock({
+    selectedPhase,
+    targetWeekStartISO: weekStart,
+    persistedClock: effectiveClock,
+  });
+  const weekKind = phaseResolution.weekKind;
+  const counters = phaseProgressionCounters(selectedPhase, phaseResolution.phaseWeekNumber, weekInBlock);
   return {
     blockNumber,
     miniCycleNumber: blockNumber,
@@ -267,9 +333,11 @@ export function getStoredBlockStateForDate(
     weekStart,
     weekEnd,
     weekKind,
-    intensityMultiplier: resolveWeekIntensityMultiplier(seasonPhase, weekKind),
-    weeksSinceDeload: getWeeksSinceDeload(state.blockStartDate, dateISO),
-    consecutiveBuildWeeks: Math.max(0, weekInBlock - 1),
+    phaseClock: phaseResolution.clock,
+    phaseResolution,
+    phaseWeekNumber: phaseResolution.phaseWeekNumber,
+    intensityMultiplier: resolveWeekIntensityMultiplier(selectedPhase, weekKind),
+    ...counters,
   };
 }
 
@@ -277,14 +345,27 @@ export function buildBlockWeekStates(args: {
   blockStartISO: string;
   blockNumber?: number;
   seasonPhase?: SeasonPhase | null;
+  seasonPhaseClock?: SeasonPhaseClock | null;
 }): ProgramBlockState[] {
   const blockNumber = Math.max(1, Math.floor(args.blockNumber ?? 1));
   const blockEnd = addDaysISO(args.blockStartISO, DAYS_PER_BLOCK - 1);
+  const selectedPhase = args.seasonPhase ?? args.seasonPhaseClock?.selectedPhase ?? 'In-season';
+  const seasonPhaseClock = clockFromEffectiveStart(
+    selectedPhase,
+    args.blockStartISO,
+    args.seasonPhaseClock,
+  );
   return Array.from({ length: WEEKS_PER_BLOCK }, (_, index) => {
     const weekInBlock = index + 1;
     const weekStart = addDaysISO(args.blockStartISO, index * DAYS_PER_WEEK);
     const weekEnd = addDaysISO(weekStart, DAYS_PER_WEEK - 1);
-    const weekKind = resolveWeekKind(args.seasonPhase, weekInBlock);
+    const phaseResolution = resolveSeasonPhaseClock({
+      selectedPhase,
+      targetWeekStartISO: weekStart,
+      persistedClock: seasonPhaseClock,
+    });
+    const weekKind = phaseResolution.weekKind;
+    const counters = phaseProgressionCounters(selectedPhase, phaseResolution.phaseWeekNumber, weekInBlock);
     return {
       blockNumber,
       miniCycleNumber: blockNumber,
@@ -295,9 +376,11 @@ export function buildBlockWeekStates(args: {
       weekStart,
       weekEnd,
       weekKind,
-      intensityMultiplier: resolveWeekIntensityMultiplier(args.seasonPhase, weekKind),
-      weeksSinceDeload: weekInBlock - 1,
-      consecutiveBuildWeeks: Math.max(0, weekInBlock - 1),
+      phaseClock: phaseResolution.clock,
+      phaseResolution,
+      phaseWeekNumber: phaseResolution.phaseWeekNumber,
+      intensityMultiplier: resolveWeekIntensityMultiplier(selectedPhase, weekKind),
+      ...counters,
     };
   });
 }

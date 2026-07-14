@@ -120,6 +120,10 @@ import type {
   GenerationInjuryConstraint,
   GenerationReadinessTier,
 } from './generationConstraints';
+import type {
+  SeasonPhaseClock,
+  SeasonPhaseClockResolutionProvenance,
+} from '../rules/seasonPhaseClock';
 
 // ─── Input Types ───
 
@@ -151,6 +155,11 @@ export interface CoachingInputs {
   miniCycleNumber?: number;
   weekInBlock?: number;
   weekKind?: WeekKind;
+  /** Canonical continuous week inside the persisted selected season phase. */
+  phaseWeekNumber?: number;
+  phaseEntryWeekStartISO?: string;
+  phaseClockSelectedPhase?: SeasonPhase;
+  phaseClockProvenance?: SeasonPhaseClockResolutionProvenance;
   offseasonSubphase?: OffseasonSubphase;
   preseasonSubphase?: PreseasonSubphase;
   /** Resolved before contract construction; false authorises equipment reduction. */
@@ -176,6 +185,9 @@ export interface OnboardingToCoachingInputsOptions {
   miniCycleNumber?: number;
   weekInBlock?: number;
   weekKind?: WeekKind;
+  phaseWeekNumber?: number;
+  phaseClock?: SeasonPhaseClock;
+  phaseClockProvenance?: SeasonPhaseClockResolutionProvenance;
   offseasonSubphase?: OffseasonSubphase;
   preseasonSubphase?: PreseasonSubphase;
   generationConstraints?: GenerationConstraintContext;
@@ -516,11 +528,7 @@ function section18ModeAndSubphase(
       anchorState: 'bye',
     };
   }
-  const phaseWeek = Math.max(1, inputs.weekNumber ?? (
-    inputs.miniCycleNumber && inputs.weekInBlock
-      ? (inputs.miniCycleNumber - 1) * 4 + inputs.weekInBlock
-      : 1
-  ));
+  const phaseWeek = Math.max(1, inputs.phaseWeekNumber ?? 1);
   const mode: Section18WeekMode = inputs.seasonPhase === 'Off-season'
     ? phaseWeek <= 2
       ? 'early_offseason'
@@ -570,8 +578,10 @@ function buildParallelSection18Contract(args: {
     blockNumber: inputs.miniCycleNumber ?? null,
     weekInBlock: inputs.weekInBlock ?? null,
     globalWeek: inputs.weekNumber ?? null,
-    phaseWeek: null,
-    phaseWeekProvenance: 'program_block_derived',
+    phaseWeek: inputs.phaseWeekNumber ?? null,
+    phaseEntryWeekStartISO: inputs.phaseEntryWeekStartISO ?? null,
+    phaseClockSelectedPhase: inputs.phaseClockSelectedPhase ?? null,
+    phaseWeekProvenance: inputs.phaseClockProvenance ?? 'legacy_unknown',
     weekKind: inputs.weekKind,
     anchorState: identity.anchorState,
     teamTrainingDays: (inputs.teamTrainingDays ?? []).map(dayNameToNumber),
@@ -897,9 +907,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   const offseasonSubphase = resolveOffseasonSubphase({
     seasonPhase: inputs.seasonPhase,
     explicitSubphase: inputs.offseasonSubphase,
-    miniCycleNumber: inputs.miniCycleNumber,
-    weekInBlock: inputs.weekInBlock,
-    weekNumber: inputs.weekNumber,
+    phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const offseasonPolicy = offseasonSubphase
     ? getOffseasonSubphasePolicy(offseasonSubphase, { readiness })
@@ -907,8 +915,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   const preseasonSubphase = resolvePreseasonSubphase({
     seasonPhase: inputs.seasonPhase,
     explicitSubphase: inputs.preseasonSubphase,
-    weekInBlock: inputs.weekInBlock,
-    weekNumber: inputs.weekNumber,
+    phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const preseasonPolicy = preseasonSubphase
     ? getPreseasonSubphasePolicy(preseasonSubphase, {
@@ -1776,9 +1783,7 @@ function buildWeeklyPlan(
   const offseasonSubphase = resolveOffseasonSubphase({
     seasonPhase: inputs.seasonPhase,
     explicitSubphase: inputs.offseasonSubphase,
-    miniCycleNumber: inputs.miniCycleNumber,
-    weekInBlock: inputs.weekInBlock,
-    weekNumber: inputs.weekNumber,
+    phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const offseasonPolicy = offseasonSubphase
     ? getOffseasonSubphasePolicy(offseasonSubphase, { readiness })
@@ -1786,8 +1791,7 @@ function buildWeeklyPlan(
   const preseasonSubphase = resolvePreseasonSubphase({
     seasonPhase: inputs.seasonPhase,
     explicitSubphase: inputs.preseasonSubphase,
-    weekInBlock: inputs.weekInBlock,
-    weekNumber: inputs.weekNumber,
+    phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const preseasonPolicy = preseasonSubphase
     ? getPreseasonSubphasePolicy(preseasonSubphase, {
@@ -7778,9 +7782,7 @@ function buildAIConstraints(
   const offseasonSubphase = resolveOffseasonSubphase({
     seasonPhase: inputs.seasonPhase,
     explicitSubphase: inputs.offseasonSubphase,
-    miniCycleNumber: inputs.miniCycleNumber,
-    weekInBlock: inputs.weekInBlock,
-    weekNumber: inputs.weekNumber,
+    phaseWeekNumber: inputs.phaseWeekNumber,
   });
   const lowerLimbGenerationIssue = activeInjuries.some((injury) =>
     injury.severity >= 4 &&
@@ -8014,6 +8016,10 @@ export function onboardingToCoachingInputs(
     miniCycleNumber: options.miniCycleNumber,
     weekInBlock: options.weekInBlock,
     weekKind: options.weekKind,
+    phaseWeekNumber: options.phaseWeekNumber,
+    phaseEntryWeekStartISO: options.phaseClock?.phaseEntryWeekStartISO,
+    phaseClockSelectedPhase: options.phaseClock?.selectedPhase,
+    phaseClockProvenance: options.phaseClockProvenance,
     offseasonSubphase: options.offseasonSubphase,
     preseasonSubphase: options.preseasonSubphase,
     generationConstraints: options.generationConstraints,

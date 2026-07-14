@@ -20,6 +20,7 @@ export * from './recoveryAddonCoverage';
 export * from './offseasonSubphase';
 export * from './offseasonSubphasePolicy';
 export * from './preseasonSubphase';
+export * from './seasonPhaseClock';
 export * from './preseasonSubphasePolicy';
 export * from './sprintExposureGate';
 export * from './programmingBias';

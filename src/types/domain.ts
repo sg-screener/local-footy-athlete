@@ -479,6 +479,9 @@ export interface TrainingProgram {
   description: string;
   programPhase: ProgramPhase;
 
+  /** Canonical persisted entry clock for the user-selected season phase. */
+  seasonPhaseClock?: import('../rules/seasonPhaseClock').SeasonPhaseClock;
+
   // Duration
   startDate: string; // ISO date
   endDate: string;   // ISO date

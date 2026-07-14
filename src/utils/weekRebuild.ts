@@ -416,9 +416,11 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
   // 1. Candidate week from base programming rules (throws on failure —
   //    nothing has been committed yet).
   const generationDate = scope === 'weekOverlay' ? targetWeekStart! : todayISO;
+  const persistedProgram = useProgramStore.getState().currentProgram;
   const program = generateProgramLocally(profile, {
     todayISO: generationDate,
     blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(generationDate),
+    previousProgram: persistedProgram,
   });
 
   // 2. Canonical context + pure sweep decision.

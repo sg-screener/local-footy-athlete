@@ -1591,8 +1591,7 @@ export function buildWorkoutsFromCoach(
     : athletePrefs;
   const offseasonSubphase = resolveOffseasonSubphase({
     seasonPhase: onboardingData?.seasonPhase,
-    miniCycleNumber: rotationContext?.miniCycleNumber,
-    weekInBlock: rotationContext?.weekInBlock,
+    explicitSubphase: rotationContext?.offseasonSubphase,
   });
   const deloadPolicy = resolveDeloadWeekPolicy(
     onboardingData?.seasonPhase,

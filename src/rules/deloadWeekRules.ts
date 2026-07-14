@@ -5,6 +5,7 @@ import type {
 } from '../types/domain';
 import { EXERCISE_TAGS } from '../data/exerciseTags';
 import { classifyPoolSlot } from '../data/exercisePoolsStrength';
+import { resolveSeasonPhaseWeekKind } from './seasonPhaseClock';
 
 export type DeloadConditioningCategory =
   | 'aerobic_base'
@@ -25,12 +26,9 @@ export interface DeloadWeekPolicy {
 
 export function resolveWeekKind(
   seasonPhase: SeasonPhase | null | undefined,
-  weekInBlock: number,
+  phaseWeekNumber: number,
 ): WeekKind {
-  if ((seasonPhase === 'Off-season' || seasonPhase === 'Pre-season') && weekInBlock === 4) {
-    return 'deload';
-  }
-  return 'build';
+  return resolveSeasonPhaseWeekKind(seasonPhase, phaseWeekNumber);
 }
 
 export function resolveWeekIntensityMultiplier(

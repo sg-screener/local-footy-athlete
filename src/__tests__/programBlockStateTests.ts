@@ -294,7 +294,7 @@ console.log('\n-- End-of-block rollover state --');
       weekKind: rolled.currentMicrocycle?.weekKind,
     }));
   ok('old week-4 deload is not replayed as the new current week',
-    program.microcycles[3].weekKind === 'deload' &&
+    program.microcycles[3].weekKind === 'build' &&
       rolled.currentMicrocycle !== program.microcycles[3] &&
       rolled.currentProgram?.microcycles[0].weekKind === 'build' &&
       rolled.currentProgram.microcycles[3].weekKind === 'deload');

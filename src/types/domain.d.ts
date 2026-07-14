@@ -152,6 +152,7 @@ export interface TrainingProgram {
     name: string;
     description: string;
     programPhase: ProgramPhase;
+    seasonPhaseClock?: import('../rules/seasonPhaseClock').SeasonPhaseClock;
     startDate: string;
     endDate: string;
     microcycles: Microcycle[];

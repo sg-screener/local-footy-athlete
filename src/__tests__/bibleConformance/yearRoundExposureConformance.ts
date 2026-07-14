@@ -410,10 +410,18 @@ export function runYearRoundExposureConformance(
 
   // Fixed reproduction: the constrained late-off-season week is accepted
   // from its canonical effective workouts, not only its allocation rows.
+  const constrainedFirstBlock = generateProgramLocally(profile({
+    trainingDaysPerWeek: 4,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Saturday'],
+  }), { todayISO: '2026-07-13', previousProgram: null });
   const constrainedLateBlock = generateProgramLocally(profile({
     trainingDaysPerWeek: 4,
     preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Saturday'],
-  }), { todayISO: '2026-07-13' });
+  }), {
+    todayISO: '2026-08-10',
+    blockNumber: 2,
+    previousProgram: constrainedFirstBlock,
+  });
   const constrainedLateWeek = constrainedLateBlock.microcycles.find(
     (week) => week.exposureContract?.identity.mode === 'late_offseason',
   );

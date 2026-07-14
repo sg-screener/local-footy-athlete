@@ -1073,12 +1073,14 @@ export function resolveWeekWithConditioning(
             state.blockState,
             day.date,
             state.seasonPhase,
+            state.currentProgram?.seasonPhaseClock,
           )
         : state.currentProgram
           ? getProgramBlockStateForDate({
             dateISO: day.date,
             programStartISO: state.currentProgram.startDate,
             seasonPhase: state.seasonPhase,
+            seasonPhaseClock: state.currentProgram.seasonPhaseClock,
           })
           : undefined;
 

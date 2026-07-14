@@ -26,6 +26,7 @@ import { getSessionComponentRows, getSessionComponents } from '../utils/sessionC
 import { extractVisibleProgramItemsFromWorkout } from '../utils/visibleProgramReadModel';
 import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
 import { combinedConditioningCategoryLabel } from '../utils/weeklyPlanDisplay';
+import { resolveSeasonPhaseClock } from '../rules/seasonPhaseClock';
 
 let pass = 0;
 let fail = 0;
@@ -138,6 +139,8 @@ function visible(workout: Workout, date: string): Workout | null {
 
 const inputs = onboardingToCoachingInputs(PROFILE, {
   availabilityDateISO: '2026-07-06',
+  phaseWeekNumber: 1,
+  preseasonSubphase: 'early_preseason',
 });
 
 section('[1] Edge prompt and first client microcycle share one block-state plan');
@@ -147,6 +150,10 @@ section('[1] Edge prompt and first client microcycle share one block-state plan'
     profile: PROFILE,
     todayISO: '2026-07-06',
     blockNumber: 1,
+    seasonPhaseClock: resolveSeasonPhaseClock({
+      selectedPhase: 'Pre-season',
+      targetWeekStartISO: '2026-07-06',
+    }).clock,
   });
   const firstMicrocyclePlan = buildCoachingPlan({
     ...inputs,
@@ -154,6 +161,8 @@ section('[1] Edge prompt and first client microcycle share one block-state plan'
     weekInBlock: 1,
     weekNumber: 1,
     weekKind: 'build',
+    phaseWeekNumber: 1,
+    preseasonSubphase: 'early_preseason',
   });
   eq(
     'edge prompt structure equals the first normalised block week',
@@ -302,6 +311,7 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
     weekInBlock: 1,
     weekNumber: 1,
     weekKind: 'build',
+    phaseWeekNumber: 1,
     availabilityDateISO: '2026-07-06',
   });
   const earlyPlan = buildCoachingPlan(earlyInputs);
@@ -505,6 +515,10 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
     microcyclePrefix: 'mc-early-exact',
     blockStartISO: '2026-07-06',
     blockNumber: 1,
+    seasonPhaseClock: resolveSeasonPhaseClock({
+      selectedPhase: 'Off-season',
+      targetWeekStartISO: '2026-07-06',
+    }).clock,
     athletePrefs: {},
     availableEquipmentTags: FULL_GYM_EQUIPMENT,
   });
@@ -542,6 +556,7 @@ section('[4] Exact early off-season edge response obeys the deterministic compon
         weekInBlock: ((microcycle.weekNumber - 1) % 4) + 1,
         weekNumber: microcycle.weekNumber,
         weekKind: microcycle.weekKind,
+        phaseWeekNumber: microcycle.exposureContractV2?.identity.phaseWeek ?? undefined,
       });
       const expectedByDay = new Map(
         weekPlan.weeklyPlan.map((entry) => [DAY_NUMBER[entry.dayOfWeek!], entry.planEntryId]),

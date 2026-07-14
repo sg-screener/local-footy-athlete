@@ -29,6 +29,11 @@ import {
   finaliseSection18SafetyWeek,
   finaliseSection18SafetyWorkout,
 } from '../rules/section18SafetyFinaliser';
+import {
+  ensureProgramSeasonPhaseClock,
+  resolveSeasonPhaseClock,
+  type SeasonPhaseClock,
+} from '../rules/seasonPhaseClock';
 
 /**
  * ProgramStore is the final persistence boundary for every generated/edit
@@ -127,7 +132,20 @@ function canonicaliseHydratedWorkout(
 function canonicaliseHydratedMicrocycle(
   microcycle: Microcycle,
   phase?: string,
+  phaseClock?: SeasonPhaseClock,
 ): Microcycle {
+  const selectedPhase = phaseClock?.selectedPhase ?? (
+    /pre/i.test(phase ?? '') ? 'Pre-season' :
+      /off|base/i.test(phase ?? '') ? 'Off-season' :
+        /in/i.test(phase ?? '') ? 'In-season' : null
+  );
+  const phaseResolution = selectedPhase && phaseClock
+    ? resolveSeasonPhaseClock({
+        selectedPhase,
+        targetWeekStartISO: microcycle.startDate,
+        persistedClock: phaseClock,
+      })
+    : null;
   let exposureContractV2 = microcycle.exposureContractV2 ?? (
     microcycle.exposureContract
       ? migrateLegacyWeeklyExposureContractV2(microcycle.exposureContract, {
@@ -137,6 +155,24 @@ function canonicaliseHydratedMicrocycle(
         })
       : undefined
   );
+  if (exposureContractV2 && phaseResolution) {
+    const expectedSubphase = exposureContractV2.identity.anchorState === 'practice_match'
+      ? 'practice_match_week'
+      : phaseResolution.subphase ?? exposureContractV2.identity.expectedSubphase;
+    exposureContractV2 = {
+      ...exposureContractV2,
+      identity: {
+        ...exposureContractV2.identity,
+        seasonPhase: phaseClock!.selectedPhase,
+        expectedSubphase,
+        phaseWeek: phaseResolution.phaseWeekNumber,
+        phaseEntryWeekStartISO: phaseClock!.phaseEntryWeekStartISO,
+        phaseClockSelectedPhase: phaseClock!.selectedPhase,
+        phaseWeekProvenance: 'preserved_persisted_state',
+        weekKind: phaseResolution.weekKind,
+      },
+    };
+  }
   let workouts = microcycle.workouts ?? [];
   if (exposureContractV2) {
     exposureContractV2 = applyGenerationSafetyToSection18Contract({
@@ -148,7 +184,7 @@ function canonicaliseHydratedMicrocycle(
       weekStart: microcycle.startDate.slice(0, 10),
       canonicalContext: {
         phase: exposureContractV2.identity.seasonPhase,
-        weekKind: microcycle.weekKind,
+        weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
         section18EvidenceMode: 'preserve_legacy_unknown',
       },
     });
@@ -156,16 +192,31 @@ function canonicaliseHydratedMicrocycle(
     exposureContractV2 = safety.contract;
   } else {
     workouts = workouts.map((workout) =>
-      canonicaliseHydratedWorkout(workout, phase, microcycle.weekKind));
+      canonicaliseHydratedWorkout(workout, phase, phaseResolution?.weekKind ?? microcycle.weekKind));
   }
-  return { ...microcycle, workouts, exposureContractV2 };
+  return {
+    ...microcycle,
+    weekKind: phaseResolution?.weekKind ?? microcycle.weekKind,
+    intensityMultiplier: phaseResolution
+      ? phaseResolution.weekKind === 'deload'
+        ? phaseClock?.selectedPhase === 'Off-season' ? 0.85 : 0.9
+        : 1
+      : microcycle.intensityMultiplier,
+    workouts,
+    exposureContractV2,
+  };
 }
 
-function canonicaliseHydratedProgram(program: TrainingProgram): TrainingProgram {
+export function canonicaliseHydratedProgram(program: TrainingProgram): TrainingProgram {
+  const clockedProgram = ensureProgramSeasonPhaseClock(program);
   return {
-    ...program,
-    microcycles: (program.microcycles ?? []).map((microcycle) =>
-      canonicaliseHydratedMicrocycle(microcycle, program.programPhase)),
+    ...clockedProgram,
+    microcycles: (clockedProgram.microcycles ?? []).map((microcycle) =>
+      canonicaliseHydratedMicrocycle(
+        microcycle,
+        clockedProgram.programPhase,
+        clockedProgram.seasonPhaseClock,
+      )),
   };
 }
 
@@ -189,12 +240,16 @@ function canonicaliseHydratedSafetyWorkout(
 function canonicaliseHydratedState(
   persistedState: Partial<ProgramState>,
 ): Partial<ProgramState> {
-  const phase = persistedState.currentProgram?.programPhase;
   const currentProgram = persistedState.currentProgram
     ? canonicaliseHydratedProgram(persistedState.currentProgram)
     : persistedState.currentProgram;
+  const phase = currentProgram?.seasonPhaseClock?.selectedPhase ?? currentProgram?.programPhase;
   const currentMicrocycle = persistedState.currentMicrocycle
-    ? canonicaliseHydratedMicrocycle(persistedState.currentMicrocycle, phase)
+    ? canonicaliseHydratedMicrocycle(
+        persistedState.currentMicrocycle,
+        phase,
+        currentProgram?.seasonPhaseClock,
+      )
     : persistedState.currentMicrocycle;
   const weekScopedOverlays = persistedState.weekScopedOverlays
     ? Object.fromEntries(Object.entries(persistedState.weekScopedOverlays).map(([weekStart, overlay]) => [
@@ -462,7 +517,9 @@ export const useProgramStore = create<ProgramState>()(
       // clearManualOverrides() where a true fresh slate is intended
       // (onboarding completion, program create, profile reset).
       setCurrentProgram: (program) => {
-        const validatedProgram = program ? postValidateProgram(program) : null;
+        const validatedProgram = program
+          ? postValidateProgram(ensureProgramSeasonPhaseClock(program))
+          : null;
         set(() => ({
           currentProgram: validatedProgram,
           currentMicrocycle: null,

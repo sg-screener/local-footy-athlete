@@ -37,6 +37,10 @@ export type Section18FindingCode =
   | 'hard_day_breach'
   | 'reduction_contradiction'
   | 'phase_subphase_policy_mismatch'
+  | 'illegal_first_offseason_deload'
+  | 'preseason_phase_age_reset'
+  | 'offseason_phase_age_reset'
+  | 'phase_clock_phase_mismatch'
   | 'equipment_substitution_missing'
   | 'legacy_evidence_unknown';
 
@@ -544,6 +548,40 @@ export function evaluateSection18EffectiveWeek(
   const findings: Section18Finding[] = [];
 
   if (
+    contract.identity.phaseClockSelectedPhase &&
+    contract.identity.phaseClockSelectedPhase !== contract.identity.seasonPhase
+  ) {
+    addFinding(findings, {
+      code: 'phase_clock_phase_mismatch',
+      severity: 'blocking',
+      domain: 'identity',
+      expected: contract.identity.phaseClockSelectedPhase,
+      actual: contract.identity.seasonPhase,
+      detail: 'The programmed phase differs from the persisted user-selected phase clock.',
+      evidence: [
+        `entry=${contract.identity.phaseEntryWeekStartISO ?? 'unknown'}`,
+        `phaseWeek=${contract.identity.phaseWeek ?? 'unknown'}`,
+      ],
+    });
+  }
+
+  if (
+    contract.identity.seasonPhase === 'Off-season' &&
+    (contract.identity.phaseWeek ?? Infinity) <= 4 &&
+    contract.identity.weekKind === 'deload'
+  ) {
+    addFinding(findings, {
+      code: 'illegal_first_offseason_deload',
+      severity: 'blocking',
+      domain: 'identity',
+      expected: 'build',
+      actual: contract.identity.weekKind,
+      detail: 'The first four Off-season phase weeks are the approved no-deload exception.',
+      evidence: [`phaseWeek=${contract.identity.phaseWeek ?? 'unknown'}`],
+    });
+  }
+
+  if (
     contract.identity.expectedSubphase &&
     contract.identity.declaredSubphase !== contract.identity.expectedSubphase
   ) {
@@ -560,6 +598,30 @@ export function evaluateSection18EffectiveWeek(
         `phaseWeek=${contract.identity.phaseWeek ?? 'unknown'}`,
       ],
     });
+    if (
+      contract.identity.seasonPhase === 'Pre-season' &&
+      (contract.identity.phaseWeek ?? 0) >= 4 &&
+      contract.identity.declaredSubphase !== 'late_preseason'
+    ) {
+      addFinding(findings, {
+        code: 'preseason_phase_age_reset', severity: 'blocking', domain: 'identity',
+        expected: contract.identity.expectedSubphase, actual: contract.identity.declaredSubphase,
+        detail: 'Pre-season identity reset even though the persisted phase clock continued.',
+        evidence: [`phaseWeek=${contract.identity.phaseWeek}`],
+      });
+    }
+    if (
+      contract.identity.seasonPhase === 'Off-season' &&
+      (contract.identity.phaseWeek ?? 0) > 4 &&
+      contract.identity.declaredSubphase !== 'late_offseason'
+    ) {
+      addFinding(findings, {
+        code: 'offseason_phase_age_reset', severity: 'blocking', domain: 'identity',
+        expected: 'late_offseason', actual: contract.identity.declaredSubphase,
+        detail: 'Late Off-season identity reset despite continuous persisted phase age.',
+        evidence: [`phaseWeek=${contract.identity.phaseWeek}`],
+      });
+    }
   }
 
   const strengthTotalForMaximum = contract.mainStrength.exposure.plannerSelectionKind === 'optional'

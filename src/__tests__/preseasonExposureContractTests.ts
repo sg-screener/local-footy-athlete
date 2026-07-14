@@ -19,6 +19,7 @@ import {
   buildInitialGeneratedCoachingPlan,
 } from '../services/api/generateProgram';
 import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
+import { resolveSeasonPhaseClock } from '../rules/seasonPhaseClock';
 
 let pass = 0;
 let fail = 0;
@@ -71,6 +72,7 @@ function planFor(
     weekInBlock: weekNumber,
     weekNumber,
     weekKind,
+    phaseWeekNumber: weekNumber,
   });
   return buildCoachingPlan(inputs);
 }
@@ -210,6 +212,10 @@ console.log('\n-- Edge prompt and deterministic fallback share the contract --')
     profile: EXACT_PROFILE,
     todayISO: '2026-07-13',
     blockNumber: 1,
+    seasonPhaseClock: resolveSeasonPhaseClock({
+      selectedPhase: 'Pre-season',
+      targetWeekStartISO: '2026-07-13',
+    }).clock,
   });
   const fallback = planFor(EXACT_PROFILE, 1);
   eq('edge and fallback own the same typed exposure contract',

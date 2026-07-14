@@ -9,6 +9,7 @@ import {
   evaluatePreseasonExposureContract,
 } from '../../../rules/preseasonExposureContract';
 import { buildInitialGeneratedCoachingPlan } from '../../../services/api/generateProgram';
+import { resolveSeasonPhaseClock } from '../../../rules/seasonPhaseClock';
 import type { PreseasonExposureWitness } from '../invariants/preseasonExposureInvariants';
 
 const PROFILE: OnboardingData = {
@@ -46,7 +47,8 @@ export function buildPreseasonExposureWitness(): PreseasonExposureWitness {
     weekInBlock: 1,
     weekNumber: 1,
     weekKind: 'build',
-    preseasonSubphase: 'mid_preseason',
+    phaseWeekNumber: 1,
+    preseasonSubphase: 'early_preseason',
   });
   const fallback = buildCoachingPlan(inputs);
   const edge = buildInitialGeneratedCoachingPlan({
@@ -54,6 +56,10 @@ export function buildPreseasonExposureWitness(): PreseasonExposureWitness {
     profile: PROFILE,
     todayISO: '2026-07-13',
     blockNumber: 1,
+    seasonPhaseClock: resolveSeasonPhaseClock({
+      selectedPhase: 'Pre-season',
+      targetWeekStartISO: '2026-07-13',
+    }).clock,
   });
   if (!fallback.weeklyExposureContract || !edge.weeklyExposureContract) {
     throw new Error('Pre-season witness omitted its typed exposure contract');

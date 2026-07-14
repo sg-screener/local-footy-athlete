@@ -119,32 +119,32 @@ function planText(plan: SessionAllocation[]): string {
 console.log('\n-- Pre-season subphase resolver and policy --');
 
 eq('week 1 resolves early pre-season',
-  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', weekInBlock: 1 }),
+  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', phaseWeekNumber: 1 }),
   'early_preseason');
 eq('week 2 resolves mid pre-season',
-  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', weekInBlock: 2 }),
+  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', phaseWeekNumber: 2 }),
   'mid_preseason');
 eq('week 3 resolves mid pre-season',
-  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', weekInBlock: 3 }),
+  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', phaseWeekNumber: 3 }),
   'mid_preseason');
 eq('week 4 resolves late pre-season',
-  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', weekInBlock: 4 }),
+  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', phaseWeekNumber: 4 }),
   'late_preseason');
-eq('global week state wraps into the current four-week block',
-  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', weekNumber: 5 }),
-  'early_preseason');
+eq('phase week 5 remains late across a new program block',
+  resolvePreseasonSubphase({ seasonPhase: 'Pre-season', phaseWeekNumber: 5 }),
+  'late_preseason');
 eq('missing pre-season week defaults to mid',
   resolvePreseasonSubphase({ seasonPhase: 'Pre-season' }),
   'mid_preseason');
 eq('explicit override wins for deterministic simulations',
   resolvePreseasonSubphase({
     seasonPhase: 'Pre-season',
-    weekInBlock: 2,
+    phaseWeekNumber: 2,
     explicitSubphase: 'late_preseason',
   }),
   'late_preseason');
 eq('non-pre-season phases do not resolve a pre-season subphase',
-  resolvePreseasonSubphase({ seasonPhase: 'Off-season', weekInBlock: 1 }),
+  resolvePreseasonSubphase({ seasonPhase: 'Off-season', phaseWeekNumber: 1 }),
   null);
 
 {
@@ -198,6 +198,7 @@ console.log('\n-- Sprint/COD top-up by pre-season subphase --');
 console.log('\n-- Early, mid and late generation behaviour --');
 
 const earlyPlan = planFor(BASE_PROFILE, {
+  phaseWeekNumber: 1,
   weekInBlock: 1,
   weekNumber: 1,
   weekKind: 'build',
@@ -225,6 +226,7 @@ const earlyNoTeamPlan = planFor(profile({
   teamTrainingDaysPerWeek: 0,
   teamTrainingDays: [],
 }), {
+  phaseWeekNumber: 1,
   weekInBlock: 1,
   weekNumber: 1,
   weekKind: 'build',
@@ -241,6 +243,7 @@ ok('early pre-season hard conditioning is always the reduced dose',
   planText(earlyNoTeamPlan));
 
 const midPlan = planFor(BASE_PROFILE, {
+  phaseWeekNumber: 2,
   weekInBlock: 2,
   weekNumber: 2,
   weekKind: 'build',
@@ -258,6 +261,7 @@ const lateMatchProfile = profile({
   usualGameDay: 'Saturday',
 });
 const latePlan = planFor(lateMatchProfile, {
+  phaseWeekNumber: 4,
   weekInBlock: 4,
   weekNumber: 4,
   weekKind: 'build',
@@ -306,6 +310,7 @@ for (const [subphase, weekInBlock] of [
 ] as Array<[PreseasonSubphase, number]>) {
   const plan = planFor(LOW_PROFILE, {
     preseasonSubphase: subphase,
+    phaseWeekNumber: weekInBlock,
     weekInBlock,
     weekNumber: weekInBlock,
     weekKind: 'build',
@@ -327,6 +332,7 @@ for (const [subphase, weekInBlock] of [
     teamTrainingDays: [],
   }), {
     preseasonSubphase: 'mid_preseason',
+    phaseWeekNumber: 2,
     weekInBlock: 2,
     weekNumber: 2,
     weekKind: 'build',

@@ -51,8 +51,8 @@ import {
 } from './workoutCanonicalisation';
 import { resolveOffseasonSubphase } from '../rules/offseasonSubphase';
 import { deriveScheduleReadiness } from './readiness';
-import { getWeekInBlock, selectMicrocycleForDate } from './programBlockState';
-import { resolveWeekKind } from '../rules/deloadWeekRules';
+import { selectMicrocycleForDate } from './programBlockState';
+import { resolveSeasonPhaseClock } from '../rules/seasonPhaseClock';
 import {
   evaluateEffectiveWeekExposureContract,
   reconcileWeeklyExposureContractToLedger,
@@ -600,14 +600,10 @@ function reResolveContractForActiveConstraints(args: {
     offseasonSubphase: resolveOffseasonSubphase({
       seasonPhase: args.contract.identity.phase,
       explicitSubphase: offseasonSubphase,
-      weekInBlock: ((args.microcycle.weekNumber - 1) % 4) + 1,
-      weekNumber: args.microcycle.weekNumber,
     }),
     preseasonSubphase: resolvePreseasonSubphase({
       seasonPhase: args.contract.identity.phase,
       explicitSubphase: preseasonSubphase,
-      weekInBlock: ((args.microcycle.weekNumber - 1) % 4) + 1,
-      weekNumber: args.microcycle.weekNumber,
     }),
     activeReadinessTier: generationContext?.readiness?.tier,
     maxStrengthSessions: profile.experienceLevel
@@ -817,7 +813,11 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
         offseasonSubphase: args.canonicalContext?.offseasonSubphase ??
           resolveOffseasonSubphase({
             seasonPhase: args.profile?.seasonPhase,
-            weekInBlock: ((args.microcycle.weekNumber - 1) % 4) + 1,
+            explicitSubphase: exposureContractV2?.identity.declaredSubphase === 'early_offseason' ||
+              exposureContractV2?.identity.declaredSubphase === 'mid_offseason' ||
+              exposureContractV2?.identity.declaredSubphase === 'late_offseason'
+              ? exposureContractV2.identity.declaredSubphase
+              : null,
           }),
         weekKind: args.canonicalContext?.weekKind ?? args.microcycle.weekKind,
         ...gameProximityContext(date, gameDates),
@@ -953,9 +953,12 @@ function liveWorkoutCanonicalisationContext(
     ? allProgramWorkouts.find((candidate) => candidate.planEntryId === workout.planEntryId) ?? null
     : null;
   const planIntentValid = !!workout.planEntryId && !!referenceWorkout;
-  const blockStart = state.blockState?.blockStartDate ??
-    state.currentProgram?.startDate?.slice(0, 10);
-  const weekInBlock = blockStart ? getWeekInBlock(blockStart, date) : undefined;
+  const phaseResolution = resolveSeasonPhaseClock({
+    selectedPhase: profile.seasonPhase ?? 'Pre-season',
+    targetWeekStartISO: date,
+    persistedClock: state.currentProgram?.seasonPhaseClock,
+    legacyProgram: state.currentProgram,
+  });
   const signal = useReadinessStore.getState().signalsByDate?.[date] ?? null;
   const gameDates = new Set(
     datedProgramWorkouts
@@ -988,11 +991,8 @@ function liveWorkoutCanonicalisationContext(
   return {
     date,
     phase: profile.seasonPhase,
-    offseasonSubphase: resolveOffseasonSubphase({
-      seasonPhase: profile.seasonPhase,
-      weekInBlock,
-    }),
-    weekKind: weekInBlock ? resolveWeekKind(profile.seasonPhase, weekInBlock) : undefined,
+    offseasonSubphase: phaseResolution.offseasonSubphase,
+    weekKind: phaseResolution.weekKind,
     readiness: deriveScheduleReadiness({ onboardingData: profile, signal }),
     ...gameProximityContext(date, Array.from(gameDates)),
     profile,

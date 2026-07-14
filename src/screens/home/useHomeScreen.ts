@@ -290,6 +290,7 @@ export function useHomeScreen() {
         blockState,
         visibleWeekStart,
         currentPhase,
+        currentProgram?.seasonPhaseClock,
       ).weekKind;
     }
     if (currentProgram?.startDate) {
@@ -297,6 +298,7 @@ export function useHomeScreen() {
         dateISO: visibleWeekStart,
         programStartISO: currentProgram.startDate,
         seasonPhase: currentPhase,
+        seasonPhaseClock: currentProgram.seasonPhaseClock,
       }).weekKind;
     }
     return undefined;

@@ -33,6 +33,7 @@ import { EXERCISE_TAGS, type MovementPattern, type InjuryKey } from './exerciseT
 import type { EquipmentTag } from './exercisePools';
 import type { ConditioningEquipmentModality } from '../types/domain';
 import type { ExperienceLevel, WeekKind } from '../types/domain';
+import type { OffseasonSubphase } from '../rules/offseasonSubphase';
 import { EXERCISE_LOAD_MAP, type EquipmentClass } from '../utils/loadEstimation';
 import {
   resolveTrainingAgePolicy,
@@ -94,6 +95,8 @@ export interface RotationContext {
   weekKind?: WeekKind;
   /** Week-level generation intensity multiplier. Optional for rotation-only callers. */
   intensityMultiplier?: number;
+  /** Canonical phase-clock identity; never inferred from mini-cycle fields. */
+  offseasonSubphase?: OffseasonSubphase;
 }
 
 // ─── Per-Athlete Overrides (Refinement 3) ───

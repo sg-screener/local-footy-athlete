@@ -224,6 +224,7 @@ function resolveRepeatTargetExposureContracts(args: {
     programStartISO: args.program.startDate,
     blockNumber: args.program.microcycles?.[0]?.miniCycleNumber ?? 1,
     seasonPhase: args.profile.seasonPhase,
+    seasonPhaseClock: args.program.seasonPhaseClock,
   });
   const equipment = resolveEquipmentCapabilities(args.profile, [], args.targetWeekStart);
   const inputs = onboardingToCoachingInputs(args.profile, {
@@ -232,6 +233,11 @@ function resolveRepeatTargetExposureContracts(args: {
     weekInBlock: blockState.weekInBlock,
     weekNumber: blockState.weekNumber,
     weekKind: blockState.weekKind,
+    phaseWeekNumber: blockState.phaseWeekNumber,
+    phaseClock: blockState.phaseClock,
+    phaseClockProvenance: blockState.phaseResolution.provenance,
+    offseasonSubphase: blockState.phaseResolution.offseasonSubphase ?? undefined,
+    preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
     appConditioningFeasible: equipment.conditioningModalities.length > 0,
   });
   const plan = buildCoachingPlan(inputs);

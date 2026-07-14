@@ -57,6 +57,7 @@ function profileFor(seasonPhase: SeasonPhase): OnboardingData {
 function generatedBlock(seasonPhase: SeasonPhase): Microcycle[] {
   return generateProgramLocally(profileFor(seasonPhase), {
     todayISO: '2026-07-06',
+    previousProgram: null,
   }).microcycles;
 }
 
@@ -129,8 +130,11 @@ function weeklyStrengthPatterns(microcycle: Microcycle): string[] {
   )).sort();
 }
 
-function assertCalendarDeload(seasonPhase: 'Off-season' | 'Pre-season', expectedMultiplier: number): void {
-  const microcycles = generatedBlock(seasonPhase);
+function assertCalendarDeload(
+  seasonPhase: 'Off-season' | 'Pre-season',
+  expectedMultiplier: number,
+  microcycles: Microcycle[] = generatedBlock(seasonPhase),
+): void {
   const week1 = microcycles[0];
   const week2 = microcycles[1];
   const week3 = microcycles[2];
@@ -224,14 +228,31 @@ console.log('\n-- Calendar deload week generation --');
     seasonPhase: 'Off-season',
   });
   ok('week kind table: week 3 builds', resolveWeekKind('Off-season', 3) === 'build');
-  ok('week kind table: week 4 deloads', resolveWeekKind('Off-season', 4) === 'deload');
+  ok('week kind table: first Off-season phase week 4 builds', resolveWeekKind('Off-season', 4) === 'build');
+  ok('week kind table: late Off-season phase week 8 deloads', resolveWeekKind('Off-season', 8) === 'deload');
   ok('week kind table: in-season week 4 still builds', resolveWeekKind('In-season', 4) === 'build');
-  ok('block states expose deload kind on week 4 only',
-    states.map((state) => state.weekKind).join(',') === 'build,build,build,deload',
+  ok('first Off-season block exposes no automatic deload',
+    states.map((state) => state.weekKind).join(',') === 'build,build,build,build',
     states.map((state) => state.weekKind).join(','));
 }
 
-assertCalendarDeload('Off-season', 0.85);
+{
+  const firstOffseason = generatedBlock('Off-season');
+  ok('first Off-season phase block keeps all four weeks as build',
+    firstOffseason.every((week) => week.weekKind === 'build' && week.intensityMultiplier === 1));
+  ok('first Off-season phase week 4 receives no deload prescription notes',
+    deloadNotes(firstOffseason[3]).length === 0);
+  const firstProgram = generateProgramLocally(profileFor('Off-season'), {
+    todayISO: '2026-07-06',
+    previousProgram: null,
+  });
+  const lateBlock = generateProgramLocally(profileFor('Off-season'), {
+    todayISO: '2026-08-03',
+    blockNumber: 2,
+    previousProgram: firstProgram,
+  });
+  assertCalendarDeload('Off-season', 0.85, lateBlock.microcycles);
+}
 assertCalendarDeload('Pre-season', 0.9);
 
 {
