@@ -4398,6 +4398,12 @@ A. Policy definitions
 | Anchor credit | Credit from actual team training, a game or a practice match. Credit depends on the participation rules below, not merely the event label. |
 | Dose/intensity change | A change to sets, reps, load, duration, speed, effort or complexity while weekly exposure frequency stays stable. |
 | Frequency change | A change to the number of weekly core exposures. Use it only when the phase policy or an applicable typed reduction permits it. |
+| Phase-owned selected target | The exposure target chosen from the canonical phase/mode table after typed constraints and before weekday allocation. Weekday geometry, recovery placeholders, accessories and optional work do not choose or rewrite it. |
+| `required_core` | App conditioning needed to satisfy the required core minimum after qualifying anchor credit. It counts toward the core total and retains the required intensity class. |
+| `planner_selected_core` | Core conditioning selected by the phase planner above the required remainder and within the approved default/preferred/maximum table. It counts toward the core total. |
+| `optional_flush` | Optional light flush work. It is non-core and cannot satisfy required or planner-selected core conditioning. |
+| `optional_recovery_aerobic` | Optional recovery-focused aerobic work used only where the phase table permits it. It is non-core, non-hard and cannot replace required strength, conditioning or full rest. |
+| `legacy_unknown` | Compatibility identity for content whose Section 18 ownership is not known. It must not be silently promoted into core credit. |
 
 B. Authoritative phase table
 
@@ -4456,11 +4462,13 @@ Team training credit
 * It counts as 1 sprint/high-speed exposure only when normal high-speed running is expected and completed.
 * Modified, rehab, restricted, non-contact or reduced-running participation does not automatically receive sprint credit.
 * A generic hard-training label is not proof of high-speed work.
+* Team-training anchor status never counts as main strength. A strength exposure on a TT day counts only when a deliberate app-authored main-strength contribution is separately planned and remains visible in the final workout.
 
 Game and practice-match credit
 
 * Normal participation counts as 1 core conditioning exposure, 1 sprint/high-speed exposure and 1 hard day.
 * Reduced participation requires an explicit adjustment.
+* A game or practice-match anchor never counts as main strength.
 
 App top-ups
 
@@ -4611,3 +4619,27 @@ All five previously open coaching-policy questions are resolved in this section:
 * Field actions receive no automatic formal power-primer credit; power remains an app category with no required numeric weekly minimum.
 
 There are no unresolved coaching-policy decisions in this report set as of 14 July 2026.
+
+J. Phase-planner ownership and cross-path preservation
+
+The Section 18 phase planner uses one ownership order for every generated week:
+
+1. Resolve the canonical season phase, subphase and week mode.
+2. Read that mode's required minimum, default target, preferred range and maximum from Section B.
+3. Apply availability, readiness, injury, participation, training-age and other applicable typed constraints. Any frequency change must carry an authorised reason from Section H.
+4. Select the phase-owned strength, core-conditioning and sprint/high-speed targets before assigning weekdays.
+5. Credit only qualifying team-training, game and practice-match anchors.
+6. Allocate required main strength, `required_core` conditioning and required sprint/high-speed work.
+7. Allocate any remaining `planner_selected_core` conditioning needed by the selected phase target.
+8. Add `optional_flush`, `optional_recovery_aerobic`, gunshow and accessory work only after core work is satisfied. Optional work never rewrites the selected target or repairs a core shortfall.
+9. Validate the allocation against the selected contract, preserve typed ownership through canonical workout construction, and validate the final effective week. A deficient week must repair, regenerate, safely reduce with a typed reason or reject; the target must never be rewritten to match deficient output.
+
+This order applies to in-season game weeks, bye build, bye recovery, early/mid/late off-season, early/mid/late pre-season, practice-match weeks, deloads and every readiness, injury, availability, participation, training-age and equipment-constrained path. The phase table in Section B remains the source of the final target; weekday geometry only decides safe placement.
+
+Cross-path rules
+
+* Initial generation, edge-authored Week 1, deterministic fallback, rebuild, rollover and persistence/rehydration must preserve the same phase-owned contract and conditioning ownership.
+* Repeat Week uses the target week's canonical phase and selected exposure table. Its phase-table signature is the mode plus the selected main-strength, core-conditioning and sprint/high-speed targets.
+* When source and target phase-table signatures differ, Repeat Week regenerates from the target phase table instead of copying the source target or deficient source structure.
+* When the signatures match, source prescriptions may be preserved, but target anchors, typed constraints and final Section 18 validation still win.
+* Detailed `required_core` and `planner_selected_core` identity remains attached to planner allocations and canonical workouts. An aggregate `core` compatibility projection may be used only by an unchanged legacy safety consumer; it does not replace the detailed phase-planner identity or allow optional work to receive core credit.
