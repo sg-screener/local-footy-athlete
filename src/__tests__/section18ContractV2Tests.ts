@@ -66,6 +66,7 @@ function row(
     section18Evidence: {
       protocolVersion: 1,
       role,
+      strengthPattern: pattern,
       mainStrengthPattern: role === 'main_strength' ? pattern : null,
       provenance: 'canonical_row_classifier',
     },
@@ -253,8 +254,10 @@ console.log('\n-- Contract v2 integration and deterministic migration --');
     generated.microcycles.length === 4 &&
     generated.microcycles.every((candidate) => candidate.exposureContractV2?.protocolVersion === 2));
   ok('shared microcycle observer consumes generated v2 contract', !!observeMicrocycleSection18(week));
-  ok('current missing TT participation remains unknown',
-    week.exposureContractV2?.anchors.every((anchor) => anchor.participation === 'unknown') === true);
+  ok('healthy generated TT resolves to normal unrestricted participation',
+    week.exposureContractV2?.anchors.every((anchor) =>
+      anchor.participation === 'normal_unrestricted' &&
+      anchor.participationProvenance === 'derived_healthy_unrestricted') === true);
 
   const legacy = buildWeeklyExposureContract({
     seasonPhase: 'Pre-season', readiness: 'medium', selectedDayNumbers: [1, 2, 3, 4, 5, 6],

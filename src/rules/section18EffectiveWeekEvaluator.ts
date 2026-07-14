@@ -111,6 +111,7 @@ export interface Section18EffectiveWeekLedger {
   anchors: Section18AnchorLedgerRow[];
   power: {
     achievedPrimerCount: number;
+    primerSources: Array<{ dayOfWeek: number; family: 'lower' | 'upper' }>;
     fieldActionPrimerCredit: 0;
   };
   restStress: {
@@ -239,6 +240,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
   let appCore = 0;
   let anchorCore = 0;
   let primerCount = 0;
+  const primerSources: Array<{ dayOfWeek: number; family: 'lower' | 'upper' }> = [];
 
   const workoutsByDay = new Map<number, Workout[]>();
   for (const workout of input.workouts) {
@@ -349,6 +351,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       }
       if (workout.powerBlock) {
         primerCount += 1;
+        primerSources.push({ dayOfWeek: day, family: workout.powerBlock.family });
         dayPower = true;
       }
     }
@@ -394,7 +397,7 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       sources: sprintSources,
     },
     anchors,
-    power: { achievedPrimerCount: primerCount, fieldActionPrimerCredit: 0 },
+    power: { achievedPrimerCount: primerCount, primerSources, fieldActionPrimerCredit: 0 },
     restStress: {
       trueFullRestDays: trueRestDays,
       activeRecoveryDays: uniq(activeRecoveryDays),
@@ -575,6 +578,16 @@ export function evaluateSection18EffectiveWeek(
     evidence: ledger.mainStrength.sessionDays.map((day) => `${dateForDay(input.weekStart, day)}:main_strength`),
   });
 
+  if (contract.safety?.prohibitedSprintHighSpeed && ledger.sprintHighSpeed.achievedCount > 0) {
+    addFinding(findings, {
+      code: 'reduction_contradiction', severity: 'blocking', domain: 'sprint_high_speed',
+      expected: 0, actual: ledger.sprintHighSpeed.achievedCount,
+      detail: 'Sprint/high-speed exposure remains despite the active safety prohibition.',
+      evidence: ledger.sprintHighSpeed.sources.map((source) =>
+        `${dateForDay(input.weekStart, source.dayOfWeek)}:${source.kind}`),
+    });
+  }
+
   evaluateNumeric({
     findings,
     domain: 'conditioning',
@@ -745,6 +758,18 @@ export function evaluateSection18EffectiveWeek(
       actual: primers,
       detail: 'Weekly power-primer selection exceeds the Section 18 preferred budget.',
       evidence: [],
+    });
+  }
+  const prohibitedPowerSources = ledger.power.primerSources.filter((source) =>
+    contract.safety?.prohibitedPowerFamilies?.includes(source.family));
+  if (prohibitedPowerSources.length > 0) {
+    addFinding(findings, {
+      code: 'power_policy_breach', severity: 'blocking', domain: 'power',
+      expected: `no ${contract.safety.prohibitedPowerFamilies.join('/')} power`,
+      actual: prohibitedPowerSources,
+      detail: 'A power primer uses an injury-prohibited movement family.',
+      evidence: prohibitedPowerSources.map((source) =>
+        `${dateForDay(input.weekStart, source.dayOfWeek)}:${source.family}`),
     });
   }
 

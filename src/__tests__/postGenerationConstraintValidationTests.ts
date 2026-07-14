@@ -252,10 +252,10 @@ section('[1] severe knee and hamstring constraints revalidate generated programs
   ok('9/10 knee removes knee-dominant squat after generation', !kneeNames.includes('Back Squat'), kneeNames);
   ok('9/10 knee removes plyometric work after generation', !kneeNames.includes('Box Jump'), kneeNames);
   ok('9/10 knee preserves unaffected upper work', kneeNames.includes('Bench Press'), kneeNames);
-  ok('post-constraint canonicalisation gives preserved upper + off-feet work an honest identity',
+  ok('post-constraint canonicalisation gives preserved unaffected upper work an honest identity',
     kneeValidated.microcycles[0].workouts[0].name === 'Upper Push' &&
-      kneeValidated.microcycles[0].workouts[0].workoutType === 'Mixed' &&
-      !!kneeValidated.microcycles[0].workouts[0].conditioningBlock,
+      kneeValidated.microcycles[0].workouts[0].workoutType === 'Strength' &&
+      !kneeValidated.microcycles[0].workouts[0].conditioningBlock,
     {
       name: kneeValidated.microcycles[0].workouts[0].name,
       type: kneeValidated.microcycles[0].workouts[0].workoutType,
@@ -336,8 +336,8 @@ section('[2] limiting injury is restrictive, not a full pause');
     profile: FULL_GYM,
   });
   ok('6/10 hamstring removes heavy hinge', !names(result.workout).includes('Deadlift'), names(result.workout));
-  ok('6/10 hamstring preserves safe lower and upper work',
-    names(result.workout).includes('Goblet Squat') && names(result.workout).includes('Bench Press'),
+  ok('6/10 lower-body restriction removes lower patterns and preserves unaffected upper work',
+    !names(result.workout).includes('Goblet Squat') && names(result.workout).includes('Bench Press'),
     names(result.workout));
   ok('6/10 does not collapse the session', !!result.workout && !result.collapsedToRest);
 }

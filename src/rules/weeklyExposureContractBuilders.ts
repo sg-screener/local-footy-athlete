@@ -242,9 +242,13 @@ function applyCommonSafetyReductions(
   });
 
   const tier = input.activeReadinessTier;
-  if (tier === 'full_pause') {
+  if (tier === 'slight_reduction') {
+    contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'low_readiness',
+      'Slight readiness reduction removes app-authored sprint while preserving normal anchor exposure.');
+  } else if (tier === 'full_pause') {
     contract = reduceAllocationTarget(contract, 'main_strength', 0, 'full_pause',
       'The active full-pause readiness state removes app training.');
+    contract.strength.requiredPatterns = [];
     contract = reduceAllocationTarget(contract, 'conditioning', anchorCredit, 'full_pause',
       'Only unavoidable team/game anchors remain during a full pause.');
     contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'full_pause',
@@ -252,6 +256,7 @@ function applyCommonSafetyReductions(
   } else if (tier === 'major_reduction') {
     contract = reduceAllocationTarget(contract, 'main_strength', 0, 'low_readiness',
       'Major readiness reduction authorises a recovery-only app week when final safe content contains no main strength.');
+    contract.strength.requiredPatterns = [];
     contract = reduceAllocationTarget(contract, 'conditioning', anchorCredit, 'low_readiness',
       'Major readiness reduction removes app-authored conditioning.');
     contract = reduceAllocationTarget(contract, 'sprint_cod', Math.min(3, anchorCredit), 'low_readiness',

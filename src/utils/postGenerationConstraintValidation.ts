@@ -58,10 +58,19 @@ import {
   reconcileWeeklyExposureContractToLedger,
   type WeeklyExposureContract,
 } from '../rules/weeklyExposureContract';
-import { buildWeeklyExposureContract } from '../rules/weeklyExposureContractBuilders';
+import {
+  buildWeeklyExposureContract,
+  resolveRestrictedMainStrengthPatterns,
+} from '../rules/weeklyExposureContractBuilders';
 import { resolvePreseasonSubphase } from '../rules/preseasonSubphase';
 import { resolveTrainingAgePolicy } from '../rules/trainingAgePolicy';
 import { resolveEquipmentCapabilities } from './equipmentAvailability';
+import {
+  migrateLegacyWeeklyExposureContractV2,
+  type WeeklyExposureContractV2,
+} from '../rules/weeklyExposureContractV2';
+import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
+import { finaliseSection18SafetyWeek } from '../rules/section18SafetyFinaliser';
 
 export interface ActiveConstraintValidationInput {
   workout: Workout | null;
@@ -90,6 +99,10 @@ function addDaysISO(dateISO: string, days: number): string {
   const [year, month, day] = dateISO.slice(0, 10).split('-').map(Number);
   const value = new Date(year, month - 1, day + days, 12, 0, 0, 0);
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+}
+
+function uniquePatterns<T>(values: readonly T[]): T[] {
+  return Array.from(new Set(values));
 }
 
 function constraintIsLiveOnDate(constraint: ActiveConstraint, date: string): boolean {
@@ -278,22 +291,50 @@ export function validateWorkoutAgainstActiveConstraints(
   });
 
   if (!input.workout) return unchanged(input.workout);
+  const active = input.date < input.todayISO
+    ? []
+    : liveConstraintsForDate(input.activeConstraints, input.date);
+  const generationContext = buildGenerationConstraintContext({
+    activeConstraints: active,
+    todayISO: input.date,
+  });
+  const prohibitedPatterns = Array.from(resolveRestrictedMainStrengthPatterns({
+    activeInjuries: generationContext?.injuries,
+    profileInjuries: input.profile?.injuries,
+  }));
+  const lowerBodyRestriction = prohibitedPatterns.includes('squat') ||
+    prohibitedPatterns.includes('hinge');
+  const readinessPowerBlocked = generationContext?.readiness?.tier === 'moderate_reduction' ||
+    generationContext?.readiness?.tier === 'major_reduction' ||
+    generationContext?.readiness?.tier === 'full_pause';
   const canonical = finaliseWorkoutAfterMutation(input.workout, {
     ...input.canonicalContext,
     date: input.date,
     profile: input.profile,
     phase: input.canonicalContext?.phase ?? input.profile?.seasonPhase,
+    prohibitedStrengthPatterns: uniquePatterns([
+      ...(input.canonicalContext?.prohibitedStrengthPatterns ?? []),
+      ...prohibitedPatterns,
+    ]),
+    prohibitPower: input.canonicalContext?.prohibitPower === true || readinessPowerBlocked,
+    prohibitSprintHighSpeed: input.canonicalContext?.prohibitSprintHighSpeed === true ||
+      lowerBodyRestriction || generationContext?.readiness?.avoidSprint === true,
   });
   const canonicalRemovedNames = canonical.actions
     .filter((action) => action.kind === 'row_removed' && !!action.item)
     .map((action) => action.item!);
   const canonicalRemovedPower = canonical.actions.some((action) => action.kind === 'power_removed');
+  const canonicalRemovedSpeed = canonical.actions.some((action) =>
+    action.reason === 'section18_safety_sprint_blocked');
   if (input.date < input.todayISO) {
     return {
       ...unchanged(canonical.workout),
       changed: canonical.changed,
       removedExerciseNames: canonicalRemovedNames,
-      removedComponents: canonicalRemovedPower ? ['power'] : [],
+      removedComponents: [
+        ...(canonicalRemovedPower ? ['power' as const] : []),
+        ...(canonicalRemovedSpeed ? ['speed' as const] : []),
+      ],
     };
   }
   const powerAlignment = alignPowerBlockToFinalWorkoutContent(canonical.workout);
@@ -306,10 +347,10 @@ export function validateWorkoutAgainstActiveConstraints(
     removedExerciseNames: canonicalRemovedNames,
     removedComponents: Array.from(new Set([
       ...(canonicalRemovedPower ? ['power' as const] : []),
+      ...(canonicalRemovedSpeed ? ['speed' as const] : []),
       ...alignmentRemovedComponents,
     ])),
   });
-  const active = liveConstraintsForDate(input.activeConstraints, input.date);
   if (active.length === 0) {
     if (!hasMeaningfulWorkoutContent(alignedWorkout)) {
       return {
@@ -319,15 +360,6 @@ export function validateWorkoutAgainstActiveConstraints(
       };
     }
     return alignedResult();
-  }
-
-  const classification = classifyVisibleSession(alignedWorkout);
-  if (classification.anchors.game || classification.anchors.teamTraining) {
-    return {
-      ...alignedResult(),
-      preservedAnchor: true,
-      activeConstraintIds: active.map((constraint) => constraint.id),
-    };
   }
 
   if (isGlobalHardStop(active, input.date) && !isRecoveryWorkout(alignedWorkout)) {
@@ -347,6 +379,15 @@ export function validateWorkoutAgainstActiveConstraints(
         ...(alignedWorkout.powerBlock || alignmentRemovedComponents.includes('power') ? ['power' as const] : []),
         ...(alignedWorkout.recoveryAddons?.length ? ['recovery_addon' as const] : []),
       ])),
+    };
+  }
+
+  const classification = classifyVisibleSession(alignedWorkout);
+  if (classification.anchors.game || classification.anchors.teamTraining) {
+    return {
+      ...alignedResult(),
+      preservedAnchor: true,
+      activeConstraintIds: active.map((constraint) => constraint.id),
     };
   }
 
@@ -413,6 +454,7 @@ export function validateWorkoutAgainstActiveConstraints(
   );
   const removedComponents = Array.from(new Set([
     ...(canonicalRemovedPower ? ['power' as const] : []),
+    ...(canonicalRemovedSpeed ? ['speed' as const] : []),
     ...alignmentRemovedComponents,
     ...componentResult.removedComponents,
     ...(postCanonicalRemovedPower ? ['power' as const] : []),
@@ -608,20 +650,13 @@ function reconcileContractForSafetyTransformations(args: {
     args.weekStart,
   );
   if (validation.accepted) return args.contract;
-  const generationContext = buildGenerationConstraintContext({
-    activeConstraints: args.activeConstraints,
-    todayISO: args.weekStart,
-  });
   const hasEquipmentConstraint = args.activeConstraints.some(
     (constraint) => constraint.type === 'equipment' && constraint.status !== 'resolved',
   );
-  const reason = generationContext?.injuries.length
-    ? 'injury_restriction' as const
-    : generationContext?.readiness
-      ? 'low_readiness' as const
-      : hasEquipmentConstraint
-        ? 'equipment_infeasibility' as const
-        : null;
+  // Injury/readiness reductions are authored before construction and remain
+  // authoritative. Never rewrite them to match an unsafe final ledger. The
+  // legacy equipment feasibility behavior remains outside this safety slice.
+  const reason = hasEquipmentConstraint ? 'equipment_infeasibility' as const : null;
   if (!reason) return args.contract;
   return reconcileWeeklyExposureContractToLedger(
     args.contract,
@@ -736,6 +771,31 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
   canonicalContext?: WorkoutCanonicalisationContext;
 }): Microcycle {
   let changed = false;
+  const weekStart = args.microcycle.startDate.slice(0, 10);
+  const generationContext = buildGenerationConstraintContext({
+    activeConstraints: args.activeConstraints,
+    todayISO: weekStart,
+  });
+  const forceFullPause = args.activeConstraints.some((constraint) =>
+    constraint.type === 'injury' && constraint.status !== 'resolved' &&
+    constraint.seriousSymptoms === true);
+  let exposureContractV2: WeeklyExposureContractV2 | undefined =
+    args.microcycle.exposureContractV2 ?? (
+      args.microcycle.exposureContract
+        ? migrateLegacyWeeklyExposureContractV2(args.microcycle.exposureContract, {
+            blockNumber: args.microcycle.miniCycleNumber,
+            weekInBlock: ((Math.max(1, args.microcycle.weekNumber) - 1) % 4) + 1,
+            globalWeek: args.microcycle.weekNumber,
+          })
+        : undefined
+    );
+  if (exposureContractV2) {
+    exposureContractV2 = applyGenerationSafetyToSection18Contract({
+      contract: exposureContractV2,
+      generationConstraints: generationContext,
+      forceFullPause,
+    });
+  }
   const datedWorkouts = args.microcycle.workouts.map((workout) => ({
     date: dateForWorkout(args.microcycle, workout),
     workout,
@@ -763,6 +823,9 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
         ...gameProximityContext(date, gameDates),
         planIntentValid: !!workout.planEntryId,
         referenceWorkout: workout,
+        prohibitedStrengthPatterns: exposureContractV2?.safety.prohibitedPatterns,
+        prohibitPower: exposureContractV2?.safety.prohibitedPower,
+        prohibitSprintHighSpeed: exposureContractV2?.safety.prohibitedSprintHighSpeed,
       },
     });
     if (result.changed) changed = true;
@@ -787,10 +850,29 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
       activeConstraints: args.activeConstraints,
     });
   }
-  const contractChanged = exposureContract !== args.microcycle.exposureContract &&
-    JSON.stringify(exposureContract) !== JSON.stringify(args.microcycle.exposureContract);
-  const validated = changed || contractChanged
-    ? { ...args.microcycle, workouts, exposureContract }
+  let safetyWorkouts = workouts;
+  if (exposureContractV2) {
+    const safety = finaliseSection18SafetyWeek({
+      contract: exposureContractV2,
+      workouts,
+      weekStart,
+      canonicalContext: {
+        ...args.canonicalContext,
+        phase: args.canonicalContext?.phase ?? args.profile?.seasonPhase,
+        weekKind: args.canonicalContext?.weekKind ?? args.microcycle.weekKind,
+        profile: args.profile,
+      },
+    });
+    safetyWorkouts = safety.workouts;
+    exposureContractV2 = safety.contract;
+  }
+  const contractChanged = (
+    exposureContract !== args.microcycle.exposureContract &&
+    JSON.stringify(exposureContract) !== JSON.stringify(args.microcycle.exposureContract)
+  ) || JSON.stringify(exposureContractV2) !== JSON.stringify(args.microcycle.exposureContractV2);
+  const workoutsChanged = JSON.stringify(safetyWorkouts) !== JSON.stringify(args.microcycle.workouts);
+  const validated = changed || contractChanged || workoutsChanged
+    ? { ...args.microcycle, workouts: safetyWorkouts, exposureContract, exposureContractV2 }
     : args.microcycle;
   assertEffectiveMicrocycleExposure(validated);
   return validated;
@@ -819,7 +901,7 @@ export function validateWeekOverlayAgainstActiveConstraints(args: {
   canonicalContext?: WorkoutCanonicalisationContext;
 }): WeekScopedWorkoutOverlay {
   let changed = false;
-  const workoutsByDate = Object.fromEntries(
+  let workoutsByDate = Object.fromEntries(
     Object.entries(args.overlay.workoutsByDate).map(([date, workout]) => {
       const result = validateWorkoutAgainstActiveConstraints({ ...args, date, workout });
       if (result.changed) changed = true;
@@ -919,6 +1001,79 @@ function liveWorkoutCanonicalisationContext(
   };
 }
 
+function finaliseLiveDateCandidateAgainstWeek(args: {
+  date: string;
+  workout: Workout;
+  context: ReturnType<typeof liveValidationContext>;
+}): Workout {
+  const state = require('../store/programStore').useProgramStore.getState();
+  const microcycle = selectMicrocycleForDate(
+    state.currentProgram,
+    state.currentMicrocycle,
+    args.date,
+  );
+  if (!microcycle) return args.workout;
+  const weekStart = addDaysISO(
+    args.date,
+    -((new Date(`${args.date}T12:00:00`).getDay() + 6) % 7),
+  );
+  const overlay = state.weekScopedOverlays?.[weekStart] as WeekScopedWorkoutOverlay | undefined;
+  let contract = overlay?.exposureContractV2 ?? microcycle.exposureContractV2 ?? (
+    microcycle.exposureContract
+      ? migrateLegacyWeeklyExposureContractV2(microcycle.exposureContract, {
+          blockNumber: microcycle.miniCycleNumber,
+          weekInBlock: ((Math.max(1, microcycle.weekNumber) - 1) % 4) + 1,
+          globalWeek: microcycle.weekNumber,
+        })
+      : null
+  );
+  if (!contract) return args.workout;
+  const generationContext = buildGenerationConstraintContext({
+    activeConstraints: args.context.activeConstraints,
+    todayISO: weekStart,
+  });
+  contract = applyGenerationSafetyToSection18Contract({
+    contract,
+    generationConstraints: generationContext,
+    forceFullPause: args.context.activeConstraints.some((constraint) =>
+      constraint.type === 'injury' && constraint.status !== 'resolved' &&
+      constraint.seriousSymptoms === true),
+  });
+
+  const workouts: Workout[] = [];
+  for (let offset = 0; offset < 7; offset++) {
+    const date = addDaysISO(weekStart, offset);
+    if (date === args.date) continue;
+    const manual = state.dateOverrides?.[date] as Workout | undefined;
+    const hasOverlayEntry = !!overlay && Object.prototype.hasOwnProperty.call(
+      overlay.workoutsByDate,
+      date,
+    );
+    const dow = new Date(`${date}T12:00:00`).getDay();
+    const workout = manual ?? (
+      hasOverlayEntry
+        ? overlay!.workoutsByDate[date]
+        : microcycle.workouts.find((candidate: Workout) => candidate.dayOfWeek === dow) ?? null
+    );
+    if (workout) workouts.push(workout);
+  }
+  // The candidate is deliberately last: an explicit edit may not displace
+  // already-authorised sessions to bypass a safety frequency ceiling.
+  workouts.push(args.workout);
+  const safety = finaliseSection18SafetyWeek({
+    contract,
+    workouts,
+    weekStart,
+    canonicalContext: {
+      phase: args.context.profile.seasonPhase,
+      profile: args.context.profile,
+    },
+  });
+  return [...safety.workouts].reverse().find((workout) => workout.id === args.workout.id) ??
+    [...safety.workouts].reverse().find((workout) => workout.dayOfWeek === args.workout.dayOfWeek) ??
+    collapseWorkoutToRest(args.workout);
+}
+
 /** Live-store wrappers used by ProgramStore's four final write primitives. */
 export function validateLiveProgramWrite(program: TrainingProgram): TrainingProgram {
   return validateProgramAgainstActiveConstraints({ ...liveValidationContext(), program });
@@ -944,7 +1099,7 @@ export function validateLiveWorkoutWrite(
     },
   });
   const validated = result.workout ?? collapseWorkoutToRest(workout);
-  return validated;
+  return finaliseLiveDateCandidateAgainstWeek({ date, workout: validated, context });
 }
 
 /** Resolve and validate the contract owned by an explicit date override. */
@@ -983,12 +1138,15 @@ export function validateLiveNullableWorkoutWrite(
 ): Workout | null {
   if (!workout) return null;
   const context = liveValidationContext();
-  return validateWorkoutAgainstActiveConstraints({
+  const validated = validateWorkoutAgainstActiveConstraints({
     ...context,
     date,
     workout,
     canonicalContext: liveWorkoutCanonicalisationContext(date, workout, context.profile),
   }).workout;
+  return validated
+    ? finaliseLiveDateCandidateAgainstWeek({ date, workout: validated, context })
+    : null;
 }
 
 export function validateLiveWeekOverlayWrite(
@@ -996,7 +1154,7 @@ export function validateLiveWeekOverlayWrite(
 ): WeekScopedWorkoutOverlay {
   const context = liveValidationContext();
   let changed = false;
-  const workoutsByDate = Object.fromEntries(
+  let workoutsByDate = Object.fromEntries(
     Object.entries(overlay.workoutsByDate).map(([date, workout]) => {
       if (!workout) return [date, null];
       const result = validateWorkoutAgainstActiveConstraints({
@@ -1009,7 +1167,7 @@ export function validateLiveWeekOverlayWrite(
       return [date, result.workout];
     }),
   );
-  const validatedOverlay = changed ? { ...overlay, workoutsByDate } : overlay;
+  let validatedOverlay = changed ? { ...overlay, workoutsByDate } : overlay;
   const state = require('../store/programStore').useProgramStore.getState();
   const baseMicrocycle = (state.currentProgram?.microcycles ?? []).find(
     (microcycle: Microcycle) =>
@@ -1024,9 +1182,11 @@ export function validateLiveWeekOverlayWrite(
   );
   const exposureContract = state.exposureContractsByWeek?.[overlay.weekStart] ??
     validatedOverlay.exposureContract ?? baseMicrocycle?.exposureContract;
-  if (!exposureContract) return validatedOverlay;
+  const persistedExposureContractV2 = validatedOverlay.exposureContractV2 ??
+    baseMicrocycle?.exposureContractV2;
+  if (!exposureContract && !persistedExposureContractV2) return validatedOverlay;
 
-  const effectiveWorkouts: Workout[] = [];
+  let effectiveWorkouts: Workout[] = [];
   for (let offset = 0; offset < 7; offset++) {
     const date = addDaysISO(overlay.weekStart, offset);
     const manual = state.dateOverrides?.[date] as Workout | undefined;
@@ -1039,6 +1199,52 @@ export function validateLiveWeekOverlayWrite(
     );
     if (workout) effectiveWorkouts.push(workout);
   }
+  let exposureContractV2 = persistedExposureContractV2 ?? (
+    exposureContract ? migrateLegacyWeeklyExposureContractV2(exposureContract) : undefined
+  );
+  const generationContext = buildGenerationConstraintContext({
+    activeConstraints: context.activeConstraints,
+    todayISO: overlay.weekStart,
+  });
+  if (exposureContractV2) {
+    exposureContractV2 = applyGenerationSafetyToSection18Contract({
+      contract: exposureContractV2,
+      generationConstraints: generationContext,
+      forceFullPause: context.activeConstraints.some((constraint) =>
+        constraint.type === 'injury' && constraint.status !== 'resolved' &&
+        constraint.seriousSymptoms === true),
+    });
+    const safety = finaliseSection18SafetyWeek({
+      contract: exposureContractV2,
+      workouts: effectiveWorkouts,
+      weekStart: overlay.weekStart,
+      canonicalContext: {
+        phase: context.profile.seasonPhase,
+        profile: context.profile,
+      },
+    });
+    const beforeSafety = effectiveWorkouts;
+    effectiveWorkouts = safety.workouts;
+    const safeByDay = new Map(effectiveWorkouts.map((workout) => [workout.dayOfWeek, workout]));
+    for (let offset = 0; offset < 7; offset++) {
+      const date = addDaysISO(overlay.weekStart, offset);
+      const dow = new Date(`${date}T12:00:00`).getDay();
+      const before = beforeSafety.find((workout) => workout.dayOfWeek === dow) ?? null;
+      const after = safeByDay.get(dow) ?? null;
+      if (
+        Object.prototype.hasOwnProperty.call(workoutsByDate, date) ||
+        JSON.stringify(before) !== JSON.stringify(after)
+      ) {
+        workoutsByDate[date] = after;
+      }
+    }
+    validatedOverlay = {
+      ...validatedOverlay,
+      workoutsByDate,
+      exposureContractV2: safety.contract,
+    };
+  }
+  if (!exposureContract) return validatedOverlay;
   const targetMicrocycle: Microcycle = {
     ...(baseMicrocycle ?? {
       id: validatedOverlay.id,
@@ -1114,7 +1320,53 @@ export function validateLiveWeekOverlayWrite(
       exposureContract: resolvedContract,
     });
   }
-  return resolvedContract === validatedOverlay.exposureContract
-    ? validatedOverlay
-    : { ...validatedOverlay, exposureContract: resolvedContract };
+  validatedOverlay = {
+    ...validatedOverlay,
+    exposureContract: resolvedContract,
+  };
+  return validatedOverlay;
+}
+
+/**
+ * Active-constraint mutations are themselves write paths. Re-run the same
+ * safety boundary over every persisted program surface after the constraint
+ * store changes so later hydration/edit flows cannot start from stale unsafe
+ * content.
+ */
+export function revalidateLiveStoredProgramSafety(): void {
+  const liveContext = liveValidationContext();
+  if (!liveContext.activeConstraints.some((constraint) =>
+    constraint.status !== 'resolved' &&
+    constraint.type !== 'missed_session' && constraint.type !== 'preference')) {
+    // Clearing a constraint never restores training content. Persisted Contract
+    // v2 already keeps the reduction conservative until an explicit rebuild;
+    // there is no new safety restriction to project on this mutation.
+    return;
+  }
+  const programStore = require('../store/programStore').useProgramStore;
+  const state = programStore.getState();
+  const currentProgram = state.currentProgram
+    ? validateLiveProgramWrite(state.currentProgram)
+    : null;
+  const currentMicrocycle = state.currentMicrocycle
+    ? validateLiveMicrocycleWrite(state.currentMicrocycle)
+    : null;
+  programStore.setState({ currentProgram, currentMicrocycle });
+
+  const weekScopedOverlays = Object.fromEntries(
+    Object.entries(state.weekScopedOverlays ?? {}).map(([weekStart, overlay]) => [
+      weekStart,
+      validateLiveWeekOverlayWrite(overlay as WeekScopedWorkoutOverlay),
+    ]),
+  );
+  const dateOverrides = Object.fromEntries(
+    Object.entries(state.dateOverrides ?? {}).map(([date, workout]) => [
+      date,
+      validateLiveWorkoutWrite(date, workout as Workout, { restoreMissingPlanPatterns: false }),
+    ]),
+  );
+  const todayWorkout = state.todayWorkout
+    ? validateLiveNullableWorkoutWrite(todayISOLocal(), state.todayWorkout)
+    : null;
+  programStore.setState({ weekScopedOverlays, dateOverrides, todayWorkout });
 }

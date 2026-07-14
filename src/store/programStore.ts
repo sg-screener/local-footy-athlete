@@ -20,7 +20,15 @@ import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 import type { SessionComponentKind } from '../utils/sessionComponents';
 import { todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
-import { migrateLegacyWeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import {
+  migrateLegacyWeeklyExposureContractV2,
+  type WeeklyExposureContractV2,
+} from '../rules/weeklyExposureContractV2';
+import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
+import {
+  finaliseSection18SafetyWeek,
+  finaliseSection18SafetyWorkout,
+} from '../rules/section18SafetyFinaliser';
 
 /**
  * ProgramStore is the final persistence boundary for every generated/edit
@@ -120,9 +128,7 @@ function canonicaliseHydratedMicrocycle(
   microcycle: Microcycle,
   phase?: string,
 ): Microcycle {
-  const workouts = (microcycle.workouts ?? []).map((workout) =>
-    canonicaliseHydratedWorkout(workout, phase, microcycle.weekKind));
-  const exposureContractV2 = microcycle.exposureContractV2 ?? (
+  let exposureContractV2 = microcycle.exposureContractV2 ?? (
     microcycle.exposureContract
       ? migrateLegacyWeeklyExposureContractV2(microcycle.exposureContract, {
           blockNumber: microcycle.miniCycleNumber,
@@ -131,6 +137,27 @@ function canonicaliseHydratedMicrocycle(
         })
       : undefined
   );
+  let workouts = microcycle.workouts ?? [];
+  if (exposureContractV2) {
+    exposureContractV2 = applyGenerationSafetyToSection18Contract({
+      contract: exposureContractV2,
+    });
+    const safety = finaliseSection18SafetyWeek({
+      contract: exposureContractV2,
+      workouts,
+      weekStart: microcycle.startDate.slice(0, 10),
+      canonicalContext: {
+        phase: exposureContractV2.identity.seasonPhase,
+        weekKind: microcycle.weekKind,
+        section18EvidenceMode: 'preserve_legacy_unknown',
+      },
+    });
+    workouts = safety.workouts;
+    exposureContractV2 = safety.contract;
+  } else {
+    workouts = workouts.map((workout) =>
+      canonicaliseHydratedWorkout(workout, phase, microcycle.weekKind));
+  }
   return { ...microcycle, workouts, exposureContractV2 };
 }
 
@@ -140,6 +167,23 @@ function canonicaliseHydratedProgram(program: TrainingProgram): TrainingProgram 
     microcycles: (program.microcycles ?? []).map((microcycle) =>
       canonicaliseHydratedMicrocycle(microcycle, program.programPhase)),
   };
+}
+
+function canonicaliseHydratedSafetyWorkout(
+  workout: Workout,
+  contract: WeeklyExposureContractV2 | undefined,
+  phase?: string,
+): Workout {
+  return contract
+    ? finaliseSection18SafetyWorkout({
+        contract,
+        workout,
+        canonicalContext: {
+          phase: contract.identity.seasonPhase,
+          section18EvidenceMode: 'preserve_legacy_unknown',
+        },
+      }).workout
+    : canonicaliseHydratedWorkout(workout, phase);
 }
 
 function canonicaliseHydratedState(
@@ -152,35 +196,66 @@ function canonicaliseHydratedState(
   const currentMicrocycle = persistedState.currentMicrocycle
     ? canonicaliseHydratedMicrocycle(persistedState.currentMicrocycle, phase)
     : persistedState.currentMicrocycle;
-  const dateOverrides = persistedState.dateOverrides
-    ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
-        date,
-        canonicaliseHydratedWorkout(workout, phase),
-      ]))
-    : persistedState.dateOverrides;
   const weekScopedOverlays = persistedState.weekScopedOverlays
     ? Object.fromEntries(Object.entries(persistedState.weekScopedOverlays).map(([weekStart, overlay]) => [
         weekStart,
-        {
-          ...overlay,
-          exposureContractV2: overlay.exposureContractV2 ?? (
+        (() => {
+          let exposureContractV2 = overlay.exposureContractV2 ?? (
             overlay.exposureContract
               ? migrateLegacyWeeklyExposureContractV2(overlay.exposureContract)
               : undefined
-          ),
-          workoutsByDate: Object.fromEntries(Object.entries(overlay.workoutsByDate).map(([date, workout]) => [
-            date,
-            workout ? canonicaliseHydratedWorkout(workout, phase) : null,
-          ])),
-        },
+          );
+          if (exposureContractV2) {
+            exposureContractV2 = applyGenerationSafetyToSection18Contract({
+              contract: exposureContractV2,
+            });
+          }
+          return {
+            ...overlay,
+            exposureContractV2,
+            workoutsByDate: Object.fromEntries(
+              Object.entries(overlay.workoutsByDate).map(([date, workout]) => [
+                date,
+                workout
+                  ? canonicaliseHydratedSafetyWorkout(workout, exposureContractV2, phase)
+                  : null,
+              ]),
+            ),
+          };
+        })(),
       ]))
     : persistedState.weekScopedOverlays;
+  const safetyContractForDate = (date: string): WeeklyExposureContractV2 | undefined => {
+    const overlay = weekScopedOverlays?.[mondayForDate(date)];
+    if (overlay?.exposureContractV2) return overlay.exposureContractV2;
+    const programMicrocycle = currentProgram?.microcycles.find((microcycle) =>
+      date >= microcycle.startDate.slice(0, 10) && date <= microcycle.endDate.slice(0, 10));
+    if (programMicrocycle?.exposureContractV2) return programMicrocycle.exposureContractV2;
+    if (
+      currentMicrocycle &&
+      date >= currentMicrocycle.startDate.slice(0, 10) &&
+      date <= currentMicrocycle.endDate.slice(0, 10)
+    ) {
+      return currentMicrocycle.exposureContractV2;
+    }
+    return undefined;
+  };
+  const dateOverrides = persistedState.dateOverrides
+    ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
+        date,
+        canonicaliseHydratedSafetyWorkout(workout, safetyContractForDate(date), phase),
+      ]))
+    : persistedState.dateOverrides;
   return {
     ...persistedState,
     currentProgram,
     currentMicrocycle,
     todayWorkout: persistedState.todayWorkout
-      ? canonicaliseHydratedWorkout(persistedState.todayWorkout, phase)
+      ? canonicaliseHydratedSafetyWorkout(
+          persistedState.todayWorkout,
+          safetyContractForDate(todayISOLocal()),
+          phase,
+        )
       : persistedState.todayWorkout,
     dateOverrides,
     weekScopedOverlays,
@@ -681,6 +756,14 @@ export const useProgramStore = create<ProgramState>()(
           merged.blockState = deriveStoredBlockStateFromProgram(merged.currentProgram);
         }
         return merged;
+      },
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) return;
+        // Both hydration orders are safe: persisted Contract v2 was conformed
+        // in merge, then currently-active constraints are projected once the
+        // Zustand state is live.
+        require('../utils/postGenerationConstraintValidation')
+          .revalidateLiveStoredProgramSafety();
       },
     },
   ),

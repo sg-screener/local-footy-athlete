@@ -77,6 +77,12 @@ export interface WorkoutCanonicalisationContext {
   restoreMissingPlanPatterns?: boolean;
   /** Legacy hydration preserves missing evidence as unknown; modern paths infer it canonically. */
   section18EvidenceMode?: Section18EvidenceMode;
+  /** Safety-owned patterns can never be restored from plan/default identity. */
+  prohibitedStrengthPatterns?: readonly MainStrengthPattern[];
+  /** Safety eligibility outranks ordinary phase power placement. */
+  prohibitPower?: boolean;
+  /** Safety eligibility outranks ordinary sprint/high-speed placement. */
+  prohibitSprintHighSpeed?: boolean;
 }
 
 export interface WorkoutCanonicalisationResult {
@@ -387,6 +393,7 @@ function updatePowerForPhase(args: {
   const earlyOffseason = args.context.phase === 'Off-season' &&
     (args.context.offseasonSubphase ?? 'early_offseason') === 'early_offseason';
   if (
+    args.context.prohibitPower === true ||
     earlyOffseason ||
     args.context.weekKind === 'deload' ||
     args.context.readiness === 'low' ||
@@ -398,6 +405,8 @@ function updatePowerForPhase(args: {
       item: block.title,
       reason: earlyOffseason
         ? 'early_offseason_power_blocked'
+        : args.context.prohibitPower
+          ? 'section18_safety_power_blocked'
         : args.context.weekKind === 'deload'
           ? 'deload_power_blocked'
           : gameProtected || gMinusTwoBlocked
@@ -469,6 +478,7 @@ export function finaliseWorkoutAfterMutation(
   }));
 
   const planIntentValid = context.planIntentValid ?? !!workout.planEntryId;
+  const prohibitedPatterns = new Set(context.prohibitedStrengthPatterns ?? []);
   const explicitRestIdentity = workout.workoutType === ('Rest' as WorkoutType) ||
     /^rest(?:\s+day)?$/i.test(workout.name.trim());
   const supportOnlyTextHint =
@@ -513,7 +523,7 @@ export function finaliseWorkoutAfterMutation(
     ? null
     : ingress.intent;
   const intendedPatterns = planIntentValid && canonicalIntent
-    ? new Set(canonicalIntent.plannedPatterns)
+    ? new Set(canonicalIntent.plannedPatterns.filter((pattern) => !prohibitedPatterns.has(pattern)))
     : new Set<MainStrengthPattern>();
   if (supportOnlyIdentity && (workout.strengthIntent || workout.strengthPatternContributions?.length)) {
     actions.push({
@@ -550,6 +560,15 @@ export function finaliseWorkoutAfterMutation(
   const sourceIsRecovery = workout.workoutType === 'Recovery' || workout.sessionTier === 'recovery';
   for (const item of classified) {
     const name = rowName(item.row);
+    const pattern = item.classification.mainPattern;
+    if (pattern && prohibitedPatterns.has(pattern)) {
+      actions.push({
+        kind: 'row_removed',
+        item: name,
+        reason: `section18_prohibited_pattern:${pattern}`,
+      });
+      continue;
+    }
     if (item.classification.kind === 'power') {
       actions.push({ kind: 'row_removed', item: name, reason: 'raw_power_owned_by_power_policy' });
       continue;
@@ -592,7 +611,6 @@ export function finaliseWorkoutAfterMutation(
       });
       continue;
     }
-    const pattern = item.classification.mainPattern;
     if (
       intendedPatterns.size > 0 && pattern && !intendedPatterns.has(pattern) &&
       !isMinorCrossPatternAccessory(item)
@@ -790,6 +808,14 @@ export function finaliseWorkoutAfterMutation(
         }),
   };
   workout = updatePowerForPhase({ workout, context, actions });
+  if (context.prohibitSprintHighSpeed && workout.speedBlock) {
+    actions.push({
+      kind: 'row_removed',
+      item: workout.speedBlock.title,
+      reason: 'section18_safety_sprint_blocked',
+    });
+    workout = { ...workout, speedBlock: undefined };
+  }
   workout = normalizeVisibleWorkoutIdentity(workout);
 
   if (!hasMeaningfulWorkoutContent(workout)) {

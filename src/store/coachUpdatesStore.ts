@@ -651,6 +651,21 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
   ),
 );
 
+let safetyProjectionInProgress = false;
+useCoachUpdatesStore.subscribe((state, previous) => {
+  if (state.activeConstraints === previous.activeConstraints || safetyProjectionInProgress) return;
+  safetyProjectionInProgress = true;
+  try {
+    // Dynamic loading keeps store initialisation acyclic. The validator reads
+    // the already-committed constraint state and projects it through the same
+    // final safety boundary used by generation, rebuilds and edits.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    require('../utils/postGenerationConstraintValidation').revalidateLiveStoredProgramSafety();
+  } finally {
+    safetyProjectionInProgress = false;
+  }
+});
+
 /**
  * Read helper used by HomeScreen. Returns null when no entry exists
  * for the week OR when the entry is inactive — both are "don't render".

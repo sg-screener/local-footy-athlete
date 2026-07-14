@@ -104,6 +104,7 @@ import {
   type Section18WeekMode,
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
+import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import {
   createStrengthIntent,
   mainPatternsForLegacyStrengthPattern,
@@ -562,7 +563,7 @@ function buildParallelSection18Contract(args: {
   const cookedReadiness = readinessTier === 'moderate_reduction' ||
     readinessTier === 'major_reduction' || readinessTier === 'full_pause';
 
-  return buildSection18WeeklyExposureContractV2({
+  const contract = buildSection18WeeklyExposureContractV2({
     seasonPhase: inputs.seasonPhase,
     declaredSubphase: identity.declaredSubphase,
     mode: identity.mode,
@@ -603,6 +604,10 @@ function buildParallelSection18Contract(args: {
       substitutionStatus: inputs.appConditioningFeasible === false ? 'not_attempted' : 'not_required',
       consideredSubstitutions: [],
     },
+  });
+  return applyGenerationSafetyToSection18Contract({
+    contract,
+    generationConstraints: inputs.generationConstraints,
   });
 }
 

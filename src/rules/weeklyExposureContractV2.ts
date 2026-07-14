@@ -75,6 +75,9 @@ export type Section18RowRole =
 export interface WorkoutExerciseSection18Evidence {
   protocolVersion: 1;
   role: Section18RowRole;
+  /** Movement pattern for safety filtering, including accessory-dose rows. */
+  strengthPattern: MainStrengthPattern | null;
+  /** Meaningful main-lift credit; accessories remain null. */
   mainStrengthPattern: MainStrengthPattern | null;
   provenance: 'canonical_row_classifier' | 'legacy_unknown';
 }
@@ -136,7 +139,13 @@ export interface Section18AnchorContract {
   kind: Section18AnchorKind;
   dayOfWeek: number;
   participation: AnchorParticipationState;
-  participationProvenance: 'explicit' | 'legacy_unknown' | 'current_input_missing';
+  participationProvenance:
+    | 'explicit'
+    | 'derived_healthy_unrestricted'
+    | 'derived_active_constraint'
+    | 'healthy_legacy_assumption'
+    | 'legacy_unknown'
+    | 'current_input_missing';
   /** What the current/legacy production path claimed before v2 participation gates. */
   currentProductionClaim: {
     conditioning: boolean;
@@ -179,12 +188,40 @@ export interface Section18EquipmentPolicyState {
   >;
 }
 
+export type Section18SafetyDomain =
+  | 'main_strength'
+  | 'conditioning'
+  | 'sprint_high_speed'
+  | 'power'
+  | 'anchor_participation'
+  | 'session_dose';
+
+export interface Section18SafetyPolicy {
+  requiredSafePatterns: MainStrengthPattern[];
+  prohibitedPatterns: MainStrengthPattern[];
+  prohibitedSprintHighSpeed: boolean;
+  prohibitedPower: boolean;
+  prohibitedPowerFamilies: Array<'lower' | 'upper'>;
+  affectedDomains: Section18SafetyDomain[];
+  unaffectedDomains: Section18SafetyDomain[];
+  fullPause: boolean;
+  mainStrengthFrequencyCeiling: number | null;
+  conditioningFrequencyCeiling: number | null;
+  sprintHighSpeedFrequencyCeiling: number | null;
+  lighterStrengthRequired: boolean;
+  strengthIntensityCeiling: 'Light' | 'Moderate' | null;
+  meaningfulMainLiftSetCeiling: number | null;
+  reasons: WeeklyExposureReductionReason[];
+}
+
 export interface WeeklyExposureContractV2 {
   protocolVersion: typeof WEEKLY_EXPOSURE_CONTRACT_V2_VERSION;
   authority: 'LFA_PROGRAMMING_BIBLE_SECTION_18';
   source: 'section18_resolver' | 'legacy_migration';
   /** Complete typed reduction ledger; domain arrays below are projections. */
   authorisedReductions: Section18AuthorisedReduction[];
+  /** Safety-only ownership consumed by the shared post-canonical finaliser. */
+  safety: Section18SafetyPolicy;
   identity: Section18Identity;
   mainStrength: {
     exposure: Section18NumericPolicy;
@@ -301,12 +338,106 @@ export interface Section18ContractV2Input {
   prohibitedPatternProvenance?: WeeklyExposureContractV2['strengthPatterns']['prohibitedPatternProvenance'];
   intentionalImbalanceReason?: string | null;
   reductions?: readonly Section18AuthorisedReduction[];
+  prohibitedSprintHighSpeed?: boolean;
+  prohibitedPower?: boolean;
+  prohibitedPowerFamilies?: readonly ('lower' | 'upper')[];
+  affectedSafetyDomains?: readonly Section18SafetyDomain[];
+  fullPause?: boolean;
   authorisedUnavoidableAnchorExcess?: number;
   equipment?: Partial<Section18EquipmentPolicyState>;
   source?: WeeklyExposureContractV2['source'];
 }
 
 const ALL_PATTERNS: readonly MainStrengthPattern[] = ['squat', 'hinge', 'push', 'pull'];
+const ALL_SAFETY_DOMAINS: readonly Section18SafetyDomain[] = [
+  'main_strength',
+  'conditioning',
+  'sprint_high_speed',
+  'power',
+  'anchor_participation',
+  'session_dose',
+];
+
+const SAFETY_REDUCTION_REASONS = new Set<WeeklyExposureReductionReason>([
+  'low_readiness',
+  'injury_restriction',
+  'bye_recovery_mode',
+  'deload_policy',
+  'training_age_limit',
+  'full_pause',
+]);
+
+function safetyFrequencyCeiling(
+  reductions: readonly Section18AuthorisedReduction[],
+  metric: Section18ReductionMetric,
+): number | null {
+  const targets = reductions
+    .filter((entry) => entry.metric === metric && entry.change !== 'dose_intensity' &&
+      SAFETY_REDUCTION_REASONS.has(entry.reason))
+    .map((entry) => entry.reducedTarget);
+  return targets.length > 0 ? Math.min(...targets) : null;
+}
+
+function buildSafetyPolicy(args: {
+  mode: Section18WeekMode;
+  weekKind: WeekKind;
+  prohibitedPatterns: readonly MainStrengthPattern[];
+  requiredSafePatterns: readonly MainStrengthPattern[];
+  reductions: readonly Section18AuthorisedReduction[];
+  cookedReadiness: boolean;
+  prohibitedSprintHighSpeed?: boolean;
+  prohibitedPower: boolean;
+  prohibitedPowerFamilies?: readonly ('lower' | 'upper')[];
+  affectedSafetyDomains?: readonly Section18SafetyDomain[];
+  fullPause?: boolean;
+}): Section18SafetyPolicy {
+  const fullPause = args.fullPause === true || args.reductions.some((entry) =>
+    entry.reason === 'full_pause');
+  const byeRecovery = args.mode === 'in_season_bye_recovery';
+  const lighterStrengthRequired = args.cookedReadiness || byeRecovery || args.weekKind === 'deload';
+  const reducedMainCeiling = safetyFrequencyCeiling(args.reductions, 'main_strength_frequency');
+  const mainCeiling = fullPause
+    ? 0
+    : byeRecovery
+      ? Math.min(2, reducedMainCeiling ?? 2)
+      : reducedMainCeiling;
+  const conditioningCeiling = fullPause
+    ? 0
+    : safetyFrequencyCeiling(args.reductions, 'conditioning_core_frequency');
+  const sprintCeiling = fullPause || args.prohibitedSprintHighSpeed
+    ? 0
+    : safetyFrequencyCeiling(args.reductions, 'sprint_high_speed_frequency');
+  const prohibitedPower = fullPause || args.prohibitedPower || byeRecovery ||
+    args.weekKind === 'deload' || args.cookedReadiness;
+  const affected = new Set<Section18SafetyDomain>(args.affectedSafetyDomains ?? []);
+  if (args.prohibitedPatterns.length > 0 || mainCeiling !== null) affected.add('main_strength');
+  if (conditioningCeiling !== null) affected.add('conditioning');
+  if (sprintCeiling !== null || args.prohibitedSprintHighSpeed) affected.add('sprint_high_speed');
+  if (prohibitedPower || (args.prohibitedPowerFamilies?.length ?? 0) > 0) affected.add('power');
+  if (lighterStrengthRequired) affected.add('session_dose');
+  if (args.prohibitedSprintHighSpeed) affected.add('anchor_participation');
+  const reasons = Array.from(new Set(args.reductions
+    .filter((entry) => SAFETY_REDUCTION_REASONS.has(entry.reason))
+    .map((entry) => entry.reason)));
+  if (byeRecovery && !reasons.includes('bye_recovery_mode')) reasons.push('bye_recovery_mode');
+  return {
+    requiredSafePatterns: [...args.requiredSafePatterns],
+    prohibitedPatterns: [...args.prohibitedPatterns],
+    prohibitedSprintHighSpeed: fullPause || args.prohibitedSprintHighSpeed === true,
+    prohibitedPower,
+    prohibitedPowerFamilies: Array.from(new Set(args.prohibitedPowerFamilies ?? [])),
+    affectedDomains: ALL_SAFETY_DOMAINS.filter((domain) => affected.has(domain)),
+    unaffectedDomains: ALL_SAFETY_DOMAINS.filter((domain) => !affected.has(domain)),
+    fullPause,
+    mainStrengthFrequencyCeiling: mainCeiling,
+    conditioningFrequencyCeiling: conditioningCeiling,
+    sprintHighSpeedFrequencyCeiling: sprintCeiling,
+    lighterStrengthRequired,
+    strengthIntensityCeiling: args.cookedReadiness || byeRecovery ? 'Moderate' : null,
+    meaningfulMainLiftSetCeiling: args.cookedReadiness || byeRecovery ? 2 : null,
+    reasons,
+  };
+}
 
 function numericPolicy(args: {
   required: number;
@@ -555,6 +686,19 @@ export function buildSection18WeeklyExposureContractV2(
     authority: 'LFA_PROGRAMMING_BIBLE_SECTION_18',
     source: input.source ?? 'section18_resolver',
     authorisedReductions: reductions,
+    safety: buildSafetyPolicy({
+      mode: input.mode,
+      weekKind: input.weekKind ?? 'build',
+      prohibitedPatterns: prohibited,
+      requiredSafePatterns,
+      reductions,
+      cookedReadiness: input.cookedReadiness === true || input.readiness === 'low',
+      prohibitedSprintHighSpeed: input.prohibitedSprintHighSpeed,
+      prohibitedPower: input.prohibitedPower === true || !powerEligible,
+      prohibitedPowerFamilies: input.prohibitedPowerFamilies,
+      affectedSafetyDomains: input.affectedSafetyDomains,
+      fullPause: input.fullPause,
+    }),
     identity: {
       seasonPhase: input.seasonPhase,
       declaredSubphase: input.declaredSubphase,
@@ -670,6 +814,39 @@ export function buildSection18WeeklyExposureContractV2(
       missingProhibitedPatternsTraceable: input.prohibitedPatternProvenance === 'legacy_missing',
     },
   };
+}
+
+/** Rebuild the derived safety projection after active constraints change a persisted contract. */
+export function refreshSection18SafetyPolicy(
+  source: WeeklyExposureContractV2,
+  overrides: Partial<Pick<
+    Section18ContractV2Input,
+    | 'prohibitedSprintHighSpeed'
+    | 'prohibitedPower'
+    | 'prohibitedPowerFamilies'
+    | 'affectedSafetyDomains'
+    | 'fullPause'
+    | 'cookedReadiness'
+  >> = {},
+): WeeklyExposureContractV2 {
+  const contract = JSON.parse(JSON.stringify(source)) as WeeklyExposureContractV2;
+  contract.safety = buildSafetyPolicy({
+    mode: contract.identity.mode,
+    weekKind: contract.identity.weekKind,
+    prohibitedPatterns: contract.strengthPatterns.prohibitedPatterns,
+    requiredSafePatterns: contract.strengthPatterns.requiredSafePatterns,
+    reductions: contract.authorisedReductions,
+    cookedReadiness: overrides.cookedReadiness ??
+      contract.safety?.reasons?.includes('low_readiness') ?? false,
+    prohibitedSprintHighSpeed: overrides.prohibitedSprintHighSpeed ??
+      contract.safety?.prohibitedSprintHighSpeed,
+    prohibitedPower: overrides.prohibitedPower ?? contract.power.eligible === false,
+    prohibitedPowerFamilies: overrides.prohibitedPowerFamilies ??
+      contract.safety?.prohibitedPowerFamilies,
+    affectedSafetyDomains: overrides.affectedSafetyDomains ?? contract.safety?.affectedDomains,
+    fullPause: overrides.fullPause ?? contract.safety?.fullPause,
+  });
+  return contract;
 }
 
 function reductionMetric(entry: WeeklyExposureReduction): Section18ReductionMetric {

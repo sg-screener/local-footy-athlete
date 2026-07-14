@@ -46,6 +46,7 @@ import { resolveOffseasonSubphase } from '../../rules/offseasonSubphase';
 import { resolvePreseasonSubphase } from '../../rules/preseasonSubphase';
 import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
 import { evaluateSection18EffectiveWeek } from '../../rules/section18EffectiveWeekEvaluator';
+import { finaliseSection18SafetyWeek } from '../../rules/section18SafetyFinaliser';
 import {
   getProgrammingRoleBias,
   normalizeOnboardingRole,
@@ -265,12 +266,27 @@ export function buildGeneratedMicrocycles(args: {
         conditioningModalities: equipment.conditioningModalities,
       },
     );
-    const workouts = attachRecoveryAddonsToWeek({
+    let workouts = attachRecoveryAddonsToWeek({
       workouts: baseWorkouts,
       profile: args.profile,
       weekKind: blockState.weekKind,
       generationConstraints: args.generationConstraints,
     });
+    let exposureContractV2 = weekPlan.weeklyExposureContractV2;
+    if (exposureContractV2) {
+      const safety = finaliseSection18SafetyWeek({
+        contract: exposureContractV2,
+        workouts,
+        weekStart: blockState.weekStart,
+        canonicalContext: {
+          phase: args.profile.seasonPhase,
+          weekKind: blockState.weekKind,
+          profile: args.profile,
+        },
+      });
+      workouts = safety.workouts;
+      exposureContractV2 = safety.contract;
+    }
     const exposureContract = weekPlan.weeklyExposureContract;
     if (exposureContract) {
       const finalValidation = evaluateEffectiveWeekExposureContract(
@@ -291,7 +307,6 @@ export function buildGeneratedMicrocycles(args: {
         throw new Error(`Final effective-week exposure contract unresolved (${detail})`);
       }
     }
-    const exposureContractV2 = weekPlan.weeklyExposureContractV2;
     if (exposureContractV2) {
       const observation = evaluateSection18EffectiveWeek({
         contract: exposureContractV2,

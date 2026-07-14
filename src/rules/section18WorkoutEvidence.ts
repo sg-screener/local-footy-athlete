@@ -39,6 +39,7 @@ function inferredRowEvidence(
   return {
     protocolVersion: 1,
     role,
+    strengthPattern: classification.mainPattern,
     mainStrengthPattern: classification.kind === 'strength_main'
       ? classification.mainPattern
       : null,
@@ -108,6 +109,7 @@ export function withSection18WorkoutEvidence(
             section18Evidence: {
               protocolVersion: 1,
               role: 'legacy_unknown',
+              strengthPattern: null,
               mainStrengthPattern: null,
               provenance: 'legacy_unknown',
             },
