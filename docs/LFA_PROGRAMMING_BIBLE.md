@@ -4405,15 +4405,28 @@ B. Authoritative phase table
 | --- | --- | --- | --- | --- | --- | --- |
 | In-season game week | 2 / 2–3 / 4. Cover push, pull, squat and hinge every week where possible. | Total is supplied by anchors plus the approved app top-up table in Section C. | Minimum 1 genuine exposure. Game or genuine high-speed TT may satisfy it. | Eligibility-based. Remove all primers for low/cooked readiness. | Minimum 1; prefer 2. | Light flushouts may occur, including G-2. They are optional, non-core and non-compulsory. |
 | Bye build | 2 / normally select 3, preferred 3–4 / 4. Select 4 only with strong readiness, sufficient availability and low TT load. | 3 meaningful exposures total, counting normal TT / 3 / normal ceiling follows the phase and hard-day rules. | Minimum 1 genuine exposure. TT may satisfy it; 0 TT requires an app exposure. | Eligibility-based under the general power rule. | Minimum 1; prefer 2. | Light flushouts and gunshow/accessories are optional and non-core. |
-| Bye recovery | Exactly 2 lighter sessions: two full-body sessions or upper/lower. | Preserve unavoidable TT. No compulsory hard app conditioning. | Do not add sprint when TT genuinely supplies it. Reduction below the one-exposure floor requires an explicit recovery reason. | No primers. | Minimum 2; prefer 3. | Recovery guidance and appropriately reduced TT participation may remain. |
+| Bye recovery | Exactly 2 lighter sessions: two full-body sessions or upper/lower. | No compulsory hard app conditioning. 0 TT: program 1–2 light aerobic/flush sessions. 1 TT: one optional light aerobic/flush session. 2+ TT: no additional conditioning required. Normal TT counts as core conditioning. | Do not add sprint when TT genuinely supplies it. Reduction below the one-exposure floor requires an explicit bye-recovery, readiness, injury or feasibility reason. | No primers. | Minimum 2; prefer 3. Light aerobic/flush work does not replace these days. | Recovery guidance and appropriately reduced TT participation may remain. Light aerobic/flush work is recovery-focused and not hard conditioning. |
 | Early off-season, first 1–2 weeks | 0 / 2–3 lighter / 3. Zero sessions is valid. | 0 / 1–2 light aerobic / 3. No hard conditioning. | No required sprint or running. Optional easy running only when the athlete wants it and is fresh. | No primers. | Prefer 3–4. | Everything is optional. Selected optional work must remain non-compulsory. |
 | Mid off-season | 3 / 4 / 4. Normally select 4 with at least 4 available days; 3 is valid with only 3 available days. | 3 / 3–4 / 5. Mostly aerobic; maximum 1 hard conditioning exposure and all remaining work easy-to-moderate. | Minimum 1 genuine exposure with controlled volume and full-quality efforts. | Eligibility-based; prefer 1–2 primers weekly, not one per lift. | Prefer 2. | Accessories/gunshow may be added but do not count as main strength. |
 | Late off-season | 3 / 4 / 4. Normally select 4. | 3 / 4 / 5. More football-specific; allow 1–2 hard exposures and keep the remainder easy-to-moderate. | Required 1 / preferred 1–2 / maximum 2. If 2 are used, control volume tightly. | Eligibility-based; prefer 1–2 primers weekly. | Prefer 2. | At most one optional accessory/gunshow session; it does not count as main strength. |
 | Pre-season, early/mid/late | 3 / default 4 / 4. Use 4 when commitments, availability and recovery allow. Valid 3-session structures include three full-body sessions or upper/lower/full-body. TT never counts as strength. | 3 / default 4 / 4. TT counts when participation qualifies. App work fills only the remainder. | Minimum 1 genuine exposure. TT may satisfy it unless participation is modified or restricted. | Eligibility-based; prefer 1–2 primers weekly. | Prefer 2. | One accessory/gunshow session and light flushouts may be optional/non-core. |
+| Practice-match week | With 2 TT: 3 main-strength sessions. With 1 TT: 3. With 0 TT: 3–4, default 3. TT and the practice match never count as strength. Keep at least one lower-body session early enough before the match; reduce nearby dose rather than unnecessarily deleting frequency. | The practice match counts as 1 core exposure with normal participation. App top-ups follow Section C and bring total core conditioning to 3. | The practice match counts as 1 genuine exposure with normal participation. Do not add unnecessary sprint. | Eligibility-based; allow 1–2 primers early in the week, maximum 2, and none close to the match. | Prefer 2. | Light flushouts may occur, including PM-2. They are optional, non-core and cannot satisfy required conditioning. Gunshow/accessories never count as strength. |
 
 Beginners in mid off-season use 2 strength, 2–3 conditioning and 1 safe sprint exposure with reduced complexity and dose.
 
 Early, mid and late pre-season change dose, intensity and specificity. Pre-season progression continues across blocks and must not reset to early pre-season at every new block.
+
+Pre-season must never be inferred automatically from dates, blocks or elapsed time. Only the user can change the season phase from Off-season to Pre-season.
+
+Off-season subphase ownership is based on time since the athlete entered Off-season, not the current block number:
+
+* First off-season block Week 1–2: early off-season.
+* First off-season block Week 3–4: mid off-season.
+* Do not automatically deload at the end of Week 4 of this first early/mid block.
+* After Week 4, start a fresh late-off-season block.
+* Late off-season then continues indefinitely across all later blocks until the user explicitly changes the season phase.
+* New blocks and deloads must not reset the athlete to early or mid off-season.
+* Later late-off-season blocks may use the approved deload policy in Section F.
 
 No-game in-season weeks must resolve to bye build or bye recovery. Normal/high readiness defaults to bye build. Low/cooked readiness, meaningful injury or an explicit recovery choice selects bye recovery.
 
@@ -4428,6 +4441,12 @@ C. Anchor credit and app top-ups
 | Bye build: 1 TT | Add 2 app conditioning exposures. | Add sprint only if TT does not genuinely supply it. |
 | Bye build: 2 TT | Add 1 app conditioning exposure, ideally a harder Saturday exposure. | Add sprint only if neither TT genuinely supplies it. |
 | Bye build: 3 TT | No compulsory app conditioning. | Add sprint only if no TT genuinely supplies it. |
+| Bye recovery: 0 TT | Program 1–2 light aerobic or flush sessions. They are recovery-focused, not hard conditioning. | Preserve the genuine sprint floor unless an explicit bye-recovery, readiness, injury or feasibility reduction removes it. |
+| Bye recovery: 1 TT | One light aerobic or flush session is optional. Normal TT counts as core conditioning. | Add no sprint when TT genuinely satisfies the floor. |
+| Bye recovery: 2+ TT | No additional conditioning is required. | Add no sprint when at least one TT genuinely satisfies the floor. |
+| Practice match: 2 TT + PM | No additional core conditioning. | Genuine TT or normal PM participation may satisfy the floor; no unnecessary app sprint. |
+| Practice match: 1 TT + PM | Add 1 medium-to-hard core conditioning exposure on PM-3 or earlier. | Same genuine-credit rule. |
+| Practice match: 0 TT + PM | Add 2 medium-to-hard core conditioning exposures on PM-3 or earlier. | Normal PM participation satisfies the floor; reduced participation requires adjustment. |
 | Pre-season target 4: 0/1/2/3 TT | Add 4/3/2/1 app core conditioning exposures respectively. | Add sprint only when genuine anchor credit does not satisfy the one-exposure floor. |
 | Pre-season reduced target 3 | After genuine TT/game/practice-match credit, add only the remainder needed to reach 3. | Same genuine-credit rule. |
 
@@ -4452,6 +4471,14 @@ App top-ups
 
 Team training and games are fixed anchors. Declared availability governs additional app sessions; it does not remove real-world anchors or authorise extra app days outside the declaration.
 
+Field-action power credit
+
+* Team training, games and practice matches do not automatically count as formal power-primer exposure.
+* Power remains an app-programming category with no required weekly numeric minimum.
+* Field actions still contribute to fatigue, hard-day load and spacing decisions.
+* When team or game-like load is high, reduce or remove app power primers.
+* Do not claim that field activity satisfied a numeric power-primer target.
+
 D. Strength-pattern rules
 
 * Default to push, pull, squat and hinge in every healthy pre-season, mid/late off-season and in-season week.
@@ -4460,6 +4487,12 @@ D. Strength-pattern rules
 * Three-session weeks may use full-body sessions to cover several patterns.
 * Injury policy must record both required safe patterns and prohibited affected patterns.
 * Accessories and gunshow never count toward main-strength frequency or pattern requirements.
+* A session receives credit for multiple patterns only when it contains a meaningful main-strength contribution to each credited pattern.
+* Examples of valid multi-pattern credit include squat + press + row for squat/push/pull, squat + RDL for squat/hinge, and bench + pull-ups for push/pull.
+* Token accessory work does not earn full pattern credit. Injury-prohibited patterns cannot receive credit.
+* Across each healthy week, default to equal or near-equal numbers of meaningful main lifts for push, pull, squat and hinge.
+* Full-body sessions must not repeatedly overrepresent one pattern while underdosing another. Three full-body sessions with several push main lifts but only one meaningful pull main lift across the week are not a valid default balance.
+* Any intentional imbalance must be justified by season phase, athlete goal, injury, readiness, availability or another explicit constraint.
 
 E. Readiness, injury, equipment and invalid weeks
 
@@ -4510,7 +4543,9 @@ Repair or regenerate automatically. Use a safe fallback if repair fails. Show a 
 
 F. Deload rules
 
-* Off-season and pre-season automatically deload every fourth week.
+* Pre-season automatically deloads every fourth week.
+* The first four-week Off-season block is an explicit exception: Weeks 1–2 are early, Weeks 3–4 are mid, and Week 4 does not automatically deload.
+* After the first block, late-off-season blocks may use the approved automatic fourth-week deload policy. A deload never resets the subphase.
 * In-season deload occurs through bye recovery or a readiness/injury decision.
 * Preserve strength and conditioning frequency where possible.
 * Reduce sets, volume, duration, load and intensity before reducing frequency.
@@ -4531,6 +4566,7 @@ G. Rest and hard-day rules
 | Mid off-season | Prefer 2. |
 | Late off-season | Prefer 2. |
 | Pre-season | Prefer 2. |
+| Practice-match week | Prefer 2. |
 
 A recovery or flush workout is an active-recovery day, not a full-rest day.
 
@@ -4542,6 +4578,7 @@ Hard-day policy
 * 5 may occur only through unavoidable anchor load, not deliberate app programming.
 * Long slow aerobic work is medium stress when intensity is controlled.
 * TT and games count as hard only with normal hard participation.
+* A practice match counts as 1 hard day only with normal participation; reduced or modified participation requires explicit adjustment.
 * Stack compatible stress rather than spreading hard work across every day.
 
 H. Authorised reduction reasons
@@ -4553,7 +4590,7 @@ H. Authorised reduction reasons
 | `injury_restriction` | Affected patterns, sprint or other unsafe work must be removed. |
 | `equipment_infeasibility` | No safe substitution can preserve the exposure frequency. |
 | `game_load_protection` | A game anchor requires a justified reduction to protect performance or safety. |
-| `practice_match_load` | A practice-match anchor requires a justified reduction. The exact pre-season strength reduction by TT count remains to be approved. |
+| `practice_match_load` | A practice-match anchor requires game-like spacing and dose adjustment. It does not authorise strength below 3 merely because the match exists: 2 TT + PM = S3; 1 TT + PM = S3; 0 TT + PM = S3–4, default 3. |
 | `bye_recovery_mode` | The approved bye-recovery structure replaces the bye-build targets. |
 | `deload_policy` | The approved deload rules change dose and, only where stated, frequency. |
 | `spacing_safety_conflict` | Required work cannot be placed without violating game, sprint, lower-body or recovery spacing. |
@@ -4563,12 +4600,14 @@ H. Authorised reduction reasons
 
 An authorised reduction must identify the affected exposure domain and must survive into the final visible week. A final week that exceeds, restores or otherwise contradicts its approved reduction is invalid.
 
-I. Policy questions still open after this approval
+I. Policy closure — 14 July 2026
 
-Only these points remain unresolved and must not be inferred:
+All five previously open coaching-policy questions are resolved in this section:
 
-* Whether off-season early/mid/late subphase progression continues globally across blocks or resets in each block.
-* The exact pre-season practice-match strength target or reduction for each 0–3 TT scenario. Conditioning and sprint anchor credit are already approved above.
-* Whether normal TT, game or practice-match actions receive explicit power-exposure credit. Power remains eligibility-based with 1–2 app primers preferred where stated until that credit policy is approved.
-* Whether bye recovery has any compulsory non-hard app conditioning beyond unavoidable TT.
-* The exact classifier rule for crediting multiple strength patterns within one exercise or session. Full-body sessions may cover several patterns, but classifier ownership must not be inferred beyond genuine work performed.
+* Practice-match strength, conditioning, sprint, power, recovery and hard-day rules are defined in Sections B, C, G and H.
+* Bye-recovery conditioning across 0, 1 and 2+ TT is defined in Sections B and C.
+* Off-season subphase ownership, the first-block deload exception and the user-owned transition to Pre-season are defined in Sections B and F.
+* Meaningful multi-pattern credit and equal or near-equal weekly main-lift balance are defined in Section D.
+* Field actions receive no automatic formal power-primer credit; power remains an app category with no required numeric weekly minimum.
+
+There are no unresolved coaching-policy decisions in this report set as of 14 July 2026.

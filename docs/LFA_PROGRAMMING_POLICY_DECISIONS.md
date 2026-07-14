@@ -5,17 +5,19 @@
 **Evidence date:** 14 July 2026.
 **Fixed scenario weeks:** Monday 13 July, 20 July, 27 July, 3 August and 10 August 2026.
 
-## Approval summary — 14 July 2026
+## Final approval summary — 14 July 2026
 
-Sam approved the phase frequencies, anchor credit, genuine sprint definition, readiness/injury/equipment precedence, deload structure, strength-pattern default, full-rest definition and hard-day limits recorded in Bible Section 18. The scenario outputs below remain evidence of current production behaviour; approval of a policy does **not** approve a conflicting output.
+Sam approved the phase frequencies, anchor credit, genuine sprint definition, readiness/injury/equipment precedence, deload structure, strength-pattern default, full-rest definition and hard-day limits recorded in Bible Section 18. Sam then resolved the final five questions: practice matches, bye-recovery conditioning, off-season progression, multi-pattern credit/balance and field-action power credit. The scenario outputs below remain evidence of current production behaviour; approval of a policy does **not** approve a conflicting output.
 
-Only five narrow questions remain open because the approved decisions did not state them:
+The five formerly open decisions are now locked:
 
-1. Whether off-season early/mid/late subphases continue globally across blocks or reset in each block.
-2. The exact pre-season practice-match **strength** reduction for each 0–3 TT scenario. The approved pre-season conditioning floor and genuine anchor credit already apply.
-3. Whether normal TT, game or practice-match actions receive explicit power-exposure credit.
-4. Whether bye recovery has any compulsory non-hard app conditioning beyond unavoidable TT.
-5. The exact classifier rule for crediting multiple strength patterns within one exercise or session.
+1. Practice-match weeks use S3 with 1–2 TT and S3–4/default3 with 0 TT, plus the approved 0–2 TT conditioning top-ups.
+2. Bye recovery uses exactly 2 lighter lifts and the approved 0/1/2+ TT light-conditioning table.
+3. The first Off-season block is early/early/mid/mid without a Week 4 deload; late Off-season then continues until the user changes phase.
+4. Multi-pattern credit requires meaningful main-strength work, with equal or near-equal weekly main-lift balance by default.
+5. Field activity never receives automatic formal power-primer credit; power has no required weekly numeric minimum.
+
+**No coaching-policy decisions remain unresolved as of 14 July 2026.**
 
 ## Historical audit result
 
@@ -56,7 +58,7 @@ The highest-risk findings are:
 - [x] [Set the 3-exposure conditioning target and 0–3 TT top-up table](#bye-policy-decisions).
 - [x] [Confirm that gunshow/accessory work never replaces required strength or conditioning](#bye-policy-decisions).
 - [x] [Confirm recovery-mode strength, sprint, full-rest and team-training treatment](#bye-policy-decisions).
-- [ ] [Set any compulsory non-hard app conditioning floor for bye recovery](#bye-policy-decisions) — **unresolved**.
+- [x] [Set the 0/1/2+ TT light-conditioning table for bye recovery](#bye-policy-decisions).
 
 ### 3. Early off-season
 
@@ -73,14 +75,14 @@ The highest-risk findings are:
 ### 5. Late off-season
 
 - [x] [Set build-week strength and conditioning frequencies](#late-off-season-policy-decisions).
-- [ ] [Decide whether off-season subphase progression continues across blocks or resets](#late-off-season-policy-decisions) — **unresolved**.
+- [x] [Keep the first block early/early/mid/mid, then continue late off-season until the user changes phase](#late-off-season-policy-decisions).
 - [x] [Confirm late-off-season deload frequency versus dose changes](#late-off-season-policy-decisions).
 
 ### 6. Pre-season
 
 - [x] [Set pre-season minimum 3, default 4 and maximum 4 for strength and core conditioning](#pre-season-policy-decisions).
 - [x] [Confirm that qualifying team training receives conditioning credit but never strength credit](#pre-season-policy-decisions).
-- [ ] [Set exact practice-match strength reductions for 0–3 accompanying team sessions](#pre-season-policy-decisions) — **unresolved**.
+- [x] [Set exact practice-match strength and conditioning policy for 0–2 accompanying team sessions](#pre-season-policy-decisions).
 - [x] [Confirm early/mid/late pre-season progression continues across blocks](#pre-season-policy-decisions).
 
 ### 7. Deloads
@@ -100,14 +102,14 @@ The highest-risk findings are:
 
 - [x] [Default push, pull, squat and hinge to every healthy relevant week, with a two-week fallback only when genuinely constrained](#strength-pattern-policy-decisions).
 - [x] [Set injury-safe required and prohibited patterns](#strength-pattern-policy-decisions).
-- [ ] [Define exact multi-pattern exercise/session classifier credit](#strength-pattern-policy-decisions) — **unresolved**.
+- [x] [Credit only meaningful multi-pattern main work and require near-equal weekly balance by default](#strength-pattern-policy-decisions).
 
 ### 10. Conditioning and sprint credit
 
 - [x] [Define a genuine sprint/high-speed exposure](#conditioning-and-sprint-credit-decisions).
 - [x] [Give team training sprint credit only for expected and completed high-speed work](#conditioning-and-sprint-credit-decisions).
 - [x] [Confirm game and practice-match credit and no unnecessary top-up after the floor is met](#conditioning-and-sprint-credit-decisions).
-- [ ] [Decide whether field actions receive explicit power-exposure credit](#conditioning-and-sprint-credit-decisions) — **unresolved**.
+- [x] [Confirm field actions never receive automatic formal power-primer credit](#conditioning-and-sprint-credit-decisions).
 
 ### 11. Rest and hard days
 
@@ -151,13 +153,13 @@ These short references keep the scenario tables readable. They are summaries, no
 | --- | --- |
 | B-GLOBAL | Section 18 is final authority for approved exposure policy. Required, preferred/default, maximum and optional work are distinct. Gunshow/accessories never count as main strength. Fixed anchors remain; declared availability governs additional app sessions. |
 | B-IS | Strength is 2 required, 2–3 preferred, 4 maximum, with all four patterns where possible. Conditioning top-ups are: 2TT+game 0; 1TT+game 1 hard on G-3 or earlier; 0TT+game 2 medium-to-hard on G-3 or earlier. Sprint minimum is 1 with genuine anchor credit only. |
-| B-BYE | Normal/high readiness defaults to build; low/cooked, meaningful injury or explicit choice selects recovery. Build normally selects 3 lifts (required 2, preferred 3–4, max 4), targets 3 meaningful conditioning exposures including TT, and requires 1 genuine sprint. Recovery uses exactly 2 lighter lifts, no power, at least 2 full-rest days and no added sprint after genuine TT credit. |
+| B-BYE | Normal/high readiness defaults to build; low/cooked, meaningful injury or explicit choice selects recovery. Build normally selects 3 lifts (required 2, preferred 3–4, max 4), targets 3 meaningful conditioning exposures including TT, and requires 1 genuine sprint. Recovery uses exactly 2 lighter lifts, no power and minimum2/preferred3 full-rest days. Recovery conditioning is 1–2 light sessions with 0TT, 1 optional light session with 1TT, and no additional work with 2+TT. |
 | B-OSE | First 1–2 weeks: everything optional and zero sessions valid. Strength 0 / 2–3 / 3; conditioning 0 / 1–2 light / 3; no hard conditioning, power or required sprint/running; prefer 3–4 full-rest days. |
 | B-OSM/L | Mid: S3/4/4, C3/3–4/5 with max 1 hard, sprint min 1, power 1–2 preferred. Late: S3/4/4, C3/4/5 with 1–2 hard, sprint 1/1–2/2, power 1–2 preferred. Both default to all four patterns and prefer 2 full-rest days. |
 | B-PS | Across early/mid/late: strength and core conditioning are minimum 3, default 4, maximum 4. TT counts only toward conditioning, never strength. Sprint minimum is 1 with participation-qualified credit. Pre-season progression continues across blocks. |
-| B-DELOAD | Off-/pre-season automatically deload every fourth week; in-season uses bye recovery or readiness/injury. Preserve frequency where possible, reduce dose/intensity first, preserve one controlled sprint and remove power. Pre-season retains minimum 3/default 4 for S and C; off-season C may fall by one. |
+| B-DELOAD | Pre-season automatically deloads every fourth week. The first Off-season block is early/early/mid/mid and explicitly does not deload at Week 4; later late-off-season blocks may use the fourth-week deload policy. Preserve frequency where possible, reduce dose first, preserve one controlled sprint and remove power. |
 | B-CONSTRAINT | Low readiness removes power and reduces dose first. Injury records safe and prohibited patterns and removes affected work. TT credit requires qualifying participation. Equipment substitution precedes reduction. A final week contradicting its reduction is invalid and must repair/regenerate or safely fall back. |
-| B-PATTERN | Default all four patterns every healthy relevant week; restore a removed pattern later where safe. A rolling two-week balance is only a genuinely constrained fallback. Injury records required safe and prohibited patterns. |
+| B-PATTERN | Default all four patterns every healthy relevant week with equal or near-equal meaningful main-lift counts. Multi-pattern credit requires a meaningful main contribution to each pattern; token accessories never credit it. Restore missed safe patterns; prohibited injury patterns never receive credit. |
 | B-REST | Recovery/flush is active recovery, not full rest. Phase rest targets are explicit in Section 18. Normal programmed hard-day maximum is 4; 5 is allowed only through unavoidable anchors. Prefer compatible stress stacking. |
 
 ### Baseline minimum, preference, maximum and optional-work comparison
@@ -168,13 +170,13 @@ This table deliberately does not turn a preferred range into a requirement. “B
 | --- | --- | --- | --- | --- | --- |
 | In-season game | 2 / 2–3 | 3 total from qualifying anchors plus approved top-ups | 1 / 1 | S4; normal programmed hard days 4 | Current planner selects S2–3. Approved app C is 0/1/2 after 2/1/0 TT plus game; optional flush never credits core C. |
 | Bye build | 2 / normally 3, preferred 3–4 | 3 total / 3 | 1 / 1 | S4; normal programmed hard days 4 | Approved app C is 3/2/1/0 after 0/1/2/3 qualifying TT. Gunshow never credits S/C. |
-| Bye recovery | exactly 2 lighter / exactly 2 | Unavoidable qualifying TT; no compulsory hard app C | Preserve 1 unless explicitly reduced | No power; hard-day max 4; rest min2/prefer3 | Exact compulsory non-hard app C floor remains unresolved. |
+| Bye recovery | exactly 2 lighter / exactly 2 | No hard app C. 0TT: program 1–2 light; 1TT: optional 1 light; 2+TT: no additional | Preserve 1 unless explicitly reduced | No power; hard-day max 4; rest min2/prefer3 | Light aerobic/flush work is recovery-focused and cannot replace strength or preferred rest. |
 | Early off-season | 0 / 2–3 | 0 / 1–2 light | 0 / 0 | S3; C3; no hard C | All work remains optional and non-compulsory; zero is valid. |
 | Mid off-season build | 3 / 4 | 3 / 3–4 | 1 / 1 | S4; C5; max1 hard C; power prefer1–2 | Normally select S4 with at least four available days; beginner is S2/C2–3/safe sprint1. |
 | Late off-season build | 3 / 4 | 3 / 4 | 1 / 1–2 | S4; C5; sprint2; 1–2 hard C; power prefer1–2 | Normally select S4 and cover all patterns. |
 | Healthy pre-season build | 3 / default 4 | 3 total / default 4 | 1 / 1 | S4; core C4; normal programmed hard days4 | TT never credits S. Qualifying TT replaces only the matching amount of app core C; flush is non-core. |
-| Practice match | Exact S reduction remains unresolved | Core C minimum3/default4/maximum4 after credit | 1 / 1 | Normal PM credits C1/sprint1/hard1; exact strength reduction not fixed | Current 0TT and 2TT reductions differ sharply; C1 in the 0TT scenario is below the approved floor. |
-| Deload | Preserve phase S frequency where possible | Preserve phase C frequency where possible; off-season may reduce by 1 | Preserve 1 controlled exposure | Pre-season remains min3/default4; no power | Current off-season C3→2 is allowed when required. Current pre-season C3 can meet the new minimum, but code must not treat default4 as compulsory or restore invalid S5. |
+| Practice match | 2TT: S3; 1TT: S3; 0TT: S3–4/default3 | Core C3 from anchors plus 0/1/2 app after 2/1/0TT | 1 / 1 | Normal PM credits C1/sprint1/hard1; allow1–2 early primers/max2; hard max4; rest prefer2 | Current 0TT code S2/C1 is below policy. TT/PM never credit strength; optional flush/gunshow never fill core requirements. |
+| Deload | Preserve phase S frequency where possible | Preserve phase C frequency where possible; late off-season may reduce by 1 | Preserve 1 controlled exposure | First early/mid block W4 never auto-deloads; pre-season remains min3/default4; no power | A later late-block C reduction by 1 may be allowed. Current first-block W4 deload is not. Pre-season C3 can meet the minimum, but S5 remains invalid. |
 
 The current validator has no general `permittedMaximum` field for main strength, conditioning or sprint/COD. It can therefore accept S5 against a Bible maximum of 4. The hard-day contract is different: it records and validates a permitted count.
 
@@ -280,7 +282,7 @@ Applicable Bible: **B-GLOBAL, B-IS, B-BYE, B-REST, B-PATTERN**, plus **B-CONSTRA
 | IS-BB-2TT-6D | Healthy bye build, 6D, 2TT. Anchors satisfy conditioning and sprint; 2 lifts. | 2 / 3–4 / 2→2; Sq,Pu,Pl | 2 / 2–2 / 2→2; 2TT only | 1 / 1→2; 2TT | E; 2 | R4, H3 | None; none | **Bible unclear; code chose—user decision required.** No extra Saturday conditioning is selected despite the Bible’s bye example. | **Approved 14 July 2026 — Bible Section 18.** |  |
 | IS-BB-3TT-7D | Healthy bye build, 7D, 3TT. Anchors supply all conditioning; still only 2 lifts. | 2 / 3–4 / 2→2; Sq,Pu,Pl | 3 / 3–3 / 3→3; 3TT only | 1 / 1→3; 3TT | E; 2 | R3, H4 | None; none | **Bible unclear; code chose—user decision required.** High team load justifies caution, but exact strength target is unstated. | **Approved 14 July 2026 — Bible Section 18.** |  |
 | IS-BR-DELOAD-0TT | Healthy 0TT Week 4, intended as recovery probe. Automatic mode remains **bye build**, not deload/recovery. | 2 / 3–4 / 2→2; Hg,Pu,Pl | 1 / 1–2 / 1→1; 1A | 1 / 1→1; 1A | E; 2 | R5, H2 | None; none | **Bible and code conflict internally.** Recovery mode exists, but the normal in-season week-kind resolver cannot select it from Week 4 and ordinary coaching inputs do not expose `byeMode`. | **Approved 14 July 2026 — Bible Section 18.** |  |
-| IS-BR-LOW-2TT | Low-readiness bye resolves to recovery. TT anchors remain; one upper lift is combined with TT. | 1 / 1–1 / 1→1; Pu,Pl | 2 / 2–2 / 2→2; 2TT only | 0 / 0→2; 2TT | E; 1 | R5 (2;2–3), H2 (2/4) | `bye_recovery_mode`; none | **Bible unclear at audit time; current code now conflicts with approved policy.** Approved recovery requires 2 lighter lifts, no power and participation-qualified sprint credit. | **Approved recovery structure. Unresolved only: any compulsory non-hard app-conditioning floor beyond TT.** |  |
+| IS-BR-LOW-2TT | Low-readiness bye resolves to recovery. TT anchors remain; one upper lift is combined with TT. | 1 / 1–1 / 1→1; Pu,Pl | 2 / 2–2 / 2→2; 2TT only | 0 / 0→2; 2TT | E; 1 | R5 (2;2–3), H2 (2/4) | `bye_recovery_mode`; none | **Bible unclear at audit time; current code now conflicts with approved policy.** Approved recovery requires 2 lighter lifts, no power and participation-qualified sprint credit. | **Resolved:** exactly 2 lighter lifts; with 2+TT no additional C; no power; sprint reduction only by typed recovery/readiness/injury/feasibility reason. | Final approval: 14 July 2026. |
 
 Gunshow/accessory work is present in build schedules but contributes **0** main strength and **0** conditioning. It cannot satisfy or replace either required exposure in the current ledger. This matches the addendum’s classification rule.
 
@@ -304,7 +306,7 @@ Gunshow/accessory work is present in build schedules but contributes **0** main 
 | Build conditioning | Requires all TT plus 1 app exposure only when TT ≤1; with 2–3 TT, anchors are sufficient. | **Approved:** 3 meaningful total; app top-up for 0/1/2/3 TT is 3/2/1/0. With 2TT, prefer a harder Saturday exposure. |  |
 | Build sprint | Requires 1; TT satisfies it; 0TT receives one app top-up. | **Approved:** minimum 1 genuine exposure; qualifying TT may satisfy; 0TT requires app sprint. |  |
 | Recovery strength | Requires exactly 1. | **Approved:** exactly 2 lighter sessions, either two full-body or upper/lower. |  |
-| Recovery conditioning | Requires team-training anchors only; no extra app exposure. | **Partly approved:** preserve unavoidable TT and add no compulsory hard app conditioning. **Unresolved:** any compulsory non-hard app-conditioning floor. |  |
+| Recovery conditioning | Requires team-training anchors only; no extra app exposure. | **Approved:** no hard app C; 0TT programs 1–2 light aerobic/flush sessions; 1TT allows 1 optional light session; 2+TT needs no additional C. | Final approval: 14 July 2026. |
 | Recovery sprint | Required target is 0, though TT still produces final sprint credit. | **Approved:** no added sprint after genuine TT credit; reduce below the floor only with explicit recovery reason. |  |
 | Recovery/rest | Requires 2 full-rest days, prefers 2–3, prefers 2 hard days and permits 4. | **Approved:** no power; minimum 2 full-rest days, prefer 3; reduce TT participation where appropriate. |  |
 | Optional work | Gunshow is optional and contributes to neither required ledger. | **Approved:** accessories/gunshow are optional and never replace required S/C. |  |
@@ -385,9 +387,9 @@ Applicable Bible: **B-GLOBAL, B-OSM/L, B-DELOAD, B-REST, B-PATTERN**.
 
 | ID | Setup and current production behaviour | Main strength and patterns | Conditioning | Sprint/high speed | Power | Rest / hard days | Authorised reductions; unresolved | Status and risk | Sam decision | Sam notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| OS-LATE-DELOAD | Week 4 automatic deload, 6D, N, healthy, Full, Exp. Keeps 4 lifts, reduces conditioning 3→2 and intensity to about 85%, preserves sprint at lower dose, removes primers. | 3 / 3–4 / 4→4; all 4 | 2 / 2–3 / 2→2 | 1 / 1→1 | E; 0 | R3 (1;1–2), H3 (4/5) | `deload_policy`; none | **Valid phase-specific exception.** Bible allows off-season deloading but does not explicitly settle conditioning frequency; the structure is coherent and visible. | **Approved 14 July 2026 — Bible Section 18.** |  |
-| OS-LATE-BUILD-EXPLICIT | Same fixed Week 4 forced to build. Four lifts, 3 conditioning, 1 sprint and 4 primers. | 3 / 3–4 / 4→4; all 4 | 3 / 3–4 / 3→3 | 1 / 1→1 | E; 4 | R3, H3 | None; none | **Bible unclear; code chose—user decision required.** Exact late-build target inside the Bible ranges is not fixed. | **Approved 14 July 2026 — Bible Section 18.** |  |
-| OS-LATE-B2-W1 | Block 2 Week 1 on 10 Aug. Off-season resolver uses global week number, so it remains late rather than resetting early. Output matches late build. | 3 / 3–4 / 4→4; all 4 | 3 / 3–4 / 3→3 | 1 / 1→1 | E; 4 | R3, H3 | None; none | **Bible unclear at audit time and remains unresolved.** No approved decision states whether off-season subphases reset across blocks. | **Unresolved — do not infer off-season block progression.** |  |
+| OS-LATE-DELOAD | Production treated first-block Week 4 as late and automatically deloaded. It kept 4 lifts, reduced conditioning 3→2, lowered intensity and removed primers. | 3 / 3–4 / 4→4; all 4 | 2 / 2–3 / 2→2 | 1 / 1→1 | E; 0 | R3 (1;1–2), H3 (4/5) | `deload_policy`; none | **Historical valid exception; now conflicts with approved policy.** First-block Week 4 must remain mid off-season and must not automatically deload. | **Resolved:** first block W4 is mid build; no automatic deload. Later late blocks may use the approved deload policy. |  |
+| OS-LATE-BUILD-EXPLICIT | Same fixed first-block Week 4 forced to build. Production labelled it late; output had 4 lifts, 3 conditioning, 1 sprint and 4 primers. | 3 / 3–4 / 4→4; all 4 | 3 / 3–4 / 3→3 | 1 / 1→1 | E; 4 | R3, H3 | None; none | **Bible unclear at audit time; now resolved.** Build week is correct but its approved subphase is mid, not late; 4 primers also exceeds the approved 1–2 preference. | **Resolved:** first-block Week 4 remains mid build with mid-off-season policy. |  |
+| OS-LATE-B2-W1 | Block 2 Week 1 on 10 Aug. Off-season resolver uses global week number, so it remains late rather than resetting early. Output matches late build. | 3 / 3–4 / 4→4; all 4 | 3 / 3–4 / 3→3 | 1 / 1→1 | E; 4 | R3, H3 | None; none | **Bible unclear at audit time; now resolved.** Remaining late after the first block matches approved subphase ownership. | **Resolved:** first block W1–2 early/W3–4 mid with no W4 deload; all later blocks remain late until the user changes phase. | Final approval: 14 July 2026. |
 
 #### Example final effective schedules
 
@@ -402,8 +404,8 @@ Applicable Bible: **B-GLOBAL, B-OSM/L, B-DELOAD, B-REST, B-PATTERN**.
 | Decision needed | Current code-owned choice | Sam decision | Sam notes |
 | --- | --- | --- | --- |
 | Build frequency | 3 required/3–4 preferred strength, 3 required/3–4 preferred conditioning, 1 sprint; planner selects 4/3/1 when feasible. | **Approved:** S3/4/4; C3/4/5 with 1–2 hard; sprint 1/1–2/2; power prefer 1–2; all patterns and 2 rest days. |  |
-| Week 4 deload | Keeps strength frequency at 4, reduces conditioning to 2, preserves sprint, removes power and reduces dose/intensity. | **Approved:** every fourth week; preserve S, C may fall by 1 when required, preserve controlled sprint, remove power, reduce dose. |  |
-| Block progression | Off-season subphase uses global week number and therefore does not reset at a new block. | **Unresolved:** approved policy does not state reset versus continuous off-season subphase progression. |  |
+| Week 4 deload | Production deloads the first Off-season Week 4. | **Approved:** do not deload first-block W4; later late blocks may deload every fourth week while preserving S, allowing C minus1 when required, preserving controlled sprint and removing power. | Final approval: 14 July 2026. |
+| Block progression | Off-season subphase uses global week number and therefore does not reset at a new block. | **Approved:** first block is early/early/mid/mid without W4 deload; then start a late block and remain late indefinitely until the user explicitly switches to Pre-season. | Final approval: 14 July 2026. |
 
 ## Pre-season evidence
 
@@ -444,8 +446,8 @@ Applicable Bible: **B-GLOBAL, B-PS, B-DELOAD, B-REST, B-PATTERN**.
 | ID | Setup and current production behaviour | Main strength and patterns | Conditioning | Sprint/high speed | Power | Rest / hard days | Authorised reductions; unresolved | Status and risk | Sam decision | Sam notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | PS-LATE-DELOAD | Automatic Week 4 deload, 2TT, healthy. Contract reduces C4→3 but keeps S4; final strength counts 5 due pure TT. Power removed. | 4 / 4–4 / 4→**5**; all 4 | **3 / 3–4 / 3→3**; 2TT+1A | 1 / 1→2; 2TT | E; 0 | R2, H4 | `deload_policy`; none | **Bible clear, code incorrect.** It both breaches strength max and changes pre-season conditioning frequency despite the clarified 4/4 baseline. | **Approved 14 July 2026 — Bible Section 18.** |  |
-| PS-PM-2TT | Week 2 with 2TT and Sat PM. Explicit practice-match load reduces 4/4 to 3/3; anchors supply all conditioning/sprint. | 3 / 3–4 / 3→3; all 4 | 3 / 3–4 / 3→3; 2TT+1PM | 1 / 1→3; 2TT+PM | E; 2 | R3, H4 | `practice_match_load`; none | **Historical valid exception; strength reduction now unresolved.** Approved C minimum 3 is met and genuine anchors can supply it, but no exact PM strength rule was approved. | **Conditioning/sprint credit approved; exact PM strength reduction unresolved.** |  |
-| PS-PM-0TT | Week 2, 0TT, Sat PM. Practice-match rule collapses S to 2 and C to the PM only. | 2 / 2–3 / 2→2; Hg,Pu,Pl | **1 / 1–4 / 1→1**; PM only | 1 / 1→1; PM | E; 2 | R4, H1 | `practice_match_load`; none | **Current code conflicts with approved conditioning minimum 3.** Exact PM strength reduction remains unresolved. | **Conditioning must be at least 3 after genuine credit; exact PM strength reduction unresolved.** |  |
+| PS-PM-2TT | Week 2 with 2TT and Sat PM. Explicit practice-match load reduces 4/4 to 3/3; anchors supply all conditioning/sprint. | 3 / 3–4 / 3→3; all 4 | 3 / 3–4 / 3→3; 2TT+1PM | 1 / 1→3; 2TT+PM | E; 2 | R3, H4 | `practice_match_load`; none | **Historical valid exception; now policy-confirmed.** S3 and C3 from 2TT+PM match approved policy, subject to genuine participation and power timing. | **Resolved:** S3; no extra core C; retain an early lower; allow1–2 early primers/max2; prefer2 rest; hard max4. | Final approval: 14 July 2026. |
+| PS-PM-0TT | Week 2, 0TT, Sat PM. Practice-match rule collapses S to 2 and C to the PM only. | 2 / 2–3 / 2→2; Hg,Pu,Pl | **1 / 1–4 / 1→1**; PM only | 1 / 1→1; PM | E; 2 | R4, H1 | `practice_match_load`; none | **Current code conflicts with approved policy.** Approved 0TT+PM is S3–4/default3 and requires 2 app core C on PM-3 or earlier. | **Resolved:** S3–4/default3; PM C1 plus 2 medium-to-hard app C; genuine sprint credit; optional PM-2 flush is non-core. | Final approval: 14 July 2026. |
 
 #### Example final effective schedules
 
@@ -487,7 +489,7 @@ Applicable Bible: **B-GLOBAL, B-PS, B-CONSTRAINT, B-REST, B-PATTERN**.
 | TT conditioning credit | Every TT replaces one app conditioning exposure. | **Approved:** only normal unrestricted full TT credits one core C; app work fills the remainder to target 3 or 4. |  |
 | TT strength credit | Contract gives none, but canonical fallback content can accidentally create it. | **Approved:** TT never counts as strength; optional gunshow/accessories also do not count. |  |
 | Sprint | Floor is 1; every TT/PM receives credit and prevents app top-up. | **Approved:** floor 1; TT credits only expected and completed high-speed work; modified/restricted TT does not. |  |
-| Practice match | With 2TT current target is 3/3; with 0TT it is 2/1. | **Partly approved:** normal PM credits C1/sprint1/hard1 and C must remain at least 3. **Unresolved:** exact strength reduction by 0–3 TT. |  |
+| Practice match | With 2TT current target is 3/3; with 0TT it is 2/1. | **Approved:** 2TT+PM S3/C3; 1TT+PM S3 plus1 app C; 0TT+PM S3–4/default3 plus2 app C. Keep an early lower, reduce nearby dose, allow1–2 early primers/max2 and prefer2 rest. | Final approval: 14 July 2026. |
 | Subphase rollover | Pre-season uses week-in-block and resets to early on every block Week 1. | **Approved:** progression continues across blocks; do not reset every block. |  |
 
 ## Cross-phase policy decisions
@@ -496,7 +498,7 @@ Applicable Bible: **B-GLOBAL, B-PS, B-CONSTRAINT, B-REST, B-PATTERN**.
 
 | Question | Bible | Current production | Sam decision | Sam notes |
 | --- | --- | --- | --- | --- |
-| Automatic phases | Deload about every 4 weeks or when readiness warrants. | Week 4 automatically deloads only off-season and pre-season; in-season always remains build unless bye recovery is selected by another condition. | **Approved:** off-/pre-season every fourth week; in-season through bye recovery or readiness/injury. |  |
+| Automatic phases | Deload about every 4 weeks or when readiness warrants. | Production automatically deloads first-block Off-season Week 4 and pre-season Week 4. | **Approved:** pre-season every fourth week; no automatic deload in first early/mid Off-season block; later late blocks may deload; in-season through bye recovery/readiness/injury. |  |
 | Strength frequency | Pre-season 4/4 baseline is frequency-stable; general deload wording emphasises lighter work. | Off-season keeps selected 4; pre-season contract keeps 4, although canonical TT can make 5. | **Approved:** preserve frequency where possible; pre-season minimum 3/default 4; keep off-season strength stable where possible. |  |
 | Conditioning frequency | Pre-season addendum says progression should not delete the 4-conditioning baseline; off-season is not numerically settled. | Off-season 3→2; pre-season 4→3. | **Approved:** pre-season minimum 3/default 4; off-season may reduce by one when required. |  |
 | Sprint | Preserve one at reduced dose unless safety/feasibility reduces it. | Off-season preserves app sprint; pre-season TT anchors preserve it. | **Approved:** preserve one controlled genuine exposure unless explicitly reduced. |  |
@@ -533,7 +535,7 @@ Approved Bible Section 18 defaults to all four patterns in every healthy relevan
 | Must all four patterns appear in every healthy in-season game week, or over a rolling period? | **Approved:** default to weekly coverage; two-week balance only when genuinely constrained. |  |
 | Must all four appear every healthy off-/pre-season week, or may a 3-session week balance them across a block? | **Approved:** weekly in pre-season and mid/late off-season; use full-body structures in 3-session weeks; two-week fallback only when constrained. |  |
 | What is the phase-specific minimum for lower patterns versus upper patterns? | **Approved:** healthy relevant weeks default to push, pull, squat and hinge; injury records required safe and prohibited patterns. |  |
-| Does one exercise/session satisfy only its dominant pattern or every classified pattern? | **Unresolved:** approved policy allows multi-pattern full-body sessions but does not define exact classifier credit. |  |
+| Does one exercise/session satisfy only its dominant pattern or every classified pattern? | **Resolved:** credit every pattern with a meaningful main-strength contribution; token accessories and injury-prohibited work receive no credit. Default to equal or near-equal meaningful main-lift counts across all four patterns each week. | Final approval: 14 July 2026. |
 | Should an injury policy express both required safe patterns and explicitly prohibited affected patterns? | **Approved:** yes; final generation must not restore prohibited patterns. |  |
 
 ### Conditioning and sprint credit decisions
@@ -549,7 +551,7 @@ The currently clarified baseline is retained in all questions below: **one genui
 | Additional app conditioning | Engine fills the contract total after anchor credit; bye build uses a separate formula. | Different TT counts can produce unexpectedly different app work without a Bible-owned table. | **Approved:** fill only the remainder using the Section 18 phase tables; optional flush never credits core C. |  |
 | Sprint top-up | Added only when credited anchors are below the floor. | Correct only if anchor credit is genuine. | **Approved:** no unnecessary top-up after genuine floor credit. |  |
 | Surface/equipment | App conditioning feasibility currently depends on recognised cardio modalities; app sprint can remain. | Running can be deleted or retained for the wrong reason. | **Approved:** substitute safe running/walking/bodyweight/hills/erg/mixed work before reduction. |  |
-| Power credit | TT/game actions receive no power credit; power is only an app primer. | Weekly explosive work is not represented consistently if Sam wants field actions to count. | **Unresolved:** no approved field-action power-credit rule. |  |
+| Power credit | TT/game actions receive no power credit; power is only an app primer. | Production must still use field fatigue/hard load for spacing without claiming numeric primer credit. | **Resolved:** TT/game/PM never automatically credit formal power; no numeric weekly minimum; reduce/remove app primers under high field load. | Final approval: 14 July 2026. |
 
 ### Rest and hard-day policy decisions
 
@@ -611,13 +613,13 @@ This register preserves what the audit found before Sam approved Section 18. Old
 | IS-G-0TT-5D | Add 2 medium-to-hard core conditioning sessions on G-3 or earlier; game supplies sprint only with qualifying participation. |
 | IS-G-2TT-3D | TT/game remain fixed; declared availability governs only additional app sessions. |
 | IS-BB-0TT-6D, IS-BB-1TT-5D, IS-BB-2TT-6D, IS-BB-3TT-7D | Normally select 3 lifts. Total C target is 3; app top-up for 0/1/2/3 TT is 3/2/1/0. |
-| IS-BR-LOW-2TT | Exactly 2 lighter lifts, no power, rest minimum2/prefer3 and participation-qualified TT/sprint credit. Only the non-hard app C floor remains unresolved. |
+| IS-BR-LOW-2TT | Exactly 2 lighter lifts, no power, rest minimum2/prefer3 and participation-qualified TT/sprint credit. With 0/1/2+TT, light app C is 1–2 programmed/1 optional/none required. |
 | OS-MID-6D-HIGH, OS-MID-4D | Normally S4 with ≥4 available days; C3–4; sprint1; only 1–2 power primers. |
 | OS-LATE-BUILD-EXPLICIT | S3/4/4, C3/4/5, sprint1/1–2/2, 1–2 power primers and 2 preferred full-rest days. |
-| OS-LATE-B2-W1 | **Still unresolved:** off-season block progression was not approved. |
+| OS-LATE-B2-W1 | First block is early/early/mid/mid without W4 deload; all later blocks remain late until the user explicitly switches phase. |
 | OS-MID-BEGINNER | S2, C2–3, safe sprint1; reduce complexity and dose. |
 | PS-B2-W1-RESETS-EARLY | Pre-season progression continues across blocks and must not reset early each block. |
-| PS-PM-0TT | C must remain at least 3 after genuine anchor credit. **Still unresolved:** exact PM strength reduction by TT count. |
+| PS-PM-0TT | 0TT+PM is S3–4/default3 and PM C1 plus2 app core C on PM-3 or earlier. 1TT+PM is S3 plus1 app C; 2TT+PM is S3 with no app C. |
 
 ## Build, rebuild, Repeat Week and rollover evidence
 
@@ -633,7 +635,7 @@ The following read-only production tests were run after the scenario audit:
 | Week 1 versus Weeks 2–4 | API Week 1 may accept edge-generated session content; later weeks use deterministic fallback. Both are canonicalised and validated. The local fixed-date runs used deterministic production fallback for all weeks. | Content provenance differs even when the same contract is intended. |
 | Rebuild | Regenerates the target week and its contract; representative tests preserve the corrected healthy pre-season 4/4/1 target. | Safe at contract level, but canonical classification defects can still overshoot. |
 | Repeat Week | Copies source prescriptions while applying the target week’s anchors/contract; it does not perform block progression. | A repeated week can carry old dose/content into a different target context even though anchors win. |
-| Rollover | Regenerates the next block, preserves active context/manual edits, and schedules Week 4 deload rules. | Approved pre-season policy continues progression across blocks, so the current reset is wrong. Off-season reset versus continuation remains unresolved. |
+| Rollover | Regenerates the next block, preserves active context/manual edits, and schedules Week 4 deload rules. | Pre-season progression continues across blocks. Off-season first block is early/early/mid/mid without W4 deload; rollover then enters late and must stay late until the user changes phase. |
 
 ## Complete historical classification index
 
@@ -659,4 +661,4 @@ This index proves that every representative row had one primary discovery classi
 
 ## Final approval record
 
-The approved answers are now authoritative in Programming Bible Section 18. The five explicitly unresolved items must not be inferred. Production contracts, canonical classification and tests may be assessed against the approved policy in a separate implementation slice; this policy-only slice changes no behaviour.
+The approved answers are now authoritative in Programming Bible Section 18. All five formerly open items were resolved on 14 July 2026, and no coaching-policy decisions remain unresolved. Production contracts, canonical classification and tests may be assessed against the approved policy in a separate implementation slice; this policy-only slice changes no behaviour.
