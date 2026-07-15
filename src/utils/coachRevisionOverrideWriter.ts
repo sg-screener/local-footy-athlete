@@ -41,6 +41,8 @@ export interface ApplyCoachRevisionOverridesInput {
   visibleWeek: ResolvedDay[];
   todayISO: string;
   validationPolicy?: CoachRevisionValidationPolicy;
+  /** The caller will publish this candidate through an atomic week owner. */
+  deferWeekAcceptanceToTransaction?: boolean;
   setManualOverride?: (
     date: string,
     workout: Workout,
@@ -114,6 +116,7 @@ export function applyCoachRevisionDateOverrides(
       revisedDay: revised,
       todayISO: input.todayISO,
       donorWorkout,
+      deferWeekAcceptanceToTransaction: input.deferWeekAcceptanceToTransaction,
     });
     if (builtDay.ok === false) {
       rejected.push({
@@ -199,6 +202,7 @@ export function buildWorkoutOverrideFromRevision(args: {
   /** Move support: when a rest day gains a workout, the content's current
    *  holder elsewhere in the visible week supplies the rows. */
   donorWorkout?: Workout | null;
+  deferWeekAcceptanceToTransaction?: boolean;
 }): BuildWorkoutOverrideFromRevisionResult {
   const source = args.beforeDay.workout ?? null;
   if (!source && !args.revisedDay.workout) {
@@ -263,7 +267,9 @@ export function buildWorkoutOverrideFromRevision(args: {
   // round-trip check so a transformed/rejected request cannot be reported as
   // though its malformed representation was written unchanged.
   try {
-    workout = validateLiveWorkoutWrite(args.revisedDay.date, workout);
+    workout = validateLiveWorkoutWrite(args.revisedDay.date, workout, {
+      deferWeekAcceptance: args.deferWeekAcceptanceToTransaction,
+    });
   } catch (error) {
     const typed = error as { code?: string; userMessage?: string };
     if (typed?.code === 'section18_week_rejected') {
@@ -469,6 +475,22 @@ function buildContentOverride(source: Workout, revisedDay: CoachVisibleDaySnapsh
       ? source.conditioningCategory ?? 'aerobic_base'
       : undefined,
     conditioningBlock: nextConditioningBlock,
+    section18Evidence: nextConditioningBlock
+      ? source.section18Evidence
+      : {
+          protocolVersion: 1,
+          conditioningRole: 'none',
+          conditioningStress: 'unknown',
+          provenance: 'explicit_mutation',
+        },
+    section18ConditioningRole: nextConditioningBlock
+      ? source.section18ConditioningRole
+      : 'none',
+    strengthIntent: hasStrength ? source.strengthIntent : undefined,
+    strengthIntentDiagnostics: hasStrength ? source.strengthIntentDiagnostics : undefined,
+    strengthPatternContributions: hasStrength ? source.strengthPatternContributions : undefined,
+    powerBlock: hasStrength ? source.powerBlock : undefined,
+    recoveryAddons: hasRecovery ? source.recoveryAddons : undefined,
     coachAddedConditioningLabel: onlyConditioning
       ? title
       : nextConditioningBlock

@@ -11,9 +11,10 @@
  * …then rebuild through the ONE canonical door (rebuildLocalWeek) and
  * assert on the RESOLVED week from the live stores.
  *
- * Invariant under test: a valid user edit survives rebuild context, while an
- * edit that would break the authoritative Section 18 selected week is rejected
- * atomically before either the override or its Coach Note can be stored.
+ * Invariant under test: valid user edits survive rebuild context. In
+ * particular, athlete deletion owns its target while Section 18 relocates or
+ * reduces required exposure around it; unrelated unsafe edits still reject
+ * atomically before either an override or Coach Note is stored.
  *
  * global.fetch is poisoned — any network use fails the whole suite.
  *
@@ -138,9 +139,17 @@ function resolveLiveWeek(mondayISO: string, seasonPhase: string, gameDay?: strin
 }
 
 function resetWorld() {
-  useProgramStore.getState().clearManualOverrides();
-  useProgramStore.getState().clearWeekScopedOverlays();
+  const coachState = useCoachUpdatesStore.getState();
+  useCoachUpdatesStore.setState({
+    activeConstraints: coachState.activeConstraints.length === 0
+      ? coachState.activeConstraints
+      : [],
+  } as never);
   useProgramStore.setState((state) => ({
+    dateOverrides: {},
+    overrideContexts: {},
+    weekScopedOverlays: {},
+    userRemovalConstraints: [],
     acceptedMaterialContext: {
       ...state.acceptedMaterialContext,
       markedDays: {},
@@ -153,10 +162,6 @@ function resetWorld() {
   }));
   useCalendarStore.setState({ markedDays: {}, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
-  useCoachUpdatesStore.setState((s: unknown) => ({
-    ...(s as object),
-    activeConstraints: [],
-  }) as never);
   markedDays = {};
 }
 
@@ -268,7 +273,8 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       rebuild.sweep.conflictsRemoved.length === 0, JSON.stringify(rebuild.sweep.conflictsRemoved));
   }
 
-  // ── B. Bin Monday via the session sheet's real path ──
+  // ── B. Bin Monday via the session sheet's real path. Required work may
+  // relocate, but the athlete-owned target remains unavailable. ──
   {
     seed(profile);
     const visibleWeek = resolveLiveWeek(wk2Mon, profile.seasonPhase!, undefined);
@@ -278,16 +284,18 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       todayISO,
       setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
     });
-    ok(`[B] invalid bin rejected: ${res.message ?? ''}`,
-      res.ok === false && res.rejected?.some((entry) => entry.code === 'section18_week_rejected') === true,
+    ok(`[B] CORE bin accepted: ${res.message ?? ''}`,
+      res.ok === true,
       JSON.stringify(res.rejected));
 
     addSaturdayGame(profile, wk2Sat);
     const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
-    ok('[B] rejected bin leaves the rebuilt Monday valid and non-manual',
-      dayOf(after, wk2Mon)?.source !== 'manual' &&
-      /lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
+    ok('[B] rebuilt Monday remains deleted',
+      !dayOf(after, wk2Mon)?.workout || dayOf(after, wk2Mon)?.workout?.workoutType === 'Rest',
       `${dayOf(after, wk2Mon)?.source}: ${dayOf(after, wk2Mon)?.workout?.name}`);
+    ok('[B] typed removal ownership survives the game rebuild',
+      useProgramStore.getState().userRemovalConstraints.some((constraint) =>
+        constraint.targetDate === wk2Mon && constraint.status === 'active'));
   }
 
   // ── C. Swap Monday to recovery via the sheet's real path ──
@@ -392,11 +400,11 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       useCoachUpdatesStore.getState().activeConstraints.some((c) => c.id === 'tap-recovery-mode:integration'));
   }
 
-  // ── H. Refresh/rebuild again: rejection is idempotent ──
+  // ── H. Refresh/rebuild again: accepted deletion is idempotent ──
   {
     seed(profile);
     const visibleWeek = resolveLiveWeek(wk2Mon, profile.seasonPhase!, undefined);
-    const rejected = applyPlanChange({
+    const deleted = applyPlanChange({
       change: { kind: 'remove_session', date: wk2Mon },
       visibleWeek,
       todayISO,
@@ -404,15 +412,14 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
     });
     addSaturdayGame(profile, wk2Sat);
     const second = addSaturdayGame(profile, wk2Sat); // "refresh" — rebuild again
-    ok('[H] repeated invalid removal is rejected before rebuild',
-      rejected.ok === false && rejected.rejected?.some((entry) =>
-        entry.code === 'section18_week_rejected') === true,
-      JSON.stringify(rejected.rejected));
-    ok('[H] second rebuild has no rejected override to preserve',
+    ok('[H] required-session removal is accepted before rebuild',
+      deleted.ok === true,
+      JSON.stringify(deleted.rejected));
+    ok('[H] second rebuild has no temporary removal override to preserve',
       !second.sweep.preserve.includes(wk2Mon), JSON.stringify(second.sweep));
     const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
-    ok('[H] resolved week still shows valid Monday core work',
-      /lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
+    ok('[H] resolved week still suppresses athlete-owned Monday',
+      !dayOf(after, wk2Mon)?.workout || dayOf(after, wk2Mon)?.workout?.workoutType === 'Rest',
       dayOf(after, wk2Mon)?.workout?.name);
   }
 }

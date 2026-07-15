@@ -2,6 +2,7 @@ import type {
   Microcycle,
   OverrideContext,
   TrainingProgram,
+  UserRemovalConstraint,
   WeekScopedWorkoutOverlay,
   Workout,
 } from '../types/domain';
@@ -36,6 +37,7 @@ export interface AcceptedProgramSurfaceSnapshot {
   dateOverrides: Record<string, Workout>;
   overrideContexts: Record<string, OverrideContext>;
   weekScopedOverlays: Record<string, WeekScopedWorkoutOverlay>;
+  userRemovalConstraints: UserRemovalConstraint[];
   exposureContractsByWeek: Record<string, WeeklyExposureContract>;
 }
 
@@ -106,6 +108,9 @@ export function normalizeAcceptedProgramSurfaces(
     overrideContexts: normalizeAcceptedKeyedMap<OverrideContext>(value?.overrideContexts),
     weekScopedOverlays: normalizeAcceptedKeyedMap<WeekScopedWorkoutOverlay>(
       value?.weekScopedOverlays,
+    ),
+    userRemovalConstraints: normalizeAcceptedArray<UserRemovalConstraint>(
+      value?.userRemovalConstraints,
     ),
     exposureContractsByWeek: normalizeAcceptedKeyedMap<WeeklyExposureContract>(
       value?.exposureContractsByWeek,

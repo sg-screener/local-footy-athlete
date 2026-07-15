@@ -146,7 +146,8 @@ function cloneWorkoutForOverlay(
   date: string,
   overlayId: string,
 ): Workout {
-  const id = `${workout.id}:week-overlay:${date}`;
+  const suffix = `:week-overlay:${date}`;
+  const id = workout.id.endsWith(suffix) ? workout.id : `${workout.id}${suffix}`;
   const dow = new Date(`${date}T12:00:00`).getDay();
   return {
     ...workout,
@@ -412,6 +413,7 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
           sourceSurfaces: state,
           activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
           primaryWeekStarts: [targetWeekStart!],
+          userRemovalConstraints: state.userRemovalConstraints,
         })
       : null;
     const primaryRollingProjection = rollingRepair?.projections.find((candidate) =>
@@ -430,6 +432,7 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
           sourceSurfaces: state,
           sourceMarkedDays: state.acceptedMaterialContext.markedDays,
           activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+          userRemovalConstraints: state.userRemovalConstraints,
         });
     const adjacentOverlays = rollingRepair?.projections
       .filter((candidate) => candidate.weekStart !== targetWeekStart)

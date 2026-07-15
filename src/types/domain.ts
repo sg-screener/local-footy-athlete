@@ -776,6 +776,39 @@ export interface Workout {
   updatedAt: string;
 }
 
+export type UserRemovalScope =
+  | 'whole_session'
+  | 'strength_component'
+  | 'conditioning_component'
+  | 'recovery_component'
+  | 'team_component';
+
+/**
+ * Persisted athlete ownership for an explicitly binned accepted target.
+ *
+ * The concrete date/scope is the permission boundary. Stable accepted
+ * identity is retained for audit/restoration, while `remainingWorkout`
+ * preserves the exact component semantics of a stacked-day deletion.
+ */
+export interface UserRemovalConstraint {
+  protocolVersion: 1;
+  id: string;
+  authorship: 'user';
+  source: 'tap' | 'coach';
+  status: 'active' | 'restored';
+  targetDate: string;
+  scope: UserRemovalScope;
+  targetPlanEntryId: string | null;
+  targetWorkoutId: string;
+  originalWorkout: Workout;
+  remainingWorkout: Workout | null;
+  equivalentExposureMayRelocate: boolean;
+  wholeDayRestOwned: boolean;
+  createdAt: string;
+  restoredAt: string | null;
+  restorationReason: 'explicit_restore' | 'explicit_re_add' | null;
+}
+
 export interface WeekScopedWorkoutOverlay {
   id: string;
   weekStart: string;

@@ -1,6 +1,6 @@
 # LFA Programming Policy Decision Report
 
-**Status:** Sam’s approved policy recorded. The Section 18 phase-planner ownership slice is implemented on `main` in commit `49073d393c19571b39fecf53051f3e3c5fdea452`; the fixture-conditioned availability/minimal-replan decision was approved on 15 July 2026 and is implemented in the current slice. Historical pre-implementation evidence is retained and labelled as such.
+**Status:** Sam’s approved policy recorded. The Section 18 phase-planner ownership slice is implemented on `main` in commit `49073d393c19571b39fecf53051f3e3c5fdea452`; fixture-conditioned availability and rolling-horizon repair were approved on 15 July 2026. Athlete-requested deletion ownership was approved on 15 July 2026 and is the policy for the current implementation slice. Historical pre-implementation evidence is retained and labelled as such.
 **Bible authority:** `docs/LFA_PROGRAMMING_BIBLE.md` Section 18, approved 14 July 2026, supersedes older contradictory examples.
 **Evidence date:** 14 July 2026.
 **Fixed scenario weeks:** Monday 13 July, 20 July, 27 July, 3 August and 10 August 2026.
@@ -71,6 +71,26 @@ The accepted effective week and proposed mutation now enter one whole-week repai
 Whole-week ownership extends across the smallest dependency closure affected by a mutation. Calendar proximity seeds the target, previous and following G-relative weeks only where applicable; persisted provenance may add any directly referenced source, target or restoration week. The accepted composed snapshot—not visible-only gap fill—is structural mutation input; identity-matched accepted prescriptions and dependency-owned derived work remain persisted.
 
 Fixture-derived G+1, G-1/G-2, temporary relocation and temporary rest work records the exact fixture source, derived target, displaced accepted session and restoration target. Removing or moving the source fixture expires every dependent item and restores still-valid underlying work. Each affected Contract v2 gateway must pass before one atomic publication; otherwise every prior horizon surface remains unchanged. Direct, chained and reload paths with identical final inputs must converge without changing phase targets, hard-day policy, phase clock, safety, power or equipment policy.
+
+## Athlete-requested session deletion ownership — approved 15 July 2026
+
+### Decision
+
+An athlete may bin a programmed session or a component of a stacked day even when it is marked CORE or supplies a required weekly exposure. The explicit deletion owns the named accepted target. CORE creates an obligation for the planner to preserve equivalent exposure somewhere in the effective horizon where possible; it is not a permission lock on the original session, component or date.
+
+Deletion repair follows one order: relocate the required exposure to the highest-scoring Bible-valid day; substitute approved content when exact relocation is not possible; move or remove lower-priority optional work to recover space or stress; then record the minimum `explicit_user_override` typed reduction for any unavoidable shortfall. The deletion is not rejected merely because the original required exposure cannot remain or because another week enters the dependency closure. `Impossible` is reserved for malformed removal identity or genuine technical/atomic-publication failure.
+
+### Typed ownership and cross-path contract
+
+The persisted user-removal constraint records whole-session versus component scope, target date, accepted `planEntryId` or stable session identity, user authorship, relocation permission, and explicit restoration/re-addition state. It does not bind through workout name, CORE label, stale `workoutType`, array position, weekday assumption or temporary UI state.
+
+Whole-session deletion leaves the concrete target date at Rest. Component deletion removes only that component and leaves the other accepted components on the stacked day. Repair, generation fallback, later mutation, reload/rehydration, rebuild, Repeat Week and rollover must apply the removal constraint before visible validation and may not recreate the deleted work or equivalent exposure on the prohibited target. Only an explicit athlete add or restore clears that ownership.
+
+Home-card, workout-detail and Coach/chat deletion produce the same constraint and use the same rolling-horizon accepted-state publication. Every affected Contract v2 week is rebuilt and validated, unaffected sessions, prescriptions and `planEntryId`s remain stable where valid, and all repaired weeks, reductions and removal ownership publish atomically. Failed publication leaves the prior complete horizon unchanged.
+
+### Approved Sunday regression
+
+From Monday Lower Body Strength; Tuesday Upper Pull + Team Training; Wednesday Rest; Thursday Upper Push + Team Training; Friday Accessories; Saturday Gunshow; Sunday CORE Hard Intervals, binning Sunday Hard Intervals succeeds. Sunday becomes Rest. Hard Conditioning relocates to Saturday when that is the highest-scoring valid repair, and lower-priority Saturday work is removed or relocated as required. Monday through Thursday and their valid prescriptions/identities remain unchanged, no duplicate hard conditioning remains, and reload does not resurrect Sunday work.
 
 ## Section 18 phase-planner implementation record — 14 July 2026
 

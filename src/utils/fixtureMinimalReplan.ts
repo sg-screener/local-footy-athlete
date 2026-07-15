@@ -2,6 +2,7 @@ import type {
   DerivedSessionProvenance,
   Microcycle,
   OnboardingData,
+  UserRemovalConstraint,
   Workout,
 } from '../types/domain';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
@@ -26,6 +27,10 @@ import type {
 import type { CalendarDayType } from '../store/calendarStore';
 import { hasMeaningfulWorkoutContent } from './workoutContent';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
+import {
+  activeUserRemovalConstraintsForWeek,
+  applyAthleteRemovalTypedReduction,
+} from '../rules/userRemovalConstraints';
 
 export interface FixtureReplanEditCost {
   section18Blockers: number;
@@ -82,6 +87,7 @@ export interface FixtureReplanCandidateDiagnostic {
 export type FixtureMutationIntent =
   | 'fixture_transition'
   | 'remove_from_date'
+  | 'athlete_removal'
   | 'remove_weekly_exposure';
 
 export class RequiredCoreRelocationError extends Error {
@@ -124,6 +130,7 @@ export interface BuildFixtureMinimalReplanInput {
   priorFixtures: readonly TargetWeekFixture[];
   proposedFixtures: readonly TargetWeekFixture[];
   activeFixtureDates?: ReadonlySet<string>;
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
   mutationIntent?: FixtureMutationIntent;
 }
 
@@ -245,9 +252,12 @@ function fixtureNeutralSource(args: BuildFixtureMinimalReplanInput): Workout[] {
   });
 }
 
-function visibleResolver(args: BuildFixtureMinimalReplanInput) {
+function visibleResolver(
+  args: BuildFixtureMinimalReplanInput,
+  contract = args.targetMicrocycle.exposureContractV2!,
+) {
   return (workouts: readonly Workout[]): Workout[] => resolveFinalVisibleSection18Week({
-    contract: args.targetMicrocycle.exposureContractV2!,
+    contract,
     workouts,
     weekStart: args.weekStart,
     profile: args.profile,
@@ -255,6 +265,7 @@ function visibleResolver(args: BuildFixtureMinimalReplanInput) {
       markedDays: args.proposedMarkedDays,
       availableDayNumbers: args.availability.effectiveAvailableDayNumbers,
     },
+    userRemovalConstraints: args.userRemovalConstraints,
   });
 }
 
@@ -273,8 +284,13 @@ function stripConditioningComponent(workout: Workout): Workout | null {
     hasCombinedConditioning: false,
     attachedConditioningKind: undefined,
     coachAddedConditioningLabel: undefined,
-    section18ConditioningRole: undefined,
-    section18Evidence: undefined,
+    section18ConditioningRole: 'none',
+    section18Evidence: {
+      protocolVersion: 1,
+      conditioningRole: 'none',
+      conditioningStress: 'unknown',
+      provenance: 'explicit_mutation',
+    },
     derivedSessionProvenance: workout.derivedSessionProvenance?.filter((record) =>
       record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),
   });
@@ -672,6 +688,66 @@ function conditioningStackingVariants(
   return variants;
 }
 
+/** Lower-priority work is the first capacity sacrifice for required repair. */
+function optionalDisplacementVariants(
+  args: BuildFixtureMinimalReplanInput,
+  source: Workout[],
+): Workout[][] {
+  const available = new Set(args.availability.effectiveAvailableDayNumbers);
+  const removable = source.filter((workout) =>
+    available.has(workout.dayOfWeek) && isOptional(workout) &&
+    !isTeamTraining(workout) && workout.workoutType !== 'Game');
+  return [
+    source,
+    ...removable.map((optional) =>
+      source.filter((workout) => workout !== optional)),
+  ];
+}
+
+/**
+ * A returning fixture can supply conditioning that an app session supplied
+ * in the prior accepted week. Remove only the resulting surplus app credit;
+ * preserve a stacked strength component whenever one exists.
+ */
+function conditioningSurplusVariants(
+  args: BuildFixtureMinimalReplanInput,
+  source: Workout[],
+): Workout[][] {
+  const contract = args.targetMicrocycle.exposureContractV2!;
+  const evaluation = evaluateSection18EffectiveWeek({
+    contract,
+    workouts: visibleResolver(args)(source),
+    weekStart: args.weekStart,
+  });
+  const maximum = contract.conditioning.core.permittedMaximum;
+  if (maximum === null || evaluation.ledger.conditioning.coreCount <= maximum) {
+    return [source];
+  }
+  const excess = evaluation.ledger.conditioning.coreCount - maximum;
+  const appDays = new Set(evaluation.ledger.conditioning.credits
+    .filter((credit) => credit.source === 'app')
+    .map((credit) => credit.dayOfWeek));
+  const removable = source
+    .filter((workout) => appDays.has(workout.dayOfWeek) &&
+      !isTeamTraining(workout) && workout.workoutType !== 'Game')
+    .sort((left, right) =>
+      Number(!left.derivedSessionProvenance?.some((record) => record.authorship === 'system')) -
+        Number(!right.derivedSessionProvenance?.some((record) => record.authorship === 'system')) ||
+      Number(hasMainStrength(left)) - Number(hasMainStrength(right)) ||
+      left.dayOfWeek - right.dayOfWeek);
+  return [
+    source,
+    ...combinations(removable.map((_, index) => index), excess).map((indexes) => {
+      const selected = new Set(indexes.map((index) => removable[index]));
+      return source.flatMap((workout) => {
+        if (!selected.has(workout)) return [workout];
+        const survivor = stripConditioningComponent(workout);
+        return survivor ? [survivor] : [];
+      });
+    }),
+  ];
+}
+
 function combinations(values: number[], size: number): number[][] {
   if (size === 0) return [[]];
   if (values.length < size) return [];
@@ -836,125 +912,138 @@ export function buildFixtureMinimalReplan(
     cost: FixtureReplanEditCost;
     addedDays: number[];
   }> = [];
+  const rejectedCandidates: Array<{
+    gateway: Section18AcceptedWeekGatewayResult;
+    workouts: Workout[];
+  }> = [];
+  const structuralFallbackSeeds: Workout[][] = [];
   const rejectedCandidateSignatures: string[] = [];
   const candidateDiagnostics: FixtureReplanCandidateDiagnostic[] = [];
   if (args.mutationIntent === 'remove_weekly_exposure') {
     throw new RequiredCoreRelocationError('authorised_reduction_required', []);
   }
-  for (const structuralSource of conditioningStackingVariants(args, source)) {
-    const structuralEvaluation = evaluateSection18EffectiveWeek({
-      contract,
-      workouts: visibleResolver(args)(structuralSource),
-      weekStart: args.weekStart,
-    });
-    const strengthVariants = addStrengthDeltaVariants({
-      input: args,
-      source: structuralSource,
-      evaluation: structuralEvaluation,
-      occupied,
-      releasedDays,
-    });
-    for (const strengthSource of strengthVariants) {
-      const baselineEvaluation = evaluateSection18EffectiveWeek({
-        contract,
-        workouts: visibleResolver(args)(strengthSource),
-        weekStart: args.weekStart,
-      });
-      const shortfall = contract.identity.mode === 'in_season_bye_recovery'
-        ? 0
-        : Math.max(0, (contract.conditioning.core.plannerSelectedTarget ??
-            contract.conditioning.core.requiredMinimum) -
-          baselineEvaluation.ledger.conditioning.coreCount);
-      const sourceMap = byDay(strengthSource);
-      const daysWithCoreConditioning = new Set(
-        strengthSource
-          .filter((workout) => {
-            const role = workout.section18Evidence?.conditioningRole ??
-              workout.section18ConditioningRole;
-            return role === 'required_core' || role === 'planner_selected_core' || role === 'core';
-          })
-          .map((workout) => workout.dayOfWeek),
-      );
-      const candidateDays = args.availability.effectiveAvailableDayNumbers.filter((day) => {
-        if (occupied.has(day) || daysWithCoreConditioning.has(day)) return false;
-        const workout = sourceMap.get(day);
-        return !workout || (hasMainStrength(workout) && !isTeamTraining(workout)) ||
-          workout.derivedSessionProvenance?.some((record) => record.authorship === 'system') === true;
-      });
-      const displacedConditioning = displacedStandaloneConditioningTemplates(args, strengthSource);
-      const daySets = shortfall === 0 ? [[]] : combinations(candidateDays, shortfall);
-      for (const addedDays of daySets) {
-        const role = baselineEvaluation.ledger.conditioning.coreCount <
-          contract.conditioning.core.requiredMinimum
-          ? 'required_core'
-          : 'planner_selected_core';
-        let candidate = [...strengthSource];
-        for (const dayNumber of addedDays) {
-          const displaced = displacedConditioning[addedDays.indexOf(dayNumber)];
-          const conditioning = displaced
-            ? relocateExistingConditioning(displaced, dayNumber, contract, args.weekStart)
-            : buildConditioning({
-                profile: args.profile,
-                weekStart: args.weekStart,
-                dayNumber,
-                microcycle: args.targetMicrocycle,
-                role,
-                stress: releasedDays.has(dayNumber) ? 'hard' : 'moderate',
-                origin: removedFixture ? 'fixture_replacement' : 'contract_shortfall_repair',
-                originatingFixtureDate: removedFixture?.date ?? null,
-              });
-          const existing = candidate.find((workout) => workout.dayOfWeek === dayNumber);
-          candidate = existing && hasMainStrength(existing)
-            ? candidate.map((workout) => workout.dayOfWeek === dayNumber
-                ? attachConditioningPreservingCore(workout, conditioning)
-                : workout)
-            : [
-                ...candidate.filter((workout) => workout.dayOfWeek !== dayNumber),
-                conditioning,
-              ];
-        }
-        candidate.sort((left, right) => left.dayOfWeek - right.dayOfWeek);
-        const gateway = runSection18AcceptedWeekGateway({
+  for (const optionalSource of optionalDisplacementVariants(args, source)) {
+    for (const surplusSource of conditioningSurplusVariants(args, optionalSource)) {
+      for (const structuralSource of conditioningStackingVariants(args, surplusSource)) {
+        structuralFallbackSeeds.push(structuralSource);
+        const structuralEvaluation = evaluateSection18EffectiveWeek({
           contract,
-          workouts: candidate,
+          workouts: visibleResolver(args)(structuralSource),
           weekStart: args.weekStart,
-          profile: args.profile,
-          activeFixtureDates: args.activeFixtureDates,
-          resolveVisibleWorkouts: visibleResolver(args),
         });
-        if (gateway.status === 'impossible') {
-          const failureSignature = gateway.failureSignature ?? 'unknown';
-          rejectedCandidateSignatures.push(failureSignature);
-          candidateDiagnostics.push({
-            addedDays,
-            status: 'rejected',
-            failureSignature,
-            canonicalConditioningDays: gateway.canonicalWorkouts
-              .filter((workout) => !!workout.section18Evidence?.conditioningRole)
-              .map((workout) => workout.dayOfWeek),
-            visibleConditioningCredits: gateway.evaluation.ledger.conditioning.credits.map((credit) => ({
-              dayOfWeek: credit.dayOfWeek,
-              source: credit.source,
-              role: credit.role,
-            })),
-            repairs: gateway.repairs,
+        const strengthVariants = addStrengthDeltaVariants({
+          input: args,
+          source: structuralSource,
+          evaluation: structuralEvaluation,
+          occupied,
+          releasedDays,
+        });
+        for (const strengthSource of strengthVariants) {
+          const baselineEvaluation = evaluateSection18EffectiveWeek({
+            contract,
+            workouts: visibleResolver(args)(strengthSource),
+            weekStart: args.weekStart,
           });
-          continue;
+          const shortfall = contract.identity.mode === 'in_season_bye_recovery'
+            ? 0
+            : Math.max(0, (contract.conditioning.core.plannerSelectedTarget ??
+                contract.conditioning.core.requiredMinimum) -
+              baselineEvaluation.ledger.conditioning.coreCount);
+          const sourceMap = byDay(strengthSource);
+          const daysWithCoreConditioning = new Set(
+            strengthSource
+              .filter((workout) => {
+                const role = workout.section18Evidence?.conditioningRole ??
+                  workout.section18ConditioningRole;
+                return role === 'required_core' || role === 'planner_selected_core' || role === 'core';
+              })
+              .map((workout) => workout.dayOfWeek),
+          );
+          const candidateDays = args.availability.effectiveAvailableDayNumbers.filter((day) => {
+            if (occupied.has(day) || daysWithCoreConditioning.has(day)) return false;
+            const workout = sourceMap.get(day);
+            return !workout || (hasMainStrength(workout) && !isTeamTraining(workout)) ||
+              workout.derivedSessionProvenance
+                ?.some((record) => record.authorship === 'system') === true;
+          });
+          const displacedConditioning = displacedStandaloneConditioningTemplates(args, strengthSource);
+          const daySets = shortfall === 0 ? [[]] : combinations(candidateDays, shortfall);
+          for (const addedDays of daySets) {
+            const role = baselineEvaluation.ledger.conditioning.coreCount <
+              contract.conditioning.core.requiredMinimum
+              ? 'required_core'
+              : 'planner_selected_core';
+            let candidate = [...strengthSource];
+            for (const dayNumber of addedDays) {
+              const displaced = displacedConditioning[addedDays.indexOf(dayNumber)];
+              const conditioning = displaced
+                ? relocateExistingConditioning(displaced, dayNumber, contract, args.weekStart)
+                : buildConditioning({
+                    profile: args.profile,
+                    weekStart: args.weekStart,
+                    dayNumber,
+                    microcycle: args.targetMicrocycle,
+                    role,
+                    stress: releasedDays.has(dayNumber) ? 'hard' : 'moderate',
+                    origin: removedFixture ? 'fixture_replacement' : 'contract_shortfall_repair',
+                    originatingFixtureDate: removedFixture?.date ?? null,
+                  });
+              const existing = candidate.find((workout) => workout.dayOfWeek === dayNumber);
+              candidate = existing && hasMainStrength(existing)
+                ? candidate.map((workout) => workout.dayOfWeek === dayNumber
+                    ? attachConditioningPreservingCore(workout, conditioning)
+                    : workout)
+                : [
+                    ...candidate.filter((workout) => workout.dayOfWeek !== dayNumber),
+                    conditioning,
+                  ];
+            }
+            candidate.sort((left, right) => left.dayOfWeek - right.dayOfWeek);
+            const gateway = runSection18AcceptedWeekGateway({
+              contract,
+              workouts: candidate,
+              weekStart: args.weekStart,
+              profile: args.profile,
+              activeFixtureDates: args.activeFixtureDates,
+              userRemovalConstraints: args.userRemovalConstraints,
+              resolveVisibleWorkouts: visibleResolver(args),
+            });
+            if (gateway.status === 'impossible') {
+              rejectedCandidates.push({
+                gateway,
+                workouts: gateway.canonicalWorkouts,
+              });
+              const failureSignature = gateway.failureSignature ?? 'unknown';
+              rejectedCandidateSignatures.push(failureSignature);
+              candidateDiagnostics.push({
+                addedDays,
+                status: 'rejected',
+                failureSignature,
+                canonicalConditioningDays: gateway.canonicalWorkouts
+                  .filter((workout) => !!workout.section18Evidence?.conditioningRole)
+                  .map((workout) => workout.dayOfWeek),
+                visibleConditioningCredits: gateway.evaluation.ledger.conditioning.credits
+                  .map((credit) => ({
+                    dayOfWeek: credit.dayOfWeek,
+                    source: credit.source,
+                    role: credit.role,
+                  })),
+                repairs: gateway.repairs,
+              });
+              continue;
+            }
+            const cost = scoreCandidate({
+              source: args.sourceWorkouts,
+              candidate: gateway.canonicalWorkouts,
+              gateway,
+              availability: args.availability,
+              addedDays,
+              preferredReplacementDay,
+            });
+            accepted.push({ gateway, addedDays, cost });
+            candidateDiagnostics.push({ addedDays, status: 'accepted', editCost: cost });
+          }
         }
-        const cost = scoreCandidate({
-          source: args.sourceWorkouts,
-          candidate: gateway.canonicalWorkouts,
-          gateway,
-          availability: args.availability,
-          addedDays,
-          preferredReplacementDay,
-        });
-        accepted.push({
-          gateway,
-          addedDays,
-          cost,
-        });
-        candidateDiagnostics.push({ addedDays, status: 'accepted', editCost: cost });
       }
     }
   }
@@ -1007,6 +1096,126 @@ export function buildFixtureMinimalReplan(
     };
   }
 
+  const activeRemovalConstraint = activeUserRemovalConstraintsForWeek(
+    args.userRemovalConstraints,
+    args.weekStart,
+  ).sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
+  if (args.mutationIntent === 'athlete_removal' || activeRemovalConstraint) {
+    const constraint = activeRemovalConstraint;
+    if (!constraint) {
+      throw new Error('Athlete-removal repair requires an active typed removal constraint');
+    }
+    const seenFallbackSeeds = new Set<string>();
+    for (const fallbackSeed of structuralFallbackSeeds) {
+      const seedSignature = fallbackSeed
+        .map((workout) => `${workout.dayOfWeek}:${workoutSignature(workout)}`)
+        .sort()
+        .join('|');
+      if (seenFallbackSeeds.has(seedSignature)) continue;
+      seenFallbackSeeds.add(seedSignature);
+      const gateway = runSection18AcceptedWeekGateway({
+        contract,
+        workouts: fallbackSeed,
+        weekStart: args.weekStart,
+        profile: args.profile,
+        activeFixtureDates: args.activeFixtureDates,
+        userRemovalConstraints: args.userRemovalConstraints,
+        resolveVisibleWorkouts: visibleResolver(args),
+      });
+      if (gateway.status === 'impossible') {
+        rejectedCandidates.push({ gateway, workouts: gateway.canonicalWorkouts });
+      }
+    }
+    // Typed deletion reductions can lower an unattainable minimum, but never
+    // relax a phase/safety maximum. Prefer a ceiling-safe candidate before
+    // comparing the remaining reducible shortfalls.
+    const bestRejected = [...rejectedCandidates].sort((left, right) =>
+      left.gateway.evaluation.blockingViolations.filter((finding) =>
+        finding.code === 'maximum_breach').length -
+        right.gateway.evaluation.blockingViolations.filter((finding) =>
+          finding.code === 'maximum_breach').length ||
+      left.gateway.evaluation.blockingViolations.length -
+        right.gateway.evaluation.blockingViolations.length ||
+      (left.gateway.failureSignature ?? '').localeCompare(right.gateway.failureSignature ?? ''))[0];
+    const reductionSource = bestRejected?.workouts ?? source;
+    const visible = bestRejected?.gateway.visibleWorkouts ?? visibleResolver(args)(source);
+    let reducedContract = applyAthleteRemovalTypedReduction({
+      contract,
+      workouts: visible,
+      weekStart: args.weekStart,
+      constraint,
+    });
+    let reducedGateway: Section18AcceptedWeekGatewayResult;
+    for (let attempt = 0; ; attempt += 1) {
+      reducedGateway = runSection18AcceptedWeekGateway({
+        contract: reducedContract,
+        workouts: reductionSource,
+        weekStart: args.weekStart,
+        profile: args.profile,
+        activeFixtureDates: args.activeFixtureDates,
+        userRemovalConstraints: args.userRemovalConstraints,
+        resolveVisibleWorkouts: visibleResolver(args, reducedContract),
+      });
+      if (reducedGateway.status !== 'impossible' || attempt >= 3) break;
+      // Safety finalisation can expose a second-order shortfall (for example,
+      // a now-unrepresentable strength pattern). Reduce from that accepted-
+      // state candidate as well; the loop is monotonic and strictly bounded.
+      const nextContract = applyAthleteRemovalTypedReduction({
+        contract: reducedContract,
+        workouts: reducedGateway.visibleWorkouts,
+        weekStart: args.weekStart,
+        constraint,
+      });
+      if (JSON.stringify(nextContract) === JSON.stringify(reducedContract)) break;
+      reducedContract = nextContract;
+    }
+    if (reducedGateway.status === 'impossible') {
+      throw new Error(
+        `Athlete deletion could not be published after typed reduction ` +
+        `(${reducedGateway.failureSignature ?? 'unknown'}).`,
+      );
+    }
+    reducedGateway.repairs.push({
+      kind: 'athlete_removal_typed_reduction',
+      detail: `Preserved athlete removal on ${constraint.targetDate} and recorded explicit_user_override for the unavoidable shortfall.`,
+    });
+    const changes = changedDaySets(args.sourceWorkouts, reducedGateway.canonicalWorkouts);
+    const cost = scoreCandidate({
+      source: args.sourceWorkouts,
+      candidate: reducedGateway.canonicalWorkouts,
+      gateway: reducedGateway,
+      availability: args.availability,
+      addedDays: changes.addedDays,
+      preferredReplacementDay,
+    });
+    const alternative: FixtureMinimalReplanAlternative = {
+      workouts: reducedGateway.canonicalWorkouts,
+      gateway: reducedGateway,
+      editCost: cost,
+      ...changes,
+      preservedCorePlanEntryIds: args.sourceWorkouts
+        .filter((workout) => isCore(workout) && workout.planEntryId &&
+          reducedGateway.canonicalWorkouts.some((candidate) =>
+            candidate.planEntryId === workout.planEntryId))
+        .map((workout) => workout.planEntryId!),
+    };
+    return {
+      path: 'minimal_repair',
+      usedFullRegeneration: false,
+      workouts: alternative.workouts,
+      gateway: reducedGateway,
+      editCost: cost,
+      ...changes,
+      preservedCorePlanEntryIds: alternative.preservedCorePlanEntryIds,
+      availability: args.availability,
+      rejectedCandidateSignatures: Array.from(new Set(rejectedCandidateSignatures)),
+      candidateDiagnostics,
+      sourcePlanEntryIds: args.sourceWorkouts.flatMap((workout) =>
+        workout.planEntryId ? [workout.planEntryId] : []),
+      alternatives: [alternative],
+    };
+  }
+
   if (args.mutationIntent === 'remove_from_date') {
     throw new RequiredCoreRelocationError(
       'no_safe_placement',
@@ -1020,6 +1229,7 @@ export function buildFixtureMinimalReplan(
     weekStart: args.weekStart,
     profile: args.profile,
     activeFixtureDates: args.activeFixtureDates,
+    userRemovalConstraints: args.userRemovalConstraints,
     resolveVisibleWorkouts: visibleResolver(args),
     regenerate: () => ({
       contract,

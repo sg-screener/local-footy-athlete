@@ -1458,7 +1458,16 @@ export function validateLiveMicrocycleWrite(microcycle: Microcycle): Microcycle 
 export function validateLiveWorkoutWrite(
   date: string,
   workout: Workout,
-  options: { restoreMissingPlanPatterns?: boolean } = {},
+  options: {
+    restoreMissingPlanPatterns?: boolean;
+    /**
+     * The caller owns an atomic accepted-week transaction that will repair
+     * and gate the complete week. Keep per-workout safety canonicalisation,
+     * but do not ask the single-date boundary to accept an intentionally
+     * incomplete intermediate week.
+     */
+    deferWeekAcceptance?: boolean;
+  } = {},
 ): Workout {
   const context = liveValidationContext();
   const result = validateWorkoutAgainstActiveConstraints({
@@ -1471,6 +1480,7 @@ export function validateLiveWorkoutWrite(
     },
   });
   const validated = result.workout ?? collapseWorkoutToRest(workout);
+  if (options.deferWeekAcceptance) return validated;
   return finaliseLiveDateCandidateAgainstWeek({ date, workout: validated, context });
 }
 

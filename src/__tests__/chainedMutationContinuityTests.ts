@@ -115,6 +115,7 @@ function reset(value: OnboardingData = athlete()): TrainingProgram {
     dateOverrides: {},
     overrideContexts: {},
     weekScopedOverlays: {},
+    userRemovalConstraints: [],
     exposureContractsByWeek: {},
     acceptedMaterialContext: {
       markedDays: marks,

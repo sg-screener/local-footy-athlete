@@ -94,7 +94,7 @@ import {
 } from './coachPlan';
 import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
 import {
-  commitDateUnavailableTransaction,
+  commitAthleteSessionDeletionTransaction,
   getAcceptedMaterialContext,
 } from '../store/acceptedStateTransaction';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
@@ -323,7 +323,12 @@ export interface AddSessionDeps {
  */
 export interface RemoveSessionDeps {
   applyRemove?: (
-    input: { targetDate: string; targetSessionId?: string | null; reason?: string },
+    input: {
+      targetDate: string;
+      targetSessionId?: string | null;
+      reason?: string;
+      originalWorkout?: Workout;
+    },
     opts: { todayISO: string },
   ) => RemoveSessionApplyResult;
   verifyRendered?: (args: {
@@ -3339,17 +3344,9 @@ function runRemoveSession(
     calendarMark: beforeCalendarMark,
     visibleWorkout: beforeWorkout,
   };
-  const riskRejection = hardStopRiskRejection({
-    writes: [{ date: targetDate, workout: null }],
-    todayISO: input.todayISO,
-    visibleWeek: visibleWeekBefore,
-    route: 'risk_blocked:remove_session',
-    progress: stages,
-  });
-  if (riskRejection) {
-    tick('composing_reply');
-    return riskRejection;
-  }
+  // A valid athlete deletion cannot introduce unsafe training content. CORE
+  // shortfalls belong to rolling repair/typed reduction, not this write gate;
+  // protected game/team anchors were handled explicitly above.
 
   tick('applying_change');
   const applyResult = applyRemove(
@@ -3357,6 +3354,7 @@ function runRemoveSession(
       targetDate,
       targetSessionId: payload.targetSessionId ?? beforeAny.id ?? null,
       reason: payload.reason,
+      originalWorkout: beforeWorkout,
     },
     { todayISO: input.todayISO },
   );
@@ -3465,16 +3463,22 @@ function runRemoveSession(
 }
 
 function defaultApplyRemoveSession(
-  input: { targetDate: string },
+  input: { targetDate: string; originalWorkout?: Workout },
   opts: { todayISO: string },
 ): RemoveSessionApplyResult {
   if (input.targetDate < opts.todayISO) {
     return { applied: false, reason: 'past_date_blocked' };
   }
   try {
-    commitDateUnavailableTransaction({
+    if (!input.originalWorkout) return { applied: false, reason: 'missing_source_identity' };
+    commitAthleteSessionDeletionTransaction({
       date: input.targetDate,
       reason: `coach:remove_session:${input.targetDate}`,
+      source: 'coach',
+      scope: 'whole_session',
+      originalWorkout: input.originalWorkout,
+      remainingWorkout: null,
+      equivalentExposureMayRelocate: true,
     });
     return { applied: true };
   } catch (e) {
@@ -3905,13 +3909,19 @@ function verifyAcceptedRequiredCoreRelocation(args: {
       args.beforeWorkout?.sessionTier === 'core';
     if (!targetWasRequired || rebased.evaluation.blockingViolations.length > 0) return false;
     if (context.markedDays[args.targetDate] !== 'rest') return false;
-    if (rebased.dates.find((entry) => entry.date === args.targetDate)?.workout) return false;
+    if (rebased.visibleWorkouts.some((workout) => workout.dayOfWeek === targetDow &&
+      workout.workoutType !== 'Rest')) return false;
+    const explicitReduction = (metric: string) => rebased.contract.authorisedReductions.some((entry) =>
+      entry.reason === 'explicit_user_override' && entry.metric === metric &&
+      entry.detail.includes(args.targetDate));
     if (targetHadStrengthCore &&
       rebased.evaluation.ledger.mainStrength.achievedCount <
-        beforeEvaluation.ledger.mainStrength.achievedCount) return false;
+        beforeEvaluation.ledger.mainStrength.achievedCount &&
+      !explicitReduction('main_strength_frequency')) return false;
     if (targetHadConditioningCore &&
       rebased.evaluation.ledger.conditioning.coreCount <
-        beforeEvaluation.ledger.conditioning.coreCount) return false;
+        beforeEvaluation.ledger.conditioning.coreCount &&
+      !explicitReduction('conditioning_core_frequency')) return false;
 
     const afterByDate = new Map(args.visibleWeekAfter.map((day) => [day.date, day.workout]));
     for (const day of args.visibleWeekBefore) {
@@ -3922,7 +3932,7 @@ function verifyAcceptedRequiredCoreRelocation(args: {
         return false;
       }
     }
-    if (targetHadStrengthCore) {
+    if (targetHadStrengthCore && !explicitReduction('main_strength_frequency')) {
       const targetIdentity = args.beforeWorkout?.planEntryId;
       const targetDose = relocationStrengthSignature(args.beforeWorkout);
       if (!rebased.visibleWorkouts.some((workout) =>

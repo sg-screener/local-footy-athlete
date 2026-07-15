@@ -30,6 +30,7 @@ import {
   type PlanChange,
 } from '../utils/planChangeProducer';
 import { createStrengthIntent } from '../rules/strengthPatternContributions';
+import type { AthleteSessionDeletionTransactionInput } from '../store/acceptedStateTransaction';
 
 const TODAY = '2026-07-01'; // Wednesday
 const MON = '2026-06-29';
@@ -397,9 +398,10 @@ console.log('planChangeProducerTests');
   });
   ok('[7] applied ok', result.ok, result);
   eq('[7] one write on the target date', writes.map((w) => w.date), [SAT]);
-  ok('[7] written workout is the template',
-    !!writes[0]?.workout && /MetCon/i.test(writes[0].workout.name),
-    writes[0]?.workout?.name);
+  ok('[7] written workout preserves the authoritative registry template identity',
+    !!writes[0]?.workout?.exercises.some((row) =>
+      row.id.startsWith('template:metcon_offlegs:')),
+    writes[0]?.workout?.exercises.map((row) => row.id));
   ok('[7] done message names the date', /2026-07-04/.test(result.message), result.message);
 
   const move = applyPlanChangeMove(week);
@@ -809,61 +811,65 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     sc.binScopes.map((s) => s.id).sort(), ['conditioning', 'strength', 'whole_day']);
 
   // Bin JUST team training: gym session survives under its own name.
-  const teamWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const teamWrites: AthleteSessionDeletionTransactionInput[] = [];
   const teamResult = applyPlanChange({
     change: { kind: 'remove_session', date: '2026-06-30', scope: 'team' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => teamWrites.push({ date, workout }),
+    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    commitAthleteRemoval: (input) => teamWrites.push(input),
   });
   ok('[12] bin team-only applies', teamResult.ok, teamResult);
   eq('[12] one write', teamWrites.length, 1);
   ok('[12] survivor is the gym session',
-    teamWrites[0]?.workout?.name === 'Upper Push' &&
-      !/team/i.test(teamWrites[0]?.workout?.name ?? ''),
-    teamWrites[0]?.workout?.name);
-  eq('[12] survivor type is Strength', teamWrites[0]?.workout?.workoutType, 'Strength');
-  eq('[12] strength rows preserved', teamWrites[0]?.workout?.exercises?.length, 2);
+    teamWrites[0]?.remainingWorkout?.name === 'Upper Push' &&
+      !/team/i.test(teamWrites[0]?.remainingWorkout?.name ?? ''),
+    teamWrites[0]?.remainingWorkout?.name);
+  eq('[12] survivor type is Strength', teamWrites[0]?.remainingWorkout?.workoutType, 'Strength');
+  eq('[12] strength rows preserved', teamWrites[0]?.remainingWorkout?.exercises?.length, 2);
 
   // Bin JUST the gym session: team training survives alone.
-  const gymWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const gymWrites: AthleteSessionDeletionTransactionInput[] = [];
   const gymResult = applyPlanChange({
     change: { kind: 'remove_session', date: '2026-06-30', scope: 'strength' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => gymWrites.push({ date, workout }),
+    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    commitAthleteRemoval: (input) => gymWrites.push(input),
   });
   ok('[12] bin gym-only applies', gymResult.ok, gymResult);
-  eq('[12] survivor is Team Training', gymWrites[0]?.workout?.name, 'Team Training');
-  eq('[12] no strength rows remain', gymWrites[0]?.workout?.exercises?.length, 0);
+  eq('[12] survivor is Team Training', gymWrites[0]?.remainingWorkout?.name, 'Team Training');
+  eq('[12] no strength rows remain', gymWrites[0]?.remainingWorkout?.exercises?.length, 0);
 
   // Bin JUST the conditioning on an S+C day.
-  const condWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const condWrites: AthleteSessionDeletionTransactionInput[] = [];
   const condResult = applyPlanChange({
     change: { kind: 'remove_session', date: TODAY, scope: 'conditioning' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => condWrites.push({ date, workout }),
+    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    commitAthleteRemoval: (input) => condWrites.push(input),
   });
   ok('[12] bin conditioning-only applies', condResult.ok, condResult);
   ok('[12] conditioning block gone',
-    !condWrites[0]?.workout?.conditioningBlock, condWrites[0]?.workout);
+    !condWrites[0]?.remainingWorkout?.conditioningBlock, condWrites[0]?.remainingWorkout);
   eq('[12] strength rows preserved on S+C day',
-    condWrites[0]?.workout?.exercises?.length, 2);
+    condWrites[0]?.remainingWorkout?.exercises?.length, 2);
 
   // Bin JUST the strength on an S+C day: conditioning becomes the day.
-  const strWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const strWrites: AthleteSessionDeletionTransactionInput[] = [];
   const strResult = applyPlanChange({
     change: { kind: 'remove_session', date: TODAY, scope: 'strength' },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => strWrites.push({ date, workout }),
+    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    commitAthleteRemoval: (input) => strWrites.push(input),
   });
   ok('[12] bin strength-only applies', strResult.ok, strResult);
   eq('[12] conditioning survives as the day',
-    strWrites[0]?.workout?.workoutType, 'Conditioning');
+    strWrites[0]?.remainingWorkout?.workoutType, 'Conditioning');
   eq('[12] only the conditioning row remains',
-    strWrites[0]?.workout?.exercises?.length, 1);
+    strWrites[0]?.remainingWorkout?.exercises?.length, 1);
 
   // Scope that isn't on the day refuses cleanly.
   const badResult = applyPlanChange({
@@ -875,16 +881,19 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[12] scope not on day refuses without writing', !badResult.ok, badResult);
 
   // Whole-day default unchanged (back-compat: scope omitted).
-  const wholeWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const wholeWrites: AthleteSessionDeletionTransactionInput[] = [];
   const wholeResult = applyPlanChange({
     change: { kind: 'remove_session', date: MON },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => wholeWrites.push({ date, workout }),
+    setManualOverride: () => { throw new Error('removal must use the accepted-state owner'); },
+    commitAthleteRemoval: (input) => wholeWrites.push(input),
   });
   ok('[12] whole-day bin still works', wholeResult.ok, wholeResult);
-  eq('[12] whole-day write is a rest override',
-    wholeWrites[0]?.workout?.workoutType, 'Rest');
+  eq('[12] whole-day commit owns a null remaining workout',
+    wholeWrites[0]?.remainingWorkout, null);
+  eq('[12] whole-day commit owns whole-session scope',
+    wholeWrites[0]?.scope, 'whole_session');
 }
 
 {

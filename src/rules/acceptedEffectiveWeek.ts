@@ -2,6 +2,7 @@ import type {
   Microcycle,
   OnboardingData,
   TrainingProgram,
+  UserRemovalConstraint,
   Workout,
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
@@ -14,6 +15,7 @@ import {
   evaluateSection18EffectiveWeek,
   type Section18EffectiveWeekEvaluation,
 } from './section18EffectiveWeekEvaluator';
+import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 
 export type AcceptedWeekSurfaceOwner = 'date_override' | 'week_overlay' | 'base_microcycle' | 'empty';
 
@@ -22,6 +24,7 @@ export interface AcceptedEffectiveWeekSurfaces {
   currentMicrocycle?: Microcycle | null;
   dateOverrides: Readonly<Record<string, Workout>>;
   weekScopedOverlays: Readonly<Record<string, WeekScopedWorkoutOverlay>>;
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
 }
 
 export interface AcceptedEffectiveWeekDate {
@@ -122,7 +125,11 @@ export function rebaseAcceptedEffectiveWeek(args: {
           : { date, dayOfWeek, owner: 'empty', workout: null });
   }
 
-  const composedWorkouts = dates.flatMap((entry) => entry.workout ? [entry.workout] : []);
+  const composedWorkouts = applyUserRemovalConstraintsToWeek({
+    workouts: dates.flatMap((entry) => entry.workout ? [entry.workout] : []),
+    weekStart,
+    constraints: args.surfaces.userRemovalConstraints,
+  });
   const markedDays = { ...args.markedDays };
   const visibleWorkouts = resolveFinalVisibleSection18Week({
     contract,
@@ -130,6 +137,7 @@ export function rebaseAcceptedEffectiveWeek(args: {
     weekStart,
     profile: args.profile ?? undefined,
     scheduleState: { markedDays },
+    userRemovalConstraints: args.surfaces.userRemovalConstraints,
   });
   const evaluation = evaluateSection18EffectiveWeek({
     contract,

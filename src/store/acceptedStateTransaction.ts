@@ -1,8 +1,11 @@
 import type {
   DayOfWeek,
+  Microcycle,
   OnboardingData,
   OverrideContext,
   TrainingProgram,
+  UserRemovalConstraint,
+  UserRemovalScope,
   Workout,
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
@@ -43,6 +46,7 @@ import {
 } from '../rules/fixtureConditionedAvailability';
 import {
   buildFixtureMinimalReplan,
+  type FixtureMutationIntent,
   type FixtureReplanEditCost,
   type FixtureMinimalReplanResult,
 } from '../utils/fixtureMinimalReplan';
@@ -53,6 +57,8 @@ import {
   rollingHorizonWeekStartsForMutation,
   searchRollingHorizonCandidateCombinations,
 } from '../rules/rollingHorizonRepair';
+import { userRemovalConstraintId } from '../rules/userRemovalConstraints';
+import { Section18WeekAcceptanceError } from '../rules/section18AcceptedWeekGateway';
 
 export type AcceptedProgramSurfaces = Pick<
   ProgramState,
@@ -63,6 +69,7 @@ export type AcceptedProgramSurfaces = Pick<
   | 'dateOverrides'
   | 'overrideContexts'
   | 'weekScopedOverlays'
+  | 'userRemovalConstraints'
   | 'exposureContractsByWeek'
 >;
 
@@ -100,6 +107,7 @@ const PROGRAM_SURFACE_KEYS: Array<keyof AcceptedProgramSurfaces> = [
   'dateOverrides',
   'overrideContexts',
   'weekScopedOverlays',
+  'userRemovalConstraints',
   'exposureContractsByWeek',
 ];
 
@@ -184,6 +192,7 @@ function materialiseFixtureMarksForCandidate(args: {
       sourceSurfaces: args.candidate,
       sourceMarkedDays: args.context.markedDays,
       activeConstraints: args.context.activeConstraints,
+      userRemovalConstraints: args.candidate.userRemovalConstraints,
     }).overlay;
     changed = true;
   }
@@ -385,7 +394,8 @@ export function buildFixtureProjection(args: {
   sourceSurfaces?: AcceptedEffectiveWeekSurfaces;
   sourceMarkedDays?: Readonly<Record<string, CalendarDayType>>;
   activeConstraints?: readonly ActiveConstraint[];
-  mutationIntent?: 'fixture_transition' | 'remove_from_date' | 'remove_weekly_exposure';
+  mutationIntent?: FixtureMutationIntent;
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
 }): {
   overlay: WeekScopedWorkoutOverlay;
   profile: OnboardingData;
@@ -409,6 +419,7 @@ export function buildFixtureProjection(args: {
     currentMicrocycle: liveState.currentMicrocycle,
     dateOverrides: liveState.dateOverrides,
     weekScopedOverlays: liveState.weekScopedOverlays,
+    userRemovalConstraints: liveState.userRemovalConstraints,
   };
   const acceptedSource = rebaseAcceptedEffectiveWeek({
     surfaces: sourceSurfaces,
@@ -461,17 +472,53 @@ export function buildFixtureProjection(args: {
     byeUsualGameDay: explicitNoGame || proposedFixtures.length === 0,
     activeConstraints: args.activeConstraints,
   });
-  const target = generateProgramLocally(args.profile, {
-    todayISO: args.weekStart,
-    previousProgram: args.program,
-    seasonPhaseClock: args.program.seasonPhaseClock,
-    targetWeekAvailability: availability,
-    targetFixtureDay: targetGameDay,
-    activeConstraints: args.activeConstraints,
-    microcycleLimit: 1,
-  });
-  const targetMicrocycle = target.microcycles[0];
+  let target: TrainingProgram | undefined;
+  let targetMicrocycle: Microcycle | undefined;
+  try {
+    target = generateProgramLocally(args.profile, {
+      todayISO: args.weekStart,
+      previousProgram: args.program,
+      seasonPhaseClock: args.program.seasonPhaseClock,
+      targetWeekAvailability: availability,
+      targetFixtureDay: targetGameDay,
+      activeConstraints: args.activeConstraints,
+      microcycleLimit: 1,
+    });
+    targetMicrocycle = target.microcycles[0];
+  } catch (error) {
+    if (!(error instanceof Section18WeekAcceptanceError)) throw error;
+    // The rolling repair owner, not target generation, decides whether the
+    // accepted source can be repaired. Preserve the rejected generator's
+    // phase-owned contract/candidate and let the shared search consume it
+    // instead of treating one invalid fallback representation as terminal.
+    const base = acceptedSource.baseMicrocycle;
+    const now = new Date().toISOString();
+    targetMicrocycle = {
+      id: `repair-target:${args.weekStart}`,
+      programId: args.program.id,
+      weekNumber: base?.weekNumber ?? 1,
+      startDate: args.weekStart,
+      endDate: addDaysISO(args.weekStart, 6),
+      miniCycleNumber: base?.miniCycleNumber ?? 1,
+      intensityMultiplier: base?.intensityMultiplier ?? 1,
+      weekKind: error.result.contract.identity.weekKind,
+      exposureContractV2: error.result.contract,
+      workouts: error.result.canonicalWorkouts,
+      createdAt: base?.createdAt ?? now,
+      updatedAt: now,
+    };
+  }
   if (!targetMicrocycle) throw new Error('Fixture target generation produced no microcycle');
+  if (!target) {
+    target = {
+      ...args.program,
+      id: `repair-target-program:${args.weekStart}`,
+      startDate: args.weekStart,
+      endDate: addDaysISO(args.weekStart, 6),
+      microcycles: [targetMicrocycle],
+      updatedAt: new Date().toISOString(),
+    };
+  }
   const replan = buildFixtureMinimalReplan({
     profile: args.profile,
     weekStart: args.weekStart,
@@ -482,6 +529,7 @@ export function buildFixtureProjection(args: {
     priorFixtures,
     proposedFixtures,
     activeFixtureDates,
+    userRemovalConstraints: args.userRemovalConstraints,
     mutationIntent: args.mutationIntent ?? 'fixture_transition',
   });
   // Dynamic loading avoids an initialisation cycle: weekRebuild itself uses
@@ -694,8 +742,9 @@ export function stageRollingHorizonFixtureRepair(args: {
   sourceSurfaces: AcceptedEffectiveWeekSurfaces;
   activeConstraints?: readonly ActiveConstraint[];
   primaryWeekStarts: readonly string[];
-  primaryMutationIntent?: 'fixture_transition' | 'remove_from_date' | 'remove_weekly_exposure';
-  dependentMutationIntent?: 'fixture_transition' | 'remove_from_date' | 'remove_weekly_exposure';
+  primaryMutationIntent?: FixtureMutationIntent;
+  dependentMutationIntent?: FixtureMutationIntent;
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
 }): RollingHorizonFixtureRepairResult {
   const primary = new Set(args.primaryWeekStarts.map((weekStart) => mondayForDate(weekStart)));
   const weekStarts = Array.from(new Set([
@@ -731,6 +780,7 @@ export function stageRollingHorizonFixtureRepair(args: {
       sourceSurfaces: args.sourceSurfaces,
       sourceMarkedDays: args.beforeMarkedDays,
       activeConstraints: args.activeConstraints,
+      userRemovalConstraints: args.userRemovalConstraints,
       mutationIntent: primary.has(weekStart)
         ? args.primaryMutationIntent ?? 'fixture_transition'
         : args.dependentMutationIntent ?? 'remove_from_date',
@@ -864,7 +914,7 @@ export function commitCalendarStateTransaction(args: {
   affectedDates: readonly string[];
   fixtureChangedDates?: readonly string[];
   program?: Partial<AcceptedProgramSurfaces>;
-  mutationIntent?: 'fixture_transition' | 'remove_from_date' | 'remove_weekly_exposure';
+  mutationIntent?: FixtureMutationIntent;
 }): AcceptedStateTransactionResult {
   const state = useProgramStore.getState();
   const baseProfile = useProfileStore.getState().onboardingData;
@@ -876,6 +926,8 @@ export function commitCalendarStateTransaction(args: {
     ...(args.program?.weekScopedOverlays ?? {}),
   };
   if (state.currentProgram && baseProfile) {
+    const proposedUserRemovalConstraints = args.program?.userRemovalConstraints ??
+      state.userRemovalConstraints;
     const repair = stageRollingHorizonFixtureRepair({
       program: state.currentProgram,
       profile: baseProfile,
@@ -883,9 +935,12 @@ export function commitCalendarStateTransaction(args: {
       afterMarkedDays: args.markedDays,
       sourceSurfaces: state,
       activeConstraints: prior.activeConstraints,
-      primaryWeekStarts: Array.from(fixtureWeeks),
+      primaryWeekStarts: Array.from(
+        args.mutationIntent === 'athlete_removal' ? affectedWeeks : fixtureWeeks,
+      ),
       primaryMutationIntent: args.mutationIntent,
       dependentMutationIntent: 'remove_from_date',
+      userRemovalConstraints: proposedUserRemovalConstraints,
     });
     for (const projection of repair.projections) {
       affectedWeeks.add(projection.weekStart);
@@ -929,6 +984,93 @@ export function commitDateUnavailableTransaction(args: {
 }
 
 /**
+ * Shared athlete-deletion owner for tap and Coach producers.
+ *
+ * The typed removal is staged with every repaired week and Contract v2
+ * reduction. No producer writes a temporary Rest workout or independently
+ * decides whether CORE content is deletable.
+ */
+export interface AthleteSessionDeletionTransactionInput {
+  date: string;
+  reason: string;
+  source: 'tap' | 'coach';
+  scope: UserRemovalScope;
+  originalWorkout: Workout;
+  remainingWorkout: Workout | null;
+  equivalentExposureMayRelocate?: boolean;
+}
+
+export function commitAthleteSessionDeletionTransaction(
+  args: AthleteSessionDeletionTransactionInput,
+): AcceptedStateTransactionResult {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(args.date.slice(0, 10)) ||
+    !args.originalWorkout?.id) {
+    throw new Error('Malformed athlete session-deletion identity');
+  }
+  const date = args.date.slice(0, 10);
+  const state = useProgramStore.getState();
+  const prior = materialContext(state);
+  const now = new Date().toISOString();
+  const id = userRemovalConstraintId({
+    date,
+    scope: args.scope,
+    workout: args.originalWorkout,
+  });
+  const existing = state.userRemovalConstraints.find((constraint) =>
+    constraint.id === id && constraint.status === 'active');
+  if (existing) return { program: programSurfaces(state), context: prior };
+
+  const constraint: UserRemovalConstraint = {
+    protocolVersion: 1,
+    id,
+    authorship: 'user',
+    source: args.source,
+    status: 'active',
+    targetDate: date,
+    scope: args.scope,
+    targetPlanEntryId: args.originalWorkout.planEntryId ?? null,
+    targetWorkoutId: args.originalWorkout.id,
+    originalWorkout: JSON.parse(JSON.stringify(args.originalWorkout)) as Workout,
+    remainingWorkout: args.remainingWorkout && args.remainingWorkout.workoutType !== 'Rest'
+      ? JSON.parse(JSON.stringify(args.remainingWorkout)) as Workout
+      : null,
+    equivalentExposureMayRelocate: args.equivalentExposureMayRelocate ?? true,
+    wholeDayRestOwned: args.scope === 'whole_session',
+    createdAt: now,
+    restoredAt: null,
+    restorationReason: null,
+  };
+  const userRemovalConstraints = [
+    ...state.userRemovalConstraints.filter((candidate) =>
+      !(candidate.targetDate === date && candidate.status === 'active' &&
+        (args.scope === 'whole_session' || candidate.scope === args.scope))),
+    constraint,
+  ];
+  const markedDays = { ...prior.markedDays };
+  if (args.scope === 'whole_session') markedDays[date] = 'rest';
+  const dateOverrides = { ...state.dateOverrides };
+  const overrideContexts = { ...state.overrideContexts };
+  delete dateOverrides[date];
+  delete overrideContexts[date];
+  return commitCalendarStateTransaction({
+    reason: args.reason,
+    markedDays,
+    affectedDates: [date],
+    fixtureChangedDates: prior.markedDays[date] === 'game' ||
+      prior.markedDays[date] === 'noGame' ? [date] : [],
+    program: {
+      dateOverrides,
+      overrideContexts,
+      userRemovalConstraints,
+      ...(date === todayISOLocal()
+        ? { todayWorkout: constraint.remainingWorkout }
+        : {}),
+    },
+    mutationIntent: 'athlete_removal',
+  });
+}
+
+/**
  * Program-setup rebuild publication. Future weeks come from the newly built
  * program, while the currently accepted effective week is minimally rebased
  * through the same planner so a new availability block relocates compulsory
@@ -962,7 +1104,11 @@ export function commitProgramSetupRebuildTransaction(args: {
         sourceSurfaces: state,
         sourceMarkedDays: prior.markedDays,
         activeConstraints: prior.activeConstraints,
-        mutationIntent: 'remove_from_date',
+        userRemovalConstraints: state.userRemovalConstraints,
+        mutationIntent: state.userRemovalConstraints.some((constraint) =>
+          constraint.status === 'active' && mondayForDate(constraint.targetDate) === weekStart)
+          ? 'athlete_removal'
+          : 'remove_from_date',
       }).overlay,
     };
   }

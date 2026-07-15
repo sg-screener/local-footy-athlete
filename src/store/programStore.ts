@@ -9,6 +9,7 @@ import {
   Workout,
   WorkoutExercise,
   OverrideContext,
+  UserRemovalConstraint,
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
 import { logger } from '../utils/logger';
@@ -46,6 +47,7 @@ import type { CalendarDayType } from './calendarStore';
 import type { ActiveConstraint } from './coachUpdatesStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
+import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
 import {
   createEmptyAcceptedMaterialContext,
   normalizeAcceptedMaterialContext,
@@ -672,6 +674,9 @@ export function canonicaliseHydratedState(
   const hydratedWeekStarts = new Set<string>([
     ...Object.keys(weekScopedOverlays ?? {}),
     ...Object.keys(dateOverrides ?? {}).map(mondayForDate),
+    ...(persistedState.userRemovalConstraints ?? [])
+      .filter((constraint) => constraint.status === 'active')
+      .map((constraint) => mondayForDate(constraint.targetDate)),
     ...(options.validateWeekStarts ?? []).map((weekStart) => weekStart.slice(0, 10)),
     ...(options.activeConstraints
       ? [
@@ -708,6 +713,7 @@ export function canonicaliseHydratedState(
         currentMicrocycle,
         dateOverrides: dateOverrides ?? {},
         weekScopedOverlays: weekScopedOverlays ?? {},
+        userRemovalConstraints: persistedState.userRemovalConstraints ?? [],
       },
       weekStart,
       profile: options.profile,
@@ -740,6 +746,7 @@ export function canonicaliseHydratedState(
         weekStart,
         profile: options.profile,
         activeFixtureDates,
+        userRemovalConstraints: persistedState.userRemovalConstraints,
         regenerate: buildFallback,
         safeFallback: buildFallback,
         resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>
@@ -749,6 +756,7 @@ export function canonicaliseHydratedState(
             weekStart,
             profile: options.profile,
             scheduleState: { markedDays: { ...(options.markedDays ?? {}) } },
+            userRemovalConstraints: persistedState.userRemovalConstraints,
           }),
       });
     const acceptedByDay = new Map<number, Workout>(
@@ -798,19 +806,27 @@ export function canonicaliseHydratedState(
       }
     }
   }
+  const hydratedTodayWorkout = persistedState.todayWorkout
+    ? applyUserRemovalConstraintsToWeek({
+        workouts: [persistedState.todayWorkout],
+        weekStart: mondayForDate(todayISOLocal()),
+        constraints: persistedState.userRemovalConstraints,
+      }).find((workout) =>
+        workout.dayOfWeek === new Date(`${todayISOLocal()}T12:00:00`).getDay()) ?? null
+    : persistedState.todayWorkout;
   return {
     ...persistedState,
     currentProgram,
     currentMicrocycle,
-    todayWorkout: persistedState.todayWorkout
+    todayWorkout: hydratedTodayWorkout
       ? options.programAlreadyAccepted && !safetyContractForDate(todayISOLocal())
-        ? persistedState.todayWorkout
+        ? hydratedTodayWorkout
         : canonicaliseHydratedSafetyWorkout(
-            persistedState.todayWorkout,
+            hydratedTodayWorkout,
             safetyContractForDate(todayISOLocal()),
             phase,
           )
-      : persistedState.todayWorkout,
+      : hydratedTodayWorkout,
     dateOverrides,
     weekScopedOverlays,
   };
@@ -922,6 +938,9 @@ export interface ProgramState {
    */
   weekScopedOverlays: Record<string, WeekScopedWorkoutOverlay>;
 
+  /** Persisted athlete-authored hard constraints for binned sessions/components. */
+  userRemovalConstraints: UserRemovalConstraint[];
+
   /** Target-week contracts reconciled by explicit date-level edits. */
   exposureContractsByWeek: Record<string, WeeklyExposureContract>;
 
@@ -1013,6 +1032,7 @@ export const useProgramStore = create<ProgramState>()(
       dateOverrides: {},
       overrideContexts: {},
       weekScopedOverlays: {},
+      userRemovalConstraints: [],
       exposureContractsByWeek: {},
       sessionFeedback: {},
       weightOverrides: {},
@@ -1046,6 +1066,7 @@ export const useProgramStore = create<ProgramState>()(
               currentProgram: candidateProgram,
               dateOverrides: candidateOverrides,
               overrideContexts: candidateOverrideContexts,
+              userRemovalConstraints: priorState.userRemovalConstraints,
             }, {
               programAlreadyAccepted: true,
               profile: require('./profileStore').useProfileStore.getState().onboardingData,
@@ -1131,6 +1152,26 @@ export const useProgramStore = create<ProgramState>()(
         };
         const exposureResolution = resolveDateMutationExposureContract(date, validatedWorkout);
         const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
+        const activeRemovals = state.userRemovalConstraints.filter((constraint) =>
+          constraint.status === 'active' && constraint.targetDate === date);
+        const restoredAt = new Date().toISOString();
+        const userRemovalConstraints = state.userRemovalConstraints.map((constraint) =>
+          constraint.status === 'active' && constraint.targetDate === date
+            ? {
+                ...constraint,
+                status: 'restored' as const,
+                restoredAt,
+                restorationReason: 'explicit_re_add' as const,
+              }
+            : constraint);
+        const acceptedContext = normalizeAcceptedMaterialContext(
+          useProgramStore.getState().acceptedMaterialContext,
+        );
+        const markedDays = { ...acceptedContext.markedDays };
+        if (activeRemovals.some((constraint) => constraint.wholeDayRestOwned) &&
+          markedDays[date] === 'rest') {
+          delete markedDays[date];
+        }
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           reason: `override:set:${date}`,
@@ -1145,7 +1186,9 @@ export const useProgramStore = create<ProgramState>()(
             overrideContexts: context
               ? { ...state.overrideContexts, [date]: context }
               : state.overrideContexts,
+            userRemovalConstraints,
           },
+          markedDays,
           validateWeekStarts: [mondayForDate(date)],
         });
       },
@@ -1378,6 +1421,7 @@ export const useProgramStore = create<ProgramState>()(
           dateOverrides: {},
           overrideContexts: {},
           weekScopedOverlays: {},
+          userRemovalConstraints: [],
           exposureContractsByWeek: {},
           sessionFeedback: {},
           weightOverrides: {},

@@ -428,7 +428,7 @@ function executePlanChangeAction(
     todayISO: context.todayISO,
     activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
   });
-  if (risk.ok && risk.assessment.decision === 'block') {
+  if (risk.ok && risk.assessment.decision === 'block' && action.type !== 'bin_session') {
     return {
       ok: false,
       changedProgram: false,

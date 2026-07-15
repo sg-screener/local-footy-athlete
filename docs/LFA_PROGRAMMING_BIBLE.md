@@ -4410,6 +4410,8 @@ A. Policy definitions
 | `optional_flush` | Optional light flush work. It is non-core and cannot satisfy required or planner-selected core conditioning. |
 | `optional_recovery_aerobic` | Optional recovery-focused aerobic work used only where the phase table permits it. It is non-core, non-hard and cannot replace required strength, conditioning or full rest. |
 | `legacy_unknown` | Compatibility identity for content whose Section 18 ownership is not known. It must not be silently promoted into core credit. |
+| Athlete-requested removal | A persisted hard user constraint removing a named accepted session or component from its target date. It owns that target even when the removed work is CORE or supplies a required exposure. |
+| CORE after athlete removal | A repair obligation to preserve equivalent exposure elsewhere where possible. CORE is never a permission lock on the specific removed session, component or date. |
 
 B. Authoritative phase table
 
@@ -4508,10 +4510,14 @@ Chained-mutation continuity and core relocation
 * Every second or later fixture, calendar, availability or session mutation starts from the currently accepted effective week: the accepted base program composed with its current week overlay, date overrides, calendar marks and active typed constraints. An original microcycle or uncomposed overlay is not a valid mutation source once a later accepted surface exists.
 * The accepted effective week carries forward the current Contract v2, visible core ownership, stable `planEntryId`s and prescriptions. A later layer may validate that representation but must not reinterpret a schedule-history note as readiness, replace it with a template, or independently reconstruct a different source week.
 * `fixture-replan:*` entries are normal accepted entries. When they supply required core work they remain preservable and relocatable; their identifier prefix does not make them disposable.
-* `remove_from_date` and date-level unavailability/rest mean that the named date cannot host the session. If the removed content supplies a compulsory weekly exposure, the planner preserves the contract and relocates or safely stacks the exact shortfall on another effective available day before considering regeneration.
-* `remove_weekly_exposure` asks to reduce the weekly exposure itself. A compulsory target is not silently reduced: the request requires an applicable typed authorised reduction or is rejected with the previous accepted state unchanged.
-* Required core relocation prefers an existing compatible hard day when safe, then another effective available day. Optional work is moved or removed before valid core strength is rewritten. Relocation must preserve the approved phase target, strength-pattern balance, rest and hard-day rules.
-* If no safe relocation satisfies the unchanged Contract v2, the mutation is rejected with a typed relocation failure. The calendar, overlay, overrides, contract and visible week remain the prior accepted snapshot.
+* Athlete deletion is hard user intent. A valid whole-session or component deletion is applied even when the target is CORE, supplies required exposure, temporarily breaks the weekly contract or creates a cross-week dependency.
+* CORE and required-exposure identity create a repair obligation; they do not own a specific session, component or date and do not authorise a write guard, gateway or rebuild to reject or undo the athlete's deletion.
+* Every deletion persists typed user-removal ownership: whole-session versus component scope, target date, accepted `planEntryId` or stable session identity, user authorship, whether equivalent exposure may relocate, and restoration/re-add state. Workout names, CORE labels, stale `workoutType`, weekday assumptions, array position and temporary UI state are not deletion identity.
+* Whole-session deletion removes that session and leaves the target date at rest under the existing visible semantics. Component deletion on a stacked day removes only the selected component and preserves the other accepted components; it does not create whole-day unavailability.
+* The prohibited target is immutable during repair. The deleted session/component or equivalent exposure cannot be recreated on that date by the same repair, later mutation, rebuild, reload/rehydration, Repeat Week or rollover unless the athlete explicitly restores or re-adds it.
+* Repair order after deletion is: relocate the required exposure to the highest-scoring Bible-valid day; substitute a valid session/component where exact relocation is not possible; move or remove lower-priority optional work to recover space or stress; then record an `explicit_user_override` typed reduction for any unavoidable shortfall. Required core relocation prefers an existing compatible hard day when safe, then another effective available day.
+* A user-deleted target may never be the reason to return `impossible`. When relocation or substitution cannot satisfy the original target, reduce the affected strength, conditioning, sprint or pattern metric only as far as the accepted visible shortfall requires and persist that typed reduction. Reject only malformed removal identity or a genuine technical/atomic-publication failure.
+* Every affected week in the rolling dependency closure is rebuilt and validated. All accepted horizon surfaces, persisted removal constraints and Contract v2 reductions publish atomically; a failed publication preserves the previous complete horizon.
 
 Whole-week repair and derived-session lifecycle
 
@@ -4522,7 +4528,7 @@ Whole-week repair and derived-session lifecycle
 * Fixture-derived provenance additionally records the exact source fixture/date, target session/date, whether the dependency crosses a week boundary, the exact displaced accepted session, and its restoration target. G+1 recovery, G-1/G-2 projection, temporary required-core relocation and temporary rest creation all inherit that fixture dependency.
 * Derived work exists only while its typed validity conditions remain true. The repair owner expires or downgrades obsolete system work before preservation scoring, then recalculates the target ledger. A fixture-replacement top-up therefore expires when a qualifying game/practice-match returns and supplies that credit; an untyped identifier prefix is never sufficient lifecycle evidence.
 * Expiring a derived replacement restores its recorded displaced session when that session remains safe and valid. A temporary rest placeholder must not erase a recoverable base session, and a temporary relocation must expire with the dependency that required it.
-* Work without system-derived provenance is not disposable by derived-work expiry. User- and Coach-authored work is preserved where safe, moved or adjusted only through normal repair, and never silently deleted as fixture replacement.
+* Work without system-derived provenance is not disposable by derived-work expiry. User- and Coach-authored additions are preserved where safe, moved or adjusted only through normal repair, and never silently deleted as fixture replacement. A persisted athlete-requested removal is separately authoritative and must continue suppressing its exact target until explicit restoration/re-addition.
 * A blocking candidate starts deterministic whole-week search: expire obsolete derived work; change optional work; relocate/stack required work; preserve unaffected core; restore patterns; rebalance spacing/rest; evaluate multiple candidates; then regenerate and safely fall back. One failed candidate or repeated finding signature does not end search while an untried candidate remains.
 * Candidate comparison considers the complete affected horizon: every week must pass its own Contract v2 gateway, obsolete dependencies and displaced sessions are resolved first, unaffected IDs/prescriptions are preserved, total horizon edits and Sunday-to-Monday stress are minimised, and required work uses the phase-appropriate day deterministically.
 * All repaired weeks and their accepted context publish in one ProgramStore replacement only after every affected gateway and visible-ledger equivalence check passes. Failure preserves the entire previous horizon; no current-week-only or UI-visible partial publication is permitted.
@@ -4591,12 +4597,12 @@ Invalid-week handling
 
 Do not store a week when:
 
-* a required safe exposure cannot be placed;
+* a required safe exposure cannot be placed and no approved typed reduction represents the unavoidable shortfall;
 * prohibited injury work returns;
 * a red flag remains unresolved; or
 * the final week contradicts its approved reduction.
 
-Repair or regenerate automatically. Use a safe fallback if repair fails. Show a simple settings-review message only when no safe week can be created. Red-flag/full-pause cases show recovery-only guidance and advice not to train.
+Repair or regenerate automatically. Use a safe fallback if repair fails. Athlete-requested deletion is the explicit exception to rejecting a required-exposure shortfall: preserve the deletion and apply the minimum `explicit_user_override` typed reduction after relocation, substitution and optional-work removal are exhausted. Show a simple settings-review message only when no safe week can be created. Red-flag/full-pause cases show recovery-only guidance and advice not to train.
 
 F. Deload rules
 
@@ -4697,6 +4703,8 @@ Cross-path rules
 * Among equally safe candidates meeting the same contract, choose deterministically by: Section 18 compliance, effective availability, preserved core sessions, changed-day count, preserved identities/prescriptions, use of a released fixture day, pattern balance, rest distribution, duplicate-pattern avoidance, avoidance of unnecessary consecutive active days, then optional-before-core sacrifice.
 * Full regeneration is permitted only when no safe minimal-diff candidate can satisfy the target contract and final gateway.
 * Rebuild, Repeat Week, rollover, persistence/rehydration, fixture changes and date/session changes use the same accepted-effective-week rebasing owner. They may project different target contracts, but they may not choose different mutation-source precedence.
+* Home-card, workout-detail and Coach/chat deletion are producers of the same persisted athlete-removal constraint and accepted-state transaction. They must converge on the same accepted visible state for the same target and scope.
+* Rebuild, Repeat Week and rollover may carry a user-removal constraint only onto its original concrete target date unless the athlete explicitly requests a broader recurring removal. They may not copy the prohibited work back onto that date, and rehydration must apply removal ownership before visible-ledger validation.
 * Sunday fixtures protect the following Monday as G+1 across the week boundary. Monday in the same Monday-to-Sunday target week is G-6 and remains eligible when otherwise safe; it must not be reclassified as that fixture's G+1.
 * Repeat Week uses the target week's canonical phase and selected exposure table. Its phase-table signature is the mode plus the selected main-strength, core-conditioning and sprint/high-speed targets.
 * When source and target phase-table signatures differ, Repeat Week regenerates from the target phase table instead of copying the source target or deficient source structure.

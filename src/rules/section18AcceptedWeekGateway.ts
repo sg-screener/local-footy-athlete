@@ -2,6 +2,7 @@ import type {
   Microcycle,
   OnboardingData,
   TrainingProgram,
+  UserRemovalConstraint,
   Workout,
 } from '../types/domain';
 import { resolveEquipmentCapabilities } from '../utils/equipmentAvailability';
@@ -31,6 +32,7 @@ import {
   rebindDerivedSessionProvenance,
 } from './derivedSessionProvenance';
 import { searchWholeWeekRepairCandidates } from './wholeWeekRepairEngine';
+import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
@@ -46,6 +48,7 @@ export type Section18WeekRepairKind =
   | 'obsolete_derived_work_expired'
   | 'optional_work_removed_for_rest'
   | 'core_work_stacked_on_existing_stress_day'
+  | 'athlete_removal_typed_reduction'
   | 'regenerated_candidate'
   | 'safe_fallback_candidate';
 
@@ -66,6 +69,7 @@ export interface Section18AcceptedWeekGatewayInput extends Section18AcceptedWeek
   profile?: OnboardingData | null;
   /** Exact fixture dates across the rolling dependency horizon. */
   activeFixtureDates?: ReadonlySet<string>;
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
   /** The caller may supply the exact live projection; generation uses the canonical resolver below. */
   resolveVisibleWorkouts?: (workouts: readonly Workout[]) => Workout[];
   maxRepairAttempts?: number;
@@ -132,9 +136,15 @@ export function resolveFinalVisibleSection18Week(args: {
   weekStart: string;
   profile?: OnboardingData | null;
   scheduleState?: Partial<ScheduleState>;
+  userRemovalConstraints?: readonly UserRemovalConstraint[];
 }): Workout[] {
   const weekStart = args.weekStart.slice(0, 10);
   const weekEnd = dateForDay(weekStart, 0);
+  const constrainedWorkouts = applyUserRemovalConstraintsToWeek({
+    workouts: args.workouts,
+    weekStart,
+    constraints: args.userRemovalConstraints,
+  });
   const microcycle: Microcycle = {
     id: `section18-visible:${weekStart}`,
     programId: `section18-visible-program:${weekStart}`,
@@ -145,7 +155,7 @@ export function resolveFinalVisibleSection18Week(args: {
     intensityMultiplier: args.contract.identity.weekKind === 'deload' ? 0.9 : 1,
     weekKind: args.contract.identity.weekKind,
     exposureContractV2: args.contract,
-    workouts: [...args.workouts],
+    workouts: constrainedWorkouts,
     createdAt: `${weekStart}T00:00:00.000Z`,
     updatedAt: `${weekStart}T00:00:00.000Z`,
   };
@@ -188,7 +198,7 @@ export function resolveFinalVisibleSection18Week(args: {
     : null;
   const profileAvailableDays = targetWeekAvailability?.effectiveAvailableDayNumbers ?? [];
   const canonicalAvailableDays = Array.from(new Set(
-    args.workouts.map((workout) => workout.dayOfWeek),
+    constrainedWorkouts.map((workout) => workout.dayOfWeek),
   ));
 
   const state: ScheduleState = {
@@ -574,8 +584,17 @@ function resolveCandidate(args: {
 }): Section18AcceptedWeekGatewayResult {
   const maxCandidates = Math.max(1, args.input.maxRepairAttempts ?? 48);
   const initialRepairs = [...(args.inheritedRepairs ?? [])];
-  const preScoreExpiry = buildDerivedSessionExpiryCandidates({
+  // A persisted athlete deletion is an accepted-state input, not a render
+  // filter. Apply it before lifecycle, safety and repair so those owners can
+  // never restore content onto the prohibited target and then lose it again
+  // only at the final visible projection.
+  const constrainedCandidateWorkouts = applyUserRemovalConstraintsToWeek({
     workouts: args.candidate.workouts,
+    weekStart: args.input.weekStart,
+    constraints: args.input.userRemovalConstraints,
+  });
+  const preScoreExpiry = buildDerivedSessionExpiryCandidates({
+    workouts: constrainedCandidateWorkouts,
     contract: args.candidate.contract,
     weekStart: args.input.weekStart,
     activeFixtureDates: args.input.activeFixtureDates,
@@ -588,7 +607,7 @@ function resolveCandidate(args: {
   }
   const safety = finaliseSection18SafetyWeek({
     contract: args.candidate.contract,
-    workouts: preScoreExpiry?.workouts ?? args.candidate.workouts,
+    workouts: preScoreExpiry?.workouts ?? constrainedCandidateWorkouts,
     weekStart: args.input.weekStart,
     canonicalContext: {
       phase: args.candidate.contract.identity.seasonPhase,
@@ -629,6 +648,7 @@ function resolveCandidate(args: {
           workouts: candidateWorkouts,
           weekStart: args.input.weekStart,
           profile: args.input.profile,
+          userRemovalConstraints: args.input.userRemovalConstraints,
         }));
       const visibleWorkouts = resolver(candidate.workouts);
       let evaluation = evaluateSection18EffectiveWeek({

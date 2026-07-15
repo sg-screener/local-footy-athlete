@@ -17,7 +17,7 @@
 import type { ResolvedDay } from './sessionResolver';
 import { getMondayForDate } from './sessionResolver';
 import { splitSessionName } from './sessionNaming';
-import type { OverrideContext, Workout } from '../types/domain';
+import type { OverrideContext, UserRemovalScope, Workout } from '../types/domain';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import {
   COACH_REVISION_PROPOSAL_SCHEMA_VERSION,
@@ -47,6 +47,10 @@ import {
 import type { ProgramEditRiskAssessment } from './programEditRiskAssessment';
 import { assessProgramEditWrites } from './programEditWriteGuard';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
+import {
+  commitAthleteSessionDeletionTransaction,
+  type AthleteSessionDeletionTransactionInput,
+} from '../store/acceptedStateTransaction';
 
 // ── Edit horizon ──
 // Sam 2026-07-03: athletes change this week and at most the next two —
@@ -1021,6 +1025,8 @@ export function applyPlanChange(args: {
     workout: Workout | null,
     context?: OverrideContext,
   ) => void;
+  /** Test/host seam; production defaults to the accepted-state transaction. */
+  commitAthleteRemoval?: (input: AthleteSessionDeletionTransactionInput) => unknown;
 }): PlanChangeApplyResult {
   const proposal = buildPlanChangeProposal(args.change, {
     visibleWeek: args.visibleWeek,
@@ -1040,7 +1046,10 @@ export function applyPlanChange(args: {
     visibleWeek: args.visibleWeek,
     todayISO: args.todayISO,
     validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
-    setManualOverride: args.setManualOverride,
+    deferWeekAcceptanceToTransaction: args.change.kind === 'remove_session',
+    setManualOverride: args.change.kind === 'remove_session'
+      ? undefined
+      : args.setManualOverride,
   });
 
   if (apply.applied.length === 0 || apply.rejected.length > 0) {
@@ -1050,6 +1059,53 @@ export function applyPlanChange(args: {
       appliedDates: apply.applied.map((write) => write.date),
       rejected: rejectedForResult(apply.rejected),
     };
+  }
+
+  if (args.change.kind === 'remove_session') {
+    const removal = args.change;
+    const source = args.visibleWeek.find((day) => day.date === removal.date)?.workout ?? null;
+    const write = apply.applied.find((candidate) => candidate.date === removal.date);
+    if (!source || !write) {
+      return {
+        ok: false,
+        message: "I couldn't safely make that change, so the plan is untouched.",
+        appliedDates: [],
+        rejected: [{
+          date: removal.date,
+          code: 'athlete_removal_identity_missing',
+          reason: 'The accepted source session or component result was unavailable.',
+        }],
+      };
+    }
+    const scopeMap: Record<PlanChangeBinScopeId, UserRemovalScope> = {
+      whole_day: 'whole_session',
+      strength: 'strength_component',
+      conditioning: 'conditioning_component',
+      recovery: 'recovery_component',
+      team: 'team_component',
+    };
+    try {
+      (args.commitAthleteRemoval ?? commitAthleteSessionDeletionTransaction)({
+        date: removal.date,
+        reason: `tap:remove_session:${removal.date}`,
+        source: 'tap',
+        scope: scopeMap[removal.scope ?? 'whole_day'],
+        originalWorkout: source,
+        remainingWorkout: write.workout.workoutType === 'Rest' ? null : write.workout,
+        equivalentExposureMayRelocate: true,
+      });
+    } catch (error) {
+      return {
+        ok: false,
+        message: "I couldn't safely make that change, so the plan is untouched.",
+        appliedDates: [],
+        rejected: [{
+          date: removal.date,
+          code: 'athlete_removal_publication_failed',
+          reason: (error as Error)?.message ?? String(error),
+        }],
+      };
+    }
   }
 
   // Category picks name what was chosen — the athlete picked a bucket,
