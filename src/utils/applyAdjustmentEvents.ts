@@ -58,6 +58,17 @@ import {
 } from './coachModalitySwap';
 import { CONDITIONING_META, type ConditioningModality } from '../data/exerciseTags';
 import { hasMeaningfulWorkoutContent } from './workoutContent';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionSource,
+  type AthleteActionTraceContext,
+  type AthleteActionType,
+} from './athleteActionDiagnostics';
 
 // ─────────────────────────────────────────────────────────────────────────
 // TYPES
@@ -100,6 +111,11 @@ export interface ApplyOptions {
   allowPastDates?: boolean;
   /** Explicit owner intent when the caller already knows the adjustment domain. */
   overrideIntent?: OverrideContext['intent'];
+  /** Development-only diagnostic provenance; ignored by mutation policy. */
+  trace?: AthleteActionTraceContext;
+  diagnosticSource?: AthleteActionSource;
+  diagnosticActionType?: AthleteActionType;
+  diagnosticRoute?: string;
 }
 
 export interface AppliedAdjustment {
@@ -1490,7 +1506,7 @@ void ({} as ParsedModalitySwap);
  *   3. Once all events for the date are processed, write the final working
  *      workout via setManualOverride (single write per date).
  */
-export function applyAdjustmentEvents(
+function applyAdjustmentEventsWithinTrace(
   events: AdjustmentEvent[],
   opts: ApplyOptions,
 ): ApplyEventsResult {
@@ -1787,6 +1803,94 @@ export function applyAdjustmentEvents(
   });
 
   return { applied, rejected };
+}
+
+function adjustmentDiagnosticActionType(
+  events: readonly AdjustmentEvent[],
+  opts: ApplyOptions,
+): AthleteActionType {
+  if (opts.diagnosticActionType) return opts.diagnosticActionType;
+  if (opts.overrideIntent === 'injury') return 'injury_change';
+  if (events.some((event) => event.kind === 'lighten_session' ||
+    event.kind === 'set_session_recovery')) return 'go_lighter';
+  if (events.some((event) => event.kind.startsWith('remove_'))) return 'delete_component';
+  return 'program_change';
+}
+
+/** Event-applier boundary with a passive, development-only trace wrapper. */
+export function applyAdjustmentEvents(
+  events: AdjustmentEvent[],
+  opts: ApplyOptions,
+): ApplyEventsResult {
+  const dates = Array.from(new Set(events.map((event) => event.date).filter(Boolean))).sort();
+  const trace = beginAthleteActionTrace({
+    source: opts.diagnosticSource ?? 'system',
+    actionType: adjustmentDiagnosticActionType(events, opts),
+    route: opts.diagnosticRoute ?? 'apply_adjustment_events',
+    currentWeekId: dates[0] ? mondayOfISOLocal(dates[0]) : mondayOfISOLocal(opts.todayISO),
+    sourceDate: dates[0],
+    targetDate: dates.at(-1),
+    sessionDate: dates[0],
+    scope: dates.length > 1 ? 'multi_date' : 'single_date',
+  }, opts.trace);
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: 'adjustment_events',
+      eventKinds: events.map((event) => event.kind),
+      eventCount: events.length,
+      affectedDates: dates,
+      inputHash: athleteActionDiagnosticHash(events.map((event) => ({
+        id: event.id,
+        kind: event.kind,
+        date: event.date,
+      }))),
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: opts.diagnosticRoute ?? 'apply_adjustment_events',
+      producer: 'applyAdjustmentEvents',
+    });
+    const result = applyAdjustmentEventsWithinTrace(events, opts);
+    for (const rejection of result.rejected) {
+      emitAthleteActionEvent(trace, 'repair_candidate_rejected', {
+        candidateId: athleteActionDiagnosticHash({
+          kind: rejection.kind,
+          date: rejection.date ?? null,
+        }),
+        rejectionCodes: [rejection.kind],
+        firstFailingInvariant: rejection.kind,
+        rejectingBoundary: 'applyAdjustmentEvents',
+        failureCategory: classifyAthleteActionFailure(rejection.kind, 'applyAdjustmentEvents'),
+      });
+    }
+    if (result.applied.length > 0) {
+      emitAthleteActionEvent(trace, 'athlete_action_completed', {
+        outcome: result.rejected.length > 0 ? 'partially_applied' : 'applied',
+        internalResultCode: result.rejected.length > 0
+          ? 'adjustment_events_partial'
+          : 'adjustment_events_applied',
+        appliedDates: result.applied.map((entry) => entry.date),
+        rejectedCount: result.rejected.length,
+        afterStateHash: athleteActionDiagnosticHash(result.applied.map((entry) => ({
+          date: entry.date,
+          eventIds: entry.eventIds,
+        }))),
+      });
+    } else if (events.length > 0) {
+      const rejectionCode = result.rejected[0]?.kind ?? 'adjustment_events_no_write';
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'rejected',
+        internalResultCode: 'adjustment_events_rejected',
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: result.rejected.map((entry) => entry.kind),
+        firstFailingBoundary: 'applyAdjustmentEvents',
+        failureCategory: classifyAthleteActionFailure(rejectionCode, 'applyAdjustmentEvents'),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+    }
+    return result;
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────

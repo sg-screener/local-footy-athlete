@@ -67,6 +67,18 @@ import {
 import { logger } from './logger';
 import type { FixtureMinimalReplanResult } from './fixtureMinimalReplan';
 import { resolveProfileTargetWeekAvailability } from '../rules/fixtureConditionedAvailability';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionErrorCode,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionSource,
+  type AthleteActionTraceContext,
+  type AthleteActionType,
+} from './athleteActionDiagnostics';
 
 // ─── Canonical context ───────────────────────────────────────────────
 
@@ -356,13 +368,18 @@ export interface RebuildLocalWeekArgs {
    * accepted snapshot has committed and must not mutate material stores.
    */
   commitGameMark?: () => void;
+  /** Development-only trace metadata; never participates in rebuild decisions. */
+  trace?: AthleteActionTraceContext;
+  diagnosticSource?: AthleteActionSource;
+  diagnosticActionType?: AthleteActionType;
+  diagnosticRoute?: string;
 }
 
 /**
  * Build + commit a deterministic week rebuild. Synchronous; throws
  * BEFORE any state mutation on failure (atomic by construction).
  */
-export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult {
+function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildResult {
   const todayISO = args.todayISO ?? todayISOLocal();
   const scope = args.scope ?? 'block';
   const targetDate = args.targetDate?.split('T')[0];
@@ -519,6 +536,93 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
     conflictsRemoved: sweep.conflictsRemoved,
   });
   return { program, context, sweep };
+}
+
+function rebuildDiagnosticActionType(args: RebuildLocalWeekArgs): AthleteActionType {
+  if (args.diagnosticActionType) return args.diagnosticActionType;
+  if (args.newGameDay !== undefined) {
+    return args.baseProfile.seasonPhase === 'Pre-season'
+      ? 'practice_match_change'
+      : 'game_day_change';
+  }
+  return 'program_change';
+}
+
+/** Canonical rebuild entry with passive trace correlation around the existing transaction. */
+export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult {
+  const todayISO = args.todayISO ?? todayISOLocal();
+  const targetDate = args.targetDate?.split('T')[0] ?? todayISO;
+  const trace = beginAthleteActionTrace({
+    source: args.diagnosticSource ?? 'tap',
+    actionType: rebuildDiagnosticActionType(args),
+    route: args.diagnosticRoute ?? 'week_rebuild',
+    currentWeekId: getMondayForDate(targetDate),
+    sourceDate: args.clearOverlayDate,
+    targetDate,
+    sessionDate: targetDate,
+    scope: args.scope ?? 'block',
+  }, args.trace);
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: 'rebuild_local_week',
+      fixtureMutation: args.newGameDay === undefined
+        ? 'unchanged'
+        : args.newGameDay === null ? 'removed' : 'set',
+      rebuildScope: args.scope ?? 'block',
+      commitsState: args.commit !== false,
+      beforeStateHash: athleteActionDiagnosticHash({
+        programId: useProgramStore.getState().currentProgram?.id ?? null,
+        overlayWeeks: Object.keys(useProgramStore.getState().weekScopedOverlays).sort(),
+        overrideDates: Object.keys(useProgramStore.getState().dateOverrides).sort(),
+      }),
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: args.scope === 'weekOverlay'
+        ? 'fixture_week_overlay_rebuild'
+        : 'canonical_block_rebuild',
+      producer: 'rebuildLocalWeek',
+    });
+    try {
+      const result = rebuildLocalWeekWithinTrace(args);
+      emitAthleteActionEvent(trace, 'athlete_action_completed', {
+        outcome: args.commit === false ? 'built_not_published' : 'rebuilt',
+        internalResultCode: `week_rebuild_${args.scope ?? 'block'}_accepted`,
+        changedDates: result.fixtureReplan?.changedDays ?? [],
+        addedDates: result.fixtureReplan?.addedDays ?? [],
+        removedDates: result.fixtureReplan?.removedDays ?? [],
+        conflictsRemovedDates: result.sweep.conflictsRemoved.map((entry) => entry.date),
+        afterStateHash: athleteActionDiagnosticHash({
+          programId: result.program.id,
+          overlayWeek: result.overlay?.weekStart ?? null,
+          preservedDates: result.sweep.preserve,
+          clearedDates: result.sweep.clear,
+        }),
+      });
+      if (trace.source === 'tap' && args.commit !== false) {
+        emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+          uiSurface: 'week_rebuild_caller',
+          uiOutcome: 'success',
+          internalResultCode: `week_rebuild_${args.scope ?? 'block'}_accepted`,
+          finalUiMessageKey: `week_rebuild_${args.scope ?? 'block'}_accepted`,
+        });
+      }
+      return result;
+    } catch (error) {
+      const rejectionCode = athleteActionErrorCode(error, 'week_rebuild_unknown_error');
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: `week_rebuild_${args.scope ?? 'block'}_failed`,
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: [rejectionCode],
+        firstFailingBoundary: 'rebuildLocalWeek',
+        failureCategory: classifyAthleteActionFailure(rejectionCode, 'rebuildLocalWeek'),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    }
+  });
 }
 
 /**

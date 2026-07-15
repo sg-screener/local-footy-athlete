@@ -25,6 +25,17 @@ import {
 } from './weekRebuild';
 import { todayISOLocal } from './appDate';
 import { logger } from './logger';
+import { getMondayForDate } from './sessionResolver';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionErrorCode,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionTraceContext,
+} from './athleteActionDiagnostics';
 
 export interface ProgramBlockRolloverResult {
   rolledOver: boolean;
@@ -52,9 +63,10 @@ export function selectRelevantRolloverOverlays(
  * weight history live outside `setCurrentProgram`, so the canonical rebuild
  * leaves both intact for the progression resolver.
  */
-export function rolloverProgramBlock(args: {
+function rolloverProgramBlockWithinTrace(args: {
   baseProfile: OnboardingData;
   targetDateISO?: string;
+  trace?: AthleteActionTraceContext;
 }): ProgramBlockRolloverResult {
   const targetDateISO = (args.targetDateISO ?? todayISOLocal()).split('T')[0];
   const before = useProgramStore.getState();
@@ -116,4 +128,76 @@ export function rolloverProgramBlock(args: {
     preservedOverlayWeeks,
     removedOverlayWeeks,
   };
+}
+
+export function rolloverProgramBlock(args: {
+  baseProfile: OnboardingData;
+  targetDateISO?: string;
+  /** Development-only correlation inherited from a caller. */
+  trace?: AthleteActionTraceContext;
+}): ProgramBlockRolloverResult {
+  const targetDateISO = (args.targetDateISO ?? todayISOLocal()).split('T')[0];
+  const trace = beginAthleteActionTrace({
+    source: 'system',
+    actionType: 'rollover',
+    route: 'program_block_rollover',
+    currentWeekId: getMondayForDate(targetDateISO),
+    targetDate: targetDateISO,
+    scope: 'program_block',
+  }, args.trace);
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: 'program_block_rollover',
+      beforeStateHash: athleteActionDiagnosticHash({
+        programId: useProgramStore.getState().currentProgram?.id ?? null,
+        blockNumber: useProgramStore.getState().blockState?.blockNumber ?? null,
+        overlayWeeks: Object.keys(useProgramStore.getState().weekScopedOverlays).sort(),
+      }),
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: 'canonical_block_rebuild',
+      producer: 'rolloverProgramBlock',
+    });
+    try {
+      const result = rolloverProgramBlockWithinTrace(args);
+      emitAthleteActionEvent(trace, 'athlete_action_completed', {
+        outcome: result.rolledOver ? 'rolled_over' : 'no_rollover_needed',
+        internalResultCode: result.rolledOver
+          ? 'program_rollover_accepted'
+          : 'program_rollover_no_op',
+        preservedOverlayWeeks: result.preservedOverlayWeeks,
+        removedOverlayWeeks: result.removedOverlayWeeks,
+        afterStateHash: athleteActionDiagnosticHash({
+          programId: result.program?.id ?? null,
+          nextBlockStart: result.status.nextBlockStart,
+          rolledOver: result.rolledOver,
+        }),
+      });
+      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+        uiSurface: 'home_program_projection',
+        uiOutcome: result.rolledOver ? 'updated' : 'unchanged',
+        internalResultCode: result.rolledOver
+          ? 'program_rollover_accepted'
+          : 'program_rollover_no_op',
+        finalUiMessageKey: result.rolledOver
+          ? 'program_rollover_accepted'
+          : 'program_rollover_no_op',
+      });
+      return result;
+    } catch (error) {
+      const rejectionCode = athleteActionErrorCode(error, 'program_rollover_unknown_error');
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: 'program_rollover_failed',
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: [rejectionCode],
+        firstFailingBoundary: 'rolloverProgramBlock',
+        failureCategory: classifyAthleteActionFailure(rejectionCode, 'rolloverProgramBlock'),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    }
+  });
 }

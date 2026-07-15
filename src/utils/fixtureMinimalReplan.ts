@@ -31,6 +31,12 @@ import {
   activeUserRemovalConstraintsForWeek,
   applyAthleteRemovalTypedReduction,
 } from '../rules/userRemovalConstraints';
+import {
+  athleteActionDiagnosticHash,
+  classifyAthleteActionFailure,
+  currentAthleteActionTrace,
+  emitAthleteActionEvent,
+} from './athleteActionDiagnostics';
 
 export interface FixtureReplanEditCost {
   section18Blockers: number;
@@ -885,6 +891,7 @@ function changedDaySets(source: readonly Workout[], target: readonly Workout[]) 
 export function buildFixtureMinimalReplan(
   args: BuildFixtureMinimalReplanInput,
 ): FixtureMinimalReplanResult {
+  const trace = currentAthleteActionTrace();
   const contract = args.targetMicrocycle.exposureContractV2;
   if (!contract) throw new Error('Fixture minimal replan requires Contract v2');
   const fixtureNeutral = fixtureNeutralSource(args);
@@ -1030,6 +1037,26 @@ export function buildFixtureMinimalReplan(
                   })),
                 repairs: gateway.repairs,
               });
+              emitAthleteActionEvent(trace, 'repair_candidate_rejected', {
+                candidateId: athleteActionDiagnosticHash({
+                  weekId: args.weekStart,
+                  addedDays,
+                  canonical: gateway.canonicalWorkouts.map((workout) =>
+                    workout.planEntryId ?? workout.id),
+                }),
+                candidateIndex: candidateDiagnostics.length - 1,
+                affectedWeek: args.weekStart,
+                candidateChanges: { addedDays },
+                rejectionCodes: gateway.evaluation.blockingViolations.map((finding) =>
+                  `${finding.code}:${finding.domain}`),
+                rejectingBoundary: 'buildFixtureMinimalReplan',
+                relevantInvariant: gateway.evaluation.blockingViolations
+                  .map((finding) => finding.domain).join(','),
+                failureCategory: classifyAthleteActionFailure(
+                  gateway.evaluation.blockingViolations[0]?.code,
+                  'buildFixtureMinimalReplan',
+                ),
+              });
               continue;
             }
             const cost = scoreCandidate({
@@ -1052,9 +1079,29 @@ export function buildFixtureMinimalReplan(
     compareFixtureReplanEditCost(left.cost, right.cost) ||
     left.addedDays.join(',').localeCompare(right.addedDays.join(',')));
   const winner = accepted[0];
+  emitAthleteActionEvent(trace, 'repair_candidates_generated', {
+    candidateCount: accepted.length + rejectedCandidates.length,
+    acceptedCandidateCount: accepted.length,
+    rejectedCandidateCount: rejectedCandidates.length,
+    affectedWeek: args.weekStart,
+    boundary: 'buildFixtureMinimalReplan',
+  });
   if (winner) {
     const changes = changedDaySets(args.sourceWorkouts, winner.gateway.canonicalWorkouts);
     const retained = new Set(winner.gateway.canonicalWorkouts.map((workout) => workout.planEntryId));
+    emitAthleteActionEvent(trace, 'repair_candidate_selected', {
+      candidateId: athleteActionDiagnosticHash({
+        weekId: args.weekStart,
+        canonical: winner.gateway.canonicalWorkouts.map((workout) =>
+          workout.planEntryId ?? workout.id),
+      }),
+      candidateScore: winner.cost,
+      preservationCost: winner.cost,
+      candidateChanges: changedDaySets(args.sourceWorkouts, winner.gateway.canonicalWorkouts),
+      affectedWeek: args.weekStart,
+      outcome: winner.gateway.status,
+      boundary: 'buildFixtureMinimalReplan',
+    });
     const seenAlternatives = new Set<string>();
     const alternatives: FixtureMinimalReplanAlternative[] = [];
     for (const candidate of accepted) {
@@ -1178,6 +1225,26 @@ export function buildFixtureMinimalReplan(
     reducedGateway.repairs.push({
       kind: 'athlete_removal_typed_reduction',
       detail: `Preserved athlete removal on ${constraint.targetDate} and recorded explicit_user_override for the unavoidable shortfall.`,
+    });
+    emitAthleteActionEvent(trace, 'repair_candidate_selected', {
+      candidateId: athleteActionDiagnosticHash({
+        weekId: args.weekStart,
+        reductionConstraint: constraint.id,
+        canonical: reducedGateway.canonicalWorkouts.map((workout) =>
+          workout.planEntryId ?? workout.id),
+      }),
+      candidateScore: { blockingCount: 0, typedReduction: true },
+      candidateChanges: changedDaySets(args.sourceWorkouts, reducedGateway.canonicalWorkouts),
+      affectedWeek: args.weekStart,
+      typedReductionCreated: reducedGateway.contract.authorisedReductions
+        .filter((reduction) => reduction.reason === 'explicit_user_override')
+        .map((reduction) => ({
+          metric: reduction.metric,
+          reducedTarget: reduction.reducedTarget,
+          reason: reduction.reason,
+        })),
+      outcome: 'reduced',
+      boundary: 'buildFixtureMinimalReplan',
     });
     const changes = changedDaySets(args.sourceWorkouts, reducedGateway.canonicalWorkouts);
     const cost = scoreCandidate({

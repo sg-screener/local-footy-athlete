@@ -49,6 +49,15 @@ import {
 } from './programAdjustmentRequests';
 import type { AdjustmentEvent } from './programAdjustmentEngine';
 import { deriveVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionType,
+} from './athleteActionDiagnostics';
 
 // ─── Result type ────────────────────────────────────────────────────
 
@@ -452,7 +461,7 @@ export interface DispatchDeps {
 
 // ─── Dispatcher ─────────────────────────────────────────────────────
 
-export function dispatchCoachIntent(
+function dispatchCoachIntentWithinTrace(
   intent: CoachIntent,
   packet: CoachContextPacket,
   deps: DispatchDeps,
@@ -1196,6 +1205,111 @@ export function dispatchCoachIntent(
       };
     }
   }
+}
+
+function dispatcherDiagnosticActionType(intent: CoachIntent): AthleteActionType {
+  if (intent.intent === 'new_injury_report' || intent.intent === 'injury_severity_reply' ||
+    intent.intent === 'active_injury_followup') return 'injury_change';
+  if (intent.intent === 'fatigue' || intent.intent === 'soreness') return 'readiness_change';
+  if (intent.intent === 'request_program_adjustment') {
+    const operation = intent.payload?.operation ?? intent.payload?.action;
+    if (operation === 'remove_session') return 'delete_session';
+    if (operation === 'remove_conditioning') return 'delete_component';
+    if (operation === 'move_session') return 'move_session';
+    if (operation === 'add_conditioning') return 'add_session';
+  }
+  return 'coach_command';
+}
+
+/** Production Coach dispatcher entry with one trace across all injected mutation deps. */
+export function dispatchCoachIntent(
+  intent: CoachIntent,
+  packet: CoachContextPacket,
+  deps: DispatchDeps,
+): DispatchOutcome {
+  const targetDate = intent.payload?.targetDate ?? intent.payload?.requestedDate ?? packet.todayISO;
+  const trace = beginAthleteActionTrace({
+    source: 'coach',
+    actionType: dispatcherDiagnosticActionType(intent),
+    route: 'coach_intent_dispatcher',
+    currentWeekId: mondayOf(targetDate),
+    sourceDate: targetDate,
+    targetDate,
+    sessionDate: targetDate,
+    scope: intent.payload?.scope ?? null,
+  });
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: intent.intent,
+      confidenceBucket: intent.confidence >= 0.8 ? 'high' : intent.confidence >= 0.5 ? 'medium' : 'low',
+      needsClarification: intent.needsClarification,
+      payloadKeys: Object.keys(intent.payload ?? {}).sort(),
+      targetIdentityHash: athleteActionDiagnosticHash({
+        date: targetDate,
+        requestedSession: intent.payload?.requestedSession ?? null,
+        targetSessionName: intent.payload?.targetSessionName ?? null,
+      }),
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: 'coach_intent_dispatcher',
+      producer: 'dispatchCoachIntent',
+      intentKind: intent.intent,
+    });
+    try {
+      const outcome = dispatchCoachIntentWithinTrace(intent, packet, deps);
+      const internalResultCode = `coach_dispatch_${outcome.replyMode}`;
+      const failedMutation = outcome.transaction?.mutationAttempted === true && !outcome.mutated;
+      if (failedMutation || outcome.replyMode === 'program_adjustment_failed') {
+        const rejectionCode = outcome.transaction?.route ?? outcome.replyMode;
+        emitAthleteActionEvent(trace, 'athlete_action_failed', {
+          outcome: outcome.replyMode,
+          internalResultCode,
+          originalRejectionCode: rejectionCode,
+          rejectionCodes: [rejectionCode],
+          firstFailingBoundary: rejectionCode,
+          failureCategory: classifyAthleteActionFailure(rejectionCode, 'dispatchCoachIntent'),
+          validCandidateExisted: false,
+          previousStateRestored: !outcome.mutated,
+          genericMessageSelected: outcome.replyMode === 'program_adjustment_failed',
+          genericMessageSelectionReason: outcome.replyMode === 'program_adjustment_failed'
+            ? 'dispatcher_verified_failure_copy'
+            : null,
+          terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+        });
+      } else {
+        emitAthleteActionEvent(trace, 'athlete_action_completed', {
+          outcome: outcome.mutated ? 'accepted_changed' : outcome.handled ? 'handled_no_change' : 'fall_through',
+          internalResultCode,
+          dispatcherRoute: outcome.transaction?.route ?? outcome.replyMode,
+          eventsEmitted: outcome.transaction?.eventsEmitted ?? 0,
+          eventsApplied: outcome.transaction?.eventsApplied ?? 0,
+        });
+      }
+      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+        uiSurface: 'coach_chat',
+        uiOutcome: outcome.replyMode,
+        internalResultCode,
+        mutated: outcome.mutated,
+        handled: outcome.handled,
+        finalUiMessageKey: outcome.replyMode,
+      });
+      return outcome;
+    } catch (error) {
+      const rejectionCode = error instanceof Error ? error.name : 'unknown_error';
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: `coach_dispatch_${intent.intent}_threw`,
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: [rejectionCode],
+        firstFailingBoundary: 'dispatchCoachIntent',
+        failureCategory: classifyAthleteActionFailure(rejectionCode, 'dispatchCoachIntent'),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    }
+  });
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────

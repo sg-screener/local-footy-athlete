@@ -99,6 +99,16 @@ import {
 } from '../store/acceptedStateTransaction';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionTraceContext,
+  type AthleteActionType,
+} from './athleteActionDiagnostics';
 
 // ─── Public types ───────────────────────────────────────────────────
 
@@ -175,6 +185,8 @@ export interface ExecuteCoachCommandInput {
    *  leaves undefined; the executor reads/writes the live mutation
    *  history store and runs the live undo engine. */
   undoDeps?: UndoDeps;
+  /** Development-only correlation inherited from an earlier Coach entry. */
+  trace?: AthleteActionTraceContext;
 }
 
 /**
@@ -400,7 +412,7 @@ export interface UndoDeps {
 
 // ─── Public entry point ─────────────────────────────────────────────
 
-export function executeCoachCommand(
+function executeCoachCommandWithinTrace(
   input: ExecuteCoachCommandInput,
 ): ExecutionResult {
   const { command } = input;
@@ -467,6 +479,113 @@ export function executeCoachCommand(
         delegationHint: 'inspect_state',
       };
   }
+}
+
+function coachDiagnosticActionType(command: CoachCommand): AthleteActionType {
+  if (command.mode !== 'mutate') return 'coach_command';
+  if (command.operation === 'remove_session') return 'delete_session';
+  if (command.operation === 'remove_conditioning') return 'delete_component';
+  if (command.operation === 'move_session') return 'move_session';
+  if (command.operation === 'add_session' || command.operation === 'add_conditioning') {
+    return 'add_session';
+  }
+  return 'coach_command';
+}
+
+/** Coach executor entry: diagnostics observe the typed command and verified result. */
+export function executeCoachCommand(input: ExecuteCoachCommandInput): ExecutionResult {
+  const targetDate = input.command.mode === 'mutate'
+    ? targetDateFor(input.command.target) ?? undefined
+    : undefined;
+  const targetSession = input.referenceResolution?.target;
+  const operation = input.command.mode === 'mutate' ? input.command.operation : input.command.mode;
+  const trace = beginAthleteActionTrace({
+    source: 'coach',
+    actionType: coachDiagnosticActionType(input.command),
+    route: 'coach_command_executor',
+    currentWeekId: targetDate ? getMondayForDate(targetDate) : undefined,
+    sourceDate: targetDate,
+    targetDate: input.command.mode === 'mutate' && input.command.payload.operation === 'move_session'
+      ? input.command.payload.toDate
+      : targetDate,
+    sessionDate: targetDate,
+    scope: input.command.mode === 'mutate' ? input.command.scope : null,
+  }, input.trace);
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: operation,
+      commandMode: input.command.mode,
+      targetKind: input.command.mode === 'mutate' ? input.command.target.kind : null,
+      needsClarification: input.command.mode === 'mutate'
+        ? input.command.needsClarification
+        : input.command.mode === 'clarify',
+      referenceStatus: input.referenceResolution?.status ?? null,
+      targetIdentityHash: athleteActionDiagnosticHash({
+        date: targetSession?.date ?? targetDate ?? null,
+        sessionName: targetSession?.sessionName ?? null,
+      }),
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: input.command.mode,
+      producer: 'executeCoachCommand',
+      operation,
+    });
+    try {
+      const result = executeCoachCommandWithinTrace(input);
+      const internalResultCode = `coach_${operation}_${result.kind}`;
+      if (result.applied && result.kind === 'mutated') {
+        emitAthleteActionEvent(trace, 'athlete_action_completed', {
+          outcome: 'verified_mutation',
+          internalResultCode,
+          executorRoute: result.route,
+          progressStages: result.progress,
+        });
+      } else if (result.kind === 'rejected' || result.kind === 'rejected_with_alternatives' ||
+        result.kind === 'error' || result.kind === 'verified_no_op') {
+        emitAthleteActionEvent(trace, 'athlete_action_failed', {
+          outcome: result.kind,
+          internalResultCode,
+          originalRejectionCode: result.route,
+          rejectionCodes: [result.route],
+          firstFailingBoundary: result.route.split(':')[0] ?? 'executeCoachCommand',
+          failureCategory: classifyAthleteActionFailure(result.route),
+          validCandidateExisted: result.kind === 'verified_no_op',
+          previousStateRestored: !result.applied,
+          terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+        });
+      } else {
+        emitAthleteActionEvent(trace, 'athlete_action_completed', {
+          outcome: result.kind,
+          internalResultCode,
+          executorRoute: result.route,
+          applied: result.applied,
+        });
+      }
+      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+        uiSurface: 'coach_chat',
+        uiOutcome: result.kind,
+        internalResultCode,
+        applied: result.applied,
+        executorRoute: result.route,
+        finalUiMessageKey: internalResultCode,
+      });
+      return result;
+    } catch (error) {
+      const rejectionCode = error instanceof Error ? error.name : 'unknown_error';
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: `coach_${operation}_threw`,
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: [rejectionCode],
+        firstFailingBoundary: 'executeCoachCommand',
+        failureCategory: classifyAthleteActionFailure(rejectionCode),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    }
+  });
 }
 
 // ─── Mutation routing ───────────────────────────────────────────────

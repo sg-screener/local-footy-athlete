@@ -3,6 +3,16 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { ReadinessSignal } from '../utils/readiness';
 import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
+import { getMondayForDate } from '../utils/sessionResolver';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionErrorCode,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+} from '../utils/athleteActionDiagnostics';
 
 interface ReadinessState {
   signalsByDate: Record<string, ReadinessSignal>;
@@ -21,25 +31,73 @@ interface ReadinessState {
   clear: () => void;
 }
 
+function commitReadinessSignalWithTrace(
+  date: string,
+  patch: Omit<Partial<ReadinessSignal>, 'date' | 'updatedAt'> | null,
+): void {
+  const diagnosticSource = patch?.source === 'coach_message' ? 'coach' : 'tap';
+  const trace = beginAthleteActionTrace({
+    source: diagnosticSource,
+    actionType: 'readiness_change',
+    route: 'readiness_store',
+    currentWeekId: getMondayForDate(date),
+    targetDate: date,
+    sessionDate: date,
+    scope: 'single_date',
+  });
+  runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: patch ? 'set_readiness_signal' : 'clear_readiness_signal',
+      readinessPatchHash: athleteActionDiagnosticHash(patch),
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: 'accepted_readiness_transaction',
+      producer: 'readinessStore',
+    });
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('./acceptedStateTransaction').commitReadinessSignalTransaction({ date, patch });
+      const internalResultCode = patch ? 'readiness_signal_set' : 'readiness_signal_cleared';
+      emitAthleteActionEvent(trace, 'athlete_action_completed', {
+        outcome: 'accepted',
+        internalResultCode,
+        targetDate: date,
+      });
+      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+        uiSurface: 'readiness_control',
+        uiOutcome: 'success',
+        internalResultCode,
+        finalUiMessageKey: internalResultCode,
+      });
+    } catch (error) {
+      const rejectionCode = athleteActionErrorCode(error, 'readiness_signal_unknown_error');
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: 'readiness_signal_failed',
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: [rejectionCode],
+        firstFailingBoundary: 'commitReadinessSignalTransaction',
+        failureCategory: classifyAthleteActionFailure(rejectionCode, 'readiness'),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    }
+  });
+}
+
 export const useReadinessStore = create<ReadinessState>()(
   persist(
     (set, get) => ({
       signalsByDate: {},
 
       setReadinessSignal: (date, signal) => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitReadinessSignalTransaction({
-          date,
-          patch: signal,
-        });
+        commitReadinessSignalWithTrace(date, signal);
       },
 
       clearReadinessSignal: (date) => {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitReadinessSignalTransaction({
-          date,
-          patch: null,
-        });
+        commitReadinessSignalWithTrace(date, null);
       },
 
       pruneBefore: (dateISO) => {

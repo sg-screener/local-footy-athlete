@@ -62,6 +62,8 @@ export const EquipmentSettingsScreen: React.FC = () => {
           rebuildLocalWeek({
             baseProfile: nextProfile,
             todayISO,
+            diagnosticActionType: 'equipment_change',
+            diagnosticRoute: 'baseline_equipment_rebuild',
           });
         },
       });

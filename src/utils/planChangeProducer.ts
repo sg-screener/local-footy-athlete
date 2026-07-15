@@ -51,6 +51,17 @@ import {
   commitAthleteSessionDeletionTransaction,
   type AthleteSessionDeletionTransactionInput,
 } from '../store/acceptedStateTransaction';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionDiagnosticsEnabled,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionTraceContext,
+  type AthleteActionType,
+} from './athleteActionDiagnostics';
 
 // ── Edit horizon ──
 // Sam 2026-07-03: athletes change this week and at most the next two —
@@ -849,6 +860,9 @@ export interface PlanChangeApplyResult {
   message: string;
   appliedDates: string[];
   rejected: Array<{ date: string | null; code: string; reason: string }>;
+  traceId?: string;
+  internalResultCode?: string;
+  uiMessageKey?: string;
 }
 
 export interface PlanChangeRiskPreviewResult {
@@ -1016,7 +1030,7 @@ export function previewPlanChangeRisk(args: {
   };
 }
 
-export function applyPlanChange(args: {
+export interface ApplyPlanChangeInput {
   change: PlanChange;
   visibleWeek: ResolvedDay[];
   todayISO: string;
@@ -1027,7 +1041,115 @@ export function applyPlanChange(args: {
   ) => void;
   /** Test/host seam; production defaults to the accepted-state transaction. */
   commitAthleteRemoval?: (input: AthleteSessionDeletionTransactionInput) => unknown;
-}): PlanChangeApplyResult {
+  trace?: AthleteActionTraceContext;
+  route?: string;
+}
+
+function diagnosticActionType(change: PlanChange): AthleteActionType {
+  if (change.kind === 'remove_session') {
+    return change.scope && change.scope !== 'whole_day' ? 'delete_component' : 'delete_session';
+  }
+  if (change.kind === 'move_session') return 'move_session';
+  if (change.kind === 'add_template' || change.kind === 'add_category') return 'add_session';
+  return 'program_change';
+}
+
+function sourceDate(change: PlanChange): string | undefined {
+  return change.kind === 'move_session' ? change.fromDate : 'date' in change ? change.date : undefined;
+}
+
+function targetDate(change: PlanChange): string | undefined {
+  return change.kind === 'move_session' ? change.toDate : 'date' in change ? change.date : undefined;
+}
+
+export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResult {
+  const source = sourceDate(args.change);
+  const target = targetDate(args.change);
+  const sourceWorkout = source
+    ? args.visibleWeek.find((day) => day.date === source)?.workout ?? null
+    : null;
+  const trace = beginAthleteActionTrace({
+    source: 'tap',
+    actionType: diagnosticActionType(args.change),
+    route: args.route ?? 'plan_change_producer',
+    currentWeekId: getMondayForDate(target ?? args.todayISO),
+    sourceDate: source,
+    targetDate: target,
+    sessionDate: source ?? target,
+    planEntryId: sourceWorkout?.planEntryId ?? null,
+    workoutId: sourceWorkout?.id ?? null,
+    scope: args.change.kind === 'remove_session' ? args.change.scope ?? 'whole_day' : null,
+    sessionTier: sourceWorkout?.sessionTier ?? null,
+    workoutType: sourceWorkout?.workoutType ?? null,
+  }, args.trace);
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: args.change.kind,
+      beforeStateHash: athleteActionDiagnosticHash(args.visibleWeek.map((day) => ({
+        date: day.date,
+        identity: day.workout?.planEntryId ?? day.workout?.id ?? null,
+      }))),
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: 'plan_change_producer',
+      producer: 'applyPlanChange',
+    });
+    const result = applyPlanChangeWithinTrace(args);
+    const internalResultCode = result.ok
+      ? `plan_change_${args.change.kind}_accepted`
+      : result.rejected[0]?.code ?? `plan_change_${args.change.kind}_rejected`;
+    const uiMessageKey = result.ok
+      ? 'plan_change_success'
+      : result.message === "I couldn't safely make that change, so the plan is untouched."
+        ? 'plan_change_generic_unsafe'
+        : 'plan_change_specific_failure';
+    if (result.ok) {
+      emitAthleteActionEvent(trace, 'athlete_action_completed', {
+        outcome: 'accepted',
+        appliedDates: result.appliedDates,
+        afterStateHash: athleteActionDiagnosticHash({
+          dates: result.appliedDates,
+          accepted: true,
+        }),
+        internalResultCode,
+        finalUiMessageKey: uiMessageKey,
+      });
+    } else {
+      const originalRejectionCode = result.rejected[0]?.code ?? internalResultCode;
+      const firstFailingBoundary = result.rejected.length > 0
+        ? 'applyCoachRevisionDateOverrides'
+        : 'buildPlanChangeProposal';
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'rejected',
+        internalResultCode,
+        originalRejectionCode,
+        rejectionCodes: result.rejected.map((entry) => entry.code),
+        firstFailingBoundary,
+        failureCategory: classifyAthleteActionFailure(originalRejectionCode, firstFailingBoundary),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        genericMessageSelected: uiMessageKey === 'plan_change_generic_unsafe',
+        genericMessageSelectionReason: uiMessageKey === 'plan_change_generic_unsafe'
+          ? 'shared_safe_failure_copy'
+          : null,
+        finalUiMessageKey: uiMessageKey,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+    }
+    emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+      uiSurface: 'plan_change_result',
+      uiOutcome: result.ok ? 'success' : 'failure',
+      internalResultCode,
+      finalUiMessageKey: uiMessageKey,
+      genericMessageSelected: uiMessageKey === 'plan_change_generic_unsafe',
+    });
+    return athleteActionDiagnosticsEnabled()
+      ? { ...result, traceId: trace.traceId, internalResultCode, uiMessageKey }
+      : result;
+  });
+}
+
+function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApplyResult {
   const proposal = buildPlanChangeProposal(args.change, {
     visibleWeek: args.visibleWeek,
     todayISO: args.todayISO,

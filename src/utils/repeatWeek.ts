@@ -61,6 +61,16 @@ import { todayISOLocal } from './appDate';
 import { logger } from './logger';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionErrorCode,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionTraceContext,
+} from './athleteActionDiagnostics';
 
 const DAY_NAME_TO_NUM: Record<DayOfWeek, number> = {
   Sunday: 0,
@@ -302,11 +312,12 @@ function resolveRepeatTargetExposureContracts(args: {
  * overlay through the shared sweep policy. Synchronous; reads the live stores.
  * Progression / block rollover are left untouched.
  */
-export function repeatWeekIntoNextWeek(args: {
+function repeatWeekIntoNextWeekWithinTrace(args: {
   baseProfile: OnboardingData;
   /** Any date inside the source (current) week. */
   sourceWeekDate: string;
   todayISO?: string;
+  trace?: AthleteActionTraceContext;
 }): RepeatWeekResult {
   const todayISO = args.todayISO ?? todayISOLocal();
   const acceptedState = useProgramStore.getState();
@@ -456,6 +467,78 @@ export function repeatWeekIntoNextWeek(args: {
   });
 
   return { overlay, sweep, sourceWeekStart, targetWeekStart };
+}
+
+export function repeatWeekIntoNextWeek(args: {
+  baseProfile: OnboardingData;
+  /** Any date inside the source (current) week. */
+  sourceWeekDate: string;
+  todayISO?: string;
+  /** Development-only correlation inherited from a caller. */
+  trace?: AthleteActionTraceContext;
+}): RepeatWeekResult {
+  const sourceWeekStart = getMondayForDate(args.sourceWeekDate.split('T')[0]);
+  const targetWeekStart = addDays(sourceWeekStart, 7);
+  const trace = beginAthleteActionTrace({
+    source: 'tap',
+    actionType: 'repeat_week',
+    route: 'repeat_week',
+    currentWeekId: sourceWeekStart,
+    sourceDate: sourceWeekStart,
+    targetDate: targetWeekStart,
+    scope: 'target_week_overlay',
+  }, args.trace);
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: 'repeat_week',
+      sourceWeekId: sourceWeekStart,
+      targetWeekId: targetWeekStart,
+      beforeStateHash: athleteActionDiagnosticHash({
+        overlayWeeks: Object.keys(useProgramStore.getState().weekScopedOverlays).sort(),
+        programId: useProgramStore.getState().currentProgram?.id ?? null,
+      }),
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: 'repeat_week_overlay',
+      producer: 'repeatWeekIntoNextWeek',
+    });
+    try {
+      const result = repeatWeekIntoNextWeekWithinTrace(args);
+      emitAthleteActionEvent(trace, 'athlete_action_completed', {
+        outcome: 'repeat_week_committed',
+        internalResultCode: 'repeat_week_accepted',
+        sourceWeekId: result.sourceWeekStart,
+        targetWeekId: result.targetWeekStart,
+        repeatedDates: Object.keys(result.overlay.workoutsByDate).sort(),
+        clearedDates: result.sweep.clear,
+        afterStateHash: athleteActionDiagnosticHash({
+          overlayId: result.overlay.id,
+          repeatedDates: Object.keys(result.overlay.workoutsByDate).sort(),
+        }),
+      });
+      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+        uiSurface: 'repeat_week_control',
+        uiOutcome: 'success',
+        internalResultCode: 'repeat_week_accepted',
+        finalUiMessageKey: 'repeat_week_accepted',
+      });
+      return result;
+    } catch (error) {
+      const rejectionCode = athleteActionErrorCode(error, 'repeat_week_unknown_error');
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: 'repeat_week_failed',
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: [rejectionCode],
+        firstFailingBoundary: 'repeatWeekIntoNextWeek',
+        failureCategory: classifyAthleteActionFailure(rejectionCode, 'repeatWeekIntoNextWeek'),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    }
+  });
 }
 
 /** Clear a previously-committed repeat-week overlay for the given target week. */

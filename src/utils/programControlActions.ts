@@ -16,7 +16,8 @@ import {
   type PlanChangeBinScopeId,
   type PlanChangeCategoryId,
 } from './planChangeProducer';
-import { clearActiveCoachNote } from './activeCoachNotes';
+import { buildCoachNotesFromModifiers, clearActiveCoachNote } from './activeCoachNotes';
+import { getActiveProgramModifiers } from './activeProgramModifiers';
 import {
   banExerciseGlobally,
   setPreferredAlternative,
@@ -47,6 +48,17 @@ import {
   isPoorSleepConstraint,
   type PoorSleepPattern,
 } from './readinessConstraints';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionDiagnosticsEnabled,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionSource,
+  type AthleteActionType,
+} from './athleteActionDiagnostics';
 
 export type ProgramControlActionType =
   | 'swap_session'
@@ -482,7 +494,7 @@ function clearModifierFromPayload(
   };
 }
 
-export function executeProgramControlAction(
+function executeProgramControlActionWithinTrace(
   action: ProgramControlAction,
   context: ProgramControlActionContext = {},
 ): ProgramControlActionResult {
@@ -843,4 +855,157 @@ export function executeProgramControlAction(
         'No deterministic handler exists for this action.',
       );
   }
+}
+
+function diagnosticActionType(action: ProgramControlAction): AthleteActionType {
+  if (action.type === 'bin_session') {
+    return action.payload.scope && action.payload.scope !== 'whole_day'
+      ? 'delete_component'
+      : 'delete_session';
+  }
+  if (action.type === 'move_session') return 'move_session';
+  if (action.type === 'add_to_day' || action.type === 'add_exercise') return 'add_session';
+  if (action.type === 'update_game_day') return 'game_day_change';
+  if (action.type === 'set_injury_modifier' || action.type === 'clear_injury_modifier') {
+    return 'injury_change';
+  }
+  if (action.type === 'set_equipment_modifier') return 'equipment_change';
+  if (action.type === 'set_fatigue_status' || action.type === 'set_poor_sleep_status' ||
+    action.type === 'clear_fatigue_status') return 'readiness_change';
+  if (action.type.startsWith('clear_') || action.type === 'clear_active_modifier') {
+    return 'clear_adjustment';
+  }
+  if (action.type === 'set_recovery_mode') return 'go_lighter';
+  return 'program_change';
+}
+
+function diagnosticActionDate(action: ProgramControlAction): string | undefined {
+  if (action.type === 'move_session') return action.payload.fromDate;
+  const payload = action.payload as Record<string, unknown>;
+  return typeof payload.date === 'string' ? payload.date : undefined;
+}
+
+/** Stable tap/system production entry for diagnostic correlation only. */
+export function executeProgramControlAction(
+  action: ProgramControlAction,
+  context: ProgramControlActionContext = {},
+): ProgramControlActionResult {
+  const date = diagnosticActionDate(action);
+  const source: AthleteActionSource = action.source.initiatedBy === 'system' ? 'system' : 'tap';
+  const visibleWorkout = date
+    ? context.visibleWeek?.find((day) => day.date === date)?.workout ?? null
+    : null;
+  const trace = beginAthleteActionTrace({
+    source,
+    actionType: diagnosticActionType(action),
+    route: `program_control:${action.source.screen}:${action.source.surface ?? 'default'}`,
+    currentWeekId: date ? getMondayForDate(date) : undefined,
+    sourceDate: date,
+    targetDate: action.type === 'move_session' ? action.payload.toDate : date,
+    sessionDate: date,
+    planEntryId: visibleWorkout?.planEntryId ?? null,
+    workoutId: visibleWorkout?.id ?? null,
+    scope: action.scope ?? null,
+    sessionTier: visibleWorkout?.sessionTier ?? null,
+    workoutType: visibleWorkout?.workoutType ?? null,
+  });
+  return runWithAthleteActionTrace(trace, () => {
+    const diagnosticsEnabled = athleteActionDiagnosticsEnabled();
+    const beforeModifiers = diagnosticsEnabled ? getActiveProgramModifiers() : [];
+    const beforeNotes = diagnosticsEnabled ? buildCoachNotesFromModifiers(beforeModifiers) : [];
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: action.type,
+      requiresRebuild: action.requiresRebuild,
+      createsActiveModifier: action.createsActiveModifier,
+      beforeStateHash: athleteActionDiagnosticHash({
+        activeConstraintIds: useCoachUpdatesStore.getState().activeConstraints.map((entry) => entry.id),
+        visibleIdentities: context.visibleWeek?.map((day) =>
+          day.workout?.planEntryId ?? day.workout?.id ?? null),
+      }),
+    });
+    const route = routeProgramControlAction(action);
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: route.route,
+      routeDecision: route.route,
+      producer: 'executeProgramControlAction',
+    });
+    try {
+      const result = executeProgramControlActionWithinTrace(action, context);
+      const afterModifiers = diagnosticsEnabled ? getActiveProgramModifiers() : [];
+      const afterNotes = diagnosticsEnabled ? buildCoachNotesFromModifiers(afterModifiers) : [];
+      const beforeNoteIds = new Set(beforeNotes.map((note) => note.id));
+      const afterNoteIds = new Set(afterNotes.map((note) => note.id));
+      emitAthleteActionEvent(trace, 'coach_notes_result', {
+        activeAdjustmentCountBefore: beforeModifiers.length,
+        activeAdjustmentCountAfter: afterModifiers.length,
+        activeCoachNoteCountBefore: beforeNotes.length,
+        activeCoachNoteCountAfter: afterNotes.length,
+        noteIdentitiesDerived: afterNotes.map((note) => note.id),
+        noteIdentitiesAdded: afterNotes.filter((note) => !beforeNoteIds.has(note.id))
+          .map((note) => note.id),
+        noteIdentitiesRemoved: beforeNotes.filter((note) => !afterNoteIds.has(note.id))
+          .map((note) => note.id),
+        noteIdentitiesPreserved: afterNotes.filter((note) => beforeNoteIds.has(note.id))
+          .map((note) => note.id),
+        noteIdentitiesSuppressed: afterModifiers
+          .filter((modifier) => !afterNotes.some((note) => note.modifierId === modifier.id))
+          .map((modifier) => modifier.id),
+        deduplicationKeys: afterNotes.map((note) => note.modifierId),
+        adjustmentCleared: beforeNotes.some((note) => !afterNoteIds.has(note.id)),
+        clearedAdjustmentIds: beforeNotes.filter((note) => !afterNoteIds.has(note.id))
+          .map((note) => note.modifierId),
+        noteStateMatchesAcceptedProvenance: afterNotes.length === afterNoteIds.size,
+      });
+      const internalResultCode = result.ok
+        ? `program_control_${action.type}_accepted`
+        : `program_control_${action.type}_${result.needsGuidedFollowUp ? 'needs_input' : 'rejected'}`;
+      if (result.ok) {
+        emitAthleteActionEvent(trace, 'athlete_action_completed', {
+          outcome: result.changedProgram ? 'accepted_changed' : 'accepted_no_change',
+          internalResultCode,
+          afterStateHash: athleteActionDiagnosticHash({
+            activeConstraintIds: useCoachUpdatesStore.getState().activeConstraints.map((entry) => entry.id),
+            createdModifierIds: result.createdModifierIds ?? [],
+            clearedModifierIds: result.clearedModifierIds ?? [],
+          }),
+        });
+      } else {
+        emitAthleteActionEvent(trace, 'athlete_action_failed', {
+          outcome: 'rejected',
+          internalResultCode,
+          originalRejectionCode: internalResultCode,
+          rejectionCodes: [internalResultCode],
+          firstFailingBoundary: route.route === 'guided_follow_up_sheet'
+            ? 'routeProgramControlAction'
+            : 'executeProgramControlAction',
+          failureCategory: classifyAthleteActionFailure(internalResultCode),
+          validCandidateExisted: false,
+          previousStateRestored: true,
+          terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+        });
+      }
+      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+        uiSurface: action.source.surface ?? action.source.screen,
+        uiOutcome: result.ok ? 'success' : result.needsGuidedFollowUp ? 'guided_follow_up' : 'failure',
+        internalResultCode,
+        changedProgram: result.changedProgram,
+        finalUiMessageKey: internalResultCode,
+      });
+      return result;
+    } catch (error) {
+      const originalRejectionCode = error instanceof Error ? error.name : 'unknown_error';
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: `program_control_${action.type}_threw`,
+        originalRejectionCode,
+        rejectionCodes: [originalRejectionCode],
+        firstFailingBoundary: 'executeProgramControlAction',
+        failureCategory: classifyAthleteActionFailure(originalRejectionCode),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    }
+  });
 }

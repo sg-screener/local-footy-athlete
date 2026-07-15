@@ -37,6 +37,17 @@ import type {
 } from '../utils/injuryProgression';
 import type { EquipmentTag } from '../data/exercisePools';
 import type { ConditioningEquipmentModality } from '../types/domain';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionErrorCode,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionSource,
+  type AthleteActionType,
+} from '../utils/athleteActionDiagnostics';
 
 export type CoachUpdateSource = 'coach' | 'uae';
 
@@ -449,17 +460,80 @@ function commitConstraintProgramTransaction(
   proposedConstraints: readonly ActiveConstraint[],
   commitConstraintState: () => void,
 ): void {
-  safetyProjectionInProgress = true;
-  try {
-    // Retain the established pure projection seam (including its failure
-    // boundary) but give publication to the accepted-state coordinator. No
-    // ProgramStore surface or compatibility mirror changes until both stages
-    // have succeeded.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const projection = require('../utils/postGenerationConstraintValidation')
-      .stageLiveStoredProgramSafety(proposedConstraints);
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+  const before = useCoachUpdatesStore.getState().activeConstraints;
+  const beforeById = new Map(before.map((constraint) => [constraint.id, constraint]));
+  const proposedById = new Map(proposedConstraints.map((constraint) => [constraint.id, constraint]));
+  const added = proposedConstraints.filter((constraint) => !beforeById.has(constraint.id));
+  const removed = before.filter((constraint) => !proposedById.has(constraint.id));
+  const representative = added[0] ?? removed[0] ?? proposedConstraints[0] ?? before[0];
+  const sourceValue = 'source' in (representative ?? {})
+    ? (representative as { source?: string }).source
+    : undefined;
+  const source: AthleteActionSource = sourceValue === 'coach' || sourceValue === 'chat'
+    ? 'coach'
+    : sourceValue === 'system' || sourceValue === 'readiness' || sourceValue === 'uae'
+      ? 'system'
+      : 'tap';
+  const actionType: AthleteActionType = representative?.type === 'injury'
+    ? 'injury_change'
+    : representative?.type === 'equipment'
+      ? 'equipment_change'
+      : representative?.type === 'fatigue' || representative?.type === 'soreness'
+        ? 'readiness_change'
+        : removed.length > 0 && added.length === 0
+          ? 'clear_adjustment'
+          : 'program_change';
+  const targetDate = representative && 'appliesToDate' in representative
+    ? representative.appliesToDate
+    : representative?.startDate;
+  const trace = beginAthleteActionTrace({
+    source,
+    actionType,
+    route: 'constraint_program_transaction',
+    targetDate,
+    sessionDate: targetDate,
+    scope: representative && 'weekStartISO' in representative && representative.weekStartISO
+      ? 'week'
+      : targetDate ? 'date' : 'program',
+  });
+  runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: 'active_constraint_change',
+      constraintTypesAdded: added.map((constraint) => constraint.type),
+      constraintTypesRemoved: removed.map((constraint) => constraint.type),
+      constraintIdsAdded: added.map((constraint) => constraint.id),
+      constraintIdsRemoved: removed.map((constraint) => constraint.id),
+      beforeConstraintHash: athleteActionDiagnosticHash(before.map((constraint) => ({
+        id: constraint.id,
+        type: constraint.type,
+        status: constraint.status,
+      }))),
+    });
+    for (const constraint of added) {
+      emitAthleteActionEvent(trace, 'mutation_constraint_created', {
+        constraintId: constraint.id,
+        constraintType: constraint.type,
+        constraintStatus: constraint.status,
+        appliesToDate: 'appliesToDate' in constraint ? constraint.appliesToDate ?? null : null,
+        weekId: 'weekStartISO' in constraint ? constraint.weekStartISO ?? null : null,
+        provenanceIdentity: `${constraint.type}:${constraint.id}`,
+      });
+    }
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: 'accepted_constraint_projection',
+      producer: 'commitConstraintProgramTransaction',
+    });
+    safetyProjectionInProgress = true;
+    try {
+      // Retain the established pure projection seam (including its failure
+      // boundary) but give publication to the accepted-state coordinator. No
+      // ProgramStore surface or compatibility mirror changes until both stages
+      // have succeeded.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const projection = require('../utils/postGenerationConstraintValidation')
+        .stageLiveStoredProgramSafety(proposedConstraints);
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      require('./acceptedStateTransaction').commitAcceptedStateTransaction({
       reason: 'constraint:update',
       program: projection ?? undefined,
       activeConstraints: [...proposedConstraints],
@@ -467,11 +541,37 @@ function commitConstraintProgramTransaction(
         proposedConstraints,
         getAcceptedInjuryHistory(),
       ),
-    });
-    commitConstraintState();
-  } finally {
-    safetyProjectionInProgress = false;
-  }
+      });
+      commitConstraintState();
+      emitAthleteActionEvent(trace, 'athlete_action_completed', {
+        outcome: 'constraint_state_committed',
+        internalResultCode: 'constraint_update_accepted',
+        activeConstraintCountBefore: before.length,
+        activeConstraintCountAfter: proposedConstraints.length,
+        afterConstraintHash: athleteActionDiagnosticHash(proposedConstraints.map((constraint) => ({
+          id: constraint.id,
+          type: constraint.type,
+          status: constraint.status,
+        }))),
+      });
+    } catch (error) {
+      const rejectionCode = athleteActionErrorCode(error, 'constraint_update_unknown_error');
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: 'constraint_update_failed',
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: [rejectionCode],
+        firstFailingBoundary: 'commitConstraintProgramTransaction',
+        failureCategory: classifyAthleteActionFailure(rejectionCode, 'constraint'),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    } finally {
+      safetyProjectionInProgress = false;
+    }
+  });
 }
 
 function getAcceptedInjuryHistory(): InjuryHistoryEntry[] | undefined {

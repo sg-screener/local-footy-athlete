@@ -49,6 +49,16 @@ import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
 import {
+  athleteActionDiagnosticHash,
+  beginAthleteActionTrace,
+  clearProgramHydrationTrace,
+  consumeAthleteActionPersistenceTrace,
+  emitAthleteActionEvent,
+  programHydrationTrace,
+  queueAthleteActionPersistence,
+  runWithAthleteActionTrace,
+} from '../utils/athleteActionDiagnostics';
+import {
   createEmptyAcceptedMaterialContext,
   normalizeAcceptedMaterialContext,
   normalizeAcceptedProgramSurfaces,
@@ -85,23 +95,68 @@ function programPersistenceFailure(
 
 const programStateStorage = {
   getItem: async (name: string): Promise<string | null> => {
+    const trace = programHydrationTrace();
     try {
-      return await AsyncStorage.getItem(name);
+      const value = await AsyncStorage.getItem(name);
+      emitAthleteActionEvent(trace, 'persistence_result', {
+        persistenceOperation: 'read',
+        persistenceStore: name,
+        persistenceSucceeded: true,
+        persistedPayloadHash: value ? athleteActionDiagnosticHash(value) : null,
+      });
+      return value;
     } catch (error) {
+      emitAthleteActionEvent(trace, 'persistence_result', {
+        persistenceOperation: 'read',
+        persistenceStore: name,
+        persistenceSucceeded: false,
+        originalRejectionCode: 'program_persistence_failed',
+        rejectingBoundary: 'programStateStorage.getItem',
+        failureCategory: 'persistence_failure',
+      });
       throw programPersistenceFailure('read', error);
     }
   },
   setItem: async (name: string, value: string): Promise<void> => {
+    const trace = consumeAthleteActionPersistenceTrace();
     try {
       await AsyncStorage.setItem(name, value);
+      emitAthleteActionEvent(trace, 'persistence_result', {
+        persistenceOperation: 'write',
+        persistenceStore: name,
+        persistenceSucceeded: true,
+        persistedPayloadHash: athleteActionDiagnosticHash(value),
+      });
     } catch (error) {
+      emitAthleteActionEvent(trace, 'persistence_result', {
+        persistenceOperation: 'write',
+        persistenceStore: name,
+        persistenceSucceeded: false,
+        originalRejectionCode: 'program_persistence_failed',
+        rejectingBoundary: 'programStateStorage.setItem',
+        failureCategory: 'persistence_failure',
+      });
       throw programPersistenceFailure('write', error);
     }
   },
   removeItem: async (name: string): Promise<void> => {
+    const trace = consumeAthleteActionPersistenceTrace();
     try {
       await AsyncStorage.removeItem(name);
+      emitAthleteActionEvent(trace, 'persistence_result', {
+        persistenceOperation: 'remove',
+        persistenceStore: name,
+        persistenceSucceeded: true,
+      });
     } catch (error) {
+      emitAthleteActionEvent(trace, 'persistence_result', {
+        persistenceOperation: 'remove',
+        persistenceStore: name,
+        persistenceSucceeded: false,
+        originalRejectionCode: 'program_persistence_failed',
+        rejectingBoundary: 'programStateStorage.removeItem',
+        failureCategory: 'persistence_failure',
+      });
       throw programPersistenceFailure('remove', error);
     }
   },
@@ -1231,10 +1286,52 @@ export const useProgramStore = create<ProgramState>()(
         });
       },
 
-      setSessionFeedback: (date, feedback) =>
-        set((state) => ({
-          sessionFeedback: { ...state.sessionFeedback, [date]: feedback },
-        })),
+      setSessionFeedback: (date, feedback) => {
+        const trace = beginAthleteActionTrace({
+          source: 'tap',
+          actionType: 'session_feedback',
+          route: 'session_feedback_form',
+          currentWeekId: mondayForDate(date),
+          sessionDate: date,
+        });
+        runWithAthleteActionTrace(trace, () => {
+          emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+            completionState: feedback.completion,
+            componentCount: feedback.components?.length ?? 0,
+          });
+          emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+            selectedRoute: 'program_store_session_feedback',
+            producer: 'setSessionFeedback',
+          });
+          const beforeStateHash = athleteActionDiagnosticHash(
+            useProgramStore.getState().sessionFeedback,
+          );
+          queueAthleteActionPersistence(trace);
+          set((state) => ({
+            sessionFeedback: { ...state.sessionFeedback, [date]: feedback },
+          }));
+          const afterStateHash = athleteActionDiagnosticHash(
+            useProgramStore.getState().sessionFeedback,
+          );
+          emitAthleteActionEvent(trace, 'accepted_state_publication_result', {
+            published: true,
+            acceptedStateVersion: useProgramStore.getState().acceptedMaterialContext.revision,
+            beforeStateHash,
+            afterStateHash,
+            outcome: 'accepted',
+          });
+          emitAthleteActionEvent(trace, 'athlete_action_completed', {
+            outcome: 'accepted',
+            internalResultCode: 'session_feedback_saved',
+            finalUiMessageKey: 'session_feedback_saved',
+          });
+          emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+            uiSurface: 'session_feedback_form',
+            uiOutcome: 'saved',
+            internalResultCode: 'session_feedback_saved',
+          });
+        });
+      },
 
       removeSessionFeedback: (date) =>
         set((state) => {
@@ -1470,26 +1567,78 @@ export const useProgramStore = create<ProgramState>()(
         if (!merged.blockState) {
           merged.blockState = deriveStoredBlockStateFromProgram(merged.currentProgram);
         }
+        const trace = programHydrationTrace();
+        emitAthleteActionEvent(trace, 'hydrated_state_checked', {
+          hydrationSucceeded: true,
+          acceptedStateVersion: merged.acceptedMaterialContext.revision,
+          hydratedStateHash: athleteActionDiagnosticHash({
+            program: normalizeAcceptedProgramSurfaces(merged),
+            context: merged.acceptedMaterialContext,
+          }),
+          visibleWeekCount: Object.keys(merged.weekScopedOverlays).length,
+          activeRemovalConstraintCount: merged.userRemovalConstraints.length,
+        });
         return merged;
       },
       onRehydrateStorage: () => (_state, error) => {
-        if (error) return;
+        if (error) {
+          const trace = programHydrationTrace();
+          emitAthleteActionEvent(trace, 'hydrated_state_checked', {
+            hydrationSucceeded: false,
+            originalRejectionCode: 'program_hydration_failed',
+            rejectingBoundary: 'programStore.onRehydrateStorage',
+            failureCategory: 'persistence_failure',
+          });
+          emitAthleteActionEvent(trace, 'athlete_action_failed', {
+            outcome: 'failed',
+            internalResultCode: 'program_hydration_failed',
+            firstFailingBoundary: 'programStore.onRehydrateStorage',
+          });
+          clearProgramHydrationTrace();
+          return;
+        }
         const hydrated = useProgramStore.getState();
         // Publish the complete hydrated/migrated program and material context
         // through the same coordinator used at runtime. Legacy store hydration
         // may happen before or after this; their own hooks re-enter this
         // boundary with the staged mirror state.
-        require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-          reason: 'program:hydration_acceptance',
-          validateWeekStarts: [
-            ...(hydrated.currentProgram?.microcycles ?? []).map((microcycle) =>
-              microcycle.startDate.slice(0, 10)),
-            ...(hydrated.currentMicrocycle
-              ? [hydrated.currentMicrocycle.startDate.slice(0, 10)]
-              : []),
-            ...Object.keys(hydrated.weekScopedOverlays ?? {}),
-          ],
-        });
+        const trace = programHydrationTrace();
+        try {
+          runWithAthleteActionTrace(trace, () => {
+            require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+              reason: 'program:hydration_acceptance',
+              trace,
+              validateWeekStarts: [
+                ...(hydrated.currentProgram?.microcycles ?? []).map((microcycle) =>
+                  microcycle.startDate.slice(0, 10)),
+                ...(hydrated.currentMicrocycle
+                  ? [hydrated.currentMicrocycle.startDate.slice(0, 10)]
+                  : []),
+                ...Object.keys(hydrated.weekScopedOverlays ?? {}),
+              ],
+            });
+            emitAthleteActionEvent(trace, 'athlete_action_completed', {
+              outcome: 'accepted',
+              internalResultCode: 'hydration_accepted',
+            });
+          });
+        } catch (hydrationError) {
+          const rejectionCode = hydrationError instanceof Error
+            ? hydrationError.name
+            : 'program_hydration_acceptance_failed';
+          emitAthleteActionEvent(trace, 'athlete_action_failed', {
+            outcome: 'failed',
+            internalResultCode: 'program_hydration_acceptance_failed',
+            originalRejectionCode: rejectionCode,
+            rejectionCodes: [rejectionCode],
+            firstFailingBoundary: 'programStore.onRehydrateStorage.acceptance',
+            failureCategory: 'persistence_failure',
+            previousStateRestored: true,
+          });
+          throw hydrationError;
+        } finally {
+          clearProgramHydrationTrace();
+        }
       },
     },
   ),

@@ -33,6 +33,11 @@ import {
 } from './derivedSessionProvenance';
 import { searchWholeWeekRepairCandidates } from './wholeWeekRepairEngine';
 import { applyUserRemovalConstraintsToWeek } from './userRemovalConstraints';
+import {
+  currentAthleteActionTrace,
+  emitAthleteActionEvent,
+  type AthleteActionTraceContext,
+} from '../utils/athleteActionDiagnostics';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
@@ -75,6 +80,8 @@ export interface Section18AcceptedWeekGatewayInput extends Section18AcceptedWeek
   maxRepairAttempts?: number;
   regenerate?: () => Section18AcceptedWeekCandidate | null;
   safeFallback?: () => Section18AcceptedWeekCandidate | null;
+  /** Development-only action correlation; never participates in acceptance. */
+  trace?: AthleteActionTraceContext;
 }
 
 export interface Section18AcceptedWeekGatewayResult {
@@ -636,6 +643,15 @@ function resolveCandidate(args: {
   const search = searchWholeWeekRepairCandidates<CandidateState, CandidateEvaluation>({
     initial: { workouts: power.workouts, repairs: initialRepairs },
     maxCandidates,
+    trace: args.input.trace ?? currentAthleteActionTrace(),
+    diagnosticBoundary: 'section18AcceptedWeekGateway',
+    diagnosticWeekId: args.input.weekStart,
+    diagnosticRejection: (assessment) => ({
+      codes: assessment.evaluation.evaluation.blockingViolations.map((finding) =>
+        `${finding.code}:${finding.domain}`),
+      invariant: Array.from(new Set(assessment.evaluation.evaluation.blockingViolations
+        .map((finding) => finding.domain))).sort().join(','),
+    }),
     stateSignature: (candidate) => JSON.stringify(candidate.workouts.map((workout) => ({
       ...workout,
       exercises: workout.exercises.map((row) => ({ ...row, exercise: row.exercise?.name ?? null })),
@@ -726,8 +742,32 @@ function resolveCandidate(args: {
 export function runSection18AcceptedWeekGateway(
   input: Section18AcceptedWeekGatewayInput,
 ): Section18AcceptedWeekGatewayResult {
+  const traced = (result: Section18AcceptedWeekGatewayResult, candidatePath: string) => {
+    emitAthleteActionEvent(input.trace ?? currentAthleteActionTrace(), 'accepted_week_gateway_result', {
+      weekId: input.weekStart,
+      gatewayStatus: result.status,
+      candidatePath,
+      candidateCount: result.attempts,
+      rejectionCodes: result.evaluation.blockingViolations.map((finding) =>
+        `${finding.code}:${finding.domain}`),
+      gatewayViolations: result.evaluation.blockingViolations.map((finding) => ({
+        code: finding.code,
+        domain: finding.domain,
+        expected: finding.expected,
+        actual: finding.actual,
+      })),
+      typedReductionCreated: result.contract.authorisedReductions.some((reduction) =>
+        reduction.reason === 'explicit_user_override'),
+      outcome: result.status === 'impossible' ? 'rejected' : result.status,
+      rejectingBoundary: result.status === 'impossible'
+        ? 'section18AcceptedWeekGateway'
+        : null,
+      failureSignature: result.failureSignature,
+    });
+    return result;
+  };
   const primary = resolveCandidate({ input, candidate: input });
-  if (primary.status !== 'impossible') return primary;
+  if (primary.status !== 'impossible') return traced(primary, 'primary');
 
   const regenerated = input.regenerate?.();
   if (regenerated) {
@@ -747,7 +787,9 @@ export function runSection18AcceptedWeekGateway(
         detail: 'The first deterministic candidate remained invalid; regenerated candidate entered the same gateway.',
       }],
     });
-    if (result.status !== 'impossible') return { ...result, status: 'regenerated' };
+    if (result.status !== 'impossible') {
+      return traced({ ...result, status: 'regenerated' }, 'regenerated');
+    }
   }
 
   const fallback = input.safeFallback?.();
@@ -768,10 +810,12 @@ export function runSection18AcceptedWeekGateway(
         detail: 'Safe deterministic fallback entered the same gateway.',
       }],
     });
-    if (result.status !== 'impossible') return { ...result, status: 'fallback' };
-    return result;
+    if (result.status !== 'impossible') {
+      return traced({ ...result, status: 'fallback' }, 'fallback');
+    }
+    return traced(result, 'fallback');
   }
-  return primary;
+  return traced(primary, 'primary');
 }
 
 export function requireSection18AcceptedWeek(

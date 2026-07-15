@@ -15,6 +15,15 @@ import type {
 } from '../types/domain';
 import type { EquipmentClass } from './loadEstimation';
 import { inferEquipment } from './sessionBuilder';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionErrorCode,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+} from './athleteActionDiagnostics';
 
 export type EquipmentAvailabilityProfile =
   Pick<OnboardingData, 'equipment' | 'trainingLocation' | 'equipmentSelectionCompleteness'> | null | undefined;
@@ -603,7 +612,7 @@ export function buildBaselineEquipmentSavePlan(
   };
 }
 
-export function saveBaselineEquipmentSelection(args: {
+interface SaveBaselineEquipmentSelectionInput {
   profile: OnboardingData;
   selectedEquipment: readonly string[];
   dateISO?: string;
@@ -611,12 +620,12 @@ export function saveBaselineEquipmentSelection(args: {
     data: Pick<OnboardingData, 'equipment' | 'equipmentSelectionCompleteness'>,
   ) => void;
   refreshProgram?: (nextProfile: OnboardingData) => void;
-}): BaselineEquipmentSaveResult {
-  const plan = buildBaselineEquipmentSavePlan(
-    args.profile,
-    args.selectedEquipment,
-    args.dateISO,
-  );
+}
+
+function saveBaselineEquipmentSelectionWithinTrace(
+  args: SaveBaselineEquipmentSelectionInput,
+  plan: BaselineEquipmentSavePlan,
+): BaselineEquipmentSaveResult {
   if (plan.rebuildRequired) {
     args.refreshProgram?.(plan.nextProfile);
   }
@@ -629,6 +638,68 @@ export function saveBaselineEquipmentSelection(args: {
     profileUpdated: true,
     refreshed: plan.rebuildRequired && typeof args.refreshProgram === 'function',
   };
+}
+
+/** Profile equipment save entry; diagnostics never retain the selected equipment values. */
+export function saveBaselineEquipmentSelection(
+  args: SaveBaselineEquipmentSelectionInput,
+): BaselineEquipmentSaveResult {
+  const dateISO = args.dateISO ?? localTodayISO();
+  const plan = buildBaselineEquipmentSavePlan(args.profile, args.selectedEquipment, dateISO);
+  const trace = beginAthleteActionTrace({
+    source: 'tap',
+    actionType: 'equipment_change',
+    route: 'equipment_settings_save',
+    currentWeekId: startOfWeekISO(dateISO),
+    targetDate: dateISO,
+    scope: 'baseline_equipment',
+  });
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: 'baseline_equipment_change',
+      selectedEquipmentCount: plan.selectedEquipment.length,
+      previousEquipmentHash: athleteActionDiagnosticHash(plan.previousResolvedEquipment),
+      nextEquipmentHash: athleteActionDiagnosticHash(plan.nextResolvedEquipment),
+      resolvedEquipmentChanged: plan.resolvedEquipmentChanged,
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: plan.rebuildRequired ? 'equipment_program_rebuild' : 'profile_only_save',
+      producer: 'saveBaselineEquipmentSelection',
+    });
+    try {
+      const result = saveBaselineEquipmentSelectionWithinTrace(args, plan);
+      const internalResultCode = result.rebuildRequired
+        ? 'equipment_updated_program_refreshed'
+        : 'equipment_saved_no_program_change';
+      emitAthleteActionEvent(trace, 'athlete_action_completed', {
+        outcome: result.rebuildRequired ? 'accepted_changed' : 'accepted_no_change',
+        internalResultCode,
+        profileUpdated: result.profileUpdated,
+        programRefreshed: result.refreshed,
+      });
+      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+        uiSurface: 'equipment_settings',
+        uiOutcome: 'success',
+        internalResultCode,
+        finalUiMessageKey: result.rebuildRequired ? 'equipment_updated' : 'equipment_saved',
+      });
+      return result;
+    } catch (error) {
+      const rejectionCode = athleteActionErrorCode(error, 'equipment_save_unknown_error');
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: 'equipment_save_failed',
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: [rejectionCode],
+        firstFailingBoundary: 'saveBaselineEquipmentSelection',
+        failureCategory: classifyAthleteActionFailure(rejectionCode, 'equipment'),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    }
+  });
 }
 
 export function equipmentTagsToSubstituteEquipmentClasses(

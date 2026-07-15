@@ -1,4 +1,4 @@
-import type { ResolvedDay } from './sessionResolver';
+import { getMondayForDate, type ResolvedDay } from './sessionResolver';
 import type {
   DayOfWeek,
   OnboardingData,
@@ -63,6 +63,15 @@ import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine'
 import { useProgramStore } from '../store/programStore';
 import { logger } from './logger';
 import { clearManualOverridesPreservingActiveModifiers } from './activeProgramModifiers';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionTerminalReasonChain,
+  beginAthleteActionTrace,
+  classifyAthleteActionFailure,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionType,
+} from './athleteActionDiagnostics';
 
 const COACH_PROGRAM_EDIT_DIAGNOSTIC_MARKER = 'coach-program-edit-diagnostics:stage3e1e-generic-block-resolver';
 
@@ -1398,7 +1407,7 @@ function isoFromDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-export function executeProgramEdit(
+function executeProgramEditWithinTrace(
   input: ExecuteProgramEditInput,
 ): ExecutionResult {
   const edit = input.programEdit;
@@ -1486,6 +1495,85 @@ export function executeProgramEdit(
     },
   });
   return result;
+}
+
+function programEditDiagnosticActionType(edit: ProgramEdit): AthleteActionType {
+  if (edit.intent === 'remove') {
+    return edit.targetDomain === 'session' ? 'delete_session' : 'delete_component';
+  }
+  if (edit.intent === 'move') return 'move_session';
+  if (edit.intent === 'add') return 'add_session';
+  return 'coach_command';
+}
+
+/** Correlates the typed ProgramEdit with its deterministic executor result. */
+export function executeProgramEdit(input: ExecuteProgramEditInput): ExecutionResult {
+  const edit = input.programEdit;
+  const trace = beginAthleteActionTrace({
+    source: 'coach',
+    actionType: programEditDiagnosticActionType(edit),
+    route: 'coach_program_edit',
+    currentWeekId: edit.targetDate ? getMondayForDate(edit.targetDate) : undefined,
+    sourceDate: edit.targetDate ?? undefined,
+    targetDate: edit.targetDate ?? undefined,
+    sessionDate: edit.targetDate ?? undefined,
+    planEntryId: edit.targetItemId ?? null,
+    scope: edit.actionScope ?? null,
+  }, input.trace);
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: edit.intent,
+      targetDomain: edit.targetDomain,
+      requestedChangeKind: edit.requestedChange,
+      missingFieldCodes: edit.missingFields,
+      targetIdentityHash: athleteActionDiagnosticHash({
+        targetDate: edit.targetDate,
+        targetItemId: edit.targetItemId,
+      }),
+      programEditSource: edit.source,
+    });
+    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+      selectedRoute: 'coach_program_edit',
+      producer: 'executeProgramEdit',
+      hasTypedCommand: Boolean(edit.command),
+    });
+    try {
+      const result = executeProgramEditWithinTrace(input);
+      if (!result.applied && (
+        result.kind === 'rejected' ||
+        result.kind === 'rejected_with_alternatives' ||
+        result.kind === 'verified_no_op' ||
+        result.kind === 'error'
+      )) {
+        emitAthleteActionEvent(trace, 'athlete_action_failed', {
+          outcome: result.kind,
+          internalResultCode: `program_edit_${edit.intent}_${result.kind}`,
+          originalRejectionCode: result.route,
+          rejectionCodes: [result.route],
+          firstFailingBoundary: result.route.split(':')[0] ?? 'executeProgramEdit',
+          failureCategory: classifyAthleteActionFailure(result.route, 'executeProgramEdit'),
+          validCandidateExisted: result.kind === 'verified_no_op',
+          previousStateRestored: true,
+          terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+        });
+      }
+      return result;
+    } catch (error) {
+      const rejectionCode = error instanceof Error ? error.name : 'unknown_error';
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: 'threw',
+        internalResultCode: `program_edit_${edit.intent}_threw`,
+        originalRejectionCode: rejectionCode,
+        rejectionCodes: [rejectionCode],
+        firstFailingBoundary: 'executeProgramEdit',
+        failureCategory: classifyAthleteActionFailure(rejectionCode, 'executeProgramEdit'),
+        validCandidateExisted: false,
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+      throw error;
+    }
+  });
 }
 
 function isStrengthBlockProgramEdit(edit: ProgramEdit): edit is StrengthBlockEdit {

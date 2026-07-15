@@ -59,6 +59,17 @@ import {
 } from '../rules/rollingHorizonRepair';
 import { userRemovalConstraintId } from '../rules/userRemovalConstraints';
 import { Section18WeekAcceptanceError } from '../rules/section18AcceptedWeekGateway';
+import {
+  athleteActionDiagnosticHash,
+  athleteActionDiagnosticsEnabled,
+  athleteActionTerminalReasonChain,
+  classifyAthleteActionFailure,
+  currentAthleteActionTrace,
+  emitAthleteActionDebugSnapshot,
+  emitAthleteActionEvent,
+  queueAthleteActionPersistence,
+  type AthleteActionTraceContext,
+} from '../utils/athleteActionDiagnostics';
 
 export type AcceptedProgramSurfaces = Pick<
   ProgramState,
@@ -75,6 +86,8 @@ export type AcceptedProgramSurfaces = Pick<
 
 export interface AcceptedStateTransactionProposal {
   reason: string;
+  /** Development-only correlation context; never persisted. */
+  trace?: AthleteActionTraceContext;
   program?: Partial<AcceptedProgramSurfaces>;
   markedDays?: Record<string, CalendarDayType>;
   readinessSignalsByDate?: Record<string, ReadinessSignal>;
@@ -231,6 +244,7 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
   context: AcceptedMaterialContext;
   weekStarts: readonly string[];
   profile?: OnboardingData | null;
+  trace?: AthleteActionTraceContext;
 }): void {
   const surfaces = normalizeAcceptedProgramSurfaces(args.surfaces);
   const context = normalizeAcceptedMaterialContext(args.context);
@@ -256,6 +270,18 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
     });
     const evaluation = rebased.evaluation;
     if (evaluation.blockingViolations.length > 0) {
+      emitAthleteActionEvent(args.trace, 'visible_projection_result', {
+        acceptedStateVersion: context.revision,
+        weekId: weekStart,
+        visibleStateHash: athleteActionDiagnosticHash(rebased.visibleWorkouts.map((workout) => ({
+          dayOfWeek: workout.dayOfWeek,
+          identity: workout.planEntryId ?? workout.id,
+        }))),
+        visibleEqualsAcceptedState: false,
+        rejectionCodes: evaluation.blockingViolations.map((finding) => finding.code),
+        rejectingBoundary: 'assertAcceptedVisibleLedgerEquivalence',
+        failureCategory: 'projection_mismatch',
+      });
       throw new AcceptedStateLedgerMismatchError(
         weekStart,
         `re-evaluation produced blockers ${evaluation.blockingViolations
@@ -263,8 +289,30 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
       );
     }
     if (acceptedLedgerSignature(contract) !== acceptedLedgerSignature(evaluation.contract)) {
+      emitAthleteActionEvent(args.trace, 'visible_projection_result', {
+        acceptedStateVersion: context.revision,
+        weekId: weekStart,
+        visibleStateHash: athleteActionDiagnosticHash(rebased.visibleWorkouts.map((workout) => ({
+          dayOfWeek: workout.dayOfWeek,
+          identity: workout.planEntryId ?? workout.id,
+        }))),
+        visibleEqualsAcceptedState: false,
+        rejectionCodes: ['accepted_state_ledger_mismatch'],
+        rejectingBoundary: 'assertAcceptedVisibleLedgerEquivalence',
+        failureCategory: 'projection_mismatch',
+      });
       throw new AcceptedStateLedgerMismatchError(weekStart, 'persisted and visible ledgers differ');
     }
+    emitAthleteActionEvent(args.trace, 'visible_projection_result', {
+      acceptedStateVersion: context.revision,
+      weekId: weekStart,
+      visibleStateHash: athleteActionDiagnosticHash(rebased.visibleWorkouts.map((workout) => ({
+        dayOfWeek: workout.dayOfWeek,
+        identity: workout.planEntryId ?? workout.id,
+      }))),
+      visibleEqualsAcceptedState: true,
+      outcome: 'accepted',
+    });
   }
 }
 
@@ -328,7 +376,46 @@ export function stageAcceptedStateTransaction(
 export function commitAcceptedStateTransaction(
   proposal: AcceptedStateTransactionProposal,
 ): AcceptedStateTransactionResult {
-  const staged = stageAcceptedStateTransaction(proposal);
+  const trace = proposal.trace ?? currentAthleteActionTrace();
+  const diagnosticsEnabled = Boolean(trace) && athleteActionDiagnosticsEnabled();
+  const current = diagnosticsEnabled ? useProgramStore.getState() : null;
+  const beforeContext = current ? materialContext(current) : null;
+  const beforeStateHash = current && beforeContext
+    ? athleteActionDiagnosticHash({
+        program: programSurfaces(current),
+        context: beforeContext,
+      })
+    : undefined;
+  emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+    selectedRoute: 'accepted_state_transaction',
+    transactionReason: proposal.reason,
+    acceptedStateVersion: beforeContext?.revision,
+    beforeStateHash,
+  });
+  let staged: AcceptedStateTransactionResult;
+  try {
+    staged = stageAcceptedStateTransaction(proposal);
+  } catch (error) {
+    const code = (error as { code?: string })?.code ?? 'transaction_staging_failed';
+    emitAthleteActionEvent(trace, 'transaction_verification_result', {
+      verified: false,
+      originalRejectionCode: code,
+      rejectionCodes: [code],
+      rejectingBoundary: 'stageAcceptedStateTransaction',
+      failureCategory: classifyAthleteActionFailure(code, 'stageAcceptedStateTransaction'),
+      previousStateRestored: true,
+      beforeStateHash,
+    });
+    emitAthleteActionEvent(trace, 'accepted_state_publication_result', {
+      published: false,
+      atomicRollback: true,
+      previousStateRestored: true,
+      beforeStateHash,
+      afterStateHash: beforeStateHash,
+      internalResultCode: code,
+    });
+    throw error;
+  }
   const equivalenceWeeks = new Set(proposal.validateWeekStarts ?? []);
   if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined) {
     for (const microcycle of staged.program.currentProgram?.microcycles ?? []) {
@@ -338,18 +425,128 @@ export function commitAcceptedStateTransaction(
       equivalenceWeeks.add(weekStart);
     }
   }
-  assertAcceptedVisibleLedgerEquivalence({
-    surfaces: staged.program,
-    context: staged.context,
-    weekStarts: Array.from(equivalenceWeeks),
-    profile: proposal.profile,
+  try {
+    assertAcceptedVisibleLedgerEquivalence({
+      surfaces: staged.program,
+      context: staged.context,
+      weekStarts: Array.from(equivalenceWeeks),
+      profile: proposal.profile,
+      trace,
+    });
+    emitAthleteActionEvent(trace, 'visible_projection_result', {
+      acceptedStateVersion: staged.context.revision,
+      dependencyWeeksSelected: Array.from(equivalenceWeeks).sort(),
+      visibleStateHash: athleteActionDiagnosticHash({
+        programId: staged.program.currentProgram?.id ?? null,
+        microcycleId: staged.program.currentMicrocycle?.id ?? null,
+        overrideIdentities: Object.entries(staged.program.dateOverrides).map(([date, workout]) => ({
+          date,
+          identity: workout.planEntryId ?? workout.id,
+        })),
+        overlayWeeks: Object.keys(staged.program.weekScopedOverlays).sort(),
+      }),
+      visibleEqualsAcceptedState: true,
+      projectionSummary: true,
+      outcome: 'accepted',
+    });
+  } catch (error) {
+    const code = (error as { code?: string })?.code ?? 'transaction_verification_failed';
+    emitAthleteActionEvent(trace, 'transaction_verification_result', {
+      verified: false,
+      originalRejectionCode: code,
+      rejectionCodes: [code],
+      rejectingBoundary: 'assertAcceptedVisibleLedgerEquivalence',
+      failureCategory: classifyAthleteActionFailure(code, 'visible_projection'),
+      previousStateRestored: true,
+      beforeStateHash,
+    });
+    emitAthleteActionEvent(trace, 'accepted_state_publication_result', {
+      published: false,
+      atomicRollback: true,
+      previousStateRestored: true,
+      beforeStateHash,
+      afterStateHash: beforeStateHash,
+      terminalReasonChain: trace ? athleteActionTerminalReasonChain(trace.traceId) : [],
+      internalResultCode: code,
+    });
+    throw error;
+  }
+  emitAthleteActionEvent(trace, 'transaction_verification_result', {
+    verified: true,
+    acceptedStateVersion: staged.context.revision,
+    dependencyWeeksSelected: Array.from(equivalenceWeeks).sort(),
+    beforeStateHash,
   });
+  queueAthleteActionPersistence(trace);
   useProgramStore.setState({
     ...staged.program,
     acceptedMaterialContext: staged.context,
   });
   useCalendarStore.setState({ markedDays: staged.context.markedDays });
   useReadinessStore.setState({ signalsByDate: staged.context.readinessSignalsByDate });
+  const afterStateHash = athleteActionDiagnosticHash({
+    program: staged.program,
+    context: staged.context,
+  });
+  emitAthleteActionEvent(trace, 'accepted_state_publication_result', {
+    published: true,
+    atomicRollback: false,
+    previousStateRestored: false,
+    acceptedStateVersion: staged.context.revision,
+    beforeStateHash,
+    afterStateHash,
+    outcome: 'accepted',
+  });
+  if (trace && diagnosticsEnabled && beforeContext) {
+    const activeNotes = (require('../utils/activeCoachNotes') as typeof import('../utils/activeCoachNotes'))
+      .buildActiveCoachNotes(staged.context.activeConstraints, staged.context.activeInjury);
+    const beforeNotes = (require('../utils/activeCoachNotes') as typeof import('../utils/activeCoachNotes'))
+      .buildActiveCoachNotes(beforeContext.activeConstraints, beforeContext.activeInjury);
+    const beforeIds = new Set(beforeNotes.map((note) => note.id));
+    const afterIds = new Set(activeNotes.map((note) => note.id));
+    const afterConstraintIds = new Set(staged.context.activeConstraints.map((constraint) => constraint.id));
+    const beforeConstraintIds = new Set(beforeContext.activeConstraints.map((constraint) => constraint.id));
+    const clearedConstraints = beforeContext.activeConstraints.filter((constraint) =>
+      !afterConstraintIds.has(constraint.id));
+    const clearedLinkedOverrideDates = Array.from(new Set(clearedConstraints.flatMap((constraint) =>
+      'linkedOverrideDates' in constraint ? constraint.linkedOverrideDates ?? [] : []))).sort();
+    const derivedConstraintIds = new Set(activeNotes.map((note) => note.constraintId));
+    emitAthleteActionEvent(trace, 'coach_notes_result', {
+      activeAdjustmentCountBefore: beforeContext.activeConstraints.length,
+      activeAdjustmentCountAfter: staged.context.activeConstraints.length,
+      activeCoachNoteCountBefore: beforeNotes.length,
+      activeCoachNoteCountAfter: activeNotes.length,
+      noteIdentitiesDerived: activeNotes.map((note) => note.id),
+      noteIdentitiesAdded: activeNotes.filter((note) => !beforeIds.has(note.id)).map((note) => note.id),
+      noteIdentitiesRemoved: beforeNotes.filter((note) => !afterIds.has(note.id)).map((note) => note.id),
+      noteIdentitiesPreserved: activeNotes.filter((note) => beforeIds.has(note.id)).map((note) => note.id),
+      noteIdentitiesSuppressed: staged.context.activeConstraints
+        .filter((constraint) => !derivedConstraintIds.has(constraint.id))
+        .map((constraint) => constraint.id),
+      deduplicationKeys: activeNotes.map((note) => note.modifierId),
+      adjustmentCleared: clearedConstraints.length > 0,
+      clearedAdjustmentIds: clearedConstraints.map((constraint) => constraint.id),
+      clearedLinkedOverrideDates,
+      displacedSessionRestorationResult: clearedLinkedOverrideDates.length === 0
+        ? 'not_applicable'
+        : clearedLinkedOverrideDates.every((date) =>
+            !Object.prototype.hasOwnProperty.call(staged.program.dateOverrides, date))
+          ? 'owned_override_removed_for_visible_reprojection'
+          : 'owned_override_still_present',
+      noteStateMatchesAcceptedProvenance: activeNotes.every((note) =>
+        afterConstraintIds.has(note.constraintId) || (
+          staged.context.activeInjury &&
+          note.constraintId === 'legacy_active_injury'
+        )),
+      acceptedConstraintIdsPreserved: staged.context.activeConstraints
+        .filter((constraint) => beforeConstraintIds.has(constraint.id))
+        .map((constraint) => constraint.id),
+    });
+    emitAthleteActionDebugSnapshot(trace, 'accepted_state_after_publication', {
+      program: staged.program,
+      context: staged.context,
+    });
+  }
   return staged;
 }
 
@@ -746,6 +943,7 @@ export function stageRollingHorizonFixtureRepair(args: {
   dependentMutationIntent?: FixtureMutationIntent;
   userRemovalConstraints?: readonly UserRemovalConstraint[];
 }): RollingHorizonFixtureRepairResult {
+  const trace = currentAthleteActionTrace();
   const primary = new Set(args.primaryWeekStarts.map((weekStart) => mondayForDate(weekStart)));
   const weekStarts = Array.from(new Set([
     ...primary,
@@ -759,6 +957,12 @@ export function stageRollingHorizonFixtureRepair(args: {
       weekStart >= microcycle.startDate.slice(0, 10) &&
       weekStart <= microcycle.endDate.slice(0, 10)))
     .sort();
+  emitAthleteActionEvent(trace, 'repair_horizon_selected', {
+    dependencyWeeksSelected: weekStarts,
+    primaryWeeks: Array.from(primary).sort(),
+    mutationIntent: args.primaryMutationIntent ?? 'fixture_transition',
+    boundary: 'stageRollingHorizonFixtureRepair',
+  });
   if (weekStarts.length === 0) {
     return {
       outcome: 'accepted',
@@ -816,6 +1020,28 @@ export function stageRollingHorizonFixtureRepair(args: {
       : statuses.includes('repaired')
         ? 'repaired'
         : 'accepted';
+  emitAthleteActionEvent(trace, 'repair_candidates_generated', {
+    candidateCount: search.searchedCandidates,
+    candidateGroupCounts: projectionResults.map(({ projection }) =>
+      projection.alternatives.length),
+    searchTruncated: search.truncated,
+    boundary: 'searchRollingHorizonCandidateCombinations',
+  });
+  emitAthleteActionEvent(trace, 'repair_candidate_selected', {
+    candidateId: athleteActionDiagnosticHash(rollingHorizonFixtureSignature(projections)),
+    candidateScore: search.score,
+    preservationCost: sumFixtureEditCosts(projections),
+    candidateChanges: projections.map((projection) => ({
+      weekId: projection.weekStart,
+      changedDates: [
+        ...projection.replan.changedDays,
+        ...projection.replan.addedDays,
+        ...projection.replan.removedDays,
+      ],
+    })),
+    outcome,
+    boundary: 'stageRollingHorizonFixtureRepair',
+  });
   return {
     outcome,
     weekStarts,
@@ -1040,6 +1266,18 @@ export function commitAthleteSessionDeletionTransaction(
     restoredAt: null,
     restorationReason: null,
   };
+  emitAthleteActionEvent(currentAthleteActionTrace(), 'mutation_constraint_created', {
+    constraintType: 'user_removal',
+    constraintId: constraint.id,
+    constraintStatus: constraint.status,
+    targetDate: constraint.targetDate,
+    planEntryId: constraint.targetPlanEntryId,
+    workoutId: constraint.targetWorkoutId,
+    scope: constraint.scope,
+    equivalentExposureMayRelocate: constraint.equivalentExposureMayRelocate,
+    wholeDayRestOwned: constraint.wholeDayRestOwned,
+    provenanceIdentity: `${constraint.authorship}:${constraint.source}:${constraint.id}`,
+  });
   const userRemovalConstraints = [
     ...state.userRemovalConstraints.filter((candidate) =>
       !(candidate.targetDate === date && candidate.status === 'active' &&
