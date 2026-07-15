@@ -128,6 +128,8 @@ let baseWeekDef: Record<number, any> = {};
 // ─── Real programStore ──────────────────────────────────────────────────
 
 import { useProgramStore } from '../store/programStore';
+import { createEmptyAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import { useProfileStore } from '../store/profileStore';
 import { applyAdjustmentEvents } from '../utils/applyAdjustmentEvents';
 import { applyProgramAdjustment } from '../utils/programAdjustmentEngine';
 import {
@@ -138,11 +140,16 @@ import { extractBodyPart } from '../utils/injuryAdjustmentEngine';
 
 // Reset store between tests by replacing its state imperatively.
 function resetStore() {
+  useProfileStore.getState().resetOnboarding();
+  const acceptedMaterialContext = createEmptyAcceptedMaterialContext();
+  acceptedMaterialContext.revision = 1;
+  acceptedMaterialContext.lastTransaction = 'coach-injury-integration:reset';
   useProgramStore.setState({
     currentProgram: null,
     currentMicrocycle: null,
     dateOverrides: {},
     overrideContexts: {},
+    acceptedMaterialContext,
     sessionFeedback: {},
     weightOverrides: {},
   } as any);

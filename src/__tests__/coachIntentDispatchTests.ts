@@ -78,7 +78,7 @@ function injury(severity: number, bodyPart: string = 'hammy', status: InjuryStat
 }
 
 function resetAll() {
-  useProgramStore.setState({ currentProgram: null, currentMicrocycle: null, dateOverrides: {}, overrideContexts: {}, sessionFeedback: {}, weightOverrides: {} } as any);
+  useProgramStore.getState().clear();
   useCoachUpdatesStore.setState({ updatesByWeek: {}, activeInjury: null });
 }
 

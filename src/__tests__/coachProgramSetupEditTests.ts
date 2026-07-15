@@ -245,7 +245,9 @@ async function main() {
     eq('temporary block reason', constraint?.reason, 'exams' as any);
     ok('temporary block rebuild applied', result?.kind === 'mutated' && result.applied, result);
     const inputs = onboardingToCoachingInputs(storedProfile, {
-      availabilityDateISO: TODAY,
+      // The change is made on Saturday, so this week's Wednesday is already
+      // past. Prove the next material week is filtered instead.
+      availabilityDateISO: '2026-06-08',
     });
     ok('active unavailable Wednesday is filtered from engine selectedDays', !inputs.selectedDays.includes('Wednesday'), inputs);
   }

@@ -500,13 +500,17 @@ const witnesses: Record<string, Section18EffectiveWeekEvaluation> = {};
   ok('11. four-primer over-selection is reported', has(witnesses.fourPrimers, 'power_policy_breach'));
 }
 
-// 12. Five hard days without unavoidable normal-anchor authorisation.
+// 12. Contract v2 owns the preferred/permitted distinction.
 {
   const c = contract('mid_preseason', {
     plannerSelected: { mainStrength: 3, coreConditioning: 4, optionalFlush: 0, sprintHighSpeed: 1, powerPrimers: 0 },
   });
   witnesses.fiveHardDays = evaluate(c, [1, 2, 3, 4, 5].map((day) => conditioning(day, 'core', 'hard')));
-  ok('12. unauthorised fifth hard day is detected', has(witnesses.fiveHardDays, 'hard_day_breach'));
+  const sixHardDays = evaluate(c, [0, 1, 2, 3, 4, 5].map((day) => conditioning(day, 'core', 'hard')));
+  ok('12. five hard days are permitted but six breach the mode maximum',
+    !has(witnesses.fiveHardDays, 'hard_day_breach') &&
+    witnesses.fiveHardDays.advisories.some((finding) => finding.domain === 'hard_days') &&
+    has(sixHardDays, 'hard_day_breach'));
 }
 
 console.log('\n-- Section 18 evaluator properties --');

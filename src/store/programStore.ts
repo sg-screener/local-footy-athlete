@@ -202,8 +202,9 @@ function hydratedWorkoutNeedsIngressCanonicalisation(workout: Workout): boolean 
   const hasStrength = !!workout.strengthIntent?.effectivePatterns.length ||
     !!workout.strengthPatternContributions?.length ||
     workout.exercises.some((row) => row.section18Evidence?.role === 'main_strength');
+  const conditioningRole = workout.section18Evidence?.conditioningRole;
   const hasConditioning = !!workout.conditioningBlock ||
-    workout.section18Evidence?.conditioningRole !== undefined ||
+    (conditioningRole !== undefined && conditioningRole !== 'none' && conditioningRole !== 'legacy_unknown') ||
     workout.hasCombinedConditioning === true;
   return (
     (!!workout.strengthPatternContributions?.length && !workout.strengthIntent) ||
@@ -607,8 +608,10 @@ export function canonicaliseHydratedState(
             workoutsByDate: Object.fromEntries(
               Object.entries(overlay.workoutsByDate).map(([date, workout]) => [
                 date,
-                workout
-                  ? canonicaliseHydratedSafetyWorkout(workout, exposureContractV2, phase)
+                  workout
+                  ? options.programAlreadyAccepted && !exposureContractV2
+                    ? workout
+                    : canonicaliseHydratedSafetyWorkout(workout, exposureContractV2, phase)
                   : null,
               ]),
             ),
@@ -635,7 +638,9 @@ export function canonicaliseHydratedState(
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
         date,
         {
-          ...canonicaliseHydratedSafetyWorkout(workout, safetyContractForDate(date), phase),
+          ...(options.programAlreadyAccepted && !safetyContractForDate(date)
+            ? workout
+            : canonicaliseHydratedSafetyWorkout(workout, safetyContractForDate(date), phase)),
           // Date-keyed overrides own a concrete calendar day. Older edit
           // writers used the 1..7 coaching convention (Sunday=7), whereas
           // Workout uses JavaScript 0..6. Normalise at ingress so the weekly
@@ -691,6 +696,22 @@ export function canonicaliseHydratedState(
     const effectiveByDate = new Map<string, Workout>(
       rebased.dates.flatMap((entry) => entry.workout ? [[entry.date, entry.workout]] : []),
     );
+    const fallbackProfile = contract.source === 'legacy_migration' && baseMicrocycle
+      ? legacyMigrationFallbackProfile({
+          profile: options.profile,
+          microcycle: baseMicrocycle,
+          contract,
+        })
+      : options.profile;
+    const buildFallback = fallbackProfile
+      ? () => require('../utils/postGenerationConstraintValidation')
+          .buildSection18ProductionFallbackCandidate({
+            contract,
+            weekStart,
+            profile: fallbackProfile,
+            activeConstraints: options.activeConstraints,
+          })
+      : undefined;
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const accepted = require('../rules/section18AcceptedWeekGateway')
       .requireSection18AcceptedWeek({
@@ -698,6 +719,8 @@ export function canonicaliseHydratedState(
         workouts: rebased.composedWorkouts,
         weekStart,
         profile: options.profile,
+        regenerate: buildFallback,
+        safeFallback: buildFallback,
         resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>
           require('../rules/section18AcceptedWeekGateway').resolveFinalVisibleSection18Week({
             contract,
@@ -759,11 +782,13 @@ export function canonicaliseHydratedState(
     currentProgram,
     currentMicrocycle,
     todayWorkout: persistedState.todayWorkout
-      ? canonicaliseHydratedSafetyWorkout(
-          persistedState.todayWorkout,
-          safetyContractForDate(todayISOLocal()),
-          phase,
-        )
+      ? options.programAlreadyAccepted && !safetyContractForDate(todayISOLocal())
+        ? persistedState.todayWorkout
+        : canonicaliseHydratedSafetyWorkout(
+            persistedState.todayWorkout,
+            safetyContractForDate(todayISOLocal()),
+            phase,
+          )
       : persistedState.todayWorkout,
     dateOverrides,
     weekScopedOverlays,

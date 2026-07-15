@@ -11,6 +11,12 @@ import {
   type Section18AcceptedWeekGatewayResult,
 } from '../rules/section18AcceptedWeekGateway';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
+import {
+  appendDerivedSessionHistory,
+  buildDerivedSessionExpiryCandidates,
+  createDerivedSessionProvenance,
+  section18ContractLifecycleSignature,
+} from '../rules/derivedSessionProvenance';
 import type {
   AvailabilityProvenance,
   FixtureConditionedAvailability,
@@ -55,6 +61,9 @@ export interface FixtureReplanCandidateDiagnostic {
   status: 'accepted' | 'rejected';
   editCost?: FixtureReplanEditCost;
   failureSignature?: string;
+  canonicalConditioningDays?: number[];
+  visibleConditioningCredits?: Array<{ dayOfWeek: number; source: string; role: string }>;
+  repairs?: Section18AcceptedWeekGatewayResult['repairs'];
 }
 
 export type FixtureMutationIntent =
@@ -198,38 +207,25 @@ function releaseProvenance(provenance: AvailabilityProvenance): boolean {
 
 /** Remove only fixture-owned content; unaffected app sessions remain byte-stable inputs. */
 function fixtureNeutralSource(args: BuildFixtureMinimalReplanInput): Workout[] {
+  // Calendar/availability resolution owns whether a retained session is
+  // visible. Keeping it in the candidate lets the generic repair owner move or
+  // stack it and prevents user/Coach-authored work from being discarded merely
+  // because a new anchor temporarily occupies its date.
   const occupied = new Set(args.proposedFixtures.map((fixture) =>
     new Date(`${fixture.date}T12:00:00`).getDay()));
-  const releasedRecoveryDays = new Set([
-    ...args.priorFixtures.map((fixture) => dayAfter(fixture.date)),
-    ...args.availability.releasedFixtures.map((fixture) => dayAfter(fixture.date)),
-  ]);
-  const releasedFixtureDays = new Set([
-    ...args.priorFixtures
-      .filter((fixture) => !args.proposedFixtures.some((proposed) => proposed.date === fixture.date))
-      .map((fixture) => new Date(`${fixture.date}T12:00:00`).getDay()),
-    ...args.availability.days
-      .filter((day) => day.provenance.some(releaseProvenance))
-      .map((day) => day.dayNumber),
-  ]);
-  const blockedAppDays = new Set(args.availability.days
+  const unavailable = new Set(args.availability.days
     .filter((day) => !day.available && day.blockedBy.length > 0)
     .map((day) => day.dayNumber));
   return args.sourceWorkouts.filter((workout) => {
-    if (releasedFixtureDays.has(workout.dayOfWeek)) return false;
     if (workout.workoutType === 'Game') return false;
-    if (occupied.has(workout.dayOfWeek)) return false;
-    if (
-      blockedAppDays.has(workout.dayOfWeek) &&
-      workout.workoutType !== 'Team Training'
-    ) return false;
-    if (releasedRecoveryDays.has(workout.dayOfWeek) && (
-      workout.sessionTier === 'recovery' ||
-      workout.workoutType === 'Recovery' ||
-      workout.workoutType === 'Rest' ||
-      /\b(?:recovery|rest)\b/i.test(workout.name)
-    )) return false;
-    return true;
+    const collides = occupied.has(workout.dayOfWeek) || (
+      workout.workoutType !== 'Team Training' && unavailable.has(workout.dayOfWeek)
+    );
+    if (!collides) return true;
+    // Only explicitly system-owned content is disposable here. An unprovenanced
+    // legacy/user/Coach session stays in the candidate for relocation or a
+    // typed impossible result; it is never silently treated as fixture debris.
+    return !workout.derivedSessionProvenance?.some((record) => record.authorship === 'system');
   });
 }
 
@@ -263,53 +259,10 @@ function stripConditioningComponent(workout: Workout): Workout | null {
     coachAddedConditioningLabel: undefined,
     section18ConditioningRole: undefined,
     section18Evidence: undefined,
+    derivedSessionProvenance: workout.derivedSessionProvenance?.filter((record) =>
+      record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),
   });
   return hasMeaningfulWorkoutContent(stripped) ? stripped : null;
-}
-
-function trimStandaloneConditioningExcess(
-  args: BuildFixtureMinimalReplanInput,
-  workouts: Workout[],
-): Workout[] {
-  const contract = args.targetMicrocycle.exposureContractV2!;
-  const evaluation = evaluateSection18EffectiveWeek({
-    contract,
-    workouts,
-    weekStart: args.weekStart,
-  });
-  const target = contract.conditioning.core.plannerSelectedTarget ??
-    contract.conditioning.core.requiredMinimum;
-  let excess = Math.max(0, evaluation.ledger.conditioning.coreCount - target);
-  if (excess === 0) return workouts;
-  const appDays = Array.from(new Set(
-    evaluation.ledger.conditioning.credits
-      .filter((credit) => credit.source === 'app')
-      .map((credit) => credit.dayOfWeek),
-  ));
-  const map = byDay(workouts);
-  appDays.sort((left, right) => {
-    const leftWorkout = map.get(left);
-    const rightWorkout = map.get(right);
-    const cost = (_day: number, workout: Workout | undefined): number =>
-      isOptional(workout) ? 0
-        : hasMainStrength(workout) ? 3 : 2;
-    return cost(left, leftWorkout) - cost(right, rightWorkout) || right - left;
-  });
-  const replacements = new Map<number, Workout | null>();
-  for (const day of appDays) {
-    if (excess === 0) break;
-    const workout = map.get(day);
-    if (!workout) continue;
-    replacements.set(day, stripConditioningComponent(workout));
-    excess -= 1;
-  }
-  return excess === 0
-    ? workouts.flatMap((workout) => {
-        if (!replacements.has(workout.dayOfWeek)) return [workout];
-        const replacement = replacements.get(workout.dayOfWeek);
-        return replacement ? [replacement] : [];
-      })
-    : workouts;
 }
 
 function buildConditioning(args: {
@@ -319,6 +272,8 @@ function buildConditioning(args: {
   microcycle: Microcycle;
   role: 'required_core' | 'planner_selected_core';
   stress: 'hard' | 'moderate';
+  origin: 'fixture_replacement' | 'contract_shortfall_repair';
+  originatingFixtureDate: string | null;
 }): Workout {
   const dayName = DAY_NAMES[args.dayNumber];
   const suffix = args.stress === 'hard' ? 'hard-conditioning' : 'conditioning';
@@ -357,6 +312,25 @@ function buildConditioning(args: {
       ? 'Hard game-replacement conditioning for the released fixture day.'
       : 'Moderate conditioning retained within the fixture-adjusted weekly structure.',
     planEntryId,
+    derivedSessionProvenance: [createDerivedSessionProvenance({
+      origin: args.origin,
+      scope: 'session',
+      triggerSignature: section18ContractLifecycleSignature(
+        args.microcycle.exposureContractV2!,
+        args.weekStart,
+      ),
+      credit: {
+        metric: 'conditioning_core',
+        amount: 1,
+        conditioningRole: args.role,
+      },
+      originatingDate: args.weekStart,
+      originatingFixtureDate: args.originatingFixtureDate,
+      sourcePlanEntryId: planEntryId,
+      validWhile: args.origin === 'fixture_replacement'
+        ? [{ kind: 'fixture_absent', fixtureDate: args.originatingFixtureDate }]
+        : undefined,
+    })],
   };
 }
 
@@ -383,6 +357,20 @@ function attachConditioningPreservingCore(target: Workout, conditioning: Workout
     conditioningBlock: conditioning.conditioningBlock,
     section18ConditioningRole: conditioning.section18ConditioningRole,
     section18Evidence: conditioning.section18Evidence,
+    derivedSessionProvenance: [
+      ...(target.derivedSessionProvenance ?? []).filter((record) =>
+        record.scope !== 'conditioning_component' && record.targetMetric !== 'conditioning_core'),
+      ...(conditioning.derivedSessionProvenance ?? []).map((record) => ({
+        ...record,
+        scope: 'conditioning_component' as const,
+        history: [...record.history, {
+          action: 'stacked' as const,
+          date: record.originatingDate,
+          fromDayOfWeek: conditioning.dayOfWeek,
+          toDayOfWeek: target.dayOfWeek,
+        }],
+      })),
+    ],
     updatedAt: target.updatedAt > conditioning.updatedAt ? target.updatedAt : conditioning.updatedAt,
   };
 }
@@ -391,12 +379,46 @@ function relocateNewStrength(
   template: Workout,
   dayNumber: number,
   weekStart: string,
+  contract: NonNullable<Microcycle['exposureContractV2']>,
   preserveIdentity = false,
 ): Workout {
   const dayName = DAY_NAMES[dayNumber];
   const id = preserveIdentity
     ? template.id
     : `${template.id}:fixture-replan:${weekStart}:${dayName.toLowerCase()}`;
+  const triggerSignature = section18ContractLifecycleSignature(contract, weekStart);
+  const existingProvenance = template.derivedSessionProvenance?.map((record) => ({
+    ...record,
+    origin: preserveIdentity ? record.origin : 'pattern_balance_repair' as const,
+    triggerSignature,
+    validWhile: preserveIdentity
+      ? record.validWhile
+      : [{ kind: 'contract_signature_matches' as const, signature: triggerSignature }],
+    history: [...record.history, {
+      action: 'relocated' as const,
+      date: weekStart,
+      fromDayOfWeek: template.dayOfWeek,
+      toDayOfWeek: dayNumber,
+    }],
+  }));
+  const derivedSessionProvenance = existingProvenance?.length
+    ? existingProvenance
+    : preserveIdentity
+      ? undefined
+      : [createDerivedSessionProvenance({
+          origin: 'pattern_balance_repair',
+          scope: 'session',
+          triggerSignature,
+          credit: { metric: 'main_strength', amount: 1 },
+          originatingDate: weekStart,
+          sourcePlanEntryId: template.planEntryId ?? null,
+          history: [{
+            action: 'relocated',
+            date: weekStart,
+            fromDayOfWeek: template.dayOfWeek,
+            toDayOfWeek: dayNumber,
+          }],
+        })];
   return {
     ...template,
     id,
@@ -404,6 +426,7 @@ function relocateNewStrength(
     planEntryId: preserveIdentity
       ? template.planEntryId
       : `fixture-replan:${weekStart}:${dayName.toLowerCase()}:strength`,
+    derivedSessionProvenance,
     exercises: template.exercises.map((row, index) => ({
       ...row,
       id: preserveIdentity ? row.id : `${id}:row:${index + 1}`,
@@ -478,6 +501,7 @@ function addStrengthDeltaVariants(args: {
       templates[index].workout,
       day,
       args.input.weekStart,
+      contract,
       templates[index].preserveIdentity,
     )),
   ]);
@@ -512,10 +536,31 @@ function displacedStandaloneConditioningTemplates(
     !isTeamTraining(workout));
 }
 
-function relocateExistingConditioning(template: Workout, dayNumber: number): Workout {
+function relocateExistingConditioning(
+  template: Workout,
+  dayNumber: number,
+  contract: NonNullable<Microcycle['exposureContractV2']>,
+  weekStart: string,
+): Workout {
+  const triggerSignature = section18ContractLifecycleSignature(contract, weekStart);
   return {
     ...template,
     dayOfWeek: dayNumber,
+    derivedSessionProvenance: appendDerivedSessionHistory(
+      template.derivedSessionProvenance?.map((record) => ({
+        ...record,
+        origin: record.targetMetric === 'conditioning_core'
+          ? 'required_core_relocation' as const
+          : record.origin,
+        triggerSignature,
+        validWhile: [],
+        invalidWhen: [],
+      })), {
+        action: 'relocated',
+        date: weekStart,
+        fromDayOfWeek: template.dayOfWeek,
+        toDayOfWeek: dayNumber,
+      }),
     exercises: template.exercises.map((row, index) => ({
       ...row,
       workoutId: template.id,
@@ -681,18 +726,29 @@ function changedDaySets(source: readonly Workout[], target: readonly Workout[]) 
   };
 }
 
-/** Fixture-specific preservation planner. Full generation is fallback only. */
+/**
+ * Fixture adapter: enumerate preservation-biased seed candidates only. The
+ * shared whole-week gateway owns lifecycle expiry, repair and acceptance;
+ * full generation remains its fallback rather than a fixture authority.
+ */
 export function buildFixtureMinimalReplan(
   args: BuildFixtureMinimalReplanInput,
 ): FixtureMinimalReplanResult {
   const contract = args.targetMicrocycle.exposureContractV2;
   if (!contract) throw new Error('Fixture minimal replan requires Contract v2');
-  const source = trimStandaloneConditioningExcess(args, fixtureNeutralSource(args));
+  const fixtureNeutral = fixtureNeutralSource(args);
+  const source = buildDerivedSessionExpiryCandidates({
+    workouts: fixtureNeutral,
+    contract,
+    weekStart: args.weekStart,
+  })[0]?.workouts ?? fixtureNeutral;
   const occupied = new Set(args.proposedFixtures.map((fixture) =>
     new Date(`${fixture.date}T12:00:00`).getDay()));
   const releasedDays = new Set(args.availability.days
     .filter((day) => day.provenance.some(releaseProvenance))
     .map((day) => day.dayNumber));
+  const removedFixture = args.priorFixtures.find((fixture) =>
+    !args.proposedFixtures.some((proposed) => proposed.date === fixture.date)) ?? null;
 
   const accepted: Array<{
     gateway: Section18AcceptedWeekGatewayResult;
@@ -748,7 +804,7 @@ export function buildFixtureMinimalReplan(
         for (const dayNumber of addedDays) {
           const displaced = displacedConditioning[addedDays.indexOf(dayNumber)];
           const conditioning = displaced
-            ? relocateExistingConditioning(displaced, dayNumber)
+            ? relocateExistingConditioning(displaced, dayNumber, contract, args.weekStart)
             : buildConditioning({
                 profile: args.profile,
                 weekStart: args.weekStart,
@@ -756,6 +812,8 @@ export function buildFixtureMinimalReplan(
                 microcycle: args.targetMicrocycle,
                 role,
                 stress: releasedDays.has(dayNumber) ? 'hard' : 'moderate',
+                origin: removedFixture ? 'fixture_replacement' : 'contract_shortfall_repair',
+                originatingFixtureDate: removedFixture?.date ?? null,
               });
           const existing = candidate.find((workout) => workout.dayOfWeek === dayNumber);
           candidate = existing
@@ -772,13 +830,22 @@ export function buildFixtureMinimalReplan(
           profile: args.profile,
           resolveVisibleWorkouts: visibleResolver(args),
         });
-        if (gateway.status === 'rejected') {
+        if (gateway.status === 'impossible') {
           const failureSignature = gateway.failureSignature ?? 'unknown';
           rejectedCandidateSignatures.push(failureSignature);
           candidateDiagnostics.push({
             addedDays,
             status: 'rejected',
             failureSignature,
+            canonicalConditioningDays: gateway.canonicalWorkouts
+              .filter((workout) => !!workout.section18Evidence?.conditioningRole)
+              .map((workout) => workout.dayOfWeek),
+            visibleConditioningCredits: gateway.evaluation.ledger.conditioning.credits.map((credit) => ({
+              dayOfWeek: credit.dayOfWeek,
+              source: credit.source,
+              role: credit.role,
+            })),
+            repairs: gateway.repairs,
           });
           continue;
         }

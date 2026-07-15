@@ -77,6 +77,7 @@ import {
   attachPrescriptionEffectEvidence,
   buildPrescriptionEffectEvidence,
 } from './deterministicCoachNoteFactory';
+import { createDerivedSessionProvenance } from '../rules/derivedSessionProvenance';
 
 export { computeBlockBounds } from './programBlockState';
 
@@ -587,7 +588,27 @@ function applyGameProximity(
           );
         }
       } else {
-        return buildDerivedSession('recovery', date, microcycleId, 'Post-game recovery', athlete);
+        const recovery = buildDerivedSession(
+          'recovery',
+          date,
+          microcycleId,
+          'Post-game recovery',
+          athlete,
+        );
+        return {
+          ...recovery,
+          derivedSessionProvenance: [createDerivedSessionProvenance({
+            origin: 'rest_distribution_repair',
+            scope: 'session',
+            triggerSignature: `fixture:${previousDate}:g_plus_1`,
+            credit: { metric: 'safe_session_content', amount: 1 },
+            originatingDate: date,
+            originatingFixtureDate: previousDate,
+            sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
+            validWhile: [{ kind: 'fixture_present', fixtureDate: previousDate }],
+            invalidWhen: [{ kind: 'fixture_absent', fixtureDate: previousDate }],
+          })],
+        };
       }
     }
   }

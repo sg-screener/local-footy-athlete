@@ -553,6 +553,76 @@ export interface Microcycle {
   updatedAt: string;
 }
 
+export type DerivedSessionOrigin =
+  | 'fixture_replacement'
+  | 'contract_shortfall_repair'
+  | 'required_core_relocation'
+  | 'pattern_balance_repair'
+  | 'rest_distribution_repair'
+  | 'safety_substitution'
+  | 'equipment_substitution'
+  | 'optional_planner_addition';
+
+export type DerivedSessionTargetMetric =
+  | 'main_strength'
+  | 'conditioning_core'
+  | 'sprint_high_speed'
+  | 'strength_pattern'
+  | 'full_rest'
+  | 'hard_day_distribution'
+  | 'safe_session_content'
+  | 'optional_non_core';
+
+export type DerivedSessionScope =
+  | 'session'
+  | 'conditioning_component'
+  | 'strength_component'
+  | 'speed_component'
+  | 'power_component'
+  | 'recovery_component';
+
+export type DerivedSessionLifecycleCondition =
+  | { kind: 'contract_signature_matches'; signature: string }
+  | { kind: 'fixture_absent'; fixtureDate: string | null }
+  | { kind: 'fixture_present'; fixtureDate: string | null }
+  | { kind: 'metric_shortfall_exists'; metric: DerivedSessionTargetMetric; target: number }
+  | { kind: 'metric_target_satisfied'; metric: DerivedSessionTargetMetric; target: number }
+  | { kind: 'date_available'; date: string }
+  | { kind: 'constraint_active'; signature: string }
+  | { kind: 'equipment_profile_matches'; signature: string };
+
+export interface DerivedSessionCredit {
+  metric: DerivedSessionTargetMetric;
+  amount: number;
+  conditioningRole?: import('../rules/weeklyExposureContractV2').Section18ConditioningRole;
+  strengthPattern?: 'squat' | 'hinge' | 'push' | 'pull';
+}
+
+export interface DerivedSessionHistoryEntry {
+  action: 'created' | 'relocated' | 'stacked' | 'substituted' | 'downgraded' | 'expired';
+  date: string;
+  fromDayOfWeek?: number;
+  toDayOfWeek?: number;
+  detail?: string;
+}
+
+/** Persisted lifecycle ownership for every system-derived session/component. */
+export interface DerivedSessionProvenance {
+  protocolVersion: 1;
+  authorship: 'system';
+  origin: DerivedSessionOrigin;
+  scope: DerivedSessionScope;
+  triggerSignature: string;
+  targetMetric: DerivedSessionTargetMetric;
+  credit: DerivedSessionCredit;
+  originatingFixtureDate: string | null;
+  originatingDate: string;
+  validWhile: DerivedSessionLifecycleCondition[];
+  invalidWhen: DerivedSessionLifecycleCondition[];
+  history: DerivedSessionHistoryEntry[];
+  sourcePlanEntryId: string | null;
+}
+
 /**
  * Workout
  * Represents a single training session
@@ -574,6 +644,8 @@ export interface Workout {
 
   /** Stable deterministic allocation identity used during generated-week normalisation. */
   planEntryId?: string;
+  /** Typed lifecycle ownership. Absence means non-disposable legacy/user/Coach work. */
+  derivedSessionProvenance?: DerivedSessionProvenance[];
   /** Canonical planned/effective strength contract. Existing typed intent always wins. */
   strengthIntent?: StrengthIntent;
   /** Development/audit proof for planned patterns absent after final filtering. */

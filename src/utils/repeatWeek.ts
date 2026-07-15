@@ -393,6 +393,7 @@ export function repeatWeekIntoNextWeek(args: {
   ) as Record<string, OverrideContext>;
   commitAcceptedStateTransaction({
     reason: `repeat_week:${sourceWeekStart}:${targetWeekStart}`,
+    profile: args.baseProfile,
     program: {
       weekScopedOverlays: {
         ...state.weekScopedOverlays,

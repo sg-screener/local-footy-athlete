@@ -86,7 +86,11 @@ export function getMeaningfulConditioningWorkRows(
 function hasCanonicalConditioning(workout: ConditioningIdentityWorkout): boolean {
   return !!workout.conditioningBlock?.options?.length ||
     !!workout.conditioningCategory ||
-    !!workout.conditioningFlavour;
+    !!workout.conditioningFlavour ||
+    // Legacy and user-authored standalone conditioning may pre-date the
+    // typed block fields. The explicit workout domain plus final owned rows
+    // is still sufficient to derive identity without trusting display copy.
+    (workout.workoutType === 'Conditioning' && (workout.exercises?.length ?? 0) > 0);
 }
 
 function unitSeconds(value: number, unit: string): number {

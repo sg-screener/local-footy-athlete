@@ -597,24 +597,25 @@ function assessContract(
   contract.restStress.achievedActiveRecoveryCount = ledger.restStress.activeRecoveryDays.length;
   contract.restStress.achievedModerateDayCount = ledger.restStress.moderateDays.length;
   contract.restStress.achievedHardDayCount = ledger.restStress.hardDays.length;
+  const permittedHardDayMaximum = contract.restStress.permittedHardDayMaximum ??
+    contract.restStress.normalProgrammedHardDayMaximum;
   const appHardDayCount = ledger.restStress.hardDays.filter((day) =>
     !ledger.restStress.anchorHardDays.includes(day)).length;
   const provenAnchorExcess = Math.max(
     0,
     ledger.restStress.hardDays.length - Math.max(
-      contract.restStress.normalProgrammedHardDayMaximum,
+      contract.restStress.preferredHardDayRange.max,
       appHardDayCount,
     ),
   );
   contract.restStress.unavoidableAnchorCausedExcess = Math.min(
     contract.restStress.authorisedUnavoidableAnchorExcess,
-    Math.max(0, ledger.restStress.hardDays.length - contract.restStress.normalProgrammedHardDayMaximum),
+    Math.max(0, ledger.restStress.hardDays.length - contract.restStress.preferredHardDayRange.max),
     provenAnchorExcess,
   );
   contract.restStress.hardDayMaximumBreach = Math.max(
     0,
-    ledger.restStress.hardDays.length - contract.restStress.normalProgrammedHardDayMaximum -
-      contract.restStress.unavoidableAnchorCausedExcess,
+    ledger.restStress.hardDays.length - permittedHardDayMaximum,
   );
   return contract;
 }
@@ -957,18 +958,23 @@ export function evaluateSection18EffectiveWeek(
     });
   }
 
-  const hardBreach = Math.max(
-    0,
-    ledger.restStress.hardDays.length - contract.restStress.normalProgrammedHardDayMaximum -
-      (contract.restStress.unavoidableAnchorCausedExcess ?? 0),
-  );
+  const permittedHardDayMaximum = contract.restStress.permittedHardDayMaximum ??
+    contract.restStress.normalProgrammedHardDayMaximum;
+  const hardBreach = Math.max(0, ledger.restStress.hardDays.length - permittedHardDayMaximum);
   if (hardBreach > 0) {
     addFinding(findings, {
       code: 'hard_day_breach', severity: 'blocking', domain: 'hard_days',
-      expected: contract.restStress.normalProgrammedHardDayMaximum +
-        (contract.restStress.unavoidableAnchorCausedExcess ?? 0),
+      expected: permittedHardDayMaximum,
       actual: ledger.restStress.hardDays.length,
-      detail: 'Hard-day maximum is exceeded without typed unavoidable anchor authorisation.',
+      detail: 'Hard-day count exceeds the Contract v2 permitted maximum for this phase and mode.',
+      evidence: ledger.restStress.hardDays.map((day) => dateForDay(input.weekStart, day)),
+    });
+  } else if (ledger.restStress.hardDays.length > contract.restStress.preferredHardDayRange.max) {
+    addFinding(findings, {
+      code: 'default_target_miss', severity: 'advisory', domain: 'hard_days',
+      expected: contract.restStress.preferredHardDayRange,
+      actual: ledger.restStress.hardDays.length,
+      detail: 'Hard-day count is above the preferred range but within the mode-specific permitted maximum.',
       evidence: ledger.restStress.hardDays.map((day) => dateForDay(input.weekStart, day)),
     });
   }

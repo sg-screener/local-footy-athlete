@@ -25,13 +25,24 @@ import type {
   WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
 import { resolveProfileTargetWeekAvailability } from './fixtureConditionedAvailability';
+import {
+  buildDerivedSessionExpiryCandidates,
+  rebindDerivedSessionProvenance,
+} from './derivedSessionProvenance';
+import { searchWholeWeekRepairCandidates } from './wholeWeekRepairEngine';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
-export type Section18WeekAcceptanceStatus = 'accepted' | 'repaired' | 'rejected';
+export type Section18WeekAcceptanceStatus =
+  | 'accepted'
+  | 'repaired'
+  | 'regenerated'
+  | 'fallback'
+  | 'impossible';
 
 export type Section18WeekRepairKind =
   | 'weekly_power_budget'
+  | 'obsolete_derived_work_expired'
   | 'optional_work_removed_for_rest'
   | 'core_work_stacked_on_existing_stress_day'
   | 'regenerated_candidate'
@@ -355,6 +366,30 @@ function mergeCoreWork(source: Workout, target: Workout): Workout | null {
     })),
   ];
   const preserveTargetType = target.workoutType === 'Team Training';
+  const stackedDate = source.derivedSessionProvenance?.[0]?.originatingDate ??
+    source.updatedAt.slice(0, 10);
+  const sourceProvenance = (source.derivedSessionProvenance ?? []).map((record) => ({
+    ...record,
+    scope: record.scope === 'session'
+      ? record.targetMetric === 'main_strength' || record.targetMetric === 'strength_pattern'
+        ? 'strength_component' as const
+        : record.targetMetric === 'conditioning_core'
+          ? 'conditioning_component' as const
+          : record.targetMetric === 'sprint_high_speed'
+            ? 'speed_component' as const
+            : record.scope
+      : record.scope,
+    history: [...record.history, {
+      action: 'stacked' as const,
+      date: stackedDate,
+      fromDayOfWeek: source.dayOfWeek,
+      toDayOfWeek: target.dayOfWeek,
+    }],
+  }));
+  const combinedProvenance = [
+    ...(target.derivedSessionProvenance ?? []),
+    ...sourceProvenance,
+  ];
   return {
     ...target,
     name: preserveTargetType ? target.name : `${target.name} + ${source.name}`,
@@ -366,6 +401,7 @@ function mergeCoreWork(source: Workout, target: Workout): Workout | null {
       : 'Moderate',
     durationMinutes: target.durationMinutes + source.durationMinutes,
     exercises,
+    derivedSessionProvenance: combinedProvenance.length > 0 ? combinedProvenance : undefined,
     ...(source.strengthIntent ? { strengthIntent: source.strengthIntent } : {}),
     ...(source.strengthPatternContributions
       ? { strengthPatternContributions: [...source.strengthPatternContributions] }
@@ -392,11 +428,11 @@ function replaceDay(workouts: readonly Workout[], day: number, replacement: Work
   return [...without, replacement].sort((a, b) => a.dayOfWeek - b.dayOfWeek);
 }
 
-function repairOptionalRest(args: {
+function repairOptionalRestCandidates(args: {
   workouts: readonly Workout[];
   evaluation: Section18EffectiveWeekEvaluation;
   contract: WeeklyExposureContractV2;
-}): { workouts: Workout[]; repair: Section18WeekRepair } | null {
+}): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
   const fixtureDays = args.contract.anchors
     .filter((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
     .map((anchor) => anchor.dayOfWeek);
@@ -408,27 +444,26 @@ function repairOptionalRest(args: {
     ...args.evaluation.ledger.restStress.activeRecoveryDays,
     ...optionalDays,
   ])).filter((day) => !protectedRecoveryDays.has(day));
-  for (const day of candidates) {
+  return candidates.flatMap((day) => {
     const source = args.workouts.find((workout) => workout.dayOfWeek === day);
-    if (source && (workoutHasMainStrength(source) || workoutHasAppCoreConditioning(source))) continue;
-    return {
+    if (source && (workoutHasMainStrength(source) || workoutHasAppCoreConditioning(source))) return [];
+    return [{
       workouts: replaceDay(args.workouts, day, explicitRestStub(day, source)),
       repair: {
         kind: 'optional_work_removed_for_rest',
         detail: `Removed optional/recovery-only work from ${DAY_NAMES[day]} to create true full rest.`,
         sourceDay: day,
       },
-    };
-  }
-  return null;
+    }];
+  });
 }
 
-function repairByStacking(args: {
+function repairByStackingCandidates(args: {
   workouts: readonly Workout[];
   evaluation: Section18EffectiveWeekEvaluation;
   contract: WeeklyExposureContractV2;
   requireHardTarget: boolean;
-}): { workouts: Workout[]; repair: Section18WeekRepair } | null {
+}): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
   const anchorByDay = new Map(args.contract.anchors.map((anchor) => [anchor.dayOfWeek, anchor]));
   const hardDays = new Set(args.evaluation.ledger.restStress.hardDays);
   const sources = args.workouts
@@ -444,14 +479,13 @@ function repairByStacking(args: {
     })
     .sort((a, b) => Number(!hardDays.has(a.dayOfWeek)) - Number(!hardDays.has(b.dayOfWeek)) ||
       a.dayOfWeek - b.dayOfWeek);
-  for (const source of sources) {
-    for (const target of targets) {
-      if (source.dayOfWeek === target.dayOfWeek) continue;
+  return sources.flatMap((source) => targets.flatMap((target) => {
+      if (source.dayOfWeek === target.dayOfWeek) return [];
       const merged = mergeCoreWork(source, target);
-      if (!merged) continue;
+      if (!merged) return [];
       let workouts = replaceDay(args.workouts, target.dayOfWeek, merged);
       workouts = replaceDay(workouts, source.dayOfWeek, explicitRestStub(source.dayOfWeek, source));
-      return {
+      return [{
         workouts,
         repair: {
           kind: 'core_work_stacked_on_existing_stress_day',
@@ -459,10 +493,8 @@ function repairByStacking(args: {
           sourceDay: source.dayOfWeek,
           targetDay: target.dayOfWeek,
         },
-      };
-    }
-  }
-  return null;
+      }];
+  }));
 }
 
 function signature(evaluation: Section18EffectiveWeekEvaluation): string {
@@ -472,25 +504,24 @@ function signature(evaluation: Section18EffectiveWeekEvaluation): string {
     .join('|');
 }
 
-function localRepair(args: {
+function localRepairCandidates(args: {
   workouts: readonly Workout[];
   evaluation: Section18EffectiveWeekEvaluation;
   contract: WeeklyExposureContractV2;
-}): { workouts: Workout[]; repair: Section18WeekRepair } | null {
+}): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
   const restShort = args.evaluation.blockingViolations.some((finding) =>
     finding.domain === 'full_rest');
-  if (restShort) {
-    const optional = repairOptionalRest(args);
-    if (optional) return optional;
-  }
   const hardBreach = args.evaluation.blockingViolations.some((finding) =>
     finding.code === 'hard_day_breach');
-  if (hardBreach) {
-    const stacked = repairByStacking({ ...args, requireHardTarget: true });
-    if (stacked) return stacked;
-  }
-  if (restShort) return repairByStacking({ ...args, requireHardTarget: false });
-  return null;
+  return [
+    ...(restShort ? repairOptionalRestCandidates(args) : []),
+    ...(hardBreach
+      ? repairByStackingCandidates({ ...args, requireHardTarget: true })
+      : []),
+    ...(restShort
+      ? repairByStackingCandidates({ ...args, requireHardTarget: false })
+      : []),
+  ];
 }
 
 function resolveCandidate(args: {
@@ -498,11 +529,22 @@ function resolveCandidate(args: {
   candidate: Section18AcceptedWeekCandidate;
   inheritedRepairs?: Section18WeekRepair[];
 }): Section18AcceptedWeekGatewayResult {
-  const maxAttempts = Math.max(1, args.input.maxRepairAttempts ?? 8);
-  const repairs = [...(args.inheritedRepairs ?? [])];
+  const maxCandidates = Math.max(1, args.input.maxRepairAttempts ?? 48);
+  const initialRepairs = [...(args.inheritedRepairs ?? [])];
+  const preScoreExpiry = buildDerivedSessionExpiryCandidates({
+    workouts: args.candidate.workouts,
+    contract: args.candidate.contract,
+    weekStart: args.input.weekStart,
+  })[0];
+  if (preScoreExpiry) {
+    initialRepairs.push({
+      kind: 'obsolete_derived_work_expired',
+      detail: `Expired ${preScoreExpiry.expiries.length} obsolete system-derived session/component${preScoreExpiry.expiries.length === 1 ? '' : 's'} before preservation scoring: ${preScoreExpiry.expiries.map((expiry) => `${expiry.origin}/${expiry.scope}/${expiry.reason}/${expiry.planEntryId ?? expiry.workoutId}`).join(', ')}.`,
+    });
+  }
   const safety = finaliseSection18SafetyWeek({
     contract: args.candidate.contract,
-    workouts: args.candidate.workouts,
+    workouts: preScoreExpiry?.workouts ?? args.candidate.workouts,
     weekStart: args.input.weekStart,
     canonicalContext: {
       phase: args.candidate.contract.identity.seasonPhase,
@@ -516,79 +558,97 @@ function resolveCandidate(args: {
     profile: args.input.profile,
   });
   if (power.removed > 0 || power.budget < 2) {
-    repairs.push({
+    initialRepairs.push({
       kind: 'weekly_power_budget',
       detail: `Weekly selector kept ${power.workouts.filter((workout) => !!workout.powerBlock).length} primers within budget ${power.budget}.`,
     });
   }
-  let contract = power.contract;
-  let workouts = power.workouts;
-  let lastEvaluation: Section18EffectiveWeekEvaluation | null = null;
-  let lastVisible: Workout[] = [];
-  const seen = new Set<string>();
-
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const resolver = args.input.resolveVisibleWorkouts ?? ((candidateWorkouts: readonly Workout[]) =>
-      resolveFinalVisibleSection18Week({
+  const baseContract = power.contract;
+  type CandidateState = { workouts: Workout[]; repairs: Section18WeekRepair[] };
+  type CandidateEvaluation = {
+    contract: WeeklyExposureContractV2;
+    visibleWorkouts: Workout[];
+    evaluation: Section18EffectiveWeekEvaluation;
+  };
+  const search = searchWholeWeekRepairCandidates<CandidateState, CandidateEvaluation>({
+    initial: { workouts: power.workouts, repairs: initialRepairs },
+    maxCandidates,
+    stateSignature: (candidate) => JSON.stringify(candidate.workouts.map((workout) => ({
+      ...workout,
+      exercises: workout.exercises.map((row) => ({ ...row, exercise: row.exercise?.name ?? null })),
+    }))),
+    assess: (candidate) => {
+      let contract = cloneContract(baseContract);
+      const resolver = args.input.resolveVisibleWorkouts ?? ((candidateWorkouts: readonly Workout[]) =>
+        resolveFinalVisibleSection18Week({
+          contract,
+          workouts: candidateWorkouts,
+          weekStart: args.input.weekStart,
+          profile: args.input.profile,
+        }));
+      const visibleWorkouts = resolver(candidate.workouts);
+      let evaluation = evaluateSection18EffectiveWeek({
         contract,
-        workouts: candidateWorkouts,
-        weekStart: args.input.weekStart,
-        profile: args.input.profile,
-      }));
-    lastVisible = resolver(workouts);
-    lastEvaluation = evaluateSection18EffectiveWeek({
-      contract,
-      workouts: lastVisible,
-      weekStart: args.input.weekStart,
-    });
-    contract = lastEvaluation.contract;
-    if (lastEvaluation.blockingViolations.length === 0) {
-      // Repairs (notably weekly power selection) can append a typed reduction
-      // after the initial safety projection. Refresh the derived safety view
-      // before persistence so hydrating this already-accepted contract is a
-      // fixed point rather than adding safety reasons on the second pass.
-      contract = applyGenerationSafetyToSection18Contract({ contract });
-      lastEvaluation = evaluateSection18EffectiveWeek({
-        contract,
-        workouts: lastVisible,
+        workouts: visibleWorkouts,
         weekStart: args.input.weekStart,
       });
-      contract = lastEvaluation.contract;
-      if (lastEvaluation.blockingViolations.length > 0) continue;
+      contract = evaluation.contract;
+      if (evaluation.blockingViolations.length === 0) {
+        contract = applyGenerationSafetyToSection18Contract({ contract });
+        evaluation = evaluateSection18EffectiveWeek({
+          contract,
+          workouts: visibleWorkouts,
+          weekStart: args.input.weekStart,
+        });
+        contract = evaluation.contract;
+      }
       return {
-        status: repairs.length > 0 ? 'repaired' : 'accepted',
-        contract,
-        canonicalWorkouts: workouts,
-        visibleWorkouts: lastVisible,
-        evaluation: lastEvaluation,
-        repairs,
-        attempts: attempt,
-        failureSignature: null,
+        accepted: evaluation.blockingViolations.length === 0,
+        blockingCount: evaluation.blockingViolations.length,
+        evaluation: { contract, visibleWorkouts, evaluation },
       };
-    }
-    const failureSignature = signature(lastEvaluation);
-    if (seen.has(failureSignature)) break;
-    seen.add(failureSignature);
-    const repaired = localRepair({ workouts, evaluation: lastEvaluation, contract });
-    if (!repaired) break;
-    workouts = repaired.workouts;
-    repairs.push(repaired.repair);
-  }
-
-  const evaluation = lastEvaluation ?? evaluateSection18EffectiveWeek({
-    contract,
-    workouts,
-    weekStart: args.input.weekStart,
+    },
+    expand: (candidate, assessment) => {
+      const evaluated = assessment.evaluation;
+      const expiryCandidates = buildDerivedSessionExpiryCandidates({
+        workouts: candidate.workouts,
+        contract: evaluated.contract,
+        weekStart: args.input.weekStart,
+      }).map((expiry) => ({
+        workouts: expiry.workouts,
+        repairs: [...candidate.repairs, {
+          kind: 'obsolete_derived_work_expired' as const,
+          detail: `Expired ${expiry.expiries.length} obsolete system-derived session/component${expiry.expiries.length === 1 ? '' : 's'} before preservation scoring.`,
+        }],
+      }));
+      const repairCandidates = localRepairCandidates({
+        workouts: candidate.workouts,
+        evaluation: evaluated.evaluation,
+        contract: evaluated.contract,
+      }).map((repair) => ({
+        workouts: repair.workouts,
+        repairs: [...candidate.repairs, repair.repair],
+      }));
+      return [...expiryCandidates, ...repairCandidates];
+    },
   });
+  const selected = search.candidate;
+  const selectedEvaluation = search.evaluation;
   return {
-    status: 'rejected',
-    contract: evaluation.contract,
-    canonicalWorkouts: workouts,
-    visibleWorkouts: lastVisible,
-    evaluation,
-    repairs,
-    attempts: Math.min(maxAttempts, seen.size + 1),
-    failureSignature: signature(evaluation),
+    status: search.outcome === 'impossible'
+      ? 'impossible'
+      : selected.repairs.some((repair) => repair.kind === 'regenerated_candidate')
+        ? 'regenerated'
+        : selected.repairs.length > 0 ? 'repaired' : 'accepted',
+    contract: selectedEvaluation.contract,
+    canonicalWorkouts: selected.workouts,
+    visibleWorkouts: selectedEvaluation.visibleWorkouts,
+    evaluation: selectedEvaluation.evaluation,
+    repairs: selected.repairs,
+    attempts: search.candidatesEvaluated,
+    failureSignature: search.outcome === 'impossible'
+      ? signature(selectedEvaluation.evaluation)
+      : null,
   };
 }
 
@@ -601,32 +661,48 @@ export function runSection18AcceptedWeekGateway(
   input: Section18AcceptedWeekGatewayInput,
 ): Section18AcceptedWeekGatewayResult {
   const primary = resolveCandidate({ input, candidate: input });
-  if (primary.status !== 'rejected') return primary;
+  if (primary.status !== 'impossible') return primary;
 
   const regenerated = input.regenerate?.();
   if (regenerated) {
+    const reboundRegenerated = {
+      ...regenerated,
+      workouts: rebindDerivedSessionProvenance({
+        workouts: regenerated.workouts,
+        contract: regenerated.contract,
+        weekStart: input.weekStart,
+      }),
+    };
     const result = resolveCandidate({
       input: { ...input, regenerate: undefined, safeFallback: undefined },
-      candidate: regenerated,
+      candidate: reboundRegenerated,
       inheritedRepairs: [...primary.repairs, {
         kind: 'regenerated_candidate',
         detail: 'The first deterministic candidate remained invalid; regenerated candidate entered the same gateway.',
       }],
     });
-    if (result.status !== 'rejected') return result;
+    if (result.status !== 'impossible') return { ...result, status: 'regenerated' };
   }
 
   const fallback = input.safeFallback?.();
   if (fallback) {
+    const reboundFallback = {
+      ...fallback,
+      workouts: rebindDerivedSessionProvenance({
+        workouts: fallback.workouts,
+        contract: fallback.contract,
+        weekStart: input.weekStart,
+      }),
+    };
     const result = resolveCandidate({
       input: { ...input, regenerate: undefined, safeFallback: undefined },
-      candidate: fallback,
+      candidate: reboundFallback,
       inheritedRepairs: [...primary.repairs, {
         kind: 'safe_fallback_candidate',
         detail: 'Safe deterministic fallback entered the same gateway.',
       }],
     });
-    if (result.status !== 'rejected') return result;
+    if (result.status !== 'impossible') return { ...result, status: 'fallback' };
     return result;
   }
   return primary;
@@ -636,7 +712,7 @@ export function requireSection18AcceptedWeek(
   input: Section18AcceptedWeekGatewayInput,
 ): Section18AcceptedWeekGatewayResult {
   const result = runSection18AcceptedWeekGateway(input);
-  if (result.status === 'rejected') throw new Section18WeekAcceptanceError(result);
+  if (result.status === 'impossible') throw new Section18WeekAcceptanceError(result);
   return result;
 }
 

@@ -52,6 +52,7 @@ import {
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 
 const WEEK_START = '2026-07-13';
 const NOW = '2026-07-13T00:00:00.000Z';
@@ -65,7 +66,7 @@ let rebuildFallbackAccepted = false;
 let repeatWriteAccepted = false;
 let rolloverFallbackAccepted = false;
 let coachWriteRejected = false;
-let fiveHardRejected = false;
+let fiveHardAccepted = false;
 let selectedTargetPreserved = false;
 let typedRejectionObserved = false;
 let hydrationRepairObserved = false;
@@ -305,14 +306,14 @@ function resetLiveStores(value: ReturnType<typeof program>): void {
   useProgramStore.getState().setCurrentProgram(clone(value.program));
 }
 
-function precedenceSnapshot(): string {
+function liveWeekAccepted(value: ReturnType<typeof program>): boolean {
   const state = useProgramStore.getState();
-  return JSON.stringify({
-    dateOverrides: state.dateOverrides,
-    overrideContexts: state.overrideContexts,
-    weekScopedOverlays: state.weekScopedOverlays,
-    exposureContractsByWeek: state.exposureContractsByWeek,
-  });
+  return rebaseAcceptedEffectiveWeek({
+    surfaces: state,
+    weekStart: firstWeek(value).startDate.slice(0, 10),
+    profile: value.profile,
+    markedDays: state.acceptedMaterialContext.markedDays,
+  }).evaluation.blockingViolations.length === 0;
 }
 
 function coreConditioningWorkout(value: ReturnType<typeof program>): Workout {
@@ -617,20 +618,18 @@ check('17 bye recovery has at least two true full-rest days',
 {
   const base = firstWeek(pre3);
   const contract = clone(base.exposureContractV2!);
-  const occupied = new Set(base.workouts.filter((workout) => workout.workoutType !== 'Rest').map((workout) => workout.dayOfWeek));
-  const free = [0, 1, 2, 3, 4, 5, 6].filter((day) => !occupied.has(day)).slice(0, 2);
-  const overHard = [
-    ...base.workouts.filter((workout) => !free.includes(workout.dayOfWeek)),
-    ...free.map((day, index) => hardConditioning(day, `fifth-hard-${index}`)),
-  ];
   const result = runSection18AcceptedWeekGateway({
-    contract, workouts: overHard, weekStart: WEEK_START, profile: pre3.profile,
+    contract, workouts: clone(base.workouts), weekStart: WEEK_START, profile: pre3.profile,
     resolveVisibleWorkouts: (workouts) => [...workouts], maxRepairAttempts: 1,
   });
-  fiveHardRejected = result.status === 'rejected' && result.evaluation.blockingViolations.some((finding) =>
-    finding.code === 'hard_day_breach');
-  check('19 app-created fifth hard day is rejected without typed anchor proof',
-    fiveHardRejected);
+  fiveHardAccepted = result.status !== 'impossible' &&
+    result.evaluation.ledger.restStress.hardDays.length === 5 &&
+    !result.evaluation.blockingViolations.some((finding) => finding.code === 'hard_day_breach');
+  check('19 a complete phase-permitted five-hard-day week is accepted', fiveHardAccepted, {
+    status: result.status,
+    hardDays: result.evaluation.ledger.restStress.hardDays,
+    blockers: result.evaluation.blockingViolations,
+  });
 }
 check('20 optional work is removed before required work when repairing rest',
   firstWeek(game).workouts.some((workout) => workout.workoutType === 'Rest') &&
@@ -741,9 +740,9 @@ check('21 generation cannot store a blocking final-visible violation',
   selectedTargetPreserved = result.contract.mainStrength.exposure.plannerSelectedTarget ===
     base.exposureContractV2?.mainStrength.exposure.plannerSelectedTarget;
   check('29 selected phase targets remain authoritative',
-    result.status === 'rejected' && selectedTargetPreserved);
+    result.status === 'impossible' && selectedTargetPreserved);
   check('30 repair loops terminate deterministically',
-    result.status === 'rejected' && result.attempts <= 3 && !!result.failureSignature);
+    result.status === 'impossible' && result.attempts <= 3 && !!result.failureSignature);
   const fallback = runSection18AcceptedWeekGateway({
     contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
     weekStart: WEEK_START, profile: mid.profile,
@@ -752,7 +751,7 @@ check('21 generation cannot store a blocking final-visible violation',
     safeFallback: () => ({ contract: clone(base.exposureContractV2!), workouts: clone(base.workouts) }),
   });
   check('31 safe fallback passes the same gateway',
-    fallback.status !== 'rejected' && fallback.repairs.some((repair) => repair.kind === 'safe_fallback_candidate'));
+    fallback.status !== 'impossible' && fallback.repairs.some((repair) => repair.kind === 'safe_fallback_candidate'));
   typedRejectionObserved = rejected(() =>
     requireSection18AcceptedWeek({
       contract: clone(base.exposureContractV2!), workouts: allRest(base.workouts),
@@ -826,7 +825,7 @@ check('P6 visible minimum rest is enforced', [game, byeRecovery].every((value) =
   return evaluation.ledger.restStress.trueFullRestDays.length >=
     evaluation.contract.restStress.requiredFullRestMinimum;
 }));
-check('P7 app programming never creates an unjustified fifth hard day', generated.every((value) =>
+check('P7 app programming never exceeds the mode-specific permitted hard-day maximum', generated.every((value) =>
   !visibleEvaluation(value).blockingViolations.some((finding) => finding.code === 'hard_day_breach')));
 check('P8 every stored materially changed week passed the gateway',
   rebuildFallbackAccepted && repeatWriteAccepted && rolloverFallbackAccepted);
@@ -857,7 +856,7 @@ const mutationChecks: Array<[string, boolean]> = [
   ['M2 skipping substitute attempts is killed', firstWeek(limitedMid).exposureContractV2?.equipment.substitutionStatus === 'substituted'],
   ['M3 treating recovery as rest is killed', !gameEvaluation.ledger.restStress.trueFullRestDays.includes(0)],
   ['M4 observing raw instead of visible week is killed', firstWeek(game).exposureContractV2?.restStress.achievedTrueFullRestCount === gameEvaluation.ledger.restStress.trueFullRestDays.length],
-  ['M5 allowing five hard days without proof is killed', fiveHardRejected],
+  ['M5 rejecting a complete phase-permitted five-hard-day week is killed', fiveHardAccepted],
   ['M6 bypassing Repeat Week gateway is killed', repeatWriteAccepted],
   ['M7 bypassing Coach edits is killed', coachWriteRejected],
   ['M8 lowering selected targets is killed', selectedTargetPreserved],
@@ -891,32 +890,28 @@ let hydrationParticipationStable = false;
 
 {
   const { extraDate } = installOverrideDependency(mid);
-  const before = precedenceSnapshot();
-  const wasRejected = rejected(() => useProgramStore.getState().removeManualOverride(extraDate));
-  overrideRemovalAtomic = wasRejected && precedenceSnapshot() === before &&
-    !!useProgramStore.getState().dateOverrides[extraDate];
-  check('33 removing an override cannot create and store a core shortfall', overrideRemovalAtomic);
+  useProgramStore.getState().removeManualOverride(extraDate);
+  overrideRemovalAtomic = !useProgramStore.getState().dateOverrides[extraDate] && liveWeekAccepted(mid);
+  check('33 removing an override repairs the whole week before publication', overrideRemovalAtomic);
 }
 {
   installOverrideDependency(mid);
-  const before = precedenceSnapshot();
-  const wasRejected = rejected(() => useProgramStore.getState().clearManualOverrides());
-  overrideClearAtomic = wasRejected && precedenceSnapshot() === before;
+  useProgramStore.getState().clearManualOverrides();
+  overrideClearAtomic = Object.keys(useProgramStore.getState().dateOverrides).length === 0 &&
+    liveWeekAccepted(mid);
   check('34 clearing all overrides is atomic', overrideClearAtomic);
 }
 {
   const { weekStart } = installOverlayDependency(mid);
-  const before = precedenceSnapshot();
-  const wasRejected = rejected(() => useProgramStore.getState().removeWeekScopedOverlay(weekStart));
-  overlayRemovalAtomic = wasRejected && precedenceSnapshot() === before &&
-    !!useProgramStore.getState().weekScopedOverlays[weekStart];
-  check('35 removing an overlay cannot create and store a core shortfall', overlayRemovalAtomic);
+  useProgramStore.getState().removeWeekScopedOverlay(weekStart);
+  overlayRemovalAtomic = !useProgramStore.getState().weekScopedOverlays[weekStart] && liveWeekAccepted(mid);
+  check('35 removing an overlay repairs the whole week before publication', overlayRemovalAtomic);
 }
 {
   installOverlayDependency(mid);
-  const before = precedenceSnapshot();
-  const wasRejected = rejected(() => useProgramStore.getState().clearWeekScopedOverlays());
-  overlayClearAtomic = wasRejected && precedenceSnapshot() === before;
+  useProgramStore.getState().clearWeekScopedOverlays();
+  overlayClearAtomic = Object.keys(useProgramStore.getState().weekScopedOverlays).length === 0 &&
+    liveWeekAccepted(mid);
   check('36 clearing all overlays is atomic', overlayClearAtomic);
 }
 {
@@ -1136,7 +1131,7 @@ const runProductionFallback = () => runSection18AcceptedWeekGateway({
 const productionFallback = runProductionFallback();
 regenerationBeforeFallback = fallbackOrder.join(',') === 'regenerate,fallback';
 check('48 production regeneration is attempted before fallback', regenerationBeforeFallback, fallbackOrder);
-fallbackPassedGateway = productionFallback.status !== 'rejected' &&
+fallbackPassedGateway = productionFallback.status !== 'impossible' &&
   productionFallback.repairs.some((repair) => repair.kind === 'safe_fallback_candidate') &&
   productionFallback.evaluation.blockingViolations.length === 0;
 check('49 production fallback passes the same accepted-week gateway', fallbackPassedGateway, productionFallback);
@@ -1202,15 +1197,41 @@ check('51 fallback and repair terminate deterministically', fallbackDeterministi
   });
   const onceAnchor = onceWeek.exposureContractV2!.anchors.find((anchor) => anchor.id === unknownAnchor.id);
   const twiceAnchor = twiceWeek.exposureContractV2!.anchors.find((anchor) => anchor.id === unknownAnchor.id);
+  const ledgerSemantics = (evaluation: typeof onceEvaluation) => JSON.stringify({
+    strength: evaluation.ledger.mainStrength.achievedCount,
+    conditioning: evaluation.ledger.conditioning.coreCount,
+    sprint: evaluation.ledger.sprintHighSpeed.achievedCount,
+    power: evaluation.ledger.power.achievedPrimerCount,
+    hardDays: evaluation.ledger.restStress.hardDays,
+    fullRest: evaluation.ledger.restStress.trueFullRestDays,
+    anchorCredits: evaluation.ledger.anchors.map((anchor) => ({
+      id: anchor.id,
+      participation: anchor.participation,
+      conditioning: anchor.conditioningCredited,
+      sprint: anchor.sprintCredited,
+      hard: anchor.hardDayCredited,
+    })),
+  });
   hydrationParticipationStable = onceAnchor?.participation === 'unknown' &&
     onceAnchor.participationProvenance === 'legacy_unknown' &&
     twiceAnchor?.participation === 'unknown' &&
     twiceAnchor.participationProvenance === 'legacy_unknown' &&
     onceEvaluation.blockingViolations.length === 0 &&
     twiceEvaluation.blockingViolations.length === 0 &&
-    JSON.stringify(onceEvaluation.ledger) === JSON.stringify(twiceEvaluation.ledger);
+    ledgerSemantics(onceEvaluation) === ledgerSemantics(twiceEvaluation);
   check('52 rehydration preserves participation state and accepted-week semantics',
-    hydrationParticipationStable, { onceAnchor, twiceAnchor, onceEvaluation, twiceEvaluation });
+    hydrationParticipationStable, {
+      onceAnchor,
+      twiceAnchor,
+      onceSemantics: ledgerSemantics(onceEvaluation),
+      twiceSemantics: ledgerSemantics(twiceEvaluation),
+      oncePower: onceWeek.workouts.filter((workout) => workout.powerBlock).map((workout) => ({
+        day: workout.dayOfWeek, family: workout.powerBlock?.family, name: workout.name,
+      })),
+      twicePower: twiceWeek.workouts.filter((workout) => workout.powerBlock).map((workout) => ({
+        day: workout.dayOfWeek, family: workout.powerBlock?.family, name: workout.name,
+      })),
+    });
 }
 
 console.log('\n-- Final-boundary properties --');
@@ -1222,13 +1243,13 @@ check('P15 typed participation owns hard-day classification', typedAnchorHardOwn
 check('P16 selected recovery work is not deleted solely to satisfy rest', byeRecoveryPreserved);
 check('P17 safe feasible constrained weeks do not reject without regeneration/fallback', severeUpperAccepted);
 check('P18 all fallbacks pass the same gateway', fallbackPassedGateway && fallbackPreservedContract);
-check('P19 failed gateway transactions preserve the previous accepted state',
-  overrideRemovalAtomic && overlayRemovalAtomic && failedConstraintAtomic);
+check('P19 impossible gateway transactions preserve the previous accepted state',
+  typedRejectionObserved && failedConstraintAtomic);
 
 console.log('\n-- Final-boundary mutation witnesses --');
 const finalBoundaryMutations: Array<[string, boolean]> = [
-  ['M11 bypassing gateway during override deletion is killed', overrideRemovalAtomic && overrideClearAtomic],
-  ['M12 bypassing gateway during overlay deletion is killed', overlayRemovalAtomic && overlayClearAtomic],
+  ['M11 bypassing whole-week repair during override deletion is killed', overrideRemovalAtomic && overrideClearAtomic],
+  ['M12 bypassing whole-week repair during overlay deletion is killed', overlayRemovalAtomic && overlayClearAtomic],
   ['M13 committing constraint before program validation is killed', failedConstraintAtomic],
   ['M14 restoring healthy_legacy_assumption is killed', legacyUnknownStable && hydrationParticipationStable],
   ['M15 classifying all visible TT/game labels as hard is killed', typedAnchorHardOwnership],

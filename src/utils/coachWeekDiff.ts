@@ -44,6 +44,7 @@ import { logger } from './logger';
 import { todayISOLocal as getTodayISOLocal } from './appDate';
 import { deriveProfileReadiness } from './readiness';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 
 // ─── Types ───
 
@@ -142,7 +143,13 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
   const seasonPhase = onboardingData?.seasonPhase || null;
   const usualGameDay = onboardingData?.usualGameDay;
   const gameDay = onboardingData?.gameDay;
-  const acceptedContext = programState.acceptedMaterialContext;
+  // Older persisted states and focused test fixtures can pre-date the
+  // accepted-context field.  The cold-start normalizer is the ownership
+  // boundary for that compatibility case; visible projection should never
+  // dereference a partial store snapshot directly.
+  const acceptedContext = normalizeAcceptedMaterialContext(
+    programState.acceptedMaterialContext,
+  );
   const acceptedOwnsMaterialState = acceptedContext.revision > 0;
   const todayReadinessSignal = acceptedOwnsMaterialState
     ? acceptedContext.readinessSignalsByDate[todayISO]

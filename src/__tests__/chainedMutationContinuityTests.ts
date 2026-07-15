@@ -35,13 +35,11 @@ import {
   RequiredCoreRelocationError,
 } from '../utils/fixtureMinimalReplan';
 import {
-  gameChangeActionFromRebuild,
   resolvedDaysToGameChangeRows,
-  upsertGameChangeCoachNoteFromDiff,
-  weekRebuildResultToGameChangeRows,
 } from '../utils/gameChangeCoachNotes';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
+import { executeHomeGameMutation } from '../screens/home/homeGameMutationController';
 
 const WEEK = '2026-03-23';
 const NEXT_WEEK = '2026-03-30';
@@ -164,6 +162,17 @@ function addSaturday(value = useProfileStore.getState().onboardingData): WeekReb
   });
 }
 
+function addSunday(value = useProfileStore.getState().onboardingData): WeekRebuildResult {
+  return rebuildLocalWeek({
+    baseProfile: value,
+    newGameDay: 'Sunday',
+    scope: 'weekOverlay',
+    targetDate: SUNDAY,
+    manageCalendarFixture: true,
+    todayISO: WEEK,
+  });
+}
+
 function moveToSunday(value = useProfileStore.getState().onboardingData): WeekRebuildResult {
   return rebuildLocalWeek({
     baseProfile: value,
@@ -181,26 +190,6 @@ function visibleRows() {
     WEEK,
     buildScheduleStateImperative(),
   ));
-}
-
-function recordGameNote(result: WeekRebuildResult, newGameDay: DayOfWeek | null, before: ReturnType<typeof visibleRows>, previousDate?: string) {
-  const after = weekRebuildResultToGameChangeRows({
-    result,
-    targetDate: newGameDay === 'Sunday' ? SUNDAY : SATURDAY,
-    newGameDay,
-  });
-  upsertGameChangeCoachNoteFromDiff({
-    action: gameChangeActionFromRebuild({ newGameDay, clearOverlayDate: previousDate }),
-    fixtureKind: useProfileStore.getState().onboardingData.seasonPhase === 'Pre-season'
-      ? 'practice_match'
-      : 'game',
-    targetDate: newGameDay === 'Sunday' ? SUNDAY : SATURDAY,
-    previousDate,
-    weekStartISO: WEEK,
-    before,
-    after,
-    todayISO: WEEK,
-  });
 }
 
 function strengthDose(workout: Workout | undefined): string {
@@ -251,22 +240,43 @@ async function main(): Promise<void> {
     const value = athlete();
     reset(value);
     let before = visibleRows();
-    const removed = removeGame(value);
-    recordGameNote(removed, null, before);
+    const removed = executeHomeGameMutation({
+      baseProfile: value,
+      currentPhase: 'In-season',
+      newGameDay: null,
+      targetDate: SATURDAY,
+      beforeRows: before,
+      todayISO: WEEK,
+    });
+    assert(removed.outcome !== 'impossible', removed.outcome === 'impossible' ? removed.reason : '');
+    const removedSaturday = byDay(accepted()).get(6);
+    assert(/Hard Conditioning/i.test(removedSaturday?.name ?? ''),
+      `Saturday replacement missing after removal: ${removedSaturday?.name}`);
+    assert(removedSaturday?.derivedSessionProvenance?.some((record) =>
+      record.origin === 'fixture_replacement') === true,
+    'Saturday replacement did not persist fixture-replacement provenance');
     before = visibleRows();
-    const added = addSaturday(value);
-    recordGameNote(added, 'Saturday', before);
-    assert(!useCoachUpdatesStore.getState().activeConstraints.some((row) => row.id === `game-change-${WEEK}`),
-      'stale removal note survived add-back');
-    before = visibleRows();
-    const moved = moveToSunday(value);
-    recordGameNote(moved, 'Sunday', before, SATURDAY);
+    const added = executeHomeGameMutation({
+      baseProfile: value,
+      currentPhase: 'In-season',
+      newGameDay: 'Sunday',
+      targetDate: SUNDAY,
+      beforeRows: before,
+      todayISO: WEEK,
+    });
+    assert(added.outcome !== 'impossible', added.outcome === 'impossible' ? added.reason : '');
+    const gameNote = useCoachUpdatesStore.getState().activeConstraints.find((row) =>
+      row.id === `game-change-${WEEK}`);
+    assert(gameNote?.reasonLabel === 'Game added',
+      `stale removal note survived add-back: ${gameNote?.reasonLabel}`);
     const week = accepted();
     const map = byDay(week);
     assert(week.evaluation.ledger.mainStrength.achievedCount === 3, 'Sunday move lost S3');
     assert(map.get(1)?.name === 'Lower Body Strength', `Monday=${map.get(1)?.name}`);
     assert(/Upper Pull/.test(map.get(2)?.name ?? ''), `Tuesday=${map.get(2)?.name}`);
     assert(/Upper Push/.test(map.get(4)?.name ?? ''), `Thursday=${map.get(4)?.name}`);
+    assert(!/Hard Conditioning/i.test(map.get(6)?.name ?? ''),
+      `obsolete Saturday replacement survived: ${map.get(6)?.name}`);
     assert(map.get(0)?.workoutType === 'Game', `Sunday=${map.get(0)?.name}`);
   });
 
@@ -541,8 +551,7 @@ async function main(): Promise<void> {
   await run('properties chained final state equals one atomic final-calendar transition', () => {
     reset();
     removeGame();
-    addSaturday();
-    moveToSunday();
+    addSunday();
     const chained = semantic(accepted());
     reset();
     moveToSunday();

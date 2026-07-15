@@ -574,6 +574,9 @@ function cloneWorkout(workout: Workout, overrides: Partial<Workout>): Workout {
       workout.coachNotes ? [...workout.coachNotes] : undefined
     ),
     ...overrides,
+    // Once Coach accepts a visible content revision, the override is authored
+    // work. It must not inherit the disposable lifecycle of its system source.
+    derivedSessionProvenance: undefined,
     updatedAt: new Date().toISOString(),
   };
 }

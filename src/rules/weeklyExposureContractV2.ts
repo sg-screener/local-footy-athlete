@@ -298,6 +298,9 @@ export interface WeeklyExposureContractV2 {
     achievedTrueFullRestCount: number | null;
     achievedActiveRecoveryCount: number | null;
     preferredHardDayRange: Section18Range;
+    /** Phase/mode-owned blocking ceiling. A preferred count is never a maximum. */
+    permittedHardDayMaximum: number;
+    /** @deprecated Compatibility projection of preferredHardDayRange.max. */
     normalProgrammedHardDayMaximum: number;
     authorisedUnavoidableAnchorExcess: number;
     unavoidableAnchorCausedExcess: number | null;
@@ -588,6 +591,7 @@ interface Section18ModePolicy {
   sprint: { required: number; preferred: Section18Range; max: number | null };
   power: { eligible: boolean; preferred: Section18Range; removalReason: string | null };
   rest: { required: number; preferred: Section18Range };
+  hardDays: { preferred: Section18Range; permittedMaximum: number };
   balance: boolean;
   selectionKind: Section18PlannerSelectionKind;
 }
@@ -631,6 +635,7 @@ function policyFor(input: Pick<
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: !noPower, preferred: { min: 0, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
+        hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
         selectionKind: 'core',
       };
@@ -641,6 +646,7 @@ function policyFor(input: Pick<
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: !noPower, preferred: { min: 0, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
+        hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
         selectionKind: 'core',
       };
@@ -651,6 +657,7 @@ function policyFor(input: Pick<
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'bye_recovery_mode' },
         rest: { required: 2, preferred: { min: 2, max: 3 } },
+        hardDays: { preferred: { min: 2, max: 2 }, permittedMaximum: 4 },
         balance: true,
         selectionKind: 'core',
       };
@@ -661,6 +668,7 @@ function policyFor(input: Pick<
         sprint: { required: 0, preferred: { min: 0, max: 0 }, max: 0 },
         power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'early_offseason' },
         rest: { required: 0, preferred: { min: 3, max: 4 } },
+        hardDays: { preferred: { min: 0, max: 2 }, permittedMaximum: 4 },
         balance: false,
         selectionKind: 'optional',
       };
@@ -671,6 +679,7 @@ function policyFor(input: Pick<
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: !noPower, preferred: { min: 1, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },
+        hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
         selectionKind: 'core',
       };
@@ -681,6 +690,7 @@ function policyFor(input: Pick<
         sprint: { required: 1, preferred: { min: 1, max: 2 }, max: 2 },
         power: { eligible: !noPower, preferred: { min: 1, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },
+        hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
         selectionKind: 'core',
       };
@@ -691,6 +701,7 @@ function policyFor(input: Pick<
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: !noPower, preferred: { min: 1, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },
+        hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
         selectionKind: 'core',
       };
@@ -704,6 +715,7 @@ function policyFor(input: Pick<
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: !noPower, preferred: { min: 1, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },
+        hardDays: { preferred: { min: 3, max: 4 }, permittedMaximum: 5 },
         balance: true,
         selectionKind: 'core',
       };
@@ -968,8 +980,9 @@ export function buildSection18WeeklyExposureContractV2(
       preferredFullRestCount: policy.rest.preferred,
       achievedTrueFullRestCount: null,
       achievedActiveRecoveryCount: null,
-      preferredHardDayRange: { min: 3, max: 4 },
-      normalProgrammedHardDayMaximum: 4,
+      preferredHardDayRange: policy.hardDays.preferred,
+      permittedHardDayMaximum: policy.hardDays.permittedMaximum,
+      normalProgrammedHardDayMaximum: policy.hardDays.preferred.max,
       authorisedUnavoidableAnchorExcess: Math.max(0, input.authorisedUnavoidableAnchorExcess ?? 0),
       unavoidableAnchorCausedExcess: null,
       achievedModerateDayCount: null,

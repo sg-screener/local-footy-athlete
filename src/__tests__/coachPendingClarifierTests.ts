@@ -1965,6 +1965,7 @@ async function runControllerPendingDateSection() {
     ...mondayBase,
     name: 'Lower Body Strength',
     workoutType: 'Strength',
+    hasCombinedConditioning: true,
     conditioningBlock: {
       ...flushTemplate.conditioningBlock,
       options: (flushTemplate.conditioningBlock?.options ?? []).map((option: any) => ({

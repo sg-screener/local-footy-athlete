@@ -14,14 +14,9 @@ import { generateProgramFromProfile } from '../../services/api/generateProgram';
 import {
   commitRebuiltProgram,
   decideSweepForCurrentStores,
-  rebuildLocalWeek,
 } from '../../utils/weekRebuild';
 import {
-  fixtureKindForPhase,
-  gameChangeActionFromRebuild,
   resolvedDaysToGameChangeRows,
-  upsertGameChangeCoachNoteFromDiff,
-  weekRebuildResultToGameChangeRows,
 } from '../../utils/gameChangeCoachNotes';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { applyPhaseShift } from '../../utils/profileMutations';
@@ -68,6 +63,7 @@ import {
   type InteractionMode,
 } from './homeScreenConstants';
 import { logger } from '../../utils/logger';
+import { executeHomeGameMutation } from './homeGameMutationController';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
@@ -662,13 +658,11 @@ export function useHomeScreen() {
   // their own follow-up state (mode/selection) on it.
   const rebuildForGameChange = async (
     newGameDay: DayOfWeek | null,
-    options?: { targetDate: string; clearOverlayDate?: string },
+    options: { targetDate: string; clearOverlayDate?: string },
   ): Promise<boolean> => {
     clearRebuildError();
     try {
-      const beforeRows = options?.targetDate
-        ? resolvedDaysToGameChangeRows(weekDays)
-        : [];
+      const beforeRows = resolvedDaysToGameChangeRows(weekDays);
       if (__DEV__) {
         logger.debug('[GameChange] Canonical local rebuild:', { newGameDay });
       }
@@ -679,34 +673,16 @@ export function useHomeScreen() {
       // decides the preservation sweep with the pure policy, and commits
       // game mark + week overlay + sweep ATOMICALLY. Throws before any state
       // change on failure \u2014 no half-applied weeks possible.
-      const result = rebuildLocalWeek({
+      const mutation = executeHomeGameMutation({
         baseProfile: onboardingData,
+        currentPhase,
         newGameDay,
-        scope: 'weekOverlay',
-        targetDate: options?.targetDate,
-        clearOverlayDate: options?.clearOverlayDate,
-        manageCalendarFixture: true,
+        targetDate: options.targetDate,
+        clearOverlayDate: options.clearOverlayDate,
+        beforeRows,
       });
-      if (options?.targetDate) {
-        const afterRows = weekRebuildResultToGameChangeRows({
-          result,
-          targetDate: options.targetDate,
-          newGameDay,
-        });
-        upsertGameChangeCoachNoteFromDiff({
-          action: gameChangeActionFromRebuild({
-            newGameDay,
-            clearOverlayDate: options.clearOverlayDate,
-          }),
-          fixtureKind: fixtureKindForPhase(currentPhase),
-          targetDate: options.targetDate,
-          previousDate: options.clearOverlayDate,
-          weekStartISO: afterRows[0]?.date ?? options.targetDate,
-          before: beforeRows,
-          after: afterRows,
-          todayISO: todayISOLocal(),
-        });
-      }
+      if (mutation.outcome === 'impossible') throw mutation.error;
+      const result = mutation.result;
       alertGameConflicts(result.sweep.conflictsRemoved);
       return true;
     } catch (err: any) {

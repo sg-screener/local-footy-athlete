@@ -60,6 +60,12 @@ A date-level removal or unavailable/rest mark has `remove_from_date` semantics. 
 
 For a two-TT bye-build week, blocking the released Saturday removes Saturday as a placement option but does not change C3. The missing app core exposure moves to a compatible existing hard day where safe, with optional Gunshow moved or removed before core strength. Moving a Saturday game to Sunday preserves Monday lower, Tuesday pull + TT and Thursday push + TT; Saturday becomes rest or approved light G-1 work, Sunday is the game, and the following Monday—not the preceding Monday—is protected as G+1.
 
+## Whole-week repair and derived-session lifecycle — approved 15 July 2026
+
+Four hard days is the preferred/default shape, not a universal absolute maximum. Contract v2 owns both the preferred range and permitted maximum by phase/mode. Up to five hard days may be accepted where that mode permits five and the complete Section 18 evaluation passes fixture spacing, participation, rest, readiness, injury, exposure and stacking rules. A fifth hard day is never rejected solely because the count is five, and unnecessary or obsolete app stress is never retained solely because five is permitted.
+
+The accepted effective week and proposed mutation now enter one whole-week repair owner. System-derived sessions/components persist typed lifecycle provenance; obsolete work expires before preservation scoring; user/Coach-authored work remains non-disposable. Candidate search continues across deterministic expiry, optional changes, relocation, stacking, pattern restoration, spacing/rest rebalancing, regeneration and fallback before returning typed `impossible`. Fixture IDs, descriptions and historical Coach Notes are not lifecycle authorities.
+
 ## Section 18 phase-planner implementation record — 14 July 2026
 
 Commit `49073d393c19571b39fecf53051f3e3c5fdea452` implements the approved phase-planner ownership boundary without changing the phase clock or Section 18 safety finaliser. The Programming Bible remains the coaching authority; this section records how the approved policy now survives production paths.
@@ -199,7 +205,7 @@ The phase-planner implementation closes the TT-as-strength, target-selection, op
 
 ### 11. Rest and hard days
 
-- [x] [Set minimum/preferred full-rest days and a normal maximum of 4 programmed hard days](#rest-and-hard-day-policy-decisions).
+- [x] [Set minimum/preferred full-rest days, a preferred/default 4-hard-day shape and phase/mode permitted maxima](#rest-and-hard-day-policy-decisions).
 - [x] [Define recovery/flush workouts as active recovery, not full rest](#rest-and-hard-day-policy-decisions).
 - [x] [Prefer compatible stress stacking over spreading hard work across the week](#rest-and-hard-day-policy-decisions).
 
@@ -248,7 +254,7 @@ These short references keep the scenario tables readable. They are summaries, no
 | B-DELOAD | Pre-season automatically deloads every fourth week. The first Off-season block is early/early/mid/mid and explicitly does not deload at Week 4; later late-off-season blocks may use the fourth-week deload policy. Preserve frequency where possible, reduce dose first, preserve one controlled sprint and remove power. |
 | B-CONSTRAINT | Low readiness removes power and reduces dose first. Injury records safe and prohibited patterns and removes affected work. TT credit requires qualifying participation. Equipment substitution precedes reduction. A final week contradicting its reduction is invalid and must repair/regenerate or safely fall back. |
 | B-PATTERN | Default all four patterns every healthy relevant week with equal or near-equal meaningful main-lift counts. Multi-pattern credit requires a meaningful main contribution to each pattern; token accessories never credit it. Restore missed safe patterns; prohibited injury patterns never receive credit. |
-| B-REST | Recovery/flush is active recovery, not full rest. Phase rest targets are explicit in Section 18. Normal programmed hard-day maximum is 4; 5 is allowed only through unavoidable anchors. Prefer compatible stress stacking. |
+| B-REST | Recovery/flush is active recovery, not full rest. Phase rest targets are explicit in Section 18. Four hard days is preferred/default; Contract v2 owns the mode-specific permitted maximum and may permit 5 when the complete week is compliant. Prefer compatible stress stacking. |
 
 ### Baseline minimum, preference, maximum and optional-work comparison
 
@@ -256,14 +262,14 @@ This table deliberately does not turn a preferred range into a requirement. “B
 
 | Mode | Main strength: production required / preferred | Conditioning: production required / preferred | Sprint: production required / preferred | Bible normal maximums | Planner-selected optional/current target behaviour |
 | --- | --- | --- | --- | --- | --- |
-| In-season game | 2 / 2–3 | 3 total from qualifying anchors plus approved top-ups | 1 / 1 | S4; normal programmed hard days 4 | Planner defaults to S3 when safe and reduces to S2 only with typed ownership. App C is 0/1/2 after 2/1/0 TT plus game; optional flush never credits core C. |
-| Bye build | 2 / normally 3, preferred 3–4 | 3 total / 3 | 1 / 1 | S4; normal programmed hard days 4 | Approved app C is 3/2/1/0 after 0/1/2/3 qualifying TT. Gunshow never credits S/C. |
+| In-season game | 2 / 2–3 | 3 total from qualifying anchors plus approved top-ups | 1 / 1 | S4; hard days prefer 4 / permit 5 | Planner defaults to S3 when safe and reduces to S2 only with typed ownership. App C is 0/1/2 after 2/1/0 TT plus game; optional flush never credits core C. |
+| Bye build | 2 / normally 3, preferred 3–4 | 3 total / 3 | 1 / 1 | S4; hard days prefer 4 / permit 5 | Approved app C is 3/2/1/0 after 0/1/2/3 qualifying TT. Gunshow never credits S/C. |
 | Bye recovery | exactly 2 lighter / exactly 2 | No hard app C. 0TT: program 1–2 light; 1TT: optional 1 light; 2+TT: no additional | Preserve 1 unless explicitly reduced | No power; hard-day max 4; rest min2/prefer3 | Light aerobic/flush work is recovery-focused and cannot replace strength or preferred rest. |
 | Early off-season | 0 / 2–3 | 0 / 1–2 light | 0 / 0 | S3; C3; no hard C | All work remains optional and non-compulsory; zero is valid. |
 | Mid off-season build | 3 / 4 | 3 / 3–4 | 1 / 1 | S4; C5; max1 hard C; power prefer1–2 | Normally select S4 with at least four available days; beginner is S2/C2–3/safe sprint1. |
 | Late off-season build | 3 / 4 | 3 / 4 | 1 / 1–2 | S4; C5; sprint2; 1–2 hard C; power prefer1–2 | Normally select S4 and cover all patterns. |
-| Healthy pre-season build | 3 / default 4 | 3 total / default 4 | 1 / 1 | S4; core C4; normal programmed hard days4 | TT never credits S. Qualifying TT replaces only the matching amount of app core C; flush is non-core. |
-| Practice match | 2TT: S3; 1TT: S3; 0TT: S3–4/default3 | Core C3 from anchors plus 0/1/2 app after 2/1/0TT | 1 / 1 | Normal PM credits C1/sprint1/hard1; allow1–2 early primers/max2; hard max4; rest prefer2 | Planner selects S3 by default and fills C3 from PM/TT plus the approved app remainder. TT/PM never credit strength; optional flush/gunshow never fill core requirements. |
+| Healthy pre-season build | 3 / default 4 | 3 total / default 4 | 1 / 1 | S4; core C4; hard days prefer 4 / permit 5 | TT never credits S. Qualifying TT replaces only the matching amount of app core C; flush is non-core. |
+| Practice match | 2TT: S3; 1TT: S3; 0TT: S3–4/default3 | Core C3 from anchors plus 0/1/2 app after 2/1/0TT | 1 / 1 | Normal PM credits C1/sprint1/hard1; allow1–2 early primers/max2; hard days prefer4/permit5; rest prefer2 | Planner selects S3 by default and fills C3 from PM/TT plus the approved app remainder. TT/PM never credit strength; optional flush/gunshow never fill core requirements. |
 | Deload | Preserve phase S frequency where possible | Preserve phase C frequency where possible; late off-season may reduce by 1 | Preserve 1 controlled exposure | First early/mid block W4 never auto-deloads; pre-season remains min3/default4; no power | First-block off-season W4 remains mid build; later late-block reductions and pre-season deloads retain the canonical phase table with typed reductions. |
 
 Contract v2 records `permittedMaximum` separately from required, default, preferred and selected targets. Phase selection is clamped before allocation, and the effective-week observer reports any maximum breach. The legacy compatibility contract remains available to existing consumers but no longer owns the Section 18 phase-table maximum.
@@ -646,21 +652,21 @@ The currently clarified baseline is retained in all questions below: **one genui
 
 | Phase/mode | Audit-time full-rest rule | Audit-time hard-day rule | Evidence concern | Sam decision | Sam notes |
 | --- | --- | --- | --- | --- | --- |
-| In-season game/build bye | Require 1, prefer 1–2 | Prefer 4, permit 5 | Final “full rest” count treats recovery cards as non-training days; a 0TT game week had only 2 hard days. | **Approved:** minimum 1/prefer 2; normal programmed hard max 4; 5 only unavoidable anchors. |  |
+| In-season game/build bye | Require 1, prefer 1–2 | Prefer 4, permit 5 | Final “full rest” count treats recovery cards as non-training days; a 0TT game week had only 2 hard days. | **Approved:** minimum 1/prefer 2; prefer 4 and permit 5 when complete spacing, rest and safety policy passes. |  |
 | Bye recovery | Require 2, prefer 2–3 | Prefer 2, permit 4 | TT anchors can consume both hard days even while sprint target is 0. | **Approved:** minimum 2/prefer 3; qualifying TT remains an anchor; no power. |  |
 | Early off-season | Require 2, prefer 2–3 | Prefer 2, permit 4 | The 7D optional week had 5 conditioning exposures but only 1 classified hard day. | **Approved:** prefer 3–4 full-rest days; no hard conditioning. |  |
-| Mid off-season | Require/prefer 2 | Prefer 4, permit 5 | Stacking often produces only 2–3 hard days despite 3–4 strength plus 3 conditioning. | **Approved:** prefer 2 rest; max 1 hard C; normal programmed hard max 4. |  |
-| Late off-season | Require 1, prefer 1–2 | Prefer 4, permit 5 | The phase shift reduces required rest from 2 to 1 without explicit Bible wording. | **Approved:** prefer 2 rest; 1–2 hard C; normal programmed hard max 4. |  |
-| Pre-season | Require/prefer 2 | Prefer 4, permit 5 | A 3TT week reaches the permitted 5; recovery cards count toward full rest. | **Approved:** prefer 2 rest; normal programmed hard max 4; 5 only unavoidable anchors. |  |
-| Practice match | Require/prefer 2 | Prefer 4, permit 5 | The 0TT PM week has only 1 hard day because its extra work is classified below hard threshold. | **Approved:** normal PM is hard1; reduced participation adjusts it; pre-season prefers 2 rest and max4 programmed hard days. |  |
+| Mid off-season | Require/prefer 2 | Prefer 4, permit 5 | Stacking often produces only 2–3 hard days despite 3–4 strength plus 3 conditioning. | **Approved:** prefer 2 rest; max 1 hard C; prefer 4 hard days and permit 5 when the complete week passes. |  |
+| Late off-season | Require 1, prefer 1–2 | Prefer 4, permit 5 | The phase shift reduces required rest from 2 to 1 without explicit Bible wording. | **Approved:** prefer 2 rest; 1–2 hard C; prefer 4 hard days and permit 5 when the complete week passes. |  |
+| Pre-season | Require/prefer 2 | Prefer 4, permit 5 | A 3TT week reaches the permitted 5; recovery cards count toward full rest. | **Approved:** prefer 2 rest; prefer 4 hard days and permit 5 when the complete week passes. |  |
+| Practice match | Require/prefer 2 | Prefer 4, permit 5 | The 0TT PM week has only 1 hard day because its extra work is classified below hard threshold. | **Approved:** normal PM is hard1; reduced participation adjusts it; pre-season prefers 2 rest, prefers 4 hard days and permits 5 when the complete week passes. |  |
 
 Questions to settle:
 
 | Decision needed | Sam decision | Sam notes |
 | --- | --- | --- |
 | Is a day containing a visible recovery workout a full-rest day, or only an active-recovery day? | **Approved:** active recovery, not full rest. |  |
-| Are hard-day numbers targets, preferred ranges or only maxima? | **Approved:** default shape 4 hard plus 1 moderate; 3 hard is valid when constrained; normal programmed maximum 4. |  |
-| Is 5 ever a normal permitted value, or should the Bible’s “4 max” govern? | **Approved:** 5 only through unavoidable anchor load, never deliberate app programming. |  |
+| Are hard-day numbers targets, preferred ranges or only maxima? | **Approved:** default shape 4 hard plus 1 moderate; 3 hard is valid when constrained; Contract v2 separately owns the phase/mode permitted maximum. |  |
+| Is 5 ever a normal permitted value, or should the Bible’s “4 max” govern? | **Approved:** 5 is permitted in modes whose Contract v2 maximum is 5 when the complete Section 18 week passes; a fifth day may not preserve unnecessary or unsafe app stress. |  |
 | Do all TT sessions and games count as hard regardless of actual load/participation? | **Approved:** only normal hard participation; reduced participation requires adjustment. |  |
 | When should compatible strength/conditioning be stacked to protect full days off? | **Approved:** prefer compatible stacking over spreading hard work across all days. |  |
 

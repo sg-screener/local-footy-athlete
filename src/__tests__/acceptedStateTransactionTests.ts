@@ -599,7 +599,7 @@ run('regression', '20 rollover restores all future overlays atomically', () => {
     'rollover restored only some future overlays');
 });
 
-run('regression', '21 one invalid restored overlay prevents a partial rollover commit', () => {
+run('regression', '21 an invalid restored overlay is regenerated inside one rollover commit', () => {
   const value = profile('Pre-season');
   seed(value, '2026-06-08');
   const future = generate(value, '2026-07-06');
@@ -621,15 +621,15 @@ run('regression', '21 one invalid restored overlay prevents a partial rollover c
       '2026-07-13': invalid,
     },
   });
-  const before = materialSignature();
-  let threw = false;
-  try {
-    rolloverProgramBlock({ baseProfile: value, targetDateISO: '2026-07-06' });
-  } catch {
-    threw = true;
-  }
-  assert(threw, 'invalid restored overlay was accepted');
-  assert(materialSignature() === before, 'invalid rollover partially published');
+  let publishes = 0;
+  const stop = useProgramStore.subscribe(() => { publishes += 1; });
+  const result = rolloverProgramBlock({ baseProfile: value, targetDateISO: '2026-07-06' });
+  stop();
+  const restored = useProgramStore.getState().weekScopedOverlays['2026-07-13'];
+  assert(result.rolledOver, 'rollover did not run');
+  assert(publishes === 1, `rollover published ${publishes} times`);
+  assert(Object.values(restored?.workoutsByDate ?? {}).some(Boolean),
+    'invalid overlay was not regenerated through the whole-week gateway');
 });
 
 run('regression', '22 constraint/program transaction has no observable intermediate state', () => {

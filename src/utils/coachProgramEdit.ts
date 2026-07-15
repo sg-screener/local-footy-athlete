@@ -2020,16 +2020,30 @@ function verifyProgramSetupRebuild(args: {
     };
   }
 
-  const blockedDows = new Set(
-    (edit.setupChange.availabilityConstraints ?? [])
-      .filter((constraint) => constraint.kind === 'unavailable_day' && constraint.dayOfWeek)
-      .map((constraint) => dayOfWeekNumber(constraint.dayOfWeek!)),
+  const unavailable = (nextProfile.availabilityConstraints ?? []).filter((constraint) =>
+    constraint.active !== false &&
+    constraint.kind === 'unavailable_day' &&
+    !!constraint.dayOfWeek,
   );
-  if (blockedDows.size > 0 && workouts.some((workout) => blockedDows.has(workout.dayOfWeek))) {
+  const blockedScheduledDate = program.microcycles.flatMap((microcycle) =>
+    (microcycle.workouts ?? []).map((workout) => ({
+      date: addDaysISO(
+        microcycle.startDate.slice(0, 10),
+        workout.dayOfWeek === 0 ? 6 : workout.dayOfWeek - 1,
+      ),
+      workout,
+    })),
+  ).find(({ date, workout }) =>
+    date >= todayISO && unavailable.some((constraint) =>
+      dayOfWeekNumber(constraint.dayOfWeek!) === workout.dayOfWeek &&
+      (!constraint.startDate || constraint.startDate <= date) &&
+      (!constraint.endDate || constraint.endDate >= date)),
+  );
+  if (blockedScheduledDate) {
     return {
       ok: false,
       reason: 'blocked_day_still_scheduled',
-      reply: 'I rebuilt the week, but it still had training on a blocked day. I did not apply it.',
+      reply: `I rebuilt the week, but it still had training on the blocked date ${blockedScheduledDate.date}. I did not apply it.`,
     };
   }
 

@@ -50,6 +50,10 @@ import {
 import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
 import { requireSection18AcceptedWeek } from '../../rules/section18AcceptedWeekGateway';
 import {
+  rebindDerivedSessionProvenance,
+  stampPlannerDerivedSessionProvenance,
+} from '../../rules/derivedSessionProvenance';
+import {
   getProgrammingRoleBias,
   normalizeOnboardingRole,
   normalizeRoleBucket,
@@ -326,8 +330,9 @@ export function buildGeneratedMicrocycles(args: {
     // week 1. Never replay that single array against week 2-4 allocations.
     // Later weeks use their own deterministic plan/fallback content.
     const sourceCoachWorkouts = stateIndex === 0 ? args.coachWorkouts : [];
-    const buildCanonicalCandidate = (source: typeof sourceCoachWorkouts): Workout[] =>
-      attachRecoveryAddonsToWeek({
+    let exposureContractV2 = weekPlan.weeklyExposureContractV2;
+    const buildCanonicalCandidate = (source: typeof sourceCoachWorkouts): Workout[] => {
+      const built = attachRecoveryAddonsToWeek({
         workouts: buildWorkoutsFromCoach(
           source,
           microcycleId,
@@ -351,8 +356,15 @@ export function buildGeneratedMicrocycles(args: {
         weekKind: blockState.weekKind,
         generationConstraints,
       });
+      return exposureContractV2
+        ? stampPlannerDerivedSessionProvenance({
+            workouts: built,
+            contract: exposureContractV2,
+            weekStart: blockState.weekStart,
+          })
+        : built;
+    };
     let workouts = buildCanonicalCandidate(sourceCoachWorkouts);
-    let exposureContractV2 = weekPlan.weeklyExposureContractV2;
     if (exposureContractV2) {
       const accepted = requireSection18AcceptedWeek({
         contract: exposureContractV2,
@@ -370,7 +382,11 @@ export function buildGeneratedMicrocycles(args: {
           workouts: buildCanonicalCandidate([]),
         }),
       });
-      workouts = accepted.canonicalWorkouts;
+      workouts = rebindDerivedSessionProvenance({
+        workouts: accepted.canonicalWorkouts,
+        contract: accepted.contract,
+        weekStart: blockState.weekStart,
+      });
       exposureContractV2 = accepted.contract;
     }
     const exposureContract = weekPlan.weeklyExposureContract;

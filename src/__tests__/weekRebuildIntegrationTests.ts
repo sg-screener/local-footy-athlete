@@ -622,8 +622,12 @@ console.log('\n── Architectural guard: one canonical rebuild door ──');
   const fs = require('fs');
   const read = (p: string) => fs.readFileSync(`${__dirname}/${p}`, 'utf8') as string;
   const home = read('../screens/home/useHomeScreen.ts');
+  const gameController = read('../screens/home/homeGameMutationController.ts');
   ok('useHomeScreen rebuilds ONLY via rebuildLocalWeek (no direct generateProgramLocally)',
-    /rebuildLocalWeek\(/.test(home) && !/generateProgramLocally\(/.test(home));
+    /executeHomeGameMutation\(/.test(home) &&
+    /rebuildLocalWeek\(/.test(gameController) &&
+    !/generateProgramLocally\(/.test(home) &&
+    !/generateProgramLocally\(/.test(gameController));
   ok('useHomeScreen never calls the raw store sweep or blanket clear',
     !/clearManualOverridesPreservingActiveModifiers\(/.test(home) &&
     !/\bclearManualOverrides\(\)/.test(home));

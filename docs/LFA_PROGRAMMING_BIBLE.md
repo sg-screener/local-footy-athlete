@@ -4513,6 +4513,15 @@ Chained-mutation continuity and core relocation
 * Required core relocation prefers an existing compatible hard day when safe, then another effective available day. Optional work is moved or removed before valid core strength is rewritten. Relocation must preserve the approved phase target, strength-pattern balance, rest and hard-day rules.
 * If no safe relocation satisfies the unchanged Contract v2, the mutation is rejected with a typed relocation failure. The calendar, overlay, overrides, contract and visible week remain the prior accepted snapshot.
 
+Whole-week repair and derived-session lifecycle
+
+* The currently accepted effective week plus the proposed mutation enters one deterministic whole-week repair owner. Fixture, availability, readiness, injury, equipment, Coach edit, Repeat Week, rebuild, rollover, future activation and rehydration paths do not own separate repair or lifecycle policies.
+* Every system-derived session or component persists typed provenance recording authorship, origin, trigger/contract signature, target metric, supplied credit, originating fixture/date, valid-while and invalidation conditions, replacement/relocation history and source `planEntryId` where applicable. Supported origins include fixture replacement, contract-shortfall repair, required-core relocation, pattern-balance repair, rest-distribution repair, safety substitution, equipment substitution and optional planner addition.
+* Derived work exists only while its typed validity conditions remain true. The repair owner expires or downgrades obsolete system work before preservation scoring, then recalculates the target ledger. A fixture-replacement top-up therefore expires when a qualifying game/practice-match returns and supplies that credit; an untyped identifier prefix is never sufficient lifecycle evidence.
+* Work without system-derived provenance is not disposable by derived-work expiry. User- and Coach-authored work is preserved where safe, moved or adjusted only through normal repair, and never silently deleted as fixture replacement.
+* A blocking candidate starts deterministic whole-week search: expire obsolete derived work; change optional work; relocate/stack required work; preserve unaffected core; restore patterns; rebalance spacing/rest; evaluate multiple candidates; then regenerate and safely fall back. One failed candidate or repeated finding signature does not end search while an untried candidate remains.
+* Ordinary mutations return typed `accepted`, `repaired`, `regenerated`, `fallback` or `impossible` outcomes. `impossible` preserves the previous accepted snapshot and exposes a safe reason; internal findings remain diagnostic.
+
 Field-action power credit
 
 * Team training, games and practice matches do not automatically count as formal power-primer exposure.
@@ -4616,8 +4625,10 @@ Hard-day policy
 
 * Default weekly shape is 4 hard days plus 1 moderate day.
 * 3 hard days is valid when phase, readiness, availability or injury requires it.
-* Maximum normal programmed hard days is 4.
-* 5 may occur only through unavoidable anchor load, not deliberate app programming.
+* 4 hard days is the preferred/default shape, not a universal blocking maximum.
+* Contract v2 owns the permitted hard-day maximum for the selected phase and mode. Up to 5 hard days may be accepted in an in-season game or bye-build week, mid/late off-season build, pre-season build or practice-match week when fixture-relative spacing, participation, readiness, injury, exposure and full-rest rules all pass. Modes with a lower phase maximum retain that lower maximum.
+* A fifth hard day may come from an unavoidable anchor or Bible-required/planner-selected app work, but unnecessary app-selected stress is not justified merely because the scalar maximum permits 5.
+* The final whole week is evaluated against the complete Section 18 contract. A count of 5 alone is advisory, not a blocking finding; unsafe G-relative placement, missing rest, prohibited work, invalid stacking or a phase-specific permitted-maximum breach remains blocking.
 * Long slow aerobic work is medium stress when intensity is controlled.
 * TT and games count as hard only with normal hard participation.
 * A practice match counts as 1 hard day only with normal participation; reduced or modified participation requires explicit adjustment.
