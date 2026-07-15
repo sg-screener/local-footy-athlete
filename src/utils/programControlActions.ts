@@ -455,6 +455,7 @@ function executePlanChangeAction(
     visibleWeek: context.visibleWeek,
     todayISO: context.todayISO,
     setManualOverride: context.setManualOverride ?? defaultSetManualOverride,
+    trace: risk.trace,
   });
   return {
     ok: result.ok,

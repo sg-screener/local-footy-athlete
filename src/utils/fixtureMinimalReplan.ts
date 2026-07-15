@@ -94,6 +94,7 @@ export type FixtureMutationIntent =
   | 'fixture_transition'
   | 'remove_from_date'
   | 'athlete_removal'
+  | 'athlete_move'
   | 'remove_weekly_exposure';
 
 export class RequiredCoreRelocationError extends Error {
@@ -1147,10 +1148,14 @@ export function buildFixtureMinimalReplan(
     args.userRemovalConstraints,
     args.weekStart,
   ).sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
-  if (args.mutationIntent === 'athlete_removal' || activeRemovalConstraint) {
+  if (
+    args.mutationIntent === 'athlete_removal' ||
+    args.mutationIntent === 'athlete_move' ||
+    activeRemovalConstraint
+  ) {
     const constraint = activeRemovalConstraint;
     if (!constraint) {
-      throw new Error('Athlete-removal repair requires an active typed removal constraint');
+      throw new Error('Athlete mutation repair requires an active typed constraint');
     }
     const seenFallbackSeeds = new Set<string>();
     for (const fallbackSeed of structuralFallbackSeeds) {

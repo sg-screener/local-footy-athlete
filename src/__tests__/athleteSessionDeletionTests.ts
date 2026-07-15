@@ -43,7 +43,7 @@ import {
 import { rebuildLocalWeek } from '../utils/weekRebuild';
 import { addDaysISO } from '../utils/programBlockState';
 import { executeProgramControlAction } from '../utils/programControlActions';
-import { applyPlanChange } from '../utils/planChangeProducer';
+import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProducer';
 import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
@@ -235,6 +235,37 @@ function deleteWorkout(args: {
   });
 }
 
+function deleteThroughRealSheetDoor(date: string): void {
+  const before = JSON.stringify({
+    overlays: useProgramStore.getState().weekScopedOverlays,
+    constraints: useProgramStore.getState().userRemovalConstraints,
+    context: useProgramStore.getState().acceptedMaterialContext,
+  });
+  const week = visibleWeek();
+  const preview = previewPlanChangeRisk({
+    change: { kind: 'remove_session', date },
+    visibleWeek: week,
+    todayISO: WEEK,
+    profile: useProfileStore.getState().onboardingData ?? undefined,
+  });
+  assert(preview.ok, `preview rejected deletion: ${JSON.stringify(preview.rejected)}`);
+  assert(JSON.stringify({
+    overlays: useProgramStore.getState().weekScopedOverlays,
+    constraints: useProgramStore.getState().userRemovalConstraints,
+    context: useProgramStore.getState().acceptedMaterialContext,
+  }) === before, 'deletion preview mutated accepted state');
+  const result = applyPlanChange({
+    change: { kind: 'remove_session', date },
+    visibleWeek: week,
+    todayISO: WEEK,
+    trace: preview.trace,
+    setManualOverride: () => {
+      throw new Error('athlete deletion must not use the single-date writer');
+    },
+  });
+  assert(result.ok, `commit rejected deletion: ${JSON.stringify(result.rejected)}`);
+}
+
 function seedExactSundayRegression(): {
   athlete: OnboardingData;
   sunday: Workout;
@@ -356,7 +387,7 @@ console.log('\n-- Athlete session deletion regressions --');
 
 run('regression', '1 exact Sunday CORE conditioning deletion relocates to Saturday', () => {
   const seeded = seedExactSundayRegression();
-  deleteWorkout({ date: SUNDAY, workout: seeded.sunday });
+  deleteThroughRealSheetDoor(SUNDAY);
   const week = accepted();
   const map = byDay();
   assert(!map.has(0), `Sunday resurrected as ${map.get(0)?.name}`);
@@ -410,7 +441,7 @@ run('regression', '2 CORE strength deletion repairs on another valid day', () =>
       .includes(workout.dayOfWeek));
   assert(target, 'CORE strength target missing');
   const date = dateForDay(WEEK, target.dayOfWeek);
-  deleteWorkout({ date, workout: target });
+  deleteThroughRealSheetDoor(date);
   const after = accepted();
   assert(!byDay().has(target.dayOfWeek), 'deleted strength date is not Rest');
   assert(after.evaluation.blockingViolations.length === 0,
@@ -428,7 +459,7 @@ run('regression', '3 optional session deletes without replacement', () => {
   const gunshow = byDay().get(6);
   assert(gunshow?.sessionTier === 'optional', 'optional precondition missing');
   const before = accepted();
-  deleteWorkout({ date: SATURDAY, workout: gunshow });
+  deleteThroughRealSheetDoor(SATURDAY);
   const after = accepted();
   assert(!byDay().has(6), 'optional Saturday was replaced');
   assert(after.evaluation.ledger.mainStrength.achievedCount === before.evaluation.ledger.mainStrength.achievedCount,

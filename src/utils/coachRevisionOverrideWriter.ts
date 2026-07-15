@@ -86,6 +86,9 @@ export function applyCoachRevisionDateOverrides(
   const daysByDate = new Map(input.visibleWeek.map((day) => [day.date, day]));
   const built: CoachRevisionOverrideWrite[] = [];
   const rejected: CoachRevisionOverrideRejection[] = [];
+  const deferWeekAcceptanceToTransaction =
+    input.deferWeekAcceptanceToTransaction === true ||
+    validation.diff.changedDates.length > 1;
 
   // Phase 1 — build and verify EVERY day purely, no writes. Multi-day
   // proposals (moves) must be atomic: a partial move that empties the source
@@ -116,7 +119,7 @@ export function applyCoachRevisionDateOverrides(
       revisedDay: revised,
       todayISO: input.todayISO,
       donorWorkout,
-      deferWeekAcceptanceToTransaction: input.deferWeekAcceptanceToTransaction,
+      deferWeekAcceptanceToTransaction,
     });
     if (builtDay.ok === false) {
       rejected.push({
@@ -141,6 +144,15 @@ export function applyCoachRevisionDateOverrides(
   // Phase 2 — all-or-nothing. Any rejection means NOTHING is written.
   if (rejected.length > 0) {
     return { applied: [], rejected };
+  }
+  if (built.length > 1 && input.setManualOverride) {
+    return {
+      applied: [],
+      rejected: [{
+        code: 'multi_date_transaction_required',
+        reason: 'Multi-date athlete revisions must publish through the accepted-state transaction.',
+      }],
+    };
   }
   for (const write of built) {
     input.setManualOverride?.(write.date, write.workout, write.context);

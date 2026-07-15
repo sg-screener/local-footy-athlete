@@ -12,7 +12,7 @@ const diagnosticStorage = new Map<string, string>();
 };
 
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
-import type { OverrideContext, Workout } from '../types/domain';
+import type { Workout } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import {
   beginAthleteActionTrace,
@@ -178,30 +178,22 @@ async function main(): Promise<void> {
   // 2. One trace survives the complete tap-move path.
   enableDiagnostics();
   resetAcceptedState();
-  const writes: Record<string, Workout> = {};
-  const contexts: Record<string, OverrideContext> = {};
   const tapMove = applyPlanChange({
     change: { kind: 'move_session', fromDate: SOURCE, toDate: TARGET },
     visibleWeek: visibleWeek(),
     todayISO: TODAY,
-    setManualOverride: (date, value, context) => {
-      if (value) writes[date] = value;
-      else delete writes[date];
-      if (context) contexts[date] = context;
-      commitAcceptedStateTransaction({
-        reason: `diagnostic:tap_move:${date}`,
-        program: { dateOverrides: { ...writes }, overrideContexts: { ...contexts } },
-        validateWeekStarts: [],
-      });
+    setManualOverride: () => {
+      throw new Error('tap move must not use the single-date writer');
     },
+    commitAthleteMove: () => simpleAcceptedCommit('diagnostic:tap_move'),
   });
   const tapMoveEvents = getAthleteActionDiagnosticEvents(tapMove.traceId);
   check('2 tap move is accepted', tapMove.ok, tapMove);
-  check('2 tap move retains source/target and one trace across both writes',
+  check('2 tap move retains source/target and one trace across one publication',
     tapMoveEvents.length > 0 &&
     new Set(tapMoveEvents.map((event) => event.traceId)).size === 1 &&
     tapMoveEvents.every((event) => event.sourceDate === SOURCE && event.targetDate === TARGET) &&
-    tapMoveEvents.filter((event) => event.event === 'accepted_state_publication_result').length >= 2,
+    tapMoveEvents.filter((event) => event.event === 'accepted_state_publication_result').length === 1,
     tapMoveEvents);
 
   // 3. Coach and tap routes expose equivalent diagnostic stages.

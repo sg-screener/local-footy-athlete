@@ -47,9 +47,16 @@ import {
 import type { ProgramEditRiskAssessment } from './programEditRiskAssessment';
 import { assessProgramEditWrites } from './programEditWriteGuard';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { useProfileStore } from '../store/profileStore';
 import {
+  commitAthleteSessionMoveTransaction,
   commitAthleteSessionDeletionTransaction,
+  stageAthleteSessionDeletionTransaction,
+  stageAthleteSessionMoveTransaction,
+  type AcceptedStateTransactionResult,
   type AthleteSessionDeletionTransactionInput,
+  type AthleteSessionMoveTransactionInput,
 } from '../store/acceptedStateTransaction';
 import {
   athleteActionDiagnosticHash,
@@ -872,6 +879,8 @@ export interface PlanChangeRiskPreviewResult {
   rejected: Array<{ date: string | null; code: string; reason: string }>;
   proposedWeek: ResolvedDay[];
   assessment: ProgramEditRiskAssessment;
+  /** Correlation context reused by the real commit door. */
+  trace: AthleteActionTraceContext;
 }
 
 function validationPolicyForPlanChange(
@@ -910,6 +919,57 @@ function withPreviewWrites(
   ));
 }
 
+function proposedWeekFromAcceptedStage(args: {
+  visibleWeek: ResolvedDay[];
+  staged: AcceptedStateTransactionResult;
+  profile?: ValidateProgramWeekInput['profile'];
+}): ResolvedDay[] {
+  const weeks = new Map<string, Map<number, Workout>>();
+  for (const day of args.visibleWeek) {
+    const weekStart = getMondayForDate(day.date);
+    if (weeks.has(weekStart)) continue;
+    const accepted = rebaseAcceptedEffectiveWeek({
+      surfaces: args.staged.program,
+      weekStart,
+      profile: args.profile ?? useProfileStore.getState().onboardingData,
+      markedDays: args.staged.context.markedDays,
+    });
+    weeks.set(weekStart, new Map(accepted.visibleWorkouts.map((workout) =>
+      [workout.dayOfWeek, workout])));
+  }
+  return args.visibleWeek.map((day) => {
+    const acceptedByDay = weeks.get(getMondayForDate(day.date));
+    if (!acceptedByDay) return day;
+    return {
+      ...day,
+      workout: acceptedByDay.get(new Date(`${day.date}T12:00:00`).getDay()) ?? null,
+      source: 'manual' as const,
+    };
+  });
+}
+
+function athleteMoveInput(args: {
+  change: Extract<PlanChange, { kind: 'move_session' }>;
+  visibleWeek: ResolvedDay[];
+  source: 'tap' | 'coach';
+}): AthleteSessionMoveTransactionInput | null {
+  const sourceWorkout = args.visibleWeek.find((day) =>
+    day.date === args.change.fromDate)?.workout ?? null;
+  if (!sourceWorkout) return null;
+  return {
+    sourceDate: args.change.fromDate,
+    targetDate: args.change.toDate,
+    reason: `${args.source}:move_session:${args.change.fromDate}:${args.change.toDate}`,
+    source: args.source,
+    acceptedSourcePlanEntryId: sourceWorkout.planEntryId ?? null,
+    sourceWorkoutId: sourceWorkout.id,
+    originalSourceWorkout: sourceWorkout,
+    existingTargetWorkout: args.visibleWeek.find((day) =>
+      day.date === args.change.toDate)?.workout ?? null,
+    scope: 'whole_session',
+  };
+}
+
 function blockedAssessmentForBuildError(
   change: PlanChange,
   error: string,
@@ -946,88 +1006,197 @@ export function previewPlanChangeRisk(args: {
   todayISO: string;
   profile?: ValidateProgramWeekInput['profile'];
   activeConstraints?: readonly ActiveConstraint[];
+  trace?: AthleteActionTraceContext;
 }): PlanChangeRiskPreviewResult {
-  const proposal = buildPlanChangeProposal(args.change, {
-    visibleWeek: args.visibleWeek,
-    todayISO: args.todayISO,
-  });
-  if ('error' in proposal) {
-    const blocked = blockedAssessmentForBuildError(args.change, proposal.error);
-    if (blocked) {
-      return {
-        ok: true,
-        message: blocked.findings[0]?.message ?? "That change can't be applied here.",
+  const source = sourceDate(args.change);
+  const target = targetDate(args.change);
+  const sourceWorkout = source
+    ? args.visibleWeek.find((day) => day.date === source)?.workout ?? null
+    : null;
+  const trace = beginAthleteActionTrace({
+    source: 'tap',
+    actionType: diagnosticActionType(args.change),
+    route: 'plan_change_preview',
+    currentWeekId: getMondayForDate(target ?? args.todayISO),
+    sourceDate: source,
+    targetDate: target,
+    sessionDate: source ?? target,
+    planEntryId: sourceWorkout?.planEntryId ?? null,
+    workoutId: sourceWorkout?.id ?? null,
+    scope: args.change.kind === 'remove_session' ? args.change.scope ?? 'whole_day' : null,
+    sessionTier: sourceWorkout?.sessionTier ?? null,
+    workoutType: sourceWorkout?.workoutType ?? null,
+  }, args.trace);
+  return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_mutation_received', {
+      mutationType: args.change.kind,
+      door: 'previewPlanChangeRisk',
+    });
+    const emptyAssessment: ProgramEditRiskAssessment = {
+      decision: 'allow',
+      highestLevel: 'info',
+      findings: [],
+      introducedRuleIds: [],
+      worsenedRuleIds: [],
+    };
+    const finish = (
+      result: Omit<PlanChangeRiskPreviewResult, 'trace'>,
+      fields: Record<string, unknown> = {},
+    ): PlanChangeRiskPreviewResult => {
+      emitAthleteActionEvent(trace, 'mutation_preview_result', {
+        previewOk: result.ok,
+        mutationType: args.change.kind,
+        appliedDates: result.appliedDates,
+        rejectionCodes: result.rejected.map((entry) => entry.code),
+        selectedOutcome: result.ok ? 'publishable' : 'rejected',
+        rejectingBoundary: result.ok ? null : 'previewPlanChangeRisk',
+        proposedStateHash: athleteActionDiagnosticHash(result.proposedWeek.map((day) => ({
+          date: day.date,
+          identity: day.workout?.planEntryId ?? day.workout?.id ?? null,
+        }))),
+        ...fields,
+      });
+      return { ...result, trace };
+    };
+    const proposal = buildPlanChangeProposal(args.change, {
+      visibleWeek: args.visibleWeek,
+      todayISO: args.todayISO,
+    });
+    if ('error' in proposal) {
+      const blocked = blockedAssessmentForBuildError(args.change, proposal.error);
+      if (blocked) {
+        return finish({
+          ok: true,
+          message: blocked.findings[0]?.message ?? "That change can't be applied here.",
+          appliedDates: [],
+          rejected: [],
+          proposedWeek: args.visibleWeek,
+          assessment: blocked,
+        }, { internalResultCode: proposal.error });
+      }
+      return finish({
+        ok: false,
+        message: `That change isn't possible here (${proposal.error}).`,
         appliedDates: [],
         rejected: [],
         proposedWeek: args.visibleWeek,
-        assessment: blocked,
-      };
+        assessment: emptyAssessment,
+      }, { internalResultCode: proposal.error });
     }
-    return {
-      ok: false,
-      message: `That change isn't possible here (${proposal.error}).`,
-      appliedDates: [],
-      rejected: [],
-      proposedWeek: args.visibleWeek,
-      assessment: {
-        decision: 'allow',
-        highestLevel: 'info',
-        findings: [],
-        introducedRuleIds: [],
-        worsenedRuleIds: [],
-      },
-    };
-  }
 
-  const preview = applyCoachRevisionDateOverrides({
-    proposal,
-    visibleWeek: args.visibleWeek,
-    todayISO: args.todayISO,
-    validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
-  });
-  if (preview.applied.length === 0 || preview.rejected.length > 0) {
-    return {
-      ok: false,
-      message: "I couldn't safely make that change, so the plan is untouched.",
+    const isAthleteTransaction = args.change.kind === 'move_session' ||
+      args.change.kind === 'remove_session';
+    const preview = applyCoachRevisionDateOverrides({
+      proposal,
+      visibleWeek: args.visibleWeek,
+      todayISO: args.todayISO,
+      validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
+      deferWeekAcceptanceToTransaction: isAthleteTransaction,
+    });
+    if (preview.applied.length === 0 || preview.rejected.length > 0) {
+      return finish({
+        ok: false,
+        message: "I couldn't safely make that change, so the plan is untouched.",
+        appliedDates: preview.applied.map((write) => write.date),
+        rejected: rejectedForResult(preview.rejected),
+        proposedWeek: args.visibleWeek,
+        assessment: emptyAssessment,
+      }, { internalResultCode: preview.rejected[0]?.code ?? 'proposal_write_build_failed' });
+    }
+
+    let proposedWeek = withPreviewWrites(args.visibleWeek, preview.applied);
+    let selectedOutcome = 'single_date_candidate';
+    try {
+      if (args.change.kind === 'remove_session') {
+        const removal = args.change;
+        const sourceWorkout = args.visibleWeek.find((day) =>
+          day.date === removal.date)?.workout ?? null;
+        const write = preview.applied.find((candidate) =>
+          candidate.date === removal.date);
+        if (!sourceWorkout || !write) throw new Error('Athlete removal identity missing');
+        const scopeMap: Record<PlanChangeBinScopeId, UserRemovalScope> = {
+          whole_day: 'whole_session',
+          strength: 'strength_component',
+          conditioning: 'conditioning_component',
+          recovery: 'recovery_component',
+          team: 'team_component',
+        };
+        const staged = stageAthleteSessionDeletionTransaction({
+          date: removal.date,
+          reason: `tap:remove_session:${removal.date}`,
+          source: 'tap',
+          scope: scopeMap[removal.scope ?? 'whole_day'],
+          originalWorkout: sourceWorkout,
+          remainingWorkout: write.workout.workoutType === 'Rest' ? null : write.workout,
+          equivalentExposureMayRelocate: true,
+        }, { purpose: 'preview' });
+        proposedWeek = proposedWeekFromAcceptedStage({
+          visibleWeek: args.visibleWeek,
+          staged: staged.result,
+          profile: args.profile,
+        });
+        selectedOutcome = staged.outcome;
+      } else if (args.change.kind === 'move_session') {
+        const input = athleteMoveInput({
+          change: args.change,
+          visibleWeek: args.visibleWeek,
+          source: 'tap',
+        });
+        if (!input) throw new Error('Athlete move identity missing');
+        const staged = stageAthleteSessionMoveTransaction(input, { purpose: 'preview' });
+        proposedWeek = proposedWeekFromAcceptedStage({
+          visibleWeek: args.visibleWeek,
+          staged: staged.result,
+          profile: args.profile,
+        });
+        selectedOutcome = staged.outcome;
+      }
+    } catch (error) {
+      const code = (error as { code?: string })?.code ??
+        (error instanceof Error ? error.name : 'athlete_mutation_preview_failed');
+      return finish({
+        ok: false,
+        message: "I couldn't safely make that change, so the plan is untouched.",
+        appliedDates: [],
+        rejected: [{
+          date: source ?? target ?? null,
+          code,
+          reason: error instanceof Error ? error.message : String(error),
+        }],
+        proposedWeek: args.visibleWeek,
+        assessment: emptyAssessment,
+      }, { internalResultCode: code, rejectingBoundary: 'stageAthleteMutationTransaction' });
+    }
+
+    const riskWrites = proposedWeek
+      .filter((day) => {
+        const before = args.visibleWeek.find((candidate) => candidate.date === day.date)?.workout ?? null;
+        return JSON.stringify(before) !== JSON.stringify(day.workout);
+      })
+      .map((day) => ({ date: day.date, workout: day.workout }));
+    // The accepted-state transaction has already repaired and gated the
+    // complete candidate. Sending its changed dates back through the legacy
+    // risk writer would re-run the single-date finaliser on each half and
+    // recreate the exact preview/commit mismatch this boundary removes.
+    const assessment = isAthleteTransaction
+      ? emptyAssessment
+      : assessProgramEditWrites({
+          writes: riskWrites,
+          visibleWeek: args.visibleWeek,
+          profile: args.profile,
+          activeConstraints: args.activeConstraints,
+          todayISO: args.todayISO,
+        }) ?? emptyAssessment;
+
+    return finish({
+      ok: true,
+      message: 'Preview ready.',
       appliedDates: preview.applied.map((write) => write.date),
-      rejected: rejectedForResult(preview.rejected),
-      proposedWeek: args.visibleWeek,
-      assessment: {
-        decision: 'allow',
-        highestLevel: 'info',
-        findings: [],
-        introducedRuleIds: [],
-        worsenedRuleIds: [],
-      },
-    };
-  }
-
-  const proposedWeek = withPreviewWrites(args.visibleWeek, preview.applied);
-  const assessment = assessProgramEditWrites({
-    writes: preview.applied.map((write) => ({
-      date: write.date,
-      workout: write.workout,
-    })),
-    visibleWeek: args.visibleWeek,
-    profile: args.profile,
-    activeConstraints: args.activeConstraints,
-    todayISO: args.todayISO,
-  }) ?? {
-    decision: 'allow',
-    highestLevel: 'info',
-    findings: [],
-    introducedRuleIds: [],
-    worsenedRuleIds: [],
-  };
-
-  return {
-    ok: true,
-    message: 'Preview ready.',
-    appliedDates: preview.applied.map((write) => write.date),
-    rejected: [],
-    proposedWeek,
-    assessment,
-  };
+      rejected: [],
+      proposedWeek,
+      assessment,
+    }, { selectedOutcome });
+  });
 }
 
 export interface ApplyPlanChangeInput {
@@ -1041,6 +1210,8 @@ export interface ApplyPlanChangeInput {
   ) => void;
   /** Test/host seam; production defaults to the accepted-state transaction. */
   commitAthleteRemoval?: (input: AthleteSessionDeletionTransactionInput) => unknown;
+  /** Test/host seam; production defaults to the accepted-state move transaction. */
+  commitAthleteMove?: (input: AthleteSessionMoveTransactionInput) => unknown;
   trace?: AthleteActionTraceContext;
   route?: string;
 }
@@ -1083,6 +1254,10 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
     workoutType: sourceWorkout?.workoutType ?? null,
   }, args.trace);
   return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_mutation_received', {
+      mutationType: args.change.kind,
+      door: 'applyPlanChange',
+    });
     emitAthleteActionEvent(trace, 'athlete_action_parsed', {
       parsedMutationType: args.change.kind,
       beforeStateHash: athleteActionDiagnosticHash(args.visibleWeek.map((day) => ({
@@ -1143,6 +1318,12 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
       finalUiMessageKey: uiMessageKey,
       genericMessageSelected: uiMessageKey === 'plan_change_generic_unsafe',
     });
+    emitAthleteActionEvent(trace, 'ui_outcome_mapped', {
+      uiSurface: 'plan_change_result',
+      uiOutcome: result.ok ? 'success' : 'failure',
+      internalResultCode,
+      finalUiMessageKey: uiMessageKey,
+    });
     return athleteActionDiagnosticsEnabled()
       ? { ...result, traceId: trace.traceId, internalResultCode, uiMessageKey }
       : result;
@@ -1168,8 +1349,10 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
     visibleWeek: args.visibleWeek,
     todayISO: args.todayISO,
     validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
-    deferWeekAcceptanceToTransaction: args.change.kind === 'remove_session',
-    setManualOverride: args.change.kind === 'remove_session'
+    deferWeekAcceptanceToTransaction: args.change.kind === 'remove_session' ||
+      args.change.kind === 'move_session',
+    setManualOverride: args.change.kind === 'remove_session' ||
+      args.change.kind === 'move_session'
       ? undefined
       : args.setManualOverride,
   });
@@ -1224,6 +1407,40 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
         rejected: [{
           date: removal.date,
           code: 'athlete_removal_publication_failed',
+          reason: (error as Error)?.message ?? String(error),
+        }],
+      };
+    }
+  }
+
+  if (args.change.kind === 'move_session') {
+    const move = athleteMoveInput({
+      change: args.change,
+      visibleWeek: args.visibleWeek,
+      source: 'tap',
+    });
+    if (!move) {
+      return {
+        ok: false,
+        message: "I couldn't safely make that change, so the plan is untouched.",
+        appliedDates: [],
+        rejected: [{
+          date: args.change.fromDate,
+          code: 'athlete_move_identity_missing',
+          reason: 'The accepted source session was unavailable.',
+        }],
+      };
+    }
+    try {
+      (args.commitAthleteMove ?? commitAthleteSessionMoveTransaction)(move);
+    } catch (error) {
+      return {
+        ok: false,
+        message: "I couldn't safely make that change, so the plan is untouched.",
+        appliedDates: [],
+        rejected: [{
+          date: args.change.fromDate,
+          code: (error as { code?: string })?.code ?? 'athlete_move_publication_failed',
           reason: (error as Error)?.message ?? String(error),
         }],
       };

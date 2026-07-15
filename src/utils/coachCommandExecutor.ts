@@ -30,7 +30,6 @@ import {
 } from './coachModalitySwapOrchestrator';
 import {
   applyAdjustmentEvents,
-  applyMoveSession,
   type ApplyEventsResult,
   type ApplyOptions,
   type ApplyMoveSessionInput,
@@ -94,6 +93,7 @@ import {
 } from './coachPlan';
 import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
 import {
+  commitAthleteSessionMoveTransaction,
   commitAthleteSessionDeletionTransaction,
   getAcceptedMaterialContext,
 } from '../store/acceptedStateTransaction';
@@ -257,7 +257,7 @@ export interface ReplaceExerciseDeps {
  * tests inject stubs to keep the harness pure.
  */
 export interface MoveSessionDeps {
-  /** Replaces `applyMoveSession` for the cross-date orchestration. */
+  /** Replaces the accepted-state move transaction adapter in tests. */
   applyMove?: (input: ApplyMoveSessionInput, opts: ApplyOptions) => ApplyMoveSessionResult;
   /** Replaces `verifyRenderedSessionMove` for the post-apply check. */
   verifyRendered?: (args: {
@@ -512,6 +512,10 @@ export function executeCoachCommand(input: ExecuteCoachCommandInput): ExecutionR
     scope: input.command.mode === 'mutate' ? input.command.scope : null,
   }, input.trace);
   return runWithAthleteActionTrace(trace, () => {
+    emitAthleteActionEvent(trace, 'athlete_mutation_received', {
+      mutationType: operation,
+      door: 'executeCoachCommand',
+    });
     emitAthleteActionEvent(trace, 'athlete_action_parsed', {
       parsedMutationType: operation,
       commandMode: input.command.mode,
@@ -567,6 +571,12 @@ export function executeCoachCommand(input: ExecuteCoachCommandInput): ExecutionR
         internalResultCode,
         applied: result.applied,
         executorRoute: result.route,
+        finalUiMessageKey: internalResultCode,
+      });
+      emitAthleteActionEvent(trace, 'ui_outcome_mapped', {
+        uiSurface: 'coach_chat',
+        uiOutcome: result.kind,
+        internalResultCode,
         finalUiMessageKey: internalResultCode,
       });
       return result;
@@ -3849,36 +3859,6 @@ function appendSessionCoachNote(workout: Workout, note: string): string[] {
   return notes;
 }
 
-function cloneWorkoutForRisk(
-  workout: Workout,
-  targetDate: string,
-  overrides: Partial<Workout> = {},
-): Workout {
-  const clone: Workout = JSON.parse(JSON.stringify(workout));
-  return {
-    ...clone,
-    ...overrides,
-    dayOfWeek: new Date(`${targetDate}T12:00:00`).getDay(),
-    updatedAt: new Date().toISOString(),
-  };
-}
-
-function buildMoveRestShellForRisk(
-  sourceWorkout: Workout,
-  sourceDate: string,
-  destDate: string,
-): Workout {
-  return cloneWorkoutForRisk(sourceWorkout, sourceDate, {
-    name: 'Rest',
-    description: `Coach moved this session to ${destDate}.`,
-    workoutType: 'Recovery',
-    sessionTier: 'recovery',
-    exercises: [],
-    conditioningBlock: undefined,
-    hasCombinedConditioning: false,
-  } as Partial<Workout>);
-}
-
 function hardStopRiskRejection(args: {
   writes: readonly ProgramEditWrite[];
   todayISO: string;
@@ -4191,12 +4171,13 @@ function removeSessionApplyRejectReply(targetDate: string, reason?: string): str
   return `I tried to remove the session on ${humanDate(targetDate)}, but the apply layer rejected it${reason ? ` (${reason})` : ''}.`;
 }
 
-// ─── Move session via applyMoveSession (Phase C) ────────────────────
+// ─── Move session via the accepted-state transaction ────────────────
 //
 // A session move is fundamentally cross-date, so it bypasses the
 // per-event single-date applier (`applyAdjustmentEvents`) and goes
-// through `applyMoveSession`, which writes BOTH source and dest in one
-// orchestrated step. The flow mirrors `runReplaceExercise`:
+// through `commitAthleteSessionMoveTransaction`, which stages BOTH source
+// and destination against the latest accepted horizon and publishes once.
+// The flow mirrors `runReplaceExercise`:
 //
 //   1. Resolve source date from `command.target`. When target.kind ===
 //      'unbound', emit an option-bearing clarifier listing the visible
@@ -4220,8 +4201,8 @@ function removeSessionApplyRejectReply(targetDate: string, reason?: string): str
 //
 // Anchor refusal (team training / game days) is enforced at THREE
 // layers — router safety pre-pass (when the dow is decidable), this
-// executor (when the source workout is loaded), and applyMoveSession
-// (final write-time guard). Defence in depth: if any one of those
+// executor (when the source workout is loaded), and the accepted-week
+// gateway inside the transaction. Defence in depth: if any one of those
 // layers misses the violation, the next catches it.
 
 function runMoveSession(
@@ -4252,7 +4233,6 @@ function runMoveSession(
   }
 
   const deps: MoveSessionDeps = input.moveSessionDeps ?? {};
-  const applyMove = deps.applyMove ?? applyMoveSession;
   const verifyRendered = deps.verifyRendered ?? verifyRenderedSessionMove;
   const snapshotBefore = deps.snapshotBefore ?? defaultSnapshotBefore;
   const visibleWeek = deps.visibleWeek ?? defaultVisibleWeek;
@@ -4288,7 +4268,7 @@ function runMoveSession(
   }
 
   // Anchor refusal at the executor layer — defence in depth alongside
-  // the router pre-pass and applyMoveSession's final guard.
+  // the router pre-pass and the transaction's accepted-week gateway.
   const sourceAny: any = sourceWorkout;
   if (sourceAny.isTeamDay === true || sourceAny.workoutType === 'Team Training') {
     tick('composing_reply');
@@ -4360,48 +4340,58 @@ function runMoveSession(
   // (or restores the source's workout while removing the dest write).
   const beforeOverrideMap = takeDateOverrideSnapshots(input, [sourceDate, destDate]);
   const destWorkout = snapshotBefore(destDate);
-  const sourceWeek = safeVisibleWeekForMonday(visibleWeek, getMondayForDate(sourceDate));
-  const destWeek = safeVisibleWeekForMonday(visibleWeek, getMondayForDate(destDate));
-  const visibleWeekForRisk = Array.from(
-    new Map([...sourceWeek, ...destWeek].map((day) => [day.date, day])).values(),
-  );
-  const riskWrites: ProgramEditWrite[] = [
-    {
-      date: destDate,
-      workout: cloneWorkoutForRisk(sourceWorkout, destDate),
-    },
-  ];
-  if (payload.swap === true && destWorkout) {
-    riskWrites.push({
-      date: sourceDate,
-      workout: cloneWorkoutForRisk(destWorkout, sourceDate),
-    });
-  } else {
-    riskWrites.push({
-      date: sourceDate,
-      workout: buildMoveRestShellForRisk(sourceWorkout, sourceDate, destDate),
-    });
-  }
-  const riskRejection = hardStopRiskRejection({
-    writes: riskWrites,
-    todayISO: input.todayISO,
-    visibleWeek: visibleWeekForRisk,
-    route: 'risk_blocked:move_session',
-    progress: stages,
-  });
-  if (riskRejection) {
-    tick('composing_reply');
-    return riskRejection;
-  }
-
   // ── 5. Apply the move. ─────────────────────────────────────────
   tick('applying_change');
+  const transactionSwap = payload.swap === true || !!destWorkout;
+  const applyMove = deps.applyMove ?? ((moveInput: ApplyMoveSessionInput): ApplyMoveSessionResult => {
+    try {
+      commitAthleteSessionMoveTransaction({
+        sourceDate: moveInput.sourceDate,
+        targetDate: moveInput.destDate,
+        reason: moveInput.reason ?? 'coach move_session',
+        source: 'coach',
+        acceptedSourcePlanEntryId: sourceWorkout.planEntryId ?? null,
+        sourceWorkoutId: sourceWorkout.id,
+        originalSourceWorkout: sourceWorkout,
+        existingTargetWorkout: destWorkout,
+        scope: 'whole_session',
+      });
+      return {
+        applied: [
+          {
+            date: sourceDate,
+            eventIds: [`athlete-move:${sourceDate}:source`],
+            workoutName: destWorkout?.name ?? 'Rest',
+          },
+          {
+            date: destDate,
+            eventIds: [`athlete-move:${destDate}:target`],
+            workoutName: sourceWorkout.name,
+          },
+        ],
+        rejected: [],
+        sourceWorkoutBefore: sourceWorkout,
+        destWorkoutBefore: destWorkout,
+      };
+    } catch (error) {
+      return {
+        applied: [],
+        rejected: [{
+          kind: (error as { code?: string })?.code ?? 'athlete_move_transaction_failed',
+          date: sourceDate,
+          reason: error instanceof Error ? error.message : String(error),
+        }],
+        sourceWorkoutBefore: sourceWorkout,
+        destWorkoutBefore: destWorkout,
+      };
+    }
+  });
   const applyResult = applyMove(
     {
       sourceDate,
       destDate,
-      reason: payload.swap === true ? 'coach swap_session' : 'coach move_session',
-      swap: payload.swap === true,
+      reason: transactionSwap ? 'coach swap_session' : 'coach move_session',
+      swap: transactionSwap,
     },
     {
       todayISO: input.todayISO,
@@ -4424,7 +4414,7 @@ function runMoveSession(
     sourceDate,
     destDate,
     movedSessionName,
-    swap: payload.swap === true,
+    swap: transactionSwap,
     appliedCount: applyResult.applied.length,
     rejectedCount: applyResult.rejected.length,
     rejectedKinds: applyResult.rejected.map((r) => r.kind),

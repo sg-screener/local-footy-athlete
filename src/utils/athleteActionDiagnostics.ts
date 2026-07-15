@@ -22,10 +22,13 @@ export type AthleteActionType =
   | 'program_change';
 
 export type AthleteActionEventName =
+  | 'athlete_mutation_received'
   | 'athlete_action_requested'
   | 'athlete_action_parsed'
   | 'athlete_action_route_selected'
   | 'mutation_constraint_created'
+  | 'mutation_preview_result'
+  | 'mutation_transaction_staged'
   | 'repair_horizon_selected'
   | 'repair_candidates_generated'
   | 'repair_candidate_rejected'
@@ -33,12 +36,14 @@ export type AthleteActionEventName =
   | 'accepted_week_gateway_result'
   | 'transaction_verification_result'
   | 'accepted_state_publication_result'
+  | 'transaction_publish_result'
   | 'persistence_result'
   | 'visible_projection_result'
   | 'coach_notes_result'
   | 'athlete_action_completed'
   | 'athlete_action_failed'
   | 'athlete_ui_outcome_shown'
+  | 'ui_outcome_mapped'
   | 'hydrated_state_checked'
   | 'diagnostic_snapshot';
 

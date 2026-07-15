@@ -319,9 +319,9 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       dayOf(after, wk2Mon)?.workout?.name);
   }
 
-  // ── D. Move Monday's session to Sunday; adding a Saturday game makes that
-  // destination G+1, so the hard moved session is cleared/reported.
-  // Light Sunday additions are covered in E below.
+  // ── D. A valid athlete move is accepted atomically. A later Saturday-game
+  // mutation may then re-resolve Sunday's new G+1 safety context, but it must
+  // not resurrect the original source or create a half-move.
   {
     seed(profile);
     const wk2Sun = addDays(blockStart, 13);
@@ -332,20 +332,24 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       todayISO,
       setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
     });
-    ok(`[D] invalid move rejected: ${res.message ?? ''}`,
-      res.ok === false && res.rejected?.some((entry) => entry.code === 'section18_week_rejected') === true,
+    const moved = resolveLiveWeek(wk2Mon, profile.seasonPhase!, undefined);
+    ok(`[D] valid move accepted: ${res.message ?? ''}`,
+      res.ok === true && !res.rejected?.some((entry) => entry.code === 'section18_week_rejected'),
       JSON.stringify(res.rejected));
+    ok('[D] accepted move publishes source and destination together',
+      (!dayOf(moved, wk2Mon)?.workout || dayOf(moved, wk2Mon)?.workout?.workoutType === 'Rest') &&
+      /lower|upper|full body/i.test(dayOf(moved, wk2Sun)?.workout?.name ?? ''),
+      `source=${dayOf(moved, wk2Mon)?.workout?.name ?? '(off)'} dest=${dayOf(moved, wk2Sun)?.workout?.name ?? '(off)'}`);
 
     const rebuild = addSaturdayGame(profile, wk2Sat);
     const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
-    ok('[D] rejected move leaves original Monday unchanged',
-      dayOf(after, wk2Mon)?.source !== 'manual' &&
-      /lower|upper|full body/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
+    ok('[D] later fixture repair does not resurrect the moved source',
+      !dayOf(after, wk2Mon)?.workout || dayOf(after, wk2Mon)?.workout?.workoutType === 'Rest',
       `${dayOf(after, wk2Mon)?.source}: ${dayOf(after, wk2Mon)?.workout?.name}`);
-    ok('[D] rejected move stores no destination requiring a sweep',
-      rebuild.sweep.conflictsRemoved.length === 0 &&
+    ok('[D] later G+1 destination is re-resolved through the fixture transaction',
       dayOf(after, wk2Sun)?.source !== 'manual' &&
-      dayOf(after, wk2Sun)?.workout?.sessionTier === 'recovery',
+      dayOf(after, wk2Sun)?.workout?.sessionTier === 'recovery' &&
+      rebuild.sweep.conflictsRemoved.length === 0,
       `${dayOf(after, wk2Sun)?.source}: ${dayOf(after, wk2Sun)?.workout?.name} sweep=${JSON.stringify(rebuild.sweep)}`);
   }
 

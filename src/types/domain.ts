@@ -795,6 +795,12 @@ export interface UserRemovalConstraint {
   id: string;
   authorship: 'user';
   source: 'tap' | 'coach';
+  /**
+   * Legacy persisted surface name notwithstanding, this record is also the
+   * typed source/target ownership for an athlete move. Older deletion rows
+   * omit the field and therefore retain `deletion` semantics.
+   */
+  mutationKind?: 'deletion' | 'move';
   status: 'active' | 'restored';
   targetDate: string;
   scope: UserRemovalScope;
@@ -804,6 +810,12 @@ export interface UserRemovalConstraint {
   remainingWorkout: Workout | null;
   equivalentExposureMayRelocate: boolean;
   wholeDayRestOwned: boolean;
+  /** Athlete-owned destination for a move; absent for a deletion. */
+  moveTargetDate?: string;
+  moveTargetPlanEntryId?: string | null;
+  moveTargetWorkoutId?: string;
+  /** Exact accepted source prescription constrained onto moveTargetDate. */
+  movedWorkout?: Workout;
   createdAt: string;
   restoredAt: string | null;
   restorationReason: 'explicit_restore' | 'explicit_re_add' | null;

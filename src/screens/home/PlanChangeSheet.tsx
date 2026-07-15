@@ -24,6 +24,7 @@ import {
 import { executeProgramControlAction } from '../../utils/programControlActions';
 import type { TapRecoveryModifierScope } from '../../utils/tapProgramModifiers';
 import type { ProgramEditRiskFinding } from '../../utils/programEditRiskAssessment';
+import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
 
 /**
  * PlanChangeSheet — the tap-first change door (ATHLETE_CHANGE_VOCABULARY.md
@@ -63,6 +64,7 @@ type Step =
       reasons: string[];
       closeOnSuccess?: boolean;
       backStep: Step;
+      trace: AthleteActionTraceContext;
     }
   | {
       kind: 'block_warning';
@@ -195,6 +197,7 @@ export function PlanChangeSheet({
     opts?: {
       closeOnSuccess?: boolean;
     },
+    trace?: AthleteActionTraceContext,
   ) => {
     const result = applyPlanChange({
       change,
@@ -202,6 +205,7 @@ export function PlanChangeSheet({
       todayISO,
       setManualOverride: (overrideDate, workout, context) =>
         useProgramStore.getState().setManualOverride(overrideDate, workout, context),
+      trace,
     });
     if (result.ok && opts?.closeOnSuccess) {
       // Destructive flows (bin) skip the result screen: the change is
@@ -282,10 +286,11 @@ export function PlanChangeSheet({
         reasons: riskReasons(preview.assessment.findings),
         closeOnSuccess: opts?.closeOnSuccess,
         backStep,
+        trace: preview.trace,
       });
       return;
     }
-    commitPlanChange(change, opts);
+    commitPlanChange(change, opts, preview.trace);
   };
 
   const pickerBackStep = (
@@ -848,7 +853,11 @@ export function PlanChangeSheet({
           ))}
           <MenuOption
             label="Continue"
-            onPress={() => commitPlanChange(step.change, { closeOnSuccess: step.closeOnSuccess })}
+            onPress={() => commitPlanChange(
+              step.change,
+              { closeOnSuccess: step.closeOnSuccess },
+              step.trace,
+            )}
           />
           <MenuOption
             label="Cancel"

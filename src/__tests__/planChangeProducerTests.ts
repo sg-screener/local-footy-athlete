@@ -405,19 +405,22 @@ console.log('planChangeProducerTests');
   ok('[7] done message names the date', /2026-07-04/.test(result.message), result.message);
 
   const move = applyPlanChangeMove(week);
-  ok('[7] move applies atomically (two writes)', move.writes.length === 2, move.writes);
+  ok('[7] move applies atomically (one transaction)', move.transactions.length === 1, move.transactions);
   ok('[7] move ok', move.result.ok, move.result);
 }
 
 function applyPlanChangeMove(week: ResolvedDay[]) {
-  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const transactions: unknown[] = [];
   const result = applyPlanChange({
     change: { kind: 'move_session', fromDate: THU, toDate: SAT },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    setManualOverride: () => {
+      throw new Error('move must not use the single-date override writer');
+    },
+    commitAthleteMove: (input) => transactions.push(input),
   });
-  return { writes, result };
+  return { transactions, result };
 }
 
 {
@@ -586,7 +589,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[9] PlanChangeSheet no longer imports legacy category-only warnings',
     !/planChangeWarningForCategory/.test(sheet));
   ok('[9] confirm warnings continue through the commit helper',
-    /step\.kind === 'confirm_warning'[\s\S]*label="Continue"[\s\S]*commitPlanChange\(step\.change/.test(sheet));
+    /step\.kind === 'confirm_warning'[\s\S]*label="Continue"[\s\S]*commitPlanChange\([\s\S]{0,80}step\.change/.test(sheet));
   ok('[9] tap warning copy is readable and coach-like',
     /This gives you \$\{observed\} hard days this week\. That's the upper edge\./.test(sheet)
       && /This puts hard work one day before your game/.test(sheet)
@@ -713,36 +716,42 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   const week = bothWeeks();
 
   // MON holds Lower Body Strength, THU holds Upper Push — swap them.
-  const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const transactions: Array<import('../store/acceptedStateTransaction').AthleteSessionMoveTransactionInput> = [];
   const result = applyPlanChange({
     change: { kind: 'move_session', fromDate: THU, toDate: MON },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => writes.push({ date, workout }),
+    setManualOverride: () => {
+      throw new Error('move must not use the single-date override writer');
+    },
+    commitAthleteMove: (input) => transactions.push(input),
   });
   ok('[11] swap applies', result.ok, result);
-  eq('[11] exactly two writes', writes.length, 2);
-  const monWrite = writes.find((w) => w.date === MON);
-  const thuWrite = writes.find((w) => w.date === THU);
-  ok('[11] MON now holds Upper Push',
-    /Upper Push/i.test(monWrite?.workout?.name ?? ''), monWrite?.workout?.name);
-  ok('[11] THU now holds Lower Body Strength',
-    /Lower Body/i.test(thuWrite?.workout?.name ?? ''), thuWrite?.workout?.name);
+  eq('[11] exactly one accepted-state transaction', transactions.length, 1);
+  ok('[11] transaction moves Upper Push to MON',
+    /Upper Push/i.test(transactions[0]?.originalSourceWorkout.name ?? ''),
+    transactions[0]?.originalSourceWorkout.name);
+  ok('[11] transaction stages Lower Body Strength back onto THU',
+    /Lower Body/i.test(transactions[0]?.existingTargetWorkout?.name ?? ''),
+    transactions[0]?.existingTargetWorkout?.name);
   ok('[11] done message says swapped', /swapped/i.test(result.message), result.message);
 
   // Plain move to a rest day still works and still reads as a move.
-  const moveWrites: Array<{ date: string; workout: Workout | null }> = [];
+  const moveTransactions: Array<import('../store/acceptedStateTransaction').AthleteSessionMoveTransactionInput> = [];
   const moveResult = applyPlanChange({
     change: { kind: 'move_session', fromDate: THU, toDate: SAT },
     visibleWeek: week,
     todayISO: TODAY,
-    setManualOverride: (date, workout) => moveWrites.push({ date, workout }),
+    setManualOverride: () => {
+      throw new Error('move must not use the single-date override writer');
+    },
+    commitAthleteMove: (input) => moveTransactions.push(input),
   });
   ok('[11] plain move applies', moveResult.ok, moveResult);
   ok('[11] plain move message unchanged', /moved to/i.test(moveResult.message), moveResult.message);
-  ok('[11] source becomes rest on plain move',
-    moveWrites.find((w) => w.date === THU)?.workout?.workoutType === 'Rest',
-    moveWrites.find((w) => w.date === THU)?.workout?.workoutType);
+  ok('[11] plain move transaction owns an empty source destination swap',
+    moveTransactions.length === 1 && moveTransactions[0].existingTargetWorkout === null,
+    moveTransactions);
 
   // Game days are never destinations.
   const thuOptions = listPlanChangeOptionsForDay({

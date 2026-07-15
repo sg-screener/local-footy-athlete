@@ -57,7 +57,10 @@ import {
   rollingHorizonWeekStartsForMutation,
   searchRollingHorizonCandidateCombinations,
 } from '../rules/rollingHorizonRepair';
-import { userRemovalConstraintId } from '../rules/userRemovalConstraints';
+import {
+  userMoveConstraintId,
+  userRemovalConstraintId,
+} from '../rules/userRemovalConstraints';
 import { Section18WeekAcceptanceError } from '../rules/section18AcceptedWeekGateway';
 import {
   athleteActionDiagnosticHash,
@@ -414,6 +417,14 @@ export function commitAcceptedStateTransaction(
       afterStateHash: beforeStateHash,
       internalResultCode: code,
     });
+    emitAthleteActionEvent(trace, 'transaction_publish_result', {
+      published: false,
+      persistenceResult: 'not_started',
+      previousStateRestored: true,
+      beforeStateHash,
+      afterStateHash: beforeStateHash,
+      internalResultCode: code,
+    });
     throw error;
   }
   const equivalenceWeeks = new Set(proposal.validateWeekStarts ?? []);
@@ -469,6 +480,14 @@ export function commitAcceptedStateTransaction(
       terminalReasonChain: trace ? athleteActionTerminalReasonChain(trace.traceId) : [],
       internalResultCode: code,
     });
+    emitAthleteActionEvent(trace, 'transaction_publish_result', {
+      published: false,
+      persistenceResult: 'not_started',
+      previousStateRestored: true,
+      beforeStateHash,
+      afterStateHash: beforeStateHash,
+      internalResultCode: code,
+    });
     throw error;
   }
   emitAthleteActionEvent(trace, 'transaction_verification_result', {
@@ -496,6 +515,15 @@ export function commitAcceptedStateTransaction(
     beforeStateHash,
     afterStateHash,
     outcome: 'accepted',
+  });
+  emitAthleteActionEvent(trace, 'transaction_publish_result', {
+    published: true,
+    persistenceResult: 'queued',
+    previousStateRestored: false,
+    acceptedStateVersion: staged.context.revision,
+    beforeStateHash,
+    afterStateHash,
+    internalResultCode: 'accepted_state_published',
   });
   if (trace && diagnosticsEnabled && beforeContext) {
     const activeNotes = (require('../utils/activeCoachNotes') as typeof import('../utils/activeCoachNotes'))
@@ -671,39 +699,65 @@ export function buildFixtureProjection(args: {
   });
   let target: TrainingProgram | undefined;
   let targetMicrocycle: Microcycle | undefined;
-  try {
-    target = generateProgramLocally(args.profile, {
-      todayISO: args.weekStart,
-      previousProgram: args.program,
-      seasonPhaseClock: args.program.seasonPhaseClock,
-      targetWeekAvailability: availability,
-      targetFixtureDay: targetGameDay,
-      activeConstraints: args.activeConstraints,
-      microcycleLimit: 1,
-    });
-    targetMicrocycle = target.microcycles[0];
-  } catch (error) {
-    if (!(error instanceof Section18WeekAcceptanceError)) throw error;
-    // The rolling repair owner, not target generation, decides whether the
-    // accepted source can be repaired. Preserve the rejected generator's
-    // phase-owned contract/candidate and let the shared search consume it
-    // instead of treating one invalid fallback representation as terminal.
+  const athleteAuthoredMutation = args.mutationIntent === 'athlete_move' ||
+    args.mutationIntent === 'athlete_removal';
+  if (athleteAuthoredMutation) {
+    // The athlete has already supplied the complete source-of-truth candidate.
+    // Re-running program generation here creates a second representation that
+    // can change exposure targets before the accepted-week gateway sees the
+    // move/deletion. Repair the accepted visible snapshot against its accepted
+    // Contract v2 ledger instead.
     const base = acceptedSource.baseMicrocycle;
     const now = new Date().toISOString();
     targetMicrocycle = {
-      id: `repair-target:${args.weekStart}`,
+      id: `athlete-mutation-target:${args.weekStart}`,
       programId: args.program.id,
       weekNumber: base?.weekNumber ?? 1,
       startDate: args.weekStart,
       endDate: addDaysISO(args.weekStart, 6),
       miniCycleNumber: base?.miniCycleNumber ?? 1,
       intensityMultiplier: base?.intensityMultiplier ?? 1,
-      weekKind: error.result.contract.identity.weekKind,
-      exposureContractV2: error.result.contract,
-      workouts: error.result.canonicalWorkouts,
+      weekKind: sourceContract.identity.weekKind,
+      exposureContractV2: sourceContract,
+      workouts: sourceCanonicalWorkouts,
       createdAt: base?.createdAt ?? now,
       updatedAt: now,
     };
+  } else {
+    try {
+      target = generateProgramLocally(args.profile, {
+        todayISO: args.weekStart,
+        previousProgram: args.program,
+        seasonPhaseClock: args.program.seasonPhaseClock,
+        targetWeekAvailability: availability,
+        targetFixtureDay: targetGameDay,
+        activeConstraints: args.activeConstraints,
+        microcycleLimit: 1,
+      });
+      targetMicrocycle = target.microcycles[0];
+    } catch (error) {
+      if (!(error instanceof Section18WeekAcceptanceError)) throw error;
+      // The rolling repair owner, not target generation, decides whether the
+      // accepted source can be repaired. Preserve the rejected generator's
+      // phase-owned contract/candidate and let the shared search consume it
+      // instead of treating one invalid fallback representation as terminal.
+      const base = acceptedSource.baseMicrocycle;
+      const now = new Date().toISOString();
+      targetMicrocycle = {
+        id: `repair-target:${args.weekStart}`,
+        programId: args.program.id,
+        weekNumber: base?.weekNumber ?? 1,
+        startDate: args.weekStart,
+        endDate: addDaysISO(args.weekStart, 6),
+        miniCycleNumber: base?.miniCycleNumber ?? 1,
+        intensityMultiplier: base?.intensityMultiplier ?? 1,
+        weekKind: error.result.contract.identity.weekKind,
+        exposureContractV2: error.result.contract,
+        workouts: error.result.canonicalWorkouts,
+        createdAt: base?.createdAt ?? now,
+        updatedAt: now,
+      };
+    }
   }
   if (!targetMicrocycle) throw new Error('Fixture target generation produced no microcycle');
   if (!target) {
@@ -945,14 +999,18 @@ export function stageRollingHorizonFixtureRepair(args: {
 }): RollingHorizonFixtureRepairResult {
   const trace = currentAthleteActionTrace();
   const primary = new Set(args.primaryWeekStarts.map((weekStart) => mondayForDate(weekStart)));
-  const weekStarts = Array.from(new Set([
-    ...primary,
-    ...rollingHorizonWeekStartsForMutation({
+  const fixtureWeeks = rollingHorizonWeekStartsForMutation({
       before: args.beforeMarkedDays,
       after: args.afterMarkedDays,
       surfaces: args.sourceSurfaces,
-    }),
-  ]))
+    });
+  // Athlete moves/deletions can touch persisted cross-week provenance even
+  // when no fixture mark changed. Close the dependency graph from the actual
+  // mutation weeks as well as any G-relative fixture window.
+  const weekStarts = rollingHorizonDependencyClosure({
+    seedWeekStarts: [...primary, ...fixtureWeeks],
+    surfaces: args.sourceSurfaces,
+  })
     .filter((weekStart) => args.program.microcycles.some((microcycle) =>
       weekStart >= microcycle.startDate.slice(0, 10) &&
       weekStart <= microcycle.endDate.slice(0, 10)))
@@ -1226,9 +1284,179 @@ export interface AthleteSessionDeletionTransactionInput {
   equivalentExposureMayRelocate?: boolean;
 }
 
-export function commitAthleteSessionDeletionTransaction(
+export interface AthleteSessionMoveTransactionInput {
+  sourceDate: string;
+  targetDate: string;
+  reason: string;
+  source: 'tap' | 'coach';
+  acceptedSourcePlanEntryId: string | null;
+  sourceWorkoutId: string;
+  originalSourceWorkout: Workout;
+  existingTargetWorkout: Workout | null;
+  scope: 'whole_session';
+}
+
+export interface AthleteMutationTransactionStage {
+  proposal: AcceptedStateTransactionProposal | null;
+  result: AcceptedStateTransactionResult;
+  affectedWeekStarts: string[];
+  outcome: RollingHorizonFixtureRepairResult['outcome'] | 'already_applied';
+  alreadyApplied: boolean;
+}
+
+function workoutIdentity(workout: Workout | null | undefined): string | null {
+  return workout ? workout.planEntryId ?? workout.id : null;
+}
+
+function acceptedWorkoutForDate(args: {
+  date: string;
+  state: ProgramState;
+  context: AcceptedMaterialContext;
+  profile: OnboardingData;
+}): Workout | null {
+  const weekStart = mondayForDate(args.date);
+  const accepted = rebaseAcceptedEffectiveWeek({
+    surfaces: args.state,
+    weekStart,
+    profile: args.profile,
+    markedDays: args.context.markedDays,
+  });
+  const dayOfWeek = new Date(`${args.date}T12:00:00`).getDay();
+  return accepted.visibleWorkouts.find((workout) => workout.dayOfWeek === dayOfWeek) ?? null;
+}
+
+function cloneWorkoutForDate(workout: Workout, date: string): Workout {
+  return {
+    ...JSON.parse(JSON.stringify(workout)) as Workout,
+    dayOfWeek: new Date(`${date}T12:00:00`).getDay(),
+  };
+}
+
+/**
+ * Shared pure staging owner for athlete moves and deletions. The typed
+ * constraint is applied to the accepted composed horizon before repair, so
+ * source and destination are never evaluated or published independently.
+ */
+function stageAthleteMutationConstraint(args: {
+  reason: string;
+  source: 'tap' | 'coach';
+  mutationIntent: 'athlete_removal' | 'athlete_move';
+  constraint: UserRemovalConstraint;
+  affectedDates: readonly string[];
+  markedDays: Record<string, CalendarDayType>;
+  stagePurpose: 'preview' | 'commit';
+}): AthleteMutationTransactionStage {
+  const state = useProgramStore.getState();
+  const profile = useProfileStore.getState().onboardingData;
+  if (!state.currentProgram || !profile) {
+    throw new Error('Athlete mutation requires an accepted program and profile');
+  }
+  const prior = materialContext(state);
+  const userRemovalConstraints = [
+    ...state.userRemovalConstraints.filter((candidate) =>
+      candidate.id !== args.constraint.id && !(
+        candidate.status === 'active' &&
+        candidate.targetDate === args.constraint.targetDate &&
+        (args.constraint.scope === 'whole_session' || candidate.scope === args.constraint.scope)
+      )),
+    args.constraint,
+  ];
+  const dateOverrides = { ...state.dateOverrides };
+  const overrideContexts = { ...state.overrideContexts };
+  for (const date of args.affectedDates) {
+    delete dateOverrides[date];
+    delete overrideContexts[date];
+  }
+  const sourceSurfaces: AcceptedEffectiveWeekSurfaces = {
+    currentProgram: state.currentProgram,
+    currentMicrocycle: state.currentMicrocycle,
+    dateOverrides,
+    weekScopedOverlays: state.weekScopedOverlays,
+    // Deletion repair needs the accepted target still present as a relocation
+    // template. A move, by contrast, must enter repair with both athlete-owned
+    // halves already staged. The gateway receives the proposed constraint in
+    // both cases and keeps the prohibited source immutable.
+    userRemovalConstraints: args.mutationIntent === 'athlete_move'
+      ? userRemovalConstraints
+      : state.userRemovalConstraints,
+  };
+  const primaryWeekStarts = Array.from(new Set(args.affectedDates.map(mondayForDate))).sort();
+  const repair = stageRollingHorizonFixtureRepair({
+    program: state.currentProgram,
+    profile,
+    beforeMarkedDays: prior.markedDays,
+    afterMarkedDays: args.markedDays,
+    sourceSurfaces,
+    activeConstraints: prior.activeConstraints,
+    primaryWeekStarts,
+    primaryMutationIntent: args.mutationIntent,
+    dependentMutationIntent: 'remove_from_date',
+    userRemovalConstraints,
+  });
+  const weekScopedOverlays = { ...state.weekScopedOverlays };
+  for (const projection of repair.projections) {
+    weekScopedOverlays[projection.weekStart] = projection.overlay;
+  }
+  const affectedWeekStarts = repair.weekStarts.length > 0
+    ? repair.weekStarts
+    : primaryWeekStarts;
+  const today = todayISOLocal();
+  const todayConstraintWorkout = args.constraint.mutationKind === 'move' &&
+    args.constraint.moveTargetDate === today
+    ? cloneWorkoutForDate(args.constraint.movedWorkout!, today)
+    : args.constraint.targetDate === today
+      ? args.constraint.remainingWorkout
+      : state.todayWorkout;
+  const proposal: AcceptedStateTransactionProposal = {
+    reason: args.reason,
+    program: {
+      dateOverrides,
+      overrideContexts,
+      weekScopedOverlays,
+      userRemovalConstraints,
+      ...(args.affectedDates.includes(today) ? { todayWorkout: todayConstraintWorkout } : {}),
+    },
+    markedDays: args.markedDays,
+    validateWeekStarts: affectedWeekStarts,
+    profile,
+    programAlreadyAccepted: true,
+  };
+  const result = stageAcceptedStateTransaction(proposal);
+  assertAcceptedVisibleLedgerEquivalence({
+    surfaces: result.program,
+    context: result.context,
+    weekStarts: affectedWeekStarts,
+    profile,
+    trace: currentAthleteActionTrace(),
+  });
+  emitAthleteActionEvent(currentAthleteActionTrace(), 'mutation_transaction_staged', {
+    stagePurpose: args.stagePurpose,
+    mutationType: args.mutationIntent,
+    dependencyWeeksSelected: affectedWeekStarts,
+    selectedOutcome: repair.outcome,
+    beforeStateHash: athleteActionDiagnosticHash({
+      program: programSurfaces(state),
+      context: prior,
+    }),
+    afterStateHash: athleteActionDiagnosticHash({
+      program: result.program,
+      context: result.context,
+    }),
+    boundary: 'stageAthleteMutationConstraint',
+  });
+  return {
+    proposal,
+    result,
+    affectedWeekStarts,
+    outcome: repair.outcome,
+    alreadyApplied: false,
+  };
+}
+
+export function stageAthleteSessionDeletionTransaction(
   args: AthleteSessionDeletionTransactionInput,
-): AcceptedStateTransactionResult {
+  options: { purpose?: 'preview' | 'commit' } = {},
+): AthleteMutationTransactionStage {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(args.date.slice(0, 10)) ||
     !args.originalWorkout?.id) {
     throw new Error('Malformed athlete session-deletion identity');
@@ -1236,21 +1464,24 @@ export function commitAthleteSessionDeletionTransaction(
   const date = args.date.slice(0, 10);
   const state = useProgramStore.getState();
   const prior = materialContext(state);
-  const now = new Date().toISOString();
-  const id = userRemovalConstraintId({
-    date,
-    scope: args.scope,
-    workout: args.originalWorkout,
-  });
+  const id = userRemovalConstraintId({ date, scope: args.scope, workout: args.originalWorkout });
   const existing = state.userRemovalConstraints.find((constraint) =>
     constraint.id === id && constraint.status === 'active');
-  if (existing) return { program: programSurfaces(state), context: prior };
-
+  if (existing) {
+    return {
+      proposal: null,
+      result: { program: programSurfaces(state), context: prior },
+      affectedWeekStarts: [mondayForDate(date)],
+      outcome: 'already_applied',
+      alreadyApplied: true,
+    };
+  }
   const constraint: UserRemovalConstraint = {
     protocolVersion: 1,
     id,
     authorship: 'user',
     source: args.source,
+    mutationKind: 'deletion',
     status: 'active',
     targetDate: date,
     scope: args.scope,
@@ -1262,7 +1493,7 @@ export function commitAthleteSessionDeletionTransaction(
       : null,
     equivalentExposureMayRelocate: args.equivalentExposureMayRelocate ?? true,
     wholeDayRestOwned: args.scope === 'whole_session',
-    createdAt: now,
+    createdAt: new Date().toISOString(),
     restoredAt: null,
     restorationReason: null,
   };
@@ -1278,34 +1509,133 @@ export function commitAthleteSessionDeletionTransaction(
     wholeDayRestOwned: constraint.wholeDayRestOwned,
     provenanceIdentity: `${constraint.authorship}:${constraint.source}:${constraint.id}`,
   });
-  const userRemovalConstraints = [
-    ...state.userRemovalConstraints.filter((candidate) =>
-      !(candidate.targetDate === date && candidate.status === 'active' &&
-        (args.scope === 'whole_session' || candidate.scope === args.scope))),
-    constraint,
-  ];
   const markedDays = { ...prior.markedDays };
   if (args.scope === 'whole_session') markedDays[date] = 'rest';
-  const dateOverrides = { ...state.dateOverrides };
-  const overrideContexts = { ...state.overrideContexts };
-  delete dateOverrides[date];
-  delete overrideContexts[date];
-  return commitCalendarStateTransaction({
+  return stageAthleteMutationConstraint({
     reason: args.reason,
-    markedDays,
-    affectedDates: [date],
-    fixtureChangedDates: prior.markedDays[date] === 'game' ||
-      prior.markedDays[date] === 'noGame' ? [date] : [],
-    program: {
-      dateOverrides,
-      overrideContexts,
-      userRemovalConstraints,
-      ...(date === todayISOLocal()
-        ? { todayWorkout: constraint.remainingWorkout }
-        : {}),
-    },
+    source: args.source,
     mutationIntent: 'athlete_removal',
+    constraint,
+    affectedDates: [date],
+    markedDays,
+    stagePurpose: options.purpose ?? 'preview',
   });
+}
+
+export function stageAthleteSessionMoveTransaction(
+  args: AthleteSessionMoveTransactionInput,
+  options: { purpose?: 'preview' | 'commit' } = {},
+): AthleteMutationTransactionStage {
+  const sourceDate = args.sourceDate.slice(0, 10);
+  const targetDate = args.targetDate.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(sourceDate) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(targetDate) ||
+    sourceDate === targetDate ||
+    !args.originalSourceWorkout?.id ||
+    !args.sourceWorkoutId) {
+    throw new Error('Malformed athlete session-move identity');
+  }
+  const state = useProgramStore.getState();
+  const profile = useProfileStore.getState().onboardingData;
+  if (!profile) throw new Error('Athlete move requires an accepted profile');
+  const prior = materialContext(state);
+  const acceptedSource = acceptedWorkoutForDate({ date: sourceDate, state, context: prior, profile });
+  const expectedSourceIdentity = args.acceptedSourcePlanEntryId ?? args.sourceWorkoutId;
+  if (!acceptedSource || workoutIdentity(acceptedSource) !== expectedSourceIdentity ||
+    workoutIdentity(args.originalSourceWorkout) !== expectedSourceIdentity) {
+    throw new Error('Accepted athlete move source identity changed');
+  }
+  const acceptedTarget = acceptedWorkoutForDate({ date: targetDate, state, context: prior, profile });
+  if (workoutIdentity(acceptedTarget) !== workoutIdentity(args.existingTargetWorkout)) {
+    throw new Error('Accepted athlete move target identity changed');
+  }
+  const id = userMoveConstraintId({
+    sourceDate,
+    targetDate,
+    workout: acceptedSource,
+  });
+  const existing = state.userRemovalConstraints.find((constraint) =>
+    constraint.id === id && constraint.status === 'active');
+  if (existing) {
+    return {
+      proposal: null,
+      result: { program: programSurfaces(state), context: prior },
+      affectedWeekStarts: Array.from(new Set([mondayForDate(sourceDate), mondayForDate(targetDate)])).sort(),
+      outcome: 'already_applied',
+      alreadyApplied: true,
+    };
+  }
+  const movedWorkout = cloneWorkoutForDate(acceptedSource, targetDate);
+  const swappedWorkout = acceptedTarget ? cloneWorkoutForDate(acceptedTarget, sourceDate) : null;
+  const constraint: UserRemovalConstraint = {
+    protocolVersion: 1,
+    id,
+    authorship: 'user',
+    source: args.source,
+    mutationKind: 'move',
+    status: 'active',
+    targetDate: sourceDate,
+    scope: 'whole_session',
+    targetPlanEntryId: acceptedSource.planEntryId ?? null,
+    targetWorkoutId: acceptedSource.id,
+    originalWorkout: JSON.parse(JSON.stringify(acceptedSource)) as Workout,
+    remainingWorkout: swappedWorkout,
+    equivalentExposureMayRelocate: true,
+    wholeDayRestOwned: !swappedWorkout,
+    moveTargetDate: targetDate,
+    moveTargetPlanEntryId: movedWorkout.planEntryId ?? null,
+    moveTargetWorkoutId: movedWorkout.id,
+    movedWorkout,
+    createdAt: new Date().toISOString(),
+    restoredAt: null,
+    restorationReason: null,
+  };
+  emitAthleteActionEvent(currentAthleteActionTrace(), 'mutation_constraint_created', {
+    constraintType: 'user_move',
+    constraintId: constraint.id,
+    constraintStatus: constraint.status,
+    sourceDate,
+    targetDate,
+    planEntryId: constraint.targetPlanEntryId,
+    workoutId: constraint.targetWorkoutId,
+    moveTargetPlanEntryId: constraint.moveTargetPlanEntryId,
+    swap: !!swappedWorkout,
+    provenanceIdentity: `${constraint.authorship}:${constraint.source}:${constraint.id}`,
+  });
+  const markedDays = { ...prior.markedDays };
+  if (swappedWorkout) {
+    if (markedDays[sourceDate] === 'rest') delete markedDays[sourceDate];
+  } else {
+    markedDays[sourceDate] = 'rest';
+  }
+  if (markedDays[targetDate] === 'rest') delete markedDays[targetDate];
+  return stageAthleteMutationConstraint({
+    reason: args.reason,
+    source: args.source,
+    mutationIntent: 'athlete_move',
+    constraint,
+    affectedDates: [sourceDate, targetDate],
+    markedDays,
+    stagePurpose: options.purpose ?? 'preview',
+  });
+}
+
+export function commitAthleteSessionDeletionTransaction(
+  args: AthleteSessionDeletionTransactionInput,
+): AcceptedStateTransactionResult {
+  const staged = stageAthleteSessionDeletionTransaction(args, { purpose: 'commit' });
+  return staged.proposal
+    ? commitAcceptedStateTransaction(staged.proposal)
+    : staged.result;
+}
+
+export function commitAthleteSessionMoveTransaction(
+  args: AthleteSessionMoveTransactionInput,
+): AcceptedStateTransactionResult {
+  const staged = stageAthleteSessionMoveTransaction(args, { purpose: 'commit' });
+  return staged.proposal
+    ? commitAcceptedStateTransaction(staged.proposal)
+    : staged.result;
 }
 
 /**

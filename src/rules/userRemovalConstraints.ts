@@ -20,7 +20,9 @@ export function activeUserRemovalConstraintsForWeek(
   const endISO = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
   return (constraints ?? [])
     .filter((constraint) => constraint.status === 'active' &&
-      constraint.targetDate >= start && constraint.targetDate <= endISO)
+      ((constraint.targetDate >= start && constraint.targetDate <= endISO) ||
+        (!!constraint.moveTargetDate &&
+          constraint.moveTargetDate >= start && constraint.moveTargetDate <= endISO)))
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt) ||
       left.id.localeCompare(right.id));
 }
@@ -36,10 +38,27 @@ export function applyUserRemovalConstraintsToWeek(args: {
     args.constraints,
     args.weekStart,
   )) {
-    const dayOfWeek = new Date(`${constraint.targetDate}T12:00:00`).getDay();
-    workouts = workouts.filter((workout) => workout.dayOfWeek !== dayOfWeek);
-    if (constraint.remainingWorkout) {
-      workouts.push({ ...clone(constraint.remainingWorkout), dayOfWeek });
+    const start = args.weekStart.slice(0, 10);
+    const end = new Date(`${start}T12:00:00`);
+    end.setDate(end.getDate() + 6);
+    const endISO = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+    if (constraint.targetDate >= start && constraint.targetDate <= endISO) {
+      const dayOfWeek = new Date(`${constraint.targetDate}T12:00:00`).getDay();
+      workouts = workouts.filter((workout) => workout.dayOfWeek !== dayOfWeek);
+      if (constraint.remainingWorkout) {
+        workouts.push({ ...clone(constraint.remainingWorkout), dayOfWeek });
+      }
+    }
+    if (
+      constraint.mutationKind === 'move' &&
+      constraint.moveTargetDate &&
+      constraint.movedWorkout &&
+      constraint.moveTargetDate >= start &&
+      constraint.moveTargetDate <= endISO
+    ) {
+      const targetDayOfWeek = new Date(`${constraint.moveTargetDate}T12:00:00`).getDay();
+      workouts = workouts.filter((workout) => workout.dayOfWeek !== targetDayOfWeek);
+      workouts.push({ ...clone(constraint.movedWorkout), dayOfWeek: targetDayOfWeek });
     }
   }
   return workouts.sort((left, right) => left.dayOfWeek - right.dayOfWeek);
@@ -54,6 +73,19 @@ export function userRemovalConstraintId(args: {
     'user-removal',
     args.date.slice(0, 10),
     args.scope,
+    args.workout.planEntryId ?? args.workout.id,
+  ].join(':');
+}
+
+export function userMoveConstraintId(args: {
+  sourceDate: string;
+  targetDate: string;
+  workout: Workout;
+}): string {
+  return [
+    'user-move',
+    args.sourceDate.slice(0, 10),
+    args.targetDate.slice(0, 10),
     args.workout.planEntryId ?? args.workout.id,
   ].join(':');
 }
