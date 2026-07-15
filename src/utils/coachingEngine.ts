@@ -40,6 +40,7 @@ import type {
   DeterministicCoachNoteEffectReason,
   DeterministicCoachNoteEffectSeed,
   ConditioningFeasibilityDecision,
+  DayOfWeek,
 } from '../types/domain';
 import { logger } from './logger';
 import {
@@ -122,6 +123,10 @@ import type {
   GenerationInjuryConstraint,
   GenerationReadinessTier,
 } from './generationConstraints';
+import {
+  resolveProfileTargetWeekAvailability,
+  type FixtureConditionedAvailability,
+} from '../rules/fixtureConditionedAvailability';
 import type {
   SeasonPhaseClock,
   SeasonPhaseClockResolutionProvenance,
@@ -197,6 +202,10 @@ export interface OnboardingToCoachingInputsOptions {
   generationConstraints?: GenerationConstraintContext;
   appConditioningFeasible?: boolean;
   conditioningSubstitutionPolicy?: Section18EquipmentPolicyState;
+  /** Canonical target-week availability; fixture flows must pass their transition result. */
+  targetWeekAvailability?: FixtureConditionedAvailability;
+  /** undefined = profile fixture, null = no fixture, day = target fixture day. */
+  targetFixtureDay?: DayOfWeek | null;
 }
 
 // ─── Output Types ───
@@ -643,6 +652,10 @@ function buildParallelSection18Contract(args: {
     // current_input_missing and remains unknown at the safety boundary.
     participationProvenance: 'derived_healthy_unrestricted',
     currentProductionClaimsAnchorCredit: true,
+    authorisedUnavoidableAnchorExcess: Math.max(
+      0,
+      (inputs.teamTrainingDays?.length ?? 0) + (inputs.hasGame ? 1 : 0) - 3,
+    ),
     readiness,
     cookedReadiness,
     plannerSelected: {
@@ -8256,24 +8269,31 @@ export function onboardingToCoachingInputs(
   // profile keeps the user's original preferences untouched, and every
   // downstream consumer that goes through this function gets the
   // reconciled set for free.
-  const rawPrefDays = (data.preferredTrainingDays || []) as string[];
-  const blockedDays = activeUnavailableDays(data, options.availabilityDateISO);
-  const prefDays = rawPrefDays.filter((day) => !blockedDays.has(day));
+  const availabilityDate = options.availabilityDateISO ?? new Date().toISOString().slice(0, 10);
+  const availabilityDateValue = new Date(`${availabilityDate}T12:00:00`);
+  availabilityDateValue.setDate(
+    availabilityDateValue.getDate() - ((availabilityDateValue.getDay() + 6) % 7),
+  );
+  const weekStart = `${availabilityDateValue.getFullYear()}-${String(availabilityDateValue.getMonth() + 1).padStart(2, '0')}-${String(availabilityDateValue.getDate()).padStart(2, '0')}`;
+  const targetWeekAvailability = options.targetWeekAvailability ??
+    resolveProfileTargetWeekAvailability({ profile: data, weekStart });
+  const prefDays = targetWeekAvailability.effectiveAvailableDayNames as string[];
   const teamDays = (data.teamTrainingDays || []) as string[];
   const selectedDays: string[] = [...prefDays];
   for (const td of teamDays) {
     if (!selectedDays.includes(td)) selectedDays.push(td);
   }
-  const baseTrainingDays = data.trainingDaysPerWeek || prefDays.length || 3;
-  const baseAvailableDays = blockedDays.size > 0
-    ? Math.min(baseTrainingDays, selectedDays.length)
-    : baseTrainingDays;
+  const baseTrainingDays = targetWeekAvailability.effectiveWeeklyTrainingCapacity ||
+    data.trainingDaysPerWeek || prefDays.length || 3;
   // availableDays feeds conditioning-target math. If team days forced the
   // actual schedulable-day count above the user's declared budget, lift
   // availableDays to match — otherwise conditioning targets under-count
   // relative to the real week shape (e.g. 5 schedulable days but 4-day
   // conditioning budget → one slot gets no prescription).
-  const availableDays = Math.max(baseAvailableDays, selectedDays.length);
+  const availableDays = Math.max(baseTrainingDays, selectedDays.length);
+  const targetFixtureDay = options.targetFixtureDay === undefined
+    ? (data.usualGameDay || data.gameDay)
+    : options.targetFixtureDay;
   return {
     seasonPhase: data.seasonPhase || 'Pre-season',
     availableDays,
@@ -8300,10 +8320,10 @@ export function onboardingToCoachingInputs(
     // Now: hasGame is true iff there is an actual game day on the profile.
     // Off-season always has hasGame=false (no game day). Pre-season only has
     // hasGame=true if the athlete has set a usualGameDay/gameDay.
-    hasGame: Boolean(data.usualGameDay || data.gameDay),
+    hasGame: Boolean(targetFixtureDay),
     // Prefer the new usualGameDay (full DayOfWeek) over the legacy gameDay field
     // so the in-season phase-shift flow drives game-proximity scheduling immediately.
-    gameDay: data.usualGameDay || data.gameDay,
+    gameDay: targetFixtureDay ?? undefined,
     weekNumber: options.weekNumber,
     miniCycleNumber: options.miniCycleNumber,
     weekInBlock: options.weekInBlock,
@@ -8318,19 +8338,4 @@ export function onboardingToCoachingInputs(
     appConditioningFeasible: options.appConditioningFeasible,
     conditioningSubstitutionPolicy: options.conditioningSubstitutionPolicy,
   };
-}
-
-function activeUnavailableDays(data: OnboardingData, availabilityDateISO?: string): Set<string> {
-  const out = new Set<string>();
-  for (const constraint of data.availabilityConstraints ?? []) {
-    if (constraint.active === false) continue;
-    if (constraint.kind !== 'unavailable_day') continue;
-    if (!constraint.dayOfWeek) continue;
-    if (constraint.scope === 'temporary' && availabilityDateISO) {
-      if (constraint.startDate && constraint.startDate > availabilityDateISO) continue;
-      if (constraint.endDate && constraint.endDate < availabilityDateISO) continue;
-    }
-    out.add(constraint.dayOfWeek);
-  }
-  return out;
 }

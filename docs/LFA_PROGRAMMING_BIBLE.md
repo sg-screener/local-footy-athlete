@@ -4399,6 +4399,12 @@ A. Policy definitions
 | Dose/intensity change | A change to sets, reps, load, duration, speed, effort or complexity while weekly exposure frequency stays stable. |
 | Frequency change | A change to the number of weekly core exposures. Use it only when the phase policy or an applicable typed reduction permits it. |
 | Phase-owned selected target | The exposure target chosen from the canonical phase/mode table after typed constraints and before weekday allocation. Weekday geometry, recovery placeholders, accessories and optional work do not choose or rewrite it. |
+| Explicit athlete availability | The athlete's stored preferred app-training days. This preference remains unchanged when a target-week fixture is added, removed or moved. |
+| Explicit athlete unavailability | A stored unavailable-day constraint, explicit calendar rest/commitment mark, or other direct athlete instruction that blocks app training on that day. It outranks fixture release. |
+| Fixture-occupied day | A target-week day containing a scheduled game or practice match. The fixture owns that day and app work may not also occupy it unless this section explicitly permits a compatible component. |
+| Fixture-released day | A day occupied by a game or practice match in the prior accepted fixture state but no longer occupied in the proposed target-week state. It becomes eligible app availability by default, without rewriting stored preferences. |
+| Effective target-week app availability | The typed target-week set produced from explicit athlete availability plus conditionally released fixture days, minus current fixtures, explicit rest/commitment or unavailable days, and safety/readiness restrictions. Each non-profile addition or removal carries provenance. |
+| Effective weekly training capacity | The number of effective target-week app-training days after fixture-conditioned additions and explicit blockers. Removing a sole fixture may increase this capacity by one; adding a fixture may reduce it by one. |
 | `required_core` | App conditioning needed to satisfy the required core minimum after qualifying anchor credit. It counts toward the core total and retains the required intensity class. |
 | `planner_selected_core` | Core conditioning selected by the phase planner above the required remainder and within the approved default/preferred/maximum table. It counts toward the core total. |
 | `optional_flush` | Optional light flush work. It is non-core and cannot satisfy required or planner-selected core conditioning. |
@@ -4447,6 +4453,12 @@ C. Anchor credit and app top-ups
 | Bye build: 1 TT | Add 2 app conditioning exposures. | Add sprint only if TT does not genuinely supply it. |
 | Bye build: 2 TT | Add 1 app conditioning exposure, ideally a harder Saturday exposure. | Add sprint only if neither TT genuinely supplies it. |
 | Bye build: 3 TT | No compulsory app conditioning. | Add sprint only if no TT genuinely supplies it. |
+
+When three genuine team-training anchors coexist with a game or practice match,
+the four unavoidable field anchors may all retain conditioning credit. This is
+an anchor-owned exception to the normal C3 game/practice-match target; it must
+not cause an additional app conditioning exposure. If that fixture is removed,
+the target returns to C3 supplied by the three TT anchors.
 | Bye recovery: 0 TT | Program 1–2 light aerobic or flush sessions. They are recovery-focused, not hard conditioning. | Preserve the genuine sprint floor unless an explicit bye-recovery, readiness, injury or feasibility reduction removes it. |
 | Bye recovery: 1 TT | One light aerobic or flush session is optional. Normal TT counts as core conditioning. | Add no sprint when TT genuinely satisfies the floor. |
 | Bye recovery: 2+ TT | No additional conditioning is required. | Add no sprint when at least one TT genuinely satisfies the floor. |
@@ -4477,7 +4489,19 @@ App top-ups
 * Optional light flushouts never count as core conditioning.
 * A genuine sprint exposure requires actual high-speed running, not only skills, tempo work or low-speed COD.
 
-Team training and games are fixed anchors. Declared availability governs additional app sessions; it does not remove real-world anchors or authorise extra app days outside the declaration.
+Team training and games are fixed anchors. Declared availability governs additional app sessions, subject to the fixture-conditioned target-week rule below; it does not remove real-world anchors.
+
+Fixture-conditioned availability
+
+* A scheduled game or practice match occupies its fixture day; that occupation is not permanent athlete unavailability.
+* Removing a fixture releases its former day for app training by default. Provenance is `released_game_day` or `released_practice_match_day`.
+* A known in-season bye conditionally releases the athlete's usual game day with provenance `bye_usual_game_day`.
+* Moving a fixture releases the old day and occupies the new day in one atomic target-week resolution.
+* Effective target-week app availability is: explicit athlete availability, plus released fixture days, minus current fixture days, explicit unavailable/rest/commitment days, and safety/readiness restrictions.
+* A released fixture day remains unavailable when an explicit unavailable-day constraint, calendar rest/commitment mark, active injury/readiness restriction, full pause, or another fixture blocks it.
+* Stored `preferredTrainingDays` and `trainingDaysPerWeek` are not mutated by fixture resolution. Effective weekly training capacity is derived for the target week only.
+* Removing a fixture must not decrease effective app availability unless another explicit blocker applies. Adding a fixture must not increase it.
+* Fixture release changes availability, not coaching mode: bye build may use the released usual game day for the approved hard replacement exposure, while bye recovery may use it for rest, recovery aerobic or lighter strength and must not automatically receive hard conditioning.
 
 Field-action power credit
 
@@ -4608,7 +4632,7 @@ H. Authorised reduction reasons
 
 An authorised reduction must identify the affected exposure domain and must survive into the final visible week. A final week that exceeds, restores or otherwise contradicts its approved reduction is invalid.
 
-I. Policy closure — 14 July 2026
+I. Policy closure — updated 15 July 2026
 
 All five previously open coaching-policy questions are resolved in this section:
 
@@ -4617,8 +4641,9 @@ All five previously open coaching-policy questions are resolved in this section:
 * Off-season subphase ownership, the first-block deload exception and the user-owned transition to Pre-season are defined in Sections B and F.
 * Meaningful multi-pattern credit and equal or near-equal weekly main-lift balance are defined in Section D.
 * Field actions receive no automatic formal power-primer credit; power remains an app category with no required numeric weekly minimum.
+* Fixture days are conditionally occupied rather than permanently unavailable. Removal/movement releases the old fixture day under the typed availability rule in Section C without mutating stored athlete preferences.
 
-There are no unresolved coaching-policy decisions in this report set as of 14 July 2026.
+There are no unresolved coaching-policy decisions in this report set as of 15 July 2026.
 
 J. Phase-planner ownership and cross-path preservation
 
@@ -4626,19 +4651,24 @@ The Section 18 phase planner uses one ownership order for every generated week:
 
 1. Resolve the canonical season phase, subphase and week mode.
 2. Read that mode's required minimum, default target, preferred range and maximum from Section B.
-3. Apply availability, readiness, injury, participation, training-age and other applicable typed constraints. Any frequency change must carry an authorised reason from Section H.
-4. Select the phase-owned strength, core-conditioning and sprint/high-speed targets before assigning weekdays.
-5. Credit only qualifying team-training, game and practice-match anchors.
-6. Allocate required main strength, `required_core` conditioning and required sprint/high-speed work.
-7. Allocate any remaining `planner_selected_core` conditioning needed by the selected phase target.
-8. Add `optional_flush`, `optional_recovery_aerobic`, gunshow and accessory work only after core work is satisfied. Optional work never rewrites the selected target or repairs a core shortfall.
-9. Validate the allocation against the selected contract, preserve typed ownership through canonical workout construction, and validate the final effective week. A deficient week must repair, regenerate, safely reduce with a typed reason or reject; the target must never be rewritten to match deficient output.
+3. Resolve typed target-week availability from stored athlete preferences, the prior and proposed fixture state, explicit calendar/unavailable marks and safety/readiness restrictions. Fixture release provenance and effective capacity are inputs to the contract; stored preferences remain unchanged.
+4. Apply readiness, injury, participation, training-age and other applicable typed constraints. Any frequency change must carry an authorised reason from Section H.
+5. Select the phase-owned strength, core-conditioning and sprint/high-speed targets before assigning weekdays.
+6. Credit only qualifying team-training, game and practice-match anchors.
+7. Allocate required main strength, `required_core` conditioning and required sprint/high-speed work.
+8. Allocate any remaining `planner_selected_core` conditioning needed by the selected phase target.
+9. Add `optional_flush`, `optional_recovery_aerobic`, gunshow and accessory work only after core work is satisfied. Optional work never rewrites the selected target or repairs a core shortfall.
+10. Validate the allocation against the selected contract, preserve typed ownership through canonical workout construction, and validate the final effective week. A deficient week must repair, regenerate, safely reduce with a typed reason or reject; the target must never be rewritten to match deficient output.
 
 This order applies to in-season game weeks, bye build, bye recovery, early/mid/late off-season, early/mid/late pre-season, practice-match weeks, deloads and every readiness, injury, availability, participation, training-age and equipment-constrained path. The phase table in Section B remains the source of the final target; weekday geometry only decides safe placement.
 
 Cross-path rules
 
 * Initial generation, edge-authored Week 1, deterministic fallback, rebuild, rollover and persistence/rehydration must preserve the same phase-owned contract and conditioning ownership.
+* Generation, calendar mutation, rebuild, Repeat Week, rollover and persistence/rehydration must consume the same typed target-week availability resolver. No path may independently infer that a removed fixture day remains unavailable.
+* A game or practice-match add, removal or move first attempts a minimal accepted-state repair: preserve every unaffected valid core session, anchor, `planEntryId`, weekday and prescription; remove fixture-only content; calculate the exact exposure delta; change optional work before core work; and add/move/broaden only the minimum sessions needed on effective available days.
+* Among equally safe candidates meeting the same contract, choose deterministically by: Section 18 compliance, effective availability, preserved core sessions, changed-day count, preserved identities/prescriptions, use of a released fixture day, pattern balance, rest distribution, duplicate-pattern avoidance, avoidance of unnecessary consecutive active days, then optional-before-core sacrifice.
+* Full regeneration is permitted only when no safe minimal-diff candidate can satisfy the target contract and final gateway.
 * Repeat Week uses the target week's canonical phase and selected exposure table. Its phase-table signature is the mode plus the selected main-strength, core-conditioning and sprint/high-speed targets.
 * When source and target phase-table signatures differ, Repeat Week regenerates from the target phase table instead of copying the source target or deficient source structure.
 * When the signatures match, source prescriptions may be preserved, but target anchors, typed constraints and final Section 18 validation still win.

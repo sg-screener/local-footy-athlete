@@ -1,6 +1,6 @@
 # LFA Programming Policy Decision Report
 
-**Status:** Sam’s approved policy recorded. The Section 18 phase-planner ownership slice is implemented on `main` in commit `49073d393c19571b39fecf53051f3e3c5fdea452`; historical pre-implementation evidence is retained below and labelled as such.
+**Status:** Sam’s approved policy recorded. The Section 18 phase-planner ownership slice is implemented on `main` in commit `49073d393c19571b39fecf53051f3e3c5fdea452`; the fixture-conditioned availability/minimal-replan decision was approved on 15 July 2026 and is implemented in the current slice. Historical pre-implementation evidence is retained and labelled as such.
 **Bible authority:** `docs/LFA_PROGRAMMING_BIBLE.md` Section 18, approved 14 July 2026, supersedes older contradictory examples.
 **Evidence date:** 14 July 2026.
 **Fixed scenario weeks:** Monday 13 July, 20 July, 27 July, 3 August and 10 August 2026.
@@ -18,6 +18,37 @@ The five formerly open decisions are now locked:
 5. Field activity never receives automatic formal power-primer credit; power has no required weekly numeric minimum.
 
 **No coaching-policy decisions remain unresolved as of 14 July 2026.**
+
+## Fixture-conditioned availability and minimal fixture replan — approved 15 July 2026
+
+### Decision
+
+A scheduled game or practice match occupies its day but does not make that weekday permanently unavailable. Removing the fixture releases the day for target-week app training by default; moving it releases the old day and occupies the new day atomically. A known in-season bye similarly releases the usual game day. Explicit unavailable-day constraints, calendar rest/commitment marks, safety/readiness restrictions and another fixture still block the day.
+
+The stored profile is not rewritten. `preferredTrainingDays` and `trainingDaysPerWeek` remain the athlete's durable preference; target-week availability and capacity are derived values with provenance:
+
+| Provenance | Meaning |
+| --- | --- |
+| `explicit_available` | Durable athlete-selected app-training day. |
+| `released_game_day` | Prior accepted game day released by removal/movement. |
+| `released_practice_match_day` | Prior accepted practice-match day released by removal/movement. |
+| `bye_usual_game_day` | Usual game day conditionally released because the target in-season week is a bye. |
+| `fixture_occupied` | Proposed game/practice-match day unavailable to app work. |
+| `explicit_unavailable` | Athlete unavailable-day instruction. |
+| `calendar_rest_commitment` | Explicit calendar rest/commitment mark. |
+| `safety_readiness_unavailable` | Active safety/readiness restriction blocks training. |
+
+Effective target-week app availability is explicit availability plus released fixture days, minus current fixture days, explicit unavailable/rest/commitment days and safety/readiness blocks. Removing a fixture cannot reduce effective availability unless another explicit blocker applies; adding one cannot increase it.
+
+### Ownership and retired behaviour
+
+One typed target-week availability resolver owns this result for initial generation, calendar mutation, rebuild, Repeat Week, rollover and persistence/rehydration. Temporary game/no-game profiles and the final gateway may consume the result but must not reinterpret it. The old behaviour—clearing the game from a temporary profile, rebuilding selected days only from stored preferences, and fully regenerating the week—is retired for fixture mutation.
+
+Fixture mutation instead starts from the visible accepted week and the new Contract v2. It preserves valid anchors and core sessions, weekdays, `planEntryId`s and prescriptions; removes fixture-only content; calculates the exact exposure delta; sacrifices optional work before core work; and makes the smallest safe edit. Candidate scoring follows Section 18 compliance, effective availability, preserved core, changed days, identity/prescription stability, released-day use, pattern/rest balance and duplicate-pattern avoidance. Full regeneration is a last resort only when no minimal candidate passes the final gateway.
+
+### Approved in-season Saturday-game removal example
+
+For normal/high readiness with Tuesday/Thursday TT, the accepted game week already contains valid Monday lower, Tuesday upper pull + TT and Thursday upper push + TT. Removing Saturday's game produces bye build: TT supplies two core conditioning exposures, so one hard core conditioning exposure is added on the released Saturday. Friday Gunshow remains optional and may be retained, moved or removed before any core strength is rewritten. No second lower/squat session and no merged upper session are permitted when the original three core sessions remain valid.
 
 ## Section 18 phase-planner implementation record — 14 July 2026
 
@@ -43,7 +74,7 @@ The detailed identity is preserved from allocation into the canonical workout. T
 
 | Mode | Normal phase-owned selection and constrained behaviour |
 | --- | --- |
-| In-season game | S3 when safe; S2 only with typed constraint ownership. Core C3 is game/TT credit plus 0/1/2 app core for 2/1/0 TT. Required game-week app intensity and G-3-or-earlier placement are retained. |
+| In-season game | S3 when safe; S2 only with typed constraint ownership. Core C3 is game/TT credit plus 0/1/2 app core for 2/1/0 TT. With 3TT, the game is a fourth unavoidable anchor credit and never triggers extra app conditioning; removing it returns the week to TT-supplied C3. Required game-week app intensity and G-3-or-earlier placement are retained. |
 | Bye build | Normally S3/C3/sprint1. Strong readiness, sufficient availability and low TT may select S4. S2 is valid only with a typed constraint. App C is 3/2/1/0 for 0/1/2/3 TT. |
 | Bye recovery | Exactly two lighter strength sessions, no power and no compulsory hard app conditioning. Light recovery aerobic is 1–2 programmed/one optional/none additional for 0/1/2+ TT. |
 | Early off-season | Core S0/C0. Planner-selected S2–3 and C1–2 remain optional, within S3/C3 maxima, with zero valid and no required sprint or power. |

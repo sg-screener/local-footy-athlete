@@ -35,6 +35,9 @@ import {
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { useProgramStore } from '../store/programStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import { useCalendarStore } from '../store/calendarStore';
+import { useReadinessStore } from '../store/readinessStore';
+import { useProfileStore } from '../store/profileStore';
 import type { OnboardingData } from '../types/domain';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
@@ -137,6 +140,19 @@ function resolveLiveWeek(mondayISO: string, seasonPhase: string, gameDay?: strin
 function resetWorld() {
   useProgramStore.getState().clearManualOverrides();
   useProgramStore.getState().clearWeekScopedOverlays();
+  useProgramStore.setState((state) => ({
+    acceptedMaterialContext: {
+      ...state.acceptedMaterialContext,
+      markedDays: {},
+      readinessSignalsByDate: {},
+      activeConstraints: [],
+      activeInjury: null,
+      revision: state.acceptedMaterialContext.revision + 1,
+      lastTransaction: 'week-rebuild-test:reset',
+    },
+  }));
+  useCalendarStore.setState({ markedDays: {}, selectedDate: null });
+  useReadinessStore.setState({ signalsByDate: {} });
   useCoachUpdatesStore.setState((s: unknown) => ({
     ...(s as object),
     activeConstraints: [],
@@ -147,6 +163,10 @@ function resetWorld() {
 /** Seed a no-game program through the canonical door. */
 function seed(profile: Partial<OnboardingData>) {
   resetWorld();
+  useProfileStore.setState({
+    onboardingData: profile as OnboardingData,
+    isOnboardingComplete: true,
+  });
   const result = rebuildLocalWeek({
     baseProfile: profile as OnboardingData,
     newGameDay: null,
@@ -161,6 +181,7 @@ function addSaturdayGame(profile: Partial<OnboardingData>, satDate: string) {
     newGameDay: 'Saturday',
     scope: 'weekOverlay',
     targetDate: satDate,
+    manageCalendarFixture: true,
     commitGameMark: () => { markedDays[satDate] = 'game'; },
   });
 }
@@ -479,10 +500,12 @@ console.log('\n── Week-scoped practice match overlay does not pollute future
     newGameDay: null,
     scope: 'weekOverlay',
     targetDate: wk2Sat,
+    manageCalendarFixture: true,
     commitGameMark: () => { delete markedDays[wk2Sat]; },
   });
-  ok('removing the practice match clears the selected-week overlay',
-    !remove.overlay && !Object.keys(useProgramStore.getState().weekScopedOverlays).includes(wk2Mon),
+  ok('removing the practice match retains one minimal no-fixture overlay',
+    remove.overlay?.reason === 'one_off_no_game' &&
+      JSON.stringify(Object.keys(useProgramStore.getState().weekScopedOverlays)) === JSON.stringify([wk2Mon]),
     JSON.stringify(useProgramStore.getState().weekScopedOverlays));
   const selectedAfterRemove = resolveLiveWeek(wk2Mon, 'Pre-season', undefined);
   ok('removed match week returns to base no-game shape aside from the manual Monday away edit',
@@ -511,6 +534,7 @@ console.log('\n── Week-scoped bye shape does not leak into adjacent in-seaso
     newGameDay: null,
     scope: 'weekOverlay',
     targetDate: wk2Sat,
+    manageCalendarFixture: true,
     commitGameMark: () => { markedDays[wk2Sat] = 'noGame'; },
   });
   const selectedBye = resolveLiveWeek(wk2Mon, 'In-season', 'Saturday');
@@ -526,7 +550,7 @@ console.log('\n── Week-scoped bye shape does not leak into adjacent in-seaso
     selectedBye.every((day) => day.workout?.workoutType !== 'Game') &&
       (() => {
         const saturday = classifyVisibleSession(dayOf(selectedBye, wk2Sat)?.workout);
-        return saturday.contributions.mainStrength === 1 && saturday.strengthRegion === 'lower';
+        return saturday.contributions.conditioning === 1 && saturday.stressLevel === 'high';
       })(),
     selectedBye.map((day) => `${day.short}:${day.workout?.name ?? 'OFF'}`).join(' | '));
   ok('previous game week is byte-identical after selected-week bye generation',
@@ -542,8 +566,10 @@ console.log('\n── Week-scoped bye shape does not leak into adjacent in-seaso
   const restore = addSaturdayGame(IN_SEASON_SIX_DAY, wk2Sat);
   const selectedGameAfterRestore = resolveLiveWeek(wk2Mon, 'In-season', 'Saturday');
   const overlayKeysAfterRestore = Object.keys(useProgramStore.getState().weekScopedOverlays);
-  ok('restoring the game returns the selected week to its original visible shape',
-    weekShapeSignature(selectedGameAfterRestore) === weekShapeSignature(selectedGameBefore),
+  const restoredFriday = selectedGameAfterRestore.find((day) => day.dayOfWeek === 5)?.workout;
+  ok('restoring the game returns the selected week to a valid minimally repaired game shape',
+    dayOf(selectedGameAfterRestore, wk2Sat)?.workout?.workoutType === 'Game' &&
+      (!restoredFriday || restoredFriday.sessionTier !== 'core'),
     `before=${weekShapeSignature(selectedGameBefore)}\nafter=${weekShapeSignature(selectedGameAfterRestore)}`);
   ok('restoring the game replaces rather than duplicates the selected-week overlay',
     restore.overlay?.reason === 'one_off_game' &&

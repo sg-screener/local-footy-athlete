@@ -627,7 +627,7 @@ function policyFor(input: Pick<
     case 'in_season_game_week':
       return {
         strength: { required: 2, defaultTarget: 3, preferred: { min: 2, max: 3 }, max: 4 },
-        conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 3 }, max: 3, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: tt === 1 ? 1 : 0, permittedHardCoreMaximum: null },
+        conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: tt === 1 ? 1 : 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: !noPower, preferred: { min: 0, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
         rest: { required: 1, preferred: { min: 1, max: 2 } },
@@ -687,7 +687,7 @@ function policyFor(input: Pick<
     case 'practice_match_week':
       return {
         strength: { required: 3, defaultTarget: 3, preferred: { min: 3, max: tt === 0 ? 4 : 3 }, max: tt === 0 ? 4 : 3 },
-        conditioning: { required: 3, defaultTarget: 3, preferred: { min: 3, max: 3 }, max: 3, stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
+        conditioning: { required: 3, defaultTarget: Math.max(3, tt + 1), preferred: { min: 3, max: Math.max(3, tt + 1) }, max: Math.max(3, tt + 1), stress: ['moderate', 'hard'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: tt === 0 ? 2 : tt === 1 ? 1 : 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: null },
         sprint: { required: 1, preferred: { min: 1, max: 1 }, max: null },
         power: { eligible: !noPower, preferred: { min: 1, max: 2 }, removalReason: noPower ? 'low_readiness_or_deload' : null },
         rest: { required: 0, preferred: { min: 2, max: 2 } },

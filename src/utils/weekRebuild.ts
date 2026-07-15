@@ -49,6 +49,7 @@ import { applyGameDayChange } from './profileMutations';
 import { addDays, computeGameDatesForBlock, getMondayForDate } from './sessionResolver';
 import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/programStore';
 import {
+  buildFixtureProjection,
   commitAcceptedStateTransaction,
   proposeFixtureMarkedDays,
   type AcceptedProgramSurfaces,
@@ -63,6 +64,8 @@ import {
   selectMicrocycleForDate,
 } from './programBlockState';
 import { logger } from './logger';
+import type { FixtureMinimalReplanResult } from './fixtureMinimalReplan';
+import { resolveProfileTargetWeekAvailability } from '../rules/fixtureConditionedAvailability';
 
 // ─── Canonical context ───────────────────────────────────────────────
 
@@ -91,6 +94,7 @@ export interface WeekRebuildResult {
   context: WeekRebuildContext;
   sweep: OverrideSweepDecision;
   overlay?: WeekScopedWorkoutOverlay;
+  fixtureReplan?: FixtureMinimalReplanResult;
 }
 
 // ─── Pure sweep decision ─────────────────────────────────────────────
@@ -134,17 +138,6 @@ const DAY_NAMES: DayOfWeek[] = [
 
 function dayNameForDate(dateISO: string): DayOfWeek {
   return DAY_NAMES[new Date(`${dateISO}T12:00:00`).getDay()];
-}
-
-function hasEffectiveGameAnchor(profile: OnboardingData): boolean {
-  const day = profile.usualGameDay || profile.gameDay;
-  return day === 'Monday' ||
-    day === 'Tuesday' ||
-    day === 'Wednesday' ||
-    day === 'Thursday' ||
-    day === 'Friday' ||
-    day === 'Saturday' ||
-    day === 'Sunday';
 }
 
 function cloneWorkoutForOverlay(
@@ -402,15 +395,21 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
     throw new Error(`Week-scoped game rebuild target ${targetDate} does not match ${args.newGameDay}`);
   }
 
-  if (
-    scope === 'weekOverlay' &&
-    args.newGameDay === null &&
-    !hasEffectiveGameAnchor(args.baseProfile)
-  ) {
+  if (scope === 'weekOverlay') {
     const currentProgram = useProgramStore.getState().currentProgram;
     if (!currentProgram) {
-      throw new Error('Cannot clear week overlay without a current program');
+      throw new Error('Cannot replan a fixture week without a current program');
     }
+    const state = useProgramStore.getState();
+    const markedDays = proposedMarkedDays ?? state.acceptedMaterialContext.markedDays;
+    const projection = buildFixtureProjection({
+      program: currentProgram,
+      profile: args.baseProfile,
+      weekStart: targetWeekStart!,
+      markedDays,
+      sourceOverlay: state.weekScopedOverlays[targetWeekStart!],
+      activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    });
     const context = collectWeekRebuildContext({
       baseProfile: args.baseProfile,
       newGameDay: args.newGameDay,
@@ -421,31 +420,50 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
     const sweep = decideOverrideSweep(context);
 
     if (shouldCommit) {
-      commitWeekScopedOverlay(null, sweep, {
-        targetWeekStart: targetWeekStart!,
+      commitWeekScopedOverlay(projection.overlay, sweep, {
         clearOverlayDate: args.clearOverlayDate,
-        markedDays: proposedMarkedDays,
+        markedDays,
       });
       args.commitGameMark?.();
     }
 
-    logger.debug('[weekRebuild] cleared week-scoped overlay', {
+    logger.debug('[weekRebuild] fixture minimal replan committed', {
       weekStart: targetWeekStart,
+      path: projection.replan.path,
+      effectiveCapacity: projection.replan.availability.effectiveWeeklyTrainingCapacity,
+      releasedFixtures: projection.replan.availability.releasedFixtures,
+      changedDays: projection.replan.changedDays,
       preserved: sweep.preserve,
       cleared: sweep.clear,
       conflictsRemoved: sweep.conflictsRemoved,
     });
-    return { program: currentProgram, context, sweep };
+    return {
+      program: currentProgram,
+      context,
+      sweep,
+      overlay: projection.overlay,
+      fixtureReplan: projection.replan,
+    };
   }
 
   // 1. Candidate week from base programming rules (throws on failure —
   //    nothing has been committed yet).
-  const generationDate = scope === 'weekOverlay' ? targetWeekStart! : todayISO;
-  const persistedProgram = useProgramStore.getState().currentProgram;
+  const generationDate = todayISO;
+  const persistedState = useProgramStore.getState();
+  const persistedProgram = persistedState.currentProgram;
+  const targetWeekAvailability = resolveProfileTargetWeekAvailability({
+    profile,
+    weekStart: getMondayForDate(generationDate),
+    markedDays: persistedState.acceptedMaterialContext.markedDays,
+    activeConstraints: persistedState.acceptedMaterialContext.activeConstraints,
+  });
+  const targetFixture = targetWeekAvailability.proposedFixtures[0];
   const program = generateProgramLocally(profile, {
     todayISO: generationDate,
     blockNumber: args.blockNumber ?? getCurrentBlockNumberForGeneration(generationDate),
     previousProgram: persistedProgram,
+    targetWeekAvailability,
+    targetFixtureDay: targetFixture ? dayNameForDate(targetFixture.date) : null,
   });
 
   // 2. Canonical context + pure sweep decision.
@@ -459,21 +477,7 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
   const sweep = decideOverrideSweep(context);
 
   // 3. Atomic commit: proposed marks + program/overlay + sweep together.
-  let overlay: WeekScopedWorkoutOverlay | undefined;
-  if (scope === 'weekOverlay') {
-    overlay = buildWeekScopedWorkoutOverlay({
-      program,
-      weekStart: targetWeekStart!,
-      anchorDate: args.newGameDay ? targetDate! : null,
-      reason: args.newGameDay ? 'one_off_game' : 'one_off_no_game',
-    });
-    if (shouldCommit) {
-      commitWeekScopedOverlay(overlay, sweep, {
-        clearOverlayDate: args.clearOverlayDate,
-        markedDays: proposedMarkedDays,
-      });
-    }
-  } else if (shouldCommit) {
+  if (shouldCommit) {
     commitRebuiltProgram(program, sweep);
   }
   if (shouldCommit) args.commitGameMark?.();
@@ -481,12 +485,12 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
   logger.debug('[weekRebuild] committed', {
     scope,
     gameDates: context.gameDates,
-    overlayWeekStart: overlay?.weekStart,
+    overlayWeekStart: null,
     preserved: sweep.preserve,
     cleared: sweep.clear,
     conflictsRemoved: sweep.conflictsRemoved,
   });
-  return { program, context, sweep, overlay };
+  return { program, context, sweep };
 }
 
 /**

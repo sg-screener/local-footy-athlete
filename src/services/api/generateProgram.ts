@@ -2,6 +2,7 @@ import {
   OnboardingData,
   TrainingProgram,
   Microcycle,
+  type DayOfWeek,
   type ConditioningEquipmentModality,
   type Workout,
 } from '../../types/domain';
@@ -60,6 +61,7 @@ import {
   type SeasonPhaseClock,
   type SeasonPhaseClockResolution,
 } from '../../rules/seasonPhaseClock';
+import type { FixtureConditionedAvailability } from '../../rules/fixtureConditionedAvailability';
 
 /**
  * Kinds of program-generation failure — used by the UI to decide whether
@@ -114,6 +116,12 @@ export interface GenerateProgramFromProfileOptions {
   /** Explicit continuity input for pure callers; normal app paths use the live persisted program. */
   previousProgram?: TrainingProgram | null;
   seasonPhaseClock?: SeasonPhaseClock | null;
+  /** Shared target-week availability result; fixture paths must not rebuild it ad hoc. */
+  targetWeekAvailability?: FixtureConditionedAvailability;
+  /** undefined = profile fixture, null = bye/no fixture, day = proposed fixture. */
+  targetFixtureDay?: DayOfWeek | null;
+  /** Build only the target week when the caller needs a contract/fallback candidate. */
+  microcycleLimit?: 1 | 4;
 }
 
 type CoachGeneratedWorkouts = Parameters<typeof buildWorkoutsFromCoach>[0];
@@ -237,13 +245,14 @@ export function buildGeneratedMicrocycles(args: {
   availableConditioningModalities?: readonly ConditioningEquipmentModality[];
   generationConstraints?: GenerationConstraintContext;
   activeConstraints?: readonly ActiveConstraint[];
+  weekLimit?: 1 | 4;
 }): Microcycle[] {
   const states = buildBlockWeekStates({
     blockStartISO: args.blockStartISO,
     blockNumber: args.blockNumber ?? 1,
     seasonPhase: args.profile.seasonPhase,
     seasonPhaseClock: args.seasonPhaseClock,
-  });
+  }).slice(0, args.weekLimit ?? 4);
 
   return states.map((blockState, stateIndex) => {
     const microcycleId = `${args.microcyclePrefix}-${blockState.weekNumber}`;
@@ -506,6 +515,8 @@ export function generateProgramLocally(
     phaseClockProvenance: phaseResolution.provenance,
     offseasonSubphase: phaseResolution.offseasonSubphase ?? undefined,
     preseasonSubphase: phaseResolution.preseasonSubphase ?? undefined,
+    targetWeekAvailability: options.targetWeekAvailability,
+    targetFixtureDay: options.targetFixtureDay,
   });
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,
@@ -539,6 +550,7 @@ export function generateProgramLocally(
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
     activeConstraints: activeConstraintsForGeneration,
+    weekLimit: options.microcycleLimit,
   });
   const firstMicrocycle = microcycles[0];
   if (!firstMicrocycle?.workouts.length) {
@@ -1015,6 +1027,8 @@ export async function generateProgramFromProfile(
     phaseClockProvenance: phaseResolution.provenance,
     offseasonSubphase: phaseResolution.offseasonSubphase ?? undefined,
     preseasonSubphase: phaseResolution.preseasonSubphase ?? undefined,
+    targetWeekAvailability: options.targetWeekAvailability,
+    targetFixtureDay: options.targetFixtureDay,
   });
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,

@@ -40,6 +40,9 @@ import type {
   Workout,
   WeekScopedWorkoutOverlay,
 } from '../types/domain';
+import {
+  resolveProfileTargetWeekAvailability,
+} from '../rules/fixtureConditionedAvailability';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
   migrateLegacyWeeklyExposureContractV2,
@@ -67,6 +70,9 @@ const DAY_NAME_TO_NUM: Record<DayOfWeek, number> = {
   Friday: 5,
   Saturday: 6,
 };
+const DAY_NUMBER_TO_NAME: DayOfWeek[] = [
+  'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday',
+];
 
 /** Deterministic owner id for a repeat-week overlay (clearable / sweepable). */
 export function repeatWeekOverlayId(targetWeekStart: string): string {
@@ -242,6 +248,14 @@ function resolveRepeatTargetExposureContracts(args: {
     equipment,
     profile: args.profile,
   });
+  const acceptedContext = useProgramStore.getState().acceptedMaterialContext;
+  const targetWeekAvailability = resolveProfileTargetWeekAvailability({
+    profile: args.profile,
+    weekStart: args.targetWeekStart,
+    markedDays: acceptedContext.markedDays,
+    activeConstraints: acceptedContext.activeConstraints,
+  });
+  const targetFixture = targetWeekAvailability.proposedFixtures[0];
   const inputs = onboardingToCoachingInputs(args.profile, {
     availabilityDateISO: args.targetWeekStart,
     miniCycleNumber: blockState.miniCycleNumber,
@@ -255,6 +269,10 @@ function resolveRepeatTargetExposureContracts(args: {
     preseasonSubphase: blockState.phaseResolution.preseasonSubphase ?? undefined,
     appConditioningFeasible: substitutionPolicy.appConditioningFeasible ?? undefined,
     conditioningSubstitutionPolicy: substitutionPolicy,
+    targetWeekAvailability,
+    targetFixtureDay: targetFixture
+      ? DAY_NUMBER_TO_NAME[new Date(`${targetFixture.date}T12:00:00`).getDay()]
+      : null,
   });
   const plan = buildCoachingPlan(inputs);
   const workouts = buildWorkoutsFromCoach(

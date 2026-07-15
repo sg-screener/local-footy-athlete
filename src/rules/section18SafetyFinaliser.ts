@@ -76,9 +76,12 @@ function stripConditioning(workout: Workout): Workout {
     conditioningBlock: undefined,
     conditioningCategory: undefined,
     conditioningFlavour: undefined,
+    conditioningFeasibility: undefined,
     hasCombinedConditioning: false,
     attachedConditioningKind: undefined,
     coachAddedConditioningLabel: undefined,
+    section18ConditioningRole: undefined,
+    section18Evidence: undefined,
   };
 }
 
@@ -157,13 +160,20 @@ function canonicalContextFor(
   };
 }
 
-function hasWorkoutSafetyTransformation(contract: WeeklyExposureContractV2): boolean {
-  return contract.safety.fullPause ||
-    contract.safety.prohibitedPatterns.length > 0 ||
-    contract.safety.prohibitedPower ||
-    contract.safety.prohibitedPowerFamilies.length > 0 ||
-    contract.safety.prohibitedSprintHighSpeed ||
-    contract.safety.lighterStrengthRequired;
+function hasWorkoutSafetyTransformation(
+  contract: WeeklyExposureContractV2,
+  workout: Workout,
+): boolean {
+  if (contract.safety.fullPause) return true;
+  if (contract.safety.lighterStrengthRequired && mainStrengthSession(workout)) return true;
+  if (contract.safety.prohibitedPatterns.length > 0 && (
+    (workout.exercises ?? []).length > 0 ||
+    (workout.strengthIntent?.effectivePatterns.length ?? 0) > 0
+  )) return true;
+  if (contract.safety.prohibitedPower && !!workout.powerBlock) return true;
+  if (workout.powerBlock &&
+      contract.safety.prohibitedPowerFamilies.includes(workout.powerBlock.family)) return true;
+  return contract.safety.prohibitedSprintHighSpeed && !!workout.speedBlock;
 }
 
 function conformWorkout(args: {
@@ -178,7 +188,7 @@ function conformWorkout(args: {
   }
   // This boundary owns safety conformance only. A healthy, unrestricted week
   // must retain its already-canonical visible identity and prescription.
-  if (!hasWorkoutSafetyTransformation(contract)) {
+  if (!hasWorkoutSafetyTransformation(contract, args.workout)) {
     return { workout: args.workout, actions };
   }
   const before = args.workout;

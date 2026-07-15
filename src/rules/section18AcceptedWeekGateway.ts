@@ -24,6 +24,7 @@ import type {
   Section18AuthorisedReduction,
   WeeklyExposureContractV2,
 } from './weeklyExposureContractV2';
+import { resolveProfileTargetWeekAvailability } from './fixtureConditionedAvailability';
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
@@ -164,9 +165,14 @@ export function resolveFinalVisibleSection18Week(args: {
     const gameDayIndex = profileGameDay ? DAY_NAMES.indexOf(profileGameDay as typeof DAY_NAMES[number]) : -1;
     if (gameDayIndex >= 0) markedDays[dateForDay(weekStart, gameDayIndex)] = 'noGame';
   }
-  const profileAvailableDays = args.profile?.preferredTrainingDays
-    ?.map((day) => DAY_NAMES.indexOf(day as typeof DAY_NAMES[number]))
-    .filter((day) => day >= 0) ?? [];
+  const targetWeekAvailability = args.profile
+    ? resolveProfileTargetWeekAvailability({
+        profile: args.profile,
+        weekStart,
+        markedDays,
+      })
+    : null;
+  const profileAvailableDays = targetWeekAvailability?.effectiveAvailableDayNumbers ?? [];
   const canonicalAvailableDays = Array.from(new Set(
     args.workouts.map((workout) => workout.dayOfWeek),
   ));
@@ -395,8 +401,13 @@ function repairOptionalRest(args: {
     .filter((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
     .map((anchor) => anchor.dayOfWeek);
   const protectedRecoveryDays = new Set(fixtureDays.map((day) => (day + 1) % 7));
-  const candidates = args.evaluation.ledger.restStress.activeRecoveryDays
-    .filter((day) => !protectedRecoveryDays.has(day));
+  const optionalDays = args.workouts
+    .filter((workout) => workout.sessionTier === 'optional')
+    .map((workout) => workout.dayOfWeek);
+  const candidates = Array.from(new Set([
+    ...args.evaluation.ledger.restStress.activeRecoveryDays,
+    ...optionalDays,
+  ])).filter((day) => !protectedRecoveryDays.has(day));
   for (const day of candidates) {
     const source = args.workouts.find((workout) => workout.dayOfWeek === day);
     if (source && (workoutHasMainStrength(source) || workoutHasAppCoreConditioning(source))) continue;

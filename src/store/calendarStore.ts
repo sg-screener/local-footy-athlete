@@ -9,8 +9,8 @@ import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
  * Stores manually-set overrides by date:
  *   'game'   → explicit game (user added or moved here)
  *   'rest'   → user-forced rest day
- *   'noGame' → explicit bye / "no game this week" override. Only
- *              meaningful in In-season, where a virtual game would
+ *   'noGame' → explicit no-fixture override. It suppresses the recurring
+ *              in-season game or pre-season practice match that would
  *              otherwise render on profile.usualGameDay.
  *
  * During In-season, the resolver renders a VIRTUAL game on

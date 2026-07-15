@@ -730,7 +730,14 @@ run('property', 'no calendar mutation can bypass the gateway', () => {
     () => useCalendarStore.getState().removeRestDay('2026-07-16'),
   ];
   for (const action of actions) {
-    action();
+    const before = materialSignature();
+    try {
+      action();
+    } catch {
+      assert(materialSignature() === before,
+        'rejected calendar mutation changed an accepted-state surface');
+      continue;
+    }
     assertAcceptedVisibleLedgerEquivalence({
       surfaces: useProgramStore.getState(), context: getAcceptedMaterialContext(),
       weekStarts: [WEEK_START], profile: value,
