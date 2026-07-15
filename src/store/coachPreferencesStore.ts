@@ -38,7 +38,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { asyncStorageCompat } from './asyncStorageCompat';
 import type { ConditioningModality } from '../data/exerciseTags';
 import type { BikeLabel } from '../utils/coachModalitySwap';
 import { logger } from '../utils/logger';
@@ -301,7 +301,7 @@ export const useCoachPreferencesStore = create<ModalityPreferencesState>()(
     }),
     {
       name: 'coach-preferences-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => asyncStorageCompat),
     },
   ),
 );

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { asyncStorageCompat } from './asyncStorageCompat';
 import type { ReadinessSignal } from '../utils/readiness';
 import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
 import { getMondayForDate } from '../utils/sessionResolver';
@@ -127,7 +127,7 @@ export const useReadinessStore = create<ReadinessState>()(
     }),
     {
       name: 'readiness-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => asyncStorageCompat),
       merge: (persisted, current) => {
         const incoming = (persisted as Partial<ReadinessState> | undefined) ?? {};
         return {

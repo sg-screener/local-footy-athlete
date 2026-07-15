@@ -4,8 +4,12 @@ import { useProfileStore } from '../store/profileStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { useReadinessStore } from '../store/readinessStore';
-import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
-import { commitProgramSetupRebuildTransaction } from '../store/acceptedStateTransaction';
+import { useCalendarStore } from '../store/calendarStore';
+import {
+  commitAcceptedStateTransaction,
+  commitProgramSetupRebuildTransaction,
+} from '../store/acceptedStateTransaction';
+import { runCoachMutationTransaction } from '../store/coachMutationTransaction';
 import type { DayOfWeek } from '../types/domain';
 import {
   usePendingCoachClarifierStore,
@@ -124,6 +128,7 @@ import {
 } from './semanticCoachRevisionProposal';
 import {
   applyCoachRevisionDateOverrides,
+  coachRevisionSemanticContractsMatch,
 } from './coachRevisionOverrideWriter';
 import {
   type ProgramEditRiskAssessment,
@@ -132,6 +137,12 @@ import {
 import { assessProgramEditWrites } from './programEditWriteGuard';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { logger } from './logger';
+import {
+  firstSemanticDoseChange,
+  semanticDiffChangesLever,
+  semanticDiffHasMaterialReductionForLever,
+  type SemanticProgramDiff,
+} from './programSemanticSnapshot';
 
 export interface CoachTurnMessage {
   id: string;
@@ -428,14 +439,6 @@ function resolveLiveProgramTabVisibleDayForDate(date: string, todayISO: string) 
 interface DraftVisibleVerifierSnapshot {
   dates: string[];
   visible: CoachVisibleDomainSnapshotMap;
-  rollback: DraftVisibleRollbackSnapshot[];
-}
-
-interface DraftVisibleRollbackSnapshot {
-  date: string;
-  workout: any | null;
-  context: any | null;
-  calendarMark: CalendarDayType | null;
 }
 
 function captureDraftVisibleVerifierSnapshot(
@@ -464,7 +467,6 @@ function captureDraftVisibleVerifierSnapshot(
   return {
     dates,
     visible,
-    rollback: captureDraftVisibleRollbackSnapshot(dates),
   };
 }
 
@@ -497,49 +499,6 @@ function collectDraftVisibleVerifierDates(
   addDate(command?.payload?.toDate);
 
   return [...dates].sort();
-}
-
-function captureDraftVisibleRollbackSnapshot(
-  dates: string[],
-): DraftVisibleRollbackSnapshot[] {
-  const programState = useProgramStore.getState();
-  const calendarState = useCalendarStore.getState();
-  return dates.map((date) => ({
-    date,
-    workout: programState.dateOverrides?.[date] ?? null,
-    context: programState.overrideContexts?.[date] ?? null,
-    calendarMark: calendarState.markedDays?.[date] ?? null,
-  }));
-}
-
-function restoreDraftVisibleRollbackSnapshot(
-  snapshot: DraftVisibleRollbackSnapshot[],
-  reason: string,
-): void {
-  const programStore = useProgramStore.getState();
-  const calendarStore = useCalendarStore.getState();
-  for (const item of snapshot) {
-    try {
-      if (item.workout) {
-        programStore.setManualOverride(item.date, item.workout, item.context ?? undefined);
-      } else {
-        programStore.removeManualOverride(item.date);
-      }
-
-      calendarStore.removeGameDay(item.date);
-      calendarStore.removeRestDay(item.date);
-      calendarStore.removeNoGame(item.date);
-      if (item.calendarMark === 'game') calendarStore.setGameDay(item.date);
-      if (item.calendarMark === 'rest') calendarStore.setRestDay(item.date);
-      if (item.calendarMark === 'noGame') calendarStore.setNoGame(item.date);
-    } catch (err) {
-      logger.warn('[coach-program-edit-draft-visible-rollback-failed]', {
-        date: item.date,
-        reason,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
 }
 
 function verifyDraftVisibleExecution(args: {
@@ -591,14 +550,14 @@ type ProgramEditVisibleGuardRun =
       verification: Extract<CoachVisibleDomainVerificationResult, { ok: false }>;
     };
 
-function executeProgramEditWithVisibleGuard(args: {
+async function executeProgramEditWithVisibleGuard(args: {
   input: CoachTurnControllerInput;
   programEdit: ProgramEdit;
   draft: ProgramEditDraft | null | undefined;
   referenceResolution: any;
   userMessage: string;
   source: string;
-}): ProgramEditVisibleGuardRun {
+}): Promise<ProgramEditVisibleGuardRun> {
   const verifierDraft = visibleVerifierDraftForProgramEdit(
     args.programEdit,
     args.draft,
@@ -609,26 +568,74 @@ function executeProgramEditWithVisibleGuard(args: {
     args.programEdit,
     args.input.todayISO,
   );
-  const result = executeProgramEdit({
-    programEdit: args.programEdit,
+  let latestVisibleVerification: CoachVisibleDomainVerificationResult = {
+    ok: true,
+    route: 'program_edit_draft_visible_guard_ok',
+  };
+  const transaction = await runCoachMutationTransaction({
     todayISO: args.input.todayISO,
-    referenceResolution: args.referenceResolution,
-    userMessage: args.userMessage,
-    onProgress: (stage) => setProgress(args.input, stage),
+    extraDates: programEditMutationDates(args.programEdit, verifierDraft),
+    mutate: () => executeProgramEdit({
+      programEdit: args.programEdit,
+      todayISO: args.input.todayISO,
+      referenceResolution: args.referenceResolution,
+      userMessage: args.userMessage,
+      onProgress: (stage) => setProgress(args.input, stage),
+    }),
+    didApply: (result) => result.kind === 'mutated' && result.applied,
+    verifyCandidate: ({ value: result, diff }) => {
+      const visibleVerification = verifyDraftVisibleExecution({
+        draft: verifierDraft,
+        edit: args.programEdit,
+        result,
+        before,
+        todayISO: args.input.todayISO,
+      });
+      latestVisibleVerification = visibleVerification;
+      if (visibleVerification.ok === false) {
+        return {
+          ok: false,
+          reason: visibleVerification.reason,
+          details: visibleVerification.details,
+        };
+      }
+      return verifyProgramEditSemanticIntent(args.programEdit, verifierDraft, diff);
+    },
+    verifyAfterPersistence: ({ value: result }) => {
+      const visibleVerification = verifyDraftVisibleExecution({
+        draft: verifierDraft,
+        edit: args.programEdit,
+        result,
+        before,
+        todayISO: args.input.todayISO,
+      });
+      latestVisibleVerification = visibleVerification;
+      if (visibleVerification.ok === false) {
+        return { ok: false, reason: visibleVerification.reason };
+      }
+      return { ok: true };
+    },
   });
   args.input.setCoachProgressLabel(null);
 
-  const verification = verifyDraftVisibleExecution({
-    draft: verifierDraft,
-    edit: args.programEdit,
-    result,
-    before,
-    todayISO: args.input.todayISO,
-  });
-  if (verification.ok === false) {
-    if (before?.rollback) {
-      restoreDraftVisibleRollbackSnapshot(before.rollback, verification.reason);
+  if (transaction.ok === false) {
+    if (
+      transaction.value &&
+      !(transaction.value.kind === 'mutated' && transaction.value.applied)
+    ) {
+      return { kind: 'ok', result: transaction.value };
     }
+    const latest = latestVisibleVerification as CoachVisibleDomainVerificationResult;
+    const verification: Extract<CoachVisibleDomainVerificationResult, { ok: false }> =
+      latest.ok === false
+        ? latest
+        : {
+            ok: false,
+            route: `program_edit_transaction_failed:${transaction.route}`,
+            reason: transaction.reason,
+            reply: "I couldn't safely apply that change, so I left the plan unchanged.",
+            details: { rollbackVerified: transaction.rollbackVerified },
+          };
     logger.warn('[coach-program-edit-draft-visible-guard-blocked]', {
       source: args.source,
       route: verification.route,
@@ -639,13 +646,124 @@ function executeProgramEditWithVisibleGuard(args: {
       draftActionScope: verifierDraft?.actionScope ?? null,
       finalIntent: args.programEdit.intent,
       finalTargetDomain: args.programEdit.targetDomain,
-      resultRoute: result.route,
-      resultReplyWasDone: /^Done\b/i.test(result.reply),
+      resultRoute: transaction.value?.route ?? transaction.route,
+      resultReplyWasDone: /^Done\b/i.test(transaction.value?.reply ?? ''),
     });
-    return { kind: 'blocked', result, verification };
+    return {
+      kind: 'blocked',
+      result: transaction.value ?? failedCoachMutationExecutionResult(transaction.route),
+      verification,
+    };
   }
 
-  return { kind: 'ok', result };
+  return {
+    kind: 'ok',
+    result: {
+      ...transaction.value,
+      reply: composeCommittedProgramEditReply(args.programEdit, transaction.diff),
+    },
+  };
+}
+
+function programEditMutationDates(
+  edit: ProgramEdit,
+  draft: ProgramEditDraft | null,
+): string[] {
+  const command = edit.command as any;
+  return Array.from(new Set([
+    edit.targetDate,
+    command?.target?.date,
+    command?.payload?.toDate,
+    draft?.targetDate,
+    ...(draft?.proposedActions.map((action) => action.targetDate) ?? []),
+  ].filter((date): date is string => typeof date === 'string' && date.length >= 10)));
+}
+
+function verifyProgramEditSemanticIntent(
+  edit: ProgramEdit,
+  draft: ProgramEditDraft | null,
+  diff: SemanticProgramDiff,
+): { ok: boolean; reason?: string; details?: Record<string, unknown> } {
+  const reductionRequested = draft?.intent === 'reduce' ||
+    edit.semanticRoles?.actionIntent === 'reduce' ||
+    ('editScope' in edit && edit.editScope === 'reduce_strength_block');
+  if (reductionRequested) {
+    const lever = draft?.actionScope === 'duration' || edit.requestedChange === 'duration'
+      ? 'duration'
+      : draft?.actionScope === 'intensity' || edit.requestedChange === 'intensity'
+        ? 'intensity'
+        : 'any';
+    if (!semanticDiffHasMaterialReductionForLever(diff, lever)) {
+      return {
+        ok: false,
+        reason: `no_material_${lever}_reduction`,
+        details: { lever },
+      };
+    }
+  }
+  if ('editScope' in edit && edit.editScope === 'intensity_only' && !semanticDiffChangesLever(diff, 'intensity')) {
+    return { ok: false, reason: 'intensity_only_edit_did_not_change_intensity' };
+  }
+  if ('editScope' in edit && edit.editScope === 'duration_only' && !semanticDiffChangesLever(diff, 'duration')) {
+    return { ok: false, reason: 'duration_only_edit_did_not_change_duration' };
+  }
+  return { ok: true };
+}
+
+function composeCommittedProgramEditReply(
+  edit: ProgramEdit,
+  diff: SemanticProgramDiff,
+): string {
+  const changedDates = diff.changedDates.length > 0
+    ? diff.changedDates.join(' and ')
+    : edit.targetDate ?? 'the visible program';
+  const doseChange = firstSemanticDoseChange(diff);
+  if (doseChange) {
+    const field = committedDoseFieldLabel(doseChange.path);
+    return `Done. I updated ${field} from ${String(doseChange.before)} to ${String(doseChange.after)} on ${changedDates}.`;
+  }
+  if (edit.intent === 'move') return `Done. I moved the accepted session across ${changedDates}.`;
+  const targetLabel = committedProgramEditTargetLabel(edit.targetDomain);
+  const protectedLabels = Array.from(new Set((edit.protectedTargets ?? [])
+    .map((target: any) => committedProgramEditTargetLabel(target.domain ?? target.targetDomain))));
+  const protectedSuffix = protectedLabels.length > 0
+    ? ` and left the ${protectedLabels.join(' and ')} alone`
+    : '';
+  if (edit.intent === 'remove') {
+    return `Done. I removed the ${targetLabel} on ${changedDates}${protectedSuffix}.`;
+  }
+  if (edit.intent === 'add') return `Done. I added the ${targetLabel} on ${changedDates}.`;
+  if (edit.intent === 'replace') return `Done. I replaced the ${targetLabel} on ${changedDates}.`;
+  return `Done. I updated the accepted programming on ${changedDates}.`;
+}
+
+function committedDoseFieldLabel(path: string): string {
+  const leaf = path.split('.').pop() ?? '';
+  if (leaf === 'repsMin' || leaf === 'repsMax') return 'reps';
+  if (leaf === 'weightKg') return 'load';
+  if (leaf === 'restSeconds') return 'rest';
+  if (leaf === 'itemDurationMinutes' || leaf === 'durationMinutes') return 'duration';
+  if (leaf === 'strengthIntensity' || leaf === 'conditioningIntensity') return 'intensity';
+  return leaf || 'prescription';
+}
+
+function committedProgramEditTargetLabel(domain: string): string {
+  if (domain === 'strength') return 'strength work';
+  if (domain === 'conditioning') return 'conditioning';
+  if (domain === 'team_training') return 'team training';
+  if (domain === 'schedule') return 'scheduled session';
+  if (domain === 'session') return 'session';
+  return 'programming';
+}
+
+function failedCoachMutationExecutionResult(route: string): ExecutionResult {
+  return {
+    kind: 'verified_no_op',
+    reply: "I couldn't safely apply that change, so I left the plan unchanged.",
+    applied: false,
+    route,
+    progress: [],
+  };
 }
 
 function visibleVerifierDraftForProgramEdit(
@@ -2004,12 +2122,12 @@ function assessCoachRevisionProposalRisk(args: {
   };
 }
 
-function applyDevActiveCoachRevision(args: {
+async function applyDevActiveCoachRevision(args: {
   input: CoachTurnControllerInput;
   packet: ReturnType<typeof buildCoachContextPacket>;
   result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>;
   visibleWeek?: ReturnType<typeof buildCoachContextPacket>['currentWeek'];
-}): { ok: true; reply: string; route: string } | { ok: false; reply: string; route: string } {
+}): Promise<{ ok: true; reply: string; route: string } | { ok: false; reply: string; route: string }> {
   if (!isSupportedDevActiveCoachRevision(args.result)) {
     return {
       ok: false,
@@ -2025,35 +2143,81 @@ function applyDevActiveCoachRevision(args: {
       ...(args.packet.nextWeek ?? []),
     ]),
   ]);
-  const apply = applyCoachRevisionDateOverrides({
-    proposal: args.result.proposal,
-    visibleWeek,
+  const verifyAcceptedProposal = () => {
+    const acceptedByDate = new Map(
+      args.result.proposal.revisedDays.map((day) => [day.date, day]),
+    );
+    const verified = args.result.proposal.scope.dates.every((date) => {
+      const accepted = acceptedByDate.get(date);
+      return !!accepted && verifyCoachRevisionProjectionAfterWrite({
+        date,
+        todayISO: args.input.todayISO,
+        accepted,
+      });
+    });
+    return verified
+      ? { ok: true }
+      : { ok: false, reason: 'accepted_revision_does_not_match_visible_projection' };
+  };
+  const transaction = await runCoachMutationTransaction({
     todayISO: args.input.todayISO,
-    // The writer re-validates internally; it must see the SAME app-side
-    // policy (date window + template authorization) as proposal time, or
-    // template replacements get re-flagged as unknown content at apply.
-    // Confirmation is a CONVERSATIONAL gate that has already been satisfied
-    // by the time anything reaches apply (needs_confirmation → stored
-    // transaction → athlete's "yes"); the writer's re-validation is the
-    // safety net for content/dates/protection, not the confirm UX.
-    validationPolicy: {
-      ...coachRevisionValidationPolicyForWeek(visibleWeek, args.input.todayISO),
-      requireConfirmationForAdds: false,
+    extraDates: args.result.proposal.scope.dates,
+    mutate: () => {
+      const multiDate = args.result.proposal.scope.dates.length > 1;
+      const apply = applyCoachRevisionDateOverrides({
+        proposal: args.result.proposal,
+        visibleWeek,
+        todayISO: args.input.todayISO,
+        // The writer re-validates internally; it must see the SAME app-side
+        // policy (date window + template authorization) as proposal time.
+        validationPolicy: {
+          ...coachRevisionValidationPolicyForWeek(visibleWeek, args.input.todayISO),
+          requireConfirmationForAdds: false,
+        },
+        deferWeekAcceptanceToTransaction: multiDate,
+        setManualOverride: multiDate
+          ? undefined
+          : (date, workout, context) =>
+              useProgramStore.getState().setManualOverride(date, workout, context),
+      });
+      if (multiDate && apply.applied.length > 0 && apply.rejected.length === 0) {
+        const state = useProgramStore.getState();
+        commitAcceptedStateTransaction({
+          reason: `coach_revision:${args.result.proposal.userIntent.intent}`,
+          program: {
+            dateOverrides: {
+              ...state.dateOverrides,
+              ...Object.fromEntries(apply.applied.map((write) => [write.date, write.workout])),
+            },
+            overrideContexts: {
+              ...state.overrideContexts,
+              ...Object.fromEntries(apply.applied.map((write) => [write.date, write.context])),
+            },
+          },
+          validateWeekStarts: Array.from(new Set(
+            apply.applied.map((write) => getMondayForDate(write.date)),
+          )),
+          programAlreadyAccepted: true,
+        });
+      }
+      return apply;
     },
-    setManualOverride: (date, workout, context) =>
-      useProgramStore.getState().setManualOverride(date, workout, context),
+    didApply: (apply) => apply.applied.length > 0 && apply.rejected.length === 0,
+    verifyCandidate: verifyAcceptedProposal,
+    verifyAfterPersistence: verifyAcceptedProposal,
   });
 
-  if (apply.applied.length === 0 || apply.rejected.length > 0) {
+  if (transaction.ok === false) {
+    const apply = transaction.value;
     // Failures at this layer were previously silent, making every writer
     // rejection look identical from the chat. Name them.
     emitCoachTurnDiagnostic('coach_revision_apply_rejected', {
-      appliedDates: apply.applied.map((write) => write.date),
-      rejected: apply.rejected.map((entry) => ({
+      appliedDates: apply?.applied.map((write) => write.date) ?? [],
+      rejected: apply?.rejected.map((entry) => ({
         date: entry.date ?? null,
         code: entry.code,
         reason: entry.reason,
-      })),
+      })) ?? [],
       proposalDates: args.result.proposal.scope.dates,
       intent: args.result.proposal.userIntent.intent,
       actionScope: args.result.proposal.userIntent.actionScope,
@@ -2061,22 +2225,9 @@ function applyDevActiveCoachRevision(args: {
     });
     return {
       ok: false,
-      route: 'coach-revision-proposal-apply-rejected',
-      reply: "I couldn't safely apply that revision, so I left the plan unchanged.",
-    };
-  }
-
-  const verified = apply.applied.every((write) =>
-    verifyCoachRevisionProjectionAfterWrite({
-      date: write.date,
-      todayISO: args.input.todayISO,
-      accepted: write.projectedDay,
-    }),
-  );
-  if (!verified) {
-    return {
-      ok: false,
-      route: 'coach-revision-proposal-visible-verifier-failed',
+      route: transaction.route === 'coach_mutation_not_applied'
+        ? 'coach-revision-proposal-apply-rejected'
+        : transaction.route,
       reply: "I couldn't safely apply that revision, so I left the plan unchanged.",
     };
   }
@@ -2084,8 +2235,45 @@ function applyDevActiveCoachRevision(args: {
   return {
     ok: true,
     route: 'coach-revision-proposal-applied',
-    reply: composeCoachRevisionDoneReply(args.result),
+    reply: composeCommittedCoachRevisionReply(transaction.diff, args.result.proposal),
   };
+}
+
+function composeCommittedCoachRevisionReply(
+  diff: SemanticProgramDiff,
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>,
+): string {
+  const dose = firstSemanticDoseChange(diff);
+  const date = diff.changedDates[0] ?? proposal.scope.dates[0] ?? 'the visible program';
+  if (proposal.userIntent.intent === 'move') {
+    const destination = proposal.scope.dates.find((candidate) => candidate !== date) ??
+      proposal.scope.dates.at(-1) ?? date;
+    const moved = diff.before.days.find((day) => day.date === date)?.workout?.presentation.title ?? 'the session';
+    return `Done. I moved ${moved} to ${destination}.`;
+  }
+  if (proposal.userIntent.intent === 'replace') {
+    const replacement = proposal.revisedDays.find((day) => day.date === date)?.workout?.title ??
+      diff.after.days.find((day) => day.date === date)?.workout?.presentation.title ??
+      'the replacement session';
+    return `Done. I swapped in ${replacement} on ${date}.`;
+  }
+  if (proposal.userIntent.intent === 'remove') {
+    if (proposal.userIntent.targetDomain === 'strength') {
+      return `Done. I removed the strength work on ${date}.`;
+    }
+    if (proposal.userIntent.targetDomain === 'conditioning') {
+      return `Done. I removed conditioning on ${date}.`;
+    }
+    if (proposal.userIntent.targetDomain === 'team_training') {
+      return `Done. I removed the team training portion on ${date}.`;
+    }
+    return `Done. I removed the session on ${date}.`;
+  }
+  if (dose) {
+    const field = committedDoseFieldLabel(dose.path);
+    return `Done. I updated ${field} from ${String(dose.before)} to ${String(dose.after)} on ${date}.`;
+  }
+  return `Done. I applied the accepted programming change on ${date}.`;
 }
 
 function verifyCoachRevisionProjectionAfterWrite(args: {
@@ -2101,9 +2289,10 @@ function verifyCoachRevisionProjectionAfterWrite(args: {
     state,
     overrideContext: programStore.overrideContexts?.[args.date],
   });
+  const projectedSnapshot = snapshotProjectedDay(projected);
+  if (coachRevisionSemanticContractsMatch(projectedSnapshot, args.accepted)) return true;
   const acceptedJson = JSON.stringify(args.accepted);
-  const projectedJson = JSON.stringify(snapshotProjectedDay(projected));
-  if (acceptedJson === projectedJson) return true;
+  const projectedJson = JSON.stringify(projectedSnapshot);
   // Verifier mismatches are the "silent lossiness" failure class: the write
   // happened but the projection renders something else. Emit the first point
   // of divergence so every mismatch names the exact field.
@@ -2119,79 +2308,6 @@ function verifyCoachRevisionProjectionAfterWrite(args: {
     projectedAround: projectedJson.slice(Math.max(0, divergeAt - 80), divergeAt + 160),
   });
   return false;
-}
-
-function composeCoachRevisionDoneReply(
-  result: Extract<SemanticCoachRevisionProposalResult, { kind: 'revision' }>,
-): string {
-  if (
-    result.proposal.userIntent.intent === 'move' &&
-    result.diff.changedDates.length === 2
-  ) {
-    const sourceDate = result.diff.dateDiffs.find((entry) =>
-      entry.itemDiffs.some((item) => item.kind === 'removed'),
-    )?.date;
-    const destDate = result.diff.dateDiffs.find((entry) =>
-      entry.itemDiffs.some((item) => item.kind === 'added'),
-    )?.date;
-    const movedTitle =
-      result.proposal.revisedDays.find((day) => day.date === destDate)?.workout?.title ??
-      'the session';
-    return `Done. I moved ${movedTitle} from ${sourceDate ?? 'its day'} to ${destDate ?? 'the new day'}.`;
-  }
-  if (
-    result.proposal.userIntent.intent === 'replace' ||
-    result.proposal.userIntent.intent === 'add'
-  ) {
-    const addedTitle = result.diff.dateDiffs
-      .flatMap((entry) => entry.sectionDiffs)
-      .find((section) => section.kind === 'added')?.after?.title;
-    const removedAnything = result.diff.dateDiffs.some((entry) =>
-      entry.sectionDiffs.some((section) => section.kind === 'removed'),
-    );
-    const changeDate = result.diff.changedDates[0] ?? result.proposal.scope.dates[0] ?? 'that day';
-    return removedAnything
-      ? `Done. I swapped in ${addedTitle ?? 'the new session'} on ${changeDate}.`
-      : `Done. I added ${addedTitle ?? 'the new session'} on ${changeDate}.`;
-  }
-  const date = result.diff.changedDates[0] ?? result.proposal.scope.dates[0] ?? 'that day';
-  const summary = result.diagnostic.diffSummary[0];
-  const removedStrength = summary?.sectionsRemoved.some((item) => item.startsWith('strength:'));
-  const removedConditioning = summary?.sectionsRemoved.some((item) => item.startsWith('conditioning:'));
-  const removedSession = summary?.sectionsRemoved.some((item) => item.startsWith('session:'));
-  const changedStrength =
-    summary?.sectionsChanged.some((item) => item.startsWith('strength:')) ||
-    summary?.itemsChanged.some((item) => item.startsWith('strength:'));
-  if (summary?.workoutChange === 'removed') {
-    return `Done. I removed the session on ${date}.`;
-  }
-  // Describe what actually SURVIVED from the revised day, not a guess —
-  // "left conditioning alone" was wrong when the survivor was team training.
-  const survivingKinds = new Set(
-    result.proposal.revisedDays[0]?.workout?.sections.map((section) => section.kind) ?? [],
-  );
-  const keptLabel =
-    survivingKinds.has('session') && !survivingKinds.has('conditioning')
-      ? 'the team training'
-      : survivingKinds.has('conditioning') && !survivingKinds.has('session')
-        ? 'conditioning'
-        : 'the rest of the session';
-  if (removedStrength && !removedConditioning) {
-    return `Done. I removed the strength work on ${date} and left ${keptLabel} alone.`;
-  }
-  if (removedConditioning && !removedStrength) {
-    return `Done. I removed conditioning from ${date} and left strength alone.`;
-  }
-  if (removedSession && !removedStrength && !removedConditioning) {
-    // Session-kind section on a combined day = the team-training commitment.
-    // Without this branch the composer fell through to "made it lighter",
-    // which misdescribes a correct edit — a wording lie on a true Done.
-    return `Done. I removed the team training on ${date} and kept the rest of the session.`;
-  }
-  if (changedStrength) {
-    return `Done. I made the strength work lighter on ${date}.`;
-  }
-  return `Done. I updated ${date}.`;
 }
 
 function pendingClarifierFromSemanticClarify(args: {
@@ -3081,7 +3197,7 @@ export async function handleCoachTurn(
           });
         }
         usePendingCoachClarifierStore.getState().clearPending();
-        const applied = applyDevActiveCoachRevision({
+        const applied = await applyDevActiveCoachRevision({
           input,
           packet,
           result: pseudoResult,
@@ -3233,7 +3349,7 @@ export async function handleCoachTurn(
               riskSignature: risk.signature,
             });
           }
-          const applied = applyDevActiveCoachRevision({
+          const applied = await applyDevActiveCoachRevision({
             input,
             packet,
             result: revisionResult,
@@ -3483,7 +3599,7 @@ export async function handleCoachTurn(
           }
           return { handled: true };
         }
-        const guarded = executeProgramEditWithVisibleGuard({
+        const guarded = await executeProgramEditWithVisibleGuard({
           input,
           programEdit: transactionProgramEdit,
           draft: null,
@@ -3638,7 +3754,7 @@ export async function handleCoachTurn(
           });
           return replyAndFinish(input, 'pending-program-edit-draft-guard', draftExecutionGuard.reply);
         }
-        const guarded = executeProgramEditWithVisibleGuard({
+        const guarded = await executeProgramEditWithVisibleGuard({
           input,
           programEdit: programEditFromDraft,
           draft: resumedDraft,
@@ -3683,7 +3799,7 @@ export async function handleCoachTurn(
           legacyBlocked: true,
           ageMs: Date.now() - pendingClarifier.createdAt,
         });
-        const guarded = executeProgramEditWithVisibleGuard({
+        const guarded = await executeProgramEditWithVisibleGuard({
           input,
           programEdit: pendingProgramEditAnswer.programEdit,
           draft: null,
@@ -3810,7 +3926,7 @@ export async function handleCoachTurn(
           }
           return { handled: true };
         }
-        const guarded = executeProgramEditWithVisibleGuard({
+        const guarded = await executeProgramEditWithVisibleGuard({
           input,
           programEdit: resumedProgramEdit,
           draft: null,
@@ -4134,7 +4250,7 @@ export async function handleCoachTurn(
             riskSignature: risk.signature,
           });
         }
-        const applied = applyDevActiveCoachRevision({
+        const applied = await applyDevActiveCoachRevision({
           input,
           packet,
           result: revisionResult,
@@ -4818,7 +4934,7 @@ export async function handleCoachTurn(
       (commandForExecution && isMutateCommand(commandForExecution)) ||
       isCommandlessTypedStrengthBlockProgramEdit(programEditForExecution)
     ) {
-      const guarded = executeProgramEditWithVisibleGuard({
+      const guarded = await executeProgramEditWithVisibleGuard({
         input,
         programEdit: programEditForExecution,
         draft: packet.programEditDraft,

@@ -24,7 +24,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { asyncStorageCompat } from './asyncStorageCompat';
 import {
   normalizeAcceptedArray,
   normalizeAcceptedKeyedMap,
@@ -790,7 +790,7 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
     }),
     {
       name: 'coach-updates',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => asyncStorageCompat),
       merge: (persisted, current) => {
         const incoming = (persisted as Partial<CoachUpdatesState> | undefined) ?? {};
         const context = normalizeAcceptedMaterialContext({

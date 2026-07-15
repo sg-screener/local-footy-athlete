@@ -275,7 +275,9 @@ export function extractVisibleProgramItemsFromWorkout(
       doseLabel: conditioningIdentity?.doseLabel,
       domain: isRecovery && !isStackedConditioningTemplate ? 'recovery' : 'conditioning',
       modality: inferModalityFromName(text),
-      durationMinutes: extractVisibleDurationMinutes(text, linkedExercises),
+      durationMinutes: Number.isFinite(option.durationMinutes)
+        ? Number(option.durationMinutes)
+        : extractVisibleDurationMinutes(text, linkedExercises),
       description,
       exerciseIds,
       source: 'conditioning_option',

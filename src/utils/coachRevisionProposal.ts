@@ -7,6 +7,7 @@ import {
 import type { ResolvedDay, ScheduleState } from './sessionResolver';
 import { logger } from './logger';
 import { getTeamTrainingWorkoutState } from './teamTraining';
+import { semanticIntensityRank } from './programSemanticSnapshot';
 
 export const COACH_REVISION_PROPOSAL_SCHEMA_VERSION = 'coach_revision_proposal.v1';
 
@@ -134,6 +135,10 @@ export interface CoachVisibleItemSnapshot {
     repsMin: number | null;
     repsMax: number | null;
     intensity: string | null;
+    weightKg?: number | null;
+    restSeconds?: number | null;
+    prescriptionType?: Workout['exercises'][number]['prescriptionType'] | null;
+    itemDurationMinutes?: number | null;
   } | null;
 }
 
@@ -148,6 +153,8 @@ export interface CoachVisibleWorkoutSnapshot {
   id: string;
   title: string;
   workoutType: string;
+  durationMinutes?: number;
+  intensity?: string;
   sections: CoachVisibleSectionSnapshot[];
 }
 
@@ -329,14 +336,21 @@ export function buildCoachRevisionWeekSnapshotFromProjectedDays(
 export function snapshotProjectedDay(day: ResolvedDay): CoachVisibleDaySnapshot {
   const workout = day.workout ?? null;
   if (!workout) return { date: day.date, workout: null };
+  const sections = buildVisibleSections(day, workout);
+  const hasStrength = sections.some((section) => section.kind === 'strength');
+  const hasConditioning = sections.some((section) => section.kind === 'conditioning');
 
   return {
     date: day.date,
     workout: {
       id: stableWorkoutId(day, workout),
       title: cleanText(workout.name) || 'Workout',
-      workoutType: cleanText(workout.workoutType) || 'Workout',
-      sections: buildVisibleSections(day, workout),
+      workoutType: hasStrength && hasConditioning
+        ? 'Mixed'
+        : cleanText(workout.workoutType) || 'Workout',
+      durationMinutes: Number(workout.durationMinutes ?? 0),
+      intensity: cleanText(workout.intensity) || 'Moderate',
+      sections,
     },
   };
 }
@@ -595,6 +609,10 @@ function snapshotVisibleItem(
           repsMin: finiteNumberOrNull(linkedExercise.prescribedRepsMin),
           repsMax: finiteNumberOrNull(linkedExercise.prescribedRepsMax),
           intensity: cleanText((linkedExercise as any).intensity ?? workout.intensity) || null,
+          weightKg: positiveNumberOrNull(linkedExercise.prescribedWeightKg),
+          restSeconds: finiteNumberOrNull(linkedExercise.restSeconds),
+          prescriptionType: linkedExercise.prescriptionType ?? 'reps',
+          itemDurationMinutes: itemDurationMinutes(linkedExercise),
         }
       : null,
   };
@@ -916,6 +934,12 @@ function validateDiffMatchesIntent(
     if (addedUnderReduce) {
       invalid.push(issue('non_conservative_reduction', 'Proposal adds content under a reduce intent.'));
     }
+    if (!hasStrictMaterialReduction(proposal, diff)) {
+      invalid.push(issue(
+        'no_material_dose_reduction',
+        'The proposal changes labels or copy but does not reduce the requested training dose.',
+      ));
+    }
     return { invalid, needsConfirmation };
   }
 
@@ -1120,18 +1144,101 @@ function isConservativeReduction(
   // had no prescription there is nothing to reduce, but DROPPING an existing
   // prescription (or any of its populated fields) is silent nullification,
   // not a conservative reduction.
-  if (!beforeRx) return true;
+  if (!beforeRx) {
+    return nullableNumberReducedOrSame(before.durationMinutes, after.durationMinutes);
+  }
   if (!afterRx) return false;
   const setsOk = nullableNumberReducedOrSame(beforeRx.sets, afterRx.sets);
   const repsMinOk = nullableNumberReducedOrSame(beforeRx.repsMin, afterRx.repsMin);
   const repsMaxOk = nullableNumberReducedOrSame(beforeRx.repsMax, afterRx.repsMax);
-  return setsOk && repsMinOk && repsMaxOk;
+  const weightOk = nullableNumberReducedOrSame(beforeRx.weightKg ?? null, afterRx.weightKg ?? null);
+  const restOk = nullableNumberIncreasedOrSame(beforeRx.restSeconds ?? null, afterRx.restSeconds ?? null);
+  const itemDurationOk = nullableNumberReducedOrSame(
+    beforeRx.itemDurationMinutes ?? before.durationMinutes,
+    afterRx.itemDurationMinutes ?? after.durationMinutes,
+  );
+  const intensityOk = semanticIntensityRank(afterRx.intensity) <= semanticIntensityRank(beforeRx.intensity);
+  const typeOk = (afterRx.prescriptionType ?? beforeRx.prescriptionType ?? null) ===
+    (beforeRx.prescriptionType ?? null);
+  return setsOk && repsMinOk && repsMaxOk && weightOk && restOk &&
+    itemDurationOk && intensityOk && typeOk;
+}
+
+function hasStrictMaterialReduction(
+  proposal: Extract<CoachRevisionProposal, { kind: 'revision' }>,
+  diff: CoachRevisionDiff,
+): boolean {
+  const requested = proposal.userIntent.actionScope === 'duration'
+    ? 'duration'
+    : proposal.userIntent.actionScope === 'intensity'
+      ? 'intensity'
+      : 'any';
+  if (requested === 'any' && diff.dateDiffs.some((entry) =>
+    entry.workoutChange === 'removed' ||
+    entry.sectionDiffs.some((section) => section.kind === 'removed') ||
+    entry.itemDiffs.some((item) => item.kind === 'removed')
+  )) return true;
+
+  return diff.dateDiffs.some((entry) => {
+    const beforeWorkout = entry.before?.workout;
+    const afterWorkout = entry.after?.workout;
+    if (
+      (requested === 'duration' || requested === 'any') &&
+      beforeWorkout && afterWorkout &&
+      Number(afterWorkout.durationMinutes ?? 0) < Number(beforeWorkout.durationMinutes ?? 0)
+    ) return true;
+    if (
+      (requested === 'intensity' || requested === 'any') &&
+      beforeWorkout && afterWorkout &&
+      semanticIntensityRank(afterWorkout.intensity) < semanticIntensityRank(beforeWorkout.intensity)
+    ) return true;
+    return entry.itemDiffs.some((item) => {
+      if (item.kind !== 'changed' || !item.before || !item.after) return false;
+      const before = item.before;
+      const after = item.after;
+      const beforeRx = before.prescription;
+      const afterRx = after.prescription;
+      if (requested === 'any' && beforeRx && afterRx &&
+        numberStrictlyReduced(beforeRx.sets, afterRx.sets)) return true;
+      if (requested === 'any' && beforeRx && afterRx && (
+        numberStrictlyReduced(beforeRx.repsMin, afterRx.repsMin) ||
+        numberStrictlyReduced(beforeRx.repsMax, afterRx.repsMax)
+      )) return true;
+      if ((requested === 'duration' || requested === 'any') && (
+        numberStrictlyReduced(before.durationMinutes, after.durationMinutes) ||
+        numberStrictlyReduced(
+          beforeRx?.itemDurationMinutes ?? null,
+          afterRx?.itemDurationMinutes ?? null,
+        )
+      )) return true;
+      if ((requested === 'intensity' || requested === 'any') &&
+        semanticIntensityRank(afterRx?.intensity) < semanticIntensityRank(beforeRx?.intensity)) return true;
+      return requested === 'any' && !!beforeRx && !!afterRx && (
+        numberStrictlyReduced(beforeRx.weightKg ?? null, afterRx.weightKg ?? null) ||
+        numberStrictlyIncreased(beforeRx.restSeconds ?? null, afterRx.restSeconds ?? null)
+      );
+    });
+  });
 }
 
 function nullableNumberReducedOrSame(before: number | null, after: number | null): boolean {
   if (before === null) return true;
   if (after === null) return false;
   return after <= before;
+}
+
+function nullableNumberIncreasedOrSame(before: number | null, after: number | null): boolean {
+  if (before === null) return true;
+  if (after === null) return false;
+  return after >= before;
+}
+
+function numberStrictlyReduced(before: number | null, after: number | null): boolean {
+  return before !== null && after !== null && after < before;
+}
+
+function numberStrictlyIncreased(before: number | null, after: number | null): boolean {
+  return before !== null && after !== null && after > before;
 }
 
 function validateProposalShape(value: Record<string, unknown>): string[] {
@@ -1285,10 +1392,23 @@ function validateDayShape(value: unknown, path: string): string[] {
     issues.push(`${path}.workout must be null or an object`);
     return issues;
   }
-  assertExactKeys(value.workout, ['id', 'title', 'workoutType', 'sections'], `${path}.workout`, issues);
+  assertAllowedAndRequiredKeys(value.workout, [
+    'id',
+    'title',
+    'workoutType',
+    'durationMinutes',
+    'intensity',
+    'sections',
+  ], ['id', 'title', 'workoutType', 'sections'], `${path}.workout`, issues);
   if (typeof value.workout.id !== 'string') issues.push(`${path}.workout.id is required`);
   if (typeof value.workout.title !== 'string') issues.push(`${path}.workout.title is required`);
   if (typeof value.workout.workoutType !== 'string') issues.push(`${path}.workout.workoutType is required`);
+  if (value.workout.durationMinutes !== undefined && typeof value.workout.durationMinutes !== 'number') {
+    issues.push(`${path}.workout.durationMinutes must be a number`);
+  }
+  if (value.workout.intensity !== undefined && typeof value.workout.intensity !== 'string') {
+    issues.push(`${path}.workout.intensity must be a string`);
+  }
   if (!Array.isArray(value.workout.sections)) {
     issues.push(`${path}.workout.sections must be an array`);
   } else {
@@ -1350,21 +1470,40 @@ function validateItemShape(value: unknown, path: string): string[] {
     if (!isRecord(value.prescription)) {
       issues.push(`${path}.prescription must be null or an object`);
     } else {
-      assertExactKeys(value.prescription, [
+      assertAllowedAndRequiredKeys(value.prescription, [
         'sets',
         'repsMin',
         'repsMax',
         'intensity',
-      ], `${path}.prescription`, issues);
-      for (const key of ['sets', 'repsMin', 'repsMax']) {
+        'weightKg',
+        'restSeconds',
+        'prescriptionType',
+        'itemDurationMinutes',
+      ], ['sets', 'repsMin', 'repsMax', 'intensity'], `${path}.prescription`, issues);
+      for (const key of [
+        'sets',
+        'repsMin',
+        'repsMax',
+        'weightKg',
+        'restSeconds',
+        'itemDurationMinutes',
+      ]) {
         const item = value.prescription[key];
-        if (item !== null && typeof item !== 'number') {
+        if (item !== undefined && item !== null && typeof item !== 'number') {
           issues.push(`${path}.prescription.${key} must be null or number`);
         }
       }
       const intensity = value.prescription.intensity;
       if (intensity !== null && typeof intensity !== 'string') {
         issues.push(`${path}.prescription.intensity must be null or string`);
+      }
+      const prescriptionType = value.prescription.prescriptionType;
+      if (
+        prescriptionType !== undefined &&
+        prescriptionType !== null &&
+        !['reps', 'duration', 'duration_minutes', 'distance'].includes(String(prescriptionType))
+      ) {
+        issues.push(`${path}.prescription.prescriptionType is invalid`);
       }
     }
   }
@@ -1378,6 +1517,17 @@ function findLinkedExercise(workout: Workout, ids: string[]): Workout['exercises
     idSet.has(String(row.exerciseId ?? '')) ||
     idSet.has(String(row.exercise?.id ?? '')),
   ) ?? null;
+}
+
+function itemDurationMinutes(row: Workout['exercises'][number]): number | null {
+  if (row.prescriptionType === 'duration_minutes') {
+    return finiteNumberOrNull(row.prescribedRepsMax ?? row.prescribedRepsMin);
+  }
+  if (row.prescriptionType === 'duration') {
+    const seconds = finiteNumberOrNull(row.prescribedRepsMax ?? row.prescribedRepsMin);
+    return seconds === null ? null : seconds / 60;
+  }
+  return finiteNumberOrNull((row as any).durationMinutes);
 }
 
 function conditioningSectionTitle(
@@ -1479,6 +1629,24 @@ function assertExactKeys(
   }
 }
 
+function assertAllowedAndRequiredKeys(
+  value: Record<string, unknown>,
+  allowedKeys: string[],
+  requiredKeys: string[],
+  path: string,
+  issues: string[],
+): void {
+  const allowed = new Set(allowedKeys);
+  for (const key of Object.keys(value)) {
+    if (!allowed.has(key)) issues.push(`${path}.${key} is not allowed`);
+  }
+  for (const key of requiredKeys) {
+    if (!Object.prototype.hasOwnProperty.call(value, key)) {
+      issues.push(`${path}.${key} is required`);
+    }
+  }
+}
+
 function cleanText(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -1486,6 +1654,11 @@ function cleanText(value: unknown): string {
 function finiteNumberOrNull(value: unknown): number | null {
   const n = Number(value);
   return Number.isFinite(n) ? n : null;
+}
+
+function positiveNumberOrNull(value: unknown): number | null {
+  const finite = finiteNumberOrNull(value);
+  return finite !== null && finite > 0 ? finite : null;
 }
 
 function normaliseKey(value: unknown): string {

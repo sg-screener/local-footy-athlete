@@ -515,6 +515,22 @@ section('[8] make tomorrow lighter via conservative reduction');
   eq('validator passes', result.status, 'valid');
   ok('strength items changed', result.diff.dateDiffs[0].itemDiffs.some((entry) => entry.kind === 'changed' && entry.sectionKind === 'strength'));
 
+  section('[8a] title-only lighter proposal is not a material reduction');
+  {
+    const renamed = clone(daySnap(before, TUE));
+    renamed.workout!.title = 'Lighter Strength';
+    const titleOnly = proposal({
+      intent: { intent: 'reduce', targetDomain: 'strength', actionScope: 'strength_section' },
+      dates: [TUE],
+      revisedDays: [renamed],
+    });
+    const titleOnlyResult = validateCoachRevisionDiff({ before, proposal: titleOnly });
+    eq('title-only lighter is rejected', titleOnlyResult.status, 'invalid');
+    ok('no material dose reduction issue is explicit',
+      titleOnlyResult.issues.some((entry) => entry.code === 'no_material_dose_reduction'),
+      titleOnlyResult.issues);
+  }
+
   section('[8b] nulling a populated prescription field is not a reduction');
   {
     const nulled = clone(daySnap(before, TUE));

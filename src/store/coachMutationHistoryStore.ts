@@ -39,7 +39,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { asyncStorageCompat } from './asyncStorageCompat';
 import type { Workout, OverrideContext } from '../types/domain';
 import type { ModalityPreference } from './coachPreferencesStore';
 import type { CalendarDayType } from './calendarStore';
@@ -260,7 +260,7 @@ export const useCoachMutationHistoryStore = create<MutationHistoryState>()(
     }),
     {
       name: 'coach-mutation-history-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => asyncStorageCompat),
     },
   ),
 );

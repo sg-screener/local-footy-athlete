@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { asyncStorageCompat } from './asyncStorageCompat';
 import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
 
 /**
@@ -135,7 +135,7 @@ export const useCalendarStore = create<CalendarState>()(
     }),
     {
       name: 'calendar-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => asyncStorageCompat),
       partialize: (state) => ({ markedDays: state.markedDays }),
       merge: (persisted, current) => {
         const incoming = (persisted as Partial<CalendarState> | undefined) ?? {};

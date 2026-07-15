@@ -189,6 +189,8 @@ When returning a workout, every workout must have exactly:
   "id": "stable workout id",
   "title": "visible title",
   "workoutType": "visible type",
+  "durationMinutes": 0,
+  "intensity": "visible intensity",
   "sections": []
 }
 
@@ -213,7 +215,11 @@ Every item must have exactly:
     "sets": 0,
     "repsMin": 0,
     "repsMax": 0,
-    "intensity": "string or null"
+    "intensity": "string or null",
+    "weightKg": 0,
+    "restSeconds": 0,
+    "prescriptionType": "reps|duration|duration_minutes|distance",
+    "itemDurationMinutes": 0
   }
 }
 

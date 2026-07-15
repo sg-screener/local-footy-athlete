@@ -11,9 +11,18 @@ import {
   extractVisibleProgramItemsFromResolvedDay,
   type VisibleProgramItem,
 } from './visibleProgramReadModel';
+import {
+  diffSemanticDays,
+  semanticDiffChangesLever,
+  semanticDiffHasMaterialReductionForLever,
+  semanticFingerprint,
+  snapshotSemanticResolvedDay,
+  type SemanticDaySnapshot,
+} from './programSemanticSnapshot';
 
 export interface CoachVisibleDomainFingerprint {
   date: string;
+  semantic: SemanticDaySnapshot;
   session: {
     visible: boolean;
     removedOrRest: boolean;
@@ -56,11 +65,13 @@ export function fingerprintVisibleProgramDay(
 ): CoachVisibleDomainFingerprint {
   const items = extractVisibleProgramItemsFromResolvedDay(day);
   const workout = day.workout ?? null;
+  const semantic = snapshotSemanticResolvedDay(day);
   const removedOrRest = isRemovedOrRestWorkout(workout);
   const emptyShell = isVisibleEmptySessionShell(workout, items);
 
   return {
     date: day.date,
+    semantic,
     session: {
       visible: !!workout && !removedOrRest,
       removedOrRest,
@@ -68,21 +79,16 @@ export function fingerprintVisibleProgramDay(
       name: clean(workout?.name),
       workoutType: clean(workout?.workoutType),
       sessionTier: clean((workout as any)?.sessionTier),
-      signature: stableString({
-        visible: !!workout && !removedOrRest,
-        removedOrRest,
-        emptyShell,
-        name: normalise(workout?.name),
-        workoutType: normalise(workout?.workoutType),
-        sessionTier: normalise((workout as any)?.sessionTier),
-        itemTitles: items.map((item) => normalise(item.title)).sort(),
-      }),
+      signature: semanticFingerprint(semantic.workout),
     },
-    strength: itemSignature(items.filter((item) => item.domain === 'strength')),
-    conditioning: conditioningDomainSignature(workout, items),
-    recovery: itemSignature(items.filter((item) => item.domain === 'recovery')),
-    exercises: itemSignature(items.filter((item) => item.source === 'strength_exercise')),
-    allItems: itemSignature(items),
+    strength: semanticFingerprint(semantic.workout?.components.filter((component) =>
+      component.kind === 'strength') ?? []),
+    conditioning: semanticFingerprint(semantic.workout?.components.filter((component) =>
+      component.kind === 'conditioning') ?? []),
+    recovery: semanticFingerprint(semantic.workout?.components.filter((component) =>
+      component.kind === 'recovery') ?? []),
+    exercises: semanticFingerprint(semantic.workout?.exercises ?? []),
+    allItems: semanticFingerprint(semantic.workout?.components ?? []),
   };
 }
 
@@ -179,6 +185,7 @@ function verifyActionDomainChange(args: {
   after: CoachVisibleDomainFingerprint;
 }): CoachVisibleDomainVerificationResult {
   const { action, before, after } = args;
+  const semanticDiff = diffSemanticDays(before.semantic, after.semantic);
   if (action.targetDomain === 'session' && action.actionScope === 'whole_session') {
     if (action.intent === 'remove') {
       if (!before.session.visible) {
@@ -208,6 +215,38 @@ function verifyActionDomainChange(args: {
   const afterDomain = domainSignature(after, action.targetDomain, action.actionScope);
   const beforeCount = domainItemCount(before, action.targetDomain, action.actionScope);
   const afterCount = domainItemCount(after, action.targetDomain, action.actionScope);
+
+  if (action.intent === 'reduce') {
+    const lever = action.actionScope === 'duration'
+      ? 'duration'
+      : action.actionScope === 'intensity'
+        ? 'intensity'
+        : 'any';
+    if (!semanticDiffHasMaterialReductionForLever(semanticDiff, lever)) {
+      return failVisibleGuard('no_material_dose_reduction', {
+        targetDate: after.date,
+        targetDomain: action.targetDomain,
+        actionScope: action.actionScope,
+        lever,
+      });
+    }
+  }
+
+  if (
+    action.intent === 'edit' &&
+    action.actionScope === 'duration' &&
+    !semanticDiffChangesLever(semanticDiff, 'duration')
+  ) {
+    return failVisibleGuard('duration_not_changed', { targetDate: after.date });
+  }
+
+  if (
+    action.intent === 'edit' &&
+    action.actionScope === 'intensity' &&
+    !semanticDiffChangesLever(semanticDiff, 'intensity')
+  ) {
+    return failVisibleGuard('intensity_not_changed', { targetDate: after.date });
+  }
 
   if (action.intent === 'add') {
     if (afterDomain === beforeDomain || afterCount <= beforeCount) {
@@ -428,45 +467,6 @@ function domainItemCount(
   }
 }
 
-function itemSignature(items: VisibleProgramItem[]): string {
-  return stableString(items.map((item) => ({
-    id: normalise(item.id),
-    title: normalise(item.title),
-    domain: item.domain,
-    modality: item.modality ?? null,
-    durationMinutes: item.durationMinutes ?? null,
-    source: item.source,
-    exerciseIds: [...item.exerciseIds].map(normalise).sort(),
-  })).sort((a, b) => {
-    const aKey = `${a.domain}:${a.id}:${a.title}`;
-    const bKey = `${b.domain}:${b.id}:${b.title}`;
-    return aKey.localeCompare(bKey);
-  }));
-}
-
-function conditioningDomainSignature(
-  workout: ResolvedDay['workout'] | null,
-  items: VisibleProgramItem[],
-): string {
-  const options = (workout?.conditioningBlock?.options ?? []).map((option: any) => ({
-    title: normalise(option?.title),
-    description: normalise(option?.description),
-  }));
-  const visibleItems = items
-    .filter((item) => item.domain === 'conditioning')
-    .map((item) => ({
-      title: normalise(item.title),
-      modality: item.modality ?? null,
-      durationMinutes: item.durationMinutes ?? null,
-      source: item.source,
-    }));
-  return stableString([...options, ...visibleItems].sort((a, b) =>
-    `${a.title}:${'source' in a ? a.source : 'option'}`.localeCompare(
-      `${b.title}:${'source' in b ? b.source : 'option'}`,
-    ),
-  ));
-}
-
 function fingerprintContainsTitle(
   fingerprint: CoachVisibleDomainFingerprint,
   title: string,
@@ -540,8 +540,4 @@ function normalise(value: unknown): string {
     .toLowerCase()
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-function stableString(value: unknown): string {
-  return JSON.stringify(value);
 }

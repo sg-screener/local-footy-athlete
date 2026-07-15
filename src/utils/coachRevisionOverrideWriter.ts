@@ -417,7 +417,9 @@ function buildContentOverride(source: Workout, revisedDay: CoachVisibleDaySnapsh
       section.items.flatMap((item) => item.exerciseIds),
     ),
   );
-  const strengthItemsByExerciseId = itemByExerciseId(strength?.items ?? []);
+  const revisedItemsByExerciseId = itemByExerciseId(
+    revisedWorkout.sections.flatMap((section) => section.items),
+  );
   const conditioningExerciseIds = sourceConditioningExerciseIds(source);
 
   let exercises = (source.exercises ?? [])
@@ -430,7 +432,7 @@ function buildContentOverride(source: Workout, revisedDay: CoachVisibleDaySnapsh
       if (isConditioning) return ids.some((id) => wantedExerciseIds.has(id));
       return ids.some((id) => wantedExerciseIds.has(id));
     })
-    .map((row: any) => applyRevisedPrescription(row, strengthItemsByExerciseId));
+    .map((row: any) => applyRevisedPrescription(row, revisedItemsByExerciseId));
 
   const nextConditioningBlock = hasConditioning || hasRecovery
     ? filterConditioningBlock(source, conditioning ?? recovery, exercises)
@@ -472,10 +474,16 @@ function buildContentOverride(source: Workout, revisedDay: CoachVisibleDaySnapsh
     : hasRecovery
     ? 'Recovery'
     : revisedWorkout.workoutType || source.workoutType;
+  const itemIntensity = revisedWorkout.sections
+    .flatMap((section) => section.items)
+    .map((item) => item.prescription?.intensity)
+    .find((value): value is string => !!value);
 
   return cloneWorkout(source, {
     name: title,
     workoutType: workoutType as any,
+    durationMinutes: revisedWorkout.durationMinutes ?? source.durationMinutes,
+    intensity: (revisedWorkout.intensity ?? itemIntensity ?? source.intensity) as any,
     description: onlyConditioning
       ? conditioning?.items[0]?.description ?? source.description
       : source.description,
@@ -551,7 +559,20 @@ function filterConditioningBlock(
       sectionExerciseIds.has(String(id)) &&
       exerciseIds.has(String(id)),
     ),
-  );
+  ).map((option) => {
+    const optionIds = new Set((option.exerciseIds ?? []).map(String));
+    const acceptedItem = section.items.find((item) =>
+      item.exerciseIds.some((id) => optionIds.has(String(id))),
+    );
+    return {
+      ...option,
+      durationMinutes:
+        acceptedItem?.prescription?.itemDurationMinutes ??
+        acceptedItem?.durationMinutes ??
+        option.durationMinutes,
+      intensity: (acceptedItem?.prescription?.intensity ?? option.intensity) as any,
+    };
+  });
   if (options.length === 0) return undefined;
   return { ...source.conditioningBlock, options };
 }
@@ -563,11 +584,22 @@ function applyRevisedPrescription(
   const match = rowIds(row).map((id) => byExerciseId.get(id)).find(Boolean);
   if (!match?.prescription) return row;
   const rx = match.prescription;
+  const prescriptionType = rx.prescriptionType ?? row.prescriptionType ?? 'reps';
+  const itemDuration = rx.itemDurationMinutes ?? match.durationMinutes;
+  const durationPrescription = itemDuration !== null && itemDuration !== undefined &&
+    (prescriptionType === 'duration' || prescriptionType === 'duration_minutes');
+  const durationValue = durationPrescription
+    ? prescriptionType === 'duration' ? itemDuration * 60 : itemDuration
+    : null;
   return {
     ...row,
     prescribedSets: rx.sets ?? row.prescribedSets,
-    prescribedRepsMin: rx.repsMin ?? row.prescribedRepsMin,
-    prescribedRepsMax: rx.repsMax ?? row.prescribedRepsMax,
+    prescribedRepsMin: durationValue ?? rx.repsMin ?? row.prescribedRepsMin,
+    prescribedRepsMax: durationValue ?? rx.repsMax ?? row.prescribedRepsMax,
+    prescribedWeightKg: rx.weightKg ?? row.prescribedWeightKg,
+    restSeconds: rx.restSeconds ?? row.restSeconds,
+    prescriptionType,
+    intensity: rx.intensity ?? row.intensity,
   };
 }
 
@@ -616,46 +648,94 @@ function cloneWorkout(workout: Workout, overrides: Partial<Workout>): Workout {
 }
 
 /**
- * Contract view of a visible day: the fields the athlete's approved change
- * actually concerns — which items exist (identity), where they live (section
- * kind / domain), and their prescriptions. App-DERIVED presentation fields
- * (descriptions, durations, titles, item ordering, section ids) are excluded
- * on purpose: the projection recomputes those after an edit, and byte-equality
- * against the LLM's echo would force the model to predict every derived
- * field — a structural false-rejection source. Safety is unaffected:
- * removals, reductions, and protected items are all identity+prescription
- * facts, and all remain in the contract.
+ * Semantic contract view. Presentation copy is excluded, but order, identity,
+ * prescription, intensity and duration are acceptance facts and therefore
+ * must round-trip exactly through the writer and visible projection.
  */
-function revisionContractView(day: CoachVisibleDaySnapshot): unknown {
+function revisionContractView(
+  day: CoachVisibleDaySnapshot,
+  contractShape: CoachVisibleDaySnapshot = day,
+): unknown {
   if (!day.workout) return { date: day.date, workout: null };
-  const sections = day.workout.sections
-    .map((section) => ({
+  const shapeItems = new Map(
+    (contractShape.workout?.sections ?? []).flatMap((section) => section.items)
+      .map((item) => [item.id, item]),
+  );
+  const sections = day.workout.sections.map((section, sectionOrder) => ({
+      order: sectionOrder,
       kind: section.kind,
-      items: [...section.items]
-        .map((item) => ({
+      items: section.items.map((item, itemOrder) => {
+        const shapePrescription = shapeItems.get(item.id)?.prescription;
+        return ({
+          order: itemOrder,
           id: item.id,
-          title: item.title,
           domain: item.domain,
+          exerciseIds: item.exerciseIds,
+          durationMinutes: item.durationMinutes,
           sets: item.prescription?.sets ?? null,
           repsMin: item.prescription?.repsMin ?? null,
           repsMax: item.prescription?.repsMax ?? null,
-        }))
-        .sort((a, b) => a.id.localeCompare(b.id)),
-    }))
-    .sort((a, b) =>
-      a.kind === b.kind
-        ? (a.items[0]?.id ?? '').localeCompare(b.items[0]?.id ?? '')
-        : a.kind.localeCompare(b.kind),
-    );
-  return { date: day.date, workout: { sections } };
+          intensity: item.prescription?.intensity ?? null,
+          ...(shapePrescription?.weightKg !== undefined
+            ? { weightKg: item.prescription?.weightKg ?? null }
+            : {}),
+          ...(shapePrescription?.restSeconds !== undefined
+            ? { restSeconds: item.prescription?.restSeconds ?? null }
+            : {}),
+          ...(shapePrescription?.prescriptionType !== undefined
+            ? { prescriptionType: item.prescription?.prescriptionType ?? null }
+            : {}),
+          ...(shapePrescription?.itemDurationMinutes !== undefined
+            ? { itemDurationMinutes: item.prescription?.itemDurationMinutes ?? null }
+            : {}),
+        });
+      }),
+    }));
+  return {
+    date: day.date,
+    workout: {
+      id: day.workout.id,
+      workoutType: semanticWorkoutType(day.workout),
+      ...(contractShape.workout?.durationMinutes !== undefined
+        ? { durationMinutes: day.workout.durationMinutes ?? null }
+        : {}),
+      ...(contractShape.workout?.intensity !== undefined
+        ? { intensity: day.workout.intensity ?? null }
+        : {}),
+      sections,
+    },
+  };
+}
+
+export function coachRevisionSemanticContractFingerprint(
+  day: CoachVisibleDaySnapshot,
+): string {
+  return JSON.stringify(revisionContractView(day));
+}
+
+export function coachRevisionSemanticContractsMatch(
+  projected: CoachVisibleDaySnapshot,
+  accepted: CoachVisibleDaySnapshot,
+): boolean {
+  return JSON.stringify(revisionContractView(projected, accepted)) ===
+    JSON.stringify(revisionContractView(accepted, accepted));
+}
+
+function semanticWorkoutType(workout: NonNullable<CoachVisibleDaySnapshot['workout']>): string {
+  const kinds = new Set(workout.sections.map((section) => section.kind));
+  if (kinds.has('strength') && kinds.has('conditioning')) return 'Mixed';
+  if (kinds.has('strength')) return 'Strength';
+  if (kinds.has('conditioning')) return 'Conditioning';
+  if (kinds.has('recovery')) return 'Recovery';
+  return workout.workoutType;
 }
 
 function visibleDayMatchesAcceptedRevision(
   projected: CoachVisibleDaySnapshot,
   accepted: CoachVisibleDaySnapshot,
 ): { ok: true } | { ok: false; detail: string } {
-  const projectedJson = JSON.stringify(revisionContractView(projected));
-  const acceptedJson = JSON.stringify(revisionContractView(accepted));
+  const projectedJson = JSON.stringify(revisionContractView(projected, accepted));
+  const acceptedJson = JSON.stringify(revisionContractView(accepted, accepted));
   if (projectedJson === acceptedJson) return { ok: true };
   let divergeAt = 0;
   const max = Math.min(projectedJson.length, acceptedJson.length);

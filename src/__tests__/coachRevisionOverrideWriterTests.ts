@@ -131,6 +131,26 @@ function strengthWorkout(): Workout {
   };
 }
 
+function durationConditioningWorkout(): Workout {
+  const value = mixedWorkout();
+  const row = clone(value.exercises[2]);
+  row.prescribedSets = 3;
+  row.prescribedRepsMin = 25;
+  row.prescribedRepsMax = 25;
+  row.prescriptionType = 'duration_minutes';
+  row.restSeconds = 60;
+  return {
+    ...value,
+    id: 'workout-duration-conditioning',
+    name: 'Easy Aerobic Flush',
+    durationMinutes: 25,
+    intensity: 'Moderate',
+    workoutType: 'Conditioning',
+    hasCombinedConditioning: false,
+    exercises: [row],
+  };
+}
+
 function mixedWorkoutWithTypedBlocks(): Workout {
   return {
     ...mixedWorkout(),
@@ -264,10 +284,13 @@ function apply(args: {
     proposal: args.proposal,
     visibleWeek: args.visibleWeek,
     todayISO: TODAY,
-    setManualOverride(date, workout, context) {
-      writes.push({ date, workout, context });
-    },
+    setManualOverride: args.proposal.kind === 'revision' && args.proposal.scope.dates.length === 1
+      ? (date, workout, context) => { writes.push({ date, workout, context }); }
+      : undefined,
   });
+  if (writes.length === 0 && result.applied.length > 1) {
+    writes.push(...result.applied.map(({ date, workout, context }) => ({ date, workout, context })));
+  }
   return { result, writes };
 }
 
@@ -292,8 +315,13 @@ section('[1] approved strength removal writes conditioning-only override');
   });
 
   eq('one write', writes.length, 1);
-  eq('no rejects', result.rejected.length, 0);
-  eq('projection matches accepted revision', result.applied[0].projectedDay, after);
+  ok('no rejects', result.rejected.length === 0, result.rejected);
+  eq('projection preserves accepted semantic sections',
+    result.applied[0].projectedDay.workout?.sections,
+    after.workout?.sections);
+  eq('projection preserves accepted session duration',
+    result.applied[0].projectedDay.workout?.durationMinutes,
+    after.workout?.durationMinutes);
   ok('override keeps conditioning block', !!writes[0].workout.conditioningBlock?.options.length, writes[0].workout);
   ok('override removes strength rows', !writes[0].workout.exercises.some((row: any) => /squat|deadlift/i.test(row.exercise?.name ?? '')), writes[0].workout.exercises);
 }
@@ -318,7 +346,9 @@ section('[2] approved conditioning removal writes strength-only override');
 
   eq('one write', writes.length, 1);
   eq('no rejects', result.rejected.length, 0);
-  eq('projection matches accepted revision', result.applied[0].projectedDay, after);
+  eq('projection preserves accepted semantic sections',
+    result.applied[0].projectedDay.workout?.sections,
+    after.workout?.sections);
   ok('conditioning block removed', !writes[0].workout.conditioningBlock, writes[0].workout);
   ok('strength rows remain', writes[0].workout.exercises.some((row: any) => /squat/i.test(row.exercise?.name ?? '')), writes[0].workout.exercises);
 }
@@ -371,6 +401,55 @@ section('[4] approved conservative reduction writes reduced prescription');
         item.prescription?.sets === 2),
     result.applied[0].projectedDay);
   ok('sets reduced in override', writes[0].workout.exercises.every((row: any) => row.prescribedSets === 2), writes[0].workout.exercises);
+}
+
+section('[4b] revision writer round-trips every mutable dose field');
+{
+  const visibleWeek = [visibleDay(MON, durationConditioningWorkout())];
+  const before = snapshot(visibleWeek);
+  const after = clone(daySnap(before, MON));
+  const item = sectionOf(after, 'conditioning').items[0];
+  after.workout!.durationMinutes = 20;
+  after.workout!.intensity = 'Light';
+  item.durationMinutes = 20;
+  item.prescription = {
+    ...item.prescription!,
+    sets: 2,
+    repsMin: 20,
+    repsMax: 20,
+    intensity: 'Light',
+    restSeconds: 120,
+    prescriptionType: 'duration_minutes',
+    itemDurationMinutes: 20,
+  };
+  const { result, writes } = apply({
+    visibleWeek,
+    proposal: proposal({
+      intent: { intent: 'reduce', targetDomain: 'conditioning', actionScope: 'duration' },
+      dates: [MON],
+      revisedDays: [after],
+    }),
+  });
+  eq('round-trip writer applies once', writes.length, 1);
+  eq('round-trip has no rejection', result.rejected.length, 0);
+  const written = writes[0]?.workout;
+  const row = written?.exercises[0];
+  eq('sets round-trip', row?.prescribedSets, 2);
+  eq('reps min round-trip', row?.prescribedRepsMin, 20);
+  eq('reps max round-trip', row?.prescribedRepsMax, 20);
+  eq('item intensity round-trip', (row as any)?.intensity, 'Light');
+  eq('item duration round-trip', row?.prescriptionType === 'duration_minutes' ? row.prescribedRepsMax : null, 20);
+  eq('session duration round-trip', written?.durationMinutes, 20);
+  eq('session intensity round-trip', written?.intensity, 'Light');
+  eq('projected semantic sections round-trip',
+    result.applied[0]?.projectedDay.workout?.sections,
+    after.workout?.sections);
+  eq('projected session duration round-trip',
+    result.applied[0]?.projectedDay.workout?.durationMinutes,
+    20);
+  eq('projected session intensity round-trip',
+    result.applied[0]?.projectedDay.workout?.intensity,
+    'Light');
 }
 
 section('[5] invalid protected violation does not write');
@@ -428,11 +507,10 @@ section('[6] unknown added IDs do not write');
   ok('rejects unknown id', result.rejected.some((entry) => entry.code === 'unknown_section_id'), result);
 }
 
-section('[7] app-derived presentation drift does not reject the contract');
+section('[7] ordered identity and item duration are semantic contract fields');
 {
-  // The projection recomputes descriptions/durations/ordering after an edit.
-  // The LLM cannot predict those derivations; only the change CONTRACT
-  // (item identity + prescriptions + section kinds) must round-trip.
+  // Titles/descriptions are presentation, but exercise order and duration are
+  // programming. The writer cannot silently discard either accepted change.
   const visibleWeek = [visibleDay(TUE, strengthWorkout())];
   const before = snapshot(visibleWeek);
   const after = clone(daySnap(before, TUE));
@@ -456,11 +534,10 @@ section('[7] app-derived presentation drift does not reject the contract');
     }),
   });
 
-  eq('one write despite presentation drift', writes.length, 1);
-  eq('no rejects despite presentation drift', result.rejected.length, 0);
-  ok('sets reduced in override',
-    writes[0].workout.exercises.every((row: any) => row.prescribedSets === 2),
-    writes[0].workout.exercises);
+  eq('semantic drift is not written', writes.length, 0);
+  ok('semantic drift rejection names projection mismatch',
+    result.rejected.some((entry) => entry.code === 'projected_override_mismatch'),
+    result.rejected);
 }
 
 section('[8] contract violations still reject, and the reason names the divergence');
@@ -512,7 +589,7 @@ section('[9] whole-day move writes both days atomically with donor rows');
   });
 
   eq('two writes', writes.length, 2);
-  eq('no rejects', result.rejected.length, 0);
+  ok('no rejects', result.rejected.length === 0, result.rejected);
   const mondayWrite = writes.find((entry) => entry.date === MON);
   const tuesdayWrite = writes.find((entry) => entry.date === TUE);
   eq('source becomes rest', mondayWrite?.workout.workoutType, 'Rest');

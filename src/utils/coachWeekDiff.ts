@@ -45,6 +45,10 @@ import { todayISOLocal as getTodayISOLocal } from './appDate';
 import { deriveProfileReadiness } from './readiness';
 import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import {
+  semanticFingerprint,
+  snapshotSemanticResolvedDay,
+} from './programSemanticSnapshot';
 
 // ─── Types ───
 
@@ -73,6 +77,7 @@ export interface DayFingerprint {
   indicator: ResolvedDay['indicator'];
   workoutName: string | null;
   exerciseNames: string[];
+  semanticFingerprint?: string;
 }
 
 /** A full week snapshot — Monday → Sunday. */
@@ -85,7 +90,8 @@ export type DayChangeType =
   | 'session-replaced'   // workout name changed (e.g. Lower → Recovery)
   | 'rest-added'         // had a session, now rest
   | 'session-added'      // was rest/none, now has a session
-  | 'exercises-changed'; // same session name, different exercises
+  | 'exercises-changed'  // same session name, different exercises
+  | 'prescription-changed'; // same labels/identity, different semantic prescription
 
 /** Per-day diff entry. */
 export interface DayDiff {
@@ -218,6 +224,7 @@ function fingerprintDay(rd: ResolvedDay): DayFingerprint {
     indicator: rd.indicator,
     workoutName: rd.workout?.name || null,
     exerciseNames,
+    semanticFingerprint: semanticFingerprint(snapshotSemanticResolvedDay(rd)),
   };
 }
 
@@ -271,6 +278,10 @@ function classifyChange(
 
   // Same session name but different exercises
   if (!sameExercises) return 'exercises-changed';
+
+  if (before.semanticFingerprint !== after.semanticFingerprint) {
+    return 'prescription-changed';
+  }
 
   return null;
 }
@@ -344,6 +355,8 @@ function summarizeDay(d: DayDiff): string {
       }
       return `${d.dayName}: tweaked ${d.after.workoutName}.`;
     }
+    case 'prescription-changed':
+      return `${d.dayName}: updated the ${d.after.workoutName} prescription.`;
   }
 }
 

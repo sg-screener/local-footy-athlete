@@ -857,6 +857,10 @@ export interface ConditioningOption {
    * renderer maps each id back to its exercise.
    */
   exerciseIds: string[];
+  /** Typed accepted dose; visible projection must prefer this over display copy. */
+  durationMinutes?: number;
+  /** Typed accepted option intensity when it differs from the workout default. */
+  intensity?: IntensityLevel;
 }
 
 /**

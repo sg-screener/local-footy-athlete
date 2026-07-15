@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { asyncStorageCompat } from './asyncStorageCompat';
 import {
   DayOfWeek,
   TrainingProgram,
@@ -93,11 +93,106 @@ function programPersistenceFailure(
   return error;
 }
 
+export const PROGRAM_STORE_PERSISTENCE_KEY = 'program-store';
+
+export interface ProgramPersistenceStageToken {
+  readonly id: number;
+}
+
+let nextProgramPersistenceStageId = 1;
+let activeProgramPersistenceStage: {
+  token: ProgramPersistenceStageToken;
+} | null = null;
+
+async function programStorageGetItem(name: string): Promise<string | null> {
+  return asyncStorageCompat.getItem(name);
+}
+
+async function programStorageSetItem(name: string, value: string): Promise<void> {
+  await asyncStorageCompat.setItem(name, value);
+}
+
+async function programStorageRemoveItem(name: string): Promise<void> {
+  await asyncStorageCompat.removeItem(name);
+}
+
+/**
+ * Coach mutations temporarily publish candidate state because the legacy
+ * deterministic executors are synchronous writers. While a transaction is
+ * open, Zustand persistence is suppressed; the transaction explicitly writes
+ * and awaits the one accepted envelope (or restores the exact prior one).
+ */
+export function beginProgramPersistenceStage(): ProgramPersistenceStageToken {
+  if (activeProgramPersistenceStage) {
+    throw new Error('program_persistence_stage_already_active');
+  }
+  const token = { id: nextProgramPersistenceStageId++ };
+  activeProgramPersistenceStage = { token };
+  return token;
+}
+
+export function endProgramPersistenceStage(token: ProgramPersistenceStageToken): void {
+  assertProgramPersistenceStage(token);
+  activeProgramPersistenceStage = null;
+}
+
+export function serializeProgramStoreEnvelope(state: ProgramState): string {
+  return JSON.stringify({ state, version: 0 });
+}
+
+export async function readDurableProgramStoreEnvelope(): Promise<string | null> {
+  try {
+    return await programStorageGetItem(PROGRAM_STORE_PERSISTENCE_KEY);
+  } catch (error) {
+    throw programPersistenceFailure('read', error);
+  }
+}
+
+export async function persistProgramStoreEnvelopeDurably(
+  token: ProgramPersistenceStageToken,
+  state: ProgramState = useProgramStore.getState(),
+): Promise<string> {
+  assertProgramPersistenceStage(token);
+  const value = serializeProgramStoreEnvelope(state);
+  await writeProgramStoreEnvelopeRaw(value);
+  return value;
+}
+
+export async function restoreProgramStoreEnvelopeDurably(
+  token: ProgramPersistenceStageToken,
+  value: string | null,
+): Promise<void> {
+  assertProgramPersistenceStage(token);
+  try {
+    if (value === null) {
+      await programStorageRemoveItem(PROGRAM_STORE_PERSISTENCE_KEY);
+    } else {
+      await programStorageSetItem(PROGRAM_STORE_PERSISTENCE_KEY, value);
+    }
+  } catch (error) {
+    throw programPersistenceFailure(value === null ? 'remove' : 'write', error);
+  }
+}
+
+function assertProgramPersistenceStage(token: ProgramPersistenceStageToken): void {
+  if (!activeProgramPersistenceStage || activeProgramPersistenceStage.token.id !== token.id) {
+    throw new Error('program_persistence_stage_not_active');
+  }
+}
+
+async function writeProgramStoreEnvelopeRaw(value: string): Promise<void> {
+  try {
+    await programStorageSetItem(PROGRAM_STORE_PERSISTENCE_KEY, value);
+  } catch (error) {
+    throw programPersistenceFailure('write', error);
+  }
+}
+
 const programStateStorage = {
   getItem: async (name: string): Promise<string | null> => {
     const trace = programHydrationTrace();
     try {
-      const value = await AsyncStorage.getItem(name);
+      const value = await programStorageGetItem(name);
       emitAthleteActionEvent(trace, 'persistence_result', {
         persistenceOperation: 'read',
         persistenceStore: name,
@@ -118,9 +213,12 @@ const programStateStorage = {
     }
   },
   setItem: async (name: string, value: string): Promise<void> => {
+    if (activeProgramPersistenceStage) {
+      return;
+    }
     const trace = consumeAthleteActionPersistenceTrace();
     try {
-      await AsyncStorage.setItem(name, value);
+      await programStorageSetItem(name, value);
       emitAthleteActionEvent(trace, 'persistence_result', {
         persistenceOperation: 'write',
         persistenceStore: name,
@@ -142,7 +240,7 @@ const programStateStorage = {
   removeItem: async (name: string): Promise<void> => {
     const trace = consumeAthleteActionPersistenceTrace();
     try {
-      await AsyncStorage.removeItem(name);
+      await programStorageRemoveItem(name);
       emitAthleteActionEvent(trace, 'persistence_result', {
         persistenceOperation: 'remove',
         persistenceStore: name,
@@ -1526,7 +1624,7 @@ export const useProgramStore = create<ProgramState>()(
       },
     }),
     {
-      name: 'program-store',
+      name: PROGRAM_STORE_PERSISTENCE_KEY,
       storage: createJSONStorage(() => programStateStorage),
       merge: (persisted, current) => {
         const incomingRaw = (persisted as Partial<ProgramState> | undefined) ?? {};
