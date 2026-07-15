@@ -97,6 +97,8 @@ function addFrequencyReduction(args: {
   reduced: number;
   targetDate: string;
   scope: UserRemovalScope;
+  affectedWeek: string;
+  deletionIdentity: string;
 }): void {
   if (args.reduced >= args.original) return;
   const prior = args.contract.authorisedReductions.find((existing) =>
@@ -111,6 +113,8 @@ function addFrequencyReduction(args: {
     change: 'frequency',
     detail: `Athlete removed ${args.scope} from ${args.targetDate}; relocation and substitution were exhausted.`,
     provenance: 'live_typed_reduction',
+    affectedWeek: args.affectedWeek,
+    deletionIdentity: args.deletionIdentity,
   };
   args.contract.authorisedReductions = args.contract.authorisedReductions.filter((existing) =>
     !(existing.reason === 'explicit_user_override' && existing.metric === args.metric &&
@@ -151,6 +155,8 @@ export function applyAthleteRemovalTypedReduction(args: {
       reduced: actual,
       targetDate: args.constraint.targetDate,
       scope: args.constraint.scope,
+      affectedWeek: args.weekStart,
+      deletionIdentity: args.constraint.id,
     });
     policy.requiredMinimum = Math.min(policy.requiredMinimum, actual);
     if (policy.plannerSelectedTarget !== null) {
@@ -183,6 +189,8 @@ export function applyAthleteRemovalTypedReduction(args: {
     reduced: achievedPatterns.length,
     targetDate: args.constraint.targetDate,
     scope: args.constraint.scope,
+    affectedWeek: args.weekStart,
+    deletionIdentity: args.constraint.id,
   });
   if (achievedPatterns.length < contract.strengthPatterns.requiredSafePatterns.length) {
     contract.strengthPatterns.requiredSafePatterns = achievedPatterns;

@@ -936,7 +936,6 @@ export function PlanChangeSheet({
             onPress={() =>
               apply(
                 { kind: 'remove_session', date, scope: step.scope },
-                { closeOnSuccess: true },
               )}
           />
           <MenuOption

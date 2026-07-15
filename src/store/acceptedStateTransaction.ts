@@ -1284,6 +1284,34 @@ export interface AthleteSessionDeletionTransactionInput {
   equivalentExposureMayRelocate?: boolean;
 }
 
+export type AthleteDeletionPublishedOutcomeKind =
+  | 'relocated'
+  | 'stacked'
+  | 'substituted'
+  | 'already_satisfied'
+  | 'reduced';
+
+export type AthleteDeletionAffectedMetric =
+  | 'main_strength'
+  | 'conditioning_core'
+  | 'session';
+
+/** Typed result derived from the accepted, publishable deletion state. */
+export interface AthleteDeletionPublishedOutcome {
+  kind: AthleteDeletionPublishedOutcomeKind;
+  affectedMetric: AthleteDeletionAffectedMetric;
+  targetDate: string;
+  deletionIdentity: string;
+  destinationDate: string | null;
+  reductionMetrics: string[];
+  removedPatterns: string[];
+}
+
+export interface AthleteSessionDeletionTransactionResult
+  extends AcceptedStateTransactionResult {
+  deletionOutcome: AthleteDeletionPublishedOutcome;
+}
+
 export interface AthleteSessionMoveTransactionInput {
   sourceDate: string;
   targetDate: string;
@@ -1329,6 +1357,119 @@ function cloneWorkoutForDate(workout: Workout, date: string): Workout {
   return {
     ...JSON.parse(JSON.stringify(workout)) as Workout,
     dayOfWeek: new Date(`${date}T12:00:00`).getDay(),
+  };
+}
+
+function meaningfulStrengthPatterns(workout: Workout | null | undefined): string[] {
+  if (!workout) return [];
+  const typed = workout.exercises.flatMap((row) =>
+    row.section18Evidence?.role === 'main_strength' &&
+      row.section18Evidence.mainStrengthPattern
+      ? [row.section18Evidence.mainStrengthPattern]
+      : []);
+  return Array.from(new Set(typed.length > 0
+    ? typed
+    : workout.strengthIntent?.effectivePatterns ?? []));
+}
+
+function dateForWeekDay(weekStart: string, dayOfWeek: number): string {
+  return addDaysISO(weekStart, dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+}
+
+function deriveAthleteDeletionPublishedOutcome(args: {
+  input: AthleteSessionDeletionTransactionInput;
+  before: ReturnType<typeof rebaseAcceptedEffectiveWeek>;
+  published: AcceptedStateTransactionResult;
+  profile: OnboardingData;
+}): AthleteDeletionPublishedOutcome {
+  const weekStart = mondayForDate(args.input.date);
+  const after = rebaseAcceptedEffectiveWeek({
+    surfaces: args.published.program,
+    weekStart,
+    profile: args.profile,
+    markedDays: args.published.context.markedDays,
+  });
+  const targetDay = new Date(`${args.input.date}T12:00:00`).getDay();
+  const beforeByDay = new Map(args.before.visibleWorkouts.map((workout) =>
+    [workout.dayOfWeek, workout]));
+  const afterByDay = new Map(after.visibleWorkouts.map((workout) =>
+    [workout.dayOfWeek, workout]));
+  const removedPatterns = meaningfulStrengthPatterns(args.input.originalWorkout);
+  const sourceWasMainStrength = args.input.scope === 'strength_component' || (
+    args.input.scope === 'whole_session' &&
+    args.before.evaluation.ledger.mainStrength.sessionDays.includes(targetDay)
+  );
+  const sourceWasCoreConditioning = args.input.scope === 'conditioning_component' || (
+    args.input.scope === 'whole_session' &&
+    args.before.evaluation.ledger.conditioning.credits.some((credit) =>
+      credit.source === 'app' && credit.dayOfWeek === targetDay)
+  );
+  const affectedMetric: AthleteDeletionAffectedMetric = sourceWasMainStrength
+    ? 'main_strength'
+    : sourceWasCoreConditioning
+      ? 'conditioning_core'
+      : 'session';
+  const reductionMetrics = after.contract.authorisedReductions
+    .filter((entry) => entry.reason === 'explicit_user_override' &&
+      entry.detail.includes(args.input.date))
+    .map((entry) => entry.metric)
+    .sort();
+  const sourceIdentity = args.input.originalWorkout.planEntryId ??
+    args.input.originalWorkout.id;
+  const componentIdentity = `${sourceIdentity}:strength-component`;
+  let destination = after.visibleWorkouts.find((workout) =>
+    workout.dayOfWeek !== targetDay && (
+      workoutIdentity(workout) === sourceIdentity ||
+      workoutIdentity(workout) === componentIdentity
+    ));
+  if (!destination && affectedMetric === 'main_strength' && removedPatterns.length > 0) {
+    destination = after.visibleWorkouts.find((workout) => {
+      if (workout.dayOfWeek === targetDay) return false;
+      const afterPatterns = meaningfulStrengthPatterns(workout);
+      const beforePatterns = meaningfulStrengthPatterns(beforeByDay.get(workout.dayOfWeek));
+      return removedPatterns.every((pattern) => afterPatterns.includes(pattern)) &&
+        !removedPatterns.every((pattern) => beforePatterns.includes(pattern));
+    });
+  }
+  if (!destination && affectedMetric === 'conditioning_core') {
+    const beforeDays = new Set(args.before.evaluation.ledger.conditioning.credits
+      .filter((credit) => credit.source === 'app')
+      .map((credit) => credit.dayOfWeek));
+    const destinationDay = after.evaluation.ledger.conditioning.credits.find((credit) =>
+      credit.source === 'app' && credit.dayOfWeek !== targetDay &&
+      !beforeDays.has(credit.dayOfWeek))?.dayOfWeek;
+    if (destinationDay !== undefined) destination = afterByDay.get(destinationDay);
+  }
+  const deletionIdentity = userRemovalConstraintId({
+    date: args.input.date,
+    scope: args.input.scope,
+    workout: args.input.originalWorkout,
+  });
+  if (reductionMetrics.length > 0) {
+    return {
+      kind: 'reduced', affectedMetric, targetDate: args.input.date,
+      deletionIdentity, destinationDate: null, reductionMetrics, removedPatterns,
+    };
+  }
+  if (!destination) {
+    return {
+      kind: 'already_satisfied', affectedMetric, targetDate: args.input.date,
+      deletionIdentity, destinationDate: null, reductionMetrics: [], removedPatterns,
+    };
+  }
+  const beforeDestination = beforeByDay.get(destination.dayOfWeek);
+  const exactIdentity = workoutIdentity(destination) === sourceIdentity ||
+    workoutIdentity(destination) === componentIdentity;
+  const stacked = !!beforeDestination &&
+    workoutIdentity(beforeDestination) === workoutIdentity(destination);
+  return {
+    kind: stacked ? 'stacked' : exactIdentity ? 'relocated' : 'substituted',
+    affectedMetric,
+    targetDate: args.input.date,
+    deletionIdentity,
+    destinationDate: dateForWeekDay(weekStart, destination.dayOfWeek),
+    reductionMetrics: [],
+    removedPatterns,
   };
 }
 
@@ -1622,11 +1763,30 @@ export function stageAthleteSessionMoveTransaction(
 
 export function commitAthleteSessionDeletionTransaction(
   args: AthleteSessionDeletionTransactionInput,
-): AcceptedStateTransactionResult {
+): AthleteSessionDeletionTransactionResult {
+  const state = useProgramStore.getState();
+  const profile = useProfileStore.getState().onboardingData;
+  if (!profile) throw new Error('Athlete deletion requires an accepted profile');
+  const beforeContext = materialContext(state);
+  const before = rebaseAcceptedEffectiveWeek({
+    surfaces: state,
+    weekStart: mondayForDate(args.date),
+    profile,
+    markedDays: beforeContext.markedDays,
+  });
   const staged = stageAthleteSessionDeletionTransaction(args, { purpose: 'commit' });
-  return staged.proposal
+  const published = staged.proposal
     ? commitAcceptedStateTransaction(staged.proposal)
     : staged.result;
+  return {
+    ...published,
+    deletionOutcome: deriveAthleteDeletionPublishedOutcome({
+      input: args,
+      before,
+      published,
+      profile,
+    }),
+  };
 }
 
 export function commitAthleteSessionMoveTransaction(

@@ -55,6 +55,7 @@ import {
   stageAthleteSessionDeletionTransaction,
   stageAthleteSessionMoveTransaction,
   type AcceptedStateTransactionResult,
+  type AthleteDeletionPublishedOutcome,
   type AthleteSessionDeletionTransactionInput,
   type AthleteSessionMoveTransactionInput,
 } from '../store/acceptedStateTransaction';
@@ -1366,6 +1367,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
     };
   }
 
+  let publishedDeletionOutcome: AthleteDeletionPublishedOutcome | null = null;
   if (args.change.kind === 'remove_session') {
     const removal = args.change;
     const source = args.visibleWeek.find((day) => day.date === removal.date)?.workout ?? null;
@@ -1390,7 +1392,8 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       team: 'team_component',
     };
     try {
-      (args.commitAthleteRemoval ?? commitAthleteSessionDeletionTransaction)({
+      const transaction = (args.commitAthleteRemoval ??
+        commitAthleteSessionDeletionTransaction)({
         date: removal.date,
         reason: `tap:remove_session:${removal.date}`,
         source: 'tap',
@@ -1399,6 +1402,12 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
         remainingWorkout: write.workout.workoutType === 'Rest' ? null : write.workout,
         equivalentExposureMayRelocate: true,
       });
+      if (transaction && typeof transaction === 'object' &&
+        'deletionOutcome' in transaction) {
+        publishedDeletionOutcome = (transaction as {
+          deletionOutcome: AthleteDeletionPublishedOutcome;
+        }).deletionOutcome;
+      }
     } catch (error) {
       return {
         ok: false,
@@ -1462,7 +1471,9 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
           proposal.kind === 'revision' &&
             proposal.revisedDays.every((day) => day.workout !== null),
         )
-      : planChangeDoneMessage(args.change, pickedTitle);
+      : args.change.kind === 'remove_session' && publishedDeletionOutcome
+        ? athleteDeletionDoneMessage(args.change, publishedDeletionOutcome)
+        : planChangeDoneMessage(args.change, pickedTitle);
 
   return {
     ok: true,
@@ -1478,6 +1489,61 @@ const BIN_SCOPE_DONE: Record<Exclude<PlanChangeBinScopeId, 'whole_day'>, string>
   recovery: 'Recovery work binned',
   team: 'Team training binned for this date',
 };
+
+function outcomeWeekday(date: string | null): string {
+  if (!date) return 'another day';
+  return new Date(`${date}T12:00:00`).toLocaleDateString('en-AU', {
+    weekday: 'long',
+  });
+}
+
+/** Athlete copy is a projection of the accepted transaction result. */
+function athleteDeletionDoneMessage(
+  change: Extract<PlanChange, { kind: 'remove_session' }>,
+  outcome: AthleteDeletionPublishedOutcome,
+): string {
+  const scope = change.scope ?? 'whole_day';
+  const patterns = new Set(outcome.removedPatterns);
+  const component = scope === 'whole_day'
+    ? 'Session'
+    : scope === 'conditioning'
+    ? 'Conditioning'
+    : patterns.size === 1 && patterns.has('pull')
+      ? 'Upper Pull'
+      : patterns.size === 1 && patterns.has('push')
+        ? 'Upper Push'
+        : scope === 'strength'
+          ? 'Gym session'
+          : 'Session';
+  const removed = component === 'Session'
+    ? 'Session removed.'
+    : `${component} was removed.`;
+  if (outcome.kind === 'reduced') {
+    const target = outcome.affectedMetric === 'conditioning_core'
+      ? 'conditioning target'
+      : 'strength target';
+    return `${removed} This week’s ${target} has been reduced at your request.`;
+  }
+  if (outcome.kind === 'already_satisfied') {
+    return outcome.affectedMetric === 'session'
+      ? removed
+      : `${removed} Your remaining sessions already cover this week’s target.`;
+  }
+  const day = outcomeWeekday(outcome.destinationDate);
+  if (patterns.has('squat') || patterns.has('hinge')) {
+    return `${removed} Lower-body strength was moved to ${day} to keep your week balanced.`;
+  }
+  if (patterns.size === 1 && patterns.has('pull')) {
+    return `${removed} Pulling work was added to ${day}.`;
+  }
+  if (patterns.size === 1 && patterns.has('push')) {
+    return `${removed} Pushing work was added to ${day}.`;
+  }
+  if (outcome.affectedMetric === 'conditioning_core') {
+    return `${removed} Conditioning work was added to ${day}.`;
+  }
+  return `${removed} Required work was added to ${day}.`;
+}
 
 function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): string {
   switch (change.kind) {

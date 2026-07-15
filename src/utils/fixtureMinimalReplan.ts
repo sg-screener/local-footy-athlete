@@ -26,6 +26,8 @@ import type {
 } from '../rules/fixtureConditionedAvailability';
 import type { CalendarDayType } from '../store/calendarStore';
 import { hasMeaningfulWorkoutContent } from './workoutContent';
+import { getSessionComponentRows } from './sessionComponents';
+import { resolveSessionDisplayName } from './sessionNaming';
 import { normalizeVisibleWorkoutIdentity } from './visibleWorkoutIdentity';
 import {
   activeUserRemovalConstraintsForWeek,
@@ -304,6 +306,63 @@ function stripConditioningComponent(workout: Workout): Workout | null {
   return hasMeaningfulWorkoutContent(stripped) ? stripped : null;
 }
 
+/**
+ * A strength component displaced from a stacked day is a relocatable app
+ * component, not the whole source workout. In particular, Team Training is a
+ * fixed anchor and must remain on its accepted date while the attached lift
+ * moves with its exact typed intent and prescription.
+ */
+function extractRelocatableStrengthComponent(workout: Workout): Workout | null {
+  const { strengthRows, supportRows } = getSessionComponentRows(workout);
+  const retainedIds = new Set([...strengthRows, ...supportRows]
+    .map((row) => row.id)
+    .filter(Boolean));
+  const exercises = workout.exercises.filter((row) => retainedIds.has(row.id));
+  if (exercises.length === 0 || !workout.strengthIntent?.effectivePatterns.length) {
+    return null;
+  }
+  const id = `${workout.id}:strength-component`;
+  const planEntryId = `${workout.planEntryId ?? workout.id}:strength-component`;
+  const component = {
+    ...workout,
+    id,
+    planEntryId,
+    name: resolveSessionDisplayName({
+      strengthIntent: workout.strengthIntent,
+      exercises,
+      isTeamDay: false,
+      tier: 'core',
+    }),
+    workoutType: 'Strength' as const,
+    sessionTier: 'core' as const,
+    exercises: exercises.map((row, index) => ({
+      ...row,
+      id: row.id,
+      workoutId: id,
+      exerciseOrder: index + 1,
+    })),
+    hasCombinedConditioning: false,
+    attachedConditioningKind: undefined,
+    conditioningFlavour: undefined,
+    conditioningCategory: undefined,
+    conditioningFeasibility: undefined,
+    conditioningBlock: undefined,
+    coachAddedConditioningLabel: undefined,
+    section18ConditioningRole: 'none' as const,
+    section18Evidence: {
+      protocolVersion: 1 as const,
+      conditioningRole: 'none' as const,
+      conditioningStress: 'unknown' as const,
+      provenance: 'explicit_mutation' as const,
+    },
+    derivedSessionProvenance: workout.derivedSessionProvenance?.filter((record) =>
+      record.scope === 'strength_component' || record.targetMetric === 'main_strength' ||
+      record.targetMetric === 'strength_pattern'),
+    ...({ isTeamDay: false } as Record<string, unknown>),
+  } as Workout;
+  return hasMeaningfulWorkoutContent(component) ? component : null;
+}
+
 function buildConditioning(args: {
   profile: OnboardingData;
   weekStart: string;
@@ -527,10 +586,26 @@ function displacedStrengthTemplates(
   input: BuildFixtureMinimalReplanInput,
   source: readonly Workout[],
 ): Array<{ workout: Workout; fixtureDisplacement?: DerivedSessionProvenance }> {
+  const explicitComponentDisplacements = activeUserRemovalConstraintsForWeek(
+    input.userRemovalConstraints,
+    input.weekStart,
+  ).flatMap((constraint) => {
+    if (constraint.scope !== 'strength_component' ||
+      !constraint.equivalentExposureMayRelocate) return [];
+    const component = extractRelocatableStrengthComponent(constraint.originalWorkout);
+    return component ? [{ workout: component }] : [];
+  });
+  const explicitSourceIds = new Set(activeUserRemovalConstraintsForWeek(
+    input.userRemovalConstraints,
+    input.weekStart,
+  ).flatMap((constraint) => constraint.scope === 'strength_component'
+    ? [constraint.targetPlanEntryId ?? constraint.targetWorkoutId]
+    : []));
   const projected = byDay(visibleResolver(input)(input.sourceWorkouts));
   const retainedIds = new Set(source.map((workout) => workout.planEntryId ?? workout.id));
-  return input.sourceWorkouts.flatMap((workout) => {
+  const inferredDisplacements = input.sourceWorkouts.flatMap((workout) => {
     if (!hasMainStrength(workout) || isTeamTraining(workout)) return [];
+    if (explicitSourceIds.has(workout.planEntryId ?? workout.id)) return [];
     const visible = projected.get(workout.dayOfWeek);
     const displaced = !retainedIds.has(workout.planEntryId ?? workout.id) ||
       !visible || !hasMainStrength(visible);
@@ -540,8 +615,13 @@ function displacedStrengthTemplates(
         record.dependency.restoration.sourcePlanEntryId === workout.planEntryId ||
         record.dependency.displacedSession.sourcePlanEntryId === workout.planEntryId
       ));
-    return [{ workout, fixtureDisplacement }];
+    const keepsAnotherVisibleComponent = !!visible;
+    const relocationTemplate = keepsAnotherVisibleComponent
+      ? extractRelocatableStrengthComponent(workout)
+      : workout;
+    return relocationTemplate ? [{ workout: relocationTemplate, fixtureDisplacement }] : [];
   });
+  return [...explicitComponentDisplacements, ...inferredDisplacements];
 }
 
 function addStrengthDeltaVariants(args: {
@@ -561,7 +641,15 @@ function addStrengthDeltaVariants(args: {
     .filter((workout) => hasMainStrength(workout) && !isTeamTraining(workout))
     .map(stripConditioningComponent)
     .filter((workout): workout is Workout => !!workout);
-  const displacedIds = new Set(displaced.map(({ workout }) => workout.planEntryId ?? workout.id));
+  const displacedIds = new Set([
+    ...displaced.map(({ workout }) => workout.planEntryId ?? workout.id),
+    ...activeUserRemovalConstraintsForWeek(
+      args.input.userRemovalConstraints,
+      args.input.weekStart,
+    ).flatMap((constraint) => constraint.scope === 'strength_component'
+      ? [constraint.targetPlanEntryId ?? constraint.targetWorkoutId]
+      : []),
+  ]);
   const templates = [
     ...displaced.map(({ workout, fixtureDisplacement }) => ({
       workout,
@@ -1048,6 +1136,13 @@ export function buildFixtureMinimalReplan(
                 candidateIndex: candidateDiagnostics.length - 1,
                 affectedWeek: args.weekStart,
                 candidateChanges: { addedDays },
+                candidateStrengthDays: gateway.visibleWorkouts
+                  .filter((workout) => hasMainStrength(workout))
+                  .map((workout) => ({
+                    dayOfWeek: workout.dayOfWeek,
+                    identity: workout.planEntryId ?? workout.id,
+                    patterns: workout.strengthIntent?.effectivePatterns ?? [],
+                  })),
                 rejectionCodes: gateway.evaluation.blockingViolations.map((finding) =>
                   `${finding.code}:${finding.domain}`),
                 rejectingBoundary: 'buildFixtureMinimalReplan',

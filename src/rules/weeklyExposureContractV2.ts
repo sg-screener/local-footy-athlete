@@ -141,6 +141,10 @@ export interface Section18AuthorisedReduction {
   change: Section18ReductionChange;
   detail: string;
   provenance: 'live_typed_reduction' | 'persisted_typed_reduction';
+  /** Present for athlete-deletion reductions so hydration/rebuild can audit ownership. */
+  affectedWeek?: string;
+  /** Stable UserRemovalConstraint identity that authorised this reduction. */
+  deletionIdentity?: string;
 }
 
 export interface Section18AnchorContract {

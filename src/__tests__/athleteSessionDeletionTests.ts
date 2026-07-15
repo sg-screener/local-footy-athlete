@@ -235,7 +235,11 @@ function deleteWorkout(args: {
   });
 }
 
-function deleteThroughRealSheetDoor(date: string): void {
+function deleteThroughRealSheetDoor(
+  date: string,
+  scope?: 'strength' | 'conditioning',
+): ReturnType<typeof applyPlanChange> {
+  const change = { kind: 'remove_session' as const, date, ...(scope ? { scope } : {}) };
   const before = JSON.stringify({
     overlays: useProgramStore.getState().weekScopedOverlays,
     constraints: useProgramStore.getState().userRemovalConstraints,
@@ -243,7 +247,7 @@ function deleteThroughRealSheetDoor(date: string): void {
   });
   const week = visibleWeek();
   const preview = previewPlanChangeRisk({
-    change: { kind: 'remove_session', date },
+    change,
     visibleWeek: week,
     todayISO: WEEK,
     profile: useProfileStore.getState().onboardingData ?? undefined,
@@ -255,7 +259,7 @@ function deleteThroughRealSheetDoor(date: string): void {
     context: useProgramStore.getState().acceptedMaterialContext,
   }) === before, 'deletion preview mutated accepted state');
   const result = applyPlanChange({
-    change: { kind: 'remove_session', date },
+    change,
     visibleWeek: week,
     todayISO: WEEK,
     trace: preview.trace,
@@ -264,6 +268,7 @@ function deleteThroughRealSheetDoor(date: string): void {
     },
   });
   assert(result.ok, `commit rejected deletion: ${JSON.stringify(result.rejected)}`);
+  return result;
 }
 
 function seedExactSundayRegression(): {
@@ -381,6 +386,59 @@ function visibleSemantic(weekStart = WEEK): string {
       target: entry.reducedTarget,
     })).sort((left, right) => left.metric.localeCompare(right.metric)),
   });
+}
+
+function prescriptionSignature(workout: Workout | null | undefined): string {
+  return JSON.stringify({
+    planEntryId: workout?.planEntryId ?? null,
+    rows: workout?.exercises.map((row) => ({
+      id: row.id,
+      exerciseId: row.exerciseId,
+      sets: row.prescribedSets,
+      repsMin: row.prescribedRepsMin,
+      repsMax: row.prescribedRepsMax,
+      weight: row.prescribedWeightKg,
+      rest: row.restSeconds,
+    })) ?? [],
+  });
+}
+
+function mainStrengthPrescriptionSignature(workout: Workout | null | undefined): string {
+  return JSON.stringify({
+    planEntryId: workout?.planEntryId ?? null,
+    rows: workout?.exercises.filter((row) =>
+      row.section18Evidence?.role === 'main_strength').map((row) => ({
+      id: row.id,
+      exerciseId: row.exerciseId,
+      sets: row.prescribedSets,
+      repsMin: row.prescribedRepsMin,
+      repsMax: row.prescribedRepsMax,
+      weight: row.prescribedWeightKg,
+      rest: row.restSeconds,
+    })) ?? [],
+  });
+}
+
+function seedExactInSeasonStrengthWeek(): OnboardingData {
+  const athlete = profile();
+  seed({ athlete, markedDays: { [SATURDAY]: 'game' } });
+  assert(byDay().get(1)?.name === 'Lower Body Strength', 'Monday lower precondition missing');
+  assert(byDay().get(2)?.name === 'Team Training + Upper Pull',
+    'Tuesday pull + Team Training precondition missing');
+  assert(byDay().get(4)?.name === 'Team Training + Upper Push',
+    'Thursday push + Team Training precondition missing');
+  return athlete;
+}
+
+function reloadAcceptedState(athlete: OnboardingData): void {
+  const persisted = clone(useProgramStore.getState());
+  const hydrated = canonicaliseHydratedState(persisted, {
+    programAlreadyAccepted: true,
+    profile: athlete,
+    markedDays: persisted.acceptedMaterialContext.markedDays,
+    validateWeekStarts: [WEEK],
+  });
+  useProgramStore.setState({ ...persisted, ...hydrated });
 }
 
 console.log('\n-- Athlete session deletion regressions --');
@@ -724,14 +782,41 @@ run('regression', '11 impossible relocation records typed reduction and keeps de
     before.evaluation.ledger.mainStrength.sessionDays.includes(workout.dayOfWeek));
   assert(target, 'constrained strength target missing');
   const date = dateForDay(WEEK, target.dayOfWeek);
-  deleteWorkout({ date, workout: target });
+  const result = deleteThroughRealSheetDoor(date);
   const after = accepted();
   assert(!byDay().has(target.dayOfWeek), 'typed-reduction target resurrected');
   assert(after.evaluation.blockingViolations.length === 0,
     JSON.stringify(after.evaluation.blockingViolations));
-  assert(after.contract.authorisedReductions.some((entry) =>
-    entry.reason === 'explicit_user_override' && entry.detail.includes(date)),
+  const constraint = useProgramStore.getState().userRemovalConstraints.find((entry) =>
+    entry.targetDate === date && entry.status === 'active');
+  assert(constraint, 'typed reduction deletion identity missing');
+  const reductions = after.contract.authorisedReductions.filter((entry) =>
+    entry.reason === 'explicit_user_override' && entry.detail.includes(date));
+  assert(reductions.length > 0 && reductions.every((entry) =>
+    entry.affectedWeek === WEEK && entry.deletionIdentity === constraint.id),
   `reductions=${JSON.stringify(after.contract.authorisedReductions)}`);
+  assert(result.message ===
+    'Session removed. This week’s strength target has been reduced at your request.',
+  `message=${result.message}`);
+  reloadAcceptedState(athlete);
+  assert(accepted().contract.authorisedReductions.some((entry) =>
+    entry.deletionIdentity === constraint.id && entry.affectedWeek === WEEK),
+  'hydration discarded typed deletion reduction');
+  const rebuilt = quiet(() => generateProgramLocally(athlete, {
+    todayISO: WEEK,
+    previousProgram: useProgramStore.getState().currentProgram,
+    seasonPhaseClock: useProgramStore.getState().currentProgram?.seasonPhaseClock,
+  }));
+  commitProgramSetupRebuildTransaction({ program: rebuilt, profile: athlete, todayISO: WEEK });
+  assert(accepted().contract.authorisedReductions.some((entry) =>
+    entry.deletionIdentity === constraint.id), 'rebuild discarded typed deletion reduction');
+  repeatWeekIntoNextWeek({ baseProfile: athlete, sourceWeekDate: WEEK, todayISO: WEEK });
+  assert(accepted().contract.authorisedReductions.some((entry) =>
+    entry.deletionIdentity === constraint.id), 'Repeat Week discarded source reduction');
+  rolloverProgramBlock({ baseProfile: athlete, targetDateISO: '2026-08-10' });
+  assert(useProgramStore.getState().userRemovalConstraints.some((entry) =>
+    entry.id === constraint.id && entry.status === 'active'),
+  'rollover discarded reduction authorisation identity');
 });
 
 run('regression', '12 failed atomic publication preserves previous complete horizon', () => {
@@ -769,6 +854,219 @@ run('regression', '13 direct and chained mutations converge on accepted state', 
   deleteWorkout({ date: SUNDAY, workout: seeded.sunday });
   const chained = visibleSemantic();
   assert(chained === direct, 'direct and chained final states differ');
+});
+
+run('regression', '14 exact in-season Lower Body deletion relocates and explains publication', () => {
+  const athlete = seedExactInSeasonStrengthWeek();
+  const before = accepted();
+  const lower = byDay().get(1)!;
+  const result = deleteThroughRealSheetDoor(WEEK);
+  const after = accepted();
+  const relocated = after.visibleWorkouts.find((workout) =>
+    workout.dayOfWeek !== 1 && workout.planEntryId === lower.planEntryId);
+  assert(!byDay().has(1), 'Monday lower deletion was not preserved');
+  assert(relocated?.dayOfWeek === 3, `lower destination=${relocated?.dayOfWeek}`);
+  assert(after.evaluation.ledger.mainStrength.achievedCount ===
+    before.evaluation.ledger.mainStrength.achievedCount, 'lower deletion reduced strength');
+  assert(Object.values(after.evaluation.ledger.strengthPatterns.meaningfulMainLiftCount)
+    .every((count) => count > 0), 'lower deletion left a stale/missing pattern');
+  assert(!after.contract.authorisedReductions.some((entry) =>
+    entry.reason === 'explicit_user_override'), 'lower repair created a reduction');
+  assert(result.message ===
+    'Session removed. Lower-body strength was moved to Wednesday to keep your week balanced.',
+  `message=${result.message}`);
+  assert(visibleWeek().find((day) => day.date === '2026-07-15')?.workout?.planEntryId ===
+    lower.planEntryId, 'weekly card projection missed relocated lower session');
+  reloadAcceptedState(athlete);
+  assert(!byDay().has(1) && byDay().get(3)?.planEntryId === lower.planEntryId,
+    'reload changed Lower Body repair');
+});
+
+run('regression', '15 exact Upper Pull component deletion preserves Team Training and relocates pull', () => {
+  const athlete = seedExactInSeasonStrengthWeek();
+  const before = accepted();
+  const pushBefore = clone(byDay().get(4)!);
+  assert(byDay().get(5)?.sessionTier === 'optional', 'optional displacement precondition missing');
+  const result = deleteThroughRealSheetDoor('2026-07-14', 'strength');
+  const after = accepted();
+  const tuesday = byDay().get(2);
+  const relocated = after.visibleWorkouts.find((workout) =>
+    workout.dayOfWeek !== 2 &&
+    workout.strengthIntent?.effectivePatterns.includes('pull'));
+  assert(tuesday?.name === 'Team Training' && tuesday.workoutType === 'Team Training',
+    `Tuesday=${tuesday?.name}/${tuesday?.workoutType}`);
+  assert(!tuesday.strengthIntent && !tuesday.exercises.some((row) =>
+    row.section18Evidence?.role === 'main_strength'), 'deleted pull retained stale Tuesday credit');
+  assert(relocated?.dayOfWeek === 3 && relocated.name === 'Upper Pull',
+    `relocated=${relocated?.dayOfWeek}:${relocated?.name}`);
+  assert(relocated.planEntryId === 'w1:tuesday:none:team:strength-component',
+    `component identity=${relocated.planEntryId}`);
+  assert(prescriptionSignature(byDay().get(4)) === prescriptionSignature(pushBefore),
+    `Thursday Upper Push identity/prescription changed ` +
+    `${prescriptionSignature(pushBefore)} -> ${prescriptionSignature(byDay().get(4))}`);
+  assert(!byDay().has(5), 'optional Friday work was not displaced before CORE work');
+  assert(after.evaluation.ledger.mainStrength.achievedCount ===
+    before.evaluation.ledger.mainStrength.achievedCount, 'pull relocation reduced strength');
+  assert(after.evaluation.ledger.strengthPatterns.meaningfulMainLiftCount.pull === 1,
+    'pull relocation was not visibly credited exactly once');
+  assert(!after.contract.authorisedReductions.some((entry) =>
+    entry.reason === 'explicit_user_override'), 'pull relocation created a reduction');
+  assert(useProgramStore.getState().acceptedMaterialContext.markedDays['2026-07-14'] !== 'rest',
+    'component deletion widened to whole-day Rest');
+  assert(result.message === 'Upper Pull was removed. Pulling work was added to Wednesday.',
+    `message=${result.message}`);
+  assert(visibleWeek().find((day) => day.date === '2026-07-15')?.workout?.planEntryId ===
+    relocated.planEntryId, 'weekly card and accepted pull differ');
+  reloadAcceptedState(athlete);
+  assert(byDay().get(2)?.name === 'Team Training' &&
+    byDay().get(3)?.planEntryId === relocated.planEntryId,
+  'reload changed Upper Pull repair');
+});
+
+run('regression', '16 Upper Push component deletion preserves Team Training and relocates push', () => {
+  const athlete = seedExactInSeasonStrengthWeek();
+  const pullBefore = clone(byDay().get(2)!);
+  const result = deleteThroughRealSheetDoor('2026-07-16', 'strength');
+  const after = accepted();
+  const thursday = byDay().get(4);
+  const relocated = after.visibleWorkouts.find((workout) =>
+    workout.dayOfWeek !== 4 &&
+    workout.strengthIntent?.effectivePatterns.includes('push'));
+  assert(thursday?.name === 'Team Training' && !thursday.strengthIntent,
+    `Thursday=${thursday?.name}`);
+  assert(relocated && relocated.dayOfWeek !== 4, 'Upper Push was not relocated');
+  assert(prescriptionSignature(byDay().get(2)) === prescriptionSignature(pullBefore),
+    `Tuesday Upper Pull changed during push repair ` +
+    `${prescriptionSignature(pullBefore)} -> ${prescriptionSignature(byDay().get(2))}`);
+  assert(after.evaluation.ledger.strengthPatterns.meaningfulMainLiftCount.push === 1,
+    'push relocation was not credited exactly once');
+  assert(!after.contract.authorisedReductions.some((entry) =>
+    entry.reason === 'explicit_user_override'), 'push relocation created a reduction');
+  assert(result.message.includes('Upper Push was removed. Pushing work was added to '),
+    `message=${result.message}`);
+  reloadAcceptedState(athlete);
+  assert(byDay().get(4)?.name === 'Team Training' &&
+    accepted().evaluation.ledger.strengthPatterns.meaningfulMainLiftCount.push === 1,
+  'reload changed Upper Push repair');
+});
+
+run('regression', '17 existing alternative pull exposure avoids duplicate repair', () => {
+  seedExactInSeasonStrengthWeek();
+  const tuesday = clone(byDay().get(2)!);
+  const alternativeId = 'accepted-alternative-upper-pull';
+  const alternativeDate = '2026-07-15';
+  const alternative: Workout = {
+    ...tuesday,
+    id: alternativeId,
+    planEntryId: alternativeId,
+    dayOfWeek: 3,
+    name: 'Upper Pull',
+    workoutType: 'Strength',
+    section18ConditioningRole: 'none',
+    section18Evidence: {
+      protocolVersion: 1,
+      conditioningRole: 'none',
+      conditioningStress: 'unknown',
+      provenance: 'explicit_mutation',
+    },
+    derivedSessionProvenance: undefined,
+    exercises: tuesday.exercises.map((row, index) => ({
+      ...row,
+      id: `${alternativeId}:row:${index + 1}`,
+      workoutId: alternativeId,
+    })),
+    ...({ isTeamDay: false } as Record<string, unknown>),
+  };
+  const state = useProgramStore.getState();
+  useProgramStore.setState({
+    dateOverrides: { ...state.dateOverrides, [alternativeDate]: alternative },
+    overrideContexts: {
+      ...state.overrideContexts,
+      [alternativeDate]: { intent: 'program_adjustment', label: 'accepted alternative exposure' },
+    },
+    acceptedMaterialContext: {
+      ...state.acceptedMaterialContext,
+      markedDays: { ...state.acceptedMaterialContext.markedDays, [FRIDAY]: 'rest' },
+    },
+  });
+  useCalendarStore.setState({
+    markedDays: { ...useCalendarStore.getState().markedDays, [FRIDAY]: 'rest' },
+  });
+  assert(byDay().get(3)?.planEntryId === alternativeId,
+    'accepted alternative did not enter the visible source week');
+  assert(accepted().evaluation.blockingViolations.length === 0,
+    `alternative exposure seed was not Bible-valid: ` +
+    `${JSON.stringify(accepted().evaluation.blockingViolations)}`);
+  const result = deleteThroughRealSheetDoor('2026-07-14', 'strength');
+  const after = accepted();
+  assert(byDay().get(2)?.name === 'Team Training', 'Team Training did not survive');
+  assert(byDay().get(3)?.planEntryId === alternativeId,
+    `existing pull exposure changed: ${JSON.stringify(after.visibleWorkouts.map((workout) => ({
+      day: workout.dayOfWeek,
+      name: workout.name,
+      id: workout.planEntryId,
+      patterns: workout.strengthIntent?.effectivePatterns ?? [],
+    })))} overrides=${JSON.stringify(Object.entries(useProgramStore.getState().dateOverrides)
+      .map(([date, workout]) => ({ date, id: workout.planEntryId, name: workout.name })))}`);
+  assert(after.evaluation.ledger.mainStrength.achievedCount === 3 &&
+    after.evaluation.ledger.strengthPatterns.meaningfulMainLiftCount.pull === 1,
+  'existing exposure did not satisfy the accepted contract');
+  assert(after.visibleWorkouts.filter((workout) =>
+    workout.strengthIntent?.effectivePatterns.includes('pull')).length === 1,
+  'unnecessary duplicate pull was created');
+  assert(result.message ===
+    'Upper Pull was removed. Your remaining sessions already cover this week’s target.',
+  `message=${result.message}`);
+});
+
+run('regression', '18 CORE conditioning stacks onto compatible strength before reduction', () => {
+  const seeded = seedExactSundayRegression();
+  const state = useProgramStore.getState();
+  const overlay = clone(state.weekScopedOverlays[WEEK]);
+  overlay.workoutsByDate[FRIDAY] = null;
+  overlay.workoutsByDate[SATURDAY] = null;
+  const markedDays = {
+    ...state.acceptedMaterialContext.markedDays,
+    [FRIDAY]: 'rest' as const,
+    [SATURDAY]: 'rest' as const,
+  };
+  useCalendarStore.setState({
+    markedDays,
+    selectedDate: useCalendarStore.getState().selectedDate,
+  });
+  useProgramStore.setState({
+    weekScopedOverlays: { ...state.weekScopedOverlays, [WEEK]: overlay },
+    acceptedMaterialContext: {
+      ...state.acceptedMaterialContext,
+      markedDays,
+    },
+  });
+  const before = accepted();
+  const mondayBefore = clone(byDay().get(1)!);
+  assert(mondayBefore && before.evaluation.blockingViolations.length === 0,
+    `stacking seed invalid: ${JSON.stringify(before.evaluation.blockingViolations)}`);
+  const result = deleteThroughRealSheetDoor(SUNDAY);
+  const after = accepted();
+  const mondayAfter = byDay().get(1);
+  assert(!byDay().has(0), 'deleted conditioning target resurrected');
+  assert(mondayAfter?.planEntryId === mondayBefore.planEntryId &&
+    mondayAfter.hasCombinedConditioning === true && !!mondayAfter.conditioningBlock,
+  `Monday did not receive stacked conditioning: ${mondayAfter?.name}`);
+  assert(mainStrengthPrescriptionSignature(mondayAfter) ===
+    mainStrengthPrescriptionSignature(mondayBefore),
+  'conditioning stacking rewrote the accepted strength prescription');
+  assert(after.evaluation.ledger.conditioning.coreCount ===
+    before.evaluation.ledger.conditioning.coreCount,
+  `conditioning ${before.evaluation.ledger.conditioning.coreCount}->` +
+    `${after.evaluation.ledger.conditioning.coreCount}`);
+  assert(!after.contract.authorisedReductions.some((entry) =>
+    entry.reason === 'explicit_user_override'), 'stackable repair created a reduction');
+  assert(result.message ===
+    'Session removed. Conditioning work was added to Monday.',
+  `message=${result.message}`);
+  reloadAcceptedState(seeded.athlete);
+  assert(byDay().get(1)?.hasCombinedConditioning === true && !byDay().has(0),
+    'reload changed conditioning stacking outcome');
 });
 
 console.log('\n-- Athlete session deletion properties --');
@@ -891,7 +1189,7 @@ run('mutation', 'publication cannot omit persisted constraint from accepted surf
 });
 
 console.warn = originalWarn;
-console.log(`\nAthlete session deletion totals: regressions=${regressions}/13 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
+console.log(`\nAthlete session deletion totals: regressions=${regressions}/18 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
 if (failures.length > 0) {
   console.error(`Failures: ${failures.join(' | ')}`);
   process.exitCode = 1;

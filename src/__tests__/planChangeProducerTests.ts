@@ -590,6 +590,13 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     !/planChangeWarningForCategory/.test(sheet));
   ok('[9] confirm warnings continue through the commit helper',
     /step\.kind === 'confirm_warning'[\s\S]*label="Continue"[\s\S]*commitPlanChange\([\s\S]{0,80}step\.change/.test(sheet));
+  const removeConfirmBlock = sheet.slice(
+    sheet.indexOf("step.kind === 'confirm_remove'"),
+    sheet.indexOf("step.kind === 'result'"),
+  );
+  ok('[9] deletion success remains visible until accepted outcome feedback is read',
+    /apply\(\s*\{ kind: 'remove_session'/.test(removeConfirmBlock) &&
+      !/closeOnSuccess/.test(removeConfirmBlock));
   ok('[9] tap warning copy is readable and coach-like',
     /This gives you \$\{observed\} hard days this week\. That's the upper edge\./.test(sheet)
       && /This puts hard work one day before your game/.test(sheet)
