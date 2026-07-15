@@ -66,6 +66,12 @@ Four hard days is the preferred/default shape, not a universal absolute maximum.
 
 The accepted effective week and proposed mutation now enter one whole-week repair owner. System-derived sessions/components persist typed lifecycle provenance; obsolete work expires before preservation scoring; user/Coach-authored work remains non-disposable. Candidate search continues across deterministic expiry, optional changes, relocation, stacking, pattern restoration, spacing/rest rebalancing, regeneration and fallback before returning typed `impossible`. Fixture IDs, descriptions and historical Coach Notes are not lifecycle authorities.
 
+### Rolling dependency horizon — approved 15 July 2026
+
+Whole-week ownership extends across the smallest dependency closure affected by a mutation. Calendar proximity seeds the target, previous and following G-relative weeks only where applicable; persisted provenance may add any directly referenced source, target or restoration week. The accepted composed snapshot—not visible-only gap fill—is structural mutation input; identity-matched accepted prescriptions and dependency-owned derived work remain persisted.
+
+Fixture-derived G+1, G-1/G-2, temporary relocation and temporary rest work records the exact fixture source, derived target, displaced accepted session and restoration target. Removing or moving the source fixture expires every dependent item and restores still-valid underlying work. Each affected Contract v2 gateway must pass before one atomic publication; otherwise every prior horizon surface remains unchanged. Direct, chained and reload paths with identical final inputs must converge without changing phase targets, hard-day policy, phase clock, safety, power or equipment policy.
+
 ## Section 18 phase-planner implementation record — 14 July 2026
 
 Commit `49073d393c19571b39fecf53051f3e3c5fdea452` implements the approved phase-planner ownership boundary without changing the phase clock or Section 18 safety finaliser. The Programming Bible remains the coaching authority; this section records how the approved policy now survives production paths.

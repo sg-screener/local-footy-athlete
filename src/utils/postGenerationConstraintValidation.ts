@@ -30,7 +30,10 @@ import {
   type Constraint,
 } from './exposureEngine';
 import { buildConstraintPlans } from './constraintPlan';
-import { buildGenerationConstraintContext } from './generationConstraints';
+import {
+  buildGenerationConstraintContext,
+  isStructuralGenerationConstraint,
+} from './generationConstraints';
 import {
   equipmentRequirementsAreAvailable,
   resolveEquipmentAvailability,
@@ -1733,6 +1736,7 @@ export function stageLiveStoredProgramSafety(
 ): LiveStoredProgramSafetyProjection | null {
   const context = liveValidationContext(proposedConstraints);
   const safetyConstraints = context.activeConstraints.filter((constraint) =>
+    isStructuralGenerationConstraint(constraint) &&
     constraint.status !== 'resolved' &&
     constraint.type !== 'missed_session' && constraint.type !== 'preference');
   if (safetyConstraints.length === 0) {
@@ -1753,6 +1757,7 @@ export function stageLiveStoredProgramSafety(
     programAlreadyAccepted: true,
     activeConstraints: context.activeConstraints,
     profile: context.profile,
+    markedDays: state.acceptedMaterialContext.markedDays,
   });
   return {
     currentProgram: staged.currentProgram ?? null,

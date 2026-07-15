@@ -64,6 +64,8 @@ import { addDaysISO } from '../utils/programBlockState';
 const WEEK_START = '2026-07-13';
 const WEDNESDAY = '2026-07-15';
 const SATURDAY = '2026-07-18';
+const SUNDAY = '2026-07-19';
+const NEXT_WEEK = '2026-07-20';
 const NOW = '2026-07-13T00:00:00.000Z';
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 const originalWarn = console.warn;
@@ -717,7 +719,7 @@ run('regression', '25 re-evaluated visible week matches the gateway ledger exact
   });
 });
 
-console.log('\n-- Properties (8 distinct invariants) --');
+console.log('\n-- Properties (10 distinct invariants) --');
 
 run('property', 'no calendar mutation can bypass the gateway', () => {
   const value = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
@@ -833,7 +835,56 @@ run('property', 'hydration remains deterministic and idempotent', () => {
   }
 });
 
-console.log('\n-- Mutation witnesses (9) --');
+run('property', 'rolling fixture repair publishes current and dependent weeks once', () => {
+  const value = profile('In-season', {
+    usualGameDay: 'Saturday',
+    gameDay: 'Saturday',
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+  });
+  seed(value);
+  let publishes = 0;
+  const stop = useProgramStore.subscribe(() => { publishes += 1; });
+  rebuildLocalWeek({
+    baseProfile: value,
+    newGameDay: 'Sunday',
+    scope: 'weekOverlay',
+    targetDate: SUNDAY,
+    clearOverlayDate: SATURDAY,
+    manageCalendarFixture: true,
+    todayISO: WEEK_START,
+  });
+  stop();
+  const followingMonday = useProgramStore.getState().weekScopedOverlays[NEXT_WEEK]
+    ?.workoutsByDate[NEXT_WEEK];
+  assert(publishes === 1, `rolling fixture repair published ${publishes} states`);
+  assert(!!useProgramStore.getState().weekScopedOverlays[WEEK_START], 'current overlay missing');
+  assert(followingMonday?.derivedSessionProvenance?.some((record) =>
+    record.dependency?.source.date === SUNDAY) === true,
+  'following-week dependency was not committed in the same snapshot');
+});
+
+run('property', 'failed rolling fixture staging preserves the entire prior horizon', () => {
+  const value = profile('In-season', {
+    usualGameDay: 'Saturday',
+    gameDay: 'Saturday',
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+  });
+  seed(value);
+  const before = materialSignature();
+  const failed = withGatewayFailure(() => rebuildLocalWeek({
+    baseProfile: value,
+    newGameDay: 'Sunday',
+    scope: 'weekOverlay',
+    targetDate: SUNDAY,
+    clearOverlayDate: SATURDAY,
+    manageCalendarFixture: true,
+    todayISO: WEEK_START,
+  }));
+  assert(failed, 'failure injection did not reach rolling gateway');
+  assert(materialSignature() === before, 'failed rolling staging partially published a week');
+});
+
+console.log('\n-- Mutation witnesses (10) --');
 
 const root = path.resolve(__dirname, '..');
 const source = (relative: string): string => readFileSync(path.join(root, relative), 'utf8');
@@ -890,6 +941,15 @@ run('mutation', 'staged state cannot publish before every affected week passes',
   assert(staged >= 0 && equivalent > staged && publish > equivalent, 'publish moved ahead of validation');
 });
 
+run('mutation', 'fixture paths cannot bypass the rolling-horizon staging owner', () => {
+  assert(transactionSource.includes('stageRollingHorizonFixtureRepair({'),
+    'calendar transaction bypasses rolling staging');
+  assert(rebuildSource.includes('stageRollingHorizonFixtureRepair({'),
+    'week rebuild bypasses rolling staging');
+  assert(!rebuildSource.includes('rollingHorizonWeekStartsForMutation({'),
+    'week rebuild retained an independent horizon owner');
+});
+
 run('mutation', 'visible projection cannot alter accepted exposure', () => {
   assert(visibleSource.includes('if (hasAcceptedWeekContract(args.state, day.date)) {\n      return day;'),
     'accepted week projection short circuit removed');
@@ -897,8 +957,8 @@ run('mutation', 'visible projection cannot alter accepted exposure', () => {
     'accepted week is structurally projected again');
 });
 
-console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/25 properties=${propertyPass}/8 mutations=${mutationPass}/9 failures=${failures.length}`);
-if (regressionPass !== 25 || propertyPass !== 8 || mutationPass !== 9 || failures.length > 0) {
+console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/25 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);
+if (regressionPass !== 25 || propertyPass !== 10 || mutationPass !== 10 || failures.length > 0) {
   console.error(`Failures: ${failures.join(', ')}`);
   process.exit(1);
 }

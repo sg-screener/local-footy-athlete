@@ -224,7 +224,8 @@ async function main(): Promise<void> {
     assert(/Upper Push/i.test(after.get(4)?.name ?? ''), `Thursday=${after.get(4)?.name}`);
     assert(after.get(5)?.sessionTier === 'optional', `Friday=${after.get(5)?.name}; before=${JSON.stringify(exact.before.microcycles[0]?.workouts.map((workout) => [DAY_NAMES[workout.dayOfWeek], workout.name, workout.sessionTier]))}; after=${JSON.stringify(Array.from(after.entries()).map(([day, workout]) => [DAY_NAMES[day], workout.name, workout.sessionTier]))}; repairs=${JSON.stringify(exact.result.fixtureReplan?.gateway.repairs)}`);
     assert(after.get(6)?.name === 'Hard Conditioning', `Saturday=${after.get(6)?.name}; week=${JSON.stringify(Array.from(after.entries()).map(([day, workout]) => [DAY_NAMES[day], workout.name, workout.sessionTier]))}; repairs=${JSON.stringify(exact.result.fixtureReplan?.gateway.repairs)}`);
-    assert(!after.has(3) && !after.has(0), 'Wednesday/Sunday should remain full rest');
+    assert((!after.has(3) || after.get(3)?.workoutType === 'Rest') && !after.has(0),
+      'Wednesday/Sunday should remain full rest');
     assert(!Array.from(after.values()).some((workout) => /Lower Squat/i.test(workout.name)),
       'duplicate Lower Squat was added');
     assert(exact.result.fixtureReplan?.path === 'minimal_repair', 'full regeneration was used');

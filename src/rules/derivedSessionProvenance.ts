@@ -1,5 +1,6 @@
 import type {
   DerivedSessionCredit,
+  DerivedSessionDependency,
   DerivedSessionHistoryEntry,
   DerivedSessionOrigin,
   DerivedSessionProvenance,
@@ -81,9 +82,10 @@ export function createDerivedSessionProvenance(args: {
   history?: DerivedSessionHistoryEntry[];
   validWhile?: DerivedSessionProvenance['validWhile'];
   invalidWhen?: DerivedSessionProvenance['invalidWhen'];
+  dependency?: DerivedSessionDependency;
 }): DerivedSessionProvenance {
   return {
-    protocolVersion: 1,
+    protocolVersion: args.dependency ? 2 : 1,
     authorship: 'system',
     origin: args.origin,
     scope: args.scope,
@@ -101,6 +103,7 @@ export function createDerivedSessionProvenance(args: {
       date: args.originatingDate.slice(0, 10),
     }],
     sourcePlanEntryId: args.sourcePlanEntryId ?? null,
+    dependency: args.dependency,
   };
 }
 
@@ -296,7 +299,10 @@ function withoutDerivedScope(
   record: DerivedSessionProvenance,
   recordIndex: number,
 ): Workout | null {
-  if (record.scope === 'session') return null;
+  if (record.scope === 'session') {
+    const restoration = record.dependency?.restoration.workout;
+    return restoration ? JSON.parse(JSON.stringify(restoration)) as Workout : null;
+  }
   if (record.scope === 'conditioning_component') {
     return withoutConditioningComponent(workout, recordIndex);
   }
@@ -335,17 +341,33 @@ function fixtureDatePresent(contract: WeeklyExposureContractV2, fixtureDate: str
     anchor.dayOfWeek === fixtureDay);
 }
 
+function exactFixtureDatePresent(args: {
+  contract: WeeklyExposureContractV2;
+  fixtureDate: string | null;
+  activeFixtureDates?: ReadonlySet<string>;
+}): boolean {
+  if (args.fixtureDate && args.activeFixtureDates) {
+    return args.activeFixtureDates.has(args.fixtureDate.slice(0, 10));
+  }
+  return fixtureDatePresent(args.contract, args.fixtureDate);
+}
+
 function expiryReason(args: {
   record: DerivedSessionProvenance;
   currentSignature: string;
   contract: WeeklyExposureContractV2;
+  activeFixtureDates?: ReadonlySet<string>;
 }): DerivedSessionExpiry['reason'] | null {
   if (args.record.invalidWhen.some((condition) =>
     condition.kind === 'fixture_present' && fixturePresent(args.contract))) {
     return 'fixture_returned';
   }
   if (args.record.invalidWhen.some((condition) =>
-    condition.kind === 'fixture_absent' && !fixtureDatePresent(args.contract, condition.fixtureDate))) {
+    condition.kind === 'fixture_absent' && !exactFixtureDatePresent({
+      contract: args.contract,
+      fixtureDate: condition.fixtureDate,
+      activeFixtureDates: args.activeFixtureDates,
+    }))) {
     return 'typed_invalidation';
   }
   if (args.record.validWhile.some((condition) =>
@@ -368,6 +390,7 @@ export function buildDerivedSessionExpiryCandidates(args: {
   workouts: readonly Workout[];
   contract: WeeklyExposureContractV2;
   weekStart: string;
+  activeFixtureDates?: ReadonlySet<string>;
 }): DerivedSessionExpiryCandidate[] {
   const currentSignature = section18ContractLifecycleSignature(args.contract, args.weekStart);
   const removals: Array<{
@@ -379,7 +402,12 @@ export function buildDerivedSessionExpiryCandidates(args: {
   args.workouts.forEach((workout, workoutIndex) => {
     (workout.derivedSessionProvenance ?? []).forEach((record, recordIndex) => {
       if (record.authorship !== 'system') return;
-      const reason = expiryReason({ record, currentSignature, contract: args.contract });
+      const reason = expiryReason({
+        record,
+        currentSignature,
+        contract: args.contract,
+        activeFixtureDates: args.activeFixtureDates,
+      });
       if (reason) removals.push({ workoutIndex, recordIndex, record, reason });
     });
   });

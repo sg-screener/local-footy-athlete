@@ -19,7 +19,7 @@ import type { DayOfWeek, OnboardingData, TrainingProgram, Workout } from '../typ
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { rebuildLocalWeek, type WeekRebuildResult } from '../utils/weekRebuild';
 import { executeCoachCommand } from '../utils/coachCommandExecutor';
-import { useProgramStore } from '../store/programStore';
+import { canonicaliseHydratedState, useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
@@ -28,6 +28,7 @@ import {
   buildFixtureProjection,
   commitDateUnavailableTransaction,
   commitProgramSetupRebuildTransaction,
+  commitReadinessSignalTransaction,
 } from '../store/acceptedStateTransaction';
 import { rebaseAcceptedEffectiveWeek, type AcceptedEffectiveWeekSnapshot } from '../rules/acceptedEffectiveWeek';
 import {
@@ -40,6 +41,7 @@ import {
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { executeHomeGameMutation } from '../screens/home/homeGameMutationController';
+import { repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 
 const WEEK = '2026-03-23';
 const NEXT_WEEK = '2026-03-30';
@@ -235,6 +237,23 @@ function semantic(snapshot: AcceptedEffectiveWeekSnapshot): string {
   });
 }
 
+function horizonSemantic(): string {
+  return JSON.stringify([semantic(accepted()), semantic(accepted(NEXT_WEEK))]);
+}
+
+function simulateAcceptedReload(): void {
+  const state = useProgramStore.getState();
+  const persisted = JSON.parse(JSON.stringify(state));
+  const canonical = canonicaliseHydratedState(persisted, {
+    programAlreadyAccepted: true,
+    profile: useProfileStore.getState().onboardingData,
+    markedDays: state.acceptedMaterialContext.markedDays,
+    validateWeekStarts: [WEEK, NEXT_WEEK],
+  });
+  useProgramStore.setState({ ...persisted, ...canonical });
+  useCalendarStore.setState({ markedDays: state.acceptedMaterialContext.markedDays });
+}
+
 async function main(): Promise<void> {
   await run('1 exact chained Saturday-to-Sunday move preserves the accepted S3 week', () => {
     const value = athlete();
@@ -287,6 +306,206 @@ async function main(): Promise<void> {
     assert(byDay(next).get(1)?.sessionTier === 'recovery', `Monday=${byDay(next).get(1)?.name}`);
     assert(next.evaluation.blockingViolations.length === 0, JSON.stringify(next.evaluation.blockingViolations));
     assert(!!useProgramStore.getState().weekScopedOverlays[NEXT_WEEK], 'next-week protection overlay missing');
+  });
+
+  await run('3 removing the moved Sunday game repairs the complete rolling horizon', () => {
+    const value = athlete();
+    reset(value);
+    const originalMonday = byDay(accepted(NEXT_WEEK)).get(1);
+    removeGame(value);
+    addSunday(value);
+    const derivedMonday = accepted(NEXT_WEEK).composedWorkouts.find((workout) =>
+      workout.dayOfWeek === 1);
+    assert(derivedMonday?.derivedSessionProvenance?.some((record) =>
+      record.origin === 'fixture_recovery' &&
+      record.dependency?.source.date === SUNDAY &&
+      record.dependency?.restoration.workout?.planEntryId === originalMonday?.planEntryId),
+    'following-Monday G+1 dependency was not persisted with its restoration');
+    const removed = executeHomeGameMutation({
+      baseProfile: value,
+      currentPhase: 'In-season',
+      newGameDay: null,
+      targetDate: SUNDAY,
+      beforeRows: visibleRows(),
+      todayISO: WEEK,
+    });
+    assert(removed.outcome !== 'impossible', removed.outcome === 'impossible' ? removed.reason : '');
+    const current = accepted();
+    const currentByDay = byDay(current);
+    const followingMonday = byDay(accepted(NEXT_WEEK)).get(1);
+    assert(/Hard Conditioning/i.test(currentByDay.get(6)?.name ?? ''),
+      `Saturday=${currentByDay.get(6)?.name}`);
+    assert(!currentByDay.has(0), `Sunday=${currentByDay.get(0)?.name}`);
+    assert(followingMonday?.sessionTier !== 'recovery', `Monday=${followingMonday?.name}`);
+    assert(followingMonday?.planEntryId === originalMonday?.planEntryId,
+      `Monday id ${originalMonday?.planEntryId}->${followingMonday?.planEntryId}`);
+    assert(strengthDose(followingMonday) === strengthDose(originalMonday),
+      'following-Monday prescription was not restored');
+  });
+
+  await run('4 direct and chained final no-game states converge across both weeks', () => {
+    reset();
+    removeGame();
+    addSunday();
+    executeHomeGameMutation({
+      baseProfile: useProfileStore.getState().onboardingData,
+      currentPhase: 'In-season',
+      newGameDay: null,
+      targetDate: SUNDAY,
+      beforeRows: visibleRows(),
+      todayISO: WEEK,
+    });
+    const chained = horizonSemantic();
+    reset();
+    removeGame();
+    const direct = horizonSemantic();
+    assert(direct === chained, 'direct and chained rolling horizons differ');
+  });
+
+  await run('5 reloads between fixture mutations preserve dependency and restoration', () => {
+    reset();
+    removeGame();
+    simulateAcceptedReload();
+    addSunday();
+    simulateAcceptedReload();
+    executeHomeGameMutation({
+      baseProfile: useProfileStore.getState().onboardingData,
+      currentPhase: 'In-season',
+      newGameDay: null,
+      targetDate: SUNDAY,
+      beforeRows: visibleRows(),
+      todayISO: WEEK,
+    });
+    const reloaded = horizonSemantic();
+    reset();
+    removeGame();
+    const direct = horizonSemantic();
+    assert(reloaded === direct, 'reload chain diverged from direct final horizon');
+  });
+
+  await run('6 moving Sunday back to Saturday moves the G+1 dependency', () => {
+    const value = athlete();
+    reset(value);
+    const originalMonday = byDay(accepted(NEXT_WEEK)).get(1);
+    moveToSunday(value);
+    assert(byDay(accepted(NEXT_WEEK)).get(1)?.sessionTier === 'recovery',
+      'Sunday fixture did not create following-Monday recovery');
+    rebuildLocalWeek({
+      baseProfile: value,
+      newGameDay: 'Saturday',
+      scope: 'weekOverlay',
+      targetDate: SATURDAY,
+      clearOverlayDate: SUNDAY,
+      manageCalendarFixture: true,
+      todayISO: WEEK,
+    });
+    const sunday = accepted().composedWorkouts.find((workout) => workout.dayOfWeek === 0);
+    const followingMonday = byDay(accepted(NEXT_WEEK)).get(1);
+    assert(sunday?.derivedSessionProvenance?.some((record) =>
+      record.origin === 'fixture_recovery' &&
+      record.dependency?.source.date === SATURDAY) === true,
+    'Saturday fixture did not own Sunday G+1 recovery');
+    assert(followingMonday?.sessionTier !== 'recovery', 'old Sunday G+1 recovery survived move');
+    assert(followingMonday?.planEntryId === originalMonday?.planEntryId,
+      'following Monday did not restore after fixture moved to Saturday');
+  });
+
+  await run('7 removing a Sunday practice match expires cross-week recovery', () => {
+    const value = athlete({ phase: 'Pre-season' });
+    reset(value);
+    const originalMonday = byDay(accepted(NEXT_WEEK)).get(1);
+    moveToSunday(value);
+    assert(byDay(accepted(NEXT_WEEK)).get(1)?.sessionTier === 'recovery',
+      'Sunday practice match did not create G+1 recovery');
+    const removed = executeHomeGameMutation({
+      baseProfile: value,
+      currentPhase: 'Pre-season',
+      newGameDay: null,
+      targetDate: SUNDAY,
+      beforeRows: visibleRows(),
+      todayISO: WEEK,
+    });
+    assert(removed.outcome !== 'impossible', removed.outcome === 'impossible' ? removed.reason : '');
+    const followingMonday = byDay(accepted(NEXT_WEEK)).get(1);
+    assert(followingMonday?.sessionTier !== 'recovery', 'practice-match recovery survived removal');
+    assert(followingMonday?.planEntryId === originalMonday?.planEntryId,
+      'practice-match removal did not restore following Monday');
+  });
+
+  await run('8 Sunday readiness updates the complete dependency horizon once', () => {
+    reset();
+    moveToSunday();
+    let publishes = 0;
+    const stop = useProgramStore.subscribe(() => { publishes += 1; });
+    commitReadinessSignalTransaction({
+      date: SUNDAY,
+      patch: {
+        source: 'quick_check',
+        energy: 2,
+        soreness: 2,
+        sleepQuality: 2,
+        stress: 4,
+      },
+    });
+    stop();
+    assert(publishes === 1, `readiness horizon published ${publishes} partial states`);
+    assert(accepted().evaluation.blockingViolations.length === 0, 'current readiness week failed');
+    assert(accepted(NEXT_WEEK).evaluation.blockingViolations.length === 0,
+      'dependent following week failed readiness validation');
+    assert(byDay(accepted(NEXT_WEEK)).get(1)?.sessionTier === 'recovery',
+      'valid Sunday G+1 dependency was lost during readiness repair');
+  });
+
+  await run('9 Sunday injury update validates both dependency weeks in one publication', () => {
+    reset();
+    moveToSunday();
+    let publishes = 0;
+    const stop = useProgramStore.subscribe(() => { publishes += 1; });
+    useCoachUpdatesStore.getState().setActiveInjury({
+      bodyPart: 'shoulder',
+      bucket: 'shoulder',
+      severity: 4,
+      initialSeverity: 4,
+      status: 'active',
+      rules: ['Avoid painful overhead pressing'],
+      startDate: `${SUNDAY}T00:00:00.000Z`,
+      lastUpdatedAt: `${SUNDAY}T00:00:00.000Z`,
+      createdAt: `${SUNDAY}T00:00:00.000Z`,
+      history: [],
+    });
+    stop();
+    assert(publishes === 1, `injury horizon published ${publishes} partial states`);
+    assert(accepted().evaluation.blockingViolations.length === 0, 'current injury week failed');
+    assert(accepted(NEXT_WEEK).evaluation.blockingViolations.length === 0,
+      'dependent following week failed injury validation');
+    assert(byDay(accepted(NEXT_WEEK)).get(1)?.sessionTier === 'recovery',
+      'valid Sunday G+1 dependency was lost during injury repair');
+    useCoachUpdatesStore.getState().setActiveInjury(null);
+  });
+
+  await run('10 Repeat Week preserves an active cross-week dependency and its new restoration', () => {
+    const value = athlete();
+    reset(value);
+    moveToSunday(value);
+    const repeatedMonday = byDay(accepted()).get(1);
+    repeatWeekIntoNextWeek({ baseProfile: value, sourceWeekDate: WEEK, todayISO: WEEK });
+    const protectedMonday = accepted(NEXT_WEEK).composedWorkouts.find((workout) =>
+      workout.dayOfWeek === 1);
+    const dependency = protectedMonday?.derivedSessionProvenance?.find((record) =>
+      record.origin === 'fixture_recovery' && record.dependency?.source.date === SUNDAY);
+    assert(protectedMonday?.sessionTier === 'recovery', 'Repeat Week erased active G+1 recovery');
+    assert(dependency?.dependency?.restoration.workout?.planEntryId === repeatedMonday?.planEntryId,
+      'Repeat Week did not update the dependency restoration target');
+    executeHomeGameMutation({
+      baseProfile: value,
+      currentPhase: 'In-season',
+      newGameDay: null,
+      targetDate: SUNDAY,
+      beforeRows: visibleRows(),
+      todayISO: WEEK,
+    });
+    assert(byDay(accepted(NEXT_WEEK)).get(1)?.planEntryId === repeatedMonday?.planEntryId,
+      'fixture removal did not restore the repeated Monday');
   });
 
   await run('3 live remove-session relocates accepted Saturday hard conditioning', () => {
@@ -495,7 +714,11 @@ async function main(): Promise<void> {
       reset(value);
       removeGame(value);
       const beforeStrength = accepted().evaluation.ledger.mainStrength.achievedCount;
-      commitDateUnavailableTransaction({ date: SATURDAY, reason: `test:block-saturday:${tt}tt` });
+      try {
+        commitDateUnavailableTransaction({ date: SATURDAY, reason: `test:block-saturday:${tt}tt` });
+      } catch (error) {
+        throw new Error(`${tt}TT relocation failed: ${error instanceof Error ? error.message : error}`);
+      }
       const week = accepted();
       assert(!byDay(week).has(6), `${tt}TT kept Saturday work`);
       assert(week.evaluation.blockingViolations.length === 0,
@@ -659,7 +882,7 @@ async function main(): Promise<void> {
     assert(checks.every(Boolean), `surviving mutation witnesses=${checks.map((ok, index) => ok ? null : index + 1).filter(Boolean)}`);
   });
 
-  console.log(`\nChained-mutation continuity totals: passed=${passed}/24 failures=${failures.length}`);
+  console.log(`\nChained-mutation continuity totals: passed=${passed}/32 failures=${failures.length}`);
   if (failures.length > 0) console.log(`Failures: ${failures.join(' | ')}`);
   if (failures.length > 0) process.exit(1);
 }

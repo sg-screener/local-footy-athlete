@@ -336,7 +336,8 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       `${dayOf(after, wk2Mon)?.source}: ${dayOf(after, wk2Mon)?.workout?.name}`);
     ok('[D] rejected move stores no destination requiring a sweep',
       rebuild.sweep.conflictsRemoved.length === 0 &&
-      dayOf(after, wk2Sun)?.source === 'gameProximity',
+      dayOf(after, wk2Sun)?.source !== 'manual' &&
+      dayOf(after, wk2Sun)?.workout?.sessionTier === 'recovery',
       `${dayOf(after, wk2Sun)?.source}: ${dayOf(after, wk2Sun)?.workout?.name} sweep=${JSON.stringify(rebuild.sweep)}`);
   }
 

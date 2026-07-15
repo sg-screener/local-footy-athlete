@@ -45,6 +45,7 @@ import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
 import type { ActiveConstraint } from './coachUpdatesStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import {
   createEmptyAcceptedMaterialContext,
   normalizeAcceptedMaterialContext,
@@ -538,15 +539,26 @@ export function canonicaliseHydratedState(
   let currentProgram = persistedState.currentProgram && !options.programAlreadyAccepted
     ? canonicaliseHydratedProgram(persistedState.currentProgram, options.profile)
     : persistedState.currentProgram;
+  const overlayOwnedWeekStarts = new Set(Object.keys(persistedState.weekScopedOverlays ?? {}));
   if (currentProgram && options.activeConstraints) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
-    currentProgram = require('../utils/postGenerationConstraintValidation')
-      .validateProgramAgainstActiveConstraints({
-        program: currentProgram,
+    const validator = require('../utils/postGenerationConstraintValidation');
+    let changed = false;
+    const microcycles = currentProgram.microcycles.map((microcycle) => {
+      // An explicit accepted overlay owns this effective week. Validating the
+      // hidden base independently would reintroduce a second week authority;
+      // the precedence-composed gateway below validates the overlay-owned week.
+      if (overlayOwnedWeekStarts.has(microcycle.startDate.slice(0, 10))) return microcycle;
+      const validated = validator.validateMicrocycleAgainstActiveConstraints({
+        microcycle,
         todayISO: todayISOLocal(),
-        activeConstraints: options.activeConstraints,
+        activeConstraints: options.activeConstraints!,
         profile: options.profile,
       });
+      if (validated !== microcycle) changed = true;
+      return validated;
+    });
+    if (changed) currentProgram = { ...currentProgram, microcycles };
   }
   const phase = currentProgram?.seasonPhaseClock?.selectedPhase ?? currentProgram?.programPhase;
   let currentMicrocycle = persistedState.currentMicrocycle && !options.programAlreadyAccepted
@@ -557,7 +569,8 @@ export function canonicaliseHydratedState(
         options.profile,
       )
     : persistedState.currentMicrocycle;
-  if (currentMicrocycle && options.activeConstraints) {
+  if (currentMicrocycle && options.activeConstraints &&
+    !overlayOwnedWeekStarts.has(currentMicrocycle.startDate.slice(0, 10))) {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     currentMicrocycle = require('../utils/postGenerationConstraintValidation')
       .validateMicrocycleAgainstActiveConstraints({
@@ -668,6 +681,13 @@ export function canonicaliseHydratedState(
         ]
       : []),
   ]);
+  const activeFixtureDates = options.profile
+    ? effectiveFixtureDatesForWeeks({
+        profile: options.profile,
+        markedDays: options.markedDays ?? {},
+        weekStarts: Array.from(hydratedWeekStarts),
+      })
+    : undefined;
   for (const weekStart of hydratedWeekStarts) {
     const overlay = weekScopedOverlays?.[weekStart];
     const baseMicrocycle = currentProgram?.microcycles.find((microcycle) =>
@@ -719,6 +739,7 @@ export function canonicaliseHydratedState(
         workouts: rebased.composedWorkouts,
         weekStart,
         profile: options.profile,
+        activeFixtureDates,
         regenerate: buildFallback,
         safeFallback: buildFallback,
         resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>

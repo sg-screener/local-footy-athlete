@@ -8,6 +8,10 @@ import {
 } from '../rules/derivedSessionProvenance';
 import { searchWholeWeekRepairCandidates } from '../rules/wholeWeekRepairEngine';
 import { buildSection18WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
+import {
+  rollingHorizonDependencyClosure,
+  searchRollingHorizonCandidateCombinations,
+} from '../rules/rollingHorizonRepair';
 
 let passed = 0;
 let failed = 0;
@@ -149,6 +153,113 @@ const patternExpiry = buildDerivedSessionExpiryCandidates({
 check('obsolete pattern-balance repair expires when its typed trigger changes',
   patternExpiry?.workouts.length === 0 &&
   patternExpiry.expiries[0].origin === 'pattern_balance_repair', patternExpiry);
+
+const underlyingMonday = workout('accepted-monday', 1, 'Lower Body Strength');
+underlyingMonday.planEntryId = 'w2:monday:strength';
+underlyingMonday.exercises = [{
+  id: 'accepted-monday:row',
+  workoutId: underlyingMonday.id,
+  exerciseId: 'deadlift',
+  exerciseOrder: 1,
+  prescribedSets: 3,
+  prescribedRepsMin: 3,
+  prescribedRepsMax: 4,
+  restSeconds: 120,
+  createdAt: `${WEEK}T00:00:00.000Z`,
+  updatedAt: `${WEEK}T00:00:00.000Z`,
+}];
+const recovery = workout('g-plus-one', 1, 'Recovery Session');
+recovery.sessionTier = 'recovery';
+recovery.workoutType = 'Recovery';
+recovery.derivedSessionProvenance = [createDerivedSessionProvenance({
+  origin: 'fixture_recovery',
+  scope: 'session',
+  triggerSignature: 'fixture:2026-07-19:g_plus_1',
+  credit: { metric: 'safe_session_content', amount: 1 },
+  originatingDate: '2026-07-20',
+  originatingFixtureDate: '2026-07-19',
+  sourcePlanEntryId: underlyingMonday.planEntryId,
+  validWhile: [{ kind: 'fixture_present', fixtureDate: '2026-07-19' }],
+  invalidWhen: [{ kind: 'fixture_absent', fixtureDate: '2026-07-19' }],
+  dependency: {
+    kind: 'fixture_to_session',
+    source: { date: '2026-07-19', weekStart: WEEK },
+    target: { date: '2026-07-20', weekStart: '2026-07-20' },
+    crossesWeekBoundary: true,
+    displacedSession: {
+      targetDate: '2026-07-20',
+      sourcePlanEntryId: underlyingMonday.planEntryId,
+      workout: underlyingMonday,
+    },
+    restoration: {
+      targetDate: '2026-07-20',
+      sourcePlanEntryId: underlyingMonday.planEntryId,
+      workout: underlyingMonday,
+    },
+  },
+})];
+const persistedRecovery = JSON.parse(JSON.stringify(recovery)) as Workout;
+check('cross-week dependency and displaced prescription survive persistence',
+  persistedRecovery.derivedSessionProvenance?.[0].dependency?.restoration.workout
+    ?.exercises[0].prescribedSets === 3);
+check('G+1 recovery remains while the exact source fixture is active',
+  buildDerivedSessionExpiryCandidates({
+    workouts: [persistedRecovery],
+    contract: game,
+    weekStart: '2026-07-20',
+    activeFixtureDates: new Set(['2026-07-19']),
+  }).length === 0);
+const recoveryExpiry = buildDerivedSessionExpiryCandidates({
+  workouts: [persistedRecovery],
+  contract: game,
+  weekStart: '2026-07-20',
+  activeFixtureDates: new Set(),
+})[0];
+check('expired G+1 recovery restores the exact displaced Monday',
+  recoveryExpiry?.workouts[0].planEntryId === underlyingMonday.planEntryId &&
+  recoveryExpiry.workouts[0].exercises[0].prescribedSets === 3,
+  recoveryExpiry);
+const dependencyOverlay = {
+  id: 'dependency-overlay',
+  weekStart: '2026-07-20',
+  weekEnd: '2026-07-26',
+  anchorDate: null,
+  reason: 'one_off_game' as const,
+  workoutsByDate: { '2026-07-20': persistedRecovery },
+  createdAt: `${WEEK}T00:00:00.000Z`,
+  updatedAt: `${WEEK}T00:00:00.000Z`,
+};
+const closure = rollingHorizonDependencyClosure({
+  seedWeekStarts: [WEEK],
+  changedTriggerDates: ['2026-07-19'],
+  surfaces: {
+    currentProgram: null,
+    currentMicrocycle: null,
+    dateOverrides: {},
+    weekScopedOverlays: { '2026-07-20': dependencyOverlay },
+  },
+});
+check('rolling horizon closes deterministically over provenance-referenced weeks',
+  JSON.stringify(closure) === JSON.stringify([WEEK, '2026-07-20']), closure);
+const horizonCombination = searchRollingHorizonCandidateCombinations({
+  candidateGroups: [[1, 2], [10, 20]],
+  score: (candidate) => Math.abs(candidate.reduce((total, value) => total + value, 0) - 22),
+  compare: (left, right) => left - right,
+  signature: (candidate) => candidate.join(','),
+});
+check('rolling horizon scores complete cross-week combinations',
+  JSON.stringify(horizonCombination?.candidate) === JSON.stringify([2, 20]) &&
+  horizonCombination?.searchedCandidates === 4, horizonCombination);
+const boundedHorizonSearch = searchRollingHorizonCandidateCombinations({
+  candidateGroups: [[1, 2, 3], [10, 20, 30]],
+  score: (candidate) => candidate.reduce((total, value) => total + value, 0),
+  compare: (left, right) => left - right,
+  signature: (candidate) => candidate.join(','),
+  maxCandidates: 2,
+});
+check('rolling horizon combination search terminates at its deterministic cap',
+  boundedHorizonSearch?.searchedCandidates === 2 && boundedHorizonSearch.truncated === true,
+  boundedHorizonSearch);
 
 const pathResults = [
   'fixture', 'readiness', 'injury', 'equipment', 'coach', 'repeat', 'rollover', 'hydration',

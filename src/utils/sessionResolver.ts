@@ -574,6 +574,49 @@ function applyGameProximity(
   athlete: AthleteContext,
   explicitGameDates: Set<string> = new Set(),
 ): Workout | null {
+  const fixtureDependency = (args: {
+    origin: 'fixture_recovery' | 'fixture_proximity';
+    fixtureDate: string;
+    relation: 'g_plus_1' | 'g_minus_1' | 'g_minus_2';
+    creditMetric: 'safe_session_content' | 'hard_day_distribution';
+  }) => createDerivedSessionProvenance({
+    origin: args.origin,
+    scope: 'session',
+    triggerSignature: `fixture:${args.fixtureDate}:${args.relation}`,
+    credit: { metric: args.creditMetric, amount: 1 },
+    originatingDate: date,
+    originatingFixtureDate: args.fixtureDate,
+    sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
+    validWhile: [{ kind: 'fixture_present', fixtureDate: args.fixtureDate }],
+    invalidWhen: [{ kind: 'fixture_absent', fixtureDate: args.fixtureDate }],
+    dependency: {
+      kind: 'fixture_to_session',
+      source: {
+        date: args.fixtureDate,
+        weekStart: getMondayForDate(args.fixtureDate),
+      },
+      target: {
+        date,
+        weekStart: getMondayForDate(date),
+      },
+      crossesWeekBoundary: getMondayForDate(args.fixtureDate) !== getMondayForDate(date),
+      displacedSession: {
+        targetDate: date,
+        sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
+        workout: templateWorkout
+          ? JSON.parse(JSON.stringify(templateWorkout)) as Workout
+          : null,
+      },
+      restoration: {
+        targetDate: date,
+        sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
+        workout: templateWorkout
+          ? JSON.parse(JSON.stringify(templateWorkout)) as Workout
+          : null,
+      },
+    },
+  });
+
   // G+1: day after a game → recovery (even if no template workout)
   const previousDate = shiftDate(date, -1);
   if (gameDates.has(previousDate)) {
@@ -597,16 +640,11 @@ function applyGameProximity(
         );
         return {
           ...recovery,
-          derivedSessionProvenance: [createDerivedSessionProvenance({
-            origin: 'rest_distribution_repair',
-            scope: 'session',
-            triggerSignature: `fixture:${previousDate}:g_plus_1`,
-            credit: { metric: 'safe_session_content', amount: 1 },
-            originatingDate: date,
-            originatingFixtureDate: previousDate,
-            sourcePlanEntryId: templateWorkout?.planEntryId ?? null,
-            validWhile: [{ kind: 'fixture_present', fixtureDate: previousDate }],
-            invalidWhen: [{ kind: 'fixture_absent', fixtureDate: previousDate }],
+          derivedSessionProvenance: [fixtureDependency({
+            origin: 'fixture_recovery',
+            fixtureDate: previousDate,
+            relation: 'g_plus_1',
+            creditMetric: 'safe_session_content',
           })],
         };
       }
@@ -641,7 +679,15 @@ function applyGameProximity(
       }
     } else {
       // Everything else → Gunshow (derivedType key remains 'arms_pump')
-      return buildDerivedSession('arms_pump', date, microcycleId, 'Pre-game day', athlete);
+      return {
+        ...buildDerivedSession('arms_pump', date, microcycleId, 'Pre-game day', athlete),
+        derivedSessionProvenance: [fixtureDependency({
+          origin: 'fixture_proximity',
+          fixtureDate: nextDate,
+          relation: 'g_minus_1',
+          creditMetric: 'safe_session_content',
+        })],
+      };
     }
   }
 
@@ -650,6 +696,7 @@ function applyGameProximity(
   // G-2: 2 days before a game → moderate lower-dominant sessions
   if (gameDates.has(shiftDate(date, 2))) {
     if (isLowerDominant(templateWorkout) && templateWorkout.sessionTier === 'core') {
+      const fixtureDate = shiftDate(date, 2);
       return {
         ...templateWorkout,
         id: `derived-nearGame-${date}`,
@@ -660,6 +707,15 @@ function applyGameProximity(
           // Preserve nested exercise sub-object for display
           exercise: e.exercise || { id: e.exerciseId, name: e.notes || `Exercise ${e.exerciseOrder}`, description: '' } as Exercise,
         })),
+        derivedSessionProvenance: [
+          ...(templateWorkout.derivedSessionProvenance ?? []),
+          fixtureDependency({
+            origin: 'fixture_proximity',
+            fixtureDate,
+            relation: 'g_minus_2',
+            creditMetric: 'hard_day_distribution',
+          }),
+        ],
         updatedAt: new Date().toISOString(),
       };
     }

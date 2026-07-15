@@ -56,7 +56,11 @@ function withoutRoutineLogs<T>(run: () => T): T {
 function runEveryCommit(repoRoot: string, mutations: Options['mutations']): number {
   const started = performance.now();
   const child = spawnSync('npm', ['run', 'test:bible'], {
-    cwd: repoRoot, encoding: 'utf8', timeout: 35_000,
+    // The every-commit command now includes the permanent rolling-horizon
+    // transaction/provenance regressions. Keep this process allowance above
+    // that full command's runtime; the harness's own policy ceilings remain
+    // authoritative and unchanged.
+    cwd: repoRoot, encoding: 'utf8', timeout: 45_000,
     env: { ...process.env, TZ: 'Australia/Melbourne', BIBLE_MUTATIONS: mutations === 'none' ? 'none' : 'smoke' },
   });
   if (child.error) throw child.error;

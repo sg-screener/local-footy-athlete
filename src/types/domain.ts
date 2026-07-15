@@ -555,6 +555,8 @@ export interface Microcycle {
 
 export type DerivedSessionOrigin =
   | 'fixture_replacement'
+  | 'fixture_recovery'
+  | 'fixture_proximity'
   | 'contract_shortfall_repair'
   | 'required_core_relocation'
   | 'pattern_balance_repair'
@@ -606,9 +608,30 @@ export interface DerivedSessionHistoryEntry {
   detail?: string;
 }
 
+export interface DerivedSessionDependencyEndpoint {
+  date: string;
+  weekStart: string;
+}
+
+export interface DerivedSessionRestoration {
+  targetDate: string;
+  sourcePlanEntryId: string | null;
+  /** Exact accepted session displaced by the derived item; null means genuine empty state. */
+  workout: Workout | null;
+}
+
+export interface DerivedSessionDependency {
+  kind: 'fixture_to_session';
+  source: DerivedSessionDependencyEndpoint;
+  target: DerivedSessionDependencyEndpoint;
+  crossesWeekBoundary: boolean;
+  displacedSession: DerivedSessionRestoration;
+  restoration: DerivedSessionRestoration;
+}
+
 /** Persisted lifecycle ownership for every system-derived session/component. */
 export interface DerivedSessionProvenance {
-  protocolVersion: 1;
+  protocolVersion: 1 | 2;
   authorship: 'system';
   origin: DerivedSessionOrigin;
   scope: DerivedSessionScope;
@@ -621,6 +644,8 @@ export interface DerivedSessionProvenance {
   invalidWhen: DerivedSessionLifecycleCondition[];
   history: DerivedSessionHistoryEntry[];
   sourcePlanEntryId: string | null;
+  /** Present when a derived session displaces accepted work and must be reversible. */
+  dependency?: DerivedSessionDependency;
 }
 
 /**

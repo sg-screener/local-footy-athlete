@@ -27,6 +27,7 @@ import type {
 import { resolveProfileTargetWeekAvailability } from './fixtureConditionedAvailability';
 import {
   buildDerivedSessionExpiryCandidates,
+  createDerivedSessionProvenance,
   rebindDerivedSessionProvenance,
 } from './derivedSessionProvenance';
 import { searchWholeWeekRepairCandidates } from './wholeWeekRepairEngine';
@@ -63,6 +64,8 @@ export interface Section18AcceptedWeekCandidate {
 export interface Section18AcceptedWeekGatewayInput extends Section18AcceptedWeekCandidate {
   weekStart: string;
   profile?: OnboardingData | null;
+  /** Exact fixture dates across the rolling dependency horizon. */
+  activeFixtureDates?: ReadonlySet<string>;
   /** The caller may supply the exact live projection; generation uses the canonical resolver below. */
   resolveVisibleWorkouts?: (workouts: readonly Workout[]) => Workout[];
   maxRepairAttempts?: number;
@@ -432,6 +435,7 @@ function repairOptionalRestCandidates(args: {
   workouts: readonly Workout[];
   evaluation: Section18EffectiveWeekEvaluation;
   contract: WeeklyExposureContractV2;
+  weekStart: string;
 }): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
   const fixtureDays = args.contract.anchors
     .filter((anchor) => anchor.kind === 'game' || anchor.kind === 'practice_match')
@@ -444,11 +448,49 @@ function repairOptionalRestCandidates(args: {
     ...args.evaluation.ledger.restStress.activeRecoveryDays,
     ...optionalDays,
   ])).filter((day) => !protectedRecoveryDays.has(day));
+  const crossWeekFixtureDependency = args.workouts
+    .flatMap((workout) => workout.derivedSessionProvenance ?? [])
+    .find((record) => record.dependency?.crossesWeekBoundary === true);
   return candidates.flatMap((day) => {
     const source = args.workouts.find((workout) => workout.dayOfWeek === day);
     if (source && (workoutHasMainStrength(source) || workoutHasAppCoreConditioning(source))) return [];
+    const rest = explicitRestStub(day, source);
+    const targetDate = dateForDay(args.weekStart, day);
+    const dependencyOwnedRest = crossWeekFixtureDependency?.dependency
+      ? {
+          ...rest,
+          derivedSessionProvenance: [createDerivedSessionProvenance({
+            origin: 'rest_distribution_repair',
+            scope: 'session',
+            triggerSignature: crossWeekFixtureDependency.triggerSignature,
+            credit: { metric: 'full_rest', amount: 1 },
+            originatingDate: targetDate,
+            originatingFixtureDate: crossWeekFixtureDependency.dependency.source.date,
+            sourcePlanEntryId: source?.planEntryId ?? null,
+            validWhile: crossWeekFixtureDependency.validWhile,
+            invalidWhen: crossWeekFixtureDependency.invalidWhen,
+            dependency: {
+              kind: 'fixture_to_session',
+              source: { ...crossWeekFixtureDependency.dependency.source },
+              target: { date: targetDate, weekStart: args.weekStart },
+              crossesWeekBoundary:
+                crossWeekFixtureDependency.dependency.source.weekStart !== args.weekStart,
+              displacedSession: {
+                targetDate,
+                sourcePlanEntryId: source?.planEntryId ?? null,
+                workout: source ? JSON.parse(JSON.stringify(source)) as Workout : null,
+              },
+              restoration: {
+                targetDate,
+                sourcePlanEntryId: source?.planEntryId ?? null,
+                workout: source ? JSON.parse(JSON.stringify(source)) as Workout : null,
+              },
+            },
+          })],
+        }
+      : rest;
     return [{
-      workouts: replaceDay(args.workouts, day, explicitRestStub(day, source)),
+      workouts: replaceDay(args.workouts, day, dependencyOwnedRest),
       repair: {
         kind: 'optional_work_removed_for_rest',
         detail: `Removed optional/recovery-only work from ${DAY_NAMES[day]} to create true full rest.`,
@@ -508,6 +550,7 @@ function localRepairCandidates(args: {
   workouts: readonly Workout[];
   evaluation: Section18EffectiveWeekEvaluation;
   contract: WeeklyExposureContractV2;
+  weekStart: string;
 }): Array<{ workouts: Workout[]; repair: Section18WeekRepair }> {
   const restShort = args.evaluation.blockingViolations.some((finding) =>
     finding.domain === 'full_rest');
@@ -535,6 +578,7 @@ function resolveCandidate(args: {
     workouts: args.candidate.workouts,
     contract: args.candidate.contract,
     weekStart: args.input.weekStart,
+    activeFixtureDates: args.input.activeFixtureDates,
   })[0];
   if (preScoreExpiry) {
     initialRepairs.push({
@@ -614,6 +658,7 @@ function resolveCandidate(args: {
         workouts: candidate.workouts,
         contract: evaluated.contract,
         weekStart: args.input.weekStart,
+        activeFixtureDates: args.input.activeFixtureDates,
       }).map((expiry) => ({
         workouts: expiry.workouts,
         repairs: [...candidate.repairs, {
@@ -625,6 +670,7 @@ function resolveCandidate(args: {
         workouts: candidate.workouts,
         evaluation: evaluated.evaluation,
         contract: evaluated.contract,
+        weekStart: args.input.weekStart,
       }).map((repair) => ({
         workouts: repair.workouts,
         repairs: [...candidate.repairs, repair.repair],

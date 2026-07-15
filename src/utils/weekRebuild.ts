@@ -51,8 +51,8 @@ import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/pr
 import {
   buildFixtureProjection,
   commitAcceptedStateTransaction,
-  fixtureProtectionWeekStartsForMarks,
   proposeFixtureMarkedDays,
+  stageRollingHorizonFixtureRepair,
   type AcceptedProgramSurfaces,
 } from '../store/acceptedStateTransaction';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
@@ -403,35 +403,37 @@ export function rebuildLocalWeek(args: RebuildLocalWeekArgs): WeekRebuildResult 
     }
     const state = useProgramStore.getState();
     const markedDays = proposedMarkedDays ?? state.acceptedMaterialContext.markedDays;
-    const projection = buildFixtureProjection({
-      program: currentProgram,
-      profile: args.baseProfile,
-      weekStart: targetWeekStart!,
-      markedDays,
-      sourceSurfaces: state,
-      sourceMarkedDays: state.acceptedMaterialContext.markedDays,
-      activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-    });
-    const adjacentOverlays = proposedMarkedDays
-      ? fixtureProtectionWeekStartsForMarks({
-          before: state.acceptedMaterialContext.markedDays,
-          after: markedDays,
+    const rollingRepair = proposedMarkedDays
+      ? stageRollingHorizonFixtureRepair({
+          program: currentProgram,
+          profile: args.baseProfile,
+          beforeMarkedDays: state.acceptedMaterialContext.markedDays,
+          afterMarkedDays: markedDays,
+          sourceSurfaces: state,
+          activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+          primaryWeekStarts: [targetWeekStart!],
         })
-          .filter((weekStart) => weekStart !== targetWeekStart)
-          .filter((weekStart) => currentProgram.microcycles.some((microcycle) =>
-            weekStart >= microcycle.startDate.slice(0, 10) &&
-            weekStart <= microcycle.endDate.slice(0, 10)))
-          .map((weekStart) => buildFixtureProjection({
-            program: currentProgram,
-            profile: args.baseProfile,
-            weekStart,
-            markedDays,
-            sourceSurfaces: state,
-            sourceMarkedDays: state.acceptedMaterialContext.markedDays,
-            activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
-            mutationIntent: 'remove_from_date',
-          }).overlay)
-      : [];
+      : null;
+    const primaryRollingProjection = rollingRepair?.projections.find((candidate) =>
+      candidate.weekStart === targetWeekStart);
+    const projection = primaryRollingProjection
+      ? {
+          overlay: primaryRollingProjection.overlay,
+          replan: primaryRollingProjection.replan,
+          profile: args.baseProfile,
+        }
+      : buildFixtureProjection({
+          program: currentProgram,
+          profile: args.baseProfile,
+          weekStart: targetWeekStart!,
+          markedDays,
+          sourceSurfaces: state,
+          sourceMarkedDays: state.acceptedMaterialContext.markedDays,
+          activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+        });
+    const adjacentOverlays = rollingRepair?.projections
+      .filter((candidate) => candidate.weekStart !== targetWeekStart)
+      .map((candidate) => candidate.overlay) ?? [];
     const context = collectWeekRebuildContext({
       baseProfile: args.baseProfile,
       newGameDay: args.newGameDay,

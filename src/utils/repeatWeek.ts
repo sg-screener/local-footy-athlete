@@ -60,6 +60,7 @@ import { commitAcceptedStateTransaction } from '../store/acceptedStateTransactio
 import { todayISOLocal } from './appDate';
 import { logger } from './logger';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 
 const DAY_NAME_TO_NUM: Record<DayOfWeek, number> = {
   Sunday: 0,
@@ -323,7 +324,7 @@ export function repeatWeekIntoNextWeek(args: {
     profile: args.baseProfile,
     markedDays: acceptedState.acceptedMaterialContext.markedDays,
   });
-  const sourceWorkouts = acceptedSource.visibleWorkouts;
+  const sourceWorkouts = acceptedSource.composedWorkouts;
 
   // Preserve any existing target-week one-off game so it keeps winning.
   const existingTargetOverlay = useProgramStore.getState().weekScopedOverlays?.[targetWeekStart];
@@ -358,7 +359,7 @@ export function repeatWeekIntoNextWeek(args: {
   const phaseOwnedSourceWorkouts = targetTableChanged
     ? targetMicrocycle?.workouts ?? resolvedTargetContracts?.workouts ?? sourceWorkouts
     : sourceWorkouts;
-  const overlay = buildRepeatWeekOverlay({
+  let overlay = buildRepeatWeekOverlay({
     sourceWorkouts: phaseOwnedSourceWorkouts,
     targetWeekStart,
     // With an in-program target, its base anchor workouts win. Immediately
@@ -372,6 +373,48 @@ export function repeatWeekIntoNextWeek(args: {
     targetExposureContract,
     targetExposureContractV2,
   });
+  if (existingTargetOverlay) {
+    const activeFixtureDates = effectiveFixtureDatesForWeeks({
+      profile: args.baseProfile,
+      markedDays: acceptedState.acceptedMaterialContext.markedDays,
+      weekStarts: [sourceWeekStart, targetWeekStart],
+    });
+    const workoutsByDate = { ...overlay.workoutsByDate };
+    for (const [date, existing] of Object.entries(existingTargetOverlay.workoutsByDate)) {
+      if (!existing) continue;
+      const activeDependencies = existing.derivedSessionProvenance?.filter((record) =>
+        record.dependency && activeFixtureDates.has(record.dependency.source.date)) ?? [];
+      if (activeDependencies.length === 0) continue;
+      const proposedUnderlying = workoutsByDate[date] ?? null;
+      workoutsByDate[date] = {
+        ...existing,
+        derivedSessionProvenance: existing.derivedSessionProvenance?.map((record) =>
+          record.dependency && activeFixtureDates.has(record.dependency.source.date)
+            ? {
+                ...record,
+                dependency: {
+                  ...record.dependency,
+                  displacedSession: {
+                    targetDate: date,
+                    sourcePlanEntryId: proposedUnderlying?.planEntryId ?? null,
+                    workout: proposedUnderlying
+                      ? JSON.parse(JSON.stringify(proposedUnderlying)) as Workout
+                      : null,
+                  },
+                  restoration: {
+                    targetDate: date,
+                    sourcePlanEntryId: proposedUnderlying?.planEntryId ?? null,
+                    workout: proposedUnderlying
+                      ? JSON.parse(JSON.stringify(proposedUnderlying)) as Workout
+                      : null,
+                  },
+                },
+              }
+            : record),
+      };
+    }
+    overlay = { ...overlay, workoutsByDate };
+  }
 
   // Shared sweep policy — preserve manual edits / live-constraint overrides,
   // clear system junk and dead-owner leftovers, resolve game-window conflicts.

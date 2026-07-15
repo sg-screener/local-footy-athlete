@@ -1,4 +1,5 @@
 import type {
+  DerivedSessionProvenance,
   Microcycle,
   OnboardingData,
   Workout,
@@ -54,6 +55,18 @@ export interface FixtureMinimalReplanResult {
   rejectedCandidateSignatures: string[];
   candidateDiagnostics: FixtureReplanCandidateDiagnostic[];
   sourcePlanEntryIds: string[];
+  /** Bounded accepted candidates retained for rolling-horizon composition. */
+  alternatives: FixtureMinimalReplanAlternative[];
+}
+
+export interface FixtureMinimalReplanAlternative {
+  workouts: Workout[];
+  gateway: Section18AcceptedWeekGatewayResult;
+  editCost: FixtureReplanEditCost;
+  changedDays: number[];
+  addedDays: number[];
+  removedDays: number[];
+  preservedCorePlanEntryIds: string[];
 }
 
 export interface FixtureReplanCandidateDiagnostic {
@@ -99,6 +112,8 @@ const EDIT_COST_ORDER: readonly (keyof FixtureReplanEditCost)[] = [
   'optionalBeforeCoreViolation',
 ];
 
+const ROLLING_HORIZON_ALTERNATIVE_CAP = 8;
+
 export interface BuildFixtureMinimalReplanInput {
   profile: OnboardingData;
   weekStart: string;
@@ -108,6 +123,7 @@ export interface BuildFixtureMinimalReplanInput {
   proposedMarkedDays: Record<string, CalendarDayType>;
   priorFixtures: readonly TargetWeekFixture[];
   proposedFixtures: readonly TargetWeekFixture[];
+  activeFixtureDates?: ReadonlySet<string>;
   mutationIntent?: FixtureMutationIntent;
 }
 
@@ -381,6 +397,7 @@ function relocateNewStrength(
   weekStart: string,
   contract: NonNullable<Microcycle['exposureContractV2']>,
   preserveIdentity = false,
+  fixtureDisplacement?: DerivedSessionProvenance,
 ): Workout {
   const dayName = DAY_NAMES[dayNumber];
   const id = preserveIdentity
@@ -392,8 +409,9 @@ function relocateNewStrength(
     origin: preserveIdentity ? record.origin : 'pattern_balance_repair' as const,
     triggerSignature,
     validWhile: preserveIdentity
-      ? record.validWhile
+      ? []
       : [{ kind: 'contract_signature_matches' as const, signature: triggerSignature }],
+    invalidWhen: preserveIdentity ? [] : record.invalidWhen,
     history: [...record.history, {
       action: 'relocated' as const,
       date: weekStart,
@@ -401,7 +419,7 @@ function relocateNewStrength(
       toDayOfWeek: dayNumber,
     }],
   }));
-  const derivedSessionProvenance = existingProvenance?.length
+  let derivedSessionProvenance = existingProvenance?.length
     ? existingProvenance
     : preserveIdentity
       ? undefined
@@ -419,6 +437,45 @@ function relocateNewStrength(
             toDayOfWeek: dayNumber,
           }],
         })];
+  if (fixtureDisplacement?.dependency) {
+    const offset = dayNumber === 0 ? 6 : dayNumber - 1;
+    const target = new Date(`${weekStart}T12:00:00`);
+    target.setDate(target.getDate() + offset);
+    const targetDate = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
+    derivedSessionProvenance = [
+      ...(derivedSessionProvenance ?? []),
+      {
+        ...fixtureDisplacement,
+        origin: 'required_core_relocation',
+        credit: { metric: 'main_strength', amount: 1 },
+        targetMetric: 'main_strength',
+        originatingDate: targetDate,
+        sourcePlanEntryId: template.planEntryId ?? null,
+        history: [...fixtureDisplacement.history, {
+          action: 'relocated',
+          date: targetDate,
+          fromDayOfWeek: template.dayOfWeek,
+          toDayOfWeek: dayNumber,
+          detail: 'Temporary relocation owned by the fixture dependency that displaced the source session.',
+        }],
+        dependency: {
+          ...fixtureDisplacement.dependency,
+          target: { date: targetDate, weekStart },
+          crossesWeekBoundary: fixtureDisplacement.dependency.source.weekStart !== weekStart,
+          displacedSession: {
+            targetDate,
+            sourcePlanEntryId: null,
+            workout: null,
+          },
+          restoration: {
+            targetDate,
+            sourcePlanEntryId: null,
+            workout: null,
+          },
+        },
+      },
+    ];
+  }
   return {
     ...template,
     id,
@@ -446,15 +503,21 @@ function relocateNewStrength(
 function displacedStrengthTemplates(
   input: BuildFixtureMinimalReplanInput,
   source: readonly Workout[],
-): Workout[] {
+): Array<{ workout: Workout; fixtureDisplacement?: DerivedSessionProvenance }> {
   const projected = byDay(visibleResolver(input)(input.sourceWorkouts));
   const retainedIds = new Set(source.map((workout) => workout.planEntryId ?? workout.id));
-  return input.sourceWorkouts.filter((workout) => {
-    if (!hasMainStrength(workout) || isTeamTraining(workout)) return false;
+  return input.sourceWorkouts.flatMap((workout) => {
+    if (!hasMainStrength(workout) || isTeamTraining(workout)) return [];
     const visible = projected.get(workout.dayOfWeek);
-    return !retainedIds.has(workout.planEntryId ?? workout.id) ||
-      !visible || !hasMainStrength(visible) ||
-      mainStrengthPrescription(visible) !== mainStrengthPrescription(workout);
+    const displaced = !retainedIds.has(workout.planEntryId ?? workout.id) ||
+      !visible || !hasMainStrength(visible);
+    if (!displaced) return [];
+    const fixtureDisplacement = visible?.derivedSessionProvenance?.find((record) =>
+      !!record.dependency && (
+        record.dependency.restoration.sourcePlanEntryId === workout.planEntryId ||
+        record.dependency.displacedSession.sourcePlanEntryId === workout.planEntryId
+      ));
+    return [{ workout, fixtureDisplacement }];
   });
 }
 
@@ -475,12 +538,16 @@ function addStrengthDeltaVariants(args: {
     .filter((workout) => hasMainStrength(workout) && !isTeamTraining(workout))
     .map(stripConditioningComponent)
     .filter((workout): workout is Workout => !!workout);
-  const displacedIds = new Set(displaced.map((workout) => workout.planEntryId ?? workout.id));
+  const displacedIds = new Set(displaced.map(({ workout }) => workout.planEntryId ?? workout.id));
   const templates = [
-    ...displaced.map((workout) => ({ workout, preserveIdentity: true })),
+    ...displaced.map(({ workout, fixtureDisplacement }) => ({
+      workout,
+      preserveIdentity: true,
+      fixtureDisplacement,
+    })),
     ...generated
       .filter((workout) => !displacedIds.has(workout.planEntryId ?? workout.id))
-      .map((workout) => ({ workout, preserveIdentity: false })),
+      .map((workout) => ({ workout, preserveIdentity: false, fixtureDisplacement: undefined })),
   ];
   if (templates.length < shortfall) return [];
   const sourceMap = byDay(args.source);
@@ -503,6 +570,7 @@ function addStrengthDeltaVariants(args: {
       args.input.weekStart,
       contract,
       templates[index].preserveIdentity,
+      templates[index].fixtureDisplacement,
     )),
   ]);
 }
@@ -646,6 +714,7 @@ function scoreCandidate(args: {
   gateway: Section18AcceptedWeekGatewayResult;
   availability: FixtureConditionedAvailability;
   addedDays: readonly number[];
+  preferredReplacementDay?: number | null;
 }): FixtureReplanEditCost {
   const source = byDay(args.source);
   const candidate = byDay(args.candidate);
@@ -700,8 +769,14 @@ function scoreCandidate(args: {
     changedCoreSessions: adjustedCoreChanges,
     changedDays: changedDays.length,
     changedPlanEntryIdsOrPrescriptions: adjustedIdentityChanges,
-    releasedFixtureDayPenalty: args.addedDays.length > 0 &&
-      args.addedDays.some((day) => releasedDays.has(day)) ? 0 : 1,
+    // In a no-fixture week the recurring fixture slot owns the preferred
+    // replacement shape. A temporarily moved/released Sunday must not become
+    // the permanent conditioning preference merely because it was released
+    // most recently.
+    releasedFixtureDayPenalty: args.addedDays.length > 0 && args.addedDays.some((day) =>
+      args.preferredReplacementDay === null || args.preferredReplacementDay === undefined
+        ? releasedDays.has(day)
+        : day === args.preferredReplacementDay) ? 0 : 1,
     patternImbalance,
     restDeficit: Math.max(
       0,
@@ -741,6 +816,7 @@ export function buildFixtureMinimalReplan(
     workouts: fixtureNeutral,
     contract,
     weekStart: args.weekStart,
+    activeFixtureDates: args.activeFixtureDates,
   })[0]?.workouts ?? fixtureNeutral;
   const occupied = new Set(args.proposedFixtures.map((fixture) =>
     new Date(`${fixture.date}T12:00:00`).getDay()));
@@ -749,6 +825,11 @@ export function buildFixtureMinimalReplan(
     .map((day) => day.dayNumber));
   const removedFixture = args.priorFixtures.find((fixture) =>
     !args.proposedFixtures.some((proposed) => proposed.date === fixture.date)) ?? null;
+  const recurringFixtureDay = args.profile.usualGameDay ?? args.profile.gameDay;
+  const preferredReplacementDay = args.proposedFixtures.length === 0 &&
+    recurringFixtureDay && recurringFixtureDay !== 'Varies'
+    ? DAY_NAMES.indexOf(recurringFixtureDay)
+    : null;
 
   const accepted: Array<{
     gateway: Section18AcceptedWeekGatewayResult;
@@ -785,13 +866,20 @@ export function buildFixtureMinimalReplan(
             contract.conditioning.core.requiredMinimum) -
           baselineEvaluation.ledger.conditioning.coreCount);
       const sourceMap = byDay(strengthSource);
-      const daysWithConditioning = new Set(
-        baselineEvaluation.ledger.conditioning.credits.map((credit) => credit.dayOfWeek),
+      const daysWithCoreConditioning = new Set(
+        strengthSource
+          .filter((workout) => {
+            const role = workout.section18Evidence?.conditioningRole ??
+              workout.section18ConditioningRole;
+            return role === 'required_core' || role === 'planner_selected_core' || role === 'core';
+          })
+          .map((workout) => workout.dayOfWeek),
       );
       const candidateDays = args.availability.effectiveAvailableDayNumbers.filter((day) => {
-        if (occupied.has(day) || daysWithConditioning.has(day)) return false;
+        if (occupied.has(day) || daysWithCoreConditioning.has(day)) return false;
         const workout = sourceMap.get(day);
-        return !workout || (hasMainStrength(workout) && !isTeamTraining(workout));
+        return !workout || (hasMainStrength(workout) && !isTeamTraining(workout)) ||
+          workout.derivedSessionProvenance?.some((record) => record.authorship === 'system') === true;
       });
       const displacedConditioning = displacedStandaloneConditioningTemplates(args, strengthSource);
       const daySets = shortfall === 0 ? [[]] : combinations(candidateDays, shortfall);
@@ -816,11 +904,14 @@ export function buildFixtureMinimalReplan(
                 originatingFixtureDate: removedFixture?.date ?? null,
               });
           const existing = candidate.find((workout) => workout.dayOfWeek === dayNumber);
-          candidate = existing
+          candidate = existing && hasMainStrength(existing)
             ? candidate.map((workout) => workout.dayOfWeek === dayNumber
                 ? attachConditioningPreservingCore(workout, conditioning)
                 : workout)
-            : [...candidate, conditioning];
+            : [
+                ...candidate.filter((workout) => workout.dayOfWeek !== dayNumber),
+                conditioning,
+              ];
         }
         candidate.sort((left, right) => left.dayOfWeek - right.dayOfWeek);
         const gateway = runSection18AcceptedWeekGateway({
@@ -828,6 +919,7 @@ export function buildFixtureMinimalReplan(
           workouts: candidate,
           weekStart: args.weekStart,
           profile: args.profile,
+          activeFixtureDates: args.activeFixtureDates,
           resolveVisibleWorkouts: visibleResolver(args),
         });
         if (gateway.status === 'impossible') {
@@ -855,6 +947,7 @@ export function buildFixtureMinimalReplan(
           gateway,
           availability: args.availability,
           addedDays,
+          preferredReplacementDay,
         });
         accepted.push({
           gateway,
@@ -873,6 +966,28 @@ export function buildFixtureMinimalReplan(
   if (winner) {
     const changes = changedDaySets(args.sourceWorkouts, winner.gateway.canonicalWorkouts);
     const retained = new Set(winner.gateway.canonicalWorkouts.map((workout) => workout.planEntryId));
+    const seenAlternatives = new Set<string>();
+    const alternatives: FixtureMinimalReplanAlternative[] = [];
+    for (const candidate of accepted) {
+      const signature = candidate.gateway.canonicalWorkouts
+        .map((workout) => `${workout.dayOfWeek}:${workoutSignature(workout)}`)
+        .sort()
+        .join('|');
+      if (seenAlternatives.has(signature)) continue;
+      seenAlternatives.add(signature);
+      alternatives.push({
+        workouts: candidate.gateway.canonicalWorkouts,
+        gateway: candidate.gateway,
+        editCost: candidate.cost,
+        ...changedDaySets(args.sourceWorkouts, candidate.gateway.canonicalWorkouts),
+        preservedCorePlanEntryIds: args.sourceWorkouts
+          .filter((workout) => isCore(workout) && workout.planEntryId &&
+            candidate.gateway.canonicalWorkouts.some((acceptedWorkout) =>
+              acceptedWorkout.planEntryId === workout.planEntryId))
+          .map((workout) => workout.planEntryId!),
+      });
+      if (alternatives.length >= ROLLING_HORIZON_ALTERNATIVE_CAP) break;
+    }
     return {
       path: 'minimal_repair',
       usedFullRegeneration: false,
@@ -888,6 +1003,7 @@ export function buildFixtureMinimalReplan(
       candidateDiagnostics,
       sourcePlanEntryIds: args.sourceWorkouts.flatMap((workout) =>
         workout.planEntryId ? [workout.planEntryId] : []),
+      alternatives,
     };
   }
 
@@ -903,6 +1019,7 @@ export function buildFixtureMinimalReplan(
     workouts: source,
     weekStart: args.weekStart,
     profile: args.profile,
+    activeFixtureDates: args.activeFixtureDates,
     resolveVisibleWorkouts: visibleResolver(args),
     regenerate: () => ({
       contract,
@@ -920,6 +1037,7 @@ export function buildFixtureMinimalReplan(
     gateway: fallbackGateway,
     availability: args.availability,
     addedDays: changes.addedDays,
+    preferredReplacementDay,
   });
   return {
     path: 'full_regeneration',
@@ -934,5 +1052,12 @@ export function buildFixtureMinimalReplan(
     candidateDiagnostics,
     sourcePlanEntryIds: args.sourceWorkouts.flatMap((workout) =>
       workout.planEntryId ? [workout.planEntryId] : []),
+    alternatives: [{
+      workouts: fallbackGateway.canonicalWorkouts,
+      gateway: fallbackGateway,
+      editCost: cost,
+      ...changes,
+      preservedCorePlanEntryIds: [],
+    }],
   };
 }

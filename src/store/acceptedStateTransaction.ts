@@ -43,8 +43,16 @@ import {
 } from '../rules/fixtureConditionedAvailability';
 import {
   buildFixtureMinimalReplan,
+  type FixtureReplanEditCost,
   type FixtureMinimalReplanResult,
 } from '../utils/fixtureMinimalReplan';
+import {
+  effectiveFixtureDatesForWeeks,
+  materialiseVisibleSystemWork,
+  rollingHorizonDependencyClosure,
+  rollingHorizonWeekStartsForMutation,
+  searchRollingHorizonCandidateCombinations,
+} from '../rules/rollingHorizonRepair';
 
 export type AcceptedProgramSurfaces = Pick<
   ProgramState,
@@ -352,28 +360,6 @@ function datesInWeek(weekStart: string): string[] {
   return Array.from({ length: 7 }, (_, offset) => addDaysISO(weekStart, offset));
 }
 
-/**
- * A one-off fixture can protect dates in an adjacent week (Sunday game ->
- * following Monday G+1; Monday game -> prior Saturday/Sunday G-2/G-1).
- * Return every effective week whose visible projection can change when the
- * explicit fixture marks change.
- */
-export function fixtureProtectionWeekStartsForMarks(args: {
-  before: Readonly<Record<string, CalendarDayType>>;
-  after: Readonly<Record<string, CalendarDayType>>;
-}): string[] {
-  const dates = new Set([...Object.keys(args.before), ...Object.keys(args.after)]);
-  const changedGames = Array.from(dates).filter((date) =>
-    (args.before[date] === 'game') !== (args.after[date] === 'game'));
-  const weeks = new Set<string>();
-  for (const date of changedGames) {
-    for (const offset of [-2, -1, 0, 1]) {
-      weeks.add(mondayForDate(addDaysISO(date, offset)));
-    }
-  }
-  return Array.from(weeks).sort();
-}
-
 function fixtureFromContract(
   contract: WeeklyExposureContractV2 | undefined,
   weekStart: string,
@@ -404,6 +390,10 @@ export function buildFixtureProjection(args: {
   overlay: WeekScopedWorkoutOverlay;
   profile: OnboardingData;
   replan: FixtureMinimalReplanResult;
+  alternatives: Array<{
+    overlay: WeekScopedWorkoutOverlay;
+    replan: FixtureMinimalReplanResult;
+  }>;
 } {
   const weekDates = new Set(datesInWeek(args.weekStart));
   const explicitGameDate = Object.entries(args.markedDays)
@@ -427,7 +417,10 @@ export function buildFixtureProjection(args: {
     markedDays: args.sourceMarkedDays ?? materialContext(liveState).markedDays,
   });
   const sourceContract = acceptedSource.contract;
-  const sourceCanonicalWorkouts = acceptedSource.visibleWorkouts;
+  // Mutation structure comes from the accepted precedence-composed snapshot.
+  // Only identity-matched accepted prescriptions and dependency-owned work
+  // are materialised later; unrelated visible-only fill never becomes input.
+  const sourceCanonicalWorkouts = acceptedSource.composedWorkouts;
   const contractFixtures = fixtureFromContract(sourceContract, args.weekStart, args.profile);
   const visibleFixtureWorkouts = sourceCanonicalWorkouts.filter((workout) =>
     workout.workoutType === 'Game');
@@ -450,6 +443,15 @@ export function buildFixtureProjection(args: {
   const targetGameDay = proposedFixtures[0]
     ? dayNameForDate(proposedFixtures[0].date)
     : null;
+  const activeFixtureDates = effectiveFixtureDatesForWeeks({
+    profile: args.profile,
+    markedDays: args.markedDays,
+    weekStarts: [
+      addDaysISO(args.weekStart, -7),
+      args.weekStart,
+      addDaysISO(args.weekStart, 7),
+    ],
+  });
   const availability = resolveFixtureConditionedAvailability({
     profile: args.profile,
     weekStart: args.weekStart,
@@ -479,29 +481,300 @@ export function buildFixtureProjection(args: {
     proposedMarkedDays: args.markedDays,
     priorFixtures,
     proposedFixtures,
+    activeFixtureDates,
     mutationIntent: args.mutationIntent ?? 'fixture_transition',
   });
-  const minimallyReplannedTarget: TrainingProgram = {
-    ...target,
-    microcycles: target.microcycles.map((microcycle, index) => index === 0 ? {
-      ...microcycle,
-      workouts: replan.workouts,
-      exposureContractV2: replan.gateway.contract,
-    } : microcycle),
-  };
   // Dynamic loading avoids an initialisation cycle: weekRebuild itself uses
   // this transaction owner for its final publication.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { buildWeekScopedWorkoutOverlay } = require('../utils/weekRebuild');
+  const alternatives = replan.alternatives.map((alternative) => {
+    const alternativeReplan: FixtureMinimalReplanResult = {
+      ...replan,
+      workouts: alternative.workouts,
+      gateway: alternative.gateway,
+      editCost: alternative.editCost,
+      changedDays: alternative.changedDays,
+      addedDays: alternative.addedDays,
+      removedDays: alternative.removedDays,
+      preservedCorePlanEntryIds: alternative.preservedCorePlanEntryIds,
+    };
+    const minimallyReplannedTarget: TrainingProgram = {
+      ...target,
+      microcycles: target.microcycles.map((microcycle, index) => index === 0 ? {
+        ...microcycle,
+        workouts: materialiseVisibleSystemWork({
+          canonical: alternative.workouts,
+          visible: alternative.gateway.visibleWorkouts,
+        }),
+        exposureContractV2: alternative.gateway.contract,
+      } : microcycle),
+    };
+    return {
+      replan: alternativeReplan,
+      overlay: buildWeekScopedWorkoutOverlay({
+        program: minimallyReplannedTarget,
+        weekStart: args.weekStart,
+        anchorDate: explicitGameDate,
+        reason: explicitGameDate ? 'one_off_game' : 'one_off_no_game',
+      }),
+    };
+  });
+  const selected = alternatives[0];
+  if (!selected) throw new Error('Fixture replan returned no accepted alternative');
   return {
     profile: args.profile,
-    overlay: buildWeekScopedWorkoutOverlay({
-      program: minimallyReplannedTarget,
-      weekStart: args.weekStart,
-      anchorDate: explicitGameDate,
-      reason: explicitGameDate ? 'one_off_game' : 'one_off_no_game',
+    overlay: selected.overlay,
+    replan: selected.replan,
+    alternatives,
+  };
+}
+
+export interface RollingHorizonFixtureRepairProjection {
+  weekStart: string;
+  overlay: WeekScopedWorkoutOverlay;
+  replan: FixtureMinimalReplanResult;
+}
+
+export interface RollingHorizonFixtureCandidateScore {
+  blockingWeeks: number;
+  unavailableDayUses: number;
+  boundaryHardTransitions: number;
+  staleDependencies: number;
+  changedCoreSessions: number;
+  changedPlanEntryIdsOrPrescriptions: number;
+  totalChangedDays: number;
+  restDeficit: number;
+  releasedFixtureDayPenalty: number;
+  optionalBeforeCoreViolation: number;
+  patternImbalance: number;
+  duplicateStrengthPatternPenalty: number;
+  excessiveActiveStreak: number;
+}
+
+export interface RollingHorizonFixtureRepairResult {
+  outcome: 'accepted' | 'repaired' | 'regenerated' | 'fallback';
+  weekStarts: string[];
+  projections: RollingHorizonFixtureRepairProjection[];
+  totalChangedDays: number;
+  horizonScore: RollingHorizonFixtureCandidateScore;
+  searchedCandidates: number;
+  searchTruncated: boolean;
+}
+
+const HORIZON_SCORE_ORDER: readonly (keyof RollingHorizonFixtureCandidateScore)[] = [
+  'blockingWeeks',
+  'unavailableDayUses',
+  'boundaryHardTransitions',
+  'staleDependencies',
+  'changedCoreSessions',
+  'changedPlanEntryIdsOrPrescriptions',
+  'totalChangedDays',
+  'restDeficit',
+  'releasedFixtureDayPenalty',
+  'optionalBeforeCoreViolation',
+  'patternImbalance',
+  'duplicateStrengthPatternPenalty',
+  'excessiveActiveStreak',
+];
+
+function compareRollingHorizonFixtureScores(
+  left: RollingHorizonFixtureCandidateScore,
+  right: RollingHorizonFixtureCandidateScore,
+): number {
+  for (const key of HORIZON_SCORE_ORDER) {
+    const delta = left[key] - right[key];
+    if (delta !== 0) return delta;
+  }
+  return 0;
+}
+
+function emptyRollingHorizonFixtureScore(): RollingHorizonFixtureCandidateScore {
+  return {
+    blockingWeeks: 0,
+    unavailableDayUses: 0,
+    boundaryHardTransitions: 0,
+    staleDependencies: 0,
+    changedCoreSessions: 0,
+    changedPlanEntryIdsOrPrescriptions: 0,
+    totalChangedDays: 0,
+    restDeficit: 0,
+    releasedFixtureDayPenalty: 0,
+    optionalBeforeCoreViolation: 0,
+    patternImbalance: 0,
+    duplicateStrengthPatternPenalty: 0,
+    excessiveActiveStreak: 0,
+  };
+}
+
+function sumFixtureEditCosts(
+  projections: readonly RollingHorizonFixtureRepairProjection[],
+): FixtureReplanEditCost {
+  const seed: FixtureReplanEditCost = {
+    section18Blockers: 0,
+    unavailableDayUses: 0,
+    changedCoreSessions: 0,
+    changedDays: 0,
+    changedPlanEntryIdsOrPrescriptions: 0,
+    releasedFixtureDayPenalty: 0,
+    patternImbalance: 0,
+    restDeficit: 0,
+    duplicateStrengthPatternPenalty: 0,
+    excessiveActiveStreak: 0,
+    optionalBeforeCoreViolation: 0,
+  };
+  return projections.reduce((total, projection) => {
+    for (const key of Object.keys(seed) as Array<keyof FixtureReplanEditCost>) {
+      total[key] += projection.replan.editCost[key];
+    }
+    return total;
+  }, seed);
+}
+
+function scoreRollingHorizonFixtureCandidate(args: {
+  projections: readonly RollingHorizonFixtureRepairProjection[];
+  activeFixtureDates: ReadonlySet<string>;
+}): RollingHorizonFixtureCandidateScore {
+  const projections = [...args.projections].sort((left, right) =>
+    left.weekStart.localeCompare(right.weekStart));
+  const costs = sumFixtureEditCosts(projections);
+  let boundaryHardTransitions = 0;
+  for (let index = 0; index < projections.length - 1; index++) {
+    const current = projections[index];
+    const following = projections[index + 1];
+    if (addDaysISO(current.weekStart, 7) !== following.weekStart) continue;
+    const currentHard = current.replan.gateway.evaluation.ledger.restStress.hardDays.includes(0);
+    const followingHard = following.replan.gateway.evaluation.ledger.restStress.hardDays.includes(1);
+    if (currentHard && followingHard) boundaryHardTransitions += 1;
+  }
+  const staleDependencies = projections.reduce((total, projection) => total +
+    projection.replan.gateway.canonicalWorkouts.reduce((workoutTotal, workout) =>
+      workoutTotal + (workout.derivedSessionProvenance ?? []).filter((record) =>
+        record.dependency && !args.activeFixtureDates.has(record.dependency.source.date)).length,
+    0), 0);
+  return {
+    blockingWeeks: projections.filter((projection) =>
+      projection.replan.gateway.evaluation.blockingViolations.length > 0).length,
+    unavailableDayUses: costs.unavailableDayUses,
+    boundaryHardTransitions,
+    staleDependencies,
+    changedCoreSessions: costs.changedCoreSessions,
+    changedPlanEntryIdsOrPrescriptions: costs.changedPlanEntryIdsOrPrescriptions,
+    totalChangedDays: costs.changedDays,
+    restDeficit: costs.restDeficit,
+    releasedFixtureDayPenalty: costs.releasedFixtureDayPenalty,
+    optionalBeforeCoreViolation: costs.optionalBeforeCoreViolation,
+    patternImbalance: costs.patternImbalance,
+    duplicateStrengthPatternPenalty: costs.duplicateStrengthPatternPenalty,
+    excessiveActiveStreak: costs.excessiveActiveStreak,
+  };
+}
+
+function rollingHorizonFixtureSignature(
+  projections: readonly RollingHorizonFixtureRepairProjection[],
+): string {
+  return projections.map((projection) => [
+    projection.weekStart,
+    ...projection.replan.gateway.canonicalWorkouts
+      .map((workout) => `${workout.dayOfWeek}:${workout.planEntryId ?? workout.id}:${workout.name}`)
+      .sort(),
+  ].join('|')).join('||');
+}
+
+/**
+ * The sole fixture rolling-horizon staging owner. It closes the dependency
+ * graph, repairs every materialised week from the same accepted snapshot and
+ * returns no partial publication. Callers may commit only the complete result.
+ */
+export function stageRollingHorizonFixtureRepair(args: {
+  program: TrainingProgram;
+  profile: OnboardingData;
+  beforeMarkedDays: Readonly<Record<string, CalendarDayType>>;
+  afterMarkedDays: Record<string, CalendarDayType>;
+  sourceSurfaces: AcceptedEffectiveWeekSurfaces;
+  activeConstraints?: readonly ActiveConstraint[];
+  primaryWeekStarts: readonly string[];
+  primaryMutationIntent?: 'fixture_transition' | 'remove_from_date' | 'remove_weekly_exposure';
+  dependentMutationIntent?: 'fixture_transition' | 'remove_from_date' | 'remove_weekly_exposure';
+}): RollingHorizonFixtureRepairResult {
+  const primary = new Set(args.primaryWeekStarts.map((weekStart) => mondayForDate(weekStart)));
+  const weekStarts = Array.from(new Set([
+    ...primary,
+    ...rollingHorizonWeekStartsForMutation({
+      before: args.beforeMarkedDays,
+      after: args.afterMarkedDays,
+      surfaces: args.sourceSurfaces,
     }),
-    replan,
+  ]))
+    .filter((weekStart) => args.program.microcycles.some((microcycle) =>
+      weekStart >= microcycle.startDate.slice(0, 10) &&
+      weekStart <= microcycle.endDate.slice(0, 10)))
+    .sort();
+  if (weekStarts.length === 0) {
+    return {
+      outcome: 'accepted',
+      weekStarts: [],
+      projections: [],
+      totalChangedDays: 0,
+      horizonScore: emptyRollingHorizonFixtureScore(),
+      searchedCandidates: 0,
+      searchTruncated: false,
+    };
+  }
+  const projectionResults = weekStarts.map((weekStart) => ({
+    weekStart,
+    projection: buildFixtureProjection({
+      program: args.program,
+      profile: args.profile,
+      weekStart,
+      markedDays: args.afterMarkedDays,
+      sourceSurfaces: args.sourceSurfaces,
+      sourceMarkedDays: args.beforeMarkedDays,
+      activeConstraints: args.activeConstraints,
+      mutationIntent: primary.has(weekStart)
+        ? args.primaryMutationIntent ?? 'fixture_transition'
+        : args.dependentMutationIntent ?? 'remove_from_date',
+    }),
+  }));
+  const activeFixtureDates = effectiveFixtureDatesForWeeks({
+    profile: args.profile,
+    markedDays: args.afterMarkedDays,
+    weekStarts,
+  });
+  const search = searchRollingHorizonCandidateCombinations({
+    candidateGroups: projectionResults.map(({ weekStart, projection }) =>
+      projection.alternatives.map((alternative) => ({
+        weekStart,
+        overlay: alternative.overlay,
+        replan: alternative.replan,
+      }))),
+    score: (candidate) => scoreRollingHorizonFixtureCandidate({
+      projections: candidate,
+      activeFixtureDates,
+    }),
+    compare: compareRollingHorizonFixtureScores,
+    signature: rollingHorizonFixtureSignature,
+    maxCandidates: 64,
+  });
+  if (!search) throw new Error('Rolling fixture repair produced no complete horizon candidate');
+  const projections = search.candidate;
+  const statuses = projections.map((projection) => projection.replan.gateway.status);
+  const outcome = statuses.includes('fallback')
+    ? 'fallback'
+    : statuses.includes('regenerated')
+      ? 'regenerated'
+      : statuses.includes('repaired')
+        ? 'repaired'
+        : 'accepted';
+  return {
+    outcome,
+    weekStarts,
+    projections,
+    totalChangedDays: projections.reduce((total, projection) =>
+      total + projection.replan.changedDays.length, 0),
+    horizonScore: search.score,
+    searchedCandidates: search.searchedCandidates,
+    searchTruncated: search.truncated,
   };
 }
 
@@ -598,40 +871,25 @@ export function commitCalendarStateTransaction(args: {
   const prior = materialContext(state);
   const affectedWeeks = new Set(args.affectedDates.map(mondayForDate));
   const fixtureWeeks = new Set((args.fixtureChangedDates ?? []).map(mondayForDate));
-  const protectionWeeks = fixtureProtectionWeekStartsForMarks({
-    before: prior.markedDays,
-    after: args.markedDays,
-  });
-  for (const weekStart of protectionWeeks) affectedWeeks.add(weekStart);
-  const projectionWeeks = new Set([...fixtureWeeks, ...protectionWeeks]);
   const overlays = {
     ...state.weekScopedOverlays,
     ...(args.program?.weekScopedOverlays ?? {}),
   };
   if (state.currentProgram && baseProfile) {
-    for (const weekStart of projectionWeeks) {
-      const materialised = state.currentProgram.microcycles.some((microcycle) =>
-        weekStart >= microcycle.startDate.slice(0, 10) &&
-        weekStart <= microcycle.endDate.slice(0, 10));
-      if (!materialised) {
-        affectedWeeks.delete(weekStart);
-        continue;
-      }
-      overlays[weekStart] = buildFixtureProjection({
-        program: state.currentProgram,
-        profile: baseProfile,
-        weekStart,
-        markedDays: args.markedDays,
-        sourceSurfaces: state,
-        sourceMarkedDays: prior.markedDays,
-        activeConstraints: prior.activeConstraints,
-        mutationIntent: args.mutationIntent ?? (
-          datesInWeek(weekStart).some((date) => args.markedDays[date] === 'rest') ||
-          (protectionWeeks.includes(weekStart) && !fixtureWeeks.has(weekStart))
-            ? 'remove_from_date'
-            : 'fixture_transition'
-        ),
-      }).overlay;
+    const repair = stageRollingHorizonFixtureRepair({
+      program: state.currentProgram,
+      profile: baseProfile,
+      beforeMarkedDays: prior.markedDays,
+      afterMarkedDays: args.markedDays,
+      sourceSurfaces: state,
+      activeConstraints: prior.activeConstraints,
+      primaryWeekStarts: Array.from(fixtureWeeks),
+      primaryMutationIntent: args.mutationIntent,
+      dependentMutationIntent: 'remove_from_date',
+    });
+    for (const projection of repair.projections) {
+      affectedWeeks.add(projection.weekStart);
+      overlays[projection.weekStart] = projection.overlay;
     }
   }
   return commitAcceptedStateTransaction({
@@ -771,10 +1029,16 @@ export function commitReadinessStateTransaction(args: {
   readinessSignalsByDate: Record<string, ReadinessSignal>;
   affectedDates: readonly string[];
 }): AcceptedStateTransactionResult {
+  const state = useProgramStore.getState();
+  const weekStarts = rollingHorizonDependencyClosure({
+    seedWeekStarts: args.affectedDates.map(mondayForDate),
+    changedTriggerDates: args.affectedDates,
+    surfaces: state,
+  });
   return commitAcceptedStateTransaction({
     reason: args.reason,
     readinessSignalsByDate: args.readinessSignalsByDate,
-    validateWeekStarts: Array.from(new Set(args.affectedDates.map(mondayForDate))),
+    validateWeekStarts: weekStarts,
   });
 }
 
