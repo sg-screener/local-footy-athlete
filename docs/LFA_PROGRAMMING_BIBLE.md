@@ -4503,6 +4503,16 @@ Fixture-conditioned availability
 * Removing a fixture must not decrease effective app availability unless another explicit blocker applies. Adding a fixture must not increase it.
 * Fixture release changes availability, not coaching mode: bye build may use the released usual game day for the approved hard replacement exposure, while bye recovery may use it for rest, recovery aerobic or lighter strength and must not automatically receive hard conditioning.
 
+Chained-mutation continuity and core relocation
+
+* Every second or later fixture, calendar, availability or session mutation starts from the currently accepted effective week: the accepted base program composed with its current week overlay, date overrides, calendar marks and active typed constraints. An original microcycle or uncomposed overlay is not a valid mutation source once a later accepted surface exists.
+* The accepted effective week carries forward the current Contract v2, visible core ownership, stable `planEntryId`s and prescriptions. A later layer may validate that representation but must not reinterpret a schedule-history note as readiness, replace it with a template, or independently reconstruct a different source week.
+* `fixture-replan:*` entries are normal accepted entries. When they supply required core work they remain preservable and relocatable; their identifier prefix does not make them disposable.
+* `remove_from_date` and date-level unavailability/rest mean that the named date cannot host the session. If the removed content supplies a compulsory weekly exposure, the planner preserves the contract and relocates or safely stacks the exact shortfall on another effective available day before considering regeneration.
+* `remove_weekly_exposure` asks to reduce the weekly exposure itself. A compulsory target is not silently reduced: the request requires an applicable typed authorised reduction or is rejected with the previous accepted state unchanged.
+* Required core relocation prefers an existing compatible hard day when safe, then another effective available day. Optional work is moved or removed before valid core strength is rewritten. Relocation must preserve the approved phase target, strength-pattern balance, rest and hard-day rules.
+* If no safe relocation satisfies the unchanged Contract v2, the mutation is rejected with a typed relocation failure. The calendar, overlay, overrides, contract and visible week remain the prior accepted snapshot.
+
 Field-action power credit
 
 * Team training, games and practice matches do not automatically count as formal power-primer exposure.
@@ -4669,6 +4679,8 @@ Cross-path rules
 * A game or practice-match add, removal or move first attempts a minimal accepted-state repair: preserve every unaffected valid core session, anchor, `planEntryId`, weekday and prescription; remove fixture-only content; calculate the exact exposure delta; change optional work before core work; and add/move/broaden only the minimum sessions needed on effective available days.
 * Among equally safe candidates meeting the same contract, choose deterministically by: Section 18 compliance, effective availability, preserved core sessions, changed-day count, preserved identities/prescriptions, use of a released fixture day, pattern balance, rest distribution, duplicate-pattern avoidance, avoidance of unnecessary consecutive active days, then optional-before-core sacrifice.
 * Full regeneration is permitted only when no safe minimal-diff candidate can satisfy the target contract and final gateway.
+* Rebuild, Repeat Week, rollover, persistence/rehydration, fixture changes and date/session changes use the same accepted-effective-week rebasing owner. They may project different target contracts, but they may not choose different mutation-source precedence.
+* Sunday fixtures protect the following Monday as G+1 across the week boundary. Monday in the same Monday-to-Sunday target week is G-6 and remains eligible when otherwise safe; it must not be reclassified as that fixture's G+1.
 * Repeat Week uses the target week's canonical phase and selected exposure table. Its phase-table signature is the mode plus the selected main-strength, core-conditioning and sprint/high-speed targets.
 * When source and target phase-table signatures differ, Repeat Week regenerates from the target phase table instead of copying the source target or deficient source structure.
 * When the signatures match, source prescriptions may be preserved, but target anchors, typed constraints and final Section 18 validation still win.

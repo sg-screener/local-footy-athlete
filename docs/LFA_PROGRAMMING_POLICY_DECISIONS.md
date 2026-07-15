@@ -50,6 +50,16 @@ Fixture mutation instead starts from the visible accepted week and the new Contr
 
 For normal/high readiness with Tuesday/Thursday TT, the accepted game week already contains valid Monday lower, Tuesday upper pull + TT and Thursday upper push + TT. Removing Saturday's game produces bye build: TT supplies two core conditioning exposures, so one hard core conditioning exposure is added on the released Saturday. Friday Gunshow remains optional and may be retained, moved or removed before any core strength is rewritten. No second lower/squat session and no merged upper session are permitted when the original three core sessions remain valid.
 
+## Chained mutation and core relocation — approved 15 July 2026
+
+The accepted effective week is the sole mutation source after any program surface has been accepted. It composes the accepted base microcycle, current week overlay, date overrides and accepted calendar/constraint context, then resolves the athlete-visible week under the carried Contract v2. Fixture, calendar, availability, session, rebuild, Repeat Week, rollover and rehydration paths consume this same representation.
+
+The retired behaviour is any path that starts a later mutation from the original microcycle, an overlay without its overrides, or a newly generated template, plus any later validation layer that independently reinterprets schedule history as readiness. Schedule-history/Coach Note evidence describes an already accepted change; it is not a readiness reduction and does not authorise lower strength or conditioning targets.
+
+A date-level removal or unavailable/rest mark has `remove_from_date` semantics. Required core work on that date is relocated or safely stacked while the approved weekly target remains unchanged. A request to remove the compulsory exposure from the whole week has `remove_weekly_exposure` semantics and is rejected unless an existing typed authorised reduction applies. Failure to find a safe relocation preserves all previously accepted surfaces atomically.
+
+For a two-TT bye-build week, blocking the released Saturday removes Saturday as a placement option but does not change C3. The missing app core exposure moves to a compatible existing hard day where safe, with optional Gunshow moved or removed before core strength. Moving a Saturday game to Sunday preserves Monday lower, Tuesday pull + TT and Thursday push + TT; Saturday becomes rest or approved light G-1 work, Sunday is the game, and the following Monday—not the preceding Monday—is protected as G+1.
+
 ## Section 18 phase-planner implementation record — 14 July 2026
 
 Commit `49073d393c19571b39fecf53051f3e3c5fdea452` implements the approved phase-planner ownership boundary without changing the phase clock or Section 18 safety finaliser. The Programming Bible remains the coaching authority; this section records how the approved policy now survives production paths.

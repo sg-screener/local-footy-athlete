@@ -81,6 +81,7 @@ import {
 import type { ModalityPreference } from '../store/coachPreferencesStore';
 import { useProgramStore } from '../store/programStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
+import { useProfileStore } from '../store/profileStore';
 import type { Workout, OverrideContext } from '../types/domain';
 import { logger } from './logger';
 import {
@@ -92,6 +93,12 @@ import {
   type CoachTrainingIntent,
 } from './coachPlan';
 import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './programEditWriteGuard';
+import {
+  commitDateUnavailableTransaction,
+  getAcceptedMaterialContext,
+} from '../store/acceptedStateTransaction';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 
 // ─── Public types ───────────────────────────────────────────────────
 
@@ -266,6 +273,9 @@ export interface RemoveSessionApplyResult {
 export interface RenderedRemoveSessionVerification {
   targetRemoved: boolean;
   otherDaysUnchanged: boolean;
+  /** True when a required target was removed from its date and the accepted
+   * weekly exposure was safely relocated through the shared week planner. */
+  requiredCoreRelocated?: boolean;
   changedOtherDates: string[];
   beforeWorkoutName: string | null;
   afterWorkoutName: string | null;
@@ -3144,7 +3154,6 @@ function runAddSession(
     visibleWeekBefore,
     visibleWeekAfter,
   });
-
   logger.debug('[coach-command-executor] add_session', {
     targetDate,
     sourceWorkoutName: sourceWorkout.name ?? null,
@@ -3364,6 +3373,16 @@ function runRemoveSession(
     visibleWeekBefore,
     visibleWeekAfter,
   });
+  const requiredCoreRelocated = !verification.otherDaysUnchanged &&
+    !deps.applyRemove &&
+    applyResult.applied &&
+    verifyAcceptedRequiredCoreRelocation({
+      targetDate,
+      beforeWorkout,
+      visibleWeekBefore,
+      visibleWeekAfter,
+    });
+  const otherDaysVerified = verification.otherDaysUnchanged || requiredCoreRelocated;
 
   logger.debug('[coach-command-executor] remove_session', {
     targetDate,
@@ -3372,7 +3391,8 @@ function runRemoveSession(
     applied: applyResult.applied,
     applyReason: applyResult.reason ?? null,
     targetRemoved: verification.targetRemoved,
-    otherDaysUnchanged: verification.otherDaysUnchanged,
+    otherDaysUnchanged: otherDaysVerified,
+    requiredCoreRelocated,
     changedOtherDates: verification.changedOtherDates,
   });
 
@@ -3387,7 +3407,7 @@ function runRemoveSession(
     };
   }
 
-  if (!verification.targetRemoved || !verification.otherDaysUnchanged) {
+  if (!verification.targetRemoved || !otherDaysVerified) {
     rollbackRemoveSession(input, rollbackSnapshot, 'verification_failed:remove_session');
     tick('composing_reply');
     return {
@@ -3406,7 +3426,9 @@ function runRemoveSession(
   tick('composing_reply');
   const result: ExecutionResult = {
     kind: 'mutated',
-    reply: `Done. I removed ${quoteSession(beforeWorkout.name ?? 'session')} from ${humanDate(targetDate)}.`,
+    reply: requiredCoreRelocated
+      ? `Done. I removed ${quoteSession(beforeWorkout.name ?? 'session')} from ${humanDate(targetDate)} and relocated the required weekly work to a safe day.`
+      : `Done. I removed ${quoteSession(beforeWorkout.name ?? 'session')} from ${humanDate(targetDate)}.`,
     applied: true,
     route: 'remove_session:applied',
     progress: stages,
@@ -3450,8 +3472,10 @@ function defaultApplyRemoveSession(
     return { applied: false, reason: 'past_date_blocked' };
   }
   try {
-    useProgramStore.getState().removeManualOverride(input.targetDate);
-    useCalendarStore.getState().setRestDay(input.targetDate);
+    commitDateUnavailableTransaction({
+      date: input.targetDate,
+      reason: `coach:remove_session:${input.targetDate}`,
+    });
     return { applied: true };
   } catch (e) {
     return {
@@ -3819,6 +3843,101 @@ function verifyRenderedRemoveSession(args: {
     beforeWorkoutName: args.beforeWorkout?.name ?? null,
     afterWorkoutName: args.afterWorkout?.name ?? null,
   };
+}
+
+function relocationStrengthSignature(workout: ResolvedDay['workout'] | null): string {
+  if (!workout) return '';
+  return JSON.stringify((workout.exercises ?? [])
+    .filter((row: any) => row.section18Evidence?.role === 'main_strength' ||
+      row.section18Evidence?.role === 'legacy_unknown')
+    .map((row: any) => ({
+      id: row.id,
+      name: row.exercise?.name ?? null,
+      sets: row.prescribedSets,
+      min: row.prescribedRepsMin,
+      max: row.prescribedRepsMax,
+      rest: row.restSeconds,
+    })));
+}
+
+function hasRelocatableMainStrength(workout: ResolvedDay['workout'] | null): boolean {
+  return !!workout && (
+    relocationStrengthSignature(workout) !== '[]' ||
+    ((workout as Workout).strengthIntent?.effectivePatterns.length ?? 0) > 0
+  );
+}
+
+/**
+ * Live remove-session verification for compulsory work. A changed second day
+ * is valid only when the already-committed accepted snapshot proves the same
+ * required ledger, retains every unaffected strength identity/prescription,
+ * and leaves the requested date empty. Custom test seams keep the stricter
+ * historical "other days unchanged" contract.
+ */
+function verifyAcceptedRequiredCoreRelocation(args: {
+  targetDate: string;
+  beforeWorkout: ResolvedDay['workout'] | null;
+  visibleWeekBefore: ResolvedDay[];
+  visibleWeekAfter: ResolvedDay[];
+}): boolean {
+  try {
+    const weekStart = getMondayForDate(args.targetDate);
+    const state = useProgramStore.getState();
+    const context = getAcceptedMaterialContext();
+    const rebased = rebaseAcceptedEffectiveWeek({
+      surfaces: state,
+      weekStart,
+      profile: useProfileStore.getState().onboardingData,
+      markedDays: context.markedDays,
+    });
+    const targetDow = new Date(`${args.targetDate}T12:00:00`).getDay();
+    const beforeWorkouts = args.visibleWeekBefore.flatMap((day) =>
+      day.workout ? [day.workout as Workout] : []);
+    const beforeEvaluation = evaluateSection18EffectiveWeek({
+      contract: rebased.contract,
+      workouts: beforeWorkouts,
+      weekStart,
+    });
+    const targetHadConditioningCore = beforeEvaluation.ledger.conditioning.credits.some((credit) =>
+      credit.dayOfWeek === targetDow && credit.source === 'app');
+    const targetHadStrengthCore = hasRelocatableMainStrength(args.beforeWorkout);
+    const targetWasRequired = targetHadStrengthCore || targetHadConditioningCore ||
+      args.beforeWorkout?.sessionTier === 'core';
+    if (!targetWasRequired || rebased.evaluation.blockingViolations.length > 0) return false;
+    if (context.markedDays[args.targetDate] !== 'rest') return false;
+    if (rebased.dates.find((entry) => entry.date === args.targetDate)?.workout) return false;
+    if (targetHadStrengthCore &&
+      rebased.evaluation.ledger.mainStrength.achievedCount <
+        beforeEvaluation.ledger.mainStrength.achievedCount) return false;
+    if (targetHadConditioningCore &&
+      rebased.evaluation.ledger.conditioning.coreCount <
+        beforeEvaluation.ledger.conditioning.coreCount) return false;
+
+    const afterByDate = new Map(args.visibleWeekAfter.map((day) => [day.date, day.workout]));
+    for (const day of args.visibleWeekBefore) {
+      if (day.date === args.targetDate || !hasRelocatableMainStrength(day.workout)) continue;
+      const after = afterByDate.get(day.date) ?? null;
+      if (!after || after.planEntryId !== day.workout?.planEntryId ||
+        relocationStrengthSignature(after) !== relocationStrengthSignature(day.workout)) {
+        return false;
+      }
+    }
+    if (targetHadStrengthCore) {
+      const targetIdentity = args.beforeWorkout?.planEntryId;
+      const targetDose = relocationStrengthSignature(args.beforeWorkout);
+      if (!rebased.visibleWorkouts.some((workout) =>
+        (targetIdentity ? workout.planEntryId === targetIdentity : true) &&
+        relocationStrengthSignature(workout) === targetDose)) return false;
+    }
+    return changedVisibleWeekDates(args.visibleWeekBefore, args.visibleWeekAfter)
+      .some((date) => date !== args.targetDate);
+  } catch (error) {
+    logger.warn('[coach-command-executor] required_core_relocation_verification_failed', {
+      targetDate: args.targetDate,
+      error: (error as Error)?.message ?? String(error),
+    });
+    return false;
+  }
 }
 
 function isRemovedSessionProjection(workout: ResolvedDay['workout'] | null): boolean {

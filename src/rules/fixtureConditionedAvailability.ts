@@ -105,7 +105,11 @@ export function targetWeekFixtures(args: {
   if (explicit.length > 0) return explicit.sort((left, right) => left.date.localeCompare(right.date));
   const explicitBye = Object.entries(args.markedDays ?? {})
     .some(([date, mark]) => isDateInWeek(date, args.weekStart) && mark === 'noGame');
-  return explicitBye ? [] : recurringFixture(args.profile, args.weekStart);
+  if (explicitBye) return [];
+  const recurring = recurringFixture(args.profile, args.weekStart);
+  return recurring.some((fixture) => args.markedDays?.[fixture.date] === 'rest')
+    ? []
+    : recurring;
 }
 
 function activeUnavailableDates(

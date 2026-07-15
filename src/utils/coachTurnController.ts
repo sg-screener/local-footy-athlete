@@ -5,6 +5,7 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
+import { commitProgramSetupRebuildTransaction } from '../store/acceptedStateTransaction';
 import type { DayOfWeek } from '../types/domain';
 import {
   usePendingCoachClarifierStore,
@@ -2822,6 +2823,9 @@ async function executeSetupEditInController(args: {
     setCurrentProgram: (program) => useProgramStore.getState().setCurrentProgram(program),
     setCurrentMicrocycle: (microcycle) => useProgramStore.getState().setCurrentMicrocycle(microcycle),
     setTodayWorkout: (workout) => useProgramStore.getState().setTodayWorkout(workout),
+    commitAcceptedRebuild: ({ program, profile, todayISO }) => {
+      commitProgramSetupRebuildTransaction({ program, profile, todayISO });
+    },
     onProgress,
   });
 }

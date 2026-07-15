@@ -21,11 +21,15 @@ import { useReadinessStore } from './readinessStore';
 import { useCoachUpdatesStore } from './coachUpdatesStore';
 import { useProfileStore } from './profileStore';
 import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
+import { isStructuralGenerationConstraint } from '../utils/generationConstraints';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { addDaysISO } from '../utils/programBlockState';
 import { todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
-import { resolveFinalVisibleSection18Week } from '../rules/section18AcceptedWeekGateway';
+import {
+  rebaseAcceptedEffectiveWeek,
+  type AcceptedEffectiveWeekSurfaces,
+} from '../rules/acceptedEffectiveWeek';
 import {
   normalizeAcceptedArray,
   normalizeAcceptedKeyedMap,
@@ -114,7 +118,9 @@ function validationConstraints(
   activeConstraints: readonly ActiveConstraint[],
   signals: Readonly<Record<string, ReadinessSignal>>,
 ): ActiveConstraint[] {
-  const byId = new Map(activeConstraints.map((constraint) => [constraint.id, constraint]));
+  const byId = new Map(activeConstraints
+    .filter(isStructuralGenerationConstraint)
+    .map((constraint) => [constraint.id, constraint]));
   for (const signal of Object.values(signals)) {
     for (const constraint of buildReadinessActiveConstraints(signal)) {
       byId.set(constraint.id, constraint);
@@ -143,7 +149,13 @@ function materialiseFixtureMarksForCandidate(args: {
     const weekDates = datesInWeek(weekStart);
     const explicitGameDate = weekDates.find((date) => args.context.markedDays[date] === 'game');
     const explicitNoGame = weekDates.some((date) => args.context.markedDays[date] === 'noGame');
-    if (!explicitGameDate && !explicitNoGame) continue;
+    const recurringDay = (args.profile.usualGameDay || args.profile.gameDay) as DayOfWeek | undefined;
+    const recurringDate = recurringDay
+      ? weekDates.find((date) => dayNameForDate(date) === recurringDay)
+      : undefined;
+    const recurringFixtureRest = !!recurringDate &&
+      args.context.markedDays[recurringDate] === 'rest';
+    if (!explicitGameDate && !explicitNoGame && !recurringFixtureRest) continue;
     const existing = overlays[weekStart];
     const contract = existing?.exposureContractV2 ?? microcycle.exposureContractV2;
     const desiredAnchor = explicitGameDate
@@ -161,7 +173,8 @@ function materialiseFixtureMarksForCandidate(args: {
       profile: args.profile,
       weekStart,
       markedDays: args.context.markedDays,
-      sourceOverlay: existing,
+      sourceSurfaces: args.candidate,
+      sourceMarkedDays: args.context.markedDays,
       activeConstraints: args.context.activeConstraints,
     }).overlay;
     changed = true;
@@ -218,34 +231,13 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
     );
     const contract = overlay?.exposureContractV2 ?? microcycle?.exposureContractV2;
     if (!contract) continue;
-    const workouts: Workout[] = [];
-    for (let offset = 0; offset < 7; offset++) {
-      const date = addDaysISO(weekStart, offset);
-      const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
-      const manual = surfaces.dateOverrides[date];
-      const hasOverlay = !!overlay && Object.prototype.hasOwnProperty.call(
-        overlay.workoutsByDate,
-        date,
-      );
-      const workout = manual ?? (
-        hasOverlay
-          ? overlay!.workoutsByDate[date]
-          : microcycle?.workouts.find((candidate) => candidate.dayOfWeek === dayOfWeek) ?? null
-      );
-      if (workout) workouts.push(workout);
-    }
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const visible = require('../rules/section18AcceptedWeekGateway')
-      .resolveFinalVisibleSection18Week({
-        contract,
-        workouts,
-        weekStart,
-        profile,
-        scheduleState: { markedDays: context.markedDays },
-      });
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const evaluation = require('../rules/section18EffectiveWeekEvaluator')
-      .evaluateSection18EffectiveWeek({ contract, workouts: visible, weekStart });
+    const rebased = rebaseAcceptedEffectiveWeek({
+      surfaces,
+      weekStart,
+      profile,
+      markedDays: context.markedDays,
+    });
+    const evaluation = rebased.evaluation;
     if (evaluation.blockingViolations.length > 0) {
       throw new AcceptedStateLedgerMismatchError(
         weekStart,
@@ -360,6 +352,28 @@ function datesInWeek(weekStart: string): string[] {
   return Array.from({ length: 7 }, (_, offset) => addDaysISO(weekStart, offset));
 }
 
+/**
+ * A one-off fixture can protect dates in an adjacent week (Sunday game ->
+ * following Monday G+1; Monday game -> prior Saturday/Sunday G-2/G-1).
+ * Return every effective week whose visible projection can change when the
+ * explicit fixture marks change.
+ */
+export function fixtureProtectionWeekStartsForMarks(args: {
+  before: Readonly<Record<string, CalendarDayType>>;
+  after: Readonly<Record<string, CalendarDayType>>;
+}): string[] {
+  const dates = new Set([...Object.keys(args.before), ...Object.keys(args.after)]);
+  const changedGames = Array.from(dates).filter((date) =>
+    (args.before[date] === 'game') !== (args.after[date] === 'game'));
+  const weeks = new Set<string>();
+  for (const date of changedGames) {
+    for (const offset of [-2, -1, 0, 1]) {
+      weeks.add(mondayForDate(addDaysISO(date, offset)));
+    }
+  }
+  return Array.from(weeks).sort();
+}
+
 function fixtureFromContract(
   contract: WeeklyExposureContractV2 | undefined,
   weekStart: string,
@@ -382,8 +396,10 @@ export function buildFixtureProjection(args: {
   profile: OnboardingData;
   weekStart: string;
   markedDays: Record<string, CalendarDayType>;
-  sourceOverlay?: WeekScopedWorkoutOverlay;
+  sourceSurfaces?: AcceptedEffectiveWeekSurfaces;
+  sourceMarkedDays?: Readonly<Record<string, CalendarDayType>>;
   activeConstraints?: readonly ActiveConstraint[];
+  mutationIntent?: 'fixture_transition' | 'remove_from_date' | 'remove_weekly_exposure';
 }): {
   overlay: WeekScopedWorkoutOverlay;
   profile: OnboardingData;
@@ -397,19 +413,21 @@ export function buildFixtureProjection(args: {
   const explicitNoGame = Object.entries(args.markedDays).some(
     ([date, mark]) => weekDates.has(date) && mark === 'noGame',
   );
-  const targetGameDay = explicitGameDate
-    ? dayNameForDate(explicitGameDate)
-    : explicitNoGame
-      ? null
-      : undefined;
-  const sourceMicrocycle = args.program.microcycles.find((microcycle) =>
-    args.weekStart >= microcycle.startDate.slice(0, 10) &&
-    args.weekStart <= microcycle.endDate.slice(0, 10)) ?? args.program.microcycles[0];
-  if (!sourceMicrocycle) throw new Error('Cannot project fixture without a source microcycle');
-  const sourceContract = args.sourceOverlay?.exposureContractV2 ?? sourceMicrocycle.exposureContractV2;
-  const sourceCanonicalWorkouts = args.sourceOverlay
-    ? Object.values(args.sourceOverlay.workoutsByDate).flatMap((workout) => workout ? [workout] : [])
-    : sourceMicrocycle.workouts;
+  const liveState = useProgramStore.getState();
+  const sourceSurfaces = args.sourceSurfaces ?? {
+    currentProgram: args.program,
+    currentMicrocycle: liveState.currentMicrocycle,
+    dateOverrides: liveState.dateOverrides,
+    weekScopedOverlays: liveState.weekScopedOverlays,
+  };
+  const acceptedSource = rebaseAcceptedEffectiveWeek({
+    surfaces: sourceSurfaces,
+    weekStart: args.weekStart,
+    profile: args.profile,
+    markedDays: args.sourceMarkedDays ?? materialContext(liveState).markedDays,
+  });
+  const sourceContract = acceptedSource.contract;
+  const sourceCanonicalWorkouts = acceptedSource.visibleWorkouts;
   const contractFixtures = fixtureFromContract(sourceContract, args.weekStart, args.profile);
   const visibleFixtureWorkouts = sourceCanonicalWorkouts.filter((workout) =>
     workout.workoutType === 'Game');
@@ -423,21 +441,22 @@ export function buildFixtureProjection(args: {
             ? 'practice_match' as const
             : 'game' as const,
         }))
-      : explicitNoGame
-        ? targetWeekFixtures({ profile: args.profile, weekStart: args.weekStart })
-        : [];
+      : [];
   const proposedFixtures = targetWeekFixtures({
     profile: args.profile,
     weekStart: args.weekStart,
     markedDays: args.markedDays,
   });
+  const targetGameDay = proposedFixtures[0]
+    ? dayNameForDate(proposedFixtures[0].date)
+    : null;
   const availability = resolveFixtureConditionedAvailability({
     profile: args.profile,
     weekStart: args.weekStart,
     priorFixtures,
     proposedFixtures,
     proposedMarkedDays: args.markedDays,
-    byeUsualGameDay: explicitNoGame,
+    byeUsualGameDay: explicitNoGame || proposedFixtures.length === 0,
     activeConstraints: args.activeConstraints,
   });
   const target = generateProgramLocally(args.profile, {
@@ -451,42 +470,16 @@ export function buildFixtureProjection(args: {
   });
   const targetMicrocycle = target.microcycles[0];
   if (!targetMicrocycle) throw new Error('Fixture target generation produced no microcycle');
-  const priorMarkedDays = { ...args.markedDays };
-  for (const date of datesInWeek(args.weekStart)) {
-    if (priorMarkedDays[date] === 'game' || priorMarkedDays[date] === 'noGame') {
-      delete priorMarkedDays[date];
-    }
-  }
-  for (const fixture of priorFixtures) priorMarkedDays[fixture.date] = 'game';
-  const priorAvailability = resolveFixtureConditionedAvailability({
-    profile: args.profile,
-    weekStart: args.weekStart,
-    priorFixtures,
-    proposedFixtures: priorFixtures,
-    proposedMarkedDays: priorMarkedDays,
-    activeConstraints: args.activeConstraints,
-  });
-  const sourceWorkouts = sourceContract
-    ? resolveFinalVisibleSection18Week({
-        contract: sourceContract,
-        workouts: sourceCanonicalWorkouts,
-        weekStart: args.weekStart,
-        profile: args.profile,
-        scheduleState: {
-          markedDays: priorMarkedDays,
-          availableDayNumbers: priorAvailability.effectiveAvailableDayNumbers,
-        },
-      })
-    : sourceCanonicalWorkouts;
   const replan = buildFixtureMinimalReplan({
     profile: args.profile,
     weekStart: args.weekStart,
-    sourceWorkouts,
+    sourceWorkouts: sourceCanonicalWorkouts,
     targetMicrocycle,
     availability,
     proposedMarkedDays: args.markedDays,
     priorFixtures,
     proposedFixtures,
+    mutationIntent: args.mutationIntent ?? 'fixture_transition',
   });
   const minimallyReplannedTarget: TrainingProgram = {
     ...target,
@@ -597,34 +590,142 @@ export function commitCalendarStateTransaction(args: {
   markedDays: Record<string, CalendarDayType>;
   affectedDates: readonly string[];
   fixtureChangedDates?: readonly string[];
+  program?: Partial<AcceptedProgramSurfaces>;
+  mutationIntent?: 'fixture_transition' | 'remove_from_date' | 'remove_weekly_exposure';
 }): AcceptedStateTransactionResult {
   const state = useProgramStore.getState();
   const baseProfile = useProfileStore.getState().onboardingData;
-  const affectedWeeks = Array.from(new Set(args.affectedDates.map(mondayForDate)));
+  const prior = materialContext(state);
+  const affectedWeeks = new Set(args.affectedDates.map(mondayForDate));
   const fixtureWeeks = new Set((args.fixtureChangedDates ?? []).map(mondayForDate));
-  const overlays = { ...state.weekScopedOverlays };
+  const protectionWeeks = fixtureProtectionWeekStartsForMarks({
+    before: prior.markedDays,
+    after: args.markedDays,
+  });
+  for (const weekStart of protectionWeeks) affectedWeeks.add(weekStart);
+  const projectionWeeks = new Set([...fixtureWeeks, ...protectionWeeks]);
+  const overlays = {
+    ...state.weekScopedOverlays,
+    ...(args.program?.weekScopedOverlays ?? {}),
+  };
   if (state.currentProgram && baseProfile) {
-    for (const weekStart of affectedWeeks) {
+    for (const weekStart of projectionWeeks) {
       const materialised = state.currentProgram.microcycles.some((microcycle) =>
         weekStart >= microcycle.startDate.slice(0, 10) &&
         weekStart <= microcycle.endDate.slice(0, 10));
-      if (!materialised || !fixtureWeeks.has(weekStart)) continue;
+      if (!materialised) {
+        affectedWeeks.delete(weekStart);
+        continue;
+      }
       overlays[weekStart] = buildFixtureProjection({
         program: state.currentProgram,
         profile: baseProfile,
         weekStart,
         markedDays: args.markedDays,
-        sourceOverlay: overlays[weekStart],
-        activeConstraints: materialContext(state).activeConstraints,
+        sourceSurfaces: state,
+        sourceMarkedDays: prior.markedDays,
+        activeConstraints: prior.activeConstraints,
+        mutationIntent: args.mutationIntent ?? (
+          datesInWeek(weekStart).some((date) => args.markedDays[date] === 'rest') ||
+          (protectionWeeks.includes(weekStart) && !fixtureWeeks.has(weekStart))
+            ? 'remove_from_date'
+            : 'fixture_transition'
+        ),
       }).overlay;
     }
   }
   return commitAcceptedStateTransaction({
     reason: args.reason,
-    program: { weekScopedOverlays: overlays },
+    program: { ...(args.program ?? {}), weekScopedOverlays: overlays },
     markedDays: args.markedDays,
-    validateWeekStarts: affectedWeeks,
+    validateWeekStarts: Array.from(affectedWeeks),
     profile: baseProfile,
+  });
+}
+
+/**
+ * Atomic whole-session/date removal. The accepted target row remains in the
+ * planner input, the proposed rest mark removes that date, and any compulsory
+ * exposure is relocated before one program/calendar snapshot is published.
+ */
+export function commitDateUnavailableTransaction(args: {
+  date: string;
+  reason: string;
+}): AcceptedStateTransactionResult {
+  const state = useProgramStore.getState();
+  const prior = materialContext(state);
+  const markedDays = { ...prior.markedDays, [args.date]: 'rest' as const };
+  const dateOverrides = { ...state.dateOverrides };
+  const overrideContexts = { ...state.overrideContexts };
+  delete dateOverrides[args.date];
+  delete overrideContexts[args.date];
+  return commitCalendarStateTransaction({
+    reason: args.reason,
+    markedDays,
+    affectedDates: [args.date],
+    fixtureChangedDates: prior.markedDays[args.date] === 'game' ||
+      prior.markedDays[args.date] === 'noGame' ? [args.date] : [],
+    program: { dateOverrides, overrideContexts },
+    mutationIntent: 'remove_from_date',
+  });
+}
+
+/**
+ * Program-setup rebuild publication. Future weeks come from the newly built
+ * program, while the currently accepted effective week is minimally rebased
+ * through the same planner so a new availability block relocates compulsory
+ * work instead of replacing the athlete's accepted strength structure.
+ */
+export function commitProgramSetupRebuildTransaction(args: {
+  program: TrainingProgram;
+  profile: OnboardingData;
+  todayISO: string;
+}): AcceptedStateTransactionResult {
+  const state = useProgramStore.getState();
+  const prior = materialContext(state);
+  const weekStart = mondayForDate(args.todayISO);
+  const selected = args.program.microcycles.find((microcycle) =>
+    weekStart >= microcycle.startDate.slice(0, 10) &&
+    weekStart <= microcycle.endDate.slice(0, 10)) ?? args.program.microcycles[0] ?? null;
+  let overlays: Record<string, WeekScopedWorkoutOverlay> = {};
+  const sourceHasWeek = state.currentProgram?.microcycles.some((microcycle) =>
+    weekStart >= microcycle.startDate.slice(0, 10) &&
+    weekStart <= microcycle.endDate.slice(0, 10));
+  const targetHasWeek = args.program.microcycles.some((microcycle) =>
+    weekStart >= microcycle.startDate.slice(0, 10) &&
+    weekStart <= microcycle.endDate.slice(0, 10));
+  if (state.currentProgram && sourceHasWeek && targetHasWeek) {
+    overlays = {
+      [weekStart]: buildFixtureProjection({
+        program: args.program,
+        profile: args.profile,
+        weekStart,
+        markedDays: prior.markedDays,
+        sourceSurfaces: state,
+        sourceMarkedDays: prior.markedDays,
+        activeConstraints: prior.activeConstraints,
+        mutationIntent: 'remove_from_date',
+      }).overlay,
+    };
+  }
+  const todayDow = new Date(`${args.todayISO}T12:00:00`).getDay();
+  const todayOverlay = overlays[weekStart]?.workoutsByDate[args.todayISO] ?? null;
+  return commitAcceptedStateTransaction({
+    reason: 'program_setup:accepted_rebuild',
+    program: {
+      currentProgram: args.program,
+      currentMicrocycle: selected,
+      todayWorkout: todayOverlay ??
+        selected?.workouts.find((workout) => workout.dayOfWeek === todayDow) ?? null,
+      weekScopedOverlays: overlays,
+      exposureContractsByWeek: {},
+    },
+    profile: args.profile,
+    programAlreadyAccepted: true,
+    validateWeekStarts: Array.from(new Set([
+      ...args.program.microcycles.map((microcycle) => microcycle.startDate.slice(0, 10)),
+      ...Object.keys(overlays),
+    ])),
   });
 }
 

@@ -44,6 +44,7 @@ import {
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
 import type { ActiveConstraint } from './coachUpdatesStore';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import {
   createEmptyAcceptedMaterialContext,
   normalizeAcceptedMaterialContext,
@@ -676,27 +677,25 @@ export function canonicaliseHydratedState(
     const contract = overlay?.exposureContractV2 ?? baseMicrocycle?.exposureContractV2;
     if (!contract) continue;
 
-    const effectiveByDate = new Map<string, Workout>();
-    for (let offset = 0; offset < 7; offset++) {
-      const date = addDaysISO(weekStart, offset);
-      const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
-      const manual = dateOverrides?.[date];
-      const hasOverlayEntry = !!overlay && Object.prototype.hasOwnProperty.call(
-        overlay.workoutsByDate,
-        date,
-      );
-      const workout = manual ?? (
-        hasOverlayEntry
-          ? overlay!.workoutsByDate[date]
-          : baseMicrocycle?.workouts.find((candidate) => candidate.dayOfWeek === dayOfWeek) ?? null
-      );
-      if (workout) effectiveByDate.set(date, workout);
-    }
+    const rebased = rebaseAcceptedEffectiveWeek({
+      surfaces: {
+        currentProgram,
+        currentMicrocycle,
+        dateOverrides: dateOverrides ?? {},
+        weekScopedOverlays: weekScopedOverlays ?? {},
+      },
+      weekStart,
+      profile: options.profile,
+      markedDays: options.markedDays ?? {},
+    });
+    const effectiveByDate = new Map<string, Workout>(
+      rebased.dates.flatMap((entry) => entry.workout ? [[entry.date, entry.workout]] : []),
+    );
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const accepted = require('../rules/section18AcceptedWeekGateway')
       .requireSection18AcceptedWeek({
         contract,
-        workouts: Array.from(effectiveByDate.values()),
+        workouts: rebased.composedWorkouts,
         weekStart,
         profile: options.profile,
         resolveVisibleWorkouts: (candidateWorkouts: readonly Workout[]) =>

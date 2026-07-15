@@ -142,8 +142,11 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
   const seasonPhase = onboardingData?.seasonPhase || null;
   const usualGameDay = onboardingData?.usualGameDay;
   const gameDay = onboardingData?.gameDay;
-  const todayReadinessSignal =
-    useReadinessStore.getState().signalsByDate[todayISO];
+  const acceptedContext = programState.acceptedMaterialContext;
+  const acceptedOwnsMaterialState = acceptedContext.revision > 0;
+  const todayReadinessSignal = acceptedOwnsMaterialState
+    ? acceptedContext.readinessSignalsByDate[todayISO]
+    : useReadinessStore.getState().signalsByDate[todayISO];
   const readiness = deriveProfileReadiness(onboardingData);
 
   const preferredDays = onboardingData?.preferredTrainingDays;
@@ -154,16 +157,24 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
           .filter((n: number | undefined) => n !== undefined)
       : undefined;
 
-  const activeInjury = coachUpdatesState.activeInjury ?? null;
-  const readinessActiveConstraints = buildReadinessActiveConstraints(
-    todayReadinessSignal,
-  );
+  const activeInjury = acceptedOwnsMaterialState
+    ? acceptedContext.activeInjury
+    : coachUpdatesState.activeInjury ?? null;
+  const activeConstraints = acceptedOwnsMaterialState
+    ? acceptedContext.activeConstraints
+    : coachUpdatesState.activeConstraints ?? [];
+  const readinessActiveConstraints = acceptedOwnsMaterialState
+    ? []
+    : buildReadinessActiveConstraints(todayReadinessSignal);
 
   return {
     currentProgram: programState.currentProgram,
     currentMicrocycle: programState.currentMicrocycle,
     manualOverrides: programState.dateOverrides || {},
-    markedDays: calendarState.markedDays || {},
+    weekScopedOverlays: programState.weekScopedOverlays || {},
+    markedDays: acceptedOwnsMaterialState
+      ? acceptedContext.markedDays
+      : calendarState.markedDays || {},
     athleteContext,
     seasonPhase,
     usualGameDay,
@@ -175,7 +186,7 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
     availableDayNumbers,
     activeInjury,
     activeConstraints: [
-      ...(coachUpdatesState.activeConstraints ?? []),
+      ...activeConstraints,
       ...readinessActiveConstraints,
     ],
   };

@@ -1728,6 +1728,13 @@ export interface ExecuteProgramSetupEditInput {
   setCurrentProgram: (program: TrainingProgram | null) => void;
   setCurrentMicrocycle: (microcycle: TrainingProgram['microcycles'][number] | null) => void;
   setTodayWorkout: (workout: TrainingProgram['microcycles'][number]['workouts'][number] | null) => void;
+  /** Production accepted-state owner. Tests/legacy callers may omit this and
+   * retain the individual setter seam below. */
+  commitAcceptedRebuild?: (args: {
+    program: TrainingProgram;
+    profile: OnboardingData;
+    todayISO: string;
+  }) => void;
   onProgress?: (stage: ProgressStage) => void;
 }
 
@@ -1818,22 +1825,44 @@ export async function executeProgramSetupEdit(
     };
   }
 
-  input.updateOnboardingData(profilePatchResult.patch);
-  input.setCurrentProgram(program);
-  // Canonical rebuild policy (2026-07-08): setCurrentProgram no longer
-  // wipes per-date overrides implicitly. A setup rebuild is a rebuild —
-  // modifier-owned overrides (away days, injury swaps) and the athlete's
-  // manual edits survive; stale system artifacts are cleared.
-  clearManualOverridesPreservingActiveModifiers(input.todayISO);
-  const firstMicrocycle = program.microcycles?.[0] ?? null;
-  input.setCurrentMicrocycle(firstMicrocycle);
-  if (firstMicrocycle) {
-    const todayDow = new Date(`${input.todayISO}T12:00:00`).getDay();
-    const todayWorkout = firstMicrocycle.workouts?.find((workout) => workout.dayOfWeek === todayDow) ?? null;
-    input.setTodayWorkout(todayWorkout);
-  } else {
-    input.setTodayWorkout(null);
+  try {
+    if (input.commitAcceptedRebuild) {
+      input.commitAcceptedRebuild({
+        program,
+        profile: nextProfile,
+        todayISO: input.todayISO,
+      });
+    } else {
+      input.setCurrentProgram(program);
+      // Legacy/test seam: production publishes this through the accepted
+      // transaction above. Keep the canonical sweep for callers that still
+      // provide only individual store setters.
+      clearManualOverridesPreservingActiveModifiers(input.todayISO);
+      const firstMicrocycle = program.microcycles?.[0] ?? null;
+      input.setCurrentMicrocycle(firstMicrocycle);
+      if (firstMicrocycle) {
+        const todayDow = new Date(`${input.todayISO}T12:00:00`).getDay();
+        const todayWorkout = firstMicrocycle.workouts?.find((workout) => workout.dayOfWeek === todayDow) ?? null;
+        input.setTodayWorkout(todayWorkout);
+      } else {
+        input.setTodayWorkout(null);
+      }
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.warn('[coach-program-setup] accepted_rebuild_failed', {
+      summary: edit.setupChange.summary,
+      message,
+    });
+    return {
+      kind: 'rejected',
+      reply: 'I understood the availability change, but I could not relocate the required work safely, so I left your accepted program unchanged.',
+      applied: false,
+      route: 'program_setup_accepted_rebuild_failed',
+      progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'],
+    };
   }
+  input.updateOnboardingData(profilePatchResult.patch);
 
   input.onProgress?.('composing_reply');
   return {

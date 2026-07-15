@@ -45,7 +45,6 @@ import {
 } from '../rules/fixtureConditionedAvailability';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
-  migrateLegacyWeeklyExposureContractV2,
   section18PhaseTableSignature,
   type WeeklyExposureContractV2,
 } from '../rules/weeklyExposureContractV2';
@@ -60,6 +59,7 @@ import { useProgramStore } from '../store/programStore';
 import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import { todayISOLocal } from './appDate';
 import { logger } from './logger';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 
 const DAY_NAME_TO_NUM: Record<DayOfWeek, number> = {
   Sunday: 0,
@@ -308,7 +308,8 @@ export function repeatWeekIntoNextWeek(args: {
   todayISO?: string;
 }): RepeatWeekResult {
   const todayISO = args.todayISO ?? todayISOLocal();
-  const program: TrainingProgram | null = useProgramStore.getState().currentProgram;
+  const acceptedState = useProgramStore.getState();
+  const program: TrainingProgram | null = acceptedState.currentProgram;
   if (!program) {
     throw new Error('Cannot repeat a week without a current program');
   }
@@ -316,8 +317,13 @@ export function repeatWeekIntoNextWeek(args: {
   const sourceWeekStart = getMondayForDate(args.sourceWeekDate.split('T')[0]);
   const targetWeekStart = addDays(sourceWeekStart, 7);
 
-  const sourceMicrocycle = selectMicrocycleForDate(program, null, sourceWeekStart);
-  const sourceWorkouts = sourceMicrocycle?.workouts ?? program.microcycles?.[0]?.workouts ?? [];
+  const acceptedSource = rebaseAcceptedEffectiveWeek({
+    surfaces: acceptedState,
+    weekStart: sourceWeekStart,
+    profile: args.baseProfile,
+    markedDays: acceptedState.acceptedMaterialContext.markedDays,
+  });
+  const sourceWorkouts = acceptedSource.visibleWorkouts;
 
   // Preserve any existing target-week one-off game so it keeps winning.
   const existingTargetOverlay = useProgramStore.getState().weekScopedOverlays?.[targetWeekStart];
@@ -346,15 +352,7 @@ export function repeatWeekIntoNextWeek(args: {
   const targetExposureContractV2 =
     existingTargetOverlay?.exposureContractV2 ?? targetMicrocycle?.exposureContractV2 ??
       resolvedTargetContracts?.v2;
-  const sourceExposureContractV2 = sourceMicrocycle?.exposureContractV2 ?? (
-    sourceMicrocycle?.exposureContract
-      ? migrateLegacyWeeklyExposureContractV2(sourceMicrocycle.exposureContract, {
-          blockNumber: sourceMicrocycle.miniCycleNumber,
-          weekInBlock: ((Math.max(1, sourceMicrocycle.weekNumber) - 1) % 4) + 1,
-          globalWeek: sourceMicrocycle.weekNumber,
-        })
-      : undefined
-  );
+  const sourceExposureContractV2 = acceptedSource.contract;
   const targetTableChanged = section18PhaseTableSignature(sourceExposureContractV2) !==
     section18PhaseTableSignature(targetExposureContractV2);
   const phaseOwnedSourceWorkouts = targetTableChanged

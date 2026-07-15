@@ -210,8 +210,15 @@ export function buildGameChangeCoachNoteConstraint(
 
 export function upsertGameChangeCoachNoteFromDiff(input: GameChangeCoachNoteInput): string | null {
   const constraint = buildGameChangeCoachNoteConstraint(input);
-  if (!constraint) return null;
-  useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
+  const store = useCoachUpdatesStore.getState();
+  if (!constraint) {
+    const staleId = `game-change-${input.weekStartISO}`;
+    if (store.activeConstraints.some((candidate) => candidate.id === staleId)) {
+      store.removeActiveConstraint(staleId);
+    }
+    return null;
+  }
+  store.upsertActiveConstraint(constraint);
   return constraint.id;
 }
 

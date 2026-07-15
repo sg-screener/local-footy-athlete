@@ -34,6 +34,7 @@
     "test:stress-placement": "sucrase-node src/__tests__/stressAwarePlacementTests.ts",
     "test:game-local-rebuild": "sucrase-node src/__tests__/gameChangeLocalRebuildTests.ts",
     "test:fixture-conditioned-replan": "TZ=Australia/Melbourne sucrase-node src/__tests__/fixtureConditionedReplanTests.ts",
+    "test:chained-mutation-continuity": "TZ=Australia/Melbourne sucrase-node src/__tests__/chainedMutationContinuityTests.ts",
     "test:week-rebuild": "sucrase-node src/__tests__/weekRebuildIntegrationTests.ts",
     "test:block-state": "sucrase-node src/__tests__/programBlockStateTests.ts",
     "test:block-rollover": "sucrase-node src/__tests__/programBlockRolloverTests.ts",

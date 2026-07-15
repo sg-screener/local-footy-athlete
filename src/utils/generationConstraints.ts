@@ -78,12 +78,22 @@ export interface GenerationConstraintContext {
   activeInjuryKeys: InjuryKey[];
 }
 
+/** Schedule-history notes describe an accepted mutation; they are not load/readiness inputs. */
+export function isStructuralGenerationConstraint(constraint: ActiveConstraint): boolean {
+  return !(
+    constraint.type === 'schedule' &&
+    constraint.severity <= 0 &&
+    constraint.noteProof?.kind === 'game_change'
+  );
+}
+
 export function buildGenerationConstraintContext(args: {
   activeConstraints?: readonly ActiveConstraint[] | null;
   todayISO: string;
   periodEndISO?: string;
 }): GenerationConstraintContext | undefined {
   const live = (args.activeConstraints ?? []).filter((constraint) =>
+    isStructuralGenerationConstraint(constraint) &&
     constraint.status !== 'resolved' && (
       args.periodEndISO
         ? constraintOverlapsPeriod(constraint as any, args.todayISO, args.periodEndISO)
