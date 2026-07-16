@@ -17,7 +17,7 @@ type PersistedStore = {
   getState: () => any;
   persist: {
     hasHydrated: () => boolean;
-    onFinishHydration: (callback: () => void) => () => void;
+    rehydrate: () => Promise<unknown> | unknown;
   };
 };
 
@@ -133,17 +133,12 @@ export interface DevE2ECheckpointRecord {
   fingerprints: DevE2EFingerprintMap;
 }
 
-function waitForStoreHydration(descriptor: SemanticStoreDescriptor): Promise<void> {
-  if (descriptor.store.persist.hasHydrated()) return Promise.resolve();
-  return new Promise((resolve) => {
-    let unsubscribe = () => {};
-    const finish = () => {
-      unsubscribe();
-      resolve();
-    };
-    unsubscribe = descriptor.store.persist.onFinishHydration(finish);
-    if (descriptor.store.persist.hasHydrated()) finish();
-  });
+async function waitForStoreHydration(descriptor: SemanticStoreDescriptor): Promise<void> {
+  if (descriptor.store.persist.hasHydrated()) return;
+  await descriptor.store.persist.rehydrate();
+  if (!descriptor.store.persist.hasHydrated()) {
+    throw new Error(`Dev E2E store did not hydrate: ${descriptor.key}`);
+  }
 }
 
 export async function waitForDevE2EHydration(): Promise<void> {

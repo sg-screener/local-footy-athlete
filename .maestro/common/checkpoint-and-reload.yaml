@@ -10,6 +10,8 @@ name: Persisted checkpoint and reload verification
 - launchApp:
     clearState: false
     stopApp: true
+    arguments:
+      e2eMetroUrl: "${E2E_METRO_URL}"
 - extendedWaitUntil:
     visible:
       id: "e2e-reload-ready-${SEED_ID}"

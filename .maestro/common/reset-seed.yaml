@@ -4,6 +4,8 @@ name: Deterministic dev E2E seed reset
 - launchApp:
     clearState: true
     stopApp: true
+    arguments:
+      e2eMetroUrl: "${E2E_METRO_URL}"
 - extendedWaitUntil:
     visible:
       id: "e2e-entry-ready"

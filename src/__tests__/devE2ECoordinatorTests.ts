@@ -244,6 +244,9 @@ async function main() {
   }
   ok('hydration waits for every relevant persisted store',
     /Promise\.all\(semanticStores\.map\(waitForStoreHydration\)\)/.test(persistenceSource));
+  ok('cold reload actively hydrates stores instead of waiting on a missed notification',
+    /await descriptor\.store\.persist\.rehydrate\(\)/.test(persistenceSource) &&
+      /Dev E2E store did not hydrate/.test(persistenceSource));
   ok('persistence readiness is semantic equality gated',
     /while \(!fingerprintMapsMatch\(expected, persisted\)\)/.test(persistenceSource));
 

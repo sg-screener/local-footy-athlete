@@ -104,6 +104,7 @@
     "test:dev-onboarding-skip": "sucrase-node src/__tests__/devOnboardingSkipTests.ts",
     "test:dev-e2e-seeds": "sucrase-node src/__tests__/devE2ESeedRegistryTests.ts",
     "test:dev-e2e-entry": "sucrase-node src/__tests__/devE2EEntryBoundaryTests.ts",
+    "test:dev-e2e-metro-isolation": "sucrase-node src/__tests__/devE2EMetroIsolationTests.ts",
     "test:dev-e2e-reset-hydration": "sucrase-node src/__tests__/devE2ECoordinatorTests.ts",
     "test:dev-e2e-testids": "sucrase-node src/__tests__/devE2EStableTestIdTests.ts",
     "test:accessibility-contracts": "sucrase-node src/__tests__/accessibilityWrapperContractTests.ts",
@@ -139,7 +140,8 @@
     "test:tap-swap-hierarchy": "sucrase-node src/__tests__/tapSwapHierarchyTests.ts",
     "test:poor-sleep": "sucrase-node src/__tests__/poorSleepReadinessTests.ts",
     "test:testing-bias": "sucrase-node src/__tests__/testingBiasTests.ts",
-    "dev:coach-semantic-active": "EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE=active EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE=1 expo start --clear"
+    "dev:coach-semantic-active": "EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE=active EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE=1 expo start --clear",
+    "e2e:maestro:ios": "scripts/dev-e2e/run-maestro-ios.sh"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

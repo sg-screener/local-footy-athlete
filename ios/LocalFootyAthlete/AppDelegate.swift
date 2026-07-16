@@ -13,6 +13,10 @@ public class AppDelegate: ExpoAppDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+#if DEBUG
+    DevE2EMetroLaunch.configureIfRequested()
+#endif
+
     let delegate = ReactNativeDelegate()
     let factory = ExpoReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()
@@ -52,6 +56,53 @@ public class AppDelegate: ExpoAppDelegate {
   }
 }
 
+#if DEBUG
+private enum DevE2EMetroLaunch {
+  private static let launchArgumentKey = "e2eMetroUrl"
+
+  static func configureIfRequested() {
+    guard let rawURL = UserDefaults.standard.string(forKey: launchArgumentKey) else {
+      return
+    }
+
+    guard
+      let components = URLComponents(string: rawURL),
+      let scheme = components.scheme?.lowercased(),
+      scheme == "http" || scheme == "https",
+      let host = components.host,
+      !host.isEmpty,
+      let port = components.port,
+      components.user == nil,
+      components.password == nil,
+      components.query == nil,
+      components.fragment == nil,
+      components.path.isEmpty || components.path == "/"
+    else {
+      fatalError(
+        "[DevE2E Metro] Invalid e2eMetroUrl '\(rawURL)'. Expected an explicit http(s) URL with host and port."
+      )
+    }
+
+    let hostPort = host.contains(":") ? "[\(host)]:\(port)" : "\(host):\(port)"
+    let provider = RCTBundleURLProvider.sharedSettings()
+    provider.packagerScheme = scheme
+    provider.jsLocation = hostPort
+
+    NSLog("[DevE2E Metro] Selected server: %@://%@", scheme, hostPort)
+  }
+
+  static func logResolvedBundle(_ bundleURL: URL?) {
+    guard UserDefaults.standard.string(forKey: launchArgumentKey) != nil else {
+      return
+    }
+    guard let bundleURL else {
+      fatalError("[DevE2E Metro] Selected server did not resolve a development bundle URL")
+    }
+    NSLog("[DevE2E Metro] Resolved bundle: %@", bundleURL.absoluteString)
+  }
+}
+#endif
+
 class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
   // Extension point for config-plugins
 
@@ -62,7 +113,9 @@ class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {
 
   override func bundleURL() -> URL? {
 #if DEBUG
-    return RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: ".expo/.virtual-metro-entry")
+    let bundleURL = RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: ".expo/.virtual-metro-entry")
+    DevE2EMetroLaunch.logResolvedBundle(bundleURL)
+    return bundleURL
 #else
     return Bundle.main.url(forResource: "main", withExtension: "jsbundle")
 #endif

@@ -37,3 +37,31 @@ Named seeds and their extra witnesses:
 Every seed also witnesses its exact profile, program identity, and anchored
 accepted microcycle. Maestro flows live under `.maestro/common` and
 `.maestro/golden`.
+
+## Isolated Metro cold launches on iOS
+
+Maestro must launch this debug app with an explicit Metro URL. The common
+reset and checkpoint/reload flows pass `E2E_METRO_URL` as the native
+`e2eMetroUrl` launch argument on every process launch. Before React Native
+creates its bridge, the debug-only AppDelegate hook validates that URL and
+sets `RCTBundleURLProvider` to its scheme and host-port. It logs both the
+selected server and the resolved bundle URL. Invalid explicit URLs fail loudly;
+release builds do not contain the hook.
+
+Choose any free port rather than relying on a shared default. For example,
+while a competing worktree keeps port 8081:
+
+```sh
+npx expo start --localhost --port 8082
+```
+
+In another terminal, run one flow or a directory through the checked wrapper:
+
+```sh
+E2E_METRO_URL=http://127.0.0.1:8082 npm run e2e:maestro:ios -- .maestro/golden/reload-standard-week.yaml
+```
+
+The wrapper verifies the selected server's `/status` endpoint, prints the URL,
+and forwards it once to Maestro. All nested reset/reload launches inherit the
+same value, so no Dev Menu action or manual step is needed between flows. The
+port is intentionally supplied by the caller and is never fixed in source.
