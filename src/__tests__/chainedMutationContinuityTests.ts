@@ -103,7 +103,6 @@ function athlete(args: {
 function reset(value: OnboardingData = athlete()): TrainingProgram {
   const marks: Record<string, CalendarDayType> = { [SATURDAY]: 'game' };
   const program = generateProgramLocally(value, { todayISO: WEEK, previousProgram: null });
-  useProfileStore.setState({ onboardingData: value, isOnboardingComplete: true });
   useCalendarStore.setState({ markedDays: marks, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null });
@@ -126,6 +125,7 @@ function reset(value: OnboardingData = athlete()): TrainingProgram {
       lastTransaction: 'chained-test:seed',
     },
   });
+  useProfileStore.setState({ onboardingData: value, isOnboardingComplete: true });
   return program;
 }
 
@@ -256,6 +256,7 @@ function simulateAcceptedReload(): void {
 }
 
 async function main(): Promise<void> {
+  await useProgramStore.persist.rehydrate();
   await run('1 exact chained Saturday-to-Sunday move preserves the accepted S3 week', () => {
     const value = athlete();
     reset(value);

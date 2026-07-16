@@ -22,6 +22,7 @@ import { readFileSync } from 'fs';
 import path from 'path';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { useProgramStore } from '../store/programStore';
+import { createEmptyAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import {
   useCoachUpdatesStore,
   type ActiveScheduleConstraint,
@@ -47,6 +48,7 @@ import {
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
+import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 
 let pass = 0;
 let fail = 0;
@@ -117,9 +119,13 @@ function resetStores(): void {
     isLoading: false,
     error: null,
     blockState: null,
+    acceptedMaterialContext: createEmptyAcceptedMaterialContext(),
     dateOverrides: {},
     overrideContexts: {},
     weekScopedOverlays: {},
+    userRemovalConstraints: [],
+    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
+    exposureContractsByWeek: {},
     sessionFeedback: {},
     weightOverrides: {},
   });

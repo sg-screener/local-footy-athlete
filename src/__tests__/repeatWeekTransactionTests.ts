@@ -35,6 +35,16 @@ import {
 import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 import { asyncStorageCompat } from '../store/asyncStorageCompat';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import {
+  createTemporaryEquipmentFact,
+  createTemporaryPoorSleepFact,
+  createTemporaryScheduleFact,
+  temporaryFactScope,
+} from '../rules/temporarySourceFact';
+import { migrateLegacyInjuryEpisodes } from '../rules/injuryEpisode';
+import type { InjuryState } from '../utils/injuryProgression';
 import {
   clearAthleteActionDiagnosticEvents,
   configureAthleteActionDiagnosticsForTests,
@@ -123,7 +133,8 @@ function seed(options: {
       })
     : null;
   const junkDate = '2026-07-07';
-  const junkWorkout = program.microcycles[0].workouts[0] as Workout;
+  const junkWorkout = (program.microcycles[0].workouts.find((workout) =>
+    workout.dayOfWeek === 2) ?? program.microcycles[0].workouts[0]) as Workout;
   useProfileStore.setState({ onboardingData: athlete, isOnboardingComplete: true });
   useCalendarStore.setState({ markedDays: {}, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
@@ -150,11 +161,12 @@ function seed(options: {
 }
 
 async function main(): Promise<void> {
+  await useProgramStore.persist.rehydrate();
   console.log('\n-- Durable Reversible Target-Overlay Transaction --');
 
   {
     const { athlete } = seed();
-    const before = JSON.stringify(useProgramStore.getState().weekScopedOverlays);
+    const before = serializeProgramStoreEnvelope(useProgramStore.getState());
     const staged = stageRepeatWeekTransaction({
       snapshot: useProgramStore.getState(),
       baseProfile: athlete,
@@ -163,7 +175,7 @@ async function main(): Promise<void> {
       expectedAcceptedRevision: 1,
     });
     check('pure staging does not publish live state',
-      JSON.stringify(useProgramStore.getState().weekScopedOverlays) === before);
+      serializeProgramStoreEnvelope(useProgramStore.getState()) === before);
     check('staging owns an exact repeat_week ledger record',
       staged.accepted.program.reversibleAdjustmentLedger.adjustments[0]?.kind === 'repeat_week' &&
       staged.accepted.program.reversibleAdjustmentLedger.adjustments[0]
@@ -179,9 +191,12 @@ async function main(): Promise<void> {
       teamTrainingDays: ['Tuesday', 'Thursday'],
     };
     const { athlete, program } = seed({ athlete: anchoredProfile });
-    const target = program.microcycles.find((week) =>
-      week.startDate.slice(0, 10) === TARGET)!;
-    const targetAnchors = target.workouts.filter((workout) =>
+    const targetAnchors = rebaseAcceptedEffectiveWeek({
+      surfaces: useProgramStore.getState(),
+      weekStart: TARGET,
+      profile: athlete,
+      markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
+    }).visibleWorkouts.filter((workout) =>
       workout.workoutType === 'Game' || workout.workoutType === 'Team Training');
     const result = await repeatWeekIntoNextWeek({
       baseProfile: athlete,
@@ -189,15 +204,40 @@ async function main(): Promise<void> {
       todayISO: SOURCE,
       expectedAcceptedRevision: 1,
     });
-    check('target fixtures and Team Training retain target authority',
+    const visibleTarget = rebaseAcceptedEffectiveWeek({
+      surfaces: useProgramStore.getState(),
+      weekStart: TARGET,
+      profile: athlete,
+      markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
+    }).visibleWorkouts;
+    check('target fixtures and Team Training retain one canonical owner',
       targetAnchors.some((workout) => workout.workoutType === 'Game') &&
       targetAnchors.some((workout) => workout.workoutType === 'Team Training') &&
       targetAnchors.every((workout) => {
         const date = new Date(`${TARGET}T12:00:00`);
         date.setDate(date.getDate() + (workout.dayOfWeek === 0 ? 6 : workout.dayOfWeek - 1));
         const iso = date.toISOString().slice(0, 10);
-        return result.overlay.workoutsByDate[iso]?.id === workout.id;
-      }));
+        return !Object.prototype.hasOwnProperty.call(result.overlay.workoutsByDate, iso) &&
+          visibleTarget.filter((candidate) =>
+            candidate.dayOfWeek === workout.dayOfWeek &&
+            candidate.workoutType === workout.workoutType).length === 1;
+      }), {
+        targetAnchors: targetAnchors.map((workout) => ({
+          id: workout.id,
+          dayOfWeek: workout.dayOfWeek,
+          workoutType: workout.workoutType,
+        })),
+        overlay: Object.entries(result.overlay.workoutsByDate).map(([date, workout]) => ({
+          date,
+          id: workout?.id,
+          workoutType: workout?.workoutType,
+        })),
+        visible: visibleTarget.map((workout) => ({
+          id: workout.id,
+          dayOfWeek: workout.dayOfWeek,
+          workoutType: workout.workoutType,
+        })),
+      });
   }
 
   {
@@ -238,6 +278,8 @@ async function main(): Promise<void> {
 
   {
     const { athlete } = seed();
+    await Promise.resolve();
+    const durableBefore = await readDurableProgramStoreEnvelope();
     const before = JSON.stringify({
       overlays: useProgramStore.getState().weekScopedOverlays,
       revision: useProgramStore.getState().acceptedMaterialContext.revision,
@@ -267,7 +309,91 @@ async function main(): Promise<void> {
     check('persistence failure leaves exact live state', JSON.stringify({
       overlays: useProgramStore.getState().weekScopedOverlays,
       revision: useProgramStore.getState().acceptedMaterialContext.revision,
-    }) === before);
+    }) === before && await readDurableProgramStoreEnvelope() === durableBefore);
+  }
+
+  {
+    const { athlete } = seed();
+    await Promise.resolve();
+    const durableBefore = await readDurableProgramStoreEnvelope();
+    const originalGetItem = asyncStorageCompat.getItem;
+    let programReads = 0;
+    asyncStorageCompat.getItem = async (name) => {
+      const value = await originalGetItem(name);
+      if (name === PROGRAM_STORE_PERSISTENCE_KEY && ++programReads === 2 && value) {
+        return `${value} `;
+      }
+      return value;
+    };
+    let publishes = 0;
+    const stop = useProgramStore.subscribe((state) => {
+      if (state.weekScopedOverlays[TARGET]?.reason === 'repeat_week') publishes += 1;
+    });
+    let rejected = false;
+    try {
+      await repeatWeekIntoNextWeek({
+        baseProfile: athlete,
+        sourceWeekDate: SOURCE,
+        todayISO: SOURCE,
+        expectedAcceptedRevision: 1,
+      });
+    } catch {
+      rejected = true;
+    } finally {
+      asyncStorageCompat.getItem = originalGetItem;
+      stop();
+    }
+    check('acknowledged readback mismatch publishes nothing and restores durable state',
+      rejected && publishes === 0 &&
+      !useProgramStore.getState().weekScopedOverlays[TARGET] &&
+      await readDurableProgramStoreEnvelope() === durableBefore);
+  }
+
+  {
+    const { athlete } = seed();
+    await Promise.resolve();
+    const durableBefore = await readDurableProgramStoreEnvelope();
+    const originalGetItem = asyncStorageCompat.getItem;
+    let injected = false;
+    asyncStorageCompat.getItem = async (name) => {
+      const value = await originalGetItem(name);
+      if (name === PROGRAM_STORE_PERSISTENCE_KEY && !injected) {
+        injected = true;
+        const context = useProgramStore.getState().acceptedMaterialContext;
+        useProgramStore.setState({
+          acceptedMaterialContext: {
+            ...context,
+            revision: context.revision + 1,
+            lastTransaction: 'repeat-week-test:concurrent-intent',
+          },
+        });
+      }
+      return value;
+    };
+    let repeatPublications = 0;
+    const stop = useProgramStore.subscribe((state) => {
+      if (state.weekScopedOverlays[TARGET]?.reason === 'repeat_week') repeatPublications += 1;
+    });
+    let rejected = false;
+    try {
+      await repeatWeekIntoNextWeek({
+        baseProfile: athlete,
+        sourceWeekDate: SOURCE,
+        todayISO: SOURCE,
+        expectedAcceptedRevision: 1,
+      });
+    } catch {
+      rejected = true;
+    } finally {
+      asyncStorageCompat.getItem = originalGetItem;
+      stop();
+    }
+    check('revision drift publishes no Repeat Week state and preserves newer intent',
+      rejected && repeatPublications === 0 &&
+      !useProgramStore.getState().weekScopedOverlays[TARGET] &&
+      useProgramStore.getState().acceptedMaterialContext.lastTransaction ===
+        'repeat-week-test:concurrent-intent' &&
+      await readDurableProgramStoreEnvelope() === durableBefore);
   }
 
   {
@@ -343,7 +469,8 @@ async function main(): Promise<void> {
     );
     check('restore reinstates the exact displaced overlay',
       (restored.outcome === 'restored' || restored.outcome === 'recomposed') &&
-      JSON.stringify(useProgramStore.getState().weekScopedOverlays[TARGET]) === displacedFingerprint);
+      JSON.stringify(useProgramStore.getState().weekScopedOverlays[TARGET]) === displacedFingerprint,
+      restored);
     const restoredOverlay = useProgramStore.getState().weekScopedOverlays[TARGET];
     check('restore reinstates exact provenance and typed reductions',
       JSON.stringify(Object.values(restoredOverlay?.workoutsByDate ?? {}).flatMap((workout) =>
@@ -351,15 +478,17 @@ async function main(): Promise<void> {
         JSON.stringify(Object.values(displaced?.workoutsByDate ?? {}).flatMap((workout) =>
           workout?.derivedSessionProvenance ?? [])) &&
       JSON.stringify(restoredOverlay?.exposureContractV2?.authorisedReductions ?? []) ===
-        JSON.stringify(displaced?.exposureContractV2?.authorisedReductions ?? []));
+        JSON.stringify(displaced?.exposureContractV2?.authorisedReductions ?? []),
+      restored);
     check('restore reinstates the exact swept override and context',
       useProgramStore.getState().dateOverrides[junkDate]?.id === junkWorkout.id &&
-      useProgramStore.getState().overrideContexts[junkDate]?.intent === 'gameProximity');
+      useProgramStore.getState().overrideContexts[junkDate]?.intent === 'gameProximity',
+      restored);
     const again = await clearReversibleAdjustment(
       result.adjustmentId,
       useProgramStore.getState().acceptedMaterialContext.revision,
     );
-    check('repeated restore is idempotent', again.outcome === 'already-cleared');
+    check('repeated restore is idempotent', again.outcome === 'already-cleared', again);
   }
 
   {
@@ -404,7 +533,7 @@ async function main(): Promise<void> {
     configureAthleteActionDiagnosticsForTests(null);
   }
 
-  for (const kind of ['session_move', 'session_delete'] as const) {
+  for (const kind of ['session_delete', 'game_fixture_move'] as const) {
     const { athlete } = seed();
     const result = await repeatWeekIntoNextWeek({
       baseProfile: athlete,
@@ -438,6 +567,105 @@ async function main(): Promise<void> {
     check(`later ${kind} supersedes Repeat Week restoration`,
       restored.outcome === 'superseded' &&
       useProgramStore.getState().weekScopedOverlays[TARGET]?.id === result.overlay.id);
+  }
+
+  {
+    const { athlete } = seed();
+    const result = await repeatWeekIntoNextWeek({
+      baseProfile: athlete,
+      sourceWeekDate: SOURCE,
+      todayISO: SOURCE,
+      expectedAcceptedRevision: 1,
+    });
+    const futureDate = '2026-09-01';
+    const futureScope = temporaryFactScope({ kind: 'date', date: futureDate });
+    const equipment = createTemporaryEquipmentFact({
+      observedDate: futureDate,
+      scope: futureScope,
+      mode: 'only',
+      equipmentTags: ['bodyweight', 'dumbbells'],
+      sourceSurface: 'test',
+      now: '2026-07-18T00:00:00.000Z',
+    });
+    const schedule = createTemporaryScheduleFact({
+      observedDate: futureDate,
+      scope: futureScope,
+      scheduleKind: 'travel',
+      unavailableDates: [futureDate],
+      sourceSurface: 'test',
+      now: '2026-07-18T00:00:00.000Z',
+    });
+    const readinessFact = createTemporaryPoorSleepFact({
+      observedDate: futureDate,
+      scope: futureScope,
+      pattern: 'single_night',
+      sourceSurface: 'test',
+      now: '2026-07-18T00:00:00.000Z',
+    });
+    const injury: InjuryState = {
+      bodyPart: 'calf',
+      bucket: 'calf',
+      severity: 4,
+      initialSeverity: 4,
+      status: 'active',
+      rules: ['Avoid painful calf loading'],
+      safeFocus: ['Pain-free upper body work'],
+      advice: [],
+      startDate: `${futureDate}T00:00:00.000Z`,
+      lastUpdatedAt: `${futureDate}T00:00:00.000Z`,
+      createdAt: `${futureDate}T00:00:00.000Z`,
+      history: [],
+    };
+    const injuryEpisodes = migrateLegacyInjuryEpisodes({
+      activeConstraints: [],
+      activeInjury: injury,
+      sourceSurface: 'repeat_week_restoration_test',
+    });
+    const currentContext = useProgramStore.getState().acceptedMaterialContext;
+    const laterContext = normalizeAcceptedMaterialContext({
+      ...currentContext,
+      readinessSignalsByDate: {
+        ...currentContext.readinessSignalsByDate,
+        [futureDate]: {
+          date: futureDate,
+          energy: 'low',
+          flatToday: true,
+          source: 'quick_check',
+          updatedAt: '2026-07-18T00:00:00.000Z',
+          temporarySourceFactIds: [readinessFact.factId],
+        },
+      },
+      activeInjury: injury,
+      injuryEpisodes,
+      temporarySourceFacts: [readinessFact, equipment, schedule, ...injuryEpisodes],
+      revision: currentContext.revision + 1,
+      lastTransaction: 'repeat-week-test:later-facts',
+    });
+    useProgramStore.setState({ acceptedMaterialContext: laterContext });
+    const laterFactsFingerprint = JSON.stringify({
+      readiness: laterContext.readinessSignalsByDate,
+      injury: laterContext.injuryEpisodes,
+      equipment: laterContext.temporarySourceFacts.filter((fact) =>
+        'factKind' in fact && fact.factKind === 'equipment'),
+      schedule: laterContext.temporarySourceFacts.filter((fact) =>
+        'factKind' in fact && fact.factKind === 'schedule'),
+    });
+    const restored = await clearReversibleAdjustment(
+      result.adjustmentId,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    );
+    const restoredContext = useProgramStore.getState().acceptedMaterialContext;
+    check('later readiness, injury, equipment and schedule facts survive restoration',
+      (restored.outcome === 'restored' || restored.outcome === 'recomposed') &&
+      JSON.stringify({
+        readiness: restoredContext.readinessSignalsByDate,
+        injury: restoredContext.injuryEpisodes,
+        equipment: restoredContext.temporarySourceFacts.filter((fact) =>
+          'factKind' in fact && fact.factKind === 'equipment'),
+        schedule: restoredContext.temporarySourceFacts.filter((fact) =>
+          'factKind' in fact && fact.factKind === 'schedule'),
+      }) === laterFactsFingerprint,
+      restored);
   }
 
   {

@@ -241,9 +241,11 @@ const nextMonday = addDays(thisMonday, 7);
     overlay?.exposureContractV2?.protocolVersion === 2);
   ok('overlay has training-day entries copied from source', Object.keys(overlay?.workoutsByDate ?? {}).length >= 1);
 
-  // Block rollover is NOT advanced: program object + block length unchanged.
+  // Block rollover is NOT advanced: program content + block length unchanged.
   const after = useProgramStore.getState().currentProgram;
-  ok('repeat does not advance the block (program unchanged)', after === before && (after?.microcycles?.length ?? 0) === beforeBlockLen);
+  ok('repeat does not advance the block (program unchanged)',
+    JSON.stringify(after) === JSON.stringify(before) &&
+      (after?.microcycles?.length ?? 0) === beforeBlockLen);
 
   // Target week resolves cleanly with the repeated content present.
   const week = resolveLiveWeek(nextMonday, 'Off-season');

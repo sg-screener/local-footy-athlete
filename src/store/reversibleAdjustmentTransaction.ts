@@ -997,6 +997,7 @@ async function clearReversibleAdjustmentWithinTrace(
     adjustmentId,
     context,
     adjustment: existing,
-    reason: 'reason' in transaction ? transaction.reason : 'Durable restoration failed.',
+    reason: transaction.value?.reason ??
+      ('reason' in transaction ? transaction.reason : 'Durable restoration failed.'),
   });
 }

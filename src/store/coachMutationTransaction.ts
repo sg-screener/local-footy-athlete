@@ -57,6 +57,7 @@ import {
   type AthleteSemanticStateV2,
 } from '../dev/e2e/AthleteActionTraceCoordinator';
 import { semanticFingerprintV2 } from '../utils/semanticFingerprintV2';
+import { normalizeAcceptedMaterialContext } from './acceptedStateColdStart';
 
 type AcceptedProgramStateSnapshot = Pick<
   ProgramState,
@@ -807,7 +808,7 @@ function captureTraceSemanticSnapshot(
   program = captureAcceptedProgramState(),
   mirrors = captureAcceptedMirrors(),
 ) {
-  const context = program.acceptedMaterialContext;
+  const context = normalizeAcceptedMaterialContext(program.acceptedMaterialContext);
   const contracts = program.exposureContractsByWeek ?? {};
   const semanticState: AthleteSemanticStateV2 = {
     reversibleAdjustmentLedger: program.reversibleAdjustmentLedger,

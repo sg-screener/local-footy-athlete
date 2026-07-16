@@ -598,6 +598,10 @@ export function stageRepeatWeekTransaction(args: {
   expectedAcceptedRevision: number;
   trace?: AthleteActionTraceContext;
 }): RepeatWeekStage {
+  // Staging owns a closed, detached value graph. Accepted-week canonicalisation
+  // is allowed to normalize its candidate in place, but it must never be able
+  // to mutate the live Zustand graph before durable acknowledgement.
+  args = { ...args, snapshot: clone(args.snapshot) };
   const todayISO = args.todayISO ?? todayISOLocal();
   if (args.snapshot.acceptedMaterialContext.revision !== args.expectedAcceptedRevision) {
     throw new Error('repeat_week_expected_revision_conflict');
@@ -619,7 +623,8 @@ export function stageRepeatWeekTransaction(args: {
   const existingTargetOverlay = args.snapshot.weekScopedOverlays[targetWeekStart] ?? null;
   const targetMicrocycle = selectMicrocycleForDate(program, null, targetWeekStart);
   const targetWinningWorkoutsByDate: Record<string, Workout> = {};
-  const targetAnchorDows = new Set(anchorDowsForProfile(args.baseProfile));
+  const profileAnchorDows = new Set(anchorDowsForProfile(args.baseProfile));
+  const targetAnchorDows = new Set(profileAnchorDows);
   if (existingTargetOverlay?.exposureContractV2 || targetMicrocycle?.exposureContractV2) {
     const acceptedTarget = rebaseAcceptedEffectiveWeek({
       surfaces: args.snapshot,
@@ -630,8 +635,21 @@ export function stageRepeatWeekTransaction(args: {
     for (const workout of acceptedTarget.visibleWorkouts) {
       if (workout.workoutType !== 'Game' && workout.workoutType !== 'Team Training') continue;
       const date = dateForDowInWeek(targetWeekStart, workout.dayOfWeek);
-      targetWinningWorkoutsByDate[date] = clone(workout);
       targetAnchorDows.add(workout.dayOfWeek);
+      const canonicalAnchor = targetMicrocycle?.workouts.find((candidate) =>
+        candidate.dayOfWeek === workout.dayOfWeek &&
+        (candidate.workoutType === 'Game' || candidate.workoutType === 'Team Training'));
+      const sameCanonicalIdentity = !!canonicalAnchor && (
+        canonicalAnchor.id === workout.id ||
+        (!!canonicalAnchor.planEntryId && canonicalAnchor.planEntryId === workout.planEntryId)
+      );
+      // Canonical target-week anchors fall through to the base microcycle. Only
+      // an overlay-/fixture-owned target anchor is carried into the replacement
+      // overlay, because it has no equivalent canonical surface to fall through
+      // to after the previous overlay is displaced.
+      if (!profileAnchorDows.has(workout.dayOfWeek) && !sameCanonicalIdentity) {
+        targetWinningWorkoutsByDate[date] = clone(workout);
+      }
     }
   }
   const resolvedTargetContracts = (
@@ -859,6 +877,7 @@ export async function repeatWeekIntoNextWeek(args: {
     let preEnvelopeRead = false;
     let token: ReturnType<typeof beginProgramPersistenceStage> | null = null;
     let published = false;
+    let attemptedStage: RepeatWeekStage | null = null;
     emitAthleteActionEvent(trace, 'athlete_action_parsed', {
       parsedMutationType: 'repeat_week',
       sourceWeekId: sourceWeekStart,
@@ -881,6 +900,7 @@ export async function repeatWeekIntoNextWeek(args: {
         expectedAcceptedRevision,
         trace: stageTrace,
       }));
+      attemptedStage = stage;
       token = beginProgramPersistenceStage();
       const persistTrace = beginAthleteActionTrace({
         source: 'tap', actionType: 'repeat_week', route: 'repeat_week_persist_before_publish',
@@ -992,19 +1012,40 @@ export async function repeatWeekIntoNextWeek(args: {
       let durableRollbackError: unknown = null;
       if (token && preEnvelopeRead) {
         try {
-          await restoreProgramStoreEnvelopeDurably(token, preEnvelope);
-          const restoredEnvelope = await readDurableProgramStoreEnvelope();
-          if (restoredEnvelope !== preEnvelope) {
-            throw new Error('repeat_week_durable_rollback_mismatch');
+          const currentEnvelope = await readDurableProgramStoreEnvelope();
+          if (currentEnvelope !== preEnvelope) {
+            await restoreProgramStoreEnvelopeDurably(token, preEnvelope);
+            const restoredEnvelope = await readDurableProgramStoreEnvelope();
+            if (restoredEnvelope !== preEnvelope) {
+              throw new Error('repeat_week_durable_rollback_mismatch');
+            }
           }
         } catch (rollbackError) {
           durableRollbackError = rollbackError;
         }
       }
-      if (published) useProgramStore.setState(preState);
-      if (serializeProgramStoreEnvelope(useProgramStore.getState()) !== preStateEnvelope ||
-        semanticFingerprint(captureAcceptedProgramState()) !== preFingerprint) {
-        throw new Error('repeat_week_memory_rollback_mismatch');
+      if (published) {
+        useProgramStore.setState(preState);
+        if (serializeProgramStoreEnvelope(useProgramStore.getState()) !== preStateEnvelope ||
+          semanticFingerprint(captureAcceptedProgramState()) !== preFingerprint) {
+          const currentEnvelope = serializeProgramStoreEnvelope(useProgramStore.getState());
+          throw new Error(
+            `repeat_week_memory_rollback_mismatch:${String((error as Error)?.message ?? error)}` +
+            `:${firstStringDivergence(preStateEnvelope, currentEnvelope)}`,
+          );
+        }
+      } else if (attemptedStage) {
+        const live = useProgramStore.getState();
+        const leakedAdjustment = live.reversibleAdjustmentLedger.adjustments.some((adjustment) =>
+          adjustment.id === attemptedStage!.result.adjustmentId);
+        const stagedOverlay = attemptedStage.programState.weekScopedOverlays[targetWeekStart] ?? null;
+        const preOverlay = preState.weekScopedOverlays[targetWeekStart] ?? null;
+        const liveOverlay = live.weekScopedOverlays[targetWeekStart] ?? null;
+        const leakedOverlay = semanticFingerprint(liveOverlay) === semanticFingerprint(stagedOverlay) &&
+          semanticFingerprint(preOverlay) !== semanticFingerprint(stagedOverlay);
+        if (leakedAdjustment || leakedOverlay) {
+          throw new Error('repeat_week_unpublished_state_leak');
+        }
       }
       if (athleteActionDiagnosticsEnabled()) {
         athleteActionTraceCoordinator.recordRollback(trace, {
@@ -1038,6 +1079,15 @@ export async function repeatWeekIntoNextWeek(args: {
       if (token) endProgramPersistenceStage(token);
     }
   }));
+}
+
+function firstStringDivergence(expected: string, actual: string): string {
+  let index = 0;
+  while (index < expected.length && index < actual.length && expected[index] === actual[index]) {
+    index += 1;
+  }
+  return `${index}:expected=${expected.slice(Math.max(0, index - 40), index + 100)}` +
+    `:actual=${actual.slice(Math.max(0, index - 40), index + 100)}`;
 }
 
 /** Test-only compatibility seam; production callers must use the durable async door. */
