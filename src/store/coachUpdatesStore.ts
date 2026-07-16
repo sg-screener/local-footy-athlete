@@ -654,6 +654,13 @@ function hasCanonicalAcceptedEnvelope(): boolean {
   return typeof context?.revision === 'number' && context.revision > 0;
 }
 
+function isFixtureMutationProjection(
+  constraint: ActiveConstraint | undefined,
+): constraint is ActiveScheduleConstraint {
+  return constraint?.type === 'schedule' &&
+    constraint.noteProof?.kind === 'game_change';
+}
+
 function canonicalTemporaryFactCompatibilityConstraints(): ActiveConstraint[] {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const context = normalizeAcceptedMaterialContext(
@@ -814,7 +821,8 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
         if (c.type === 'injury' && hasCanonicalInjuryOwnership()) return;
         if (c.type === 'fatigue' || c.type === 'soreness' ||
           ((c.type === 'equipment' || c.type === 'schedule') &&
-            hasCanonicalAcceptedEnvelope())) {
+            hasCanonicalAcceptedEnvelope() &&
+            !isFixtureMutationProjection(c))) {
           const accepted = normalizeAcceptedMaterialContext(
             require('./programStore').useProgramStore.getState().acceptedMaterialContext,
           );
@@ -851,7 +859,8 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
         if (removed?.type === 'injury' && hasCanonicalInjuryOwnership()) return;
         if (removed?.type === 'fatigue' || removed?.type === 'soreness' ||
           ((removed?.type === 'equipment' || removed?.type === 'schedule') &&
-            hasCanonicalAcceptedEnvelope())) {
+            hasCanonicalAcceptedEnvelope() &&
+            !isFixtureMutationProjection(removed))) {
           const accepted = normalizeAcceptedMaterialContext(
             require('./programStore').useProgramStore.getState().acceptedMaterialContext,
           );

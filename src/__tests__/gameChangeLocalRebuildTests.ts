@@ -212,10 +212,9 @@ console.log('\n── 4. In-season local rebuild keeps regular game behaviour �
 
 // ═════════════════════════════════════════════════════════════════════
 // 5. Busy/Away constraints survive game-day rebuilds.
-//    Away days are manual overrides OWNED by the schedule Coach Note
-//    (OverrideContext.activeModifierId). The rebuild sweep must clear
-//    stale overrides but preserve modifier-owned ones — otherwise the
-//    note says "Away this week" while Monday's session comes back.
+//    Away days are canonical schedule facts, not Rest overrides. The rebuild
+//    sweep clears stale overrides while the accepted fact keeps the date
+//    unavailable until that exact fact resolves.
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 5. Away-blocked Monday survives adding a practice match ──');
 
@@ -226,21 +225,14 @@ import {
 } from '../store/coachUpdatesStore';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import {
+  createTemporaryScheduleFact,
   createTemporaryFatigueFact,
   temporaryFactScope,
 } from '../rules/temporarySourceFact';
 import { clearManualOverridesPreservingActiveModifiers } from '../utils/activeProgramModifiers';
 import { addDays } from '../utils/sessionResolver';
+import { validateWorkoutAgainstActiveConstraints } from '../utils/postGenerationConstraintValidation';
 import type { Workout } from '../types/domain';
-
-// Late-bound require: programControlActions participates in an import cycle
-// with the modules above when loaded eagerly under the CJS test runner —
-// its exports are undefined at hoisted-import time but resolved by now.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const {
-  buildTapScheduleModifier,
-  scheduleModifierIdForDate,
-} = require('../utils/programControlActions') as typeof import('../utils/programControlActions');
 
 function makeAwayRestWorkout(date: string): Workout {
   const now = new Date().toISOString();
@@ -261,36 +253,54 @@ function makeAwayRestWorkout(date: string): Workout {
   // Test on a FUTURE week (Sam's repro): week 2 of the block.
   const week2Monday = addDays(blockStart, 7);
 
-  // 1. Athlete marks Monday away: schedule constraint + owned override.
-  const awayId = scheduleModifierIdForDate(week2Monday, 'away');
-  useCoachUpdatesStore.getState().upsertActiveConstraint(
-    buildTapScheduleModifier({
-      date: week2Monday,
-      todayISO: blockStart,
-      variant: 'away',
-      linkedOverrideDates: [week2Monday],
-    }),
+  // 1. Athlete marks Monday away through the canonical source-fact owner.
+  // Travel facts block the date at the visible validation boundary and never
+  // create a temporary Rest override.
+  const priorAccepted = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
   );
-  useProgramStore.getState().setManualOverride(
-    week2Monday,
-    makeAwayRestWorkout(week2Monday),
-    { intent: 'program_adjustment', activeModifierId: awayId },
-  );
+  const awayFact = createTemporaryScheduleFact({
+    observedDate: blockStart,
+    scope: temporaryFactScope({ kind: 'date', date: week2Monday }),
+    scheduleKind: 'travel',
+    unavailableDates: [week2Monday],
+    sourceSurface: 'game-rebuild-test',
+    now: '2026-07-16T00:00:00.000Z',
+  });
+  const acceptedAway = normalizeAcceptedMaterialContext({
+    ...priorAccepted,
+    temporarySourceFacts: [awayFact],
+    revision: priorAccepted.revision + 1,
+    lastTransaction: 'game-rebuild-test:canonical-away-fact',
+  });
+  useProgramStore.setState({ acceptedMaterialContext: acceptedAway });
+  publishAcceptedCoachUpdatesCompatibilityMirror({
+    activeConstraints: acceptedAway.activeConstraints,
+    activeInjury: acceptedAway.activeInjury,
+  });
+  const awayConstraint = acceptedAway.activeConstraints.find((constraint) =>
+    constraint.temporarySourceFactIds?.includes(awayFact.factId));
+  ok('away fact creates no date override',
+    useProgramStore.getState().dateOverrides[week2Monday] === undefined);
   // Plus a STALE override (no owner) that SHOULD be wiped by a rebuild.
   const staleDate = addDays(blockStart, 8);
   useProgramStore.getState().setManualOverride(staleDate, makeAwayRestWorkout(staleDate), {
     intent: 'gameProximity', relatedGameDate: addDays(blockStart, 9),
   });
 
-  // 2. Add the practice match → local rebuild → the sweep runs.
-  const rebuilt = generateProgramLocally(withGame);
+  // 2. Add the practice match → local rebuild → the sweep runs. The program
+  // was generated before the temporary fact was published; accepted facts
+  // constrain its visible projection instead of becoming baseline inputs.
+  const rebuilt = program;
   const sweep = clearManualOverridesPreservingActiveModifiers(blockStart);
-  ok('away-day override preserved by the rebuild sweep',
-    sweep.preserved.includes(week2Monday), JSON.stringify(sweep));
+  ok('away remains source-fact-owned through the rebuild sweep',
+    !!awayConstraint &&
+      useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts.some((fact) =>
+        'factId' in fact && fact.factId === awayFact.factId));
   ok('stale (unowned) override cleared by the rebuild sweep',
     sweep.cleared.includes(staleDate), JSON.stringify(sweep));
 
-  // 3. Resolve the FUTURE week with the surviving override in place.
+  // 3. Resolve the FUTURE week and enforce the accepted travel fact.
   const micro = rebuilt.microcycles[0];
   const markedDays: Record<string, 'game' | 'rest'> = {};
   for (const gd of computeGameDatesForBlock('Saturday', blockStart, rebuilt.endDate.split('T')[0])) {
@@ -307,20 +317,64 @@ function makeAwayRestWorkout(date: string): Workout {
   const mon = resolved.find((d) => d.date === week2Monday);
   const sat = resolved.find((d) => d.dayOfWeek === 6);
   const fri = resolved.find((d) => d.dayOfWeek === 5);
-  ok('future-week Monday stays blocked (away rest, not Lower Body Strength)',
-    mon?.source === 'manual' && /away|rest/i.test(mon?.workout?.name ?? ''),
-    `${mon?.source}: ${mon?.workout?.name}`);
+  const validatedMonday = validateWorkoutAgainstActiveConstraints({
+    workout: mon?.workout ?? null,
+    date: week2Monday,
+    todayISO: blockStart,
+    activeConstraints: acceptedAway.activeConstraints,
+    profile: withGame,
+  }).workout;
+  ok('future-week Monday stays unavailable through the canonical travel fact',
+    validatedMonday === null, `${mon?.source}: ${mon?.workout?.name}`);
   ok('Saturday still renders as Game Day', sat?.workout?.workoutType === 'Game', sat?.workout?.name);
   ok('Friday (G-1) still light', !fri?.workout || fri.workout.sessionTier !== 'core',
     `${fri?.workout?.sessionTier}: ${fri?.workout?.name}`);
   ok('Coach Note constraint still active (note and program agree)',
-    useCoachUpdatesStore.getState().activeConstraints.some((c) => c.id === awayId));
+    !!awayConstraint &&
+      useCoachUpdatesStore.getState().activeConstraints.some((c) =>
+        c.id === awayConstraint.id));
 
-  // 4. Athlete clears the away adjustment → next rebuild may restore Monday.
-  useCoachUpdatesStore.getState().removeActiveConstraint(awayId);
-  const sweep2 = clearManualOverridesPreservingActiveModifiers(blockStart);
-  ok('after clearing the away note, the override is released on next rebuild',
-    sweep2.cleared.includes(week2Monday), JSON.stringify(sweep2));
+  // 4. Athlete resolves the away fact. The date becomes available again
+  // without deleting or restoring any override.
+  const resolvedAt = '2026-07-16T01:00:00.000Z';
+  const resolvedAwayFact = {
+    ...awayFact,
+    status: 'resolved' as const,
+    updatedAt: resolvedAt,
+    resolvedAt,
+    transitionHistory: [
+      ...awayFact.transitionHistory,
+      {
+        at: resolvedAt,
+        from: 'active' as const,
+        to: 'resolved' as const,
+        actor: 'athlete' as const,
+        surface: 'game-rebuild-test',
+        reason: 'resolved',
+      },
+    ],
+  };
+  const clearedAway = normalizeAcceptedMaterialContext({
+    ...acceptedAway,
+    temporarySourceFacts: [resolvedAwayFact],
+    revision: acceptedAway.revision + 1,
+    lastTransaction: 'game-rebuild-test:resolve-away-fact',
+  });
+  useProgramStore.setState({ acceptedMaterialContext: clearedAway });
+  publishAcceptedCoachUpdatesCompatibilityMirror({
+    activeConstraints: clearedAway.activeConstraints,
+    activeInjury: clearedAway.activeInjury,
+  });
+  const restoredMonday = validateWorkoutAgainstActiveConstraints({
+    workout: mon?.workout ?? null,
+    date: week2Monday,
+    todayISO: blockStart,
+    activeConstraints: clearedAway.activeConstraints,
+    profile: withGame,
+  }).workout;
+  ok('resolving the travel fact restores Monday without override ownership',
+    restoredMonday !== null &&
+      useProgramStore.getState().dateOverrides[week2Monday] === undefined);
 
   // Cleanup for any later suites.
   useProgramStore.getState().clearManualOverrides();

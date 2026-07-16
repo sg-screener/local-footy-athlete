@@ -29,11 +29,17 @@ import {
   readDurableProgramStoreEnvelope,
   useProgramStore,
 } from '../store/programStore';
-import { useProfileStore } from '../store/profileStore';
+import {
+  publishAcceptedProfileCompatibilityMirror,
+  useProfileStore,
+} from '../store/profileStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
-import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import {
+  ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
+  normalizeAcceptedMaterialContext,
+} from '../store/acceptedStateColdStart';
 import {
   completeAcceptedStateFingerprint,
 } from '../store/coachMutationTransaction';
@@ -113,10 +119,6 @@ function seedAcceptedWeek(args: {
     activeConstraints: [],
     readinessSignal: null,
   });
-  useProfileStore.setState({
-    onboardingData: args.athlete,
-    isOnboardingComplete: true,
-  });
   useCalendarStore.setState({ markedDays, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
   useProgramStore.setState({
@@ -136,10 +138,19 @@ function seedAcceptedWeek(args: {
       readinessSignalsByDate: {},
       activeConstraints: [],
       activeInjury: null,
+      acceptedProfileSnapshot: {
+        protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
+        capturedAt: `${WEEK_START}T00:00:00.000Z`,
+        updatedAt: `${WEEK_START}T00:00:00.000Z`,
+        sourceRevision: 1,
+        onboardingData: args.athlete,
+      },
       revision: 1,
       lastTransaction: 'fixture-transaction-test:seed',
     }),
   });
+  publishAcceptedProfileCompatibilityMirror(args.athlete);
+  useProfileStore.setState({ isOnboardingComplete: true });
   useCoachUpdatesStore.setState({
     updatesByWeek: {},
     activeConstraints: [],
