@@ -140,6 +140,8 @@ type AcceptedMirrorEnvelopes = Record<AcceptedMirrorStorageKey, string | null>;
 export async function runCoachMutationTransaction<T>(args: {
   todayISO: string;
   extraDates?: readonly string[];
+  /** Explicit TraceV2 correlation for async callers that cannot use ambient state. */
+  trace?: AthleteActionTraceContext;
   /** Permit a durable accepted-envelope change with no visible program diff. */
   allowAcceptedStateOnlyChange?: boolean;
   /** Permit an identical semantic retry and re-acknowledge the durable envelope. */
@@ -160,7 +162,7 @@ export async function runCoachMutationTransaction<T>(args: {
   }) => CoachMutationCandidateVerification | Promise<CoachMutationCandidateVerification>;
 }): Promise<CoachMutationTransactionResult<T>> {
   const execute = (): Promise<CoachMutationTransactionResult<T>> => withCoachMutationLock(async () => {
-    const trace = currentAthleteActionTrace();
+    const trace = args.trace ?? currentAthleteActionTrace();
     const preProgram = captureAcceptedProgramState();
     const preMirrors = captureAcceptedMirrors();
     const preDates = collectAcceptedDates(useProgramStore.getState(), args.extraDates ?? [], args.todayISO);
@@ -228,6 +230,7 @@ export async function runCoachMutationTransaction<T>(args: {
             preEnvelope,
             preMirrorEnvelopes,
             beforeProjection,
+            trace,
           });
         }
         return {
@@ -255,6 +258,7 @@ export async function runCoachMutationTransaction<T>(args: {
             preEnvelope,
             preMirrorEnvelopes,
             beforeProjection,
+            trace,
           });
           return {
             ok: false,
@@ -283,6 +287,7 @@ export async function runCoachMutationTransaction<T>(args: {
           preEnvelope,
           preMirrorEnvelopes,
           beforeProjection,
+          trace,
         });
         return {
           ok: false,
@@ -383,6 +388,7 @@ export async function runCoachMutationTransaction<T>(args: {
           preEnvelope,
           preMirrorEnvelopes,
           beforeProjection,
+          trace,
           restoreDurable: durablePreStateRead && (candidatePersisted || isPersistenceFailure(error)),
         });
       } catch (rollbackError) {
@@ -452,7 +458,7 @@ export async function runCoachMutationTransaction<T>(args: {
     }
   });
   if (!athleteActionDiagnosticsEnabled()) return execute();
-  const inherited = currentAthleteActionTrace();
+  const inherited = args.trace ?? currentAthleteActionTrace();
   const trace: AthleteActionTraceContext = beginAthleteActionTrace({
     source: inherited?.source ?? 'system',
     actionType: inherited?.actionType ?? 'program_change',
@@ -508,6 +514,7 @@ async function restoreExactPreState(args: {
   preEnvelope: string | null;
   preMirrorEnvelopes: AcceptedMirrorEnvelopes | null;
   beforeProjection: SemanticProjectionSnapshot;
+  trace?: AthleteActionTraceContext;
   restoreDurable?: boolean;
 }): Promise<void> {
   restoreAcceptedInMemory(args.preProgram, args.preMirrors);
@@ -548,7 +555,7 @@ async function restoreExactPreState(args: {
     );
   }
   assertCardAndDetailProjectionEqual(restored);
-  const trace = currentAthleteActionTrace();
+  const trace = args.trace ?? currentAthleteActionTrace();
   if (trace && athleteActionDiagnosticsEnabled()) {
     athleteActionTraceCoordinator.recordRollback(trace, {
       memory: {

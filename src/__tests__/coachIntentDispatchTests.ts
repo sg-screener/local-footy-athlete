@@ -62,6 +62,15 @@ import { parseCoachIntent, COACH_INTENT_SYSTEM_PROMPT, type CoachIntent, type Co
 import { dispatchCoachIntent, type DispatchDeps } from '../utils/coachIntentDispatcher';
 import type { InjuryState } from '../utils/injuryProgression';
 import { extractBodyPart } from '../utils/injuryAdjustmentEngine';
+import { readFileSync } from 'fs';
+import {
+  beginAthleteActionTrace,
+  clearAthleteActionDiagnosticEvents,
+  configureAthleteActionDiagnosticsForTests,
+  emitAthleteActionEvent,
+  getAthleteActionTracesV2,
+  runWithAthleteActionTrace,
+} from '../utils/athleteActionDiagnostics';
 
 function ex(name: string, notes?: string): any {
   return { id:`we-${name}`, workoutId:'wk', exerciseId:`ex-${name}`, exerciseOrder:0, prescribedSets:3, prescribedRepsMin:6, prescribedRepsMax:8, prescribedWeightKg:0, restSeconds:0,
@@ -92,6 +101,7 @@ function eq<T>(name: string, a: T, b: T) {
 }
 function section(label: string) { realLog(`\n${label}`); }
 
+(async () => {
 // ─────────────────────────────────────────────────────────────────────
 // 1. parseCoachIntent — schema validation
 // ─────────────────────────────────────────────────────────────────────
@@ -367,7 +377,7 @@ section('[7] Session mismatch wording routes to program explanation, not injury'
     applyProgramAdjustmentEvents: () => ({ success: false, eventsApplied: 0, visibleDiff: [] }),
   };
 
-  const outcome = dispatchCoachIntent({
+  const outcome = await dispatchCoachIntent({
     intent: 'session_mismatch_question',
     confidence: 0.95,
     needsClarification: false,
@@ -380,7 +390,7 @@ section('[7] Session mismatch wording routes to program explanation, not injury'
   ok('reply explains aerobic / non-running rationale', /aerobic base|running load|Zone 2/i.test(outcome.reply));
   ok('reply targets Wednesday row, not Tuesday', /Wednesday/i.test(outcome.reply) && !/Tuesday/i.test(outcome.reply));
 
-  const misclassified = dispatchCoachIntent({
+  const misclassified = await dispatchCoachIntent({
     intent: 'new_injury_report',
     confidence: 0.5,
     needsClarification: true,
@@ -407,7 +417,7 @@ section('[8] Program explanation for mid-week row');
     applyProgramAdjustmentEvents: () => ({ success: false, eventsApplied: 0, visibleDiff: [] }),
   };
 
-  function withRow(message: string) {
+  async function withRow(message: string) {
     resetAll();
     baseWeekDef = {
       2: wk('Team Training + Upper Pull', 2, {
@@ -431,14 +441,14 @@ section('[8] Program explanation for mid-week row');
       recentMessages: [],
       todayISO: FIXED_TODAY,
     });
-    return dispatchCoachIntent({
+    return await dispatchCoachIntent({
       intent: 'general_question',
       confidence: 0.7,
       needsClarification: false,
     }, packet, deps);
   }
 
-  const midWeek = withRow('Why did you put a mid week row in?');
+  const midWeek = await withRow('Why did you put a mid week row in?');
   ok('mid-week row handled without legacy', midWeek.handled === true);
   eq('mid-week row replyMode', midWeek.replyMode, 'program_explanation');
   ok('mid-week row does not mention pain guard', !/pain score|pain out of 10|injury report/i.test(midWeek.reply));
@@ -447,10 +457,10 @@ section('[8] Program explanation for mid-week row');
   ok('mid-week row keeps intensity concise', /3-4\/10/i.test(midWeek.reply));
   ok('mid-week row does not invent Tuesday', !/Tuesday/i.test(midWeek.reply));
 
-  const wed = withRow('Why is there a row on Wednesday?');
+  const wed = await withRow('Why is there a row on Wednesday?');
   ok('Wednesday row targets Wednesday', /Wednesday/i.test(wed.reply) && !/Tuesday/i.test(wed.reply));
 
-  const running = withRow('Why am I rowing instead of running?');
+  const running = await withRow('Why am I rowing instead of running?');
   ok('rowing instead of running explains off-feet conversion', /non-running|running load|Zone 2/i.test(running.reply));
 
   resetAll();
@@ -466,13 +476,227 @@ section('[8] Program explanation for mid-week row');
     recentMessages: [],
     todayISO: FIXED_TODAY,
   });
-  const noRow = dispatchCoachIntent({
+  const noRow = await dispatchCoachIntent({
     intent: 'general_question',
     confidence: 0.7,
     needsClarification: false,
   }, noRowPacket, deps);
   eq('no row asks which day', noRow.reply, "I can't see the row session in the visible week I'm reading. Which day are you looking at?");
   ok('no row does not invent Tuesday', !/Tuesday/i.test(noRow.reply));
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 9. Async dispatcher contract and deterministic failure handling.
+// ─────────────────────────────────────────────────────────────────────
+section('[9] Async Coach Intent Dispatcher — Awaitable dependency contract');
+{
+  resetAll();
+  const packet = buildCoachContextPacket({
+    userMessage: 'busy week',
+    recentMessages: [],
+    todayISO: FIXED_TODAY,
+  });
+  const baseDeps: DispatchDeps = {
+    reapplyInjuryAtSeverity: () => ({ applied: 0, visibleDiffDetected: false }),
+    runProgression: () => ({ reply: 'progression', mutated: false }),
+    runUAEForInjury: () => ({ reply: 'injury', mutated: false }),
+    inspect: () => ({ kind: 'general_state', message: 'inspect' }),
+    generalReply: () => 'general',
+    applyNonInjuryConstraint: () => ({ reply: 'sync busy reply', mutated: true }),
+    applyConstraintResolution: () => ({ cleared: [] }),
+    applyProgramAdjustmentEvents: () => ({
+      success: false,
+      eventsApplied: 0,
+      visibleDiff: [],
+    }),
+  };
+  const busyIntent: CoachIntent = {
+    intent: 'busy_week',
+    confidence: 0.95,
+    needsClarification: false,
+  };
+
+  const syncOutcome = await dispatchCoachIntent(busyIntent, packet, baseDeps);
+  eq('synchronous dependency double still returns through Promise', syncOutcome.reply, 'sync busy reply');
+  ok('synchronous dependency double preserves mutation result', syncOutcome.mutated);
+
+  let asyncResolved = false;
+  const asyncOutcome = await dispatchCoachIntent(busyIntent, packet, {
+    ...baseDeps,
+    applyNonInjuryConstraint: async () => {
+      await Promise.resolve();
+      asyncResolved = true;
+      return { reply: 'async busy reply', mutated: true };
+    },
+  });
+  ok('async dependency settles before DispatchOutcome returns', asyncResolved);
+  eq('async dependency reply is preserved', asyncOutcome.reply, 'async busy reply');
+
+  const rejectedOutcome = await dispatchCoachIntent(busyIntent, packet, {
+    ...baseDeps,
+    applyNonInjuryConstraint: async () => {
+      throw new Error('injected_async_dependency_rejection');
+    },
+  });
+  ok('async dependency rejection remains handled', rejectedOutcome.handled);
+  ok('async dependency rejection cannot fall through to legacy',
+    rejectedOutcome.replyMode !== 'fall_through');
+  ok('async dependency rejection makes no mutation claim', !rejectedOutcome.mutated);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 10. Explicit TraceV2 correlation survives overlap and await.
+// ─────────────────────────────────────────────────────────────────────
+section('[10] Async Coach Intent Dispatcher — TraceV2 correlation');
+{
+  configureAthleteActionDiagnosticsForTests({ enabled: true, production: false });
+  clearAthleteActionDiagnosticEvents();
+  const busyIntent: CoachIntent = {
+    intent: 'busy_week',
+    confidence: 0.95,
+    needsClarification: false,
+  };
+  const packetFor = (message: string) => buildCoachContextPacket({
+    userMessage: message,
+    recentMessages: [],
+    todayISO: FIXED_TODAY,
+  });
+  const baseDeps: DispatchDeps = {
+    reapplyInjuryAtSeverity: () => ({ applied: 0, visibleDiffDetected: false }),
+    runProgression: () => ({ reply: 'progression', mutated: false }),
+    runUAEForInjury: () => ({ reply: 'injury', mutated: false }),
+    inspect: () => ({ kind: 'general_state', message: 'inspect' }),
+    generalReply: () => 'general',
+    applyNonInjuryConstraint: () => ({ reply: 'busy', mutated: true }),
+    applyConstraintResolution: () => ({ cleared: [] }),
+    applyProgramAdjustmentEvents: () => ({
+      success: false,
+      eventsApplied: 0,
+      visibleDiff: [],
+    }),
+  };
+  let releaseFirst: (() => void) | null = null;
+  let releaseSecond: (() => void) | null = null;
+  const tracedDeps = (label: 'first' | 'second'): DispatchDeps => ({
+    ...baseDeps,
+    applyNonInjuryConstraint: (_kind, _intent, _packet, trace) => {
+      if (!trace) throw new Error('missing_explicit_dispatch_trace');
+      const span = beginAthleteActionTrace({
+        source: 'coach',
+        actionType: 'readiness_change',
+        route: `async_dependency_${label}`,
+      }, trace);
+      return runWithAthleteActionTrace(span, async () => {
+        emitAthleteActionEvent(span, 'mutation_preview_result', {
+          asyncBoundary: label,
+          phase: 'before_await',
+        });
+        await new Promise<void>((resolve) => {
+          if (label === 'first') releaseFirst = resolve;
+          else releaseSecond = resolve;
+        });
+        emitAthleteActionEvent(span, 'mutation_constraint_created', {
+          asyncBoundary: label,
+          phase: 'after_await',
+          constraintId: `${label}-constraint`,
+          constraintType: 'busy_week',
+          constraintStatus: 'active',
+        });
+        return { reply: `${label} reply`, mutated: true };
+      });
+    },
+  });
+
+  const first = (async () =>
+    await dispatchCoachIntent(busyIntent, packetFor('first overlap'), tracedDeps('first')))();
+  const second = (async () =>
+    await dispatchCoachIntent(busyIntent, packetFor('second overlap'), tracedDeps('second')))();
+  ok('both async dependencies reached their await boundary',
+    typeof releaseFirst === 'function' && typeof releaseSecond === 'function');
+  releaseSecond?.();
+  releaseFirst?.();
+  await Promise.all([first, second]);
+
+  const traces = getAthleteActionTracesV2();
+  ok('overlapping dispatcher calls retain separate TraceV2 roots',
+    traces.length === 2 && traces[0].traceId !== traces[1].traceId);
+  ok('nested async dependencies create spans under their root',
+    traces.every((record) => record.spans.length >= 2));
+  ok('events before and after await remain on one root per call',
+    traces.every((record) => {
+      const phases = record.events
+        .filter((event) =>
+          event.event === 'mutation_preview_result' ||
+          event.event === 'mutation_constraint_created')
+        .map((event) => event.fields.phase);
+      return phases.includes('before_await') && phases.includes('after_await');
+    }));
+
+  clearAthleteActionDiagnosticEvents();
+  await dispatchCoachIntent({
+    intent: 'new_injury_report',
+    confidence: 0.9,
+    needsClarification: true,
+    clarificationQuestion: 'How bad is it?',
+    payload: { bodyPart: 'hammy' },
+  }, packetFor('hammy is sore'), baseDeps);
+  const clarificationTrace = getAthleteActionTracesV2()[0];
+  ok('clarification creates no durable-publication evidence',
+    clarificationTrace?.evidence.publication.status === 'missing');
+  ok('clarification creates no mutation-success completion request',
+    !clarificationTrace?.events.some((event) =>
+      event.event === 'athlete_action_completion_requested'));
+
+  clearAthleteActionDiagnosticEvents();
+  await dispatchCoachIntent({
+    intent: 'general_question',
+    confidence: 0.9,
+    needsClarification: false,
+  }, packetFor('tell me about training'), baseDeps);
+  const fallThroughTrace = getAthleteActionTracesV2()[0];
+  ok('conversation fall-through creates no mutation-success evidence',
+    fallThroughTrace?.evidence.publication.status === 'missing' &&
+      !fallThroughTrace.events.some((event) =>
+        event.event === 'athlete_action_completion_requested'));
+  configureAthleteActionDiagnosticsForTests(null);
+  clearAthleteActionDiagnosticEvents();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 11. Ownership and awaited-caller invariants.
+// ─────────────────────────────────────────────────────────────────────
+section('[11] Async Coach Intent Dispatcher — ownership boundaries');
+{
+  const dispatcherSource = readFileSync('src/utils/coachIntentDispatcher.ts', 'utf8');
+  const liveDepsSource = readFileSync('src/utils/coachDispatchDeps.ts', 'utf8');
+  ok('fixture execution remains a future dependency seam only',
+    /executeFixtureChange\?:/.test(dispatcherSource) &&
+      !/deps\.executeFixtureChange\s*\(/.test(dispatcherSource) &&
+      !/executeFixtureChange/.test(liveDepsSource));
+  ok('injury production ownership remains outside live dispatcher deps',
+    /legacy_dispatch_mutation_bypassed/.test(liveDepsSource) &&
+      !/injuryEpisodeTransaction|fixtureMutationTransaction/.test(dispatcherSource));
+
+  const callers = [
+    'src/utils/coachTurnController.ts',
+    'scripts/inspect-coach-live-context.ts',
+    'src/__tests__/coachIntentDispatchTests.ts',
+    'src/__tests__/coachLivePathV2IntegrationTests.ts',
+    'src/__tests__/coachLiveWiringTests.ts',
+    'src/__tests__/coachOrchestrationTests.ts',
+    'src/__tests__/constraintResolutionTests.ts',
+    'src/__tests__/programAdjustmentRequestTests.ts',
+  ];
+  const floating = callers.flatMap((file) =>
+    readFileSync(file, 'utf8')
+      .split('\n')
+      .filter((line) =>
+        line.includes('dispatchCoachIntent(') &&
+        !line.includes('await ') &&
+        !line.includes("line.includes('dispatchCoachIntent(')"))
+      .map((line) => `${file}:${line.trim()}`));
+  ok('every production, diagnostic, and test caller awaits dispatchCoachIntent',
+    floating.length === 0, floating.join('\n'));
 }
 
 // ─── Summary ───
@@ -486,3 +710,8 @@ if (fail > 0) {
   process.exit(1);
 }
 process.exit(0);
+})().catch((error) => {
+  console.log = realLog;
+  console.error(error);
+  process.exit(1);
+});

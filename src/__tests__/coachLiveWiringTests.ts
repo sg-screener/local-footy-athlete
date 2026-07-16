@@ -221,7 +221,7 @@ async function liveHandleSend(
   });
   const intent = await classifier.classify(packet);
   const deps = buildLiveDispatchDeps(todayISO);
-  const outcome = dispatchCoachIntent(intent, packet, deps);
+  const outcome = await dispatchCoachIntent(intent, packet, deps);
 
   if (outcome.handled) {
     return {

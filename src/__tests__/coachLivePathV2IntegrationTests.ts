@@ -15,7 +15,7 @@
  *
  * Strategy: stub the resolver + getMondayStr so each scenario runs against
  * a deterministic week. Mock global fetch so /coach-intent returns the
- * scripted intent for the scenario under test. Prove the legacy synchronous
+ * scripted intent for the scenario under test. Prove the legacy compatibility
  * dispatcher cannot publish readiness mirrors upstream, then commit the
  * classified fact through the canonical transaction. After acceptance, mirror the
  * useResolvedDay / useResolvedWeek projection — buildExtraConstraints +
@@ -307,7 +307,7 @@ async function liveDispatchNonInjury(
   });
   const intent = await classifier.classify(packet);
   const deps = buildLiveDispatchDeps(todayISO);
-  const outcome = dispatchCoachIntent(intent, packet, deps);
+  const outcome = await dispatchCoachIntent(intent, packet, deps);
   return {
     handled: outcome.handled,
     reply: outcome.reply,

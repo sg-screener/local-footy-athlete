@@ -49,7 +49,7 @@ import { verifyRenderedProgramMutation } from './visibleProgramReadModel';
  */
 export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
   return {
-    runUAEForInjury(bodyPart, severity, _note) {
+    runUAEForInjury(bodyPart, severity, _note, _trace) {
       logger.warn('[injury-episode] legacy_dispatch_mutation_bypassed', {
         bodyPart,
         severity,
@@ -61,7 +61,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       };
     },
 
-    runProgression(outcome, current, _note) {
+    runProgression(outcome, current, _note, _trace) {
       logger.warn('[injury-episode] legacy_dispatch_mutation_bypassed', {
         bodyPart: current.bodyPart,
         outcome: outcome.kind,
@@ -90,7 +90,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       });
     },
 
-    reapplyInjuryAtSeverity(bodyPart, severity, monday) {
+    reapplyInjuryAtSeverity(bodyPart, severity, monday, _todayISO, _trace) {
       logger.warn('[injury-episode] legacy_dispatch_reapply_bypassed', {
         bodyPart,
         severity,
@@ -111,7 +111,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       );
     },
 
-    applyNonInjuryConstraint(kind, intent, packet) {
+    applyNonInjuryConstraint(kind, intent, packet, _trace) {
       // The packet date is the app's authoritative local "today". Using the
       // wall clock here makes replayed/fixed-date turns create future-dated
       // constraints that cannot apply to the week the athlete edited.
@@ -198,7 +198,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       }
     },
 
-    applyConstraintResolution(ids, _todayISO) {
+    applyConstraintResolution(ids, _todayISO, _trace) {
       const store = useCoachUpdatesStore.getState();
       const monday = getMondayStr(0);
       // Snapshot the constraints BEFORE removal so we can return them
@@ -250,7 +250,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       };
     },
 
-    applyProgramAdjustmentEvents(events, intendedChange) {
+    applyProgramAdjustmentEvents(events, intendedChange, trace) {
       const targetDates = intendedChange.targetDates ?? events.map((e) => e.date);
       const visibleMonday = getMondayForDate(todayISO);
       const nextVisibleSunday = addDays(visibleMonday, 13);
@@ -280,6 +280,7 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
         todayISO,
         allowFutureWeeks: true,
         allowPastDates: true,
+        trace,
       });
 
       const afterWeek = weekStarts.flatMap((monday) =>

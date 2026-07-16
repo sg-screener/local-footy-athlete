@@ -232,12 +232,13 @@ function section(label: string) {
   console.log(`\n${label}`);
 }
 
+(async () => {
 section('[1] first request routes to deterministic clarifier, not fall_through');
 {
   reset(TODAY);
   const classified = intent({ requestedSession: 'Monday', concern: 'add conditioning' });
   eq('classifier intent = request_program_adjustment', classified.intent, 'request_program_adjustment');
-  const outcome = dispatchCoachIntent(classified, packet('add conditioning to Monday sessions'), fakeDeps({ eventsApplied: 0, success: false }));
+  const outcome = await dispatchCoachIntent(classified, packet('add conditioning to Monday sessions'), fakeDeps({ eventsApplied: 0, success: false }));
   eq('handled', outcome.handled, true);
   ok('does not fall through', outcome.replyMode !== 'fall_through');
   eq('asks clarifier', outcome.replyMode, 'program_adjustment_clarifier');
@@ -254,7 +255,7 @@ section('[1b] Monday name can omit strength when exercises are strength-based');
 {
   reset(TODAY);
   baseWeekDef[1] = mixedWorkoutWithStrengthContent('Main Lift Day');
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add conditioning' }),
     packet('add conditioning to Monday sessions'),
     fakeDeps({ eventsApplied: 0, success: false }),
@@ -267,7 +268,7 @@ section('[1c] visible Monday without strength asks before adding');
 {
   reset(TODAY);
   baseWeekDef[1] = nonStrengthWorkout('Skills Session');
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add conditioning' }),
     packet('add conditioning to Monday sessions'),
     fakeDeps({ eventsApplied: 0, success: false }),
@@ -283,12 +284,12 @@ section('[1c] visible Monday without strength asks before adding');
 section('[2] clarification creates pending proposal without success claim');
 {
   reset(MONDAY_TODAY);
-  const pending = dispatchCoachIntent(
+  const pending = (await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add conditioning' }),
     packet('add conditioning to Monday sessions'),
     fakeDeps({ eventsApplied: 0, success: false }),
-  ).pendingCoachProposal;
-  const outcome = dispatchCoachIntent(
+  )).pendingCoachProposal;
+  const outcome = await dispatchCoachIntent(
     intent({ concern: 'light aerobic intervals after strength' }),
     packet('Just some light aerobic intervals I can do after the strength work', pending),
     fakeDeps({ eventsApplied: 0, success: false }),
@@ -307,12 +308,12 @@ section('[2] clarification creates pending proposal without success claim');
 section('[2b] short bike flush answer resolves pending clarification');
 {
   reset(TODAY);
-  const pending = dispatchCoachIntent(
+  const pending = (await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add conditioning' }),
     packet('add conditioning to Monday sessions'),
     fakeDeps({ eventsApplied: 0, success: false }),
-  ).pendingCoachProposal;
-  const outcome = dispatchCoachIntent(
+  )).pendingCoachProposal;
+  const outcome = await dispatchCoachIntent(
     { intent: 'general_question', confidence: 0.6, needsClarification: false },
     packet('Short bike flush', pending, TODAY),
     fakeDeps({ eventsApplied: 0, success: false }),
@@ -330,12 +331,12 @@ section('[2b] short bike flush answer resolves pending clarification');
 section('[2c] tempo running answer resolves pending clarification');
 {
   reset(TODAY);
-  const pending = dispatchCoachIntent(
+  const pending = (await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add conditioning' }),
     packet('add conditioning to Monday sessions'),
     fakeDeps({ eventsApplied: 0, success: false }),
-  ).pendingCoachProposal;
-  const outcome = dispatchCoachIntent(
+  )).pendingCoachProposal;
+  const outcome = await dispatchCoachIntent(
     { intent: 'general_question', confidence: 0.6, needsClarification: false },
     packet('tempo running', pending, TODAY),
     fakeDeps({ eventsApplied: 0, success: false }),
@@ -352,12 +353,12 @@ section('[2c] tempo running answer resolves pending clarification');
 section('[2d] unrecognised conditioning answer gets one helpful follow-up');
 {
   reset(TODAY);
-  const pending = dispatchCoachIntent(
+  const pending = (await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add conditioning' }),
     packet('add conditioning to Monday sessions'),
     fakeDeps({ eventsApplied: 0, success: false }),
-  ).pendingCoachProposal;
-  const outcome = dispatchCoachIntent(
+  )).pendingCoachProposal;
+  const outcome = await dispatchCoachIntent(
     { intent: 'general_question', confidence: 0.6, needsClarification: false },
     packet('make it spicy but not too spicy', pending, TODAY),
     fakeDeps({ eventsApplied: 0, success: false }),
@@ -385,7 +386,7 @@ section('[3] confirmation applies and visible Monday includes conditioning');
     modality: 'bike or track',
     createdAt: Date.now(),
   };
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     { intent: 'general_question', confidence: 0.8, needsClarification: false },
     packet('Sounds good', pending, TODAY),
     buildLiveDispatchDeps(TODAY),
@@ -442,7 +443,7 @@ section('[3b] completed current Monday targets next Monday');
       },
     },
   } as any);
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add light aerobic intervals after strength' }),
     packet('add light aerobic intervals after strength to Monday', undefined, TODAY),
     buildLiveDispatchDeps(TODAY),
@@ -455,17 +456,17 @@ section('[3b] completed current Monday targets next Monday');
 section('[3c] short bike proposal confirmation applies visible bike flush');
 {
   reset(TODAY);
-  const clarifier = dispatchCoachIntent(
+  const clarifier = (await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add conditioning' }),
     packet('add conditioning to Monday sessions', undefined, TODAY),
     fakeDeps({ eventsApplied: 0, success: false }),
-  ).pendingCoachProposal;
-  const proposal = dispatchCoachIntent(
+  )).pendingCoachProposal;
+  const proposal = (await dispatchCoachIntent(
     { intent: 'general_question', confidence: 0.6, needsClarification: false },
     packet('Short bike flush', clarifier, TODAY),
     fakeDeps({ eventsApplied: 0, success: false }),
-  ).pendingCoachProposal;
-  const outcome = dispatchCoachIntent(
+  )).pendingCoachProposal;
+  const outcome = await dispatchCoachIntent(
     { intent: 'general_question', confidence: 0.8, needsClarification: false },
     packet('sounds good', proposal, TODAY),
     buildLiveDispatchDeps(TODAY),
@@ -505,7 +506,7 @@ section('[3c] short bike proposal confirmation applies visible bike flush');
 section('[4] zero applied events cannot claim success');
 {
   reset(MONDAY_TODAY);
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add light aerobic intervals after strength' }),
     packet('add light aerobic intervals after strength to Monday', undefined, MONDAY_TODAY),
     fakeDeps({ eventsApplied: 0, success: true, visibleDiff: [NEXT_MONDAY] }),
@@ -517,7 +518,7 @@ section('[4] zero applied events cannot claim success');
 section('[5] visible diff failure cannot claim success');
 {
   reset(MONDAY_TODAY);
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add light aerobic intervals after strength' }),
     packet('add light aerobic intervals after strength to Monday', undefined, MONDAY_TODAY),
     fakeDeps({ eventsApplied: 1, success: false, visibleDiff: [] }),
@@ -537,12 +538,12 @@ section('[6] state inspector answers truthfully after apply');
     modality: 'bike or track',
     createdAt: Date.now(),
   };
-  dispatchCoachIntent(
+  await dispatchCoachIntent(
     { intent: 'general_question', confidence: 0.8, needsClarification: false },
     packet('sounds good', pending, MONDAY_TODAY),
     buildLiveDispatchDeps(MONDAY_TODAY),
   );
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     {
       intent: 'why_didnt_program_change',
       confidence: 0.9,
@@ -560,7 +561,7 @@ section('[6b] no current or next Monday session fails honestly');
 {
   reset(TODAY);
   baseWeekDef = {};
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'add light aerobic intervals after strength' }),
     packet('add light aerobic intervals after strength to Monday', undefined, TODAY),
     buildLiveDispatchDeps(TODAY),
@@ -589,7 +590,7 @@ section('[6c] target outside current/next visible weeks fails closed');
       restSeconds: 60,
     },
   );
-  const result = deps.applyProgramAdjustmentEvents([ev], {
+  const result = await deps.applyProgramAdjustmentEvents([ev], {
     type: 'add_conditioning',
     targetDates: [farMonday],
     requiredText: 'aerobic',
@@ -609,7 +610,7 @@ section('[7] pending proposal cancel clears without mutation');
     modality: 'bike or track',
     createdAt: Date.now(),
   };
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     { intent: 'general_question', confidence: 0.8, needsClarification: false },
     packet('cancel that', pending),
     buildLiveDispatchDeps(TODAY),
@@ -631,7 +632,7 @@ section('[8] expired pending proposal does not apply on confirmation');
     modality: 'bike or track',
     createdAt: Date.now() - PENDING_PROGRAM_PROPOSAL_TTL_MS - 1,
   };
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     { intent: 'general_question', confidence: 0.8, needsClarification: false },
     packet('sounds good', pending),
     buildLiveDispatchDeps(TODAY),
@@ -646,7 +647,7 @@ section('[8] expired pending proposal does not apply on confirmation');
 section('[9] unsupported response copy is human');
 {
   reset(MONDAY_TODAY);
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     intent({ requestedSession: 'Monday', concern: 'redesign my whole week' }),
     packet('Can you redesign my whole week?', undefined, MONDAY_TODAY),
     fakeDeps({ eventsApplied: 0, success: false }),
@@ -665,3 +666,7 @@ if (fail > 0) {
   process.exit(1);
 }
 process.exit(0);
+})().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

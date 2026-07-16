@@ -5579,7 +5579,7 @@ export async function handleCoachTurn(
     });
 
     const deps = buildLiveDispatchDeps(input.todayISO);
-    const outcome = dispatchCoachIntent(intent, packet, deps);
+    const outcome = await dispatchCoachIntent(intent, packet, deps);
 
     if (outcome.handled) {
       if (outcome.pendingCoachProposal !== undefined) {
