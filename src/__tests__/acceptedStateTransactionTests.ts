@@ -954,8 +954,13 @@ run('mutation', 'only canonical injury facts may compose over an accepted base',
   assert(visibleSource.includes(
     'if (hasAcceptedWeekContract(args.state, day.date) && !args.state.activeInjury) {'),
   'non-injury accepted week projection short circuit removed');
-  assert(visibleSource.includes('activeInjury: args.state.activeInjury'),
-    'canonical injury visible composition removed');
+  assert(visibleSource.includes("if (c.type === 'injury')") &&
+    visibleSource.includes('buildInjuryConstraint({'),
+  'episode-derived injury constraints are not composed visibly');
+  assert(visibleSource.includes(
+    "args.state.injuryProjectionOwner === 'accepted_episode'") &&
+    visibleSource.includes('activeInjury: !canonicalInjuryProjection && args.state.activeInjury'),
+  'canonical injury composition still depends on the single-slot alias');
   assert(transactionSource.includes(".filter((constraint) => constraint.type !== 'injury')"),
     'injury constraint can destructively overwrite the accepted base');
 });

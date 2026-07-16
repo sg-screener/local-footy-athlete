@@ -371,6 +371,10 @@ async function main(): Promise<void> {
   check('two active episodes coexist', normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext).injuryEpisodes.filter((episode) =>
       episode.status === 'active' || episode.status === 'improving').length === 2);
+  check('all active episodes compose simultaneously',
+    !visibleNames(date).includes('Romanian Deadlift') &&
+      !visibleNames(date).includes('Barbell Overhead Press'),
+    visibleNames(date));
   const hamstringResolved = await resolveInjuryEpisode(hamstringId, {
     todayISO: date,
     sourceActor: 'athlete',

@@ -70,6 +70,7 @@ export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[])
   if (!Array.isArray(activeConstraints) || activeConstraints.length === 0) return [];
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const {
+    buildInjuryConstraint,
     buildFatigueConstraint,
     buildSorenessConstraint,
     buildScheduleConstraint,
@@ -78,7 +79,23 @@ export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[])
   const out: any[] = [];
   for (const c of activeConstraints) {
     if (!c || c.status === 'resolved') continue;
-    if (c.type === 'fatigue') {
+    if (c.type === 'injury') {
+      const fullPause = c.seriousSymptoms === true || c.adjustmentLevel === 'training_paused';
+      const region = fullPause
+        ? 'global'
+        : c.region ?? (c.bucket ? bucketToRegion(c.bucket) : null);
+      if (!region) continue;
+      out.push(buildInjuryConstraint({
+        id: c.id,
+        region,
+        severity: c.severity,
+        status: c.status,
+        startDate: c.startDate,
+        fullPause,
+        safeFocus: c.safeFocus,
+        advice: c.advice,
+      }));
+    } else if (c.type === 'fatigue') {
       out.push(buildFatigueConstraint({ id: c.id, severity: c.severity, startDate: c.startDate }));
     } else if (c.type === 'soreness' && c.bucket) {
       out.push(buildSorenessConstraint({
@@ -122,9 +139,10 @@ export function buildProgramTabProjectedWeek(args: {
       day.date,
     );
     const extraConstraints = buildExtraConstraintsForVisibleProgram(dayActiveConstraints);
+    const canonicalInjuryProjection = args.state.injuryProjectionOwner === 'accepted_episode';
     return projectVisibleDay({
       day,
-      activeInjury: args.state.activeInjury
+      activeInjury: !canonicalInjuryProjection && args.state.activeInjury
         ? { ...args.state.activeInjury, rules: args.state.activeInjury.rules ?? [] }
         : null,
       extraConstraints,
@@ -151,12 +169,13 @@ export function buildDayWorkoutProjectedDay(args: {
     args.date,
   );
   const extraConstraints = buildExtraConstraintsForVisibleProgram(dayActiveConstraints);
+  const canonicalInjuryProjection = args.state.injuryProjectionOwner === 'accepted_episode';
   const prefs =
     args.modalityPreferences ??
     useCoachPreferencesStore.getState().modalityPreferences;
   return projectVisibleDay({
     day: raw,
-    activeInjury: args.state.activeInjury
+    activeInjury: !canonicalInjuryProjection && args.state.activeInjury
       ? { ...args.state.activeInjury, rules: args.state.activeInjury.rules ?? [] }
       : null,
     extraConstraints,

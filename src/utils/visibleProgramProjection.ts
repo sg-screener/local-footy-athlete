@@ -147,9 +147,10 @@ function alreadyHasInjuryNote(workout: Workout): boolean {
 }
 
 /**
- * Build the active constraint set for a given day. The injury
- * constraint comes from `activeInjury`; additional constraints
- * (fatigue, soreness, schedule) are merged in via `extraConstraints`.
+ * Build the active constraint set for a given day. Legacy callers supply the
+ * single-slot `activeInjury` alias. Canonical episode callers supply every
+ * episode-derived injury constraint through `extraConstraints`, so multiple
+ * injuries compose once without making the compatibility alias authoritative.
  */
 function buildActiveConstraints(input: ProjectInput): Constraint[] {
   const constraints: Constraint[] = [];
