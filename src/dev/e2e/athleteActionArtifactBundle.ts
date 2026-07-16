@@ -11,6 +11,7 @@ export interface AthleteActionArtifactBundleInputV2 {
   screenshots: Record<string, string>;
   accessibilityHierarchies: Record<string, unknown>;
   trace: AthleteActionTraceRecordV2;
+  clockEvidence: unknown;
   acceptedFingerprints: unknown;
   persistedFingerprints: unknown;
   postReloadResult: unknown;
@@ -77,6 +78,7 @@ export function collectAthleteActionArtifactBundleV2(
     [`${root}/action-script.yaml`]: `${redactActionScriptYaml(input.actionScriptYaml).trim()}\n`,
     [`${root}/expected-outcome.json`]: json(input.expectedOutcome),
     [`${root}/athlete-action-trace-v2.json`]: json(input.trace),
+    [`${root}/clock-evidence.json`]: json(input.clockEvidence),
     [`${root}/accepted-fingerprints.json`]: json(input.acceptedFingerprints),
     [`${root}/persisted-fingerprints.json`]: json(input.persistedFingerprints),
     [`${root}/post-reload-result.json`]: json(input.postReloadResult),
@@ -117,6 +119,7 @@ export function assertAthleteActionArtifactBundleV2(
     'action-script.yaml',
     'expected-outcome.json',
     'athlete-action-trace-v2.json',
+    'clock-evidence.json',
     'accepted-fingerprints.json',
     'persisted-fingerprints.json',
     'post-reload-result.json',

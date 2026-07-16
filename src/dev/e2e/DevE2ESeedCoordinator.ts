@@ -56,12 +56,12 @@ export interface DevE2ECoordinatorDeps {
   readCheckpoint: () => Promise<DevE2ECheckpointRecord | null>;
   readPersistedFingerprints: () => Promise<DevE2EFingerprintMap>;
   clearCheckpoint: () => Promise<void>;
-  captureUnfinishedAthleteActionTraces?: () => AthleteActionTraceCheckpointV2;
-  resumeAthleteActionTraces?: (
+  captureUnfinishedAthleteActionTraces: () => AthleteActionTraceCheckpointV2;
+  resumeAthleteActionTraces: (
     checkpoint: AthleteActionTraceCheckpointV2 | null | undefined,
     evidence: AthleteActionReloadEvidenceV2,
   ) => string[];
-  captureReloadEvidence?: (
+  captureReloadEvidence: (
     memory: DevE2EFingerprintMap,
     persisted: DevE2EFingerprintMap,
   ) => AthleteActionReloadEvidenceV2;
@@ -76,6 +76,13 @@ function fingerprintMismatchReason(
     .filter((key) => expected[key] !== actual[key])
     .map((key) => `${key} expected=${expected[key] ?? '<missing>'} actual=${actual[key] ?? '<missing>'}`)
     .join('; ');
+}
+
+function traceIdsMatch(expected: readonly string[], actual: readonly string[]): boolean {
+  const sortedExpected = [...expected].sort();
+  const sortedActual = [...actual].sort();
+  return sortedExpected.length === sortedActual.length &&
+    sortedExpected.every((traceId, index) => traceId === sortedActual[index]);
 }
 
 /**
@@ -173,7 +180,7 @@ export class DevE2ESeedCoordinator {
           fingerprints,
           clockFingerprint: clockReceipt.semanticFingerprint,
           unfinishedAthleteActionTraces:
-            this.deps.captureUnfinishedAthleteActionTraces?.(),
+            this.deps.captureUnfinishedAthleteActionTraces(),
         });
         setDevE2ECheckpointReady(checkpointId);
         return true;
@@ -213,20 +220,21 @@ export class DevE2ESeedCoordinator {
             `Accepted state changed while reload persistence converged: ${fingerprintMismatchReason(current, stableCurrent)}`,
           );
         }
-        const evidence = this.deps.captureReloadEvidence?.(
+        const evidence = this.deps.captureReloadEvidence(
           stableCurrent,
           convergedPersisted,
-        ) ?? {
-          accepted: stableCurrent,
-          persisted: convergedPersisted,
-          visible: stableCurrent['program-store'] ?? null,
-          coachNotes: stableCurrent['coach-updates'] ?? null,
-          verified: true,
-        };
-        this.deps.resumeAthleteActionTraces?.(
+        );
+        const resumedTraceIds = this.deps.resumeAthleteActionTraces(
           checkpoint.unfinishedAthleteActionTraces,
           evidence,
         );
+        const checkpointTraceIds = checkpoint.unfinishedAthleteActionTraces.records
+          .map((record) => record.traceId);
+        if (!traceIdsMatch(checkpointTraceIds, resumedTraceIds)) {
+          throw new Error(
+            `Reload TraceV2 resume mismatch: checkpoint=${checkpointTraceIds.sort().join(',')} resumed=${[...resumedTraceIds].sort().join(',')}`,
+          );
+        }
         this.activeSeedId = checkpoint.seedId;
         setDevE2EReloadReady(checkpoint.seedId, checkpoint.checkpointId);
         return true;

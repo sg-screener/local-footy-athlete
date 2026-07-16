@@ -74,6 +74,12 @@ function main(): void {
     screenshots: { 'after.png': 'base64-screenshot-witness' },
     accessibilityHierarchies: { 'after.json': { id: 'result', label: 'redacted-by-runner' } },
     trace,
+    clockEvidence: {
+      seedId: 'lower-body-deletion',
+      timezone: 'Australia/Melbourne',
+      receiptFingerprint: 'clock-sha256',
+      checkpointClockFingerprint: 'clock-sha256',
+    },
     acceptedFingerprints: { program: 'sha256-accepted' },
     persistedFingerprints: { program: 'sha256-persisted' },
     postReloadResult: { matched: true },
@@ -103,8 +109,17 @@ function main(): void {
   });
   ok('collector emits the complete bounded artifact layout',
     Object.keys(bundle.files).some((path) => path.endsWith('/manifest.json')) &&
+      Object.keys(bundle.files).some((path) => path.endsWith('/clock-evidence.json')) &&
       Object.keys(bundle.files).some((path) => path.includes('/screenshots/')) &&
       Object.keys(bundle.files).some((path) => path.includes('/accessibility-hierarchy/')));
+  ok('bundle carries clock and TraceV2 fingerprint evidence',
+    Object.entries(bundle.files).some(([path, contents]) =>
+      path.endsWith('/clock-evidence.json') &&
+      contents.includes('"receiptFingerprint": "clock-sha256"') &&
+      contents.includes('"checkpointClockFingerprint": "clock-sha256"')) &&
+    Object.entries(bundle.files).some(([path, contents]) =>
+      path.endsWith('/athlete-action-trace-v2.json') &&
+      contents.includes('"fingerprintContract": "athlete-semantic-sha256-v2"')));
   const serialized = JSON.stringify(bundle.files);
   ok('default artifacts contain no raw Coach text or raw health details',
     !serialized.includes('SECRET_COACH_TEXT') &&

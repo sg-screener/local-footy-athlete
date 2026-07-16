@@ -17,7 +17,7 @@ export interface DevE2ECheckpointRecord {
   checkpointId: DevE2ESeedId;
   fingerprints: DevE2EFingerprintMap;
   clockFingerprint: string;
-  unfinishedAthleteActionTraces?: AthleteActionTraceCheckpointV2;
+  unfinishedAthleteActionTraces: AthleteActionTraceCheckpointV2;
 }
 
 function defaultDevE2EStorage(): DevE2EKeyValueStorage {
@@ -37,9 +37,11 @@ function parseFingerprintMap(value: unknown): DevE2EFingerprintMap | null {
 
 function parseAthleteActionTraceCheckpoint(
   value: unknown,
-): AthleteActionTraceCheckpointV2 | undefined {
-  if (value === undefined) return undefined;
+): AthleteActionTraceCheckpointV2 {
   const checkpoint = value as Partial<AthleteActionTraceCheckpointV2> | null;
+  const traceIds = Array.isArray(checkpoint?.records)
+    ? checkpoint.records.map((record) => record?.traceId)
+    : [];
   if (!checkpoint ||
     checkpoint.version !== 2 ||
     checkpoint.fingerprintContract !== 'athlete-semantic-sha256-v2' ||
@@ -49,7 +51,8 @@ function parseAthleteActionTraceCheckpoint(
       record.schemaVersion !== 2 ||
       record.fingerprintContract !== 'athlete-semantic-sha256-v2' ||
       typeof record.traceId !== 'string' ||
-      record.traceId.length === 0)) {
+      record.traceId.length === 0) ||
+    new Set(traceIds).size !== traceIds.length) {
     throw new Error('Dev E2E checkpoint TraceV2 receipt is corrupt.');
   }
   return checkpoint as AthleteActionTraceCheckpointV2;

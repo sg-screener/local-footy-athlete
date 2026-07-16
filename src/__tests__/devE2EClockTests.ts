@@ -19,9 +19,11 @@ import {
 } from '../dev/e2e/DevE2EClock';
 import {
   DEV_E2E_CHECKPOINT_STORAGE_KEY,
+  readDevE2ECheckpointRecord,
   type DevE2ECheckpointRecord,
   type DevE2EKeyValueStorage,
 } from '../dev/e2e/devE2ECheckpoint';
+import { AthleteActionTraceCoordinator } from '../dev/e2e/AthleteActionTraceCoordinator';
 import {
   DEV_E2E_CLOCK_STORAGE_KEY,
   restoreDevE2EClockBeforeHydration,
@@ -107,14 +109,27 @@ async function main(): Promise<void> {
     Object.keys(receipt).sort().join(',') ===
       'anchorInstant,createdAt,protocolVersion,seedId,semanticFingerprint,timezone');
   await writeDevE2EClockReceipt(receipt, storage);
+  const traceCoordinator = new AthleteActionTraceCoordinator(
+    () => true,
+    () => new Date('2026-07-13T12:00:00.000Z'),
+  );
+  const traceToken = traceCoordinator.startRoot({
+    source: 'tap',
+    actionType: 'move_session',
+    seedId: receipt.seedId,
+  });
   const checkpoint: DevE2ECheckpointRecord = {
     version: 2,
     seedId: receipt.seedId,
     checkpointId: receipt.seedId,
     fingerprints: { state: 'unchanged' },
     clockFingerprint: receipt.semanticFingerprint,
+    unfinishedAthleteActionTraces: traceCoordinator.exportCheckpoint(),
   };
   storage.values.set(DEV_E2E_CHECKPOINT_STORAGE_KEY, JSON.stringify(checkpoint));
+  const parsedCheckpoint = await readDevE2ECheckpointRecord(storage);
+  ok('checkpoint protocol v2 retains the unfinished TraceV2 identity',
+    parsedCheckpoint?.unfinishedAthleteActionTraces.records[0]?.traceId === traceToken.traceId);
 
   clearDevE2EClock();
   let reseedCalls = 0;

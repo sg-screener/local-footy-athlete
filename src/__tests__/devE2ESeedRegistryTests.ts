@@ -22,7 +22,7 @@ let fetchCalls = 0;
 const EXPECTED_WITNESS_KINDS: Record<string, string> = {
   'standard-in-season-week': 'program,profile_exact,calendar_mark',
   'stacked-team-training-upper-pull': 'program,profile_exact,workout',
-  'lower-body-deletion': 'program,profile_exact,workout',
+  'lower-body-deletion': 'program,profile_exact,workout,exercise_present',
   'one-set-strength': 'program,profile_exact,exercise_sets',
   'fixture-move': 'program,profile_exact,calendar_mark',
   'injury-case': 'program,profile_exact,active_injury',

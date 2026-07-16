@@ -16,6 +16,7 @@ import {
   createDevE2EClockReceiptForSeed,
   type DevE2EClockReceipt,
 } from '../dev/e2e/DevE2EClock';
+import { AthleteActionTraceCoordinator } from '../dev/e2e/AthleteActionTraceCoordinator';
 
 let passed = 0;
 const failures: string[] = [];
@@ -101,14 +102,26 @@ async function main() {
     'standard-in-season-week',
     '2026-07-13T00:00:00.000Z',
   );
+  const traceCoordinator = new AthleteActionTraceCoordinator(
+    () => true,
+    () => new Date('2026-07-13T12:00:00.000Z'),
+  );
+  const traceToken = traceCoordinator.startRoot({
+    source: 'tap',
+    actionType: 'move_session',
+    seedId: 'standard-in-season-week',
+  });
+  const traceCheckpoint = traceCoordinator.exportCheckpoint();
   const checkpoint = {
     version: 2 as const,
     seedId: 'standard-in-season-week' as const,
     checkpointId: 'standard-in-season-week' as const,
     fingerprints: { state: 'ready' },
     clockFingerprint: clockReceipt.semanticFingerprint,
+    unfinishedAthleteActionTraces: traceCheckpoint,
   };
   let writtenCheckpoint: typeof checkpoint | null = null;
+  let resumedTraceIds: string[] = [];
   const deps: DevE2ECoordinatorDeps = {
     waitForHydration: async () => { events.push('hydrated'); },
     clearClock: async () => {
@@ -172,6 +185,20 @@ async function main() {
     readCheckpoint: async () => checkpoint,
     readPersistedFingerprints: async () => checkpoint.fingerprints,
     clearCheckpoint: async () => events.push('checkpoint-clear'),
+    captureUnfinishedAthleteActionTraces: () => traceCheckpoint,
+    resumeAthleteActionTraces: (unfinished, evidence) => {
+      events.push('trace-resume');
+      ok('reload evidence is verified before TraceV2 resumes', evidence.verified);
+      resumedTraceIds = unfinished?.records.map((record) => record.traceId) ?? [];
+      return resumedTraceIds;
+    },
+    captureReloadEvidence: (memory, persisted) => ({
+      accepted: memory,
+      persisted,
+      visible: { program: memory.state },
+      coachNotes: { renderedCardIds: [] },
+      verified: true,
+    }),
   };
 
   const coordinator = new DevE2ESeedCoordinator(true, deps);
@@ -198,6 +225,9 @@ async function main() {
   ok('checkpoint marker uses checkpoint identity',
     getDevE2EStateSnapshot().phase === 'checkpoint_ready' &&
       getDevE2EStateSnapshot().checkpointId === 'fixture-move');
+  ok('checkpoint binds the clock and unfinished TraceV2 records together',
+    writtenCheckpoint?.clockFingerprint === clockReceipt.semanticFingerprint &&
+      writtenCheckpoint?.unfinishedAthleteActionTraces.records[0]?.traceId === traceToken.traceId);
 
   const eventCount = events.length;
   ok('unknown seed returns false', !(await coordinator.reset('not-allowlisted')));
@@ -241,7 +271,25 @@ async function main() {
   reloadHydration.resolve();
   ok('reload checkpoint validates', await validatingReload);
   ok('reload validation never rebuilds or reseeds', buildCalls === 0);
+  ok('reload resumes the exact checkpointed TraceV2 identity',
+    resumedTraceIds.length === 1 && resumedTraceIds[0] === traceToken.traceId);
   ok('reload marker uses preserved seed', getDevE2EStateSnapshot().phase === 'reload_ready');
+
+  const traceMismatch = new DevE2ESeedCoordinator(true, {
+    ...reloadDeps,
+    waitForHydration: async () => {},
+    resumeAthleteActionTraces: () => [],
+  });
+  let traceMismatchRejected = false;
+  try {
+    await traceMismatch.validateReloadCheckpoint();
+  } catch {
+    traceMismatchRejected = true;
+  }
+  ok('reload-ready refuses a missing same-trace resume', traceMismatchRejected);
+  ok('TraceV2 mismatch exposes checkpoint and resumed identities',
+    getDevE2EStateSnapshot().error ===
+      `Reload TraceV2 resume mismatch: checkpoint=${traceToken.traceId} resumed=`);
 
   const clockMismatch = new DevE2ESeedCoordinator(true, {
     ...reloadDeps,
