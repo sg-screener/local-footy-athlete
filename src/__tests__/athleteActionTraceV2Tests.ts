@@ -119,6 +119,41 @@ async function main(): Promise<void> {
   ok('Coach and tap equivalent actions normalize to one canonical action shape',
     JSON.stringify(familyCoordinator.getRecord(coachEquivalent.traceId)?.root.canonicalRequestedAction) ===
       JSON.stringify(familyCoordinator.getRecord(tapEquivalent.traceId)?.root.canonicalRequestedAction));
+  const firstScenarioRoot = familyCoordinator.startRoot({
+    source: 'tap',
+    actionType: 'move_session',
+    scenarioRunId: 'explorer-three-action',
+    scenarioStepId: 'move-one',
+    seedId: 'standard-in-season-week',
+    priorActionTraceId: null,
+  });
+  const secondScenarioRoot = familyCoordinator.startRoot({
+    source: 'tap',
+    actionType: 'move_session',
+    scenarioRunId: 'explorer-three-action',
+    scenarioStepId: 'move-two',
+    seedId: 'standard-in-season-week',
+    priorActionTraceId: firstScenarioRoot.traceId,
+  });
+  const secondScenarioRecord = familyCoordinator.getRecord(
+    secondScenarioRoot.traceId,
+  );
+  ok('scenario actions use distinct roots linked by priorActionTraceId',
+    firstScenarioRoot.traceId !== secondScenarioRoot.traceId &&
+      secondScenarioRecord?.root.scenarioStepId.status === 'captured' &&
+      secondScenarioRecord.root.scenarioStepId.value === 'move-two' &&
+      secondScenarioRecord.root.priorActionTraceId.status === 'captured' &&
+      secondScenarioRecord.root.priorActionTraceId.value ===
+        firstScenarioRoot.traceId);
+  const diagnosticsSource = readFileSync(
+    `${__dirname}/../utils/athleteActionDiagnostics.ts`,
+    'utf8',
+  );
+  ok('the outer TraceV2 front door claims and registers scenario eligibility',
+    diagnosticsSource.includes('claimRegisteredDevE2EScenarioAction({') &&
+      diagnosticsSource.includes(
+        'registerClaimedDevE2EScenarioActionTrace(scenarioClaim, token.traceId)',
+      ));
 
   const failedDurabilityCoordinator = new AthleteActionTraceCoordinator(
     () => true,

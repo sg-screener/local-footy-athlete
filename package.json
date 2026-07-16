@@ -113,6 +113,7 @@
     "test:dev-e2e-entry": "sucrase-node src/__tests__/devE2EEntryBoundaryTests.ts",
     "test:dev-e2e-metro-isolation": "sucrase-node src/__tests__/devE2EMetroIsolationTests.ts",
     "test:dev-e2e-reset-hydration": "sucrase-node src/__tests__/devE2ECoordinatorTests.ts",
+    "test:dev-e2e-scenario-session": "sucrase-node src/__tests__/devE2EScenarioSessionTests.ts",
     "test:dev-e2e-testids": "sucrase-node src/__tests__/devE2EStableTestIdTests.ts",
     "test:accessibility-contracts": "sucrase-node src/__tests__/accessibilityWrapperContractTests.ts",
     "test:onboarding-cold-start": "EXPO_PUBLIC_SUPABASE_URL=https://example.test EXPO_PUBLIC_SUPABASE_ANON_KEY=cold-start-test TZ=Australia/Melbourne sucrase-node src/__tests__/onboardingColdStartTests.ts",

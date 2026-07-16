@@ -39,7 +39,12 @@ ok('selected server and resolved bundle are observable',
   appDelegate.includes('[DevE2E Metro] Selected server:') &&
   appDelegate.includes('[DevE2E Metro] Resolved bundle:'));
 
-for (const file of ['reset-seed.yaml', 'checkpoint-and-reload.yaml']) {
+for (const file of [
+  'reset-seed.yaml',
+  'checkpoint-and-reload.yaml',
+  'reset-scenario.yaml',
+  'scenario-checkpoint-and-reload.yaml',
+]) {
   const flowPath = path.join(root, '.maestro', 'common', file);
   const flowSource = fs.readFileSync(flowPath, 'utf8');
   const documents: unknown[] = [];

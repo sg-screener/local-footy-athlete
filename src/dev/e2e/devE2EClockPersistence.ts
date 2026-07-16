@@ -14,6 +14,14 @@ import {
   type DevE2EKeyValueStorage,
 } from './devE2ECheckpoint';
 import type { DevE2ESeedId } from './devE2ESeedIds';
+import {
+  readDevE2EScenarioSessionRecord,
+  type DevE2EScenarioSessionRecord,
+} from './devE2EScenarioSession';
+import {
+  DEV_E2E_SCENARIO_REASON,
+  DevE2EScenarioProtocolError,
+} from './devE2EScenarioProtocol';
 
 export const DEV_E2E_CLOCK_STORAGE_KEY = 'dev-e2e-clock-receipt-v1';
 
@@ -76,29 +84,85 @@ export async function replacePersistedDevE2EClockForSeed(
 export async function restoreDevE2EClockBeforeHydration(args: {
   storage?: DevE2EKeyValueStorage;
   readCheckpoint?: () => Promise<DevE2ECheckpointRecord | null>;
+  readScenarioSession?: () => Promise<DevE2EScenarioSessionRecord | null>;
 } = {}): Promise<boolean> {
   if (!isDevE2EClockAvailable()) return false;
   // Never let a stale in-memory clock survive a corrupt or mismatched durable
   // receipt. Successful validation below is the only restoration path.
   clearDevE2EClock();
   const storage = args.storage ?? defaultDevE2EStorage();
-  const [receipt, checkpoint] = await Promise.all([
+  const [receipt, checkpoint, scenarioSession] = await Promise.all([
     readDevE2EClockReceipt(storage),
     args.readCheckpoint
       ? args.readCheckpoint()
       : readDevE2ECheckpointRecord(storage),
+    args.readScenarioSession
+      ? args.readScenarioSession()
+      : readDevE2EScenarioSessionRecord(storage),
   ]);
-  if (!receipt && !checkpoint) {
+  if (!receipt && !checkpoint && !scenarioSession) {
     clearDevE2EClock();
     return false;
   }
-  if (receipt && !checkpoint) {
+  if (receipt && !checkpoint && !scenarioSession) {
     throw new Error('DevE2EClock reload mismatch: clock receipt has no active checkpoint.');
+  }
+  if (!receipt && scenarioSession) {
+    throw new DevE2EScenarioProtocolError(
+      DEV_E2E_SCENARIO_REASON.CLOCK_MISMATCH,
+      'Dev E2E scenario session has no clock receipt.',
+    );
   }
   if (!receipt && checkpoint) {
     throw new Error('DevE2EClock reload mismatch: active checkpoint has no clock receipt.');
   }
-  const matchingReceipt = assertDevE2EClockMatchesCheckpoint(receipt, checkpoint!);
+  if (scenarioSession) {
+    if (receipt!.seedId !== scenarioSession.seedId ||
+      receipt!.semanticFingerprint !== scenarioSession.clockFingerprint) {
+      throw new DevE2EScenarioProtocolError(
+        DEV_E2E_SCENARIO_REASON.CLOCK_MISMATCH,
+        `Dev E2E scenario clock mismatch: session=${scenarioSession.clockFingerprint} receipt=${receipt!.semanticFingerprint}.`,
+      );
+    }
+    const checkpointTraceCorrelates = checkpoint && (
+      scenarioSession.activeActionTraceId
+        ? checkpoint.activeActionTraceId ===
+            scenarioSession.activeActionTraceId &&
+          checkpoint.priorActionTraceId === scenarioSession.priorActionTraceId
+        : checkpoint.activeActionTraceId ===
+            scenarioSession.priorActionTraceId
+    );
+    if (checkpoint && (!checkpoint.scenarioId ||
+      checkpoint.scenarioId !== scenarioSession.scenarioId ||
+      checkpoint.checkpointStepId !== scenarioSession.checkpointStepId ||
+      !checkpointTraceCorrelates)) {
+      throw new DevE2EScenarioProtocolError(
+        DEV_E2E_SCENARIO_REASON.SESSION_CHECKPOINT_MISMATCH,
+        'Dev E2E scenario session and checkpoint do not correlate.',
+      );
+    }
+  }
+  if (checkpoint?.scenarioId && !scenarioSession) {
+    throw new DevE2EScenarioProtocolError(
+      DEV_E2E_SCENARIO_REASON.SESSION_CHECKPOINT_MISMATCH,
+      'Dev E2E scenario checkpoint has no session.',
+    );
+  }
+  let matchingReceipt: DevE2EClockReceipt;
+  if (checkpoint && scenarioSession) {
+    try {
+      matchingReceipt = assertDevE2EClockMatchesCheckpoint(receipt, checkpoint);
+    } catch (error) {
+      throw new DevE2EScenarioProtocolError(
+        DEV_E2E_SCENARIO_REASON.CLOCK_MISMATCH,
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  } else {
+    matchingReceipt = checkpoint
+      ? assertDevE2EClockMatchesCheckpoint(receipt, checkpoint)
+      : receipt!;
+  }
   if (!setDevE2EClock(matchingReceipt)) {
     throw new Error('DevE2EClock is unavailable in this build.');
   }

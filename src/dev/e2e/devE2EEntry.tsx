@@ -7,10 +7,12 @@ import {
   devE2EMarkers,
   getDevE2EStateSnapshot,
   setDevE2EEntryReady,
+  setDevE2EScenarioError,
   setDevE2ESeedError,
   subscribeDevE2EState,
 } from './devE2EState';
 import { restoreDevE2EClockBeforeHydration } from './devE2EClockPersistence';
+import { devE2EScenarioReasonCode } from './devE2EScenarioProtocol';
 
 export interface DevE2ELinking {
   addEventListener: (
@@ -28,6 +30,18 @@ export interface InstalledDevE2EEntry {
 
 let activeInstallation: InstalledDevE2EEntry | null = null;
 
+function publishDevE2EEntryError(
+  error: unknown,
+  scenarioId: string | null = null,
+): void {
+  const reasonCode = devE2EScenarioReasonCode(error);
+  if (reasonCode) {
+    setDevE2EScenarioError(reasonCode, error, scenarioId);
+  } else {
+    setDevE2ESeedError(error);
+  }
+}
+
 /**
  * Must finish before RootNavigator or the coordinator imports persisted
  * stores. A mismatch fails closed and remains visible through the E2E marker.
@@ -37,7 +51,7 @@ export async function prepareDevE2EAppLaunch(): Promise<boolean> {
     await restoreDevE2EClockBeforeHydration();
     return true;
   } catch (error) {
-    setDevE2ESeedError(error);
+    publishDevE2EEntryError(error);
     return false;
   }
 }
@@ -68,11 +82,24 @@ export function installDevE2EEntry(args: {
     const route = parseDevE2EEntryRoute(url);
     if (!route) return false;
     try {
-      return await (route.kind === 'reset'
-        ? coordinator.reset(route.seedId)
-        : coordinator.checkpoint(route.checkpointId));
+      switch (route.kind) {
+        case 'reset':
+          return await coordinator.reset(route.seedId);
+        case 'checkpoint':
+          return await coordinator.checkpoint(route.checkpointId);
+        case 'scenario_reset':
+          return await coordinator.resetScenario(route.scenarioId);
+        case 'scenario_checkpoint':
+          return await coordinator.checkpointScenario(
+            route.scenarioId,
+            route.checkpointStepId,
+          );
+      }
     } catch (error) {
-      setDevE2ESeedError(error);
+      publishDevE2EEntryError(
+        error,
+        'scenarioId' in route ? route.scenarioId : null,
+      );
       return false;
     }
   };
@@ -80,10 +107,10 @@ export function installDevE2EEntry(args: {
   const subscription = linking.addEventListener('url', (event) => {
     void handleUrl(event.url);
   });
-  void linking.getInitialURL().then(handleUrl).catch(setDevE2ESeedError);
+  void linking.getInitialURL().then(handleUrl).catch(publishDevE2EEntryError);
   // Reload validation is deliberately separate from URL handling. A preserved
   // checkpoint is inspected after hydration without calling reset/buildSeed.
-  void coordinator.validateReloadCheckpoint().catch(setDevE2ESeedError);
+  void coordinator.validateReloadCheckpoint().catch(publishDevE2EEntryError);
 
   activeInstallation = {
     installed: true,

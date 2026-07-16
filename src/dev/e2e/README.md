@@ -22,6 +22,8 @@ The runtime entry accepts only these exact links:
 
 - `localfootyathlete://e2e/reset/<allowlisted-seed-id>`
 - `localfootyathlete://e2e/checkpoint/<allowlisted-seed-id>`
+- `localfootyathlete://e2e/scenario/reset/<scenario-id>`
+- `localfootyathlete://e2e/scenario/checkpoint/<scenario-id>/<step-id>`
 
 Reset waits for every relevant persisted store to hydrate, clears domain
 state through public APIs with ProgramStore last, clears the prior clock and
@@ -39,6 +41,32 @@ and the hydrated state has converged back to persistence. It never calls the
 seed builder, allowing Maestro to distinguish preservation from reseeding.
 Comparison failures expose the exact store plus expected and actual hashes via
 the `e2e-seed-error-reason` accessibility marker.
+
+## Scenario-session protocol V2
+
+A scenario manifest owns one existing seed and an ordered list of action step
+IDs. Reset installs that seed once and persists `dev-e2e-scenario-session-v2`
+with protocol version, scenario/seed/checkpoint identity, active and prior
+TraceV2 IDs, reload count, accepted and persisted semantic fingerprints, clock
+fingerprint, next-action eligibility, and a clock-derived deterministic
+`updatedAt`.
+
+The first step becomes eligible only after reset hydration and persistence
+converge. A checkpoint is accepted only for the manifest's expected step and
+only when the active TraceV2 root is present in the unfinished trace envelope.
+Non-final checkpoints persist the following step as `blocked/reload_required`.
+Cold launch restores the clock before store imports, then validates the
+scenario session, checkpoint, pre-hydration store fingerprints, hydrated
+state, persistence convergence, and TraceV2 resume. It increments reload count,
+moves the checkpointed trace from active to prior, reevaluates eligibility, and
+publishes the reload and next-action markers.
+
+The TraceV2 front door consumes the eligibility marker synchronously before a
+tap or Coach action root can begin. Each later action receives a new root whose
+`priorActionTraceId` links to the preceding action; no live span is treated as
+surviving process death. Final checkpoints and later reloads retain
+`complete/scenario_complete`. Duplicate, out-of-order, stale, corrupt, blocked,
+and correlation failures publish `e2e-scenario-error-<reasonCode>`.
 
 Named seeds and their extra witnesses:
 

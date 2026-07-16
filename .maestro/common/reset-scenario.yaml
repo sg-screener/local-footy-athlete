@@ -1,0 +1,23 @@
+appId: com.localfootyathlete.app
+name: Deterministic dev E2E scenario reset
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+    arguments:
+      e2eMetroUrl: "${E2E_METRO_URL}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-entry-ready"
+    timeout: 15000
+- openLink: "localfootyathlete://e2e/scenario/reset/${SCENARIO_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-scenario-ready-${SCENARIO_ID}"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "e2e-next-action-eligible-${SCENARIO_ID}-${NEXT_STEP_ID}"
+    timeout: 15000
+- assertNotVisible:
+    id: "e2e-seed-error"

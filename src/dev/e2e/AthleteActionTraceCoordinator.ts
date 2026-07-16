@@ -22,8 +22,10 @@ export interface AthleteActionTraceRootInputV2 {
   route?: string;
   campaignId?: string;
   scenarioRunId?: string;
+  scenarioStepId?: string;
   seedId?: string;
   buildId?: string;
+  priorActionTraceId?: string | null;
   canonicalRequestedAction?: unknown;
   sourceSurface?: string;
   controlId?: string;
@@ -115,8 +117,10 @@ export interface AthleteActionTraceRecordV2 {
   root: {
     campaignId: TraceField<string>;
     scenarioRunId: TraceField<string>;
+    scenarioStepId: TraceField<string>;
     seedId: TraceField<string>;
     buildId: TraceField<string>;
+    priorActionTraceId: TraceField<string | null>;
     canonicalRequestedAction: TraceField<unknown>;
     source: TraceField<'tap' | 'coach' | 'system'>;
     actionType: TraceField<string>;
@@ -295,8 +299,12 @@ function initialRecord(
     root: {
       campaignId: present(input.campaignId),
       scenarioRunId: present(input.scenarioRunId),
+      scenarioStepId: present(input.scenarioStepId),
       seedId: present(input.seedId),
       buildId: present(input.buildId ?? envBuildId()),
+      priorActionTraceId: input.priorActionTraceId === undefined
+        ? notApplicableTraceField('action is not part of a linked scenario session')
+        : capturedTraceField(input.priorActionTraceId),
       canonicalRequestedAction: present(input.canonicalRequestedAction ?? {
         type: input.actionType,
         sourceDate: input.sourceDate ?? null,
@@ -391,6 +399,9 @@ export class AthleteActionTraceCoordinator {
       actionType: input.actionType,
       sourceDate: input.sourceDate ?? null,
       targetDate: input.targetDate ?? null,
+      scenarioRunId: input.scenarioRunId ?? null,
+      scenarioStepId: input.scenarioStepId ?? null,
+      priorActionTraceId: input.priorActionTraceId ?? null,
     }).slice(-24)}`;
     const token = { traceId, spanId: `span-${this.spanCounter}` };
     if (this.enabled()) this.records.set(traceId, initialRecord(traceId, token.spanId, input, timestamp));

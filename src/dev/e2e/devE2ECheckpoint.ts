@@ -1,5 +1,6 @@
 import { isDevE2ESeedId, type DevE2ESeedId } from './devE2ESeedIds';
 import type { AthleteActionTraceCheckpointV2 } from './AthleteActionTraceCoordinator';
+import { isDevE2EScenarioProtocolId } from './devE2EScenarioProtocol';
 
 export type DevE2EFingerprintMap = Record<string, string>;
 
@@ -18,6 +19,10 @@ export interface DevE2ECheckpointRecord {
   fingerprints: DevE2EFingerprintMap;
   clockFingerprint: string;
   unfinishedAthleteActionTraces: AthleteActionTraceCheckpointV2;
+  scenarioId?: string;
+  checkpointStepId?: string;
+  activeActionTraceId?: string;
+  priorActionTraceId?: string | null;
 }
 
 function defaultDevE2EStorage(): DevE2EKeyValueStorage {
@@ -61,6 +66,14 @@ function parseAthleteActionTraceCheckpoint(
 export function parseDevE2ECheckpointRecord(value: unknown): DevE2ECheckpointRecord {
   const parsed = value as Partial<DevE2ECheckpointRecord> | null;
   const fingerprints = parseFingerprintMap(parsed?.fingerprints);
+  const scenarioFieldCount = parsed
+    ? [
+        parsed.scenarioId,
+        parsed.checkpointStepId,
+        parsed.activeActionTraceId,
+        parsed.priorActionTraceId,
+      ].filter((field) => field !== undefined).length
+    : 0;
   if (!parsed ||
     parsed.version !== 2 ||
     typeof parsed.seedId !== 'string' ||
@@ -69,19 +82,42 @@ export function parseDevE2ECheckpointRecord(value: unknown): DevE2ECheckpointRec
     !isDevE2ESeedId(parsed.checkpointId) ||
     !fingerprints ||
     typeof parsed.clockFingerprint !== 'string' ||
-    parsed.clockFingerprint.length === 0) {
+    parsed.clockFingerprint.length === 0 ||
+    (scenarioFieldCount !== 0 && scenarioFieldCount !== 4) ||
+    (scenarioFieldCount === 4 && (
+      !isDevE2EScenarioProtocolId(parsed.scenarioId) ||
+      !isDevE2EScenarioProtocolId(parsed.checkpointStepId) ||
+      typeof parsed.activeActionTraceId !== 'string' ||
+      parsed.activeActionTraceId.length === 0 ||
+      (parsed.priorActionTraceId !== null &&
+        (typeof parsed.priorActionTraceId !== 'string' ||
+          parsed.priorActionTraceId.length === 0))
+    ))) {
     throw new Error('Dev E2E checkpoint receipt is corrupt.');
   }
-  return {
+  const unfinishedAthleteActionTraces = parseAthleteActionTraceCheckpoint(
+    parsed.unfinishedAthleteActionTraces,
+  );
+  if (scenarioFieldCount === 4 &&
+    !unfinishedAthleteActionTraces.records.some((record) =>
+      record.traceId === parsed.activeActionTraceId)) {
+    throw new Error('Dev E2E checkpoint receipt is corrupt.');
+  }
+  const record: DevE2ECheckpointRecord = {
     version: 2,
     seedId: parsed.seedId,
     checkpointId: parsed.checkpointId,
     fingerprints,
     clockFingerprint: parsed.clockFingerprint,
-    unfinishedAthleteActionTraces: parseAthleteActionTraceCheckpoint(
-      parsed.unfinishedAthleteActionTraces,
-    ),
+    unfinishedAthleteActionTraces,
   };
+  if (scenarioFieldCount === 4) {
+    record.scenarioId = parsed.scenarioId!;
+    record.checkpointStepId = parsed.checkpointStepId!;
+    record.activeActionTraceId = parsed.activeActionTraceId!;
+    record.priorActionTraceId = parsed.priorActionTraceId!;
+  }
+  return record;
 }
 
 export async function writeDevE2ECheckpointRecord(

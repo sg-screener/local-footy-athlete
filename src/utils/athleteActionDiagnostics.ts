@@ -8,6 +8,10 @@ import {
   type AthleteActionTraceTokenV2,
   type AthleteSemanticSnapshotV2,
 } from '../dev/e2e/AthleteActionTraceCoordinator';
+import {
+  claimRegisteredDevE2EScenarioAction,
+  registerClaimedDevE2EScenarioActionTrace,
+} from './devE2EScenarioActionBridge';
 
 export type AthleteActionSource = 'tap' | 'coach' | 'system';
 
@@ -72,6 +76,10 @@ export interface AthleteActionTraceContext extends AthleteActionTraceTokenV2 {
   actionType: AthleteActionType;
   startedAt: string;
   route?: string;
+  scenarioRunId?: string;
+  scenarioStepId?: string;
+  seedId?: string;
+  priorActionTraceId?: string | null;
   currentWeekId?: string;
   sourceDate?: string;
   targetDate?: string;
@@ -191,10 +199,28 @@ export function beginAthleteActionTrace(
     const span = athleteActionTraceCoordinator.startSpan(inherited, input.route ?? input.actionType);
     return { ...inherited, spanId: span.spanId };
   }
+  let scenarioClaim: {
+    scenarioId: string;
+    seedId: string;
+    scenarioStepId: string;
+    priorActionTraceId: string | null;
+  } | null = null;
+  if (!productionBuild()) {
+    scenarioClaim = claimRegisteredDevE2EScenarioAction({
+      source: input.source,
+      actionType: input.actionType,
+      controlId: input.controlId,
+      sourceSurface: input.route,
+    });
+  }
   const token = athleteActionTraceCoordinator.startRoot({
     source: input.source,
     actionType: input.actionType,
     route: input.route,
+    scenarioRunId: scenarioClaim?.scenarioId,
+    scenarioStepId: scenarioClaim?.scenarioStepId,
+    seedId: scenarioClaim?.seedId,
+    priorActionTraceId: scenarioClaim?.priorActionTraceId,
     canonicalRequestedAction: {
       actionType: input.actionType,
       scope: input.scope ?? null,
@@ -213,9 +239,18 @@ export function beginAthleteActionTrace(
       injuryEpisodeId: input.injuryEpisodeId ?? null,
     },
   });
+  if (scenarioClaim) {
+    registerClaimedDevE2EScenarioActionTrace(scenarioClaim, token.traceId);
+  }
   const trace: AthleteActionTraceContext = {
     ...input,
     ...token,
+    ...(scenarioClaim ? {
+      scenarioRunId: scenarioClaim.scenarioId,
+      scenarioStepId: scenarioClaim.scenarioStepId,
+      seedId: scenarioClaim.seedId,
+      priorActionTraceId: scenarioClaim.priorActionTraceId,
+    } : {}),
     startedAt: now().toISOString(),
   };
   if (

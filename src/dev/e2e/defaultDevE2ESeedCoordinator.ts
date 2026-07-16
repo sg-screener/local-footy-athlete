@@ -23,12 +23,15 @@ import {
 import {
   captureDevE2EMemoryFingerprints,
   clearDevE2ECheckpoint,
+  clearDevE2EScenarioSession,
   fingerprintMapsMatch,
   readDevE2ECheckpoint,
+  readDevE2EScenarioSession,
   readDevE2EPersistedFingerprints,
   waitForDevE2EHydration,
   waitForDevE2EPersistence,
   writeDevE2ECheckpoint,
+  writeDevE2EScenarioSession,
 } from './devE2EPersistence';
 import {
   DevE2ESeedCoordinator,
@@ -53,6 +56,13 @@ import {
   replacePersistedDevE2EClockForSeed,
 } from './devE2EClockPersistence';
 import { todayISOLocal } from '../../utils/appDate';
+import { resolveDevE2EScenarioManifest } from './devE2EScenarioManifestRegistry';
+import { defaultDevE2EScenarioEligibility } from './devE2EScenarioProtocol';
+import {
+  activateDevE2EScenarioRuntime,
+  clearDevE2EScenarioRuntime,
+  readActiveDevE2EScenarioSession,
+} from './devE2EScenarioRuntime';
 
 function clearLocalStateThroughPublicAPIs(): void {
   clearAthleteActionDiagnosticEvents();
@@ -263,6 +273,14 @@ const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   readCheckpoint: readDevE2ECheckpoint,
   readPersistedFingerprints: readDevE2EPersistedFingerprints,
   clearCheckpoint: clearDevE2ECheckpoint,
+  writeScenarioSession: writeDevE2EScenarioSession,
+  readScenarioSession: readDevE2EScenarioSession,
+  clearScenarioSession: clearDevE2EScenarioSession,
+  resolveScenarioManifest: resolveDevE2EScenarioManifest,
+  evaluateScenarioEligibility: defaultDevE2EScenarioEligibility,
+  activateScenarioSession: activateDevE2EScenarioRuntime,
+  readActiveScenarioSession: readActiveDevE2EScenarioSession,
+  clearScenarioRuntime: clearDevE2EScenarioRuntime,
   captureUnfinishedAthleteActionTraces: exportAthleteActionTraceCheckpointV2,
   resumeAthleteActionTraces: resumeAthleteActionTraceCheckpointV2,
   captureReloadEvidence,

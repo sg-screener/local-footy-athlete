@@ -1,0 +1,26 @@
+appId: com.localfootyathlete.app
+name: Persisted scenario checkpoint and reload verification
+---
+- openLink: "localfootyathlete://e2e/scenario/checkpoint/${SCENARIO_ID}/${CHECKPOINT_STEP_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-checkpoint-ready-${SCENARIO_ID}-${CHECKPOINT_STEP_ID}"
+    timeout: 15000
+- stopApp
+- launchApp:
+    clearState: false
+    stopApp: true
+    arguments:
+      e2eMetroUrl: "${E2E_METRO_URL}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-reload-ready-${SCENARIO_ID}-${CHECKPOINT_STEP_ID}-${RELOAD_COUNT}"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "e2e-next-action-eligible-${SCENARIO_ID}-${NEXT_STEP_ID}"
+    timeout: 15000
+- assertNotVisible:
+    id: "e2e-seed-loading"
+- assertNotVisible:
+    id: "e2e-seed-error"

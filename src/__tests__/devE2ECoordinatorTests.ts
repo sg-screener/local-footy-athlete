@@ -185,6 +185,18 @@ async function main() {
     readCheckpoint: async () => checkpoint,
     readPersistedFingerprints: async () => checkpoint.fingerprints,
     clearCheckpoint: async () => events.push('checkpoint-clear'),
+    writeScenarioSession: async () => {},
+    readScenarioSession: async () => null,
+    clearScenarioSession: async () => events.push('scenario-session-clear'),
+    resolveScenarioManifest: () => null,
+    evaluateScenarioEligibility: ({ nextStep }) => ({
+      status: 'eligible',
+      reasonCode: 'eligible',
+      witnessIds: [...nextStep.eligibilityWitnessIds],
+    }),
+    activateScenarioSession: () => true,
+    readActiveScenarioSession: () => null,
+    clearScenarioRuntime: () => events.push('scenario-runtime-clear'),
     captureUnfinishedAthleteActionTraces: () => traceCheckpoint,
     resumeAthleteActionTraces: (unfinished, evidence) => {
       events.push('trace-resume');
@@ -235,7 +247,14 @@ async function main() {
 
   const release = new DevE2ESeedCoordinator(false, deps);
   ok('release reset is refused', !(await release.reset('standard-in-season-week')));
+  ok('release scenario reset is refused',
+    !(await release.resetScenario('standard-in-season-week')));
   ok('release checkpoint is refused', !(await release.checkpoint('standard-in-season-week')));
+  ok('release scenario checkpoint is refused',
+    !(await release.checkpointScenario(
+      'standard-in-season-week',
+      'standard-in-season-week',
+    )));
   ok('release validation is refused', !(await release.validateReloadCheckpoint()));
   ok('release mode does not call dependencies', events.length === eventCount);
 

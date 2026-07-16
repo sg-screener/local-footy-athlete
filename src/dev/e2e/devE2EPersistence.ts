@@ -18,12 +18,22 @@ import {
   type DevE2ECheckpointRecord,
   type DevE2EFingerprintMap,
 } from './devE2ECheckpoint';
+import {
+  clearDevE2EScenarioSessionRecord,
+  readDevE2EScenarioSessionRecord,
+  writeDevE2EScenarioSessionRecord,
+  type DevE2EScenarioSessionRecord,
+} from './devE2EScenarioSession';
 
 export {
   DEV_E2E_CHECKPOINT_STORAGE_KEY,
   type DevE2ECheckpointRecord,
   type DevE2EFingerprintMap,
 } from './devE2ECheckpoint';
+export {
+  DEV_E2E_SCENARIO_SESSION_STORAGE_KEY,
+  type DevE2EScenarioSessionRecord,
+} from './devE2EScenarioSession';
 
 type PersistedStore = {
   getState: () => any;
@@ -214,4 +224,20 @@ export async function clearDevE2ECheckpoint(): Promise<void> {
     clearDevE2ECheckpointRecord(),
     AsyncStorage.removeItem(LEGACY_DEV_E2E_CHECKPOINT_STORAGE_KEY),
   ]);
+}
+
+export async function writeDevE2EScenarioSession(
+  record: DevE2EScenarioSessionRecord,
+): Promise<void> {
+  await writeDevE2EScenarioSessionRecord(record);
+}
+
+export async function readDevE2EScenarioSession(): Promise<
+  DevE2EScenarioSessionRecord | null
+> {
+  return readDevE2EScenarioSessionRecord();
+}
+
+export async function clearDevE2EScenarioSession(): Promise<void> {
+  await clearDevE2EScenarioSessionRecord();
 }

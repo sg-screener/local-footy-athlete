@@ -20,6 +20,14 @@ for (const seedId of DEV_E2E_SEED_IDS) {
     parseDevE2EEntryRoute(`localfootyathlete://e2e/reset/${seedId}`)?.kind === 'reset');
   ok(`checkpoint route accepts ${seedId}`,
     parseDevE2EEntryRoute(`localfootyathlete://e2e/checkpoint/${seedId}`)?.kind === 'checkpoint');
+  ok(`scenario reset route accepts ${seedId}`,
+    parseDevE2EEntryRoute(
+      `localfootyathlete://e2e/scenario/reset/${seedId}`,
+    )?.kind === 'scenario_reset');
+  ok(`scenario checkpoint route accepts ${seedId}`,
+    parseDevE2EEntryRoute(
+      `localfootyathlete://e2e/scenario/checkpoint/${seedId}/first-action`,
+    )?.kind === 'scenario_checkpoint');
 }
 
 for (const invalid of [
@@ -29,6 +37,9 @@ for (const invalid of [
   'localfootyathlete://e2e/reset/standard-in-season-week?override=1',
   ' localfootyathlete://e2e/reset/standard-in-season-week',
   'https://e2e/reset/standard-in-season-week',
+  'localfootyathlete://e2e/scenario/reset/standard-in-season-week/',
+  'localfootyathlete://e2e/scenario/checkpoint/standard-in-season-week',
+  'localfootyathlete://e2e/scenario/checkpoint/standard-in-season-week/first_action',
 ]) {
   ok(`exact parser rejects ${invalid}`, parseDevE2EEntryRoute(invalid) === null);
 }
@@ -45,6 +56,10 @@ const clockSource = fs.readFileSync(
 );
 const clockPersistenceSource = fs.readFileSync(
   path.join(root, 'src', 'dev', 'e2e', 'devE2EClockPersistence.ts'),
+  'utf8',
+);
+const scenarioRuntimeSource = fs.readFileSync(
+  path.join(root, 'src', 'dev', 'e2e', 'devE2EScenarioRuntime.ts'),
   'utf8',
 );
 const appGuard = appSource.indexOf('if (__DEV__)');
@@ -66,9 +81,17 @@ ok('clock has no public env or diagnostics override',
     `${clockSource}\n${clockPersistenceSource}`,
   ));
 ok('release refusal returns installed false', /if \(!isDev\)[\s\S]*installed: false/.test(entrySource));
+ok('release scenario runtime cannot activate',
+  /if \(!isAvailable\(\)\) \{[\s\S]{0,120}active = null;[\s\S]{0,120}return false;/.test(
+    scenarioRuntimeSource,
+  ));
 ok('dev E2E errors expose their exact reason to accessibility',
   entrySource.includes('testID="e2e-seed-error-reason"') &&
     entrySource.includes('accessibilityLabel={errorReason}'));
+ok('scenario reload errors retain their exact scenario reason marker',
+  entrySource.includes(
+    'coordinator.validateReloadCheckpoint().catch(publishDevE2EEntryError)',
+  ));
 
 function sourceFiles(directory: string): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

@@ -25,6 +25,11 @@ import {
 } from '../dev/e2e/devE2ECheckpoint';
 import { AthleteActionTraceCoordinator } from '../dev/e2e/AthleteActionTraceCoordinator';
 import {
+  devE2EAcceptedSemanticFingerprint,
+  writeDevE2EScenarioSessionRecord,
+  type DevE2EScenarioSessionRecord,
+} from '../dev/e2e/devE2EScenarioSession';
+import {
   DEV_E2E_CLOCK_STORAGE_KEY,
   restoreDevE2EClockBeforeHydration,
   writeDevE2EClockReceipt,
@@ -136,6 +141,45 @@ async function main(): Promise<void> {
   const restored = await restoreDevE2EClockBeforeHydration({ storage });
   ok('cold reload restores the clock receipt', restored && todayISOLocal() === '2026-07-13');
   ok('cold reload restoration never rebuilds or reseeds', reseedCalls === 0);
+
+  const scenarioStorage = new MemoryStorage();
+  await writeDevE2EClockReceipt(receipt, scenarioStorage);
+  const scenarioCheckpoint: DevE2ECheckpointRecord = {
+    ...checkpoint,
+    scenarioId: 'standard-in-season-week',
+    checkpointStepId: 'standard-in-season-week',
+    activeActionTraceId: traceToken.traceId,
+    priorActionTraceId: null,
+  };
+  scenarioStorage.values.set(
+    DEV_E2E_CHECKPOINT_STORAGE_KEY,
+    JSON.stringify(scenarioCheckpoint),
+  );
+  const scenarioSession: DevE2EScenarioSessionRecord = {
+    protocolVersion: 2,
+    scenarioId: 'standard-in-season-week',
+    seedId: receipt.seedId,
+    checkpointStepId: 'standard-in-season-week',
+    activeActionTraceId: traceToken.traceId,
+    priorActionTraceId: null,
+    reloadCount: 0,
+    currentAcceptedSemanticFingerprint:
+      devE2EAcceptedSemanticFingerprint(checkpoint.fingerprints),
+    persistedStoreFingerprints: checkpoint.fingerprints,
+    clockFingerprint: receipt.semanticFingerprint,
+    nextActionEligibility: {
+      nextStepId: null,
+      status: 'complete',
+      reasonCode: 'scenario_complete',
+      witnessIds: ['checkpoint:standard-in-season-week'],
+    },
+    updatedAt: '2026-07-13T02:00:00.001Z',
+  };
+  await writeDevE2EScenarioSessionRecord(scenarioSession, scenarioStorage);
+  clearDevE2EClock();
+  ok('cold launch restores a clock correlated to scenario session and checkpoint',
+    await restoreDevE2EClockBeforeHydration({ storage: scenarioStorage }) &&
+      getDevE2EClockReceipt()?.semanticFingerprint === receipt.semanticFingerprint);
 
   const currentProgram = {
     id: 'clock-week-program',

@@ -3,6 +3,7 @@ import {
   buildDevE2ESeed,
   validateDevE2EWitnesses,
 } from '../dev/e2e/devE2ESeedRegistry';
+import { DEV_E2E_SCENARIO_MANIFESTS } from '../dev/e2e/devE2EScenarioManifestRegistry';
 
 let passed = 0;
 const failures: string[] = [];
@@ -99,6 +100,12 @@ try {
         EXPECTED_WITNESS_KINDS[seedId]);
   }
   ok('no named seed calls fetch', fetchCalls === 0, `fetchCalls=${fetchCalls}`);
+  ok('scenario protocol adds no seed families',
+    DEV_E2E_SCENARIO_MANIFESTS.length === DEV_E2E_SEED_IDS.length &&
+      DEV_E2E_SCENARIO_MANIFESTS.every((manifest) =>
+        DEV_E2E_SEED_IDS.includes(manifest.seedId) &&
+        manifest.steps.length === 1 &&
+        manifest.steps[0].stepId === manifest.seedId));
 } finally {
   globalThis.fetch = originalFetch;
 }
