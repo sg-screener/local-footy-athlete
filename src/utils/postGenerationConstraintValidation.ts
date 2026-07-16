@@ -17,6 +17,7 @@ import type {
 import type {
   ActiveConstraint,
   ActiveInjuryConstraint,
+  ActiveScheduleConstraint,
 } from '../store/coachUpdatesStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useProfileStore } from '../store/profileStore';
@@ -150,6 +151,46 @@ function isRecoveryWorkout(workout: Workout): boolean {
     /\brecovery\b/i.test(workout.name ?? '');
 }
 
+const DAY_NAMES: import('../types/domain').DayOfWeek[] = [
+  'Sunday',
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+];
+
+function scheduleBlocksDate(
+  constraint: ActiveScheduleConstraint,
+  date: string,
+): boolean {
+  if (constraint.scheduleKind === 'time_cap') return false;
+  if (constraint.unavailableDates?.includes(date)) return true;
+  return constraint.unavailableWeekdays?.includes(
+    DAY_NAMES[new Date(`${date}T12:00:00`).getDay()],
+  ) ?? false;
+}
+
+function scheduleTimeCap(
+  constraints: readonly ActiveConstraint[],
+  date: string,
+): number | null {
+  const day = DAY_NAMES[new Date(`${date}T12:00:00`).getDay()];
+  const caps = constraints
+    .filter((constraint): constraint is ActiveScheduleConstraint =>
+      constraint.type === 'schedule' &&
+      constraint.scheduleKind === 'time_cap' &&
+      typeof constraint.maxSessionMinutes === 'number')
+    .filter((constraint) =>
+      constraint.timeCapAllSessions === true ||
+      constraint.timeCapDates?.includes(date) ||
+      constraint.timeCapWeekdays?.includes(day))
+    .map((constraint) => constraint.maxSessionMinutes!)
+    .filter((minutes) => Number.isFinite(minutes) && minutes >= 10);
+  return caps.length > 0 ? Math.min(...caps) : null;
+}
+
 function isGlobalHardStop(
   constraints: readonly ActiveConstraint[],
   date: string,
@@ -167,7 +208,11 @@ function isGlobalHardStop(
 function engineConstraintsFor(
   constraints: readonly ActiveConstraint[],
 ): Constraint[] {
-  return buildConstraintPlans([...constraints]).map((plan) => plan.constraint);
+  return buildConstraintPlans([...constraints].filter((constraint) =>
+    constraint.type !== 'schedule' ||
+    constraint.scheduleKind === undefined ||
+    constraint.scheduleKind === 'busy_week' ||
+    constraint.scheduleKind === 'max_sessions')).map((plan) => plan.constraint);
 }
 
 /**
@@ -236,12 +281,14 @@ export function validateWorkoutAgainstActiveConstraints(
     };
   }
   const powerAlignment = alignPowerBlockToFinalWorkoutContent(canonical.workout);
-  const alignedWorkout = powerAlignment.workout;
+  let alignedWorkout = powerAlignment.workout;
+  let scheduleDurationChanged = false;
   const alignmentRemovedComponents: ActiveConstraintValidationResult['removedComponents'] =
     powerAlignment.action === 'removed' ? ['power'] : [];
   const alignedResult = (): ActiveConstraintValidationResult => ({
     ...unchanged(alignedWorkout),
-    changed: canonical.changed || powerAlignment.action !== 'unchanged',
+    changed: canonical.changed || powerAlignment.action !== 'unchanged' ||
+      scheduleDurationChanged,
     removedExerciseNames: canonicalRemovedNames,
     removedComponents: Array.from(new Set([
       ...(canonicalRemovedPower ? ['power' as const] : []),
@@ -258,6 +305,36 @@ export function validateWorkoutAgainstActiveConstraints(
       };
     }
     return alignedResult();
+  }
+
+  const blockingSchedule = active.find((constraint): constraint is ActiveScheduleConstraint =>
+    constraint.type === 'schedule' && scheduleBlocksDate(constraint, input.date));
+  if (blockingSchedule) {
+    return {
+      workout: null,
+      changed: true,
+      collapsedToRest: true,
+      preservedAnchor: false,
+      activeConstraintIds: active.map((constraint) => constraint.id),
+      removedExerciseNames: (alignedWorkout.exercises ?? [])
+        .map((row) => row.exercise?.name ?? '')
+        .filter(Boolean),
+      removedComponents: Array.from(new Set([
+        ...(alignedWorkout.conditioningBlock ? ['conditioning' as const] : []),
+        ...(alignedWorkout.speedBlock ? ['speed' as const] : []),
+        ...(alignedWorkout.powerBlock ? ['power' as const] : []),
+        ...(alignedWorkout.recoveryAddons?.length ? ['recovery_addon' as const] : []),
+      ])),
+    };
+  }
+
+  const timeCap = scheduleTimeCap(active, input.date);
+  if (timeCap !== null && alignedWorkout.durationMinutes > timeCap) {
+    alignedWorkout = {
+      ...alignedWorkout,
+      durationMinutes: timeCap,
+    };
+    scheduleDurationChanged = true;
   }
 
   if (isGlobalHardStop(active, input.date) && !isRecoveryWorkout(alignedWorkout)) {
@@ -990,7 +1067,7 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
   const gameDates = datedWorkouts
     .filter(({ workout }) => classifyVisibleSession(workout).anchors.game)
     .map(({ date }) => date);
-  const workouts = args.microcycle.workouts.map((workout) => {
+  let workouts = args.microcycle.workouts.map((workout) => {
     const date = dateForWorkout(args.microcycle, workout);
     const result = validateWorkoutAgainstActiveConstraints({
       workout,
@@ -1022,6 +1099,41 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
     if (result.changed) changed = true;
     return result.workout ?? collapseWorkoutToRest(workout);
   });
+  const sessionCaps = args.activeConstraints
+    .filter((constraint): constraint is ActiveScheduleConstraint =>
+      constraint.type === 'schedule' &&
+      typeof constraint.maxSessionsThisWeek === 'number' &&
+      constraint.status !== 'resolved' &&
+      (!constraint.weekStartISO || constraint.weekStartISO === weekStart))
+    .map((constraint) => Math.max(0, Math.trunc(constraint.maxSessionsThisWeek!)));
+  if (sessionCaps.length > 0) {
+    const cap = Math.min(...sessionCaps);
+    const trainable = workouts
+      .map((workout, index) => ({ workout, index, classification: classifyVisibleSession(workout) }))
+      .filter(({ workout }) => hasMeaningfulWorkoutContent(workout));
+    const protectedCount = trainable.filter(({ classification }) =>
+      classification.anchors.game || classification.anchors.teamTraining).length;
+    if (protectedCount > cap) throw new Error('temporary_schedule_max_sessions_impossible');
+    const removable = trainable
+      .filter(({ classification }) =>
+        !classification.anchors.game && !classification.anchors.teamTraining)
+      .sort((left, right) => {
+        const tier = (workout: Workout): number =>
+          workout.sessionTier === 'optional' || workout.sessionTier === 'recovery' ? 0 :
+            workout.sessionTier === 'core' ? 2 : 1;
+        return tier(left.workout) - tier(right.workout) ||
+          right.workout.dayOfWeek - left.workout.dayOfWeek ||
+          left.index - right.index;
+      });
+    const removeCount = Math.max(0, trainable.length - cap);
+    const removeIndexes = new Set(removable.slice(0, removeCount).map(({ index }) => index));
+    if (removeIndexes.size < removeCount) throw new Error('temporary_schedule_max_sessions_impossible');
+    if (removeIndexes.size > 0) {
+      changed = true;
+      workouts = workouts.map((workout, index) =>
+        removeIndexes.has(index) ? collapseWorkoutToRest(workout) : workout);
+    }
+  }
   let exposureContract = args.microcycle.exposureContract
     ? reResolveContractForActiveConstraints({
         contract: args.microcycle.exposureContract,
@@ -1068,6 +1180,27 @@ export function validateMicrocycleAgainstActiveConstraints(args: {
     });
     safetyWorkouts = accepted.canonicalWorkouts;
     exposureContractV2 = accepted.contract;
+  }
+  if (sessionCaps.length > 0) {
+    const cap = Math.min(...sessionCaps);
+    const visibleSessions = safetyWorkouts.filter((workout) =>
+      hasMeaningfulWorkoutContent(workout)).length;
+    if (visibleSessions > cap) {
+      throw new Error('temporary_schedule_max_sessions_not_preserved');
+    }
+  }
+  for (const workout of safetyWorkouts) {
+    const date = dateForWorkout(args.microcycle, workout);
+    const live = liveConstraintsForDate(args.activeConstraints, date);
+    if (live.some((constraint) =>
+      constraint.type === 'schedule' && scheduleBlocksDate(constraint, date)) &&
+      hasMeaningfulWorkoutContent(workout)) {
+      throw new Error('temporary_schedule_unavailable_date_not_preserved');
+    }
+    const cap = scheduleTimeCap(live, date);
+    if (cap !== null && workout.durationMinutes > cap) {
+      throw new Error('temporary_time_cap_not_preserved');
+    }
   }
   const contractChanged = (
     exposureContract !== args.microcycle.exposureContract &&

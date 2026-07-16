@@ -17,13 +17,14 @@ import { useProfileStore } from '../../store/profileStore';
 import { OnboardingInjury } from '../../types/domain';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
+import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
+import { todayISOLocal } from '../../utils/appDate';
 
 const SEVERITY_OPTIONS = ['Mild', 'Moderate', 'Severe'];
 
 export const InjuryManagementScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const onboardingData = useProfileStore((state) => state.onboardingData);
-  const updateOnboardingData = useProfileStore((state) => state.updateOnboardingData);
 
   const [showForm, setShowForm] = useState(false);
   const [bodyPart, setBodyPart] = useState('');
@@ -43,9 +44,15 @@ export const InjuryManagementScreen: React.FC = () => {
         description: `${severity}${notes ? ' - ' + notes : ''}`,
       };
 
-      updateOnboardingData({
-        injuries: [...injuries, newInjury],
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'profile_setup',
+          patch: { injuries: [...injuries, newInjury] },
+        },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'injury_management',
       });
+      if (!result.ok) throw new Error(result.reason ?? 'injury_management_transaction_failed');
 
       setBodyPart('');
       setSeverity('Mild');
@@ -62,7 +69,15 @@ export const InjuryManagementScreen: React.FC = () => {
     setLoading(true);
     try {
       const updatedInjuries = injuries.filter((_, i) => i !== index);
-      updateOnboardingData({ injuries: updatedInjuries });
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'profile_setup',
+          patch: { injuries: updatedInjuries },
+        },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'injury_management',
+      });
+      if (!result.ok) throw new Error(result.reason ?? 'injury_management_transaction_failed');
     } catch (error) {
       console.error('Error removing injury:', error);
     } finally {

@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OnboardingData } from '../types/domain';
 import { normalizeOnboardingRole } from '../utils/roleBuckets';
+import { asyncStorageCompat } from './asyncStorageCompat';
 
 interface ProfileState {
   onboardingData: OnboardingData;
@@ -30,6 +30,8 @@ const initialOnboardingData: OnboardingData = {
     'bands',
   ],
 };
+
+let acceptedProfileMirrorPublicationInProgress = false;
 
 export const useProfileStore = create<ProfileState>()(
   persist(
@@ -73,7 +75,7 @@ export const useProfileStore = create<ProfileState>()(
     }),
     {
       name: 'profile-store',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => asyncStorageCompat),
       merge: (persistedState, currentState) => {
         const persisted = persistedState as Partial<ProfileState> | undefined;
         return {
@@ -88,3 +90,43 @@ export const useProfileStore = create<ProfileState>()(
     },
   ),
 );
+
+function canonicalAcceptedProfile(): OnboardingData | null {
+  try {
+    const accepted = require('./programStore').useProgramStore.getState().acceptedMaterialContext;
+    return accepted.revision > 0 && accepted.acceptedProfileSnapshot
+      ? accepted.acceptedProfileSnapshot.onboardingData
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/** ProgramStore's accepted profile is authoritative; ProfileStore is a read mirror. */
+export function publishAcceptedProfileCompatibilityMirror(
+  onboardingData: OnboardingData,
+): void {
+  acceptedProfileMirrorPublicationInProgress = true;
+  try {
+    useProfileStore.setState({
+      onboardingData: normalizeOnboardingRole(onboardingData),
+    });
+  } finally {
+    acceptedProfileMirrorPublicationInProgress = false;
+  }
+}
+
+useProfileStore.subscribe((state) => {
+  if (acceptedProfileMirrorPublicationInProgress) return;
+  const canonical = canonicalAcceptedProfile();
+  if (!canonical ||
+    JSON.stringify(state.onboardingData) === JSON.stringify(canonical)) return;
+  acceptedProfileMirrorPublicationInProgress = true;
+  try {
+    useProfileStore.setState({
+      onboardingData: normalizeOnboardingRole(canonical),
+    });
+  } finally {
+    acceptedProfileMirrorPublicationInProgress = false;
+  }
+});

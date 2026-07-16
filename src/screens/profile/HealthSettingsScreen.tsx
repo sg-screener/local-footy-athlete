@@ -14,11 +14,12 @@ import { Button } from '../../components/common/Button';
 import { useProfileStore } from '../../store/profileStore';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
+import { todayISOLocal } from '../../utils/appDate';
 
 export const HealthSettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const onboardingData = useProfileStore((state) => state.onboardingData);
-  const updateOnboardingData = useProfileStore((state) => state.updateOnboardingData);
 
   const [height, setHeight] = useState(onboardingData.heightCm?.toString() || '');
   const [weight, setWeight] = useState(onboardingData.weightKg?.toString() || '');
@@ -27,10 +28,18 @@ export const HealthSettingsScreen: React.FC = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      updateOnboardingData({
-        heightCm: height ? parseInt(height, 10) : undefined,
-        weightKg: weight ? parseInt(weight, 10) : undefined,
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'profile_setup',
+          patch: {
+            heightCm: height ? parseInt(height, 10) : undefined,
+            weightKg: weight ? parseInt(weight, 10) : undefined,
+          },
+        },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'health_settings',
       });
+      if (!result.ok) throw new Error(result.reason ?? 'health_settings_transaction_failed');
       navigation.goBack();
     } catch (error) {
       console.error('Error updating health settings:', error);

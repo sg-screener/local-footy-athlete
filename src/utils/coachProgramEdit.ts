@@ -1991,15 +1991,17 @@ function buildProgramSetupProfilePatch(
     (nextDays.length !== currentDays.length ? nextDays.length : current.trainingDaysPerWeek);
   if (
     desiredFrequency != null &&
-    desiredFrequency > nextDays.length &&
+    desiredFrequency !== nextDays.length &&
     !change.addTrainingDays?.length &&
     !change.replaceTrainingDays?.length
   ) {
     return {
       kind: 'clarify',
-      reply: `You are asking for ${desiredFrequency} training days, but I only have ${nextDays.length || 'no'} available day${nextDays.length === 1 ? '' : 's'} saved. Which extra day can you train?`,
-      route: 'program_setup_clarify:extra_training_day',
-      options: ALL_DAYS.filter((day) => !nextDays.includes(day)),
+      reply: `Which ${desiredFrequency} weekdays should be your regular training days?`,
+      route: 'program_setup_clarify:preferred_training_days',
+      options: desiredFrequency > nextDays.length
+        ? ALL_DAYS.filter((day) => !nextDays.includes(day))
+        : nextDays,
     };
   }
 

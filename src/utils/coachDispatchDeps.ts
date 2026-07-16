@@ -207,6 +207,18 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       const idSet = new Set(ids);
       const cleared = before.filter((c) =>
         idSet.has(c.id) && c.status !== 'resolved' && c.type !== 'injury');
+      if (cleared.some((constraint) =>
+        (constraint.temporarySourceFactIds?.length ?? 0) > 0)) {
+        logger.warn('[constraint-resolution] canonical_source_fact_resolution_required', {
+          ids,
+        });
+        return {
+          cleared: [],
+          remainingActiveCount: before.filter((constraint) =>
+            constraint.status !== 'resolved').length,
+          derivedCardShouldRender: true,
+        };
+      }
 
       // 1. Remove each constraint from the store.
       for (const id of cleared.map((constraint) => constraint.id)) {

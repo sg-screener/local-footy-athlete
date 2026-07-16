@@ -94,17 +94,22 @@ import {
   resolvePendingScheduleTransactionAnswer,
 } from './coachClarifierResume';
 import {
+  createTemporaryEquipmentFact,
   createTemporaryFatigueFact,
   createTemporaryPoorSleepFact,
+  createTemporaryScheduleFact,
   createTemporarySorenessFact,
+  createTemporaryTimeCapFact,
   isInjurySourceFact,
   isNonInjuryTemporarySourceFact,
+  isTemporaryScheduleFact,
   temporaryFactScope,
   temporarySourceFactId,
   type TemporaryPoorSleepFact,
   type TemporarySourceFact,
 } from '../rules/temporarySourceFact';
 import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
+import { commitProfileProgramTransaction } from '../store/profileProgramTransaction';
 import { resolveInjuryBucket } from './programAdjustmentEngine';
 import { isPendingProgramProposalExpired } from './programAdjustmentRequests';
 import { buildScheduleStateImperative } from './coachWeekDiff';
@@ -2834,12 +2839,35 @@ function temporarySourceFactFromIntent(
   intent: CoachIntent,
   todayISO: string,
 ): { fact: TemporarySourceFact } | { clarification: string } | null {
+  if (intent.intent === 'equipment_change' &&
+    intent.payload?.equipmentChangeScope !== 'baseline') {
+    const equipmentTags = intent.payload?.equipmentTags ?? [];
+    if (equipmentTags.length === 0 || !intent.payload?.equipmentMode) {
+      return { clarification: 'Which equipment is available or unavailable, and is this temporary?' };
+    }
+    const observedDate = (intent.payload.requestedDate ??
+      intent.payload.targetDate ??
+      todayISO).slice(0, 10);
+    return { fact: createTemporaryEquipmentFact({
+      observedDate,
+      scope: temporaryFactScope({ kind: 'week', date: observedDate }),
+      mode: intent.payload.equipmentMode,
+      equipmentTags,
+      conditioningModalities: intent.payload.conditioningModalities,
+      sourceActor: 'coach',
+      sourceSurface: 'coach_chat',
+    }) };
+  }
   const factKind = intent.intent === 'mixed_fact_and_program_adjustment'
     ? intent.payload?.factKind
-    : intent.intent === 'fatigue' || intent.intent === 'soreness' || intent.intent === 'poor_sleep'
+    : intent.intent === 'fatigue' || intent.intent === 'soreness' ||
+      intent.intent === 'poor_sleep' || intent.intent === 'busy_week'
       ? intent.intent
       : null;
   if (!factKind) return null;
+  if (factKind === 'equipment' || factKind === 'schedule' || factKind === 'time_cap') {
+    return null;
+  }
   const observedDate = (intent.payload?.requestedDate ?? intent.payload?.targetDate ?? todayISO).slice(0, 10);
   const level = intent.payload?.reportedLevelIsExplicit === true &&
     typeof intent.payload.severity === 'number'
@@ -2848,6 +2876,18 @@ function temporarySourceFactFromIntent(
   const weekScoped = intent.payload?.scope === 'this_week' ||
     intent.payload?.poorSleepPattern === 'repeated';
   const scope = temporaryFactScope({ kind: weekScoped ? 'week' : 'date', date: observedDate });
+  if (factKind === 'busy_week') {
+    return { fact: createTemporaryScheduleFact({
+      observedDate,
+      scope: temporaryFactScope({ kind: 'week', date: observedDate }),
+      scheduleKind: typeof intent.payload?.maxSessionsThisWeek === 'number'
+        ? 'max_sessions'
+        : 'busy_week',
+      maxSessions: intent.payload?.maxSessionsThisWeek,
+      sourceActor: 'coach',
+      sourceSurface: 'coach_chat',
+    }) };
+  }
   if (factKind === 'fatigue') {
     return { fact: createTemporaryFatigueFact({
       observedDate,
@@ -2890,6 +2930,298 @@ async function executeSetupEditInController(args: {
   onProgress: (stage: ProgressStage) => void;
 }) {
   const { input, programEdit, onProgress } = args;
+  const setup = programEdit.setupChange;
+  if (setup.clearUnavailableDays?.length) {
+    const clearDays = new Set(setup.clearUnavailableDays);
+    const activeScheduleFacts = useProgramStore.getState().acceptedMaterialContext
+      .temporarySourceFacts
+      .filter((fact) =>
+        isTemporaryScheduleFact(fact) &&
+        fact.status === 'active' &&
+        fact.unavailableWeekdays.some((day) => clearDays.has(day)));
+    if (activeScheduleFacts.length > 1) {
+      return {
+        kind: 'clarify' as const,
+        reply: 'I found more than one temporary availability restriction for those days. Which one should end?',
+        applied: false,
+        route: 'program_setup:temporary_schedule_resolution_ambiguous',
+        progress: ['checking_program', 'composing_reply'] as ProgressStage[],
+      };
+    }
+    if (activeScheduleFacts.length === 1) {
+      onProgress('checking_program');
+      onProgress('applying_change');
+      const fact = activeScheduleFacts[0];
+      const remainingWeekdays = fact.unavailableWeekdays.filter((day) =>
+        !clearDays.has(day));
+      const result = remainingWeekdays.length === 0
+        ? await transactTemporarySourceFact({
+            operation: 'resolve',
+            factId: fact.factId,
+            todayISO: input.todayISO,
+            sourceActor: 'coach',
+            sourceSurface: 'coach_chat',
+          })
+        : await transactTemporarySourceFact({
+            operation: 'update',
+            fact: {
+              ...fact,
+              unavailableWeekdays: remainingWeekdays,
+              updatedAt: new Date().toISOString(),
+              sourceActor: 'coach',
+              sourceSurface: 'coach_chat',
+            },
+            todayISO: input.todayISO,
+            sourceActor: 'coach',
+            sourceSurface: 'coach_chat',
+          });
+      const applied = result.outcome !== 'conflicted' &&
+        result.outcome !== 'safely_rejected';
+      onProgress('verifying_update');
+      onProgress('composing_reply');
+      return applied
+        ? {
+            kind: 'mutated' as const,
+            reply: 'Schedule is back to normal for the selected day after durable recomposition and visible verification.',
+            applied: true,
+            route: 'program_setup:temporary_schedule_resolved',
+            progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+          }
+        : {
+            kind: 'rejected' as const,
+            reply: result.message,
+            applied: false,
+            route: `program_setup:temporary_schedule_resolution_failed:${result.reason ?? result.outcome}`,
+            progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+          };
+    }
+    const currentProfile = useProfileStore.getState().onboardingData;
+    const remainingPermanent = (currentProfile.availabilityConstraints ?? [])
+      .filter((constraint) =>
+        constraint.scope === 'permanent' &&
+        constraint.kind === 'unavailable_day' &&
+        constraint.active !== false &&
+        !!constraint.dayOfWeek &&
+        !clearDays.has(constraint.dayOfWeek))
+      .map((constraint) => constraint.dayOfWeek!)
+      .filter((day): day is import('../types/domain').DayOfWeek => !!day);
+    onProgress('checking_program');
+    onProgress('applying_change');
+    const result = await commitProfileProgramTransaction({
+      change: {
+        kind: 'permanent_unavailable_weekdays',
+        weekdays: remainingPermanent,
+      },
+      todayISO: input.todayISO,
+      sourceSurface: 'coach_program_setup',
+    });
+    onProgress('verifying_update');
+    onProgress('composing_reply');
+    return result.ok
+      ? {
+          kind: 'mutated' as const,
+          reply: result.message,
+          applied: true,
+          route: 'program_setup:permanent_schedule_restored',
+          progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+        }
+      : {
+          kind: 'rejected' as const,
+          reply: result.message,
+          applied: false,
+          route: `program_setup:permanent_schedule_restore_failed:${result.reason ?? 'unknown'}`,
+          progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+        };
+  }
+  const temporaryConstraints = (setup.availabilityConstraints ?? [])
+    .filter((constraint) => constraint.scope === 'temporary' && constraint.active !== false);
+  const onlyTemporaryAvailability = temporaryConstraints.length > 0 &&
+    temporaryConstraints.length === (setup.availabilityConstraints ?? []).length &&
+    !setup.addTrainingDays?.length &&
+    !setup.removeTrainingDays?.length &&
+    !setup.replaceTrainingDays?.length &&
+    setup.trainingDaysPerWeek === undefined &&
+    !setup.clearUnavailableDays?.length;
+  if (onlyTemporaryAvailability) {
+    const kinds = new Set(temporaryConstraints.map((constraint) => constraint.kind));
+    const minutes = Array.from(new Set(temporaryConstraints
+      .map((constraint) => constraint.maxSessionMinutes)
+      .filter((value): value is number => typeof value === 'number')));
+    if ((kinds.size === 1 && kinds.has('unavailable_day')) ||
+      (kinds.size === 1 && kinds.has('time_limit') && minutes.length === 1)) {
+      onProgress('checking_program');
+      const starts = temporaryConstraints
+        .map((constraint) => constraint.startDate?.slice(0, 10))
+        .filter((date): date is string => !!date)
+        .sort();
+      const ends = temporaryConstraints
+        .map((constraint) => constraint.endDate?.slice(0, 10))
+        .filter((date): date is string => !!date)
+        .sort();
+      const scope = starts.length > 0 || ends.length > 0
+        ? temporaryFactScope({
+            kind: 'window',
+            from: starts[0] ?? input.todayISO,
+            until: ends[ends.length - 1] ?? starts[0] ?? input.todayISO,
+          })
+        : temporaryFactScope({ kind: 'week', date: input.todayISO });
+      const weekdays = temporaryConstraints
+        .map((constraint) => constraint.dayOfWeek)
+        .filter((day): day is import('../types/domain').DayOfWeek => !!day);
+      const fact = kinds.has('time_limit')
+        ? createTemporaryTimeCapFact({
+            observedDate: input.todayISO,
+            scope,
+            targetKind: weekdays.length > 0 ? 'weekdays' : 'all_sessions',
+            weekdays,
+            maxSessionMinutes: minutes[0],
+            sourceActor: 'coach',
+            sourceSurface: 'coach_chat',
+          })
+        : createTemporaryScheduleFact({
+            observedDate: input.todayISO,
+            scope,
+            scheduleKind: 'unavailable_weekdays',
+            unavailableWeekdays: weekdays,
+            sourceActor: 'coach',
+            sourceSurface: 'coach_chat',
+          });
+      onProgress('applying_change');
+      const result = await transactTemporarySourceFact({
+        operation: 'create',
+        fact,
+        todayISO: input.todayISO,
+        sourceActor: 'coach',
+        sourceSurface: 'coach_chat',
+      });
+      const applied = result.outcome !== 'conflicted' &&
+        result.outcome !== 'safely_rejected';
+      onProgress('verifying_update');
+      onProgress('composing_reply');
+      return applied
+        ? {
+            kind: 'mutated' as const,
+            reply: result.message,
+            applied: true,
+            route: `program_setup:temporary_source_fact:${fact.factKind}`,
+            progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+          }
+        : {
+            kind: 'rejected' as const,
+            reply: result.message,
+            applied: false,
+            route: `program_setup:temporary_source_fact_failed:${result.reason ?? result.outcome}`,
+            progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+          };
+    }
+  }
+  const permanentConstraints = (setup.availabilityConstraints ?? [])
+    .filter((constraint) => constraint.scope === 'permanent' && constraint.active !== false);
+  const onlyPermanentAvailability = permanentConstraints.length > 0 &&
+    permanentConstraints.length === (setup.availabilityConstraints ?? []).length &&
+    !setup.addTrainingDays?.length &&
+    !setup.removeTrainingDays?.length &&
+    !setup.replaceTrainingDays?.length &&
+    setup.trainingDaysPerWeek === undefined &&
+    !setup.clearUnavailableDays?.length;
+  if (onlyPermanentAvailability) {
+    const kinds = new Set(permanentConstraints.map((constraint) => constraint.kind));
+    const weekdays = permanentConstraints
+      .map((constraint) => constraint.dayOfWeek)
+      .filter((day): day is import('../types/domain').DayOfWeek => !!day);
+    const minutes = Array.from(new Set(permanentConstraints
+      .map((constraint) => constraint.maxSessionMinutes)
+      .filter((value): value is number => typeof value === 'number')));
+    const currentProfile = useProfileStore.getState().onboardingData;
+    const change = kinds.size === 1 && kinds.has('unavailable_day')
+      ? {
+          kind: 'permanent_unavailable_weekdays' as const,
+          weekdays: Array.from(new Set([
+            ...(currentProfile.availabilityConstraints ?? [])
+              .filter((constraint) =>
+                constraint.scope === 'permanent' &&
+                constraint.kind === 'unavailable_day' &&
+                constraint.active !== false)
+              .map((constraint) => constraint.dayOfWeek)
+              .filter((day): day is import('../types/domain').DayOfWeek => !!day),
+            ...weekdays,
+          ])),
+        }
+      : kinds.size === 1 && kinds.has('time_limit') && minutes.length === 1
+        ? {
+            kind: 'permanent_session_time_cap' as const,
+            weekdays,
+            maxSessionMinutes: minutes[0],
+          }
+        : null;
+    if (change) {
+      onProgress('checking_program');
+      onProgress('applying_change');
+      const result = await commitProfileProgramTransaction({
+        change,
+        todayISO: input.todayISO,
+        sourceSurface: 'coach_program_setup',
+      });
+      onProgress('verifying_update');
+      onProgress('composing_reply');
+      return result.ok
+        ? {
+            kind: 'mutated' as const,
+            reply: result.message,
+            applied: true,
+            route: 'program_setup:profile_program_transaction',
+            progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+          }
+        : {
+            kind: 'rejected' as const,
+            reply: result.message,
+            applied: false,
+            route: `program_setup:profile_program_transaction_failed:${result.reason ?? 'unknown'}`,
+            progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+          };
+    }
+  }
+  const changesPreferredWeekdays = !!(
+    setup.addTrainingDays?.length ||
+    setup.removeTrainingDays?.length ||
+    setup.replaceTrainingDays?.length
+  ) && !(setup.availabilityConstraints?.length) && !(setup.clearUnavailableDays?.length);
+  if (changesPreferredWeekdays) {
+    const current = useProfileStore.getState().onboardingData.preferredTrainingDays ?? [];
+    const next = setup.replaceTrainingDays
+      ? [...setup.replaceTrainingDays]
+      : Array.from(new Set([
+          ...current.filter((day) => !setup.removeTrainingDays?.includes(day)),
+          ...(setup.addTrainingDays ?? []),
+        ]));
+    onProgress('checking_program');
+    onProgress('applying_change');
+    const result = await commitProfileProgramTransaction({
+      change: {
+        kind: 'preferred_training_weekdays',
+        weekdays: next,
+      },
+      todayISO: input.todayISO,
+      sourceSurface: 'coach_program_setup',
+    });
+    onProgress('verifying_update');
+    onProgress('composing_reply');
+    return result.ok
+      ? {
+          kind: 'mutated' as const,
+          reply: result.message,
+          applied: true,
+          route: 'program_setup:profile_program_transaction',
+          progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+        }
+      : {
+          kind: 'rejected' as const,
+          reply: result.message,
+          applied: false,
+          route: `program_setup:profile_program_transaction_failed:${result.reason ?? 'unknown'}`,
+          progress: ['checking_program', 'applying_change', 'verifying_update', 'composing_reply'] as ProgressStage[],
+        };
+  }
   return executeProgramSetupEdit({
     programEdit,
     todayISO: input.todayISO,
@@ -3029,7 +3361,7 @@ export async function handleCoachTurn(
           return replyAndFinish(
             input,
             'temporary-source-fact-resolve-clarify',
-            'Which active fatigue, soreness, or sleep report do you mean?',
+            'Which active temporary report or restriction do you mean?',
           );
         }
         const resolution = await transactTemporarySourceFact({
@@ -3040,6 +3372,30 @@ export async function handleCoachTurn(
           sourceSurface: 'coach_chat',
         });
         return replyAndFinish(input, 'temporary-source-fact-resolved', resolution.message);
+      }
+      if (semanticIntent.intent === 'equipment_change' &&
+        semanticIntent.payload?.equipmentChangeScope === 'baseline') {
+        if (semanticIntent.payload.equipmentMode !== 'only' ||
+          !(semanticIntent.payload.equipmentTags?.length)) {
+          return replyAndFinish(
+            input,
+            'baseline-equipment-clarify',
+            'For your permanent equipment settings, what equipment do you normally have access to?',
+          );
+        }
+        const profileResult = await commitProfileProgramTransaction({
+          change: {
+            kind: 'baseline_equipment',
+            equipment: semanticIntent.payload.equipmentTags,
+          },
+          todayISO: input.todayISO,
+          sourceSurface: 'coach_program_setup',
+        });
+        return replyAndFinish(
+          input,
+          profileResult.ok ? 'baseline-equipment-updated' : 'baseline-equipment-failed',
+          profileResult.message,
+        );
       }
       const sourceFactIntent = temporarySourceFactFromIntent(semanticIntent, input.todayISO);
       if (sourceFactIntent) {

@@ -155,8 +155,8 @@ export const TEMPORARY_EQUIPMENT_PRESETS: readonly TemporaryEquipmentPreset[] = 
   },
   {
     id: 'back_to_normal',
-    label: 'Back to normal',
-    sub: 'Clear the temporary equipment limit',
+    label: 'Equipment available again',
+    sub: 'End the temporary equipment restriction after the program is restored',
     tags: [],
     clearsActiveEquipment: true,
   },

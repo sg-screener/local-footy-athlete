@@ -332,6 +332,7 @@ export function collectWeekRebuildContext(args: {
       : []
   );
   const programState = useProgramStore.getState();
+  const acceptedConstraints = canonicalActiveConstraints();
   return {
     todayISO,
     profile,
@@ -339,10 +340,17 @@ export function collectWeekRebuildContext(args: {
     overrides: { ...(programState.dateOverrides ?? {}) },
     overrideContexts: { ...(programState.overrideContexts ?? {}) },
     activeConstraintIds: liveConstraintIds(
-      useCoachUpdatesStore.getState().activeConstraints ?? [],
+      acceptedConstraints,
       todayISO,
     ),
   };
+}
+
+function canonicalActiveConstraints() {
+  const state = useProgramStore.getState();
+  return state.acceptedMaterialContext.revision > 0
+    ? state.acceptedMaterialContext.activeConstraints
+    : useCoachUpdatesStore.getState().activeConstraints ?? [];
 }
 
 // ─── The canonical rebuild ───────────────────────────────────────────
@@ -435,7 +443,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           beforeMarkedDays: state.acceptedMaterialContext.markedDays,
           afterMarkedDays: markedDays,
           sourceSurfaces: state,
-          activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+          activeConstraints: canonicalActiveConstraints(),
           primaryWeekStarts: [targetWeekStart!],
           userRemovalConstraints: state.userRemovalConstraints,
         })
@@ -455,7 +463,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
           markedDays,
           sourceSurfaces: state,
           sourceMarkedDays: state.acceptedMaterialContext.markedDays,
-          activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+          activeConstraints: canonicalActiveConstraints(),
           userRemovalConstraints: state.userRemovalConstraints,
         });
     const adjacentOverlays = rollingRepair?.projections

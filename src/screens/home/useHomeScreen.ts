@@ -1053,7 +1053,7 @@ export function useHomeScreen() {
   ) => {
     const todayISO = todayISOLocal();
     if (action === 'busy_week_reduce') {
-      const result = executeProgramControlAction({
+      const result = await executeProgramControlActionDurably({
         type: 'set_schedule_modifier',
         source: {
           screen: 'program_tab',
@@ -1080,7 +1080,7 @@ export function useHomeScreen() {
     anchorDateISO?: string,
   ) => {
     const todayISO = todayISOLocal();
-    const result = executeProgramControlAction({
+    const result = await executeProgramControlActionDurably({
       type: 'set_equipment_modifier',
       source: {
         screen: 'program_tab',
@@ -1102,12 +1102,11 @@ export function useHomeScreen() {
   }, [handleProgramControlResult, weekDays]);
 
   // ── Busy week / Away / Holiday (vocab group 5) ──
-  // "Busy" reduces the whole current week; "Away" clears the exact days
-  // the athlete picked and records an Away Coach Note that restores them
-  // when cleared. Both run through executeProgramControlAction — no chat.
+  // Busy and away are canonical temporary schedule facts. Away carries exact
+  // unavailable dates and never creates fact-owned Rest overrides.
   const handleApplyBusyWeekReduce = useCallback(async () => {
     const todayISO = todayISOLocal();
-    const result = executeProgramControlAction({
+    const result = await executeProgramControlActionDurably({
       type: 'set_schedule_modifier',
       source: {
         screen: 'program_tab',
@@ -1204,7 +1203,7 @@ export function useHomeScreen() {
     // Anchor the schedule note to the week the away days actually fall in
     // so it shows + expires on the right week (not necessarily this one).
     const anchor = [...dates].sort()[0] ?? todayISO;
-    const result = executeProgramControlAction({
+    const result = await executeProgramControlActionDurably({
       type: 'set_schedule_modifier',
       source: {
         screen: 'program_tab',

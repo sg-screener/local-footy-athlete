@@ -853,6 +853,10 @@ function statusModifier(
           `Limits: ${listPreview(rules, 'normal loading')}.`,
         ]);
   const sourceConstraint = c as ActiveConstraint;
+  const sourceFactOwned = (sourceConstraint.temporarySourceFactIds?.length ?? 0) > 0;
+  const scheduleClearLabel = c.type === 'schedule' && c.scheduleKind === 'time_cap'
+    ? 'End temporary restriction'
+    : 'Schedule is back to normal';
 
   return {
     id: modifierId(source, c.id),
@@ -872,6 +876,12 @@ function statusModifier(
           ]
         : c.presentationOnlyDismiss || isLegacyFixtureProjection
           ? [{ kind: 'dismiss_note', label: 'Dismiss note' }]
+          : sourceFactOwned
+            ? [
+                { kind: 'clear_adjustment', label: scheduleClearLabel },
+                { kind: 'update_adjustment', label: 'Update availability' },
+                { kind: 'dismiss_note', label: 'Dismiss note' },
+              ]
           : [
               { kind: 'clear_adjustment', label: 'Clear adjustment' },
               { kind: 'update_adjustment', label: 'Update' },
@@ -980,14 +990,28 @@ function equipmentModifier(
     severity: c.severity,
     affects,
     actions: [
-      { kind: 'clear_adjustment', label: 'Clear adjustment' },
-      { kind: 'update_adjustment', label: 'Update' },
+      {
+        kind: 'clear_adjustment',
+        label: (c.temporarySourceFactIds?.length ?? 0) > 0
+          ? 'Equipment available again'
+          : 'Clear adjustment',
+      },
+      {
+        kind: 'update_adjustment',
+        label: (c.temporarySourceFactIds?.length ?? 0) > 0
+          ? 'Update equipment'
+          : 'Update',
+      },
+      ...((c.temporarySourceFactIds?.length ?? 0) > 0
+        ? [{ kind: 'dismiss_note' as const, label: 'Dismiss note' }]
+        : []),
     ],
     payload: {
       constraintId: c.id,
       lifecycleKey: activeConstraintLifecycleKey(c, source),
       mode: c.mode,
       tags: [...c.tags],
+      temporarySourceFactIds: [...(c.temporarySourceFactIds ?? [])],
       expiresAt: expiresAt(c),
       rebuildRequired: true,
     },

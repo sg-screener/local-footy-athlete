@@ -14,12 +14,11 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native';
 import { Feather } from '@expo/vector-icons';
 import { useProfileStore } from '../../store/profileStore';
-import { getCurrentBlockNumberForGeneration, useProgramStore } from '../../store/programStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useReadinessStore } from '../../store/readinessStore';
-import { generateProgramFromProfile } from '../../services/api/generateProgram';
+import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
 import {
   clearCoachAdjustments,
   clearCoachChat,
@@ -29,7 +28,7 @@ import {
 import { mapToLegacyGameDay } from '../../utils/profileMutations';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import { dayOfWeekForISODate, todayISOLocal } from '../../utils/appDate';
+import { todayISOLocal } from '../../utils/appDate';
 import { Text } from '../../components/common/Text';
 import { Card } from '../../components/common/Card';
 import { SelectableTile } from '../../components/common/SelectableTile';
@@ -126,11 +125,6 @@ export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const onboardingData = useProfileStore((s) => s.onboardingData);
-  const updateOnboardingData = useProfileStore((s) => s.updateOnboardingData);
-  const setCurrentProgram = useProgramStore((s) => s.setCurrentProgram);
-  const setCurrentMicrocycle = useProgramStore((s) => s.setCurrentMicrocycle);
-  const setTodayWorkout = useProgramStore((s) => s.setTodayWorkout);
-  const clearManualOverrides = useProgramStore((s) => s.clearManualOverrides);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
   const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
   const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
@@ -432,10 +426,6 @@ export default function ProfileScreen() {
     setPendingPosition(draftPosition);
     setPendingExperience(draftExperience);
 
-    if (trimmedName !== (onboardingData.firstName || '')) {
-      updateOnboardingData({ firstName: trimmedName });
-    }
-
     setSetupUpdateError(null);
     setSetupSheetStep('overview');
   };
@@ -522,26 +512,21 @@ export default function ProfileScreen() {
   const executeSetupUpdate = async () => {
     if (!canUpdateSetup && !setupUpdateError) return;
     const patch = buildSetupPatch();
-    const nextProfile = { ...onboardingData, ...patch };
     setSetupUpdateError(null);
     setSetupUpdateMsgIdx(0);
     setupUpdateMsgOpacity.setValue(1);
     setSetupSheetStep('building');
     setIsSetupUpdating(true);
     try {
-      const program = await generateProgramFromProfile(nextProfile, {
-        blockNumber: getCurrentBlockNumberForGeneration(),
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'profile_setup',
+          patch,
+        },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'profile_setup',
       });
-      updateOnboardingData(patch);
-      setCurrentProgram(program);
-      if (program.microcycles && program.microcycles.length > 0) {
-        const first = program.microcycles[0];
-        setCurrentMicrocycle(first);
-        const dow = dayOfWeekForISODate(todayISOLocal());
-        const todayWorkout = first.workouts?.find((w) => w.dayOfWeek === dow);
-        if (todayWorkout) setTodayWorkout(todayWorkout);
-      }
-      clearManualOverrides();
+      if (!result.ok) throw new Error(result.reason ?? 'profile_setup_transaction_failed');
       setSetupSheetVisible(false);
       setSetupSheetStep('overview');
       setProgramDetailsSaved(false);

@@ -210,11 +210,18 @@ function collectActiveConstraintsForGeneration(
   options: GenerateProgramFromProfileOptions,
   todayISO: string,
 ): ActiveConstraint[] {
+  const accepted = require('../../store/programStore').useProgramStore.getState()
+    .acceptedMaterialContext;
+  const hasCanonicalAcceptedContext = accepted.revision > 0;
   const storedConstraints = options.activeConstraints ??
-    (useCoachUpdatesStore.getState().activeConstraints ?? []);
+    (hasCanonicalAcceptedContext
+      ? accepted.activeConstraints ?? []
+      : useCoachUpdatesStore.getState().activeConstraints ?? []);
   const readinessSignal = options.readinessSignal !== undefined
     ? options.readinessSignal
-    : useReadinessStore.getState().signalsByDate?.[todayISO] ?? null;
+    : hasCanonicalAcceptedContext
+      ? accepted.readinessSignalsByDate?.[todayISO] ?? null
+      : useReadinessStore.getState().signalsByDate?.[todayISO] ?? null;
   const readinessConstraints = buildReadinessActiveConstraints(readinessSignal);
   const byId = new Map<string, ActiveConstraint>();
   for (const constraint of storedConstraints) byId.set(constraint.id, constraint);

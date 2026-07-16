@@ -67,7 +67,7 @@ const COACH_INTENT_SYSTEM_PROMPT = `You are the intent classifier for a strength
 Your job is to read the athlete's latest message + the surrounding context and return a JSON object that matches this schema:
 
 {
-  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | why_didnt_program_change | program_explanation | session_mismatch_question | request_program_adjustment | record_session_outcome | fatigue | soreness | busy_week | exercise_swap | general_question>",
+  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | temporary_source_fact_followup | why_didnt_program_change | program_explanation | session_mismatch_question | request_program_adjustment | record_session_outcome | fatigue | soreness | poor_sleep | mixed_fact_and_program_adjustment | busy_week | equipment_change | exercise_swap | general_question>",
   "confidence": <0..1>,
   "needsClarification": <boolean>,
   "clarificationQuestion": "<string if needsClarification>",
@@ -78,6 +78,7 @@ Your job is to read the athlete's latest message + the surrounding context and r
     "requestedSession": "<optional>",
     "concern": "<optional, free-text>",
     "followupKind": "<optional: resolved | improving | worsening | unchanged>",
+    "factKind": "<optional: fatigue | soreness | poor_sleep | equipment | schedule | time_cap>",
     "operation": "<for program edits: add_conditioning | remove_conditioning | replace_conditioning | move_session | replace_exercise | change_duration>",
     "targetDate": "<optional, YYYY-MM-DD>",
     "targetSessionName": "<optional>",
@@ -85,6 +86,11 @@ Your job is to read the athlete's latest message + the surrounding context and r
     "replaceActivity": "<existing activity being replaced, e.g. Pilates>",
     "durationMinutes": <optional number>,
     "durationSeconds": <optional number, for sprint/effort reps>,
+    "maxSessionsThisWeek": <optional number>,
+    "equipmentMode": "<optional: only | without>",
+    "equipmentTags": ["<optional canonical equipment tags>"],
+    "conditioningModalities": ["<optional: bike | row | ski | treadmill>"],
+    "equipmentChangeScope": "<optional: temporary | baseline>",
     "sets": <optional number>,
     "repsMin": <optional number>,
     "repsMax": <optional number>,
@@ -136,7 +142,9 @@ CRITICAL RULES
 7. Non-injury signals — disambiguate carefully:
    - "fatigue" — global tired / cooked / drained / smashed without specific body part ("feeling cooked this week", "exhausted"). Estimate severity 1..10 from intensity language.
    - "soreness" — localised muscle soreness, NOT injury-level pain ("quads are sore", "tight calves", "DOMS"). payload.bodyPart is required. Severity 1..10 from descriptors.
-   - "busy_week" — schedule constraint: limited time / capacity ("crazy week ahead", "can only train twice", "exam week"). Set payload.severity=5 by default.
+   - "busy_week" — schedule constraint: limited time / capacity ("crazy week ahead", "can only train twice", "exam week"). Set payload.severity=5 by default. If an exact bounded weekly maximum is stated, set payload.maxSessionsThisWeek.
+   - "equipment_change" — exact available/unavailable equipment. Set payload.equipmentMode="only" or "without", payload.equipmentTags using canonical tags (bodyweight, dumbbells, barbell, cables, bands, bench, pullup_bar, kettlebell, machine, bike_or_treadmill), and payload.equipmentChangeScope="temporary" for bounded/current-week limits or "baseline" for permanent equipment settings. Preserve exact conditioning modality terms in payload.conditioningModalities.
+   - A factual clear report ("my equipment is available again", "my schedule is back to normal", "the time restriction is over") is temporary_source_fact_followup with followupKind="resolved" and the exact factKind.
    - "record_session_outcome" — a report about work that already happened: completed, partial, missed/skipped attendance, or how a completed/recent session felt. Capture target, completion, feeling, soreness, reason, and component outcomes.
    - "I missed it" is record_session_outcome with completion="skipped". It is attendance feedback, not a schedule constraint and not a delete/move request.
    - "It was too hard" about a completed or recent session is record_session_outcome. "Make it easier" is a future request_program_adjustment.
@@ -161,13 +169,17 @@ const VALID_INTENTS = new Set([
   "new_injury_report",
   "injury_severity_reply",
   "active_injury_followup",
+  "temporary_source_fact_followup",
   "why_didnt_program_change",
   "program_explanation",
   "session_mismatch_question",
   "request_program_adjustment",
   "fatigue",
   "soreness",
+  "poor_sleep",
+  "mixed_fact_and_program_adjustment",
   "busy_week",
+  "equipment_change",
   "record_session_outcome",
   "missed_session",
   "exercise_swap",

@@ -15,9 +15,8 @@ import { SelectableTile } from '../../components/common';
 import { useProfileStore } from '../../store/profileStore';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
-import { saveBaselineEquipmentSelection } from '../../utils/equipmentAvailability';
 import { todayISOLocal } from '../../utils/appDate';
-import { rebuildLocalWeek } from '../../utils/weekRebuild';
+import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
 
 const EQUIPMENT_OPTIONS = [
   'Full Gym',
@@ -34,7 +33,6 @@ const EQUIPMENT_OPTIONS = [
 export const EquipmentSettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const onboardingData = useProfileStore((state) => state.onboardingData);
-  const updateOnboardingData = useProfileStore((state) => state.updateOnboardingData);
 
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>(
     onboardingData.equipment || []
@@ -53,22 +51,17 @@ export const EquipmentSettingsScreen: React.FC = () => {
     setLoading(true);
     try {
       const todayISO = todayISOLocal();
-      const result = saveBaselineEquipmentSelection({
-        profile: onboardingData,
-        selectedEquipment,
-        dateISO: todayISO,
-        updateOnboardingData,
-        refreshProgram: (nextProfile) => {
-          rebuildLocalWeek({
-            baseProfile: nextProfile,
-            todayISO,
-            diagnosticActionType: 'equipment_change',
-            diagnosticRoute: 'baseline_equipment_rebuild',
-          });
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'baseline_equipment',
+          equipment: selectedEquipment,
         },
+        todayISO,
+        sourceSurface: 'equipment_settings',
       });
+      if (!result.ok) throw new Error(result.reason ?? 'equipment_profile_transaction_failed');
       Alert.alert(
-        result.rebuildRequired ? 'Equipment updated' : 'Equipment saved',
+        result.changedProgram ? 'Equipment updated' : 'Equipment saved',
         result.message,
       );
       navigation.goBack();

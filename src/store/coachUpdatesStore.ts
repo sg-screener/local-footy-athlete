@@ -229,7 +229,7 @@ export interface ActiveFatigueConstraint extends ActiveConstraintModifierMetadat
   /** Optional display override for derived constraints such as readiness chips. */
   reasonLabel?: string;
   /** Optional origin for derived/non-chat constraints. */
-  source?: 'coach' | 'readiness' | 'tap';
+  source?: 'coach' | 'readiness' | 'tap' | 'system';
   /** Typed readiness reason for deterministic non-chat flows. */
   readinessKind?: 'poor_sleep';
   /** One poor night is day-scoped; repeated poor sleep is week-scoped. */
@@ -293,6 +293,15 @@ export interface ActiveScheduleConstraint extends ActiveConstraintModifierMetada
   noteProof?: ActiveConstraintNoteProof;
   /** Optional cap on total sessions for the week. */
   maxSessionsThisWeek?: number;
+  /** Canonical compatibility projection of an exact temporary schedule fact. */
+  scheduleKind?: 'unavailable_dates' | 'unavailable_weekdays' | 'busy_week' |
+    'travel' | 'max_sessions' | 'time_cap';
+  unavailableDates?: string[];
+  unavailableWeekdays?: import('../types/domain').DayOfWeek[];
+  maxSessionMinutes?: number;
+  timeCapDates?: string[];
+  timeCapWeekdays?: import('../types/domain').DayOfWeek[];
+  timeCapAllSessions?: boolean;
   rules: string[];
   safeFocus: string[];
   advice: string[];
@@ -638,6 +647,13 @@ function hasCanonicalTemporaryFactOwnership(): boolean {
   return Array.isArray(context?.temporarySourceFacts) && context.temporarySourceFacts.length > 0;
 }
 
+function hasCanonicalAcceptedEnvelope(): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const context = require('./programStore').useProgramStore.getState()
+    .acceptedMaterialContext;
+  return typeof context?.revision === 'number' && context.revision > 0;
+}
+
 function canonicalTemporaryFactCompatibilityConstraints(): ActiveConstraint[] {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const context = normalizeAcceptedMaterialContext(
@@ -796,7 +812,9 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
 
       upsertActiveConstraint: (c) => {
         if (c.type === 'injury' && hasCanonicalInjuryOwnership()) return;
-        if (c.type === 'fatigue' || c.type === 'soreness') {
+        if (c.type === 'fatigue' || c.type === 'soreness' ||
+          ((c.type === 'equipment' || c.type === 'schedule') &&
+            hasCanonicalAcceptedEnvelope())) {
           const accepted = normalizeAcceptedMaterialContext(
             require('./programStore').useProgramStore.getState().acceptedMaterialContext,
           );
@@ -831,7 +849,9 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
       removeActiveConstraint: (id) => {
         const removed = get().activeConstraints.find((c) => c.id === id);
         if (removed?.type === 'injury' && hasCanonicalInjuryOwnership()) return;
-        if (removed?.type === 'fatigue' || removed?.type === 'soreness') {
+        if (removed?.type === 'fatigue' || removed?.type === 'soreness' ||
+          ((removed?.type === 'equipment' || removed?.type === 'schedule') &&
+            hasCanonicalAcceptedEnvelope())) {
           const accepted = normalizeAcceptedMaterialContext(
             require('./programStore').useProgramStore.getState().acceptedMaterialContext,
           );

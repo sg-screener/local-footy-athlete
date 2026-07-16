@@ -63,15 +63,22 @@ import {
 } from '../utils/athleteActionDiagnostics';
 import {
   ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
+  ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
+  acceptedProfileForContext,
   createEmptyAcceptedMaterialContext,
   normalizeAcceptedMaterialContext,
   normalizeAcceptedProgramSurfaces,
   type AcceptedMaterialContext,
+  type AcceptedProfileSnapshotV1,
 } from './acceptedStateColdStart';
 import {
   migrateLegacyTemporarySourceFacts,
   normalizeTemporarySourceFacts,
 } from '../rules/temporarySourceFact';
+import {
+  composeAcceptedProfileConstraints,
+  isAcceptedProfileConstraint,
+} from '../rules/acceptedProfileProjection';
 import {
   createEmptyReversibleAdjustmentLedger,
   normalizeReversibleAdjustmentLedger,
@@ -1235,7 +1242,10 @@ export const useProgramStore = create<ProgramState>()(
               userRemovalConstraints: priorState.userRemovalConstraints,
             }, {
               programAlreadyAccepted: true,
-              profile: require('./profileStore').useProfileStore.getState().onboardingData,
+              profile: acceptedProfileForContext(
+                useProgramStore.getState().acceptedMaterialContext,
+                require('./profileStore').useProfileStore.getState().onboardingData,
+              ),
             })
           : null;
         const validatedProgram = acceptedSurfaces?.currentProgram ?? candidateProgram;
@@ -1606,7 +1616,8 @@ export const useProgramStore = create<ProgramState>()(
         const rawLegacyConstraints = Array.isArray(rawAcceptedContext.activeConstraints)
           ? rawAcceptedContext.activeConstraints.filter((constraint) =>
               (constraint.type === 'injury' && !constraint.injuryEpisodeId) ||
-              ((constraint.type === 'fatigue' || constraint.type === 'soreness') &&
+              ((constraint.type === 'fatigue' || constraint.type === 'soreness' ||
+                constraint.type === 'equipment' || constraint.type === 'schedule') &&
                 (constraint.temporarySourceFactIds?.length ?? 0) === 0))
           : [];
         const legacyFacts = migrateLegacyTemporarySourceFacts({
@@ -1615,6 +1626,10 @@ export const useProgramStore = create<ProgramState>()(
             ? null
             : rawAcceptedContext.activeInjury ?? acceptedContext.activeInjury,
           readinessSignalsByDate: rawAcceptedContext.readinessSignalsByDate ?? {},
+          availabilityConstraints: acceptedProfileForContext(
+            acceptedContext,
+            {},
+          ).availabilityConstraints,
           sourceSurface: 'program_store_hydration',
         });
         const migratedFacts = normalizeTemporarySourceFacts({
@@ -1683,7 +1698,10 @@ export const useProgramStore = create<ProgramState>()(
           incoming,
           {
             programAlreadyAccepted: true,
-            profile: require('./profileStore').useProfileStore.getState().onboardingData,
+            profile: acceptedProfileForContext(
+              acceptedContext,
+              {},
+            ),
             markedDays: acceptedContext.markedDays,
             validateWeekStarts: [
               ...(incoming.currentProgram?.microcycles ?? []).map((microcycle) =>
@@ -1741,20 +1759,40 @@ export const useProgramStore = create<ProgramState>()(
             const acceptedBefore = normalizeAcceptedMaterialContext(
               useProgramStore.getState().acceptedMaterialContext,
             );
+            const persistedState = async (key: string): Promise<Record<string, any>> => {
+              try {
+                const raw = await asyncStorageCompat.getItem(key);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw) as { state?: Record<string, any> } | Record<string, any>;
+                return parsed && typeof parsed === 'object' && 'state' in parsed
+                  ? parsed.state ?? {}
+                  : parsed as Record<string, any>;
+              } catch {
+                return {};
+              }
+            };
+            const persistedProfile = await persistedState('profile-store');
+            let profileForAcceptance = acceptedProfileForContext(
+              acceptedBefore,
+              (persistedProfile.onboardingData && typeof persistedProfile.onboardingData === 'object'
+                ? persistedProfile.onboardingData
+                : require('./profileStore').useProfileStore.getState().onboardingData),
+            );
+            const profileSnapshotTime =
+              acceptedBefore.acceptedProfileSnapshot?.updatedAt ??
+              acceptedBefore.acceptedCompositionBase?.updatedAt ??
+              acceptedBefore.acceptedCompositionBase?.capturedAt ??
+              new Date(0).toISOString();
+            let acceptedProfileSnapshot: AcceptedProfileSnapshotV1 =
+              acceptedBefore.acceptedProfileSnapshot ?? {
+                protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
+                capturedAt: profileSnapshotTime,
+                updatedAt: profileSnapshotTime,
+                sourceRevision: acceptedBefore.revision + 1,
+                onboardingData: profileForAcceptance,
+              };
             let legacyHydrationFacts = acceptedBefore.temporarySourceFacts;
             if (legacyHydrationFacts.length === 0) {
-              const persistedState = async (key: string): Promise<Record<string, any>> => {
-                try {
-                  const raw = await asyncStorageCompat.getItem(key);
-                  if (!raw) return {};
-                  const parsed = JSON.parse(raw) as { state?: Record<string, any> } | Record<string, any>;
-                  return parsed && typeof parsed === 'object' && 'state' in parsed
-                    ? parsed.state ?? {}
-                    : parsed as Record<string, any>;
-                } catch {
-                  return {};
-                }
-              };
               const [coachMirror, readinessMirror] = await Promise.all([
                 persistedState('coach-updates'),
                 persistedState('readiness-store'),
@@ -1771,13 +1809,37 @@ export const useProgramStore = create<ProgramState>()(
                     : {}),
                   ...acceptedBefore.readinessSignalsByDate,
                 },
+                availabilityConstraints: profileForAcceptance.availabilityConstraints,
                 sourceSurface: 'program_store_hydration',
               });
+            }
+            if ((profileForAcceptance.availabilityConstraints ?? [])
+              .some((constraint) => constraint.scope === 'temporary')) {
+              profileForAcceptance = {
+                ...profileForAcceptance,
+                availabilityConstraints: (profileForAcceptance.availabilityConstraints ?? [])
+                  .filter((constraint) => constraint.scope !== 'temporary'),
+              };
+              acceptedProfileSnapshot = {
+                ...acceptedProfileSnapshot,
+                onboardingData: profileForAcceptance,
+                updatedAt: profileSnapshotTime,
+              };
             }
             await runWithAthleteActionTrace(trace, async () => {
               require('./acceptedStateTransaction').commitAcceptedStateTransaction({
                 reason: 'program:hydration_acceptance',
                 trace,
+                profile: profileForAcceptance,
+                acceptedProfileSnapshot,
+                activeConstraints: [
+                  ...acceptedBefore.activeConstraints.filter((constraint) =>
+                    !isAcceptedProfileConstraint(constraint)),
+                  ...composeAcceptedProfileConstraints(
+                    profileForAcceptance,
+                    profileSnapshotTime,
+                  ),
+                ],
                 validateWeekStarts: [
                   ...(hydrated.currentProgram?.microcycles ?? []).map((microcycle) =>
                     microcycle.startDate.slice(0, 10)),
@@ -1814,6 +1876,11 @@ export const useProgramStore = create<ProgramState>()(
                   activeConstraints: accepted.activeConstraints,
                   activeInjury: accepted.activeInjury,
                 });
+              }
+              if (accepted.acceptedProfileSnapshot) {
+                require('./profileStore').publishAcceptedProfileCompatibilityMirror(
+                  accepted.acceptedProfileSnapshot.onboardingData,
+                );
               }
               emitAthleteActionEvent(trace, 'athlete_action_completed', {
                 outcome: 'accepted',

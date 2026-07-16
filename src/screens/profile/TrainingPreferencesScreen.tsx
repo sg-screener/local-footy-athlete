@@ -13,6 +13,8 @@ import { Button } from '../../components/common/Button';
 import { useProfileStore } from '../../store/profileStore';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
+import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
+import { todayISOLocal } from '../../utils/appDate';
 
 const DAYS_OPTIONS = ['2', '3', '4', '5'];
 const DURATIONS = ['30 min', '45 min', '60 min', '75 min', '90 min'];
@@ -20,7 +22,6 @@ const DURATIONS = ['30 min', '45 min', '60 min', '75 min', '90 min'];
 export const TrainingPreferencesScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const onboardingData = useProfileStore((state) => state.onboardingData);
-  const updateOnboardingData = useProfileStore((state) => state.updateOnboardingData);
 
   const [daysPerWeek, setDaysPerWeek] = useState(
     onboardingData.trainingDaysPerWeek?.toString() || '3'
@@ -34,10 +35,18 @@ export const TrainingPreferencesScreen: React.FC = () => {
     setLoading(true);
     try {
       const durationNum = parseInt(sessionDuration, 10);
-      updateOnboardingData({
-        trainingDaysPerWeek: parseInt(daysPerWeek, 10),
-        sessionDurationMinutes: durationNum as any,
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'profile_setup',
+          patch: {
+            trainingDaysPerWeek: parseInt(daysPerWeek, 10),
+            sessionDurationMinutes: durationNum as any,
+          },
+        },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'training_preferences',
       });
+      if (!result.ok) throw new Error(result.reason ?? 'training_preferences_transaction_failed');
       navigation.goBack();
     } catch (error) {
       console.error('Error updating training preferences:', error);

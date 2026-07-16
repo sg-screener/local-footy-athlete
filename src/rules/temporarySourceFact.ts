@@ -1,6 +1,16 @@
 import type { ActiveConstraint, ActiveFatigueConstraint, ActiveSorenessConstraint } from '../store/coachUpdatesStore';
+import type {
+  ActiveEquipmentConstraint,
+  ActiveScheduleConstraint,
+} from '../store/coachUpdatesStore';
+import type { EquipmentTag } from '../data/exercisePools';
 import type { ReadinessSignal } from '../utils/readiness';
 import type { InjuryState } from '../utils/injuryProgression';
+import type {
+  ConditioningEquipmentModality,
+  DayOfWeek,
+  ProgramAvailabilityConstraint,
+} from '../types/domain';
 import {
   composeInjuryCompatibility,
   migrateLegacyInjuryEpisodes,
@@ -10,7 +20,7 @@ import {
 
 export const TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION = 1 as const;
 
-export type TemporarySourceFactStatus = 'active' | 'resolved' | 'expired';
+export type TemporarySourceFactStatus = 'active' | 'resolved' | 'expired' | 'superseded';
 export type TemporarySourceFactActor = 'athlete' | 'coach' | 'system';
 export type TemporarySourceFactSurface =
   | 'coach_chat'
@@ -36,6 +46,15 @@ export interface TemporarySourceFactScope {
   until: string;
 }
 
+export interface TemporarySourceFactTransition {
+  at: string;
+  from: TemporarySourceFactStatus | null;
+  to: TemporarySourceFactStatus;
+  actor: TemporarySourceFactActor;
+  surface: TemporarySourceFactSurface;
+  reason?: string;
+}
+
 interface TemporarySourceFactBase<TKind extends string> {
   protocolVersion: typeof TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION;
   factId: string;
@@ -52,6 +71,7 @@ interface TemporarySourceFactBase<TKind extends string> {
   sourceActor: TemporarySourceFactActor;
   sourceSurface: TemporarySourceFactSurface;
   legacyMigrationStatus: 'native_v1' | 'legacy_after_state_only';
+  transitionHistory: TemporarySourceFactTransition[];
 }
 
 export interface TemporaryFatigueFact extends TemporarySourceFactBase<'fatigue'> {
@@ -70,10 +90,44 @@ export interface TemporaryPoorSleepFact extends TemporarySourceFactBase<'poor_sl
   pattern: 'single_night' | 'repeated';
 }
 
-export type NonInjuryTemporarySourceFact =
+export interface TemporaryEquipmentFact extends TemporarySourceFactBase<'equipment'> {
+  mode: 'only' | 'without';
+  equipmentTags: EquipmentTag[];
+  /** Exact unavailable/available conditioning modalities, never generated exercises. */
+  conditioningModalities: ConditioningEquipmentModality[];
+}
+
+export type TemporaryScheduleFactKind =
+  | 'unavailable_dates'
+  | 'unavailable_weekdays'
+  | 'busy_week'
+  | 'travel'
+  | 'max_sessions';
+
+export interface TemporaryScheduleFact extends TemporarySourceFactBase<'schedule'> {
+  scheduleKind: TemporaryScheduleFactKind;
+  unavailableDates: string[];
+  unavailableWeekdays: DayOfWeek[];
+  maxSessions: number | null;
+}
+
+export interface TemporaryTimeCapFact extends TemporarySourceFactBase<'time_cap'> {
+  targetKind: 'dates' | 'weekdays' | 'all_sessions';
+  dates: string[];
+  weekdays: DayOfWeek[];
+  maxSessionMinutes: number;
+}
+
+export type TemporaryHealthFact =
   | TemporaryFatigueFact
   | TemporarySorenessFact
   | TemporaryPoorSleepFact;
+
+export type NonInjuryTemporarySourceFact =
+  | TemporaryHealthFact
+  | TemporaryEquipmentFact
+  | TemporaryScheduleFact
+  | TemporaryTimeCapFact;
 
 /** InjuryEpisodeV1 is the landed injury member of the same canonical fact set. */
 export type TemporarySourceFact =
@@ -143,9 +197,88 @@ function normalizeScope(value: unknown, from: string, until: string): TemporaryS
   };
 }
 
+const DAY_NAMES = new Set<DayOfWeek>([
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+]);
+
+const CONDITIONING_MODALITIES = new Set<ConditioningEquipmentModality>([
+  'bike',
+  'row',
+  'ski',
+  'treadmill',
+]);
+
+function normalizeStatus(value: unknown): TemporarySourceFactStatus {
+  return value === 'resolved' || value === 'expired' || value === 'superseded'
+    ? value
+    : 'active';
+}
+
+function normalizeActor(value: unknown): TemporarySourceFactActor {
+  return value === 'coach' || value === 'system' ? value : 'athlete';
+}
+
+function normalizeTransitionHistory(args: {
+  value: unknown;
+  createdAt: string;
+  status: TemporarySourceFactStatus;
+  actor: TemporarySourceFactActor;
+  surface: TemporarySourceFactSurface;
+}): TemporarySourceFactTransition[] {
+  const normalized = (Array.isArray(args.value) ? args.value : [])
+    .map((entry): TemporarySourceFactTransition | null => {
+      if (!isRecord(entry)) return null;
+      const to = normalizeStatus(entry.to);
+      const from = entry.from === null
+        ? null
+        : entry.from === 'active' || entry.from === 'resolved' ||
+          entry.from === 'expired' || entry.from === 'superseded'
+          ? entry.from
+          : null;
+      return {
+        at: isoTimestamp(entry.at, args.createdAt),
+        from,
+        to,
+        actor: normalizeActor(entry.actor),
+        surface: typeof entry.surface === 'string' ? entry.surface : args.surface,
+        ...(typeof entry.reason === 'string' ? { reason: entry.reason } : {}),
+      };
+    })
+    .filter((entry): entry is TemporarySourceFactTransition => !!entry);
+  if (normalized.length > 0) return normalized;
+  return [{
+    at: args.createdAt,
+    from: null,
+    to: args.status,
+    actor: args.actor,
+    surface: args.surface,
+    reason: args.status === 'active' ? 'created' : 'legacy_hydration',
+  }];
+}
+
+function normalizeDates(value: unknown): string[] {
+  return Array.from(new Set((Array.isArray(value) ? value : [])
+    .map(isoDate)
+    .filter((date): date is string => !!date))).sort();
+}
+
+function normalizeWeekdays(value: unknown): DayOfWeek[] {
+  return Array.from(new Set((Array.isArray(value) ? value : [])
+    .filter((day): day is DayOfWeek =>
+      typeof day === 'string' && DAY_NAMES.has(day as DayOfWeek))));
+}
+
 function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | null {
   if (!isRecord(value) || typeof value.factId !== 'string') return null;
-  if (value.factKind !== 'fatigue' && value.factKind !== 'soreness' && value.factKind !== 'poor_sleep') {
+  if (value.factKind !== 'fatigue' && value.factKind !== 'soreness' &&
+    value.factKind !== 'poor_sleep' && value.factKind !== 'equipment' &&
+    value.factKind !== 'schedule' && value.factKind !== 'time_cap') {
     return null;
   }
   const observedDate = isoDate(value.observedDate);
@@ -154,10 +287,15 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
   if (!observedDate || !effectiveFrom || !effectiveUntil) return null;
   const createdAt = isoTimestamp(value.createdAt, `${observedDate}T00:00:00.000Z`);
   const updatedAt = isoTimestamp(value.updatedAt, createdAt);
+  const status = normalizeStatus(value.status);
+  const sourceActor = normalizeActor(value.sourceActor);
+  const sourceSurface = typeof value.sourceSurface === 'string'
+    ? value.sourceSurface
+    : 'hydration_migration';
   const base: Omit<TemporarySourceFactBase<NonInjuryTemporarySourceFact['factKind']>, 'factKind'> = {
     protocolVersion: TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION,
     factId: value.factId,
-    status: value.status === 'resolved' || value.status === 'expired' ? value.status : 'active' as const,
+    status,
     observedDate,
     effectiveFrom,
     effectiveUntil,
@@ -165,16 +303,21 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
     athleteReportedLevel: clampReportedLevel(value.athleteReportedLevel),
     createdAt,
     updatedAt,
-    resolvedAt: value.status === 'resolved' || value.status === 'expired'
+    resolvedAt: status !== 'active'
       ? isoTimestamp(value.resolvedAt, updatedAt)
       : null,
-    sourceActor: value.sourceActor === 'coach' || value.sourceActor === 'system'
-      ? value.sourceActor
-      : 'athlete' as const,
-    sourceSurface: typeof value.sourceSurface === 'string' ? value.sourceSurface : 'hydration_migration',
+    sourceActor,
+    sourceSurface,
     legacyMigrationStatus: value.legacyMigrationStatus === 'legacy_after_state_only'
       ? 'legacy_after_state_only' as const
       : 'native_v1' as const,
+    transitionHistory: normalizeTransitionHistory({
+      value: value.transitionHistory,
+      createdAt,
+      status,
+      actor: sourceActor,
+      surface: sourceSurface,
+    }),
   };
   if (value.factKind === 'fatigue') {
     return {
@@ -188,6 +331,68 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
       ...base,
       factKind: 'poor_sleep',
       pattern: value.pattern === 'repeated' ? 'repeated' : 'single_night',
+    };
+  }
+  if (value.factKind === 'equipment') {
+    const mode = value.mode === 'without' ? 'without' : 'only';
+    const conditioningModalities = Array.from(new Set((Array.isArray(value.conditioningModalities)
+      ? value.conditioningModalities
+      : []).filter((modality): modality is ConditioningEquipmentModality =>
+      typeof modality === 'string' &&
+      CONDITIONING_MODALITIES.has(modality as ConditioningEquipmentModality))));
+    const equipmentTags = Array.from(new Set([
+      ...(Array.isArray(value.equipmentTags)
+        ? value.equipmentTags
+        : []).filter((tag): tag is EquipmentTag => typeof tag === 'string'),
+      ...(mode === 'only' && conditioningModalities.length > 0
+        ? ['bike_or_treadmill' as EquipmentTag]
+        : []),
+    ]));
+    return {
+      ...base,
+      factKind: 'equipment',
+      mode,
+      equipmentTags,
+      conditioningModalities,
+    };
+  }
+  if (value.factKind === 'schedule') {
+    const scheduleKind: TemporaryScheduleFactKind =
+      value.scheduleKind === 'unavailable_weekdays' ||
+      value.scheduleKind === 'busy_week' ||
+      value.scheduleKind === 'travel' ||
+      value.scheduleKind === 'max_sessions'
+        ? value.scheduleKind
+        : 'unavailable_dates';
+    const rawMax = typeof value.maxSessions === 'number' && Number.isFinite(value.maxSessions)
+      ? Math.max(0, Math.min(14, Math.trunc(value.maxSessions)))
+      : null;
+    return {
+      ...base,
+      factKind: 'schedule',
+      scheduleKind,
+      unavailableDates: normalizeDates(value.unavailableDates),
+      unavailableWeekdays: normalizeWeekdays(value.unavailableWeekdays),
+      maxSessions: rawMax,
+    };
+  }
+  if (value.factKind === 'time_cap') {
+    const targetKind = value.targetKind === 'dates' || value.targetKind === 'weekdays'
+      ? value.targetKind
+      : 'all_sessions';
+    const maxSessionMinutes = typeof value.maxSessionMinutes === 'number' &&
+      Number.isFinite(value.maxSessionMinutes) &&
+      value.maxSessionMinutes >= 10
+      ? Math.min(240, Math.trunc(value.maxSessionMinutes))
+      : 0;
+    if (maxSessionMinutes <= 0) return null;
+    return {
+      ...base,
+      factKind: 'time_cap',
+      targetKind,
+      dates: normalizeDates(value.dates),
+      weekdays: normalizeWeekdays(value.weekdays),
+      maxSessionMinutes,
     };
   }
   const bucket = canonicalBodyPartBucket(value.canonicalBodyPartBucket);
@@ -210,6 +415,30 @@ export function isNonInjuryTemporarySourceFact(
   fact: TemporarySourceFact,
 ): fact is NonInjuryTemporarySourceFact {
   return !isInjurySourceFact(fact);
+}
+
+export function isTemporaryHealthFact(fact: TemporarySourceFact): fact is TemporaryHealthFact {
+  return !isInjurySourceFact(fact) &&
+    (fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
+      fact.factKind === 'poor_sleep');
+}
+
+export function isTemporaryEquipmentFact(
+  fact: TemporarySourceFact,
+): fact is TemporaryEquipmentFact {
+  return !isInjurySourceFact(fact) && fact.factKind === 'equipment';
+}
+
+export function isTemporaryScheduleFact(
+  fact: TemporarySourceFact,
+): fact is TemporaryScheduleFact {
+  return !isInjurySourceFact(fact) && fact.factKind === 'schedule';
+}
+
+export function isTemporaryTimeCapFact(
+  fact: TemporarySourceFact,
+): fact is TemporaryTimeCapFact {
+  return !isInjurySourceFact(fact) && fact.factKind === 'time_cap';
 }
 
 export function temporarySourceFactId(fact: TemporarySourceFact): string {
@@ -254,7 +483,23 @@ export function expireTemporarySourceFacts(
 ): TemporarySourceFact[] {
   return facts.map((fact) => {
     if (isInjurySourceFact(fact) || fact.status !== 'active' || fact.effectiveUntil >= onDate) return fact;
-    return { ...fact, status: 'expired', updatedAt: now, resolvedAt: now };
+    return {
+      ...fact,
+      status: 'expired',
+      updatedAt: now,
+      resolvedAt: now,
+      transitionHistory: [
+        ...fact.transitionHistory,
+        {
+          at: now,
+          from: 'active',
+          to: 'expired',
+          actor: 'system',
+          surface: 'durable_expiry',
+          reason: 'effective_window_elapsed',
+        },
+      ],
+    };
   });
 }
 
@@ -268,7 +513,7 @@ function levelScore(level: TemporaryAthleteReportedLevel): number {
 }
 
 function projectionScore(
-  fact: TemporaryFatigueFact | TemporarySorenessFact | TemporaryPoorSleepFact,
+  fact: TemporaryHealthFact,
 ): number {
   if (fact.factKind === 'poor_sleep' && fact.athleteReportedLevel === 'unspecified') {
     return fact.pattern === 'repeated' ? 5 : 3;
@@ -288,7 +533,7 @@ function factConstraintMetadata(facts: readonly (TemporaryFatigueFact | Temporar
 }
 
 function globalConstraint(
-  facts: readonly (TemporaryFatigueFact | TemporarySorenessFact | TemporaryPoorSleepFact)[],
+  facts: readonly TemporaryHealthFact[],
 ): ActiveFatigueConstraint | null {
   if (facts.length === 0) return null;
   const strongest = [...facts].sort((left, right) =>
@@ -325,9 +570,9 @@ function globalConstraint(
 }
 
 function globalConstraints(
-  facts: readonly (TemporaryFatigueFact | TemporarySorenessFact | TemporaryPoorSleepFact)[],
+  facts: readonly TemporaryHealthFact[],
 ): ActiveFatigueConstraint[] {
-  const byWindow = new Map<string, Array<TemporaryFatigueFact | TemporarySorenessFact | TemporaryPoorSleepFact>>();
+  const byWindow = new Map<string, TemporaryHealthFact[]>();
   for (const fact of facts) {
     const key = `${fact.effectiveFrom}:${fact.effectiveUntil}`;
     const windowFacts = byWindow.get(key) ?? [];
@@ -388,7 +633,7 @@ function localizedSorenessConstraints(facts: readonly TemporarySorenessFact[]): 
 }
 
 function readinessProjection(
-  facts: readonly (TemporaryFatigueFact | TemporarySorenessFact | TemporaryPoorSleepFact)[],
+  facts: readonly TemporaryHealthFact[],
 ): Record<string, ReadinessSignal> {
   const byDate: Record<string, ReadinessSignal> = {};
   for (const fact of facts) {
@@ -421,6 +666,114 @@ function readinessProjection(
   return byDate;
 }
 
+function equipmentProjection(
+  facts: readonly TemporaryEquipmentFact[],
+): ActiveEquipmentConstraint[] {
+  return facts.map((fact): ActiveEquipmentConstraint => ({
+    id: `source-fact:equipment:${fact.factId}`,
+    type: 'equipment',
+    mode: fact.mode,
+    tags: [...fact.equipmentTags],
+    conditioningModalities: [...fact.conditioningModalities],
+    severity: 5,
+    status: 'active',
+    startDate: fact.effectiveFrom,
+    lastUpdatedAt: fact.updatedAt,
+    source: fact.sourceSurface === 'coach_chat' ? 'chat' :
+      fact.sourceActor === 'system' ? 'system' : 'tap',
+    reasonLabel: fact.mode === 'only' ? 'Temporary equipment setup' : 'Equipment unavailable',
+    temporarySourceFactIds: [fact.factId],
+    expiresAt: fact.effectiveUntil,
+    ...(fact.scope.kind === 'week' ? { weekStartISO: fact.scope.weekStart } : {}),
+    modifierTitle: 'Equipment restriction active',
+    modifierBody: fact.mode === 'only'
+      ? 'Your sessions are using only the equipment you currently have.'
+      : 'Your sessions are avoiding the equipment you marked unavailable.',
+    modifierAffects: ['current_week', 'future_generation'],
+    rules: fact.mode === 'only'
+      ? [`use only: ${fact.equipmentTags.join(', ') || 'bodyweight'}`]
+      : [`avoid: ${fact.equipmentTags.join(', ')}`],
+    safeFocus: ['Available-equipment substitutions', 'Bodyweight options'],
+    advice: [],
+  })).sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function scheduleProjection(
+  facts: readonly TemporaryScheduleFact[],
+): ActiveScheduleConstraint[] {
+  return facts.map((fact): ActiveScheduleConstraint => ({
+    id: `source-fact:schedule:${fact.factId}`,
+    type: 'schedule',
+    severity: fact.scheduleKind === 'travel' ? 7 : 5,
+    status: 'active',
+    startDate: fact.effectiveFrom,
+    lastUpdatedAt: fact.updatedAt,
+    reasonLabel: fact.scheduleKind === 'travel' ? 'Away / travel' :
+      fact.scheduleKind === 'busy_week' ? 'Busy week' : 'Temporary availability',
+    source: fact.sourceActor === 'coach' ? 'coach' :
+      fact.sourceActor === 'system' ? 'system' : 'tap',
+    temporarySourceFactIds: [fact.factId],
+    expiresAt: fact.effectiveUntil,
+    ...(fact.scope.kind === 'week' ? { weekStartISO: fact.scope.weekStart } : {}),
+    scheduleKind: fact.scheduleKind,
+    unavailableDates: [...fact.unavailableDates],
+    unavailableWeekdays: [...fact.unavailableWeekdays],
+    maxSessionsThisWeek: fact.maxSessions ?? undefined,
+    modifierTitle: fact.scheduleKind === 'travel'
+      ? 'Away / travel period active'
+      : fact.scheduleKind === 'busy_week'
+        ? 'Busy week active'
+        : 'Temporary availability active',
+    modifierBody: fact.scheduleKind === 'travel'
+      ? 'Your program is avoiding the dates you are away.'
+      : fact.scheduleKind === 'busy_week'
+        ? 'Your bounded week is being kept within the session limit you set.'
+        : 'Your program is avoiding the dates or weekdays you marked unavailable.',
+    modifierAffects: ['current_week', 'future_generation'],
+    rules: [
+      ...(fact.unavailableDates.length > 0
+        ? [`unavailable dates: ${fact.unavailableDates.join(', ')}`]
+        : []),
+      ...(fact.unavailableWeekdays.length > 0
+        ? [`unavailable weekdays: ${fact.unavailableWeekdays.join(', ')}`]
+        : []),
+      ...(fact.maxSessions !== null ? [`maximum ${fact.maxSessions} sessions`] : []),
+    ],
+    safeFocus: ['Eligible available days', 'Highest-priority work'],
+    advice: [],
+  })).sort((left, right) => left.id.localeCompare(right.id));
+}
+
+function timeCapProjection(
+  facts: readonly TemporaryTimeCapFact[],
+): ActiveScheduleConstraint[] {
+  return facts.map((fact): ActiveScheduleConstraint => ({
+    id: `source-fact:time-cap:${fact.factId}`,
+    type: 'schedule',
+    severity: fact.maxSessionMinutes < 20 ? 7 : 5,
+    status: 'active',
+    startDate: fact.effectiveFrom,
+    lastUpdatedAt: fact.updatedAt,
+    reasonLabel: `Temporary ${fact.maxSessionMinutes}-minute cap`,
+    source: fact.sourceActor === 'coach' ? 'coach' :
+      fact.sourceActor === 'system' ? 'system' : 'tap',
+    temporarySourceFactIds: [fact.factId],
+    expiresAt: fact.effectiveUntil,
+    ...(fact.scope.kind === 'week' ? { weekStartISO: fact.scope.weekStart } : {}),
+    scheduleKind: 'time_cap',
+    maxSessionMinutes: fact.maxSessionMinutes,
+    timeCapDates: [...fact.dates],
+    timeCapWeekdays: [...fact.weekdays],
+    timeCapAllSessions: fact.targetKind === 'all_sessions',
+    modifierTitle: `${fact.maxSessionMinutes}-minute session cap active`,
+    modifierBody: 'Every targeted session is capped deterministically within the effective window.',
+    modifierAffects: ['current_week', 'future_generation'],
+    rules: [`maximum session duration ${fact.maxSessionMinutes} minutes`],
+    safeFocus: ['Highest-priority session content'],
+    advice: [],
+  })).sort((left, right) => left.id.localeCompare(right.id));
+}
+
 export function isTemporarySourceFactConstraint(constraint: ActiveConstraint): boolean {
   return (constraint.temporarySourceFactIds?.length ?? 0) > 0 ||
     (constraint.type === 'injury' && !!constraint.injuryEpisodeId);
@@ -436,8 +789,10 @@ export function composeTemporarySourceFactCompatibility(args: {
   const facts = normalizeTemporarySourceFacts({ value: args.temporarySourceFacts });
   const injuryEpisodes = facts.filter(isInjurySourceFact);
   const active = activeTemporarySourceFacts(facts, args.onDate);
-  const activeNonInjuries = active.filter((fact): fact is TemporaryFatigueFact | TemporarySorenessFact | TemporaryPoorSleepFact =>
-    !isInjurySourceFact(fact));
+  const activeHealth = active.filter(isTemporaryHealthFact);
+  const activeEquipment = active.filter(isTemporaryEquipmentFact);
+  const activeSchedule = active.filter(isTemporaryScheduleFact);
+  const activeTimeCaps = active.filter(isTemporaryTimeCapFact);
   const injury = composeInjuryCompatibility({
     activeConstraints: (args.activeConstraints ?? []).filter((constraint) =>
       !isTemporarySourceFactConstraint(constraint) &&
@@ -446,9 +801,9 @@ export function composeTemporarySourceFactCompatibility(args: {
       constraint.type !== 'soreness'),
     injuryEpisodes,
   });
-  const localized = localizedSorenessConstraints(activeNonInjuries.filter((fact): fact is TemporarySorenessFact =>
+  const localized = localizedSorenessConstraints(activeHealth.filter((fact): fact is TemporarySorenessFact =>
     fact.factKind === 'soreness' && fact.distribution === 'localized'));
-  const global = globalConstraints(activeNonInjuries.filter((fact) =>
+  const global = globalConstraints(activeHealth.filter((fact) =>
     fact.factKind !== 'soreness' || fact.distribution === 'general'));
   const retainedSignals = Object.fromEntries(Object.entries(args.readinessSignalsByDate ?? {})
     .filter(([, signal]) =>
@@ -467,20 +822,24 @@ export function composeTemporarySourceFactCompatibility(args: {
       ...injury.activeConstraints,
       ...localized,
       ...global,
+      ...equipmentProjection(activeEquipment),
+      ...scheduleProjection(activeSchedule),
+      ...timeCapProjection(activeTimeCaps),
     ],
     activeInjury: injury.activeInjury,
     readinessSignalsByDate: {
       ...retainedSignals,
-      ...readinessProjection(activeNonInjuries),
+      ...readinessProjection(activeHealth),
     },
   };
 }
 
 export function stableTemporarySourceFactId(args: {
-  factKind: 'fatigue' | 'soreness' | 'poor_sleep';
+  factKind: NonInjuryTemporarySourceFact['factKind'];
   observedDate: string;
   scope: TemporarySourceFactScope;
   canonicalBodyPartBucket?: InjuryState['bucket'] | null;
+  discriminator?: string | null;
 }): string {
   const scopeKey = args.scope.kind === 'week'
     ? `week:${args.scope.weekStart}`
@@ -488,7 +847,10 @@ export function stableTemporarySourceFactId(args: {
   const body = args.factKind === 'soreness'
     ? `:${args.canonicalBodyPartBucket ?? 'general'}`
     : '';
-  return `temporary-source-fact:v1:${args.factKind}:${scopeKey}${body}`;
+  const discriminator = args.discriminator?.trim()
+    ? `:${args.discriminator.trim().replace(/[^a-z0-9_-]+/gi, '_').toLowerCase()}`
+    : '';
+  return `temporary-source-fact:v1:${args.factKind}:${scopeKey}${body}${discriminator}`;
 }
 
 function mondayFor(dateISO: string): string {
@@ -551,6 +913,14 @@ export function createTemporaryFatigueFact(args: {
     sourceActor: args.sourceActor ?? 'athlete',
     sourceSurface: args.sourceSurface,
     legacyMigrationStatus: 'native_v1',
+    transitionHistory: [{
+      at: now,
+      from: null,
+      to: 'active',
+      actor: args.sourceActor ?? 'athlete',
+      surface: args.sourceSurface,
+      reason: 'created',
+    }],
   };
 }
 
@@ -596,6 +966,14 @@ export function createTemporarySorenessFact(args: {
     sourceActor: args.sourceActor ?? 'athlete',
     sourceSurface: args.sourceSurface,
     legacyMigrationStatus: 'native_v1',
+    transitionHistory: [{
+      at: now,
+      from: null,
+      to: 'active',
+      actor: args.sourceActor ?? 'athlete',
+      surface: args.sourceSurface,
+      reason: 'created',
+    }],
   };
 }
 
@@ -629,6 +1007,174 @@ export function createTemporaryPoorSleepFact(args: {
     sourceActor: args.sourceActor ?? 'athlete',
     sourceSurface: args.sourceSurface,
     legacyMigrationStatus: 'native_v1',
+    transitionHistory: [{
+      at: now,
+      from: null,
+      to: 'active',
+      actor: args.sourceActor ?? 'athlete',
+      surface: args.sourceSurface,
+      reason: 'created',
+    }],
+  };
+}
+
+export function createTemporaryEquipmentFact(args: {
+  observedDate: string;
+  scope: TemporarySourceFactScope;
+  mode: 'only' | 'without';
+  equipmentTags: readonly EquipmentTag[];
+  conditioningModalities?: readonly ConditioningEquipmentModality[];
+  sourceActor?: TemporarySourceFactActor;
+  sourceSurface: TemporarySourceFactSurface;
+  now?: string;
+  factId?: string;
+}): TemporaryEquipmentFact {
+  const now = args.now ?? new Date().toISOString();
+  const actor = args.sourceActor ?? 'athlete';
+  const conditioningModalities = Array.from(new Set(args.conditioningModalities ?? []));
+  const equipmentTags = Array.from(new Set([
+    ...args.equipmentTags,
+    ...(args.mode === 'only' && conditioningModalities.length > 0
+      ? ['bike_or_treadmill' as EquipmentTag]
+      : []),
+  ]));
+  return {
+    protocolVersion: TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION,
+    factId: args.factId ?? stableTemporarySourceFactId({
+      factKind: 'equipment',
+      observedDate: args.observedDate,
+      scope: args.scope,
+    }),
+    factKind: 'equipment',
+    status: 'active',
+    observedDate: args.observedDate.slice(0, 10),
+    effectiveFrom: args.scope.from,
+    effectiveUntil: args.scope.until,
+    scope: args.scope,
+    athleteReportedLevel: 'unspecified',
+    mode: args.mode,
+    equipmentTags,
+    conditioningModalities,
+    createdAt: now,
+    updatedAt: now,
+    resolvedAt: null,
+    sourceActor: actor,
+    sourceSurface: args.sourceSurface,
+    legacyMigrationStatus: 'native_v1',
+    transitionHistory: [{
+      at: now,
+      from: null,
+      to: 'active',
+      actor,
+      surface: args.sourceSurface,
+      reason: 'created',
+    }],
+  };
+}
+
+export function createTemporaryScheduleFact(args: {
+  observedDate: string;
+  scope: TemporarySourceFactScope;
+  scheduleKind: TemporaryScheduleFactKind;
+  unavailableDates?: readonly string[];
+  unavailableWeekdays?: readonly DayOfWeek[];
+  maxSessions?: number | null;
+  sourceActor?: TemporarySourceFactActor;
+  sourceSurface: TemporarySourceFactSurface;
+  now?: string;
+  factId?: string;
+}): TemporaryScheduleFact {
+  const now = args.now ?? new Date().toISOString();
+  const actor = args.sourceActor ?? 'athlete';
+  return {
+    protocolVersion: TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION,
+    factId: args.factId ?? stableTemporarySourceFactId({
+      factKind: 'schedule',
+      observedDate: args.observedDate,
+      scope: args.scope,
+      discriminator: args.scheduleKind,
+    }),
+    factKind: 'schedule',
+    status: 'active',
+    observedDate: args.observedDate.slice(0, 10),
+    effectiveFrom: args.scope.from,
+    effectiveUntil: args.scope.until,
+    scope: args.scope,
+    athleteReportedLevel: 'unspecified',
+    scheduleKind: args.scheduleKind,
+    unavailableDates: normalizeDates(args.unavailableDates ?? []),
+    unavailableWeekdays: normalizeWeekdays(args.unavailableWeekdays ?? []),
+    maxSessions: typeof args.maxSessions === 'number'
+      ? Math.max(0, Math.min(14, Math.trunc(args.maxSessions)))
+      : null,
+    createdAt: now,
+    updatedAt: now,
+    resolvedAt: null,
+    sourceActor: actor,
+    sourceSurface: args.sourceSurface,
+    legacyMigrationStatus: 'native_v1',
+    transitionHistory: [{
+      at: now,
+      from: null,
+      to: 'active',
+      actor,
+      surface: args.sourceSurface,
+      reason: 'created',
+    }],
+  };
+}
+
+export function createTemporaryTimeCapFact(args: {
+  observedDate: string;
+  scope: TemporarySourceFactScope;
+  targetKind: 'dates' | 'weekdays' | 'all_sessions';
+  dates?: readonly string[];
+  weekdays?: readonly DayOfWeek[];
+  maxSessionMinutes: number;
+  sourceActor?: TemporarySourceFactActor;
+  sourceSurface: TemporarySourceFactSurface;
+  now?: string;
+  factId?: string;
+}): TemporaryTimeCapFact {
+  const now = args.now ?? new Date().toISOString();
+  const actor = args.sourceActor ?? 'athlete';
+  const maxSessionMinutes = Math.trunc(args.maxSessionMinutes);
+  if (!Number.isFinite(maxSessionMinutes) || maxSessionMinutes < 10) {
+    throw new Error('temporary_time_cap_below_minimum');
+  }
+  return {
+    protocolVersion: TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION,
+    factId: args.factId ?? stableTemporarySourceFactId({
+      factKind: 'time_cap',
+      observedDate: args.observedDate,
+      scope: args.scope,
+      discriminator: args.targetKind,
+    }),
+    factKind: 'time_cap',
+    status: 'active',
+    observedDate: args.observedDate.slice(0, 10),
+    effectiveFrom: args.scope.from,
+    effectiveUntil: args.scope.until,
+    scope: args.scope,
+    athleteReportedLevel: 'unspecified',
+    targetKind: args.targetKind,
+    dates: normalizeDates(args.dates ?? []),
+    weekdays: normalizeWeekdays(args.weekdays ?? []),
+    maxSessionMinutes,
+    createdAt: now,
+    updatedAt: now,
+    resolvedAt: null,
+    sourceActor: actor,
+    sourceSurface: args.sourceSurface,
+    legacyMigrationStatus: 'native_v1',
+    transitionHistory: [{
+      at: now,
+      from: null,
+      to: 'active',
+      actor,
+      surface: args.sourceSurface,
+      reason: 'created',
+    }],
   };
 }
 
@@ -637,6 +1183,7 @@ export function migrateLegacyTemporarySourceFacts(args: {
   activeConstraints: readonly ActiveConstraint[];
   activeInjury: InjuryState | null;
   readinessSignalsByDate: Readonly<Record<string, ReadinessSignal>>;
+  availabilityConstraints?: readonly ProgramAvailabilityConstraint[];
   sourceSurface?: string;
 }): TemporarySourceFact[] {
   const sourceSurface = args.sourceSurface ?? 'hydration_migration';
@@ -649,6 +1196,83 @@ export function migrateLegacyTemporarySourceFacts(args: {
   const seen = new Set<string>();
   for (const constraint of args.activeConstraints) {
     if (constraint.status !== 'active' || isTemporarySourceFactConstraint(constraint)) continue;
+    if (constraint.type === 'equipment') {
+      const scope = constraint.weekStartISO
+        ? temporaryFactScope({ kind: 'week', date: constraint.weekStartISO })
+        : temporaryFactScope({
+            kind: 'window',
+            from: constraint.startDate,
+            until: constraint.expiresAt ?? constraint.startDate,
+          });
+      const fact = createTemporaryEquipmentFact({
+        observedDate: constraint.startDate,
+        scope,
+        mode: constraint.mode,
+        equipmentTags: constraint.tags,
+        conditioningModalities: constraint.conditioningModalities,
+        sourceActor: 'system',
+        sourceSurface,
+        now: constraint.lastUpdatedAt,
+      });
+      fact.legacyMigrationStatus = 'legacy_after_state_only';
+      if (!seen.has(fact.factId)) {
+        migrated.push(fact);
+        seen.add(fact.factId);
+      }
+      continue;
+    }
+    if (constraint.type === 'schedule') {
+      if (constraint.scheduleKind === 'time_cap' &&
+        (!constraint.maxSessionMinutes || constraint.maxSessionMinutes < 10)) {
+        continue;
+      }
+      const scope = constraint.weekStartISO
+        ? temporaryFactScope({ kind: 'week', date: constraint.weekStartISO })
+        : temporaryFactScope({
+            kind: 'window',
+            from: constraint.startDate,
+            until: constraint.expiresAt ?? constraint.startDate,
+          });
+      const fact = constraint.scheduleKind === 'time_cap' && constraint.maxSessionMinutes
+        ? createTemporaryTimeCapFact({
+            observedDate: constraint.startDate,
+            scope,
+            targetKind: constraint.timeCapAllSessions
+              ? 'all_sessions'
+              : (constraint.timeCapDates?.length ?? 0) > 0 ? 'dates' : 'weekdays',
+            dates: constraint.timeCapDates,
+            weekdays: constraint.timeCapWeekdays,
+            maxSessionMinutes: constraint.maxSessionMinutes,
+            sourceActor: 'system',
+            sourceSurface,
+            now: constraint.lastUpdatedAt,
+          })
+        : createTemporaryScheduleFact({
+            observedDate: constraint.startDate,
+            scope,
+            scheduleKind: constraint.scheduleKind === 'travel'
+              ? 'travel'
+              : constraint.maxSessionsThisWeek !== undefined
+                ? 'max_sessions'
+                : (constraint.unavailableDates?.length ?? 0) > 0
+                  ? 'unavailable_dates'
+                  : (constraint.unavailableWeekdays?.length ?? 0) > 0
+                    ? 'unavailable_weekdays'
+                    : 'busy_week',
+            unavailableDates: constraint.unavailableDates ?? constraint.linkedOverrideDates,
+            unavailableWeekdays: constraint.unavailableWeekdays,
+            maxSessions: constraint.maxSessionsThisWeek,
+            sourceActor: 'system',
+            sourceSurface,
+            now: constraint.lastUpdatedAt,
+          });
+      fact.legacyMigrationStatus = 'legacy_after_state_only';
+      if (!seen.has(fact.factId)) {
+        migrated.push(fact);
+        seen.add(fact.factId);
+      }
+      continue;
+    }
     if (constraint.type !== 'fatigue' && constraint.type !== 'soreness') continue;
     const date = (constraint.appliesToDate ?? constraint.startDate).slice(0, 10);
     const scope = constraint.weekStartISO
@@ -730,5 +1354,55 @@ export function migrateLegacyTemporarySourceFacts(args: {
       }
     }
   }
+  for (const constraint of args.availabilityConstraints ?? []) {
+    if (constraint.scope !== 'temporary' || constraint.active === false) continue;
+    if (constraint.kind === 'time_limit' &&
+      (!constraint.maxSessionMinutes || constraint.maxSessionMinutes < 10)) continue;
+    const from = (constraint.startDate ?? new Date().toISOString()).slice(0, 10);
+    const until = (constraint.endDate ?? from).slice(0, 10);
+    const scope = temporaryFactScope({ kind: 'window', from, until });
+    const fact = constraint.kind === 'time_limit' && constraint.maxSessionMinutes
+      ? createTemporaryTimeCapFact({
+          observedDate: from,
+          scope,
+          targetKind: constraint.dayOfWeek ? 'weekdays' : 'all_sessions',
+          weekdays: constraint.dayOfWeek ? [constraint.dayOfWeek] : [],
+          maxSessionMinutes: constraint.maxSessionMinutes,
+          sourceActor: 'system',
+          sourceSurface,
+          now: constraint.updatedAt ?? constraint.createdAt,
+          factId: `temporary-source-fact:v1:legacy-profile:${constraint.id}`,
+        })
+      : createTemporaryScheduleFact({
+          observedDate: from,
+          scope,
+          scheduleKind: constraint.kind === 'travel'
+            ? 'travel'
+            : constraint.dayOfWeek ? 'unavailable_weekdays' : 'unavailable_dates',
+          unavailableDates: constraint.kind === 'travel'
+            ? datesBetween(from, until)
+            : [],
+          unavailableWeekdays: constraint.dayOfWeek ? [constraint.dayOfWeek] : [],
+          sourceActor: 'system',
+          sourceSurface,
+          now: constraint.updatedAt ?? constraint.createdAt,
+          factId: `temporary-source-fact:v1:legacy-profile:${constraint.id}`,
+        });
+    fact.legacyMigrationStatus = 'legacy_after_state_only';
+    if (!seen.has(fact.factId)) {
+      migrated.push(fact);
+      seen.add(fact.factId);
+    }
+  }
   return normalizeTemporarySourceFacts({ value: migrated });
+}
+
+function datesBetween(from: string, until: string): string[] {
+  const dates: string[] = [];
+  let cursor = from.slice(0, 10);
+  while (cursor <= until.slice(0, 10) && dates.length < 370) {
+    dates.push(cursor);
+    cursor = addDays(cursor, 1);
+  }
+  return dates;
 }

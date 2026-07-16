@@ -1,5 +1,6 @@
 import type {
   Microcycle,
+  OnboardingData,
   OverrideContext,
   TrainingProgram,
   UserRemovalConstraint,
@@ -43,6 +44,8 @@ export interface AcceptedMaterialContext {
   temporarySourceFacts: TemporarySourceFact[];
   /** Mutable accepted base before active temporary facts are visibly composed. */
   acceptedCompositionBase: AcceptedCompositionBaseV1 | null;
+  /** Versioned durable athlete profile truth mirrored downstream to ProfileStore. */
+  acceptedProfileSnapshot: AcceptedProfileSnapshotV1 | null;
   revision: number;
   lastTransaction: string | null;
 }
@@ -61,6 +64,15 @@ export interface AcceptedProgramSurfaceSnapshot {
 }
 
 export const ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION = 1 as const;
+export const ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION = 1 as const;
+
+export interface AcceptedProfileSnapshotV1 {
+  protocolVersion: typeof ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION;
+  capturedAt: string;
+  updatedAt: string;
+  sourceRevision: number;
+  onboardingData: OnboardingData;
+}
 
 export interface AcceptedCompositionBaseV1 {
   protocolVersion: typeof ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION;
@@ -98,6 +110,7 @@ export function createEmptyAcceptedMaterialContext(): AcceptedMaterialContext {
     injuryEpisodes: [],
     temporarySourceFacts: [],
     acceptedCompositionBase: null,
+    acceptedProfileSnapshot: null,
     revision: 0,
     lastTransaction: null,
   };
@@ -148,6 +161,26 @@ export function normalizeAcceptedMaterialContext(
         surfaces: normalizeAcceptedProgramSurfaces(rawBase.surfaces),
       }
     : null;
+  const rawProfile = value?.acceptedProfileSnapshot;
+  const acceptedProfileSnapshot = isObjectRecord(rawProfile) &&
+    rawProfile.protocolVersion === ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION &&
+    isObjectRecord(rawProfile.onboardingData)
+    ? {
+        protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
+        capturedAt: typeof rawProfile.capturedAt === 'string'
+          ? rawProfile.capturedAt
+          : new Date(0).toISOString(),
+        updatedAt: typeof rawProfile.updatedAt === 'string'
+          ? rawProfile.updatedAt
+          : typeof rawProfile.capturedAt === 'string'
+            ? rawProfile.capturedAt
+            : new Date(0).toISOString(),
+        sourceRevision: typeof rawProfile.sourceRevision === 'number'
+          ? Math.max(0, Math.trunc(rawProfile.sourceRevision))
+          : 0,
+        onboardingData: rawProfile.onboardingData as OnboardingData,
+      }
+    : null;
   return {
     markedDays: normalizeAcceptedKeyedMap<CalendarDayType>(value?.markedDays),
     readinessSignalsByDate: compatibility.readinessSignalsByDate,
@@ -156,6 +189,7 @@ export function normalizeAcceptedMaterialContext(
     injuryEpisodes: compatibility.injuryEpisodes,
     temporarySourceFacts,
     acceptedCompositionBase,
+    acceptedProfileSnapshot,
     revision,
     lastTransaction: typeof value?.lastTransaction === 'string'
       ? value.lastTransaction
@@ -197,6 +231,16 @@ export function normalizeAcceptedProgramSurfaces(
   };
 }
 
+export function acceptedProfileForContext(
+  context: Partial<AcceptedMaterialContext> | null | undefined,
+  fallback: OnboardingData,
+): OnboardingData {
+  const accepted = normalizeAcceptedMaterialContext(context);
+  return accepted.revision > 0 && accepted.acceptedProfileSnapshot
+    ? accepted.acceptedProfileSnapshot.onboardingData
+    : fallback;
+}
+
 export function acceptedStatePresenceSummary(args: {
   program?: Partial<AcceptedProgramSurfaceSnapshot> | null;
   context?: Partial<AcceptedMaterialContext> | null;
@@ -226,5 +270,6 @@ export function acceptedStatePresenceSummary(args: {
     injuryEpisodes: describe(args.context?.injuryEpisodes),
     temporarySourceFacts: describe(args.context?.temporarySourceFacts),
     acceptedCompositionBase: describe(args.context?.acceptedCompositionBase),
+    acceptedProfileSnapshot: describe(args.context?.acceptedProfileSnapshot),
   };
 }

@@ -1,5 +1,6 @@
 import {
   ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
+  acceptedProfileForContext,
   normalizeAcceptedMaterialContext,
   normalizeAcceptedProgramSurfaces,
   type AcceptedCompositionBaseV1,
@@ -30,8 +31,15 @@ import {
   currentAthleteActionTrace,
   emitAthleteActionEvent,
 } from '../utils/athleteActionDiagnostics';
+import { isAcceptedProfileConstraint } from '../rules/acceptedProfileProjection';
 
-export type TemporarySourceFactOperation = 'create' | 'update' | 'resolve' | 'expire' | 'hydrate';
+export type TemporarySourceFactOperation =
+  | 'create'
+  | 'update'
+  | 'resolve'
+  | 'expire'
+  | 'supersede'
+  | 'hydrate';
 export type TemporarySourceFactTransactionOutcome =
   | 'created_and_recomposed'
   | 'created_no_program_change'
@@ -41,6 +49,8 @@ export type TemporarySourceFactTransactionOutcome =
   | 'resolved_no_program_change'
   | 'expired_and_recomposed'
   | 'expired_no_program_change'
+  | 'superseded_and_recomposed'
+  | 'superseded_no_program_change'
   | 'hydrated_and_recomposed'
   | 'hydrated_no_program_change'
   | 'no_op'
@@ -151,12 +161,17 @@ export function loadCanonicalTemporarySourceFactOwnership(now: string): Canonica
   let facts = context.temporarySourceFacts;
   const unownedLegacyConstraints = (rawContext.activeConstraints ?? []).filter((constraint) =>
     (constraint.type === 'injury' && !constraint.injuryEpisodeId) ||
-    ((constraint.type === 'fatigue' || constraint.type === 'soreness') &&
+    ((constraint.type === 'fatigue' || constraint.type === 'soreness' ||
+      constraint.type === 'equipment' || constraint.type === 'schedule') &&
       (constraint.temporarySourceFactIds?.length ?? 0) === 0));
   const legacyFacts = migrateLegacyTemporarySourceFacts({
     activeConstraints: unownedLegacyConstraints,
     activeInjury: facts.some(isInjurySourceFact) ? null : rawContext.activeInjury,
     readinessSignalsByDate: rawContext.readinessSignalsByDate ?? {},
+    availabilityConstraints: acceptedProfileForContext(
+      context,
+      useProfileStore.getState().onboardingData,
+    ).availabilityConstraints,
     sourceSurface: 'temporary_source_fact_transaction',
   });
   facts = normalizeTemporarySourceFacts({ value: [...legacyFacts, ...facts] });
@@ -197,10 +212,15 @@ function validateEffectiveComposition(args: {
   context: ReturnType<typeof normalizeAcceptedMaterialContext>;
   weekStarts: readonly string[];
 }): void {
-  const profile = useProfileStore.getState().onboardingData;
+  const profile = acceptedProfileForContext(
+    args.context,
+    useProfileStore.getState().onboardingData,
+  );
   const projected = canonicaliseHydratedState(args.base.surfaces, {
     programAlreadyAccepted: true,
-    activeConstraints: args.context.activeConstraints.filter(isTemporarySourceFactConstraint),
+    activeConstraints: args.context.activeConstraints.filter((constraint) =>
+      isTemporarySourceFactConstraint(constraint) ||
+      isAcceptedProfileConstraint(constraint)),
     profile,
     markedDays: args.context.markedDays,
     validateWeekStarts: args.weekStarts,
@@ -343,12 +363,14 @@ function exactFactReplacement(
     ...replacement,
     createdAt: existing.createdAt,
     resolvedAt: replacement.status === 'active' ? null : replacement.resolvedAt,
+    transitionHistory: [...existing.transitionHistory],
   };
 }
 
 function statusForOperation(operation: TemporarySourceFactOperation): TemporarySourceFactStatus | null {
   if (operation === 'resolve') return 'resolved';
   if (operation === 'expire') return 'expired';
+  if (operation === 'supersede') return 'superseded';
   return null;
 }
 
@@ -480,13 +502,26 @@ async function transactTemporarySourceFactWithinTrace(
       return { outcome: 'safely_rejected', factId: targetFactId, changedProgram: false, message: 'Injury transitions require the typed injury transition payload.', reason: 'injury_transition_payload_required' };
     }
     if (effectiveOperation !== 'expire') {
+      const actor = input.sourceActor ?? existing.sourceActor;
+      const surface = input.sourceSurface ?? existing.sourceSurface;
       const replacement: TemporarySourceFact = {
         ...existing,
         status,
         updatedAt: now,
         resolvedAt: now,
-        sourceActor: input.sourceActor ?? existing.sourceActor,
-        sourceSurface: input.sourceSurface ?? existing.sourceSurface,
+        sourceActor: actor,
+        sourceSurface: surface,
+        transitionHistory: [
+          ...existing.transitionHistory,
+          {
+            at: now,
+            from: existing.status,
+            to: status,
+            actor,
+            surface,
+            reason: `transaction_${effectiveOperation}`,
+          },
+        ],
       };
       nextFacts = nextFacts.map((fact) => temporarySourceFactId(fact) === targetFactId
         ? replacement
@@ -514,17 +549,29 @@ async function transactTemporarySourceFactWithinTrace(
     };
   }
   const prefix = effectiveOperation === 'hydrate' ? 'hydrated' : `${effectiveOperation}d`;
+  const target = nextFacts.find((fact) => temporarySourceFactId(fact) === targetFactId);
+  const subject = target && !isInjurySourceFact(target)
+    ? target.factKind === 'equipment'
+      ? 'equipment restriction'
+      : target.factKind === 'schedule'
+        ? 'schedule restriction'
+        : target.factKind === 'time_cap'
+          ? 'temporary time cap'
+          : 'report'
+    : 'report';
   return {
     outcome: `${prefix}_${persisted.changedProgram ? 'and_recomposed' : 'no_program_change'}` as TemporarySourceFactTransactionOutcome,
     factId: targetFactId,
     changedProgram: persisted.changedProgram,
     message: persisted.changedProgram
-      ? effectiveOperation === 'resolve' || effectiveOperation === 'expire'
-        ? 'That report is inactive. The visible program was recomposed from the clean accepted base, restoring only what verification allowed while preserving other active facts and later edits.'
-        : 'The report is active and the visible program was safely recomposed.'
-      : effectiveOperation === 'resolve' || effectiveOperation === 'expire'
-        ? 'That report is inactive. Other active facts and later program edits were preserved.'
-        : 'The report is active. No visible session needed changing.',
+      ? effectiveOperation === 'resolve' || effectiveOperation === 'expire' ||
+        effectiveOperation === 'supersede'
+        ? `That ${subject} is inactive. The visible program was recomposed from the clean accepted base, restoring only what verification allowed while preserving other active facts and later edits.`
+        : `The ${subject} is active and the visible program was safely recomposed.`
+      : effectiveOperation === 'resolve' || effectiveOperation === 'expire' ||
+        effectiveOperation === 'supersede'
+        ? `That ${subject} is inactive. Other active facts and later program edits were preserved.`
+        : `The ${subject} is active. No visible session needed changing.`,
   };
 }
 

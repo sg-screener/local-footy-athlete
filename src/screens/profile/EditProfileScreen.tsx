@@ -16,11 +16,12 @@ import type { RoleBucket } from '../../types/domain';
 import { ROLE_BUCKET_OPTIONS, normalizeRoleBucket } from '../../utils/roleBuckets';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius } from '../../theme/spacing';
+import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
+import { todayISOLocal } from '../../utils/appDate';
 
 export const EditProfileScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const onboardingData = useProfileStore((state) => state.onboardingData);
-  const updateOnboardingData = useProfileStore((state) => state.updateOnboardingData);
 
   const [name, setName] = useState(onboardingData.firstName || '');
   const [selectedPosition, setSelectedPosition] = useState<RoleBucket | null>(
@@ -31,10 +32,18 @@ export const EditProfileScreen: React.FC = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      updateOnboardingData({
-        firstName: name,
-        ...(selectedPosition ? { position: selectedPosition } : {}),
+      const result = await commitProfileProgramTransaction({
+        change: {
+          kind: 'profile_setup',
+          patch: {
+            firstName: name,
+            ...(selectedPosition ? { position: selectedPosition } : {}),
+          },
+        },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'edit_profile',
       });
+      if (!result.ok) throw new Error(result.reason ?? 'edit_profile_transaction_failed');
       navigation.goBack();
     } catch (error) {
       console.error('Error updating profile:', error);

@@ -17,6 +17,10 @@ import {
 import { useCoachMutationHistoryStore } from './coachMutationHistoryStore';
 import { useCoachPreferencesStore } from './coachPreferencesStore';
 import {
+  publishAcceptedProfileCompatibilityMirror,
+  useProfileStore,
+} from './profileStore';
+import {
   asyncStorageDurable,
   beginAsyncStorageWriteStage,
   endAsyncStorageWriteStage,
@@ -78,6 +82,8 @@ interface AcceptedMirrorSnapshot {
   dismissedCoachNoteIds: ReturnType<typeof useCoachUpdatesStore.getState>['dismissedCoachNoteIds'];
   mutationHistoryEntries: ReturnType<typeof useCoachMutationHistoryStore.getState>['entries'];
   modalityPreferences: ReturnType<typeof useCoachPreferencesStore.getState>['modalityPreferences'];
+  onboardingData: ReturnType<typeof useProfileStore.getState>['onboardingData'];
+  isOnboardingComplete: ReturnType<typeof useProfileStore.getState>['isOnboardingComplete'];
 }
 
 export interface CoachMutationCandidateVerification {
@@ -119,6 +125,7 @@ const ACCEPTED_MIRROR_STORAGE_KEYS = [
   'coach-updates',
   'coach-mutation-history-store',
   'coach-preferences-store',
+  'profile-store',
 ] as const;
 
 type AcceptedMirrorStorageKey = typeof ACCEPTED_MIRROR_STORAGE_KEYS[number];
@@ -581,6 +588,8 @@ function restoreAcceptedInMemory(
   });
   useCoachMutationHistoryStore.setState({ entries: clone(mirrors.mutationHistoryEntries) });
   useCoachPreferencesStore.setState({ modalityPreferences: clone(mirrors.modalityPreferences) });
+  publishAcceptedProfileCompatibilityMirror(clone(mirrors.onboardingData));
+  useProfileStore.setState({ isOnboardingComplete: mirrors.isOnboardingComplete });
   // Mirror-store subscriptions may publish a compatibility context revision.
   // Restore the authoritative accepted ProgramStore snapshot last so those
   // callbacks cannot become a second rollback owner.
@@ -663,6 +672,8 @@ function captureAcceptedMirrors(): AcceptedMirrorSnapshot {
     dismissedCoachNoteIds: useCoachUpdatesStore.getState().dismissedCoachNoteIds,
     mutationHistoryEntries: useCoachMutationHistoryStore.getState().entries,
     modalityPreferences: useCoachPreferencesStore.getState().modalityPreferences,
+    onboardingData: useProfileStore.getState().onboardingData,
+    isOnboardingComplete: useProfileStore.getState().isOnboardingComplete,
   });
 }
 
@@ -693,6 +704,15 @@ function serializeAcceptedMirrorEnvelopes(
     }),
     'coach-preferences-store': JSON.stringify({
       state: { modalityPreferences: mirrors.modalityPreferences },
+      version: 0,
+    }),
+    'profile-store': JSON.stringify({
+      state: {
+        onboardingData: mirrors.onboardingData,
+        isOnboardingComplete: mirrors.isOnboardingComplete,
+        isLoading: false,
+        error: null,
+      },
       version: 0,
     }),
   };

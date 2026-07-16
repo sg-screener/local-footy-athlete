@@ -14,6 +14,8 @@ import { SelectableTile } from '../../components/common';
 import { useProfileStore } from '../../store/profileStore';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
+import { todayISOLocal } from '../../utils/appDate';
 
 const GOAL_OPTIONS = [
   'Build Strength',
@@ -29,7 +31,6 @@ const GOAL_OPTIONS = [
 export const GoalSettingsScreen: React.FC = () => {
   const navigation = useNavigation<any>();
   const onboardingData = useProfileStore((state) => state.onboardingData);
-  const updateOnboardingData = useProfileStore((state) => state.updateOnboardingData);
 
   const [selectedGoals, setSelectedGoals] = useState<string[]>(
     onboardingData.goals || []
@@ -47,7 +48,12 @@ export const GoalSettingsScreen: React.FC = () => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      updateOnboardingData({ goals: selectedGoals });
+      const result = await commitProfileProgramTransaction({
+        change: { kind: 'profile_setup', patch: { goals: selectedGoals } },
+        todayISO: todayISOLocal(),
+        sourceSurface: 'goal_settings',
+      });
+      if (!result.ok) throw new Error(result.reason ?? 'goal_settings_transaction_failed');
       navigation.goBack();
     } catch (error) {
       console.error('Error updating goals:', error);

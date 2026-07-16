@@ -773,6 +773,14 @@ function dispatchCoachIntentWithinTrace(
         packet.todayISO,
       );
       const { cleared } = resolutionApply;
+      if (cleared.length === 0 && resolution.constraintIdsToResolve.length > 0) {
+        return {
+          handled: true,
+          reply: 'I could not durably verify that restriction was cleared, so I left the accepted program unchanged.',
+          mutated: false,
+          replyMode: 'source_fact_transaction_required',
+        };
+      }
       const reply = formatResolutionSuccessReply(
         cleared,
         resolution.kind ?? 'generic',
@@ -1184,7 +1192,9 @@ function dispatchCoachIntentWithinTrace(
     case 'soreness':
     case 'poor_sleep':
     case 'mixed_fact_and_program_adjustment':
-    case 'temporary_source_fact_followup': {
+    case 'temporary_source_fact_followup':
+    case 'busy_week':
+    case 'equipment_change': {
       // Canonical temporary facts are asynchronous accepted-state
       // transactions owned by coachTurnController. Never publish a legacy
       // ActiveConstraint upstream from this synchronous compatibility seam.
@@ -1193,31 +1203,9 @@ function dispatchCoachIntentWithinTrace(
       });
       return {
         handled: true,
-        reply: 'I could not safely verify that wellbeing update, so I have not changed your program.',
+        reply: 'I could not safely verify that temporary fact update, so I have not changed your program.',
         mutated: false,
         replyMode: 'source_fact_transaction_required',
-      };
-    }
-
-    case 'busy_week': {
-      // Non-injury constraint producers — build a typed
-      // ActiveConstraint, write it to the store, and let the existing
-      // exposure/projection/Coach Update card pipeline surface it.
-      // Soreness with no body part falls back to a clarifying reply
-      // rather than persisting an unmapped entry.
-      const kind: NonInjuryConstraintKind = 'busy_week';
-      const result = deps.applyNonInjuryConstraint(kind, intent, packet);
-      logger.debug('[coach-flow] route', {
-        route: 'non_injury_constraint',
-        kind,
-        mutated: result.mutated,
-      });
-      logger.debug('[coach-reply] source', { mode: 'non_injury_constraint' });
-      return {
-        handled: true,
-        reply: result.reply,
-        mutated: result.mutated,
-        replyMode: 'non_injury_constraint',
       };
     }
 
@@ -1289,7 +1277,10 @@ function dispatcherDiagnosticActionType(intent: CoachIntent): AthleteActionType 
     intent.intent === 'active_injury_followup') return 'injury_change';
   if (intent.intent === 'fatigue' || intent.intent === 'soreness' ||
     intent.intent === 'poor_sleep' || intent.intent === 'temporary_source_fact_followup' ||
-    intent.intent === 'mixed_fact_and_program_adjustment') return 'readiness_change';
+    intent.intent === 'mixed_fact_and_program_adjustment' || intent.intent === 'busy_week') {
+    return 'readiness_change';
+  }
+  if (intent.intent === 'equipment_change') return 'equipment_change';
   if (intent.intent === 'request_program_adjustment') {
     const operation = intent.payload?.operation ?? intent.payload?.action;
     if (operation === 'remove_session') return 'delete_session';

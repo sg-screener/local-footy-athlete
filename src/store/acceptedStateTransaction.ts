@@ -30,7 +30,10 @@ import {
   publishAcceptedCoachUpdatesCompatibilityMirror,
   useCoachUpdatesStore,
 } from './coachUpdatesStore';
-import { useProfileStore } from './profileStore';
+import {
+  publishAcceptedProfileCompatibilityMirror,
+  useProfileStore,
+} from './profileStore';
 import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
 import { isStructuralGenerationConstraint } from '../utils/generationConstraints';
 import { generateProgramLocally } from '../services/api/generateProgram';
@@ -46,7 +49,10 @@ import {
   normalizeAcceptedKeyedMap,
   normalizeAcceptedMaterialContext,
   normalizeAcceptedProgramSurfaces,
+  acceptedProfileForContext,
+  ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
   type AcceptedCompositionBaseV1,
+  type AcceptedProfileSnapshotV1,
 } from './acceptedStateColdStart';
 import {
   resolveFixtureConditionedAvailability,
@@ -122,6 +128,7 @@ export interface AcceptedStateTransactionProposal {
   injuryEpisodes?: InjuryEpisodeV1[];
   temporarySourceFacts?: TemporarySourceFact[];
   acceptedCompositionBase?: AcceptedCompositionBaseV1 | null;
+  acceptedProfileSnapshot?: AcceptedProfileSnapshotV1 | null;
   validateWeekStarts?: readonly string[];
   profile?: OnboardingData | null;
   programAlreadyAccepted?: boolean;
@@ -419,10 +426,45 @@ export function stageAcceptedStateTransaction(
     acceptedCompositionBase: proposal.acceptedCompositionBase === undefined
       ? priorContext.acceptedCompositionBase
       : proposal.acceptedCompositionBase,
+    acceptedProfileSnapshot: proposal.acceptedProfileSnapshot === undefined
+      ? priorContext.acceptedProfileSnapshot
+      : proposal.acceptedProfileSnapshot,
     revision: priorContext.revision + 1,
     lastTransaction: proposal.reason,
   });
-  const profile = proposal.profile ?? useProfileStore.getState().onboardingData;
+  const profile = proposal.profile ?? acceptedProfileForContext(
+    context,
+    useProfileStore.getState().onboardingData,
+  );
+  if (context.acceptedProfileSnapshot) {
+    const profileChanged = JSON.stringify(
+      context.acceptedProfileSnapshot.onboardingData,
+    ) !== JSON.stringify(profile);
+    if (proposal.acceptedProfileSnapshot !== undefined ||
+      (proposal.profile !== undefined && profileChanged)) {
+      context = normalizeAcceptedMaterialContext({
+        ...context,
+        acceptedProfileSnapshot: proposal.acceptedProfileSnapshot ?? {
+          ...context.acceptedProfileSnapshot,
+          updatedAt: new Date().toISOString(),
+          sourceRevision: context.revision,
+          onboardingData: profile,
+        },
+      });
+    }
+  } else {
+    const now = new Date().toISOString();
+    context = normalizeAcceptedMaterialContext({
+      ...context,
+      acceptedProfileSnapshot: {
+        protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
+        capturedAt: now,
+        updatedAt: now,
+        sourceRevision: context.revision,
+        onboardingData: profile,
+      },
+    });
+  }
   const patchedCandidate = materialisedProgramPatch(programSurfaces(current), proposal.program);
   const candidate = proposal.preserveExactAcceptedWorkouts
     ? patchedCandidate
@@ -558,7 +600,10 @@ export function commitAcceptedStateTransaction(
       surfaces: staged.program,
       context: staged.context,
       weekStarts: Array.from(equivalenceWeeks),
-      profile: proposal.profile,
+      profile: proposal.profile ?? acceptedProfileForContext(
+        staged.context,
+        useProfileStore.getState().onboardingData,
+      ),
       trace,
     });
     emitAthleteActionEvent(trace, 'visible_projection_result', {
@@ -625,6 +670,11 @@ export function commitAcceptedStateTransaction(
       activeConstraints: staged.context.activeConstraints,
       activeInjury: staged.context.activeInjury,
     });
+  }
+  if (staged.context.acceptedProfileSnapshot) {
+    publishAcceptedProfileCompatibilityMirror(
+      staged.context.acceptedProfileSnapshot.onboardingData,
+    );
   }
   const afterStateHash = athleteActionDiagnosticHash({
     program: staged.program,
@@ -2568,6 +2618,13 @@ export function commitProgramSetupRebuildTransaction(args: {
       exposureContractsByWeek: {},
     },
     profile: args.profile,
+    acceptedProfileSnapshot: {
+      protocolVersion: ACCEPTED_PROFILE_SNAPSHOT_PROTOCOL_VERSION,
+      capturedAt: prior.acceptedProfileSnapshot?.capturedAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      sourceRevision: prior.revision + 1,
+      onboardingData: args.profile,
+    },
     programAlreadyAccepted: true,
     validateWeekStarts: Array.from(new Set([
       ...args.program.microcycles.map((microcycle) => microcycle.startDate.slice(0, 10)),

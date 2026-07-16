@@ -1,7 +1,6 @@
 import { useProgramStore } from '../store/programStore';
 import {
   useCoachUpdatesStore,
-  type ActiveEquipmentConstraint,
   type ActiveInjuryConstraint,
   type ActiveScheduleConstraint,
 } from '../store/coachUpdatesStore';
@@ -33,9 +32,7 @@ import {
   type TapRecoveryModifierScope,
 } from './tapProgramModifiers';
 import {
-  buildTemporaryEquipmentConstraint,
   temporaryEquipmentPresetById,
-  upsertActiveEquipmentConstraint,
   type TemporaryEquipmentPresetId,
 } from './equipmentAvailability';
 import {
@@ -61,14 +58,20 @@ import {
 } from '../store/injuryEpisodeTransaction';
 import {
   createTemporaryFatigueFact,
+  createTemporaryEquipmentFact,
   createTemporaryPoorSleepFact,
+  createTemporaryScheduleFact,
   createTemporarySorenessFact,
+  isTemporaryEquipmentFact,
   isInjurySourceFact,
   isNonInjuryTemporarySourceFact,
   temporaryFactScope,
   temporarySourceFactId,
 } from '../rules/temporarySourceFact';
-import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
+import {
+  commitTemporarySourceFactSet,
+  transactTemporarySourceFact,
+} from '../store/temporarySourceFactTransaction';
 
 export type ProgramControlActionType =
   | 'swap_session'
@@ -204,9 +207,8 @@ export type ProgramControlAction =
       severity?: number;
       reasonLabel?: string;
       maxSessionsThisWeek?: number;
-      /** Away / holiday: an explicit day-clearing change applied alongside
-       *  the schedule Coach Note. When present the modifier owns the
-       *  cleared-day overrides, so clearing the note restores them. */
+      /** Away / holiday dates. The durable executor stores them as schedule
+       *  facts; it never creates fact-owned Rest overrides. */
       planChange?: PlanChange;
       /** Coach Notes copy overrides (busy vs away wording). */
       modifierTitle?: string;
@@ -741,101 +743,21 @@ function executeProgramControlActionWithinTrace(
       };
     }
     case 'set_equipment_modifier': {
-      const todayISO = action.payload.todayISO ?? context.todayISO ?? action.payload.date;
-      const preset = temporaryEquipmentPresetById(action.payload.presetId);
-      if (preset.clearsActiveEquipment) {
-        const store = useCoachUpdatesStore.getState();
-        const equipmentConstraints = store.activeConstraints
-          .filter((constraint): constraint is ActiveEquipmentConstraint => constraint.type === 'equipment');
-        for (const constraint of equipmentConstraints) {
-          store.removeActiveConstraint(constraint.id);
-        }
-        return {
-          ok: true,
-          changedProgram: equipmentConstraints.length > 0,
-          requiresRebuild: equipmentConstraints.length > 0,
-          clearedModifierIds: equipmentConstraints.map((constraint) =>
-            `program-modifier:active_constraint:${constraint.id}`),
-          fallbackToCoach: false,
-          route: route.route,
-        };
-      }
-      const constraint = buildTemporaryEquipmentConstraint({
-        presetId: action.payload.presetId as Exclude<TemporaryEquipmentPresetId, 'back_to_normal'>,
-        date: action.payload.date,
-        todayISO,
-        source: 'tap',
-      });
-      const result = upsertActiveEquipmentConstraint(constraint);
       return {
-        ok: true,
-        changedProgram: true,
-        requiresRebuild: result.rebuildRequired,
-        createdModifierIds: [result.modifierId],
+        ok: false,
+        changedProgram: false,
+        requiresRebuild: false,
+        message: 'Temporary equipment changes require the durable source-fact transaction.',
         fallbackToCoach: false,
         route: route.route,
       };
     }
     case 'set_schedule_modifier': {
-      const todayISO = action.payload.todayISO ?? context.todayISO ?? action.payload.date;
-      // Away/holiday: an explicit day-clearing change rides alongside the
-      // schedule note. The note OWNS those overrides (tagged with its id +
-      // recorded as linkedOverrideDates), so clearing the note restores the
-      // days — the same ownership pattern recovery mode uses.
-      const variant: 'busy' | 'away' = action.payload.planChange ? 'away' : 'busy';
-      const scheduleId = scheduleModifierIdForDate(action.payload.date, variant);
-      let appliedDates: string[] = [];
-      let message: string | undefined;
-      if (action.payload.planChange) {
-        if (!context.visibleWeek) {
-          return fallbackResult(
-            action,
-            { route: 'guided_follow_up_sheet', reason: 'Visible week context is required.' },
-            'Cannot safely clear away days without the current visible week.',
-          );
-        }
-        const planResult = applyPlanChange({
-          change: action.payload.planChange,
-          visibleWeek: context.visibleWeek,
-          todayISO,
-          setManualOverride: (date, workout, overrideContext) =>
-            (context.setManualOverride ?? defaultSetManualOverride)(
-              date,
-              workout,
-              withActiveProgramModifierContext(overrideContext, scheduleId),
-            ),
-        });
-        if (!planResult.ok) {
-          return {
-            ok: false,
-            changedProgram: false,
-            requiresRebuild: false,
-            message: planResult.message,
-            fallbackToCoach: false,
-            route: route.route,
-          };
-        }
-        appliedDates = planResult.appliedDates;
-        message = planResult.message;
-      }
-      const constraint = buildTapScheduleModifier({
-        date: action.payload.date,
-        todayISO,
-        severity: action.payload.severity,
-        reasonLabel: action.payload.reasonLabel,
-        maxSessionsThisWeek: action.payload.maxSessionsThisWeek,
-        variant,
-        linkedOverrideDates: appliedDates,
-        modifierTitle: action.payload.modifierTitle,
-        modifierBody: action.payload.modifierBody,
-      });
-      useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
       return {
-        ok: true,
-        changedProgram: true,
+        ok: false,
+        changedProgram: false,
         requiresRebuild: false,
-        createdModifierIds: [constraint.id],
-        message,
+        message: 'Temporary schedule changes require the durable source-fact transaction.',
         fallbackToCoach: false,
         route: route.route,
       };
@@ -1131,6 +1053,139 @@ async function executeProgramControlActionDurablyWithinTrace(
       route: routeProgramControlAction(action).route,
     };
   }
+  if (action.type === 'set_equipment_modifier') {
+    const date = action.payload.date.slice(0, 10);
+    const todayISO = action.payload.todayISO ?? context.todayISO ?? date;
+    const sourceSurface = action.source.surface ?? action.source.screen;
+    const preset = temporaryEquipmentPresetById(action.payload.presetId);
+    if (preset.clearsActiveEquipment) {
+      const accepted = useProgramStore.getState().acceptedMaterialContext;
+      const facts = accepted.temporarySourceFacts
+        .filter((fact) => isTemporaryEquipmentFact(fact) && fact.status === 'active');
+      if (facts.length === 0) {
+        return {
+          ok: true,
+          changedProgram: false,
+          requiresRebuild: false,
+          clearedModifierIds: [],
+          message: 'No temporary equipment restriction is active.',
+          fallbackToCoach: false,
+          route: routeProgramControlAction(action).route,
+        };
+      }
+      const now = new Date().toISOString();
+      const ids = new Set(facts.map((fact) => fact.factId));
+      const actor = action.source.initiatedBy === 'system' ? 'system' : 'athlete';
+      const nextFacts = accepted.temporarySourceFacts.map((fact) =>
+        isTemporaryEquipmentFact(fact) && ids.has(fact.factId)
+          ? {
+              ...fact,
+              status: 'resolved' as const,
+              updatedAt: now,
+              resolvedAt: now,
+              sourceActor: actor,
+              sourceSurface,
+              transitionHistory: [
+                ...fact.transitionHistory,
+                {
+                  at: now,
+                  from: 'active' as const,
+                  to: 'resolved' as const,
+                  actor,
+                  surface: sourceSurface,
+                  reason: 'equipment_available_again',
+                },
+              ],
+            }
+          : fact);
+      const result = await commitTemporarySourceFactSet({
+        nextFacts,
+        targetFactId: facts[0].factId,
+        todayISO,
+        reason: 'temporary_source_fact:equipment_available_again',
+        expectedAcceptedRevision: accepted.revision,
+      });
+      return {
+        ok: result.ok,
+        changedProgram: result.changedProgram,
+        requiresRebuild: false,
+        clearedModifierIds: result.ok ? facts.map((fact) => fact.factId) : undefined,
+        message: result.ok
+          ? 'Equipment available again. The accepted program was recomposed and verified.'
+          : 'The equipment restriction was not cleared because the accepted program could not be verified.',
+        fallbackToCoach: false,
+        route: routeProgramControlAction(action).route,
+      };
+    }
+    const fact = createTemporaryEquipmentFact({
+      observedDate: date,
+      scope: temporaryFactScope({ kind: 'week', date }),
+      mode: preset.mode!,
+      equipmentTags: preset.tags,
+      sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+      sourceSurface,
+    });
+    const result = await transactTemporarySourceFact({
+      operation: 'create',
+      fact,
+      todayISO,
+      sourceActor: fact.sourceActor,
+      sourceSurface,
+    });
+    const ok = result.outcome !== 'conflicted' && result.outcome !== 'safely_rejected';
+    return {
+      ok,
+      changedProgram: result.changedProgram,
+      requiresRebuild: false,
+      createdModifierIds: ok ? [fact.factId] : undefined,
+      message: result.message,
+      fallbackToCoach: false,
+      route: routeProgramControlAction(action).route,
+    };
+  }
+  if (action.type === 'set_schedule_modifier') {
+    const date = action.payload.date.slice(0, 10);
+    const todayISO = action.payload.todayISO ?? context.todayISO ?? date;
+    const sourceSurface = action.source.surface ?? action.source.screen;
+    const awayDates = action.payload.planChange?.kind === 'clear_days'
+      ? action.payload.planChange.dates.map((value) => value.slice(0, 10))
+      : [];
+    const sortedAwayDates = [...awayDates].sort();
+    const fact = createTemporaryScheduleFact({
+      observedDate: date,
+      scope: awayDates.length > 0
+        ? temporaryFactScope({
+            kind: 'window',
+            from: sortedAwayDates[0],
+            until: sortedAwayDates[sortedAwayDates.length - 1],
+          })
+        : temporaryFactScope({ kind: 'week', date }),
+      scheduleKind: awayDates.length > 0
+        ? 'travel'
+        : action.payload.maxSessionsThisWeek !== undefined ? 'max_sessions' : 'busy_week',
+      unavailableDates: awayDates,
+      maxSessions: action.payload.maxSessionsThisWeek,
+      sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+      sourceSurface,
+    });
+    const result = await transactTemporarySourceFact({
+      operation: 'create',
+      fact,
+      todayISO,
+      sourceActor: fact.sourceActor,
+      sourceSurface,
+    });
+    const ok = result.outcome !== 'conflicted' && result.outcome !== 'safely_rejected';
+    return {
+      ok,
+      changedProgram: result.changedProgram,
+      requiresRebuild: false,
+      createdModifierIds: ok ? [fact.factId] : undefined,
+      message: result.message,
+      fallbackToCoach: false,
+      route: routeProgramControlAction(action).route,
+    };
+  }
   if (action.type === 'set_fatigue_status' || action.type === 'set_poor_sleep_status') {
     const date = action.payload.date.slice(0, 10);
     const sourceSurface = action.source.surface ?? action.source.screen;
@@ -1210,7 +1265,7 @@ async function executeProgramControlActionDurablyWithinTrace(
         requiresRebuild: false,
         message: sourceFactIds.length > 1
           ? 'Choose the exact report to resolve; the visible adjustment is composed from multiple active facts.'
-          : 'No exact active fatigue, soreness, or poor-sleep report matched this action.',
+          : 'No exact active temporary restriction matched this action.',
         fallbackToCoach: false,
         route: routeProgramControlAction(action).route,
       };
