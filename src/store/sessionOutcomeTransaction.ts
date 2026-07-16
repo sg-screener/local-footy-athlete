@@ -18,7 +18,7 @@ import {
 import { runCoachMutationTransaction } from './coachMutationTransaction';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { buildDayWorkoutProjectedDay } from '../utils/visibleProgramReadModel';
-import { todayISOLocal } from '../utils/appDate';
+import { appDateNow, todayISOLocal } from '../utils/appDate';
 import {
   getSessionComponents,
   type SessionComponent,
@@ -190,14 +190,17 @@ export async function commitSessionOutcomeTransaction(
       protocolVersion: 1,
       transactionId: `session-outcome:${intent.date}:${target.workout.planEntryId ?? target.workout.id}:${semanticHash}`,
       semanticFingerprint: semanticHash,
-      committedAt: new Date().toISOString(),
+      committedAt: appDateNow().toISOString(),
       date: intent.date,
       sessionIdentity: {
         workoutId: target.workout.id,
         ...(target.workout.planEntryId ? { planEntryId: target.workout.planEntryId } : {}),
       },
       componentIds: normalizedIntent.componentOutcomes.map((component) => component.componentId),
-      source: { ...intent.source, traceId: trace.traceId },
+      source: {
+        ...intent.source,
+        traceId: intent.source.traceId ?? trace.traceId,
+      },
     };
     candidateFeedback = { ...candidateFeedback, outcomeReceipt: receipt };
   } catch (error) {

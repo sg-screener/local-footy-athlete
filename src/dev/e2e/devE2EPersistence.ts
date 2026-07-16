@@ -76,6 +76,7 @@ const semanticStores: SemanticStoreDescriptor[] = [
       overrideContexts: state.overrideContexts,
       weekScopedOverlays: state.weekScopedOverlays,
       userRemovalConstraints: state.userRemovalConstraints,
+      reversibleAdjustmentLedger: state.reversibleAdjustmentLedger,
       exposureContractsByWeek: state.exposureContractsByWeek,
       sessionFeedback: state.sessionFeedback,
       weightOverrides: state.weightOverrides,

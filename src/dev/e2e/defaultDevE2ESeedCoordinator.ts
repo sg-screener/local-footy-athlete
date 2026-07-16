@@ -15,6 +15,15 @@ import { useUIStore } from '../../store/uiStore';
 import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
 import { buildTemporaryEquipmentConstraint } from '../../utils/equipmentAvailability';
 import {
+  createOrUpdateInjuryEpisode,
+} from '../../store/injuryEpisodeTransaction';
+import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
+import {
+  commitSessionOutcomeTransaction,
+  createRecordSessionOutcomeIntentFromFeedback,
+  resolveSessionOutcomeTarget,
+} from '../../store/sessionOutcomeTransaction';
+import {
   buildDevE2ESeed,
   validateDevE2EWitnesses,
   type DevE2EAuxiliaryState,
@@ -55,7 +64,7 @@ import {
   readActiveDevE2EClockReceipt,
   replacePersistedDevE2EClockForSeed,
 } from './devE2EClockPersistence';
-import { todayISOLocal } from '../../utils/appDate';
+import { dayOfWeekForISODate, todayISOLocal } from '../../utils/appDate';
 import { resolveDevE2EScenarioManifest } from './devE2EScenarioManifestRegistry';
 import { defaultDevE2EScenarioEligibility } from './devE2EScenarioProtocol';
 import {
@@ -83,23 +92,46 @@ function clearLocalStateThroughPublicAPIs(): void {
   useProgramStore.getState().clear();
 }
 
-function applyAuxiliaryState(items: readonly DevE2EAuxiliaryState[]): void {
+async function applyAuxiliaryState(
+  items: readonly DevE2EAuxiliaryState[],
+): Promise<void> {
   for (const item of items) {
-    if (item.kind === 'active_injury') {
+    if (item.kind === 'canonical_injury_episode') {
       const timestamp = '2026-07-13T12:00:00.000Z';
-      useCoachUpdatesStore.getState().setActiveInjury({
+      const constraint: ActiveInjuryConstraint = {
+        id: item.constraintId,
+        type: 'injury',
         bodyPart: item.bodyPart,
         bucket: item.injuryKey,
         severity: item.severity,
-        initialSeverity: item.severity,
         status: 'active',
+        source: 'coach',
+        region: 'lower_body',
+        severityBand: 'moderate',
+        adjustmentLevel: 'moderate',
+        triggers: ['Sprinting', 'Running'],
+        seriousSymptoms: false,
         rules: [],
-        startDate: timestamp,
+        safeFocus: ['Upper-body strength and pain-free conditioning'],
+        advice: ['Progress running only while symptoms stay settled'],
+        startDate: item.date,
         lastUpdatedAt: timestamp,
-        createdAt: timestamp,
-        history: [],
+      };
+      const result = await createOrUpdateInjuryEpisode({
+        constraint,
+        sourceActor: 'system',
+        sourceSurface: 'dev_e2e_seed',
+        note: 'Deterministic Explorer injury seed.',
+        todayISO: item.date,
+        now: timestamp,
       });
-      useAthletePreferencesStore.getState().setActiveInjuries([item.injuryKey]);
+      if (result.episodeId !== item.expectedEpisodeId ||
+        result.outcome === 'conflicted' ||
+        result.outcome === 'safely_rejected') {
+        throw new Error(
+          `canonical_injury_seed_failed:${result.outcome}:${result.episodeId ?? 'missing'}`,
+        );
+      }
       continue;
     }
     if (item.kind === 'temporary_equipment') {
@@ -112,8 +144,12 @@ function applyAuxiliaryState(items: readonly DevE2EAuxiliaryState[]): void {
       useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
       continue;
     }
+    if (item.kind === 'calendar_game') {
+      useCalendarStore.getState().setGameDay(item.date);
+      continue;
+    }
     if (item.kind === 'removable_component_override') {
-      const dayOfWeek = new Date(`${item.date}T12:00:00`).getDay();
+      const dayOfWeek = dayOfWeekForISODate(item.date);
       const state = useProgramStore.getState();
       const baseWorkout = state.currentMicrocycle?.workouts.find((workout) =>
         workout.dayOfWeek === dayOfWeek) ??
@@ -124,79 +160,136 @@ function applyAuxiliaryState(items: readonly DevE2EAuxiliaryState[]): void {
         throw new Error(`removable_component_override_missing_workout:${item.date}`);
       }
       const componentId = 'dev-e2e-removable-band-pull-apart';
-      useProgramStore.setState((current) => ({
-        dateOverrides: {
-          ...current.dateOverrides,
-          [item.date]: {
-            ...baseWorkout,
-            id: `${baseWorkout.id}:dev-e2e-removable-component`,
-            exercises: [
-              {
+      useProgramStore.getState().setManualOverride(
+        item.date,
+        {
+          ...baseWorkout,
+          id: `${baseWorkout.id}:dev-e2e-removable-component`,
+          exercises: [
+            {
+              id: componentId,
+              workoutId: baseWorkout.id,
+              exerciseId: componentId,
+              exerciseOrder: 0,
+              prescribedSets: 2,
+              prescribedRepsMin: 12,
+              prescribedRepsMax: 15,
+              prescribedWeightKg: 0,
+              restSeconds: 45,
+              exercise: {
                 id: componentId,
-                workoutId: baseWorkout.id,
-                exerciseId: componentId,
-                exerciseOrder: 0,
-                prescribedSets: 2,
-                prescribedRepsMin: 12,
-                prescribedRepsMax: 15,
-                prescribedWeightKg: 0,
-                restSeconds: 45,
-                exercise: {
-                  id: componentId,
-                  name: 'Band Pull-Apart',
-                  description: 'Optional removable E2E component',
-                  exerciseType: 'Accessory',
-                  muscleGroups: [],
-                  equipmentRequired: ['Resistance Band'],
-                  difficultyLevel: 'Beginner',
-                  createdAt: '2026-07-13T12:00:00.000Z',
-                  updatedAt: '2026-07-13T12:00:00.000Z',
-                },
+                name: 'Band Pull-Apart',
+                description: 'Optional removable E2E component',
+                exerciseType: 'Isolation',
+                muscleGroups: [],
+                equipmentRequired: ['Resistance Band'],
+                difficultyLevel: 'Beginner',
                 createdAt: '2026-07-13T12:00:00.000Z',
                 updatedAt: '2026-07-13T12:00:00.000Z',
               },
-              ...baseWorkout.exercises,
-            ],
-          },
+              createdAt: '2026-07-13T12:00:00.000Z',
+              updatedAt: '2026-07-13T12:00:00.000Z',
+            },
+            ...baseWorkout.exercises,
+          ],
         },
-        overrideContexts: {
-          ...current.overrideContexts,
-          [item.date]: {
-            intent: 'manual',
-            label: 'Dev E2E removable component',
-          },
+        {
+          intent: 'program_adjustment',
+          label: 'Dev E2E removable component',
         },
-      }));
+      );
       continue;
     }
-    // Fixture installation stays inside the dev-only seed boundary. Live tap
-    // and Coach ingress must use the canonical session-outcome transaction.
-    useProgramStore.setState((state) => ({
-      sessionFeedback: {
-        ...state.sessionFeedback,
-        [item.date]: {
-          dateStr: item.date,
-          completion: item.completion,
-          feeling: item.feeling,
-          soreness: item.soreness,
-          difficulty: item.difficulty,
-        },
+    const target = resolveSessionOutcomeTarget(item.date, item.date);
+    if (target.workout.id !== item.workoutId ||
+      (
+        item.planEntryId !== undefined &&
+        target.workout.planEntryId !== item.planEntryId
+      )) {
+      throw new Error(`session_feedback_seed_identity_mismatch:${item.date}`);
+    }
+    const intent = createRecordSessionOutcomeIntentFromFeedback({
+      date: item.date,
+      workout: target.workout,
+      feedback: {
+        dateStr: item.date,
+        completion: item.completion,
+        feeling: item.feeling,
+        soreness: item.soreness,
+        difficulty: item.difficulty,
       },
-    }));
+      source: {
+        entryPoint: 'tap',
+        surface: 'dev_e2e_seed',
+        interpretedIntent: 'record_session_outcome',
+        traceId: `dev-e2e-session-feedback:${item.date}:${item.workoutId}`,
+      },
+      todayISO: item.date,
+    });
+    const result = await commitSessionOutcomeTransaction(intent);
+    if (!result.ok) {
+      throw new Error(`session_feedback_seed_failed:${result.code}`);
+    }
   }
 }
 
 function readWitnessState(): DevE2EWitnessState {
   const program = useProgramStore.getState();
   const updates = useCoachUpdatesStore.getState();
+  const accepted = program.acceptedMaterialContext;
+  const schedule = buildScheduleStateImperative();
+  const todayISO = todayISOLocal();
+  const visibleCardDays: Record<string, unknown> = {};
+  const visibleDetailDays: Record<string, unknown> = {};
+  const weekStarts = program.currentProgram?.microcycles.map((microcycle) =>
+    microcycle.startDate.slice(0, 10)) ?? [];
+  for (const weekStart of weekStarts) {
+    const cardDays = buildProgramTabProjectedWeek({
+      mondayISO: weekStart,
+      todayISO,
+      state: schedule,
+      overrideContexts: program.overrideContexts,
+    });
+    for (const day of cardDays) {
+      visibleCardDays[day.date] = day;
+      visibleDetailDays[day.date] = buildDayWorkoutProjectedDay({
+        date: day.date,
+        todayISO,
+        state: schedule,
+        overrideContext: program.overrideContexts[day.date],
+      });
+    }
+  }
   return {
     program: program.currentProgram,
     dateOverrides: program.dateOverrides,
+    overrideContexts: program.overrideContexts,
+    weekScopedOverlays: program.weekScopedOverlays,
+    userRemovalConstraints: program.userRemovalConstraints,
+    reversibleAdjustmentLedger: program.reversibleAdjustmentLedger,
     profile: useProfileStore.getState().onboardingData,
     calendarMarks: useCalendarStore.getState().markedDays,
     activeInjury: updates.activeInjury,
     activeConstraints: updates.activeConstraints,
+    injuryEpisodes: accepted.injuryEpisodes,
+    temporarySourceFacts: accepted.temporarySourceFacts,
+    readinessSignalsByDate: accepted.readinessSignalsByDate,
     sessionFeedback: program.sessionFeedback,
+    acceptedRevision: accepted.revision,
+    coachState: {
+      transcriptCount:
+        useCoachStore.getState().messages.length +
+        useCoachStore.getState().conversations.length,
+      memoryCount: useCoachMemoryStore.getState().notes.length,
+      mutationHistoryCount: useCoachMutationHistoryStore.getState().entries.length,
+      pendingClarifier: usePendingCoachClarifierStore.getState().pending,
+      // Pending Coach proposals are screen-local and non-persisted. A Dev E2E
+      // launch starts before CoachScreen creates that ref, so the reset
+      // protocol's durable state has no proposal to restore.
+      pendingProposal: null,
+    },
+    visibleCardDays,
+    visibleDetailDays,
   };
 }
 

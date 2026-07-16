@@ -38,7 +38,7 @@ import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
 import { isStructuralGenerationConstraint } from '../utils/generationConstraints';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { addDaysISO } from '../utils/programBlockState';
-import { todayISOLocal } from '../utils/appDate';
+import { appDateNow, todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContractV2 } from '../rules/weeklyExposureContractV2';
 import {
   rebaseAcceptedEffectiveWeek,
@@ -479,7 +479,7 @@ export function stageAcceptedStateTransaction(
         ...context,
         acceptedCompositionBase: {
           ...context.acceptedCompositionBase,
-          updatedAt: new Date().toISOString(),
+          updatedAt: appDateNow().toISOString(),
           sourceRevision: context.revision,
           surfaces: candidate,
         },
@@ -520,7 +520,7 @@ export function stageAcceptedStateTransaction(
       ...context,
       acceptedCompositionBase: {
         ...context.acceptedCompositionBase,
-        updatedAt: new Date().toISOString(),
+        updatedAt: appDateNow().toISOString(),
         sourceRevision: context.revision,
         surfaces: program,
       },
@@ -1445,7 +1445,7 @@ export function buildFixtureProjection(args: {
     // move/deletion. Repair the accepted visible snapshot against its accepted
     // Contract v2 ledger instead.
     const base = acceptedSource.baseMicrocycle;
-    const now = new Date().toISOString();
+    const now = appDateNow().toISOString();
     targetMicrocycle = {
       id: `athlete-mutation-target:${args.weekStart}`,
       programId: args.program.id,
@@ -1479,7 +1479,7 @@ export function buildFixtureProjection(args: {
       // phase-owned contract/candidate and let the shared search consume it
       // instead of treating one invalid fallback representation as terminal.
       const base = acceptedSource.baseMicrocycle;
-      const now = new Date().toISOString();
+      const now = appDateNow().toISOString();
       targetMicrocycle = {
         id: `repair-target:${args.weekStart}`,
         programId: args.program.id,
@@ -1504,7 +1504,7 @@ export function buildFixtureProjection(args: {
       startDate: args.weekStart,
       endDate: addDaysISO(args.weekStart, 6),
       microcycles: [targetMicrocycle],
-      updatedAt: new Date().toISOString(),
+      updatedAt: appDateNow().toISOString(),
     };
   }
   const replan = buildFixtureMinimalReplan({

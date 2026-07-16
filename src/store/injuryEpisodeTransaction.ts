@@ -63,6 +63,8 @@ export interface CreateOrUpdateInjuryEpisodeInput {
   sourceSurface: string;
   note?: string;
   todayISO?: string;
+  /** Deterministic transaction clock for accepted fixtures and replay tests. */
+  now?: string;
   expectedAcceptedRevision?: number;
   /** @internal Deterministic failure-boundary witnesses for transaction tests. */
   testHooks?: InjuryEpisodeTransactionTestHooks;
@@ -290,6 +292,7 @@ async function persistEpisodeSet(args: {
   nextEpisodes: InjuryEpisodeV1[];
   ownership: CanonicalOwnershipSnapshot;
   anchorDate: string;
+  now: string;
   reason: string;
   expectedAcceptedRevision?: number;
   targetEpisodeId: string;
@@ -307,6 +310,7 @@ async function persistEpisodeSet(args: {
     targetFactId: args.targetEpisodeId,
     todayISO: args.anchorDate,
     reason: args.reason,
+    now: args.now,
     expectedAcceptedRevision: args.expectedAcceptedRevision ?? args.ownership.context.revision,
     testHooks: args.testHooks,
   });
@@ -355,7 +359,7 @@ export async function createOrUpdateInjuryEpisode(
 async function createOrUpdateInjuryEpisodeWithinTrace(
   input: CreateOrUpdateInjuryEpisodeInput,
 ): Promise<InjuryEpisodeMutationResult> {
-  const now = new Date().toISOString();
+  const now = input.now ?? new Date().toISOString();
   const anchorDate = (input.todayISO ?? todayISOLocal()).slice(0, 10);
   const ownership = currentOwnership(now);
   if (input.expectedAcceptedRevision !== undefined &&
@@ -389,6 +393,7 @@ async function createOrUpdateInjuryEpisodeWithinTrace(
     nextEpisodes,
     ownership,
     anchorDate,
+    now,
     reason: existing ? 'injury_episode:update' : 'injury_episode:create',
     expectedAcceptedRevision: input.expectedAcceptedRevision,
     targetEpisodeId: episode.episodeId,
@@ -594,6 +599,7 @@ async function resolveInjuryEpisodeWithinTrace(
     nextEpisodes,
     ownership,
     anchorDate,
+    now,
     reason: 'injury_episode:resolve',
     expectedAcceptedRevision: options.expectedAcceptedRevision,
     targetEpisodeId: episodeId,

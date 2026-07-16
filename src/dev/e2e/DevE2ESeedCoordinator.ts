@@ -59,7 +59,7 @@ export interface DevE2ECoordinatorDeps {
   buildSeed: (seedId: DevE2ESeedId) => DevE2ESeed;
   writeProfile: (seed: DevE2ESeed) => void;
   installProgram: (seed: DevE2ESeed) => void;
-  applyAuxiliaryState: (items: readonly DevE2EAuxiliaryState[]) => void;
+  applyAuxiliaryState: (items: readonly DevE2EAuxiliaryState[]) => Promise<void> | void;
   completeOnboarding: () => void;
   readWitnessState: () => DevE2EWitnessState;
   validateWitnesses: (
@@ -172,7 +172,7 @@ export class DevE2ESeedCoordinator {
         }
         this.deps.writeProfile(seed);
         this.deps.installProgram(seed);
-        this.deps.applyAuxiliaryState(seed.auxiliaryState);
+        await this.deps.applyAuxiliaryState(seed.auxiliaryState);
         this.deps.completeOnboarding();
         const failures = this.deps.validateWitnesses(
           seedId,
