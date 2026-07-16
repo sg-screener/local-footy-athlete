@@ -98,7 +98,7 @@ async function main() {
     needsClarification: false,
     rationale: 'router_bypass',
   };
-  const turn1Outcome = dispatchCoachIntent(turn1Intent, turn1Packet, deps);
+  const turn1Outcome = await dispatchCoachIntent(turn1Intent, turn1Packet, deps);
   console.log('\ndispatcher outcome.handled =', turn1Outcome.handled);
   console.log('dispatcher outcome.replyMode =', turn1Outcome.replyMode);
   console.log('dispatcher outcome.referencedSession =', JSON.stringify(turn1Outcome.referencedSession));

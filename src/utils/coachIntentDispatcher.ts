@@ -57,10 +57,13 @@ import {
   classifyAthleteActionFailure,
   emitAthleteActionEvent,
   runWithAthleteActionTrace,
+  type AthleteActionTraceContext,
   type AthleteActionType,
 } from './athleteActionDiagnostics';
 
 // ─── Result type ────────────────────────────────────────────────────
+
+export type Awaitable<T> = T | Promise<T>;
 
 export type DispatchReplyMode =
   | 'severity_clarifier'
@@ -395,7 +398,8 @@ export interface DispatchDeps {
     severity: number,
     monday: string,
     todayISO: string,
-  ) => { applied: number; visibleDiffDetected: boolean };
+    trace?: AthleteActionTraceContext,
+  ) => Awaitable<{ applied: number; visibleDiffDetected: boolean }>;
   /** Run the active-injury progression handler. */
   runProgression: (
     outcome:
@@ -405,13 +409,15 @@ export interface DispatchDeps {
       | { kind: 'unchanged' },
     current: InjuryState,
     note: string,
-  ) => string | InjuryDispatchDependencyResult;
+    trace?: AthleteActionTraceContext,
+  ) => Awaitable<string | InjuryDispatchDependencyResult>;
   /** Run UAE for a known {bodyPart, severity}. Returns the reply text. */
   runUAEForInjury: (
     bodyPart: string,
     severity: number,
     note: string,
-  ) => string | InjuryDispatchDependencyResult;
+    trace?: AthleteActionTraceContext,
+  ) => Awaitable<string | InjuryDispatchDependencyResult>;
   /** State inspector — called by why_didnt_program_change. */
   inspect: (query: {
     date?: string;
@@ -437,7 +443,8 @@ export interface DispatchDeps {
     kind: NonInjuryConstraintKind,
     intent: CoachIntent,
     packet: CoachContextPacket,
-  ) => { reply: string; mutated: boolean };
+    trace?: AthleteActionTraceContext,
+  ) => Awaitable<{ reply: string; mutated: boolean }>;
   /**
    * Resolve (clear) the named active constraints. The implementation:
    *   1. Calls `removeActiveConstraint(id)` for each id.
@@ -454,29 +461,41 @@ export interface DispatchDeps {
   applyConstraintResolution: (
     ids: string[],
     todayISO: string,
-  ) => {
+    trace?: AthleteActionTraceContext,
+  ) => Awaitable<{
     cleared: ActiveConstraint[];
     remainingActiveCount?: number;
     derivedCardShouldRender?: boolean;
-  };
+  }>;
   applyProgramAdjustmentEvents: (
     events: AdjustmentEvent[],
     intendedChange: { type: string; targetDates: string[]; requiredText?: string },
-  ) => {
+    trace?: AthleteActionTraceContext,
+  ) => Awaitable<{
     eventsApplied: number;
     visibleDiff: string[];
     success: boolean;
     reason?: string;
-  };
+  }>;
+  /**
+   * Reserved async seam for a later typed fixture-change slice.
+   * The dispatcher does not route to or own fixture execution yet.
+   */
+  executeFixtureChange?: (
+    intent: CoachIntent,
+    packet: CoachContextPacket,
+    trace?: AthleteActionTraceContext,
+  ) => Awaitable<DispatchOutcome>;
 }
 
 // ─── Dispatcher ─────────────────────────────────────────────────────
 
-function dispatchCoachIntentWithinTrace(
+export async function dispatchCoachIntentWithinTrace(
   intent: CoachIntent,
   packet: CoachContextPacket,
   deps: DispatchDeps,
-): DispatchOutcome {
+  trace: AthleteActionTraceContext,
+): Promise<DispatchOutcome> {
   const pendingProposalBefore = packet.pendingCoachProposal ?? null;
   logger.debug('[coach-flow] intent', {
     kind: intent.intent,
@@ -553,11 +572,11 @@ function dispatchCoachIntentWithinTrace(
     };
     const planned = planProgramAdjustmentRequest(confirmationIntent, packet);
     if (planned.kind === 'ready') {
-      const apply = deps.applyProgramAdjustmentEvents(planned.events, {
+      const apply = await deps.applyProgramAdjustmentEvents(planned.events, {
         type: planned.proposal.action,
         targetDates: planned.events.map((e) => e.date),
         requiredText: getProgramAdjustmentRequiredText(planned.proposal),
-      });
+      }, trace);
       const success = planned.events.length > 0 && apply.eventsApplied > 0 && apply.success;
       const reply = success
         ? getProgramAdjustmentSuccessReply(planned.proposal)
@@ -768,9 +787,10 @@ function dispatchCoachIntentWithinTrace(
       }
 
       // Apply the resolution.
-      const resolutionApply = deps.applyConstraintResolution(
+      const resolutionApply = await deps.applyConstraintResolution(
         resolution.constraintIdsToResolve,
         packet.todayISO,
+        trace,
       );
       const { cleared } = resolutionApply;
       if (cleared.length === 0 && resolution.constraintIdsToResolve.length > 0) {
@@ -848,11 +868,14 @@ function dispatchCoachIntentWithinTrace(
         activeBodyPart: packet.activeInjury.bodyPart,
       });
       // Treat as active_injury_followup instead.
-      const progression = normalizeInjuryDispatchDependencyResult(deps.runProgression(
-        { kind: 'unchanged' },
-        packet.activeInjury,
-        packet.userMessage,
-      ));
+      const progression = normalizeInjuryDispatchDependencyResult(
+        await deps.runProgression(
+          { kind: 'unchanged' },
+          packet.activeInjury,
+          packet.userMessage,
+          trace,
+        ),
+      );
       logger.debug('[coach-flow] route', {
         route: 'active_injury_followup',
         mutated: progression.mutated,
@@ -915,7 +938,7 @@ function dispatchCoachIntentWithinTrace(
         };
       }
       const injury = normalizeInjuryDispatchDependencyResult(
-        deps.runUAEForInjury(bodyPart, severity, packet.userMessage),
+        await deps.runUAEForInjury(bodyPart, severity, packet.userMessage, trace),
       );
       logger.debug('[coach-flow] route', {
         route: 'severity_reply_uae',
@@ -958,7 +981,7 @@ function dispatchCoachIntentWithinTrace(
         outcome = { kind: 'unchanged' };
       }
       const progression = normalizeInjuryDispatchDependencyResult(
-        deps.runProgression(outcome, current, packet.userMessage),
+        await deps.runProgression(outcome, current, packet.userMessage, trace),
       );
       logger.debug('[coach-flow] route', {
         route: 'active_injury_followup',
@@ -992,11 +1015,12 @@ function dispatchCoachIntentWithinTrace(
         ans.date
       ) {
         const monday = mondayOf(ans.date);
-        const result = deps.reapplyInjuryAtSeverity(
+        const result = await deps.reapplyInjuryAtSeverity(
           packet.activeInjury.bodyPart,
           packet.activeInjury.severity,
           monday,
           packet.todayISO,
+          trace,
         );
         if (result.visibleDiffDetected) {
           mutated = true;
@@ -1027,7 +1051,7 @@ function dispatchCoachIntentWithinTrace(
       const severity = intent.payload?.severity;
       if (bodyPart && severity != null) {
         const injury = normalizeInjuryDispatchDependencyResult(
-          deps.runUAEForInjury(bodyPart, severity, packet.userMessage),
+          await deps.runUAEForInjury(bodyPart, severity, packet.userMessage, trace),
         );
         logger.debug('[coach-flow] route', {
           route: 'new_injury_full_payload_uae',
@@ -1155,11 +1179,11 @@ function dispatchCoachIntentWithinTrace(
           },
         };
       }
-      const apply = deps.applyProgramAdjustmentEvents(planned.events, {
+      const apply = await deps.applyProgramAdjustmentEvents(planned.events, {
         type: planned.proposal.action,
         targetDates: planned.events.map((e) => e.date),
         requiredText: getProgramAdjustmentRequiredText(planned.proposal),
-      });
+      }, trace);
       const success = planned.events.length > 0 && apply.eventsApplied > 0 && apply.success;
       logger.debug('[coach-flow] route', {
         route: success ? 'request_program_adjustment_applied' : 'request_program_adjustment_failed',
@@ -1197,7 +1221,7 @@ function dispatchCoachIntentWithinTrace(
     case 'equipment_change': {
       // Canonical temporary facts are asynchronous accepted-state
       // transactions owned by coachTurnController. Never publish a legacy
-      // ActiveConstraint upstream from this synchronous compatibility seam.
+      // ActiveConstraint upstream from this dispatcher compatibility seam.
       logger.warn('[coach-flow] source fact bypassed canonical transaction', {
         intent: intent.intent,
       });
@@ -1291,12 +1315,44 @@ function dispatcherDiagnosticActionType(intent: CoachIntent): AthleteActionType 
   return 'coach_command';
 }
 
+function dependencyFailureOutcome(
+  intent: CoachIntent,
+  pendingProposalBefore: PendingCoachProposal | null,
+): DispatchOutcome {
+  const programAdjustment = intent.intent === 'request_program_adjustment' ||
+    pendingProposalBefore?.type === 'program_adjustment';
+  const replyMode: DispatchReplyMode = programAdjustment
+    ? 'program_adjustment_failed'
+    : 'safe_fallback';
+  const route = programAdjustment
+    ? 'program_adjustment_dependency_rejected'
+    : 'coach_dispatch_dependency_rejected';
+  return {
+    handled: true,
+    reply: programAdjustment
+      ? "I tried to add that, but it didn't land in the visible program. I'm not going to pretend it changed."
+      : "I couldn't safely apply that change, so I haven't changed your program.",
+    mutated: false,
+    replyMode,
+    ...(programAdjustment ? { pendingCoachProposal: null } : {}),
+    transaction: {
+      route,
+      pendingProposalBefore,
+      mutationAttempted: true,
+      eventsEmitted: 0,
+      eventsApplied: 0,
+      visibleDiff: [],
+      replyMode,
+    },
+  };
+}
+
 /** Production Coach dispatcher entry with one trace across all injected mutation deps. */
-export function dispatchCoachIntent(
+export async function dispatchCoachIntent(
   intent: CoachIntent,
   packet: CoachContextPacket,
   deps: DispatchDeps,
-): DispatchOutcome {
+): Promise<DispatchOutcome> {
   const targetDate = intent.payload?.targetDate ?? intent.payload?.requestedDate ?? packet.todayISO;
   const trace = beginAthleteActionTrace({
     source: 'coach',
@@ -1307,8 +1363,8 @@ export function dispatchCoachIntent(
     targetDate,
     sessionDate: targetDate,
     scope: intent.payload?.scope ?? null,
-  });
-  return runWithAthleteActionTrace(trace, () => {
+  }, undefined, { forceRoot: true });
+  return runWithAthleteActionTrace(trace, async () => {
     emitAthleteActionEvent(trace, 'athlete_action_parsed', {
       parsedMutationType: intent.intent,
       confidenceBucket: intent.confidence >= 0.8 ? 'high' : intent.confidence >= 0.5 ? 'medium' : 'low',
@@ -1326,7 +1382,7 @@ export function dispatchCoachIntent(
       intentKind: intent.intent,
     });
     try {
-      const outcome = dispatchCoachIntentWithinTrace(intent, packet, deps);
+      const outcome = await dispatchCoachIntentWithinTrace(intent, packet, deps, trace);
       const internalResultCode = `coach_dispatch_${outcome.replyMode}`;
       const failedMutation = outcome.transaction?.mutationAttempted === true && !outcome.mutated;
       if (failedMutation || outcome.replyMode === 'program_adjustment_failed') {
@@ -1346,16 +1402,16 @@ export function dispatchCoachIntent(
             : null,
           terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
         });
-      } else {
+      } else if (outcome.mutated) {
         emitAthleteActionEvent(trace, 'athlete_action_completed', {
-          outcome: outcome.mutated ? 'accepted_changed' : outcome.handled ? 'handled_no_change' : 'fall_through',
+          outcome: 'accepted_changed',
           internalResultCode,
           dispatcherRoute: outcome.transaction?.route ?? outcome.replyMode,
           eventsEmitted: outcome.transaction?.eventsEmitted ?? 0,
           eventsApplied: outcome.transaction?.eventsApplied ?? 0,
         });
       }
-      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
+      emitAthleteActionEvent(trace, 'ui_outcome_mapped', {
         uiSurface: 'coach_chat',
         uiOutcome: outcome.replyMode,
         internalResultCode,
@@ -1366,18 +1422,30 @@ export function dispatchCoachIntent(
       return outcome;
     } catch (error) {
       const rejectionCode = error instanceof Error ? error.name : 'unknown_error';
+      const outcome = dependencyFailureOutcome(
+        intent,
+        packet.pendingCoachProposal ?? null,
+      );
       emitAthleteActionEvent(trace, 'athlete_action_failed', {
-        outcome: 'threw',
-        internalResultCode: `coach_dispatch_${intent.intent}_threw`,
+        outcome: outcome.replyMode,
+        internalResultCode: `coach_dispatch_${intent.intent}_dependency_rejected`,
         originalRejectionCode: rejectionCode,
         rejectionCodes: [rejectionCode],
-        firstFailingBoundary: 'dispatchCoachIntent',
+        firstFailingBoundary: outcome.transaction?.route ?? 'dispatchCoachIntent',
         failureCategory: classifyAthleteActionFailure(rejectionCode, 'dispatchCoachIntent'),
         validCandidateExisted: false,
-        previousStateRestored: true,
+        previousStateRestored: !outcome.mutated,
         terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
       });
-      throw error;
+      emitAthleteActionEvent(trace, 'ui_outcome_mapped', {
+        uiSurface: 'coach_chat',
+        uiOutcome: outcome.replyMode,
+        internalResultCode: `coach_dispatch_${intent.intent}_dependency_rejected`,
+        mutated: false,
+        handled: true,
+        finalUiMessageKey: outcome.replyMode,
+      });
+      return outcome;
     }
   });
 }

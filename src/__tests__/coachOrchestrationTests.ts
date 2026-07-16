@@ -280,6 +280,7 @@ function eq<T>(name: string, a: T, b: T) {
 }
 function section(label: string) { realLog(`\n${label}`); }
 
+(async () => {
 // ─────────────────────────────────────────────────────────────────────
 // Test 1 — New injury current + future
 // ─────────────────────────────────────────────────────────────────────
@@ -305,7 +306,7 @@ section('[1] New injury → activeInjury + visible current + future filtered');
     payload: { bodyPart: 'hammy' },
   };
   captureLogs();
-  const outA = dispatchCoachIntent(intentA, packetA, deps);
+  const outA = await dispatchCoachIntent(intentA, packetA, deps);
   restoreLogs();
   ok('clarifier handled', outA.handled);
   eq('clarifier mode', outA.replyMode, 'severity_clarifier');
@@ -325,7 +326,7 @@ section('[1] New injury → activeInjury + visible current + future filtered');
     payload: { bodyPart: 'hammy', severity: 6 },
   };
   captureLogs();
-  const outB = dispatchCoachIntent(intentB, packetB, deps);
+  const outB = await dispatchCoachIntent(intentB, packetB, deps);
   restoreLogs();
   ok('severity reply handled', outB.handled);
   ok('mutated', outB.mutated);
@@ -387,7 +388,7 @@ section('[2] activeInjury + "I already told you" → no severity question');
     intent: 'active_injury_followup', confidence: 0.94, needsClarification: false,
   };
   captureLogs();
-  const out = dispatchCoachIntent(intent, packet, deps);
+  const out = await dispatchCoachIntent(intent, packet, deps);
   restoreLogs();
   ok('handled by progression', out.replyMode === 'progression');
   ok('does NOT ask severity', !/how bad is it/i.test(out.reply));
@@ -404,7 +405,7 @@ section('[2] activeInjury + "I already told you" → no severity question');
     payload: { bodyPart: 'hammy' },
   };
   captureLogs();
-  const outMis = dispatchCoachIntent(intentMisclass, packet, deps);
+  const outMis = await dispatchCoachIntent(intentMisclass, packet, deps);
   restoreLogs();
   ok('clarifier suppressed on activeInjury+sameBodyPart', outMis.replyMode === 'progression');
   ok('logs suppressed_clarifier', loggedAny('suppressed_clarifier'));
@@ -435,7 +436,7 @@ section('[3] "Why didn\'t Monday change?" past-date → state inspector');
     payload: { requestedDate: '2026-04-27' }, // Mon — past
   };
   captureLogs();
-  const out = dispatchCoachIntent(intent, packet, deps);
+  const out = await dispatchCoachIntent(intent, packet, deps);
   restoreLogs();
   eq('routed via state_inspector', out.replyMode, 'state_inspector');
   ok('mentions past', /past|already/i.test(out.reply));
@@ -479,7 +480,7 @@ section('[4] "Deadlifts still there next week?" → re-apply');
   // Push exerciseName via concern parser.
   (intent.payload as any).exerciseName = 'Deadlift';
   captureLogs();
-  const out = dispatchCoachIntent(intent, packet, deps);
+  const out = await dispatchCoachIntent(intent, packet, deps);
   restoreLogs();
   ok('inspector handled', out.handled);
   ok(
@@ -504,7 +505,7 @@ section('[5] "pain is gone" → activeInjury cleared, future filter stops');
   });
   // Seed a current-week override.
   const deps = makeDeps();
-  deps.runUAEForInjury('hammy', 6, 'seed');
+  await deps.runUAEForInjury('hammy', 6, 'seed');
   ok('pre-resolve: override exists', Object.keys(useProgramStore.getState().dateOverrides).length > 0);
 
   const packet = buildCoachContextPacket({
@@ -517,7 +518,7 @@ section('[5] "pain is gone" → activeInjury cleared, future filter stops');
     payload: { followupKind: 'resolved' },
   };
   captureLogs();
-  const out = dispatchCoachIntent(intent, packet, deps);
+  const out = await dispatchCoachIntent(intent, packet, deps);
   restoreLogs();
   ok('handled', out.handled);
   ok('mutated (cleared overrides)', out.mutated);
@@ -563,7 +564,7 @@ section('[6] activeInjury hammy + "my shoulder hurts" → new injury possible');
     payload: { bodyPart: 'shoulder' },
   };
   captureLogs();
-  const out = dispatchCoachIntent(intent, packet, deps);
+  const out = await dispatchCoachIntent(intent, packet, deps);
   restoreLogs();
   // Different body part → clarifier NOT suppressed.
   eq('clarifier mode', out.replyMode, 'severity_clarifier');
@@ -596,7 +597,7 @@ section('[7] "Should I train today?" → state-grounded answer');
     payload: { concern: 'whether to train today' } as any,
   };
   captureLogs();
-  const out = dispatchCoachIntent(intent, packet, deps);
+  const out = await dispatchCoachIntent(intent, packet, deps);
   restoreLogs();
   ok('handled', out.handled);
   ok('does NOT ask severity', !/how bad is it/i.test(out.reply));
@@ -619,3 +620,9 @@ if (fail > 0) {
   process.exit(1);
 }
 process.exit(0);
+})().catch((error) => {
+  console.log = realLog;
+  console.warn = realWarn;
+  console.error(error);
+  process.exit(1);
+});

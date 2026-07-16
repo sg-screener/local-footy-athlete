@@ -8,7 +8,7 @@
  *     follow-up owns exact recovery and visible verification.
  *
  * The canonical semantic classifier + source-fact transaction now own
- * recovery before the synchronous dispatcher is reached.
+ * recovery before the compatibility dispatcher is reached.
  *
  * Run: npm run test:constraint-resolution
  */
@@ -176,6 +176,7 @@ function freshIntent(): CoachIntent {
   };
 }
 
+(async () => {
 // ─────────────────────────────────────────────────────────────────────
 // 1. Detector — fatigue-specific phrases
 // ─────────────────────────────────────────────────────────────────────
@@ -421,7 +422,7 @@ section('[8] dispatcher — fatigue resolved clears constraint, no fatigue re-cr
   const packet = makePacket('Update on how I\'m feeling: no fatigue anymore', [
     fatigue('cf-1'),
   ]);
-  const outcome = dispatchCoachIntent(freshIntent(), packet, deps);
+  const outcome = await dispatchCoachIntent(freshIntent(), packet, deps);
 
   ok('outcome.handled', outcome.handled);
   ok(
@@ -466,7 +467,7 @@ section('[9] dispatcher — injury phrase requires typed episode resolution');
     fatigue('cf-fat'),
     injury('hammy', 'ci-hammy', 7),
   ]);
-  const outcome = dispatchCoachIntent(freshIntent(), packet, deps);
+  const outcome = await dispatchCoachIntent(freshIntent(), packet, deps);
 
   ok('outcome.handled', outcome.handled);
   ok(
@@ -501,7 +502,7 @@ section('[10] dispatcher — ambiguous resolution asks which to clear');
     injury('hammy', 'ci-hammy'),
     injury('shoulder', 'ci-shoulder'),
   ]);
-  const outcome = dispatchCoachIntent(freshIntent(), packet, deps);
+  const outcome = await dispatchCoachIntent(freshIntent(), packet, deps);
 
   ok('outcome.handled', outcome.handled);
   ok(
@@ -543,7 +544,7 @@ section('[11] dispatcher — explicit all-clear clarifies and preserves every fa
   const deps = makeDeps(log, [all]);
 
   const packet = makePacket('all good now', all);
-  const outcome = dispatchCoachIntent(freshIntent(), packet, deps);
+  const outcome = await dispatchCoachIntent(freshIntent(), packet, deps);
 
   ok('outcome.handled', outcome.handled);
   ok(
@@ -589,7 +590,7 @@ section('[12] dispatcher — pending clarification still wins over resolution');
     needsClarification: false,
     payload: { bodyPart: 'shoulder', severity: 9 },
   };
-  const outcome = dispatchCoachIntent(intent, packet, deps);
+  const outcome = await dispatchCoachIntent(intent, packet, deps);
 
   ok(
     'pending clarifier route honoured (not constraint resolution)',
@@ -617,7 +618,7 @@ section('[13] dispatcher — phrase but nothing to clear → honest reply');
   const deps = makeDeps(log, [[]]);
 
   const packet = makePacket('no fatigue anymore', []);
-  const outcome = dispatchCoachIntent(freshIntent(), packet, deps);
+  const outcome = await dispatchCoachIntent(freshIntent(), packet, deps);
 
   ok('outcome.handled', outcome.handled);
   ok(
@@ -647,7 +648,7 @@ section('[8] dispatcher — phrase resolution compatibility path is bypassed');
     nonInjuryConstraintApplied: [],
     uaeRuns: [],
   };
-  const outcome = dispatchCoachIntent(
+  const outcome = await dispatchCoachIntent(
     freshIntent(),
     makePacket('back to normal', [fatigue('cf-retired')]),
     makeDeps(log, [[]]),
@@ -665,3 +666,8 @@ if (fail > 0) {
   realLog(`\nFailures:\n${failures.map((f) => `  - ${f}`).join('\n')}`);
   process.exit(1);
 }
+})().catch((error) => {
+  console.log = realLog;
+  console.error(error);
+  process.exit(1);
+});

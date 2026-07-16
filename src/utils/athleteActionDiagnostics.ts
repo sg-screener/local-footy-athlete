@@ -185,8 +185,11 @@ export function currentAthleteActionTrace(): AthleteActionTraceContext | undefin
 export function beginAthleteActionTrace(
   input: Omit<AthleteActionTraceContext, 'traceId' | 'spanId' | 'startedAt'>,
   existing?: AthleteActionTraceContext,
+  options: { forceRoot?: boolean } = {},
 ): AthleteActionTraceContext {
-  const inherited = existing ?? currentAthleteActionTrace();
+  const inherited = options.forceRoot
+    ? undefined
+    : existing ?? currentAthleteActionTrace();
   if (inherited) {
     const span = athleteActionTraceCoordinator.startSpan(inherited, input.route ?? input.actionType);
     return { ...inherited, spanId: span.spanId };
@@ -212,7 +215,7 @@ export function beginAthleteActionTrace(
       adjustmentId: input.adjustmentId ?? null,
       injuryEpisodeId: input.injuryEpisodeId ?? null,
     },
-  });
+  }, options);
   const trace: AthleteActionTraceContext = {
     ...input,
     ...token,
