@@ -47,7 +47,7 @@ import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProdu
 import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
-import { repeatWeekIntoNextWeek } from '../utils/repeatWeek';
+import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import {
   createEmptyReversibleAdjustmentLedger,

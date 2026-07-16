@@ -18,7 +18,7 @@ import {
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { buildBlockWeekStates } from '../utils/programBlockState';
 import { rebuildLocalWeek } from '../utils/weekRebuild';
-import { repeatWeekIntoNextWeek } from '../utils/repeatWeek';
+import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import {
   canonicaliseHydratedProgram,

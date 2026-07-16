@@ -37,7 +37,7 @@ import {
   validateWorkoutAgainstActiveConstraints,
 } from '../utils/postGenerationConstraintValidation';
 import { hasMeaningfulWorkoutContent } from '../utils/workoutContent';
-import { repeatWeekIntoNextWeek } from '../utils/repeatWeek';
+import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { commitRebuiltProgram } from '../utils/weekRebuild';
 import {
   COACH_REVISION_PROPOSAL_SCHEMA_VERSION,

@@ -22,10 +22,9 @@
  *   • Target anchors win — game/team DOWs are omitted → base target week shows.
  *   • No stale game copy — source `Game` workouts are skipped.
  *   • Owner / id         — `reason: 'repeat_week'` overlay keyed by target week
- *                         start; cleared with `removeWeekScopedOverlay`.
- *   • Sweep policy       — the store action runs the shared `decideOverrideSweep`
- *                         so manual edits and live constraints are preserved /
- *                         cleared exactly as every other rebuild.
+ *                         start; restored only through its reversible ledger ID.
+ *   • Sweep policy       — pure staging runs the shared `decideOverrideSweep`
+ *                         and captures exact displaced rows in the ledger.
  *   • Block rollover     — untouched: no block-number advance, no block-anchor
  *                         shift. A repeat is an overlay, not a progression.
  *
@@ -50,19 +49,55 @@ import {
 } from '../rules/weeklyExposureContractV2';
 import { buildWorkoutsFromCoach } from '../data/defaultProgram';
 import { buildCoachingPlan, onboardingToCoachingInputs } from './coachingEngine';
-import { addDays, getMondayForDate } from './sessionResolver';
+import { addDays, computeGameDatesForBlock, getMondayForDate } from './sessionResolver';
 import { getProgramBlockStateForDate, selectMicrocycleForDate } from './programBlockState';
 import { resolveEquipmentCapabilities } from './equipmentAvailability';
 import { resolveConditioningSubstitutionPolicy } from '../rules/conditioningFeasibility';
-import { collectWeekRebuildContext, decideOverrideSweep, type OverrideSweepDecision } from './weekRebuild';
-import { useProgramStore } from '../store/programStore';
-import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
+import {
+  decideOverrideSweep,
+  liveConstraintIds,
+  type OverrideSweepDecision,
+} from './weekRebuild';
+import {
+  beginProgramPersistenceStage,
+  endProgramPersistenceStage,
+  persistProgramStoreEnvelopeDurably,
+  readDurableProgramStoreEnvelope,
+  restoreProgramStoreEnvelopeDurably,
+  serializeProgramStoreEnvelope,
+  useProgramStore,
+  type ProgramState,
+} from '../store/programStore';
+import {
+  assertAcceptedVisibleLedgerEquivalence,
+  stageAcceptedStateTransaction,
+  type AcceptedStateTransactionResult,
+} from '../store/acceptedStateTransaction';
+import {
+  captureAcceptedAthleteSemanticSnapshotV2,
+  captureAcceptedProgramState,
+  withAcceptedMutationLock,
+} from '../store/coachMutationTransaction';
 import { todayISOLocal } from './appDate';
 import { logger } from './logger';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import {
+  REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+  reversibleAdjustmentId,
+  reversibleAdjustmentWorkoutFingerprint,
+  type ReversibleAdjustmentProvenanceDelta,
+  type ReversibleAdjustmentRecord,
+  type ReversibleAdjustmentSweptOverrideDelta,
+  type ReversibleAdjustmentTypedReductionDelta,
+} from '../rules/reversibleAdjustmentLedger';
+import { semanticFingerprint } from './programSemanticSnapshot';
+import { semanticFingerprintV2 } from './semanticFingerprintV2';
+import { capturedTraceField } from '../dev/e2e/AthleteActionTraceCoordinator';
+import {
+  athleteActionDiagnosticsEnabled,
   athleteActionDiagnosticHash,
+  athleteActionTraceCoordinator,
   athleteActionErrorCode,
   athleteActionTerminalReasonChain,
   beginAthleteActionTrace,
@@ -217,13 +252,6 @@ export function shouldRecommendRepeatWeek(summary: RepeatWeekFeedbackSummary): b
 
 // ─── Store-wired action ───────────────────────────────────────────────
 
-export interface RepeatWeekResult {
-  overlay: WeekScopedWorkoutOverlay;
-  sweep: OverrideSweepDecision;
-  sourceWeekStart: string;
-  targetWeekStart: string;
-}
-
 function anchorDowsForProfile(profile: OnboardingData): number[] {
   const dows = new Set<number>();
   const gameDay = (profile.usualGameDay || profile.gameDay) as DayOfWeek | undefined;
@@ -234,15 +262,11 @@ function anchorDowsForProfile(profile: OnboardingData): number[] {
   return Array.from(dows);
 }
 
-function gameDowForProfile(profile: OnboardingData): number[] {
-  const gameDay = (profile.usualGameDay || profile.gameDay) as DayOfWeek | undefined;
-  return gameDay && gameDay in DAY_NAME_TO_NUM ? [DAY_NAME_TO_NUM[gameDay]] : [];
-}
-
 function resolveRepeatTargetExposureContracts(args: {
   profile: OnboardingData;
   program: TrainingProgram;
   targetWeekStart: string;
+  acceptedMaterialContext: ProgramState['acceptedMaterialContext'];
 }): { legacy: WeeklyExposureContract; v2: WeeklyExposureContractV2; workouts: Workout[] } {
   const blockState = getProgramBlockStateForDate({
     dateISO: args.targetWeekStart,
@@ -259,12 +283,11 @@ function resolveRepeatTargetExposureContracts(args: {
     equipment,
     profile: args.profile,
   });
-  const acceptedContext = useProgramStore.getState().acceptedMaterialContext;
   const targetWeekAvailability = resolveProfileTargetWeekAvailability({
     profile: args.profile,
     weekStart: args.targetWeekStart,
-    markedDays: acceptedContext.markedDays,
-    activeConstraints: acceptedContext.activeConstraints,
+    markedDays: args.acceptedMaterialContext.markedDays,
+    activeConstraints: args.acceptedMaterialContext.activeConstraints,
   });
   const targetFixture = targetWeekAvailability.proposedFixtures[0];
   const inputs = onboardingToCoachingInputs(args.profile, {
@@ -307,87 +330,356 @@ function resolveRepeatTargetExposureContracts(args: {
   };
 }
 
+type RepeatWeekSnapshot = ProgramState;
+
+export interface RepeatWeekResult {
+  overlay: WeekScopedWorkoutOverlay;
+  sweep: OverrideSweepDecision;
+  sourceWeekStart: string;
+  targetWeekStart: string;
+  adjustmentId: string;
+  acceptedRevision: number;
+  traceId?: string;
+  observationId?: string;
+}
+
+export interface RepeatWeekStage {
+  accepted: AcceptedStateTransactionResult;
+  /** Complete immutable publication candidate; also the exact durable envelope. */
+  programState: ProgramState;
+  result: RepeatWeekResult;
+}
+
+function clone<T>(value: T): T {
+  return value === null || value === undefined
+    ? value
+    : JSON.parse(JSON.stringify(value)) as T;
+}
+
+function workoutForRawTargetDate(args: {
+  snapshot: RepeatWeekSnapshot;
+  overlay: WeekScopedWorkoutOverlay | null;
+  targetMicrocycle: ReturnType<typeof selectMicrocycleForDate>;
+  date: string;
+}): { owner: 'date_override' | 'week_overlay' | 'base_microcycle' | 'empty'; workout: Workout | null } {
+  const override = args.snapshot.dateOverrides[args.date];
+  if (override) return { owner: 'date_override', workout: override };
+  if (args.overlay && Object.prototype.hasOwnProperty.call(args.overlay.workoutsByDate, args.date)) {
+    return { owner: 'week_overlay', workout: args.overlay.workoutsByDate[args.date] ?? null };
+  }
+  const dow = new Date(`${args.date}T12:00:00`).getDay();
+  const base = args.targetMicrocycle?.workouts.find((workout) => workout.dayOfWeek === dow) ?? null;
+  return base
+    ? { owner: 'base_microcycle', workout: base }
+    : { owner: 'empty', workout: null };
+}
+
+function provenanceRows(
+  overlay: WeekScopedWorkoutOverlay | null,
+): ReversibleAdjustmentProvenanceDelta[] {
+  return Object.entries(overlay?.workoutsByDate ?? {}).flatMap(([date, workout]) =>
+    (workout?.derivedSessionProvenance ?? []).map((record) => ({
+      date,
+      record: clone(record),
+      fingerprint: semanticFingerprint({ date, record }),
+    }))).sort((left, right) => left.date.localeCompare(right.date) ||
+      left.fingerprint.localeCompare(right.fingerprint));
+}
+
+function reductionRows(
+  weekStart: string,
+  overlay: WeekScopedWorkoutOverlay | null,
+): ReversibleAdjustmentTypedReductionDelta[] {
+  return (overlay?.exposureContractV2?.authorisedReductions ?? []).map((reduction) => ({
+    weekStart,
+    reduction: clone(reduction),
+    fingerprint: semanticFingerprint({
+      weekStart,
+      metric: reduction.metric,
+      reason: reduction.reason,
+      originalApprovedTarget: reduction.originalApprovedTarget,
+      reducedTarget: reduction.reducedTarget,
+      detail: reduction.detail,
+      deletionIdentity: reduction.deletionIdentity ?? null,
+    }),
+  })).sort((left, right) => left.fingerprint.localeCompare(right.fingerprint));
+}
+
+function deltaRows<T extends { fingerprint: string }>(
+  before: T[],
+  after: T[],
+): { added: T[]; removed: T[] } {
+  const beforeIds = new Set(before.map((entry) => entry.fingerprint));
+  const afterIds = new Set(after.map((entry) => entry.fingerprint));
+  return {
+    added: after.filter((entry) => !beforeIds.has(entry.fingerprint)),
+    removed: before.filter((entry) => !afterIds.has(entry.fingerprint)),
+  };
+}
+
+function buildRepeatAdjustment(args: {
+  snapshot: RepeatWeekSnapshot;
+  sourceWeekStart: string;
+  targetWeekStart: string;
+  targetMicrocycle: ReturnType<typeof selectMicrocycleForDate>;
+  beforeOverlay: WeekScopedWorkoutOverlay | null;
+  afterOverlay: WeekScopedWorkoutOverlay;
+  sweep: OverrideSweepDecision;
+  acceptedRevision: number;
+}): ReversibleAdjustmentRecord {
+  const createdAt = args.afterOverlay.createdAt;
+  const id = reversibleAdjustmentId({
+    kind: 'repeat_week',
+    sourceActionOrIntentId: `${args.sourceWeekStart}:${args.targetWeekStart}`,
+    createdAt,
+  });
+  const targetDates = Array.from({ length: 7 }, (_, offset) =>
+    addDays(args.targetWeekStart, offset));
+  const sweptDates = new Set(args.sweep.clear);
+  const ownedDays = targetDates.map((date) => {
+    const before = workoutForRawTargetDate({
+      snapshot: args.snapshot,
+      overlay: args.beforeOverlay,
+      targetMicrocycle: args.targetMicrocycle,
+      date,
+    });
+    const afterDateOverride = sweptDates.has(date)
+      ? null
+      : args.snapshot.dateOverrides[date] ?? null;
+    const afterOverrideContext = sweptDates.has(date)
+      ? null
+      : args.snapshot.overrideContexts[date] ?? null;
+    const dow = new Date(`${date}T12:00:00`).getDay();
+    const targetBaseWorkout = args.targetMicrocycle?.workouts.find((workout) =>
+      workout.dayOfWeek === dow) ?? null;
+    const hasAfterOverlayRow = Object.prototype.hasOwnProperty.call(
+      args.afterOverlay.workoutsByDate,
+      date,
+    );
+    const afterWorkout = afterDateOverride ?? (
+      hasAfterOverlayRow
+        ? args.afterOverlay.workoutsByDate[date] ?? null
+        : targetBaseWorkout
+    );
+    const afterOwner = afterDateOverride
+      ? 'date_override' as const
+      : hasAfterOverlayRow
+        ? 'week_overlay' as const
+        : targetBaseWorkout
+          ? 'base_microcycle' as const
+          : 'empty' as const;
+    return {
+      date,
+      weekStart: args.targetWeekStart,
+      beforeWorkout: clone(before.workout),
+      afterWorkout: clone(afterWorkout),
+      beforeSurfaceOwner: before.owner,
+      afterSurfaceOwner: afterOwner,
+      beforeSurfaceWorkout: clone(before.workout),
+      afterSurfaceWorkout: clone(afterWorkout),
+      beforeDateOverride: clone(args.snapshot.dateOverrides[date] ?? null),
+      afterDateOverride: clone(afterDateOverride),
+      beforeOverrideContext: clone(args.snapshot.overrideContexts[date] ?? null),
+      afterOverrideContext: clone(afterOverrideContext),
+      beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(date, before.workout),
+      afterFingerprint: reversibleAdjustmentWorkoutFingerprint(date, afterWorkout),
+    };
+  });
+  const sweptOverrides: ReversibleAdjustmentSweptOverrideDelta[] = args.sweep.clear.map((date) => {
+    const beforeWorkout = args.snapshot.dateOverrides[date] ?? null;
+    const beforeContext = args.snapshot.overrideContexts[date] ?? null;
+    return {
+      date,
+      beforeWorkout: clone(beforeWorkout),
+      afterWorkout: null,
+      beforeContext: clone(beforeContext),
+      afterContext: null,
+      beforeFingerprint: semanticFingerprint({ workout: beforeWorkout, context: beforeContext }),
+      afterFingerprint: semanticFingerprint({ workout: null, context: null }),
+    };
+  });
+  const provenanceDeltas = deltaRows(
+    provenanceRows(args.beforeOverlay),
+    provenanceRows(args.afterOverlay),
+  );
+  const typedReductionDeltas = deltaRows(
+    reductionRows(args.targetWeekStart, args.beforeOverlay),
+    reductionRows(args.targetWeekStart, args.afterOverlay),
+  );
+  const affectedDates = Array.from(new Set([...targetDates, ...args.sweep.clear])).sort();
+  const affectedWeeks = Array.from(new Set(affectedDates.map(getMondayForDate))).sort();
+  return {
+    protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+    id,
+    kind: 'repeat_week',
+    sourceActor: 'athlete',
+    sourceSurface: 'program_tab',
+    sourceActionOrIntentId: `${args.sourceWeekStart}:${args.targetWeekStart}`,
+    sourceProducer: 'tap',
+    createdAt,
+    acceptedRevision: args.acceptedRevision,
+    status: 'active',
+    clearedAt: null,
+    supersededById: null,
+    supersededReason: null,
+    affectedDates,
+    affectedWeeks,
+    rollingDependencyWeeks: affectedWeeks,
+    displacedOriginalState: {
+      ownedDays,
+      ownedWeeks: [],
+      calendarFacts: [],
+      userRemovalConstraint: null,
+      weekOverlay: {
+        weekStart: args.targetWeekStart,
+        before: clone(args.beforeOverlay),
+        after: clone(args.afterOverlay),
+        beforeFingerprint: semanticFingerprint(args.beforeOverlay),
+        afterFingerprint: semanticFingerprint(args.afterOverlay),
+      },
+      sweptOverrides,
+      provenanceDeltas,
+      typedReductionDeltas,
+    },
+    acceptedAfterSemanticFingerprints: ownedDays.map((entry) => ({
+      date: entry.date,
+      fingerprint: entry.afterFingerprint,
+    })),
+    restorationTarget: {
+      kind: 'week_overlay',
+      dates: affectedDates,
+      stableIdentities: [args.afterOverlay.id],
+    },
+    linkedConstraintIds: [],
+    linkedCalendarFacts: [],
+    linkedOverrideOwners: sweptOverrides.map((entry) => ({
+      date: entry.date,
+      ownerId: entry.beforeContext?.activeModifierId ?? null,
+    })),
+    linkedOverlayIds: [args.afterOverlay.id],
+    linkedUserRemovalConstraintIds: [],
+    linkedProvenanceIds: provenanceDeltas.added.map((entry) => entry.fingerprint),
+    linkedTypedReductions: typedReductionDeltas.added.map((entry) => ({
+      weekStart: entry.weekStart,
+      metric: entry.reduction.metric,
+      reason: entry.reduction.reason,
+      originalApprovedTarget: entry.reduction.originalApprovedTarget,
+      reducedTarget: entry.reduction.reducedTarget,
+      detail: entry.reduction.detail,
+      deletionIdentity: entry.reduction.deletionIdentity ?? null,
+      fingerprint: entry.fingerprint,
+    })),
+    validity: {
+      reversible: true,
+      source: 'runtime_exact_delta',
+      validWhile: [
+        'target_overlay_matches_repeat_accepted_after',
+        'swept_override_rows_remain_repeat_owned',
+      ],
+      invalidWhen: [
+        'newer_overlapping_athlete_intent_exists',
+        'unowned_target_overlay_or_swept_row_drift',
+      ],
+    },
+    laterIntentPolicy: 'newer_athlete_intent_wins',
+  };
+}
+
 /**
- * Repeat the source week into the next week, committed as a `repeat_week`
- * overlay through the shared sweep policy. Synchronous; reads the live stores.
- * Progression / block rollover are left untouched.
+ * Pure staging for the Durable Reversible Target-Overlay Transaction.
+ * The supplied snapshot is the only source of truth; no store is mutated or
+ * re-read while the candidate, ledger delta and accepted envelope are built.
  */
-function repeatWeekIntoNextWeekWithinTrace(args: {
+export function stageRepeatWeekTransaction(args: {
+  snapshot: RepeatWeekSnapshot;
   baseProfile: OnboardingData;
-  /** Any date inside the source (current) week. */
   sourceWeekDate: string;
   todayISO?: string;
+  expectedAcceptedRevision: number;
   trace?: AthleteActionTraceContext;
-}): RepeatWeekResult {
+}): RepeatWeekStage {
   const todayISO = args.todayISO ?? todayISOLocal();
-  const acceptedState = useProgramStore.getState();
-  const program: TrainingProgram | null = acceptedState.currentProgram;
-  if (!program) {
-    throw new Error('Cannot repeat a week without a current program');
+  if (args.snapshot.acceptedMaterialContext.revision !== args.expectedAcceptedRevision) {
+    throw new Error('repeat_week_expected_revision_conflict');
   }
-
+  const program = args.snapshot.currentProgram;
+  if (!program) throw new Error('Cannot repeat a week without a current program');
   const sourceWeekStart = getMondayForDate(args.sourceWeekDate.split('T')[0]);
   const targetWeekStart = addDays(sourceWeekStart, 7);
-
   const acceptedSource = rebaseAcceptedEffectiveWeek({
-    surfaces: acceptedState,
+    surfaces: args.snapshot,
     weekStart: sourceWeekStart,
     profile: args.baseProfile,
-    markedDays: acceptedState.acceptedMaterialContext.markedDays,
+    markedDays: args.snapshot.acceptedMaterialContext.markedDays,
   });
-  const sourceWorkouts = acceptedSource.composedWorkouts;
-
-  // Preserve any existing target-week one-off game so it keeps winning.
-  const existingTargetOverlay = useProgramStore.getState().weekScopedOverlays?.[targetWeekStart];
+  // The accepted gateway's visible rows already include active source facts,
+  // exact user removals and any owned derived provenance. They are the repeat
+  // source of truth when the target phase table has not changed.
+  const sourceWorkouts = acceptedSource.visibleWorkouts;
+  const existingTargetOverlay = args.snapshot.weekScopedOverlays[targetWeekStart] ?? null;
   const targetMicrocycle = selectMicrocycleForDate(program, null, targetWeekStart);
   const targetWinningWorkoutsByDate: Record<string, Workout> = {};
-  if (existingTargetOverlay && existingTargetOverlay.reason === 'one_off_game') {
-    for (const [date, workout] of Object.entries(existingTargetOverlay.workoutsByDate)) {
-      if (workout && workout.workoutType === 'Game') targetWinningWorkoutsByDate[date] = workout;
+  const targetAnchorDows = new Set(anchorDowsForProfile(args.baseProfile));
+  if (existingTargetOverlay?.exposureContractV2 || targetMicrocycle?.exposureContractV2) {
+    const acceptedTarget = rebaseAcceptedEffectiveWeek({
+      surfaces: args.snapshot,
+      weekStart: targetWeekStart,
+      profile: args.baseProfile,
+      markedDays: args.snapshot.acceptedMaterialContext.markedDays,
+    });
+    for (const workout of acceptedTarget.visibleWorkouts) {
+      if (workout.workoutType !== 'Game' && workout.workoutType !== 'Team Training') continue;
+      const date = dateForDowInWeek(targetWeekStart, workout.dayOfWeek);
+      targetWinningWorkoutsByDate[date] = clone(workout);
+      targetAnchorDows.add(workout.dayOfWeek);
     }
   }
-
   const resolvedTargetContracts = (
     !existingTargetOverlay?.exposureContract && !targetMicrocycle?.exposureContract
   ) || (
     !existingTargetOverlay?.exposureContractV2 && !targetMicrocycle?.exposureContractV2
-  )
-    ? resolveRepeatTargetExposureContracts({
-        profile: args.baseProfile,
-        program,
-        targetWeekStart,
-      })
-    : null;
-  const targetExposureContract =
-    existingTargetOverlay?.exposureContract ?? targetMicrocycle?.exposureContract ??
-      resolvedTargetContracts!.legacy;
-  const targetExposureContractV2 =
-    existingTargetOverlay?.exposureContractV2 ?? targetMicrocycle?.exposureContractV2 ??
-      resolvedTargetContracts?.v2;
-  const sourceExposureContractV2 = acceptedSource.contract;
-  const targetTableChanged = section18PhaseTableSignature(sourceExposureContractV2) !==
+  ) ? resolveRepeatTargetExposureContracts({
+      profile: args.baseProfile,
+      program,
+      targetWeekStart,
+      acceptedMaterialContext: args.snapshot.acceptedMaterialContext,
+    }) : null;
+  const targetExposureContract = existingTargetOverlay?.exposureContract ??
+    targetMicrocycle?.exposureContract ?? resolvedTargetContracts!.legacy;
+  const targetExposureContractV2 = existingTargetOverlay?.exposureContractV2 ??
+    targetMicrocycle?.exposureContractV2 ?? resolvedTargetContracts?.v2;
+  const targetTableChanged = section18PhaseTableSignature(acceptedSource.contract) !==
     section18PhaseTableSignature(targetExposureContractV2);
   const phaseOwnedSourceWorkouts = targetTableChanged
     ? targetMicrocycle?.workouts ?? resolvedTargetContracts?.workouts ?? sourceWorkouts
     : sourceWorkouts;
+  const sourceRemovedDows = new Set(acceptedSource.dates
+    .filter((entry) => entry.workout && !acceptedSource.visibleWorkouts.some((workout) =>
+      workout.dayOfWeek === entry.dayOfWeek))
+    .map((entry) => entry.dayOfWeek));
   let overlay = buildRepeatWeekOverlay({
     sourceWorkouts: phaseOwnedSourceWorkouts,
     targetWeekStart,
-    // With an in-program target, its base anchor workouts win. Immediately
-    // beyond the current window there is no base team workout to fall through
-    // to, so retain the repeated recurring team session and omit only game
-    // content (fixture credit is projected by the target contract).
-    targetAnchorDows: targetMicrocycle
-      ? anchorDowsForProfile(args.baseProfile)
-      : gameDowForProfile(args.baseProfile),
+    targetAnchorDows: Array.from(targetAnchorDows),
     targetWinningWorkoutsByDate,
     targetExposureContract,
     targetExposureContractV2,
   });
+  if (sourceRemovedDows.size > 0) {
+    const workoutsByDate = { ...overlay.workoutsByDate };
+    for (const dow of sourceRemovedDows) {
+      if (targetAnchorDows.has(dow)) continue;
+      const date = dateForDowInWeek(targetWeekStart, dow);
+      if (!Object.prototype.hasOwnProperty.call(targetWinningWorkoutsByDate, date)) {
+        workoutsByDate[date] = null;
+      }
+    }
+    overlay = { ...overlay, workoutsByDate };
+  }
   if (existingTargetOverlay) {
     const activeFixtureDates = effectiveFixtureDatesForWeeks({
       profile: args.baseProfile,
-      markedDays: acceptedState.acceptedMaterialContext.markedDays,
+      markedDays: args.snapshot.acceptedMaterialContext.markedDays,
       weekStarts: [sourceWeekStart, targetWeekStart],
     });
     const workoutsByDate = { ...overlay.workoutsByDate };
@@ -408,16 +700,12 @@ function repeatWeekIntoNextWeekWithinTrace(args: {
                   displacedSession: {
                     targetDate: date,
                     sourcePlanEntryId: proposedUnderlying?.planEntryId ?? null,
-                    workout: proposedUnderlying
-                      ? JSON.parse(JSON.stringify(proposedUnderlying)) as Workout
-                      : null,
+                    workout: clone(proposedUnderlying),
                   },
                   restoration: {
                     targetDate: date,
                     sourcePlanEntryId: proposedUnderlying?.planEntryId ?? null,
-                    workout: proposedUnderlying
-                      ? JSON.parse(JSON.stringify(proposedUnderlying)) as Workout
-                      : null,
+                    workout: clone(proposedUnderlying),
                   },
                 },
               }
@@ -426,57 +714,128 @@ function repeatWeekIntoNextWeekWithinTrace(args: {
     }
     overlay = { ...overlay, workoutsByDate };
   }
-
-  // Shared sweep policy — preserve manual edits / live-constraint overrides,
-  // clear system junk and dead-owner leftovers, resolve game-window conflicts.
-  const context = collectWeekRebuildContext({
-    baseProfile: args.baseProfile,
-    newGameDay: undefined,
-    program,
-    todayISO,
+  const gameDay = (args.baseProfile.usualGameDay || args.baseProfile.gameDay) as
+    DayOfWeek | undefined;
+  const gameDates = gameDay
+    ? computeGameDatesForBlock(gameDay, program.startDate.slice(0, 10), program.endDate.slice(0, 10))
+    : [];
+  const sweep = decideOverrideSweep({
+    gameDates,
+    overrides: args.snapshot.dateOverrides,
+    overrideContexts: args.snapshot.overrideContexts,
+    activeConstraintIds: liveConstraintIds(
+      args.snapshot.acceptedMaterialContext.activeConstraints,
+      todayISO,
+    ),
   });
-  const sweep = decideOverrideSweep(context);
-
-  const state = useProgramStore.getState();
   const cleared = new Set(sweep.clear);
-  const dateOverrides = Object.fromEntries(
-    Object.entries(state.dateOverrides).filter(([date]) => !cleared.has(date)),
-  ) as Record<string, Workout>;
-  const overrideContexts = Object.fromEntries(
-    Object.entries(state.overrideContexts).filter(([date]) => !cleared.has(date)),
-  ) as Record<string, OverrideContext>;
-  commitAcceptedStateTransaction({
+  const dateOverrides = Object.fromEntries(Object.entries(args.snapshot.dateOverrides)
+    .filter(([date]) => !cleared.has(date))) as Record<string, Workout>;
+  const overrideContexts = Object.fromEntries(Object.entries(args.snapshot.overrideContexts)
+    .filter(([date]) => !cleared.has(date))) as Record<string, OverrideContext>;
+  const firstAccepted = stageAcceptedStateTransaction({
     reason: `repeat_week:${sourceWeekStart}:${targetWeekStart}`,
+    trace: args.trace,
     profile: args.baseProfile,
     program: {
       weekScopedOverlays: {
-        ...state.weekScopedOverlays,
+        ...args.snapshot.weekScopedOverlays,
         [targetWeekStart]: overlay,
       },
       dateOverrides,
       overrideContexts,
     },
     validateWeekStarts: [targetWeekStart, ...sweep.clear.map(getMondayForDate)],
-  });
-
-  logger.debug('[repeatWeek] committed repeat_week overlay', {
+  }, args.snapshot);
+  const acceptedOverlay = firstAccepted.program.weekScopedOverlays[targetWeekStart];
+  if (!acceptedOverlay) throw new Error('repeat_week_staged_overlay_missing');
+  const adjustment = buildRepeatAdjustment({
+    snapshot: args.snapshot,
     sourceWeekStart,
     targetWeekStart,
-    days: Object.keys(overlay.workoutsByDate),
-    cleared: sweep.clear,
+    targetMicrocycle,
+    beforeOverlay: existingTargetOverlay,
+    afterOverlay: acceptedOverlay,
+    sweep,
+    acceptedRevision: firstAccepted.context.revision,
   });
-
-  return { overlay, sweep, sourceWeekStart, targetWeekStart };
+  const accepted = stageAcceptedStateTransaction({
+    reason: `repeat_week:${sourceWeekStart}:${targetWeekStart}`,
+    trace: args.trace,
+    profile: args.baseProfile,
+    preserveExactAcceptedWorkouts: true,
+    programAlreadyAccepted: true,
+    program: {
+      ...firstAccepted.program,
+      reversibleAdjustmentLedger: {
+        protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+        adjustments: [
+          ...args.snapshot.reversibleAdjustmentLedger.adjustments,
+          adjustment,
+        ],
+      },
+    },
+    validateWeekStarts: [targetWeekStart, ...sweep.clear.map(getMondayForDate)],
+  }, args.snapshot);
+  return {
+    accepted,
+    programState: {
+      ...args.snapshot,
+      ...accepted.program,
+      acceptedMaterialContext: accepted.context,
+    },
+    result: {
+      overlay: accepted.program.weekScopedOverlays[targetWeekStart]!,
+      sweep,
+      sourceWeekStart,
+      targetWeekStart,
+      adjustmentId: adjustment.id,
+      acceptedRevision: accepted.context.revision,
+    },
+  };
 }
 
-export function repeatWeekIntoNextWeek(args: {
+function publishStagedRepeatWeek(args: {
+  stage: RepeatWeekStage;
+  profile: OnboardingData;
+  expectedAcceptedRevision: number;
+  trace: AthleteActionTraceContext;
+  onPublished: () => void;
+}): void {
+  if (useProgramStore.getState().acceptedMaterialContext.revision !== args.expectedAcceptedRevision) {
+    throw new Error('repeat_week_expected_revision_conflict_before_publish');
+  }
+  assertAcceptedVisibleLedgerEquivalence({
+    surfaces: args.stage.accepted.program,
+    context: args.stage.accepted.context,
+    weekStarts: [args.stage.result.targetWeekStart],
+    profile: args.profile,
+    trace: args.trace,
+  });
+  useProgramStore.setState({
+    ...args.stage.programState,
+  });
+  args.onPublished();
+  if (serializeProgramStoreEnvelope(useProgramStore.getState()) !==
+    serializeProgramStoreEnvelope(args.stage.programState)) {
+    throw new Error('repeat_week_live_publication_mismatch');
+  }
+  emitAthleteActionEvent(args.trace, 'accepted_state_publication_result', {
+    published: true,
+    acceptedStateVersion: args.stage.accepted.context.revision,
+    targetWeekId: args.stage.result.targetWeekStart,
+    internalResultCode: 'repeat_week_persisted_before_publication',
+  });
+}
+
+/** Production Repeat Week door: durable acknowledgement precedes one live publication. */
+export async function repeatWeekIntoNextWeek(args: {
   baseProfile: OnboardingData;
-  /** Any date inside the source (current) week. */
   sourceWeekDate: string;
   todayISO?: string;
-  /** Development-only correlation inherited from a caller. */
+  expectedAcceptedRevision?: number;
   trace?: AthleteActionTraceContext;
-}): RepeatWeekResult {
+}): Promise<RepeatWeekResult> {
   const sourceWeekStart = getMondayForDate(args.sourceWeekDate.split('T')[0]);
   const targetWeekStart = addDays(sourceWeekStart, 7);
   const trace = beginAthleteActionTrace({
@@ -487,70 +846,217 @@ export function repeatWeekIntoNextWeek(args: {
     sourceDate: sourceWeekStart,
     targetDate: targetWeekStart,
     scope: 'target_week_overlay',
+    controlId: 'program-week-repeat',
   }, args.trace);
-  return runWithAthleteActionTrace(trace, () => {
+  return runWithAthleteActionTrace(trace, () => withAcceptedMutationLock(async () => {
+    const expectedAcceptedRevision = args.expectedAcceptedRevision ??
+      useProgramStore.getState().acceptedMaterialContext.revision;
+    const preState = useProgramStore.getState();
+    const preStateEnvelope = serializeProgramStoreEnvelope(preState);
+    const preProgram = captureAcceptedProgramState();
+    const preFingerprint = semanticFingerprint(preProgram);
+    let preEnvelope: string | null = null;
+    let preEnvelopeRead = false;
+    let token: ReturnType<typeof beginProgramPersistenceStage> | null = null;
+    let published = false;
     emitAthleteActionEvent(trace, 'athlete_action_parsed', {
       parsedMutationType: 'repeat_week',
       sourceWeekId: sourceWeekStart,
       targetWeekId: targetWeekStart,
-      beforeStateHash: athleteActionDiagnosticHash({
-        overlayWeeks: Object.keys(useProgramStore.getState().weekScopedOverlays).sort(),
-        programId: useProgramStore.getState().currentProgram?.id ?? null,
-      }),
-    });
-    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
-      selectedRoute: 'repeat_week_overlay',
-      producer: 'repeatWeekIntoNextWeek',
+      expectedAcceptedRevision,
+      beforeStateHash: athleteActionDiagnosticHash(preProgram),
     });
     try {
-      const result = repeatWeekIntoNextWeekWithinTrace(args);
+      if (useProgramStore.getState().acceptedMaterialContext.revision !== expectedAcceptedRevision) {
+        throw new Error('repeat_week_expected_revision_conflict');
+      }
+      const stageTrace = beginAthleteActionTrace({
+        source: 'tap', actionType: 'repeat_week', route: 'repeat_week_stage',
+      }, trace);
+      const stage = runWithAthleteActionTrace(stageTrace, () => stageRepeatWeekTransaction({
+        snapshot: preState,
+        baseProfile: args.baseProfile,
+        sourceWeekDate: args.sourceWeekDate,
+        todayISO: args.todayISO,
+        expectedAcceptedRevision,
+        trace: stageTrace,
+      }));
+      token = beginProgramPersistenceStage();
+      const persistTrace = beginAthleteActionTrace({
+        source: 'tap', actionType: 'repeat_week', route: 'repeat_week_persist_before_publish',
+      }, trace);
+      await runWithAthleteActionTrace(persistTrace, async () => {
+        preEnvelope = await readDurableProgramStoreEnvelope();
+        preEnvelopeRead = true;
+        if (athleteActionDiagnosticsEnabled()) {
+          athleteActionTraceCoordinator.recordBefore({
+            token: trace,
+            semantic: captureAcceptedAthleteSemanticSnapshotV2(preProgram),
+            visibleCard: { status: 'awaiting_actual_home_render' },
+            visibleDetail: { sourceWeekStart, targetWeekStart },
+            persistedEnvelope: preEnvelope,
+          });
+          athleteActionTraceCoordinator.recordPersistence(persistTrace, {
+            operation: 'read_before',
+            store: 'program-store',
+            attempted: true,
+            acknowledged: true,
+            expectedFingerprint: capturedTraceField(semanticFingerprintV2(preEnvelope)),
+            actualFingerprint: capturedTraceField(semanticFingerprintV2(preEnvelope)),
+          });
+        }
+        if (serializeProgramStoreEnvelope(useProgramStore.getState()) !== preStateEnvelope ||
+          semanticFingerprint(captureAcceptedProgramState()) !== preFingerprint ||
+          useProgramStore.getState().acceptedMaterialContext.revision !== expectedAcceptedRevision) {
+          throw new Error('repeat_week_expected_revision_conflict_before_persist');
+        }
+        const persistedEnvelope = await persistProgramStoreEnvelopeDurably(
+          token!,
+          stage.programState,
+        );
+        if (athleteActionDiagnosticsEnabled()) {
+          athleteActionTraceCoordinator.recordPersistence(persistTrace, {
+            operation: 'write_attempt',
+            store: 'program-store',
+            attempted: true,
+            acknowledged: true,
+            expectedFingerprint: capturedTraceField(semanticFingerprintV2(persistedEnvelope)),
+            actualFingerprint: capturedTraceField(semanticFingerprintV2(persistedEnvelope)),
+          });
+        }
+        const acknowledgedEnvelope = await readDurableProgramStoreEnvelope();
+        if (acknowledgedEnvelope !== persistedEnvelope) {
+          throw new Error('repeat_week_persisted_envelope_ack_mismatch');
+        }
+        const acknowledgedRevision = acknowledgedEnvelope
+          ? (JSON.parse(acknowledgedEnvelope) as { state?: { acceptedMaterialContext?: { revision?: number } } })
+            .state?.acceptedMaterialContext?.revision
+          : undefined;
+        if (acknowledgedRevision !== stage.accepted.context.revision) {
+          throw new Error('repeat_week_persisted_revision_ack_mismatch');
+        }
+        if (athleteActionDiagnosticsEnabled()) {
+          athleteActionTraceCoordinator.recordPersistence(persistTrace, {
+            operation: 'readback',
+            store: 'program-store',
+            attempted: true,
+            acknowledged: true,
+            expectedFingerprint: capturedTraceField(semanticFingerprintV2(persistedEnvelope)),
+            actualFingerprint: capturedTraceField(semanticFingerprintV2(acknowledgedEnvelope)),
+          });
+        }
+      });
+      const publishTrace = beginAthleteActionTrace({
+        source: 'tap', actionType: 'repeat_week', route: 'repeat_week_publish_and_verify',
+      }, trace);
+      if (serializeProgramStoreEnvelope(useProgramStore.getState()) !== preStateEnvelope) {
+        throw new Error('repeat_week_live_state_changed_before_publish');
+      }
+      runWithAthleteActionTrace(publishTrace, () => {
+        publishStagedRepeatWeek({
+          stage,
+          profile: args.baseProfile,
+          expectedAcceptedRevision,
+          trace: publishTrace,
+          onPublished: () => { published = true; },
+        });
+      });
+      if (athleteActionDiagnosticsEnabled()) {
+        athleteActionTraceCoordinator.recordAfter({
+          token: trace,
+          semantic: captureAcceptedAthleteSemanticSnapshotV2(),
+          visibleCard: { status: 'awaiting_actual_home_render' },
+          visibleDetail: { sourceWeekStart, targetWeekStart },
+        });
+      }
+      logger.debug('[repeatWeek] durable target overlay published', {
+        sourceWeekStart,
+        targetWeekStart,
+        adjustmentId: stage.result.adjustmentId,
+        cleared: stage.result.sweep.clear,
+      });
       emitAthleteActionEvent(trace, 'athlete_action_completed', {
         outcome: 'repeat_week_committed',
         internalResultCode: 'repeat_week_accepted',
-        sourceWeekId: result.sourceWeekStart,
-        targetWeekId: result.targetWeekStart,
-        repeatedDates: Object.keys(result.overlay.workoutsByDate).sort(),
-        clearedDates: result.sweep.clear,
-        afterStateHash: athleteActionDiagnosticHash({
-          overlayId: result.overlay.id,
-          repeatedDates: Object.keys(result.overlay.workoutsByDate).sort(),
-        }),
+        acceptedStateVersion: stage.accepted.context.revision,
+        sourceWeekId: sourceWeekStart,
+        targetWeekId: targetWeekStart,
+        reversibleAdjustmentId: stage.result.adjustmentId,
       });
-      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
-        uiSurface: 'repeat_week_control',
-        uiOutcome: 'success',
-        internalResultCode: 'repeat_week_accepted',
-        finalUiMessageKey: 'repeat_week_accepted',
-      });
-      return result;
+      return {
+        ...stage.result,
+        traceId: trace.traceId,
+        observationId: `repeat-week-visible:${stage.result.adjustmentId}`,
+      };
     } catch (error) {
+      let durableRollbackError: unknown = null;
+      if (token && preEnvelopeRead) {
+        try {
+          await restoreProgramStoreEnvelopeDurably(token, preEnvelope);
+          const restoredEnvelope = await readDurableProgramStoreEnvelope();
+          if (restoredEnvelope !== preEnvelope) {
+            throw new Error('repeat_week_durable_rollback_mismatch');
+          }
+        } catch (rollbackError) {
+          durableRollbackError = rollbackError;
+        }
+      }
+      if (published) useProgramStore.setState(preState);
+      if (serializeProgramStoreEnvelope(useProgramStore.getState()) !== preStateEnvelope ||
+        semanticFingerprint(captureAcceptedProgramState()) !== preFingerprint) {
+        throw new Error('repeat_week_memory_rollback_mismatch');
+      }
+      if (athleteActionDiagnosticsEnabled()) {
+        athleteActionTraceCoordinator.recordRollback(trace, {
+          memory: { verified: true },
+          programEnvelope: { verified: durableRollbackError === null },
+          mirrorEnvelopes: { verified: true, status: 'not_applicable' },
+          visibleProjection: { verified: true },
+        });
+      }
       const rejectionCode = athleteActionErrorCode(error, 'repeat_week_unknown_error');
+      emitAthleteActionEvent(trace, 'accepted_state_publication_result', {
+        published: false,
+        previousStateRestored: durableRollbackError === null,
+        internalResultCode: rejectionCode,
+      });
       emitAthleteActionEvent(trace, 'athlete_action_failed', {
         outcome: 'threw',
         internalResultCode: 'repeat_week_failed',
         originalRejectionCode: rejectionCode,
         rejectionCodes: [rejectionCode],
-        firstFailingBoundary: 'repeatWeekIntoNextWeek',
+        firstFailingBoundary: published
+          ? 'repeat_week_publish_and_verify'
+          : 'repeat_week_persist_before_publish',
         failureCategory: classifyAthleteActionFailure(rejectionCode, 'repeatWeekIntoNextWeek'),
-        validCandidateExisted: false,
-        previousStateRestored: true,
+        previousStateRestored: durableRollbackError === null,
         terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
       });
+      if (durableRollbackError) throw durableRollbackError;
       throw error;
+    } finally {
+      if (token) endProgramPersistenceStage(token);
     }
-  });
+  }));
 }
 
-/** Clear a previously-committed repeat-week overlay for the given target week. */
-export function clearRepeatWeek(targetWeekStart: string): void {
-  const weekStart = getMondayForDate(targetWeekStart.split('T')[0]);
-  const state = useProgramStore.getState();
-  if (!Object.prototype.hasOwnProperty.call(state.weekScopedOverlays, weekStart)) return;
-  const overlays = { ...state.weekScopedOverlays };
-  delete overlays[weekStart];
-  commitAcceptedStateTransaction({
-    reason: `repeat_week:clear:${weekStart}`,
-    program: { weekScopedOverlays: overlays },
-    validateWeekStarts: [weekStart],
+/** Test-only compatibility seam; production callers must use the durable async door. */
+export function repeatWeekIntoNextWeekInMemory(args: {
+  baseProfile: OnboardingData;
+  sourceWeekDate: string;
+  todayISO?: string;
+}): RepeatWeekResult {
+  const expectedAcceptedRevision = useProgramStore.getState().acceptedMaterialContext.revision;
+  const stage = stageRepeatWeekTransaction({
+    snapshot: useProgramStore.getState(),
+    baseProfile: args.baseProfile,
+    sourceWeekDate: args.sourceWeekDate,
+    todayISO: args.todayISO,
+    expectedAcceptedRevision,
   });
+  useProgramStore.setState({
+    ...stage.accepted.program,
+    acceptedMaterialContext: stage.accepted.context,
+  });
+  return stage.result;
 }

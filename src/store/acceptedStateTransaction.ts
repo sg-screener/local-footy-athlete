@@ -401,9 +401,14 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
  */
 export function stageAcceptedStateTransaction(
   proposal: AcceptedStateTransactionProposal,
+  sourceState?: ProgramState,
 ): AcceptedStateTransactionResult {
-  const current = useProgramStore.getState();
-  const priorContext = materialContext(current);
+  const current = sourceState ?? useProgramStore.getState();
+  // An explicit source is a closed staging snapshot. Compatibility mirrors
+  // must not leak into it, even for a legacy revision-zero envelope.
+  const priorContext = sourceState
+    ? normalizeAcceptedMaterialContext(sourceState.acceptedMaterialContext)
+    : materialContext(current);
   let context = normalizeAcceptedMaterialContext({
     markedDays: proposal.markedDays === undefined
       ? priorContext.markedDays

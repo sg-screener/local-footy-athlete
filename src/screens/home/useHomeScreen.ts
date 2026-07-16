@@ -64,6 +64,7 @@ import {
   executeFixtureMutationTransaction,
 } from '../../store/fixtureMutationTransaction';
 import { clearReversibleAdjustment } from '../../store/reversibleAdjustmentTransaction';
+import { repeatWeekIntoNextWeek } from '../../utils/repeatWeek';
 import {
   observeRenderedAthleteActionOutcome,
   registerAthleteActionUIOutcome,
@@ -194,7 +195,23 @@ export function useHomeScreen() {
     observationId: string;
     acceptedRevisionAfter: number;
     affectedDates: string[];
+    controlId?: string;
+    renderedStatus?: string;
   } | null>(null);
+  const [pendingRepeatObservation, setPendingRepeatObservation] = useState<{
+    traceId: string;
+    observationId: string;
+    targetWeekStart: string;
+    adjustmentId: string;
+    acceptedRevision: number;
+  } | null>(null);
+  const [repeatWeekConfirmVisible, setRepeatWeekConfirmVisible] = useState(false);
+  const [repeatWeekBusy, setRepeatWeekBusy] = useState(false);
+  const [repeatWeekResult, setRepeatWeekResult] = useState<{
+    tone: 'success' | 'failure';
+    message: string;
+  } | null>(null);
+  const [repeatWeekRestoreStatus, setRepeatWeekRestoreStatus] = useState<string | null>(null);
 
   // Calendar store actions
   const { clearAllGames } = useCalendarStore();
@@ -237,6 +254,8 @@ export function useHomeScreen() {
   const currentProgram = useProgramStore((s) => s.currentProgram);
   const blockState = useProgramStore((s) => s.blockState);
   const acceptedRevision = useProgramStore((s) => s.acceptedMaterialContext.revision);
+  const reversibleAdjustments = useProgramStore((s) =>
+    s.reversibleAdjustmentLedger.adjustments);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
   const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
   const dismissedCoachNoteIds = useCoachUpdatesStore((s) => s.dismissedCoachNoteIds);
@@ -293,6 +312,12 @@ export function useHomeScreen() {
     rolloverTargetDateISO,
   ]);
   const visibleWeekStart = weekDays[0]?.date;
+  const activeRepeatWeekAdjustment = useMemo(() => reversibleAdjustments
+    .filter((adjustment) => adjustment.kind === 'repeat_week' && adjustment.status === 'active' &&
+      adjustment.restorationTarget.kind === 'week_overlay' &&
+      adjustment.displacedOriginalState.weekOverlay?.weekStart === visibleWeekStart)
+    .sort((left, right) => right.acceptedRevision - left.acceptedRevision)[0] ?? null,
+  [reversibleAdjustments, visibleWeekStart]);
   const visibleWeekKind = useMemo(() => {
     if (!visibleWeekStart) return undefined;
     const exactMicrocycle = currentProgram?.microcycles?.find((microcycle) => {
@@ -388,6 +413,37 @@ export function useHomeScreen() {
   }, [pendingFixtureObservation, weekDays]);
 
   useEffect(() => {
+    if (!pendingRepeatObservation ||
+      visibleWeekStart !== pendingRepeatObservation.targetWeekStart ||
+      acceptedRevision !== pendingRepeatObservation.acceptedRevision ||
+      activeRepeatWeekAdjustment?.id !== pendingRepeatObservation.adjustmentId) return;
+    observeRenderedAthleteActionOutcome({
+      traceId: pendingRepeatObservation.traceId,
+      observationId: pendingRepeatObservation.observationId,
+      renderedText: {
+        targetWeekStart: pendingRepeatObservation.targetWeekStart,
+        adjustmentId: pendingRepeatObservation.adjustmentId,
+        acceptedRevision,
+        resultMessage: repeatWeekResult?.message ?? null,
+      },
+      controlId: 'home-visible-week-after-repeat',
+      accessibilityNode: {
+        resultTestID: 'repeat-week-result-message',
+        activeCardTestID: 'repeat-week-active-card',
+      },
+      screenshotReference: 'screenshots/trace-v2-repeat-week-after-mutation.png',
+      hierarchyReference: 'accessibility-hierarchy/trace-v2-repeat-week-after-mutation.json',
+    });
+    setPendingRepeatObservation(null);
+  }, [
+    acceptedRevision,
+    activeRepeatWeekAdjustment,
+    pendingRepeatObservation,
+    repeatWeekResult,
+    visibleWeekStart,
+  ]);
+
+  useEffect(() => {
     if (
       !pendingRestorationObservation ||
       acceptedRevision !== pendingRestorationObservation.acceptedRevisionAfter
@@ -405,13 +461,17 @@ export function useHomeScreen() {
         acceptedRevision,
         affectedDates: pendingRestorationObservation.affectedDates,
         visibleFixtureDates,
+        renderedStatus: pendingRestorationObservation.renderedStatus ?? null,
       },
-      controlId: 'home-visible-week-after-restoration',
+      controlId: pendingRestorationObservation.controlId ?? 'home-visible-week-after-restoration',
       accessibilityNode: {
         fixtureStateTestIDs: weekDays
           .filter((day) => visibleFixtureDates.includes(day.date))
           .map((day) =>
             `day-row-${dayOfWeekTestIdToken(day.dayOfWeek)}-state-fixture`),
+        resultTestID: pendingRestorationObservation.renderedStatus
+          ? 'repeat-week-restore-status'
+          : null,
       },
       screenshotReference: 'screenshots/trace-v2-restoration-after-mutation.png',
       hierarchyReference:
@@ -1568,6 +1628,115 @@ export function useHomeScreen() {
       })
     : '';
 
+  const handleOpenRepeatWeek = useCallback(() => {
+    if (!weekDays[0]?.date || repeatWeekBusy) return;
+    setRepeatWeekResult(null);
+    setRepeatWeekRestoreStatus(null);
+    setRepeatWeekConfirmVisible(true);
+  }, [repeatWeekBusy, weekDays]);
+
+  const handleCancelRepeatWeek = useCallback(() => {
+    if (!repeatWeekBusy) setRepeatWeekConfirmVisible(false);
+  }, [repeatWeekBusy]);
+
+  const handleConfirmRepeatWeek = useCallback(async () => {
+    // The displayed week is the action source. Never substitute today.
+    const sourceWeekDate = weekDays[0]?.date;
+    if (!sourceWeekDate || repeatWeekBusy) return;
+    setRepeatWeekBusy(true);
+    setRepeatWeekResult(null);
+    setRepeatWeekRestoreStatus(null);
+    try {
+      const result = await repeatWeekIntoNextWeek({
+        baseProfile: onboardingData,
+        sourceWeekDate,
+        todayISO: todayISOLocal(),
+        expectedAcceptedRevision: acceptedRevision,
+      });
+      const message = 'Repeated week saved. Your next week is ready.';
+      setRepeatWeekResult({ tone: 'success', message });
+      setRepeatWeekConfirmVisible(false);
+      if (result.traceId && result.observationId) {
+        registerAthleteActionUIOutcome({
+          traceId: result.traceId,
+          observationId: result.observationId,
+          domainReturn: {
+            message,
+            targetWeekStart: result.targetWeekStart,
+            adjustmentId: result.adjustmentId,
+            acceptedRevision: result.acceptedRevision,
+          },
+          controlId: 'home-visible-week-after-repeat',
+        });
+        setPendingRepeatObservation({
+          traceId: result.traceId,
+          observationId: result.observationId,
+          targetWeekStart: result.targetWeekStart,
+          adjustmentId: result.adjustmentId,
+          acceptedRevision: result.acceptedRevision,
+        });
+      }
+      goToDate(result.targetWeekStart);
+    } catch (error) {
+      logger.warn('[repeatWeek] durable transaction failed', error);
+      setRepeatWeekResult({
+        tone: 'failure',
+        message: 'Repeat Week wasn’t saved. Your program is unchanged.',
+      });
+      setRepeatWeekConfirmVisible(false);
+    } finally {
+      setRepeatWeekBusy(false);
+    }
+  }, [
+    acceptedRevision,
+    goToDate,
+    onboardingData,
+    repeatWeekBusy,
+    weekDays,
+  ]);
+
+  const handleRestoreRepeatWeek = useCallback(async () => {
+    if (!activeRepeatWeekAdjustment || repeatWeekBusy) return;
+    setRepeatWeekBusy(true);
+    setRepeatWeekRestoreStatus('Restoring the previous target week…');
+    try {
+      const result = await clearReversibleAdjustment(
+        activeRepeatWeekAdjustment.id,
+        useProgramStore.getState().acceptedMaterialContext.revision,
+      );
+      const restored = result.outcome === 'restored' || result.outcome === 'recomposed' ||
+        result.outcome === 'already-cleared';
+      const status = restored
+        ? 'Previous target week restored and saved.'
+        : result.outcome === 'superseded'
+          ? 'A newer change owns this week, so Repeat Week was left untouched.'
+          : 'Repeat Week couldn’t be restored because this week has changed.';
+      setRepeatWeekRestoreStatus(status);
+      if (result.traceId) {
+        const observationId = `home-repeat-restoration:${result.traceId}`;
+        registerAthleteActionUIOutcome({
+          traceId: result.traceId,
+          observationId,
+          domainReturn: { outcome: result.outcome, status },
+          controlId: 'home-visible-week-after-repeat-restoration',
+        });
+        setPendingRestorationObservation({
+          traceId: result.traceId,
+          observationId,
+          acceptedRevisionAfter: result.acceptedRevisionAfter,
+          affectedDates: result.affectedDates,
+          controlId: 'home-visible-week-after-repeat-restoration',
+          renderedStatus: status,
+        });
+      }
+    } catch (error) {
+      logger.warn('[repeatWeek] durable restoration failed', error);
+      setRepeatWeekRestoreStatus('Repeat Week wasn’t restored. Your program is unchanged.');
+    } finally {
+      setRepeatWeekBusy(false);
+    }
+  }, [activeRepeatWeekAdjustment, repeatWeekBusy]);
+
   // ───────── Return flat bag ─────────
   // Flat-by-design. Grouping into nested objects (`rebuild.open()`) reads
   // nicely but forces every call site to rewrite. Keep the surface shape
@@ -1642,6 +1811,17 @@ export function useHomeScreen() {
     handleOpenRebuild,
     handleCancelRebuild,
     handleConfirmRebuild,
+
+    // Durable Repeat Week target-overlay transaction
+    repeatWeekConfirmVisible,
+    repeatWeekBusy,
+    repeatWeekResult,
+    repeatWeekRestoreStatus,
+    activeRepeatWeekAdjustment,
+    handleOpenRepeatWeek,
+    handleCancelRepeatWeek,
+    handleConfirmRepeatWeek,
+    handleRestoreRepeatWeek,
 
     // Phase-shift modal
     phaseShiftModalVisible,

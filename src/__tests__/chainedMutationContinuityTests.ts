@@ -41,7 +41,7 @@ import {
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { executeHomeGameMutation } from '../screens/home/homeGameMutationController';
-import { repeatWeekIntoNextWeek } from '../utils/repeatWeek';
+import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 
 const WEEK = '2026-03-23';
 const NEXT_WEEK = '2026-03-30';

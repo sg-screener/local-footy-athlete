@@ -1,15 +1,18 @@
 import type { CalendarDayType } from '../store/calendarStore';
 import type {
+  DerivedSessionProvenance,
   OverrideContext,
   UserRemovalConstraint,
   UserRemovalScope,
   Workout,
+  WeekScopedWorkoutOverlay,
 } from '../types/domain';
 import {
   semanticFingerprint,
   snapshotSemanticWorkout,
 } from '../utils/programSemanticSnapshot';
 import type { WeeklyExposureContractV2 } from './weeklyExposureContractV2';
+import type { Section18AuthorisedReduction } from './weeklyExposureContractV2';
 
 export const REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION = 1 as const;
 
@@ -23,6 +26,8 @@ export type ReversibleAdjustmentKind =
   | 'session_move'
   | 'session_delete'
   | 'session_component_delete'
+  /** Exact target-overlay transaction produced by Repeat Week. */
+  | 'repeat_week'
   /** Exact accepted delta for an explicit athlete go-lighter command. */
   | 'explicit_load_edit';
 
@@ -91,10 +96,42 @@ export interface ReversibleAdjustmentSemanticFingerprint {
 }
 
 export interface ReversibleAdjustmentRestorationTarget {
-  kind: 'fixture_state' | 'session' | 'session_component';
+  kind: 'fixture_state' | 'session' | 'session_component' | 'week_overlay';
   dates: string[];
   stableIdentities: string[];
   componentScope?: UserRemovalScope;
+}
+
+/** Exact raw overlay ownership for a target-week replacement. */
+export interface ReversibleAdjustmentWeekOverlayDelta {
+  weekStart: string;
+  before: WeekScopedWorkoutOverlay | null;
+  after: WeekScopedWorkoutOverlay | null;
+  beforeFingerprint: string;
+  afterFingerprint: string;
+}
+
+/** Exact override/context row displaced by a transaction sweep. */
+export interface ReversibleAdjustmentSweptOverrideDelta {
+  date: string;
+  beforeWorkout: Workout | null;
+  afterWorkout: Workout | null;
+  beforeContext: OverrideContext | null;
+  afterContext: OverrideContext | null;
+  beforeFingerprint: string;
+  afterFingerprint: string;
+}
+
+export interface ReversibleAdjustmentProvenanceDelta {
+  date: string;
+  record: DerivedSessionProvenance;
+  fingerprint: string;
+}
+
+export interface ReversibleAdjustmentTypedReductionDelta {
+  weekStart: string;
+  reduction: Section18AuthorisedReduction;
+  fingerprint: string;
 }
 
 export interface ReversibleAdjustmentLinkedOverride {
@@ -145,6 +182,17 @@ export interface ReversibleAdjustmentRecord {
     ownedWeeks: ReversibleAdjustmentOwnedWeekDelta[];
     calendarFacts: ReversibleAdjustmentCalendarFact[];
     userRemovalConstraint: UserRemovalConstraint | null;
+    /** Present for exact target-overlay transactions such as Repeat Week. */
+    weekOverlay?: ReversibleAdjustmentWeekOverlayDelta | null;
+    sweptOverrides?: ReversibleAdjustmentSweptOverrideDelta[];
+    provenanceDeltas?: {
+      added: ReversibleAdjustmentProvenanceDelta[];
+      removed: ReversibleAdjustmentProvenanceDelta[];
+    };
+    typedReductionDeltas?: {
+      added: ReversibleAdjustmentTypedReductionDelta[];
+      removed: ReversibleAdjustmentTypedReductionDelta[];
+    };
   };
   acceptedAfterSemanticFingerprints: ReversibleAdjustmentSemanticFingerprint[];
   restorationTarget: ReversibleAdjustmentRestorationTarget;
@@ -387,6 +435,16 @@ export function normalizeReversibleAdjustmentLedger(args: {
         displacedOriginalState: {
           ...clone(adjustment.displacedOriginalState),
           ownedWeeks: clone(adjustment.displacedOriginalState.ownedWeeks ?? []),
+          weekOverlay: clone(adjustment.displacedOriginalState.weekOverlay ?? null),
+          sweptOverrides: clone(adjustment.displacedOriginalState.sweptOverrides ?? []),
+          provenanceDeltas: clone(adjustment.displacedOriginalState.provenanceDeltas ?? {
+            added: [],
+            removed: [],
+          }),
+          typedReductionDeltas: clone(adjustment.displacedOriginalState.typedReductionDeltas ?? {
+            added: [],
+            removed: [],
+          }),
         },
       }))
     : [];

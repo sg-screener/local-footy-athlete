@@ -46,7 +46,7 @@ import {
   stageAthleteSessionMoveTransaction,
   type AthleteSessionMoveTransactionInput,
 } from '../store/acceptedStateTransaction';
-import { repeatWeekIntoNextWeek } from '../utils/repeatWeek';
+import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import {
   createEmptyReversibleAdjustmentLedger,

@@ -224,6 +224,209 @@ function currentMatchesAcceptedAfter(args: {
   };
 }
 
+function provenanceFingerprints(workout: Workout | null): Set<string> {
+  return new Set((workout?.derivedSessionProvenance ?? []).map((record) =>
+    semanticFingerprint(record)));
+}
+
+function activeOverrideOwner(
+  context: OverrideContext | null | undefined,
+  accepted: AcceptedMaterialContext,
+): boolean {
+  const ownerId = context?.activeModifierId;
+  return !!ownerId && accepted.activeConstraints.some((constraint) => constraint.id === ownerId);
+}
+
+function repeatOverlayRestoration(args: {
+  adjustment: ReversibleAdjustmentRecord;
+  surfaces: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+}): {
+  surfaces: AcceptedProgramSurfaces;
+  conflictDates: string[];
+} {
+  const delta = args.adjustment.displacedOriginalState.weekOverlay;
+  if (!delta?.after) {
+    return { surfaces: args.surfaces, conflictDates: [args.adjustment.affectedWeeks[0] ?? 'unknown'] };
+  }
+  const surfaces = clone(args.surfaces);
+  const current = surfaces.weekScopedOverlays[delta.weekStart] ?? null;
+  if (!current) return { surfaces, conflictDates: [delta.weekStart] };
+  const exactAcceptedAfterOverlay = semanticFingerprint(current) === delta.afterFingerprint;
+
+  const preserveLaterOwnedDates = new Set<string>();
+  const allDates = new Set([
+    ...Object.keys(delta.after.workoutsByDate),
+    ...Object.keys(current.workoutsByDate),
+  ]);
+  for (const date of allDates) {
+    const acceptedAfter = delta.after.workoutsByDate[date] ?? null;
+    const now = current.workoutsByDate[date] ?? null;
+    if (semanticFingerprint(now) === semanticFingerprint(acceptedAfter)) continue;
+    const afterProvenance = provenanceFingerprints(acceptedAfter);
+    const currentProvenance = provenanceFingerprints(now);
+    const hasLaterTypedOwner = Array.from(currentProvenance).some((fingerprint) =>
+      !afterProvenance.has(fingerprint));
+    if (!hasLaterTypedOwner) return { surfaces, conflictDates: [date] };
+    preserveLaterOwnedDates.add(date);
+  }
+
+  const afterContract = delta.after.exposureContractV2;
+  const currentContract = current.exposureContractV2;
+  const afterReductionIds = new Set((afterContract?.authorisedReductions ?? []).map((entry) =>
+    reductionFingerprint({ weekStart: delta.weekStart, entry })));
+  const hasLaterReduction = (currentContract?.authorisedReductions ?? []).some((entry) =>
+    !afterReductionIds.has(reductionFingerprint({ weekStart: delta.weekStart, entry })));
+  if (semanticFingerprint(currentContract) !== semanticFingerprint(afterContract) && !hasLaterReduction) {
+    return { surfaces, conflictDates: [delta.weekStart] };
+  }
+  if (semanticFingerprint({
+    id: current.id,
+    weekStart: current.weekStart,
+    weekEnd: current.weekEnd,
+    anchorDate: current.anchorDate,
+    reason: current.reason,
+    exposureContract: current.exposureContract,
+    createdAt: current.createdAt,
+  }) !== semanticFingerprint({
+    id: delta.after.id,
+    weekStart: delta.after.weekStart,
+    weekEnd: delta.after.weekEnd,
+    anchorDate: delta.after.anchorDate,
+    reason: delta.after.reason,
+    exposureContract: delta.after.exposureContract,
+    createdAt: delta.after.createdAt,
+  })) {
+    return { surfaces, conflictDates: [delta.weekStart] };
+  }
+  if (!exactAcceptedAfterOverlay && preserveLaterOwnedDates.size === 0 && !hasLaterReduction) {
+    return { surfaces, conflictDates: [delta.weekStart] };
+  }
+
+  for (const owned of args.adjustment.displacedOriginalState.ownedDays) {
+    const currentOverride = surfaces.dateOverrides[owned.date] ?? null;
+    const currentContext = surfaces.overrideContexts[owned.date] ?? null;
+    if (semanticFingerprint(currentOverride) === semanticFingerprint(owned.afterDateOverride) &&
+      semanticFingerprint(currentContext) === semanticFingerprint(owned.afterOverrideContext)) {
+      continue;
+    }
+    if (!activeOverrideOwner(currentContext, args.context)) {
+      return { surfaces, conflictDates: [owned.date] };
+    }
+  }
+
+  for (const swept of args.adjustment.displacedOriginalState.sweptOverrides ?? []) {
+    const currentWorkout = surfaces.dateOverrides[swept.date] ?? null;
+    const currentContext = surfaces.overrideContexts[swept.date] ?? null;
+    const currentFingerprint = semanticFingerprint({
+      workout: currentWorkout,
+      context: currentContext,
+    });
+    if (currentFingerprint === swept.afterFingerprint) {
+      if (swept.beforeWorkout) surfaces.dateOverrides[swept.date] = clone(swept.beforeWorkout);
+      else delete surfaces.dateOverrides[swept.date];
+      if (swept.beforeContext) surfaces.overrideContexts[swept.date] = clone(swept.beforeContext);
+      else delete surfaces.overrideContexts[swept.date];
+      continue;
+    }
+    if (!activeOverrideOwner(currentContext, args.context)) {
+      return { surfaces, conflictDates: [swept.date] };
+    }
+  }
+
+  if (preserveLaterOwnedDates.size === 0) {
+    if (delta.before) surfaces.weekScopedOverlays[delta.weekStart] = clone(delta.before);
+    else delete surfaces.weekScopedOverlays[delta.weekStart];
+    return { surfaces, conflictDates: [] };
+  }
+
+  const restored = delta.before ? clone(delta.before) : clone(current);
+  if (!delta.before) {
+    for (const date of Object.keys(restored.workoutsByDate)) {
+      if (!preserveLaterOwnedDates.has(date)) delete restored.workoutsByDate[date];
+    }
+  }
+  for (const date of preserveLaterOwnedDates) {
+    if (Object.prototype.hasOwnProperty.call(current.workoutsByDate, date)) {
+      restored.workoutsByDate[date] = clone(current.workoutsByDate[date] ?? null);
+    } else {
+      delete restored.workoutsByDate[date];
+    }
+  }
+  if (delta.before?.exposureContractV2 && current.exposureContractV2 && hasLaterReduction) {
+    restored.exposureContractV2 = recomposeUnrelatedReductions({
+      restored: delta.before.exposureContractV2,
+      current: current.exposureContractV2,
+      weekStart: delta.weekStart,
+      adjustment: args.adjustment,
+    });
+  }
+  surfaces.weekScopedOverlays[delta.weekStart] = restored;
+  return { surfaces, conflictDates: [] };
+}
+
+function stageClearRepeatWeekAdjustment(args: {
+  adjustment: ReversibleAdjustmentRecord;
+  surfaces: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+  expectedRevision: number;
+}): ClearReversibleAdjustmentStage {
+  const restored = repeatOverlayRestoration(args);
+  if (restored.conflictDates.length > 0) {
+    return stageStatusOnly({
+      adjustment: args.adjustment,
+      status: 'conflicted',
+      reason: `Unowned Repeat Week drift exists on ${restored.conflictDates.join(', ')}.`,
+      outcome: 'conflicted',
+    });
+  }
+  const cleared = updateAdjustmentStatus({
+    adjustment: args.adjustment,
+    status: 'cleared',
+    reason: 'Exact Repeat Week target-overlay restoration completed.',
+  });
+  restored.surfaces.reversibleAdjustmentLedger = {
+    protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+    adjustments: args.surfaces.reversibleAdjustmentLedger.adjustments.map((candidate) =>
+      candidate.id === cleared.id ? cleared : candidate),
+  };
+  const profile = useProfileStore.getState().onboardingData;
+  const proposal: AcceptedStateTransactionProposal = {
+    reason: `reversible_adjustment:clear:${args.adjustment.id}`,
+    profile,
+    program: restored.surfaces,
+    programAlreadyAccepted: true,
+    preserveExactAcceptedWorkouts: true,
+    validateWeekStarts: args.adjustment.rollingDependencyWeeks,
+  };
+  try {
+    const accepted = stageAcceptedStateTransaction(proposal);
+    return {
+      proposal,
+      accepted,
+      result: clearResult({
+        outcome: args.expectedRevision === args.context.revision ? 'restored' : 'recomposed',
+        adjustmentId: args.adjustment.id,
+        context: args.context,
+        adjustment: args.adjustment,
+        acceptedRevisionAfter: accepted.context.revision,
+      }),
+    };
+  } catch (error) {
+    return {
+      proposal: null,
+      accepted: { program: args.surfaces, context: args.context },
+      result: clearResult({
+        outcome: 'safely-rejected',
+        adjustmentId: args.adjustment.id,
+        context: args.context,
+        adjustment: args.adjustment,
+        reason: error instanceof Error ? error.message : String(error),
+      }),
+    };
+  }
+}
+
 function reductionFingerprint(args: {
   weekStart: string;
   entry: WeeklyExposureContractV2['authorisedReductions'][number];
@@ -574,24 +777,6 @@ export function stageClearReversibleAdjustment(
     adjustment,
     surfaces.reversibleAdjustmentLedger.adjustments,
   );
-  const currentAfter = currentMatchesAcceptedAfter({ adjustment, surfaces, context });
-  if (!currentAfter.matches) {
-    if (newer) {
-      return stageStatusOnly({
-        adjustment,
-        status: 'superseded',
-        supersededById: newer.id,
-        reason: `Newer athlete intent ${newer.id} owns the same restoration target.`,
-        outcome: 'superseded',
-      });
-    }
-    return stageStatusOnly({
-      adjustment,
-      status: 'conflicted',
-      reason: `Accepted-after semantic state changed on ${currentAfter.mismatchedDates.join(', ')}.`,
-      outcome: 'conflicted',
-    });
-  }
   if (newer) {
     return stageStatusOnly({
       adjustment,
@@ -601,7 +786,23 @@ export function stageClearReversibleAdjustment(
       outcome: 'superseded',
     });
   }
-
+  if (adjustment.kind === 'repeat_week') {
+    return stageClearRepeatWeekAdjustment({
+      adjustment,
+      surfaces,
+      context,
+      expectedRevision,
+    });
+  }
+  const currentAfter = currentMatchesAcceptedAfter({ adjustment, surfaces, context });
+  if (!currentAfter.matches) {
+    return stageStatusOnly({
+      adjustment,
+      status: 'conflicted',
+      reason: `Accepted-after semantic state changed on ${currentAfter.mismatchedDates.join(', ')}.`,
+      outcome: 'conflicted',
+    });
+  }
   try {
     const restored = restoreOwnedSurfaces({ adjustment, surfaces, context });
     const profile = useProfileStore.getState().onboardingData;

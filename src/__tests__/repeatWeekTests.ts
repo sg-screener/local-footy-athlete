@@ -29,8 +29,7 @@ import {
   shouldRecommendRepeatWeek,
   repeatWeekOverlayId,
   isRepeatWeekOverlay,
-  repeatWeekIntoNextWeek,
-  clearRepeatWeek,
+  repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek,
 } from '../utils/repeatWeek';
 import { rebuildLocalWeek } from '../utils/weekRebuild';
 import { addDays, getMondayForDate, resolveWeekWithConditioning, type ScheduleState, type ResolvedDay } from '../utils/sessionResolver';
@@ -41,6 +40,8 @@ import { todayISOLocal } from '../utils/appDate';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 import { observeOverlaySection18 } from '../utils/section18ProgramObservation';
 import { section18PhaseTableSignature } from '../rules/weeklyExposureContractV2';
+import { commitClearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
+import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 
 let pass = 0;
 let fail = 0;
@@ -158,6 +159,9 @@ let markedDays: ScheduleState['markedDays'] = {};
 function resetWorld() {
   useProgramStore.getState().clearManualOverrides();
   useProgramStore.getState().clearWeekScopedOverlays();
+  useProgramStore.setState({
+    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
+  });
   useCoachUpdatesStore.setState((s: unknown) => ({ ...(s as object), activeConstraints: [] }) as never);
   markedDays = {};
 }
@@ -218,6 +222,18 @@ const nextMonday = addDays(thisMonday, 7);
   ok('repeat targets next week', res.targetWeekStart === nextMonday, `${res.targetWeekStart} vs ${nextMonday}`);
 
   const overlay = useProgramStore.getState().weekScopedOverlays?.[nextMonday];
+  const sourceMicrocycle = before?.microcycles.find((week) =>
+    week.startDate.slice(0, 10) === thisMonday);
+  const targetMicrocycle = before?.microcycles.find((week) =>
+    week.startDate.slice(0, 10) === nextMonday);
+  ok('same-signature Repeat Week keeps source prescriptions',
+    !!sourceMicrocycle?.exposureContractV2 && !!targetMicrocycle?.exposureContractV2 &&
+      section18PhaseTableSignature(sourceMicrocycle.exposureContractV2) ===
+        section18PhaseTableSignature(targetMicrocycle.exposureContractV2) &&
+      Object.values(overlay?.workoutsByDate ?? {})
+        .filter((workout): workout is Workout => !!workout && workout.workoutType !== 'Game')
+        .some((workout) => sourceMicrocycle.workouts.some((sourceWorkout) =>
+          workout.id.startsWith(`${sourceWorkout.id}:repeat-week:`))));
   ok('repeat_week overlay committed to the target week', !!overlay && overlay.reason === 'repeat_week');
   ok('repeat_week overlay carries the target week exposure contract',
     overlay?.exposureContract?.identity.phase === 'Off-season');
@@ -234,12 +250,21 @@ const nextMonday = addDays(thisMonday, 7);
   ok('target week resolves and has at least one training session', week.some((d) => d.workout));
 }
 
-// ── 9. Repeat-week overlay has owner/id and can be cleared ──
+// ── 9. Repeat-week overlay has owner/id and restores through the ledger ──
 {
   const overlay = useProgramStore.getState().weekScopedOverlays?.[nextMonday];
   ok('overlay id equals the deterministic owner id', overlay?.id === repeatWeekOverlayId(nextMonday));
-  clearRepeatWeek(nextMonday);
-  ok('clearRepeatWeek removes the overlay', !useProgramStore.getState().weekScopedOverlays?.[nextMonday]);
+  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments
+    .find((candidate) => candidate.kind === 'repeat_week' && candidate.status === 'active');
+  const restored = adjustment
+    ? commitClearReversibleAdjustment(
+        adjustment.id,
+        useProgramStore.getState().acceptedMaterialContext.revision,
+      )
+    : null;
+  ok('clearReversibleAdjustment restores the displaced target overlay',
+    restored?.outcome === 'restored' &&
+      !useProgramStore.getState().weekScopedOverlays?.[nextMonday]);
 }
 
 // ── 10. Target-week recurring game anchor still wins after a repeat ──

@@ -53,6 +53,7 @@ import {
   buildAthleteSemanticSnapshotV2,
   capturedTraceField,
   notApplicableTraceField,
+  type AthleteSemanticSnapshotV2,
   type AthleteSemanticStateV2,
 } from '../dev/e2e/AthleteActionTraceCoordinator';
 import { semanticFingerprintV2 } from '../utils/semanticFingerprintV2';
@@ -161,7 +162,7 @@ export async function runCoachMutationTransaction<T>(args: {
     diff: SemanticProgramDiff;
   }) => CoachMutationCandidateVerification | Promise<CoachMutationCandidateVerification>;
 }): Promise<CoachMutationTransactionResult<T>> {
-  const execute = (): Promise<CoachMutationTransactionResult<T>> => withCoachMutationLock(async () => {
+  const execute = (): Promise<CoachMutationTransactionResult<T>> => withAcceptedMutationLock(async () => {
     const trace = args.trace ?? currentAthleteActionTrace();
     const preProgram = captureAcceptedProgramState();
     const preMirrors = captureAcceptedMirrors();
@@ -766,7 +767,8 @@ function isPersistenceFailure(error: unknown): boolean {
     /persist|storage|envelope/i.test(String((error as Error)?.message ?? error));
 }
 
-async function withCoachMutationLock<T>(task: () => Promise<T>): Promise<T> {
+/** Serializes every durable accepted-state publisher, including pure-staged ones. */
+export async function withAcceptedMutationLock<T>(task: () => Promise<T>): Promise<T> {
   const previous = coachMutationQueue;
   let release!: () => void;
   coachMutationQueue = new Promise<void>((resolve) => { release = resolve; });
@@ -839,6 +841,16 @@ function captureTraceSemanticSnapshot(
         .map((reduction) => ({ weekStart, reduction }))),
   };
   return buildAthleteSemanticSnapshotV2(semanticState, context.revision);
+}
+
+/**
+ * TraceV2 semantic capture for durable accepted-state doors that deliberately
+ * do not execute through the legacy live-before-persist transaction runner.
+ */
+export function captureAcceptedAthleteSemanticSnapshotV2(
+  program: ReturnType<typeof captureAcceptedProgramState> = captureAcceptedProgramState(),
+): AthleteSemanticSnapshotV2 {
+  return captureTraceSemanticSnapshot(program);
 }
 
 function collectSemanticMembers(value: unknown, keyPattern: RegExp): unknown[] {

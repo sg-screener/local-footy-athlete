@@ -137,6 +137,15 @@ export default function HomeScreenV2() {
     handleOpenRebuild,
     handleCancelRebuild,
     handleConfirmRebuild,
+    repeatWeekConfirmVisible,
+    repeatWeekBusy,
+    repeatWeekResult,
+    repeatWeekRestoreStatus,
+    activeRepeatWeekAdjustment,
+    handleOpenRepeatWeek,
+    handleCancelRepeatWeek,
+    handleConfirmRepeatWeek,
+    handleRestoreRepeatWeek,
     phaseShiftModalVisible,
     phaseShiftStep,
     pendingPreferredDays,
@@ -424,6 +433,67 @@ export default function HomeScreenV2() {
           onAction={handleCoachNoteAction}
         />
 
+        {repeatWeekResult && (
+          <Card
+            tone={repeatWeekResult.tone === 'success' ? 'accent' : 'outline'}
+            padding="md"
+            radius="lg"
+            style={styles.repeatWeekCard}
+          >
+            <Text testID="repeat-week-result-message" style={styles.repeatWeekMessage}>
+              {repeatWeekResult.message}
+            </Text>
+          </Card>
+        )}
+
+        {activeRepeatWeekAdjustment && (
+          <Card
+            tone="outline"
+            padding="lg"
+            radius="xl"
+            style={styles.repeatWeekCard}
+            testID="repeat-week-active-card"
+          >
+            <Text style={styles.phaseBadge}>Repeated week active</Text>
+            <Text style={styles.phaseBody}>
+              This week is using the saved Repeat Week overlay. You can restore the exact plan it displaced.
+            </Text>
+            <Button
+              label="Restore previous target week"
+              onPress={() => void handleRestoreRepeatWeek()}
+              variant="outline"
+              size="md"
+              loading={repeatWeekBusy}
+              testID="repeat-week-restore"
+            />
+          </Card>
+        )}
+
+        {repeatWeekRestoreStatus && (
+          <Text testID="repeat-week-restore-status" style={styles.repeatWeekStatus}>
+            {repeatWeekRestoreStatus}
+          </Text>
+        )}
+
+        {repeatWeekResult?.tone === 'success' && activeRepeatWeekAdjustment && (
+          <View pointerEvents="none" testID="home-visible-week-after-repeat" />
+        )}
+        {repeatWeekRestoreStatus && !activeRepeatWeekAdjustment && (
+          <View pointerEvents="none" testID="home-visible-week-after-repeat-restoration" />
+        )}
+
+        {isNormal && !activeRepeatWeekAdjustment && (
+          <Button
+            label="Repeat this week into next week"
+            onPress={handleOpenRepeatWeek}
+            variant="outline"
+            size="md"
+            disabled={repeatWeekBusy}
+            testID="program-week-repeat"
+            style={styles.repeatWeekCard}
+          />
+        )}
+
         {/* ── No game CTA ── */}
         {isNormal && currentPhase === 'In-season' && !weekHasGame && showAddGameCTA && (
           <Pressable onPress={handleAddGameMode} style={({ pressed }) => [pressed && { opacity: 0.75 }]}>
@@ -629,6 +699,31 @@ export default function HomeScreenV2() {
         msgOpacity={rebuildMsgOpacity}
         onConfirm={handleConfirmRebuild}
       />
+
+      <Sheet
+        visible={repeatWeekConfirmVisible}
+        onClose={handleCancelRepeatWeek}
+        dismissable={!repeatWeekBusy}
+        testID="repeat-week-confirm-sheet"
+      >
+        <Text style={styles.sheetTitle}>Repeat this week?</Text>
+        <Text style={styles.sheetBody}>
+          We’ll save this displayed week into next week while keeping next week’s fixtures, Team Training, and phase rules.
+        </Text>
+        <Button
+          label="Repeat this week into next week"
+          onPress={() => void handleConfirmRepeatWeek()}
+          loading={repeatWeekBusy}
+          testID="repeat-week-confirm"
+        />
+        <Button
+          label="Cancel"
+          onPress={handleCancelRepeatWeek}
+          variant="ghost"
+          disabled={repeatWeekBusy}
+          testID="repeat-week-cancel"
+        />
+      </Sheet>
 
       <CoachNoteSheet
         state={coachNoteSheet}
@@ -2568,6 +2663,14 @@ const styles = StyleSheet.create({
   },
   phaseBody: { color: '#D0D0D0', fontSize: 14, lineHeight: 20 },
   phaseBodyAccent: { color: '#C8FF00', fontSize: 14, fontWeight: '400' },
+  repeatWeekCard: { marginTop: spacing.md, gap: spacing.sm },
+  repeatWeekMessage: { color: '#F2F2F2', fontSize: 14, lineHeight: 20 },
+  repeatWeekStatus: {
+    color: '#B8B8B8',
+    fontSize: 13,
+    lineHeight: 18,
+    marginTop: spacing.sm,
+  },
 
   // Sheet
   // Back chevron — absolute top-left. Deliberately chromeless (no bg, no

@@ -65,7 +65,8 @@ import {
   buildWeekScopedWorkoutOverlay,
   rebuildLocalWeek,
 } from '../utils/weekRebuild';
-import { repeatWeekIntoNextWeek } from '../utils/repeatWeek';
+import { repeatWeekIntoNextWeekInMemory as repeatWeekIntoNextWeek } from '../utils/repeatWeek';
+import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { addDaysISO } from '../utils/programBlockState';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -189,6 +190,8 @@ function resetStores(): void {
     dateOverrides: {},
     overrideContexts: {},
     weekScopedOverlays: {},
+    userRemovalConstraints: [],
+    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {},
     sessionFeedback: {},
     weightOverrides: {},
