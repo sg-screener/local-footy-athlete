@@ -794,8 +794,7 @@ async function runProtocolInvariants(): Promise<void> {
     role: 'user',
     content: 'Monday was very hard but I finished it',
   };
-  let regularClassifierCalls = 0;
-  let outcomeClassifierCalls = 0;
+  let classifierCalls = 0;
   let debug: CoachTurnDebug | null = null;
   const controllerResult = await handleCoachTurn({
     userMessage: controllerUser,
@@ -803,12 +802,12 @@ async function runProtocolInvariants(): Promise<void> {
     todayISO: TODAY,
     classifier: {
       classify: async () => {
-        regularClassifierCalls += 1;
-        return { intent: 'general_question', confidence: 1, needsClarification: false };
-      },
-      classifySessionOutcome: async () => {
-        outcomeClassifierCalls += 1;
-        return coachIntent(CASES[1]);
+        classifierCalls += 1;
+        return {
+          status: 'classified' as const,
+          provenance: 'deterministic' as const,
+          intent: coachIntent(CASES[1]),
+        };
       },
     },
     pendingCoachProposal: null,
@@ -833,8 +832,7 @@ async function runProtocolInvariants(): Promise<void> {
     coachRevisionProposalMode: 'off',
   });
   ok('Coach controller handles outcome at the typed front door', controllerResult.handled);
-  ok('Coach controller calls the outcome classifier once', outcomeClassifierCalls === 1);
-  ok('Coach controller does not call the legacy classifier', regularClassifierCalls === 0);
+  ok('Coach controller classifies the turn exactly once', classifierCalls === 1);
   ok('Coach controller reports the verified transaction route',
     debug?.route === 'session_outcome:recorded', debug);
   ok('Coach controller publishes durable feedback before replying',

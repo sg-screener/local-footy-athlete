@@ -5,7 +5,10 @@ import {
   DevE2ESeedCoordinator,
   type DevE2ECoordinatorDeps,
 } from '../dev/e2e/DevE2ESeedCoordinator';
-import type { DevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
+import {
+  DEV_E2E_SEED_IDS,
+  type DevE2ESeed,
+} from '../dev/e2e/devE2ESeedRegistry';
 import { DEV_E2E_STANDARD_PROFILE } from '../dev/e2e/devE2EStandardProfile';
 import {
   __resetDevE2EStateForTest,
@@ -246,10 +249,14 @@ async function main() {
   ok('unknown seed causes no state mutation', events.length === eventCount);
 
   const release = new DevE2ESeedCoordinator(false, deps);
-  ok('release reset is refused', !(await release.reset('standard-in-season-week')));
+  ok('release reset refuses every allowlisted seed',
+    (await Promise.all(DEV_E2E_SEED_IDS.map((seedId) => release.reset(seedId))))
+      .every((result) => result === false));
   ok('release scenario reset is refused',
     !(await release.resetScenario('standard-in-season-week')));
-  ok('release checkpoint is refused', !(await release.checkpoint('standard-in-season-week')));
+  ok('release checkpoint refuses every allowlisted seed',
+    (await Promise.all(DEV_E2E_SEED_IDS.map((seedId) => release.checkpoint(seedId))))
+      .every((result) => result === false));
   ok('release scenario checkpoint is refused',
     !(await release.checkpointScenario(
       'standard-in-season-week',
@@ -374,9 +381,13 @@ async function main() {
     }));
   ok('dev feedback seed does not call the retired live feedback setter',
     !defaultCoordinatorSource.includes('.setSessionFeedback('));
-  ok('dev feedback seed remains explicit fixture installation',
-    defaultCoordinatorSource.includes('useProgramStore.setState((state) => ({') &&
-      defaultCoordinatorSource.includes('[item.date]: {'));
+  ok('dev auxiliary seeds use public canonical APIs after program installation',
+    !defaultCoordinatorSource.includes('useProgramStore.setState(') &&
+      defaultCoordinatorSource.includes('commitAcceptedStateTransaction({') &&
+      defaultCoordinatorSource.includes('preserveExactAcceptedWorkouts: true') &&
+      defaultCoordinatorSource.includes('setManualOverride(') &&
+      defaultCoordinatorSource.includes('createOrUpdateInjuryEpisode({') &&
+      defaultCoordinatorSource.includes('commitSessionOutcomeTransaction(intent)'));
   for (const storageKey of [
     'profile-store',
     'program-store',
@@ -399,6 +410,8 @@ async function main() {
       /Dev E2E store did not hydrate/.test(persistenceSource));
   ok('persistence readiness is semantic equality gated',
     /while \(!fingerprintMapsMatch\(expected, persisted\)\)/.test(persistenceSource));
+  ok('reload fingerprints include the reversible-adjustment ledger',
+    persistenceSource.includes('reversibleAdjustmentLedger: state.reversibleAdjustmentLedger'));
 
   console.log(`\nDev E2E coordinator: ${passed} passed, ${failures.length} failed`);
   if (failures.length > 0) {

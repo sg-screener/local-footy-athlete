@@ -1872,10 +1872,14 @@ async function runControllerPendingDateSection() {
     todayISO,
     classifier: {
       classify: async () => ({
-        intent: 'conversation',
-        confidence: 0,
-        needsClarification: false,
-      } as any),
+        status: 'classified' as const,
+        provenance: 'deterministic' as const,
+        intent: {
+          intent: 'request_program_adjustment' as const,
+          confidence: 1,
+          needsClarification: false,
+        },
+      }),
     },
     pendingCoachProposal: null,
     pendingReadiness: null,
@@ -2073,10 +2077,14 @@ async function runControllerPendingDateSection() {
     todayISO,
     classifier: {
       classify: async () => ({
-        intent: 'conversation',
-        confidence: 0,
-        needsClarification: false,
-      } as any),
+        status: 'classified' as const,
+        provenance: 'deterministic' as const,
+        intent: {
+          intent: 'request_program_adjustment' as const,
+          confidence: 1,
+          needsClarification: false,
+        },
+      }),
     },
     pendingCoachProposal: null,
     pendingReadiness: null,

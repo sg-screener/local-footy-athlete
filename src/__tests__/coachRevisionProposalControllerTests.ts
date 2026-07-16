@@ -715,6 +715,7 @@ async function runControllerTurn(args: {
   seed?: boolean;
   seedFn?: () => void;
   visibleDate?: string;
+  conversation?: boolean;
 }) {
   if (args.seed !== false) (args.seedFn ?? seedProgram)();
   const messages: CoachTurnMessage[] = [];
@@ -734,10 +735,16 @@ async function runControllerTurn(args: {
       classify: async () => {
         classifierCalls++;
         return {
-          intent: 'conversation',
-          confidence: 0,
-          needsClarification: false,
-        } as any;
+          status: 'classified' as const,
+          provenance: 'deterministic' as const,
+          intent: {
+            intent: args.conversation
+              ? 'general_question' as const
+              : 'request_program_adjustment' as const,
+            confidence: 1,
+            needsClarification: false,
+          },
+        };
       },
     },
     pendingCoachProposal: null,
@@ -802,7 +809,7 @@ async function run() {
     });
     eq('[1] adapter called once', adapter.calls.length, 1);
     eq('[1] handled', result.handled.handled, true);
-    eq('[1] legacy classifier not called', result.classifierCalls, 0);
+    eq('[1] turn classification called once', result.classifierCalls, 1);
     ok('[1] done reply only after revision apply', /Done\. I removed the strength work/.test(result.reply), result.reply);
     ok('[1] override written', !!result.dateOverrides[THURSDAY], result.dateOverrides);
     ok('[1] visible conditioning remains', result.visible.conditioningItems.length > 0, result.visible.items);
@@ -839,7 +846,7 @@ async function run() {
       adapter,
     });
     eq('[4] handled', result.handled.handled, true);
-    eq('[4] legacy classifier not called after invalid revision', result.classifierCalls, 0);
+    eq('[4] turn classification called once after invalid revision', result.classifierCalls, 1);
     ok('[4] safe no-change reply', /left the plan unchanged/.test(result.reply), result.reply);
     ok('[4] no override written', !result.dateOverrides[THURSDAY], result.dateOverrides);
     ok('[4] diagnostic captured protected violation',
@@ -923,7 +930,7 @@ async function run() {
       (result.debug as CoachTurnDebug | null)?.route,
       'coach-revision-proposal-invalid:diff_validation_failed');
     ok('[9] safe no-change reply', /left the plan unchanged/.test(result.reply), result.reply);
-    eq('[9] legacy classifier not called', result.classifierCalls, 0);
+    eq('[9] turn classification called once', result.classifierCalls, 1);
     ok('[9] no override written anywhere',
       Object.keys(result.dateOverrides).length === 0,
       result.dateOverrides);
@@ -943,7 +950,7 @@ async function run() {
     ok('[6] dev misconfig reply',
       /\[dev\] Coach revision mode is active but the endpoint adapter is missing/.test(result.reply),
       result.reply);
-    eq('[6] legacy classifier not called', result.classifierCalls, 0);
+    eq('[6] turn classification called once', result.classifierCalls, 1);
     ok('[6] no override written', !result.dateOverrides[THURSDAY], result.dateOverrides);
     ok('[6] visible program unchanged',
       result.visible.strengthItems.length > 0 && result.visible.conditioningItems.length > 0,
@@ -970,7 +977,7 @@ async function run() {
     ok('[7] does not claim validation failure',
       !/couldn't safely validate/.test(result.reply),
       result.reply);
-    eq('[7] legacy classifier not called', result.classifierCalls, 0);
+    eq('[7] turn classification called once', result.classifierCalls, 1);
     ok('[7] no override written', !result.dateOverrides[THURSDAY], result.dateOverrides);
   }
 
@@ -986,7 +993,7 @@ async function run() {
     ok('[8] dev endpoint-failure reply on abort',
       /\[dev\] Coach revision endpoint failed \(Aborted\)/.test(result.reply),
       result.reply);
-    eq('[8] legacy classifier not called', result.classifierCalls, 0);
+    eq('[8] turn classification called once', result.classifierCalls, 1);
     ok('[8] no override written', !result.dateOverrides[THURSDAY], result.dateOverrides);
   }
 
@@ -1046,7 +1053,7 @@ async function run() {
     eq('[10] pending cleared after apply',
       usePendingCoachClarifierStore.getState().pending,
       null);
-    eq('[10] legacy classifier never called', second.classifierCalls, 0);
+    eq('[10] resumed turn classification called once', second.classifierCalls, 1);
   }
 
   {
@@ -1234,7 +1241,7 @@ async function run() {
     ok('[15] clarify question relayed, not legacy reply',
       /Which session do you mean by that\?/.test(result.reply),
       result.reply);
-    eq('[15] legacy classifier not called', result.classifierCalls, 0);
+    eq('[15] turn classification called once', result.classifierCalls, 1);
     ok('[15] pending stored despite null intent',
       !!result.pending?.coachRevisionProposalEnvelope,
       result.pending);
@@ -1280,7 +1287,7 @@ async function run() {
     ok('[16] nothing removed: strength and conditioning both remain',
       result.visible.strengthItems.length > 0 && result.visible.conditioningItems.length > 0,
       result.visible.items);
-    eq('[16] legacy classifier not called', result.classifierCalls, 0);
+    eq('[16] turn classification called once', result.classifierCalls, 1);
   }
 
   {
@@ -1412,6 +1419,7 @@ async function run() {
     const result = await runControllerTurn({
       message: "How's my week looking next week?",
       adapter,
+      conversation: true,
     });
     eq('[17] revision adapter consulted', adapter.calls.length, 1);
     // Released = controller returns handled:false so the screen's coach-chat
@@ -1864,7 +1872,7 @@ async function run() {
     ok('[11] no override ever written',
       Object.keys(fourth.dateOverrides).length === 0,
       fourth.dateOverrides);
-    eq('[11] legacy classifier never called', fourth.classifierCalls, 0);
+    eq('[11] turn classification called once', fourth.classifierCalls, 1);
   }
 }
 

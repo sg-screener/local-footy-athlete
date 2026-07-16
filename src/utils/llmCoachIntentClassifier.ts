@@ -6,7 +6,7 @@
  *     endpoint: 'https://<project>.supabase.co/functions/v1/coach-intent',
  *     authToken: '<anon key>',
  *   });
- *   const intent = await classifier.classify(packet);
+ *   const result = await classifier.classify(packet);
  *
  * The class delegates the heavy lifting to the edge function at
  * `supabase/functions/coach-intent/index.ts`, which calls the configured
@@ -14,11 +14,8 @@
  * just the client transport.
  *
  * SAFETY GUARANTEES
- *   - On any failure (network error, HTTP error, malformed JSON,
- *     schema mismatch) the classifier returns a deterministic
- *     `general_question` fallback. The dispatcher treats this as
- *     "no understanding" and falls back to the existing rule-based
- *     flow. We never crash the chat UI on a classifier failure.
+ *   - Transport, configuration, and schema failures are returned as
+ *     `unavailable`. They can never masquerade as conversational intent.
  *
  *   - The classifier NEVER mutates state. It only returns intent.
  *
@@ -35,8 +32,8 @@
 
 import {
   parseCoachIntent,
+  type CoachClassificationResult,
   type CoachContextPacket,
-  type CoachIntent,
   type CoachIntentClassifier,
 } from './coachIntent';
 import { serialisePacketForLLM } from './coachContextPacket';
@@ -64,21 +61,6 @@ function truncate(s: string, n: number = LOG_TRUNCATE): string {
   return s.length <= n ? s : `${s.slice(0, n)}…`;
 }
 
-/**
- * Safe fallback when the LLM is unreachable / malformed. Returning
- * `general_question` with confidence=0 tells the dispatcher to use
- * its deterministic guards (the legacy injury clarifier etc.) for
- * this turn — the chat doesn't break.
- */
-function safeFallback(): CoachIntent {
-  return {
-    intent: 'general_question',
-    confidence: 0,
-    needsClarification: false,
-    rationale: 'classifier_fallback',
-  };
-}
-
 export class LLMCoachIntentClassifier implements CoachIntentClassifier {
   private readonly endpoint: string;
   private readonly authToken?: string;
@@ -92,7 +74,12 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
     this.timeoutMs = opts.timeoutMs ?? 8000;
   }
 
-  async classify(packet: CoachContextPacket): Promise<CoachIntent> {
+  async classify(packet: CoachContextPacket): Promise<CoachClassificationResult> {
+    if (!this.endpoint.trim()) {
+      logger.warn('[coach-intent] error', { kind: 'missing_configuration' });
+      return { status: 'unavailable', reason: 'missing_configuration' };
+    }
+
     const serialisedPacket = serialisePacketForLLM(packet);
     logger.debug('[coach-intent] input', {
       messageLength: packet.userMessage.length,
@@ -138,11 +125,16 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
         signal: controller?.signal as any,
       });
     } catch (err) {
+      const timedOut = controller?.signal.aborted === true ||
+        (err instanceof Error && err.name === 'AbortError');
       logger.warn('[coach-intent] error', {
-        kind: 'fetch_failed',
+        kind: timedOut ? 'timeout' : 'fetch_failed',
         detail: err instanceof Error ? err.message : String(err),
       });
-      return safeFallback();
+      return {
+        status: 'unavailable',
+        reason: timedOut ? 'timeout' : 'network_failure',
+      };
     } finally {
       if (timer) clearTimeout(timer);
     }
@@ -154,7 +146,7 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
         status: resp.status,
       });
       logger.debug('[coach-intent] http_error body preview', truncate(errText));
-      return safeFallback();
+      return { status: 'unavailable', reason: 'http_failure' };
     }
 
     let json: unknown;
@@ -165,7 +157,7 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
         kind: 'json_parse_failed',
         detail: err instanceof Error ? err.message : String(err),
       });
-      return safeFallback();
+      return { status: 'unavailable', reason: 'invalid_json' };
     }
 
     logger.debug('[coach-intent] raw', truncate(JSON.stringify(json)));
@@ -176,7 +168,7 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
         kind: 'schema_validation_failed',
       });
       logger.debug('[coach-intent] schema_validation_failed raw', truncate(JSON.stringify(json)));
-      return safeFallback();
+      return { status: 'unavailable', reason: 'schema_failure' };
     }
 
     logger.debug('[coach-intent] parsed', {
@@ -185,10 +177,10 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
       needsClarification: parsed.needsClarification,
       payloadKeys: parsed.payload ? Object.keys(parsed.payload) : [],
     });
-    return parsed;
-  }
-
-  classifySessionOutcome(packet: CoachContextPacket): Promise<CoachIntent> {
-    return this.classify(packet);
+    return {
+      status: 'classified',
+      intent: parsed,
+      provenance: 'semantic_service',
+    };
   }
 }

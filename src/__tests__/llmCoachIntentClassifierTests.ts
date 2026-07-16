@@ -5,9 +5,8 @@
  * The classifier MUST:
  *   - shape the request correctly (POST + JSON body + auth header)
  *   - parse a valid CoachIntent response
- *   - reject HTTP errors safely (general_question fallback)
- *   - reject malformed JSON safely
- *   - reject schema-invalid responses safely
+ *   - distinguish configuration, transport, HTTP, JSON, schema, and timeout failures
+ *   - never rewrite service failure as general_question
  *   - log at each stage
  *
  * Run: npm run test:llm-classifier
@@ -128,12 +127,15 @@ section('[1] Valid LLM response → parsed CoachIntent');
     authToken: 'anon-key-123',
     fetcher,
   });
-  const intent = await classifier.classify(makePacket());
+  const result = await classifier.classify(makePacket());
   restoreLogs();
 
-  eq('intent kind', intent.intent, 'active_injury_followup');
-  eq('intent confidence', intent.confidence, 0.92);
-  eq('intent needsClarification', intent.needsClarification, false);
+  eq('classification status', result.status, 'classified');
+  const intent = result.status === 'classified' ? result.intent : null;
+  eq('classification provenance', result.status === 'classified' ? result.provenance : null, 'semantic_service');
+  eq('intent kind', intent?.intent, 'active_injury_followup');
+  eq('intent confidence', intent?.confidence, 0.92);
+  eq('intent needsClarification', intent?.needsClarification, false);
 
   // Request shape.
   ok('endpoint hit', capturedRequest?.url === 'https://x.supabase.co/functions/v1/coach-intent');
@@ -154,9 +156,28 @@ section('[1] Valid LLM response → parsed CoachIntent');
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 2. HTTP 500 → safe fallback (general_question + confidence 0)
+// 2. Missing configuration → unavailable
 // ─────────────────────────────────────────────────────────────────────
-section('[2] HTTP 500 → safe fallback');
+section('[2] Missing configuration → unavailable');
+{
+  let fetchCalls = 0;
+  const classifier = new LLMCoachIntentClassifier({
+    endpoint: '',
+    fetcher: (async () => {
+      fetchCalls += 1;
+      return makeFakeResp({});
+    }) as unknown as typeof fetch,
+  });
+  const result = await classifier.classify(makePacket());
+  eq('missing config status', result.status, 'unavailable');
+  eq('missing config reason', result.status === 'unavailable' ? result.reason : null, 'missing_configuration');
+  eq('missing config makes no fetch', fetchCalls, 0);
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 3. HTTP 500 → unavailable
+// ─────────────────────────────────────────────────────────────────────
+section('[3] HTTP 500 → unavailable');
 {
   const fetcher = (() => Promise.resolve(makeFakeResp({ error: 'boom' }, 500))) as unknown as typeof fetch;
   captureLogs();
@@ -164,18 +185,17 @@ section('[2] HTTP 500 → safe fallback');
     endpoint: 'https://x.com/coach-intent',
     fetcher,
   });
-  const intent = await classifier.classify(makePacket());
+  const result = await classifier.classify(makePacket());
   restoreLogs();
-  eq('fallback intent', intent.intent, 'general_question');
-  eq('fallback confidence', intent.confidence, 0);
-  ok('fallback rationale', intent.rationale === 'classifier_fallback');
+  eq('HTTP status', result.status, 'unavailable');
+  eq('HTTP reason', result.status === 'unavailable' ? result.reason : null, 'http_failure');
   ok('logs http_error', loggedAny('[coach-intent] error'));
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 3. Network error → safe fallback
+// 4. Network error → unavailable
 // ─────────────────────────────────────────────────────────────────────
-section('[3] Network error → safe fallback');
+section('[4] Network error → unavailable');
 {
   const fetcher = (() => Promise.reject(new Error('ECONNREFUSED'))) as unknown as typeof fetch;
   captureLogs();
@@ -183,16 +203,17 @@ section('[3] Network error → safe fallback');
     endpoint: 'https://x.com/coach-intent',
     fetcher,
   });
-  const intent = await classifier.classify(makePacket());
+  const result = await classifier.classify(makePacket());
   restoreLogs();
-  eq('fallback intent', intent.intent, 'general_question');
+  eq('network status', result.status, 'unavailable');
+  eq('network reason', result.status === 'unavailable' ? result.reason : null, 'network_failure');
   ok('logs fetch_failed', loggedAny('fetch_failed'));
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 4. Body is not JSON → safe fallback
+// 5. Body is not JSON → unavailable
 // ─────────────────────────────────────────────────────────────────────
-section('[4] Non-JSON response body → safe fallback');
+section('[5] Non-JSON response body → unavailable');
 {
   const fetcher = (() => Promise.resolve(makeBadJSONResp('not json'))) as unknown as typeof fetch;
   captureLogs();
@@ -200,16 +221,17 @@ section('[4] Non-JSON response body → safe fallback');
     endpoint: 'https://x.com/coach-intent',
     fetcher,
   });
-  const intent = await classifier.classify(makePacket());
+  const result = await classifier.classify(makePacket());
   restoreLogs();
-  eq('fallback intent', intent.intent, 'general_question');
+  eq('invalid JSON status', result.status, 'unavailable');
+  eq('invalid JSON reason', result.status === 'unavailable' ? result.reason : null, 'invalid_json');
   ok('logs json_parse_failed', loggedAny('json_parse_failed'));
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 5. Body is JSON but schema-invalid → safe fallback
+// 6. Body is JSON but schema-invalid → unavailable
 // ─────────────────────────────────────────────────────────────────────
-section('[5] Schema-invalid response → safe fallback');
+section('[6] Schema-invalid response → unavailable');
 {
   // Missing intent field.
   const fetcher = (() => Promise.resolve(makeFakeResp({ confidence: 0.9 }))) as unknown as typeof fetch;
@@ -218,16 +240,17 @@ section('[5] Schema-invalid response → safe fallback');
     endpoint: 'https://x.com/coach-intent',
     fetcher,
   });
-  const intent = await classifier.classify(makePacket());
+  const result = await classifier.classify(makePacket());
   restoreLogs();
-  eq('fallback intent', intent.intent, 'general_question');
+  eq('schema status', result.status, 'unavailable');
+  eq('schema reason', result.status === 'unavailable' ? result.reason : null, 'schema_failure');
   ok('logs schema_validation_failed', loggedAny('schema_validation_failed'));
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 6. Unknown intent kind → safe fallback (parseCoachIntent rejects it)
+// 7. Unknown intent kind → schema unavailable (parseCoachIntent rejects it)
 // ─────────────────────────────────────────────────────────────────────
-section('[6] Unknown intent kind → safe fallback');
+section('[7] Unknown intent kind → schema unavailable');
 {
   const fetcher = (() => Promise.resolve(makeFakeResp({
     intent: 'eat_lunch', confidence: 0.99, needsClarification: false,
@@ -237,15 +260,38 @@ section('[6] Unknown intent kind → safe fallback');
     endpoint: 'https://x.com/coach-intent',
     fetcher,
   });
-  const intent = await classifier.classify(makePacket());
+  const result = await classifier.classify(makePacket());
   restoreLogs();
-  eq('fallback intent', intent.intent, 'general_question');
+  eq('unknown kind status', result.status, 'unavailable');
+  eq('unknown kind reason', result.status === 'unavailable' ? result.reason : null, 'schema_failure');
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 7. Each spec-defined intent kind round-trips
+// 8. Timeout → unavailable
 // ─────────────────────────────────────────────────────────────────────
-section('[7] All intent kinds parse correctly');
+section('[8] Timeout → unavailable');
+{
+  const fetcher = ((_url: unknown, init?: RequestInit) => new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener('abort', () => {
+      const error = new Error('aborted');
+      error.name = 'AbortError';
+      reject(error);
+    });
+  })) as typeof fetch;
+  const classifier = new LLMCoachIntentClassifier({
+    endpoint: 'https://x.com/coach-intent',
+    fetcher,
+    timeoutMs: 1,
+  });
+  const result = await classifier.classify(makePacket());
+  eq('timeout status', result.status, 'unavailable');
+  eq('timeout reason', result.status === 'unavailable' ? result.reason : null, 'timeout');
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 9. Each spec-defined intent kind round-trips
+// ─────────────────────────────────────────────────────────────────────
+section('[9] All intent kinds parse correctly');
 {
   const kinds = [
     'new_injury_report',
@@ -270,9 +316,10 @@ section('[7] All intent kinds parse correctly');
       endpoint: 'https://x.com/coach-intent',
       fetcher,
     });
-    const intent = await classifier.classify(makePacket());
+    const result = await classifier.classify(makePacket());
     restoreLogs();
-    eq(`kind '${k}' round-trip`, intent.intent, k);
+    eq(`kind '${k}' classified`, result.status, 'classified');
+    eq(`kind '${k}' round-trip`, result.status === 'classified' ? result.intent.intent : null, k);
   }
 }
 

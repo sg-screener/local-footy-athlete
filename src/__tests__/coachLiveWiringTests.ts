@@ -219,9 +219,13 @@ async function liveHandleSend(
     recentMessages: [],
     todayISO,
   });
-  const intent = await classifier.classify(packet);
+  const classification = await classifier.classify(packet);
+  if (classification.status === 'unavailable') {
+    return { reply: '(classification unavailable)', legacyCalled: false, intentCalled: true };
+  }
+  const intent = classification.intent;
   const deps = buildLiveDispatchDeps(todayISO);
-  const outcome = await dispatchCoachIntent(intent, packet, deps);
+  const outcome = await dispatchCoachIntent(intent, packet, deps, classification);
 
   if (outcome.handled) {
     return {

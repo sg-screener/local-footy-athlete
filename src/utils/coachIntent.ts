@@ -303,17 +303,38 @@ export interface CoachContextPacket {
  * Pluggable intent classifier. Production wires a real LLM call
  * (edge function with structured output); tests inject a mock.
  *
- *   classify(packet) → Promise<CoachIntent>
+ *   classify(packet) → Promise<CoachClassificationResult>
  *
  * Implementations MUST be pure side-effect-free (no store writes).
  * The dispatcher is responsible for any state mutation.
  */
+export type CoachClassificationUnavailableReason =
+  | 'missing_configuration'
+  | 'network_failure'
+  | 'http_failure'
+  | 'invalid_json'
+  | 'schema_failure'
+  | 'timeout';
+
+/**
+ * Single source of truth for classification in one Coach turn. Transport and
+ * configuration failures are deliberately not representable as CoachIntent.
+ */
+export type CoachClassificationResult =
+  | {
+      status: 'classified';
+      intent: CoachIntent;
+      provenance: 'deterministic' | 'semantic_service';
+    }
+  | {
+      status: 'unavailable';
+      reason: CoachClassificationUnavailableReason;
+    };
+
 export interface CoachIntentClassifier {
-  classify(packet: CoachContextPacket): Promise<CoachIntent> | CoachIntent;
-  /** Optional semantic front door used before program-edit interpretation. */
-  classifySessionOutcome?: (
+  classify(
     packet: CoachContextPacket,
-  ) => Promise<CoachIntent> | CoachIntent;
+  ): Promise<CoachClassificationResult> | CoachClassificationResult;
   classifyPendingClarificationAnswer?: (
     input: PendingClarificationAnswerInput,
   ) => Promise<PendingClarificationAnswerClassification> | PendingClarificationAnswerClassification;

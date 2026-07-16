@@ -33,6 +33,7 @@ import {
   dispatchCoachIntent,
 } from './coachIntentDispatcher';
 import type {
+  CoachClassificationResult,
   CoachIntent,
   CoachIntentClassifier,
   PendingCoachProposal,
@@ -161,6 +162,10 @@ import {
   type SemanticProgramDiff,
 } from './programSemanticSnapshot';
 import { executeCoachSessionOutcome } from './coachSessionOutcome';
+import {
+  beginAthleteActionTrace,
+  emitAthleteActionEvent,
+} from './athleteActionDiagnostics';
 
 export interface CoachTurnMessage {
   id: string;
@@ -182,6 +187,11 @@ export interface CoachTurnDebug {
   toModality?: string | null;
   projectionShowsTo?: boolean | null;
   projectionShowsFrom?: boolean | null;
+  /** Exact object returned by the one classification owned by this turn. */
+  classifiedCoachIntent?: CoachIntent | null;
+  classificationStatus?: CoachClassificationResult['status'];
+  classificationProvenance?: 'deterministic' | 'semantic_service' | null;
+  classificationUnavailableReason?: string | null;
 }
 
 export type SemanticProgramEditDraftMode = 'off' | 'shadow' | 'active';
@@ -218,6 +228,8 @@ export interface CoachTurnControllerInput {
   messages: CoachTurnMessage[];
   todayISO: string;
   classifier: CoachIntentClassifier;
+  /** Test seam for proving unavailable classifications never dispatch. */
+  dispatchIntent?: typeof dispatchCoachIntent;
   pendingCoachProposal: PendingCoachProposal | null;
   pendingReadiness: PendingReadinessClarifier | null;
   pendingInjury: {
@@ -3255,10 +3267,69 @@ function replyAndFinish(
   return { handled: true };
 }
 
+export const COACH_CLASSIFICATION_UNAVAILABLE_REPLY =
+  "I can't reach the coaching service right now, so I haven't changed your program. Please try again.";
+
+function recordCoachClassification(
+  result: CoachClassificationResult,
+  todayISO: string,
+): void {
+  const trace = beginAthleteActionTrace({
+    source: 'coach',
+    actionType: 'coach_command',
+    route: 'coach_intent_classification',
+    currentWeekId: getMondayForDate(todayISO),
+    sourceDate: todayISO,
+    targetDate: todayISO,
+    sessionDate: todayISO,
+  }, undefined, { forceRoot: true });
+  const intent = result.status === 'classified' ? result.intent : null;
+  emitAthleteActionEvent(trace, 'coach_intent_classification_result', {
+    classificationStatus: result.status,
+    classifiedIntentKind: intent?.intent ?? null,
+    confidenceBucket: intent
+      ? intent.confidence >= 0.8
+        ? 'high'
+        : intent.confidence >= 0.5
+          ? 'medium'
+          : 'low'
+      : null,
+    clarificationFlag: intent?.needsClarification ?? null,
+    classificationProvenance: result.status === 'classified' ? result.provenance : null,
+    unavailableCode: result.status === 'unavailable' ? result.reason : null,
+  });
+  emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
+    selectedRoute: result.status === 'classified'
+      ? 'classification_owned'
+      : 'classification_unavailable',
+    producer: 'handleCoachTurn',
+  });
+}
+
 export async function handleCoachTurn(
   input: CoachTurnControllerInput,
 ): Promise<CoachTurnControllerResult> {
   let classifiedCoachIntent: CoachIntent | null = null;
+  let classificationResult: CoachClassificationResult | null = null;
+  const setLastCoachDebug = input.setLastCoachDebug;
+  input = {
+    ...input,
+    setLastCoachDebug: (debug) => setLastCoachDebug(debug
+      ? {
+          ...debug,
+          classifiedCoachIntent,
+          classificationStatus: classificationResult?.status,
+          classificationProvenance:
+            classificationResult?.status === 'classified'
+              ? classificationResult.provenance
+              : null,
+          classificationUnavailableReason:
+            classificationResult?.status === 'unavailable'
+              ? classificationResult.reason
+              : null,
+        }
+      : null),
+  };
 
   try {
     const recentMessages = input.messages
@@ -3301,13 +3372,62 @@ export async function handleCoachTurn(
       buildFingerprint: coachTurnBuildFingerprint(),
     });
 
+    try {
+      classificationResult = await input.classifier.classify(packet);
+    } catch (error) {
+      logger.warn('[coach-intent] classifier_threw', {
+        detail: error instanceof Error ? error.message : String(error),
+      });
+      classificationResult = { status: 'unavailable', reason: 'network_failure' };
+    }
+    recordCoachClassification(classificationResult, input.todayISO);
+    if (classificationResult.status === 'unavailable') {
+      input.setLastCoachDebug({
+        intent: 'classification_unavailable',
+        route: `classification_unavailable:${classificationResult.reason}`,
+        referenceStatus: packet.referenceResolution?.status ?? null,
+        referenceTargetDate: null,
+        referenceTargetName: null,
+        mutationLike: false,
+        legacyCalled: false,
+        replySource: 'deterministic',
+        applied: false,
+      });
+      return replyAndFinish(
+        input,
+        'classification-unavailable',
+        COACH_CLASSIFICATION_UNAVAILABLE_REPLY,
+      );
+    }
+    classifiedCoachIntent = classificationResult.intent;
+    input.setLastCoachDebug({
+      intent: classifiedCoachIntent.intent,
+      route: 'classification_owned',
+      referenceStatus: packet.referenceResolution?.status ?? null,
+      referenceTargetDate: packet.referenceResolution?.target?.date ?? null,
+      referenceTargetName: packet.referenceResolution?.target?.sessionName ?? null,
+      mutationLike: false,
+      legacyCalled: false,
+      replySource: 'deterministic',
+    });
+    emitCoachTurnDiagnostic('classification_result', {
+      status: classificationResult.status,
+      intentKind: classifiedCoachIntent.intent,
+      confidenceBucket: classifiedCoachIntent.confidence >= 0.8
+        ? 'high'
+        : classifiedCoachIntent.confidence >= 0.5
+          ? 'medium'
+          : 'low',
+      clarificationFlag: classifiedCoachIntent.needsClarification,
+      provenance: classificationResult.provenance,
+    });
+
     // Session outcome is an independent typed command, not a program-edit
     // clarifier answer. Give the semantic classifier first ownership so a
     // stale pending edit cannot reinterpret attendance/performance feedback.
-    if (input.classifier.classifySessionOutcome) {
+    {
       try {
-        const semanticOutcomeIntent = await input.classifier.classifySessionOutcome(packet);
-        classifiedCoachIntent = semanticOutcomeIntent;
+        const semanticOutcomeIntent = classifiedCoachIntent;
         const sessionOutcome = await executeCoachSessionOutcome(semanticOutcomeIntent, packet);
         if (sessionOutcome.kind !== 'not_outcome') {
           const applied = sessionOutcome.kind === 'recorded';
@@ -3326,7 +3446,7 @@ export async function handleCoachTurn(
           return replyAndFinish(input, 'session-outcome', sessionOutcome.reply);
         }
       } catch (error) {
-        logger.warn('[coach-session-outcome] classifier_unavailable', {
+        logger.warn('[coach-session-outcome] handler_failed', {
           detail: error instanceof Error ? error.message : String(error),
         });
       }
@@ -3337,7 +3457,7 @@ export async function handleCoachTurn(
     // as an imperative go-lighter edit. Mixed intents retain the explicit edit
     // fields and continue through the deterministic program-edit executor.
     try {
-      const semanticIntent = await input.classifier.classify(packet);
+      const semanticIntent = classifiedCoachIntent;
       if (semanticIntent.intent === 'temporary_source_fact_followup' &&
         semanticIntent.payload?.followupKind === 'resolved') {
         const requestedKind = semanticIntent.payload.factKind;
@@ -3443,16 +3563,12 @@ export async function handleCoachTurn(
           });
           return replyAndFinish(input, 'temporary-source-fact', factResult.message);
         }
-        classifiedCoachIntent = {
-          ...semanticIntent,
-          intent: 'request_program_adjustment',
-          rationale: `${semanticIntent.rationale ?? 'mixed_intent'}; temporary fact committed separately`,
-        };
-      } else {
-        classifiedCoachIntent = semanticIntent;
+        // Keep the classifier-owned object intact. The explicit edit wording
+        // continues through the deterministic ProgramEdit path below; the
+        // classified mixed intent is never rewritten into a second intent.
       }
     } catch (error) {
-      logger.warn('[temporary-source-fact] semantic_classifier_unavailable', {
+      logger.warn('[temporary-source-fact] semantic_route_failed', {
         detail: error instanceof Error ? error.message : String(error),
       });
     }
@@ -5225,8 +5341,7 @@ export async function handleCoachTurn(
       );
     }
     if (routedCommand && shouldTryLLMCoachCommand(routedCommand, input.userMessage.content)) {
-      const llmIntent = classifiedCoachIntent ?? await input.classifier.classify(packet);
-      classifiedCoachIntent = llmIntent;
+      const llmIntent = classifiedCoachIntent;
       const adapted = coachCommandFromLLMIntent(llmIntent, packet);
       logger.debug('[coach-llm-command]', {
         intent: llmIntent.intent,
@@ -5569,8 +5684,7 @@ export async function handleCoachTurn(
       return replyAndFinish(input, 'clarify', routedCommand.question);
     }
 
-    const intent: CoachIntent = classifiedCoachIntent ?? await input.classifier.classify(packet);
-    classifiedCoachIntent = intent;
+    const intent = classifiedCoachIntent;
     logger.debug('[coach-flow] intent', {
       kind: intent.intent,
       confidence: intent.confidence,
@@ -5579,7 +5693,12 @@ export async function handleCoachTurn(
     });
 
     const deps = buildLiveDispatchDeps(input.todayISO);
-    const outcome = await dispatchCoachIntent(intent, packet, deps);
+    const outcome = await (input.dispatchIntent ?? dispatchCoachIntent)(
+      intent,
+      packet,
+      deps,
+      classificationResult,
+    );
 
     if (outcome.handled) {
       if (outcome.pendingCoachProposal !== undefined) {
@@ -5716,6 +5835,18 @@ export async function handleCoachTurn(
         "I tried to handle that program adjustment, but it didn't land in the visible program. I'm not going to pretend it changed.",
       );
     }
+  }
+
+  if (classifiedCoachIntent?.intent !== 'general_question') {
+    logger.warn('[coach-flow] legacy_fallback_blocked', {
+      reason: 'classification_not_genuine_conversation',
+      intent: classifiedCoachIntent?.intent ?? null,
+    });
+    return replyAndFinish(
+      input,
+      'classified-non-conversation-unhandled',
+      "I understood that as a coaching action, but I couldn't handle it safely, so I haven't changed your program.",
+    );
   }
 
   logger.debug('[coach-flow] legacy_fallback', {

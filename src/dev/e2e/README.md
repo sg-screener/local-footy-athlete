@@ -29,8 +29,10 @@ Reset waits for every relevant persisted store to hydrate, clears domain
 state through public APIs with ProgramStore last, clears the prior clock and
 checkpoint, installs the selected seed clock before building the deterministic
 accepted week, installs through the onboarding installation seam, applies owned
-auxiliary state, completes onboarding, validates witnesses (including the
-clock date), and waits for persisted semantic equality before publishing ready.
+auxiliary state through public canonical APIs, completes onboarding, validates
+typed semantic witnesses (including the clock date), and waits for persisted
+semantic equality before publishing ready. Seed installation never writes
+Zustand internals directly.
 
 Checkpoint records semantic fingerprints only after persistence converges.
 Cold-start validation starts the checkpoint and persisted-fingerprint reads
@@ -73,16 +75,23 @@ Named seeds and their extra witnesses:
 | Seed | Extra visible/state witness |
 | --- | --- |
 | `standard-in-season-week` | Saturday fixture |
-| `stacked-team-training-upper-pull` | Tuesday combined team + upper-pull session |
+| `stacked-team-training-upper-pull` | Separate Team Training and upper-pull component identities on the same Tuesday |
 | `lower-body-deletion` | Monday squat-pattern session |
 | `one-set-strength` | Stable exercise row prescribed for one set |
-| `fixture-move` | Saturday fixture ready to move |
-| `injury-case` | Active right-hamstring constraint |
+| `fixture-move` | Exact Saturday fixture, eligible Sunday rest target, and no conflicting target ownership |
+| `injury-case` | Native canonical right-hamstring injury episode/source fact |
 | `equipment-restriction-case` | Complete bodyweight profile + active equipment constraint |
-| `feedback-progression-case` | Full-completion feedback at the seed anchor |
+| `feedback-progression-case` | Exact feedback source, baseline prescription, and future progression target |
+| `multi-reload-fixture-chain` | Four accepted weeks, exact fixture/rest/following-Monday identities, empty source facts, empty reversible ledger, and exact accepted revision |
+| `repeat-week-phase-transition` | Adjacent accepted weeks with different Section 18 phase signatures and explicit target fixture/Team Training anchors; no Repeat Week overlay is installed |
+| `coach-production-replay` | Empty Coach transcript/memory/history/clarifier/proposal with stable move, injury-exposure, and feedback-progression targets |
 
-Every seed also witnesses its exact profile, program identity, and anchored
-accepted microcycle. Maestro flows live under `.maestro/common` and
+The witness vocabulary also covers accepted-week count, Section 18
+contract/phase signature, eligible target dates, fixture and component
+identity, absent overlay/source-fact ownership, accepted revision,
+reversible-ledger state, future progression targets, and visible
+card/detail equality. Every declared witness must pass before the seed-ready
+marker is published. Maestro flows live under `.maestro/common` and
 `.maestro/golden`.
 
 ## Isolated Metro cold launches on iOS

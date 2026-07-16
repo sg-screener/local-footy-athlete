@@ -95,6 +95,8 @@ export interface CommitTemporarySourceFactSetInput {
   targetFactId: string;
   todayISO: string;
   reason: string;
+  /** Deterministic transaction clock for accepted fixtures and replay tests. */
+  now?: string;
   expectedAcceptedRevision?: number;
   testHooks?: TemporarySourceFactTransactionTestHooks;
 }
@@ -241,7 +243,7 @@ function validateEffectiveComposition(args: {
 export async function commitTemporarySourceFactSet(
   args: CommitTemporarySourceFactSetInput,
 ): Promise<CommitTemporarySourceFactSetResult> {
-  const now = new Date().toISOString();
+  const now = args.now ?? new Date().toISOString();
   const ownership = loadCanonicalTemporarySourceFactOwnership(now);
   if (args.expectedAcceptedRevision !== undefined &&
     args.expectedAcceptedRevision !== ownership.context.revision) {
@@ -534,6 +536,7 @@ async function transactTemporarySourceFactWithinTrace(
     targetFactId: targetFactId ?? 'temporary-source-facts:empty',
     todayISO,
     reason: `temporary_source_fact:${effectiveOperation}`,
+    now,
     expectedAcceptedRevision: input.expectedAcceptedRevision ?? ownership.context.revision,
     testHooks: input.testHooks,
   });

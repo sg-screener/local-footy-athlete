@@ -35,6 +35,7 @@ export type AthleteActionType =
   | 'program_change';
 
 export type AthleteActionEventName =
+  | 'coach_intent_classification_result'
   | 'athlete_mutation_received'
   | 'athlete_action_requested'
   | 'athlete_action_parsed'

@@ -330,9 +330,13 @@ async function liveDispatchNonInjury(
     recentMessages: [],
     todayISO,
   });
-  const intent = await classifier.classify(packet);
+  const classification = await classifier.classify(packet);
+  if (classification.status === 'unavailable') {
+    return { handled: true, reply: '(classification unavailable)', mutated: false, replyMode: 'safe_fallback' };
+  }
+  const intent = classification.intent;
   const deps = buildLiveDispatchDeps(todayISO);
-  const outcome = await dispatchCoachIntent(intent, packet, deps);
+  const outcome = await dispatchCoachIntent(intent, packet, deps, classification);
   return {
     handled: outcome.handled,
     reply: outcome.reply,
