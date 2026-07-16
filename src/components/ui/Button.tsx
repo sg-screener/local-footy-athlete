@@ -121,6 +121,8 @@ export function Button({
 
   return (
     <Animated.View
+      accessible={false}
+      importantForAccessibility="no"
       style={[
         { transform: [{ scale }] },
         fullWidth && styles.fullWidth,
@@ -129,6 +131,8 @@ export function Button({
       ]}
     >
       <Pressable
+        accessible
+        importantForAccessibility="yes"
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel ?? label}
         accessibilityState={{ disabled: disabled || loading }}

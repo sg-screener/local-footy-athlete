@@ -1087,6 +1087,7 @@ function DayRow({
           : isSelected
             ? 'selected'
             : 'scheduled';
+  const exposesExpandedActions = isSelected && normal;
 
   return (
     <Card
@@ -1097,6 +1098,7 @@ function DayRow({
       onPress={onPress}
       testID={`day-row-${dayToken}`}
       accessibilityLabel={`Day ${day.short ?? ''}${hasWorkout ? ` ${day.workout.name}` : ''}`}
+      accessible={!exposesExpandedActions}
       style={[
         styles.dayRow,
         // Rest-of-week rows sit on a darker, borderless surface — a

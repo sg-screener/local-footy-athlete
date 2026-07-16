@@ -37,6 +37,12 @@ export interface V2CardProps {
   radius?: 'md' | 'lg' | 'xl';
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  /**
+   * Interactive cards are one accessibility element by default. Set this to
+   * false when the card renders nested actions so those controls remain
+   * independently discoverable without changing the card's press behavior.
+   */
+  accessible?: boolean;
   testID?: string;
 }
 
@@ -65,6 +71,7 @@ export function Card({
   radius = 'xl',
   style,
   accessibilityLabel,
+  accessible,
   testID,
 }: V2CardProps) {
   const { bg, border } = toneColors(tone, selected);
@@ -102,12 +109,20 @@ export function Card({
     return <View style={[containerStyle, style]} testID={testID}>{children}</View>;
   }
 
+  const exposesAsAccessibilityElement = accessible ?? true;
+
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
+    <Animated.View
+      accessible={false}
+      importantForAccessibility="no"
+      style={{ transform: [{ scale }] }}
+    >
       <Pressable
         onPress={onPress}
         onPressIn={onPressIn}
         onPressOut={onPressOut}
+        accessible={exposesAsAccessibilityElement}
+        importantForAccessibility={exposesAsAccessibilityElement ? 'yes' : 'no'}
         accessibilityLabel={accessibilityLabel}
         accessibilityRole="button"
         testID={testID}

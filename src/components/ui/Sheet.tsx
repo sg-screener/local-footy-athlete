@@ -48,14 +48,29 @@ export function Sheet({
       animationType="fade"
       onRequestClose={handleClose}
     >
-      <Pressable style={styles.overlay} onPress={handleClose} testID={testID}>
-        {/* Inner pressable stops the background tap from bubbling when the
-            user interacts with the sheet contents. */}
-        <Pressable style={[styles.content, contentStyle]}>
+      <View
+        style={styles.overlay}
+        accessible={false}
+        importantForAccessibility="no"
+        collapsable={false}
+        testID={testID}
+      >
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={handleClose}
+          accessible={false}
+          importantForAccessibility="no"
+        />
+        <View
+          style={[styles.content, contentStyle]}
+          accessible={false}
+          importantForAccessibility="no"
+          accessibilityViewIsModal
+        >
           <View style={styles.handle} />
           {children}
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
