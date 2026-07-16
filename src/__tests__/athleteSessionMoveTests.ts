@@ -128,14 +128,17 @@ function profile(): OnboardingData {
   };
 }
 
-function seed(athlete: OnboardingData = profile()): TrainingProgram {
+function seed(
+  athlete: OnboardingData = profile(),
+  options: { phaseEntryWeekStartISO?: string } = {},
+): TrainingProgram {
   const program = quiet(() => generateProgramLocally(athlete, {
     todayISO: CURRENT_WEEK,
     previousProgram: null,
     seasonPhaseClock: {
       protocolVersion: 1,
       selectedPhase: athlete.seasonPhase!,
-      phaseEntryWeekStartISO: CURRENT_WEEK,
+      phaseEntryWeekStartISO: options.phaseEntryWeekStartISO ?? CURRENT_WEEK,
       originProvenance: 'explicit_user_phase_change',
     },
   }));
@@ -170,6 +173,12 @@ function seed(athlete: OnboardingData = profile()): TrainingProgram {
     weightOverrides: {},
   });
   return program;
+}
+
+function addDaysISO(dateISO: string, days: number): string {
+  const date = new Date(`${dateISO}T12:00:00`);
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
 function accepted(weekStart: string) {
@@ -276,11 +285,39 @@ run('1 future Monday strength moves to Wednesday Rest through preview → commit
   assert(workoutOn(FUTURE_WEEK, 1), 'future Monday source missing');
   assert(!workoutOn(FUTURE_WEEK, 3), 'future Wednesday must start as Rest');
   const original = clone(workoutOn(FUTURE_WEEK, 1)!);
-  const result = realDoor({
-    kind: 'move_session',
-    fromDate: dateForDay(FUTURE_WEEK, 1),
-    toDate: dateForDay(FUTURE_WEEK, 3),
-  }, FUTURE_WEEK);
+  const templateCatalog = require('../utils/coachRevisionTemplates') as {
+    listCoachRevisionTemplates: () => unknown[];
+  };
+  const liveWriteValidation = require('../utils/postGenerationConstraintValidation') as {
+    validateLiveWorkoutWrite: (...args: unknown[]) => unknown;
+  };
+  const originalListTemplates = templateCatalog.listCoachRevisionTemplates;
+  const originalValidateLiveWrite = liveWriteValidation.validateLiveWorkoutWrite;
+  let templateCatalogCalls = 0;
+  let liveWriteValidationCalls = 0;
+  let result: ReturnType<typeof realDoor> | null = null;
+  try {
+    templateCatalog.listCoachRevisionTemplates = () => {
+      templateCatalogCalls += 1;
+      throw new Error('move_session reached the revision template catalog');
+    };
+    liveWriteValidation.validateLiveWorkoutWrite = () => {
+      liveWriteValidationCalls += 1;
+      throw new Error('move_session reached canonical template validation');
+    };
+    result = realDoor({
+      kind: 'move_session',
+      fromDate: dateForDay(FUTURE_WEEK, 1),
+      toDate: dateForDay(FUTURE_WEEK, 3),
+    }, FUTURE_WEEK);
+  } finally {
+    templateCatalog.listCoachRevisionTemplates = originalListTemplates;
+    liveWriteValidation.validateLiveWorkoutWrite = originalValidateLiveWrite;
+  }
+  assert(templateCatalogCalls === 0, 'move_session called listCoachRevisionTemplates');
+  assert(liveWriteValidationCalls === 0,
+    'move_session called canonicalTemplateSectionSignature/validateLiveWorkoutWrite');
+  assert(result, 'move_session did not return from the typed production door');
   assert(result.preview.ok, JSON.stringify(result.preview.rejected));
   assert(result.commit?.ok, JSON.stringify(result.commit?.rejected));
   const destination = workoutOn(FUTURE_WEEK, 3);
@@ -595,7 +632,7 @@ run('11 a later readiness transaction or rollback retains move ownership and pla
     'readiness transaction lost move destination');
 });
 
-run('12 direct and reload-chained moves converge on accepted state', () => {
+run('12 direct/reload moves converge across the production-door phase matrix', () => {
   seed();
   commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK));
   const direct = semantic(FUTURE_WEEK);
@@ -610,6 +647,91 @@ run('12 direct and reload-chained moves converge on accepted state', () => {
   useProgramStore.setState({ ...persisted, ...hydrated });
   commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK));
   assert(semantic(FUTURE_WEEK) === direct, 'direct and chained move states differ');
+
+  const noFixture = {
+    usualGameDay: undefined,
+    gameDay: undefined,
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+  } satisfies Partial<OnboardingData>;
+  const matrix: Array<{
+    name: string;
+    athlete: OnboardingData;
+    phaseEntryOffsetWeeks: number;
+    weekIndex: number;
+  }> = [
+    { name: 'in-season game week current', athlete: profile(), phaseEntryOffsetWeeks: 0, weekIndex: 0 },
+    { name: 'in-season bye current', athlete: { ...profile(), ...noFixture }, phaseEntryOffsetWeeks: 0, weekIndex: 0 },
+    { name: 'early off-season', athlete: { ...profile(), ...noFixture, seasonPhase: 'Off-season' }, phaseEntryOffsetWeeks: 0, weekIndex: 0 },
+    { name: 'mid off-season', athlete: { ...profile(), ...noFixture, seasonPhase: 'Off-season' }, phaseEntryOffsetWeeks: 2, weekIndex: 0 },
+    { name: 'late off-season', athlete: { ...profile(), ...noFixture, seasonPhase: 'Off-season' }, phaseEntryOffsetWeeks: 6, weekIndex: 0 },
+    { name: 'early pre-season', athlete: { ...profile(), ...noFixture, seasonPhase: 'Pre-season' }, phaseEntryOffsetWeeks: 0, weekIndex: 0 },
+    { name: 'late pre-season', athlete: { ...profile(), ...noFixture, seasonPhase: 'Pre-season' }, phaseEntryOffsetWeeks: 6, weekIndex: 0 },
+    { name: 'pre-season deload', athlete: { ...profile(), ...noFixture, seasonPhase: 'Pre-season' }, phaseEntryOffsetWeeks: 0, weekIndex: 3 },
+    { name: 'practice match', athlete: { ...profile(), seasonPhase: 'Pre-season', teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }, phaseEntryOffsetWeeks: 2, weekIndex: 0 },
+    { name: 'stacked Team Training days', athlete: profile(), phaseEntryOffsetWeeks: 0, weekIndex: 0 },
+    { name: 'Sunday-fixture adjacent future week', athlete: { ...profile(), usualGameDay: 'Sunday', gameDay: 'Sunday' }, phaseEntryOffsetWeeks: 0, weekIndex: 1 },
+    { name: 'future in-season game week', athlete: profile(), phaseEntryOffsetWeeks: 0, weekIndex: 1 },
+  ];
+  for (const scenario of matrix) {
+    const program = seed(scenario.athlete, {
+      phaseEntryWeekStartISO: addDaysISO(
+        CURRENT_WEEK,
+        -scenario.phaseEntryOffsetWeeks * 7,
+      ),
+    });
+    const weekStart = program.microcycles[scenario.weekIndex]?.startDate.slice(0, 10);
+    assert(weekStart, `${scenario.name}: target week missing`);
+    const before = accepted(weekStart);
+    const week = visibleWeek(weekStart);
+    const acceptedIdentityByDay = new Map(before.visibleWorkouts.map((workout) => [
+      workout.dayOfWeek,
+      workout.planEntryId ?? workout.id,
+    ]));
+    const eligible = week.filter((day) => day.workout?.planEntryId &&
+      !/Game|Practice Match|Team Training/i.test(
+        `${day.workout.name} ${day.workout.workoutType}`,
+      ) && acceptedIdentityByDay.get(day.dayOfWeek) ===
+        (day.workout.planEntryId ?? day.workout.id));
+    const source = eligible[0];
+    const protectedDayNames = new Set<string>([
+      scenario.athlete.usualGameDay,
+      scenario.athlete.gameDay,
+      ...(scenario.athlete.teamTrainingDays ?? []),
+    ].filter(Boolean) as string[]);
+    const emptyAcceptedTarget = week.find((day) => {
+      const dayName = [
+        'Sunday', 'Monday', 'Tuesday', 'Wednesday',
+        'Thursday', 'Friday', 'Saturday',
+      ][day.dayOfWeek];
+      return !day.workout && !acceptedIdentityByDay.has(day.dayOfWeek) &&
+        !protectedDayNames.has(dayName);
+    });
+    const target = emptyAcceptedTarget ?? eligible[1];
+    assert(source?.workout && target && source.date !== target.date,
+      `${scenario.name}: safe source/target pair missing`);
+    const sourceIdentity = source.workout.planEntryId ?? source.workout.id;
+    const moved = realDoor({
+      kind: 'move_session',
+      fromDate: source.date,
+      toDate: target.date,
+    }, weekStart);
+    assert(moved.preview.ok && moved.commit?.ok,
+      `${scenario.name}: ${JSON.stringify(moved)}`);
+    const after = accepted(weekStart);
+    assert(after.evaluation.blockingViolations.length === 0,
+      `${scenario.name}: ${JSON.stringify(after.evaluation.blockingViolations)}`);
+    assert(after.contract.identity.mode === before.contract.identity.mode,
+      `${scenario.name}: phase mode changed`);
+    const publishedTarget = workoutOn(
+      weekStart,
+      new Date(`${target.date}T12:00:00`).getDay(),
+    );
+    assert(publishedTarget?.planEntryId === sourceIdentity ||
+      publishedTarget?.id === sourceIdentity,
+    `${scenario.name}: moved identity ${sourceIdentity} did not own ${target.date}; ` +
+      `published=${publishedTarget?.planEntryId ?? publishedTarget?.id ?? 'REST'}`);
+  }
 });
 
 run('13 Monday → Wednesday restoration returns both exact prescriptions', () => {

@@ -1,4 +1,11 @@
-import type { Workout } from '../types/domain';
+import type { UserRemovalScope, Workout } from '../types/domain';
+import type { ResolvedDay } from './sessionResolver';
+import {
+  snapshotProjectedDay,
+  type CoachRevisionSectionKind,
+  type CoachVisibleSectionSnapshot,
+} from './coachRevisionProposal';
+import { splitSessionName } from './sessionNaming';
 import {
   getTeamTrainingWorkoutState,
   isTeamTrainingItem,
@@ -27,6 +34,235 @@ export interface SessionComponent {
   kind: SessionComponentKind;
   label: string;
   completionPolicy: SessionComponentCompletionPolicy;
+}
+
+export type AthleteSessionComponentReductionResult =
+  | { ok: true; remainingWorkout: Workout | null }
+  | { ok: false; code: 'nothing_to_remove' | 'scope_not_on_day' };
+
+const REMOVAL_SECTION_KIND: Partial<Record<UserRemovalScope, CoachRevisionSectionKind>> = {
+  strength_component: 'strength',
+  conditioning_component: 'conditioning',
+  recovery_component: 'recovery',
+  team_component: 'session',
+};
+
+/**
+ * Deterministic component-reduction owner for athlete session deletion.
+ *
+ * The accepted visible snapshot decides which concrete rows belong to the
+ * requested component. This function only removes that typed component and
+ * never canonicalises, repairs, authorises templates, or writes state. The
+ * accepted-state transaction remains responsible for relocation, Section 18
+ * repair, validation, provenance and atomic publication.
+ */
+export function reduceAcceptedSessionForAthleteRemoval(args: {
+  day: ResolvedDay;
+  scope: UserRemovalScope;
+}): AthleteSessionComponentReductionResult {
+  const source = args.day.workout;
+  if (!source) return { ok: false, code: 'nothing_to_remove' };
+  if (args.scope === 'whole_session') {
+    return { ok: true, remainingWorkout: null };
+  }
+
+  const snapshot = snapshotProjectedDay(args.day);
+  if (!snapshot.workout) return { ok: false, code: 'nothing_to_remove' };
+  const removedKind = REMOVAL_SECTION_KIND[args.scope];
+  if (!removedKind || !snapshot.workout.sections.some((section) =>
+    section.kind === removedKind)) {
+    return { ok: false, code: 'scope_not_on_day' };
+  }
+  const survivingSections = snapshot.workout.sections.filter((section) =>
+    section.kind !== removedKind);
+  if (survivingSections.length === 0) {
+    return { ok: true, remainingWorkout: null };
+  }
+
+  const survivorTitle = survivingSections.some((section) => section.kind === 'strength')
+    ? splitSessionName(snapshot.workout.title).title || snapshot.workout.title
+    : survivingSections[0].title || snapshot.workout.title;
+  const survivorWorkoutType =
+    survivingSections.every((section) => section.kind === 'session')
+      ? source.workoutType
+      : survivingSections.some((section) => section.kind === 'strength')
+      ? 'Strength'
+      : survivingSections.some((section) => section.kind === 'conditioning')
+      ? 'Conditioning'
+      : 'Recovery';
+
+  return {
+    ok: true,
+    remainingWorkout: materializeAcceptedVisibleSections({
+      source,
+      title: survivorTitle,
+      workoutType: survivorWorkoutType,
+      durationMinutes: snapshot.workout.durationMinutes,
+      intensity: snapshot.workout.intensity,
+      sections: survivingSections,
+    }),
+  };
+}
+
+function materializeAcceptedVisibleSections(args: {
+  source: Workout;
+  title: string;
+  workoutType: string;
+  durationMinutes?: number;
+  intensity?: string;
+  sections: CoachVisibleSectionSnapshot[];
+}): Workout {
+  const strength = args.sections.find((section) => section.kind === 'strength');
+  const conditioning = args.sections.find((section) => section.kind === 'conditioning');
+  const recovery = args.sections.find((section) => section.kind === 'recovery');
+  const session = args.sections.find((section) => section.kind === 'session');
+  const hasStrength = !!strength;
+  const hasConditioning = !!conditioning;
+  const hasRecovery = !!recovery;
+  const hasSession = !!session;
+  const wantedExerciseIds = new Set(args.sections.flatMap((section) =>
+    section.items.flatMap((item) => item.exerciseIds)));
+  const conditioningExerciseIds = sourceConditioningExerciseIds(args.source);
+
+  let exercises = (args.source.exercises ?? []).filter((row: any) => {
+    const ids = workoutRowIds(row);
+    const isConditioning = ids.some((id) => conditioningExerciseIds.has(id));
+    if (isConditioning && !hasConditioning && !hasRecovery) return false;
+    if (!isConditioning && !hasStrength) return false;
+    if (wantedExerciseIds.size === 0) return true;
+    return ids.some((id) => wantedExerciseIds.has(id));
+  });
+
+  const nextConditioningBlock = hasConditioning || hasRecovery
+    ? filterAcceptedConditioningBlock(args.source, conditioning ?? recovery, exercises)
+    : undefined;
+  if (nextConditioningBlock) {
+    const linkedIds = new Set(nextConditioningBlock.options.flatMap((option) =>
+      (option.exerciseIds ?? []).map((id: unknown) => String(id))));
+    exercises = exercises.filter((row: any) => {
+      const ids = workoutRowIds(row);
+      const isConditioning = ids.some((id) => conditioningExerciseIds.has(id));
+      return !isConditioning || ids.some((id) => linkedIds.has(id));
+    });
+  }
+
+  const onlyConditioning = !hasStrength && (hasConditioning || hasRecovery);
+  const onlyStrength = hasStrength && !hasConditioning && !hasRecovery && !hasSession;
+  const onlySession = hasSession && !hasStrength && !hasConditioning && !hasRecovery;
+  const title = onlySession
+    ? session?.items[0]?.title || args.title || args.source.name
+    : args.title || args.source.name;
+  const workoutType = onlySession
+    ? 'Team Training'
+    : onlyConditioning
+    ? 'Conditioning'
+    : onlyStrength
+    ? 'Strength'
+    : hasRecovery
+    ? 'Recovery'
+    : args.workoutType || args.source.workoutType;
+
+  return cloneWorkout(args.source, {
+    name: title,
+    workoutType: workoutType as Workout['workoutType'],
+    durationMinutes: args.durationMinutes ?? args.source.durationMinutes,
+    intensity: (args.intensity ?? args.source.intensity) as Workout['intensity'],
+    description: onlyConditioning
+      ? conditioning?.items[0]?.description ?? args.source.description
+      : args.source.description,
+    hasCombinedConditioning: hasStrength && !!nextConditioningBlock,
+    attachedConditioningKind: nextConditioningBlock
+      ? args.source.attachedConditioningKind
+      : undefined,
+    conditioningFlavour: nextConditioningBlock
+      ? args.source.conditioningFlavour ?? 'aerobic'
+      : undefined,
+    conditioningCategory: nextConditioningBlock
+      ? args.source.conditioningCategory ?? 'aerobic_base'
+      : undefined,
+    conditioningBlock: nextConditioningBlock,
+    section18Evidence: nextConditioningBlock
+      ? args.source.section18Evidence
+      : {
+          protocolVersion: 1,
+          conditioningRole: 'none',
+          conditioningStress: 'unknown',
+          provenance: 'explicit_mutation',
+        },
+    section18ConditioningRole: nextConditioningBlock
+      ? args.source.section18ConditioningRole
+      : 'none',
+    strengthIntent: hasStrength ? args.source.strengthIntent : undefined,
+    strengthIntentDiagnostics: hasStrength
+      ? args.source.strengthIntentDiagnostics
+      : undefined,
+    strengthPatternContributions: hasStrength
+      ? args.source.strengthPatternContributions
+      : undefined,
+    powerBlock: hasStrength ? args.source.powerBlock : undefined,
+    recoveryAddons: hasRecovery ? args.source.recoveryAddons : undefined,
+    coachAddedConditioningLabel: onlyConditioning
+      ? title
+      : nextConditioningBlock
+      ? args.source.coachAddedConditioningLabel
+      : undefined,
+    exercises,
+  });
+}
+
+function filterAcceptedConditioningBlock(
+  source: Workout,
+  section: CoachVisibleSectionSnapshot | undefined,
+  exercises: Workout['exercises'],
+): Workout['conditioningBlock'] {
+  if (!section || !source.conditioningBlock?.options?.length) return undefined;
+  const sectionExerciseIds = new Set(section.items.flatMap((item) => item.exerciseIds));
+  const exerciseIds = new Set(exercises.flatMap((row: any) => workoutRowIds(row)));
+  const options = source.conditioningBlock.options.filter((option: any) =>
+    (option.exerciseIds ?? []).some((id: unknown) =>
+      sectionExerciseIds.has(String(id)) && exerciseIds.has(String(id))))
+    .map((option) => {
+      const optionIds = new Set((option.exerciseIds ?? []).map(String));
+      const acceptedItem = section.items.find((item) =>
+        item.exerciseIds.some((id) => optionIds.has(String(id))));
+      return {
+        ...option,
+        durationMinutes:
+          acceptedItem?.prescription?.itemDurationMinutes ??
+          acceptedItem?.durationMinutes ??
+          option.durationMinutes,
+        intensity: (acceptedItem?.prescription?.intensity ?? option.intensity) as any,
+      };
+    });
+  return options.length > 0 ? { ...source.conditioningBlock, options } : undefined;
+}
+
+function sourceConditioningExerciseIds(workout: Workout): Set<string> {
+  const ids = new Set<string>();
+  for (const option of workout.conditioningBlock?.options ?? []) {
+    for (const id of option.exerciseIds ?? []) ids.add(String(id));
+  }
+  return ids;
+}
+
+function workoutRowIds(row: any): string[] {
+  return [row?.id, row?.exerciseId, row?.exercise?.id]
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean);
+}
+
+function cloneWorkout(workout: Workout, overrides: Partial<Workout>): Workout {
+  return {
+    ...workout,
+    ...overrides,
+    exercises: (overrides.exercises ?? workout.exercises ?? []).map((row: any) => ({
+      ...row,
+      exercise: row.exercise ? { ...row.exercise } : row.exercise,
+    })),
+    coachNotes: overrides.coachNotes ?? (
+      workout.coachNotes ? [...workout.coachNotes] : undefined
+    ),
+  };
 }
 
 const CONDITIONING_TYPES = new Set([

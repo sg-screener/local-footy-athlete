@@ -244,6 +244,7 @@ function deleteWorkout(args: {
 function deleteThroughRealSheetDoor(
   date: string,
   scope?: 'strength' | 'conditioning',
+  weekStart = WEEK,
 ): ReturnType<typeof applyPlanChange> {
   const change = { kind: 'remove_session' as const, date, ...(scope ? { scope } : {}) };
   const before = JSON.stringify({
@@ -251,7 +252,7 @@ function deleteThroughRealSheetDoor(
     constraints: useProgramStore.getState().userRemovalConstraints,
     context: useProgramStore.getState().acceptedMaterialContext,
   });
-  const week = visibleWeek();
+  const week = visibleWeek(weekStart);
   const preview = previewPlanChangeRisk({
     change,
     visibleWeek: week,
@@ -548,13 +549,35 @@ run('regression', '4 component deletion preserves the rest of a stacked day', ()
   const stacked = accepted().visibleWorkouts.find((workout) => workout.hasCombinedConditioning);
   assert(stacked, 'stacked strength+conditioning precondition missing');
   const date = dateForDay(WEEK, stacked.dayOfWeek);
-  const result = applyPlanChange({
-    change: { kind: 'remove_session', date, scope: 'conditioning' },
-    visibleWeek: visibleWeek(),
-    todayISO: WEEK,
-    setManualOverride: (overrideDate, workout, context) =>
-      useProgramStore.getState().setManualOverride(overrideDate, workout, context),
-  });
+  const templateCatalog = require('../utils/coachRevisionTemplates') as {
+    listCoachRevisionTemplates: () => unknown[];
+  };
+  const liveWriteValidation = require('../utils/postGenerationConstraintValidation') as {
+    validateLiveWorkoutWrite: (...args: unknown[]) => unknown;
+  };
+  const originalListTemplates = templateCatalog.listCoachRevisionTemplates;
+  const originalValidateLiveWrite = liveWriteValidation.validateLiveWorkoutWrite;
+  let templateCatalogCalls = 0;
+  let liveWriteValidationCalls = 0;
+  let result: ReturnType<typeof applyPlanChange> | null = null;
+  try {
+    templateCatalog.listCoachRevisionTemplates = () => {
+      templateCatalogCalls += 1;
+      throw new Error('component deletion reached the revision template catalog');
+    };
+    liveWriteValidation.validateLiveWorkoutWrite = () => {
+      liveWriteValidationCalls += 1;
+      throw new Error('component deletion reached canonical template validation');
+    };
+    result = deleteThroughRealSheetDoor(date, 'conditioning');
+  } finally {
+    templateCatalog.listCoachRevisionTemplates = originalListTemplates;
+    liveWriteValidation.validateLiveWorkoutWrite = originalValidateLiveWrite;
+  }
+  assert(templateCatalogCalls === 0, 'component deletion called listCoachRevisionTemplates');
+  assert(liveWriteValidationCalls === 0,
+    'component deletion called canonicalTemplateSectionSignature/validateLiveWorkoutWrite');
+  assert(result, 'component deletion did not return from the typed production door');
   const remaining = byDay().get(stacked.dayOfWeek);
   assert(result.ok, `${result.message ?? 'component deletion failed'} ${JSON.stringify(result.rejected)}`);
   assert(remaining, 'component deletion became whole-day unavailability');
@@ -589,31 +612,70 @@ run('regression', '6 phase matrix keeps deletion authoritative and Bible-valid',
     athlete: OnboardingData;
     phaseEntryOffsetWeeks: number;
     targetIndex?: number;
+    marks?: Record<string, CalendarDayType>;
+    componentScope?: 'strength' | 'conditioning';
+    selectTarget?: (workouts: Workout[]) => Workout | undefined;
   }> = [
-    { name: 'in-season', athlete: profile(), phaseEntryOffsetWeeks: 0 },
-    { name: 'bye', athlete: profile({ usualGameDay: undefined, gameDay: undefined }), phaseEntryOffsetWeeks: 0 },
+    { name: 'in-season game week (current)', athlete: profile(), phaseEntryOffsetWeeks: 0 },
+    { name: 'in-season bye (current)', athlete: profile({ usualGameDay: undefined, gameDay: undefined }), phaseEntryOffsetWeeks: 0 },
     { name: 'early off-season', athlete: profile({ seasonPhase: 'Off-season', usualGameDay: undefined, gameDay: undefined, teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }), phaseEntryOffsetWeeks: 0 },
     { name: 'mid off-season', athlete: profile({ seasonPhase: 'Off-season', usualGameDay: undefined, gameDay: undefined, teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }), phaseEntryOffsetWeeks: 2 },
     { name: 'late off-season', athlete: profile({ seasonPhase: 'Off-season', usualGameDay: undefined, gameDay: undefined, teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }), phaseEntryOffsetWeeks: 6 },
-    { name: 'pre-season', athlete: profile({ seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined, teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }), phaseEntryOffsetWeeks: 0 },
-    { name: 'deload', athlete: profile({ seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined, teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }), phaseEntryOffsetWeeks: 0, targetIndex: 3 },
+    { name: 'early pre-season', athlete: profile({ seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined, teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }), phaseEntryOffsetWeeks: 0 },
+    { name: 'late pre-season', athlete: profile({ seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined, teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }), phaseEntryOffsetWeeks: 6 },
+    { name: 'pre-season deload', athlete: profile({ seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined, teamTrainingDaysPerWeek: 0, teamTrainingDays: [] }), phaseEntryOffsetWeeks: 0, targetIndex: 3 },
+    {
+      name: 'practice match',
+      athlete: profile({
+        seasonPhase: 'Pre-season',
+        teamTrainingDaysPerWeek: 0, teamTrainingDays: [],
+      }),
+      phaseEntryOffsetWeeks: 2,
+    },
+    {
+      name: 'stacked Team Training component',
+      athlete: profile(),
+      phaseEntryOffsetWeeks: 0,
+      componentScope: 'strength',
+      selectTarget: (workouts) => workouts.find((workout) =>
+        /Team Training\s*\+/i.test(workout.name)),
+    },
+    {
+      name: 'Sunday-fixture adjacent horizon',
+      athlete: profile({ usualGameDay: 'Sunday', gameDay: 'Sunday' }),
+      phaseEntryOffsetWeeks: 0,
+    },
+    {
+      name: 'future in-season game week',
+      athlete: profile(),
+      phaseEntryOffsetWeeks: 0,
+      targetIndex: 1,
+    },
   ];
   for (const scenario of scenarios) {
     seed({
       athlete: scenario.athlete,
       phaseEntryWeekStartISO: addDaysISO(WEEK, -scenario.phaseEntryOffsetWeeks * 7),
       targetMicrocycleIndex: scenario.targetIndex,
+      markedDays: scenario.marks,
     });
     const weekStart = useProgramStore.getState().currentMicrocycle!.startDate.slice(0, 10);
     const before = accepted(weekStart);
-    const target = before.visibleWorkouts.find((workout) =>
-      workout.workoutType !== 'Game' && workout.workoutType !== 'Team Training' &&
-      workout.workoutType !== 'Rest');
-    if (!target) continue; // Zero-session early off-season is valid policy.
+    const target = scenario.selectTarget?.(before.visibleWorkouts) ??
+      before.visibleWorkouts.find((workout) =>
+        workout.workoutType !== 'Game' && workout.workoutType !== 'Team Training' &&
+        workout.workoutType !== 'Rest');
+    assert(target, `${scenario.name}: production-door target missing`);
     const date = dateForDay(weekStart, target.dayOfWeek);
-    deleteWorkout({ date, workout: target });
+    deleteThroughRealSheetDoor(date, scenario.componentScope, weekStart);
     const after = accepted(weekStart);
-    assert(!byDay(weekStart).has(target.dayOfWeek), `${scenario.name}: target resurrected`);
+    if (scenario.componentScope) {
+      const remaining = byDay(weekStart).get(target.dayOfWeek);
+      assert(remaining && /Team Training/i.test(remaining.name),
+        `${scenario.name}: protected Team Training component was not preserved`);
+    } else {
+      assert(!byDay(weekStart).has(target.dayOfWeek), `${scenario.name}: target resurrected`);
+    }
     assert(after.evaluation.blockingViolations.length === 0,
       `${scenario.name}: ${JSON.stringify(after.evaluation.blockingViolations)}`);
     assert(after.contract.identity.mode === before.contract.identity.mode,

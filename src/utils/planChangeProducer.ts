@@ -2,12 +2,12 @@
  * planChangeProducer — deterministic proposal producer for the tap-first
  * plan-change sheet (ATHLETE_CHANGE_VOCABULARY.md, group 1).
  *
- * The sheet is the SECOND door into the revision pipeline. It produces the
- * same CoachRevisionProposal shape the chat coach produces, and applies it
- * through the same writer with the same shared policy
- * (coachRevisionPolicy.ts). No LLM, no interpretation: the athlete tapped
- * the day (no date ambiguity), picked the action (no intent ambiguity), and
- * chose from options this module listed (no illegal content possible).
+ * The sheet is the SECOND door into program mutation. Registry-backed
+ * add/stack/swap actions produce the same CoachRevisionProposal as chat and
+ * retain the shared revision writer/policy. Athlete move/delete actions are
+ * owned end-to-end by their typed accepted-state transactions. No LLM, no
+ * interpretation: the athlete tapped the day (no date ambiguity), picked the
+ * action (no intent ambiguity), and chose from listed options.
  *
  * Invariant the tests enforce: EVERY option this module offers builds a
  * proposal that passes validateCoachRevisionDiff under the shared policy.
@@ -57,6 +57,7 @@ export type {
 } from './planChangeTypes';
 import type { ProgramEditRiskAssessment } from './programEditRiskAssessment';
 import { assessProgramEditWrites } from './programEditWriteGuard';
+import { reduceAcceptedSessionForAthleteRemoval } from './sessionComponents';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { useProfileStore } from '../store/profileStore';
@@ -939,6 +940,108 @@ function athleteMoveInput(args: {
   };
 }
 
+const ATHLETE_REMOVAL_SCOPE: Record<PlanChangeBinScopeId, UserRemovalScope> = {
+  whole_day: 'whole_session',
+  strength: 'strength_component',
+  conditioning: 'conditioning_component',
+  recovery: 'recovery_component',
+  team: 'team_component',
+};
+
+type AthleteOwnedPlanChange = Extract<PlanChange,
+  { kind: 'move_session' } | { kind: 'remove_session' }>;
+
+type AthleteMutationResolution =
+  | {
+      ok: true;
+      kind: 'move_session';
+      input: AthleteSessionMoveTransactionInput;
+      appliedDates: string[];
+      swapped: boolean;
+    }
+  | {
+      ok: true;
+      kind: 'remove_session';
+      input: AthleteSessionDeletionTransactionInput;
+      appliedDates: string[];
+      swapped: false;
+    }
+  | { ok: false; error: string };
+
+/**
+ * Resolve athlete-owned mutation identity and component scope from the
+ * accepted visible snapshot. Registry templates and the general revision
+ * writer deliberately have no role in this operation-scoped boundary.
+ */
+function resolveAthleteMutation(args: {
+  change: AthleteOwnedPlanChange;
+  visibleWeek: ResolvedDay[];
+  source: 'tap' | 'coach';
+}): AthleteMutationResolution {
+  const change = args.change;
+  if (change.kind === 'move_session') {
+    const sourceDay = args.visibleWeek.find((day) =>
+      day.date === change.fromDate);
+    const targetDay = args.visibleWeek.find((day) =>
+      day.date === change.toDate);
+    if (!sourceDay?.workout) return { ok: false, error: 'nothing_to_move' };
+    if (!targetDay) return { ok: false, error: 'not_visible' };
+    if (
+      protectedAnchorsForDaySnapshot(snapshotProjectedDay(sourceDay)).length > 0 ||
+      protectedAnchorsForDaySnapshot(snapshotProjectedDay(targetDay)).length > 0
+    ) {
+      return { ok: false, error: 'protected_anchor_day' };
+    }
+    const input = athleteMoveInput({
+      change,
+      visibleWeek: args.visibleWeek,
+      source: args.source,
+    });
+    if (!input) return { ok: false, error: 'athlete_move_identity_missing' };
+    return {
+      ok: true,
+      kind: 'move_session',
+      input,
+      appliedDates: [change.fromDate, change.toDate],
+      swapped: !!input.existingTargetWorkout,
+    };
+  }
+
+  const sourceDay = args.visibleWeek.find((day) =>
+    day.date === change.date);
+  if (!sourceDay?.workout) return { ok: false, error: 'nothing_to_remove' };
+  const snapshot = snapshotProjectedDay(sourceDay);
+  const anchors = protectedAnchorsForDaySnapshot(snapshot);
+  const scope = ATHLETE_REMOVAL_SCOPE[change.scope ?? 'whole_day'];
+  if (anchors.some((anchor) => anchor.kind === 'game') ||
+    (scope === 'whole_session' && anchors.length > 0)) {
+    return { ok: false, error: 'protected_anchor_day' };
+  }
+  const reduction = reduceAcceptedSessionForAthleteRemoval({
+    day: sourceDay,
+    scope,
+  });
+  if (reduction.ok === false) return { ok: false, error: reduction.code };
+  if (!reduction.remainingWorkout && anchors.length > 0 && scope !== 'team_component') {
+    return { ok: false, error: 'protected_anchor_day' };
+  }
+  return {
+    ok: true,
+    kind: 'remove_session',
+    input: {
+      date: change.date,
+      reason: `${args.source}:remove_session:${change.date}`,
+      source: args.source,
+      scope,
+      originalWorkout: sourceDay.workout,
+      remainingWorkout: reduction.remainingWorkout,
+      equivalentExposureMayRelocate: true,
+    },
+    appliedDates: [change.date],
+    swapped: false,
+  };
+}
+
 function blockedAssessmentForBuildError(
   change: PlanChange,
   error: string,
@@ -1027,6 +1130,89 @@ export function previewPlanChangeRisk(args: {
       });
       return { ...result, trace };
     };
+
+    // Operation-scoped ownership: athlete move/delete resolves and stages
+    // directly from the accepted visible snapshot. This branch is before
+    // proposal construction, template-policy construction and the legacy
+    // date-override writer by design.
+    if (args.change.kind === 'move_session' || args.change.kind === 'remove_session') {
+      const resolution = resolveAthleteMutation({
+        change: args.change,
+        visibleWeek: args.visibleWeek,
+        source: 'tap',
+      });
+      if (resolution.ok === false) {
+        const blocked = blockedAssessmentForBuildError(args.change, resolution.error);
+        if (blocked) {
+          return finish({
+            ok: true,
+            message: blocked.findings[0]?.message ?? "That change can't be applied here.",
+            appliedDates: [],
+            rejected: [],
+            proposedWeek: args.visibleWeek,
+            assessment: blocked,
+          }, { internalResultCode: resolution.error });
+        }
+        return finish({
+          ok: false,
+          message: `That change isn't possible here (${resolution.error}).`,
+          appliedDates: [],
+          rejected: [],
+          proposedWeek: args.visibleWeek,
+          assessment: emptyAssessment,
+        }, { internalResultCode: resolution.error });
+      }
+
+      try {
+        const staged = resolution.kind === 'move_session'
+          ? stageAthleteSessionMoveTransaction(
+              resolution.input,
+              { purpose: 'preview' },
+            )
+          : stageAthleteSessionDeletionTransaction(
+              resolution.input,
+              { purpose: 'preview' },
+            );
+        const proposedWeek = proposedWeekFromAcceptedStage({
+          visibleWeek: args.visibleWeek,
+          staged: staged.result,
+          profile: args.profile,
+        });
+        return finish({
+          ok: true,
+          message: 'Preview ready.',
+          appliedDates: resolution.appliedDates,
+          rejected: [],
+          proposedWeek,
+          assessment: emptyAssessment,
+        }, {
+          selectedOutcome: staged.outcome,
+          ownershipBoundary: 'typed_athlete_mutation',
+        });
+      } catch (error) {
+        const code = (error as { code?: string })?.code ??
+          (args.change.kind === 'move_session'
+            ? 'athlete_move_preview_failed'
+            : 'athlete_removal_preview_failed');
+        return finish({
+          ok: false,
+          message: "I couldn't safely make that change, so the plan is untouched.",
+          appliedDates: [],
+          rejected: [{
+            date: source ?? target ?? null,
+            code,
+            reason: error instanceof Error ? error.message : String(error),
+          }],
+          proposedWeek: args.visibleWeek,
+          assessment: emptyAssessment,
+        }, {
+          internalResultCode: code,
+          rejectingBoundary: 'stageAthleteMutationTransaction',
+          ownershipBoundary: 'typed_athlete_mutation',
+        });
+      }
+    }
+
     const proposal = buildPlanChangeProposal(args.change, {
       visibleWeek: args.visibleWeek,
       todayISO: args.todayISO,
@@ -1053,8 +1239,6 @@ export function previewPlanChangeRisk(args: {
       }, { internalResultCode: proposal.error });
     }
 
-    const isAthleteTransaction = args.change.kind === 'move_session' ||
-      args.change.kind === 'remove_session';
     const preview = applyCoachRevisionDateOverrides({
       proposal,
       planChange: resolveTemplatePlanChange({
@@ -1064,7 +1248,6 @@ export function previewPlanChangeRisk(args: {
       visibleWeek: args.visibleWeek,
       todayISO: args.todayISO,
       validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
-      deferWeekAcceptanceToTransaction: isAthleteTransaction,
     });
     if (preview.applied.length === 0 || preview.rejected.length > 0) {
       return finish({
@@ -1077,69 +1260,7 @@ export function previewPlanChangeRisk(args: {
       }, { internalResultCode: preview.rejected[0]?.code ?? 'proposal_write_build_failed' });
     }
 
-    let proposedWeek = withPreviewWrites(args.visibleWeek, preview.applied);
-    let selectedOutcome = 'single_date_candidate';
-    try {
-      if (args.change.kind === 'remove_session') {
-        const removal = args.change;
-        const sourceWorkout = args.visibleWeek.find((day) =>
-          day.date === removal.date)?.workout ?? null;
-        const write = preview.applied.find((candidate) =>
-          candidate.date === removal.date);
-        if (!sourceWorkout || !write) throw new Error('Athlete removal identity missing');
-        const scopeMap: Record<PlanChangeBinScopeId, UserRemovalScope> = {
-          whole_day: 'whole_session',
-          strength: 'strength_component',
-          conditioning: 'conditioning_component',
-          recovery: 'recovery_component',
-          team: 'team_component',
-        };
-        const staged = stageAthleteSessionDeletionTransaction({
-          date: removal.date,
-          reason: `tap:remove_session:${removal.date}`,
-          source: 'tap',
-          scope: scopeMap[removal.scope ?? 'whole_day'],
-          originalWorkout: sourceWorkout,
-          remainingWorkout: write.workout.workoutType === 'Rest' ? null : write.workout,
-          equivalentExposureMayRelocate: true,
-        }, { purpose: 'preview' });
-        proposedWeek = proposedWeekFromAcceptedStage({
-          visibleWeek: args.visibleWeek,
-          staged: staged.result,
-          profile: args.profile,
-        });
-        selectedOutcome = staged.outcome;
-      } else if (args.change.kind === 'move_session') {
-        const input = athleteMoveInput({
-          change: args.change,
-          visibleWeek: args.visibleWeek,
-          source: 'tap',
-        });
-        if (!input) throw new Error('Athlete move identity missing');
-        const staged = stageAthleteSessionMoveTransaction(input, { purpose: 'preview' });
-        proposedWeek = proposedWeekFromAcceptedStage({
-          visibleWeek: args.visibleWeek,
-          staged: staged.result,
-          profile: args.profile,
-        });
-        selectedOutcome = staged.outcome;
-      }
-    } catch (error) {
-      const code = (error as { code?: string })?.code ??
-        (error instanceof Error ? error.name : 'athlete_mutation_preview_failed');
-      return finish({
-        ok: false,
-        message: "I couldn't safely make that change, so the plan is untouched.",
-        appliedDates: [],
-        rejected: [{
-          date: source ?? target ?? null,
-          code,
-          reason: error instanceof Error ? error.message : String(error),
-        }],
-        proposedWeek: args.visibleWeek,
-        assessment: emptyAssessment,
-      }, { internalResultCode: code, rejectingBoundary: 'stageAthleteMutationTransaction' });
-    }
+    const proposedWeek = withPreviewWrites(args.visibleWeek, preview.applied);
 
     const riskWrites = proposedWeek
       .filter((day) => {
@@ -1147,19 +1268,16 @@ export function previewPlanChangeRisk(args: {
         return JSON.stringify(before) !== JSON.stringify(day.workout);
       })
       .map((day) => ({ date: day.date, workout: day.workout }));
-    // The accepted-state transaction has already repaired and gated the
-    // complete candidate. Sending its changed dates back through the legacy
-    // risk writer would re-run the single-date finaliser on each half and
-    // recreate the exact preview/commit mismatch this boundary removes.
-    const assessment = isAthleteTransaction
-      ? emptyAssessment
-      : assessProgramEditWrites({
-          writes: riskWrites,
-          visibleWeek: args.visibleWeek,
-          profile: args.profile,
-          activeConstraints: args.activeConstraints,
-          todayISO: args.todayISO,
-        }) ?? emptyAssessment;
+    // Registry-backed revisions still use the existing proposal/materializer
+    // risk assessment. Athlete move/delete returned from their typed branch
+    // above and never reach this single-date policy path.
+    const assessment = assessProgramEditWrites({
+      writes: riskWrites,
+      visibleWeek: args.visibleWeek,
+      profile: args.profile,
+      activeConstraints: args.activeConstraints,
+      todayISO: args.todayISO,
+    }) ?? emptyAssessment;
 
     return finish({
       ok: true,
@@ -1168,7 +1286,7 @@ export function previewPlanChangeRisk(args: {
       rejected: [],
       proposedWeek,
       assessment,
-    }, { selectedOutcome });
+    }, { selectedOutcome: 'single_date_candidate' });
   });
 }
 
@@ -1264,7 +1382,13 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
       });
     } else {
       const originalRejectionCode = result.rejected[0]?.code ?? internalResultCode;
-      const firstFailingBoundary = result.rejected.length > 0
+      const athleteOwned = args.change.kind === 'move_session' ||
+        args.change.kind === 'remove_session';
+      const firstFailingBoundary = athleteOwned
+        ? result.rejected.length > 0
+          ? 'athlete_session_transaction'
+          : 'resolve_athlete_mutation'
+        : result.rejected.length > 0
         ? 'applyCoachRevisionDateOverrides'
         : 'buildPlanChangeProposal';
       emitAthleteActionEvent(trace, 'athlete_action_failed', {
@@ -1304,6 +1428,89 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
 }
 
 function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApplyResult {
+  // Commit through the same typed owner used by preview. This is intentionally
+  // before proposal/template policy construction and before the legacy
+  // revision override writer.
+  if (args.change.kind === 'move_session' || args.change.kind === 'remove_session') {
+    const resolution = resolveAthleteMutation({
+      change: args.change,
+      visibleWeek: args.visibleWeek,
+      source: 'tap',
+    });
+    if (resolution.ok === false) {
+      return {
+        ok: false,
+        message: `That change isn't possible here (${resolution.error}).`,
+        appliedDates: [],
+        rejected: [],
+      };
+    }
+
+    if (resolution.kind === 'move_session') {
+      if (args.change.kind !== 'move_session') {
+        throw new Error('Athlete move resolution did not match its typed intent');
+      }
+      try {
+        (args.commitAthleteMove ?? commitAthleteSessionMoveTransaction)(
+          resolution.input,
+        );
+      } catch (error) {
+        return {
+          ok: false,
+          message: "I couldn't safely make that change, so the plan is untouched.",
+          appliedDates: [],
+          rejected: [{
+            date: args.change.fromDate,
+            code: (error as { code?: string })?.code ?? 'athlete_move_publication_failed',
+            reason: (error as Error)?.message ?? String(error),
+          }],
+        };
+      }
+      return {
+        ok: true,
+        message: moveDoneMessage(args.change, resolution.swapped),
+        appliedDates: resolution.appliedDates,
+        rejected: [],
+      };
+    }
+
+    if (args.change.kind !== 'remove_session') {
+      throw new Error('Athlete deletion resolution did not match its typed intent');
+    }
+    let publishedOutcome: AthleteDeletionPublishedOutcome | null = null;
+    try {
+      const transaction = (args.commitAthleteRemoval ??
+        commitAthleteSessionDeletionTransaction)(
+          resolution.input,
+        );
+      if (transaction && typeof transaction === 'object' &&
+        'deletionOutcome' in transaction) {
+        publishedOutcome = (transaction as {
+          deletionOutcome: AthleteDeletionPublishedOutcome;
+        }).deletionOutcome;
+      }
+    } catch (error) {
+      return {
+        ok: false,
+        message: "I couldn't safely make that change, so the plan is untouched.",
+        appliedDates: [],
+        rejected: [{
+          date: args.change.date,
+          code: (error as { code?: string })?.code ?? 'athlete_removal_publication_failed',
+          reason: (error as Error)?.message ?? String(error),
+        }],
+      };
+    }
+    return {
+      ok: true,
+      message: publishedOutcome
+        ? athleteDeletionDoneMessage(args.change, publishedOutcome)
+        : planChangeDoneMessage(args.change, null),
+      appliedDates: resolution.appliedDates,
+      rejected: [],
+    };
+  }
+
   const proposal = buildPlanChangeProposal(args.change, {
     visibleWeek: args.visibleWeek,
     todayISO: args.todayISO,
@@ -1326,12 +1533,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
     visibleWeek: args.visibleWeek,
     todayISO: args.todayISO,
     validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
-    deferWeekAcceptanceToTransaction: args.change.kind === 'remove_session' ||
-      args.change.kind === 'move_session',
-    setManualOverride: args.change.kind === 'remove_session' ||
-      args.change.kind === 'move_session'
-      ? undefined
-      : args.setManualOverride,
+    setManualOverride: args.setManualOverride,
   });
 
   if (apply.applied.length === 0 || apply.rejected.length > 0) {
@@ -1341,95 +1543,6 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       appliedDates: apply.applied.map((write) => write.date),
       rejected: rejectedForResult(apply.rejected),
     };
-  }
-
-  let publishedDeletionOutcome: AthleteDeletionPublishedOutcome | null = null;
-  if (args.change.kind === 'remove_session') {
-    const removal = args.change;
-    const source = args.visibleWeek.find((day) => day.date === removal.date)?.workout ?? null;
-    const write = apply.applied.find((candidate) => candidate.date === removal.date);
-    if (!source || !write) {
-      return {
-        ok: false,
-        message: "I couldn't safely make that change, so the plan is untouched.",
-        appliedDates: [],
-        rejected: [{
-          date: removal.date,
-          code: 'athlete_removal_identity_missing',
-          reason: 'The accepted source session or component result was unavailable.',
-        }],
-      };
-    }
-    const scopeMap: Record<PlanChangeBinScopeId, UserRemovalScope> = {
-      whole_day: 'whole_session',
-      strength: 'strength_component',
-      conditioning: 'conditioning_component',
-      recovery: 'recovery_component',
-      team: 'team_component',
-    };
-    try {
-      const transaction = (args.commitAthleteRemoval ??
-        commitAthleteSessionDeletionTransaction)({
-        date: removal.date,
-        reason: `tap:remove_session:${removal.date}`,
-        source: 'tap',
-        scope: scopeMap[removal.scope ?? 'whole_day'],
-        originalWorkout: source,
-        remainingWorkout: write.workout.workoutType === 'Rest' ? null : write.workout,
-        equivalentExposureMayRelocate: true,
-      });
-      if (transaction && typeof transaction === 'object' &&
-        'deletionOutcome' in transaction) {
-        publishedDeletionOutcome = (transaction as {
-          deletionOutcome: AthleteDeletionPublishedOutcome;
-        }).deletionOutcome;
-      }
-    } catch (error) {
-      return {
-        ok: false,
-        message: "I couldn't safely make that change, so the plan is untouched.",
-        appliedDates: [],
-        rejected: [{
-          date: removal.date,
-          code: 'athlete_removal_publication_failed',
-          reason: (error as Error)?.message ?? String(error),
-        }],
-      };
-    }
-  }
-
-  if (args.change.kind === 'move_session') {
-    const move = athleteMoveInput({
-      change: args.change,
-      visibleWeek: args.visibleWeek,
-      source: 'tap',
-    });
-    if (!move) {
-      return {
-        ok: false,
-        message: "I couldn't safely make that change, so the plan is untouched.",
-        appliedDates: [],
-        rejected: [{
-          date: args.change.fromDate,
-          code: 'athlete_move_identity_missing',
-          reason: 'The accepted source session was unavailable.',
-        }],
-      };
-    }
-    try {
-      (args.commitAthleteMove ?? commitAthleteSessionMoveTransaction)(move);
-    } catch (error) {
-      return {
-        ok: false,
-        message: "I couldn't safely make that change, so the plan is untouched.",
-        appliedDates: [],
-        rejected: [{
-          date: args.change.fromDate,
-          code: (error as { code?: string })?.code ?? 'athlete_move_publication_failed',
-          reason: (error as Error)?.message ?? String(error),
-        }],
-      };
-    }
   }
 
   // Category picks name what was chosen — the athlete picked a bucket,
@@ -1446,17 +1559,7 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
       ? proposal.revisedDays.find((day) => day.workout)?.workout?.title ?? null
       : null;
 
-  // Moves report differently when the destination was occupied (swap).
-  const message =
-    args.change.kind === 'move_session'
-      ? moveDoneMessage(
-          args.change,
-          proposal.kind === 'revision' &&
-            proposal.revisedDays.every((day) => day.workout !== null),
-        )
-      : args.change.kind === 'remove_session' && publishedDeletionOutcome
-        ? athleteDeletionDoneMessage(args.change, publishedDeletionOutcome)
-        : planChangeDoneMessage(args.change, pickedTitle);
+  const message = planChangeDoneMessage(args.change, pickedTitle);
 
   return {
     ok: true,

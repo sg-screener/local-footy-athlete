@@ -1767,6 +1767,64 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     phaseFailures);
 }
 
+// ── 20. Operation-scoped athlete ownership architecture ────────────────
+// Move/delete must return through the typed transaction branch before the
+// registry-backed revision policy or legacy override writer is constructed.
+// Add/stack/swap deliberately retain that registry policy below the branch.
+const producerSource = require('fs').readFileSync(
+  require.resolve('../utils/planChangeProducer'),
+  'utf8',
+) as string;
+const previewOwnerStart = producerSource.indexOf(
+  "if (args.change.kind === 'move_session' || args.change.kind === 'remove_session')",
+  producerSource.indexOf('export function previewPlanChangeRisk'),
+);
+const previewLegacyStart = producerSource.indexOf(
+  'const proposal = buildPlanChangeProposal',
+  previewOwnerStart,
+);
+const previewOwner = producerSource.slice(previewOwnerStart, previewLegacyStart);
+ok('[20] preview branches before general revision-template policy construction',
+  previewOwnerStart >= 0 && previewLegacyStart > previewOwnerStart &&
+    previewOwner.includes('stageAthleteSessionMoveTransaction') &&
+    previewOwner.includes('stageAthleteSessionDeletionTransaction') &&
+    previewOwner.includes('proposedWeekFromAcceptedStage') &&
+    !previewOwner.includes('validationPolicyForPlanChange') &&
+    !previewOwner.includes('applyCoachRevisionDateOverrides') &&
+    !previewOwner.includes('listCoachRevisionTemplates') &&
+    !previewOwner.includes('canonicalTemplateSectionSignature'),
+  previewOwner);
+
+const commitFunctionStart = producerSource.indexOf('function applyPlanChangeWithinTrace');
+const commitOwnerStart = producerSource.indexOf(
+  "if (args.change.kind === 'move_session' || args.change.kind === 'remove_session')",
+  commitFunctionStart,
+);
+const commitLegacyStart = producerSource.indexOf(
+  'const proposal = buildPlanChangeProposal',
+  commitOwnerStart,
+);
+const commitOwner = producerSource.slice(commitOwnerStart, commitLegacyStart);
+ok('[20] commit branches before the legacy revision writer',
+  commitOwnerStart >= 0 && commitLegacyStart > commitOwnerStart &&
+    commitOwner.includes('commitAthleteSessionMoveTransaction') &&
+    commitOwner.includes('commitAthleteSessionDeletionTransaction') &&
+    !commitOwner.includes('validationPolicyForPlanChange') &&
+    !commitOwner.includes('applyCoachRevisionDateOverrides') &&
+    !commitOwner.includes('listCoachRevisionTemplates'),
+  commitOwner);
+
+const revisionPolicySource = require('fs').readFileSync(
+  require.resolve('../utils/coachRevisionPolicy'),
+  'utf8',
+) as string;
+ok('[20] add/swap registry authorization remains intact',
+  producerSource.includes('validationPolicy: validationPolicyForPlanChange') &&
+    producerSource.includes("case 'swap_template'") &&
+    producerSource.includes("case 'add_template'") &&
+    revisionPolicySource.includes('listCoachRevisionTemplates()') &&
+    revisionPolicySource.includes('canonicalTemplateSectionSignature('));
+
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);
 if (fail > 0) {
   console.log(failures.join('\n'));
