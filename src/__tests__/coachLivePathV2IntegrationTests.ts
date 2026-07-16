@@ -348,6 +348,13 @@ const classifier = new LLMCoachIntentClassifier({
 });
 
 (async () => {
+  // Both persisted stores auto-hydrate on import. Settle those merges before
+  // the first reset so a late hydration cannot overwrite scenario-one state.
+  await Promise.all([
+    useProgramStore.persist.rehydrate(),
+    useCoachUpdatesStore.persist.rehydrate(),
+  ]);
+
   // ─────────────────────────────────────────────────────────────────────
   // [1] Fatigue 7/10 → activeConstraints, week coachNotes, card fields
   // ─────────────────────────────────────────────────────────────────────
