@@ -96,6 +96,63 @@ function applyAuxiliaryState(items: readonly DevE2EAuxiliaryState[]): void {
       useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
       continue;
     }
+    if (item.kind === 'removable_component_override') {
+      const dayOfWeek = new Date(`${item.date}T12:00:00`).getDay();
+      const state = useProgramStore.getState();
+      const baseWorkout = state.currentMicrocycle?.workouts.find((workout) =>
+        workout.dayOfWeek === dayOfWeek) ??
+        state.currentProgram?.microcycles
+          .flatMap((microcycle) => microcycle.workouts)
+          .find((workout) => workout.dayOfWeek === dayOfWeek);
+      if (!baseWorkout) {
+        throw new Error(`removable_component_override_missing_workout:${item.date}`);
+      }
+      const componentId = 'dev-e2e-removable-band-pull-apart';
+      useProgramStore.setState((current) => ({
+        dateOverrides: {
+          ...current.dateOverrides,
+          [item.date]: {
+            ...baseWorkout,
+            id: `${baseWorkout.id}:dev-e2e-removable-component`,
+            exercises: [
+              {
+                id: componentId,
+                workoutId: baseWorkout.id,
+                exerciseId: componentId,
+                exerciseOrder: 0,
+                prescribedSets: 2,
+                prescribedRepsMin: 12,
+                prescribedRepsMax: 15,
+                prescribedWeightKg: 0,
+                restSeconds: 45,
+                exercise: {
+                  id: componentId,
+                  name: 'Band Pull-Apart',
+                  description: 'Optional removable E2E component',
+                  exerciseType: 'Accessory',
+                  muscleGroups: [],
+                  equipmentRequired: ['Resistance Band'],
+                  difficultyLevel: 'Beginner',
+                  createdAt: '2026-07-13T12:00:00.000Z',
+                  updatedAt: '2026-07-13T12:00:00.000Z',
+                },
+                createdAt: '2026-07-13T12:00:00.000Z',
+                updatedAt: '2026-07-13T12:00:00.000Z',
+              },
+              ...baseWorkout.exercises,
+            ],
+          },
+        },
+        overrideContexts: {
+          ...current.overrideContexts,
+          [item.date]: {
+            intent: 'manual',
+            label: 'Dev E2E removable component',
+          },
+        },
+      }));
+      continue;
+    }
     // Fixture installation stays inside the dev-only seed boundary. Live tap
     // and Coach ingress must use the canonical session-outcome transaction.
     useProgramStore.setState((state) => ({
@@ -118,6 +175,7 @@ function readWitnessState(): DevE2EWitnessState {
   const updates = useCoachUpdatesStore.getState();
   return {
     program: program.currentProgram,
+    dateOverrides: program.dateOverrides,
     profile: useProfileStore.getState().onboardingData,
     calendarMarks: useCalendarStore.getState().markedDays,
     activeInjury: updates.activeInjury,

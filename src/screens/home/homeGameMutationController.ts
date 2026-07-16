@@ -12,16 +12,18 @@ import { rebuildLocalWeek, type WeekRebuildResult } from '../../utils/weekRebuil
 import { getMondayForDate } from '../../utils/sessionResolver';
 import {
   athleteActionDiagnosticHash,
+  athleteActionDiagnosticsEnabled,
   athleteActionErrorCode,
   athleteActionTerminalReasonChain,
   beginAthleteActionTrace,
   classifyAthleteActionFailure,
   emitAthleteActionEvent,
   runWithAthleteActionTrace,
+  type AthleteActionTraceContext,
 } from '../../utils/athleteActionDiagnostics';
 import { runCoachMutationTransaction } from '../../store/coachMutationTransaction';
 
-export type HomeGameMutationResult =
+type HomeGameMutationOutcome =
   | {
       outcome: Exclude<WholeWeekRepairOutcome, 'impossible'>;
       result: WeekRebuildResult;
@@ -31,6 +33,38 @@ export type HomeGameMutationResult =
       reason: string;
       error: unknown;
     };
+
+export type HomeGameMutationResult = HomeGameMutationOutcome & {
+  /** Development-only explicit token correlation for the render observer. */
+  traceId?: string;
+};
+
+function beginHomeGameMutationTrace(
+  args: Pick<
+    Parameters<typeof executeHomeGameMutation>[0],
+    'currentPhase' | 'targetDate' | 'clearOverlayDate' | 'newGameDay'
+  >,
+  inherited?: AthleteActionTraceContext,
+): AthleteActionTraceContext {
+  const actionType = fixtureKindForPhase(args.currentPhase) === 'practice_match'
+    ? 'practice_match_change' as const
+    : 'game_day_change' as const;
+  return beginAthleteActionTrace({
+    source: inherited?.source ?? 'tap',
+    actionType,
+    route: 'home_fixture_mutation',
+    currentWeekId: getMondayForDate(args.targetDate),
+    sourceDate: args.clearOverlayDate,
+    targetDate: args.targetDate,
+    sessionDate: args.targetDate,
+    scope: args.clearOverlayDate ? 'move_fixture' : args.newGameDay ? 'add_fixture' : 'remove_fixture',
+    fixtureId: `${fixtureKindForPhase(args.currentPhase)}:${args.clearOverlayDate ?? args.targetDate}`,
+    practiceMatchId: fixtureKindForPhase(args.currentPhase) === 'practice_match'
+      ? `practice_match:${args.clearOverlayDate ?? args.targetDate}`
+      : null,
+    controlId: inherited?.controlId ?? 'home-fixture-control',
+  }, inherited);
+}
 
 /** The real Home add/remove/move controller, shared verbatim with regression tests. */
 function executeHomeGameMutationWithinTrace(args: {
@@ -111,20 +145,7 @@ export function executeHomeGameMutation(args: {
   const actionType = fixtureKindForPhase(args.currentPhase) === 'practice_match'
     ? 'practice_match_change' as const
     : 'game_day_change' as const;
-  const trace = beginAthleteActionTrace({
-    source: 'tap',
-    actionType,
-    route: 'home_fixture_mutation',
-    currentWeekId: getMondayForDate(args.targetDate),
-    sourceDate: args.clearOverlayDate,
-    targetDate: args.targetDate,
-    sessionDate: args.targetDate,
-    scope: args.clearOverlayDate ? 'move_fixture' : args.newGameDay ? 'add_fixture' : 'remove_fixture',
-    fixtureId: `${fixtureKindForPhase(args.currentPhase)}:${args.clearOverlayDate ?? args.targetDate}`,
-    practiceMatchId: fixtureKindForPhase(args.currentPhase) === 'practice_match'
-      ? `practice_match:${args.clearOverlayDate ?? args.targetDate}`
-      : null,
-  });
+  const trace = beginHomeGameMutationTrace(args);
   return runWithAthleteActionTrace(trace, () => {
     emitAthleteActionEvent(trace, 'athlete_action_parsed', {
       parsedMutationType: args.clearOverlayDate
@@ -180,22 +201,47 @@ export function executeHomeGameMutation(args: {
 export async function executeHomeGameMutationDurably(
   args: Omit<Parameters<typeof executeHomeGameMutation>[0], 'deriveCoachNote'>,
 ): Promise<HomeGameMutationResult> {
-  const transaction = await runCoachMutationTransaction({
-    todayISO: args.todayISO ?? todayISOLocal(),
-    extraDates: [args.clearOverlayDate, args.targetDate]
-      .filter((date): date is string => !!date),
-    mutate: () => executeHomeGameMutation({ ...args, deriveCoachNote: false }),
-    didApply: (result) => result.outcome !== 'impossible' &&
-      !!result.result.reversibleAdjustmentId,
-  });
-  if (transaction.ok) {
-    if (transaction.value.outcome !== 'impossible') {
-      deriveGameChangeCoachNote(args, transaction.value.result);
+  const execute = async (): Promise<HomeGameMutationOutcome> => {
+    const transaction = await runCoachMutationTransaction({
+      todayISO: args.todayISO ?? todayISOLocal(),
+      extraDates: [args.clearOverlayDate, args.targetDate]
+        .filter((date): date is string => !!date),
+      mutate: () => executeHomeGameMutation({ ...args, deriveCoachNote: false }),
+      didApply: (result) => result.outcome !== 'impossible' &&
+        !!result.result.reversibleAdjustmentId,
+    });
+    if (transaction.ok) {
+      if (transaction.value.outcome !== 'impossible') {
+        deriveGameChangeCoachNote(args, transaction.value.result);
+      }
+      return transaction.value;
     }
-    return transaction.value;
-  }
-  const reason = 'reason' in transaction
-    ? transaction.reason
-    : 'The fixture change could not be persisted.';
-  return { outcome: 'impossible', reason, error: new Error(reason) };
+    const reason = 'reason' in transaction
+      ? transaction.reason
+      : 'The fixture change could not be persisted.';
+    return { outcome: 'impossible', reason, error: new Error(reason) };
+  };
+  if (!athleteActionDiagnosticsEnabled()) return execute();
+  const trace = beginHomeGameMutationTrace(args);
+  return runWithAthleteActionTrace(trace, async () => {
+    const result = await execute();
+    if (result.outcome === 'impossible') {
+      emitAthleteActionEvent(trace, 'athlete_action_failed', {
+        outcome: result.outcome,
+        internalResultCode: `${trace.actionType}_durable_failure`,
+        originalRejectionCode: athleteActionErrorCode(
+          result.error,
+          `${trace.actionType}_durable_failure`,
+        ),
+        firstFailingBoundary: 'executeHomeGameMutationDurably',
+        failureCategory: classifyAthleteActionFailure(
+          athleteActionErrorCode(result.error, `${trace.actionType}_durable_failure`),
+          'fixture_persistence',
+        ),
+        previousStateRestored: true,
+        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
+      });
+    }
+    return { ...result, traceId: trace.traceId };
+  });
 }

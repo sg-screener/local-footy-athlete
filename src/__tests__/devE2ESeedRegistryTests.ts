@@ -36,8 +36,41 @@ try {
     const hasInjury = seed.auxiliaryState.some((item) => item.kind === 'active_injury');
     const hasEquipment = seed.auxiliaryState.some((item) => item.kind === 'temporary_equipment');
     const feedback = seed.auxiliaryState.find((item) => item.kind === 'session_feedback');
+    const removableComponent = seed.auxiliaryState.find(
+      (item) => item.kind === 'removable_component_override',
+    );
+    const removableDayOfWeek = removableComponent
+      ? new Date(`${removableComponent.date}T12:00:00`).getDay()
+      : -1;
+    const removableWorkout = seed.program.microcycles
+      .flatMap((microcycle) => microcycle.workouts)
+      .find((workout) => workout.dayOfWeek === removableDayOfWeek);
+    const removableSourceExercise = removableWorkout?.exercises[0];
+    const dateOverrides = removableComponent && removableWorkout && removableSourceExercise
+      ? {
+          [removableComponent.date]: {
+            ...removableWorkout,
+            exercises: [
+              {
+                ...removableSourceExercise,
+                id: 'dev-e2e-removable-band-pull-apart',
+                exerciseId: 'dev-e2e-removable-band-pull-apart',
+                exercise: removableSourceExercise.exercise
+                  ? {
+                      ...removableSourceExercise.exercise,
+                      id: 'dev-e2e-removable-band-pull-apart',
+                      name: 'Band Pull-Apart',
+                    }
+                  : removableSourceExercise.exercise,
+              },
+              ...removableWorkout.exercises,
+            ],
+          },
+        }
+      : {};
     const failuresForSeed = validateDevE2EWitnesses(seedId, seed.witnesses, {
       program: seed.program,
+      dateOverrides,
       profile: seed.profile,
       calendarMarks,
       activeInjury: hasInjury ? { bodyPart: 'Right hamstring', severity: 5 } : null,

@@ -22,8 +22,14 @@ tags:
     id: "day-row-sun"
 - extendedWaitUntil:
     visible:
-      id: "program-active-coach-notes"
+      id: "day-row-sun-state-fixture"
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "program-active-coach-notes"
+    direction: DOWN
+- assertVisible:
+    id: "program-active-coach-notes"
 - tapOn: "Restore fixture"
 - tapOn:
     text: "Restore fixture"
@@ -31,9 +37,19 @@ tags:
     visible:
       id: "day-row-sat-state-fixture"
     timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "e2e-trace-ui-observed-home-visible-week-after-restoration"
+    timeout: 15000
+- takeScreenshot: "trace-v2-restoration-after-mutation"
 - runFlow:
     file: ../common/checkpoint-and-reload.yaml
     env:
       SEED_ID: fixture-move
+- scrollUntilVisible:
+    element:
+      id: "day-row-sat-state-fixture"
+    direction: DOWN
 - assertVisible:
     id: "day-row-sat-state-fixture"
+- takeScreenshot: "trace-v2-restoration-after-reload"

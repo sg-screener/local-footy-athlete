@@ -24,9 +24,19 @@ tags:
     visible:
       id: "day-row-sun-state-fixture"
     timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "e2e-trace-ui-observed-home-fixture-visible-state"
+    timeout: 15000
+- takeScreenshot: "trace-v2-fixture-after-mutation"
 - runFlow:
     file: ../common/checkpoint-and-reload.yaml
     env:
       SEED_ID: fixture-move
+- scrollUntilVisible:
+    element:
+      id: "day-row-sun-state-fixture"
+    direction: DOWN
 - assertVisible:
     id: "day-row-sun-state-fixture"
+- takeScreenshot: "trace-v2-fixture-after-reload"

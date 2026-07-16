@@ -1139,7 +1139,13 @@ async function executeProgramControlActionDurablyWithinTrace(
       route: routeProgramControlAction(action).route,
     };
   }
-  if (action.type !== 'move_session' && action.type !== 'bin_session') {
+  const durableSessionMutation =
+    action.type === 'move_session' ||
+    action.type === 'bin_session' ||
+    action.type === 'swap_exercise' ||
+    action.type === 'add_exercise' ||
+    action.type === 'remove_exercise';
+  if (!durableSessionMutation) {
     return executeProgramControlAction(action, context);
   }
   const dates = action.type === 'move_session'

@@ -14,13 +14,28 @@ tags:
     id: "view-workout-button"
 - tapOn:
     id: "day-workout-make-change-link"
-- tapOn: "Remove an exercise"
-- tapOn: "Back Squat"
+- tapOn: "Remove an exercise.*"
+- tapOn: "Band Pull-Apart"
+- extendedWaitUntil:
+    visible: "This will remove it from today’s session."
+    timeout: 5000
 - tapOn: "Remove exercise"
-- tapOn: "Today only"
-- assertNotVisible: "Back Squat"
+- tapOn: "Today only.*"
+- assertNotVisible: "Band Pull-Apart"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-trace-ui-observed-day-workout-visible-exercises"
+    timeout: 15000
+- takeScreenshot: "trace-v2-component-deletion-after-mutation"
 - runFlow:
     file: ../common/checkpoint-and-reload.yaml
     env:
       SEED_ID: lower-body-deletion
-- assertNotVisible: "Back Squat"
+- tapOn:
+    id: "day-row-mon"
+- tapOn:
+    id: "view-workout-button"
+- assertVisible:
+    id: "workout-exercise-row-dev-e2e-lower-body-deletion-dow-1-exercise-ex-squat"
+- assertNotVisible: "Band Pull-Apart"
+- takeScreenshot: "trace-v2-component-deletion-after-reload"

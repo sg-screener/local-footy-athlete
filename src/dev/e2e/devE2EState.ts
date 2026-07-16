@@ -24,9 +24,9 @@ const INITIAL: DevE2EStateSnapshot = Object.freeze({
 
 let snapshot: DevE2EStateSnapshot = INITIAL;
 const subscribers = new Set<() => void>();
+const observedTraceControlIds = new Set<string>();
 
-function publish(next: Omit<DevE2EStateSnapshot, 'revision'>): void {
-  snapshot = Object.freeze({ ...next, revision: snapshot.revision + 1 });
+function notifySubscribers(): void {
   for (const subscriber of Array.from(subscribers)) {
     try {
       subscriber();
@@ -34,6 +34,11 @@ function publish(next: Omit<DevE2EStateSnapshot, 'revision'>): void {
       // A diagnostic subscriber must never break the entry coordinator.
     }
   }
+}
+
+function publish(next: Omit<DevE2EStateSnapshot, 'revision'>): void {
+  snapshot = Object.freeze({ ...next, revision: snapshot.revision + 1 });
+  notifySubscribers();
 }
 
 export function getDevE2EStateSnapshot(): DevE2EStateSnapshot {
@@ -46,6 +51,7 @@ export function subscribeDevE2EState(subscriber: () => void): () => void {
 }
 
 export function setDevE2EEntryReady(): void {
+  observedTraceControlIds.clear();
   publish({
     phase: 'entry_ready',
     seedId: null,
@@ -55,6 +61,7 @@ export function setDevE2EEntryReady(): void {
 }
 
 export function setDevE2ESeedLoading(seedId: string): void {
+  observedTraceControlIds.clear();
   publish({
     phase: 'seed_loading',
     seedId,
@@ -99,8 +106,21 @@ export function setDevE2EReloadReady(seedId: string, checkpointId: string): void
   });
 }
 
+/** Render-only marker proving the actual React observation callback fired. */
+export function setDevE2ETraceUIObserved(controlId: string): void {
+  if (!controlId || observedTraceControlIds.has(controlId)) return;
+  observedTraceControlIds.add(controlId);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
 export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
-  const markers = ['e2e-entry-ready'];
+  const markers = [
+    'e2e-entry-ready',
+    ...Array.from(observedTraceControlIds)
+      .sort()
+      .map((controlId) => `e2e-trace-ui-observed-${controlId}`),
+  ];
   switch (state.phase) {
     case 'seed_loading':
       markers.push('e2e-seed-loading');
@@ -126,6 +146,7 @@ export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
 }
 
 export function __resetDevE2EStateForTest(): void {
+  observedTraceControlIds.clear();
   snapshot = INITIAL;
-  for (const subscriber of Array.from(subscribers)) subscriber();
+  notifySubscribers();
 }

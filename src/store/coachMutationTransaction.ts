@@ -40,6 +40,7 @@ import {
   athleteActionDiagnosticsEnabled,
   beginAthleteActionTrace,
   currentAthleteActionTrace,
+  emitAthleteActionEvent,
   runWithAthleteActionTrace,
   athleteActionTraceCoordinator,
   type AthleteActionTraceContext,
@@ -350,6 +351,17 @@ export async function runCoachMutationTransaction<T>(args: {
           semantic: captureTraceSemanticSnapshot(),
           visibleCard: postProjection.program,
           visibleDetail: postProjection.detailDays,
+        });
+        // This transaction is the durable acceptance boundary even when a
+        // legacy deterministic executor does not publish through
+        // AcceptedStateTransaction. Record publication only after the write,
+        // acknowledged readback and visible projection verification agree.
+        emitAthleteActionEvent(trace, 'transaction_publish_result', {
+          published: true,
+          persistenceResult: 'acknowledged_readback',
+          acceptedStateVersion:
+            useProgramStore.getState().acceptedMaterialContext.revision,
+          internalResultCode: 'coach_mutation_durable_publication_succeeded',
         });
       }
 

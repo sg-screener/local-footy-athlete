@@ -24,6 +24,10 @@ import {
   executeProgramControlAction,
   executeProgramControlActionDurably,
 } from '../../utils/programControlActions';
+import {
+  observeRenderedAthleteActionOutcome,
+  registerAthleteActionUIOutcome,
+} from '../../dev/e2e/athleteActionUIObservation';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 import {
   buildGuidedInjuryConstraint,
@@ -427,11 +431,49 @@ export default function DayWorkoutScreenV2() {
     React.useState<ExerciseEditStep>({ kind: 'closed' });
   const [injuryFlowExercise, setInjuryFlowExercise] =
     React.useState<EditableExercise | null>(null);
+  const [
+    pendingComponentDeletionObservation,
+    setPendingComponentDeletionObservation,
+  ] = React.useState<{
+    traceId: string;
+    observationId: string;
+    componentId: string;
+    targetId?: string;
+    exerciseKey: string;
+  } | null>(null);
 
   const editableExercises = React.useMemo(
     () => buildEditableExercises(workout, isTeamOnly),
     [workout, isTeamOnly],
   );
+  React.useEffect(() => {
+    if (!pendingComponentDeletionObservation) return;
+    const targetStillRendered = editableExercises.some((exercise) =>
+      pendingComponentDeletionObservation.targetId
+        ? exercise.targetId === pendingComponentDeletionObservation.targetId
+        : exercise.key === pendingComponentDeletionObservation.exerciseKey);
+    if (targetStillRendered) return;
+    observeRenderedAthleteActionOutcome({
+      traceId: pendingComponentDeletionObservation.traceId,
+      observationId: pendingComponentDeletionObservation.observationId,
+      renderedText: {
+        componentId: pendingComponentDeletionObservation.componentId,
+        targetStillRendered,
+        visibleComponentIds: editableExercises.map((exercise) =>
+          exercise.targetId ?? exercise.key),
+      },
+      controlId: 'day-workout-visible-exercises',
+      accessibilityNode: {
+        workoutExerciseRowTestIDs: editableExercises.map((exercise) =>
+          `workout-exercise-row-${stableTestIdToken(exercise.targetId ?? exercise.key)}`),
+      },
+      screenshotReference:
+        'screenshots/trace-v2-component-deletion-after-mutation.png',
+      hierarchyReference:
+        'accessibility-hierarchy/trace-v2-component-deletion-after-mutation.json',
+    });
+    setPendingComponentDeletionObservation(null);
+  }, [editableExercises, pendingComponentDeletionObservation]);
 
   const closeExerciseEditor = React.useCallback(
     () => setExerciseEditStep({ kind: 'closed' }),
@@ -810,9 +852,9 @@ export default function DayWorkoutScreenV2() {
   }, [closeExerciseEditor]);
 
   const removeExerciseToday = React.useCallback(
-    (exercise: EditableExercise) => {
+    async (exercise: EditableExercise) => {
       if (!date) return;
-      const result = executeProgramControlAction({
+      const result = await executeProgramControlActionDurably({
         type: 'remove_exercise',
         source: { screen: 'session_detail', surface: 'exercise_edit_sheet', initiatedBy: 'tap' },
         scope: 'today_only',
@@ -826,6 +868,26 @@ export default function DayWorkoutScreenV2() {
         oneOffOnly: true,
       });
       if (result.ok) {
+        if (result.traceId) {
+          const observationId = `day-workout-component-deletion:${result.traceId}`;
+          registerAthleteActionUIOutcome({
+            traceId: result.traceId,
+            observationId,
+            domainReturn: {
+              ok: result.ok,
+              date,
+              componentId: exercise.targetId ?? exercise.key,
+            },
+            controlId: 'day-workout-visible-exercises',
+          });
+          setPendingComponentDeletionObservation({
+            traceId: result.traceId,
+            observationId,
+            componentId: exercise.targetId ?? exercise.key,
+            targetId: exercise.targetId,
+            exerciseKey: exercise.key,
+          });
+        }
         setExerciseEditStep({ kind: 'future_scope', action: 'remove', exercise });
         return;
       }

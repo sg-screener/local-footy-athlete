@@ -250,6 +250,65 @@ console.log('\n[5] ledger-backed fixture notes separate Restore from presentatio
     second?.id !== id && second?.id === `game-change:${secondId}`);
 }
 
+console.log('\n[6] canonical Rest projection preserves ledger-backed note proof');
+{
+  resetStores();
+  const before = [
+    ...baseWeek().slice(0, 5),
+    row(SAT, 'Game Day', 'Game', 'game'),
+    row(SUN, 'Recovery Session', 'Recovery', 'recovery'),
+  ];
+  const after = [
+    row(MON, 'Lower body strength'),
+    row(TUE, 'Team training + Upper body pull', 'Strength', 'core'),
+    row(WED, 'Rest', 'Rest', 'recovery'),
+    row(THU, 'Team training + Upper body push', 'Strength', 'core'),
+    row(FRI, null),
+    row(SAT, 'Gunshow', 'Strength', 'optional'),
+    row(SUN, 'Game Day', 'Game', 'game'),
+  ];
+  const adjustmentId = 'reversible-adjustment:test:canonical-rest';
+  upsertGameChangeCoachNoteFromDiff({
+    action: 'moved', fixtureKind: 'game', previousDate: SAT, targetDate: SUN,
+    weekStartISO: WEEK_START, before, after, todayISO: MON, adjustmentId,
+  });
+  const visibleWeekDays = after.map((day) => ({
+    date: day.date,
+    dayOfWeek: day.dayOfWeek,
+    workout: day.workoutType === 'Rest' || !day.workoutName
+      ? null
+      : {
+          name: day.workoutName,
+          workoutType: day.workoutType,
+          sessionTier: day.sessionTier,
+        } as any,
+  }));
+  const notes = selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    dismissedCoachNoteIds: [],
+    todayISO: MON,
+    visibleWeekDays,
+  });
+  ok('explicit Rest proof matches the canonical no-workout Rest projection',
+    notes[0]?.reversibleAdjustmentId === adjustmentId, notes);
+  const mismatchedDays = visibleWeekDays.map((day) => day.date === SAT
+    ? {
+        ...day,
+        workout: {
+          name: 'Hard Conditioning',
+          workoutType: 'Conditioning',
+          sessionTier: 'core',
+        } as any,
+      }
+    : day);
+  eq('real training mismatch still suppresses the note', selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    dismissedCoachNoteIds: [],
+    todayISO: MON,
+    visibleWeekDays: mismatchedDays,
+  }), []);
+}
+
 console.log('\nSummary');
 console.log(`  Pass: ${pass}`);
 console.log(`  Fail: ${fail}`);

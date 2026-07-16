@@ -23,6 +23,7 @@ export { DEV_E2E_STANDARD_PROFILE } from './devE2EStandardProfile';
 export type DevE2EAuxiliaryState =
   | { kind: 'active_injury'; injuryKey: 'hamstring'; bodyPart: string; severity: number }
   | { kind: 'temporary_equipment'; presetId: 'bodyweight_only'; date: string }
+  | { kind: 'removable_component_override'; date: string }
   | {
       kind: 'session_feedback';
       date: string;
@@ -44,6 +45,7 @@ export type DevE2EWitness =
       strengthPattern?: 'squat' | 'hinge' | 'push' | 'pull';
     }
   | { kind: 'exercise_sets'; exerciseId: string; prescribedSets: number }
+  | { kind: 'exercise_present'; exerciseId: string; name: string }
   | { kind: 'calendar_mark'; date: string; mark: 'game' | 'rest' | 'noGame' }
   | { kind: 'profile_equipment'; equipment: string[]; completeness: 'complete' }
   | { kind: 'active_injury'; bodyPart: string; severity: number }
@@ -61,6 +63,7 @@ export interface DevE2ESeed {
 
 export interface DevE2EWitnessState {
   program: TrainingProgram | null;
+  dateOverrides?: Record<string, Workout | null>;
   profile: OnboardingData;
   calendarMarks: Record<string, 'game' | 'rest' | 'noGame'>;
   activeInjury: { bodyPart: string; severity: number } | null;
@@ -253,6 +256,11 @@ export function witnessesForDevE2ESeed(seedId: DevE2ESeedId): DevE2EWitness[] {
       break;
     case 'lower-body-deletion':
       witnesses.push({ kind: 'workout', dayOfWeek: 1, strengthPattern: 'squat' });
+      witnesses.push({
+        kind: 'exercise_present',
+        exerciseId: 'dev-e2e-removable-band-pull-apart',
+        name: 'Band Pull-Apart',
+      });
       break;
     case 'one-set-strength':
       witnesses.push({
@@ -303,6 +311,10 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
     case 'stacked-team-training-upper-pull':
       break;
     case 'lower-body-deletion':
+      auxiliaryState.push({
+        kind: 'removable_component_override',
+        date: anchorDate,
+      });
       break;
     case 'one-set-strength':
       break;
@@ -386,6 +398,19 @@ export function validateDevE2EWitnesses(
           .find((candidate) => candidate.id === witness.exerciseId);
         if (!exercise || exercise.prescribedSets !== witness.prescribedSets) {
           failures.push(`exercise_sets:${witness.exerciseId}`);
+        }
+        break;
+      }
+      case 'exercise_present': {
+        const exercise = [
+          ...workouts,
+          ...Object.values(state.dateOverrides ?? {}).filter(
+            (workout): workout is Workout => !!workout),
+        ]
+          .flatMap((workout) => workout.exercises)
+          .find((candidate) => candidate.id === witness.exerciseId);
+        if (!exercise || exercise.exercise?.name !== witness.name) {
+          failures.push(`exercise_present:${witness.exerciseId}`);
         }
         break;
       }

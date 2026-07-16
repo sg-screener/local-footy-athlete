@@ -72,6 +72,11 @@ import {
   executeHomeGameMutationDurably as executeHomeGameMutation,
 } from './homeGameMutationController';
 import { clearReversibleAdjustment } from '../../store/reversibleAdjustmentTransaction';
+import {
+  observeRenderedAthleteActionOutcome,
+  registerAthleteActionUIOutcome,
+} from '../../dev/e2e/athleteActionUIObservation';
+import { dayOfWeekTestIdToken } from '../../utils/stableTestId';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
@@ -185,6 +190,19 @@ export function useHomeScreen() {
 
   // Normal vs. moveGame (tap-to-pick target) vs. addGame
   const [mode, setMode] = useState<InteractionMode>({ type: 'normal' });
+  const [pendingFixtureObservation, setPendingFixtureObservation] = useState<{
+    traceId: string;
+    observationId: string;
+    sourceDate?: string;
+    targetDate: string;
+    fixtureExpectedAtTarget: boolean;
+  } | null>(null);
+  const [pendingRestorationObservation, setPendingRestorationObservation] = useState<{
+    traceId: string;
+    observationId: string;
+    acceptedRevisionAfter: number;
+    affectedDates: string[];
+  } | null>(null);
 
   // Calendar store actions
   const { setGameDay, removeGameDay, clearAllGames } = useCalendarStore();
@@ -226,6 +244,7 @@ export function useHomeScreen() {
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
   const currentProgram = useProgramStore((s) => s.currentProgram);
   const blockState = useProgramStore((s) => s.blockState);
+  const acceptedRevision = useProgramStore((s) => s.acceptedMaterialContext.revision);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
   const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
   const dismissedCoachNoteIds = useCoachUpdatesStore((s) => s.dismissedCoachNoteIds);
@@ -332,6 +351,82 @@ export function useHomeScreen() {
       weekDays,
     ],
   );
+
+  useEffect(() => {
+    if (!pendingFixtureObservation) return;
+    const target = weekDays.find((day) => day.date === pendingFixtureObservation.targetDate);
+    const source = pendingFixtureObservation.sourceDate
+      ? weekDays.find((day) => day.date === pendingFixtureObservation.sourceDate)
+      : null;
+    const targetHasFixture = target?.workout?.workoutType === 'Game';
+    const sourceReleased = !source || source.workout?.workoutType !== 'Game';
+    if (
+      targetHasFixture !== pendingFixtureObservation.fixtureExpectedAtTarget ||
+      !sourceReleased
+    ) return;
+    observeRenderedAthleteActionOutcome({
+      traceId: pendingFixtureObservation.traceId,
+      observationId: pendingFixtureObservation.observationId,
+      renderedText: {
+        targetDate: pendingFixtureObservation.targetDate,
+        targetHasFixture,
+        sourceDate: pendingFixtureObservation.sourceDate ?? null,
+        sourceReleased,
+      },
+      controlId: 'home-fixture-visible-state',
+      accessibilityNode: {
+        targetTestID: target
+          ? `day-row-${dayOfWeekTestIdToken(target.dayOfWeek)}-state-${
+              targetHasFixture ? 'fixture' : target.workout ? 'scheduled' : 'rest'
+            }`
+          : null,
+        sourceTestID: source
+          ? `day-row-${dayOfWeekTestIdToken(source.dayOfWeek)}-state-${
+              source.workout?.workoutType === 'Game'
+                ? 'fixture'
+                : source.workout ? 'scheduled' : 'rest'
+            }`
+          : null,
+      },
+      screenshotReference: 'screenshots/trace-v2-fixture-after-mutation.png',
+      hierarchyReference:
+        'accessibility-hierarchy/trace-v2-fixture-after-mutation.json',
+    });
+    setPendingFixtureObservation(null);
+  }, [pendingFixtureObservation, weekDays]);
+
+  useEffect(() => {
+    if (
+      !pendingRestorationObservation ||
+      acceptedRevision !== pendingRestorationObservation.acceptedRevisionAfter
+    ) return;
+    const visibleFixtureDates = weekDays
+      .filter((day) =>
+        pendingRestorationObservation.affectedDates.includes(day.date) &&
+        day.workout?.workoutType === 'Game')
+      .map((day) => day.date)
+      .sort();
+    observeRenderedAthleteActionOutcome({
+      traceId: pendingRestorationObservation.traceId,
+      observationId: pendingRestorationObservation.observationId,
+      renderedText: {
+        acceptedRevision,
+        affectedDates: pendingRestorationObservation.affectedDates,
+        visibleFixtureDates,
+      },
+      controlId: 'home-visible-week-after-restoration',
+      accessibilityNode: {
+        fixtureStateTestIDs: weekDays
+          .filter((day) => visibleFixtureDates.includes(day.date))
+          .map((day) =>
+            `day-row-${dayOfWeekTestIdToken(day.dayOfWeek)}-state-fixture`),
+      },
+      screenshotReference: 'screenshots/trace-v2-restoration-after-mutation.png',
+      hierarchyReference:
+        'accessibility-hierarchy/trace-v2-restoration-after-mutation.json',
+    });
+    setPendingRestorationObservation(null);
+  }, [acceptedRevision, pendingRestorationObservation, weekDays]);
 
   // ── Missed-session prompt ──
   // The most recent past, unlogged trainable day in the visible week.
@@ -693,6 +788,27 @@ export function useHomeScreen() {
         beforeRows,
       });
       if (mutation.outcome === 'impossible') throw mutation.error;
+      if (mutation.traceId) {
+        const observationId = `home-fixture-result:${mutation.traceId}`;
+        registerAthleteActionUIOutcome({
+          traceId: mutation.traceId,
+          observationId,
+          domainReturn: {
+            outcome: mutation.outcome,
+            sourceDate: options.clearOverlayDate ?? null,
+            targetDate: options.targetDate,
+            fixtureExpectedAtTarget: newGameDay !== null,
+          },
+          controlId: 'home-fixture-visible-state',
+        });
+        setPendingFixtureObservation({
+          traceId: mutation.traceId,
+          observationId,
+          sourceDate: options.clearOverlayDate,
+          targetDate: options.targetDate,
+          fixtureExpectedAtTarget: newGameDay !== null,
+        });
+      }
       const result = mutation.result;
       alertGameConflicts(result.sweep.conflictsRemoved);
       return true;
@@ -1271,6 +1387,25 @@ export function useHomeScreen() {
         note.reversibleAdjustmentId,
         useProgramStore.getState().acceptedMaterialContext.revision,
       );
+      if (result.traceId) {
+        const observationId = `home-restoration-result:${result.traceId}`;
+        registerAthleteActionUIOutcome({
+          traceId: result.traceId,
+          observationId,
+          domainReturn: {
+            outcome: result.outcome,
+            acceptedRevisionAfter: result.acceptedRevisionAfter,
+            affectedDates: result.affectedDates,
+          },
+          controlId: 'home-visible-week-after-restoration',
+        });
+        setPendingRestorationObservation({
+          traceId: result.traceId,
+          observationId,
+          acceptedRevisionAfter: result.acceptedRevisionAfter,
+          affectedDates: result.affectedDates,
+        });
+      }
       if (result.outcome === 'safely-rejected' || result.outcome === 'conflicted' ||
         result.outcome === 'superseded') {
         Alert.alert('Couldn’t restore this adjustment', result.reason ??

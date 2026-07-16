@@ -3,6 +3,7 @@ import {
   athleteActionTraceCoordinator,
   currentAthleteActionTrace,
 } from '../../utils/athleteActionDiagnostics';
+import { setDevE2ETraceUIObserved } from './devE2EState';
 
 export interface RenderedAthleteActionObservationInput {
   traceId: string;
@@ -39,4 +40,5 @@ export function observeRenderedAthleteActionOutcome(
 ): void {
   if (!athleteActionDiagnosticsEnabled()) return;
   athleteActionTraceCoordinator.observeRenderedUI(args);
+  setDevE2ETraceUIObserved(args.controlId);
 }

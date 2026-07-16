@@ -632,11 +632,30 @@ function weekStartFromVisibleDays(
   return firstDate ? getMondayForDate(firstDate) : null;
 }
 
-function workoutLifecycleLabel(day: ActiveProgramModifierVisibleDay | undefined): string {
-  const workout = day?.workout;
-  if (!workout) return 'Off';
-  if (workout.workoutType === 'Game') return 'Game Day';
-  return workout.name?.trim() || 'Off';
+function normalizedWorkoutLifecycle(
+  workoutName: unknown,
+  workoutType: unknown,
+): string {
+  const name = typeof workoutName === 'string' ? workoutName.trim() : '';
+  const type = typeof workoutType === 'string' ? workoutType.trim() : '';
+  if (type === 'Game') return 'game';
+  if (
+    !name && !type ||
+    type === 'Rest' ||
+    /^(?:rest|off)$/i.test(name)
+  ) {
+    return 'rest';
+  }
+  return `training:${type}:${name}`;
+}
+
+function visibleWorkoutLifecycle(
+  day: ActiveProgramModifierVisibleDay | undefined,
+): string {
+  return normalizedWorkoutLifecycle(
+    day?.workout?.name,
+    day?.workout?.workoutType,
+  );
 }
 
 function gameChangeProofStillVisible(
@@ -650,12 +669,10 @@ function gameChangeProofStillVisible(
     if (typeof row?.date !== 'string') return false;
     const visible = visibleByDate.get(row.date);
     if (!visible) return false;
-    const expectedLabel = row.workoutType === 'Game'
-      ? 'Game Day'
-      : (typeof row.workoutName === 'string' && row.workoutName.trim() ? row.workoutName.trim() : 'Off');
-    if (workoutLifecycleLabel(visible) !== expectedLabel) return false;
-    const visibleType = visible.workout?.workoutType ?? null;
-    return (row.workoutType ?? null) === visibleType;
+    return visibleWorkoutLifecycle(visible) === normalizedWorkoutLifecycle(
+      row.workoutName,
+      row.workoutType,
+    );
   });
 }
 

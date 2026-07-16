@@ -56,6 +56,8 @@ export interface ClearReversibleAdjustmentResult {
   affectedWeeks: string[];
   reason: string | null;
   supersededById: string | null;
+  /** Development-only explicit token correlation for the render observer. */
+  traceId?: string;
 }
 
 export interface ClearReversibleAdjustmentStage {
@@ -764,7 +766,7 @@ export async function clearReversibleAdjustment(
         acceptedRevisionBefore: result.acceptedRevisionBefore,
         acceptedRevisionAfter: result.acceptedRevisionAfter,
       });
-    return result;
+    return { ...result, traceId: trace.traceId };
   });
 }
 
