@@ -386,9 +386,14 @@ export class AthleteActionTraceCoordinator {
     return this.activeTokens[this.activeTokens.length - 1];
   }
 
-  startRoot(input: AthleteActionTraceRootInputV2): AthleteActionTraceTokenV2 {
+  startRoot(
+    input: AthleteActionTraceRootInputV2,
+    options: { forceRoot?: boolean } = {},
+  ): AthleteActionTraceTokenV2 {
     const current = this.currentToken();
-    if (current) return this.startSpan(current, input.route ?? input.actionType);
+    if (current && !options.forceRoot) {
+      return this.startSpan(current, input.route ?? input.actionType);
+    }
     const timestamp = this.clock().toISOString();
     this.traceCounter += 1;
     this.spanCounter += 1;
