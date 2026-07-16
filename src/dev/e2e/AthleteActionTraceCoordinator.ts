@@ -115,6 +115,13 @@ export interface CoachClassificationEvidenceV2 {
   unavailableReasonCode: string | null;
 }
 
+export type CoachLegacyFallbackDecisionV2 =
+  | 'allowed:genuine_conversation'
+  | 'forbidden:deterministic_owner'
+  | 'forbidden:policy'
+  | 'forbidden:classification_unavailable'
+  | 'forbidden:deterministic_failure';
+
 export interface AthleteActionTraceRecordV2 {
   schemaVersion: typeof ATHLETE_ACTION_TRACE_SCHEMA_VERSION;
   fingerprintContract: typeof SEMANTIC_FINGERPRINT_CONTRACT_V2;
@@ -148,6 +155,7 @@ export interface AthleteActionTraceRecordV2 {
   spans: AthleteActionTraceSpanV2[];
   evidence: {
     coachClassification: TraceField<CoachClassificationEvidenceV2>;
+    legacyFallbackDecision: TraceField<CoachLegacyFallbackDecisionV2>;
     acceptedRevisionBefore: TraceField<number>;
     acceptedRevisionAfter: TraceField<number>;
     acceptedRevisionPostReload: TraceField<number>;
@@ -343,6 +351,9 @@ function initialRecord(
       coachClassification: input.source === 'coach'
         ? missing('Coach classification has not been recorded')
         : notApplicableTraceField('action did not originate from Coach classification'),
+      legacyFallbackDecision: input.source === 'coach'
+        ? missing('Coach legacy fallback decision has not been recorded')
+        : notApplicableTraceField('action did not originate from Coach'),
       acceptedRevisionBefore: missing(),
       acceptedRevisionAfter: missing(),
       acceptedRevisionPostReload: missing(),
@@ -517,6 +528,18 @@ export class AthleteActionTraceCoordinator {
           ? fields.unavailableCode
           : null,
       });
+    }
+    if (event === 'coach_legacy_fallback_decision') {
+      const decision = fields.legacyDecision;
+      if (
+        decision === 'allowed:genuine_conversation' ||
+        decision === 'forbidden:deterministic_owner' ||
+        decision === 'forbidden:policy' ||
+        decision === 'forbidden:classification_unavailable' ||
+        decision === 'forbidden:deterministic_failure'
+      ) {
+        record.evidence.legacyFallbackDecision = capturedTraceField(decision);
+      }
     }
     if (event === 'athlete_action_parsed') {
       record.root.canonicalRequestedAction = capturedTraceField({

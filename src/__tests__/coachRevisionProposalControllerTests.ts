@@ -1429,7 +1429,7 @@ async function run() {
       result.handled.handled,
       false);
     eq('[17] classified as conversation, not mutation',
-      (result.handled as any).classifiedCoachIntent?.intent,
+      result.handled.selectedIntent?.intent,
       'general_question');
     ok('[17] no clarify hijack reply',
       !/I think that is a program edit/.test(result.reply),

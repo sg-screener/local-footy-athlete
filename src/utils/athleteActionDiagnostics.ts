@@ -36,6 +36,7 @@ export type AthleteActionType =
 
 export type AthleteActionEventName =
   | 'coach_intent_classification_result'
+  | 'coach_legacy_fallback_decision'
   | 'athlete_mutation_received'
   | 'athlete_action_requested'
   | 'athlete_action_parsed'

@@ -165,6 +165,7 @@ import { executeCoachSessionOutcome } from './coachSessionOutcome';
 import {
   beginAthleteActionTrace,
   emitAthleteActionEvent,
+  type AthleteActionTraceContext,
 } from './athleteActionDiagnostics';
 
 export interface CoachTurnMessage {
@@ -219,15 +220,75 @@ export interface CoachRevisionProposalControllerDiagnostic {
   diagnostic: CoachRevisionShadowDiagnostic;
 }
 
+export type LegacyFallbackPolicy =
+  | 'conversation_only'
+  | 'forbid';
+
+export const DEFAULT_LEGACY_FALLBACK_POLICY: LegacyFallbackPolicy =
+  'conversation_only';
+
+export type GeneralQuestionIntent = CoachIntent & {
+  intent: 'general_question';
+};
+
+export type CoachTurnOwnershipOutcome =
+  | {
+      kind: 'handled';
+      handled: true;
+      selectedIntent: CoachIntent;
+      reply: string;
+      legacyFallbackAllowed: false;
+      resultCode: string;
+      traceId?: string;
+    }
+  | {
+      kind: 'conversation';
+      handled: false;
+      selectedIntent: GeneralQuestionIntent;
+      fallbackReason: 'genuine_conversation';
+      legacyFallbackAllowed: true;
+      traceId?: string;
+    };
+
+/**
+ * Classification availability is decided before an intent exists. Keep that
+ * state explicit instead of fabricating a CoachIntent merely to satisfy the
+ * post-classification ownership contract.
+ */
+export type CoachClassificationUnavailableOutcome = {
+  kind: 'handled';
+  handled: true;
+  selectedIntent: null;
+  reply: string;
+  legacyFallbackAllowed: false;
+  resultCode: string;
+  traceId?: string;
+};
+
 export type CoachTurnControllerResult =
-  | { handled: true }
-  | { handled: false; classifiedCoachIntent: CoachIntent | null };
+  | CoachTurnOwnershipOutcome
+  | CoachClassificationUnavailableOutcome;
+
+export type CoachLegacyFallbackDecision =
+  | 'allowed:genuine_conversation'
+  | 'forbidden:deterministic_owner'
+  | 'forbidden:policy'
+  | 'forbidden:classification_unavailable'
+  | 'forbidden:deterministic_failure';
+
+interface CoachTurnOwnershipContext {
+  selectedIntent: CoachIntent | null;
+  trace: AthleteActionTraceContext;
+  legacyDecisionRecorded: boolean;
+}
 
 export interface CoachTurnControllerInput {
   userMessage: CoachTurnMessage;
   messages: CoachTurnMessage[];
   todayISO: string;
   classifier: CoachIntentClassifier;
+  /** Production defaults to conversation-only legacy delegation. */
+  legacyFallbackPolicy?: LegacyFallbackPolicy;
   /** Test seam for proving unavailable classifications never dispatch. */
   dispatchIntent?: typeof dispatchCoachIntent;
   pendingCoachProposal: PendingCoachProposal | null;
@@ -274,6 +335,8 @@ export interface CoachTurnControllerInput {
   onCoachRevisionProposalDiagnostic?: (
     diagnostic: CoachRevisionProposalControllerDiagnostic,
   ) => void;
+  /** Internal per-turn ownership state shared with deterministic helpers. */
+  _ownershipContext?: CoachTurnOwnershipContext;
 }
 
 
@@ -3257,14 +3320,60 @@ function setProgress(input: CoachTurnControllerInput, stage: ProgressStage) {
   input.setCoachProgressLabel(describeStage(stage));
 }
 
+function recordLegacyFallbackDecision(
+  input: CoachTurnControllerInput,
+  decision: CoachLegacyFallbackDecision,
+): void {
+  const ownership = input._ownershipContext;
+  if (!ownership || ownership.legacyDecisionRecorded) return;
+  ownership.legacyDecisionRecorded = true;
+  emitAthleteActionEvent(ownership.trace, 'coach_legacy_fallback_decision', {
+    legacyDecision: decision,
+    selectedIntentKind: ownership.selectedIntent?.intent ?? null,
+    policy: input.legacyFallbackPolicy ?? DEFAULT_LEGACY_FALLBACK_POLICY,
+  });
+}
+
+function handledOwnershipOutcome(
+  input: CoachTurnControllerInput,
+  resultCode: string,
+  reply: string,
+  decision: CoachLegacyFallbackDecision = 'forbidden:deterministic_owner',
+): CoachTurnControllerResult {
+  recordLegacyFallbackDecision(input, decision);
+  const selectedIntent = input._ownershipContext?.selectedIntent ?? null;
+  const traceId = input._ownershipContext?.trace.traceId;
+  if (!selectedIntent) {
+    return {
+      kind: 'handled',
+      handled: true,
+      selectedIntent: null,
+      reply,
+      legacyFallbackAllowed: false,
+      resultCode,
+      ...(traceId ? { traceId } : {}),
+    };
+  }
+  return {
+    kind: 'handled',
+    handled: true,
+    selectedIntent,
+    reply,
+    legacyFallbackAllowed: false,
+    resultCode,
+    ...(traceId ? { traceId } : {}),
+  };
+}
+
 function replyAndFinish(
   input: CoachTurnControllerInput,
   suffix: string,
   content: string,
+  decision: CoachLegacyFallbackDecision = 'forbidden:deterministic_owner',
 ): CoachTurnControllerResult {
   input.appendUserAndAssistant(assistantMessage(suffix, content));
   input.clearInput();
-  return { handled: true };
+  return handledOwnershipOutcome(input, suffix, content, decision);
 }
 
 export const COACH_CLASSIFICATION_UNAVAILABLE_REPLY =
@@ -3273,7 +3382,7 @@ export const COACH_CLASSIFICATION_UNAVAILABLE_REPLY =
 function recordCoachClassification(
   result: CoachClassificationResult,
   todayISO: string,
-): void {
+): AthleteActionTraceContext {
   const trace = beginAthleteActionTrace({
     source: 'coach',
     actionType: 'coach_command',
@@ -3304,6 +3413,194 @@ function recordCoachClassification(
       : 'classification_unavailable',
     producer: 'handleCoachTurn',
   });
+  return trace;
+}
+
+/**
+ * The single post-classification ownership boundary. Dispatcher success,
+ * rejection, no-op, or failure can shape the reply, but never who owns the
+ * turn. Only an explicit general_question fall-through may become a
+ * conversation outcome.
+ */
+async function resolveSelectedIntentOwnership(args: {
+  input: CoachTurnControllerInput;
+  intent: CoachIntent;
+  packet: ReturnType<typeof buildCoachContextPacket>;
+  classification: Extract<CoachClassificationResult, { status: 'classified' }>;
+}): Promise<CoachTurnControllerResult> {
+  const { input, intent, packet, classification } = args;
+  const deps = buildLiveDispatchDeps(input.todayISO);
+  try {
+    const outcome = await (input.dispatchIntent ?? dispatchCoachIntent)(
+      intent,
+      packet,
+      deps,
+      classification,
+      input._ownershipContext?.trace,
+    );
+
+    if (outcome.handled) {
+      if (outcome.pendingCoachProposal !== undefined) {
+        input.setPendingCoachProposal(outcome.pendingCoachProposal);
+      }
+      if (outcome.referencedSession) {
+        const day = packet.currentWeek.find(
+          (candidate) => candidate.date === outcome.referencedSession!.date,
+        );
+        const modalities = day?.workout
+          ? extractModalitiesFromSession({
+              name: day.workout.name,
+              exercises: day.workout.exercises,
+            })
+          : undefined;
+        useCoachContextStateStore.getState().setLastExplainedSession({
+          date: outcome.referencedSession.date,
+          sessionName: outcome.referencedSession.sessionName,
+          modalities,
+          source: 'coach_explanation',
+        });
+        logger.debug('[coach-flow] last_explained_set', {
+          date: outcome.referencedSession.date,
+          sessionName: outcome.referencedSession.sessionName,
+          replyMode: outcome.replyMode,
+        });
+      }
+      logger.debug('[coach-transaction]', {
+        message: input.userMessage.content,
+        intent: intent.intent,
+        route: outcome.transaction?.route ?? outcome.replyMode,
+        pendingProposalBefore: outcome.transaction?.pendingProposalBefore ?? null,
+        mutationAttempted: outcome.transaction?.mutationAttempted ?? outcome.mutated,
+        eventsEmitted: outcome.transaction?.eventsEmitted ?? 0,
+        eventsApplied: outcome.transaction?.eventsApplied ?? 0,
+        visibleDiff: outcome.transaction?.visibleDiff ?? [],
+        replyMode: outcome.replyMode,
+      });
+      logger.debug('[coach-flow] dispatcher_handled', {
+        replyMode: outcome.replyMode,
+        mutated: outcome.mutated,
+      });
+      input.setLastCoachDebug({
+        intent: intent.intent,
+        route: outcome.transaction?.route ?? outcome.replyMode,
+        referenceStatus: packet.referenceResolution?.status ?? null,
+        referenceTargetDate: outcome.referencedSession?.date
+          ?? packet.referenceResolution?.target?.date
+          ?? null,
+        referenceTargetName: outcome.referencedSession?.sessionName
+          ?? packet.referenceResolution?.target?.sessionName
+          ?? null,
+        mutationLike: false,
+        legacyCalled: false,
+        replySource: 'deterministic',
+      });
+      const resultCode = outcome.transaction?.route ?? outcome.replyMode;
+      const legacyDecision: CoachLegacyFallbackDecision =
+        /(?:persistence|dependency_rejected|exception|unhandled_error)/.test(resultCode)
+          ? 'forbidden:deterministic_failure'
+          : 'forbidden:deterministic_owner';
+      return replyAndFinish(
+        input,
+        resultCode,
+        outcome.reply,
+        legacyDecision,
+      );
+    }
+
+    logger.debug('[coach-flow] dispatcher_passed', {
+      replyMode: outcome.replyMode,
+      intent: intent.intent,
+    });
+    if (isPendingProgramProposalExpired(input.pendingCoachProposal)) {
+      input.setPendingCoachProposal(null);
+    }
+    logger.debug('[coach-flow] ownership_diagnostic', {
+      mutationLike: isMutationLike(input.userMessage.content),
+      selectedIntent: intent.intent,
+      ownershipSource: 'classified_intent',
+    });
+
+    if (intent.intent !== 'general_question') {
+      logger.warn('[coach-flow] legacy_fallback_blocked', {
+        reason: 'classification_not_genuine_conversation',
+        intent: intent.intent,
+      });
+      return replyAndFinish(
+        input,
+        'classified_non_conversation_unhandled',
+        "I understood that as a coaching action, but I couldn't handle it safely, so I haven't changed your program.",
+      );
+    }
+
+    if (input.legacyFallbackPolicy === 'forbid') {
+      return replyAndFinish(
+        input,
+        'conversation_forbidden_by_policy',
+        deps.generalReply(intent, packet),
+        'forbidden:policy',
+      );
+    }
+
+    logger.debug('[coach-flow] legacy_fallback', {
+      reason: 'genuine_conversation',
+    });
+    logger.debug('[coach-transaction]', {
+      message: input.userMessage.content,
+      intent: 'legacy_fallback',
+      route: 'legacy_fallback',
+      pendingProposalBefore: input.pendingCoachProposal,
+      mutationAttempted: false,
+      eventsEmitted: 0,
+      eventsApplied: 0,
+      visibleDiff: [],
+      replyMode: 'fall_through',
+    });
+    input.setLastCoachDebug({
+      intent: intent.intent,
+      route: 'legacy_fallback',
+      referenceStatus: null,
+      referenceTargetDate: null,
+      referenceTargetName: null,
+      mutationLike: isMutationLike(input.userMessage.content),
+      legacyCalled: false,
+      replySource: 'legacy',
+    });
+    recordLegacyFallbackDecision(input, 'allowed:genuine_conversation');
+    return {
+      kind: 'conversation',
+      handled: false,
+      selectedIntent: intent as GeneralQuestionIntent,
+      fallbackReason: 'genuine_conversation',
+      legacyFallbackAllowed: true,
+      traceId: input._ownershipContext?.trace.traceId,
+    };
+  } catch (error) {
+    logger.warn('[coach-flow] dispatcher_error', {
+      detail: error instanceof Error ? error.message : String(error),
+    });
+    if (input.pendingCoachProposal) {
+      input.setPendingCoachProposal(null);
+    }
+    logger.debug('[coach-transaction]', {
+      message: input.userMessage.content,
+      intent: intent.intent,
+      route: 'deterministic_executor_exception',
+      pendingProposalBefore: null,
+      mutationAttempted: false,
+      eventsEmitted: 0,
+      eventsApplied: 0,
+      visibleDiff: [],
+      replyMode: 'program_adjustment_failed',
+    });
+    return replyAndFinish(
+      input,
+      `deterministic_failure:${intent.intent}`,
+      intent.intent === 'request_program_adjustment'
+        ? "I tried to handle that program adjustment, but it didn't land in the visible program. I'm not going to pretend it changed."
+        : "I understood that request, but something went wrong before I could handle it safely. Nothing was changed.",
+      'forbidden:deterministic_failure',
+    );
+  }
 }
 
 export async function handleCoachTurn(
@@ -3314,6 +3611,8 @@ export async function handleCoachTurn(
   const setLastCoachDebug = input.setLastCoachDebug;
   input = {
     ...input,
+    legacyFallbackPolicy:
+      input.legacyFallbackPolicy ?? DEFAULT_LEGACY_FALLBACK_POLICY,
     setLastCoachDebug: (debug) => setLastCoachDebug(debug
       ? {
           ...debug,
@@ -3380,7 +3679,15 @@ export async function handleCoachTurn(
       });
       classificationResult = { status: 'unavailable', reason: 'network_failure' };
     }
-    recordCoachClassification(classificationResult, input.todayISO);
+    const classificationTrace = recordCoachClassification(
+      classificationResult,
+      input.todayISO,
+    );
+    input._ownershipContext = {
+      selectedIntent: null,
+      trace: classificationTrace,
+      legacyDecisionRecorded: false,
+    };
     if (classificationResult.status === 'unavailable') {
       input.setLastCoachDebug({
         intent: 'classification_unavailable',
@@ -3395,11 +3702,13 @@ export async function handleCoachTurn(
       });
       return replyAndFinish(
         input,
-        'classification-unavailable',
+        `classification_unavailable:${classificationResult.reason}`,
         COACH_CLASSIFICATION_UNAVAILABLE_REPLY,
+        'forbidden:classification_unavailable',
       );
     }
     classifiedCoachIntent = classificationResult.intent;
+    input._ownershipContext.selectedIntent = classifiedCoachIntent;
     input.setLastCoachDebug({
       intent: classifiedCoachIntent.intent,
       route: 'classification_owned',
@@ -3421,6 +3730,21 @@ export async function handleCoachTurn(
       clarificationFlag: classifiedCoachIntent.needsClarification,
       provenance: classificationResult.provenance,
     });
+
+    if (
+      classifiedCoachIntent.intent === 'general_question' &&
+      !pendingClarifier &&
+      !input.pendingCoachProposal &&
+      semanticModeAtTurnStart === 'off' &&
+      controllerCoachRevisionProposalMode(input) === 'off'
+    ) {
+      return await resolveSelectedIntentOwnership({
+        input,
+        intent: classifiedCoachIntent,
+        packet,
+        classification: classificationResult,
+      });
+    }
 
     // Session outcome is an independent typed command, not a program-edit
     // clarifier answer. Give the semantic classifier first ownership so a
@@ -3449,6 +3773,12 @@ export async function handleCoachTurn(
         logger.warn('[coach-session-outcome] handler_failed', {
           detail: error instanceof Error ? error.message : String(error),
         });
+        return replyAndFinish(
+          input,
+          `deterministic_failure:session_outcome:${classifiedCoachIntent.intent}`,
+          "I couldn't safely process that coaching request, so I haven't changed or recorded anything.",
+          'forbidden:deterministic_failure',
+        );
       }
     }
 
@@ -3571,6 +3901,12 @@ export async function handleCoachTurn(
       logger.warn('[temporary-source-fact] semantic_route_failed', {
         detail: error instanceof Error ? error.message : String(error),
       });
+      return replyAndFinish(
+        input,
+        `deterministic_failure:source_fact:${classifiedCoachIntent.intent}`,
+        "I couldn't safely process that update, so I haven't changed your facts or program.",
+        'forbidden:deterministic_failure',
+      );
     }
 
     if (pendingClarifier) {
@@ -4071,25 +4407,24 @@ export async function handleCoachTurn(
       } catch (err) {
         const detail = err instanceof Error ? err.message : String(err);
         logger.error('[coach-revision-proposal] pending_resume_exception', { detail });
-        if (controllerCoachRevisionProposalMode(input) === 'active') {
-          usePendingCoachClarifierStore.getState().clearPending();
-          input.setLastCoachDebug({
-            intent: 'coach_revision_proposal',
-            route: 'coach-revision-proposal-error',
-            referenceStatus: packet.referenceResolution?.status ?? null,
-            referenceTargetDate: null,
-            referenceTargetName: null,
-            mutationLike: true,
-            legacyCalled: false,
-            replySource: 'deterministic',
-            applied: false,
-          });
-          return replyAndFinish(
-            input,
-            'coach-revision-proposal-error',
-            `[dev] Coach revision path crashed (${detail}). No changes made - see logs.`,
-          );
-        }
+        usePendingCoachClarifierStore.getState().clearPending();
+        input.setLastCoachDebug({
+          intent: 'coach_revision_proposal',
+          route: 'coach-revision-proposal-error',
+          referenceStatus: packet.referenceResolution?.status ?? null,
+          referenceTargetDate: null,
+          referenceTargetName: null,
+          mutationLike: true,
+          legacyCalled: false,
+          replySource: 'deterministic',
+          applied: false,
+        });
+        return replyAndFinish(
+          input,
+          'deterministic_failure:pending_coach_revision',
+          "I understood the follow-up, but the deterministic revision step failed. I haven't changed your program.",
+          'forbidden:deterministic_failure',
+        );
       }
       const pendingScheduleAnswer = resolvePendingScheduleTransactionAnswer({
         pending: pendingClarifier,
@@ -4150,6 +4485,8 @@ export async function handleCoachTurn(
           input.clearInput();
           input.startSetupRebuildProgress();
           input.setIsLoading(true);
+          let ownershipReply = '';
+          let ownershipFailed = false;
           try {
             const setupResult = await executeSetupEditInController({
               input,
@@ -4157,8 +4494,11 @@ export async function handleCoachTurn(
               onProgress: (stage) => setProgress(input, stage),
             });
             input.setCoachProgressLabel(null);
+            ownershipReply = setupResult.reply;
             input.appendAssistant(assistantMessage('schedule-transaction-setup', setupResult.reply));
           } catch (err) {
+            ownershipFailed = true;
+            ownershipReply = "I understood the setup change, but I couldn't rebuild the program safely. I haven't changed the program.";
             logger.error('[coach-send] schedule_transaction_setup_error', {
               message: pendingClarifier.originalMessage,
               answer: input.userMessage.content,
@@ -4166,14 +4506,23 @@ export async function handleCoachTurn(
             });
             input.appendAssistant(assistantMessage(
               'schedule-transaction-setup-error',
-              "I understood the setup change, but I couldn't rebuild the program safely. I haven't changed the program.",
+              ownershipReply,
             ));
           } finally {
             input.clearSetupRebuildProgress();
             input.setIsLoading(false);
             input.setCoachProgressLabel(null);
           }
-          return { handled: true };
+          return handledOwnershipOutcome(
+            input,
+            ownershipFailed
+              ? 'deterministic_failure:schedule_transaction_setup'
+              : 'schedule_transaction_setup',
+            ownershipReply,
+            ownershipFailed
+              ? 'forbidden:deterministic_failure'
+              : 'forbidden:deterministic_owner',
+          );
         }
         const guarded = await executeProgramEditWithVisibleGuard({
           input,
@@ -4470,6 +4819,8 @@ export async function handleCoachTurn(
           input.clearInput();
           input.startSetupRebuildProgress();
           input.setIsLoading(true);
+          let ownershipReply = '';
+          let ownershipFailed = false;
           try {
             const setupResult = await executeSetupEditInController({
               input,
@@ -4477,6 +4828,7 @@ export async function handleCoachTurn(
               onProgress: (stage) => setProgress(input, stage),
             });
             input.setCoachProgressLabel(null);
+            ownershipReply = setupResult.reply;
             logger.debug('[coach-flow] pending_program_setup_executed', {
               route: setupResult.route,
               executorKind: setupResult.kind,
@@ -4486,6 +4838,8 @@ export async function handleCoachTurn(
             });
             input.appendAssistant(assistantMessage('pending-program-setup', setupResult.reply));
           } catch (err) {
+            ownershipFailed = true;
+            ownershipReply = "I understood the setup change, but I couldn't rebuild the program safely. I haven't changed the program.";
             logger.error('[coach-send] pending_program_setup_error', {
               message: pendingClarifier.originalMessage,
               answer: input.userMessage.content,
@@ -4493,14 +4847,23 @@ export async function handleCoachTurn(
             });
             input.appendAssistant(assistantMessage(
               'pending-program-setup-error',
-              "I understood the setup change, but I couldn't rebuild the program safely. I haven't changed the program.",
+              ownershipReply,
             ));
           } finally {
             input.clearSetupRebuildProgress();
             input.setIsLoading(false);
             input.setCoachProgressLabel(null);
           }
-          return { handled: true };
+          return handledOwnershipOutcome(
+            input,
+            ownershipFailed
+              ? 'deterministic_failure:pending_program_setup'
+              : 'pending_program_setup',
+            ownershipReply,
+            ownershipFailed
+              ? 'forbidden:deterministic_failure'
+              : 'forbidden:deterministic_owner',
+          );
         }
         const guarded = await executeProgramEditWithVisibleGuard({
           input,
@@ -4985,25 +5348,23 @@ export async function handleCoachTurn(
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       logger.error('[coach-revision-proposal] active_path_exception', { detail });
-      if (revisionMode === 'active') {
-        input.setLastCoachDebug({
-          intent: 'coach_revision_proposal',
-          route: 'coach-revision-proposal-error',
-          referenceStatus: packet.referenceResolution?.status ?? null,
-          referenceTargetDate: null,
-          referenceTargetName: null,
-          mutationLike: true,
-          legacyCalled: false,
-          replySource: 'deterministic',
-          applied: false,
-        });
-        return replyAndFinish(
-          input,
-          'coach-revision-proposal-error',
-          `[dev] Coach revision path crashed (${detail}). No changes made - see logs.`,
-        );
-      }
-      // Shadow mode never owned the turn; legacy continues as before.
+      input.setLastCoachDebug({
+        intent: 'coach_revision_proposal',
+        route: 'coach-revision-proposal-error',
+        referenceStatus: packet.referenceResolution?.status ?? null,
+        referenceTargetDate: null,
+        referenceTargetName: null,
+        mutationLike: true,
+        legacyCalled: false,
+        replySource: 'deterministic',
+        applied: false,
+      });
+      return replyAndFinish(
+        input,
+        'deterministic_failure:coach_revision_proposal',
+        "I understood the request, but the deterministic revision step failed. I haven't changed your program.",
+        'forbidden:deterministic_failure',
+      );
     }
 
     const semanticMode = controllerSemanticProgramEditDraftMode(input);
@@ -5427,12 +5788,15 @@ export async function handleCoachTurn(
       input.startSetupRebuildProgress();
       input.setIsLoading(true);
 
+      let ownershipReply = '';
+      let ownershipFailed = false;
       try {
         const result = await executeSetupEditInController({
           input,
           programEdit: programEditForExecution,
           onProgress: (stage) => setProgress(input, stage),
         });
+        ownershipReply = result.reply;
         input.setCoachProgressLabel(null);
 
         if (result.kind === 'mutated' || result.kind === 'rejected' || result.kind === 'error') {
@@ -5478,6 +5842,8 @@ export async function handleCoachTurn(
         });
         input.appendAssistant(assistantMessage('program-setup', result.reply));
       } catch (err) {
+        ownershipFailed = true;
+        ownershipReply = "I understood the setup change, but I couldn't rebuild the program safely. I haven't changed the program.";
         logger.error('[coach-send] program_setup_error', {
           message: input.userMessage.content,
           error: err instanceof Error ? err.message : String(err),
@@ -5495,14 +5861,23 @@ export async function handleCoachTurn(
         });
         input.appendAssistant(assistantMessage(
           'program-setup-error',
-          "I understood the setup change, but I couldn't rebuild the program safely. I haven't changed the program.",
+          ownershipReply,
         ));
       } finally {
         input.clearSetupRebuildProgress();
         input.setIsLoading(false);
         input.setCoachProgressLabel(null);
       }
-      return { handled: true };
+      return handledOwnershipOutcome(
+        input,
+        ownershipFailed
+          ? 'deterministic_failure:program_setup'
+          : 'program_setup',
+        ownershipReply,
+        ownershipFailed
+          ? 'forbidden:deterministic_failure'
+          : 'forbidden:deterministic_owner',
+      );
     }
 
     if (
@@ -5692,186 +6067,37 @@ export async function handleCoachTurn(
       source: 'router_bypass',
     });
 
-    const deps = buildLiveDispatchDeps(input.todayISO);
-    const outcome = await (input.dispatchIntent ?? dispatchCoachIntent)(
+    return await resolveSelectedIntentOwnership({
+      input,
       intent,
       packet,
-      deps,
-      classificationResult,
-    );
-
-    if (outcome.handled) {
-      if (outcome.pendingCoachProposal !== undefined) {
-        input.setPendingCoachProposal(outcome.pendingCoachProposal);
-      }
-      if (outcome.referencedSession) {
-        const day = packet.currentWeek.find(
-          (d) => d.date === outcome.referencedSession!.date,
-        );
-        const modalities = day?.workout
-          ? extractModalitiesFromSession({
-              name: day.workout.name,
-              exercises: day.workout.exercises,
-            })
-          : undefined;
-        useCoachContextStateStore.getState().setLastExplainedSession({
-          date: outcome.referencedSession.date,
-          sessionName: outcome.referencedSession.sessionName,
-          modalities,
-          source: 'coach_explanation',
-        });
-        logger.debug('[coach-flow] last_explained_set', {
-          date: outcome.referencedSession.date,
-          sessionName: outcome.referencedSession.sessionName,
-          replyMode: outcome.replyMode,
-        });
-      }
-      logger.debug('[coach-transaction]', {
-        message: input.userMessage.content,
-        intent: intent.intent,
-        route: outcome.transaction?.route ?? outcome.replyMode,
-        pendingProposalBefore: outcome.transaction?.pendingProposalBefore ?? null,
-        mutationAttempted: outcome.transaction?.mutationAttempted ?? outcome.mutated,
-        eventsEmitted: outcome.transaction?.eventsEmitted ?? 0,
-        eventsApplied: outcome.transaction?.eventsApplied ?? 0,
-        visibleDiff: outcome.transaction?.visibleDiff ?? [],
-        replyMode: outcome.replyMode,
-      });
-      logger.debug('[coach-flow] dispatcher_handled', {
-        replyMode: outcome.replyMode,
-        mutated: outcome.mutated,
-      });
-      input.setLastCoachDebug({
-        intent: intent.intent,
-        route: outcome.transaction?.route ?? outcome.replyMode,
-        referenceStatus: packet.referenceResolution?.status ?? null,
-        referenceTargetDate: outcome.referencedSession?.date
-          ?? packet.referenceResolution?.target?.date
-          ?? null,
-        referenceTargetName: outcome.referencedSession?.sessionName
-          ?? packet.referenceResolution?.target?.sessionName
-          ?? null,
-        mutationLike: false,
-        legacyCalled: false,
-        replySource: 'deterministic',
-      });
-      return replyAndFinish(input, 'dispatch', outcome.reply);
-    }
-    logger.debug('[coach-flow] dispatcher_passed', {
-      replyMode: outcome.replyMode,
-      intent: intent.intent,
+      classification: classificationResult,
     });
-    if (isPendingProgramProposalExpired(input.pendingCoachProposal)) {
-      input.setPendingCoachProposal(null);
-    }
-
-    const mutationLike = isMutationLike(input.userMessage.content);
-    if (mutationLike) {
-      const refRes = packet.referenceResolution ?? null;
-      let reply: string;
-      let gateReason: string;
-      if (refRes?.status === 'resolved' && refRes.target) {
-        gateReason = 'mutation_unsupported_target_resolved';
-        const dayLabel = (() => {
-          try {
-            return new Date(`${refRes.target.date}T12:00:00`)
-              .toLocaleDateString(undefined, { weekday: 'long' });
-          } catch {
-            return refRes.target.date;
-          }
-        })();
-        reply =
-          `I can see you mean ${dayLabel}'s ${refRes.target.sessionName}, ` +
-          `but I can't apply that change automatically yet. ` +
-          `I'm not going to pretend it's done.`;
-      } else if (refRes?.clarifierQuestion) {
-        gateReason = `mutation_clarifier_${refRes.status}`;
-        reply = refRes.clarifierQuestion;
-      } else {
-        gateReason = 'mutation_no_target';
-        reply = 'Which session do you mean?';
-      }
-      logger.debug('[coach-flow] mutation_truth_gate', {
-        reason: gateReason,
-        referenceStatus: refRes?.status ?? null,
-        referenceTarget: refRes?.target ?? null,
-      });
-      logger.debug('[coach-transaction]', {
-        message: input.userMessage.content,
-        intent: classifiedCoachIntent?.intent ?? 'mutation_truth_gate',
-        route: 'mutation_truth_gate',
-        pendingProposalBefore: input.pendingCoachProposal,
-        mutationAttempted: false,
-        eventsEmitted: 0,
-        eventsApplied: 0,
-        visibleDiff: [],
-        replyMode: 'program_adjustment_failed',
-      });
-      return replyAndFinish(input, 'truth-gate', reply);
-    }
   } catch (err) {
-    logger.warn('[coach-flow] dispatcher_error', {
+    logger.warn('[coach-flow] controller_error', {
       detail: err instanceof Error ? err.message : String(err),
     });
-    if (
-      input.pendingCoachProposal ||
-      classifiedCoachIntent?.intent === 'request_program_adjustment'
-    ) {
+    if (input.pendingCoachProposal) {
       input.setPendingCoachProposal(null);
-      logger.debug('[coach-transaction]', {
-        message: input.userMessage.content,
-        intent: classifiedCoachIntent?.intent ?? 'dispatcher_error',
-        route: 'program_adjustment_dispatcher_error',
-        pendingProposalBefore: null,
-        mutationAttempted: false,
-        eventsEmitted: 0,
-        eventsApplied: 0,
-        visibleDiff: [],
-        replyMode: 'program_adjustment_failed',
-      });
-      return replyAndFinish(
-        input,
-        'program-adjustment-error',
-        "I tried to handle that program adjustment, but it didn't land in the visible program. I'm not going to pretend it changed.",
-      );
     }
-  }
-
-  if (classifiedCoachIntent?.intent !== 'general_question') {
-    logger.warn('[coach-flow] legacy_fallback_blocked', {
-      reason: 'classification_not_genuine_conversation',
-      intent: classifiedCoachIntent?.intent ?? null,
+    logger.debug('[coach-transaction]', {
+      message: input.userMessage.content,
+      intent: classifiedCoachIntent?.intent ?? 'dispatcher_error',
+      route: 'deterministic_controller_exception',
+      pendingProposalBefore: null,
+      mutationAttempted: false,
+      eventsEmitted: 0,
+      eventsApplied: 0,
+      visibleDiff: [],
+      replyMode: 'program_adjustment_failed',
     });
     return replyAndFinish(
       input,
-      'classified-non-conversation-unhandled',
-      "I understood that as a coaching action, but I couldn't handle it safely, so I haven't changed your program.",
+      `deterministic_failure:${classifiedCoachIntent?.intent ?? 'unselected'}`,
+      classifiedCoachIntent?.intent === 'request_program_adjustment'
+        ? "I tried to handle that program adjustment, but it didn't land in the visible program. I'm not going to pretend it changed."
+        : "I understood that request, but something went wrong before I could handle it safely. Nothing was changed.",
+      'forbidden:deterministic_failure',
     );
   }
-
-  logger.debug('[coach-flow] legacy_fallback', {
-    reason: 'dispatcher_did_not_handle',
-  });
-  logger.debug('[coach-transaction]', {
-    message: input.userMessage.content,
-    intent: 'legacy_fallback',
-    route: 'legacy_fallback',
-    pendingProposalBefore: input.pendingCoachProposal,
-    mutationAttempted: false,
-    eventsEmitted: 0,
-    eventsApplied: 0,
-    visibleDiff: [],
-    replyMode: 'fall_through',
-  });
-  input.setLastCoachDebug({
-    intent: classifiedCoachIntent?.intent ?? 'legacy_fallback',
-    route: 'legacy_fallback',
-    referenceStatus: null,
-    referenceTargetDate: null,
-    referenceTargetName: null,
-    mutationLike: false,
-    legacyCalled: true,
-    replySource: 'legacy',
-  });
-  return { handled: false, classifiedCoachIntent };
 }

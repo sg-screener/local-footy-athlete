@@ -82,8 +82,10 @@ import { insertProgramSummaryBeforeFinalClose } from '../../utils/coachReplyComp
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 import { todayISOLocal } from '../../utils/appDate';
 import {
+  DEFAULT_LEGACY_FALLBACK_POLICY,
   handleCoachTurn,
   type CoachTurnDebug,
+  type LegacyFallbackPolicy,
 } from '../../utils/coachTurnController';
 import { LLMSemanticProgramEditDraftAdapter } from '../../utils/llmSemanticProgramEditDraftAdapter';
 import { LLMSemanticCoachRevisionProposalAdapter } from '../../utils/llmSemanticCoachRevisionProposalAdapter';
@@ -160,6 +162,9 @@ const liveCoachRevisionProposalAdapter = clientEnv.isReady &&
       timeoutMs: 45000,
     })
   : null;
+
+const legacyFallbackPolicy: LegacyFallbackPolicy =
+  DEFAULT_LEGACY_FALLBACK_POLICY;
 
 // Warm the revision edge function as soon as the app loads this screen's
 // module: a fire-and-forget CORS preflight spins up the isolate so the
@@ -1634,6 +1639,7 @@ export default function CoachScreen() {
       messages,
       todayISO: todayISOLocal(),
       classifier: liveCoachIntentClassifier,
+      legacyFallbackPolicy,
       semanticProgramEditDraftMode: clientEnv.semanticProgramEditDraftMode,
       semanticProgramEditDraftRawMode: clientEnv.semanticProgramEditDraftRawMode,
       semanticProgramEditDraftActiveAllowed: clientEnv.semanticProgramEditDraftActiveAllowed,
@@ -1691,7 +1697,11 @@ export default function CoachScreen() {
       return;
     }
 
-    if (controllerResult.handled) {
+    if (
+      controllerResult.kind !== 'conversation' ||
+      controllerResult.legacyFallbackAllowed !== true ||
+      legacyFallbackPolicy !== 'conversation_only'
+    ) {
       setIsLoading(false);
       return;
     }
@@ -1786,6 +1796,13 @@ export default function CoachScreen() {
           content: m.content,
         }));
 
+      setLastCoachDebug((previous) => previous
+        ? {
+            ...previous,
+            legacyCalled: true,
+            replySource: 'legacy',
+          }
+        : previous);
       const response = await fetch(
         env.coachChatEndpoint,
         {

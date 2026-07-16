@@ -1354,9 +1354,10 @@ export async function dispatchCoachIntent(
   packet: CoachContextPacket,
   deps: DispatchDeps,
   classification?: Extract<CoachClassificationResult, { status: 'classified' }>,
+  existingTrace?: AthleteActionTraceContext,
 ): Promise<DispatchOutcome> {
   const targetDate = intent.payload?.targetDate ?? intent.payload?.requestedDate ?? packet.todayISO;
-  const trace = beginAthleteActionTrace({
+  const trace = existingTrace ?? beginAthleteActionTrace({
     source: 'coach',
     actionType: dispatcherDiagnosticActionType(intent),
     route: 'coach_intent_dispatcher',
@@ -1367,18 +1368,20 @@ export async function dispatchCoachIntent(
     scope: intent.payload?.scope ?? null,
   }, undefined, { forceRoot: true });
   return runWithAthleteActionTrace(trace, async () => {
-    emitAthleteActionEvent(trace, 'coach_intent_classification_result', {
-      classificationStatus: 'classified',
-      classifiedIntentKind: intent.intent,
-      confidenceBucket: intent.confidence >= 0.8
-        ? 'high'
-        : intent.confidence >= 0.5
-          ? 'medium'
-          : 'low',
-      clarificationFlag: intent.needsClarification,
-      classificationProvenance: classification?.provenance ?? 'deterministic',
-      unavailableCode: null,
-    });
+    if (!existingTrace) {
+      emitAthleteActionEvent(trace, 'coach_intent_classification_result', {
+        classificationStatus: 'classified',
+        classifiedIntentKind: intent.intent,
+        confidenceBucket: intent.confidence >= 0.8
+          ? 'high'
+          : intent.confidence >= 0.5
+            ? 'medium'
+            : 'low',
+        clarificationFlag: intent.needsClarification,
+        classificationProvenance: classification?.provenance ?? 'deterministic',
+        unavailableCode: null,
+      });
+    }
     emitAthleteActionEvent(trace, 'athlete_action_parsed', {
       parsedMutationType: intent.intent,
       confidenceBucket: intent.confidence >= 0.8 ? 'high' : intent.confidence >= 0.5 ? 'medium' : 'low',
