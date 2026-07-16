@@ -7,10 +7,24 @@ import {
   buildExplorerFailureClusterSignature,
   collectExplorerScenarioArtifactBundleV1,
   EXPLORER_SCENARIO_ARTIFACT_FAILURE,
-  explorerScenarioSemanticHash,
+  explorerScenarioArtifactSemanticHash,
   type ExplorerScenarioArtifactBundleV1,
   ExplorerScenarioArtifactValidationError,
 } from '../dev/e2e/explorerScenarioArtifactBundle';
+import {
+  EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS,
+  type ExplorerScenarioContract,
+  type ExplorerScenarioStep,
+} from '../dev/e2e/explorerScenarioContracts';
+import {
+  explorerActionSemanticHash,
+  explorerScenarioSemanticHash as canonicalExplorerScenarioSemanticHash,
+  ExplorerScenarioContractValidationError,
+} from '../dev/e2e/explorerScenarioContractValidation';
+import {
+  parseDevE2EScenarioSessionRecord,
+  type DevE2EScenarioSessionRecord,
+} from '../dev/e2e/devE2EScenarioSession';
 import { semanticFingerprintV2 } from '../utils/semanticFingerprintV2';
 import {
   EXPLORER_SCENARIO_ARTIFACT_WRITER_FAILURE,
@@ -21,7 +35,9 @@ import {
 } from '../../scripts/write-explorer-scenario-artifact-bundle';
 import {
   cloneExplorerFixture,
+  createValidExplorerScenarioArtifactInput,
   createValidExplorerScenarioArtifactBundle,
+  EXPLORER_FIXTURE_SCENARIO_MANIFEST,
   EXPLORER_FIXTURE_STEP_IDS,
 } from './explorerScenarioArtifactFixture';
 
@@ -57,8 +73,11 @@ function expectValidationCode(
 function recollect(
   bundle: ExplorerScenarioArtifactBundleV1,
 ): ExplorerScenarioArtifactBundleV1 {
-  const { schemaVersion: _schemaVersion, semanticHash: _semanticHash, ...input } = bundle;
-  return collectExplorerScenarioArtifactBundleV1(input);
+  const { semanticHash: _semanticHash, ...draft } = bundle;
+  return {
+    ...draft,
+    semanticHash: explorerScenarioArtifactSemanticHash(draft),
+  };
 }
 
 function reverseObjectKeys(value: unknown): unknown {
@@ -107,6 +126,129 @@ function main(): void {
     valid.actions.every((action, index) =>
       action.stepId === EXPLORER_FIXTURE_STEP_IDS[index] &&
       action.priorActionTraceId === (valid.actions[index - 1]?.traceV2RootId ?? null)));
+
+  const canonicalReference = valid.resolvedScenarioManifestReference;
+  ok('compatibility: scenario artifacts accept canonical Explorer manifests',
+    canonicalReference.scenarioId === EXPLORER_FIXTURE_SCENARIO_MANIFEST.scenarioId &&
+      canonicalReference.scenarioTier === EXPLORER_FIXTURE_SCENARIO_MANIFEST.tier &&
+      canonicalReference.seedId === EXPLORER_FIXTURE_SCENARIO_MANIFEST.seedId &&
+      canonicalReference.schemaVersion === EXPLORER_FIXTURE_SCENARIO_MANIFEST.schemaVersion &&
+      canonicalReference.campaignSeed === EXPLORER_FIXTURE_SCENARIO_MANIFEST.campaignSeed);
+
+  ok('compatibility: canonical manifest and action semantic hashes are used verbatim',
+    canonicalReference.semanticHash ===
+      canonicalExplorerScenarioSemanticHash(EXPLORER_FIXTURE_SCENARIO_MANIFEST) &&
+      canonicalReference.steps.every((step, index) =>
+        step.actionSemanticHash === explorerActionSemanticHash(
+          EXPLORER_FIXTURE_SCENARIO_MANIFEST.steps[index].action,
+        ) && valid.actions[index].intendedActionSemanticHash === step.actionSemanticHash));
+
+  const expectedOracleOrder = EXPLORER_FIXTURE_SCENARIO_MANIFEST.steps
+    .flatMap((step) => step.oracleAssertions.map((oracle) => oracle.oracleId));
+  ok('compatibility: action order, oracle IDs, and checkpoint policies remain canonical',
+    JSON.stringify(canonicalReference.steps.map((step) => step.stepId)) ===
+      JSON.stringify(EXPLORER_FIXTURE_STEP_IDS) &&
+      JSON.stringify(valid.oracles.map((oracle) => oracle.oracleId)) ===
+        JSON.stringify(expectedOracleOrder) &&
+      JSON.stringify(canonicalReference.steps.map((step) => step.checkpointPolicy)) ===
+        JSON.stringify(EXPLORER_FIXTURE_SCENARIO_MANIFEST.steps.map((step) =>
+          step.checkpointPolicy)));
+
+  const repeatManifest = cloneExplorerFixture(EXPLORER_FIXTURE_SCENARIO_MANIFEST) as
+    ExplorerScenarioContract & { steps: ExplorerScenarioStep[] };
+  repeatManifest.steps[0] = {
+    ...repeatManifest.steps[0],
+    action: {
+      type: 'week.repeat',
+      target: { kind: 'week', weekId: 'week-2026-07-13' },
+      args: {
+        sourceWeekStart: '2026-07-13',
+        targetWeekStart: '2026-07-20',
+      },
+      capability: { capabilityId: 'week.repeat', status: 'enabled' },
+    },
+    ingress: 'week-controls',
+  };
+  const repeatBundle = collectExplorerScenarioArtifactBundleV1(
+    createValidExplorerScenarioArtifactInput(repeatManifest),
+  );
+  ok('compatibility: production-owned week.repeat capability is accepted',
+    repeatBundle.resolvedScenarioManifestReference.steps[0].capability?.status === 'enabled' &&
+      JSON.stringify(repeatBundle.resolvedScenarioManifestReference.capabilityDeclarations) ===
+        JSON.stringify(EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS));
+
+  const coachManifest = cloneExplorerFixture(EXPLORER_FIXTURE_SCENARIO_MANIFEST) as
+    ExplorerScenarioContract & { steps: ExplorerScenarioStep[] };
+  coachManifest.steps[0] = {
+    ...coachManifest.steps[0],
+    action: {
+      type: 'coach.message',
+      target: {
+        kind: 'coach-message',
+        conversationId: 'conversation-1',
+        messageId: 'message-1',
+      },
+      args: {
+        message: 'Move my strength session to Wednesday.',
+        visibleWeekId: 'week-2026-07-13',
+      },
+      capability: { capabilityId: 'coach.message', status: 'enabled' },
+    },
+    ingress: 'coach-chat',
+  };
+  let coachCapabilityRejected = false;
+  try {
+    collectExplorerScenarioArtifactBundleV1(
+      createValidExplorerScenarioArtifactInput(coachManifest),
+    );
+  } catch (error) {
+    coachCapabilityRejected = error instanceof ExplorerScenarioContractValidationError &&
+      error.issues.some((issue) => issue.code === 'capability-not-declared');
+  }
+  ok('compatibility: coach.message remains capability-disabled', coachCapabilityRejected);
+
+  const untouchedInput = createValidExplorerScenarioArtifactInput();
+  const unwrappedActionBundles = JSON.stringify(
+    untouchedInput.actions.map((action) => action.actionArtifactBundle),
+  );
+  const untouchedBundle = collectExplorerScenarioArtifactBundleV1(untouchedInput);
+  ok('compatibility: AthleteActionArtifactBundleV2 is wrapped without mutation',
+    JSON.stringify(untouchedBundle.actions.map((action) => action.actionArtifactBundle)) ===
+      unwrappedActionBundles && untouchedBundle.actions.every((action) => {
+      assertAthleteActionArtifactBundleV2(action.actionArtifactBundle);
+      return true;
+    }));
+
+  const sessionInput = createValidExplorerScenarioArtifactInput();
+  const sessionBundle = collectExplorerScenarioArtifactBundleV1(sessionInput);
+  const inputResetSession = sessionInput.scenarioSessionEvidence
+    .scenarioSessionRecordAtReset as DevE2EScenarioSessionRecord;
+  inputResetSession.reloadCount = 99;
+  const parsedSessionReceipt = parseDevE2EScenarioSessionRecord(
+    sessionBundle.scenarioSessionEvidence.scenarioSessionRecordAtReset,
+  );
+  ok('compatibility: scenario-session V2 fields are immutable receipts, not ownership',
+    parsedSessionReceipt.reloadCount === 0 &&
+      Object.keys(parsedSessionReceipt).sort().join(',') ===
+        Object.keys(sessionBundle.scenarioSessionEvidence.scenarioSessionRecordAtReset)
+          .sort().join(','));
+
+  const compatibilityEnvironmentA = explorerScenarioArtifactSemanticHash({
+    manifestSemanticHash: canonicalReference.semanticHash,
+    absolutePath: '/Users/alice/worktree/scenario.json',
+    metroPort: 8081,
+    simulatorUdid: 'SIM-A',
+    observedAt: '2026-07-17T01:02:03.000Z',
+  });
+  const compatibilityEnvironmentB = explorerScenarioArtifactSemanticHash({
+    manifestSemanticHash: canonicalReference.semanticHash,
+    absolutePath: '/home/runner/worktree/scenario.json',
+    metroPort: 19000,
+    simulatorUdid: 'SIM-B',
+    observedAt: '2026-07-18T11:12:13.000Z',
+  });
+  ok('compatibility: environment-specific values do not affect semantic hashes',
+    compatibilityEnvironmentA === compatibilityEnvironmentB);
 
   const missingScreenshot = cloneExplorerFixture(valid);
   delete (missingScreenshot.actions[1].screenshots as Partial<
@@ -158,23 +300,26 @@ function main(): void {
     failedHardInsidePassed);
 
   const clusteredFailureDraft = cloneExplorerFixture(valid);
-  clusteredFailureDraft.oracles[1].passed = false;
-  clusteredFailureDraft.oracles[1].failureCode = 'visible_projection_mismatch';
-  clusteredFailureDraft.oracles[1].firstDivergentProjection = 'visible_week';
+  const clusteredOracle = clusteredFailureDraft.oracles.find((oracle) =>
+    oracle.stepId === EXPLORER_FIXTURE_STEP_IDS[1])!;
+  const clusteredAction = clusteredFailureDraft.actions.find((action) =>
+    action.stepId === clusteredOracle.stepId)!;
+  clusteredOracle.passed = false;
+  clusteredOracle.failureCode = 'visible_projection_mismatch';
+  clusteredOracle.firstDivergentProjection = 'visible_week';
   clusteredFailureDraft.result = {
     ...clusteredFailureDraft.result,
     disposition: 'product_failure',
-    firstFailingStepId: clusteredFailureDraft.oracles[1].stepId,
-    firstFailingOracleId: clusteredFailureDraft.oracles[1].oracleId,
+    firstFailingStepId: clusteredOracle.stepId,
+    firstFailingOracleId: clusteredOracle.oracleId,
     firstDivergentProjection: 'visible_week',
     failureClusterSignature: buildExplorerFailureClusterSignature({
-      oracleId: clusteredFailureDraft.oracles[1].oracleId,
-      primaryFailureCode: clusteredFailureDraft.oracles[1].failureCode,
-      actionKind: clusteredFailureDraft.actions[1].intendedActionReceipt.actionKind,
-      productionSurface:
-        clusteredFailureDraft.actions[1].intendedActionReceipt.productionSurface,
+      oracleId: clusteredOracle.oracleId,
+      primaryFailureCode: clusteredOracle.failureCode,
+      actionKind: clusteredAction.intendedActionReceipt.actionKind,
+      productionSurface: clusteredAction.intendedActionReceipt.productionSurface,
       firstDivergentProjection: 'visible_week',
-      firstFailingStepId: clusteredFailureDraft.oracles[1].stepId,
+      firstFailingStepId: clusteredOracle.stepId,
     }),
   };
   const clusteredFailure = recollect(clusteredFailureDraft);
@@ -210,7 +355,7 @@ function main(): void {
   ok('deterministic serialization sorts every object key and preserves array order',
     serialized === serializeExplorerScenarioArtifactBundleV1(reversed));
 
-  const normalizedHashA = explorerScenarioSemanticHash({
+  const normalizedHashA = explorerScenarioArtifactSemanticHash({
     stableId: 'same-evidence',
     localPath: '/Users/alice/project/artifact.json',
     observedAt: '2026-07-17T01:02:03.000Z',
@@ -218,7 +363,7 @@ function main(): void {
     simulatorDeviceId: 'SIMULATOR-A',
     endpoint: 'http://localhost:8081/index.bundle',
   });
-  const normalizedHashB = explorerScenarioSemanticHash({
+  const normalizedHashB = explorerScenarioArtifactSemanticHash({
     stableId: 'same-evidence',
     localPath: '/home/runner/project/artifact.json',
     observedAt: '2026-07-18T11:12:13.000Z',
@@ -226,10 +371,10 @@ function main(): void {
     simulatorDeviceId: 'SIMULATOR-B',
     endpoint: 'http://localhost:19000/index.bundle',
   });
-  const clockOwnedA = explorerScenarioSemanticHash({
+  const clockOwnedA = explorerScenarioArtifactSemanticHash({
     deterministicClockReceipt: { anchorInstant: '2026-07-13T00:00:00.000Z' },
   });
-  const clockOwnedB = explorerScenarioSemanticHash({
+  const clockOwnedB = explorerScenarioArtifactSemanticHash({
     deterministicClockReceipt: { anchorInstant: '2026-07-14T00:00:00.000Z' },
   });
   ok('path, non-clock timestamp, Metro port, and simulator normalization is deterministic',
@@ -244,13 +389,13 @@ function main(): void {
   const semanticVariant = cloneExplorerFixture(actionArtifactBase);
   replaceActionBundleFile(semanticVariant, '/expected-outcome.json',
     '{"accepted":false}\n');
-  const baseActionSemanticHash = explorerScenarioSemanticHash({
+  const baseActionSemanticHash = explorerScenarioArtifactSemanticHash({
     actionArtifactBundle: actionArtifactBase,
   });
   ok('scenario hash excludes media bytes but retains normalized action semantics',
-    baseActionSemanticHash === explorerScenarioSemanticHash({
+    baseActionSemanticHash === explorerScenarioArtifactSemanticHash({
       actionArtifactBundle: mediaVariant,
-    }) && baseActionSemanticHash !== explorerScenarioSemanticHash({
+    }) && baseActionSemanticHash !== explorerScenarioArtifactSemanticHash({
       actionArtifactBundle: semanticVariant,
     }));
 
@@ -259,13 +404,6 @@ function main(): void {
     operation: 'move_session',
     localPath: '/Users/alice/project/scenario.json',
   };
-  environmentHashedRaw.actions[0].intendedActionSemanticHash = semanticFingerprintV2({
-    contract: 'explorer-scenario-artifact-v1',
-    value: {
-      kind: 'intended_action_receipt',
-      ...environmentHashedRaw.actions[0].intendedActionReceipt,
-    },
-  });
   expectValidationCode('environment-specific data cannot be included in an intended-action hash',
     EXPLORER_SCENARIO_ARTIFACT_FAILURE.ENVIRONMENT_SPECIFIC_SEMANTIC_HASH_INPUT,
     environmentHashedRaw);
@@ -297,8 +435,9 @@ function main(): void {
     })),
     shrinkLineage: [{
       attempt: 1,
-      parentChainSemanticHash: explorerScenarioSemanticHash(['one', 'two', 'three']),
-      candidateChainSemanticHash: explorerScenarioSemanticHash(['two', 'three']),
+      parentChainSemanticHash:
+        explorerScenarioArtifactSemanticHash(['one', 'two', 'three']),
+      candidateChainSemanticHash: explorerScenarioArtifactSemanticHash(['two', 'three']),
       result: 'retained',
     }],
     shrinkAttemptCount: 1,
@@ -314,13 +453,15 @@ function main(): void {
 
   const blockedDraft = cloneExplorerFixture(valid);
   blockedDraft.actions = blockedDraft.actions.slice(0, 2);
-  blockedDraft.oracles = blockedDraft.oracles.slice(0, 2);
+  const completedStepIds = new Set(EXPLORER_FIXTURE_STEP_IDS.slice(0, 2));
+  blockedDraft.oracles = blockedDraft.oracles.filter((oracle) =>
+    completedStepIds.has(oracle.stepId as (typeof EXPLORER_FIXTURE_STEP_IDS)[number]));
   blockedDraft.scenarioSessionEvidence.checkpointRecords =
     blockedDraft.scenarioSessionEvidence.checkpointRecords.slice(0, 2);
   blockedDraft.scenarioSessionEvidence.reloadReceipts =
     blockedDraft.scenarioSessionEvidence.reloadReceipts.slice(0, 2);
   const blockedSession = blockedDraft.scenarioSessionEvidence.reloadReceipts[1]
-    .scenarioSessionRecord;
+    .scenarioSessionRecord as DevE2EScenarioSessionRecord;
   blockedSession.nextActionEligibility = {
     nextStepId: EXPLORER_FIXTURE_STEP_IDS[2],
     status: 'blocked',

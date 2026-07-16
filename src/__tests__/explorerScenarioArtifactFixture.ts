@@ -10,14 +10,19 @@ import { DEV_E2E_SCENARIO_PROTOCOL_VERSION } from '../dev/e2e/devE2EScenarioProt
 import type { DevE2EScenarioSessionRecord } from '../dev/e2e/devE2EScenarioSession';
 import {
   collectExplorerScenarioArtifactBundleV1,
-  explorerIntendedActionSemanticHash,
-  explorerScenarioManifestSemanticHash,
   type ExplorerArtifactReferenceV1,
   type ExplorerScenarioActionEvidenceV1,
+  type ExplorerScenarioArtifactCollectionInputV1,
   type ExplorerScenarioArtifactBundleV1,
   type ExplorerScenarioIntendedActionReceiptV1,
-  type ExplorerScenarioManifestReferenceV1,
 } from '../dev/e2e/explorerScenarioArtifactBundle';
+import {
+  EXPLORER_SCENARIO_SCHEMA_VERSION,
+  type ExplorerAction,
+  type ExplorerScenarioContract,
+  type ExplorerScenarioStep,
+} from '../dev/e2e/explorerScenarioContracts';
+import { explorerActionSemanticHash } from '../dev/e2e/explorerScenarioContractValidation';
 import { semanticFingerprintV2 } from '../utils/semanticFingerprintV2';
 
 export const EXPLORER_FIXTURE_SCENARIO_ID = 'scenario-artifact-three-step';
@@ -28,8 +33,110 @@ export const EXPLORER_FIXTURE_STEP_IDS = [
   'log-session-feedback',
 ] as const;
 
-const ACTION_KINDS = ['move_session', 'delete_component', 'session_feedback'] as const;
-const ACTION_SURFACES = ['calendar_card', 'workout_detail', 'session_feedback_form'] as const;
+const EXPLORER_FIXTURE_ACTIONS = [
+  {
+    type: 'session.move',
+    target: { kind: 'session', sessionId: 'session-strength-1' },
+    args: { fromDate: '2026-07-14', toDate: '2026-07-15' },
+  },
+  {
+    type: 'component.delete',
+    target: {
+      kind: 'component',
+      sessionId: 'session-strength-1',
+      componentId: 'component-accessory-1',
+    },
+    args: { date: '2026-07-15' },
+  },
+  {
+    type: 'session-feedback.record',
+    target: {
+      kind: 'session-feedback',
+      sessionId: 'session-conditioning-1',
+      feedbackId: 'feedback-conditioning-1',
+    },
+    args: {
+      date: '2026-07-16',
+      completion: 'full',
+      feeling: 'manageable',
+      soreness: 'mild',
+      difficulty: 6,
+    },
+  },
+] as const satisfies readonly ExplorerAction[];
+
+const ACTION_SURFACES = [
+  'program-card',
+  'program-detail',
+  'session-feedback',
+] as const;
+
+function manifestStep(index: number): ExplorerScenarioStep {
+  const stepId = EXPLORER_FIXTURE_STEP_IDS[index];
+  const action = EXPLORER_FIXTURE_ACTIONS[index];
+  const controlTestId = `explorer-control-${index + 1}`;
+  const targetTestId = `explorer-target-${index + 1}`;
+  return {
+    stepId,
+    action,
+    preconditions: [{
+      predicateId: `${stepId}-revision`,
+      type: 'accepted-revision',
+      revision: index + 1,
+    }],
+    ingress: ACTION_SURFACES[index],
+    controlTestId,
+    targetTestIds: [targetTestId],
+    checkpointPolicy: {
+      kind: 'durable',
+      reload: 'required',
+      renderedProof: 'required',
+    },
+    expectedOutcome: {
+      kind: 'accepted',
+      stateChange: 'required',
+      acceptedRevisionDelta: 1,
+    },
+    oracleAssertions: [
+      {
+        oracleId: `${stepId}-rendered`,
+        type: 'rendered-witness',
+        testId: targetTestId,
+        selector: '/program/weeks/0',
+        relation: 'equals-accepted',
+      },
+      {
+        oracleId: `${stepId}-trace`,
+        type: 'trace-v2-production-receipt',
+        schemaVersion: 2,
+        terminalStatus: 'finalized_success',
+      },
+      {
+        oracleId: `${stepId}-persisted`,
+        type: 'persisted-accepted-equality',
+        selector: '/program',
+      },
+    ],
+    requiredInvariants: [
+      'no-false-success',
+      'durable-readback-equals-accepted-state',
+      'render-equals-accepted-state',
+      'trace-chain-contiguous',
+      'same-seed-same-replay',
+    ],
+  };
+}
+
+export const EXPLORER_FIXTURE_SCENARIO_MANIFEST: ExplorerScenarioContract = {
+  schemaVersion: EXPLORER_SCENARIO_SCHEMA_VERSION,
+  scenarioId: EXPLORER_FIXTURE_SCENARIO_ID,
+  tier: 'golden',
+  seedId: EXPLORER_FIXTURE_SEED_ID,
+  tags: ['explorer', 'scenario-artifact'],
+  campaignSeed: 1729,
+  budgetMs: 15_000,
+  steps: [manifestStep(0), manifestStep(1), manifestStep(2)],
+};
 
 function ref(artifactId: string): ExplorerArtifactReferenceV1 {
   return {
@@ -127,22 +234,14 @@ export function cloneExplorerFixture<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
 
-export function createValidExplorerScenarioArtifactBundle():
-ExplorerScenarioArtifactBundleV1 {
+export function createValidExplorerScenarioArtifactInput(
+  scenarioManifest: ExplorerScenarioContract = EXPLORER_FIXTURE_SCENARIO_MANIFEST,
+):
+ExplorerScenarioArtifactCollectionInputV1 {
   const clockReceipt = createDevE2EClockReceiptForSeed(
     EXPLORER_FIXTURE_SEED_ID,
     '2026-07-13T00:00:00.000Z',
   );
-  const manifestWithoutHash = {
-    scenarioId: EXPLORER_FIXTURE_SCENARIO_ID,
-    seedId: EXPLORER_FIXTURE_SEED_ID,
-    schemaVersion: DEV_E2E_SCENARIO_PROTOCOL_VERSION,
-    orderedStepIds: [...EXPLORER_FIXTURE_STEP_IDS],
-  };
-  const manifestReference: ExplorerScenarioManifestReferenceV1 = {
-    ...manifestWithoutHash,
-    semanticHash: explorerScenarioManifestSemanticHash(manifestWithoutHash),
-  };
   const coordinator = new AthleteActionTraceCoordinator(
     () => true,
     () => new Date('2026-07-13T12:00:00.000Z'),
@@ -155,9 +254,11 @@ ExplorerScenarioArtifactBundleV1 {
   let beforePersisted: DevE2EFingerprintMap = { program: 'persisted:initial' };
 
   EXPLORER_FIXTURE_STEP_IDS.forEach((stepId, index) => {
+    const manifestAction = scenarioManifest.steps[index].action;
+    const manifestIngress = scenarioManifest.steps[index].ingress;
     const token = coordinator.startRoot({
       source: 'tap',
-      actionType: ACTION_KINDS[index],
+      actionType: manifestAction.type,
       campaignId: 'explorer-v1',
       scenarioRunId: EXPLORER_FIXTURE_SCENARIO_ID,
       scenarioStepId: stepId,
@@ -165,10 +266,10 @@ ExplorerScenarioArtifactBundleV1 {
       buildId: 'build-fixture-001',
       priorActionTraceId: priorTraceId,
       canonicalRequestedAction: {
-        actionKind: ACTION_KINDS[index],
+        actionKind: manifestAction.type,
         targetStableId: `target-${index + 1}`,
       },
-      sourceSurface: ACTION_SURFACES[index],
+      sourceSurface: manifestIngress,
       controlId: `control-${index + 1}`,
     });
     const trace = coordinator.getRecord(token.traceId)!;
@@ -176,7 +277,7 @@ ExplorerScenarioArtifactBundleV1 {
       campaignId: 'explorer-v1',
       scenarioRunId: EXPLORER_FIXTURE_SCENARIO_ID,
       scenarioSeed: { seedId: EXPLORER_FIXTURE_SEED_ID },
-      actionScriptYaml: `action: ${ACTION_KINDS[index]}`,
+      actionScriptYaml: `action: ${manifestAction.type}`,
       expectedOutcome: { accepted: true },
       screenshots: { [`${stepId}-after.png`]: `fixture-screenshot-${index}` },
       accessibilityHierarchies: {
@@ -194,18 +295,17 @@ ExplorerScenarioArtifactBundleV1 {
     const reloadAccepted = `accepted:reload:${index + 1}`;
     const reloadPersisted = { program: `persisted:reload:${index + 1}` };
     const intendedActionReceipt: ExplorerScenarioIntendedActionReceiptV1 = {
-      actionKind: ACTION_KINDS[index],
-      productionSurface: ACTION_SURFACES[index],
+      actionKind: manifestAction.type,
+      productionSurface: manifestIngress,
       semanticInput: {
         targetStableId: `target-${index + 1}`,
-        operation: ACTION_KINDS[index],
+        operation: manifestAction.type,
       },
     };
     actions.push({
       stepId,
       intendedActionReceipt,
-      intendedActionSemanticHash:
-        explorerIntendedActionSemanticHash(intendedActionReceipt),
+      intendedActionSemanticHash: explorerActionSemanticHash(manifestAction),
       actualProductionReceiptReference: ref(`production-receipt:${stepId}`),
       actionArtifactBundle: actionBundle,
       traceV2RootId: trace.traceId,
@@ -307,19 +407,13 @@ ExplorerScenarioArtifactBundleV1 {
   const finalSession = reloadReceipts[reloadReceipts.length - 1]
     .scenarioSessionRecord;
 
-  return collectExplorerScenarioArtifactBundleV1({
+  return {
+    scenarioManifest,
     identity: {
-      scenarioId: EXPLORER_FIXTURE_SCENARIO_ID,
-      scenarioTier: 'bounded',
-      manifestSchemaVersion: manifestReference.schemaVersion,
-      manifestSemanticHash: manifestReference.semanticHash,
-      seedId: EXPLORER_FIXTURE_SEED_ID,
-      campaignSeed: 'campaign-seed-001',
       repositoryCommit: '9f28da0d51a62106bc85d12a14868c216de8b96d',
       buildIdentifier: 'build-fixture-001',
       deterministicClockReceipt: clockReceipt,
     },
-    resolvedScenarioManifestReference: manifestReference,
     seedEvidence: {
       witnessReport: {
         seedId: EXPLORER_FIXTURE_SEED_ID,
@@ -348,24 +442,25 @@ ExplorerScenarioArtifactBundleV1 {
       },
     },
     actions,
-    oracles: EXPLORER_FIXTURE_STEP_IDS.map((stepId, index) => ({
-      oracleId: `oracle:${stepId}`,
-      stepId,
-      evaluationPoint: 'after_reload' as const,
-      enforcement: 'hard' as const,
-      evaluationStatus: 'evaluated' as const,
-      expectedValue: {
-        representation: 'semantic_fingerprint' as const,
-        fingerprint: `accepted:reload:${index + 1}`,
-      },
-      actualValueOrFingerprint: {
-        representation: 'semantic_fingerprint' as const,
-        fingerprint: `accepted:reload:${index + 1}`,
-      },
-      passed: true,
-      failureCode: null,
-      firstDivergentProjection: null,
-    })),
+    oracles: scenarioManifest.steps.flatMap((step, index) =>
+      step.oracleAssertions.map((oracle) => ({
+        oracleId: oracle.oracleId,
+        stepId: step.stepId,
+        evaluationPoint: 'after_reload' as const,
+        enforcement: 'hard' as const,
+        evaluationStatus: 'evaluated' as const,
+        expectedValue: {
+          representation: 'semantic_fingerprint' as const,
+          fingerprint: `accepted:reload:${index + 1}`,
+        },
+        actualValueOrFingerprint: {
+          representation: 'semantic_fingerprint' as const,
+          fingerprint: `accepted:reload:${index + 1}`,
+        },
+        passed: true,
+        failureCode: null,
+        firstDivergentProjection: null,
+      }))),
     result: {
       disposition: 'passed',
       firstFailingStepId: null,
@@ -375,5 +470,12 @@ ExplorerScenarioArtifactBundleV1 {
       runnerLogReference: ref('runner-log:scenario-artifact-three-step'),
       reproductionCommand: 'npm run test:explorer-scenario-artifacts',
     },
-  });
+  };
+}
+
+export function createValidExplorerScenarioArtifactBundle():
+ExplorerScenarioArtifactBundleV1 {
+  return collectExplorerScenarioArtifactBundleV1(
+    createValidExplorerScenarioArtifactInput(),
+  );
 }

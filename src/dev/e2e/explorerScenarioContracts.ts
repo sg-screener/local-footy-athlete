@@ -33,7 +33,7 @@ export const EXPLORER_CAPABILITY_IDS = [
 
 export type ExplorerCapabilityId = (typeof EXPLORER_CAPABILITY_IDS)[number];
 
-/** These capabilities are represented by the contract but have no production owner yet. */
+/** Default gates remain fail-closed until a scenario opts into a declared owner. */
 export const EXPLORER_DEFAULT_CAPABILITY_STATUS: Readonly<
   Record<ExplorerCapabilityId, 'disabled'>
 > = Object.freeze({
@@ -51,6 +51,18 @@ export interface ExplorerCapabilityDeclaration {
   readonly owner: string;
   readonly contractVersion: string;
 }
+
+/**
+ * Canonical production ownership registry. Explorer consumers may verify this
+ * receipt, but they must not invent capability ownership locally.
+ */
+export const EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS = Object.freeze([
+  {
+    capabilityId: 'week.repeat',
+    owner: 'repeatWeekIntoNextWeek',
+    contractVersion: 'repeat-week-transaction-v1',
+  },
+] as const satisfies readonly ExplorerCapabilityDeclaration[]);
 
 export interface ExplorerContractValidationOptions {
   readonly declaredCapabilities?: readonly ExplorerCapabilityDeclaration[];

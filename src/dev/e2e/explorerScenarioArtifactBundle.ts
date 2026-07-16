@@ -9,11 +9,38 @@ import type {
   DevE2ECheckpointRecord,
   DevE2EFingerprintMap,
 } from './devE2ECheckpoint';
-import type { DevE2ESeedId } from './devE2ESeedIds';
+import { isDevE2ESeedId, type DevE2ESeedId } from './devE2ESeedIds';
 import {
   parseDevE2EScenarioSessionRecord,
+  type DevE2ENextActionEligibility,
   type DevE2EScenarioSessionRecord,
 } from './devE2EScenarioSession';
+import {
+  EXPLORER_ACTION_TYPES,
+  EXPLORER_INGRESS_SURFACES,
+  EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS,
+  EXPLORER_SCENARIO_SCHEMA_VERSION,
+  EXPLORER_SCENARIO_TIERS,
+  explorerActionCapability,
+  type ExplorerAction,
+  type ExplorerActionType,
+  type ExplorerCapabilityDeclaration,
+  type ExplorerCapabilityGate,
+  type ExplorerCapabilityId,
+  type ExplorerCheckpointPolicy,
+  type ExplorerIngressSurface,
+  type ExplorerScenarioContract,
+  type ExplorerScenarioTier,
+} from './explorerScenarioContracts';
+import {
+  EXPLORER_ACTION_HASH_CONTRACT,
+  EXPLORER_SCENARIO_HASH_CONTRACT,
+  explorerActionSemanticHash as canonicalExplorerActionSemanticHash,
+  explorerScenarioSemanticHash as canonicalExplorerScenarioSemanticHash,
+  validateExplorerScenarioContract,
+  type ExplorerActionSemanticHash,
+  type ExplorerScenarioSemanticHash,
+} from './explorerScenarioContractValidation';
 import {
   semanticFingerprintV2,
   type SemanticFingerprintV2,
@@ -74,11 +101,25 @@ export interface ExplorerArtifactReferenceV1 {
 }
 
 export interface ExplorerScenarioManifestReferenceV1 {
-  scenarioId: string;
+  scenarioId: ExplorerScenarioContract['scenarioId'];
+  scenarioTier: ExplorerScenarioTier;
   seedId: DevE2ESeedId;
-  schemaVersion: number;
-  semanticHash: SemanticFingerprintV2;
-  orderedStepIds: string[];
+  schemaVersion: typeof EXPLORER_SCENARIO_SCHEMA_VERSION;
+  campaignSeed?: number;
+  semanticHash: ExplorerScenarioSemanticHash;
+  steps: ExplorerScenarioManifestStepReceiptV1[];
+  capabilityDeclarations: ExplorerCapabilityDeclaration[];
+}
+
+/** Privacy-safe projection of one canonical manifest step. */
+export interface ExplorerScenarioManifestStepReceiptV1 {
+  stepId: string;
+  actionType: ExplorerActionType;
+  actionSemanticHash: ExplorerActionSemanticHash;
+  ingress: ExplorerIngressSurface;
+  oracleIds: string[];
+  checkpointPolicy: ExplorerCheckpointPolicy;
+  capability: ExplorerCapabilityGate<ExplorerCapabilityId> | null;
 }
 
 export interface ExplorerScenarioSeedWitnessV1 {
@@ -102,37 +143,37 @@ export interface ExplorerScenarioSeedEvidenceV1 {
 }
 
 export interface ExplorerScenarioCheckpointEvidenceV1 {
-  scenarioId: string;
-  stepId: string;
+  scenarioId: DevE2EScenarioSessionRecord['scenarioId'];
+  stepId: NonNullable<DevE2EScenarioSessionRecord['checkpointStepId']>;
   /** Reload count before the cold reload that follows this checkpoint. */
   reloadCount: number;
   checkpointRecord: DevE2ECheckpointRecord;
-  scenarioSessionRecord: DevE2EScenarioSessionRecord;
+  scenarioSessionRecord: Readonly<DevE2EScenarioSessionRecord>;
 }
 
 export interface ExplorerScenarioReloadReceiptV1 {
   protocolVersion: typeof EXPLORER_SCENARIO_RELOAD_RECEIPT_VERSION;
   receiptId: string;
-  scenarioId: string;
-  stepId: string;
+  scenarioId: DevE2EScenarioSessionRecord['scenarioId'];
+  stepId: NonNullable<DevE2EScenarioSessionRecord['checkpointStepId']>;
   reloadCount: number;
   traceV2RootId: string;
   acceptedSemanticFingerprint: string;
   persistedStoreFingerprints: DevE2EFingerprintMap;
   clockFingerprint: string;
-  scenarioSessionRecord: DevE2EScenarioSessionRecord;
+  scenarioSessionRecord: Readonly<DevE2EScenarioSessionRecord>;
 }
 
 export interface ExplorerScenarioSessionEvidenceV1 {
-  protocolVersion: number;
-  scenarioSessionRecordAtReset: DevE2EScenarioSessionRecord;
+  protocolVersion: DevE2EScenarioSessionRecord['protocolVersion'];
+  scenarioSessionRecordAtReset: Readonly<DevE2EScenarioSessionRecord>;
   checkpointRecords: ExplorerScenarioCheckpointEvidenceV1[];
   reloadReceipts: ExplorerScenarioReloadReceiptV1[];
-  finalScenarioSessionRecord: DevE2EScenarioSessionRecord;
+  finalScenarioSessionRecord: Readonly<DevE2EScenarioSessionRecord>;
   reloadCount: number;
   completionStatus: {
-    status: 'complete' | 'blocked';
-    reasonCode: string;
+    status: Exclude<DevE2ENextActionEligibility['status'], 'eligible'>;
+    reasonCode: DevE2ENextActionEligibility['reasonCode'];
   };
 }
 
@@ -155,7 +196,7 @@ export interface ExplorerScenarioActionFingerprintsV1 {
 
 export interface ExplorerScenarioActionEvidenceV1 {
   stepId: string;
-  intendedActionSemanticHash: SemanticFingerprintV2;
+  intendedActionSemanticHash: ExplorerActionSemanticHash;
   intendedActionReceipt: ExplorerScenarioIntendedActionReceiptV1;
   actualProductionReceiptReference: ExplorerArtifactReferenceV1;
   actionArtifactBundle: AthleteActionArtifactBundleV2;
@@ -213,7 +254,7 @@ export interface ExplorerScenarioResultV1 {
 
 export interface ExplorerGeneratedActionChainEntryV1 {
   stepId: string;
-  intendedActionSemanticHash: SemanticFingerprintV2;
+  intendedActionSemanticHash: ExplorerActionSemanticHash;
 }
 
 export interface ExplorerShrinkLineageEntryV1 {
@@ -232,20 +273,22 @@ export interface ExplorerScenarioGeneratedCaseMetadataV1 {
   shrinkAttemptCount?: number;
 }
 
+export interface ExplorerScenarioArtifactIdentityV1 {
+  scenarioId: ExplorerScenarioContract['scenarioId'];
+  scenarioTier: ExplorerScenarioTier;
+  manifestSchemaVersion: typeof EXPLORER_SCENARIO_SCHEMA_VERSION;
+  manifestSemanticHash: ExplorerScenarioSemanticHash;
+  seedId: DevE2ESeedId;
+  campaignSeed?: number;
+  repositoryCommit: string;
+  buildIdentifier: string;
+  deterministicClockReceipt: DevE2EClockReceipt;
+}
+
 export interface ExplorerScenarioArtifactBundleV1 {
   schemaVersion: typeof EXPLORER_SCENARIO_ARTIFACT_SCHEMA_VERSION;
   semanticHash: SemanticFingerprintV2;
-  identity: {
-    scenarioId: string;
-    scenarioTier: string;
-    manifestSchemaVersion: number;
-    manifestSemanticHash: SemanticFingerprintV2;
-    seedId: DevE2ESeedId;
-    campaignSeed?: string;
-    repositoryCommit: string;
-    buildIdentifier: string;
-    deterministicClockReceipt: DevE2EClockReceipt;
-  };
+  identity: ExplorerScenarioArtifactIdentityV1;
   resolvedScenarioManifestReference: ExplorerScenarioManifestReferenceV1;
   seedEvidence: ExplorerScenarioSeedEvidenceV1;
   scenarioSessionEvidence: ExplorerScenarioSessionEvidenceV1;
@@ -257,6 +300,14 @@ export interface ExplorerScenarioArtifactBundleV1 {
 
 type ExplorerScenarioArtifactBundleWithoutHashV1 =
   Omit<ExplorerScenarioArtifactBundleV1, 'schemaVersion' | 'semanticHash'>;
+
+export type ExplorerScenarioArtifactCollectionInputV1 =
+  Omit<ExplorerScenarioArtifactBundleWithoutHashV1,
+    'identity' | 'resolvedScenarioManifestReference'> & {
+    scenarioManifest: ExplorerScenarioContract;
+    identity: Pick<ExplorerScenarioArtifactIdentityV1,
+      'repositoryCommit' | 'buildIdentifier' | 'deterministicClockReceipt'>;
+  };
 
 const ISO_INSTANT =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -404,7 +455,7 @@ export function normalizeExplorerScenarioSemanticValue(value: unknown): unknown 
   }, new WeakSet<object>());
 }
 
-export function explorerScenarioSemanticHash(value: unknown): SemanticFingerprintV2 {
+export function explorerScenarioArtifactSemanticHash(value: unknown): SemanticFingerprintV2 {
   return semanticFingerprintV2({
     contract: 'explorer-scenario-artifact-v1',
     value: normalizeExplorerScenarioSemanticValue(value),
@@ -412,21 +463,15 @@ export function explorerScenarioSemanticHash(value: unknown): SemanticFingerprin
 }
 
 export function explorerScenarioManifestSemanticHash(
-  reference: Omit<ExplorerScenarioManifestReferenceV1, 'semanticHash'>,
-): SemanticFingerprintV2 {
-  return explorerScenarioSemanticHash({
-    kind: 'resolved_scenario_manifest_reference',
-    ...reference,
-  });
+  manifest: ExplorerScenarioContract,
+): ExplorerScenarioSemanticHash {
+  return canonicalExplorerScenarioSemanticHash(manifest);
 }
 
 export function explorerIntendedActionSemanticHash(
-  receipt: ExplorerScenarioIntendedActionReceiptV1,
-): SemanticFingerprintV2 {
-  return explorerScenarioSemanticHash({
-    kind: 'intended_action_receipt',
-    ...receipt,
-  });
+  action: ExplorerAction,
+): ExplorerActionSemanticHash {
+  return canonicalExplorerActionSemanticHash(action);
 }
 
 export function buildExplorerFailureClusterSignature(args: {
@@ -437,7 +482,7 @@ export function buildExplorerFailureClusterSignature(args: {
   firstDivergentProjection: string;
   firstFailingStepId: string;
 }): SemanticFingerprintV2 {
-  return explorerScenarioSemanticHash({
+  return explorerScenarioArtifactSemanticHash({
     kind: 'explorer_failure_cluster_signature_v1',
     oracleId: args.oracleId,
     primaryFailureCode: args.primaryFailureCode,
@@ -657,6 +702,86 @@ function assertOracleValue(value: unknown, detail: string): void {
   }
 }
 
+function hasHashContract(value: unknown, contract: string): value is string {
+  if (typeof value !== 'string' || !value.startsWith(`${contract}:`)) return false;
+  return /^[0-9a-f]{64}$/.test(value.slice(contract.length + 1));
+}
+
+function isCheckpointPolicy(value: unknown): value is ExplorerCheckpointPolicy {
+  if (!isRecord(value)) return false;
+  const keys = Object.keys(value).sort().join(',');
+  if (value.kind === 'durable') {
+    return keys === 'kind,reload,renderedProof' &&
+      (value.reload === 'required' || value.reload === 'not-required') &&
+      (value.renderedProof === 'required' || value.renderedProof === 'not-required');
+  }
+  if (value.kind === 'rejected') {
+    return keys === 'kind,renderedProof' &&
+      (value.renderedProof === 'required' || value.renderedProof === 'not-required');
+  }
+  return value.kind === 'none' && keys === 'kind,reason' &&
+    value.reason === 'capability-disabled';
+}
+
+function productionCapabilityDeclarations(
+  capabilityIds: readonly ExplorerCapabilityId[],
+): ExplorerCapabilityDeclaration[] | null {
+  const uniqueIds = [...new Set(capabilityIds)];
+  const declarations = uniqueIds.map((capabilityId) =>
+    EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS.find((candidate) =>
+      candidate.capabilityId === capabilityId));
+  if (declarations.some((declaration) => declaration === undefined)) return null;
+  return declarations.map((declaration) => ({ ...declaration! }));
+}
+
+function sameStableValue(left: unknown, right: unknown): boolean {
+  return JSON.stringify(normalizeExplorerScenarioSemanticValue(left)) ===
+    JSON.stringify(normalizeExplorerScenarioSemanticValue(right));
+}
+
+function jsonReceiptSnapshot<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function buildManifestReference(
+  manifest: ExplorerScenarioContract,
+): ExplorerScenarioManifestReferenceV1 {
+  if (!isDevE2ESeedId(manifest.seedId)) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.IDENTITY_MISMATCH, 'manifest_seed_id');
+  }
+  const steps = manifest.steps.map((step): ExplorerScenarioManifestStepReceiptV1 => {
+    const capability = explorerActionCapability(step.action);
+    return {
+      stepId: step.stepId,
+      actionType: step.action.type,
+      actionSemanticHash: canonicalExplorerActionSemanticHash(step.action),
+      ingress: step.ingress,
+      oracleIds: step.oracleAssertions.map((oracle) => oracle.oracleId),
+      checkpointPolicy: { ...step.checkpointPolicy },
+      capability: capability ? { ...capability } : null,
+    };
+  });
+  const declarations = productionCapabilityDeclarations(
+    steps.flatMap((step) => step.capability?.status === 'enabled'
+      ? [step.capability.capabilityId]
+      : []),
+  );
+  if (!declarations) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.IDENTITY_MISMATCH,
+      'manifest_capability_declaration');
+  }
+  return {
+    scenarioId: manifest.scenarioId,
+    scenarioTier: manifest.tier,
+    seedId: manifest.seedId,
+    schemaVersion: manifest.schemaVersion,
+    ...(manifest.campaignSeed === undefined ? {} : { campaignSeed: manifest.campaignSeed }),
+    semanticHash: canonicalExplorerScenarioSemanticHash(manifest),
+    steps,
+    capabilityDeclarations: declarations,
+  };
+}
+
 /**
  * Scenario-level cross-record validator. It never mutates or widens the embedded
  * AthleteActionArtifactBundleV2 contract.
@@ -674,24 +799,74 @@ export function assertExplorerScenarioArtifactBundleV1(
   const manifest = bundle.resolvedScenarioManifestReference;
   if (!isRecord(identity) || !isRecord(manifest) ||
     !nonEmptyString(identity.scenarioId) ||
-    !nonEmptyString(identity.scenarioTier) ||
+    !EXPLORER_SCENARIO_TIERS.includes(identity.scenarioTier as ExplorerScenarioTier) ||
     !nonEmptyString(identity.repositoryCommit) ||
     !nonEmptyString(identity.buildIdentifier) ||
-    typeof identity.manifestSchemaVersion !== 'number' ||
-    !Number.isInteger(identity.manifestSchemaVersion) ||
-    identity.manifestSchemaVersion < 1 ||
-    !nonEmptyString(identity.manifestSemanticHash) ||
-    !nonEmptyString(identity.seedId) ||
-    (identity.campaignSeed !== undefined && !nonEmptyString(identity.campaignSeed)) ||
+    identity.manifestSchemaVersion !== EXPLORER_SCENARIO_SCHEMA_VERSION ||
+    !isDevE2ESeedId(identity.seedId) ||
+    (identity.campaignSeed !== undefined &&
+      (typeof identity.campaignSeed !== 'number' ||
+        !Number.isInteger(identity.campaignSeed) || identity.campaignSeed < 0)) ||
     manifest.scenarioId !== identity.scenarioId ||
+    manifest.scenarioTier !== identity.scenarioTier ||
     manifest.seedId !== identity.seedId ||
     manifest.schemaVersion !== identity.manifestSchemaVersion ||
+    manifest.campaignSeed !== identity.campaignSeed ||
     manifest.semanticHash !== identity.manifestSemanticHash ||
-    !Array.isArray(manifest.orderedStepIds) ||
-    manifest.orderedStepIds.length === 0 ||
-    manifest.orderedStepIds.some((stepId) => !nonEmptyString(stepId)) ||
-    new Set(manifest.orderedStepIds).size !== manifest.orderedStepIds.length) {
+    !Array.isArray(manifest.steps) || manifest.steps.length === 0 ||
+    !Array.isArray(manifest.capabilityDeclarations)) {
     fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.IDENTITY_MISMATCH);
+  }
+  if (!hasHashContract(identity.manifestSemanticHash, EXPLORER_SCENARIO_HASH_CONTRACT)) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.MANIFEST_SEMANTIC_HASH_MISMATCH);
+  }
+  const manifestStepIds = manifest.steps.map((step) => step?.stepId);
+  if (manifestStepIds.some((stepId) => !nonEmptyString(stepId)) ||
+    new Set(manifestStepIds).size !== manifestStepIds.length) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.STEP_ORDER_MISMATCH,
+      'manifest_step_receipts');
+  }
+  const manifestOracleIds = new Set<string>();
+  const enabledCapabilities: ExplorerCapabilityId[] = [];
+  for (const step of manifest.steps) {
+    if (!isRecord(step) ||
+      !EXPLORER_ACTION_TYPES.includes(step.actionType as ExplorerActionType) ||
+      !EXPLORER_INGRESS_SURFACES.includes(step.ingress as ExplorerIngressSurface) ||
+      !hasHashContract(step.actionSemanticHash, EXPLORER_ACTION_HASH_CONTRACT) ||
+      !Array.isArray(step.oracleIds) ||
+      step.oracleIds.some((oracleId) => !nonEmptyString(oracleId)) ||
+      !isCheckpointPolicy(step.checkpointPolicy)) {
+      fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.IDENTITY_MISMATCH,
+        `${step?.stepId ?? 'unknown'}:manifest_step_receipt`);
+    }
+    for (const oracleId of step.oracleIds) {
+      if (manifestOracleIds.has(oracleId)) {
+        fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.IDENTITY_MISMATCH,
+          `${step.stepId}:duplicate_oracle_id`);
+      }
+      manifestOracleIds.add(oracleId);
+    }
+    const capability = step.capability;
+    const isCapabilityAction = step.actionType === 'week.repeat' ||
+      step.actionType === 'coach.message';
+    if ((!isCapabilityAction && capability !== null) ||
+      (isCapabilityAction && (!isRecord(capability) ||
+        capability.capabilityId !== step.actionType ||
+        (capability.status !== 'enabled' && capability.status !== 'disabled'))) ||
+      (capability?.status === 'disabled' && step.checkpointPolicy.kind !== 'none') ||
+      (capability?.status === 'enabled' && step.checkpointPolicy.kind === 'none')) {
+      fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.IDENTITY_MISMATCH,
+        `${step.stepId}:capability_receipt`);
+    }
+    if (capability?.status === 'enabled') {
+      enabledCapabilities.push(capability.capabilityId);
+    }
+  }
+  const expectedDeclarations = productionCapabilityDeclarations(enabledCapabilities);
+  if (!expectedDeclarations ||
+    !sameStableValue(manifest.capabilityDeclarations, expectedDeclarations)) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.IDENTITY_MISMATCH,
+      'capability_declarations');
   }
   let clockReceipt: DevE2EClockReceipt;
   try {
@@ -703,15 +878,6 @@ export function assertExplorerScenarioArtifactBundleV1(
   if (clockReceipt.seedId !== identity.seedId) {
     fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.IDENTITY_MISMATCH,
       'clock_seed_id');
-  }
-  const expectedManifestHash = explorerScenarioManifestSemanticHash({
-    scenarioId: manifest.scenarioId,
-    seedId: manifest.seedId,
-    schemaVersion: manifest.schemaVersion,
-    orderedStepIds: manifest.orderedStepIds,
-  });
-  if (manifest.semanticHash !== expectedManifestHash) {
-    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.MANIFEST_SEMANTIC_HASH_MISMATCH);
   }
 
   const seed = bundle.seedEvidence;
@@ -765,11 +931,11 @@ export function assertExplorerScenarioArtifactBundleV1(
 
   if (!Array.isArray(bundle.actions) || bundle.actions.length === 0 ||
     bundle.actions.some((action, index) =>
-      !isRecord(action) || action.stepId !== manifest.orderedStepIds[index])) {
+      !isRecord(action) || action.stepId !== manifest.steps[index]?.stepId)) {
     fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.STEP_ORDER_MISMATCH);
   }
   if (sessionEvidence.completionStatus.status === 'complete' &&
-    bundle.actions.length !== manifest.orderedStepIds.length) {
+    bundle.actions.length !== manifest.steps.length) {
     fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.STEP_ORDER_MISMATCH,
       'complete_scenario_missing_steps');
   }
@@ -781,25 +947,29 @@ export function assertExplorerScenarioArtifactBundleV1(
 
   let expectedPriorTraceId: string | null = null;
   bundle.actions.forEach((action, index) => {
+    const manifestStep = manifest.steps[index];
     if (!nonEmptyString(action.stepId) ||
       !nonEmptyString(action.traceV2RootId) ||
-      action.priorActionTraceId !== expectedPriorTraceId ||
-      !isRecord(action.intendedActionReceipt) ||
-      !nonEmptyString(action.intendedActionReceipt.actionKind) ||
-      !nonEmptyString(action.intendedActionReceipt.productionSurface)) {
+      action.priorActionTraceId !== expectedPriorTraceId) {
       fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.TRACE_PRIOR_LINKAGE_BROKEN,
         action.stepId);
     }
+    if (!isRecord(action.intendedActionReceipt) ||
+      action.intendedActionReceipt.actionKind !== manifestStep.actionType ||
+      action.intendedActionReceipt.productionSurface !== manifestStep.ingress ||
+      manifestStep.checkpointPolicy.kind === 'none') {
+      fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.IDENTITY_MISMATCH,
+        `${action.stepId}:canonical_action_receipt`);
+    }
     assertPrivacySafeValue(action.intendedActionReceipt.semanticInput,
       ['actions', action.stepId, 'intendedActionReceipt', 'semanticInput']);
-    const expectedIntendedHash = explorerIntendedActionSemanticHash(
-      action.intendedActionReceipt,
-    );
-    if (action.intendedActionSemanticHash !== expectedIntendedHash) {
-      fail(containsEnvironmentSpecificSemanticInput(action.intendedActionReceipt.semanticInput)
-        ? EXPLORER_SCENARIO_ARTIFACT_FAILURE.ENVIRONMENT_SPECIFIC_SEMANTIC_HASH_INPUT
-        : EXPLORER_SCENARIO_ARTIFACT_FAILURE.INTENDED_ACTION_SEMANTIC_HASH_MISMATCH,
-      action.stepId);
+    if (containsEnvironmentSpecificSemanticInput(action.intendedActionReceipt.semanticInput)) {
+      fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.ENVIRONMENT_SPECIFIC_SEMANTIC_HASH_INPUT,
+        action.stepId);
+    }
+    if (action.intendedActionSemanticHash !== manifestStep.actionSemanticHash) {
+      fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.INTENDED_ACTION_SEMANTIC_HASH_MISMATCH,
+        action.stepId);
     }
     assertArtifactReference(action.actualProductionReceiptReference,
       EXPLORER_SCENARIO_ARTIFACT_FAILURE.INVALID_BUNDLE,
@@ -951,7 +1121,19 @@ export function assertExplorerScenarioArtifactBundleV1(
   if (!Array.isArray(bundle.oracles) || bundle.oracles.length === 0) {
     fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.ORACLE_UNEVALUATED, 'no_oracles');
   }
-  const stepOrder = new Map(manifest.orderedStepIds.map((stepId, index) => [stepId, index]));
+  const stepOrder = new Map(manifest.steps.map((step, index) => [step.stepId, index]));
+  const expectedOracleReceipts = manifest.steps.slice(0, bundle.actions.length)
+    .flatMap((step) => step.oracleIds.map((oracleId) => ({
+      oracleId,
+      stepId: step.stepId,
+    })));
+  if (bundle.oracles.length !== expectedOracleReceipts.length ||
+    bundle.oracles.some((oracle, index) =>
+      oracle?.oracleId !== expectedOracleReceipts[index]?.oracleId ||
+      oracle?.stepId !== expectedOracleReceipts[index]?.stepId)) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.ORACLE_UNEVALUATED,
+      'canonical_oracle_receipts');
+  }
   let lastOracleStep = -1;
   const oracleIds = new Set<string>();
   for (const oracle of bundle.oracles) {
@@ -1060,9 +1242,12 @@ export function assertExplorerScenarioArtifactBundleV1(
     const shrinkLineageLength = Array.isArray(generated.shrinkLineage)
       ? generated.shrinkLineage.length
       : 0;
+    const canonicalActionHashes = new Map(manifest.steps.map((step) =>
+      [step.stepId, step.actionSemanticHash]));
     if (chains.some((chain) => chain.some((entry) =>
       !isRecord(entry) || !stepOrder.has(entry.stepId) ||
-      !nonEmptyString(entry.intendedActionSemanticHash))) ||
+      !hasHashContract(entry.intendedActionSemanticHash, EXPLORER_ACTION_HASH_CONTRACT) ||
+      entry.intendedActionSemanticHash !== canonicalActionHashes.get(entry.stepId))) ||
       (generated.coveredPairIds !== undefined &&
         (!Array.isArray(generated.coveredPairIds) ||
           generated.coveredPairIds.some((pairId) => !nonEmptyString(pairId)))) ||
@@ -1086,7 +1271,7 @@ export function assertExplorerScenarioArtifactBundleV1(
     }
   }
 
-  const expectedBundleHash = explorerScenarioSemanticHash(bundle);
+  const expectedBundleHash = explorerScenarioArtifactSemanticHash(bundle);
   if (bundle.semanticHash !== expectedBundleHash) {
     fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.SEMANTIC_HASH_MISMATCH);
   }
@@ -1094,16 +1279,38 @@ export function assertExplorerScenarioArtifactBundleV1(
 
 /** Adds the self-verifying semantic receipt and immediately validates the bundle. */
 export function collectExplorerScenarioArtifactBundleV1(
-  input: ExplorerScenarioArtifactBundleWithoutHashV1,
+  input: ExplorerScenarioArtifactCollectionInputV1,
 ): ExplorerScenarioArtifactBundleV1 {
+  const scenarioManifest = validateExplorerScenarioContract(input.scenarioManifest, {
+    declaredCapabilities: EXPLORER_PRODUCTION_CAPABILITY_DECLARATIONS,
+  });
+  const resolvedScenarioManifestReference = buildManifestReference(scenarioManifest);
+  const {
+    scenarioManifest: _scenarioManifest,
+    identity: runtimeIdentity,
+    ...evidence
+  } = input;
+  const evidenceSnapshot = jsonReceiptSnapshot(evidence);
   const draft = {
     schemaVersion: EXPLORER_SCENARIO_ARTIFACT_SCHEMA_VERSION,
     semanticHash: '' as SemanticFingerprintV2,
-    ...input,
+    identity: {
+      scenarioId: resolvedScenarioManifestReference.scenarioId,
+      scenarioTier: resolvedScenarioManifestReference.scenarioTier,
+      manifestSchemaVersion: resolvedScenarioManifestReference.schemaVersion,
+      manifestSemanticHash: resolvedScenarioManifestReference.semanticHash,
+      seedId: resolvedScenarioManifestReference.seedId,
+      ...(resolvedScenarioManifestReference.campaignSeed === undefined
+        ? {}
+        : { campaignSeed: resolvedScenarioManifestReference.campaignSeed }),
+      ...runtimeIdentity,
+    },
+    resolvedScenarioManifestReference,
+    ...evidenceSnapshot,
   };
   const bundle: ExplorerScenarioArtifactBundleV1 = {
     ...draft,
-    semanticHash: explorerScenarioSemanticHash(draft),
+    semanticHash: explorerScenarioArtifactSemanticHash(draft),
   };
   assertExplorerScenarioArtifactBundleV1(bundle);
   return bundle;

@@ -28,8 +28,14 @@ import {
 export const EXPLORER_SCENARIO_HASH_CONTRACT =
   'explorer-scenario-contract-sha256-v1' as const;
 
+export const EXPLORER_ACTION_HASH_CONTRACT =
+  'explorer-action-contract-sha256-v1' as const;
+
 export type ExplorerScenarioSemanticHash =
   `${typeof EXPLORER_SCENARIO_HASH_CONTRACT}:${string}`;
+
+export type ExplorerActionSemanticHash =
+  `${typeof EXPLORER_ACTION_HASH_CONTRACT}:${string}`;
 
 export type ExplorerScenarioValidationIssueCode =
   | 'unknown-field'
@@ -1623,6 +1629,23 @@ export function explorerScenarioSemanticHash(
     scenario: JSON.parse(normalized) as ExplorerJsonValue,
   }));
   return `${EXPLORER_SCENARIO_HASH_CONTRACT}:${digest}`;
+}
+
+/** Canonical action hash used by manifests, runners, and artifact receipts. */
+export function explorerActionSemanticHash(
+  action: ExplorerAction,
+): ExplorerActionSemanticHash {
+  const normalized = normalizeStableValue(action, '$', new WeakSet<object>(), null);
+  if (normalized === OMIT) {
+    throw new ExplorerScenarioContractValidationError([
+      { code: 'unstable-normalization', path: '$', message: 'action cannot be omitted' },
+    ]);
+  }
+  const digest = sha256Hex(JSON.stringify({
+    contract: EXPLORER_ACTION_HASH_CONTRACT,
+    action: normalized,
+  }));
+  return `${EXPLORER_ACTION_HASH_CONTRACT}:${digest}`;
 }
 
 /** Compile-time sentinel: adding an action must force an explicit validator decision. */
