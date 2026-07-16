@@ -26,7 +26,7 @@ import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { applyInjuryFilterToWorkout } from './injuryWorkoutFilter';
 import {
   applyConstraintsToSession,
-  scoreExerciseAgainstConstraints,
+  applyConstraintsToTypedComponents,
   type Constraint,
 } from './exposureEngine';
 import { buildConstraintPlans } from './constraintPlan';
@@ -168,133 +168,6 @@ function engineConstraintsFor(
   constraints: readonly ActiveConstraint[],
 ): Constraint[] {
   return buildConstraintPlans([...constraints]).map((plan) => plan.constraint);
-}
-
-function textIsRemovedByConstraints(
-  text: string,
-  constraints: readonly Constraint[],
-): boolean {
-  return !!text.trim() &&
-    scoreExerciseAgainstConstraints(text, [...constraints]).decision === 'remove';
-}
-
-function speedBlockExposureText(workout: Workout): string {
-  const block = workout.speedBlock;
-  if (!block) return '';
-  const typedExposure = block.kind === 'cod'
-    ? 'sprint acceleration change of direction agility'
-    : 'sprint acceleration high speed running';
-  return `${typedExposure} ${block.title} ${block.label} ${block.prescription}`;
-}
-
-function applyTypedComponentValidation(args: {
-  workout: Workout;
-  constraints: readonly Constraint[];
-  availableEquipment: readonly import('../data/exercisePools').EquipmentTag[] | null;
-}): {
-  workout: Workout;
-  removedComponents: ActiveConstraintValidationResult['removedComponents'];
-} {
-  let workout = args.workout;
-  const removedComponents: ActiveConstraintValidationResult['removedComponents'] = [];
-
-  if (
-    workout.speedBlock &&
-    textIsRemovedByConstraints(speedBlockExposureText(workout), args.constraints)
-  ) {
-    workout = { ...workout, speedBlock: undefined };
-    removedComponents.push('speed');
-  }
-
-  if (workout.powerBlock) {
-    const typedPowerExposure = workout.powerBlock.family === 'lower'
-      ? 'plyometric explosive lower jump'
-      : 'explosive push';
-    const options = workout.powerBlock.options.filter((option) =>
-      !textIsRemovedByConstraints(`${typedPowerExposure} ${option.name}`, args.constraints) &&
-      (!args.availableEquipment || equipmentRequirementsAreAvailable(
-        option.equipmentRequired,
-        args.availableEquipment,
-      )),
-    );
-    if (options.length !== workout.powerBlock.options.length) {
-      workout = options.length > 0
-        ? { ...workout, powerBlock: { ...workout.powerBlock, options } }
-        : { ...workout, powerBlock: undefined };
-      if (options.length === 0) removedComponents.push('power');
-    }
-  }
-
-  if (workout.recoveryAddons?.length) {
-    const addons = workout.recoveryAddons
-      .map((addon) => ({
-        ...addon,
-        exercises: addon.exercises.filter((exercise) =>
-          !textIsRemovedByConstraints(exercise.name, args.constraints)),
-      }))
-      .filter((addon) => addon.exercises.length > 0);
-    if (
-      addons.length !== workout.recoveryAddons.length ||
-      addons.some((addon, index) =>
-        addon.exercises.length !== workout.recoveryAddons![index]?.exercises.length)
-    ) {
-      workout = { ...workout, recoveryAddons: addons.length > 0 ? addons : undefined };
-      if (addons.length === 0) removedComponents.push('recovery_addon');
-    }
-  }
-
-  if (workout.conditioningBlock) {
-    const availableRowIds = new Set((workout.exercises ?? []).map((row) => row.id));
-    const removeRowIds = new Set<string>();
-    const options = workout.conditioningBlock.options.flatMap((option) => {
-      const displayText = `${option.title} ${option.description}`;
-      const typedModality = (option as typeof option & { modality?: string }).modality;
-      const isRunning = typedModality === 'running' || /\b(?:run|running|jog)\b/i.test(displayText);
-      const typedExposure = workout.conditioningBlock?.intent === 'high-intensity'
-        ? isRunning
-          ? 'hard running sprint high speed running repeat efforts'
-          : 'hard off-feet conditioning repeat efforts'
-        : workout.conditioningBlock?.intent === 'tempo'
-          ? isRunning ? 'tempo running' : 'off-feet tempo conditioning'
-          : isRunning ? 'easy aerobic running' : 'easy off-feet aerobic conditioning';
-      // Typed modality/intent owns exposure. Copy remains supporting context,
-      // so a generic title such as "Running intervals" cannot hide hard
-      // running from an active lower-limb restriction.
-      if (textIsRemovedByConstraints(`${typedExposure} ${displayText}`, args.constraints)) {
-        for (const id of option.exerciseIds) removeRowIds.add(id);
-        return [];
-      }
-      const exerciseIds = option.exerciseIds.filter((id) => availableRowIds.has(id));
-      if (option.exerciseIds.length > 0 && exerciseIds.length === 0) return [];
-      return [{ ...option, exerciseIds }];
-    });
-
-    const exercises = (workout.exercises ?? []).filter((row) => !removeRowIds.has(row.id));
-    if (
-      options.length !== workout.conditioningBlock.options.length ||
-      exercises.length !== (workout.exercises ?? []).length
-    ) {
-      workout = options.length > 0
-        ? {
-            ...workout,
-            exercises,
-            conditioningBlock: { ...workout.conditioningBlock, options },
-          }
-        : {
-            ...workout,
-            exercises,
-            hasCombinedConditioning: false,
-            attachedConditioningKind: undefined,
-            conditioningFlavour: undefined,
-            conditioningCategory: undefined,
-            conditioningBlock: undefined,
-            coachAddedConditioningLabel: undefined,
-          };
-      if (options.length === 0) removedComponents.push('conditioning');
-    }
-  }
-
-  return { workout, removedComponents };
 }
 
 /**
@@ -454,11 +327,18 @@ export function validateWorkoutAgainstActiveConstraints(
     }
   }
 
-  const componentResult = applyTypedComponentValidation({
+  const componentResult = applyConstraintsToTypedComponents(
     workout,
-    constraints: engineConstraints,
-    availableEquipment,
-  });
+    engineConstraints,
+    {
+      equipmentAvailable: availableEquipment
+        ? (requirements) => equipmentRequirementsAreAvailable(
+            requirements,
+            availableEquipment,
+          )
+        : undefined,
+    },
+  );
   // Constraints are allowed to remove planned work. Re-run the same shape
   // canonicaliser afterwards, but never restore content that safety just
   // removed. This keeps type/name/components honest without fighting injury,

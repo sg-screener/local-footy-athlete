@@ -607,6 +607,40 @@ section('[16] Empty training shells project as Rest, not clickable sessions');
 
 section('[16b] Cooked readiness does not leave an empty recovery shell');
 {
+  const poweredStrength = wk('Powered Lower Strength', 3, [ex('Back Squat')], {
+    powerBlock: {
+      id: 'fatigue-power',
+      kind: 'primer',
+      family: 'lower',
+      title: 'Power Primer',
+      placement: 'pre_lift',
+      prescription: '3 x 3 jumps',
+      options: [{
+        name: 'Vertical Jump',
+        sets: 3,
+        repsMin: 3,
+        repsMax: 3,
+        equipmentRequired: [],
+      }],
+      notes: [],
+      counting: {
+        hardExposure: false,
+        mainStrength: false,
+        conditioningCredit: 'none',
+        isFinisher: false,
+      },
+    },
+  });
+  const poweredProjected = projectVisibleDay({
+    day: day('2026-05-06', poweredStrength, 'template'),
+    activeInjury: null,
+    extraConstraints: [buildFatigueConstraint({ severity: 8 })],
+    todayISO: TODAY_ISO,
+  });
+  eq('cooked fatigue removes typed power exposure',
+    poweredProjected.day.workout?.powerBlock,
+    undefined);
+
   const hardOnly = wk('Hard Conditioning', 3, [
     ex('10m Sprint'),
     ex('Box Jump'),

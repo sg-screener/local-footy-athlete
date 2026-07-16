@@ -54,8 +54,14 @@ const {
   parseCoachIntent,
 } = require('../utils/coachIntent') as typeof import('../utils/coachIntent');
 const {
+  handleCoachTurn,
+} = require('../utils/coachTurnController') as typeof import('../utils/coachTurnController');
+const {
   semanticFingerprint,
 } = require('../utils/programSemanticSnapshot') as typeof import('../utils/programSemanticSnapshot');
+const {
+  buildSection18WeeklyExposureContractV2,
+} = require('../rules/weeklyExposureContractV2') as typeof import('../rules/weeklyExposureContractV2');
 
 let passed = 0;
 const failures: string[] = [];
@@ -134,6 +140,62 @@ async function main(): Promise<void> {
   check('explicit lighter command is a program adjustment', command?.intent === 'request_program_adjustment');
   check('mixed intent preserves both typed owners', mixed?.intent === 'mixed_fact_and_program_adjustment' &&
     mixed.payload?.factKind === 'fatigue' && mixed.payload?.operation === 'reduce_strength_block');
+
+  console.log('\n[1b] Coach typed front door owns factual cooked reports');
+  const cookedMessages: import('../utils/coachTurnController').CoachTurnMessage[] = [];
+  const cookedUser: import('../utils/coachTurnController').CoachTurnMessage = {
+    id: 'temporary-source-fact-cooked-user',
+    role: 'user',
+    content: "I'm cooked",
+  };
+  const cookedTurn = await handleCoachTurn({
+    userMessage: cookedUser,
+    messages: cookedMessages,
+    todayISO: date,
+    classifier: {
+      classify: async () => ({
+        intent: 'fatigue',
+        confidence: 1,
+        needsClarification: false,
+        payload: {
+          reportKind: 'cooked',
+          scope: 'this_week',
+        },
+      }),
+    },
+    pendingCoachProposal: null,
+    pendingReadiness: null,
+    pendingInjury: null,
+    smokeCoachBikeFlow: false,
+    isFocused: true,
+    smokeWednesdayMissingReason: null,
+    smokeWednesdayOpenTarget: null,
+    setPendingCoachProposal: () => {},
+    setPendingReadiness: () => {},
+    appendUser: () => cookedMessages.push(cookedUser),
+    appendAssistant: (message) => cookedMessages.push(message),
+    appendUserAndAssistant: (message) => cookedMessages.push(cookedUser, message),
+    clearInput: () => {},
+    setIsLoading: () => {},
+    setCoachProgressLabel: () => {},
+    startSetupRebuildProgress: () => {},
+    clearSetupRebuildProgress: () => {},
+    setLastCoachDebug: () => {},
+    semanticProgramEditDraftMode: 'off',
+    coachRevisionProposalMode: 'off',
+  });
+  const cookedFact = activeFacts().find((fact) =>
+    !isInjurySourceFact(fact) && fact.factKind === 'fatigue');
+  const cookedReply = cookedMessages.find((message) => message.role === 'assistant')?.content ?? '';
+  check('factual “I’m cooked” commits a canonical fatigue fact',
+    cookedTurn.handled && cookedFact?.reportKind === 'cooked');
+  check('factual “I’m cooked” does not create an explicit load edit',
+    useProgramStore.getState().reversibleAdjustmentLedger.adjustments.every((entry) =>
+      entry.kind !== 'explicit_load_edit'));
+  check('factual “I’m cooked” does not fall into a vague load clarification',
+    /report is active/i.test(cookedReply) &&
+    !/strength|conditioning|whole session/i.test(cookedReply));
+  reset();
 
   console.log('\n[2] Coach/tap equivalence and strongest global tier once');
   const coachFatigue = createTemporaryFatigueFact({
@@ -329,7 +391,33 @@ async function main(): Promise<void> {
     intensity: 'Moderate', workoutType: 'Strength', sessionTier: 'core',
     hasCombinedConditioning: false, exercises: [], createdAt: '', updatedAt: '',
   } as any;
-  useProgramStore.setState({ dateOverrides: { [date]: originalWorkout } });
+  const contract = buildSection18WeeklyExposureContractV2({
+    seasonPhase: 'Off-season',
+    declaredSubphase: 'early_offseason',
+    mode: 'early_offseason',
+    anchorState: 'none',
+    teamTrainingDays: [],
+    readiness: 'medium',
+    plannerSelected: {
+      mainStrength: 1,
+      coreConditioning: 0,
+      sprintHighSpeed: 0,
+      powerPrimers: 0,
+    },
+  });
+  useProgramStore.setState({
+    currentMicrocycle: {
+      id: 'later-intent-week',
+      trainingProgramId: 'later-intent-program',
+      weekNumber: 1,
+      startDate: date,
+      endDate: '2026-07-26',
+      phase: 'Off-season',
+      workouts: [originalWorkout],
+      exposureContractV2: contract,
+    } as any,
+    dateOverrides: { [date]: originalWorkout },
+  });
   const movableFact = createTemporaryFatigueFact({
     observedDate: date, scope: weekScope, athleteReportedLevel: 'cooked',
     sourceSurface: 'test', factId: 'test:later-intent-fatigue', now,
@@ -382,6 +470,18 @@ async function main(): Promise<void> {
   check('later delete survives fact resolution', Object.keys(useProgramStore.getState().dateOverrides).length === 0);
 
   reset();
+  useProgramStore.setState({
+    currentMicrocycle: {
+      id: 'later-intent-week',
+      trainingProgramId: 'later-intent-program',
+      weekNumber: 1,
+      startDate: date,
+      endDate: '2026-07-26',
+      phase: 'Off-season',
+      workouts: [originalWorkout],
+      exposureContractV2: contract,
+    } as any,
+  });
   commitAcceptedStateTransaction({
     reason: 'test:seed_explicit_load_edit',
     program: { dateOverrides: { [date]: originalWorkout } },

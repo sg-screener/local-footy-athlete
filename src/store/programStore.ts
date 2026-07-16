@@ -1180,6 +1180,9 @@ export interface ProgramState {
   clear: () => void;
 }
 
+let programHydrationAcceptancePromise: Promise<void> = Promise.resolve();
+let programHydrationAccepted = false;
+
 export const useProgramStore = create<ProgramState>()(
   persist(
     (set) => ({
@@ -1709,133 +1712,164 @@ export const useProgramStore = create<ProgramState>()(
         });
         return merged;
       },
-      onRehydrateStorage: () => async (_state, error) => {
-        if (error) {
-          const trace = programHydrationTrace();
-          emitAthleteActionEvent(trace, 'hydrated_state_checked', {
-            hydrationSucceeded: false,
-            originalRejectionCode: 'program_hydration_failed',
-            rejectingBoundary: 'programStore.onRehydrateStorage',
-            failureCategory: 'persistence_failure',
-          });
-          emitAthleteActionEvent(trace, 'athlete_action_failed', {
-            outcome: 'failed',
-            internalResultCode: 'program_hydration_failed',
-            firstFailingBoundary: 'programStore.onRehydrateStorage',
-          });
-          clearProgramHydrationTrace();
-          return;
-        }
-        const hydrated = useProgramStore.getState();
-        // Publish the complete hydrated/migrated program and material context
-        // through the same coordinator used at runtime. Compatibility-store
-        // hydration may happen in any order; those stores never publish
-        // upstream and are replaced from this accepted context.
-        const trace = programHydrationTrace();
-        try {
-          const acceptedBefore = normalizeAcceptedMaterialContext(
-            useProgramStore.getState().acceptedMaterialContext,
-          );
-          let legacyHydrationFacts = acceptedBefore.temporarySourceFacts;
-          if (legacyHydrationFacts.length === 0) {
-            const persistedState = async (key: string): Promise<Record<string, any>> => {
-              try {
-                const raw = await asyncStorageCompat.getItem(key);
-                if (!raw) return {};
-                const parsed = JSON.parse(raw) as { state?: Record<string, any> } | Record<string, any>;
-                return parsed && typeof parsed === 'object' && 'state' in parsed
-                  ? parsed.state ?? {}
-                  : parsed as Record<string, any>;
-              } catch {
-                return {};
-              }
-            };
-            const [coachMirror, readinessMirror] = await Promise.all([
-              persistedState('coach-updates'),
-              persistedState('readiness-store'),
-            ]);
-            legacyHydrationFacts = migrateLegacyTemporarySourceFacts({
-              activeConstraints: [
-                ...acceptedBefore.activeConstraints,
-                ...(Array.isArray(coachMirror.activeConstraints) ? coachMirror.activeConstraints : []),
-              ],
-              activeInjury: acceptedBefore.activeInjury ?? coachMirror.activeInjury ?? null,
-              readinessSignalsByDate: {
-                ...(readinessMirror.signalsByDate && typeof readinessMirror.signalsByDate === 'object'
-                  ? readinessMirror.signalsByDate
-                  : {}),
-                ...acceptedBefore.readinessSignalsByDate,
-              },
-              sourceSurface: 'program_store_hydration',
+      onRehydrateStorage: () => (_state, error) => {
+        programHydrationAccepted = false;
+        programHydrationAcceptancePromise = (async () => {
+          if (error) {
+            const trace = programHydrationTrace();
+            emitAthleteActionEvent(trace, 'hydrated_state_checked', {
+              hydrationSucceeded: false,
+              originalRejectionCode: 'program_hydration_failed',
+              rejectingBoundary: 'programStore.onRehydrateStorage',
+              failureCategory: 'persistence_failure',
             });
+            emitAthleteActionEvent(trace, 'athlete_action_failed', {
+              outcome: 'failed',
+              internalResultCode: 'program_hydration_failed',
+              firstFailingBoundary: 'programStore.onRehydrateStorage',
+            });
+            clearProgramHydrationTrace();
+            return;
           }
-          await runWithAthleteActionTrace(trace, async () => {
-            require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-              reason: 'program:hydration_acceptance',
-              trace,
-              validateWeekStarts: [
-                ...(hydrated.currentProgram?.microcycles ?? []).map((microcycle) =>
-                  microcycle.startDate.slice(0, 10)),
-                ...(hydrated.currentMicrocycle
-                  ? [hydrated.currentMicrocycle.startDate.slice(0, 10)]
-                  : []),
-                ...Object.keys(hydrated.weekScopedOverlays ?? {}),
-              ],
-              skipConstraintProjection: true,
-            });
-            if (legacyHydrationFacts.length > 0) {
-              const currentAccepted = normalizeAcceptedMaterialContext(
-                useProgramStore.getState().acceptedMaterialContext,
-              );
-              if (currentAccepted.temporarySourceFacts.length === 0) {
-                await require('./temporarySourceFactTransaction').commitTemporarySourceFactSet({
-                  nextFacts: legacyHydrationFacts,
-                  targetFactId: 'episodeId' in legacyHydrationFacts[0]
-                    ? legacyHydrationFacts[0].episodeId
-                    : legacyHydrationFacts[0].factId,
-                  todayISO: todayISOLocal(),
-                  reason: 'temporary_source_fact:hydrate_legacy_compatibility',
-                });
-              } else {
-                await require('./temporarySourceFactTransaction')
-                  .hydrateTemporarySourceFacts(todayISOLocal());
-              }
-            }
-            const accepted = normalizeAcceptedMaterialContext(
+          const hydrated = useProgramStore.getState();
+          // Publish the complete hydrated/migrated program and material context
+          // through the same coordinator used at runtime. Compatibility-store
+          // hydration may happen in any order; those stores never publish
+          // upstream and are replaced from this accepted context.
+          const trace = programHydrationTrace();
+          try {
+            const acceptedBefore = normalizeAcceptedMaterialContext(
               useProgramStore.getState().acceptedMaterialContext,
             );
-            if (accepted.temporarySourceFacts.length > 0) {
-              require('./coachUpdatesStore').publishAcceptedCoachUpdatesCompatibilityMirror({
-                activeConstraints: accepted.activeConstraints,
-                activeInjury: accepted.activeInjury,
+            let legacyHydrationFacts = acceptedBefore.temporarySourceFacts;
+            if (legacyHydrationFacts.length === 0) {
+              const persistedState = async (key: string): Promise<Record<string, any>> => {
+                try {
+                  const raw = await asyncStorageCompat.getItem(key);
+                  if (!raw) return {};
+                  const parsed = JSON.parse(raw) as { state?: Record<string, any> } | Record<string, any>;
+                  return parsed && typeof parsed === 'object' && 'state' in parsed
+                    ? parsed.state ?? {}
+                    : parsed as Record<string, any>;
+                } catch {
+                  return {};
+                }
+              };
+              const [coachMirror, readinessMirror] = await Promise.all([
+                persistedState('coach-updates'),
+                persistedState('readiness-store'),
+              ]);
+              legacyHydrationFacts = migrateLegacyTemporarySourceFacts({
+                activeConstraints: [
+                  ...acceptedBefore.activeConstraints,
+                  ...(Array.isArray(coachMirror.activeConstraints) ? coachMirror.activeConstraints : []),
+                ],
+                activeInjury: acceptedBefore.activeInjury ?? coachMirror.activeInjury ?? null,
+                readinessSignalsByDate: {
+                  ...(readinessMirror.signalsByDate && typeof readinessMirror.signalsByDate === 'object'
+                    ? readinessMirror.signalsByDate
+                    : {}),
+                  ...acceptedBefore.readinessSignalsByDate,
+                },
+                sourceSurface: 'program_store_hydration',
               });
             }
-            emitAthleteActionEvent(trace, 'athlete_action_completed', {
-              outcome: 'accepted',
-              internalResultCode: 'hydration_accepted',
+            await runWithAthleteActionTrace(trace, async () => {
+              require('./acceptedStateTransaction').commitAcceptedStateTransaction({
+                reason: 'program:hydration_acceptance',
+                trace,
+                validateWeekStarts: [
+                  ...(hydrated.currentProgram?.microcycles ?? []).map((microcycle) =>
+                    microcycle.startDate.slice(0, 10)),
+                  ...(hydrated.currentMicrocycle
+                    ? [hydrated.currentMicrocycle.startDate.slice(0, 10)]
+                    : []),
+                  ...Object.keys(hydrated.weekScopedOverlays ?? {}),
+                ],
+                skipConstraintProjection: true,
+              });
+              if (legacyHydrationFacts.length > 0) {
+                const currentAccepted = normalizeAcceptedMaterialContext(
+                  useProgramStore.getState().acceptedMaterialContext,
+                );
+                if (currentAccepted.temporarySourceFacts.length === 0) {
+                  await require('./temporarySourceFactTransaction').commitTemporarySourceFactSet({
+                    nextFacts: legacyHydrationFacts,
+                    targetFactId: 'episodeId' in legacyHydrationFacts[0]
+                      ? legacyHydrationFacts[0].episodeId
+                      : legacyHydrationFacts[0].factId,
+                    todayISO: todayISOLocal(),
+                    reason: 'temporary_source_fact:hydrate_legacy_compatibility',
+                  });
+                } else {
+                  await require('./temporarySourceFactTransaction')
+                    .hydrateTemporarySourceFacts(todayISOLocal());
+                }
+              }
+              const accepted = normalizeAcceptedMaterialContext(
+                useProgramStore.getState().acceptedMaterialContext,
+              );
+              if (accepted.temporarySourceFacts.length > 0) {
+                require('./coachUpdatesStore').publishAcceptedCoachUpdatesCompatibilityMirror({
+                  activeConstraints: accepted.activeConstraints,
+                  activeInjury: accepted.activeInjury,
+                });
+              }
+              emitAthleteActionEvent(trace, 'athlete_action_completed', {
+                outcome: 'accepted',
+                internalResultCode: 'hydration_accepted',
+              });
             });
-          });
-        } catch (hydrationError) {
-          const rejectionCode = hydrationError instanceof Error
-            ? hydrationError.name
-            : 'program_hydration_acceptance_failed';
-          emitAthleteActionEvent(trace, 'athlete_action_failed', {
-            outcome: 'failed',
-            internalResultCode: 'program_hydration_acceptance_failed',
-            originalRejectionCode: rejectionCode,
-            rejectionCodes: [rejectionCode],
-            firstFailingBoundary: 'programStore.onRehydrateStorage.acceptance',
-            failureCategory: 'persistence_failure',
-            previousStateRestored: true,
-          });
-          throw hydrationError;
-        } finally {
-          clearProgramHydrationTrace();
-        }
+          } catch (hydrationError) {
+            const rejectionCode = hydrationError instanceof Error
+              ? hydrationError.name
+              : 'program_hydration_acceptance_failed';
+            emitAthleteActionEvent(trace, 'athlete_action_failed', {
+              outcome: 'failed',
+              internalResultCode: 'program_hydration_acceptance_failed',
+              originalRejectionCode: rejectionCode,
+              rejectionCodes: [rejectionCode],
+              firstFailingBoundary: 'programStore.onRehydrateStorage.acceptance',
+              failureCategory: 'persistence_failure',
+              previousStateRestored: true,
+            });
+            throw hydrationError;
+          } finally {
+            clearProgramHydrationTrace();
+          }
+        })().then(() => {
+          if (!error) programHydrationAccepted = true;
+        });
       },
     },
   ),
 );
+
+const rawProgramStoreRehydrate = useProgramStore.persist.rehydrate;
+const rawProgramStoreHasHydrated = useProgramStore.persist.hasHydrated;
+const initialProgramHydrationCompletion = rawProgramStoreHasHydrated()
+  ? programHydrationAcceptancePromise
+  : new Promise<void>((resolve, reject) => {
+      const unsubscribe = useProgramStore.persist.onFinishHydration(() => {
+        unsubscribe();
+        programHydrationAcceptancePromise.then(resolve, reject);
+      });
+    });
+let programHydrationQueue = initialProgramHydrationCompletion.catch(() => undefined);
+
+useProgramStore.persist.rehydrate = () => {
+  const run = programHydrationQueue.then(async () => {
+    programHydrationAccepted = false;
+    programHydrationAcceptancePromise = Promise.resolve();
+    await rawProgramStoreRehydrate();
+    await programHydrationAcceptancePromise;
+  });
+  programHydrationQueue = run.catch(() => undefined);
+  return run;
+};
+
+useProgramStore.persist.hasHydrated = () =>
+  rawProgramStoreHasHydrated() && programHydrationAccepted;
 
 export function getCurrentBlockNumberForGeneration(dateISO?: string): number {
   const state = useProgramStore.getState();

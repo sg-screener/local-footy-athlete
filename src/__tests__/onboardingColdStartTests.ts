@@ -426,6 +426,7 @@ async function main(): Promise<void> {
       activeConstraints: [],
       activeInjury: null,
       injuryEpisodes: [],
+      temporarySourceFacts: [],
       acceptedCompositionBase: null,
       revision: 0,
       lastTransaction: null,

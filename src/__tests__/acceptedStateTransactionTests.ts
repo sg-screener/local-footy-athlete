@@ -9,12 +9,13 @@
  */
 
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
+const memory = new Map<string, string>();
 (globalThis as unknown as { window: unknown }).window = {
   localStorage: {
-    getItem: () => null,
-    setItem: () => undefined,
-    removeItem: () => undefined,
-    clear: () => undefined,
+    getItem: (key: string) => memory.get(key) ?? null,
+    setItem: (key: string, value: string) => { memory.set(key, value); },
+    removeItem: (key: string) => { memory.delete(key); },
+    clear: () => { memory.clear(); },
   },
 };
 (global as unknown as { fetch: () => never }).fetch = () => {
@@ -47,8 +48,15 @@ import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
 import {
   assertAcceptedVisibleLedgerEquivalence,
   commitAcceptedStateTransaction,
+  commitReadinessSignalTransaction,
   getAcceptedMaterialContext,
 } from '../store/acceptedStateTransaction';
+import {
+  createTemporaryFatigueFact,
+  createTemporarySorenessFact,
+  temporaryFactScope,
+} from '../rules/temporarySourceFact';
+import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
 import {
   resolveFinalVisibleSection18Week,
 } from '../rules/section18AcceptedWeekGateway';
@@ -60,6 +68,8 @@ import {
 import { repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
 import { addDaysISO } from '../utils/programBlockState';
+import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
+import { buildDayWorkoutProjectedDay } from '../utils/visibleProgramReadModel';
 
 const WEEK_START = '2026-07-13';
 const WEDNESDAY = '2026-07-15';
@@ -79,22 +89,22 @@ let regressionPass = 0;
 let propertyPass = 0;
 let mutationPass = 0;
 const failures: string[] = [];
+const tests: Array<{
+  kind: 'regression' | 'property' | 'mutation';
+  name: string;
+  body: () => void | Promise<void>;
+}> = [];
 
 function assert(condition: unknown, detail: string): asserts condition {
   if (!condition) throw new Error(detail);
 }
 
-function run(kind: 'regression' | 'property' | 'mutation', name: string, body: () => void): void {
-  try {
-    body();
-    if (kind === 'regression') regressionPass += 1;
-    else if (kind === 'property') propertyPass += 1;
-    else mutationPass += 1;
-    console.log(`  PASS [${kind}] ${name}`);
-  } catch (error) {
-    failures.push(`${kind}: ${name}`);
-    console.error(`  FAIL [${kind}] ${name}`, error);
-  }
+function run(
+  kind: 'regression' | 'property' | 'mutation',
+  name: string,
+  body: () => void | Promise<void>,
+): void {
+  tests.push({ kind, name, body });
 }
 
 function clone<T>(value: T): T {
@@ -242,6 +252,50 @@ function acceptedWeek(weekStart: string) {
   };
 }
 
+function projectedDay(date: string) {
+  return buildDayWorkoutProjectedDay({
+    date,
+    todayISO: WEEK_START,
+    state: buildScheduleStateImperative(),
+    overrideContext: useProgramStore.getState().overrideContexts[date],
+  });
+}
+
+async function createCanonicalReadinessFact(
+  kind: 'fatigue' | 'soreness',
+  date: string,
+  expectAccepted = true,
+): Promise<Awaited<ReturnType<typeof transactTemporarySourceFact>>> {
+  const scope = temporaryFactScope({ kind: 'date', date });
+  const fact = kind === 'fatigue'
+    ? createTemporaryFatigueFact({
+        observedDate: date,
+        scope,
+        athleteReportedLevel: 'cooked',
+        sourceSurface: 'test',
+        now: NOW,
+      })
+    : createTemporarySorenessFact({
+        observedDate: date,
+        scope,
+        athleteReportedLevel: 'moderate',
+        distribution: 'general',
+        sourceSurface: 'test',
+        now: NOW,
+      });
+  const result = await transactTemporarySourceFact({
+    operation: 'create',
+    fact,
+    todayISO: date,
+    now: NOW,
+  });
+  if (expectAccepted) {
+    assert(result.outcome === 'created_and_recomposed' ||
+      result.outcome === 'created_no_program_change', `source fact was not accepted: ${result.outcome}`);
+  }
+  return result;
+}
+
 function materialSignature(): string {
   const state = useProgramStore.getState();
   return JSON.stringify({
@@ -298,6 +352,23 @@ function withGatewayFailure(body: () => void): boolean {
   }
 }
 
+async function withGatewayFailureAsync(body: () => Promise<void>): Promise<boolean> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const gateway = require('../rules/section18AcceptedWeekGateway') as Record<string, unknown>;
+  const original = gateway.requireSection18AcceptedWeek;
+  let called = false;
+  gateway.requireSection18AcceptedWeek = () => {
+    called = true;
+    throw new Error('INJECTED_ACCEPTANCE_FAILURE');
+  };
+  try {
+    await body();
+    return called;
+  } finally {
+    gateway.requireSection18AcceptedWeek = original;
+  }
+}
+
 function stripContracts(program: TrainingProgram): TrainingProgram {
   return {
     ...clone(program),
@@ -310,6 +381,7 @@ function stripContracts(program: TrainingProgram): TrainingProgram {
 }
 
 function migrated(value: OnboardingData): TrainingProgram {
+  resetStores();
   return canonicaliseHydratedProgram(stripContracts(generate(value)), value);
 }
 
@@ -325,8 +397,6 @@ function placeholderOverlay(weekStart: string): WeekScopedWorkoutOverlay {
     updatedAt: NOW,
   };
 }
-
-console.log('\n-- Required fixed regressions (25) --');
 
 run('regression', '1 adding a game mark regenerates and gates the target game week', () => {
   const value = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
@@ -419,35 +489,41 @@ run('regression', '6 a future calendar mark is gated when it becomes material', 
   assert(week.evaluation.blockingViolations.length === 0, 'activated future mark has blockers');
 });
 
-run('regression', '7 low readiness commits readiness and reduced program together', () => {
+run('regression', '7 low readiness commits a canonical fact and reduced visible program together', async () => {
   seed(profile('Pre-season'));
   const before = acceptedWeek(WEEK_START);
   const powerDay = before.visible.find((workout) => !!workout.powerBlock)?.dayOfWeek ?? 1;
   const date = dateForDay(WEEK_START, powerDay);
-  useReadinessStore.getState().setReadinessSignal(date, buildReadinessSignalPatch('flat'));
+  await createCanonicalReadinessFact('fatigue', date);
   const after = acceptedWeek(WEEK_START);
-  const visibleDay = after.visible.find((workout) => workout.dayOfWeek === powerDay);
+  const visibleDay = projectedDay(date).workout;
   assert(!!getAcceptedMaterialContext().readinessSignalsByDate[date], 'accepted readiness missing');
   assert(!!useReadinessStore.getState().signalsByDate[date], 'readiness mirror missing');
   assert(!visibleDay?.powerBlock, 'low readiness left power on affected day');
   assert(after.evaluation.blockingViolations.length === 0, 'readiness-reduced week has blockers');
 });
 
-run('regression', '8 a failed readiness projection commits neither surface', () => {
+run('regression', '8 a failed readiness source-fact projection commits neither surface', async () => {
   seed(profile('Pre-season'));
   const before = materialSignature();
-  const failed = withGatewayFailure(() =>
-    useReadinessStore.getState().setReadinessSignal(WEDNESDAY, buildReadinessSignalPatch('flat')));
+  let result: Awaited<ReturnType<typeof transactTemporarySourceFact>> | null = null;
+  const failed = await withGatewayFailureAsync(async () => {
+    result = await createCanonicalReadinessFact('fatigue', WEDNESDAY, false);
+  });
   assert(failed, 'failure injection did not reach readiness gateway');
+  assert(result?.outcome === 'safely_rejected', 'failed readiness fact was not safely rejected');
   assert(materialSignature() === before, 'failed readiness changed accepted or mirror state');
 });
 
-run('regression', '9 athlete-visible readiness schedule equals the persisted accepted ledger', () => {
+run('regression', '9 canonical readiness projection retains persisted accepted-ledger equivalence', async () => {
   seed(profile('Pre-season'));
-  useReadinessStore.getState().setReadinessSignal(WEDNESDAY, buildReadinessSignalPatch('flat'));
+  await createCanonicalReadinessFact('fatigue', WEDNESDAY);
   const week = acceptedWeek(WEEK_START);
+  assert(getAcceptedMaterialContext().temporarySourceFacts.length === 1,
+    'canonical readiness fact missing');
   assert(ledgerSignature(week.contract) === ledgerSignature(week.evaluation.contract),
     'visible readiness ledger differs from persisted accepted ledger');
+  resetStores();
 });
 
 run('regression', '10 contractless legacy in-season derives a conservative v2 contract', () => {
@@ -640,7 +716,7 @@ run('regression', '22 constraint/program transaction has no observable intermedi
     date: WEDNESDAY,
     source: 'quick_check',
     updatedAt: NOW,
-    ...buildReadinessSignalPatch('flat'),
+    ...buildReadinessSignalPatch('short_time'),
   };
   const constraint = buildReadinessActiveConstraints(signal)[0];
   let badObservation = false;
@@ -685,19 +761,36 @@ run('regression', '23 calendar/program transaction has no observable intermediat
   assert(!badObservation, 'subscriber observed new mark with old contract');
 });
 
-run('regression', '24 readiness/program transaction has no observable intermediate state', () => {
+run('regression', '24 readiness source-fact/program transaction has no observable intermediate state', async () => {
   seed(profile('Pre-season'));
+  const fact = createTemporaryFatigueFact({
+    observedDate: WEDNESDAY,
+    scope: temporaryFactScope({ kind: 'date', date: WEDNESDAY }),
+    athleteReportedLevel: 'slight',
+    sourceSurface: 'test',
+    now: NOW,
+  });
   let badObservation = false;
   let programPublishes = 0;
   const stopProgram = useProgramStore.subscribe((state) => {
+    const hasFact = state.acceptedMaterialContext.temporarySourceFacts.some((candidate) =>
+      'factId' in candidate && candidate.factId === fact.factId);
+    if (!hasFact) return;
     programPublishes += 1;
-    if (!state.acceptedMaterialContext.readinessSignalsByDate[WEDNESDAY]) badObservation = true;
+    if (!state.acceptedMaterialContext.readinessSignalsByDate[WEDNESDAY]) {
+      badObservation = true;
+    }
   });
   const stopReadiness = useReadinessStore.subscribe((state) => {
     if (state.signalsByDate[WEDNESDAY] &&
         !getAcceptedMaterialContext().readinessSignalsByDate[WEDNESDAY]) badObservation = true;
   });
-  useReadinessStore.getState().setReadinessSignal(WEDNESDAY, buildReadinessSignalPatch('flat'));
+  await transactTemporarySourceFact({
+    operation: 'create',
+    fact,
+    todayISO: WEDNESDAY,
+    now: NOW,
+  });
   stopProgram();
   stopReadiness();
   assert(programPublishes === 1, `readiness transaction published ProgramStore ${programPublishes} times`);
@@ -718,8 +811,6 @@ run('regression', '25 re-evaluated visible week matches the gateway ledger exact
     profile: value,
   });
 });
-
-console.log('\n-- Properties (10 distinct invariants) --');
 
 run('property', 'no calendar mutation can bypass the gateway', () => {
   const value = profile('In-season', { usualGameDay: 'Saturday', gameDay: 'Saturday' });
@@ -747,11 +838,20 @@ run('property', 'no calendar mutation can bypass the gateway', () => {
   }
 });
 
-run('property', 'no structural readiness change can bypass the gateway', () => {
+run('property', 'no structural readiness change can bypass the gateway', async () => {
   const value = profile('Pre-season');
-  seed(value);
   for (const option of ['flat', 'sore', 'short_time', 'good'] as const) {
-    useReadinessStore.getState().setReadinessSignal(WEDNESDAY, buildReadinessSignalPatch(option));
+    seed(value);
+    if (option === 'flat') {
+      await createCanonicalReadinessFact('fatigue', WEDNESDAY);
+    } else if (option === 'sore') {
+      await createCanonicalReadinessFact('soreness', WEDNESDAY);
+    } else {
+      commitReadinessSignalTransaction({
+        date: WEDNESDAY,
+        patch: option === 'good' ? null : buildReadinessSignalPatch(option),
+      });
+    }
     assertAcceptedVisibleLedgerEquivalence({
       surfaces: useProgramStore.getState(), context: getAcceptedMaterialContext(),
       weekStarts: [WEEK_START], profile: value,
@@ -884,8 +984,6 @@ run('property', 'failed rolling fixture staging preserves the entire prior horiz
   assert(materialSignature() === before, 'failed rolling staging partially published a week');
 });
 
-console.log('\n-- Mutation witnesses (10) --');
-
 const root = path.resolve(__dirname, '..');
 const source = (relative: string): string => readFileSync(path.join(root, relative), 'utf8');
 const calendarSource = source('store/calendarStore.ts');
@@ -896,6 +994,7 @@ const transactionSource = source('store/acceptedStateTransaction.ts');
 const rebuildSource = source('utils/weekRebuild.ts');
 const rolloverSource = source('utils/programBlockRollover.ts');
 const visibleSource = source('utils/visibleProgramReadModel.ts');
+const temporaryFactTransactionSource = source('store/temporarySourceFactTransaction.ts');
 
 run('mutation', 'calendar cannot write markedDays before validation', () => {
   assert(calendarSource.includes("commitCalendarMarkTransaction"), 'calendar coordinator call removed');
@@ -903,8 +1002,14 @@ run('mutation', 'calendar cannot write markedDays before validation', () => {
 });
 
 run('mutation', 'readiness cannot exist only in the visible read model', () => {
-  assert(readinessSource.includes('commitReadinessSignalTransaction'), 'readiness coordinator call removed');
-  assert(visibleSource.includes('hasAcceptedWeekContract'), 'accepted visible fence removed');
+  assert(readinessSource.includes('Downstream compatibility only') &&
+    readinessSource.includes('canonicalFactReadinessProjection'),
+  'readiness store is no longer a downstream canonical-fact mirror');
+  assert(temporaryFactTransactionSource.includes('commitAcceptedStateTransaction({') &&
+    temporaryFactTransactionSource.includes('temporarySourceFacts: normalizedFacts'),
+  'source-fact transaction no longer owns accepted publication');
+  assert(visibleSource.includes('hasTemporaryFactProjection'),
+    'accepted visible source-fact fence removed');
 });
 
 run('mutation', 'contract derivation cannot be skipped for contractless legacy weeks', () => {
@@ -950,23 +1055,58 @@ run('mutation', 'fixture paths cannot bypass the rolling-horizon staging owner',
     'week rebuild retained an independent horizon owner');
 });
 
-run('mutation', 'only canonical injury facts may compose over an accepted base', () => {
+run('mutation', 'only canonical source facts may compose over an accepted base', () => {
   assert(visibleSource.includes(
-    'if (hasAcceptedWeekContract(args.state, day.date) && !args.state.activeInjury) {'),
-  'non-injury accepted week projection short circuit removed');
+    '!args.state.activeInjury && !hasTemporaryFactProjection'),
+  'accepted week source-fact projection fence removed');
+  assert(visibleSource.includes('dayActiveConstraints.filter(isTemporaryFactProjectionConstraint)'),
+    'accepted week can apply non-fact constraints twice');
   assert(visibleSource.includes("if (c.type === 'injury')") &&
-    visibleSource.includes('buildInjuryConstraint({'),
-  'episode-derived injury constraints are not composed visibly');
+    visibleSource.includes('buildInjuryConstraint({') &&
+    visibleSource.includes("else if (c.type === 'fatigue')") &&
+    visibleSource.includes("else if (c.type === 'soreness'"),
+  'canonical health fact constraints are not composed visibly');
   assert(visibleSource.includes(
     "args.state.injuryProjectionOwner === 'accepted_episode'") &&
     visibleSource.includes('activeInjury: !canonicalInjuryProjection && args.state.activeInjury'),
   'canonical injury composition still depends on the single-slot alias');
-  assert(transactionSource.includes(".filter((constraint) => constraint.type !== 'injury')"),
-    'injury constraint can destructively overwrite the accepted base');
+  assert(transactionSource.includes(
+    '.filter((constraint) => !isTemporarySourceFactConstraint(constraint) && constraint.type !=='),
+  'temporary fact constraint can destructively overwrite the accepted base');
 });
 
-console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/25 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);
-if (regressionPass !== 25 || propertyPass !== 10 || mutationPass !== 10 || failures.length > 0) {
-  console.error(`Failures: ${failures.join(', ')}`);
-  process.exit(1);
+async function main(): Promise<void> {
+  let previousKind: 'regression' | 'property' | 'mutation' | null = null;
+  for (const test of tests) {
+    if (test.kind !== previousKind) {
+      const heading = test.kind === 'regression'
+        ? 'Required fixed regressions (25)'
+        : test.kind === 'property'
+          ? 'Properties (10 distinct invariants)'
+          : 'Mutation witnesses (10)';
+      console.log(`\n-- ${heading} --`);
+      previousKind = test.kind;
+    }
+    try {
+      await test.body();
+      if (test.kind === 'regression') regressionPass += 1;
+      else if (test.kind === 'property') propertyPass += 1;
+      else mutationPass += 1;
+      console.log(`  PASS [${test.kind}] ${test.name}`);
+    } catch (error) {
+      failures.push(`${test.kind}: ${test.name}`);
+      console.error(`  FAIL [${test.kind}] ${test.name}`, error);
+    }
+  }
+
+  console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/25 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);
+  if (regressionPass !== 25 || propertyPass !== 10 || mutationPass !== 10 || failures.length > 0) {
+    console.error(`Failures: ${failures.join(', ')}`);
+    process.exit(1);
+  }
 }
+
+void main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

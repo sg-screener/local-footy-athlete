@@ -98,6 +98,7 @@ import {
   createTemporaryPoorSleepFact,
   createTemporarySorenessFact,
   isInjurySourceFact,
+  isNonInjuryTemporarySourceFact,
   temporaryFactScope,
   temporarySourceFactId,
   type TemporaryPoorSleepFact,
@@ -3012,7 +3013,8 @@ export async function handleCoachTurn(
           ? resolveInjuryBucket(semanticIntent.payload.bodyPart)
           : null;
         const matches = useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
-          .filter((fact) => !isInjurySourceFact(fact) && fact.status === 'active')
+          .filter(isNonInjuryTemporarySourceFact)
+          .filter((fact) => fact.status === 'active')
           .filter((fact) => !requestedKind || fact.factKind === requestedKind)
           .filter((fact) => fact.factKind !== 'soreness' || !requestedBucket ||
             fact.canonicalBodyPartBucket === requestedBucket);

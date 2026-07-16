@@ -15,10 +15,7 @@ const memory = new Map<string, string>();
 };
 
 import type { Workout } from '../types/domain';
-import type {
-  ActiveConstraint,
-  ActiveInjuryConstraint,
-} from '../store/coachUpdatesStore';
+import type { ActiveInjuryConstraint } from '../store/coachUpdatesStore';
 import type { ReversibleAdjustmentRecord } from '../rules/reversibleAdjustmentLedger';
 
 const {
@@ -71,6 +68,13 @@ const {
 const {
   migrateLegacyInjuryEpisodes,
 } = require('../rules/injuryEpisode') as typeof import('../rules/injuryEpisode');
+const {
+  createTemporaryFatigueFact,
+  temporaryFactScope,
+} = require('../rules/temporarySourceFact') as typeof import('../rules/temporarySourceFact');
+const {
+  transactTemporarySourceFact,
+} = require('../store/temporarySourceFactTransaction') as typeof import('../store/temporarySourceFactTransaction');
 
 let passed = 0;
 const failures: string[] = [];
@@ -436,20 +440,20 @@ async function main(): Promise<void> {
     useProgramStore.getState().reversibleAdjustmentLedger.adjustments[0]?.status === 'active');
 
   console.log('\n[5] unrelated facts and generic all-good remain safe');
-  const fatigue: ActiveConstraint = {
-    id: 'fatigue-test-active',
-    type: 'fatigue',
-    severity: 9,
-    status: 'active',
-    startDate: date,
-    lastUpdatedAt: `${date}T10:00:00.000Z`,
-    reasonLabel: 'Fatigue',
-    rules: ['No max-effort work', 'No sprinting or plyometrics'],
-    safeFocus: ['Recovery and easy aerobic work'],
-    advice: ['Prioritise sleep and recovery'],
-  };
+  const fatigue = createTemporaryFatigueFact({
+    observedDate: date,
+    scope: temporaryFactScope({ kind: 'week', date }),
+    athleteReportedLevel: 'cooked',
+    sourceSurface: 'test',
+    factId: 'fatigue-test-active',
+    now: `${date}T10:00:00.000Z`,
+  });
   const beforeFatigueVisible = semanticFingerprint(visibleNames(movedDate));
-  useCoachUpdatesStore.getState().upsertActiveConstraint(fatigue);
+  await transactTemporarySourceFact({
+    operation: 'create',
+    fact: fatigue,
+    todayISO: date,
+  });
   const fatigueVisible = semanticFingerprint(visibleNames(movedDate));
   check('unrelated fact has its own visible program effect',
     fatigueVisible !== beforeFatigueVisible, { beforeFatigueVisible, fatigueVisible });
@@ -466,7 +470,7 @@ async function main(): Promise<void> {
   await resolveInjuryEpisode(third.episodeId!, { todayISO: date });
   check('resolving injury preserves unrelated constraint', normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext).activeConstraints.some((constraint) =>
-      constraint.id === fatigue.id));
+      constraint.temporarySourceFactIds?.includes(fatigue.factId)));
   check('resolving injury preserves the unrelated fact program effect',
     semanticFingerprint(visibleNames(movedDate)) === fatigueVisible, {
       expected: fatigueVisible,

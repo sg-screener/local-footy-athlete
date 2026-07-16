@@ -320,7 +320,7 @@ export interface ActiveEquipmentConstraint extends ActiveConstraintModifierMetad
  * mutate exposures by default; the coach reply explains what to keep
  * doing this week.
  */
-export interface ActiveMissedSessionConstraint {
+export interface ActiveMissedSessionConstraint extends ActiveConstraintModifierMetadata {
   id: string;
   type: 'missed_session';
   /** ISO date the athlete missed (or the team session). */
@@ -337,7 +337,7 @@ export interface ActiveMissedSessionConstraint {
   advice: string[];
 }
 
-export interface ActivePreferenceConstraint {
+export interface ActivePreferenceConstraint extends ActiveConstraintModifierMetadata {
   id: string;
   type: 'preference';
   preferenceKind: 'avoid_exercise' | 'preferred_alternative' | 'add_focus';

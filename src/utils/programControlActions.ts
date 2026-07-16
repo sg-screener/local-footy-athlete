@@ -64,6 +64,7 @@ import {
   createTemporaryPoorSleepFact,
   createTemporarySorenessFact,
   isInjurySourceFact,
+  isNonInjuryTemporarySourceFact,
   temporaryFactScope,
   temporarySourceFactId,
 } from '../rules/temporarySourceFact';
@@ -1198,8 +1199,9 @@ async function executeProgramControlActionDurablyWithinTrace(
       candidate.id === normalizedModifierId ||
       `program-modifier:active_constraint:${candidate.id}` === requested);
     const sourceFactIds = constraint?.temporarySourceFactIds ?? [];
-    const directFactId = accepted.temporarySourceFacts.find((fact) =>
-      !isInjurySourceFact(fact) && temporarySourceFactId(fact) === normalizedModifierId)?.factId;
+    const directFactId = accepted.temporarySourceFacts
+      .filter(isNonInjuryTemporarySourceFact)
+      .find((fact) => temporarySourceFactId(fact) === normalizedModifierId)?.factId;
     const factId = directFactId ?? (sourceFactIds.length === 1 ? sourceFactIds[0] : null);
     if (!factId) {
       return {

@@ -202,6 +202,18 @@ export interface ApplyConstraintsResult {
   applied: boolean;
 }
 
+export type ConstraintRemovedComponent =
+  | 'conditioning'
+  | 'speed'
+  | 'power'
+  | 'recovery_addon';
+
+export interface ApplyTypedComponentConstraintsResult {
+  workout: Workout;
+  changed: boolean;
+  removedComponents: ConstraintRemovedComponent[];
+}
+
 export interface ProgramViolation {
   date?: string;
   workoutName?: string;
@@ -969,6 +981,134 @@ function isRecovery(workout: Workout): boolean {
 }
 function isGame(workout: Workout): boolean {
   return (workout as any).workoutType === 'Game';
+}
+
+function textIsRemovedByConstraints(
+  text: string,
+  constraints: readonly Constraint[],
+): boolean {
+  return !!text.trim() &&
+    scoreExerciseAgainstConstraints(text, [...constraints]).decision === 'remove';
+}
+
+function speedBlockExposureText(workout: Workout): string {
+  const block = workout.speedBlock;
+  if (!block) return '';
+  const typedExposure = block.kind === 'cod'
+    ? 'sprint acceleration change of direction agility'
+    : 'sprint acceleration high speed running';
+  return `${typedExposure} ${block.title} ${block.label} ${block.prescription}`;
+}
+
+/**
+ * Apply the universal exposure constraints to structured workout components
+ * that intentionally live outside `workout.exercises`.
+ */
+export function applyConstraintsToTypedComponents(
+  source: Workout,
+  constraints: readonly Constraint[],
+  options: {
+    equipmentAvailable?: (requirements: readonly string[]) => boolean;
+  } = {},
+): ApplyTypedComponentConstraintsResult {
+  let workout = source;
+  const removedComponents: ConstraintRemovedComponent[] = [];
+
+  if (
+    workout.speedBlock &&
+    textIsRemovedByConstraints(speedBlockExposureText(workout), constraints)
+  ) {
+    workout = { ...workout, speedBlock: undefined };
+    removedComponents.push('speed');
+  }
+
+  if (workout.powerBlock) {
+    const typedPowerExposure = workout.powerBlock.family === 'lower'
+      ? 'plyometric explosive lower jump'
+      : 'explosive push';
+    const powerOptions = workout.powerBlock.options.filter((option) =>
+      !textIsRemovedByConstraints(`${typedPowerExposure} ${option.name}`, constraints) &&
+      (!options.equipmentAvailable || options.equipmentAvailable(option.equipmentRequired)),
+    );
+    if (powerOptions.length !== workout.powerBlock.options.length) {
+      workout = powerOptions.length > 0
+        ? { ...workout, powerBlock: { ...workout.powerBlock, options: powerOptions } }
+        : { ...workout, powerBlock: undefined };
+      if (powerOptions.length === 0) removedComponents.push('power');
+    }
+  }
+
+  if (workout.recoveryAddons?.length) {
+    const addons = workout.recoveryAddons
+      .map((addon) => ({
+        ...addon,
+        exercises: addon.exercises.filter((exercise) =>
+          !textIsRemovedByConstraints(exercise.name, constraints)),
+      }))
+      .filter((addon) => addon.exercises.length > 0);
+    if (
+      addons.length !== workout.recoveryAddons.length ||
+      addons.some((addon, index) =>
+        addon.exercises.length !== workout.recoveryAddons![index]?.exercises.length)
+    ) {
+      workout = { ...workout, recoveryAddons: addons.length > 0 ? addons : undefined };
+      if (addons.length === 0) removedComponents.push('recovery_addon');
+    }
+  }
+
+  if (workout.conditioningBlock) {
+    const availableRowIds = new Set((workout.exercises ?? []).map((row) => row.id));
+    const removeRowIds = new Set<string>();
+    const conditioningOptions = workout.conditioningBlock.options.flatMap((option) => {
+      const displayText = `${option.title} ${option.description}`;
+      const typedModality = (option as typeof option & { modality?: string }).modality;
+      const isRunning = typedModality === 'running' || /\b(?:run|running|jog)\b/i.test(displayText);
+      const typedExposure = workout.conditioningBlock?.intent === 'high-intensity'
+        ? isRunning
+          ? 'hard running sprint high speed running repeat efforts'
+          : 'hard off-feet conditioning repeat efforts'
+        : workout.conditioningBlock?.intent === 'tempo'
+          ? isRunning ? 'tempo running' : 'off-feet tempo conditioning'
+          : isRunning ? 'easy aerobic running' : 'easy off-feet aerobic conditioning';
+      if (textIsRemovedByConstraints(`${typedExposure} ${displayText}`, constraints)) {
+        for (const id of option.exerciseIds) removeRowIds.add(id);
+        return [];
+      }
+      const exerciseIds = option.exerciseIds.filter((id) => availableRowIds.has(id));
+      if (option.exerciseIds.length > 0 && exerciseIds.length === 0) return [];
+      return [{ ...option, exerciseIds }];
+    });
+
+    const exercises = (workout.exercises ?? []).filter((row) => !removeRowIds.has(row.id));
+    if (
+      conditioningOptions.length !== workout.conditioningBlock.options.length ||
+      exercises.length !== (workout.exercises ?? []).length
+    ) {
+      workout = conditioningOptions.length > 0
+        ? {
+            ...workout,
+            exercises,
+            conditioningBlock: { ...workout.conditioningBlock, options: conditioningOptions },
+          }
+        : {
+            ...workout,
+            exercises,
+            hasCombinedConditioning: false,
+            attachedConditioningKind: undefined,
+            conditioningFlavour: undefined,
+            conditioningCategory: undefined,
+            conditioningBlock: undefined,
+            coachAddedConditioningLabel: undefined,
+          };
+      if (conditioningOptions.length === 0) removedComponents.push('conditioning');
+    }
+  }
+
+  return {
+    workout,
+    changed: workout !== source,
+    removedComponents,
+  };
 }
 
 function recoverySubstitution(workout: Workout, coachNotes: string[]): Workout {

@@ -44,6 +44,7 @@ import type { InjuryBucket } from './programAdjustmentEngine';
 import {
   buildInjuryConstraint,
   applyConstraintsToSession,
+  applyConstraintsToTypedComponents,
   validateWorkoutAgainstConstraints,
   type Constraint,
   type ConstraintRegion,
@@ -286,8 +287,10 @@ export function projectVisibleDay(input: ProjectInput): ProjectOutcome {
   // ── Pass 2: universal exposure engine ──
   const applyResult = applyConstraintsToSession(workoutNow, constraints);
   workoutNow = applyResult.workout;
+  const componentResult = applyConstraintsToTypedComponents(workoutNow, constraints);
+  workoutNow = componentResult.workout;
   const exposureRemoved = applyResult.classification.removedNames;
-  const exposureApplied = applyResult.applied;
+  const exposureApplied = applyResult.applied || componentResult.changed;
 
   const filterApplied = tagChanged || exposureApplied;
   if (!filterApplied) {

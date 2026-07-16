@@ -72,6 +72,7 @@ export type DispatchReplyMode =
   | 'reapplied'
   | 'general_state_grounded'
   | 'non_injury_constraint'
+  | 'source_fact_transaction_required'
   | 'session_outcome_transaction_required'
   | 'program_adjustment_clarifier'
   | 'program_adjustment_proposed'

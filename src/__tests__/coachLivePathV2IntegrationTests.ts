@@ -1,10 +1,11 @@
 /**
- * coachLivePathV2IntegrationTests — proves the FULL live path:
+ * coachLivePathV2IntegrationTests — proves the canonical V2 readiness path:
  *
  *   coach message
  *   → LLMCoachIntentClassifier (real)
  *   → dispatchCoachIntent (real)
- *   → buildLiveDispatchDeps.applyNonInjuryConstraint (real)
+ *   → source_fact_transaction_required boundary
+ *   → transactTemporarySourceFact (real accepted-state transaction)
  *   → useCoachUpdatesStore.activeConstraints[] (real)
  *   → projectAndLog with extraConstraints from buildExtraConstraints
  *     (matches useResolvedDay/useResolvedWeek behaviour)
@@ -14,8 +15,9 @@
  *
  * Strategy: stub the resolver + getMondayStr so each scenario runs against
  * a deterministic week. Mock global fetch so /coach-intent returns the
- * scripted intent for the scenario under test. Drive the same dispatch
- * chain CoachScreen.handleSend uses. After the dispatch, mirror the
+ * scripted intent for the scenario under test. Prove the legacy synchronous
+ * dispatcher cannot publish readiness mirrors upstream, then commit the
+ * classified fact through the canonical transaction. After acceptance, mirror the
  * useResolvedDay / useResolvedWeek projection — buildExtraConstraints +
  * projectAndLog — and assert:
  *
@@ -91,6 +93,8 @@ let baseWeekDef: Record<number, any> = {};
 
 // ─── Stores + production wiring ───────────────────────────────────────
 import { useProgramStore } from '../store/programStore';
+import { createEmptyAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import {
   useCoachUpdatesStore,
   type ActiveConstraint,
@@ -111,6 +115,12 @@ import {
 } from '../utils/exposureEngine';
 import { bucketToRegion } from '../utils/coachConstraintProducers';
 import { buildWeeklyCoachUpdateFromConstraints } from '../utils/weeklyCoachUpdate';
+import {
+  createTemporaryFatigueFact,
+  createTemporarySorenessFact,
+  temporaryFactScope,
+} from '../rules/temporarySourceFact';
+import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
 import type { CoachIntent } from '../utils/coachIntent';
 import type { Workout } from '../types/domain';
 
@@ -162,8 +172,19 @@ function resetAll() {
   useProgramStore.setState({
     currentProgram: null,
     currentMicrocycle: null,
+    todayWorkout: null,
+    blockState: null,
+    acceptedMaterialContext: {
+      ...createEmptyAcceptedMaterialContext(),
+      revision: 1,
+      lastTransaction: 'coach-live-path-v2:test-seed',
+    },
     dateOverrides: {},
     overrideContexts: {},
+    weekScopedOverlays: {},
+    userRemovalConstraints: [],
+    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
+    exposureContractsByWeek: {},
     sessionFeedback: {},
     weightOverrides: {},
   } as any);
@@ -171,7 +192,54 @@ function resetAll() {
     updatesByWeek: {},
     activeInjury: null,
     activeConstraints: [],
+    dismissedCoachNoteIds: [],
   });
+}
+
+async function commitFatigue(level: number, factId?: string): Promise<string> {
+  const fact = createTemporaryFatigueFact({
+    observedDate: FIXED_TODAY,
+    scope: temporaryFactScope({ kind: 'week', date: FIXED_TODAY }),
+    athleteReportedLevel: level,
+    sourceSurface: 'coach_chat',
+    factId,
+    now: '2026-04-29T10:00:00.000Z',
+  });
+  const result = await transactTemporarySourceFact({
+    operation: 'create',
+    fact,
+    todayISO: FIXED_TODAY,
+    now: '2026-04-29T10:00:00.000Z',
+  });
+  ok('canonical fatigue transaction accepted', result.outcome.startsWith('created_'), result.outcome);
+  return fact.factId;
+}
+
+async function commitSoreness(args: {
+  level: number;
+  bodyPart: string;
+  bucket: 'knee' | 'hamstring' | 'calf' | 'shoulder';
+  factId?: string;
+}): Promise<string> {
+  const fact = createTemporarySorenessFact({
+    observedDate: FIXED_TODAY,
+    scope: temporaryFactScope({ kind: 'week', date: FIXED_TODAY }),
+    athleteReportedLevel: args.level,
+    distribution: 'localized',
+    reportedBodyPartLanguage: args.bodyPart,
+    canonicalBodyPartBucket: args.bucket,
+    sourceSurface: 'coach_chat',
+    factId: args.factId,
+    now: '2026-04-29T10:00:00.000Z',
+  });
+  const result = await transactTemporarySourceFact({
+    operation: 'create',
+    fact,
+    todayISO: FIXED_TODAY,
+    now: '2026-04-29T10:00:00.000Z',
+  });
+  ok('canonical soreness transaction accepted', result.outcome.startsWith('created_'), result.outcome);
+  return fact.factId;
 }
 
 // ─── Mock fetch ────────────────────────────────────────────────────────
@@ -356,7 +424,7 @@ const classifier = new LLMCoachIntentClassifier({
   ]);
 
   // ─────────────────────────────────────────────────────────────────────
-  // [1] Fatigue 7/10 → activeConstraints, week coachNotes, card fields
+  // [1] Fatigue 7/10 → canonical fact, mirrors, coachNotes, card fields
   // ─────────────────────────────────────────────────────────────────────
   section('[1] fatigue 7/10 → full V2 chain populated');
   {
@@ -386,17 +454,19 @@ const classifier = new LLMCoachIntentClassifier({
     const result = await liveDispatchNonInjury("I'm absolutely cooked this week", classifier);
 
     ok('dispatcher handled', result.handled);
-    eq('replyMode = non_injury_constraint', result.replyMode, 'non_injury_constraint');
+    eq('replyMode requires canonical source-fact transaction', result.replyMode, 'source_fact_transaction_required');
+    eq('legacy dispatcher does not mutate readiness mirrors', result.mutated, false);
     ok('legacy /coach-chat NOT called', coachChatCalls === 0);
+    await commitFatigue(7);
 
-    // 1. activeConstraints[] populated with typed fatigue entry
+    // 1. accepted transaction publishes the downstream typed fatigue mirror
     const constraints = useCoachUpdatesStore.getState().activeConstraints;
     const fatigue = constraints.find((c) => c.type === 'fatigue') as ActiveFatigueConstraint;
     ok('activeConstraints contains fatigue entry', !!fatigue);
     if (fatigue) {
       eq('fatigue.severity = 7', fatigue.severity, 7);
-      eq('fatigue.id = fatigue-active', fatigue.id, 'fatigue-active');
       eq('fatigue.status = active', fatigue.status, 'active');
+      ok('fatigue mirror names its canonical fact owner', fatigue.temporarySourceFactIds?.length === 1);
     }
 
     // 2. Visible week (HomeScreenV2 surface) reflects fatigue mutation
@@ -476,7 +546,9 @@ const classifier = new LLMCoachIntentClassifier({
     } as any;
 
     const result = await liveDispatchNonInjury('quads are toast', classifier);
-    eq('replyMode = non_injury_constraint', result.replyMode, 'non_injury_constraint');
+    eq('replyMode requires canonical source-fact transaction', result.replyMode, 'source_fact_transaction_required');
+    eq('legacy dispatcher does not mutate readiness mirrors', result.mutated, false);
+    await commitSoreness({ level: 6, bodyPart: 'quads', bucket: 'knee' });
 
     const constraints = useCoachUpdatesStore.getState().activeConstraints;
     const sore = constraints.find((c) => c.type === 'soreness') as ActiveSorenessConstraint;
@@ -485,7 +557,7 @@ const classifier = new LLMCoachIntentClassifier({
       eq('soreness.bucket = knee', sore.bucket, 'knee');
       eq('soreness.bodyPart = quads', sore.bodyPart, 'quads');
       eq('soreness.severity = 6', sore.severity, 6);
-      eq('soreness.id = soreness-knee', sore.id, 'soreness-knee');
+      ok('soreness mirror names its canonical fact owner', sore.temporarySourceFactIds?.length === 1);
     }
 
     const rawWeek = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
@@ -642,7 +714,9 @@ const classifier = new LLMCoachIntentClassifier({
       needsClarification: false,
       payload: { severity: 6 },
     } as any;
-    await liveDispatchNonInjury('feeling cooked', classifier);
+    const fatigueDispatch = await liveDispatchNonInjury('feeling cooked', classifier);
+    eq('fatigue dispatch requires canonical transaction', fatigueDispatch.replyMode, 'source_fact_transaction_required');
+    await commitFatigue(6);
 
     // Second turn: soreness quads 5
     scriptedIntent = {
@@ -651,7 +725,9 @@ const classifier = new LLMCoachIntentClassifier({
       needsClarification: false,
       payload: { bodyPart: 'quads', severity: 5 },
     } as any;
-    await liveDispatchNonInjury('quads also tight', classifier);
+    const sorenessDispatch = await liveDispatchNonInjury('quads also tight', classifier);
+    eq('soreness dispatch requires canonical transaction', sorenessDispatch.replyMode, 'source_fact_transaction_required');
+    await commitSoreness({ level: 5, bodyPart: 'quads', bucket: 'knee' });
 
     const constraints = useCoachUpdatesStore.getState().activeConstraints;
     eq('two active constraints', constraints.length, 2);
@@ -690,9 +766,9 @@ const classifier = new LLMCoachIntentClassifier({
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // [6] Producer skip — soreness w/ unresolvable bodyPart → no constraint
+  // [6] Legacy seam cannot guess or publish an unresolvable soreness fact
   // ─────────────────────────────────────────────────────────────────────
-  section('[6] soreness with unmapped body part → no constraint, asks clarifier');
+  section('[6] soreness with unmapped body part → no readiness mirror');
   {
     resetAll();
     resetFetchSpy();
@@ -705,15 +781,16 @@ const classifier = new LLMCoachIntentClassifier({
     } as any;
 
     const result = await liveDispatchNonInjury("I'm sore", classifier);
-    ok('reply asks where the soreness is', /where.*soreness|body part/i.test(result.reply));
+    eq('replyMode requires canonical source-fact transaction', result.replyMode, 'source_fact_transaction_required');
+    eq('legacy seam does not claim a mutation', result.mutated, false);
     const constraints = useCoachUpdatesStore.getState().activeConstraints;
     eq('no constraint written', constraints.length, 0);
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // [7] Resolved constraint disappears from card + projection
+  // [7] Resolved canonical fact disappears from card + projection
   // ─────────────────────────────────────────────────────────────────────
-  section('[7] manually resolved fatigue → projection no-op, card returns null');
+  section('[7] resolved canonical fatigue → projection no-op, card returns null');
   {
     resetAll();
     resetFetchSpy();
@@ -724,14 +801,16 @@ const classifier = new LLMCoachIntentClassifier({
       needsClarification: false,
       payload: { severity: 8 },
     } as any;
-    await liveDispatchNonInjury('totally smashed', classifier);
+    const fatigueId = await commitFatigue(8);
     const idx = useCoachUpdatesStore.getState().activeConstraints.findIndex((c) => c.type === 'fatigue');
     ok('fatigue persisted', idx >= 0);
-    // Resolve it.
-    const updated = useCoachUpdatesStore.getState().activeConstraints.map((c, i) =>
-      i === idx ? { ...c, status: 'resolved' as const } : c,
-    );
-    useCoachUpdatesStore.getState().setActiveConstraints(updated as any);
+    const resolution = await transactTemporarySourceFact({
+      operation: 'resolve',
+      factId: fatigueId,
+      todayISO: FIXED_TODAY,
+      now: '2026-04-29T11:00:00.000Z',
+    });
+    ok('canonical fatigue resolution accepted', resolution.outcome.startsWith('resolved_'), resolution.outcome);
 
     const rawWeek = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
     const visibleWeek = projectVisibleWeek(rawWeek);
@@ -748,26 +827,19 @@ const classifier = new LLMCoachIntentClassifier({
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // [8] Live fatigue resolution path clears store + Program card
+  // [8] Canonical fatigue resolution preserves independent source facts
   // ─────────────────────────────────────────────────────────────────────
-  section('[8] live "no fatigue" message clears only fatigue + Program card agrees');
+  section('[8] canonical fatigue resolution is surgical + Program card agrees');
   {
     resetAll();
     resetFetchSpy();
     baseWeekDef = { 5: wk('Sprint + Plyo', 5, { exercises: [ex('Flying 30m Sprints')] }) };
 
-    // First turn: create fatigue through the real non-injury producer.
-    scriptedIntent = {
-      intent: 'fatigue' as any,
-      confidence: 0.9,
-      needsClarification: false,
-      payload: { severity: 5 },
-    } as any;
-    await liveDispatchNonInjury('Feeling flat, fatigue is about 5/10', classifier);
+    const fatigueId = await commitFatigue(5);
     const afterFatigue = useCoachUpdatesStore.getState().activeConstraints;
     ok(
-      'fatigue created by producer',
-      afterFatigue.some((c) => c.type === 'fatigue' && c.id === 'fatigue-active' && c.status === 'active'),
+      'fatigue created by canonical transaction',
+      afterFatigue.some((c) => c.type === 'fatigue' && c.status === 'active'),
     );
 
     const rawWeekWithFatigue = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
@@ -784,46 +856,26 @@ const classifier = new LLMCoachIntentClassifier({
       JSON.stringify(fatigueCard?.activeIssues ?? []),
     );
 
-    // Add other active constraints to prove fatigue resolution is surgical.
-    const nowISO = '2026-04-29T10:00:00.000Z';
-    useCoachUpdatesStore.getState().upsertActiveConstraint({
-      id: 'injury-hamstring',
-      type: 'injury',
-      bodyPart: 'hammy',
-      bucket: 'hamstring' as any,
-      severity: 7,
-      status: 'active',
-      startDate: nowISO,
-      lastUpdatedAt: nowISO,
-      rules: [],
-      safeFocus: [],
-      advice: [],
-    } as any);
-    useCoachUpdatesStore.getState().upsertActiveConstraint({
-      id: 'injury-shoulder',
-      type: 'injury',
+    // Add independent canonical facts to prove fatigue resolution is surgical.
+    const calfId = await commitSoreness({
+      level: 7,
+      bodyPart: 'calves',
+      bucket: 'calf',
+      factId: 'coach-live-path:soreness:calf',
+    });
+    const shoulderId = await commitSoreness({
+      level: 6,
       bodyPart: 'shoulder',
-      bucket: 'shoulder' as any,
-      severity: 6,
-      status: 'active',
-      startDate: nowISO,
-      lastUpdatedAt: nowISO,
-      rules: [],
-      safeFocus: [],
-      advice: [],
-    } as any);
-
-    // Second turn: the LLM still says "fatigue", but the deterministic
-    // resolution detector must clear instead of creating a new fatigue flag.
-    scriptedIntent = {
-      intent: 'fatigue' as any,
-      confidence: 0.92,
-      needsClarification: false,
-      payload: { severity: 5 },
-    } as any;
-    const result = await liveDispatchNonInjury("No I'm fine - I have no fatigue", classifier);
-    eq('replyMode = constraint_resolution_applied', result.replyMode, 'constraint_resolution_applied');
-    ok('reply names cleared fatigue', /cleared.*fatigue/i.test(result.reply), result.reply);
+      bucket: 'shoulder',
+      factId: 'coach-live-path:soreness:shoulder',
+    });
+    const resolution = await transactTemporarySourceFact({
+      operation: 'resolve',
+      factId: fatigueId,
+      todayISO: FIXED_TODAY,
+      now: '2026-04-29T11:00:00.000Z',
+    });
+    ok('fatigue resolution is accepted', resolution.outcome.startsWith('resolved_'), resolution.outcome);
 
     const afterResolution = useCoachUpdatesStore.getState().activeConstraints;
     ok(
@@ -832,12 +884,12 @@ const classifier = new LLMCoachIntentClassifier({
       JSON.stringify(afterResolution),
     );
     ok(
-      'hammy remains active',
-      afterResolution.some((c) => c.type === 'injury' && (c as any).bodyPart === 'hammy'),
+      'calves soreness remains active',
+      afterResolution.some((c) => c.type === 'soreness' && (c as any).bodyPart === 'calves'),
     );
     ok(
-      'shoulder remains active',
-      afterResolution.some((c) => c.type === 'injury' && (c as any).bodyPart === 'shoulder'),
+      'shoulder soreness remains active',
+      afterResolution.some((c) => c.type === 'soreness' && (c as any).bodyPart === 'shoulder'),
     );
 
     const rawWeekAfterResolution = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
@@ -854,17 +906,27 @@ const classifier = new LLMCoachIntentClassifier({
       JSON.stringify(cardAfterResolution?.activeIssues ?? []),
     );
     ok(
-      'Program card still shows remaining injury constraints',
+      'Program card still shows remaining soreness constraints',
       !!cardAfterResolution &&
-        cardAfterResolution.activeIssues.some((issue) => /Hammy pain/i.test(issue)) &&
-        cardAfterResolution.activeIssues.some((issue) => /Shoulder pain/i.test(issue)),
+        cardAfterResolution.activeIssues.some((issue) => /calves/i.test(issue)) &&
+        cardAfterResolution.activeIssues.some((issue) => /shoulder/i.test(issue)),
       JSON.stringify(cardAfterResolution?.activeIssues ?? []),
     );
 
     // Now clear the other constraints too; with no active constraints,
     // HomeScreenV2's derived card path returns null immediately.
-    useCoachUpdatesStore.getState().removeActiveConstraint('injury-hamstring');
-    useCoachUpdatesStore.getState().removeActiveConstraint('injury-shoulder');
+    await transactTemporarySourceFact({
+      operation: 'resolve',
+      factId: calfId,
+      todayISO: FIXED_TODAY,
+      now: '2026-04-29T11:05:00.000Z',
+    });
+    await transactTemporarySourceFact({
+      operation: 'resolve',
+      factId: shoulderId,
+      todayISO: FIXED_TODAY,
+      now: '2026-04-29T11:10:00.000Z',
+    });
     const cardWithNoActiveConstraints = buildWeeklyCoachUpdateFromConstraints({
       weekStartISO: FIXED_MONDAY,
       visibleWeek: projectVisibleWeek(rawWeekAfterResolution),

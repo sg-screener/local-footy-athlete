@@ -31,7 +31,6 @@ import {
 } from '../utils/coachClarifierResume';
 import { checkInjuryClarificationGuard } from '../utils/injuryClarificationGuard';
 import { extractBodyPart } from '../utils/injuryAdjustmentEngine';
-import { buildReadinessSignalPatch } from '../utils/readiness';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
 import { useProgramStore } from '../store/programStore';
@@ -320,14 +319,7 @@ function answerGameDayPending(answer: string) {
   });
   ok(`${answer}: game-day pending captured`, !!captured, captured);
   if (!captured) return null;
-  const resolved = resolvePendingGameDayReadinessAnswer(captured as any, answer);
-  if (resolved?.kind === 'mark_limited') {
-    useReadinessStore.getState().setReadinessSignal(TODAY, {
-      ...buildReadinessSignalPatch('flat'),
-      source: 'coach_message',
-    });
-  }
-  return resolved;
+  return resolvePendingGameDayReadinessAnswer(captured as any, answer);
 }
 
 section('[1] bare fatigue/readiness goes to ProgramEdit clarify, not readiness mutation');
@@ -473,9 +465,9 @@ for (const phrase of [
   eq('mark limited: readiness path', answer?.kind, 'mark_limited' as any);
   ok('mark limited: no program changes copy', !/program changes/i.test(answer?.reply ?? ''), answer);
   eq(
-    'mark limited: readiness store write',
+    'mark limited: downstream readiness mirror cannot publish upstream',
     Object.keys(useReadinessStore.getState().signalsByDate).length,
-    1,
+    0,
   );
   assertNoProgramMutation('mark limited');
 }

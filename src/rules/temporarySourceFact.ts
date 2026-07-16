@@ -70,12 +70,15 @@ export interface TemporaryPoorSleepFact extends TemporarySourceFactBase<'poor_sl
   pattern: 'single_night' | 'repeated';
 }
 
-/** InjuryEpisodeV1 is the landed injury member of the same canonical fact set. */
-export type TemporarySourceFact =
-  | InjuryEpisodeV1
+export type NonInjuryTemporarySourceFact =
   | TemporaryFatigueFact
   | TemporarySorenessFact
   | TemporaryPoorSleepFact;
+
+/** InjuryEpisodeV1 is the landed injury member of the same canonical fact set. */
+export type TemporarySourceFact =
+  | InjuryEpisodeV1
+  | NonInjuryTemporarySourceFact;
 
 export interface TemporarySourceFactCompatibility {
   injuryEpisodes: InjuryEpisodeV1[];
@@ -140,7 +143,7 @@ function normalizeScope(value: unknown, from: string, until: string): TemporaryS
   };
 }
 
-function normalizeNonInjuryFact(value: unknown): TemporaryFatigueFact | TemporarySorenessFact | TemporaryPoorSleepFact | null {
+function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | null {
   if (!isRecord(value) || typeof value.factId !== 'string') return null;
   if (value.factKind !== 'fatigue' && value.factKind !== 'soreness' && value.factKind !== 'poor_sleep') {
     return null;
@@ -151,7 +154,7 @@ function normalizeNonInjuryFact(value: unknown): TemporaryFatigueFact | Temporar
   if (!observedDate || !effectiveFrom || !effectiveUntil) return null;
   const createdAt = isoTimestamp(value.createdAt, `${observedDate}T00:00:00.000Z`);
   const updatedAt = isoTimestamp(value.updatedAt, createdAt);
-  const base = {
+  const base: Omit<TemporarySourceFactBase<NonInjuryTemporarySourceFact['factKind']>, 'factKind'> = {
     protocolVersion: TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION,
     factId: value.factId,
     status: value.status === 'resolved' || value.status === 'expired' ? value.status : 'active' as const,
@@ -203,6 +206,12 @@ export function isInjurySourceFact(fact: TemporarySourceFact): fact is InjuryEpi
   return 'episodeId' in fact;
 }
 
+export function isNonInjuryTemporarySourceFact(
+  fact: TemporarySourceFact,
+): fact is NonInjuryTemporarySourceFact {
+  return !isInjurySourceFact(fact);
+}
+
 export function temporarySourceFactId(fact: TemporarySourceFact): string {
   return isInjurySourceFact(fact) ? fact.episodeId : fact.factId;
 }
@@ -220,7 +229,7 @@ export function normalizeTemporarySourceFacts(args: {
     : normalizeInjuryEpisodes(args.legacyInjuryEpisodes);
   const nonInjuries = source
     .map(normalizeNonInjuryFact)
-    .filter((fact): fact is TemporaryFatigueFact | TemporarySorenessFact | TemporaryPoorSleepFact => !!fact);
+    .filter((fact): fact is NonInjuryTemporarySourceFact => !!fact);
   const byId = new Map<string, TemporarySourceFact>();
   for (const fact of [...injuries, ...nonInjuries]) byId.set(temporarySourceFactId(fact), fact);
   return Array.from(byId.values()).sort((left, right) =>
@@ -346,7 +355,10 @@ function localizedSorenessConstraints(facts: readonly TemporarySorenessFact[]): 
     group.facts.push(fact);
     byBucketAndWindow.set(key, group);
   }
-  return Array.from(byBucketAndWindow.values()).map(({ bucket, facts: bucketFacts }) => {
+  return Array.from(byBucketAndWindow.values()).map(({
+    bucket,
+    facts: bucketFacts,
+  }): ActiveSorenessConstraint => {
     const strongest = [...bucketFacts].sort((left, right) =>
       levelScore(right.athleteReportedLevel) - levelScore(left.athleteReportedLevel) ||
       right.updatedAt.localeCompare(left.updatedAt))[0];
