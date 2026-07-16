@@ -64,6 +64,11 @@ import {
   normalizeAcceptedProgramSurfaces,
   type AcceptedMaterialContext,
 } from './acceptedStateColdStart';
+import {
+  createEmptyReversibleAdjustmentLedger,
+  normalizeReversibleAdjustmentLedger,
+  type ReversibleAdjustmentLedger,
+} from '../rules/reversibleAdjustmentLedger';
 
 export type { AcceptedMaterialContext } from './acceptedStateColdStart';
 
@@ -1094,6 +1099,9 @@ export interface ProgramState {
   /** Persisted athlete-authored hard constraints for binned sessions/components. */
   userRemovalConstraints: UserRemovalConstraint[];
 
+  /** Accepted reversible fixture/session actions and their exact owned deltas. */
+  reversibleAdjustmentLedger: ReversibleAdjustmentLedger;
+
   /** Target-week contracts reconciled by explicit date-level edits. */
   exposureContractsByWeek: Record<string, WeeklyExposureContract>;
 
@@ -1186,6 +1194,7 @@ export const useProgramStore = create<ProgramState>()(
       overrideContexts: {},
       weekScopedOverlays: {},
       userRemovalConstraints: [],
+      reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
       exposureContractsByWeek: {},
       sessionFeedback: {},
       weightOverrides: {},
@@ -1617,6 +1626,7 @@ export const useProgramStore = create<ProgramState>()(
           overrideContexts: {},
           weekScopedOverlays: {},
           userRemovalConstraints: [],
+          reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
           exposureContractsByWeek: {},
           sessionFeedback: {},
           weightOverrides: {},
@@ -1634,6 +1644,28 @@ export const useProgramStore = create<ProgramState>()(
           ...normalizeAcceptedProgramSurfaces(incomingRaw),
           acceptedMaterialContext: acceptedContext,
         };
+        const migrationContractsByWeek: Record<string, WeeklyExposureContractV2> = {};
+        for (const microcycle of incoming.currentProgram?.microcycles ?? []) {
+          if (microcycle.exposureContractV2) {
+            migrationContractsByWeek[microcycle.startDate.slice(0, 10)] =
+              microcycle.exposureContractV2;
+          }
+        }
+        if (incoming.currentMicrocycle?.exposureContractV2) {
+          migrationContractsByWeek[incoming.currentMicrocycle.startDate.slice(0, 10)] =
+            incoming.currentMicrocycle.exposureContractV2;
+        }
+        for (const [weekStart, overlay] of Object.entries(incoming.weekScopedOverlays)) {
+          if (overlay.exposureContractV2) {
+            migrationContractsByWeek[weekStart] = overlay.exposureContractV2;
+          }
+        }
+        incoming.reversibleAdjustmentLedger = normalizeReversibleAdjustmentLedger({
+          value: incomingRaw.reversibleAdjustmentLedger,
+          userRemovalConstraints: incoming.userRemovalConstraints,
+          acceptedRevision: acceptedContext.revision,
+          exposureContractsByWeek: migrationContractsByWeek,
+        });
         const readinessConstraints = acceptedContext.revision > 0
           ? Object.values(acceptedContext.readinessSignalsByDate).flatMap((signal) =>
               require('../utils/readinessConstraints').buildReadinessActiveConstraints(signal))

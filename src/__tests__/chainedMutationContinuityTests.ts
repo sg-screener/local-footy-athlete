@@ -285,10 +285,13 @@ async function main(): Promise<void> {
       todayISO: WEEK,
     });
     assert(added.outcome !== 'impossible', added.outcome === 'impossible' ? added.reason : '');
-    const gameNote = useCoachUpdatesStore.getState().activeConstraints.find((row) =>
-      row.id === `game-change-${WEEK}`);
-    assert(gameNote?.reasonLabel === 'Game added',
-      `stale removal note survived add-back: ${gameNote?.reasonLabel}`);
+    const gameNotes = useCoachUpdatesStore.getState().activeConstraints.filter((row) =>
+      row.noteProof?.kind === 'game_change' && row.weekStartISO === WEEK);
+    const gameNote = gameNotes[0];
+    assert(gameNotes.length === 1 && gameNote?.reasonLabel === 'Game added' &&
+      added.result.reversibleAdjustmentId &&
+      gameNote.id === `game-change:${added.result.reversibleAdjustmentId}`,
+    `stale removal note survived add-back: ${gameNote?.reasonLabel}`);
     const week = accepted();
     const map = byDay(week);
     assert(week.evaluation.ledger.mainStrength.achievedCount === 3, 'Sunday move lost S3');

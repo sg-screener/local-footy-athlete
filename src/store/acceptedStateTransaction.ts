@@ -21,7 +21,10 @@ import {
 } from './programStore';
 import { useCalendarStore } from './calendarStore';
 import { useReadinessStore } from './readinessStore';
-import { useCoachUpdatesStore } from './coachUpdatesStore';
+import {
+  publishAcceptedCoachUpdatesCompatibilityMirror,
+  useCoachUpdatesStore,
+} from './coachUpdatesStore';
 import { useProfileStore } from './profileStore';
 import { buildReadinessActiveConstraints } from '../utils/readinessConstraints';
 import { isStructuralGenerationConstraint } from '../utils/generationConstraints';
@@ -61,6 +64,19 @@ import {
   userMoveConstraintId,
   userRemovalConstraintId,
 } from '../rules/userRemovalConstraints';
+import {
+  REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+  reversibleAdjustmentId,
+  reversibleAdjustmentWorkoutFingerprint,
+  type ReversibleAdjustmentActor,
+  type ReversibleAdjustmentKind,
+  type ReversibleAdjustmentLinkedReduction,
+  type ReversibleAdjustmentOwnedDayDelta,
+  type ReversibleAdjustmentRecord,
+  type ReversibleAdjustmentRestorationTarget,
+  type ReversibleAdjustmentSurface,
+} from '../rules/reversibleAdjustmentLedger';
+import { semanticFingerprint } from '../utils/programSemanticSnapshot';
 import { Section18WeekAcceptanceError } from '../rules/section18AcceptedWeekGateway';
 import {
   athleteActionDiagnosticHash,
@@ -84,6 +100,7 @@ export type AcceptedProgramSurfaces = Pick<
   | 'overrideContexts'
   | 'weekScopedOverlays'
   | 'userRemovalConstraints'
+  | 'reversibleAdjustmentLedger'
   | 'exposureContractsByWeek'
 >;
 
@@ -99,11 +116,36 @@ export interface AcceptedStateTransactionProposal {
   validateWeekStarts?: readonly string[];
   profile?: OnboardingData | null;
   programAlreadyAccepted?: boolean;
+  /** Restoration-only mode: keep ledger-owned prescriptions byte-for-byte
+   * while still running the complete accepted visible-ledger gateway. */
+  preserveExactAcceptedWorkouts?: boolean;
 }
 
 export interface AcceptedStateTransactionResult {
   program: AcceptedProgramSurfaces;
   context: AcceptedMaterialContext;
+}
+
+export interface ReversibleAdjustmentCreationInput {
+  kind: ReversibleAdjustmentKind;
+  sourceActor: ReversibleAdjustmentActor;
+  sourceSurface: ReversibleAdjustmentSurface;
+  sourceActionOrIntentId: string;
+  proposal: AcceptedStateTransactionProposal;
+  affectedDates?: readonly string[];
+  restorationTarget?: Partial<ReversibleAdjustmentRestorationTarget>;
+  linkedConstraintIds?: readonly string[];
+  linkedUserRemovalConstraintIds?: readonly string[];
+  userRemovalConstraint?: UserRemovalConstraint | null;
+  adjustmentId?: string;
+  createdAt?: string;
+  nonce?: string;
+}
+
+export interface ReversibleAdjustmentCreationStage {
+  proposal: AcceptedStateTransactionProposal;
+  result: AcceptedStateTransactionResult;
+  adjustment: ReversibleAdjustmentRecord | null;
 }
 
 export class AcceptedStateLedgerMismatchError extends Error {
@@ -124,6 +166,7 @@ const PROGRAM_SURFACE_KEYS: Array<keyof AcceptedProgramSurfaces> = [
   'overrideContexts',
   'weekScopedOverlays',
   'userRemovalConstraints',
+  'reversibleAdjustmentLedger',
   'exposureContractsByWeek',
 ];
 
@@ -304,7 +347,13 @@ export function assertAcceptedVisibleLedgerEquivalence(args: {
         rejectingBoundary: 'assertAcceptedVisibleLedgerEquivalence',
         failureCategory: 'projection_mismatch',
       });
-      throw new AcceptedStateLedgerMismatchError(weekStart, 'persisted and visible ledgers differ');
+      throw new AcceptedStateLedgerMismatchError(
+        weekStart,
+        `persisted and visible ledgers differ: ${JSON.stringify({
+          persisted: JSON.parse(acceptedLedgerSignature(contract)),
+          visible: JSON.parse(acceptedLedgerSignature(evaluation.contract)),
+        })}`,
+      );
     }
     emitAthleteActionEvent(args.trace, 'visible_projection_result', {
       acceptedStateVersion: context.revision,
@@ -345,11 +394,24 @@ export function stageAcceptedStateTransaction(
     lastTransaction: proposal.reason,
   });
   const profile = proposal.profile ?? useProfileStore.getState().onboardingData;
-  const candidate = materialiseFixtureMarksForCandidate({
-    candidate: materialisedProgramPatch(programSurfaces(current), proposal.program),
-    context,
-    profile,
-  });
+  const patchedCandidate = materialisedProgramPatch(programSurfaces(current), proposal.program);
+  const candidate = proposal.preserveExactAcceptedWorkouts
+    ? patchedCandidate
+    : materialiseFixtureMarksForCandidate({
+        candidate: patchedCandidate,
+        context,
+        profile,
+      });
+  if (proposal.preserveExactAcceptedWorkouts) {
+    assertAcceptedVisibleLedgerEquivalence({
+      surfaces: candidate,
+      context,
+      weekStarts: proposal.validateWeekStarts ?? [],
+      profile,
+      trace: proposal.trace,
+    });
+    return { program: candidate, context };
+  }
   const constraints = validationConstraints(
     context.activeConstraints,
     context.readinessSignalsByDate,
@@ -503,6 +565,12 @@ export function commitAcceptedStateTransaction(
   });
   useCalendarStore.setState({ markedDays: staged.context.markedDays });
   useReadinessStore.setState({ signalsByDate: staged.context.readinessSignalsByDate });
+  if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined) {
+    publishAcceptedCoachUpdatesCompatibilityMirror({
+      activeConstraints: staged.context.activeConstraints,
+      activeInjury: staged.context.activeInjury,
+    });
+  }
   const afterStateHash = athleteActionDiagnosticHash({
     program: staged.program,
     context: staged.context,
@@ -576,6 +644,375 @@ export function commitAcceptedStateTransaction(
     });
   }
   return staged;
+}
+
+function cloneAccepted<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function acceptedWorkoutsForDates(args: {
+  surfaces: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+  profile: OnboardingData | null;
+  dates: readonly string[];
+}): Map<string, Workout | null> {
+  const dates = Array.from(new Set(args.dates.map((date) => date.slice(0, 10))));
+  const byDate = new Map<string, Workout | null>();
+  for (const weekStart of Array.from(new Set(dates.map(mondayForDate)))) {
+    const rebased = rebaseAcceptedEffectiveWeek({
+      surfaces: args.surfaces,
+      weekStart,
+      profile: args.profile,
+      markedDays: args.context.markedDays,
+    });
+    const byDay = new Map(rebased.visibleWorkouts.map((workout) =>
+      [workout.dayOfWeek, workout]));
+    for (const date of dates.filter((candidate) => mondayForDate(candidate) === weekStart)) {
+      const workout = byDay.get(new Date(`${date}T12:00:00`).getDay()) ?? null;
+      byDate.set(date, workout ? cloneAccepted(workout) : null);
+    }
+  }
+  return byDate;
+}
+
+function acceptedSurfaceRowsForDates(args: {
+  surfaces: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+  profile: OnboardingData | null;
+  dates: readonly string[];
+}): Map<string, { owner: 'date_override' | 'week_overlay' | 'base_microcycle' | 'empty'; workout: Workout | null }> {
+  const dates = Array.from(new Set(args.dates.map((date) => date.slice(0, 10))));
+  const byDate = new Map<string, {
+    owner: 'date_override' | 'week_overlay' | 'base_microcycle' | 'empty';
+    workout: Workout | null;
+  }>();
+  for (const weekStart of Array.from(new Set(dates.map(mondayForDate)))) {
+    const rebased = rebaseAcceptedEffectiveWeek({
+      surfaces: args.surfaces,
+      weekStart,
+      profile: args.profile,
+      markedDays: args.context.markedDays,
+    });
+    for (const entry of rebased.dates) {
+      if (!dates.includes(entry.date)) continue;
+      byDate.set(entry.date, {
+        owner: entry.owner,
+        workout: entry.workout ? cloneAccepted(entry.workout) : null,
+      });
+    }
+  }
+  return byDate;
+}
+
+function contractForAcceptedWeek(
+  surfaces: AcceptedProgramSurfaces,
+  weekStart: string,
+): WeeklyExposureContractV2 | undefined {
+  const overlay = surfaces.weekScopedOverlays[weekStart];
+  if (overlay?.exposureContractV2) return overlay.exposureContractV2;
+  const microcycle = surfaces.currentProgram?.microcycles.find((candidate) =>
+    weekStart >= candidate.startDate.slice(0, 10) &&
+    weekStart <= candidate.endDate.slice(0, 10));
+  if (microcycle?.exposureContractV2) return microcycle.exposureContractV2;
+  if (
+    surfaces.currentMicrocycle &&
+    weekStart >= surfaces.currentMicrocycle.startDate.slice(0, 10) &&
+    weekStart <= surfaces.currentMicrocycle.endDate.slice(0, 10)
+  ) return surfaces.currentMicrocycle.exposureContractV2;
+  return undefined;
+}
+
+function linkedReductionSignature(entry: ReversibleAdjustmentLinkedReduction): string {
+  return semanticFingerprint(entry);
+}
+
+function acceptedLinkedReductions(
+  surfaces: AcceptedProgramSurfaces,
+  weekStarts: readonly string[],
+): ReversibleAdjustmentLinkedReduction[] {
+  return weekStarts.flatMap((weekStart) =>
+    (contractForAcceptedWeek(surfaces, weekStart)?.authorisedReductions ?? []).map((entry) => {
+      const reduction = {
+        weekStart,
+        metric: entry.metric,
+        reason: entry.reason,
+        originalApprovedTarget: entry.originalApprovedTarget,
+        reducedTarget: entry.reducedTarget,
+        detail: entry.detail,
+        deletionIdentity: entry.deletionIdentity ?? null,
+      };
+      return { ...reduction, fingerprint: semanticFingerprint(reduction) };
+    }));
+}
+
+function provenanceReferences(
+  workouts: ReadonlyMap<string, Workout | null>,
+): string[] {
+  return Array.from(workouts.entries()).flatMap(([date, workout]) =>
+    (workout?.derivedSessionProvenance ?? []).map((record, index) => [
+      date,
+      workout.planEntryId ?? workout.id,
+      record.sourcePlanEntryId ?? 'none',
+      record.origin,
+      record.scope,
+      index,
+      semanticFingerprint(record),
+    ].join(':')));
+}
+
+function overrideOwnerId(
+  context: OverrideContext | null | undefined,
+): string | null {
+  if (!context) return null;
+  const candidate = context as OverrideContext & {
+    activeModifierId?: string;
+    sourceActionId?: string;
+    sourceEventId?: string;
+  };
+  return candidate.activeModifierId ?? candidate.sourceActionId ?? candidate.sourceEventId ?? null;
+}
+
+/**
+ * Pure reversible creation staging. It first obtains the fully accepted
+ * candidate, derives exact owned date deltas from that candidate, then stages
+ * the same candidate with one ledger record. No store is published here.
+ */
+export function stageReversibleAdjustmentCreationTransaction(
+  input: ReversibleAdjustmentCreationInput,
+): ReversibleAdjustmentCreationStage {
+  const current = useProgramStore.getState();
+  const beforeProgram = programSurfaces(current);
+  const beforeContext = materialContext(current);
+  const profile = input.proposal.profile ?? useProfileStore.getState().onboardingData;
+  const firstStage = stageAcceptedStateTransaction(input.proposal);
+  const rollingDependencyWeeks = Array.from(new Set([
+    ...(input.proposal.validateWeekStarts ?? []).map((week) => mondayForDate(week)),
+    ...(input.affectedDates ?? []).map(mondayForDate),
+  ])).sort();
+  const candidateDates = Array.from(new Set([
+    ...rollingDependencyWeeks.flatMap(datesInWeek),
+    ...(input.affectedDates ?? []).map((date) => date.slice(0, 10)),
+  ])).sort();
+  const beforeWorkouts = acceptedWorkoutsForDates({
+    surfaces: beforeProgram,
+    context: beforeContext,
+    profile,
+    dates: candidateDates,
+  });
+  const afterWorkouts = acceptedWorkoutsForDates({
+    surfaces: firstStage.program,
+    context: firstStage.context,
+    profile,
+    dates: candidateDates,
+  });
+  const beforeSurfaceRows = acceptedSurfaceRowsForDates({
+    surfaces: beforeProgram,
+    context: beforeContext,
+    profile,
+    dates: candidateDates,
+  });
+  const afterSurfaceRows = acceptedSurfaceRowsForDates({
+    surfaces: firstStage.program,
+    context: firstStage.context,
+    profile,
+    dates: candidateDates,
+  });
+  const changedDates = candidateDates.filter((date) => {
+    const beforeFingerprint = reversibleAdjustmentWorkoutFingerprint(
+      date,
+      beforeWorkouts.get(date) ?? null,
+    );
+    const afterFingerprint = reversibleAdjustmentWorkoutFingerprint(
+      date,
+      afterWorkouts.get(date) ?? null,
+    );
+    return beforeFingerprint !== afterFingerprint ||
+      (beforeContext.markedDays[date] ?? null) !== (firstStage.context.markedDays[date] ?? null) ||
+      semanticFingerprint(beforeProgram.dateOverrides[date] ?? null) !==
+        semanticFingerprint(firstStage.program.dateOverrides[date] ?? null);
+  });
+  const ownedDays: ReversibleAdjustmentOwnedDayDelta[] = changedDates.map((date) => {
+    const beforeWorkout = beforeWorkouts.get(date) ?? null;
+    const afterWorkout = afterWorkouts.get(date) ?? null;
+    const beforeSurface = beforeSurfaceRows.get(date);
+    const afterSurface = afterSurfaceRows.get(date);
+    return {
+      date,
+      weekStart: mondayForDate(date),
+      beforeWorkout,
+      afterWorkout,
+      beforeSurfaceOwner: beforeSurface?.owner ?? 'empty',
+      afterSurfaceOwner: afterSurface?.owner ?? 'empty',
+      beforeSurfaceWorkout: beforeSurface?.workout ?? null,
+      afterSurfaceWorkout: afterSurface?.workout ?? null,
+      beforeDateOverride: beforeProgram.dateOverrides[date]
+        ? cloneAccepted(beforeProgram.dateOverrides[date])
+        : null,
+      afterDateOverride: firstStage.program.dateOverrides[date]
+        ? cloneAccepted(firstStage.program.dateOverrides[date])
+        : null,
+      beforeOverrideContext: beforeProgram.overrideContexts[date]
+        ? cloneAccepted(beforeProgram.overrideContexts[date])
+        : null,
+      afterOverrideContext: firstStage.program.overrideContexts[date]
+        ? cloneAccepted(firstStage.program.overrideContexts[date])
+        : null,
+      beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(date, beforeWorkout),
+      afterFingerprint: reversibleAdjustmentWorkoutFingerprint(date, afterWorkout),
+    };
+  });
+  const calendarFacts = changedDates.flatMap((date) => {
+    const before = beforeContext.markedDays[date] ?? null;
+    const after = firstStage.context.markedDays[date] ?? null;
+    return before === after ? [] : [{ date, before, after }];
+  });
+  const affectedDates = Array.from(new Set(changedDates)).sort();
+  const beforeProvenance = new Set(provenanceReferences(beforeWorkouts));
+  const linkedProvenanceIds = provenanceReferences(afterWorkouts)
+    .filter((id) => !beforeProvenance.has(id));
+  const beforeReductions = new Set(acceptedLinkedReductions(
+    beforeProgram,
+    rollingDependencyWeeks,
+  ).map(linkedReductionSignature));
+  const linkedTypedReductions = acceptedLinkedReductions(
+    firstStage.program,
+    rollingDependencyWeeks,
+  ).filter((entry) => !beforeReductions.has(linkedReductionSignature(entry)));
+  const ownedWeeks = rollingDependencyWeeks.flatMap((weekStart) => {
+    const beforeContract = contractForAcceptedWeek(beforeProgram, weekStart) ?? null;
+    const afterContract = contractForAcceptedWeek(firstStage.program, weekStart) ?? null;
+    const beforeFingerprint = semanticFingerprint(beforeContract);
+    const afterFingerprint = semanticFingerprint(afterContract);
+    return beforeFingerprint === afterFingerprint ? [] : [{
+      weekStart,
+      beforeExposureContract: beforeContract ? cloneAccepted(beforeContract) : null,
+      afterExposureContract: afterContract ? cloneAccepted(afterContract) : null,
+      beforeFingerprint,
+      afterFingerprint,
+    }];
+  });
+  if (ownedDays.length === 0 && ownedWeeks.length === 0) {
+    return { proposal: input.proposal, result: firstStage, adjustment: null };
+  }
+  const affectedWeeks = Array.from(new Set([
+    ...affectedDates.map(mondayForDate),
+    ...ownedWeeks.map((owned) => owned.weekStart),
+  ])).sort();
+  const createdAt = input.createdAt ?? new Date().toISOString();
+  const id = input.adjustmentId ?? reversibleAdjustmentId({
+    kind: input.kind,
+    sourceActionOrIntentId: input.sourceActionOrIntentId,
+    createdAt,
+    nonce: input.nonce,
+  });
+  const existing = beforeProgram.reversibleAdjustmentLedger.adjustments.find((entry) =>
+    entry.id === id);
+  if (existing) {
+    return { proposal: input.proposal, result: firstStage, adjustment: existing };
+  }
+  const stableIdentities = Array.from(new Set([
+    ...(input.restorationTarget?.stableIdentities ?? []),
+    ...ownedDays.flatMap((entry) => [
+      entry.beforeWorkout?.planEntryId ?? entry.beforeWorkout?.id,
+      entry.afterWorkout?.planEntryId ?? entry.afterWorkout?.id,
+    ].filter((value): value is string => !!value)),
+  ])).sort();
+  const adjustment: ReversibleAdjustmentRecord = {
+    protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+    id,
+    kind: input.kind,
+    sourceActor: input.sourceActor,
+    sourceSurface: input.sourceSurface,
+    sourceActionOrIntentId: input.sourceActionOrIntentId,
+    createdAt,
+    acceptedRevision: firstStage.context.revision,
+    status: 'active',
+    clearedAt: null,
+    supersededById: null,
+    supersededReason: null,
+    affectedDates,
+    affectedWeeks,
+    rollingDependencyWeeks,
+    displacedOriginalState: {
+      ownedDays,
+      ownedWeeks,
+      calendarFacts,
+      userRemovalConstraint: input.userRemovalConstraint
+        ? cloneAccepted(input.userRemovalConstraint)
+        : null,
+    },
+    acceptedAfterSemanticFingerprints: ownedDays.map((entry) => ({
+      date: entry.date,
+      fingerprint: entry.afterFingerprint,
+    })),
+    restorationTarget: {
+      kind: input.restorationTarget?.kind ?? (
+        input.kind.includes('fixture') ? 'fixture_state' :
+          input.kind === 'session_component_delete' ? 'session_component' : 'session'
+      ),
+      dates: Array.from(new Set(input.restorationTarget?.dates ?? affectedDates)).sort(),
+      stableIdentities,
+      ...(input.restorationTarget?.componentScope
+        ? { componentScope: input.restorationTarget.componentScope }
+        : {}),
+    },
+    linkedConstraintIds: Array.from(new Set(input.linkedConstraintIds ?? [])).sort(),
+    linkedCalendarFacts: calendarFacts,
+    linkedOverrideOwners: changedDates.flatMap((date) => {
+      const beforeOverride = beforeProgram.dateOverrides[date];
+      const afterOverride = firstStage.program.dateOverrides[date];
+      if (semanticFingerprint(beforeOverride ?? null) === semanticFingerprint(afterOverride ?? null)) {
+        return [];
+      }
+      return [{
+        date,
+        ownerId: overrideOwnerId(firstStage.program.overrideContexts[date]) ??
+          overrideOwnerId(beforeProgram.overrideContexts[date]),
+      }];
+    }),
+    linkedOverlayIds: rollingDependencyWeeks.flatMap((weekStart) => {
+      const before = beforeProgram.weekScopedOverlays[weekStart];
+      const after = firstStage.program.weekScopedOverlays[weekStart];
+      return semanticFingerprint(before ?? null) === semanticFingerprint(after ?? null) || !after
+        ? []
+        : [after.id];
+    }),
+    linkedUserRemovalConstraintIds: Array.from(new Set(
+      input.linkedUserRemovalConstraintIds ?? [],
+    )).sort(),
+    linkedProvenanceIds,
+    linkedTypedReductions,
+    validity: {
+      reversible: true,
+      source: 'runtime_exact_delta',
+      validWhile: ['accepted_after_semantic_fingerprints_match'],
+      invalidWhen: ['newer_athlete_intent_owns_same_target', 'owned_day_fingerprint_changes'],
+    },
+    laterIntentPolicy: 'newer_athlete_intent_wins',
+  };
+  const proposal: AcceptedStateTransactionProposal = {
+    ...input.proposal,
+    program: {
+      ...(input.proposal.program ?? {}),
+      reversibleAdjustmentLedger: {
+        protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+        adjustments: [
+          ...beforeProgram.reversibleAdjustmentLedger.adjustments,
+          adjustment,
+        ],
+      },
+    },
+  };
+  const result = stageAcceptedStateTransaction(proposal);
+  return { proposal, result, adjustment };
+}
+
+export function commitReversibleAdjustmentCreationTransaction(
+  input: ReversibleAdjustmentCreationInput,
+): ReversibleAdjustmentCreationStage {
+  const staged = stageReversibleAdjustmentCreationTransaction(input);
+  const result = commitAcceptedStateTransaction(staged.proposal);
+  return { ...staged, result };
 }
 
 function mondayForDate(date: string): string {
@@ -700,7 +1137,8 @@ export function buildFixtureProjection(args: {
   let target: TrainingProgram | undefined;
   let targetMicrocycle: Microcycle | undefined;
   const athleteAuthoredMutation = args.mutationIntent === 'athlete_move' ||
-    args.mutationIntent === 'athlete_removal';
+    args.mutationIntent === 'athlete_removal' ||
+    args.mutationIntent === 'restore_adjustment';
   if (athleteAuthoredMutation) {
     // The athlete has already supplied the complete source-of-truth candidate.
     // Re-running program generation here creates a second representation that
@@ -1327,6 +1765,7 @@ export interface AthleteSessionMoveTransactionInput {
 export interface AthleteMutationTransactionStage {
   proposal: AcceptedStateTransactionProposal | null;
   result: AcceptedStateTransactionResult;
+  adjustment: ReversibleAdjustmentRecord | null;
   affectedWeekStarts: string[];
   outcome: RollingHorizonFixtureRepairResult['outcome'] | 'already_applied';
   alreadyApplied: boolean;
@@ -1562,7 +2001,29 @@ function stageAthleteMutationConstraint(args: {
     profile,
     programAlreadyAccepted: true,
   };
-  const result = stageAcceptedStateTransaction(proposal);
+  const creation = stageReversibleAdjustmentCreationTransaction({
+    kind: args.mutationIntent === 'athlete_move'
+      ? 'session_move'
+      : args.constraint.scope === 'whole_session'
+        ? 'session_delete'
+        : 'session_component_delete',
+    sourceActor: 'athlete',
+    sourceSurface: args.source === 'coach' ? 'coach_chat' : 'program_tab',
+    sourceActionOrIntentId: `${args.reason}:${args.constraint.id}`,
+    proposal,
+    affectedDates: args.affectedDates,
+    restorationTarget: {
+      kind: args.constraint.scope === 'whole_session' ? 'session' : 'session_component',
+      dates: args.affectedDates.map((date) => date.slice(0, 10)),
+      stableIdentities: [
+        args.constraint.targetPlanEntryId ?? args.constraint.targetWorkoutId,
+      ],
+      componentScope: args.constraint.scope,
+    },
+    linkedUserRemovalConstraintIds: [args.constraint.id],
+    userRemovalConstraint: args.constraint,
+  });
+  const result = creation.result;
   assertAcceptedVisibleLedgerEquivalence({
     surfaces: result.program,
     context: result.context,
@@ -1586,8 +2047,9 @@ function stageAthleteMutationConstraint(args: {
     boundary: 'stageAthleteMutationConstraint',
   });
   return {
-    proposal,
+    proposal: creation.proposal,
     result,
+    adjustment: creation.adjustment,
     affectedWeekStarts,
     outcome: repair.outcome,
     alreadyApplied: false,
@@ -1612,6 +2074,8 @@ export function stageAthleteSessionDeletionTransaction(
     return {
       proposal: null,
       result: { program: programSurfaces(state), context: prior },
+      adjustment: state.reversibleAdjustmentLedger.adjustments.find((adjustment) =>
+        adjustment.linkedUserRemovalConstraintIds.includes(id)) ?? null,
       affectedWeekStarts: [mondayForDate(date)],
       outcome: 'already_applied',
       alreadyApplied: true,
@@ -1701,6 +2165,8 @@ export function stageAthleteSessionMoveTransaction(
     return {
       proposal: null,
       result: { program: programSurfaces(state), context: prior },
+      adjustment: state.reversibleAdjustmentLedger.adjustments.find((adjustment) =>
+        adjustment.linkedUserRemovalConstraintIds.includes(id)) ?? null,
       affectedWeekStarts: Array.from(new Set([mondayForDate(sourceDate), mondayForDate(targetDate)])).sort(),
       outcome: 'already_applied',
       alreadyApplied: true,

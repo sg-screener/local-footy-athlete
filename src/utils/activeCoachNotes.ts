@@ -9,7 +9,7 @@ import {
   type ActiveProgramModifierSnapshot,
   type ActiveProgramModifierType,
 } from './activeProgramModifiers';
-import type { ActiveConstraint } from '../store/coachUpdatesStore';
+import { useCoachUpdatesStore, type ActiveConstraint } from '../store/coachUpdatesStore';
 import type { InjuryState } from './injuryProgression';
 
 export type ActiveCoachNoteType = ActiveProgramModifierType;
@@ -25,6 +25,8 @@ export interface ActiveCoachNote {
   body: string;
   severity?: number;
   actions: ActiveCoachNoteAction[];
+  reversibleAdjustmentId?: string;
+  presentationOnlyDismiss?: boolean;
 }
 
 export interface ClearActiveCoachNoteResult {
@@ -55,7 +57,9 @@ function dedupeModifiersByLifecycle(
 
 export function buildCoachNotesFromModifiers(
   modifiers: readonly ActiveProgramModifier[],
+  dismissedCoachNoteIds: readonly string[] = [],
 ): ActiveCoachNote[] {
+  const dismissed = new Set(dismissedCoachNoteIds);
   return dedupeModifiersByLifecycle(modifiers).map((modifier) => ({
     id: `coach-note:${modifier.id}`,
     modifierId: modifier.id,
@@ -65,13 +69,28 @@ export function buildCoachNotesFromModifiers(
     body: modifier.body,
     severity: modifier.severity,
     actions: modifier.actions,
-  }));
+    reversibleAdjustmentId: typeof modifier.payload?.reversibleAdjustmentId === 'string'
+      ? modifier.payload.reversibleAdjustmentId
+      : undefined,
+    presentationOnlyDismiss: modifier.payload?.presentationOnlyDismiss === true,
+  })).filter((note) => !dismissed.has(note.id));
+}
+
+export function dismissActiveCoachNote(noteId: string): boolean {
+  const note = buildCoachNotesFromModifiers(getActiveProgramModifiers(), [])
+    .find((candidate) => candidate.id === noteId);
+  if (!note || (!note.presentationOnlyDismiss && !note.reversibleAdjustmentId)) return false;
+  useCoachUpdatesStore.getState().dismissCoachNote(note.id);
+  return true;
 }
 
 export function selectActiveCoachNotes(
   snapshot: ActiveProgramModifierSnapshot,
 ): ActiveCoachNote[] {
-  return buildCoachNotesFromModifiers(selectActiveProgramModifiers(snapshot));
+  return buildCoachNotesFromModifiers(
+    selectActiveProgramModifiers(snapshot),
+    snapshot.dismissedCoachNoteIds ?? useCoachUpdatesStore.getState().dismissedCoachNoteIds,
+  );
 }
 
 /**

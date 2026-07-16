@@ -23,11 +23,15 @@ import type {
 } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { rebuildLocalWeek, type WeekRebuildResult } from '../utils/weekRebuild';
-import { useProgramStore } from '../store/programStore';
+import {
+  canonicaliseHydratedState,
+  readDurableProgramStoreEnvelope,
+  useProgramStore,
+} from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
-import type { ActiveConstraint } from '../store/coachUpdatesStore';
+import { useCoachUpdatesStore, type ActiveConstraint } from '../store/coachUpdatesStore';
 import {
   resolveFixtureConditionedAvailability,
   targetWeekFixtures,
@@ -35,6 +39,17 @@ import {
 } from '../rules/fixtureConditionedAvailability';
 import { compareFixtureReplanEditCost } from '../utils/fixtureMinimalReplan';
 import { resolveFinalVisibleSection18Week } from '../rules/section18AcceptedWeekGateway';
+import {
+  createEmptyReversibleAdjustmentLedger,
+  reversibleAdjustmentWorkoutFingerprint,
+} from '../rules/reversibleAdjustmentLedger';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import {
+  clearReversibleAdjustment,
+  commitClearReversibleAdjustment,
+} from '../store/reversibleAdjustmentTransaction';
+import { executeHomeGameMutationDurably } from '../screens/home/homeGameMutationController';
+import type { GameChangeVisibleDay } from '../utils/gameChangeCoachNotes';
 
 const WEEK_START = '2026-03-23';
 const SATURDAY = '2026-03-28';
@@ -114,6 +129,11 @@ function seedAcceptedWeek(args: {
   useProfileStore.setState({ onboardingData: args.athlete, isOnboardingComplete: true });
   useCalendarStore.setState({ markedDays, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
+  useCoachUpdatesStore.setState({
+    activeConstraints,
+    activeInjury: null,
+    dismissedCoachNoteIds: [],
+  });
   useProgramStore.setState({
     currentProgram: program,
     currentMicrocycle: program.microcycles[0] ?? null,
@@ -122,6 +142,7 @@ function seedAcceptedWeek(args: {
     dateOverrides: {},
     overrideContexts: {},
     weekScopedOverlays: {},
+    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {},
     acceptedMaterialContext: {
       markedDays,
@@ -169,6 +190,53 @@ function exerciseSignature(workout: Workout | undefined): string {
     max: row.prescribedRepsMax,
     rest: row.restSeconds,
   })));
+}
+
+function acceptedWeekSignature(athlete: OnboardingData): string {
+  const state = useProgramStore.getState();
+  const week = rebaseAcceptedEffectiveWeek({
+    surfaces: state,
+    weekStart: WEEK_START,
+    profile: athlete,
+    markedDays: state.acceptedMaterialContext.markedDays,
+  });
+  return JSON.stringify({
+    marks: state.acceptedMaterialContext.markedDays,
+    days: Array.from({ length: 7 }, (_, offset) => {
+      const date = new Date(`${WEEK_START}T12:00:00`);
+      date.setDate(date.getDate() + offset);
+      const iso = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      const day = new Date(`${iso}T12:00:00`).getDay();
+      return reversibleAdjustmentWorkoutFingerprint(
+        iso,
+        week.visibleWorkouts.find((workout) => workout.dayOfWeek === day) ?? null,
+      );
+    }),
+  });
+}
+
+function acceptedWeekRows(athlete: OnboardingData): GameChangeVisibleDay[] {
+  const state = useProgramStore.getState();
+  const week = rebaseAcceptedEffectiveWeek({
+    surfaces: state,
+    weekStart: WEEK_START,
+    profile: athlete,
+    markedDays: state.acceptedMaterialContext.markedDays,
+  });
+  return Array.from({ length: 7 }, (_, offset) => {
+    const value = new Date(`${WEEK_START}T12:00:00`);
+    value.setDate(value.getDate() + offset);
+    const date = `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    const dayOfWeek = value.getDay();
+    const workout = week.visibleWorkouts.find((candidate) => candidate.dayOfWeek === dayOfWeek);
+    return {
+      date,
+      dayOfWeek,
+      workoutName: workout?.name ?? null,
+      workoutType: workout?.workoutType ?? null,
+      sessionTier: workout?.sessionTier ?? null,
+    };
+  });
 }
 
 function storedWorkout(program: TrainingProgram, day: number): Workout | undefined {
@@ -357,6 +425,223 @@ async function main(): Promise<void> {
       'old fixture day not released');
     assert(result.fixtureReplan?.availability.proposedFixtures.some((fixture) => fixture.date === SUNDAY),
       'new fixture day not occupied');
+  });
+
+  await run('11b Saturday → Sunday restore returns Saturday exactly and survives hydration', () => {
+    const athlete = profile();
+    seedAcceptedWeek({ athlete });
+    const before = acceptedWeekSignature(athlete);
+    return executeHomeGameMutationDurably({
+      baseProfile: athlete,
+      currentPhase: 'In-season',
+      newGameDay: 'Sunday',
+      targetDate: SUNDAY,
+      clearOverlayDate: SATURDAY,
+      beforeRows: acceptedWeekRows(athlete),
+      todayISO: WEEK_START,
+    }).then(async (moved) => {
+      const adjustmentId = moved.outcome === 'impossible'
+        ? null
+        : moved.result.reversibleAdjustmentId;
+      assert(adjustmentId, 'fixture move adjustment ID missing');
+      const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments
+        .find((candidate) => candidate.id === adjustmentId);
+      assert(adjustment && adjustment.rollingDependencyWeeks.length > 1,
+        'fixture adjustment did not own its adjacent dependency closure');
+      assert(useProgramStore.getState().acceptedMaterialContext.markedDays[SUNDAY] === 'game',
+        'Sunday fixture did not publish');
+      const restored = await clearReversibleAdjustment(
+        adjustmentId,
+        useProgramStore.getState().acceptedMaterialContext.revision,
+      );
+      assert(restored.outcome === 'restored', JSON.stringify(restored));
+      assert(restored.affectedWeeks.length === adjustment.rollingDependencyWeeks.length,
+        'Restore did not validate the complete recorded dependency closure');
+      assert(useProgramStore.getState().acceptedMaterialContext.markedDays[SATURDAY] === 'game' &&
+        useProgramStore.getState().acceptedMaterialContext.markedDays[SUNDAY] === undefined,
+      'fixture calendar facts were not restored');
+      assert(!useCoachUpdatesStore.getState().activeConstraints.some((constraint) =>
+        constraint.reversibleAdjustmentId === adjustmentId),
+      'restored fixture Coach Note projection remained active');
+      assert(acceptedWeekSignature(athlete) === before,
+        'restored fixture prescriptions differ from the accepted before-state');
+      const envelope = await readDurableProgramStoreEnvelope();
+      assert(envelope, 'durable restored fixture envelope missing');
+      const persisted = JSON.parse(envelope).state as ReturnType<typeof useProgramStore.getState>;
+      assert(persisted.reversibleAdjustmentLedger.adjustments.some((candidate) =>
+        candidate.id === adjustmentId && candidate.status === 'cleared'),
+      'durable envelope did not acknowledge the restored fixture');
+      const hydrated = canonicaliseHydratedState(persisted, {
+        programAlreadyAccepted: true,
+        profile: athlete,
+        markedDays: persisted.acceptedMaterialContext.markedDays,
+        validateWeekStarts: adjustment.rollingDependencyWeeks,
+      });
+      useProgramStore.setState({ ...persisted, ...hydrated });
+      assert(acceptedWeekSignature(athlete) === before,
+        'hydration changed the durably restored fixture state');
+    });
+  });
+
+  await run('11c Game add restores the exact no-fixture week', () => {
+    const athlete = profile({ withFixture: false });
+    seedAcceptedWeek({ athlete, markedDays: {} });
+    const before = acceptedWeekSignature(athlete);
+    const changed = rebuildLocalWeek({
+      baseProfile: athlete, newGameDay: 'Saturday', scope: 'weekOverlay',
+      targetDate: SATURDAY, manageCalendarFixture: true, todayISO: WEEK_START,
+    });
+    assert(changed.reversibleAdjustmentId, 'game add adjustment missing');
+    const restored = commitClearReversibleAdjustment(
+      changed.reversibleAdjustmentId,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    );
+    assert(restored.outcome === 'restored' && acceptedWeekSignature(athlete) === before,
+      JSON.stringify(restored));
+  });
+
+  await run('11d Game remove reverses noGame and restores Saturday exactly', () => {
+    const athlete = profile();
+    seedAcceptedWeek({ athlete });
+    const before = acceptedWeekSignature(athlete);
+    const changed = rebuildLocalWeek({
+      baseProfile: athlete, newGameDay: null, scope: 'weekOverlay',
+      targetDate: SATURDAY, manageCalendarFixture: true, todayISO: WEEK_START,
+    });
+    assert(changed.reversibleAdjustmentId, 'game remove adjustment missing');
+    assert(useProgramStore.getState().acceptedMaterialContext.markedDays[SATURDAY] === 'noGame',
+      'recurring fixture suppression missing');
+    const restored = commitClearReversibleAdjustment(
+      changed.reversibleAdjustmentId,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    );
+    assert(restored.outcome === 'restored' && acceptedWeekSignature(athlete) === before,
+      JSON.stringify(restored));
+  });
+
+  await run('11e Practice Match add restores the exact no-fixture week', () => {
+    const athlete = profile({ phase: 'Pre-season', withFixture: false });
+    seedAcceptedWeek({ athlete, markedDays: {} });
+    const before = acceptedWeekSignature(athlete);
+    const changed = rebuildLocalWeek({
+      baseProfile: athlete, newGameDay: 'Saturday', scope: 'weekOverlay',
+      targetDate: SATURDAY, manageCalendarFixture: true, todayISO: WEEK_START,
+    });
+    const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
+    assert(changed.reversibleAdjustmentId && adjustment?.kind === 'practice_match_fixture_add',
+      'practice add adjustment missing');
+    const restored = commitClearReversibleAdjustment(
+      changed.reversibleAdjustmentId,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    );
+    assert(restored.outcome === 'restored' && acceptedWeekSignature(athlete) === before,
+      JSON.stringify(restored));
+  });
+
+  await run('11f Practice Match move restores Saturday exactly', () => {
+    const athlete = profile({ phase: 'Pre-season' });
+    seedAcceptedWeek({ athlete });
+    const before = acceptedWeekSignature(athlete);
+    const changed = rebuildLocalWeek({
+      baseProfile: athlete, newGameDay: 'Sunday', scope: 'weekOverlay',
+      targetDate: SUNDAY, clearOverlayDate: SATURDAY,
+      manageCalendarFixture: true, todayISO: WEEK_START,
+    });
+    const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
+    assert(changed.reversibleAdjustmentId && adjustment?.kind === 'practice_match_fixture_move',
+      'practice move adjustment missing');
+    const restored = commitClearReversibleAdjustment(
+      changed.reversibleAdjustmentId,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    );
+    assert(restored.outcome === 'restored' && acceptedWeekSignature(athlete) === before,
+      JSON.stringify(restored));
+  });
+
+  await run('11g Practice Match remove restores suppression and prescriptions', () => {
+    const athlete = profile({ phase: 'Pre-season' });
+    seedAcceptedWeek({ athlete });
+    const before = acceptedWeekSignature(athlete);
+    const changed = rebuildLocalWeek({
+      baseProfile: athlete, newGameDay: null, scope: 'weekOverlay',
+      targetDate: SATURDAY, manageCalendarFixture: true, todayISO: WEEK_START,
+    });
+    const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
+    assert(changed.reversibleAdjustmentId && adjustment?.kind === 'practice_match_fixture_remove',
+      'practice remove adjustment missing');
+    const restored = commitClearReversibleAdjustment(
+      changed.reversibleAdjustmentId,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    );
+    assert(restored.outcome === 'restored' && acceptedWeekSignature(athlete) === before,
+      JSON.stringify(restored));
+  });
+
+  await run('11h production fixture creation is durable before its Coach Note is derived', async () => {
+    const athlete = profile();
+    seedAcceptedWeek({ athlete });
+    const result = await executeHomeGameMutationDurably({
+      baseProfile: athlete,
+      currentPhase: 'In-season',
+      newGameDay: 'Sunday',
+      targetDate: SUNDAY,
+      clearOverlayDate: SATURDAY,
+      beforeRows: acceptedWeekRows(athlete),
+      todayISO: WEEK_START,
+    });
+    assert(result.outcome !== 'impossible' && result.result.reversibleAdjustmentId,
+      JSON.stringify(result));
+    const envelope = await readDurableProgramStoreEnvelope();
+    const persisted = envelope ? JSON.parse(envelope).state : null;
+    assert(persisted?.reversibleAdjustmentLedger?.adjustments?.some((adjustment: { id: string }) =>
+      adjustment.id === result.result.reversibleAdjustmentId),
+    'durable envelope did not acknowledge the fixture adjustment');
+    assert(useCoachUpdatesStore.getState().activeConstraints.some((constraint) =>
+      constraint.id === `game-change:${result.result.reversibleAdjustmentId}`),
+    'Coach Note was not derived from the acknowledged adjustment identity');
+  });
+
+  await run('11i later explicit fixture semantics conflict without a stale calendar overwrite', () => {
+    const athlete = profile();
+    seedAcceptedWeek({ athlete });
+    const changed = rebuildLocalWeek({
+      baseProfile: athlete, newGameDay: 'Sunday', scope: 'weekOverlay',
+      targetDate: SUNDAY, clearOverlayDate: SATURDAY,
+      manageCalendarFixture: true, todayISO: WEEK_START,
+    });
+    assert(changed.reversibleAdjustmentId, 'fixture conflict adjustment missing');
+    const state = useProgramStore.getState();
+    const laterMarks = {
+      ...state.acceptedMaterialContext.markedDays,
+      [SATURDAY]: 'game' as const,
+      [SUNDAY]: 'noGame' as const,
+    };
+    useProgramStore.setState({
+      acceptedMaterialContext: {
+        ...state.acceptedMaterialContext,
+        markedDays: laterMarks,
+        revision: state.acceptedMaterialContext.revision + 1,
+        lastTransaction: 'test:later_explicit_fixture_semantics',
+      },
+    });
+    useCalendarStore.setState({ markedDays: laterMarks });
+    const programBefore = JSON.stringify({
+      marks: laterMarks,
+      overlays: useProgramStore.getState().weekScopedOverlays,
+      overrides: useProgramStore.getState().dateOverrides,
+    });
+    const restored = commitClearReversibleAdjustment(
+      changed.reversibleAdjustmentId,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    );
+    assert(restored.outcome === 'conflicted', JSON.stringify(restored));
+    const programAfter = JSON.stringify({
+      marks: useProgramStore.getState().acceptedMaterialContext.markedDays,
+      overlays: useProgramStore.getState().weekScopedOverlays,
+      overrides: useProgramStore.getState().dateOverrides,
+    });
+    assert(programAfter === programBefore,
+      'fixture conflict overwrote later recurring or explicit calendar semantics');
   });
 
   await run('12 removing a practice match uses released-practice-match provenance', () => {
@@ -582,7 +867,7 @@ async function main(): Promise<void> {
       `surviving mutants=${mutantChecks.map((value, index) => value ? index + 1 : null).filter(Boolean)}`);
   });
 
-  console.log(`\nFixture-conditioned replan totals: passed=${passed}/26 failures=${failures.length}`);
+  console.log(`\nFixture-conditioned replan totals: passed=${passed}/34 failures=${failures.length}`);
   if (failures.length > 0) process.exit(1);
 }
 

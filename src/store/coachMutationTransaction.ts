@@ -10,7 +10,10 @@ import {
 } from './programStore';
 import { useCalendarStore } from './calendarStore';
 import { useReadinessStore } from './readinessStore';
-import { useCoachUpdatesStore } from './coachUpdatesStore';
+import {
+  restoreCoachUpdatesCompatibilityMirror,
+  useCoachUpdatesStore,
+} from './coachUpdatesStore';
 import { useCoachMutationHistoryStore } from './coachMutationHistoryStore';
 import { useCoachPreferencesStore } from './coachPreferencesStore';
 import {
@@ -45,6 +48,7 @@ type AcceptedProgramStateSnapshot = Pick<
   | 'overrideContexts'
   | 'weekScopedOverlays'
   | 'userRemovalConstraints'
+  | 'reversibleAdjustmentLedger'
   | 'exposureContractsByWeek'
 >;
 
@@ -54,6 +58,7 @@ interface AcceptedMirrorSnapshot {
   coachUpdatesByWeek: ReturnType<typeof useCoachUpdatesStore.getState>['updatesByWeek'];
   activeConstraints: ReturnType<typeof useCoachUpdatesStore.getState>['activeConstraints'];
   activeInjury: ReturnType<typeof useCoachUpdatesStore.getState>['activeInjury'];
+  dismissedCoachNoteIds: ReturnType<typeof useCoachUpdatesStore.getState>['dismissedCoachNoteIds'];
   mutationHistoryEntries: ReturnType<typeof useCoachMutationHistoryStore.getState>['entries'];
   modalityPreferences: ReturnType<typeof useCoachPreferencesStore.getState>['modalityPreferences'];
 }
@@ -111,6 +116,8 @@ type AcceptedMirrorEnvelopes = Record<AcceptedMirrorStorageKey, string | null>;
 export async function runCoachMutationTransaction<T>(args: {
   todayISO: string;
   extraDates?: readonly string[];
+  /** Permit a durable accepted-envelope change with no visible program diff. */
+  allowAcceptedStateOnlyChange?: boolean;
   mutate: () => T;
   didApply: (value: T) => boolean;
   verifyCandidate?: (args: {
@@ -185,22 +192,28 @@ export async function runCoachMutationTransaction<T>(args: {
       }
 
       if (!diff.hasProgrammingChange) {
-        await restoreExactPreState({
-          token,
-          preProgram,
-          preMirrors,
-          preEnvelope,
-          preMirrorEnvelopes,
-          beforeProjection,
-        });
-        return {
-          ok: false,
-          value,
-          route: 'coach_mutation_no_material_semantic_change',
-          reason: 'Only presentation fields changed; no programming field changed.',
-          diff,
-          rollbackVerified: true,
-        };
+        const acceptedStateChanged = acceptedStateFingerprint() !==
+          acceptedStateFingerprint(preProgram);
+        if (!args.allowAcceptedStateOnlyChange || !acceptedStateChanged) {
+          await restoreExactPreState({
+            token,
+            preProgram,
+            preMirrors,
+            preEnvelope,
+            preMirrorEnvelopes,
+            beforeProjection,
+          });
+          return {
+            ok: false,
+            value,
+            route: 'coach_mutation_no_material_semantic_change',
+            reason: 'Only presentation fields changed; no programming field changed.',
+            diff,
+            rollbackVerified: true,
+          };
+        }
+        // Ledger status transitions (conflicted/superseded bookkeeping) are
+        // accepted-state changes even though the visible program is intact.
       }
 
       const candidateVerification = args.verifyCandidate?.({
@@ -303,6 +316,7 @@ export function captureAcceptedProgramState(): AcceptedProgramStateSnapshot {
     overrideContexts: state.overrideContexts,
     weekScopedOverlays: state.weekScopedOverlays,
     userRemovalConstraints: state.userRemovalConstraints,
+    reversibleAdjustmentLedger: state.reversibleAdjustmentLedger,
     exposureContractsByWeek: state.exposureContractsByWeek,
   });
 }
@@ -373,10 +387,11 @@ function restoreAcceptedInMemory(
 ): void {
   useCalendarStore.setState({ markedDays: clone(mirrors.markedDays) });
   useReadinessStore.setState({ signalsByDate: clone(mirrors.readinessSignalsByDate) });
-  useCoachUpdatesStore.setState({
+  restoreCoachUpdatesCompatibilityMirror({
     updatesByWeek: clone(mirrors.coachUpdatesByWeek),
     activeConstraints: clone(mirrors.activeConstraints),
     activeInjury: clone(mirrors.activeInjury),
+    dismissedCoachNoteIds: clone(mirrors.dismissedCoachNoteIds),
   });
   useCoachMutationHistoryStore.setState({ entries: clone(mirrors.mutationHistoryEntries) });
   useCoachPreferencesStore.setState({ modalityPreferences: clone(mirrors.modalityPreferences) });
@@ -459,6 +474,7 @@ function captureAcceptedMirrors(): AcceptedMirrorSnapshot {
     coachUpdatesByWeek: useCoachUpdatesStore.getState().updatesByWeek,
     activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
     activeInjury: useCoachUpdatesStore.getState().activeInjury,
+    dismissedCoachNoteIds: useCoachUpdatesStore.getState().dismissedCoachNoteIds,
     mutationHistoryEntries: useCoachMutationHistoryStore.getState().entries,
     modalityPreferences: useCoachPreferencesStore.getState().modalityPreferences,
   });
@@ -481,6 +497,7 @@ function serializeAcceptedMirrorEnvelopes(
         updatesByWeek: mirrors.coachUpdatesByWeek,
         activeConstraints: mirrors.activeConstraints,
         activeInjury: mirrors.activeInjury,
+        dismissedCoachNoteIds: mirrors.dismissedCoachNoteIds,
       },
       version: 0,
     }),

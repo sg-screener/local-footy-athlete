@@ -49,6 +49,11 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
 import { repeatWeekIntoNextWeek } from '../utils/repeatWeek';
 import { rolloverProgramBlock } from '../utils/programBlockRollover';
+import {
+  createEmptyReversibleAdjustmentLedger,
+  normalizeReversibleAdjustmentLedger,
+} from '../rules/reversibleAdjustmentLedger';
+import { commitClearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 
 const WEEK = '2026-07-13';
 const FRIDAY = '2026-07-17';
@@ -187,6 +192,7 @@ function seed(args: {
     overrideContexts: {},
     weekScopedOverlays: {},
     userRemovalConstraints: [],
+    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {},
     sessionFeedback: {},
     weightOverrides: {},
@@ -1137,6 +1143,192 @@ run('property', 'explicit re-add restores typed ownership', () => {
     'restoration retained deletion-owned Rest mark');
 });
 
+run('regression', '19 whole CORE deletion restores the exact session and removes owned relocation', () => {
+  seedExactInSeasonStrengthWeek();
+  const original = clone(byDay().get(1)!);
+  const before = visibleSemantic();
+  deleteThroughRealSheetDoor(WEEK);
+  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
+  assert(adjustment?.kind === 'session_delete', 'whole deletion adjustment missing');
+  const outcome = commitClearReversibleAdjustment(
+    adjustment.id,
+    useProgramStore.getState().acceptedMaterialContext.revision,
+  );
+  assert(outcome.outcome === 'restored', JSON.stringify(outcome));
+  assert(visibleSemantic() === before, 'restored CORE week differs from its exact accepted before-state');
+  assert(prescriptionSignature(byDay().get(1)) === prescriptionSignature(original),
+    'restored CORE prescription differs');
+  assert(useProgramStore.getState().userRemovalConstraints.filter((constraint) =>
+    constraint.targetDate === WEEK && constraint.status === 'restored').length === 1,
+  'only the exact owned removal was not marked restored');
+});
+
+run('regression', '20 Upper Pull restoration preserves Team Training and removes only owned relocation', () => {
+  seedExactInSeasonStrengthWeek();
+  const before = visibleSemantic();
+  const tuesdayBefore = clone(byDay().get(2)!);
+  deleteThroughRealSheetDoor('2026-07-14', 'strength');
+  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
+  assert(adjustment?.kind === 'session_component_delete', 'component adjustment missing');
+  const outcome = commitClearReversibleAdjustment(
+    adjustment.id,
+    useProgramStore.getState().acceptedMaterialContext.revision,
+  );
+  assert(outcome.outcome === 'restored', JSON.stringify(outcome));
+  const tuesdayAfter = byDay().get(2);
+  assert(tuesdayAfter?.name === 'Team Training + Upper Pull', 'Upper Pull was not restacked');
+  assert(prescriptionSignature(tuesdayAfter) === prescriptionSignature(tuesdayBefore),
+    'Upper Pull prescription changed during restore');
+  assert(visibleSemantic() === before, 'Upper Pull restoration changed unrelated sessions');
+});
+
+run('regression', '21 conditioning component restoration preserves the stacked strength component', () => {
+  const athlete = profile({
+    seasonPhase: 'Pre-season',
+    usualGameDay: undefined,
+    gameDay: undefined,
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    trainingDaysPerWeek: 4,
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday', 'Saturday'],
+  });
+  seed({ athlete });
+  const stacked = accepted().visibleWorkouts.find((workout) => workout.hasCombinedConditioning);
+  assert(stacked, 'stacked conditioning precondition missing');
+  const before = visibleSemantic();
+  const date = dateForDay(WEEK, stacked.dayOfWeek);
+  const result = applyPlanChange({
+    change: { kind: 'remove_session', date, scope: 'conditioning' },
+    visibleWeek: visibleWeek(),
+    todayISO: WEEK,
+    setManualOverride: () => { throw new Error('component deletion used legacy override writer'); },
+  });
+  assert(result.ok, JSON.stringify(result.rejected));
+  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
+  assert(adjustment?.restorationTarget.componentScope === 'conditioning_component',
+    'conditioning ownership missing');
+  const outcome = commitClearReversibleAdjustment(
+    adjustment.id,
+    useProgramStore.getState().acceptedMaterialContext.revision,
+  );
+  assert(outcome.outcome === 'restored', JSON.stringify(outcome));
+  assert(visibleSemantic() === before, 'conditioning restoration changed the stacked week');
+});
+
+run('regression', '22 Restore removes only its typed reduction and preserves an unrelated reduction', () => {
+  const athlete = profile({
+    seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined,
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [], trainingDaysPerWeek: 3,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+  });
+  seed({ athlete });
+  const before = accepted();
+  const target = before.visibleWorkouts.find((workout) =>
+    before.evaluation.ledger.mainStrength.sessionDays.includes(workout.dayOfWeek));
+  assert(target, 'typed reduction restoration target missing');
+  const date = dateForDay(WEEK, target.dayOfWeek);
+  deleteThroughRealSheetDoor(date);
+  const adjustment = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
+  assert(adjustment?.linkedTypedReductions.length, 'owned typed reduction was not linked');
+  const state = useProgramStore.getState();
+  const overlay = clone(state.weekScopedOverlays[WEEK]);
+  const owned = overlay.exposureContractV2.authorisedReductions.find((entry) =>
+    entry.deletionIdentity === adjustment.linkedUserRemovalConstraintIds[0]);
+  assert(owned, 'owned reduction missing from accepted contract');
+  const migrated = normalizeReversibleAdjustmentLedger({
+    value: null,
+    userRemovalConstraints: state.userRemovalConstraints,
+    acceptedRevision: state.acceptedMaterialContext.revision,
+    exposureContractsByWeek: { [WEEK]: overlay.exposureContractV2 },
+  });
+  assert(migrated.adjustments.some((candidate) =>
+    candidate.linkedTypedReductions.some((entry) =>
+      entry.deletionIdentity === owned.deletionIdentity)),
+  'lossless migration did not link the existing typed reduction by deletion identity');
+  const program = clone(state.currentProgram);
+  assert(program, 'accepted program missing');
+  const unrelatedMicrocycle = program.microcycles.find((microcycle) =>
+    microcycle.startDate !== WEEK && !!microcycle.exposureContractV2);
+  assert(unrelatedMicrocycle?.exposureContractV2, 'unrelated contract week missing');
+  const unrelated = {
+    ...clone(owned),
+    affectedWeek: unrelatedMicrocycle.startDate,
+    detail: `${owned.detail}:unrelated`,
+    deletionIdentity: 'unrelated-adjustment:reduction',
+  };
+  unrelatedMicrocycle.exposureContractV2.authorisedReductions = [
+    ...unrelatedMicrocycle.exposureContractV2.authorisedReductions,
+    unrelated,
+  ];
+  useProgramStore.setState({ currentProgram: program });
+  const restored = commitClearReversibleAdjustment(
+    adjustment.id,
+    useProgramStore.getState().acceptedMaterialContext.revision,
+  );
+  assert(restored.outcome === 'restored', JSON.stringify(restored));
+  const reductions = accepted().contract.authorisedReductions;
+  assert(!reductions.some((entry) =>
+    entry.deletionIdentity === adjustment.linkedUserRemovalConstraintIds[0]),
+  'owned typed reduction survived Restore');
+  const persistedUnrelated = useProgramStore.getState().currentProgram?.microcycles
+    .find((microcycle) => microcycle.startDate === unrelatedMicrocycle.startDate)
+    ?.exposureContractV2?.authorisedReductions;
+  assert(persistedUnrelated?.some((entry) =>
+    entry.deletionIdentity === unrelated.deletionIdentity),
+    'unrelated typed reduction was removed');
+  assert(byDay().get(target.dayOfWeek)?.planEntryId === target.planEntryId,
+    'typed reduction target session was not restored');
+});
+
+run('regression', '23 restoration gateway rejection publishes no partial accepted state', () => {
+  const athlete = profile({
+    seasonPhase: 'Pre-season', usualGameDay: undefined, gameDay: undefined,
+    teamTrainingDaysPerWeek: 0, teamTrainingDays: [], trainingDaysPerWeek: 3,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+  });
+  seed({ athlete });
+  const week = accepted();
+  const target = week.visibleWorkouts.find((workout) =>
+    week.evaluation.ledger.mainStrength.sessionDays.includes(workout.dayOfWeek));
+  assert(target, 'gateway failure restoration target missing');
+  deleteThroughRealSheetDoor(dateForDay(WEEK, target.dayOfWeek));
+  const state = useProgramStore.getState();
+  const ledger = clone(state.reversibleAdjustmentLedger);
+  const adjustment = ledger.adjustments.at(-1);
+  const ownedContract = adjustment?.displacedOriginalState.ownedWeeks[0]
+    ?.beforeExposureContract;
+  assert(adjustment && ownedContract, 'gateway failure owned contract missing');
+  ownedContract.mainStrength.exposure.requiredMinimum = 99;
+  ownedContract.mainStrength.exposure.plannerSelectedTarget = 99;
+  useProgramStore.setState({ reversibleAdjustmentLedger: ledger });
+  const beforeVisible = visibleSemantic();
+  const beforeState = JSON.stringify({
+    program: useProgramStore.getState().currentProgram,
+    overlays: useProgramStore.getState().weekScopedOverlays,
+    overrides: useProgramStore.getState().dateOverrides,
+    contexts: useProgramStore.getState().overrideContexts,
+    removals: useProgramStore.getState().userRemovalConstraints,
+    ledger: useProgramStore.getState().reversibleAdjustmentLedger,
+    material: useProgramStore.getState().acceptedMaterialContext,
+  });
+  const restored = commitClearReversibleAdjustment(
+    adjustment.id,
+    useProgramStore.getState().acceptedMaterialContext.revision,
+  );
+  assert(restored.outcome === 'safely-rejected', JSON.stringify(restored));
+  assert(visibleSemantic() === beforeVisible, 'gateway rejection changed the visible program');
+  const afterState = JSON.stringify({
+    program: useProgramStore.getState().currentProgram,
+    overlays: useProgramStore.getState().weekScopedOverlays,
+    overrides: useProgramStore.getState().dateOverrides,
+    contexts: useProgramStore.getState().overrideContexts,
+    removals: useProgramStore.getState().userRemovalConstraints,
+    ledger: useProgramStore.getState().reversibleAdjustmentLedger,
+    material: useProgramStore.getState().acceptedMaterialContext,
+  });
+  assert(afterState === beforeState, 'gateway rejection published partial accepted state');
+});
+
 console.log('\n-- Athlete session deletion mutation witnesses --');
 
 run('mutation', 'ignoring persisted removal resurrects target and is detected', () => {
@@ -1189,7 +1381,7 @@ run('mutation', 'publication cannot omit persisted constraint from accepted surf
 });
 
 console.warn = originalWarn;
-console.log(`\nAthlete session deletion totals: regressions=${regressions}/18 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
+console.log(`\nAthlete session deletion totals: regressions=${regressions}/23 properties=${properties}/5 mutations=${mutations}/3 failures=${failures.length}`);
 if (failures.length > 0) {
   console.error(`Failures: ${failures.join(' | ')}`);
   process.exitCode = 1;

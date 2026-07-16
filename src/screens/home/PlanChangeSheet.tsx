@@ -21,7 +21,10 @@ import {
   type PlanChangeCategoryId,
   type PlanChangeDayOptions,
 } from '../../utils/planChangeProducer';
-import { executeProgramControlAction } from '../../utils/programControlActions';
+import {
+  executeProgramControlAction,
+  executeProgramControlActionDurably,
+} from '../../utils/programControlActions';
 import type { TapRecoveryModifierScope } from '../../utils/tapProgramModifiers';
 import type { ProgramEditRiskFinding } from '../../utils/programEditRiskAssessment';
 import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
@@ -192,21 +195,41 @@ export function PlanChangeSheet({
     selectedWorkoutName === 'recovery';
   const hasEditableSession = !!options?.hasSession && !isRestOrRecoveryDay;
 
-  const commitPlanChange = (
+  const commitPlanChange = async (
     change: PlanChange,
     opts?: {
       closeOnSuccess?: boolean;
     },
     trace?: AthleteActionTraceContext,
   ) => {
-    const result = applyPlanChange({
-      change,
-      visibleWeek: weekDays,
-      todayISO,
-      setManualOverride: (overrideDate, workout, context) =>
-        useProgramStore.getState().setManualOverride(overrideDate, workout, context),
-      trace,
-    });
+    const result = change.kind === 'move_session'
+      ? await executeProgramControlActionDurably({
+          type: 'move_session',
+          source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
+          scope: 'today_only',
+          payload: { fromDate: change.fromDate, toDate: change.toDate },
+          requiresRebuild: false,
+          createsActiveModifier: false,
+          oneOffOnly: true,
+        }, { visibleWeek: weekDays, todayISO })
+      : change.kind === 'remove_session'
+        ? await executeProgramControlActionDurably({
+            type: 'bin_session',
+            source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
+            scope: 'today_only',
+            payload: { date: change.date, scope: change.scope },
+            requiresRebuild: false,
+            createsActiveModifier: false,
+            oneOffOnly: true,
+          }, { visibleWeek: weekDays, todayISO })
+        : applyPlanChange({
+            change,
+            visibleWeek: weekDays,
+            todayISO,
+            setManualOverride: (overrideDate, workout, context) =>
+              useProgramStore.getState().setManualOverride(overrideDate, workout, context),
+            trace,
+          });
     if (result.ok && opts?.closeOnSuccess) {
       // Destructive flows (bin) skip the result screen: the change is
       // already confirmed, so close straight back to the weekly plan.
@@ -290,7 +313,7 @@ export function PlanChangeSheet({
       });
       return;
     }
-    commitPlanChange(change, opts, preview.trace);
+    void commitPlanChange(change, opts, preview.trace);
   };
 
   const pickerBackStep = (
@@ -853,7 +876,7 @@ export function PlanChangeSheet({
           ))}
           <MenuOption
             label="Continue"
-            onPress={() => commitPlanChange(
+            onPress={() => void commitPlanChange(
               step.change,
               { closeOnSuccess: step.closeOnSuccess },
               step.trace,

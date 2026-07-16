@@ -151,6 +151,10 @@ export interface ActiveConstraintModifierMetadata {
   expiresAt?: string;
   /** Optional Monday boundary for a future or current week-scoped modifier. */
   weekStartISO?: string;
+  /** Ledger owner for reversible fixture/session projections. */
+  reversibleAdjustmentId?: string;
+  /** This record can be hidden without clearing any accepted program state. */
+  presentationOnlyDismiss?: boolean;
 }
 
 export interface ActiveConstraintGameChangeProofRow {
@@ -162,10 +166,28 @@ export interface ActiveConstraintGameChangeProofRow {
 
 export interface ActiveConstraintNoteProof {
   kind: 'game_change';
-  /** Stable owner key for dedupe/update: one game-change note per affected week. */
+  /** Unique projection identity. Accepted event history lives in the ledger. */
   lifecycleKey: string;
   changedDates: string[];
   after: ActiveConstraintGameChangeProofRow[];
+}
+
+function sharesGameChangePresentationSlot(
+  left: ActiveConstraint,
+  right: ActiveConstraint,
+): boolean {
+  const leftProjection = left as ActiveConstraint & {
+    noteProof?: ActiveConstraintNoteProof;
+    weekStartISO?: string;
+  };
+  const rightProjection = right as ActiveConstraint & {
+    noteProof?: ActiveConstraintNoteProof;
+    weekStartISO?: string;
+  };
+  return leftProjection.noteProof?.kind === 'game_change' &&
+    rightProjection.noteProof?.kind === 'game_change' &&
+    !!leftProjection.weekStartISO &&
+    leftProjection.weekStartISO === rightProjection.weekStartISO;
 }
 
 export interface ActiveInjuryConstraint extends ActiveConstraintModifierMetadata {
@@ -378,6 +400,10 @@ interface CoachUpdatesState {
    * derive from this array. Multiple injuries are first-class.
    */
   activeConstraints: ActiveConstraint[];
+  /** Presentation-only Coach Note dismissals. These never alter accepted
+   * constraints or program surfaces. */
+  dismissedCoachNoteIds: string[];
+  dismissCoachNote: (noteId: string) => void;
 
   /**
    * Single active injury — DERIVED ALIAS for the FIRST active injury
@@ -587,6 +613,12 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
       updatesByWeek: {},
       activeInjury: null,
       activeConstraints: [],
+      dismissedCoachNoteIds: [],
+      dismissCoachNote: (noteId) => set((state) => ({
+        dismissedCoachNoteIds: state.dismissedCoachNoteIds.includes(noteId)
+          ? state.dismissedCoachNoteIds
+          : [...state.dismissedCoachNoteIds, noteId],
+      })),
 
       upsertCoachUpdate: (weekStartISO, payload) => {
         // Composite id: timestamp + random suffix so two upserts in the
@@ -632,7 +664,12 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
 
       clearAllCoachUpdates: () =>
         commitConstraintProgramTransaction([], () =>
-          set({ updatesByWeek: {}, activeInjury: null, activeConstraints: [] })),
+          set({
+            updatesByWeek: {},
+            activeInjury: null,
+            activeConstraints: [],
+            dismissedCoachNoteIds: [],
+          })),
 
       setActiveInjury: (state) => {
         // Write-through: the legacy single-slot setter ALSO mirrors
@@ -701,7 +738,9 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
 
       upsertActiveConstraint: (c) => {
         const nextConstraint = withDefaultModifierMetadata(c);
-        const filtered = get().activeConstraints.filter((x) => x.id !== nextConstraint.id);
+        const filtered = get().activeConstraints.filter((x) =>
+          x.id !== nextConstraint.id &&
+          !sharesGameChangePresentationSlot(x, nextConstraint));
         const nextConstraints = [...filtered, nextConstraint];
         // Mirror back to legacy activeInjury when the constraint is
         // an injury — pick the most recently-touched as "primary".
@@ -803,11 +842,47 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
           updatesByWeek: normalizeAcceptedKeyedMap<CoachUpdate>(incoming.updatesByWeek),
           activeConstraints: context.activeConstraints,
           activeInjury: context.activeInjury,
+          dismissedCoachNoteIds: Array.isArray(incoming.dismissedCoachNoteIds)
+            ? Array.from(new Set(incoming.dismissedCoachNoteIds.filter((id): id is string =>
+                typeof id === 'string')))
+            : [],
         };
       },
     },
   ),
 );
+
+function setCoachUpdatesCompatibilityMirror(
+  patch: Partial<Pick<CoachUpdatesState,
+    'updatesByWeek' | 'activeConstraints' | 'activeInjury' | 'dismissedCoachNoteIds'>>,
+): void {
+  const alreadyProjecting = safetyProjectionInProgress;
+  safetyProjectionInProgress = true;
+  try {
+    useCoachUpdatesStore.setState(patch);
+  } finally {
+    safetyProjectionInProgress = alreadyProjecting;
+  }
+}
+
+/** Accepted ProgramStore context is authoritative; this updates the
+ * compatibility read model without starting a second program transaction. */
+export function publishAcceptedCoachUpdatesCompatibilityMirror(args: {
+  activeConstraints: ActiveConstraint[];
+  activeInjury: InjuryState | null;
+}): void {
+  setCoachUpdatesCompatibilityMirror(args);
+}
+
+/** Exact transaction rollback mirror restore. */
+export function restoreCoachUpdatesCompatibilityMirror(args: {
+  updatesByWeek: Record<string, CoachUpdate>;
+  activeConstraints: ActiveConstraint[];
+  activeInjury: InjuryState | null;
+  dismissedCoachNoteIds: string[];
+}): void {
+  setCoachUpdatesCompatibilityMirror(args);
+}
 
 useCoachUpdatesStore.subscribe((state, previous) => {
   if (state.activeConstraints === previous.activeConstraints || safetyProjectionInProgress) return;

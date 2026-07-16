@@ -118,6 +118,7 @@ export default function HomeScreenV2() {
     activeConstraints,
     todayReadinessModifier,
     handleClearCoachNote,
+    handleDismissCoachNote,
     handleUpdateCoachNoteStatus,
     gameModalVisible,
     gameModalLabel,
@@ -230,8 +231,14 @@ export default function HomeScreenV2() {
       setInjuryFlowNote(note);
       return;
     }
+    if (action.kind === 'dismiss_note') {
+      handleDismissCoachNote(note.id);
+      return;
+    }
     setCoachNoteSheet({
-      mode: action.kind.startsWith('clear') ? 'clear' : 'update',
+      mode: action.kind.startsWith('clear') || action.kind === 'restore_adjustment'
+        ? 'clear'
+        : 'update',
       note,
     });
   };
@@ -1351,6 +1358,12 @@ function CoachNotesSection({ notes, onAction }: CoachNotesSectionProps) {
 }
 
 function clearCopyForNote(note: ActiveCoachNote): { title: string; body: string } {
+  if (note.reversibleAdjustmentId) {
+    return {
+      title: 'Restore the previous fixture?',
+      body: 'This restores the exact displaced sessions and repairs the affected fixture horizon.',
+    };
+  }
   if (note.type === 'injury') {
     const clearLabel = note.actions.find((action) => action.kind === 'clear_injury')?.label ?? '';
     if (/cleared/i.test(clearLabel) || /training paused/i.test(note.title)) {
@@ -1423,7 +1436,9 @@ function CoachNoteSheet({
       {state.mode === 'clear' ? (
         <>
           <Button
-            label="Clear and update program"
+            label={state.note.reversibleAdjustmentId
+              ? 'Restore fixture'
+              : 'Clear and update program'}
             size="lg"
             onPress={onConfirmClear}
           />

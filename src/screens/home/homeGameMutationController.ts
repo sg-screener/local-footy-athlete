@@ -19,6 +19,7 @@ import {
   emitAthleteActionEvent,
   runWithAthleteActionTrace,
 } from '../../utils/athleteActionDiagnostics';
+import { runCoachMutationTransaction } from '../../store/coachMutationTransaction';
 
 export type HomeGameMutationResult =
   | {
@@ -51,27 +52,6 @@ function executeHomeGameMutationWithinTrace(args: {
       manageCalendarFixture: true,
       todayISO: args.todayISO,
     });
-    const afterRows = weekRebuildResultToGameChangeRows({
-      result,
-      targetDate: args.targetDate,
-      newGameDay: args.newGameDay,
-    });
-    const weekStartISO = afterRows
-      .map((row) => row.date)
-      .sort((left, right) => left.localeCompare(right))[0] ?? args.targetDate;
-    upsertGameChangeCoachNoteFromDiff({
-      action: gameChangeActionFromRebuild({
-        newGameDay: args.newGameDay,
-        clearOverlayDate: args.clearOverlayDate,
-      }),
-      fixtureKind: fixtureKindForPhase(args.currentPhase),
-      targetDate: args.targetDate,
-      previousDate: args.clearOverlayDate,
-      weekStartISO,
-      before: args.beforeRows,
-      after: afterRows,
-      todayISO: args.todayISO ?? todayISOLocal(),
-    });
     const status = result.fixtureReplan?.gateway.status;
     return {
       outcome: status === 'impossible' || !status ? 'accepted' : status,
@@ -85,6 +65,38 @@ function executeHomeGameMutationWithinTrace(args: {
   }
 }
 
+function deriveGameChangeCoachNote(args: {
+  currentPhase: SeasonPhase;
+  newGameDay: DayOfWeek | null;
+  targetDate: string;
+  clearOverlayDate?: string;
+  beforeRows: readonly GameChangeVisibleDay[];
+  todayISO?: string;
+}, result: WeekRebuildResult): void {
+  const afterRows = weekRebuildResultToGameChangeRows({
+    result,
+    targetDate: args.targetDate,
+    newGameDay: args.newGameDay,
+  });
+  const weekStartISO = afterRows
+    .map((row) => row.date)
+    .sort((left, right) => left.localeCompare(right))[0] ?? args.targetDate;
+  upsertGameChangeCoachNoteFromDiff({
+    action: gameChangeActionFromRebuild({
+      newGameDay: args.newGameDay,
+      clearOverlayDate: args.clearOverlayDate,
+    }),
+    fixtureKind: fixtureKindForPhase(args.currentPhase),
+    targetDate: args.targetDate,
+    previousDate: args.clearOverlayDate,
+    weekStartISO,
+    before: args.beforeRows,
+    after: afterRows,
+    todayISO: args.todayISO ?? todayISOLocal(),
+    adjustmentId: result.reversibleAdjustmentId,
+  });
+}
+
 /** Home fixture entry keeps rebuild, Coach Notes, and UI outcome on one trace. */
 export function executeHomeGameMutation(args: {
   baseProfile: OnboardingData;
@@ -94,6 +106,7 @@ export function executeHomeGameMutation(args: {
   clearOverlayDate?: string;
   beforeRows: readonly GameChangeVisibleDay[];
   todayISO?: string;
+  deriveCoachNote?: boolean;
 }): HomeGameMutationResult {
   const actionType = fixtureKindForPhase(args.currentPhase) === 'practice_match'
     ? 'practice_match_change' as const
@@ -129,6 +142,9 @@ export function executeHomeGameMutation(args: {
       producer: 'executeHomeGameMutation',
     });
     const result = executeHomeGameMutationWithinTrace(args);
+    if (result.outcome !== 'impossible' && args.deriveCoachNote !== false) {
+      deriveGameChangeCoachNote(args, result.result);
+    }
     const internalResultCode = result.outcome === 'impossible'
       ? `${actionType}_impossible`
       : `${actionType}_${result.outcome}`;
@@ -157,4 +173,29 @@ export function executeHomeGameMutation(args: {
     });
     return result;
   });
+}
+
+/** Production tap boundary: the accepted fixture mutation and ledger are
+ * persisted/read back before its Coach Note projection is derived. */
+export async function executeHomeGameMutationDurably(
+  args: Omit<Parameters<typeof executeHomeGameMutation>[0], 'deriveCoachNote'>,
+): Promise<HomeGameMutationResult> {
+  const transaction = await runCoachMutationTransaction({
+    todayISO: args.todayISO ?? todayISOLocal(),
+    extraDates: [args.clearOverlayDate, args.targetDate]
+      .filter((date): date is string => !!date),
+    mutate: () => executeHomeGameMutation({ ...args, deriveCoachNote: false }),
+    didApply: (result) => result.outcome !== 'impossible' &&
+      !!result.result.reversibleAdjustmentId,
+  });
+  if (transaction.ok) {
+    if (transaction.value.outcome !== 'impossible') {
+      deriveGameChangeCoachNote(args, transaction.value.result);
+    }
+    return transaction.value;
+  }
+  const reason = 'reason' in transaction
+    ? transaction.reason
+    : 'The fixture change could not be persisted.';
+  return { outcome: 'impossible', reason, error: new Error(reason) };
 }

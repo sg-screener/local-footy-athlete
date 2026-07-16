@@ -59,6 +59,7 @@ import {
   type AthleteActionSource,
   type AthleteActionType,
 } from './athleteActionDiagnostics';
+import { runCoachMutationTransaction } from '../store/coachMutationTransaction';
 
 export type ProgramControlActionType =
   | 'swap_session'
@@ -1009,4 +1010,35 @@ export function executeProgramControlAction(
       throw error;
     }
   });
+}
+
+/** Durable accepted boundary for the migrated tap-owned session mutations.
+ * Unmigrated actions retain the existing synchronous control path. */
+export async function executeProgramControlActionDurably(
+  action: ProgramControlAction,
+  context: ProgramControlActionContext = {},
+): Promise<ProgramControlActionResult> {
+  if (action.type !== 'move_session' && action.type !== 'bin_session') {
+    return executeProgramControlAction(action, context);
+  }
+  const dates = action.type === 'move_session'
+    ? [action.payload.fromDate, action.payload.toDate]
+    : [action.payload.date];
+  const transaction = await runCoachMutationTransaction({
+    todayISO: context.todayISO ?? dates[0],
+    extraDates: dates,
+    mutate: () => executeProgramControlAction(action, context),
+    didApply: (result) => result.ok && result.changedProgram,
+  });
+  if (transaction.ok) return transaction.value;
+  return {
+    ok: false,
+    changedProgram: false,
+    requiresRebuild: false,
+    message: 'reason' in transaction
+      ? transaction.reason
+      : 'The accepted session change could not be persisted.',
+    fallbackToCoach: false,
+    route: routeProgramControlAction(action).route,
+  };
 }

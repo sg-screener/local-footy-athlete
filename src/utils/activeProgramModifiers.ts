@@ -55,7 +55,9 @@ export type ActiveProgramModifierActionKind =
   | 'clear_status'
   | 'update_status'
   | 'clear_adjustment'
-  | 'update_adjustment';
+  | 'update_adjustment'
+  | 'restore_adjustment'
+  | 'dismiss_note';
 
 export type ActiveProgramModifierAffect = ActiveConstraintModifierAffect;
 
@@ -87,6 +89,7 @@ export interface ActiveProgramModifierSnapshot {
   todayISO?: string;
   weekKind?: WeekKind | null;
   visibleWeekDays?: readonly ActiveProgramModifierVisibleDay[] | null;
+  dismissedCoachNoteIds?: readonly string[] | null;
 }
 
 export interface ActiveProgramModifierVisibleDay {
@@ -801,6 +804,8 @@ function statusModifier(
   const rules = 'rules' in c ? c.rules : [];
   const focus = 'safeFocus' in c ? c.safeFocus : [];
   const isCoachRestriction = c.type === 'schedule';
+  const isLegacyFixtureProjection = c.type === 'schedule' &&
+    c.noteProof?.kind === 'game_change' && !c.reversibleAdjustmentId;
   const isSoreness = c.type === 'soreness';
   const fallbackTitle = c.type === 'fatigue'
     ? 'Recovery mode active'
@@ -833,10 +838,18 @@ function statusModifier(
     severity: 'severity' in c ? c.severity : undefined,
     affects: modifierAffects(sourceConstraint, []),
     actions: isCoachRestriction
-      ? [
-          { kind: 'clear_adjustment', label: 'Clear adjustment' },
-          { kind: 'update_adjustment', label: 'Update' },
-        ]
+      ? c.reversibleAdjustmentId
+        ? [
+            { kind: 'restore_adjustment', label: c.noteProof?.kind === 'game_change'
+              ? 'Restore fixture' : 'Undo athlete action' },
+            { kind: 'dismiss_note', label: 'Dismiss note' },
+          ]
+        : c.presentationOnlyDismiss || isLegacyFixtureProjection
+          ? [{ kind: 'dismiss_note', label: 'Dismiss note' }]
+          : [
+              { kind: 'clear_adjustment', label: 'Clear adjustment' },
+              { kind: 'update_adjustment', label: 'Update' },
+            ]
       : [
           { kind: 'clear_status', label: "I'm good now" },
           { kind: 'update_status', label: 'Update status' },
@@ -847,6 +860,8 @@ function statusModifier(
       date: 'appliesToDate' in c ? c.appliesToDate : undefined,
       expiresAt: expiresAt(sourceConstraint),
       overrideDates: linkedOverrideDates(sourceConstraint),
+      reversibleAdjustmentId: c.reversibleAdjustmentId,
+      presentationOnlyDismiss: c.presentationOnlyDismiss === true || isLegacyFixtureProjection,
     },
   };
 }

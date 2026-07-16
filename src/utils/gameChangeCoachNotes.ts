@@ -36,6 +36,7 @@ export interface GameChangeCoachNoteInput {
   before: readonly GameChangeVisibleDay[];
   after: readonly GameChangeVisibleDay[];
   todayISO?: string;
+  adjustmentId?: string | null;
 }
 
 const DAY_NAMES: DayOfWeek[] = [
@@ -174,7 +175,9 @@ export function buildGameChangeCoachNoteConstraint(
   const title = input.fixtureKind === 'practice_match'
     ? `Practice match ${input.action}`
     : `Game ${input.action}`;
-  const id = `game-change-${input.weekStartISO}`;
+  const id = input.adjustmentId
+    ? `game-change:${input.adjustmentId}`
+    : `game-change-${input.weekStartISO}`;
   return {
     id,
     type: 'schedule',
@@ -192,9 +195,13 @@ export function buildGameChangeCoachNoteConstraint(
     modifierBody: [actionSentence(input), ...effects].join(' '),
     modifierAffects: ['current_week'],
     expiresAt: weekEnd(input.weekStartISO),
+    reversibleAdjustmentId: input.adjustmentId ?? undefined,
+    presentationOnlyDismiss: !input.adjustmentId,
     noteProof: {
       kind: 'game_change',
-      lifecycleKey: `game-change:${input.weekStartISO}`,
+      lifecycleKey: input.adjustmentId
+        ? `game-change:${input.adjustmentId}`
+        : `legacy-game-change:${input.weekStartISO}`,
       changedDates: changed,
       after: input.after
         .filter((row) => changed.includes(row.date))
@@ -212,8 +219,12 @@ export function upsertGameChangeCoachNoteFromDiff(input: GameChangeCoachNoteInpu
   const constraint = buildGameChangeCoachNoteConstraint(input);
   const store = useCoachUpdatesStore.getState();
   if (!constraint) {
-    const staleId = `game-change-${input.weekStartISO}`;
-    if (store.activeConstraints.some((candidate) => candidate.id === staleId)) {
+    const staleId = input.adjustmentId
+      ? `game-change:${input.adjustmentId}`
+      : `game-change-${input.weekStartISO}`;
+    if (store.activeConstraints.some((candidate) =>
+      candidate.id === staleId && (!('reversibleAdjustmentId' in candidate) ||
+        !candidate.reversibleAdjustmentId))) {
       store.removeActiveConstraint(staleId);
     }
     return null;

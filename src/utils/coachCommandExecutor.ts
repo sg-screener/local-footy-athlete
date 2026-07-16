@@ -98,6 +98,7 @@ import {
   getAcceptedMaterialContext,
 } from '../store/acceptedStateTransaction';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { commitClearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import {
   athleteActionDiagnosticHash,
@@ -709,6 +710,57 @@ function runUndoLastChange(
       reply: "I don't have a recent coach change to undo.",
       applied: false,
       route: 'no_history:undo_last_change',
+      progress: stages,
+    };
+  }
+
+  const reversibleKinds = entry.mutationKind === 'move_session'
+    ? new Set(['session_move'])
+    : entry.mutationKind === 'remove_session'
+      ? new Set(['session_delete', 'session_component_delete'])
+      : null;
+  const adjustment = reversibleKinds
+    ? useProgramStore.getState().reversibleAdjustmentLedger.adjustments
+        .filter((candidate) => candidate.status === 'active' &&
+          candidate.sourceSurface === 'coach_chat' && reversibleKinds.has(candidate.kind) &&
+          entry.affectedDates.every((date) => candidate.affectedDates.includes(date)))
+        .sort((left, right) => right.acceptedRevision - left.acceptedRevision ||
+          right.createdAt.localeCompare(left.createdAt))[0] ?? null
+    : null;
+  if (adjustment) {
+    tick('applying_change');
+    const restored = commitClearReversibleAdjustment(
+      adjustment.id,
+      useProgramStore.getState().acceptedMaterialContext.revision,
+    );
+    tick('verifying_update');
+    tick('composing_reply');
+    if (restored.outcome !== 'restored' && restored.outcome !== 'recomposed' &&
+      restored.outcome !== 'already-cleared') {
+      return {
+        kind: 'verified_no_op',
+        reply: restored.reason ??
+          "I couldn't safely undo that because the accepted program has changed since.",
+        applied: false,
+        route: `reversible_adjustment:${restored.outcome}:undo_last_change`,
+        progress: stages,
+      };
+    }
+    try {
+      markReverted(entry.id, now());
+    } catch (error) {
+      logger.warn('[coach-command-executor] mark_reverted_threw', {
+        entryId: entry.id,
+        error: (error as Error)?.message ?? String(error),
+      });
+    }
+    return {
+      kind: restored.outcome === 'already-cleared' ? 'verified_no_op' : 'mutated',
+      reply: restored.outcome === 'already-cleared'
+        ? 'That athlete action was already restored.'
+        : 'Done — I restored the previous accepted session state.',
+      applied: restored.outcome !== 'already-cleared',
+      route: `reversible_adjustment:${restored.outcome}:undo_last_change`,
       progress: stages,
     };
   }

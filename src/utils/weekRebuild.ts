@@ -51,9 +51,11 @@ import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/pr
 import {
   buildFixtureProjection,
   commitAcceptedStateTransaction,
+  commitReversibleAdjustmentCreationTransaction,
   proposeFixtureMarkedDays,
   stageRollingHorizonFixtureRepair,
   type AcceptedProgramSurfaces,
+  type ReversibleAdjustmentCreationInput,
 } from '../store/acceptedStateTransaction';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { classifyDaySessions } from '../rules/sessionTaxonomy';
@@ -66,6 +68,7 @@ import {
 } from './programBlockState';
 import { logger } from './logger';
 import type { FixtureMinimalReplanResult } from './fixtureMinimalReplan';
+import { reversibleAdjustmentId as createReversibleAdjustmentId } from '../rules/reversibleAdjustmentLedger';
 import { resolveProfileTargetWeekAvailability } from '../rules/fixtureConditionedAvailability';
 import {
   athleteActionDiagnosticHash,
@@ -108,6 +111,7 @@ export interface WeekRebuildResult {
   sweep: OverrideSweepDecision;
   overlay?: WeekScopedWorkoutOverlay;
   fixtureReplan?: FixtureMinimalReplanResult;
+  reversibleAdjustmentId?: string;
 }
 
 // ─── Pure sweep decision ─────────────────────────────────────────────
@@ -462,14 +466,52 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
       gameDatesOverride,
     });
     const sweep = decideOverrideSweep(context);
+    let reversibleAdjustmentId: string | undefined;
 
     if (shouldCommit) {
-      commitWeekScopedOverlay(projection.overlay, sweep, {
+      const fixtureAction = args.clearOverlayDate
+        ? 'move'
+        : args.newGameDay ? 'add' : 'remove';
+      const fixtureKind = args.baseProfile.seasonPhase === 'Pre-season'
+        ? 'practice_match'
+        : 'game';
+      const sourceActionOrIntentId = [
+        fixtureKind,
+        fixtureAction,
+        args.clearOverlayDate ?? 'none',
+        targetDate,
+      ].join(':');
+      const adjustmentId = createReversibleAdjustmentId({
+        kind: `${fixtureKind}_fixture_${fixtureAction}` as ReversibleAdjustmentCreationInput['kind'],
+        sourceActionOrIntentId,
+      });
+      const committedAdjustment = commitWeekScopedOverlay(projection.overlay, sweep, {
         clearOverlayDate: args.clearOverlayDate,
         markedDays,
         additionalOverlays: adjacentOverlays,
+        reversibleAdjustment: {
+          kind: `${fixtureKind}_fixture_${fixtureAction}` as ReversibleAdjustmentCreationInput['kind'],
+          sourceActor: args.diagnosticSource === 'coach' ? 'coach' : 'athlete',
+          sourceSurface: args.diagnosticSource === 'coach' ? 'coach_chat' : 'program_tab',
+          sourceActionOrIntentId,
+          adjustmentId,
+          affectedDates: [args.clearOverlayDate, targetDate]
+            .filter((date): date is string => !!date),
+          restorationTarget: {
+            kind: 'fixture_state',
+            dates: [args.clearOverlayDate, targetDate]
+              .filter((date): date is string => !!date),
+            stableIdentities: [`${fixtureKind}:${targetWeekStart}`],
+          },
+          linkedConstraintIds: [`game-change:${adjustmentId}`],
+        },
       });
       args.commitGameMark?.();
+      if (committedAdjustment) {
+        projection.overlay = useProgramStore.getState().weekScopedOverlays[targetWeekStart!] ??
+          projection.overlay;
+      }
+      reversibleAdjustmentId = committedAdjustment?.id;
     }
 
     logger.debug('[weekRebuild] fixture minimal replan committed', {
@@ -488,6 +530,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
       sweep,
       overlay: projection.overlay,
       fixtureReplan: projection.replan,
+      reversibleAdjustmentId,
     };
   }
 
@@ -695,8 +738,9 @@ function commitWeekScopedOverlay(
     clearOverlayDate?: string;
     markedDays?: Record<string, import('../store/calendarStore').CalendarDayType>;
     additionalOverlays?: readonly WeekScopedWorkoutOverlay[];
+    reversibleAdjustment?: Omit<ReversibleAdjustmentCreationInput, 'proposal'>;
   },
-): void {
+): import('../rules/reversibleAdjustmentLedger').ReversibleAdjustmentRecord | null {
   const state = useProgramStore.getState();
   const overlays = { ...state.weekScopedOverlays };
   if (options?.clearOverlayDate) {
@@ -724,12 +768,20 @@ function commitWeekScopedOverlay(
     ...(options?.additionalOverlays ?? []).map((candidate) => candidate.weekStart),
     ...sweep.clear.map(getMondayForDate),
   ]);
-  commitAcceptedStateTransaction({
+  const proposal = {
     reason: 'week_rebuild:overlay',
     program: { weekScopedOverlays: overlays, dateOverrides, overrideContexts },
     markedDays: options?.markedDays,
     validateWeekStarts: Array.from(affectedWeeks),
-  });
+  } satisfies import('../store/acceptedStateTransaction').AcceptedStateTransactionProposal;
+  if (options?.reversibleAdjustment) {
+    return commitReversibleAdjustmentCreationTransaction({
+      ...options.reversibleAdjustment,
+      proposal,
+    }).adjustment;
+  }
+  commitAcceptedStateTransaction(proposal);
+  return null;
 }
 
 export function clearWeekScopedOverlayForDate(args: {

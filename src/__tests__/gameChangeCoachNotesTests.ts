@@ -5,7 +5,7 @@ import {
   upsertGameChangeCoachNoteFromDiff,
   type GameChangeVisibleDay,
 } from '../utils/gameChangeCoachNotes';
-import { selectActiveCoachNotes } from '../utils/activeCoachNotes';
+import { dismissActiveCoachNote, selectActiveCoachNotes } from '../utils/activeCoachNotes';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 
 let pass = 0;
@@ -33,6 +33,7 @@ function resetStores() {
     updatesByWeek: {},
     activeInjury: null,
     activeConstraints: [],
+    dismissedCoachNoteIds: [],
   } as any);
 }
 
@@ -115,6 +116,8 @@ console.log('\n[1] adding Saturday practice match creates a diff-proved note');
     todayISO: MON,
   });
   ok('note passes active Coach Notes truth gate', notes.some((note) => note.title === 'Practice match added'));
+  eq('legacy after-state-only fixture note is Dismiss-only',
+    notes[0]?.actions.map((action) => action.kind), ['dismiss_note']);
 }
 
 console.log('\n[2] zero-diff game/practice-match edit creates no note');
@@ -199,6 +202,52 @@ console.log('\n[4] removing game creates a note only when the visible week chang
     after: before,
     todayISO: MON,
   }), null);
+}
+
+console.log('\n[5] ledger-backed fixture notes separate Restore from presentation-only Dismiss');
+{
+  resetStores();
+  const before = [
+    ...baseWeek().slice(0, 5),
+    row(SAT, 'Game Day', 'Game', 'game'),
+    row(SUN, 'Recovery Session', 'Recovery', 'recovery'),
+  ];
+  const after = [
+    ...baseWeek().slice(0, 5),
+    row(SAT, 'Gunshow', 'Strength', 'optional'),
+    row(SUN, 'Game Day', 'Game', 'game'),
+  ];
+  const adjustmentId = 'reversible-adjustment:test:fixture-move:1';
+  const id = upsertGameChangeCoachNoteFromDiff({
+    action: 'moved', fixtureKind: 'game', previousDate: SAT, targetDate: SUN,
+    weekStartISO: WEEK_START, before, after, todayISO: MON, adjustmentId,
+  });
+  eq('runtime fixture note uses exact adjustment identity', id, `game-change:${adjustmentId}`);
+  const notes = selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    dismissedCoachNoteIds: useCoachUpdatesStore.getState().dismissedCoachNoteIds,
+    todayISO: MON,
+  });
+  eq('runtime fixture note exposes Restore and Dismiss separately',
+    notes[0]?.actions.map((action) => action.kind),
+    ['restore_adjustment', 'dismiss_note']);
+  const constraintsBefore = JSON.stringify(useCoachUpdatesStore.getState().activeConstraints);
+  ok('presentation-only Dismiss succeeds', dismissActiveCoachNote(notes[0]?.id ?? ''));
+  eq('Dismiss preserves the backing accepted projection',
+    JSON.stringify(useCoachUpdatesStore.getState().activeConstraints), constraintsBefore);
+  eq('Dismiss hides only the note', selectActiveCoachNotes({
+    activeConstraints: useCoachUpdatesStore.getState().activeConstraints,
+    dismissedCoachNoteIds: useCoachUpdatesStore.getState().dismissedCoachNoteIds,
+    todayISO: MON,
+  }), []);
+
+  const secondId = 'reversible-adjustment:test:fixture-move:2';
+  const second = buildGameChangeCoachNoteConstraint({
+    action: 'moved', fixtureKind: 'game', previousDate: SAT, targetDate: SUN,
+    weekStartISO: WEEK_START, before, after, todayISO: MON, adjustmentId: secondId,
+  });
+  ok('repeated same-week fixture changes keep separate identities',
+    second?.id !== id && second?.id === `game-change:${secondId}`);
 }
 
 console.log('\nSummary');

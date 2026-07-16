@@ -12,6 +12,10 @@ import type { CalendarDayType } from './calendarStore';
 import type { ReadinessSignal } from '../utils/readiness';
 import type { ActiveConstraint } from './coachUpdatesStore';
 import type { InjuryState } from '../utils/injuryProgression';
+import {
+  normalizeReversibleAdjustmentLedger,
+  type ReversibleAdjustmentLedger,
+} from '../rules/reversibleAdjustmentLedger';
 
 /**
  * The canonical empty/unknown accepted-state contract.
@@ -38,6 +42,7 @@ export interface AcceptedProgramSurfaceSnapshot {
   overrideContexts: Record<string, OverrideContext>;
   weekScopedOverlays: Record<string, WeekScopedWorkoutOverlay>;
   userRemovalConstraints: UserRemovalConstraint[];
+  reversibleAdjustmentLedger: ReversibleAdjustmentLedger;
   exposureContractsByWeek: Record<string, WeeklyExposureContract>;
 }
 
@@ -91,6 +96,9 @@ export function normalizeAcceptedMaterialContext(
 export function normalizeAcceptedProgramSurfaces(
   value: Partial<AcceptedProgramSurfaceSnapshot> | null | undefined,
 ): AcceptedProgramSurfaceSnapshot {
+  const userRemovalConstraints = normalizeAcceptedArray<UserRemovalConstraint>(
+    value?.userRemovalConstraints,
+  );
   return {
     currentProgram: isObjectRecord(value?.currentProgram)
       ? value.currentProgram
@@ -109,9 +117,10 @@ export function normalizeAcceptedProgramSurfaces(
     weekScopedOverlays: normalizeAcceptedKeyedMap<WeekScopedWorkoutOverlay>(
       value?.weekScopedOverlays,
     ),
-    userRemovalConstraints: normalizeAcceptedArray<UserRemovalConstraint>(
-      value?.userRemovalConstraints,
-    ),
+    userRemovalConstraints,
+    reversibleAdjustmentLedger: normalizeReversibleAdjustmentLedger({
+      value: value?.reversibleAdjustmentLedger,
+    }),
     exposureContractsByWeek: normalizeAcceptedKeyedMap<WeeklyExposureContract>(
       value?.exposureContractsByWeek,
     ),
@@ -137,6 +146,7 @@ export function acceptedStatePresenceSummary(args: {
     dateOverrides: describe(args.program?.dateOverrides),
     overrideContexts: describe(args.program?.overrideContexts),
     weekScopedOverlays: describe(args.program?.weekScopedOverlays),
+    reversibleAdjustmentLedger: describe(args.program?.reversibleAdjustmentLedger),
     exposureContractsByWeek: describe(args.program?.exposureContractsByWeek),
     acceptedMaterialContext: describe(args.context),
     markedDays: describe(args.context?.markedDays),

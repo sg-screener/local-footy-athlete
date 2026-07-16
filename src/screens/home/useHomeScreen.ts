@@ -20,13 +20,14 @@ import {
 } from '../../utils/gameChangeCoachNotes';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { applyPhaseShift } from '../../utils/profileMutations';
-import { selectActiveCoachNotes } from '../../utils/activeCoachNotes';
+import { dismissActiveCoachNote, selectActiveCoachNotes } from '../../utils/activeCoachNotes';
 import {
   getActiveProgramModifiers,
   type ActiveProgramModifier,
 } from '../../utils/activeProgramModifiers';
 import {
   executeProgramControlAction,
+  executeProgramControlActionDurably,
   type ProgramControlActionResult,
   type ProgramControlStatusUpdate,
 } from '../../utils/programControlActions';
@@ -63,7 +64,10 @@ import {
   type InteractionMode,
 } from './homeScreenConstants';
 import { logger } from '../../utils/logger';
-import { executeHomeGameMutation } from './homeGameMutationController';
+import {
+  executeHomeGameMutationDurably as executeHomeGameMutation,
+} from './homeGameMutationController';
+import { clearReversibleAdjustment } from '../../store/reversibleAdjustmentTransaction';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
@@ -220,6 +224,7 @@ export function useHomeScreen() {
   const blockState = useProgramStore((s) => s.blockState);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
   const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
+  const dismissedCoachNoteIds = useCoachUpdatesStore((s) => s.dismissedCoachNoteIds);
   const athletePrefs = useAthletePreferencesStore((s) => s.prefs);
   const modalityPreferences = useCoachPreferencesStore((s) => s.modalityPreferences);
   const readinessSignalsByDate = useReadinessStore((s) => s.signalsByDate);
@@ -303,6 +308,7 @@ export function useHomeScreen() {
     () => selectActiveCoachNotes({
       activeConstraints,
       activeInjury,
+      dismissedCoachNoteIds,
       athletePrefs,
       modalityPreferences,
       onboardingData,
@@ -313,6 +319,7 @@ export function useHomeScreen() {
     [
       activeConstraints,
       activeInjury,
+      dismissedCoachNoteIds,
       athletePrefs,
       modalityPreferences,
       onboardingData,
@@ -673,7 +680,7 @@ export function useHomeScreen() {
       // decides the preservation sweep with the pure policy, and commits
       // game mark + week overlay + sweep ATOMICALLY. Throws before any state
       // change on failure \u2014 no half-applied weeks possible.
-      const mutation = executeHomeGameMutation({
+      const mutation = await executeHomeGameMutation({
         baseProfile: onboardingData,
         currentPhase,
         newGameDay,
@@ -1141,7 +1148,7 @@ export function useHomeScreen() {
       return;
     }
     if (response === 'skip_it') {
-      const result = executeProgramControlAction({
+      const result = await executeProgramControlActionDurably({
         type: 'bin_session',
         source: {
           screen: 'program_tab',
@@ -1170,7 +1177,7 @@ export function useHomeScreen() {
         .setSessionFeedback(missed.date, missedSessionFeedback(missed.date, 'missed_it'));
       return;
     }
-    const result = executeProgramControlAction({
+    const result = await executeProgramControlActionDurably({
       type: 'move_session',
       source: {
         screen: 'program_tab',
@@ -1209,9 +1216,26 @@ export function useHomeScreen() {
   }, [handleProgramControlResult]);
 
   const handleClearCoachNote = useCallback(async (noteId: string) => {
+    const note = coachNotes.find((candidate) => candidate.id === noteId);
+    if (note?.reversibleAdjustmentId) {
+      const result = await clearReversibleAdjustment(
+        note.reversibleAdjustmentId,
+        useProgramStore.getState().acceptedMaterialContext.revision,
+      );
+      if (result.outcome === 'safely-rejected' || result.outcome === 'conflicted' ||
+        result.outcome === 'superseded') {
+        Alert.alert('Couldn’t restore this adjustment', result.reason ??
+          'Your program has changed since this adjustment was made.');
+      }
+      return;
+    }
     const result = clearCoachNoteAction(noteId);
     await handleProgramControlResult(result);
-  }, [clearCoachNoteAction, handleProgramControlResult]);
+  }, [clearCoachNoteAction, coachNotes, handleProgramControlResult]);
+
+  const handleDismissCoachNote = useCallback((noteId: string) => {
+    dismissActiveCoachNote(noteId);
+  }, []);
 
   const handleUpdateCoachNoteStatus = useCallback(async (
     noteId: string,
@@ -1270,6 +1294,7 @@ export function useHomeScreen() {
   }, [
     clearCoachNoteAction,
     handleClearCoachNote,
+    handleDismissCoachNote,
     handleProgramControlResult,
     statusModifierKindForNote,
   ]);
@@ -1425,6 +1450,7 @@ export function useHomeScreen() {
     activeConstraints,
     todayReadinessModifier,
     handleClearCoachNote,
+    handleDismissCoachNote,
     handleUpdateCoachNoteStatus,
 
     // Game-day modal
