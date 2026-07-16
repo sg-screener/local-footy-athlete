@@ -117,6 +117,7 @@ import { bucketToRegion } from '../utils/coachConstraintProducers';
 import { buildWeeklyCoachUpdateFromConstraints } from '../utils/weeklyCoachUpdate';
 import {
   createTemporaryFatigueFact,
+  createTemporaryScheduleFact,
   createTemporarySorenessFact,
   temporaryFactScope,
 } from '../rules/temporarySourceFact';
@@ -239,6 +240,30 @@ async function commitSoreness(args: {
     now: '2026-04-29T10:00:00.000Z',
   });
   ok('canonical soreness transaction accepted', result.outcome.startsWith('created_'), result.outcome);
+  return fact.factId;
+}
+
+async function commitBusyWeek(factId?: string): Promise<string> {
+  const fact = createTemporaryScheduleFact({
+    observedDate: FIXED_TODAY,
+    scope: temporaryFactScope({ kind: 'week', date: FIXED_TODAY }),
+    scheduleKind: 'busy_week',
+    sourceActor: 'coach',
+    sourceSurface: 'coach_chat',
+    factId,
+    now: '2026-04-29T10:00:00.000Z',
+  });
+  const result = await transactTemporarySourceFact({
+    operation: 'create',
+    fact,
+    todayISO: FIXED_TODAY,
+    now: '2026-04-29T10:00:00.000Z',
+  });
+  ok(
+    'canonical busy-week transaction accepted',
+    result.outcome.startsWith('created_'),
+    result.outcome,
+  );
   return fact.factId;
 }
 
@@ -600,9 +625,9 @@ const classifier = new LLMCoachIntentClassifier({
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // [3] Busy week 7/10 → schedule constraint mutates max-effort exposures
+  // [3] Busy week → canonical schedule fact reaches V2 surfaces
   // ─────────────────────────────────────────────────────────────────────
-  section('[3] busy_week 7/10 → schedule constraint reaches V2 surfaces');
+  section('[3] busy_week → canonical schedule fact reaches V2 surfaces');
   {
     resetAll();
     resetFetchSpy();
@@ -622,14 +647,19 @@ const classifier = new LLMCoachIntentClassifier({
     } as any;
 
     const result = await liveDispatchNonInjury('crazy week, packed schedule', classifier);
-    eq('replyMode = non_injury_constraint', result.replyMode, 'non_injury_constraint');
+    eq('replyMode requires canonical source-fact transaction',
+      result.replyMode, 'source_fact_transaction_required');
+    ok('legacy dispatcher does not mutate schedule mirrors', !result.mutated);
+
+    const factId = await commitBusyWeek();
 
     const constraints = useCoachUpdatesStore.getState().activeConstraints;
     const sched = constraints.find((c) => c.type === 'schedule') as ActiveScheduleConstraint;
     ok('schedule constraint persisted', !!sched);
     if (sched) {
-      eq('schedule.severity = 7', sched.severity, 7);
-      eq('schedule.id = schedule-busy-week', sched.id, 'schedule-busy-week');
+      eq('schedule.severity = canonical busy-week level', sched.severity, 5);
+      eq('schedule mirror names its canonical fact owner',
+        sched.temporarySourceFactIds?.[0], factId);
     }
 
     const rawWeek = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
@@ -643,8 +673,8 @@ const classifier = new LLMCoachIntentClassifier({
     ok('card derived', !!card);
     if (card) {
       ok(
-        'card.activeIssues mentions Busy week 7/10',
-        card.activeIssues.some((i) => /Busy week/i.test(i) && /7/.test(i)),
+        'card.activeIssues mentions canonical Busy week level',
+        card.activeIssues.some((i) => /Busy week/i.test(i) && /5/.test(i)),
         `activeIssues=${JSON.stringify(card.activeIssues)}`,
       );
       eq('card.ctaPrefill is busy-week prefill', card.ctaPrefill, 'Update on my week: ');
