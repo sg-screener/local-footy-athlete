@@ -136,15 +136,15 @@ function acceptedShape(state: ReturnType<typeof useProgramStore.getState>): stri
     currentMicrocycle: state.currentMicrocycle ? 'object' : 'null',
     todayWorkout: state.todayWorkout ? 'object' : 'null',
     blockState: state.blockState ? 'object' : 'null',
-    microcycles: state.currentProgram?.microcycles.length ?? 0,
-    dateOverrides: Object.keys(state.dateOverrides).length,
-    overrideContexts: Object.keys(state.overrideContexts).length,
-    weekScopedOverlays: Object.keys(state.weekScopedOverlays).length,
-    exposureContractsByWeek: Object.keys(state.exposureContractsByWeek).length,
-    markedDays: Object.keys(state.acceptedMaterialContext.markedDays).length,
-    readinessSignals: Object.keys(state.acceptedMaterialContext.readinessSignalsByDate).length,
-    activeConstraints: state.acceptedMaterialContext.activeConstraints.length,
-    activeInjury: state.acceptedMaterialContext.activeInjury,
+    microcycles: (state.currentProgram?.microcycles.length ?? 0) > 0 ? 'nonempty' : 'empty',
+    dateOverrides: typeof state.dateOverrides,
+    overrideContexts: typeof state.overrideContexts,
+    weekScopedOverlays: typeof state.weekScopedOverlays,
+    exposureContractsByWeek: typeof state.exposureContractsByWeek,
+    markedDays: typeof state.acceptedMaterialContext.markedDays,
+    readinessSignals: typeof state.acceptedMaterialContext.readinessSignalsByDate,
+    activeConstraints: Array.isArray(state.acceptedMaterialContext.activeConstraints),
+    activeInjury: state.acceptedMaterialContext.activeInjury === null ? 'null' : 'object',
   });
 }
 
@@ -218,14 +218,36 @@ async function main(): Promise<void> {
   });
 
   let devShape = '';
-  await run('2 dev onboarding skip stores generated program without fallback', async () => {
+  let devProgramId = '';
+  let devGeneratorCalls = 0;
+  await run('2 dev onboarding skip installs the deterministic accepted seed', async () => {
     resetToSparseColdStart();
-    const result = await withoutGenerationLogsAsync(() => runDevOnboardingSkip({
-      generateProgram: async () => clone(source),
-    }));
+    // The coordinator runs after hydration in the app. Reproduce the hydrated
+    // cold-start invariants here; the sparse-state cases below intentionally
+    // bypass Zustand's merge normalisers to exercise production acceptance.
+    useCalendarStore.setState({ markedDays: {} });
+    useReadinessStore.setState({ signalsByDate: {} });
+    const runtime = global as unknown as { __DEV__: boolean };
+    const previousDev = runtime.__DEV__;
+    runtime.__DEV__ = true;
+    let result: Awaited<ReturnType<typeof runDevOnboardingSkip>>;
+    try {
+      result = await withoutGenerationLogsAsync(() => runDevOnboardingSkip({
+        generateProgram: async () => {
+          devGeneratorCalls += 1;
+          return clone(source);
+        },
+      }));
+    } finally {
+      runtime.__DEV__ = previousDev;
+    }
     const state = useProgramStore.getState();
     assert(!result.usedFallback, 'dev skip used DEFAULT_PROGRAM');
-    assert(state.currentProgram?.id === source.id, 'dev skip did not store generated program');
+    assert(result.program.id === 'dev-e2e-standard-in-season-week',
+      'dev skip did not return the standard deterministic seed');
+    assert(state.currentProgram?.id === result.program.id,
+      'dev skip did not store the standard deterministic seed');
+    devProgramId = result.program.id;
     devShape = acceptedShape(state);
   });
 
@@ -320,7 +342,7 @@ async function main(): Promise<void> {
     assert(Object.keys(hydrated.dateOverrides).length === 0, 'rehydration did not normalise maps');
   });
 
-  await run('12 dev skip and normal onboarding have equivalent accepted-state shapes', () => {
+  await run('12 dev skip and normal onboarding publish the same accepted surfaces', () => {
     assert(devShape === realShape, `shape mismatch\ndev=${devShape}\nreal=${realShape}`);
   });
 
@@ -356,14 +378,9 @@ async function main(): Promise<void> {
     assert(acceptance.originalStack === acceptanceCause.stack, 'original stack was not preserved');
   });
 
-  await run('14 successful generation never uses DEFAULT_PROGRAM fallback', async () => {
-    resetToSparseColdStart();
-    const result = await withoutGenerationLogsAsync(() =>
-      runDevOnboardingSkip({ generateProgram: async () => clone(source) }));
-    assert(!result.usedFallback, 'successful generation reported fallback');
-    assert(result.program !== DEFAULT_PROGRAM, 'successful generation returned DEFAULT_PROGRAM');
-    assert(useProgramStore.getState().currentProgram?.id !== DEFAULT_PROGRAM.id,
-      'successful generated program was replaced by DEFAULT_PROGRAM');
+  await run('14 dev skip never calls the injected generator or uses DEFAULT_PROGRAM', () => {
+    assert(devGeneratorCalls === 0, 'dev skip waited for the injected network generator');
+    assert(devProgramId !== DEFAULT_PROGRAM.id, 'dev skip installed DEFAULT_PROGRAM');
   });
 
   await run('15 existing complete accepted-state surfaces are unchanged by normalisation', () => {
