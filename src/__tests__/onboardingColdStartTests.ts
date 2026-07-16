@@ -428,6 +428,7 @@ async function main(): Promise<void> {
       injuryEpisodes: [],
       temporarySourceFacts: [],
       acceptedCompositionBase: null,
+      acceptedProfileSnapshot: null,
       revision: 0,
       lastTransaction: null,
     }),

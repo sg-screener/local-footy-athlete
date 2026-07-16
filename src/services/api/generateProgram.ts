@@ -66,6 +66,8 @@ import {
   type SeasonPhaseClockResolution,
 } from '../../rules/seasonPhaseClock';
 import type { FixtureConditionedAvailability } from '../../rules/fixtureConditionedAvailability';
+import { validateWorkoutAgainstActiveConstraints } from '../../utils/postGenerationConstraintValidation';
+import { collapseWorkoutToRest } from '../../utils/workoutContent';
 
 /**
  * Kinds of program-generation failure — used by the UI to decide whether
@@ -133,6 +135,12 @@ type AthletePoolPrefsArg = Parameters<typeof buildWorkoutsFromCoach>[5];
 
 function dateAtNoonISO(dateISO: string): string {
   return new Date(`${dateISO}T12:00:00`).toISOString();
+}
+
+function dateForWeekday(weekStartISO: string, dayOfWeek: number): string {
+  const date = new Date(`${weekStartISO}T12:00:00`);
+  date.setDate(date.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  return date.toISOString().slice(0, 10);
 }
 
 function dateFromOption(todayISO?: string): Date {
@@ -212,15 +220,15 @@ function collectActiveConstraintsForGeneration(
 ): ActiveConstraint[] {
   const accepted = require('../../store/programStore').useProgramStore.getState()
     .acceptedMaterialContext;
-  const hasCanonicalAcceptedContext = accepted.revision > 0;
+  const hasCanonicalAcceptedContext = (accepted?.revision ?? 0) > 0;
   const storedConstraints = options.activeConstraints ??
     (hasCanonicalAcceptedContext
-      ? accepted.activeConstraints ?? []
+      ? accepted?.activeConstraints ?? []
       : useCoachUpdatesStore.getState().activeConstraints ?? []);
   const readinessSignal = options.readinessSignal !== undefined
     ? options.readinessSignal
     : hasCanonicalAcceptedContext
-      ? accepted.readinessSignalsByDate?.[todayISO] ?? null
+      ? accepted?.readinessSignalsByDate?.[todayISO] ?? null
       : useReadinessStore.getState().signalsByDate?.[todayISO] ?? null;
   const readinessConstraints = buildReadinessActiveConstraints(readinessSignal);
   const byId = new Map<string, ActiveConstraint>();
@@ -363,13 +371,29 @@ export function buildGeneratedMicrocycles(args: {
         weekKind: blockState.weekKind,
         generationConstraints,
       });
+      const hardPostGenerationConstraints = (args.activeConstraints ?? []).filter((constraint) =>
+        constraint.type === 'equipment' ||
+        (constraint.type === 'schedule' &&
+          constraint.scheduleKind !== undefined &&
+          constraint.scheduleKind !== 'busy_week' &&
+          constraint.scheduleKind !== 'max_sessions'));
+      const constrained = hardPostGenerationConstraints.length > 0
+        ? built.map((workout) =>
+            validateWorkoutAgainstActiveConstraints({
+              workout,
+              date: dateForWeekday(blockState.weekStart, workout.dayOfWeek),
+              todayISO: blockState.weekStart,
+              activeConstraints: hardPostGenerationConstraints,
+              profile,
+            }).workout ?? collapseWorkoutToRest(workout))
+        : built;
       return exposureContractV2
         ? stampPlannerDerivedSessionProvenance({
-            workouts: built,
+            workouts: constrained,
             contract: exposureContractV2,
             weekStart: blockState.weekStart,
           })
-        : built;
+        : constrained;
     };
     let workouts = buildCanonicalCandidate(sourceCoachWorkouts);
     if (exposureContractV2) {

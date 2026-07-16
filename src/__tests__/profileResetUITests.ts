@@ -214,9 +214,10 @@ ok(
   /currentPhase === 'In-season' \? \([\s\S]*label="Usual game day"/.test(src),
 );
 ok(
-  'name-only player edit saves profile without forcing setup rebuild',
-  /updateOnboardingData\(\{ firstName: trimmedName \}\)/.test(src)
-    && !/pendingName !==/.test(src),
+  'player details stage into the accepted profile transaction',
+  /setPendingName\(trimmedName\)/.test(src)
+    && /patch\.firstName = trimmedName/.test(src)
+    && !/updateOnboardingData\(\{ firstName: trimmedName \}\)/.test(src),
 );
 ok(
   'position or training experience changes count as setup changes',
@@ -270,11 +271,10 @@ ok(
     && /Custom coach edits may be replaced/.test(src),
 );
 ok(
-  'setup update rebuilds from patched profile before committing stores',
-  /const program = await generateProgramFromProfile\(nextProfile,/.test(src)
-    && /updateOnboardingData\(patch\)/.test(src)
-    && /setCurrentProgram\(program\)/.test(src)
-    && /clearManualOverrides\(\)/.test(src),
+  'setup update commits profile and program through one transaction',
+  /commitProfileProgramTransaction\(\{[\s\S]*kind: 'profile_setup'[\s\S]*patch[\s\S]*sourceSurface: 'profile_setup'/.test(src)
+    && !/updateOnboardingData\(patch\)/.test(src)
+    && !/setCurrentProgram\(program\)/.test(src),
 );
 ok(
   'setup rebuild patch carries player detail fields',
@@ -633,12 +633,14 @@ ok(
 
 section('[12] Baseline equipment settings save is rebuild-aware');
 ok(
-  'EquipmentSettingsScreen uses baseline equipment save helper',
-  /saveBaselineEquipmentSelection/.test(equipmentSettings),
+  'EquipmentSettingsScreen uses the atomic profile/program transaction',
+  /commitProfileProgramTransaction/.test(equipmentSettings)
+    && /kind: 'baseline_equipment'/.test(equipmentSettings),
 );
 ok(
-  'EquipmentSettingsScreen refreshes through canonical local rebuild',
-  /rebuildLocalWeek\(\{[\s\S]*baseProfile:\s*nextProfile[\s\S]*todayISO/.test(equipmentSettings),
+  'EquipmentSettingsScreen delegates accepted-base rebuild and verification',
+  /todayISO[\s\S]*sourceSurface: 'equipment_settings'/.test(equipmentSettings)
+    && /if \(!result\.ok\) throw/.test(equipmentSettings),
 );
 ok(
   'EquipmentSettingsScreen does not use chat or active equipment constraints',

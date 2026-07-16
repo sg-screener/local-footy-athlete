@@ -17,7 +17,7 @@ import {
 import { useCoachMutationHistoryStore } from './coachMutationHistoryStore';
 import { useCoachPreferencesStore } from './coachPreferencesStore';
 import {
-  publishAcceptedProfileCompatibilityMirror,
+  restoreAcceptedProfileCompatibilityMirror,
   useProfileStore,
 } from './profileStore';
 import {
@@ -588,8 +588,10 @@ function restoreAcceptedInMemory(
   });
   useCoachMutationHistoryStore.setState({ entries: clone(mirrors.mutationHistoryEntries) });
   useCoachPreferencesStore.setState({ modalityPreferences: clone(mirrors.modalityPreferences) });
-  publishAcceptedProfileCompatibilityMirror(clone(mirrors.onboardingData));
-  useProfileStore.setState({ isOnboardingComplete: mirrors.isOnboardingComplete });
+  restoreAcceptedProfileCompatibilityMirror({
+    onboardingData: clone(mirrors.onboardingData),
+    isOnboardingComplete: mirrors.isOnboardingComplete,
+  });
   // Mirror-store subscriptions may publish a compatibility context revision.
   // Restore the authoritative accepted ProgramStore snapshot last so those
   // callbacks cannot become a second rollback owner.

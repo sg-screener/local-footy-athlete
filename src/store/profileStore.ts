@@ -116,6 +116,22 @@ export function publishAcceptedProfileCompatibilityMirror(
   }
 }
 
+/** Restore the complete downstream profile mirror without triggering upstream fencing. */
+export function restoreAcceptedProfileCompatibilityMirror(snapshot: {
+  onboardingData: OnboardingData;
+  isOnboardingComplete: boolean;
+}): void {
+  acceptedProfileMirrorPublicationInProgress = true;
+  try {
+    useProfileStore.setState({
+      onboardingData: normalizeOnboardingRole(snapshot.onboardingData),
+      isOnboardingComplete: snapshot.isOnboardingComplete,
+    });
+  } finally {
+    acceptedProfileMirrorPublicationInProgress = false;
+  }
+}
+
 useProfileStore.subscribe((state) => {
   if (acceptedProfileMirrorPublicationInProgress) return;
   const canonical = canonicalAcceptedProfile();

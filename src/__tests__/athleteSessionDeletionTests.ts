@@ -160,6 +160,8 @@ function seed(args: {
   const program = quiet(() => generateProgramLocally(athlete, {
     todayISO: weekStart,
     previousProgram: null,
+    activeConstraints: [],
+    readinessSignal: null,
     seasonPhaseClock: {
       protocolVersion: 1,
       selectedPhase: athlete.seasonPhase!,
@@ -169,7 +171,6 @@ function seed(args: {
   }));
   const target = program.microcycles[args.targetMicrocycleIndex ?? 0] ?? program.microcycles[0];
   const marks = args.markedDays ?? {};
-  useProfileStore.setState({ onboardingData: athlete, isOnboardingComplete: true });
   useCalendarStore.setState({ markedDays: marks, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
   const coachState = useCoachUpdatesStore.getState();
@@ -197,6 +198,7 @@ function seed(args: {
     sessionFeedback: {},
     weightOverrides: {},
   });
+  useProfileStore.setState({ onboardingData: athlete, isOnboardingComplete: true });
   return program;
 }
 
@@ -895,10 +897,12 @@ run('regression', '12 failed atomic publication preserves previous complete hori
     constraints: useProgramStore.getState().userRemovalConstraints,
     marks: useProgramStore.getState().acceptedMaterialContext.markedDays,
   });
-  useProfileStore.setState({ onboardingData: null } as never);
   let rejected = false;
   try {
-    deleteWorkout({ date: SUNDAY, workout: seeded.sunday });
+    deleteWorkout({
+      date: SUNDAY,
+      workout: { ...seeded.sunday, id: '' },
+    });
   } catch {
     rejected = true;
   }

@@ -4,11 +4,12 @@
  * Run: npx sucrase-node src/__tests__/equipmentAvailabilityTests.ts
  */
 
+const memory = new Map<string, string>();
 (global as any).window = {
   localStorage: {
-    getItem: () => null,
-    setItem: () => undefined,
-    removeItem: () => undefined,
+    getItem: (key: string) => memory.get(key) ?? null,
+    setItem: (key: string, value: string) => { memory.set(key, value); },
+    removeItem: (key: string) => { memory.delete(key); },
   },
 };
 
@@ -27,6 +28,15 @@ import {
 } from '../utils/equipmentAvailability';
 import { buildProgramGenerationRequestDiagnostics } from '../services/api/generateProgram';
 import { useCoachUpdatesStore, type ActiveEquipmentConstraint } from '../store/coachUpdatesStore';
+import { createEmptyAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import { useProfileStore } from '../store/profileStore';
+import { useProgramStore } from '../store/programStore';
+import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
+import {
+  createTemporaryEquipmentFact,
+  temporaryFactScope,
+  temporarySourceFactId,
+} from '../rules/temporarySourceFact';
 import { selectActiveCoachNotes } from '../utils/activeCoachNotes';
 
 let pass = 0;
@@ -51,6 +61,7 @@ function section(title: string): void {
   console.log(`\n=== ${title} ===`);
 }
 
+async function main(): Promise<void> {
 const currentOptions: Array<[string, readonly string[]]> = [
   ['Full Gym', FULL_GYM_EQUIPMENT],
   ['Home Gym', ['bodyweight', 'dumbbells', 'bands', 'foam_roller', 'kettlebell']],
@@ -368,56 +379,74 @@ section('7. Store lifecycle and modifier metadata');
     trainingLocation: 'Commercial gym',
     equipment: ['Full Gym'],
   };
-  useCoachUpdatesStore.getState().setActiveConstraints([]);
-  const constraint = buildActiveEquipmentConstraint({
-    id: 'equipment-store-db-only',
+  useProgramStore.setState({
+    acceptedMaterialContext: createEmptyAcceptedMaterialContext(),
+    currentProgram: null,
+    currentMicrocycle: null,
+    todayWorkout: null,
+    dateOverrides: {},
+    overrideContexts: {},
+    weekScopedOverlays: {},
+    reversibleAdjustmentLedger: [],
+  } as any);
+  useProfileStore.setState({ onboardingData: profile } as any);
+  useCoachUpdatesStore.setState({
+    activeConstraints: [],
+    activeInjury: null,
+  } as any);
+  const fact = createTemporaryEquipmentFact({
+    factId: 'equipment-store-db-only',
+    observedDate: '2026-04-22',
+    scope: temporaryFactScope({ kind: 'week', date: '2026-04-22' }),
     mode: 'only',
-    tags: ['dumbbells'],
-    source: 'chat',
-    nowISO: '2026-04-22T09:00:00.000Z',
-    scope: 'this_week',
-    modifierAffects: ['current_week'],
+    equipmentTags: ['dumbbells'],
+    sourceActor: 'coach',
+    sourceSurface: 'test',
   });
-  useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
+  const created = await transactTemporarySourceFact({
+    operation: 'create',
+    fact,
+    todayISO: '2026-04-22',
+  });
   const stored = useCoachUpdatesStore.getState().activeConstraints[0];
-  assert(stored?.type === 'equipment', 'equipment constraint type is accepted by store');
   assert(
-    sameSet((stored as ActiveEquipmentConstraint).modifierAffects, ['current_week']),
-    'store preserves provided equipment modifierAffects',
+    created.outcome !== 'conflicted' &&
+      created.outcome !== 'safely_rejected' &&
+      stored?.type === 'equipment' &&
+      stored.temporarySourceFactIds?.includes(fact.factId),
+    'canonical equipment fact publishes the downstream store mirror',
+  );
+  assert(
+    sameSet(
+      (stored as ActiveEquipmentConstraint).modifierAffects,
+      ['current_week', 'future_generation'],
+    ),
+    'canonical projection publishes visible current/future modifier metadata',
   );
   const constrained = resolveEquipmentAvailability(
     profile,
     useCoachUpdatesStore.getState().activeConstraints,
     '2026-04-23',
   );
-  assert(!constrained.includes('barbell'), 'stored equipment constraint affects resolver');
-  useCoachUpdatesStore.getState().removeActiveConstraint('equipment-store-db-only');
+  assert(!constrained.includes('barbell'), 'accepted equipment projection affects resolver');
+  await transactTemporarySourceFact({
+    operation: 'resolve',
+    factId: fact.factId,
+    todayISO: '2026-04-22',
+  });
   const restored = resolveEquipmentAvailability(
     profile,
     useCoachUpdatesStore.getState().activeConstraints,
     '2026-04-23',
   );
-  assert(restored.includes('barbell'), 'clearing equipment constraint restores baseline availability');
-
-  const missingAffects = {
-    ...buildActiveEquipmentConstraint({
-      id: 'equipment-default-affects',
-      mode: 'without',
-      tags: ['barbell'],
-      source: 'system',
-      nowISO: '2026-04-22T09:00:00.000Z',
-      scope: 'open_ended',
-    }),
-    modifierAffects: undefined,
-  } as any;
-  useCoachUpdatesStore.getState().upsertActiveConstraint(missingAffects);
-  const defaulted = useCoachUpdatesStore.getState().activeConstraints
-    .find((c) => c.id === 'equipment-default-affects') as ActiveEquipmentConstraint | undefined;
   assert(
-    sameSet(defaulted?.modifierAffects ?? [], ['current_week', 'future_generation']),
-    'store defaults missing equipment modifierAffects to visible current/future metadata',
+    restored.includes('barbell') &&
+      useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
+        .some((candidate) =>
+          temporarySourceFactId(candidate) === fact.factId &&
+          candidate.status === 'resolved'),
+    'resolving the canonical fact restores baseline availability and retains history',
   );
-  useCoachUpdatesStore.getState().setActiveConstraints([]);
 }
 
 section('8. Baseline equipment save/rebuild behaviour');
@@ -464,7 +493,6 @@ section('8. Baseline equipment save/rebuild behaviour');
     'modern equipment save records authoritative completeness',
   );
 
-  useCoachUpdatesStore.getState().setActiveConstraints([]);
   const plan = buildBaselineEquipmentSavePlan(baseline, ['Bodyweight Only'], date);
   assert(plan.rebuildRequired === true, 'baseline bodyweight change is meaningful');
   assert(
@@ -480,12 +508,19 @@ section('8. Baseline equipment save/rebuild behaviour');
     'baseline equipment change does not create active equipment constraint',
   );
 
-  const temporary = buildTemporaryEquipmentConstraint({
-    presetId: 'bodyweight_only',
-    date,
-    todayISO: `${date}T09:00:00.000Z`,
+  const temporaryFact = createTemporaryEquipmentFact({
+    factId: 'equipment-baseline-save-survival',
+    observedDate: date,
+    scope: temporaryFactScope({ kind: 'week', date }),
+    mode: 'only',
+    equipmentTags: ['bodyweight'],
+    sourceSurface: 'test',
   });
-  useCoachUpdatesStore.getState().setActiveConstraints([temporary]);
+  await transactTemporarySourceFact({
+    operation: 'create',
+    fact: temporaryFact,
+    todayISO: date,
+  });
   const savedWithTemporary = saveBaselineEquipmentSelection({
     profile: baseline,
     selectedEquipment: ['Full Gym'],
@@ -494,8 +529,11 @@ section('8. Baseline equipment save/rebuild behaviour');
     refreshProgram: () => undefined,
   });
   assert(
-    useCoachUpdatesStore.getState().activeConstraints.some((constraint) => constraint.id === temporary.id),
-    'active temporary equipment constraint survives baseline save',
+    useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
+      .some((candidate) =>
+        temporarySourceFactId(candidate) === temporaryFact.factId &&
+        candidate.status === 'active'),
+    'active temporary equipment fact survives baseline save planning',
   );
   assert(
     sameSet(
@@ -508,7 +546,6 @@ section('8. Baseline equipment save/rebuild behaviour');
     ),
     'resolved availability after baseline save still applies live temporary constraint',
   );
-  useCoachUpdatesStore.getState().setActiveConstraints([]);
 }
 
 console.log(`\n[equipmentAvailability] ${pass} passed, ${fail} failed`);
@@ -517,3 +554,9 @@ if (fail > 0) {
   failures.forEach((f) => console.log(`  - ${f}`));
   process.exit(1);
 }
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

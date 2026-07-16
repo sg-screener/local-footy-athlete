@@ -55,6 +55,12 @@ const {
 const {
   parseCoachIntent,
 } = require('../utils/coachIntent') as typeof import('../utils/coachIntent');
+const {
+  executeProgramControlActionDurably,
+} = require('../utils/programControlActions') as typeof import('../utils/programControlActions');
+const {
+  generateProgramLocally,
+} = require('../services/api/generateProgram') as typeof import('../services/api/generateProgram');
 
 let passed = 0;
 const failures: string[] = [];
@@ -413,6 +419,100 @@ async function main(): Promise<void> {
   check('Dismiss Note changes no accepted profile, fact, base or program',
     semanticFingerprint(useProgramStore.getState().acceptedMaterialContext) ===
       canonicalBeforeStale);
+
+  console.log('\n[5] busy and away tap actions publish canonical schedule facts');
+  reset();
+  const actionBase = {
+    source: {
+      screen: 'test',
+      surface: 'equipment_schedule_fact_test',
+      initiatedBy: 'test',
+    },
+    scope: 'current_week',
+    requiresRebuild: false,
+    createsActiveModifier: true,
+    oneOffOnly: false,
+  } as const;
+  const equipmentResult = await executeProgramControlActionDurably({
+    ...actionBase,
+    type: 'set_equipment_modifier',
+    payload: {
+      presetId: 'bodyweight_only',
+      date,
+      todayISO: date,
+    },
+  } as any, { todayISO: date });
+  accepted = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
+  );
+  check('equipment tap publishes a canonical equipment fact',
+    equipmentResult.ok &&
+    accepted.temporarySourceFacts.some((fact) =>
+      !('episodeId' in fact) &&
+      fact.factKind === 'equipment' &&
+      fact.mode === 'only' &&
+      semanticFingerprint(fact.equipmentTags) === semanticFingerprint(['bodyweight'])));
+  const generated = generateProgramLocally(profile(), {
+    todayISO: date,
+    blockNumber: 1,
+  });
+  const generatedEquipment = (generated.microcycles[0]?.workouts ?? [])
+    .flatMap((workout) => workout.exercises ?? [])
+    .flatMap((exercise) => exercise.exercise?.equipmentRequired ?? [])
+    .map((value) => String(value).toLowerCase());
+  check('generation reads accepted canonical equipment facts',
+    generatedEquipment.every((value) =>
+      value.includes('bodyweight') || value === 'none' || value.length === 0),
+    generatedEquipment);
+
+  const busyResult = await executeProgramControlActionDurably({
+    ...actionBase,
+    type: 'set_schedule_modifier',
+    payload: {
+      date,
+      todayISO: date,
+      severity: 5,
+      reasonLabel: 'Busy week',
+    },
+  } as any, { todayISO: date });
+  accepted = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
+  );
+  check('busy tap publishes a canonical busy-week fact',
+    busyResult.ok &&
+    accepted.temporarySourceFacts.some((fact) =>
+      !('episodeId' in fact) &&
+      fact.factKind === 'schedule' &&
+      fact.scheduleKind === 'busy_week' &&
+      fact.status === 'active'));
+
+  const awayDates = ['2026-07-22', '2026-07-23'];
+  const awayResult = await executeProgramControlActionDurably({
+    ...actionBase,
+    type: 'set_schedule_modifier',
+    payload: {
+      date,
+      todayISO: date,
+      severity: 7,
+      reasonLabel: 'Away / travel',
+      planChange: {
+        kind: 'clear_days',
+        dates: awayDates,
+      },
+    },
+  } as any, { todayISO: date });
+  accepted = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
+  );
+  check('away tap publishes one canonical travel fact with exact dates',
+    awayResult.ok &&
+    accepted.temporarySourceFacts.some((fact) =>
+      !('episodeId' in fact) &&
+      fact.factKind === 'schedule' &&
+      fact.scheduleKind === 'travel' &&
+      semanticFingerprint(fact.unavailableDates) === semanticFingerprint(awayDates)));
+  check('away tap creates no fact-owned date override',
+    Object.keys(useProgramStore.getState().dateOverrides).length === 0);
 
   console.log(`\nEquipment/schedule source-fact tests: ${passed} passed`);
   if (failures.length > 0) {
