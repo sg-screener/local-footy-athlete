@@ -26,6 +26,13 @@ import {
   type InjuryEpisodeV1,
 } from '../rules/injuryEpisode';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
+import {
+  athleteActionDiagnosticsEnabled,
+  beginAthleteActionTrace,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionTraceContext,
+} from '../utils/athleteActionDiagnostics';
 
 export type InjuryEpisodeMutationOutcome =
   | 'created_and_recomposed'
@@ -67,6 +74,7 @@ export interface CreateOrUpdateInjuryEpisodeInput {
   expectedAcceptedRevision?: number;
   /** @internal Deterministic failure-boundary witnesses for transaction tests. */
   testHooks?: InjuryEpisodeTransactionTestHooks;
+  trace?: AthleteActionTraceContext;
 }
 
 export interface InjuryEpisodeTransactionTestHooks {
@@ -85,6 +93,7 @@ export interface UpdateInjuryEpisodeInput {
   note?: string;
   todayISO?: string;
   expectedAcceptedRevision?: number;
+  trace?: AthleteActionTraceContext;
 }
 
 export interface ResolveInjuryEpisodeOptions {
@@ -95,6 +104,7 @@ export interface ResolveInjuryEpisodeOptions {
   expectedAcceptedRevision?: number;
   /** @internal Deterministic failure-boundary witnesses for transaction tests. */
   testHooks?: InjuryEpisodeTransactionTestHooks;
+  trace?: AthleteActionTraceContext;
 }
 
 interface CanonicalOwnershipSnapshot {
@@ -450,6 +460,46 @@ async function persistEpisodeSet(args: {
 export async function createOrUpdateInjuryEpisode(
   input: CreateOrUpdateInjuryEpisodeInput,
 ): Promise<InjuryEpisodeMutationResult> {
+  if (!athleteActionDiagnosticsEnabled()) return createOrUpdateInjuryEpisodeWithinTrace(input);
+  const trace = beginAthleteActionTrace({
+    source: /coach/i.test(input.sourceSurface)
+      ? 'coach'
+      : input.sourceActor === 'system' ? 'system' : 'tap',
+    actionType: 'injury_change',
+    route: `canonical_injury_episode:${input.sourceSurface}`,
+    sourceDate: (input.todayISO ?? todayISO()).slice(0, 10),
+    sessionDate: (input.todayISO ?? todayISO()).slice(0, 10),
+    scope: 'canonical_injury_episode',
+    injuryEpisodeId: input.constraint.injuryEpisodeId ?? null,
+    controlId: input.sourceSurface,
+  }, input.trace);
+  return runWithAthleteActionTrace(trace, async () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: 'canonical_injury_create_or_update',
+      sourceSurface: input.sourceSurface,
+    });
+    const result = await createOrUpdateInjuryEpisodeWithinTrace({ ...input, trace });
+    emitAthleteActionEvent(trace, 'mutation_constraint_created', {
+      constraintType: 'injury_episode',
+      constraintId: result.episodeId,
+      constraintStatus: result.outcome.includes('created') || result.outcome.includes('updated')
+        ? 'active'
+        : result.outcome,
+    });
+    emitAthleteActionEvent(trace,
+      result.outcome === 'conflicted' || result.outcome === 'safely_rejected'
+        ? 'athlete_action_failed'
+        : 'athlete_action_completed', {
+        outcome: result.outcome,
+        internalResultCode: `canonical_injury_${result.outcome}`,
+      });
+    return result;
+  });
+}
+
+async function createOrUpdateInjuryEpisodeWithinTrace(
+  input: CreateOrUpdateInjuryEpisodeInput,
+): Promise<InjuryEpisodeMutationResult> {
   const now = new Date().toISOString();
   const anchorDate = (input.todayISO ?? todayISO()).slice(0, 10);
   const ownership = currentOwnership(now);
@@ -516,6 +566,25 @@ export async function createOrUpdateInjuryEpisode(
 export async function updateInjuryEpisode(
   input: UpdateInjuryEpisodeInput,
 ): Promise<InjuryEpisodeMutationResult> {
+  if (!athleteActionDiagnosticsEnabled()) return updateInjuryEpisodeWithinTrace(input);
+  const trace = beginAthleteActionTrace({
+    source: /coach/i.test(input.sourceSurface)
+      ? 'coach'
+      : input.sourceActor === 'system' ? 'system' : 'tap',
+    actionType: 'injury_change',
+    route: `canonical_injury_update:${input.sourceSurface}`,
+    sourceDate: (input.todayISO ?? todayISO()).slice(0, 10),
+    sessionDate: (input.todayISO ?? todayISO()).slice(0, 10),
+    scope: 'canonical_injury_episode',
+    injuryEpisodeId: input.episodeId,
+    controlId: input.sourceSurface,
+  }, input.trace);
+  return runWithAthleteActionTrace(trace, () => updateInjuryEpisodeWithinTrace({ ...input, trace }));
+}
+
+async function updateInjuryEpisodeWithinTrace(
+  input: UpdateInjuryEpisodeInput,
+): Promise<InjuryEpisodeMutationResult> {
   const context = normalizeAcceptedMaterialContext(
     useProgramStore.getState().acceptedMaterialContext,
   );
@@ -554,12 +623,55 @@ export async function updateInjuryEpisode(
     note: input.note,
     todayISO: input.todayISO,
     expectedAcceptedRevision: input.expectedAcceptedRevision,
+    trace: input.trace,
   });
 }
 
 export async function resolveInjuryEpisode(
   episodeId: string,
   options: ResolveInjuryEpisodeOptions = {},
+): Promise<InjuryEpisodeResolutionResult> {
+  if (!athleteActionDiagnosticsEnabled()) return resolveInjuryEpisodeWithinTrace(episodeId, options);
+  const sourceSurface = options.sourceSurface ?? 'injury_resolved_action';
+  const trace = beginAthleteActionTrace({
+    source: /coach/i.test(sourceSurface)
+      ? 'coach'
+      : options.sourceActor === 'system' ? 'system' : 'tap',
+    actionType: 'injury_change',
+    route: `canonical_injury_resolve:${sourceSurface}`,
+    sourceDate: (options.todayISO ?? todayISO()).slice(0, 10),
+    sessionDate: (options.todayISO ?? todayISO()).slice(0, 10),
+    scope: 'canonical_injury_episode',
+    injuryEpisodeId: episodeId,
+    controlId: sourceSurface,
+  }, options.trace);
+  return runWithAthleteActionTrace(trace, async () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: 'canonical_injury_resolve',
+      injuryEpisodeId: episodeId,
+    });
+    const result = await resolveInjuryEpisodeWithinTrace(episodeId, { ...options, trace });
+    emitAthleteActionEvent(trace, 'mutation_constraint_created', {
+      constraintType: 'injury_episode',
+      constraintId: episodeId,
+      constraintStatus: result.outcome.startsWith('resolved') || result.outcome === 'already_resolved'
+        ? 'resolved'
+        : result.outcome,
+    });
+    emitAthleteActionEvent(trace,
+      result.outcome === 'conflicted' || result.outcome === 'safely_rejected'
+        ? 'athlete_action_failed'
+        : 'athlete_action_completed', {
+        outcome: result.outcome,
+        internalResultCode: `canonical_injury_${result.outcome}`,
+      });
+    return result;
+  });
+}
+
+async function resolveInjuryEpisodeWithinTrace(
+  episodeId: string,
+  options: ResolveInjuryEpisodeOptions,
 ): Promise<InjuryEpisodeResolutionResult> {
   const now = new Date().toISOString();
   const anchorDate = (options.todayISO ?? todayISO()).slice(0, 10);

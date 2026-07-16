@@ -69,6 +69,8 @@
     "test:llm-classifier": "sucrase-node src/__tests__/llmCoachIntentClassifierTests.ts",
     "test:pipeline-instrumentation": "sucrase-node src/__tests__/pipelineInstrumentationTests.ts",
     "test:athlete-action-diagnostics": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionDiagnosticsTests.ts",
+    "test:athlete-action-trace-v2": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionTraceV2Tests.ts",
+    "test:athlete-action-artifacts": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionArtifactAndClusteringTests.ts",
     "test:persistent-injury": "sucrase-node src/__tests__/persistentInjuryStateTests.ts",
     "test:coach-orchestration": "sucrase-node src/__tests__/coachOrchestrationTests.ts",
     "test:coach-live-wiring": "sucrase-node src/__tests__/coachLiveWiringTests.ts",

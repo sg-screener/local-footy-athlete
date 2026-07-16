@@ -16,11 +16,18 @@ import {
   setDevE2ESeedLoading,
   setDevE2ESeedReady,
 } from './devE2EState';
+import type {
+  AthleteActionReloadEvidenceV2,
+  AthleteActionTraceCheckpointV2,
+} from './AthleteActionTraceCoordinator';
 
 export interface DevE2ECoordinatorDeps {
   waitForHydration: () => Promise<void>;
   resetLocalState: () => void;
-  waitForPersistence: () => Promise<DevE2EFingerprintMap>;
+  waitForPersistence: (
+    expected?: DevE2EFingerprintMap,
+    timeoutMs?: number,
+  ) => Promise<DevE2EFingerprintMap>;
   buildSeed: (seedId: DevE2ESeedId) => DevE2ESeed;
   writeProfile: (seed: DevE2ESeed) => void;
   installProgram: (seed: DevE2ESeed) => void;
@@ -41,6 +48,15 @@ export interface DevE2ECoordinatorDeps {
   readCheckpoint: () => Promise<DevE2ECheckpointRecord | null>;
   readPersistedFingerprints: () => Promise<DevE2EFingerprintMap>;
   clearCheckpoint: () => Promise<void>;
+  captureUnfinishedAthleteActionTraces?: () => AthleteActionTraceCheckpointV2;
+  resumeAthleteActionTraces?: (
+    checkpoint: AthleteActionTraceCheckpointV2 | null | undefined,
+    evidence: AthleteActionReloadEvidenceV2,
+  ) => string[];
+  captureReloadEvidence?: (
+    memory: DevE2EFingerprintMap,
+    persisted: DevE2EFingerprintMap,
+  ) => AthleteActionReloadEvidenceV2;
 }
 
 function fingerprintMismatchReason(
@@ -127,10 +143,12 @@ export class DevE2ESeedCoordinator {
           );
         }
         await this.deps.writeCheckpoint({
-          version: 1,
+          version: 2,
           seedId: this.activeSeedId,
           checkpointId,
           fingerprints,
+          unfinishedAthleteActionTraces:
+            this.deps.captureUnfinishedAthleteActionTraces?.(),
         });
         setDevE2ECheckpointReady(checkpointId);
         return true;
@@ -161,7 +179,28 @@ export class DevE2ESeedCoordinator {
             `Reload persisted fingerprint mismatch for ${checkpoint.seedId}: ${fingerprintMismatchReason(checkpoint.fingerprints, persisted)}`,
           );
         }
-        await this.deps.waitForPersistence();
+        const current = this.deps.captureMemoryFingerprints();
+        const convergedPersisted = await this.deps.waitForPersistence(current);
+        const stableCurrent = this.deps.captureMemoryFingerprints();
+        if (!this.deps.fingerprintMapsMatch(current, stableCurrent)) {
+          throw new Error(
+            `Accepted state changed while reload persistence converged: ${fingerprintMismatchReason(current, stableCurrent)}`,
+          );
+        }
+        const evidence = this.deps.captureReloadEvidence?.(
+          stableCurrent,
+          convergedPersisted,
+        ) ?? {
+          accepted: stableCurrent,
+          persisted: convergedPersisted,
+          visible: stableCurrent['program-store'] ?? null,
+          coachNotes: stableCurrent['coach-updates'] ?? null,
+          verified: true,
+        };
+        this.deps.resumeAthleteActionTraces?.(
+          checkpoint.unfinishedAthleteActionTraces,
+          evidence,
+        );
         setDevE2EReloadReady(checkpoint.seedId, checkpoint.checkpointId);
         return true;
       } catch (error) {

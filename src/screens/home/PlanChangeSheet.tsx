@@ -28,6 +28,10 @@ import {
 import type { TapRecoveryModifierScope } from '../../utils/tapProgramModifiers';
 import type { ProgramEditRiskFinding } from '../../utils/programEditRiskAssessment';
 import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
+import {
+  observeRenderedAthleteActionOutcome,
+  registerAthleteActionUIOutcome,
+} from '../../dev/e2e/athleteActionUIObservation';
 
 /**
  * PlanChangeSheet — the tap-first change door (ATHLETE_CHANGE_VOCABULARY.md
@@ -83,7 +87,7 @@ type Step =
   | { kind: 'pick_sleep' }
   | { kind: 'pick_sick' }
   | { kind: 'confirm_shutdown' }
-  | { kind: 'result'; ok: boolean; message: string };
+  | { kind: 'result'; ok: boolean; message: string; traceId?: string };
 
 interface PlanChangeSheetProps {
   visible: boolean;
@@ -161,6 +165,29 @@ export function PlanChangeSheet({
     if (!visible || !date) return null;
     return listPlanChangeOptionsForDay({ visibleWeek: weekDays, date, todayISO });
   }, [visible, date, weekDays, todayISO]);
+  useEffect(() => {
+    if (step.kind !== 'result' || !step.traceId) return;
+    const observationId = `plan-change-result:${step.traceId}`;
+    registerAthleteActionUIOutcome({
+      traceId: step.traceId,
+      observationId,
+      domainReturn: { ok: step.ok, message: step.message },
+      controlId: 'plan-change-result-message',
+    });
+    // Effects run after the committed render, so this proves the React node
+    // exists independently from the returned domain message.
+    observeRenderedAthleteActionOutcome({
+      traceId: step.traceId,
+      observationId,
+      renderedText: step.message,
+      controlId: 'plan-change-result-message',
+      accessibilityNode: {
+        testID: 'plan-change-result-message',
+        role: 'text',
+        labelFingerprintSource: 'rendered_text',
+      },
+    });
+  }, [step]);
   const selectedDay = useMemo(
     () => (date ? weekDays.find((day) => day.date === date) ?? null : null),
     [date, weekDays],
@@ -238,7 +265,12 @@ export function PlanChangeSheet({
       onClose();
       return;
     }
-    setStep({ kind: 'result', ok: result.ok, message: result.message });
+    setStep({
+      kind: 'result',
+      ok: result.ok,
+      message: result.message,
+      traceId: result.traceId,
+    });
   };
 
   const apply = (
@@ -974,7 +1006,11 @@ export function PlanChangeSheet({
 
       {step.kind === 'result' && (
         <View>
-          <Text style={step.ok ? styles.resultOk : styles.resultBad}>
+          <Text
+            style={step.ok ? styles.resultOk : styles.resultBad}
+            testID="plan-change-result-message"
+            accessibilityRole="text"
+          >
             {step.message}
           </Text>
           <Button

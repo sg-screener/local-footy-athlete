@@ -259,6 +259,8 @@ export interface ProgramControlActionResult {
   fallbackReason?: string;
   needsGuidedFollowUp?: boolean;
   route: ProgramControlRoute;
+  /** Development-only explicit token correlation for the render observer. */
+  traceId?: string;
 }
 
 const SETUP_ACTIONS = new Set<ProgramControlActionType>([
@@ -895,6 +897,7 @@ function diagnosticActionType(action: ProgramControlAction): AthleteActionType {
       ? 'delete_component'
       : 'delete_session';
   }
+  if (action.type === 'remove_exercise') return 'delete_component';
   if (action.type === 'move_session') return 'move_session';
   if (action.type === 'add_to_day' || action.type === 'add_exercise') return 'add_session';
   if (action.type === 'update_game_day') return 'game_day_change';
@@ -915,6 +918,12 @@ function diagnosticActionDate(action: ProgramControlAction): string | undefined 
   if (action.type === 'move_session') return action.payload.fromDate;
   const payload = action.payload as Record<string, unknown>;
   return typeof payload.date === 'string' ? payload.date : undefined;
+}
+
+function diagnosticComponentId(action: ProgramControlAction): string | null | undefined {
+  if (action.type === 'remove_exercise') return action.payload.exerciseId ?? action.payload.exercise;
+  if (action.type === 'swap_exercise') return action.payload.fromExerciseId ?? action.payload.fromExercise;
+  return undefined;
 }
 
 /** Stable tap/system production entry for diagnostic correlation only. */
@@ -940,6 +949,7 @@ export function executeProgramControlAction(
     scope: action.scope ?? null,
     sessionTier: visibleWorkout?.sessionTier ?? null,
     workoutType: visibleWorkout?.workoutType ?? null,
+    componentId: diagnosticComponentId(action),
   });
   return runWithAthleteActionTrace(trace, () => {
     const diagnosticsEnabled = athleteActionDiagnosticsEnabled();
@@ -1023,7 +1033,9 @@ export function executeProgramControlAction(
         changedProgram: result.changedProgram,
         finalUiMessageKey: internalResultCode,
       });
-      return result;
+      return athleteActionDiagnosticsEnabled()
+        ? { ...result, traceId: trace.traceId }
+        : result;
     } catch (error) {
       const originalRejectionCode = error instanceof Error ? error.name : 'unknown_error';
       emitAthleteActionEvent(trace, 'athlete_action_failed', {
@@ -1047,6 +1059,30 @@ export function executeProgramControlAction(
 export async function executeProgramControlActionDurably(
   action: ProgramControlAction,
   context: ProgramControlActionContext = {},
+): Promise<ProgramControlActionResult> {
+  if (!athleteActionDiagnosticsEnabled()) {
+    return executeProgramControlActionDurablyWithinTrace(action, context);
+  }
+  const date = diagnosticActionDate(action);
+  const trace = beginAthleteActionTrace({
+    source: action.source.initiatedBy === 'system' ? 'system' : 'tap',
+    actionType: diagnosticActionType(action),
+    route: `program_control_durable:${action.source.surface ?? action.source.screen}`,
+    sourceDate: action.type === 'move_session' ? action.payload.fromDate : date,
+    targetDate: action.type === 'move_session' ? action.payload.toDate : undefined,
+    sessionDate: date,
+    scope: action.scope,
+    componentId: diagnosticComponentId(action),
+  });
+  return runWithAthleteActionTrace(trace, async () => {
+    const result = await executeProgramControlActionDurablyWithinTrace(action, context);
+    return { ...result, traceId: trace.traceId };
+  });
+}
+
+async function executeProgramControlActionDurablyWithinTrace(
+  action: ProgramControlAction,
+  context: ProgramControlActionContext,
 ): Promise<ProgramControlActionResult> {
   if (action.type === 'set_injury_modifier') {
     const result = await createOrUpdateInjuryEpisode({

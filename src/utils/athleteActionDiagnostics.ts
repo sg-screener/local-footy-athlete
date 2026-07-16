@@ -1,4 +1,13 @@
 import { createLogger } from './logger';
+import { semanticFingerprintV2 } from './semanticFingerprintV2';
+import {
+  AthleteActionTraceCoordinator,
+  type AthleteActionReloadEvidenceV2,
+  type AthleteActionTraceCheckpointV2,
+  type AthleteActionTraceRecordV2,
+  type AthleteActionTraceTokenV2,
+  type AthleteSemanticSnapshotV2,
+} from '../dev/e2e/AthleteActionTraceCoordinator';
 
 export type AthleteActionSource = 'tap' | 'coach' | 'system';
 
@@ -56,8 +65,9 @@ export type AthleteActionFailureCategory =
   | 'projection_mismatch'
   | 'technical_failure';
 
-export interface AthleteActionTraceContext {
+export interface AthleteActionTraceContext extends AthleteActionTraceTokenV2 {
   traceId: string;
+  spanId: string;
   source: AthleteActionSource;
   actionType: AthleteActionType;
   startedAt: string;
@@ -73,6 +83,10 @@ export interface AthleteActionTraceContext {
   workoutType?: string | null;
   fixtureId?: string | null;
   practiceMatchId?: string | null;
+  componentId?: string | null;
+  adjustmentId?: string | null;
+  injuryEpisodeId?: string | null;
+  controlId?: string;
 }
 
 export interface AthleteActionDiagnosticEvent {
@@ -93,6 +107,10 @@ export interface AthleteActionDiagnosticEvent {
   workoutType?: string | null;
   fixtureId?: string | null;
   practiceMatchId?: string | null;
+  componentId?: string | null;
+  adjustmentId?: string | null;
+  injuryEpisodeId?: string | null;
+  controlId?: string;
   [field: string]: unknown;
 }
 
@@ -105,13 +123,18 @@ interface DiagnosticTestConfig {
 
 const diagnosticLogger = createLogger({ enableDebugLogs: true });
 const MAX_RETAINED_EVENTS = 5000;
+/** Bounded V1 output projection only; V2 owns correlation and terminal truth. */
 const retainedEvents: AthleteActionDiagnosticEvent[] = [];
 const traceStack: AthleteActionTraceContext[] = [];
-const pendingPersistence: AthleteActionTraceContext[] = [];
 let testConfig: DiagnosticTestConfig | null = null;
-let traceCounter = 0;
 let hydrationTrace: AthleteActionTraceContext | null = null;
 let selectedDebugTraceId: string | null = null;
+
+/** Sole V2 record owner. The legacy event facade below is derived from it. */
+export const athleteActionTraceCoordinator = new AthleteActionTraceCoordinator(
+  () => athleteActionDiagnosticsEnabled(),
+  () => now(),
+);
 
 const FORBIDDEN_EVENT_KEYS = /(?:profile|health|bodypart|description|coachnotes|exercises?|prescription|weight|reps?|sets?|medical|symptom|injurydetail)/i;
 const SENSITIVE_SNAPSHOT_KEYS = /(?:profile|health|bodypart|description|coachnotes|notes?|exercises?|prescription|weight|reps?|sets?|medical|symptom|injury|rules?|advice|safefocus|message|reason)/i;
@@ -143,29 +166,10 @@ function stableValue(value: unknown, seen = new WeakSet<object>()): unknown {
     .map(([key, entry]) => [key, stableValue(entry, seen)]));
 }
 
-/** Compact deterministic hash for state/candidate correlation without state dumps. */
+/** Versioned SHA-256 correlation hash shared with the V2 semantic contract. */
 export function athleteActionDiagnosticHash(value: unknown): string {
   if (!athleteActionDiagnosticsEnabled()) return 'diagnostics-disabled';
-  const input = JSON.stringify(stableValue(value));
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < input.length; index += 1) {
-    hash ^= input.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return `fnv1a-${(hash >>> 0).toString(16).padStart(8, '0')}`;
-}
-
-function nextTraceId(input: Omit<AthleteActionTraceContext, 'traceId' | 'startedAt'>): string {
-  traceCounter += 1;
-  const timestamp = now().toISOString();
-  return `aa-${athleteActionDiagnosticHash({
-    timestamp,
-    counter: traceCounter,
-    source: input.source,
-    actionType: input.actionType,
-    sourceDate: input.sourceDate,
-    targetDate: input.targetDate,
-  }).replace('fnv1a-', '')}`;
+  return semanticFingerprintV2(stableValue(value));
 }
 
 function safeFields(fields: Record<string, unknown>): Record<string, unknown> {
@@ -179,14 +183,39 @@ export function currentAthleteActionTrace(): AthleteActionTraceContext | undefin
 
 /** First production entry owns the trace; nested entries reuse it. */
 export function beginAthleteActionTrace(
-  input: Omit<AthleteActionTraceContext, 'traceId' | 'startedAt'>,
+  input: Omit<AthleteActionTraceContext, 'traceId' | 'spanId' | 'startedAt'>,
   existing?: AthleteActionTraceContext,
 ): AthleteActionTraceContext {
   const inherited = existing ?? currentAthleteActionTrace();
-  if (inherited) return inherited;
+  if (inherited) {
+    const span = athleteActionTraceCoordinator.startSpan(inherited, input.route ?? input.actionType);
+    return { ...inherited, spanId: span.spanId };
+  }
+  const token = athleteActionTraceCoordinator.startRoot({
+    source: input.source,
+    actionType: input.actionType,
+    route: input.route,
+    canonicalRequestedAction: {
+      actionType: input.actionType,
+      scope: input.scope ?? null,
+      sourceDate: input.sourceDate ?? input.sessionDate ?? null,
+      targetDate: input.targetDate ?? null,
+    },
+    sourceSurface: input.route,
+    controlId: input.controlId,
+    sourceDate: input.sourceDate ?? input.sessionDate,
+    targetDate: input.targetDate,
+    identities: {
+      sessionId: input.planEntryId ?? input.workoutId,
+      componentId: input.componentId ?? null,
+      fixtureId: input.fixtureId ?? input.practiceMatchId,
+      adjustmentId: input.adjustmentId ?? null,
+      injuryEpisodeId: input.injuryEpisodeId ?? null,
+    },
+  });
   const trace: AthleteActionTraceContext = {
     ...input,
-    traceId: nextTraceId(input),
+    ...token,
     startedAt: now().toISOString(),
   };
   if (
@@ -207,12 +236,25 @@ export function runWithAthleteActionTrace<T>(
   trace: AthleteActionTraceContext,
   run: () => T,
 ): T {
-  traceStack.push(trace);
-  try {
-    return run();
-  } finally {
-    traceStack.pop();
-  }
+  return athleteActionTraceCoordinator.run(trace, () => {
+    traceStack.push(trace);
+    let result: T;
+    try {
+      result = run();
+    } catch (error) {
+      traceStack.splice(traceStack.lastIndexOf(trace), 1);
+      throw error;
+    }
+    if (result && typeof (result as { then?: unknown }).then === 'function') {
+      return Promise.resolve(result).finally(() => {
+        const index = traceStack.lastIndexOf(trace);
+        if (index >= 0) traceStack.splice(index, 1);
+      }) as T;
+    }
+    const index = traceStack.lastIndexOf(trace);
+    if (index >= 0) traceStack.splice(index, 1);
+    return result;
+  });
 }
 
 export function emitAthleteActionEvent(
@@ -239,6 +281,10 @@ export function emitAthleteActionEvent(
     ...(trace.workoutType !== undefined ? { workoutType: trace.workoutType } : {}),
     ...(trace.fixtureId !== undefined ? { fixtureId: trace.fixtureId } : {}),
     ...(trace.practiceMatchId !== undefined ? { practiceMatchId: trace.practiceMatchId } : {}),
+    ...(trace.componentId !== undefined ? { componentId: trace.componentId } : {}),
+    ...(trace.adjustmentId !== undefined ? { adjustmentId: trace.adjustmentId } : {}),
+    ...(trace.injuryEpisodeId !== undefined ? { injuryEpisodeId: trace.injuryEpisodeId } : {}),
+    ...(trace.controlId !== undefined ? { controlId: trace.controlId } : {}),
     ...safeFields(fields),
   };
   retainedEvents.push(diagnostic);
@@ -247,6 +293,10 @@ export function emitAthleteActionEvent(
   }
   if (testConfig?.sink) testConfig.sink(diagnostic);
   else diagnosticLogger.info('[athlete-action-trace]', diagnostic);
+  athleteActionTraceCoordinator.recordEvent(trace, event, {
+    ...safeFields(fields),
+    legacyCompatibilityEvent: true,
+  });
   return diagnostic;
 }
 
@@ -282,27 +332,27 @@ export function athleteActionTerminalReasonChain(traceId: string): Array<{
   codes: unknown;
   category: unknown;
 }> {
-  return retainedEvents
-    .filter((event) => event.traceId === traceId && (
-      event.event === 'repair_candidate_rejected' ||
-      event.event === 'transaction_verification_result' ||
-      event.event === 'athlete_action_failed'))
-    .map((event) => ({
-      event: event.event,
-      boundary: event.rejectingBoundary ?? event.firstFailingBoundary ?? null,
-      codes: event.rejectionCodes ?? event.originalRejectionCode ?? null,
-      category: event.failureCategory ?? null,
+  return (athleteActionTraceCoordinator.getRecord(traceId)?.events ?? [])
+    .filter((entry) =>
+      entry.event === 'repair_candidate_rejected' ||
+      entry.event === 'transaction_verification_result' ||
+      entry.event === 'athlete_action_failed')
+    .map((entry) => ({
+      event: entry.event as AthleteActionEventName,
+      boundary: entry.fields.rejectingBoundary ?? entry.fields.firstFailingBoundary ?? null,
+      codes: entry.fields.rejectionCodes ?? entry.fields.originalRejectionCode ?? null,
+      category: entry.fields.failureCategory ?? null,
     }));
 }
 
 export function queueAthleteActionPersistence(trace?: AthleteActionTraceContext): void {
-  const resolved = trace ?? currentAthleteActionTrace();
-  if (!resolved || !athleteActionDiagnosticsEnabled()) return;
-  pendingPersistence.push(resolved);
+  // Retained as a source-compatible no-op while callers migrate. Persistence
+  // correlation is captured explicitly at the storage boundary, never FIFO.
+  void trace;
 }
 
 export function consumeAthleteActionPersistenceTrace(): AthleteActionTraceContext | undefined {
-  return pendingPersistence.shift();
+  return currentAthleteActionTrace();
 }
 
 export function programHydrationTrace(): AthleteActionTraceContext {
@@ -365,14 +415,63 @@ export function getAthleteActionDiagnosticEvents(traceId?: string): AthleteActio
 
 export function clearAthleteActionDiagnosticEvents(): void {
   retainedEvents.length = 0;
-  pendingPersistence.length = 0;
   traceStack.length = 0;
   hydrationTrace = null;
   selectedDebugTraceId = null;
+  athleteActionTraceCoordinator.clear();
 }
 
 export function configureAthleteActionDiagnosticsForTests(
   config: DiagnosticTestConfig | null,
 ): void {
   testConfig = config;
+}
+
+export function getAthleteActionTraceV2(traceId: string): AthleteActionTraceRecordV2 | null {
+  return athleteActionTraceCoordinator.getRecord(traceId);
+}
+
+export function getAthleteActionTracesV2(): AthleteActionTraceRecordV2[] {
+  return athleteActionTraceCoordinator.getRecords();
+}
+
+export function exportAthleteActionTraceCheckpointV2(): AthleteActionTraceCheckpointV2 {
+  return athleteActionTraceCoordinator.exportCheckpoint();
+}
+
+export function resumeAthleteActionTraceCheckpointV2(
+  checkpoint: AthleteActionTraceCheckpointV2 | null | undefined,
+  evidence?: AthleteActionReloadEvidenceV2,
+): string[] {
+  return athleteActionTraceCoordinator.resumeCheckpoint(checkpoint, evidence);
+}
+
+export function recordAthleteActionBeforeV2(args: {
+  trace?: AthleteActionTraceContext;
+  semantic: AthleteSemanticSnapshotV2;
+  visibleCard: unknown;
+  visibleDetail: unknown;
+  persistedEnvelope: unknown;
+}): void {
+  athleteActionTraceCoordinator.recordBefore({
+    token: args.trace ?? currentAthleteActionTrace(),
+    semantic: args.semantic,
+    visibleCard: args.visibleCard,
+    visibleDetail: args.visibleDetail,
+    persistedEnvelope: args.persistedEnvelope,
+  });
+}
+
+export function recordAthleteActionAfterV2(args: {
+  trace?: AthleteActionTraceContext;
+  semantic: AthleteSemanticSnapshotV2;
+  visibleCard: unknown;
+  visibleDetail: unknown;
+}): void {
+  athleteActionTraceCoordinator.recordAfter({
+    token: args.trace ?? currentAthleteActionTrace(),
+    semantic: args.semantic,
+    visibleCard: args.visibleCard,
+    visibleDetail: args.visibleDetail,
+  });
 }

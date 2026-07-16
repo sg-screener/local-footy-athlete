@@ -31,6 +31,13 @@ import {
 } from './acceptedStateColdStart';
 import { runCoachMutationTransaction } from './coachMutationTransaction';
 import { useProgramStore } from './programStore';
+import {
+  athleteActionDiagnosticsEnabled,
+  beginAthleteActionTrace,
+  emitAthleteActionEvent,
+  runWithAthleteActionTrace,
+  type AthleteActionTraceContext,
+} from '../utils/athleteActionDiagnostics';
 
 export type ClearReversibleAdjustmentOutcome =
   | 'restored'
@@ -724,6 +731,44 @@ export function commitClearReversibleAdjustment(
  * projection, and roll back both memory and storage before returning failure.
  */
 export async function clearReversibleAdjustment(
+  adjustmentId: string,
+  expectedRevision: number,
+  inheritedTrace?: AthleteActionTraceContext,
+): Promise<ClearReversibleAdjustmentResult> {
+  if (!athleteActionDiagnosticsEnabled()) {
+    return clearReversibleAdjustmentWithinTrace(adjustmentId, expectedRevision);
+  }
+  const trace = beginAthleteActionTrace({
+    source: inheritedTrace?.source ?? 'tap',
+    actionType: 'clear_adjustment',
+    route: 'canonical_reversible_adjustment_restore',
+    scope: 'owned_reversible_adjustment',
+    adjustmentId,
+    controlId: inheritedTrace?.controlId ?? 'coach-note-confirm-clear',
+  }, inheritedTrace);
+  return runWithAthleteActionTrace(trace, async () => {
+    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+      parsedMutationType: 'restore_reversible_adjustment',
+      adjustmentId,
+      expectedAcceptedRevision: expectedRevision,
+    });
+    const result = await clearReversibleAdjustmentWithinTrace(adjustmentId, expectedRevision);
+    emitAthleteActionEvent(trace,
+      result.outcome === 'restored' || result.outcome === 'recomposed' ||
+        result.outcome === 'already-cleared'
+        ? 'athlete_action_completed'
+        : 'athlete_action_failed', {
+        outcome: result.outcome,
+        internalResultCode: `reversible_adjustment_${result.outcome}`,
+        adjustmentId,
+        acceptedRevisionBefore: result.acceptedRevisionBefore,
+        acceptedRevisionAfter: result.acceptedRevisionAfter,
+      });
+    return result;
+  });
+}
+
+async function clearReversibleAdjustmentWithinTrace(
   adjustmentId: string,
   expectedRevision: number,
 ): Promise<ClearReversibleAdjustmentResult> {

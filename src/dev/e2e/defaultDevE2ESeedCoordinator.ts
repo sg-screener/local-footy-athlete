@@ -34,8 +34,22 @@ import {
   DevE2ESeedCoordinator,
   type DevE2ECoordinatorDeps,
 } from './DevE2ESeedCoordinator';
+import {
+  exportAthleteActionTraceCheckpointV2,
+  clearAthleteActionDiagnosticEvents,
+  resumeAthleteActionTraceCheckpointV2,
+} from '../../utils/athleteActionDiagnostics';
+import { buildScheduleStateImperative } from '../../utils/coachWeekDiff';
+import {
+  buildDayWorkoutProjectedDay,
+  buildProgramTabProjectedWeek,
+} from '../../utils/visibleProgramReadModel';
+import { buildActiveCoachNotes } from '../../utils/activeCoachNotes';
+import { semanticFingerprintV2 } from '../../utils/semanticFingerprintV2';
+import type { DevE2EFingerprintMap } from './devE2EPersistence';
 
 function clearLocalStateThroughPublicAPIs(): void {
+  clearAthleteActionDiagnosticEvents();
   useCoachContextStateStore.getState().clearCoachContext();
   usePendingCoachClarifierStore.getState().clearPending();
   useWorkoutLogStore.getState().clear();
@@ -112,6 +126,55 @@ function readWitnessState(): DevE2EWitnessState {
   };
 }
 
+function captureReloadEvidence(
+  memory: DevE2EFingerprintMap,
+  persisted: DevE2EFingerprintMap,
+) {
+  const program = useProgramStore.getState();
+  const context = program.acceptedMaterialContext;
+  const weeks = Array.from(new Set([
+    ...(program.currentProgram?.microcycles ?? []).map((microcycle) =>
+      microcycle.startDate.slice(0, 10)),
+    ...(program.currentMicrocycle ? [program.currentMicrocycle.startDate.slice(0, 10)] : []),
+    ...Object.keys(program.weekScopedOverlays ?? {}),
+  ])).sort();
+  const todayISO = program.currentMicrocycle?.startDate.slice(0, 10) ??
+    program.currentProgram?.startDate.slice(0, 10) ??
+    '1970-01-01';
+  const schedule = buildScheduleStateImperative();
+  const cardDays = weeks.flatMap((mondayISO) => buildProgramTabProjectedWeek({
+    mondayISO,
+    todayISO,
+    state: schedule,
+    overrideContexts: program.overrideContexts,
+  }));
+  const detailDays = cardDays.map((day) => buildDayWorkoutProjectedDay({
+    date: day.date,
+    todayISO,
+    state: schedule,
+    overrideContext: program.overrideContexts[day.date],
+  }));
+  const notes = buildActiveCoachNotes(context.activeConstraints, context.activeInjury);
+  return {
+    accepted: { fingerprints: memory, fingerprint: semanticFingerprintV2(memory) },
+    persisted: { fingerprints: persisted, fingerprint: semanticFingerprintV2(persisted) },
+    visible: {
+      cardFingerprint: semanticFingerprintV2(cardDays),
+      detailFingerprint: semanticFingerprintV2(detailDays),
+    },
+    coachNotes: {
+      ownershipFingerprint: semanticFingerprintV2(notes.map((note) => ({
+        id: note.id,
+        constraintId: note.constraintId,
+        modifierId: note.modifierId,
+      }))),
+      renderedCardIds: notes.map((note) => note.id).sort(),
+    },
+    acceptedRevision: context.revision,
+    verified: true,
+  };
+}
+
 const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   waitForHydration: waitForDevE2EHydration,
   resetLocalState: clearLocalStateThroughPublicAPIs,
@@ -132,6 +195,9 @@ const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   readCheckpoint: readDevE2ECheckpoint,
   readPersistedFingerprints: readDevE2EPersistedFingerprints,
   clearCheckpoint: clearDevE2ECheckpoint,
+  captureUnfinishedAthleteActionTraces: exportAthleteActionTraceCheckpointV2,
+  resumeAthleteActionTraces: resumeAthleteActionTraceCheckpointV2,
+  captureReloadEvidence,
 };
 
 export function createDefaultDevE2ESeedCoordinator(isDev: boolean): DevE2ESeedCoordinator {

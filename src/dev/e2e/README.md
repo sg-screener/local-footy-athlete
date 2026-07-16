@@ -71,3 +71,31 @@ The wrapper verifies the selected server's `/status` endpoint, prints the URL,
 and forwards it once to Maestro. All nested reset/reload launches inherit the
 same value, so no Dev Menu action or manual step is needed between flows. The
 port is intentionally supplied by the caller and is never fixed in source.
+
+## AthleteActionTraceV2
+
+`AthleteActionTraceCoordinator` is the sole diagnostic authority for one
+athlete action. Outer Coach, tap, and system doors start a root token; nested
+doors create spans on that token. The token is captured explicitly before an
+async persistence or render boundary, so neither FIFO order nor a returned
+domain message is accepted as correlation or UI proof.
+
+The V2 record uses `captured`, `not_applicable`, and `missing` field states.
+Semantic fingerprints use the versioned `athlete-semantic-sha256-v2` contract.
+Accepted revision remains separate concurrency metadata and is never part of
+the semantic hash. The fingerprint includes the reversible ledger, removal
+constraints, injury/source facts, active constraints, readiness, feedback,
+Coach Note ownership, overlays, overrides, contracts, provenance, and typed
+reductions.
+
+`runCoachMutationTransaction` records accepted/visible/persisted before state,
+the write and acknowledged readback, card/detail verification, and exact
+rollback evidence for memory, ProgramStore, compatibility mirrors, and the
+visible projection. A V2 success cannot finalize until a React observation and
+post-reload verification also exist.
+
+Dev E2E checkpoint V2 persists unfinished trace records. Cold-start validation
+resumes the same trace IDs and attaches post-reload accepted, persisted,
+visible, and Coach Note evidence. Artifact collection is pure in-app; the Node
+writer materializes the required `artifacts/<campaign>/<scenarioRunId>/`
+bundle and refuses incomplete bundles.

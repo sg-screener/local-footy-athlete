@@ -88,7 +88,6 @@ import {
   currentAthleteActionTrace,
   emitAthleteActionDebugSnapshot,
   emitAthleteActionEvent,
-  queueAthleteActionPersistence,
   type AthleteActionTraceContext,
 } from '../utils/athleteActionDiagnostics';
 
@@ -597,7 +596,6 @@ export function commitAcceptedStateTransaction(
     dependencyWeeksSelected: Array.from(equivalenceWeeks).sort(),
     beforeStateHash,
   });
-  queueAthleteActionPersistence(trace);
   useProgramStore.setState({
     ...staged.program,
     acceptedMaterialContext: staged.context,

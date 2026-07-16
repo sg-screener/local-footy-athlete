@@ -57,7 +57,7 @@ import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstrain
 import {
   athleteActionDiagnosticHash,
   clearProgramHydrationTrace,
-  consumeAthleteActionPersistenceTrace,
+  currentAthleteActionTrace,
   emitAthleteActionEvent,
   programHydrationTrace,
   runWithAthleteActionTrace,
@@ -229,7 +229,10 @@ const programStateStorage = {
     if (activeProgramPersistenceStage) {
       return;
     }
-    const trace = consumeAthleteActionPersistenceTrace();
+    // Capture the explicit token synchronously at this async boundary. The
+    // local variable preserves correlation through the awaited write; FIFO
+    // ordering is never used as an authority.
+    const trace = currentAthleteActionTrace();
     try {
       await programStorageSetItem(name, value);
       emitAthleteActionEvent(trace, 'persistence_result', {
@@ -251,7 +254,7 @@ const programStateStorage = {
     }
   },
   removeItem: async (name: string): Promise<void> => {
-    const trace = consumeAthleteActionPersistenceTrace();
+    const trace = currentAthleteActionTrace();
     try {
       await programStorageRemoveItem(name);
       emitAthleteActionEvent(trace, 'persistence_result', {

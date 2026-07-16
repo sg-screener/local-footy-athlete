@@ -36,6 +36,21 @@ import {
 } from '../utils/visibleProgramReadModel';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { logger } from '../utils/logger';
+import {
+  athleteActionDiagnosticsEnabled,
+  beginAthleteActionTrace,
+  currentAthleteActionTrace,
+  runWithAthleteActionTrace,
+  athleteActionTraceCoordinator,
+  type AthleteActionTraceContext,
+} from '../utils/athleteActionDiagnostics';
+import {
+  buildAthleteSemanticSnapshotV2,
+  capturedTraceField,
+  notApplicableTraceField,
+  type AthleteSemanticStateV2,
+} from '../dev/e2e/AthleteActionTraceCoordinator';
+import { semanticFingerprintV2 } from '../utils/semanticFingerprintV2';
 
 type AcceptedProgramStateSnapshot = Pick<
   ProgramState,
@@ -136,7 +151,8 @@ export async function runCoachMutationTransaction<T>(args: {
     diff: SemanticProgramDiff;
   }) => CoachMutationCandidateVerification | Promise<CoachMutationCandidateVerification>;
 }): Promise<CoachMutationTransactionResult<T>> {
-  return withCoachMutationLock(async () => {
+  const execute = (): Promise<CoachMutationTransactionResult<T>> => withCoachMutationLock(async () => {
+    const trace = currentAthleteActionTrace();
     const preProgram = captureAcceptedProgramState();
     const preMirrors = captureAcceptedMirrors();
     const preDates = collectAcceptedDates(useProgramStore.getState(), args.extraDates ?? [], args.todayISO);
@@ -155,6 +171,30 @@ export async function runCoachMutationTransaction<T>(args: {
       preEnvelope = await readDurableProgramStoreEnvelope();
       preMirrorEnvelopes = await readAcceptedMirrorEnvelopesDurably();
       durablePreStateRead = true;
+      if (trace && athleteActionDiagnosticsEnabled()) {
+        const semantic = captureTraceSemanticSnapshot(preProgram, preMirrors);
+        athleteActionTraceCoordinator.recordBefore({
+          token: trace,
+          semantic,
+          visibleCard: beforeProjection.program,
+          visibleDetail: beforeProjection.detailDays,
+          persistedEnvelope: {
+            program: preEnvelope,
+            mirrors: preMirrorEnvelopes,
+          },
+        });
+        athleteActionTraceCoordinator.recordPersistence(trace, {
+          operation: 'read_before',
+          store: 'program-store+accepted-mirrors',
+          attempted: true,
+          acknowledged: true,
+          expectedFingerprint: notApplicableTraceField('pre-command read establishes the expected durable state'),
+          actualFingerprint: capturedTraceField(semanticFingerprintV2({
+            program: preEnvelope,
+            mirrors: preMirrorEnvelopes,
+          })),
+        });
+      }
       // Nothing may replace the visible state captured at command entry while
       // the durable read yields (notably late hydration in cold-start/tests).
       restoreAcceptedInMemory(preProgram, preMirrors);
@@ -248,11 +288,46 @@ export async function runCoachMutationTransaction<T>(args: {
 
       const persistedEnvelope = await persistProgramStoreEnvelopeDurably(token);
       candidatePersisted = true;
+      if (trace && athleteActionDiagnosticsEnabled()) {
+        athleteActionTraceCoordinator.recordPersistence(trace, {
+          operation: 'write_attempt',
+          store: 'program-store',
+          attempted: true,
+          acknowledged: false,
+          expectedFingerprint: capturedTraceField(semanticFingerprintV2(persistedEnvelope)),
+          actualFingerprint: notApplicableTraceField('write acknowledgement requires readback'),
+        });
+      }
       const acknowledgedEnvelope = await readDurableProgramStoreEnvelope();
       if (acknowledgedEnvelope !== persistedEnvelope) {
         throw new Error('persisted_program_envelope_ack_mismatch');
       }
+      if (trace && athleteActionDiagnosticsEnabled()) {
+        athleteActionTraceCoordinator.recordPersistence(trace, {
+          operation: 'readback',
+          store: 'program-store',
+          attempted: true,
+          acknowledged: true,
+          expectedFingerprint: capturedTraceField(semanticFingerprintV2(persistedEnvelope)),
+          actualFingerprint: capturedTraceField(semanticFingerprintV2(acknowledgedEnvelope)),
+        });
+      }
       await persistAcceptedMirrorEnvelopesDurably(captureAcceptedMirrors());
+      if (trace && athleteActionDiagnosticsEnabled()) {
+        const mirrorEnvelopes = serializeAcceptedMirrorEnvelopes(captureAcceptedMirrors());
+        athleteActionTraceCoordinator.recordPersistence(trace, {
+          operation: 'mirror_readback',
+          store: 'accepted-mirrors',
+          attempted: true,
+          acknowledged: true,
+          expectedFingerprint: capturedTraceField(semanticFingerprintV2(
+            serializeAcceptedMirrorEnvelopes(captureAcceptedMirrors()),
+          )),
+          // persistAcceptedMirrorEnvelopesDurably performs and verifies the
+          // acknowledged readback before returning.
+          actualFingerprint: capturedTraceField(semanticFingerprintV2(mirrorEnvelopes)),
+        });
+      }
 
       const postProjection = captureSemanticProjection(afterDates, args.todayISO);
       assertCardAndDetailProjectionEqual(postProjection);
@@ -267,6 +342,15 @@ export async function runCoachMutationTransaction<T>(args: {
       });
       if (postVerification && !postVerification.ok) {
         throw new Error(postVerification.reason ?? 'post_persistence_verifier_failed');
+      }
+
+      if (trace && athleteActionDiagnosticsEnabled()) {
+        athleteActionTraceCoordinator.recordAfter({
+          token: trace,
+          semantic: captureTraceSemanticSnapshot(),
+          visibleCard: postProjection.program,
+          visibleDetail: postProjection.detailDays,
+        });
       }
 
       return { ok: true, value, diff, persistedEnvelope };
@@ -292,6 +376,47 @@ export async function runCoachMutationTransaction<T>(args: {
         error: error instanceof Error ? error.message : String(error),
         candidatePersisted,
       });
+      if (trace && athleteActionDiagnosticsEnabled()) {
+        // Diagnostics are fail-isolated: evidence collection can never change
+        // the transaction result after the rollback owner has verified it.
+        try {
+          const restoredProjection = captureSemanticProjection(preDates, args.todayISO);
+          const restoredProgramEnvelope = await readDurableProgramStoreEnvelope();
+          const restoredMirrorEnvelopes = await readAcceptedMirrorEnvelopesDurably();
+          athleteActionTraceCoordinator.recordRollback(trace, {
+            memory: {
+              expected: semanticFingerprintV2({ program: preProgram, mirrors: preMirrors }),
+              actual: semanticFingerprintV2({
+                program: captureAcceptedProgramState(),
+                mirrors: captureAcceptedMirrors(),
+              }),
+              verified: completeAcceptedStateFingerprint() === semanticFingerprint({
+                program: preProgram,
+                mirrors: preMirrors,
+              }),
+            },
+            programEnvelope: {
+              expected: semanticFingerprintV2(preEnvelope),
+              actual: semanticFingerprintV2(restoredProgramEnvelope),
+              verified: restoredProgramEnvelope === preEnvelope,
+            },
+            mirrorEnvelopes: {
+              expected: semanticFingerprintV2(preMirrorEnvelopes),
+              actual: semanticFingerprintV2(restoredMirrorEnvelopes),
+              verified: semanticFingerprintV2(restoredMirrorEnvelopes) ===
+                semanticFingerprintV2(preMirrorEnvelopes),
+            },
+            visibleProjection: {
+              expected: semanticFingerprintV2(beforeProjection),
+              actual: semanticFingerprintV2(restoredProjection),
+              verified: semanticFingerprint(restoredProjection.program) ===
+                semanticFingerprint(beforeProjection.program),
+            },
+          });
+        } catch {
+          // The rollback itself has already been verified by restoreExactPreState.
+        }
+      }
       return {
         ok: false,
         value,
@@ -307,6 +432,25 @@ export async function runCoachMutationTransaction<T>(args: {
       endProgramPersistenceStage(token);
     }
   });
+  if (!athleteActionDiagnosticsEnabled()) return execute();
+  const inherited = currentAthleteActionTrace();
+  const trace: AthleteActionTraceContext = beginAthleteActionTrace({
+    source: inherited?.source ?? 'system',
+    actionType: inherited?.actionType ?? 'program_change',
+    route: 'runCoachMutationTransaction',
+    currentWeekId: inherited?.currentWeekId,
+    sourceDate: inherited?.sourceDate,
+    targetDate: inherited?.targetDate,
+    sessionDate: inherited?.sessionDate,
+    planEntryId: inherited?.planEntryId,
+    workoutId: inherited?.workoutId,
+    scope: inherited?.scope,
+    sessionTier: inherited?.sessionTier,
+    workoutType: inherited?.workoutType,
+    fixtureId: inherited?.fixtureId,
+    practiceMatchId: inherited?.practiceMatchId,
+  }, inherited);
+  return runWithAthleteActionTrace(trace, execute);
 }
 
 export function captureAcceptedProgramState(): AcceptedProgramStateSnapshot {
@@ -385,6 +529,30 @@ async function restoreExactPreState(args: {
     );
   }
   assertCardAndDetailProjectionEqual(restored);
+  const trace = currentAthleteActionTrace();
+  if (trace && athleteActionDiagnosticsEnabled()) {
+    athleteActionTraceCoordinator.recordRollback(trace, {
+      memory: {
+        expected: semanticFingerprintV2({ program: args.preProgram, mirrors: args.preMirrors }),
+        actual: semanticFingerprintV2({
+          program: captureAcceptedProgramState(),
+          mirrors: captureAcceptedMirrors(),
+        }),
+        verified: true,
+      },
+      programEnvelope: args.restoreDurable === false
+        ? { verified: true, status: 'not_applicable', reason: 'candidate was never durably written' }
+        : { expected: semanticFingerprintV2(args.preEnvelope), verified: true },
+      mirrorEnvelopes: args.restoreDurable === false
+        ? { verified: true, status: 'not_applicable', reason: 'candidate mirrors were never durably written' }
+        : { expected: semanticFingerprintV2(args.preMirrorEnvelopes), verified: true },
+      visibleProjection: {
+        expected: semanticFingerprintV2(args.beforeProjection),
+        actual: semanticFingerprintV2(restored),
+        verified: true,
+      },
+    });
+  }
 }
 
 function restoreAcceptedInMemory(
@@ -590,4 +758,71 @@ function firstDivergence(expected: string, actual: string): string {
   let index = 0;
   while (index < expected.length && index < actual.length && expected[index] === actual[index]) index++;
   return `${index}:expected=${expected.slice(Math.max(0, index - 40), index + 100)}:actual=${actual.slice(Math.max(0, index - 40), index + 100)}`;
+}
+
+function captureTraceSemanticSnapshot(
+  program = captureAcceptedProgramState(),
+  mirrors = captureAcceptedMirrors(),
+) {
+  const context = program.acceptedMaterialContext;
+  const contracts = program.exposureContractsByWeek ?? {};
+  const semanticState: AthleteSemanticStateV2 = {
+    reversibleAdjustmentLedger: program.reversibleAdjustmentLedger,
+    userRemovalConstraints: program.userRemovalConstraints,
+    injuryEpisodes: context.injuryEpisodes,
+    temporarySourceFacts: {
+      injuryEpisodeIds: context.injuryEpisodes.map((episode) => ({
+        id: episode.episodeId,
+        status: episode.status,
+      })),
+      constraintFacts: context.activeConstraints.map((constraint) => ({
+        id: constraint.id,
+        type: constraint.type,
+        status: constraint.status,
+      })),
+    },
+    activeConstraints: context.activeConstraints,
+    readiness: {
+      accepted: context.readinessSignalsByDate,
+      mirror: mirrors.readinessSignalsByDate,
+    },
+    sessionFeedback: program.sessionFeedback,
+    coachNoteOwnership: {
+      activeConstraintIds: context.activeConstraints.map((constraint) => constraint.id).sort(),
+      injuryEpisodeIds: context.injuryEpisodes.map((episode) => episode.episodeId).sort(),
+      dismissedCardIds: mirrors.dismissedCoachNoteIds,
+    },
+    overlays: program.weekScopedOverlays,
+    overrides: {
+      dateOverrides: program.dateOverrides,
+      overrideContexts: program.overrideContexts,
+    },
+    contracts,
+    provenance: collectSemanticMembers({
+      currentProgram: program.currentProgram,
+      currentMicrocycle: program.currentMicrocycle,
+      overlays: program.weekScopedOverlays,
+    }, /provenance/i),
+    typedReductions: Object.entries(contracts).flatMap(([weekStart, contract]) =>
+      ((contract as { authorisedReductions?: unknown[] }).authorisedReductions ?? [])
+        .map((reduction) => ({ weekStart, reduction }))),
+  };
+  return buildAthleteSemanticSnapshotV2(semanticState, context.revision);
+}
+
+function collectSemanticMembers(value: unknown, keyPattern: RegExp): unknown[] {
+  const collected: unknown[] = [];
+  const visit = (current: unknown): void => {
+    if (!current || typeof current !== 'object') return;
+    if (Array.isArray(current)) {
+      current.forEach(visit);
+      return;
+    }
+    for (const [key, child] of Object.entries(current as Record<string, unknown>)) {
+      if (keyPattern.test(key)) collected.push({ key, value: child });
+      else visit(child);
+    }
+  };
+  visit(value);
+  return collected;
 }

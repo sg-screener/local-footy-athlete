@@ -1,0 +1,26 @@
+appId: com.localfootyathlete.app
+name: Trace V2 - component deletion and reload
+tags:
+  - e2e
+  - action-trace-v2
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: lower-body-deletion
+- tapOn:
+    id: "day-row-mon"
+- tapOn:
+    id: "view-workout-button"
+- tapOn:
+    id: "day-workout-make-change-link"
+- tapOn: "Remove an exercise"
+- tapOn: "Back Squat"
+- tapOn: "Remove exercise"
+- tapOn: "Today only"
+- assertNotVisible: "Back Squat"
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: lower-body-deletion
+- assertNotVisible: "Back Squat"

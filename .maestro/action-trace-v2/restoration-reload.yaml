@@ -1,0 +1,39 @@
+appId: com.localfootyathlete.app
+name: Trace V2 - reversible restoration and reload
+tags:
+  - e2e
+  - action-trace-v2
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: fixture-move
+- scrollUntilVisible:
+    element:
+      id: "day-row-sat"
+    direction: DOWN
+- tapOn:
+    id: "day-row-sat"
+- tapOn:
+    id: "fixture-actions-open"
+- tapOn:
+    id: "fixture-move-action"
+- tapOn:
+    id: "day-row-sun"
+- extendedWaitUntil:
+    visible:
+      id: "program-active-coach-notes"
+    timeout: 15000
+- tapOn: "Restore fixture"
+- tapOn:
+    text: "Restore fixture"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-sat-state-fixture"
+    timeout: 15000
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: fixture-move
+- assertVisible:
+    id: "day-row-sat-state-fixture"
