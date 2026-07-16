@@ -149,6 +149,7 @@ async function main() {
     fingerprintMapsMatch: (left, right) => JSON.stringify(left) === JSON.stringify(right),
     writeCheckpoint: async (record) => { writtenCheckpoint = record as typeof checkpoint; },
     readCheckpoint: async () => checkpoint,
+    readPersistedFingerprints: async () => checkpoint.fingerprints,
     clearCheckpoint: async () => events.push('checkpoint-clear'),
   };
 
@@ -184,16 +185,53 @@ async function main() {
   ok('release mode does not call dependencies', events.length === eventCount);
 
   let buildCalls = 0;
+  const reloadHydration = deferred<void>();
+  const reloadEvents: string[] = [];
   const reloadDeps: DevE2ECoordinatorDeps = {
     ...deps,
+    waitForHydration: async () => {
+      reloadEvents.push('hydration-wait');
+      await reloadHydration.promise;
+      reloadEvents.push('hydrated');
+    },
     waitForPersistence: async () => ({ state: 'ready' }),
     buildSeed: () => { buildCalls += 1; return seed(); },
-    readCheckpoint: async () => checkpoint,
+    readCheckpoint: async () => {
+      reloadEvents.push('checkpoint-read');
+      return checkpoint;
+    },
+    readPersistedFingerprints: async () => {
+      reloadEvents.push('persisted-read');
+      return checkpoint.fingerprints;
+    },
   };
   const reload = new DevE2ESeedCoordinator(true, reloadDeps);
-  ok('reload checkpoint validates', await reload.validateReloadCheckpoint());
+  const validatingReload = reload.validateReloadCheckpoint();
+  await Promise.resolve();
+  await Promise.resolve();
+  ok('reload durable reads start before hydration completes',
+    reloadEvents.includes('checkpoint-read') && reloadEvents.includes('persisted-read') &&
+      !reloadEvents.includes('hydrated'));
+  reloadHydration.resolve();
+  ok('reload checkpoint validates', await validatingReload);
   ok('reload validation never rebuilds or reseeds', buildCalls === 0);
   ok('reload marker uses preserved seed', getDevE2EStateSnapshot().phase === 'reload_ready');
+
+  const mismatch = new DevE2ESeedCoordinator(true, {
+    ...reloadDeps,
+    waitForHydration: async () => {},
+    readPersistedFingerprints: async () => ({ state: 'changed' }),
+  });
+  let mismatchRejected = false;
+  try {
+    await mismatch.validateReloadCheckpoint();
+  } catch {
+    mismatchRejected = true;
+  }
+  ok('reload mismatch is rejected', mismatchRejected);
+  ok('reload mismatch exposes exact store fingerprints',
+    getDevE2EStateSnapshot().error ===
+      'Reload persisted fingerprint mismatch for standard-in-season-week: state expected=ready actual=changed');
 
   const defaultCoordinatorSource = fs.readFileSync(
     path.resolve(__dirname, '..', 'dev', 'e2e', 'defaultDevE2ESeedCoordinator.ts'),

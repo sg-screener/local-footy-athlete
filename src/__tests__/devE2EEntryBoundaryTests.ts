@@ -48,6 +48,9 @@ ok('App loads the entry only inside __DEV__', appGuard >= 0 && appRequire > appG
 ok('release refusal occurs before coordinator import', releaseReturn >= 0 && coordinatorRequire > releaseReturn);
 ok('entry has no production or env override', !/EXPO_PUBLIC|process\.env/.test(entrySource));
 ok('release refusal returns installed false', /if \(!isDev\)[\s\S]*installed: false/.test(entrySource));
+ok('dev E2E errors expose their exact reason to accessibility',
+  entrySource.includes('testID="e2e-seed-error-reason"') &&
+    entrySource.includes('accessibilityLabel={errorReason}'));
 
 function sourceFiles(directory: string): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

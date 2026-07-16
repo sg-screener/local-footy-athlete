@@ -20,10 +20,7 @@ import {
 export interface DevE2ECoordinatorDeps {
   waitForHydration: () => Promise<void>;
   resetLocalState: () => void;
-  waitForPersistence: (
-    expected?: DevE2EFingerprintMap,
-    timeoutMs?: number,
-  ) => Promise<DevE2EFingerprintMap>;
+  waitForPersistence: () => Promise<DevE2EFingerprintMap>;
   buildSeed: (seedId: DevE2ESeedId) => DevE2ESeed;
   writeProfile: (seed: DevE2ESeed) => void;
   installProgram: (seed: DevE2ESeed) => void;
@@ -42,7 +39,19 @@ export interface DevE2ECoordinatorDeps {
   ) => boolean;
   writeCheckpoint: (record: DevE2ECheckpointRecord) => Promise<void>;
   readCheckpoint: () => Promise<DevE2ECheckpointRecord | null>;
+  readPersistedFingerprints: () => Promise<DevE2EFingerprintMap>;
   clearCheckpoint: () => Promise<void>;
+}
+
+function fingerprintMismatchReason(
+  expected: DevE2EFingerprintMap,
+  actual: DevE2EFingerprintMap,
+): string {
+  return Array.from(new Set([...Object.keys(expected), ...Object.keys(actual)]))
+    .sort()
+    .filter((key) => expected[key] !== actual[key])
+    .map((key) => `${key} expected=${expected[key] ?? '<missing>'} actual=${actual[key] ?? '<missing>'}`)
+    .join('; ');
 }
 
 /**
@@ -110,10 +119,12 @@ export class DevE2ESeedCoordinator {
           throw new Error('Checkpoint requires a ready seed in the current app run.');
         }
         const fingerprints = this.deps.captureMemoryFingerprints();
-        await this.deps.waitForPersistence(fingerprints);
+        await this.deps.waitForPersistence();
         const current = this.deps.captureMemoryFingerprints();
         if (!this.deps.fingerprintMapsMatch(fingerprints, current)) {
-          throw new Error('Accepted state changed while the checkpoint was being persisted.');
+          throw new Error(
+            `Accepted state changed while the checkpoint was being persisted: ${fingerprintMismatchReason(fingerprints, current)}`,
+          );
         }
         await this.deps.writeCheckpoint({
           version: 1,
@@ -134,14 +145,23 @@ export class DevE2ESeedCoordinator {
     if (!this.isDev) return false;
     return this.enqueue(async () => {
       try {
+        // Start both durable reads before awaiting store hydration. ProgramStore
+        // legitimately migrates its internal overlay envelope while hydrating;
+        // the checkpoint receipt proves the exact pre-migration bytes survived.
+        const checkpointRead = this.deps.readCheckpoint();
+        const persistedFingerprintRead = this.deps.readPersistedFingerprints();
         await this.deps.waitForHydration();
-        const checkpoint = await this.deps.readCheckpoint();
+        const [checkpoint, persisted] = await Promise.all([
+          checkpointRead,
+          persistedFingerprintRead,
+        ]);
         if (!checkpoint || !isDevE2ESeedId(checkpoint.seedId)) return false;
-        const current = this.deps.captureMemoryFingerprints();
-        await this.deps.waitForPersistence(current);
-        if (!this.deps.fingerprintMapsMatch(checkpoint.fingerprints, current)) {
-          throw new Error(`Reload fingerprint mismatch for ${checkpoint.seedId}.`);
+        if (!this.deps.fingerprintMapsMatch(checkpoint.fingerprints, persisted)) {
+          throw new Error(
+            `Reload persisted fingerprint mismatch for ${checkpoint.seedId}: ${fingerprintMismatchReason(checkpoint.fingerprints, persisted)}`,
+          );
         }
+        await this.deps.waitForPersistence();
         setDevE2EReloadReady(checkpoint.seedId, checkpoint.checkpointId);
         return true;
       } catch (error) {

@@ -25,6 +25,7 @@ import {
   clearDevE2ECheckpoint,
   fingerprintMapsMatch,
   readDevE2ECheckpoint,
+  readDevE2EPersistedFingerprints,
   waitForDevE2EHydration,
   waitForDevE2EPersistence,
   writeDevE2ECheckpoint,
@@ -129,6 +130,7 @@ const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   fingerprintMapsMatch,
   writeCheckpoint: writeDevE2ECheckpoint,
   readCheckpoint: readDevE2ECheckpoint,
+  readPersistedFingerprints: readDevE2EPersistedFingerprints,
   clearCheckpoint: clearDevE2ECheckpoint,
 };
 

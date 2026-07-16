@@ -98,6 +98,7 @@ export function DevE2EStatusMarkers(): React.ReactElement {
     getDevE2EStateSnapshot,
     getDevE2EStateSnapshot,
   );
+  const errorReason = snapshot.phase === 'seed_error' ? snapshot.error : null;
   return (
     <>
       {devE2EMarkers(snapshot).map((marker) => (
@@ -113,6 +114,18 @@ export function DevE2EStatusMarkers(): React.ReactElement {
           <Text>{marker}</Text>
         </View>
       ))}
+      {errorReason ? (
+        <View
+          accessible
+          collapsable={false}
+          pointerEvents="none"
+          style={MARKER_STYLE}
+          testID="e2e-seed-error-reason"
+          accessibilityLabel={errorReason}
+        >
+          <Text>{errorReason}</Text>
+        </View>
+      ) : null}
     </>
   );
 }

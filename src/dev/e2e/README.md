@@ -18,8 +18,14 @@ owned auxiliary state, completes onboarding, validates witnesses, and waits
 for persisted semantic equality before publishing ready.
 
 Checkpoint records semantic fingerprints only after persistence converges.
-Cold-start validation reads that checkpoint after hydration and never calls
-the seed builder, allowing Maestro to distinguish preservation from reseeding.
+Cold-start validation starts the checkpoint and persisted-fingerprint reads
+before awaiting hydration, so an exact receipt is selected before ProgramStore
+can legitimately migrate its internal overlay envelope. It publishes reload
+ready only after those durable fingerprints match, every store is hydrated,
+and the hydrated state has converged back to persistence. It never calls the
+seed builder, allowing Maestro to distinguish preservation from reseeding.
+Comparison failures expose the exact store plus expected and actual hashes via
+the `e2e-seed-error-reason` accessibility marker.
 
 Named seeds and their extra witnesses:
 
