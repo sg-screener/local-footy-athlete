@@ -58,7 +58,14 @@ import { useProgramStore } from '../store/programStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { buildCoachContextPacket } from '../utils/coachContextPacket';
 import { inspectCoachState } from '../utils/coachStateInspector';
-import { parseCoachIntent, COACH_INTENT_SYSTEM_PROMPT, type CoachIntent, type CoachIntentClassifier, type CoachContextPacket, type PendingCoachProposal } from '../utils/coachIntent';
+import {
+  parseCoachIntent,
+  COACH_INTENT_SYSTEM_PROMPT,
+  type CoachIntent,
+  type CoachIntentClassifier,
+  type CoachContextPacket,
+  type PendingCoachProposal,
+} from '../utils/coachIntent';
 import { dispatchCoachIntent, type DispatchDeps } from '../utils/coachIntentDispatcher';
 import type { InjuryState } from '../utils/injuryProgression';
 import { extractBodyPart } from '../utils/injuryAdjustmentEngine';
@@ -89,6 +96,20 @@ function injury(severity: number, bodyPart: string = 'hammy', status: InjuryStat
 function resetAll() {
   useProgramStore.getState().clear();
   useCoachUpdatesStore.setState({ updatesByWeek: {}, activeInjury: null });
+}
+
+function pendingConditioningProposal(): PendingCoachProposal {
+  return {
+    type: 'program_adjustment',
+    target: 'Monday Lower Strength',
+    targetDay: 'Monday',
+    targetDate: FIXED_MONDAY,
+    targetSessionName: 'Lower Strength',
+    action: 'add_conditioning',
+    prescription: '8 x 2 min @ 75-80% max HR, 1 min easy recovery',
+    modality: 'bike or track',
+    createdAt: Date.now(),
+  };
 }
 
 let pass = 0; let fail = 0; const failures: string[] = [];
@@ -485,76 +506,48 @@ section('[8] Program explanation for mid-week row');
   ok('no row does not invent Tuesday', !/Tuesday/i.test(noRow.reply));
 }
 
-const ASYNC_ADJUSTMENT_INTENT: CoachIntent = {
-  intent: 'request_program_adjustment',
-  confidence: 0.95,
-  needsClarification: false,
-};
-
-function asyncAdjustmentPacket(): CoachContextPacket {
-  const pendingCoachProposal: PendingCoachProposal = {
-    type: 'program_adjustment',
-    target: 'Monday Lower Body Strength',
-    targetDay: 'Monday',
-    targetDate: FIXED_MONDAY,
-    targetSessionName: 'Lower Body Strength',
-    action: 'add_conditioning',
-    prescription: '8 x 2 min @ 75-80% max HR, 1 min easy recovery',
-    modality: 'bike or track',
-    createdAt: Date.now(),
-  };
-  return buildCoachContextPacket({
-    userMessage: 'Sounds good',
-    recentMessages: [],
-    todayISO: FIXED_TODAY,
-    pendingCoachProposal,
-  });
-}
-
-function installAsyncAdjustmentTarget(): void {
-  baseWeekDef = {
-    1: wk('Monday Lower Body Strength', 1, {
-      exercises: [ex('Back Squat')],
-    }),
-  };
-}
-
 // ─────────────────────────────────────────────────────────────────────
 // 9. Async dispatcher contract and deterministic failure handling.
 // ─────────────────────────────────────────────────────────────────────
 section('[9] Async Coach Intent Dispatcher — Awaitable dependency contract');
 {
   resetAll();
-  installAsyncAdjustmentTarget();
-  let syncDependencyCalled = false;
+  baseWeekDef = {
+    1: wk('Lower Strength', 1, { exercises: [ex('Back Squat')] }),
+  };
+  const pendingProgramAdjustment = pendingConditioningProposal();
+  const packet = buildCoachContextPacket({
+    userMessage: 'sounds good',
+    recentMessages: [],
+    todayISO: FIXED_TODAY,
+    pendingCoachProposal: pendingProgramAdjustment,
+  });
   const baseDeps: DispatchDeps = {
     reapplyInjuryAtSeverity: () => ({ applied: 0, visibleDiffDetected: false }),
     runProgression: () => ({ reply: 'progression', mutated: false }),
     runUAEForInjury: () => ({ reply: 'injury', mutated: false }),
     inspect: () => ({ kind: 'general_state', message: 'inspect' }),
     generalReply: () => 'general',
-    applyNonInjuryConstraint: () => ({ reply: 'unused', mutated: false }),
+    applyNonInjuryConstraint: () => ({ reply: 'retired fact mutation', mutated: true }),
     applyConstraintResolution: () => ({ cleared: [] }),
-    applyProgramAdjustmentEvents: () => {
-      syncDependencyCalled = true;
-      return {
-        success: true,
-        eventsApplied: 1,
-        visibleDiff: ['conditioning added'],
-      };
-    },
+    applyProgramAdjustmentEvents: () => ({
+      success: true,
+      eventsApplied: 1,
+      visibleDiff: ['conditioning added'],
+    }),
+  };
+  const confirmationIntent: CoachIntent = {
+    intent: 'general_question',
+    confidence: 0.95,
+    needsClarification: false,
   };
 
-  const syncOutcome = await dispatchCoachIntent(
-    ASYNC_ADJUSTMENT_INTENT,
-    asyncAdjustmentPacket(),
-    baseDeps,
-  );
-  ok('synchronous dependency double returns through Promise', syncDependencyCalled);
+  const syncOutcome = await dispatchCoachIntent(confirmationIntent, packet, baseDeps);
+  eq('synchronous dependency double still returns through Promise', syncOutcome.replyMode, 'program_adjustment_applied');
   ok('synchronous dependency double preserves mutation result', syncOutcome.mutated);
 
   let asyncResolved = false;
-  const asyncOutcome = await dispatchCoachIntent(ASYNC_ADJUSTMENT_INTENT, asyncAdjustmentPacket(), {
+  const asyncOutcome = await dispatchCoachIntent(confirmationIntent, packet, {
     ...baseDeps,
     applyProgramAdjustmentEvents: async () => {
       await Promise.resolve();
@@ -563,9 +556,9 @@ section('[9] Async Coach Intent Dispatcher — Awaitable dependency contract');
     },
   });
   ok('async dependency settles before DispatchOutcome returns', asyncResolved);
-  ok('async dependency mutation result is preserved', asyncOutcome.mutated);
+  eq('async dependency result is preserved', asyncOutcome.replyMode, 'program_adjustment_applied');
 
-  const rejectedOutcome = await dispatchCoachIntent(ASYNC_ADJUSTMENT_INTENT, asyncAdjustmentPacket(), {
+  const rejectedOutcome = await dispatchCoachIntent(confirmationIntent, packet, {
     ...baseDeps,
     applyProgramAdjustmentEvents: async () => {
       throw new Error('injected_async_dependency_rejection');
@@ -575,6 +568,26 @@ section('[9] Async Coach Intent Dispatcher — Awaitable dependency contract');
   ok('async dependency rejection cannot fall through to legacy',
     rejectedOutcome.replyMode !== 'fall_through');
   ok('async dependency rejection makes no mutation claim', !rejectedOutcome.mutated);
+
+  let retiredFactMutationCalled = false;
+  const busyOutcome = await dispatchCoachIntent({
+    intent: 'busy_week',
+    confidence: 0.95,
+    needsClarification: false,
+  }, buildCoachContextPacket({
+    userMessage: 'busy week',
+    recentMessages: [],
+    todayISO: FIXED_TODAY,
+  }), {
+    ...baseDeps,
+    applyNonInjuryConstraint: () => {
+      retiredFactMutationCalled = true;
+      return { reply: 'retired fact mutation', mutated: true };
+    },
+  });
+  eq('canonical readiness fact remains outside dispatcher mutation ownership',
+    busyOutcome.replyMode, 'source_fact_transaction_required');
+  ok('retired readiness constraint mutator is not called', !retiredFactMutationCalled);
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -584,15 +597,32 @@ section('[10] Async Coach Intent Dispatcher — TraceV2 correlation');
 {
   configureAthleteActionDiagnosticsForTests({ enabled: true, production: false });
   clearAthleteActionDiagnosticEvents();
-  resetAll();
-  installAsyncAdjustmentTarget();
+  baseWeekDef = {
+    1: wk('Lower Strength', 1, { exercises: [ex('Back Squat')] }),
+  };
+  const confirmationIntent: CoachIntent = {
+    intent: 'general_question',
+    confidence: 0.95,
+    needsClarification: false,
+  };
+  const packetFor = (message: string, withPendingProgramAdjustment = false) =>
+    buildCoachContextPacket({
+      userMessage: withPendingProgramAdjustment ? 'sounds good' : message,
+      recentMessages: [],
+      todayISO: FIXED_TODAY,
+      ...(withPendingProgramAdjustment
+        ? {
+            pendingCoachProposal: pendingConditioningProposal(),
+          }
+        : {}),
+    });
   const baseDeps: DispatchDeps = {
     reapplyInjuryAtSeverity: () => ({ applied: 0, visibleDiffDetected: false }),
     runProgression: () => ({ reply: 'progression', mutated: false }),
     runUAEForInjury: () => ({ reply: 'injury', mutated: false }),
     inspect: () => ({ kind: 'general_state', message: 'inspect' }),
     generalReply: () => 'general',
-    applyNonInjuryConstraint: () => ({ reply: 'unused', mutated: false }),
+    applyNonInjuryConstraint: () => ({ reply: 'retired fact mutation', mutated: true }),
     applyConstraintResolution: () => ({ cleared: [] }),
     applyProgramAdjustmentEvents: () => ({
       success: true,
@@ -620,32 +650,25 @@ section('[10] Async Coach Intent Dispatcher — TraceV2 correlation');
           if (label === 'first') releaseFirst = resolve;
           else releaseSecond = resolve;
         });
-        emitAthleteActionEvent(span, 'mutation_constraint_created', {
+        emitAthleteActionEvent(span, 'mutation_preview_result', {
           asyncBoundary: label,
           phase: 'after_await',
-          constraintId: `${label}-constraint`,
-          constraintType: 'busy_week',
-          constraintStatus: 'active',
         });
-        return {
-          success: true,
-          eventsApplied: 1,
-          visibleDiff: [`${label} conditioning added`],
-        };
+        return { success: true, eventsApplied: 1, visibleDiff: [`${label} conditioning added`] };
       });
     },
   });
 
   const first = (async () =>
     await dispatchCoachIntent(
-      ASYNC_ADJUSTMENT_INTENT,
-      asyncAdjustmentPacket(),
+      confirmationIntent,
+      packetFor('first overlap', true),
       tracedDeps('first'),
     ))();
   const second = (async () =>
     await dispatchCoachIntent(
-      ASYNC_ADJUSTMENT_INTENT,
-      asyncAdjustmentPacket(),
+      confirmationIntent,
+      packetFor('second overlap', true),
       tracedDeps('second'),
     ))();
   ok('both async dependencies reached their await boundary',
@@ -662,9 +685,7 @@ section('[10] Async Coach Intent Dispatcher — TraceV2 correlation');
   ok('events before and after await remain on one root per call',
     traces.every((record) => {
       const phases = record.events
-        .filter((event) =>
-          event.event === 'mutation_preview_result' ||
-          event.event === 'mutation_constraint_created')
+        .filter((event) => event.event === 'mutation_preview_result')
         .map((event) => event.fields.phase);
       return phases.includes('before_await') && phases.includes('after_await');
     }));

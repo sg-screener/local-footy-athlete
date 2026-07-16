@@ -281,6 +281,14 @@ function eq<T>(name: string, a: T, b: T) {
 function section(label: string) { realLog(`\n${label}`); }
 
 (async () => {
+// The dispatcher now yields across Awaitable dependencies. Finish the stores'
+// automatic hydration before seeding scenario state so hydration cannot race a
+// fixture write on the first awaited Coach turn.
+await Promise.all([
+  useProgramStore.persist.rehydrate(),
+  useCoachUpdatesStore.persist.rehydrate(),
+]);
+
 // ─────────────────────────────────────────────────────────────────────
 // Test 1 — New injury current + future
 // ─────────────────────────────────────────────────────────────────────
@@ -486,6 +494,7 @@ section('[4] "Deadlifts still there next week?" → re-apply');
   ok(
     'reply references actual state (Deadlift / Lower Strength / no longer present)',
     /deadlift|Lower Strength|already|no longer/i.test(out.reply),
+    out.reply,
   );
   ok('does NOT ask severity', !/how bad is it/i.test(out.reply));
 }
