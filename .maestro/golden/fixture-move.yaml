@@ -1,0 +1,25 @@
+appId: com.localfootyathlete.app
+name: Golden - move fixture by domain day
+tags:
+  - e2e
+  - golden
+  - fixture
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: fixture-move
+- tapOn:
+    id: "day-row-sat"
+- tapOn:
+    id: "fixture-actions-open"
+- tapOn:
+    id: "fixture-move-action"
+- assertVisible:
+    id: "day-row-sun-state-move-target"
+- tapOn:
+    id: "day-row-sun"
+- extendedWaitUntil:
+    visible:
+      id: "day-row-sun-state-fixture"
+    timeout: 15000

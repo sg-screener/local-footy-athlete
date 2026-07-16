@@ -42,6 +42,7 @@ import {
 } from '../../utils/tapProgramModifiers';
 import { poorSleepConstraintId } from '../../utils/readinessConstraints';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
+import { dayOfWeekTestIdToken } from '../../utils/stableTestId';
 import {
   WEEK_DAYS,
   DAY_SHORT,
@@ -268,7 +269,7 @@ export default function HomeScreenV2() {
   // from CoachScreen (see CoachScreen.handleSmokeOpenWednesdayWorkout),
   // so HomeScreen owns no smoke testIDs and produces no smoke logs.
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']} testID="program-screen">
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -302,6 +303,7 @@ export default function HomeScreenV2() {
             <IconButton
               onPress={handlePrev}
               accessibilityLabel="Previous week"
+              testID="program-week-previous"
               icon={
                 <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                   <Path d="M15 18l-6-6 6-6" />
@@ -312,6 +314,7 @@ export default function HomeScreenV2() {
               style={styles.topBarCenter}
               onPress={isThisWeek ? undefined : handleThisWeek}
               accessibilityLabel={isThisWeek ? 'This week' : 'Return to this week'}
+              testID="program-week-current"
             >
               <Text style={styles.topBarLabel} numberOfLines={1}>{weekLabel}</Text>
               {(() => {
@@ -335,6 +338,7 @@ export default function HomeScreenV2() {
               <IconButton
                 onPress={handleNext}
                 accessibilityLabel="Next week"
+                testID="program-week-next"
                 icon={
                   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
                     <Path d="M9 18l6-6-6-6" />
@@ -344,6 +348,7 @@ export default function HomeScreenV2() {
               <IconButton
                 onPress={handleOpenRebuild}
                 accessibilityLabel="Rebuild this week"
+                testID="program-week-rebuild"
                 tone="accent"
                 icon={
                   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
@@ -1070,6 +1075,18 @@ function DayRow({
     </>
   );
   const selectedTitle = hasWorkout ? title : 'Rest';
+  const dayToken = dayOfWeekTestIdToken(day.dayOfWeek);
+  const stateToken = isMoveSource
+    ? 'move-source'
+    : isMoveTarget
+      ? 'move-target'
+      : isGame
+        ? 'fixture'
+        : !hasWorkout
+          ? 'rest'
+          : isSelected
+            ? 'selected'
+            : 'scheduled';
 
   return (
     <Card
@@ -1078,7 +1095,7 @@ function DayRow({
       padding="none"
       radius="lg"
       onPress={onPress}
-      testID={`day-row-${(day.short || '').toString().toLowerCase()}`}
+      testID={`day-row-${dayToken}`}
       accessibilityLabel={`Day ${day.short ?? ''}${hasWorkout ? ` ${day.workout.name}` : ''}`}
       style={[
         styles.dayRow,
@@ -1092,6 +1109,11 @@ function DayRow({
         emphasized && selectedDayRowStyle(accentColor),
       ]}
     >
+      <View
+        pointerEvents="none"
+        style={{ width: 1, height: 1 }}
+        testID={`day-row-${dayToken}-state-${stateToken}`}
+      />
       <View
         pointerEvents="none"
         style={[
@@ -1265,12 +1287,12 @@ function DayRow({
             size="lg"
             glow={false}
             onPress={onLogGame}
-            testID="log-game-button"
+            testID="fixture-log-action"
           />
           <Pressable
             onPress={onGameDayActions}
             style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
-            testID="move-remove-game-link"
+            testID="fixture-actions-open"
           >
             <Text style={styles.makeChangeText}>Move or remove game day</Text>
           </Pressable>
@@ -1522,7 +1544,7 @@ interface GameDaySheetProps {
 }
 function GameDaySheet({ visible, onClose, label, onMove, onRemove }: GameDaySheetProps) {
   return (
-    <Sheet visible={visible} onClose={onClose}>
+    <Sheet visible={visible} onClose={onClose} testID="fixture-actions-sheet">
       <Text style={styles.sheetTitle}>{label}</Text>
       <View style={styles.sheetCurrentBadge}>
         <View style={styles.sheetCurrentDot} />
@@ -1531,12 +1553,14 @@ function GameDaySheet({ visible, onClose, label, onMove, onRemove }: GameDayShee
 
       <SheetOption
         label="Move Game Day This Week"
+        testID="fixture-move-action"
         accent
         icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14"/><Path d="M12 5l7 7-7 7"/></Svg>}
         onPress={onMove}
       />
       <SheetOption
         label="Remove Game Day"
+        testID="fixture-remove-action"
         danger
         icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#F44336" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M18 6L6 18"/><Path d="M6 6l12 12"/></Svg>}
         onPress={onRemove}
@@ -1553,11 +1577,13 @@ interface SheetOptionProps {
   accent?: boolean;
   danger?: boolean;
   onPress: () => void;
+  testID?: string;
 }
-function SheetOption({ label, icon, accent, danger, onPress }: SheetOptionProps) {
+function SheetOption({ label, icon, accent, danger, onPress, testID }: SheetOptionProps) {
   return (
     <Pressable
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [styles.sheetOption, pressed && { opacity: 0.7 }]}
     >
       <View style={[

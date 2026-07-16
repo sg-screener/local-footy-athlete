@@ -26,6 +26,7 @@ export interface V2IconButtonProps {
   size?: V2IconButtonSize;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  testID?: string;
 }
 
 const SIZES: Record<V2IconButtonSize, number> = { sm: 32, md: 40, lg: 48 };
@@ -38,6 +39,7 @@ export function IconButton({
   size = 'md',
   disabled = false,
   style,
+  testID,
 }: V2IconButtonProps) {
   const dim = SIZES[size];
   const bg = toneBg(tone, disabled);
@@ -49,6 +51,7 @@ export function IconButton({
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
       accessibilityState={{ disabled }}
+      testID={testID}
       style={({ pressed }) => [
         styles.base,
         {

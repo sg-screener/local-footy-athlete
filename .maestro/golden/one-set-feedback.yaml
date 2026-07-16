@@ -1,0 +1,64 @@
+appId: com.localfootyathlete.app
+name: Golden - one-set prescription and session feedback
+tags:
+  - e2e
+  - golden
+  - workout
+  - feedback
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: one-set-strength
+- tapOn:
+    id: "day-row-mon"
+- tapOn:
+    id: "view-workout-button"
+- extendedWaitUntil:
+    visible:
+      id: "exercise-set-count-dev-e2e-one-set-main-1"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "finish-session-action"
+    direction: DOWN
+- tapOn:
+    id: "finish-session-action"
+- scrollUntilVisible:
+    element:
+      id: "feedback-strength-completion-full"
+    direction: DOWN
+- tapOn:
+    id: "feedback-strength-completion-full"
+- scrollUntilVisible:
+    element:
+      id: "feedback-support-completion-full"
+    direction: DOWN
+- tapOn:
+    id: "feedback-support-completion-full"
+- scrollUntilVisible:
+    element:
+      id: "feedback-recovery-addon-completion-full"
+    direction: DOWN
+- tapOn:
+    id: "feedback-recovery-addon-completion-full"
+- scrollUntilVisible:
+    element:
+      id: "feedback-feeling-good"
+    direction: DOWN
+- tapOn:
+    id: "feedback-feeling-good"
+- scrollUntilVisible:
+    element:
+      id: "feedback-soreness-none"
+    direction: DOWN
+- tapOn:
+    id: "feedback-soreness-none"
+- scrollUntilVisible:
+    element:
+      id: "feedback-save-action"
+    direction: DOWN
+- tapOn:
+    id: "feedback-save-action"
+- assertVisible:
+    id: "session-completion"

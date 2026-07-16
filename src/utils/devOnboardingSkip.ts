@@ -1,60 +1,8 @@
 import type { OnboardingData, TrainingProgram } from '../types/domain';
-import { DEFAULT_PROGRAM } from '../data/defaultProgram';
-import {
-  ProgramGenError,
-  buildProgramGenerationRequestDiagnostics,
-  generateProgramFromProfile,
-  getProgramGenerationProfileFieldDiagnostics,
-} from '../services/api/generateProgram';
-import { useProfileStore } from '../store/profileStore';
-import { useProgramStore } from '../store/programStore';
-import { useCalendarStore } from '../store/calendarStore';
-import { logger } from './logger';
-import {
-  logOnboardingPipelineError,
-  seedOnboardingProgram,
-  toOnboardingPipelineError,
-} from './onboardingCompletion';
+import { DEV_E2E_STANDARD_PROFILE } from '../dev/e2e/devE2EStandardProfile';
 
-export const DEV_TEST_ONBOARDING_DATA: OnboardingData = {
-  firstName: 'Sam',
-  heightCm: 184,
-  weightKg: 90,
-  position: 'inside_mid',
-  motivation: 'Stay injury-free',
-  goals: ['Stay injury-free'],
-  seasonPhase: 'In-season',
-  gameDay: 'Saturday',
-  usualGameDay: 'Saturday',
-  teamTrainingDaysPerWeek: 2,
-  teamTrainingDays: ['Tuesday', 'Thursday'],
-  teamTrainingDuration: '90 minutes',
-  teamTrainingIntensity: 'Moderate',
-  trainingDaysPerWeek: 5,
-  preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-  sessionDurationMinutes: 60,
-  trainingLocation: 'Commercial gym',
-  equipment: [
-    'barbell',
-    'dumbbells',
-    'squat_rack',
-    'pullup_bar',
-    'cable_machine',
-    'hamstring_curl',
-    'knee_extension',
-    'bands',
-  ],
-  experienceLevel: '5+ years',
-  squatStrength: '1.5x bodyweight',
-  benchStrength: '1.5x bodyweight+',
-  conditioningLevel: 'Elite',
-  sprintExposure: '2+ times per week',
-  recentTrainingLoad: 'Very consistent',
-  injuries: [],
-  biggestLimitation: 'Power & explosiveness',
-  biggestFrustration: 'Getting a week that respects team training and game day.',
-  successVision: 'A durable in-season week that keeps strength and conditioning ticking over without cooking the legs.',
-};
+/** The development skip is the same named seed used by Maestro. */
+export const DEV_TEST_ONBOARDING_DATA: OnboardingData = DEV_E2E_STANDARD_PROFILE;
 
 export function isDevOnboardingSkipEnabled(
   isDev: boolean =
@@ -65,145 +13,39 @@ export function isDevOnboardingSkipEnabled(
   return isDev;
 }
 
-export async function runDevOnboardingSkip(args: {
+/**
+ * Compatibility-shaped arguments remain so existing dev callers compile, but
+ * generation/store injection is intentionally no longer an alternate entry
+ * architecture. Every press delegates to the allowlisted local seed and can
+ * never call the network-backed onboarding generator.
+ */
+export async function runDevOnboardingSkip(_args: {
   onboardingData?: OnboardingData;
   generateProgram?: (data: OnboardingData) => Promise<TrainingProgram>;
-  profileStore?: Pick<
-    ReturnType<typeof useProfileStore.getState>,
-    'updateOnboardingData' | 'completeOnboarding'
-  >;
-  programStore?: Pick<
-    ReturnType<typeof useProgramStore.getState>,
-    'setCurrentProgram' | 'setCurrentMicrocycle' | 'setTodayWorkout'
-  > & Partial<Pick<ReturnType<typeof useProgramStore.getState>, 'setError'>>;
-  calendarStore?: Pick<ReturnType<typeof useCalendarStore.getState>, 'setGameDay'>;
-} = {}): Promise<{ program: TrainingProgram; onboardingData: OnboardingData; usedFallback: boolean }> {
-  const onboardingData = args.onboardingData ?? DEV_TEST_ONBOARDING_DATA;
-  const profileStore = args.profileStore ?? useProfileStore.getState();
-  const programStore = args.programStore ?? useProgramStore.getState();
-  const generate = args.generateProgram ?? generateProgramFromProfile;
-  const generationSource = args.generateProgram ? 'injected_generator' : 'coach-chat';
-  let program: TrainingProgram;
-  let usedFallback = false;
-
-  // ── Smoke-test diagnostic markers ────────────────────────────────
-  // These three lines are the deterministic trace that the live-smoke
-  // wrapper greps from the simulator system log. Do not remove without
-  // updating scripts/smoke-coach-bike-flow.js diagnostics.
-  logger.info('[dev-skip] started');
-
-  profileStore.updateOnboardingData(onboardingData);
-  logger.info('[dev-skip] profile seeded');
-
-  try {
-    program = await generate(onboardingData);
-    logger.warn(
-      generationSource === 'coach-chat'
-        ? '[dev-onboarding-skip] Using generated program from coach-chat'
-        : '[dev-onboarding-skip] Using generated program from injected generator',
-      {
-        source: generationSource,
-        programId: program.id,
-        programName: program.name,
-        microcycleCount: program.microcycles?.length ?? 0,
-        firstMicrocycleWorkoutCount: program.microcycles?.[0]?.workouts?.length ?? 0,
-        firstWorkout: program.microcycles?.[0]?.workouts?.[0]
-          ? {
-            dayOfWeek: program.microcycles[0].workouts[0].dayOfWeek,
-            name: program.microcycles[0].workouts[0].name,
-            workoutType: program.microcycles[0].workouts[0].workoutType,
-            sessionTier: program.microcycles[0].workouts[0].sessionTier ?? null,
-          }
-          : null,
-      },
-    );
-  } catch (err: any) {
-    usedFallback = true;
-    const fieldDiagnostics = getProgramGenerationProfileFieldDiagnostics(onboardingData);
-    const requestDiagnostics = buildProgramGenerationRequestDiagnostics(onboardingData);
-    const programGenError = err instanceof ProgramGenError ? err : null;
-    const fallbackReason =
-      programGenError?.diagnostic ??
-      err?.message ??
-      String(err);
-    const fallbackWarning =
-      `DEV WARNING: Program generation failed during skip onboarding. Using DEFAULT_PROGRAM because: ${fallbackReason}`;
-    logger.error('[dev-onboarding-skip] Program generation failed', {
-      errorName: err?.name ?? 'Error',
-      kind: programGenError?.kind ?? 'unknown',
-      canRetry: programGenError?.canRetry ?? null,
-      userMessage: programGenError?.userMessage ?? err?.message ?? String(err),
-      diagnostic: fallbackReason,
-      details: programGenError?.details ?? null,
-      request: requestDiagnostics,
-      missingProfileFields: fieldDiagnostics,
-      fallbackReason,
-    });
-    logger.warn(`[dev-onboarding-skip] Using DEFAULT_PROGRAM fallback because: ${fallbackReason}`, {
-      warning: fallbackWarning,
-      defaultProgram: {
-        id: DEFAULT_PROGRAM.id,
-        name: DEFAULT_PROGRAM.name,
-        microcycleCount: DEFAULT_PROGRAM.microcycles?.length ?? 0,
-        firstMicrocycleWorkoutCount: DEFAULT_PROGRAM.microcycles?.[0]?.workouts?.length ?? 0,
-      },
-    });
-    programStore.setError?.(fallbackWarning);
-    program = DEFAULT_PROGRAM;
+  profileStore?: unknown;
+  programStore?: unknown;
+  calendarStore?: unknown;
+} = {}): Promise<{
+  program: TrainingProgram;
+  onboardingData: OnboardingData;
+  usedFallback: false;
+}> {
+  if (!isDevOnboardingSkipEnabled()) {
+    throw new Error('Development onboarding skip is unavailable outside dev builds.');
   }
-
-  try {
-    seedOnboardingProgram({
-      onboardingData,
-      program,
-      programStore,
-      calendarStore: args.calendarStore,
-    });
-  } catch (error) {
-    const pipelineError = toOnboardingPipelineError(
-      error,
-      'accepted_state_transaction',
-      'store_generated_program',
-    );
-    logOnboardingPipelineError('Dev-skip program installation failed', pipelineError);
-    if (pipelineError.stage !== 'section18_acceptance' || program === DEFAULT_PROGRAM) {
-      throw pipelineError;
-    }
-    usedFallback = true;
-    logger.warn('[dev-onboarding-skip] Using DEFAULT_PROGRAM after Section 18 rejection', {
-      stage: pipelineError.stage,
-      diagnostic: pipelineError.message,
-    });
-    try {
-      seedOnboardingProgram({
-        onboardingData,
-        program: DEFAULT_PROGRAM,
-        programStore,
-        calendarStore: args.calendarStore,
-      });
-      program = DEFAULT_PROGRAM;
-    } catch (fallbackError) {
-      const fallbackPipelineError = toOnboardingPipelineError(
-        fallbackError,
-        'accepted_state_transaction',
-        'store_default_program_after_acceptance_failure',
-      );
-      logOnboardingPipelineError('Dev-skip DEFAULT_PROGRAM installation failed', fallbackPipelineError);
-      throw fallbackPipelineError;
-    }
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { createDefaultDevE2ESeedCoordinator } = require('../dev/e2e/defaultDevE2ESeedCoordinator');
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useProgramStore } = require('../store/programStore');
+  const coordinator = createDefaultDevE2ESeedCoordinator(true);
+  const installed = await coordinator.reset('standard-in-season-week');
+  const program = useProgramStore.getState().currentProgram;
+  if (!installed || !program) {
+    throw new Error('The standard development E2E seed did not install a program.');
   }
-  try {
-    profileStore.completeOnboarding();
-  } catch (error) {
-    const pipelineError = toOnboardingPipelineError(
-      error,
-      'onboarding_navigation',
-      'complete_onboarding',
-    );
-    logOnboardingPipelineError('Dev-skip onboarding completion failed', pipelineError);
-    throw pipelineError;
-  }
-  logger.info('[dev-skip] completeOnboarding called');
-
-  return { program, onboardingData, usedFallback };
+  return {
+    program,
+    onboardingData: DEV_TEST_ONBOARDING_DATA,
+    usedFallback: false,
+  };
 }

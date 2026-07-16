@@ -28,6 +28,7 @@ export function EquipmentLimitationSheet({
         {TEMPORARY_EQUIPMENT_PRESETS.map((preset) => (
           <EquipmentOption
             key={preset.id}
+            presetId={preset.id}
             label={preset.label}
             sub={preset.sub}
             onPress={() => onApply(preset.id)}
@@ -39,10 +40,12 @@ export function EquipmentLimitationSheet({
 }
 
 function EquipmentOption({
+  presetId,
   label,
   sub,
   onPress,
 }: {
+  presetId: TemporaryEquipmentPresetId;
   label: string;
   sub: string;
   onPress: () => void;
@@ -50,6 +53,7 @@ function EquipmentOption({
   return (
     <Pressable
       onPress={onPress}
+      testID={`equipment-preset-${presetId}`}
       style={({ pressed }) => [styles.option, pressed && { opacity: 0.7 }]}
     >
       <Text style={styles.optionLabel}>{label}</Text>

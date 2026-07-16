@@ -1,0 +1,19 @@
+appId: com.localfootyathlete.app
+name: Golden - reload preserves accepted standard week
+tags:
+  - e2e
+  - golden
+  - persistence
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- runFlow:
+    file: ../common/checkpoint-and-reload.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- assertVisible:
+    id: "program-screen"
+- assertVisible:
+    id: "day-row-sat-state-fixture"

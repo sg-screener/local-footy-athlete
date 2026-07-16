@@ -1,0 +1,20 @@
+appId: com.localfootyathlete.app
+name: Persisted checkpoint and reload verification
+---
+- openLink: "localfootyathlete://e2e/checkpoint/${SEED_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-checkpoint-ready-${SEED_ID}"
+    timeout: 15000
+- stopApp
+- launchApp:
+    clearState: false
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: "e2e-reload-ready-${SEED_ID}"
+    timeout: 30000
+- assertNotVisible:
+    id: "e2e-seed-loading"
+- assertNotVisible:
+    id: "e2e-seed-error"

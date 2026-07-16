@@ -1,0 +1,31 @@
+appId: com.localfootyathlete.app
+name: Golden - deterministic standard program week
+tags:
+  - e2e
+  - golden
+  - program
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: standard-in-season-week
+- assertVisible:
+    id: "program-week-previous"
+- assertVisible:
+    id: "program-week-current"
+- assertVisible:
+    id: "program-week-next"
+- assertVisible:
+    id: "day-row-mon"
+- assertVisible:
+    id: "day-row-tue"
+- assertVisible:
+    id: "day-row-wed"
+- assertVisible:
+    id: "day-row-thu"
+- assertVisible:
+    id: "day-row-fri"
+- assertVisible:
+    id: "day-row-sat"
+- assertVisible:
+    id: "day-row-sun"

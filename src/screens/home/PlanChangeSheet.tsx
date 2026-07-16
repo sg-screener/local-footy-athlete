@@ -544,6 +544,7 @@ export function PlanChangeSheet({
             <MenuOption
               label="Edit this session"
               sub="Swap, add, move or remove this session"
+              testID="plan-change-edit-session"
               onPress={() => setStep({ kind: 'edit_session' })}
             />
           ) : (
@@ -583,11 +584,13 @@ export function PlanChangeSheet({
           <MenuOption
             label="Move this session"
             sub="Move it to another day or trade places"
+            testID="plan-change-move-session"
             onPress={() => setStep({ kind: 'pick_destination' })}
           />
           <MenuOption
             label="Bin this session"
             sub="Remove it - the day becomes rest"
+            testID="plan-change-delete-session"
             danger
             onPress={startBin}
           />
@@ -955,6 +958,7 @@ export function PlanChangeSheet({
           </Text>
           <MenuOption
             label="Yes, bin it"
+            testID="plan-change-delete-confirm"
             danger
             onPress={() =>
               apply(
@@ -973,7 +977,13 @@ export function PlanChangeSheet({
           <Text style={step.ok ? styles.resultOk : styles.resultBad}>
             {step.message}
           </Text>
-          <Button label="Done" size="lg" glow={false} onPress={onClose} />
+          <Button
+            label="Done"
+            size="lg"
+            glow={false}
+            onPress={onClose}
+            testID="plan-change-done"
+          />
         </View>
       )}
     </Sheet>
@@ -987,15 +997,17 @@ export function PlanChangeSheet({
   );
 }
 
-function MenuOption({ label, sub, danger, onPress }: {
+function MenuOption({ label, sub, danger, onPress, testID }: {
   label: string;
   sub?: string;
   danger?: boolean;
   onPress: () => void;
+  testID?: string;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [styles.option, pressed && { opacity: 0.7 }]}
     >
       <Text style={[styles.optionLabel, danger && styles.optionDanger]}>{label}</Text>

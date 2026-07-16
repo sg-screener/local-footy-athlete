@@ -13,6 +13,42 @@ import {
   type GuidedInjuryRegion,
 } from '../../utils/guidedInjuryControl';
 
+const INJURY_AREA_TEST_IDS: Record<string, string> = {
+  Neck: 'neck',
+  Shoulder: 'shoulder',
+  Elbow: 'elbow',
+  'Wrist / hand': 'wrist-hand',
+  'Chest / ribs': 'chest-ribs',
+  'Other upper body': 'other-upper-body',
+  'Hip / groin': 'hip-groin',
+  Hamstring: 'hamstring',
+  Quad: 'quad',
+  Knee: 'knee',
+  'Calf / Achilles': 'calf-achilles',
+  'Ankle / foot': 'ankle-foot',
+  'Other lower body': 'other-lower-body',
+  'Lower back': 'lower-back',
+  'Upper back': 'upper-back',
+  'Abs / side': 'abs-side',
+  'Other midline': 'other-midline',
+};
+
+const INJURY_TRIGGER_TEST_IDS: Record<string, string> = {
+  Sprinting: 'sprinting',
+  'Change of direction': 'change-of-direction',
+  Kicking: 'kicking',
+  Running: 'running',
+  'Jumping / landing': 'jumping-landing',
+  'Heavy lifting': 'heavy-lifting',
+  'Squatting / lunging': 'squatting-lunging',
+  'Hinging / bending': 'hinging-bending',
+  Pressing: 'pressing',
+  Pulling: 'pulling',
+  'Contact / games': 'contact-games',
+  'Always there': 'always-there',
+  Other: 'other',
+};
+
 type FlowStep =
   | 'region'
   | 'area'
@@ -107,6 +143,7 @@ export function GuidedInjuryFlowSheet({
           {GUIDED_INJURY_REGION_OPTIONS.map((option) => (
             <FlowOption
               key={option.id}
+              testID={`injury-region-${option.id}`}
               label={option.label}
               selected={region === option.id}
               onPress={() => {
@@ -130,6 +167,7 @@ export function GuidedInjuryFlowSheet({
           {GUIDED_INJURY_AREA_OPTIONS[region].map((option) => (
             <FlowOption
               key={option}
+              testID={`injury-area-${INJURY_AREA_TEST_IDS[option]}`}
               label={option}
               selected={area === option}
               onPress={() => {
@@ -154,9 +192,11 @@ export function GuidedInjuryFlowSheet({
             placeholderTextColor="rgba(255,255,255,0.35)"
             style={styles.input}
             autoCapitalize="none"
+            testID="injury-area-custom-input"
           />
           <Button
             label="Continue"
+            testID="injury-area-custom-continue"
             glow={false}
             disabled={customArea.trim().length === 0}
             onPress={() => setStep('severity')}
@@ -180,6 +220,7 @@ export function GuidedInjuryFlowSheet({
           </Text>
           <Button
             label="Pause affected training"
+            testID="injury-pause-training"
             glow={false}
             onPress={() => submit(true)}
           />
@@ -201,6 +242,7 @@ export function GuidedInjuryFlowSheet({
           {GUIDED_INJURY_SEVERITY_OPTIONS.map((option) => (
             <FlowOption
               key={option.label}
+              testID={`injury-severity-${option.severityBand}`}
               label={option.label}
               sub={option.sub}
               selected={selectedSeverity.label === option.label}
@@ -228,6 +270,7 @@ export function GuidedInjuryFlowSheet({
           {GUIDED_INJURY_TRIGGER_OPTIONS.map((trigger) => (
             <Pressable
               key={trigger}
+              testID={`injury-trigger-${INJURY_TRIGGER_TEST_IDS[trigger]}`}
               onPress={() => toggleTrigger(trigger)}
               style={({ pressed }) => [
                 styles.triggerChip,
@@ -248,6 +291,7 @@ export function GuidedInjuryFlowSheet({
         </View>
         <Button
           label="Apply training adjustment"
+          testID="injury-apply-adjustment"
           glow={false}
           onPress={() => submit(isTrainingPaused)}
           style={styles.submitButton}
@@ -266,12 +310,14 @@ export function GuidedInjuryFlowSheet({
 }
 
 function FlowOption({
+  testID,
   label,
   sub,
   selected,
   danger,
   onPress,
 }: {
+  testID?: string;
   label: string;
   sub?: string;
   selected?: boolean;
@@ -281,6 +327,7 @@ function FlowOption({
   return (
     <Pressable
       onPress={onPress}
+      testID={testID}
       style={({ pressed }) => [
         styles.option,
         selected && styles.optionSelected,

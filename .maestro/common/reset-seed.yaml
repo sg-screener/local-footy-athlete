@@ -1,0 +1,21 @@
+appId: com.localfootyathlete.app
+name: Deterministic dev E2E seed reset
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- extendedWaitUntil:
+    visible:
+      id: "e2e-entry-ready"
+    timeout: 15000
+- openLink: "localfootyathlete://e2e/reset/${SEED_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-seed-ready-${SEED_ID}"
+    timeout: 30000
+- assertNotVisible:
+    id: "e2e-seed-error"
+- extendedWaitUntil:
+    visible:
+      id: "program-screen"
+    timeout: 15000

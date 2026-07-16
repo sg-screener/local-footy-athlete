@@ -132,7 +132,13 @@ export const SessionCompleteMoment: React.FC<Props> = ({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Card tone="raised" padding="xl" radius="xl" style={styles.panel}>
+    <Card
+      tone="raised"
+      padding="xl"
+      radius="xl"
+      style={styles.panel}
+      testID="session-completion"
+    >
       <View style={styles.inner}>
         {/*
          * Icon wrapper carries the only glow — a subtle lime RN shadow

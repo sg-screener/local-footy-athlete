@@ -60,6 +60,7 @@ import {
 } from './dayWorkoutHelpers';
 import { isTeamTrainingItem } from '../../utils/teamTraining';
 import { deriveVisibleWorkoutIdentity } from '../../utils/visibleWorkoutIdentity';
+import { stableTestIdToken } from '../../utils/stableTestId';
 
 type EditableExercise = {
   key: string;
@@ -928,7 +929,7 @@ export default function DayWorkoutScreenV2() {
     .join(' · ');
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} testID="workout-screen">
       {/*
         Top-of-screen mirror of the contract markers, mounted as a
         sibling of the header. The IDENTICAL markers also render
@@ -1485,12 +1486,14 @@ function StrengthExerciseCard({
   const restLabel = exercise.restSeconds >= 90 ? formatRest(exercise.restSeconds) : null;
   const cueText = buildCueText(exerciseName);
   const isEditing = editingWeightId === exercise.exerciseId;
+  const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
 
   return (
     <Card
       tone={isGrouped ? 'raised' : 'default'}
       radius="xl"
       padding="xs"
+      testID={`workout-exercise-row-${exerciseToken}`}
       style={[
         styles.exerciseCard,
         isGrouped && styles.exerciseCardGrouped,
@@ -1512,7 +1515,16 @@ function StrengthExerciseCard({
        * the right. Reads left-to-right: "what am I doing, what load?".
        */}
       <View style={styles.statsRow}>
-        <Text style={styles.statsPrimary}>{setsReps}</Text>
+        <Text
+          style={styles.statsPrimary}
+          testID={`workout-exercise-prescription-${exerciseToken}`}
+        >
+          {setsReps}
+        </Text>
+        <View
+          style={{ width: 1, height: 1 }}
+          testID={`exercise-set-count-${exerciseToken}-${exercise.prescribedSets}`}
+        />
         <View style={styles.weightControl}>
           <Pressable
             onPress={() => decrementWeight(exercise)}
@@ -1609,6 +1621,7 @@ function RecoveryBlock({
         const restLabel = formatRest(exercise.restSeconds);
         const displayNotes = cleanNotes(exercise.notes);
         const cueText = buildCueText(exerciseName);
+        const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
 
         return (
           <Card
@@ -1616,6 +1629,7 @@ function RecoveryBlock({
             tone="default"
             radius="xl"
             padding="md"
+            testID={`workout-exercise-row-${exerciseToken}`}
             style={styles.exerciseCard}
           >
             <ExerciseHeaderRow
@@ -1628,7 +1642,10 @@ function RecoveryBlock({
             />
 
             <View style={styles.recoveryPrescriptionRow}>
-              <Text style={styles.recoveryPrescription}>
+              <Text
+                style={styles.recoveryPrescription}
+                testID={`workout-exercise-prescription-${exerciseToken}`}
+              >
                 {setsPrefix}
                 {prescriptionLabel}
               </Text>
@@ -1686,9 +1703,18 @@ function RecoveryAddonSection({ addons }: RecoveryAddonSectionProps) {
           ) : null}
           <View style={styles.recoveryAddonExercises}>
             {addon.exercises.map((exercise) => (
-              <View key={exercise.id} style={styles.recoveryAddonExercise}>
+              <View
+                key={exercise.id}
+                style={styles.recoveryAddonExercise}
+                testID={`workout-exercise-row-${stableTestIdToken(exercise.id)}`}
+              >
                 <Text style={styles.recoveryAddonExerciseName}>{exercise.name}</Text>
-                <Text style={styles.recoveryAddonPrescription}>{exercise.prescription}</Text>
+                <Text
+                  style={styles.recoveryAddonPrescription}
+                  testID={`workout-exercise-prescription-${stableTestIdToken(exercise.id)}`}
+                >
+                  {exercise.prescription}
+                </Text>
                 {exercise.notes ? (
                   <Text style={styles.recoveryAddonNotes}>{exercise.notes}</Text>
                 ) : null}
@@ -1717,6 +1743,7 @@ function ConditioningPhases({ exercises, onChangeExercise }: ConditioningPhasesP
         const phaseDisplayName = displayExerciseName(phaseName, `Phase ${index + 1}`);
         const description = exercise.notes || exercise.exercise?.description || '';
         const restLabel = formatRest(exercise.restSeconds, 'recovery');
+        const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
 
         return (
           <Card
@@ -1724,6 +1751,7 @@ function ConditioningPhases({ exercises, onChangeExercise }: ConditioningPhasesP
             tone="accent"
             radius="xl"
             padding="md"
+            testID={`workout-exercise-row-${exerciseToken}`}
             style={styles.conditioningPhaseCard}
           >
             <View style={styles.conditioningPhaseHeader}>
@@ -1733,7 +1761,12 @@ function ConditioningPhases({ exercises, onChangeExercise }: ConditioningPhasesP
               ) : null}
             </View>
             {description ? (
-              <Text style={styles.conditioningPhaseBody}>{description}</Text>
+              <Text
+                style={styles.conditioningPhaseBody}
+                testID={`workout-exercise-prescription-${exerciseToken}`}
+              >
+                {description}
+              </Text>
             ) : null}
             {restLabel ? (
               <Text style={styles.conditioningRest}>{restLabel}</Text>
@@ -1758,9 +1791,13 @@ function ConditioningRow({ exercise, idx, onChangeExercise }: ConditioningRowPro
   const displayName = displayExerciseName(name, `Phase ${idx + 1}`);
   const notes = exercise.notes || '';
   const prescription = formatConditioningRowPrescription(exercise);
+  const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
 
   return (
-    <View style={styles.conditioningRow}>
+    <View
+      style={styles.conditioningRow}
+      testID={`workout-exercise-row-${exerciseToken}`}
+    >
       <View style={styles.conditioningBullet} />
       <View style={{ flex: 1 }}>
         <View style={styles.conditioningRowHeader}>
@@ -1770,7 +1807,12 @@ function ConditioningRow({ exercise, idx, onChangeExercise }: ConditioningRowPro
           ) : null}
         </View>
         {prescription ? (
-          <Text style={styles.conditioningRowPrescription}>{prescription}</Text>
+          <Text
+            style={styles.conditioningRowPrescription}
+            testID={`workout-exercise-prescription-${exerciseToken}`}
+          >
+            {prescription}
+          </Text>
         ) : null}
         {notes ? (
           <Text style={styles.conditioningRowNotes}>{cleanNotes(notes)}</Text>
@@ -1922,7 +1964,12 @@ interface FinishMomentProps {
 function FinishMoment({ onPress }: FinishMomentProps) {
   return (
     <View style={styles.finishSection}>
-      <Button label="Finish Session" size="lg" onPress={onPress} />
+      <Button
+        label="Finish Session"
+        size="lg"
+        onPress={onPress}
+        testID="finish-session-action"
+      />
     </View>
   );
 }

@@ -1,0 +1,25 @@
+appId: com.localfootyathlete.app
+name: Golden - delete lower-body session
+tags:
+  - e2e
+  - golden
+  - plan-change
+---
+- runFlow:
+    file: ../common/reset-seed.yaml
+    env:
+      SEED_ID: lower-body-deletion
+- tapOn:
+    id: "day-row-mon"
+- tapOn:
+    id: "make-change-link"
+- tapOn:
+    id: "plan-change-edit-session"
+- tapOn:
+    id: "plan-change-delete-session"
+- tapOn:
+    id: "plan-change-delete-confirm"
+- tapOn:
+    id: "plan-change-done"
+- assertVisible:
+    id: "day-row-mon-state-rest"

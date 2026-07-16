@@ -34,6 +34,7 @@ import {
 } from 'react-native';
 import { Text } from './common/Text';
 import { Card, Button, SectionLabel } from './ui';
+import { stableTestIdToken } from '../utils/stableTestId';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
 import type { Workout } from '../types/domain';
@@ -535,6 +536,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             {PARTIAL_REASON_OPTIONS.map((opt) => (
               <FeedbackChip
                 key={opt.key}
+                testID={`feedback-${stableTestIdToken(component.id)}-partial-reason-${opt.key}`}
                 label={opt.label}
                 selected={reason?.partialReason === opt.key}
                 selectedColor={colors.accent.lime}
@@ -556,6 +558,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             {SKIP_REASON_OPTIONS.map((opt) => (
               <FeedbackChip
                 key={opt.key}
+                testID={`feedback-${stableTestIdToken(component.id)}-skip-reason-${opt.key}`}
                 label={opt.label}
                 selected={reason?.skipReason === opt.key}
                 selectedColor={colors.accent.lime}
@@ -576,7 +579,13 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
   ]);
 
   return (
-    <Card tone="raised" padding="lg" radius="xl" style={styles.panel}>
+    <Card
+      tone="raised"
+      padding="lg"
+      radius="xl"
+      style={styles.panel}
+      testID="session-feedback-panel"
+    >
       <Text style={styles.eyebrow}>SESSION COMPLETE</Text>
       <Text style={styles.heading}>Session feedback</Text>
       <Text style={styles.subheading}>
@@ -601,6 +610,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
               {COMPLETION_OPTIONS.map((opt) => (
                 <FeedbackChip
                   key={opt.key}
+                  testID={`feedback-${stableTestIdToken(component.id)}-completion-${opt.key}`}
                   label={opt.label}
                   selected={componentCompletions[component.id] === opt.key}
                   selectedColor={colors.accent.lime}
@@ -620,6 +630,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             {COMPLETION_OPTIONS.map((opt) => (
               <FeedbackChip
                 key={opt.key}
+                testID={`feedback-completion-${opt.key}`}
                 label={opt.label}
                 selected={completion === opt.key}
                 selectedColor={colors.accent.lime}
@@ -639,6 +650,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             {PARTIAL_REASON_OPTIONS.map((opt) => (
               <FeedbackChip
                 key={opt.key}
+                testID={`feedback-partial-reason-${opt.key}`}
                 label={opt.label}
                 selected={partialReason === opt.key}
                 selectedColor={colors.accent.lime}
@@ -658,6 +670,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             {SKIP_REASON_OPTIONS.map((opt) => (
               <FeedbackChip
                 key={opt.key}
+                testID={`feedback-skip-reason-${opt.key}`}
                 label={opt.label}
                 selected={skipReason === opt.key}
                 selectedColor={colors.accent.lime}
@@ -679,6 +692,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             {FEELING_OPTIONS.map((opt) => (
               <FeedbackChip
                 key={opt.key}
+                testID={`feedback-feeling-${opt.key}`}
                 label={opt.label}
                 selected={feeling === opt.key}
                 selectedColor={opt.color}
@@ -698,6 +712,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             {SORENESS_OPTIONS.map((opt) => (
               <FeedbackChip
                 key={opt.key}
+                testID={`feedback-soreness-${opt.key}`}
                 label={opt.label}
                 selected={soreness === opt.key}
                 selectedColor={opt.color}
@@ -717,6 +732,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             {MODE_OPTIONS.map((opt) => (
               <FeedbackChip
                 key={opt.key}
+                testID={`feedback-conditioning-mode-${opt.key}`}
                 label={opt.label}
                 selected={conditioningMode === opt.key}
                 selectedColor={colors.accent.lime}
@@ -823,6 +839,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
         <View style={styles.saveRow}>
           <Button
             label="Save & Finish"
+            testID="feedback-save-action"
             onPress={handleSave}
             variant="primary"
             size="lg"
@@ -848,6 +865,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
  * lighter, translucent chip to read as elevated above it.
  */
 interface FeedbackChipProps {
+  testID?: string;
   label: string;
   selected: boolean;
   selectedColor: string;
@@ -855,6 +873,7 @@ interface FeedbackChipProps {
 }
 
 const FeedbackChip: React.FC<FeedbackChipProps> = ({
+  testID,
   label,
   selected,
   selectedColor,
@@ -862,6 +881,7 @@ const FeedbackChip: React.FC<FeedbackChipProps> = ({
 }) => (
   <Pressable
     onPress={onPress}
+    testID={testID}
     accessibilityRole="button"
     accessibilityState={{ selected }}
     accessibilityLabel={label}
