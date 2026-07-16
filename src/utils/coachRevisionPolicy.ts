@@ -39,7 +39,15 @@ function canonicalTemplateSectionSignature(
 ): string | null {
   const workout = buildCoachRevisionTemplateWorkout(templateId, date);
   if (!workout) return null;
-  const canonical = validateLiveWorkoutWrite(date, workout);
+  let canonical;
+  try {
+    canonical = validateLiveWorkoutWrite(date, workout);
+  } catch (error) {
+    if ((error as { code?: string })?.code === 'section18_week_rejected') {
+      return null;
+    }
+    throw error;
+  }
   const projected = projectVisibleDay({
     day: {
       date,

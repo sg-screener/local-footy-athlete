@@ -33,6 +33,7 @@ import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import {
   completeAcceptedStateFingerprint,
 } from '../store/coachMutationTransaction';
@@ -118,12 +119,6 @@ function seedAcceptedWeek(args: {
   });
   useCalendarStore.setState({ markedDays, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
-  useCoachUpdatesStore.setState({
-    updatesByWeek: {},
-    activeConstraints: [],
-    activeInjury: null,
-    dismissedCoachNoteIds: [],
-  });
   useProgramStore.setState({
     currentProgram: program,
     currentMicrocycle: program.microcycles[0] ?? null,
@@ -136,14 +131,20 @@ function seedAcceptedWeek(args: {
     reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
     exposureContractsByWeek: {},
     sessionFeedback: {},
-    acceptedMaterialContext: {
+    acceptedMaterialContext: normalizeAcceptedMaterialContext({
       markedDays,
       readinessSignalsByDate: {},
       activeConstraints: [],
       activeInjury: null,
       revision: 1,
       lastTransaction: 'fixture-transaction-test:seed',
-    },
+    }),
+  });
+  useCoachUpdatesStore.setState({
+    updatesByWeek: {},
+    activeConstraints: [],
+    activeInjury: null,
+    dismissedCoachNoteIds: [],
   });
 }
 

@@ -35,11 +35,19 @@ import {
 } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
 import { useProgramStore } from '../store/programStore';
-import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import {
+  publishAcceptedCoachUpdatesCompatibilityMirror,
+  useCoachUpdatesStore,
+} from '../store/coachUpdatesStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
 import { useProfileStore } from '../store/profileStore';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import type { OnboardingData } from '../types/domain';
+import {
+  createTemporaryFatigueFact,
+  temporaryFactScope,
+} from '../rules/temporarySourceFact';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import { evaluateEffectiveWeekExposureContract } from '../rules/weeklyExposureContract';
 import { observeMicrocycleSection18 } from '../utils/section18ProgramObservation';
@@ -139,30 +147,56 @@ function resolveLiveWeek(mondayISO: string, seasonPhase: string, gameDay?: strin
 }
 
 function resetWorld() {
-  const coachState = useCoachUpdatesStore.getState();
-  useCoachUpdatesStore.setState({
-    activeConstraints: coachState.activeConstraints.length === 0
-      ? coachState.activeConstraints
-      : [],
-  } as never);
   useProgramStore.setState((state) => ({
     dateOverrides: {},
     overrideContexts: {},
     weekScopedOverlays: {},
     userRemovalConstraints: [],
-    acceptedMaterialContext: {
-      ...state.acceptedMaterialContext,
+    acceptedMaterialContext: normalizeAcceptedMaterialContext({
       markedDays: {},
       readinessSignalsByDate: {},
       activeConstraints: [],
       activeInjury: null,
+      injuryEpisodes: [],
+      temporarySourceFacts: [],
+      acceptedCompositionBase: null,
       revision: state.acceptedMaterialContext.revision + 1,
       lastTransaction: 'week-rebuild-test:reset',
-    },
+    }),
   }));
+  useCoachUpdatesStore.setState({
+    activeConstraints: [],
+    activeInjury: null,
+  } as never);
   useCalendarStore.setState({ markedDays: {}, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
   markedDays = {};
+}
+
+function seedCanonicalFatigueFact(date: string): string | null {
+  const prior = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
+  );
+  const fact = createTemporaryFatigueFact({
+    observedDate: date,
+    scope: temporaryFactScope({ kind: 'week', date }),
+    athleteReportedLevel: 'high',
+    sourceSurface: 'test',
+    now: '2026-07-16T00:00:00.000Z',
+  });
+  const accepted = normalizeAcceptedMaterialContext({
+    ...prior,
+    temporarySourceFacts: [fact],
+    revision: prior.revision + 1,
+    lastTransaction: 'week-rebuild-test:canonical-readiness-fact',
+  });
+  useProgramStore.setState({ acceptedMaterialContext: accepted });
+  publishAcceptedCoachUpdatesCompatibilityMirror({
+    activeConstraints: accepted.activeConstraints,
+    activeInjury: accepted.activeInjury,
+  });
+  return accepted.activeConstraints.find((constraint) =>
+    constraint.temporarySourceFactIds?.includes(fact.factId))?.id ?? null;
 }
 
 /** Seed a no-game program through the canonical door. */
@@ -309,7 +343,10 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
     });
     ok(`[C] invalid recovery swap rejected: ${res.message ?? ''}`,
-      res.ok === false && res.rejected?.some((entry) => entry.code === 'section18_week_rejected') === true,
+      res.ok === false && (
+        /section18_week_rejected/.test(res.message) ||
+        res.rejected?.some((entry) => entry.code === 'section18_week_rejected') === true
+      ),
       JSON.stringify(res.rejected));
 
     addSaturdayGame(profile, wk2Sat);
@@ -389,19 +426,13 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
   // ── F. Low readiness / reduced load survives the rebuild ──
   {
     seed(profile);
-    useCoachUpdatesStore.getState().upsertActiveConstraint({
-      id: 'tap-recovery-mode:integration',
-      type: 'fatigue',
-      severity: 7,
-      status: 'active',
-      startDate: new Date().toISOString(),
-      blockedExposures: [], limitedExposures: [], allowedExposures: [],
-      safeFocus: ['Recovery + mobility'],
-      label: 'reduced load (integration)',
-    } as never);
+    const fatigueConstraintId = seedCanonicalFatigueFact(wk2Mon);
     addSaturdayGame(profile, wk2Sat);
     ok('[F] readiness/reduced-load constraint survives the rebuild',
-      useCoachUpdatesStore.getState().activeConstraints.some((c) => c.id === 'tap-recovery-mode:integration'));
+      !!fatigueConstraintId &&
+        useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts.length === 1 &&
+        useCoachUpdatesStore.getState().activeConstraints.some((constraint) =>
+          constraint.id === fatigueConstraintId));
   }
 
   // ── H. Refresh/rebuild again: accepted deletion is idempotent ──

@@ -220,7 +220,15 @@ console.log('\n── 4. In-season local rebuild keeps regular game behaviour �
 console.log('\n── 5. Away-blocked Monday survives adding a practice match ──');
 
 import { useProgramStore } from '../store/programStore';
-import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import {
+  publishAcceptedCoachUpdatesCompatibilityMirror,
+  useCoachUpdatesStore,
+} from '../store/coachUpdatesStore';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import {
+  createTemporaryFatigueFact,
+  temporaryFactScope,
+} from '../rules/temporarySourceFact';
 import { clearManualOverridesPreservingActiveModifiers } from '../utils/activeProgramModifiers';
 import { addDays } from '../utils/sessionResolver';
 import type { Workout } from '../types/domain';
@@ -309,9 +317,7 @@ function makeAwayRestWorkout(date: string): Workout {
     useCoachUpdatesStore.getState().activeConstraints.some((c) => c.id === awayId));
 
   // 4. Athlete clears the away adjustment → next rebuild may restore Monday.
-  useCoachUpdatesStore.setState((s: any) => ({
-    activeConstraints: s.activeConstraints.filter((c: any) => c.id !== awayId),
-  }));
+  useCoachUpdatesStore.getState().removeActiveConstraint(awayId);
   const sweep2 = clearManualOverridesPreservingActiveModifiers(blockStart);
   ok('after clearing the away note, the override is released on next rebuild',
     sweep2.cleared.includes(week2Monday), JSON.stringify(sweep2));
@@ -451,25 +457,50 @@ console.log('\n── 6. Manual bin/move/swap/add vs game-day rebuild ──');
 // ═════════════════════════════════════════════════════════════════════
 console.log('\n── 7. Readiness constraints survive game-day rebuilds ──');
 {
-  // "I'm not 100%" / reduced-load lives in coachUpdatesStore constraints —
-  // the sweep must never touch that store.
-  const fatigueConstraint: any = {
-    id: 'tap-recovery-mode:test',
-    type: 'fatigue',
-    severity: 7,
-    status: 'active',
-    startDate: new Date().toISOString(),
-    blockedExposures: [], limitedExposures: [], allowedExposures: [],
-    safeFocus: ['Recovery + mobility'],
-    label: 'reduced load (test)',
-  };
-  useCoachUpdatesStore.getState().upsertActiveConstraint(fatigueConstraint);
+  // Current main owns readiness through canonical temporary source facts.
+  // Seed that truth first, then project the compatibility Coach Note mirror.
+  const prior = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext,
+  );
+  const observedDate = useProgramStore.getState().currentProgram?.startDate.slice(0, 10) ??
+    new Date().toISOString().slice(0, 10);
+  const fact = createTemporaryFatigueFact({
+    observedDate,
+    scope: temporaryFactScope({ kind: 'week', date: observedDate }),
+    athleteReportedLevel: 'high',
+    sourceSurface: 'test',
+    now: '2026-07-16T00:00:00.000Z',
+  });
+  const accepted = normalizeAcceptedMaterialContext({
+    ...prior,
+    temporarySourceFacts: [fact],
+    revision: prior.revision + 1,
+    lastTransaction: 'game-rebuild-test:canonical-readiness-fact',
+  });
+  useProgramStore.setState({ acceptedMaterialContext: accepted });
+  publishAcceptedCoachUpdatesCompatibilityMirror({
+    activeConstraints: accepted.activeConstraints,
+    activeInjury: accepted.activeInjury,
+  });
+  const fatigueConstraint = accepted.activeConstraints.find((constraint) =>
+    constraint.temporarySourceFactIds?.includes(fact.factId));
   clearManualOverridesPreservingActiveModifiers();
   ok('reduced-load/readiness constraint untouched by rebuild sweep',
-    useCoachUpdatesStore.getState().activeConstraints.some((c) => c.id === 'tap-recovery-mode:test'));
-  useCoachUpdatesStore.setState((s: any) => ({
-    activeConstraints: s.activeConstraints.filter((c: any) => c.id !== 'tap-recovery-mode:test'),
-  }));
+    !!fatigueConstraint &&
+      useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts.some((candidate) =>
+        'factId' in candidate && candidate.factId === fact.factId) &&
+      useCoachUpdatesStore.getState().activeConstraints.some((constraint) =>
+        constraint.id === fatigueConstraint.id));
+  const cleared = normalizeAcceptedMaterialContext({
+    ...prior,
+    revision: accepted.revision + 1,
+    lastTransaction: 'game-rebuild-test:clear-canonical-readiness-fact',
+  });
+  useProgramStore.setState({ acceptedMaterialContext: cleared });
+  publishAcceptedCoachUpdatesCompatibilityMirror({
+    activeConstraints: cleared.activeConstraints,
+    activeInjury: cleared.activeInjury,
+  });
 }
 
 // ═════════════════════════════════════════════════════════════════════
