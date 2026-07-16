@@ -24,6 +24,12 @@ import {
   type TemporarySourceFactStatus,
 } from '../rules/temporarySourceFact';
 import { semanticFingerprint } from '../utils/programSemanticSnapshot';
+import {
+  athleteActionTerminalReasonChain,
+  classifyAthleteActionFailure,
+  currentAthleteActionTrace,
+  emitAthleteActionEvent,
+} from '../utils/athleteActionDiagnostics';
 
 export type TemporarySourceFactOperation = 'create' | 'update' | 'resolve' | 'expire' | 'hydrate';
 export type TemporarySourceFactTransactionOutcome =
@@ -347,6 +353,59 @@ function statusForOperation(operation: TemporarySourceFactOperation): TemporaryS
 }
 
 export async function transactTemporarySourceFact(
+  input: TemporarySourceFactTransactionInput,
+): Promise<TemporarySourceFactTransactionResult> {
+  const trace = currentAthleteActionTrace();
+  emitAthleteActionEvent(trace, 'athlete_action_parsed', {
+    parsedMutationType: `temporary_source_fact:${input.operation}`,
+    sourceFactId: input.factId ?? (input.fact ? temporarySourceFactId(input.fact) : null),
+    sourceSurface: input.sourceSurface ?? null,
+  });
+  const result = await transactTemporarySourceFactWithinTrace(input);
+  const succeeded = result.outcome !== 'conflicted' && result.outcome !== 'safely_rejected';
+  if (succeeded && result.outcome !== 'no_op' && result.factId) {
+    emitAthleteActionEvent(trace, 'mutation_constraint_created', {
+      constraintType: 'temporary_source_fact',
+      constraintId: result.factId,
+      constraintStatus: result.outcome.startsWith('resolved')
+        ? 'resolved'
+        : result.outcome.startsWith('expired') ? 'expired' : 'active',
+      factOperation: input.operation,
+      changedProgram: result.changedProgram,
+      sourceSurface: input.sourceSurface ?? null,
+    });
+  }
+  const internalResultCode = `temporary_source_fact_${result.outcome}`;
+  emitAthleteActionEvent(
+    trace,
+    succeeded ? 'athlete_action_completed' : 'athlete_action_failed',
+    succeeded
+      ? {
+          outcome: result.changedProgram ? 'accepted_changed' : 'accepted_no_change',
+          internalResultCode,
+          factId: result.factId,
+        }
+      : {
+          outcome: 'rejected',
+          internalResultCode,
+          originalRejectionCode: result.reason ?? result.outcome,
+          rejectionCodes: [result.reason ?? result.outcome],
+          firstFailingBoundary: 'temporarySourceFactTransaction',
+          failureCategory: classifyAthleteActionFailure(
+            result.reason ?? result.outcome,
+            'temporarySourceFactTransaction',
+          ),
+          validCandidateExisted: false,
+          previousStateRestored: true,
+          terminalReasonChain: trace
+            ? athleteActionTerminalReasonChain(trace.traceId)
+            : [],
+        },
+  );
+  return result;
+}
+
+async function transactTemporarySourceFactWithinTrace(
   input: TemporarySourceFactTransactionInput,
 ): Promise<TemporarySourceFactTransactionResult> {
   const now = input.now ?? new Date().toISOString();

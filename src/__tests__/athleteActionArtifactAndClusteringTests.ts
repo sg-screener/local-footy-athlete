@@ -1,5 +1,6 @@
 import {
   AthleteActionTraceCoordinator,
+  buildAthleteSemanticSnapshotV2,
 } from '../dev/e2e/AthleteActionTraceCoordinator';
 import {
   assertAthleteActionArtifactBundleV2,
@@ -37,6 +38,29 @@ function main(): void {
     buildId: 'ec5a6cd',
     sourceSurface: 'coach_chat',
     controlId: 'coach-send-button',
+  });
+  const semanticSnapshot = buildAthleteSemanticSnapshotV2({
+    reversibleAdjustmentLedger: [],
+    userRemovalConstraints: [],
+    injuryEpisodes: [],
+    temporarySourceFacts: [{ factId: 'temporary-fatigue:week:2026-07-13' }],
+    activeConstraints: [],
+    readiness: {},
+    sessionFeedback: {},
+    coachNoteOwnership: [],
+    overlays: {},
+    overrides: {},
+    contracts: {},
+    provenance: [],
+    typedReductions: [],
+  }, 2);
+  const sourceFactFingerprint = semanticSnapshot.componentFingerprints.temporarySourceFacts;
+  coordinator.recordBefore({
+    token,
+    semantic: semanticSnapshot,
+    visibleCard: {},
+    visibleDetail: {},
+    persistedEnvelope: {},
   });
   const trace = coordinator.getRecord(token.traceId)!;
   const cluster = clusterAthleteActionFailure({
@@ -80,7 +104,10 @@ function main(): void {
       receiptFingerprint: 'clock-sha256',
       checkpointClockFingerprint: 'clock-sha256',
     },
-    acceptedFingerprints: { program: 'sha256-accepted' },
+    acceptedFingerprints: {
+      program: 'sha256-accepted',
+      temporarySourceFacts: sourceFactFingerprint,
+    },
     persistedFingerprints: { program: 'sha256-persisted' },
     postReloadResult: { matched: true },
     failureCluster: clusterAthleteActionFailure({
@@ -120,6 +147,13 @@ function main(): void {
     Object.entries(bundle.files).some(([path, contents]) =>
       path.endsWith('/athlete-action-trace-v2.json') &&
       contents.includes('"fingerprintContract": "athlete-semantic-sha256-v2"')));
+  ok('bundle carries the canonical temporary-source-fact fingerprint',
+    Object.entries(bundle.files).some(([path, contents]) =>
+      path.endsWith('/athlete-action-trace-v2.json') &&
+      contents.includes(`"temporarySourceFacts": "${sourceFactFingerprint}"`)) &&
+    Object.entries(bundle.files).some(([path, contents]) =>
+      path.endsWith('/accepted-fingerprints.json') &&
+      contents.includes(`"temporarySourceFacts": "${sourceFactFingerprint}"`)));
   const serialized = JSON.stringify(bundle.files);
   ok('default artifacts contain no raw Coach text or raw health details',
     !serialized.includes('SECRET_COACH_TEXT') &&

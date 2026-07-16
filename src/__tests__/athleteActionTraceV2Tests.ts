@@ -22,6 +22,7 @@ import {
   registerAthleteActionUIOutcome,
 } from '../dev/e2e/athleteActionUIObservation';
 import { semanticFingerprintV2, sha256Hex } from '../utils/semanticFingerprintV2';
+import { readFileSync } from 'fs';
 
 let passed = 0;
 let failed = 0;
@@ -79,6 +80,13 @@ async function main(): Promise<void> {
     Object.keys(revisionOne.componentFingerprints).length === 13 &&
       Object.values(revisionOne.componentFingerprints).every((fingerprint) =>
         fingerprint.startsWith('athlete-semantic-sha256-v2:')));
+  const mutationTransactionSource = readFileSync(
+    `${__dirname}/../store/coachMutationTransaction.ts`,
+    'utf8',
+  );
+  ok('production TraceV2 snapshots fingerprint canonical temporary source facts',
+    /temporarySourceFacts:\s*context\.temporarySourceFacts/.test(mutationTransactionSource) &&
+      !/temporarySourceFacts:\s*\{\s*injuryEpisodeIds:/.test(mutationTransactionSource));
 
   const familyCoordinator = new AthleteActionTraceCoordinator(
     () => true,
@@ -324,6 +332,10 @@ async function main(): Promise<void> {
     resumedRecord?.evidence.semanticAcceptedBefore.status === 'captured' &&
       resumedRecord.evidence.semanticAcceptedBefore.value.componentFingerprints
         .reversibleAdjustmentLedger === revisionOne.componentFingerprints.reversibleAdjustmentLedger);
+  ok('canonical temporary-source-fact fingerprint remains present after reload resume',
+    resumedRecord?.evidence.semanticAcceptedBefore.status === 'captured' &&
+      resumedRecord.evidence.semanticAcceptedBefore.value.componentFingerprints
+        .temporarySourceFacts === revisionOne.componentFingerprints.temporarySourceFacts);
   ok('reload resume automatically finalizes a ready requested outcome',
     resumedRecord?.status === 'finalized_success');
   const final = athleteActionTraceCoordinator.finalize(root.traceId, 'success');

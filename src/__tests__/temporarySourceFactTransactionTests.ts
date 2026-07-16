@@ -57,6 +57,14 @@ const {
   handleCoachTurn,
 } = require('../utils/coachTurnController') as typeof import('../utils/coachTurnController');
 const {
+  executeProgramControlActionDurably,
+} = require('../utils/programControlActions') as typeof import('../utils/programControlActions');
+const {
+  clearAthleteActionDiagnosticEvents,
+  configureAthleteActionDiagnosticsForTests,
+  getAthleteActionTraceV2,
+} = require('../utils/athleteActionDiagnostics') as typeof import('../utils/athleteActionDiagnostics');
+const {
   semanticFingerprint,
 } = require('../utils/programSemanticSnapshot') as typeof import('../utils/programSemanticSnapshot');
 const {
@@ -222,6 +230,72 @@ async function main(): Promise<void> {
   check('fatigue and poor sleep compose one global tier', globalConstraints.length === 1, globalConstraints);
   check('one global tier carries both fact owners', globalConstraints[0]?.temporarySourceFactIds?.length === 2);
   check('strongest global level wins once', globalConstraints[0]?.severity === 8);
+
+  console.log('\n[2b] TraceV2 follows the canonical tap source-fact owner');
+  reset();
+  configureAthleteActionDiagnosticsForTests({
+    enabled: true,
+    production: false,
+    now: () => new Date('2026-07-20T09:00:00.000Z'),
+    sink: () => undefined,
+  });
+  clearAthleteActionDiagnosticEvents();
+  const tracedCreate = await executeProgramControlActionDurably({
+    type: 'set_fatigue_status',
+    source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+    scope: 'current_week',
+    payload: { date, todayISO: date, level: 'cooked' },
+    requiresRebuild: false,
+    createsActiveModifier: true,
+    oneOffOnly: false,
+  }, { todayISO: date });
+  const createTrace = tracedCreate.traceId
+    ? getAthleteActionTraceV2(tracedCreate.traceId)
+    : null;
+  check('tap fact creation retains one TraceV2 identity',
+    tracedCreate.ok && !!tracedCreate.traceId && createTrace?.traceId === tracedCreate.traceId);
+  check('TraceV2 records the exact canonical fact creation',
+    createTrace?.evidence.factsCreated.status === 'captured' &&
+    createTrace.evidence.factsCreated.value.some((entry: any) =>
+      entry.id === tracedCreate.createdModifierIds?.[0] &&
+      entry.type === 'temporary_source_fact' &&
+      entry.status === 'active'));
+  check('TraceV2 records acknowledged durable readback',
+    createTrace?.evidence.persistence.status === 'captured' &&
+    createTrace.evidence.persistence.value.some((entry) =>
+      entry.operation === 'readback' && entry.acknowledged));
+  check('TraceV2 records canonical source-fact and visible after-state',
+    createTrace?.evidence.semanticAcceptedBefore.status === 'captured' &&
+    createTrace.evidence.semanticAcceptedAfter.status === 'captured' &&
+    createTrace.evidence.semanticAcceptedBefore.value.componentFingerprints.temporarySourceFacts !==
+      createTrace.evidence.semanticAcceptedAfter.value.componentFingerprints.temporarySourceFacts &&
+    createTrace.evidence.visibleCardAfter.status === 'captured');
+  check('TraceV2 requests terminal success from the source-fact owner',
+    createTrace?.requestedTerminalOutcome.status === 'captured' &&
+    createTrace.requestedTerminalOutcome.value === 'success');
+
+  const tracedResolve = await executeProgramControlActionDurably({
+    type: 'clear_fatigue_status',
+    source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+    scope: 'current_week',
+    payload: { modifierId: tracedCreate.createdModifierIds?.[0], date },
+    requiresRebuild: false,
+    createsActiveModifier: false,
+    oneOffOnly: false,
+  }, { todayISO: date });
+  const resolveTrace = tracedResolve.traceId
+    ? getAthleteActionTraceV2(tracedResolve.traceId)
+    : null;
+  check('TraceV2 records exact canonical fact resolution',
+    tracedResolve.ok &&
+    resolveTrace?.evidence.factsExpired.status === 'captured' &&
+    resolveTrace.evidence.factsExpired.value.some((entry: any) =>
+      entry.id === tracedResolve.clearedModifierIds?.[0] &&
+      entry.type === 'temporary_source_fact' &&
+      entry.status === 'resolved'));
+  configureAthleteActionDiagnosticsForTests(null);
+  clearAthleteActionDiagnosticEvents();
+  reset();
 
   console.log('\n[3] idempotence and exact replacement');
   const first = await transactTemporarySourceFact({

@@ -782,17 +782,7 @@ function captureTraceSemanticSnapshot(
     reversibleAdjustmentLedger: program.reversibleAdjustmentLedger,
     userRemovalConstraints: program.userRemovalConstraints,
     injuryEpisodes: context.injuryEpisodes,
-    temporarySourceFacts: {
-      injuryEpisodeIds: context.injuryEpisodes.map((episode) => ({
-        id: episode.episodeId,
-        status: episode.status,
-      })),
-      constraintFacts: context.activeConstraints.map((constraint) => ({
-        id: constraint.id,
-        type: constraint.type,
-        status: constraint.status,
-      })),
-    },
+    temporarySourceFacts: context.temporarySourceFacts,
     activeConstraints: context.activeConstraints,
     readiness: {
       accepted: context.readinessSignalsByDate,
