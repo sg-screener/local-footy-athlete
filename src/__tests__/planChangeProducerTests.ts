@@ -15,6 +15,7 @@ import type { OverrideContext, Workout } from '../types/domain';
 import type { ResolvedDay } from '../utils/sessionResolver';
 import {
   buildCoachRevisionWeekSnapshotFromProjectedDays,
+  snapshotProjectedDay,
   validateCoachRevisionDiff,
   type CoachRevisionProposal,
 } from '../utils/coachRevisionProposal';
@@ -27,10 +28,17 @@ import {
   pickTemplateForCategory,
   planChangeWarningForCategory,
   previewPlanChangeRisk,
+  resolveTemplatePlanChange,
   type PlanChange,
 } from '../utils/planChangeProducer';
 import { createStrengthIntent } from '../rules/strengthPatternContributions';
 import type { AthleteSessionDeletionTransactionInput } from '../store/acceptedStateTransaction';
+import { materializeCanonicalPlanChangeCandidate } from '../utils/canonicalPlanChangeCandidateMaterializer';
+import { validateLiveWorkoutWrite } from '../utils/postGenerationConstraintValidation';
+import { applyCoachRevisionDateOverrides } from '../utils/coachRevisionOverrideWriter';
+import { projectVisibleDay } from '../utils/visibleProgramProjection';
+import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
+import { canonicaliseHydratedState } from '../store/programStore';
 
 const TODAY = '2026-07-01'; // Wednesday
 const MON = '2026-06-29';
@@ -1404,6 +1412,359 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
       protectedPreview.assessment.decision === 'block' &&
       protectedPreview.assessment.findings.some((finding) => finding.ruleId === 'protected_anchor_edit_blocked'),
     protectedPreview.assessment);
+}
+
+{
+  console.log('\n[19] canonical plan-change candidate materializer invariants');
+
+  const projectedSnapshot = (date: string, workout: Workout | null) =>
+    snapshotProjectedDay(projectVisibleDay({
+      day: visibleDay(date, workout),
+      activeInjury: null,
+      todayISO: TODAY,
+      modalityPreferences: {},
+    }).day);
+  const canonicalize = (date: string, workout: Workout) =>
+    validateLiveWorkoutWrite(date, workout);
+
+  // 60m lower strength + the exact 24m flushout must have one canonical
+  // duration/identity/projection owner from proposal through acceptance.
+  const lowerWeek = byeWeek();
+  const lowerChange = {
+    kind: 'add_template',
+    date: MON,
+    templateId: 'flushout_3030',
+  } as const;
+  const lowerDay = lowerWeek.find((day) => day.date === MON)!;
+  const lowerCandidate = materializeCanonicalPlanChangeCandidate({
+    change: lowerChange,
+    currentDay: lowerDay,
+    todayISO: TODAY,
+    canonicalizeWorkout: canonicalize,
+  });
+  ok('[19] lower + flushout materializes canonically', lowerCandidate.ok, lowerCandidate);
+  const lowerProposal = buildPlanChangeProposal(lowerChange, {
+    visibleWeek: lowerWeek,
+    todayISO: TODAY,
+  });
+  if (lowerCandidate.ok && !('error' in lowerProposal) && lowerProposal.kind === 'revision') {
+    eq('[19] 60 + 24 publishes 84 minutes',
+      lowerCandidate.workout.durationMinutes, 84);
+    eq('[19] add-on retains source container id',
+      lowerCandidate.workout.id, lowerDay.workout?.id);
+    eq('[19] proposal snapshot is the exact materialized projection',
+      lowerProposal.revisedDays[0], lowerCandidate.projectedDay);
+  }
+  const lowerWrites: Workout[] = [];
+  const lowerApplied = applyPlanChange({
+    change: lowerChange,
+    visibleWeek: lowerWeek,
+    todayISO: TODAY,
+    setManualOverride: (_date, workout) => {
+      if (workout) lowerWrites.push(workout);
+    },
+  });
+  ok('[19] canonical 84-minute candidate publishes',
+    lowerApplied.ok && lowerWrites[0]?.durationMinutes === 84,
+    { lowerApplied, duration: lowerWrites[0]?.durationMinutes });
+  if (!('error' in lowerProposal) && lowerProposal.kind === 'revision' && lowerWrites[0]) {
+    eq('[19] accepted state equals normal visible projection',
+      projectedSnapshot(MON, lowerWrites[0]), lowerProposal.revisedDays[0]);
+  }
+
+  // Hydration owns representation normalisation only; it must not change the
+  // accepted semantic snapshot or stable source/template identities.
+  if (lowerWrites[0]) {
+    const persisted = JSON.parse(JSON.stringify({
+      dateOverrides: { [MON]: lowerWrites[0] },
+    }));
+    const hydrated = canonicaliseHydratedState(persisted, {
+      programAlreadyAccepted: true,
+    });
+    const hydratedWorkout = hydrated.dateOverrides?.[MON] ?? null;
+    eq('[19] persistence and hydration preserve the accepted projection',
+      projectedSnapshot(MON, hydratedWorkout), projectedSnapshot(MON, lowerWrites[0]));
+    eq('[19] hydration preserves source workout identity',
+      hydratedWorkout?.id, lowerWrites[0].id);
+    eq('[19] hydration preserves template row identity',
+      (hydratedWorkout?.exercises ?? [])
+        .filter((row) => row.id.startsWith('template:'))
+        .map((row) => row.id),
+      (lowerWrites[0].exercises ?? [])
+        .filter((row) => row.id.startsWith('template:'))
+        .map((row) => row.id));
+  }
+
+  // 25m conditioning + 60m Upper Pull must canonicalize into the normal
+  // strength-before-conditioning read-model order while retaining the source.
+  const conditioningDate = '2026-06-30';
+  const conditioningWeek = [...lowerWeek];
+  conditioningWeek[1] = visibleDay(
+    conditioningDate,
+    conditioningWorkout('workout-cond-canonical', 'Easy Zone 2 Bike', 2),
+  );
+  const upperChange = {
+    kind: 'add_template',
+    date: conditioningDate,
+    templateId: 'strength_upper_pull',
+  } as const;
+  const upperDay = conditioningWeek[1];
+  const upperCandidate = materializeCanonicalPlanChangeCandidate({
+    change: upperChange,
+    currentDay: upperDay,
+    todayISO: TODAY,
+    canonicalizeWorkout: canonicalize,
+  });
+  ok('[19] conditioning + Upper Pull materializes canonically',
+    upperCandidate.ok, upperCandidate);
+  if (upperCandidate.ok) {
+    eq('[19] 25 + 60 publishes 85 minutes', upperCandidate.workout.durationMinutes, 85);
+    eq('[19] strength-on-conditioning retains source container id',
+      upperCandidate.workout.id, upperDay.workout?.id);
+    eq('[19] mixed sections use canonical visible order',
+      upperCandidate.projectedDay.workout?.sections.map((section) => section.kind),
+      ['strength', 'conditioning']);
+  }
+  const upperProposal = buildPlanChangeProposal(upperChange, {
+    visibleWeek: conditioningWeek,
+    todayISO: TODAY,
+  });
+  const upperWrites: Workout[] = [];
+  const upperApplied = applyPlanChange({
+    change: upperChange,
+    visibleWeek: conditioningWeek,
+    todayISO: TODAY,
+    setManualOverride: (_date, workout) => {
+      if (workout) upperWrites.push(workout);
+    },
+  });
+  ok('[19] canonical 85-minute candidate publishes',
+    upperApplied.ok && upperWrites[0]?.durationMinutes === 85,
+    { upperApplied, duration: upperWrites[0]?.durationMinutes });
+  if (!('error' in upperProposal) && upperProposal.kind === 'revision' && upperWrites[0]) {
+    eq('[19] 85-minute accepted state equals its proposal and projection',
+      projectedSnapshot(conditioningDate, upperWrites[0]), upperProposal.revisedDays[0]);
+  }
+
+  // Team Training is the day/container owner. Replacing its gym component
+  // retains exactly one anchor and inserts only the registry conditioning.
+  const teamDate = '2026-06-30';
+  const teamSource = teamStrengthWorkout(
+    'team-source-canonical',
+    'Team Training + Upper Push',
+    2,
+  );
+  const teamWeek = [
+    visibleDay(MON, strengthWorkout('other-lower', 'Lower Body Strength', 1)),
+    visibleDay(teamDate, teamSource),
+    visibleDay(TODAY, null),
+    visibleDay(THU, null),
+    visibleDay('2026-07-03', null),
+    visibleDay(SAT, null),
+    visibleDay('2026-07-05', null),
+  ];
+  const teamChange = {
+    kind: 'swap_template',
+    date: teamDate,
+    templateId: 'easy_zone2_bike',
+  } as const;
+  const teamWrites: Workout[] = [];
+  const teamApplied = applyPlanChange({
+    change: teamChange,
+    visibleWeek: teamWeek,
+    todayISO: TODAY,
+    setManualOverride: (_date, workout) => {
+      if (workout) teamWrites.push(workout);
+    },
+  });
+  const acceptedTeam = teamWrites[0] ?? null;
+  const projectedTeam = projectedSnapshot(teamDate, acceptedTeam);
+  ok('[19] Team Training-preserving replacement publishes', teamApplied.ok, teamApplied);
+  eq('[19] Team replacement retains source/anchor container id',
+    acceptedTeam?.id, teamSource.id);
+  eq('[19] exactly one Team Training section remains',
+    (projectedTeam.workout?.sections ?? []).filter((section) =>
+      section.kind === 'session' && /team training/i.test(section.title)).length,
+    1);
+  ok('[19] replaced gym content is absent',
+    !(acceptedTeam?.exercises ?? []).some((row) =>
+      (teamSource.exercises ?? []).some((sourceRow) => sourceRow.id === row.id)),
+    acceptedTeam?.exercises?.map((row) => row.id));
+  ok('[19] replacement conditioning content is present with template identity',
+    (acceptedTeam?.exercises ?? []).some((row) =>
+      row.id.startsWith('template:easy_zone2_bike:')) &&
+      (projectedTeam.workout?.sections ?? []).some((section) =>
+        section.kind === 'conditioning'),
+    projectedTeam.workout?.sections);
+
+  // The materializer itself keeps both protected match anchors immutable.
+  for (const [label, workout] of [
+    ['Game Day', gameWorkout(6)],
+    ['Practice Match', practiceMatchWorkout(6)],
+  ] as const) {
+    const protectedResult = materializeCanonicalPlanChangeCandidate({
+      change: {
+        kind: 'swap_template',
+        date: SAT,
+        templateId: 'easy_zone2_bike',
+      },
+      currentDay: visibleDay(SAT, workout),
+      todayISO: TODAY,
+      canonicalizeWorkout: canonicalize,
+    });
+    ok(`[19] ${label} remains immutable`,
+      protectedResult.ok === false && protectedResult.code === 'protected_anchor_day',
+      protectedResult);
+  }
+
+  // Every add-on category the menu legally exposes must traverse proposal,
+  // strict verification and publication without a second representation.
+  const addOnScenarios = [
+    { date: MON, week: lowerWeek },
+    { date: conditioningDate, week: conditioningWeek },
+  ];
+  const addOnFailures: string[] = [];
+  let offeredAddOnCount = 0;
+  for (const scenario of addOnScenarios) {
+    const options = listPlanChangeOptionsForDay({
+      visibleWeek: scenario.week,
+      date: scenario.date,
+      todayISO: TODAY,
+    });
+    for (const category of options.addOnTopCategories) {
+      offeredAddOnCount += 1;
+      const writes: Workout[] = [];
+      const result = applyPlanChange({
+        change: { kind: 'add_category', date: scenario.date, category: category.id },
+        visibleWeek: scenario.week,
+        todayISO: TODAY,
+        setManualOverride: (_date, workout) => {
+          if (workout) writes.push(workout);
+        },
+      });
+      if (!result.ok || writes.length !== 1) {
+        addOnFailures.push(`${scenario.date}:${category.id}:${result.rejected[0]?.code ?? result.message}`);
+      }
+    }
+  }
+  ok('[19] every legally offered add-on category round-trips',
+    offeredAddOnCount > 0 && addOnFailures.length === 0,
+    { offeredAddOnCount, addOnFailures });
+
+  // Category intent resolves once to a concrete typed template. Applying the
+  // direct intent or the chained category intent must accept the same state.
+  const chainedChange = {
+    kind: 'add_category',
+    date: MON,
+    category: 'conditioning_light',
+  } as const;
+  const directChange = resolveTemplatePlanChange({
+    change: chainedChange,
+    visibleWeek: lowerWeek,
+  });
+  const chainedWrites: Workout[] = [];
+  const directWrites: Workout[] = [];
+  const chainedResult = applyPlanChange({
+    change: chainedChange,
+    visibleWeek: lowerWeek,
+    todayISO: TODAY,
+    setManualOverride: (_date, workout) => {
+      if (workout) chainedWrites.push(workout);
+    },
+  });
+  const directResult = directChange && applyPlanChange({
+    change: directChange,
+    visibleWeek: lowerWeek,
+    todayISO: TODAY,
+    setManualOverride: (_date, workout) => {
+      if (workout) directWrites.push(workout);
+    },
+  });
+  ok('[19] equivalent direct and chained intent both publish',
+    chainedResult.ok && !!directResult?.ok,
+    { chainedResult, directResult });
+  if (chainedWrites[0] && directWrites[0]) {
+    eq('[19] equivalent direct and chained intent accepts equivalent state',
+      projectedSnapshot(MON, chainedWrites[0]), projectedSnapshot(MON, directWrites[0]));
+  }
+
+  // Keep the strict semantic verifier unchanged: tampering with the accepted
+  // proposal snapshot still rejects before any publication.
+  if (!('error' in lowerProposal) && lowerProposal.kind === 'revision') {
+    const tampered: CoachRevisionProposal = {
+      ...lowerProposal,
+      revisedDays: lowerProposal.revisedDays.map((day) => ({
+        ...day,
+        workout: day.workout
+          ? { ...day.workout, durationMinutes: day.workout.durationMinutes + 1 }
+          : null,
+      })),
+    };
+    const mismatchWrites: Workout[] = [];
+    const mismatch = applyCoachRevisionDateOverrides({
+      proposal: tampered,
+      planChange: lowerChange,
+      visibleWeek: lowerWeek,
+      todayISO: TODAY,
+      validationPolicy: {
+        ...coachRevisionValidationPolicyForWeek(lowerWeek, TODAY),
+        requireConfirmationForAdds: false,
+      },
+      setManualOverride: (_date, workout) => mismatchWrites.push(workout),
+    });
+    ok('[19] genuine semantic mismatch publishes nothing',
+      mismatch.applied.length === 0 &&
+        mismatchWrites.length === 0 &&
+        mismatch.rejected.some((entry) => entry.code === 'projected_override_mismatch'),
+      mismatch);
+  }
+
+  // Phase policy can decide availability, but every allowed case uses this
+  // same phase-independent pure materializer and round-trips deterministically.
+  const phaseCases = [
+    { label: 'off-season', context: { phase: 'Off-season', offseasonSubphase: 'late_offseason' } },
+    { label: 'pre-season', context: { phase: 'Pre-season' } },
+    { label: 'in-season game week', context: { phase: 'In-season', hasGame: true, gOffset: -3 } },
+    { label: 'in-season bye week', context: { phase: 'In-season', hasGame: false } },
+    { label: 'deload/readiness-adjusted', context: {
+      phase: 'In-season', weekKind: 'deload', readiness: 'low', hasGame: false,
+    } },
+  ] as const;
+  const phaseFailures: string[] = [];
+  for (const phaseCase of phaseCases) {
+    const phaseCanonicalize = (_date: string, workout: Workout) =>
+      finaliseWorkoutAfterMutation(workout, {
+        ...phaseCase.context,
+        date: MON,
+        planIntentValid: true,
+        referenceWorkout: workout,
+      }).workout;
+    const proposalCandidate = materializeCanonicalPlanChangeCandidate({
+      change: lowerChange,
+      currentDay: lowerDay,
+      todayISO: TODAY,
+      canonicalizeWorkout: phaseCanonicalize,
+    });
+    const writerCandidate = materializeCanonicalPlanChangeCandidate({
+      change: lowerChange,
+      currentDay: lowerDay,
+      todayISO: TODAY,
+      canonicalizeWorkout: phaseCanonicalize,
+    });
+    if (
+      proposalCandidate.ok === false ||
+      writerCandidate.ok === false ||
+      proposalCandidate.workout.durationMinutes !== 84 ||
+      proposalCandidate.workout.id !== lowerDay.workout?.id ||
+      JSON.stringify(proposalCandidate.projectedDay) !==
+        JSON.stringify(writerCandidate.projectedDay)
+    ) {
+      phaseFailures.push(phaseCase.label);
+    }
+  }
+  ok('[19] all cross-phase scenarios use one deterministic materializer',
+    phaseFailures.length === 0,
+    phaseFailures);
 }
 
 console.log(`\nplanChangeProducerTests: ${pass} passed, ${fail} failed`);

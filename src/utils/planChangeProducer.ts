@@ -26,11 +26,9 @@ import {
   type CoachRevisionProtectedAnchorKind,
   type CoachRevisionSectionKind,
   type CoachVisibleDaySnapshot,
-  type CoachVisibleSectionSnapshot,
   type CoachVisibleWorkoutSnapshot,
 } from './coachRevisionProposal';
 import {
-  buildCoachRevisionTemplateSection,
   listCoachRevisionTemplates,
   visibleDayLooksLikeGame,
   type CoachRevisionTemplateDefinition,
@@ -44,6 +42,19 @@ import {
   applyCoachRevisionDateOverrides,
   type CoachRevisionOverrideRejection,
 } from './coachRevisionOverrideWriter';
+import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
+import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import type {
+  PlanChange,
+  PlanChangeBinScopeId,
+  PlanChangeCategoryId,
+  TemplatePlanChange,
+} from './planChangeTypes';
+export type {
+  PlanChange,
+  PlanChangeBinScopeId,
+  PlanChangeCategoryId,
+} from './planChangeTypes';
 import type { ProgramEditRiskAssessment } from './programEditRiskAssessment';
 import { assessProgramEditWrites } from './programEditWriteGuard';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
@@ -100,15 +111,6 @@ export function isWithinEditHorizon(dateISO: string, todayISO: string): boolean 
  * 'conditioning_sprint' and the strength buckets arrive in later phases
  * (sprint waits on RUNNING_RULES_PLAN.md; strength on generation wiring).
  */
-export type PlanChangeCategoryId =
-  | 'conditioning_light'
-  | 'conditioning_hard'
-  | 'recovery'
-  | 'strength_upper'
-  | 'strength_lower'
-  | 'strength_full'
-  | 'accessories';
-
 export interface PlanChangeCategoryOption {
   id: PlanChangeCategoryId;
   label: string;
@@ -185,17 +187,6 @@ function hasProtectedAnchors(snap: CoachVisibleDaySnapshot): boolean {
   return protectedAnchorsForDaySnapshot(snap).length > 0;
 }
 
-function protectedSectionsToPreserve(
-  snap: CoachVisibleDaySnapshot,
-): CoachVisibleSectionSnapshot[] {
-  const refs = new Set(
-    protectedAnchorsForDaySnapshot(snap)
-      .filter((anchor) => anchor.kind === 'team_training')
-      .map((anchor) => anchor.ref),
-  );
-  return (snap.workout?.sections ?? []).filter((section) => refs.has(section.id));
-}
-
 function categoryAddsSessionKind(category: PlanChangeCategoryId): VisibleSessionKind {
   if (category === 'recovery') return 'recovery';
   if (category.startsWith('strength_') || category === 'accessories') return 'strength';
@@ -217,36 +208,11 @@ function templateAddsSessionKind(
  * that single date only (Sam 2026-07-03: recurring team schedule and
  * future weeks untouched).
  */
-export type PlanChangeBinScopeId =
-  | 'whole_day'
-  | 'strength'
-  | 'conditioning'
-  | 'recovery'
-  | 'team';
-
 export interface PlanChangeBinScope {
   id: PlanChangeBinScopeId;
   label: string;
   sub: string;
 }
-
-export type PlanChange =
-  | { kind: 'remove_session'; date: string; scope?: PlanChangeBinScopeId }
-  | { kind: 'swap_template'; date: string; templateId: string }
-  | { kind: 'add_template'; date: string; templateId: string }
-  | { kind: 'swap_category'; date: string; category: PlanChangeCategoryId }
-  | { kind: 'add_category'; date: string; category: PlanChangeCategoryId }
-  | { kind: 'move_session'; fromDate: string; toDate: string }
-  /** "I'm not 100%" bed-ridden path: clear every remaining session in the
-   *  date's week (today onward, games untouched). One atomic proposal
-   *  through the same validate → apply pipeline. */
-  | { kind: 'shutdown_week'; date: string }
-  /** "Away / holiday" path: clear an EXPLICIT list of days to rest (the
-   *  athlete picked exactly which days they're unavailable). Games are
-   *  left alone; already-rest days are skipped. Same atomic validate →
-   *  apply pipeline as shutdown_week, but scoped to the chosen dates
-   *  rather than the whole rest-of-week. */
-  | { kind: 'clear_days'; dates: string[] };
 
 export interface PlanChangeMoveDestination {
   date: string;
@@ -477,6 +443,29 @@ export function pickTemplateForCategory(args: {
   return pool[dateSeed(args.date) % pool.length];
 }
 
+/** Resolve category intent once so proposal production and override
+ * materialisation consume the identical concrete template change. */
+export function resolveTemplatePlanChange(args: {
+  change: PlanChange;
+  visibleWeek: ResolvedDay[];
+}): TemplatePlanChange | null {
+  if (args.change.kind === 'swap_template' || args.change.kind === 'add_template') {
+    return args.change;
+  }
+  if (args.change.kind !== 'swap_category' && args.change.kind !== 'add_category') {
+    return null;
+  }
+  const picked = pickTemplateForCategory({
+    category: args.change.category,
+    date: args.change.date,
+    visibleWeek: args.visibleWeek,
+  });
+  if (!picked) return null;
+  return args.change.kind === 'swap_category'
+    ? { kind: 'swap_template', date: args.change.date, templateId: picked.templateId }
+    : { kind: 'add_template', date: args.change.date, templateId: picked.templateId };
+}
+
 // ── Advisory warnings ──
 // The athlete can pick anything; the coach still gets a word in first.
 // SINGLE owner of the warning copy + trigger rules — the sheet renders
@@ -534,29 +523,6 @@ export function planChangeWarningForCategory(args: {
 }
 
 // ── Proposal building ──
-
-function templateWorkoutSnapshot(
-  templateId: string,
-  date: string,
-): CoachVisibleWorkoutSnapshot | null {
-  const definition = listCoachRevisionTemplates()
-    .find((template) => template.templateId === templateId);
-  const section = buildCoachRevisionTemplateSection(templateId, date);
-  if (!definition || !section) return null;
-  return {
-    id: `template-${templateId}`,
-    title: definition.label,
-    // Must match what the writer materializes for this template, or the
-    // advertised/written round-trip breaks.
-    workoutType:
-      definition.category === 'recovery'
-        ? 'Recovery'
-        : definition.category === 'strength' || definition.category === 'accessories'
-        ? 'Strength'
-        : 'Conditioning',
-    sections: [section],
-  };
-}
 
 export function buildPlanChangeProposal(
   change: PlanChange,
@@ -621,18 +587,9 @@ export function buildPlanChangeProposal(
     // the template cases — one build path, no duplicate proposal logic.
     case 'swap_category':
     case 'add_category': {
-      const picked = pickTemplateForCategory({
-        category: change.category,
-        date: change.date,
-        visibleWeek: ctx.visibleWeek,
-      });
-      if (!picked) return { error: 'no_template_for_category' };
-      return buildPlanChangeProposal(
-        change.kind === 'swap_category'
-          ? { kind: 'swap_template', date: change.date, templateId: picked.templateId }
-          : { kind: 'add_template', date: change.date, templateId: picked.templateId },
-        ctx,
-      );
+      const resolved = resolveTemplatePlanChange({ change, visibleWeek: ctx.visibleWeek });
+      if (!resolved) return { error: 'no_template_for_category' };
+      return buildPlanChangeProposal(resolved, ctx);
     }
     case 'remove_session': {
       const before = daySnap(change.date);
@@ -712,21 +669,21 @@ export function buildPlanChangeProposal(
       const before = daySnap(change.date);
       if (!before?.workout) return { error: 'nothing_to_swap' };
       if (visibleDayLooksLikeGame(before)) return { error: 'protected_anchor_day' };
-      const workout = templateWorkoutSnapshot(change.templateId, change.date);
-      if (!workout) return { error: 'unknown_template' };
-      const anchorSections = protectedSectionsToPreserve(before);
-      const revisedWorkout = anchorSections.length > 0
-        ? {
-            ...workout,
-            sections: [...workout.sections, ...anchorSections],
-          }
-        : workout;
+      const currentDay = ctx.visibleWeek.find((day) => day.date === change.date)!;
+      const materialized = materializeCanonicalPlanChangeCandidate({
+        change,
+        currentDay,
+        todayISO: ctx.todayISO ?? change.date,
+        canonicalizeWorkout: (date, workout) => validateLiveWorkoutWrite(date, workout),
+      });
+      if (materialized.ok === false) return { error: materialized.code };
       return revision({
         intent: 'replace',
         targetDomain: 'session',
         dates: [change.date],
-        revisedDays: [{ date: change.date, workout: revisedWorkout }],
-        explanation: `Sheet: swap in ${workout.title}`,
+        revisedDays: [materialized.projectedDay],
+        explanation:
+          `Sheet: swap in ${materialized.projectedDay.workout?.title ?? change.templateId}`,
       });
     }
     case 'add_template': {
@@ -734,8 +691,7 @@ export function buildPlanChangeProposal(
       if (before === null) return { error: 'not_visible' };
       const definition = listCoachRevisionTemplates()
         .find((template) => template.templateId === change.templateId);
-      const workout = templateWorkoutSnapshot(change.templateId, change.date);
-      if (!definition || !workout) return { error: 'unknown_template' };
+      if (!definition) return { error: 'unknown_template' };
 
       // Occupied day: STACK the template on top. The day can carry at most
       // two visible parts, and add never duplicates an existing strength or
@@ -761,20 +717,32 @@ export function buildPlanChangeProposal(
         if (addedKind === 'conditioning' && kinds.includes('conditioning')) {
           return { error: 'day_already_has_conditioning' };
         }
+        const currentDay = ctx.visibleWeek.find((day) => day.date === change.date)!;
+        const materialized = materializeCanonicalPlanChangeCandidate({
+          change,
+          currentDay,
+          todayISO: ctx.todayISO ?? change.date,
+          canonicalizeWorkout: (date, workout) => validateLiveWorkoutWrite(date, workout),
+        });
+        if (materialized.ok === false) return { error: materialized.code };
         return revision({
           intent: 'add',
           targetDomain: addedKind === 'strength' ? 'strength' : 'conditioning',
           dates: [change.date],
-          revisedDays: [{
-            date: change.date,
-            workout: {
-              ...before.workout,
-              sections: [...before.workout.sections, ...workout.sections],
-            },
-          }],
-          explanation: `Sheet: add ${workout.title} on top`,
+          revisedDays: [materialized.projectedDay],
+          explanation:
+            `Sheet: add ${materialized.projectedDay.workout?.title ?? definition.label} on top`,
         });
       }
+
+      const currentDay = ctx.visibleWeek.find((day) => day.date === change.date)!;
+      const materialized = materializeCanonicalPlanChangeCandidate({
+        change,
+        currentDay,
+        todayISO: ctx.todayISO ?? change.date,
+        canonicalizeWorkout: (date, workout) => validateLiveWorkoutWrite(date, workout),
+      });
+      if (materialized.ok === false) return { error: materialized.code };
 
       return revision({
         intent: 'add',
@@ -786,8 +754,8 @@ export function buildPlanChangeProposal(
             ? 'strength'
             : 'conditioning',
         dates: [change.date],
-        revisedDays: [{ date: change.date, workout }],
-        explanation: `Sheet: add ${workout.title}`,
+        revisedDays: [materialized.projectedDay],
+        explanation: `Sheet: add ${materialized.projectedDay.workout?.title ?? definition.label}`,
       });
     }
     case 'shutdown_week': {
@@ -1089,6 +1057,10 @@ export function previewPlanChangeRisk(args: {
       args.change.kind === 'remove_session';
     const preview = applyCoachRevisionDateOverrides({
       proposal,
+      planChange: resolveTemplatePlanChange({
+        change: args.change,
+        visibleWeek: args.visibleWeek,
+      }),
       visibleWeek: args.visibleWeek,
       todayISO: args.todayISO,
       validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
@@ -1347,6 +1319,10 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
 
   const apply = applyCoachRevisionDateOverrides({
     proposal,
+    planChange: resolveTemplatePlanChange({
+      change: args.change,
+      visibleWeek: args.visibleWeek,
+    }),
     visibleWeek: args.visibleWeek,
     todayISO: args.todayISO,
     validationPolicy: validationPolicyForPlanChange(args.visibleWeek, args.todayISO),
@@ -1458,8 +1434,15 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
 
   // Category picks name what was chosen — the athlete picked a bucket,
   // so the confirmation must say which session the producer put in.
-  const pickedTitle =
-    proposal.kind === 'revision'
+  const concreteTemplateChange = resolveTemplatePlanChange({
+    change: args.change,
+    visibleWeek: args.visibleWeek,
+  });
+  const pickedTitle = concreteTemplateChange
+    ? listCoachRevisionTemplates().find(
+        (template) => template.templateId === concreteTemplateChange.templateId,
+      )?.label ?? null
+    : proposal.kind === 'revision'
       ? proposal.revisedDays.find((day) => day.workout)?.workout?.title ?? null
       : null;
 

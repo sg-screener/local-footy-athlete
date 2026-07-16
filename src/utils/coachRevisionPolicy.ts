@@ -23,9 +23,39 @@ import {
 } from './coachRevisionProposal';
 import {
   buildCoachRevisionTemplateSection,
+  buildCoachRevisionTemplateWorkout,
   listCoachRevisionTemplates,
+  templateIdFromSection,
   visibleDayLooksLikeGame,
 } from './coachRevisionTemplates';
+import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import { projectVisibleDay } from './visibleProgramProjection';
+import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
+
+function canonicalTemplateSectionSignature(
+  templateId: string,
+  date: string,
+  todayISO: string,
+): string | null {
+  const workout = buildCoachRevisionTemplateWorkout(templateId, date);
+  if (!workout) return null;
+  const canonical = validateLiveWorkoutWrite(date, workout);
+  const projected = projectVisibleDay({
+    day: {
+      date,
+      dayOfWeek: canonical.dayOfWeek,
+      short: 'DAY',
+      isToday: date === todayISO,
+      source: 'manual',
+      indicator: null,
+      workout: canonical,
+    } as ResolvedDay,
+    activeInjury: null,
+    todayISO,
+  }).day;
+  const section = snapshotProjectedDay(projected).workout?.sections[0];
+  return section ? coachRevisionSectionBodySignature(section) : null;
+}
 
 export function coachRevisionValidationPolicyForWeek(
   visibleWeek: ResolvedDay[],
@@ -53,13 +83,55 @@ export function coachRevisionValidationPolicyForWeek(
       const signature = signatureFor(template.templateId, date);
       if (signature) standard.push(signature);
     }
+    // The publishable candidate passes through the normal safety/finalisation
+    // boundary before projection. Authorise that exact registry-derived body
+    // as well as the advertised raw body; free-form sections remain forbidden.
+    // Canonicalisation can be date/phase dependent, so compute every visible
+    // date even for otherwise-static template builders.
+    for (const date of weekDates) {
+      const signature = canonicalTemplateSectionSignature(
+        template.templateId,
+        date,
+        todayISO,
+      );
+      if (signature) standard.push(signature);
+    }
+  }
+  // A template stacked onto an accepted container can legitimately acquire a
+  // container-derived section title while retaining byte-exact registry rows.
+  // Derive those signatures from the same candidate materializer used by the
+  // producer and writer. This authorizes only shapes the registry can actually
+  // materialize against the visible source state; arbitrary free-form content
+  // still has no allowed kind or signature.
+  for (const day of visibleWeek) {
+    if (!day.workout) continue;
+    for (const template of listCoachRevisionTemplates()) {
+      for (const kind of ['add_template', 'swap_template'] as const) {
+        const candidate = materializeCanonicalPlanChangeCandidate({
+          change: {
+            kind,
+            date: day.date,
+            templateId: template.templateId,
+          },
+          currentDay: day,
+          todayISO,
+          canonicalizeWorkout: (date, workout) =>
+            validateLiveWorkoutWrite(date, workout),
+        });
+        if (candidate.ok === false) continue;
+        for (const section of candidate.projectedDay.workout?.sections ?? []) {
+          if (templateIdFromSection(section) !== template.templateId) continue;
+          standard.push(coachRevisionSectionBodySignature(section));
+        }
+      }
+    }
   }
   return {
     allowedChangedDates: visibleWeek.map((day) => day.date),
     // Free-form section adds stay forbidden; the ONLY addable content is the
     // app template registry, matched byte-exactly by body signature.
     allowedAddedSectionKinds: [] as never[],
-    allowedTemplateSectionSignatures: standard,
+    allowedTemplateSectionSignatures: [...new Set(standard)],
     byeOnlyTemplateSectionSignatures: [] as string[],
     byeUnlockedDates: byeUnlockedDatesForWeek(visibleWeek),
     protectedAnchors: protectedAnchorsForVisibleWeek(visibleWeek),

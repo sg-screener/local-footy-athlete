@@ -17,6 +17,8 @@ import {
 } from './coachRevisionTemplates';
 import { logWeekValidation } from '../rules/weekStructureValidator';
 import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
+import type { TemplatePlanChange } from './planChangeTypes';
 
 export interface CoachRevisionOverrideWrite {
   date: string;
@@ -38,6 +40,9 @@ export interface ApplyCoachRevisionOverridesResult {
 
 export interface ApplyCoachRevisionOverridesInput {
   proposal: CoachRevisionProposal;
+  /** Concrete typed tap intent. When present, the writer rebuilds the exact
+   * candidate through the same canonical materializer as proposal creation. */
+  planChange?: TemplatePlanChange | null;
   visibleWeek: ResolvedDay[];
   todayISO: string;
   validationPolicy?: CoachRevisionValidationPolicy;
@@ -114,13 +119,37 @@ export function applyCoachRevisionDateOverrides(
         ? findDonorWorkout(input.visibleWeek, revised.workout.id)
         : null;
 
-    const builtDay = buildWorkoutOverrideFromRevision({
-      beforeDay,
-      revisedDay: revised,
-      todayISO: input.todayISO,
-      donorWorkout,
-      deferWeekAcceptanceToTransaction,
-    });
+    let builtDay = input.planChange && input.planChange.date === revised.date
+      ? materializeCanonicalPlanChangeCandidate({
+          change: input.planChange,
+          currentDay: beforeDay,
+          todayISO: input.todayISO,
+          canonicalizeWorkout: (date, workout) => validateLiveWorkoutWrite(date, workout, {
+            deferWeekAcceptance: deferWeekAcceptanceToTransaction,
+          }),
+        })
+      : buildWorkoutOverrideFromRevision({
+          beforeDay,
+          revisedDay: revised,
+          todayISO: input.todayISO,
+          donorWorkout,
+          deferWeekAcceptanceToTransaction,
+        });
+    if (
+      input.planChange &&
+      input.planChange.date === revised.date &&
+      builtDay.ok
+    ) {
+      const match = visibleDayMatchesAcceptedRevision(builtDay.projectedDay, revised);
+      if (match.ok === false) {
+        builtDay = {
+          ok: false,
+          code: 'projected_override_mismatch',
+          reason:
+            `The built override does not project back to the accepted visible revision. ${match.detail}`,
+        };
+      }
+    }
     if (builtDay.ok === false) {
       rejected.push({
         date: revised.date,
