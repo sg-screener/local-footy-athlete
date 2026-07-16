@@ -143,6 +143,8 @@ export interface ReversibleAdjustmentCreationInput {
   sourceActor: ReversibleAdjustmentActor;
   sourceSurface: ReversibleAdjustmentSurface;
   sourceActionOrIntentId: string;
+  sourceProducer?: 'tap' | 'coach' | 'system';
+  sourceTurnId?: string;
   proposal: AcceptedStateTransactionProposal;
   affectedDates?: readonly string[];
   restorationTarget?: Partial<ReversibleAdjustmentRestorationTarget>;
@@ -977,6 +979,8 @@ export function stageReversibleAdjustmentCreationTransaction(
     sourceActor: input.sourceActor,
     sourceSurface: input.sourceSurface,
     sourceActionOrIntentId: input.sourceActionOrIntentId,
+    ...(input.sourceProducer ? { sourceProducer: input.sourceProducer } : {}),
+    ...(input.sourceTurnId ? { sourceTurnId: input.sourceTurnId } : {}),
     createdAt,
     acceptedRevision: firstStage.context.revision,
     status: 'active',

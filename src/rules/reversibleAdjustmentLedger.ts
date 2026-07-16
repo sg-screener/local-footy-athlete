@@ -127,6 +127,10 @@ export interface ReversibleAdjustmentRecord {
   sourceActor: ReversibleAdjustmentActor;
   sourceSurface: ReversibleAdjustmentSurface;
   sourceActionOrIntentId: string;
+  /** Optional producer detail retained by newer canonical transactions. */
+  sourceProducer?: 'tap' | 'coach' | 'system';
+  /** Optional producer-turn correlation; never part of fixture/session identity. */
+  sourceTurnId?: string;
   createdAt: string;
   acceptedRevision: number;
   status: ReversibleAdjustmentStatus;

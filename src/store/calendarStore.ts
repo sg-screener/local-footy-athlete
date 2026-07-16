@@ -25,6 +25,10 @@ import { todayISOLocal } from '../utils/appDate';
 
 export type CalendarDayType = 'game' | 'rest' | 'noGame';
 
+/**
+ * Compatibility projection for onboarding, legacy Coach/undo and hydration.
+ * Live fixture add/move/remove UI is owned by FixtureMutationTransaction.
+ */
 function commitMark(date: string, mark: CalendarDayType | null, expectedCurrentMark?: CalendarDayType): void {
   // Dynamic loading keeps the accepted transaction owner above the legacy
   // compatibility mirror without creating a store-initialisation cycle.
@@ -44,11 +48,21 @@ interface CalendarState {
   selectedDate: string | null;
 
   // Actions
+  /**
+   * COMPATIBILITY-ONLY FIXTURE WRITE.
+   * Live Home fixture UI must use FixtureMutationTransaction.
+   */
   setGameDay: (date: string) => void;
+  /**
+   * COMPATIBILITY-ONLY FIXTURE WRITE.
+   * Live Home fixture UI must use FixtureMutationTransaction.
+   */
   removeGameDay: (date: string) => void;
   setRestDay: (date: string) => void;
   removeRestDay: (date: string) => void;
+  /** COMPATIBILITY-ONLY fixture suppression write; not a live Home UI door. */
   setNoGame: (date: string) => void;
+  /** COMPATIBILITY-ONLY fixture suppression write; not a live Home UI door. */
   removeNoGame: (date: string) => void;
   setSelectedDate: (date: string | null) => void;
   getGameDaysInRange: (startDate: string, endDate: string) => string[];
@@ -56,6 +70,8 @@ interface CalendarState {
   /**
    * Wipe all 'game' and 'noGame' overrides (leaves 'rest' marks intact).
    * Used when leaving In-season so no stale game state survives.
+   * COMPATIBILITY-ONLY phase-transition cleanup; not a live fixture-control
+   * add/move/remove door.
    */
   clearAllGames: () => void;
   clear: () => void;

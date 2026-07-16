@@ -36,6 +36,7 @@ import type {
 } from '../utils/injuryProgression';
 import type { EquipmentTag } from '../data/exercisePools';
 import type { ConditioningEquipmentModality } from '../types/domain';
+import type { FixtureMutationSourceMetadata } from '../types/fixtureMutation';
 import {
   athleteActionDiagnosticHash,
   athleteActionErrorCode,
@@ -280,7 +281,11 @@ export interface ActiveScheduleConstraint extends ActiveConstraintModifierMetada
   startDate: string;
   lastUpdatedAt: string;
   reasonLabel?: string;
-  source?: 'coach' | 'readiness' | 'tap';
+  source?: 'coach' | 'readiness' | 'tap' | 'system';
+  /** Acknowledged producer metadata for fixture-derived Coach Notes. */
+  fixtureMutationSource?: FixtureMutationSourceMetadata;
+  /** Trace root that owns fixture mutation plus this note projection. */
+  fixtureMutationTraceId?: string;
   appliesToDate?: string;
   /** Optional Mon-Sun ISO of the affected week. */
   weekStartISO?: string;

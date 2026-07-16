@@ -15,9 +15,6 @@ import {
   commitRebuiltProgram,
   decideSweepForCurrentStores,
 } from '../../utils/weekRebuild';
-import {
-  resolvedDaysToGameChangeRows,
-} from '../../utils/gameChangeCoachNotes';
 import type { SeasonPhase, DayOfWeek } from '../../types/domain';
 import { applyPhaseShift } from '../../utils/profileMutations';
 import { dismissActiveCoachNote, selectActiveCoachNotes } from '../../utils/activeCoachNotes';
@@ -64,8 +61,8 @@ import {
 } from './homeScreenConstants';
 import { logger } from '../../utils/logger';
 import {
-  executeHomeGameMutationDurably as executeHomeGameMutation,
-} from './homeGameMutationController';
+  executeFixtureMutationTransaction,
+} from '../../store/fixtureMutationTransaction';
 import { clearReversibleAdjustment } from '../../store/reversibleAdjustmentTransaction';
 import {
   observeRenderedAthleteActionOutcome,
@@ -200,7 +197,7 @@ export function useHomeScreen() {
   } | null>(null);
 
   // Calendar store actions
-  const { setGameDay, removeGameDay, clearAllGames } = useCalendarStore();
+  const { clearAllGames } = useCalendarStore();
 
   // ── Rebuild state ──
   const [rebuildModalVisible, setRebuildModalVisible] = useState(false);
@@ -752,7 +749,7 @@ export function useHomeScreen() {
   // normaliser, no network. Because the build is synchronous and pure,
   // atomicity falls out naturally: we build FIRST, and only if that
   // succeeds do we commit the selected-week overlay AND run the caller's
-  // game-mark commit (setGameDay / setNoGame) together. On failure nothing is
+  // game-mark commit and accepted program publication together. On failure nothing is
   // touched \u2014 no more "Game Day card shows but the week didn't reshape".
   //
   // Returns true when the rebuild + commit succeeded so callers can gate
@@ -763,26 +760,41 @@ export function useHomeScreen() {
   ): Promise<boolean> => {
     clearRebuildError();
     try {
-      const beforeRows = resolvedDaysToGameChangeRows(weekDays);
       if (__DEV__) {
         logger.debug('[GameChange] Canonical local rebuild:', { newGameDay });
       }
-      // THE canonical rebuild door (src/utils/weekRebuild.ts): assembles
-      // the full week context (profile + game overlay, every per-date
-      // override with ownership metadata, every live Coach Note
-      // constraint, the new game anchors), builds the candidate week,
-      // decides the preservation sweep with the pure policy, and commits
-      // game mark + week overlay + sweep ATOMICALLY. Throws before any state
-      // change on failure \u2014 no half-applied weeks possible.
-      const mutation = await executeHomeGameMutation({
-        baseProfile: onboardingData,
-        currentPhase,
-        newGameDay,
-        targetDate: options.targetDate,
-        clearOverlayDate: options.clearOverlayDate,
-        beforeRows,
+      // FixtureMutationTransaction derives the accepted profile, visible
+      // before-state, fixture facts and rolling horizon, then commits the
+      // fixture, repaired program, reversible ledger and Coach Note proof.
+      const action = options.clearOverlayDate
+        ? 'move' as const
+        : newGameDay ? 'add' as const : 'remove' as const;
+      const sourceDate = action === 'move'
+        ? options.clearOverlayDate
+        : action === 'remove' ? options.targetDate : undefined;
+      const mutation = await executeFixtureMutationTransaction({
+        action,
+        fixtureKind: currentPhase === 'Pre-season' ? 'practice_match' : 'game',
+        ...(sourceDate ? { sourceDate } : {}),
+        ...(action !== 'remove' ? { targetDate: options.targetDate } : {}),
+        expectedAcceptedRevision: acceptedRevision,
+        source: {
+          requestedBy: 'athlete',
+          producer: 'tap',
+          surface: 'program_tab',
+          commandId: [
+            'home-fixture',
+            action,
+            sourceDate ?? 'none',
+            options.targetDate,
+            `revision-${acceptedRevision}`,
+          ].join(':'),
+        },
       });
-      if (mutation.outcome === 'impossible') throw mutation.error;
+      if (mutation.outcome === 'no_change') return true;
+      if (mutation.outcome === 'conflicted' || mutation.outcome === 'impossible') {
+        throw mutation.error;
+      }
       if (mutation.traceId) {
         const observationId = `home-fixture-result:${mutation.traceId}`;
         registerAthleteActionUIOutcome({
@@ -887,17 +899,12 @@ export function useHomeScreen() {
       setMode({ type: 'normal' });
       setSelectedIdx(idx);
 
-      if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
-        const targetName = DAY_NUM_TO_NAME[day.dayOfWeek];
-        await rebuildForGameChange(targetName, {
-          targetDate,
-          clearOverlayDate: fromDate,
-        });
-      } else {
-        // setGameDay owns the same-week single-fixture invariant, so this is
-        // one gated calendar/program transaction rather than remove + add.
-        setGameDay(targetDate);
-      }
+      if (currentPhase !== 'In-season' && currentPhase !== 'Pre-season') return;
+      const targetName = DAY_NUM_TO_NAME[day.dayOfWeek];
+      await rebuildForGameChange(targetName, {
+        targetDate,
+        clearOverlayDate: fromDate,
+      });
       return;
     }
 
@@ -915,15 +922,11 @@ export function useHomeScreen() {
       // ATOMIC (2026-07-08): the game mark commits INSIDE the rebuild's
       // success path — build first, then mark + program together. If the
       // rebuild fails, no Game Day card appears over an unchanged week.
-      if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
-        const targetName = DAY_NUM_TO_NAME[day.dayOfWeek];
-        await rebuildForGameChange(targetName, {
-          targetDate: day.date,
-        });
-      } else {
-        // No game-aware engine branch for this phase — mark only.
-        setGameDay(day.date);
-      }
+      if (currentPhase !== 'In-season' && currentPhase !== 'Pre-season') return;
+      const targetName = DAY_NUM_TO_NAME[day.dayOfWeek];
+      await rebuildForGameChange(targetName, {
+        targetDate: day.date,
+      });
       return;
     }
 
@@ -1528,13 +1531,10 @@ export function useHomeScreen() {
     // Deterministic local rebuild via the NO-game branch (Saturday becomes
     // a core peak + conditioning day). Pre-season practice matches use the
     // same anchor logic.
-    if (currentPhase === 'In-season' || currentPhase === 'Pre-season') {
-      await rebuildForGameChange(null, {
-        targetDate: removedDate,
-      });
-    } else {
-      removeGameDay(removedDate);
-    }
+    if (currentPhase !== 'In-season' && currentPhase !== 'Pre-season') return;
+    await rebuildForGameChange(null, {
+      targetDate: removedDate,
+    });
   };
 
   const handleCancelMove = () => {

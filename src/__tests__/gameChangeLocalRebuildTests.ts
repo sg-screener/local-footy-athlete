@@ -484,15 +484,15 @@ console.log('\n── 8. No rebuild path uses blanket clearManualOverrides ─�
     `${__dirname}/../screens/home/useHomeScreen.ts`,
     'utf8',
   ) as string;
-  const gameController = fs.readFileSync(
-    `${__dirname}/../screens/home/homeGameMutationController.ts`,
+  const fixtureTransaction = fs.readFileSync(
+    `${__dirname}/../store/fixtureMutationTransaction.ts`,
     'utf8',
   ) as string;
   ok('useHomeScreen never calls blanket clearManualOverrides()',
     !/\bclearManualOverrides\(\)/.test(src));
   ok('useHomeScreen rebuilds through the canonical weekRebuild door',
-    /executeHomeGameMutation\(/.test(src) &&
-    /rebuildLocalWeek\(/.test(gameController) &&
+    /executeFixtureMutationTransaction\(/.test(src) &&
+    /rebuildLocalWeek\(/.test(fixtureTransaction) &&
     /commitRebuiltProgram\(/.test(src));
 }
 

@@ -35,6 +35,7 @@
     "test:stress-placement": "sucrase-node src/__tests__/stressAwarePlacementTests.ts",
     "test:game-local-rebuild": "sucrase-node src/__tests__/gameChangeLocalRebuildTests.ts",
     "test:fixture-conditioned-replan": "TZ=Australia/Melbourne sucrase-node src/__tests__/fixtureConditionedReplanTests.ts",
+    "test:fixture-mutation-transaction": "TZ=Australia/Melbourne sucrase-node src/__tests__/fixtureMutationTransactionTests.ts",
     "test:chained-mutation-continuity": "TZ=Australia/Melbourne sucrase-node src/__tests__/chainedMutationContinuityTests.ts",
     "test:athlete-session-deletion": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteSessionDeletionTests.ts",
     "test:athlete-session-move": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteSessionMoveTests.ts",

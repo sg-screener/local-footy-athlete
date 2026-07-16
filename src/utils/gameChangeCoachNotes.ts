@@ -9,6 +9,7 @@ import type {
   WeekScopedWorkoutOverlay,
   Workout,
 } from '../types/domain';
+import type { FixtureMutationSourceMetadata } from '../types/fixtureMutation';
 import {
   addDays,
   getMondayForDate,
@@ -37,6 +38,8 @@ export interface GameChangeCoachNoteInput {
   after: readonly GameChangeVisibleDay[];
   todayISO?: string;
   adjustmentId?: string | null;
+  source?: FixtureMutationSourceMetadata;
+  traceId?: string;
 }
 
 const DAY_NAMES: DayOfWeek[] = [
@@ -178,6 +181,11 @@ export function buildGameChangeCoachNoteConstraint(
   const id = input.adjustmentId
     ? `game-change:${input.adjustmentId}`
     : `game-change-${input.weekStartISO}`;
+  const source = input.source?.producer === 'coach'
+    ? 'coach'
+    : input.source?.producer === 'system'
+      ? 'system'
+      : 'tap';
   return {
     id,
     type: 'schedule',
@@ -186,7 +194,9 @@ export function buildGameChangeCoachNoteConstraint(
     startDate: nowISO,
     lastUpdatedAt: nowISO,
     reasonLabel: title,
-    source: 'tap',
+    source,
+    ...(input.source ? { fixtureMutationSource: { ...input.source } } : {}),
+    ...(input.traceId ? { fixtureMutationTraceId: input.traceId } : {}),
     weekStartISO: input.weekStartISO,
     rules: effects,
     safeFocus: [],

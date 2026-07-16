@@ -70,6 +70,7 @@ import { logger } from './logger';
 import type { FixtureMinimalReplanResult } from './fixtureMinimalReplan';
 import { reversibleAdjustmentId as createReversibleAdjustmentId } from '../rules/reversibleAdjustmentLedger';
 import { resolveProfileTargetWeekAvailability } from '../rules/fixtureConditionedAvailability';
+import type { FixtureMutationSourceMetadata } from '../types/fixtureMutation';
 import {
   athleteActionDiagnosticHash,
   athleteActionErrorCode,
@@ -377,6 +378,8 @@ export interface RebuildLocalWeekArgs {
   diagnosticSource?: AthleteActionSource;
   diagnosticActionType?: AthleteActionType;
   diagnosticRoute?: string;
+  /** Explicit fixture producer metadata supplied by the canonical transaction. */
+  fixtureMutationSource?: FixtureMutationSourceMetadata;
 }
 
 /**
@@ -475,7 +478,7 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
       const fixtureKind = args.baseProfile.seasonPhase === 'Pre-season'
         ? 'practice_match'
         : 'game';
-      const sourceActionOrIntentId = [
+      const sourceActionOrIntentId = args.fixtureMutationSource?.commandId ?? [
         fixtureKind,
         fixtureAction,
         args.clearOverlayDate ?? 'none',
@@ -491,9 +494,13 @@ function rebuildLocalWeekWithinTrace(args: RebuildLocalWeekArgs): WeekRebuildRes
         additionalOverlays: adjacentOverlays,
         reversibleAdjustment: {
           kind: `${fixtureKind}_fixture_${fixtureAction}` as ReversibleAdjustmentCreationInput['kind'],
-          sourceActor: args.diagnosticSource === 'coach' ? 'coach' : 'athlete',
-          sourceSurface: args.diagnosticSource === 'coach' ? 'coach_chat' : 'program_tab',
+          sourceActor: args.fixtureMutationSource?.requestedBy ??
+            (args.diagnosticSource === 'coach' ? 'coach' : 'athlete'),
+          sourceSurface: args.fixtureMutationSource?.surface ??
+            (args.diagnosticSource === 'coach' ? 'coach_chat' : 'program_tab'),
           sourceActionOrIntentId,
+          sourceProducer: args.fixtureMutationSource?.producer,
+          sourceTurnId: args.fixtureMutationSource?.turnId,
           adjustmentId,
           affectedDates: [args.clearOverlayDate, targetDate]
             .filter((date): date is string => !!date),
