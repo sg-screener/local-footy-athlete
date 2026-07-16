@@ -97,7 +97,6 @@ import {
   type ActiveSorenessConstraint,
   type ActiveFatigueConstraint,
   type ActiveScheduleConstraint,
-  type ActiveMissedSessionConstraint,
 } from '../store/coachUpdatesStore';
 import { LLMCoachIntentClassifier } from '../utils/llmCoachIntentClassifier';
 import { dispatchCoachIntent } from '../utils/coachIntentDispatcher';
@@ -579,9 +578,9 @@ const classifier = new LLMCoachIntentClassifier({
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // [4] Missed session → informational; activeConstraints[] still updated
+  // [4] Legacy missed-session dispatch is fenced from accepted state
   // ─────────────────────────────────────────────────────────────────────
-  section('[4] missed_session → constraint persisted, card surfaces ack');
+  section('[4] legacy missed_session cannot recreate a constraint');
   {
     resetAll();
     resetFetchSpy();
@@ -596,18 +595,11 @@ const classifier = new LLMCoachIntentClassifier({
     } as any;
 
     const result = await liveDispatchNonInjury("missed Tuesday's session", classifier);
-    eq('replyMode = non_injury_constraint', result.replyMode, 'non_injury_constraint');
+    eq('replyMode requires canonical transaction', result.replyMode, 'session_outcome_transaction_required');
     eq('mutated = false (informational)', result.mutated, false);
 
     const constraints = useCoachUpdatesStore.getState().activeConstraints;
-    const missed = constraints.find((c) => c.type === 'missed_session') as ActiveMissedSessionConstraint;
-    ok('missed_session constraint persisted', !!missed);
-    if (missed) {
-      eq('missed.missedDate threaded', missed.missedDate, '2026-04-28');
-      eq('missed.sessionName threaded', missed.sessionName, 'Tuesday Lower');
-      eq('missed.id deterministic', missed.id, 'missed-2026-04-28');
-      eq('missed.severity = 0', missed.severity, 0);
-    }
+    ok('missed_session constraint not persisted', !constraints.some((c) => c.type === 'missed_session'));
 
     const rawWeek = (sessionResolver as any).resolveWeekWithConditioning(FIXED_MONDAY, {});
     const visibleWeek = projectVisibleWeek(rawWeek);
@@ -617,20 +609,7 @@ const classifier = new LLMCoachIntentClassifier({
       baselineWeek: rawWeek,
       activeConstraints: constraints as any,
     });
-    ok('card derived', !!card);
-    if (card) {
-      ok(
-        'card.activeIssues mentions Missed Tuesday Lower',
-        card.activeIssues.some((i) => /Missed.*Tuesday Lower/i.test(i)),
-        `activeIssues=${JSON.stringify(card.activeIssues)}`,
-      );
-      eq('card.ctaPrefill is missed-session prefill', card.ctaPrefill, 'Update on the missed session: ');
-      ok(
-        'card.keep mentions pick up',
-        card.keep.some((k) => /pick up/i.test(k)),
-        `keep=${JSON.stringify(card.keep)}`,
-      );
-    }
+    ok('no Coach Note is derived from attendance feedback', !card);
   }
 
   // ─────────────────────────────────────────────────────────────────────

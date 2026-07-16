@@ -19,9 +19,15 @@ import {
   getBlockNumberForDate,
   type StoredProgramBlockState,
 } from '../utils/programBlockState';
-import type { ConditioningPerformanceLog } from '../utils/conditioningLogging';
-import type { StrengthExercisePerformanceLog } from '../utils/strengthLogging';
 import type { SessionComponentKind } from '../utils/sessionComponents';
+import type {
+  FeedbackCompletion,
+  FeedbackFeeling,
+  FeedbackPartialReason,
+  FeedbackSkipReason,
+  FeedbackSoreness,
+  SessionOutcomeTransactionReceipt,
+} from '../types/sessionOutcome';
 import { todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
@@ -50,12 +56,10 @@ import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
 import {
   athleteActionDiagnosticHash,
-  beginAthleteActionTrace,
   clearProgramHydrationTrace,
   consumeAthleteActionPersistenceTrace,
   emitAthleteActionEvent,
   programHydrationTrace,
-  queueAthleteActionPersistence,
   runWithAthleteActionTrace,
 } from '../utils/athleteActionDiagnostics';
 import {
@@ -992,23 +996,13 @@ export function canonicaliseHydratedState(
 
 // ─── Session Feedback ───
 
-export type FeedbackFeeling = 'very_easy' | 'easy' | 'good' | 'hard' | 'very_hard';
-export type FeedbackCompletion = 'full' | 'partial' | 'skipped';
-export type FeedbackSoreness = 'none' | 'mild' | 'moderate' | 'high';
-export type FeedbackPartialReason =
-  | 'ran_out_of_time'
-  | 'felt_sore_tight'
-  | 'too_hard_today'
-  | 'equipment_unavailable'
-  | 'other';
-export type FeedbackSkipReason =
-  | 'busy_no_time'
-  | 'sore_tight'
-  | 'injured_niggle'
-  | 'sick_low_energy'
-  | 'didnt_feel_like_it'
-  | 'equipment_unavailable'
-  | 'other';
+export type {
+  FeedbackCompletion,
+  FeedbackFeeling,
+  FeedbackPartialReason,
+  FeedbackSkipReason,
+  FeedbackSoreness,
+} from '../types/sessionOutcome';
 
 export interface SessionFeedbackComponent {
   componentId: string;
@@ -1041,10 +1035,12 @@ export interface SessionFeedback {
    * Optional performance data for trackable conditioning sessions.
    * Easy/recovery sessions intentionally keep using completion + feeling only.
    */
-  conditioning?: ConditioningPerformanceLog;
+  conditioning?: import('../utils/conditioningLogging').ConditioningPerformanceLog;
   /** Main-lift snapshot captured on save for future progression/diary use. */
-  strength?: StrengthExercisePerformanceLog[];
+  strength?: import('../utils/strengthLogging').StrengthExercisePerformanceLog[];
   notes?: string;
+  /** Canonical durable mutation receipt. Missing on legacy persisted feedback. */
+  outcomeReceipt?: SessionOutcomeTransactionReceipt;
 }
 
 export interface ProgramState {
@@ -1166,8 +1162,6 @@ export interface ProgramState {
   /** Clear all system-authored week overlays */
   clearWeekScopedOverlays: () => void;
 
-  /** Save session feedback for a date */
-  setSessionFeedback: (date: string, feedback: SessionFeedback) => void;
   /** Remove feedback for a date */
   removeSessionFeedback: (date: string) => void;
 
@@ -1390,53 +1384,6 @@ export const useProgramStore = create<ProgramState>()(
             exposureContractsByWeek: {},
           },
           validateWeekStarts: affectedWeeks,
-        });
-      },
-
-      setSessionFeedback: (date, feedback) => {
-        const trace = beginAthleteActionTrace({
-          source: 'tap',
-          actionType: 'session_feedback',
-          route: 'session_feedback_form',
-          currentWeekId: mondayForDate(date),
-          sessionDate: date,
-        });
-        runWithAthleteActionTrace(trace, () => {
-          emitAthleteActionEvent(trace, 'athlete_action_parsed', {
-            completionState: feedback.completion,
-            componentCount: feedback.components?.length ?? 0,
-          });
-          emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
-            selectedRoute: 'program_store_session_feedback',
-            producer: 'setSessionFeedback',
-          });
-          const beforeStateHash = athleteActionDiagnosticHash(
-            useProgramStore.getState().sessionFeedback,
-          );
-          queueAthleteActionPersistence(trace);
-          set((state) => ({
-            sessionFeedback: { ...state.sessionFeedback, [date]: feedback },
-          }));
-          const afterStateHash = athleteActionDiagnosticHash(
-            useProgramStore.getState().sessionFeedback,
-          );
-          emitAthleteActionEvent(trace, 'accepted_state_publication_result', {
-            published: true,
-            acceptedStateVersion: useProgramStore.getState().acceptedMaterialContext.revision,
-            beforeStateHash,
-            afterStateHash,
-            outcome: 'accepted',
-          });
-          emitAthleteActionEvent(trace, 'athlete_action_completed', {
-            outcome: 'accepted',
-            internalResultCode: 'session_feedback_saved',
-            finalUiMessageKey: 'session_feedback_saved',
-          });
-          emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
-            uiSurface: 'session_feedback_form',
-            uiOutcome: 'saved',
-            internalResultCode: 'session_feedback_saved',
-          });
         });
       },
 

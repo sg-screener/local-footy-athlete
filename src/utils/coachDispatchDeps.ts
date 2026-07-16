@@ -51,7 +51,6 @@ import {
   buildFatigueConstraintFromIntent,
   buildSorenessConstraintFromIntent,
   buildBusyWeekConstraintFromIntent,
-  buildMissedSessionConstraintFromIntent,
 } from './coachConstraintProducers';
 import {
   buildVerifiedCommunication,
@@ -421,16 +420,6 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
             severityIsExplicit,
           });
           return { reply: guidanceReply(c), mutated: true };
-        }
-        case 'missed_session': {
-          const c = buildMissedSessionConstraintFromIntent(intent, nowISO);
-          upsert(c);
-          logger.debug('[non-injury-constraint] missed_session_applied', {
-            id: c.id, missedDate: c.missedDate, sessionName: c.sessionName,
-          });
-          const target = c.sessionName ?? (c.missedDate ? `the ${c.missedDate} session` : 'that session');
-          const reply = `No worries about ${target} - picking up where the schedule left off, no make-up needed.`;
-          return { reply, mutated: false };
         }
       }
     },

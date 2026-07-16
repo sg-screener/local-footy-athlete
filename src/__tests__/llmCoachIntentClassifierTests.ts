@@ -255,6 +255,7 @@ section('[7] All intent kinds parse correctly');
     'program_explanation',
     'session_mismatch_question',
     'request_program_adjustment',
+    'record_session_outcome',
     'fatigue',
     'missed_session',
     'exercise_swap',

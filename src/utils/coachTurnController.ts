@@ -143,6 +143,7 @@ import {
   semanticDiffHasMaterialReductionForLever,
   type SemanticProgramDiff,
 } from './programSemanticSnapshot';
+import { executeCoachSessionOutcome } from './coachSessionOutcome';
 
 export interface CoachTurnMessage {
   id: string;
@@ -3005,6 +3006,38 @@ export async function handleCoachTurn(
       buildMarker: COACH_TURN_DIAGNOSTIC_MARKER,
       buildFingerprint: coachTurnBuildFingerprint(),
     });
+
+    // Session outcome is an independent typed command, not a program-edit
+    // clarifier answer. Give the semantic classifier first ownership so a
+    // stale pending edit cannot reinterpret attendance/performance feedback.
+    if (input.classifier.classifySessionOutcome) {
+      try {
+        const semanticOutcomeIntent = await input.classifier.classifySessionOutcome(packet);
+        classifiedCoachIntent = semanticOutcomeIntent;
+        const sessionOutcome = await executeCoachSessionOutcome(semanticOutcomeIntent, packet);
+        if (sessionOutcome.kind !== 'not_outcome') {
+          const applied = sessionOutcome.kind === 'recorded';
+          const target = sessionOutcome.kind === 'recorded' ? sessionOutcome.target : null;
+          input.setLastCoachDebug({
+            intent: semanticOutcomeIntent.intent,
+            route: `session_outcome:${sessionOutcome.kind}`,
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: target?.date ?? null,
+            referenceTargetName: target?.workout?.name ?? null,
+            mutationLike: false,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied,
+          });
+          return replyAndFinish(input, 'session-outcome', sessionOutcome.reply);
+        }
+      } catch (error) {
+        logger.warn('[coach-session-outcome] classifier_unavailable', {
+          detail: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+
     if (pendingClarifier) {
       if (isCancelClarifierMessage(input.userMessage.content)) {
         usePendingCoachClarifierStore.getState().clearPending();
@@ -4765,7 +4798,7 @@ export async function handleCoachTurn(
       );
     }
     if (routedCommand && shouldTryLLMCoachCommand(routedCommand, input.userMessage.content)) {
-      const llmIntent = await input.classifier.classify(packet);
+      const llmIntent = classifiedCoachIntent ?? await input.classifier.classify(packet);
       classifiedCoachIntent = llmIntent;
       const adapted = coachCommandFromLLMIntent(llmIntent, packet);
       logger.debug('[coach-llm-command]', {

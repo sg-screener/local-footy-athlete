@@ -187,4 +187,8 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
     });
     return parsed;
   }
+
+  classifySessionOutcome(packet: CoachContextPacket): Promise<CoachIntent> {
+    return this.classify(packet);
+  }
 }

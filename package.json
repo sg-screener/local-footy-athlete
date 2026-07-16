@@ -89,6 +89,7 @@
     "test:coach-update-card-ui": "sucrase-node src/__tests__/coachUpdateCardUITests.ts",
     "test:session-components": "sucrase-node src/__tests__/sessionComponentsTests.ts",
     "test:session-feedback-form": "sucrase-node src/__tests__/sessionFeedbackFormTests.ts",
+    "test:session-outcome-parity": "TZ=Australia/Melbourne sucrase-node src/__tests__/sessionOutcomeParityTests.ts",
     "test:session-logging-ui": "sucrase-node src/__tests__/sessionLoggingUITests.ts",
     "test:session-naming": "sucrase-node src/__tests__/sessionNamingTests.ts",
     "test:strength-intent": "sucrase-node src/__tests__/strengthIntentContractTests.ts",

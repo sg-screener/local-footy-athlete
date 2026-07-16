@@ -12,7 +12,8 @@
  *                          ├─▶ active_injury_followup → progression
  *                          ├─▶ why_didnt_program_change → coachStateInspector (+ reapply)
  *                          ├─▶ request_program_adjustment → UAE (TODO non-injury)
- *                          ├─▶ general_question / fatigue / missed / busy / swap
+ *                          ├─▶ record_session_outcome → shared transaction (before dispatcher)
+ *                          ├─▶ general_question / fatigue / busy / swap
  *                          │   → state-grounded reply, NO mutation by default
  *                          └─▶ unknown intent → safe-fallback general_question
  *
@@ -71,6 +72,7 @@ export type DispatchReplyMode =
   | 'reapplied'
   | 'general_state_grounded'
   | 'non_injury_constraint'
+  | 'session_outcome_transaction_required'
   | 'program_adjustment_clarifier'
   | 'program_adjustment_proposed'
   | 'program_adjustment_applied'
@@ -85,8 +87,7 @@ export type DispatchReplyMode =
 export type NonInjuryConstraintKind =
   | 'fatigue'
   | 'soreness'
-  | 'busy_week'
-  | 'missed_session';
+  | 'busy_week';
 
 export interface DispatchOutcome {
   /**
@@ -413,14 +414,12 @@ export interface DispatchDeps {
   /** Build a state-grounded "should I train?" / general reply. */
   generalReply: (intent: CoachIntent, packet: CoachContextPacket) => string;
   /**
-   * Apply a non-injury constraint (fatigue / soreness / busy_week /
-   * missed_session). Builds the producer constraint, writes it to the
+   * Apply a non-injury constraint (fatigue / soreness / busy_week).
+   * Builds the producer constraint, writes it to the
    * activeConstraints store, and returns a state-grounded reply +
    * whether the program was actually mutated.
    *
-   * `mutated: false` ⇒ informational only (e.g. missed_session). The
-   * card still surfaces, the reply is still produced, and the active
-   * constraint is still persisted — but the visible week is unchanged.
+   * `mutated: false` means no accepted constraint was published.
    */
   applyNonInjuryConstraint: (
     kind: NonInjuryConstraintKind,
@@ -1140,8 +1139,7 @@ function dispatchCoachIntentWithinTrace(
 
     case 'fatigue':
     case 'soreness':
-    case 'busy_week':
-    case 'missed_session': {
+    case 'busy_week': {
       // Non-injury constraint producers — build a typed
       // ActiveConstraint, write it to the store, and let the existing
       // exposure/projection/Coach Update card pipeline surface it.
@@ -1160,6 +1158,22 @@ function dispatchCoachIntentWithinTrace(
         reply: result.reply,
         mutated: result.mutated,
         replyMode: 'non_injury_constraint',
+      };
+    }
+
+    case 'record_session_outcome':
+    case 'missed_session': {
+      // Production classifies and commits session outcomes before this
+      // legacy dispatcher. Never recreate the retired missed-session
+      // constraint/Coach Note path if an older caller reaches this seam.
+      logger.warn('[coach-flow] session outcome bypassed canonical transaction', {
+        intent: intent.intent,
+      });
+      return {
+        handled: true,
+        reply: "I couldn't safely record that session outcome yet, so I haven't changed your plan or feedback.",
+        mutated: false,
+        replyMode: 'session_outcome_transaction_required',
       };
     }
 
@@ -1208,6 +1222,9 @@ function dispatchCoachIntentWithinTrace(
 }
 
 function dispatcherDiagnosticActionType(intent: CoachIntent): AthleteActionType {
+  if (intent.intent === 'record_session_outcome' || intent.intent === 'missed_session') {
+    return 'session_feedback';
+  }
   if (intent.intent === 'new_injury_report' || intent.intent === 'injury_severity_reply' ||
     intent.intent === 'active_injury_followup') return 'injury_change';
   if (intent.intent === 'fatigue' || intent.intent === 'soreness') return 'readiness_change';

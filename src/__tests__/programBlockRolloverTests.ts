@@ -274,21 +274,26 @@ console.log('\n-- Deterministic next-block state and persistence --');
   useProgramStore.getState().setWeekScopedOverlay(oldOverlay);
   useProgramStore.getState().setWeekScopedOverlay(futureOverlay);
 
-  useProgramStore.getState().setSessionFeedback('2026-07-30', {
-    dateStr: '2026-07-30',
-    completion: 'full',
-    feeling: 'easy',
-    strength: [{
-      exerciseId: 'back-squat',
-      workoutExerciseId: 'logged-back-squat',
-      exerciseName: 'Back Squat',
-      prescribedSets: 4,
-      prescribedRepsMin: 5,
-      prescribedRepsMax: 5,
-      weightKg: 100,
-      completion: 'full',
-    }],
-  });
+  useProgramStore.setState((state) => ({
+    sessionFeedback: {
+      ...state.sessionFeedback,
+      '2026-07-30': {
+        dateStr: '2026-07-30',
+        completion: 'full',
+        feeling: 'easy',
+        strength: [{
+          exerciseId: 'back-squat',
+          workoutExerciseId: 'logged-back-squat',
+          exerciseName: 'Back Squat',
+          prescribedSets: 4,
+          prescribedRepsMin: 5,
+          prescribedRepsMax: 5,
+          weightKg: 100,
+          completion: 'full',
+        }],
+      },
+    },
+  }));
   useProgramStore.getState().setWeightOverride('2026-07-30', 'back-squat', 100);
 
   const relevant = selectRelevantRolloverOverlays(

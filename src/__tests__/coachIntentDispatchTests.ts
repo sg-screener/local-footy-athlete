@@ -120,6 +120,9 @@ section('[2] COACH_INTENT_SYSTEM_PROMPT — contains critical rules');
   ok('mentions why_didnt_program_change', /why_didnt_program_change/.test(COACH_INTENT_SYSTEM_PROMPT));
   ok('mentions program_explanation', /program_explanation/.test(COACH_INTENT_SYSTEM_PROMPT));
   ok('mentions session_mismatch_question', /session_mismatch_question/.test(COACH_INTENT_SYSTEM_PROMPT));
+  ok('distinguishes past outcomes from future edits',
+    /record_session_outcome/.test(COACH_INTENT_SYSTEM_PROMPT) &&
+      /Make it easier[\s\S]*request_program_adjustment/.test(COACH_INTENT_SYSTEM_PROMPT));
   ok('teaches upper pull is training terminology', /upper pull/.test(COACH_INTENT_SYSTEM_PROMPT));
 }
 
@@ -266,6 +269,9 @@ section('[6] Mocked classifier dispatch — 7 spec scenarios route correctly');
       case 'session_mismatch_question':
       case 'general_question':
       case 'fatigue':
+      case 'soreness':
+      case 'busy_week':
+      case 'record_session_outcome':
       case 'missed_session':
       case 'exercise_swap':
       case 'new_injury_report':

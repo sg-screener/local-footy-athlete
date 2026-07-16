@@ -67,7 +67,7 @@ const COACH_INTENT_SYSTEM_PROMPT = `You are the intent classifier for a strength
 Your job is to read the athlete's latest message + the surrounding context and return a JSON object that matches this schema:
 
 {
-  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | why_didnt_program_change | program_explanation | session_mismatch_question | request_program_adjustment | fatigue | soreness | busy_week | missed_session | exercise_swap | general_question>",
+  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | why_didnt_program_change | program_explanation | session_mismatch_question | request_program_adjustment | record_session_outcome | fatigue | soreness | busy_week | exercise_swap | general_question>",
   "confidence": <0..1>,
   "needsClarification": <boolean>,
   "clarificationQuestion": "<string if needsClarification>",
@@ -94,7 +94,13 @@ Your job is to read the athlete's latest message + the surrounding context and r
     "effortKind": "<optional: sprint | interval>",
     "trainingIntent": "<optional: hiit | sprint | tempo | aerobic | low_load>",
     "changeKind": "<optional: modality | training_intent | modality_and_training_intent>",
-    "scope": "<optional: one_off | this_week | recurring | permanent>"
+    "scope": "<optional: one_off | this_week | recurring | permanent>",
+    "completion": "<for record_session_outcome: full | partial | skipped>",
+    "feeling": "<optional: very_easy | easy | good | hard | very_hard>",
+    "soreness": "<optional: none | mild | moderate | high>",
+    "partialReason": "<optional: ran_out_of_time | felt_sore_tight | too_hard_today | equipment_unavailable | other>",
+    "skipReason": "<optional: busy_no_time | sore_tight | injured_niggle | sick_low_energy | didnt_feel_like_it | equipment_unavailable | other>",
+    "componentOutcomes": [{ "kind": "<stable component kind such as strength or conditioning>", "completion": "<full | partial | skipped>", "reason": "<optional reason>" }]
   },
   "rationale": "<one sentence>"
 }
@@ -131,7 +137,10 @@ CRITICAL RULES
    - "fatigue" — global tired / cooked / drained / smashed without specific body part ("feeling cooked this week", "exhausted"). Estimate severity 1..10 from intensity language.
    - "soreness" — localised muscle soreness, NOT injury-level pain ("quads are sore", "tight calves", "DOMS"). payload.bodyPart is required. Severity 1..10 from descriptors.
    - "busy_week" — schedule constraint: limited time / capacity ("crazy week ahead", "can only train twice", "exam week"). Set payload.severity=5 by default.
-   - "missed_session" — past tense report of skipping a session ("missed Tuesday", "didn't get to the field session"). Capture payload.requestedDate when given.
+   - "record_session_outcome" — a report about work that already happened: completed, partial, missed/skipped attendance, or how a completed/recent session felt. Capture target, completion, feeling, soreness, reason, and component outcomes.
+   - "I missed it" is record_session_outcome with completion="skipped". It is attendance feedback, not a schedule constraint and not a delete/move request.
+   - "It was too hard" about a completed or recent session is record_session_outcome. "Make it easier" is a future request_program_adjustment.
+   - Post-session soreness belongs in record_session_outcome; equipment_unavailable as an outcome reason is feedback, not a new constraint.
 
 8. Program adjustment requests:
    - "add conditioning to Monday", "chuck some HIIT rowing intervals on Tuesday", "slot in a rower session Friday", "remove conditioning from Friday", "can we move Monday" → request_program_adjustment.
@@ -159,6 +168,7 @@ const VALID_INTENTS = new Set([
   "fatigue",
   "soreness",
   "busy_week",
+  "record_session_outcome",
   "missed_session",
   "exercise_swap",
   "general_question",

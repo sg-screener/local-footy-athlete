@@ -42,6 +42,10 @@ import {
   type MissedSession,
   type MissedSessionResponse,
 } from '../../utils/missedSessions';
+import {
+  commitSessionOutcomeTransaction,
+  createRecordSessionOutcomeIntentFromFeedback,
+} from '../../store/sessionOutcomeTransaction';
 import { todayISOLocal } from '../../utils/appDate';
 import {
   getProgramBlockStateForDate,
@@ -1142,9 +1146,21 @@ export function useHomeScreen() {
   ) => {
     const todayISO = todayISOLocal();
     if (response === 'did_it' || response === 'missed_it') {
-      useProgramStore
-        .getState()
-        .setSessionFeedback(missed.date, missedSessionFeedback(missed.date, response));
+      const workout = weekDays.find((day) => day.date === missed.date)?.workout ?? null;
+      const feedback = missedSessionFeedback(missed.date, response);
+      const result = await commitSessionOutcomeTransaction(
+        createRecordSessionOutcomeIntentFromFeedback({
+          date: missed.date,
+          feedback,
+          workout,
+          todayISO,
+          source: {
+            entryPoint: 'tap',
+            surface: 'missed_session_prompt',
+          },
+        }),
+      );
+      if (!result.ok) logger.warn('[missed-session] feedback transaction failed', result);
       return;
     }
     if (response === 'skip_it') {
@@ -1172,9 +1188,21 @@ export function useHomeScreen() {
     if (!target) {
       // Nowhere open to land it — acknowledge as missed so the athlete
       // isn't stuck, and the prompt clears.
-      useProgramStore
-        .getState()
-        .setSessionFeedback(missed.date, missedSessionFeedback(missed.date, 'missed_it'));
+      const workout = weekDays.find((day) => day.date === missed.date)?.workout ?? null;
+      const feedback = missedSessionFeedback(missed.date, 'missed_it');
+      const result = await commitSessionOutcomeTransaction(
+        createRecordSessionOutcomeIntentFromFeedback({
+          date: missed.date,
+          feedback,
+          workout,
+          todayISO,
+          source: {
+            entryPoint: 'tap',
+            surface: 'missed_session_prompt_no_move_target',
+          },
+        }),
+      );
+      if (!result.ok) logger.warn('[missed-session] fallback feedback transaction failed', result);
       return;
     }
     const result = await executeProgramControlActionDurably({

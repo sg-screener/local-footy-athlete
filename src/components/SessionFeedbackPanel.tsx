@@ -77,6 +77,10 @@ import {
 } from '../utils/sessionComponents';
 import { buildStrengthPerformanceLogs, collectLoggedStrengthSets } from '../utils/strengthLogging';
 import { useWorkoutLogStore } from '../store/workoutLogStore';
+import {
+  commitSessionOutcomeTransaction,
+  createRecordSessionOutcomeIntentFromFeedback,
+} from '../store/sessionOutcomeTransaction';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
@@ -191,7 +195,6 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
   const existing = useProgramStore((s: any) => s.sessionFeedback[date]) as
     | SessionFeedback
     | undefined;
-  const setSessionFeedback = useProgramStore((s: any) => s.setSessionFeedback);
   const weightOverrides = useProgramStore((s: any) => s.weightOverrides[date]);
   const conditioningConfig = useMemo(
     () => getConditioningLoggingConfig(workout),
@@ -467,7 +470,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     conditioningRpe,
   ]);
 
-  const handleSave = useCallback(() => {
+  const handleSave = useCallback(async () => {
     if (!canSave || !activeCompletion) return;
     const conditioning = buildConditioningLog();
     const conditioningRpeValue = conditioning?.rpe;
@@ -500,7 +503,18 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
       strength,
     });
     if (!feedback) return;
-    setSessionFeedback(date, feedback);
+    const result = await commitSessionOutcomeTransaction(
+      createRecordSessionOutcomeIntentFromFeedback({
+        date,
+        feedback,
+        workout,
+        source: {
+          entryPoint: 'tap',
+          surface: 'session_feedback_panel',
+        },
+      }),
+    );
+    if (!result.ok) return;
     onSave?.();
   }, [
     canSave,
@@ -518,7 +532,6 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
     weightOverrides,
     notes,
     date,
-    setSessionFeedback,
     onSave,
   ]);
 

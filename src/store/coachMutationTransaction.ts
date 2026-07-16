@@ -50,6 +50,7 @@ type AcceptedProgramStateSnapshot = Pick<
   | 'userRemovalConstraints'
   | 'reversibleAdjustmentLedger'
   | 'exposureContractsByWeek'
+  | 'sessionFeedback'
 >;
 
 interface AcceptedMirrorSnapshot {
@@ -118,6 +119,8 @@ export async function runCoachMutationTransaction<T>(args: {
   extraDates?: readonly string[];
   /** Permit a durable accepted-envelope change with no visible program diff. */
   allowAcceptedStateOnlyChange?: boolean;
+  /** Permit an identical semantic retry and re-acknowledge the durable envelope. */
+  allowIdempotentNoop?: boolean;
   mutate: () => T;
   didApply: (value: T) => boolean;
   verifyCandidate?: (args: {
@@ -194,7 +197,9 @@ export async function runCoachMutationTransaction<T>(args: {
       if (!diff.hasProgrammingChange) {
         const acceptedStateChanged = acceptedStateFingerprint() !==
           acceptedStateFingerprint(preProgram);
-        if (!args.allowAcceptedStateOnlyChange || !acceptedStateChanged) {
+        const acceptedOnlyChangeAllowed =
+          args.allowAcceptedStateOnlyChange && acceptedStateChanged;
+        if (!acceptedOnlyChangeAllowed && !args.allowIdempotentNoop) {
           await restoreExactPreState({
             token,
             preProgram,
@@ -318,6 +323,7 @@ export function captureAcceptedProgramState(): AcceptedProgramStateSnapshot {
     userRemovalConstraints: state.userRemovalConstraints,
     reversibleAdjustmentLedger: state.reversibleAdjustmentLedger,
     exposureContractsByWeek: state.exposureContractsByWeek,
+    sessionFeedback: state.sessionFeedback,
   });
 }
 
