@@ -9,6 +9,10 @@ tags:
     file: ../common/reset-seed.yaml
     env:
       SEED_ID: fixture-move
+- scrollUntilVisible:
+    element:
+      id: "day-row-sat"
+    direction: DOWN
 - tapOn:
     id: "day-row-sat"
 - tapOn:

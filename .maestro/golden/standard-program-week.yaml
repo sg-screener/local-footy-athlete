@@ -25,7 +25,15 @@ tags:
     id: "day-row-thu"
 - assertVisible:
     id: "day-row-fri"
+- scrollUntilVisible:
+    element:
+      id: "day-row-sat"
+    direction: DOWN
 - assertVisible:
     id: "day-row-sat"
+- scrollUntilVisible:
+    element:
+      id: "day-row-sun"
+    direction: DOWN
 - assertVisible:
     id: "day-row-sun"

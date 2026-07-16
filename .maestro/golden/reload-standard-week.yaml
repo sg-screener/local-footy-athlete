@@ -15,5 +15,9 @@ tags:
       SEED_ID: standard-in-season-week
 - assertVisible:
     id: "program-screen"
+- scrollUntilVisible:
+    element:
+      id: "day-row-sat-state-fixture"
+    direction: DOWN
 - assertVisible:
     id: "day-row-sat-state-fixture"
