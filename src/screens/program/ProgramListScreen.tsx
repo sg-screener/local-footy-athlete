@@ -17,6 +17,7 @@ import { Card } from '../../components/common/Card';
 import { Badge } from '../../components/common/Badge';
 import { useProgramStore } from '../../store/programStore';
 import type { ProgramStackParamList } from '../../types/navigation';
+import { todayISOLocal } from '../../utils/appDate';
 
 type ProgramListScreenProps = NativeStackScreenProps<ProgramStackParamList, 'ProgramList'>;
 
@@ -99,7 +100,7 @@ export default function ProgramListScreen({ navigation }: ProgramListScreenProps
 
   const getWeeksCompleted = (program: typeof MOCK_PROGRAM) => {
     const startDate = new Date(program.startDate);
-    const today = new Date();
+    const today = new Date(`${todayISOLocal()}T12:00:00`);
     const weeksElapsed = Math.floor(
       (today.getTime() - startDate.getTime()) / (7 * 24 * 60 * 60 * 1000)
     );

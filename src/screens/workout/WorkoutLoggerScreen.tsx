@@ -25,8 +25,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { SetLoggerRow } from './SetLoggerRow';
 import { ExerciseVideoPlayer } from './ExerciseVideoPlayer';
 import { CompletionSummary } from './CompletionSummary';
-import { format } from 'date-fns';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
+import { todayISOLocal } from '../../utils/appDate';
 
 type WorkoutLoggerScreenProps = NativeStackScreenProps<HomeStackParamList, 'WorkoutLogger'>;
 
@@ -74,7 +74,7 @@ export default function WorkoutLoggerScreen({ route, navigation }: WorkoutLogger
           id: uuidv4(),
           userId: '', // Will be set when saving
           workoutId: todayWorkout.id,
-          loggedDate: format(new Date(), 'yyyy-MM-dd'),
+          loggedDate: todayISOLocal(),
           completed: false,
           synced: false,
           sets: [],

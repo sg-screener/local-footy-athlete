@@ -19,7 +19,7 @@ import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
 import { PowerPrimerSection } from '../../components/PowerPrimerSection';
 import { TrunkSupportSection } from '../../components/TrunkSupportSection';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
-import { shortWeekdayDateLabel } from '../../utils/appDate';
+import { shortWeekdayDateLabel, todayISOLocal } from '../../utils/appDate';
 import {
   executeProgramControlAction,
   executeProgramControlActionDurably,
@@ -520,7 +520,7 @@ export default function DayWorkoutScreenV2() {
       reason: SwapReason | ExerciseConcern,
       primaryInjury: TapSwapPrimaryInjury | null = null,
     ): SuggestedSwap => {
-      const dateISO = date ?? new Date().toISOString().slice(0, 10);
+      const dateISO = date ?? todayISOLocal();
       const environment = resolveTapSwapEnvironment({
         date: dateISO,
         profile: useProfileStore.getState().onboardingData,

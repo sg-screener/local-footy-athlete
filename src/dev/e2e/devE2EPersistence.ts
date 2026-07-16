@@ -10,9 +10,20 @@ import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useUIStore } from '../../store/uiStore';
-import { isDevE2ESeedId, type DevE2ESeedId } from './devE2ESeedIds';
 import { semanticFingerprint } from './semanticFingerprint';
-import type { AthleteActionTraceCheckpointV2 } from './AthleteActionTraceCoordinator';
+import {
+  clearDevE2ECheckpointRecord,
+  readDevE2ECheckpointRecord,
+  writeDevE2ECheckpointRecord,
+  type DevE2ECheckpointRecord,
+  type DevE2EFingerprintMap,
+} from './devE2ECheckpoint';
+
+export {
+  DEV_E2E_CHECKPOINT_STORAGE_KEY,
+  type DevE2ECheckpointRecord,
+  type DevE2EFingerprintMap,
+} from './devE2ECheckpoint';
 
 type PersistedStore = {
   getState: () => any;
@@ -123,19 +134,7 @@ const semanticStores: SemanticStoreDescriptor[] = [
   },
 ];
 
-export type DevE2EFingerprintMap = Record<string, string>;
-
-export const DEV_E2E_CHECKPOINT_STORAGE_KEY = 'dev-e2e-checkpoint-v2';
 const LEGACY_DEV_E2E_CHECKPOINT_STORAGE_KEY = 'dev-e2e-checkpoint-v1';
-
-export interface DevE2ECheckpointRecord {
-  version: 1 | 2;
-  seedId: DevE2ESeedId;
-  checkpointId: DevE2ESeedId;
-  fingerprints: DevE2EFingerprintMap;
-  unfinishedAthleteActionTraces?: AthleteActionTraceCheckpointV2;
-}
-
 async function waitForStoreHydration(descriptor: SemanticStoreDescriptor): Promise<void> {
   if (descriptor.store.persist.hasHydrated()) return;
   await descriptor.store.persist.rehydrate();
@@ -203,26 +202,16 @@ export async function waitForDevE2EPersistence(
 }
 
 export async function writeDevE2ECheckpoint(record: DevE2ECheckpointRecord): Promise<void> {
-  await AsyncStorage.setItem(DEV_E2E_CHECKPOINT_STORAGE_KEY, JSON.stringify(record));
+  await writeDevE2ECheckpointRecord(record);
 }
 
 export async function readDevE2ECheckpoint(): Promise<DevE2ECheckpointRecord | null> {
-  const raw = await AsyncStorage.getItem(DEV_E2E_CHECKPOINT_STORAGE_KEY) ??
-    await AsyncStorage.getItem(LEGACY_DEV_E2E_CHECKPOINT_STORAGE_KEY);
-  if (!raw) return null;
-  const parsed = JSON.parse(raw) as Partial<DevE2ECheckpointRecord>;
-  if ((parsed.version !== 1 && parsed.version !== 2) ||
-    !parsed.seedId || !isDevE2ESeedId(parsed.seedId) ||
-    !parsed.checkpointId || !isDevE2ESeedId(parsed.checkpointId) ||
-    !parsed.fingerprints || typeof parsed.fingerprints !== 'object') {
-    return null;
-  }
-  return parsed as DevE2ECheckpointRecord;
+  return readDevE2ECheckpointRecord();
 }
 
 export async function clearDevE2ECheckpoint(): Promise<void> {
   await Promise.all([
-    AsyncStorage.removeItem(DEV_E2E_CHECKPOINT_STORAGE_KEY),
+    clearDevE2ECheckpointRecord(),
     AsyncStorage.removeItem(LEGACY_DEV_E2E_CHECKPOINT_STORAGE_KEY),
   ]);
 }

@@ -38,6 +38,8 @@ import {
   type ActivePreferenceConstraint,
 } from '../store/coachUpdatesStore';
 import {
+  addDays,
+  getMondayStr,
   resolveDateWithConditioning,
 } from './sessionResolver';
 import { buildScheduleStateImperative } from './coachWeekDiff';
@@ -784,12 +786,7 @@ export function addExerciseAtDate(input: AddExerciseAtDateInput): ActionResult {
  */
 export function addWeeklyOverride(input: AddWeeklyOverrideInput): ActionResult {
   const { rule } = input;
-  const today = new Date();
-  const dow = today.getDay();
-  const daysToMonday = dow === 0 ? -6 : -(dow - 1);
-  const monday = new Date(today);
-  monday.setDate(today.getDate() + daysToMonday);
-  monday.setHours(12, 0, 0, 0);
+  const monday = getMondayStr(0);
 
   const setManualOverride = useProgramStore.getState().setManualOverride;
   const removeManualOverride = useProgramStore.getState().removeManualOverride;
@@ -804,9 +801,7 @@ export function addWeeklyOverride(input: AddWeeklyOverrideInput): ActionResult {
   // Wed-upper week writes one override (Mon), not two.
   let touched = 0;
   for (let i = 0; i < 7; i++) {
-    const probe = new Date(monday);
-    probe.setDate(monday.getDate() + i);
-    const date = `${probe.getFullYear()}-${String(probe.getMonth() + 1).padStart(2, '0')}-${String(probe.getDate()).padStart(2, '0')}`;
+    const date = addDays(monday, i);
     const current = resolveDateWorkout(date);
     if (!current) continue;
 

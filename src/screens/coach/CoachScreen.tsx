@@ -80,6 +80,7 @@ import { filterLegacyCoachActions } from '../../utils/legacyCoachActionFilter';
 import { logCoachBuildFingerprint, COACH_BUILD_INFO } from '../../utils/coachBuildInfo';
 import { insertProgramSummaryBeforeFinalClose } from '../../utils/coachReplyComposer';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
+import { todayISOLocal } from '../../utils/appDate';
 import {
   handleCoachTurn,
   type CoachTurnDebug,
@@ -207,16 +208,6 @@ if (__DEV__ && shouldCreateCoachRevisionProposalAdapter(clientEnv.coachRevisionP
       missing: clientEnv.missing,
     });
   }
-}
-
-/** Local-clock today as YYYY-MM-DD. The UAE is deterministic — it never
- *  reads the clock itself; the caller supplies todayISO. */
-function todayISOLocal(): string {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
 }
 
 function isTodaySessionQuestion(message: string): boolean {

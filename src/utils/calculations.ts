@@ -12,6 +12,7 @@
  */
 
 import type { LoggedWorkout, LoggedSet } from '../types/domain';
+import { todayISOLocal } from './appDate';
 
 /**
  * Estimate one rep maximum using the Epley formula
@@ -196,7 +197,7 @@ export function calculateStreak(loggedWorkouts: LoggedWorkout[]): number {
   if (loggedWorkouts.length === 0) return 0;
 
   let streak = 0;
-  const today = new Date();
+  const today = new Date(`${todayISOLocal()}T12:00:00`);
   const oneDay = 24 * 60 * 60 * 1000;
 
   // Sort workouts by date in ascending order

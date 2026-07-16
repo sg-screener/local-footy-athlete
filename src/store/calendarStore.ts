@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
+import { todayISOLocal } from '../utils/appDate';
 
 /**
  * Calendar Store — Game Day Management
@@ -90,7 +91,7 @@ export const useCalendarStore = create<CalendarState>()(
 
       getNextGameDay: (fromDate) => {
         const { markedDays } = get();
-        const from = fromDate || new Date().toISOString().split('T')[0];
+        const from = fromDate || todayISOLocal();
         const gameDays = Object.entries(markedDays)
           .filter(([date, type]) => type === 'game' && date >= from)
           .map(([date]) => date)

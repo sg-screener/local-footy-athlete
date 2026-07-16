@@ -4,6 +4,7 @@ import { useCalendarStore } from '../store/calendarStore';
 import { computeGameDatesForBlock } from './sessionResolver';
 import { logger } from './logger';
 import { acceptedStatePresenceSummary } from '../store/acceptedStateColdStart';
+import { dayOfWeekForISODate, todayISOLocal } from './appDate';
 
 export type OnboardingPipelineStage =
   | 'generation'
@@ -105,8 +106,7 @@ export function seedOnboardingProgram(args: {
     runAcceptedStateStep('set_current_microcycle', () =>
       programStore.setCurrentMicrocycle(firstMicrocycle));
 
-    const today = new Date();
-    const dayOfWeek = today.getDay();
+    const dayOfWeek = dayOfWeekForISODate(todayISOLocal());
     const todayWorkout = firstMicrocycle.workouts?.find(
       (w) => w.dayOfWeek === dayOfWeek,
     );

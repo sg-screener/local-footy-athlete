@@ -63,6 +63,7 @@ import {
 } from '../rules/injurySeverityBands';
 import { classifyExerciseRiskForBucket } from '../rules/injuryExerciseRisk';
 import { getReplacementForBucket } from './injurySessionClassifier';
+import { todayISOLocal } from './appDate';
 
 // ─── Types ───
 
@@ -264,16 +265,6 @@ export function extractInjuryContext(text: string): InjuryContext | null {
     isLowerLimb: bucket ? LOWER_LIMB_BUCKETS.has(bucket) : false,
     isUpperLimb: bucket ? UPPER_LIMB_BUCKETS.has(bucket) : false,
   };
-}
-
-// ─── Date helpers ───
-
-function todayISOLocal(): string {
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
 }
 
 // ─── Per-exercise classification ───

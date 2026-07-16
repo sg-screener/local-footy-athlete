@@ -12,6 +12,10 @@ import {
   getDevE2EStateSnapshot,
 } from '../dev/e2e/devE2EState';
 import { semanticFingerprint } from '../dev/e2e/semanticFingerprint';
+import {
+  createDevE2EClockReceiptForSeed,
+  type DevE2EClockReceipt,
+} from '../dev/e2e/DevE2EClock';
 
 let passed = 0;
 const failures: string[] = [];
@@ -92,15 +96,32 @@ async function main() {
   };
   let persistenceCalls = 0;
   const finalPersistence = deferred<Record<string, string>>();
+  let activeClock: DevE2EClockReceipt | null = null;
+  const clockReceipt = createDevE2EClockReceiptForSeed(
+    'standard-in-season-week',
+    '2026-07-13T00:00:00.000Z',
+  );
   const checkpoint = {
-    version: 1 as const,
+    version: 2 as const,
     seedId: 'standard-in-season-week' as const,
     checkpointId: 'standard-in-season-week' as const,
     fingerprints: { state: 'ready' },
+    clockFingerprint: clockReceipt.semanticFingerprint,
   };
   let writtenCheckpoint: typeof checkpoint | null = null;
   const deps: DevE2ECoordinatorDeps = {
     waitForHydration: async () => { events.push('hydrated'); },
+    clearClock: async () => {
+      events.push('clock-clear');
+      activeClock = null;
+    },
+    installClock: async () => {
+      events.push('clock-install');
+      activeClock = clockReceipt;
+      return clockReceipt;
+    },
+    readClockReceipt: () => activeClock,
+    readTodayISO: () => '2026-07-13',
     resetLocalState: () => {
       events.push('reset');
       dirty = Object.fromEntries(Object.keys(dirty).map((key) => [key, false])) as typeof dirty;
@@ -164,6 +185,10 @@ async function main() {
   ok('ready appears only after persistence matches',
     getDevE2EStateSnapshot().phase === 'seed_ready');
   ok('program is cleared before seed build', events.indexOf('reset') < events.indexOf('build'));
+  ok('old clock is cleared before local state reset',
+    events.indexOf('clock-clear') < events.indexOf('reset'));
+  ok('seed clock is installed before seed build',
+    events.indexOf('clock-install') < events.indexOf('build'));
   ok('empty persistence flush precedes build', events.indexOf('persist-1') < events.indexOf('build'));
   ok('onboarding completes after auxiliary state', events.indexOf('auxiliary') < events.indexOf('complete'));
   ok('checkpoint succeeds after a ready seed', await coordinator.checkpoint('fixture-move'));
@@ -206,6 +231,7 @@ async function main() {
     },
   };
   const reload = new DevE2ESeedCoordinator(true, reloadDeps);
+  activeClock = clockReceipt;
   const validatingReload = reload.validateReloadCheckpoint();
   await Promise.resolve();
   await Promise.resolve();
@@ -216,6 +242,25 @@ async function main() {
   ok('reload checkpoint validates', await validatingReload);
   ok('reload validation never rebuilds or reseeds', buildCalls === 0);
   ok('reload marker uses preserved seed', getDevE2EStateSnapshot().phase === 'reload_ready');
+
+  const clockMismatch = new DevE2ESeedCoordinator(true, {
+    ...reloadDeps,
+    waitForHydration: async () => {},
+    readClockReceipt: () => createDevE2EClockReceiptForSeed(
+      'fixture-move',
+      '2026-07-13T00:00:00.000Z',
+    ),
+  });
+  let clockMismatchRejected = false;
+  try {
+    await clockMismatch.validateReloadCheckpoint();
+  } catch {
+    clockMismatchRejected = true;
+  }
+  ok('reload rejects a checkpoint bound to a different clock receipt', clockMismatchRejected);
+  ok('reload clock mismatch exposes the exact seed identities',
+    getDevE2EStateSnapshot().error ===
+      'DevE2EClock reload mismatch: checkpoint seed=standard-in-season-week receipt seed=fixture-move.');
 
   const mismatch = new DevE2ESeedCoordinator(true, {
     ...reloadDeps,

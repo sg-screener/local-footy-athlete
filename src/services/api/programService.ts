@@ -1,6 +1,7 @@
 import { supabase, handleSupabaseError } from './supabaseClient';
 import { TrainingProgram, Microcycle, Workout } from '../../types/domain';
 import { ApiResponse } from '../../types/api';
+import { dayOfWeekForISODate, todayISOLocal } from '../../utils/appDate';
 
 /**
  * Get the current active training program for a user
@@ -163,16 +164,16 @@ export async function createProgram(
  */
 export async function getTodayWorkout(programId: string): Promise<ApiResponse<Workout | null>> {
   try {
-    const today = new Date();
-    const dayOfWeek = today.getDay();
+    const today = todayISOLocal();
+    const dayOfWeek = dayOfWeekForISODate(today);
 
     // Get the current microcycle
     const { data: microcycle, error: mcError } = await supabase
       .from('microcycles')
       .select('id')
       .eq('program_id', programId)
-      .lte('start_date', today.toISOString().split('T')[0])
-      .gte('end_date', today.toISOString().split('T')[0])
+      .lte('start_date', today)
+      .gte('end_date', today)
       .single();
 
     if (mcError) {

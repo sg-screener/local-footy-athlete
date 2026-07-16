@@ -39,14 +39,32 @@ const entrySource = fs.readFileSync(
   path.join(root, 'src', 'dev', 'e2e', 'devE2EEntry.tsx'),
   'utf8',
 );
+const clockSource = fs.readFileSync(
+  path.join(root, 'src', 'dev', 'e2e', 'DevE2EClock.ts'),
+  'utf8',
+);
+const clockPersistenceSource = fs.readFileSync(
+  path.join(root, 'src', 'dev', 'e2e', 'devE2EClockPersistence.ts'),
+  'utf8',
+);
 const appGuard = appSource.indexOf('if (__DEV__)');
 const appRequire = appSource.indexOf("require('./src/dev/e2e/devE2EEntry')");
 const releaseReturn = entrySource.indexOf('if (!isDev)');
 const coordinatorRequire = entrySource.indexOf("require('./defaultDevE2ESeedCoordinator')");
 
 ok('App loads the entry only inside __DEV__', appGuard >= 0 && appRequire > appGuard);
+ok('development restores the clock before importing RootNavigator stores',
+  appSource.includes('prepareDevE2EAppLaunch().then((ready) => {') &&
+    appSource.indexOf('prepareDevE2EAppLaunch().then((ready) => {') <
+      appSource.lastIndexOf("require('./src/navigation/RootNavigator')"));
+ok('release imports RootNavigator without the development bootstrap',
+  /} else \{[\s\S]*ReleaseRootNavigator = require\('\.\/src\/navigation\/RootNavigator'\)\.default;/.test(appSource));
 ok('release refusal occurs before coordinator import', releaseReturn >= 0 && coordinatorRequire > releaseReturn);
 ok('entry has no production or env override', !/EXPO_PUBLIC|process\.env/.test(entrySource));
+ok('clock has no public env or diagnostics override',
+  !/EXPO_PUBLIC|process\.env|athleteActionDiagnostics/.test(
+    `${clockSource}\n${clockPersistenceSource}`,
+  ));
 ok('release refusal returns installed false', /if \(!isDev\)[\s\S]*installed: false/.test(entrySource));
 ok('dev E2E errors expose their exact reason to accessibility',
   entrySource.includes('testID="e2e-seed-error-reason"') &&

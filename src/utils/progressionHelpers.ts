@@ -18,6 +18,7 @@ import type {
   LoggedWorkout,
   LoggedSet,
 } from '../types/domain';
+import { formatLocalISODate, todayISOLocal } from './appDate';
 
 // ─── Types ───
 
@@ -328,11 +329,11 @@ export function countConsecutiveBuildWeeks(
   }
 
   // Walk backwards from current week
-  const now = new Date();
+  const now = new Date(`${todayISOLocal()}T12:00:00`);
   let count = 0;
   for (let i = 0; i < 12; i++) {
     const checkDate = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-    const weekKey = getISOWeekKey(checkDate.toISOString().split('T')[0]);
+    const weekKey = getISOWeekKey(formatLocalISODate(checkDate));
     if (weekSet.has(weekKey)) {
       count++;
     } else {

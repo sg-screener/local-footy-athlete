@@ -14,6 +14,7 @@ import { spacing, borderRadius } from '../../theme/spacing';
 import { Text } from '../../components/common/Text';
 import { Card } from '../../components/common/Card';
 import { Button } from '../../components/common/Button';
+import { todayISOLocal } from '../../utils/appDate';
 
 // Mock today's workouts
 const MOCK_TODAYS_WORKOUTS = [
@@ -137,7 +138,11 @@ export const LogWorkoutScreen = () => {
             Choose a Workout
           </Text>
           <Text variant="label" style={{ color: colors.text.tertiary }}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+            {new Date(`${todayISOLocal()}T12:00:00`).toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'short',
+              day: 'numeric',
+            })}
           </Text>
         </View>
 

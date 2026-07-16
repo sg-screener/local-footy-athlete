@@ -136,7 +136,7 @@ function dateAtNoonISO(dateISO: string): string {
 }
 
 function dateFromOption(todayISO?: string): Date {
-  return todayISO ? new Date(`${todayISO}T12:00:00`) : new Date();
+  return new Date(`${todayISO ?? todayISOLocal()}T12:00:00`);
 }
 
 function currentPersistedProgram(

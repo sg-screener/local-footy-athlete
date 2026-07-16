@@ -47,6 +47,12 @@ import {
 import { buildActiveCoachNotes } from '../../utils/activeCoachNotes';
 import { semanticFingerprintV2 } from '../../utils/semanticFingerprintV2';
 import type { DevE2EFingerprintMap } from './devE2EPersistence';
+import {
+  clearPersistedDevE2EClock,
+  readActiveDevE2EClockReceipt,
+  replacePersistedDevE2EClockForSeed,
+} from './devE2EClockPersistence';
+import { todayISOLocal } from '../../utils/appDate';
 
 function clearLocalStateThroughPublicAPIs(): void {
   clearAthleteActionDiagnosticEvents();
@@ -236,6 +242,10 @@ function captureReloadEvidence(
 const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   waitForHydration: waitForDevE2EHydration,
   resetLocalState: clearLocalStateThroughPublicAPIs,
+  clearClock: clearPersistedDevE2EClock,
+  installClock: replacePersistedDevE2EClockForSeed,
+  readClockReceipt: readActiveDevE2EClockReceipt,
+  readTodayISO: todayISOLocal,
   waitForPersistence: waitForDevE2EPersistence,
   buildSeed: buildDevE2ESeed,
   writeProfile: (seed) => useProfileStore.getState().updateOnboardingData(seed.profile),

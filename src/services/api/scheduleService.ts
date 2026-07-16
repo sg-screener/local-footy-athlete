@@ -1,6 +1,8 @@
 import { supabase, handleSupabaseError } from './supabaseClient';
 import { ScheduleEvent } from '../../types/domain';
 import { ApiResponse } from '../../types/api';
+import { todayISOLocal } from '../../utils/appDate';
+import { addDaysISO } from '../../utils/programBlockState';
 
 /**
  * Get events within a date range
@@ -184,11 +186,8 @@ export async function deleteEvent(eventId: string): Promise<ApiResponse<null>> {
  */
 export async function getUpcomingEvents(userId: string): Promise<ApiResponse<ScheduleEvent[]>> {
   try {
-    const today = new Date();
-    const nextWeek = new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000);
-
-    const todayStr = today.toISOString().split('T')[0];
-    const nextWeekStr = nextWeek.toISOString().split('T')[0];
+    const todayStr = todayISOLocal();
+    const nextWeekStr = addDaysISO(todayStr, 7);
 
     const { data, error } = await supabase
       .from('schedule_events')

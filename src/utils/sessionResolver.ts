@@ -78,6 +78,7 @@ import {
   buildPrescriptionEffectEvidence,
 } from './deterministicCoachNoteFactory';
 import { createDerivedSessionProvenance } from '../rules/derivedSessionProvenance';
+import { todayISOLocal } from './appDate';
 
 export { computeBlockBounds } from './programBlockState';
 
@@ -263,13 +264,7 @@ function isInBlock(dateStr: string, program: TrainingProgram | null): boolean {
 
 /** Get ISO date string for Monday of the week containing today, offset by N weeks. */
 export function getMondayStr(weekOffset: number): string {
-  const now = new Date();
-  const dow = now.getDay(); // 0=Sun
-  const mondayOffset = dow === 0 ? -6 : -(dow - 1);
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + mondayOffset + weekOffset * 7);
-  monday.setHours(12, 0, 0, 0);
-  return formatDate(monday);
+  return addDays(getMondayStrForDate(todayISOLocal()), weekOffset * 7);
 }
 
 /**
@@ -845,7 +840,7 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
     date,
   );
   const dow = dateToDayOfWeek(date);
-  const today = formatDate(new Date());
+  const today = todayISOLocal();
   const inBlock = isInBlock(date, currentProgram);
 
   // ── Priority 1: Manual override (human/coach authored) ──
@@ -1271,7 +1266,7 @@ export function resolveWeekWithConditioning(
   // without this guard, that single outside-week anchor could be misread
   // as a double-game week and a legitimate in-week G+1 would be downgraded.
   const result = [...baseDays];
-  const today = formatDate(new Date());
+  const today = todayISOLocal();
   const weekMonday = mondayStr;
   const weekSunday = addDays(weekMonday, 6);
   let gamesInThisWeek = 0;

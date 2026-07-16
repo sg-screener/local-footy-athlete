@@ -5,6 +5,7 @@ import {
   injurySeverityPausesAffectedTraining,
   injurySeverityRecommendsPhysio,
 } from '../rules/injurySeverityBands';
+import { todayISOLocal } from './appDate';
 
 export type GuidedInjuryRegion = 'upper_body' | 'lower_body' | 'back_midline' | 'other';
 export type GuidedInjurySeverityBand = 'mild' | 'slight' | 'moderate' | 'avoid';
@@ -196,7 +197,7 @@ function modifierBody(result: GuidedInjuryFlowResult): string {
 
 export function buildGuidedInjuryConstraint(
   result: GuidedInjuryFlowResult,
-  opts: { todayISO: string; existingId?: string } = { todayISO: new Date().toISOString().slice(0, 10) },
+  opts: { todayISO: string; existingId?: string } = { todayISO: todayISOLocal() },
 ): ActiveInjuryConstraint {
   const now = new Date().toISOString();
   const bucket = guidedInjuryBucketForArea(result.area);

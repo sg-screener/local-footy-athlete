@@ -33,6 +33,7 @@ import {
   runWithAthleteActionTrace,
   type AthleteActionTraceContext,
 } from '../utils/athleteActionDiagnostics';
+import { todayISOLocal } from '../utils/appDate';
 
 export type InjuryEpisodeMutationOutcome =
   | 'created_and_recomposed'
@@ -114,11 +115,6 @@ interface CanonicalOwnershipSnapshot {
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
-}
-
-function todayISO(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 function addDays(dateISO: string, count: number): string {
@@ -467,8 +463,8 @@ export async function createOrUpdateInjuryEpisode(
       : input.sourceActor === 'system' ? 'system' : 'tap',
     actionType: 'injury_change',
     route: `canonical_injury_episode:${input.sourceSurface}`,
-    sourceDate: (input.todayISO ?? todayISO()).slice(0, 10),
-    sessionDate: (input.todayISO ?? todayISO()).slice(0, 10),
+    sourceDate: (input.todayISO ?? todayISOLocal()).slice(0, 10),
+    sessionDate: (input.todayISO ?? todayISOLocal()).slice(0, 10),
     scope: 'canonical_injury_episode',
     injuryEpisodeId: input.constraint.injuryEpisodeId ?? null,
     controlId: input.sourceSurface,
@@ -501,7 +497,7 @@ async function createOrUpdateInjuryEpisodeWithinTrace(
   input: CreateOrUpdateInjuryEpisodeInput,
 ): Promise<InjuryEpisodeMutationResult> {
   const now = new Date().toISOString();
-  const anchorDate = (input.todayISO ?? todayISO()).slice(0, 10);
+  const anchorDate = (input.todayISO ?? todayISOLocal()).slice(0, 10);
   const ownership = currentOwnership(now);
   if (input.expectedAcceptedRevision !== undefined &&
     input.expectedAcceptedRevision !== ownership.context.revision) {
@@ -573,8 +569,8 @@ export async function updateInjuryEpisode(
       : input.sourceActor === 'system' ? 'system' : 'tap',
     actionType: 'injury_change',
     route: `canonical_injury_update:${input.sourceSurface}`,
-    sourceDate: (input.todayISO ?? todayISO()).slice(0, 10),
-    sessionDate: (input.todayISO ?? todayISO()).slice(0, 10),
+    sourceDate: (input.todayISO ?? todayISOLocal()).slice(0, 10),
+    sessionDate: (input.todayISO ?? todayISOLocal()).slice(0, 10),
     scope: 'canonical_injury_episode',
     injuryEpisodeId: input.episodeId,
     controlId: input.sourceSurface,
@@ -639,8 +635,8 @@ export async function resolveInjuryEpisode(
       : options.sourceActor === 'system' ? 'system' : 'tap',
     actionType: 'injury_change',
     route: `canonical_injury_resolve:${sourceSurface}`,
-    sourceDate: (options.todayISO ?? todayISO()).slice(0, 10),
-    sessionDate: (options.todayISO ?? todayISO()).slice(0, 10),
+    sourceDate: (options.todayISO ?? todayISOLocal()).slice(0, 10),
+    sessionDate: (options.todayISO ?? todayISOLocal()).slice(0, 10),
     scope: 'canonical_injury_episode',
     injuryEpisodeId: episodeId,
     controlId: sourceSurface,
@@ -674,7 +670,7 @@ async function resolveInjuryEpisodeWithinTrace(
   options: ResolveInjuryEpisodeOptions,
 ): Promise<InjuryEpisodeResolutionResult> {
   const now = new Date().toISOString();
-  const anchorDate = (options.todayISO ?? todayISO()).slice(0, 10);
+  const anchorDate = (options.todayISO ?? todayISOLocal()).slice(0, 10);
   const ownership = currentOwnership(now);
   const episode = ownership.context.injuryEpisodes.find((candidate) =>
     candidate.episodeId === episodeId);

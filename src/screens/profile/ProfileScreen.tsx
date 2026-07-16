@@ -29,6 +29,7 @@ import {
 import { mapToLegacyGameDay } from '../../utils/profileMutations';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { dayOfWeekForISODate, todayISOLocal } from '../../utils/appDate';
 import { Text } from '../../components/common/Text';
 import { Card } from '../../components/common/Card';
 import { SelectableTile } from '../../components/common/SelectableTile';
@@ -536,7 +537,7 @@ export default function ProfileScreen() {
       if (program.microcycles && program.microcycles.length > 0) {
         const first = program.microcycles[0];
         setCurrentMicrocycle(first);
-        const dow = new Date().getDay();
+        const dow = dayOfWeekForISODate(todayISOLocal());
         const todayWorkout = first.workouts?.find((w) => w.dayOfWeek === dow);
         if (todayWorkout) setTodayWorkout(todayWorkout);
       }

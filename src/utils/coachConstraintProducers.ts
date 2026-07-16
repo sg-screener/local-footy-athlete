@@ -31,6 +31,7 @@ import type {
 } from '../store/coachUpdatesStore';
 import type { InjuryBucket } from './programAdjustmentEngine';
 import type { ConstraintRegion } from './exposureEngine';
+import { todayISOLocal } from './appDate';
 
 // ─── Body-part → InjuryBucket (soreness uses the same canonicalisation) ─
 
@@ -148,7 +149,7 @@ function clampSeverity(n: unknown, fallback: number): number {
 
 function isoDate(value: string | undefined): string {
   if (value && /^\d{4}-\d{2}-\d{2}/.test(value)) return value.slice(0, 10);
-  return new Date().toISOString().slice(0, 10);
+  return todayISOLocal();
 }
 
 function addDaysISO(dateISO: string, days: number): string {

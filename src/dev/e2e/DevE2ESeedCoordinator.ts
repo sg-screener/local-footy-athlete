@@ -10,6 +10,10 @@ import type {
   DevE2EFingerprintMap,
 } from './devE2EPersistence';
 import {
+  assertDevE2EClockMatchesCheckpoint,
+  type DevE2EClockReceipt,
+} from './DevE2EClock';
+import {
   setDevE2ECheckpointReady,
   setDevE2EReloadReady,
   setDevE2ESeedError,
@@ -24,6 +28,10 @@ import type {
 export interface DevE2ECoordinatorDeps {
   waitForHydration: () => Promise<void>;
   resetLocalState: () => void;
+  clearClock: () => Promise<void>;
+  installClock: (seedId: DevE2ESeedId) => Promise<DevE2EClockReceipt>;
+  readClockReceipt: () => DevE2EClockReceipt | null;
+  readTodayISO: () => string;
   waitForPersistence: (
     expected?: DevE2EFingerprintMap,
     timeoutMs?: number,
@@ -98,10 +106,17 @@ export class DevE2ESeedCoordinator {
       try {
         this.activeSeedId = null;
         await this.deps.waitForHydration();
-        this.deps.resetLocalState();
         await this.deps.clearCheckpoint();
+        await this.deps.clearClock();
+        this.deps.resetLocalState();
         await this.deps.waitForPersistence();
+        const clockReceipt = await this.deps.installClock(seedId);
         const seed = this.deps.buildSeed(seedId);
+        if (clockReceipt.seedId !== seed.id || this.deps.readTodayISO() !== seed.anchorDate) {
+          throw new Error(
+            `Seed clock witness failed: seed=${seed.id} today=${this.deps.readTodayISO()} anchor=${seed.anchorDate}.`,
+          );
+        }
         this.deps.writeProfile(seed);
         this.deps.installProgram(seed);
         this.deps.applyAuxiliaryState(seed.auxiliaryState);
@@ -119,6 +134,11 @@ export class DevE2ESeedCoordinator {
         setDevE2ESeedReady(seedId);
         return true;
       } catch (error) {
+        try {
+          await this.deps.clearClock();
+        } catch {
+          // Preserve the original deterministic reset failure.
+        }
         setDevE2ESeedError(error, seedId);
         throw error;
       }
@@ -134,6 +154,10 @@ export class DevE2ESeedCoordinator {
         if (!this.activeSeedId) {
           throw new Error('Checkpoint requires a ready seed in the current app run.');
         }
+        const clockReceipt = this.deps.readClockReceipt();
+        if (!clockReceipt || clockReceipt.seedId !== this.activeSeedId) {
+          throw new Error('Checkpoint requires the active seed clock receipt.');
+        }
         const fingerprints = this.deps.captureMemoryFingerprints();
         await this.deps.waitForPersistence();
         const current = this.deps.captureMemoryFingerprints();
@@ -147,6 +171,7 @@ export class DevE2ESeedCoordinator {
           seedId: this.activeSeedId,
           checkpointId,
           fingerprints,
+          clockFingerprint: clockReceipt.semanticFingerprint,
           unfinishedAthleteActionTraces:
             this.deps.captureUnfinishedAthleteActionTraces?.(),
         });
@@ -174,6 +199,7 @@ export class DevE2ESeedCoordinator {
           persistedFingerprintRead,
         ]);
         if (!checkpoint || !isDevE2ESeedId(checkpoint.seedId)) return false;
+        assertDevE2EClockMatchesCheckpoint(this.deps.readClockReceipt(), checkpoint);
         if (!this.deps.fingerprintMapsMatch(checkpoint.fingerprints, persisted)) {
           throw new Error(
             `Reload persisted fingerprint mismatch for ${checkpoint.seedId}: ${fingerprintMismatchReason(checkpoint.fingerprints, persisted)}`,
@@ -201,6 +227,7 @@ export class DevE2ESeedCoordinator {
           checkpoint.unfinishedAthleteActionTraces,
           evidence,
         );
+        this.activeSeedId = checkpoint.seedId;
         setDevE2EReloadReady(checkpoint.seedId, checkpoint.checkpointId);
         return true;
       } catch (error) {

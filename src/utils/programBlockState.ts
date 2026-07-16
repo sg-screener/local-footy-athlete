@@ -8,6 +8,7 @@ import {
   type SeasonPhaseClock,
   type SeasonPhaseClockResolution,
 } from '../rules/seasonPhaseClock';
+import { todayISOLocal } from './appDate';
 
 export const WEEKS_PER_BLOCK = 4;
 const DAYS_PER_WEEK = 7;
@@ -86,7 +87,7 @@ function daysBetween(startISO: string, endISO: string): number {
 }
 
 function todayISO(): string {
-  return formatDate(new Date());
+  return todayISOLocal();
 }
 
 /**

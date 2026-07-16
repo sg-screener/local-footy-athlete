@@ -5,17 +5,30 @@ pure coordinator with injected dependencies; `defaultDevE2ESeedCoordinator`
 is the only adapter that knows about Zustand stores, AsyncStorage, the local
 program builder, and `seedOnboardingProgram`.
 
-The runtime entry is loaded from `App.tsx` only inside `__DEV__`. It accepts
-only these exact links:
+`DevE2EClock` is the single development clock source. `App.tsx` restores its
+minimal receipt and checks it against the active checkpoint before importing
+`RootNavigator`, the coordinator, or persisted Zustand stores. `appDate` reads
+that source only in `__DEV__`; without an active receipt it uses the real local
+clock. Release never imports the coordinator and the clock refuses set,
+restore, read, and clear operations when `__DEV__` is false.
+
+The clock receipt contains only protocol version, seed ID, anchor instant,
+IANA timezone, receipt creation timestamp, and a semantic fingerprint.
+Checkpoint protocol v2 binds its persisted-state fingerprints to that clock
+fingerprint. A missing, corrupt, unknown, or mismatched receipt fails closed
+through the exact `e2e-seed-error-reason` marker.
+
+The runtime entry accepts only these exact links:
 
 - `localfootyathlete://e2e/reset/<allowlisted-seed-id>`
 - `localfootyathlete://e2e/checkpoint/<allowlisted-seed-id>`
 
 Reset waits for every relevant persisted store to hydrate, clears domain
-state through public APIs with ProgramStore last, builds a deterministic
-accepted week, installs through the onboarding installation seam, applies
-owned auxiliary state, completes onboarding, validates witnesses, and waits
-for persisted semantic equality before publishing ready.
+state through public APIs with ProgramStore last, clears the prior clock and
+checkpoint, installs the selected seed clock before building the deterministic
+accepted week, installs through the onboarding installation seam, applies owned
+auxiliary state, completes onboarding, validates witnesses (including the
+clock date), and waits for persisted semantic equality before publishing ready.
 
 Checkpoint records semantic fingerprints only after persistence converges.
 Cold-start validation starts the checkpoint and persisted-fingerprint reads

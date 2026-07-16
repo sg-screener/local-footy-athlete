@@ -23,6 +23,10 @@ import {
 import { logger } from '../utils/logger';
 import { addDaysISO, computeBlockBounds } from '../utils/programBlockState';
 import {
+  dayOfWeekForISODate,
+  todayISOLocal,
+} from '../utils/appDate';
+import {
   applyLoadEstimates,
   EXERCISE_LOAD_MAP,
   estimateStartingWeight,
@@ -458,7 +462,7 @@ function createWorkout(
  * Create the default microcycle (1 week)
  */
 function createDefaultMicrocycle(programId: string, onboardingData?: OnboardingData): Microcycle {
-  const today = new Date();
+  const today = new Date(`${todayISOLocal()}T12:00:00`);
   const { blockStart } = computeBlockBounds(today);
   const startDate = new Date(blockStart + 'T12:00:00');
 
@@ -1685,17 +1689,15 @@ export function buildWorkoutsFromCoach(
   // Generated workouts are day-of-week keyed. When the caller passes a
   // weekStartISO, hash against that real generated week; legacy callers fall
   // back to today's week for backward compatibility.
-  const today = new Date();
-  const todayDow = today.getDay(); // 0=Sun
+  const todayISO = todayISOLocal();
+  const todayDow = dayOfWeekForISODate(todayISO); // 0=Sun
   function syntheticDateStr(dayOfWeek: number): string {
     if (rotationContext?.weekStartISO) {
       const mondayBasedOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       return addDaysISO(rotationContext.weekStartISO, mondayBasedOffset);
     }
     const offset = ((dayOfWeek - todayDow) + 7) % 7;
-    const d = new Date(today);
-    d.setDate(d.getDate() + offset);
-    return d.toISOString().split('T')[0];
+    return addDaysISO(todayISO, offset);
   }
 
   // The conditioning builder uses the shared generation projection to decide
@@ -2541,7 +2543,7 @@ export const DEFAULT_PROFILE: UserProfile = {
  * Default training program
  */
 // Compute week-aligned block bounds once at module load
-const _defaultBounds = computeBlockBounds(new Date());
+const _defaultBounds = computeBlockBounds(new Date(`${todayISOLocal()}T12:00:00`));
 
 export const DEFAULT_PROGRAM: TrainingProgram = {
   id: 'prog-1',

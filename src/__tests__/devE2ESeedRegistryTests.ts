@@ -19,6 +19,16 @@ function ok(name: string, condition: boolean, detail = ''): void {
 
 const originalFetch = globalThis.fetch;
 let fetchCalls = 0;
+const EXPECTED_WITNESS_KINDS: Record<string, string> = {
+  'standard-in-season-week': 'program,profile_exact,calendar_mark',
+  'stacked-team-training-upper-pull': 'program,profile_exact,workout',
+  'lower-body-deletion': 'program,profile_exact,workout',
+  'one-set-strength': 'program,profile_exact,exercise_sets',
+  'fixture-move': 'program,profile_exact,calendar_mark',
+  'injury-case': 'program,profile_exact,active_injury',
+  'equipment-restriction-case': 'program,profile_exact,profile_equipment,active_equipment',
+  'feedback-progression-case': 'program,profile_exact,session_feedback',
+};
 globalThis.fetch = (async () => {
   fetchCalls += 1;
   throw new Error('fetch must not be called by a dev E2E seed');
@@ -84,6 +94,9 @@ try {
     ok(`${seedId} has an explicit anchor`, /^\d{4}-\d{2}-\d{2}$/.test(seed.anchorDate));
     ok(`${seedId} builds an accepted-program witness`, failuresForSeed.length === 0, failuresForSeed.join(', '));
     ok(`${seedId} has visible witnesses`, seed.witnesses.length >= 2);
+    ok(`${seedId} keeps its existing witness contract`,
+      seed.witnesses.map((witness) => witness.kind).join(',') ===
+        EXPECTED_WITNESS_KINDS[seedId]);
   }
   ok('no named seed calls fetch', fetchCalls === 0, `fetchCalls=${fetchCalls}`);
 } finally {

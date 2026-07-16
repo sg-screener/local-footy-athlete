@@ -28,7 +28,7 @@ import type {
   FeedbackSoreness,
   SessionOutcomeTransactionReceipt,
 } from '../types/sessionOutcome';
-import { todayISOLocal } from '../utils/appDate';
+import { dayOfWeekForISODate, todayISOLocal } from '../utils/appDate';
 import type { WeeklyExposureContract } from '../rules/weeklyExposureContract';
 import {
   buildSection18WeeklyExposureContractV2,
@@ -1550,7 +1550,7 @@ export const useProgramStore = create<ProgramState>()(
         });
 
         // Also update todayWorkout if it falls on the same dayOfWeek
-        const todayDay = new Date().getDay();
+        const todayDay = dayOfWeekForISODate(todayISOLocal());
         const updatedToday = todayDay === dayOfWeek
           ? postValidateNullableWorkout(
               todayISOLocal(),
@@ -1770,7 +1770,7 @@ export const useProgramStore = create<ProgramState>()(
 export function getCurrentBlockNumberForGeneration(dateISO?: string): number {
   const state = useProgramStore.getState();
   const blockState = state.blockState ?? state.ensureBlockState(dateISO);
-  const targetISO = dateISO ?? new Date().toISOString().split('T')[0];
+  const targetISO = dateISO ?? todayISOLocal();
   return getBlockNumberForDate(
     blockState.blockStartDate,
     blockState.blockNumber,

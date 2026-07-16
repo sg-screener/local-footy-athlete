@@ -18,6 +18,7 @@ import { SessionTierBadge } from '../../components/common/SessionTierBadge';
 import { useProgramStore } from '../../store/programStore';
 import type { ProgramStackParamList } from '../../types/navigation';
 import { getTeamTrainingWorkoutState } from '../../utils/teamTraining';
+import { dayOfWeekForISODate, todayISOLocal } from '../../utils/appDate';
 
 type MicrocycleDetailScreenProps = NativeStackScreenProps<ProgramStackParamList, 'MicrocycleDetail'>;
 
@@ -145,7 +146,7 @@ export default function MicrocycleDetailScreen() {
   };
 
   const getCurrentDayOfWeek = () => {
-    return new Date().getDay();
+    return dayOfWeekForISODate(todayISOLocal());
   };
 
   const getIntensityBadgeVariant = (intensity: string) => {

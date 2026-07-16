@@ -43,6 +43,7 @@ import type {
   DayOfWeek,
 } from '../types/domain';
 import { logger } from './logger';
+import { todayISOLocal } from './appDate';
 import {
   canonicalStrengthLabel,
   inferMovementPatterns,
@@ -8269,7 +8270,7 @@ export function onboardingToCoachingInputs(
   // profile keeps the user's original preferences untouched, and every
   // downstream consumer that goes through this function gets the
   // reconciled set for free.
-  const availabilityDate = options.availabilityDateISO ?? new Date().toISOString().slice(0, 10);
+  const availabilityDate = options.availabilityDateISO ?? todayISOLocal();
   const availabilityDateValue = new Date(`${availabilityDate}T12:00:00`);
   availabilityDateValue.setDate(
     availabilityDateValue.getDate() - ((availabilityDateValue.getDay() + 6) % 7),

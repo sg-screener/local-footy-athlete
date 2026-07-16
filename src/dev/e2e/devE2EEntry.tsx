@@ -10,6 +10,7 @@ import {
   setDevE2ESeedError,
   subscribeDevE2EState,
 } from './devE2EState';
+import { restoreDevE2EClockBeforeHydration } from './devE2EClockPersistence';
 
 export interface DevE2ELinking {
   addEventListener: (
@@ -26,6 +27,20 @@ export interface InstalledDevE2EEntry {
 }
 
 let activeInstallation: InstalledDevE2EEntry | null = null;
+
+/**
+ * Must finish before RootNavigator or the coordinator imports persisted
+ * stores. A mismatch fails closed and remains visible through the E2E marker.
+ */
+export async function prepareDevE2EAppLaunch(): Promise<boolean> {
+  try {
+    await restoreDevE2EClockBeforeHydration();
+    return true;
+  } catch (error) {
+    setDevE2ESeedError(error);
+    return false;
+  }
+}
 
 export function installDevE2EEntry(args: {
   isDev?: boolean;

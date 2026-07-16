@@ -1,11 +1,8 @@
 import type { EquipmentTag } from '../data/exercisePools';
-import {
-  useCoachUpdatesStore,
-  type ActiveEquipmentConstraint,
-} from '../store/coachUpdatesStore';
 import type {
   ActiveConstraint,
   ActiveConstraintModifierAffect,
+  ActiveEquipmentConstraint,
 } from '../store/coachUpdatesStore';
 import type {
   ConditioningEquipmentModality,
@@ -24,6 +21,7 @@ import {
   emitAthleteActionEvent,
   runWithAthleteActionTrace,
 } from './athleteActionDiagnostics';
+import { todayISOLocal } from './appDate';
 
 export type EquipmentAvailabilityProfile =
   Pick<OnboardingData, 'equipment' | 'trainingLocation' | 'equipmentSelectionCompleteness'> | null | undefined;
@@ -319,11 +317,7 @@ function fallbackTrainingLocation(profile: EquipmentAvailabilityProfile): Traini
 }
 
 function localTodayISO(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  const d = String(now.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  return todayISOLocal();
 }
 
 function dateOnly(value: string | undefined): string | undefined {
@@ -445,6 +439,10 @@ export function upsertActiveEquipmentConstraint(
   modifierId: string;
   rebuildRequired: true;
 } {
+  // Keep pure equipment/date projection importable without initializing
+  // persisted stores; only this mutation adapter needs Zustand.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const { useCoachUpdatesStore } = require('../store/coachUpdatesStore');
   useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
   return {
     constraint,

@@ -18,6 +18,8 @@ import { useProgramStore } from '../../store/programStore';
 import { useCalendarStore } from '../../store/calendarStore';
 import { useProfileStore } from '../../store/profileStore';
 import { computeGameDatesForBlock } from '../../utils/sessionResolver';
+import { todayISOLocal } from '../../utils/appDate';
+import { addDaysISO } from '../../utils/programBlockState';
 import type { ProgramStackParamList } from '../../types/navigation';
 import type { ProgramPhase } from '../../types/domain';
 
@@ -88,16 +90,15 @@ export default function ProgramCreateScreen({ navigation }: ProgramCreateScreenP
       await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Create mock program
+      const todayISO = todayISOLocal();
       const newProgram = {
         id: `prog-${Date.now()}`,
         userId: 'user-1',
         name: `${selectedPhase} Program`,
         description: `Personalized ${selectedPhase} training program`,
         programPhase: selectedPhase,
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date(Date.now() + 12 * 7 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split('T')[0],
+        startDate: todayISO,
+        endDate: addDaysISO(todayISO, 12 * 7),
         microcycles: generateMicrocycles(),
         primaryFocus: 'Comprehensive',
         isActive: true,
@@ -134,18 +135,17 @@ export default function ProgramCreateScreen({ navigation }: ProgramCreateScreenP
 
   const generateMicrocycles = () => {
     const microcycles = [];
+    const todayISO = todayISOLocal();
     for (let i = 1; i <= 12; i++) {
-      const startDate = new Date();
-      startDate.setDate(startDate.getDate() + (i - 1) * 7);
-      const endDate = new Date(startDate);
-      endDate.setDate(endDate.getDate() + 6);
+      const startDate = addDaysISO(todayISO, (i - 1) * 7);
+      const endDate = addDaysISO(startDate, 6);
 
       microcycles.push({
         id: `micro-${i}`,
         programId: `prog-${Date.now()}`,
         weekNumber: i,
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
+        startDate,
+        endDate,
         miniCycleNumber: Math.ceil(i / 4),
         intensityMultiplier: 0.8 + Math.random() * 0.4,
         workouts: [],

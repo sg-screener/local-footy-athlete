@@ -1,6 +1,8 @@
 import { supabase, handleSupabaseError } from './supabaseClient';
 import { ApiResponse } from '../../types/api';
 import { ScheduleEvent } from '../../types/domain';
+import { todayISOLocal } from '../../utils/appDate';
+import { addDaysISO } from '../../utils/programBlockState';
 
 /**
  * Program Modification Service
@@ -26,7 +28,7 @@ export async function submitChange(
   change: ChangeDetails,
 ): Promise<ApiResponse<ScheduleEvent>> {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayISOLocal();
 
     let eventType: 'Game' | 'Team Training' | 'Bye Week' | 'Injury' | 'Other' = 'Other';
     let eventName = '';
@@ -138,9 +140,7 @@ export async function getRecentChanges(
   days: number = 30,
 ): Promise<ApiResponse<ScheduleEvent[]>> {
   try {
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - days);
-    const startDateStr = startDate.toISOString().split('T')[0];
+    const startDateStr = addDaysISO(todayISOLocal(), -days);
 
     const { data, error } = await supabase
       .from('schedule_events')
