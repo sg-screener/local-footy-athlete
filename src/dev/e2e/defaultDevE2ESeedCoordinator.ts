@@ -81,13 +81,20 @@ function applyAuxiliaryState(items: readonly DevE2EAuxiliaryState[]): void {
       useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
       continue;
     }
-    useProgramStore.getState().setSessionFeedback(item.date, {
-      dateStr: item.date,
-      completion: item.completion,
-      feeling: item.feeling,
-      soreness: item.soreness,
-      difficulty: item.difficulty,
-    });
+    // Fixture installation stays inside the dev-only seed boundary. Live tap
+    // and Coach ingress must use the canonical session-outcome transaction.
+    useProgramStore.setState((state) => ({
+      sessionFeedback: {
+        ...state.sessionFeedback,
+        [item.date]: {
+          dateStr: item.date,
+          completion: item.completion,
+          feeling: item.feeling,
+          soreness: item.soreness,
+          difficulty: item.difficulty,
+        },
+      },
+    }));
   }
 }
 

@@ -222,6 +222,11 @@ async function main() {
       const domainClear = defaultCoordinatorSource.indexOf(needle);
       return domainClear >= 0 && domainClear < programClear;
     }));
+  ok('dev feedback seed does not call the retired live feedback setter',
+    !defaultCoordinatorSource.includes('.setSessionFeedback('));
+  ok('dev feedback seed remains explicit fixture installation',
+    defaultCoordinatorSource.includes('useProgramStore.setState((state) => ({') &&
+      defaultCoordinatorSource.includes('[item.date]: {'));
   for (const storageKey of [
     'profile-store',
     'program-store',

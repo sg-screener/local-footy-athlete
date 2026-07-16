@@ -116,7 +116,7 @@ export async function executeCoachSessionOutcome(
   const resolved = resolveCoachSessionOutcomeIntent(coachIntent, packet);
   if (resolved.kind !== 'ready') return resolved;
   const result = await commitSessionOutcomeTransaction(resolved.intent);
-  if (!result.ok) {
+  if (result.ok === false) {
     return {
       kind: 'failed',
       reply: "I understood the feedback, but I couldn't persist it safely, so I haven't marked the session.",

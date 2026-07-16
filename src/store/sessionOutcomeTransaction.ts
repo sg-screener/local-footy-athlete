@@ -256,7 +256,7 @@ export async function commitSessionOutcomeTransaction(
         };
       },
     });
-    if (!transaction.ok) {
+    if (transaction.ok === false) {
       emitAthleteActionEvent(trace, 'athlete_action_failed', {
         outcome: 'rejected',
         internalResultCode: transaction.route,
@@ -306,7 +306,9 @@ function normalizeIntent(
   target: ResolvedSessionOutcomeTarget,
 ): RecordSessionOutcomeIntent {
   validateTargetIdentity(intent, target.workout);
-  const actualById = new Map(target.components.map((component) => [component.id, component]));
+  const actualById = new Map<string, SessionComponent>(
+    target.components.map((component) => [component.id, component]),
+  );
   const seen = new Set<string>();
   const suppliedById = new Map<string, RecordSessionOutcomeComponentIntent>();
   for (const supplied of intent.componentOutcomes) {
