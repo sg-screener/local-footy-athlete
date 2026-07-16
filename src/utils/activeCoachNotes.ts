@@ -27,6 +27,7 @@ export interface ActiveCoachNote {
   actions: ActiveCoachNoteAction[];
   reversibleAdjustmentId?: string;
   injuryEpisodeId?: string;
+  temporarySourceFactIds?: string[];
   presentationOnlyDismiss?: boolean;
 }
 
@@ -75,6 +76,9 @@ export function buildCoachNotesFromModifiers(
       : undefined,
     injuryEpisodeId: typeof modifier.payload?.injuryEpisodeId === 'string'
       ? modifier.payload.injuryEpisodeId
+      : undefined,
+    temporarySourceFactIds: Array.isArray(modifier.payload?.temporarySourceFactIds)
+      ? modifier.payload.temporarySourceFactIds.filter((value): value is string => typeof value === 'string')
       : undefined,
     presentationOnlyDismiss: modifier.payload?.presentationOnlyDismiss === true,
   })).filter((note) => !dismissed.has(note.id));

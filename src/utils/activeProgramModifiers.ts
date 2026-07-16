@@ -808,6 +808,7 @@ function injuryModifier(
         ],
     payload: {
       constraintId: c.id,
+      temporarySourceFactIds: [...(c.temporarySourceFactIds ?? [])],
       injuryEpisodeId: c.injuryEpisodeId,
       lifecycleKey: activeConstraintLifecycleKey(c, source),
       bodyPart: c.bodyPart,
@@ -881,6 +882,7 @@ function statusModifier(
         ],
     payload: {
       constraintId: c.id,
+      temporarySourceFactIds: [...(c.temporarySourceFactIds ?? [])],
       lifecycleKey: activeConstraintLifecycleKey(sourceConstraint, source),
       date: 'appliesToDate' in c ? c.appliesToDate : undefined,
       expiresAt: expiresAt(sourceConstraint),

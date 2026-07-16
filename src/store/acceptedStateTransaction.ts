@@ -15,6 +15,10 @@ import type { ActiveConstraint } from './coachUpdatesStore';
 import type { InjuryState } from '../utils/injuryProgression';
 import type { InjuryEpisodeV1 } from '../rules/injuryEpisode';
 import {
+  isTemporarySourceFactConstraint,
+  type TemporarySourceFact,
+} from '../rules/temporarySourceFact';
+import {
   canonicaliseHydratedState,
   type AcceptedMaterialContext,
   type ProgramState,
@@ -74,6 +78,7 @@ import {
   type ReversibleAdjustmentKind,
   type ReversibleAdjustmentLinkedReduction,
   type ReversibleAdjustmentOwnedDayDelta,
+  type ReversibleAdjustmentOwnedWeekDelta,
   type ReversibleAdjustmentRecord,
   type ReversibleAdjustmentRestorationTarget,
   type ReversibleAdjustmentSurface,
@@ -115,10 +120,14 @@ export interface AcceptedStateTransactionProposal {
   activeConstraints?: ActiveConstraint[];
   activeInjury?: InjuryState | null;
   injuryEpisodes?: InjuryEpisodeV1[];
+  temporarySourceFacts?: TemporarySourceFact[];
   acceptedCompositionBase?: AcceptedCompositionBaseV1 | null;
   validateWeekStarts?: readonly string[];
   profile?: OnboardingData | null;
   programAlreadyAccepted?: boolean;
+  /** Candidate already owns all non-fact reductions; do not replay legacy
+   * constraint projections onto it during hydration/source-fact publication. */
+  skipConstraintProjection?: boolean;
   /** Restoration-only mode: keep ledger-owned prescriptions byte-for-byte
    * while still running the complete accepted visible-ledger gateway. */
   preserveExactAcceptedWorkouts?: boolean;
@@ -200,10 +209,11 @@ function validationConstraints(
     // InjuryEpisodeV1 is composed at the visible accepted boundary. Applying
     // its compatibility constraint here would destructively overwrite the
     // AcceptedCompositionBase that resolution must recompose from.
-    .filter((constraint) => constraint.type !== 'injury')
+    .filter((constraint) => !isTemporarySourceFactConstraint(constraint) && constraint.type !== 'injury')
     .filter(isStructuralGenerationConstraint)
     .map((constraint) => [constraint.id, constraint]));
   for (const signal of Object.values(signals)) {
+    if ((signal.temporarySourceFactIds?.length ?? 0) > 0) continue;
     for (const constraint of buildReadinessActiveConstraints(signal)) {
       byId.set(constraint.id, constraint);
     }
@@ -401,6 +411,9 @@ export function stageAcceptedStateTransaction(
     injuryEpisodes: proposal.injuryEpisodes === undefined
       ? priorContext.injuryEpisodes
       : proposal.injuryEpisodes,
+    temporarySourceFacts: proposal.temporarySourceFacts === undefined
+      ? priorContext.temporarySourceFacts
+      : proposal.temporarySourceFacts,
     acceptedCompositionBase: proposal.acceptedCompositionBase === undefined
       ? priorContext.acceptedCompositionBase
       : proposal.acceptedCompositionBase,
@@ -447,7 +460,9 @@ export function stageAcceptedStateTransaction(
     // not turn a context-only clear into a whole-program regeneration or a
     // second structural pass. Explicit affected weeks are still re-gated via
     // validateWeekStarts below.
-    activeConstraints: constraints.length > 0 ? constraints : undefined,
+    activeConstraints: !proposal.skipConstraintProjection && constraints.length > 0
+      ? constraints
+      : undefined,
     profile,
     markedDays: context.markedDays,
     validateWeekStarts: proposal.validateWeekStarts,
@@ -528,7 +543,7 @@ export function commitAcceptedStateTransaction(
   }
   const equivalenceWeeks = new Set(proposal.validateWeekStarts ?? []);
   if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
-    proposal.injuryEpisodes !== undefined) {
+    proposal.injuryEpisodes !== undefined || proposal.temporarySourceFacts !== undefined) {
     for (const microcycle of staged.program.currentProgram?.microcycles ?? []) {
       equivalenceWeeks.add(microcycle.startDate.slice(0, 10));
     }
@@ -603,7 +618,7 @@ export function commitAcceptedStateTransaction(
   useCalendarStore.setState({ markedDays: staged.context.markedDays });
   useReadinessStore.setState({ signalsByDate: staged.context.readinessSignalsByDate });
   if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
-    proposal.injuryEpisodes !== undefined) {
+    proposal.injuryEpisodes !== undefined || proposal.temporarySourceFacts !== undefined) {
     publishAcceptedCoachUpdatesCompatibilityMirror({
       activeConstraints: staged.context.activeConstraints,
       activeInjury: staged.context.activeInjury,
@@ -1051,6 +1066,198 @@ export function commitReversibleAdjustmentCreationTransaction(
   const staged = stageReversibleAdjustmentCreationTransaction(input);
   const result = commitAcceptedStateTransaction(staged.proposal);
   return { ...staged, result };
+}
+
+/**
+ * Exact-delta owner for an explicit athlete/coach load reduction. Temporary
+ * health facts must never call this helper: they compose reversibly from the
+ * AcceptedCompositionBase and therefore do not own a program delta.
+ */
+export function commitExplicitLoadEditTransaction(args: {
+  proposal: AcceptedStateTransactionProposal;
+  sourceActionOrIntentId: string;
+  affectedDates: readonly string[];
+  sourceActor?: ReversibleAdjustmentActor;
+  sourceSurface?: ReversibleAdjustmentSurface;
+}): ReversibleAdjustmentCreationStage {
+  return commitReversibleAdjustmentCreationTransaction({
+    kind: 'explicit_load_edit',
+    sourceActor: args.sourceActor ?? 'athlete',
+    sourceSurface: args.sourceSurface ?? 'coach_chat',
+    sourceActionOrIntentId: args.sourceActionOrIntentId,
+    proposal: args.proposal,
+    affectedDates: args.affectedDates,
+    restorationTarget: {
+      kind: 'session',
+      dates: [...args.affectedDates],
+    },
+  });
+}
+
+export interface AcceptedLoadEditLedgerBaseline {
+  program: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+}
+
+export function captureAcceptedLoadEditLedgerBaseline(): AcceptedLoadEditLedgerBaseline {
+  const state = useProgramStore.getState();
+  return {
+    program: cloneAccepted(programSurfaces(state)),
+    context: cloneAccepted(materialContext(state)),
+  };
+}
+
+/**
+ * Attach exact ownership after a deterministic program-edit executor has
+ * already written its accepted candidate inside the surrounding rollback
+ * transaction. The owned rows are computed from clean accepted surfaces, so
+ * active temporary facts are not counted as a second load reduction.
+ */
+export function commitExplicitLoadEditLedgerFromBaseline(args: {
+  baseline: AcceptedLoadEditLedgerBaseline;
+  sourceActionOrIntentId: string;
+  affectedDates: readonly string[];
+  sourceActor?: ReversibleAdjustmentActor;
+  sourceSurface?: ReversibleAdjustmentSurface;
+}): ReversibleAdjustmentRecord | null {
+  const afterState = useProgramStore.getState();
+  const afterProgram = programSurfaces(afterState);
+  const afterContext = materialContext(afterState);
+  const profile = useProfileStore.getState().onboardingData;
+  const candidateDates = Array.from(new Set(args.affectedDates.map((date) => date.slice(0, 10)))).sort();
+  const weeks = Array.from(new Set(candidateDates.map(mondayForDate))).sort();
+  const beforeWorkouts = acceptedWorkoutsForDates({
+    surfaces: args.baseline.program,
+    context: args.baseline.context,
+    profile,
+    dates: candidateDates,
+  });
+  const afterWorkouts = acceptedWorkoutsForDates({
+    surfaces: afterProgram,
+    context: afterContext,
+    profile,
+    dates: candidateDates,
+  });
+  const beforeSurfaceRows = acceptedSurfaceRowsForDates({
+    surfaces: args.baseline.program,
+    context: args.baseline.context,
+    profile,
+    dates: candidateDates,
+  });
+  const afterSurfaceRows = acceptedSurfaceRowsForDates({
+    surfaces: afterProgram,
+    context: afterContext,
+    profile,
+    dates: candidateDates,
+  });
+  const changedDates = candidateDates.filter((date) =>
+    reversibleAdjustmentWorkoutFingerprint(date, beforeWorkouts.get(date) ?? null) !==
+      reversibleAdjustmentWorkoutFingerprint(date, afterWorkouts.get(date) ?? null) ||
+    semanticFingerprint(args.baseline.program.dateOverrides[date] ?? null) !==
+      semanticFingerprint(afterProgram.dateOverrides[date] ?? null));
+  const ownedDays: ReversibleAdjustmentOwnedDayDelta[] = changedDates.map((date) => ({
+    date,
+    weekStart: mondayForDate(date),
+    beforeWorkout: cloneAccepted(beforeWorkouts.get(date) ?? null),
+    afterWorkout: cloneAccepted(afterWorkouts.get(date) ?? null),
+    beforeSurfaceOwner: beforeSurfaceRows.get(date)?.owner ?? 'empty',
+    afterSurfaceOwner: afterSurfaceRows.get(date)?.owner ?? 'empty',
+    beforeSurfaceWorkout: cloneAccepted(beforeSurfaceRows.get(date)?.workout ?? null),
+    afterSurfaceWorkout: cloneAccepted(afterSurfaceRows.get(date)?.workout ?? null),
+    beforeDateOverride: cloneAccepted(args.baseline.program.dateOverrides[date] ?? null),
+    afterDateOverride: cloneAccepted(afterProgram.dateOverrides[date] ?? null),
+    beforeOverrideContext: cloneAccepted(args.baseline.program.overrideContexts[date] ?? null),
+    afterOverrideContext: cloneAccepted(afterProgram.overrideContexts[date] ?? null),
+    beforeFingerprint: reversibleAdjustmentWorkoutFingerprint(date, beforeWorkouts.get(date) ?? null),
+    afterFingerprint: reversibleAdjustmentWorkoutFingerprint(date, afterWorkouts.get(date) ?? null),
+  }));
+  const ownedWeeks: ReversibleAdjustmentOwnedWeekDelta[] = weeks.flatMap((weekStart) => {
+    const before = contractForAcceptedWeek(args.baseline.program, weekStart) ?? null;
+    const after = contractForAcceptedWeek(afterProgram, weekStart) ?? null;
+    const beforeFingerprint = semanticFingerprint(before);
+    const afterFingerprint = semanticFingerprint(after);
+    return beforeFingerprint === afterFingerprint ? [] : [{
+      weekStart,
+      beforeExposureContract: before ? cloneAccepted(before) : null,
+      afterExposureContract: after ? cloneAccepted(after) : null,
+      beforeFingerprint,
+      afterFingerprint,
+    }];
+  });
+  if (ownedDays.length === 0 && ownedWeeks.length === 0) return null;
+  const createdAt = new Date().toISOString();
+  const id = reversibleAdjustmentId({
+    kind: 'explicit_load_edit',
+    sourceActionOrIntentId: args.sourceActionOrIntentId,
+    createdAt,
+  });
+  const beforeReductions = new Set(acceptedLinkedReductions(args.baseline.program, weeks)
+    .map(linkedReductionSignature));
+  const linkedTypedReductions = acceptedLinkedReductions(afterProgram, weeks)
+    .filter((entry) => !beforeReductions.has(linkedReductionSignature(entry)));
+  const record: ReversibleAdjustmentRecord = {
+    protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+    id,
+    kind: 'explicit_load_edit',
+    sourceActor: args.sourceActor ?? 'athlete',
+    sourceSurface: args.sourceSurface ?? 'coach_chat',
+    sourceActionOrIntentId: args.sourceActionOrIntentId,
+    createdAt,
+    acceptedRevision: afterContext.revision,
+    status: 'active',
+    clearedAt: null,
+    supersededById: null,
+    supersededReason: null,
+    affectedDates: changedDates,
+    affectedWeeks: weeks,
+    rollingDependencyWeeks: weeks,
+    displacedOriginalState: {
+      ownedDays,
+      ownedWeeks,
+      calendarFacts: [],
+      userRemovalConstraint: null,
+    },
+    acceptedAfterSemanticFingerprints: ownedDays.map((entry) => ({
+      date: entry.date,
+      fingerprint: entry.afterFingerprint,
+    })),
+    restorationTarget: {
+      kind: 'session',
+      dates: changedDates,
+      stableIdentities: Array.from(new Set(ownedDays.flatMap((entry) => [
+        entry.beforeWorkout?.planEntryId ?? entry.beforeWorkout?.id,
+        entry.afterWorkout?.planEntryId ?? entry.afterWorkout?.id,
+      ].filter((value): value is string => !!value)))).sort(),
+    },
+    linkedConstraintIds: [],
+    linkedCalendarFacts: [],
+    linkedOverrideOwners: changedDates.map((date) => ({
+      date,
+      ownerId: overrideOwnerId(afterProgram.overrideContexts[date]),
+    })),
+    linkedOverlayIds: [],
+    linkedUserRemovalConstraintIds: [],
+    linkedProvenanceIds: [],
+    linkedTypedReductions,
+    validity: {
+      reversible: true,
+      source: 'runtime_exact_delta',
+      validWhile: ['accepted_after_semantic_fingerprints_match'],
+      invalidWhen: ['newer_athlete_intent_owns_same_target', 'owned_day_fingerprint_changes'],
+    },
+    laterIntentPolicy: 'newer_athlete_intent_wins',
+  };
+  commitAcceptedStateTransaction({
+    reason: 'explicit_load_edit:record_exact_delta',
+    program: {
+      reversibleAdjustmentLedger: {
+        protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+        adjustments: [...afterProgram.reversibleAdjustmentLedger.adjustments, record],
+      },
+    },
+    validateWeekStarts: weeks,
+  });
+  return record;
 }
 
 function mondayForDate(date: string): string {

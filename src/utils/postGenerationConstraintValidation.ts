@@ -123,7 +123,25 @@ function liveConstraintsForDate(
   constraints: readonly ActiveConstraint[],
   date: string,
 ): ActiveConstraint[] {
-  return constraints.filter((constraint) => constraintIsLiveOnDate(constraint, date));
+  const live = constraints.filter((constraint) => constraintIsLiveOnDate(constraint, date));
+  const strongestFatigue = live
+    .filter((constraint) => constraint.type === 'fatigue')
+    .sort((left, right) => right.severity - left.severity ||
+      right.lastUpdatedAt.localeCompare(left.lastUpdatedAt))[0];
+  const sorenessByBucket = new Map<string, ActiveConstraint>();
+  for (const constraint of live) {
+    if (constraint.type !== 'soreness') continue;
+    const prior = sorenessByBucket.get(constraint.bucket);
+    if (!prior || constraint.severity > prior.severity ||
+      (constraint.severity === prior.severity && constraint.lastUpdatedAt > prior.lastUpdatedAt)) {
+      sorenessByBucket.set(constraint.bucket, constraint);
+    }
+  }
+  return [
+    ...live.filter((constraint) => constraint.type !== 'fatigue' && constraint.type !== 'soreness'),
+    ...Array.from(sorenessByBucket.values()),
+    ...(strongestFatigue ? [strongestFatigue] : []),
+  ];
 }
 
 function isRecoveryWorkout(workout: Workout): boolean {

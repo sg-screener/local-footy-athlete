@@ -22,7 +22,9 @@ export type ReversibleAdjustmentKind =
   | 'practice_match_fixture_remove'
   | 'session_move'
   | 'session_delete'
-  | 'session_component_delete';
+  | 'session_component_delete'
+  /** Exact accepted delta for an explicit athlete go-lighter command. */
+  | 'explicit_load_edit';
 
 export type ReversibleAdjustmentStatus =
   | 'active'

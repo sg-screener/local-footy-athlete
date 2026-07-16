@@ -18,7 +18,8 @@
  *   program_explanation         → explain visible programming choice
  *   session_mismatch_question   → visible program explanation, no injury clarifier
  *   request_program_adjustment  → UAE / coachActions
- *   fatigue / soreness / busy_week   → deterministic constraint engines
+ *   fatigue / soreness / poor_sleep  → canonical source-fact transaction
+ *   busy_week                        → deterministic constraint engine
  *   record_session_outcome           → canonical session-outcome transaction
  *   exercise_swap               → UAE
  *   general_question            → free-form LLM reply (no mutation)
@@ -72,6 +73,9 @@ export type CoachIntentKind =
   | 'request_program_adjustment'
   | 'fatigue'
   | 'soreness'
+  | 'poor_sleep'
+  | 'mixed_fact_and_program_adjustment'
+  | 'temporary_source_fact_followup'
   | 'busy_week'
   | 'record_session_outcome'
   | 'missed_session'
@@ -118,6 +122,13 @@ export interface CoachIntentPayload {
   trainingIntent?: string;
   changeKind?: string;
   scope?: string;
+  /** Typed temporary source-fact fields; never projection instructions. */
+  factKind?: 'fatigue' | 'soreness' | 'poor_sleep';
+  reportKind?: 'fatigue' | 'cooked';
+  sorenessDistribution?: 'localized' | 'general';
+  poorSleepPattern?: 'single_night' | 'repeated';
+  /** True only when the athlete stated the numeric fact level themselves. */
+  reportedLevelIsExplicit?: boolean;
   /** Structured session outcome fields. Stable ids are resolved client-side. */
   completion?: FeedbackCompletion;
   feeling?: FeedbackFeeling;
@@ -317,7 +328,7 @@ export const COACH_INTENT_SYSTEM_PROMPT = `You are the intent classifier for a s
 Your job is to read the athlete's latest message + the surrounding context and return a JSON object that matches this schema:
 
 {
-  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | why_didnt_program_change | program_explanation | session_mismatch_question | request_program_adjustment | record_session_outcome | fatigue | soreness | busy_week | exercise_swap | general_question>",
+  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | temporary_source_fact_followup | why_didnt_program_change | program_explanation | session_mismatch_question | request_program_adjustment | record_session_outcome | fatigue | soreness | poor_sleep | mixed_fact_and_program_adjustment | busy_week | exercise_swap | general_question>",
   "confidence": <0..1>,
   "needsClarification": <boolean>,
   "clarificationQuestion": "<string if needsClarification>",
@@ -345,6 +356,11 @@ Your job is to read the athlete's latest message + the surrounding context and r
     "trainingIntent": "<optional: hiit | sprint | tempo | aerobic | low_load>",
     "changeKind": "<optional: modality | training_intent | modality_and_training_intent>",
     "scope": "<optional: one_off | this_week | recurring | permanent>",
+    "factKind": "<for mixed factual report + command: fatigue | soreness | poor_sleep>",
+    "reportKind": "<for fatigue facts: fatigue | cooked>",
+    "sorenessDistribution": "<localized | general>",
+    "poorSleepPattern": "<single_night | repeated>",
+    "reportedLevelIsExplicit": <optional boolean; true only when the athlete explicitly stated the numeric level>,
     "completion": "<for record_session_outcome: full | partial | skipped>",
     "feeling": "<optional: very_easy | easy | good | hard | very_hard>",
     "soreness": "<optional: none | mild | moderate | high>",
@@ -384,13 +400,17 @@ CRITICAL RULES
    Only ask pain out of 10 when explicit pain/injury words are present: pain, hurt, sore, soreness, strain, injured, tight, tweaked, pulled my hamstring/back/groin.
 
 7. Non-injury signals — disambiguate carefully:
-   - "fatigue" — global tired / cooked / drained / smashed without specific body part ("feeling cooked this week", "exhausted"). Estimate severity 1..10 from intensity language.
-   - "soreness" — localised muscle soreness, NOT injury-level pain ("quads are sore", "tight calves", "DOMS"). payload.bodyPart is required. Severity 1..10 from descriptors.
+   - "fatigue" — global tired / cooked / drained / smashed without specific body part ("feeling cooked this week", "exhausted"). Set reportKind="cooked" for cooked language. Only set numeric severity when the athlete explicitly reports a number, and then set reportedLevelIsExplicit=true.
+   - "soreness" — localised or general muscle soreness, NOT injury-level pain ("quads are sore", "tight calves", "DOMS"). Preserve payload.bodyPart exactly when localised. Only set numeric severity when the athlete explicitly reports a number, and then set reportedLevelIsExplicit=true.
+   - "poor_sleep" — a factual report about sleep ("I slept badly"). Use poorSleepPattern="single_night" unless repeated nights are explicit. Only set numeric severity with reportedLevelIsExplicit=true when the athlete stated that number.
    - "busy_week" — schedule constraint: limited time / capacity ("crazy week ahead", "can only train twice", "exam week"). Set payload.severity=5 by default.
    - "record_session_outcome" — a report about work that already happened: completed, partial, missed/skipped attendance, or how a completed/recent session felt. Capture payload.requestedDate/targetSessionName, completion, feeling, soreness, reasons and componentOutcomes.
    - "I missed it" means record_session_outcome with completion="skipped". It is attendance feedback, not a schedule constraint and not a delete/move request.
    - "It was too hard" about a completed or recent session means record_session_outcome with feeling="hard" or "very_hard". If no partial/skip language exists, use completion="full".
    - "Make it easier" is a future request_program_adjustment, never session feedback.
+   - Factual state and imperative programming are different: "I feel fatigued" is fatigue; "I'm cooked this week" is a fatigue fact with reportKind="cooked" and scope="this_week"; "Make this week lighter" and "Reduce my strength work" are request_program_adjustment.
+   - If one message contains both a factual report and an explicit command (for example "I'm cooked, make this week lighter"), use mixed_fact_and_program_adjustment, set factKind and all fact fields, and also populate the structured program-edit fields. The app will apply one fact and one exact reversible edit without treating the fact as a second percentage edit.
+   - A factual recovery/clear report ("my calves aren't sore now", "I slept well last night", "I'm not fatigued anymore") is temporary_source_fact_followup with followupKind="resolved" and factKind. Include bodyPart for soreness. Do not classify it as a new report or a generic command.
    - General post-session soreness belongs in record_session_outcome.soreness; only classify injury/soreness constraint intent when the athlete reports a current health issue that should change future training.
    - equipment_unavailable as an outcome reason remains feedback; it is not an equipment constraint.
 
@@ -429,6 +449,9 @@ export function parseCoachIntent(raw: unknown): CoachIntent | null {
     'request_program_adjustment',
     'fatigue',
     'soreness',
+    'poor_sleep',
+    'mixed_fact_and_program_adjustment',
+    'temporary_source_fact_followup',
     'busy_week',
     'record_session_outcome',
     'missed_session',

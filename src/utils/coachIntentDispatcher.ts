@@ -685,13 +685,15 @@ function dispatchCoachIntentWithinTrace(
   }
 
   // ── 0. Constraint-resolution detector ──────────────────────────────
-  // Runs BEFORE pending-clarifier and intent classification so a
-  // message like "no fatigue anymore" never gets re-classified as a
-  // new fatigue report. Pure detector — never mutates state.
+  // Retired compatibility path. Temporary fact recovery is owned by the
+  // typed semantic intent and canonical source-fact transaction in
+  // coachTurnController; a phrase detector must not clear a downstream
+  // ActiveConstraint alias.
   // Pending clarifications still take priority: a bare severity reply
   // ("9/10") arriving while pendingInjury is set is the clarifier
   // handshake and must NOT be intercepted as resolution.
-  if (!packet.pendingInjury) {
+  const legacyConstraintResolutionEnabled = false;
+  if (legacyConstraintResolutionEnabled && !packet.pendingInjury) {
     const resolution = detectConstraintResolution(
       packet.userMessage,
       packet.activeConstraints ?? [],
@@ -1179,13 +1181,30 @@ function dispatchCoachIntentWithinTrace(
 
     case 'fatigue':
     case 'soreness':
+    case 'poor_sleep':
+    case 'mixed_fact_and_program_adjustment':
+    case 'temporary_source_fact_followup': {
+      // Canonical temporary facts are asynchronous accepted-state
+      // transactions owned by coachTurnController. Never publish a legacy
+      // ActiveConstraint upstream from this synchronous compatibility seam.
+      logger.warn('[coach-flow] source fact bypassed canonical transaction', {
+        intent: intent.intent,
+      });
+      return {
+        handled: true,
+        reply: 'I could not safely verify that wellbeing update, so I have not changed your program.',
+        mutated: false,
+        replyMode: 'source_fact_transaction_required',
+      };
+    }
+
     case 'busy_week': {
       // Non-injury constraint producers — build a typed
       // ActiveConstraint, write it to the store, and let the existing
       // exposure/projection/Coach Update card pipeline surface it.
       // Soreness with no body part falls back to a clarifying reply
       // rather than persisting an unmapped entry.
-      const kind: NonInjuryConstraintKind = intent.intent;
+      const kind: NonInjuryConstraintKind = 'busy_week';
       const result = deps.applyNonInjuryConstraint(kind, intent, packet);
       logger.debug('[coach-flow] route', {
         route: 'non_injury_constraint',
@@ -1267,7 +1286,9 @@ function dispatcherDiagnosticActionType(intent: CoachIntent): AthleteActionType 
   }
   if (intent.intent === 'new_injury_report' || intent.intent === 'injury_severity_reply' ||
     intent.intent === 'active_injury_followup') return 'injury_change';
-  if (intent.intent === 'fatigue' || intent.intent === 'soreness') return 'readiness_change';
+  if (intent.intent === 'fatigue' || intent.intent === 'soreness' ||
+    intent.intent === 'poor_sleep' || intent.intent === 'temporary_source_fact_followup' ||
+    intent.intent === 'mixed_fact_and_program_adjustment') return 'readiness_change';
   if (intent.intent === 'request_program_adjustment') {
     const operation = intent.payload?.operation ?? intent.payload?.action;
     if (operation === 'remove_session') return 'delete_session';

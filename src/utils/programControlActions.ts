@@ -27,7 +27,6 @@ import {
   pinExerciseGlobally,
 } from './coachActions';
 import {
-  upsertTapLoadReductionModifier,
   upsertTapRecoveryModeModifier,
   recoveryModeModifierIdForDate,
   withActiveProgramModifierContext,
@@ -43,11 +42,7 @@ import {
   assessTapSwapCandidateSafety,
   resolveTapSwapEnvironment,
 } from './tapSwapHierarchy';
-import {
-  buildPoorSleepReadinessConstraint,
-  isPoorSleepConstraint,
-  type PoorSleepPattern,
-} from './readinessConstraints';
+import type { PoorSleepPattern } from './readinessConstraints';
 import {
   athleteActionDiagnosticHash,
   athleteActionDiagnosticsEnabled,
@@ -64,6 +59,15 @@ import {
   createOrUpdateInjuryEpisode,
   resolveInjuryEpisode,
 } from '../store/injuryEpisodeTransaction';
+import {
+  createTemporaryFatigueFact,
+  createTemporaryPoorSleepFact,
+  createTemporarySorenessFact,
+  isInjurySourceFact,
+  temporaryFactScope,
+  temporarySourceFactId,
+} from '../rules/temporarySourceFact';
+import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
 
 export type ProgramControlActionType =
   | 'swap_session'
@@ -494,6 +498,21 @@ function clearModifierFromPayload(
       route: 'guided_follow_up_sheet',
     };
   }
+  const normalizedId = id
+    .replace(/^coach-note:/, '')
+    .replace(/^program-modifier:active_constraint:/, '');
+  const acceptedConstraint = useProgramStore.getState().acceptedMaterialContext.activeConstraints
+    .find((constraint) => constraint.id === normalizedId);
+  if ((acceptedConstraint?.temporarySourceFactIds?.length ?? 0) > 0) {
+    return {
+      ok: false,
+      changedProgram: false,
+      requiresRebuild: false,
+      message: 'Resolve the exact wellbeing report through the durable source-fact action.',
+      fallbackToCoach: false,
+      route: route.route,
+    };
+  }
   const cleared = clearActiveCoachNote(id);
   return {
     ok: Boolean(cleared.cleared),
@@ -654,57 +673,21 @@ function executeProgramControlActionWithinTrace(
       };
     }
     case 'set_fatigue_status': {
-      const todayISO = action.payload.todayISO ?? context.todayISO ?? action.payload.date;
-      if (action.payload.level === 'cooked') {
-        useReadinessStore.getState().clearReadinessSignal(todayISO);
-        const modifierId = upsertTapLoadReductionModifier({ date: action.payload.date, todayISO });
-        return {
-          ok: true,
-          changedProgram: true,
-          requiresRebuild: false,
-          createdModifierIds: [modifierId],
-          fallbackToCoach: false,
-          route: route.route,
-        };
-      }
-      if (action.payload.level === 'sore') {
-        useReadinessStore.getState().setReadinessSignal(todayISO, {
-          soreness: 'moderate',
-          source: 'quick_check',
-        });
-      } else {
-        useReadinessStore.getState().setReadinessSignal(todayISO, {
-          energy: 'low',
-          flatToday: action.payload.level === 'worse',
-          source: 'quick_check',
-        });
-      }
-      // Garbage-collect dormant past-date signals now that we've written
-      // today's — only today's signal is ever read downstream.
-      useReadinessStore.getState().pruneBefore(todayISO);
       return {
-        ok: true,
-        changedProgram: true,
+        ok: false,
+        changedProgram: false,
         requiresRebuild: false,
+        message: 'Temporary wellbeing reports require the durable source-fact transaction.',
         fallbackToCoach: false,
         route: route.route,
       };
     }
     case 'set_poor_sleep_status': {
-      const store = useCoachUpdatesStore.getState();
-      for (const constraint of store.activeConstraints.filter(isPoorSleepConstraint)) {
-        store.removeActiveConstraint(constraint.id);
-      }
-      const constraint = buildPoorSleepReadinessConstraint({
-        date: action.payload.date,
-        pattern: action.payload.pattern,
-      });
-      store.upsertActiveConstraint(constraint);
       return {
-        ok: true,
-        changedProgram: true,
+        ok: false,
+        changedProgram: false,
         requiresRebuild: false,
-        createdModifierIds: [constraint.id],
+        message: 'Poor-sleep replacement requires the durable source-fact transaction.',
         fallbackToCoach: false,
         route: route.route,
       };
@@ -719,10 +702,18 @@ function executeProgramControlActionWithinTrace(
         route: route.route,
       };
     case 'clear_recovery_mode':
-    case 'clear_fatigue_status':
     case 'clear_exercise_preference':
     case 'clear_active_modifier':
       return clearModifierFromPayload(action.payload, route);
+    case 'clear_fatigue_status':
+      return {
+        ok: false,
+        changedProgram: false,
+        requiresRebuild: false,
+        message: 'Temporary wellbeing resolution requires the durable source-fact transaction.',
+        fallbackToCoach: false,
+        route: route.route,
+      };
     case 'set_injury_modifier': {
       const accepted = useProgramStore.getState().acceptedMaterialContext;
       if ((accepted.injuryEpisodes?.length ?? 0) === 0 && !accepted.acceptedCompositionBase) {
@@ -1135,6 +1126,107 @@ async function executeProgramControlActionDurablyWithinTrace(
       requiresRebuild: false,
       clearedModifierIds: ok ? [episodeId] : undefined,
       message: result.message,
+      fallbackToCoach: false,
+      route: routeProgramControlAction(action).route,
+    };
+  }
+  if (action.type === 'set_fatigue_status' || action.type === 'set_poor_sleep_status') {
+    const date = action.payload.date.slice(0, 10);
+    const sourceSurface = action.source.surface ?? action.source.screen;
+    const existingPoorSleep = action.type === 'set_poor_sleep_status'
+      ? useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
+          ?.find((fact) => !isInjurySourceFact(fact) && fact.factKind === 'poor_sleep' && fact.status === 'active')
+      : null;
+    const fact = action.type === 'set_poor_sleep_status'
+      ? createTemporaryPoorSleepFact({
+          observedDate: date,
+          scope: temporaryFactScope({
+            kind: action.payload.pattern === 'repeated' ? 'week' : 'date',
+            date,
+          }),
+          pattern: action.payload.pattern,
+          sourceSurface,
+          factId: existingPoorSleep && !isInjurySourceFact(existingPoorSleep)
+            ? existingPoorSleep.factId
+            : undefined,
+        })
+      : action.payload.level === 'sore'
+        ? createTemporarySorenessFact({
+            observedDate: date,
+            scope: temporaryFactScope({ kind: 'date', date }),
+            athleteReportedLevel: 'moderate',
+            distribution: 'general',
+            sourceSurface,
+          })
+        : createTemporaryFatigueFact({
+            observedDate: date,
+            scope: temporaryFactScope({
+              kind: action.payload.level === 'cooked' ? 'week' : 'date',
+              date,
+            }),
+            athleteReportedLevel: action.payload.level === 'cooked'
+              ? 'cooked'
+              : action.payload.level === 'worse' ? 'high' : action.payload.level === 'not_right' ? 'moderate' : 'slight',
+            reportKind: action.payload.level === 'cooked' ? 'cooked' : 'fatigue',
+            sourceSurface,
+          });
+    const factResult = await transactTemporarySourceFact({
+      operation: existingPoorSleep ? 'update' : 'create',
+      fact,
+      todayISO: action.payload.todayISO ?? context.todayISO ?? date,
+      sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+      sourceSurface,
+    });
+    const ok = factResult.outcome !== 'conflicted' && factResult.outcome !== 'safely_rejected';
+    return {
+      ok,
+      changedProgram: factResult.changedProgram,
+      requiresRebuild: false,
+      createdModifierIds: ok && factResult.factId ? [factResult.factId] : undefined,
+      message: factResult.message,
+      fallbackToCoach: false,
+      route: routeProgramControlAction(action).route,
+    };
+  }
+  if (action.type === 'clear_fatigue_status') {
+    const accepted = useProgramStore.getState().acceptedMaterialContext;
+    const requested = action.payload.modifierId ?? action.payload.noteId ?? null;
+    const normalizedModifierId = requested
+      ?.replace(/^coach-note:/, '')
+      .replace(/^program-modifier:active_constraint:/, '');
+    const constraint = accepted.activeConstraints.find((candidate) =>
+      candidate.id === normalizedModifierId ||
+      `program-modifier:active_constraint:${candidate.id}` === requested);
+    const sourceFactIds = constraint?.temporarySourceFactIds ?? [];
+    const directFactId = accepted.temporarySourceFacts.find((fact) =>
+      !isInjurySourceFact(fact) && temporarySourceFactId(fact) === normalizedModifierId)?.factId;
+    const factId = directFactId ?? (sourceFactIds.length === 1 ? sourceFactIds[0] : null);
+    if (!factId) {
+      return {
+        ok: false,
+        changedProgram: false,
+        requiresRebuild: false,
+        message: sourceFactIds.length > 1
+          ? 'Choose the exact report to resolve; the visible adjustment is composed from multiple active facts.'
+          : 'No exact active fatigue, soreness, or poor-sleep report matched this action.',
+        fallbackToCoach: false,
+        route: routeProgramControlAction(action).route,
+      };
+    }
+    const factResult = await transactTemporarySourceFact({
+      operation: 'resolve',
+      factId,
+      todayISO: action.payload.date ?? context.todayISO,
+      sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+      sourceSurface: action.source.surface ?? action.source.screen,
+    });
+    const ok = factResult.outcome !== 'conflicted' && factResult.outcome !== 'safely_rejected';
+    return {
+      ok,
+      changedProgram: factResult.changedProgram,
+      requiresRebuild: false,
+      clearedModifierIds: ok ? [factId] : undefined,
+      message: factResult.message,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
     };

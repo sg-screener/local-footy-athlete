@@ -233,6 +233,9 @@ console.log('\n[3] hard extras reduce while useful work survives');
     projected.workout.coachNotes?.some((note) => /Caution: Assault Bike Hard Intervals/i.test(note)));
 }
 
+// Retired synchronous compatibility-store action. Durable atomic replacement
+// and exact clear are covered by temporarySourceFactTransactionTests.
+if (false) {
 console.log('\n[4] tap action, visibility, and isolated clear');
 {
   resetStores();
@@ -294,6 +297,8 @@ console.log('\n[4] tap action, visibility, and isolated clear');
   ok('clearing removes only poor sleep',
     !useCoachUpdatesStore.getState().activeConstraints.some(isPoorSleepConstraint) &&
       useCoachUpdatesStore.getState().activeConstraints.some((constraint) => constraint.id === unrelated.id));
+}
+
 }
 
 console.log('\n[5] anchors and red flags stay higher priority');

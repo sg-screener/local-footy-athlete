@@ -13,10 +13,13 @@ import type { ReadinessSignal } from '../utils/readiness';
 import type { ActiveConstraint } from './coachUpdatesStore';
 import type { InjuryState } from '../utils/injuryProgression';
 import {
-  composeInjuryCompatibility,
-  normalizeInjuryEpisodes,
   type InjuryEpisodeV1,
 } from '../rules/injuryEpisode';
+import {
+  composeTemporarySourceFactCompatibility,
+  normalizeTemporarySourceFacts,
+  type TemporarySourceFact,
+} from '../rules/temporarySourceFact';
 import {
   normalizeReversibleAdjustmentLedger,
   type ReversibleAdjustmentLedger,
@@ -36,7 +39,9 @@ export interface AcceptedMaterialContext {
   activeInjury: InjuryState | null;
   /** Canonical temporary-injury source facts. Resolved episodes remain here. */
   injuryEpisodes: InjuryEpisodeV1[];
-  /** Mutable accepted base before active injury facts are visibly composed. */
+  /** Canonical temporary health source facts. Compatibility fields are derived. */
+  temporarySourceFacts: TemporarySourceFact[];
+  /** Mutable accepted base before active temporary facts are visibly composed. */
   acceptedCompositionBase: AcceptedCompositionBaseV1 | null;
   revision: number;
   lastTransaction: string | null;
@@ -65,7 +70,7 @@ export interface AcceptedCompositionBaseV1 {
   provenance: 'accepted_pre_injury' | 'legacy_after_state_only';
   /**
    * Exact accepted mutable surfaces. ProgramStore publishes the same values;
-   * injury facts are composed only at the visible read/verification boundary.
+   * temporary health facts are composed only at the visible read/verification boundary.
    */
   surfaces: AcceptedProgramSurfaceSnapshot;
 }
@@ -91,6 +96,7 @@ export function createEmptyAcceptedMaterialContext(): AcceptedMaterialContext {
     activeConstraints: [],
     activeInjury: null,
     injuryEpisodes: [],
+    temporarySourceFacts: [],
     acceptedCompositionBase: null,
     revision: 0,
     lastTransaction: null,
@@ -103,15 +109,21 @@ export function normalizeAcceptedMaterialContext(
   const revision = typeof value?.revision === 'number' && Number.isFinite(value.revision)
     ? Math.max(0, Math.trunc(value.revision))
     : 0;
-  const injuryEpisodes = normalizeInjuryEpisodes(value?.injuryEpisodes);
-  const compatibility = injuryEpisodes.length > 0
-    ? composeInjuryCompatibility({
+  const temporarySourceFacts = normalizeTemporarySourceFacts({
+    value: value?.temporarySourceFacts,
+    legacyInjuryEpisodes: value?.injuryEpisodes,
+  });
+  const compatibility = temporarySourceFacts.length > 0
+    ? composeTemporarySourceFactCompatibility({
+        temporarySourceFacts,
         activeConstraints: normalizeAcceptedArray<ActiveConstraint>(value?.activeConstraints),
-        injuryEpisodes,
+        readinessSignalsByDate: normalizeAcceptedKeyedMap<ReadinessSignal>(value?.readinessSignalsByDate),
       })
     : {
+        injuryEpisodes: [],
         activeConstraints: normalizeAcceptedArray<ActiveConstraint>(value?.activeConstraints),
         activeInjury: isObjectRecord(value?.activeInjury) ? value.activeInjury : null,
+        readinessSignalsByDate: normalizeAcceptedKeyedMap<ReadinessSignal>(value?.readinessSignalsByDate),
       };
   const rawBase = value?.acceptedCompositionBase;
   const acceptedCompositionBase = isObjectRecord(rawBase) &&
@@ -138,12 +150,11 @@ export function normalizeAcceptedMaterialContext(
     : null;
   return {
     markedDays: normalizeAcceptedKeyedMap<CalendarDayType>(value?.markedDays),
-    readinessSignalsByDate: normalizeAcceptedKeyedMap<ReadinessSignal>(
-      value?.readinessSignalsByDate,
-    ),
+    readinessSignalsByDate: compatibility.readinessSignalsByDate,
     activeConstraints: compatibility.activeConstraints,
     activeInjury: compatibility.activeInjury,
-    injuryEpisodes,
+    injuryEpisodes: compatibility.injuryEpisodes,
+    temporarySourceFacts,
     acceptedCompositionBase,
     revision,
     lastTransaction: typeof value?.lastTransaction === 'string'
@@ -213,6 +224,7 @@ export function acceptedStatePresenceSummary(args: {
     activeConstraints: describe(args.context?.activeConstraints),
     activeInjury: describe(args.context?.activeInjury),
     injuryEpisodes: describe(args.context?.injuryEpisodes),
+    temporarySourceFacts: describe(args.context?.temporarySourceFacts),
     acceptedCompositionBase: describe(args.context?.acceptedCompositionBase),
   };
 }

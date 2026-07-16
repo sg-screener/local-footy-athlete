@@ -1,16 +1,14 @@
 /**
- * constraintResolutionTests — proves that "issue is gone" chat
- * messages clear the right active constraint, leave the rest
- * untouched, and never silently create a fresh constraint.
+ * constraintResolutionTests — preserves the legacy detector's pure
+ * classification fixtures while proving dispatcher mutation is bypassed.
  *
  * Live failure being regression-protected:
- *   • Athlete: "I'm cooked this week" → fatigue 5/10 constraint set
- *   • Athlete: "Update on how I'm feeling: no fatigue anymore"
- *   • Bug: Coach Update card stayed visible, fatigue card unchanged
+ *   • Legacy phrase detection remains pure compatibility documentation.
+ *   • Dispatcher mutation through that path is retired; typed source-fact
+ *     follow-up owns exact recovery and visible verification.
  *
- * The detector + dispatcher wiring intercept the resolution message
- * BEFORE the LLM intent classifier runs so the second turn never
- * gets re-classified as a new fatigue report.
+ * The canonical semantic classifier + source-fact transaction now own
+ * recovery before the synchronous dispatcher is reached.
  *
  * Run: npm run test:constraint-resolution
  */
@@ -407,6 +405,9 @@ section('[7] reply formatters');
 // ─────────────────────────────────────────────────────────────────────
 // 8. Dispatcher integration — fatigue resolved clears card + reply
 // ─────────────────────────────────────────────────────────────────────
+// Retired compatibility behaviour only. Canonical fact recovery is covered
+// below and in temporarySourceFactTransactionTests.
+if (false) {
 section('[8] dispatcher — fatigue resolved clears constraint, no fatigue re-created');
 {
   const log: MutationLog = {
@@ -637,6 +638,26 @@ section('[13] dispatcher — phrase but nothing to clear → honest reply');
 }
 
 // ─────────────────────────────────────────────────────────────────────
+}
+
+section('[8] dispatcher — phrase resolution compatibility path is bypassed');
+{
+  const log: MutationLog = {
+    resolutionApplied: [],
+    nonInjuryConstraintApplied: [],
+    uaeRuns: [],
+  };
+  const outcome = dispatchCoachIntent(
+    freshIntent(),
+    makePacket('back to normal', [fatigue('cf-retired')]),
+    makeDeps(log, [[]]),
+  );
+  ok('legacy phrase resolver performs no mutation',
+    !outcome.mutated && log.resolutionApplied.length === 0);
+  ok('fact-shaped intent fails closed at the canonical async boundary',
+    outcome.replyMode === 'source_fact_transaction_required', outcome.replyMode);
+}
+
 // Done
 // ─────────────────────────────────────────────────────────────────────
 realLog(`\n${pass} passed, ${fail} failed`);

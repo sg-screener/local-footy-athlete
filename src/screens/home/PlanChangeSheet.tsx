@@ -429,8 +429,8 @@ export function PlanChangeSheet({
     onAskCoach(`About ${weekdayLabel(date)}: `);
   };
 
-  const applyTired = (severity: 'spark' | 'cooked') => {
-    const result = executeProgramControlAction({
+  const applyTired = async (severity: 'spark' | 'cooked') => {
+    const result = await executeProgramControlActionDurably({
       type: 'set_fatigue_status',
       source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
       scope: severity === 'cooked' ? 'current_week' : 'today_only',
@@ -446,15 +446,12 @@ export function PlanChangeSheet({
     setStep({
       kind: 'result',
       ok: result.ok,
-      message:
-        severity === 'cooked'
-          ? "Heard. This week eases right off - recovery-level only. Clear the note when you're breathing fire again."
-          : "Noted. Today backs off the hard stuff where it can. Shout if it gets worse.",
+      message: result.message ?? 'The report was not applied because the visible program could not be verified.',
     });
   };
 
-  const applySore = () => {
-    const result = executeProgramControlAction({
+  const applySore = async () => {
+    const result = await executeProgramControlActionDurably({
       type: 'set_fatigue_status',
       source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
       scope: 'today_only',
@@ -466,12 +463,12 @@ export function PlanChangeSheet({
     setStep({
       kind: 'result',
       ok: result.ok,
-      message: "Noted. Today adjusts around how you're feeling.",
+      message: result.message ?? 'The soreness report was not applied.',
     });
   };
 
-  const applyPoorSleep = (pattern: 'single_night' | 'repeated') => {
-    const result = executeProgramControlAction({
+  const applyPoorSleep = async (pattern: 'single_night' | 'repeated') => {
+    const result = await executeProgramControlActionDurably({
       type: 'set_poor_sleep_status',
       source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
       scope: pattern === 'repeated' ? 'current_week' : 'today_only',
@@ -483,9 +480,7 @@ export function PlanChangeSheet({
     setStep({
       kind: 'result',
       ok: result.ok,
-      message: pattern === 'repeated'
-        ? 'Noted. Hard work is reduced this week while useful safe training stays in.'
-        : 'Noted. Today trims hard extras first and keeps the useful work where safe.',
+      message: result.message ?? 'The poor-sleep report was not applied.',
     });
   };
 

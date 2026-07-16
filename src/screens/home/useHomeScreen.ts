@@ -54,11 +54,6 @@ import {
 } from '../../utils/programBlockState';
 import { rolloverProgramBlock } from '../../utils/programBlockRollover';
 import {
-  loadReductionModifierIdForDate,
-  recoveryModeModifierIdForDate,
-} from '../../utils/tapProgramModifiers';
-import { poorSleepConstraintId } from '../../utils/readinessConstraints';
-import {
   WEEK_DAYS,
   DAY_NUM_TO_NAME,
   NEXT_PHASE,
@@ -1128,36 +1123,14 @@ export function useHomeScreen() {
 
   // ── Weekly readiness ("I'm not 100%") ──
   // This surface only routes into existing owners: today's readiness signal
-  // for tired/sore, week load reduction for cooked, and week recovery mode
-  // for sick. Updating replaces wellbeing state only; busy/away and injury
-  // modifiers remain independent.
+  // for tired/sore, a factual week-scoped cooked report, and week recovery
+  // mode for sick. Independent facts remain active until their exact report
+  // is resolved; busy/away and injury modifiers remain independent.
   const handleApplyWeekReadiness = useCallback(async (
     kind: WeekReadinessAction,
     anchorDateISO: string,
   ) => {
     const todayISO = todayISOLocal();
-    const weekReadinessIds = new Set([
-      loadReductionModifierIdForDate(anchorDateISO),
-      recoveryModeModifierIdForDate(anchorDateISO),
-      poorSleepConstraintId(todayISO, 'single_night'),
-      poorSleepConstraintId(anchorDateISO, 'repeated'),
-    ]);
-    const existingWellbeing = getActiveProgramModifiers(todayISO).filter((modifier) =>
-      modifier.source === 'readiness_signal' || weekReadinessIds.has(modifier.sourceId));
-
-    for (const modifier of existingWellbeing) {
-      const clearResult = executeProgramControlAction({
-        type: 'clear_active_modifier',
-        source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-        scope: 'current_week',
-        payload: { modifierId: modifier.id },
-        requiresRebuild: false,
-        createsActiveModifier: false,
-        oneOffOnly: false,
-      }, { todayISO });
-      await handleProgramControlResult(clearResult);
-    }
-
     const result = kind === 'sick_week'
       ? executeProgramControlAction({
           type: 'set_recovery_mode',
@@ -1169,7 +1142,7 @@ export function useHomeScreen() {
           oneOffOnly: false,
         }, { todayISO })
       : kind === 'poor_sleep_today' || kind === 'poor_sleep_week'
-        ? executeProgramControlAction({
+        ? await executeProgramControlActionDurably({
             type: 'set_poor_sleep_status',
             source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
             scope: kind === 'poor_sleep_week' ? 'current_week' : 'today_only',
@@ -1182,7 +1155,7 @@ export function useHomeScreen() {
             createsActiveModifier: true,
             oneOffOnly: false,
           }, { todayISO })
-        : executeProgramControlAction({
+        : await executeProgramControlActionDurably({
           type: 'set_fatigue_status',
           source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
           scope: kind === 'cooked_week' ? 'current_week' : 'today_only',
@@ -1210,11 +1183,11 @@ export function useHomeScreen() {
     // constraint ids — resolve through the same selector Coach Notes use.
     const modifier = getActiveProgramModifiers()
       .find((m) => m.sourceId === constraintId);
-    const result = executeProgramControlAction({
-      type: 'clear_active_modifier',
+    const result = await executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
       source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
       scope: 'current_week',
-      payload: { modifierId: modifier?.id ?? constraintId },
+      payload: { modifierId: modifier?.id ?? constraintId, date: todayISO },
       requiresRebuild: false,
       createsActiveModifier: false,
       oneOffOnly: false,
@@ -1413,7 +1386,21 @@ export function useHomeScreen() {
       }
       return;
     }
-    const result = clearCoachNoteAction(noteId);
+    const constraint = note
+      ? useProgramStore.getState().acceptedMaterialContext.activeConstraints
+          .find((candidate) => candidate.id === note.constraintId)
+      : null;
+    const result = (constraint?.temporarySourceFactIds?.length ?? 0) > 0
+      ? await executeProgramControlActionDurably({
+          type: 'clear_fatigue_status',
+          source: { screen: 'program_tab', surface: 'coach_notes_resolved', initiatedBy: 'tap' },
+          scope: 'current_and_future',
+          payload: { noteId, modifierId: note?.modifierId, date: todayISOLocal() },
+          requiresRebuild: false,
+          createsActiveModifier: false,
+          oneOffOnly: false,
+        }, { todayISO: todayISOLocal() })
+      : clearCoachNoteAction(noteId);
     await handleProgramControlResult(result);
   }, [clearCoachNoteAction, coachNotes, handleProgramControlResult]);
 
@@ -1433,7 +1420,7 @@ export function useHomeScreen() {
     const currentStatusKind = statusModifierKindForNote(noteId);
     const nextStatusKind = targetStatusModifierKind(status);
     if (currentStatusKind !== 'unknown' && currentStatusKind !== nextStatusKind) {
-      await handleProgramControlResult(clearCoachNoteAction(noteId));
+      await handleClearCoachNote(noteId);
     }
     const result = status === 'still_sick'
       ? executeProgramControlAction({
@@ -1453,7 +1440,7 @@ export function useHomeScreen() {
           createsActiveModifier: true,
           oneOffOnly: false,
         }, { todayISO })
-      : executeProgramControlAction({
+      : await executeProgramControlActionDurably({
           type: 'set_fatigue_status',
           source: {
             screen: 'program_tab',

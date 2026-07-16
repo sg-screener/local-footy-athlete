@@ -26,7 +26,6 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import {
-  normalizeAcceptedArray,
   normalizeAcceptedKeyedMap,
   normalizeAcceptedMaterialContext,
 } from './acceptedStateColdStart';
@@ -139,6 +138,8 @@ export type ActiveConstraintModifierAffect =
   | 'future_generation';
 
 export interface ActiveConstraintModifierMetadata {
+  /** Canonical fact owners. Compatibility projections never publish upstream. */
+  temporarySourceFactIds?: string[];
   /** Optional Coach Notes display override for this constraint. */
   modifierTitle?: string;
   /** Optional Coach Notes body override for this constraint. */
@@ -234,6 +235,7 @@ export interface ActiveFatigueConstraint extends ActiveConstraintModifierMetadat
   readinessPattern?: 'single_night' | 'repeated';
   /** Optional single-day scope. If present, projection only applies on this date. */
   appliesToDate?: string;
+  weekStartISO?: string;
   rules: string[];
   safeFocus: string[];
   advice: string[];
@@ -258,6 +260,7 @@ export interface ActiveSorenessConstraint extends ActiveConstraintModifierMetada
   reasonLabel?: string;
   source?: 'coach' | 'readiness' | 'tap';
   appliesToDate?: string;
+  weekStartISO?: string;
   rules: string[];
   safeFocus: string[];
   advice: string[];
@@ -623,6 +626,23 @@ function hasCanonicalInjuryOwnership(): boolean {
   return Array.isArray(context?.injuryEpisodes) && context.injuryEpisodes.length > 0;
 }
 
+function hasCanonicalTemporaryFactOwnership(): boolean {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const context = require('./programStore').useProgramStore.getState()
+    .acceptedMaterialContext;
+  return Array.isArray(context?.temporarySourceFacts) && context.temporarySourceFacts.length > 0;
+}
+
+function canonicalTemporaryFactCompatibilityConstraints(): ActiveConstraint[] {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const context = normalizeAcceptedMaterialContext(
+    require('./programStore').useProgramStore.getState().acceptedMaterialContext,
+  );
+  return context.activeConstraints.filter((constraint) =>
+    (constraint.temporarySourceFactIds?.length ?? 0) > 0 ||
+    (constraint.type === 'injury' && !!constraint.injuryEpisodeId));
+}
+
 function canonicalInjuryCompatibilityConstraints(): ActiveInjuryConstraint[] {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const context = normalizeAcceptedMaterialContext(
@@ -689,11 +709,17 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
         }),
 
       clearAllCoachUpdates: () =>
-        commitConstraintProgramTransaction(canonicalInjuryCompatibilityConstraints(), () =>
+        commitConstraintProgramTransaction(
+          hasCanonicalTemporaryFactOwnership()
+            ? canonicalTemporaryFactCompatibilityConstraints()
+            : canonicalInjuryCompatibilityConstraints(),
+          () =>
           set({
             updatesByWeek: {},
             activeInjury: hasCanonicalInjuryOwnership() ? get().activeInjury : null,
-            activeConstraints: canonicalInjuryCompatibilityConstraints(),
+            activeConstraints: hasCanonicalTemporaryFactOwnership()
+              ? canonicalTemporaryFactCompatibilityConstraints()
+              : canonicalInjuryCompatibilityConstraints(),
             dismissedCoachNoteIds: [],
           })),
 
@@ -765,6 +791,18 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
 
       upsertActiveConstraint: (c) => {
         if (c.type === 'injury' && hasCanonicalInjuryOwnership()) return;
+        if (c.type === 'fatigue' || c.type === 'soreness') {
+          const accepted = normalizeAcceptedMaterialContext(
+            require('./programStore').useProgramStore.getState().acceptedMaterialContext,
+          );
+          if (accepted.revision > 0 || accepted.temporarySourceFacts.length > 0) {
+            publishAcceptedCoachUpdatesCompatibilityMirror({
+              activeConstraints: accepted.activeConstraints,
+              activeInjury: accepted.activeInjury,
+            });
+          }
+          return;
+        }
         const nextConstraint = withDefaultModifierMetadata(c);
         const filtered = get().activeConstraints.filter((x) =>
           x.id !== nextConstraint.id &&
@@ -788,6 +826,18 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
       removeActiveConstraint: (id) => {
         const removed = get().activeConstraints.find((c) => c.id === id);
         if (removed?.type === 'injury' && hasCanonicalInjuryOwnership()) return;
+        if (removed?.type === 'fatigue' || removed?.type === 'soreness') {
+          const accepted = normalizeAcceptedMaterialContext(
+            require('./programStore').useProgramStore.getState().acceptedMaterialContext,
+          );
+          if (accepted.revision > 0 || accepted.temporarySourceFacts.length > 0) {
+            publishAcceptedCoachUpdatesCompatibilityMirror({
+              activeConstraints: accepted.activeConstraints,
+              activeInjury: accepted.activeInjury,
+            });
+          }
+          return;
+        }
         const remaining = get().activeConstraints.filter((c) => c.id !== id);
         // activeInjury is a derived alias. Recompute whenever any injury is
         // removed; constraint ids are not required to use the legacy format.
@@ -802,8 +852,13 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
       },
 
       setActiveConstraints: (constraints) => {
-        const requested = constraints.map(withDefaultModifierMetadata);
-        const nextConstraints = hasCanonicalInjuryOwnership()
+        const requested = constraints.map(withDefaultModifierMetadata)
+          .filter((constraint) => constraint.type !== 'fatigue' && constraint.type !== 'soreness');
+        const factCompatibility = canonicalTemporaryFactCompatibilityConstraints();
+        const nextConstraints = hasCanonicalTemporaryFactOwnership()
+          ? [...requested.filter((constraint) =>
+              !(constraint.type === 'injury' && constraint.injuryEpisodeId)), ...factCompatibility]
+          : hasCanonicalInjuryOwnership()
           ? [
               ...requested.filter((constraint) => constraint.type !== 'injury'),
               ...canonicalInjuryCompatibilityConstraints(),
@@ -929,48 +984,16 @@ useCoachUpdatesStore.subscribe((state, previous) => {
   const accepted = normalizeAcceptedMaterialContext(
     require('./programStore').useProgramStore.getState().acceptedMaterialContext,
   );
-  if (accepted.injuryEpisodes.length > 0) {
+  if (accepted.revision > 0 || accepted.temporarySourceFacts.length > 0) {
     publishAcceptedCoachUpdatesCompatibilityMirror({
       activeConstraints: accepted.activeConstraints,
       activeInjury: accepted.activeInjury,
     });
     return;
   }
-  const activeConstraints = normalizeAcceptedArray<ActiveConstraint>(state.activeConstraints);
-  const priorConstraints = normalizeAcceptedArray<ActiveConstraint>(previous.activeConstraints);
-  const activeInjury = normalizeAcceptedMaterialContext({
-    activeConstraints,
-    activeInjury: state.activeInjury,
-  }).activeInjury;
-  const priorInjury = normalizeAcceptedMaterialContext({
-    activeConstraints: priorConstraints,
-    activeInjury: previous.activeInjury,
-  }).activeInjury;
-  safetyProjectionInProgress = true;
-  try {
-    // External persistence hydration writes only the legacy mirror. Publish
-    // the accepted constraint/program combination as one material snapshot.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    require('./acceptedStateTransaction').commitAcceptedStateTransaction({
-      reason: 'constraint:external_hydration',
-      activeConstraints,
-      activeInjury,
-    });
-    if (state.activeConstraints !== activeConstraints || state.activeInjury !== activeInjury) {
-      useCoachUpdatesStore.setState({ activeConstraints, activeInjury });
-    }
-  } catch (error) {
-    // Persistence hydration is the one external state replacement that can
-    // bypass the action methods above. Roll it back if the paired program
-    // projection cannot be accepted.
-    useCoachUpdatesStore.setState({
-      activeConstraints: priorConstraints,
-      activeInjury: priorInjury,
-    });
-    throw error;
-  } finally {
-    safetyProjectionInProgress = false;
-  }
+  // Revision zero is a legacy envelope. ProgramStore is the sole migration
+  // owner and may consume this mirror when it hydrates; this store never
+  // publishes constraints upstream or mutates accepted programming.
 });
 
 /**

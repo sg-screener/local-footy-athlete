@@ -3,16 +3,6 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { asyncStorageCompat } from './asyncStorageCompat';
 import type { ReadinessSignal } from '../utils/readiness';
 import { normalizeAcceptedKeyedMap } from './acceptedStateColdStart';
-import { getMondayForDate } from '../utils/sessionResolver';
-import {
-  athleteActionDiagnosticHash,
-  athleteActionErrorCode,
-  athleteActionTerminalReasonChain,
-  beginAthleteActionTrace,
-  classifyAthleteActionFailure,
-  emitAthleteActionEvent,
-  runWithAthleteActionTrace,
-} from '../utils/athleteActionDiagnostics';
 
 interface ReadinessState {
   signalsByDate: Record<string, ReadinessSignal>;
@@ -31,98 +21,48 @@ interface ReadinessState {
   clear: () => void;
 }
 
-function commitReadinessSignalWithTrace(
-  date: string,
-  patch: Omit<Partial<ReadinessSignal>, 'date' | 'updatedAt'> | null,
+function canonicalFactReadinessProjection(): Record<string, ReadinessSignal> | null {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const accepted = require('./acceptedStateColdStart').normalizeAcceptedMaterialContext(
+    require('./programStore').useProgramStore.getState().acceptedMaterialContext,
+  );
+  return accepted.revision > 0 || accepted.temporarySourceFacts.length > 0
+    ? accepted.readinessSignalsByDate
+    : null;
+}
+
+function replaceWithCanonicalReadinessProjection(
+  _date: string,
+  _patch: Omit<Partial<ReadinessSignal>, 'date' | 'updatedAt'> | null,
 ): void {
-  const diagnosticSource = patch?.source === 'coach_message' ? 'coach' : 'tap';
-  const trace = beginAthleteActionTrace({
-    source: diagnosticSource,
-    actionType: 'readiness_change',
-    route: 'readiness_store',
-    currentWeekId: getMondayForDate(date),
-    targetDate: date,
-    sessionDate: date,
-    scope: 'single_date',
-  });
-  runWithAthleteActionTrace(trace, () => {
-    emitAthleteActionEvent(trace, 'athlete_action_parsed', {
-      parsedMutationType: patch ? 'set_readiness_signal' : 'clear_readiness_signal',
-      readinessPatchHash: athleteActionDiagnosticHash(patch),
-    });
-    emitAthleteActionEvent(trace, 'athlete_action_route_selected', {
-      selectedRoute: 'accepted_readiness_transaction',
-      producer: 'readinessStore',
-    });
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      require('./acceptedStateTransaction').commitReadinessSignalTransaction({ date, patch });
-      const internalResultCode = patch ? 'readiness_signal_set' : 'readiness_signal_cleared';
-      emitAthleteActionEvent(trace, 'athlete_action_completed', {
-        outcome: 'accepted',
-        internalResultCode,
-        targetDate: date,
-      });
-      emitAthleteActionEvent(trace, 'athlete_ui_outcome_shown', {
-        uiSurface: 'readiness_control',
-        uiOutcome: 'success',
-        internalResultCode,
-        finalUiMessageKey: internalResultCode,
-      });
-    } catch (error) {
-      const rejectionCode = athleteActionErrorCode(error, 'readiness_signal_unknown_error');
-      emitAthleteActionEvent(trace, 'athlete_action_failed', {
-        outcome: 'threw',
-        internalResultCode: 'readiness_signal_failed',
-        originalRejectionCode: rejectionCode,
-        rejectionCodes: [rejectionCode],
-        firstFailingBoundary: 'commitReadinessSignalTransaction',
-        failureCategory: classifyAthleteActionFailure(rejectionCode, 'readiness'),
-        validCandidateExisted: false,
-        previousStateRestored: true,
-        terminalReasonChain: athleteActionTerminalReasonChain(trace.traceId),
-      });
-      throw error;
-    }
-  });
+  // Downstream compatibility only. ProgramStore's accepted context is the
+  // sole publisher; stale callers are overwritten by its current projection.
+  const projection = canonicalFactReadinessProjection();
+  if (projection) useReadinessStore.setState({ signalsByDate: projection });
 }
 
 export const useReadinessStore = create<ReadinessState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       signalsByDate: {},
 
       setReadinessSignal: (date, signal) => {
-        commitReadinessSignalWithTrace(date, signal);
+        replaceWithCanonicalReadinessProjection(date, signal);
       },
 
       clearReadinessSignal: (date) => {
-        commitReadinessSignalWithTrace(date, null);
+        replaceWithCanonicalReadinessProjection(date, null);
       },
 
       pruneBefore: (dateISO) => {
-        const current = get().signalsByDate;
-        const entries = Object.entries(current).filter(([date]) => date >= dateISO);
-        if (entries.length === Object.keys(current).length) return;
-        const next = Object.fromEntries(entries);
-        const affectedDates = Object.keys(current).filter((date) => date < dateISO);
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitReadinessStateTransaction({
-          reason: `readiness:prune:${dateISO}`,
-          readinessSignalsByDate: next,
-          affectedDates,
-        });
+        void dateISO;
+        const projection = canonicalFactReadinessProjection();
+        if (projection) set({ signalsByDate: projection });
       },
 
       clear: () => {
-        const affectedDates = Object.keys(get().signalsByDate);
-        if (affectedDates.length === 0) return;
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitReadinessStateTransaction({
-          reason: 'readiness:clear',
-          readinessSignalsByDate: {},
-          affectedDates,
-        });
+        const projection = canonicalFactReadinessProjection();
+        if (projection) set({ signalsByDate: projection });
       },
     }),
     {
@@ -138,14 +78,19 @@ export const useReadinessStore = create<ReadinessState>()(
       },
       onRehydrateStorage: () => (state, error) => {
         if (error || !state) return;
-        const affectedDates = Object.keys(state.signalsByDate);
-        if (affectedDates.length === 0) return;
+        // Compatibility hydration is downstream-only. Once ProgramStore has
+        // accepted canonical state, replace any stale persisted readiness
+        // alias with that projection; never publish this store upstream.
         // eslint-disable-next-line @typescript-eslint/no-var-requires
-        require('./acceptedStateTransaction').commitReadinessStateTransaction({
-          reason: 'readiness:hydration_acceptance',
-          readinessSignalsByDate: state.signalsByDate,
-          affectedDates,
-        });
+        const accepted = require('./acceptedStateColdStart').normalizeAcceptedMaterialContext(
+          require('./programStore').useProgramStore.getState().acceptedMaterialContext,
+        );
+        // At revision zero retain the raw mirror long enough for ProgramStore,
+        // the sole migration owner, to consume it in either hydration order.
+        // It is never published upstream from here.
+        if (accepted.revision > 0 || accepted.temporarySourceFacts.length > 0) {
+          useReadinessStore.setState({ signalsByDate: accepted.readinessSignalsByDate });
+        }
       },
     },
   ),

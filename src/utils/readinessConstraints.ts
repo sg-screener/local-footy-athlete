@@ -94,6 +94,9 @@ export function buildReadinessActiveConstraints(
   signal: ReadinessSignal | null | undefined,
 ): ActiveConstraint[] {
   if (!signal) return [];
+  // Canonical source facts already publish their one composed constraint.
+  // Re-expanding the downstream ReadinessSignal alias would double-apply it.
+  if ((signal.temporarySourceFactIds?.length ?? 0) > 0) return [];
   const constraints: ActiveConstraint[] = [];
 
   if (signal.flatToday || signal.energy === 'low') {

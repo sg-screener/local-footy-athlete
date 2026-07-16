@@ -3,10 +3,11 @@ import { getCurrentBlockNumberForGeneration, useProgramStore } from '../store/pr
 import { useProfileStore } from '../store/profileStore';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useCoachMutationHistoryStore } from '../store/coachMutationHistoryStore';
-import { useReadinessStore } from '../store/readinessStore';
 import { useCalendarStore } from '../store/calendarStore';
 import {
+  captureAcceptedLoadEditLedgerBaseline,
   commitAcceptedStateTransaction,
+  commitExplicitLoadEditLedgerFromBaseline,
   commitProgramSetupRebuildTransaction,
 } from '../store/acceptedStateTransaction';
 import { runCoachMutationTransaction } from '../store/coachMutationTransaction';
@@ -53,8 +54,6 @@ import {
   shouldTryLLMCoachCommand,
 } from './coachLLMCommandAdapter';
 import {
-  routeCoachReadinessMessage,
-  type CoachReadinessAction,
   type PendingReadinessClarifier,
 } from './coachReadinessAdapter';
 import {
@@ -94,7 +93,18 @@ import {
   resolvePendingGameDayReadinessAnswer,
   resolvePendingScheduleTransactionAnswer,
 } from './coachClarifierResume';
-import { buildReadinessSignalPatch } from './readiness';
+import {
+  createTemporaryFatigueFact,
+  createTemporaryPoorSleepFact,
+  createTemporarySorenessFact,
+  isInjurySourceFact,
+  temporaryFactScope,
+  temporarySourceFactId,
+  type TemporaryPoorSleepFact,
+  type TemporarySourceFact,
+} from '../rules/temporarySourceFact';
+import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
+import { resolveInjuryBucket } from './programAdjustmentEngine';
 import { isPendingProgramProposalExpired } from './programAdjustmentRequests';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import {
@@ -139,6 +149,7 @@ import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { logger } from './logger';
 import {
   firstSemanticDoseChange,
+  semanticFingerprint,
   semanticDiffChangesLever,
   semanticDiffHasMaterialReductionForLever,
   type SemanticProgramDiff,
@@ -247,7 +258,6 @@ export interface CoachTurnControllerInput {
   ) => void;
 }
 
-type AppliedReadinessAction = Extract<CoachReadinessAction, { kind: 'apply_signal' }>;
 
 const COACH_TURN_DIAGNOSTIC_MARKER = 'coach-turn-diagnostics:6fa216a-cond1';
 
@@ -569,20 +579,43 @@ async function executeProgramEditWithVisibleGuard(args: {
     args.programEdit,
     args.input.todayISO,
   );
+  const explicitLoadReduction = args.draft?.intent === 'reduce' ||
+    args.programEdit.semanticRoles?.actionIntent === 'reduce' ||
+    ('editScope' in args.programEdit && args.programEdit.editScope === 'reduce_strength_block');
+  const loadEditBaseline = explicitLoadReduction
+    ? captureAcceptedLoadEditLedgerBaseline()
+    : null;
+  const mutationDates = programEditMutationDates(args.programEdit, verifierDraft);
   let latestVisibleVerification: CoachVisibleDomainVerificationResult = {
     ok: true,
     route: 'program_edit_draft_visible_guard_ok',
   };
   const transaction = await runCoachMutationTransaction({
     todayISO: args.input.todayISO,
-    extraDates: programEditMutationDates(args.programEdit, verifierDraft),
-    mutate: () => executeProgramEdit({
-      programEdit: args.programEdit,
-      todayISO: args.input.todayISO,
-      referenceResolution: args.referenceResolution,
-      userMessage: args.userMessage,
-      onProgress: (stage) => setProgress(args.input, stage),
-    }),
+    extraDates: mutationDates,
+    mutate: () => {
+      const result = executeProgramEdit({
+        programEdit: args.programEdit,
+        todayISO: args.input.todayISO,
+        referenceResolution: args.referenceResolution,
+        userMessage: args.userMessage,
+        onProgress: (stage) => setProgress(args.input, stage),
+      });
+      if (loadEditBaseline && result.kind === 'mutated' && result.applied) {
+        commitExplicitLoadEditLedgerFromBaseline({
+          baseline: loadEditBaseline,
+          sourceActionOrIntentId: `coach-load-edit:${semanticFingerprint({
+            message: args.userMessage,
+            dates: mutationDates,
+            scope: 'editScope' in args.programEdit ? args.programEdit.editScope : null,
+          })}`,
+          affectedDates: mutationDates,
+          sourceActor: 'athlete',
+          sourceSurface: 'coach_chat',
+        });
+      }
+      return result;
+    },
     didApply: (result) => result.kind === 'mutated' && result.applied,
     verifyCandidate: ({ value: result, diff }) => {
       const visibleVerification = verifyDraftVisibleExecution({
@@ -2796,130 +2829,58 @@ function patchProgramEditDraftTargetDate(args: {
   };
 }
 
-function isRecoveryWorkoutForCoach(workout: any): boolean {
-  return (
-    workout?.workoutType === 'Recovery' ||
-    workout?.sessionTier === 'recovery'
-  );
-}
-
-function buildSessionAwareReadinessReply(
-  readinessAction: AppliedReadinessAction,
+function temporarySourceFactFromIntent(
+  intent: CoachIntent,
   todayISO: string,
-): string {
-  const signal = readinessAction.signal ?? {};
-  const isFlat = signal.flatToday || signal.energy === 'low';
-  const isSore = signal.soreness === 'moderate' || signal.soreness === 'high';
-  const isShortTime =
-    typeof signal.timeAvailableMinutes === 'number' &&
-    signal.timeAvailableMinutes < 45;
-  const bodyPart =
-    typeof signal.bodyPart === 'string' && signal.bodyPart.trim()
-      ? signal.bodyPart.trim()
-      : 'that area';
-
-  let workout: any = null;
-  try {
-    workout = getTodayProjectedDay(todayISO).day?.workout ?? null;
-  } catch (err) {
-    logger.warn('[coach-readiness-reply] failed to read today workout', {
-      error: err instanceof Error ? err.message : String(err),
-    });
+): { fact: TemporarySourceFact } | { clarification: string } | null {
+  const factKind = intent.intent === 'mixed_fact_and_program_adjustment'
+    ? intent.payload?.factKind
+    : intent.intent === 'fatigue' || intent.intent === 'soreness' || intent.intent === 'poor_sleep'
+      ? intent.intent
+      : null;
+  if (!factKind) return null;
+  const observedDate = (intent.payload?.requestedDate ?? intent.payload?.targetDate ?? todayISO).slice(0, 10);
+  const level = intent.payload?.reportedLevelIsExplicit === true &&
+    typeof intent.payload.severity === 'number'
+    ? intent.payload.severity
+    : intent.payload?.reportKind === 'cooked' ? 'cooked' : 'unspecified';
+  const weekScoped = intent.payload?.scope === 'this_week' ||
+    intent.payload?.poorSleepPattern === 'repeated';
+  const scope = temporaryFactScope({ kind: weekScoped ? 'week' : 'date', date: observedDate });
+  if (factKind === 'fatigue') {
+    return { fact: createTemporaryFatigueFact({
+      observedDate,
+      scope,
+      athleteReportedLevel: level,
+      reportKind: intent.payload?.reportKind === 'cooked' ? 'cooked' : 'fatigue',
+      sourceSurface: 'coach_chat',
+    }) };
   }
-
-  if (!workout) {
-    if (isFlat) {
-      return 'Got it - no S&C session is scheduled today, so keep it as recovery. Easy movement is fine if it makes you feel better.';
-    }
-    if (isSore) {
-      return `Got it - no S&C session is scheduled today, so keep ${bodyPart} calm and pain-free. If it feels like pain, tell me a rough score out of 10.`;
-    }
-    if (isShortTime) {
-      return 'Got it - no S&C session is scheduled today, so there is nothing we need to squeeze in.';
-    }
+  if (factKind === 'poor_sleep') {
+    const pattern = intent.payload?.poorSleepPattern === 'repeated' ? 'repeated' : 'single_night';
+    return { fact: createTemporaryPoorSleepFact({
+      observedDate,
+      scope: temporaryFactScope({ kind: pattern === 'repeated' ? 'week' : 'date', date: observedDate }),
+      pattern,
+      athleteReportedLevel: level,
+      sourceSurface: 'coach_chat',
+    }) };
   }
-
-  if (isRecoveryWorkoutForCoach(workout)) {
-    if (isFlat) {
-      return 'Got it - today is already a recovery session, so we’ll keep it recovery-led. Aim to finish fresher than you started: easy pace, relaxed mobility, and no extra work added.';
-    }
-    if (isSore) {
-      return `Got it - today is already recovery, so keep it gentle around ${bodyPart}. Stay pain-free, use the flush and mobility work, and tell me a pain score if it feels sharper than soreness.`;
-    }
-    if (isShortTime) {
-      return 'Got it - today is already recovery, so keep the essentials only. Do the main mobility or flush work, then call it.';
-    }
+  const distribution = intent.payload?.sorenessDistribution ??
+    (intent.payload?.bodyPart ? 'localized' : 'general');
+  const bucket = intent.payload?.bodyPart ? resolveInjuryBucket(intent.payload.bodyPart) : null;
+  if (distribution === 'localized' && (!intent.payload?.bodyPart || !bucket)) {
+    return { clarification: 'Which body part is sore?' };
   }
-
-  if (isFlat) {
-    const sessionName = workout?.name ? `For ${workout.name}, ` : '';
-    return (
-      `Yep - that’s a low-readiness flag. ${sessionName}` +
-      `we’ll pull today back: keep the main work crisp, cap effort around 6-7/10, and skip anything that turns into a grind. ` +
-      `If you still feel worse after warming up, make it recovery only.`
-    );
-  }
-
-  if (isSore) {
-    return (
-      `Got it - sore ${bodyPart} today. ` +
-      `Keep that area pain-free, avoid pushing through sharpness, and I’ll bias the plan away from anything that hammers it.`
-    );
-  }
-
-  if (isShortTime) {
-    return 'Got it - short-time day. Main stimulus first, then leave the accessories unless you’ve genuinely got room.';
-  }
-
-  return readinessAction.reply;
-}
-
-function describeTodayReadinessImpact(todayISO: string): string {
-  try {
-    const { day } = getTodayProjectedDay(todayISO);
-    const workout = day?.workout;
-    if (!workout) {
-      return 'Program update\nToday is already a no-session day, so there was nothing to trim.';
-    }
-
-    const notes = workout.coachNotes ?? [];
-    const removed = notes
-      .filter((n: string) => /^Removed:\s*/i.test(n))
-      .map((n: string) => n.replace(/^Removed:\s*/i, '').trim());
-    const cautions = notes
-      .filter((n: string) => /^Caution:\s*/i.test(n))
-      .map((n: string) => n.replace(/^Caution:\s*/i, '').trim());
-    const focus = notes
-      .filter((n: string) => /^Focus:\s*/i.test(n))
-      .map((n: string) => n.replace(/^Focus:\s*/i, '').trim())
-      .slice(0, 2);
-
-    const lines: string[] = ['Program update'];
-    if (removed.length > 0) lines.push(`Removed today: ${removed.join(', ')}`);
-    if (cautions.length > 0) lines.push(`Treat as caution: ${cautions.join(', ')}`);
-    if (focus.length > 0) lines.push(`Focus: ${focus.join(', ')}`);
-
-    if (lines.length > 1) return lines.join('\n');
-
-    if (isRecoveryWorkoutForCoach(workout)) {
-      return [
-        'Program update',
-        `${workout.name} is already the low-cost option, so I left the structure alone.`,
-        'Keep it easy and finish feeling better than you started.',
-      ].join('\n');
-    }
-
-    return [
-      'Program update',
-      `${workout.name} was already low-cost enough that I did not need to remove exercises.`,
-      'Keep it controlled and do not add extras today.',
-    ].join('\n');
-  } catch (err) {
-    logger.warn('[coach-readiness-impact] failed', {
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return 'Program update\nI flagged today, but could not verify the visible session change in chat. Check the Program tab before training.';
-  }
+  return { fact: createTemporarySorenessFact({
+    observedDate,
+    scope,
+    athleteReportedLevel: level,
+    distribution,
+    reportedBodyPartLanguage: intent.payload?.bodyPart ?? null,
+    canonicalBodyPartBucket: bucket,
+    sourceSurface: 'coach_chat',
+  }) };
 }
 
 async function executeSetupEditInController(args: {
@@ -3038,6 +2999,106 @@ export async function handleCoachTurn(
       }
     }
 
+    // Typed semantic ownership for present-tense athlete facts. This runs
+    // before program-edit routing so factual "cooked" cannot be reinterpreted
+    // as an imperative go-lighter edit. Mixed intents retain the explicit edit
+    // fields and continue through the deterministic program-edit executor.
+    try {
+      const semanticIntent = await input.classifier.classify(packet);
+      if (semanticIntent.intent === 'temporary_source_fact_followup' &&
+        semanticIntent.payload?.followupKind === 'resolved') {
+        const requestedKind = semanticIntent.payload.factKind;
+        const requestedBucket = semanticIntent.payload.bodyPart
+          ? resolveInjuryBucket(semanticIntent.payload.bodyPart)
+          : null;
+        const matches = useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
+          .filter((fact) => !isInjurySourceFact(fact) && fact.status === 'active')
+          .filter((fact) => !requestedKind || fact.factKind === requestedKind)
+          .filter((fact) => fact.factKind !== 'soreness' || !requestedBucket ||
+            fact.canonicalBodyPartBucket === requestedBucket);
+        if (matches.length === 0) {
+          return replyAndFinish(
+            input,
+            'temporary-source-fact-resolve-noop',
+            'I could not match an active report, so I left your facts and visible program unchanged.',
+          );
+        }
+        if (matches.length > 1) {
+          return replyAndFinish(
+            input,
+            'temporary-source-fact-resolve-clarify',
+            'Which active fatigue, soreness, or sleep report do you mean?',
+          );
+        }
+        const resolution = await transactTemporarySourceFact({
+          operation: 'resolve',
+          factId: temporarySourceFactId(matches[0]),
+          todayISO: input.todayISO,
+          sourceActor: 'athlete',
+          sourceSurface: 'coach_chat',
+        });
+        return replyAndFinish(input, 'temporary-source-fact-resolved', resolution.message);
+      }
+      const sourceFactIntent = temporarySourceFactFromIntent(semanticIntent, input.todayISO);
+      if (sourceFactIntent) {
+        classifiedCoachIntent = semanticIntent;
+        if ('clarification' in sourceFactIntent) {
+          return replyAndFinish(input, 'temporary-source-fact-clarify', sourceFactIntent.clarification);
+        }
+        const existingPoorSleep = !isInjurySourceFact(sourceFactIntent.fact) &&
+          sourceFactIntent.fact.factKind === 'poor_sleep'
+          ? useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
+              .filter((fact): fact is TemporaryPoorSleepFact => !isInjurySourceFact(fact) &&
+                fact.factKind === 'poor_sleep' && fact.status === 'active')
+              .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))[0]
+          : null;
+        const fact = existingPoorSleep && !isInjurySourceFact(sourceFactIntent.fact)
+          ? {
+              ...sourceFactIntent.fact,
+              factId: existingPoorSleep.factId,
+              createdAt: existingPoorSleep.createdAt,
+            }
+          : sourceFactIntent.fact;
+        const factResult = await transactTemporarySourceFact({
+          operation: existingPoorSleep ? 'update' : 'create',
+          fact,
+          todayISO: input.todayISO,
+          sourceActor: 'athlete',
+          sourceSurface: 'coach_chat',
+        });
+        const factApplied = factResult.outcome !== 'conflicted' &&
+          factResult.outcome !== 'safely_rejected';
+        if (!factApplied) {
+          return replyAndFinish(input, 'temporary-source-fact-failed', factResult.message);
+        }
+        if (semanticIntent.intent !== 'mixed_fact_and_program_adjustment') {
+          input.setLastCoachDebug({
+            intent: semanticIntent.intent,
+            route: `temporary_source_fact:${factResult.outcome}`,
+            referenceStatus: packet.referenceResolution?.status ?? null,
+            referenceTargetDate: null,
+            referenceTargetName: null,
+            mutationLike: false,
+            legacyCalled: false,
+            replySource: 'deterministic',
+            applied: factApplied,
+          });
+          return replyAndFinish(input, 'temporary-source-fact', factResult.message);
+        }
+        classifiedCoachIntent = {
+          ...semanticIntent,
+          intent: 'request_program_adjustment',
+          rationale: `${semanticIntent.rationale ?? 'mixed_intent'}; temporary fact committed separately`,
+        };
+      } else {
+        classifiedCoachIntent = semanticIntent;
+      }
+    } catch (error) {
+      logger.warn('[temporary-source-fact] semantic_classifier_unavailable', {
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+
     if (pendingClarifier) {
       if (isCancelClarifierMessage(input.userMessage.content)) {
         usePendingCoachClarifierStore.getState().clearPending();
@@ -3060,9 +3121,17 @@ export async function handleCoachTurn(
           ageMs: Date.now() - pendingClarifier.createdAt,
         });
         if (pendingGameDayAnswer.kind === 'mark_limited') {
-          useReadinessStore.getState().setReadinessSignal(input.todayISO, {
-            ...buildReadinessSignalPatch('flat'),
-            source: 'coach_message',
+          await transactTemporarySourceFact({
+            operation: 'create',
+            fact: createTemporaryFatigueFact({
+              observedDate: input.todayISO,
+              scope: temporaryFactScope({ kind: 'date', date: input.todayISO }),
+              athleteReportedLevel: 'slight',
+              sourceSurface: 'coach_chat',
+            }),
+            todayISO: input.todayISO,
+            sourceActor: 'athlete',
+            sourceSurface: 'coach_chat',
           });
         }
         return replyAndFinish(input, 'game-day-readiness-answer', pendingGameDayAnswer.reply);
@@ -5142,46 +5211,7 @@ export async function handleCoachTurn(
       return replyAndFinish(input, 'clarify', routedCommand.question);
     }
 
-    const readinessAction = routeCoachReadinessMessage({
-      message: input.userMessage.content,
-      pending: input.pendingReadiness,
-    });
-    if ('clearPending' in readinessAction && readinessAction.clearPending) {
-      input.setPendingReadiness(null);
-    }
-    if (readinessAction.kind === 'clarify') {
-      input.setPendingReadiness(readinessAction.pending);
-      logger.debug('[coach-readiness] clarify', {
-        reason: readinessAction.reason,
-      });
-      return replyAndFinish(input, 'readiness-clarify', readinessAction.reply);
-    }
-    if (readinessAction.kind === 'apply_signal') {
-      useReadinessStore.getState().setReadinessSignal(input.todayISO, {
-        ...readinessAction.signal,
-        source: 'coach_message',
-      });
-      logger.debug('[coach-readiness] applied', {
-        reason: readinessAction.reason,
-        todayISO: input.todayISO,
-        signal: readinessAction.signal,
-      });
-      return replyAndFinish(
-        input,
-        'readiness',
-        [
-          buildSessionAwareReadinessReply(readinessAction, input.todayISO),
-          describeTodayReadinessImpact(input.todayISO),
-        ].join('\n\n'),
-      );
-    }
-
-    const intent: CoachIntent = {
-      intent: 'general_question',
-      confidence: 0,
-      needsClarification: false,
-      rationale: `router_mode_${routedCommand.mode}_bypass`,
-    };
+    const intent: CoachIntent = classifiedCoachIntent ?? await input.classifier.classify(packet);
     classifiedCoachIntent = intent;
     logger.debug('[coach-flow] intent', {
       kind: intent.intent,

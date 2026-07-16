@@ -1,31 +1,18 @@
 import type { ActiveInjuryConstraint } from './coachUpdatesStore';
 import {
-  ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
   normalizeAcceptedMaterialContext,
-  normalizeAcceptedProgramSurfaces,
   type AcceptedCompositionBaseV1,
 } from './acceptedStateColdStart';
-import {
-  assertAcceptedVisibleLedgerEquivalence,
-  commitAcceptedStateTransaction,
-} from './acceptedStateTransaction';
-import { canonicaliseHydratedState, useProgramStore } from './programStore';
-import { useProfileStore } from './profileStore';
-import {
-  runCoachMutationTransaction,
-} from './coachMutationTransaction';
+import { useProgramStore } from './programStore';
 import {
   INJURY_EPISODE_PROTOCOL_VERSION,
   activeInjuryEpisodes,
-  composeInjuryCompatibility,
-  migrateLegacyInjuryEpisodes,
-  normalizeInjuryEpisodes,
   type InjuryEpisodeSourceActor,
   type InjuryEpisodeStatus,
   type InjuryEpisodeTransitionV1,
   type InjuryEpisodeV1,
 } from '../rules/injuryEpisode';
-import { semanticFingerprint } from '../utils/programSemanticSnapshot';
+import { isInjurySourceFact } from '../rules/temporarySourceFact';
 import {
   athleteActionDiagnosticsEnabled,
   beginAthleteActionTrace,
@@ -34,6 +21,10 @@ import {
   type AthleteActionTraceContext,
 } from '../utils/athleteActionDiagnostics';
 import { todayISOLocal } from '../utils/appDate';
+import {
+  commitTemporarySourceFactSet,
+  loadCanonicalTemporarySourceFactOwnership,
+} from './temporarySourceFactTransaction';
 
 export type InjuryEpisodeMutationOutcome =
   | 'created_and_recomposed'
@@ -113,10 +104,6 @@ interface CanonicalOwnershipSnapshot {
   compositionBase: AcceptedCompositionBaseV1;
 }
 
-function clone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
 function addDays(dateISO: string, count: number): string {
   const date = new Date(`${dateISO.slice(0, 10)}T12:00:00`);
   date.setDate(date.getDate() + count);
@@ -150,35 +137,7 @@ function acceptedWeeksAndDates(anchorDate: string): { weeks: string[]; dates: st
 }
 
 function currentOwnership(now: string): CanonicalOwnershipSnapshot {
-  const state = useProgramStore.getState();
-  let context = normalizeAcceptedMaterialContext(state.acceptedMaterialContext);
-  let episodes = context.injuryEpisodes;
-  if (episodes.length === 0) {
-    episodes = migrateLegacyInjuryEpisodes({
-      activeConstraints: context.activeConstraints,
-      activeInjury: context.activeInjury,
-      sourceSurface: 'injury_episode_transaction',
-    });
-  }
-  const surfaces = normalizeAcceptedProgramSurfaces(state);
-  const migratedAfterStateOnly = episodes.some((episode) =>
-    episode.legacyMigrationStatus === 'legacy_after_state_only');
-  const compositionBase = context.acceptedCompositionBase ?? {
-    protocolVersion: ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
-    capturedAt: now,
-    updatedAt: now,
-    sourceRevision: context.revision,
-    provenance: migratedAfterStateOnly
-      ? 'legacy_after_state_only' as const
-      : 'accepted_pre_injury' as const,
-    surfaces: clone(surfaces),
-  };
-  context = normalizeAcceptedMaterialContext({
-    ...context,
-    injuryEpisodes: episodes,
-    acceptedCompositionBase: compositionBase,
-  });
-  return { context, compositionBase };
+  return loadCanonicalTemporarySourceFactOwnership(now);
 }
 
 function activeEpisodeForConstraint(
@@ -327,28 +286,6 @@ function episodeFromConstraint(args: {
   };
 }
 
-function validateEffectiveInjuryComposition(args: {
-  base: AcceptedCompositionBaseV1;
-  context: ReturnType<typeof normalizeAcceptedMaterialContext>;
-  weekStarts: readonly string[];
-}): void {
-  const profile = useProfileStore.getState().onboardingData;
-  const projected = canonicaliseHydratedState(args.base.surfaces, {
-    programAlreadyAccepted: true,
-    activeConstraints: args.context.activeConstraints,
-    profile,
-    markedDays: args.context.markedDays,
-    validateWeekStarts: args.weekStarts,
-  });
-  const surfaces = normalizeAcceptedProgramSurfaces(projected);
-  assertAcceptedVisibleLedgerEquivalence({
-    surfaces,
-    context: args.context,
-    weekStarts: args.weekStarts,
-    profile,
-  });
-}
-
 async function persistEpisodeSet(args: {
   nextEpisodes: InjuryEpisodeV1[];
   ownership: CanonicalOwnershipSnapshot;
@@ -363,94 +300,16 @@ async function persistEpisodeSet(args: {
   reason?: string;
   route?: string;
 }> {
-  const currentRevision = args.ownership.context.revision;
-  if (args.expectedAcceptedRevision !== undefined &&
-    args.expectedAcceptedRevision !== currentRevision) {
-    return { ok: false, changedProgram: false, route: 'conflicted', reason: 'accepted_revision_changed' };
-  }
-  const horizon = acceptedWeeksAndDates(args.anchorDate);
-  const compatibility = composeInjuryCompatibility({
-    activeConstraints: args.ownership.context.activeConstraints,
-    injuryEpisodes: args.nextEpisodes,
-  });
-  const baseFingerprint = semanticFingerprint(args.ownership.compositionBase.surfaces);
-  const ledgerFingerprint = semanticFingerprint(
-    args.ownership.compositionBase.surfaces.reversibleAdjustmentLedger,
-  );
-  const transaction = await runCoachMutationTransaction({
+  const nonInjuryFacts = args.ownership.context.temporarySourceFacts
+    .filter((fact) => !isInjurySourceFact(fact));
+  return commitTemporarySourceFactSet({
+    nextFacts: [...nonInjuryFacts, ...args.nextEpisodes],
+    targetFactId: args.targetEpisodeId,
     todayISO: args.anchorDate,
-    extraDates: horizon.dates,
-    allowAcceptedStateOnlyChange: true,
-    mutate: () => {
-      args.testHooks?.beforeStage?.();
-      const nextContext = normalizeAcceptedMaterialContext({
-        ...args.ownership.context,
-        activeConstraints: compatibility.activeConstraints,
-        activeInjury: compatibility.activeInjury,
-        injuryEpisodes: args.nextEpisodes,
-        acceptedCompositionBase: args.ownership.compositionBase,
-      });
-      args.testHooks?.beforeEffectiveValidation?.();
-      validateEffectiveInjuryComposition({
-        base: args.ownership.compositionBase,
-        context: nextContext,
-        weekStarts: horizon.weeks,
-      });
-      return commitAcceptedStateTransaction({
-        reason: args.reason,
-        activeConstraints: compatibility.activeConstraints,
-        activeInjury: compatibility.activeInjury,
-        injuryEpisodes: args.nextEpisodes,
-        acceptedCompositionBase: args.ownership.compositionBase,
-        validateWeekStarts: horizon.weeks,
-      });
-    },
-    didApply: () => true,
-    verifyCandidate: () => {
-      if (args.testHooks?.verifyCandidate?.() === false) {
-        return { ok: false, reason: 'injury_visible_candidate_test_rejection' };
-      }
-      const accepted = normalizeAcceptedMaterialContext(
-        useProgramStore.getState().acceptedMaterialContext,
-      );
-      const target = accepted.injuryEpisodes.find((episode) =>
-        episode.episodeId === args.targetEpisodeId);
-      if (!target) return { ok: false, reason: 'injury_episode_candidate_missing' };
-      if (semanticFingerprint(accepted.acceptedCompositionBase?.surfaces ?? null) !== baseFingerprint) {
-        return { ok: false, reason: 'accepted_composition_base_changed_by_injury_fact' };
-      }
-      if (semanticFingerprint(useProgramStore.getState().reversibleAdjustmentLedger) !==
-        ledgerFingerprint) {
-        return { ok: false, reason: 'injury_created_reversible_adjustment_record' };
-      }
-      return { ok: true };
-    },
-    verifyAfterPersistence: () => {
-      if (args.testHooks?.verifyAfterPersistence?.() === false) {
-        return { ok: false, reason: 'injury_durable_readback_test_rejection' };
-      }
-      const accepted = normalizeAcceptedMaterialContext(
-        useProgramStore.getState().acceptedMaterialContext,
-      );
-      const expected = normalizeInjuryEpisodes(args.nextEpisodes);
-      if (semanticFingerprint(accepted.injuryEpisodes) !== semanticFingerprint(expected)) {
-        return { ok: false, reason: 'injury_episode_durable_readback_mismatch' };
-      }
-      if (semanticFingerprint(accepted.acceptedCompositionBase?.surfaces ?? null) !== baseFingerprint) {
-        return { ok: false, reason: 'accepted_composition_base_durable_readback_mismatch' };
-      }
-      return { ok: true };
-    },
+    reason: args.reason,
+    expectedAcceptedRevision: args.expectedAcceptedRevision ?? args.ownership.context.revision,
+    testHooks: args.testHooks,
   });
-  if (!('route' in transaction)) {
-    return { ok: true, changedProgram: transaction.diff.hasProgrammingChange };
-  }
-  return {
-    ok: false,
-    changedProgram: false,
-    route: transaction.route,
-    reason: transaction.reason,
-  };
 }
 
 export async function createOrUpdateInjuryEpisode(

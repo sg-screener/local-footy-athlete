@@ -16,6 +16,9 @@ export interface ReadinessSignal {
   flatToday?: boolean;
   source: ReadinessSource;
   updatedAt: string;
+  /** Downstream compatibility provenance for canonical health source facts. */
+  temporarySourceFactIds?: string[];
+  poorSleepPattern?: 'single_night' | 'repeated';
 }
 
 export function deriveProfileReadiness(

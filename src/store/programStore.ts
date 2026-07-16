@@ -50,7 +50,6 @@ import {
 } from '../rules/seasonPhaseClock';
 import { classifyVisibleSession } from '../rules/sessionClassificationAdapter';
 import type { CalendarDayType } from './calendarStore';
-import type { ActiveConstraint } from './coachUpdatesStore';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { effectiveFixtureDatesForWeeks } from '../rules/rollingHorizonRepair';
 import { applyUserRemovalConstraintsToWeek } from '../rules/userRemovalConstraints';
@@ -70,8 +69,9 @@ import {
   type AcceptedMaterialContext,
 } from './acceptedStateColdStart';
 import {
-  migrateLegacyInjuryEpisodes,
-} from '../rules/injuryEpisode';
+  migrateLegacyTemporarySourceFacts,
+  normalizeTemporarySourceFacts,
+} from '../rules/temporarySourceFact';
 import {
   createEmptyReversibleAdjustmentLedger,
   normalizeReversibleAdjustmentLedger,
@@ -1592,25 +1592,38 @@ export const useProgramStore = create<ProgramState>()(
       storage: createJSONStorage(() => programStateStorage),
       merge: (persisted, current) => {
         const incomingRaw = (persisted as Partial<ProgramState> | undefined) ?? {};
+        const rawAcceptedContext = (incomingRaw.acceptedMaterialContext ?? {}) as
+          Partial<AcceptedMaterialContext>;
         let acceptedContext = normalizeAcceptedMaterialContext(incomingRaw.acceptedMaterialContext);
         let incoming = {
           ...incomingRaw,
           ...normalizeAcceptedProgramSurfaces(incomingRaw),
           acceptedMaterialContext: acceptedContext,
         };
-        const migratedEpisodes = migrateLegacyInjuryEpisodes({
-          activeConstraints: acceptedContext.activeConstraints,
-          activeInjury: acceptedContext.activeInjury,
-          existingEpisodes: acceptedContext.injuryEpisodes,
+        const rawLegacyConstraints = Array.isArray(rawAcceptedContext.activeConstraints)
+          ? rawAcceptedContext.activeConstraints.filter((constraint) =>
+              (constraint.type === 'injury' && !constraint.injuryEpisodeId) ||
+              ((constraint.type === 'fatigue' || constraint.type === 'soreness') &&
+                (constraint.temporarySourceFactIds?.length ?? 0) === 0))
+          : [];
+        const legacyFacts = migrateLegacyTemporarySourceFacts({
+          activeConstraints: rawLegacyConstraints,
+          activeInjury: acceptedContext.temporarySourceFacts.some((fact) => 'episodeId' in fact)
+            ? null
+            : rawAcceptedContext.activeInjury ?? acceptedContext.activeInjury,
+          readinessSignalsByDate: rawAcceptedContext.readinessSignalsByDate ?? {},
           sourceSurface: 'program_store_hydration',
         });
-        if (migratedEpisodes.length > 0) {
-          const capturedAt = migratedEpisodes
-            .map((episode) => episode.createdAt)
+        const migratedFacts = normalizeTemporarySourceFacts({
+          value: [...legacyFacts, ...acceptedContext.temporarySourceFacts],
+        });
+        if (migratedFacts.length > 0) {
+          const capturedAt = migratedFacts
+            .map((fact) => fact.createdAt)
             .sort()[0] ?? new Date(0).toISOString();
           acceptedContext = normalizeAcceptedMaterialContext({
             ...acceptedContext,
-            injuryEpisodes: migratedEpisodes,
+            temporarySourceFacts: migratedFacts,
             acceptedCompositionBase: acceptedContext.acceptedCompositionBase ?? {
               protocolVersion: ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
               capturedAt,
@@ -1646,27 +1659,29 @@ export const useProgramStore = create<ProgramState>()(
           acceptedRevision: acceptedContext.revision,
           exposureContractsByWeek: migrationContractsByWeek,
         });
-        const readinessConstraints = acceptedContext.revision > 0
-          ? Object.values(acceptedContext.readinessSignalsByDate).flatMap((signal) =>
-              require('../utils/readinessConstraints').buildReadinessActiveConstraints(signal))
-          : [];
-        const constraintsById = new Map<string, ActiveConstraint>();
-        for (const constraint of [
-          ...acceptedContext.activeConstraints,
-          ...readinessConstraints,
-        ]) {
-          // Canonical injury episodes are visible composition facts, not
-          // destructive hydration validators for the mutable base.
-          if (constraint.type !== 'injury') constraintsById.set(constraint.id, constraint);
+        if (acceptedContext.acceptedCompositionBase) {
+          acceptedContext = normalizeAcceptedMaterialContext({
+            ...acceptedContext,
+            acceptedCompositionBase: {
+              ...acceptedContext.acceptedCompositionBase,
+              surfaces: {
+                ...acceptedContext.acceptedCompositionBase.surfaces,
+                reversibleAdjustmentLedger: incoming.reversibleAdjustmentLedger,
+              },
+            },
+          });
+          incoming = {
+            ...incoming,
+            ...acceptedContext.acceptedCompositionBase.surfaces,
+            acceptedMaterialContext: acceptedContext,
+          };
         }
         const persistedState = canonicaliseHydratedState(
           incoming,
           {
+            programAlreadyAccepted: true,
             profile: require('./profileStore').useProfileStore.getState().onboardingData,
             markedDays: acceptedContext.markedDays,
-            activeConstraints: constraintsById.size > 0
-              ? Array.from(constraintsById.values())
-              : undefined,
             validateWeekStarts: [
               ...(incoming.currentProgram?.microcycles ?? []).map((microcycle) =>
                 microcycle.startDate.slice(0, 10)),
@@ -1694,7 +1709,7 @@ export const useProgramStore = create<ProgramState>()(
         });
         return merged;
       },
-      onRehydrateStorage: () => (_state, error) => {
+      onRehydrateStorage: () => async (_state, error) => {
         if (error) {
           const trace = programHydrationTrace();
           emitAthleteActionEvent(trace, 'hydrated_state_checked', {
@@ -1713,12 +1728,48 @@ export const useProgramStore = create<ProgramState>()(
         }
         const hydrated = useProgramStore.getState();
         // Publish the complete hydrated/migrated program and material context
-        // through the same coordinator used at runtime. Legacy store hydration
-        // may happen before or after this; their own hooks re-enter this
-        // boundary with the staged mirror state.
+        // through the same coordinator used at runtime. Compatibility-store
+        // hydration may happen in any order; those stores never publish
+        // upstream and are replaced from this accepted context.
         const trace = programHydrationTrace();
         try {
-          runWithAthleteActionTrace(trace, () => {
+          const acceptedBefore = normalizeAcceptedMaterialContext(
+            useProgramStore.getState().acceptedMaterialContext,
+          );
+          let legacyHydrationFacts = acceptedBefore.temporarySourceFacts;
+          if (legacyHydrationFacts.length === 0) {
+            const persistedState = async (key: string): Promise<Record<string, any>> => {
+              try {
+                const raw = await asyncStorageCompat.getItem(key);
+                if (!raw) return {};
+                const parsed = JSON.parse(raw) as { state?: Record<string, any> } | Record<string, any>;
+                return parsed && typeof parsed === 'object' && 'state' in parsed
+                  ? parsed.state ?? {}
+                  : parsed as Record<string, any>;
+              } catch {
+                return {};
+              }
+            };
+            const [coachMirror, readinessMirror] = await Promise.all([
+              persistedState('coach-updates'),
+              persistedState('readiness-store'),
+            ]);
+            legacyHydrationFacts = migrateLegacyTemporarySourceFacts({
+              activeConstraints: [
+                ...acceptedBefore.activeConstraints,
+                ...(Array.isArray(coachMirror.activeConstraints) ? coachMirror.activeConstraints : []),
+              ],
+              activeInjury: acceptedBefore.activeInjury ?? coachMirror.activeInjury ?? null,
+              readinessSignalsByDate: {
+                ...(readinessMirror.signalsByDate && typeof readinessMirror.signalsByDate === 'object'
+                  ? readinessMirror.signalsByDate
+                  : {}),
+                ...acceptedBefore.readinessSignalsByDate,
+              },
+              sourceSurface: 'program_store_hydration',
+            });
+          }
+          await runWithAthleteActionTrace(trace, async () => {
             require('./acceptedStateTransaction').commitAcceptedStateTransaction({
               reason: 'program:hydration_acceptance',
               trace,
@@ -1730,11 +1781,30 @@ export const useProgramStore = create<ProgramState>()(
                   : []),
                 ...Object.keys(hydrated.weekScopedOverlays ?? {}),
               ],
+              skipConstraintProjection: true,
             });
+            if (legacyHydrationFacts.length > 0) {
+              const currentAccepted = normalizeAcceptedMaterialContext(
+                useProgramStore.getState().acceptedMaterialContext,
+              );
+              if (currentAccepted.temporarySourceFacts.length === 0) {
+                await require('./temporarySourceFactTransaction').commitTemporarySourceFactSet({
+                  nextFacts: legacyHydrationFacts,
+                  targetFactId: 'episodeId' in legacyHydrationFacts[0]
+                    ? legacyHydrationFacts[0].episodeId
+                    : legacyHydrationFacts[0].factId,
+                  todayISO: todayISOLocal(),
+                  reason: 'temporary_source_fact:hydrate_legacy_compatibility',
+                });
+              } else {
+                await require('./temporarySourceFactTransaction')
+                  .hydrateTemporarySourceFacts(todayISOLocal());
+              }
+            }
             const accepted = normalizeAcceptedMaterialContext(
               useProgramStore.getState().acceptedMaterialContext,
             );
-            if (accepted.injuryEpisodes.length > 0) {
+            if (accepted.temporarySourceFacts.length > 0) {
               require('./coachUpdatesStore').publishAcceptedCoachUpdatesCompatibilityMirror({
                 activeConstraints: accepted.activeConstraints,
                 activeInjury: accepted.activeInjury,

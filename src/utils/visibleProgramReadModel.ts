@@ -77,6 +77,20 @@ export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[])
     buildMissedSessionConstraint,
   } = require('../utils/exposureEngine');
   const out: any[] = [];
+  const strongestFatigue = activeConstraints
+    .filter((constraint) => constraint?.type === 'fatigue' && constraint.status !== 'resolved')
+    .sort((left, right) => (right.severity ?? 0) - (left.severity ?? 0) ||
+      String(right.lastUpdatedAt ?? '').localeCompare(String(left.lastUpdatedAt ?? '')))[0];
+  const strongestSorenessByBucket = new Map<string, any>();
+  for (const constraint of activeConstraints) {
+    if (constraint?.type !== 'soreness' || !constraint.bucket || constraint.status === 'resolved') continue;
+    const prior = strongestSorenessByBucket.get(constraint.bucket);
+    if (!prior || (constraint.severity ?? 0) > (prior.severity ?? 0) ||
+      ((constraint.severity ?? 0) === (prior.severity ?? 0) &&
+        String(constraint.lastUpdatedAt ?? '') > String(prior.lastUpdatedAt ?? ''))) {
+      strongestSorenessByBucket.set(constraint.bucket, constraint);
+    }
+  }
   for (const c of activeConstraints) {
     if (!c || c.status === 'resolved') continue;
     if (c.type === 'injury') {
@@ -96,8 +110,10 @@ export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[])
         advice: c.advice,
       }));
     } else if (c.type === 'fatigue') {
+      if (c !== strongestFatigue) continue;
       out.push(buildFatigueConstraint({ id: c.id, severity: c.severity, startDate: c.startDate }));
     } else if (c.type === 'soreness' && c.bucket) {
+      if (strongestSorenessByBucket.get(c.bucket) !== c) continue;
       out.push(buildSorenessConstraint({
         id: c.id,
         region: bucketToRegion(c.bucket),
@@ -118,6 +134,11 @@ export function buildExtraConstraintsForVisibleProgram(activeConstraints: any[])
   return out;
 }
 
+function isTemporaryFactProjectionConstraint(constraint: any): boolean {
+  return (constraint?.temporarySourceFactIds?.length ?? 0) > 0 ||
+    (constraint?.type === 'injury' && !!constraint?.injuryEpisodeId);
+}
+
 export function buildProgramTabProjectedWeek(args: {
   mondayISO?: string;
   todayISO: string;
@@ -131,14 +152,19 @@ export function buildProgramTabProjectedWeek(args: {
     args.modalityPreferences ??
     useCoachPreferencesStore.getState().modalityPreferences;
   return rawWeek.map((day) => {
-    if (hasAcceptedWeekContract(args.state, day.date) && !args.state.activeInjury) {
-      return day;
-    }
     const dayActiveConstraints = filterConstraintsForDate(
       args.state.activeConstraints ?? [],
       day.date,
     );
-    const extraConstraints = buildExtraConstraintsForVisibleProgram(dayActiveConstraints);
+    const hasTemporaryFactProjection = dayActiveConstraints.some(isTemporaryFactProjectionConstraint);
+    if (hasAcceptedWeekContract(args.state, day.date) &&
+      !args.state.activeInjury && !hasTemporaryFactProjection) {
+      return day;
+    }
+    const projectionConstraints = hasAcceptedWeekContract(args.state, day.date)
+      ? dayActiveConstraints.filter(isTemporaryFactProjectionConstraint)
+      : dayActiveConstraints;
+    const extraConstraints = buildExtraConstraintsForVisibleProgram(projectionConstraints);
     const canonicalInjuryProjection = args.state.injuryProjectionOwner === 'accepted_episode';
     return projectVisibleDay({
       day,
@@ -161,14 +187,19 @@ export function buildDayWorkoutProjectedDay(args: {
   modalityPreferences?: Record<string, any>;
 }): ResolvedDay {
   const raw = resolveDateWithConditioning(args.date, args.state);
-  if (hasAcceptedWeekContract(args.state, args.date) && !args.state.activeInjury) {
-    return raw;
-  }
   const dayActiveConstraints = filterConstraintsForDate(
     args.state.activeConstraints ?? [],
     args.date,
   );
-  const extraConstraints = buildExtraConstraintsForVisibleProgram(dayActiveConstraints);
+  const hasTemporaryFactProjection = dayActiveConstraints.some(isTemporaryFactProjectionConstraint);
+  if (hasAcceptedWeekContract(args.state, args.date) &&
+    !args.state.activeInjury && !hasTemporaryFactProjection) {
+    return raw;
+  }
+  const projectionConstraints = hasAcceptedWeekContract(args.state, args.date)
+    ? dayActiveConstraints.filter(isTemporaryFactProjectionConstraint)
+    : dayActiveConstraints;
+  const extraConstraints = buildExtraConstraintsForVisibleProgram(projectionConstraints);
   const canonicalInjuryProjection = args.state.injuryProjectionOwner === 'accepted_episode';
   const prefs =
     args.modalityPreferences ??
