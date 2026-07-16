@@ -404,10 +404,14 @@ async function runTurn(args: {
       classify: async () => {
         classifierCalls++;
         return {
-          intent: 'conversation',
-          confidence: 0,
-          needsClarification: false,
-        } as any;
+          status: 'classified' as const,
+          provenance: 'deterministic' as const,
+          intent: {
+            intent: 'request_program_adjustment' as const,
+            confidence: 1,
+            needsClarification: false,
+          },
+        };
       },
     },
     pendingCoachProposal: null,
@@ -495,7 +499,7 @@ async function run() {
       adapter,
     });
     ok('[1] messy strength removal handled', result.handled.handled, result.handled);
-    ok('[1] no legacy classifier fallback', result.classifierCalls === 0, result.classifierCalls);
+    ok('[1] turn classification called once', result.classifierCalls === 1, result.classifierCalls);
     ok('[1] strength removed', result.visible.strengthItems.length === 0, result.visible.items);
     ok('[1] conditioning preserved', result.visible.conditioningItems.length > 0, result.visible.items);
   }
@@ -508,7 +512,7 @@ async function run() {
     });
     ok('[2] conditioning removed', result.visible.conditioningItems.length === 0, result.visible.items);
     ok('[2] strength preserved', result.visible.strengthItems.length > 0, result.visible.items);
-    ok('[2] no legacy fallback', result.classifierCalls === 0, result.classifierCalls);
+    ok('[2] turn classification called once', result.classifierCalls === 1, result.classifierCalls);
   }
 
   {
@@ -518,7 +522,7 @@ async function run() {
       adapter,
     });
     eq('[3] whole session removed', result.visible.day.workout, null);
-    ok('[3] no legacy fallback', result.classifierCalls === 0, result.classifierCalls);
+    ok('[3] turn classification called once', result.classifierCalls === 1, result.classifierCalls);
   }
 
   {
@@ -529,7 +533,7 @@ async function run() {
     });
     ok('[4] lighter edit keeps strength visible', result.visible.strengthItems.length > 0, result.visible.items);
     ok('[4] lighter edit writes override', !!result.dateOverrides[THURSDAY], result.dateOverrides);
-    ok('[4] no legacy fallback', result.classifierCalls === 0, result.classifierCalls);
+    ok('[4] turn classification called once', result.classifierCalls === 1, result.classifierCalls);
   }
 
   {
@@ -565,7 +569,7 @@ async function run() {
     });
     ok('[6] protected violation blocked', /left the plan unchanged/.test(result.reply), result.reply);
     ok('[6] no override on protected violation', !result.dateOverrides[THURSDAY], result.dateOverrides);
-    ok('[6] no legacy fallback after invalid revision', result.classifierCalls === 0, result.classifierCalls);
+    ok('[6] turn classification called once after invalid revision', result.classifierCalls === 1, result.classifierCalls);
   }
 
   {
@@ -576,7 +580,7 @@ async function run() {
     });
     ok('[7] unknown ids blocked', /left the plan unchanged/.test(result.reply), result.reply);
     ok('[7] no override on unknown ids', !result.dateOverrides[THURSDAY], result.dateOverrides);
-    ok('[7] no legacy fallback on unknown ids', result.classifierCalls === 0, result.classifierCalls);
+    ok('[7] turn classification called once on unknown ids', result.classifierCalls === 1, result.classifierCalls);
   }
 
   {
@@ -597,7 +601,7 @@ async function run() {
       adapter,
     });
     ok('[9] malformed proposal blocked', /left the plan unchanged/.test(result.reply), result.reply);
-    ok('[9] no legacy fallback after malformed proposal', result.classifierCalls === 0, result.classifierCalls);
+    ok('[9] turn classification called once after malformed proposal', result.classifierCalls === 1, result.classifierCalls);
     ok('[9] no override after malformed proposal', !result.dateOverrides[THURSDAY], result.dateOverrides);
   }
 

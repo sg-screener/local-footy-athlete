@@ -24,6 +24,7 @@
  */
 
 import type {
+  CoachClassificationResult,
   CoachContextPacket,
   CoachIntent,
   PendingCoachProposal,
@@ -1352,6 +1353,7 @@ export async function dispatchCoachIntent(
   intent: CoachIntent,
   packet: CoachContextPacket,
   deps: DispatchDeps,
+  classification?: Extract<CoachClassificationResult, { status: 'classified' }>,
 ): Promise<DispatchOutcome> {
   const targetDate = intent.payload?.targetDate ?? intent.payload?.requestedDate ?? packet.todayISO;
   const trace = beginAthleteActionTrace({
@@ -1365,6 +1367,18 @@ export async function dispatchCoachIntent(
     scope: intent.payload?.scope ?? null,
   }, undefined, { forceRoot: true });
   return runWithAthleteActionTrace(trace, async () => {
+    emitAthleteActionEvent(trace, 'coach_intent_classification_result', {
+      classificationStatus: 'classified',
+      classifiedIntentKind: intent.intent,
+      confidenceBucket: intent.confidence >= 0.8
+        ? 'high'
+        : intent.confidence >= 0.5
+          ? 'medium'
+          : 'low',
+      clarificationFlag: intent.needsClarification,
+      classificationProvenance: classification?.provenance ?? 'deterministic',
+      unavailableCode: null,
+    });
     emitAthleteActionEvent(trace, 'athlete_action_parsed', {
       parsedMutationType: intent.intent,
       confidenceBucket: intent.confidence >= 0.8 ? 'high' : intent.confidence >= 0.5 ? 'medium' : 'low',

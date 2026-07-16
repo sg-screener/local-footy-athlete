@@ -106,6 +106,15 @@ export interface AthleteActionUIObservationV2 {
   observedAt: string | null;
 }
 
+export interface CoachClassificationEvidenceV2 {
+  status: 'classified' | 'unavailable';
+  intentKind: string | null;
+  confidenceBucket: 'low' | 'medium' | 'high' | null;
+  clarificationFlag: boolean | null;
+  provenance: 'deterministic' | 'semantic_service' | null;
+  unavailableReasonCode: string | null;
+}
+
 export interface AthleteActionTraceRecordV2 {
   schemaVersion: typeof ATHLETE_ACTION_TRACE_SCHEMA_VERSION;
   fingerprintContract: typeof SEMANTIC_FINGERPRINT_CONTRACT_V2;
@@ -138,6 +147,7 @@ export interface AthleteActionTraceRecordV2 {
   };
   spans: AthleteActionTraceSpanV2[];
   evidence: {
+    coachClassification: TraceField<CoachClassificationEvidenceV2>;
     acceptedRevisionBefore: TraceField<number>;
     acceptedRevisionAfter: TraceField<number>;
     acceptedRevisionPostReload: TraceField<number>;
@@ -330,6 +340,9 @@ function initialRecord(
     },
     spans: [{ spanId, parentSpanId: null, name: 'athlete_action_root', startedAt: timestamp, endedAt: null }],
     evidence: {
+      coachClassification: input.source === 'coach'
+        ? missing('Coach classification has not been recorded')
+        : notApplicableTraceField('action did not originate from Coach classification'),
       acceptedRevisionBefore: missing(),
       acceptedRevisionAfter: missing(),
       acceptedRevisionPostReload: missing(),
@@ -480,6 +493,31 @@ export class AthleteActionTraceCoordinator {
     event: string,
     fields: Record<string, unknown>,
   ): void {
+    if (event === 'coach_intent_classification_result') {
+      record.evidence.coachClassification = capturedTraceField({
+        status: fields.classificationStatus === 'unavailable' ? 'unavailable' : 'classified',
+        intentKind: typeof fields.classifiedIntentKind === 'string'
+          ? fields.classifiedIntentKind
+          : null,
+        confidenceBucket:
+          fields.confidenceBucket === 'low' ||
+          fields.confidenceBucket === 'medium' ||
+          fields.confidenceBucket === 'high'
+            ? fields.confidenceBucket
+            : null,
+        clarificationFlag: typeof fields.clarificationFlag === 'boolean'
+          ? fields.clarificationFlag
+          : null,
+        provenance:
+          fields.classificationProvenance === 'deterministic' ||
+          fields.classificationProvenance === 'semantic_service'
+            ? fields.classificationProvenance
+            : null,
+        unavailableReasonCode: typeof fields.unavailableCode === 'string'
+          ? fields.unavailableCode
+          : null,
+      });
+    }
     if (event === 'athlete_action_parsed') {
       record.root.canonicalRequestedAction = capturedTraceField({
         actionType: record.root.actionType.status === 'captured' ? record.root.actionType.value : null,

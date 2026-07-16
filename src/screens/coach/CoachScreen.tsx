@@ -120,10 +120,8 @@ import {
 
 /** Singleton classifier — instantiated at module load.
  *
- *  This is the LIVE LLM-backed wiring. Failure paths inside the
- *  classifier (network, HTTP error, JSON parse, schema mismatch) all
- *  resolve to a safe `general_question` fallback so the dispatcher
- *  always receives a valid intent. */
+ *  This is the LIVE LLM-backed wiring. Failure paths are explicit
+ *  `unavailable` results and can never enter conversational fallback. */
 const clientEnv = getClientEnvConfig();
 if (!clientEnv.isReady) {
   logMissingClientEnv('CoachScreen', clientEnv);
@@ -132,10 +130,8 @@ if (!clientEnv.isReady) {
 const disabledCoachIntentClassifier: CoachIntentClassifier = {
   async classify() {
     return {
-      intent: 'general_question',
-      confidence: 0,
-      needsClarification: false,
-      rationale: 'missing_client_env',
+      status: 'unavailable' as const,
+      reason: 'missing_configuration' as const,
     };
   },
 };

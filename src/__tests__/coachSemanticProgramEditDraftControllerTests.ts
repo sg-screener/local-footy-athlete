@@ -453,10 +453,14 @@ async function runControllerTurn(args: {
       classify: async () => {
         classifierCalls++;
         return {
-          intent: 'conversation',
-          confidence: 0,
-          needsClarification: false,
-        } as any;
+          status: 'classified' as const,
+          provenance: 'deterministic' as const,
+          intent: {
+            intent: 'request_program_adjustment' as const,
+            confidence: 1,
+            needsClarification: false,
+          },
+        };
       },
     },
     pendingCoachProposal: null,
@@ -526,7 +530,7 @@ async function run() {
       semanticAdapter: adapter,
     });
     eq('[2] semantic enabled calls adapter once', adapter.calls.length, 1);
-    eq('[2] semantic front door returns before LLM legacy classifier', result.classifierCalls, 0);
+    eq('[2] semantic front door reuses the one turn classification', result.classifierCalls, 1);
     ok('[2] messy command is handled as a typed strength-block draft, not generic fallback',
       /strength-block edit/i.test(result.reply) &&
         /team training|game content/i.test(result.reply) &&
@@ -583,7 +587,7 @@ async function run() {
       semanticEnabled: true,
       semanticAdapter: adapter,
     });
-    eq('[4] compound semantic draft returns before legacy classifier', result.classifierCalls, 0);
+    eq('[4] compound semantic draft reuses the one turn classification', result.classifierCalls, 1);
     ok('[4] compound draft is safely deferred, not generic fallback',
       /more than one program edit/i.test(result.reply) &&
         /remove-and-add compound edit/i.test(result.reply),

@@ -70,6 +70,7 @@
     "test:resolver-injury": "sucrase-node src/__tests__/resolverInjuryFilterTests.ts",
     "test:coach-intent": "sucrase-node src/__tests__/coachIntentDispatchTests.ts",
     "test:llm-classifier": "sucrase-node src/__tests__/llmCoachIntentClassifierTests.ts",
+    "test:coach-classification-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachClassificationOwnershipTests.ts",
     "test:pipeline-instrumentation": "sucrase-node src/__tests__/pipelineInstrumentationTests.ts",
     "test:athlete-action-diagnostics": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionDiagnosticsTests.ts",
     "test:athlete-action-trace-v2": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionTraceV2Tests.ts",

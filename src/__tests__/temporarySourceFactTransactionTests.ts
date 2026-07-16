@@ -162,12 +162,16 @@ async function main(): Promise<void> {
     todayISO: date,
     classifier: {
       classify: async () => ({
-        intent: 'fatigue',
-        confidence: 1,
-        needsClarification: false,
-        payload: {
-          reportKind: 'cooked',
-          scope: 'this_week',
+        status: 'classified' as const,
+        provenance: 'deterministic' as const,
+        intent: {
+          intent: 'fatigue' as const,
+          confidence: 1,
+          needsClarification: false,
+          payload: {
+            reportKind: 'cooked' as const,
+            scope: 'this_week',
+          },
         },
       }),
     },

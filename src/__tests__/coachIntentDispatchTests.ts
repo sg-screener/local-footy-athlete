@@ -284,8 +284,19 @@ section('[6] Mocked classifier dispatch — 7 spec scenarios route correctly');
       recentMessages: [],
       todayISO: FIXED_TODAY,
     });
-    const classifier: CoachIntentClassifier = { classify: () => mockedIntent };
-    const intent = classifier.classify(packet) as CoachIntent;
+    const classifier: CoachIntentClassifier = {
+      classify: () => ({
+        status: 'classified',
+        intent: mockedIntent,
+        provenance: 'deterministic',
+      }),
+    };
+    const classification = classifier.classify(packet) as Exclude<
+      ReturnType<CoachIntentClassifier['classify']>,
+      Promise<unknown>
+    >;
+    if (classification.status !== 'classified') throw new Error('test classifier unavailable');
+    const intent = classification.intent;
     // Dispatch table — minimal mirror for testing.
     let mutated = false;
     switch (intent.intent) {
