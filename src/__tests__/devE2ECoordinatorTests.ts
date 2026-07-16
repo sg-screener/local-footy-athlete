@@ -383,6 +383,8 @@ async function main() {
     !defaultCoordinatorSource.includes('.setSessionFeedback('));
   ok('dev auxiliary seeds use public canonical APIs after program installation',
     !defaultCoordinatorSource.includes('useProgramStore.setState(') &&
+      defaultCoordinatorSource.includes('commitAcceptedStateTransaction({') &&
+      defaultCoordinatorSource.includes('preserveExactAcceptedWorkouts: true') &&
       defaultCoordinatorSource.includes('setManualOverride(') &&
       defaultCoordinatorSource.includes('createOrUpdateInjuryEpisode({') &&
       defaultCoordinatorSource.includes('commitSessionOutcomeTransaction(intent)'));

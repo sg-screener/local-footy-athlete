@@ -490,6 +490,14 @@ function visibleFixtureWorkoutId(date: string): string {
   return `calendar-game-${date}`;
 }
 
+function visibleRecoveryWorkoutId(date: string): string {
+  return `derived-recovery-${date}`;
+}
+
+function visibleArmsPumpWorkoutId(date: string): string {
+  return `derived-arms_pump-${date}`;
+}
+
 function teamTrainingWorkout(program: TrainingProgram, date: string): Workout {
   const workout = underlyingWorkoutForDate(program, date);
   if (!workout || !isTeamTrainingWorkout(workout)) {
@@ -868,7 +876,7 @@ export function witnessesForDevE2ESeed(
       });
       for (const [date, workoutId] of [
         [fixtureDate, visibleFixtureWorkoutId(fixtureDate)],
-        [sundayDate, sunday?.id ?? null],
+        [sundayDate, visibleRecoveryWorkoutId(sundayDate)],
         [followingMonday, nextMonday.id],
       ] as const) {
         witnesses.push({ kind: 'visible_card_detail_equality', date, workoutId });
@@ -982,8 +990,8 @@ export function witnessesForDevE2ESeed(
       witnesses.push({ kind: 'reversible_ledger_state', activeCount: 0, totalCount: 0 });
       for (const [date, workoutId] of [
         [fixtureDate, visibleFixtureWorkoutId(fixtureDate)],
-        [sundayDate, sunday?.id ?? null],
-        [hamstring.date, hamstring.workout.id],
+        [sundayDate, visibleRecoveryWorkoutId(sundayDate)],
+        [hamstring.date, visibleArmsPumpWorkoutId(hamstring.date)],
         [progression.targetDate, progression.targetWorkout.id],
       ] as const) {
         witnesses.push({ kind: 'visible_card_detail_equality', date, workoutId });

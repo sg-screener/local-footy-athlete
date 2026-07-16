@@ -58,6 +58,38 @@ function visibleWorkoutForDate(
       updatedAt: FIXED_TIMESTAMP,
     };
   }
+  if (calendarMarks[addDaysISO(date, -1)] === 'game') {
+    return {
+      id: `derived-recovery-${date}`,
+      microcycleId: 'calendar',
+      dayOfWeek: dayOfWeekForISODate(date),
+      name: 'Recovery Session',
+      description: 'Post-game recovery',
+      durationMinutes: 30,
+      intensity: 'Light',
+      workoutType: 'Recovery',
+      sessionTier: 'recovery',
+      exercises: [],
+      createdAt: FIXED_TIMESTAMP,
+      updatedAt: FIXED_TIMESTAMP,
+    };
+  }
+  if (calendarMarks[addDaysISO(date, 1)] === 'game') {
+    return {
+      id: `derived-arms_pump-${date}`,
+      microcycleId: 'calendar',
+      dayOfWeek: dayOfWeekForISODate(date),
+      name: 'Gunshow',
+      description: 'Pre-game day - light upper body pump work',
+      durationMinutes: 35,
+      intensity: 'Light',
+      workoutType: 'Strength',
+      sessionTier: 'optional',
+      exercises: [],
+      createdAt: FIXED_TIMESTAMP,
+      updatedAt: FIXED_TIMESTAMP,
+    };
+  }
   if (Object.prototype.hasOwnProperty.call(dateOverrides, date)) {
     return dateOverrides[date] ?? null;
   }

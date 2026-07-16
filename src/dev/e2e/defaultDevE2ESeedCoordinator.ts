@@ -24,6 +24,10 @@ import {
   resolveSessionOutcomeTarget,
 } from '../../store/sessionOutcomeTransaction';
 import {
+  commitAcceptedStateTransaction,
+  getAcceptedMaterialContext,
+} from '../../store/acceptedStateTransaction';
+import {
   buildDevE2ESeed,
   validateDevE2EWitnesses,
   type DevE2EAuxiliaryState,
@@ -65,6 +69,7 @@ import {
   replacePersistedDevE2EClockForSeed,
 } from './devE2EClockPersistence';
 import { dayOfWeekForISODate, todayISOLocal } from '../../utils/appDate';
+import { deriveStoredBlockStateFromProgram } from '../../utils/programBlockState';
 import { resolveDevE2EScenarioManifest } from './devE2EScenarioManifestRegistry';
 import { defaultDevE2EScenarioEligibility } from './devE2EScenarioProtocol';
 import {
@@ -90,6 +95,83 @@ function clearLocalStateThroughPublicAPIs(): void {
   useProfileStore.getState().clear();
   // ProgramStore is last so no legacy mirror can republish old material.
   useProgramStore.getState().clear();
+}
+
+function installAcceptedCalendarGame(date: string, fallbackProfile?: ReturnType<
+  typeof buildDevE2ESeed
+>['profile']): void {
+  const accepted = getAcceptedMaterialContext();
+  const program = useProgramStore.getState().currentProgram;
+  const profile = accepted.acceptedProfileSnapshot?.onboardingData ?? fallbackProfile;
+  if (!program || !profile) {
+    throw new Error(`dev_e2e_seed_calendar_context_missing:${date}`);
+  }
+  commitAcceptedStateTransaction({
+    reason: `dev_e2e_seed:calendar_game:${date}`,
+    markedDays: { ...accepted.markedDays, [date]: 'game' },
+    profile,
+    programAlreadyAccepted: true,
+    preserveExactAcceptedWorkouts: true,
+    validateWeekStarts: program.microcycles.map((microcycle) =>
+      microcycle.startDate.slice(0, 10)),
+  });
+}
+
+function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): void {
+  const validateWeekStarts = seed.program.microcycles.map((microcycle) =>
+    microcycle.startDate.slice(0, 10));
+  seedOnboardingProgram({
+    onboardingData: seed.profile,
+    program: seed.program,
+    programStore: {
+      setCurrentProgram: (program) => {
+        if (!program) throw new Error('dev_e2e_seed_program_missing');
+        commitAcceptedStateTransaction({
+          reason: 'dev_e2e_seed:install_program',
+          program: {
+            currentProgram: program,
+            currentMicrocycle: null,
+            todayWorkout: null,
+            blockState: deriveStoredBlockStateFromProgram(program),
+          },
+          profile: seed.profile,
+          programAlreadyAccepted: true,
+          preserveExactAcceptedWorkouts: true,
+          validateWeekStarts,
+        });
+      },
+      setCurrentMicrocycle: (microcycle) => commitAcceptedStateTransaction({
+        reason: 'dev_e2e_seed:select_microcycle',
+        program: { currentMicrocycle: microcycle },
+        profile: seed.profile,
+        programAlreadyAccepted: true,
+        preserveExactAcceptedWorkouts: true,
+        validateWeekStarts: microcycle ? [microcycle.startDate.slice(0, 10)] : [],
+      }),
+      // The complete week has already crossed the Section 18 acceptance
+      // boundary. Re-running a single-day mutation finaliser for the selected
+      // workout can reinterpret an otherwise valid phase-transition week.
+      // Publish the selection as part of the exact accepted surfaces while
+      // still gating the complete canonical week.
+      setTodayWorkout: (workout) => commitAcceptedStateTransaction({
+        reason: 'dev_e2e_seed:set_today_workout',
+        program: { todayWorkout: workout },
+        profile: seed.profile,
+        programAlreadyAccepted: true,
+        preserveExactAcceptedWorkouts: true,
+        validateWeekStarts: [seed.anchorDate],
+      }),
+    },
+    // The registry owns the exact accepted seed. Installing its fixture marks
+    // through the live calendar-mutation path would rebuild those accepted
+    // workouts into one_off_game overlays before witnesses run. Keep the
+    // normal onboarding revision sequence, but publish each deterministic
+    // mark through the canonical accepted-state transaction without
+    // reinterpreting the already-accepted program.
+    calendarStore: {
+      setGameDay: (date) => installAcceptedCalendarGame(date, seed.profile),
+    },
+  });
 }
 
 async function applyAuxiliaryState(
@@ -145,7 +227,7 @@ async function applyAuxiliaryState(
       continue;
     }
     if (item.kind === 'calendar_game') {
-      useCalendarStore.getState().setGameDay(item.date);
+      installAcceptedCalendarGame(item.date);
       continue;
     }
     if (item.kind === 'removable_component_override') {
@@ -352,10 +434,7 @@ const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   waitForPersistence: waitForDevE2EPersistence,
   buildSeed: buildDevE2ESeed,
   writeProfile: (seed) => useProfileStore.getState().updateOnboardingData(seed.profile),
-  installProgram: (seed) => seedOnboardingProgram({
-    onboardingData: seed.profile,
-    program: seed.program,
-  }),
+  installProgram: installAcceptedSeedProgram,
   applyAuxiliaryState,
   completeOnboarding: () => useProfileStore.getState().completeOnboarding(),
   readWitnessState,

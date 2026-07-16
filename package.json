@@ -114,6 +114,7 @@
     "test:dev-e2e-entry": "sucrase-node src/__tests__/devE2EEntryBoundaryTests.ts",
     "test:dev-e2e-metro-isolation": "sucrase-node src/__tests__/devE2EMetroIsolationTests.ts",
     "test:dev-e2e-reset-hydration": "sucrase-node src/__tests__/devE2ECoordinatorTests.ts",
+    "test:dev-e2e-default-installation": "sucrase-node src/__tests__/devE2EDefaultSeedInstallationTests.ts",
     "test:dev-e2e-scenario-session": "sucrase-node src/__tests__/devE2EScenarioSessionTests.ts",
     "test:dev-e2e-testids": "sucrase-node src/__tests__/devE2EStableTestIdTests.ts",
     "test:accessibility-contracts": "sucrase-node src/__tests__/accessibilityWrapperContractTests.ts",
