@@ -779,12 +779,19 @@ function injuryModifier(
     affects: source === 'legacy_active_injury'
       ? ['current_week', 'future_generation']
       : modifierAffects(c, []),
-    actions: [
-      { kind: 'clear_injury', label: isSerious ? "I've been cleared" : "I'm all good now" },
-      { kind: 'update_injury', label: isSerious ? 'Update issue' : 'Update injury' },
-    ],
+    actions: c.injuryEpisodeId
+      ? [
+          { kind: 'clear_injury', label: 'Injury resolved' },
+          { kind: 'update_injury', label: isSerious ? 'Update issue' : 'Update injury' },
+          { kind: 'dismiss_note', label: 'Dismiss note' },
+        ]
+      : [
+          { kind: 'clear_injury', label: isSerious ? "I've been cleared" : "I'm all good now" },
+          { kind: 'update_injury', label: isSerious ? 'Update issue' : 'Update injury' },
+        ],
     payload: {
       constraintId: c.id,
+      injuryEpisodeId: c.injuryEpisodeId,
       lifecycleKey: activeConstraintLifecycleKey(c, source),
       bodyPart: c.bodyPart,
       region: c.region,
@@ -792,6 +799,7 @@ function injuryModifier(
       adjustmentLevel: c.adjustmentLevel,
       triggers: c.triggers ?? [],
       seriousSymptoms: c.seriousSymptoms ?? false,
+      presentationOnlyDismiss: Boolean(c.injuryEpisodeId),
     },
   };
 }
@@ -1305,7 +1313,21 @@ export function clearActiveProgramModifier(
         .find((candidate) => candidate.id === modifierIdToClear) ?? null;
     }
   }
+
   if (!modifier) {
+    return {
+      cleared: null,
+      remainingActiveCount: modifiers.length,
+      rebuildRequired: false,
+    };
+  }
+  // Canonical injury state is resolved only by resolveInjuryEpisode(id).
+  // Generic modifier Clear remains available for the other legacy families,
+  // but it must never delete an episode, history, or injury-owned projection.
+  if (modifier.type === 'injury' && (
+    typeof modifier.payload?.injuryEpisodeId === 'string' ||
+    useProgramStore.getState().acceptedMaterialContext.injuryEpisodes?.length > 0
+  )) {
     return {
       cleared: null,
       remainingActiveCount: modifiers.length,

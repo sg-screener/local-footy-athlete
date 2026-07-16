@@ -20,7 +20,10 @@ import { PowerPrimerSection } from '../../components/PowerPrimerSection';
 import { TrunkSupportSection } from '../../components/TrunkSupportSection';
 import { getSmokeRuntimeSignal } from '../../utils/smokeBootstrap';
 import { shortWeekdayDateLabel } from '../../utils/appDate';
-import { executeProgramControlAction } from '../../utils/programControlActions';
+import {
+  executeProgramControlAction,
+  executeProgramControlActionDurably,
+} from '../../utils/programControlActions';
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 import {
   buildGuidedInjuryConstraint,
@@ -559,12 +562,12 @@ export default function DayWorkoutScreenV2() {
   );
 
   const applyExerciseGuidedInjury = React.useCallback(
-    (result: GuidedInjuryFlowResult) => {
+    async (result: GuidedInjuryFlowResult) => {
       const exercise = injuryFlowExercise;
       if (!date || !exercise) return;
       const constraint = buildGuidedInjuryConstraint(result, { todayISO: date });
       const trainingPaused = constraint.adjustmentLevel === 'training_paused';
-      const actionResult = executeProgramControlAction({
+      const actionResult = await executeProgramControlActionDurably({
         type: 'set_injury_modifier',
         source: { screen: 'session_detail', surface: 'exercise_injury_flow', initiatedBy: 'tap' },
         scope: 'current_and_future',

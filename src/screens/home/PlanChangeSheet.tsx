@@ -497,10 +497,10 @@ export function PlanChangeSheet({
     );
   };
 
-  const applyGuidedInjury = (result: GuidedInjuryFlowResult) => {
+  const applyGuidedInjury = async (result: GuidedInjuryFlowResult) => {
     const constraint = buildGuidedInjuryConstraint(result, { todayISO });
     const trainingPaused = constraint.adjustmentLevel === 'training_paused';
-    const actionResult = executeProgramControlAction({
+    const actionResult = await executeProgramControlActionDurably({
       type: 'set_injury_modifier',
       source: { screen: 'program_tab', surface: 'plan_change_injury_flow', initiatedBy: 'tap' },
       scope: 'current_and_future',

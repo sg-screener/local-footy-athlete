@@ -950,11 +950,14 @@ run('mutation', 'fixture paths cannot bypass the rolling-horizon staging owner',
     'week rebuild retained an independent horizon owner');
 });
 
-run('mutation', 'visible projection cannot alter accepted exposure', () => {
-  assert(visibleSource.includes('if (hasAcceptedWeekContract(args.state, day.date)) {\n      return day;'),
-    'accepted week projection short circuit removed');
-  assert(!visibleSource.includes('if (hasAcceptedWeekContract(args.state, day.date)) {\n      return projectVisibleDay'),
-    'accepted week is structurally projected again');
+run('mutation', 'only canonical injury facts may compose over an accepted base', () => {
+  assert(visibleSource.includes(
+    'if (hasAcceptedWeekContract(args.state, day.date) && !args.state.activeInjury) {'),
+  'non-injury accepted week projection short circuit removed');
+  assert(visibleSource.includes('activeInjury: args.state.activeInjury'),
+    'canonical injury visible composition removed');
+  assert(transactionSource.includes(".filter((constraint) => constraint.type !== 'injury')"),
+    'injury constraint can destructively overwrite the accepted base');
 });
 
 console.log(`\nAccepted-state transaction totals: regressions=${regressionPass}/25 properties=${propertyPass}/10 mutations=${mutationPass}/10 failures=${failures.length}`);

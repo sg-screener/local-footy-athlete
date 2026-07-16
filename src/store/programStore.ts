@@ -63,11 +63,15 @@ import {
   runWithAthleteActionTrace,
 } from '../utils/athleteActionDiagnostics';
 import {
+  ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
   createEmptyAcceptedMaterialContext,
   normalizeAcceptedMaterialContext,
   normalizeAcceptedProgramSurfaces,
   type AcceptedMaterialContext,
 } from './acceptedStateColdStart';
+import {
+  migrateLegacyInjuryEpisodes,
+} from '../rules/injuryEpisode';
 import {
   createEmptyReversibleAdjustmentLedger,
   normalizeReversibleAdjustmentLedger,
@@ -1585,12 +1589,38 @@ export const useProgramStore = create<ProgramState>()(
       storage: createJSONStorage(() => programStateStorage),
       merge: (persisted, current) => {
         const incomingRaw = (persisted as Partial<ProgramState> | undefined) ?? {};
-        const acceptedContext = normalizeAcceptedMaterialContext(incomingRaw.acceptedMaterialContext);
-        const incoming = {
+        let acceptedContext = normalizeAcceptedMaterialContext(incomingRaw.acceptedMaterialContext);
+        let incoming = {
           ...incomingRaw,
           ...normalizeAcceptedProgramSurfaces(incomingRaw),
           acceptedMaterialContext: acceptedContext,
         };
+        const migratedEpisodes = migrateLegacyInjuryEpisodes({
+          activeConstraints: acceptedContext.activeConstraints,
+          activeInjury: acceptedContext.activeInjury,
+          existingEpisodes: acceptedContext.injuryEpisodes,
+          sourceSurface: 'program_store_hydration',
+        });
+        if (migratedEpisodes.length > 0) {
+          const capturedAt = migratedEpisodes
+            .map((episode) => episode.createdAt)
+            .sort()[0] ?? new Date(0).toISOString();
+          acceptedContext = normalizeAcceptedMaterialContext({
+            ...acceptedContext,
+            injuryEpisodes: migratedEpisodes,
+            acceptedCompositionBase: acceptedContext.acceptedCompositionBase ?? {
+              protocolVersion: ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
+              capturedAt,
+              updatedAt: capturedAt,
+              sourceRevision: acceptedContext.revision,
+              provenance: 'legacy_after_state_only',
+              // A legacy envelope has no provable displaced before-state. Its
+              // current accepted after-state is the only safe rebase source.
+              surfaces: normalizeAcceptedProgramSurfaces(incoming),
+            },
+          });
+          incoming = { ...incoming, acceptedMaterialContext: acceptedContext };
+        }
         const migrationContractsByWeek: Record<string, WeeklyExposureContractV2> = {};
         for (const microcycle of incoming.currentProgram?.microcycles ?? []) {
           if (microcycle.exposureContractV2) {
@@ -1621,7 +1651,11 @@ export const useProgramStore = create<ProgramState>()(
         for (const constraint of [
           ...acceptedContext.activeConstraints,
           ...readinessConstraints,
-        ]) constraintsById.set(constraint.id, constraint);
+        ]) {
+          // Canonical injury episodes are visible composition facts, not
+          // destructive hydration validators for the mutable base.
+          if (constraint.type !== 'injury') constraintsById.set(constraint.id, constraint);
+        }
         const persistedState = canonicaliseHydratedState(
           incoming,
           {
@@ -1694,6 +1728,15 @@ export const useProgramStore = create<ProgramState>()(
                 ...Object.keys(hydrated.weekScopedOverlays ?? {}),
               ],
             });
+            const accepted = normalizeAcceptedMaterialContext(
+              useProgramStore.getState().acceptedMaterialContext,
+            );
+            if (accepted.injuryEpisodes.length > 0) {
+              require('./coachUpdatesStore').publishAcceptedCoachUpdatesCompatibilityMirror({
+                activeConstraints: accepted.activeConstraints,
+                activeInjury: accepted.activeInjury,
+              });
+            }
             emitAthleteActionEvent(trace, 'athlete_action_completed', {
               outcome: 'accepted',
               internalResultCode: 'hydration_accepted',

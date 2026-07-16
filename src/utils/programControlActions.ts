@@ -60,6 +60,10 @@ import {
   type AthleteActionType,
 } from './athleteActionDiagnostics';
 import { runCoachMutationTransaction } from '../store/coachMutationTransaction';
+import {
+  createOrUpdateInjuryEpisode,
+  resolveInjuryEpisode,
+} from '../store/injuryEpisodeTransaction';
 
 export type ProgramControlActionType =
   | 'swap_session'
@@ -179,7 +183,11 @@ export type ProgramControlAction =
     }>
   | ProgramControlActionBase<'clear_fatigue_status', { noteId?: string; modifierId?: string; date?: string }>
   | ProgramControlActionBase<'set_injury_modifier', { constraint?: ActiveInjuryConstraint }>
-  | ProgramControlActionBase<'clear_injury_modifier', { noteId?: string; modifierId?: string }>
+  | ProgramControlActionBase<'clear_injury_modifier', {
+      noteId?: string;
+      modifierId?: string;
+      episodeId?: string;
+    }>
   | ProgramControlActionBase<'set_equipment_modifier', {
       presetId: TemporaryEquipmentPresetId;
       date: string;
@@ -699,19 +707,41 @@ function executeProgramControlActionWithinTrace(
         route: route.route,
       };
     }
+    case 'clear_injury_modifier':
+      return {
+        ok: false,
+        changedProgram: false,
+        requiresRebuild: false,
+        message: 'Injury resolution must use the durable Injury resolved action.',
+        fallbackToCoach: false,
+        route: route.route,
+      };
     case 'clear_recovery_mode':
     case 'clear_fatigue_status':
-    case 'clear_injury_modifier':
     case 'clear_exercise_preference':
     case 'clear_active_modifier':
       return clearModifierFromPayload(action.payload, route);
     case 'set_injury_modifier': {
-      useCoachUpdatesStore.getState().upsertActiveConstraint(action.payload.constraint!);
+      const accepted = useProgramStore.getState().acceptedMaterialContext;
+      if ((accepted.injuryEpisodes?.length ?? 0) === 0 && !accepted.acceptedCompositionBase) {
+        // Legacy pre-migration compatibility only. Every production injury
+        // surface now calls executeProgramControlActionDurably; this seam lets
+        // an old envelope enter the explicit legacy_after_state_only migration.
+        useCoachUpdatesStore.getState().upsertActiveConstraint(action.payload.constraint!);
+        return {
+          ok: true,
+          changedProgram: true,
+          requiresRebuild: false,
+          createdModifierIds: [action.payload.constraint!.id],
+          fallbackToCoach: false,
+          route: route.route,
+        };
+      }
       return {
-        ok: true,
-        changedProgram: true,
+        ok: false,
+        changedProgram: false,
         requiresRebuild: false,
-        createdModifierIds: [action.payload.constraint!.id],
+        message: 'Injury changes must use the durable injury transaction.',
         fallbackToCoach: false,
         route: route.route,
       };
@@ -1018,6 +1048,61 @@ export async function executeProgramControlActionDurably(
   action: ProgramControlAction,
   context: ProgramControlActionContext = {},
 ): Promise<ProgramControlActionResult> {
+  if (action.type === 'set_injury_modifier') {
+    const result = await createOrUpdateInjuryEpisode({
+      constraint: action.payload.constraint!,
+      sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+      sourceSurface: action.source.surface ?? action.source.screen,
+      todayISO: context.todayISO,
+    });
+    const ok = result.outcome !== 'conflicted' && result.outcome !== 'safely_rejected';
+    return {
+      ok,
+      changedProgram: result.changedProgram,
+      requiresRebuild: false,
+      createdModifierIds: ok && result.episodeId ? [result.episodeId] : undefined,
+      message: result.message,
+      fallbackToCoach: false,
+      route: routeProgramControlAction(action).route,
+    };
+  }
+  if (action.type === 'clear_injury_modifier') {
+    let episodeId = action.payload.episodeId;
+    if (!episodeId) {
+      const notes = buildCoachNotesFromModifiers(getActiveProgramModifiers(), []);
+      const note = notes.find((candidate) =>
+        candidate.id === action.payload.noteId ||
+        candidate.modifierId === action.payload.modifierId);
+      episodeId = note?.injuryEpisodeId;
+    }
+    if (!episodeId) {
+      return {
+        ok: false,
+        changedProgram: false,
+        requiresRebuild: false,
+        message: 'No exact active injury episode matched this action.',
+        fallbackToCoach: false,
+        route: routeProgramControlAction(action).route,
+      };
+    }
+    const result = await resolveInjuryEpisode(episodeId, {
+      sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+      sourceSurface: action.source.surface ?? action.source.screen,
+      todayISO: context.todayISO,
+    });
+    const ok = result.outcome === 'resolved_and_recomposed' ||
+      result.outcome === 'resolved_no_program_change' ||
+      result.outcome === 'already_resolved';
+    return {
+      ok,
+      changedProgram: result.changedProgram,
+      requiresRebuild: false,
+      clearedModifierIds: ok ? [episodeId] : undefined,
+      message: result.message,
+      fallbackToCoach: false,
+      route: routeProgramControlAction(action).route,
+    };
+  }
   if (action.type !== 'move_session' && action.type !== 'bin_session') {
     return executeProgramControlAction(action, context);
   }

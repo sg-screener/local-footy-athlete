@@ -258,12 +258,22 @@ export function detectConstraintResolution(
         kind: 'all',
       };
     }
+    if (active.length > 1) {
+      return {
+        matched: true,
+        constraintIdsToResolve: [],
+        reason: 'all_clear_multiple_active_facts',
+        ambiguous: true,
+        kind: 'all',
+        candidates: active,
+      };
+    }
     return {
       matched: true,
-      constraintIdsToResolve: active.map((c) => c.id),
-      reason: 'all_clear',
+      constraintIdsToResolve: [active[0].id],
+      reason: 'all_clear_single_active_fact',
       ambiguous: false,
-      kind: 'all',
+      kind: active[0].type === 'injury' ? 'injury' : 'all',
     };
   }
 
@@ -389,7 +399,10 @@ export function formatResolutionAmbiguityQuestion(
   }
   const head = labels.slice(0, -1).join(', ');
   const tail = labels[labels.length - 1];
-  return `Good - which one should I clear: ${head}, ${tail}, or all of them?`;
+  const exactOnly = candidates.some((constraint) => constraint.type === 'injury');
+  return exactOnly
+    ? `Good - which exact one has resolved: ${head} or ${tail}?`
+    : `Good - which one should I clear: ${head}, ${tail}, or all of them?`;
 }
 
 /**

@@ -1227,7 +1227,7 @@ export function useHomeScreen() {
   ) => {
     const todayISO = todayISOLocal();
     const constraint = buildGuidedInjuryConstraint(result, { todayISO, existingId });
-    const actionResult = executeProgramControlAction({
+    const actionResult = await executeProgramControlActionDurably({
       type: 'set_injury_modifier',
       source: {
         screen: 'program_tab',
@@ -1245,6 +1245,27 @@ export function useHomeScreen() {
 
   const handleClearCoachNote = useCallback(async (noteId: string) => {
     const note = coachNotes.find((candidate) => candidate.id === noteId);
+    if (note?.injuryEpisodeId) {
+      const result = await executeProgramControlActionDurably({
+        type: 'clear_injury_modifier',
+        source: {
+          screen: 'program_tab',
+          surface: 'coach_notes_injury_resolved',
+          initiatedBy: 'tap',
+        },
+        scope: 'current_and_future',
+        payload: { noteId, episodeId: note.injuryEpisodeId },
+        requiresRebuild: false,
+        createsActiveModifier: false,
+        oneOffOnly: false,
+      }, { todayISO: todayISOLocal() });
+      await handleProgramControlResult(result);
+      if (!result.ok) {
+        Alert.alert('Couldn’t resolve this injury', result.message ??
+          'The accepted program could not be safely recomposed.');
+      }
+      return;
+    }
     if (note?.reversibleAdjustmentId) {
       const result = await clearReversibleAdjustment(
         note.reversibleAdjustmentId,

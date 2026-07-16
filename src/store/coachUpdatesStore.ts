@@ -193,6 +193,8 @@ function sharesGameChangePresentationSlot(
 export interface ActiveInjuryConstraint extends ActiveConstraintModifierMetadata {
   id: string;
   type: 'injury';
+  /** Canonical source-fact identity. Present for InjuryEpisodeV1 projections. */
+  injuryEpisodeId?: string;
   bodyPart: string;
   bucket: InjuryState['bucket'];
   severity: number;
@@ -475,6 +477,11 @@ function legacyInjuryForConstraints(
     initialSeverity: primary.severity,
     status: primary.status,
     rules: Array.isArray(primary.rules) ? [...primary.rules] : [],
+    seriousSymptoms: primary.seriousSymptoms,
+    seriousSymptom: primary.seriousSymptom,
+    adjustmentLevel: primary.adjustmentLevel,
+    safeFocus: [...primary.safeFocus],
+    advice: [...primary.advice],
     startDate: primary.startDate,
     lastUpdatedAt: primary.lastUpdatedAt,
     createdAt: primary.startDate,
@@ -607,6 +614,25 @@ function getAcceptedInjuryHistory(): InjuryHistoryEntry[] | undefined {
   return context?.activeInjury?.history;
 }
 
+function hasCanonicalInjuryOwnership(): boolean {
+  // Lazy access avoids the store initialisation cycle. Once any episode has
+  // migrated, legacy aliases are projections only and may not mutate it.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const context = require('./programStore').useProgramStore.getState()
+    .acceptedMaterialContext;
+  return Array.isArray(context?.injuryEpisodes) && context.injuryEpisodes.length > 0;
+}
+
+function canonicalInjuryCompatibilityConstraints(): ActiveInjuryConstraint[] {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const context = normalizeAcceptedMaterialContext(
+    require('./programStore').useProgramStore.getState().acceptedMaterialContext,
+  );
+  return context.activeConstraints.filter(
+    (constraint): constraint is ActiveInjuryConstraint => constraint.type === 'injury',
+  );
+}
+
 export const useCoachUpdatesStore = create<CoachUpdatesState>()(
   persist(
     (set, get) => ({
@@ -663,15 +689,16 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
         }),
 
       clearAllCoachUpdates: () =>
-        commitConstraintProgramTransaction([], () =>
+        commitConstraintProgramTransaction(canonicalInjuryCompatibilityConstraints(), () =>
           set({
             updatesByWeek: {},
-            activeInjury: null,
-            activeConstraints: [],
+            activeInjury: hasCanonicalInjuryOwnership() ? get().activeInjury : null,
+            activeConstraints: canonicalInjuryCompatibilityConstraints(),
             dismissedCoachNoteIds: [],
           })),
 
       setActiveInjury: (state) => {
+        if (hasCanonicalInjuryOwnership()) return;
         // Write-through: the legacy single-slot setter ALSO mirrors
         // into activeConstraints so multi-constraint consumers see
         // the new injury without a separate call.
@@ -737,6 +764,7 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
       },
 
       upsertActiveConstraint: (c) => {
+        if (c.type === 'injury' && hasCanonicalInjuryOwnership()) return;
         const nextConstraint = withDefaultModifierMetadata(c);
         const filtered = get().activeConstraints.filter((x) =>
           x.id !== nextConstraint.id &&
@@ -759,6 +787,7 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
 
       removeActiveConstraint: (id) => {
         const removed = get().activeConstraints.find((c) => c.id === id);
+        if (removed?.type === 'injury' && hasCanonicalInjuryOwnership()) return;
         const remaining = get().activeConstraints.filter((c) => c.id !== id);
         // activeInjury is a derived alias. Recompute whenever any injury is
         // removed; constraint ids are not required to use the legacy format.
@@ -773,7 +802,13 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
       },
 
       setActiveConstraints: (constraints) => {
-        const nextConstraints = constraints.map(withDefaultModifierMetadata);
+        const requested = constraints.map(withDefaultModifierMetadata);
+        const nextConstraints = hasCanonicalInjuryOwnership()
+          ? [
+              ...requested.filter((constraint) => constraint.type !== 'injury'),
+              ...canonicalInjuryCompatibilityConstraints(),
+            ]
+          : requested;
         const legacy = legacyInjuryForConstraints(
           nextConstraints,
           get().activeInjury?.history,
@@ -785,6 +820,7 @@ export const useCoachUpdatesStore = create<CoachUpdatesState>()(
       transitionInjuryStatus: ({ toStatus, severity, note, timestamp }) => {
         const current = get().activeInjury;
         if (!current) return null;
+        if (hasCanonicalInjuryOwnership()) return current;
         const nowISO = timestamp ?? new Date().toISOString();
         const entry: InjuryHistoryEntry = {
           timestamp: nowISO,
@@ -886,6 +922,20 @@ export function restoreCoachUpdatesCompatibilityMirror(args: {
 
 useCoachUpdatesStore.subscribe((state, previous) => {
   if (state.activeConstraints === previous.activeConstraints || safetyProjectionInProgress) return;
+  // ProgramStore episodes win hydration order. A stale persisted alias or
+  // CoachUpdates constraint can update the compatibility view only by being
+  // replaced with the projection of the durable episode history.
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const accepted = normalizeAcceptedMaterialContext(
+    require('./programStore').useProgramStore.getState().acceptedMaterialContext,
+  );
+  if (accepted.injuryEpisodes.length > 0) {
+    publishAcceptedCoachUpdatesCompatibilityMirror({
+      activeConstraints: accepted.activeConstraints,
+      activeInjury: accepted.activeInjury,
+    });
+    return;
+  }
   const activeConstraints = normalizeAcceptedArray<ActiveConstraint>(state.activeConstraints);
   const priorConstraints = normalizeAcceptedArray<ActiveConstraint>(previous.activeConstraints);
   const activeInjury = normalizeAcceptedMaterialContext({

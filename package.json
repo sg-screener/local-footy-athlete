@@ -62,6 +62,7 @@
     "test:visible-diff": "sucrase-node src/__tests__/visibleWorkoutDiffTests.ts",
     "test:coach-updates": "sucrase-node src/__tests__/coachUpdatesStoreTests.ts",
     "test:injury-progression": "sucrase-node src/__tests__/injuryProgressionTests.ts",
+    "test:injury-episode-transactions": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryEpisodeTransactionTests.ts",
     "test:injury-severity-bands": "sucrase-node src/__tests__/injurySeverityBandTests.ts",
     "test:resolver-injury": "sucrase-node src/__tests__/resolverInjuryFilterTests.ts",
     "test:coach-intent": "sucrase-node src/__tests__/coachIntentDispatchTests.ts",

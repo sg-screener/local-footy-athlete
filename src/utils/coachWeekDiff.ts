@@ -198,6 +198,9 @@ export function buildScheduleStateImperative(): ScheduleState & { activeConstrai
     weightOverrides: programState.weightOverrides || {},
     availableDayNumbers,
     activeInjury,
+    injuryProjectionOwner: acceptedContext.injuryEpisodes.length > 0
+      ? 'accepted_episode'
+      : undefined,
     activeConstraints: [
       ...activeConstraints,
       ...readinessActiveConstraints,

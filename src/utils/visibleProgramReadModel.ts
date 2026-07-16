@@ -114,7 +114,7 @@ export function buildProgramTabProjectedWeek(args: {
     args.modalityPreferences ??
     useCoachPreferencesStore.getState().modalityPreferences;
   return rawWeek.map((day) => {
-    if (hasAcceptedWeekContract(args.state, day.date)) {
+    if (hasAcceptedWeekContract(args.state, day.date) && !args.state.activeInjury) {
       return day;
     }
     const dayActiveConstraints = filterConstraintsForDate(
@@ -143,7 +143,7 @@ export function buildDayWorkoutProjectedDay(args: {
   modalityPreferences?: Record<string, any>;
 }): ResolvedDay {
   const raw = resolveDateWithConditioning(args.date, args.state);
-  if (hasAcceptedWeekContract(args.state, args.date)) {
+  if (hasAcceptedWeekContract(args.state, args.date) && !args.state.activeInjury) {
     return raw;
   }
   const dayActiveConstraints = filterConstraintsForDate(

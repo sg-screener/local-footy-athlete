@@ -1270,7 +1270,10 @@ function liveValidationContext(
   const activeById = new Map<string, ActiveConstraint>();
   for (const constraint of activeConstraintsOverride ??
     (hasAcceptedContext ? accepted.activeConstraints : useCoachUpdatesStore.getState().activeConstraints) ?? []) {
-    activeById.set(constraint.id, constraint);
+    // InjuryEpisodeV1 is composed against AcceptedCompositionBase at the
+    // visible boundary. Treating its compatibility constraint as a write
+    // validator would destroy the very base resolution needs.
+    if (constraint.type !== 'injury') activeById.set(constraint.id, constraint);
   }
   const readinessSignals = hasAcceptedContext
     ? accepted.readinessSignalsByDate
@@ -1748,6 +1751,7 @@ export function stageLiveStoredProgramSafety(
   const safetyConstraints = context.activeConstraints.filter((constraint) =>
     isStructuralGenerationConstraint(constraint) &&
     constraint.status !== 'resolved' &&
+    constraint.type !== 'injury' &&
     constraint.type !== 'missed_session' && constraint.type !== 'preference');
   if (safetyConstraints.length === 0) {
     // Constraint clearing is deliberately conservative. The already-reduced

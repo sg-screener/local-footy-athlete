@@ -13,6 +13,11 @@ import type { ReadinessSignal } from '../utils/readiness';
 import type { ActiveConstraint } from './coachUpdatesStore';
 import type { InjuryState } from '../utils/injuryProgression';
 import {
+  composeInjuryCompatibility,
+  normalizeInjuryEpisodes,
+  type InjuryEpisodeV1,
+} from '../rules/injuryEpisode';
+import {
   normalizeReversibleAdjustmentLedger,
   type ReversibleAdjustmentLedger,
 } from '../rules/reversibleAdjustmentLedger';
@@ -29,6 +34,10 @@ export interface AcceptedMaterialContext {
   readinessSignalsByDate: Record<string, ReadinessSignal>;
   activeConstraints: ActiveConstraint[];
   activeInjury: InjuryState | null;
+  /** Canonical temporary-injury source facts. Resolved episodes remain here. */
+  injuryEpisodes: InjuryEpisodeV1[];
+  /** Mutable accepted base before active injury facts are visibly composed. */
+  acceptedCompositionBase: AcceptedCompositionBaseV1 | null;
   revision: number;
   lastTransaction: string | null;
 }
@@ -44,6 +53,21 @@ export interface AcceptedProgramSurfaceSnapshot {
   userRemovalConstraints: UserRemovalConstraint[];
   reversibleAdjustmentLedger: ReversibleAdjustmentLedger;
   exposureContractsByWeek: Record<string, WeeklyExposureContract>;
+}
+
+export const ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION = 1 as const;
+
+export interface AcceptedCompositionBaseV1 {
+  protocolVersion: typeof ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION;
+  capturedAt: string;
+  updatedAt: string;
+  sourceRevision: number;
+  provenance: 'accepted_pre_injury' | 'legacy_after_state_only';
+  /**
+   * Exact accepted mutable surfaces. ProgramStore publishes the same values;
+   * injury facts are composed only at the visible read/verification boundary.
+   */
+  surfaces: AcceptedProgramSurfaceSnapshot;
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -66,6 +90,8 @@ export function createEmptyAcceptedMaterialContext(): AcceptedMaterialContext {
     readinessSignalsByDate: {},
     activeConstraints: [],
     activeInjury: null,
+    injuryEpisodes: [],
+    acceptedCompositionBase: null,
     revision: 0,
     lastTransaction: null,
   };
@@ -77,15 +103,48 @@ export function normalizeAcceptedMaterialContext(
   const revision = typeof value?.revision === 'number' && Number.isFinite(value.revision)
     ? Math.max(0, Math.trunc(value.revision))
     : 0;
+  const injuryEpisodes = normalizeInjuryEpisodes(value?.injuryEpisodes);
+  const compatibility = injuryEpisodes.length > 0
+    ? composeInjuryCompatibility({
+        activeConstraints: normalizeAcceptedArray<ActiveConstraint>(value?.activeConstraints),
+        injuryEpisodes,
+      })
+    : {
+        activeConstraints: normalizeAcceptedArray<ActiveConstraint>(value?.activeConstraints),
+        activeInjury: isObjectRecord(value?.activeInjury) ? value.activeInjury : null,
+      };
+  const rawBase = value?.acceptedCompositionBase;
+  const acceptedCompositionBase = isObjectRecord(rawBase) &&
+    rawBase.protocolVersion === ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION &&
+    isObjectRecord(rawBase.surfaces)
+    ? {
+        protocolVersion: ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
+        capturedAt: typeof rawBase.capturedAt === 'string'
+          ? rawBase.capturedAt
+          : new Date(0).toISOString(),
+        updatedAt: typeof rawBase.updatedAt === 'string'
+          ? rawBase.updatedAt
+          : typeof rawBase.capturedAt === 'string'
+            ? rawBase.capturedAt
+            : new Date(0).toISOString(),
+        sourceRevision: typeof rawBase.sourceRevision === 'number'
+          ? Math.max(0, Math.trunc(rawBase.sourceRevision))
+          : 0,
+        provenance: rawBase.provenance === 'legacy_after_state_only'
+          ? 'legacy_after_state_only' as const
+          : 'accepted_pre_injury' as const,
+        surfaces: normalizeAcceptedProgramSurfaces(rawBase.surfaces),
+      }
+    : null;
   return {
     markedDays: normalizeAcceptedKeyedMap<CalendarDayType>(value?.markedDays),
     readinessSignalsByDate: normalizeAcceptedKeyedMap<ReadinessSignal>(
       value?.readinessSignalsByDate,
     ),
-    activeConstraints: normalizeAcceptedArray<ActiveConstraint>(value?.activeConstraints),
-    activeInjury: isObjectRecord(value?.activeInjury)
-      ? value.activeInjury
-      : null,
+    activeConstraints: compatibility.activeConstraints,
+    activeInjury: compatibility.activeInjury,
+    injuryEpisodes,
+    acceptedCompositionBase,
     revision,
     lastTransaction: typeof value?.lastTransaction === 'string'
       ? value.lastTransaction
@@ -153,5 +212,7 @@ export function acceptedStatePresenceSummary(args: {
     readinessSignalsByDate: describe(args.context?.readinessSignalsByDate),
     activeConstraints: describe(args.context?.activeConstraints),
     activeInjury: describe(args.context?.activeInjury),
+    injuryEpisodes: describe(args.context?.injuryEpisodes),
+    acceptedCompositionBase: describe(args.context?.acceptedCompositionBase),
   };
 }

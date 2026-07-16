@@ -81,6 +81,11 @@ export interface ProjectInput {
     severity: number;
     status: 'active' | 'improving' | 'resolved';
     rules: string[];
+    seriousSymptoms?: boolean;
+    seriousSymptom?: string;
+    adjustmentLevel?: 'minimal' | 'slight' | 'moderate' | 'avoid_affected' | 'training_paused';
+    safeFocus?: string[];
+    advice?: string[];
   } | null;
   /** Override context for this date — may flag injury-authored edits. */
   overrideContext?: OverrideContext;
@@ -149,7 +154,20 @@ function alreadyHasInjuryNote(workout: Workout): boolean {
 function buildActiveConstraints(input: ProjectInput): Constraint[] {
   const constraints: Constraint[] = [];
   const injury = input.activeInjury;
-  if (
+  if (injury && injury.status !== 'resolved' && (
+    injury.seriousSymptoms === true || injury.adjustmentLevel === 'training_paused'
+  )) {
+    constraints.push(buildInjuryConstraint({
+      id: 'injury-training-paused',
+      region: 'global',
+      severity: injury.severity,
+      status: injury.status,
+      startDate: new Date().toISOString(),
+      fullPause: true,
+      safeFocus: injury.safeFocus,
+      advice: injury.advice,
+    }));
+  } else if (
     injury &&
     injury.status !== 'resolved' &&
     injury.bucket &&

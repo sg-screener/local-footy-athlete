@@ -168,6 +168,8 @@ export interface Constraint {
   advice?: string[];
   /** Human-readable reason for logs. */
   label?: string;
+  /** Typed medical-stop policy: preserve only existing recovery/game anchors. */
+  fullPause?: boolean;
 }
 
 export type ExerciseDecisionKind = 'keep' | 'limit' | 'remove';
@@ -686,6 +688,9 @@ export function buildInjuryConstraint(args: {
   severity: number;
   status?: 'active' | 'improving' | 'resolved';
   startDate?: string;
+  fullPause?: boolean;
+  safeFocus?: string[];
+  advice?: string[];
 }): Constraint {
   const region = args.region;
   const severity = args.severity;
@@ -705,9 +710,10 @@ export function buildInjuryConstraint(args: {
     blockedExposures: sets.blocked,
     limitedExposures: sets.limited,
     allowedExposures: sets.allowed,
-    safeFocus: sets.safeFocus,
-    advice,
+    safeFocus: args.safeFocus ?? sets.safeFocus,
+    advice: args.advice ?? advice,
     label: `injury:${region}@${severity}/10`,
+    fullPause: args.fullPause === true,
   };
 }
 
@@ -969,18 +975,29 @@ function recoverySubstitution(workout: Workout, coachNotes: string[]): Workout {
   return {
     ...workout,
     name: 'Recovery Session',
-    description: 'Recovery, mobility, or an easy walk. Keep this light while readiness returns.',
+    description: 'Recovery, mobility, or an easy walk. Keep this light while the active restriction is in place.',
     durationMinutes: 20,
     intensity: 'Light',
     workoutType: 'Recovery',
     sessionTier: 'recovery',
+    strengthIntent: undefined,
+    strengthIntentDiagnostics: undefined,
+    strengthPatternContributions: undefined,
     hasCombinedConditioning: false,
+    attachedConditioningKind: undefined,
     conditioningFlavour: undefined,
     conditioningCategory: undefined,
+    conditioningFeasibility: undefined,
+    section18ConditioningRole: undefined,
+    section18Evidence: undefined,
     conditioningBlock: undefined,
     coachAddedConditioningLabel: undefined,
+    speedBlock: undefined,
+    powerBlock: undefined,
+    recoveryAddons: undefined,
     exercises: [],
     coachNotes,
+    ...({ isTeamDay: false } as any),
   };
 }
 
@@ -1054,6 +1071,40 @@ export function applyConstraintsToSession(
         keptNames: (workout.exercises ?? []).map((e: any) => e.exercise?.name ?? '').filter(Boolean),
       },
       applied: false,
+    };
+  }
+  const fullPause = active.find((constraint) => constraint.fullPause === true);
+  if (fullPause) {
+    const removedNames = (workout.exercises ?? [])
+      .map((exercise: any) => exercise.exercise?.name ?? '')
+      .filter(Boolean);
+    const coachNotes = [...(workout.coachNotes ?? [])];
+    for (const focus of fullPause.safeFocus) {
+      const note = `Focus: ${focus}`;
+      if (!coachNotes.includes(note)) coachNotes.push(note);
+    }
+    for (const advice of fullPause.advice ?? []) {
+      if (!coachNotes.includes(advice)) coachNotes.push(advice);
+    }
+    const classification: SessionClassification = {
+      impact: 'high',
+      action: 'recovery',
+      exerciseDecisions: removedNames.map((name) => ({
+        name,
+        decision: 'remove',
+        matchedExposures: [],
+        triggeringExposures: [],
+        triggeringConstraintIds: [fullPause.id],
+        reason: 'typed injury training pause',
+      })),
+      removedNames,
+      limitedNames: [],
+      keptNames: [],
+    };
+    return {
+      workout: recoverySubstitution(workout, coachNotes),
+      classification,
+      applied: true,
     };
   }
   const classification = classifySessionAgainstConstraints(workout, active);

@@ -7,27 +7,12 @@
  *   const deps = buildLiveDispatchDeps(todayISO, userMessage)
  *   const outcome = await dispatchCoachIntent(intent, packet, deps)
  *
- * This module is the seam that lets `CoachScreen.handleSend` stay
- * thin — all the nuanced engine plumbing (UAE → applyAdjustmentEvents
- * → visible-diff → Coach Update card → activeInjury seed) lives here
- * in one named function instead of being inlined in the screen.
+ * This module is the generic dispatcher seam. Injury mutation is deliberately
+ * not owned here: Coach/tap injury surfaces use InjuryEpisodeTransaction,
+ * while these legacy dependency callbacks fail closed without writing state.
  */
 
-import {
-  applyProgramAdjustment,
-  buildInjuryPolicy,
-  resolveInjuryBucket,
-  eventToBullet,
-} from './programAdjustmentEngine';
-import {
-  hasActiveInjurySeverity,
-  injurySeverityPausesAffectedTraining,
-} from '../rules/injurySeverityBands';
-import {
-  applyAdjustmentEvents,
-  removeInjuryOverridesFromDate,
-  removeInjuryOverridesForWeek,
-} from './applyAdjustmentEvents';
+import { applyAdjustmentEvents } from './applyAdjustmentEvents';
 import { buildScheduleStateImperative } from './coachWeekDiff';
 import {
   resolveWeekWithConditioning,
@@ -36,14 +21,11 @@ import {
   addDays,
 } from './sessionResolver';
 import {
-  snapshotVisibleWorkout,
-  computeVisibleDiff,
   assertVerifiedProgramMutation,
 } from './visibleWorkoutDiff';
 import { inspectCoachState } from './coachStateInspector';
 import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { useProgramStore } from '../store/programStore';
-import type { InjuryState } from './injuryProgression';
 import type { DispatchDeps } from './coachIntentDispatcher';
 import { logger } from './logger';
 import type { CoachContextPacket, CoachIntent } from './coachIntent';
@@ -60,11 +42,6 @@ import {
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import { verifyRenderedProgramMutation } from './visibleProgramReadModel';
 
-function capitalize(s: string): string {
-  if (!s) return s;
-  return s[0].toUpperCase() + s.slice(1);
-}
-
 /**
  * Compose the live dispatcher deps. Pure — no side effects until a
  * dep handler is invoked. Each handler runs through the existing
@@ -72,216 +49,30 @@ function capitalize(s: string): string {
  */
 export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
   return {
-    runUAEForInjury(bodyPart, severity, note) {
-      // 1. BEFORE snapshot — for visible-diff verification.
-      const monday = getMondayStr(0);
-      const beforeWeek = resolveWeekWithConditioning(
-        monday,
-        buildScheduleStateImperative(),
-      );
-      const beforeByDate: Record<string, ReturnType<typeof snapshotVisibleWorkout>> = {};
-      for (const d of beforeWeek) beforeByDate[d.date] = snapshotVisibleWorkout(d.workout);
-
-      // 2. Engine.
-      const result = applyProgramAdjustment(
-        {
-          intent: 'injury',
-          todayISO,
-          message: note,
-          payload: { bodyPart, severity },
-          source: 'client_guard',
-        } as any,
-        buildScheduleStateImperative(),
-      );
-      const apply = applyAdjustmentEvents(result.events, { todayISO, overrideIntent: 'injury' });
-
-      // 3. AFTER snapshot + visible-diff verification.
-      const afterWeek = resolveWeekWithConditioning(
-        monday,
-        buildScheduleStateImperative(),
-      );
-      const afterByDate: Record<string, ReturnType<typeof snapshotVisibleWorkout>> = {};
-      for (const d of afterWeek) afterByDate[d.date] = snapshotVisibleWorkout(d.workout);
-      const dates = Array.from(new Set([
-        ...apply.applied.map((a) => a.date),
-        ...result.events.map((e) => e.date),
-      ]));
-      const visibleDiff = computeVisibleDiff(dates, beforeByDate, afterByDate);
-      const visibleDiffDetected = visibleDiff.length > 0;
-
-      // 4. Bucket canonicalisation + activeInjury seed.
-      // Bucket is ALWAYS derived from bodyPart here so known aliases
-      // ('hammy' / 'lower back' / 'calves' / 'quads' …) never produce
-      // a null bucket. Without the canonical bucket, the resolver-
-      // level filter has nothing to act on for future weeks.
-      const cardBucket =
-        bodyPart && bodyPart !== 'unknown' ? resolveInjuryBucket(bodyPart) : null;
-      if (!cardBucket && bodyPart && bodyPart !== 'unknown') {
-        logger.warn('[injury-context] canonicalization_failed', {
-          rawBodyPart: bodyPart,
-          source: 'runUAEForInjury',
-        });
-      }
-      logger.debug('[injury-context] canonicalized', {
-        rawBodyPart: bodyPart,
-        canonicalBucket: cardBucket,
+    runUAEForInjury(bodyPart, severity, _note) {
+      logger.warn('[injury-episode] legacy_dispatch_mutation_bypassed', {
+        bodyPart,
         severity,
         source: 'runUAEForInjury',
       });
-      const policy = buildInjuryPolicy(cardBucket, severity);
-      const nowISO = new Date().toISOString();
-
-      // ── ACTIVE INJURY SEED (UNCONDITIONAL when severity is active) ────
-      // Persistent constraint drives future-week filtering even when
-      // the current week had nothing to mutate.
-      if (hasActiveInjurySeverity(severity)) {
-        const existing = useCoachUpdatesStore.getState().activeInjury;
-        const newState: InjuryState = existing && existing.bodyPart.toLowerCase() === bodyPart.toLowerCase()
-          ? {
-              ...existing,
-              bucket: cardBucket as any,
-              severity,
-              status: 'active',
-              rules: [...policy.globalRules],
-              lastUpdatedAt: nowISO,
-              history: [
-                ...existing.history,
-                { timestamp: nowISO, fromStatus: existing.status, toStatus: 'active', severity, note },
-              ],
-            }
-          : {
-              bodyPart,
-              bucket: cardBucket as any,
-              severity,
-              initialSeverity: severity,
-              status: 'active',
-              rules: [...policy.globalRules],
-              startDate: nowISO,
-              createdAt: nowISO,
-              lastUpdatedAt: nowISO,
-              history: [{ timestamp: nowISO, fromStatus: 'new', toStatus: 'active', severity, note }],
-            };
-        useCoachUpdatesStore.getState().setActiveInjury(newState);
-        logger.debug('[active-injury] set', {
-          bodyPart: newState.bodyPart,
-          bucket: newState.bucket,
-          severity: newState.severity,
-          status: newState.status,
-          rules: newState.rules,
-        });
-      }
-
-      // ── CARD WRITE (gated on apply.applied + visibleDiff) ─────
-      if (apply.applied.length > 0 && visibleDiffDetected) {
-        useCoachUpdatesStore.getState().upsertCoachUpdate(monday, {
-          source: 'uae',
-          reason: `${capitalize(bodyPart)} pain - ${severity}/10`,
-          rules: [...policy.globalRules],
-          changes: result.events.map((e) => eventToBullet(e)),
-        });
-      }
-
-      // 5. Reply gate — match CoachScreen.handleSend's existing logic.
-      if (result.events.length === 0) return result.reply;
-      if (apply.applied.length === 0) {
-        const head =
-          bodyPart === 'unknown'
-            ? `Got it - ${severity}/10.`
-            : `Got it - ${bodyPart} ${severity}/10.`;
-        return `${head}\n\nPlanned changes could not be applied - I lined up adjustments for your week, but they didn't land on real sessions.`;
-      }
-      if (!visibleDiffDetected) {
-        const head =
-          bodyPart === 'unknown'
-            ? `Got it - ${severity}/10.`
-            : `Got it - ${bodyPart} ${severity}/10.`;
-        return `${head}\n\nNo changes applied - the user-visible surface didn't move. Investigate the apply layer.`;
-      }
-      return result.reply;
+      return {
+        reply: `The ${bodyPart} injury update was not applied because this legacy path cannot durably verify the accepted program.`,
+        mutated: false,
+      };
     },
 
-    runProgression(outcome, current, note) {
-      const monday = getMondayStr(0);
-      const nowISO = new Date().toISOString();
-      const partTitle = capitalize(current.bodyPart);
-
-      if (outcome.kind === 'resolved') {
-        removeInjuryOverridesFromDate(todayISO);
-        useCoachUpdatesStore.getState().deactivateCoachUpdate(monday);
-        useCoachUpdatesStore.getState().transitionInjuryStatus({
-          toStatus: 'resolved', severity: 0, note, timestamp: nowISO,
-        });
-        useCoachUpdatesStore.getState().setActiveInjury(null);
-        return `Great news - clearing the ${current.bodyPart} restrictions and getting your week back to normal.`;
-      }
-
-      if (outcome.kind === 'unchanged') {
-        useCoachUpdatesStore.getState().transitionInjuryStatus({
-          toStatus: 'active', severity: current.severity, note, timestamp: nowISO,
-        });
-        return `Got it - keeping the ${current.bodyPart} ${current.severity}/10 restrictions in place.`;
-      }
-
-      // improving / worsening: wipe + re-run engine at the new severity.
-      const newSeverity = outcome.newSeverity;
-      removeInjuryOverridesForWeek(monday);
-      let appliedCount = 0;
-      let visibleDiffDetected = false;
-      let newRules: string[] = [];
-      let newChanges: string[] = [];
-      const beforeWeek = resolveWeekWithConditioning(monday, buildScheduleStateImperative());
-      const beforeByDate: Record<string, ReturnType<typeof snapshotVisibleWorkout>> = {};
-      for (const d of beforeWeek) beforeByDate[d.date] = snapshotVisibleWorkout(d.workout);
-
-      if (hasActiveInjurySeverity(newSeverity)) {
-        const result = applyProgramAdjustment(
-          {
-            intent: 'injury',
-            todayISO,
-            message: note,
-            payload: { bodyPart: current.bodyPart, severity: newSeverity },
-            source: 'client_guard',
-          } as any,
-          buildScheduleStateImperative(),
-        );
-        const apply = applyAdjustmentEvents(result.events, { todayISO, overrideIntent: 'injury' });
-        appliedCount = apply.applied.length;
-        const afterWeek = resolveWeekWithConditioning(monday, buildScheduleStateImperative());
-        const afterByDate: Record<string, ReturnType<typeof snapshotVisibleWorkout>> = {};
-        for (const d of afterWeek) afterByDate[d.date] = snapshotVisibleWorkout(d.workout);
-        const dates = Array.from(new Set([
-          ...apply.applied.map((a) => a.date),
-          ...result.events.map((e) => e.date),
-        ]));
-        visibleDiffDetected = computeVisibleDiff(dates, beforeByDate, afterByDate).length > 0;
-        const cardBucket =
-          current.bucket ?? (current.bodyPart && current.bodyPart !== 'unknown'
-            ? resolveInjuryBucket(current.bodyPart) : null);
-        const policy = buildInjuryPolicy(cardBucket, newSeverity);
-        newRules = [...policy.globalRules];
-        newChanges = result.events.map((e) => eventToBullet(e));
-      }
-
-      const trendWord = outcome.kind === 'improving' ? 'improving' : 'worse';
-      const reason = `${partTitle} ${trendWord} - ${newSeverity}/10`;
-      if (!hasActiveInjurySeverity(newSeverity)) {
-        useCoachUpdatesStore.getState().deactivateCoachUpdate(monday);
-      } else if (appliedCount > 0 && visibleDiffDetected) {
-        useCoachUpdatesStore.getState().upsertCoachUpdate(monday, {
-          source: 'uae', reason, rules: newRules, changes: newChanges,
-        });
-      }
-      useCoachUpdatesStore.getState().transitionInjuryStatus({
-        toStatus: outcome.kind === 'improving' ? 'improving' : 'active',
-        severity: newSeverity, note, timestamp: nowISO,
+    runProgression(outcome, current, _note) {
+      logger.warn('[injury-episode] legacy_dispatch_mutation_bypassed', {
+        bodyPart: current.bodyPart,
+        outcome: outcome.kind,
+        source: 'runProgression',
       });
-
-      if (outcome.kind === 'improving') {
-        return `Good - ${current.bodyPart} easing to ${newSeverity}/10. Pulling back some of the load restrictions.`;
-      }
-      return injurySeverityPausesAffectedTraining(newSeverity)
-        ? `Sorry to hear - ${current.bodyPart} ${newSeverity}/10 is serious. Pulling things back hard.`
-        : `Sorry to hear - ${current.bodyPart} worse at ${newSeverity}/10. Tightening the restrictions.`;
+      return {
+        reply: outcome.kind === 'resolved'
+          ? `The ${current.bodyPart} injury was not resolved because this legacy path cannot durably recompose and verify the accepted program.`
+          : `The ${current.bodyPart} injury update was not applied because this legacy path cannot durably verify the accepted program.`,
+        mutated: false,
+      };
     },
 
     inspect(query) {
@@ -300,29 +91,12 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
     },
 
     reapplyInjuryAtSeverity(bodyPart, severity, monday) {
-      removeInjuryOverridesForWeek(monday);
-      const beforeWeek = resolveWeekWithConditioning(monday, buildScheduleStateImperative());
-      const beforeByDate: Record<string, ReturnType<typeof snapshotVisibleWorkout>> = {};
-      for (const d of beforeWeek) beforeByDate[d.date] = snapshotVisibleWorkout(d.workout);
-      const result = applyProgramAdjustment(
-        {
-          intent: 'injury',
-          todayISO,
-          payload: { bodyPart, severity },
-          source: 'client_guard',
-        } as any,
-        buildScheduleStateImperative(),
-      );
-      const apply = applyAdjustmentEvents(result.events, { todayISO, overrideIntent: 'injury' });
-      const afterWeek = resolveWeekWithConditioning(monday, buildScheduleStateImperative());
-      const afterByDate: Record<string, ReturnType<typeof snapshotVisibleWorkout>> = {};
-      for (const d of afterWeek) afterByDate[d.date] = snapshotVisibleWorkout(d.workout);
-      const dates = Array.from(new Set([
-        ...apply.applied.map((a) => a.date),
-        ...result.events.map((e) => e.date),
-      ]));
-      const visibleDiff = computeVisibleDiff(dates, beforeByDate, afterByDate);
-      return { applied: apply.applied.length, visibleDiffDetected: visibleDiff.length > 0 };
+      logger.warn('[injury-episode] legacy_dispatch_reapply_bypassed', {
+        bodyPart,
+        severity,
+        monday,
+      });
+      return { applied: 0, visibleDiffDetected: false };
     },
 
     generalReply(_intent: CoachIntent, packet: CoachContextPacket): string {
@@ -431,30 +205,21 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       // to the dispatcher (for the success reply).
       const before = store.activeConstraints ?? [];
       const idSet = new Set(ids);
-      const cleared = before.filter((c) => idSet.has(c.id) && c.status !== 'resolved');
+      const cleared = before.filter((c) =>
+        idSet.has(c.id) && c.status !== 'resolved' && c.type !== 'injury');
 
       // 1. Remove each constraint from the store.
-      for (const id of ids) {
+      for (const id of cleared.map((constraint) => constraint.id)) {
         useCoachUpdatesStore.getState().removeActiveConstraint(id);
       }
 
-      // 2. Once the last injury source clears, remove legacy injury-authored
-      //    overrides from today forward so future weeks cannot stay stale.
-      const anyInjuryCleared = cleared.some((c) => c.type === 'injury');
-
-      // 3. Deactivate the Coach Update card for the current week if
+      // 2. Deactivate the Coach Update card for the current week if
       //    no active constraints remain. (HomeScreen card derives
       //    from activeConstraints, so leaving a stale card behind
       //    would re-create the live failure this whole detector
       //    fixes.)
       const remaining = useCoachUpdatesStore.getState().activeConstraints ?? [];
       const remainingActive = remaining.filter((c) => c.status !== 'resolved');
-      const hasRemainingInjury = remainingActive.some((c) => c.type === 'injury') ||
-        useCoachUpdatesStore.getState().activeInjury?.status === 'active' ||
-        useCoachUpdatesStore.getState().activeInjury?.status === 'improving';
-      if (anyInjuryCleared && !hasRemainingInjury) {
-        removeInjuryOverridesFromDate(todayISO);
-      }
       if (remainingActive.length === 0) {
         useCoachUpdatesStore.getState().deactivateCoachUpdate(monday);
       }
@@ -463,7 +228,6 @@ export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
       logger.debug('[constraint-resolution] applied', {
         ids,
         clearedTypes: cleared.map((c) => c.type),
-        anyInjuryCleared,
         remaining: remaining.length,
         remainingActive: remainingActive.length,
       });

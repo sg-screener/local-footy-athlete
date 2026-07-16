@@ -241,7 +241,7 @@ section('[2] detector — body-part resolved phrases');
 // ─────────────────────────────────────────────────────────────────────
 // 3. Detector — explicit all-clear
 // ─────────────────────────────────────────────────────────────────────
-section('[3] detector — explicit all-clear removes everything');
+section('[3] detector — explicit all-clear is ambiguous across active facts');
 {
   const constraints: ActiveConstraint[] = [
     fatigue('cf-1'),
@@ -258,11 +258,9 @@ section('[3] detector — explicit all-clear removes everything');
     const r = detectConstraintResolution(msg, constraints);
     ok(`"${msg}" → matched, kind=all`, r.matched && r.kind === 'all', JSON.stringify(r));
     ok(
-      `"${msg}" → resolves all 3`,
-      r.constraintIdsToResolve.length === 3 &&
-        r.constraintIdsToResolve.includes('cf-1') &&
-        r.constraintIdsToResolve.includes('ci-hammy') &&
-        r.constraintIdsToResolve.includes('cs-shoulder'),
+      `"${msg}" → resolves nothing until exact selection`,
+      r.ambiguous && r.constraintIdsToResolve.length === 0 &&
+        (r.candidates ?? []).length === 3,
     );
   }
 }
@@ -298,7 +296,8 @@ section('[4] detector — ambiguous generic phrase asks question');
     /fatigue/i.test(question) && /hammy/i.test(question) && /shoulder/i.test(question),
     question,
   );
-  ok('ambiguity question offers "all of them"', /all of them/i.test(question), question);
+  ok('ambiguity question requires one exact fact', /which exact one/i.test(question) &&
+    !/all of them/i.test(question), question);
 
   // Single active constraint + generic phrase = NOT ambiguous, just resolves it.
   const singleResolution = detectConstraintResolution("I'm fine now", [fatigue('cf-only')]);
@@ -451,7 +450,7 @@ section('[8] dispatcher — fatigue resolved clears constraint, no fatigue re-cr
 // ─────────────────────────────────────────────────────────────────────
 // 9. Dispatcher integration — multi-constraint single clear (only target)
 // ─────────────────────────────────────────────────────────────────────
-section('[9] dispatcher — multi-constraint specific clear leaves others');
+section('[9] dispatcher — injury phrase requires typed episode resolution');
 {
   const log: MutationLog = {
     resolutionApplied: [],
@@ -470,18 +469,16 @@ section('[9] dispatcher — multi-constraint specific clear leaves others');
 
   ok('outcome.handled', outcome.handled);
   ok(
-    'replyMode = constraint_resolution_applied',
-    outcome.replyMode === 'constraint_resolution_applied',
+    'replyMode = constraint_resolution_ambiguous',
+    outcome.replyMode === 'constraint_resolution_ambiguous',
   );
   ok(
-    'only ci-hammy resolved',
-    log.resolutionApplied.length === 1 &&
-      log.resolutionApplied[0].ids.length === 1 &&
-      log.resolutionApplied[0].ids[0] === 'ci-hammy',
+    'generic dispatcher resolves no injury id',
+    log.resolutionApplied.length === 0,
   );
   ok(
-    'reply names hammy, not fatigue',
-    /hammy/i.test(outcome.reply) && !/fatigue/i.test(outcome.reply),
+    'reply directs the exact Injury resolved action',
+    /Injury resolved/i.test(outcome.reply) && !/fatigue/i.test(outcome.reply),
     outcome.reply,
   );
 }
@@ -518,11 +515,11 @@ section('[10] dispatcher — ambiguous resolution asks which to clear');
   );
   ok(
     'reply asks which to clear, lists all options',
-    /which one should I clear/i.test(outcome.reply) &&
+    /which exact one/i.test(outcome.reply) &&
       /fatigue/i.test(outcome.reply) &&
       /hammy/i.test(outcome.reply) &&
       /shoulder/i.test(outcome.reply) &&
-      /all of them/i.test(outcome.reply),
+      !/all of them/i.test(outcome.reply),
     outcome.reply,
   );
 }
@@ -530,7 +527,7 @@ section('[10] dispatcher — ambiguous resolution asks which to clear');
 // ─────────────────────────────────────────────────────────────────────
 // 11. Dispatcher integration — explicit all-clear wipes every constraint
 // ─────────────────────────────────────────────────────────────────────
-section('[11] dispatcher — explicit all-clear removes every constraint');
+section('[11] dispatcher — explicit all-clear clarifies and preserves every fact');
 {
   const log: MutationLog = {
     resolutionApplied: [],
@@ -549,18 +546,19 @@ section('[11] dispatcher — explicit all-clear removes every constraint');
 
   ok('outcome.handled', outcome.handled);
   ok(
-    'replyMode = constraint_resolution_applied',
-    outcome.replyMode === 'constraint_resolution_applied',
+    'replyMode = constraint_resolution_ambiguous',
+    outcome.replyMode === 'constraint_resolution_ambiguous',
   );
   ok(
-    'all 3 ids resolved',
-    log.resolutionApplied.length === 1 && log.resolutionApplied[0].ids.length === 3,
+    'no ids resolved',
+    log.resolutionApplied.length === 0,
   );
   ok(
-    'reply names all three flags',
+    'reply names all three facts without offering bulk clear',
     /fatigue/i.test(outcome.reply) &&
       /hammy/i.test(outcome.reply) &&
-      /shoulder/i.test(outcome.reply),
+      /shoulder/i.test(outcome.reply) &&
+      !/all of them/i.test(outcome.reply),
     outcome.reply,
   );
 }

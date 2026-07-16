@@ -108,6 +108,12 @@ export interface InjuryState {
    * `getInjuryRules(state)` is authoritative.
    */
   rules: string[];
+  /** Canonical episode policy fields retained by the legacy read alias. */
+  seriousSymptoms?: boolean;
+  seriousSymptom?: string;
+  adjustmentLevel?: 'minimal' | 'slight' | 'moderate' | 'avoid_affected' | 'training_paused';
+  safeFocus?: string[];
+  advice?: string[];
   /** ISO timestamp when the injury was first reported (alias of createdAt). */
   startDate: string;
   /** ISO timestamp when this state was last touched. */

@@ -376,6 +376,17 @@ function buildSessionMismatchReply(packet: CoachContextPacket): string {
 
 // ─── Dependency surface ─────────────────────────────────────────────
 
+export interface InjuryDispatchDependencyResult {
+  reply: string;
+  mutated: boolean;
+}
+
+function normalizeInjuryDispatchDependencyResult(
+  value: string | InjuryDispatchDependencyResult,
+): InjuryDispatchDependencyResult {
+  return typeof value === 'string' ? { reply: value, mutated: true } : value;
+}
+
 export interface DispatchDeps {
   /** Re-apply the injury policy to the week — used by why-handler. */
   reapplyInjuryAtSeverity: (
@@ -393,13 +404,13 @@ export interface DispatchDeps {
       | { kind: 'unchanged' },
     current: InjuryState,
     note: string,
-  ) => string;
+  ) => string | InjuryDispatchDependencyResult;
   /** Run UAE for a known {bodyPart, severity}. Returns the reply text. */
   runUAEForInjury: (
     bodyPart: string,
     severity: number,
     note: string,
-  ) => string;
+  ) => string | InjuryDispatchDependencyResult;
   /** State inspector — called by why_didnt_program_change. */
   inspect: (query: {
     date?: string;
@@ -739,6 +750,20 @@ function dispatchCoachIntentWithinTrace(
         };
       }
 
+      const exactMatches = (packet.activeConstraints ?? []).filter((constraint) =>
+        resolution.constraintIdsToResolve.includes(constraint.id));
+      if (exactMatches.some((constraint) => constraint.type === 'injury')) {
+        return {
+          handled: true,
+          reply: exactMatches.length > 1
+            ? 'Which exact injury has resolved? I’ll leave the other active restrictions unchanged.'
+            : 'Use “Injury resolved” on that injury note so I can safely recompose and verify the affected sessions.',
+          mutated: false,
+          replyMode: 'constraint_resolution_ambiguous',
+          rationale: 'injury_episode_resolution_required',
+        };
+      }
+
       // Apply the resolution.
       const resolutionApply = deps.applyConstraintResolution(
         resolution.constraintIdsToResolve,
@@ -812,17 +837,20 @@ function dispatchCoachIntentWithinTrace(
         activeBodyPart: packet.activeInjury.bodyPart,
       });
       // Treat as active_injury_followup instead.
-      const reply = deps.runProgression(
+      const progression = normalizeInjuryDispatchDependencyResult(deps.runProgression(
         { kind: 'unchanged' },
         packet.activeInjury,
         packet.userMessage,
-      );
-      logger.debug('[coach-flow] route', { route: 'active_injury_followup', mutated: false });
+      ));
+      logger.debug('[coach-flow] route', {
+        route: 'active_injury_followup',
+        mutated: progression.mutated,
+      });
       logger.debug('[coach-reply] source', { mode: 'progression' });
       return {
         handled: true,
-        reply,
-        mutated: false,
+        reply: progression.reply,
+        mutated: progression.mutated,
         replyMode: 'progression',
         rationale: 'clarifier suppressed (activeInjury same bodyPart)',
       };
@@ -875,13 +903,18 @@ function dispatchCoachIntentWithinTrace(
           replyMode: 'safe_fallback',
         };
       }
-      const reply = deps.runUAEForInjury(bodyPart, severity, packet.userMessage);
-      logger.debug('[coach-flow] route', { route: 'severity_reply_uae', mutated: true });
+      const injury = normalizeInjuryDispatchDependencyResult(
+        deps.runUAEForInjury(bodyPart, severity, packet.userMessage),
+      );
+      logger.debug('[coach-flow] route', {
+        route: 'severity_reply_uae',
+        mutated: injury.mutated,
+      });
       logger.debug('[coach-reply] source', { mode: 'severity_reply_uae' });
       return {
         handled: true,
-        reply,
-        mutated: true,
+        reply: injury.reply,
+        mutated: injury.mutated,
         replyMode: 'severity_reply_uae',
       };
     }
@@ -913,17 +946,19 @@ function dispatchCoachIntentWithinTrace(
       } else {
         outcome = { kind: 'unchanged' };
       }
-      const reply = deps.runProgression(outcome, current, packet.userMessage);
+      const progression = normalizeInjuryDispatchDependencyResult(
+        deps.runProgression(outcome, current, packet.userMessage),
+      );
       logger.debug('[coach-flow] route', {
         route: 'active_injury_followup',
         followup,
-        mutated: outcome.kind !== 'unchanged',
+        mutated: progression.mutated,
       });
       logger.debug('[coach-reply] source', { mode: 'progression' });
       return {
         handled: true,
-        reply,
-        mutated: outcome.kind !== 'unchanged',
+        reply: progression.reply,
+        mutated: progression.mutated,
         replyMode: 'progression',
       };
     }
@@ -980,13 +1015,18 @@ function dispatchCoachIntentWithinTrace(
       const bodyPart = intent.payload?.bodyPart;
       const severity = intent.payload?.severity;
       if (bodyPart && severity != null) {
-        const reply = deps.runUAEForInjury(bodyPart, severity, packet.userMessage);
-        logger.debug('[coach-flow] route', { route: 'new_injury_full_payload_uae', mutated: true });
+        const injury = normalizeInjuryDispatchDependencyResult(
+          deps.runUAEForInjury(bodyPart, severity, packet.userMessage),
+        );
+        logger.debug('[coach-flow] route', {
+          route: 'new_injury_full_payload_uae',
+          mutated: injury.mutated,
+        });
         logger.debug('[coach-reply] source', { mode: 'severity_reply_uae' });
         return {
           handled: true,
-          reply,
-          mutated: true,
+          reply: injury.reply,
+          mutated: injury.mutated,
           replyMode: 'severity_reply_uae',
         };
       }

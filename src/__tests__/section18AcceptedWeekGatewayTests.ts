@@ -53,6 +53,13 @@ import {
 } from '../rules/weeklyExposureContractV2';
 import { applyGenerationSafetyToSection18Contract } from '../rules/section18SafetyPolicy';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
+import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
+import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
+import {
+  composeInjuryCompatibility,
+  migrateLegacyInjuryEpisodes,
+} from '../rules/injuryEpisode';
 
 const WEEK_START = '2026-07-13';
 const NOW = '2026-07-13T00:00:00.000Z';
@@ -960,30 +967,71 @@ const pauseConstraint = redFlagConstraint();
 let pausedProgramSnapshot = '';
 {
   resetLiveStores(mid);
-  useCoachUpdatesStore.getState().upsertActiveConstraint(pauseConstraint);
+  pausedProgramSnapshot = JSON.stringify(useProgramStore.getState().currentProgram);
+  const injuryEpisodes = migrateLegacyInjuryEpisodes({
+    activeConstraints: [pauseConstraint],
+    activeInjury: null,
+    sourceSurface: 'section18_full_pause_invariant',
+  });
+  const compatibility = composeInjuryCompatibility({
+    activeConstraints: useProgramStore.getState().acceptedMaterialContext.activeConstraints,
+    injuryEpisodes,
+  });
+  commitAcceptedStateTransaction({
+    reason: 'test:canonical-full-pause-source-fact',
+    injuryEpisodes,
+    activeConstraints: compatibility.activeConstraints,
+    activeInjury: compatibility.activeInjury,
+  });
   const storedProgram = useProgramStore.getState().currentProgram!;
-  pausedProgramSnapshot = JSON.stringify(storedProgram);
   const pausedWeek = storedProgram.microcycles[0];
+  const visiblePausedWorkouts = buildProgramTabProjectedWeek({
+    mondayISO: pausedWeek.startDate.slice(0, 10),
+    todayISO: WEEK_START,
+    state: buildScheduleStateImperative(),
+    overrideContexts: useProgramStore.getState().overrideContexts,
+  }).flatMap((day) => day.workout ? [day.workout] : []);
+  const composedPauseContract = applyGenerationSafetyToSection18Contract({
+    contract: clone(pausedWeek.exposureContractV2!),
+    forceFullPause: true,
+  });
   const evaluation = evaluateSection18EffectiveWeek({
-    contract: pausedWeek.exposureContractV2!,
-    workouts: pausedWeek.workouts,
+    contract: composedPauseContract,
+    workouts: visiblePausedWorkouts,
     weekStart: pausedWeek.startDate.slice(0, 10),
   });
   fullPauseAtomic = useCoachUpdatesStore.getState().activeConstraints.some((entry) =>
     entry.id === pauseConstraint.id) &&
-    pausedWeek.workouts.every((workout) =>
+    JSON.stringify(storedProgram) === pausedProgramSnapshot &&
+    pausedWeek.exposureContractV2!.authorisedReductions.every((entry) =>
+      entry.reason !== 'full_pause') &&
+    composedPauseContract.authorisedReductions.some((entry) =>
+      entry.reason === 'full_pause') &&
+    visiblePausedWorkouts.every((workout) =>
       workout.workoutType === 'Rest' || workout.workoutType === 'Recovery' || workout.workoutType === 'Flush-Out') &&
     evaluation.ledger.mainStrength.achievedCount === 0 &&
     evaluation.ledger.conditioning.coreCount === 0 &&
     evaluation.ledger.sprintHighSpeed.achievedCount === 0 &&
     evaluation.ledger.power.achievedPrimerCount === 0 &&
     evaluation.blockingViolations.length === 0;
-  check('38 full-pause constraint and recovery-only program commit together', fullPauseAtomic, evaluation);
+  check('38 full-pause source fact composes recovery-only visibility without overwriting the base',
+    fullPauseAtomic, {
+      activeInjury: buildScheduleStateImperative().activeInjury,
+      activeConstraints: buildScheduleStateImperative().activeConstraints,
+      visibleWorkouts: visiblePausedWorkouts.map((workout) => ({
+        name: workout.name,
+        workoutType: workout.workoutType,
+        exercises: workout.exercises.length,
+        conditioning: workout.conditioningBlock?.options.length ?? 0,
+        speed: !!workout.speedBlock,
+      })),
+      evaluation,
+    });
 
   useCoachUpdatesStore.getState().removeActiveConstraint(pauseConstraint.id);
-  conservativeClear = useCoachUpdatesStore.getState().activeConstraints.every((entry) =>
-    entry.id !== pauseConstraint.id) && JSON.stringify(useProgramStore.getState().currentProgram) === pausedProgramSnapshot;
-  check('40 clearing a constraint does not silently restore training', conservativeClear);
+  conservativeClear = useCoachUpdatesStore.getState().activeConstraints.some((entry) =>
+    entry.id === pauseConstraint.id) && JSON.stringify(useProgramStore.getState().currentProgram) === pausedProgramSnapshot;
+  check('40 deleting a compatibility mirror cannot resolve a canonical episode', conservativeClear);
 }
 {
   resetLiveStores(mid);

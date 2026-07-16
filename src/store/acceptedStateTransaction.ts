@@ -13,6 +13,7 @@ import type { CalendarDayType } from './calendarStore';
 import type { ReadinessSignal } from '../utils/readiness';
 import type { ActiveConstraint } from './coachUpdatesStore';
 import type { InjuryState } from '../utils/injuryProgression';
+import type { InjuryEpisodeV1 } from '../rules/injuryEpisode';
 import {
   canonicaliseHydratedState,
   type AcceptedMaterialContext,
@@ -41,6 +42,7 @@ import {
   normalizeAcceptedKeyedMap,
   normalizeAcceptedMaterialContext,
   normalizeAcceptedProgramSurfaces,
+  type AcceptedCompositionBaseV1,
 } from './acceptedStateColdStart';
 import {
   resolveFixtureConditionedAvailability,
@@ -113,6 +115,8 @@ export interface AcceptedStateTransactionProposal {
   readinessSignalsByDate?: Record<string, ReadinessSignal>;
   activeConstraints?: ActiveConstraint[];
   activeInjury?: InjuryState | null;
+  injuryEpisodes?: InjuryEpisodeV1[];
+  acceptedCompositionBase?: AcceptedCompositionBaseV1 | null;
   validateWeekStarts?: readonly string[];
   profile?: OnboardingData | null;
   programAlreadyAccepted?: boolean;
@@ -193,7 +197,11 @@ function validationConstraints(
   activeConstraints: readonly ActiveConstraint[],
   signals: Readonly<Record<string, ReadinessSignal>>,
 ): ActiveConstraint[] {
-  const byId = new Map(activeConstraints
+  const byId = new Map<string, ActiveConstraint>(activeConstraints
+    // InjuryEpisodeV1 is composed at the visible accepted boundary. Applying
+    // its compatibility constraint here would destructively overwrite the
+    // AcceptedCompositionBase that resolution must recompose from.
+    .filter((constraint) => constraint.type !== 'injury')
     .filter(isStructuralGenerationConstraint)
     .map((constraint) => [constraint.id, constraint]));
   for (const signal of Object.values(signals)) {
@@ -250,7 +258,8 @@ function materialiseFixtureMarksForCandidate(args: {
       markedDays: args.context.markedDays,
       sourceSurfaces: args.candidate,
       sourceMarkedDays: args.context.markedDays,
-      activeConstraints: args.context.activeConstraints,
+      activeConstraints: args.context.activeConstraints.filter((constraint) =>
+        constraint.type !== 'injury'),
       userRemovalConstraints: args.candidate.userRemovalConstraints,
     }).overlay;
     changed = true;
@@ -377,7 +386,7 @@ export function stageAcceptedStateTransaction(
 ): AcceptedStateTransactionResult {
   const current = useProgramStore.getState();
   const priorContext = materialContext(current);
-  const context = normalizeAcceptedMaterialContext({
+  let context = normalizeAcceptedMaterialContext({
     markedDays: proposal.markedDays === undefined
       ? priorContext.markedDays
       : proposal.markedDays,
@@ -390,6 +399,12 @@ export function stageAcceptedStateTransaction(
     activeInjury: proposal.activeInjury === undefined
       ? priorContext.activeInjury
       : proposal.activeInjury,
+    injuryEpisodes: proposal.injuryEpisodes === undefined
+      ? priorContext.injuryEpisodes
+      : proposal.injuryEpisodes,
+    acceptedCompositionBase: proposal.acceptedCompositionBase === undefined
+      ? priorContext.acceptedCompositionBase
+      : proposal.acceptedCompositionBase,
     revision: priorContext.revision + 1,
     lastTransaction: proposal.reason,
   });
@@ -403,6 +418,17 @@ export function stageAcceptedStateTransaction(
         profile,
       });
   if (proposal.preserveExactAcceptedWorkouts) {
+    if (context.acceptedCompositionBase) {
+      context = normalizeAcceptedMaterialContext({
+        ...context,
+        acceptedCompositionBase: {
+          ...context.acceptedCompositionBase,
+          updatedAt: new Date().toISOString(),
+          sourceRevision: context.revision,
+          surfaces: candidate,
+        },
+      });
+    }
     assertAcceptedVisibleLedgerEquivalence({
       surfaces: candidate,
       context,
@@ -427,10 +453,22 @@ export function stageAcceptedStateTransaction(
     markedDays: context.markedDays,
     validateWeekStarts: proposal.validateWeekStarts,
   });
-  return {
-    program: materialisedProgramPatch(candidate, accepted as Partial<AcceptedProgramSurfaces>),
-    context,
-  };
+  const program = materialisedProgramPatch(
+    candidate,
+    accepted as Partial<AcceptedProgramSurfaces>,
+  );
+  if (context.acceptedCompositionBase) {
+    context = normalizeAcceptedMaterialContext({
+      ...context,
+      acceptedCompositionBase: {
+        ...context.acceptedCompositionBase,
+        updatedAt: new Date().toISOString(),
+        sourceRevision: context.revision,
+        surfaces: program,
+      },
+    });
+  }
+  return { program, context };
 }
 
 /**
@@ -490,7 +528,8 @@ export function commitAcceptedStateTransaction(
     throw error;
   }
   const equivalenceWeeks = new Set(proposal.validateWeekStarts ?? []);
-  if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined) {
+  if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
+    proposal.injuryEpisodes !== undefined) {
     for (const microcycle of staged.program.currentProgram?.microcycles ?? []) {
       equivalenceWeeks.add(microcycle.startDate.slice(0, 10));
     }
@@ -565,7 +604,8 @@ export function commitAcceptedStateTransaction(
   });
   useCalendarStore.setState({ markedDays: staged.context.markedDays });
   useReadinessStore.setState({ signalsByDate: staged.context.readinessSignalsByDate });
-  if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined) {
+  if (proposal.activeConstraints !== undefined || proposal.activeInjury !== undefined ||
+    proposal.injuryEpisodes !== undefined) {
     publishAcceptedCoachUpdatesCompatibilityMirror({
       activeConstraints: staged.context.activeConstraints,
       activeInjury: staged.context.activeInjury,

@@ -150,9 +150,17 @@ export interface ScheduleState {
     severity: number;
     status: 'active' | 'improving' | 'resolved';
     rules?: string[];
+    seriousSymptoms?: boolean;
+    seriousSymptom?: string;
+    adjustmentLevel?: 'minimal' | 'slight' | 'moderate' | 'avoid_affected' | 'training_paused';
+    safeFocus?: string[];
+    advice?: string[];
     /** Recent peak/previous severity — drives staged reintroduction. */
     priorSeverity?: number | null;
   } | null;
+  /** Canonical episodes compose at visibleProgramReadModel; legacy aliases
+   * retain this resolver pass only until migration. */
+  injuryProjectionOwner?: 'accepted_episode';
 }
 
 export interface ResolvedDay {
@@ -984,16 +992,16 @@ function _resolveDateRaw(date: string, state: ScheduleState): ResolvedDay {
 }
 
 /**
- * Public resolveDate — runs the full priority resolution and then
- * applies the resolver-level injury filter so future weeks (and any
- * single-date renders) reflect the active injury without needing
- * per-date overrides. Manual overrides bypass the filter.
+ * Public base resolver. Temporary injury facts are intentionally not applied
+ * here: the visible-program gate composes them once for every card/detail
+ * surface, including manual overrides. Keeping this resolver on the accepted
+ * base prevents a second injury owner and lets later athlete edits survive.
  */
 export function resolveDate(date: string, state: ScheduleState): ResolvedDay {
   const day = _resolveDateRaw(date, state);
-  if (!state.activeInjury) return day;
-  const [filtered] = applyInjuryFilterPass([day], state);
-  return filtered;
+  if (!state.activeInjury || state.injuryProjectionOwner === 'accepted_episode') return day;
+  const [legacyProjected] = applyInjuryFilterPass([day], state);
+  return legacyProjected;
 }
 
 // ─── Wrapper Functions ───

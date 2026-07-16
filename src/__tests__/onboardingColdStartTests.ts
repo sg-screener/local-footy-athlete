@@ -425,6 +425,8 @@ async function main(): Promise<void> {
       readinessSignalsByDate: {},
       activeConstraints: [],
       activeInjury: null,
+      injuryEpisodes: [],
+      acceptedCompositionBase: null,
       revision: 0,
       lastTransaction: null,
     }),
