@@ -140,6 +140,8 @@
     "test:modality-preference-verification": "sucrase-node src/__tests__/coachModalityPreferenceVerificationTests.ts",
     "test:coach-program-edit": "sucrase-node src/__tests__/coachProgramEditContractTests.ts",
     "test:coach-mutation-truth": "sucrase-node src/__tests__/coachSemanticMutationTruthTests.ts",
+    "test:program-semantic-snapshot": "sucrase-node src/__tests__/programSemanticSnapshotTests.ts",
+    "test:coach-visible-domain-verifier": "sucrase-node src/__tests__/coachVisibleDomainVerifierTests.ts",
     "test:coach-revision-proposal-behavior": "sucrase-node src/__tests__/coachRevisionProposalBehaviorMatrixTests.ts",
     "test:plan-change-producer": "sucrase-node src/__tests__/planChangeProducerTests.ts",
     "test:coach-program-setup-edit": "sucrase-node src/__tests__/coachProgramSetupEditTests.ts",
