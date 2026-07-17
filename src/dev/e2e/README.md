@@ -104,12 +104,20 @@ Every step requires durable reload proof and a rendered witness.
 
 Eligibility is deliberately fail-closed. A missing collection is not treated as
 an empty collection, a stale revision is not current, and an unavailable render
-test ID blocks before mutation. The typed foundation therefore compiles and can
-be exercised with injected production bindings, while a live smoke campaign
-must wait for all declared test IDs and exact stable target IDs to be exposed.
-In particular, fixture/Repeat Week restoration needs stable adjustment IDs from
-the production receipt, and the equipment seed must expose its canonical source
-fact rather than only the legacy profile/constraint witness.
+test ID blocks before mutation. `explorerProductionBindings` now resolves the
+deterministic target, invokes the existing canonical owner once, and returns its
+typed receipt. Fixture and Repeat Week restoration bind to the exact adjustment
+ID returned by the manifest-declared baseline step and rehydrate that ID through
+the exact prior TraceV2 chain after reload. The equipment seed installs its
+canonical source fact through the existing temporary-source-fact transaction.
+
+`explorerScenarioRunner` installs those production bindings plus the correlated
+render wait around the existing runtime dependencies. The in-app render observer
+waits for accepted semantic state and the exact visible session/component state,
+then records the manifest control, semantic test IDs, observation ID, TraceV2
+root and canonical identity. Screenshots and accessibility hierarchies are never
+invented: all nine manifests preflight as executable but explicitly incomplete
+until a live collector attaches both external artifact references.
 
 Named seeds and their extra witnesses:
 
