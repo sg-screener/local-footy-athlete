@@ -48,6 +48,7 @@ function packet(overrides: Partial<CoachContextPacket> = {}): CoachContextPacket
     userMessage: 'fixture request',
     recentMessages: [],
     activeInjury: null,
+    acceptedInjuryContext: { revision: 0, activeEpisodes: [] },
     activeConstraints: [],
     coachUpdate: null,
     currentWeek: [],

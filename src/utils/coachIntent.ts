@@ -61,6 +61,33 @@ import type {
   FeedbackSoreness,
   SessionOutcomeReason,
 } from '../types/sessionOutcome';
+import {
+  INJURY_EPISODE_PROMPT_CONTRACT,
+  isInjuryEpisodeIntent,
+  parseInjuryEpisodeIntent,
+  parseInjuryEpisodePayload,
+} from '../../supabase/functions/shared/coachInjuryIntentContract';
+import type {
+  InjuryEpisodeIntent,
+  InjuryEpisodeIntentKind,
+  InjuryEpisodePayload,
+  InjuryFollowupKind,
+  InjurySeverity,
+} from '../../supabase/functions/shared/coachInjuryIntentContract';
+import type { InjuryBucket } from './programAdjustmentEngine';
+
+export {
+  isInjuryEpisodeIntent,
+  parseInjuryEpisodeIntent,
+  parseInjuryEpisodePayload,
+};
+export type {
+  InjuryEpisodeIntentKind,
+  InjuryEpisodePayload,
+  InjuryEpisodeIntent,
+  InjuryFollowupKind,
+  InjurySeverity,
+};
 
 // ─── Intent schema ──────────────────────────────────────────────────
 
@@ -263,6 +290,22 @@ export type FixtureChangeIntent =
       payload: IncompleteFixtureClarificationPayload;
     });
 
+export interface AcceptedInjuryContextEpisode {
+  episodeId: string;
+  bodyPart: string;
+  bucket: InjuryBucket | null;
+  severity: number;
+  status: 'active' | 'improving';
+  onsetOrReportedDate: string;
+  updatedAt: string;
+  seriousSymptoms: boolean;
+}
+
+export interface AcceptedInjuryContext {
+  revision: number;
+  activeEpisodes: AcceptedInjuryContextEpisode[];
+}
+
 // ─── Context packet ─────────────────────────────────────────────────
 
 /**
@@ -281,8 +324,14 @@ export interface CoachContextPacket {
   userMessage: string;
   /** Recent chat — last N messages, oldest first. */
   recentMessages: Array<{ role: 'user' | 'assistant'; content: string }>;
-  /** Active injury, if any. Drives most of the disambiguation logic. */
+  /** Compatibility-only collapsed injury projection; never authoritative. */
   activeInjury: InjuryState | null;
+  /**
+   * Canonical accepted injury truth. This preserves every active episode;
+   * activeInjury above is a compatibility projection only and must not be
+   * used as the authoritative injury target.
+   */
+  acceptedInjuryContext: AcceptedInjuryContext;
   /**
    * All active constraints — injuries, fatigue, soreness, schedule, etc.
    * Used by the constraint-resolution detector that runs BEFORE the
@@ -467,21 +516,23 @@ Your job is to read the athlete's latest message + the surrounding context and r
   "rationale": "<one sentence>"
 }
 
+${INJURY_EPISODE_PROMPT_CONTRACT}
+
 CRITICAL RULES
 
-1. If \`activeInjury\` is set in context AND the message references the same body part (or no specific body part), DO NOT classify as new_injury_report. Use active_injury_followup or why_didnt_program_change.
+1. \`acceptedInjuryContext.activeEpisodes\` is the authoritative injury context. \`activeInjury\` is compatibility-only and must not be used as the source of truth. If the message references the same body part as an accepted active episode, DO NOT classify it as new_injury_report. Use active_injury_followup or why_didnt_program_change.
 
-2. If \`activeInjury\` is set and the user just gives a number ("4/10"), this is injury_severity_reply with payload.severity (interpret as the new severity for the EXISTING injury).
+2. If exactly one accepted active episode is the available target and the user just gives a number ("4/10"), this is injury_severity_reply with payload.severity (interpret it as the new severity for that EXISTING episode). If more than one episode could be the target, preserve the injury intent and let the app clarify the target.
 
 3. Severity clarification (needsClarification=true with "How bad is it?") is ONLY appropriate when:
-   - no activeInjury exists, AND
+   - no accepted active episode matches the reported body part, AND
    - the user is reporting a NEW injury, AND
    - severity is missing.
-   Never ask severity if activeInjury.severity is already set unless the user explicitly reports a different injury.
+   Missing severity is a valid injury classification, not schema failure. Never ask severity for an accepted existing episode unless the athlete is reporting a severity change or answering a severity question.
 
 4. "why didn't X change?" / "why are deadlifts still there?" / "should I still train?" → why_didnt_program_change. Do not classify as a new request unless it's clear they want a NEW change.
 
-5. Different body part with activeInjury → may be a NEW injury — classify as new_injury_report (the dispatcher will handle the severity clarifier flow if needed).
+5. A body part different from every accepted active episode may be a NEW injury — classify as new_injury_report. A new injury report remains new_injury_report even when a similar accepted episode exists; the app owns target resolution.
 
 6. Programming rationale and session naming/display mismatch questions are NOT injuries. Classify as program_explanation or session_mismatch_question, never new_injury_report:
    - "why did you put a mid week row in?"
@@ -669,6 +720,10 @@ export function parseCoachIntent(raw: unknown, athleteMessage?: string): CoachIn
   }
   if (hasOwn(r, 'payload') && !isRecord(r.payload)) return null;
   if (hasOwn(r, 'rationale') && typeof r.rationale !== 'string') return null;
+  if (r.intent === 'new_injury_report' || r.intent === 'injury_severity_reply' ||
+    r.intent === 'active_injury_followup') {
+    return parseInjuryEpisodeIntent(r);
+  }
   if (r.intent === 'fixture_change') {
     if (r.needsClarification &&
       (typeof r.clarificationQuestion !== 'string' || !r.clarificationQuestion.trim())) {

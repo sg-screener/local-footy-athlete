@@ -46,6 +46,10 @@ import type {
 } from '../utils/coachRevisionProposal';
 import type { ProgramEditRiskAssessment } from '../utils/programEditRiskAssessment';
 import type { DayOfWeek } from '../types/domain';
+import type {
+  InjurySeverity,
+} from '../utils/coachIntent';
+import { appDateNow } from '../utils/appDate';
 
 /**
  * How long a pending clarifier is treated as "still on the table".
@@ -261,18 +265,66 @@ export interface PendingCoachClarifier {
   pendingClarification?: PendingClarificationSlot;
 }
 
+export interface PendingNewInjurySeverityClarifier {
+  operation: 'report';
+  bodyPart: string;
+  originalMessage: string;
+  askedQuestion: string;
+  createdAt: number;
+}
+
+export interface PendingExistingInjurySeverityClarifier {
+  operation: 'update';
+  episodeId: string;
+  bodyPart: string;
+  change: 'improving' | 'worsening';
+  originalMessage: string;
+  askedQuestion: string;
+  createdAt: number;
+}
+
+export interface PendingInjuryTargetClarifier {
+  operation: 'update' | 'refresh' | 'resolve';
+  candidateEpisodeIds: string[];
+  candidateLabels: string[];
+  severity?: InjurySeverity;
+  status?: 'active' | 'improving';
+  originalMessage: string;
+  askedQuestion: string;
+  createdAt: number;
+}
+
+export type PendingInjuryClarifier =
+  | PendingNewInjurySeverityClarifier
+  | PendingExistingInjurySeverityClarifier
+  | PendingInjuryTargetClarifier;
+
+export type PendingInjuryClarifierInput = PendingInjuryClarifier extends infer Entry
+  ? Entry extends PendingInjuryClarifier
+    ? Omit<Entry, 'createdAt'> & { createdAt?: number }
+    : never
+  : never;
+
 interface PendingCoachClarifierState {
   pending: PendingCoachClarifier | null;
+  pendingInjury: PendingInjuryClarifier | null;
   /** Stash a new pending clarifier (overwrites any previous one). */
   setPending: (entry: Omit<PendingCoachClarifier, 'createdAt'> & { createdAt?: number }) => void;
+  /** Stash a typed injury clarifier and retire any generic question. */
+  setPendingInjury: (entry: PendingInjuryClarifierInput) => void;
   /** Clear the slot. */
   clearPending: () => void;
+  clearPendingInjury: () => void;
+  /** Reset every clarifier slot. */
+  reset: () => void;
 }
 
 export const usePendingCoachClarifierStore = create<PendingCoachClarifierState>()((set) => ({
   pending: null,
+  pendingInjury: null,
   setPending: (entry) =>
     set({
+      pendingInjury: null,
       pending: {
         operation: entry.operation,
         partialPayload: entry.partialPayload,
@@ -282,7 +334,7 @@ export const usePendingCoachClarifierStore = create<PendingCoachClarifierState>(
         missingFields: entry.missingFields,
         originalMessage: entry.originalMessage,
         askedQuestion: entry.askedQuestion,
-        createdAt: entry.createdAt ?? Date.now(),
+        createdAt: entry.createdAt ?? appDateNow().getTime(),
         targetDate: entry.targetDate,
         targetSessionName: entry.targetSessionName,
         programEdit: entry.programEdit,
@@ -292,7 +344,17 @@ export const usePendingCoachClarifierStore = create<PendingCoachClarifierState>(
         pendingClarification: entry.pendingClarification,
       },
     }),
+  setPendingInjury: (entry) =>
+    set({
+      pending: null,
+      pendingInjury: {
+        ...entry,
+        createdAt: entry.createdAt ?? appDateNow().getTime(),
+      } as PendingInjuryClarifier,
+    }),
   clearPending: () => set({ pending: null }),
+  clearPendingInjury: () => set({ pendingInjury: null }),
+  reset: () => set({ pending: null, pendingInjury: null }),
 }));
 
 /**
@@ -300,12 +362,25 @@ export const usePendingCoachClarifierStore = create<PendingCoachClarifierState>(
  * Anything older than `PENDING_CLARIFIER_TTL_MS` is treated as missing.
  */
 export function getPendingClarifierSnapshot(
-  now: number = Date.now(),
+  now: number = appDateNow().getTime(),
 ): PendingCoachClarifier | null {
   const p = usePendingCoachClarifierStore.getState().pending;
   if (!p) return null;
   if (now - p.createdAt > PENDING_CLARIFIER_TTL_MS) return null;
   return p;
+}
+
+/**
+ * Imperative typed injury getter with the same freshness boundary as the
+ * generic clarifier. Expired entries are never effective targets.
+ */
+export function getPendingInjuryClarifierSnapshot(
+  now: number = appDateNow().getTime(),
+): PendingInjuryClarifier | null {
+  const pending = usePendingCoachClarifierStore.getState().pendingInjury;
+  if (!pending) return null;
+  if (now - pending.createdAt > PENDING_CLARIFIER_TTL_MS) return null;
+  return pending;
 }
 
 /**

@@ -193,7 +193,7 @@ function defaultDevPostOnboardingResetDeps(): DevPostOnboardingResetDeps {
     },
     pendingClarifierStore: {
       clearPending: () =>
-        usePendingCoachClarifierStore.getState().clearPending(),
+        usePendingCoachClarifierStore.getState().reset(),
     },
     mutationHistoryStore: {
       clearAll: () => useCoachMutationHistoryStore.getState().clearAll(),

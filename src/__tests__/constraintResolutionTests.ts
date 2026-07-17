@@ -156,6 +156,7 @@ function makePacket(
     userMessage,
     recentMessages: [],
     activeInjury: null,
+    acceptedInjuryContext: { revision: 0, activeEpisodes: [] },
     activeConstraints,
     pendingInjury: null,
     coachUpdate: null,
