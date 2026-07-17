@@ -210,7 +210,9 @@ async function main() {
       entry.includes('setDevE2EExplorerArtifactAccepted(args.scenarioId)'),
     'live entry publishes success without a validated artifact bundle');
     expect(runner.includes('e2e-explorer-artifact-accepted-${args.plan.scenarioId}') &&
-      runner.includes('completed.every(({ plan }) => value.includes('),
+      runner.includes('const observedArtifactAcceptances = new Set<string>();') &&
+      runner.includes('completed.every(({ plan }) =>') &&
+      runner.includes('observedArtifactAcceptances.has(plan.scenarioId)'),
     'runner does not validate each artifact and the all-nine artifact set');
   });
 

@@ -1,6 +1,17 @@
 import fs from 'fs';
 import path from 'path';
 import yaml from 'js-yaml';
+import {
+  explorerMetroDiagnosticMarker,
+  verifyExplorerMetroDiagnostic,
+} from '../dev/e2e/explorerAppLaunchContract';
+import { parseDevE2EEntryRoute } from '../dev/e2e/devE2EEntryRoute';
+import {
+  __resetDevE2EStateForTest,
+  devE2EMarkers,
+  getDevE2EStateSnapshot,
+  setDevE2EExplorerMetroDiagnostic,
+} from '../dev/e2e/devE2EState';
 
 let passed = 0;
 const failures: string[] = [];
@@ -39,12 +50,7 @@ ok('selected server and resolved bundle are observable',
   appDelegate.includes('[DevE2E Metro] Selected server:') &&
   appDelegate.includes('[DevE2E Metro] Resolved bundle:'));
 
-for (const file of [
-  'reset-seed.yaml',
-  'checkpoint-and-reload.yaml',
-  'reset-scenario.yaml',
-  'scenario-checkpoint-and-reload.yaml',
-]) {
+for (const file of ['reset-seed.yaml', 'checkpoint-and-reload.yaml']) {
   const flowPath = path.join(root, '.maestro', 'common', file);
   const flowSource = fs.readFileSync(flowPath, 'utf8');
   const documents: unknown[] = [];
@@ -54,6 +60,84 @@ for (const file of [
   ok(`${file} passes the selected Metro URL on cold launch`,
     /launchApp:[\s\S]*arguments:\s+e2eMetroUrl: "\$\{E2E_METRO_URL\}"/.test(flowSource));
 }
+
+const canonicalLaunchPath = path.join(
+  root, '.maestro', 'common', 'launch-explorer-app.yaml',
+);
+const canonicalLaunch = fs.readFileSync(canonicalLaunchPath, 'utf8');
+const canonicalDocuments: unknown[] = [];
+yaml.loadAll(canonicalLaunch, (document) => canonicalDocuments.push(document));
+ok('canonical Explorer launch flow parses and owns the only Explorer launchApp',
+  canonicalDocuments.length === 2 && Array.isArray(canonicalDocuments[1]) &&
+  canonicalLaunch.includes('launchApp:') &&
+  canonicalLaunch.includes('e2eMetroUrl: "${E2E_METRO_URL}"') &&
+  canonicalLaunch.includes('openLink: "${EXPLORER_LAUNCH_DEEP_LINK}"'));
+
+for (const [file, purpose] of [
+  ['reset-scenario.yaml', 'scenario-reset'],
+  ['run-explorer-scenario.yaml', 'scenario-reset'],
+  ['scenario-checkpoint-and-reload.yaml', 'action-reload'],
+  ['scenario-final-checkpoint-and-reload.yaml', 'final-step-reload'],
+  ['relaunch-explorer-diagnostics.yaml', 'diagnostic-relaunch'],
+] as const) {
+  const flowSource = fs.readFileSync(path.join(root, '.maestro', 'common', file), 'utf8');
+  const documents: unknown[] = [];
+  yaml.loadAll(flowSource, (document) => documents.push(document));
+  ok(`${file} parses and delegates launch ownership`,
+    documents.length === 2 && Array.isArray(documents[1]) &&
+    flowSource.includes('file: launch-explorer-app.yaml') &&
+    flowSource.includes(`EXPLORER_LAUNCH_PURPOSE: ${purpose}`) &&
+    flowSource.includes('EXPLORER_LAUNCH_DEEP_LINK:') &&
+    flowSource.includes('e2eMetroUrl=${E2E_METRO_URL}') &&
+    !flowSource.includes('launchApp:'));
+}
+
+const selectedMetro = 'http://127.0.0.1:8082';
+const diagnosticRoute = parseDevE2EEntryRoute(
+  'localfootyathlete://e2e/explorer/diagnostics/initial-cold-launch' +
+  `?e2eMetroUrl=${encodeURIComponent(selectedMetro)}`,
+);
+ok('diagnostic deep link preserves the exact selected Metro URL',
+  diagnosticRoute?.kind === 'explorer_diagnostic' &&
+  diagnosticRoute.e2eMetroUrl === selectedMetro &&
+  diagnosticRoute.launchPurpose === 'initial-cold-launch');
+ok('matching app diagnostics publish an exact URL marker',
+  verifyExplorerMetroDiagnostic({
+    deepLinkMetroUrl: selectedMetro,
+    nativeMetroUrl: selectedMetro,
+  }) === selectedMetro &&
+  explorerMetroDiagnosticMarker(selectedMetro).includes(encodeURIComponent(selectedMetro)));
+__resetDevE2EStateForTest();
+setDevE2EExplorerMetroDiagnostic({
+  metroUrl: selectedMetro,
+  launchPurpose: 'initial-cold-launch',
+});
+const diagnosticMarkers = devE2EMarkers(getDevE2EStateSnapshot());
+ok('rendered diagnostics expose exact URL and launch-path markers',
+  diagnosticMarkers.includes(explorerMetroDiagnosticMarker(selectedMetro)) &&
+  diagnosticMarkers.includes(
+    'e2e-explorer-launch-diagnostic-initial-cold-launch',
+  ));
+let mismatchFailed = false;
+try {
+  verifyExplorerMetroDiagnostic({
+    deepLinkMetroUrl: selectedMetro,
+    nativeMetroUrl: 'http://127.0.0.1:8081',
+  });
+} catch (error) {
+  mismatchFailed = error instanceof Error &&
+    error.message === 'explorer_metro_diagnostic_mismatch';
+}
+ok('app diagnostics reject ambient Metro before route dispatch', mismatchFailed);
+
+const entrySource = fs.readFileSync(
+  path.join(root, 'src', 'dev', 'e2e', 'devE2EEntry.tsx'),
+  'utf8',
+);
+ok('Explorer diagnostics run before seed reset and scenario execution',
+  entrySource.indexOf('verifyExplorerMetroDiagnostic({') >= 0 &&
+  entrySource.indexOf('verifyExplorerMetroDiagnostic({') <
+    entrySource.indexOf('switch (route.kind)'));
 
 const wrapper = fs.readFileSync(
   path.join(root, 'scripts', 'dev-e2e', 'run-maestro-ios.sh'),
@@ -66,6 +150,15 @@ ok('wrapper requires an explicit URL and checks that Metro is live',
 ok('wrapper has no fixed Metro port', !/8081|8082/.test(wrapper));
 ok('wrapper forwards one URL to every Maestro launch',
   wrapper.includes('-e "E2E_METRO_URL=${E2E_METRO_URL}"'));
+
+const explorerSources = [
+  fs.readFileSync(path.join(root, 'scripts', 'run-explorer-nine-live.ts'), 'utf8'),
+  fs.readFileSync(path.join(root, 'scripts', 'explorer-app-launch.ts'), 'utf8'),
+  canonicalLaunch,
+].join('\n');
+ok('Explorer isolation never discovers or terminates ambient Metro servers',
+  !/\blsof\b|killall|pkill|metroPortScan/.test(explorerSources) &&
+  !/8081|8082/.test(explorerSources));
 
 console.log(`\nDev E2E Metro isolation: ${passed} passed, ${failures.length} failed`);
 if (failures.length > 0) {
