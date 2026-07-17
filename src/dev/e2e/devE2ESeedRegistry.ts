@@ -92,7 +92,11 @@ export type DevE2EWitness =
       episodeId: string;
       constraintId: string;
     }
-  | { kind: 'active_equipment'; presetId: 'bodyweight_only' }
+  | {
+      kind: 'active_equipment';
+      presetId: 'bodyweight_only';
+      factId: string;
+    }
   | {
       kind: 'session_feedback';
       date: string;
@@ -765,12 +769,6 @@ export function witnessesForDevE2ESeed(
         date: anchorDate,
         strengthPattern: 'squat',
       });
-      witnesses.push({
-        kind: 'exercise_present',
-        exerciseId: 'dev-e2e-removable-band-pull-apart',
-        name: 'Band Pull-Apart',
-        date: anchorDate,
-      });
       break;
     case 'one-set-strength':
       witnesses.push({
@@ -823,7 +821,11 @@ export function witnessesForDevE2ESeed(
         equipment: ['bodyweight'],
         completeness: 'complete',
       });
-      witnesses.push({ kind: 'active_equipment', presetId: 'bodyweight_only' });
+      witnesses.push({
+        kind: 'active_equipment',
+        presetId: 'bodyweight_only',
+        factId: `temporary-equipment-bodyweight-only-${anchorDate}`,
+      });
       break;
     case 'feedback-progression-case': {
       const progression = futureProgressionIdentity(program, anchorDate);
@@ -1027,10 +1029,6 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
       });
       break;
     case 'lower-body-deletion':
-      auxiliaryState.push({
-        kind: 'removable_component_override',
-        date: anchorDate,
-      });
       break;
     case 'injury-case':
       auxiliaryState.push({
@@ -1263,7 +1261,16 @@ export function validateDevE2EWitnesses(
       }
       case 'active_equipment':
         if (!state.activeConstraints.some((constraint) =>
-          constraint.type === 'equipment' && constraint.reasonLabel === 'Bodyweight only')) {
+          constraint.type === 'equipment' &&
+          constraint.mode === 'only' &&
+          constraint.tags.includes('bodyweight') &&
+          constraint.temporarySourceFactIds?.includes(witness.factId)) ||
+          !state.temporarySourceFacts?.some((fact) =>
+            'factId' in fact &&
+            fact.factId === witness.factId &&
+            'factKind' in fact &&
+            fact.factKind === 'equipment' &&
+            fact.status === 'active')) {
           failures.push(`equipment:${witness.presetId}`);
         }
         break;

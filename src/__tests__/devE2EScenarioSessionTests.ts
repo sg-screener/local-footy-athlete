@@ -296,8 +296,8 @@ function createHarness(): Harness {
 async function main(): Promise<void> {
   __resetDevE2EScenarioRuntimeForTest();
   __resetDevE2EStateForTest();
-  ok('default scenario manifests add no seed families',
-    DEV_E2E_SCENARIO_MANIFESTS.length === DEV_E2E_SEED_IDS.length &&
+  ok('default and nine Explorer manifests add no seed families',
+    DEV_E2E_SCENARIO_MANIFESTS.length === DEV_E2E_SEED_IDS.length + 9 &&
       DEV_E2E_SCENARIO_MANIFESTS.every((manifest) =>
         DEV_E2E_SEED_IDS.includes(manifest.seedId)));
 

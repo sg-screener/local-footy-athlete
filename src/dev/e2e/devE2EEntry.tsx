@@ -13,6 +13,11 @@ import {
 } from './devE2EState';
 import { restoreDevE2EClockBeforeHydration } from './devE2EClockPersistence';
 import { devE2EScenarioReasonCode } from './devE2EScenarioProtocol';
+import { ExplorerProductionRenderReceiptObserver } from './ExplorerProductionRenderReceiptObserver';
+import {
+  runLiveExplorerCampaign,
+  runLiveExplorerScenario,
+} from './explorerLiveScenarioRuntime';
 
 export interface DevE2ELinking {
   addEventListener: (
@@ -94,6 +99,23 @@ export function installDevE2EEntry(args: {
             route.scenarioId,
             route.checkpointStepId,
           );
+        case 'explorer_run': {
+          const result = await runLiveExplorerScenario({
+            coordinator,
+            scenarioId: route.scenarioId,
+          });
+          if (result.status === 'blocked') {
+            setDevE2EScenarioError(result.reasonCode, result, route.scenarioId);
+          }
+          return true;
+        }
+        case 'explorer_campaign': {
+          const result = await runLiveExplorerCampaign(coordinator);
+          if (result.status === 'blocked') {
+            setDevE2EScenarioError(result.reasonCode, result);
+          }
+          return true;
+        }
       }
     } catch (error) {
       publishDevE2EEntryError(
@@ -143,6 +165,7 @@ export function DevE2EStatusMarkers(): React.ReactElement {
   const errorReason = snapshot.phase === 'seed_error' ? snapshot.error : null;
   return (
     <>
+      <ExplorerProductionRenderReceiptObserver />
       {devE2EMarkers(snapshot).map((marker) => (
         <View
           key={marker}

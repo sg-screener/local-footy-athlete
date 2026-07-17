@@ -19,5 +19,9 @@ name: Deterministic dev E2E scenario reset
     visible:
       id: "e2e-next-action-eligible-${SCENARIO_ID}-${NEXT_STEP_ID}"
     timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: "e2e-explorer-next-action-eligible-${SCENARIO_ID}-${NEXT_STEP_ID}"
+    timeout: 15000
 - assertNotVisible:
     id: "e2e-seed-error"

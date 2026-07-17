@@ -1,0 +1,34 @@
+appId: com.localfootyathlete.app
+name: Explorer - all nine registered smoke scenarios
+tags:
+  - e2e
+  - explorer
+  - smoke
+---
+- runFlow:
+    file: ../common/run-explorer-scenario.yaml
+    env: { SCENARIO_ID: smoke-whole-session-deletion, SCENARIO_BUDGET_MS: 30000 }
+- runFlow:
+    file: ../common/run-explorer-scenario.yaml
+    env: { SCENARIO_ID: smoke-stacked-upper-pull-component-deletion, SCENARIO_BUDGET_MS: 30000 }
+- runFlow:
+    file: ../common/run-explorer-scenario.yaml
+    env: { SCENARIO_ID: smoke-fixture-move, SCENARIO_BUDGET_MS: 30000 }
+- runFlow:
+    file: ../common/run-explorer-scenario.yaml
+    env: { SCENARIO_ID: smoke-multi-reload-fixture-session-restoration-chain, SCENARIO_BUDGET_MS: 90000 }
+- runFlow:
+    file: ../common/run-explorer-scenario.yaml
+    env: { SCENARIO_ID: smoke-injury-update-and-resolution, SCENARIO_BUDGET_MS: 60000 }
+- runFlow:
+    file: ../common/run-explorer-scenario.yaml
+    env: { SCENARIO_ID: smoke-readiness-set-and-clear, SCENARIO_BUDGET_MS: 60000 }
+- runFlow:
+    file: ../common/run-explorer-scenario.yaml
+    env: { SCENARIO_ID: smoke-equipment-clear-and-reapply, SCENARIO_BUDGET_MS: 60000 }
+- runFlow:
+    file: ../common/run-explorer-scenario.yaml
+    env: { SCENARIO_ID: smoke-session-feedback-receipt, SCENARIO_BUDGET_MS: 30000 }
+- runFlow:
+    file: ../common/run-explorer-scenario.yaml
+    env: { SCENARIO_ID: smoke-repeat-week-phase-transition-and-restore, SCENARIO_BUDGET_MS: 60000 }

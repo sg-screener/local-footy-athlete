@@ -310,6 +310,11 @@ export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
       markers.push(
         `e2e-next-action-eligible-${state.scenarioId}-${state.scenarioNextStepId}`,
       );
+      if (state.scenarioId.startsWith('smoke-')) {
+        markers.push(
+          `e2e-explorer-next-action-eligible-${state.scenarioId}-${state.scenarioNextStepId}`,
+        );
+      }
     }
     if (state.scenarioEligibilityStatus === 'complete') {
       markers.push(`e2e-scenario-complete-${state.scenarioId}`);

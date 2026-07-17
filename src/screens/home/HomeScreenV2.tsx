@@ -690,11 +690,11 @@ export default function HomeScreenV2() {
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
             testID={weekReadiness
               ? explorerTestId.readinessUpdate(weekReadiness.id)
-              : explorerTestId.readinessOption('open')}
+              : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
             accessibilityRole="button"
             accessibilityLabel={weekReadiness
               ? explorerTestId.readinessUpdate(weekReadiness.id)
-              : explorerTestId.readinessOption('open')}
+              : explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)}
           >
             <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
               <View style={styles.busyAwayRow}>
@@ -855,6 +855,7 @@ export default function HomeScreenV2() {
       <EquipmentLimitationSheet
         visible={equipmentVisible}
         activeFactId={activeEquipmentFact?.factId}
+        targetFactId={equipmentFacts.find((fact) => fact.status !== 'active')?.factId}
         onClose={() => setEquipmentVisible(false)}
         onApply={async (presetId) => {
           await handleApplyEquipmentPreset(presetId, weekAnchorISO);

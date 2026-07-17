@@ -70,6 +70,55 @@ surviving process death. Final checkpoints and later reloads retain
 `complete/scenario_complete`. Duplicate, out-of-order, stale, corrupt, blocked,
 and correlation failures publish `e2e-scenario-error-<reasonCode>`.
 
+## Typed Explorer runtime foundation
+
+`explorerRuntime` is the canonical coordinator for manifest-driven Explorer
+scenarios. Its ownership sequence is fixed:
+
+1. validate and hash the manifest before any reset;
+2. install the declared seed exactly once and require its typed witness report;
+3. evaluate current, complete eligibility witnesses and publish the exact
+   intended-action marker;
+4. claim that action and invoke its named production transaction through
+   `explorerActionBridge`;
+5. validate the production receipt against the manifest action hash, target,
+   accepted revision, owner, and TraceV2 root;
+6. wait for a correlated React render, run hard after-action oracles, checkpoint,
+   cold reload through scenario-session V2, and run hard after-reload oracles;
+7. assemble manifest, seed, action, receipt, trace, oracle, checkpoint, reload,
+   and first-divergence evidence before advancing.
+
+Explorer never mutates program state. The bridge contains one typed adapter
+slot for every supported non-Coach action and names the existing production
+transaction that owns each mutation. Adapters may invoke that owner and return
+its typed durable outcome; they cannot publish accepted state or implement a
+second mutation path. Success is derived only from `applied`, `rejected`,
+`no-change`, `conflict`, or `failure` production outcomes. Reply text and UI copy
+are not bridge inputs. `coach.message` remains capability-disabled.
+
+`explorerSmokeScenarioManifests` compiles nine non-Coach scenarios (15 actions):
+whole-session deletion; stacked upper-pull component deletion; fixture move;
+the three-reload move/delete/restore chain; injury update/resolve; readiness
+set/clear; equipment clear/reapply; session feedback; and Repeat Week/restore.
+Every step requires durable reload proof and a rendered witness.
+
+Eligibility is deliberately fail-closed. A missing collection is not treated as
+an empty collection, a stale revision is not current, and an unavailable render
+test ID blocks before mutation. `explorerProductionBindings` now resolves the
+deterministic target, invokes the existing canonical owner once, and returns its
+typed receipt. Fixture and Repeat Week restoration bind to the exact adjustment
+ID returned by the manifest-declared baseline step and rehydrate that ID through
+the exact prior TraceV2 chain after reload. The equipment seed installs its
+canonical source fact through the existing temporary-source-fact transaction.
+
+`explorerScenarioRunner` installs those production bindings plus the correlated
+render wait around the existing runtime dependencies. The in-app render observer
+waits for accepted semantic state and the exact visible session/component state,
+then records the manifest control, semantic test IDs, observation ID, TraceV2
+root and canonical identity. Screenshots and accessibility hierarchies are never
+invented: all nine manifests preflight as executable but explicitly incomplete
+until a live collector attaches both external artifact references.
+
 Named seeds and their extra witnesses:
 
 | Seed | Extra visible/state witness |

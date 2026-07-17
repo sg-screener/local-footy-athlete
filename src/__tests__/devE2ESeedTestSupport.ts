@@ -3,6 +3,7 @@ import type {
   Workout,
 } from '../types/domain';
 import type { InjuryEpisodeV1 } from '../rules/injuryEpisode';
+import { createTemporaryEquipmentFact } from '../rules/temporarySourceFact';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { dayOfWeekForISODate } from '../utils/appDate';
 import type {
@@ -201,6 +202,23 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
     item.kind === 'temporary_equipment');
   const feedback = seed.auxiliaryState.find((item) =>
     item.kind === 'session_feedback');
+  const equipmentFact = equipment?.kind === 'temporary_equipment'
+    ? createTemporaryEquipmentFact({
+        observedDate: equipment.date,
+        scope: {
+          kind: 'week',
+          weekStart: equipment.date,
+          from: equipment.date,
+          until: addDaysISO(equipment.date, 6),
+        },
+        mode: 'only',
+        equipmentTags: ['bodyweight'],
+        sourceActor: 'system',
+        sourceSurface: 'dev_e2e_seed',
+        now: FIXED_TIMESTAMP,
+        factId: `temporary-equipment-bodyweight-only-${equipment.date}`,
+      })
+    : null;
   const sessionFeedback: DevE2EWitnessState['sessionFeedback'] = {};
   if (feedback?.kind === 'session_feedback') {
     sessionFeedback[feedback.date] = {
@@ -258,11 +276,19 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
             id: `equipment-temporary:${equipment.date}`,
             type: 'equipment',
             reasonLabel: 'Bodyweight only',
+            mode: 'only',
+            tags: ['bodyweight'],
+            temporarySourceFactIds: [
+              `temporary-equipment-bodyweight-only-${equipment.date}`,
+            ],
           }]
         : []),
     ],
     injuryEpisodes: injuryEpisode ? [injuryEpisode] : [],
-    temporarySourceFacts: injuryEpisode ? [injuryEpisode] : [],
+    temporarySourceFacts: [
+      ...(injuryEpisode ? [injuryEpisode] : []),
+      ...(equipmentFact ? [equipmentFact] : []),
+    ],
     readinessSignalsByDate: {},
     sessionFeedback,
     acceptedRevision: acceptedRevision?.kind === 'accepted_revision'

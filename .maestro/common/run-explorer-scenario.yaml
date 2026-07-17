@@ -1,0 +1,17 @@
+appId: com.localfootyathlete.app
+name: Run one registered Explorer scenario
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+    arguments:
+      e2eMetroUrl: "${E2E_METRO_URL}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-entry-ready"
+    timeout: 15000
+- openLink: "localfootyathlete://e2e/explorer/run/${SCENARIO_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-scenario-complete-${SCENARIO_ID}"
+    timeout: "${SCENARIO_BUDGET_MS}"

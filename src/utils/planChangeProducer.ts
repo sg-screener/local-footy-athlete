@@ -951,7 +951,7 @@ const ATHLETE_REMOVAL_SCOPE: Record<PlanChangeBinScopeId, UserRemovalScope> = {
 type AthleteOwnedPlanChange = Extract<PlanChange,
   { kind: 'move_session' } | { kind: 'remove_session' }>;
 
-type AthleteMutationResolution =
+export type AthleteMutationResolution =
   | {
       ok: true;
       kind: 'move_session';
@@ -973,7 +973,7 @@ type AthleteMutationResolution =
  * accepted visible snapshot. Registry templates and the general revision
  * writer deliberately have no role in this operation-scoped boundary.
  */
-function resolveAthleteMutation(args: {
+export function resolveAthleteMutation(args: {
   change: AthleteOwnedPlanChange;
   visibleWeek: ResolvedDay[];
   source: 'tap' | 'coach';
