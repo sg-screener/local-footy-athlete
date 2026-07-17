@@ -206,7 +206,7 @@ function rebuildScenario(
       });
     return {
       ...cloneJson(sourceStep),
-      preconditions: preconditions as ExplorerScenarioStep['preconditions'],
+      preconditions: preconditions as unknown as ExplorerScenarioStep['preconditions'],
       oracleAssertions,
     };
   });

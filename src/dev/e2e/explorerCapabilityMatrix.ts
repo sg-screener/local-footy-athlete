@@ -248,19 +248,21 @@ const CONSTRAINTS: readonly ExplorerBinaryCapabilityConstraint[] = [
   },
 ];
 
+const CAPABILITY_DIMENSIONS = [
+  { dimension: 'seasonPhase', values: EXPLORER_SEASON_PHASES },
+  { dimension: 'fixtureState', values: EXPLORER_FIXTURE_STATES },
+  { dimension: 'sourceFacts', values: EXPLORER_SOURCE_FACT_COMBINATIONS },
+  { dimension: 'availabilityState', values: EXPLORER_AVAILABILITY_STATES },
+  { dimension: 'sessionTopology', values: EXPLORER_SESSION_TOPOLOGIES },
+  { dimension: 'actionKind', values: EXPLORER_ACTION_TYPES },
+  { dimension: 'reversibleLedgerState', values: EXPLORER_REVERSIBLE_LEDGER_STATES },
+  { dimension: 'reloadPolicy', values: EXPLORER_RELOAD_POLICIES },
+  { dimension: 'expectedDisposition', values: EXPLORER_EXPECTED_DISPOSITIONS },
+] as const satisfies readonly ExplorerCapabilityDimensionDefinition[];
+
 export const EXPLORER_CAPABILITY_MATRIX: ExplorerCapabilityMatrix = Object.freeze({
   schemaVersion: EXPLORER_CAPABILITY_MATRIX_SCHEMA_VERSION,
-  dimensions: Object.freeze([
-    { dimension: 'seasonPhase', values: EXPLORER_SEASON_PHASES },
-    { dimension: 'fixtureState', values: EXPLORER_FIXTURE_STATES },
-    { dimension: 'sourceFacts', values: EXPLORER_SOURCE_FACT_COMBINATIONS },
-    { dimension: 'availabilityState', values: EXPLORER_AVAILABILITY_STATES },
-    { dimension: 'sessionTopology', values: EXPLORER_SESSION_TOPOLOGIES },
-    { dimension: 'actionKind', values: EXPLORER_ACTION_TYPES },
-    { dimension: 'reversibleLedgerState', values: EXPLORER_REVERSIBLE_LEDGER_STATES },
-    { dimension: 'reloadPolicy', values: EXPLORER_RELOAD_POLICIES },
-    { dimension: 'expectedDisposition', values: EXPLORER_EXPECTED_DISPOSITIONS },
-  ]),
+  dimensions: Object.freeze(CAPABILITY_DIMENSIONS),
   actionCapabilities: Object.freeze(ACTION_CAPABILITIES),
   constraints: Object.freeze(CONSTRAINTS),
 });

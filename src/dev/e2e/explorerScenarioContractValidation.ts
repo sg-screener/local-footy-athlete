@@ -1537,7 +1537,7 @@ function normalizeStableValue(
     typeof value === 'string' ||
     typeof value === 'boolean'
   ) {
-    return value;
+    return value as ExplorerJsonValue;
   }
   if (typeof value === 'number') {
     if (Number.isFinite(value)) return value;
