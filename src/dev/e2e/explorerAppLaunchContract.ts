@@ -52,7 +52,25 @@ export function explorerMetroDiagnosticMarker(metroUrl: string): string {
   return `e2e-explorer-metro-url-${encodeURIComponent(requireMetroUrl(metroUrl))}`;
 }
 
-function assertLocalMetroUrl(value: string): void {
+export function explorerRequestedMetroDiagnosticMarker(metroUrl: string): string {
+  return 'e2e-explorer-launch-requested-metro-url-' +
+    encodeURIComponent(requireMetroUrl(metroUrl));
+}
+
+export function explorerResolvedMetroDiagnosticMarker(metroUrl: string): string {
+  return 'e2e-explorer-launch-resolved-metro-url-' +
+    encodeURIComponent(requireMetroUrl(metroUrl));
+}
+
+export function explorerBuildShaDiagnosticMarker(repositorySha: string): string {
+  return `e2e-explorer-launch-build-sha-${repositorySha}`;
+}
+
+export function explorerNativeBridgeDiagnosticMarker(version: string): string {
+  return `e2e-explorer-native-bridge-version-${version}`;
+}
+
+export function assertExplorerLocalMetroUrl(value: string): void {
   let parsed: URL;
   try {
     parsed = new URL(value);
@@ -61,52 +79,8 @@ function assertLocalMetroUrl(value: string): void {
   }
   if (parsed.protocol !== 'http:' ||
     (parsed.hostname !== '127.0.0.1' && parsed.hostname !== 'localhost') ||
-    !parsed.port || parsed.pathname !== '/' || parsed.search || parsed.hash) {
+    !parsed.port || parsed.pathname !== '/' || parsed.search || parsed.hash ||
+    value !== `http://${parsed.hostname}:${parsed.port}`) {
     throw new Error('explorer_metro_diagnostic_url_invalid');
   }
-}
-
-/** Fails before an Explorer route can reset a seed or execute a scenario. */
-export function verifyExplorerMetroDiagnostic(args: {
-  deepLinkMetroUrl: string | null;
-  nativeMetroUrl: string | null;
-}): string {
-  if (!args.deepLinkMetroUrl) {
-    throw new Error('explorer_metro_diagnostic_query_missing');
-  }
-  if (!args.nativeMetroUrl) {
-    throw new Error('explorer_metro_diagnostic_native_missing');
-  }
-  assertLocalMetroUrl(args.deepLinkMetroUrl);
-  assertLocalMetroUrl(args.nativeMetroUrl);
-  if (args.deepLinkMetroUrl !== args.nativeMetroUrl) {
-    throw new Error('explorer_metro_diagnostic_mismatch');
-  }
-  return args.nativeMetroUrl;
-}
-
-/** Launch proof is native-owned and does not depend on any deep-link route. */
-export function verifyExplorerNativeLaunchDiagnostic(args: {
-  nativeMetroUrl: string | null;
-  resolvedMetroUrl: string | null;
-  launchPurpose: string | null;
-}): { metroUrl: string; launchPurpose: ExplorerAppLaunchPurpose } {
-  if (!args.nativeMetroUrl) {
-    throw new Error('explorer_metro_diagnostic_native_missing');
-  }
-  if (!args.resolvedMetroUrl) {
-    throw new Error('explorer_metro_diagnostic_resolved_bundle_missing');
-  }
-  if (!args.launchPurpose || !isExplorerAppLaunchPurpose(args.launchPurpose)) {
-    throw new Error('explorer_launch_purpose_invalid');
-  }
-  assertLocalMetroUrl(args.nativeMetroUrl);
-  assertLocalMetroUrl(args.resolvedMetroUrl);
-  if (args.nativeMetroUrl !== args.resolvedMetroUrl) {
-    throw new Error('explorer_metro_diagnostic_resolved_bundle_mismatch');
-  }
-  return {
-    metroUrl: args.nativeMetroUrl,
-    launchPurpose: args.launchPurpose,
-  };
 }

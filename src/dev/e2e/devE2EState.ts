@@ -1,3 +1,13 @@
+import type { AcknowledgedExplorerNativeLaunchDiagnosticReceiptV1 } from
+  './explorerNativeLaunchDiagnostic';
+import {
+  explorerBuildShaDiagnosticMarker,
+  explorerMetroDiagnosticMarker,
+  explorerNativeBridgeDiagnosticMarker,
+  explorerRequestedMetroDiagnosticMarker,
+  explorerResolvedMetroDiagnosticMarker,
+} from './explorerAppLaunchContract';
+
 export type DevE2EPhase =
   | 'entry_ready'
   | 'seed_loading'
@@ -45,6 +55,7 @@ const explorerCaptureAcceptedMarkers = new Set<string>();
 const explorerCaptureErrorMarkers = new Set<string>();
 const explorerArtifactAcceptedMarkers = new Set<string>();
 const explorerMetroDiagnosticMarkers = new Set<string>();
+const explorerLaunchErrorMarkers = new Set<string>();
 const explorerCampaignPendingMarkers = new Set<string>();
 const explorerCampaignAcceptedMarkers = new Set<string>();
 const explorerCampaignErrorMarkers = new Set<string>();
@@ -95,6 +106,7 @@ export function setDevE2EEntryReady(): void {
   explorerCaptureErrorMarkers.clear();
   explorerArtifactAcceptedMarkers.clear();
   explorerMetroDiagnosticMarkers.clear();
+  explorerLaunchErrorMarkers.clear();
   explorerCampaignPendingMarkers.clear();
   explorerCampaignAcceptedMarkers.clear();
   explorerCampaignErrorMarkers.clear();
@@ -319,21 +331,30 @@ export function setDevE2EExplorerArtifactAccepted(scenarioId: string): void {
   notifySubscribers();
 }
 
-export function setDevE2EExplorerMetroDiagnostic(args: {
-  metroUrl: string;
-  launchPurpose?: string;
-}): void {
-  if (!args.metroUrl) return;
+export function setDevE2EExplorerNativeLaunchDiagnostic(
+  receipt: AcknowledgedExplorerNativeLaunchDiagnosticReceiptV1,
+): void {
   const markers = [
     'e2e-explorer-metro-diagnostic-ready',
-    `e2e-explorer-metro-url-${encodeURIComponent(args.metroUrl)}`,
-    ...(args.launchPurpose
-      ? [`e2e-explorer-launch-diagnostic-${args.launchPurpose}`]
-      : []),
+    explorerMetroDiagnosticMarker(receipt.requestedMetroUrl),
+    explorerRequestedMetroDiagnosticMarker(receipt.requestedMetroUrl),
+    explorerResolvedMetroDiagnosticMarker(receipt.resolvedMetroUrl),
+    explorerBuildShaDiagnosticMarker(receipt.integratedRepositorySha),
+    explorerNativeBridgeDiagnosticMarker(receipt.nativeBridgeVersion),
+    `e2e-explorer-launch-receipt-${receipt.receiptFingerprint}`,
+    `e2e-explorer-launch-diagnostic-${receipt.launchPurpose}`,
   ];
   const next = markers.filter((marker) => !explorerMetroDiagnosticMarkers.has(marker));
   if (next.length === 0) return;
   next.forEach((marker) => explorerMetroDiagnosticMarkers.add(marker));
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
+export function setDevE2EExplorerLaunchError(reasonCode: string): void {
+  const token = markerToken(reasonCode);
+  if (!token || explorerLaunchErrorMarkers.has(token)) return;
+  explorerLaunchErrorMarkers.add(token);
   snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
   notifySubscribers();
 }
@@ -381,6 +402,9 @@ export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
       .sort()
       .map((scenarioId) => `e2e-explorer-artifact-accepted-${scenarioId}`),
     ...Array.from(explorerMetroDiagnosticMarkers).sort(),
+    ...Array.from(explorerLaunchErrorMarkers)
+      .sort()
+      .map((reasonCode) => `e2e-explorer-launch-error-${reasonCode}`),
     ...Array.from(explorerCampaignPendingMarkers)
       .sort()
       .map((campaignId) => `e2e-explorer-campaign-pending-${campaignId}`),
@@ -459,6 +483,7 @@ export function __resetDevE2EStateForTest(): void {
   explorerCaptureErrorMarkers.clear();
   explorerArtifactAcceptedMarkers.clear();
   explorerMetroDiagnosticMarkers.clear();
+  explorerLaunchErrorMarkers.clear();
   explorerCampaignPendingMarkers.clear();
   explorerCampaignAcceptedMarkers.clear();
   explorerCampaignErrorMarkers.clear();

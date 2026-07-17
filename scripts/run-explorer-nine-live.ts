@@ -11,7 +11,11 @@ import { resolve } from 'node:path';
 import {
   buildExplorerAppLaunchPlan,
   buildExplorerDeepLinkCommand,
+  explorerBuildShaDiagnosticMarker,
   explorerMetroDiagnosticMarker,
+  explorerNativeBridgeDiagnosticMarker,
+  explorerRequestedMetroDiagnosticMarker,
+  explorerResolvedMetroDiagnosticMarker,
   type ExplorerAppLaunchPurpose,
 } from './explorer-app-launch';
 import {
@@ -31,6 +35,12 @@ import {
 } from '../src/dev/e2e/explorerScenarioRunner';
 import { explorerCampaignDeterministicClockFingerprint } from
   '../src/dev/e2e/explorerCampaignBootstrapContract';
+import {
+  EXPLORER_APP_BUNDLE_IDENTIFIER,
+  EXPLORER_NATIVE_BUILD_IDENTITY_RESOURCE,
+  EXPLORER_NATIVE_LAUNCH_DIAGNOSTIC_BRIDGE_VERSION,
+  EXPLORER_NATIVE_LAUNCH_DIAGNOSTIC_SCHEMA_VERSION,
+} from '../src/dev/e2e/explorerNativeLaunchDiagnostic';
 
 export const EXPLORER_LIVE_RUNNER_TARGET_MS = EXPLORER_CAMPAIGN_NORMAL_TARGET_MS;
 export const EXPLORER_LIVE_RUNNER_HARD_STOP_MS = EXPLORER_CAMPAIGN_HARD_STOP_MS;
@@ -84,8 +94,18 @@ const CAPTURE_ENVELOPE_PATTERN =
   /e2e-explorer-capture-envelope-([A-Za-z0-9%._~'()!*\-]+)/g;
 const SCENARIO_ERROR_PATTERN = /e2e-scenario-error-([a-z0-9_-]+)/;
 const CAMPAIGN_ERROR_PATTERN = /e2e-explorer-campaign-error-([a-z0-9-]+)/;
+const LAUNCH_ERROR_PATTERN = /e2e-explorer-launch-error-([a-z0-9-]+)/;
 
 function throwForScenarioErrorMarker(hierarchy: string): void {
+  const launchReasonCode = LAUNCH_ERROR_PATTERN.exec(hierarchy)?.[1];
+  if (launchReasonCode) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      launchReasonCode === 'stale-debug-binary'
+        ? 'stale_debug_binary'
+        : `explorer_launch_${launchReasonCode.replace(/-/g, '_')}`,
+    );
+  }
   const campaignReasonCode = CAMPAIGN_ERROR_PATTERN.exec(hierarchy)?.[1];
   if (campaignReasonCode) {
     throw new ExplorerLiveRunnerError(
@@ -111,6 +131,7 @@ function commandResult(
   spec: ExplorerLiveCommand,
   cwd: string,
   timeoutMs = 30_000,
+  failureReasonCode = 'maestro_command_failed',
 ): string {
   const result = spawnSync(spec.command, [...spec.args], {
     cwd,
@@ -121,7 +142,7 @@ function commandResult(
   if (result.status !== 0) {
     throw new ExplorerLiveRunnerError(
       'infrastructure',
-      'maestro_command_failed',
+      failureReasonCode,
       `${spec.command}:${result.stderr || result.stdout}`,
     );
   }
@@ -152,6 +173,85 @@ export function assertOneSelectedSimulator(
   return simulators[0];
 }
 
+export interface ExplorerInstalledDebugAppBuildIdentity {
+  readonly schemaVersion: 1;
+  readonly nativeBridgeVersion: string;
+  readonly integratedRepositorySha: string;
+}
+
+export function parseExplorerInstalledDebugAppBuildIdentity(
+  raw: string,
+  expectedRepositorySha: string,
+): ExplorerInstalledDebugAppBuildIdentity {
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      'stale_debug_binary',
+      'installed_build_identity_invalid',
+    );
+  }
+  const record = value as Partial<ExplorerInstalledDebugAppBuildIdentity>;
+  if (!record || typeof record !== 'object' ||
+    record.schemaVersion !==
+      EXPLORER_NATIVE_LAUNCH_DIAGNOSTIC_SCHEMA_VERSION ||
+    typeof record.integratedRepositorySha !== 'string' ||
+    !/^[a-f0-9]{40}$/.test(record.integratedRepositorySha)) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      'stale_debug_binary',
+      'installed_build_identity_missing_or_invalid',
+    );
+  }
+  if (record.integratedRepositorySha !== expectedRepositorySha) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      'stale_debug_binary',
+      `installed=${record.integratedRepositorySha}:expected=${expectedRepositorySha}`,
+    );
+  }
+  if (record.nativeBridgeVersion !==
+    EXPLORER_NATIVE_LAUNCH_DIAGNOSTIC_BRIDGE_VERSION) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      'installed_native_bridge_version_unsupported',
+      String(record.nativeBridgeVersion ?? 'missing'),
+    );
+  }
+  return record as ExplorerInstalledDebugAppBuildIdentity;
+}
+
+export function preflightInstalledExplorerDebugApp(args: {
+  simulatorId: string;
+  repositoryRoot: string;
+  integratedRepositorySha: string;
+}): ExplorerInstalledDebugAppBuildIdentity {
+  const appBundlePath = commandResult({
+    command: 'xcrun',
+    args: [
+      'simctl',
+      'get_app_container',
+      args.simulatorId,
+      EXPLORER_APP_BUNDLE_IDENTIFIER,
+      'app',
+    ],
+  }, args.repositoryRoot, 30_000, 'installed_debug_app_missing').trim();
+  const identityPath = resolve(
+    appBundlePath,
+    EXPLORER_NATIVE_BUILD_IDENTITY_RESOURCE,
+  );
+  const raw = commandResult({
+    command: '/usr/bin/plutil',
+    args: ['-convert', 'json', '-o', '-', identityPath],
+  }, args.repositoryRoot, 30_000, 'stale_debug_binary');
+  return parseExplorerInstalledDebugAppBuildIdentity(
+    raw,
+    args.integratedRepositorySha,
+  );
+}
+
 export function assertExplicitMetroUrl(value: string): URL {
   if (!value) {
     throw new ExplorerLiveRunnerError('infrastructure', 'metro_url_required');
@@ -164,7 +264,8 @@ export function assertExplicitMetroUrl(value: string): URL {
   }
   if (url.protocol !== 'http:' ||
     (url.hostname !== '127.0.0.1' && url.hostname !== 'localhost') ||
-    !url.port || url.pathname !== '/' || url.search || url.hash) {
+    !url.port || url.pathname !== '/' || url.search || url.hash ||
+    value !== `http://${url.hostname}:${url.port}`) {
     throw new ExplorerLiveRunnerError('infrastructure', 'metro_url_invalid');
   }
   return url;
@@ -603,6 +704,16 @@ async function launchExplorerApp(args: {
       explorerMetroDiagnosticMarker(args.options.metroUrl),
     ) && hierarchy.includes(
       `e2e-explorer-launch-diagnostic-${args.purpose}`,
+    ) && hierarchy.includes(
+      explorerRequestedMetroDiagnosticMarker(args.options.metroUrl),
+    ) && hierarchy.includes(
+      explorerResolvedMetroDiagnosticMarker(args.options.metroUrl),
+    ) && hierarchy.includes(
+      explorerBuildShaDiagnosticMarker(args.options.integratedRepositorySha),
+    ) && hierarchy.includes(
+      explorerNativeBridgeDiagnosticMarker(
+        EXPLORER_NATIVE_LAUNCH_DIAGNOSTIC_BRIDGE_VERSION,
+      ),
     ),
   });
 }
@@ -827,6 +938,11 @@ export async function runExplorerNineLive(
       'integrated_repository_sha_mismatch',
     );
   }
+  preflightInstalledExplorerDebugApp({
+    simulatorId: options.simulatorId,
+    repositoryRoot: options.repositoryRoot,
+    integratedRepositorySha: currentSha,
+  });
   const campaignId = `explorer-nine-${currentSha.slice(0, 12)}`;
   const campaignDirectory = explorerCampaignArtifactDirectory(campaignId);
   const startedAt = nowMs();

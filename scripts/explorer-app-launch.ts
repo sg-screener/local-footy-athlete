@@ -1,15 +1,23 @@
 import {
   EXPLORER_APP_LAUNCH_PURPOSES,
+  explorerBuildShaDiagnosticMarker,
   explorerMetroDiagnosticMarker,
   explorerMetroDiagnosticRoute,
+  explorerNativeBridgeDiagnosticMarker,
+  explorerRequestedMetroDiagnosticMarker,
+  explorerResolvedMetroDiagnosticMarker,
   withExplorerMetroUrl,
   type ExplorerAppLaunchPurpose,
 } from '../src/dev/e2e/explorerAppLaunchContract';
 
 export {
   EXPLORER_APP_LAUNCH_PURPOSES,
+  explorerBuildShaDiagnosticMarker,
   explorerMetroDiagnosticMarker,
   explorerMetroDiagnosticRoute,
+  explorerNativeBridgeDiagnosticMarker,
+  explorerRequestedMetroDiagnosticMarker,
+  explorerResolvedMetroDiagnosticMarker,
   withExplorerMetroUrl,
   type ExplorerAppLaunchPurpose,
 };

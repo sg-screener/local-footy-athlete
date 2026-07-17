@@ -44,6 +44,32 @@ seed builder, allowing Maestro to distinguish preservation from reseeding.
 Comparison failures expose the exact store plus expected and actual hashes via
 the `e2e-seed-error-reason` accessibility marker.
 
+## Native Explorer launch receipt
+
+`DevE2ELaunchDiagnosticReceiptOwner` is the sole owner of native Explorer
+launch provenance. In Debug only, it captures the selected Metro URL and launch
+purpose before the React factory exists, resolves the actual bundle server,
+loads the build-time repository SHA and bridge version, and finalizes one
+deterministically fingerprinted receipt before JavaScript boots. The bridge
+exports only that canonical receipt JSON; Release compiles out both owner and
+bridge.
+
+`ExplorerNativeLaunchDiagnosticTransaction` validates the schema, bridge,
+purpose, requested/resolved Metro URLs, bundle identifier, repository SHA and
+fingerprint. It persists the exact native JSON and reads it back before the
+launch marker can be published. Identical delivery is idempotent, conflicting
+delivery in one JS lifetime is rejected, and a new native process may replace a
+prior launch's durable receipt. React remounts and JS reloads therefore retain
+the current native launch proof.
+
+Campaign identity remains a separate transaction. Campaign start consumes the
+active launch receipt and checks its initial-launch purpose, selected Metro and
+integrated repository SHA before it can write a pending campaign receipt. The
+external runner independently rejects an installed Debug app whose embedded
+build identity does not match current `HEAD`, then waits for app-reported
+requested/resolved Metro, build SHA, supported bridge and durable receipt
+markers before delivering campaign start once.
+
 ## Scenario-session protocol V2
 
 A scenario manifest owns one existing seed and an ordered list of action step

@@ -14,6 +14,8 @@
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		E18BD637B39E81A681A57B62 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D9CBA79D5B52DF45E4EEA5D /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
+		F2E2E0012E2E000100000001 /* DevE2ELaunchDiagnostic.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2E2E0032E2E000100000001 /* DevE2ELaunchDiagnostic.swift */; };
+		F2E2E0022E2E000100000001 /* DevE2ELaunchDiagnosticBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = F2E2E0042E2E000100000001 /* DevE2ELaunchDiagnosticBridge.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,6 +32,8 @@
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = LocalFootyAthlete/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* LocalFootyAthlete-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "LocalFootyAthlete-Bridging-Header.h"; path = "LocalFootyAthlete/LocalFootyAthlete-Bridging-Header.h"; sourceTree = "<group>"; };
+		F2E2E0032E2E000100000001 /* DevE2ELaunchDiagnostic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DevE2ELaunchDiagnostic.swift; path = LocalFootyAthlete/DevE2ELaunchDiagnostic.swift; sourceTree = "<group>"; };
+		F2E2E0042E2E000100000001 /* DevE2ELaunchDiagnosticBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = DevE2ELaunchDiagnosticBridge.m; path = LocalFootyAthlete/DevE2ELaunchDiagnosticBridge.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -56,6 +60,8 @@
 			isa = PBXGroup;
 			children = (
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
+				F2E2E0032E2E000100000001 /* DevE2ELaunchDiagnostic.swift */,
+				F2E2E0042E2E000100000001 /* DevE2ELaunchDiagnosticBridge.m */,
 				F11748442D0722820044C1D9 /* LocalFootyAthlete-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
@@ -144,6 +150,7 @@
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
+				F2E2E0052E2E000100000001 /* Embed Dev E2E Build Identity */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
 				D2068DD1BB45DAF6E4E3C966 /* [CP] Embed Pods Frameworks */,
@@ -322,6 +329,21 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-LocalFootyAthlete/Pods-LocalFootyAthlete-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
+		F2E2E0052E2E000100000001 /* Embed Dev E2E Build Identity */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Embed Dev E2E Build Identity";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "/bin/sh \"$SRCROOT/../scripts/embed-dev-e2e-build-identity.sh\"\n";
+		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -329,6 +351,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				F2E2E0022E2E000100000001 /* DevE2ELaunchDiagnosticBridge.m in Sources */,
+				F2E2E0012E2E000100000001 /* DevE2ELaunchDiagnostic.swift in Sources */,
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
 				E18BD637B39E81A681A57B62 /* ExpoModulesProvider.swift in Sources */,
 			);

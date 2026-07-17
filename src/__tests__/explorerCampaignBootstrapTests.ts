@@ -21,12 +21,14 @@ import {
   setDevE2EExplorerCampaignAccepted,
   setDevE2EExplorerCampaignError,
   setDevE2EExplorerCampaignPending,
-  setDevE2EExplorerMetroDiagnostic,
+  setDevE2EExplorerNativeLaunchDiagnostic,
   setDevE2EScenarioReady,
 } from '../dev/e2e/devE2EState';
 import {
-  verifyExplorerNativeLaunchDiagnostic,
-} from '../dev/e2e/explorerAppLaunchContract';
+  createExplorerNativeLaunchDiagnosticReceipt,
+  verifyExplorerNativeLaunchDiagnosticReceipt,
+  type AcknowledgedExplorerNativeLaunchDiagnosticReceiptV1,
+} from '../dev/e2e/explorerNativeLaunchDiagnostic';
 import { runExplorerInitialCampaignBootstrap } from
   '../../scripts/run-explorer-nine-live';
 
@@ -86,6 +88,15 @@ const prerequisite = {
     explorerCampaignDeterministicClockFingerprint(),
 } as const;
 
+const nativeReceipt = createExplorerNativeLaunchDiagnosticReceipt({
+  launchPurpose: 'initial-cold-launch',
+  requestedMetroUrl: identity.e2eMetroUrl,
+  resolvedMetroUrl: identity.e2eMetroUrl,
+  resolvedBundleFingerprint: 'fnv1a32:12345678',
+  appBundleIdentifier: 'com.localfootyathlete.app',
+  integratedRepositorySha: identity.integratedRepositorySha,
+});
+
 async function expectReason(
   reasonCode: string,
   run: () => Promise<unknown>,
@@ -104,13 +115,14 @@ async function main(): Promise<void> {
   console.log('\n-- Explorer campaign bootstrap transaction --');
 
   await test('initial launch diagnostic needs native launch proof, not campaign identity', () => {
-    const diagnostic = verifyExplorerNativeLaunchDiagnostic({
-      nativeMetroUrl: identity.e2eMetroUrl,
-      resolvedMetroUrl: identity.e2eMetroUrl,
+    const diagnostic = verifyExplorerNativeLaunchDiagnosticReceipt(
+      nativeReceipt,
+      {
       launchPurpose: 'initial-cold-launch',
-    });
+      },
+    );
     expect(diagnostic.launchPurpose === 'initial-cold-launch' &&
-      diagnostic.metroUrl === identity.e2eMetroUrl,
+      diagnostic.requestedMetroUrl === identity.e2eMetroUrl,
     'native launch proof was not sufficient');
   });
 
@@ -306,10 +318,9 @@ async function main(): Promise<void> {
 
   await test('launch, pending, accepted, error and scenario markers remain distinct', () => {
     __resetDevE2EStateForTest();
-    setDevE2EExplorerMetroDiagnostic({
-      metroUrl: identity.e2eMetroUrl,
-      launchPurpose: 'initial-cold-launch',
-    });
+    setDevE2EExplorerNativeLaunchDiagnostic(
+      nativeReceipt as AcknowledgedExplorerNativeLaunchDiagnosticReceiptV1,
+    );
     setDevE2EExplorerCampaignPending(identity.campaignId);
     setDevE2EExplorerCampaignAccepted(identity.campaignId);
     setDevE2EExplorerCampaignError('example');

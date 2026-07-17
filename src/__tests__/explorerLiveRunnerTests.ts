@@ -24,6 +24,7 @@ import {
   explorerScenarioRunUrl,
   extractPendingCaptureRequests,
   parseBootedIOSSimulators,
+  parseExplorerInstalledDebugAppBuildIdentity,
   preflightExplorerMetro,
   runWholeScenarioWithInfrastructureRetry,
   writeExplorerCampaignEnvironmentReceipt,
@@ -304,6 +305,53 @@ async function main(): Promise<void> {
       return;
     }
     throw new Error('multiple booted simulators were accepted');
+  });
+
+  await test('installed Debug identity fails stale SHA and unsupported bridge preflight', () => {
+    const sha = 'a'.repeat(40);
+    expect(parseExplorerInstalledDebugAppBuildIdentity(JSON.stringify({
+      schemaVersion: 1,
+      nativeBridgeVersion: '1',
+      integratedRepositorySha: sha,
+    }), sha).integratedRepositorySha === sha,
+    'current installed Debug identity was rejected');
+    for (const [reasonCode, identity] of [
+      ['stale_debug_binary', {
+        schemaVersion: 1,
+        nativeBridgeVersion: '1',
+        integratedRepositorySha: 'b'.repeat(40),
+      }],
+      ['installed_native_bridge_version_unsupported', {
+        schemaVersion: 1,
+        nativeBridgeVersion: '2',
+        integratedRepositorySha: sha,
+      }],
+    ] as const) {
+      try {
+        parseExplorerInstalledDebugAppBuildIdentity(
+          JSON.stringify(identity),
+          sha,
+        );
+      } catch (error) {
+        expect(error instanceof ExplorerLiveRunnerError &&
+          error.reasonCode === reasonCode, `expected ${reasonCode}`);
+        continue;
+      }
+      throw new Error(`${reasonCode} was accepted`);
+    }
+  });
+
+  await test('runner waits for acknowledged native receipt before campaign start', () => {
+    const runner = readFileSync('scripts/run-explorer-nine-live.ts', 'utf8');
+    const launch = runner.indexOf('async function launchExplorerApp(');
+    const campaignStart = runner.indexOf('sendCampaignStart: () => {');
+    expect(launch >= 0 && launch < campaignStart &&
+      runner.includes('preflightInstalledExplorerDebugApp({') &&
+      runner.includes('explorerRequestedMetroDiagnosticMarker(') &&
+      runner.includes('explorerResolvedMetroDiagnosticMarker(') &&
+      runner.includes('explorerBuildShaDiagnosticMarker(') &&
+      runner.includes('explorerNativeBridgeDiagnosticMarker('),
+    'runner no longer proves installed build/native receipt before campaign start');
   });
 
   await test('all nine capture plans compile in canonical order', () => {

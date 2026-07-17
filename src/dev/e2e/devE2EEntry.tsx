@@ -9,7 +9,8 @@ import {
   setDevE2EEntryReady,
   setDevE2EExplorerCampaignError,
   setDevE2EExplorerCampaignPending,
-  setDevE2EExplorerMetroDiagnostic,
+  setDevE2EExplorerLaunchError,
+  setDevE2EExplorerNativeLaunchDiagnostic,
   setDevE2EScenarioError,
   setDevE2ESeedError,
   subscribeDevE2EState,
@@ -34,9 +35,11 @@ import {
   startExplorerPhysicalEvidenceCampaign,
 } from './explorerPhysicalEvidenceDevBridge';
 import {
-  verifyExplorerMetroDiagnostic,
-  verifyExplorerNativeLaunchDiagnostic,
-} from './explorerAppLaunchContract';
+  ExplorerNativeLaunchDiagnosticError,
+  hydrateExplorerNativeLaunchDiagnostic,
+  readActiveExplorerNativeLaunchDiagnostic,
+  verifyExplorerNativeLaunchDiagnosticReceipt,
+} from './explorerNativeLaunchDiagnostic';
 import type { DevE2ESeedCoordinator } from './DevE2ESeedCoordinator';
 
 export interface DevE2ELinking {
@@ -56,20 +59,21 @@ export interface InstalledDevE2EEntry {
 
 let activeInstallation: InstalledDevE2EEntry | null = null;
 
-function nativeE2ELaunchSettings(): {
-  e2eMetroUrl: string | null;
-  e2eResolvedMetroUrl: string | null;
-  e2eLaunchPurpose: string | null;
+function nativeExplorerLaunchDiagnosticInput(): {
+  receiptJson: unknown;
+  explorerLaunchRequested: boolean;
 } {
   const settings = (NativeModules.SettingsManager as {
     settings?: Record<string, unknown>;
   } | undefined)?.settings;
-  const stringSetting = (name: string): string | null =>
-    typeof settings?.[name] === 'string' ? settings[name] as string : null;
+  const bridge = (NativeModules as Record<string, unknown>)
+    .DevE2ELaunchDiagnostic as { receiptJson?: unknown } | undefined;
+  const receiptJson = bridge?.receiptJson;
   return {
-    e2eMetroUrl: stringSetting('e2eMetroUrl'),
-    e2eResolvedMetroUrl: stringSetting('e2eResolvedMetroUrl'),
-    e2eLaunchPurpose: stringSetting('e2eLaunchPurpose'),
+    receiptJson,
+    explorerLaunchRequested: receiptJson !== undefined ||
+      typeof settings?.e2eMetroUrl === 'string' ||
+      typeof settings?.e2eLaunchPurpose === 'string',
   };
 }
 
@@ -77,6 +81,10 @@ function publishDevE2EEntryError(
   error: unknown,
   scenarioId: string | null = null,
 ): void {
+  if (error instanceof ExplorerNativeLaunchDiagnosticError) {
+    setDevE2EExplorerLaunchError(error.reasonCode);
+    return;
+  }
   const reasonCode = devE2EScenarioReasonCode(error);
   if (reasonCode) {
     setDevE2EScenarioError(reasonCode, error, scenarioId);
@@ -122,20 +130,24 @@ export function installDevE2EEntry(args: {
   let coordinator: DevE2ESeedCoordinator | null = null;
   setDevE2EEntryReady();
 
-  const launchSettings = nativeE2ELaunchSettings();
-  if (launchSettings.e2eMetroUrl || launchSettings.e2eResolvedMetroUrl ||
-    launchSettings.e2eLaunchPurpose) {
-    try {
-      const diagnostic = verifyExplorerNativeLaunchDiagnostic({
-        nativeMetroUrl: launchSettings.e2eMetroUrl,
-        resolvedMetroUrl: launchSettings.e2eResolvedMetroUrl,
-        launchPurpose: launchSettings.e2eLaunchPurpose,
-      });
-      setDevE2EExplorerMetroDiagnostic(diagnostic);
-    } catch (error) {
-      publishDevE2EEntryError(error);
-    }
-  }
+  const nativeDiagnostic = nativeExplorerLaunchDiagnosticInput();
+  const launchDiagnosticReady = nativeDiagnostic.explorerLaunchRequested
+    ? hydrateExplorerNativeLaunchDiagnostic({
+        nativeReceiptJson: nativeDiagnostic.receiptJson,
+        isDev,
+      }).then((receipt) => {
+        // Readiness is visible only after the transaction's exact readback.
+        setDevE2EExplorerNativeLaunchDiagnostic(receipt);
+        return receipt;
+      }).catch((error: unknown) => {
+        setDevE2EExplorerLaunchError(
+          error instanceof ExplorerNativeLaunchDiagnosticError
+            ? error.reasonCode
+            : 'native-receipt-corrupt',
+        );
+        return null;
+      })
+    : Promise.resolve(null);
 
   const campaignPrerequisite = (
     route: Extract<
@@ -167,16 +179,13 @@ export function installDevE2EEntry(args: {
     try {
       let selectedMetroUrl: string | null = null;
       if ('e2eMetroUrl' in route) {
-        selectedMetroUrl = verifyExplorerMetroDiagnostic({
-          deepLinkMetroUrl: route.e2eMetroUrl,
-          nativeMetroUrl: nativeE2ELaunchSettings().e2eMetroUrl,
-        });
-        setDevE2EExplorerMetroDiagnostic({
-          metroUrl: selectedMetroUrl,
-          ...(route.kind === 'explorer_diagnostic'
-            ? { launchPurpose: route.launchPurpose }
-            : {}),
-        });
+        if (!route.e2eMetroUrl) {
+          throw new Error('explorer_metro_diagnostic_query_missing');
+        }
+        selectedMetroUrl = verifyExplorerNativeLaunchDiagnosticReceipt(
+          readActiveExplorerNativeLaunchDiagnostic(),
+          { selectedMetroUrl: route.e2eMetroUrl },
+        ).requestedMetroUrl;
       }
       switch (route.kind) {
         case 'reset':
@@ -257,6 +266,7 @@ export function installDevE2EEntry(args: {
     handleUrl,
     coordinatorReady: async () => {
       if (coordinator) return;
+      await launchDiagnosticReady;
       // Dynamic only after the hard development guard and clock barrier.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { createDefaultDevE2ESeedCoordinator } =

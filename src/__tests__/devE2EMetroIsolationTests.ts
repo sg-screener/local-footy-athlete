@@ -3,16 +3,19 @@ import path from 'path';
 import yaml from 'js-yaml';
 import {
   explorerMetroDiagnosticMarker,
-  verifyExplorerMetroDiagnostic,
-  verifyExplorerNativeLaunchDiagnostic,
 } from '../dev/e2e/explorerAppLaunchContract';
 import { parseDevE2EEntryRoute } from '../dev/e2e/devE2EEntryRoute';
 import {
   __resetDevE2EStateForTest,
   devE2EMarkers,
   getDevE2EStateSnapshot,
-  setDevE2EExplorerMetroDiagnostic,
+  setDevE2EExplorerNativeLaunchDiagnostic,
 } from '../dev/e2e/devE2EState';
+import {
+  createExplorerNativeLaunchDiagnosticReceipt,
+  verifyExplorerNativeLaunchDiagnosticReceipt,
+  type AcknowledgedExplorerNativeLaunchDiagnosticReceiptV1,
+} from '../dev/e2e/explorerNativeLaunchDiagnostic';
 
 let passed = 0;
 const failures: string[] = [];
@@ -32,25 +35,33 @@ const appDelegate = fs.readFileSync(
   path.join(root, 'ios', 'LocalFootyAthlete', 'AppDelegate.swift'),
   'utf8',
 );
+const nativeDiagnostic = fs.readFileSync(
+  path.join(root, 'ios', 'LocalFootyAthlete', 'DevE2ELaunchDiagnostic.swift'),
+  'utf8',
+);
+const nativeBridge = fs.readFileSync(
+  path.join(root, 'ios', 'LocalFootyAthlete', 'DevE2ELaunchDiagnosticBridge.m'),
+  'utf8',
+);
 
 ok('native Metro selection is DEBUG-only',
-  /#if DEBUG\s+DevE2EMetroLaunch\.configureIfRequested\(\)\s+#endif/.test(appDelegate) &&
-  /#if DEBUG\s+private enum DevE2EMetroLaunch[\s\S]+#endif/.test(appDelegate));
+  /#if DEBUG\s+DevE2ELaunchDiagnosticReceiptOwner\.captureAndConfigureIfRequested\(\)\s+#endif/.test(appDelegate) &&
+  nativeDiagnostic.startsWith('#if DEBUG') && nativeBridge.startsWith('#if DEBUG'));
 ok('launch argument owns the bundle provider before React Native starts',
-  appDelegate.indexOf('DevE2EMetroLaunch.configureIfRequested()') <
+  appDelegate.indexOf('captureAndConfigureIfRequested()') <
   appDelegate.indexOf('factory.startReactNative('));
 ok('explicit URL configures both scheme and host-port',
-  appDelegate.includes('provider.packagerScheme = scheme') &&
-  appDelegate.includes('provider.jsLocation = hostPort'));
+  nativeDiagnostic.includes('provider.packagerScheme = metro.scheme') &&
+  nativeDiagnostic.includes('provider.jsLocation = metro.hostPort'));
 ok('invalid explicit URL fails instead of falling back',
-  appDelegate.includes('[DevE2E Metro] Invalid e2eMetroUrl') &&
-  appDelegate.includes('let port = components.port'));
+  nativeDiagnostic.includes('[DevE2E Metro] Invalid e2eMetroUrl') &&
+  nativeDiagnostic.includes('let port = components.port'));
 ok('release bundle behavior remains the embedded main.jsbundle',
   /#else\s+return Bundle\.main\.url\(forResource: "main", withExtension: "jsbundle"\)\s+#endif/.test(appDelegate));
 ok('selected server and resolved bundle are observable',
-  appDelegate.includes('[DevE2E Metro] Selected server:') &&
-  appDelegate.includes('[DevE2E Metro] Resolved bundle:') &&
-  appDelegate.includes('forKey: resolvedMetroKey'));
+  nativeDiagnostic.includes('[DevE2E Metro] Selected server:') &&
+  nativeDiagnostic.includes('[DevE2E Metro] Resolved bundle fingerprint:') &&
+  nativeDiagnostic.includes('UserDefaults.standard.set(json'));
 
 for (const file of ['reset-seed.yaml', 'checkpoint-and-reload.yaml']) {
   const flowPath = path.join(root, '.maestro', 'common', file);
@@ -95,6 +106,14 @@ for (const [file, purpose] of [
 }
 
 const selectedMetro = 'http://127.0.0.1:8082';
+const nativeReceipt = createExplorerNativeLaunchDiagnosticReceipt({
+  launchPurpose: 'initial-cold-launch',
+  requestedMetroUrl: selectedMetro,
+  resolvedMetroUrl: selectedMetro,
+  resolvedBundleFingerprint: 'fnv1a32:12345678',
+  appBundleIdentifier: 'com.localfootyathlete.app',
+  integratedRepositorySha: 'a'.repeat(40),
+});
 const diagnosticRoute = parseDevE2EEntryRoute(
   'localfootyathlete://e2e/explorer/diagnostics/initial-cold-launch' +
   `?e2eMetroUrl=${encodeURIComponent(selectedMetro)}`,
@@ -104,22 +123,18 @@ ok('diagnostic deep link preserves the exact selected Metro URL',
   diagnosticRoute.e2eMetroUrl === selectedMetro &&
   diagnosticRoute.launchPurpose === 'initial-cold-launch');
 ok('matching app diagnostics publish an exact URL marker',
-  verifyExplorerMetroDiagnostic({
-    deepLinkMetroUrl: selectedMetro,
-    nativeMetroUrl: selectedMetro,
-  }) === selectedMetro &&
+  verifyExplorerNativeLaunchDiagnosticReceipt(nativeReceipt, {
+    selectedMetroUrl: selectedMetro,
+  }).requestedMetroUrl === selectedMetro &&
   explorerMetroDiagnosticMarker(selectedMetro).includes(encodeURIComponent(selectedMetro)));
 ok('initial app diagnostic is independent of campaign/deep-link identity',
-  verifyExplorerNativeLaunchDiagnostic({
-    nativeMetroUrl: selectedMetro,
-    resolvedMetroUrl: selectedMetro,
+  verifyExplorerNativeLaunchDiagnosticReceipt(nativeReceipt, {
     launchPurpose: 'initial-cold-launch',
   }).launchPurpose === 'initial-cold-launch');
 __resetDevE2EStateForTest();
-setDevE2EExplorerMetroDiagnostic({
-  metroUrl: selectedMetro,
-  launchPurpose: 'initial-cold-launch',
-});
+setDevE2EExplorerNativeLaunchDiagnostic(
+  nativeReceipt as AcknowledgedExplorerNativeLaunchDiagnosticReceiptV1,
+);
 const diagnosticMarkers = devE2EMarkers(getDevE2EStateSnapshot());
 ok('rendered diagnostics expose exact URL and launch-path markers',
   diagnosticMarkers.includes(explorerMetroDiagnosticMarker(selectedMetro)) &&
@@ -128,13 +143,16 @@ ok('rendered diagnostics expose exact URL and launch-path markers',
   ));
 let mismatchFailed = false;
 try {
-  verifyExplorerMetroDiagnostic({
-    deepLinkMetroUrl: selectedMetro,
-    nativeMetroUrl: 'http://127.0.0.1:8081',
-  });
+  verifyExplorerNativeLaunchDiagnosticReceipt(
+    createExplorerNativeLaunchDiagnosticReceipt({
+      ...nativeReceipt,
+      requestedMetroUrl: 'http://127.0.0.1:8081',
+    }),
+    { selectedMetroUrl: selectedMetro },
+  );
 } catch (error) {
   mismatchFailed = error instanceof Error &&
-    error.message === 'explorer_metro_diagnostic_mismatch';
+    error.message === 'requested-metro-url-mismatch';
 }
 ok('app diagnostics reject ambient Metro before route dispatch', mismatchFailed);
 
@@ -143,8 +161,8 @@ const entrySource = fs.readFileSync(
   'utf8',
 );
 ok('Explorer diagnostics run before seed reset and scenario execution',
-  entrySource.indexOf('verifyExplorerMetroDiagnostic({') >= 0 &&
-  entrySource.indexOf('verifyExplorerMetroDiagnostic({') <
+  entrySource.indexOf('verifyExplorerNativeLaunchDiagnosticReceipt(') >= 0 &&
+  entrySource.indexOf('verifyExplorerNativeLaunchDiagnosticReceipt(') <
     entrySource.indexOf('switch (route.kind)'));
 
 const wrapper = fs.readFileSync(

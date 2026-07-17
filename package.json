@@ -95,6 +95,7 @@
     "test:explorer-live-runner": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLiveRunnerTests.ts",
     "test:explorer-launch-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLaunchOwnershipTests.ts",
     "test:explorer-campaign-bootstrap": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerCampaignBootstrapTests.ts",
+    "test:explorer-native-launch-diagnostic": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerNativeLaunchDiagnosticTests.ts",
     "test:persistent-injury": "sucrase-node src/__tests__/persistentInjuryStateTests.ts",
     "test:coach-orchestration": "sucrase-node src/__tests__/coachOrchestrationTests.ts",
     "test:coach-live-wiring": "sucrase-node src/__tests__/coachLiveWiringTests.ts",

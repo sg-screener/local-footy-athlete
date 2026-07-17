@@ -17,6 +17,8 @@ import {
   acceptExplorerCampaignBootstrap,
   restoreExplorerCampaignBootstrap,
 } from './explorerCampaignBootstrap';
+import { requireActiveExplorerNativeLaunchDiagnostic } from
+  './explorerNativeLaunchDiagnostic';
 
 declare const __DEV__: boolean | undefined;
 
@@ -79,6 +81,11 @@ export async function startExplorerPhysicalEvidenceCampaign(args: {
     setDevE2EExplorerCaptureError(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RELEASE_BUILD);
     return false;
   }
+  requireActiveExplorerNativeLaunchDiagnostic({
+    launchPurpose: 'initial-cold-launch',
+    selectedMetroUrl: args.e2eMetroUrl,
+    integratedRepositorySha: args.integratedRepositorySha,
+  });
   const storage = args.storage ?? defaultStorage();
   const bootstrap = await acceptExplorerCampaignBootstrap({
     campaignId: args.campaignId,
