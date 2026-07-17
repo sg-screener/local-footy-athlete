@@ -197,7 +197,7 @@ export function createExplorerProductionScenarioRunner(args: {
       });
       if (!correlated) return null;
       return requireExternalArtifacts && !correlated.externalArtifacts.complete
-        ? { ...correlated, complete: false }
+        ? { ...correlated, complete: false, incompleteArtifact: true }
         : correlated;
     };
   return {
@@ -209,6 +209,77 @@ export function createExplorerProductionScenarioRunner(args: {
       actionBridge: productionBindings.actionBridge,
       waitForReactRender,
     }),
+  };
+}
+
+export const EXPLORER_CAMPAIGN_NORMAL_TARGET_MS = 35 * 60 * 1_000;
+export const EXPLORER_CAMPAIGN_HARD_STOP_MS = 45 * 60 * 1_000;
+
+export interface ExplorerCampaignScenarioReceipt {
+  readonly scenarioId: string;
+  readonly attempts: 1 | 2;
+  readonly result: ExplorerRuntimeResult;
+}
+
+export interface ExplorerCampaignResult {
+  readonly status: 'complete' | 'blocked';
+  readonly reasonCode: string;
+  readonly elapsedMs: number;
+  readonly exceededNormalTarget: boolean;
+  readonly scenarios: readonly ExplorerCampaignScenarioReceipt[];
+}
+
+const RETRYABLE_INFRASTRUCTURE_REASONS = new Set<string>([
+  'checkpoint_failed',
+  'reload_checkpoint_order_invalid',
+  'seed_reset_failed',
+]);
+
+/** Runs the exact registry order with one whole-scenario infrastructure retry. */
+export async function runAllExplorerSmokeScenarios(args: {
+  readonly runner: Pick<ExplorerProductionScenarioRunner, 'run'>;
+  readonly nowMs?: () => number;
+}): Promise<ExplorerCampaignResult> {
+  const nowMs = args.nowMs ?? Date.now;
+  const startedAt = nowMs();
+  const scenarios: ExplorerCampaignScenarioReceipt[] = [];
+  for (const manifest of EXPLORER_NON_COACH_SMOKE_MANIFESTS) {
+    if (nowMs() - startedAt >= EXPLORER_CAMPAIGN_HARD_STOP_MS) {
+      return {
+        status: 'blocked',
+        reasonCode: 'campaign_hard_stop_expired',
+        elapsedMs: nowMs() - startedAt,
+        exceededNormalTarget: true,
+        scenarios,
+      };
+    }
+    let result = await args.runner.run(manifest.scenarioId);
+    let attempts: 1 | 2 = 1;
+    if (result.status === 'blocked' &&
+      RETRYABLE_INFRASTRUCTURE_REASONS.has(result.reasonCode) &&
+      nowMs() - startedAt < EXPLORER_CAMPAIGN_HARD_STOP_MS) {
+      result = await args.runner.run(manifest.scenarioId);
+      attempts = 2;
+    }
+    scenarios.push({ scenarioId: manifest.scenarioId, attempts, result });
+    if (result.status !== 'complete') {
+      return {
+        status: 'blocked',
+        reasonCode: result.reasonCode,
+        elapsedMs: nowMs() - startedAt,
+        exceededNormalTarget:
+          nowMs() - startedAt > EXPLORER_CAMPAIGN_NORMAL_TARGET_MS,
+        scenarios,
+      };
+    }
+  }
+  const elapsedMs = nowMs() - startedAt;
+  return {
+    status: 'complete',
+    reasonCode: 'campaign_complete',
+    elapsedMs,
+    exceededNormalTarget: elapsedMs > EXPLORER_CAMPAIGN_NORMAL_TARGET_MS,
+    scenarios,
   };
 }
 

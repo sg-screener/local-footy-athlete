@@ -13,11 +13,13 @@ import { useWorkoutLogStore } from '../../store/workoutLogStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useUIStore } from '../../store/uiStore';
 import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
-import { createTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
+import {
+  composeTemporarySourceFactCompatibility,
+  createTemporaryEquipmentFact,
+} from '../../rules/temporarySourceFact';
 import {
   createOrUpdateInjuryEpisode,
 } from '../../store/injuryEpisodeTransaction';
-import { transactTemporarySourceFact } from '../../store/temporarySourceFactTransaction';
 import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
 import {
   commitSessionOutcomeTransaction,
@@ -72,7 +74,7 @@ import {
 import { dayOfWeekForISODate, todayISOLocal } from '../../utils/appDate';
 import { deriveStoredBlockStateFromProgram } from '../../utils/programBlockState';
 import { resolveDevE2EScenarioManifest } from './devE2EScenarioManifestRegistry';
-import { failClosedDevE2EScenarioEligibility } from './devE2EScenarioProtocol';
+import { evaluateLiveDevE2EScenarioEligibility } from './explorerLiveEligibility';
 import {
   activateDevE2EScenarioRuntime,
   clearDevE2EScenarioRuntime,
@@ -236,21 +238,39 @@ async function applyAuxiliaryState(
         now: `${item.date}T12:00:00.000Z`,
         factId,
       });
-      const result = await transactTemporarySourceFact({
-        operation: 'create',
-        fact,
-        factId,
-        todayISO: item.date,
-        now: `${item.date}T12:00:00.000Z`,
-        sourceActor: 'system',
-        sourceSurface: 'dev_e2e_seed',
-        expectedAcceptedRevision:
-          useProgramStore.getState().acceptedMaterialContext.revision,
-      });
-      if (result.outcome !== 'created_and_recomposed' &&
-        result.outcome !== 'created_no_program_change') {
-        throw new Error(`temporary_equipment_seed_failed:${result.outcome}`);
+      const state = useProgramStore.getState();
+      const accepted = state.acceptedMaterialContext;
+      const profile = useProfileStore.getState().onboardingData;
+      if (!state.currentProgram || !profile) {
+        throw new Error('temporary_equipment_seed_context_missing');
       }
+      const temporarySourceFacts = [
+        ...accepted.temporarySourceFacts.filter((candidate) =>
+          !('factId' in candidate) || candidate.factId !== factId),
+        fact,
+      ];
+      const compatibility = composeTemporarySourceFactCompatibility({
+        temporarySourceFacts,
+        activeConstraints: accepted.activeConstraints,
+        readinessSignalsByDate: accepted.readinessSignalsByDate,
+      });
+      // The deterministic seed program was already generated against the
+      // exact bodyweight-only profile. Publish the matching canonical fact at
+      // the accepted-state boundary without recomposing that proven seed.
+      commitAcceptedStateTransaction({
+        reason: `dev_e2e_seed:temporary_equipment:${factId}`,
+        temporarySourceFacts,
+        activeConstraints: compatibility.activeConstraints,
+        activeInjury: compatibility.activeInjury,
+        injuryEpisodes: compatibility.injuryEpisodes,
+        readinessSignalsByDate: compatibility.readinessSignalsByDate,
+        profile,
+        programAlreadyAccepted: true,
+        preserveExactAcceptedWorkouts: true,
+        skipConstraintProjection: true,
+        validateWeekStarts: state.currentProgram.microcycles.map((microcycle) =>
+          microcycle.startDate.slice(0, 10)),
+      });
       continue;
     }
     if (item.kind === 'calendar_game') {
@@ -342,7 +362,7 @@ async function applyAuxiliaryState(
   }
 }
 
-function readWitnessState(): DevE2EWitnessState {
+export function readDevE2EWitnessState(): DevE2EWitnessState {
   const program = useProgramStore.getState();
   const updates = useCoachUpdatesStore.getState();
   const accepted = program.acceptedMaterialContext;
@@ -464,7 +484,7 @@ const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   installProgram: installAcceptedSeedProgram,
   applyAuxiliaryState,
   completeOnboarding: () => useProfileStore.getState().completeOnboarding(),
-  readWitnessState,
+  readWitnessState: readDevE2EWitnessState,
   validateWitnesses: validateDevE2EWitnesses,
   captureMemoryFingerprints: captureDevE2EMemoryFingerprints,
   fingerprintMapsMatch,
@@ -476,7 +496,7 @@ const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   readScenarioSession: readDevE2EScenarioSession,
   clearScenarioSession: clearDevE2EScenarioSession,
   resolveScenarioManifest: resolveDevE2EScenarioManifest,
-  evaluateScenarioEligibility: failClosedDevE2EScenarioEligibility,
+  evaluateScenarioEligibility: evaluateLiveDevE2EScenarioEligibility,
   activateScenarioSession: activateDevE2EScenarioRuntime,
   readActiveScenarioSession: readActiveDevE2EScenarioSession,
   clearScenarioRuntime: clearDevE2EScenarioRuntime,

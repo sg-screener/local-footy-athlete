@@ -84,6 +84,8 @@ export const explorerTestId = {
 
   readinessOption: (kind: string) =>
     `readiness-option-${stableTestIdToken(kind)}`,
+  readinessSetAction: (readinessId: string) =>
+    `readiness-set-action-${stableTestIdToken(readinessId)}`,
   readinessUpdate: (readinessId: string) =>
     `readiness-update-${stableTestIdToken(readinessId)}`,
   readinessClearAction: (readinessId: string) =>
@@ -99,6 +101,8 @@ export const explorerTestId = {
 
   equipmentOption: (presetId: string) =>
     `equipment-preset-${stableTestIdToken(presetId)}`,
+  equipmentSet: (factId: string, presetId: string) =>
+    `equipment-set-${stableTestIdToken(factId)}-${stableTestIdToken(presetId)}`,
   equipmentUpdate: (factId: string, presetId?: string) =>
     `equipment-update-${stableTestIdToken(factId)}${presetId ? `-${stableTestIdToken(presetId)}` : ''}`,
   equipmentClear: (factId: string) =>
@@ -110,6 +114,8 @@ export const explorerTestId = {
 
   feedbackReceipt: (transactionId: string) =>
     `session-feedback-receipt-${stableTestIdToken(transactionId)}`,
+  feedbackSave: (sessionId: string) =>
+    `session-feedback-save-${stableTestIdToken(sessionId)}`,
   feedbackProgressionTarget: (transactionId: string, targetSessionId: string) =>
     `session-feedback-progression-target-${stableTestIdToken(transactionId)}-${stableTestIdToken(targetSessionId)}`,
 

@@ -12,6 +12,7 @@ import type {
   ExplorerOracleAssertion,
 } from './explorerOracleContracts';
 import { validateExplorerScenarioContracts } from './explorerScenarioContractValidation';
+import { explorerTestId } from '../../utils/stableTestId';
 
 const DATE = '2026-07-13';
 const TUESDAY = '2026-07-14';
@@ -22,10 +23,8 @@ const NEXT_MONDAY = '2026-07-20';
 const INJURY_EPISODE_ID =
   'injury-episode:v1:dev-e2e-injury-right-hamstring:20260713120000000';
 const EQUIPMENT_FACT_ID = 'temporary-equipment-bodyweight-only-2026-07-13';
-const FIXTURE_CHAIN_ADJUSTMENT_ID =
-  'explorer-multi-reload-fixture-move-adjustment';
-const REPEAT_WEEK_ADJUSTMENT_ID =
-  'explorer-repeat-week-2026-07-13-2026-07-20-adjustment';
+const FIXTURE_CHAIN_ADJUSTMENT_ID = 'receipt-from-move-fixture';
+const REPEAT_WEEK_ADJUSTMENT_ID = 'receipt-from-repeat-week';
 
 function acceptedOracles(args: {
   stepId: string;
@@ -160,8 +159,10 @@ const WHOLE_SESSION_DELETION = scenario({
       date: DATE,
     }],
     ingress: 'program-card',
-    controlTestId: 'plan-change-delete-confirm',
-    renderTestId: 'plan-change-result-message',
+    controlTestId: explorerTestId.sessionDeleteIngress(wholeSessionId),
+    renderTestId: explorerTestId.sessionMutationResult(
+      'delete', `${wholeSessionId}:whole_day`,
+    ),
     selector: `/accepted/sessions/${wholeSessionId}`,
     extraOracles: [{
       oracleId: 'delete-whole-session-absent',
@@ -194,8 +195,12 @@ const STACKED_UPPER_PULL_DELETION = scenario({
       date: TUESDAY,
     }],
     ingress: 'program-detail',
-    controlTestId: 'exercise-edit-sheet',
-    renderTestId: 'day-workout-visible-exercises',
+    controlTestId: explorerTestId.componentDeleteIngress(
+      stackedSessionId, upperPullComponentId,
+    ),
+    renderTestId: explorerTestId.componentDeleteResult(
+      stackedSessionId, upperPullComponentId,
+    ),
     selector: `/accepted/sessions/${stackedSessionId}/components/${upperPullComponentId}`,
     extraOracles: [{
       oracleId: 'delete-upper-pull-component-absent',
@@ -232,8 +237,12 @@ function fixtureMoveStep(
       },
     ],
     ingress: 'fixture-editor',
-    controlTestId: 'fixture-move-action',
-    renderTestId: 'home-fixture-visible-state',
+    controlTestId: explorerTestId.fixtureIngress(
+      'move', `calendar-game-${FIXTURE_DATE}`,
+    ),
+    renderTestId: explorerTestId.fixtureState(
+      `calendar-game-${FIXTURE_DATE}`, 'active',
+    ),
     selector: `/accepted/fixtures/${FIXTURE_TARGET_DATE}`,
     priorStepId,
     extraOracles: [{
@@ -267,8 +276,10 @@ const chainDelete = acceptedStep({
     date: NEXT_MONDAY,
   }],
   ingress: 'program-card',
-  controlTestId: 'plan-change-delete-confirm',
-  renderTestId: 'plan-change-result-message',
+  controlTestId: explorerTestId.sessionDeleteIngress(followingMondaySessionId),
+  renderTestId: explorerTestId.sessionMutationResult(
+    'delete', `${followingMondaySessionId}:whole_day`,
+  ),
   selector: `/accepted/sessions/${followingMondaySessionId}`,
   priorStepId: chainMove.stepId,
 });
@@ -286,8 +297,8 @@ const chainRestore = acceptedStep({
     status: 'active',
   }],
   ingress: 'adjustment-history',
-  controlTestId: 'coach-note-confirm-clear',
-  renderTestId: 'home-visible-week-after-restoration',
+  controlTestId: explorerTestId.adjustmentRestore(FIXTURE_CHAIN_ADJUSTMENT_ID),
+  renderTestId: explorerTestId.adjustmentRestored(FIXTURE_CHAIN_ADJUSTMENT_ID),
   selector: '/accepted/fixtures',
   priorStepId: chainDelete.stepId,
   extraOracles: [{
@@ -324,8 +335,8 @@ const injuryUpdate = acceptedStep({
     sourceFactType: 'injury',
   }],
   ingress: 'injury-editor',
-  controlTestId: 'injury-apply-adjustment',
-  renderTestId: 'home-visible-week-after-injury',
+  controlTestId: explorerTestId.injuryIngress('update', INJURY_EPISODE_ID),
+  renderTestId: explorerTestId.injuryActive(INJURY_EPISODE_ID),
   selector: `/accepted/injuries/${INJURY_EPISODE_ID}`,
   extraInvariants: ['source-fact-has-programming-effect'],
 });
@@ -343,8 +354,8 @@ const injuryResolve = acceptedStep({
     sourceFactType: 'injury',
   }],
   ingress: 'injury-editor',
-  controlTestId: 'injury-resolve-action',
-  renderTestId: 'home-visible-week-after-injury-resolution',
+  controlTestId: explorerTestId.injuryResolveAction(INJURY_EPISODE_ID),
+  renderTestId: explorerTestId.injuryResolved(INJURY_EPISODE_ID),
   selector: `/accepted/injuries/${INJURY_EPISODE_ID}`,
   priorStepId: injuryUpdate.stepId,
   extraInvariants: ['source-fact-has-programming-effect'],
@@ -371,8 +382,8 @@ const readinessSet = acceptedStep({
     sourceFactType: 'readiness',
   }],
   ingress: 'readiness-editor',
-  controlTestId: 'home-week-readiness-entry',
-  renderTestId: 'home-visible-week-after-readiness',
+  controlTestId: explorerTestId.readinessSetAction(readinessId),
+  renderTestId: explorerTestId.readinessActive(readinessId),
   selector: `/accepted/readiness/${DATE}`,
   extraInvariants: ['source-fact-has-programming-effect'],
 });
@@ -390,8 +401,8 @@ const readinessClear = acceptedStep({
     sourceFactType: 'readiness',
   }],
   ingress: 'readiness-editor',
-  controlTestId: 'readiness-clear-action',
-  renderTestId: 'home-visible-week-after-readiness-clear',
+  controlTestId: explorerTestId.readinessClearAction(readinessId),
+  renderTestId: explorerTestId.readinessClearState(DATE),
   selector: `/accepted/readiness/${DATE}`,
   priorStepId: readinessSet.stepId,
   extraInvariants: ['source-fact-has-programming-effect'],
@@ -417,8 +428,8 @@ const equipmentClear = acceptedStep({
     sourceFactType: 'equipment',
   }],
   ingress: 'equipment-editor',
-  controlTestId: 'equipment-clear-action',
-  renderTestId: 'home-visible-week-after-equipment-clear',
+  controlTestId: explorerTestId.equipmentClear(EQUIPMENT_FACT_ID),
+  renderTestId: explorerTestId.equipmentCleared(EQUIPMENT_FACT_ID),
   selector: `/accepted/equipment/${EQUIPMENT_FACT_ID}`,
   extraInvariants: ['source-fact-has-programming-effect'],
 });
@@ -441,11 +452,8 @@ const equipmentReapply = acceptedStep({
     sourceFactType: 'equipment',
   }],
   ingress: 'equipment-editor',
-  // The live control currently contains an underscore and therefore is not a
-  // contract-safe stable test ID. This declared ID intentionally remains
-  // unavailable until the production observer exposes a canonical selector.
-  controlTestId: 'equipment-preset-bodyweight-only',
-  renderTestId: 'home-visible-week-after-equipment-set',
+  controlTestId: explorerTestId.equipmentSet(EQUIPMENT_FACT_ID, 'bodyweight_only'),
+  renderTestId: explorerTestId.equipmentActive(EQUIPMENT_FACT_ID),
   selector: `/accepted/equipment/${EQUIPMENT_FACT_ID}`,
   priorStepId: equipmentClear.stepId,
   extraInvariants: ['source-fact-has-programming-effect'],
@@ -484,8 +492,10 @@ const SESSION_FEEDBACK_RECEIPT = scenario({
       date: DATE,
     }],
     ingress: 'session-feedback',
-    controlTestId: 'feedback-save-action',
-    renderTestId: 'session-feedback-panel',
+    controlTestId: explorerTestId.feedbackSave(oneSetSessionId),
+    renderTestId: explorerTestId.feedbackReceipt(
+      `feedback-${DATE}-${oneSetSessionId}`,
+    ),
     selector: `/accepted/session-feedback/${DATE}`,
     acceptedRevisionDelta: 0,
   })],
@@ -513,8 +523,8 @@ const repeatWeek = acceptedStep({
     },
   ],
   ingress: 'week-controls',
-  controlTestId: 'program-week-repeat',
-  renderTestId: 'home-visible-week-after-repeat',
+  controlTestId: explorerTestId.repeatIngress(DATE),
+  renderTestId: explorerTestId.repeatActive(REPEAT_WEEK_ADJUSTMENT_ID),
   selector: `/accepted/weeks/${NEXT_MONDAY}`,
 });
 const restoreRepeatedWeek = acceptedStep({
@@ -531,8 +541,8 @@ const restoreRepeatedWeek = acceptedStep({
     status: 'active',
   }],
   ingress: 'adjustment-history',
-  controlTestId: 'repeat-week-restore',
-  renderTestId: 'home-visible-week-after-repeat-restoration',
+  controlTestId: explorerTestId.repeatRestore(REPEAT_WEEK_ADJUSTMENT_ID),
+  renderTestId: explorerTestId.repeatRestored(REPEAT_WEEK_ADJUSTMENT_ID),
   selector: `/accepted/weeks/${NEXT_MONDAY}`,
   priorStepId: repeatWeek.stepId,
   extraOracles: [{

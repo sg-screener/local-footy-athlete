@@ -446,12 +446,7 @@ function defaultResolveTarget(
         manifest,
         logicalAdjustmentId: action.target.adjustmentId,
         priorActionTraceId: context.claim.priorActionTraceId,
-      }) ?? (
-        useProgramStore.getState().reversibleAdjustmentLedger.adjustments.some((entry) =>
-          entry.id === action.target.adjustmentId)
-          ? action.target.adjustmentId
-          : null
-      );
+      });
       if (!exactAdjustmentId) {
         throw new Error(`explorer_exact_adjustment_receipt_missing:${action.target.adjustmentId}`);
       }

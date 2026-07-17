@@ -16,6 +16,7 @@ interface EquipmentLimitationSheetProps {
   onClose: () => void;
   onApply: (presetId: TemporaryEquipmentPresetId) => void | Promise<void>;
   activeFactId?: string | null;
+  targetFactId?: string | null;
 }
 
 export function EquipmentLimitationSheet({
@@ -23,6 +24,7 @@ export function EquipmentLimitationSheet({
   onClose,
   onApply,
   activeFactId,
+  targetFactId,
 }: EquipmentLimitationSheetProps) {
   const presets = activeFactId
     ? TEMPORARY_EQUIPMENT_PRESETS
@@ -48,7 +50,9 @@ export function EquipmentLimitationSheet({
               ? preset.clearsActiveEquipment
                 ? explorerTestId.equipmentClear(activeFactId)
                 : explorerTestId.equipmentUpdate(activeFactId, preset.id)
-              : explorerTestId.equipmentOption(preset.id)}
+              : targetFactId
+                ? explorerTestId.equipmentSet(targetFactId, preset.id)
+                : explorerTestId.equipmentOption(preset.id)}
             onPress={() => onApply(preset.id)}
           />
         ))}

@@ -24,6 +24,10 @@ import type {
   ExplorerScenarioSeedEvidenceV1,
 } from './explorerScenarioArtifactBundle';
 import {
+  EXPLORER_SCENARIO_ARTIFACT_FAILURE,
+  ExplorerScenarioArtifactValidationError,
+} from './explorerScenarioArtifactBundle';
+import {
   explorerActionSemanticHash,
   explorerScenarioSemanticHash,
   validateExplorerScenarioContract,
@@ -55,6 +59,8 @@ export const EXPLORER_RUNTIME_REASON = Object.freeze({
   CHECKPOINT_FAILED: 'checkpoint_failed',
   RELOAD_ORDER_INVALID: 'reload_checkpoint_order_invalid',
   ARTIFACT_ASSEMBLY_FAILED: 'artifact_assembly_failed',
+  INCOMPLETE_ARTIFACT: 'incomplete_artifact',
+  BUDGET_EXPIRED: 'budget_expired',
   DUPLICATED_MUTATION_REQUIRED: 'duplicated_mutation_logic_required',
 } as const);
 
@@ -79,6 +85,7 @@ export interface ExplorerRuntimeRenderReceipt {
   readonly traceV2RootId: string;
   readonly observedTestIds: readonly string[];
   readonly complete: boolean;
+  readonly incompleteArtifact?: boolean;
 }
 
 export interface ExplorerRuntimeCheckpointReceipt {
@@ -189,9 +196,26 @@ export interface ExplorerRuntimeDependencies {
   readonly assembleActionEvidence: (
     input: ExplorerRuntimeActionArtifactInput,
   ) => Promise<ExplorerScenarioActionEvidenceV1>;
-  readonly assembleScenarioArtifact?: (
+  readonly assembleScenarioArtifact: (
     assembly: ExplorerRuntimeArtifactAssemblyV1,
   ) => Promise<ExplorerScenarioArtifactBundleV1>;
+  readonly nowMs?: () => number;
+}
+
+function artifactFailureReason(error: unknown): ExplorerRuntimeReasonCode {
+  return error instanceof ExplorerScenarioArtifactValidationError && (
+    error.code === EXPLORER_SCENARIO_ARTIFACT_FAILURE.SCREENSHOT_MISSING ||
+    error.code === EXPLORER_SCENARIO_ARTIFACT_FAILURE.HIERARCHY_MISSING
+  )
+    ? EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT
+    : EXPLORER_RUNTIME_REASON.ARTIFACT_ASSEMBLY_FAILED;
+}
+
+function seedArtifactEvidenceComplete(evidence: ExplorerScenarioSeedEvidenceV1): boolean {
+  return evidence.initialScreenshotReference?.artifactId.length > 0 &&
+    evidence.initialScreenshotReference?.contentFingerprint.length > 0 &&
+    evidence.initialAccessibilityHierarchyReference?.artifactId.length > 0 &&
+    evidence.initialAccessibilityHierarchyReference?.contentFingerprint.length > 0;
 }
 
 function markerFor(
@@ -360,8 +384,22 @@ export async function runExplorerScenario(
     };
   }
 
+  const nowMs = deps.nowMs ?? Date.now;
+  const startedAtMs = nowMs();
+  const budgetExpired = () => nowMs() - startedAtMs >= manifest.budgetMs;
+
   const records: ExplorerRuntimeActionRecord[] = [];
   const attemptedReceipts: ExplorerProductionActionReceipt[] = [];
+  if (budgetExpired()) {
+    return blocked({
+      manifest,
+      manifestSemanticHash,
+      seedEvidence: null,
+      records,
+      reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+      failedStepId: null,
+    });
+  }
   let seedReceipt: ExplorerRuntimeSeedResetReceipt;
   try {
     seedReceipt = await deps.resetSeedOnce(manifest.seedId);
@@ -388,10 +426,31 @@ export async function runExplorerScenario(
       failedStepId: null,
     });
   }
+  if (!seedArtifactEvidenceComplete(seedReceipt.seedEvidence)) {
+    return blocked({
+      manifest,
+      manifestSemanticHash,
+      seedEvidence: seedReceipt.seedEvidence,
+      records,
+      reasonCode: EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
+      failedStepId: null,
+    });
+  }
 
   let priorActionTraceId: string | null = null;
   for (let index = 0; index < manifest.steps.length; index += 1) {
     const step = manifest.steps[index];
+    if (budgetExpired()) {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+        failedStepId: step.stepId,
+      });
+    }
     let witnessState: ExplorerEligibilityWitnessState;
     let eligibility: ExplorerStepEligibilityReceipt;
     try {
@@ -444,7 +503,7 @@ export async function runExplorerScenario(
     try {
       assertExplorerActionExecutable(step.action);
       productionReceipt = await deps.actionBridge.execute(step.action, { claim });
-    } catch (error) {
+    } catch {
       return blocked({
         manifest,
         manifestSemanticHash,
@@ -487,7 +546,7 @@ export async function runExplorerScenario(
         step,
         receipt: productionReceipt,
       });
-    } catch {
+    } catch (error) {
       renderReceipt = null;
     }
     if (!renderReceipt || !renderReceipt.complete ||
@@ -498,7 +557,9 @@ export async function runExplorerScenario(
         seedEvidence: seedReceipt.seedEvidence,
         records,
         attemptedReceipts,
-        reasonCode: EXPLORER_RUNTIME_REASON.MISSING_RENDER_WITNESS,
+        reasonCode: renderReceipt?.incompleteArtifact
+          ? EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT
+          : EXPLORER_RUNTIME_REASON.MISSING_RENDER_WITNESS,
         failedStepId: step.stepId,
       });
     }
@@ -644,14 +705,14 @@ export async function runExplorerScenario(
         reload,
         oracleReceipts: [...afterAction, ...afterReload],
       });
-    } catch {
+    } catch (error) {
       return blocked({
         manifest,
         manifestSemanticHash,
         seedEvidence: seedReceipt.seedEvidence,
         records,
         attemptedReceipts,
-        reasonCode: EXPLORER_RUNTIME_REASON.ARTIFACT_ASSEMBLY_FAILED,
+        reasonCode: artifactFailureReason(error),
         failedStepId: step.stepId,
       });
     }
@@ -667,6 +728,17 @@ export async function runExplorerScenario(
       reload,
       artifactEvidence,
     });
+    if (budgetExpired()) {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+        failedStepId: step.stepId,
+      });
+    }
     priorActionTraceId = productionReceipt.traceV2RootId;
   }
 
@@ -681,28 +753,45 @@ export async function runExplorerScenario(
     failedStepId: null,
     firstDivergentProjection: null,
   });
-  let artifactBundle: ExplorerScenarioArtifactBundleV1 | null = null;
-  if (deps.assembleScenarioArtifact) {
-    try {
-      artifactBundle = await deps.assembleScenarioArtifact(artifactAssembly);
-    } catch {
-      return {
-        status: 'blocked',
-        reasonCode: EXPLORER_RUNTIME_REASON.ARTIFACT_ASSEMBLY_FAILED,
-        manifestSemanticHash,
-        failedStepId: manifest.steps[manifest.steps.length - 1]?.stepId ?? null,
-        firstDivergentProjection: null,
-        actionRecords: records,
-        artifactAssembly: {
-          ...artifactAssembly,
-          completion: {
-            status: 'blocked',
-            reasonCode: EXPLORER_RUNTIME_REASON.ARTIFACT_ASSEMBLY_FAILED,
-          },
+  if (!deps.assembleScenarioArtifact) {
+    return {
+      status: 'blocked',
+      reasonCode: EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
+      manifestSemanticHash,
+      failedStepId: manifest.steps[manifest.steps.length - 1]?.stepId ?? null,
+      firstDivergentProjection: null,
+      actionRecords: records,
+      artifactAssembly: {
+        ...artifactAssembly,
+        completion: {
+          status: 'blocked',
+          reasonCode: EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
         },
-        artifactBundle: null,
-      };
-    }
+      },
+      artifactBundle: null,
+    };
+  }
+  let artifactBundle: ExplorerScenarioArtifactBundleV1;
+  try {
+    artifactBundle = await deps.assembleScenarioArtifact(artifactAssembly);
+  } catch (error) {
+    const reasonCode = artifactFailureReason(error);
+    return {
+      status: 'blocked',
+      reasonCode,
+      manifestSemanticHash,
+      failedStepId: manifest.steps[manifest.steps.length - 1]?.stepId ?? null,
+      firstDivergentProjection: null,
+      actionRecords: records,
+      artifactAssembly: {
+        ...artifactAssembly,
+        completion: {
+          status: 'blocked',
+          reasonCode,
+        },
+      },
+      artifactBundle: null,
+    };
   }
   return {
     status: 'complete',

@@ -4,16 +4,25 @@ export type DevE2EEntryRoute =
   | { kind: 'reset'; seedId: DevE2ESeedId }
   | { kind: 'checkpoint'; checkpointId: DevE2ESeedId }
   | { kind: 'scenario_reset'; scenarioId: string }
-  | { kind: 'scenario_checkpoint'; scenarioId: string; checkpointStepId: string };
+  | { kind: 'scenario_checkpoint'; scenarioId: string; checkpointStepId: string }
+  | { kind: 'explorer_run'; scenarioId: string }
+  | { kind: 'explorer_campaign' };
 
 const EXACT_E2E_ROUTE = /^localfootyathlete:\/\/e2e\/(reset|checkpoint)\/([a-z0-9-]+)$/;
 const EXACT_SCENARIO_RESET_ROUTE =
   /^localfootyathlete:\/\/e2e\/scenario\/reset\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
 const EXACT_SCENARIO_CHECKPOINT_ROUTE =
   /^localfootyathlete:\/\/e2e\/scenario\/checkpoint\/([a-z0-9]+(?:-[a-z0-9]+)*)\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
+const EXACT_EXPLORER_RUN_ROUTE =
+  /^localfootyathlete:\/\/e2e\/explorer\/run\/([a-z0-9]+(?:-[a-z0-9]+)*)$/;
+const EXACT_EXPLORER_CAMPAIGN_ROUTE =
+  /^localfootyathlete:\/\/e2e\/explorer\/run-all-nine$/;
 
 export function parseDevE2EEntryRoute(url: string | null | undefined): DevE2EEntryRoute | null {
   if (!url) return null;
+  if (EXACT_EXPLORER_CAMPAIGN_ROUTE.test(url)) return { kind: 'explorer_campaign' };
+  const explorerRun = EXACT_EXPLORER_RUN_ROUTE.exec(url);
+  if (explorerRun) return { kind: 'explorer_run', scenarioId: explorerRun[1] };
   const scenarioReset = EXACT_SCENARIO_RESET_ROUTE.exec(url);
   if (scenarioReset) {
     return { kind: 'scenario_reset', scenarioId: scenarioReset[1] };

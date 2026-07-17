@@ -769,12 +769,6 @@ export function witnessesForDevE2ESeed(
         date: anchorDate,
         strengthPattern: 'squat',
       });
-      witnesses.push({
-        kind: 'exercise_present',
-        exerciseId: 'dev-e2e-removable-band-pull-apart',
-        name: 'Band Pull-Apart',
-        date: anchorDate,
-      });
       break;
     case 'one-set-strength':
       witnesses.push({
@@ -1035,10 +1029,6 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
       });
       break;
     case 'lower-body-deletion':
-      auxiliaryState.push({
-        kind: 'removable_component_override',
-        date: anchorDate,
-      });
       break;
     case 'injury-case':
       auxiliaryState.push({
@@ -1271,7 +1261,10 @@ export function validateDevE2EWitnesses(
       }
       case 'active_equipment':
         if (!state.activeConstraints.some((constraint) =>
-          constraint.type === 'equipment' && constraint.reasonLabel === 'Bodyweight only') ||
+          constraint.type === 'equipment' &&
+          constraint.mode === 'only' &&
+          constraint.tags.includes('bodyweight') &&
+          constraint.temporarySourceFactIds?.includes(witness.factId)) ||
           !state.temporarySourceFacts?.some((fact) =>
             'factId' in fact &&
             fact.factId === witness.factId &&

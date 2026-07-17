@@ -868,7 +868,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
         <View style={styles.saveRow}>
           <Button
             label="Save & Finish"
-            testID="feedback-save-action"
+            testID={explorerTestId.feedbackSave(workout?.id ?? date)}
             onPress={handleSave}
             variant="primary"
             size="lg"
