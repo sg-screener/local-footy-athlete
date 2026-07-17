@@ -99,7 +99,10 @@ async function main(): Promise<void> {
       plan.scenarioId === EXPLORER_NON_COACH_SMOKE_MANIFESTS[index].scenarioId &&
       plan.captures.length ===
         1 + EXPLORER_NON_COACH_SMOKE_MANIFESTS[index].steps.length * 2 &&
-      plan.captures[0].screenshotBasename === 'seed-initial.png'),
+      plan.captures[0].screenshotBasename === 'seed-initial.png' &&
+      EXPLORER_NON_COACH_SMOKE_MANIFESTS[index].steps.every((step, stepIndex) =>
+        plan.captures[stepIndex * 2 + 1].controlId === step.controlTestId &&
+        plan.captures[stepIndex * 2 + 2].controlId === step.controlTestId)),
     'canonical scenario order or capture cardinality drifted');
   });
 

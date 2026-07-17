@@ -43,6 +43,7 @@ const explorerCaptureRequestMarkers = new Set<string>();
 const explorerCaptureRequestEnvelopes = new Map<string, string>();
 const explorerCaptureAcceptedMarkers = new Set<string>();
 const explorerCaptureErrorMarkers = new Set<string>();
+const explorerArtifactAcceptedMarkers = new Set<string>();
 
 function notifySubscribers(): void {
   for (const subscriber of Array.from(subscribers)) {
@@ -88,6 +89,7 @@ export function setDevE2EEntryReady(): void {
   explorerCaptureRequestEnvelopes.clear();
   explorerCaptureAcceptedMarkers.clear();
   explorerCaptureErrorMarkers.clear();
+  explorerArtifactAcceptedMarkers.clear();
   publish({
     phase: 'entry_ready',
     seedId: null,
@@ -302,6 +304,13 @@ export function setDevE2EExplorerCaptureError(reasonCode: string): void {
   notifySubscribers();
 }
 
+export function setDevE2EExplorerArtifactAccepted(scenarioId: string): void {
+  if (!scenarioId || explorerArtifactAcceptedMarkers.has(scenarioId)) return;
+  explorerArtifactAcceptedMarkers.add(scenarioId);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
 export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
   const markers = [
     'e2e-entry-ready',
@@ -319,6 +328,9 @@ export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
     ...Array.from(explorerCaptureErrorMarkers)
       .sort()
       .map((reasonCode) => `e2e-explorer-capture-error-${reasonCode}`),
+    ...Array.from(explorerArtifactAcceptedMarkers)
+      .sort()
+      .map((scenarioId) => `e2e-explorer-artifact-accepted-${scenarioId}`),
   ];
   if (!state.scenarioId) {
     switch (state.phase) {
@@ -386,6 +398,7 @@ export function __resetDevE2EStateForTest(): void {
   explorerCaptureRequestEnvelopes.clear();
   explorerCaptureAcceptedMarkers.clear();
   explorerCaptureErrorMarkers.clear();
+  explorerArtifactAcceptedMarkers.clear();
   snapshot = INITIAL;
   notifySubscribers();
 }

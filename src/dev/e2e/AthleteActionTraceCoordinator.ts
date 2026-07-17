@@ -895,6 +895,8 @@ export class AthleteActionTraceCoordinator {
   clear(): void {
     this.records.clear();
     this.activeTokens.length = 0;
+    this.traceCounter = 0;
+    this.spanCounter = 0;
   }
 
   private resolve(token?: AthleteActionTraceTokenV2): AthleteActionTraceRecordV2 | null {

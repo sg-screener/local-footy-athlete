@@ -642,6 +642,9 @@ void test('runs ordered after-action/reload oracles and a three-reload chain onc
     record.reload.reloadReceipt.scenarioId === manifest.scenarioId &&
     record.reload.reloadReceipt.stepId === record.stepId &&
     record.renderReceipt.traceV2RootId === record.productionReceipt.traceV2RootId &&
+    record.renderReceipt.externalArtifacts?.complete === true &&
+    record.renderReceipt.externalArtifacts.screenshot === 'captured' &&
+    record.renderReceipt.externalArtifacts.accessibilityHierarchy === 'captured' &&
     record.reload.reloadReceipt.traceV2RootId === record.productionReceipt.traceV2RootId),
   'action, trace, render, checkpoint and reload identities were not linked');
   expect(result.artifactAssembly?.productionReceipts.length === 3,

@@ -1,95 +1,46 @@
 import type { DevE2ESeedCoordinator } from './DevE2ESeedCoordinator';
-import { buildDevE2ESeed } from './devE2ESeedRegistry';
-import { captureDevE2EMemoryFingerprints } from './devE2EPersistence';
-import { readActiveDevE2EClockReceipt } from './devE2EClockPersistence';
-import {
-  EXPLORER_SCENARIO_ARTIFACT_FAILURE,
-  ExplorerScenarioArtifactValidationError,
-} from './explorerScenarioArtifactBundle';
 import {
   createExplorerProductionScenarioRunner,
   runAllExplorerSmokeScenarios,
   type ExplorerCampaignResult,
 } from './explorerScenarioRunner';
 import type {
-  ExplorerRuntimeDependencies,
   ExplorerRuntimeResult,
 } from './explorerRuntime';
-import { semanticFingerprintV2 } from '../../utils/semanticFingerprintV2';
 import {
   readExplorerPhysicalEvidenceCampaignIdentity,
-  requestExplorerPhysicalEvidence,
 } from './explorerPhysicalEvidenceDevBridge';
+import { createCanonicalExplorerLiveHostDependencies } from
+  './explorerCanonicalLiveHost';
+import { setDevE2EExplorerArtifactAccepted } from './devE2EState';
+
+declare const __DEV__: boolean | undefined;
 
 /** Last dev-only receipt, exposed for deterministic native E2E inspection. */
 let lastResult: ExplorerRuntimeResult | ExplorerCampaignResult | null = null;
 
-function unavailable(): never {
-  throw new ExplorerScenarioArtifactValidationError(
-    EXPLORER_SCENARIO_ARTIFACT_FAILURE.SCREENSHOT_MISSING,
-    'live capture receipt has not been installed',
-  );
+function assertLiveHostAvailable(): void {
+  const available = typeof __DEV__ !== 'undefined'
+    ? __DEV__
+    : (globalThis as { __DEV__?: boolean }).__DEV__ === true;
+  if (!available) throw new Error('explorer_live_host_release_build_rejected');
 }
 
 function liveHostDependencies(args: {
   coordinator: DevE2ESeedCoordinator;
   scenarioId: string;
-}): Omit<ExplorerRuntimeDependencies, 'loadManifest' | 'actionBridge' | 'waitForReactRender'> {
+}) {
+  assertLiveHostAvailable();
   const campaign = readExplorerPhysicalEvidenceCampaignIdentity();
   if (!campaign) {
     throw new Error('explorer_live_physical_evidence_campaign_missing');
   }
-  return {
-    physicalEvidence: {
-      campaignId: campaign.campaignId,
-      integratedRepositorySha: campaign.integratedRepositorySha,
-      deterministicClockFingerprint: () => {
-        const clock = readActiveDevE2EClockReceipt();
-        if (!clock) throw new Error('explorer_live_clock_missing');
-        return clock.semanticFingerprint;
-      },
-      requestCapture: requestExplorerPhysicalEvidence,
-    },
-    resetSeedOnce: async (seedId) => {
-      const reset = await args.coordinator.resetScenario(args.scenarioId);
-      if (!reset) throw new Error(`explorer_live_reset_refused:${args.scenarioId}`);
-      const seed = buildDevE2ESeed(seedId);
-      const fingerprints = captureDevE2EMemoryFingerprints();
-      const clock = readActiveDevE2EClockReceipt();
-      if (!clock || clock.seedId !== seedId) {
-        throw new Error(`explorer_live_clock_missing:${seedId}`);
-      }
-      return {
-        resetId: `explorer-live-reset:${args.scenarioId}`,
-        seedId,
-        seedEvidence: {
-          witnessReport: {
-            seedId,
-            complete: true,
-            witnesses: seed.witnesses.map((witness, index) => ({
-              witnessId: `seed:${seedId}:${witness.kind}:${index + 1}`,
-              status: 'passed' as const,
-              evidenceFingerprint: semanticFingerprintV2(witness),
-            })),
-          },
-          initialAcceptedSemanticFingerprint: semanticFingerprintV2(fingerprints),
-          initialPersistedStoreFingerprints: fingerprints,
-          // Physical evidence is owned by the native/Maestro harness. Empty
-          // references deliberately force incomplete_artifact until supplied.
-          initialScreenshotReference: { artifactId: '', contentFingerprint: '' },
-          initialAccessibilityHierarchyReference: { artifactId: '', contentFingerprint: '' },
-        },
-      };
-    },
-    readEligibilityWitnessState: async () => unavailable(),
-    publishEligibilityMarker: () => {},
-    claimIntendedAction: () => {},
-    captureOracleContext: async () => unavailable(),
-    checkpointScenarioStep: async () => unavailable(),
-    coldReloadScenarioSessionV2: async () => unavailable(),
-    assembleActionEvidence: async () => unavailable(),
-    assembleScenarioArtifact: async () => unavailable(),
-  };
+  return createCanonicalExplorerLiveHostDependencies({
+    coordinator: args.coordinator,
+    scenarioId: args.scenarioId,
+    campaignId: campaign.campaignId,
+    integratedRepositorySha: campaign.integratedRepositorySha,
+  });
 }
 
 /** Real dev entry caller: it always constructs the production action registry. */
@@ -97,10 +48,14 @@ export async function runLiveExplorerScenario(args: {
   coordinator: DevE2ESeedCoordinator;
   scenarioId: string;
 }): Promise<ExplorerRuntimeResult> {
+  assertLiveHostAvailable();
   const runner = createExplorerProductionScenarioRunner({
     hostDependencies: liveHostDependencies(args),
   });
   const result = await runner.run(args.scenarioId);
+  if (result.status === 'complete' && result.artifactBundle) {
+    setDevE2EExplorerArtifactAccepted(args.scenarioId);
+  }
   lastResult = result;
   return result;
 }
@@ -108,6 +63,7 @@ export async function runLiveExplorerScenario(args: {
 export async function runLiveExplorerCampaign(
   coordinator: DevE2ESeedCoordinator,
 ): Promise<ExplorerCampaignResult> {
+  assertLiveHostAvailable();
   const result = await runAllExplorerSmokeScenarios({
     runner: {
       run: (scenarioId) => runLiveExplorerScenario({ coordinator, scenarioId }),

@@ -997,7 +997,11 @@ function traceFor(
       ? action.target.injuryEpisodeId
       : null,
     adjustmentId: target.exactAdjustmentId ?? null,
-  }, undefined, { forceRoot: true });
+  }, undefined, {
+    forceRoot: true,
+    rootActionType: action.type,
+    rootSourceSurface: step.ingress,
+  });
 }
 
 function receiptId(args: {

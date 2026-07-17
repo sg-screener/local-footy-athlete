@@ -16,6 +16,7 @@ import {
 import {
   __resetExplorerPhysicalEvidenceDevBridgeForTest,
   acknowledgeExplorerPhysicalEvidence,
+  requestExplorerPhysicalEvidence,
   startExplorerPhysicalEvidenceCampaign,
 } from '../dev/e2e/explorerPhysicalEvidenceDevBridge';
 import { sha256Hex } from '../utils/semanticFingerprintV2';
@@ -413,6 +414,15 @@ async function main(): Promise<void> {
       encodeURIComponent(JSON.stringify(receipt(request()))),
       false,
     ) === false, 'release acknowledgement route was accepted');
+    try {
+      await requestExplorerPhysicalEvidence(request());
+    } catch (error) {
+      expect(error instanceof ExplorerPhysicalEvidenceError &&
+        error.reasonCode === EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RELEASE_BUILD,
+      'release capture request had the wrong failure');
+      return;
+    }
+    throw new Error('release capture request was accepted');
   });
 
   console.log(`\nExplorer physical evidence: ${passed} passed, ${failed} failed`);

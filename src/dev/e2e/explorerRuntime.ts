@@ -96,6 +96,11 @@ export interface ExplorerRuntimeRenderReceipt {
   readonly controlId?: string;
   readonly observationId?: string;
   readonly canonicalSemanticIdentity?: string;
+  readonly externalArtifacts?: {
+    readonly screenshot: 'captured' | 'missing';
+    readonly accessibilityHierarchy: 'captured' | 'missing';
+    readonly complete: boolean;
+  };
 }
 
 export interface ExplorerRuntimeCheckpointReceipt {
@@ -672,6 +677,16 @@ export async function runExplorerScenario(
           marker.actionSemanticHash,
       });
       physicalEvidenceReceipts.push(afterActionPhysicalEvidence);
+      // The semantic render receipt becomes launch-complete only after the
+      // exact physical request has an acknowledged screenshot and hierarchy.
+      renderReceipt = {
+        ...renderReceipt,
+        externalArtifacts: {
+          screenshot: 'captured',
+          accessibilityHierarchy: 'captured',
+          complete: true,
+        },
+      };
     } catch {
       return blocked({
         manifest,
@@ -913,6 +928,29 @@ export async function runExplorerScenario(
       });
     }
     priorActionTraceId = productionReceipt.traceV2RootId;
+  }
+
+  // Scenario-end is the final hard-oracle gate over the canonical receipts
+  // collected at their owning after-action and after-reload boundaries. It
+  // deliberately does not manufacture duplicate oracle receipts.
+  const scenarioEndSummary = summarizeExplorerOracleEvaluations(
+    manifest,
+    records.flatMap((record) => [
+      ...record.afterActionOracleReceipts,
+      ...record.afterReloadOracleReceipts,
+    ]),
+  );
+  if (!scenarioEndSummary.passed) {
+    return blocked({
+      manifest,
+      manifestSemanticHash,
+      seedEvidence: seedReceipt.seedEvidence,
+      records,
+      attemptedReceipts,
+      reasonCode: EXPLORER_RUNTIME_REASON.HARD_ORACLE_FAILED,
+      failedStepId: scenarioEndSummary.firstFailingStepId,
+      firstDivergentProjection: scenarioEndSummary.firstDivergentProjection,
+    });
   }
 
   const artifactAssembly = buildAssembly({

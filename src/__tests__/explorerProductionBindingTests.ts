@@ -389,6 +389,11 @@ async function main(): Promise<void> {
     expect(trace?.root.priorActionTraceId.status === 'captured' &&
       trace.root.priorActionTraceId.value === 'prior-production-trace',
     'priorActionTraceId was not captured on TraceV2');
+    expect(trace?.root.actionType.status === 'captured' &&
+      trace.root.actionType.value === action.type &&
+      trace.root.sourceSurface.status === 'captured' &&
+      trace.root.sourceSurface.value === step.ingress,
+    'TraceV2 root did not preserve canonical Explorer action/surface identity');
     configureAthleteActionDiagnosticsForTests({
       enabled: false,
       production: false,

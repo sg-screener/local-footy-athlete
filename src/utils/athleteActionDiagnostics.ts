@@ -163,7 +163,15 @@ export function athleteActionDiagnosticsEnabled(): boolean {
 }
 
 function now(): Date {
-  return testConfig?.now?.() ?? new Date();
+  if (testConfig?.now) return testConfig.now();
+  const deterministicClock = (globalThis as {
+    __LFA_DEV_E2E_CLOCK_RECEIPT__?: { anchorInstant?: string };
+  }).__LFA_DEV_E2E_CLOCK_RECEIPT__;
+  if (!productionBuild() && deterministicClock?.anchorInstant) {
+    const instant = new Date(deterministicClock.anchorInstant);
+    if (!Number.isNaN(instant.getTime())) return instant;
+  }
+  return new Date();
 }
 
 function stableValue(value: unknown, seen = new WeakSet<object>()): unknown {
@@ -195,7 +203,12 @@ export function currentAthleteActionTrace(): AthleteActionTraceContext | undefin
 export function beginAthleteActionTrace(
   input: Omit<AthleteActionTraceContext, 'traceId' | 'spanId' | 'startedAt'>,
   existing?: AthleteActionTraceContext,
-  options: { forceRoot?: boolean } = {},
+  options: {
+    forceRoot?: boolean;
+    /** Optional canonical root identity when a protocol matcher uses a legacy action name. */
+    rootActionType?: string;
+    rootSourceSurface?: string;
+  } = {},
 ): AthleteActionTraceContext {
   const inherited = options.forceRoot
     ? undefined
@@ -220,7 +233,7 @@ export function beginAthleteActionTrace(
   }
   const token = athleteActionTraceCoordinator.startRoot({
     source: input.source,
-    actionType: input.actionType,
+    actionType: options.rootActionType ?? input.actionType,
     route: input.route,
     scenarioRunId: scenarioClaim?.scenarioId ?? input.scenarioRunId,
     scenarioStepId: scenarioClaim?.scenarioStepId ?? input.scenarioStepId,
@@ -233,7 +246,7 @@ export function beginAthleteActionTrace(
       sourceDate: input.sourceDate ?? input.sessionDate ?? null,
       targetDate: input.targetDate ?? null,
     },
-    sourceSurface: input.route,
+    sourceSurface: options.rootSourceSurface ?? input.route,
     controlId: input.controlId,
     sourceDate: input.sourceDate ?? input.sessionDate,
     targetDate: input.targetDate,

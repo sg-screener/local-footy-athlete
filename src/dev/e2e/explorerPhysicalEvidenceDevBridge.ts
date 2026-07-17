@@ -151,6 +151,12 @@ ExplorerPhysicalEvidenceCampaignIdentity | null {
 export async function requestExplorerPhysicalEvidence(
   request: ExplorerPhysicalCaptureRequestV1,
 ): Promise<ExplorerPhysicalEvidenceReceiptV1> {
+  if (!available()) {
+    setDevE2EExplorerCaptureError(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RELEASE_BUILD);
+    throw new ExplorerPhysicalEvidenceError(
+      EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RELEASE_BUILD,
+    );
+  }
   if (!active || request.campaignId !== active.identity.campaignId) {
     throw new ExplorerPhysicalEvidenceError(
       EXPLORER_PHYSICAL_EVIDENCE_FAILURE.CAMPAIGN_MISMATCH,

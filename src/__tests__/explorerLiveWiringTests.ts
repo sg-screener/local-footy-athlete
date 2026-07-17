@@ -10,6 +10,7 @@ import {
   __resetDevE2EStateForTest,
   devE2EMarkers,
   getDevE2EStateSnapshot,
+  setDevE2EExplorerArtifactAccepted,
   setDevE2EScenarioReady,
 } from '../dev/e2e/devE2EState';
 import {
@@ -72,6 +73,22 @@ const blockedResult = (reasonCode: string): ExplorerRuntimeResult => ({
 async function main() {
   console.log('\n-- Explorer live launch wiring --');
 
+  await test('no launch-critical live-host seam remains unavailable', () => {
+    const entry = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerLiveScenarioRuntime.ts'), 'utf8');
+    const host = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerCanonicalLiveHost.ts'), 'utf8');
+    expect(!/function\s+unavailable|=>\s*unavailable\(/.test(`${entry}\n${host}`),
+      'a live-host launch seam is still bound to unavailable()');
+    for (const seam of [
+      'readEligibilityWitnessState', 'captureOracleContext',
+      'checkpointScenarioStep', 'coldReloadScenarioSessionV2',
+      'assembleActionEvidence', 'assembleScenarioArtifact',
+    ]) {
+      expect(host.includes(`${seam}:`), `${seam} is not installed by the canonical host`);
+    }
+  });
+
   await test('scenario-session V2 resolves exactly all nine smoke IDs', () => {
     expect(EXPLORER_DEV_E2E_SCENARIO_MANIFESTS.length === 9, 'live registry count changed');
     expect(EXACT_IDS.every((id, index) =>
@@ -100,6 +117,15 @@ async function main() {
       const adapter = bindings.adapters[actionType as keyof typeof bindings.adapters];
       expect(adapter.owner === owner, `${actionType} is not bound to ${owner}`);
     }
+  });
+
+  await test('all fifteen live actions remain on canonical production bindings', () => {
+    const actions = EXPLORER_NON_COACH_SMOKE_MANIFESTS.flatMap((manifest) =>
+      manifest.steps.map((step) => step.action.type));
+    expect(actions.length === 15, `expected 15 live actions, received ${actions.length}`);
+    expect(actions.every((actionType) =>
+      Object.prototype.hasOwnProperty.call(EXPLORER_PRODUCTION_OWNER_BY_ACTION, actionType)),
+    'a live action bypasses explorerProductionBindings');
   });
 
   await test('all manifest controls and render witnesses are semantic identity selectors', () => {
@@ -169,6 +195,43 @@ async function main() {
       !finalFlow.includes('e2e-next-action-eligible-${SCENARIO_ID}-${NEXT_STEP_ID}'),
     'final reload waits for a next-action marker');
     expect(EXACT_IDS.every((id) => campaign.includes(id)), 'all-nine Maestro flow is incomplete');
+  });
+
+  await test('scenario completion is gated by hard-oracle summary and artifact validation', () => {
+    const runtime = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerRuntime.ts'), 'utf8');
+    const entry = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerLiveScenarioRuntime.ts'), 'utf8');
+    const runner = readFileSync(resolve(
+      process.cwd(), 'scripts/run-explorer-nine-live.ts'), 'utf8');
+    expect(runtime.includes('const scenarioEndSummary = summarizeExplorerOracleEvaluations('),
+      'scenario-end hard-oracle gate is missing');
+    expect(entry.includes('result.status === \'complete\' && result.artifactBundle') &&
+      entry.includes('setDevE2EExplorerArtifactAccepted(args.scenarioId)'),
+    'live entry publishes success without a validated artifact bundle');
+    expect(runner.includes('e2e-explorer-artifact-accepted-${args.plan.scenarioId}') &&
+      runner.includes('completed.every(({ plan }) => value.includes('),
+    'runner does not validate each artifact and the all-nine artifact set');
+  });
+
+  await test('validated artifact publication has an exact campaign-visible marker', () => {
+    __resetDevE2EStateForTest();
+    setDevE2EExplorerArtifactAccepted(EXACT_IDS[0]);
+    expect(devE2EMarkers(getDevE2EStateSnapshot()).includes(
+      `e2e-explorer-artifact-accepted-${EXACT_IDS[0]}`,
+    ), 'validated scenario artifact marker is missing');
+  });
+
+  await test('release boundary rejects direct live execution and capture requests', () => {
+    const live = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerLiveScenarioRuntime.ts'), 'utf8');
+    const physical = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerPhysicalEvidenceDevBridge.ts'), 'utf8');
+    expect(live.includes('explorer_live_host_release_build_rejected') &&
+      live.includes('assertLiveHostAvailable();'),
+    'direct Explorer live execution lacks a release refusal');
+    expect(/requestExplorerPhysicalEvidence[\s\S]*if \(!available\(\)\)/.test(physical),
+      'capture requests lack a release refusal');
   });
 
   console.log(`\nExplorer live wiring: ${passed} passed, ${failed} failed`);

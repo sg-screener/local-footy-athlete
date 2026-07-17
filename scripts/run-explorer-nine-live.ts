@@ -232,6 +232,7 @@ export function compileExplorerNineCapturePlan(): readonly {
   captures: readonly {
     capturePhase: 'seed-reset' | 'after-action' | 'after-reload';
     stepId?: string;
+    controlId?: string;
     reloadCount: number;
     screenshotBasename: string;
     hierarchyBasename: string;
@@ -250,6 +251,7 @@ export function compileExplorerNineCapturePlan(): readonly {
         {
           capturePhase: 'after-action' as const,
           stepId: step.stepId,
+          controlId: step.controlTestId,
           reloadCount: index,
           screenshotBasename:
             `${String(index + 1).padStart(2, '0')}-${step.stepId}-after-action.png`,
@@ -259,6 +261,7 @@ export function compileExplorerNineCapturePlan(): readonly {
         {
           capturePhase: 'after-reload' as const,
           stepId: step.stepId,
+          controlId: step.controlTestId,
           reloadCount: index + 1,
           screenshotBasename:
             `${String(index + 1).padStart(2, '0')}-${step.stepId}-after-reload.png`,
@@ -481,6 +484,7 @@ async function runScenario(args: {
       request.scenarioId !== args.plan.scenarioId ||
       request.capturePhase !== expected.capturePhase ||
       request.stepId !== expected.stepId ||
+      request.controlId !== (expected.controlId ?? null) ||
       request.reloadCount !== expected.reloadCount ||
       request.requestedScreenshotRelativePath.split('/').pop() !==
         expected.screenshotBasename ||
@@ -489,6 +493,36 @@ async function runScenario(args: {
       throw new ExplorerLiveRunnerError(
         'infrastructure',
         'capture_plan_mismatch',
+        args.plan.scenarioId,
+      );
+    }
+    const nextStep = request.capturePhase === 'seed-reset'
+      ? EXPLORER_NON_COACH_SMOKE_MANIFESTS.find((manifest) =>
+          manifest.scenarioId === args.plan.scenarioId)?.steps[0]
+      : request.capturePhase === 'after-reload'
+        ? EXPLORER_NON_COACH_SMOKE_MANIFESTS.find((manifest) =>
+            manifest.scenarioId === args.plan.scenarioId)?.steps[request.reloadCount]
+        : undefined;
+    if (request.capturePhase === 'seed-reset' ||
+      (request.capturePhase === 'after-reload' && nextStep)) {
+      if (!nextStep ||
+        !hierarchy.includes(
+          `e2e-next-action-eligible-${args.plan.scenarioId}-${nextStep.stepId}`,
+        ) || !hierarchy.includes(
+          `e2e-explorer-next-action-eligible-${args.plan.scenarioId}-${nextStep.stepId}`,
+        )) {
+        throw new ExplorerLiveRunnerError(
+          'product',
+          'eligibility_markers_missing',
+          nextStep?.stepId ?? args.plan.scenarioId,
+        );
+      }
+    }
+    if (request.capturePhase === 'after-reload' && !nextStep &&
+      !hierarchy.includes(`e2e-scenario-complete-${args.plan.scenarioId}`)) {
+      throw new ExplorerLiveRunnerError(
+        'product',
+        'final_scenario_complete_marker_missing',
         args.plan.scenarioId,
       );
     }
@@ -558,6 +592,13 @@ async function runScenario(args: {
     deadline: args.hardDeadline,
     predicate: (value) => value.includes(
       `e2e-scenario-complete-${args.plan.scenarioId}`,
+    ),
+  });
+  await waitForHierarchyValue({
+    options: args.options,
+    deadline: args.hardDeadline,
+    predicate: (value) => value.includes(
+      `e2e-explorer-artifact-accepted-${args.plan.scenarioId}`,
     ),
   });
   validateScenarioPhysicalEvidenceBundle({
@@ -633,6 +674,13 @@ export async function runExplorerNineLive(
     });
     completed.push({ plan, receipts: scenario.result });
   }
+  await waitForHierarchyValue({
+    options,
+    deadline: hardDeadline,
+    predicate: (value) => completed.every(({ plan }) => value.includes(
+      `e2e-explorer-artifact-accepted-${plan.scenarioId}`,
+    )),
+  });
   // Campaign completion revalidates every immutable scenario bundle rather
   // than trusting the earlier per-scenario pass.
   for (const scenario of completed) {
