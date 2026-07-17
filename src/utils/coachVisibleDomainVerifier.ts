@@ -13,6 +13,7 @@ import {
 } from './visibleProgramReadModel';
 import {
   diffSemanticDays,
+  projectSemanticComponentsForDomain,
   semanticDiffChangesLever,
   semanticDiffHasMaterialReductionForLever,
   semanticFingerprint,
@@ -81,12 +82,9 @@ export function fingerprintVisibleProgramDay(
       sessionTier: clean((workout as any)?.sessionTier),
       signature: semanticFingerprint(semantic.workout),
     },
-    strength: semanticFingerprint(semantic.workout?.components.filter((component) =>
-      component.kind === 'strength') ?? []),
-    conditioning: semanticFingerprint(semantic.workout?.components.filter((component) =>
-      component.kind === 'conditioning') ?? []),
-    recovery: semanticFingerprint(semantic.workout?.components.filter((component) =>
-      component.kind === 'recovery') ?? []),
+    strength: semanticFingerprint(projectSemanticComponentsForDomain(semantic.workout, 'strength')),
+    conditioning: semanticFingerprint(projectSemanticComponentsForDomain(semantic.workout, 'conditioning')),
+    recovery: semanticFingerprint(projectSemanticComponentsForDomain(semantic.workout, 'recovery')),
     exercises: semanticFingerprint(semantic.workout?.exercises ?? []),
     allItems: semanticFingerprint(semantic.workout?.components ?? []),
   };

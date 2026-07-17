@@ -28,6 +28,8 @@ export interface SemanticComponentSnapshot {
   metadata: unknown;
 }
 
+export type SemanticComponentDomain = SemanticComponentSnapshot['kind'];
+
 export interface SemanticWorkoutSnapshot {
   identity: string;
   workoutType: string;
@@ -250,6 +252,27 @@ export function buildSemanticProgramSnapshot(days: readonly ResolvedDay[]): Sema
       .sort(([left], [right]) => left.localeCompare(right))
       .map(([weekStart, weekDays]) => weeklyExposure(weekStart, weekDays)),
   };
+}
+
+/**
+ * Canonical semantic projection for comparisons scoped to one component domain.
+ *
+ * Component order in a full workout is intentionally global. Once a consumer
+ * asks about one domain, only the relative top-level order inside that domain is
+ * semantic; removing an earlier component from another domain must not make an
+ * otherwise identical protected component look changed. Nested exercise order
+ * and every other component field remain untouched.
+ */
+export function projectSemanticComponentsForDomain(
+  workout: Pick<SemanticWorkoutSnapshot, 'components'> | null | undefined,
+  domain: SemanticComponentDomain,
+): SemanticComponentSnapshot[] {
+  return (workout?.components ?? [])
+    .filter((component) => component.kind === domain)
+    .map((component, order) => ({
+      ...component,
+      order,
+    }));
 }
 
 export function semanticFingerprint(value: unknown): string {
