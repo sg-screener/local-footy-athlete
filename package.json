@@ -66,6 +66,7 @@
     "test:coach-updates": "sucrase-node src/__tests__/coachUpdatesStoreTests.ts",
     "test:injury-progression": "sucrase-node src/__tests__/injuryProgressionTests.ts",
     "test:injury-episode-transactions": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryEpisodeTransactionTests.ts",
+    "test:injury-episode-commands": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryEpisodeCommandTests.ts",
     "test:coach-injury-contracts": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachInjuryContractTests.ts",
     "test:temporary-source-facts": "TZ=Australia/Melbourne sucrase-node src/__tests__/temporarySourceFactTransactionTests.ts",
     "test:equipment-schedule-facts": "TZ=Australia/Melbourne sucrase-node src/__tests__/equipmentScheduleFactTransactionTests.ts",
