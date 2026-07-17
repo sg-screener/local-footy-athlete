@@ -81,6 +81,8 @@
     "test:repeat-week-ui": "sucrase-node src/__tests__/repeatWeekUIContractTests.ts",
     "test:athlete-action-artifacts": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionArtifactAndClusteringTests.ts",
     "test:explorer-scenario-contracts": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerScenarioContractTests.ts",
+    "test:explorer-runtime": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerRuntimeTests.ts",
+    "test:explorer-oracles": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerOracleEvaluatorTests.ts",
     "test:explorer-scenario-artifacts": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerScenarioArtifactBundleTests.ts",
     "test:persistent-injury": "sucrase-node src/__tests__/persistentInjuryStateTests.ts",
     "test:coach-orchestration": "sucrase-node src/__tests__/coachOrchestrationTests.ts",

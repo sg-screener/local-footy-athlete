@@ -1064,7 +1064,7 @@ function collectExpectedOutcome(
       enumAt(outcome, 'stateChange', ['required'] as const, path, issues);
       numberAt(outcome, 'acceptedRevisionDelta', path, issues, {
         integer: true,
-        minimum: 1,
+        minimum: 0,
       });
       break;
     case 'rejected':

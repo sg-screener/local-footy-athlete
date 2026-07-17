@@ -71,7 +71,7 @@ import {
 import { dayOfWeekForISODate, todayISOLocal } from '../../utils/appDate';
 import { deriveStoredBlockStateFromProgram } from '../../utils/programBlockState';
 import { resolveDevE2EScenarioManifest } from './devE2EScenarioManifestRegistry';
-import { defaultDevE2EScenarioEligibility } from './devE2EScenarioProtocol';
+import { failClosedDevE2EScenarioEligibility } from './devE2EScenarioProtocol';
 import {
   activateDevE2EScenarioRuntime,
   clearDevE2EScenarioRuntime,
@@ -449,7 +449,7 @@ const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
   readScenarioSession: readDevE2EScenarioSession,
   clearScenarioSession: clearDevE2EScenarioSession,
   resolveScenarioManifest: resolveDevE2EScenarioManifest,
-  evaluateScenarioEligibility: defaultDevE2EScenarioEligibility,
+  evaluateScenarioEligibility: failClosedDevE2EScenarioEligibility,
   activateScenarioSession: activateDevE2EScenarioRuntime,
   readActiveScenarioSession: readActiveDevE2EScenarioSession,
   clearScenarioRuntime: clearDevE2EScenarioRuntime,
