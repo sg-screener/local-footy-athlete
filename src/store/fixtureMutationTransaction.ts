@@ -6,7 +6,10 @@ import type {
 } from '../types/fixtureMutation';
 import type { WholeWeekRepairOutcome } from '../rules/wholeWeekRepairEngine';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
-import { targetWeekFixtures } from '../rules/fixtureConditionedAvailability';
+import {
+  canonicalFixtureKind,
+  targetWeekFixtures,
+} from '../rules/fixtureConditionedAvailability';
 import {
   gameChangeActionFromRebuild,
   upsertGameChangeCoachNoteFromDiff,
@@ -128,10 +131,6 @@ function traceTargetDate(input: FixtureMutationTransactionInput): string {
     : todayISOLocal();
 }
 
-function expectedFixtureKind(profile: OnboardingData): FixtureMutationKind {
-  return profile.seasonPhase === 'Pre-season' ? 'practice_match' : 'game';
-}
-
 function fixtureFactsForWeeks(args: {
   profile: OnboardingData;
   weekStarts: readonly string[];
@@ -172,7 +171,7 @@ function resolveFixtureMutation(
       ),
     };
   }
-  if (input.fixtureKind !== expectedFixtureKind(profile)) {
+  if (input.fixtureKind !== canonicalFixtureKind(profile)) {
     throw new FixtureMutationValidationError(
       'fixture_kind_phase_mismatch',
       `Accepted ${profile.seasonPhase} state does not own ${input.fixtureKind} fixtures.`,

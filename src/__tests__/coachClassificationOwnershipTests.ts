@@ -288,6 +288,21 @@ async function runController(args: {
         clarificationQuestion: 'What would you like to change?',
       },
     },
+    {
+      label: 'fixture change',
+      message: 'Move my game from Saturday to Sunday',
+      intent: {
+        intent: 'fixture_change',
+        confidence: 0.97,
+        needsClarification: false,
+        payload: {
+          action: 'move',
+          sourceDate: '2026-07-18',
+          targetDate: '2026-07-19',
+          explicitFixtureKind: 'game',
+        },
+      },
+    },
   ];
   for (const identityCase of identityCases) {
     resetState();
@@ -316,6 +331,43 @@ async function runController(args: {
     check(`${identityCase.label} routing never substitutes another intent object`,
       dispatched === null || dispatched === identityCase.intent);
   }
+
+  let fixtureMutationBoundaryCalls = 0;
+  const earlyFixture = await runController({
+    message: 'Add a game on Sunday',
+    classification: {
+      status: 'classified',
+      provenance: 'semantic_service',
+      intent: {
+        intent: 'fixture_change',
+        confidence: 0.98,
+        needsClarification: false,
+        payload: { action: 'add', targetDate: '2026-07-19', explicitFixtureKind: 'game' },
+      },
+    },
+    dispatch: async () => ({
+      handled: true,
+      reply: 'Fixture owner handled this turn.',
+      mutated: false,
+      replyMode: 'fixture_change',
+      transaction: {
+        route: 'fixture_change_no_change',
+        pendingProposalBefore: null,
+        mutationAttempted: false,
+        eventsEmitted: 0,
+        eventsApplied: 0,
+        visibleDiff: [],
+        replyMode: 'fixture_change',
+      },
+    }),
+    onSemanticMutationBoundary: () => { fixtureMutationBoundaryCalls += 1; },
+  });
+  check('fixture_change runs before semantic drafts, revision proposals and pending paths',
+    fixtureMutationBoundaryCalls === 0);
+  check('fixture_change remains handled with zero legacy eligibility',
+    earlyFixture.result.kind === 'handled' &&
+      earlyFixture.result.legacyFallbackAllowed === false,
+    earlyFixture.result);
 
   console.log('\n[4] Successful classification is explicit TraceV2 evidence');
   resetState();

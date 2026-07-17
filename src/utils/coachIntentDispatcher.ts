@@ -27,8 +27,10 @@ import type {
   CoachClassificationResult,
   CoachContextPacket,
   CoachIntent,
+  FixtureChangeIntent,
   PendingCoachProposal,
 } from './coachIntent';
+import { isFixtureChangeIntent } from './coachIntent';
 import { logger } from './logger';
 import type { ResolvedDay } from './sessionResolver';
 import type { Workout, OverrideContext } from '../types/domain';
@@ -86,6 +88,7 @@ export type DispatchReplyMode =
   | 'constraint_resolution_applied'
   | 'constraint_resolution_ambiguous'
   | 'constraint_resolution_no_match'
+  | 'fixture_change'
   | 'safe_fallback'
   | 'fall_through';
 
@@ -478,14 +481,11 @@ export interface DispatchDeps {
     success: boolean;
     reason?: string;
   }>;
-  /**
-   * Reserved async seam for a later typed fixture-change slice.
-   * The dispatcher does not route to or own fixture execution yet.
-   */
-  executeFixtureChange?: (
-    intent: CoachIntent,
+  /** Execute the strict fixture adapter; FixtureMutationTransaction owns writes. */
+  executeFixtureChange: (
+    intent: FixtureChangeIntent,
     packet: CoachContextPacket,
-    trace?: AthleteActionTraceContext,
+    trace: AthleteActionTraceContext,
   ) => Awaitable<DispatchOutcome>;
 }
 
@@ -511,6 +511,27 @@ export async function dispatchCoachIntentWithinTrace(
         status: packet.activeInjury.status,
       }
     : null);
+
+  if (intent.intent === 'fixture_change') {
+    if (!isFixtureChangeIntent(intent)) {
+      return {
+        handled: true,
+        reply: "I couldn't validate that fixture request, so the accepted plan was not changed or saved.",
+        mutated: false,
+        replyMode: 'fixture_change',
+        transaction: {
+          route: 'fixture_change_schema_rejected',
+          pendingProposalBefore,
+          mutationAttempted: false,
+          eventsEmitted: 0,
+          eventsApplied: 0,
+          visibleDiff: [],
+          replyMode: 'fixture_change',
+        },
+      };
+    }
+    return deps.executeFixtureChange(intent, packet, trace);
+  }
 
   if (
     pendingProposalBefore?.type === 'program_adjustment' &&

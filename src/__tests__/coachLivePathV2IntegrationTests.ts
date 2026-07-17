@@ -326,6 +326,7 @@ async function liveDispatchNonInjury(
 ): Promise<{ handled: boolean; reply: string; mutated: boolean; replyMode: string }> {
   const todayISO = FIXED_TODAY;
   const packet = buildCoachContextPacket({
+    turnId: 'coach-live-path-turn-1',
     userMessage,
     recentMessages: [],
     todayISO,
@@ -968,6 +969,24 @@ const classifier = new LLMCoachIntentClassifier({
       activeConstraints: useCoachUpdatesStore.getState().activeConstraints as any,
     });
     eq('Program card disappears when no active constraints remain', cardWithNoActiveConstraints, null);
+  }
+
+  section('[9] fixture_change is owned before generic Coach paths');
+  {
+    resetAll();
+    resetFetchSpy();
+    scriptedIntent = {
+      intent: 'fixture_change',
+      confidence: 0.98,
+      needsClarification: true,
+      clarificationQuestion: 'What date do you want to add the fixture on?',
+      payload: { action: 'add', missingFields: ['targetDate'] } as any,
+    };
+    const result = await liveDispatchNonInjury('add a game', classifier);
+    ok('fixture_change handled by deterministic adapter',
+      result.handled && result.replyMode === 'fixture_change', JSON.stringify(result));
+    ok('fixture_change makes zero /coach-chat calls', coachChatCalls === 0);
+    ok('fixture_change produces the typed clarification', /What date/.test(result.reply));
   }
 
   // ─── Summary ─────────────────────────────────────────────────────────

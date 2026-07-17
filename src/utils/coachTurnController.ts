@@ -167,11 +167,16 @@ import {
   emitAthleteActionEvent,
   type AthleteActionTraceContext,
 } from './athleteActionDiagnostics';
+import {
+  registerCoachFixtureReply,
+  type CoachFixtureReplyObservation,
+} from './coachFixtureReplyObservation';
 
 export interface CoachTurnMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  fixtureReplyObservation?: CoachFixtureReplyObservation;
 }
 
 export interface CoachTurnDebug {
@@ -3371,7 +3376,20 @@ function replyAndFinish(
   content: string,
   decision: CoachLegacyFallbackDecision = 'forbidden:deterministic_owner',
 ): CoachTurnControllerResult {
-  input.appendUserAndAssistant(assistantMessage(suffix, content));
+  let replyMessage = assistantMessage(suffix, content);
+  const traceId = input._ownershipContext?.trace.traceId;
+  if (input._ownershipContext?.selectedIntent?.intent === 'fixture_change' && traceId) {
+    replyMessage = {
+      ...replyMessage,
+      fixtureReplyObservation: registerCoachFixtureReply({
+        traceId,
+        assistantId: replyMessage.id,
+        resultCode: suffix,
+        replyText: content,
+      }),
+    };
+  }
+  input.appendUserAndAssistant(replyMessage);
   input.clearInput();
   return handledOwnershipOutcome(input, suffix, content, decision);
 }
@@ -3496,7 +3514,8 @@ async function resolveSelectedIntentOwnership(args: {
       });
       const resultCode = outcome.transaction?.route ?? outcome.replyMode;
       const legacyDecision: CoachLegacyFallbackDecision =
-        /(?:persistence|dependency_rejected|exception|unhandled_error)/.test(resultCode)
+        /(?:persistence|dependency_(?:rejected|failure)|exception|unhandled_error|impossible|conflicted)/
+          .test(resultCode)
           ? 'forbidden:deterministic_failure'
           : 'forbidden:deterministic_owner';
       return replyAndFinish(
@@ -3639,6 +3658,7 @@ export async function handleCoachTurn(
         content: m.content,
       }));
     let packet = buildCoachContextPacket({
+      turnId: input.userMessage.id,
       userMessage: input.userMessage.content,
       recentMessages,
       todayISO: input.todayISO,
@@ -3730,6 +3750,15 @@ export async function handleCoachTurn(
       clarificationFlag: classifiedCoachIntent.needsClarification,
       provenance: classificationResult.provenance,
     });
+
+    if (classifiedCoachIntent.intent === 'fixture_change') {
+      return await resolveSelectedIntentOwnership({
+        input,
+        intent: classifiedCoachIntent,
+        packet,
+        classification: classificationResult,
+      });
+    }
 
     if (
       classifiedCoachIntent.intent === 'general_question' &&

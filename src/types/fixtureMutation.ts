@@ -27,3 +27,39 @@ export interface FixtureMutationSourceMetadata {
   commandId: string;
   turnId?: string;
 }
+
+export interface CoachFixtureMutationSourceMetadata
+  extends FixtureMutationSourceMetadata {
+  requestedBy: 'athlete';
+  producer: 'coach';
+  surface: 'coach_chat';
+  turnId: string;
+}
+
+interface FixtureChangeCommandBase {
+  fixtureKind: FixtureMutationKind;
+  expectedAcceptedRevision: number;
+  todayISO: string;
+  source: CoachFixtureMutationSourceMetadata;
+}
+
+/**
+ * Typed Coach-to-transaction contract. Date requirements are represented in
+ * the type so an add can never be silently widened into a move.
+ */
+export type FixtureChangeCommand =
+  | (FixtureChangeCommandBase & {
+      action: 'add';
+      targetDate: string;
+      sourceDate?: never;
+    })
+  | (FixtureChangeCommandBase & {
+      action: 'move';
+      sourceDate: string;
+      targetDate: string;
+    })
+  | (FixtureChangeCommandBase & {
+      action: 'remove';
+      sourceDate: string;
+      targetDate?: never;
+    });

@@ -21,6 +21,7 @@
  *   fatigue / soreness / poor_sleep  → canonical source-fact transaction
  *   busy_week / equipment_change     → canonical source-fact/profile transaction
  *   record_session_outcome           → canonical session-outcome transaction
+ *   fixture_change                   → typed fixture intent-to-command adapter
  *   exercise_swap               → UAE
  *   general_question            → free-form LLM reply (no mutation)
  *
@@ -79,6 +80,7 @@ export type CoachIntentKind =
   | 'busy_week'
   | 'equipment_change'
   | 'record_session_outcome'
+  | 'fixture_change'
   | 'missed_session'
   | 'exercise_swap'
   | 'general_question';
@@ -99,7 +101,10 @@ export interface CoachIntentPayload {
   /** Structured program-edit action when intent=request_program_adjustment. */
   operation?: string;
   action?: string;
+  sourceDate?: string;
   targetDate?: string;
+  /** Present only when the athlete explicitly said game or practice match. */
+  explicitFixtureKind?: FixtureExplicitKind;
   targetSessionName?: string;
   activity?: string;
   customActivity?: string;
@@ -149,6 +154,46 @@ export interface CoachIntentPayload {
   notes?: string;
   difficulty?: number;
 }
+
+export type FixtureChangeAction = 'add' | 'move' | 'remove';
+
+export type FixtureExplicitKind = 'game' | 'practice_match';
+
+export type FixtureChangeMissingField = 'action' | 'targetDate';
+
+export interface FixtureChangeAddPayload {
+  action: 'add';
+  targetDate: string;
+  sourceDate?: never;
+  explicitFixtureKind?: FixtureExplicitKind;
+}
+
+export interface FixtureChangeMovePayload {
+  action: 'move';
+  targetDate: string;
+  sourceDate?: string;
+  explicitFixtureKind?: FixtureExplicitKind;
+}
+
+export interface FixtureChangeRemovePayload {
+  action: 'remove';
+  sourceDate?: string;
+  targetDate?: never;
+  explicitFixtureKind?: FixtureExplicitKind;
+}
+
+export interface IncompleteFixtureClarificationPayload {
+  action?: FixtureChangeAction;
+  sourceDate?: string;
+  targetDate?: string;
+  explicitFixtureKind?: FixtureExplicitKind;
+  missingFields: FixtureChangeMissingField[];
+}
+
+export type FixtureChangePayload =
+  | FixtureChangeAddPayload
+  | FixtureChangeMovePayload
+  | FixtureChangeRemovePayload;
 
 export interface CoachSessionOutcomeComponentPayload {
   kind: SessionComponentKind;
@@ -205,6 +250,19 @@ export interface CoachIntent {
   rationale?: string;
 }
 
+export type FixtureChangeIntent =
+  | (Omit<CoachIntent, 'intent' | 'needsClarification' | 'payload'> & {
+      intent: 'fixture_change';
+      needsClarification: false;
+      payload: FixtureChangePayload;
+    })
+  | (Omit<CoachIntent, 'intent' | 'needsClarification' | 'clarificationQuestion' | 'payload'> & {
+      intent: 'fixture_change';
+      needsClarification: true;
+      clarificationQuestion: string;
+      payload: IncompleteFixtureClarificationPayload;
+    });
+
 // ─── Context packet ─────────────────────────────────────────────────
 
 /**
@@ -217,6 +275,8 @@ export interface CoachIntent {
  * the deterministic engines that run after dispatch.
  */
 export interface CoachContextPacket {
+  /** Stable id of the athlete message that owns this Coach turn. */
+  turnId?: string;
   /** The full user message just submitted. */
   userMessage: string;
   /** Recent chat — last N messages, oldest first. */
@@ -355,7 +415,7 @@ export const COACH_INTENT_SYSTEM_PROMPT = `You are the intent classifier for a s
 Your job is to read the athlete's latest message + the surrounding context and return a JSON object that matches this schema:
 
 {
-  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | temporary_source_fact_followup | why_didnt_program_change | program_explanation | session_mismatch_question | request_program_adjustment | record_session_outcome | fatigue | soreness | poor_sleep | mixed_fact_and_program_adjustment | busy_week | equipment_change | exercise_swap | general_question>",
+  "intent": "<one of: new_injury_report | injury_severity_reply | active_injury_followup | temporary_source_fact_followup | why_didnt_program_change | program_explanation | session_mismatch_question | request_program_adjustment | record_session_outcome | fixture_change | fatigue | soreness | poor_sleep | mixed_fact_and_program_adjustment | busy_week | equipment_change | exercise_swap | general_question>",
   "confidence": <0..1>,
   "needsClarification": <boolean>,
   "clarificationQuestion": "<string if needsClarification>",
@@ -367,7 +427,11 @@ Your job is to read the athlete's latest message + the surrounding context and r
     "concern": "<optional, free-text>",
     "followupKind": "<optional: resolved | improving | worsening | unchanged>",
     "operation": "<for program edits: add_conditioning | remove_session | remove_conditioning | replace_conditioning | move_session | replace_exercise | change_duration>",
+    "action": "<for fixture_change: add | move | remove>",
+    "sourceDate": "<optional fixture source, YYYY-MM-DD>",
     "targetDate": "<optional, YYYY-MM-DD>",
+    "explicitFixtureKind": "<optional for fixture_change: game | practice_match; include only when the athlete explicitly says that kind>",
+    "missingFields": ["<for incomplete fixture clarification: action | targetDate>"],
     "targetSessionName": "<optional>",
     "activity": "<new activity to add, preserve exact terms like HIIT rowing intervals, hard hill running, Pilates, assault bike sprints>",
     "replaceActivity": "<existing activity being replaced, e.g. Pilates>",
@@ -447,7 +511,15 @@ CRITICAL RULES
    - General post-session soreness belongs in record_session_outcome.soreness; only classify injury/soreness constraint intent when the athlete reports a current health issue that should change future training.
    - equipment_unavailable as an outcome reason remains feedback; it is not an equipment constraint.
 
-8. Program adjustment requests:
+8. Fixture changes:
+   - Adding, moving, rescheduling, or removing a game or practice match is fixture_change. Use payload.action and ISO dates; do not encode fixture changes as request_program_adjustment.
+   - A missed game or practice-match report about what already happened is record_session_outcome with completion="skipped", never fixture_change.
+   - Moving a workout, strength session, conditioning session, or team-training session is request_program_adjustment, never fixture_change.
+   - Set explicitFixtureKind only when the athlete explicitly says "game" or "practice match". It is a conflict signal; the app derives the canonical kind from accepted phase state.
+   - add requires targetDate and forbids sourceDate. move requires targetDate and may include sourceDate. remove may include sourceDate and forbids targetDate. Never reinterpret add as move.
+   - If action or a required targetDate is missing, set needsClarification=true, ask the smallest useful question, and include payload.missingFields. Do not invent or coerce a date.
+
+9. Program adjustment requests:
    - "add conditioning to Monday", "chuck some HIIT rowing intervals on Tuesday", "slot in a rower session Friday", "remove conditioning from Friday", "can we move Monday" → request_program_adjustment.
    - If pendingCoachProposal is set and the user says "sounds good", "yes", "do it", or similar confirmation, classify as request_program_adjustment, not general_question.
    - For supported edits, fill the structured edit fields in payload. Preserve the athlete's actual requested activity words. "HIIT rowing intervals" must not become "row"; "assault bike sprints" must not become "bike intervals"; "hard hill running" must not become "run".
@@ -460,48 +532,158 @@ CRITICAL RULES
    - If the date/session or activity is missing, set needsClarification=true and ask the smallest useful question.
    - You only classify/structure intent. The app will apply or reject deterministic supported edits.
 
-9. Output VALID JSON only. No prose. No markdown.`;
+10. Output VALID JSON only. No prose. No markdown.`;
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
 /**
- * Validate / coerce a parsed JSON blob into a `CoachIntent`. Returns
+ * Validate a parsed JSON blob as a `CoachIntent`. Returns
  * null when the shape is unrecognisable (the dispatcher falls back to
  * the deterministic guard chain in that case).
  */
-export function parseCoachIntent(raw: unknown): CoachIntent | null {
-  if (!raw || typeof raw !== 'object') return null;
-  const r = raw as any;
-  const validKinds: CoachIntentKind[] = [
-    'new_injury_report',
-    'injury_severity_reply',
-    'active_injury_followup',
-    'why_didnt_program_change',
-    'program_explanation',
-    'session_mismatch_question',
-    'request_program_adjustment',
-    'fatigue',
-    'soreness',
-    'poor_sleep',
-    'mixed_fact_and_program_adjustment',
-    'temporary_source_fact_followup',
-    'busy_week',
-    'equipment_change',
-    'record_session_outcome',
-    'missed_session',
-    'exercise_swap',
-    'general_question',
-  ];
-  if (!validKinds.includes(r.intent)) return null;
-  const confidence = typeof r.confidence === 'number' ? r.confidence : 0.5;
-  const needsClarification = !!r.needsClarification;
+const VALID_COACH_INTENTS = new Set<CoachIntentKind>([
+  'new_injury_report',
+  'injury_severity_reply',
+  'active_injury_followup',
+  'temporary_source_fact_followup',
+  'why_didnt_program_change',
+  'program_explanation',
+  'session_mismatch_question',
+  'request_program_adjustment',
+  'fatigue',
+  'soreness',
+  'poor_sleep',
+  'mixed_fact_and_program_adjustment',
+  'busy_week',
+  'equipment_change',
+  'record_session_outcome',
+  'fixture_change',
+  'missed_session',
+  'exercise_swap',
+  'general_question',
+]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function isISODate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T12:00:00Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value;
+}
+
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
+
+function parseFixtureChangePayload(
+  value: unknown,
+  needsClarification: boolean,
+): FixtureChangePayload | IncompleteFixtureClarificationPayload | null {
+  if (!isRecord(value)) return null;
+  const allowedKeys = new Set([
+    'action',
+    'sourceDate',
+    'targetDate',
+    'explicitFixtureKind',
+    'missingFields',
+  ]);
+  if (Object.keys(value).some((key) => !allowedKeys.has(key))) return null;
+  const action = value.action;
+  if (action !== undefined && action !== 'add' && action !== 'move' && action !== 'remove') {
+    return null;
+  }
+  if (hasOwn(value, 'sourceDate') && !isISODate(value.sourceDate)) return null;
+  if (hasOwn(value, 'targetDate') && !isISODate(value.targetDate)) return null;
+  if (
+    hasOwn(value, 'explicitFixtureKind') &&
+    value.explicitFixtureKind !== 'game' &&
+    value.explicitFixtureKind !== 'practice_match'
+  ) return null;
+  if (action === 'add' && hasOwn(value, 'sourceDate')) return null;
+  if (action === 'remove' && hasOwn(value, 'targetDate')) return null;
+
+  if (needsClarification) {
+    if (!Array.isArray(value.missingFields) || value.missingFields.length === 0) return null;
+    const missingFields = value.missingFields;
+    if (!missingFields.every((field) => field === 'action' || field === 'targetDate')) {
+      return null;
+    }
+    if (new Set(missingFields).size !== missingFields.length) return null;
+    if (action === undefined && !missingFields.includes('action')) return null;
+    if ((action === 'add' || action === 'move') && !hasOwn(value, 'targetDate') &&
+      !missingFields.includes('targetDate')) return null;
+    if (action === 'remove' || ((action === 'add' || action === 'move') && hasOwn(value, 'targetDate'))) {
+      return null;
+    }
+    return value as unknown as IncompleteFixtureClarificationPayload;
+  }
+
+  if (hasOwn(value, 'missingFields')) return null;
+  if (action === 'add') {
+    return hasOwn(value, 'targetDate')
+      ? value as unknown as FixtureChangeAddPayload
+      : null;
+  }
+  if (action === 'move') {
+    return hasOwn(value, 'targetDate')
+      ? value as unknown as FixtureChangeMovePayload
+      : null;
+  }
+  return action === 'remove'
+    ? value as unknown as FixtureChangeRemovePayload
+    : null;
+}
+
+function explicitFixtureKindWasStated(
+  payload: FixtureChangePayload | IncompleteFixtureClarificationPayload,
+  athleteMessage: string | undefined,
+): boolean {
+  if (!payload.explicitFixtureKind || athleteMessage === undefined) return true;
+  return payload.explicitFixtureKind === 'practice_match'
+    ? /\bpractice[-\s]+match\b/i.test(athleteMessage)
+    : /\bgame\b/i.test(athleteMessage);
+}
+
+export function isFixtureChangeIntent(intent: CoachIntent): intent is FixtureChangeIntent {
+  return intent.intent === 'fixture_change' &&
+    parseFixtureChangePayload(intent.payload, intent.needsClarification) !== null;
+}
+
+export function parseCoachIntent(raw: unknown, athleteMessage?: string): CoachIntent | null {
+  if (!isRecord(raw)) return null;
+  const r = raw;
+  if (typeof r.intent !== 'string' || !VALID_COACH_INTENTS.has(r.intent as CoachIntentKind)) {
+    return null;
+  }
+  if (
+    typeof r.confidence !== 'number' ||
+    !Number.isFinite(r.confidence) ||
+    r.confidence < 0 ||
+    r.confidence > 1 ||
+    typeof r.needsClarification !== 'boolean'
+  ) return null;
+  if (hasOwn(r, 'clarificationQuestion') && typeof r.clarificationQuestion !== 'string') {
+    return null;
+  }
+  if (hasOwn(r, 'payload') && !isRecord(r.payload)) return null;
+  if (hasOwn(r, 'rationale') && typeof r.rationale !== 'string') return null;
+  if (r.intent === 'fixture_change') {
+    if (r.needsClarification &&
+      (typeof r.clarificationQuestion !== 'string' || !r.clarificationQuestion.trim())) {
+      return null;
+    }
+    const fixturePayload = parseFixtureChangePayload(r.payload, r.needsClarification);
+    if (!fixturePayload || !explicitFixtureKindWasStated(fixturePayload, athleteMessage)) return null;
+  }
   const out: CoachIntent = {
-    intent: r.intent,
-    confidence,
-    needsClarification,
+    intent: r.intent as CoachIntentKind,
+    confidence: r.confidence,
+    needsClarification: r.needsClarification,
     clarificationQuestion:
       typeof r.clarificationQuestion === 'string' ? r.clarificationQuestion : undefined,
-    payload: r.payload && typeof r.payload === 'object' ? r.payload : undefined,
+    payload: isRecord(r.payload) ? r.payload as CoachIntentPayload : undefined,
     rationale: typeof r.rationale === 'string' ? r.rationale : undefined,
   };
   return out;
