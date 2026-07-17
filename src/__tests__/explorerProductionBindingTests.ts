@@ -130,6 +130,24 @@ const ACTIONS: readonly ExplorerExecutableAction[] = [
   },
 ];
 
+const EXPECTED_OWNER_BY_ACTION = {
+  'fixture.add': 'executeFixtureMutationTransaction',
+  'fixture.move': 'executeFixtureMutationTransaction',
+  'fixture.remove': 'executeFixtureMutationTransaction',
+  'session.move': 'commitAthleteSessionMoveTransaction',
+  'session.delete': 'commitAthleteSessionDeletionTransaction',
+  'component.delete': 'commitAthleteSessionDeletionTransaction',
+  'injury.set': 'updateInjuryEpisode',
+  'injury.resolve': 'resolveInjuryEpisode',
+  'readiness.set': 'commitReadinessSignalTransaction',
+  'readiness.clear': 'commitReadinessSignalTransaction',
+  'equipment.set': 'transactTemporarySourceFact',
+  'equipment.clear': 'transactTemporarySourceFact',
+  'session-feedback.record': 'commitSessionOutcomeTransaction',
+  'adjustment.restore': 'clearReversibleAdjustment',
+  'week.repeat': 'repeatWeekIntoNextWeek',
+} as const;
+
 function canonicalIdentity(action: ExplorerExecutableAction): string {
   switch (action.target.kind) {
     case 'fixture': return action.target.fixtureId;
@@ -162,6 +180,8 @@ async function main(): Promise<void> {
     expect(new Set(EXPLORER_BOUND_ACTION_TYPES).size === 15, 'duplicate binding type');
     expect(ACTIONS.every((action) => EXPLORER_BOUND_ACTION_TYPES.includes(action.type)),
       'action fixture does not cover every binding');
+    expect(JSON.stringify(EXPLORER_PRODUCTION_OWNER_BY_ACTION) ===
+      JSON.stringify(EXPECTED_OWNER_BY_ACTION), 'canonical owner map changed');
   });
 
   await test('rejected, no-change, conflict and failure remain distinct receipts', async () => {

@@ -43,7 +43,7 @@ export const EXPLORER_PRODUCTION_OWNER_BY_ACTION = Object.freeze({
   'session.move': 'commitAthleteSessionMoveTransaction',
   'session.delete': 'commitAthleteSessionDeletionTransaction',
   'component.delete': 'commitAthleteSessionDeletionTransaction',
-  'injury.set': 'createOrUpdateInjuryEpisode',
+  'injury.set': 'updateInjuryEpisode',
   'injury.resolve': 'resolveInjuryEpisode',
   'readiness.set': 'commitReadinessSignalTransaction',
   'readiness.clear': 'commitReadinessSignalTransaction',
