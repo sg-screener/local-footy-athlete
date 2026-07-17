@@ -92,7 +92,11 @@ export type DevE2EWitness =
       episodeId: string;
       constraintId: string;
     }
-  | { kind: 'active_equipment'; presetId: 'bodyweight_only' }
+  | {
+      kind: 'active_equipment';
+      presetId: 'bodyweight_only';
+      factId: string;
+    }
   | {
       kind: 'session_feedback';
       date: string;
@@ -823,7 +827,11 @@ export function witnessesForDevE2ESeed(
         equipment: ['bodyweight'],
         completeness: 'complete',
       });
-      witnesses.push({ kind: 'active_equipment', presetId: 'bodyweight_only' });
+      witnesses.push({
+        kind: 'active_equipment',
+        presetId: 'bodyweight_only',
+        factId: `temporary-equipment-bodyweight-only-${anchorDate}`,
+      });
       break;
     case 'feedback-progression-case': {
       const progression = futureProgressionIdentity(program, anchorDate);
@@ -1263,7 +1271,13 @@ export function validateDevE2EWitnesses(
       }
       case 'active_equipment':
         if (!state.activeConstraints.some((constraint) =>
-          constraint.type === 'equipment' && constraint.reasonLabel === 'Bodyweight only')) {
+          constraint.type === 'equipment' && constraint.reasonLabel === 'Bodyweight only') ||
+          !state.temporarySourceFacts?.some((fact) =>
+            'factId' in fact &&
+            fact.factId === witness.factId &&
+            'factKind' in fact &&
+            fact.factKind === 'equipment' &&
+            fact.status === 'active')) {
           failures.push(`equipment:${witness.presetId}`);
         }
         break;

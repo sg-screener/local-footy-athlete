@@ -235,7 +235,7 @@ export class DevE2ESeedCoordinator {
         }
         this.deps.writeProfile(seed);
         this.deps.installProgram(seed);
-        this.deps.applyAuxiliaryState(seed.auxiliaryState);
+        await this.deps.applyAuxiliaryState(seed.auxiliaryState);
         this.deps.completeOnboarding();
         const failures = this.deps.validateWitnesses(
           manifest.seedId,

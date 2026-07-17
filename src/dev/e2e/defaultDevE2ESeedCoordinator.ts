@@ -13,10 +13,11 @@ import { useWorkoutLogStore } from '../../store/workoutLogStore';
 import { useAthletePreferencesStore } from '../../store/athletePreferencesStore';
 import { useUIStore } from '../../store/uiStore';
 import { seedOnboardingProgram } from '../../utils/onboardingCompletion';
-import { buildTemporaryEquipmentConstraint } from '../../utils/equipmentAvailability';
+import { createTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
 import {
   createOrUpdateInjuryEpisode,
 } from '../../store/injuryEpisodeTransaction';
+import { transactTemporarySourceFact } from '../../store/temporarySourceFactTransaction';
 import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
 import {
   commitSessionOutcomeTransaction,
@@ -217,13 +218,39 @@ async function applyAuxiliaryState(
       continue;
     }
     if (item.kind === 'temporary_equipment') {
-      const constraint = buildTemporaryEquipmentConstraint({
-        presetId: item.presetId,
-        date: item.date,
-        todayISO: `${item.date}T12:00:00.000Z`,
-        source: 'system',
+      const until = new Date(`${item.date}T12:00:00.000Z`);
+      until.setDate(until.getDate() + 6);
+      const factId = `temporary-equipment-bodyweight-only-${item.date}`;
+      const fact = createTemporaryEquipmentFact({
+        observedDate: item.date,
+        scope: {
+          kind: 'week',
+          weekStart: item.date,
+          from: item.date,
+          until: until.toISOString().slice(0, 10),
+        },
+        mode: 'only',
+        equipmentTags: ['bodyweight'],
+        sourceActor: 'system',
+        sourceSurface: 'dev_e2e_seed',
+        now: `${item.date}T12:00:00.000Z`,
+        factId,
       });
-      useCoachUpdatesStore.getState().upsertActiveConstraint(constraint);
+      const result = await transactTemporarySourceFact({
+        operation: 'create',
+        fact,
+        factId,
+        todayISO: item.date,
+        now: `${item.date}T12:00:00.000Z`,
+        sourceActor: 'system',
+        sourceSurface: 'dev_e2e_seed',
+        expectedAcceptedRevision:
+          useProgramStore.getState().acceptedMaterialContext.revision,
+      });
+      if (result.outcome !== 'created_and_recomposed' &&
+        result.outcome !== 'created_no_program_change') {
+        throw new Error(`temporary_equipment_seed_failed:${result.outcome}`);
+      }
       continue;
     }
     if (item.kind === 'calendar_game') {
