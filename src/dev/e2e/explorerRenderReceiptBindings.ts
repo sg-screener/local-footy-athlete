@@ -409,13 +409,13 @@ export function recordExplorerRenderedExpectation(args: {
 
 export interface ExplorerRenderAcceptedSnapshot {
   readonly markedDays: Readonly<Record<string, string>>;
-  readonly injuryEpisodes: readonly Array<{ episodeId: string; status: string }>;
+  readonly injuryEpisodes: ReadonlyArray<{ episodeId: string; status: string }>;
   readonly readinessSignalsByDate: Readonly<Record<string, unknown>>;
-  readonly temporarySourceFacts: readonly Array<{
+  readonly temporarySourceFacts: ReadonlyArray<{
     factId?: string;
     status?: string;
   }>;
-  readonly reversibleAdjustments: readonly Array<{
+  readonly reversibleAdjustments: ReadonlyArray<{
     id: string;
     kind: string;
     status: string;
@@ -424,7 +424,7 @@ export interface ExplorerRenderAcceptedSnapshot {
     outcomeReceipt?: { transactionId?: string };
   }>>;
   readonly weekScopedOverlayIds: Readonly<Record<string, string | null>>;
-  readonly visibleSessions: readonly Array<{
+  readonly visibleSessions: ReadonlyArray<{
     readonly date: string;
     readonly sessionId: string;
     readonly componentIds: readonly string[];

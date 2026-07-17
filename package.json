@@ -84,6 +84,7 @@
     "test:athlete-action-artifacts": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteActionArtifactAndClusteringTests.ts",
     "test:explorer-scenario-contracts": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerScenarioContractTests.ts",
     "test:explorer-runtime": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerRuntimeTests.ts",
+    "test:explorer-metro-transform": "node src/__tests__/explorerMetroTransformTests.js",
     "test:explorer-production-bindings": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerProductionBindingTests.ts",
     "test:explorer-render-bindings": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerRenderBindingTests.ts",
     "test:explorer-scenario-runner": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerScenarioRunnerTests.ts",
