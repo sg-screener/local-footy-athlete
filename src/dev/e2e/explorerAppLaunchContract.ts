@@ -84,3 +84,29 @@ export function verifyExplorerMetroDiagnostic(args: {
   }
   return args.nativeMetroUrl;
 }
+
+/** Launch proof is native-owned and does not depend on any deep-link route. */
+export function verifyExplorerNativeLaunchDiagnostic(args: {
+  nativeMetroUrl: string | null;
+  resolvedMetroUrl: string | null;
+  launchPurpose: string | null;
+}): { metroUrl: string; launchPurpose: ExplorerAppLaunchPurpose } {
+  if (!args.nativeMetroUrl) {
+    throw new Error('explorer_metro_diagnostic_native_missing');
+  }
+  if (!args.resolvedMetroUrl) {
+    throw new Error('explorer_metro_diagnostic_resolved_bundle_missing');
+  }
+  if (!args.launchPurpose || !isExplorerAppLaunchPurpose(args.launchPurpose)) {
+    throw new Error('explorer_launch_purpose_invalid');
+  }
+  assertLocalMetroUrl(args.nativeMetroUrl);
+  assertLocalMetroUrl(args.resolvedMetroUrl);
+  if (args.nativeMetroUrl !== args.resolvedMetroUrl) {
+    throw new Error('explorer_metro_diagnostic_resolved_bundle_mismatch');
+  }
+  return {
+    metroUrl: args.nativeMetroUrl,
+    launchPurpose: args.launchPurpose,
+  };
+}

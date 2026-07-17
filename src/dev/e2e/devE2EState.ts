@@ -45,7 +45,9 @@ const explorerCaptureAcceptedMarkers = new Set<string>();
 const explorerCaptureErrorMarkers = new Set<string>();
 const explorerArtifactAcceptedMarkers = new Set<string>();
 const explorerMetroDiagnosticMarkers = new Set<string>();
-const explorerCampaignReadyMarkers = new Set<string>();
+const explorerCampaignPendingMarkers = new Set<string>();
+const explorerCampaignAcceptedMarkers = new Set<string>();
+const explorerCampaignErrorMarkers = new Set<string>();
 
 function notifySubscribers(): void {
   for (const subscriber of Array.from(subscribers)) {
@@ -93,7 +95,9 @@ export function setDevE2EEntryReady(): void {
   explorerCaptureErrorMarkers.clear();
   explorerArtifactAcceptedMarkers.clear();
   explorerMetroDiagnosticMarkers.clear();
-  explorerCampaignReadyMarkers.clear();
+  explorerCampaignPendingMarkers.clear();
+  explorerCampaignAcceptedMarkers.clear();
+  explorerCampaignErrorMarkers.clear();
   publish({
     phase: 'entry_ready',
     seedId: null,
@@ -334,9 +338,24 @@ export function setDevE2EExplorerMetroDiagnostic(args: {
   notifySubscribers();
 }
 
-export function setDevE2EExplorerCampaignReady(campaignId: string): void {
-  if (!campaignId || explorerCampaignReadyMarkers.has(campaignId)) return;
-  explorerCampaignReadyMarkers.add(campaignId);
+export function setDevE2EExplorerCampaignPending(campaignId: string): void {
+  if (!campaignId || explorerCampaignPendingMarkers.has(campaignId)) return;
+  explorerCampaignPendingMarkers.add(campaignId);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
+export function setDevE2EExplorerCampaignAccepted(campaignId: string): void {
+  if (!campaignId || explorerCampaignAcceptedMarkers.has(campaignId)) return;
+  explorerCampaignAcceptedMarkers.add(campaignId);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
+export function setDevE2EExplorerCampaignError(reasonCode: string): void {
+  const token = markerToken(reasonCode);
+  if (!token || explorerCampaignErrorMarkers.has(token)) return;
+  explorerCampaignErrorMarkers.add(token);
   snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
   notifySubscribers();
 }
@@ -362,9 +381,15 @@ export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
       .sort()
       .map((scenarioId) => `e2e-explorer-artifact-accepted-${scenarioId}`),
     ...Array.from(explorerMetroDiagnosticMarkers).sort(),
-    ...Array.from(explorerCampaignReadyMarkers)
+    ...Array.from(explorerCampaignPendingMarkers)
       .sort()
-      .map((campaignId) => `e2e-explorer-campaign-ready-${campaignId}`),
+      .map((campaignId) => `e2e-explorer-campaign-pending-${campaignId}`),
+    ...Array.from(explorerCampaignAcceptedMarkers)
+      .sort()
+      .map((campaignId) => `e2e-explorer-campaign-accepted-${campaignId}`),
+    ...Array.from(explorerCampaignErrorMarkers)
+      .sort()
+      .map((reasonCode) => `e2e-explorer-campaign-error-${reasonCode}`),
   ];
   if (!state.scenarioId) {
     switch (state.phase) {
@@ -434,7 +459,9 @@ export function __resetDevE2EStateForTest(): void {
   explorerCaptureErrorMarkers.clear();
   explorerArtifactAcceptedMarkers.clear();
   explorerMetroDiagnosticMarkers.clear();
-  explorerCampaignReadyMarkers.clear();
+  explorerCampaignPendingMarkers.clear();
+  explorerCampaignAcceptedMarkers.clear();
+  explorerCampaignErrorMarkers.clear();
   snapshot = INITIAL;
   notifySubscribers();
 }

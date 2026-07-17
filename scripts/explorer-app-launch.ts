@@ -85,13 +85,6 @@ export function buildExplorerAppLaunchPlan(args: {
   maestroBinary?: string;
 }): ExplorerAppLaunchPlan {
   const metroUrl = requireMetroUrl(args.metroUrl);
-  const deepLink = withExplorerMetroUrl(
-    explorerMetroDiagnosticRoute(args.purpose),
-    metroUrl,
-  );
-  if (new URL(deepLink).searchParams.get('e2eMetroUrl') !== metroUrl) {
-    throw new Error('Explorer launch refused: generated deep link lacks e2eMetroUrl');
-  }
   const launchCommand = buildMaestroFlowCommand({
     simulatorId: args.simulatorId,
     flow: EXPLORER_APP_LAUNCH_FLOW,
@@ -101,8 +94,6 @@ export function buildExplorerAppLaunchPlan(args: {
       `E2E_METRO_URL=${metroUrl}`,
       '-e',
       `EXPLORER_LAUNCH_PURPOSE=${args.purpose}`,
-      '-e',
-      `EXPLORER_LAUNCH_DEEP_LINK=${deepLink}`,
     ],
   });
   const statePolicy = statePolicyForPurpose(args.purpose);

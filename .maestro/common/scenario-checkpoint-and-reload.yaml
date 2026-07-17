@@ -10,7 +10,6 @@ name: Persisted scenario checkpoint and reload verification
     file: launch-explorer-app.yaml
     env:
       EXPLORER_LAUNCH_PURPOSE: action-reload
-      EXPLORER_LAUNCH_DEEP_LINK: "localfootyathlete://e2e/explorer/diagnostics/action-reload?e2eMetroUrl=${E2E_METRO_URL}"
 - extendedWaitUntil:
     visible:
       id: "e2e-reload-ready-${SCENARIO_ID}-${CHECKPOINT_STEP_ID}-${RELOAD_COUNT}"

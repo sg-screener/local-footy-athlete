@@ -29,6 +29,8 @@ import {
   EXPLORER_CAMPAIGN_HARD_STOP_MS,
   EXPLORER_CAMPAIGN_NORMAL_TARGET_MS,
 } from '../src/dev/e2e/explorerScenarioRunner';
+import { explorerCampaignDeterministicClockFingerprint } from
+  '../src/dev/e2e/explorerCampaignBootstrapContract';
 
 export const EXPLORER_LIVE_RUNNER_TARGET_MS = EXPLORER_CAMPAIGN_NORMAL_TARGET_MS;
 export const EXPLORER_LIVE_RUNNER_HARD_STOP_MS = EXPLORER_CAMPAIGN_HARD_STOP_MS;
@@ -81,8 +83,16 @@ const RETRYABLE_INFRASTRUCTURE_REASONS = new Set([
 const CAPTURE_ENVELOPE_PATTERN =
   /e2e-explorer-capture-envelope-([A-Za-z0-9%._~'()!*\-]+)/g;
 const SCENARIO_ERROR_PATTERN = /e2e-scenario-error-([a-z0-9_-]+)/;
+const CAMPAIGN_ERROR_PATTERN = /e2e-explorer-campaign-error-([a-z0-9-]+)/;
 
 function throwForScenarioErrorMarker(hierarchy: string): void {
+  const campaignReasonCode = CAMPAIGN_ERROR_PATTERN.exec(hierarchy)?.[1];
+  if (campaignReasonCode) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      `campaign_${campaignReasonCode.replace(/-/g, '_')}`,
+    );
+  }
   const reasonCode = SCENARIO_ERROR_PATTERN.exec(hierarchy)?.[1];
   if (!reasonCode) return;
   if (RETRYABLE_INFRASTRUCTURE_REASONS.has(reasonCode)) {
@@ -273,8 +283,24 @@ export function explorerEvidenceCampaignStartUrl(args: {
     `${args.campaignId}/${args.integratedRepositorySha}`;
 }
 
-export function explorerScenarioRunUrl(scenarioId: string): string {
-  return `localfootyathlete://e2e/explorer/run/${scenarioId}`;
+export function explorerScenarioRunUrl(args: {
+  scenarioId: string;
+  campaignId: string;
+  integratedRepositorySha: string;
+}): string {
+  const url = new URL(
+    `localfootyathlete://e2e/explorer/run/${args.scenarioId}`,
+  );
+  url.searchParams.set('campaignId', args.campaignId);
+  url.searchParams.set(
+    'integratedRepositorySha',
+    args.integratedRepositorySha,
+  );
+  url.searchParams.set(
+    'deterministicClockFingerprint',
+    explorerCampaignDeterministicClockFingerprint(),
+  );
+  return url.toString();
 }
 
 export function explorerEvidenceAcknowledgementUrl(
@@ -581,6 +607,16 @@ async function launchExplorerApp(args: {
   });
 }
 
+export async function runExplorerInitialCampaignBootstrap(args: {
+  launch: () => Promise<void>;
+  sendCampaignStart: () => void;
+  waitForCampaignAccepted: () => Promise<void>;
+}): Promise<void> {
+  await args.launch();
+  args.sendCampaignStart();
+  await args.waitForCampaignAccepted();
+}
+
 async function runScenario(args: {
   options: ExplorerLiveRunnerOptions;
   campaignId: string;
@@ -598,13 +634,17 @@ async function runScenario(args: {
     options: args.options,
     deadline: args.hardDeadline,
     predicate: (hierarchy) => hierarchy.includes(
-      `e2e-explorer-campaign-ready-${args.campaignId}`,
+      `e2e-explorer-campaign-accepted-${args.campaignId}`,
     ),
   });
   commandResult(buildExplorerDeepLinkCommand({
     simulatorId: args.options.simulatorId,
     metroUrl: args.options.metroUrl,
-    deepLink: explorerScenarioRunUrl(args.plan.scenarioId),
+    deepLink: explorerScenarioRunUrl({
+      scenarioId: args.plan.scenarioId,
+      campaignId: args.campaignId,
+      integratedRepositorySha: args.options.integratedRepositorySha,
+    }),
   }), args.options.repositoryRoot, Math.max(
     1,
     args.hardDeadline - (args.options.nowMs ?? Date.now)(),
@@ -801,25 +841,31 @@ export async function runExplorerNineLive(
     reservedMetroPort: options.reservedMetroPort,
     bundleEndpoint: metroPreflight.bundleEndpoint,
   });
-  await launchExplorerApp({
-    options,
-    purpose: 'initial-cold-launch',
-    hardDeadline,
-  });
-  commandResult(buildExplorerDeepLinkCommand({
-    simulatorId: options.simulatorId,
-    metroUrl: options.metroUrl,
-    deepLink: explorerEvidenceCampaignStartUrl({
-      campaignId,
-      integratedRepositorySha: currentSha,
+  await runExplorerInitialCampaignBootstrap({
+    launch: () => launchExplorerApp({
+      options,
+      purpose: 'initial-cold-launch',
+      hardDeadline,
     }),
-  }), options.repositoryRoot, Math.max(1, hardDeadline - nowMs()));
-  await waitForHierarchyValue({
-    options,
-    deadline: hardDeadline,
-    predicate: (hierarchy) => hierarchy.includes(
-      `e2e-explorer-campaign-ready-${campaignId}`,
-    ),
+    sendCampaignStart: () => {
+      commandResult(buildExplorerDeepLinkCommand({
+        simulatorId: options.simulatorId,
+        metroUrl: options.metroUrl,
+        deepLink: explorerEvidenceCampaignStartUrl({
+          campaignId,
+          integratedRepositorySha: currentSha,
+        }),
+      }), options.repositoryRoot, Math.max(1, hardDeadline - nowMs()));
+    },
+    waitForCampaignAccepted: async () => {
+      await waitForHierarchyValue({
+        options,
+        deadline: hardDeadline,
+        predicate: (hierarchy) => hierarchy.includes(
+          `e2e-explorer-campaign-accepted-${campaignId}`,
+        ),
+      });
+    },
   });
   await launchExplorerApp({
     options,
@@ -830,7 +876,7 @@ export async function runExplorerNineLive(
     options,
     deadline: hardDeadline,
     predicate: (hierarchy) => hierarchy.includes(
-      `e2e-explorer-campaign-ready-${campaignId}`,
+      `e2e-explorer-campaign-accepted-${campaignId}`,
     ),
   });
   const completed: Array<{

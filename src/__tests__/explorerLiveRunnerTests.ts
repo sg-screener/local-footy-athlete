@@ -21,6 +21,7 @@ import {
   createEvidenceReceiptFromFiles,
   explorerIOSBundleEndpoint,
   explorerEvidenceAcknowledgementUrl,
+  explorerScenarioRunUrl,
   extractPendingCaptureRequests,
   parseBootedIOSSimulators,
   preflightExplorerMetro,
@@ -32,8 +33,6 @@ import {
   EXPLORER_APP_LAUNCH_FLOW,
   buildExplorerAppLaunchPlan,
   buildExplorerDeepLinkCommand,
-  explorerMetroDiagnosticRoute,
-  withExplorerMetroUrl,
   type ExplorerAppLaunchPurpose,
 } from '../../scripts/explorer-app-launch';
 import {
@@ -99,10 +98,6 @@ async function main(): Promise<void> {
       });
       const launchCommand = plan.commands.find((command) =>
         command.args.includes(EXPLORER_APP_LAUNCH_FLOW));
-      const diagnostic = withExplorerMetroUrl(
-        explorerMetroDiagnosticRoute(path.purpose),
-        selected,
-      );
       expect(Boolean(launchCommand),
         `${path.name} bypassed the canonical flow`);
       expect(Boolean(launchCommand?.args.includes(`E2E_METRO_URL=${selected}`)) &&
@@ -110,14 +105,11 @@ async function main(): Promise<void> {
           `EXPLORER_LAUNCH_PURPOSE=${path.purpose}`,
         )),
       `${path.name} omitted the selected Metro`);
-      expect(Boolean(launchCommand?.args.includes(
-        `EXPLORER_LAUNCH_DEEP_LINK=${diagnostic}`,
-      )),
-        `${path.name} did not use its validated generated deep link`);
-      expect(new URL(diagnostic).searchParams.get('e2eMetroUrl') === selected,
-        `${path.name} diagnostic omitted e2eMetroUrl`);
+      expect(!launchCommand?.args.some((argument) =>
+        argument.startsWith('EXPLORER_LAUNCH_DEEP_LINK=')),
+      `${path.name} still couples launch proof to a deep link`);
       expect(!plan.commands.some((command) =>
-        command.args.join(' ').includes('8081')) && !diagnostic.includes('8081'),
+        command.args.join(' ').includes('8081')),
         `${path.name} fell back to the ambient Metro`);
     }
   });
@@ -143,6 +135,22 @@ async function main(): Promise<void> {
     expect(!launch.commands.some((command) =>
       command.args.join(' ').includes('8081')) && !delivered.includes('8081'),
       'ambient Metro leaked into a launch command');
+    const scenarioRoute = buildExplorerDeepLinkCommand({
+      simulatorId: 'simulator-1',
+      metroUrl: 'http://127.0.0.1:8082',
+      deepLink: explorerScenarioRunUrl({
+        scenarioId: 'smoke-fixture-move',
+        campaignId: 'explorer-nine-aaaaaaaaaaaa',
+        integratedRepositorySha: 'a'.repeat(40),
+      }),
+    }).args.at(-1) ?? '';
+    const parsed = parseDevE2EEntryRoute(scenarioRoute);
+    expect(parsed?.kind === 'explorer_run' &&
+      parsed.campaignId === 'explorer-nine-aaaaaaaaaaaa' &&
+      parsed.integratedRepositorySha === 'a'.repeat(40) &&
+      parsed.e2eMetroUrl === 'http://127.0.0.1:8082' &&
+      Boolean(parsed.deterministicClockFingerprint),
+    'scenario reset route omitted its accepted campaign prerequisite');
   });
 
   await test('Metro preflight is exact, local, reserved-port bound and probes iOS bundle', async () => {
@@ -262,12 +270,12 @@ async function main(): Promise<void> {
     ].map((file) => readFileSync(file, 'utf8'));
     const runner = readFileSync('scripts/run-explorer-nine-live.ts', 'utf8');
     expect(canonical.includes('launchApp:') && canonical.includes('e2eMetroUrl:') &&
-      canonical.includes('openLink: "${EXPLORER_LAUNCH_DEEP_LINK}"'),
-    'canonical launch flow lost native/deep-link Metro ownership');
+      canonical.includes('e2eLaunchPurpose:') &&
+      !canonical.includes('openLink:'),
+    'canonical launch flow lost native launch diagnostic ownership');
     expect(callSites.every((source) => !source.includes('launchApp:') &&
       source.includes('file: launch-explorer-app.yaml') &&
-      source.includes('EXPLORER_LAUNCH_DEEP_LINK:') &&
-      source.includes('e2eMetroUrl=${E2E_METRO_URL}')),
+      !source.includes('EXPLORER_LAUNCH_DEEP_LINK:')),
     'an Explorer Maestro call site constructs launchApp directly');
     expect(!runner.includes("args: ['simctl', 'openurl'") &&
       runner.includes('buildExplorerAppLaunchPlan({') &&

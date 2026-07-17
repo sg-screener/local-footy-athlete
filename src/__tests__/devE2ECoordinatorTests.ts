@@ -126,6 +126,7 @@ async function main() {
   let writtenCheckpoint: typeof checkpoint | null = null;
   let resumedTraceIds: string[] = [];
   const deps: DevE2ECoordinatorDeps = {
+    requireScenarioBootstrap: async () => {},
     waitForHydration: async () => { events.push('hydrated'); },
     clearClock: async () => {
       events.push('clock-clear');

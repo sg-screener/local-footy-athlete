@@ -105,6 +105,10 @@ ok('development restores the clock before importing RootNavigator stores',
   appSource.includes('prepareDevE2EAppLaunch().then((ready) => {') &&
     appSource.indexOf('prepareDevE2EAppLaunch().then((ready) => {') <
       appSource.lastIndexOf("require('./src/navigation/RootNavigator')"));
+ok('development installs URL ingress before the asynchronous clock barrier',
+  appSource.indexOf('installDevE2EEntry();') >= 0 &&
+    appSource.indexOf('installDevE2EEntry();') <
+      appSource.indexOf('prepareDevE2EAppLaunch().then((ready) => {'));
 ok('release imports RootNavigator without the development bootstrap',
   /} else \{[\s\S]*ReleaseRootNavigator = require\('\.\/src\/navigation\/RootNavigator'\)\.default;/.test(appSource));
 ok('release refusal occurs before coordinator import', releaseReturn >= 0 && coordinatorRequire > releaseReturn);
@@ -124,9 +128,8 @@ ok('dev E2E errors expose their exact reason to accessibility',
   entrySource.includes('testID="e2e-seed-error-reason"') &&
     entrySource.includes('accessibilityLabel={errorReason}'));
 ok('scenario reload errors retain their exact scenario reason marker',
-  entrySource.includes(
-    'coordinator.validateReloadCheckpoint().catch(publishDevE2EEntryError)',
-  ));
+  entrySource.includes('await coordinator.validateReloadCheckpoint();') &&
+    entrySource.includes('activeInstallation?.coordinatorReady()'));
 
 function sourceFiles(directory: string): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

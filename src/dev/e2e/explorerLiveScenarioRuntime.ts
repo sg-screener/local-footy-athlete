@@ -8,8 +8,9 @@ import type {
   ExplorerRuntimeResult,
 } from './explorerRuntime';
 import {
-  readExplorerPhysicalEvidenceCampaignIdentity,
-} from './explorerPhysicalEvidenceDevBridge';
+  completeActiveExplorerCampaign,
+  readActiveExplorerCampaignBootstrap,
+} from './explorerCampaignBootstrap';
 import { createCanonicalExplorerLiveHostDependencies } from
   './explorerCanonicalLiveHost';
 import { setDevE2EExplorerArtifactAccepted } from './devE2EState';
@@ -31,7 +32,7 @@ function liveHostDependencies(args: {
   scenarioId: string;
 }) {
   assertLiveHostAvailable();
-  const campaign = readExplorerPhysicalEvidenceCampaignIdentity();
+  const campaign = readActiveExplorerCampaignBootstrap();
   if (!campaign) {
     throw new Error('explorer_live_physical_evidence_campaign_missing');
   }
@@ -69,6 +70,9 @@ export async function runLiveExplorerCampaign(
       run: (scenarioId) => runLiveExplorerScenario({ coordinator, scenarioId }),
     },
   });
+  if (result.status === 'complete') {
+    await completeActiveExplorerCampaign();
+  }
   lastResult = result;
   return result;
 }

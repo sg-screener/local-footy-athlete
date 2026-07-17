@@ -7,14 +7,23 @@ import {
   devE2EMarkers,
   getDevE2EStateSnapshot,
   setDevE2EEntryReady,
+  setDevE2EExplorerCampaignError,
+  setDevE2EExplorerCampaignPending,
   setDevE2EExplorerMetroDiagnostic,
   setDevE2EScenarioError,
   setDevE2ESeedError,
   subscribeDevE2EState,
 } from './devE2EState';
 import { restoreDevE2EClockBeforeHydration } from './devE2EClockPersistence';
+import { DevE2EEntryRouteQueue } from './devE2EEntryRouteQueue';
 import { devE2EScenarioReasonCode } from './devE2EScenarioProtocol';
 import { ExplorerProductionRenderReceiptObserver } from './ExplorerProductionRenderReceiptObserver';
+import {
+  EXPLORER_CAMPAIGN_BOOTSTRAP_REASON,
+  ExplorerCampaignBootstrapError,
+  requireExplorerCampaignScenarioReset,
+  type ExplorerCampaignScenarioPrerequisite,
+} from './explorerCampaignBootstrap';
 import {
   runLiveExplorerCampaign,
   runLiveExplorerScenario,
@@ -24,7 +33,11 @@ import {
   restoreExplorerPhysicalEvidenceCampaign,
   startExplorerPhysicalEvidenceCampaign,
 } from './explorerPhysicalEvidenceDevBridge';
-import { verifyExplorerMetroDiagnostic } from './explorerAppLaunchContract';
+import {
+  verifyExplorerMetroDiagnostic,
+  verifyExplorerNativeLaunchDiagnostic,
+} from './explorerAppLaunchContract';
+import type { DevE2ESeedCoordinator } from './DevE2ESeedCoordinator';
 
 export interface DevE2ELinking {
   addEventListener: (
@@ -37,17 +50,27 @@ export interface DevE2ELinking {
 export interface InstalledDevE2EEntry {
   installed: boolean;
   handleUrl: (url: string | null | undefined) => Promise<boolean>;
+  coordinatorReady: () => Promise<void>;
   remove: () => void;
 }
 
 let activeInstallation: InstalledDevE2EEntry | null = null;
 
-function nativeE2EMetroUrl(): string | null {
+function nativeE2ELaunchSettings(): {
+  e2eMetroUrl: string | null;
+  e2eResolvedMetroUrl: string | null;
+  e2eLaunchPurpose: string | null;
+} {
   const settings = (NativeModules.SettingsManager as {
     settings?: Record<string, unknown>;
   } | undefined)?.settings;
-  const value = settings?.e2eMetroUrl;
-  return typeof value === 'string' ? value : null;
+  const stringSetting = (name: string): string | null =>
+    typeof settings?.[name] === 'string' ? settings[name] as string : null;
+  return {
+    e2eMetroUrl: stringSetting('e2eMetroUrl'),
+    e2eResolvedMetroUrl: stringSetting('e2eResolvedMetroUrl'),
+    e2eLaunchPurpose: stringSetting('e2eLaunchPurpose'),
+  };
 }
 
 function publishDevE2EEntryError(
@@ -69,6 +92,7 @@ function publishDevE2EEntryError(
 export async function prepareDevE2EAppLaunch(): Promise<boolean> {
   try {
     await restoreDevE2EClockBeforeHydration();
+    await activeInstallation?.coordinatorReady();
     return true;
   } catch (error) {
     publishDevE2EEntryError(error);
@@ -85,27 +109,67 @@ export function installDevE2EEntry(args: {
     return {
       installed: false,
       handleUrl: async () => false,
+      coordinatorReady: async () => {},
       remove: () => {},
     };
   }
   if (activeInstallation) return activeInstallation;
 
-  // Dynamic only after the hard development guard. Release evaluation of this
-  // entry module therefore cannot import the registry or hydrate/mutate stores.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { createDefaultDevE2ESeedCoordinator } = require('./defaultDevE2ESeedCoordinator');
-  const coordinator = createDefaultDevE2ESeedCoordinator(true);
   const linking = args.linking ?? (Linking as unknown as DevE2ELinking);
+  const routeQueue = new DevE2EEntryRouteQueue<
+    NonNullable<ReturnType<typeof parseDevE2EEntryRoute>>
+  >();
+  let coordinator: DevE2ESeedCoordinator | null = null;
   setDevE2EEntryReady();
 
-  const handleUrl = async (url: string | null | undefined): Promise<boolean> => {
-    const route = parseDevE2EEntryRoute(url);
-    if (!route) return false;
+  const launchSettings = nativeE2ELaunchSettings();
+  if (launchSettings.e2eMetroUrl || launchSettings.e2eResolvedMetroUrl ||
+    launchSettings.e2eLaunchPurpose) {
     try {
+      const diagnostic = verifyExplorerNativeLaunchDiagnostic({
+        nativeMetroUrl: launchSettings.e2eMetroUrl,
+        resolvedMetroUrl: launchSettings.e2eResolvedMetroUrl,
+        launchPurpose: launchSettings.e2eLaunchPurpose,
+      });
+      setDevE2EExplorerMetroDiagnostic(diagnostic);
+    } catch (error) {
+      publishDevE2EEntryError(error);
+    }
+  }
+
+  const campaignPrerequisite = (
+    route: Extract<
+      NonNullable<ReturnType<typeof parseDevE2EEntryRoute>>,
+      { kind: 'explorer_run' | 'explorer_campaign' }
+    >,
+  ): ExplorerCampaignScenarioPrerequisite => {
+    if (!route.campaignId || !route.integratedRepositorySha ||
+      !route.e2eMetroUrl || !route.deterministicClockFingerprint) {
+      setDevE2EExplorerCampaignError(
+        EXPLORER_CAMPAIGN_BOOTSTRAP_REASON.CAMPAIGN_MISSING,
+      );
+      throw new ExplorerCampaignBootstrapError(
+        EXPLORER_CAMPAIGN_BOOTSTRAP_REASON.CAMPAIGN_MISSING,
+      );
+    }
+    return {
+      campaignId: route.campaignId,
+      integratedRepositorySha: route.integratedRepositorySha,
+      e2eMetroUrl: route.e2eMetroUrl,
+      deterministicClockFingerprint: route.deterministicClockFingerprint,
+    };
+  };
+
+  const processRoute = async (
+    route: NonNullable<ReturnType<typeof parseDevE2EEntryRoute>>,
+  ): Promise<boolean> => {
+    if (!coordinator) return false;
+    try {
+      let selectedMetroUrl: string | null = null;
       if ('e2eMetroUrl' in route) {
-        const selectedMetroUrl = verifyExplorerMetroDiagnostic({
+        selectedMetroUrl = verifyExplorerMetroDiagnostic({
           deepLinkMetroUrl: route.e2eMetroUrl,
-          nativeMetroUrl: nativeE2EMetroUrl(),
+          nativeMetroUrl: nativeE2ELaunchSettings().e2eMetroUrl,
         });
         setDevE2EExplorerMetroDiagnostic({
           metroUrl: selectedMetroUrl,
@@ -127,6 +191,9 @@ export function installDevE2EEntry(args: {
             route.checkpointStepId,
           );
         case 'explorer_run': {
+          await requireExplorerCampaignScenarioReset(
+            campaignPrerequisite(route),
+          );
           const result = await runLiveExplorerScenario({
             coordinator,
             scenarioId: route.scenarioId,
@@ -137,6 +204,9 @@ export function installDevE2EEntry(args: {
           return true;
         }
         case 'explorer_campaign': {
+          await requireExplorerCampaignScenarioReset(
+            campaignPrerequisite(route),
+          );
           const result = await runLiveExplorerCampaign(coordinator);
           if (result.status === 'blocked') {
             setDevE2EScenarioError(result.reasonCode, result);
@@ -149,6 +219,7 @@ export function installDevE2EEntry(args: {
           return await startExplorerPhysicalEvidenceCampaign({
             campaignId: route.campaignId,
             integratedRepositorySha: route.integratedRepositorySha,
+            e2eMetroUrl: selectedMetroUrl!,
             isDev,
           });
         case 'explorer_evidence':
@@ -167,21 +238,39 @@ export function installDevE2EEntry(args: {
     }
   };
 
+  const handleUrl = async (url: string | null | undefined): Promise<boolean> => {
+    const route = parseDevE2EEntryRoute(url);
+    if (!route || !url) return false;
+    if (route.kind === 'explorer_evidence_start') {
+      setDevE2EExplorerCampaignPending(route.campaignId);
+    }
+    return routeQueue.enqueue(url, route);
+  };
+
   const subscription = linking.addEventListener('url', (event) => {
     void handleUrl(event.url);
   });
   void linking.getInitialURL().then(handleUrl).catch(publishDevE2EEntryError);
-  // Reload validation is deliberately separate from URL handling. A preserved
-  // checkpoint is inspected after hydration without calling reset/buildSeed.
-  void coordinator.validateReloadCheckpoint().catch(publishDevE2EEntryError);
-  void restoreExplorerPhysicalEvidenceCampaign({ isDev })
-    .catch(publishDevE2EEntryError);
 
   activeInstallation = {
     installed: true,
     handleUrl,
+    coordinatorReady: async () => {
+      if (coordinator) return;
+      // Dynamic only after the hard development guard and clock barrier.
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const { createDefaultDevE2ESeedCoordinator } =
+        require('./defaultDevE2ESeedCoordinator');
+      coordinator = createDefaultDevE2ESeedCoordinator(true);
+      await restoreExplorerPhysicalEvidenceCampaign({ isDev });
+      // Reload validation remains separate from route handling and never
+      // calls reset/buildSeed for a preserved checkpoint.
+      await coordinator.validateReloadCheckpoint();
+      await routeQueue.setReady(processRoute);
+    },
     remove: () => {
       subscription.remove();
+      routeQueue.clear();
       activeInstallation = null;
     },
   };

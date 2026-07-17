@@ -407,6 +407,7 @@ async function main(): Promise<void> {
     expect(await startExplorerPhysicalEvidenceCampaign({
       campaignId: CAMPAIGN_ID,
       integratedRepositorySha: REPOSITORY_SHA,
+      e2eMetroUrl: 'http://127.0.0.1:8082',
       isDev: false,
     }) === false, 'release campaign route was accepted');
     expect(await acknowledgeExplorerPhysicalEvidence(

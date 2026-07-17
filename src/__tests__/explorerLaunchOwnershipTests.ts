@@ -8,8 +8,6 @@ import {
   EXPLORER_APP_CLEAR_STATE_FLOW,
   EXPLORER_APP_LAUNCH_FLOW,
   buildExplorerAppLaunchPlan,
-  explorerMetroDiagnosticRoute,
-  withExplorerMetroUrl,
   type ExplorerAppLaunchPlan,
   type ExplorerAppLaunchPurpose,
 } from '../../scripts/explorer-app-launch';
@@ -173,22 +171,15 @@ async function main(): Promise<void> {
         command.args.includes(EXPLORER_APP_LAUNCH_FLOW));
       const clearCommands = plan.commands.filter((command) =>
         command.args.includes(EXPLORER_APP_CLEAR_STATE_FLOW));
-      const expectedDeepLink = withExplorerMetroUrl(
-        explorerMetroDiagnosticRoute(purpose),
-        metroUrl,
-      );
       expect(plan.purpose === purpose && plan.statePolicy === statePolicy,
         `${purpose} changed its typed state policy`);
       expect(launchCommands.length === 1,
         `${purpose} did not generate exactly one canonical launch`);
       expect(launchCommands[0]?.args.includes(`E2E_METRO_URL=${metroUrl}`) === true &&
         launchCommands[0]?.args.includes(`EXPLORER_LAUNCH_PURPOSE=${purpose}`) === true &&
-        launchCommands[0]?.args.includes(
-          `EXPLORER_LAUNCH_DEEP_LINK=${expectedDeepLink}`,
-        ) === true,
-      `${purpose} lost Metro URL, native argument source, query, or identity`);
-      expect(new URL(expectedDeepLink).searchParams.get('e2eMetroUrl') === metroUrl,
-        `${purpose} deep link does not match the selected Metro URL`);
+        !launchCommands[0]?.args.some((argument) =>
+          argument.startsWith('EXPLORER_LAUNCH_DEEP_LINK=')),
+      `${purpose} lost native Metro/purpose ownership or retained deep-link coupling`);
       expect(clearCommands.length === (statePolicy === 'clear' ? 1 : 0) &&
         expandedClearStateCount(plan) === (statePolicy === 'clear' ? 1 : 0),
       `${purpose} generated the wrong clearState execution count`);

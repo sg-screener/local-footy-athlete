@@ -179,6 +179,7 @@ function createHarness(): Harness {
   );
 
   const deps: DevE2ECoordinatorDeps = {
+    requireScenarioBootstrap: async () => {},
     waitForHydration: async () => {},
     resetLocalState: () => {
       traceCoordinator.clear();
@@ -300,6 +301,21 @@ async function main(): Promise<void> {
     DEV_E2E_SCENARIO_MANIFESTS.length === DEV_E2E_SEED_IDS.length + 9 &&
       DEV_E2E_SCENARIO_MANIFESTS.every((manifest) =>
         DEV_E2E_SEED_IDS.includes(manifest.seedId)));
+
+  const blockedHarness = createHarness();
+  let prerequisiteChecked = false;
+  blockedHarness.deps.requireScenarioBootstrap = async () => {
+    prerequisiteChecked = true;
+    throw new Error('campaign-not-accepted');
+  };
+  let resetRejected = false;
+  try {
+    await blockedHarness.coordinator().resetScenario(MANIFEST.scenarioId);
+  } catch {
+    resetRejected = true;
+  }
+  ok('scenario-session V2 rejects reset before campaign acceptance',
+    prerequisiteChecked && resetRejected && blockedHarness.buildCalls() === 0);
 
   const harness = createHarness();
   let coordinator = harness.coordinator();

@@ -5,7 +5,6 @@ import {
   ExplorerPhysicalEvidenceBridge,
   ExplorerPhysicalEvidenceError,
   decodeExplorerPhysicalEvidenceReceipt,
-  explorerCampaignArtifactDirectory,
   type ExplorerPhysicalCaptureRequestV1,
   type ExplorerPhysicalEvidenceReceiptV1,
 } from './explorerPhysicalEvidence';
@@ -13,13 +12,13 @@ import {
   setDevE2EExplorerCaptureAccepted,
   setDevE2EExplorerCaptureError,
   setDevE2EExplorerCaptureRequest,
-  setDevE2EExplorerCampaignReady,
 } from './devE2EState';
+import {
+  acceptExplorerCampaignBootstrap,
+  restoreExplorerCampaignBootstrap,
+} from './explorerCampaignBootstrap';
 
 declare const __DEV__: boolean | undefined;
-
-export const EXPLORER_PHYSICAL_EVIDENCE_CAMPAIGN_STORAGE_KEY =
-  'dev-e2e-explorer-physical-evidence-campaign-v1';
 
 export interface ExplorerPhysicalEvidenceCampaignIdentity {
   readonly campaignId: string;
@@ -42,32 +41,6 @@ function defaultStorage(): DevE2EKeyValueStorage {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const module = require('@react-native-async-storage/async-storage');
   return module.default ?? module;
-}
-
-function parseCampaignIdentity(value: unknown): ExplorerPhysicalEvidenceCampaignIdentity {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new ExplorerPhysicalEvidenceError(
-      EXPLORER_PHYSICAL_EVIDENCE_FAILURE.PERSISTENCE_FAILED,
-      'campaign_identity',
-    );
-  }
-  const record = value as Record<string, unknown>;
-  const keys = Object.keys(record).sort();
-  if (keys.length !== 2 || keys[0] !== 'campaignId' ||
-    keys[1] !== 'integratedRepositorySha' ||
-    typeof record.campaignId !== 'string' ||
-    typeof record.integratedRepositorySha !== 'string' ||
-    !/^[a-f0-9]{40}$/.test(record.integratedRepositorySha)) {
-    throw new ExplorerPhysicalEvidenceError(
-      EXPLORER_PHYSICAL_EVIDENCE_FAILURE.PERSISTENCE_FAILED,
-      'campaign_identity',
-    );
-  }
-  explorerCampaignArtifactDirectory(record.campaignId);
-  return {
-    campaignId: record.campaignId,
-    integratedRepositorySha: record.integratedRepositorySha,
-  };
 }
 
 function createBridge(
@@ -98,6 +71,7 @@ function createBridge(
 export async function startExplorerPhysicalEvidenceCampaign(args: {
   campaignId: string;
   integratedRepositorySha: string;
+  e2eMetroUrl: string;
   isDev?: boolean;
   storage?: DevE2EKeyValueStorage;
 }): Promise<boolean> {
@@ -106,18 +80,20 @@ export async function startExplorerPhysicalEvidenceCampaign(args: {
     return false;
   }
   const storage = args.storage ?? defaultStorage();
-  const identity = parseCampaignIdentity({
+  const bootstrap = await acceptExplorerCampaignBootstrap({
     campaignId: args.campaignId,
     integratedRepositorySha: args.integratedRepositorySha,
+    e2eMetroUrl: args.e2eMetroUrl,
+    storage,
+    isDev: args.isDev,
   });
-  await storage.setItem(
-    EXPLORER_PHYSICAL_EVIDENCE_CAMPAIGN_STORAGE_KEY,
-    JSON.stringify(identity),
-  );
+  const identity = {
+    campaignId: bootstrap.campaignId,
+    integratedRepositorySha: bootstrap.integratedRepositorySha,
+  };
   const bridge = createBridge(identity, storage);
   active = { identity, bridge };
   await bridge.restore();
-  setDevE2EExplorerCampaignReady(identity.campaignId);
   return true;
 }
 
@@ -127,28 +103,22 @@ export async function restoreExplorerPhysicalEvidenceCampaign(args: {
 } = {}): Promise<boolean> {
   if (!available(args.isDev)) return false;
   const storage = args.storage ?? defaultStorage();
-  const raw = await storage.getItem(EXPLORER_PHYSICAL_EVIDENCE_CAMPAIGN_STORAGE_KEY);
-  if (!raw) return false;
-  let value: unknown;
-  try {
-    value = JSON.parse(raw);
-  } catch {
-    throw new ExplorerPhysicalEvidenceError(
-      EXPLORER_PHYSICAL_EVIDENCE_FAILURE.PERSISTENCE_FAILED,
-      'campaign_json',
-    );
+  const bootstrap = await restoreExplorerCampaignBootstrap({
+    storage,
+    isDev: args.isDev,
+  });
+  if (!bootstrap || (bootstrap.status !== 'accepted' &&
+    bootstrap.status !== 'active' && bootstrap.status !== 'complete')) {
+    return false;
   }
-  const identity = parseCampaignIdentity(value);
+  const identity = {
+    campaignId: bootstrap.campaignId,
+    integratedRepositorySha: bootstrap.integratedRepositorySha,
+  };
   const bridge = createBridge(identity, storage);
   active = { identity, bridge };
   await bridge.restore();
-  setDevE2EExplorerCampaignReady(identity.campaignId);
   return true;
-}
-
-export function readExplorerPhysicalEvidenceCampaignIdentity():
-ExplorerPhysicalEvidenceCampaignIdentity | null {
-  return active?.identity ?? null;
 }
 
 export async function requestExplorerPhysicalEvidence(

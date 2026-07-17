@@ -203,6 +203,18 @@ export interface AthleteActionTraceRecordV2 {
   missingRequiredFields: string[];
 }
 
+/** Bootstrap proof counts only trace roots correlated to an Explorer action. */
+export function explorerAthleteActionTraceRoots(
+  records: readonly AthleteActionTraceRecordV2[],
+  campaignId?: string,
+): AthleteActionTraceRecordV2[] {
+  return records.filter((record) =>
+    record.root.campaignId.status === 'captured' &&
+    (!campaignId || record.root.campaignId.value === campaignId) &&
+    record.root.scenarioRunId.status === 'captured' &&
+    record.root.scenarioStepId.status === 'captured');
+}
+
 export interface AthleteActionTraceCheckpointV2 {
   version: typeof ATHLETE_ACTION_TRACE_SCHEMA_VERSION;
   fingerprintContract: typeof SEMANTIC_FINGERPRINT_CONTRACT_V2;

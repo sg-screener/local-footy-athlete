@@ -59,8 +59,10 @@ public class AppDelegate: ExpoAppDelegate {
 #if DEBUG
 private enum DevE2EMetroLaunch {
   private static let launchArgumentKey = "e2eMetroUrl"
+  private static let resolvedMetroKey = "e2eResolvedMetroUrl"
 
   static func configureIfRequested() {
+    UserDefaults.standard.removeObject(forKey: resolvedMetroKey)
     guard let rawURL = UserDefaults.standard.string(forKey: launchArgumentKey) else {
       return
     }
@@ -98,6 +100,17 @@ private enum DevE2EMetroLaunch {
     guard let bundleURL else {
       fatalError("[DevE2E Metro] Selected server did not resolve a development bundle URL")
     }
+    guard let scheme = bundleURL.scheme,
+      let host = bundleURL.host,
+      let port = bundleURL.port
+    else {
+      fatalError("[DevE2E Metro] Resolved development bundle lacks an explicit server")
+    }
+    let hostPort = host.contains(":") ? "[\(host)]:\(port)" : "\(host):\(port)"
+    UserDefaults.standard.set(
+      "\(scheme)://\(hostPort)/",
+      forKey: resolvedMetroKey
+    )
     NSLog("[DevE2E Metro] Resolved bundle: %@", bundleURL.absoluteString)
   }
 }

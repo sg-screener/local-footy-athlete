@@ -53,6 +53,14 @@ TraceV2 IDs, reload count, accepted and persisted semantic fingerprints, clock
 fingerprint, next-action eligibility, and a clock-derived deterministic
 `updatedAt`.
 
+Explorer scenario reset first consumes the accepted
+`dev-e2e-explorer-campaign-bootstrap-v1` receipt. That dev-only transaction is
+the sole campaign identity owner: campaign ID, integrated repository SHA,
+selected Metro URL, deterministic campaign clock receipt, status, and
+deterministic acceptance time are persisted and read back before the accepted
+marker is published. Scenario-session V2 validates the existing receipt; it
+does not create or reinterpret campaign identity.
+
 The first step becomes eligible only after reset hydration and persistence
 converge. A checkpoint is accepted only for the manifest's expected step and
 only when the active TraceV2 root is present in the unfinished trace envelope.
@@ -168,8 +176,12 @@ infrastructure retry. This bridge is not present in release entry wiring.
 
 Maestro must launch this debug app with an explicit Metro URL. Every Explorer
 process launch delegates to `launch-explorer-app.yaml`, which passes
-`E2E_METRO_URL` as the native `e2eMetroUrl` launch argument and immediately
-opens a diagnostic deep link carrying the matching `e2eMetroUrl` query field.
+`E2E_METRO_URL` and the typed launch purpose as native launch arguments. The
+debug AppDelegate publishes the resolved Metro server, allowing entry-ready
+code to publish launch diagnostics without any campaign or deep-link identity.
+Only after that launch marker does the runner send the campaign-start link.
+URL ingress is installed before the asynchronous clock/coordinator barrier, so
+an early campaign route is queued once and consumed after readiness.
 The typed launch plan runs the literal `clear-explorer-app-state.yaml` prelude
 only for the initial cold launch; every preservation purpose runs the canonical
 launch flow directly, without an interpolated clear-state value.
@@ -177,9 +189,9 @@ Before React Native
 creates its bridge, the debug-only AppDelegate hook validates that URL and
 sets `RCTBundleURLProvider` to its scheme and host-port. It logs both the
 selected server and the resolved bundle URL. The development entry compares
-the native value with the deep-link value before dispatching an Explorer reset
-or run. Invalid or mismatched URLs fail loudly; release builds do not contain
-the hook.
+the native value with each later deep-link value before dispatching an Explorer
+reset or run. Invalid or mismatched URLs fail loudly; release builds do not
+contain the hook.
 
 Choose any free port rather than relying on a shared default. For example,
 while a competing worktree keeps port 8081:

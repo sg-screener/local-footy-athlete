@@ -9,8 +9,21 @@ export type DevE2EEntryRoute =
   | { kind: 'checkpoint'; checkpointId: DevE2ESeedId }
   | { kind: 'scenario_reset'; scenarioId: string }
   | { kind: 'scenario_checkpoint'; scenarioId: string; checkpointStepId: string }
-  | { kind: 'explorer_run'; scenarioId: string; e2eMetroUrl: string | null }
-  | { kind: 'explorer_campaign'; e2eMetroUrl: string | null }
+  | {
+      kind: 'explorer_run';
+      scenarioId: string;
+      e2eMetroUrl: string | null;
+      campaignId: string | null;
+      integratedRepositorySha: string | null;
+      deterministicClockFingerprint: string | null;
+    }
+  | {
+      kind: 'explorer_campaign';
+      e2eMetroUrl: string | null;
+      campaignId: string | null;
+      integratedRepositorySha: string | null;
+      deterministicClockFingerprint: string | null;
+    }
   | {
       kind: 'explorer_diagnostic';
       launchPurpose: ExplorerAppLaunchPurpose;
@@ -45,12 +58,21 @@ const EXACT_EXPLORER_EVIDENCE_START_ROUTE =
 const EXACT_EXPLORER_EVIDENCE_ROUTE =
   /^localfootyathlete:\/\/e2e\/explorer\/evidence\/(explorer-capture-[a-f0-9]{64})\?receipt=([^&#]+)$/;
 
-function splitExplorerMetroQuery(url: string): {
+function splitExplorerBootstrapQuery(url: string): {
   routeUrl: string;
   e2eMetroUrl: string | null;
+  campaignId: string | null;
+  integratedRepositorySha: string | null;
+  deterministicClockFingerprint: string | null;
 } | null {
   if (!url.startsWith('localfootyathlete://e2e/explorer/')) {
-    return { routeUrl: url, e2eMetroUrl: null };
+    return {
+      routeUrl: url,
+      e2eMetroUrl: null,
+      campaignId: null,
+      integratedRepositorySha: null,
+      deterministicClockFingerprint: null,
+    };
   }
   let parsed: URL;
   try {
@@ -58,16 +80,37 @@ function splitExplorerMetroQuery(url: string): {
   } catch {
     return null;
   }
-  const values = parsed.searchParams.getAll('e2eMetroUrl');
-  if (values.length > 1) return null;
-  const e2eMetroUrl = values[0] ?? null;
-  parsed.searchParams.delete('e2eMetroUrl');
-  return { routeUrl: parsed.toString(), e2eMetroUrl };
+  const field = (name: string): string | null | undefined => {
+    const values = parsed.searchParams.getAll(name);
+    return values.length > 1 ? undefined : values[0] ?? null;
+  };
+  const e2eMetroUrl = field('e2eMetroUrl');
+  const campaignId = field('campaignId');
+  const integratedRepositorySha = field('integratedRepositorySha');
+  const deterministicClockFingerprint = field('deterministicClockFingerprint');
+  if (e2eMetroUrl === undefined || campaignId === undefined ||
+    integratedRepositorySha === undefined ||
+    deterministicClockFingerprint === undefined) return null;
+  for (const name of [
+    'e2eMetroUrl',
+    'campaignId',
+    'integratedRepositorySha',
+    'deterministicClockFingerprint',
+  ]) {
+    parsed.searchParams.delete(name);
+  }
+  return {
+    routeUrl: parsed.toString(),
+    e2eMetroUrl,
+    campaignId,
+    integratedRepositorySha,
+    deterministicClockFingerprint,
+  };
 }
 
 export function parseDevE2EEntryRoute(url: string | null | undefined): DevE2EEntryRoute | null {
   if (!url) return null;
-  const explorer = splitExplorerMetroQuery(url);
+  const explorer = splitExplorerBootstrapQuery(url);
   if (!explorer) return null;
   const routeUrl = explorer.routeUrl;
   const evidenceStart = EXACT_EXPLORER_EVIDENCE_START_ROUTE.exec(routeUrl);
@@ -97,7 +140,13 @@ export function parseDevE2EEntryRoute(url: string | null | undefined): DevE2EEnt
     };
   }
   if (EXACT_EXPLORER_CAMPAIGN_ROUTE.test(routeUrl)) {
-    return { kind: 'explorer_campaign', e2eMetroUrl: explorer.e2eMetroUrl };
+    return {
+      kind: 'explorer_campaign',
+      e2eMetroUrl: explorer.e2eMetroUrl,
+      campaignId: explorer.campaignId,
+      integratedRepositorySha: explorer.integratedRepositorySha,
+      deterministicClockFingerprint: explorer.deterministicClockFingerprint,
+    };
   }
   const explorerRun = EXACT_EXPLORER_RUN_ROUTE.exec(routeUrl);
   if (explorerRun) {
@@ -105,6 +154,9 @@ export function parseDevE2EEntryRoute(url: string | null | undefined): DevE2EEnt
       kind: 'explorer_run',
       scenarioId: explorerRun[1],
       e2eMetroUrl: explorer.e2eMetroUrl,
+      campaignId: explorer.campaignId,
+      integratedRepositorySha: explorer.integratedRepositorySha,
+      deterministicClockFingerprint: explorer.deterministicClockFingerprint,
     };
   }
   const scenarioReset = EXACT_SCENARIO_RESET_ROUTE.exec(routeUrl);

@@ -5,11 +5,11 @@ name: Canonical Explorer app launch
     stopApp: true
     arguments:
       e2eMetroUrl: "${E2E_METRO_URL}"
+      e2eLaunchPurpose: "${EXPLORER_LAUNCH_PURPOSE}"
 - extendedWaitUntil:
     visible:
       id: "e2e-entry-ready"
     timeout: 15000
-- openLink: "${EXPLORER_LAUNCH_DEEP_LINK}"
 - extendedWaitUntil:
     visible:
       id: "e2e-explorer-launch-diagnostic-${EXPLORER_LAUNCH_PURPOSE}"

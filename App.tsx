@@ -18,6 +18,8 @@ if (__DEV__) {
   DevE2EStatusMarkers = devEntry.DevE2EStatusMarkers;
   prepareDevE2EAppLaunch = devEntry.prepareDevE2EAppLaunch;
   installDevE2EEntry = () => devEntry.installDevE2EEntry({ isDev: true });
+  // URL ingress must exist before the asynchronous clock/coordinator barrier.
+  installDevE2EEntry();
 } else {
   // Release never imports the development clock or coordinator.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -44,7 +46,6 @@ export default function App() {
     let mounted = true;
     void prepareDevE2EAppLaunch().then((ready) => {
       if (!ready || !mounted) return;
-      installDevE2EEntry?.();
       // Store hydration begins only after the dev clock restoration barrier.
       // eslint-disable-next-line @typescript-eslint/no-var-requires
       const RootNavigator = require('./src/navigation/RootNavigator').default;

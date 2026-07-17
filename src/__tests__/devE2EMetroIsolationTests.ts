@@ -4,6 +4,7 @@ import yaml from 'js-yaml';
 import {
   explorerMetroDiagnosticMarker,
   verifyExplorerMetroDiagnostic,
+  verifyExplorerNativeLaunchDiagnostic,
 } from '../dev/e2e/explorerAppLaunchContract';
 import { parseDevE2EEntryRoute } from '../dev/e2e/devE2EEntryRoute';
 import {
@@ -48,7 +49,8 @@ ok('release bundle behavior remains the embedded main.jsbundle',
   /#else\s+return Bundle\.main\.url\(forResource: "main", withExtension: "jsbundle"\)\s+#endif/.test(appDelegate));
 ok('selected server and resolved bundle are observable',
   appDelegate.includes('[DevE2E Metro] Selected server:') &&
-  appDelegate.includes('[DevE2E Metro] Resolved bundle:'));
+  appDelegate.includes('[DevE2E Metro] Resolved bundle:') &&
+  appDelegate.includes('forKey: resolvedMetroKey'));
 
 for (const file of ['reset-seed.yaml', 'checkpoint-and-reload.yaml']) {
   const flowPath = path.join(root, '.maestro', 'common', file);
@@ -71,7 +73,8 @@ ok('canonical Explorer launch flow parses and owns the only Explorer launchApp',
   canonicalDocuments.length === 2 && Array.isArray(canonicalDocuments[1]) &&
   canonicalLaunch.includes('launchApp:') &&
   canonicalLaunch.includes('e2eMetroUrl: "${E2E_METRO_URL}"') &&
-  canonicalLaunch.includes('openLink: "${EXPLORER_LAUNCH_DEEP_LINK}"'));
+  canonicalLaunch.includes('e2eLaunchPurpose: "${EXPLORER_LAUNCH_PURPOSE}"') &&
+  !canonicalLaunch.includes('openLink:'));
 
 for (const [file, purpose] of [
   ['reset-scenario.yaml', 'scenario-reset'],
@@ -87,8 +90,7 @@ for (const [file, purpose] of [
     documents.length === 2 && Array.isArray(documents[1]) &&
     flowSource.includes('file: launch-explorer-app.yaml') &&
     flowSource.includes(`EXPLORER_LAUNCH_PURPOSE: ${purpose}`) &&
-    flowSource.includes('EXPLORER_LAUNCH_DEEP_LINK:') &&
-    flowSource.includes('e2eMetroUrl=${E2E_METRO_URL}') &&
+    !flowSource.includes('EXPLORER_LAUNCH_DEEP_LINK:') &&
     !flowSource.includes('launchApp:'));
 }
 
@@ -107,6 +109,12 @@ ok('matching app diagnostics publish an exact URL marker',
     nativeMetroUrl: selectedMetro,
   }) === selectedMetro &&
   explorerMetroDiagnosticMarker(selectedMetro).includes(encodeURIComponent(selectedMetro)));
+ok('initial app diagnostic is independent of campaign/deep-link identity',
+  verifyExplorerNativeLaunchDiagnostic({
+    nativeMetroUrl: selectedMetro,
+    resolvedMetroUrl: selectedMetro,
+    launchPurpose: 'initial-cold-launch',
+  }).launchPurpose === 'initial-cold-launch');
 __resetDevE2EStateForTest();
 setDevE2EExplorerMetroDiagnostic({
   metroUrl: selectedMetro,

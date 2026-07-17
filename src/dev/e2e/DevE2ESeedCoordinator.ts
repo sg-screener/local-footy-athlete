@@ -46,6 +46,8 @@ import {
 } from './devE2EScenarioSession';
 
 export interface DevE2ECoordinatorDeps {
+  /** Scenario-session V2 consumes the already-verified campaign prerequisite. */
+  requireScenarioBootstrap: () => Promise<void>;
   waitForHydration: () => Promise<void>;
   resetLocalState: () => void;
   clearClock: () => Promise<void>;
@@ -204,8 +206,9 @@ export class DevE2ESeedCoordinator {
     if (!resolved) return false;
     const manifest = validateDevE2EScenarioManifest(resolved);
     return this.enqueue(async () => {
-      setDevE2ESeedLoading(manifest.seedId);
       try {
+        await this.deps.requireScenarioBootstrap();
+        setDevE2ESeedLoading(manifest.seedId);
         this.activeSeedId = null;
         await this.deps.waitForHydration();
         await this.deps.clearCheckpoint();

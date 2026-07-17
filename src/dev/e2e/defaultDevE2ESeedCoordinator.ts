@@ -53,6 +53,8 @@ import {
   DevE2ESeedCoordinator,
   type DevE2ECoordinatorDeps,
 } from './DevE2ESeedCoordinator';
+import { requireActiveExplorerCampaignScenarioReset } from
+  './explorerCampaignBootstrap';
 import {
   exportAthleteActionTraceCheckpointV2,
   clearAthleteActionDiagnosticEvents,
@@ -472,6 +474,9 @@ function captureReloadEvidence(
 }
 
 const DEFAULT_DEPS: DevE2ECoordinatorDeps = {
+  requireScenarioBootstrap: async () => {
+    await requireActiveExplorerCampaignScenarioReset();
+  },
   waitForHydration: waitForDevE2EHydration,
   resetLocalState: clearLocalStateThroughPublicAPIs,
   clearClock: clearPersistedDevE2EClock,
