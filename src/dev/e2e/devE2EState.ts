@@ -38,7 +38,7 @@ const INITIAL: DevE2EStateSnapshot = Object.freeze({
 
 let snapshot: DevE2EStateSnapshot = INITIAL;
 const subscribers = new Set<() => void>();
-const observedTraceControlIds = new Set<string>();
+const observedTraceMarkers = new Set<string>();
 
 function notifySubscribers(): void {
   for (const subscriber of Array.from(subscribers)) {
@@ -79,7 +79,7 @@ export function subscribeDevE2EState(subscriber: () => void): () => void {
 }
 
 export function setDevE2EEntryReady(): void {
-  observedTraceControlIds.clear();
+  observedTraceMarkers.clear();
   publish({
     phase: 'entry_ready',
     seedId: null,
@@ -90,7 +90,7 @@ export function setDevE2EEntryReady(): void {
 }
 
 export function setDevE2ESeedLoading(seedId: string): void {
-  observedTraceControlIds.clear();
+  observedTraceMarkers.clear();
   publish({
     phase: 'seed_loading',
     seedId,
@@ -234,10 +234,33 @@ export function setDevE2EScenarioError(
   });
 }
 
-/** Render-only marker proving the actual React observation callback fired. */
-export function setDevE2ETraceUIObserved(controlId: string): void {
-  if (!controlId || observedTraceControlIds.has(controlId)) return;
-  observedTraceControlIds.add(controlId);
+function markerToken(value: string): string {
+  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+/** Render-only markers proving the actual, trace-correlated React callback fired. */
+export function setDevE2ETraceUIObserved(
+  controlId: string,
+  traceId?: string,
+  observationId?: string,
+): void {
+  if (!controlId) return;
+  const markers = [
+    `e2e-trace-ui-observed-${controlId}`,
+    ...(traceId && observationId ? [
+      [
+        'e2e-trace-ui-observed',
+        markerToken(controlId),
+        'trace',
+        markerToken(traceId),
+        'observation',
+        markerToken(observationId),
+      ].join('-'),
+    ] : []),
+  ];
+  const next = markers.filter((marker) => !observedTraceMarkers.has(marker));
+  if (next.length === 0) return;
+  next.forEach((marker) => observedTraceMarkers.add(marker));
   snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
   notifySubscribers();
 }
@@ -245,9 +268,7 @@ export function setDevE2ETraceUIObserved(controlId: string): void {
 export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
   const markers = [
     'e2e-entry-ready',
-    ...Array.from(observedTraceControlIds)
-      .sort()
-      .map((controlId) => `e2e-trace-ui-observed-${controlId}`),
+    ...Array.from(observedTraceMarkers).sort(),
   ];
   if (!state.scenarioId) {
     switch (state.phase) {
@@ -305,7 +326,7 @@ export function hasDevE2EMarker(marker: string): boolean {
 }
 
 export function __resetDevE2EStateForTest(): void {
-  observedTraceControlIds.clear();
+  observedTraceMarkers.clear();
   snapshot = INITIAL;
   notifySubscribers();
 }

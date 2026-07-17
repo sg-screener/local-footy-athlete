@@ -81,6 +81,9 @@ import {
   commitSessionOutcomeTransaction,
   createRecordSessionOutcomeIntentFromFeedback,
 } from '../store/sessionOutcomeTransaction';
+import type { SessionOutcomeTransactionReceipt } from '../types/sessionOutcome';
+import { registerAthleteActionUIOutcome } from '../dev/e2e/athleteActionUIObservation';
+import { explorerTestId } from '../utils/stableTestId';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
@@ -88,7 +91,7 @@ interface Props {
   /** Resolved workout for deciding whether richer conditioning logging is useful. */
   workout?: Workout | null;
   /** Called after feedback is saved. Parent uses this to navigate back. */
-  onSave?: () => void;
+  onSave?: (receipt: SessionOutcomeTransactionReceipt) => void;
 }
 
 // ─── Feeling options (4 choices — maps to existing backend keys) ───
@@ -515,7 +518,20 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
       }),
     );
     if (!result.ok) return;
-    onSave?.();
+    const traceId = result.receipt.source.traceId;
+    if (traceId) {
+      registerAthleteActionUIOutcome({
+        traceId,
+        observationId: `session-feedback-render:${traceId}`,
+        domainReturn: {
+          transactionId: result.receipt.transactionId,
+          sessionIdentity: result.receipt.sessionIdentity,
+          componentIds: result.receipt.componentIds,
+        },
+        controlId: explorerTestId.feedbackReceipt(result.receipt.transactionId),
+      });
+    }
+    onSave?.(result.receipt);
   }, [
     canSave,
     activeCompletion,

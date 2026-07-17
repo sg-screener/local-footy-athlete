@@ -12,6 +12,7 @@ import {
   type GuidedInjuryFlowResult,
   type GuidedInjuryRegion,
 } from '../../utils/guidedInjuryControl';
+import { explorerTestId } from '../../utils/stableTestId';
 
 const INJURY_AREA_TEST_IDS: Record<string, string> = {
   Neck: 'neck',
@@ -63,6 +64,7 @@ interface GuidedInjuryFlowSheetProps {
   onComplete: (result: GuidedInjuryFlowResult) => void | Promise<void>;
   initial?: Partial<GuidedInjuryFlowResult>;
   titlePrefix?: string;
+  episodeId?: string;
 }
 
 export function GuidedInjuryFlowSheet({
@@ -71,6 +73,7 @@ export function GuidedInjuryFlowSheet({
   onComplete,
   initial,
   titlePrefix,
+  episodeId,
 }: GuidedInjuryFlowSheetProps) {
   const [step, setStep] = useState<FlowStep>('region');
   const [region, setRegion] = useState<GuidedInjuryRegion | null>(null);
@@ -193,6 +196,7 @@ export function GuidedInjuryFlowSheet({
             style={styles.input}
             autoCapitalize="none"
             testID="injury-area-custom-input"
+            accessibilityLabel="injury-area-custom-input"
           />
           <Button
             label="Continue"
@@ -220,7 +224,7 @@ export function GuidedInjuryFlowSheet({
           </Text>
           <Button
             label="Pause affected training"
-            testID="injury-pause-training"
+            testID={explorerTestId.injuryIngress(episodeId ? 'update' : 'set', episodeId)}
             glow={false}
             onPress={() => submit(true)}
           />
@@ -271,6 +275,8 @@ export function GuidedInjuryFlowSheet({
             <Pressable
               key={trigger}
               testID={`injury-trigger-${INJURY_TRIGGER_TEST_IDS[trigger]}`}
+              accessibilityRole="button"
+              accessibilityLabel={`injury-trigger-${INJURY_TRIGGER_TEST_IDS[trigger]}`}
               onPress={() => toggleTrigger(trigger)}
               style={({ pressed }) => [
                 styles.triggerChip,
@@ -291,7 +297,7 @@ export function GuidedInjuryFlowSheet({
         </View>
         <Button
           label="Apply training adjustment"
-          testID="injury-apply-adjustment"
+          testID={explorerTestId.injuryIngress(episodeId ? 'update' : 'set', episodeId)}
           glow={false}
           onPress={() => submit(isTrainingPaused)}
           style={styles.submitButton}
@@ -302,7 +308,13 @@ export function GuidedInjuryFlowSheet({
   };
 
   return (
-    <Sheet visible={visible} onClose={onClose} testID="guided-injury-flow-sheet">
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      testID={episodeId
+        ? explorerTestId.injuryDetail(episodeId)
+        : 'guided-injury-flow-sheet'}
+    >
       {titlePrefix ? <Text style={styles.prefix}>{titlePrefix}</Text> : null}
       {renderStep()}
     </Sheet>
@@ -328,6 +340,8 @@ function FlowOption({
     <Pressable
       onPress={onPress}
       testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={testID}
       style={({ pressed }) => [
         styles.option,
         selected && styles.optionSelected,
@@ -344,7 +358,12 @@ function FlowOption({
 
 function BackButton({ onPress }: { onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.back, pressed && { opacity: 0.72 }]}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel="injury-flow-back"
+      style={({ pressed }) => [styles.back, pressed && { opacity: 0.72 }]}
+    >
       <Text style={styles.backText}>Back</Text>
     </Pressable>
   );

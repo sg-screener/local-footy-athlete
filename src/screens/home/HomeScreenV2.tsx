@@ -42,7 +42,9 @@ import {
 } from '../../utils/tapProgramModifiers';
 import { poorSleepConstraintId } from '../../utils/readinessConstraints';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
-import { dayOfWeekTestIdToken } from '../../utils/stableTestId';
+import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
+import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
+import { deriveFutureProgressionRenderTarget } from '../../utils/sessionFeedbackRenderWitness';
 import {
   WEEK_DAYS,
   DAY_SHORT,
@@ -118,10 +120,17 @@ export default function HomeScreenV2() {
     coachNotes,
     activeConstraints,
     todayReadinessModifier,
+    injuryEpisodes,
+    readinessFacts,
+    equipmentFacts,
+    visibleReversibleAdjustments,
+    currentProgram,
+    sessionFeedback,
     handleClearCoachNote,
     handleDismissCoachNote,
     handleUpdateCoachNoteStatus,
     gameModalVisible,
+    gameModalDate,
     gameModalLabel,
     closeGameModal,
     handleOpenGameDayActions,
@@ -232,6 +241,68 @@ export default function HomeScreenV2() {
       scope: 'today' as const,
     };
   }, [isThisWeek, readinessActiveConstraints, todayReadinessModifier, weekAnchorISO]);
+  const activeEquipmentFact = equipmentFacts.find((fact) => fact.status === 'active') ?? null;
+  const readinessProgrammingEffectFactIds = useMemo(() => new Set(
+    activeConstraints.flatMap((constraint) => constraint.temporarySourceFactIds ?? []),
+  ), [activeConstraints]);
+  const activeFixtureId = gameModalDate
+    ? weekDays.find((day) => day.date === gameModalDate)?.workout?.id ?? `calendar-game-${gameModalDate}`
+    : 'calendar-game-unknown';
+  const feedbackRenderWitnesses = useMemo(() => Object.values(sessionFeedback)
+    .flatMap((feedback) => {
+      const receipt = feedback?.outcomeReceipt;
+      if (!receipt) return [];
+      return [{
+        receipt,
+        progressionTarget: deriveFutureProgressionRenderTarget({
+          program: currentProgram,
+          receipt,
+        }),
+      }];
+    }), [currentProgram, sessionFeedback]);
+  const adjustmentResultWitnesses = useMemo(() => {
+    const testIDs: string[] = [];
+    for (const adjustment of visibleReversibleAdjustments) {
+      const constraint = adjustment.displacedOriginalState.userRemovalConstraint;
+      if (!constraint) continue;
+      const sessionId = constraint.targetWorkoutId;
+      if (adjustment.kind === 'session_move' && constraint.moveTargetDate) {
+        testIDs.push(explorerTestId.sessionMutationResult(
+          'move',
+          `${sessionId}:${constraint.moveTargetDate}`,
+        ));
+      }
+      if (adjustment.kind === 'session_delete' || adjustment.kind === 'session_component_delete') {
+        const resultScope = constraint.scope === 'whole_session'
+          ? 'whole_day'
+          : constraint.scope === 'strength_component'
+            ? 'strength'
+            : constraint.scope === 'conditioning_component'
+              ? 'conditioning'
+              : constraint.scope === 'recovery_component'
+                ? 'recovery'
+                : 'team';
+        testIDs.push(explorerTestId.sessionMutationResult(
+          'delete',
+          `${sessionId}:${resultScope}`,
+        ));
+      }
+      if (adjustment.kind === 'session_component_delete') {
+        const remainingIdentities = new Set((constraint.remainingWorkout?.exercises ?? []).map(
+          (exercise) => String(exercise.id || exercise.exerciseId || exercise.exercise?.id || ''),
+        ));
+        for (const exercise of constraint.originalWorkout.exercises) {
+          const componentId = String(
+            exercise.id || exercise.exerciseId || exercise.exercise?.id || '',
+          );
+          if (componentId && !remainingIdentities.has(componentId)) {
+            testIDs.push(explorerTestId.componentDeleteResult(sessionId, componentId));
+          }
+        }
+      }
+    }
+    return Array.from(new Set(testIDs));
+  }, [visibleReversibleAdjustments]);
 
   const handleCoachNoteAction = (
     note: ActiveCoachNote,
@@ -423,6 +494,15 @@ export default function HomeScreenV2() {
                 staleWarning={staleByDate[day.date]}
                 onReviewStale={handleMessageCoach}
                 normal={isNormal}
+                feedbackReceipts={feedbackRenderWitnesses
+                  .filter((witness) => witness.receipt.date === day.date)
+                  .map((witness) => witness.receipt.transactionId)}
+                progressionReceipts={feedbackRenderWitnesses
+                  .filter((witness) => witness.progressionTarget?.targetDate === day.date)
+                  .map((witness) => ({
+                    transactionId: witness.receipt.transactionId,
+                    targetSessionId: witness.progressionTarget!.targetSessionId,
+                  }))}
               />
             );
           })}
@@ -430,8 +510,75 @@ export default function HomeScreenV2() {
 
         <CoachNotesSection
           notes={coachNotes}
+          equipmentFactIds={new Set(equipmentFacts.map((fact) => fact.factId))}
           onAction={handleCoachNoteAction}
         />
+
+        {/* Canonical state leaves survive wording changes and cold reloads. */}
+        {injuryEpisodes.map((episode) => (
+          <ExplorerRenderWitness
+            key={`injury-${episode.episodeId}-${episode.status}`}
+            testID={episode.status === 'active' || episode.status === 'improving'
+              ? explorerTestId.injuryActive(episode.episodeId)
+              : explorerTestId.injuryResolved(episode.episodeId)}
+          />
+        ))}
+        {readinessFacts.map((fact) => (
+          <React.Fragment key={`readiness-${fact.factId}-${fact.status}`}>
+            <ExplorerRenderWitness
+              testID={fact.status === 'active'
+                ? explorerTestId.readinessActive(fact.factId)
+                : explorerTestId.readinessClear(fact.factId)}
+            />
+            {fact.status === 'active' && readinessProgrammingEffectFactIds.has(fact.factId) ? (
+              <ExplorerRenderWitness
+                testID={explorerTestId.readinessProgrammingEffect(fact.factId)}
+              />
+            ) : null}
+          </React.Fragment>
+        ))}
+        {weekReadiness && readinessFacts.every((fact) => fact.status !== 'active') ? (
+          <>
+            <ExplorerRenderWitness testID={explorerTestId.readinessActive(weekReadiness.id)} />
+            <ExplorerRenderWitness
+              testID={explorerTestId.readinessProgrammingEffect(weekReadiness.id)}
+            />
+          </>
+        ) : null}
+        {!weekReadiness && readinessFacts.every((fact) => fact.status !== 'active') ? (
+          <ExplorerRenderWitness testID={explorerTestId.readinessClearState(weekAnchorISO)} />
+        ) : null}
+        {equipmentFacts.map((fact) => (
+          <ExplorerRenderWitness
+            key={`equipment-${fact.factId}-${fact.status}`}
+            testID={fact.status === 'active'
+              ? explorerTestId.equipmentActive(fact.factId)
+              : explorerTestId.equipmentCleared(fact.factId)}
+          />
+        ))}
+        {visibleReversibleAdjustments.map((adjustment) => (
+          <React.Fragment key={`adjustment-${adjustment.id}-${adjustment.status}`}>
+            <ExplorerRenderWitness
+              testID={adjustment.status === 'active'
+                ? explorerTestId.adjustmentActive(adjustment.id)
+                : adjustment.status === 'cleared'
+                  ? explorerTestId.adjustmentRestored(adjustment.id)
+                  : explorerTestId.adjustmentState(adjustment.id, adjustment.status)}
+            />
+            {adjustment.kind === 'repeat_week' ? (
+              <ExplorerRenderWitness
+                testID={adjustment.status === 'active'
+                  ? explorerTestId.repeatActive(adjustment.id)
+                  : adjustment.status === 'cleared'
+                    ? explorerTestId.repeatRestored(adjustment.id)
+                    : explorerTestId.adjustmentState(adjustment.id, adjustment.status)}
+              />
+            ) : null}
+          </React.Fragment>
+        ))}
+        {adjustmentResultWitnesses.map((testID) => (
+          <ExplorerRenderWitness key={testID} testID={testID} />
+        ))}
 
         {repeatWeekResult && (
           <Card
@@ -464,7 +611,7 @@ export default function HomeScreenV2() {
               variant="outline"
               size="md"
               loading={repeatWeekBusy}
-              testID="repeat-week-restore"
+              testID={explorerTestId.repeatRestore(activeRepeatWeekAdjustment.id)}
             />
           </Card>
         )}
@@ -489,14 +636,20 @@ export default function HomeScreenV2() {
             variant="outline"
             size="md"
             disabled={repeatWeekBusy}
-            testID="program-week-repeat"
+            testID={explorerTestId.repeatIngress(weekAnchorISO)}
             style={styles.repeatWeekCard}
           />
         )}
 
         {/* ── No game CTA ── */}
         {isNormal && currentPhase === 'In-season' && !weekHasGame && showAddGameCTA && (
-          <Pressable onPress={handleAddGameMode} style={({ pressed }) => [pressed && { opacity: 0.75 }]}>
+          <Pressable
+            onPress={handleAddGameMode}
+            testID={explorerTestId.fixtureIngress('add', weekAnchorISO)}
+            accessibilityRole="button"
+            accessibilityLabel={explorerTestId.fixtureIngress('add', weekAnchorISO)}
+            style={({ pressed }) => [pressed && { opacity: 0.75 }]}
+          >
             <Card tone="default" padding="md" radius="lg" style={styles.addGame}>
               <View style={styles.addGameRow}>
                 <View style={styles.addGameIcon}>
@@ -535,7 +688,13 @@ export default function HomeScreenV2() {
           <Pressable
             onPress={() => setReadinessVisible(true)}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID="home-week-readiness-entry"
+            testID={weekReadiness
+              ? explorerTestId.readinessUpdate(weekReadiness.id)
+              : explorerTestId.readinessOption('open')}
+            accessibilityRole="button"
+            accessibilityLabel={weekReadiness
+              ? explorerTestId.readinessUpdate(weekReadiness.id)
+              : explorerTestId.readinessOption('open')}
           >
             <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
               <View style={styles.busyAwayRow}>
@@ -562,7 +721,13 @@ export default function HomeScreenV2() {
           <Pressable
             onPress={() => setEquipmentVisible(true)}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID="home-equipment-limitation-entry"
+            testID={activeEquipmentFact
+              ? explorerTestId.equipmentUpdate(activeEquipmentFact.factId)
+              : explorerTestId.equipmentOption('open')}
+            accessibilityRole="button"
+            accessibilityLabel={activeEquipmentFact
+              ? explorerTestId.equipmentUpdate(activeEquipmentFact.factId)
+              : explorerTestId.equipmentOption('open')}
           >
             <Card tone="default" padding="md" radius="lg" style={styles.busyAwayEntry}>
               <View style={styles.busyAwayRow}>
@@ -579,7 +744,13 @@ export default function HomeScreenV2() {
           <Pressable
             onPress={handlePracticeMatchPress}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
-            testID="preseason-practice-match-entry"
+            testID={practiceMatchDay?.workout
+              ? explorerTestId.fixtureActions(practiceMatchDay.workout.id)
+              : explorerTestId.fixtureIngress('add', weekAnchorISO)}
+            accessibilityRole="button"
+            accessibilityLabel={practiceMatchDay?.workout
+              ? explorerTestId.fixtureActions(practiceMatchDay.workout.id)
+              : explorerTestId.fixtureIngress('add', weekAnchorISO)}
           >
             {/* Same component treatment as the busy/away card above — only
                 the icon, tint and label differ. Reuses the busyAway* styles
@@ -628,6 +799,7 @@ export default function HomeScreenV2() {
         visible={gameModalVisible}
         onClose={closeGameModal}
         label={gameModalLabel}
+        fixtureId={activeFixtureId}
         onMove={handleMoveGameDay}
         onRemove={handleRemoveGameDay}
       />
@@ -682,6 +854,7 @@ export default function HomeScreenV2() {
 
       <EquipmentLimitationSheet
         visible={equipmentVisible}
+        activeFactId={activeEquipmentFact?.factId}
         onClose={() => setEquipmentVisible(false)}
         onApply={async (presetId) => {
           await handleApplyEquipmentPreset(presetId, weekAnchorISO);
@@ -714,7 +887,7 @@ export default function HomeScreenV2() {
           label="Repeat this week into next week"
           onPress={() => void handleConfirmRepeatWeek()}
           loading={repeatWeekBusy}
-          testID="repeat-week-confirm"
+          testID={explorerTestId.repeatConfirm(weekAnchorISO)}
         />
         <Button
           label="Cancel"
@@ -727,6 +900,7 @@ export default function HomeScreenV2() {
 
       <CoachNoteSheet
         state={coachNoteSheet}
+        equipmentFactIds={new Set(equipmentFacts.map((fact) => fact.factId))}
         onClose={() => setCoachNoteSheet(null)}
         onConfirmClear={handleConfirmCoachNoteClear}
         onUpdateStatus={handleCoachNoteStatusUpdate}
@@ -736,6 +910,7 @@ export default function HomeScreenV2() {
         visible={injuryFlowNote !== null}
         onClose={() => setInjuryFlowNote(null)}
         initial={injuryFlowInitial}
+        episodeId={injuryFlowNote?.injuryEpisodeId}
         titlePrefix="Update injury"
         onComplete={async (result) => {
           await handleApplyGuidedInjury(
@@ -800,6 +975,8 @@ interface DayRowProps {
   onMakeChange: () => void;
   staleWarning: any;
   onReviewStale: (prefill: string) => void;
+  feedbackReceipts: string[];
+  progressionReceipts: Array<{ transactionId: string; targetSessionId: string }>;
 }
 
 const DAY_ROW_ACCENT = {
@@ -1132,6 +1309,7 @@ function DayRow({
   day, isSelected, isMoveSource, isMoveTarget, pickerMode,
   hasWorkout, isGame, normal, onPress, onViewWorkout, onFinishTeam,
   onLogGame, onGameDayActions, onMakeChange, staleWarning, onReviewStale,
+  feedbackReceipts, progressionReceipts,
 }: DayRowProps) {
   const emphasized = isSelected && normal;
   const showRowBadges = emphasized;
@@ -1191,7 +1369,9 @@ function DayRow({
       padding="none"
       radius="lg"
       onPress={onPress}
-      testID={`day-row-${dayToken}`}
+      testID={isMoveTarget
+        ? explorerTestId.fixtureTarget(day.date)
+        : `day-row-${dayToken}`}
       accessibilityLabel={`Day ${day.short ?? ''}${hasWorkout ? ` ${day.workout.name}` : ''}`}
       accessible={!exposesExpandedActions}
       style={[
@@ -1206,6 +1386,31 @@ function DayRow({
         emphasized && selectedDayRowStyle(accentColor),
       ]}
     >
+      {hasWorkout ? (
+        <ExplorerRenderWitness testID={explorerTestId.sessionCard(day.workout.id)} />
+      ) : null}
+      {isGame ? (
+        <>
+          <ExplorerRenderWitness testID={explorerTestId.fixtureCard(day.workout.id)} />
+          <ExplorerRenderWitness testID={explorerTestId.fixtureState(day.workout.id, 'active')} />
+        </>
+      ) : (
+        <ExplorerRenderWitness
+          testID={explorerTestId.fixtureState(`calendar-game-${day.date}`, 'absent')}
+        />
+      )}
+      {feedbackReceipts.map((transactionId) => (
+        <ExplorerRenderWitness
+          key={transactionId}
+          testID={explorerTestId.feedbackReceipt(transactionId)}
+        />
+      ))}
+      {progressionReceipts.map(({ transactionId, targetSessionId }) => (
+        <ExplorerRenderWitness
+          key={`${transactionId}:${targetSessionId}`}
+          testID={explorerTestId.feedbackProgressionTarget(transactionId, targetSessionId)}
+        />
+      ))}
       <View
         pointerEvents="none"
         style={{ width: 1, height: 1 }}
@@ -1384,12 +1589,14 @@ function DayRow({
             size="lg"
             glow={false}
             onPress={onLogGame}
-            testID="fixture-log-action"
+            testID={explorerTestId.fixtureLog(day.workout.id)}
           />
           <Pressable
             onPress={onGameDayActions}
             style={({ pressed }) => [styles.makeChangeLink, pressed && { opacity: 0.7 }]}
-            testID="fixture-actions-open"
+            testID={explorerTestId.fixtureIngress('move', day.workout.id)}
+            accessibilityRole="button"
+            accessibilityLabel={explorerTestId.fixtureIngress('move', day.workout.id)}
           >
             <Text style={styles.makeChangeText}>Move or remove game day</Text>
           </Pressable>
@@ -1414,10 +1621,11 @@ function DayRow({
 
 interface CoachNotesSectionProps {
   notes: ActiveCoachNote[];
+  equipmentFactIds: ReadonlySet<string>;
   onAction: (note: ActiveCoachNote, action: ActiveCoachNoteAction) => void;
 }
 
-function CoachNotesSection({ notes, onAction }: CoachNotesSectionProps) {
+function CoachNotesSection({ notes, equipmentFactIds, onAction }: CoachNotesSectionProps) {
   if (notes.length === 0) return null;
 
   return (
@@ -1431,7 +1639,11 @@ function CoachNotesSection({ notes, onAction }: CoachNotesSectionProps) {
             padding="none"
             radius="lg"
             style={styles.coachNoteCard}
-            testID={`program-active-coach-note-${note.constraintId}`}
+            testID={note.injuryEpisodeId
+              ? explorerTestId.injuryActive(note.injuryEpisodeId)
+              : note.reversibleAdjustmentId
+                ? explorerTestId.adjustmentActive(note.reversibleAdjustmentId)
+                : `program-active-coach-note-${note.constraintId}`}
           >
             <View style={styles.coachNoteContent}>
               <View style={styles.coachNoteHeader}>
@@ -1444,6 +1656,23 @@ function CoachNotesSection({ notes, onAction }: CoachNotesSectionProps) {
               <View style={styles.coachNoteActions}>
                 {note.actions.map((action, index) => {
                   const primary = index === 0;
+                  const sourceFactId = note.temporarySourceFactIds?.[0];
+                  const isEquipmentFact = sourceFactId
+                    ? equipmentFactIds.has(sourceFactId)
+                    : false;
+                  const actionTestID = action.kind === 'update_injury' && note.injuryEpisodeId
+                    ? explorerTestId.injuryIngress('update', note.injuryEpisodeId)
+                    : action.kind === 'clear_injury' && note.injuryEpisodeId
+                      ? explorerTestId.injuryResolveAction(note.injuryEpisodeId)
+                      : action.kind === 'restore_adjustment' && note.reversibleAdjustmentId
+                        ? explorerTestId.adjustmentRestore(note.reversibleAdjustmentId)
+                        : action.kind === 'update_status' && sourceFactId
+                          ? explorerTestId.readinessUpdate(sourceFactId)
+                          : action.kind === 'clear_adjustment' && sourceFactId && isEquipmentFact
+                            ? explorerTestId.equipmentClear(sourceFactId)
+                            : action.kind === 'update_adjustment' && sourceFactId && isEquipmentFact
+                              ? explorerTestId.equipmentUpdate(sourceFactId)
+                          : `program-active-coach-note-action-${note.constraintId}-${action.kind}`;
                   return (
                     <Pressable
                       key={action.kind}
@@ -1453,7 +1682,9 @@ function CoachNotesSection({ notes, onAction }: CoachNotesSectionProps) {
                         primary && styles.coachNotePrimaryAction,
                         pressed && { opacity: 0.72 },
                       ]}
-                      testID={`program-active-coach-note-action-${note.constraintId}-${action.kind}`}
+                      testID={actionTestID}
+                      accessibilityRole="button"
+                      accessibilityLabel={actionTestID}
                     >
                       <Text
                         style={[
@@ -1529,6 +1760,7 @@ function updateCopyForNote(note: ActiveCoachNote): { title: string; body: string
 
 interface CoachNoteSheetProps {
   state: { mode: 'clear' | 'update'; note: ActiveCoachNote } | null;
+  equipmentFactIds: ReadonlySet<string>;
   onClose: () => void;
   onConfirmClear: () => void;
   onUpdateStatus: (status: ProgramControlStatusUpdate) => void;
@@ -1536,6 +1768,7 @@ interface CoachNoteSheetProps {
 
 function CoachNoteSheet({
   state,
+  equipmentFactIds,
   onClose,
   onConfirmClear,
   onUpdateStatus,
@@ -1547,9 +1780,21 @@ function CoachNoteSheet({
     : updateCopyForNote(state.note);
   const clearAction = state.note.actions.find((action) => action.kind.startsWith('clear'));
   const isStatusUpdate = state.mode === 'update' && state.note.type === 'temporary_status';
+  const injuryEpisodeId = state.note.injuryEpisodeId;
+  const reversibleAdjustmentId = state.note.reversibleAdjustmentId;
+  const sourceFactId = state.note.temporarySourceFactIds?.[0] ?? state.note.constraintId;
+  const isEquipmentFact = equipmentFactIds.has(sourceFactId);
 
   return (
-    <Sheet visible={Boolean(state)} onClose={onClose}>
+    <Sheet
+      visible={Boolean(state)}
+      onClose={onClose}
+      testID={injuryEpisodeId
+        ? explorerTestId.injuryDetail(injuryEpisodeId)
+        : reversibleAdjustmentId
+          ? explorerTestId.adjustmentRestore(reversibleAdjustmentId)
+          : `coach-note-detail-${sourceFactId}`}
+    >
       <Text style={styles.sheetTitle}>{copy.title}</Text>
       <Text style={styles.sheetBody}>{copy.body}</Text>
       {state.mode === 'clear' ? (
@@ -1560,6 +1805,13 @@ function CoachNoteSheet({
               : 'Clear and update program'}
             size="lg"
             onPress={onConfirmClear}
+            testID={reversibleAdjustmentId
+              ? explorerTestId.adjustmentRestore(reversibleAdjustmentId)
+              : injuryEpisodeId
+                ? explorerTestId.injuryResolveAction(injuryEpisodeId)
+                : isEquipmentFact
+                  ? explorerTestId.equipmentClear(sourceFactId)
+                  : explorerTestId.readinessClearAction(sourceFactId)}
           />
           <Button
             label="Cancel"
@@ -1575,12 +1827,14 @@ function CoachNoteSheet({
             label="I'm good now"
             size="lg"
             onPress={() => onUpdateStatus('good_now')}
+            testID={explorerTestId.readinessClearAction(sourceFactId)}
           />
           <Button
             label="Still not right"
             variant="secondary"
             size="md"
             onPress={() => onUpdateStatus('still_not_right')}
+            testID={explorerTestId.readinessOption('still_not_right')}
             style={{ marginTop: spacing.sm }}
           />
           <Button
@@ -1588,6 +1842,7 @@ function CoachNoteSheet({
             variant="secondary"
             size="md"
             onPress={() => onUpdateStatus('still_sick')}
+            testID={explorerTestId.readinessOption('still_sick')}
             style={{ marginTop: spacing.sm }}
           />
           <Button
@@ -1595,6 +1850,7 @@ function CoachNoteSheet({
             variant="secondary"
             size="md"
             onPress={() => onUpdateStatus('still_cooked')}
+            testID={explorerTestId.readinessOption('still_cooked')}
             style={{ marginTop: spacing.sm }}
           />
           <Button
@@ -1602,6 +1858,7 @@ function CoachNoteSheet({
             variant="secondary"
             size="md"
             onPress={() => onUpdateStatus('worse')}
+            testID={explorerTestId.readinessOption('worse')}
             style={{ marginTop: spacing.sm }}
           />
           <Button
@@ -1624,6 +1881,11 @@ function CoachNoteSheet({
             variant="secondary"
             size="md"
             onPress={onConfirmClear}
+            testID={injuryEpisodeId
+              ? explorerTestId.injuryResolveAction(injuryEpisodeId)
+              : isEquipmentFact
+                ? explorerTestId.equipmentClear(sourceFactId)
+                : explorerTestId.readinessClearAction(sourceFactId)}
             style={{ marginTop: spacing.md }}
           />
         </>
@@ -1636,12 +1898,24 @@ interface GameDaySheetProps {
   visible: boolean;
   onClose: () => void;
   label: string;
+  fixtureId: string;
   onMove: () => void;
   onRemove: () => void;
 }
-function GameDaySheet({ visible, onClose, label, onMove, onRemove }: GameDaySheetProps) {
+function GameDaySheet({
+  visible,
+  onClose,
+  label,
+  fixtureId,
+  onMove,
+  onRemove,
+}: GameDaySheetProps) {
   return (
-    <Sheet visible={visible} onClose={onClose} testID="fixture-actions-sheet">
+    <Sheet
+      visible={visible}
+      onClose={onClose}
+      testID={explorerTestId.fixtureActions(fixtureId)}
+    >
       <Text style={styles.sheetTitle}>{label}</Text>
       <View style={styles.sheetCurrentBadge}>
         <View style={styles.sheetCurrentDot} />
@@ -1650,14 +1924,14 @@ function GameDaySheet({ visible, onClose, label, onMove, onRemove }: GameDayShee
 
       <SheetOption
         label="Move Game Day This Week"
-        testID="fixture-move-action"
+        testID={explorerTestId.fixtureIngress('move', fixtureId)}
         accent
         icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M5 12h14"/><Path d="M12 5l7 7-7 7"/></Svg>}
         onPress={onMove}
       />
       <SheetOption
         label="Remove Game Day"
-        testID="fixture-remove-action"
+        testID={explorerTestId.fixtureIngress('remove', fixtureId)}
         danger
         icon={<Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#F44336" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><Path d="M18 6L6 18"/><Path d="M6 6l12 12"/></Svg>}
         onPress={onRemove}
@@ -1681,6 +1955,8 @@ function SheetOption({ label, icon, accent, danger, onPress, testID }: SheetOpti
     <Pressable
       onPress={onPress}
       testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={testID}
       style={({ pressed }) => [styles.sheetOption, pressed && { opacity: 0.7 }]}
     >
       <View style={[
@@ -1795,11 +2071,13 @@ function WeekReadinessSheet({
           </Text>
           <SheetOption
             label="Update — how I'm feeling changed"
+            testID={explorerTestId.readinessUpdate(active.id)}
             icon={pulseIcon('#FF7A85')}
             onPress={() => setUpdating(true)}
           />
           <SheetOption
             label="Clear adjustment — I'm good now"
+            testID={explorerTestId.readinessClearAction(active.id)}
             accent
             icon={
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#C8FF00" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -1817,37 +2095,44 @@ function WeekReadinessSheet({
           <Text style={styles.sheetTitle}>Not 100%? What's going on?</Text>
           <SheetOption
             label="Just a bit tired today"
+            testID={explorerTestId.readinessOption('tired_today')}
             icon={pulseIcon('#FFC247')}
             onPress={() => onApply('tired_today')}
           />
           <SheetOption
             label="Poor sleep last night"
+            testID={explorerTestId.readinessOption('poor_sleep_today')}
             icon={pulseIcon('#FFC247')}
             onPress={() => onApply('poor_sleep_today')}
           />
           <SheetOption
             label="Poor sleep for a few nights"
+            testID={explorerTestId.readinessOption('poor_sleep_week')}
             icon={pulseIcon('#FF7A85')}
             onPress={() => onApply('poor_sleep_week')}
           />
           <SheetOption
             label="Cooked / need an easier week"
+            testID={explorerTestId.readinessOption('cooked_week')}
             accent
             icon={pulseIcon('#C8FF00')}
             onPress={() => onApply('cooked_week')}
           />
           <SheetOption
             label="Sore or tight"
+            testID={explorerTestId.readinessOption('sore_today')}
             icon={pulseIcon('#FF7A85')}
             onPress={() => onApply('sore_today')}
           />
           <SheetOption
             label="Sick / run down"
+            testID={explorerTestId.readinessOption('sick_week')}
             icon={pulseIcon('#1EA7FF')}
             onPress={() => onApply('sick_week')}
           />
           <SheetOption
             label="Niggle or injury"
+            testID={explorerTestId.injuryIngress('set')}
             icon={
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF7A85" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M12 9v4" /><Path d="M12 17h.01" /><Path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" />
@@ -1857,6 +2142,7 @@ function WeekReadinessSheet({
           />
           <SheetOption
             label="Short on time"
+            testID={explorerTestId.readinessOption('short_time')}
             icon={
               <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <Path d="M12 6v6l4 2" /><Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />

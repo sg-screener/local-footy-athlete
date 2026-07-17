@@ -20,6 +20,7 @@ import {
 } from '../../utils/teamTraining';
 import { getSessionComponentRows } from '../../utils/sessionComponents';
 import { projectConditioningVisibleIdentity } from '../../utils/conditioningVisibleIdentity';
+import type { SessionOutcomeTransactionReceipt } from '../../types/sessionOutcome';
 
 // Enable LayoutAnimation on Android (idempotent — safe to call multiple times).
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -71,6 +72,8 @@ export function useDayWorkout() {
   // SessionCompleteMoment, and auto-dismiss the screen after a short beat so
   // the athlete sees the polished "Session logged" state before it fades out.
   const [justSaved, setJustSaved] = useState<boolean>(false);
+  const [savedFeedbackReceipt, setSavedFeedbackReceipt] =
+    useState<SessionOutcomeTransactionReceipt | null>(null);
   const savedDismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ─── Resolved data ───
@@ -279,11 +282,12 @@ export function useDayWorkout() {
    * register the check-mark spring + week-consistency copy without feeling
    * sticky.
    */
-  const handleFeedbackSaved = useCallback(() => {
+  const handleFeedbackSaved = useCallback((receipt: SessionOutcomeTransactionReceipt) => {
     if (savedDismissTimer.current) {
       clearTimeout(savedDismissTimer.current);
     }
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSavedFeedbackReceipt(receipt);
     setJustSaved(true);
     savedDismissTimer.current = setTimeout(() => {
       savedDismissTimer.current = null;
@@ -464,6 +468,7 @@ export function useDayWorkout() {
     toggleCue,
     isFinished,
     justSaved,
+    savedFeedbackReceipt,
 
     // Weight-override API
     editingWeightId,

@@ -30,6 +30,11 @@ import { colors } from '../theme/colors';
 import { spacing, borderRadius, shadows } from '../theme/spacing';
 import { useProgramStore } from '../store/programStore';
 import { getMondayForDate } from '../utils/sessionResolver';
+import type { SessionOutcomeTransactionReceipt } from '../types/sessionOutcome';
+import { ExplorerRenderWitness } from './ExplorerRenderWitness';
+import { explorerTestId } from '../utils/stableTestId';
+import { deriveFutureProgressionRenderTarget } from '../utils/sessionFeedbackRenderWitness';
+import { observeRenderedAthleteActionOutcome } from '../dev/e2e/athleteActionUIObservation';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' of the session just completed. */
@@ -39,6 +44,7 @@ interface Props {
    * tailored (e.g. "Recovery logged") if a session type warrants it.
    */
   headline?: string;
+  receipt?: SessionOutcomeTransactionReceipt | null;
 }
 
 /** Count completed sessions in the same ISO week as `date`, inclusive. */
@@ -83,9 +89,40 @@ function pickSupportCopy(weekCount: number): string {
 export const SessionCompleteMoment: React.FC<Props> = ({
   date,
   headline = 'Session logged',
+  receipt,
 }) => {
   const weekCount = useWeekSessionCount(date);
   const supportCopy = pickSupportCopy(weekCount);
+  const currentProgram = useProgramStore((state) => state.currentProgram);
+  const progressionTarget = useMemo(
+    () => receipt ? deriveFutureProgressionRenderTarget({ program: currentProgram, receipt }) : null,
+    [currentProgram, receipt],
+  );
+
+  useEffect(() => {
+    const traceId = receipt?.source.traceId;
+    if (!receipt || !traceId) return;
+    const receiptTestID = explorerTestId.feedbackReceipt(receipt.transactionId);
+    observeRenderedAthleteActionOutcome({
+      traceId,
+      observationId: `session-feedback-render:${traceId}`,
+      renderedText: {
+        transactionId: receipt.transactionId,
+        sessionIdentity: receipt.sessionIdentity,
+        progressionTarget,
+      },
+      controlId: receiptTestID,
+      accessibilityNode: {
+        receiptTestID,
+        progressionTargetTestID: progressionTarget
+          ? explorerTestId.feedbackProgressionTarget(
+              receipt.transactionId,
+              progressionTarget.targetSessionId,
+            )
+          : null,
+      },
+    });
+  }, [progressionTarget, receipt]);
 
   // ── Animations ──
   // Check icon: scale 0.6 → 1 (spring), opacity 0 → 1. The badge's subtle
@@ -139,6 +176,19 @@ export const SessionCompleteMoment: React.FC<Props> = ({
       style={styles.panel}
       testID="session-completion"
     >
+      {receipt ? (
+        <ExplorerRenderWitness
+          testID={explorerTestId.feedbackReceipt(receipt.transactionId)}
+        />
+      ) : null}
+      {receipt && progressionTarget ? (
+        <ExplorerRenderWitness
+          testID={explorerTestId.feedbackProgressionTarget(
+            receipt.transactionId,
+            progressionTarget.targetSessionId,
+          )}
+        />
+      ) : null}
       <View style={styles.inner}>
         {/*
          * Icon wrapper carries the only glow — a subtle lime RN shadow
