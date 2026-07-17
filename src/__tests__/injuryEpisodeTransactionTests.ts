@@ -24,6 +24,7 @@ const {
 } = require('../store/acceptedStateColdStart') as typeof import('../store/acceptedStateColdStart');
 const {
   createEmptyReversibleAdjustmentLedger,
+  normalizeReversibleAdjustmentLedger,
 } = require('../rules/reversibleAdjustmentLedger') as typeof import('../rules/reversibleAdjustmentLedger');
 const {
   asyncStorageDurable,
@@ -206,7 +207,7 @@ function visibleNames(date: string): string[] {
   }).workout?.exercises.map((row) => row.exercise?.name ?? row.exerciseId) ?? [];
 }
 
-function reset(date = '2026-07-20'): void {
+function reset(date = '2026-07-20') {
   const fixtureAdjustment: ReversibleAdjustmentRecord = {
     protocolVersion: 1,
     id: 'reversible-adjustment:test:fixture-add',
@@ -256,6 +257,15 @@ function reset(date = '2026-07-20'): void {
     revision: 1,
     lastTransaction: 'test:seed',
   };
+  const normalizedLedger = normalizeReversibleAdjustmentLedger({
+    value: {
+      ...createEmptyReversibleAdjustmentLedger(),
+      adjustments: [fixtureAdjustment],
+    },
+  });
+  check('seeded reversible-adjustment ledger normalization is idempotent', semanticFingerprint(
+    normalizeReversibleAdjustmentLedger({ value: normalizedLedger })) ===
+      semanticFingerprint(normalizedLedger));
   useProgramStore.setState({
     currentProgram: null,
     currentMicrocycle: null,
@@ -266,10 +276,7 @@ function reset(date = '2026-07-20'): void {
     overrideContexts: {},
     weekScopedOverlays: {},
     userRemovalConstraints: [],
-    reversibleAdjustmentLedger: {
-      ...createEmptyReversibleAdjustmentLedger(),
-      adjustments: [fixtureAdjustment],
-    },
+    reversibleAdjustmentLedger: normalizedLedger,
     exposureContractsByWeek: {},
     sessionFeedback: {},
     weightOverrides: {},
@@ -280,6 +287,7 @@ function reset(date = '2026-07-20'): void {
     activeInjury: null,
     dismissedCoachNoteIds: [],
   });
+  return normalizedLedger;
 }
 
 async function main(): Promise<void> {
@@ -287,13 +295,11 @@ async function main(): Promise<void> {
     useProgramStore.persist.rehydrate(),
     useCoachUpdatesStore.persist.rehydrate(),
   ]);
-  reset();
+  const normalizedLedger = reset();
   const date = '2026-07-20';
   const movedDate = '2026-07-21';
   const rawBaseFingerprint = semanticFingerprint(useProgramStore.getState().dateOverrides);
-  const ledgerFingerprint = semanticFingerprint(
-    useProgramStore.getState().reversibleAdjustmentLedger,
-  );
+  const ledgerFingerprint = semanticFingerprint(normalizedLedger);
   const fixtureFingerprint = semanticFingerprint(
     useProgramStore.getState().acceptedMaterialContext.markedDays,
   );
