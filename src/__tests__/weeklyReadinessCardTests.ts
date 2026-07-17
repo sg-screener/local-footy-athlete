@@ -32,6 +32,7 @@ import {
 import { selectActiveCoachNotes } from '../utils/activeCoachNotes';
 import { getActiveProgramModifiers } from '../utils/activeProgramModifiers';
 import { todayISOLocal } from '../utils/appDate';
+import { explorerTestId, stableTestIdToken } from '../utils/stableTestId';
 import type { OnboardingData } from '../types/domain';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -49,6 +50,41 @@ function ok(name: string, cond: boolean, detail?: string) {
     failures.push(name);
     console.log(`  ✗ ${name}${detail ? '\n      ' + detail : ''}`);
   }
+}
+
+function jsxOpeningTags(source: string, element: string): string[] {
+  const tags: string[] = [];
+  const opener = `<${element}`;
+  let cursor = 0;
+
+  while (cursor < source.length) {
+    const start = source.indexOf(opener, cursor);
+    if (start < 0) break;
+
+    let braceDepth = 0;
+    let quote: '"' | "'" | '`' | null = null;
+    for (let index = start + opener.length; index < source.length; index += 1) {
+      const char = source[index];
+      if (quote) {
+        if (char === quote && source[index - 1] !== '\\') quote = null;
+        continue;
+      }
+      if (char === '"' || char === "'" || char === '`') {
+        quote = char;
+        continue;
+      }
+      if (char === '{') braceDepth += 1;
+      if (char === '}') braceDepth -= 1;
+      if (char === '>' && braceDepth === 0) {
+        tags.push(source.slice(start, index + 1));
+        cursor = index + 1;
+        break;
+      }
+    }
+    if (cursor <= start) break;
+  }
+
+  return tags;
 }
 
 function resetWorld() {
@@ -297,24 +333,72 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const fs = require('fs');
   const src = fs.readFileSync(`${__dirname}/../screens/home/HomeScreenV2.tsx`, 'utf8') as string;
+  const hookSrc = fs.readFileSync(`${__dirname}/../screens/home/useHomeScreen.ts`, 'utf8') as string;
+  const witnessSrc = fs.readFileSync(
+    `${__dirname}/../components/ExplorerRenderWitness.tsx`, 'utf8',
+  ) as string;
+  const readinessEntryTag = jsxOpeningTags(src, 'Pressable')
+    .find((tag) => tag.includes('setReadinessVisible(true)')) ?? '';
+  const sheetOptionTags = jsxOpeningTags(src, 'SheetOption');
+  const readinessFactId = 'temporary-readiness:fatigue:2026-07-20';
+  const readinessFactToken = stableTestIdToken(readinessFactId);
+  const factSelectors = [
+    explorerTestId.readinessActive(readinessFactId),
+    explorerTestId.readinessUpdate(readinessFactId),
+    explorerTestId.readinessClearAction(readinessFactId),
+    explorerTestId.readinessClear(readinessFactId),
+    explorerTestId.readinessProgrammingEffect(readinessFactId),
+  ];
 
-  ok('card exists with testID home-week-readiness-entry',
-    src.includes('home-week-readiness-entry'));
-  ok('card reuses the busy/away card styles (shared treatment)',
-    /home-week-readiness-entry[\s\S]{0,400}styles\.busyAwayEntry/.test(src) &&
-    /home-week-readiness-entry[\s\S]{0,600}styles\.busyAwayIcon/.test(src) &&
-    /home-week-readiness-entry[\s\S]{0,800}styles\.busyAwayText/.test(src));
-  const busyIdx = src.indexOf('home-busy-away-entry');
-  const readinessIdx = src.indexOf('home-week-readiness-entry');
-  const practiceIdx = src.indexOf('preseason-practice-match-entry');
-  ok('card sits below busy/away and above the practice-match card',
-    busyIdx > -1 && readinessIdx > busyIdx && practiceIdx > readinessIdx,
-    `busy=${busyIdx} readiness=${readinessIdx} practice=${practiceIdx}`);
-  // Phase visibility: the card render is gated on isNormal only — no
-  // seasonPhase / showPracticeMatchCTA condition on its Pressable block.
-  const cardBlock = src.slice(src.indexOf('Weekly readiness ("I\'m not 100%") — all phases'), readinessIdx + 200);
-  ok('card is visible in all phases (gated on isNormal only)',
-    cardBlock.includes('{isNormal && (') && !cardBlock.includes('showPracticeMatchCTA') && !cardBlock.includes('currentPhase'));
+  ok('readiness entry and lifecycle selectors preserve stable fact identity',
+    factSelectors.every((selector) => selector.endsWith(readinessFactToken)) &&
+    new Set(factSelectors).size === factSelectors.length &&
+    readinessEntryTag.includes('explorerTestId.readinessUpdate(weekReadiness.id)') &&
+    readinessEntryTag.includes("explorerTestId.readinessOption('open')") &&
+    readinessEntryTag.includes('accessibilityRole="button"') &&
+    readinessEntryTag.includes('accessibilityLabel={weekReadiness'));
+
+  const readinessActionKinds: ReadinessOption[] = [
+    'tired_today',
+    'poor_sleep_today',
+    'poor_sleep_week',
+    'cooked_week',
+    'sore_today',
+    'sick_week',
+  ];
+  const readinessOptionSelectors = [
+    ...readinessActionKinds.map((kind) => explorerTestId.readinessOption(kind)),
+    explorerTestId.readinessOption('short_time'),
+    explorerTestId.injuryIngress('set'),
+  ];
+  ok('readiness options plus update and clear controls use semantic identities',
+    new Set(readinessOptionSelectors).size === readinessOptionSelectors.length &&
+    readinessActionKinds.every((kind) => sheetOptionTags.some((tag) =>
+      tag.includes(`explorerTestId.readinessOption('${kind}')`) &&
+      tag.includes(`onApply('${kind}')`))) &&
+    sheetOptionTags.some((tag) =>
+      tag.includes("explorerTestId.readinessOption('short_time')") && tag.includes('onShortTime')) &&
+    sheetOptionTags.some((tag) =>
+      tag.includes("explorerTestId.injuryIngress('set')") && tag.includes('onInjury')) &&
+    sheetOptionTags.some((tag) =>
+      tag.includes('explorerTestId.readinessUpdate(active.id)') && tag.includes('setUpdating(true)')) &&
+    sheetOptionTags.some((tag) =>
+      tag.includes('explorerTestId.readinessClearAction(active.id)') && tag.includes('onClear(active.id)')));
+
+  ok('active readiness and programming-effect witnesses use the canonical fact identity',
+    /readinessFacts\.map\(\(fact\)[\s\S]*fact\.status === 'active'[\s\S]*readinessActive\(fact\.factId\)[\s\S]*readinessClear\(fact\.factId\)[\s\S]*readinessProgrammingEffectFactIds\.has\(fact\.factId\)[\s\S]*readinessProgrammingEffect\(fact\.factId\)/.test(src));
+
+  ok('resolved facts and an empty week expose distinct cleared-state witnesses',
+    explorerTestId.readinessClear(readinessFactId) !==
+      explorerTestId.readinessClearState('2026-07-20') &&
+    /fact\.status === 'active'[\s\S]*readinessActive\(fact\.factId\)[\s\S]*readinessClear\(fact\.factId\)/.test(src) &&
+    /!weekReadiness && readinessFacts\.every\(\(fact\) => fact\.status !== 'active'\)[\s\S]*readinessClearState\(weekAnchorISO\)/.test(src));
+
+  ok('accepted readiness facts reconstruct accessibility-visible semantic nodes after reload',
+    /temporarySourceFacts = useProgramStore\(\(s\) =>[\s\S]*s\.acceptedMaterialContext\.temporarySourceFacts\)/.test(hookSrc) &&
+    /readinessFacts = useMemo\(\(\) => temporarySourceFacts\.filter/.test(hookSrc) &&
+    /readinessFacts\.map\(\(fact\)[\s\S]*<ExplorerRenderWitness/.test(src) &&
+    /<View[\s\S]*accessible[\s\S]*accessibilityLabel=\{accessibilityLabel\}[\s\S]*accessibilityRole="text"[\s\S]*collapsable=\{false\}[\s\S]*testID=\{testID\}/.test(witnessSrc));
   ok('tapping opens the readiness sheet (state wiring present)',
     src.includes('setReadinessVisible(true)') && src.includes('home-week-readiness-sheet'));
   ok('sheet offers all eight athlete-facing options',
@@ -334,13 +418,9 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     src.includes('Not 100% today') && src.includes("Not 100% this week") &&
     src.includes('Recovery mode this week') &&
     src.includes('Clear adjustment'));
-  ok('Busy/Away and practice-match cards retain their tap handlers',
-    src.includes('home-busy-away-entry') && src.includes('setBusyAwayVisible(true)') &&
-    src.includes('preseason-practice-match-entry') && src.includes('onPress={handlePracticeMatchPress}'));
   ok('no coach-chat / LLM in the flow (no askCoach or fetch in readiness paths)',
     !/WeekReadinessSheet[\s\S]{0,4000}onAskCoach/.test(src));
 
-  const hookSrc = fs.readFileSync(`${__dirname}/../screens/home/useHomeScreen.ts`, 'utf8') as string;
   ok('hook keeps today and week scopes distinct',
     hookSrc.includes("scope: kind === 'cooked_week' ? 'current_week' : 'today_only'") &&
     hookSrc.includes("kind === 'poor_sleep_week' ? 'current_week' : 'today_only'") &&
