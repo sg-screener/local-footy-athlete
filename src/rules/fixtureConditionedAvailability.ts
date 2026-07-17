@@ -21,6 +21,13 @@ export interface TargetWeekFixture {
   kind: FixtureAvailabilityKind;
 }
 
+/** One phase-derived fixture identity shared by every fixture producer. */
+export function canonicalFixtureKind(
+  profile: Pick<OnboardingData, 'seasonPhase'>,
+): FixtureAvailabilityKind {
+  return profile.seasonPhase === 'Pre-season' ? 'practice_match' : 'game';
+}
+
 export interface EffectiveAvailabilityDay {
   date: string;
   dayOfWeek: DayOfWeek;
@@ -84,13 +91,9 @@ function isDateInWeek(date: string, weekStart: string): boolean {
   return date >= weekStart && date <= addDays(weekStart, 6);
 }
 
-function fixtureKind(profile: OnboardingData): FixtureAvailabilityKind {
-  return profile.seasonPhase === 'Pre-season' ? 'practice_match' : 'game';
-}
-
 function recurringFixture(profile: OnboardingData, weekStart: string): TargetWeekFixture[] {
   const day = (profile.usualGameDay || profile.gameDay) as DayOfWeek | undefined;
-  return day ? [{ date: dateForDay(weekStart, day), kind: fixtureKind(profile) }] : [];
+  return day ? [{ date: dateForDay(weekStart, day), kind: canonicalFixtureKind(profile) }] : [];
 }
 
 /** Resolve fixture anchors from the accepted target-week calendar view. */
@@ -101,7 +104,7 @@ export function targetWeekFixtures(args: {
 }): TargetWeekFixture[] {
   const explicit = Object.entries(args.markedDays ?? {})
     .filter(([date, mark]) => isDateInWeek(date, args.weekStart) && mark === 'game')
-    .map(([date]) => ({ date, kind: fixtureKind(args.profile) }));
+    .map(([date]) => ({ date, kind: canonicalFixtureKind(args.profile) }));
   if (explicit.length > 0) return explicit.sort((left, right) => left.date.localeCompare(right.date));
   const explicitBye = Object.entries(args.markedDays ?? {})
     .some(([date, mark]) => isDateInWeek(date, args.weekStart) && mark === 'noGame');
@@ -180,7 +183,7 @@ export function resolveFixtureConditionedAvailability(
     ) {
       releasedFixtures.push({
         date,
-        kind: fixtureKind(input.profile),
+        kind: canonicalFixtureKind(input.profile),
         provenance: 'bye_usual_game_day',
       });
     }

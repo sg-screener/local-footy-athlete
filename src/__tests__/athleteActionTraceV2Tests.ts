@@ -87,6 +87,25 @@ async function main(): Promise<void> {
   ok('production TraceV2 snapshots fingerprint canonical temporary source facts',
     /temporarySourceFacts:\s*context\.temporarySourceFacts/.test(mutationTransactionSource) &&
       !/temporarySourceFacts:\s*\{\s*injuryEpisodeIds:/.test(mutationTransactionSource));
+  const coachFixtureSource = readFileSync(
+    `${__dirname}/../utils/coachFixtureChange.ts`,
+    'utf8',
+  );
+  const coachReplySource = readFileSync(
+    `${__dirname}/../utils/coachFixtureReplyObservation.ts`,
+    'utf8',
+  );
+  const coachScreenSource = readFileSync(
+    `${__dirname}/../screens/coach/CoachScreen.tsx`,
+    'utf8',
+  );
+  ok('Coach fixture adapter passes the forced classification root to the one transaction owner',
+    /executeTransaction\(\{ \.\.\.command, trace \}\)/.test(coachFixtureSource) &&
+      /executeFixtureMutationTransaction\(command\)/.test(coachFixtureSource));
+  ok('Coach fixture replies separate domain registration from post-commit rendered proof',
+    /registerAthleteActionUIOutcome/.test(coachReplySource) &&
+      /observeRenderedAthleteActionOutcome/.test(coachReplySource) &&
+      /useEffect\(\(\) => \{[\s\S]*observeCoachFixtureReply/.test(coachScreenSource));
 
   const familyCoordinator = new AthleteActionTraceCoordinator(
     () => true,

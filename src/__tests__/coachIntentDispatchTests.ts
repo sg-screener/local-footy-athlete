@@ -746,10 +746,11 @@ section('[11] Async Coach Intent Dispatcher — ownership boundaries');
 {
   const dispatcherSource = readFileSync('src/utils/coachIntentDispatcher.ts', 'utf8');
   const liveDepsSource = readFileSync('src/utils/coachDispatchDeps.ts', 'utf8');
-  ok('fixture execution remains a future dependency seam only',
-    /executeFixtureChange\?:/.test(dispatcherSource) &&
-      !/deps\.executeFixtureChange\s*\(/.test(dispatcherSource) &&
-      !/executeFixtureChange/.test(liveDepsSource));
+  ok('fixture execution is a required first dispatcher branch with one live adapter',
+    /executeFixtureChange:\s*\(/.test(dispatcherSource) &&
+      /if \(intent\.intent === 'fixture_change'\)/.test(dispatcherSource) &&
+      /return deps\.executeFixtureChange\(intent, packet, trace\)/.test(dispatcherSource) &&
+      /executeCoachFixtureChange\(intent, packet, trace\)/.test(liveDepsSource));
   ok('injury production ownership remains outside live dispatcher deps',
     /legacy_dispatch_mutation_bypassed/.test(liveDepsSource) &&
       !/injuryEpisodeTransaction|fixtureMutationTransaction/.test(dispatcherSource));

@@ -162,7 +162,7 @@ export class LLMCoachIntentClassifier implements CoachIntentClassifier {
 
     logger.debug('[coach-intent] raw', truncate(JSON.stringify(json)));
 
-    const parsed = parseCoachIntent(json);
+    const parsed = parseCoachIntent(json, packet.userMessage);
     if (!parsed) {
       logger.warn('[coach-intent] error', {
         kind: 'schema_validation_failed',

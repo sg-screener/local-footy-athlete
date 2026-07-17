@@ -40,6 +40,8 @@ import { constraintAppliesToDate } from './readinessConstraints';
 const RECENT_HISTORY_LIMIT = 8;
 
 export interface BuildPacketInput {
+  /** Stable id of the athlete message that owns this Coach turn. */
+  turnId?: string;
   /** The user's just-submitted message. */
   userMessage: string;
   /** Recent conversation turns. */
@@ -143,6 +145,7 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
   // location — CoachScreen also has a redundant call but this one
   // fires first and makes the packet self-contained.
   const basePacket = {
+    ...(input.turnId ? { turnId: input.turnId } : {}),
     userMessage: input.userMessage,
     recentMessages: recent,
     activeInjury,

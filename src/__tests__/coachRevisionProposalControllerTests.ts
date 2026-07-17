@@ -716,6 +716,7 @@ async function runControllerTurn(args: {
   seedFn?: () => void;
   visibleDate?: string;
   conversation?: boolean;
+  fixture?: boolean;
 }) {
   if (args.seed !== false) (args.seedFn ?? seedProgram)();
   const messages: CoachTurnMessage[] = [];
@@ -734,16 +735,25 @@ async function runControllerTurn(args: {
     classifier: {
       classify: async () => {
         classifierCalls++;
+        const intent = args.fixture
+          ? {
+              intent: 'fixture_change' as const,
+              confidence: 1,
+              needsClarification: true as const,
+              clarificationQuestion: 'What date do you want to add the fixture on?',
+              payload: { action: 'add' as const, missingFields: ['targetDate' as const] },
+            }
+          : {
+              intent: args.conversation
+                ? 'general_question' as const
+                : 'request_program_adjustment' as const,
+              confidence: 1,
+              needsClarification: false as const,
+            };
         return {
           status: 'classified' as const,
           provenance: 'deterministic' as const,
-          intent: {
-            intent: args.conversation
-              ? 'general_question' as const
-              : 'request_program_adjustment' as const,
-            confidence: 1,
-            needsClarification: false,
-          },
+          intent,
         };
       },
     },
@@ -800,6 +810,21 @@ async function runControllerTurn(args: {
 
 async function run() {
   console.log('coachRevisionProposalControllerTests');
+
+  {
+    const adapter = new RecordingRevisionAdapter(removeStrengthProposal);
+    const result = await runControllerTurn({
+      message: 'Add a fixture',
+      adapter,
+      fixture: true,
+    });
+    eq('[fixture] revision adapter bypassed', adapter.calls.length, 0);
+    eq('[fixture] classification called once', result.classifierCalls, 1);
+    ok('[fixture] typed clarification handled before revision ownership',
+      result.handled.handled && /What date/.test(result.reply), result.reply);
+    ok('[fixture] no revision override written',
+      Object.keys(result.dateOverrides).length === 0, result.dateOverrides);
+  }
 
   {
     const adapter = new RecordingRevisionAdapter(removeStrengthProposal);

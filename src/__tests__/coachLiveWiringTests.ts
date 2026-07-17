@@ -215,6 +215,7 @@ async function liveHandleSend(
 
   // ── 2-4. Build packet, classify, dispatch ──
   const packet = buildCoachContextPacket({
+    turnId: 'live-coach-turn-1',
     userMessage: userMessageContent,
     recentMessages: [],
     todayISO,
@@ -420,9 +421,28 @@ section('[7] activeInjury hammy + "shoulder hurts" → clarifier asks shoulder s
 }
 
 // ─────────────────────────────────────────────────────────────────────
-// 8. coach-flow logs at every routing decision
+// 8. fixture_change is handled before legacy /coach-chat
 // ─────────────────────────────────────────────────────────────────────
-section('[8] runtime logs — coach-flow trace');
+section('[8] fixture_change → typed adapter, zero /coach-chat calls');
+{
+  resetAll(); resetFetchSpy();
+  scriptedIntent = {
+    intent: 'fixture_change',
+    confidence: 0.98,
+    needsClarification: true,
+    clarificationQuestion: 'What date do you want to add the fixture on?',
+    payload: { action: 'add', missingFields: ['targetDate'] } as any,
+  };
+  const r = await liveHandleSend('add a game', { current: null }, classifier);
+  ok('fixture classifier called once', coachIntentCalls === 1);
+  ok('fixture reply handled without /coach-chat', !r.legacyCalled && coachChatCalls === 0);
+  ok('fixture clarification rendered from deterministic owner', /What date/.test(r.reply));
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 9. coach-flow logs at every routing decision
+// ─────────────────────────────────────────────────────────────────────
+section('[9] runtime logs — coach-flow trace');
 {
   resetAll(); resetFetchSpy();
   baseWeekDef = { 5: wk('Lower Strength', 5, { exercises: [ex('RDLs')] }) };

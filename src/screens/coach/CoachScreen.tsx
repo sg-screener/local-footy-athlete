@@ -111,6 +111,10 @@ import {
   deriveSmokeWednesdayOpenTarget,
   type SmokeWednesdayOpenTarget,
 } from '../../components/dev/smokeVisibleWeekHarnessState';
+import {
+  observeCoachFixtureReply,
+  type CoachFixtureReplyObservation,
+} from '../../utils/coachFixtureReplyObservation';
 // NOTE: SMOKE_WEDNESDAY_* fixture constants are now consumed exclusively by
 // SmokeCoachBikeHarness (src/components/dev/SmokeCoachBikeHarness.tsx).
 // CoachScreen no longer owns the visible-week preflight markers — they
@@ -487,6 +491,59 @@ interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
+  fixtureReplyObservation?: CoachFixtureReplyObservation;
+}
+
+function CoachConversationBubble({ item }: { item: Message }) {
+  const isUserMessage = item.role === 'user';
+  const isSystemMessage = item.role === 'system';
+  const observation = item.fixtureReplyObservation;
+
+  useEffect(() => {
+    if (!observation || item.role !== 'assistant') return;
+    observeCoachFixtureReply({
+      observation,
+      renderedText: item.content,
+    });
+  }, [item.content, item.role, observation]);
+
+  if (isSystemMessage) {
+    return (
+      <View style={styles.systemMessageContainer}>
+        <Text style={styles.systemMessageText}>{item.content}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View
+      style={[
+        styles.messageContainer,
+        isUserMessage && styles.userMessageContainer,
+      ]}
+    >
+      <View
+        accessible={!!observation}
+        accessibilityRole={observation ? 'text' : undefined}
+        accessibilityLabel={observation ? item.content : undefined}
+        collapsable={observation ? false : undefined}
+        testID={observation?.controlId}
+        style={[
+          styles.messageBubble,
+          isUserMessage && styles.userBubble,
+        ]}
+      >
+        <Text
+          style={[
+            styles.messageText,
+            isUserMessage && styles.userMessageText,
+          ]}
+        >
+          {renderMessageContent(item.content, isUserMessage)}
+        </Text>
+      </View>
+    </View>
+  );
 }
 
 const WELCOME_MESSAGE: Message = {
@@ -2084,41 +2141,7 @@ export default function CoachScreen() {
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
-    const isUserMessage = item.role === 'user';
-    const isSystemMessage = item.role === 'system';
-
-    if (isSystemMessage) {
-      return (
-        <View style={styles.systemMessageContainer}>
-          <Text style={styles.systemMessageText}>{item.content}</Text>
-        </View>
-      );
-    }
-
-    return (
-      <View
-        style={[
-          styles.messageContainer,
-          isUserMessage && styles.userMessageContainer,
-        ]}
-      >
-        <View
-          style={[
-            styles.messageBubble,
-            isUserMessage && styles.userBubble,
-          ]}
-        >
-          <Text
-            style={[
-              styles.messageText,
-              isUserMessage && styles.userMessageText,
-            ]}
-          >
-            {renderMessageContent(item.content, isUserMessage)}
-          </Text>
-        </View>
-      </View>
-    );
+    return <CoachConversationBubble item={item} />;
   };
 
   // Phase 3 — render the debug overlay only when the live env var

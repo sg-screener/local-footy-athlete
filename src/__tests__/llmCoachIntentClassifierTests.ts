@@ -17,6 +17,7 @@ process.env.EXPO_PUBLIC_ENABLE_DEBUG_LOGS = 'true';
 
 import { LLMCoachIntentClassifier } from '../utils/llmCoachIntentClassifier';
 import type { CoachContextPacket, CoachIntent } from '../utils/coachIntent';
+import { readFileSync } from 'fs';
 
 let pass = 0;
 let fail = 0;
@@ -321,6 +322,67 @@ section('[9] All intent kinds parse correctly');
     eq(`kind '${k}' classified`, result.status, 'classified');
     eq(`kind '${k}' round-trip`, result.status === 'classified' ? result.intent.intent : null, k);
   }
+
+  const fixtureFetcher = (() => Promise.resolve(makeFakeResp({
+    intent: 'fixture_change',
+    confidence: 0.95,
+    needsClarification: false,
+    payload: { action: 'move', sourceDate: '2026-03-28', targetDate: '2026-03-29' },
+  }))) as unknown as typeof fetch;
+  const fixtureResult = await new LLMCoachIntentClassifier({
+    endpoint: 'https://x.com/coach-intent',
+    fetcher: fixtureFetcher,
+  }).classify(makePacket());
+  eq('fixture_change classified', fixtureResult.status, 'classified');
+  eq('fixture_change action preserved',
+    fixtureResult.status === 'classified' ? fixtureResult.intent.payload?.action : null,
+    'move');
+
+  const hallucinatedKindResult = await new LLMCoachIntentClassifier({
+    endpoint: 'https://x.com/coach-intent',
+    fetcher: (() => Promise.resolve(makeFakeResp({
+      intent: 'fixture_change',
+      confidence: 0.95,
+      needsClarification: false,
+      payload: {
+        action: 'move',
+        sourceDate: '2026-03-28',
+        targetDate: '2026-03-29',
+        explicitFixtureKind: 'game',
+      },
+    }))) as unknown as typeof fetch,
+  }).classify(makePacket({ userMessage: 'move the fixture to Sunday' }));
+  eq('explicit fixture kind is rejected unless the athlete said it',
+    hallucinatedKindResult.status, 'unavailable');
+
+  for (const invalidPayload of [
+    { action: 'add', sourceDate: '2026-03-28', targetDate: '2026-03-29' },
+    { action: 'move', sourceDate: '2026-03-28' },
+    { action: 'remove', sourceDate: '2026-03-28', targetDate: '2026-03-29' },
+  ]) {
+    const invalidResult = await new LLMCoachIntentClassifier({
+      endpoint: 'https://x.com/coach-intent',
+      fetcher: (() => Promise.resolve(makeFakeResp({
+        intent: 'fixture_change',
+        confidence: 0.95,
+        needsClarification: false,
+        payload: invalidPayload,
+      }))) as unknown as typeof fetch,
+    }).classify(makePacket());
+    eq(`invalid fixture payload rejected ${JSON.stringify(invalidPayload)}`,
+      invalidResult.status, 'unavailable');
+  }
+
+  const edgeSource = readFileSync('supabase/functions/coach-intent/index.ts', 'utf8');
+  const appSource = readFileSync('src/utils/coachIntent.ts', 'utf8');
+  const edgePrompt = edgeSource.match(/COACH_INTENT_SYSTEM_PROMPT = `([\s\S]*?)`;\n/)?.[1];
+  const appPrompt = appSource.match(/COACH_INTENT_SYSTEM_PROMPT = `([\s\S]*?)`;\n/)?.[1];
+  ok('app and edge classifier prompts remain byte-exact', edgePrompt === appPrompt);
+  const intentSet = (source: string) => source
+    .match(/const VALID_COACH_INTENTS = new Set(?:<CoachIntentKind>)?\(\[([\s\S]*?)\]\);/)?.[1]
+    .match(/['"]([^'"]+)['"]/g)
+    ?.map((value) => value.slice(1, -1));
+  eq('app and edge allowed intent sets remain exact', intentSet(edgeSource), intentSet(appSource));
 }
 
 // ─── Summary ────

@@ -41,6 +41,7 @@ import {
 } from './verifiedCoachCommunication';
 import type { ActiveConstraint } from '../store/coachUpdatesStore';
 import { verifyRenderedProgramMutation } from './visibleProgramReadModel';
+import { executeCoachFixtureChange } from './coachFixtureChange';
 
 /**
  * Compose the live dispatcher deps. Pure — no side effects until a
@@ -49,6 +50,10 @@ import { verifyRenderedProgramMutation } from './visibleProgramReadModel';
  */
 export function buildLiveDispatchDeps(todayISO: string): DispatchDeps {
   return {
+    executeFixtureChange(intent, packet, trace) {
+      return executeCoachFixtureChange(intent, packet, trace);
+    },
+
     runUAEForInjury(bodyPart, severity, _note, _trace) {
       logger.warn('[injury-episode] legacy_dispatch_mutation_bypassed', {
         bodyPart,

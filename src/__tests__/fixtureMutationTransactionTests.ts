@@ -442,7 +442,12 @@ async function main(): Promise<void> {
   await run('10 Game Change Coach Note uses acknowledged source metadata', async () => {
     const athlete = profile();
     seedAcceptedWeek({ athlete });
-    const metadata = source('home-tap-source-proof', { turnId: 'tap-turn-1' });
+    const metadata = source('coach-fixture:coach-turn-1', {
+      requestedBy: 'athlete',
+      producer: 'coach',
+      surface: 'coach_chat',
+      turnId: 'coach-turn-1',
+    });
     const result = await executeFixtureMutationTransaction(input({
       action: 'move',
       fixtureKind: 'game',
@@ -610,6 +615,10 @@ async function main(): Promise<void> {
       `${__dirname}/../store/calendarStore.ts`,
       'utf8',
     ) as string;
+    const coachAdapter = fs.readFileSync(
+      `${__dirname}/../utils/coachFixtureChange.ts`,
+      'utf8',
+    ) as string;
     assert(FIXTURE_MUTATION_TRANSACTION_NAME === 'FixtureMutationTransaction',
       'canonical transaction name drifted');
     assert(!/runCoachMutationTransaction|rebuildLocalWeek|upsertGameChangeCoachNoteFromDiff/
@@ -621,6 +630,9 @@ async function main(): Promise<void> {
     'live Home fixture UI bypasses FixtureMutationTransaction');
     assert(/COMPATIBILITY-ONLY FIXTURE WRITE/.test(calendar),
       'direct CalendarStore fixture doors are not marked compatibility-only');
+    assert(/executeFixtureMutationTransaction\(command\)/.test(coachAdapter) &&
+      !/rebuildLocalWeek|runCoachMutationTransaction|upsertGameChangeCoachNoteFromDiff/.test(coachAdapter),
+    'Coach adapter introduced a second fixture mutation engine');
   });
 }
 
