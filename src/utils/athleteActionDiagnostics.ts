@@ -222,10 +222,11 @@ export function beginAthleteActionTrace(
     source: input.source,
     actionType: input.actionType,
     route: input.route,
-    scenarioRunId: scenarioClaim?.scenarioId,
-    scenarioStepId: scenarioClaim?.scenarioStepId,
-    seedId: scenarioClaim?.seedId,
-    priorActionTraceId: scenarioClaim?.priorActionTraceId,
+    scenarioRunId: scenarioClaim?.scenarioId ?? input.scenarioRunId,
+    scenarioStepId: scenarioClaim?.scenarioStepId ?? input.scenarioStepId,
+    seedId: scenarioClaim?.seedId ?? input.seedId,
+    priorActionTraceId:
+      scenarioClaim?.priorActionTraceId ?? input.priorActionTraceId,
     canonicalRequestedAction: {
       actionType: input.actionType,
       scope: input.scope ?? null,
