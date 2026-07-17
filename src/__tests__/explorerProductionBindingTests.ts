@@ -319,7 +319,7 @@ async function main(): Promise<void> {
     });
     expect(registry.resolveExactAdjustmentId(
       chain.scenarioId,
-      'explorer-multi-reload-fixture-move-adjustment',
+      'receipt-from-move-fixture',
     ) === 'exact-fixture-adjustment', 'restore rebound to unrelated later adjustment');
   });
 
@@ -335,7 +335,7 @@ async function main(): Promise<void> {
     });
     expect(registry.resolveExactAdjustmentId(
       repeat.scenarioId,
-      'explorer-repeat-week-2026-07-13-2026-07-20-adjustment',
+      'receipt-from-repeat-week',
     ) === 'exact-repeat-week-adjustment', 'Repeat Week exact ID was not retained');
   });
 
@@ -448,7 +448,7 @@ async function main(): Promise<void> {
     const registry = new ExplorerAdjustmentReceiptRegistry();
     const exact = registry.hydrateFromPriorTraceChain({
       manifest: chain,
-      logicalAdjustmentId: 'explorer-multi-reload-fixture-move-adjustment',
+      logicalAdjustmentId: 'receipt-from-move-fixture',
       priorActionTraceId: deleteTrace.traceId,
     });
     expect(exact === 'exact-fixture-adjustment-after-reload',

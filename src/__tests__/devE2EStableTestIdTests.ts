@@ -43,7 +43,7 @@ const contracts: Array<[string, string, RegExp]> = [
   ['set count identity', sources.workout, /exercise-set-count-\$\{exerciseToken\}-\$\{exercise\.prescribedSets\}/],
   ['finish action', sources.workout, /testID="finish-session-action"/],
   ['feedback options', sources.feedback, /feedback-completion-\$\{opt\.key\}[\s\S]*feedback-feeling-\$\{opt\.key\}[\s\S]*feedback-soreness-\$\{opt\.key\}/],
-  ['feedback save', sources.feedback, /testID="feedback-save-action"/],
+  ['feedback save', sources.feedback, /testID=\{explorerTestId\.feedbackSave\(workout\?\.id \?\? date\)\}/],
   ['session completion', sources.completion, /testID="session-completion"/],
   ['feedback receipt uses transaction identity', sources.completion, /feedbackReceipt\(receipt\.transactionId\)/],
   ['progression target uses receipt and target session', sources.completion, /feedbackProgressionTarget\([\s\S]*receipt\.transactionId,[\s\S]*progressionTarget\.targetSessionId/],

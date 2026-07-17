@@ -276,6 +276,11 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
             id: `equipment-temporary:${equipment.date}`,
             type: 'equipment',
             reasonLabel: 'Bodyweight only',
+            mode: 'only',
+            tags: ['bodyweight'],
+            temporarySourceFactIds: [
+              `temporary-equipment-bodyweight-only-${equipment.date}`,
+            ],
           }]
         : []),
     ],

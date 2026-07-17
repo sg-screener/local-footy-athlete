@@ -37,6 +37,7 @@ import type { ExplorerOracleEvaluationContext } from
   '../dev/e2e/explorerOracleEvaluator';
 import type {
   ExplorerScenarioActionEvidenceV1,
+  ExplorerScenarioArtifactBundleV1,
   ExplorerScenarioCheckpointEvidenceV1,
   ExplorerScenarioReloadReceiptV1,
   ExplorerScenarioSeedEvidenceV1,
@@ -408,8 +409,10 @@ function runtimeDeps(
       return {
         order,
         reloadReceipt: {
+          scenarioId: manifest.scenarioId,
           stepId: step.stepId,
           reloadCount: order,
+          traceV2RootId: `trace-readiness.set-${order}`,
         } as unknown as ExplorerScenarioReloadReceiptV1,
       };
     },
@@ -417,6 +420,10 @@ function runtimeDeps(
       counts.artifact += 1;
       return { stepId: step.stepId } as ExplorerScenarioActionEvidenceV1;
     },
+    assembleScenarioArtifact: async () => ({
+      schemaVersion: 1,
+      semanticHash: 'sha256:test',
+    } as ExplorerScenarioArtifactBundleV1),
   };
   return deps;
 }
@@ -567,6 +574,7 @@ void test('runs ordered after-action/reload oracles and a three-reload chain onc
   const deps = runtimeDeps(manifest);
   const result = await runExplorerScenario(manifest.scenarioId, deps);
   expect(result.status === 'complete', `runtime blocked: ${result.reasonCode}`);
+  expect(result.artifactBundle !== null, 'complete runtime omitted artifact bundle');
   expect(deps.counts.reset === 1, 'scenario reseeded');
   expect(deps.counts.action === 3, 'action count changed');
   expect(deps.counts.checkpoint === 3 && deps.counts.reload === 3,
@@ -574,6 +582,14 @@ void test('runs ordered after-action/reload oracles and a three-reload chain onc
   expect(result.actionRecords.every((record) =>
     record.afterActionOracleReceipts.length === 1 &&
     record.afterReloadOracleReceipts.length >= 2), 'oracle evaluation points changed');
+  expect(result.actionRecords.every((record) =>
+    record.checkpoint.checkpointEvidence.scenarioId === manifest.scenarioId &&
+    record.checkpoint.checkpointEvidence.stepId === record.stepId &&
+    record.reload.reloadReceipt.scenarioId === manifest.scenarioId &&
+    record.reload.reloadReceipt.stepId === record.stepId &&
+    record.renderReceipt.traceV2RootId === record.productionReceipt.traceV2RootId &&
+    record.reload.reloadReceipt.traceV2RootId === record.productionReceipt.traceV2RootId),
+  'action, trace, render, checkpoint and reload identities were not linked');
   expect(result.artifactAssembly?.productionReceipts.length === 3,
     'production receipts were not aggregated');
   expect(result.artifactAssembly?.traceV2RootChain.join(',') ===
@@ -606,6 +622,45 @@ void test('keeps an attempted receipt when React render observation never arrive
     'blocked artifact dropped the actual production receipt');
   expect(result.artifactAssembly?.traceV2RootChain.length === 1,
     'blocked artifact dropped the TraceV2 root');
+});
+
+void test('never returns complete when scenario artifact assembly is absent', async () => {
+  const manifest = runtimeManifest(1);
+  const deps = runtimeDeps(manifest);
+  const result = await runExplorerScenario(manifest.scenarioId, {
+    ...deps,
+    assembleScenarioArtifact: undefined,
+  } as unknown as ExplorerRuntimeDependencies);
+  expect(result.status === 'blocked', 'runtime passed without scenario artifact assembly');
+  expect(result.reasonCode === EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
+    'missing bundle did not produce incomplete_artifact');
+  expect(result.artifactBundle === null, 'missing assembler manufactured a bundle');
+});
+
+void test('maps missing live screenshot or hierarchy to incomplete_artifact', async () => {
+  const manifest = runtimeManifest(1);
+  const deps = runtimeDeps(manifest);
+  deps.waitForReactRender = async ({ receipt }) => ({
+    traceV2RootId: receipt.traceV2RootId,
+    observedTestIds: [],
+    complete: false,
+    incompleteArtifact: true,
+  });
+  const result = await runExplorerScenario(manifest.scenarioId, deps);
+  expect(result.reasonCode === EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
+    'missing physical capture was reported as a product pass/failure');
+});
+
+void test('manifest budget expiry blocks all later actions without reseeding', async () => {
+  const manifest = runtimeManifest(2);
+  const deps = runtimeDeps(manifest);
+  const times = [0, 0, manifest.budgetMs];
+  deps.nowMs = () => times.shift() ?? manifest.budgetMs;
+  const result = await runExplorerScenario(manifest.scenarioId, deps);
+  expect(result.reasonCode === EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+    'expired manifest budget did not fail closed');
+  expect(deps.counts.action === 0, 'an action ran after budget expiry');
+  expect(deps.counts.reset === 1, 'budget handling reseeded the scenario');
 });
 
 void test('repeated bridge execution produces deterministic receipt identity', async () => {

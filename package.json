@@ -85,6 +85,7 @@
     "test:explorer-production-bindings": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerProductionBindingTests.ts",
     "test:explorer-render-bindings": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerRenderBindingTests.ts",
     "test:explorer-scenario-runner": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerScenarioRunnerTests.ts",
+    "test:explorer-live-wiring": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLiveWiringTests.ts",
     "test:explorer-oracles": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerOracleEvaluatorTests.ts",
     "test:explorer-scenario-artifacts": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerScenarioArtifactBundleTests.ts",
     "test:persistent-injury": "sucrase-node src/__tests__/persistentInjuryStateTests.ts",

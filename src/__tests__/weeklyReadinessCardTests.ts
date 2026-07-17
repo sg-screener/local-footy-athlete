@@ -354,7 +354,7 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     factSelectors.every((selector) => selector.endsWith(readinessFactToken)) &&
     new Set(factSelectors).size === factSelectors.length &&
     readinessEntryTag.includes('explorerTestId.readinessUpdate(weekReadiness.id)') &&
-    readinessEntryTag.includes("explorerTestId.readinessOption('open')") &&
+    readinessEntryTag.includes('explorerTestId.readinessSetAction(`readiness-${weekAnchorISO}`)') &&
     readinessEntryTag.includes('accessibilityRole="button"') &&
     readinessEntryTag.includes('accessibilityLabel={weekReadiness'));
 

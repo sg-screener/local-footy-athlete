@@ -66,6 +66,9 @@ async function main(): Promise<void> {
     // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { section18PhaseTableSignature } = require('../rules/weeklyExposureContractV2') as
       typeof import('../rules/weeklyExposureContractV2');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { readActiveDevE2EScenarioSession } = require('../dev/e2e/devE2EScenarioRuntime') as
+      typeof import('../dev/e2e/devE2EScenarioRuntime');
 
     const seedIds = [
       'multi-reload-fixture-chain',
@@ -115,6 +118,25 @@ async function main(): Promise<void> {
     ok(
       'all three new seed families install through the production adapter',
       installed.join(',') === seedIds.join(','),
+    );
+    await coordinator.reset('equipment-restriction-case');
+    const equipmentFacts = useProgramStore.getState()
+      .acceptedMaterialContext.temporarySourceFacts;
+    ok(
+      'equipment restriction installs the canonical temporary source fact',
+      equipmentFacts.some((fact) =>
+        'factId' in fact &&
+        fact.factId === 'temporary-equipment-bodyweight-only-2026-07-13' &&
+        (!('status' in fact) || fact.status === 'active')),
+    );
+    const explorerReset = await coordinator.resetScenario('smoke-whole-session-deletion');
+    const explorerSession = readActiveDevE2EScenarioSession();
+    ok(
+      'production scenario reset evaluates typed Explorer predicates',
+      explorerReset &&
+        explorerSession?.nextActionEligibility.status === 'eligible' &&
+        explorerSession.nextActionEligibility.nextStepId === 'delete-whole-session',
+      explorerSession?.nextActionEligibility.reasonCode ?? 'missing session',
     );
     ok('default seed installation performs no fetch', fetchCalls === 0);
 

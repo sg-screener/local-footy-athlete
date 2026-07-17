@@ -31,7 +31,7 @@ const EXPECTED_WITNESS_KINDS: Record<DevE2ESeedId, string> = {
   'standard-in-season-week': 'program,profile_exact,calendar_mark',
   'stacked-team-training-upper-pull':
     'program,profile_exact,workout,component_identity,component_identity,visible_card_detail_equality',
-  'lower-body-deletion': 'program,profile_exact,workout,exercise_present',
+  'lower-body-deletion': 'program,profile_exact,workout',
   'one-set-strength': 'program,profile_exact,exercise_sets',
   'fixture-move':
     'program,profile_exact,calendar_mark,fixture_identity,eligible_target_date,absent_overlay,visible_card_detail_equality',
@@ -162,12 +162,15 @@ try {
   }
   ok('unknown seed IDs fail in the pure registry', unknownRejected);
   ok('no named seed calls fetch', fetchCalls === 0, `fetchCalls=${fetchCalls}`);
-  ok('scenario protocol adds no seed families',
-    DEV_E2E_SCENARIO_MANIFESTS.length === DEV_E2E_SEED_IDS.length &&
+  ok('scenario protocol plus nine Explorer manifests add no seed families',
+    DEV_E2E_SCENARIO_MANIFESTS.length === DEV_E2E_SEED_IDS.length + 9 &&
       DEV_E2E_SCENARIO_MANIFESTS.every((manifest) =>
-        DEV_E2E_SEED_IDS.includes(manifest.seedId) &&
-        manifest.steps.length === 1 &&
-        manifest.steps[0].stepId === manifest.seedId));
+        DEV_E2E_SEED_IDS.includes(manifest.seedId)) &&
+      DEV_E2E_SEED_IDS.every((seedId) =>
+        DEV_E2E_SCENARIO_MANIFESTS.some((manifest) =>
+          manifest.scenarioId === seedId &&
+          manifest.steps.length === 1 &&
+          manifest.steps[0].stepId === seedId)));
 } finally {
   globalThis.fetch = originalFetch;
 }
