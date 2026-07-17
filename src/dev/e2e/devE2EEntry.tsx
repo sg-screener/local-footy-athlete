@@ -13,6 +13,7 @@ import {
 } from './devE2EState';
 import { restoreDevE2EClockBeforeHydration } from './devE2EClockPersistence';
 import { devE2EScenarioReasonCode } from './devE2EScenarioProtocol';
+import { ExplorerProductionRenderReceiptObserver } from './ExplorerProductionRenderReceiptObserver';
 
 export interface DevE2ELinking {
   addEventListener: (
@@ -143,6 +144,7 @@ export function DevE2EStatusMarkers(): React.ReactElement {
   const errorReason = snapshot.phase === 'seed_error' ? snapshot.error : null;
   return (
     <>
+      <ExplorerProductionRenderReceiptObserver />
       {devE2EMarkers(snapshot).map((marker) => (
         <View
           key={marker}
