@@ -264,6 +264,19 @@ function main(): void {
   expectValidationCode('missing action hierarchy is refused',
     EXPLORER_SCENARIO_ARTIFACT_FAILURE.HIERARCHY_MISSING, missingHierarchy);
 
+  const missingPhysicalReceipts = cloneExplorerFixture(valid);
+  delete (missingPhysicalReceipts as Partial<ExplorerScenarioArtifactBundleV1>)
+    .physicalEvidenceReceipts;
+  expectValidationCode('passed scenario requires every physical evidence receipt',
+    EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISSING,
+    missingPhysicalReceipts);
+
+  const wrongPhysicalTrace = cloneExplorerFixture(valid);
+  wrongPhysicalTrace.physicalEvidenceReceipts[1].traceId = 'trace-wrong-physical';
+  expectValidationCode('physical receipt must match action trace identity',
+    EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISMATCH,
+    wrongPhysicalTrace);
+
   const staleActionManifest = cloneExplorerFixture(valid);
   const staleScreenshotPath = Object.keys(
     staleActionManifest.actions[0].actionArtifactBundle.files,
@@ -398,6 +411,16 @@ function main(): void {
     }) && baseActionSemanticHash !== explorerScenarioArtifactSemanticHash({
       actionArtifactBundle: semanticVariant,
     }));
+  const physicalMediaA = explorerScenarioArtifactSemanticHash({
+    screenshot: { relativeReference: 'scenario/seed.png', sha256: 'a'.repeat(64), byteSize: 10 },
+    hierarchy: { relativeReference: 'scenario/seed.json', sha256: 'b'.repeat(64), byteSize: 20 },
+  });
+  const physicalMediaB = explorerScenarioArtifactSemanticHash({
+    screenshot: { relativeReference: 'scenario/seed.png', sha256: 'c'.repeat(64), byteSize: 99 },
+    hierarchy: { relativeReference: 'scenario/seed.json', sha256: 'd'.repeat(64), byteSize: 88 },
+  });
+  ok('physical receipt hashes do not redefine scenario semantics',
+    physicalMediaA === physicalMediaB);
 
   const environmentHashedRaw = cloneExplorerFixture(valid);
   environmentHashedRaw.actions[0].intendedActionReceipt.semanticInput = {
@@ -453,6 +476,8 @@ function main(): void {
 
   const blockedDraft = cloneExplorerFixture(valid);
   blockedDraft.actions = blockedDraft.actions.slice(0, 2);
+  blockedDraft.physicalEvidenceReceipts =
+    blockedDraft.physicalEvidenceReceipts.slice(0, 5);
   const completedStepIds = new Set(EXPLORER_FIXTURE_STEP_IDS.slice(0, 2));
   blockedDraft.oracles = blockedDraft.oracles.filter((oracle) =>
     completedStepIds.has(oracle.stepId as (typeof EXPLORER_FIXTURE_STEP_IDS)[number]));

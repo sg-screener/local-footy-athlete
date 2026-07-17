@@ -16,6 +16,10 @@ import type {
   ExplorerRuntimeResult,
 } from './explorerRuntime';
 import { semanticFingerprintV2 } from '../../utils/semanticFingerprintV2';
+import {
+  readExplorerPhysicalEvidenceCampaignIdentity,
+  requestExplorerPhysicalEvidence,
+} from './explorerPhysicalEvidenceDevBridge';
 
 /** Last dev-only receipt, exposed for deterministic native E2E inspection. */
 let lastResult: ExplorerRuntimeResult | ExplorerCampaignResult | null = null;
@@ -31,7 +35,21 @@ function liveHostDependencies(args: {
   coordinator: DevE2ESeedCoordinator;
   scenarioId: string;
 }): Omit<ExplorerRuntimeDependencies, 'loadManifest' | 'actionBridge' | 'waitForReactRender'> {
+  const campaign = readExplorerPhysicalEvidenceCampaignIdentity();
+  if (!campaign) {
+    throw new Error('explorer_live_physical_evidence_campaign_missing');
+  }
   return {
+    physicalEvidence: {
+      campaignId: campaign.campaignId,
+      integratedRepositorySha: campaign.integratedRepositorySha,
+      deterministicClockFingerprint: () => {
+        const clock = readActiveDevE2EClockReceipt();
+        if (!clock) throw new Error('explorer_live_clock_missing');
+        return clock.semanticFingerprint;
+      },
+      requestCapture: requestExplorerPhysicalEvidence,
+    },
     resetSeedOnce: async (seedId) => {
       const reset = await args.coordinator.resetScenario(args.scenarioId);
       if (!reset) throw new Error(`explorer_live_reset_refused:${args.scenarioId}`);

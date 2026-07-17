@@ -89,6 +89,8 @@
     "test:explorer-live-wiring": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLiveWiringTests.ts",
     "test:explorer-oracles": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerOracleEvaluatorTests.ts",
     "test:explorer-scenario-artifacts": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerScenarioArtifactBundleTests.ts",
+    "test:explorer-physical-evidence": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerPhysicalEvidenceTests.ts",
+    "test:explorer-live-runner": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLiveRunnerTests.ts",
     "test:persistent-injury": "sucrase-node src/__tests__/persistentInjuryStateTests.ts",
     "test:coach-orchestration": "sucrase-node src/__tests__/coachOrchestrationTests.ts",
     "test:coach-live-wiring": "sucrase-node src/__tests__/coachLiveWiringTests.ts",
@@ -169,7 +171,8 @@
     "test:poor-sleep": "sucrase-node src/__tests__/poorSleepReadinessTests.ts",
     "test:testing-bias": "sucrase-node src/__tests__/testingBiasTests.ts",
     "dev:coach-semantic-active": "EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE=active EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE=1 expo start --clear",
-    "e2e:maestro:ios": "scripts/dev-e2e/run-maestro-ios.sh"
+    "e2e:maestro:ios": "scripts/dev-e2e/run-maestro-ios.sh",
+    "e2e:explorer-nine:live": "sucrase-node scripts/run-explorer-nine-live.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

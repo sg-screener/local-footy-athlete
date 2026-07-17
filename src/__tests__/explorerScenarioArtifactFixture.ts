@@ -22,8 +22,18 @@ import {
   type ExplorerScenarioContract,
   type ExplorerScenarioStep,
 } from '../dev/e2e/explorerScenarioContracts';
-import { explorerActionSemanticHash } from '../dev/e2e/explorerScenarioContractValidation';
-import { semanticFingerprintV2 } from '../utils/semanticFingerprintV2';
+import {
+  explorerActionSemanticHash,
+  explorerScenarioSemanticHash,
+} from '../dev/e2e/explorerScenarioContractValidation';
+import {
+  EXPLORER_HIERARCHY_FORMAT,
+  createExplorerPhysicalCaptureRequest,
+  explorerEvidenceArtifactReference,
+  type ExplorerPhysicalCaptureRequestV1,
+  type ExplorerPhysicalEvidenceReceiptV1,
+} from '../dev/e2e/explorerPhysicalEvidence';
+import { semanticFingerprintV2, sha256Hex } from '../utils/semanticFingerprintV2';
 
 export const EXPLORER_FIXTURE_SCENARIO_ID = 'scenario-artifact-three-step';
 export const EXPLORER_FIXTURE_SEED_ID = 'lower-body-deletion' as const;
@@ -70,6 +80,40 @@ const ACTION_SURFACES = [
   'program-detail',
   'session-feedback',
 ] as const;
+const FIXTURE_REPOSITORY_SHA = '9f28da0d51a62106bc85d12a14868c216de8b96d';
+const FIXTURE_CAMPAIGN_ID = 'explorer-nine-9f28da0d51a6';
+
+function physicalReceipt(
+  request: ExplorerPhysicalCaptureRequestV1,
+): ExplorerPhysicalEvidenceReceiptV1 {
+  return {
+    schemaVersion: request.schemaVersion,
+    captureId: request.captureId,
+    campaignId: request.campaignId,
+    scenarioId: request.scenarioId,
+    ...(request.stepId ? { stepId: request.stepId } : {}),
+    capturePhase: request.capturePhase,
+    reloadCount: request.reloadCount,
+    traceId: request.traceId,
+    controlId: request.controlId,
+    observationId: request.observationId,
+    expectedSemanticIdentity: request.expectedSemanticIdentity,
+    screenshot: {
+      relativeReference: request.requestedScreenshotRelativePath,
+      sha256: sha256Hex(`screenshot:${request.captureId}`),
+      byteSize: 128,
+      mediaType: 'image/png',
+    },
+    hierarchy: {
+      relativeReference: request.requestedHierarchyRelativePath,
+      sha256: sha256Hex(`hierarchy:${request.captureId}`),
+      byteSize: 256,
+      format: EXPLORER_HIERARCHY_FORMAT,
+    },
+    capturedIntegratedRepositorySha: FIXTURE_REPOSITORY_SHA,
+    deterministicClockFingerprint: request.deterministicClockFingerprint,
+  };
+}
 
 function manifestStep(index: number): ExplorerScenarioStep {
   const stepId = EXPLORER_FIXTURE_STEP_IDS[index];
@@ -406,11 +450,69 @@ ExplorerScenarioArtifactCollectionInputV1 {
   });
   const finalSession = reloadReceipts[reloadReceipts.length - 1]
     .scenarioSessionRecord;
+  const manifestSemanticHash = explorerScenarioSemanticHash(scenarioManifest);
+  const seedPhysical = physicalReceipt(createExplorerPhysicalCaptureRequest({
+    campaignId: FIXTURE_CAMPAIGN_ID,
+    scenarioId: scenarioManifest.scenarioId,
+    capturePhase: 'seed-reset',
+    reloadCount: 0,
+    traceId: null,
+    controlId: null,
+    observationId: null,
+    expectedSemanticIdentity: {
+      manifestSemanticHash,
+      actionSemanticHash: null,
+      canonicalSemanticIdentity: manifestSemanticHash,
+    },
+    deterministicClockFingerprint: clockReceipt.semanticFingerprint,
+  }));
+  const actionPhysical = actions.flatMap((action, index) => {
+    const step = scenarioManifest.steps[index];
+    const identity = {
+      manifestSemanticHash,
+      actionSemanticHash: action.intendedActionSemanticHash,
+      canonicalSemanticIdentity: `canonical:${action.stepId}`,
+    };
+    const common = {
+      campaignId: FIXTURE_CAMPAIGN_ID,
+      scenarioId: scenarioManifest.scenarioId,
+      stepId: action.stepId,
+      stepOrdinal: index + 1,
+      traceId: action.traceV2RootId,
+      controlId: step.controlTestId,
+      observationId: `observation:${action.stepId}`,
+      expectedSemanticIdentity: identity,
+      deterministicClockFingerprint: clockReceipt.semanticFingerprint,
+    };
+    return [
+      physicalReceipt(createExplorerPhysicalCaptureRequest({
+        ...common,
+        capturePhase: 'after-action',
+        reloadCount: index,
+      })),
+      physicalReceipt(createExplorerPhysicalCaptureRequest({
+        ...common,
+        capturePhase: 'after-reload',
+        reloadCount: index + 1,
+      })),
+    ];
+  });
+  const actionsWithPhysical = actions.map((action, index) => ({
+    ...action,
+    screenshots: {
+      afterAction: explorerEvidenceArtifactReference(actionPhysical[index * 2].screenshot),
+      afterReload: explorerEvidenceArtifactReference(actionPhysical[index * 2 + 1].screenshot),
+    },
+    accessibilityHierarchies: {
+      afterAction: explorerEvidenceArtifactReference(actionPhysical[index * 2].hierarchy),
+      afterReload: explorerEvidenceArtifactReference(actionPhysical[index * 2 + 1].hierarchy),
+    },
+  }));
 
   return {
     scenarioManifest,
     identity: {
-      repositoryCommit: '9f28da0d51a62106bc85d12a14868c216de8b96d',
+      repositoryCommit: FIXTURE_REPOSITORY_SHA,
       buildIdentifier: 'build-fixture-001',
       deterministicClockReceipt: clockReceipt,
     },
@@ -426,8 +528,9 @@ ExplorerScenarioArtifactCollectionInputV1 {
       },
       initialAcceptedSemanticFingerprint: 'accepted:initial',
       initialPersistedStoreFingerprints: { program: 'persisted:initial' },
-      initialScreenshotReference: ref('screenshot:seed-initial'),
-      initialAccessibilityHierarchyReference: ref('hierarchy:seed-initial'),
+      initialScreenshotReference: explorerEvidenceArtifactReference(seedPhysical.screenshot),
+      initialAccessibilityHierarchyReference:
+        explorerEvidenceArtifactReference(seedPhysical.hierarchy),
     },
     scenarioSessionEvidence: {
       protocolVersion: DEV_E2E_SCENARIO_PROTOCOL_VERSION,
@@ -441,7 +544,8 @@ ExplorerScenarioArtifactCollectionInputV1 {
         reasonCode: 'scenario_complete',
       },
     },
-    actions,
+    actions: actionsWithPhysical,
+    physicalEvidenceReceipts: [seedPhysical, ...actionPhysical],
     oracles: scenarioManifest.steps.flatMap((step, index) =>
       step.oracleAssertions.map((oracle) => ({
         oracleId: oracle.oracleId,

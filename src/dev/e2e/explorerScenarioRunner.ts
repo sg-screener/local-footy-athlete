@@ -188,7 +188,6 @@ export function createExplorerProductionScenarioRunner(args: {
   const productionBindings = createExplorerProductionBindings({
     dependencies: args.bindingDependencies,
   });
-  const requireExternalArtifacts = args.requireExternalArtifacts ?? true;
   const waitForReactRender: ExplorerRuntimeDependencies['waitForReactRender'] =
     async ({ receipt }): Promise<ExplorerCorrelatedRenderReceipt | null> => {
       const correlated = await waitForExplorerRenderReceipt({
@@ -196,9 +195,9 @@ export function createExplorerProductionScenarioRunner(args: {
         timeoutMs: args.renderTimeoutMs,
       });
       if (!correlated) return null;
-      return requireExternalArtifacts && !correlated.externalArtifacts.complete
-        ? { ...correlated, complete: false, incompleteArtifact: true }
-        : correlated;
+      // Physical files are acknowledged by the app-owned evidence bridge.
+      // The semantic render observer must never manufacture those receipts.
+      return correlated;
     };
   return {
     productionBindings,

@@ -1,0 +1,5 @@
+appId: com.localfootyathlete.app
+name: Capture one Explorer physical screenshot
+---
+- takeScreenshot:
+    path: "${SCREENSHOT_PATH}"

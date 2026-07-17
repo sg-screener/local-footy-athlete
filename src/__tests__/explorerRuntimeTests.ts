@@ -42,7 +42,12 @@ import type {
   ExplorerScenarioReloadReceiptV1,
   ExplorerScenarioSeedEvidenceV1,
 } from '../dev/e2e/explorerScenarioArtifactBundle';
-import { semanticFingerprintV2 } from '../utils/semanticFingerprintV2';
+import {
+  EXPLORER_HIERARCHY_FORMAT,
+  type ExplorerPhysicalCaptureRequestV1,
+  type ExplorerPhysicalEvidenceReceiptV1,
+} from '../dev/e2e/explorerPhysicalEvidence';
+import { semanticFingerprintV2, sha256Hex } from '../utils/semanticFingerprintV2';
 
 let passed = 0;
 let failed = 0;
@@ -335,10 +340,14 @@ function oracleContext(args: {
 
 function runtimeDeps(
   manifest: ExplorerScenarioContract,
-  options: { missingRender?: boolean } = {},
+  options: {
+    missingRender?: boolean;
+    missingPhysicalPhase?: 'seed-reset' | 'after-action' | 'after-reload';
+  } = {},
 ): ExplorerRuntimeDependencies & { counts: Record<string, number> } {
   const counts: Record<string, number> = {
     reset: 0, marker: 0, claim: 0, action: 0, checkpoint: 0, reload: 0, artifact: 0,
+    capture: 0, oracle: 0,
   };
   const adapters = buildAdapters({
     mutateResult: (action, result) => ({
@@ -392,8 +401,10 @@ function runtimeDeps(
       observedTestIds: [step.controlTestId, ...(step.targetTestIds ?? [])],
       complete: true,
     }),
-    captureOracleContext: async ({ step, point }) =>
-      oracleContext({ manifest, step, point }),
+    captureOracleContext: async ({ step, point }) => {
+      counts.oracle += 1;
+      return oracleContext({ manifest, step, point });
+    },
     checkpointScenarioStep: async ({ step, order }) => {
       counts.checkpoint += 1;
       return {
@@ -424,6 +435,47 @@ function runtimeDeps(
       schemaVersion: 1,
       semanticHash: 'sha256:test',
     } as ExplorerScenarioArtifactBundleV1),
+    physicalEvidence: {
+      campaignId: 'explorer-nine-9f28da0d51a6',
+      integratedRepositorySha: '9f28da0d51a62106bc85d12a14868c216de8b96d',
+      deterministicClockFingerprint: () => 'clock:runtime',
+      requestCapture: async (
+        request: ExplorerPhysicalCaptureRequestV1,
+      ): Promise<ExplorerPhysicalEvidenceReceiptV1> => {
+        counts.capture += 1;
+        if (request.capturePhase === options.missingPhysicalPhase) {
+          throw new Error(`physical receipt missing:${request.capturePhase}`);
+        }
+        return {
+          schemaVersion: request.schemaVersion,
+          captureId: request.captureId,
+          campaignId: request.campaignId,
+          scenarioId: request.scenarioId,
+          ...(request.stepId ? { stepId: request.stepId } : {}),
+          capturePhase: request.capturePhase,
+          reloadCount: request.reloadCount,
+          traceId: request.traceId,
+          controlId: request.controlId,
+          observationId: request.observationId,
+          expectedSemanticIdentity: request.expectedSemanticIdentity,
+          screenshot: {
+            relativeReference: request.requestedScreenshotRelativePath,
+            sha256: sha256Hex(`screenshot:${request.captureId}`),
+            byteSize: 10,
+            mediaType: 'image/png',
+          },
+          hierarchy: {
+            relativeReference: request.requestedHierarchyRelativePath,
+            sha256: sha256Hex(`hierarchy:${request.captureId}`),
+            byteSize: 20,
+            format: EXPLORER_HIERARCHY_FORMAT,
+          },
+          capturedIntegratedRepositorySha:
+            '9f28da0d51a62106bc85d12a14868c216de8b96d',
+          deterministicClockFingerprint: request.deterministicClockFingerprint,
+        };
+      },
+    },
   };
   return deps;
 }
@@ -579,6 +631,8 @@ void test('runs ordered after-action/reload oracles and a three-reload chain onc
   expect(deps.counts.action === 3, 'action count changed');
   expect(deps.counts.checkpoint === 3 && deps.counts.reload === 3,
     'three-reload checkpoint progression changed');
+  expect(deps.counts.capture === 7,
+    'reset/action/reload physical capture cardinality changed');
   expect(result.actionRecords.every((record) =>
     record.afterActionOracleReceipts.length === 1 &&
     record.afterReloadOracleReceipts.length >= 2), 'oracle evaluation points changed');
@@ -649,6 +703,19 @@ void test('maps missing live screenshot or hierarchy to incomplete_artifact', as
   const result = await runExplorerScenario(manifest.scenarioId, deps);
   expect(result.reasonCode === EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
     'missing physical capture was reported as a product pass/failure');
+});
+
+void test('missing physical acknowledgement blocks before hard oracles', async () => {
+  const manifest = runtimeManifest(1);
+  const deps = runtimeDeps(manifest, { missingPhysicalPhase: 'after-action' });
+  const result = await runExplorerScenario(manifest.scenarioId, deps);
+  expect(result.status === 'blocked' &&
+    result.reasonCode === EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
+  'missing receipt was not incomplete_artifact');
+  expect(deps.counts.action === 1 && deps.counts.oracle === 0,
+    'hard oracle ran before physical evidence acknowledgement');
+  expect(result.artifactBundle === null,
+    'missing physical receipt manufactured an artifact bundle');
 });
 
 void test('manifest budget expiry blocks all later actions without reseeding', async () => {

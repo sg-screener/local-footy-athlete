@@ -40,9 +40,22 @@ for (const invalid of [
   'localfootyathlete://e2e/scenario/reset/standard-in-season-week/',
   'localfootyathlete://e2e/scenario/checkpoint/standard-in-season-week',
   'localfootyathlete://e2e/scenario/checkpoint/standard-in-season-week/first_action',
+  `localfootyathlete://e2e/explorer/evidence/explorer-capture-${'a'.repeat(64)}`,
+  `localfootyathlete://e2e/explorer/evidence/explorer-capture-${'a'.repeat(64)}?receipt=%7B%7D&extra=1`,
 ]) {
   ok(`exact parser rejects ${invalid}`, parseDevE2EEntryRoute(invalid) === null);
 }
+
+ok('physical evidence campaign route accepts exact campaign and repository identity',
+  parseDevE2EEntryRoute(
+    'localfootyathlete://e2e/explorer/evidence/start/' +
+    'explorer-nine-9f28da0d51a6/9f28da0d51a62106bc85d12a14868c216de8b96d',
+  )?.kind === 'explorer_evidence_start');
+ok('physical evidence acknowledgement route accepts exact capture and payload identity',
+  parseDevE2EEntryRoute(
+    `localfootyathlete://e2e/explorer/evidence/explorer-capture-${'a'.repeat(64)}` +
+    '?receipt=%7B%7D',
+  )?.kind === 'explorer_evidence');
 
 const root = path.resolve(__dirname, '..', '..');
 const appSource = fs.readFileSync(path.join(root, 'App.tsx'), 'utf8');
@@ -81,6 +94,8 @@ ok('clock has no public env or diagnostics override',
     `${clockSource}\n${clockPersistenceSource}`,
   ));
 ok('release refusal returns installed false', /if \(!isDev\)[\s\S]*installed: false/.test(entrySource));
+ok('release refusal occurs before physical evidence route handling',
+  releaseReturn >= 0 && entrySource.indexOf("case 'explorer_evidence'") > releaseReturn);
 ok('release scenario runtime cannot activate',
   /if \(!isAvailable\(\)\) \{[\s\S]{0,120}active = null;[\s\S]{0,120}return false;/.test(
     scenarioRuntimeSource,

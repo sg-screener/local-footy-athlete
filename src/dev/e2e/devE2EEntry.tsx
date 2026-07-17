@@ -18,6 +18,11 @@ import {
   runLiveExplorerCampaign,
   runLiveExplorerScenario,
 } from './explorerLiveScenarioRuntime';
+import {
+  acknowledgeExplorerPhysicalEvidence,
+  restoreExplorerPhysicalEvidenceCampaign,
+  startExplorerPhysicalEvidenceCampaign,
+} from './explorerPhysicalEvidenceDevBridge';
 
 export interface DevE2ELinking {
   addEventListener: (
@@ -116,6 +121,18 @@ export function installDevE2EEntry(args: {
           }
           return true;
         }
+        case 'explorer_evidence_start':
+          return await startExplorerPhysicalEvidenceCampaign({
+            campaignId: route.campaignId,
+            integratedRepositorySha: route.integratedRepositorySha,
+            isDev,
+          });
+        case 'explorer_evidence':
+          return await acknowledgeExplorerPhysicalEvidence(
+            route.captureId,
+            route.encodedReceipt,
+            isDev,
+          );
       }
     } catch (error) {
       publishDevE2EEntryError(
@@ -133,6 +150,8 @@ export function installDevE2EEntry(args: {
   // Reload validation is deliberately separate from URL handling. A preserved
   // checkpoint is inspected after hydration without calling reset/buildSeed.
   void coordinator.validateReloadCheckpoint().catch(publishDevE2EEntryError);
+  void restoreExplorerPhysicalEvidenceCampaign({ isDev })
+    .catch(publishDevE2EEntryError);
 
   activeInstallation = {
     installed: true,

@@ -143,6 +143,26 @@ card/detail equality. Every declared witness must pass before the seed-ready
 marker is published. Maestro flows live under `.maestro/common` and
 `.maestro/golden`.
 
+## Explorer Physical Evidence Bridge
+
+The nine-flow campaign uses one development-only external-capture boundary.
+The app creates and persists a strict capture request at seed reset, after
+every action, and after every cold reload. Runtime advancement pauses until a
+single receipt containing both the PNG and Maestro accessibility-hierarchy
+hashes has been validated and durably acknowledged.
+
+The app owns request identity, expected scenario/step/phase/trace/control/
+observation identity, deterministic clock identity, receipt validation,
+acknowledgement ordering, and scenario-artifact binding. Maestro owns physical
+capture and file creation; the app never claims it captured either file.
+
+Run the local harness with `npm run e2e:explorer-nine:live -- --simulator
+<UDID> --metro-url http://127.0.0.1:<PORT>`. It requires exactly one booted
+simulator and that explicit Metro, writes under
+`artifacts/explorer-nine-<integrated-short-sha>/<scenario-id>/`, and enforces
+the 35-minute target, 45-minute hard stop, and single whole-scenario
+infrastructure retry. This bridge is not present in release entry wiring.
+
 ## Isolated Metro cold launches on iOS
 
 Maestro must launch this debug app with an explicit Metro URL. The common

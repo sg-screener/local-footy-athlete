@@ -45,6 +45,10 @@ import {
   semanticFingerprintV2,
   type SemanticFingerprintV2,
 } from '../../utils/semanticFingerprintV2';
+import {
+  parseExplorerPhysicalEvidenceReceipt,
+  type ExplorerPhysicalEvidenceReceiptV1,
+} from './explorerPhysicalEvidence';
 
 export const EXPLORER_SCENARIO_ARTIFACT_SCHEMA_VERSION = 1 as const;
 export const EXPLORER_SCENARIO_RELOAD_RECEIPT_VERSION = 1 as const;
@@ -61,6 +65,8 @@ export const EXPLORER_SCENARIO_ARTIFACT_FAILURE = {
   RELOAD_COUNT_NON_MONOTONIC: 'explorer_scenario_reload_count_non_monotonic',
   SCREENSHOT_MISSING: 'explorer_scenario_screenshot_missing',
   HIERARCHY_MISSING: 'explorer_scenario_hierarchy_missing',
+  PHYSICAL_EVIDENCE_MISSING: 'explorer_scenario_physical_evidence_missing',
+  PHYSICAL_EVIDENCE_MISMATCH: 'explorer_scenario_physical_evidence_mismatch',
   FINGERPRINT_MISSING: 'explorer_scenario_fingerprint_missing',
   INTENDED_ACTION_SEMANTIC_HASH_MISMATCH:
     'explorer_scenario_intended_action_semantic_hash_mismatch',
@@ -293,6 +299,7 @@ export interface ExplorerScenarioArtifactBundleV1 {
   seedEvidence: ExplorerScenarioSeedEvidenceV1;
   scenarioSessionEvidence: ExplorerScenarioSessionEvidenceV1;
   actions: ExplorerScenarioActionEvidenceV1[];
+  physicalEvidenceReceipts: ExplorerPhysicalEvidenceReceiptV1[];
   oracles: ExplorerScenarioOracleEvidenceV1[];
   result: ExplorerScenarioResultV1;
   generatedCaseMetadata?: ExplorerScenarioGeneratedCaseMetadataV1;
@@ -316,7 +323,7 @@ const NON_CLOCK_TIMESTAMP_KEY =
 const ENVIRONMENT_KEY =
   /^(?:absolutePath|localPath|temporaryPath|tempPath|repositoryRoot|metroPort|temporaryMetroPort|simulatorDeviceId|simulatorDeviceIdentifier|simulatorUdid|deviceUdid|udid)$/i;
 const MEDIA_KEY = /(?:screenshot|accessibilityHierarchy|accessibilityHierarchies|hierarchy)/i;
-const MEDIA_BYTES_KEY = /^(?:bytes|base64|content|contentFingerprint|data)$/i;
+const MEDIA_BYTES_KEY = /^(?:bytes|byteSize|base64|content|contentFingerprint|data|sha256)$/i;
 const ABSOLUTE_PATH =
   /(?:^|[\s"'=])(?:\/Users\/|\/home\/|\/private\/(?:tmp|var\/folders)\/|\/tmp\/|[a-zA-Z]:\\(?:Users|Temp)\\)[^\s"']*/g;
 const METRO_ENDPOINT = /((?:localhost|127\.0\.0\.1):)\d{2,5}/g;
@@ -901,6 +908,47 @@ export function assertExplorerScenarioArtifactBundleV1(
   assertArtifactReference(seed.initialAccessibilityHierarchyReference,
     EXPLORER_SCENARIO_ARTIFACT_FAILURE.HIERARCHY_MISSING, 'seed_initial');
 
+  if (!Array.isArray(bundle.physicalEvidenceReceipts)) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISSING);
+  }
+  const physicalReceipts = bundle.physicalEvidenceReceipts.map((receipt, index) => {
+    try {
+      return parseExplorerPhysicalEvidenceReceipt(receipt);
+    } catch {
+      return fail(
+        EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISMATCH,
+        `receipt:${index}`,
+      );
+    }
+  });
+  if (new Set(physicalReceipts.map((receipt) => receipt.captureId)).size !==
+    physicalReceipts.length) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISMATCH,
+      'duplicate_capture_id');
+  }
+  const seedPhysical = physicalReceipts[0];
+  if (!seedPhysical || seedPhysical.capturePhase !== 'seed-reset' ||
+    seedPhysical.scenarioId !== identity.scenarioId ||
+    seedPhysical.stepId !== undefined || seedPhysical.reloadCount !== 0 ||
+    seedPhysical.traceId !== null || seedPhysical.controlId !== null ||
+    seedPhysical.observationId !== null ||
+    seedPhysical.capturedIntegratedRepositorySha !== identity.repositoryCommit ||
+    seedPhysical.deterministicClockFingerprint !== clockReceipt.semanticFingerprint ||
+    seedPhysical.expectedSemanticIdentity.manifestSemanticHash !==
+      identity.manifestSemanticHash ||
+    seedPhysical.expectedSemanticIdentity.actionSemanticHash !== null ||
+    seed.initialScreenshotReference.artifactId !==
+      seedPhysical.screenshot.relativeReference ||
+    seed.initialScreenshotReference.contentFingerprint !==
+      `sha256:${seedPhysical.screenshot.sha256}` ||
+    seed.initialAccessibilityHierarchyReference.artifactId !==
+      seedPhysical.hierarchy.relativeReference ||
+    seed.initialAccessibilityHierarchyReference.contentFingerprint !==
+      `sha256:${seedPhysical.hierarchy.sha256}`) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISMATCH,
+      'seed_reset');
+  }
+
   const sessionEvidence = bundle.scenarioSessionEvidence;
   if (!isRecord(sessionEvidence) ||
     typeof sessionEvidence.protocolVersion !== 'number' ||
@@ -938,6 +986,10 @@ export function assertExplorerScenarioArtifactBundleV1(
     bundle.actions.length !== manifest.steps.length) {
     fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.STEP_ORDER_MISMATCH,
       'complete_scenario_missing_steps');
+  }
+  if (physicalReceipts.length !== 1 + bundle.actions.length * 2) {
+    fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISSING,
+      'action_capture_cardinality');
   }
   if (sessionEvidence.checkpointRecords.length !== bundle.actions.length ||
     sessionEvidence.reloadReceipts.length !== bundle.actions.length) {
@@ -1037,6 +1089,48 @@ export function assertExplorerScenarioArtifactBundleV1(
     assertArtifactReference(action.accessibilityHierarchies?.afterReload,
       EXPLORER_SCENARIO_ARTIFACT_FAILURE.HIERARCHY_MISSING,
       `${action.stepId}:after_reload`);
+
+    const afterActionPhysical = physicalReceipts[index * 2 + 1];
+    const afterReloadPhysical = physicalReceipts[index * 2 + 2];
+    const physicalMatches = (
+      receipt: ExplorerPhysicalEvidenceReceiptV1 | undefined,
+      phase: 'after-action' | 'after-reload',
+      reloadCount: number,
+      screenshot: ExplorerArtifactReferenceV1,
+      hierarchy: ExplorerArtifactReferenceV1,
+    ): boolean => !!receipt &&
+      receipt.campaignId === seedPhysical.campaignId &&
+      receipt.scenarioId === identity.scenarioId &&
+      receipt.stepId === action.stepId && receipt.capturePhase === phase &&
+      receipt.reloadCount === reloadCount &&
+      receipt.traceId === action.traceV2RootId &&
+      nonEmptyString(receipt.controlId) && nonEmptyString(receipt.observationId) &&
+      receipt.capturedIntegratedRepositorySha === identity.repositoryCommit &&
+      receipt.deterministicClockFingerprint === clockReceipt.semanticFingerprint &&
+      receipt.expectedSemanticIdentity.manifestSemanticHash ===
+        identity.manifestSemanticHash &&
+      receipt.expectedSemanticIdentity.actionSemanticHash ===
+        action.intendedActionSemanticHash &&
+      screenshot.artifactId === receipt.screenshot.relativeReference &&
+      screenshot.contentFingerprint === `sha256:${receipt.screenshot.sha256}` &&
+      hierarchy.artifactId === receipt.hierarchy.relativeReference &&
+      hierarchy.contentFingerprint === `sha256:${receipt.hierarchy.sha256}`;
+    if (!physicalMatches(
+      afterActionPhysical,
+      'after-action',
+      index,
+      action.screenshots.afterAction,
+      action.accessibilityHierarchies.afterAction,
+    ) || !physicalMatches(
+      afterReloadPhysical,
+      'after-reload',
+      index + 1,
+      action.screenshots.afterReload,
+      action.accessibilityHierarchies.afterReload,
+    )) {
+      fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISMATCH,
+        action.stepId);
+    }
 
     const checkpoint = sessionEvidence.checkpointRecords[index];
     const checkpointSession = assertScenarioSession(
@@ -1182,6 +1276,10 @@ export function assertExplorerScenarioArtifactBundleV1(
   const failedHardOracle = bundle.oracles.find((oracle) =>
     oracle.enforcement === 'hard' && !oracle.passed);
   if (result.disposition === 'passed') {
+    if (physicalReceipts.length !== 1 + manifest.steps.length * 2) {
+      fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.PHYSICAL_EVIDENCE_MISSING,
+        'passed_scenario');
+    }
     if (failedHardOracle) {
       fail(EXPLORER_SCENARIO_ARTIFACT_FAILURE.PASSED_WITH_FAILED_HARD_ORACLE,
         failedHardOracle.oracleId);

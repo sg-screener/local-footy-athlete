@@ -39,6 +39,13 @@ import {
   type ExplorerScenarioContract,
   type ExplorerScenarioStep,
 } from './explorerScenarioContracts';
+import {
+  createExplorerPhysicalCaptureRequest,
+  explorerEvidenceArtifactReference,
+  validateExplorerPhysicalEvidenceReceipt,
+  type ExplorerPhysicalCaptureRequestV1,
+  type ExplorerPhysicalEvidenceReceiptV1,
+} from './explorerPhysicalEvidence';
 
 export const EXPLORER_RUNTIME_PROTOCOL_VERSION = 1 as const;
 
@@ -86,6 +93,9 @@ export interface ExplorerRuntimeRenderReceipt {
   readonly observedTestIds: readonly string[];
   readonly complete: boolean;
   readonly incompleteArtifact?: boolean;
+  readonly controlId?: string;
+  readonly observationId?: string;
+  readonly canonicalSemanticIdentity?: string;
 }
 
 export interface ExplorerRuntimeCheckpointReceipt {
@@ -109,6 +119,10 @@ export interface ExplorerRuntimeActionRecord {
   readonly checkpoint: ExplorerRuntimeCheckpointReceipt;
   readonly reload: ExplorerRuntimeReloadReceipt;
   readonly artifactEvidence: ExplorerScenarioActionEvidenceV1;
+  readonly physicalEvidence: {
+    readonly afterAction: ExplorerPhysicalEvidenceReceiptV1;
+    readonly afterReload: ExplorerPhysicalEvidenceReceiptV1;
+  };
 }
 
 export interface ExplorerRuntimeArtifactAssemblyV1 {
@@ -123,6 +137,7 @@ export interface ExplorerRuntimeArtifactAssemblyV1 {
   readonly reloadReceipts: readonly ExplorerScenarioReloadReceiptV1[];
   readonly oracleReceipts: readonly ExplorerOracleEvaluationReceipt[];
   readonly actionEvidence: readonly ExplorerScenarioActionEvidenceV1[];
+  readonly physicalEvidenceReceipts: readonly ExplorerPhysicalEvidenceReceiptV1[];
   readonly firstDivergentStepId: string | null;
   readonly firstDivergentProjection: string | null;
   readonly completion: {
@@ -199,6 +214,14 @@ export interface ExplorerRuntimeDependencies {
   readonly assembleScenarioArtifact: (
     assembly: ExplorerRuntimeArtifactAssemblyV1,
   ) => Promise<ExplorerScenarioArtifactBundleV1>;
+  readonly physicalEvidence: {
+    readonly campaignId: string;
+    readonly integratedRepositorySha: string;
+    readonly deterministicClockFingerprint: () => string;
+    readonly requestCapture: (
+      request: ExplorerPhysicalCaptureRequestV1,
+    ) => Promise<ExplorerPhysicalEvidenceReceiptV1>;
+  };
   readonly nowMs?: () => number;
 }
 
@@ -211,11 +234,47 @@ function artifactFailureReason(error: unknown): ExplorerRuntimeReasonCode {
     : EXPLORER_RUNTIME_REASON.ARTIFACT_ASSEMBLY_FAILED;
 }
 
-function seedArtifactEvidenceComplete(evidence: ExplorerScenarioSeedEvidenceV1): boolean {
-  return evidence.initialScreenshotReference?.artifactId.length > 0 &&
-    evidence.initialScreenshotReference?.contentFingerprint.length > 0 &&
-    evidence.initialAccessibilityHierarchyReference?.artifactId.length > 0 &&
-    evidence.initialAccessibilityHierarchyReference?.contentFingerprint.length > 0;
+async function capturePhysicalEvidence(args: {
+  deps: ExplorerRuntimeDependencies;
+  manifest: ExplorerScenarioContract;
+  manifestSemanticHash: ExplorerScenarioSemanticHash;
+  step?: ExplorerScenarioStep;
+  stepOrdinal?: number;
+  capturePhase: 'seed-reset' | 'after-action' | 'after-reload';
+  reloadCount: number;
+  traceId: string | null;
+  controlId: string | null;
+  observationId: string | null;
+  canonicalSemanticIdentity: string;
+}): Promise<ExplorerPhysicalEvidenceReceiptV1> {
+  const clockFingerprint = args.deps.physicalEvidence.deterministicClockFingerprint();
+  const request = createExplorerPhysicalCaptureRequest({
+    campaignId: args.deps.physicalEvidence.campaignId,
+    scenarioId: args.manifest.scenarioId,
+    ...(args.step ? { stepId: args.step.stepId } : {}),
+    ...(args.stepOrdinal === undefined ? {} : { stepOrdinal: args.stepOrdinal }),
+    capturePhase: args.capturePhase,
+    reloadCount: args.reloadCount,
+    traceId: args.traceId,
+    controlId: args.controlId,
+    observationId: args.observationId,
+    expectedSemanticIdentity: {
+      manifestSemanticHash: args.manifestSemanticHash,
+      actionSemanticHash: args.step
+        ? explorerActionSemanticHash(args.step.action)
+        : null,
+      canonicalSemanticIdentity: args.canonicalSemanticIdentity,
+    },
+    deterministicClockFingerprint: clockFingerprint,
+  });
+  const receipt = await args.deps.physicalEvidence.requestCapture(request);
+  return validateExplorerPhysicalEvidenceReceipt({
+    request,
+    receipt,
+    expectedIntegratedRepositorySha:
+      args.deps.physicalEvidence.integratedRepositorySha,
+    currentDeterministicClockFingerprint: clockFingerprint,
+  });
 }
 
 function markerFor(
@@ -290,6 +349,7 @@ function buildAssembly(args: {
   reasonCode: ExplorerRuntimeReasonCode;
   failedStepId: string | null;
   firstDivergentProjection: string | null;
+  physicalEvidenceReceipts?: readonly ExplorerPhysicalEvidenceReceiptV1[];
 }): ExplorerRuntimeArtifactAssemblyV1 {
   return {
     protocolVersion: EXPLORER_RUNTIME_PROTOCOL_VERSION,
@@ -310,6 +370,10 @@ function buildAssembly(args: {
       ...record.afterReloadOracleReceipts,
     ]),
     actionEvidence: args.records.map((record) => record.artifactEvidence),
+    physicalEvidenceReceipts: args.physicalEvidenceReceipts ?? args.records.flatMap((record) => [
+      record.physicalEvidence.afterAction,
+      record.physicalEvidence.afterReload,
+    ]),
     firstDivergentStepId: args.failedStepId,
     firstDivergentProjection: args.firstDivergentProjection,
     completion: { status: args.status, reasonCode: args.reasonCode },
@@ -426,7 +490,20 @@ export async function runExplorerScenario(
       failedStepId: null,
     });
   }
-  if (!seedArtifactEvidenceComplete(seedReceipt.seedEvidence)) {
+  let seedPhysicalEvidence: ExplorerPhysicalEvidenceReceiptV1;
+  try {
+    seedPhysicalEvidence = await capturePhysicalEvidence({
+      deps,
+      manifest,
+      manifestSemanticHash,
+      capturePhase: 'seed-reset',
+      reloadCount: 0,
+      traceId: null,
+      controlId: null,
+      observationId: null,
+      canonicalSemanticIdentity: manifestSemanticHash,
+    });
+  } catch {
     return blocked({
       manifest,
       manifestSemanticHash,
@@ -436,6 +513,19 @@ export async function runExplorerScenario(
       failedStepId: null,
     });
   }
+  seedReceipt = {
+    ...seedReceipt,
+    seedEvidence: {
+      ...seedReceipt.seedEvidence,
+      initialScreenshotReference:
+        explorerEvidenceArtifactReference(seedPhysicalEvidence.screenshot),
+      initialAccessibilityHierarchyReference:
+        explorerEvidenceArtifactReference(seedPhysicalEvidence.hierarchy),
+    },
+  };
+  const physicalEvidenceReceipts: ExplorerPhysicalEvidenceReceiptV1[] = [
+    seedPhysicalEvidence,
+  ];
 
   let priorActionTraceId: string | null = null;
   for (let index = 0; index < manifest.steps.length; index += 1) {
@@ -456,7 +546,7 @@ export async function runExplorerScenario(
     try {
       witnessState = await deps.readEligibilityWitnessState(manifest, step);
       eligibility = evaluateExplorerStepEligibility({ step, state: witnessState });
-    } catch {
+    } catch (error) {
       return blocked({
         manifest,
         manifestSemanticHash,
@@ -488,7 +578,7 @@ export async function runExplorerScenario(
     try {
       await deps.publishEligibilityMarker(marker);
       await deps.claimIntendedAction(marker, claim);
-    } catch {
+    } catch (error) {
       return blocked({
         manifest,
         manifestSemanticHash,
@@ -503,7 +593,7 @@ export async function runExplorerScenario(
     try {
       assertExplorerActionExecutable(step.action);
       productionReceipt = await deps.actionBridge.execute(step.action, { claim });
-    } catch {
+    } catch (error) {
       return blocked({
         manifest,
         manifestSemanticHash,
@@ -560,6 +650,36 @@ export async function runExplorerScenario(
         reasonCode: renderReceipt?.incompleteArtifact
           ? EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT
           : EXPLORER_RUNTIME_REASON.MISSING_RENDER_WITNESS,
+        failedStepId: step.stepId,
+      });
+    }
+
+    let afterActionPhysicalEvidence: ExplorerPhysicalEvidenceReceiptV1;
+    try {
+      afterActionPhysicalEvidence = await capturePhysicalEvidence({
+        deps,
+        manifest,
+        manifestSemanticHash,
+        step,
+        stepOrdinal: index + 1,
+        capturePhase: 'after-action',
+        reloadCount: index,
+        traceId: productionReceipt.traceV2RootId,
+        controlId: renderReceipt.controlId ?? step.controlTestId,
+        observationId: renderReceipt.observationId ??
+          `explorer-render:${productionReceipt.traceV2RootId}:${step.stepId}`,
+        canonicalSemanticIdentity: renderReceipt.canonicalSemanticIdentity ??
+          marker.actionSemanticHash,
+      });
+      physicalEvidenceReceipts.push(afterActionPhysicalEvidence);
+    } catch {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
         failedStepId: step.stepId,
       });
     }
@@ -652,6 +772,36 @@ export async function runExplorerScenario(
       });
     }
 
+    let afterReloadPhysicalEvidence: ExplorerPhysicalEvidenceReceiptV1;
+    try {
+      afterReloadPhysicalEvidence = await capturePhysicalEvidence({
+        deps,
+        manifest,
+        manifestSemanticHash,
+        step,
+        stepOrdinal: index + 1,
+        capturePhase: 'after-reload',
+        reloadCount: index + 1,
+        traceId: productionReceipt.traceV2RootId,
+        controlId: renderReceipt.controlId ?? step.controlTestId,
+        observationId: renderReceipt.observationId ??
+          `explorer-render:${productionReceipt.traceV2RootId}:${step.stepId}`,
+        canonicalSemanticIdentity: renderReceipt.canonicalSemanticIdentity ??
+          marker.actionSemanticHash,
+      });
+      physicalEvidenceReceipts.push(afterReloadPhysicalEvidence);
+    } catch {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
+        failedStepId: step.stepId,
+      });
+    }
+
     let afterReload: readonly ExplorerOracleEvaluationReceipt[];
     let afterReloadSummary: ReturnType<typeof summarizeExplorerOracleEvaluations>;
     try {
@@ -705,6 +855,25 @@ export async function runExplorerScenario(
         reload,
         oracleReceipts: [...afterAction, ...afterReload],
       });
+      artifactEvidence = {
+        ...artifactEvidence,
+        screenshots: {
+          afterAction: explorerEvidenceArtifactReference(
+            afterActionPhysicalEvidence.screenshot,
+          ),
+          afterReload: explorerEvidenceArtifactReference(
+            afterReloadPhysicalEvidence.screenshot,
+          ),
+        },
+        accessibilityHierarchies: {
+          afterAction: explorerEvidenceArtifactReference(
+            afterActionPhysicalEvidence.hierarchy,
+          ),
+          afterReload: explorerEvidenceArtifactReference(
+            afterReloadPhysicalEvidence.hierarchy,
+          ),
+        },
+      };
     } catch (error) {
       return blocked({
         manifest,
@@ -727,6 +896,10 @@ export async function runExplorerScenario(
       checkpoint,
       reload,
       artifactEvidence,
+      physicalEvidence: {
+        afterAction: afterActionPhysicalEvidence,
+        afterReload: afterReloadPhysicalEvidence,
+      },
     });
     if (budgetExpired()) {
       return blocked({
@@ -752,6 +925,7 @@ export async function runExplorerScenario(
     reasonCode: EXPLORER_RUNTIME_REASON.COMPLETE,
     failedStepId: null,
     firstDivergentProjection: null,
+    physicalEvidenceReceipts,
   });
   if (!deps.assembleScenarioArtifact) {
     return {

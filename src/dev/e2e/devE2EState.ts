@@ -39,6 +39,10 @@ const INITIAL: DevE2EStateSnapshot = Object.freeze({
 let snapshot: DevE2EStateSnapshot = INITIAL;
 const subscribers = new Set<() => void>();
 const observedTraceMarkers = new Set<string>();
+const explorerCaptureRequestMarkers = new Set<string>();
+const explorerCaptureRequestEnvelopes = new Map<string, string>();
+const explorerCaptureAcceptedMarkers = new Set<string>();
+const explorerCaptureErrorMarkers = new Set<string>();
 
 function notifySubscribers(): void {
   for (const subscriber of Array.from(subscribers)) {
@@ -80,6 +84,10 @@ export function subscribeDevE2EState(subscriber: () => void): () => void {
 
 export function setDevE2EEntryReady(): void {
   observedTraceMarkers.clear();
+  explorerCaptureRequestMarkers.clear();
+  explorerCaptureRequestEnvelopes.clear();
+  explorerCaptureAcceptedMarkers.clear();
+  explorerCaptureErrorMarkers.clear();
   publish({
     phase: 'entry_ready',
     seedId: null,
@@ -265,10 +273,52 @@ export function setDevE2ETraceUIObserved(
   notifySubscribers();
 }
 
+export function setDevE2EExplorerCaptureRequest(
+  captureId: string,
+  encodedRequest: string,
+): void {
+  if (!captureId || !encodedRequest ||
+    (explorerCaptureRequestMarkers.has(captureId) &&
+      explorerCaptureRequestEnvelopes.get(captureId) === encodedRequest)) return;
+  explorerCaptureRequestMarkers.add(captureId);
+  explorerCaptureRequestEnvelopes.set(captureId, encodedRequest);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
+export function setDevE2EExplorerCaptureAccepted(captureId: string): void {
+  if (!captureId || explorerCaptureAcceptedMarkers.has(captureId)) return;
+  explorerCaptureRequestMarkers.delete(captureId);
+  explorerCaptureRequestEnvelopes.delete(captureId);
+  explorerCaptureAcceptedMarkers.add(captureId);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
+export function setDevE2EExplorerCaptureError(reasonCode: string): void {
+  if (!reasonCode || explorerCaptureErrorMarkers.has(reasonCode)) return;
+  explorerCaptureErrorMarkers.add(reasonCode);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
 export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
   const markers = [
     'e2e-entry-ready',
     ...Array.from(observedTraceMarkers).sort(),
+    ...Array.from(explorerCaptureRequestMarkers)
+      .sort()
+      .map((captureId) => `e2e-explorer-capture-request-${captureId}`),
+    ...Array.from(explorerCaptureRequestEnvelopes.entries())
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([, encodedRequest]) =>
+        `e2e-explorer-capture-envelope-${encodedRequest}`),
+    ...Array.from(explorerCaptureAcceptedMarkers)
+      .sort()
+      .map((captureId) => `e2e-explorer-capture-accepted-${captureId}`),
+    ...Array.from(explorerCaptureErrorMarkers)
+      .sort()
+      .map((reasonCode) => `e2e-explorer-capture-error-${reasonCode}`),
   ];
   if (!state.scenarioId) {
     switch (state.phase) {
@@ -332,6 +382,10 @@ export function hasDevE2EMarker(marker: string): boolean {
 
 export function __resetDevE2EStateForTest(): void {
   observedTraceMarkers.clear();
+  explorerCaptureRequestMarkers.clear();
+  explorerCaptureRequestEnvelopes.clear();
+  explorerCaptureAcceptedMarkers.clear();
+  explorerCaptureErrorMarkers.clear();
   snapshot = INITIAL;
   notifySubscribers();
 }
