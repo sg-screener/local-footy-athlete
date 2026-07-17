@@ -1836,6 +1836,7 @@ section('[15] pending slot resolver fills targetDate before generic routing');
 }
 
 async function runControllerPendingDateSection() {
+  await useProgramStore.persist.rehydrate();
   section('[16] CoachTurnController stores pending date slot on stale visible date');
   const todayISO = '2026-07-01';
   const program = buildSmokeCoachBikeFlowProgram(new Date(`${todayISO}T12:00:00`)) as any;

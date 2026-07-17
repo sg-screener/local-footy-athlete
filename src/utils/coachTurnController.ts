@@ -156,6 +156,7 @@ import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { logger } from './logger';
 import {
   firstSemanticDoseChange,
+  projectSemanticComponentsForDomain,
   semanticFingerprint,
   semanticDiffChangesLever,
   semanticDiffHasMaterialReductionForLever,
@@ -721,7 +722,7 @@ async function executeProgramEditWithVisibleGuard(args: {
       }
       return verifyProgramEditSemanticIntent(args.programEdit, verifierDraft, diff);
     },
-    verifyAfterPersistence: ({ value: result }) => {
+    verifyAfterPersistence: ({ value: result, diff }) => {
       const visibleVerification = verifyDraftVisibleExecution({
         draft: verifierDraft,
         edit: args.programEdit,
@@ -733,7 +734,11 @@ async function executeProgramEditWithVisibleGuard(args: {
       if (visibleVerification.ok === false) {
         return { ok: false, reason: visibleVerification.reason };
       }
-      return { ok: true };
+      return verifyProgramEditSemanticIntent(
+        args.programEdit,
+        verifierDraft,
+        diff,
+      );
     },
   });
   args.input.setCoachProgressLabel(null);
@@ -780,7 +785,11 @@ async function executeProgramEditWithVisibleGuard(args: {
     kind: 'ok',
     result: {
       ...transaction.value,
-      reply: composeCommittedProgramEditReply(args.programEdit, transaction.diff),
+      reply: composeCommittedProgramEditReply(
+        args.programEdit,
+        transaction.diff,
+        transaction.value.reply,
+      ),
     },
   };
 }
@@ -799,11 +808,14 @@ function programEditMutationDates(
   ].filter((date): date is string => typeof date === 'string' && date.length >= 10)));
 }
 
-function verifyProgramEditSemanticIntent(
+export function verifyProgramEditSemanticIntent(
   edit: ProgramEdit,
   draft: ProgramEditDraft | null,
   diff: SemanticProgramDiff,
 ): { ok: boolean; reason?: string; details?: Record<string, unknown> } {
+  const structuralVerification = verifyStructuralProgramEditSemanticIntent(edit, draft, diff);
+  if (structuralVerification) return structuralVerification;
+
   const reductionRequested = draft?.intent === 'reduce' ||
     edit.semanticRoles?.actionIntent === 'reduce' ||
     ('editScope' in edit && edit.editScope === 'reduce_strength_block');
@@ -830,19 +842,127 @@ function verifyProgramEditSemanticIntent(
   return { ok: true };
 }
 
-function composeCommittedProgramEditReply(
+function verifyStructuralProgramEditSemanticIntent(
+  edit: ProgramEdit,
+  draft: ProgramEditDraft | null,
+  diff: SemanticProgramDiff,
+): { ok: boolean; reason?: string; details?: Record<string, unknown> } | null {
+  if (edit.intent === 'move') return verifySemanticMove(edit, diff);
+  if (edit.intent !== 'remove' && edit.intent !== 'add' && edit.intent !== 'replace') {
+    return null;
+  }
+
+  const targetDate = edit.targetDate;
+  if (!targetDate) {
+    return {
+      ok: false,
+      reason: `structural_${edit.intent}_missing_target_date`,
+    };
+  }
+  const before = semanticDayForDate(diff.before, targetDate);
+  const after = semanticDayForDate(diff.after, targetDate);
+  const actionScope = draft?.actionScope ?? visibleVerifierActionScopeFromProgramEdit(edit);
+  const beforeCount = semanticStructuralItemCount(before, edit.targetDomain, actionScope);
+  const afterCount = semanticStructuralItemCount(after, edit.targetDomain, actionScope);
+  const beforeSignature = semanticDomainSignature(before, edit.targetDomain);
+  const afterSignature = semanticDomainSignature(after, edit.targetDomain);
+
+  if (edit.intent === 'remove' && beforeCount > afterCount) return { ok: true };
+  if (edit.intent === 'add' && afterCount > beforeCount) return { ok: true };
+  if (
+    edit.intent === 'replace' &&
+    beforeCount > 0 &&
+    afterCount > 0 &&
+    beforeSignature !== afterSignature
+  ) {
+    return { ok: true };
+  }
+
+  return {
+    ok: false,
+    reason: `structural_${edit.intent}_contradicted_by_durable_diff`,
+    details: {
+      targetDate,
+      targetDomain: edit.targetDomain,
+      actionScope,
+      beforeCount,
+      afterCount,
+      domainChanged: beforeSignature !== afterSignature,
+    },
+  };
+}
+
+function verifySemanticMove(
   edit: ProgramEdit,
   diff: SemanticProgramDiff,
+): { ok: boolean; reason?: string; details?: Record<string, unknown> } {
+  const command = edit.command as any;
+  const sourceDate = command?.target?.date ?? edit.targetDate;
+  const destinationDate = command?.payload?.toDate;
+  if (!sourceDate || typeof destinationDate !== 'string') {
+    return { ok: false, reason: 'structural_move_missing_source_or_destination' };
+  }
+
+  const beforeSource = semanticDayForDate(diff.before, sourceDate);
+  const afterSource = semanticDayForDate(diff.after, sourceDate);
+  const beforeDestination = semanticDayForDate(diff.before, destinationDate);
+  const afterDestination = semanticDayForDate(diff.after, destinationDate);
+  const sourceChanged = semanticDomainSignature(beforeSource, 'session') !==
+    semanticDomainSignature(afterSource, 'session');
+  const destinationChanged = semanticDomainSignature(beforeDestination, 'session') !==
+    semanticDomainSignature(afterDestination, 'session');
+
+  return sourceChanged && destinationChanged
+    ? { ok: true }
+    : {
+        ok: false,
+        reason: 'structural_move_contradicted_by_durable_diff',
+        details: {
+          sourceDate,
+          destinationDate,
+          sourceChanged,
+          destinationChanged,
+        },
+      };
+}
+
+function semanticDayForDate(
+  program: SemanticProgramDiff['before'] | SemanticProgramDiff['after'],
+  date: string,
+) {
+  return program.days.find((day) => day.date === date) ?? null;
+}
+
+function semanticStructuralItemCount(
+  day: ReturnType<typeof semanticDayForDate>,
+  domain: ProgramEdit['targetDomain'],
+  actionScope: ProgramEditDraft['actionScope'],
+): number {
+  if (domain === 'session' || domain === 'schedule') return day?.workout ? 1 : 0;
+  const components = projectSemanticComponentsForDomain(day?.workout, domain);
+  return actionScope === 'exercise'
+    ? components.reduce((count, component) => count + component.exercises.length, 0)
+    : components.length;
+}
+
+function semanticDomainSignature(
+  day: ReturnType<typeof semanticDayForDate>,
+  domain: ProgramEdit['targetDomain'],
+): string {
+  if (domain === 'session' || domain === 'schedule') {
+    return semanticFingerprint(day?.workout ?? null);
+  }
+  return semanticFingerprint(projectSemanticComponentsForDomain(day?.workout, domain));
+}
+
+export function composeCommittedProgramEditReply(
+  edit: ProgramEdit,
+  diff: SemanticProgramDiff,
+  verifiedStructuralReply?: string,
 ): string {
   const changedDates = diff.changedDates.length > 0
     ? diff.changedDates.join(' and ')
     : edit.targetDate ?? 'the visible program';
-  const doseChange = firstSemanticDoseChange(diff);
-  if (doseChange) {
-    const field = committedDoseFieldLabel(doseChange.path);
-    return `Done. I updated ${field} from ${String(doseChange.before)} to ${String(doseChange.after)} on ${changedDates}.`;
-  }
-  if (edit.intent === 'move') return `Done. I moved the accepted session across ${changedDates}.`;
   const targetLabel = committedProgramEditTargetLabel(edit.targetDomain);
   const protectedLabels = Array.from(new Set((edit.protectedTargets ?? [])
     .map((target: any) => committedProgramEditTargetLabel(target.domain ?? target.targetDomain))));
@@ -850,10 +970,23 @@ function composeCommittedProgramEditReply(
     ? ` and left the ${protectedLabels.join(' and ')} alone`
     : '';
   if (edit.intent === 'remove') {
-    return `Done. I removed the ${targetLabel} on ${changedDates}${protectedSuffix}.`;
+    return verifiedStructuralReply ??
+      `Done. I removed the ${targetLabel} on ${changedDates}${protectedSuffix}.`;
   }
-  if (edit.intent === 'add') return `Done. I added the ${targetLabel} on ${changedDates}.`;
-  if (edit.intent === 'replace') return `Done. I replaced the ${targetLabel} on ${changedDates}.`;
+  if (edit.intent === 'add') {
+    return verifiedStructuralReply ?? `Done. I added the ${targetLabel} on ${changedDates}.`;
+  }
+  if (edit.intent === 'replace') {
+    return verifiedStructuralReply ?? `Done. I replaced the ${targetLabel} on ${changedDates}.`;
+  }
+  if (edit.intent === 'move') {
+    return verifiedStructuralReply ?? `Done. I moved the accepted session across ${changedDates}.`;
+  }
+  const doseChange = firstSemanticDoseChange(diff);
+  if (doseChange) {
+    const field = committedDoseFieldLabel(doseChange.path);
+    return `Done. I updated ${field} from ${String(doseChange.before)} to ${String(doseChange.after)} on ${changedDates}.`;
+  }
   return `Done. I updated the accepted programming on ${changedDates}.`;
 }
 
