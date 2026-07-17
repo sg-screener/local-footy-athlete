@@ -68,6 +68,8 @@ import {
 import { isTeamTrainingItem } from '../../utils/teamTraining';
 import { deriveVisibleWorkoutIdentity } from '../../utils/visibleWorkoutIdentity';
 import { stableTestIdToken } from '../../utils/stableTestId';
+import { explorerTestId } from '../../utils/stableTestId';
+import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
 
 type EditableExercise = {
   key: string;
@@ -223,16 +225,18 @@ function buildEditableExercises(workout: any, isTeamOnly: boolean): EditableExer
   if (!workout || isTeamOnly) return [];
   return (workout.exercises ?? [])
     .filter((exercise: any) => !isTeamTrainingItem(exercise))
-    .map((exercise: any, index: number) => {
+    .map((exercise: any) => {
       const targetId = exercise.id || exercise.exerciseId || exercise.exercise?.id;
+      if (!targetId) return null;
       return {
-        key: String(targetId || `${getExerciseName(exercise)}-${index}`),
-        name: getExerciseName(exercise, `Exercise ${index + 1}`),
-        targetId: targetId ? String(targetId) : undefined,
+        key: String(targetId),
+        name: getExerciseName(exercise),
+        targetId: String(targetId),
         raw: exercise,
       };
     })
-    .filter((exercise: EditableExercise) => !!exercise.name);
+    .filter((exercise: EditableExercise | null): exercise is EditableExercise =>
+      exercise !== null && !!exercise.name);
 }
 
 function baseSuggestion(
@@ -399,6 +403,7 @@ export default function DayWorkoutScreenV2() {
     toggleCue,
     isFinished,
     justSaved,
+    savedFeedbackReceipt,
     editingWeightId,
     editingWeightText,
     setEditingWeightText,
@@ -453,6 +458,10 @@ export default function DayWorkoutScreenV2() {
         ? exercise.targetId === pendingComponentDeletionObservation.targetId
         : exercise.key === pendingComponentDeletionObservation.exerciseKey);
     if (targetStillRendered) return;
+    const resultTestID = explorerTestId.componentDeleteResult(
+      workout.id,
+      pendingComponentDeletionObservation.componentId,
+    );
     observeRenderedAthleteActionOutcome({
       traceId: pendingComponentDeletionObservation.traceId,
       observationId: pendingComponentDeletionObservation.observationId,
@@ -462,8 +471,9 @@ export default function DayWorkoutScreenV2() {
         visibleComponentIds: editableExercises.map((exercise) =>
           exercise.targetId ?? exercise.key),
       },
-      controlId: 'day-workout-visible-exercises',
+      controlId: resultTestID,
       accessibilityNode: {
+        resultTestID,
         workoutExerciseRowTestIDs: editableExercises.map((exercise) =>
           `workout-exercise-row-${stableTestIdToken(exercise.targetId ?? exercise.key)}`),
       },
@@ -473,7 +483,7 @@ export default function DayWorkoutScreenV2() {
         'accessibility-hierarchy/trace-v2-component-deletion-after-mutation.json',
     });
     setPendingComponentDeletionObservation(null);
-  }, [editableExercises, pendingComponentDeletionObservation]);
+  }, [editableExercises, pendingComponentDeletionObservation, workout.id]);
 
   const closeExerciseEditor = React.useCallback(
     () => setExerciseEditStep({ kind: 'closed' }),
@@ -869,6 +879,7 @@ export default function DayWorkoutScreenV2() {
       });
       if (result.ok) {
         if (result.traceId) {
+          const componentId = exercise.targetId ?? exercise.key;
           const observationId = `day-workout-component-deletion:${result.traceId}`;
           registerAthleteActionUIOutcome({
             traceId: result.traceId,
@@ -876,14 +887,14 @@ export default function DayWorkoutScreenV2() {
             domainReturn: {
               ok: result.ok,
               date,
-              componentId: exercise.targetId ?? exercise.key,
+              componentId,
             },
-            controlId: 'day-workout-visible-exercises',
+            controlId: explorerTestId.componentDeleteResult(workout.id, componentId),
           });
           setPendingComponentDeletionObservation({
             traceId: result.traceId,
             observationId,
-            componentId: exercise.targetId ?? exercise.key,
+            componentId,
             targetId: exercise.targetId,
             exerciseKey: exercise.key,
           });
@@ -898,7 +909,7 @@ export default function DayWorkoutScreenV2() {
         message: result.message ?? 'Nothing changed.',
       });
     },
-    [date],
+    [date, workout.id],
   );
 
   const askCoachForTeamTraining = React.useCallback(
@@ -995,6 +1006,16 @@ export default function DayWorkoutScreenV2() {
 
   return (
     <SafeAreaView style={styles.container} testID="workout-screen">
+      <ExplorerRenderWitness testID={explorerTestId.sessionDetail(workout.id)} />
+      {editableExercises.map((exercise) => (
+        <ExplorerRenderWitness
+          key={`component-identity-${exercise.key}`}
+          testID={explorerTestId.componentIdentity(
+            workout.id,
+            exercise.targetId ?? exercise.key,
+          )}
+        />
+      ))}
       {/*
         Top-of-screen mirror of the contract markers, mounted as a
         sibling of the header. The IDENTICAL markers also render
@@ -1158,7 +1179,7 @@ export default function DayWorkoutScreenV2() {
         {isFinished && date ? (
           <View style={styles.feedbackSection}>
             {justSaved ? (
-              <SessionCompleteMoment date={date} />
+              <SessionCompleteMoment date={date} receipt={savedFeedbackReceipt} />
             ) : (
               <SessionFeedbackPanel date={date} workout={workout} onSave={handleFeedbackSaved} />
             )}
@@ -1179,6 +1200,7 @@ export default function DayWorkoutScreenV2() {
 
       <ExerciseEditSheet
         visible={exerciseEditStep.kind !== 'closed'}
+        sessionId={workout.id}
         step={exerciseEditStep}
         editableExercises={editableExercises}
         onClose={closeExerciseEditor}
@@ -2041,6 +2063,7 @@ function FinishMoment({ onPress }: FinishMomentProps) {
 
 interface ExerciseEditSheetProps {
   visible: boolean;
+  sessionId: string;
   step: ExerciseEditStep;
   editableExercises: EditableExercise[];
   onClose: () => void;
@@ -2064,6 +2087,7 @@ interface ExerciseEditSheetProps {
 
 function ExerciseEditSheet({
   visible,
+  sessionId,
   step,
   editableExercises,
   onClose,
@@ -2150,6 +2174,12 @@ function ExerciseEditSheet({
       <ExerciseSheetOption
         key={exercise.key}
         label={displayExerciseName(exercise.name)}
+        testID={action === 'remove'
+          ? explorerTestId.componentDeleteIngress(
+              sessionId,
+              exercise.targetId ?? exercise.key,
+            )
+          : explorerTestId.componentIdentity(sessionId, exercise.targetId ?? exercise.key)}
         onPress={() => {
           if (action === 'swap') onStep({ kind: 'swap_reason', exercise });
           if (action === 'remove') onStep({ kind: 'confirm_remove', exercise });
@@ -2195,6 +2225,10 @@ function ExerciseEditSheet({
             />
             <ExerciseSheetOption
               label="Remove exercise"
+              testID={explorerTestId.componentDeleteIngress(
+                sessionId,
+                step.exercise.targetId ?? step.exercise.key,
+              )}
               onPress={() => onStep({ kind: 'confirm_remove', exercise: step.exercise })}
             />
             <ExerciseSheetOption
@@ -2248,6 +2282,10 @@ function ExerciseEditSheet({
               variant="danger"
               size="md"
               onPress={() => onRemoveToday(step.exercise)}
+              testID={explorerTestId.componentDeleteConfirm(
+                sessionId,
+                step.exercise.targetId ?? step.exercise.key,
+              )}
             />
             <Button
               label="Cancel"
@@ -2326,6 +2364,14 @@ function ExerciseEditSheet({
       case 'future_scope':
         return (
           <>
+            {step.action === 'remove' ? (
+              <ExplorerRenderWitness
+                testID={explorerTestId.componentDeleteResult(
+                  sessionId,
+                  step.exercise.targetId ?? step.exercise.key,
+                )}
+              />
+            ) : null}
             <Text style={styles.exerciseEditBody}>{futureScopeBody(step)}</Text>
             <Text style={styles.exerciseEditQuestion}>
               Apply this change to future weeks?
@@ -2333,11 +2379,25 @@ function ExerciseEditSheet({
             <ExerciseSheetOption
               label="Today only"
               sub="Keep this as a one-off change"
+              testID={step.action === 'remove'
+                ? explorerTestId.componentDeleteScope(
+                    sessionId,
+                    step.exercise.targetId ?? step.exercise.key,
+                    'today',
+                  )
+                : undefined}
               onPress={onTodayOnly}
             />
             <ExerciseSheetOption
               label="Future weeks too"
               sub="Save a smarter ongoing adjustment"
+              testID={step.action === 'remove'
+                ? explorerTestId.componentDeleteScope(
+                    sessionId,
+                    step.exercise.targetId ?? step.exercise.key,
+                    'future',
+                  )
+                : undefined}
               onPress={() => onFutureScope(step)}
             />
           </>
@@ -2523,13 +2583,16 @@ function futureScopeBody(step: FutureScopeStep): string {
 interface ExerciseSheetOptionProps {
   label: string;
   sub?: string;
+  testID?: string;
   onPress: () => void;
 }
-function ExerciseSheetOption({ label, sub, onPress }: ExerciseSheetOptionProps) {
+function ExerciseSheetOption({ label, sub, testID, onPress }: ExerciseSheetOptionProps) {
   return (
     <Pressable
       onPress={onPress}
+      testID={testID}
       accessibilityRole="button"
+      accessibilityLabel={testID ?? label}
       style={({ pressed }) => [
         styles.exerciseEditOption,
         pressed && styles.exerciseEditOptionPressed,

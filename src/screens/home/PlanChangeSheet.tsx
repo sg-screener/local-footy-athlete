@@ -32,6 +32,9 @@ import {
   observeRenderedAthleteActionOutcome,
   registerAthleteActionUIOutcome,
 } from '../../dev/e2e/athleteActionUIObservation';
+import { explorerTestId } from '../../utils/stableTestId';
+import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
+import { getSessionComponents } from '../../utils/sessionComponents';
 
 /**
  * PlanChangeSheet — the tap-first change door (ATHLETE_CHANGE_VOCABULARY.md
@@ -87,7 +90,21 @@ type Step =
   | { kind: 'pick_sleep' }
   | { kind: 'pick_sick' }
   | { kind: 'confirm_shutdown' }
-  | { kind: 'result'; ok: boolean; message: string; traceId?: string };
+  | {
+      kind: 'result';
+      ok: boolean;
+      message: string;
+      traceId?: string;
+      observationId?: string;
+      resultTestID?: string;
+      canonicalResult?: {
+        action: 'move' | 'delete';
+        sourceDate: string;
+        sourceSessionId: string;
+        targetDate?: string;
+        scope?: PlanChangeBinScopeId;
+      };
+    };
 
 interface PlanChangeSheetProps {
   visible: boolean;
@@ -166,28 +183,44 @@ export function PlanChangeSheet({
     return listPlanChangeOptionsForDay({ visibleWeek: weekDays, date, todayISO });
   }, [visible, date, weekDays, todayISO]);
   useEffect(() => {
-    if (step.kind !== 'result' || !step.traceId) return;
-    const observationId = `plan-change-result:${step.traceId}`;
-    registerAthleteActionUIOutcome({
-      traceId: step.traceId,
-      observationId,
-      domainReturn: { ok: step.ok, message: step.message },
-      controlId: 'plan-change-result-message',
-    });
-    // Effects run after the committed render, so this proves the React node
-    // exists independently from the returned domain message.
+    if (step.kind !== 'result' || !step.traceId || !step.observationId ||
+      !step.resultTestID || !step.canonicalResult) return;
+    const sourceDay = weekDays.find((day) => day.date === step.canonicalResult!.sourceDate);
+    const targetDay = step.canonicalResult.targetDate
+      ? weekDays.find((day) => day.date === step.canonicalResult!.targetDate)
+      : sourceDay;
+    const sourceReleased = sourceDay?.workout?.id !== step.canonicalResult.sourceSessionId;
+    const targetSessionId = targetDay?.workout?.id ?? null;
+    const deletedScopeStillRendered = step.canonicalResult.action === 'delete' &&
+      step.canonicalResult.scope && step.canonicalResult.scope !== 'whole_day'
+      ? getSessionComponents(targetDay?.workout ?? null).some((component) =>
+          component.id === step.canonicalResult!.scope ||
+          (step.canonicalResult!.scope === 'team' && component.id === 'team_training'))
+      : false;
+    const renderedStateMatches = step.canonicalResult.action === 'move'
+      ? sourceReleased && !!targetSessionId
+      : step.canonicalResult.scope === 'whole_day'
+        ? !targetSessionId
+        : !deletedScopeStillRendered;
+    if (!renderedStateMatches) return;
     observeRenderedAthleteActionOutcome({
       traceId: step.traceId,
-      observationId,
-      renderedText: step.message,
-      controlId: 'plan-change-result-message',
+      observationId: step.observationId,
+      renderedText: {
+        message: step.message,
+        canonicalResult: step.canonicalResult,
+        sourceReleased,
+        targetSessionId,
+        deletedScopeStillRendered,
+      },
+      controlId: step.resultTestID,
       accessibilityNode: {
-        testID: 'plan-change-result-message',
+        testID: step.resultTestID,
         role: 'text',
-        labelFingerprintSource: 'rendered_text',
+        canonicalIdentity: step.canonicalResult,
       },
     });
-  }, [step]);
+  }, [step, weekDays]);
   const selectedDay = useMemo(
     () => (date ? weekDays.find((day) => day.date === date) ?? null : null),
     [date, weekDays],
@@ -257,6 +290,38 @@ export function PlanChangeSheet({
               useProgramStore.getState().setManualOverride(overrideDate, workout, context),
             trace,
           });
+    const canonicalResult = selectedWorkout && (
+      change.kind === 'move_session' || change.kind === 'remove_session'
+    ) ? {
+        action: change.kind === 'move_session' ? 'move' as const : 'delete' as const,
+        sourceDate: change.kind === 'move_session' ? change.fromDate : change.date,
+        sourceSessionId: selectedWorkout.id,
+        ...(change.kind === 'move_session' ? { targetDate: change.toDate } : {}),
+        ...(change.kind === 'remove_session' ? { scope: change.scope } : {}),
+      } : undefined;
+    const resultIdentity = canonicalResult
+      ? canonicalResult.action === 'move'
+        ? `${canonicalResult.sourceSessionId}:${canonicalResult.targetDate}`
+        : `${canonicalResult.sourceSessionId}:${canonicalResult.scope ?? 'whole_day'}`
+      : undefined;
+    const resultTestID = canonicalResult && resultIdentity
+      ? explorerTestId.sessionMutationResult(canonicalResult.action, resultIdentity)
+      : undefined;
+    const observationId = result.traceId
+      ? `plan-change-result:${result.traceId}`
+      : undefined;
+    if (result.ok && result.traceId && observationId && resultTestID && canonicalResult) {
+      registerAthleteActionUIOutcome({
+        traceId: result.traceId,
+        observationId,
+        domainReturn: {
+          ok: result.ok,
+          message: result.message,
+          canonicalResult,
+        },
+        controlId: resultTestID,
+      });
+    }
     if (result.ok && opts?.closeOnSuccess) {
       // Destructive flows (bin) skip the result screen: the change is
       // already confirmed, so close straight back to the weekly plan.
@@ -270,6 +335,9 @@ export function PlanChangeSheet({
       ok: result.ok,
       message: result.message,
       traceId: result.traceId,
+      observationId,
+      resultTestID,
+      canonicalResult,
     });
   };
 
@@ -611,13 +679,17 @@ export function PlanChangeSheet({
           <MenuOption
             label="Move this session"
             sub="Move it to another day or trade places"
-            testID="plan-change-move-session"
+            testID={selectedWorkout
+              ? explorerTestId.sessionMoveIngress(selectedWorkout.id)
+              : undefined}
             onPress={() => setStep({ kind: 'pick_destination' })}
           />
           <MenuOption
             label="Bin this session"
             sub="Remove it - the day becomes rest"
-            testID="plan-change-delete-session"
+            testID={selectedWorkout
+              ? explorerTestId.sessionDeleteIngress(selectedWorkout.id)
+              : undefined}
             danger
             onPress={startBin}
           />
@@ -942,6 +1014,7 @@ export function PlanChangeSheet({
               sub={destination.occupiedBy
                 ? `Swap with ${destination.occupiedBy}`
                 : 'Currently a rest day'}
+              testID={explorerTestId.sessionMoveDestination(destination.date)}
               onPress={() =>
                 apply({ kind: 'move_session', fromDate: date, toDate: destination.date })}
             />
@@ -962,6 +1035,9 @@ export function PlanChangeSheet({
               label={scope.label}
               sub={scope.sub}
               danger={scope.id === 'whole_day'}
+              testID={selectedWorkout
+                ? explorerTestId.sessionDeleteScope(selectedWorkout.id, scope.id)
+                : undefined}
               onPress={() =>
                 setStep({
                   kind: 'confirm_remove',
@@ -985,7 +1061,9 @@ export function PlanChangeSheet({
           </Text>
           <MenuOption
             label="Yes, bin it"
-            testID="plan-change-delete-confirm"
+            testID={selectedWorkout
+              ? explorerTestId.sessionDeleteScope(selectedWorkout.id, `confirm-${step.scope}`)
+              : undefined}
             danger
             onPress={() =>
               apply(
@@ -1001,6 +1079,9 @@ export function PlanChangeSheet({
 
       {step.kind === 'result' && (
         <View>
+          {step.resultTestID ? (
+            <ExplorerRenderWitness testID={step.resultTestID} />
+          ) : null}
           <Text
             style={step.ok ? styles.resultOk : styles.resultBad}
             testID="plan-change-result-message"
@@ -1039,6 +1120,8 @@ function MenuOption({ label, sub, danger, onPress, testID }: {
     <Pressable
       onPress={onPress}
       testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={testID ?? label}
       style={({ pressed }) => [styles.option, pressed && { opacity: 0.7 }]}
     >
       <Text style={[styles.optionLabel, danger && styles.optionDanger]}>{label}</Text>

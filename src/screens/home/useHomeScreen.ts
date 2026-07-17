@@ -69,7 +69,8 @@ import {
   observeRenderedAthleteActionOutcome,
   registerAthleteActionUIOutcome,
 } from '../../dev/e2e/athleteActionUIObservation';
-import { dayOfWeekTestIdToken } from '../../utils/stableTestId';
+import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
+import { isTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
@@ -189,6 +190,7 @@ export function useHomeScreen() {
     sourceDate?: string;
     targetDate: string;
     fixtureExpectedAtTarget: boolean;
+    fixtureId: string;
   } | null>(null);
   const [pendingRestorationObservation, setPendingRestorationObservation] = useState<{
     traceId: string;
@@ -197,6 +199,22 @@ export function useHomeScreen() {
     affectedDates: string[];
     controlId?: string;
     renderedStatus?: string;
+    adjustmentId: string;
+  } | null>(null);
+  const [pendingSourceFactObservation, setPendingSourceFactObservation] = useState<{
+    traceId: string;
+    observationId: string;
+    domain: 'readiness' | 'equipment';
+    factId: string;
+    expectedStatus: 'active' | 'resolved';
+    controlId: string;
+  } | null>(null);
+  const [pendingInjuryObservation, setPendingInjuryObservation] = useState<{
+    traceId: string;
+    observationId: string;
+    episodeId: string;
+    expectedStatus: 'active' | 'resolved';
+    controlId: string;
   } | null>(null);
   const [pendingRepeatObservation, setPendingRepeatObservation] = useState<{
     traceId: string;
@@ -256,6 +274,9 @@ export function useHomeScreen() {
   const acceptedRevision = useProgramStore((s) => s.acceptedMaterialContext.revision);
   const reversibleAdjustments = useProgramStore((s) =>
     s.reversibleAdjustmentLedger.adjustments);
+  const injuryEpisodes = useProgramStore((s) => s.acceptedMaterialContext.injuryEpisodes);
+  const temporarySourceFacts = useProgramStore((s) =>
+    s.acceptedMaterialContext.temporarySourceFacts);
   const activeConstraints = useCoachUpdatesStore((s) => s.activeConstraints);
   const activeInjury = useCoachUpdatesStore((s) => s.activeInjury);
   const dismissedCoachNoteIds = useCoachUpdatesStore((s) => s.dismissedCoachNoteIds);
@@ -312,12 +333,36 @@ export function useHomeScreen() {
     rolloverTargetDateISO,
   ]);
   const visibleWeekStart = weekDays[0]?.date;
+  const visibleWeekEnd = weekDays[weekDays.length - 1]?.date ?? visibleWeekStart;
   const activeRepeatWeekAdjustment = useMemo(() => reversibleAdjustments
     .filter((adjustment) => adjustment.kind === 'repeat_week' && adjustment.status === 'active' &&
       adjustment.restorationTarget.kind === 'week_overlay' &&
       adjustment.displacedOriginalState.weekOverlay?.weekStart === visibleWeekStart)
     .sort((left, right) => right.acceptedRevision - left.acceptedRevision)[0] ?? null,
   [reversibleAdjustments, visibleWeekStart]);
+  const visibleReversibleAdjustments = useMemo(() => reversibleAdjustments
+    .filter((adjustment) => adjustment.restorationTarget.dates.some((date) =>
+      weekDays.some((day) => day.date === date)) || (
+      adjustment.restorationTarget.kind === 'week_overlay' &&
+      adjustment.displacedOriginalState.weekOverlay?.weekStart === visibleWeekStart
+    )), [reversibleAdjustments, visibleWeekStart, weekDays]);
+  const visibleRepeatWeekAdjustment = useMemo(() => visibleReversibleAdjustments
+    .filter((adjustment) => adjustment.kind === 'repeat_week')
+    .sort((left, right) => right.acceptedRevision - left.acceptedRevision)[0] ?? null,
+  [visibleReversibleAdjustments]);
+  const equipmentFacts = useMemo(() => temporarySourceFacts
+    .filter(isTemporaryEquipmentFact)
+    .filter((fact) => !visibleWeekStart || !visibleWeekEnd || (
+      fact.scope.from <= visibleWeekEnd &&
+      fact.scope.until >= visibleWeekStart
+    )), [temporarySourceFacts, visibleWeekEnd, visibleWeekStart]);
+  const readinessFacts = useMemo(() => temporarySourceFacts.filter((fact) =>
+    'factKind' in fact && (
+      fact.factKind === 'fatigue' || fact.factKind === 'soreness' || fact.factKind === 'poor_sleep'
+    ) && (!visibleWeekStart || !visibleWeekEnd || (
+      fact.scope.from <= visibleWeekEnd &&
+      fact.scope.until >= visibleWeekStart
+    ))), [temporarySourceFacts, visibleWeekEnd, visibleWeekStart]);
   const visibleWeekKind = useMemo(() => {
     if (!visibleWeekStart) return undefined;
     const exactMicrocycle = currentProgram?.microcycles?.find((microcycle) => {
@@ -390,7 +435,10 @@ export function useHomeScreen() {
         sourceDate: pendingFixtureObservation.sourceDate ?? null,
         sourceReleased,
       },
-      controlId: 'home-fixture-visible-state',
+      controlId: explorerTestId.fixtureState(
+        pendingFixtureObservation.fixtureId,
+        targetHasFixture ? 'active' : 'absent',
+      ),
       accessibilityNode: {
         targetTestID: target
           ? `day-row-${dayOfWeekTestIdToken(target.dayOfWeek)}-state-${
@@ -413,6 +461,56 @@ export function useHomeScreen() {
   }, [pendingFixtureObservation, weekDays]);
 
   useEffect(() => {
+    if (!pendingSourceFactObservation) return;
+    const fact = temporarySourceFacts.find((candidate) =>
+      'factId' in candidate && candidate.factId === pendingSourceFactObservation.factId);
+    const activeConstraintExists = activeConstraints.some((constraint) =>
+      constraint.id === pendingSourceFactObservation.factId ||
+      constraint.temporarySourceFactIds?.includes(pendingSourceFactObservation.factId));
+    const renderedStatus = fact && 'status' in fact ? fact.status : null;
+    const matches = pendingSourceFactObservation.expectedStatus === 'active'
+      ? activeConstraintExists && (renderedStatus === 'active' || renderedStatus === null)
+      : !activeConstraintExists && (renderedStatus === 'resolved' || renderedStatus === null);
+    if (!matches) return;
+    observeRenderedAthleteActionOutcome({
+      traceId: pendingSourceFactObservation.traceId,
+      observationId: pendingSourceFactObservation.observationId,
+      renderedText: {
+        domain: pendingSourceFactObservation.domain,
+        factId: pendingSourceFactObservation.factId,
+        status: renderedStatus,
+        activeConstraintExists,
+        acceptedRevision,
+      },
+      controlId: pendingSourceFactObservation.controlId,
+      accessibilityNode: { testID: pendingSourceFactObservation.controlId },
+    });
+    setPendingSourceFactObservation(null);
+  }, [acceptedRevision, activeConstraints, pendingSourceFactObservation, temporarySourceFacts]);
+
+  useEffect(() => {
+    if (!pendingInjuryObservation) return;
+    const episode = injuryEpisodes.find((candidate) =>
+      candidate.episodeId === pendingInjuryObservation.episodeId);
+    const matches = pendingInjuryObservation.expectedStatus === 'active'
+      ? episode?.status === 'active' || episode?.status === 'improving'
+      : episode?.status === 'resolved' || episode?.status === 'superseded';
+    if (!matches) return;
+    observeRenderedAthleteActionOutcome({
+      traceId: pendingInjuryObservation.traceId,
+      observationId: pendingInjuryObservation.observationId,
+      renderedText: {
+        episodeId: pendingInjuryObservation.episodeId,
+        status: episode?.status ?? null,
+        acceptedRevision,
+      },
+      controlId: pendingInjuryObservation.controlId,
+      accessibilityNode: { testID: pendingInjuryObservation.controlId },
+    });
+    setPendingInjuryObservation(null);
+  }, [acceptedRevision, injuryEpisodes, pendingInjuryObservation]);
+
+  useEffect(() => {
     if (!pendingRepeatObservation ||
       visibleWeekStart !== pendingRepeatObservation.targetWeekStart ||
       acceptedRevision !== pendingRepeatObservation.acceptedRevision ||
@@ -426,10 +524,13 @@ export function useHomeScreen() {
         acceptedRevision,
         resultMessage: repeatWeekResult?.message ?? null,
       },
-      controlId: 'home-visible-week-after-repeat',
+      controlId: explorerTestId.repeatActive(pendingRepeatObservation.adjustmentId),
       accessibilityNode: {
         resultTestID: 'repeat-week-result-message',
         activeCardTestID: 'repeat-week-active-card',
+        canonicalActiveTestID: explorerTestId.repeatActive(
+          pendingRepeatObservation.adjustmentId,
+        ),
       },
       screenshotReference: 'screenshots/trace-v2-repeat-week-after-mutation.png',
       hierarchyReference: 'accessibility-hierarchy/trace-v2-repeat-week-after-mutation.json',
@@ -448,6 +549,9 @@ export function useHomeScreen() {
       !pendingRestorationObservation ||
       acceptedRevision !== pendingRestorationObservation.acceptedRevisionAfter
     ) return;
+    const restoredAdjustment = reversibleAdjustments.find((adjustment) =>
+      adjustment.id === pendingRestorationObservation.adjustmentId);
+    if (restoredAdjustment?.status !== 'cleared') return;
     const visibleFixtureDates = weekDays
       .filter((day) =>
         pendingRestorationObservation.affectedDates.includes(day.date) &&
@@ -463,7 +567,8 @@ export function useHomeScreen() {
         visibleFixtureDates,
         renderedStatus: pendingRestorationObservation.renderedStatus ?? null,
       },
-      controlId: pendingRestorationObservation.controlId ?? 'home-visible-week-after-restoration',
+      controlId: pendingRestorationObservation.controlId ??
+        explorerTestId.adjustmentRestored(pendingRestorationObservation.adjustmentId),
       accessibilityNode: {
         fixtureStateTestIDs: weekDays
           .filter((day) => visibleFixtureDates.includes(day.date))
@@ -472,13 +577,16 @@ export function useHomeScreen() {
         resultTestID: pendingRestorationObservation.renderedStatus
           ? 'repeat-week-restore-status'
           : null,
+        canonicalResultTestID: explorerTestId.adjustmentRestored(
+          pendingRestorationObservation.adjustmentId,
+        ),
       },
       screenshotReference: 'screenshots/trace-v2-restoration-after-mutation.png',
       hierarchyReference:
         'accessibility-hierarchy/trace-v2-restoration-after-mutation.json',
     });
     setPendingRestorationObservation(null);
-  }, [acceptedRevision, pendingRestorationObservation, weekDays]);
+  }, [acceptedRevision, pendingRestorationObservation, reversibleAdjustments, weekDays]);
 
   // ── Missed-session prompt ──
   // The most recent past, unlogged trainable day in the visible week.
@@ -856,6 +964,12 @@ export function useHomeScreen() {
         throw mutation.error;
       }
       if (mutation.traceId) {
+        const fixtureDate = newGameDay === null
+          ? sourceDate ?? options.targetDate
+          : options.targetDate;
+        const fixtureId = `calendar-game-${fixtureDate}`;
+        const fixtureState = newGameDay === null ? 'absent' as const : 'active' as const;
+        const controlId = explorerTestId.fixtureState(fixtureId, fixtureState);
         const observationId = `home-fixture-result:${mutation.traceId}`;
         registerAthleteActionUIOutcome({
           traceId: mutation.traceId,
@@ -866,7 +980,7 @@ export function useHomeScreen() {
             targetDate: options.targetDate,
             fixtureExpectedAtTarget: newGameDay !== null,
           },
-          controlId: 'home-fixture-visible-state',
+          controlId,
         });
         setPendingFixtureObservation({
           traceId: mutation.traceId,
@@ -874,6 +988,7 @@ export function useHomeScreen() {
           sourceDate: options.clearOverlayDate,
           targetDate: options.targetDate,
           fixtureExpectedAtTarget: newGameDay !== null,
+          fixtureId,
         });
       }
       const result = mutation.result;
@@ -1108,6 +1223,46 @@ export function useHomeScreen() {
     }
   }, [rebuildMsgOpacity, runRebuild]);
 
+  const registerSourceFactRenderObservation = useCallback((args: {
+    result: ProgramControlActionResult;
+    domain: 'readiness' | 'equipment';
+    expectedStatus: 'active' | 'resolved';
+    factId?: string;
+    controlId?: string;
+  }) => {
+    const factId = args.factId ?? (args.expectedStatus === 'active'
+      ? args.result.createdModifierIds?.[0]
+      : args.result.clearedModifierIds?.[0]);
+    if (!args.result.ok || !args.result.traceId || !factId) return;
+    const controlId = args.controlId ?? (args.domain === 'equipment'
+      ? args.expectedStatus === 'active'
+        ? explorerTestId.equipmentActive(factId)
+        : explorerTestId.equipmentCleared(factId)
+      : args.expectedStatus === 'active'
+        ? explorerTestId.readinessActive(factId)
+        : explorerTestId.readinessClear(factId));
+    const observationId = `${args.domain}-${args.expectedStatus}:${args.result.traceId}`;
+    registerAthleteActionUIOutcome({
+      traceId: args.result.traceId,
+      observationId,
+      domainReturn: {
+        ok: args.result.ok,
+        factId,
+        expectedStatus: args.expectedStatus,
+        changedProgram: args.result.changedProgram,
+      },
+      controlId,
+    });
+    setPendingSourceFactObservation({
+      traceId: args.result.traceId,
+      observationId,
+      domain: args.domain,
+      factId,
+      expectedStatus: args.expectedStatus,
+      controlId,
+    });
+  }, []);
+
   const handleApplyHomeQuickStatus = useCallback(async (
     action: HomeQuickStatusAction,
   ) => {
@@ -1140,6 +1295,9 @@ export function useHomeScreen() {
     anchorDateISO?: string,
   ) => {
     const todayISO = todayISOLocal();
+    const activeFactId = temporarySourceFacts
+      .filter(isTemporaryEquipmentFact)
+      .find((fact) => fact.status === 'active')?.factId;
     const result = await executeProgramControlActionDurably({
       type: 'set_equipment_modifier',
       source: {
@@ -1157,9 +1315,20 @@ export function useHomeScreen() {
       createsActiveModifier: presetId !== 'back_to_normal',
       oneOffOnly: false,
     }, { todayISO });
+    registerSourceFactRenderObservation({
+      result,
+      domain: 'equipment',
+      expectedStatus: presetId === 'back_to_normal' ? 'resolved' : 'active',
+      factId: presetId === 'back_to_normal' ? activeFactId : undefined,
+    });
     await handleProgramControlResult(result);
     return result;
-  }, [handleProgramControlResult, weekDays]);
+  }, [
+    handleProgramControlResult,
+    registerSourceFactRenderObservation,
+    temporarySourceFacts,
+    weekDays,
+  ]);
 
   // ── Busy week / Away / Holiday (vocab group 5) ──
   // Busy and away are canonical temporary schedule facts. Away carries exact
@@ -1234,9 +1403,14 @@ export function useHomeScreen() {
           createsActiveModifier: true,
           oneOffOnly: false,
         }, { todayISO });
+    registerSourceFactRenderObservation({
+      result,
+      domain: 'readiness',
+      expectedStatus: 'active',
+    });
     await handleProgramControlResult(result);
     return result;
-  }, [handleProgramControlResult]);
+  }, [handleProgramControlResult, registerSourceFactRenderObservation]);
 
   const handleClearWeekReadiness = useCallback(async (constraintId: string) => {
     const todayISO = todayISOLocal();
@@ -1245,6 +1419,9 @@ export function useHomeScreen() {
     // constraint ids — resolve through the same selector Coach Notes use.
     const modifier = getActiveProgramModifiers()
       .find((m) => m.sourceId === constraintId);
+    const sourceFactId = activeConstraints.find((constraint) => constraint.id === constraintId)
+      ?.temporarySourceFactIds?.[0];
+    const factId = sourceFactId ?? constraintId;
     const result = await executeProgramControlActionDurably({
       type: 'clear_fatigue_status',
       source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
@@ -1254,9 +1431,23 @@ export function useHomeScreen() {
       createsActiveModifier: false,
       oneOffOnly: false,
     }, { todayISO });
+    registerSourceFactRenderObservation({
+      result,
+      domain: 'readiness',
+      expectedStatus: 'resolved',
+      factId,
+      controlId: sourceFactId
+        ? explorerTestId.readinessClear(sourceFactId)
+        : explorerTestId.readinessClearState(weekDays[0]?.date ?? todayISO),
+    });
     await handleProgramControlResult(result);
     return result;
-  }, [handleProgramControlResult]);
+  }, [
+    activeConstraints,
+    handleProgramControlResult,
+    registerSourceFactRenderObservation,
+    weekDays,
+  ]);
 
   const handleApplyAwayDays = useCallback(async (dates: string[]) => {
     const todayISO = todayISOLocal();
@@ -1391,6 +1582,28 @@ export function useHomeScreen() {
       createsActiveModifier: true,
       oneOffOnly: false,
     }, { todayISO });
+    const episodeId = actionResult.createdModifierIds?.[0];
+    if (actionResult.ok && actionResult.traceId && episodeId) {
+      const controlId = explorerTestId.injuryActive(episodeId);
+      const observationId = `injury-active:${actionResult.traceId}`;
+      registerAthleteActionUIOutcome({
+        traceId: actionResult.traceId,
+        observationId,
+        domainReturn: {
+          episodeId,
+          existingConstraintId: existingId ?? null,
+          changedProgram: actionResult.changedProgram,
+        },
+        controlId,
+      });
+      setPendingInjuryObservation({
+        traceId: actionResult.traceId,
+        observationId,
+        episodeId,
+        expectedStatus: 'active',
+        controlId,
+      });
+    }
     await handleProgramControlResult(actionResult);
   }, [handleProgramControlResult]);
 
@@ -1410,6 +1623,26 @@ export function useHomeScreen() {
         createsActiveModifier: false,
         oneOffOnly: false,
       }, { todayISO: todayISOLocal() });
+      if (result.ok && result.traceId) {
+        const controlId = explorerTestId.injuryResolved(note.injuryEpisodeId);
+        const observationId = `injury-resolved:${result.traceId}`;
+        registerAthleteActionUIOutcome({
+          traceId: result.traceId,
+          observationId,
+          domainReturn: {
+            episodeId: note.injuryEpisodeId,
+            changedProgram: result.changedProgram,
+          },
+          controlId,
+        });
+        setPendingInjuryObservation({
+          traceId: result.traceId,
+          observationId,
+          episodeId: note.injuryEpisodeId,
+          expectedStatus: 'resolved',
+          controlId,
+        });
+      }
       await handleProgramControlResult(result);
       if (!result.ok) {
         Alert.alert('Couldn’t resolve this injury', result.message ??
@@ -1432,13 +1665,15 @@ export function useHomeScreen() {
             acceptedRevisionAfter: result.acceptedRevisionAfter,
             affectedDates: result.affectedDates,
           },
-          controlId: 'home-visible-week-after-restoration',
+          controlId: explorerTestId.adjustmentRestored(note.reversibleAdjustmentId),
         });
         setPendingRestorationObservation({
           traceId: result.traceId,
           observationId,
           acceptedRevisionAfter: result.acceptedRevisionAfter,
           affectedDates: result.affectedDates,
+          adjustmentId: note.reversibleAdjustmentId,
+          controlId: explorerTestId.adjustmentRestored(note.reversibleAdjustmentId),
         });
       }
       if (result.outcome === 'safely-rejected' || result.outcome === 'conflicted' ||
@@ -1452,6 +1687,11 @@ export function useHomeScreen() {
       ? useProgramStore.getState().acceptedMaterialContext.activeConstraints
           .find((candidate) => candidate.id === note.constraintId)
       : null;
+    const sourceFactId = note?.temporarySourceFactIds?.[0];
+    const sourceFactDomain = sourceFactId && temporarySourceFacts.some((fact) =>
+      isTemporaryEquipmentFact(fact) && fact.factId === sourceFactId)
+      ? 'equipment' as const
+      : 'readiness' as const;
     const result = (constraint?.temporarySourceFactIds?.length ?? 0) > 0
       ? await executeProgramControlActionDurably({
           type: 'clear_fatigue_status',
@@ -1463,8 +1703,22 @@ export function useHomeScreen() {
           oneOffOnly: false,
         }, { todayISO: todayISOLocal() })
       : clearCoachNoteAction(noteId);
+    if (sourceFactId) {
+      registerSourceFactRenderObservation({
+        result,
+        domain: sourceFactDomain,
+        expectedStatus: 'resolved',
+        factId: sourceFactId,
+      });
+    }
     await handleProgramControlResult(result);
-  }, [clearCoachNoteAction, coachNotes, handleProgramControlResult]);
+  }, [
+    clearCoachNoteAction,
+    coachNotes,
+    handleProgramControlResult,
+    registerSourceFactRenderObservation,
+    temporarySourceFacts,
+  ]);
 
   const handleDismissCoachNote = useCallback((noteId: string) => {
     dismissActiveCoachNote(noteId);
@@ -1523,12 +1777,18 @@ export function useHomeScreen() {
           createsActiveModifier: true,
           oneOffOnly: false,
         }, { todayISO });
+    registerSourceFactRenderObservation({
+      result,
+      domain: 'readiness',
+      expectedStatus: 'active',
+    });
     await handleProgramControlResult(result);
   }, [
     clearCoachNoteAction,
     handleClearCoachNote,
     handleDismissCoachNote,
     handleProgramControlResult,
+    registerSourceFactRenderObservation,
     statusModifierKindForNote,
   ]);
 
@@ -1666,7 +1926,7 @@ export function useHomeScreen() {
             adjustmentId: result.adjustmentId,
             acceptedRevision: result.acceptedRevision,
           },
-          controlId: 'home-visible-week-after-repeat',
+          controlId: explorerTestId.repeatActive(result.adjustmentId),
         });
         setPendingRepeatObservation({
           traceId: result.traceId,
@@ -1718,14 +1978,15 @@ export function useHomeScreen() {
           traceId: result.traceId,
           observationId,
           domainReturn: { outcome: result.outcome, status },
-          controlId: 'home-visible-week-after-repeat-restoration',
+          controlId: explorerTestId.repeatRestored(activeRepeatWeekAdjustment.id),
         });
         setPendingRestorationObservation({
           traceId: result.traceId,
           observationId,
           acceptedRevisionAfter: result.acceptedRevisionAfter,
           affectedDates: result.affectedDates,
-          controlId: 'home-visible-week-after-repeat-restoration',
+          adjustmentId: activeRepeatWeekAdjustment.id,
+          controlId: explorerTestId.repeatRestored(activeRepeatWeekAdjustment.id),
           renderedStatus: status,
         });
       }
@@ -1788,12 +2049,19 @@ export function useHomeScreen() {
     coachNotes,
     activeConstraints,
     todayReadinessModifier,
+    injuryEpisodes,
+    readinessFacts,
+    equipmentFacts,
+    visibleReversibleAdjustments,
+    currentProgram,
+    sessionFeedback,
     handleClearCoachNote,
     handleDismissCoachNote,
     handleUpdateCoachNoteStatus,
 
     // Game-day modal
     gameModalVisible,
+    gameModalDate,
     gameModalLabel,
     closeGameModal,
     handleOpenGameDayActions,
@@ -1818,6 +2086,7 @@ export function useHomeScreen() {
     repeatWeekResult,
     repeatWeekRestoreStatus,
     activeRepeatWeekAdjustment,
+    visibleRepeatWeekAdjustment,
     handleOpenRepeatWeek,
     handleCancelRepeatWeek,
     handleConfirmRepeatWeek,
