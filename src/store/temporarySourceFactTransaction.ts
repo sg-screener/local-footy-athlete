@@ -30,6 +30,7 @@ import {
   classifyAthleteActionFailure,
   currentAthleteActionTrace,
   emitAthleteActionEvent,
+  type AthleteActionTraceContext,
 } from '../utils/athleteActionDiagnostics';
 import { isAcceptedProfileConstraint } from '../rules/acceptedProfileProjection';
 
@@ -99,10 +100,15 @@ export interface CommitTemporarySourceFactSetInput {
   now?: string;
   expectedAcceptedRevision?: number;
   testHooks?: TemporarySourceFactTransactionTestHooks;
+  /** Explicit TraceV2 correlation for async command executors. */
+  trace?: AthleteActionTraceContext;
 }
 
 export interface CommitTemporarySourceFactSetResult {
   ok: boolean;
+  acceptedStateChanged: boolean;
+  visibleProgramChanged: boolean;
+  /** @deprecated Compatibility alias for visibleProgramChanged. */
   changedProgram: boolean;
   reason?: string;
   route?: string;
@@ -247,7 +253,14 @@ export async function commitTemporarySourceFactSet(
   const ownership = loadCanonicalTemporarySourceFactOwnership(now);
   if (args.expectedAcceptedRevision !== undefined &&
     args.expectedAcceptedRevision !== ownership.context.revision) {
-    return { ok: false, changedProgram: false, route: 'conflicted', reason: 'accepted_revision_changed' };
+    return {
+      ok: false,
+      acceptedStateChanged: false,
+      visibleProgramChanged: false,
+      changedProgram: false,
+      route: 'conflicted',
+      reason: 'accepted_revision_changed',
+    };
   }
   const normalizedFacts = normalizeTemporarySourceFacts({
     value: expireTemporarySourceFacts(args.nextFacts, args.todayISO, now),
@@ -271,6 +284,7 @@ export async function commitTemporarySourceFactSet(
   const transaction = await runCoachMutationTransaction({
     todayISO: args.todayISO,
     extraDates: horizon.dates,
+    trace: args.trace,
     allowAcceptedStateOnlyChange: true,
     mutate: () => {
       args.testHooks?.beforeStage?.();
@@ -345,9 +359,21 @@ export async function commitTemporarySourceFactSet(
     },
   });
   if (!('route' in transaction)) {
-    return { ok: true, changedProgram: transaction.diff.hasProgrammingChange };
+    return {
+      ok: true,
+      acceptedStateChanged: true,
+      visibleProgramChanged: transaction.diff.hasProgrammingChange,
+      changedProgram: transaction.diff.hasProgrammingChange,
+    };
   }
-  return { ok: false, changedProgram: false, route: transaction.route, reason: transaction.reason };
+  return {
+    ok: false,
+    acceptedStateChanged: false,
+    visibleProgramChanged: false,
+    changedProgram: false,
+    route: transaction.route,
+    reason: transaction.reason,
+  };
 }
 
 function comparableFact(fact: TemporarySourceFact): unknown {
