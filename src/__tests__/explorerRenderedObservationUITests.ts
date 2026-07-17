@@ -74,4 +74,3 @@ __resetDevE2EStateForTest();
 
 console.log(`\nExplorer rendered observation UI: ${passed} passed, ${failed} failed`);
 if (failed) process.exit(1);
-

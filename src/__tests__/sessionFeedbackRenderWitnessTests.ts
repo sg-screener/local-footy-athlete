@@ -69,4 +69,3 @@ if (missing !== null) {
   process.exit(1);
 }
 console.log('  ✓ missing source session does not guess a progression target');
-
