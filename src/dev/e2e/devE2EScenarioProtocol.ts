@@ -148,12 +148,17 @@ export function expectedDevE2ENextStep(
   return manifest.steps[index + 1] ?? null;
 }
 
-export function defaultDevE2EScenarioEligibility(
+/**
+ * Protocol-only sessions have no accepted witness vocabulary. They must never
+ * become eligible merely because a manifest listed opaque witness IDs; a
+ * caller must install a typed evaluator that reads current accepted state.
+ */
+export function failClosedDevE2EScenarioEligibility(
   context: DevE2EScenarioEligibilityContext,
 ): DevE2EScenarioEligibilityDecision {
   return {
-    status: 'eligible',
-    reasonCode: DEV_E2E_SCENARIO_REASON.ELIGIBLE,
+    status: 'blocked',
+    reasonCode: 'typed_eligibility_evaluator_required',
     witnessIds: [
       ...context.nextStep.eligibilityWitnessIds,
       `scenario:${context.manifest.scenarioId}`,
