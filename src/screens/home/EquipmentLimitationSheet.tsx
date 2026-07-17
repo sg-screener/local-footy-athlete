@@ -4,33 +4,51 @@ import { Text } from '../../components/common/Text';
 import { Sheet } from '../../components/ui';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
+import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
 import {
   TEMPORARY_EQUIPMENT_PRESETS,
   type TemporaryEquipmentPresetId,
 } from '../../utils/equipmentAvailability';
+import { explorerTestId } from '../../utils/stableTestId';
 
 interface EquipmentLimitationSheetProps {
   visible: boolean;
   onClose: () => void;
   onApply: (presetId: TemporaryEquipmentPresetId) => void | Promise<void>;
+  activeFactId?: string | null;
 }
 
 export function EquipmentLimitationSheet({
   visible,
   onClose,
   onApply,
+  activeFactId,
 }: EquipmentLimitationSheetProps) {
+  const presets = activeFactId
+    ? TEMPORARY_EQUIPMENT_PRESETS
+    : TEMPORARY_EQUIPMENT_PRESETS.filter((preset) => !preset.clearsActiveEquipment);
   return (
     <Sheet visible={visible} onClose={onClose} testID="home-equipment-limitation-sheet">
       <View>
         <Text style={styles.title}>Limited equipment this week</Text>
-        <Text style={styles.body}>Pick the closest temporary setup.</Text>
-        {TEMPORARY_EQUIPMENT_PRESETS.map((preset) => (
+        <Text style={styles.body}>
+          {activeFactId
+            ? 'Your current restriction is active. Choose another setup or clear it.'
+            : 'Pick the closest temporary setup.'}
+        </Text>
+        {activeFactId ? (
+          <ExplorerRenderWitness testID={explorerTestId.equipmentActive(activeFactId)} />
+        ) : null}
+        {presets.map((preset) => (
           <EquipmentOption
             key={preset.id}
-            presetId={preset.id}
             label={preset.label}
             sub={preset.sub}
+            testID={activeFactId
+              ? preset.clearsActiveEquipment
+                ? explorerTestId.equipmentClear(activeFactId)
+                : explorerTestId.equipmentUpdate(activeFactId, preset.id)
+              : explorerTestId.equipmentOption(preset.id)}
             onPress={() => onApply(preset.id)}
           />
         ))}
@@ -40,20 +58,22 @@ export function EquipmentLimitationSheet({
 }
 
 function EquipmentOption({
-  presetId,
   label,
   sub,
+  testID,
   onPress,
 }: {
-  presetId: TemporaryEquipmentPresetId;
   label: string;
   sub: string;
+  testID: string;
   onPress: () => void;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      testID={`equipment-preset-${presetId}`}
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={testID}
       style={({ pressed }) => [styles.option, pressed && { opacity: 0.7 }]}
     >
       <Text style={styles.optionLabel}>{label}</Text>

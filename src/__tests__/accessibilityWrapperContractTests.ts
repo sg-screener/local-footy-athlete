@@ -20,6 +20,9 @@ const button = read('components/ui/Button.tsx');
 const card = read('components/ui/Card.tsx');
 const planChangeSheet = read('screens/home/PlanChangeSheet.tsx');
 const home = read('screens/home/HomeScreenV2.tsx');
+const injury = read('screens/home/GuidedInjuryFlowSheet.tsx');
+const equipment = read('screens/home/EquipmentLimitationSheet.tsx');
+const witness = read('components/ExplorerRenderWitness.tsx');
 
 let pass = 0;
 let fail = 0;
@@ -103,7 +106,7 @@ section('[3] Interactive Card supports nested controls without swallowing them')
     /const exposesExpandedActions = isSelected && normal/.test(home),
   );
   ok('expanded day row disables parent accessibility grouping', /accessible=\{!exposesExpandedActions\}/.test(dayCardTag));
-  ok('day row identifier remains unchanged', /testID=\{`day-row-\$\{dayToken\}`\}/.test(dayCardTag));
+  ok('day row identifier remains canonical in normal mode', /`day-row-\$\{dayToken\}`/.test(dayCardTag));
   ok('day row press behavior remains attached', /onPress=\{onPress\}/.test(dayCardTag));
 }
 
@@ -123,11 +126,11 @@ section('[4] Required sheet titles and child controls remain independently expos
   );
   ok(
     'Fixture sheet title remains visible accessibility text inside Sheet',
-    /<Sheet[^>]*testID="fixture-actions-sheet">[\s\S]*?<Text style=\{styles\.sheetTitle\}>/.test(home),
+    /<Sheet[\s\S]*?testID=\{explorerTestId\.fixtureActions\(fixtureId\)\}[\s\S]*?<Text style=\{styles\.sheetTitle\}>/.test(home),
   );
   ok(
     'Fixture move action keeps its identifier on SheetOption',
-    /<SheetOption[\s\S]*?testID="fixture-move-action"[\s\S]*?onPress=\{onMove\}/.test(home),
+    /<SheetOption[\s\S]*?testID=\{explorerTestId\.fixtureIngress\('move', fixtureId\)\}[\s\S]*?onPress=\{onMove\}/.test(home),
   );
   ok(
     'SheetOption forwards identifier and press to the same Pressable',
@@ -137,6 +140,20 @@ section('[4] Required sheet titles and child controls remain independently expos
     'Start Session keeps view-workout-button on shared Button',
     /<Button label="Start Session"[^>]*onPress=\{onViewWorkout\}[^>]*testID="view-workout-button"/.test(home),
   );
+}
+
+section('[5] Explorer semantic leaves and lifecycle controls are accessible');
+{
+  ok('render witness is an accessibility-visible retained native leaf',
+    /<View[\s\S]*?accessible[\s\S]*?accessibilityLabel=\{accessibilityLabel\}[\s\S]*?accessibilityRole="text"[\s\S]*?collapsable=\{false\}/.test(witness));
+  ok('SheetOption keeps semantic IDs as accessibility labels',
+    /function SheetOption[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{testID\}/.test(home));
+  ok('injury options expose their stable identity to accessibility',
+    /function FlowOption[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{testID\}/.test(injury));
+  ok('equipment options expose their stable identity to accessibility',
+    /function EquipmentOption[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{testID\}/.test(equipment));
+  ok('fixture expanded action exposes the canonical fixture identity',
+    /fixtureIngress\('move', day\.workout\.id\)[\s\S]*?accessibilityRole="button"[\s\S]*?accessibilityLabel=\{explorerTestId\.fixtureIngress\('move', day\.workout\.id\)\}/.test(home));
 }
 
 console.log(`\nAccessibility wrapper contracts: ${pass} passed, ${fail} failed`);

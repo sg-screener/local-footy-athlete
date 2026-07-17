@@ -75,6 +75,7 @@ function DayWorkoutScreenClassic() {
     toggleCue,
     isFinished,
     justSaved,
+    savedFeedbackReceipt,
     editingWeightId,
     editingWeightText,
     setEditingWeightText,
@@ -576,7 +577,7 @@ function DayWorkoutScreenClassic() {
         {/* Post-finish: feedback panel, or "Session logged" success moment. */}
         {isFinished && date ? (
           justSaved ? (
-            <SessionCompleteMoment date={date} />
+            <SessionCompleteMoment date={date} receipt={savedFeedbackReceipt} />
           ) : (
             <SessionFeedbackPanel date={date} workout={workout} onSave={handleFeedbackSaved} />
           )

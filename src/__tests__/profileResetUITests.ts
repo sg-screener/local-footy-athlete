@@ -624,11 +624,14 @@ ok(
 );
 ok(
   'Program screen has temporary equipment entry',
-  /testID="home-equipment-limitation-entry"[\s\S]*Missing equipment\?/.test(homeV2),
+  /testID=\{activeEquipmentFact[\s\S]*explorerTestId\.equipmentUpdate\(activeEquipmentFact\.factId\)[\s\S]*explorerTestId\.equipmentOption\('open'\)[\s\S]*Missing equipment\?/.test(homeV2),
 );
 ok(
   'temporary equipment sheet is local and preset-driven',
-  /testID="home-equipment-limitation-sheet"[\s\S]*TEMPORARY_EQUIPMENT_PRESETS/.test(equipmentSheet),
+  /testID="home-equipment-limitation-sheet"/.test(equipmentSheet)
+    && /const presets = activeFactId[\s\S]*TEMPORARY_EQUIPMENT_PRESETS/.test(equipmentSheet)
+    && /presets\.map\(\(preset\)/.test(equipmentSheet)
+    && /onPress=\{\(\) => onApply\(preset\.id\)\}/.test(equipmentSheet),
 );
 
 section('[12] Baseline equipment settings save is rebuild-aware');

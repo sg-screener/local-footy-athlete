@@ -40,5 +40,5 @@ export function observeRenderedAthleteActionOutcome(
 ): void {
   if (!athleteActionDiagnosticsEnabled()) return;
   athleteActionTraceCoordinator.observeRenderedUI(args);
-  setDevE2ETraceUIObserved(args.controlId);
+  setDevE2ETraceUIObserved(args.controlId, args.traceId, args.observationId);
 }
