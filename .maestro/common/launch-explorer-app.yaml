@@ -2,7 +2,6 @@ appId: com.localfootyathlete.app
 name: Canonical Explorer app launch
 ---
 - launchApp:
-    clearState: "${EXPLORER_CLEAR_STATE}"
     stopApp: true
     arguments:
       e2eMetroUrl: "${E2E_METRO_URL}"

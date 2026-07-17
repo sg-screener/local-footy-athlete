@@ -10,7 +10,6 @@ name: Final scenario checkpoint and completion reload
     file: launch-explorer-app.yaml
     env:
       EXPLORER_LAUNCH_PURPOSE: final-step-reload
-      EXPLORER_CLEAR_STATE: "false"
       EXPLORER_LAUNCH_DEEP_LINK: "localfootyathlete://e2e/explorer/diagnostics/final-step-reload?e2eMetroUrl=${E2E_METRO_URL}"
 - extendedWaitUntil:
     visible:

@@ -9,7 +9,7 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import {
-  buildExplorerAppLaunchCommand,
+  buildExplorerAppLaunchPlan,
   buildExplorerDeepLinkCommand,
   explorerMetroDiagnosticMarker,
   type ExplorerAppLaunchPurpose,
@@ -558,12 +558,18 @@ async function launchExplorerApp(args: {
   hardDeadline: number;
 }): Promise<void> {
   const nowMs = args.options.nowMs ?? Date.now;
-  commandResult(buildExplorerAppLaunchCommand({
+  const plan = buildExplorerAppLaunchPlan({
     simulatorId: args.options.simulatorId,
     metroUrl: args.options.metroUrl,
     purpose: args.purpose,
     maestroBinary: args.options.maestroBinary,
-  }), args.options.repositoryRoot, Math.max(1, args.hardDeadline - nowMs()));
+  });
+  for (const command of plan.commands) {
+    commandResult(command, args.options.repositoryRoot, Math.max(
+      1,
+      args.hardDeadline - nowMs(),
+    ));
+  }
   await waitForHierarchyValue({
     options: args.options,
     deadline: args.hardDeadline,

@@ -170,6 +170,9 @@ Maestro must launch this debug app with an explicit Metro URL. Every Explorer
 process launch delegates to `launch-explorer-app.yaml`, which passes
 `E2E_METRO_URL` as the native `e2eMetroUrl` launch argument and immediately
 opens a diagnostic deep link carrying the matching `e2eMetroUrl` query field.
+The typed launch plan runs the literal `clear-explorer-app-state.yaml` prelude
+only for the initial cold launch; every preservation purpose runs the canonical
+launch flow directly, without an interpolated clear-state value.
 Before React Native
 creates its bridge, the debug-only AppDelegate hook validates that URL and
 sets `RCTBundleURLProvider` to its scheme and host-port. It logs both the

@@ -28,8 +28,9 @@ import {
   writeExplorerCampaignEnvironmentReceipt,
 } from '../../scripts/run-explorer-nine-live';
 import {
+  EXPLORER_APP_CLEAR_STATE_FLOW,
   EXPLORER_APP_LAUNCH_FLOW,
-  buildExplorerAppLaunchCommand,
+  buildExplorerAppLaunchPlan,
   buildExplorerDeepLinkCommand,
   explorerMetroDiagnosticRoute,
   withExplorerMetroUrl,
@@ -93,29 +94,36 @@ async function main(): Promise<void> {
       { name: 'initial cold launch', purpose: 'initial-cold-launch' },
     ];
     for (const path of paths) {
-      const command = buildExplorerAppLaunchCommand({
+      const plan = buildExplorerAppLaunchPlan({
         simulatorId: 'simulator-1', metroUrl: selected, purpose: path.purpose,
       });
+      const launchCommand = plan.commands.find((command) =>
+        command.args.includes(EXPLORER_APP_LAUNCH_FLOW));
       const diagnostic = withExplorerMetroUrl(
         explorerMetroDiagnosticRoute(path.purpose),
         selected,
       );
-      expect(command.args.includes(EXPLORER_APP_LAUNCH_FLOW),
+      expect(Boolean(launchCommand),
         `${path.name} bypassed the canonical flow`);
-      expect(command.args.includes(`E2E_METRO_URL=${selected}`) &&
-        command.args.includes(`EXPLORER_LAUNCH_PURPOSE=${path.purpose}`),
+      expect(Boolean(launchCommand?.args.includes(`E2E_METRO_URL=${selected}`)) &&
+        Boolean(launchCommand?.args.includes(
+          `EXPLORER_LAUNCH_PURPOSE=${path.purpose}`,
+        )),
       `${path.name} omitted the selected Metro`);
-      expect(command.args.includes(`EXPLORER_LAUNCH_DEEP_LINK=${diagnostic}`),
+      expect(Boolean(launchCommand?.args.includes(
+        `EXPLORER_LAUNCH_DEEP_LINK=${diagnostic}`,
+      )),
         `${path.name} did not use its validated generated deep link`);
       expect(new URL(diagnostic).searchParams.get('e2eMetroUrl') === selected,
         `${path.name} diagnostic omitted e2eMetroUrl`);
-      expect(!command.args.join(' ').includes('8081') && !diagnostic.includes('8081'),
+      expect(!plan.commands.some((command) =>
+        command.args.join(' ').includes('8081')) && !diagnostic.includes('8081'),
         `${path.name} fell back to the ambient Metro`);
     }
   });
 
   await test('initial launch and all running-app links pin 8082 without probing 8081', () => {
-    const launch = buildExplorerAppLaunchCommand({
+    const launch = buildExplorerAppLaunchPlan({
       simulatorId: 'simulator-1',
       metroUrl: 'http://127.0.0.1:8082',
       purpose: 'initial-cold-launch',
@@ -126,11 +134,14 @@ async function main(): Promise<void> {
       deepLink: 'localfootyathlete://e2e/explorer/run/smoke-fixture-move',
     });
     const delivered = route.args.at(-1) ?? '';
-    expect(launch.args.includes('EXPLORER_CLEAR_STATE=true'),
-      'initial launch did not own cold state');
+    expect(launch.statePolicy === 'clear' && launch.commands.length === 2 &&
+      launch.commands[0]?.args.includes(EXPLORER_APP_CLEAR_STATE_FLOW) &&
+      launch.commands[1]?.args.includes(EXPLORER_APP_LAUNCH_FLOW),
+    'initial launch did not own the literal clear-then-launch sequence');
     expect(new URL(delivered).searchParams.get('e2eMetroUrl') ===
       'http://127.0.0.1:8082', 'running-app deep link lost selected Metro');
-    expect(!launch.args.join(' ').includes('8081') && !delivered.includes('8081'),
+    expect(!launch.commands.some((command) =>
+      command.args.join(' ').includes('8081')) && !delivered.includes('8081'),
       'ambient Metro leaked into a launch command');
   });
 
@@ -202,7 +213,7 @@ async function main(): Promise<void> {
 
   await test('launch builder refuses a missing E2E_METRO_URL', () => {
     try {
-      buildExplorerAppLaunchCommand({
+      buildExplorerAppLaunchPlan({
         simulatorId: 'simulator-1',
         metroUrl: '',
         purpose: 'initial-cold-launch',
@@ -259,7 +270,7 @@ async function main(): Promise<void> {
       source.includes('e2eMetroUrl=${E2E_METRO_URL}')),
     'an Explorer Maestro call site constructs launchApp directly');
     expect(!runner.includes("args: ['simctl', 'openurl'") &&
-      runner.includes('buildExplorerAppLaunchCommand({') &&
+      runner.includes('buildExplorerAppLaunchPlan({') &&
       runner.includes('buildExplorerDeepLinkCommand({'),
     'live runner bypasses canonical launch/deep-link builders');
   });

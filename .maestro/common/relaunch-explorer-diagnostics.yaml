@@ -5,5 +5,4 @@ name: Explorer Metro diagnostic relaunch
     file: launch-explorer-app.yaml
     env:
       EXPLORER_LAUNCH_PURPOSE: diagnostic-relaunch
-      EXPLORER_CLEAR_STATE: "false"
       EXPLORER_LAUNCH_DEEP_LINK: "localfootyathlete://e2e/explorer/diagnostics/diagnostic-relaunch?e2eMetroUrl=${E2E_METRO_URL}"

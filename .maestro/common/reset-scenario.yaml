@@ -5,7 +5,6 @@ name: Deterministic dev E2E scenario reset
     file: launch-explorer-app.yaml
     env:
       EXPLORER_LAUNCH_PURPOSE: scenario-reset
-      EXPLORER_CLEAR_STATE: "true"
       EXPLORER_LAUNCH_DEEP_LINK: "localfootyathlete://e2e/explorer/diagnostics/scenario-reset?e2eMetroUrl=${E2E_METRO_URL}"
 - openLink: "localfootyathlete://e2e/scenario/reset/${SCENARIO_ID}"
 - extendedWaitUntil:

@@ -1,0 +1,4 @@
+appId: com.localfootyathlete.app
+name: Clear Explorer app state
+---
+- clearState

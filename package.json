@@ -93,6 +93,7 @@
     "test:explorer-scenario-artifacts": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerScenarioArtifactBundleTests.ts",
     "test:explorer-physical-evidence": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerPhysicalEvidenceTests.ts",
     "test:explorer-live-runner": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLiveRunnerTests.ts",
+    "test:explorer-launch-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLaunchOwnershipTests.ts",
     "test:persistent-injury": "sucrase-node src/__tests__/persistentInjuryStateTests.ts",
     "test:coach-orchestration": "sucrase-node src/__tests__/coachOrchestrationTests.ts",
     "test:coach-live-wiring": "sucrase-node src/__tests__/coachLiveWiringTests.ts",
