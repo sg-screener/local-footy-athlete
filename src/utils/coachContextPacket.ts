@@ -36,8 +36,43 @@ import {
 } from './coachTargetFrame';
 import { buildProgramEditDraft } from './coachProgramEditDraft';
 import { constraintAppliesToDate } from './readinessConstraints';
+import {
+  normalizeAcceptedMaterialContext,
+  type AcceptedMaterialContext,
+} from '../store/acceptedStateColdStart';
+import { activeInjuryEpisodes } from '../rules/injuryEpisode';
+import type { AcceptedInjuryContext } from './coachIntent';
 
 const RECENT_HISTORY_LIMIT = 8;
+
+/**
+ * Build the classifier-safe injury projection from one normalized accepted
+ * snapshot. Every active episode is retained and only non-sensitive targeting
+ * fields cross the context boundary.
+ */
+export function buildAcceptedInjuryContext(
+  value: Partial<AcceptedMaterialContext> | null | undefined,
+): AcceptedInjuryContext {
+  const accepted = normalizeAcceptedMaterialContext(value);
+  const activeEpisodes = activeInjuryEpisodes(accepted.injuryEpisodes)
+    .map((episode) => ({
+      episodeId: episode.episodeId,
+      bodyPart: episode.bodyPart,
+      bucket: episode.bucket,
+      severity: episode.severity,
+      status: episode.status as 'active' | 'improving',
+      onsetOrReportedDate: episode.onsetOrReportedDate,
+      updatedAt: episode.updatedAt,
+      seriousSymptoms: episode.seriousSymptoms,
+    }))
+    .sort((left, right) =>
+      left.onsetOrReportedDate.localeCompare(right.onsetOrReportedDate) ||
+      left.episodeId.localeCompare(right.episodeId));
+  return {
+    revision: accepted.revision,
+    activeEpisodes,
+  };
+}
 
 export interface BuildPacketInput {
   /** Stable id of the athlete message that owns this Coach turn. */
@@ -79,6 +114,9 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     (c) => c.status !== 'resolved' && constraintAppliesToDate(c as any, input.todayISO),
   );
   const programStore = useProgramStore.getState();
+  const acceptedInjuryContext = buildAcceptedInjuryContext(
+    programStore.acceptedMaterialContext,
+  );
   const projectedState = {
     ...state,
     activeConstraints,
@@ -149,6 +187,7 @@ export function buildCoachContextPacket(input: BuildPacketInput): CoachContextPa
     userMessage: input.userMessage,
     recentMessages: recent,
     activeInjury,
+    acceptedInjuryContext,
     activeConstraints,
     pendingInjury: input.pendingInjury ?? null,
     pendingCoachProposal: input.pendingCoachProposal ?? null,
@@ -229,6 +268,7 @@ export function serialisePacketForLLM(packet: CoachContextPacket): string {
   const out = {
     userMessage: packet.userMessage,
     todayISO: packet.todayISO,
+    acceptedInjuryContext: packet.acceptedInjuryContext,
     activeInjury: packet.activeInjury
       ? {
           bodyPart: packet.activeInjury.bodyPart,

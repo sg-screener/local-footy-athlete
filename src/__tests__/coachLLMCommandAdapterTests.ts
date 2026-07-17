@@ -33,6 +33,7 @@ function packet(): CoachContextPacket {
     userMessage: 'Actually I want some hard hill running instead of Pilates today',
     recentMessages: [],
     activeInjury: null,
+    acceptedInjuryContext: { revision: 0, activeEpisodes: [] },
     activeConstraints: [],
     coachUpdate: null,
     currentWeek: [],

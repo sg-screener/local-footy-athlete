@@ -71,6 +71,19 @@ function makePacket(overrides: Partial<CoachContextPacket> = {}): CoachContextPa
       lastUpdatedAt: '2026-04-29T10:00:00Z',
       history: [],
     },
+    acceptedInjuryContext: {
+      revision: 1,
+      activeEpisodes: [{
+        episodeId: 'hammy-episode',
+        bodyPart: 'hammy',
+        bucket: 'hamstring' as any,
+        severity: 6,
+        status: 'active',
+        onsetOrReportedDate: '2026-04-29',
+        updatedAt: '2026-04-29T10:00:00Z',
+        seriousSymptoms: false,
+      }],
+    },
     coachUpdate: null,
     currentWeek: [],
     nextWeek: [],
@@ -311,6 +324,9 @@ section('[9] All intent kinds parse correctly');
   for (const k of kinds) {
     const fetcher = (() => Promise.resolve(makeFakeResp({
       intent: k, confidence: 0.8, needsClarification: false,
+      ...(k === 'active_injury_followup'
+        ? { payload: { followupKind: 'unchanged' } }
+        : {}),
     }))) as unknown as typeof fetch;
     captureLogs();
     const classifier = new LLMCoachIntentClassifier({

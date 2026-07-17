@@ -173,6 +173,7 @@ function buildPacket(
     userMessage: '',
     recentMessages: [],
     activeInjury: null,
+    acceptedInjuryContext: { revision: 0, activeEpisodes: [] },
     activeConstraints: [],
     pendingInjury: null,
     pendingCoachProposal: null,
