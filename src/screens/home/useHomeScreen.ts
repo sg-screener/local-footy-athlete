@@ -201,14 +201,14 @@ export function useHomeScreen() {
     renderedStatus?: string;
     adjustmentId: string;
   } | null>(null);
-  const [pendingSourceFactObservation, setPendingSourceFactObservation] = useState<{
+  const [pendingSourceFactObservations, setPendingSourceFactObservations] = useState<Array<{
     traceId: string;
     observationId: string;
     domain: 'readiness' | 'equipment';
     factId: string;
     expectedStatus: 'active' | 'resolved';
     controlId: string;
-  } | null>(null);
+  }>>([]);
   const [pendingInjuryObservation, setPendingInjuryObservation] = useState<{
     traceId: string;
     observationId: string;
@@ -461,32 +461,44 @@ export function useHomeScreen() {
   }, [pendingFixtureObservation, weekDays]);
 
   useEffect(() => {
-    if (!pendingSourceFactObservation) return;
-    const fact = temporarySourceFacts.find((candidate) =>
-      'factId' in candidate && candidate.factId === pendingSourceFactObservation.factId);
-    const activeConstraintExists = activeConstraints.some((constraint) =>
-      constraint.id === pendingSourceFactObservation.factId ||
-      constraint.temporarySourceFactIds?.includes(pendingSourceFactObservation.factId));
-    const renderedStatus = fact && 'status' in fact ? fact.status : null;
-    const matches = pendingSourceFactObservation.expectedStatus === 'active'
-      ? activeConstraintExists && (renderedStatus === 'active' || renderedStatus === null)
-      : !activeConstraintExists && (renderedStatus === 'resolved' || renderedStatus === null);
-    if (!matches) return;
-    observeRenderedAthleteActionOutcome({
-      traceId: pendingSourceFactObservation.traceId,
-      observationId: pendingSourceFactObservation.observationId,
-      renderedText: {
-        domain: pendingSourceFactObservation.domain,
-        factId: pendingSourceFactObservation.factId,
-        status: renderedStatus,
-        activeConstraintExists,
-        acceptedRevision,
-      },
-      controlId: pendingSourceFactObservation.controlId,
-      accessibilityNode: { testID: pendingSourceFactObservation.controlId },
-    });
-    setPendingSourceFactObservation(null);
-  }, [acceptedRevision, activeConstraints, pendingSourceFactObservation, temporarySourceFacts]);
+    if (pendingSourceFactObservations.length === 0) return;
+    const completedTraceIds = new Set<string>();
+    for (const pending of pendingSourceFactObservations) {
+      const fact = temporarySourceFacts.find((candidate) =>
+        'factId' in candidate && candidate.factId === pending.factId);
+      const activeConstraintExists = activeConstraints.some((constraint) =>
+        constraint.id === pending.factId ||
+        constraint.temporarySourceFactIds?.includes(pending.factId));
+      const renderedStatus = fact && 'status' in fact ? fact.status : null;
+      const matches = pending.expectedStatus === 'active'
+        ? activeConstraintExists && (renderedStatus === 'active' || renderedStatus === null)
+        : !activeConstraintExists && (renderedStatus === 'resolved' || renderedStatus === null);
+      if (!matches) continue;
+      observeRenderedAthleteActionOutcome({
+        traceId: pending.traceId,
+        observationId: pending.observationId,
+        renderedText: {
+          domain: pending.domain,
+          factId: pending.factId,
+          status: renderedStatus,
+          activeConstraintExists,
+          acceptedRevision,
+        },
+        controlId: pending.controlId,
+        accessibilityNode: { testID: pending.controlId },
+      });
+      completedTraceIds.add(pending.traceId);
+    }
+    if (completedTraceIds.size > 0) {
+      setPendingSourceFactObservations((current) => current.filter((pending) =>
+        !completedTraceIds.has(pending.traceId)));
+    }
+  }, [
+    acceptedRevision,
+    activeConstraints,
+    pendingSourceFactObservations,
+    temporarySourceFacts,
+  ]);
 
   useEffect(() => {
     if (!pendingInjuryObservation) return;
@@ -1234,6 +1246,7 @@ export function useHomeScreen() {
       ? args.result.createdModifierIds?.[0]
       : args.result.clearedModifierIds?.[0]);
     if (!args.result.ok || !args.result.traceId || !factId) return;
+    const traceId = args.result.traceId;
     const controlId = args.controlId ?? (args.domain === 'equipment'
       ? args.expectedStatus === 'active'
         ? explorerTestId.equipmentActive(factId)
@@ -1241,9 +1254,9 @@ export function useHomeScreen() {
       : args.expectedStatus === 'active'
         ? explorerTestId.readinessActive(factId)
         : explorerTestId.readinessClear(factId));
-    const observationId = `${args.domain}-${args.expectedStatus}:${args.result.traceId}`;
+    const observationId = `${args.domain}-${args.expectedStatus}:${traceId}`;
     registerAthleteActionUIOutcome({
-      traceId: args.result.traceId,
+      traceId,
       observationId,
       domainReturn: {
         ok: args.result.ok,
@@ -1253,14 +1266,14 @@ export function useHomeScreen() {
       },
       controlId,
     });
-    setPendingSourceFactObservation({
-      traceId: args.result.traceId,
+    setPendingSourceFactObservations((current) => [...current, {
+      traceId,
       observationId,
       domain: args.domain,
       factId,
       expectedStatus: args.expectedStatus,
       controlId,
-    });
+    }]);
   }, []);
 
   const handleApplyHomeQuickStatus = useCallback(async (
@@ -1607,7 +1620,10 @@ export function useHomeScreen() {
     await handleProgramControlResult(actionResult);
   }, [handleProgramControlResult]);
 
-  const handleClearCoachNote = useCallback(async (noteId: string) => {
+  const handleClearCoachNote = useCallback(async (
+    noteId: string,
+    observeResult = true,
+  ) => {
     const note = coachNotes.find((candidate) => candidate.id === noteId);
     if (note?.injuryEpisodeId) {
       const result = await executeProgramControlActionDurably({
@@ -1655,7 +1671,9 @@ export function useHomeScreen() {
         note.reversibleAdjustmentId,
         useProgramStore.getState().acceptedMaterialContext.revision,
       );
-      if (result.traceId) {
+      const restored = result.outcome === 'restored' || result.outcome === 'recomposed' ||
+        result.outcome === 'already-cleared';
+      if (result.traceId && restored) {
         const observationId = `home-restoration-result:${result.traceId}`;
         registerAthleteActionUIOutcome({
           traceId: result.traceId,
@@ -1703,7 +1721,7 @@ export function useHomeScreen() {
           oneOffOnly: false,
         }, { todayISO: todayISOLocal() })
       : clearCoachNoteAction(noteId);
-    if (sourceFactId) {
+    if (sourceFactId && observeResult) {
       registerSourceFactRenderObservation({
         result,
         domain: sourceFactDomain,
@@ -1736,7 +1754,7 @@ export function useHomeScreen() {
     const currentStatusKind = statusModifierKindForNote(noteId);
     const nextStatusKind = targetStatusModifierKind(status);
     if (currentStatusKind !== 'unknown' && currentStatusKind !== nextStatusKind) {
-      await handleClearCoachNote(noteId);
+      await handleClearCoachNote(noteId, false);
     }
     const result = status === 'still_sick'
       ? executeProgramControlAction({
@@ -1972,7 +1990,7 @@ export function useHomeScreen() {
           ? 'A newer change owns this week, so Repeat Week was left untouched.'
           : 'Repeat Week couldn’t be restored because this week has changed.';
       setRepeatWeekRestoreStatus(status);
-      if (result.traceId) {
+      if (result.traceId && restored) {
         const observationId = `home-repeat-restoration:${result.traceId}`;
         registerAthleteActionUIOutcome({
           traceId: result.traceId,

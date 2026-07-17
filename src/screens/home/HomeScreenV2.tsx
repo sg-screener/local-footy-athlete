@@ -273,9 +273,18 @@ export default function HomeScreenV2() {
         ));
       }
       if (adjustment.kind === 'session_delete' || adjustment.kind === 'session_component_delete') {
+        const resultScope = constraint.scope === 'whole_session'
+          ? 'whole_day'
+          : constraint.scope === 'strength_component'
+            ? 'strength'
+            : constraint.scope === 'conditioning_component'
+              ? 'conditioning'
+              : constraint.scope === 'recovery_component'
+                ? 'recovery'
+                : 'team';
         testIDs.push(explorerTestId.sessionMutationResult(
           'delete',
-          `${sessionId}:${constraint.scope === 'whole_session' ? 'whole_day' : constraint.scope}`,
+          `${sessionId}:${resultScope}`,
         ));
       }
       if (adjustment.kind === 'session_component_delete') {
