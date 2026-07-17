@@ -56,6 +56,26 @@ ok('physical evidence acknowledgement route accepts exact capture and payload id
     `localfootyathlete://e2e/explorer/evidence/explorer-capture-${'a'.repeat(64)}` +
     '?receipt=%7B%7D',
   )?.kind === 'explorer_evidence');
+const selectedMetroUrl = 'http://127.0.0.1:8082';
+const metroDiagnostic = parseDevE2EEntryRoute(
+  'localfootyathlete://e2e/explorer/diagnostics/scenario-reset' +
+  `?e2eMetroUrl=${encodeURIComponent(selectedMetroUrl)}`,
+);
+ok('Explorer launch diagnostic carries exact purpose and Metro URL',
+  metroDiagnostic?.kind === 'explorer_diagnostic' &&
+  metroDiagnostic.launchPurpose === 'scenario-reset' &&
+  metroDiagnostic.e2eMetroUrl === selectedMetroUrl);
+ok('Explorer route accepts one exact Metro query field',
+  parseDevE2EEntryRoute(
+    'localfootyathlete://e2e/explorer/run/smoke-fixture-move' +
+    `?e2eMetroUrl=${encodeURIComponent(selectedMetroUrl)}`,
+  )?.kind === 'explorer_run');
+ok('Explorer route rejects duplicate Metro query fields',
+  parseDevE2EEntryRoute(
+    'localfootyathlete://e2e/explorer/run/smoke-fixture-move' +
+    `?e2eMetroUrl=${encodeURIComponent(selectedMetroUrl)}` +
+    `&e2eMetroUrl=${encodeURIComponent(selectedMetroUrl)}`,
+  ) === null);
 
 const root = path.resolve(__dirname, '..', '..');
 const appSource = fs.readFileSync(path.join(root, 'App.tsx'), 'utf8');

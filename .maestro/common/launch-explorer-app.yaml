@@ -1,0 +1,19 @@
+appId: com.localfootyathlete.app
+name: Canonical Explorer app launch
+---
+- launchApp:
+    clearState: "${EXPLORER_CLEAR_STATE}"
+    stopApp: true
+    arguments:
+      e2eMetroUrl: "${E2E_METRO_URL}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-entry-ready"
+    timeout: 15000
+- openLink: "${EXPLORER_LAUNCH_DEEP_LINK}"
+- extendedWaitUntil:
+    visible:
+      id: "e2e-explorer-launch-diagnostic-${EXPLORER_LAUNCH_PURPOSE}"
+    timeout: 15000
+- assertNotVisible:
+    id: "e2e-seed-error"

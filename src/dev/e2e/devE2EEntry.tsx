@@ -1,5 +1,5 @@
 import React from 'react';
-import { Linking, Text, View } from 'react-native';
+import { Linking, NativeModules, Text, View } from 'react-native';
 import { parseDevE2EEntryRoute } from './devE2EEntryRoute';
 export { parseDevE2EEntryRoute } from './devE2EEntryRoute';
 export type { DevE2EEntryRoute } from './devE2EEntryRoute';
@@ -7,6 +7,7 @@ import {
   devE2EMarkers,
   getDevE2EStateSnapshot,
   setDevE2EEntryReady,
+  setDevE2EExplorerMetroDiagnostic,
   setDevE2EScenarioError,
   setDevE2ESeedError,
   subscribeDevE2EState,
@@ -23,6 +24,7 @@ import {
   restoreExplorerPhysicalEvidenceCampaign,
   startExplorerPhysicalEvidenceCampaign,
 } from './explorerPhysicalEvidenceDevBridge';
+import { verifyExplorerMetroDiagnostic } from './explorerAppLaunchContract';
 
 export interface DevE2ELinking {
   addEventListener: (
@@ -39,6 +41,14 @@ export interface InstalledDevE2EEntry {
 }
 
 let activeInstallation: InstalledDevE2EEntry | null = null;
+
+function nativeE2EMetroUrl(): string | null {
+  const settings = (NativeModules.SettingsManager as {
+    settings?: Record<string, unknown>;
+  } | undefined)?.settings;
+  const value = settings?.e2eMetroUrl;
+  return typeof value === 'string' ? value : null;
+}
 
 function publishDevE2EEntryError(
   error: unknown,
@@ -92,6 +102,18 @@ export function installDevE2EEntry(args: {
     const route = parseDevE2EEntryRoute(url);
     if (!route) return false;
     try {
+      if ('e2eMetroUrl' in route) {
+        const selectedMetroUrl = verifyExplorerMetroDiagnostic({
+          deepLinkMetroUrl: route.e2eMetroUrl,
+          nativeMetroUrl: nativeE2EMetroUrl(),
+        });
+        setDevE2EExplorerMetroDiagnostic({
+          metroUrl: selectedMetroUrl,
+          ...(route.kind === 'explorer_diagnostic'
+            ? { launchPurpose: route.launchPurpose }
+            : {}),
+        });
+      }
       switch (route.kind) {
         case 'reset':
           return await coordinator.reset(route.seedId);
@@ -121,6 +143,8 @@ export function installDevE2EEntry(args: {
           }
           return true;
         }
+        case 'explorer_diagnostic':
+          return true;
         case 'explorer_evidence_start':
           return await startExplorerPhysicalEvidenceCampaign({
             campaignId: route.campaignId,

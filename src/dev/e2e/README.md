@@ -156,22 +156,27 @@ observation identity, deterministic clock identity, receipt validation,
 acknowledgement ordering, and scenario-artifact binding. Maestro owns physical
 capture and file creation; the app never claims it captured either file.
 
-Run the local harness with `npm run e2e:explorer-nine:live -- --simulator
-<UDID> --metro-url http://127.0.0.1:<PORT>`. It requires exactly one booted
-simulator and that explicit Metro, writes under
+Run the local harness with `E2E_METRO_URL=http://127.0.0.1:<PORT> npm run
+e2e:explorer-nine:live -- --simulator <UDID> --reserved-metro-port <PORT>`.
+It requires exactly one booted simulator, the explicit URL, and the separately
+reserved matching campaign port, writes under
 `artifacts/explorer-nine-<integrated-short-sha>/<scenario-id>/`, and enforces
 the 35-minute target, 45-minute hard stop, and single whole-scenario
 infrastructure retry. This bridge is not present in release entry wiring.
 
 ## Isolated Metro cold launches on iOS
 
-Maestro must launch this debug app with an explicit Metro URL. The common
-reset and checkpoint/reload flows pass `E2E_METRO_URL` as the native
-`e2eMetroUrl` launch argument on every process launch. Before React Native
+Maestro must launch this debug app with an explicit Metro URL. Every Explorer
+process launch delegates to `launch-explorer-app.yaml`, which passes
+`E2E_METRO_URL` as the native `e2eMetroUrl` launch argument and immediately
+opens a diagnostic deep link carrying the matching `e2eMetroUrl` query field.
+Before React Native
 creates its bridge, the debug-only AppDelegate hook validates that URL and
 sets `RCTBundleURLProvider` to its scheme and host-port. It logs both the
-selected server and the resolved bundle URL. Invalid explicit URLs fail loudly;
-release builds do not contain the hook.
+selected server and the resolved bundle URL. The development entry compares
+the native value with the deep-link value before dispatching an Explorer reset
+or run. Invalid or mismatched URLs fail loudly; release builds do not contain
+the hook.
 
 Choose any free port rather than relying on a shared default. For example,
 while a competing worktree keeps port 8081:

@@ -6,12 +6,12 @@ name: Persisted scenario checkpoint and reload verification
     visible:
       id: "e2e-checkpoint-ready-${SCENARIO_ID}-${CHECKPOINT_STEP_ID}"
     timeout: 15000
-- stopApp
-- launchApp:
-    clearState: false
-    stopApp: true
-    arguments:
-      e2eMetroUrl: "${E2E_METRO_URL}"
+- runFlow:
+    file: launch-explorer-app.yaml
+    env:
+      EXPLORER_LAUNCH_PURPOSE: action-reload
+      EXPLORER_CLEAR_STATE: "false"
+      EXPLORER_LAUNCH_DEEP_LINK: "localfootyathlete://e2e/explorer/diagnostics/action-reload?e2eMetroUrl=${E2E_METRO_URL}"
 - extendedWaitUntil:
     visible:
       id: "e2e-reload-ready-${SCENARIO_ID}-${CHECKPOINT_STEP_ID}-${RELOAD_COUNT}"

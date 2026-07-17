@@ -9,6 +9,12 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import {
+  buildExplorerAppLaunchCommand,
+  buildExplorerDeepLinkCommand,
+  explorerMetroDiagnosticMarker,
+  type ExplorerAppLaunchPurpose,
+} from './explorer-app-launch';
+import {
   EXPLORER_HIERARCHY_FORMAT,
   EXPLORER_PHYSICAL_EVIDENCE_SCHEMA_VERSION,
   explorerCampaignArtifactDirectory,
@@ -36,6 +42,7 @@ export interface ExplorerLiveCommand {
 export interface ExplorerLiveRunnerOptions {
   readonly simulatorId: string;
   readonly metroUrl: string;
+  readonly reservedMetroPort: number;
   readonly repositoryRoot: string;
   readonly integratedRepositorySha: string;
   readonly maestroBinary?: string;
@@ -136,6 +143,9 @@ export function assertOneSelectedSimulator(
 }
 
 export function assertExplicitMetroUrl(value: string): URL {
+  if (!value) {
+    throw new ExplorerLiveRunnerError('infrastructure', 'metro_url_required');
+  }
   let url: URL;
   try {
     url = new URL(value);
@@ -148,6 +158,79 @@ export function assertExplicitMetroUrl(value: string): URL {
     throw new ExplorerLiveRunnerError('infrastructure', 'metro_url_invalid');
   }
   return url;
+}
+
+export function assertReservedMetroUrl(
+  value: string,
+  reservedMetroPort: number,
+): URL {
+  const url = assertExplicitMetroUrl(value);
+  if (!Number.isInteger(reservedMetroPort) || reservedMetroPort < 1 ||
+    reservedMetroPort > 65_535) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      'reserved_metro_port_invalid',
+    );
+  }
+  if (Number(url.port) !== reservedMetroPort) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      'reserved_metro_port_mismatch',
+      `selected=${url.port}:reserved=${reservedMetroPort}`,
+    );
+  }
+  return url;
+}
+
+export function explorerIOSBundleEndpoint(metroUrl: URL): URL {
+  const endpoint = new URL('/.expo/.virtual-metro-entry.bundle', metroUrl);
+  endpoint.searchParams.set('platform', 'ios');
+  endpoint.searchParams.set('dev', 'true');
+  endpoint.searchParams.set('minify', 'false');
+  return endpoint;
+}
+
+async function fetchWithTimeout(
+  fetchImpl: typeof fetch,
+  input: URL,
+): Promise<Response> {
+  try {
+    return await fetchImpl(input, {
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    throw new ExplorerLiveRunnerError('infrastructure', 'metro_unreachable');
+  }
+}
+
+export async function preflightExplorerMetro(args: {
+  metroUrl: string;
+  reservedMetroPort: number;
+  fetchImpl?: typeof fetch;
+}): Promise<{ metroUrl: URL; bundleEndpoint: URL }> {
+  const metroUrl = assertReservedMetroUrl(
+    args.metroUrl,
+    args.reservedMetroPort,
+  );
+  const fetchImpl = args.fetchImpl ?? fetch;
+  const statusResponse = await fetchWithTimeout(
+    fetchImpl,
+    new URL('/status', metroUrl),
+  );
+  const statusBody = await statusResponse.text();
+  if (statusResponse.status !== 200 || statusBody !== 'packager-status:running') {
+    throw new ExplorerLiveRunnerError('infrastructure', 'metro_not_running');
+  }
+  const bundleEndpoint = explorerIOSBundleEndpoint(metroUrl);
+  const bundleResponse = await fetchWithTimeout(fetchImpl, bundleEndpoint);
+  if (bundleResponse.status !== 200) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      'metro_ios_bundle_unavailable',
+      `status=${bundleResponse.status}`,
+    );
+  }
+  return { metroUrl, bundleEndpoint };
 }
 
 export function buildMaestroHierarchyCommand(args: {
@@ -179,16 +262,6 @@ export function buildMaestroScreenshotCommand(args: {
       '-e',
       `SCREENSHOT_PATH=${withoutPng}`,
     ],
-  };
-}
-
-export function buildSimulatorOpenUrlCommand(args: {
-  simulatorId: string;
-  url: string;
-}): ExplorerLiveCommand {
-  return {
-    command: 'xcrun',
-    args: ['simctl', 'openurl', args.simulatorId, args.url],
   };
 }
 
@@ -271,6 +344,45 @@ export function compileExplorerNineCapturePlan(): readonly {
       ]),
     ],
   }));
+}
+
+export interface ExplorerCampaignEnvironmentReceiptV1 {
+  readonly schemaVersion: 1;
+  readonly campaignId: string;
+  readonly integratedRepositorySha: string;
+  readonly e2eMetroUrl: string;
+  readonly reservedMetroPort: number;
+  readonly metroStatusEndpoint: string;
+  readonly iosBundleEndpoint: string;
+}
+
+export function writeExplorerCampaignEnvironmentReceipt(args: {
+  repositoryRoot: string;
+  campaignDirectory: string;
+  campaignId: string;
+  integratedRepositorySha: string;
+  e2eMetroUrl: string;
+  metroUrl: URL;
+  reservedMetroPort: number;
+  bundleEndpoint: URL;
+}): ExplorerCampaignEnvironmentReceiptV1 {
+  const receipt: ExplorerCampaignEnvironmentReceiptV1 = {
+    schemaVersion: 1,
+    campaignId: args.campaignId,
+    integratedRepositorySha: args.integratedRepositorySha,
+    e2eMetroUrl: args.e2eMetroUrl,
+    reservedMetroPort: args.reservedMetroPort,
+    metroStatusEndpoint: new URL('/status', args.metroUrl).toString(),
+    iosBundleEndpoint: args.bundleEndpoint.toString(),
+  };
+  const directory = resolve(args.repositoryRoot, args.campaignDirectory);
+  mkdirSync(directory, { recursive: true });
+  writeFileSync(
+    resolve(directory, 'campaign-environment-receipt.json'),
+    `${JSON.stringify(receipt, null, 2)}\n`,
+    'utf8',
+  );
+  return receipt;
 }
 
 function sha256File(path: string): string {
@@ -422,21 +534,6 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolveSleep) => setTimeout(resolveSleep, ms));
 }
 
-async function confirmMetro(url: URL): Promise<void> {
-  let response: Response;
-  try {
-    response = await fetch(new URL('/status', url), {
-      signal: AbortSignal.timeout(5_000),
-    });
-  } catch {
-    throw new ExplorerLiveRunnerError('infrastructure', 'metro_unreachable');
-  }
-  const status = await response.text();
-  if (!response.ok || !status.includes('packager-status:running')) {
-    throw new ExplorerLiveRunnerError('infrastructure', 'metro_not_running');
-  }
-}
-
 async function waitForHierarchyValue(args: {
   options: ExplorerLiveRunnerOptions;
   predicate: (hierarchy: string) => boolean;
@@ -455,16 +552,53 @@ async function waitForHierarchyValue(args: {
   throw new ExplorerLiveRunnerError('infrastructure', 'capture_marker_timeout');
 }
 
+async function launchExplorerApp(args: {
+  options: ExplorerLiveRunnerOptions;
+  purpose: ExplorerAppLaunchPurpose;
+  hardDeadline: number;
+}): Promise<void> {
+  const nowMs = args.options.nowMs ?? Date.now;
+  commandResult(buildExplorerAppLaunchCommand({
+    simulatorId: args.options.simulatorId,
+    metroUrl: args.options.metroUrl,
+    purpose: args.purpose,
+    maestroBinary: args.options.maestroBinary,
+  }), args.options.repositoryRoot, Math.max(1, args.hardDeadline - nowMs()));
+  await waitForHierarchyValue({
+    options: args.options,
+    deadline: args.hardDeadline,
+    predicate: (hierarchy) => hierarchy.includes(
+      explorerMetroDiagnosticMarker(args.options.metroUrl),
+    ) && hierarchy.includes(
+      `e2e-explorer-launch-diagnostic-${args.purpose}`,
+    ),
+  });
+}
+
 async function runScenario(args: {
   options: ExplorerLiveRunnerOptions;
   campaignId: string;
   campaignDirectory: string;
   plan: ReturnType<typeof compileExplorerNineCapturePlan>[number];
   hardDeadline: number;
+  launchPurpose: 'scenario-reset' | 'infrastructure-retry';
 }): Promise<readonly ExplorerPhysicalEvidenceReceiptV1[]> {
-  commandResult(buildSimulatorOpenUrlCommand({
+  await launchExplorerApp({
+    options: args.options,
+    purpose: args.launchPurpose,
+    hardDeadline: args.hardDeadline,
+  });
+  await waitForHierarchyValue({
+    options: args.options,
+    deadline: args.hardDeadline,
+    predicate: (hierarchy) => hierarchy.includes(
+      `e2e-explorer-campaign-ready-${args.campaignId}`,
+    ),
+  });
+  commandResult(buildExplorerDeepLinkCommand({
     simulatorId: args.options.simulatorId,
-    url: explorerScenarioRunUrl(args.plan.scenarioId),
+    metroUrl: args.options.metroUrl,
+    deepLink: explorerScenarioRunUrl(args.plan.scenarioId),
   }), args.options.repositoryRoot, Math.max(
     1,
     args.hardDeadline - (args.options.nowMs ?? Date.now)(),
@@ -572,9 +706,10 @@ async function runScenario(args: {
         scenarioId: args.plan.scenarioId,
         receipts,
       }, null, 2) + '\n', 'utf8');
-    commandResult(buildSimulatorOpenUrlCommand({
+    commandResult(buildExplorerDeepLinkCommand({
       simulatorId: args.options.simulatorId,
-      url: explorerEvidenceAcknowledgementUrl(receipt),
+      metroUrl: args.options.metroUrl,
+      deepLink: explorerEvidenceAcknowledgementUrl(receipt),
     }), args.options.repositoryRoot, Math.max(
       1,
       args.hardDeadline - (args.options.nowMs ?? Date.now)(),
@@ -616,13 +751,15 @@ export async function runExplorerNineLive(
   options: ExplorerLiveRunnerOptions,
 ): Promise<{ campaignId: string; elapsedMs: number; exceededTarget: boolean }> {
   const nowMs = options.nowMs ?? Date.now;
-  const metro = assertExplicitMetroUrl(options.metroUrl);
+  const metroPreflight = await preflightExplorerMetro({
+    metroUrl: options.metroUrl,
+    reservedMetroPort: options.reservedMetroPort,
+  });
   const booted = parseBootedIOSSimulators(commandResult({
     command: 'xcrun',
     args: ['simctl', 'list', 'devices', 'booted', '--json'],
   }, options.repositoryRoot));
   assertOneSelectedSimulator(booted, options.simulatorId);
-  await confirmMetro(metro);
   const currentSha = commandResult({
     command: 'git',
     args: ['rev-parse', 'HEAD'],
@@ -648,39 +785,80 @@ export async function runExplorerNineLive(
   const campaignDirectory = explorerCampaignArtifactDirectory(campaignId);
   const startedAt = nowMs();
   const hardDeadline = startedAt + EXPLORER_LIVE_RUNNER_HARD_STOP_MS;
-  commandResult(buildSimulatorOpenUrlCommand({
+  writeExplorerCampaignEnvironmentReceipt({
+    repositoryRoot: options.repositoryRoot,
+    campaignDirectory,
+    campaignId,
+    integratedRepositorySha: currentSha,
+    e2eMetroUrl: options.metroUrl,
+    metroUrl: metroPreflight.metroUrl,
+    reservedMetroPort: options.reservedMetroPort,
+    bundleEndpoint: metroPreflight.bundleEndpoint,
+  });
+  await launchExplorerApp({
+    options,
+    purpose: 'initial-cold-launch',
+    hardDeadline,
+  });
+  commandResult(buildExplorerDeepLinkCommand({
     simulatorId: options.simulatorId,
-    url: explorerEvidenceCampaignStartUrl({
+    metroUrl: options.metroUrl,
+    deepLink: explorerEvidenceCampaignStartUrl({
       campaignId,
       integratedRepositorySha: currentSha,
     }),
   }), options.repositoryRoot, Math.max(1, hardDeadline - nowMs()));
+  await waitForHierarchyValue({
+    options,
+    deadline: hardDeadline,
+    predicate: (hierarchy) => hierarchy.includes(
+      `e2e-explorer-campaign-ready-${campaignId}`,
+    ),
+  });
+  await launchExplorerApp({
+    options,
+    purpose: 'diagnostic-relaunch',
+    hardDeadline,
+  });
+  await waitForHierarchyValue({
+    options,
+    deadline: hardDeadline,
+    predicate: (hierarchy) => hierarchy.includes(
+      `e2e-explorer-campaign-ready-${campaignId}`,
+    ),
+  });
   const completed: Array<{
     plan: ReturnType<typeof compileExplorerNineCapturePlan>[number];
     receipts: readonly ExplorerPhysicalEvidenceReceiptV1[];
   }> = [];
+  const observedArtifactAcceptances = new Set<string>();
   for (const plan of compileExplorerNineCapturePlan()) {
     if (nowMs() >= hardDeadline) {
       throw new ExplorerLiveRunnerError('infrastructure', 'campaign_hard_stop_expired');
     }
     const scenario = await runWholeScenarioWithInfrastructureRetry({
-      run: () => runScenario({
+      run: (attempt) => runScenario({
         options,
         campaignId,
         campaignDirectory,
         plan,
         hardDeadline,
+        launchPurpose: attempt === 1
+          ? 'scenario-reset'
+          : 'infrastructure-retry',
       }),
     });
     completed.push({ plan, receipts: scenario.result });
+    // runScenario returns only after visibly observing this exact marker.
+    observedArtifactAcceptances.add(plan.scenarioId);
   }
-  await waitForHierarchyValue({
-    options,
-    deadline: hardDeadline,
-    predicate: (value) => completed.every(({ plan }) => value.includes(
-      `e2e-explorer-artifact-accepted-${plan.scenarioId}`,
-    )),
-  });
+  if (!completed.every(({ plan }) =>
+    observedArtifactAcceptances.has(plan.scenarioId))) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      'campaign_artifact_acceptance_incomplete',
+    );
+  }
   // Campaign completion revalidates every immutable scenario bundle rather
   // than trusting the earlier per-scenario pass.
   for (const scenario of completed) {
@@ -708,11 +886,27 @@ function argument(name: string): string {
   return value;
 }
 
+function environment(name: string): string {
+  const value = process.env[name] ?? '';
+  if (!value) throw new Error(`Missing required ${name}`);
+  return value;
+}
+
+function portArgument(name: string): number {
+  const raw = argument(name);
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1 || value > 65_535) {
+    throw new Error(`Invalid ${name}: ${raw}`);
+  }
+  return value;
+}
+
 async function main(): Promise<void> {
   const repositoryRoot = process.cwd();
   const result = await runExplorerNineLive({
     simulatorId: argument('--simulator'),
-    metroUrl: argument('--metro-url'),
+    metroUrl: environment('E2E_METRO_URL'),
+    reservedMetroPort: portArgument('--reserved-metro-port'),
     integratedRepositorySha: commandResult({
       command: 'git',
       args: ['rev-parse', 'HEAD'],

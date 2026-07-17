@@ -44,6 +44,8 @@ const explorerCaptureRequestEnvelopes = new Map<string, string>();
 const explorerCaptureAcceptedMarkers = new Set<string>();
 const explorerCaptureErrorMarkers = new Set<string>();
 const explorerArtifactAcceptedMarkers = new Set<string>();
+const explorerMetroDiagnosticMarkers = new Set<string>();
+const explorerCampaignReadyMarkers = new Set<string>();
 
 function notifySubscribers(): void {
   for (const subscriber of Array.from(subscribers)) {
@@ -90,6 +92,8 @@ export function setDevE2EEntryReady(): void {
   explorerCaptureAcceptedMarkers.clear();
   explorerCaptureErrorMarkers.clear();
   explorerArtifactAcceptedMarkers.clear();
+  explorerMetroDiagnosticMarkers.clear();
+  explorerCampaignReadyMarkers.clear();
   publish({
     phase: 'entry_ready',
     seedId: null,
@@ -311,6 +315,32 @@ export function setDevE2EExplorerArtifactAccepted(scenarioId: string): void {
   notifySubscribers();
 }
 
+export function setDevE2EExplorerMetroDiagnostic(args: {
+  metroUrl: string;
+  launchPurpose?: string;
+}): void {
+  if (!args.metroUrl) return;
+  const markers = [
+    'e2e-explorer-metro-diagnostic-ready',
+    `e2e-explorer-metro-url-${encodeURIComponent(args.metroUrl)}`,
+    ...(args.launchPurpose
+      ? [`e2e-explorer-launch-diagnostic-${args.launchPurpose}`]
+      : []),
+  ];
+  const next = markers.filter((marker) => !explorerMetroDiagnosticMarkers.has(marker));
+  if (next.length === 0) return;
+  next.forEach((marker) => explorerMetroDiagnosticMarkers.add(marker));
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
+export function setDevE2EExplorerCampaignReady(campaignId: string): void {
+  if (!campaignId || explorerCampaignReadyMarkers.has(campaignId)) return;
+  explorerCampaignReadyMarkers.add(campaignId);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
 export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
   const markers = [
     'e2e-entry-ready',
@@ -331,6 +361,10 @@ export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
     ...Array.from(explorerArtifactAcceptedMarkers)
       .sort()
       .map((scenarioId) => `e2e-explorer-artifact-accepted-${scenarioId}`),
+    ...Array.from(explorerMetroDiagnosticMarkers).sort(),
+    ...Array.from(explorerCampaignReadyMarkers)
+      .sort()
+      .map((campaignId) => `e2e-explorer-campaign-ready-${campaignId}`),
   ];
   if (!state.scenarioId) {
     switch (state.phase) {
@@ -399,6 +433,8 @@ export function __resetDevE2EStateForTest(): void {
   explorerCaptureAcceptedMarkers.clear();
   explorerCaptureErrorMarkers.clear();
   explorerArtifactAcceptedMarkers.clear();
+  explorerMetroDiagnosticMarkers.clear();
+  explorerCampaignReadyMarkers.clear();
   snapshot = INITIAL;
   notifySubscribers();
 }

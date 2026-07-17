@@ -13,6 +13,7 @@ import {
   setDevE2EExplorerCaptureAccepted,
   setDevE2EExplorerCaptureError,
   setDevE2EExplorerCaptureRequest,
+  setDevE2EExplorerCampaignReady,
 } from './devE2EState';
 
 declare const __DEV__: boolean | undefined;
@@ -116,6 +117,7 @@ export async function startExplorerPhysicalEvidenceCampaign(args: {
   const bridge = createBridge(identity, storage);
   active = { identity, bridge };
   await bridge.restore();
+  setDevE2EExplorerCampaignReady(identity.campaignId);
   return true;
 }
 
@@ -140,6 +142,7 @@ export async function restoreExplorerPhysicalEvidenceCampaign(args: {
   const bridge = createBridge(identity, storage);
   active = { identity, bridge };
   await bridge.restore();
+  setDevE2EExplorerCampaignReady(identity.campaignId);
   return true;
 }
 
