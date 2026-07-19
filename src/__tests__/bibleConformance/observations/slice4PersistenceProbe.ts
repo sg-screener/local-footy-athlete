@@ -1,19 +1,64 @@
 import type { Workout } from '../../../types/domain';
-import { buildSection18WeeklyExposureContractV2 } from '../../../rules/weeklyExposureContractV2';
-import { finaliseWorkoutAfterMutation } from '../../../utils/workoutCanonicalisation';
-import {
-  canonicalWeekLedger,
-  pathExercise,
-  pathMicrocycle,
-  pathPowerBlock,
-  pathProgram,
-  pathWorkout,
-  PATH_PROFILE,
-} from './buildCanonicalPathLedger';
+
+type AsyncStorageShim = {
+  getItem: (key: string) => Promise<string | null>;
+  setItem: (key: string, value: string) => Promise<void>;
+  removeItem: (key: string) => Promise<void>;
+  clear: () => Promise<void>;
+};
+
+type ProbeDependencies = {
+  buildSection18WeeklyExposureContractV2:
+    typeof import('../../../rules/weeklyExposureContractV2').buildSection18WeeklyExposureContractV2;
+  finaliseWorkoutAfterMutation:
+    typeof import('../../../utils/workoutCanonicalisation').finaliseWorkoutAfterMutation;
+  canonicalWeekLedger:
+    typeof import('./buildCanonicalPathLedger').canonicalWeekLedger;
+  pathExercise: typeof import('./buildCanonicalPathLedger').pathExercise;
+  pathMicrocycle: typeof import('./buildCanonicalPathLedger').pathMicrocycle;
+  pathPowerBlock: typeof import('./buildCanonicalPathLedger').pathPowerBlock;
+  pathProgram: typeof import('./buildCanonicalPathLedger').pathProgram;
+  pathWorkout: typeof import('./buildCanonicalPathLedger').pathWorkout;
+  PATH_PROFILE: typeof import('./buildCanonicalPathLedger').PATH_PROFILE;
+};
 
 const RESULT_MARKER = 'BIBLE_SLICE4_PERSISTENCE_RESULT ';
 
-function modernWorkouts(): Workout[] {
+function installDeterministicStorageShim(): AsyncStorageShim {
+  const asyncModule = require('@react-native-async-storage/async-storage');
+  const storage = (asyncModule.default ?? asyncModule) as AsyncStorageShim;
+  const memory = new Map<string, string>();
+  storage.getItem = async (key: string) => memory.get(key) ?? null;
+  storage.setItem = async (key: string, value: string) => { memory.set(key, value); };
+  storage.removeItem = async (key: string) => { memory.delete(key); };
+  storage.clear = async () => { memory.clear(); };
+  return storage;
+}
+
+function loadProbeDependencies(): ProbeDependencies {
+  const exposure = require('../../../rules/weeklyExposureContractV2') as
+    typeof import('../../../rules/weeklyExposureContractV2');
+  const canonicalisation = require('../../../utils/workoutCanonicalisation') as
+    typeof import('../../../utils/workoutCanonicalisation');
+  const ledger = require('./buildCanonicalPathLedger') as
+    typeof import('./buildCanonicalPathLedger');
+  return {
+    buildSection18WeeklyExposureContractV2: exposure.buildSection18WeeklyExposureContractV2,
+    finaliseWorkoutAfterMutation: canonicalisation.finaliseWorkoutAfterMutation,
+    canonicalWeekLedger: ledger.canonicalWeekLedger,
+    pathExercise: ledger.pathExercise,
+    pathMicrocycle: ledger.pathMicrocycle,
+    pathPowerBlock: ledger.pathPowerBlock,
+    pathProgram: ledger.pathProgram,
+    pathWorkout: ledger.pathWorkout,
+    PATH_PROFILE: ledger.PATH_PROFILE,
+  };
+}
+
+function modernWorkouts(dependencies: ProbeDependencies): Workout[] {
+  const {
+    finaliseWorkoutAfterMutation, pathExercise, pathPowerBlock, pathWorkout,
+  } = dependencies;
   const lowerId = 'persist-modern-lower';
   const lower = pathWorkout({
     id: lowerId, dayOfWeek: 1, name: 'Stale Upper Label',
@@ -96,7 +141,8 @@ function modernWorkouts(): Workout[] {
   ];
 }
 
-function legacyWorkouts(): Workout[] {
+function legacyWorkouts(dependencies: ProbeDependencies): Workout[] {
+  const { finaliseWorkoutAfterMutation, pathExercise, pathWorkout } = dependencies;
   const id = 'persist-legacy-lower';
   const workout = pathWorkout({
     id, dayOfWeek: 1, name: 'Upper Push From Old Copy',
@@ -156,7 +202,8 @@ function legacyWorkouts(): Workout[] {
   return [legacyLower, upper, full, conditioning];
 }
 
-function modernContract() {
+function modernContract(dependencies: ProbeDependencies) {
+  const { buildSection18WeeklyExposureContractV2 } = dependencies;
   return buildSection18WeeklyExposureContractV2({
     seasonPhase: 'In-season', declaredSubphase: 'bye_build',
     mode: 'in_season_bye_build', weekKind: 'build', anchorState: 'bye',
@@ -172,17 +219,34 @@ function modernContract() {
 }
 
 async function run(scenarioId: string) {
-  const asyncModule = require('@react-native-async-storage/async-storage');
-  const storage = asyncModule.default ?? asyncModule;
-  const memory = new Map<string, string>();
-  storage.getItem = async (key: string) => memory.get(key) ?? null;
-  storage.setItem = async (key: string, value: string) => { memory.set(key, value); };
-  storage.removeItem = async (key: string) => { memory.delete(key); };
-  storage.clear = async () => { memory.clear(); };
+  const storage = installDeterministicStorageShim();
+  await storage.clear();
+
+  const programStorePath = require.resolve('../../../store/programStore');
+  if (require.cache[programStorePath]) {
+    throw new Error('ProgramStore initialized before the deterministic Slice 4 storage shim');
+  }
+
+  // These deferred runtime imports can transitively initialize ProgramStore.
+  // Keep them after the AsyncStorage shim and use a fresh child process per probe.
+  const dependencies = loadProbeDependencies();
+  const {
+    canonicalWeekLedger, finaliseWorkoutAfterMutation, pathExercise, pathMicrocycle,
+    pathProgram, PATH_PROFILE,
+  } = dependencies;
+  const { useProgramStore } = require('../../../store/programStore') as
+    typeof import('../../../store/programStore');
+
+  // Quiesce the automatic empty hydration triggered by module initialization
+  // before installing this probe's persisted envelope.
+  await useProgramStore.persist.rehydrate();
+  if (useProgramStore.getState().currentProgram !== null) {
+    throw new Error('Slice 4 probe did not start from an empty ProgramStore');
+  }
 
   const legacy = scenarioId === 'legacy-program-rehydrate';
-  const workouts = legacy ? legacyWorkouts() : modernWorkouts();
-  const contract = legacy ? undefined : modernContract();
+  const workouts = legacy ? legacyWorkouts(dependencies) : modernWorkouts(dependencies);
+  const contract = legacy ? undefined : modernContract(dependencies);
   const baseProgram = pathProgram(workouts);
   const program = {
     ...baseProgram,
@@ -203,9 +267,6 @@ async function run(scenarioId: string) {
   };
   await storage.setItem('program-store', JSON.stringify(envelope));
 
-  // Import only after the in-memory native storage shim and real persisted
-  // Zustand envelope are installed.
-  const { useProgramStore } = require('../../../store/programStore');
   let mergeRuns = 0;
   const unsubscribe = useProgramStore.persist.onFinishHydration(() => { mergeRuns++; });
   await useProgramStore.persist.rehydrate();
@@ -234,7 +295,7 @@ async function run(scenarioId: string) {
         hasCombinedConditioning: true, attachedConditioningKind: 'component',
       }, { phase: 'In-season', planIntentValid: true, referenceWorkout: source }).workout;
     };
-    result.liveEdit = canonicalWeekLedger([addBike(modernWorkouts()[0])]);
+    result.liveEdit = canonicalWeekLedger([addBike(modernWorkouts(dependencies)[0])]);
     result.rehydratedEdit = canonicalWeekLedger([addBike(hydratedTwiceWorkouts[0])]);
 
     const { rebuildLocalWeek } = require('../../../utils/weekRebuild');
@@ -246,6 +307,7 @@ async function run(scenarioId: string) {
     result.rehydratedRebuild = canonicalWeekLedger(rebuildTwice);
   }
   unsubscribe();
+  await storage.clear();
   return result;
 }
 

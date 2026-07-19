@@ -31,8 +31,45 @@ const shrink = verifyShrinkerAcceptance();
 check('shrinker returns a smaller same-failure witness', shrink.reduced);
 
 verifyMutationCatalogue();
-check('mutation registry preserves 49 accepted smoke probes', SMOKE_MUTATIONS.length === 49);
-check('mutation registry adds twelve full probes', MUTATION_CATALOGUE.length === 61);
+const mutationIds = MUTATION_CATALOGUE.map((entry) => entry.id);
+check('mutation scenario identities are unique', new Set(mutationIds).size === mutationIds.length);
+
+const smokeInvariantIds = new Set(SMOKE_MUTATIONS.flatMap((entry) => entry.expectedInvariantIds));
+const requiredSmokePolicyFamilies = [
+  'INV_HEALTHY_BLOCK_PATTERN_BALANCE',
+  'INV_MIXED_PRESERVES_BOTH',
+  'INV_POWER_PHASE_GATED',
+  'INV_CONDITIONING_FEASIBILITY_SINGLE_OWNER',
+  'INV_EQUIVALENT_CANONICAL_LEDGER',
+  'INV_STORE_ROUNDTRIP_CONSERVED',
+  'INV_IDENTITY_PERSISTS_ACROSS_WRITE_PATHS',
+  'INV_PRESEASON_STRENGTH_PATTERNS_COMPLETE',
+];
+check(
+  'smoke registry covers strength, component, phase, feasibility, path, persistence, identity and pre-season policy families',
+  requiredSmokePolicyFamilies.every((invariantId) => smokeInvariantIds.has(invariantId)),
+);
+
+const fullInvariantIds = new Set(MUTATION_CATALOGUE
+  .filter((entry) => entry.tier === 'full')
+  .flatMap((entry) => entry.expectedInvariantIds));
+const requiredFullCapabilities = [
+  'INV_MULTI_CONSTRAINT_PRESERVED',
+  'INV_MULTI_EQUIPMENT_PRESERVED',
+  'INV_RECOVERY_NON_DESTRUCTIVE',
+  'INV_WEEK_DETAIL_COMPONENT_AGREEMENT',
+  'INV_EXPOSURE_TYPED_COMPONENTS',
+  'INV_EFFECTIVE_CREDIT_ONLY',
+  'INV_SAFETY_REMOVAL_STABLE',
+  'INV_DELOAD_PATTERN_CONSERVED',
+  'INV_BYE_STRENGTH_CONSERVED',
+  'INV_PLAN_ENTRY_JOIN_UNAMBIGUOUS',
+  'INV_CONDITIONING_DURATION_CONSERVED',
+];
+check(
+  'full registry covers multi-constraint, projection, exposure, safety, phase, identity and persistence capabilities',
+  requiredFullCapabilities.every((invariantId) => fullInvariantIds.has(invariantId)),
+);
 
 const reportA = buildCoverageReport(seed, pairA);
 const reportB = buildCoverageReport(seed, pairB);
