@@ -127,6 +127,7 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
   seedOnboardingProgram({
     onboardingData: seed.profile,
     program: seed.program,
+    todayISO: seed.anchorDate,
     programStore: {
       setCurrentProgram: (program) => {
         if (!program) throw new Error('dev_e2e_seed_program_missing');

@@ -4,7 +4,8 @@ import { useCalendarStore } from '../store/calendarStore';
 import { computeGameDatesForBlock } from './sessionResolver';
 import { logger } from './logger';
 import { acceptedStatePresenceSummary } from '../store/acceptedStateColdStart';
-import { dayOfWeekForISODate, todayISOLocal } from './appDate';
+import { dayOfWeekForISODate } from './appDate';
+import { selectMicrocycleForDate } from './programBlockState';
 
 export type OnboardingPipelineStage =
   | 'generation'
@@ -83,6 +84,7 @@ function runAcceptedStateStep(step: string, body: () => void): void {
 export function seedOnboardingProgram(args: {
   onboardingData: OnboardingData;
   program: TrainingProgram;
+  todayISO: string;
   programStore?: Pick<
     ReturnType<typeof useProgramStore.getState>,
     'setCurrentProgram' | 'setCurrentMicrocycle' | 'setTodayWorkout'
@@ -98,23 +100,30 @@ export function seedOnboardingProgram(args: {
   // overrides implicitly — override lifecycle belongs to the canonical
   // rebuild sweep; see programStore.setCurrentProgram.)
   runAcceptedStateStep('clear_manual_overrides', () =>
-    useProgramStore.getState().clearManualOverrides());
+    useProgramStore.getState().clearManualOverrides(args.todayISO));
   runAcceptedStateStep('set_current_program', () =>
-    programStore.setCurrentProgram(program));
-  if (program.microcycles && program.microcycles.length > 0) {
-    const firstMicrocycle = program.microcycles[0];
-    runAcceptedStateStep('set_current_microcycle', () =>
-      programStore.setCurrentMicrocycle(firstMicrocycle));
+    programStore.setCurrentProgram(program, { todayISO: args.todayISO }));
 
-    const dayOfWeek = dayOfWeekForISODate(todayISOLocal());
-    const todayWorkout = firstMicrocycle.workouts?.find(
-      (w) => w.dayOfWeek === dayOfWeek,
-    );
-    if (todayWorkout) {
-      runAcceptedStateStep('set_today_workout', () =>
-        programStore.setTodayWorkout(todayWorkout));
-    }
-  }
+  // Select from the accepted store copy. The acceptance boundary may
+  // canonicalise rows, and todayWorkout must reference that accepted raw row
+  // rather than the pre-acceptance generation object.
+  const acceptedProgram = useProgramStore.getState().currentProgram ?? program;
+  const currentMicrocycle = selectMicrocycleForDate(
+    acceptedProgram,
+    null,
+    args.todayISO,
+  );
+  runAcceptedStateStep('set_current_microcycle', () =>
+    programStore.setCurrentMicrocycle(currentMicrocycle, args.todayISO));
+
+  const acceptedCurrentMicrocycle = useProgramStore.getState().currentMicrocycle ??
+    currentMicrocycle;
+  const dayOfWeek = dayOfWeekForISODate(args.todayISO);
+  const todayWorkout = acceptedCurrentMicrocycle?.workouts?.find(
+    (workout) => workout.dayOfWeek === dayOfWeek,
+  ) ?? null;
+  runAcceptedStateStep('set_today_workout', () =>
+    programStore.setTodayWorkout(todayWorkout, args.todayISO));
 
   const selectedGameDay = onboardingData?.gameDay;
   if (selectedGameDay && selectedGameDay !== 'Varies' && program.startDate && program.endDate) {
@@ -126,7 +135,7 @@ export function seedOnboardingProgram(args: {
     logger.debug(`[Onboarding] Seeding ${gameDates.length} game dates for ${selectedGameDay}:`, gameDates);
     gameDates.forEach((date) => runAcceptedStateStep(
       `set_game_day:${date}`,
-      () => calendarStore.setGameDay(date),
+      () => calendarStore.setGameDay(date, args.todayISO),
     ));
   }
 }

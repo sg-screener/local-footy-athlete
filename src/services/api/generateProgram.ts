@@ -143,8 +143,8 @@ function dateForWeekday(weekStartISO: string, dayOfWeek: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-function dateFromOption(todayISO?: string): Date {
-  return new Date(`${todayISO ?? todayISOLocal()}T12:00:00`);
+function dateFromISO(todayISO: string): Date {
+  return new Date(`${todayISO}T12:00:00`);
 }
 
 function currentPersistedProgram(
@@ -191,7 +191,8 @@ export function buildInitialGeneratedCoachingPlan(args: {
   blockNumber?: number;
   seasonPhaseClock: SeasonPhaseClock;
 }): CoachingPlan {
-  const { blockStart } = computeBlockBounds(dateFromOption(args.todayISO));
+  const effectiveTodayISO = args.todayISO ?? todayISOLocal();
+  const { blockStart } = computeBlockBounds(dateFromISO(effectiveTodayISO));
   const [firstState] = buildBlockWeekStates({
     blockStartISO: blockStart,
     blockNumber: args.blockNumber ?? 1,
@@ -529,8 +530,9 @@ export function generateProgramLocally(
   onboardingData: OnboardingData,
   options: GenerateProgramFromProfileOptions = {},
 ): TrainingProgram {
-  const availabilityDateISO = options.todayISO ?? todayISOLocal();
-  const today = dateFromOption(options.todayISO);
+  const effectiveTodayISO = options.todayISO ?? todayISOLocal();
+  const availabilityDateISO = effectiveTodayISO;
+  const today = dateFromISO(effectiveTodayISO);
   const { blockStart, blockEnd } = computeBlockBounds(today);
   const activeConstraintsForGeneration = collectActiveConstraintsForGeneration(options, availabilityDateISO);
   const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
@@ -568,7 +570,7 @@ export function generateProgramLocally(
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,
     profile: generationProfile,
-    todayISO: options.todayISO,
+    todayISO: effectiveTodayISO,
     blockNumber: options.blockNumber,
     seasonPhaseClock: phaseResolution.clock,
   });
@@ -774,12 +776,13 @@ export function buildProgramGenerationRequestDiagnostics(
   resolvedEquipmentTags: readonly EquipmentTag[] = resolveEquipmentAvailability(onboardingData),
   resolvedConditioningModalities: readonly ConditioningEquipmentModality[] =
     resolveEquipmentCapabilities(onboardingData).conditioningModalities,
+  todayISO: string = todayISOLocal(),
 ): Record<string, unknown> {
   const generationProfile = normalizeOnboardingRole(onboardingData);
   const derivedInputs = onboardingToCoachingInputs(generationProfile, {
-    availabilityDateISO: todayISOLocal(),
+    availabilityDateISO: todayISO,
   });
-  const diagnosticsWeek = computeBlockBounds(dateFromOption()).blockStart;
+  const diagnosticsWeek = computeBlockBounds(dateFromISO(todayISO)).blockStart;
   const diagnosticsClock = resolveSeasonPhaseClock({
     selectedPhase: generationProfile.seasonPhase ?? 'Pre-season',
     targetWeekStartISO: diagnosticsWeek,
@@ -787,6 +790,7 @@ export function buildProgramGenerationRequestDiagnostics(
   const derivedPlan = plan ?? buildInitialGeneratedCoachingPlan({
     coachingInputs: derivedInputs,
     profile: generationProfile,
+    todayISO,
     seasonPhaseClock: diagnosticsClock,
   });
   const derivedMessage = message ?? buildGenerationPrompt(
@@ -1026,7 +1030,8 @@ export async function generateProgramFromProfile(
 ): Promise<TrainingProgram> {
   const env = getClientEnvConfig();
   const devBuild = isDevBuild();
-  const availabilityDateISO = options.todayISO ?? todayISOLocal();
+  const effectiveTodayISO = options.todayISO ?? todayISOLocal();
+  const availabilityDateISO = effectiveTodayISO;
   const activeConstraintsForGeneration = collectActiveConstraintsForGeneration(options, availabilityDateISO);
   const generationConstraints = resolveGenerationConstraints(options, availabilityDateISO);
   const baseProfile = normalizeOnboardingRole(onboardingData);
@@ -1040,7 +1045,7 @@ export async function generateProgramFromProfile(
     availabilityDateISO,
   );
   const resolvedEquipmentTags = resolvedEquipment.tags;
-  const generationDate = dateFromOption(options.todayISO);
+  const generationDate = dateFromISO(effectiveTodayISO);
   const generationBounds = computeBlockBounds(generationDate);
   const phaseResolution = generationPhaseResolution(
     generationProfile,
@@ -1080,7 +1085,7 @@ export async function generateProgramFromProfile(
   const plan = buildInitialGeneratedCoachingPlan({
     coachingInputs,
     profile: generationProfile,
-    todayISO: options.todayISO,
+    todayISO: effectiveTodayISO,
     blockNumber: options.blockNumber,
     seasonPhaseClock: phaseResolution.clock,
   });
@@ -1107,6 +1112,7 @@ export async function generateProgramFromProfile(
     env,
     resolvedEquipmentTags,
     resolvedEquipment.conditioningModalities,
+    effectiveTodayISO,
   );
 
   const promptWords = message.split(/\s+/).length;
@@ -1384,7 +1390,7 @@ export async function generateProgramFromProfile(
   // are enforced deterministically — the AI is not trusted for these.
   let microcycles: Microcycle[];
   try {
-    const today = dateFromOption(options.todayISO);
+    const today = dateFromISO(effectiveTodayISO);
     const { blockStart } = computeBlockBounds(today);
     microcycles = buildGeneratedMicrocycles({
       coachWorkouts: result.programUpdate.workouts,
@@ -1475,7 +1481,7 @@ export async function generateProgramFromProfile(
   // Build dates — aligned to calendar week boundaries (Mon-Sun).
   // The week containing "today" is Week 1. Block runs through
   // the Sunday of the 3rd full week after (4 weeks total).
-  const today = dateFromOption(options.todayISO);
+  const today = dateFromISO(effectiveTodayISO);
   const { blockStart, blockEnd } = computeBlockBounds(today);
   const startDate = new Date(blockStart + 'T12:00:00');
   const endDate = new Date(blockEnd + 'T12:00:00');

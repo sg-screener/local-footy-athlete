@@ -29,7 +29,12 @@ export type CalendarDayType = 'game' | 'rest' | 'noGame';
  * Compatibility projection for onboarding, legacy Coach/undo and hydration.
  * Live fixture add/move/remove UI is owned by FixtureMutationTransaction.
  */
-function commitMark(date: string, mark: CalendarDayType | null, expectedCurrentMark?: CalendarDayType): void {
+function commitMark(
+  date: string,
+  mark: CalendarDayType | null,
+  expectedCurrentMark?: CalendarDayType,
+  todayISO?: string,
+): void {
   // Dynamic loading keeps the accepted transaction owner above the legacy
   // compatibility mirror without creating a store-initialisation cycle.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -37,6 +42,7 @@ function commitMark(date: string, mark: CalendarDayType | null, expectedCurrentM
     date,
     mark,
     expectedCurrentMark,
+    todayISO,
   });
 }
 
@@ -52,7 +58,7 @@ interface CalendarState {
    * COMPATIBILITY-ONLY FIXTURE WRITE.
    * Live Home fixture UI must use FixtureMutationTransaction.
    */
-  setGameDay: (date: string) => void;
+  setGameDay: (date: string, todayISO?: string) => void;
   /**
    * COMPATIBILITY-ONLY FIXTURE WRITE.
    * Live Home fixture UI must use FixtureMutationTransaction.
@@ -83,7 +89,7 @@ export const useCalendarStore = create<CalendarState>()(
       markedDays: {},
       selectedDate: null,
 
-      setGameDay: (date) => commitMark(date, 'game'),
+      setGameDay: (date, todayISO) => commitMark(date, 'game', undefined, todayISO),
 
       removeGameDay: (date) => commitMark(date, null, 'game'),
 

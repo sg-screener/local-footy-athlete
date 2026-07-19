@@ -30,6 +30,7 @@ import {
   toOnboardingPipelineError,
 } from '../../utils/onboardingCompletion';
 import { logger } from '../../utils/logger';
+import { todayISOLocal } from '../../utils/appDate';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
 type CompleteScreenProps = NativeStackScreenProps<
@@ -258,10 +259,15 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
   const generateProgram = async () => {
     setPhase('generating');
     setErrorMessage('');
+    // One Effective Onboarding Date: one generation attempt owns one date.
+    // A retry starts a new attempt and may therefore capture a new date.
+    const effectiveTodayISO = todayISOLocal();
 
     let program: typeof DEFAULT_PROGRAM;
     try {
-      program = await generateProgramFromProfile(onboardingData);
+      program = await generateProgramFromProfile(onboardingData, {
+        todayISO: effectiveTodayISO,
+      });
     } catch (err: any) {
       const programGenError = err instanceof ProgramGenError ? err : null;
       logger.error('[Onboarding][generation] Program generation failed', {
@@ -286,7 +292,15 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
             'DEV WARNING: The app is using DEFAULT_PROGRAM. Coach-edit tests may not reflect a real generated program.',
           diagnostic: programGenError?.diagnostic ?? err?.message ?? String(err),
           details: programGenError?.details ?? null,
-          request: buildProgramGenerationRequestDiagnostics(onboardingData),
+          request: buildProgramGenerationRequestDiagnostics(
+            onboardingData,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            effectiveTodayISO,
+          ),
           missingProfileFields: getProgramGenerationProfileFieldDiagnostics(onboardingData),
         });
       }
@@ -294,7 +308,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
     }
 
     try {
-      seedProgram(program);
+      seedProgram(program, effectiveTodayISO);
     } catch (error) {
       const pipelineError = toOnboardingPipelineError(
         error,
@@ -310,7 +324,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
           });
         }
         try {
-          seedProgram(DEFAULT_PROGRAM);
+          seedProgram(DEFAULT_PROGRAM, effectiveTodayISO);
         } catch (fallbackError) {
           const fallbackPipelineError = toOnboardingPipelineError(
             fallbackError,
@@ -367,10 +381,14 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
     }, wait);
   };
 
-  const seedProgram = (program: typeof DEFAULT_PROGRAM) => {
+  const seedProgram = (
+    program: typeof DEFAULT_PROGRAM,
+    effectiveTodayISO: string,
+  ) => {
     seedOnboardingProgram({
       onboardingData,
       program,
+      todayISO: effectiveTodayISO,
       programStore: {
         setCurrentProgram,
         setCurrentMicrocycle,
