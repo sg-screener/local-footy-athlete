@@ -50,6 +50,10 @@ import {
   type ExplorerPhysicalCaptureRequestV1,
   type ExplorerPhysicalEvidenceReceiptV1,
 } from './explorerPhysicalEvidence';
+import {
+  ExplorerScenarioActiveTimeBudget,
+  type ExplorerActiveTimePauseToken,
+} from './explorerScenarioActiveTimeBudget';
 
 export const EXPLORER_RUNTIME_PROTOCOL_VERSION = 1 as const;
 
@@ -226,6 +230,8 @@ export interface ExplorerRuntimeCommonDependencies {
       request: ExplorerPhysicalCaptureRequestV1,
     ) => Promise<ExplorerPhysicalEvidenceReceiptV1>;
   };
+  /** Live execution injects the durable owner; pure tests use an in-memory one. */
+  readonly activeTimeBudget?: ExplorerScenarioActiveTimeBudget;
   readonly nowMs?: () => number;
 }
 
@@ -248,6 +254,7 @@ export interface ExplorerLiveRuntimeDependencies
   ) => Promise<void>;
   readonly waitForExternalActionIngress: (
     request: ExplorerActionIngressRequest,
+    pauseToken: ExplorerActiveTimePauseToken,
   ) => Promise<ExplorerProductionActionReceipt>;
 }
 
@@ -266,6 +273,7 @@ function artifactFailureReason(error: unknown): ExplorerRuntimeReasonCode {
 
 async function capturePhysicalEvidence(args: {
   deps: ExplorerRuntimeDependencies;
+  budget: ExplorerScenarioActiveTimeBudget;
   manifest: ExplorerScenarioContract;
   manifestSemanticHash: ExplorerScenarioSemanticHash;
   step?: ExplorerScenarioStep;
@@ -297,7 +305,14 @@ async function capturePhysicalEvidence(args: {
     },
     deterministicClockFingerprint: clockFingerprint,
   });
-  const receipt = await args.deps.physicalEvidence.requestCapture(request);
+  const pauseReason = args.capturePhase === 'seed-reset'
+    ? 'physical_evidence_acknowledgement' as const
+    : 'physical_evidence_capture' as const;
+  const receipt = await args.budget.runExternal(
+    pauseReason,
+    request.captureId,
+    async () => await args.deps.physicalEvidence.requestCapture(request),
+  );
   return validateExplorerPhysicalEvidenceReceipt({
     request,
     receipt,
@@ -478,10 +493,15 @@ export async function runExplorerScenario(
     };
   }
 
-  const nowMs = deps.nowMs ?? Date.now;
-  const startedAtMs = nowMs();
-  const budgetExpired = () => nowMs() - startedAtMs >= manifest.budgetMs;
+  const budget = deps.activeTimeBudget ?? new ExplorerScenarioActiveTimeBudget(
+    deps.nowMs ?? Date.now,
+  );
+  budget.resetScenario();
+  budget.start(manifest.scenarioId, manifest.budgetMs);
+  await budget.flush();
+  const budgetExpired = () => budget.remaining() <= 0;
 
+  try {
   const records: ExplorerRuntimeActionRecord[] = [];
   const attemptedReceipts: ExplorerProductionActionReceipt[] = [];
   if (budgetExpired()) {
@@ -520,10 +540,22 @@ export async function runExplorerScenario(
       failedStepId: null,
     });
   }
+  if (budgetExpired()) {
+    return blocked({
+      manifest,
+      manifestSemanticHash,
+      seedEvidence: seedReceipt.seedEvidence,
+      records,
+      attemptedReceipts,
+      reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+      failedStepId: null,
+    });
+  }
   let seedPhysicalEvidence: ExplorerPhysicalEvidenceReceiptV1;
   try {
     seedPhysicalEvidence = await capturePhysicalEvidence({
       deps,
+      budget,
       manifest,
       manifestSemanticHash,
       capturePhase: 'seed-reset',
@@ -637,12 +669,30 @@ export async function runExplorerScenario(
         failedStepId: step.stepId,
       });
     }
+    if (budgetExpired()) {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+        failedStepId: step.stepId,
+      });
+    }
     let productionReceipt: ExplorerProductionActionReceipt;
     try {
       assertExplorerActionExecutable(step.action);
       if (deps.actionExecutionMode === 'live-external-action-ingress') {
         if (!ingressRequest) throw new Error('action_ingress_request_missing');
-        productionReceipt = await deps.waitForExternalActionIngress(ingressRequest);
+        productionReceipt = await budget.runExternal(
+          'external_action_ingress',
+          ingressRequest.requestId,
+          async (pauseToken) => await deps.waitForExternalActionIngress(
+            ingressRequest!,
+            pauseToken,
+          ),
+        );
       } else {
         productionReceipt = await deps.executeProductionAction(step.action, claim);
       }
@@ -671,6 +721,17 @@ export async function runExplorerScenario(
       });
     }
     attemptedReceipts.push(productionReceipt);
+    if (budgetExpired()) {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+        failedStepId: step.stepId,
+      });
+    }
     if (productionReceipt.traceV2RootId === priorActionTraceId) {
       return blocked({
         manifest,
@@ -684,11 +745,15 @@ export async function runExplorerScenario(
     }
     let renderReceipt: ExplorerRuntimeRenderReceipt | null;
     try {
-      renderReceipt = await deps.waitForReactRender({
-        manifest,
-        step,
-        receipt: productionReceipt,
-      });
+      renderReceipt = await budget.runExternal(
+        'rendered_observation',
+        productionReceipt.traceV2RootId,
+        async () => await deps.waitForReactRender({
+          manifest,
+          step,
+          receipt: productionReceipt,
+        }),
+      );
     } catch (error) {
       renderReceipt = null;
     }
@@ -711,6 +776,7 @@ export async function runExplorerScenario(
     try {
       afterActionPhysicalEvidence = await capturePhysicalEvidence({
         deps,
+        budget,
         manifest,
         manifestSemanticHash,
         step,
@@ -743,6 +809,17 @@ export async function runExplorerScenario(
         records,
         attemptedReceipts,
         reasonCode: EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
+        failedStepId: step.stepId,
+      });
+    }
+    if (budgetExpired()) {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
         failedStepId: step.stepId,
       });
     }
@@ -780,6 +857,17 @@ export async function runExplorerScenario(
         reasonCode: EXPLORER_RUNTIME_REASON.HARD_ORACLE_FAILED,
         failedStepId: step.stepId,
         firstDivergentProjection: afterActionSummary.firstDivergentProjection,
+      });
+    }
+    if (budgetExpired()) {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+        failedStepId: step.stepId,
       });
     }
 
@@ -834,11 +922,23 @@ export async function runExplorerScenario(
         failedStepId: step.stepId,
       });
     }
+    if (budgetExpired()) {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+        failedStepId: step.stepId,
+      });
+    }
 
     let afterReloadPhysicalEvidence: ExplorerPhysicalEvidenceReceiptV1;
     try {
       afterReloadPhysicalEvidence = await capturePhysicalEvidence({
         deps,
+        budget,
         manifest,
         manifestSemanticHash,
         step,
@@ -904,6 +1004,17 @@ export async function runExplorerScenario(
             : EXPLORER_RUNTIME_REASON.HARD_ORACLE_FAILED,
         failedStepId: step.stepId,
         firstDivergentProjection: afterReloadSummary.firstDivergentProjection,
+      });
+    }
+    if (budgetExpired()) {
+      return blocked({
+        manifest,
+        manifestSemanticHash,
+        seedEvidence: seedReceipt.seedEvidence,
+        records,
+        attemptedReceipts,
+        reasonCode: EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
+        failedStepId: step.stepId,
       });
     }
 
@@ -1063,4 +1174,8 @@ export async function runExplorerScenario(
     artifactAssembly,
     artifactBundle,
   };
+  } finally {
+    budget.finish();
+    await budget.flush();
+  }
 }

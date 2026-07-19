@@ -48,6 +48,14 @@ import {
   type ExplorerPhysicalEvidenceReceiptV1,
 } from '../dev/e2e/explorerPhysicalEvidence';
 import { semanticFingerprintV2, sha256Hex } from '../utils/semanticFingerprintV2';
+import { ExplorerActionIngressGate } from '../dev/e2e/explorerActionIngress';
+import {
+  __resetDevE2EStateForTest,
+  devE2EMarkers,
+  getDevE2EStateSnapshot,
+} from '../dev/e2e/devE2EState';
+
+(globalThis as { __DEV__?: boolean }).__DEV__ = true;
 
 let passed = 0;
 let failed = 0;
@@ -733,13 +741,63 @@ void test('no athlete action begins before seed physical evidence acceptance', a
 void test('manifest budget expiry blocks all later actions without reseeding', async () => {
   const manifest = runtimeManifest(2);
   const deps = runtimeDeps(manifest);
-  const times = [0, 0, manifest.budgetMs];
-  deps.nowMs = () => times.shift() ?? manifest.budgetMs;
+  let activeNowMs = 0;
+  deps.nowMs = () => activeNowMs;
+  const resetSeedOnce = deps.resetSeedOnce;
+  deps.resetSeedOnce = async (seedId) => {
+    const receipt = await resetSeedOnce(seedId);
+    activeNowMs = manifest.budgetMs + 1_000;
+    return receipt;
+  };
   const result = await runExplorerScenario(manifest.scenarioId, deps);
   expect(result.reasonCode === EXPLORER_RUNTIME_REASON.BUDGET_EXPIRED,
     'expired manifest budget did not fail closed');
   expect(deps.counts.action === 0, 'an action ran after budget expiry');
   expect(deps.counts.reset === 1, 'budget handling reseeded the scenario');
+});
+
+void test('45-second seed acknowledgement reaches durable live ingress without mutation', async () => {
+  __resetDevE2EStateForTest();
+  const manifest = runtimeManifest(1);
+  const synthetic = runtimeDeps(manifest);
+  const values = new Map<string, string>();
+  const gate = new ExplorerActionIngressGate({
+    getItem: async (key) => values.get(key) ?? null,
+    setItem: async (key, value) => { values.set(key, value); },
+    removeItem: async (key) => { values.delete(key); },
+  });
+  let nowMs = 0;
+  const requestCapture = synthetic.physicalEvidence.requestCapture;
+  const live = {
+    ...synthetic,
+    nowMs: () => nowMs,
+    actionExecutionMode: 'live-external-action-ingress' as const,
+    physicalEvidence: {
+      ...synthetic.physicalEvidence,
+      requestCapture: async (request: ExplorerPhysicalCaptureRequestV1) => {
+        const receipt = await requestCapture(request);
+        if (request.capturePhase === 'seed-reset') nowMs = 45_000;
+        return receipt;
+      },
+    },
+    persistActionIngressRequest: async (request: Parameters<
+      ExplorerActionIngressGate['open']
+    >[0]) => await gate.open(request),
+    waitForExternalActionIngress: async () => {
+      throw new Error('stop_before_tap');
+    },
+  } as unknown as ExplorerRuntimeDependencies & { counts: Record<string, number> };
+  const result = await runExplorerScenario(manifest.scenarioId, live);
+  const step = manifest.steps[0];
+  expect(result.reasonCode === EXPLORER_RUNTIME_REASON.ACTION_RECEIPT_MISSING,
+    'external acknowledgement wall time still expired the active budget');
+  expect(gate.readActiveRequest()?.stepId === step.stepId,
+    'runtime did not persist the pending ingress after acknowledgement');
+  expect(devE2EMarkers(getDevE2EStateSnapshot()).includes(
+    `e2e-explorer-action-awaiting-${manifest.scenarioId}-${step.stepId}`,
+  ), 'runtime did not publish the exact awaiting marker');
+  expect(live.counts.action === 0,
+    'a production mutation ran before external UI ingress');
 });
 
 void test('repeated bridge execution produces deterministic receipt identity', async () => {

@@ -47,6 +47,10 @@ import {
 } from './explorerNativeLaunchDiagnostic';
 import { ExplorerPhysicalEvidenceError } from './explorerPhysicalEvidence';
 import { restoreExplorerActionIngress } from './explorerActionIngress';
+import {
+  clearExplorerScenarioActiveTimeBudget,
+  restoreExplorerScenarioActiveTimeBudget,
+} from './explorerScenarioActiveTimeBudget';
 import type { DevE2ESeedCoordinator } from './DevE2ESeedCoordinator';
 
 export interface DevE2ELinking {
@@ -212,6 +216,7 @@ export function installDevE2EEntry(args: {
         case 'checkpoint':
           return await coordinator.checkpoint(route.checkpointId);
         case 'scenario_reset':
+          await clearExplorerScenarioActiveTimeBudget(route.scenarioId);
           return await coordinator.resetScenario(route.scenarioId);
         case 'scenario_checkpoint':
           return await coordinator.checkpointScenario(
@@ -299,6 +304,7 @@ export function installDevE2EEntry(args: {
         require('./defaultDevE2ESeedCoordinator');
       coordinator = createDefaultDevE2ESeedCoordinator(true);
       await restoreExplorerPhysicalEvidenceCampaign({ isDev });
+      await restoreExplorerScenarioActiveTimeBudget();
       await restoreExplorerActionIngress();
       // Reload validation remains separate from route handling and never
       // calls reset/buildSeed for a preserved checkpoint.

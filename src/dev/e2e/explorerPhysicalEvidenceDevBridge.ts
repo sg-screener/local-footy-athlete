@@ -20,6 +20,10 @@ import {
 } from './explorerCampaignBootstrap';
 import { requireActiveExplorerNativeLaunchDiagnostic } from
   './explorerNativeLaunchDiagnostic';
+import {
+  resumeExplorerLiveExternalPauseIfPresent,
+  withExplorerExternalStageDeadline,
+} from './explorerScenarioActiveTimeBudget';
 
 declare const __DEV__: boolean | undefined;
 
@@ -216,7 +220,17 @@ export async function requestExplorerPhysicalEvidence(
   }
   // Only the bridge completion below resolves this wait, after durable
   // readback and accepted-marker publication.
-  return promise;
+  try {
+    return await withExplorerExternalStageDeadline(
+      request.capturePhase === 'seed-reset'
+        ? 'physical_evidence_acknowledgement'
+        : 'physical_evidence_capture',
+      async () => await promise,
+    );
+  } catch (error) {
+    pendingCaptureWaits.delete(request.captureId);
+    throw error;
+  }
 }
 
 export async function acknowledgeExplorerPhysicalEvidence(
@@ -241,6 +255,13 @@ export async function acknowledgeExplorerPhysicalEvidence(
       receiptFileReference,
       receiptSha256,
     );
+    await resumeExplorerLiveExternalPauseIfPresent({
+      reason: result.receipt.capturePhase === 'seed-reset'
+        ? 'physical_evidence_acknowledgement'
+        : 'physical_evidence_capture',
+      scope: captureId,
+      scenarioId: result.receipt.scenarioId,
+    });
     pendingCaptureWaits.get(captureId)?.resolve(result.receipt);
     pendingCaptureWaits.delete(captureId);
     return true;

@@ -13,6 +13,12 @@ import {
   setDevE2EExplorerActionError,
   setDevE2EExplorerActionReceipt,
 } from './devE2EState';
+import {
+  resumeExplorerLiveExternalPauseIfPresentSync,
+  resumeExplorerLiveExternalPauseTokenSync,
+  withExplorerExternalStageDeadline,
+  type ExplorerActiveTimePauseToken,
+} from './explorerScenarioActiveTimeBudget';
 
 declare const __DEV__: boolean | undefined;
 
@@ -324,7 +330,12 @@ export class ExplorerActionIngressGate {
     resolve: (receipt: ExplorerActionIngressReceipt) => void;
     reject: (error: unknown) => void;
   }>();
+  private claimWaiters = new Map<string, {
+    resolve: () => void;
+    reject: (error: unknown) => void;
+  }>();
   private completedReceipts = new Map<string, ExplorerActionIngressReceipt>();
+  private activeTimePauseTokens = new Map<string, ExplorerActiveTimePauseToken>();
   private persistenceChain: Promise<void> = Promise.resolve();
   private storage: ExplorerActionIngressStorage | null;
 
@@ -430,6 +441,21 @@ export class ExplorerActionIngressGate {
     if (input.acceptedRevision !== request.expectedAcceptedRevision) {
       fail(EXPLORER_ACTION_INGRESS_FAILURE.ACCEPTED_REVISION_DRIFT);
     }
+    // This is the exact external-completion boundary. It runs after the full
+    // UI claim correlation succeeds and before claimAndStart invokes the real
+    // control's production callback.
+    const boundPauseToken = this.activeTimePauseTokens.get(request.requestId);
+    if (boundPauseToken) {
+      resumeExplorerLiveExternalPauseTokenSync(boundPauseToken);
+    } else {
+      // After a JS cold reload the exact token is recovered from the durable
+      // active-time snapshot by its request-scoped identity.
+      resumeExplorerLiveExternalPauseIfPresentSync({
+        reason: 'external_action_ingress',
+        scope: request.requestId,
+        scenarioId: request.scenarioId,
+      });
+    }
     const claimIdentity = {
       requestId: request.requestId,
       ...input,
@@ -451,6 +477,8 @@ export class ExplorerActionIngressGate {
       this.waiters.get(request.requestId)?.reject(error);
     });
     setDevE2EExplorerActionClaimed(request.scenarioId, request.stepId);
+    this.claimWaiters.get(request.requestId)?.resolve();
+    this.claimWaiters.delete(request.requestId);
     return claim;
   }
 
@@ -487,19 +515,43 @@ export class ExplorerActionIngressGate {
 
   async waitForReceipt(
     request: ExplorerActionIngressRequest,
+    pauseToken?: ExplorerActiveTimePauseToken,
   ): Promise<ExplorerActionIngressReceipt> {
+    if (pauseToken && (
+      pauseToken.reason !== 'external_action_ingress' ||
+      pauseToken.scope !== request.requestId ||
+      pauseToken.scenarioId !== request.scenarioId
+    )) {
+      throw new ExplorerActionIngressError(
+        EXPLORER_ACTION_INGRESS_FAILURE.REQUEST_CONFLICT,
+        'active_time_pause_token_mismatch',
+      );
+    }
+    if (pauseToken) {
+      const existingPauseToken = this.activeTimePauseTokens.get(request.requestId);
+      if (existingPauseToken &&
+        JSON.stringify(existingPauseToken) !== JSON.stringify(pauseToken)) {
+        throw new ExplorerActionIngressError(
+          EXPLORER_ACTION_INGRESS_FAILURE.REQUEST_CONFLICT,
+          'competing_active_time_pause_token',
+        );
+      }
+      this.activeTimePauseTokens.set(request.requestId, pauseToken);
+    }
     const completed = this.completedReceipts.get(request.requestId);
     if (completed) {
       this.completedReceipts.delete(request.requestId);
+      this.activeTimePauseTokens.delete(request.requestId);
       return completed;
     }
     await this.open(request);
     const completedAfterOpen = this.completedReceipts.get(request.requestId);
     if (completedAfterOpen) {
       this.completedReceipts.delete(request.requestId);
+      this.activeTimePauseTokens.delete(request.requestId);
       return completedAfterOpen;
     }
-    return new Promise<ExplorerActionIngressReceipt>((resolve, reject) => {
+    const receiptPromise = new Promise<ExplorerActionIngressReceipt>((resolve, reject) => {
       if (this.waiters.has(request.requestId)) {
         reject(new ExplorerActionIngressError(
           EXPLORER_ACTION_INGRESS_FAILURE.REQUEST_CONFLICT,
@@ -509,6 +561,30 @@ export class ExplorerActionIngressGate {
       }
       this.waiters.set(request.requestId, { resolve, reject });
     });
+    const claimed = this.state?.status === 'claimed'
+      ? Promise.resolve()
+      : new Promise<void>((resolve, reject) => {
+          if (this.claimWaiters.has(request.requestId)) {
+            reject(new ExplorerActionIngressError(
+              EXPLORER_ACTION_INGRESS_FAILURE.REQUEST_CONFLICT,
+              'duplicate_claim_waiter',
+            ));
+            return;
+          }
+          this.claimWaiters.set(request.requestId, { resolve, reject });
+        });
+    try {
+      await withExplorerExternalStageDeadline(
+        'external_action_ingress',
+        async () => await claimed,
+      );
+      return await receiptPromise;
+    } catch (error) {
+      this.claimWaiters.delete(request.requestId);
+      this.waiters.delete(request.requestId);
+      this.activeTimePauseTokens.delete(request.requestId);
+      throw error;
+    }
   }
 
   async registerProductionReceipt(
@@ -541,6 +617,8 @@ export class ExplorerActionIngressGate {
     const receipt = { request, claim, productionReceipt };
     const waiter = this.waiters.get(request.requestId);
     this.waiters.delete(request.requestId);
+    this.claimWaiters.delete(request.requestId);
+    this.activeTimePauseTokens.delete(request.requestId);
     this.state = null;
     if (!waiter) this.completedReceipts.set(request.requestId, receipt);
     await this.persist();
@@ -556,8 +634,15 @@ export class ExplorerActionIngressGate {
         EXPLORER_ACTION_INGRESS_FAILURE.STALE_CLAIM,
       ));
     }
+    for (const waiter of this.claimWaiters.values()) {
+      waiter.reject(new ExplorerActionIngressError(
+        EXPLORER_ACTION_INGRESS_FAILURE.STALE_CLAIM,
+      ));
+    }
     this.waiters.clear();
+    this.claimWaiters.clear();
     this.completedReceipts.clear();
+    this.activeTimePauseTokens.clear();
     this.state = null;
     this.restored = true;
     await this.persist();

@@ -11,6 +11,10 @@ const metroBabelTransformer = require(transformerPath);
 const explorerLivePathFiles = [
   'src/dev/e2e/explorerRenderReceiptBindings.ts',
   'src/dev/e2e/explorerPhysicalEvidence.ts',
+  'src/dev/e2e/explorerPhysicalEvidenceDevBridge.ts',
+  'src/dev/e2e/explorerScenarioActiveTimeBudget.ts',
+  'src/dev/e2e/explorerActionIngress.ts',
+  'src/dev/e2e/explorerRuntime.ts',
   'src/dev/e2e/explorerCanonicalLiveHost.ts',
   'src/dev/e2e/explorerLiveScenarioRuntime.ts',
   'src/dev/e2e/explorerScenarioRunner.ts',

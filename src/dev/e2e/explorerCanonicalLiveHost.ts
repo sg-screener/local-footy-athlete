@@ -62,6 +62,8 @@ import type {
 } from './explorerScenarioContracts';
 import { readDevE2EWitnessState } from './defaultDevE2ESeedCoordinator';
 import { buildDevE2ESeed } from './devE2ESeedRegistry';
+import { explorerLiveScenarioActiveTimeBudget } from
+  './explorerScenarioActiveTimeBudget';
 
 /**
  * Canonical Explorer Live Host
@@ -494,6 +496,7 @@ export function createCanonicalExplorerLiveHostDependencies(args: {
 
   return {
     actionExecutionMode: 'live-external-action-ingress',
+    activeTimeBudget: explorerLiveScenarioActiveTimeBudget(),
     physicalEvidence: {
       campaignId: args.campaignId,
       integratedRepositorySha: args.integratedRepositorySha,
@@ -576,8 +579,11 @@ export function createCanonicalExplorerLiveHostDependencies(args: {
     persistActionIngressRequest: async (request) => {
       await explorerLiveActionIngressGate().open(request);
     },
-    waitForExternalActionIngress: async (request) => {
-      const receipt = await explorerLiveActionIngressGate().waitForReceipt(request);
+    waitForExternalActionIngress: async (request, pauseToken) => {
+      const receipt = await explorerLiveActionIngressGate().waitForReceipt(
+        request,
+        pauseToken,
+      );
       return receipt.productionReceipt;
     },
     captureOracleContext: async ({
