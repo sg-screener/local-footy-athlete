@@ -154,6 +154,19 @@ async function main(): Promise<void> {
     expect(processed.join(',') === 'campaign-url', 'queued URL was lost or duplicated');
   });
 
+  await test('evidence URL delivered before coordinator readiness is retained', async () => {
+    const queue = new DevE2EEntryRouteQueue<string>();
+    const processed: string[] = [];
+    await queue.enqueue('capture-id', 'evidence-route');
+    expect(processed.length === 0, 'early evidence route ran before readiness');
+    await queue.setReady(async (route) => {
+      processed.push(route);
+      return true;
+    });
+    expect(processed.join(',') === 'evidence-route',
+      'early evidence route was dropped before readiness');
+  });
+
   await test('campaign URL after readiness processes immediately', async () => {
     const queue = new DevE2EEntryRouteQueue<string>();
     let processed = false;
@@ -186,6 +199,38 @@ async function main(): Promise<void> {
     expect(events.join(',') ===
       'start:campaign,end:campaign,start:scenario,end:scenario',
     'a later scenario route overtook campaign acceptance');
+  });
+
+  await test('evidence acknowledgement can resolve an active scenario route', async () => {
+    const scenarioQueue = new DevE2EEntryRouteQueue<string>();
+    const evidenceQueue = new DevE2EEntryRouteQueue<string>();
+    const events: string[] = [];
+    let acceptEvidence!: () => void;
+    const accepted = new Promise<void>((resolve) => {
+      acceptEvidence = resolve;
+    });
+    await evidenceQueue.setReady(async () => {
+      events.push('evidence');
+      acceptEvidence();
+      return true;
+    });
+    await scenarioQueue.setReady(async () => {
+      events.push('scenario-start');
+      await accepted;
+      events.push('scenario-end');
+      return true;
+    });
+    const scenario = scenarioQueue.enqueue('scenario', 'scenario');
+    await Promise.resolve();
+    const evidence = evidenceQueue.enqueue('evidence', 'evidence');
+    await Promise.all([scenario, evidence]);
+    expect(events.join(',') === 'scenario-start,evidence,scenario-end',
+      'receipt remained blocked behind the scenario it must resolve');
+    const entry = readFileSync('src/dev/e2e/devE2EEntry.tsx', 'utf8');
+    expect(entry.includes('const evidenceRouteQueue =') &&
+      entry.indexOf('await evidenceRouteQueue.setReady(processRoute);') <
+        entry.indexOf('await routeQueue.setReady(processRoute);'),
+    'entry does not ready the acknowledgement lane before scenario dispatch');
   });
 
   await test('campaign persistence and exact readback precede accepted marker', async () => {

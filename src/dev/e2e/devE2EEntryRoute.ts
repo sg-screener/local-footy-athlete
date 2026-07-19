@@ -38,7 +38,8 @@ export type DevE2EEntryRoute =
   | {
       kind: 'explorer_evidence';
       captureId: string;
-      encodedReceipt: string;
+      receiptFileReference: string;
+      receiptSha256: string;
       e2eMetroUrl: string | null;
     };
 
@@ -56,7 +57,24 @@ const EXACT_EXPLORER_DIAGNOSTIC_ROUTE =
 const EXACT_EXPLORER_EVIDENCE_START_ROUTE =
   /^localfootyathlete:\/\/e2e\/explorer\/evidence\/start\/(explorer-nine-[a-z0-9]+(?:-[a-z0-9]+)*)\/([a-f0-9]{40})$/;
 const EXACT_EXPLORER_EVIDENCE_ROUTE =
-  /^localfootyathlete:\/\/e2e\/explorer\/evidence\/(explorer-capture-[a-f0-9]{64})\?receipt=([^&#]+)$/;
+  /^localfootyathlete:\/\/e2e\/explorer\/evidence\/(explorer-capture-[a-f0-9]{64})\?receiptFile=([^&#]+)&receiptSha256=([a-f0-9]{64})$/;
+
+export function explorerPhysicalEvidenceCaptureIdFromRoute(
+  url: string | null | undefined,
+): string | null {
+  if (!url) return null;
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.protocol !== 'localfootyathlete:' || parsed.hostname !== 'e2e') {
+    return null;
+  }
+  return /^\/explorer\/evidence\/(explorer-capture-[a-f0-9]{64})$/
+    .exec(parsed.pathname)?.[1] ?? null;
+}
 
 function splitExplorerBootstrapQuery(url: string): {
   routeUrl: string;
@@ -124,10 +142,17 @@ export function parseDevE2EEntryRoute(url: string | null | undefined): DevE2EEnt
   }
   const evidence = EXACT_EXPLORER_EVIDENCE_ROUTE.exec(routeUrl);
   if (evidence) {
+    let receiptFileReference: string;
+    try {
+      receiptFileReference = decodeURIComponent(evidence[2]);
+    } catch {
+      return null;
+    }
     return {
       kind: 'explorer_evidence',
       captureId: evidence[1],
-      encodedReceipt: evidence[2],
+      receiptFileReference,
+      receiptSha256: evidence[3],
       e2eMetroUrl: explorer.e2eMetroUrl,
     };
   }

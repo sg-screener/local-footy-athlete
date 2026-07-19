@@ -1,6 +1,7 @@
 import type { DevE2EKeyValueStorage } from './devE2ECheckpoint';
 import {
   semanticFingerprintV2,
+  sha256BytesHex,
   stableSemanticJsonV2,
 } from '../../utils/semanticFingerprintV2';
 
@@ -26,6 +27,16 @@ export const EXPLORER_PHYSICAL_EVIDENCE_FAILURE = Object.freeze({
   MISSING_FILE: 'capture_file_missing',
   EMPTY_FILE: 'capture_file_empty',
   INVALID_HASH: 'capture_hash_invalid',
+  RECEIPT_REFERENCE_INVALID: 'capture_receipt_reference_invalid',
+  RECEIPT_REFERENCE_MISMATCH: 'capture_receipt_reference_mismatch',
+  RECEIPT_FILE_MISSING: 'capture_receipt_file_missing',
+  RECEIPT_FILE_READ_FAILED: 'capture_receipt_file_read_failed',
+  RECEIPT_FILE_HASH_MISMATCH: 'capture_receipt_file_hash_mismatch',
+  FILE_READ_FAILED: 'capture_file_read_failed',
+  SCREENSHOT_SIZE_MISMATCH: 'capture_screenshot_size_mismatch',
+  SCREENSHOT_HASH_MISMATCH: 'capture_screenshot_hash_mismatch',
+  HIERARCHY_SIZE_MISMATCH: 'capture_hierarchy_size_mismatch',
+  HIERARCHY_HASH_MISMATCH: 'capture_hierarchy_hash_mismatch',
   REQUEST_NOT_PENDING: 'capture_request_not_pending',
   CAPTURE_ID_MISMATCH: 'capture_id_mismatch',
   CAMPAIGN_MISMATCH: 'capture_campaign_mismatch',
@@ -44,6 +55,7 @@ export const EXPLORER_PHYSICAL_EVIDENCE_FAILURE = Object.freeze({
   REPOSITORY_SHA_MISMATCH: 'capture_repository_sha_mismatch',
   DUPLICATE_RECEIPT: 'capture_receipt_duplicate',
   PERSISTENCE_FAILED: 'capture_persistence_failed',
+  READBACK_MISMATCH: 'capture_readback_mismatch',
   RELEASE_BUILD: 'capture_route_release_rejected',
 } as const);
 
@@ -129,10 +141,34 @@ export interface ExplorerPhysicalEvidenceLedgerV1 {
   readonly entries: readonly ExplorerPhysicalEvidenceLedgerEntryV1[];
 }
 
+export const EXPLORER_PHYSICAL_EVIDENCE_STAGES = [
+  'route-received',
+  'receipt-parsed',
+  'pending-request-matched',
+  'validation-succeeded',
+  'persistence-succeeded',
+  'readback-succeeded',
+  'accepted-marker-published',
+] as const;
+
+export type ExplorerPhysicalEvidenceStage =
+  (typeof EXPLORER_PHYSICAL_EVIDENCE_STAGES)[number];
+
+export interface ExplorerPhysicalEvidenceArtifactReader {
+  (args: {
+    campaignId: string;
+    relativeReference: string;
+  }): Promise<Uint8Array | null>;
+}
+
 export interface ExplorerPhysicalEvidenceMarkerPublisher {
   readonly request: (captureId: string, encodedRequest: string) => void;
   readonly accepted: (captureId: string) => void;
   readonly error: (reasonCode: ExplorerPhysicalEvidenceFailureCode) => void;
+  readonly stage: (
+    captureId: string,
+    stage: ExplorerPhysicalEvidenceStage,
+  ) => void;
 }
 
 const REQUEST_KEYS = [
@@ -244,6 +280,40 @@ export function isPrivacySafeExplorerRelativePath(value: unknown): value is stri
     return false;
   }
   return true;
+}
+
+export function explorerPhysicalEvidenceReceiptRelativeReference(
+  identity: Pick<ExplorerPhysicalEvidenceReceiptV1, 'captureId' | 'scenarioId'>,
+): string {
+  if (!CAPTURE_ID_PATTERN.test(identity.captureId) ||
+    !ID_PATTERN.test(identity.scenarioId)) {
+    fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_REFERENCE_INVALID);
+  }
+  return `${identity.scenarioId}/physical-evidence-receipt-${
+    identity.captureId}.json`;
+}
+
+export function validateExplorerPhysicalEvidenceReceiptReference(args: {
+  captureId: string;
+  relativeReference: unknown;
+  sha256: unknown;
+}): { relativeReference: string; sha256: string } {
+  if (!CAPTURE_ID_PATTERN.test(args.captureId) ||
+    !isPrivacySafeExplorerRelativePath(args.relativeReference)) {
+    fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_REFERENCE_INVALID);
+  }
+  if (!SHA256_PATTERN.test(String(args.sha256))) {
+    fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.INVALID_HASH, 'receipt_file');
+  }
+  const segments = args.relativeReference.split('/');
+  if (segments.length !== 2 || !ID_PATTERN.test(segments[0]) ||
+    segments[1] !== `physical-evidence-receipt-${args.captureId}.json`) {
+    fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_REFERENCE_MISMATCH);
+  }
+  return {
+    relativeReference: args.relativeReference,
+    sha256: args.sha256 as string,
+  };
 }
 
 function parseExpectedSemanticIdentity(
@@ -694,12 +764,14 @@ export class ExplorerPhysicalEvidenceBridge {
   private readonly markers: ExplorerPhysicalEvidenceMarkerPublisher;
   private readonly integratedRepositorySha: string;
   private readonly currentClockFingerprint: () => string;
+  private readonly readArtifact: ExplorerPhysicalEvidenceArtifactReader;
 
   constructor(args: {
     storage?: DevE2EKeyValueStorage;
     markers: ExplorerPhysicalEvidenceMarkerPublisher;
     integratedRepositorySha: string;
     currentClockFingerprint: () => string;
+    readArtifact: ExplorerPhysicalEvidenceArtifactReader;
   }) {
     if (!REPOSITORY_SHA_PATTERN.test(args.integratedRepositorySha)) {
       fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.REPOSITORY_SHA_MISMATCH,
@@ -709,16 +781,77 @@ export class ExplorerPhysicalEvidenceBridge {
     this.markers = args.markers;
     this.integratedRepositorySha = args.integratedRepositorySha;
     this.currentClockFingerprint = args.currentClockFingerprint;
+    this.readArtifact = args.readArtifact;
+  }
+
+  private publishStage(
+    captureId: string,
+    stage: ExplorerPhysicalEvidenceStage,
+  ): void {
+    this.markers.stage(captureId, stage);
+  }
+
+  private async readArtifactOrFail(args: {
+    campaignId: string;
+    relativeReference: string;
+    missing: ExplorerPhysicalEvidenceFailureCode;
+    unreadable: ExplorerPhysicalEvidenceFailureCode;
+  }): Promise<Uint8Array> {
+    let value: Uint8Array | null;
+    try {
+      value = await this.readArtifact({
+        campaignId: args.campaignId,
+        relativeReference: args.relativeReference,
+      });
+    } catch {
+      fail(args.unreadable);
+    }
+    if (!value) fail(args.missing);
+    return value;
+  }
+
+  private async verifyPhysicalFiles(
+    receipt: ExplorerPhysicalEvidenceReceiptV1,
+  ): Promise<void> {
+    const screenshot = await this.readArtifactOrFail({
+      campaignId: receipt.campaignId,
+      relativeReference: receipt.screenshot.relativeReference,
+      missing: EXPLORER_PHYSICAL_EVIDENCE_FAILURE.MISSING_FILE,
+      unreadable: EXPLORER_PHYSICAL_EVIDENCE_FAILURE.FILE_READ_FAILED,
+    });
+    if (screenshot.byteLength !== receipt.screenshot.byteSize) {
+      fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.SCREENSHOT_SIZE_MISMATCH);
+    }
+    if (sha256BytesHex(screenshot) !== receipt.screenshot.sha256) {
+      fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.SCREENSHOT_HASH_MISMATCH);
+    }
+    const hierarchy = await this.readArtifactOrFail({
+      campaignId: receipt.campaignId,
+      relativeReference: receipt.hierarchy.relativeReference,
+      missing: EXPLORER_PHYSICAL_EVIDENCE_FAILURE.MISSING_FILE,
+      unreadable: EXPLORER_PHYSICAL_EVIDENCE_FAILURE.FILE_READ_FAILED,
+    });
+    if (hierarchy.byteLength !== receipt.hierarchy.byteSize) {
+      fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.HIERARCHY_SIZE_MISMATCH);
+    }
+    if (sha256BytesHex(hierarchy) !== receipt.hierarchy.sha256) {
+      fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.HIERARCHY_HASH_MISMATCH);
+    }
   }
 
   async restore(): Promise<ExplorerPhysicalEvidenceLedgerV1> {
     const ledger = await readLedger(this.storage);
     for (const entry of ledger.entries) {
-      if (entry.receipt) this.markers.accepted(entry.request.captureId);
-      else this.markers.request(
-        entry.request.captureId,
-        encodeURIComponent(JSON.stringify(entry.request)),
-      );
+      if (entry.receipt) {
+        this.publishStage(entry.request.captureId, 'readback-succeeded');
+        this.markers.accepted(entry.request.captureId);
+        this.publishStage(entry.request.captureId, 'accepted-marker-published');
+      } else {
+        this.markers.request(
+          entry.request.captureId,
+          encodeURIComponent(JSON.stringify(entry.request)),
+        );
+      }
     }
     return ledger;
   }
@@ -738,11 +871,16 @@ export class ExplorerPhysicalEvidenceBridge {
         fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.DUPLICATE_RECEIPT,
           request.captureId);
       }
-      if (existing.receipt) this.markers.accepted(request.captureId);
-      else this.markers.request(
-        request.captureId,
-        encodeURIComponent(JSON.stringify(request)),
-      );
+      if (existing.receipt) {
+        this.publishStage(request.captureId, 'readback-succeeded');
+        this.markers.accepted(request.captureId);
+        this.publishStage(request.captureId, 'accepted-marker-published');
+      } else {
+        this.markers.request(
+          request.captureId,
+          encodeURIComponent(JSON.stringify(request)),
+        );
+      }
       return request;
     }
     await writeLedger(this.storage, {
@@ -754,6 +892,57 @@ export class ExplorerPhysicalEvidenceBridge {
       encodeURIComponent(JSON.stringify(request)),
     );
     return request;
+  }
+
+  async acknowledgeReference(
+    captureId: string,
+    relativeReferenceValue: unknown,
+    sha256Value: unknown,
+  ): Promise<{ status: 'accepted' | 'already-accepted'; receipt: ExplorerPhysicalEvidenceReceiptV1 }> {
+    let delegated = false;
+    try {
+      const reference = validateExplorerPhysicalEvidenceReceiptReference({
+        captureId,
+        relativeReference: relativeReferenceValue,
+        sha256: sha256Value,
+      });
+      const ledger = await readLedger(this.storage);
+      const pending = ledger.entries.find((entry) =>
+        entry.request.captureId === captureId);
+      if (!pending) {
+        fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.REQUEST_NOT_PENDING, captureId);
+      }
+      const receiptBytes = await this.readArtifactOrFail({
+        campaignId: pending.request.campaignId,
+        relativeReference: reference.relativeReference,
+        missing: EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_FILE_MISSING,
+        unreadable: EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_FILE_READ_FAILED,
+      });
+      if (sha256BytesHex(receiptBytes) !== reference.sha256) {
+        fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_FILE_HASH_MISMATCH);
+      }
+      let value: unknown;
+      try {
+        value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(receiptBytes));
+      } catch {
+        fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.INVALID_RECEIPT, 'receipt_file');
+      }
+      const parsed = parseExplorerPhysicalEvidenceReceipt(value);
+      this.publishStage(captureId, 'receipt-parsed');
+      if (reference.relativeReference !==
+        explorerPhysicalEvidenceReceiptRelativeReference(parsed)) {
+        fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_REFERENCE_MISMATCH);
+      }
+      delegated = true;
+      return await this.acknowledge(captureId, parsed);
+    } catch (error) {
+      const reasonCode = error instanceof ExplorerPhysicalEvidenceError
+        ? error.reasonCode
+        : EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_FILE_READ_FAILED;
+      if (!delegated) this.markers.error(reasonCode);
+      if (error instanceof ExplorerPhysicalEvidenceError) throw error;
+      throw new ExplorerPhysicalEvidenceError(reasonCode);
+    }
   }
 
   async acknowledge(
@@ -768,12 +957,16 @@ export class ExplorerPhysicalEvidenceBridge {
         fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.REQUEST_NOT_PENDING, captureId);
       }
       const entry = ledger.entries[index]!;
+      this.publishStage(captureId, 'pending-request-matched');
       if (entry.receipt) {
         const duplicate = parseExplorerPhysicalEvidenceReceipt(value);
         if (stableSemanticJsonV2(duplicate) !== stableSemanticJsonV2(entry.receipt)) {
           fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.DUPLICATE_RECEIPT, captureId);
         }
+        this.publishStage(captureId, 'validation-succeeded');
+        this.publishStage(captureId, 'readback-succeeded');
         this.markers.accepted(captureId);
+        this.publishStage(captureId, 'accepted-marker-published');
         return { status: 'already-accepted', receipt: entry.receipt };
       }
       const receipt = validateExplorerPhysicalEvidenceReceipt({
@@ -782,21 +975,43 @@ export class ExplorerPhysicalEvidenceBridge {
         expectedIntegratedRepositorySha: this.integratedRepositorySha,
         currentDeterministicClockFingerprint: this.currentClockFingerprint(),
       });
+      await this.verifyPhysicalFiles(receipt);
+      this.publishStage(captureId, 'validation-succeeded');
       const entries = [...ledger.entries];
       entries[index] = { request: entry.request, receipt };
       // Persistence is deliberately awaited before the accepted marker exists.
-      await writeLedger(this.storage, {
-        schemaVersion: EXPLORER_PHYSICAL_EVIDENCE_SCHEMA_VERSION,
-        entries,
-      });
+      try {
+        await writeLedger(this.storage, {
+          schemaVersion: EXPLORER_PHYSICAL_EVIDENCE_SCHEMA_VERSION,
+          entries,
+        });
+      } catch {
+        fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.PERSISTENCE_FAILED);
+      }
+      this.publishStage(captureId, 'persistence-succeeded');
+      let readback: ExplorerPhysicalEvidenceLedgerV1;
+      try {
+        readback = await readLedger(this.storage);
+      } catch {
+        fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.READBACK_MISMATCH);
+      }
+      const persisted = readback.entries.find((candidate) =>
+        candidate.request.captureId === captureId)?.receipt;
+      if (!persisted || stableSemanticJsonV2(persisted) !==
+        stableSemanticJsonV2(receipt)) {
+        fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.READBACK_MISMATCH);
+      }
+      this.publishStage(captureId, 'readback-succeeded');
       this.markers.accepted(captureId);
+      this.publishStage(captureId, 'accepted-marker-published');
       return { status: 'accepted', receipt };
     } catch (error) {
       const reasonCode = error instanceof ExplorerPhysicalEvidenceError
         ? error.reasonCode
         : EXPLORER_PHYSICAL_EVIDENCE_FAILURE.PERSISTENCE_FAILED;
       this.markers.error(reasonCode);
-      throw error;
+      if (error instanceof ExplorerPhysicalEvidenceError) throw error;
+      throw new ExplorerPhysicalEvidenceError(reasonCode);
     }
   }
 
@@ -818,22 +1033,4 @@ export class ExplorerPhysicalEvidenceBridge {
         entry.request.scenarioId === args.scenarioId && entry.receipt !== null)
       .map((entry) => entry.receipt!);
   }
-}
-
-export function encodeExplorerPhysicalEvidenceReceipt(
-  receipt: ExplorerPhysicalEvidenceReceiptV1,
-): string {
-  return encodeURIComponent(JSON.stringify(parseExplorerPhysicalEvidenceReceipt(receipt)));
-}
-
-export function decodeExplorerPhysicalEvidenceReceipt(
-  encoded: string,
-): ExplorerPhysicalEvidenceReceiptV1 {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(decodeURIComponent(encoded));
-  } catch {
-    fail(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.INVALID_RECEIPT, 'encoded_payload');
-  }
-  return parseExplorerPhysicalEvidenceReceipt(parsed);
 }

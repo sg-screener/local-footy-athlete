@@ -721,6 +721,18 @@ void test('missing physical acknowledgement blocks before hard oracles', async (
     'missing physical receipt manufactured an artifact bundle');
 });
 
+void test('no athlete action begins before seed physical evidence acceptance', async () => {
+  const manifest = runtimeManifest(1);
+  const deps = runtimeDeps(manifest, { missingPhysicalPhase: 'seed-reset' });
+  const result = await runExplorerScenario(manifest.scenarioId, deps);
+  expect(result.status === 'blocked' &&
+    result.reasonCode === EXPLORER_RUNTIME_REASON.INCOMPLETE_ARTIFACT,
+  'missing seed receipt did not block the scenario');
+  expect(deps.counts.action === 0 && deps.counts.oracle === 0 &&
+    deps.counts.checkpoint === 0 && deps.counts.reload === 0,
+  'athlete work began before seed evidence acceptance');
+});
+
 void test('manifest budget expiry blocks all later actions without reseeding', async () => {
   const manifest = runtimeManifest(2);
   const deps = runtimeDeps(manifest);

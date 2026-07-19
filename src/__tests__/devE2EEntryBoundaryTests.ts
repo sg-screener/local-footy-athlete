@@ -1,6 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import { parseDevE2EEntryRoute } from '../dev/e2e/devE2EEntryRoute';
+import {
+  explorerPhysicalEvidenceCaptureIdFromRoute,
+  parseDevE2EEntryRoute,
+} from '../dev/e2e/devE2EEntryRoute';
 import { DEV_E2E_SEED_IDS } from '../dev/e2e/devE2ESeedIds';
 
 let passed = 0;
@@ -52,10 +55,25 @@ ok('physical evidence campaign route accepts exact campaign and repository ident
     'explorer-nine-9f28da0d51a6/9f28da0d51a62106bc85d12a14868c216de8b96d',
   )?.kind === 'explorer_evidence_start');
 ok('physical evidence acknowledgement route accepts exact capture and payload identity',
-  parseDevE2EEntryRoute(
-    `localfootyathlete://e2e/explorer/evidence/explorer-capture-${'a'.repeat(64)}` +
-    '?receipt=%7B%7D',
-  )?.kind === 'explorer_evidence');
+  (() => {
+    const captureId = `explorer-capture-${'a'.repeat(64)}`;
+    const route = parseDevE2EEntryRoute(
+      `localfootyathlete://e2e/explorer/evidence/${captureId}` +
+      `?receiptFile=smoke-evidence%2Fphysical-evidence-receipt-${captureId}.json` +
+      `&receiptSha256=${'b'.repeat(64)}`,
+    );
+    return route?.kind === 'explorer_evidence' &&
+      route.captureId === captureId &&
+      route.receiptFileReference ===
+        `smoke-evidence/physical-evidence-receipt-${captureId}.json` &&
+      route.receiptSha256 === 'b'.repeat(64);
+  })());
+const truncatedCaptureId = `explorer-capture-${'c'.repeat(64)}`;
+ok('receipt ingress still identifies a truncated route for diagnostics',
+  explorerPhysicalEvidenceCaptureIdFromRoute(
+    `localfootyathlete://e2e/explorer/evidence/${truncatedCaptureId}` +
+      '?receiptFile=truncated',
+  ) === truncatedCaptureId);
 const selectedMetroUrl = 'http://127.0.0.1:8082';
 const metroDiagnostic = parseDevE2EEntryRoute(
   'localfootyathlete://e2e/explorer/diagnostics/scenario-reset' +

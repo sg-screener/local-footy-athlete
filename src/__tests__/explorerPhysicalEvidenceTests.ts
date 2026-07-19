@@ -7,6 +7,7 @@ import {
   ExplorerPhysicalEvidenceError,
   createExplorerPhysicalCaptureRequest,
   explorerCaptureRelativePaths,
+  explorerPhysicalEvidenceReceiptRelativeReference,
   parseExplorerPhysicalCaptureRequest,
   parseExplorerPhysicalEvidenceReceipt,
   validateExplorerPhysicalEvidenceReceipt,
@@ -16,10 +17,11 @@ import {
 import {
   __resetExplorerPhysicalEvidenceDevBridgeForTest,
   acknowledgeExplorerPhysicalEvidence,
+  explorerPhysicalEvidenceArtifactUrl,
   requestExplorerPhysicalEvidence,
   startExplorerPhysicalEvidenceCampaign,
 } from '../dev/e2e/explorerPhysicalEvidenceDevBridge';
-import { sha256Hex } from '../utils/semanticFingerprintV2';
+import { sha256BytesHex } from '../utils/semanticFingerprintV2';
 import {
   __resetDevE2EStateForTest,
   devE2EMarkers,
@@ -27,6 +29,7 @@ import {
   setDevE2EExplorerCaptureAccepted,
   setDevE2EExplorerCaptureError,
   setDevE2EExplorerCaptureRequest,
+  setDevE2EExplorerCaptureStage,
 } from '../dev/e2e/devE2EState';
 
 const REPOSITORY_SHA = '9f28da0d51a62106bc85d12a14868c216de8b96d';
@@ -44,6 +47,74 @@ class MemoryStorage implements DevE2EKeyValueStorage {
   async removeItem(key: string): Promise<void> {
     this.values.delete(key);
   }
+}
+
+class ReceiptWriteFailureStorage extends MemoryStorage {
+  async setItem(key: string, value: string): Promise<void> {
+    if (key === EXPLORER_PHYSICAL_EVIDENCE_STORAGE_KEY &&
+      value.includes('"receipt":{')) {
+      throw new Error('write failed');
+    }
+    await super.setItem(key, value);
+  }
+}
+
+class ReadbackMismatchStorage extends MemoryStorage {
+  private corruptNextRead = false;
+  async setItem(key: string, value: string): Promise<void> {
+    await super.setItem(key, value);
+    if (key === EXPLORER_PHYSICAL_EVIDENCE_STORAGE_KEY &&
+      value.includes('"receipt":{')) this.corruptNextRead = true;
+  }
+  async getItem(key: string): Promise<string | null> {
+    const value = await super.getItem(key);
+    if (!this.corruptNextRead || key !== EXPLORER_PHYSICAL_EVIDENCE_STORAGE_KEY ||
+      !value) return value;
+    this.corruptNextRead = false;
+    const parsed = JSON.parse(value) as { entries: Array<{ receipt: unknown }> };
+    parsed.entries[0].receipt = null;
+    return JSON.stringify(parsed);
+  }
+}
+
+class MemoryArtifacts {
+  readonly values = new Map<string, Uint8Array>();
+  readonly read = async (args: {
+    campaignId: string;
+    relativeReference: string;
+  }): Promise<Uint8Array | null> => this.values.get(
+    `${args.campaignId}/${args.relativeReference}`,
+  ) ?? null;
+
+  put(campaignId: string, relativeReference: string, value: Uint8Array): void {
+    this.values.set(`${campaignId}/${relativeReference}`, value);
+  }
+
+  installPhysicalFiles(evidence: ExplorerPhysicalEvidenceReceiptV1): void {
+    this.put(evidence.campaignId, evidence.screenshot.relativeReference,
+      screenshotBytes(evidence.captureId));
+    this.put(evidence.campaignId, evidence.hierarchy.relativeReference,
+      hierarchyBytes(evidence.captureId));
+  }
+
+  installReceiptFile(evidence: ExplorerPhysicalEvidenceReceiptV1): {
+    relativeReference: string;
+    sha256: string;
+  } {
+    const relativeReference =
+      explorerPhysicalEvidenceReceiptRelativeReference(evidence);
+    const bytes = new TextEncoder().encode(JSON.stringify(evidence));
+    this.put(evidence.campaignId, relativeReference, bytes);
+    return { relativeReference, sha256: sha256BytesHex(bytes) };
+  }
+}
+
+function screenshotBytes(captureId: string): Uint8Array {
+  return new TextEncoder().encode(`screenshot:${captureId}`);
+}
+
+function hierarchyBytes(captureId: string): Uint8Array {
+  return new TextEncoder().encode(`hierarchy:${captureId}`);
 }
 
 function request(args: {
@@ -82,6 +153,8 @@ function receipt(
   captureRequest: ExplorerPhysicalCaptureRequestV1,
   overrides: Partial<ExplorerPhysicalEvidenceReceiptV1> = {},
 ): ExplorerPhysicalEvidenceReceiptV1 {
+  const screenshot = screenshotBytes(captureRequest.captureId);
+  const hierarchy = hierarchyBytes(captureRequest.captureId);
   return {
     schemaVersion: captureRequest.schemaVersion,
     captureId: captureRequest.captureId,
@@ -96,14 +169,14 @@ function receipt(
     expectedSemanticIdentity: captureRequest.expectedSemanticIdentity,
     screenshot: {
       relativeReference: captureRequest.requestedScreenshotRelativePath,
-      sha256: sha256Hex(`screenshot:${captureRequest.captureId}`),
-      byteSize: 100,
+      sha256: sha256BytesHex(screenshot),
+      byteSize: screenshot.byteLength,
       mediaType: 'image/png',
     },
     hierarchy: {
       relativeReference: captureRequest.requestedHierarchyRelativePath,
-      sha256: sha256Hex(`hierarchy:${captureRequest.captureId}`),
-      byteSize: 200,
+      sha256: sha256BytesHex(hierarchy),
+      byteSize: hierarchy.byteLength,
       format: EXPLORER_HIERARCHY_FORMAT,
     },
     capturedIntegratedRepositorySha: REPOSITORY_SHA,
@@ -143,6 +216,44 @@ function expectCode(
     return;
   }
   throw new Error(`expected ${code}`);
+}
+
+async function expectAsyncCode(
+  code: string,
+  run: () => Promise<unknown>,
+): Promise<void> {
+  try {
+    await run();
+  } catch (error) {
+    expect(error instanceof ExplorerPhysicalEvidenceError,
+      `expected physical evidence error, received ${String(error)}`);
+    expect((error as ExplorerPhysicalEvidenceError).reasonCode === code,
+      `expected ${code}, received ${
+        (error as ExplorerPhysicalEvidenceError).reasonCode}`);
+    return;
+  }
+  throw new Error(`expected ${code}`);
+}
+
+function createTestBridge(args: {
+  storage: DevE2EKeyValueStorage;
+  artifacts: MemoryArtifacts;
+  accepted?: string[];
+  errors?: string[];
+  stages?: string[];
+}): ExplorerPhysicalEvidenceBridge {
+  return new ExplorerPhysicalEvidenceBridge({
+    storage: args.storage,
+    readArtifact: args.artifacts.read,
+    integratedRepositorySha: REPOSITORY_SHA,
+    currentClockFingerprint: () => CLOCK,
+    markers: {
+      request: () => {},
+      accepted: (captureId) => args.accepted?.push(captureId),
+      error: (reasonCode) => args.errors?.push(reasonCode),
+      stage: (captureId, stage) => args.stages?.push(`${stage}:${captureId}`),
+    },
+  });
 }
 
 function validate(
@@ -223,18 +334,55 @@ async function main(): Promise<void> {
       }));
   });
 
-  await test('trace, control, observation and reload mismatches fail closed', () => {
+  await test('trace mismatch fails closed', () => {
     const captureRequest = request();
     expectCode(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.TRACE_MISMATCH, () =>
       validate(captureRequest, receipt(captureRequest, { traceId: 'trace-wrong' })));
+  });
+
+  await test('control mismatch fails closed', () => {
+    const captureRequest = request();
     expectCode(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.CONTROL_MISMATCH, () =>
       validate(captureRequest, receipt(captureRequest, { controlId: 'control-wrong' })));
+  });
+
+  await test('observation mismatch fails closed', () => {
+    const captureRequest = request();
     expectCode(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.OBSERVATION_MISMATCH, () =>
       validate(captureRequest, receipt(captureRequest, {
         observationId: 'observation-wrong',
       })));
+  });
+
+  await test('reload-count mismatch fails closed', () => {
+    const captureRequest = request();
     expectCode(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RELOAD_COUNT_MISMATCH, () =>
       validate(captureRequest, receipt(captureRequest, { reloadCount: 1 })));
+  });
+
+  await test('capture, scenario, step and phase identity mismatches fail closed', () => {
+    const captureRequest = request();
+    expectCode(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.CAPTURE_ID_MISMATCH, () =>
+      validate(captureRequest, receipt(captureRequest, {
+        captureId: `explorer-capture-${'0'.repeat(64)}`,
+      })));
+    expectCode(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.SCENARIO_MISMATCH, () =>
+      validate(captureRequest, receipt(captureRequest, {
+        scenarioId: 'smoke-wrong-scenario',
+      })));
+    expectCode(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.STEP_MISMATCH, () =>
+      validate(captureRequest, receipt(captureRequest, {
+        stepId: 'wrong-step',
+      })));
+    expectCode(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.PHASE_MISMATCH, () =>
+      validate(captureRequest, receipt(captureRequest, {
+        capturePhase: 'after-reload',
+        reloadCount: 1,
+      })));
+    expectCode(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.CLOCK_MISMATCH, () =>
+      validate(captureRequest, receipt(captureRequest, {
+        deterministicClockFingerprint: 'clock:wrong',
+      })));
   });
 
   await test('cross-campaign, wrong repository, stale and future receipts fail closed', () => {
@@ -281,11 +429,14 @@ async function main(): Promise<void> {
 
   await test('acknowledgement persists before accepted marker and is idempotent', async () => {
     const storage = new MemoryStorage();
+    const artifacts = new MemoryArtifacts();
     const captureRequest = request();
     const accepted = receipt(captureRequest);
+    artifacts.installPhysicalFiles(accepted);
     const events: string[] = [];
     const bridge = new ExplorerPhysicalEvidenceBridge({
       storage,
+      readArtifact: artifacts.read,
       integratedRepositorySha: REPOSITORY_SHA,
       currentClockFingerprint: () => CLOCK,
       markers: {
@@ -297,6 +448,7 @@ async function main(): Promise<void> {
           events.push(`accepted:${captureId}`);
         },
         error: (reasonCode) => events.push(`error:${reasonCode}`),
+        stage: (captureId, stage) => events.push(`stage:${stage}:${captureId}`),
       },
     });
     await bridge.requestCapture(captureRequest);
@@ -308,15 +460,173 @@ async function main(): Promise<void> {
       'idempotent acknowledgement did not republish accepted marker');
   });
 
+  await test('seed-reset, after-action and after-reload receipt files are acknowledged', async () => {
+    const storage = new MemoryStorage();
+    const artifacts = new MemoryArtifacts();
+    const accepted: string[] = [];
+    const bridge = createTestBridge({ storage, artifacts, accepted });
+    for (const captureRequest of [
+      request({ phase: 'seed-reset' }),
+      request({ phase: 'after-action' }),
+      request({ phase: 'after-reload' }),
+    ]) {
+      const evidence = receipt(captureRequest);
+      artifacts.installPhysicalFiles(evidence);
+      const reference = artifacts.installReceiptFile(evidence);
+      await bridge.requestCapture(captureRequest);
+      const result = await bridge.acknowledgeReference(
+        captureRequest.captureId,
+        reference.relativeReference,
+        reference.sha256,
+      );
+      expect(result.status === 'accepted',
+        `${captureRequest.capturePhase} receipt was not accepted`);
+    }
+    expect(accepted.length === 3, 'not every capture phase published acceptance');
+  });
+
+  await test('receipt references reject absolute paths, traversal, hash mismatch and reuse', async () => {
+    const storage = new MemoryStorage();
+    const artifacts = new MemoryArtifacts();
+    const captureRequest = request();
+    const evidence = receipt(captureRequest);
+    artifacts.installPhysicalFiles(evidence);
+    const reference = artifacts.installReceiptFile(evidence);
+    const bridge = createTestBridge({ storage, artifacts });
+    await bridge.requestCapture(captureRequest);
+    await expectAsyncCode(
+      EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_REFERENCE_INVALID,
+      () => bridge.acknowledgeReference(
+        captureRequest.captureId, '/tmp/receipt.json', reference.sha256,
+      ),
+    );
+    await expectAsyncCode(
+      EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_REFERENCE_INVALID,
+      () => bridge.acknowledgeReference(
+        captureRequest.captureId, '../receipt.json', reference.sha256,
+      ),
+    );
+    await expectAsyncCode(
+      EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_FILE_HASH_MISMATCH,
+      () => bridge.acknowledgeReference(
+        captureRequest.captureId, reference.relativeReference, '0'.repeat(64),
+      ),
+    );
+    const another = request({ stepId: 'second-action', stepOrdinal: 2, reloadCount: 1 });
+    await bridge.requestCapture(another);
+    await expectAsyncCode(
+      EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RECEIPT_REFERENCE_MISMATCH,
+      () => bridge.acknowledgeReference(
+        another.captureId, reference.relativeReference, reference.sha256,
+      ),
+    );
+  });
+
+  await test('physical screenshot and hierarchy bytes must match receipt hashes', async () => {
+    for (const kind of ['screenshot', 'hierarchy'] as const) {
+      const storage = new MemoryStorage();
+      const artifacts = new MemoryArtifacts();
+      const captureRequest = request();
+      const valid = receipt(captureRequest);
+      const invalid = kind === 'screenshot'
+        ? receipt(captureRequest, {
+            screenshot: { ...valid.screenshot, sha256: '0'.repeat(64) },
+          })
+        : receipt(captureRequest, {
+            hierarchy: { ...valid.hierarchy, sha256: '0'.repeat(64) },
+          });
+      artifacts.installPhysicalFiles(invalid);
+      const bridge = createTestBridge({ storage, artifacts });
+      await bridge.requestCapture(captureRequest);
+      await expectAsyncCode(
+        kind === 'screenshot'
+          ? EXPLORER_PHYSICAL_EVIDENCE_FAILURE.SCREENSHOT_HASH_MISMATCH
+          : EXPLORER_PHYSICAL_EVIDENCE_FAILURE.HIERARCHY_HASH_MISMATCH,
+        () => bridge.acknowledge(captureRequest.captureId, invalid),
+      );
+    }
+  });
+
+  await test('missing screenshot or hierarchy fails before persistence', async () => {
+    for (const missing of ['screenshot', 'hierarchy'] as const) {
+      const storage = new MemoryStorage();
+      const artifacts = new MemoryArtifacts();
+      const captureRequest = request();
+      const evidence = receipt(captureRequest);
+      if (missing !== 'screenshot') {
+        artifacts.put(evidence.campaignId, evidence.screenshot.relativeReference,
+          screenshotBytes(evidence.captureId));
+      }
+      if (missing !== 'hierarchy') {
+        artifacts.put(evidence.campaignId, evidence.hierarchy.relativeReference,
+          hierarchyBytes(evidence.captureId));
+      }
+      const bridge = createTestBridge({ storage, artifacts });
+      await bridge.requestCapture(captureRequest);
+      await expectAsyncCode(
+        EXPLORER_PHYSICAL_EVIDENCE_FAILURE.MISSING_FILE,
+        () => bridge.acknowledge(captureRequest.captureId, evidence),
+      );
+      expect(!(storage.values.get(EXPLORER_PHYSICAL_EVIDENCE_STORAGE_KEY) ?? '')
+        .includes('"receipt":{'), `${missing} absence persisted a receipt`);
+    }
+  });
+
+  await test('persistence failure and readback mismatch publish no accepted marker', async () => {
+    for (const storage of [
+      new ReceiptWriteFailureStorage(),
+      new ReadbackMismatchStorage(),
+    ]) {
+      const artifacts = new MemoryArtifacts();
+      const captureRequest = request();
+      const evidence = receipt(captureRequest);
+      artifacts.installPhysicalFiles(evidence);
+      const accepted: string[] = [];
+      const bridge = createTestBridge({ storage, artifacts, accepted });
+      await bridge.requestCapture(captureRequest);
+      await expectAsyncCode(
+        storage instanceof ReceiptWriteFailureStorage
+          ? EXPLORER_PHYSICAL_EVIDENCE_FAILURE.PERSISTENCE_FAILED
+          : EXPLORER_PHYSICAL_EVIDENCE_FAILURE.READBACK_MISMATCH,
+        () => bridge.acknowledge(captureRequest.captureId, evidence),
+      );
+      expect(accepted.length === 0, 'failed durability published acceptance');
+    }
+  });
+
+  await test('conflicting duplicate fails closed while identical duplicate is idempotent', async () => {
+    const storage = new MemoryStorage();
+    const artifacts = new MemoryArtifacts();
+    const captureRequest = request();
+    const evidence = receipt(captureRequest);
+    artifacts.installPhysicalFiles(evidence);
+    const bridge = createTestBridge({ storage, artifacts });
+    await bridge.requestCapture(captureRequest);
+    await bridge.acknowledge(captureRequest.captureId, evidence);
+    expect((await bridge.acknowledge(captureRequest.captureId, evidence)).status ===
+      'already-accepted', 'identical duplicate was not idempotent');
+    await expectAsyncCode(
+      EXPLORER_PHYSICAL_EVIDENCE_FAILURE.DUPLICATE_RECEIPT,
+      () => bridge.acknowledge(captureRequest.captureId, {
+        ...evidence,
+        screenshot: { ...evidence.screenshot, sha256: '0'.repeat(64) },
+      }),
+    );
+  });
+
   await test('one receipt cannot satisfy another pending capture', async () => {
     const storage = new MemoryStorage();
+    const artifacts = new MemoryArtifacts();
     const first = request();
     const second = request({ stepId: 'second-action', stepOrdinal: 2, reloadCount: 1 });
     const bridge = new ExplorerPhysicalEvidenceBridge({
       storage,
+      readArtifact: artifacts.read,
       integratedRepositorySha: REPOSITORY_SHA,
       currentClockFingerprint: () => CLOCK,
-      markers: { request: () => {}, accepted: () => {}, error: () => {} },
+      markers: {
+        request: () => {}, accepted: () => {}, error: () => {}, stage: () => {},
+      },
     });
     await bridge.requestCapture(first);
     await bridge.requestCapture(second);
@@ -333,32 +643,103 @@ async function main(): Promise<void> {
 
   await test('cold reload restores pending and accepted evidence markers', async () => {
     const storage = new MemoryStorage();
+    const artifacts = new MemoryArtifacts();
     const pending = request();
     const acceptedRequest = request({ phase: 'after-reload' });
     const first = new ExplorerPhysicalEvidenceBridge({
       storage,
+      readArtifact: artifacts.read,
       integratedRepositorySha: REPOSITORY_SHA,
       currentClockFingerprint: () => CLOCK,
-      markers: { request: () => {}, accepted: () => {}, error: () => {} },
+      markers: {
+        request: () => {}, accepted: () => {}, error: () => {}, stage: () => {},
+      },
     });
     await first.requestCapture(pending);
     await first.requestCapture(acceptedRequest);
-    await first.acknowledge(acceptedRequest.captureId, receipt(acceptedRequest));
+    const acceptedEvidence = receipt(acceptedRequest);
+    artifacts.installPhysicalFiles(acceptedEvidence);
+    await first.acknowledge(acceptedRequest.captureId, acceptedEvidence);
     const restored: string[] = [];
     const cold = new ExplorerPhysicalEvidenceBridge({
       storage,
+      readArtifact: artifacts.read,
       integratedRepositorySha: REPOSITORY_SHA,
       currentClockFingerprint: () => CLOCK,
       markers: {
         request: (captureId) => restored.push(`request:${captureId}`),
         accepted: (captureId) => restored.push(`accepted:${captureId}`),
         error: () => {},
+        stage: () => {},
       },
     });
     await cold.restore();
     expect(restored.includes(`request:${pending.captureId}`) &&
       restored.includes(`accepted:${acceptedRequest.captureId}`),
     'cold restore omitted evidence state');
+  });
+
+  await test('state republish exposes exact marker across React remount and cold reload', async () => {
+    __resetDevE2EStateForTest();
+    const storage = new MemoryStorage();
+    const artifacts = new MemoryArtifacts();
+    const captureRequest = request({ phase: 'seed-reset' });
+    const evidence = receipt(captureRequest);
+    artifacts.installPhysicalFiles(evidence);
+    const reference = artifacts.installReceiptFile(evidence);
+    const bridge = new ExplorerPhysicalEvidenceBridge({
+      storage,
+      readArtifact: artifacts.read,
+      integratedRepositorySha: REPOSITORY_SHA,
+      currentClockFingerprint: () => CLOCK,
+      markers: {
+        request: setDevE2EExplorerCaptureRequest,
+        accepted: setDevE2EExplorerCaptureAccepted,
+        error: setDevE2EExplorerCaptureError,
+        stage: setDevE2EExplorerCaptureStage,
+      },
+    });
+    setDevE2EExplorerCaptureStage(captureRequest.captureId, 'route-received');
+    await bridge.requestCapture(captureRequest);
+    await bridge.acknowledgeReference(
+      captureRequest.captureId,
+      reference.relativeReference,
+      reference.sha256,
+    );
+    const marker = `e2e-explorer-capture-accepted-${captureRequest.captureId}`;
+    const firstRender = devE2EMarkers(getDevE2EStateSnapshot());
+    const remountRender = devE2EMarkers(getDevE2EStateSnapshot());
+    expect(firstRender.includes(marker) && remountRender.includes(marker),
+      'React remount lost the accepted marker');
+    for (const stage of [
+      'route-received',
+      'receipt-parsed',
+      'pending-request-matched',
+      'validation-succeeded',
+      'persistence-succeeded',
+      'readback-succeeded',
+      'accepted-marker-published',
+    ]) {
+      expect(firstRender.includes(
+        `e2e-explorer-capture-stage-${stage}-${captureRequest.captureId}`,
+      ), `missing lifecycle stage ${stage}`);
+    }
+    __resetDevE2EStateForTest();
+    const cold = new ExplorerPhysicalEvidenceBridge({
+      storage,
+      readArtifact: artifacts.read,
+      integratedRepositorySha: REPOSITORY_SHA,
+      currentClockFingerprint: () => CLOCK,
+      markers: {
+        request: setDevE2EExplorerCaptureRequest,
+        accepted: setDevE2EExplorerCaptureAccepted,
+        error: setDevE2EExplorerCaptureError,
+        stage: setDevE2EExplorerCaptureStage,
+      },
+    });
+    await cold.restore();
+    expect(devE2EMarkers(getDevE2EStateSnapshot()).includes(marker),
+      'cold reload lost the accepted marker');
   });
 
   await test('deterministic reset/action/reload file names are exact', () => {
@@ -378,6 +759,17 @@ async function main(): Promise<void> {
         'smoke-paths/02-move-session-after-action.accessibility.json' &&
       reload.screenshot === 'smoke-paths/02-move-session-after-reload.png',
     'physical evidence filenames drifted');
+    expect(explorerPhysicalEvidenceArtifactUrl({
+      e2eMetroUrl: 'http://127.0.0.1:8082',
+      campaignId: CAMPAIGN_ID,
+      relativeReference:
+        'smoke-paths/physical-evidence-receipt-explorer-capture-' +
+        `${'0'.repeat(64)}.json`,
+    }) === 'http://127.0.0.1:8082/__dev_e2e__/explorer-physical-evidence/' +
+      `${CAMPAIGN_ID}/smoke-paths%2F` +
+      'physical-evidence-receipt-explorer-capture-' +
+      `${'0'.repeat(64)}.json`,
+    'app-to-Metro artifact URL was not the literal query-free path');
   });
 
   await test('request, accepted and fail-closed error markers are exact', () => {
@@ -388,6 +780,7 @@ async function main(): Promise<void> {
       `e2e-explorer-capture-request-${captureRequest.captureId}`,
     ), 'capture request marker missing');
     setDevE2EExplorerCaptureAccepted(captureRequest.captureId);
+    setDevE2EExplorerCaptureStage(captureRequest.captureId, 'readback-succeeded');
     setDevE2EExplorerCaptureError(
       EXPLORER_PHYSICAL_EVIDENCE_FAILURE.TRACE_MISMATCH,
     );
@@ -399,6 +792,8 @@ async function main(): Promise<void> {
         EXPLORER_PHYSICAL_EVIDENCE_FAILURE.TRACE_MISMATCH}`,
     ) && !markers.includes(
       `e2e-explorer-capture-request-${captureRequest.captureId}`,
+    ) && markers.includes(
+      `e2e-explorer-capture-stage-readback-succeeded-${captureRequest.captureId}`,
     ), 'accepted/error markers or pending marker lifecycle changed');
   });
 
@@ -412,7 +807,9 @@ async function main(): Promise<void> {
     }) === false, 'release campaign route was accepted');
     expect(await acknowledgeExplorerPhysicalEvidence(
       request().captureId,
-      encodeURIComponent(JSON.stringify(receipt(request()))),
+      'smoke-physical-evidence/physical-evidence-receipt-explorer-capture-' +
+        `${'0'.repeat(64)}.json`,
+      '0'.repeat(64),
       false,
     ) === false, 'release acknowledgement route was accepted');
     try {

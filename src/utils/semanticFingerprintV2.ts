@@ -91,8 +91,8 @@ const SHA256_CONSTANTS = [
 ] as const;
 
 /** Pure synchronous SHA-256 so the same contract works in Expo and Node. */
-export function sha256Hex(value: string): string {
-  const message = utf8Bytes(value);
+export function sha256BytesHex(value: readonly number[] | Uint8Array): string {
+  const message = Array.from(value);
   const bitLengthHigh = Math.floor((message.length * 8) / 0x100000000);
   const bitLengthLow = (message.length * 8) >>> 0;
   message.push(0x80);
@@ -149,6 +149,10 @@ export function sha256Hex(value: string): string {
     hash[7] = (hash[7] + h) >>> 0;
   }
   return hash.map((word) => word.toString(16).padStart(8, '0')).join('');
+}
+
+export function sha256Hex(value: string): string {
+  return sha256BytesHex(utf8Bytes(value));
 }
 
 export type SemanticFingerprintV2 = `${typeof SEMANTIC_FINGERPRINT_CONTRACT_V2}:${string}`;

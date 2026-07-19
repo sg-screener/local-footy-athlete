@@ -4,7 +4,7 @@ import {
   EXPLORER_PHYSICAL_EVIDENCE_FAILURE,
   ExplorerPhysicalEvidenceBridge,
   ExplorerPhysicalEvidenceError,
-  decodeExplorerPhysicalEvidenceReceipt,
+  type ExplorerPhysicalEvidenceArtifactReader,
   type ExplorerPhysicalCaptureRequestV1,
   type ExplorerPhysicalEvidenceReceiptV1,
 } from './explorerPhysicalEvidence';
@@ -12,6 +12,7 @@ import {
   setDevE2EExplorerCaptureAccepted,
   setDevE2EExplorerCaptureError,
   setDevE2EExplorerCaptureRequest,
+  setDevE2EExplorerCaptureStage,
 } from './devE2EState';
 import {
   acceptExplorerCampaignBootstrap,
@@ -25,12 +26,18 @@ declare const __DEV__: boolean | undefined;
 export interface ExplorerPhysicalEvidenceCampaignIdentity {
   readonly campaignId: string;
   readonly integratedRepositorySha: string;
+  readonly e2eMetroUrl: string;
 }
 
 let active: {
   identity: ExplorerPhysicalEvidenceCampaignIdentity;
   bridge: ExplorerPhysicalEvidenceBridge;
 } | null = null;
+const pendingCaptureWaits = new Map<string, {
+  promise: Promise<ExplorerPhysicalEvidenceReceiptV1>;
+  resolve: (receipt: ExplorerPhysicalEvidenceReceiptV1) => void;
+  reject: (error: unknown) => void;
+}>();
 
 function available(explicit?: boolean): boolean {
   if (explicit !== undefined) return explicit;
@@ -45,12 +52,46 @@ function defaultStorage(): DevE2EKeyValueStorage {
   return module.default ?? module;
 }
 
+export function explorerPhysicalEvidenceArtifactUrl(args: {
+  e2eMetroUrl: string;
+  campaignId: string;
+  relativeReference: string;
+}): string {
+  // Keep this literal and query-free. iOS URL delivery changed the query
+  // representation before the strict Metro boundary saw it. Two encoded path
+  // segments preserve the validated campaign and relative-file identities.
+  return `${args.e2eMetroUrl}/__dev_e2e__/explorer-physical-evidence/` +
+    `${encodeURIComponent(args.campaignId)}/` +
+    encodeURIComponent(args.relativeReference);
+}
+
+function metroArtifactReader(
+  e2eMetroUrl: string,
+): ExplorerPhysicalEvidenceArtifactReader {
+  return async ({ campaignId, relativeReference }) => {
+    const url = explorerPhysicalEvidenceArtifactUrl({
+      e2eMetroUrl,
+      campaignId,
+      relativeReference,
+    });
+    const response = await fetch(url, { cache: 'no-store' });
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      throw new Error(`explorer_physical_evidence_read_failed:${response.status}`);
+    }
+    return new Uint8Array(await response.arrayBuffer());
+  };
+}
+
 function createBridge(
   identity: ExplorerPhysicalEvidenceCampaignIdentity,
   storage: DevE2EKeyValueStorage,
+  readArtifact: ExplorerPhysicalEvidenceArtifactReader =
+    metroArtifactReader(identity.e2eMetroUrl),
 ): ExplorerPhysicalEvidenceBridge {
   return new ExplorerPhysicalEvidenceBridge({
     storage,
+    readArtifact,
     integratedRepositorySha: identity.integratedRepositorySha,
     currentClockFingerprint: () => {
       const clock = readActiveDevE2EClockReceipt();
@@ -66,6 +107,7 @@ function createBridge(
       request: setDevE2EExplorerCaptureRequest,
       accepted: setDevE2EExplorerCaptureAccepted,
       error: setDevE2EExplorerCaptureError,
+      stage: setDevE2EExplorerCaptureStage,
     },
   });
 }
@@ -76,6 +118,7 @@ export async function startExplorerPhysicalEvidenceCampaign(args: {
   e2eMetroUrl: string;
   isDev?: boolean;
   storage?: DevE2EKeyValueStorage;
+  readArtifact?: ExplorerPhysicalEvidenceArtifactReader;
 }): Promise<boolean> {
   if (!available(args.isDev)) {
     setDevE2EExplorerCaptureError(EXPLORER_PHYSICAL_EVIDENCE_FAILURE.RELEASE_BUILD);
@@ -97,8 +140,9 @@ export async function startExplorerPhysicalEvidenceCampaign(args: {
   const identity = {
     campaignId: bootstrap.campaignId,
     integratedRepositorySha: bootstrap.integratedRepositorySha,
+    e2eMetroUrl: bootstrap.e2eMetroUrl,
   };
-  const bridge = createBridge(identity, storage);
+  const bridge = createBridge(identity, storage, args.readArtifact);
   active = { identity, bridge };
   await bridge.restore();
   return true;
@@ -121,6 +165,7 @@ export async function restoreExplorerPhysicalEvidenceCampaign(args: {
   const identity = {
     campaignId: bootstrap.campaignId,
     integratedRepositorySha: bootstrap.integratedRepositorySha,
+    e2eMetroUrl: bootstrap.e2eMetroUrl,
   };
   const bridge = createBridge(identity, storage);
   active = { identity, bridge };
@@ -144,32 +189,40 @@ export async function requestExplorerPhysicalEvidence(
   }
   const bridge = active.bridge;
   await bridge.requestCapture(request);
-  // Runtime advancement pauses on this promise until the external deep-link
-  // acknowledgement persists the exact matching receipt.
-  return new Promise<ExplorerPhysicalEvidenceReceiptV1>((resolve, reject) => {
-    let stopped = false;
-    const poll = async () => {
-      if (stopped) return;
-      try {
-        const receipt = await bridge.readAccepted(request.captureId);
-        if (receipt) {
-          stopped = true;
-          resolve(receipt);
-          return;
-        }
-        setTimeout(() => void poll(), 20);
-      } catch (error) {
-        stopped = true;
-        reject(error);
-      }
-    };
-    void poll();
+  const existing = pendingCaptureWaits.get(request.captureId);
+  if (existing) return existing.promise;
+  let resolveWait!: (receipt: ExplorerPhysicalEvidenceReceiptV1) => void;
+  let rejectWait!: (error: unknown) => void;
+  const promise = new Promise<ExplorerPhysicalEvidenceReceiptV1>(
+    (resolve, reject) => {
+      resolveWait = resolve;
+      rejectWait = reject;
+    },
+  );
+  pendingCaptureWaits.set(request.captureId, {
+    promise,
+    resolve: resolveWait,
+    reject: rejectWait,
   });
+  try {
+    const accepted = await bridge.readAccepted(request.captureId);
+    if (accepted) {
+      resolveWait(accepted);
+      pendingCaptureWaits.delete(request.captureId);
+    }
+  } catch (error) {
+    pendingCaptureWaits.delete(request.captureId);
+    throw error;
+  }
+  // Only the bridge completion below resolves this wait, after durable
+  // readback and accepted-marker publication.
+  return promise;
 }
 
 export async function acknowledgeExplorerPhysicalEvidence(
   captureId: string,
-  encodedReceipt: string,
+  receiptFileReference: string,
+  receiptSha256: string,
   isDev?: boolean,
 ): Promise<boolean> {
   if (!available(isDev)) {
@@ -182,11 +235,23 @@ export async function acknowledgeExplorerPhysicalEvidence(
     );
     return false;
   }
-  const receipt = decodeExplorerPhysicalEvidenceReceipt(encodedReceipt);
-  await active.bridge.acknowledge(captureId, receipt);
-  return true;
+  try {
+    const result = await active.bridge.acknowledgeReference(
+      captureId,
+      receiptFileReference,
+      receiptSha256,
+    );
+    pendingCaptureWaits.get(captureId)?.resolve(result.receipt);
+    pendingCaptureWaits.delete(captureId);
+    return true;
+  } catch (error) {
+    pendingCaptureWaits.get(captureId)?.reject(error);
+    pendingCaptureWaits.delete(captureId);
+    throw error;
+  }
 }
 
 export function __resetExplorerPhysicalEvidenceDevBridgeForTest(): void {
   active = null;
+  pendingCaptureWaits.clear();
 }

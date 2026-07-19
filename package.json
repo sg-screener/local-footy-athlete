@@ -91,6 +91,7 @@
     "test:explorer-live-wiring": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLiveWiringTests.ts",
     "test:explorer-oracles": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerOracleEvaluatorTests.ts",
     "test:explorer-scenario-artifacts": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerScenarioArtifactBundleTests.ts",
+    "test:explorer-physical-evidence-acknowledgement": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerPhysicalEvidenceTests.ts",
     "test:explorer-physical-evidence": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerPhysicalEvidenceTests.ts",
     "test:explorer-live-runner": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLiveRunnerTests.ts",
     "test:explorer-launch-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/explorerLaunchOwnershipTests.ts",

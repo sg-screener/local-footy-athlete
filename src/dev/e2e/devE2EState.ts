@@ -1,5 +1,6 @@
 import type { AcknowledgedExplorerNativeLaunchDiagnosticReceiptV1 } from
   './explorerNativeLaunchDiagnostic';
+import type { ExplorerPhysicalEvidenceStage } from './explorerPhysicalEvidence';
 import {
   explorerBuildShaDiagnosticMarker,
   explorerMetroDiagnosticMarker,
@@ -53,6 +54,7 @@ const explorerCaptureRequestMarkers = new Set<string>();
 const explorerCaptureRequestEnvelopes = new Map<string, string>();
 const explorerCaptureAcceptedMarkers = new Set<string>();
 const explorerCaptureErrorMarkers = new Set<string>();
+const explorerCaptureStageMarkers = new Set<string>();
 const explorerArtifactAcceptedMarkers = new Set<string>();
 const explorerMetroDiagnosticMarkers = new Set<string>();
 const explorerLaunchErrorMarkers = new Set<string>();
@@ -104,6 +106,7 @@ export function setDevE2EEntryReady(): void {
   explorerCaptureRequestEnvelopes.clear();
   explorerCaptureAcceptedMarkers.clear();
   explorerCaptureErrorMarkers.clear();
+  explorerCaptureStageMarkers.clear();
   explorerArtifactAcceptedMarkers.clear();
   explorerMetroDiagnosticMarkers.clear();
   explorerLaunchErrorMarkers.clear();
@@ -324,6 +327,17 @@ export function setDevE2EExplorerCaptureError(reasonCode: string): void {
   notifySubscribers();
 }
 
+export function setDevE2EExplorerCaptureStage(
+  captureId: string,
+  stage: ExplorerPhysicalEvidenceStage,
+): void {
+  const marker = `e2e-explorer-capture-stage-${stage}-${captureId}`;
+  if (!captureId || explorerCaptureStageMarkers.has(marker)) return;
+  explorerCaptureStageMarkers.add(marker);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
 export function setDevE2EExplorerArtifactAccepted(scenarioId: string): void {
   if (!scenarioId || explorerArtifactAcceptedMarkers.has(scenarioId)) return;
   explorerArtifactAcceptedMarkers.add(scenarioId);
@@ -398,6 +412,8 @@ export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
     ...Array.from(explorerCaptureErrorMarkers)
       .sort()
       .map((reasonCode) => `e2e-explorer-capture-error-${reasonCode}`),
+    ...Array.from(explorerCaptureStageMarkers)
+      .sort(),
     ...Array.from(explorerArtifactAcceptedMarkers)
       .sort()
       .map((scenarioId) => `e2e-explorer-artifact-accepted-${scenarioId}`),

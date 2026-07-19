@@ -185,6 +185,15 @@ every action, and after every cold reload. Runtime advancement pauses until a
 single receipt containing both the PNG and Maestro accessibility-hierarchy
 hashes has been validated and durably acknowledged.
 
+The runner writes that immutable receipt as a file in the campaign directory
+and sends only the capture ID, campaign-relative file reference, and receipt
+SHA-256 through the iOS URL. A development-only Metro middleware exposes files
+strictly below the active campaign root. The bridge re-hashes the receipt,
+PNG, and hierarchy bytes, persists the exact receipt, verifies durable
+readback, republishes state, and only then publishes the correlated accepted
+marker. Absolute paths, traversal, symlink escapes, reused references, and
+conflicting duplicates fail closed.
+
 The app owns request identity, expected scenario/step/phase/trace/control/
 observation identity, deterministic clock identity, receipt validation,
 acknowledgement ordering, and scenario-artifact binding. Maestro owns physical
@@ -208,6 +217,10 @@ code to publish launch diagnostics without any campaign or deep-link identity.
 Only after that launch marker does the runner send the campaign-start link.
 URL ingress is installed before the asynchronous clock/coordinator barrier, so
 an early campaign route is queued once and consumed after readiness.
+Evidence acknowledgements use a second ready-gated ingress lane: the serial
+scenario route is intentionally allowed to await evidence while the receipt
+route resolves it, without allowing later scenario/control routes to overtake
+campaign ordering.
 The typed launch plan runs the literal `clear-explorer-app-state.yaml` prelude
 only for the initial cold launch; every preservation purpose runs the canonical
 launch flow directly, without an interpolated clear-state value.

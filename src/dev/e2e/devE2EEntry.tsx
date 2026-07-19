@@ -1,6 +1,9 @@
 import React from 'react';
 import { Linking, NativeModules, Text, View } from 'react-native';
-import { parseDevE2EEntryRoute } from './devE2EEntryRoute';
+import {
+  explorerPhysicalEvidenceCaptureIdFromRoute,
+  parseDevE2EEntryRoute,
+} from './devE2EEntryRoute';
 export { parseDevE2EEntryRoute } from './devE2EEntryRoute';
 export type { DevE2EEntryRoute } from './devE2EEntryRoute';
 import {
@@ -9,6 +12,7 @@ import {
   setDevE2EEntryReady,
   setDevE2EExplorerCampaignError,
   setDevE2EExplorerCampaignPending,
+  setDevE2EExplorerCaptureStage,
   setDevE2EExplorerLaunchError,
   setDevE2EExplorerNativeLaunchDiagnostic,
   setDevE2EScenarioError,
@@ -40,6 +44,7 @@ import {
   readActiveExplorerNativeLaunchDiagnostic,
   verifyExplorerNativeLaunchDiagnosticReceipt,
 } from './explorerNativeLaunchDiagnostic';
+import { ExplorerPhysicalEvidenceError } from './explorerPhysicalEvidence';
 import type { DevE2ESeedCoordinator } from './DevE2ESeedCoordinator';
 
 export interface DevE2ELinking {
@@ -85,6 +90,10 @@ function publishDevE2EEntryError(
     setDevE2EExplorerLaunchError(error.reasonCode);
     return;
   }
+  if (error instanceof ExplorerPhysicalEvidenceError) {
+    // The bridge already published its exact fail-closed capture reason.
+    return;
+  }
   const reasonCode = devE2EScenarioReasonCode(error);
   if (reasonCode) {
     setDevE2EScenarioError(reasonCode, error, scenarioId);
@@ -126,6 +135,14 @@ export function installDevE2EEntry(args: {
   const linking = args.linking ?? (Linking as unknown as DevE2ELinking);
   const routeQueue = new DevE2EEntryRouteQueue<
     NonNullable<ReturnType<typeof parseDevE2EEntryRoute>>
+  >();
+  // Evidence acknowledgement must be able to resolve the promise held by an
+  // active scenario route; placing both on one serial queue deadlocks them.
+  const evidenceRouteQueue = new DevE2EEntryRouteQueue<
+    Extract<
+      NonNullable<ReturnType<typeof parseDevE2EEntryRoute>>,
+      { kind: 'explorer_evidence' }
+    >
   >();
   let coordinator: DevE2ESeedCoordinator | null = null;
   setDevE2EEntryReady();
@@ -234,7 +251,8 @@ export function installDevE2EEntry(args: {
         case 'explorer_evidence':
           return await acknowledgeExplorerPhysicalEvidence(
             route.captureId,
-            route.encodedReceipt,
+            route.receiptFileReference,
+            route.receiptSha256,
             isDev,
           );
       }
@@ -248,12 +266,18 @@ export function installDevE2EEntry(args: {
   };
 
   const handleUrl = async (url: string | null | undefined): Promise<boolean> => {
+    const evidenceCaptureId = explorerPhysicalEvidenceCaptureIdFromRoute(url);
+    if (evidenceCaptureId) {
+      setDevE2EExplorerCaptureStage(evidenceCaptureId, 'route-received');
+    }
     const route = parseDevE2EEntryRoute(url);
     if (!route || !url) return false;
     if (route.kind === 'explorer_evidence_start') {
       setDevE2EExplorerCampaignPending(route.campaignId);
     }
-    return routeQueue.enqueue(url, route);
+    return route.kind === 'explorer_evidence'
+      ? evidenceRouteQueue.enqueue(url, route)
+      : routeQueue.enqueue(url, route);
   };
 
   const subscription = linking.addEventListener('url', (event) => {
@@ -276,10 +300,12 @@ export function installDevE2EEntry(args: {
       // Reload validation remains separate from route handling and never
       // calls reset/buildSeed for a preserved checkpoint.
       await coordinator.validateReloadCheckpoint();
+      await evidenceRouteQueue.setReady(processRoute);
       await routeQueue.setReady(processRoute);
     },
     remove: () => {
       subscription.remove();
+      evidenceRouteQueue.clear();
       routeQueue.clear();
       activeInstallation = null;
     },

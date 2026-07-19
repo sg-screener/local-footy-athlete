@@ -3,10 +3,12 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { PassThrough } from 'node:stream';
 import {
   EXPLORER_LIVE_RUNNER_HARD_STOP_MS,
   EXPLORER_LIVE_RUNNER_INFRASTRUCTURE_RETRY_LIMIT,
@@ -28,6 +30,7 @@ import {
   preflightExplorerMetro,
   runWholeScenarioWithInfrastructureRetry,
   writeExplorerCampaignEnvironmentReceipt,
+  writeExplorerPhysicalEvidenceReceiptFile,
 } from '../../scripts/run-explorer-nine-live';
 import {
   EXPLORER_APP_CLEAR_STATE_FLOW,
@@ -43,6 +46,12 @@ import {
 import { EXPLORER_NON_COACH_SMOKE_MANIFESTS } from
   '../dev/e2e/explorerSmokeScenarioManifests';
 import { parseDevE2EEntryRoute } from '../dev/e2e/devE2EEntryRoute';
+
+const {
+  EXPLORER_PHYSICAL_EVIDENCE_ENDPOINT,
+  createExplorerPhysicalEvidenceMetroMiddleware,
+  resolveExplorerPhysicalEvidenceArtifact,
+} = require('../../scripts/explorer-physical-evidence-metro-middleware');
 
 let passed = 0;
 let failed = 0;
@@ -468,14 +477,142 @@ async function main(): Promise<void> {
       });
       expect(JSON.stringify(receipt) === JSON.stringify(second),
         'same files produced different receipts');
-      const url = explorerEvidenceAcknowledgementUrl(receipt);
-      const route = parseDevE2EEntryRoute(url);
+      const acknowledgement = writeExplorerPhysicalEvidenceReceiptFile({
+        receipt,
+        repositoryRoot: root,
+        campaignDirectory,
+      });
+      const url = explorerEvidenceAcknowledgementUrl(acknowledgement);
+      const deliveredUrl = buildExplorerDeepLinkCommand({
+        simulatorId: 'simulator-1',
+        metroUrl: 'http://127.0.0.1:8082',
+        deepLink: url,
+      }).args[3];
+      const route = parseDevE2EEntryRoute(deliveredUrl);
       expect(route?.kind === 'explorer_evidence' &&
-        route.captureId === receipt.captureId,
+        route.captureId === receipt.captureId &&
+        route.receiptFileReference === acknowledgement.receiptFileReference &&
+        route.receiptSha256 === acknowledgement.receiptSha256,
       'acknowledgement URL did not reach the strict route');
+      expect(deliveredUrl.length < 1_024,
+        `file-reference acknowledgement is still fragile (${deliveredUrl.length})`);
+      const receiptPath = join(
+        root, campaignDirectory, acknowledgement.receiptFileReference,
+      );
+      expect(readFileSync(receiptPath, 'utf8') === JSON.stringify(receipt),
+        'runner receipt file did not preserve exact serialized evidence');
+      expect(writeExplorerPhysicalEvidenceReceiptFile({
+        receipt,
+        repositoryRoot: root,
+        campaignDirectory,
+      }).receiptSha256 === acknowledgement.receiptSha256,
+      'identical receipt-file submission was not idempotent');
+      try {
+        writeExplorerPhysicalEvidenceReceiptFile({
+          receipt: {
+            ...receipt,
+            screenshot: { ...receipt.screenshot, sha256: '0'.repeat(64) },
+          },
+          repositoryRoot: root,
+          campaignDirectory,
+        });
+      } catch (error) {
+        expect(error instanceof ExplorerLiveRunnerError &&
+          error.reasonCode === 'physical_evidence_receipt_file_conflict',
+        'conflicting receipt file had the wrong failure');
+        return;
+      }
+      throw new Error('conflicting receipt file overwrote immutable evidence');
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+
+  await test('Metro evidence reader rejects absolute, traversal and outside-campaign files', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'explorer-reader-'));
+    try {
+      const campaignId = 'explorer-nine-9f28da0d51a6';
+      const campaignRoot = join(root, 'artifacts', campaignId);
+      mkdirSync(join(campaignRoot, 'smoke-reader'), { recursive: true });
+      writeFileSync(join(campaignRoot, 'smoke-reader', 'receipt.json'), '{}');
+      const resolved = resolveExplorerPhysicalEvidenceArtifact({
+        repositoryRoot: root,
+        campaignId,
+        relativeReference: 'smoke-reader/receipt.json',
+      });
+      expect(resolved?.endsWith('smoke-reader/receipt.json'),
+        'valid campaign-relative evidence was rejected');
+      const response = new PassThrough() as PassThrough & {
+        statusCode: number;
+        setHeader: (name: string, value: string) => void;
+      };
+      response.setHeader = () => {};
+      const chunks: Buffer[] = [];
+      response.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+      const finished = new Promise<void>((resolveFinished, rejectFinished) => {
+        response.once('finish', resolveFinished);
+        response.once('error', rejectFinished);
+      });
+      createExplorerPhysicalEvidenceMetroMiddleware({
+        repositoryRoot: root,
+        next: () => {
+          throw new Error('valid iOS-normalised evidence path bypassed middleware');
+        },
+      })({
+        method: 'GET',
+        url: `${EXPLORER_PHYSICAL_EVIDENCE_ENDPOINT}/${campaignId}/` +
+          'smoke-reader/receipt.json?nativeCachePolicy=no-store',
+      }, response, () => {});
+      await finished;
+      expect(response.statusCode === 200 &&
+        Buffer.concat(chunks).toString('utf8') === '{}',
+      'iOS-normalised nested receipt path was not served exactly');
+      for (const relativeReference of ['/tmp/receipt.json', '../receipt.json']) {
+        try {
+          resolveExplorerPhysicalEvidenceArtifact({
+            repositoryRoot: root, campaignId, relativeReference,
+          });
+        } catch {
+          continue;
+        }
+        throw new Error(`${relativeReference} escaped the campaign boundary`);
+      }
+      writeFileSync(join(root, 'outside.json'), '{}');
+      symlinkSync(join(root, 'outside.json'), join(campaignRoot, 'smoke-reader', 'link.json'));
+      try {
+        resolveExplorerPhysicalEvidenceArtifact({
+          repositoryRoot: root,
+          campaignId,
+          relativeReference: 'smoke-reader/link.json',
+        });
+      } catch {
+        return;
+      }
+      throw new Error('symlink escaped the campaign boundary');
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  await test('one receipt submission and marker wait own acknowledgement correctness', () => {
+    const runner = readFileSync('scripts/run-explorer-nine-live.ts', 'utf8');
+    const bridge = readFileSync(
+      'src/dev/e2e/explorerPhysicalEvidenceDevBridge.ts', 'utf8');
+    expect((runner.match(/deepLink: explorerEvidenceAcknowledgementUrl/g) ?? [])
+      .length === 1, 'runner submits the same receipt through multiple paths');
+    const submission = runner.indexOf(
+      'deepLink: explorerEvidenceAcknowledgementUrl(acknowledgement)',
+    );
+    const markerWait = runner.indexOf('await waitForHierarchyValue({', submission);
+    expect(submission >= 0 && markerWait > submission &&
+      !/\bsleep\b|setTimeout\s*\(/.test(runner.slice(submission, markerWait)),
+    'arbitrary runner sleep replaced the correlated marker wait');
+    expect(!/setTimeout\s*\(/.test(bridge) &&
+      bridge.includes('pendingCaptureWaits.get(captureId)?.resolve(result.receipt)'),
+    'polling rather than bridge completion owns acknowledgement timing');
+    expect(runner.includes(
+      '`e2e-explorer-capture-accepted-${request.captureId}`',
+    ), 'runner waits for a marker other than the app capture identity');
   });
 
   await test('capture flow uses Maestro screenshot ownership only', () => {

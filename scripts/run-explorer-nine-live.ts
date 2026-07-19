@@ -22,6 +22,7 @@ import {
   EXPLORER_HIERARCHY_FORMAT,
   EXPLORER_PHYSICAL_EVIDENCE_SCHEMA_VERSION,
   explorerCampaignArtifactDirectory,
+  explorerPhysicalEvidenceReceiptRelativeReference,
   parseExplorerPhysicalCaptureRequest,
   validateExplorerPhysicalEvidenceReceipt,
   type ExplorerPhysicalCaptureRequestV1,
@@ -95,8 +96,16 @@ const CAPTURE_ENVELOPE_PATTERN =
 const SCENARIO_ERROR_PATTERN = /e2e-scenario-error-([a-z0-9_-]+)/;
 const CAMPAIGN_ERROR_PATTERN = /e2e-explorer-campaign-error-([a-z0-9-]+)/;
 const LAUNCH_ERROR_PATTERN = /e2e-explorer-launch-error-([a-z0-9-]+)/;
+const CAPTURE_ERROR_PATTERN = /e2e-explorer-capture-error-([a-z0-9_-]+)/;
 
 function throwForScenarioErrorMarker(hierarchy: string): void {
+  const captureReasonCode = CAPTURE_ERROR_PATTERN.exec(hierarchy)?.[1];
+  if (captureReasonCode) {
+    throw new ExplorerLiveRunnerError(
+      'infrastructure',
+      `physical_evidence_${captureReasonCode}`,
+    );
+  }
   const launchReasonCode = LAUNCH_ERROR_PATTERN.exec(hierarchy)?.[1];
   if (launchReasonCode) {
     throw new ExplorerLiveRunnerError(
@@ -405,10 +414,18 @@ export function explorerScenarioRunUrl(args: {
 }
 
 export function explorerEvidenceAcknowledgementUrl(
-  receipt: ExplorerPhysicalEvidenceReceiptV1,
+  acknowledgement: {
+    captureId: string;
+    receiptFileReference: string;
+    receiptSha256: string;
+  },
 ): string {
-  return `localfootyathlete://e2e/explorer/evidence/${receipt.captureId}` +
-    `?receipt=${encodeURIComponent(JSON.stringify(receipt))}`;
+  const url = new URL(
+    `localfootyathlete://e2e/explorer/evidence/${acknowledgement.captureId}`,
+  );
+  url.searchParams.set('receiptFile', acknowledgement.receiptFileReference);
+  url.searchParams.set('receiptSha256', acknowledgement.receiptSha256);
+  return url.toString();
 }
 
 export function extractPendingCaptureRequests(
@@ -577,6 +594,41 @@ export function createEvidenceReceiptFromFiles(args: {
         args.request.deterministicClockFingerprint,
     },
   });
+}
+
+export function writeExplorerPhysicalEvidenceReceiptFile(args: {
+  receipt: ExplorerPhysicalEvidenceReceiptV1;
+  repositoryRoot: string;
+  campaignDirectory: string;
+}): {
+  captureId: string;
+  receiptFileReference: string;
+  receiptSha256: string;
+} {
+  const receiptFileReference =
+    explorerPhysicalEvidenceReceiptRelativeReference(args.receipt);
+  const receiptPath = resolve(
+    args.repositoryRoot,
+    args.campaignDirectory,
+    receiptFileReference,
+  );
+  const serialized = JSON.stringify(args.receipt);
+  if (existsSync(receiptPath)) {
+    if (readFileSync(receiptPath, 'utf8') !== serialized) {
+      throw new ExplorerLiveRunnerError(
+        'infrastructure',
+        'physical_evidence_receipt_file_conflict',
+        args.receipt.captureId,
+      );
+    }
+  } else {
+    writeFileSync(receiptPath, serialized, 'utf8');
+  }
+  return {
+    captureId: args.receipt.captureId,
+    receiptFileReference,
+    receiptSha256: sha256File(receiptPath),
+  };
 }
 
 export function validateScenarioPhysicalEvidenceBundle(args: {
@@ -856,6 +908,11 @@ async function runScenario(args: {
       integratedRepositorySha: args.options.integratedRepositorySha,
     });
     receipts.push(receipt);
+    const acknowledgement = writeExplorerPhysicalEvidenceReceiptFile({
+      receipt,
+      repositoryRoot: args.options.repositoryRoot,
+      campaignDirectory: args.campaignDirectory,
+    });
     writeFileSync(resolve(scenarioDirectory, 'physical-evidence-receipts.json'),
       JSON.stringify({
         schemaVersion: EXPLORER_PHYSICAL_EVIDENCE_SCHEMA_VERSION,
@@ -866,7 +923,7 @@ async function runScenario(args: {
     commandResult(buildExplorerDeepLinkCommand({
       simulatorId: args.options.simulatorId,
       metroUrl: args.options.metroUrl,
-      deepLink: explorerEvidenceAcknowledgementUrl(receipt),
+      deepLink: explorerEvidenceAcknowledgementUrl(acknowledgement),
     }), args.options.repositoryRoot, Math.max(
       1,
       args.hardDeadline - (args.options.nowMs ?? Date.now)(),
