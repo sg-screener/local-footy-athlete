@@ -1,10 +1,14 @@
 import {
   ExplorerActionBridgeError,
   assertExplorerActionExecutable,
-  type ExplorerActionBridge,
   type ExplorerActionClaimReceipt,
   type ExplorerProductionActionReceipt,
 } from './explorerActionBridge';
+import {
+  createExplorerActionIngressRequest,
+  explorerCanonicalTargetIds,
+  type ExplorerActionIngressRequest,
+} from './explorerActionIngress';
 import {
   evaluateExplorerStepEligibility,
   type ExplorerEligibilityWitnessState,
@@ -172,7 +176,7 @@ export interface ExplorerRuntimeActionArtifactInput {
   readonly oracleReceipts: readonly ExplorerOracleEvaluationReceipt[];
 }
 
-export interface ExplorerRuntimeDependencies {
+export interface ExplorerRuntimeCommonDependencies {
   /** Returns raw data; runtime validation and hashing always happen before reset. */
   readonly loadManifest: (scenarioId: string) => unknown | null;
   readonly resetSeedOnce: (seedId: string) => Promise<ExplorerRuntimeSeedResetReceipt>;
@@ -183,11 +187,6 @@ export interface ExplorerRuntimeDependencies {
   readonly publishEligibilityMarker: (
     marker: ExplorerRuntimeEligibilityMarker,
   ) => Promise<void> | void;
-  readonly claimIntendedAction: (
-    marker: ExplorerRuntimeEligibilityMarker,
-    claim: ExplorerActionClaimReceipt,
-  ) => Promise<void> | void;
-  readonly actionBridge: ExplorerActionBridge;
   readonly waitForReactRender: (args: {
     readonly manifest: ExplorerScenarioContract;
     readonly step: ExplorerScenarioStep;
@@ -229,6 +228,32 @@ export interface ExplorerRuntimeDependencies {
   };
   readonly nowMs?: () => number;
 }
+
+/** Pure/injected tests may execute a deterministic adapter directly. */
+export interface ExplorerSyntheticRuntimeDependencies
+  extends ExplorerRuntimeCommonDependencies {
+  readonly actionExecutionMode: 'synthetic-direct-adapter';
+  readonly executeProductionAction: (
+    action: Exclude<ExplorerScenarioStep['action'], { readonly type: 'coach.message' }>,
+    claim: ExplorerActionClaimReceipt,
+  ) => Promise<ExplorerProductionActionReceipt>;
+}
+
+/** The live host persists and waits; it has no production execution capability. */
+export interface ExplorerLiveRuntimeDependencies
+  extends ExplorerRuntimeCommonDependencies {
+  readonly actionExecutionMode: 'live-external-action-ingress';
+  readonly persistActionIngressRequest: (
+    request: ExplorerActionIngressRequest,
+  ) => Promise<void>;
+  readonly waitForExternalActionIngress: (
+    request: ExplorerActionIngressRequest,
+  ) => Promise<ExplorerProductionActionReceipt>;
+}
+
+export type ExplorerRuntimeDependencies =
+  | ExplorerSyntheticRuntimeDependencies
+  | ExplorerLiveRuntimeDependencies;
 
 function artifactFailureReason(error: unknown): ExplorerRuntimeReasonCode {
   return error instanceof ExplorerScenarioArtifactValidationError && (
@@ -574,15 +599,33 @@ export async function runExplorerScenario(
     }
     const marker = markerFor(manifest, step, eligibility);
     const claim: ExplorerActionClaimReceipt = {
+      campaignId: deps.physicalEvidence.campaignId,
       scenarioId: manifest.scenarioId,
       stepId: step.stepId,
       intendedActionSemanticHash: marker.actionSemanticHash,
       expectedAcceptedRevision: witnessState.acceptedRevision,
       priorActionTraceId,
     };
+    let ingressRequest: ExplorerActionIngressRequest | null = null;
     try {
-      await deps.publishEligibilityMarker(marker);
-      await deps.claimIntendedAction(marker, claim);
+      if (deps.actionExecutionMode === 'live-external-action-ingress') {
+        ingressRequest = createExplorerActionIngressRequest({
+          campaignId: deps.physicalEvidence.campaignId,
+          scenarioId: manifest.scenarioId,
+          stepId: step.stepId,
+          actionSemanticHash: marker.actionSemanticHash,
+          expectedControlId: step.controlTestId,
+          expectedCanonicalTargetIds: explorerCanonicalTargetIds(step.action),
+          expectedAcceptedRevision: witnessState.acceptedRevision,
+          priorActionTraceId,
+          deterministicClockFingerprint:
+            deps.physicalEvidence.deterministicClockFingerprint(),
+        });
+        await deps.persistActionIngressRequest(ingressRequest);
+        await deps.publishEligibilityMarker(marker);
+      } else {
+        await deps.publishEligibilityMarker(marker);
+      }
     } catch (error) {
       return blocked({
         manifest,
@@ -597,7 +640,12 @@ export async function runExplorerScenario(
     let productionReceipt: ExplorerProductionActionReceipt;
     try {
       assertExplorerActionExecutable(step.action);
-      productionReceipt = await deps.actionBridge.execute(step.action, { claim });
+      if (deps.actionExecutionMode === 'live-external-action-ingress') {
+        if (!ingressRequest) throw new Error('action_ingress_request_missing');
+        productionReceipt = await deps.waitForExternalActionIngress(ingressRequest);
+      } else {
+        productionReceipt = await deps.executeProductionAction(step.action, claim);
+      }
     } catch (error) {
       return blocked({
         manifest,

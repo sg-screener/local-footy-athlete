@@ -359,6 +359,7 @@ function runtimeDeps(
   const underlyingBridge = createExplorerActionBridge(adapters);
   const deps: ExplorerRuntimeDependencies & { counts: Record<string, number> } = {
     counts,
+    actionExecutionMode: 'synthetic-direct-adapter',
     loadManifest: (scenarioId) => scenarioId === manifest.scenarioId ? manifest : null,
     resetSeedOnce: async (seedId) => {
       counts.reset += 1;
@@ -384,17 +385,13 @@ function runtimeDeps(
         'eligibility marker identity drifted',
       );
     },
-    claimIntendedAction: (_marker, claim) => {
+    executeProductionAction: async (action, claim) => {
       counts.claim += 1;
       expect(claim.priorActionTraceId === (counts.claim === 1
         ? null
         : `trace-readiness.set-${counts.claim - 1}`), 'claim prior trace mismatch');
-    },
-    actionBridge: {
-      execute: async (action, context) => {
-        counts.action += 1;
-        return underlyingBridge.execute(action, context);
-      },
+      counts.action += 1;
+      return underlyingBridge.execute(action, { claim });
     },
     waitForReactRender: async ({ step, receipt }) => ({
       traceV2RootId: receipt.traceV2RootId,

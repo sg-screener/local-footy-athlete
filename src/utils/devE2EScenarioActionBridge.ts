@@ -3,6 +3,7 @@ export interface DevE2EScenarioActionBridgeInput {
   actionType: string;
   controlId?: string;
   sourceSurface?: string;
+  canonicalTargetIds?: readonly string[];
 }
 
 export interface DevE2EScenarioActionBridgeClaim {
@@ -10,6 +11,7 @@ export interface DevE2EScenarioActionBridgeClaim {
   seedId: string;
   scenarioStepId: string;
   priorActionTraceId: string | null;
+  explorerActionIngressClaimId?: string;
 }
 
 interface DevE2EScenarioActionBridge {

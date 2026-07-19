@@ -1,6 +1,6 @@
 import type { DevE2ESeedCoordinator } from './DevE2ESeedCoordinator';
 import {
-  createExplorerProductionScenarioRunner,
+  createExplorerLiveScenarioRunner,
   runAllExplorerSmokeScenarios,
   type ExplorerCampaignResult,
 } from './explorerScenarioRunner';
@@ -44,13 +44,13 @@ function liveHostDependencies(args: {
   });
 }
 
-/** Real dev entry caller: it always constructs the production action registry. */
+/** Real dev entry caller: it can only wait for UI-owned action ingress. */
 export async function runLiveExplorerScenario(args: {
   coordinator: DevE2ESeedCoordinator;
   scenarioId: string;
 }): Promise<ExplorerRuntimeResult> {
   assertLiveHostAvailable();
-  const runner = createExplorerProductionScenarioRunner({
+  const runner = createExplorerLiveScenarioRunner({
     hostDependencies: liveHostDependencies(args),
   });
   const result = await runner.run(args.scenarioId);

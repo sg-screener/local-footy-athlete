@@ -114,6 +114,7 @@ export interface ExplorerProductionActionReceipt<
 }
 
 export interface ExplorerActionClaimReceipt {
+  readonly campaignId?: string;
   readonly scenarioId: string;
   readonly stepId: string;
   readonly intendedActionSemanticHash: ExplorerActionSemanticHash;

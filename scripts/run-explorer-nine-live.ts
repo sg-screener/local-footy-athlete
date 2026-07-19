@@ -385,6 +385,27 @@ export function buildMaestroScreenshotCommand(args: {
   };
 }
 
+export function buildMaestroActionIngressTapCommand(args: {
+  simulatorId: string;
+  controlId: string;
+  maestroBinary?: string;
+}): ExplorerLiveCommand {
+  if (!args.controlId) {
+    throw new ExplorerLiveRunnerError('product', 'action_ingress_control_missing');
+  }
+  return {
+    command: args.maestroBinary ?? 'maestro',
+    args: [
+      '--no-ansi',
+      `--device=${args.simulatorId}`,
+      'test',
+      '.maestro/common/tap-explorer-action-ingress.yaml',
+      '-e',
+      `CONTROL_ID=${args.controlId}`,
+    ],
+  };
+}
+
 export function explorerEvidenceCampaignStartUrl(args: {
   campaignId: string;
   integratedRepositorySha: string;
@@ -846,21 +867,6 @@ async function runScenario(args: {
         ? EXPLORER_NON_COACH_SMOKE_MANIFESTS.find((manifest) =>
             manifest.scenarioId === args.plan.scenarioId)?.steps[request.reloadCount]
         : undefined;
-    if (request.capturePhase === 'seed-reset' ||
-      (request.capturePhase === 'after-reload' && nextStep)) {
-      if (!nextStep ||
-        !hierarchy.includes(
-          `e2e-next-action-eligible-${args.plan.scenarioId}-${nextStep.stepId}`,
-        ) || !hierarchy.includes(
-          `e2e-explorer-next-action-eligible-${args.plan.scenarioId}-${nextStep.stepId}`,
-        )) {
-        throw new ExplorerLiveRunnerError(
-          'product',
-          'eligibility_markers_missing',
-          nextStep?.stepId ?? args.plan.scenarioId,
-        );
-      }
-    }
     if (request.capturePhase === 'after-reload' && !nextStep &&
       !hierarchy.includes(`e2e-scenario-complete-${args.plan.scenarioId}`)) {
       throw new ExplorerLiveRunnerError(
@@ -935,6 +941,42 @@ async function runScenario(args: {
         `e2e-explorer-capture-accepted-${request.captureId}`,
       ),
     });
+    if ((request.capturePhase === 'seed-reset' ||
+      request.capturePhase === 'after-reload') && nextStep) {
+      await waitForHierarchyValue({
+        options: args.options,
+        deadline: args.hardDeadline,
+        predicate: (value) => value.includes(
+          `e2e-next-action-eligible-${args.plan.scenarioId}-${nextStep.stepId}`,
+        ) && value.includes(
+          `e2e-explorer-next-action-eligible-${args.plan.scenarioId}-${nextStep.stepId}`,
+        ) && value.includes(
+          `e2e-explorer-action-awaiting-${args.plan.scenarioId}-${nextStep.stepId}`,
+        ),
+      });
+      commandResult(buildMaestroActionIngressTapCommand({
+        simulatorId: args.options.simulatorId,
+        controlId: nextStep.controlTestId,
+        maestroBinary: args.options.maestroBinary,
+      }), args.options.repositoryRoot, Math.max(
+        1,
+        args.hardDeadline - (args.options.nowMs ?? Date.now)(),
+      ));
+      await waitForHierarchyValue({
+        options: args.options,
+        deadline: args.hardDeadline,
+        predicate: (value) => value.includes(
+          `e2e-explorer-action-claimed-${args.plan.scenarioId}-${nextStep.stepId}`,
+        ),
+      });
+      await waitForHierarchyValue({
+        options: args.options,
+        deadline: args.hardDeadline,
+        predicate: (value) => value.includes(
+          `e2e-explorer-action-receipt-${args.plan.scenarioId}-${nextStep.stepId}`,
+        ),
+      });
+    }
   }
   await waitForHierarchyValue({
     options: args.options,

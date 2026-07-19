@@ -1,0 +1,5 @@
+appId: com.localfootyathlete.app
+name: Tap exact Explorer action ingress
+---
+- tapOn:
+    id: "${CONTROL_ID}"

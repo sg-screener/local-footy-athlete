@@ -25,8 +25,10 @@ import {
 } from './explorerRenderReceiptBindings';
 import {
   runExplorerScenario,
+  type ExplorerLiveRuntimeDependencies,
   type ExplorerRuntimeDependencies,
   type ExplorerRuntimeResult,
+  type ExplorerSyntheticRuntimeDependencies,
 } from './explorerRuntime';
 import type { ExplorerExecutableAction } from './explorerActionBridge';
 
@@ -51,13 +53,24 @@ export interface ExplorerScenarioPreflightReceipt {
   };
 }
 
-type ExplorerScenarioHostDependencies = Omit<
-  ExplorerRuntimeDependencies,
-  'loadManifest' | 'actionBridge' | 'waitForReactRender'
+type ExplorerSyntheticScenarioHostDependencies = Omit<
+  ExplorerSyntheticRuntimeDependencies,
+  'loadManifest' | 'actionExecutionMode' | 'executeProductionAction' |
+  'waitForReactRender'
+>;
+
+type ExplorerLiveScenarioHostDependencies = Omit<
+  ExplorerLiveRuntimeDependencies,
+  'loadManifest' | 'waitForReactRender'
 >;
 
 export interface ExplorerProductionScenarioRunner {
   readonly productionBindings: ExplorerProductionBindings;
+  readonly preflightReceipts: readonly ExplorerScenarioPreflightReceipt[];
+  readonly run: (scenarioId: string) => Promise<ExplorerRuntimeResult>;
+}
+
+export interface ExplorerLiveScenarioRunner {
   readonly preflightReceipts: readonly ExplorerScenarioPreflightReceipt[];
   readonly run: (scenarioId: string) => Promise<ExplorerRuntimeResult>;
 }
@@ -180,7 +193,7 @@ export function preflightExplorerSmokeScenarios(): readonly ExplorerScenarioPref
  * their existing runtime/session implementations and are injected here.
  */
 export function createExplorerProductionScenarioRunner(args: {
-  readonly hostDependencies: ExplorerScenarioHostDependencies;
+  readonly hostDependencies: ExplorerSyntheticScenarioHostDependencies;
   readonly bindingDependencies?: Partial<ExplorerProductionBindingDependencies>;
   readonly renderTimeoutMs?: number;
   readonly requireExternalArtifacts?: boolean;
@@ -205,7 +218,30 @@ export function createExplorerProductionScenarioRunner(args: {
     run: (scenarioId) => runExplorerScenario(scenarioId, {
       ...args.hostDependencies,
       loadManifest: resolveExplorerSmokeScenarioManifest,
-      actionBridge: productionBindings.actionBridge,
+      actionExecutionMode: 'synthetic-direct-adapter',
+      executeProductionAction: (action, claim) =>
+        productionBindings.actionBridge.execute(action, { claim }),
+      waitForReactRender,
+    }),
+  };
+}
+
+/** Live execution can only wait for a UI-owned ingress and correlated receipt. */
+export function createExplorerLiveScenarioRunner(args: {
+  readonly hostDependencies: ExplorerLiveScenarioHostDependencies;
+  readonly renderTimeoutMs?: number;
+}): ExplorerLiveScenarioRunner {
+  const waitForReactRender: ExplorerRuntimeDependencies['waitForReactRender'] =
+    async ({ receipt }): Promise<ExplorerCorrelatedRenderReceipt | null> =>
+      await waitForExplorerRenderReceipt({
+        receipt,
+        timeoutMs: args.renderTimeoutMs,
+      });
+  return {
+    preflightReceipts: preflightExplorerSmokeScenarios(),
+    run: (scenarioId) => runExplorerScenario(scenarioId, {
+      ...args.hostDependencies,
+      loadManifest: resolveExplorerSmokeScenarioManifest,
       waitForReactRender,
     }),
   };
@@ -236,7 +272,7 @@ const RETRYABLE_INFRASTRUCTURE_REASONS = new Set<string>([
 
 /** Runs the exact registry order with one whole-scenario infrastructure retry. */
 export async function runAllExplorerSmokeScenarios(args: {
-  readonly runner: Pick<ExplorerProductionScenarioRunner, 'run'>;
+  readonly runner: Pick<ExplorerProductionScenarioRunner | ExplorerLiveScenarioRunner, 'run'>;
   readonly nowMs?: () => number;
 }): Promise<ExplorerCampaignResult> {
   const nowMs = args.nowMs ?? Date.now;

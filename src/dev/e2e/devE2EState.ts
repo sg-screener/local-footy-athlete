@@ -61,6 +61,10 @@ const explorerLaunchErrorMarkers = new Set<string>();
 const explorerCampaignPendingMarkers = new Set<string>();
 const explorerCampaignAcceptedMarkers = new Set<string>();
 const explorerCampaignErrorMarkers = new Set<string>();
+const explorerActionAwaitingMarkers = new Set<string>();
+const explorerActionClaimedMarkers = new Set<string>();
+const explorerActionReceiptMarkers = new Set<string>();
+const explorerActionErrorMarkers = new Set<string>();
 
 function notifySubscribers(): void {
   for (const subscriber of Array.from(subscribers)) {
@@ -113,6 +117,10 @@ export function setDevE2EEntryReady(): void {
   explorerCampaignPendingMarkers.clear();
   explorerCampaignAcceptedMarkers.clear();
   explorerCampaignErrorMarkers.clear();
+  explorerActionAwaitingMarkers.clear();
+  explorerActionClaimedMarkers.clear();
+  explorerActionReceiptMarkers.clear();
+  explorerActionErrorMarkers.clear();
   publish({
     phase: 'entry_ready',
     seedId: null,
@@ -177,6 +185,10 @@ export function setDevE2EScenarioReady(args: {
   eligibilityStatus: 'eligible' | 'complete' | 'blocked';
   eligibilityReasonCode: string;
 }): void {
+  explorerActionAwaitingMarkers.clear();
+  explorerActionClaimedMarkers.clear();
+  explorerActionReceiptMarkers.clear();
+  explorerActionErrorMarkers.clear();
   publish({
     phase: 'seed_ready',
     seedId: args.seedId,
@@ -395,6 +407,50 @@ export function setDevE2EExplorerCampaignError(reasonCode: string): void {
   notifySubscribers();
 }
 
+function actionStepMarker(scenarioId: string, stepId: string): string | null {
+  return scenarioId && stepId ? `${scenarioId}-${stepId}` : null;
+}
+
+export function setDevE2EExplorerActionAwaiting(
+  scenarioId: string,
+  stepId: string,
+): void {
+  const marker = actionStepMarker(scenarioId, stepId);
+  if (!marker || explorerActionAwaitingMarkers.has(marker)) return;
+  explorerActionAwaitingMarkers.add(marker);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
+export function setDevE2EExplorerActionClaimed(
+  scenarioId: string,
+  stepId: string,
+): void {
+  const marker = actionStepMarker(scenarioId, stepId);
+  if (!marker || explorerActionClaimedMarkers.has(marker)) return;
+  explorerActionClaimedMarkers.add(marker);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
+export function setDevE2EExplorerActionReceipt(
+  scenarioId: string,
+  stepId: string,
+): void {
+  const marker = actionStepMarker(scenarioId, stepId);
+  if (!marker || explorerActionReceiptMarkers.has(marker)) return;
+  explorerActionReceiptMarkers.add(marker);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
+export function setDevE2EExplorerActionError(reasonCode: string): void {
+  if (!reasonCode || explorerActionErrorMarkers.has(reasonCode)) return;
+  explorerActionErrorMarkers.add(reasonCode);
+  snapshot = Object.freeze({ ...snapshot, revision: snapshot.revision + 1 });
+  notifySubscribers();
+}
+
 export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
   const markers = [
     'e2e-entry-ready',
@@ -430,6 +486,18 @@ export function devE2EMarkers(state: DevE2EStateSnapshot): string[] {
     ...Array.from(explorerCampaignErrorMarkers)
       .sort()
       .map((reasonCode) => `e2e-explorer-campaign-error-${reasonCode}`),
+    ...Array.from(explorerActionAwaitingMarkers)
+      .sort()
+      .map((identity) => `e2e-explorer-action-awaiting-${identity}`),
+    ...Array.from(explorerActionClaimedMarkers)
+      .sort()
+      .map((identity) => `e2e-explorer-action-claimed-${identity}`),
+    ...Array.from(explorerActionReceiptMarkers)
+      .sort()
+      .map((identity) => `e2e-explorer-action-receipt-${identity}`),
+    ...Array.from(explorerActionErrorMarkers)
+      .sort()
+      .map((reasonCode) => `e2e-explorer-action-error-${reasonCode}`),
   ];
   if (!state.scenarioId) {
     switch (state.phase) {
@@ -503,6 +571,10 @@ export function __resetDevE2EStateForTest(): void {
   explorerCampaignPendingMarkers.clear();
   explorerCampaignAcceptedMarkers.clear();
   explorerCampaignErrorMarkers.clear();
+  explorerActionAwaitingMarkers.clear();
+  explorerActionClaimedMarkers.clear();
+  explorerActionReceiptMarkers.clear();
+  explorerActionErrorMarkers.clear();
   snapshot = INITIAL;
   notifySubscribers();
 }

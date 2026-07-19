@@ -78,6 +78,7 @@ export interface AthleteActionTraceContext extends AthleteActionTraceTokenV2 {
   actionType: AthleteActionType;
   startedAt: string;
   route?: string;
+  campaignId?: string;
   scenarioRunId?: string;
   scenarioStepId?: string;
   seedId?: string;
@@ -97,6 +98,7 @@ export interface AthleteActionTraceContext extends AthleteActionTraceTokenV2 {
   adjustmentId?: string | null;
   injuryEpisodeId?: string | null;
   controlId?: string;
+  canonicalTargetIds?: readonly string[];
 }
 
 export interface AthleteActionDiagnosticEvent {
@@ -222,6 +224,7 @@ export function beginAthleteActionTrace(
     seedId: string;
     scenarioStepId: string;
     priorActionTraceId: string | null;
+    explorerActionIngressClaimId?: string;
   } | null = null;
   if (!productionBuild()) {
     scenarioClaim = claimRegisteredDevE2EScenarioAction({
@@ -229,9 +232,21 @@ export function beginAthleteActionTrace(
       actionType: input.actionType,
       controlId: input.controlId,
       sourceSurface: input.route,
+      canonicalTargetIds: input.canonicalTargetIds ?? [
+        ...(input.workoutId || input.planEntryId
+          ? [input.workoutId ?? input.planEntryId!]
+          : []),
+        ...(input.componentId ? [input.componentId] : []),
+        ...(input.fixtureId || input.practiceMatchId
+          ? [input.fixtureId ?? input.practiceMatchId!]
+          : []),
+        ...(input.adjustmentId ? [input.adjustmentId] : []),
+        ...(input.injuryEpisodeId ? [input.injuryEpisodeId] : []),
+      ],
     });
   }
   const token = athleteActionTraceCoordinator.startRoot({
+    campaignId: input.campaignId,
     source: input.source,
     actionType: options.rootActionType ?? input.actionType,
     route: input.route,

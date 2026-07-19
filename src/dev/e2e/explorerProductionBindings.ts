@@ -103,6 +103,7 @@ import {
   type ExplorerRenderExpectation,
 } from './explorerRenderReceiptBindings';
 import { deriveFutureProgressionRenderTarget } from '../../utils/sessionFeedbackRenderWitness';
+import { explorerCanonicalTargetIds } from './explorerActionIngress';
 
 export const EXPLORER_BOUND_ACTION_TYPES = [
   'fixture.add',
@@ -975,6 +976,7 @@ function traceFor(
     source: 'tap',
     actionType: diagnosticActionType(action),
     route: `explorer_production_binding:${action.type}`,
+    campaignId: context.claim.campaignId,
     scenarioRunId: manifest.scenarioId,
     scenarioStepId: step.stepId,
     seedId: manifest.seedId,
@@ -997,6 +999,7 @@ function traceFor(
       ? action.target.injuryEpisodeId
       : null,
     adjustmentId: target.exactAdjustmentId ?? null,
+    canonicalTargetIds: explorerCanonicalTargetIds(action),
   }, undefined, {
     forceRoot: true,
     rootActionType: action.type,

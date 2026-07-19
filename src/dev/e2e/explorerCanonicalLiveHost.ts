@@ -26,9 +26,7 @@ import type { DevE2EScenarioSessionRecord } from './devE2EScenarioSession';
 import {
   hasDevE2EMarker,
 } from './devE2EState';
-import type {
-  ExplorerActionClaimReceipt,
-} from './explorerActionBridge';
+import { explorerLiveActionIngressGate } from './explorerActionIngress';
 import {
   readLiveExplorerEligibilityWitnessState,
 } from './explorerLiveEligibility';
@@ -46,8 +44,8 @@ import { readExplorerCorrelatedRenderReceipt } from './explorerRenderReceiptBind
 import type {
   ExplorerRuntimeActionArtifactInput,
   ExplorerRuntimeArtifactAssemblyV1,
-  ExplorerRuntimeDependencies,
   ExplorerRuntimeEligibilityMarker,
+  ExplorerLiveRuntimeDependencies,
 } from './explorerRuntime';
 import {
   collectExplorerScenarioArtifactBundleV1,
@@ -470,8 +468,8 @@ export function createCanonicalExplorerLiveHostDependencies(args: {
   campaignId: string;
   integratedRepositorySha: string;
 }): Omit<
-  ExplorerRuntimeDependencies,
-  'loadManifest' | 'actionBridge' | 'waitForReactRender'
+  ExplorerLiveRuntimeDependencies,
+  'loadManifest' | 'waitForReactRender'
 > {
   const state: CanonicalLiveHostState = {
     resetCount: 0,
@@ -495,6 +493,7 @@ export function createCanonicalExplorerLiveHostDependencies(args: {
   };
 
   return {
+    actionExecutionMode: 'live-external-action-ingress',
     physicalEvidence: {
       campaignId: args.campaignId,
       integratedRepositorySha: args.integratedRepositorySha,
@@ -510,6 +509,7 @@ export function createCanonicalExplorerLiveHostDependencies(args: {
       if (state.resetCount !== 1) {
         throw new Error(`explorer_live_reseed_forbidden:${args.scenarioId}`);
       }
+      await explorerLiveActionIngressGate().clear();
       const reset = await args.coordinator.resetScenario(args.scenarioId);
       if (!reset) throw new Error(`explorer_live_reset_refused:${args.scenarioId}`);
       const session = await durableSessionFor({ scenarioId: args.scenarioId });
@@ -573,23 +573,12 @@ export function createCanonicalExplorerLiveHostDependencies(args: {
         throw new Error(`explorer_live_eligibility_marker_missing:${marker.stepId}`);
       }
     },
-    claimIntendedAction: async (
-      marker: ExplorerRuntimeEligibilityMarker,
-      claim: ExplorerActionClaimReceipt,
-    ) => {
-      const session = await durableSessionFor({
-        scenarioId: marker.scenarioId,
-        stepId: marker.stepId,
-      });
-      if (claim.intendedActionSemanticHash !== marker.actionSemanticHash ||
-        claim.expectedAcceptedRevision !==
-          useProgramStore.getState().acceptedMaterialContext.revision ||
-        claim.priorActionTraceId !== session.priorActionTraceId ||
-        session.activeActionTraceId !== null) {
-        throw new Error(`explorer_live_action_claim_mismatch:${marker.stepId}`);
-      }
-      // The canonical TraceV2 entry claims and registers the scenario action
-      // exactly once when explorerProductionBindings invokes the owner.
+    persistActionIngressRequest: async (request) => {
+      await explorerLiveActionIngressGate().open(request);
+    },
+    waitForExternalActionIngress: async (request) => {
+      const receipt = await explorerLiveActionIngressGate().waitForReceipt(request);
+      return receipt.productionReceipt;
     },
     captureOracleContext: async ({
       manifest,

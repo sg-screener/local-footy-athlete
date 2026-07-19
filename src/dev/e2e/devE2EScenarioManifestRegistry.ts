@@ -39,7 +39,6 @@ export const EXPLORER_DEV_E2E_SCENARIO_MANIFESTS: readonly DevE2EScenarioManifes
           actionType: DIAGNOSTIC_ACTION_TYPE[step.action.type],
           sources: ['tap'],
           controlId: step.controlTestId,
-          sourceSurface: `explorer_production_binding:${step.action.type}`,
         },
         eligibilityWitnessIds: step.preconditions.map((predicate) =>
           `eligibility:${predicate.type}:${predicate.predicateId}`),

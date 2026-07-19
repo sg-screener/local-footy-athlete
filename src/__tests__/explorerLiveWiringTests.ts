@@ -84,6 +84,7 @@ async function main() {
       'readEligibilityWitnessState', 'captureOracleContext',
       'checkpointScenarioStep', 'coldReloadScenarioSessionV2',
       'assembleActionEvidence', 'assembleScenarioArtifact',
+      'persistActionIngressRequest', 'waitForExternalActionIngress',
     ]) {
       expect(host.includes(`${seam}:`), `${seam} is not installed by the canonical host`);
     }
@@ -126,6 +127,41 @@ async function main() {
     expect(actions.every((actionType) =>
       Object.prototype.hasOwnProperty.call(EXPLORER_PRODUCTION_OWNER_BY_ACTION, actionType)),
     'a live action bypasses explorerProductionBindings');
+  });
+
+  await test('live host cannot invoke production bindings directly', () => {
+    const live = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerLiveScenarioRuntime.ts'), 'utf8');
+    const host = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerCanonicalLiveHost.ts'), 'utf8');
+    const runtime = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerRuntime.ts'), 'utf8');
+    const uiIngress = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/ExplorerActionIngressControl.tsx'), 'utf8');
+    expect(live.includes('createExplorerLiveScenarioRunner') &&
+      !live.includes('createExplorerProductionScenarioRunner') &&
+      !live.includes('createExplorerProductionBindings') &&
+      !live.includes('executeProductionAction'),
+    'live runtime retained a direct production capability');
+    expect(host.includes('waitForExternalActionIngress:') &&
+      !host.includes('executeProductionAction') &&
+      !host.includes('actionBridge.execute'),
+    'canonical live host can invoke a production binding');
+    expect(runtime.includes("actionExecutionMode: 'synthetic-direct-adapter'") &&
+      runtime.includes("actionExecutionMode: 'live-external-action-ingress'"),
+    'live and synthetic action execution are not distinct types');
+    expect(uiIngress.includes('onPress={onPress}') &&
+      uiIngress.includes('createExplorerProductionBindings()') &&
+      uiIngress.includes('gate.claimAndStart({'),
+    'the tapped UI ingress does not own production action start');
+  });
+
+  await test('action receipt correlation never selects a newest receipt', () => {
+    const ingress = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerActionIngress.ts'), 'utf8');
+    expect(ingress.includes('productionReceipt.traceV2RootId !== claim.actionTraceId') &&
+      !/newest|mostRecent|most_recent|\.at\(-1\)/.test(ingress),
+    'action ingress correlates by recency instead of exact claim/trace identity');
   });
 
   await test('all manifest controls and render witnesses are semantic identity selectors', () => {
@@ -229,11 +265,16 @@ async function main() {
       process.cwd(), 'src/dev/e2e/explorerLiveScenarioRuntime.ts'), 'utf8');
     const physical = readFileSync(resolve(
       process.cwd(), 'src/dev/e2e/explorerPhysicalEvidenceDevBridge.ts'), 'utf8');
+    const ingress = readFileSync(resolve(
+      process.cwd(), 'src/dev/e2e/explorerActionIngress.ts'), 'utf8');
     expect(live.includes('explorer_live_host_release_build_rejected') &&
       live.includes('assertLiveHostAvailable();'),
     'direct Explorer live execution lacks a release refusal');
     expect(/requestExplorerPhysicalEvidence[\s\S]*if \(!available\(\)\)/.test(physical),
       'capture requests lack a release refusal');
+    expect(ingress.includes('RELEASE_BUILD_REJECTED') &&
+      ingress.includes('if (!available())'),
+    'action ingress is exposed in release builds');
   });
 
   console.log(`\nExplorer live wiring: ${passed} passed, ${failed} failed`);

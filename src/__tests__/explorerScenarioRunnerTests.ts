@@ -9,7 +9,7 @@ import {
 } from '../dev/e2e/explorerSmokeScenarioManifests';
 import {
   EXPLORER_RUNTIME_REASON,
-  type ExplorerRuntimeDependencies,
+  type ExplorerSyntheticRuntimeDependencies,
 } from '../dev/e2e/explorerRuntime';
 
 let passed = 0;
@@ -103,8 +103,9 @@ async function main(): Promise<void> {
         throw new Error('must not reset unknown scenario');
       },
     } as unknown as Omit<
-      ExplorerRuntimeDependencies,
-      'loadManifest' | 'actionBridge' | 'waitForReactRender'
+      ExplorerSyntheticRuntimeDependencies,
+      'loadManifest' | 'actionExecutionMode' | 'executeProductionAction' |
+      'waitForReactRender'
     >;
     const runner = createExplorerProductionScenarioRunner({ hostDependencies });
     const result = await runner.run('unknown-explorer-scenario');

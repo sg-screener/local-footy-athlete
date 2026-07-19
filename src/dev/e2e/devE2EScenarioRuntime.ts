@@ -14,6 +14,8 @@ import {
   setDevE2EScenarioActionActive,
   setDevE2EScenarioError,
 } from './devE2EState';
+import { useProgramStore } from '../../store/programStore';
+import { explorerLiveActionIngressGate } from './explorerActionIngress';
 
 declare const __DEV__: boolean | undefined;
 
@@ -28,6 +30,7 @@ export interface DevE2EScenarioActionInput {
   actionType: string;
   controlId?: string;
   sourceSurface?: string;
+  canonicalTargetIds?: readonly string[];
 }
 
 export interface DevE2EScenarioActionClaim {
@@ -35,6 +38,7 @@ export interface DevE2EScenarioActionClaim {
   seedId: string;
   scenarioStepId: string;
   priorActionTraceId: string | null;
+  explorerActionIngressClaimId?: string;
 }
 
 let active: ActiveScenarioRuntime | null = null;
@@ -131,12 +135,29 @@ export function claimDevE2EScenarioAction(
       `Dev E2E scenario action does not match step ${step.stepId}.`,
     );
   }
+  const ingressRequest = explorerLiveActionIngressGate().readActiveRequest();
+  let explorerActionIngressClaimId: string | undefined;
+  if (ingressRequest && ingressRequest.scenarioId === active.session.scenarioId &&
+    ingressRequest.stepId === step.stepId) {
+    const ingressClaim = explorerLiveActionIngressGate().claimAndStart({
+      campaignId: ingressRequest.campaignId,
+      scenarioId: active.session.scenarioId,
+      stepId: step.stepId,
+      actionSemanticHash: ingressRequest.actionSemanticHash,
+      controlId: input.controlId ?? '',
+      canonicalTargetIds: input.canonicalTargetIds ?? [],
+      acceptedRevision:
+        useProgramStore.getState().acceptedMaterialContext.revision,
+    }, () => undefined);
+    explorerActionIngressClaimId = ingressClaim.claimId;
+  }
   active.claimedStepId = step.stepId;
   return {
     scenarioId: active.session.scenarioId,
     seedId: active.session.seedId,
     scenarioStepId: step.stepId,
     priorActionTraceId: active.session.priorActionTraceId,
+    ...(explorerActionIngressClaimId ? { explorerActionIngressClaimId } : {}),
   };
 }
 
@@ -154,6 +175,12 @@ export function registerDevE2EScenarioActionTrace(
     );
   }
   active.session.activeActionTraceId = traceId;
+  if (claim.explorerActionIngressClaimId) {
+    explorerLiveActionIngressGate().registerTrace(
+      claim.explorerActionIngressClaimId,
+      traceId,
+    );
+  }
   setDevE2EScenarioActionActive(active.session.scenarioId, claim.scenarioStepId);
 }
 

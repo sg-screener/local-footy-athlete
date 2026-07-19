@@ -23,6 +23,7 @@ import { restoreDevE2EClockBeforeHydration } from './devE2EClockPersistence';
 import { DevE2EEntryRouteQueue } from './devE2EEntryRouteQueue';
 import { devE2EScenarioReasonCode } from './devE2EScenarioProtocol';
 import { ExplorerProductionRenderReceiptObserver } from './ExplorerProductionRenderReceiptObserver';
+import { ExplorerActionIngressControl } from './ExplorerActionIngressControl';
 import {
   EXPLORER_CAMPAIGN_BOOTSTRAP_REASON,
   ExplorerCampaignBootstrapError,
@@ -45,6 +46,7 @@ import {
   verifyExplorerNativeLaunchDiagnosticReceipt,
 } from './explorerNativeLaunchDiagnostic';
 import { ExplorerPhysicalEvidenceError } from './explorerPhysicalEvidence';
+import { restoreExplorerActionIngress } from './explorerActionIngress';
 import type { DevE2ESeedCoordinator } from './DevE2ESeedCoordinator';
 
 export interface DevE2ELinking {
@@ -297,6 +299,7 @@ export function installDevE2EEntry(args: {
         require('./defaultDevE2ESeedCoordinator');
       coordinator = createDefaultDevE2ESeedCoordinator(true);
       await restoreExplorerPhysicalEvidenceCampaign({ isDev });
+      await restoreExplorerActionIngress();
       // Reload validation remains separate from route handling and never
       // calls reset/buildSeed for a preserved checkpoint.
       await coordinator.validateReloadCheckpoint();
@@ -334,6 +337,7 @@ export function DevE2EStatusMarkers(): React.ReactElement {
   return (
     <>
       <ExplorerProductionRenderReceiptObserver />
+      <ExplorerActionIngressControl />
       {devE2EMarkers(snapshot).map((marker) => (
         <View
           key={marker}

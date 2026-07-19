@@ -17,6 +17,7 @@ import {
   assertExplicitMetroUrl,
   assertOneSelectedSimulator,
   assertReservedMetroUrl,
+  buildMaestroActionIngressTapCommand,
   buildMaestroHierarchyCommand,
   buildMaestroScreenshotCommand,
   compileExplorerNineCapturePlan,
@@ -80,6 +81,10 @@ async function main(): Promise<void> {
       screenshotRelativePath:
         'artifacts/explorer-nine-abcdef/smoke-one/seed-initial.png',
     });
+    const actionTap = buildMaestroActionIngressTapCommand({
+      simulatorId: 'simulator-1',
+      controlId: 'session-delete-action-session-one',
+    });
     expect(hierarchy.args.includes('--device=simulator-1'),
       'hierarchy command omitted selected simulator');
     expect(screenshot.args.includes('--device=simulator-1') &&
@@ -87,6 +92,9 @@ async function main(): Promise<void> {
       screenshot.args.includes(
         'SCREENSHOT_PATH=artifacts/explorer-nine-abcdef/smoke-one/seed-initial'),
     'screenshot command omitted simulator, Metro, or exact output path');
+    expect(actionTap.args.includes('--device=simulator-1') &&
+      actionTap.args.includes('CONTROL_ID=session-delete-action-session-one'),
+    'action tap command omitted simulator or exact manifest control');
     expect(assertExplicitMetroUrl('http://127.0.0.1:8082').port === '8082',
       'explicit Metro URL was rejected');
   });
@@ -620,6 +628,32 @@ async function main(): Promise<void> {
       '.maestro/common/capture-explorer-evidence.yaml', 'utf8');
     expect(flow.includes('takeScreenshot:') && flow.includes('${SCREENSHOT_PATH}') &&
       !flow.includes('simctl io'), 'capture flow bypassed Maestro screenshot ownership');
+  });
+
+  await test('runner taps only after awaiting and waits for claim then receipt', () => {
+    const runner = readFileSync('scripts/run-explorer-nine-live.ts', 'utf8');
+    const accepted = runner.indexOf('e2e-explorer-capture-accepted-${request.captureId}');
+    const awaiting = runner.indexOf('e2e-explorer-action-awaiting-${args.plan.scenarioId}');
+    const tap = runner.indexOf('buildMaestroActionIngressTapCommand({');
+    const claimed = runner.indexOf('e2e-explorer-action-claimed-${args.plan.scenarioId}');
+    const receipt = runner.indexOf('e2e-explorer-action-receipt-${args.plan.scenarioId}');
+    expect(accepted >= 0 && awaiting > accepted && tap > awaiting &&
+      claimed > tap && receipt > claimed,
+    'live runner action-ingress order drifted');
+    const actionWindow = runner.slice(awaiting, receipt);
+    expect(!actionWindow.includes('executeProductionAction') &&
+      !actionWindow.includes('actionBridge.execute'),
+    'runner called a production binding directly');
+    expect(!/setTimeout\s*\(/.test(actionWindow),
+      'an arbitrary sleep owns action-ingress correctness');
+  });
+
+  await test('action ingress flow taps the typed semantic control only', () => {
+    const flow = readFileSync(
+      '.maestro/common/tap-explorer-action-ingress.yaml', 'utf8');
+    expect(flow.includes('tapOn:') && flow.includes('id: "${CONTROL_ID}"') &&
+      !flow.includes('runScript') && !flow.includes('openLink'),
+    'action ingress flow bypasses the manifest control');
   });
 
   console.log(`\nExplorer live runner: ${passed} passed, ${failed} failed`);

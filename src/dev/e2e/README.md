@@ -250,6 +250,21 @@ and forwards it once to Maestro. All nested reset/reload launches inherit the
 same value, so no Dev Menu action or manual step is needed between flows. The
 port is intentionally supplied by the caller and is never fixed in source.
 
+## Explicit Explorer Action Ingress Gate
+
+The live Explorer runtime evaluates eligibility, persists one exact pending
+request, publishes the protocol and Explorer eligibility markers, and waits.
+It has no production action adapter. A Maestro tap reaches the dev-only UI
+ingress control, which atomically claims the request before constructing the
+canonical production binding. The resulting receipt is accepted only when its
+action hash, control, canonical targets, accepted revision, owner, durable
+result, and exact TraceV2 root agree with that claim.
+
+`live-external-action-ingress` and `synthetic-direct-adapter` are distinct
+runtime dependency types. The latter exists for injected tests only. Pending
+live state is durable across a cold reload, while an explicit scenario reset
+clears it without invoking an athlete action.
+
 ## AthleteActionTraceV2
 
 `AthleteActionTraceCoordinator` is the sole diagnostic authority for one
