@@ -703,7 +703,6 @@ export function commitRebuiltProgram(
     reason: options.reason ?? 'week_rebuild:block',
     program: proposal,
     markedDays: options.markedDays,
-    programAlreadyAccepted: true,
     validateWeekStarts: [
       ...program.microcycles.map((microcycle) => microcycle.startDate.slice(0, 10)),
       ...Object.keys(proposal.weekScopedOverlays ?? {}),

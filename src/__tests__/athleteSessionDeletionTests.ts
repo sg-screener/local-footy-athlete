@@ -25,7 +25,7 @@ import type {
   Workout,
 } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
-import { useProgramStore, canonicaliseHydratedState } from '../store/programStore';
+import { useProgramStore, canonicaliseAcceptedStateCandidate } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
@@ -441,8 +441,7 @@ function seedExactInSeasonStrengthWeek(): OnboardingData {
 
 function reloadAcceptedState(athlete: OnboardingData): void {
   const persisted = clone(useProgramStore.getState());
-  const hydrated = canonicaliseHydratedState(persisted, {
-    programAlreadyAccepted: true,
+  const hydrated = canonicaliseAcceptedStateCandidate(persisted, {
     profile: athlete,
     markedDays: persisted.acceptedMaterialContext.markedDays,
     validateWeekStarts: [WEEK],
@@ -817,8 +816,7 @@ run('regression', '10 reload, rebuild, Repeat Week and rollover do not resurrect
   const seeded = seedExactSundayRegression();
   deleteWorkout({ date: SUNDAY, workout: seeded.sunday });
   const persisted = clone(useProgramStore.getState());
-  const hydrated = canonicaliseHydratedState(persisted, {
-    programAlreadyAccepted: true,
+  const hydrated = canonicaliseAcceptedStateCandidate(persisted, {
     profile: seeded.athlete,
     markedDays: persisted.acceptedMaterialContext.markedDays,
     validateWeekStarts: [WEEK],

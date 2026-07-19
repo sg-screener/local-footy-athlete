@@ -310,7 +310,6 @@ export async function commitProfileProgramTransaction(
         acceptedCompositionBase: base,
         acceptedProfileSnapshot,
         validateWeekStarts: weeks,
-        programAlreadyAccepted: true,
         skipConstraintProjection: true,
       });
       committedBaseFingerprint = semanticFingerprint(

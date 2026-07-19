@@ -19,7 +19,7 @@ import type { DayOfWeek, OnboardingData, TrainingProgram, Workout } from '../typ
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { rebuildLocalWeek, type WeekRebuildResult } from '../utils/weekRebuild';
 import { executeCoachCommand } from '../utils/coachCommandExecutor';
-import { canonicaliseHydratedState, useProgramStore } from '../store/programStore';
+import { canonicaliseAcceptedStateCandidate, useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { useCalendarStore, type CalendarDayType } from '../store/calendarStore';
 import { useReadinessStore } from '../store/readinessStore';
@@ -245,8 +245,7 @@ function horizonSemantic(): string {
 function simulateAcceptedReload(): void {
   const state = useProgramStore.getState();
   const persisted = JSON.parse(JSON.stringify(state));
-  const canonical = canonicaliseHydratedState(persisted, {
-    programAlreadyAccepted: true,
+  const canonical = canonicaliseAcceptedStateCandidate(persisted, {
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,
     validateWeekStarts: [WEEK, NEXT_WEEK],

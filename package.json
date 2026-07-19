@@ -146,6 +146,7 @@
     "test:explorer-lifecycle-ui": "sucrase-node src/__tests__/explorerLifecycleWitnessUITests.ts",
     "test:feedback-render-witness": "sucrase-node src/__tests__/sessionFeedbackRenderWitnessTests.ts",
     "test:onboarding-cold-start": "EXPO_PUBLIC_SUPABASE_URL=https://example.test EXPO_PUBLIC_SUPABASE_ANON_KEY=cold-start-test TZ=Australia/Melbourne sucrase-node src/__tests__/onboardingColdStartTests.ts",
+    "test:program-hydration-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/programHydrationOwnershipTests.ts",
     "test:welcome-dev-skip-contract": "sucrase-node src/__tests__/welcomeScreenDevSkipContractTests.ts",
     "test:in-season-midweek-row": "sucrase-node src/__tests__/inSeasonMidweekRowTests.ts",
     "test:coach-reference-resolver": "sucrase-node src/__tests__/coachReferenceResolverTests.ts",

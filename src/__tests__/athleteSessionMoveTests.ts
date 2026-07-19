@@ -22,7 +22,7 @@ import type { OnboardingData, TrainingProgram, Workout } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import {
   PROGRAM_STORE_PERSISTENCE_KEY,
-  canonicaliseHydratedState,
+  canonicaliseAcceptedStateCandidate,
   readDurableProgramStoreEnvelope,
   useProgramStore,
 } from '../store/programStore';
@@ -383,8 +383,7 @@ run('4 persisted move constraint owns both dates through hydration', () => {
   assert(constraint?.moveTargetDate === input.targetDate && !!constraint.movedWorkout,
     'typed source/target ownership missing');
   const persisted = clone(useProgramStore.getState());
-  const hydrated = canonicaliseHydratedState(persisted, {
-    programAlreadyAccepted: true,
+  const hydrated = canonicaliseAcceptedStateCandidate(persisted, {
     profile: profile(),
     markedDays: persisted.acceptedMaterialContext.markedDays,
     validateWeekStarts: [FUTURE_WEEK],
@@ -574,8 +573,7 @@ run('10 reload, rebuild, Repeat Week and rollover retain move ownership', () => 
   const input = moveInput(FUTURE_WEEK);
   commitAthleteSessionMoveTransaction(input);
   const persisted = clone(useProgramStore.getState());
-  const hydrated = canonicaliseHydratedState(persisted, {
-    programAlreadyAccepted: true,
+  const hydrated = canonicaliseAcceptedStateCandidate(persisted, {
     profile: athlete,
     markedDays: persisted.acceptedMaterialContext.markedDays,
     validateWeekStarts: [FUTURE_WEEK],
@@ -638,8 +636,7 @@ run('12 direct/reload moves converge across the production-door phase matrix', (
   const direct = semantic(FUTURE_WEEK);
   seed();
   const persisted = clone(useProgramStore.getState());
-  const hydrated = canonicaliseHydratedState(persisted, {
-    programAlreadyAccepted: true,
+  const hydrated = canonicaliseAcceptedStateCandidate(persisted, {
     profile: profile(),
     markedDays: persisted.acceptedMaterialContext.markedDays,
     validateWeekStarts: [FUTURE_WEEK],
