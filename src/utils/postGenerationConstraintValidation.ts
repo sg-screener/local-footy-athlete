@@ -1287,6 +1287,7 @@ export function validateWeekOverlayAgainstActiveConstraints(args: {
 
 function liveValidationContext(
   activeConstraintsOverride?: readonly ActiveConstraint[],
+  todayISO: string = todayISOLocal(),
 ): {
   todayISO: string;
   activeConstraints: ActiveConstraint[];
@@ -1315,7 +1316,7 @@ function liveValidationContext(
     }
   }
   return {
-    todayISO: todayISOLocal(),
+    todayISO,
     activeConstraints: Array.from(activeById.values()),
     profile: useProfileStore.getState().onboardingData,
   };
@@ -1481,12 +1482,24 @@ function finaliseLiveDateCandidateAgainstWeek(args: {
 }
 
 /** Live-store wrappers used by ProgramStore's four final write primitives. */
-export function validateLiveProgramWrite(program: TrainingProgram): TrainingProgram {
-  return validateProgramAgainstActiveConstraints({ ...liveValidationContext(), program });
+export function validateLiveProgramWrite(
+  program: TrainingProgram,
+  todayISO?: string,
+): TrainingProgram {
+  return validateProgramAgainstActiveConstraints({
+    ...liveValidationContext(undefined, todayISO),
+    program,
+  });
 }
 
-export function validateLiveMicrocycleWrite(microcycle: Microcycle): Microcycle {
-  return validateMicrocycleAgainstActiveConstraints({ ...liveValidationContext(), microcycle });
+export function validateLiveMicrocycleWrite(
+  microcycle: Microcycle,
+  todayISO?: string,
+): Microcycle {
+  return validateMicrocycleAgainstActiveConstraints({
+    ...liveValidationContext(undefined, todayISO),
+    microcycle,
+  });
 }
 
 export function validateLiveWorkoutWrite(
@@ -1503,7 +1516,7 @@ export function validateLiveWorkoutWrite(
     deferWeekAcceptance?: boolean;
   } = {},
 ): Workout {
-  const context = liveValidationContext();
+  const context = liveValidationContext(undefined, date);
   const result = validateWorkoutAgainstActiveConstraints({
     ...context,
     date,
@@ -1570,7 +1583,7 @@ export function validateLiveNullableWorkoutWrite(
     // fixed-date rebuild and rollover flows).
     return workout;
   }
-  const context = liveValidationContext();
+  const context = liveValidationContext(undefined, date);
   const validated = validateWorkoutAgainstActiveConstraints({
     ...context,
     date,

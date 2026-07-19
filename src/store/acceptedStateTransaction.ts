@@ -118,6 +118,8 @@ export type AcceptedProgramSurfaces = Pick<
 
 export interface AcceptedStateTransactionProposal {
   reason: string;
+  /** One explicit date owner for transactions that began before async work. */
+  todayISO?: string;
   /** Development-only correlation context; never persisted. */
   trace?: AthleteActionTraceContext;
   program?: Partial<AcceptedProgramSurfaces>;
@@ -513,6 +515,7 @@ export function stageAcceptedStateTransaction(
     profile,
     markedDays: context.markedDays,
     validateWeekStarts: proposal.validateWeekStarts,
+    todayISO: proposal.todayISO,
   });
   const program = materialisedProgramPatch(
     candidate,
@@ -1856,6 +1859,7 @@ export function commitCalendarMarkTransaction(args: {
   date: string;
   mark: CalendarDayType | null;
   expectedCurrentMark?: CalendarDayType;
+  todayISO?: string;
 }): AcceptedStateTransactionResult {
   const state = useProgramStore.getState();
   const prior = materialContext(state);
@@ -1893,6 +1897,7 @@ export function commitCalendarMarkTransaction(args: {
     affectedDates: [args.date],
     fixtureChangedDates: current === 'game' || current === 'noGame' ||
       args.mark === 'game' || args.mark === 'noGame' ? [args.date] : [],
+    todayISO: args.todayISO,
   });
 }
 
@@ -1934,6 +1939,7 @@ export function proposeFixtureMarkedDays(args: {
 
 export function commitCalendarStateTransaction(args: {
   reason: string;
+  todayISO?: string;
   markedDays: Record<string, CalendarDayType>;
   affectedDates: readonly string[];
   fixtureChangedDates?: readonly string[];
@@ -1973,6 +1979,7 @@ export function commitCalendarStateTransaction(args: {
   }
   return commitAcceptedStateTransaction({
     reason: args.reason,
+    todayISO: args.todayISO,
     program: { ...(args.program ?? {}), weekScopedOverlays: overlays },
     markedDays: args.markedDays,
     validateWeekStarts: Array.from(affectedWeeks),

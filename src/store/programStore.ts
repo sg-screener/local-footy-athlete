@@ -312,16 +312,16 @@ const programStateStorage = {
  * path. Dynamic loading avoids a store-initialisation cycle while ensuring the
  * same validator runs for program, overlay, and manual-override writes.
  */
-function postValidateProgram(program: TrainingProgram): TrainingProgram {
+function postValidateProgram(program: TrainingProgram, todayISO?: string): TrainingProgram {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../utils/postGenerationConstraintValidation')
-    .validateLiveProgramWrite(program);
+    .validateLiveProgramWrite(program, todayISO);
 }
 
-function postValidateMicrocycle(microcycle: Microcycle): Microcycle {
+function postValidateMicrocycle(microcycle: Microcycle, todayISO?: string): Microcycle {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   return require('../utils/postGenerationConstraintValidation')
-    .validateLiveMicrocycleWrite(microcycle);
+    .validateLiveMicrocycleWrite(microcycle, todayISO);
 }
 
 function postValidateWorkout(
@@ -736,8 +736,10 @@ function canonicaliseAcceptedBoundaryState(
     profile?: OnboardingData | null;
     markedDays?: Readonly<Record<string, CalendarDayType>>;
     validateWeekStarts?: readonly string[];
+    todayISO?: string;
   },
 ): Partial<ProgramState> {
+  const effectiveTodayISO = options.todayISO ?? todayISOLocal();
   let currentProgram = persistedState.currentProgram && options.structuralMigrationRequired
     ? canonicaliseHydratedProgram(persistedState.currentProgram, options.profile)
     : persistedState.currentProgram;
@@ -753,7 +755,7 @@ function canonicaliseAcceptedBoundaryState(
       if (overlayOwnedWeekStarts.has(microcycle.startDate.slice(0, 10))) return microcycle;
       const validated = validator.validateMicrocycleAgainstActiveConstraints({
         microcycle,
-        todayISO: todayISOLocal(),
+        todayISO: effectiveTodayISO,
         activeConstraints: options.activeConstraints!,
         profile: options.profile,
       });
@@ -777,7 +779,7 @@ function canonicaliseAcceptedBoundaryState(
     currentMicrocycle = require('../utils/postGenerationConstraintValidation')
       .validateMicrocycleAgainstActiveConstraints({
         microcycle: currentMicrocycle,
-        todayISO: todayISOLocal(),
+        todayISO: effectiveTodayISO,
         activeConstraints: options.activeConstraints,
         profile: options.profile,
       });
@@ -1009,21 +1011,21 @@ function canonicaliseAcceptedBoundaryState(
   const hydratedTodayWorkout = persistedState.todayWorkout
     ? applyUserRemovalConstraintsToWeek({
         workouts: [persistedState.todayWorkout],
-        weekStart: mondayForDate(todayISOLocal()),
+        weekStart: mondayForDate(effectiveTodayISO),
         constraints: persistedState.userRemovalConstraints,
       }).find((workout) =>
-        workout.dayOfWeek === new Date(`${todayISOLocal()}T12:00:00`).getDay()) ?? null
+        workout.dayOfWeek === new Date(`${effectiveTodayISO}T12:00:00`).getDay()) ?? null
     : persistedState.todayWorkout;
   return {
     ...persistedState,
     currentProgram,
     currentMicrocycle,
     todayWorkout: hydratedTodayWorkout
-      ? !options.structuralMigrationRequired && !safetyContractForDate(todayISOLocal())
+      ? !options.structuralMigrationRequired && !safetyContractForDate(effectiveTodayISO)
         ? hydratedTodayWorkout
         : canonicaliseHydratedSafetyWorkout(
             hydratedTodayWorkout,
-            safetyContractForDate(todayISOLocal()),
+            safetyContractForDate(effectiveTodayISO),
             phase,
           )
       : hydratedTodayWorkout,
@@ -1037,6 +1039,7 @@ export interface AcceptedStateCandidateCanonicalisationOptions {
   profile?: OnboardingData | null;
   markedDays?: Readonly<Record<string, CalendarDayType>>;
   validateWeekStarts?: readonly string[];
+  todayISO?: string;
 }
 
 /** Runtime acceptance owns validation, but never legacy hydration migration. */
@@ -1209,12 +1212,12 @@ export interface ProgramState {
 
   setCurrentProgram: (
     program: TrainingProgram | null,
-    options?: { clearOverrideDates?: readonly string[] },
+    options?: { clearOverrideDates?: readonly string[]; todayISO?: string },
   ) => void;
   setBlockState: (blockState: StoredProgramBlockState | null) => void;
   ensureBlockState: (dateISO?: string) => StoredProgramBlockState;
-  setCurrentMicrocycle: (microcycle: Microcycle | null) => void;
-  setTodayWorkout: (workout: Workout | null) => void;
+  setCurrentMicrocycle: (microcycle: Microcycle | null, todayISO?: string) => void;
+  setTodayWorkout: (workout: Workout | null, todayISO?: string) => void;
   setGenerating: (generating: boolean) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -1236,7 +1239,7 @@ export interface ProgramState {
   /** Remove a manual override for a specific date */
   removeManualOverride: (date: string) => void;
   /** Clear all manual overrides (called on full program regeneration) */
-  clearManualOverrides: () => void;
+  clearManualOverrides: (todayISO?: string) => void;
   /** Dismiss a stale-override warning (user chose "keep") */
   dismissStaleWarning: (date: string) => void;
 
@@ -1293,8 +1296,9 @@ export const useProgramStore = create<ProgramState>()(
       // clearManualOverrides() where a true fresh slate is intended
       // (onboarding completion, program create, profile reset).
       setCurrentProgram: (program, options) => {
+        const effectiveTodayISO = options?.todayISO ?? todayISOLocal();
         const candidateProgram = program
-          ? postValidateProgram(ensureProgramSeasonPhaseClock(program))
+          ? postValidateProgram(ensureProgramSeasonPhaseClock(program), effectiveTodayISO)
           : null;
         const priorState = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         const clearedDates = new Set(options?.clearOverrideDates ?? []);
@@ -1317,6 +1321,7 @@ export const useProgramStore = create<ProgramState>()(
                 useProgramStore.getState().acceptedMaterialContext,
                 require('./profileStore').useProfileStore.getState().onboardingData,
               ),
+              todayISO: effectiveTodayISO,
             })
           : null;
         const validatedProgram = acceptedSurfaces?.currentProgram ?? candidateProgram;
@@ -1325,6 +1330,7 @@ export const useProgramStore = create<ProgramState>()(
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           reason: 'program:replace',
+          todayISO: effectiveTodayISO,
           program: {
             currentProgram: validatedProgram,
             currentMicrocycle: null,
@@ -1334,7 +1340,7 @@ export const useProgramStore = create<ProgramState>()(
             weekScopedOverlays: {},
             exposureContractsByWeek: {},
             blockState: validatedProgram
-              ? deriveStoredBlockStateFromProgram(validatedProgram, undefined)
+              ? deriveStoredBlockStateFromProgram(validatedProgram, effectiveTodayISO)
               : null,
           },
           validateWeekStarts: validatedProgram?.microcycles.map((microcycle) =>
@@ -1352,24 +1358,30 @@ export const useProgramStore = create<ProgramState>()(
         return derived;
       },
 
-      setCurrentMicrocycle: (microcycle) => {
+      setCurrentMicrocycle: (microcycle, todayISO) => {
+        const effectiveTodayISO = todayISO ?? todayISOLocal();
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           reason: 'program:select_microcycle',
+          todayISO: effectiveTodayISO,
           program: {
-            currentMicrocycle: microcycle ? postValidateMicrocycle(microcycle) : null,
+            currentMicrocycle: microcycle
+              ? postValidateMicrocycle(microcycle, effectiveTodayISO)
+              : null,
           },
           validateWeekStarts: microcycle ? [microcycle.startDate.slice(0, 10)] : [],
         });
       },
 
-      setTodayWorkout: (workout) => {
+      setTodayWorkout: (workout, todayISO) => {
+        const effectiveTodayISO = todayISO ?? todayISOLocal();
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           reason: 'program:set_today_workout',
+          todayISO: effectiveTodayISO,
           program: {
             todayWorkout: workout
-              ? postValidateNullableWorkout(todayISOLocal(), workout)
+              ? postValidateNullableWorkout(effectiveTodayISO, workout)
               : null,
           },
         });
@@ -1462,12 +1474,14 @@ export const useProgramStore = create<ProgramState>()(
         });
       },
 
-      clearManualOverrides: () => {
+      clearManualOverrides: (todayISO) => {
+        const effectiveTodayISO = todayISO ?? todayISOLocal();
         const state = normalizeAcceptedProgramSurfaces(useProgramStore.getState());
         const affectedWeeks = Array.from(new Set(Object.keys(state.dateOverrides).map(mondayForDate)));
         // eslint-disable-next-line @typescript-eslint/no-var-requires
         require('./acceptedStateTransaction').commitAcceptedStateTransaction({
           reason: 'override:clear_all',
+          todayISO: effectiveTodayISO,
           program: {
             dateOverrides: {},
             overrideContexts: {},

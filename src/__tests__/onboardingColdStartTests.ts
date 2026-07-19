@@ -4,6 +4,9 @@
  * Run: npm run test:onboarding-cold-start
  */
 
+import fs from 'fs';
+import path from 'path';
+
 (global as unknown as { __DEV__: boolean }).__DEV__ = false;
 process.env.TZ = 'Australia/Melbourne';
 
@@ -17,7 +20,7 @@ const localStorageData = new Map<string, string>();
   },
 };
 
-import type { TrainingProgram } from '../types/domain';
+import type { OnboardingData, TrainingProgram } from '../types/domain';
 import {
   generateProgramFromProfile,
   generateProgramLocally,
@@ -40,6 +43,11 @@ import {
   DEV_TEST_ONBOARDING_DATA,
   runDevOnboardingSkip,
 } from '../utils/devOnboardingSkip';
+import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
+import { buildProgramTabProjectedWeek } from '../utils/visibleProgramReadModel';
+
+const EFFECTIVE_TODAY_ISO = '2026-07-13';
+const EFFECTIVE_WEEK_START_ISO = '2026-07-13';
 
 let passed = 0;
 const failures: string[] = [];
@@ -123,10 +131,17 @@ function resetToSparseColdStart(): void {
   } as never);
 }
 
-function install(program: TrainingProgram): ReturnType<typeof useProgramStore.getState> {
+function install(
+  program: TrainingProgram,
+  todayISO: string = EFFECTIVE_TODAY_ISO,
+): ReturnType<typeof useProgramStore.getState> {
   useProfileStore.setState({ onboardingData: DEV_TEST_ONBOARDING_DATA });
   withoutGenerationLogs(() =>
-    seedOnboardingProgram({ onboardingData: DEV_TEST_ONBOARDING_DATA, program: clone(program) }));
+    seedOnboardingProgram({
+      onboardingData: DEV_TEST_ONBOARDING_DATA,
+      program: clone(program),
+      todayISO,
+    }));
   return useProgramStore.getState();
 }
 
@@ -134,7 +149,6 @@ function acceptedShape(state: ReturnType<typeof useProgramStore.getState>): stri
   return JSON.stringify({
     currentProgram: state.currentProgram ? 'object' : 'null',
     currentMicrocycle: state.currentMicrocycle ? 'object' : 'null',
-    todayWorkout: state.todayWorkout ? 'object' : 'null',
     blockState: state.blockState ? 'object' : 'null',
     microcycles: (state.currentProgram?.microcycles.length ?? 0) > 0 ? 'nonempty' : 'empty',
     dateOverrides: typeof state.dateOverrides,
@@ -146,6 +160,43 @@ function acceptedShape(state: ReturnType<typeof useProgramStore.getState>): stri
     activeConstraints: Array.isArray(state.acceptedMaterialContext.activeConstraints),
     activeInjury: state.acceptedMaterialContext.activeInjury === null ? 'null' : 'object',
   });
+}
+
+function canonicalVisibleProjection(): string {
+  const state = buildScheduleStateImperative();
+  return JSON.stringify(buildProgramTabProjectedWeek({
+    mondayISO: EFFECTIVE_WEEK_START_ISO,
+    todayISO: EFFECTIVE_TODAY_ISO,
+    state,
+  }).map((day) => ({
+    date: day.date,
+    indicator: day.indicator,
+    workoutName: day.workout?.name ?? null,
+    workoutType: day.workout?.workoutType ?? null,
+    sessionTier: day.workout?.sessionTier ?? null,
+  })));
+}
+
+function canonicalVisibleDay(date: string): ReturnType<
+  typeof buildProgramTabProjectedWeek
+>[number] {
+  const weekStart = date === '2026-07-13'
+    ? EFFECTIVE_WEEK_START_ISO
+    : useProgramStore.getState().currentMicrocycle?.startDate.slice(0, 10) ?? date;
+  const day = buildProgramTabProjectedWeek({
+    mondayISO: weekStart,
+    todayISO: date,
+    state: buildScheduleStateImperative(),
+  }).find((candidate) => candidate.date === date);
+  assert(day, `canonical visible day missing for ${date}`);
+  return day;
+}
+
+function withTestClock(dateISO: string): void {
+  (globalThis as any).__LFA_DEV_E2E_CLOCK_RECEIPT__ = {
+    anchorInstant: `${dateISO}T02:00:00.000Z`,
+    timezone: 'Australia/Melbourne',
+  };
 }
 
 function fakeCoachResponse(): Response {
@@ -200,24 +251,62 @@ function fakeCoachResponse(): Response {
 async function main(): Promise<void> {
   const source = generatedProgram();
 
-  await run('1 fresh install and direct generateProgramFromProfile cold start', async () => {
+  await run('1 async Sunday-to-Monday rollover keeps one generation and acceptance date', async () => {
     resetToSparseColdStart();
     const originalFetch = global.fetch;
-    (global as unknown as { fetch: typeof fetch }).fetch = async () => fakeCoachResponse();
+    const runtime = global as unknown as { __DEV__: boolean };
+    const previousDev = runtime.__DEV__;
+    const previousClock = (globalThis as any).__LFA_DEV_E2E_CLOCK_RECEIPT__;
+    runtime.__DEV__ = true;
+    withTestClock('2026-07-19');
+    (global as unknown as { fetch: typeof fetch }).fetch = async () => {
+      const response = fakeCoachResponse();
+      const readBody = response.text.bind(response);
+      Object.defineProperty(response, 'text', {
+        value: async () => {
+          // The request began on Sunday. Simulate the response completing
+          // after local midnight on Monday.
+          withTestClock('2026-07-20');
+          return readBody();
+        },
+      });
+      return response;
+    };
     try {
       const direct = await withoutGenerationLogsAsync(() => generateProgramFromProfile(
         DEV_TEST_ONBOARDING_DATA,
-        { todayISO: '2026-07-13' },
       ));
-      const state = install(direct);
+      const state = install(direct, '2026-07-19');
       assert(state.currentProgram?.id === direct.id, 'directly generated program was not stored');
       assert(state.currentProgram.microcycles.length === 4, 'direct generation lost microcycles');
+      assert(
+        state.currentProgram.startDate.slice(0, 10) === '2026-07-13',
+        `response completion changed block start to ${state.currentProgram.startDate}`,
+      );
+      assert(
+        state.currentMicrocycle?.startDate.slice(0, 10) === '2026-07-13',
+        'accepted installation did not retain the Sunday-containing microcycle',
+      );
+      assert(state.todayWorkout === null, 'Sunday raw compatibility cache should remain null');
+      const sunday = canonicalVisibleDay('2026-07-19');
+      assert(
+        sunday.workout?.workoutType === 'Recovery',
+        `Sunday G+1 did not project Recovery: ${sunday.workout?.name ?? 'rest'}`,
+      );
     } finally {
       (global as unknown as { fetch: typeof fetch }).fetch = originalFetch;
+      runtime.__DEV__ = previousDev;
+      if (previousClock) {
+        (globalThis as any).__LFA_DEV_E2E_CLOCK_RECEIPT__ = previousClock;
+      } else {
+        delete (globalThis as any).__LFA_DEV_E2E_CLOCK_RECEIPT__;
+      }
     }
   });
 
   let devShape = '';
+  let devVisibleProjection = '';
+  let devMicrocycleCount = 0;
   let devProgramId = '';
   let devGeneratorCalls = 0;
   await run('2 dev onboarding skip installs the deterministic accepted seed', async () => {
@@ -247,16 +336,64 @@ async function main(): Promise<void> {
       'dev skip did not return the standard deterministic seed');
     assert(state.currentProgram?.id === result.program.id,
       'dev skip did not store the standard deterministic seed');
+    assert(
+      state.currentMicrocycle?.startDate.slice(0, 10) === EFFECTIVE_WEEK_START_ISO,
+      'dev seed did not select the Monday-containing microcycle',
+    );
+    assert(
+      state.todayWorkout?.name === 'Lower Body Strength',
+      `dev Monday compatibility row changed: ${state.todayWorkout?.name ?? 'null'}`,
+    );
+    assert(
+      canonicalVisibleDay(EFFECTIVE_TODAY_ISO).workout?.name === 'Lower Body Strength',
+      'dev Monday canonical visible day disagrees with the accepted session',
+    );
     devProgramId = result.program.id;
     devShape = acceptedShape(state);
+    devVisibleProjection = canonicalVisibleProjection();
+    devMicrocycleCount = state.currentProgram?.microcycles.length ?? 0;
   });
 
   let realShape = '';
+  let realVisibleProjection = '';
+  let realMicrocycleCount = 0;
   await run('3 normal onboarding completion stores generated program', () => {
     resetToSparseColdStart();
     const state = install(source);
     assert(state.currentProgram?.id === source.id, 'normal onboarding did not store generated program');
+    assert(
+      state.currentMicrocycle?.startDate.slice(0, 10) === EFFECTIVE_WEEK_START_ISO,
+      'normal onboarding did not select the date-containing microcycle',
+    );
+    assert(
+      state.todayWorkout?.name === 'Lower Body Strength',
+      `normal Monday compatibility row changed: ${state.todayWorkout?.name ?? 'null'}`,
+    );
+    assert(
+      canonicalVisibleDay('2026-07-13').workout?.name === 'Lower Body Strength',
+      'Monday canonical visible day disagrees',
+    );
+    assert(
+      canonicalVisibleDay('2026-07-14').workout?.workoutType === 'Team Training' &&
+        canonicalVisibleDay('2026-07-16').workout?.workoutType === 'Team Training',
+      'Tuesday/Thursday team training geometry changed',
+    );
+    assert(
+      canonicalVisibleDay('2026-07-15').workout === null,
+      'genuine Wednesday full-rest day was populated',
+    );
+    assert(
+      canonicalVisibleDay('2026-07-18').workout?.workoutType === 'Game',
+      'Saturday fixture did not project Game',
+    );
+    const recovery = canonicalVisibleDay('2026-07-19');
+    assert(
+      recovery.workout?.workoutType === 'Recovery' && recovery.indicator === 'recovery',
+      'G+1 active recovery was collapsed to full rest',
+    );
     realShape = acceptedShape(state);
+    realVisibleProjection = canonicalVisibleProjection();
+    realMicrocycleCount = state.currentProgram?.microcycles.length ?? 0;
   });
 
   await run('4 empty calendar store means no invented non-fixture marks', () => {
@@ -271,25 +408,63 @@ async function main(): Promise<void> {
     withoutGenerationLogs(() => seedOnboardingProgram({
       onboardingData: { ...DEV_TEST_ONBOARDING_DATA, gameDay: 'Varies', usualGameDay: undefined },
       program: value,
+      todayISO: '2026-07-13',
     }));
     assert(Object.keys(useProgramStore.getState().acceptedMaterialContext.markedDays).length === 0,
       'empty calendar manufactured marks');
   });
 
-  await run('5 empty readiness store stays unknown/empty', () => {
+  await run('5 pre-season practice-match geometry survives a sparse cold start', () => {
     resetToSparseColdStart();
     const state = install(source);
     assert(Object.keys(state.acceptedMaterialContext.readinessSignalsByDate).length === 0,
       'cold start manufactured readiness');
+    const practiceMatchProfile: OnboardingData = {
+      ...DEV_TEST_ONBOARDING_DATA,
+      seasonPhase: 'Pre-season' as const,
+      gameDay: 'Sunday' as const,
+      usualGameDay: 'Sunday' as const,
+      trainingDaysPerWeek: 5,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    };
+    const practiceMatch = withoutGenerationLogs(() => generateProgramLocally(
+      practiceMatchProfile,
+      { todayISO: EFFECTIVE_TODAY_ISO, previousProgram: null, activeConstraints: [] },
+    ));
+    assert(
+      practiceMatch.microcycles.every((microcycle) =>
+        microcycle.exposureContractV2?.identity.declaredSubphase === 'practice_match_week' &&
+        microcycle.exposureContractV2.identity.expectedSubphase === 'practice_match_week'),
+      'pre-season practice-match contract geometry changed',
+    );
   });
 
-  await run('6 empty constraints and injury store stays empty/null', () => {
+  await run('6 off-season geometry survives with empty constraints and injury state', () => {
     resetToSparseColdStart();
     const state = install(source);
     assert(state.acceptedMaterialContext.activeConstraints.length === 0,
       'cold start manufactured constraints');
     assert(state.acceptedMaterialContext.activeInjury === null,
       'cold start manufactured injury state');
+    const offSeason = withoutGenerationLogs(() => generateProgramLocally({
+      ...DEV_TEST_ONBOARDING_DATA,
+      seasonPhase: 'Off-season',
+      gameDay: 'Varies',
+      usualGameDay: undefined,
+      teamTrainingDaysPerWeek: 0,
+      teamTrainingDays: [],
+    }, {
+      todayISO: EFFECTIVE_TODAY_ISO,
+      previousProgram: null,
+      activeConstraints: [],
+    }));
+    assert(
+      offSeason.microcycles.length === 4 && offSeason.microcycles.every((microcycle) =>
+        microcycle.exposureContractV2?.identity.seasonPhase === 'Off-season' &&
+        microcycle.exposureContractV2.identity.mode.includes('offseason') &&
+        !microcycle.workouts.some((workout) => workout.workoutType === 'Game')),
+      'off-season block geometry changed',
+    );
   });
 
   await run('7 undefined legacy override and overlay maps become empty maps', () => {
@@ -314,39 +489,59 @@ async function main(): Promise<void> {
     assert(install(source).currentProgram?.id === 'prog-ai-1', 'generated program was replaced');
   });
 
-  await run('10 four microcycles remain after persistence publication', () => {
+  await run('10 four-week install selects the microcycle containing todayISO', () => {
     resetToSparseColdStart();
-    assert(install(source).currentProgram?.microcycles.length === 4, 'microcycle count changed');
+    const state = install(source, '2026-07-27');
+    assert(state.currentProgram?.microcycles.length === 4, 'microcycle count changed');
+    assert(
+      state.currentMicrocycle?.id === state.currentProgram?.microcycles[2]?.id &&
+        state.currentMicrocycle?.id !== state.currentProgram?.microcycles[0]?.id,
+      `selected ${state.currentMicrocycle?.id ?? 'null'} instead of the date-containing week`,
+    );
   });
 
-  await run('11 newly stored program rehydrates with four microcycles', async () => {
+  await run('11 null or stale todayWorkout cannot change the hydrated visible projection', async () => {
     resetToSparseColdStart();
     const storedState = install(source);
-    const persistedEnvelope = JSON.stringify({
-      state: JSON.parse(JSON.stringify(storedState)),
-      version: 0,
-    });
-    useProgramStore.setState({
-      currentProgram: undefined,
-      currentMicrocycle: undefined,
-      acceptedMaterialContext: undefined,
-      dateOverrides: undefined,
-      overrideContexts: undefined,
-      weekScopedOverlays: undefined,
-      exposureContractsByWeek: undefined,
-    } as never);
-    localStorageData.set('program-store', persistedEnvelope);
-    await useProgramStore.persist.rehydrate();
-    const hydrated = useProgramStore.getState();
-    assert(hydrated.currentProgram?.microcycles.length === 4, 'rehydration lost microcycles');
-    assert(Object.keys(hydrated.dateOverrides).length === 0, 'rehydration did not normalise maps');
+    const visibleBefore = canonicalVisibleProjection();
+    const persistedState = JSON.parse(JSON.stringify(storedState));
+    const rehydrateWith = async (todayWorkout: unknown) => {
+      persistedState.todayWorkout = todayWorkout;
+      useProgramStore.setState({
+        currentProgram: undefined,
+        currentMicrocycle: undefined,
+        todayWorkout: undefined,
+        acceptedMaterialContext: undefined,
+        dateOverrides: undefined,
+        overrideContexts: undefined,
+        weekScopedOverlays: undefined,
+        exposureContractsByWeek: undefined,
+      } as never);
+      localStorageData.set('program-store', JSON.stringify({ state: persistedState, version: 0 }));
+      await useProgramStore.persist.rehydrate();
+      const hydrated = useProgramStore.getState();
+      assert(hydrated.currentProgram?.microcycles.length === 4, 'rehydration lost microcycles');
+      assert(Object.keys(hydrated.dateOverrides).length === 0, 'rehydration did not normalise maps');
+      assert(
+        canonicalVisibleProjection() === visibleBefore,
+        'compatibility cache changed the hydrated canonical projection',
+      );
+    };
+    await rehydrateWith(null);
+    await rehydrateWith(source.microcycles[3]?.workouts[0] ?? source.microcycles[0].workouts[0]);
   });
 
-  await run('12 dev skip and normal onboarding publish the same accepted surfaces', () => {
+  await run('12 dev skip and normal onboarding agree canonically while retaining storage horizons', () => {
     assert(devShape === realShape, `shape mismatch\ndev=${devShape}\nreal=${realShape}`);
+    assert(
+      devVisibleProjection === realVisibleProjection,
+      `visible projection mismatch\ndev=${devVisibleProjection}\nreal=${realVisibleProjection}`,
+    );
+    assert(devMicrocycleCount === 1, `dev seed horizon changed: ${devMicrocycleCount}`);
+    assert(realMicrocycleCount === 4, `normal onboarding horizon changed: ${realMicrocycleCount}`);
   });
 
-  await run('13 diagnostics preserve stack and identify every pipeline stage', () => {
+  await run('13 CompleteScreen captures and forwards exactly one effective date per attempt', () => {
     const generation = toOnboardingPipelineError(new Error('generation'), 'generation', 'generate');
     const acceptanceCause = Object.assign(new Error('rejected'), { code: 'section18_week_rejected' });
     const acceptance = toOnboardingPipelineError(
@@ -376,6 +571,19 @@ async function main(): Promise<void> {
     assert(persistence.stage === 'persistence', 'persistence stage mislabelled');
     assert(navigation.stage === 'onboarding_navigation', 'navigation stage mislabelled');
     assert(acceptance.originalStack === acceptanceCause.stack, 'original stack was not preserved');
+    const completeScreen = fs.readFileSync(path.join(
+      __dirname,
+      '../screens/onboarding/CompleteScreen.tsx',
+    ), 'utf8');
+    assert(
+      (completeScreen.match(/todayISOLocal\(\)/g) ?? []).length === 1,
+      'CompleteScreen rereads today within an onboarding attempt',
+    );
+    assert(
+      /generateProgramFromProfile\(onboardingData,\s*\{\s*todayISO:\s*effectiveTodayISO/.test(completeScreen) &&
+        /seedOnboardingProgram\([\s\S]*?todayISO:\s*effectiveTodayISO/.test(completeScreen),
+      'CompleteScreen does not forward the captured effective date through generation and installation',
+    );
   });
 
   await run('14 dev skip never calls the injected generator or uses DEFAULT_PROGRAM', () => {
@@ -383,9 +591,10 @@ async function main(): Promise<void> {
     assert(devProgramId !== DEFAULT_PROGRAM.id, 'dev skip installed DEFAULT_PROGRAM');
   });
 
-  await run('15 existing complete accepted-state surfaces are unchanged by normalisation', () => {
+  await run('15 Home cards and Coach today-session reads remain projection-owned', () => {
     resetToSparseColdStart();
     const state = install(source);
+    const visibleBefore = canonicalVisibleProjection();
     const before = {
       currentProgram: state.currentProgram,
       currentMicrocycle: state.currentMicrocycle,
@@ -400,6 +609,34 @@ async function main(): Promise<void> {
     for (const key of Object.keys(before) as Array<keyof typeof before>) {
       assert(after[key] === before[key], `normalisation changed existing ${key}`);
     }
+    useProgramStore.setState({
+      todayWorkout: source.microcycles[3]?.workouts[0] ?? null,
+    });
+    assert(
+      canonicalVisibleProjection() === visibleBefore,
+      'stale todayWorkout changed the shared visible projection',
+    );
+    const homeSource = fs.readFileSync(path.join(
+      __dirname,
+      '../screens/home/useHomeScreen.ts',
+    ), 'utf8');
+    const coachSource = fs.readFileSync(path.join(
+      __dirname,
+      '../screens/coach/CoachScreen.tsx',
+    ), 'utf8');
+    const coachControllerSource = fs.readFileSync(path.join(
+      __dirname,
+      '../utils/coachTurnController.ts',
+    ), 'utf8');
+    assert(
+      /useResolvedWeek\(\)/.test(homeSource) && !/\btodayWorkout\b/.test(homeSource),
+      'Home card stopped using the canonical resolved-week projection',
+    );
+    assert(
+      /useResolvedWeek\(\)/.test(coachSource) && !/\btodayWorkout\b/.test(coachSource) &&
+        /buildProgramTabProjectedWeek\(/.test(coachControllerSource),
+      'Coach today-session resolution stopped using the canonical visible projection',
+    );
   });
 
   await run('mutation removing the dateOverrides cold-start default reproduces the crash', () => {
