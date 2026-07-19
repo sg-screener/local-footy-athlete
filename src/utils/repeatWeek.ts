@@ -782,7 +782,6 @@ export function stageRepeatWeekTransaction(args: {
     trace: args.trace,
     profile: args.baseProfile,
     preserveExactAcceptedWorkouts: true,
-    programAlreadyAccepted: true,
     program: {
       ...firstAccepted.program,
       reversibleAdjustmentLedger: {

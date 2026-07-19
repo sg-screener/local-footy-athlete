@@ -24,7 +24,7 @@ import type {
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { rebuildLocalWeek, type WeekRebuildResult } from '../utils/weekRebuild';
 import {
-  canonicaliseHydratedState,
+  canonicaliseAcceptedStateCandidate,
   readDurableProgramStoreEnvelope,
   useProgramStore,
 } from '../store/programStore';
@@ -485,8 +485,7 @@ async function main(): Promise<void> {
       assert(persisted.reversibleAdjustmentLedger.adjustments.some((candidate) =>
         candidate.id === adjustmentId && candidate.status === 'cleared'),
       'durable envelope did not acknowledge the restored fixture');
-      const hydrated = canonicaliseHydratedState(persisted, {
-        programAlreadyAccepted: true,
+      const hydrated = canonicaliseAcceptedStateCandidate(persisted, {
         profile: athlete,
         markedDays: persisted.acceptedMaterialContext.markedDays,
         validateWeekStarts: adjustment.rollingDependencyWeeks,

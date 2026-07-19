@@ -395,7 +395,6 @@ function stageClearRepeatWeekAdjustment(args: {
     reason: `reversible_adjustment:clear:${args.adjustment.id}`,
     profile,
     program: restored.surfaces,
-    programAlreadyAccepted: true,
     preserveExactAcceptedWorkouts: true,
     validateWeekStarts: args.adjustment.rollingDependencyWeeks,
   };
@@ -869,7 +868,6 @@ export function stageClearReversibleAdjustment(
       activeConstraints,
       validateWeekStarts: validatedWeekStarts,
       profile,
-      programAlreadyAccepted: true,
       preserveExactAcceptedWorkouts: true,
     };
     const accepted = stageAcceptedStateTransaction(proposal);

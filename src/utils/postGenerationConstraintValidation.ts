@@ -1791,7 +1791,7 @@ export function stageLiveStoredProgramSafety(
   }
   const programStore = require('../store/programStore');
   const state = programStore.useProgramStore.getState();
-  const staged = programStore.canonicaliseHydratedState({
+  const staged = programStore.canonicaliseAcceptedStateCandidate({
     currentProgram: state.currentProgram,
     currentMicrocycle: state.currentMicrocycle,
     todayWorkout: state.todayWorkout,
@@ -1799,7 +1799,6 @@ export function stageLiveStoredProgramSafety(
     overrideContexts: state.overrideContexts,
     weekScopedOverlays: state.weekScopedOverlays,
   }, {
-    programAlreadyAccepted: true,
     activeConstraints: context.activeConstraints,
     profile: context.profile,
     markedDays: state.acceptedMaterialContext.markedDays,

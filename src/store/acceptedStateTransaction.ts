@@ -19,7 +19,7 @@ import {
   type TemporarySourceFact,
 } from '../rules/temporarySourceFact';
 import {
-  canonicaliseHydratedState,
+  canonicaliseAcceptedStateCandidate,
   type AcceptedMaterialContext,
   type ProgramState,
   useProgramStore,
@@ -131,7 +131,6 @@ export interface AcceptedStateTransactionProposal {
   acceptedProfileSnapshot?: AcceptedProfileSnapshotV1 | null;
   validateWeekStarts?: readonly string[];
   profile?: OnboardingData | null;
-  programAlreadyAccepted?: boolean;
   /** Candidate already owns all non-fact reductions; do not replay legacy
    * constraint projections onto it during hydration/source-fact publication. */
   skipConstraintProjection?: boolean;
@@ -503,8 +502,7 @@ export function stageAcceptedStateTransaction(
     context.activeConstraints,
     context.readinessSignalsByDate,
   );
-  const accepted = canonicaliseHydratedState(candidate, {
-    programAlreadyAccepted: proposal.programAlreadyAccepted ?? true,
+  const accepted = canonicaliseAcceptedStateCandidate(candidate, {
     // An empty set means "retain the already-accepted reduced program". Do
     // not turn a context-only clear into a whole-program regeneration or a
     // second structural pass. Explicit affected weeks are still re-gated via
@@ -2303,7 +2301,6 @@ function stageAthleteMutationConstraint(args: {
     markedDays: args.markedDays,
     validateWeekStarts: affectedWeekStarts,
     profile,
-    programAlreadyAccepted: true,
   };
   const creation = stageReversibleAdjustmentCreationTransaction({
     kind: args.mutationIntent === 'athlete_move'
@@ -2630,7 +2627,6 @@ export function commitProgramSetupRebuildTransaction(args: {
       sourceRevision: prior.revision + 1,
       onboardingData: args.profile,
     },
-    programAlreadyAccepted: true,
     validateWeekStarts: Array.from(new Set([
       ...args.program.microcycles.map((microcycle) => microcycle.startDate.slice(0, 10)),
       ...Object.keys(overlays),

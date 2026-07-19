@@ -10,7 +10,7 @@ import {
   commitAcceptedStateTransaction,
 } from './acceptedStateTransaction';
 import { runCoachMutationTransaction } from './coachMutationTransaction';
-import { canonicaliseHydratedState, useProgramStore } from './programStore';
+import { canonicaliseAcceptedStateCandidate, useProgramStore } from './programStore';
 import { useProfileStore } from './profileStore';
 import {
   composeTemporarySourceFactCompatibility,
@@ -224,8 +224,7 @@ function validateEffectiveComposition(args: {
     args.context,
     useProfileStore.getState().onboardingData,
   );
-  const projected = canonicaliseHydratedState(args.base.surfaces, {
-    programAlreadyAccepted: true,
+  const projected = canonicaliseAcceptedStateCandidate(args.base.surfaces, {
     activeConstraints: args.context.activeConstraints.filter((constraint) =>
       isTemporarySourceFactConstraint(constraint) ||
       isAcceptedProfileConstraint(constraint)),
@@ -313,7 +312,6 @@ export async function commitTemporarySourceFactSet(
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         acceptedCompositionBase: compositionBase,
         validateWeekStarts: horizon.weeks,
-        programAlreadyAccepted: true,
         skipConstraintProjection: true,
       });
     },

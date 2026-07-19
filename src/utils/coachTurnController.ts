@@ -2450,7 +2450,6 @@ async function applyDevActiveCoachRevision(args: {
           validateWeekStarts: Array.from(new Set(
             apply.applied.map((write) => getMondayForDate(write.date)),
           )),
-          programAlreadyAccepted: true,
         });
       }
       return apply;

@@ -718,7 +718,7 @@ check('21 generation cannot store a blocking final-visible violation',
         ...clone(activeRecovery), id: 'hydrated-optional-recovery', dayOfWeek: restDay,
       },
     },
-  });
+  }, { ingressKind: 'migration_required' });
   const repairedOverride = hydratedState.dateOverrides?.[restDate];
   hydrationRepairObserved = hydrationRepairObserved && repairedOverride?.workoutType === 'Rest';
   check('27 hydration repairs migrated base and effective override weeks before persistence',

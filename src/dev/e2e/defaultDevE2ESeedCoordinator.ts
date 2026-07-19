@@ -115,7 +115,6 @@ function installAcceptedCalendarGame(date: string, fallbackProfile?: ReturnType<
     reason: `dev_e2e_seed:calendar_game:${date}`,
     markedDays: { ...accepted.markedDays, [date]: 'game' },
     profile,
-    programAlreadyAccepted: true,
     preserveExactAcceptedWorkouts: true,
     validateWeekStarts: program.microcycles.map((microcycle) =>
       microcycle.startDate.slice(0, 10)),
@@ -140,7 +139,6 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
             blockState: deriveStoredBlockStateFromProgram(program),
           },
           profile: seed.profile,
-          programAlreadyAccepted: true,
           preserveExactAcceptedWorkouts: true,
           validateWeekStarts,
         });
@@ -149,7 +147,6 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
         reason: 'dev_e2e_seed:select_microcycle',
         program: { currentMicrocycle: microcycle },
         profile: seed.profile,
-        programAlreadyAccepted: true,
         preserveExactAcceptedWorkouts: true,
         validateWeekStarts: microcycle ? [microcycle.startDate.slice(0, 10)] : [],
       }),
@@ -162,7 +159,6 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
         reason: 'dev_e2e_seed:set_today_workout',
         program: { todayWorkout: workout },
         profile: seed.profile,
-        programAlreadyAccepted: true,
         preserveExactAcceptedWorkouts: true,
         validateWeekStarts: [seed.anchorDate],
       }),
@@ -267,7 +263,6 @@ async function applyAuxiliaryState(
         injuryEpisodes: compatibility.injuryEpisodes,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         profile,
-        programAlreadyAccepted: true,
         preserveExactAcceptedWorkouts: true,
         skipConstraintProjection: true,
         validateWeekStarts: state.currentProgram.microcycles.map((microcycle) =>

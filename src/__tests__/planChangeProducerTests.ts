@@ -38,7 +38,7 @@ import { validateLiveWorkoutWrite } from '../utils/postGenerationConstraintValid
 import { applyCoachRevisionDateOverrides } from '../utils/coachRevisionOverrideWriter';
 import { projectVisibleDay } from '../utils/visibleProgramProjection';
 import { finaliseWorkoutAfterMutation } from '../utils/workoutCanonicalisation';
-import { canonicaliseHydratedState } from '../store/programStore';
+import { canonicaliseAcceptedStateCandidate } from '../store/programStore';
 
 const TODAY = '2026-07-01'; // Wednesday
 const MON = '2026-06-29';
@@ -1478,9 +1478,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     const persisted = JSON.parse(JSON.stringify({
       dateOverrides: { [MON]: lowerWrites[0] },
     }));
-    const hydrated = canonicaliseHydratedState(persisted, {
-      programAlreadyAccepted: true,
-    });
+    const hydrated = canonicaliseAcceptedStateCandidate(persisted);
     const hydratedWorkout = hydrated.dateOverrides?.[MON] ?? null;
     eq('[19] persistence and hydration preserve the accepted projection',
       projectedSnapshot(MON, hydratedWorkout), projectedSnapshot(MON, lowerWrites[0]));

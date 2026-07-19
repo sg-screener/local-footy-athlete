@@ -84,6 +84,17 @@ import {
   normalizeReversibleAdjustmentLedger,
   type ReversibleAdjustmentLedger,
 } from '../rules/reversibleAdjustmentLedger';
+import {
+  PROGRAM_STORE_PERSISTENCE_VERSION,
+  ProgramHydrationIngressError,
+  requireProgramHydrationIngress,
+  type ProgramHydrationIngressClassification,
+  type ProgramHydrationIngressKind,
+} from './programHydrationIngress';
+import {
+  projectAcceptedMaterialContextDerivedFields,
+  projectHydratedStateDerivedFields,
+} from './programHydrationProjection';
 
 export type { AcceptedMaterialContext } from './acceptedStateColdStart';
 
@@ -157,7 +168,7 @@ export function endProgramPersistenceStage(token: ProgramPersistenceStageToken):
 }
 
 export function serializeProgramStoreEnvelope(state: ProgramState): string {
-  return JSON.stringify({ state, version: 0 });
+  return JSON.stringify({ state, version: PROGRAM_STORE_PERSISTENCE_VERSION });
 }
 
 export async function readDurableProgramStoreEnvelope(): Promise<string | null> {
@@ -205,6 +216,19 @@ async function writeProgramStoreEnvelopeRaw(value: string): Promise<void> {
     await programStorageSetItem(PROGRAM_STORE_PERSISTENCE_KEY, value);
   } catch (error) {
     throw programPersistenceFailure('write', error);
+  }
+}
+
+async function persistCanonicalHydratedEnvelopeReadback(): Promise<void> {
+  if (activeProgramPersistenceStage) return;
+  const canonicalEnvelope = serializeProgramStoreEnvelope(useProgramStore.getState());
+  const persistedEnvelope = await programStorageGetItem(PROGRAM_STORE_PERSISTENCE_KEY);
+  if (persistedEnvelope !== canonicalEnvelope) {
+    await writeProgramStoreEnvelopeRaw(canonicalEnvelope);
+  }
+  const acknowledgedEnvelope = await programStorageGetItem(PROGRAM_STORE_PERSISTENCE_KEY);
+  if (acknowledgedEnvelope !== canonicalEnvelope) {
+    throw new Error('program_hydration_normalization_readback_mismatch');
   }
 }
 
@@ -704,17 +728,17 @@ function canonicaliseHydratedSafetyWorkout(
     : canonicaliseHydratedWorkout(workout, phase);
 }
 
-export function canonicaliseHydratedState(
+function canonicaliseAcceptedBoundaryState(
   persistedState: Partial<ProgramState>,
   options: {
-    programAlreadyAccepted?: boolean;
+    structuralMigrationRequired: boolean;
     activeConstraints?: readonly import('./coachUpdatesStore').ActiveConstraint[];
     profile?: OnboardingData | null;
     markedDays?: Readonly<Record<string, CalendarDayType>>;
     validateWeekStarts?: readonly string[];
-  } = {},
+  },
 ): Partial<ProgramState> {
-  let currentProgram = persistedState.currentProgram && !options.programAlreadyAccepted
+  let currentProgram = persistedState.currentProgram && options.structuralMigrationRequired
     ? canonicaliseHydratedProgram(persistedState.currentProgram, options.profile)
     : persistedState.currentProgram;
   const overlayOwnedWeekStarts = new Set(Object.keys(persistedState.weekScopedOverlays ?? {}));
@@ -739,7 +763,7 @@ export function canonicaliseHydratedState(
     if (changed) currentProgram = { ...currentProgram, microcycles };
   }
   const phase = currentProgram?.seasonPhaseClock?.selectedPhase ?? currentProgram?.programPhase;
-  let currentMicrocycle = persistedState.currentMicrocycle && !options.programAlreadyAccepted
+  let currentMicrocycle = persistedState.currentMicrocycle && options.structuralMigrationRequired
     ? canonicaliseHydratedMicrocycle(
         persistedState.currentMicrocycle,
         phase,
@@ -800,7 +824,7 @@ export function canonicaliseHydratedState(
               Object.entries(overlay.workoutsByDate).map(([date, workout]) => [
                 date,
                   workout
-                  ? options.programAlreadyAccepted && !exposureContractV2
+                  ? !options.structuralMigrationRequired && !exposureContractV2
                     ? workout
                     : canonicaliseHydratedSafetyWorkout(workout, exposureContractV2, phase)
                   : null,
@@ -829,7 +853,7 @@ export function canonicaliseHydratedState(
     ? Object.fromEntries(Object.entries(persistedState.dateOverrides).map(([date, workout]) => [
         date,
         {
-          ...(options.programAlreadyAccepted && !safetyContractForDate(date)
+          ...(!options.structuralMigrationRequired && !safetyContractForDate(date)
             ? workout
             : canonicaliseHydratedSafetyWorkout(workout, safetyContractForDate(date), phase)),
           // Date-keyed overrides own a concrete calendar day. Older edit
@@ -995,7 +1019,7 @@ export function canonicaliseHydratedState(
     currentProgram,
     currentMicrocycle,
     todayWorkout: hydratedTodayWorkout
-      ? options.programAlreadyAccepted && !safetyContractForDate(todayISOLocal())
+      ? !options.structuralMigrationRequired && !safetyContractForDate(todayISOLocal())
         ? hydratedTodayWorkout
         : canonicaliseHydratedSafetyWorkout(
             hydratedTodayWorkout,
@@ -1006,6 +1030,53 @@ export function canonicaliseHydratedState(
     dateOverrides,
     weekScopedOverlays,
   };
+}
+
+export interface AcceptedStateCandidateCanonicalisationOptions {
+  activeConstraints?: readonly import('./coachUpdatesStore').ActiveConstraint[];
+  profile?: OnboardingData | null;
+  markedDays?: Readonly<Record<string, CalendarDayType>>;
+  validateWeekStarts?: readonly string[];
+}
+
+/** Runtime acceptance owns validation, but never legacy hydration migration. */
+export function canonicaliseAcceptedStateCandidate(
+  candidate: Partial<ProgramState>,
+  options: AcceptedStateCandidateCanonicalisationOptions = {},
+): Partial<ProgramState> {
+  const accepted = canonicaliseAcceptedBoundaryState(candidate, {
+    ...options,
+    structuralMigrationRequired: false,
+  });
+  return projectHydratedStateDerivedFields(accepted as Record<string, unknown>) as
+    Partial<ProgramState>;
+}
+
+export interface HydratedStateCanonicalisationOptions {
+  ingressKind: Exclude<ProgramHydrationIngressKind, 'invalid_or_ambiguous'>;
+  profile?: OnboardingData | null;
+}
+
+/**
+ * Hydration dispatch has one owner: the typed ingress classification.
+ * Accepted envelopes receive only the safe derived projection; supported
+ * legacy envelopes additionally receive the structural migration pipeline.
+ */
+export function canonicaliseHydratedState(
+  persistedState: Partial<ProgramState>,
+  options: HydratedStateCanonicalisationOptions,
+): Partial<ProgramState> {
+  if (options.ingressKind === 'accepted_canonical') {
+    return projectHydratedStateDerivedFields(
+      persistedState as Record<string, unknown>,
+    ) as Partial<ProgramState>;
+  }
+  const migrated = canonicaliseAcceptedBoundaryState(persistedState, {
+    structuralMigrationRequired: true,
+    profile: options.profile,
+  });
+  return projectHydratedStateDerivedFields(migrated as Record<string, unknown>) as
+    Partial<ProgramState>;
 }
 
 // ─── Session Feedback ───
@@ -1189,6 +1260,7 @@ export interface ProgramState {
 
 let programHydrationAcceptancePromise: Promise<void> = Promise.resolve();
 let programHydrationAccepted = false;
+let programHydrationIngressForAcceptance: ProgramHydrationIngressClassification | null = null;
 
 export const useProgramStore = create<ProgramState>()(
   persist(
@@ -1235,13 +1307,12 @@ export const useProgramStore = create<ProgramState>()(
               !clearedDates.has(date)))
           : priorState.overrideContexts;
         const acceptedSurfaces = candidateProgram
-          ? canonicaliseHydratedState({
+          ? canonicaliseAcceptedStateCandidate({
               currentProgram: candidateProgram,
               dateOverrides: candidateOverrides,
               overrideContexts: candidateOverrideContexts,
               userRemovalConstraints: priorState.userRemovalConstraints,
             }, {
-              programAlreadyAccepted: true,
               profile: acceptedProfileForContext(
                 useProgramStore.getState().acceptedMaterialContext,
                 require('./profileStore').useProfileStore.getState().onboardingData,
@@ -1266,7 +1337,6 @@ export const useProgramStore = create<ProgramState>()(
               ? deriveStoredBlockStateFromProgram(validatedProgram, undefined)
               : null,
           },
-          programAlreadyAccepted: true,
           validateWeekStarts: validatedProgram?.microcycles.map((microcycle) =>
             microcycle.startDate.slice(0, 10)) ?? [],
         });
@@ -1603,114 +1673,132 @@ export const useProgramStore = create<ProgramState>()(
     {
       name: PROGRAM_STORE_PERSISTENCE_KEY,
       storage: createJSONStorage(() => programStateStorage),
+      version: PROGRAM_STORE_PERSISTENCE_VERSION,
+      migrate: (persistedState, persistedVersion) => {
+        const ingress = requireProgramHydrationIngress(persistedState, persistedVersion);
+        return {
+          ...(persistedState as Record<string, unknown>),
+          __programHydrationIngress: ingress,
+        };
+      },
       merge: (persisted, current) => {
-        const incomingRaw = (persisted as Partial<ProgramState> | undefined) ?? {};
+        const candidate = (persisted as (Partial<ProgramState> & {
+          __programHydrationIngress?: ProgramHydrationIngressClassification;
+        }) | undefined) ?? {};
+        const embeddedIngress = candidate.__programHydrationIngress;
+        const { __programHydrationIngress: _ignoredIngress, ...incomingWithoutIngress } = candidate;
+        const incomingRaw = incomingWithoutIngress as Partial<ProgramState>;
+        const ingress = embeddedIngress ?? requireProgramHydrationIngress(
+          incomingRaw,
+          PROGRAM_STORE_PERSISTENCE_VERSION,
+        );
+        programHydrationIngressForAcceptance = ingress;
+        const acceptedCanonical = ingress.kind === 'accepted_canonical';
         const rawAcceptedContext = (incomingRaw.acceptedMaterialContext ?? {}) as
           Partial<AcceptedMaterialContext>;
-        let acceptedContext = normalizeAcceptedMaterialContext(incomingRaw.acceptedMaterialContext);
+        let acceptedContext = acceptedCanonical
+          ? projectAcceptedMaterialContextDerivedFields(incomingRaw.acceptedMaterialContext)
+          : normalizeAcceptedMaterialContext(incomingRaw.acceptedMaterialContext);
+        const normalizedSurfaces = normalizeAcceptedProgramSurfaces(incomingRaw);
+        if (acceptedCanonical && incomingRaw.reversibleAdjustmentLedger) {
+          normalizedSurfaces.reversibleAdjustmentLedger = incomingRaw.reversibleAdjustmentLedger;
+        }
         let incoming = {
           ...incomingRaw,
-          ...normalizeAcceptedProgramSurfaces(incomingRaw),
+          ...normalizedSurfaces,
           acceptedMaterialContext: acceptedContext,
         };
-        const rawLegacyConstraints = Array.isArray(rawAcceptedContext.activeConstraints)
-          ? rawAcceptedContext.activeConstraints.filter((constraint) =>
-              (constraint.type === 'injury' && !constraint.injuryEpisodeId) ||
-              ((constraint.type === 'fatigue' || constraint.type === 'soreness' ||
-                constraint.type === 'equipment' || constraint.type === 'schedule') &&
-                (constraint.temporarySourceFactIds?.length ?? 0) === 0))
-          : [];
-        const legacyFacts = migrateLegacyTemporarySourceFacts({
-          activeConstraints: rawLegacyConstraints,
-          activeInjury: acceptedContext.temporarySourceFacts.some((fact) => 'episodeId' in fact)
-            ? null
-            : rawAcceptedContext.activeInjury ?? acceptedContext.activeInjury,
-          readinessSignalsByDate: rawAcceptedContext.readinessSignalsByDate ?? {},
-          availabilityConstraints: acceptedProfileForContext(
-            acceptedContext,
-            {},
-          ).availabilityConstraints,
-          sourceSurface: 'program_store_hydration',
-        });
-        const migratedFacts = normalizeTemporarySourceFacts({
-          value: [...legacyFacts, ...acceptedContext.temporarySourceFacts],
-        });
-        if (migratedFacts.length > 0) {
-          const capturedAt = migratedFacts
-            .map((fact) => fact.createdAt)
-            .sort()[0] ?? new Date(0).toISOString();
-          acceptedContext = normalizeAcceptedMaterialContext({
-            ...acceptedContext,
-            temporarySourceFacts: migratedFacts,
-            acceptedCompositionBase: acceptedContext.acceptedCompositionBase ?? {
-              protocolVersion: ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
-              capturedAt,
-              updatedAt: capturedAt,
-              sourceRevision: acceptedContext.revision,
-              provenance: 'legacy_after_state_only',
-              // A legacy envelope has no provable displaced before-state. Its
-              // current accepted after-state is the only safe rebase source.
-              surfaces: normalizeAcceptedProgramSurfaces(incoming),
-            },
+        if (!acceptedCanonical) {
+          const rawLegacyConstraints = Array.isArray(rawAcceptedContext.activeConstraints)
+            ? rawAcceptedContext.activeConstraints.filter((constraint) =>
+                (constraint.type === 'injury' && !constraint.injuryEpisodeId) ||
+                ((constraint.type === 'fatigue' || constraint.type === 'soreness' ||
+                  constraint.type === 'equipment' || constraint.type === 'schedule') &&
+                  (constraint.temporarySourceFactIds?.length ?? 0) === 0))
+            : [];
+          const legacyFacts = migrateLegacyTemporarySourceFacts({
+            activeConstraints: rawLegacyConstraints,
+            activeInjury: acceptedContext.temporarySourceFacts.some((fact) => 'episodeId' in fact)
+              ? null
+              : rawAcceptedContext.activeInjury ?? acceptedContext.activeInjury,
+            readinessSignalsByDate: rawAcceptedContext.readinessSignalsByDate ?? {},
+            availabilityConstraints: acceptedProfileForContext(
+              acceptedContext,
+              {},
+            ).availabilityConstraints,
+            sourceSurface: 'program_store_hydration',
           });
-          incoming = { ...incoming, acceptedMaterialContext: acceptedContext };
-        }
-        const migrationContractsByWeek: Record<string, WeeklyExposureContractV2> = {};
-        for (const microcycle of incoming.currentProgram?.microcycles ?? []) {
-          if (microcycle.exposureContractV2) {
-            migrationContractsByWeek[microcycle.startDate.slice(0, 10)] =
-              microcycle.exposureContractV2;
-          }
-        }
-        if (incoming.currentMicrocycle?.exposureContractV2) {
-          migrationContractsByWeek[incoming.currentMicrocycle.startDate.slice(0, 10)] =
-            incoming.currentMicrocycle.exposureContractV2;
-        }
-        for (const [weekStart, overlay] of Object.entries(incoming.weekScopedOverlays)) {
-          if (overlay.exposureContractV2) {
-            migrationContractsByWeek[weekStart] = overlay.exposureContractV2;
-          }
-        }
-        incoming.reversibleAdjustmentLedger = normalizeReversibleAdjustmentLedger({
-          value: incomingRaw.reversibleAdjustmentLedger,
-          userRemovalConstraints: incoming.userRemovalConstraints,
-          acceptedRevision: acceptedContext.revision,
-          exposureContractsByWeek: migrationContractsByWeek,
-        });
-        if (acceptedContext.acceptedCompositionBase) {
-          acceptedContext = normalizeAcceptedMaterialContext({
-            ...acceptedContext,
-            acceptedCompositionBase: {
-              ...acceptedContext.acceptedCompositionBase,
-              surfaces: {
-                ...acceptedContext.acceptedCompositionBase.surfaces,
-                reversibleAdjustmentLedger: incoming.reversibleAdjustmentLedger,
+          const migratedFacts = normalizeTemporarySourceFacts({
+            value: [...legacyFacts, ...acceptedContext.temporarySourceFacts],
+          });
+          if (migratedFacts.length > 0) {
+            const capturedAt = migratedFacts
+              .map((fact) => fact.createdAt)
+              .sort()[0] ?? new Date(0).toISOString();
+            acceptedContext = normalizeAcceptedMaterialContext({
+              ...acceptedContext,
+              temporarySourceFacts: migratedFacts,
+              acceptedCompositionBase: acceptedContext.acceptedCompositionBase ?? {
+                protocolVersion: ACCEPTED_COMPOSITION_BASE_PROTOCOL_VERSION,
+                capturedAt,
+                updatedAt: capturedAt,
+                sourceRevision: acceptedContext.revision,
+                provenance: 'legacy_after_state_only',
+                // A legacy envelope has no provable displaced before-state. Its
+                // current accepted after-state is the only safe rebase source.
+                surfaces: normalizeAcceptedProgramSurfaces(incoming),
               },
-            },
+            });
+            incoming = { ...incoming, acceptedMaterialContext: acceptedContext };
+          }
+          const migrationContractsByWeek: Record<string, WeeklyExposureContractV2> = {};
+          for (const microcycle of incoming.currentProgram?.microcycles ?? []) {
+            if (microcycle.exposureContractV2) {
+              migrationContractsByWeek[microcycle.startDate.slice(0, 10)] =
+                microcycle.exposureContractV2;
+            }
+          }
+          if (incoming.currentMicrocycle?.exposureContractV2) {
+            migrationContractsByWeek[incoming.currentMicrocycle.startDate.slice(0, 10)] =
+              incoming.currentMicrocycle.exposureContractV2;
+          }
+          for (const [weekStart, overlay] of Object.entries(incoming.weekScopedOverlays)) {
+            if (overlay.exposureContractV2) {
+              migrationContractsByWeek[weekStart] = overlay.exposureContractV2;
+            }
+          }
+          incoming.reversibleAdjustmentLedger = normalizeReversibleAdjustmentLedger({
+            value: incomingRaw.reversibleAdjustmentLedger,
+            userRemovalConstraints: incoming.userRemovalConstraints,
+            acceptedRevision: acceptedContext.revision,
+            exposureContractsByWeek: migrationContractsByWeek,
           });
-          incoming = {
-            ...incoming,
-            ...acceptedContext.acceptedCompositionBase.surfaces,
-            acceptedMaterialContext: acceptedContext,
-          };
+          if (acceptedContext.acceptedCompositionBase) {
+            acceptedContext = normalizeAcceptedMaterialContext({
+              ...acceptedContext,
+              acceptedCompositionBase: {
+                ...acceptedContext.acceptedCompositionBase,
+                surfaces: {
+                  ...acceptedContext.acceptedCompositionBase.surfaces,
+                  reversibleAdjustmentLedger: incoming.reversibleAdjustmentLedger,
+                },
+              },
+            });
+            incoming = {
+              ...incoming,
+              ...acceptedContext.acceptedCompositionBase.surfaces,
+              acceptedMaterialContext: acceptedContext,
+            };
+          }
         }
         const persistedState = canonicaliseHydratedState(
           incoming,
           {
-            programAlreadyAccepted: true,
+            ingressKind: ingress.kind,
             profile: acceptedProfileForContext(
               acceptedContext,
               {},
             ),
-            markedDays: acceptedContext.markedDays,
-            validateWeekStarts: [
-              ...(incoming.currentProgram?.microcycles ?? []).map((microcycle) =>
-                microcycle.startDate.slice(0, 10)),
-              ...(incoming.currentMicrocycle
-                ? [incoming.currentMicrocycle.startDate.slice(0, 10)]
-                : []),
-              ...Object.keys(incoming.weekScopedOverlays ?? {}),
-            ],
           },
         );
         const merged = { ...current, ...persistedState } as ProgramState;
@@ -1730,20 +1818,27 @@ export const useProgramStore = create<ProgramState>()(
         });
         return merged;
       },
-      onRehydrateStorage: () => (_state, error) => {
+      onRehydrateStorage: () => {
+        programHydrationIngressForAcceptance = null;
+        return (_state, error) => {
         programHydrationAccepted = false;
         programHydrationAcceptancePromise = (async () => {
           if (error) {
             const trace = programHydrationTrace();
+            const hydrationReason = error instanceof ProgramHydrationIngressError
+              ? error.reason
+              : 'program_hydration_failed';
             emitAthleteActionEvent(trace, 'hydrated_state_checked', {
               hydrationSucceeded: false,
-              originalRejectionCode: 'program_hydration_failed',
+              originalRejectionCode: hydrationReason,
               rejectingBoundary: 'programStore.onRehydrateStorage',
               failureCategory: 'persistence_failure',
             });
             emitAthleteActionEvent(trace, 'athlete_action_failed', {
               outcome: 'failed',
               internalResultCode: 'program_hydration_failed',
+              originalRejectionCode: hydrationReason,
+              rejectionCodes: [hydrationReason],
               firstFailingBoundary: 'programStore.onRehydrateStorage',
             });
             clearProgramHydrationTrace();
@@ -1759,6 +1854,27 @@ export const useProgramStore = create<ProgramState>()(
             const acceptedBefore = normalizeAcceptedMaterialContext(
               useProgramStore.getState().acceptedMaterialContext,
             );
+            if (programHydrationIngressForAcceptance?.kind === 'accepted_canonical') {
+              await runWithAthleteActionTrace(trace, async () => {
+                if (acceptedBefore.temporarySourceFacts.length > 0) {
+                  require('./coachUpdatesStore').publishAcceptedCoachUpdatesCompatibilityMirror({
+                    activeConstraints: acceptedBefore.activeConstraints,
+                    activeInjury: acceptedBefore.activeInjury,
+                  });
+                }
+                if (acceptedBefore.acceptedProfileSnapshot) {
+                  require('./profileStore').publishAcceptedProfileCompatibilityMirror(
+                    acceptedBefore.acceptedProfileSnapshot.onboardingData,
+                  );
+                }
+                await persistCanonicalHydratedEnvelopeReadback();
+                emitAthleteActionEvent(trace, 'athlete_action_completed', {
+                  outcome: 'accepted',
+                  internalResultCode: 'hydration_accepted_canonical_projection',
+                });
+              });
+              return;
+            }
             const persistedState = async (key: string): Promise<Record<string, any>> => {
               try {
                 const raw = await asyncStorageCompat.getItem(key);
@@ -1882,6 +1998,7 @@ export const useProgramStore = create<ProgramState>()(
                   accepted.acceptedProfileSnapshot.onboardingData,
                 );
               }
+              await persistCanonicalHydratedEnvelopeReadback();
               emitAthleteActionEvent(trace, 'athlete_action_completed', {
                 outcome: 'accepted',
                 internalResultCode: 'hydration_accepted',
@@ -1907,6 +2024,7 @@ export const useProgramStore = create<ProgramState>()(
         })().then(() => {
           if (!error) programHydrationAccepted = true;
         });
+        };
       },
     },
   ),

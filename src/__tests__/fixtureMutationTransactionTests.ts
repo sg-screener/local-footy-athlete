@@ -24,7 +24,7 @@ import type {
 } from '../types/fixtureMutation';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import {
-  canonicaliseHydratedState,
+  canonicaliseAcceptedStateCandidate,
   PROGRAM_STORE_PERSISTENCE_KEY,
   readDurableProgramStoreEnvelope,
   useProgramStore,
@@ -428,8 +428,7 @@ async function main(): Promise<void> {
     const envelope = await readDurableProgramStoreEnvelope();
     assert(envelope, 'restored durable envelope missing');
     const persisted = JSON.parse(envelope).state as ReturnType<typeof useProgramStore.getState>;
-    const hydrated = canonicaliseHydratedState(persisted, {
-      programAlreadyAccepted: true,
+    const hydrated = canonicaliseAcceptedStateCandidate(persisted, {
       profile: athlete,
       markedDays: persisted.acceptedMaterialContext.markedDays,
       validateWeekStarts: adjustment.rollingDependencyWeeks,

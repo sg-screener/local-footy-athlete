@@ -582,7 +582,10 @@ run('regression', '14 an unrepairable legacy week returns a typed migration fail
   const source = stripContracts(generate(profile('Off-season'))).microcycles[0];
   let error: unknown;
   try {
-    canonicaliseHydratedState({ currentMicrocycle: source });
+    canonicaliseHydratedState(
+      { currentMicrocycle: source },
+      { ingressKind: 'migration_required' },
+    );
   } catch (caught) {
     error = caught;
   }
