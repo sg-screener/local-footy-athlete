@@ -6,6 +6,62 @@ the top.
 
 ---
 
+## Wednesday 22 July 2026 — Journal and Auth logged as backlog, not bugs
+
+**What happened.**
+Following the Journal and Auth audits, `docs/SUPPORTED_ATHLETE_ACTIONS.md`
+now says plainly what those audits found: both areas are fully built
+screens that nobody wired into any navigator, on purpose, not accidental
+breakage. They're moved into the contract's "Explicitly NOT product" list
+so future audits stop re-discovering the same absence.
+
+**What's next (added to backlog, not started).**
+Journal needs a product spec before it's built: a weekly log of numbers,
+progress, and fatigue an athlete can check against "was I too tired this
+week?", plus free-note space for recovery, mobility, injury, diet, and life
+stress. It has to read from the same feedback/readiness data the visible-
+persistence fix (group B) is already working on, not keep its own copy.
+Auth needs an actual product decision — sign-in/accounts/sign-out — before
+anyone reconnects the existing SignIn/SignUp screens; right now the app is
+effectively local-only and that's a pre-release call, not a wiring task.
+
+---
+
+## Tuesday–Wednesday 21–22 July 2026 — The great testing reset
+
+**What happened.**
+Two weeks of frustrating AI testing loops ended with a full process reset.
+The old way (many terminals, many worktrees, coach-chat used to test
+everything, AI diagnosing instead of tapping) is gone. The new way: Claude
+Code runs in the repo with direct control of the simulator, audits one app
+area at a time against a signed-off list of what the app is actually
+supposed to do (`docs/SUPPORTED_ATHLETE_ACTIONS.md`), records findings fast,
+and fixes bugs in reviewed groups. Five areas were audited in a day —
+Program, Workout, Home, Profile, plus Journal/Auth overnight.
+
+**The big discovery.**
+Three nasty bug families (legal changes refused with a scary internal code,
+weights changing on exercises nobody touched, binning one session quietly
+rearranging other days) all turned out to be ONE root cause: the week you
+see on screen is rebuilt from scratch every time you look at it, and the
+rebuild is allowed to change things nobody asked it to. The full explanation
+lives in `docs/SECTION18_OWNERSHIP_REASSESSMENT_2026-07-22.md` — approved,
+now being fixed properly (save the week, show the exact diff, one owner for
+all changes) instead of patched.
+
+**Product decisions made.**
+Off-season correctly drops team training. The vague "busy week = make it
+lighter" button is retired — replaced (on paper) by "pick which days are
+out" and a "did you do Tuesday?" prompt for missed sessions. Session
+duration editing is officially not a thing.
+
+**What's next.**
+Land the ownership fix in stages with safety tests first, then the visible
+feedback fixes (logging a session should visibly count), then accessibility
+labels and the small dead buttons.
+
+---
+
 ## Thursday 9 July 2026 — The word "tempo" means tempo again (Phase 4B)
 
 **What happened.**
