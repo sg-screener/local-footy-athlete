@@ -12,6 +12,12 @@
  *   - Prescription adjustments apply correctly
  */
 
+// Runs directly against the TypeScript sources via sucrase-node (the same
+// runner every maintained suite uses) — no separate tsc compile step and no
+// /tmp/lfa-compiled artifacts. App modules reference the RN __DEV__ flag at
+// import time, so define it before requiring them.
+(global).__DEV__ = false;
+
 // ─── Imports ───
 
 const {
@@ -20,24 +26,24 @@ const {
   applyStrengthProgression,
   buildProgressionContext,
   DEFAULT_PROGRESSION_CONTEXT,
-} = require('/tmp/lfa-compiled/utils/strengthProgressionIntegration');
+} = require('../utils/strengthProgressionIntegration');
 
 const {
   resolveProgression,
-} = require('/tmp/lfa-compiled/utils/progressionRules');
+} = require('../utils/progressionRules');
 
 const {
   feelingToRPE,
   deriveTrend,
   deriveCompletionQuality,
-} = require('/tmp/lfa-compiled/utils/progressionHelpers');
+} = require('../utils/progressionHelpers');
 
 const {
   resolveWeekWithConditioning,
   authorWeekStrengthProgression,
   formatDate,
   addDays,
-} = require('/tmp/lfa-compiled/utils/sessionResolver');
+} = require('../utils/sessionResolver');
 
 // ─── Test Scaffolding ───
 
@@ -592,7 +598,7 @@ assert(rounded5kgSquat.prescribedWeightKg === 115,
   `Weight rounded to 5.0kg: ${rounded5kgSquat.prescribedWeightKg} (expect 115)`);
 
 // Verify roundToIncrement directly
-const { roundToIncrement } = require('/tmp/lfa-compiled/utils/strengthProgressionIntegration');
+const { roundToIncrement } = require('../utils/strengthProgressionIntegration');
 assert(roundToIncrement(102.3, 2.5) === 102.5, `roundToIncrement(102.3, 2.5) → 102.5`);
 assert(roundToIncrement(101.2, 2.5) === 100, `roundToIncrement(101.2, 2.5) → 100`);
 assert(roundToIncrement(64.575, 1.0) === 65, `roundToIncrement(64.575, 1.0) → 65`);
