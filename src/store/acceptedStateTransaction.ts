@@ -2043,14 +2043,28 @@ export type AthleteDeletionAffectedMetric =
   | 'conditioning_core'
   | 'session';
 
+/** Per-metric quantified shortfall vs the optimal week (authorised reduction). */
+export interface AthleteReductionShortfall {
+  metric: string;
+  originalApprovedTarget: number;
+  reducedTarget: number;
+}
+
 /** Typed result derived from the accepted, publishable deletion state. */
 export interface AthleteDeletionPublishedOutcome {
   kind: AthleteDeletionPublishedOutcomeKind;
   affectedMetric: AthleteDeletionAffectedMetric;
   targetDate: string;
   deletionIdentity: string;
+  /** Day the displaced required work relocated to (null when reduced/none). */
   destinationDate: string | null;
   reductionMetrics: string[];
+  /**
+   * Quantified loss vs the optimal week when the displaced work could not be
+   * relocated. Empty for a relocation. Carries the data the ask-before-
+   * restructure / quantified-notice UX (preview-gate stage) will surface.
+   */
+  reductions: AthleteReductionShortfall[];
   removedPatterns: string[];
 }
 
@@ -2157,11 +2171,15 @@ function deriveAthleteDeletionPublishedOutcome(args: {
     : sourceWasCoreConditioning
       ? 'conditioning_core'
       : 'session';
-  const reductionMetrics = after.contract.authorisedReductions
+  const reductionEntries = after.contract.authorisedReductions
     .filter((entry) => entry.reason === 'explicit_user_override' &&
-      entry.detail.includes(args.input.date))
-    .map((entry) => entry.metric)
-    .sort();
+      entry.detail.includes(args.input.date));
+  const reductionMetrics = reductionEntries.map((entry) => entry.metric).sort();
+  const reductions: AthleteReductionShortfall[] = reductionEntries.map((entry) => ({
+    metric: entry.metric,
+    originalApprovedTarget: entry.originalApprovedTarget,
+    reducedTarget: entry.reducedTarget,
+  }));
   const sourceIdentity = args.input.originalWorkout.planEntryId ??
     args.input.originalWorkout.id;
   const componentIdentity = `${sourceIdentity}:strength-component`;
@@ -2196,13 +2214,13 @@ function deriveAthleteDeletionPublishedOutcome(args: {
   if (reductionMetrics.length > 0) {
     return {
       kind: 'reduced', affectedMetric, targetDate: args.input.date,
-      deletionIdentity, destinationDate: null, reductionMetrics, removedPatterns,
+      deletionIdentity, destinationDate: null, reductionMetrics, reductions, removedPatterns,
     };
   }
   if (!destination) {
     return {
       kind: 'already_satisfied', affectedMetric, targetDate: args.input.date,
-      deletionIdentity, destinationDate: null, reductionMetrics: [], removedPatterns,
+      deletionIdentity, destinationDate: null, reductionMetrics: [], reductions: [], removedPatterns,
     };
   }
   const beforeDestination = beforeByDay.get(destination.dayOfWeek);
@@ -2217,6 +2235,7 @@ function deriveAthleteDeletionPublishedOutcome(args: {
     deletionIdentity,
     destinationDate: dateForWeekDay(weekStart, destination.dayOfWeek),
     reductionMetrics: [],
+    reductions: [],
     removedPatterns,
   };
 }
@@ -2389,6 +2408,16 @@ export function stageAthleteSessionDeletionTransaction(
       alreadyApplied: true,
     };
   }
+  // A swap rides this deletion with a non-null remainingWorkout (the new
+  // session). When content remains on the day it is not a whole-day rest, so
+  // rest-ownership and the rest calendar mark follow the surviving content —
+  // mirroring the move transaction (wholeDayRestOwned: !swappedWorkout). For
+  // every existing Bin case (whole_session ⇒ remainingWorkout null) this is
+  // byte-identical to the previous unconditional behaviour.
+  const remainingWorkout = args.remainingWorkout && args.remainingWorkout.workoutType !== 'Rest'
+    ? JSON.parse(JSON.stringify(args.remainingWorkout)) as Workout
+    : null;
+  const wholeDayRest = args.scope === 'whole_session' && !remainingWorkout;
   const constraint: UserRemovalConstraint = {
     protocolVersion: 1,
     id,
@@ -2401,11 +2430,9 @@ export function stageAthleteSessionDeletionTransaction(
     targetPlanEntryId: args.originalWorkout.planEntryId ?? null,
     targetWorkoutId: args.originalWorkout.id,
     originalWorkout: JSON.parse(JSON.stringify(args.originalWorkout)) as Workout,
-    remainingWorkout: args.remainingWorkout && args.remainingWorkout.workoutType !== 'Rest'
-      ? JSON.parse(JSON.stringify(args.remainingWorkout)) as Workout
-      : null,
+    remainingWorkout,
     equivalentExposureMayRelocate: args.equivalentExposureMayRelocate ?? true,
-    wholeDayRestOwned: args.scope === 'whole_session',
+    wholeDayRestOwned: wholeDayRest,
     createdAt: new Date().toISOString(),
     restoredAt: null,
     restorationReason: null,
@@ -2423,7 +2450,7 @@ export function stageAthleteSessionDeletionTransaction(
     provenanceIdentity: `${constraint.authorship}:${constraint.source}:${constraint.id}`,
   });
   const markedDays = { ...prior.markedDays };
-  if (args.scope === 'whole_session') markedDays[date] = 'rest';
+  if (wholeDayRest) markedDays[date] = 'rest';
   return stageAthleteMutationConstraint({
     reason: args.reason,
     source: args.source,

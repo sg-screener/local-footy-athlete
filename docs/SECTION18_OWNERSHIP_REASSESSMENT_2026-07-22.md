@@ -571,3 +571,66 @@ result. It is RED until stage 2 lands.
 ### Stage-2 gate
 `test:bible` green; ownership scoreboard monotonic (stage 2 targets #3 and the
 new #8 → green; never green→red). Report both.
+
+---
+
+## Stage 2 landed — swap re-route (2026-07-22)
+
+Non-anchor `swap_category` / `swap_template` now route through the accepted-state
+transaction (the path Move/Bin use), modelling a swap as a whole-session removal
+whose `remainingWorkout` is the materialized new session. `resolveAthleteMutation`
++ `applyPlanChangeWithinTrace` / `previewPlanChangeRisk` gained a `swap_session`
+branch; the new content is materialized through the pure
+`finaliseWorkoutAfterMutation` boundary (not the rejecting whole-week gate), so
+§18 is owned by the transaction. One transaction edit: rest-ownership /
+rest-mark are gated on `!remainingWorkout` (mirroring Move), byte-identical for
+every existing Bin case.
+
+**Correction to the stage-2 diagnosis above.** The diagnosis claimed MON's
+lower-body strength has "no free day to relocate" and that a swap therefore
+"records the same authorised reduction Bin does." That was an artefact of driving
+the **single-date** gate (`maxRepairAttempts: 1`), which cannot persist cross-day
+repairs. The transaction path *can*: on `standard-in-season-week`, both Bin **and**
+the swap relocate the displaced strength to Wednesday (a free rest day) and record
+**no** reduction. A forced reduction only occurs when the week genuinely has no
+free relocation day.
+
+### Product decision (Sam, 2026-07-22)
+A strength-displacing swap **relocates the displaced work when the Bible allows
+it, discloses where it went, and reduces the target — with disclosure — only when
+relocation is genuinely impossible.** Parity with Bin is in reduction
+*ownership/disclosure*, not in relocation policy. Future athlete UX (lands with
+the **preview-gate stage**, not now): ask-before-restructure ("want me to update
+the rest of the week for the optimal program?") and, when relocation is
+impossible, a **quantified** notice of what the week loses. To power that later,
+the transaction result already carries the data now:
+`AthleteDeletionPublishedOutcome.destinationDate` (relocation target day) and
+`AthleteDeletionPublishedOutcome.reductions` (per-metric
+`originalApprovedTarget` → `reducedTarget` shortfall vs the optimal week).
+
+Invariant #8 was split accordingly and both are green:
+- **#8a** (relocatable, standard seed) — the displaced strength lands on the free
+  day (Wed) and the result names that day.
+- **#8b** (unrelocatable, Pre-season Mon/Wed/Fri, no game/team training) — a real
+  `explicit_user_override` reduction is recorded and disclosed.
+
+Shipped scoreboard: **#3, #8a, #8b green**; #1/#2/#6/#7 unchanged; #4/#5 remain
+red (out of stage-2 scope). Out-of-gate swap suites updated same commit
+(`planChangeProducerTests`, `weekRebuildIntegrationTests` [C] flipped from
+"rejected" to "accepted + disclosed").
+
+### Stage 3 — tests-first, mandatory before implementation
+Add these two **RED** ownership invariants first; they pin the behaviour the
+legacy single-date override writer still owns:
+- **(a) Anchor-day swap** — a swap on a Team Training day **preserves the Team
+  Training anchor** and replaces only the gym component (no anchor drop/re-add).
+  Non-anchor swaps deferred here fall through to the legacy writer today
+  (`swap_defers_to_legacy_anchor`).
+- **(b) Empty/rest-day add** — `add_category` on an empty day routes through a new
+  **athlete-addition transaction primitive** (not the legacy writer), §18 owned
+  by the transaction.
+
+**Retirement ledger:** the legacy single-date override writer still owns
+anchor-day swaps and **all** adds. It is not fully retired until stage 3 lands
+(a) and (b) green. This note is the tracking record so the retirement is not
+quietly dropped.

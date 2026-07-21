@@ -116,9 +116,13 @@ function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   } as OnboardingData;
 }
 
-/** Seed the deterministic `standard-in-season-week` into the live stores. */
-function seed(): TrainingProgram {
-  const athlete = profile();
+/** Seed the deterministic `standard-in-season-week` into the live stores.
+ *  Callers may pass a constrained athlete + marks (e.g. Pre-season MWF with no
+ *  game) to build a week with no free relocation day. */
+function seed(
+  athlete: OnboardingData = profile(),
+  marks: Record<string, CalendarDayType> = { [SATURDAY]: 'game' },
+): TrainingProgram {
   const program = quiet(() => generateProgramLocally(athlete, {
     todayISO: WEEK,
     previousProgram: null,
@@ -126,12 +130,11 @@ function seed(): TrainingProgram {
     readinessSignal: null,
     seasonPhaseClock: {
       protocolVersion: 1,
-      selectedPhase: 'In-season',
+      selectedPhase: athlete.seasonPhase!,
       phaseEntryWeekStartISO: WEEK,
       originProvenance: 'explicit_user_phase_change',
     },
   }));
-  const marks: Record<string, CalendarDayType> = { [SATURDAY]: 'game' };
   useCalendarStore.setState({ markedDays: marks, selectedDate: null });
   useReadinessStore.setState({ signalsByDate: {} });
   useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
@@ -392,10 +395,17 @@ run('7 persistence: the bounded swap result survives reload without drift', () =
     `untouched Deadlift load ${deadliftWeight} -> ${deadliftAfterReload} across a swap + reload`);
 });
 
-// Invariant 8 — disclosed reduction: a Swap that reduces a target must disclose it.
-// (Stage-2 spec addition. A strength-displacing Swap must succeed AND surface the
-// authorised reduction in its result, same ownership as Bin's disclosure.)
-run('8 disclosed-reduction: strength-displacing Swap succeeds and discloses the reduction', () => {
+// Invariant 8 — a strength-displacing Swap relocates the displaced work when the
+// Bible allows it (and names where it went), and reduces the target — with
+// disclosure — only when relocation is genuinely impossible. Same disclosure
+// ownership as Bin. Split into 8a (relocatable) and 8b (unrelocatable) so the
+// reduction path stays tested. (Product decision, Sam 2026-07-22: see
+// docs/SECTION18_OWNERSHIP_REASSESSMENT_2026-07-22.md "Stage 2 landed".)
+
+// 8a — standard in-season week: WED is a free day, so §18 relocates MON's
+// lower-body strength there. The swap must succeed and NAME the relocation day
+// (no silent side effect).
+run('8a relocated-disclosure: strength-displacing Swap relocates the displaced strength and names the day', () => {
   seed();
   const change = { kind: 'swap_category' as const, date: WEEK, category: 'conditioning_light' as const };
   const week = visibleWeek();
@@ -407,13 +417,48 @@ run('8 disclosed-reduction: strength-displacing Swap succeeds and discloses the 
     change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
     setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
   });
-  // MON's only lower-body strength has no free relocation day, so §18 must accept
-  // the swap against an authorised reduction — owned + disclosed by the transaction.
   assert(result.ok, `strength-displacing Swap refused: "${result.message}"`);
+  const sessionDays = acceptedSnapshot().evaluation.ledger.mainStrength.sessionDays;
+  // MON (1) gave up its lower-body strength; it relocated to the free WED (3).
+  assert(!sessionDays.includes(1) && sessionDays.includes(3),
+    `displaced strength did not relocate to Wednesday: sessionDays=${JSON.stringify(sessionDays)}`);
+  assert(/wednesday/i.test(result.message),
+    `relocation day not disclosed in the Swap result: "${result.message}"`);
+});
+
+// 8b — Pre-season Mon/Wed/Fri, no game, no team training: every training day is
+// occupied and there is no free day to relocate to, so §18 must accept the swap
+// against an authorised reduction — owned + disclosed by the transaction, like Bin.
+run('8b disclosed-reduction: an unrelocatable strength-displacing Swap reduces the target and discloses it', () => {
+  const constrained = profile({
+    seasonPhase: 'Pre-season',
+    usualGameDay: undefined,
+    gameDay: undefined,
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    trainingDaysPerWeek: 3,
+    preferredTrainingDays: ['Monday', 'Wednesday', 'Friday'],
+  });
+  seed(constrained, {});
+  const before = acceptedSnapshot();
+  const strengthDay = before.evaluation.ledger.mainStrength.sessionDays[0];
+  assert(strengthDay !== undefined, 'constrained week has no main-strength day to swap');
+  const date = dateForDay(WEEK, strengthDay);
+  const change = { kind: 'swap_category' as const, date, category: 'conditioning_light' as const };
+  const week = visibleWeek();
+  const preview = previewPlanChangeRisk({
+    change, visibleWeek: week, todayISO: WEEK,
+    profile: useProfileStore.getState().onboardingData ?? undefined,
+  });
+  const result = applyPlanChange({
+    change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
+    setManualOverride: (d, workout, ctx) => useProgramStore.getState().setManualOverride(d, workout, ctx),
+  });
+  assert(result.ok, `unrelocatable strength-displacing Swap refused: "${result.message}"`);
   const reductions = acceptedSnapshot().contract.authorisedReductions.filter(
     (entry) => entry.reason === 'explicit_user_override');
   assert(reductions.length > 0,
-    'no authorised reduction recorded for a strength-displacing Swap');
+    'no authorised reduction recorded for an unrelocatable strength-displacing Swap');
   assert(/reduc/i.test(result.message),
     `authorised reduction not disclosed in the Swap result: "${result.message}"`);
 });

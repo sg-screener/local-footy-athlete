@@ -696,16 +696,24 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     pickTemplateForCategory({ category: 'conditioning_light', date: SAT, visibleWeek: crowdedWeek })?.label,
     'Flush Out - 2min On / 1min Off');
 
-  // Category kinds flow end-to-end through the same writer.
+  // swap_category is owned by the typed accepted-state transaction (a swap is a
+  // whole-session removal whose remainingWorkout is the new session), NOT the
+  // legacy single-date override writer — so it never calls setManualOverride.
   const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const swapInputs: Array<import('../store/acceptedStateTransaction').AthleteSessionDeletionTransactionInput> = [];
   const swapResult = applyPlanChange({
     change: { kind: 'swap_category', date: THU, category: 'conditioning_light' },
     visibleWeek: week,
     todayISO: TODAY,
     setManualOverride: (date, workout) => writes.push({ date, workout }),
+    commitAthleteRemoval: (input) => { swapInputs.push(input); return {} as any; },
   });
   ok('[10] swap_category applies', swapResult.ok, swapResult);
-  eq('[10] one write on the swapped date', writes.map((w) => w.date), [THU]);
+  ok('[10] swap routes through the transaction, not the legacy writer',
+    writes.length === 0, writes);
+  eq('[10] one transaction on the swapped date', swapInputs.map((i) => i.date), [THU]);
+  ok('[10] new session lands on the swapped day as remainingWorkout',
+    !!swapInputs[0]?.remainingWorkout, swapInputs[0]);
   ok('[10] done message names the picked session',
     !!pick1 && swapResult.message.includes(pick1.label),
     swapResult.message);
@@ -1070,16 +1078,22 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   const pickB = pickTemplateForCategory({ category: 'accessories', date: SAT, visibleWeek: week });
   eq('[14] accessory pick deterministic', pickA?.templateId, pickB?.templateId);
 
-  // Swap THU's Upper Push for a lower-body engine session, end to end.
+  // Swap THU's Upper Push for a lower-body engine session, end to end. The swap
+  // is transaction-owned, so the engine build arrives as the transaction's
+  // remainingWorkout (the new session that lands on the day), not a manual write.
   const writes: Array<{ date: string; workout: Workout | null }> = [];
+  const swapInputs: Array<import('../store/acceptedStateTransaction').AthleteSessionDeletionTransactionInput> = [];
   const result = applyPlanChange({
     change: { kind: 'swap_category', date: THU, category: 'strength_lower' },
     visibleWeek: week,
     todayISO: TODAY,
     setManualOverride: (date, workout) => writes.push({ date, workout }),
+    commitAthleteRemoval: (input) => { swapInputs.push(input); return {} as any; },
   });
   ok('[14] engine strength swap applies', result.ok, result);
-  const written = writes[0]?.workout;
+  ok('[14] swap routes through the transaction, not the legacy writer',
+    writes.length === 0, writes);
+  const written = swapInputs[0]?.remainingWorkout;
   eq('[14] written session is the engine build', written?.name, 'Lower Body Strength');
   eq('[14] written type is Strength', written?.workoutType, 'Strength');
   ok('[14] engine produced real exercises',
@@ -1321,9 +1335,12 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
 {
   console.log('\n[18] pre-commit risk preview for tap edits');
 
+  // A safe add stays on the registry/risk-preview path (swap is now transaction-
+  // owned and previews as a plain 'allow' without a store seed). add_category
+  // exercises the same allow/confirm/block pipeline the risky cases below rely on.
   const safeWeek = byeWeek();
   const safePreview = previewPlanChangeRisk({
-    change: { kind: 'swap_category', date: THU, category: 'conditioning_light' },
+    change: { kind: 'add_category', date: THU, category: 'conditioning_light' },
     visibleWeek: safeWeek,
     todayISO: TODAY,
   });
@@ -1332,7 +1349,7 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     safePreview.assessment);
   const safeWrites: Array<{ date: string; workout: Workout | null }> = [];
   const safeApply = applyPlanChange({
-    change: { kind: 'swap_category', date: THU, category: 'conditioning_light' },
+    change: { kind: 'add_category', date: THU, category: 'conditioning_light' },
     visibleWeek: safeWeek,
     todayISO: TODAY,
     setManualOverride: (date, workout) => safeWrites.push({ date, workout }),
@@ -1774,7 +1791,7 @@ const producerSource = require('fs').readFileSync(
   'utf8',
 ) as string;
 const previewOwnerStart = producerSource.indexOf(
-  "if (args.change.kind === 'move_session' || args.change.kind === 'remove_session')",
+  "args.change.kind === 'move_session' || args.change.kind === 'remove_session'",
   producerSource.indexOf('export function previewPlanChangeRisk'),
 );
 const previewLegacyStart = producerSource.indexOf(
@@ -1795,7 +1812,7 @@ ok('[20] preview branches before general revision-template policy construction',
 
 const commitFunctionStart = producerSource.indexOf('function applyPlanChangeWithinTrace');
 const commitOwnerStart = producerSource.indexOf(
-  "if (args.change.kind === 'move_session' || args.change.kind === 'remove_session')",
+  "args.change.kind === 'move_session' || args.change.kind === 'remove_session'",
   commitFunctionStart,
 );
 const commitLegacyStart = producerSource.indexOf(
