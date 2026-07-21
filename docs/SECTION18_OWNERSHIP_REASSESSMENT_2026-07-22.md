@@ -689,14 +689,19 @@ these):**
   (`SUPPORTED_ATHLETE_ACTIONS.md` contract text to follow in a later change.)
 
 **Retirement ledger — what the legacy single-date override writer STILL owns after
-stage 3** (so residuals aren't quietly dropped):
+stage 3** (the four residuals amendment 2 enumerated, so none is quietly dropped):
 1. **Occupied-day STACK adds** — `add_template`/`add_category` onto a day that
-   already has a session (`add_defers_to_legacy_stack`, occupied branch).
-2. **`no_template_for_category`** — a category pick with no resolvable template
-   (swap or add).
-3. **The removal-constraint re-add / restoration defer** — an add onto a day
+   already has a session (the occupied branch of `resolveAthleteMutation`).
+2. **`add_defers_to_legacy_stack`** — the deferral error code that routes (1) and
+   (3) to the legacy writer.
+3. **`no_template_for_category`** — a category pick (swap or add) with no
+   resolvable template.
+4. **The removal-constraint re-add / restoration defer** — an add onto a day
    emptied by an active whole-DAY removal (`remainingWorkout: null`); that is the
-   restoration path, not a net-new add.
+   restoration path, not a net-new add, so it also defers via
+   `add_defers_to_legacy_stack`.
 
-These are the only residual owners; a future stage migrates occupied-day stack
-adds through a transaction-owned stack primitive to finish the retirement.
+(Distinctly: three *cases* — occupied stack, no-template, re-add restoration —
+across two error codes; item 2 is the shared code, listed separately per the
+tracking record.) A future stage migrates occupied-day stack adds through a
+transaction-owned stack primitive to finish the retirement.
