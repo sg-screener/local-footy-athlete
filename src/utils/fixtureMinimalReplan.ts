@@ -97,6 +97,7 @@ export type FixtureMutationIntent =
   | 'remove_from_date'
   | 'athlete_removal'
   | 'athlete_move'
+  | 'athlete_addition'
   | 'restore_adjustment'
   | 'remove_weekly_exposure';
 

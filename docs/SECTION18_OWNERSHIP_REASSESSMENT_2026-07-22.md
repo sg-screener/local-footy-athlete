@@ -634,3 +634,69 @@ legacy single-date override writer still owns:
 anchor-day swaps and **all** adds. It is not fully retired until stage 3 lands
 (a) and (b) green. This note is the tracking record so the retirement is not
 quietly dropped.
+
+### Stage-3 design correction — the "no constraint" add was wrong (2026-07-22)
+The stage-3 plan assumed an empty-day add could be a *constraint-free* transaction:
+stage the new session as a `dateOverride`, run the whole-week repair with a
+preserve-set intent, and let it survive. **Empirically it does not.** Driving the
+§18 gateway on `standard-in-season-week` + a Wednesday conditioning add returns
+`status: repaired` and **canonicalises Wednesday straight back to `Rest`** — the
+gateway strips the unrequired session. It is not an off-target rejection; the
+gateway simply does not keep authored content that nothing *pins*.
+
+**The single mechanism by which user-authored content survives §18 is the
+`UserRemovalConstraint.remainingWorkout` pin.** Removals and swaps survive because
+their constraint forces `remainingWorkout` onto the day
+(`applyUserRemovalConstraintsToWeek`); that is exactly why invariant #9 (anchor
+swap) passes. Same correction shape as the stage-2 diagnosis correction: an
+assumption about a later layer was wrong, and the fix is to route through the
+**one** ownership mechanism, not to add a second.
+
+**Adopted (Sam approved):** keep the dedicated addition primitive
+(`commitAthleteSessionAdditionTransaction`, ledger kind `session_add`), but pin the
+added session with a constraint whose `originalWorkout` = the day's **base `Rest`
+placeholder** (present with a stable id) and `remainingWorkout` = the new session.
+Requirements verified with the fix:
+1. **Zero displaced work.** The pin's `originalWorkout` is `Rest`, so no
+   authorised-reduction / strength-target math counts it as removed training
+   (`equivalentExposureMayRelocate: false`, no reduction recorded).
+2. **Re-add defer stays honest.** The removal-constraint re-add/restoration defer
+   is distinguished from add-pins (add-pins carry `remainingWorkout` and leave the
+   day occupied; only a real whole-day removal leaves it empty with
+   `remainingWorkout: null`), verified against the athlete-session-deletion re-add
+   regression.
+3. **Undo round-trips to Rest.** Restoring a `session_add` returns the day to its
+   base `Rest` placeholder (add undone = rest day again).
+
+## Stage 3 landed — anchor-day swap + empty-day add (2026-07-22)
+
+Both stage-3 ownership invariants are green (`#9` anchor swap, `#10` empty-day add);
+scoreboard `#1,2,3,6,7,8a,8b,9,10` green, `#4/#5` still red (out of scope).
+`test:bible` green. The ownership suite stays a standalone target (not appended to
+`test:bible` while `#4/#5` are open).
+
+**What now routes through the accepted-state transaction (legacy writer retired for
+these):**
+- **Anchor-day (Team Training) swaps** — `resolveAthleteMutation` no longer defers
+  `team_training`; it rides the deletion transaction's `remainingWorkout` pin
+  (`Team Training + <new>`), anchor preserved, gym component replaced.
+- **Empty/rest-day adds** — `commitAthleteSessionAdditionTransaction`, a `session_add`
+  pinned by a whole-session constraint whose `originalWorkout` is the day's base
+  `Rest` placeholder (zero displaced work); §18 repaired cross-day and disclosed
+  ("…added on Wednesday. I rebalanced Friday to keep your week balanced.").
+- **Game day** is fully locked for swap AND add — plain-language refusal
+  ("It's game day — sessions can't be changed or added here."), never a raw code.
+  (`SUPPORTED_ATHLETE_ACTIONS.md` contract text to follow in a later change.)
+
+**Retirement ledger — what the legacy single-date override writer STILL owns after
+stage 3** (so residuals aren't quietly dropped):
+1. **Occupied-day STACK adds** — `add_template`/`add_category` onto a day that
+   already has a session (`add_defers_to_legacy_stack`, occupied branch).
+2. **`no_template_for_category`** — a category pick with no resolvable template
+   (swap or add).
+3. **The removal-constraint re-add / restoration defer** — an add onto a day
+   emptied by an active whole-DAY removal (`remainingWorkout: null`); that is the
+   restoration path, not a net-new add.
+
+These are the only residual owners; a future stage migrates occupied-day stack
+adds through a transaction-owned stack primitive to finish the retirement.

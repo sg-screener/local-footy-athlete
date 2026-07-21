@@ -1443,6 +1443,7 @@ export function buildFixtureProjection(args: {
   let targetMicrocycle: Microcycle | undefined;
   const athleteAuthoredMutation = args.mutationIntent === 'athlete_move' ||
     args.mutationIntent === 'athlete_removal' ||
+    args.mutationIntent === 'athlete_addition' ||
     args.mutationIntent === 'restore_adjustment';
   if (athleteAuthoredMutation) {
     // The athlete has already supplied the complete source-of-truth candidate.
@@ -2073,6 +2074,31 @@ export interface AthleteSessionDeletionTransactionResult
   deletionOutcome: AthleteDeletionPublishedOutcome;
 }
 
+/** A net-new session placed on a previously empty/rest day. */
+export interface AthleteSessionAdditionTransactionInput {
+  date: string;
+  reason: string;
+  source: 'tap' | 'coach';
+  /** Already materialised (through finaliseWorkoutAfterMutation) new session. */
+  addedWorkout: Workout;
+}
+
+export type AthleteAdditionPublishedOutcomeKind = 'added' | 'added_with_repair';
+
+/** Typed result derived from the accepted, publishable addition state. */
+export interface AthleteAdditionPublishedOutcome {
+  kind: AthleteAdditionPublishedOutcomeKind;
+  targetDate: string;
+  additionIdentity: string;
+  /** Days other than the target the whole-week §18 repair touched (disclosed). */
+  repairedDates: string[];
+}
+
+export interface AthleteSessionAdditionTransactionResult
+  extends AcceptedStateTransactionResult {
+  additionOutcome: AthleteAdditionPublishedOutcome;
+}
+
 export interface AthleteSessionMoveTransactionInput {
   sourceDate: string;
   targetDate: string;
@@ -2248,11 +2274,14 @@ function deriveAthleteDeletionPublishedOutcome(args: {
 function stageAthleteMutationConstraint(args: {
   reason: string;
   source: 'tap' | 'coach';
-  mutationIntent: 'athlete_removal' | 'athlete_move';
+  mutationIntent: 'athlete_removal' | 'athlete_move' | 'athlete_addition';
   constraint: UserRemovalConstraint;
   affectedDates: readonly string[];
   markedDays: Record<string, CalendarDayType>;
   stagePurpose: 'preview' | 'commit';
+  /** Override the derived reversible-ledger kind (e.g. an addition uses the
+   *  removal machinery to pin its remainingWorkout, but records `session_add`). */
+  adjustmentKind?: ReversibleAdjustmentKind;
 }): AthleteMutationTransactionStage {
   const state = useProgramStore.getState();
   const profile = useProfileStore.getState().onboardingData;
@@ -2329,11 +2358,11 @@ function stageAthleteMutationConstraint(args: {
     profile,
   };
   const creation = stageReversibleAdjustmentCreationTransaction({
-    kind: args.mutationIntent === 'athlete_move'
+    kind: args.adjustmentKind ?? (args.mutationIntent === 'athlete_move'
       ? 'session_move'
       : args.constraint.scope === 'whole_session'
         ? 'session_delete'
-        : 'session_component_delete',
+        : 'session_component_delete'),
     sourceActor: 'athlete',
     sourceSurface: args.source === 'coach' ? 'coach_chat' : 'program_tab',
     sourceActionOrIntentId: `${args.reason}:${args.constraint.id}`,
@@ -2597,6 +2626,127 @@ export function commitAthleteSessionMoveTransaction(
   return staged.proposal
     ? commitAcceptedStateTransaction(staged.proposal)
     : staged.result;
+}
+
+/**
+ * Dedicated owner for an athlete addition onto an empty/rest day. An add pins its
+ * new session the SAME way a swap does — a whole-session constraint whose
+ * `remainingWorkout` the §18 gateway must keep (`applyUserRemovalConstraintsToWeek`);
+ * this is the single mechanism by which user-authored content survives §18. What
+ * makes it an ADD rather than a removal: the pinned-away `originalWorkout` is the
+ * day's base **Rest** placeholder — ZERO displaced training, so no relocation and
+ * no authorised reduction may attach — and it records a `session_add` reversible
+ * adjustment (not `session_delete`). Undo returns the day to that Rest placeholder.
+ */
+export function stageAthleteSessionAdditionTransaction(
+  args: AthleteSessionAdditionTransactionInput,
+  options: { purpose?: 'preview' | 'commit' } = {},
+): AthleteMutationTransactionStage {
+  const date = args.date.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !args.addedWorkout?.id) {
+    throw new Error('Malformed athlete session-addition identity');
+  }
+  const state = useProgramStore.getState();
+  const profile = useProfileStore.getState().onboardingData;
+  if (!state.currentProgram || !profile) {
+    throw new Error('Athlete addition requires an accepted program and profile');
+  }
+  const prior = materialContext(state);
+  const dayOfWeek = new Date(`${date}T12:00:00`).getDay();
+  // The base placeholder the athlete is filling (the composed day, which includes
+  // Rest days that visibleWorkouts omits). It must have a stable id to pin against
+  // and to undo back to.
+  const accepted = rebaseAcceptedEffectiveWeek({
+    surfaces: state, weekStart: mondayForDate(date), profile, markedDays: prior.markedDays,
+  });
+  const restPlaceholder = accepted.composedWorkouts.find(
+    (workout) => workout.dayOfWeek === dayOfWeek) ?? null;
+  if (!restPlaceholder?.id) {
+    throw new Error('Athlete addition requires a base day placeholder to pin against');
+  }
+  const addedWorkout = cloneWorkoutForDate(args.addedWorkout, date);
+  const id = userRemovalConstraintId({ date, scope: 'whole_session', workout: restPlaceholder });
+  const existing = state.userRemovalConstraints.find((constraint) =>
+    constraint.id === id && constraint.status === 'active');
+  if (existing) {
+    return {
+      proposal: null,
+      result: { program: programSurfaces(state), context: prior },
+      adjustment: state.reversibleAdjustmentLedger.adjustments.find((adjustment) =>
+        adjustment.linkedUserRemovalConstraintIds.includes(id)) ?? null,
+      affectedWeekStarts: [mondayForDate(date)],
+      outcome: 'already_applied',
+      alreadyApplied: true,
+    };
+  }
+  const constraint: UserRemovalConstraint = {
+    protocolVersion: 1,
+    id,
+    authorship: 'user',
+    source: args.source,
+    mutationKind: 'deletion',
+    status: 'active',
+    targetDate: date,
+    scope: 'whole_session',
+    targetPlanEntryId: restPlaceholder.planEntryId ?? null,
+    targetWorkoutId: restPlaceholder.id,
+    originalWorkout: JSON.parse(JSON.stringify(restPlaceholder)) as Workout,
+    remainingWorkout: addedWorkout,
+    // The "removed" original is Rest → nothing displaced, so this pin must never
+    // relocate work or attach an authorised reduction.
+    equivalentExposureMayRelocate: false,
+    wholeDayRestOwned: false,
+    createdAt: new Date().toISOString(),
+    restoredAt: null,
+    restorationReason: null,
+  };
+  emitAthleteActionEvent(currentAthleteActionTrace(), 'mutation_constraint_created', {
+    constraintType: 'user_addition',
+    constraintId: constraint.id,
+    constraintStatus: constraint.status,
+    targetDate: constraint.targetDate,
+    planEntryId: constraint.targetPlanEntryId,
+    workoutId: constraint.targetWorkoutId,
+    scope: constraint.scope,
+    equivalentExposureMayRelocate: constraint.equivalentExposureMayRelocate,
+    wholeDayRestOwned: constraint.wholeDayRestOwned,
+    provenanceIdentity: `${constraint.authorship}:${constraint.source}:${constraint.id}`,
+  });
+  const markedDays = { ...prior.markedDays };
+  if (markedDays[date] === 'rest') delete markedDays[date];
+  return stageAthleteMutationConstraint({
+    reason: args.reason,
+    source: args.source,
+    mutationIntent: 'athlete_addition',
+    constraint,
+    affectedDates: [date],
+    markedDays,
+    stagePurpose: options.purpose ?? 'preview',
+    adjustmentKind: 'session_add',
+  });
+}
+
+export function commitAthleteSessionAdditionTransaction(
+  args: AthleteSessionAdditionTransactionInput,
+): AthleteSessionAdditionTransactionResult {
+  const staged = stageAthleteSessionAdditionTransaction(args, { purpose: 'commit' });
+  const published = staged.proposal
+    ? commitAcceptedStateTransaction(staged.proposal)
+    : staged.result;
+  const date = args.date.slice(0, 10);
+  const repairedDates = Array.from(new Set((staged.adjustment?.affectedDates ?? [])
+    .map((entry) => entry.slice(0, 10))))
+    .filter((entry) => entry !== date)
+    .sort();
+  return {
+    ...published,
+    additionOutcome: {
+      kind: repairedDates.length > 0 ? 'added_with_repair' : 'added',
+      targetDate: date,
+      additionIdentity: args.addedWorkout.planEntryId ?? args.addedWorkout.id,
+      repairedDates,
+    },
+  };
 }
 
 /**
