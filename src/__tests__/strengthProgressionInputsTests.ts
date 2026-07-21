@@ -9,7 +9,7 @@ import {
 } from '../utils/strengthProgressionIntegration';
 import { deriveAdaptation } from '../utils/feedbackAdapter';
 import {
-  resolveWeekWithConditioning,
+  authorWeekStrengthProgression,
   type ScheduleState,
 } from '../utils/sessionResolver';
 import { DEFAULT_ATHLETE_CONTEXT } from '../utils/sessionBuilder';
@@ -328,9 +328,11 @@ console.log('\n-- Strength progression real inputs --');
     weightOverrides: {},
     blockState: { blockStartDate: '2026-07-06', blockNumber: 1 },
   };
-  const week = resolveWeekWithConditioning('2026-07-13', state);
+  // Progression now runs at authoring time (not on read). Assert the authoring
+  // step still lifts the load from real provided/feedback workout history.
+  const week = authorWeekStrengthProgression('2026-07-13', state);
   const monday = week.find((day) => day.date === '2026-07-13')?.workout;
-  ok('resolver uses real provided/feedback workout history',
+  ok('authoring materialises progression from real provided/feedback workout history',
     (progressedSquatWeight(monday as Workout) ?? 0) > 100);
 }
 

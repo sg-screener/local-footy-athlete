@@ -34,6 +34,7 @@ const {
 
 const {
   resolveWeekWithConditioning,
+  authorWeekStrengthProgression,
   formatDate,
   addDays,
 } = require('/tmp/lfa-compiled/utils/sessionResolver');
@@ -402,9 +403,10 @@ assert(recoveryResult.exercises.length === 0, 'Recovery exercises unchanged');
 
 section('12. Live Resolver Integration');
 
-// Run the full week resolution and check that strength sessions have progression
+// Progression is materialised at authoring time (not on read). Author the week
+// and check that strength sessions still receive progression.
 const state = makeState();
-const weekDays = resolveWeekWithConditioning('2026-04-06', state);
+const weekDays = authorWeekStrengthProgression('2026-04-06', state);
 
 // Monday (idx 0) should be Lower Body with progression
 const mondayDay = weekDays[0];
@@ -518,7 +520,7 @@ const injuryState = makeState({
     trainingLocation: 'Commercial gym',
   },
 });
-const injuryWeek = resolveWeekWithConditioning('2026-04-06', injuryState);
+const injuryWeek = authorWeekStrengthProgression('2026-04-06', injuryState);
 const injMonday = injuryWeek[0];
 if (injMonday.workout && injMonday.workout.workoutType === 'Strength') {
   const injSquat = injMonday.workout.exercises.find(e => e.exercise?.name === 'Back Squat');

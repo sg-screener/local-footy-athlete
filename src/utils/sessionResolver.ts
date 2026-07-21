@@ -1057,60 +1057,30 @@ export function getMondayForDate(dateStr: string): string {
  *
  * If no seasonPhase is available (pre-onboarding), passes 2 and 3 are skipped.
  */
-export function resolveWeekWithConditioning(
-  mondayStr: string,
+/**
+ * Materialise strength progression for a resolved week (AUTHORING step).
+ *
+ * Applies the progression engine to template/manual strength days, mutating
+ * `baseDays` in place. This is the *authoring / acceptance-time* computation:
+ * it used to run on every read inside resolveWeekWithConditioning, which made
+ * loads drift on each resolution and let mutations snapshot a re-progressed
+ * value. Under the §18 ownership redesign (stage 1) it is invoked once when a
+ * week is authored / accepted, and resolution merely projects the frozen
+ * result. Exported so authoring paths and progression tests drive it directly.
+ */
+export function materialiseWeekStrengthProgression(
+  baseDays: ResolvedDay[],
   state: ScheduleState,
+  gameDates: string[],
 ): ResolvedDay[] {
-  // Pass 1: base resolution (strength, game proximity, templates)
-  const baseDays = resolveWeek(mondayStr, state);
-
-  // Guard: skip conditioning + recovery if no season context
-  if (!state.seasonPhase) return baseDays;
-
-  // ── Availability hard-filter ──
-  // Build a Set of allowed day-of-week numbers for O(1) lookup.
-  // If availableDayNumbers is undefined/empty, all days are allowed.
-  const availableSet: Set<number> | null =
-    state.availableDayNumbers && state.availableDayNumbers.length > 0
-      ? new Set(state.availableDayNumbers)
-      : null;
-  const isDayAvailable = (dayOfWeek: number): boolean =>
-    availableSet === null || availableSet.has(dayOfWeek);
-
-  // Extract all game dates from markedDays (full calendar, not just this week).
-  // Augments with VIRTUAL games around this week so conditioning + recovery
-  // placement see Saturday as a game even when it's not in calendarStore.
-  const gameDates: string[] = [];
-  {
-    const effSet = getEffectiveGameDates(state, mondayStr);
-    effSet.forEach((d) => gameDates.push(d));
-  }
-
-  // Determine block bounds for in-block check
-  const blockStart = state.currentProgram?.startDate?.split('T')[0] || null;
-  const blockEnd = state.currentProgram?.endDate?.split('T')[0] || null;
-
-  // ── Strength Progression Pass ──
-  // Apply progression adjustments to template strength sessions.
-  // This is a builder-layer operation that modifies prescriptions
-  // (sets, reps, weight, rest) based on the progression engine.
-  // Only affects exercises classified as primary_strength or secondary_strength.
-  // Does NOT modify resolveDate() or change any placement logic.
   const injuries = (state.athleteContext?.injuries || []).map(i => ({
     bodyArea: i.bodyArea,
     severity: i.severity,
   }));
 
-  // Build sorted feedback array once for the whole week.
-  // Newest first, filtered to entries before the earliest day in the week.
   const feedbackMap = state.sessionFeedback || {};
   const allFeedbackSorted: SessionFeedback[] = Object.values(feedbackMap)
     .sort((a: SessionFeedback, b: SessionFeedback) => b.dateStr.localeCompare(a.dateStr));
-
-  // Pattern summary for conditioning/recovery biases (computed once per week)
-  const weekPatternSummary = analyzeFeedbackPatterns(
-    allFeedbackSorted.filter((fb: SessionFeedback) => fb.dateStr < baseDays[0]?.date)
-  );
 
   // Build a workout-type-by-date map for session type matching.
   // Uses resolved base days + template workouts to map dates → workoutType.
@@ -1253,6 +1223,105 @@ export function resolveWeekWithConditioning(
       };
     }
   }
+
+  return baseDays;
+}
+
+/**
+ * Author a week's strength progression (AUTHORING/acceptance entry point).
+ *
+ * Resolves the base week, then materialises strength progression into it and
+ * returns the progressed days. This is the single seam that should run once
+ * when a week is authored / accepted (its result is then stored and merely
+ * projected by resolveWeekWithConditioning). It reproduces exactly what the
+ * old read-time progression pass computed for a given ScheduleState — so
+ * progression itself is unchanged; only *when* it runs has moved.
+ */
+export function authorWeekStrengthProgression(
+  mondayStr: string,
+  state: ScheduleState,
+): ResolvedDay[] {
+  const baseDays = resolveWeek(mondayStr, state);
+  const gameDates: string[] = [];
+  getEffectiveGameDates(state, mondayStr).forEach((d) => gameDates.push(d));
+  return materialiseWeekStrengthProgression(baseDays, state, gameDates);
+}
+
+/**
+ * Bake strength progression into a program's stored microcycles (AUTHORING).
+ *
+ * Runs once at generation so the stored week already carries its progressed
+ * loads; resolution then merely projects them. This replaces the retired
+ * read-time progression pass as the place progression is applied to a freshly
+ * authored program. Mutates each microcycle's workouts in place.
+ */
+export function bakeMicrocycleStrengthProgression(
+  program: TrainingProgram,
+  state: Omit<ScheduleState, 'currentProgram' | 'currentMicrocycle'>,
+): void {
+  for (const microcycle of program.microcycles) {
+    const weekStart = microcycle.startDate.slice(0, 10);
+    const authored = authorWeekStrengthProgression(weekStart, {
+      ...state,
+      currentProgram: program,
+      currentMicrocycle: microcycle,
+    });
+    const progressedById = new Map<string, Workout>();
+    for (const day of authored) {
+      if (day.workout) progressedById.set(day.workout.id, day.workout);
+    }
+    microcycle.workouts = microcycle.workouts.map(
+      (workout) => progressedById.get(workout.id) ?? workout,
+    );
+  }
+}
+
+export function resolveWeekWithConditioning(
+  mondayStr: string,
+  state: ScheduleState,
+): ResolvedDay[] {
+  // Pass 1: base resolution (strength, game proximity, templates)
+  const baseDays = resolveWeek(mondayStr, state);
+
+  // Guard: skip conditioning + recovery if no season context
+  if (!state.seasonPhase) return baseDays;
+
+  // ── Availability hard-filter ──
+  // Build a Set of allowed day-of-week numbers for O(1) lookup.
+  // If availableDayNumbers is undefined/empty, all days are allowed.
+  const availableSet: Set<number> | null =
+    state.availableDayNumbers && state.availableDayNumbers.length > 0
+      ? new Set(state.availableDayNumbers)
+      : null;
+  const isDayAvailable = (dayOfWeek: number): boolean =>
+    availableSet === null || availableSet.has(dayOfWeek);
+
+  // Extract all game dates from markedDays (full calendar, not just this week).
+  // Augments with VIRTUAL games around this week so conditioning + recovery
+  // placement see Saturday as a game even when it's not in calendarStore.
+  const gameDates: string[] = [];
+  {
+    const effSet = getEffectiveGameDates(state, mondayStr);
+    effSet.forEach((d) => gameDates.push(d));
+  }
+
+  // Determine block bounds for in-block check
+  const blockStart = state.currentProgram?.startDate?.split('T')[0] || null;
+  const blockEnd = state.currentProgram?.endDate?.split('T')[0] || null;
+
+  // Weekly feedback context for the conditioning / recovery passes below.
+  const feedbackMap = state.sessionFeedback || {};
+  const allFeedbackSorted: SessionFeedback[] = Object.values(feedbackMap)
+    .sort((a: SessionFeedback, b: SessionFeedback) => b.dateStr.localeCompare(a.dateStr));
+  const weekPatternSummary = analyzeFeedbackPatterns(
+    allFeedbackSorted.filter((fb: SessionFeedback) => fb.dateStr < baseDays[0]?.date)
+  );
+
+  // Strength progression is materialised once at authoring/acceptance time
+  // (see materialiseWeekStrengthProgression / bakeMicrocycleStrengthProgression)
+  // and baked into the stored week. Resolution now PROJECTS those loads — it no
+  // longer recomputes progression on read. Retiring the read-time progression
+  // layer is stage 1 of the §18 ownership redesign.
 
   // ── Double game week: second G+1 → full rest ──
   // On double game weeks, game proximity places recovery on BOTH G+1 days.
