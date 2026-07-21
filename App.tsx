@@ -1,4 +1,5 @@
 import React from 'react';
+import { LogBox } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -11,6 +12,14 @@ let prepareDevE2EAppLaunch: (() => Promise<boolean>) | null = null;
 let installDevE2EEntry: (() => unknown) | null = null;
 let ReleaseRootNavigator: React.ComponentType | null = null;
 if (__DEV__) {
+  // Under Fusebox (RN DevTools), ordinary warnings never render LogBox
+  // banners; the only warning banner RN can show is the hardcoded
+  // "Open debugger to view warnings." advisory, which overlays the tab bar
+  // and swallows taps on its buttons (Maestro taps element centers).
+  // Suppress exactly that message. Launch-argument detection is unreliable:
+  // Maestro arguments never reach UserDefaults/SettingsManager, so any
+  // arg-gated suppression is dead code in E2E runs. Errors still surface.
+  LogBox.ignoreLogs(['Open debugger to view warnings.']);
   // Clock bootstrap is storage-only. The coordinator/store graph is imported
   // after the receipt is restored and checked against the active checkpoint.
   // eslint-disable-next-line @typescript-eslint/no-var-requires
