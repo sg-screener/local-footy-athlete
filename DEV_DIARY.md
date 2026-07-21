@@ -6,6 +6,37 @@ the top.
 
 ---
 
+## Wednesday 22 July 2026 — Known reds documented, fix worklist for the small stuff
+
+**What happened.**
+Two housekeeping docs, no code touched. `docs/QA_RUNBOOK.md` gained a
+"Known pre-existing reds" section so nobody re-investigates two tests that
+already fail for understood reasons: `coachBehaviourScenarioTests`'
+"Friday" scenarios rot over a weekend (only fails Sat/Sun, not a real bug),
+and `programControlActionsTests` has a pre-existing recovery/coach-notes
+failure that predates the ownership-migration work — ran it once to pin
+down the exact failure signature (three assertion failures plus a hard
+crash on scenario 5, all stemming from recovery Coach Notes never getting
+created in this baseline) so it's recognizable next time instead of
+re-diagnosed.
+
+Also read back through all four 2026-07-21 area audits and pulled every
+finding that's neither the big ownership-migration bug (group A) nor the
+persistence bugs that shrink once that migration lands (group B) into
+`docs/FIX_GROUPS_C_D_WORKLIST.md` — a plain checklist of the small stuff:
+four accessibility gaps where screen-reader labels read out internal ids
+instead of real text, two dead buttons in Profile Support, raw ISO dates
+and a raw internal error code leaking into user-facing messages, and the
+still-missing "swap to Rest day" control.
+
+**What's next.**
+Work the C/D checklist whenever there's a lull between ownership-migration
+stages — none of it depends on that migration landing first. Group B stays
+parked until the migration ships, since fixing it now would mean fixing it
+twice.
+
+---
+
 ## Wednesday 22 July 2026 — Journal and Auth logged as backlog, not bugs
 
 **What happened.**

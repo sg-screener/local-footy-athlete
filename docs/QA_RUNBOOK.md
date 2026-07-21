@@ -64,3 +64,38 @@ E2E_METRO_URL=http://127.0.0.1:8081 scripts/dev-e2e/run-maestro-ios.sh \
   protocol or reseed. This blocks naive persistence testing — known issue.
 - Simulator ignores synthetic keystrokes from screen-control agents; use
   clipboard paste. (Irrelevant inside Claude Code — Maestro types fine.)
+
+## Known pre-existing reds (do not re-investigate)
+
+Suites that fail for known, accepted reasons, unrelated to whatever this
+session is working on. If one of these comes up red, confirm the signature
+matches below and move on — don't re-diagnose it as a new regression.
+
+- **`coachBehaviourScenarioTests`**
+  (`npm run test:coach-behaviour-scenarios`) — weekend date-rot. Scenarios
+  built around a "Friday" reference date fail whenever the suite is run on
+  a Saturday or Sunday (the scenario's relative-day math rots over the
+  weekend). Only the "fridays" scenarios are affected; weekday runs are
+  unaffected. Known, not fixed, not blocking.
+
+- **`programControlActionsTests`**
+  (`TZ=Australia/Melbourne npx sucrase-node
+  src/__tests__/programControlActionsTests.ts`) — coach-notes/recovery
+  failure, present on the pre-stage-1 baseline (predates the §18 ownership
+  migration work). Exact signature as captured 2026-07-22:
+  - `[1] recovery modifier creation through ProgramControlAction` → FAIL
+    "Coach Notes includes recovery mode"
+  - `[2] no duplicate recovery status modifiers` → FAIL "one active
+    recovery constraint" (expected 1, actual 0); FAIL "one Coach Note"
+    (expected 1, actual 0)
+  - `[3] multiple modifiers stack` → FAIL "recovery note appears"
+  - `[5] clear recovery modifier removes linked program override` → the
+    script never reaches its pass/fail summary or `process.exit` — it dies
+    with an uncaught `TypeError: Cannot read properties of undefined
+    (reading 'id')` at `programControlActionsTests.ts:369` (`noteId:
+    note.id`), because scenario 5 depends on a Coach Note that scenarios
+    1–3 already show never gets created.
+  - Shape: recovery-mode Coach Notes/constraints aren't being created or
+    surfaced by the recovery-modifier path in this baseline; scenario 5's
+    crash is a downstream symptom of that, not a separate bug. Not
+    diagnosed further here — record only.
