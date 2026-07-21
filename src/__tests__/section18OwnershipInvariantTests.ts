@@ -42,10 +42,12 @@ import { executeCoachCommand } from '../utils/coachCommandExecutor';
 import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProducer';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { resolveWeekWithConditioning } from '../utils/sessionResolver';
+import { getTeamTrainingWorkoutState } from '../utils/teamTraining';
 import { addDaysISO } from '../utils/programBlockState';
 
 const WEEK = '2026-07-13';
 const TUESDAY = '2026-07-14';
+const WEDNESDAY = '2026-07-15';
 const SATURDAY = '2026-07-18';
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -461,6 +463,93 @@ run('8b disclosed-reduction: an unrelocatable strength-displacing Swap reduces t
     'no authorised reduction recorded for an unrelocatable strength-displacing Swap');
   assert(/reduc/i.test(result.message),
     `authorised reduction not disclosed in the Swap result: "${result.message}"`);
+});
+
+// Invariant 9 — an anchor-day (Team Training) swap keeps the Team Training
+// anchor and replaces only the gym component, owned by the accepted-state
+// transaction (not the legacy single-date override writer). Stage 3(a). RED
+// pre-migration: anchor swaps defer to the legacy writer
+// (`swap_defers_to_legacy_anchor`), which either refuses (section18) or writes
+// via setManualOverride with no reversible-ledger entry. Game day stays locked
+// (amendment 3): a game-day swap must be hard-blocked — that guard runs first so
+// a wrong game-lock baseline is distinguishable from the anchor-preservation RED.
+run('9 anchor-swap: a Team Training day swap keeps the anchor, replaces the gym component, transaction-owned', () => {
+  // Baseline guard (amendment 3): a game-day swap must be hard-blocked.
+  seed();
+  {
+    const change = { kind: 'swap_category' as const, date: SATURDAY, category: 'conditioning_light' as const };
+    const week = visibleWeek();
+    const preview = previewPlanChangeRisk({
+      change, visibleWeek: week, todayISO: WEEK,
+      profile: useProfileStore.getState().onboardingData ?? undefined,
+    });
+    const result = applyPlanChange({
+      change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
+      setManualOverride: (d, workout, ctx) => useProgramStore.getState().setManualOverride(d, workout, ctx),
+    });
+    assert(!result.ok,
+      `baseline: a game-day swap must be hard-blocked (amendment 3), but it applied: "${result.message}"`);
+  }
+
+  // Anchor-day swap: TUE is Team Training + Upper Pull.
+  seed();
+  const beforeTue = acceptedByDay().get(2);
+  assert(getTeamTrainingWorkoutState(beforeTue).hasTeamTraining,
+    'precondition: TUE is a Team Training anchor day');
+  const change = { kind: 'swap_category' as const, date: TUESDAY, category: 'conditioning_light' as const };
+  const week = visibleWeek();
+  const preview = previewPlanChangeRisk({
+    change, visibleWeek: week, todayISO: WEEK,
+    profile: useProfileStore.getState().onboardingData ?? undefined,
+  });
+  const result = applyPlanChange({
+    change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
+    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+  });
+  assert(result.ok, `anchor-day Swap refused: "${result.message}"`);
+  const afterTue = acceptedByDay().get(2);
+  // Team Training anchor preserved; only the gym component replaced.
+  assert(getTeamTrainingWorkoutState(afterTue).hasTeamTraining,
+    'Team Training anchor dropped/re-added by the anchor-day swap');
+  assert(JSON.stringify(exerciseCells(beforeTue).sort()) !== JSON.stringify(exerciseCells(afterTue).sort()),
+    'anchor-day swap left the gym component unchanged');
+  // Transaction-owned: legacy setManualOverride records no reversible adjustment.
+  const owned = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.some(
+    (entry) => entry.affectedDates.includes(TUESDAY));
+  assert(owned,
+    'anchor-day swap not owned by the accepted-state transaction (no reversible adjustment for TUE)');
+});
+
+// Invariant 10 — an add on an empty/rest day routes through the accepted-state
+// transaction (a new addition primitive), with §18 owned by the transaction.
+// Stage 3(b). RED pre-migration: add_category is never in the typed gate, so it
+// goes through the legacy single-date writer, which records no reversible
+// adjustment (and can refuse for an off-target §18 condition).
+run('10 empty-day-add: add_category on a rest day routes through the transaction, §18 owned by it', () => {
+  seed();
+  const beforeWed = acceptedByDay().get(3);
+  const wedEmpty = !beforeWed || beforeWed.workoutType === 'Rest' || exerciseCells(beforeWed).length === 0;
+  assert(wedEmpty,
+    `precondition: WED must be empty/rest, got ${JSON.stringify(beforeWed?.workoutType ?? null)}`);
+  const change = { kind: 'add_category' as const, date: WEDNESDAY, category: 'conditioning_light' as const };
+  const week = visibleWeek();
+  const preview = previewPlanChangeRisk({
+    change, visibleWeek: week, todayISO: WEEK,
+    profile: useProfileStore.getState().onboardingData ?? undefined,
+  });
+  const result = applyPlanChange({
+    change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
+    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+  });
+  assert(result.ok, `empty-day add refused: "${result.message}"`);
+  const afterWed = acceptedByDay().get(3);
+  assert(afterWed && afterWed.workoutType !== 'Rest' && exerciseCells(afterWed).length > 0,
+    'add did not place a session on WED');
+  // Transaction-owned: the legacy writer records no reversible adjustment.
+  const owned = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.some(
+    (entry) => entry.affectedDates.includes(WEDNESDAY));
+  assert(owned,
+    'empty-day add not owned by the accepted-state transaction (no reversible adjustment for WED)');
 });
 
 console.log(`\n§18 ownership invariants: ${passes} passing, ${failures.length} failing`);
