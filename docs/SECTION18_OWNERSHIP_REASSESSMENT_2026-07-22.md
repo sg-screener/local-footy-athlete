@@ -481,3 +481,93 @@ boundary first (TDD), per AGENTS.md.
   `src/utils/coachIntentDispatcher.ts`, `src/utils/coachCommandRouter.ts`,
   `src/utils/coachCommandExecutor.ts`, `src/utils/coachProgramEdit.ts`.
 - State: `src/store/programStore.ts`, `src/store/acceptedStateColdStart.ts`.
+
+---
+
+## Stage 2 diagnosis — the §18 preview-gate refusal (invariant #3), 2026-07-22
+
+Recorded after stage 1 landed (loads frozen at authoring; ownership #1/#2/#6/#7
+green). Diagnosis approved as the Q6 route below. **Design only — no stage-2
+code yet.**
+
+### Reproduction & failure signature
+`applyPlanChange({ kind: 'swap_category', date: MON, category: 'conditioning_light' })`
+on the seeded `standard-in-season-week` is refused with
+`section18_week_rejected`. Driving the gateway directly
+(`runSection18AcceptedWeekGateway`) on the resulting week returns
+`status: 'impossible'` with failure signature:
+
+```
+pattern_restore_failure:strength_patterns:0
+| pattern_restore_failure:strength_patterns:0
+| planner_selected_target_miss:main_strength:2
+```
+
+Swapping Monday's *only* lower-body strength session to conditioning drops the
+week below §18's required main-strength count, and there is no free day to
+relocate that strength to (Tue/Thu are Team Training + strength, Wed rest, Fri
+optional, Sat game, Sun recovery).
+
+### `maxRepairAttempts` is a red herring
+The single-date gate passes `maxRepairAttempts: 1`
+(`postGenerationConstraintValidation.ts:1477`, comment: "A single-date store
+primitive cannot atomically persist repairs to other dates"). But the failure
+is **not** a repair-budget problem: re-running the gateway at
+`maxRepairAttempts: 3` still returns `impossible` (outcome attempts = 1). The
+week genuinely cannot satisfy the strength minimum by repair — no reachable
+week state fixes it. Bumping the budget changes nothing.
+
+### Why Bin passes on the identical shortfall
+Binning the same strength session hits the same shortfall, yet succeeds.
+Bin routes through the accepted-state transaction
+(`commitAthleteSessionDeletionTransaction`), which — when relocation is
+impossible — records an **authorised reduction** (`explicit_user_override`:
+"you asked for this, so this week's strength target is reduced"). §18 then
+accepts the week against the *reduced* target. See
+`athleteSessionDeletionTests.ts` regression 11 ("impossible relocation records
+typed reduction and keeps deletion"), message: *"Session removed. This week's
+strength target has been reduced at your request."*
+
+**The single-date Swap/Add path has no authorised-reduction ownership.** It can
+only ask the gateway to accept the full target, and when that's impossible it
+rejects. That is the whole of the asymmetry: same §18 shortfall, but Bin owns a
+reduction and Swap/Add do not.
+
+### The fix is Q6 — route Swap/Add through the accepted-state transaction
+Not a `maxRepairAttempts` bump, and **not** replicating the authorised-reduction
+bookkeeping inside the proposal path (that would duplicate ownership — the exact
+anti-pattern the escalation rule forbids). Instead:
+
+1. Extend the athlete-mutation resolver + accepted-state transaction
+   (`resolveAthleteMutation` in `planChangeProducer.ts`;
+   `acceptedStateTransaction.ts`) to **own `swap_category` / `add_category`**.
+   Semantically a swap is remove-and-replace and an add is an addition; when the
+   change displaces a required session that cannot be relocated, the transaction
+   records the same authorised reduction Bin does.
+2. Switch `applyPlanChangeWithinTrace` (`planChangeProducer.ts:1434`) to route
+   `swap_category` / `add_category` through that transaction (like
+   `move_session` / `remove_session` already do), instead of
+   `buildPlanChangeProposal` → `applyCoachRevisionDateOverrides` → the
+   single-date override writer.
+3. Retire the single-date override-writer path for Swap/Add (the
+   `deferWeekAcceptance: false` branch of `validateLiveWorkoutWrite` /
+   `finaliseLiveDateCandidateAgainstWeek` no longer owns these edits).
+
+Result: a legal Swap/Add is never refused for a pre-existing off-target §18
+condition; if the change itself reduces a target, the week is accepted against
+the reduction — exactly as Bin behaves.
+
+### Spec addition — disclosure parity (owner: transaction result)
+An authorised reduction triggered by a Swap/Add **must be disclosed in the
+transaction result**, with the **same ownership as Bin's disclosure** (Bin
+surfaces it in the result message, e.g. "…strength target has been reduced at
+your request."). A Swap/Add that silently reduces a target — even while
+correctly accepting the week — is a defect of the same class as the Bin
+undisclosed-side-effect finding (Q7 invariant #4). This is asserted **before
+implementation** by an added ownership invariant (#8, "disclosed-reduction"):
+the strength-displacing Swap must succeed **and** disclose the reduction in its
+result. It is RED until stage 2 lands.
+
+### Stage-2 gate
+`test:bible` green; ownership scoreboard monotonic (stage 2 targets #3 and the
+new #8 → green; never green→red). Report both.
