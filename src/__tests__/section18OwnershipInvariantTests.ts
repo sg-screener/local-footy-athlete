@@ -2,10 +2,12 @@
  * §18 / program-mutation OWNERSHIP INVARIANTS.
  *
  * These encode the seven Q7 invariants from
- * docs/SECTION18_OWNERSHIP_REASSESSMENT_2026-07-22.md. They describe the
- * CORRECT post-redesign behaviour, so they are expected to FAIL on the current
- * (pre-migration) architecture — that failure is what proves each test pins the
- * bug it targets. The staged source-of-truth migration turns them green.
+ * docs/SECTION18_OWNERSHIP_REASSESSMENT_2026-07-22.md, plus invariant #8 added
+ * for the stage-2 diagnosis (Swap/Add authorised reductions must be disclosed in
+ * the result, same ownership as Bin). They describe the CORRECT post-redesign
+ * behaviour, so they are expected to FAIL on the current (pre-migration)
+ * architecture — that failure is what proves each test pins the bug it targets.
+ * The staged source-of-truth migration turns them green.
  *
  * Ground truth (seed `standard-in-season-week`, anchor Mon 2026-07-13):
  *   MON  Lower Body Strength — ex-squat, ex-custom-deadlift, ex-custom-pallof-press
@@ -163,15 +165,19 @@ function seed(): TrainingProgram {
 }
 
 /** Authored / accepted read model — reflects what the store owns. */
-function acceptedByDay(weekStart = WEEK): Map<number, Workout> {
+function acceptedSnapshot(weekStart = WEEK) {
   const state = useProgramStore.getState();
-  const week = rebaseAcceptedEffectiveWeek({
+  return rebaseAcceptedEffectiveWeek({
     surfaces: state,
     weekStart,
     profile: useProfileStore.getState().onboardingData,
     markedDays: state.acceptedMaterialContext.markedDays,
   });
-  return new Map(week.visibleWorkouts.map((workout) => [workout.dayOfWeek, workout]));
+}
+
+function acceptedByDay(weekStart = WEEK): Map<number, Workout> {
+  return new Map(acceptedSnapshot(weekStart).visibleWorkouts.map(
+    (workout) => [workout.dayOfWeek, workout]));
 }
 
 /** Visible / projected read model — what the athlete taps on. */
@@ -384,6 +390,32 @@ run('7 persistence: the bounded swap result survives reload without drift', () =
   const deadliftAfterReload = findRow(acceptedByDay().get(1), /deadlift/i)?.prescribedWeightKg;
   assert(deadliftAfterReload === deadliftWeight,
     `untouched Deadlift load ${deadliftWeight} -> ${deadliftAfterReload} across a swap + reload`);
+});
+
+// Invariant 8 — disclosed reduction: a Swap that reduces a target must disclose it.
+// (Stage-2 spec addition. A strength-displacing Swap must succeed AND surface the
+// authorised reduction in its result, same ownership as Bin's disclosure.)
+run('8 disclosed-reduction: strength-displacing Swap succeeds and discloses the reduction', () => {
+  seed();
+  const change = { kind: 'swap_category' as const, date: WEEK, category: 'conditioning_light' as const };
+  const week = visibleWeek();
+  const preview = previewPlanChangeRisk({
+    change, visibleWeek: week, todayISO: WEEK,
+    profile: useProfileStore.getState().onboardingData ?? undefined,
+  });
+  const result = applyPlanChange({
+    change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
+    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+  });
+  // MON's only lower-body strength has no free relocation day, so §18 must accept
+  // the swap against an authorised reduction — owned + disclosed by the transaction.
+  assert(result.ok, `strength-displacing Swap refused: "${result.message}"`);
+  const reductions = acceptedSnapshot().contract.authorisedReductions.filter(
+    (entry) => entry.reason === 'explicit_user_override');
+  assert(reductions.length > 0,
+    'no authorised reduction recorded for a strength-displacing Swap');
+  assert(/reduc/i.test(result.message),
+    `authorised reduction not disclosed in the Swap result: "${result.message}"`);
 });
 
 console.log(`\n§18 ownership invariants: ${passes} passing, ${failures.length} failing`);
