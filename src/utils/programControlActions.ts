@@ -565,6 +565,7 @@ function executeProgramControlActionWithinTrace(
       }
       const result = replaceExerciseAtDate({
         date: action.payload.date,
+        todayISO: context.todayISO,
         fromExercise: action.payload.fromExercise,
         fromExerciseId: action.payload.fromExerciseId,
         toExercise: action.payload.toExercise!,

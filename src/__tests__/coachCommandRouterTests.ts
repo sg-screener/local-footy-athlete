@@ -26,6 +26,9 @@ import {
 import {
   executeCoachCommand,
 } from '../utils/coachCommandExecutor';
+import { useProgramStore } from '../store/programStore';
+import * as sessionResolver from '../utils/sessionResolver';
+import type { Workout, WorkoutExercise } from '../types/domain';
 import type { CoachReferenceResolution } from '../utils/coachReferenceResolver';
 import {
   dayWorkoutShowsConditioningAfterStrength,
@@ -2211,36 +2214,57 @@ function fakeWorkout(exerciseNames: string[]): any {
   };
 }
 
-function stubSwapVerify(args: {
-  fromPresent: { tab: boolean; day: boolean };
-  toPresent: { tab: boolean; day: boolean };
-}): any {
-  return (a: any) => ({
-    requestedDay: a.targetDate,
-    todayISO: a.todayISO,
-    targetDate: a.targetDate,
-    fromName: a.fromName,
-    toName: a.toName,
-    programTabHasFromExercise: args.fromPresent.tab,
-    programTabHasToExercise: args.toPresent.tab,
-    dayWorkoutHasFromExercise: args.fromPresent.day,
-    dayWorkoutHasToExercise: args.toPresent.day,
-    overrideKeyWritten: true,
-  });
+// ── Real-store seam for the replace_exercise WRITE tests. ─────────────
+// The write is now owned by replaceExerciseAtDate (the tap-door owner), which
+// reads the live store via resolveDateWithConditioning and writes through
+// setManualOverride. These helpers seed a real fixture the owner resolves and
+// capture the override it writes — the same module-stub pattern coachActionsTests
+// uses. The seam is INERT unless a fixture is set, so the DI-based tests
+// elsewhere in this file are untouched.
+let swapOverrideCalls: Array<{ date: string; workout: Workout }> = [];
+let swapFixtureByDate: Record<string, Workout> = {};
+function swapSeamActive(): boolean {
+  return Object.keys(swapFixtureByDate).length > 0;
 }
-
-function stubApplyOkSwap(): any {
-  return (events: any[]) => ({
-    applied: events.map((e) => ({ date: e.date, eventIds: [e.id], workoutName: 'Lower Body Strength' })),
-    rejected: [],
-  });
+const _origGetState = (useProgramStore as any).getState;
+const _origResolveDate = (sessionResolver as any).resolveDateWithConditioning;
+(useProgramStore as any).getState = () => {
+  const real = _origGetState();
+  if (!swapSeamActive()) return real;
+  return {
+    ...real,
+    setManualOverride: (date: string, workout: Workout) => {
+      swapOverrideCalls.push({ date, workout });
+    },
+  };
+};
+(sessionResolver as any).resolveDateWithConditioning = (date: string, ...rest: any[]) => {
+  if (swapSeamActive() && swapFixtureByDate[date]) {
+    return { date, workout: swapFixtureByDate[date] };
+  }
+  return _origResolveDate(date, ...rest);
+};
+function swapExercise(name: string): WorkoutExercise {
+  const id = `ex-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+  return {
+    id, workoutId: '', exerciseId: id, exerciseOrder: 0,
+    prescribedSets: 3, prescribedRepsMin: 6, prescribedRepsMax: 8,
+    prescribedWeightKg: 0, restSeconds: 0,
+    exercise: { id, name } as WorkoutExercise['exercise'],
+  } as WorkoutExercise;
 }
-
-function stubApplyRejectSwap(reason: string, kind: string): any {
-  return (events: any[]) => ({
-    applied: [],
-    rejected: events.map((e) => ({ kind, date: e.date, reason })),
-  });
+function seedSwapFixture(date: string, exerciseNames: string[]): void {
+  swapFixtureByDate = {
+    [date]: {
+      id: 'wk-swap', name: 'Lower Body Strength', workoutType: 'Strength',
+      exercises: exerciseNames.map(swapExercise),
+    } as unknown as Workout,
+  };
+  swapOverrideCalls = [];
+}
+function clearSwapFixture(): void {
+  swapFixtureByDate = {};
+  swapOverrideCalls = [];
 }
 
 // 15.1 — "swap bench press for dumbbell bench" → resolves to Bench Press → DB Bench Press
@@ -2253,7 +2277,12 @@ ok('"swap bench press for dumbbell bench" → mutate', swap1Cmd.mode === 'mutate
 ok('classified as replace_exercise', asMutate(swap1Cmd)?.operation === 'replace_exercise');
 ok('legacy blocked', !canFallbackToLegacy(swap1Cmd));
 
+// Migrated to the real owner: seed the fixture the owner resolves, drop the
+// retired AdjustmentEvent apply/verify stubs, and trust the owner's result (as
+// the tap door does — no separate name-only verifier). The write is asserted
+// via the captured setManualOverride.
 const swap1Stages: string[] = [];
+seedSwapFixture(REP_MONDAY, ['Bench Press', 'Pull-Ups']);
 const swap1Exec = executeCoachCommand({
   command: swap1Cmd,
   todayISO: REP_TODAY,
@@ -2262,12 +2291,6 @@ const swap1Exec = executeCoachCommand({
   onProgress: (s) => swap1Stages.push(s),
   replaceExerciseDeps: {
     snapshotBefore: () => fakeWorkout(['Bench Press', 'Pull-Ups']),
-    applyEvents: stubApplyOkSwap(),
-    verifyRendered: stubSwapVerify({
-      fromPresent: { tab: false, day: false },
-      toPresent: { tab: true, day: true },
-    }),
-    newEventId: () => 'test-swap-1',
   },
 });
 eq('"swap bench press for dumbbell bench" → mutated', swap1Exec.kind, 'mutated');
@@ -2276,10 +2299,15 @@ ok('swap1 reply starts with "Done"', /^Done\b/.test(swap1Exec.reply));
 ok('swap1 reply mentions canonical source name (Bench Press)', /Bench Press/.test(swap1Exec.reply));
 ok('swap1 reply mentions canonical target name (DB Bench Press)', /DB Bench Press/.test(swap1Exec.reply));
 ok('swap1 reply mentions date', swap1Exec.reply.includes(REP_MONDAY));
+// Progress order no longer includes the retired verify stage.
 eq('swap1 progress order',
   swap1Stages,
-  ['checking_program', 'applying_change', 'verifying_update', 'composing_reply']);
+  ['checking_program', 'applying_change', 'composing_reply']);
 ok('swap1 route = replace_exercise:applied', swap1Exec.route === 'replace_exercise:applied');
+ok('swap1 wrote exactly one override on the target date',
+  swapOverrideCalls.length === 1 && swapOverrideCalls[0].date === REP_MONDAY,
+  `overrides=${JSON.stringify(swapOverrideCalls.map((c) => c.date))}`);
+clearSwapFixture();
 
 // 15.2 — "replace back squat with trap bar deadlift"
 const swap2Cmd = routeCoachCommand({
@@ -2290,6 +2318,7 @@ const swap2Cmd = routeCoachCommand({
 ok('"replace back squat with trap bar deadlift" → mutate', swap2Cmd.mode === 'mutate');
 ok('replace classified as replace_exercise', asMutate(swap2Cmd)?.operation === 'replace_exercise');
 
+seedSwapFixture(REP_MONDAY, ['Back Squat', 'Walking Lunges']);
 const swap2Exec = executeCoachCommand({
   command: swap2Cmd,
   todayISO: REP_TODAY,
@@ -2297,17 +2326,12 @@ const swap2Exec = executeCoachCommand({
   userMessage: 'replace back squat with trap bar deadlift',
   replaceExerciseDeps: {
     snapshotBefore: () => fakeWorkout(['Back Squat', 'Walking Lunges']),
-    applyEvents: stubApplyOkSwap(),
-    verifyRendered: stubSwapVerify({
-      fromPresent: { tab: false, day: false },
-      toPresent: { tab: true, day: true },
-    }),
-    newEventId: () => 'test-swap-2',
   },
 });
 eq('"replace back squat with trap bar deadlift" → mutated', swap2Exec.kind, 'mutated');
 ok('swap2 reply names Trap Bar Deadlift',
   /Trap Bar Deadlift/.test(swap2Exec.reply));
+clearSwapFixture();
 
 // 15.3 — "I don't have a cable machine, swap cable rows" → source-only → clarify w/ siblings
 const swap3Cmd = routeCoachCommand({
@@ -2422,71 +2446,52 @@ ok('rejection reply mentions "I don\'t recognise"',
   unkRepExec.reply);
 ok('rejection applied = false', unkRepExec.applied === false);
 
-// 15.7 — Apply succeeds but verifier shows fromName still present → verified_no_op
-const ghostSwapExec = executeCoachCommand({
-  command: swap1Cmd,
-  todayISO: REP_TODAY,
-  referenceResolution: null,
-  userMessage: 'swap bench press for dumbbell bench',
-  replaceExerciseDeps: {
-    snapshotBefore: () => fakeWorkout(['Bench Press', 'Pull-Ups']),
-    applyEvents: stubApplyOkSwap(),
-    // Verifier reports source still present on Day view → not fully verified
-    verifyRendered: stubSwapVerify({
-      fromPresent: { tab: false, day: true },
-      toPresent: { tab: true, day: true },
-    }),
-    newEventId: () => 'test-ghost-swap',
-  },
-});
-eq('partial-verification → verified_no_op', ghostSwapExec.kind, 'verified_no_op');
-ok('ghost swap applied = false', ghostSwapExec.applied === false);
-ok('ghost swap reply does NOT start with "Done"',
-  !/^Done\b/.test(ghostSwapExec.reply));
-ok('ghost swap reply names visible-surface failure',
-  /didn'?t fully land|visible|edit/i.test(ghostSwapExec.reply));
+// 15.7 — RETIRED. The old "apply succeeded but the name-only verifier says the
+// source still renders → verified_no_op" test asserted the very dual-surface
+// name-only verifier that produced §18 invariant #5's false "Done" (it declared
+// a swap done while the accepted row kept its old identity). The verifier is
+// deleted, not migrated: the write is now owned by replaceExerciseAtDate and the
+// door trusts the owner's result, so this split-brain state can no longer occur.
 
-// 15.8 — applyEvents rejects (e.g. exercise_not_present) → honest reply
+// 15.8 — Owner rejects a source that isn't on the day → honest, non-Done reply.
+// The owner now finds no such row; the executor surfaces its reason.
+seedSwapFixture(REP_MONDAY, ['Squat', 'Pull-Ups']); // no Bench Press on the day
 const notPresentExec = executeCoachCommand({
   command: swap1Cmd,
   todayISO: REP_TODAY,
   referenceResolution: null,
   userMessage: 'swap bench press for dumbbell bench',
   replaceExerciseDeps: {
+    // Front-half still sees the requested source (matches production, where the
+    // snapshot and the owner read the same store); the owner is the source of
+    // truth and rejects because the row isn't there.
     snapshotBefore: () => fakeWorkout(['Bench Press', 'Pull-Ups']),
-    applyEvents: stubApplyRejectSwap('"Bench Press" not present in workout', 'exercise_not_present'),
-    verifyRendered: stubSwapVerify({
-      fromPresent: { tab: true, day: true },
-      toPresent: { tab: false, day: false },
-    }),
-    newEventId: () => 'test-not-present-swap',
   },
 });
-eq('apply rejected exercise_not_present → verified_no_op',
-  notPresentExec.kind, 'verified_no_op');
-ok('not-present reply explains source missing',
-  /wasn'?t on|not present/i.test(notPresentExec.reply),
+eq('owner not-found → verified_no_op', notPresentExec.kind, 'verified_no_op');
+ok('not-present reply names the missing source',
+  /bench press/i.test(notPresentExec.reply) && !/^Done\b/.test(notPresentExec.reply),
   notPresentExec.reply);
+clearSwapFixture();
 
-// 15.9 — Past-date rejection
+// 15.9 — Past-date rejection, now owned by replaceExerciseAtDate (both doors).
+// The command targets REP_MONDAY but "today" is after it, so the day is in the
+// past and the owner refuses the edit.
+seedSwapFixture(REP_MONDAY, ['Bench Press', 'Pull-Ups']);
 const pastSwapExec = executeCoachCommand({
   command: swap1Cmd,
-  todayISO: REP_TODAY,
+  todayISO: '2026-05-20', // after REP_MONDAY (2026-05-11) → target is in the past
   referenceResolution: null,
   userMessage: 'swap bench press for dumbbell bench',
   replaceExerciseDeps: {
     snapshotBefore: () => fakeWorkout(['Bench Press', 'Pull-Ups']),
-    applyEvents: stubApplyRejectSwap('cannot apply event on past date', 'past_date_blocked'),
-    verifyRendered: stubSwapVerify({
-      fromPresent: { tab: true, day: true },
-      toPresent: { tab: false, day: false },
-    }),
-    newEventId: () => 'test-past-swap',
   },
 });
 eq('past-date swap → verified_no_op', pastSwapExec.kind, 'verified_no_op');
 ok('past-date swap reply mentions "past"',
   /past/i.test(pastSwapExec.reply));
+ok('past-date swap wrote nothing', swapOverrideCalls.length === 0);
+clearSwapFixture();
 
 // 15.10 — No target binding → clarify (executor short-circuits)
 const noTargetCmd = routeCoachCommand({
@@ -3686,9 +3691,10 @@ function undoCmd(): CoachCommand {
     undoResult.reply === 'Done — I undid the last change.');
 }
 
-// 17.6 — undo replace exercise
+// 17.6 — undo replace exercise (write owned by replaceExerciseAtDate)
 {
   const { rig, deps } = makeUndoRig();
+  seedSwapFixture(UNDO_WED, ['Back Squat', 'Walking Lunge']);
   const swapResult = executeCoachCommand({
     command: routeCoachCommand({
       userMessage: 'swap back squat for trap bar deadlift on Wednesday',
@@ -3707,22 +3713,6 @@ function undoCmd(): CoachCommand {
           { exercise: { name: 'Walking Lunge' } },
         ],
       } as any),
-      applyEvents: () => ({
-        applied: [{ date: UNDO_WED, eventIds: ['e1'], workoutName: 'Lower Body Strength' }],
-        rejected: [],
-      }),
-      verifyRendered: (a) => ({
-        requestedDay: a.requestedDay,
-        todayISO: a.todayISO,
-        targetDate: a.targetDate,
-        fromName: a.fromName,
-        toName: a.toName,
-        programTabHasFromExercise: false,
-        programTabHasToExercise: true,
-        dayWorkoutHasFromExercise: false,
-        dayWorkoutHasToExercise: true,
-        overrideKeyWritten: true,
-      } as any),
     },
     undoDeps: deps,
   });
@@ -3737,6 +3727,7 @@ function undoCmd(): CoachCommand {
     undoDeps: deps,
   });
   eq('17.6 undo → mutated', undoResult.kind, 'mutated');
+  clearSwapFixture();
 }
 
 // 17.7 — undo move session (records both source + dest dates)

@@ -6,6 +6,124 @@ the top.
 
 ---
 
+## Wednesday 22 July 2026 — Program edits now go through one system, not two
+
+**What happened.**
+The big rebuild of how program edits work is finished. Before this, the
+app had two different systems for saving a change to your week, and the
+older one was the direct cause of the bugs the audits kept turning up:
+edits refused for no good reason, loads on exercises nobody touched
+quietly changing, sessions vanishing after being added, and the coach
+saying "done" without actually doing it. Now every edit — swap, add, move,
+or bin, whether it comes from the tap menus or from coach chat — goes
+through one system. That system respects exactly what the athlete asked
+for, repairs the rest of the week around it only when it has to, and tells
+the athlete every day it touched. Game day is now properly locked, with a
+clear message instead of a confusing refusal. Eleven permanent automated
+checks now guard all of this on every test run, so these bug classes can't
+quietly come back.
+
+**What's not done yet.**
+Adding a second session to a day that's already full still goes through
+the old path — that's tracked, not forgotten. And the on-device smoke test
+that confirms the new behaviour actually works in the real app, not just
+in the automated checks, is running right now.
+
+**What's next.**
+Checking that the app's screens actually reflect what happened — feedback
+and readiness signals that get submitted but don't visibly show up
+anywhere yet — plus tidying the smaller accessibility and dead-button
+issues already logged.
+
+---
+
+## Wednesday 22 July 2026 — Known reds documented, fix worklist for the small stuff
+
+**What happened.**
+Two housekeeping docs, no code touched. `docs/QA_RUNBOOK.md` gained a
+"Known pre-existing reds" section so nobody re-investigates two tests that
+already fail for understood reasons: `coachBehaviourScenarioTests`'
+"Friday" scenarios rot over a weekend (only fails Sat/Sun, not a real bug),
+and `programControlActionsTests` has a pre-existing recovery/coach-notes
+failure that predates the ownership-migration work — ran it once to pin
+down the exact failure signature (three assertion failures plus a hard
+crash on scenario 5, all stemming from recovery Coach Notes never getting
+created in this baseline) so it's recognizable next time instead of
+re-diagnosed.
+
+Also read back through all four 2026-07-21 area audits and pulled every
+finding that's neither the big ownership-migration bug (group A) nor the
+persistence bugs that shrink once that migration lands (group B) into
+`docs/FIX_GROUPS_C_D_WORKLIST.md` — a plain checklist of the small stuff:
+four accessibility gaps where screen-reader labels read out internal ids
+instead of real text, two dead buttons in Profile Support, raw ISO dates
+and a raw internal error code leaking into user-facing messages, and the
+still-missing "swap to Rest day" control.
+
+**What's next.**
+Work the C/D checklist whenever there's a lull between ownership-migration
+stages — none of it depends on that migration landing first. Group B stays
+parked until the migration ships, since fixing it now would mean fixing it
+twice.
+
+---
+
+## Wednesday 22 July 2026 — Journal and Auth logged as backlog, not bugs
+
+**What happened.**
+Following the Journal and Auth audits, `docs/SUPPORTED_ATHLETE_ACTIONS.md`
+now says plainly what those audits found: both areas are fully built
+screens that nobody wired into any navigator, on purpose, not accidental
+breakage. They're moved into the contract's "Explicitly NOT product" list
+so future audits stop re-discovering the same absence.
+
+**What's next (added to backlog, not started).**
+Journal needs a product spec before it's built: a weekly log of numbers,
+progress, and fatigue an athlete can check against "was I too tired this
+week?", plus free-note space for recovery, mobility, injury, diet, and life
+stress. It has to read from the same feedback/readiness data the visible-
+persistence fix (group B) is already working on, not keep its own copy.
+Auth needs an actual product decision — sign-in/accounts/sign-out — before
+anyone reconnects the existing SignIn/SignUp screens; right now the app is
+effectively local-only and that's a pre-release call, not a wiring task.
+
+---
+
+## Tuesday–Wednesday 21–22 July 2026 — The great testing reset
+
+**What happened.**
+Two weeks of frustrating AI testing loops ended with a full process reset.
+The old way (many terminals, many worktrees, coach-chat used to test
+everything, AI diagnosing instead of tapping) is gone. The new way: Claude
+Code runs in the repo with direct control of the simulator, audits one app
+area at a time against a signed-off list of what the app is actually
+supposed to do (`docs/SUPPORTED_ATHLETE_ACTIONS.md`), records findings fast,
+and fixes bugs in reviewed groups. Five areas were audited in a day —
+Program, Workout, Home, Profile, plus Journal/Auth overnight.
+
+**The big discovery.**
+Three nasty bug families (legal changes refused with a scary internal code,
+weights changing on exercises nobody touched, binning one session quietly
+rearranging other days) all turned out to be ONE root cause: the week you
+see on screen is rebuilt from scratch every time you look at it, and the
+rebuild is allowed to change things nobody asked it to. The full explanation
+lives in `docs/SECTION18_OWNERSHIP_REASSESSMENT_2026-07-22.md` — approved,
+now being fixed properly (save the week, show the exact diff, one owner for
+all changes) instead of patched.
+
+**Product decisions made.**
+Off-season correctly drops team training. The vague "busy week = make it
+lighter" button is retired — replaced (on paper) by "pick which days are
+out" and a "did you do Tuesday?" prompt for missed sessions. Session
+duration editing is officially not a thing.
+
+**What's next.**
+Land the ownership fix in stages with safety tests first, then the visible
+feedback fixes (logging a session should visibly count), then accessibility
+labels and the small dead buttons.
+
+---
+
 ## Thursday 9 July 2026 — The word "tempo" means tempo again (Phase 4B)
 
 **What happened.**

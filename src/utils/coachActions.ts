@@ -142,6 +142,12 @@ export interface MakeSessionOptionalInput {
 export interface ReplaceExerciseInput {
   date: string;
   fromExercise: string;
+  /**
+   * Today's ISO date. When provided, the owner refuses to edit a past-dated
+   * workout — the single place both doors (tap + coach) inherit past-date
+   * protection, instead of each door guarding separately.
+   */
+  todayISO?: string;
   /** Optional exact row identity from a tapped UI exercise. */
   fromExerciseId?: string;
   toExercise: {
@@ -527,7 +533,10 @@ export function makeSessionOptional(input: MakeSessionOptionalInput): ActionResu
 
 /** Swap one exercise on a single date for another. */
 export function replaceExerciseAtDate(input: ReplaceExerciseInput): ActionResult {
-  const { date, fromExercise, fromExerciseId, toExercise } = input;
+  const { date, fromExercise, fromExerciseId, toExercise, todayISO } = input;
+  if (todayISO && date.slice(0, 10) < todayISO.slice(0, 10)) {
+    return { success: false, reason: `${date} is in the past - I can't change it.` };
+  }
   const current = resolveDateWorkout(date);
   if (!current) {
     return { success: false, reason: `No session on ${date} to swap exercise on.` };

@@ -26,6 +26,8 @@ export type ReversibleAdjustmentKind =
   | 'session_move'
   | 'session_delete'
   | 'session_component_delete'
+  /** Net-new session added onto a previously empty/rest day (athlete addition). */
+  | 'session_add'
   /** Exact target-overlay transaction produced by Repeat Week. */
   | 'repeat_week'
   /** Exact accepted delta for an explicit athlete go-lighter command. */

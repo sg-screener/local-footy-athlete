@@ -44,6 +44,7 @@ import {
 } from './coachRevisionOverrideWriter';
 import { materializeCanonicalPlanChangeCandidate } from './canonicalPlanChangeCandidateMaterializer';
 import { validateLiveWorkoutWrite } from './postGenerationConstraintValidation';
+import { finaliseWorkoutAfterMutation } from './workoutCanonicalisation';
 import type {
   PlanChange,
   PlanChangeBinScopeId,
@@ -61,14 +62,19 @@ import { reduceAcceptedSessionForAthleteRemoval } from './sessionComponents';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { useProfileStore } from '../store/profileStore';
+import { useProgramStore } from '../store/programStore';
 import {
   commitAthleteSessionMoveTransaction,
   commitAthleteSessionDeletionTransaction,
+  commitAthleteSessionAdditionTransaction,
   stageAthleteSessionDeletionTransaction,
   stageAthleteSessionMoveTransaction,
+  stageAthleteSessionAdditionTransaction,
   type AcceptedStateTransactionResult,
   type AthleteDeletionPublishedOutcome,
+  type AthleteAdditionPublishedOutcome,
   type AthleteSessionDeletionTransactionInput,
+  type AthleteSessionAdditionTransactionInput,
   type AthleteSessionMoveTransactionInput,
 } from '../store/acceptedStateTransaction';
 import {
@@ -949,7 +955,9 @@ const ATHLETE_REMOVAL_SCOPE: Record<PlanChangeBinScopeId, UserRemovalScope> = {
 };
 
 type AthleteOwnedPlanChange = Extract<PlanChange,
-  { kind: 'move_session' } | { kind: 'remove_session' }>;
+  { kind: 'move_session' } | { kind: 'remove_session' } |
+  { kind: 'swap_category' } | { kind: 'swap_template' } |
+  { kind: 'add_category' } | { kind: 'add_template' }>;
 
 export type AthleteMutationResolution =
   | {
@@ -966,7 +974,81 @@ export type AthleteMutationResolution =
       appliedDates: string[];
       swapped: false;
     }
+  | {
+      // A swap is a whole-session removal whose replacement sits on the day.
+      // It rides the deletion transaction so the displaced session triggers
+      // the same relocation → authorised-reduction → disclosure path as Bin.
+      ok: true;
+      kind: 'swap_session';
+      input: AthleteSessionDeletionTransactionInput;
+      pickedTitle: string | null;
+      appliedDates: string[];
+      swapped: false;
+    }
+  | {
+      // An add on an empty/rest day: a net-new session owned by the dedicated
+      // addition transaction (§18 repaired cross-day, never rejected for an
+      // off-target condition). Occupied-day stacks stay on the legacy writer.
+      ok: true;
+      kind: 'add_session';
+      input: AthleteSessionAdditionTransactionInput;
+      pickedTitle: string | null;
+      appliedDates: string[];
+      swapped: false;
+    }
   | { ok: false; error: string };
+
+/**
+ * Errors from a swap resolution that mean "this stage doesn't own this case —
+ * fall through to the legacy registry writer" rather than a user-facing
+ * rejection. Team-Training anchor swaps are now owned by the transaction (stage
+ * 3); only a category pick with no resolvable template still defers.
+ */
+const SWAP_DEFERS_TO_LEGACY = new Set<string>([
+  'no_template_for_category',
+]);
+
+/**
+ * Errors from an add resolution that mean "fall through to the legacy writer".
+ * Stage 3 owns only the empty/rest-day add; occupied-day STACK adds, a category
+ * with no template, and a re-add onto a day emptied by an active removal
+ * constraint (the restoration path) stay on the legacy writer.
+ */
+const ADD_DEFERS_TO_LEGACY = new Set<string>([
+  'add_defers_to_legacy_stack',
+  'no_template_for_category',
+]);
+
+/**
+ * Materialise the new session a swap places on the day. Uses the pure
+ * finaliseWorkoutAfterMutation boundary — NOT validateLiveWorkoutWrite — so the
+ * whole-week §18 gate never runs here; the accepted-state transaction owns
+ * week-level §18 (and any authorised reduction it forces).
+ */
+function materializeAthleteSwapSession(args: {
+  change: TemplatePlanChange;
+  currentDay: ResolvedDay;
+  todayISO: string;
+}): { ok: true; workout: Workout; title: string | null } | { ok: false; error: string } {
+  const phase = useProfileStore.getState().onboardingData?.seasonPhase ?? undefined;
+  const materialized = materializeCanonicalPlanChangeCandidate({
+    change: args.change,
+    currentDay: args.currentDay,
+    todayISO: args.todayISO,
+    canonicalizeWorkout: (date, workout) =>
+      finaliseWorkoutAfterMutation(workout, {
+        date,
+        phase,
+        planIntentValid: false,
+      }).workout,
+  });
+  if (materialized.ok === false) return { ok: false, error: materialized.code };
+  return {
+    ok: true,
+    workout: materialized.workout,
+    title: materialized.projectedDay.workout?.title ?? null,
+  };
+}
 
 /**
  * Resolve athlete-owned mutation identity and component scope from the
@@ -1004,6 +1086,97 @@ export function resolveAthleteMutation(args: {
       input,
       appliedDates: [change.fromDate, change.toDate],
       swapped: !!input.existingTargetWorkout,
+    };
+  }
+
+  if (change.kind === 'swap_category' || change.kind === 'swap_template') {
+    const swapDay = args.visibleWeek.find((day) => day.date === change.date);
+    if (!swapDay?.workout) return { ok: false, error: 'nothing_to_swap' };
+    // Game day is fully locked — no swap, no override. Team Training anchors ARE
+    // swappable: the materializer keeps the anchor and replaces only the gym
+    // component (a whole-session removal whose remainingWorkout is "Team
+    // Training + <new>"), so it rides the transaction like any other swap.
+    if (protectedAnchorsForDaySnapshot(snapshotProjectedDay(swapDay))
+      .some((anchor) => anchor.kind === 'game')) {
+      return { ok: false, error: 'protected_game_day' };
+    }
+    const template = resolveTemplatePlanChange({ change, visibleWeek: args.visibleWeek });
+    if (!template) return { ok: false, error: 'no_template_for_category' };
+    const materialized = materializeAthleteSwapSession({
+      change: template,
+      currentDay: swapDay,
+      todayISO: change.date,
+    });
+    if (materialized.ok === false) return { ok: false, error: materialized.error };
+    // Name what the athlete picked — the registry label (parity with the legacy
+    // confirmation copy), falling back to the materialized session title.
+    const pickedTitle = listCoachRevisionTemplates().find(
+      (definition) => definition.templateId === template.templateId,
+    )?.label ?? materialized.title;
+    return {
+      ok: true,
+      kind: 'swap_session',
+      input: {
+        date: change.date,
+        reason: `${args.source}:swap_session:${change.date}`,
+        source: args.source,
+        scope: 'whole_session',
+        originalWorkout: swapDay.workout,
+        remainingWorkout: materialized.workout,
+        equivalentExposureMayRelocate: true,
+      },
+      pickedTitle,
+      appliedDates: [change.date],
+      swapped: false,
+    };
+  }
+
+  if (change.kind === 'add_category' || change.kind === 'add_template') {
+    const addDay = args.visibleWeek.find((day) => day.date === change.date);
+    if (!addDay) return { ok: false, error: 'not_visible' };
+    // Game day is fully locked — no add, no override.
+    if (protectedAnchorsForDaySnapshot(snapshotProjectedDay(addDay))
+      .some((anchor) => anchor.kind === 'game')) {
+      return { ok: false, error: 'protected_game_day' };
+    }
+    // Occupied-day STACK adds stay on the legacy writer (out of scope this stage).
+    if (addDay.workout) return { ok: false, error: 'add_defers_to_legacy_stack' };
+    // A day emptied by an active whole-DAY removal is a re-add (restoration
+    // path), not a net-new add — defer so this primitive never fights it. Only a
+    // real removal leaves the day empty with remainingWorkout null; add/swap pins
+    // carry a remainingWorkout and leave the day occupied (handled above), so
+    // they are excluded here by the remainingWorkout check.
+    const hasActiveRemoval = useProgramStore.getState().userRemovalConstraints.some(
+      (constraint) => constraint.status === 'active' &&
+        constraint.targetDate === change.date &&
+        constraint.scope === 'whole_session' &&
+        !constraint.remainingWorkout);
+    if (hasActiveRemoval) return { ok: false, error: 'add_defers_to_legacy_stack' };
+    const template = resolveTemplatePlanChange({ change, visibleWeek: args.visibleWeek });
+    if (!template) return { ok: false, error: 'no_template_for_category' };
+    // No source workout on an empty day → the materializer yields the bare new
+    // session (the empty-day add content), through the pure finaliser boundary.
+    const materialized = materializeAthleteSwapSession({
+      change: template,
+      currentDay: addDay,
+      todayISO: change.date,
+    });
+    if (materialized.ok === false) return { ok: false, error: materialized.error };
+    const pickedTitle = listCoachRevisionTemplates().find(
+      (definition) => definition.templateId === template.templateId,
+    )?.label ?? materialized.title;
+    return {
+      ok: true,
+      kind: 'add_session',
+      input: {
+        date: change.date,
+        reason: `${args.source}:add_session:${change.date}`,
+        source: args.source,
+        addedWorkout: materialized.workout,
+      },
+      pickedTitle,
+      appliedDates: [change.date],
+      swapped: false,
     };
   }
 
@@ -1046,20 +1219,25 @@ function blockedAssessmentForBuildError(
   change: PlanChange,
   error: string,
 ): ProgramEditRiskAssessment | null {
-  if (error !== 'protected_anchor_day') return null;
+  if (error !== 'protected_anchor_day' && error !== 'protected_game_day') return null;
   const date =
     'date' in change
       ? change.date
       : change.kind === 'move_session'
       ? change.fromDate
       : null;
+  // Game day is fully locked (product decision): a plain-language refusal, never
+  // a raw error code. Other protected anchors keep the generic guard copy.
+  const message = error === 'protected_game_day'
+    ? "It's game day — sessions can't be changed or added here."
+    : 'This would remove or replace a protected game/team anchor, so it cannot be applied from this edit flow.';
   return {
     decision: 'block',
     highestLevel: 'hard_stop',
     findings: [{
-      ruleId: 'protected_anchor_edit_blocked',
+      ruleId: error === 'protected_game_day' ? 'game_day_locked' : 'protected_anchor_edit_blocked',
       level: 'hard_stop',
-      message: 'This would remove or replace a protected game/team anchor, so it cannot be applied from this edit flow.',
+      message,
       dates: date ? [date] : [],
       sessions: [],
       canOverride: false,
@@ -1067,7 +1245,7 @@ function blockedAssessmentForBuildError(
       bibleRef: 'Section 16 App / AI rules; Section 17.E',
       data: { error },
     }],
-    introducedRuleIds: ['protected_anchor_edit_blocked'],
+    introducedRuleIds: [error === 'protected_game_day' ? 'game_day_locked' : 'protected_anchor_edit_blocked'],
     worsenedRuleIds: [],
   };
 }
@@ -1135,13 +1313,22 @@ export function previewPlanChangeRisk(args: {
     // directly from the accepted visible snapshot. This branch is before
     // proposal construction, template-policy construction and the legacy
     // date-override writer by design.
-    if (args.change.kind === 'move_session' || args.change.kind === 'remove_session') {
+    const wantsTypedSwap = args.change.kind === 'swap_category' ||
+      args.change.kind === 'swap_template';
+    const wantsTypedAdd = args.change.kind === 'add_category' ||
+      args.change.kind === 'add_template';
+    if (args.change.kind === 'move_session' || args.change.kind === 'remove_session' ||
+      wantsTypedSwap || wantsTypedAdd) {
       const resolution = resolveAthleteMutation({
         change: args.change,
         visibleWeek: args.visibleWeek,
         source: 'tap',
       });
-      if (resolution.ok === false) {
+      // No-template swaps and occupied-day / restoration adds defer to legacy.
+      const defersToLegacy = resolution.ok === false && (
+        (wantsTypedSwap && SWAP_DEFERS_TO_LEGACY.has(resolution.error)) ||
+        (wantsTypedAdd && ADD_DEFERS_TO_LEGACY.has(resolution.error)));
+      if (resolution.ok === false && !defersToLegacy) {
         const blocked = blockedAssessmentForBuildError(args.change, resolution.error);
         if (blocked) {
           return finish({
@@ -1163,53 +1350,64 @@ export function previewPlanChangeRisk(args: {
         }, { internalResultCode: resolution.error });
       }
 
-      try {
-        const staged = resolution.kind === 'move_session'
-          ? stageAthleteSessionMoveTransaction(
-              resolution.input,
-              { purpose: 'preview' },
-            )
-          : stageAthleteSessionDeletionTransaction(
-              resolution.input,
-              { purpose: 'preview' },
-            );
-        const proposedWeek = proposedWeekFromAcceptedStage({
-          visibleWeek: args.visibleWeek,
-          staged: staged.result,
-          profile: args.profile,
-        });
-        return finish({
-          ok: true,
-          message: 'Preview ready.',
-          appliedDates: resolution.appliedDates,
-          rejected: [],
-          proposedWeek,
-          assessment: emptyAssessment,
-        }, {
-          selectedOutcome: staged.outcome,
-          ownershipBoundary: 'typed_athlete_mutation',
-        });
-      } catch (error) {
-        const code = (error as { code?: string })?.code ??
-          (args.change.kind === 'move_session'
-            ? 'athlete_move_preview_failed'
-            : 'athlete_removal_preview_failed');
-        return finish({
-          ok: false,
-          message: "I couldn't safely make that change, so the plan is untouched.",
-          appliedDates: [],
-          rejected: [{
-            date: source ?? target ?? null,
-            code,
-            reason: error instanceof Error ? error.message : String(error),
-          }],
-          proposedWeek: args.visibleWeek,
-          assessment: emptyAssessment,
-        }, {
-          internalResultCode: code,
-          rejectingBoundary: 'stageAthleteMutationTransaction',
-          ownershipBoundary: 'typed_athlete_mutation',
-        });
+      if (resolution.ok === true) {
+        try {
+          const staged = resolution.kind === 'move_session'
+            ? stageAthleteSessionMoveTransaction(
+                resolution.input,
+                { purpose: 'preview' },
+              )
+            : resolution.kind === 'add_session'
+              ? stageAthleteSessionAdditionTransaction(
+                  resolution.input,
+                  { purpose: 'preview' },
+                )
+              : stageAthleteSessionDeletionTransaction(
+                  resolution.input,
+                  { purpose: 'preview' },
+                );
+          const proposedWeek = proposedWeekFromAcceptedStage({
+            visibleWeek: args.visibleWeek,
+            staged: staged.result,
+            profile: args.profile,
+          });
+          return finish({
+            ok: true,
+            message: 'Preview ready.',
+            appliedDates: resolution.appliedDates,
+            rejected: [],
+            proposedWeek,
+            assessment: emptyAssessment,
+          }, {
+            selectedOutcome: staged.outcome,
+            ownershipBoundary: 'typed_athlete_mutation',
+          });
+        } catch (error) {
+          const code = (error as { code?: string })?.code ??
+            (resolution.kind === 'move_session'
+              ? 'athlete_move_preview_failed'
+              : resolution.kind === 'swap_session'
+                ? 'athlete_swap_preview_failed'
+                : resolution.kind === 'add_session'
+                  ? 'athlete_addition_preview_failed'
+                  : 'athlete_removal_preview_failed');
+          return finish({
+            ok: false,
+            message: "I couldn't safely make that change, so the plan is untouched.",
+            appliedDates: [],
+            rejected: [{
+              date: source ?? target ?? null,
+              code,
+              reason: error instanceof Error ? error.message : String(error),
+            }],
+            proposedWeek: args.visibleWeek,
+            assessment: emptyAssessment,
+          }, {
+            internalResultCode: code,
+            rejectingBoundary: 'stageAthleteMutationTransaction',
+            ownershipBoundary: 'typed_athlete_mutation',
+          });
+        }
       }
     }
 
@@ -1303,6 +1501,8 @@ export interface ApplyPlanChangeInput {
   commitAthleteRemoval?: (input: AthleteSessionDeletionTransactionInput) => unknown;
   /** Test/host seam; production defaults to the accepted-state move transaction. */
   commitAthleteMove?: (input: AthleteSessionMoveTransactionInput) => unknown;
+  /** Test/host seam; production defaults to the accepted-state addition transaction. */
+  commitAthleteAddition?: (input: AthleteSessionAdditionTransactionInput) => unknown;
   trace?: AthleteActionTraceContext;
   route?: string;
 }
@@ -1383,7 +1583,11 @@ export function applyPlanChange(args: ApplyPlanChangeInput): PlanChangeApplyResu
     } else {
       const originalRejectionCode = result.rejected[0]?.code ?? internalResultCode;
       const athleteOwned = args.change.kind === 'move_session' ||
-        args.change.kind === 'remove_session';
+        args.change.kind === 'remove_session' ||
+        args.change.kind === 'swap_category' ||
+        args.change.kind === 'swap_template' ||
+        args.change.kind === 'add_category' ||
+        args.change.kind === 'add_template';
       const firstFailingBoundary = athleteOwned
         ? result.rejected.length > 0
           ? 'athlete_session_transaction'
@@ -1431,22 +1635,36 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
   // Commit through the same typed owner used by preview. This is intentionally
   // before proposal/template policy construction and before the legacy
   // revision override writer.
-  if (args.change.kind === 'move_session' || args.change.kind === 'remove_session') {
+  const wantsTypedSwap = args.change.kind === 'swap_category' ||
+    args.change.kind === 'swap_template';
+  const wantsTypedAdd = args.change.kind === 'add_category' ||
+    args.change.kind === 'add_template';
+  if (args.change.kind === 'move_session' || args.change.kind === 'remove_session' ||
+    wantsTypedSwap || wantsTypedAdd) {
     const resolution = resolveAthleteMutation({
       change: args.change,
       visibleWeek: args.visibleWeek,
       source: 'tap',
     });
     if (resolution.ok === false) {
-      return {
-        ok: false,
-        message: `That change isn't possible here (${resolution.error}).`,
-        appliedDates: [],
-        rejected: [],
-      };
-    }
-
-    if (resolution.kind === 'move_session') {
+      // No-template swaps and occupied-day / restoration adds are not owned by
+      // this stage — fall through to the legacy registry writer below.
+      const defersToLegacy =
+        (wantsTypedSwap && SWAP_DEFERS_TO_LEGACY.has(resolution.error)) ||
+        (wantsTypedAdd && ADD_DEFERS_TO_LEGACY.has(resolution.error));
+      if (!defersToLegacy) {
+        // Game day is locked — surface the plain-language block, never a raw code.
+        const blocked = blockedAssessmentForBuildError(args.change, resolution.error);
+        return {
+          ok: false,
+          message: blocked
+            ? blocked.findings[0]?.message ?? "That change can't be applied here."
+            : `That change isn't possible here (${resolution.error}).`,
+          appliedDates: [],
+          rejected: [],
+        };
+      }
+    } else if (resolution.kind === 'move_session') {
       if (args.change.kind !== 'move_session') {
         throw new Error('Athlete move resolution did not match its typed intent');
       }
@@ -1472,43 +1690,109 @@ function applyPlanChangeWithinTrace(args: ApplyPlanChangeInput): PlanChangeApply
         appliedDates: resolution.appliedDates,
         rejected: [],
       };
-    }
-
-    if (args.change.kind !== 'remove_session') {
-      throw new Error('Athlete deletion resolution did not match its typed intent');
-    }
-    let publishedOutcome: AthleteDeletionPublishedOutcome | null = null;
-    try {
-      const transaction = (args.commitAthleteRemoval ??
-        commitAthleteSessionDeletionTransaction)(
-          resolution.input,
-        );
-      if (transaction && typeof transaction === 'object' &&
-        'deletionOutcome' in transaction) {
-        publishedOutcome = (transaction as {
-          deletionOutcome: AthleteDeletionPublishedOutcome;
-        }).deletionOutcome;
+    } else if (resolution.kind === 'swap_session') {
+      // A swap rides the deletion transaction (whole-session removal with the
+      // new session as remainingWorkout), so it inherits Bin's authorised-
+      // reduction + disclosure ownership.
+      let publishedOutcome: AthleteDeletionPublishedOutcome | null = null;
+      try {
+        const transaction = (args.commitAthleteRemoval ??
+          commitAthleteSessionDeletionTransaction)(resolution.input);
+        if (transaction && typeof transaction === 'object' &&
+          'deletionOutcome' in transaction) {
+          publishedOutcome = (transaction as {
+            deletionOutcome: AthleteDeletionPublishedOutcome;
+          }).deletionOutcome;
+        }
+      } catch (error) {
+        return {
+          ok: false,
+          message: "I couldn't safely make that change, so the plan is untouched.",
+          appliedDates: [],
+          rejected: [{
+            date: resolution.input.date,
+            code: (error as { code?: string })?.code ?? 'athlete_swap_publication_failed',
+            reason: (error as Error)?.message ?? String(error),
+          }],
+        };
       }
-    } catch (error) {
       return {
-        ok: false,
-        message: "I couldn't safely make that change, so the plan is untouched.",
-        appliedDates: [],
-        rejected: [{
-          date: args.change.date,
-          code: (error as { code?: string })?.code ?? 'athlete_removal_publication_failed',
-          reason: (error as Error)?.message ?? String(error),
-        }],
+        ok: true,
+        message: athleteSwapDoneMessage(
+          resolution.input.date, resolution.pickedTitle, publishedOutcome),
+        appliedDates: resolution.appliedDates,
+        rejected: [],
+      };
+    } else if (resolution.kind === 'add_session') {
+      // An add on an empty/rest day rides the dedicated addition transaction:
+      // §18 is repaired cross-day (never rejected for an off-target condition),
+      // and any repaired day is disclosed in the confirmation.
+      let additionOutcome: AthleteAdditionPublishedOutcome | null = null;
+      try {
+        const transaction = (args.commitAthleteAddition ??
+          commitAthleteSessionAdditionTransaction)(resolution.input);
+        if (transaction && typeof transaction === 'object' &&
+          'additionOutcome' in transaction) {
+          additionOutcome = (transaction as {
+            additionOutcome: AthleteAdditionPublishedOutcome;
+          }).additionOutcome;
+        }
+      } catch (error) {
+        return {
+          ok: false,
+          message: "I couldn't safely make that change, so the plan is untouched.",
+          appliedDates: [],
+          rejected: [{
+            date: resolution.input.date,
+            code: (error as { code?: string })?.code ?? 'athlete_addition_publication_failed',
+            reason: (error as Error)?.message ?? String(error),
+          }],
+        };
+      }
+      return {
+        ok: true,
+        message: athleteAdditionDoneMessage(
+          resolution.input.date, resolution.pickedTitle, additionOutcome),
+        appliedDates: resolution.appliedDates,
+        rejected: [],
+      };
+    } else {
+      if (args.change.kind !== 'remove_session') {
+        throw new Error('Athlete deletion resolution did not match its typed intent');
+      }
+      let publishedOutcome: AthleteDeletionPublishedOutcome | null = null;
+      try {
+        const transaction = (args.commitAthleteRemoval ??
+          commitAthleteSessionDeletionTransaction)(
+            resolution.input,
+          );
+        if (transaction && typeof transaction === 'object' &&
+          'deletionOutcome' in transaction) {
+          publishedOutcome = (transaction as {
+            deletionOutcome: AthleteDeletionPublishedOutcome;
+          }).deletionOutcome;
+        }
+      } catch (error) {
+        return {
+          ok: false,
+          message: "I couldn't safely make that change, so the plan is untouched.",
+          appliedDates: [],
+          rejected: [{
+            date: args.change.date,
+            code: (error as { code?: string })?.code ?? 'athlete_removal_publication_failed',
+            reason: (error as Error)?.message ?? String(error),
+          }],
+        };
+      }
+      return {
+        ok: true,
+        message: publishedOutcome
+          ? athleteDeletionDoneMessage(args.change, publishedOutcome)
+          : planChangeDoneMessage(args.change, null),
+        appliedDates: resolution.appliedDates,
+        rejected: [],
       };
     }
-    return {
-      ok: true,
-      message: publishedOutcome
-        ? athleteDeletionDoneMessage(args.change, publishedOutcome)
-        : planChangeDoneMessage(args.change, null),
-      appliedDates: resolution.appliedDates,
-      rejected: [],
-    };
   }
 
   const proposal = buildPlanChangeProposal(args.change, {
@@ -1583,6 +1867,89 @@ function outcomeWeekday(date: string | null): string {
   });
 }
 
+/**
+ * Swap copy is a projection of the accepted transaction result. It names the
+ * session the athlete now has and, on an authorised reduction, discloses it
+ * with the same ownership as Bin (see athleteDeletionDoneMessage 'reduced').
+ */
+function athleteSwapDoneMessage(
+  date: string,
+  pickedTitle: string | null,
+  outcome: AthleteDeletionPublishedOutcome | null,
+): string {
+  const label = pickedTitle ?? 'New session';
+  const lead = `Done. ${label} is now on ${date}.`;
+  if (!outcome) return lead;
+  // Reduction only when the displaced required work is genuinely unrelocatable.
+  if (outcome.kind === 'reduced') {
+    const target = outcome.affectedMetric === 'conditioning_core'
+      ? 'conditioning target'
+      : 'strength target';
+    return `${lead} This week’s ${target} has been reduced at your request.`;
+  }
+  // Bible-legal relocation of the displaced required work must be disclosed —
+  // name the day it moved to (parity with Bin's deletion copy).
+  if ((outcome.kind === 'relocated' || outcome.kind === 'substituted' ||
+    outcome.kind === 'stacked') && outcome.destinationDate) {
+    const day = outcomeWeekday(outcome.destinationDate);
+    const patterns = new Set(outcome.removedPatterns);
+    const moved = patterns.has('squat') || patterns.has('hinge')
+      ? 'Lower-body strength'
+      : outcome.affectedMetric === 'main_strength'
+        ? 'Your strength work'
+        : outcome.affectedMetric === 'conditioning_core'
+          ? 'Conditioning work'
+          : 'Required work';
+    return `${lead} ${moved} was moved to ${day} to keep your week balanced.`;
+  }
+  return lead;
+}
+
+/**
+ * Add copy is a projection of the accepted addition transaction result. Names
+ * the session the athlete now has and, when the whole-week §18 repair touched
+ * other days, discloses every one (disclosed-repair parity, invariant #4).
+ */
+function athleteAdditionDoneMessage(
+  date: string,
+  pickedTitle: string | null,
+  outcome: AthleteAdditionPublishedOutcome | null,
+): string {
+  const label = pickedTitle ?? 'New session';
+  const lead = `Done. ${label} added on ${outcomeWeekday(date)}.`;
+  if (!outcome || outcome.kind !== 'added_with_repair' || outcome.repairedDates.length === 0) {
+    return lead;
+  }
+  const days = outcome.repairedDates.map(outcomeWeekday);
+  const named = days.length === 1
+    ? days[0]
+    : `${days.slice(0, -1).join(', ')} and ${days[days.length - 1]}`;
+  return `${lead} I rebalanced ${named} to keep your week balanced.`;
+}
+
+/**
+ * Names any day the whole-week §18 repair touched beyond the target and the
+ * already-named relocation destination — disclosed-repair parity with the
+ * addition path (invariant #4). Mirrors `athleteAdditionDoneMessage`'s voice so
+ * a residual emptied/rebalanced day is never silent.
+ */
+function residualRepairClause(
+  outcome: AthleteDeletionPublishedOutcome,
+): string {
+  const alreadyNamed = new Set<string>();
+  if (outcome.targetDate) alreadyNamed.add(outcome.targetDate.slice(0, 10));
+  if (outcome.destinationDate) alreadyNamed.add(outcome.destinationDate.slice(0, 10));
+  const residual = outcome.repairedDates
+    .map((entry) => entry.slice(0, 10))
+    .filter((entry) => !alreadyNamed.has(entry));
+  if (residual.length === 0) return '';
+  const days = residual.map(outcomeWeekday);
+  const named = days.length === 1
+    ? days[0]
+    : `${days.slice(0, -1).join(', ')} and ${days[days.length - 1]}`;
+  return ` I also rebalanced ${named} to keep your week balanced.`;
+}
+
 /** Athlete copy is a projection of the accepted transaction result. */
 function athleteDeletionDoneMessage(
   change: Extract<PlanChange, { kind: 'remove_session' }>,
@@ -1604,31 +1971,33 @@ function athleteDeletionDoneMessage(
   const removed = component === 'Session'
     ? 'Session removed.'
     : `${component} was removed.`;
+  const residual = residualRepairClause(outcome);
   if (outcome.kind === 'reduced') {
     const target = outcome.affectedMetric === 'conditioning_core'
       ? 'conditioning target'
       : 'strength target';
-    return `${removed} This week’s ${target} has been reduced at your request.`;
+    return `${removed} This week’s ${target} has been reduced at your request.${residual}`;
   }
   if (outcome.kind === 'already_satisfied') {
-    return outcome.affectedMetric === 'session'
+    const base = outcome.affectedMetric === 'session'
       ? removed
       : `${removed} Your remaining sessions already cover this week’s target.`;
+    return `${base}${residual}`;
   }
   const day = outcomeWeekday(outcome.destinationDate);
   if (patterns.has('squat') || patterns.has('hinge')) {
-    return `${removed} Lower-body strength was moved to ${day} to keep your week balanced.`;
+    return `${removed} Lower-body strength was moved to ${day} to keep your week balanced.${residual}`;
   }
   if (patterns.size === 1 && patterns.has('pull')) {
-    return `${removed} Pulling work was added to ${day}.`;
+    return `${removed} Pulling work was added to ${day}.${residual}`;
   }
   if (patterns.size === 1 && patterns.has('push')) {
-    return `${removed} Pushing work was added to ${day}.`;
+    return `${removed} Pushing work was added to ${day}.${residual}`;
   }
   if (outcome.affectedMetric === 'conditioning_core') {
-    return `${removed} Conditioning work was added to ${day}.`;
+    return `${removed} Conditioning work was added to ${day}.${residual}`;
   }
-  return `${removed} Required work was added to ${day}.`;
+  return `${removed} Required work was added to ${day}.${residual}`;
 }
 
 function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): string {

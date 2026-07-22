@@ -7,6 +7,8 @@ import {
   type Workout,
 } from '../../types/domain';
 import { buildWorkoutsFromCoach } from '../../data/defaultProgram';
+import { bakeMicrocycleStrengthProgression } from '../../utils/sessionResolver';
+import { deriveProfileReadiness } from '../../utils/readiness';
 import {
   buildCoachingPlan,
   onboardingToCoachingInputs,
@@ -617,7 +619,7 @@ export function generateProgramLocally(
     'In-season': 'In-Season',
   };
 
-  return {
+  const program: TrainingProgram = {
     id: 'prog-ai-1',
     userId: 'user-default',
     name: buildProgramName(generationProfile, plan),
@@ -632,6 +634,30 @@ export function generateProgramLocally(
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+
+  // Authoring-time freeze (§18 ownership redesign, stage 1): materialise strength
+  // progression into the stored microcycles once. Resolution then merely projects
+  // these loads — it no longer recomputes progression on read.
+  bakeMicrocycleStrengthProgression(program, {
+    manualOverrides: {},
+    markedDays: {},
+    athleteContext: {
+      injuries: baseProfile.injuries || [],
+      equipmentTags: [...resolvedEquipmentTags],
+      trainingLocation: baseProfile.trainingLocation || 'Commercial gym',
+      onboardingData: baseProfile,
+    },
+    seasonPhase: generationProfile.seasonPhase || null,
+    gameDay: baseProfile.gameDay,
+    usualGameDay: baseProfile.usualGameDay,
+    readiness: deriveProfileReadiness(baseProfile),
+    sessionFeedback: {},
+    weightOverrides: {},
+    workoutHistory: [],
+    blockState: null,
+  });
+
+  return program;
 }
 
 /** Is a response body HTML (Cloudflare/Supabase proxy page etc.)? */

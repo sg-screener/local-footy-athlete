@@ -333,6 +333,12 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
   }
 
   // ── C. Swap Monday to recovery via the sheet's real path ──
+  // Transaction-owned swap (§18 ownership stage 2): displacing Monday's
+  // lower-body strength is Bible-legal because the strength relocates to a free
+  // day (Wednesday). The swap SUCCEEDS, Monday becomes the recovery session, and
+  // the relocation is disclosed — no silent side effect. Previously the
+  // single-date gate refused this (section18_week_rejected) because it could not
+  // persist cross-day repairs; the accepted-state transaction can.
   {
     seed(profile);
     const visibleWeek = resolveLiveWeek(wk2Mon, profile.seasonPhase!, undefined);
@@ -342,18 +348,18 @@ function runRemovalMatrix(label: string, profile: Partial<OnboardingData>) {
       todayISO,
       setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w!, c),
     });
-    ok(`[C] invalid recovery swap rejected: ${res.message ?? ''}`,
-      res.ok === false && (
-        /section18_week_rejected/.test(res.message) ||
-        res.rejected?.some((entry) => entry.code === 'section18_week_rejected') === true
-      ),
+    ok(`[C] recovery swap accepted: ${res.message ?? ''}`,
+      res.ok === true &&
+        !res.rejected?.some((entry) => entry.code === 'section18_week_rejected'),
       JSON.stringify(res.rejected));
+    ok('[C] swap discloses what happened to the displaced strength (relocation or reduction)',
+      /moved to/i.test(res.message) || /reduc/i.test(res.message),
+      res.message);
 
-    addSaturdayGame(profile, wk2Sat);
-    const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, 'Saturday');
-    ok('[C] rejected recovery swap leaves Monday strength intact',
-      /lower|squat|hinge/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
-      dayOf(after, wk2Mon)?.workout?.name);
+    const after = resolveLiveWeek(wk2Mon, profile.seasonPhase!, undefined);
+    ok('[C] Monday now holds the recovery session, not lower-body strength',
+      !/lower|squat|hinge/i.test(dayOf(after, wk2Mon)?.workout?.name ?? ''),
+      `${dayOf(after, wk2Mon)?.source}: ${dayOf(after, wk2Mon)?.workout?.name}`);
   }
 
   // ── D. A valid athlete move is accepted atomically. A later Saturday-game
