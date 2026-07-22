@@ -42,7 +42,8 @@ import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjust
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
-import { isInjurySourceFact, createTemporaryFatigueFact, composeTemporarySourceFactCompatibility } from '../rules/temporarySourceFact';
+import { isInjurySourceFact, createTemporaryFatigueFact, composeTemporarySourceFactCompatibility, isTemporarySourceFactConstraint } from '../rules/temporarySourceFact';
+import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
 import { resolveWeekWithConditioning, addDays } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { applyLighterDayTrim } from '../utils/lighterDayTrim';
@@ -497,6 +498,64 @@ async function main(): Promise<void> {
     const after = signature();
     assert(before === after,
       'a minor-tier fatigue fact changed the resolved week (it must be record-only / inert)');
+  });
+
+  // ── Invariant R9 (Defect 3 part 2 — non-mutation boundary): a contextual/inert
+  // fact commit must succeed even when whole-week §18 re-validation WOULD reject the
+  // week — the fact commits OFF the mutation boundary. Severe (deriving) facts stay
+  // gated. The `beforeEffectiveValidation` test hook stands in for "the §18
+  // whole-week gate rejects"; part 2 must not run it (nor the commit-time week
+  // re-validation) for an inert fact. RED today: the inert commit runs the gate.
+  await run('R9 non-mutation-boundary: an inert fact commits even when §18 validation would reject; severe stays gated', async () => {
+    const dateScope = { kind: 'date' as const, date: WEEK, from: WEEK, until: WEEK };
+    const weekScope = { kind: 'week' as const, weekStart: WEEK, from: WEEK, until: addDays(WEEK, 6) };
+    const wouldReject = { beforeEffectiveValidation: () => { throw new Error('SIMULATED §18 whole-week rejection'); } };
+
+    // Inert (minor-tier) fact: commits OFF the validation boundary despite the
+    // would-reject hook.
+    seed();
+    const slight = createTemporaryFatigueFact({
+      observedDate: WEEK, scope: dateScope, athleteReportedLevel: 'slight',
+      reportKind: 'fatigue', sourceSurface: 'week_readiness_sheet',
+    });
+    const inert = await transactTemporarySourceFact({
+      operation: 'create', fact: slight, todayISO: WEEK, testHooks: wouldReject,
+    });
+    assert(!/safely_rejected|conflicted/.test(inert.outcome),
+      `inert fact must commit off the §18 mutation gate, got outcome=${inert.outcome}`);
+
+    // Severe (cooked, deriving) fact: still runs validation — the would-reject hook
+    // fails it (auto-protect tiers stay gated by §18).
+    seed();
+    const cooked = createTemporaryFatigueFact({
+      observedDate: WEEK, scope: weekScope, athleteReportedLevel: 'cooked',
+      reportKind: 'cooked', sourceSurface: 'week_readiness_sheet',
+    });
+    const severe = await transactTemporarySourceFact({
+      operation: 'create', fact: cooked, todayISO: WEEK, testHooks: wouldReject,
+    });
+    assert(/safely_rejected/.test(severe.outcome),
+      `severe fact must stay gated by §18 validation, got outcome=${severe.outcome}`);
+  });
+
+  // ── Invariant R10 (injury channel unaffected): the non-mutation-boundary skip
+  // keys on source-fact constraints, and an injury constraint IS a source-fact
+  // constraint — so an injury delta always changes the composition signature and
+  // can never be misclassified as inert. Injury commits stay fully gated + owned by
+  // their separate channel. (Guards the R9 inert-detection boundary.)
+  await run('R10 injury-unaffected: an injury constraint is source-fact-owned (never inert)', () => {
+    const injuryConstraint = {
+      id: 'injury:knee:episode-1', type: 'injury', injuryEpisodeId: 'episode-1', status: 'active',
+    };
+    assert(isTemporarySourceFactConstraint(injuryConstraint as never) === true,
+      'an injury constraint must be source-fact-owned so an injury delta is never inert');
+    // A fatigue constraint carrying a source-fact id is likewise counted; only a
+    // fact composing NO such constraint (minor-tier fatigue) can be inert.
+    const fatigueConstraint = {
+      id: 'source-fact:global:x:y', type: 'fatigue', temporarySourceFactIds: ['f1'], status: 'active',
+    };
+    assert(isTemporarySourceFactConstraint(fatigueConstraint as never) === true,
+      'a source-fact fatigue constraint must be counted');
   });
 
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);

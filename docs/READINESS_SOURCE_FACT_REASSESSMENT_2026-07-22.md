@@ -464,3 +464,53 @@ not re-run that gate. **Not yet implemented.**
    (inert) fact commit must succeed even when the whole-week §18 gate would reject
    the week — proving it commits off the mutation gate. Then re-run the full
    on-device pass before any merge.
+
+---
+
+## Part 2 LANDED in-harness + clock determinism fix (2026-07-22)
+
+Sam approved (a): implement part 2 now, tests-first; the invariant is the ownership
+boundary itself — *a contextual/inert fact commits off the whole-week §18 mutation
+gate, full stop* — justified under any diagnosis (the captured device error already
+shows the whole-week gateway firing on a fact commit with fatigue-independent repair
+failures). **Not merged — device pass remains the gate; Sam runs it.**
+
+**Part 2 — the non-mutation boundary (`commitTemporarySourceFactSet`).** A fact
+commit whose composition does NOT change the exposure-affecting (source-fact)
+constraint set is **INERT**: it changes no visible program, so it skips BOTH the
+explicit whole-week §18 gate (`validateEffectiveComposition`) AND the commit-time
+week re-validation (`commitAcceptedStateTransaction({ validateWeekStarts: [] })`).
+Detection: `sourceFactConstraintSignature(before) === (after)` over constraints
+matched by `isTemporarySourceFactConstraint`. Deriving facts (severe fatigue add/
+remove, injury — all source-fact-owned constraints) change the signature → stay
+gated. This removes a whole-week program-mutation gate from a record-only signal —
+deleting a boundary, not adding a guard.
+
+Pinned by:
+- **R9** — an inert fact commits even when whole-week §18 validation would reject
+  (a throwing `beforeEffectiveValidation` hook stands in for the gate rejecting);
+  a severe (cooked) fact with the same hook stays `safely_rejected`.
+- **R10** — an injury constraint is `isTemporarySourceFactConstraint`, so an injury
+  delta always changes the signature and can never be misclassified as inert; the
+  injury channel is unaffected.
+
+**Clock determinism fix (`acceptedStateTransaction.ts`).** The accepted-profile
+snapshot used raw `new Date()` (lines 455/462) while the rest of the accepted-state
+path uses the controllable `appDateNow()` (DevE2E clock, else `new Date()`). Under
+a frozen test clock this drift produced a false `accepted_state_rollback_mismatch`
+(profile-snapshot `capturedAt`: real-time vs the rollback-captured pre-state),
+masking the real path in every device-exact repro. Both now use `appDateNow()`.
+Verified: with a frozen clock the install-side `capturedAt` is deterministic. (A
+residual epoch-0 on the durable *restore* side of the device-exact repro is a
+separate localStorage-mock persistence-fidelity artifact — NOT `new Date()`-driven
+— and does not affect the R1-style suite seed, which carries no profile snapshot.)
+
+**Gates:** readiness ownership **10/10** (R1–R10); `test:bible` exit 0;
+`test:temporary-source-facts` 45/45; `test:accepted-state-transactions`
+25/25+10/10+10/10; `test:weekly-readiness` 14/14; §18 ownership 12/12; typecheck
+clean on touched files.
+
+**STOPPED before merge, per Sam.** Next: Sam kills the interactive Expo, we run one
+clean `expo start` logging to a file, re-run the device flow (tired-today →
+success ack + card flip + witness + lighter-day offer applies/undoes), and capture
+the exact post-fix result. Nothing merges on harness evidence alone.

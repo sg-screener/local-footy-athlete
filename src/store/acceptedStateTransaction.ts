@@ -452,14 +452,19 @@ export function stageAcceptedStateTransaction(
         ...context,
         acceptedProfileSnapshot: proposal.acceptedProfileSnapshot ?? {
           ...context.acceptedProfileSnapshot,
-          updatedAt: new Date().toISOString(),
+          updatedAt: appDateNow().toISOString(),
           sourceRevision: context.revision,
           onboardingData: profile,
         },
       });
     }
   } else {
-    const now = new Date().toISOString();
+    // Controllable clock (appDateNow) for the accepted-profile snapshot — the
+    // rest of the accepted-state path already uses it. A raw `new Date()` here
+    // let the profile-snapshot capturedAt drift from the rollback-captured
+    // pre-state, producing a false `accepted_state_rollback_mismatch` under a
+    // frozen test clock. See docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md.
+    const now = appDateNow().toISOString();
     context = normalizeAcceptedMaterialContext({
       ...context,
       acceptedProfileSnapshot: {
