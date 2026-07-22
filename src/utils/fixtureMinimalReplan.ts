@@ -1052,7 +1052,8 @@ export function buildFixtureMinimalReplan(
             workouts: visibleResolver(args)(strengthSource),
             weekStart: args.weekStart,
           });
-          const shortfall = contract.identity.mode === 'in_season_bye_recovery'
+          const shortfall = contract.identity.mode === 'in_season_bye_recovery' ||
+            contract.identity.mode === 'illness_recovery'
             ? 0
             : Math.max(0, (contract.conditioning.core.plannerSelectedTarget ??
                 contract.conditioning.core.requiredMinimum) -

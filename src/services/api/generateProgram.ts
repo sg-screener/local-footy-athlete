@@ -19,6 +19,7 @@ import {
 import { todayISOLocal } from '../../utils/appDate';
 import { getAthletePrefs } from '../../store/athletePreferencesStore';
 import { useCoachUpdatesStore, type ActiveConstraint } from '../../store/coachUpdatesStore';
+import type { TemporarySourceFact } from '../../rules/temporarySourceFact';
 import { useReadinessStore } from '../../store/readinessStore';
 import {
   buildBlockWeekStates,
@@ -249,6 +250,8 @@ function resolveGenerationConstraints(
   return buildGenerationConstraintContext({
     activeConstraints,
     todayISO,
+    temporarySourceFacts: require('../../store/programStore').useProgramStore.getState()
+      .acceptedMaterialContext?.temporarySourceFacts,
   });
 }
 
@@ -267,6 +270,8 @@ export function buildGeneratedMicrocycles(args: {
   availableConditioningModalities?: readonly ConditioningEquipmentModality[];
   generationConstraints?: GenerationConstraintContext;
   activeConstraints?: readonly ActiveConstraint[];
+  /** Raw facts, threaded per-week to mint the illness_recovery week mode. */
+  temporarySourceFacts?: readonly TemporarySourceFact[] | null;
   weekLimit?: 1 | 4;
 }): Microcycle[] {
   const states = buildBlockWeekStates({
@@ -283,6 +288,7 @@ export function buildGeneratedMicrocycles(args: {
           activeConstraints: args.activeConstraints,
           todayISO: blockState.weekStart,
           periodEndISO: blockState.weekEnd,
+          temporarySourceFacts: args.temporarySourceFacts,
         })
       : args.generationConstraints;
     const profile = applyGenerationConstraintsToProfile(args.profile, generationConstraints);
@@ -601,6 +607,8 @@ export function generateProgramLocally(
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
     activeConstraints: activeConstraintsForGeneration,
+    temporarySourceFacts: require('../../store/programStore').useProgramStore.getState()
+      .acceptedMaterialContext?.temporarySourceFacts,
     weekLimit: options.microcycleLimit,
   });
   const firstMicrocycle = microcycles[0];

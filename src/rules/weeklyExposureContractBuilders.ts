@@ -59,6 +59,13 @@ export interface WeeklyExposureContractInput {
   }>;
   /** Explicit caller decision; omitted lets readiness/injury choose the mode. */
   byeMode?: 'build' | 'recovery';
+  /**
+   * Derived week mode, minted by the single composition-boundary owner
+   * (`deriveIllnessRecoveryWeekMode`) at generation and PRESERVED verbatim on
+   * re-derivation. When set it wins over readiness/injury/bye logic; the builder
+   * never re-reads facts.
+   */
+  weekModeOverride?: 'illness_recovery';
 }
 
 const ALL_PATTERNS: readonly MainStrengthPattern[] = ['squat', 'hinge', 'push', 'pull'];
@@ -98,10 +105,14 @@ function createBaseContract(
     .filter((day) => selectedSet.has(day));
   const fixtureCredit = input.hasGame && input.gameDay !== null ? 1 : 0;
   const anchorCredit = teamDays.length + fixtureCredit;
-  const conditioningRequired = Math.max(targets.conditioning.required, anchorCredit);
+  // In illness_recovery the athlete isn't attending anchors, so anchor credit
+  // must not FLOOR any requirement — nothing is required this week. Credited
+  // counts stay factual; only the required/selected floors drop.
+  const floorCredit = targets.mode === 'illness_recovery' ? 0 : anchorCredit;
+  const conditioningRequired = Math.max(targets.conditioning.required, floorCredit);
   const selectedConditioning = Math.max(
     targets.conditioning.selectedTarget ?? targets.conditioning.required,
-    anchorCredit,
+    floorCredit,
   );
   return {
     protocolVersion: 1,
@@ -121,8 +132,8 @@ function createBaseContract(
       targetCount: selectedConditioning,
       required: conditioningRequired,
       preferred: {
-        min: Math.max(targets.conditioning.preferredMin, anchorCredit),
-        max: Math.max(targets.conditioning.preferredMax, anchorCredit),
+        min: Math.max(targets.conditioning.preferredMin, floorCredit),
+        max: Math.max(targets.conditioning.preferredMax, floorCredit),
       },
       creditedTeamTrainingCount: teamDays.length,
       creditedGameOrPracticeMatchCount: fixtureCredit,
@@ -532,9 +543,35 @@ export function buildInSeasonByeRecoveryExposureContract(
   return applyCommonSafetyReductions(contract, input);
 }
 
+export function buildIllnessRecoveryExposureContract(
+  input: WeeklyExposureContractInput,
+): WeeklyExposureContract {
+  const selected = phaseSelection(input, 'illness_recovery');
+  const teams = uniqueExposureDays(input.teamTrainingDayNumbers).length;
+  const contract = createBaseContract(input, {
+    mode: 'illness_recovery',
+    subphase: 'illness_recovery',
+    // Every §18 minimum is lifted: nothing is required this week. Selected work
+    // is OPTIONAL, reduced and recovery-tier — not cleared to rest.
+    strength: { required: 0, preferredMin: 0, preferredMax: 2, selectedTarget: selected.mainStrength },
+    conditioning: { required: 0, preferredMin: 0, preferredMax: teams, selectedTarget: selected.coreConditioning },
+    sprintCod: { required: 0, preferredMin: 0, preferredMax: 0, selectedTarget: selected.sprintHighSpeed },
+    fullRest: { required: 2, preferredMin: 2, preferredMax: 4 },
+    allowCombined: false,
+    preferredHardDays: 0,
+    permittedHardDays: 2,
+  });
+  return applyCommonSafetyReductions(contract, input);
+}
+
 export function buildInSeasonExposureContract(
   input: WeeklyExposureContractInput,
 ): WeeklyExposureContract {
+  // A minted illness_recovery mode wins over game/bye logic; the builder never
+  // re-reads facts, only the derived mode.
+  if (input.weekModeOverride === 'illness_recovery') {
+    return buildIllnessRecoveryExposureContract(input);
+  }
   if (input.hasGame && input.gameDay !== null) return buildInSeasonGameWeekExposureContract(input);
   return byeRecoveryMode(input)
     ? buildInSeasonByeRecoveryExposureContract(input)

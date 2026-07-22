@@ -612,6 +612,13 @@ function reResolveContractForActiveConstraints(args: {
       : args.contract.identity.mode === 'in_season_bye_build'
         ? 'build'
         : undefined,
+    // PRESERVE a minted illness_recovery mode across re-derivation. Without this
+    // the validation path would re-collapse the severe illness into a fatigue
+    // tier and downgrade to bye_recovery — the reinterpretation seam the design
+    // forbids. The gateway consumes the mode; it never re-reads facts.
+    weekModeOverride: args.contract.identity.mode === 'illness_recovery'
+      ? 'illness_recovery'
+      : undefined,
   });
 }
 

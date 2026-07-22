@@ -338,6 +338,7 @@ export function applyGenerationSafetyToSection18Contract(args: {
   ]);
   const prohibitedPower = fullPause || cookedReadiness ||
     contract.identity.mode === 'in_season_bye_recovery' ||
+    contract.identity.mode === 'illness_recovery' ||
     contract.identity.weekKind === 'deload' || contract.power.eligible === false;
   if (prohibitedPower) {
     contract.power.eligible = false;
@@ -345,9 +346,11 @@ export function applyGenerationSafetyToSection18Contract(args: {
       ? 'full_pause'
       : cookedReadiness
         ? 'low_readiness'
-        : contract.identity.mode === 'in_season_bye_recovery'
-          ? 'bye_recovery_mode'
-          : contract.power.removalReason ?? 'deload_policy';
+        : contract.identity.mode === 'illness_recovery'
+          ? 'illness_recovery_mode'
+          : contract.identity.mode === 'in_season_bye_recovery'
+            ? 'bye_recovery_mode'
+            : contract.power.removalReason ?? 'deload_policy';
   }
 
   const affectedDomains: Section18SafetyDomain[] = [];
@@ -361,7 +364,8 @@ export function applyGenerationSafetyToSection18Contract(args: {
       readiness?.avoidSprint) affectedDomains.push('sprint_high_speed');
   if (hasFieldRestriction) affectedDomains.push('anchor_participation');
   if (prohibitedPower || prohibitedPowerFamilies.length > 0) affectedDomains.push('power');
-  if (cookedReadiness || contract.identity.mode === 'in_season_bye_recovery') {
+  if (cookedReadiness || contract.identity.mode === 'in_season_bye_recovery' ||
+      contract.identity.mode === 'illness_recovery') {
     affectedDomains.push('session_dose');
   }
 

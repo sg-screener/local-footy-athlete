@@ -528,6 +528,12 @@ function section18ModeAndSubphase(
   inputs: CoachingInputs,
   legacy: WeeklyExposureContract,
 ): { mode: Section18WeekMode; declaredSubphase: Section18Subphase; anchorState: 'game' | 'bye' | 'practice_match' | 'none' } {
+  // A minted illness_recovery mode is preserved verbatim into Contract v2 — it
+  // wins over game/bye typing (the athlete is recovering, not participating in
+  // anchors), so declared and expected subphase stay in agreement.
+  if (legacy.identity.mode === 'illness_recovery') {
+    return { mode: 'illness_recovery', declaredSubphase: 'illness_recovery', anchorState: 'bye' };
+  }
   if (inputs.seasonPhase === 'Pre-season' && inputs.hasGame) {
     return {
       mode: 'practice_match_week',
@@ -1040,6 +1046,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
       inputs.conditioningSubstitutionPolicy?.consideredSubstitutions,
     profileInjuries: inputs.injuries,
     activeInjuries: inputs.generationConstraints?.injuries,
+    weekModeOverride: inputs.generationConstraints?.weekMode,
   });
   const phasePlannerContractV2 = buildParallelSection18Contract({
     inputs,
@@ -6856,7 +6863,8 @@ function applySection18ConditioningAllocation(
     contract.conditioning.optionalRecoveryAerobic.plannerSelectedCount ?? 0,
   );
   const optionalOnlyMode = contract.identity.mode === 'early_offseason' ||
-    contract.identity.mode === 'in_season_bye_recovery';
+    contract.identity.mode === 'in_season_bye_recovery' ||
+    contract.identity.mode === 'illness_recovery';
   if (optionalOnlyMode) {
     const existing = plan.filter((session) => hasConditioning(session) && !session.isTeamDay)
       .sort(inTrainingOrder);
@@ -6865,7 +6873,8 @@ function applySection18ConditioningAllocation(
       else clearConditioning(session);
     });
     let remaining = Math.max(0, optionalRecoveryTarget - existing.length);
-    const preserveByeRecoveryRest = contract.identity.mode === 'in_season_bye_recovery';
+    const preserveByeRecoveryRest = contract.identity.mode === 'in_season_bye_recovery' ||
+      contract.identity.mode === 'illness_recovery';
     const optionalCandidates = plan
       .filter((session) => !session.isTeamDay && !hasConditioning(session) &&
         (preserveByeRecoveryRest || !hasStrength(session)))

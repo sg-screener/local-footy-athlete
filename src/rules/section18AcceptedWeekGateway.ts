@@ -237,6 +237,7 @@ export function resolveFinalVisibleSection18Week(args: {
 function powerReductionReason(contract: WeeklyExposureContractV2): Section18AuthorisedReduction['reason'] {
   if (contract.safety.fullPause) return 'full_pause';
   if (contract.identity.weekKind === 'deload') return 'deload_policy';
+  if (contract.identity.mode === 'illness_recovery') return 'illness_recovery_mode';
   if (contract.identity.mode === 'in_season_bye_recovery') return 'bye_recovery_mode';
   if (contract.safety.reasons.includes('low_readiness')) return 'low_readiness';
   if (contract.safety.prohibitedPower || contract.safety.prohibitedPowerFamilies.length >= 2) {
@@ -279,6 +280,7 @@ function weeklyPowerBudget(args: {
   const ineligible = contract.power.eligible === false || beginner ||
     contract.identity.weekKind === 'deload' ||
     contract.identity.mode === 'in_season_bye_recovery' ||
+    contract.identity.mode === 'illness_recovery' ||
     contract.safety.fullPause || contract.safety.prohibitedPower ||
     contract.safety.reasons.includes('low_readiness');
   const normalAnchors = contract.anchors.filter((anchor) =>

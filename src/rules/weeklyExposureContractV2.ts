@@ -28,6 +28,7 @@ export type Section18WeekMode =
   | 'in_season_game_week'
   | 'in_season_bye_build'
   | 'in_season_bye_recovery'
+  | 'illness_recovery'
   | 'early_offseason'
   | 'mid_offseason'
   | 'late_offseason'
@@ -42,6 +43,7 @@ export type Section18Subphase =
   | 'game_week'
   | 'bye_build'
   | 'bye_recovery'
+  | 'illness_recovery'
   | 'practice_match_week';
 
 export type Section18AnchorState = 'game' | 'bye' | 'practice_match' | 'none';
@@ -389,6 +391,7 @@ const SAFETY_REDUCTION_REASONS = new Set<WeeklyExposureReductionReason>([
   'low_readiness',
   'injury_restriction',
   'bye_recovery_mode',
+  'illness_recovery_mode',
   'deload_policy',
   'training_age_limit',
   'full_pause',
@@ -420,7 +423,11 @@ function buildSafetyPolicy(args: {
 }): Section18SafetyPolicy {
   const fullPause = args.fullPause === true || args.reductions.some((entry) =>
     entry.reason === 'full_pause');
-  const byeRecovery = args.mode === 'in_season_bye_recovery';
+  const illnessRecovery = args.mode === 'illness_recovery';
+  // illness_recovery shares bye_recovery's recovery-tier safety (lighter, capped,
+  // no power) — the difference is that its §18 minimums are lifted (see policyFor),
+  // not its safety envelope.
+  const byeRecovery = args.mode === 'in_season_bye_recovery' || illnessRecovery;
   const lighterStrengthRequired = args.cookedReadiness || byeRecovery || args.weekKind === 'deload';
   const reducedMainCeiling = safetyFrequencyCeiling(args.reductions, 'main_strength_frequency');
   const mainCeiling = fullPause
@@ -446,7 +453,9 @@ function buildSafetyPolicy(args: {
   const reasons = Array.from(new Set(args.reductions
     .filter((entry) => SAFETY_REDUCTION_REASONS.has(entry.reason))
     .map((entry) => entry.reason)));
-  if (byeRecovery && !reasons.includes('bye_recovery_mode')) reasons.push('bye_recovery_mode');
+  const recoveryReason: WeeklyExposureReductionReason = illnessRecovery
+    ? 'illness_recovery_mode' : 'bye_recovery_mode';
+  if (byeRecovery && !reasons.includes(recoveryReason)) reasons.push(recoveryReason);
   return {
     requiredSafePatterns: [...args.requiredSafePatterns],
     prohibitedPatterns: [...args.prohibitedPatterns],
@@ -524,6 +533,7 @@ function expectedSubphase(input: Section18ContractV2Input): Section18Subphase | 
       ? resolveSeasonSubphaseAtPhaseWeek(input.seasonPhase, phaseWeek)
       : null;
   }
+  if (input.mode === 'illness_recovery') return 'illness_recovery';
   if (input.anchorState === 'game') return 'game_week';
   return input.mode === 'in_season_bye_recovery' ? 'bye_recovery' : 'bye_build';
 }
@@ -665,6 +675,20 @@ function policyFor(input: Pick<
         balance: true,
         selectionKind: 'core',
       };
+    case 'illness_recovery':
+      // Severe-illness recovery week: EVERY §18 minimum is lifted (nothing is
+      // required this week). Remaining work is OPTIONAL and recovery-tier
+      // (light stress, no power, capped strength) — not cleared to rest.
+      return {
+        strength: { required: 0, defaultTarget: 0, preferred: { min: 0, max: 2 }, max: 2 },
+        conditioning: { required: 0, defaultTarget: 0, preferred: { min: 0, max: tt }, max: null, stress: ['light'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 0 },
+        sprint: { required: 0, preferred: { min: 0, max: 0 }, max: 0 },
+        power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'illness_recovery_mode' },
+        rest: { required: 2, preferred: { min: 2, max: 4 } },
+        hardDays: { preferred: { min: 0, max: 0 }, permittedMaximum: 2 },
+        balance: false,
+        selectionKind: 'optional',
+      };
     case 'early_offseason':
       return {
         strength: { required: 0, defaultTarget: 0, preferred: { min: 2, max: 3 }, max: 3 },
@@ -757,6 +781,7 @@ export function resolveSection18PhasePlannerSelection(
     weekKind: input.weekKind,
   });
   const recoveryMode = input.mode === 'in_season_bye_recovery';
+  const illnessRecovery = input.mode === 'illness_recovery';
   const earlyOffseason = input.mode === 'early_offseason';
   const strongByeBuild = input.mode === 'in_season_bye_build' &&
     input.readiness === 'high' && teamTrainingCount <= 1 && availableDayCount >= 4;
@@ -785,24 +810,32 @@ export function resolveSection18PhasePlannerSelection(
     policy.sprint.max,
     input.sprintHighSpeedFrequencyCeiling,
   );
-  const optionalRecoveryAerobic = recoveryMode
-    ? teamTrainingCount === 0 && availableDayCount > mainStrength
-      ? Math.min(1, availableDayCount - mainStrength)
-      : teamTrainingCount === 1 && availableDayCount > mainStrength
-        ? 1
-        : 0
-    : earlyOffseason
-      ? Math.min(
-          input.readiness === 'high' && teamTrainingCount < 3 ? 2 : 1,
-          Math.max(0, availableDayCount - mainStrength),
-        )
-      : 0;
+  // Severe-illness recovery selects only OPTIONAL, reduced work: up to two light
+  // optional lifts and one gentle aerobic session, with every enforceable floor
+  // (main strength / core conditioning / sprint) at 0. Nothing is required.
+  const illnessOptionalStrength = illnessRecovery
+    ? Math.min(policy.strength.preferred.max, availableDayCount)
+    : 0;
+  const optionalRecoveryAerobic = illnessRecovery
+    ? Math.min(1, Math.max(0, availableDayCount - illnessOptionalStrength))
+    : recoveryMode
+      ? teamTrainingCount === 0 && availableDayCount > mainStrength
+        ? Math.min(1, availableDayCount - mainStrength)
+        : teamTrainingCount === 1 && availableDayCount > mainStrength
+          ? 1
+          : 0
+      : earlyOffseason
+        ? Math.min(
+            input.readiness === 'high' && teamTrainingCount < 3 ? 2 : 1,
+            Math.max(0, availableDayCount - mainStrength),
+          )
+        : 0;
 
   return {
     mainStrength,
     coreConditioning,
     sprintHighSpeed,
-    optionalMainStrength: earlyOffseason ? mainStrength : 0,
+    optionalMainStrength: earlyOffseason ? mainStrength : illnessOptionalStrength,
     optionalFlush: 0,
     optionalRecoveryAerobic,
     appCoreConditioning: Math.max(0, coreConditioning - teamTrainingCount - (
@@ -930,8 +963,10 @@ export function buildSection18WeeklyExposureContractV2(
         achievedCount: null,
       },
       optionalRecoveryAerobic: {
-        permitted: input.mode === 'in_season_bye_recovery' || input.mode === 'early_offseason',
-        preferredRange: input.mode === 'in_season_bye_recovery'
+        permitted: input.mode === 'in_season_bye_recovery' ||
+          input.mode === 'illness_recovery' || input.mode === 'early_offseason',
+        preferredRange: input.mode === 'in_season_bye_recovery' ||
+          input.mode === 'illness_recovery'
           ? policy.conditioning.optionalFlush
           : input.mode === 'early_offseason'
             ? policy.conditioning.preferred
