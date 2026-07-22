@@ -1927,6 +1927,29 @@ function athleteAdditionDoneMessage(
   return `${lead} I rebalanced ${named} to keep your week balanced.`;
 }
 
+/**
+ * Names any day the whole-week §18 repair touched beyond the target and the
+ * already-named relocation destination — disclosed-repair parity with the
+ * addition path (invariant #4). Mirrors `athleteAdditionDoneMessage`'s voice so
+ * a residual emptied/rebalanced day is never silent.
+ */
+function residualRepairClause(
+  outcome: AthleteDeletionPublishedOutcome,
+): string {
+  const alreadyNamed = new Set<string>();
+  if (outcome.targetDate) alreadyNamed.add(outcome.targetDate.slice(0, 10));
+  if (outcome.destinationDate) alreadyNamed.add(outcome.destinationDate.slice(0, 10));
+  const residual = outcome.repairedDates
+    .map((entry) => entry.slice(0, 10))
+    .filter((entry) => !alreadyNamed.has(entry));
+  if (residual.length === 0) return '';
+  const days = residual.map(outcomeWeekday);
+  const named = days.length === 1
+    ? days[0]
+    : `${days.slice(0, -1).join(', ')} and ${days[days.length - 1]}`;
+  return ` I also rebalanced ${named} to keep your week balanced.`;
+}
+
 /** Athlete copy is a projection of the accepted transaction result. */
 function athleteDeletionDoneMessage(
   change: Extract<PlanChange, { kind: 'remove_session' }>,
@@ -1948,31 +1971,33 @@ function athleteDeletionDoneMessage(
   const removed = component === 'Session'
     ? 'Session removed.'
     : `${component} was removed.`;
+  const residual = residualRepairClause(outcome);
   if (outcome.kind === 'reduced') {
     const target = outcome.affectedMetric === 'conditioning_core'
       ? 'conditioning target'
       : 'strength target';
-    return `${removed} This week’s ${target} has been reduced at your request.`;
+    return `${removed} This week’s ${target} has been reduced at your request.${residual}`;
   }
   if (outcome.kind === 'already_satisfied') {
-    return outcome.affectedMetric === 'session'
+    const base = outcome.affectedMetric === 'session'
       ? removed
       : `${removed} Your remaining sessions already cover this week’s target.`;
+    return `${base}${residual}`;
   }
   const day = outcomeWeekday(outcome.destinationDate);
   if (patterns.has('squat') || patterns.has('hinge')) {
-    return `${removed} Lower-body strength was moved to ${day} to keep your week balanced.`;
+    return `${removed} Lower-body strength was moved to ${day} to keep your week balanced.${residual}`;
   }
   if (patterns.size === 1 && patterns.has('pull')) {
-    return `${removed} Pulling work was added to ${day}.`;
+    return `${removed} Pulling work was added to ${day}.${residual}`;
   }
   if (patterns.size === 1 && patterns.has('push')) {
-    return `${removed} Pushing work was added to ${day}.`;
+    return `${removed} Pushing work was added to ${day}.${residual}`;
   }
   if (outcome.affectedMetric === 'conditioning_core') {
-    return `${removed} Conditioning work was added to ${day}.`;
+    return `${removed} Conditioning work was added to ${day}.${residual}`;
   }
-  return `${removed} Required work was added to ${day}.`;
+  return `${removed} Required work was added to ${day}.${residual}`;
 }
 
 function planChangeDoneMessage(change: PlanChange, pickedTitle: string | null): string {

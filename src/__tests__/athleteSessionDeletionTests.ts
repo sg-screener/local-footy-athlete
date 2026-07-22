@@ -983,7 +983,11 @@ run('regression', '15 exact Upper Pull component deletion preserves Team Trainin
     entry.reason === 'explicit_user_override'), 'pull relocation created a reduction');
   assert(useProgramStore.getState().acceptedMaterialContext.markedDays['2026-07-14'] !== 'rest',
     'component deletion widened to whole-day Rest');
-  assert(result.message === 'Upper Pull was removed. Pulling work was added to Wednesday.',
+  // Binning Tuesday's pull relocates it to Wednesday AND empties Friday's
+  // optional session (a real repair side effect — bug 3). Disclosed-repair
+  // (invariant #4) requires the confirmation to name every touched day.
+  assert(result.message === 'Upper Pull was removed. Pulling work was added to Wednesday. ' +
+    'I also rebalanced Friday to keep your week balanced.',
     `message=${result.message}`);
   assert(visibleWeek().find((day) => day.date === '2026-07-15')?.workout?.planEntryId ===
     relocated.planEntryId, 'weekly card and accepted pull differ');

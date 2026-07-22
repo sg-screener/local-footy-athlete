@@ -2067,6 +2067,13 @@ export interface AthleteDeletionPublishedOutcome {
    */
   reductions: AthleteReductionShortfall[];
   removedPatterns: string[];
+  /**
+   * Every day other than the target the whole-week §18 repair changed
+   * (disclosed-repair parity with the addition path's `repairedDates`). Names
+   * the residual days a Bin/removal touched beyond `destinationDate` — e.g. an
+   * unrelated day the repair emptied — so the confirmation can disclose them.
+   */
+  repairedDates: string[];
 }
 
 export interface AthleteSessionDeletionTransactionResult
@@ -2164,6 +2171,25 @@ function dateForWeekDay(weekStart: string, dayOfWeek: number): string {
   return addDaysISO(weekStart, dayOfWeek === 0 ? 6 : dayOfWeek - 1);
 }
 
+/**
+ * Visible exercise-content signature for a day — the prescription the athlete
+ * actually sees (id + sets/reps/weight), order-independent. Drives disclosed-
+ * repair (`repairedDates`): a day counts as repaired only when its visible
+ * content changed, not merely its internal fingerprint (which flags metadata-
+ * only differences the athlete never sees).
+ */
+function deletionVisibleExerciseSignature(workout: Workout | null | undefined): string {
+  return JSON.stringify((workout?.exercises ?? [])
+    .map((row) => JSON.stringify({
+      exerciseId: row.exerciseId,
+      sets: row.prescribedSets,
+      repsMin: row.prescribedRepsMin,
+      repsMax: row.prescribedRepsMax,
+      weight: row.prescribedWeightKg,
+    }))
+    .sort());
+}
+
 function deriveAthleteDeletionPublishedOutcome(args: {
   input: AthleteSessionDeletionTransactionInput;
   before: ReturnType<typeof rebaseAcceptedEffectiveWeek>;
@@ -2182,6 +2208,15 @@ function deriveAthleteDeletionPublishedOutcome(args: {
     [workout.dayOfWeek, workout]));
   const afterByDay = new Map(after.visibleWorkouts.map((workout) =>
     [workout.dayOfWeek, workout]));
+  // Every day other than the target whose visible content the repair changed —
+  // disclosed-repair (invariant #4). Uses the athlete-visible signature, not the
+  // internal fingerprint, so metadata-only differences are not over-disclosed.
+  const repairedDates = Array.from({ length: 7 }, (_unused, day) => day)
+    .filter((day) => day !== targetDay)
+    .filter((day) => deletionVisibleExerciseSignature(beforeByDay.get(day)) !==
+      deletionVisibleExerciseSignature(afterByDay.get(day)))
+    .map((day) => dateForWeekDay(weekStart, day))
+    .sort();
   const removedPatterns = meaningfulStrengthPatterns(args.input.originalWorkout);
   const sourceWasMainStrength = args.input.scope === 'strength_component' || (
     args.input.scope === 'whole_session' &&
@@ -2241,12 +2276,14 @@ function deriveAthleteDeletionPublishedOutcome(args: {
     return {
       kind: 'reduced', affectedMetric, targetDate: args.input.date,
       deletionIdentity, destinationDate: null, reductionMetrics, reductions, removedPatterns,
+      repairedDates,
     };
   }
   if (!destination) {
     return {
       kind: 'already_satisfied', affectedMetric, targetDate: args.input.date,
       deletionIdentity, destinationDate: null, reductionMetrics: [], reductions: [], removedPatterns,
+      repairedDates,
     };
   }
   const beforeDestination = beforeByDay.get(destination.dayOfWeek);
@@ -2263,6 +2300,7 @@ function deriveAthleteDeletionPublishedOutcome(args: {
     reductionMetrics: [],
     reductions: [],
     removedPatterns,
+    repairedDates,
   };
 }
 
