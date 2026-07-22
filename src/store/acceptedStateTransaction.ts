@@ -44,6 +44,7 @@ import {
   rebaseAcceptedEffectiveWeek,
   type AcceptedEffectiveWeekSurfaces,
 } from '../rules/acceptedEffectiveWeek';
+import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import {
   normalizeAcceptedArray,
   normalizeAcceptedKeyedMap,
@@ -2187,9 +2188,10 @@ function dateForWeekDay(weekStart: string, dayOfWeek: number): string {
  * actually sees (id + sets/reps/weight), order-independent. Drives disclosed-
  * repair (`repairedDates`): a day counts as repaired only when its visible
  * content changed, not merely its internal fingerprint (which flags metadata-
- * only differences the athlete never sees).
+ * only differences the athlete never sees). Shared by the move conservation gate
+ * to prove the moved session's content survives the transaction.
  */
-function deletionVisibleExerciseSignature(workout: Workout | null | undefined): string {
+function visibleExerciseSignature(workout: Workout | null | undefined): string {
   return JSON.stringify((workout?.exercises ?? [])
     .map((row) => JSON.stringify({
       exerciseId: row.exerciseId,
@@ -2224,8 +2226,8 @@ function deriveAthleteDeletionPublishedOutcome(args: {
   // internal fingerprint, so metadata-only differences are not over-disclosed.
   const repairedDates = Array.from({ length: 7 }, (_unused, day) => day)
     .filter((day) => day !== targetDay)
-    .filter((day) => deletionVisibleExerciseSignature(beforeByDay.get(day)) !==
-      deletionVisibleExerciseSignature(afterByDay.get(day)))
+    .filter((day) => visibleExerciseSignature(beforeByDay.get(day)) !==
+      visibleExerciseSignature(afterByDay.get(day)))
     .map((day) => dateForWeekDay(weekStart, day))
     .sort();
   const removedPatterns = meaningfulStrengthPatterns(args.input.originalWorkout);
@@ -2668,13 +2670,94 @@ export function commitAthleteSessionDeletionTransaction(
   };
 }
 
+/**
+ * Content-conservation post-condition for a pure Move/Swap. Resolves the PUBLISHED
+ * week (the reliable, §18-canonicalised result — the same source the deletion
+ * outcome reads) and returns a violation code when an athlete-owned session that
+ * the move relocated has been silently destroyed or duplicated. Resolver-owned
+ * game-proximity fillers (G-1 Gunshow / G+1 Recovery) are excluded — they are
+ * regenerated every render and legitimately churn. Survival is by stable identity
+ * (planEntryId ?? id), so a legitimate §18 repair that alters a session's
+ * prescription is not read as a loss. Returns null when the move conserved
+ * content (e.g. a protected-core session preserved on a virtual-game proximity
+ * day). Uses the shared visible-content view (`visibleWorkouts`).
+ */
+function detectAthleteMoveContentLoss(args: {
+  moved: Workout;
+  displaced: Workout | null | undefined;
+  weekStarts: readonly string[];
+  profile: OnboardingData;
+}): { code: string; message: string } | null {
+  const identity = (workout: Workout): string => workout.planEntryId ?? workout.id;
+  // Resolve the PUBLISHED week from the live store (commitAcceptedStateTransaction
+  // has already applied the move to it) — the same full-surfaces view the read
+  // model and tests use, so the moved session's base content is present.
+  const publishedState = useProgramStore.getState();
+  const publishedMarkedDays = materialContext(publishedState).markedDays;
+  const afterIdentities = new Map<string, number>();
+  for (const weekStart of Array.from(new Set(args.weekStarts))) {
+    const after = rebaseAcceptedEffectiveWeek({
+      surfaces: publishedState,
+      weekStart,
+      profile: args.profile,
+      markedDays: publishedMarkedDays,
+    });
+    for (const workout of after.visibleWorkouts) {
+      if (isResolverOwnedDerivedSession(workout)) continue;
+      const id = identity(workout);
+      afterIdentities.set(id, (afterIdentities.get(id) ?? 0) + 1);
+    }
+  }
+  const mustSurvive = [args.moved, args.displaced].filter(
+    (workout): workout is Workout => !!workout && !isResolverOwnedDerivedSession(workout),
+  );
+  for (const workout of mustSurvive) {
+    if (!afterIdentities.has(identity(workout))) {
+      return {
+        code: 'athlete_move_content_not_conserved',
+        message: `Move would silently destroy session ${identity(workout)}`,
+      };
+    }
+  }
+  const duplicated = [...afterIdentities.entries()].find(([, count]) => count > 1);
+  if (duplicated) {
+    return {
+      code: 'athlete_move_duplicated_session',
+      message: `Move would duplicate session ${duplicated[0]} across days`,
+    };
+  }
+  return null;
+}
+
 export function commitAthleteSessionMoveTransaction(
   args: AthleteSessionMoveTransactionInput,
 ): AcceptedStateTransactionResult {
+  const priorState = { ...useProgramStore.getState() };
+  const profile = useProfileStore.getState().onboardingData;
   const staged = stageAthleteSessionMoveTransaction(args, { purpose: 'commit' });
-  return staged.proposal
-    ? commitAcceptedStateTransaction(staged.proposal)
-    : staged.result;
+  if (!staged.proposal) return staged.result;
+  const published = commitAcceptedStateTransaction(staged.proposal);
+  // Conservation post-condition (defense-in-depth behind the producer's
+  // not-swappable guard): a relocation must never silently destroy an athlete-
+  // owned session. Checked against the PUBLISHED week; on violation the publish
+  // is rolled back in-memory (restoring the exact prior surfaces) before the
+  // throw, so nothing is left half-applied. Reaches direct-transaction callers
+  // (Coach door, hydration) that bypass the producer gate.
+  if (profile) {
+    const violation = detectAthleteMoveContentLoss({
+      moved: args.originalSourceWorkout,
+      displaced: args.existingTargetWorkout,
+      weekStarts: staged.affectedWeekStarts,
+      profile,
+    });
+    if (violation) {
+      useProgramStore.setState(priorState);
+      const error = new Error(violation.message) as Error & { code?: string };
+      error.code = violation.code;
+      throw error;
+    }
+  }
+  return published;
 }
 
 /**

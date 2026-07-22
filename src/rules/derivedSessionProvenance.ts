@@ -23,6 +23,42 @@ export interface DerivedSessionExpiryCandidate {
   expiries: DerivedSessionExpiry[];
 }
 
+/**
+ * Origins the resolver re-synthesises every render from game proximity, OVER
+ * whatever is placed on the day: G-1 Gunshow (`fixture_proximity`) and G+1
+ * Recovery (`fixture_recovery`). Other system-authored derived origins
+ * (rest/pattern/contract repairs, substitutions) are persisted overlays that a
+ * move may legitimately relocate — they are NOT in this set.
+ */
+const GAME_PROXIMITY_RESOLVER_ORIGINS: ReadonlySet<DerivedSessionOrigin> = new Set([
+  'fixture_proximity',
+  'fixture_recovery',
+]);
+
+/**
+ * A pure game-proximity FILLER the resolver regenerates every render (G-1 Gunshow
+ * / G+1 Recovery, built by `buildDerivedSession`). Such a session is not a stable,
+ * athlete-ownable target: moving a real session onto its day is futile (the
+ * resolver regenerates the filler over the top), and "swapping" it back to the
+ * source day materialises resolver-owned content as athlete-owned content.
+ *
+ * Two signals, both required: system-authored game-proximity provenance AND no
+ * `planEntryId`. The `planEntryId` guard is load-bearing — the G-2 rule *modulates*
+ * a real athlete session (keeps its `planEntryId` and exercises, only relabels
+ * intensity) and stamps the same `fixture_proximity` origin; that session is NOT
+ * disposable and must not be excluded from conservation. A filler has no backing
+ * plan entry.
+ */
+export function isResolverOwnedDerivedSession(
+  workout: Workout | null | undefined,
+): boolean {
+  if (!workout || workout.planEntryId) return false;
+  return !!workout.derivedSessionProvenance?.some(
+    (record) => record.authorship === 'system' &&
+      GAME_PROXIMITY_RESOLVER_ORIGINS.has(record.origin),
+  );
+}
+
 function stable(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stable).join(',')}]`;
   if (value && typeof value === 'object') {

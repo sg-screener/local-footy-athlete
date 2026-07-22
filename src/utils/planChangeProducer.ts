@@ -61,6 +61,7 @@ import { assessProgramEditWrites } from './programEditWriteGuard';
 import { reduceAcceptedSessionForAthleteRemoval } from './sessionComponents';
 import type { ValidateProgramWeekInput } from '../rules/weekStructureValidator';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { isResolverOwnedDerivedSession } from '../rules/derivedSessionProvenance';
 import { useProfileStore } from '../store/profileStore';
 import { useProgramStore } from '../store/programStore';
 import {
@@ -1074,6 +1075,14 @@ export function resolveAthleteMutation(args: {
     ) {
       return { ok: false, error: 'protected_anchor_day' };
     }
+    // A resolver-owned game-proximity filler (e.g. G-1 Gunshow) on the
+    // destination is not a swappable athlete-owned session — it is regenerated
+    // every render, so a real session moved onto its day is silently overwritten
+    // and the "swapped-back" filler duplicates onto the source day. Refuse rather
+    // than classify it as a swap.
+    if (isResolverOwnedDerivedSession(targetDay.workout)) {
+      return { ok: false, error: 'move_destination_resolver_owned' };
+    }
     const input = athleteMoveInput({
       change,
       visibleWeek: args.visibleWeek,
@@ -1219,7 +1228,8 @@ function blockedAssessmentForBuildError(
   change: PlanChange,
   error: string,
 ): ProgramEditRiskAssessment | null {
-  if (error !== 'protected_anchor_day' && error !== 'protected_game_day') return null;
+  if (error !== 'protected_anchor_day' && error !== 'protected_game_day' &&
+    error !== 'move_destination_resolver_owned') return null;
   const date =
     'date' in change
       ? change.date
@@ -1227,15 +1237,24 @@ function blockedAssessmentForBuildError(
       ? change.fromDate
       : null;
   // Game day is fully locked (product decision): a plain-language refusal, never
-  // a raw error code. Other protected anchors keep the generic guard copy.
+  // a raw error code. Other protected anchors keep the generic guard copy. A
+  // game-proximity filler day (G-1/G+1) is resolver-managed around the fixture,
+  // so a session can't land there — plain-language, game-framed, no raw code.
   const message = error === 'protected_game_day'
     ? "It's game day — sessions can't be changed or added here."
+    : error === 'move_destination_resolver_owned'
+    ? "That day is kept light around your game, so a session can't be moved onto it. The plan is untouched."
     : 'This would remove or replace a protected game/team anchor, so it cannot be applied from this edit flow.';
+  const ruleId = error === 'protected_game_day'
+    ? 'game_day_locked'
+    : error === 'move_destination_resolver_owned'
+    ? 'game_proximity_day_locked'
+    : 'protected_anchor_edit_blocked';
   return {
     decision: 'block',
     highestLevel: 'hard_stop',
     findings: [{
-      ruleId: error === 'protected_game_day' ? 'game_day_locked' : 'protected_anchor_edit_blocked',
+      ruleId,
       level: 'hard_stop',
       message,
       dates: date ? [date] : [],
@@ -1245,7 +1264,7 @@ function blockedAssessmentForBuildError(
       bibleRef: 'Section 16 App / AI rules; Section 17.E',
       data: { error },
     }],
-    introducedRuleIds: [error === 'protected_game_day' ? 'game_day_locked' : 'protected_anchor_edit_blocked'],
+    introducedRuleIds: [ruleId],
     worsenedRuleIds: [],
   };
 }
