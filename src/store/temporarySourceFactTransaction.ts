@@ -327,8 +327,13 @@ export async function commitTemporarySourceFactSet(
         activeInjury: compatibility.activeInjury,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         acceptedCompositionBase: compositionBase,
-        // Inert facts commit off the mutation boundary: no whole-week §18 re-gate.
+        // Inert facts commit off the mutation boundary: no whole-week §18 re-gate,
+        // AND the exact accepted program surfaces are preserved (no re-canonicalise).
+        // Re-canonicalising a record-only fact mutates `acceptedCompositionBase.surfaces`,
+        // which `verifyCandidate` rejects with
+        // `accepted_composition_base_changed_by_temporary_fact` (the on-device failure).
         validateWeekStarts: inertComposition ? [] : horizon.weeks,
+        preserveExactAcceptedWorkouts: inertComposition ? true : undefined,
         skipConstraintProjection: true,
       });
     },

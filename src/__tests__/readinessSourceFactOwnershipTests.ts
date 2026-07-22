@@ -47,6 +47,9 @@ import { transactTemporarySourceFact } from '../store/temporarySourceFactTransac
 import { resolveWeekWithConditioning, addDays } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { applyLighterDayTrim } from '../utils/lighterDayTrim';
+import { buildDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
+import { seedOnboardingProgram } from '../utils/onboardingCompletion';
+import { deriveStoredBlockStateFromProgram } from '../utils/programBlockState';
 
 const WEEK = '2026-07-13';
 const SATURDAY = '2026-07-18';
@@ -194,6 +197,42 @@ function activeReadinessFacts(): TemporarySourceFact[] {
   return facts.filter((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
     'factKind' in fact &&
     (fact.factKind === 'fatigue' || fact.factKind === 'soreness' || fact.factKind === 'poor_sleep'));
+}
+
+/** DEVICE-EXACT seed install — establishes a real `acceptedCompositionBase` the way
+ *  the dev E2E reset does (`seedOnboardingProgram` + `commitAcceptedStateTransaction`,
+ *  `preserveExactAcceptedWorkouts`). This fidelity is load-bearing: the device-only
+ *  `accepted_composition_base_changed_by_temporary_fact` rejection only reproduces
+ *  when a real composition base exists (the R1-style `seed()` leaves it null). */
+function seedDeviceExact(): string {
+  const dseed = buildDevE2ESeed('standard-in-season-week');
+  const validateWeekStarts = dseed.program.microcycles.map((m) => m.startDate.slice(0, 10));
+  quiet(() => seedOnboardingProgram({
+    onboardingData: dseed.profile,
+    program: dseed.program,
+    todayISO: dseed.anchorDate,
+    programStore: {
+      setCurrentProgram: (program) => { commitAcceptedStateTransaction({
+        reason: 'readiness-ownership-test:device-exact-install',
+        program: { currentProgram: program, currentMicrocycle: null, todayWorkout: null,
+          blockState: deriveStoredBlockStateFromProgram(program) },
+        profile: dseed.profile, preserveExactAcceptedWorkouts: true, validateWeekStarts,
+      } as never); },
+      setCurrentMicrocycle: (m) => commitAcceptedStateTransaction({
+        reason: 'readiness-ownership-test:device-exact-mc', program: { currentMicrocycle: m },
+        profile: dseed.profile, preserveExactAcceptedWorkouts: true,
+        validateWeekStarts: m ? [m.startDate.slice(0, 10)] : [],
+      } as never),
+      setTodayWorkout: (w) => commitAcceptedStateTransaction({
+        reason: 'readiness-ownership-test:device-exact-today', program: { todayWorkout: w },
+        profile: dseed.profile, preserveExactAcceptedWorkouts: true,
+        validateWeekStarts: [dseed.anchorDate],
+      } as never),
+    },
+    calendarStore: { setGameDay: () => undefined },
+  } as never));
+  useProfileStore.setState({ onboardingData: dseed.profile, isOnboardingComplete: true });
+  return dseed.anchorDate;
 }
 
 async function main(): Promise<void> {
@@ -556,6 +595,34 @@ async function main(): Promise<void> {
     };
     assert(isTemporarySourceFactConstraint(fatigueConstraint as never) === true,
       'a source-fact fatigue constraint must be counted');
+  });
+
+  // ── Invariant R11 (device-exact repro of the real device failure): a minor-tier
+  // fatigue fact must commit on a REAL accepted composition base. RED before the
+  // fix: the commit re-canonicalises the accepted surfaces, changing the composition
+  // base, and `verifyCandidate` rejects with
+  // `accepted_composition_base_changed_by_temporary_fact` — the exact reason the
+  // on-device probe captured. An inert fact must preserve the exact program base.
+  await run('R11 device-exact: a slight fatigue fact commits on a real composition base (no base mutation)', async () => {
+    const wk = seedDeviceExact();
+    const scope = { kind: 'date' as const, date: wk, from: wk, until: wk };
+    const slight = createTemporaryFatigueFact({
+      observedDate: wk, scope, athleteReportedLevel: 'slight',
+      reportKind: 'fatigue', sourceSurface: 'week_readiness_sheet',
+    });
+    let outcome = 'threw';
+    let reason: string | undefined;
+    try {
+      const result = await transactTemporarySourceFact({ operation: 'create', fact: slight, todayISO: wk });
+      outcome = result.outcome;
+      reason = result.reason;
+    } catch (error) {
+      reason = (error as Error).message;
+    }
+    assert(!/safely_rejected|conflicted|threw/.test(outcome),
+      `slight fatigue rejected on a real composition base: outcome=${outcome} reason=${reason}`);
+    assert(activeReadinessFacts().length === 1,
+      'the fatigue fact did not persist on a device-exact base');
   });
 
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);
