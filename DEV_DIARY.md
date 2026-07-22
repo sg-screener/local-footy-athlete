@@ -6,6 +6,37 @@ the top.
 
 ---
 
+## Wednesday 22 July 2026 — Program edits now go through one system, not two
+
+**What happened.**
+The big rebuild of how program edits work is finished. Before this, the
+app had two different systems for saving a change to your week, and the
+older one was the direct cause of the bugs the audits kept turning up:
+edits refused for no good reason, loads on exercises nobody touched
+quietly changing, sessions vanishing after being added, and the coach
+saying "done" without actually doing it. Now every edit — swap, add, move,
+or bin, whether it comes from the tap menus or from coach chat — goes
+through one system. That system respects exactly what the athlete asked
+for, repairs the rest of the week around it only when it has to, and tells
+the athlete every day it touched. Game day is now properly locked, with a
+clear message instead of a confusing refusal. Eleven permanent automated
+checks now guard all of this on every test run, so these bug classes can't
+quietly come back.
+
+**What's not done yet.**
+Adding a second session to a day that's already full still goes through
+the old path — that's tracked, not forgotten. And the on-device smoke test
+that confirms the new behaviour actually works in the real app, not just
+in the automated checks, is running right now.
+
+**What's next.**
+Checking that the app's screens actually reflect what happened — feedback
+and readiness signals that get submitted but don't visibly show up
+anywhere yet — plus tidying the smaller accessibility and dead-button
+issues already logged.
+
+---
+
 ## Wednesday 22 July 2026 — Known reds documented, fix worklist for the small stuff
 
 **What happened.**
