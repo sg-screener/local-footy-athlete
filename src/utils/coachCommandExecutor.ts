@@ -36,9 +36,9 @@ import {
   type ApplyMoveSessionResult,
 } from './applyAdjustmentEvents';
 import type { AdjustmentEvent } from './programAdjustmentEngine';
+import { replaceExerciseAtDate } from './coachActions';
 import {
   verifyRenderedProgramMutation,
-  verifyRenderedExerciseSwap,
   verifyRenderedSessionMove,
   type RenderedMutationVerification,
   type RenderedExerciseSwapVerification,
@@ -2774,12 +2774,12 @@ function runReplaceExercise(
     };
   }
 
+  // The write is owned by replaceExerciseAtDate (the tap-door owner); only the
+  // before-snapshot seam remains, used for the exercise-list clarifiers and the
+  // undo revert plan. The former applyEvents/verifyRendered/newEventId seams are
+  // retired for this path (the AdjustmentEvent write no longer runs here).
   const deps: ReplaceExerciseDeps = input.replaceExerciseDeps ?? {};
-  const applyEvents = deps.applyEvents ?? applyAdjustmentEvents;
-  const verifyRendered = deps.verifyRendered ?? verifyRenderedExerciseSwap;
   const snapshotBefore = deps.snapshotBefore ?? defaultSnapshotBefore;
-  const newEventId =
-    deps.newEventId ?? (() => `coach-cmd-replace_exercise-${targetDate}`);
 
   // ── 1. Snapshot the target workout — exercise list drives every
   //       clarifier the executor produces below. ───────────────────
@@ -2881,148 +2881,85 @@ function runReplaceExercise(
     };
   }
 
-  // ── 4. Build and apply the AdjustmentEvent. ────────────────────
-  const event: AdjustmentEvent = {
-    id: newEventId(),
-    kind: 'replace_exercise',
-    date: targetDate,
-    reason: `coach replace_exercise`,
-    before: sourceMatch,
-    after: replacementName,
-  };
+  // ── 4. Route the WRITE through the shared tap-door owner. ──────
+  // replaceExerciseAtDate is the exact owner the tap door uses: it mints the
+  // `ex-coach-<name>` row identity and commits through setManualOverride →
+  // the accepted-state transaction. Converging here (instead of the coach's
+  // own AdjustmentEvent write + name-only verifier) is what makes the two
+  // doors produce the identical accepted result and kills the false "Done"
+  // over a row whose identity never actually changed (invariant #5). The tap
+  // door trusts this owner's return with no separate verification; so do we.
+  const sourceRow = beforeWorkout.exercises.find(
+    (row) => (row.exercise?.name ?? '') === sourceMatch);
   tick('applying_change');
-  const applyResult = applyEvents([event], {
+  const swap = replaceExerciseAtDate({
+    date: targetDate,
     todayISO: input.todayISO,
-    allowFutureWeeks: true,
-    allowPastDates: false,
+    fromExercise: sourceMatch,
+    toExercise: {
+      name: replacementName,
+      sets: sourceRow?.prescribedSets ?? 3,
+      repsMin: sourceRow?.prescribedRepsMin ?? 8,
+      repsMax: sourceRow?.prescribedRepsMax ?? 12,
+    },
   });
 
-  // ── 5. Verify dual-surface diff. ───────────────────────────────
-  tick('verifying_update');
-  const verification = verifyRendered({
-    requestedDay: targetDate,
-    todayISO: input.todayISO,
-    targetDate,
-    fromName: sourceMatch,
-    toName: replacementName,
-  });
-
-  logger.debug('[coach-command-executor] replace_exercise', {
-    targetDate,
-    sourceMatch,
-    replacementName,
-    appliedCount: applyResult.applied.length,
-    rejectedCount: applyResult.rejected.length,
-    rejectedKinds: applyResult.rejected.map((r) => r.kind),
-    programTabHasFromExercise: verification.programTabHasFromExercise,
-    programTabHasToExercise: verification.programTabHasToExercise,
-    dayWorkoutHasFromExercise: verification.dayWorkoutHasFromExercise,
-    dayWorkoutHasToExercise: verification.dayWorkoutHasToExercise,
-  });
-
-  const result = composeReplaceExerciseResult({
-    sourceMatch,
-    replacementName,
-    targetDate,
-    applyResult,
-    verification,
-    stages,
-    tick,
-  });
-
-  if (result.kind === 'mutated' && result.applied) {
-    const revertPlan = buildRevertPlanFromDateSnapshots(beforeOverrideMap, [targetDate]);
-    recordVerifiedMutation({
-      input,
-      result,
-      operation: 'replace_exercise',
-      mutationKind: 'replace_exercise',
-      affectedDates: [targetDate],
-      touchedActivities: [
-        {
-          kind: 'exercise',
-          date: targetDate,
-          title: replacementName,
-          previousTitle: sourceMatch,
-        },
-      ],
-      scope: command.scope,
-      revertPlan,
-    });
-  }
-
-  return result;
-}
-
-function composeReplaceExerciseResult(args: {
-  sourceMatch: string;
-  replacementName: string;
-  targetDate: string;
-  applyResult: ApplyEventsResult;
-  verification: RenderedExerciseSwapVerification;
-  stages: ProgressStage[];
-  tick: (s: ProgressStage) => void;
-}): ExecutionResult {
-  const { sourceMatch, replacementName, targetDate, applyResult, verification, stages, tick } = args;
+  tick('composing_reply');
   const niceDate = humanDate(targetDate);
+  logger.debug('[coach-command-executor] replace_exercise', {
+    targetDate, sourceMatch, replacementName,
+    success: swap.success, reason: swap.reason,
+    ambiguous: !!swap.ambiguous,
+  });
 
-  if (applyResult.applied.length === 0) {
-    tick('composing_reply');
-    const first = applyResult.rejected[0];
-    const rejReason = first?.reason ?? '';
-    let body: string;
-    switch (first?.kind) {
-      case 'exercise_not_present':
-        body = `"${sourceMatch}" wasn't on ${niceDate} when I tried to swap it.`;
-        break;
-      case 'past_date_blocked':
-        body = `${niceDate} is in the past - I can't change it.`;
-        break;
-      case 'no_workout_on_date':
-        body = `${niceDate} doesn't have a workout to adjust.`;
-        break;
-      case 'invalid_target_date':
-        body = `${niceDate} isn't in the visible program - try a date inside this week.`;
-        break;
-      default:
-        body =
-          `I tried to swap ${sourceMatch} → ${replacementName} on ${niceDate}, ` +
-          `but the apply layer rejected it${rejReason ? ` (${rejReason})` : ''}.`;
+  if (!swap.success) {
+    if (swap.ambiguous) {
+      return {
+        kind: 'clarify',
+        reply: swap.reason ??
+          `Which "${sourceMatch}" on ${niceDate} do you want to swap?`,
+        applied: false,
+        route: 'clarify_ambiguous_source:replace_exercise',
+        progress: stages,
+        options: swap.ambiguous.candidates,
+      };
     }
     return {
       kind: 'verified_no_op',
-      reply: body,
+      reply: swap.reason ??
+        `I tried to swap ${sourceMatch} → ${replacementName} on ${niceDate}, but it didn't apply.`,
       applied: false,
       route: 'apply_rejected:replace_exercise',
       progress: stages,
     };
   }
 
-  const sourceGone = !verification.programTabHasFromExercise && !verification.dayWorkoutHasFromExercise;
-  const replacementVisible = verification.programTabHasToExercise && verification.dayWorkoutHasToExercise;
-  const fullyVerified = sourceGone && replacementVisible;
-
-  tick('composing_reply');
-  if (!fullyVerified) {
-    return {
-      kind: 'verified_no_op',
-      reply:
-        `I tried to swap ${sourceMatch} → ${replacementName} on ${niceDate}, ` +
-        `but the change didn't fully land on the visible program. ` +
-        `Try editing that session directly - the apply layer didn't make it visible.`,
-      applied: false,
-      route: 'verification_failed:replace_exercise',
-      progress: stages,
-    };
-  }
-
-  return {
+  const result: ExecutionResult = {
     kind: 'mutated',
     reply: `Done. I swapped ${sourceMatch} for ${replacementName} on ${niceDate}.`,
     applied: true,
     route: 'replace_exercise:applied',
     progress: stages,
   };
+  const revertPlan = buildRevertPlanFromDateSnapshots(beforeOverrideMap, [targetDate]);
+  recordVerifiedMutation({
+    input,
+    result,
+    operation: 'replace_exercise',
+    mutationKind: 'replace_exercise',
+    affectedDates: [targetDate],
+    touchedActivities: [
+      {
+        kind: 'exercise',
+        date: targetDate,
+        title: replacementName,
+        previousTitle: sourceMatch,
+      },
+    ],
+    scope: command.scope,
+    revertPlan,
+  });
+  return result;
 }
 
 // ─── Helpers for replace_exercise ───────────────────────────────────
