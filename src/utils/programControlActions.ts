@@ -72,6 +72,7 @@ import {
   commitTemporarySourceFactSet,
   transactTemporarySourceFact,
 } from '../store/temporarySourceFactTransaction';
+import { clearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 
 export type ProgramControlActionType =
   | 'swap_session'
@@ -1271,6 +1272,21 @@ async function executeProgramControlActionDurablyWithinTrace(
         route: routeProgramControlAction(action).route,
       };
     }
+    // Cascade: revert any reversible adjustment authored by THIS fact (generic —
+    // keyed on the recorded `sourceFactId`, no per-feature special case), through
+    // the proven transaction-owned clearReversibleAdjustment path, before resolving
+    // the fact. This makes the fact's clear action revert its linked program change
+    // (e.g. an accepted lighter-day trim), honouring the "undo anytime" promise.
+    const linkedAdjustments = useProgramStore.getState().reversibleAdjustmentLedger.adjustments
+      .filter((adjustment) => adjustment.sourceFactId === factId && adjustment.status === 'active');
+    let revertedAdjustment = false;
+    for (const adjustment of linkedAdjustments) {
+      const revert = await clearReversibleAdjustment(
+        adjustment.id,
+        useProgramStore.getState().acceptedMaterialContext.revision,
+      );
+      if (revert.outcome === 'restored' || revert.outcome === 'recomposed') revertedAdjustment = true;
+    }
     const factResult = await transactTemporarySourceFact({
       operation: 'resolve',
       factId,
@@ -1281,10 +1297,12 @@ async function executeProgramControlActionDurablyWithinTrace(
     const ok = factResult.outcome !== 'conflicted' && factResult.outcome !== 'safely_rejected';
     return {
       ok,
-      changedProgram: factResult.changedProgram,
+      changedProgram: factResult.changedProgram || revertedAdjustment,
       requiresRebuild: false,
       clearedModifierIds: ok ? [factId] : undefined,
-      message: factResult.message,
+      message: ok && revertedAdjustment
+        ? "Cleared — today's back to its original session."
+        : factResult.message,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
     };

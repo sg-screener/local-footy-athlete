@@ -21,6 +21,8 @@ import {
 import { resolveDateWithConditioning } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { applyLighterDayTrim } from '../utils/lighterDayTrim';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import { isInjurySourceFact } from '../rules/temporarySourceFact';
 
 export interface ApplyLighterDayResult {
   ok: boolean;
@@ -32,7 +34,21 @@ export interface ApplyLighterDayResult {
 function discloseChanges(changes: string[]): string {
   if (changes.length === 0) return "Today's already light — nothing to trim.";
   const list = changes.join(', ');
-  return `Kept today's session but made it lighter: ${list}. You can undo this anytime.`;
+  // Point the undo promise at the mechanism that reverts it.
+  return `Kept today's session but made it lighter: ${list}. You can undo this anytime by clearing "Not 100% today".`;
+}
+
+/** The active readiness (fatigue/soreness/poor-sleep) fact covering `date`, if any —
+ *  the fact whose acceptance offered this lighter day, so the trim can be linked to
+ *  it and cascade-reverted when the athlete clears it. */
+function activeReadinessFactIdForDate(date: string): string | undefined {
+  const facts = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
+  const match = facts.find((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
+    'factKind' in fact &&
+    (fact.factKind === 'fatigue' || fact.factKind === 'soreness' || fact.factKind === 'poor_sleep') &&
+    fact.scope.from <= date && fact.scope.until >= date);
+  return match?.factId;
 }
 
 /**
@@ -66,6 +82,9 @@ export async function applyLighterDayForToday(args: {
     affectedDates: [args.date],
     sourceActor: 'athlete',
     sourceSurface: 'program_tab',
+    // Link the trim to the readiness fact that offered it, so clearing that fact
+    // cascade-reverts this adjustment generically.
+    sourceFactId: activeReadinessFactIdForDate(args.date),
   });
 
   return {

@@ -50,6 +50,8 @@ import { applyLighterDayTrim } from '../utils/lighterDayTrim';
 import { buildDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
 import { seedOnboardingProgram } from '../utils/onboardingCompletion';
 import { deriveStoredBlockStateFromProgram } from '../utils/programBlockState';
+import { applyLighterDayForToday } from '../utils/lighterDayTransaction';
+import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProducer';
 
 const WEEK = '2026-07-13';
 const SATURDAY = '2026-07-18';
@@ -623,6 +625,79 @@ async function main(): Promise<void> {
       `slight fatigue rejected on a real composition base: outcome=${outcome} reason=${reason}`);
     assert(activeReadinessFacts().length === 1,
       'the fatigue fact did not persist on a device-exact base');
+  });
+
+  // ── Invariant R12 (cascade undo): the disclosure promises "undo anytime".
+  // Clearing the readiness fact must generically revert ANY reversible adjustment
+  // linked to that fact (by RECORDED source-fact id, not heuristic), restoring the
+  // accepted week byte-identical to pre-offer state — no lighter-day special case.
+  // Also: a clear with no accepted trim is a no-op cascade; and clearing must never
+  // touch an unlinked adjustment.
+  await run('R12 cascade-undo: clearing the readiness fact reverts the linked trim (by recorded id), byte-identical', async () => {
+    const monWeightSig = (): string => JSON.stringify(
+      (resolveWeekWithConditioning(WEEK, buildScheduleStateImperative())
+        .find((day) => day.date === WEEK)?.workout?.exercises ?? [] as any[])
+        .map((r: any) => ({ id: r.exerciseId, sets: r.prescribedSets, kg: r.prescribedWeightKg })));
+    const clearFatigue = (factId: string) => executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week', payload: { modifierId: factId, date: WEEK },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    } as never, { todayISO: WEEK });
+    const ledger = () => useProgramStore.getState().reversibleAdjustmentLedger.adjustments;
+
+    // ── (1) main cascade ──────────────────────────────────────────────
+    seed();
+    const preOffer = monWeightSig();
+    assert((await reportTiredToday('today_only') as { ok?: boolean }).ok === true, 'precondition: fact commits');
+    const factId = activeReadinessFacts()[0].factId;
+    const applied = await applyLighterDayForToday({ date: WEEK, todayISO: WEEK });
+    assert(applied.ok && !!applied.adjustmentId, 'precondition: lighter-day trim applied');
+    assert(monWeightSig() !== preOffer, 'precondition: the trim changed the week');
+    const adj = ledger().find((a) => a.id === applied.adjustmentId);
+    assert((adj as { sourceFactId?: string } | undefined)?.sourceFactId === factId,
+      `link must resolve by RECORDED source-fact id, got ${(adj as { sourceFactId?: string } | undefined)?.sourceFactId}`);
+
+    const cleared = await clearFatigue(factId);
+    assert((cleared as { ok?: boolean }).ok === true, `clear failed: ${(cleared as { message?: string }).message}`);
+    assert(activeReadinessFacts().length === 0, '(a) clear must remove the tired fact');
+    const adjAfter = ledger().find((a) => a.id === applied.adjustmentId);
+    assert(adjAfter && adjAfter.status !== 'active', '(b) linked adjustment must be reverted');
+    assert(monWeightSig() === preOffer,
+      '(b) accepted week must restore byte-identical to pre-offer state');
+
+    // ── (2) no-op cascade: clear with no accepted trim just clears the fact ──
+    seed();
+    assert((await reportTiredToday('today_only') as { ok?: boolean }).ok === true, 'precondition');
+    const factId2 = activeReadinessFacts()[0].factId;
+    const activeAdjBefore = ledger().filter((a) => a.status === 'active').length;
+    const cleared2 = await clearFatigue(factId2);
+    assert((cleared2 as { ok?: boolean }).ok === true, 'no-op clear must still succeed');
+    assert(activeReadinessFacts().length === 0, 'no-op cascade must still clear the fact');
+    assert(ledger().filter((a) => a.status === 'active').length === activeAdjBefore,
+      'no-op cascade must not create/clear any adjustment');
+
+    // ── (3) unlinked adjustments untouched ───────────────────────────
+    seed();
+    assert((await reportTiredToday('today_only') as { ok?: boolean }).ok === true, 'precondition');
+    const factId3 = activeReadinessFacts()[0].factId;
+    await applyLighterDayForToday({ date: WEEK, todayISO: WEEK }); // linked to factId3
+    // An UNRELATED reversible adjustment (empty-day add on WED — no source fact).
+    const WEDNESDAY = addDays(WEEK, 2);
+    const change = { kind: 'add_category' as const, date: WEDNESDAY, category: 'conditioning_light' as const };
+    const week = resolveWeekWithConditioning(WEEK, buildScheduleStateImperative());
+    const preview = previewPlanChangeRisk({ change, visibleWeek: week, todayISO: WEEK,
+      profile: useProfileStore.getState().onboardingData ?? undefined });
+    applyPlanChange({ change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
+      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w, c) });
+    const unlinked = ledger().find((a) => a.affectedDates.includes(WEDNESDAY) && a.status === 'active');
+    assert(!!unlinked, 'precondition: an unrelated WED adjustment exists');
+    assert(!(unlinked as { sourceFactId?: string }).sourceFactId, 'the WED adjustment is not fact-linked');
+
+    await clearFatigue(factId3);
+    const unlinkedAfter = ledger().find((a) => a.id === (unlinked as { id: string }).id);
+    assert(unlinkedAfter && unlinkedAfter.status === 'active',
+      'clearing the fact must NOT touch an unlinked adjustment');
   });
 
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);

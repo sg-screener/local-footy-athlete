@@ -153,6 +153,8 @@ export interface ReversibleAdjustmentCreationInput {
   sourceActionOrIntentId: string;
   sourceProducer?: 'tap' | 'coach' | 'system';
   sourceTurnId?: string;
+  /** Temporary source fact that authored this adjustment (for cascade-revert). */
+  sourceFactId?: string;
   proposal: AcceptedStateTransactionProposal;
   affectedDates?: readonly string[];
   restorationTarget?: Partial<ReversibleAdjustmentRestorationTarget>;
@@ -1042,6 +1044,7 @@ export function stageReversibleAdjustmentCreationTransaction(
     sourceActionOrIntentId: input.sourceActionOrIntentId,
     ...(input.sourceProducer ? { sourceProducer: input.sourceProducer } : {}),
     ...(input.sourceTurnId ? { sourceTurnId: input.sourceTurnId } : {}),
+    ...(input.sourceFactId ? { sourceFactId: input.sourceFactId } : {}),
     createdAt,
     acceptedRevision: firstStage.context.revision,
     status: 'active',
@@ -1184,6 +1187,8 @@ export function commitExplicitLoadEditLedgerFromBaseline(args: {
   affectedDates: readonly string[];
   sourceActor?: ReversibleAdjustmentActor;
   sourceSurface?: ReversibleAdjustmentSurface;
+  /** Temporary source fact that authored this edit (for cascade-revert on clear). */
+  sourceFactId?: string;
 }): ReversibleAdjustmentRecord | null {
   const afterState = useProgramStore.getState();
   const afterProgram = programSurfaces(afterState);
@@ -1267,6 +1272,7 @@ export function commitExplicitLoadEditLedgerFromBaseline(args: {
     sourceActor: args.sourceActor ?? 'athlete',
     sourceSurface: args.sourceSurface ?? 'coach_chat',
     sourceActionOrIntentId: args.sourceActionOrIntentId,
+    ...(args.sourceFactId ? { sourceFactId: args.sourceFactId } : {}),
     createdAt,
     acceptedRevision: afterContext.revision,
     status: 'active',
