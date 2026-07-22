@@ -788,3 +788,137 @@ longer occur. Router suite 597/0.
 `coachProgramEditDraftTests` §23 (4 assertions) are **pre-existing** source-ordering
 checks on `coachTurnController.ts` (which stage 4 does not touch); they fail
 identically with this stage's changes stashed. Not a stage-4 regression.
+
+## Stage 5 diagnosis — the coach free-text (active coach-revision) pipeline (2026-07-22)
+
+Recorded after the on-device Maestro smoke pass
+(`docs/audits/SECTION18_SMOKE_2026-07-22.md`) surfaced two coach free-text findings
+that stage 4 did not cover. **Design only — no stage-5 code yet.** Same shape as the
+stage-2 diagnosis. This becomes **stage 5 on a new branch after this branch merges.**
+All `file:line` at `section18-ownership-invariants` HEAD.
+
+### Reproduction (dev-client, E2E seed)
+- **"Swap Back Squat for Front Squat on Monday"** (coach chat) → *"I couldn't safely
+  validate that revision, so I left the plan unchanged."* — while the **tap door applies
+  exactly that swap** (Back Squat → Front Squat) via `replaceExerciseAtDate`.
+- **Add / swap on Saturday (game day)** → the coach first asks *"Which conditioning
+  session should replace Saturday's Game Day?"*, then *"I couldn't safely preview/validate
+  that revision, so I left the plan unchanged."* — **not** the specific *"It's game day —
+  sessions can't be changed or added here."* lock. Plan unchanged, no raw code.
+- No false "Done" in any case — the coach's claims always matched the visible state (the
+  #5 safety property holds in-app).
+
+### Q0 — which pipeline, and is it in production?
+The observed behaviour is the **active coach-revision-proposal route**, and it is
+**dev-gated**. `coachRevisionProposalMode` resolves to `'active'` **only** when
+`rawMode==='active' && isDev && devActive` (`src/config/env.ts:106-122`); otherwise it
+logs a warning and returns `'off'`. The smoke-test `.env` sets
+`EXPO_PUBLIC_COACH_REVISION_PROPOSAL_MODE=active` + `…_DEV_ACTIVE=1` and the dev-client is
+`isDev`, so the route was live. **In production (`isDev===false`) this route is `'off'`.**
+So these are **pre-graduation defects in the not-yet-shipped coach door**, not a live
+production regression — and that door is exactly the Q6 target (the future single coach
+door meant to emit `{proposedSnapshot, diff}`).
+
+Entry & shape (`src/utils/coachTurnController.ts`): a mutation-like message
+(`shouldAttemptCoachRevisionProposal` `:1933`) → `buildCoachRevisionProposalForController`
+(`:5200`) → the LLM adapter → a `SemanticCoachRevisionProposalResult`, dispatched (`:5243+`)
+through **three gates**, each collapsing to a generic reply: **validate** (`kind:'invalid'`
+→ `coachRevisionInvalidReply` `:2176`), **preview** (`assessCoachRevisionProposalRisk`
+`:2343-2348`), **apply** (`:2483`). Routing is **ordering-based**: this block returns
+before the deterministic `interpretCoachMessageToProgramEdit`/`routeCoachCommand` path
+(`:5760`), so the stage-4-converged `runReplaceExercise` executor
+(`coachCommandExecutor.ts:2885-2905`) is never reached. (The "Updating your program…"
+progress text is not a stage — it's a UI time-based fallback at `loadingSeconds>=12`,
+`CoachScreen.tsx:2325`, crossed by the ~45s revision-LLM round-trip.)
+
+### Root cause #1 (validator) — a legal exercise swap is refused
+The two doors ask **different questions about the same replacement row**, and the
+divergence is the **validator**, not the writer (this finding fails before any write):
+- **Tap door** (`replaceExerciseAtDate`, `coachActions.ts:535`, mints id `ex-coach-<name>`
+  `:576`) validates via `validateLiveWorkoutWrite` → `finaliseLiveDateCandidateAgainstWeek`
+  → `requireSection18AcceptedWeek` (`postGenerationConstraintValidation.ts:1399,1469`). §18
+  is a **role/exposure** contract keyed on `main_strength`/strength-pattern
+  (`section18AcceptedWeekGateway.ts:367,394`) — **identity-blind**. Back Squat and Front
+  Squat are both `main_strength` squat-pattern → exposure signature unchanged → **PASS**.
+- **Coach-revision route** validates a **visible-week diff** (`validateCoachRevisionDiff`,
+  `coachRevisionProposal.ts:426`) under a policy that forbids all free-form additions
+  (`coachRevisionPolicy.ts:141-149`: `allowedAddedSectionKinds: []`, byte-exact
+  template-signatures only). Visible-item ids are the exercise ids
+  (`visibleProgramReadModel.ts:373`) and `diffItems` matches strictly by id
+  (`coachRevisionProposal.ts:664-688`), so the minted `ex-coach-front-squat` is never a
+  `changed` item — it is Back Squat **removed** + Front Squat **added**; the added strength
+  item matches no template signature → **`unknown_item_id`** (`:838-856`) →
+  `status:'invalid'` → the validate-gate reply. (If labelled `intent:'replace'`,
+  `validateDiffMatchesIntent` independently requires an *added section* → in-place row swap
+  produces none → `replace_missing_addition`, `:893-913`.)
+
+**Divergence:** role-exposure-in-a-single-write (identity-blind, PASS) vs
+item-identity-in-a-diff against a template-only allow-list (a swapped-in `ex-coach-*` row
+reads as *unauthorized added content*, FAIL). The coach route never reaches the §18/store
+layer for this input.
+
+### Root cause #2 (missing lock) — the game-day message never surfaces
+- The string **"It's game day — sessions can't be changed or added here."** exists **only**
+  in `planChangeProducer.blockedAssessmentForBuildError` (`:1229-1233`), fed by
+  `resolveAthleteMutation`'s `protected_game_day` rejection (`:1099-1102` swap, `:1137-1141`
+  add), surfaced only in `applyPlanChangeWithinTrace` (`:1655-1665`) — a chain imported
+  **only** by `programControlActions.ts` → the tap screens. **The coach-revision route
+  never calls `resolveAthleteMutation`/`applyPlanChange`**, so it cannot reach it.
+- The route's own game-day awareness never fires: `programEditRiskAssessment` carries
+  game-day rules (`:258,:289`), but `assessProgramEditWrites` runs **only after** the
+  preview succeeds. For a game-day add/swap the preview (`applyCoachRevisionDateOverrides`)
+  rejects first and its **reason is discarded** into the generic *"couldn't safely preview
+  that revision"* (`coachTurnController.ts:2343-2348`).
+- The clarifier *"Which conditioning session should replace Saturday's Game Day?"* is
+  emitted earlier still (`coachProgramEdit.ts:4306-4307`) — the route proposes a
+  replacement before the write is previewed, so it does not model game day as locked.
+
+### Where the writer stands
+`applyCoachRevisionDateOverrides` (`coachRevisionOverrideWriter.ts:58`) is only **partly**
+unified: **single-day** revisions persist via `setManualOverride` into `dateOverrides`
+(`:186-188`) — the separate date-override writer — while **multi-day** revisions refuse to
+self-write (`multi_date_transaction_required`, `:180-184`) and the controller commits them
+through **`commitAcceptedStateTransaction`** (`coachTurnController.ts:2430-2453`). The
+single-date path — the one an exercise-row swap would take — is the one still off the
+transaction owner.
+
+### Q6 retirements that apply (verbatim, this doc §Q6)
+- **"The coach-revision-override writer as a second door** with its own §18 boundary
+  (`coachRevisionOverrideWriter.ts`) — unify with the transaction path."
+- **"Redundant front-half representations** (7/8 as separate from the transaction;
+  `ProgramEditDraft` variants) can be retired once both doors emit the same
+  `{proposedSnapshot, diff}`." → coach #6 `ProgramEdit/ProgramEditDraft`, #7
+  `CoachRevisionProposal`, #8 `AdjustmentEvent[]`.
+- **"`dateOverrides` as a parallel mutation channel** … collapse into the single accepted
+  snapshot so there is one write target, not two." → the single-day coach writer's target.
+
+### Recommendation (Elegant Solution Requirement — compare, no code here)
+- **Option A — patch the coach-revision path** (widen `coachRevisionPolicy` to allow
+  `ex-coach-*` swaps; thread `protected_game_day` reasons through the generic reply).
+  **Reject as the primary fix** — it keeps a second validator + second writer and
+  re-derives policies the transaction owner already enforces (adds guards to a parallel
+  door), the exact anti-pattern the CLAUDE.md escalation rule forbids.
+- **Option B — route the coach-revision door through the transaction owner (recommend).**
+  Commit the approved `{proposedSnapshot, diff}` through the **accepted-state transaction**
+  (`resolveAthleteMutation` / `commitAthleteSession*Transaction`, and `replaceExerciseAtDate`
+  for exercise-row swaps) — the same owner the tap door and the deterministic coach executor
+  use. The route then inherits the role-based §18 gate (Front Squat passes), the game-day
+  lock message, and disclosed cross-day repairs for free; the visible-diff authorization
+  policy and the coach-revision-override writer are **retired** (Q6), not patched. This is
+  the "both doors emit `{proposedSnapshot, diff}` → one executor" endpoint Q4/Q5 prescribe.
+
+### Invariants that would pin stage 5 (tests-first, per prior stages)
+1. **Cross-door visible equivalence (free-text):** a free-text coach "swap Back Squat for
+   Front Squat" produces the **same accepted visible row** as the tap door's swap
+   (Front Squat present, Deadlift load byte-identical), applied — no false Done.
+2. **Game-day plain-language refusal via coach:** a coach add/swap on game day returns the
+   **specific** "It's game day…" message (the transaction owner's), never the generic
+   "couldn't safely preview/validate", and never a raw code; plan unchanged.
+3. **Single-owner:** the coach-revision commit records a reversible adjustment / accepted
+   snapshot exactly as the tap door does (no `dateOverrides`-only write).
+
+### Stage-5 gate & notes
+`test:bible` green + ownership scoreboard monotonic (add the coach cross-door invariants;
+never green→red); run the coach blast-radius suites. The route is **dev-gated** — it must
+not graduate to production (`DEV_ACTIVE`→prod) until unified, or these defects ship.
+Record stage 5 here when it lands.
