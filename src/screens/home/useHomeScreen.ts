@@ -71,6 +71,7 @@ import {
 } from '../../dev/e2e/athleteActionUIObservation';
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
 import { isTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
+import { seasonPhaseFromProgram } from '../../rules/seasonPhaseClock';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
 type HomeQuickStatusAction = 'busy_week_reduce';
@@ -250,6 +251,10 @@ export function useHomeScreen() {
   const isOnboardingComplete = useProfileStore((s) => s.isOnboardingComplete);
   const updateOnboardingData = useProfileStore((s) => s.updateOnboardingData);
 
+  // Program store — currentProgram is read up here so the season-phase
+  // derivation below can source the phase from its clock (single source of truth).
+  const currentProgram = useProgramStore((s) => s.currentProgram);
+
   // ── Phase-shift state ──
   const [phaseShiftModalVisible, setPhaseShiftModalVisible] = useState(false);
   const [phaseShiftStep, setPhaseShiftStep] = useState<PhaseShiftStep>('confirm');
@@ -259,7 +264,15 @@ export function useHomeScreen() {
   const [pendingPreferredDays, setPendingPreferredDays] = useState<DayOfWeek[]>([]);
   const [pendingTeamDays, setPendingTeamDays] = useState<DayOfWeek[]>([]);
   const [pendingGameDay, setPendingGameDay] = useState<DayOfWeek | null>(null);
-  const currentPhase = (onboardingData.seasonPhase || 'Pre-season') as SeasonPhase;
+  // Season phase is read from the generated program's clock — the single
+  // source of truth the visible week is built from (seasonPhaseClock.selectedPhase).
+  // Falls back to the profile only when there is no valid clock yet (fresh
+  // account, pre-generation). Reading the profile directly used to drift from
+  // the week after a phase shift rebuilt the program but the profile write
+  // lagged (HOMEV2 row 5.1: card stuck "In-season" over an off-season week).
+  const currentPhase = (seasonPhaseFromProgram(currentProgram)
+    ?? onboardingData.seasonPhase
+    ?? 'Pre-season') as SeasonPhase;
   // Latched target phase for the shift modal. Set explicitly by the caller
   // of handleOpenPhaseShift so the modal renders from the user's actual
   // selection, never from a derived "next phase". Seeded to NEXT_PHASE so
@@ -269,7 +282,6 @@ export function useHomeScreen() {
 
   // Program store
   const sessionFeedback = useProgramStore((s) => s.sessionFeedback);
-  const currentProgram = useProgramStore((s) => s.currentProgram);
   const blockState = useProgramStore((s) => s.blockState);
   const acceptedRevision = useProgramStore((s) => s.acceptedMaterialContext.revision);
   const reversibleAdjustments = useProgramStore((s) =>

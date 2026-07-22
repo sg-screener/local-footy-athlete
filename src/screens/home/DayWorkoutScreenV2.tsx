@@ -404,6 +404,8 @@ export default function DayWorkoutScreenV2() {
     isFinished,
     justSaved,
     savedFeedbackReceipt,
+    persistedReceipt,
+    isAlreadyComplete,
     editingWeightId,
     editingWeightText,
     setEditingWeightText,
@@ -1175,8 +1177,17 @@ export default function DayWorkoutScreenV2() {
 
         <RecoveryAddonSection addons={workout.recoveryAddons ?? []} />
 
-        {/* ── Post-finish: feedback → success moment → auto-dismiss ── */}
-        {isFinished && date ? (
+        {/* ── Reopen of a completed session → read-only summary ── */}
+        {isAlreadyComplete && date ? (
+          <View style={styles.feedbackSection}>
+            <SessionCompleteMoment
+              date={date}
+              receipt={persistedReceipt}
+              headline="Session complete"
+            />
+          </View>
+        ) : /* ── Post-finish: feedback → success moment → auto-dismiss ── */
+        isFinished && date ? (
           <View style={styles.feedbackSection}>
             {justSaved ? (
               <SessionCompleteMoment date={date} receipt={savedFeedbackReceipt} />
@@ -1186,8 +1197,8 @@ export default function DayWorkoutScreenV2() {
           </View>
         ) : null}
 
-        {/* ── Finish moment ── */}
-        {!isFinished ? (
+        {/* ── Finish moment (hidden once the session is complete) ── */}
+        {!isFinished && !isAlreadyComplete ? (
           <FinishMoment onPress={handleFinishWorkout} />
         ) : null}
       </ScrollView>

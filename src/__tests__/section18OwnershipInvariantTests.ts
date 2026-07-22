@@ -520,6 +520,47 @@ run('9 anchor-swap: a Team Training day swap keeps the anchor, replaces the gym 
     'anchor-day swap not owned by the accepted-state transaction (no reversible adjustment for TUE)');
 });
 
+// Invariant 8c — anchor-day relocate-first: a strength-displacing swap ON a Team
+// Training anchor day (TUE = Team Training + Upper Pull) relocates the displaced
+// gym-strength component to the free day and names it, the same relocate-first
+// rule 8a proves for a plain strength day — reducing the target only when
+// relocation is genuinely impossible (8b). RED pre-fix: the relocation engine
+// (`displacedStrengthTemplates`) drops Team Training days, so the displaced
+// Upper Pull strength is never offered a relocation template and the transaction
+// falls straight to a disclosed reduction ("reduced at your request") even
+// though WED is free. (Product decision, Sam 2026-07-22; GROUPB re-audit flow 2.)
+run('8c anchor-relocated-disclosure: an anchor-day strength-displacing Swap relocates the displaced strength and names the day', () => {
+  seed();
+  const beforeTue = acceptedByDay().get(2);
+  assert(getTeamTrainingWorkoutState(beforeTue).hasTeamTraining,
+    'precondition: TUE is a Team Training anchor day');
+  const baseDays = acceptedSnapshot().evaluation.ledger.mainStrength.sessionDays;
+  assert(baseDays.includes(2),
+    `precondition: TUE (2) is a main-strength day: sessionDays=${JSON.stringify(baseDays)}`);
+  const change = { kind: 'swap_category' as const, date: TUESDAY, category: 'conditioning_light' as const };
+  const week = visibleWeek();
+  const preview = previewPlanChangeRisk({
+    change, visibleWeek: week, todayISO: WEEK,
+    profile: useProfileStore.getState().onboardingData ?? undefined,
+  });
+  const result = applyPlanChange({
+    change, visibleWeek: week, todayISO: WEEK, trace: preview.trace,
+    setManualOverride: (date, workout, ctx) => useProgramStore.getState().setManualOverride(date, workout, ctx),
+  });
+  assert(result.ok, `anchor-day strength-displacing Swap refused: "${result.message}"`);
+  const sessionDays = acceptedSnapshot().evaluation.ledger.mainStrength.sessionDays;
+  // TUE (2) gave up its Upper Pull strength; it relocated to the free WED (3).
+  assert(!sessionDays.includes(2) && sessionDays.includes(3),
+    `displaced anchor-day strength did not relocate to Wednesday: sessionDays=${JSON.stringify(sessionDays)}`);
+  // Relocate-first, not reduce: no authorised reduction while a free day exists.
+  const reductions = acceptedSnapshot().contract.authorisedReductions.filter(
+    (entry) => entry.reason === 'explicit_user_override');
+  assert(reductions.length === 0,
+    `anchor-day swap reduced the target instead of relocating (WED is free): ${reductions.length} reduction(s)`);
+  assert(/wednesday/i.test(result.message),
+    `relocation day not disclosed in the anchor-day Swap result: "${result.message}"`);
+});
+
 // Invariant 10 — an add on an empty/rest day routes through the accepted-state
 // transaction (a new addition primitive), with §18 owned by the transaction.
 // Stage 3(b). RED pre-migration: add_category is never in the typed gate, so it

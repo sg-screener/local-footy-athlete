@@ -1336,8 +1336,14 @@ function DayRow({
     day.workout.workoutType === 'Recovery' ||
     day.workout.sessionTier === 'recovery'
   );
+  // A persisted session-outcome receipt for this day means the athlete finished
+  // and saved feedback — the day is complete. Drives the "Done" marker and the
+  // read-only completed CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
+  // saved outcome was persisted but never surfaced back to the card).
+  const isCompleted = hasWorkout && feedbackReceipts.length > 0;
   const rowBadges = (
     <>
+      {isCompleted && <Badge label="Done" tone="success" />}
       {showRowBadges && day.isToday && <Badge label="Today" tone="accent" />}
       {isMoveSource
         ? <Badge label="Moving" tone="outline" />
@@ -1558,7 +1564,15 @@ function DayRow({
               onReview={(prefill) => onReviewStale(prefill)}
             />
           )}
-          {isTeamOnly ? (
+          {isCompleted ? (
+            <>
+              <View style={styles.sessionCompleteLine} testID={`day-complete-${dayToken}`}>
+                <RowIcon kind="pulse" size={15} color="#5BD98A" />
+                <Text style={styles.sessionCompleteText}>Session complete</Text>
+              </View>
+              <Button label="View summary" size="lg" glow={false} onPress={onViewWorkout} testID="view-completed-session-button" />
+            </>
+          ) : isTeamOnly ? (
             <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
           ) : (
             <>
@@ -2930,6 +2944,8 @@ const styles = StyleSheet.create({
 
   expanded: { marginTop: spacing.md, gap: spacing.sm },
   expandedMeta: { color: '#888888', fontSize: 13 },
+  sessionCompleteLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  sessionCompleteText: { color: '#5BD98A', fontSize: 13, fontWeight: '600' },
 
   // Tap-first change door (PlanChangeSheet trigger)
   makeChangeLink: { paddingVertical: spacing.xs, alignSelf: 'flex-start' },

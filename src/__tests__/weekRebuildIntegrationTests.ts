@@ -682,6 +682,15 @@ console.log('\n── Architectural guard: one canonical rebuild door ──');
     !/\bclearManualOverrides\(\)/.test(home));
   ok('AI rebuild path commits through the shared canonical policy',
     /decideSweepForCurrentStores\(/.test(home) && /commitRebuiltProgram\(/.test(home));
+  // Representation-drift guard (HOMEV2 row 5.1): the season-phase status card
+  // must read the phase from the generated program's clock — the single source
+  // of truth the visible week is built from — not straight off the profile,
+  // which can lag behind a rebuild and leave the card stale ("In-season" over
+  // an off-season week). currentPhase drives the badge, the shift CTA, and the
+  // weekKind derivation, so a single clock-sourced read aligns all of them.
+  ok('season-phase card reads currentPhase from the program clock (single source of truth), not the profile',
+    /seasonPhaseFromProgram\(currentProgram\)/.test(home) &&
+    !/const currentPhase = \(onboardingData\.seasonPhase\b/.test(home));
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────
