@@ -514,3 +514,54 @@ clean on touched files.
 clean `expo start` logging to a file, re-run the device flow (tired-today →
 success ack + card flip + witness + lighter-day offer applies/undoes), and capture
 the exact post-fix result. Nothing merges on harness evidence alone.
+
+---
+
+## Part 2b — the actual on-device failure + device pass (2026-07-22)
+
+Ran a clean device pass (one `expo start --reset-cache` logging to a file;
+uninstall + fresh install so the bundle is guaranteed fresh — verified the served
+18 MB bundle contains `inertComposition` / `sourceFactConstraintSignature` /
+`RECORD-ONLY` markers). A temporary tagged `console.warn` in the fatigue result
+path captured the exact device rejection (the transaction's own logs don't forward
+for this path):
+
+```
+outcome: "safely_rejected"
+reason:  "accepted_composition_base_changed_by_temporary_fact"
+```
+
+So part 2 DID remove the §18 gateway rejection (that log is gone), but a second
+gate remained: `verifyCandidate` rejects because re-canonicalising a record-only
+fact **mutates `acceptedCompositionBase.surfaces`**. This only reproduces with a
+REAL composition base (device-exact seed) — the R1-style suite seed leaves it
+null, which is why R1–R10 didn't catch it.
+
+**Part 2b fix.** For an inert fact, `commitTemporarySourceFactSet` now also passes
+`preserveExactAcceptedWorkouts: true` (with `validateWeekStarts: []`), so a
+record-only fact keeps the exact accepted surfaces — no base mutation,
+`verifyCandidate` passes. Pinned by **R11** (device-exact harness:
+`seedOnboardingProgram` + `commitAcceptedStateTransaction` `preserveExact`
+establishes a real composition base) — reproduces the exact device rejection RED,
+green after the fix. Gates: readiness **11/11**; `test:bible` exit 0;
+`test:temporary-source-facts` 45/45; accepted-state 25/25; weekly-readiness 14/14.
+
+**Device pass (confirmed-fresh bundle, iPhone 17 Pro) — VALIDATED:**
+- **(a)** success ack: *"Got it — logged how you're feeling. Your week's adjusted
+  to match."* ✓
+- **(b)** card flips "I'm not 100%" → **"Not 100% today"** ✓
+- **record-only (Sam's added check):** after the ack, declining the offer, the
+  **whole week is byte-unchanged** (MON Lower Body Strength / TUE·THU Team Training
+  / WED Rest / FRI Gunshow / SAT Game Day / SUN Recovery — identical to baseline);
+  only the readiness card (witness) flipped ✓
+- **(c)** lighter-day offer applies with the plain-words disclosure: *"Kept today's
+  session but made it lighter: Trimmed accessory volume. You can undo this
+  anytime."* MON stays **CORE / Lower Body Strength** (main lift kept) ✓
+
+**OPEN — undo affordance (device pass not fully clean).** The disclosure promises
+"undo anytime," and the transaction-level undo is proven (R6:
+`clearReversibleAdjustment`), but there is **no discoverable UI to undo the
+lighter-day trim**: it's a separate reversible adjustment from the readiness fact,
+and the sheet's "Clear adjustment — I'm good now" clears the *fact*, not the *trim*.
+This needs wiring (either a dedicated undo, or make the readiness clear cascade to
+the linked lighter-day adjustment) before merge — device pass remains the gate.
