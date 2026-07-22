@@ -792,8 +792,9 @@ export default function HomeScreenV2() {
           // set); on failure the error acknowledgment is shown in place.
           const result = await handleApplyWeekReadiness(kind, weekAnchorISO);
           setReadinessAck(buildReadinessAcknowledgment(result));
-          // Opt-in lighter-day offer after a today-scoped report.
-          const todayScoped = kind === 'tired_today' || kind === 'poor_sleep_today' || kind === 'sore_today';
+          // Opt-in lighter-day / "soften today" offer after a today-scoped report.
+          const todayScoped = kind === 'tired_today' || kind === 'poor_sleep_today' ||
+            kind === 'sore_today' || kind === 'sniffle_today';
           setLighterDayOffer(result?.ok && todayScoped ? { date: todayISOLocal() } : null);
         }}
         onAcceptLighterDay={async (date) => {
@@ -2181,6 +2182,12 @@ function WeekReadinessSheet({
             testID={explorerTestId.readinessOption('sore_today')}
             icon={pulseIcon('#FF7A85')}
             onPress={() => onApply('sore_today')}
+          />
+          <SheetOption
+            label="Light sniffle"
+            testID={explorerTestId.readinessOption('sniffle_today')}
+            icon={pulseIcon('#1EA7FF')}
+            onPress={() => onApply('sniffle_today')}
           />
           <SheetOption
             label="Sick / run down"

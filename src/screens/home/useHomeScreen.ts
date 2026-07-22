@@ -81,6 +81,7 @@ export type WeekReadinessAction =
   | 'poor_sleep_week'
   | 'cooked_week'
   | 'sore_today'
+  | 'sniffle_today'
   | 'sick_week';
 
 const targetStatusModifierKind = (
@@ -1397,7 +1398,21 @@ export function useHomeScreen() {
           requiresRebuild: false,
           createsActiveModifier: true,
           oneOffOnly: false,
-        }, { todayISO })
+        }, { todayISO, visibleWeek: weekDays })
+      : kind === 'sniffle_today'
+        ? await executeProgramControlActionDurably({
+            type: 'set_illness_status',
+            source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+            scope: 'today_only',
+            // Minor illness (sniffle): record-only + inert. The opt-in "soften
+            // today?" offer (lighter-day pattern) is surfaced by the sheet for
+            // today-scoped tiers. (Severe illness / bed-ridden is a later stage —
+            // it derives the illness_recovery week mode.)
+            payload: { date: todayISO, todayISO, severity: 'minor' },
+            requiresRebuild: false,
+            createsActiveModifier: true,
+            oneOffOnly: false,
+          }, { todayISO })
       : kind === 'poor_sleep_today' || kind === 'poor_sleep_week'
         ? await executeProgramControlActionDurably({
             type: 'set_poor_sleep_status',
@@ -1436,7 +1451,7 @@ export function useHomeScreen() {
     });
     await handleProgramControlResult(result);
     return result;
-  }, [handleProgramControlResult, registerSourceFactRenderObservation]);
+  }, [handleProgramControlResult, registerSourceFactRenderObservation, weekDays]);
 
   const handleClearWeekReadiness = useCallback(async (constraintId: string) => {
     const todayISO = todayISOLocal();
