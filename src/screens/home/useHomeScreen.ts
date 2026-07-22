@@ -370,7 +370,8 @@ export function useHomeScreen() {
     )), [temporarySourceFacts, visibleWeekEnd, visibleWeekStart]);
   const readinessFacts = useMemo(() => temporarySourceFacts.filter((fact) =>
     'factKind' in fact && (
-      fact.factKind === 'fatigue' || fact.factKind === 'soreness' || fact.factKind === 'poor_sleep'
+      fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
+      fact.factKind === 'poor_sleep' || fact.factKind === 'illness'
     ) && (!visibleWeekStart || !visibleWeekEnd || (
       fact.scope.from <= visibleWeekEnd &&
       fact.scope.until >= visibleWeekStart

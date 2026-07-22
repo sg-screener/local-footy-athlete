@@ -46,7 +46,8 @@ function activeReadinessFactIdForDate(date: string): string | undefined {
     useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
   const match = facts.find((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
     'factKind' in fact &&
-    (fact.factKind === 'fatigue' || fact.factKind === 'soreness' || fact.factKind === 'poor_sleep') &&
+    (fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
+      fact.factKind === 'poor_sleep' || fact.factKind === 'illness') &&
     fact.scope.from <= date && fact.scope.until >= date);
   return match?.factId;
 }

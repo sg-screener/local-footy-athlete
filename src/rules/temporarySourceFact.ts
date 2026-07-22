@@ -90,6 +90,19 @@ export interface TemporaryPoorSleepFact extends TemporarySourceFactBase<'poor_sl
   pattern: 'single_night' | 'repeated';
 }
 
+/**
+ * Illness ("under the weather") — a SIBLING health fact, not a variant of injury
+ * or fatigue. Follows the shared severity doctrine: `minor` is INERT (record-only,
+ * zero derivation — a light sniffle merely records; the adjustment is opt-in via
+ * the "soften today?" offer) and `severe` is DERIVING (auto-protect). The tier is
+ * carried by `athleteReportedLevel` through the same `projectionScore` threshold
+ * every health fact uses (minor → below 4, severe → at/above), so the inert vs.
+ * deriving boundary is identical to fatigue's.
+ */
+export interface TemporaryIllnessFact extends TemporarySourceFactBase<'illness'> {
+  severity: 'minor' | 'severe';
+}
+
 export interface TemporaryEquipmentFact extends TemporarySourceFactBase<'equipment'> {
   mode: 'only' | 'without';
   equipmentTags: EquipmentTag[];
@@ -121,7 +134,8 @@ export interface TemporaryTimeCapFact extends TemporarySourceFactBase<'time_cap'
 export type TemporaryHealthFact =
   | TemporaryFatigueFact
   | TemporarySorenessFact
-  | TemporaryPoorSleepFact;
+  | TemporaryPoorSleepFact
+  | TemporaryIllnessFact;
 
 export type NonInjuryTemporarySourceFact =
   | TemporaryHealthFact
@@ -277,7 +291,8 @@ function normalizeWeekdays(value: unknown): DayOfWeek[] {
 function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | null {
   if (!isRecord(value) || typeof value.factId !== 'string') return null;
   if (value.factKind !== 'fatigue' && value.factKind !== 'soreness' &&
-    value.factKind !== 'poor_sleep' && value.factKind !== 'equipment' &&
+    value.factKind !== 'poor_sleep' && value.factKind !== 'illness' &&
+    value.factKind !== 'equipment' &&
     value.factKind !== 'schedule' && value.factKind !== 'time_cap') {
     return null;
   }
@@ -331,6 +346,13 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
       ...base,
       factKind: 'poor_sleep',
       pattern: value.pattern === 'repeated' ? 'repeated' : 'single_night',
+    };
+  }
+  if (value.factKind === 'illness') {
+    return {
+      ...base,
+      factKind: 'illness',
+      severity: value.severity === 'severe' ? 'severe' : 'minor',
     };
   }
   if (value.factKind === 'equipment') {
@@ -420,7 +442,7 @@ export function isNonInjuryTemporarySourceFact(
 export function isTemporaryHealthFact(fact: TemporarySourceFact): fact is TemporaryHealthFact {
   return !isInjurySourceFact(fact) &&
     (fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
-      fact.factKind === 'poor_sleep');
+      fact.factKind === 'poor_sleep' || fact.factKind === 'illness');
 }
 
 export function isTemporaryEquipmentFact(
@@ -521,7 +543,7 @@ function projectionScore(
   return levelScore(fact.athleteReportedLevel);
 }
 
-function factConstraintMetadata(facts: readonly (TemporaryFatigueFact | TemporarySorenessFact | TemporaryPoorSleepFact)[]) {
+function factConstraintMetadata(facts: readonly TemporaryHealthFact[]) {
   const updated = facts.map((fact) => fact.updatedAt).sort();
   const expires = facts.map((fact) => fact.effectiveUntil).sort();
   return {
@@ -561,7 +583,8 @@ function globalConstraint(
     ...factConstraintMetadata(facts),
     reasonLabel: poorSleep
       ? poorSleep.pattern === 'repeated' ? 'Repeated poor sleep' : 'Poor sleep'
-      : strongest.factKind === 'soreness' ? 'General soreness' : 'Fatigue',
+      : strongest.factKind === 'soreness' ? 'General soreness'
+        : strongest.factKind === 'illness' ? 'Illness' : 'Fatigue',
     source: poorSleep ? 'readiness' : 'coach',
     ...(poorSleep ? { readinessKind: 'poor_sleep' as const, readinessPattern: poorSleep.pattern } : {}),
     ...(dateScoped ? { appliesToDate: strongest.effectiveFrom } : {}),
@@ -917,6 +940,51 @@ export function createTemporaryFatigueFact(args: {
     effectiveUntil: args.scope.until,
     scope: args.scope,
     athleteReportedLevel: args.athleteReportedLevel,
+    createdAt: now,
+    updatedAt: now,
+    resolvedAt: null,
+    sourceActor: args.sourceActor ?? 'athlete',
+    sourceSurface: args.sourceSurface,
+    legacyMigrationStatus: 'native_v1',
+    transitionHistory: [{
+      at: now,
+      from: null,
+      to: 'active',
+      actor: args.sourceActor ?? 'athlete',
+      surface: args.sourceSurface,
+      reason: 'created',
+    }],
+  };
+}
+
+export function createTemporaryIllnessFact(args: {
+  observedDate: string;
+  scope: TemporarySourceFactScope;
+  severity: 'minor' | 'severe';
+  sourceActor?: TemporarySourceFactActor;
+  sourceSurface: TemporarySourceFactSurface;
+  now?: string;
+  factId?: string;
+}): TemporaryIllnessFact {
+  const now = args.now ?? new Date().toISOString();
+  // The tier drives the projection score through the shared health-fact
+  // threshold: minor → 'slight' (< 4, inert / record-only), severe → 'high'
+  // (>= 4, deriving / auto-protect). Same boundary fatigue uses.
+  const athleteReportedLevel: TemporaryAthleteReportedLevel =
+    args.severity === 'severe' ? 'high' : 'slight';
+  return {
+    protocolVersion: TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION,
+    factId: args.factId ?? stableTemporarySourceFactId({
+      factKind: 'illness', observedDate: args.observedDate, scope: args.scope,
+    }),
+    factKind: 'illness',
+    severity: args.severity,
+    status: 'active',
+    observedDate: args.observedDate.slice(0, 10),
+    effectiveFrom: args.scope.from,
+    effectiveUntil: args.scope.until,
+    scope: args.scope,
+    athleteReportedLevel,
     createdAt: now,
     updatedAt: now,
     resolvedAt: null,

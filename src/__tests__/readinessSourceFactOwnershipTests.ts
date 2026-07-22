@@ -42,7 +42,7 @@ import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjust
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
-import { isInjurySourceFact, createTemporaryFatigueFact, composeTemporarySourceFactCompatibility, isTemporarySourceFactConstraint } from '../rules/temporarySourceFact';
+import { isInjurySourceFact, createTemporaryFatigueFact, createTemporaryIllnessFact, composeTemporarySourceFactCompatibility, isTemporarySourceFactConstraint } from '../rules/temporarySourceFact';
 import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
 import { resolveWeekWithConditioning, addDays } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -198,7 +198,15 @@ function activeReadinessFacts(): TemporarySourceFact[] {
     useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
   return facts.filter((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
     'factKind' in fact &&
-    (fact.factKind === 'fatigue' || fact.factKind === 'soreness' || fact.factKind === 'poor_sleep'));
+    (fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
+      fact.factKind === 'poor_sleep' || fact.factKind === 'illness'));
+}
+
+function activeIllnessFacts(): TemporarySourceFact[] {
+  const facts = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
+  return facts.filter((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
+    'factKind' in fact && fact.factKind === 'illness');
 }
 
 /** DEVICE-EXACT seed install — establishes a real `acceptedCompositionBase` the way
@@ -698,6 +706,67 @@ async function main(): Promise<void> {
     const unlinkedAfter = ledger().find((a) => a.id === (unlinked as { id: string }).id);
     assert(unlinkedAfter && unlinkedAfter.status === 'active',
       'clearing the fact must NOT touch an unlinked adjustment');
+  });
+
+  // ── Invariant R13 (illness severity doctrine — minor is INERT): a minor illness
+  // fact is a sibling health fact that follows the same non-mutation boundary as
+  // minor fatigue. It commits OFF the §18 mutation gate (record-only, zero
+  // derivation) even when whole-week re-validation WOULD reject. The adjustment is
+  // strictly opt-in via the "soften today?" offer.
+  await run('R13 illness-inert: a minor illness fact commits off the §18 mutation gate', async () => {
+    const dateScope = { kind: 'date' as const, date: WEEK, from: WEEK, until: WEEK };
+    const wouldReject = { beforeEffectiveValidation: () => { throw new Error('SIMULATED §18 whole-week rejection'); } };
+    seed();
+    const minor = createTemporaryIllnessFact({
+      observedDate: WEEK, scope: dateScope, severity: 'minor',
+      sourceSurface: 'week_readiness_sheet',
+    });
+    const result = await transactTemporarySourceFact({
+      operation: 'create', fact: minor, todayISO: WEEK, testHooks: wouldReject,
+    });
+    assert(!/safely_rejected|conflicted/.test(result.outcome),
+      `minor illness fact must commit off the §18 mutation gate, got outcome=${result.outcome}`);
+    assert(activeIllnessFacts().length === 1,
+      `minor illness fact did not persist (count=${activeIllnessFacts().length})`);
+  });
+
+  // ── Invariant R14 (illness severity doctrine — severe is DERIVING): a severe
+  // illness fact composes an auto-protect constraint, so it changes the composition
+  // signature and can NEVER be misclassified inert — it stays gated by §18
+  // validation exactly as severe fatigue does.
+  await run('R14 illness-deriving: a severe illness fact stays gated by §18 validation', async () => {
+    const weekScope = { kind: 'week' as const, weekStart: WEEK, from: WEEK, until: addDays(WEEK, 6) };
+    const wouldReject = { beforeEffectiveValidation: () => { throw new Error('SIMULATED §18 whole-week rejection'); } };
+    seed();
+    const severe = createTemporaryIllnessFact({
+      observedDate: WEEK, scope: weekScope, severity: 'severe',
+      sourceSurface: 'week_readiness_sheet',
+    });
+    const result = await transactTemporarySourceFact({
+      operation: 'create', fact: severe, todayISO: WEEK, testHooks: wouldReject,
+    });
+    assert(/safely_rejected/.test(result.outcome),
+      `severe illness fact must stay gated by §18 validation, got outcome=${result.outcome}`);
+    // The severity boundary is the shared one: a severe illness composes a
+    // source-fact constraint (deriving), a minor one composes none (inert).
+    const composed = composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: [createTemporaryIllnessFact({
+        observedDate: WEEK, scope: weekScope, severity: 'severe',
+        sourceSurface: 'week_readiness_sheet',
+      })],
+      activeConstraints: [],
+    });
+    assert(composed.activeConstraints.some((c) => isTemporarySourceFactConstraint(c)),
+      'a severe illness fact must compose a source-fact (auto-protect) constraint');
+    const inertCompose = composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: [createTemporaryIllnessFact({
+        observedDate: WEEK, scope: { kind: 'date', date: WEEK, from: WEEK, until: WEEK },
+        severity: 'minor', sourceSurface: 'week_readiness_sheet',
+      })],
+      activeConstraints: [],
+    });
+    assert(!inertCompose.activeConstraints.some((c) => isTemporarySourceFactConstraint(c)),
+      'a minor illness fact must compose NO source-fact constraint (inert)');
   });
 
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);
