@@ -153,6 +153,8 @@ export interface ReversibleAdjustmentCreationInput {
   sourceActionOrIntentId: string;
   sourceProducer?: 'tap' | 'coach' | 'system';
   sourceTurnId?: string;
+  /** Temporary source fact that authored this adjustment (for cascade-revert). */
+  sourceFactId?: string;
   proposal: AcceptedStateTransactionProposal;
   affectedDates?: readonly string[];
   restorationTarget?: Partial<ReversibleAdjustmentRestorationTarget>;
@@ -452,14 +454,19 @@ export function stageAcceptedStateTransaction(
         ...context,
         acceptedProfileSnapshot: proposal.acceptedProfileSnapshot ?? {
           ...context.acceptedProfileSnapshot,
-          updatedAt: new Date().toISOString(),
+          updatedAt: appDateNow().toISOString(),
           sourceRevision: context.revision,
           onboardingData: profile,
         },
       });
     }
   } else {
-    const now = new Date().toISOString();
+    // Controllable clock (appDateNow) for the accepted-profile snapshot — the
+    // rest of the accepted-state path already uses it. A raw `new Date()` here
+    // let the profile-snapshot capturedAt drift from the rollback-captured
+    // pre-state, producing a false `accepted_state_rollback_mismatch` under a
+    // frozen test clock. See docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md.
+    const now = appDateNow().toISOString();
     context = normalizeAcceptedMaterialContext({
       ...context,
       acceptedProfileSnapshot: {
@@ -1037,6 +1044,7 @@ export function stageReversibleAdjustmentCreationTransaction(
     sourceActionOrIntentId: input.sourceActionOrIntentId,
     ...(input.sourceProducer ? { sourceProducer: input.sourceProducer } : {}),
     ...(input.sourceTurnId ? { sourceTurnId: input.sourceTurnId } : {}),
+    ...(input.sourceFactId ? { sourceFactId: input.sourceFactId } : {}),
     createdAt,
     acceptedRevision: firstStage.context.revision,
     status: 'active',
@@ -1179,6 +1187,8 @@ export function commitExplicitLoadEditLedgerFromBaseline(args: {
   affectedDates: readonly string[];
   sourceActor?: ReversibleAdjustmentActor;
   sourceSurface?: ReversibleAdjustmentSurface;
+  /** Temporary source fact that authored this edit (for cascade-revert on clear). */
+  sourceFactId?: string;
 }): ReversibleAdjustmentRecord | null {
   const afterState = useProgramStore.getState();
   const afterProgram = programSurfaces(afterState);
@@ -1262,6 +1272,7 @@ export function commitExplicitLoadEditLedgerFromBaseline(args: {
     sourceActor: args.sourceActor ?? 'athlete',
     sourceSurface: args.sourceSurface ?? 'coach_chat',
     sourceActionOrIntentId: args.sourceActionOrIntentId,
+    ...(args.sourceFactId ? { sourceFactId: args.sourceFactId } : {}),
     createdAt,
     acceptedRevision: afterContext.revision,
     status: 'active',

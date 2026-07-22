@@ -166,6 +166,14 @@ export interface ReversibleAdjustmentRecord {
   sourceActor: ReversibleAdjustmentActor;
   sourceSurface: ReversibleAdjustmentSurface;
   sourceActionOrIntentId: string;
+  /**
+   * First-class link to the temporary source fact that authored this adjustment,
+   * when it was made in response to one (e.g. a lighter-day trim accepted after a
+   * readiness report). Clearing that fact cascade-reverts this adjustment
+   * generically — no per-feature special case. Absent for adjustments with no
+   * originating fact.
+   */
+  sourceFactId?: string;
   /** Optional producer detail retained by newer canonical transactions. */
   sourceProducer?: 'tap' | 'coach' | 'system';
   /** Optional producer-turn correlation; never part of fixture/session identity. */

@@ -64,6 +64,22 @@ E2E_METRO_URL=http://127.0.0.1:8081 scripts/dev-e2e/run-maestro-ios.sh \
   protocol or reseed. This blocks naive persistence testing — known issue.
 - Simulator ignores synthetic keystrokes from screen-control agents; use
   clipboard paste. (Irrelevant inside Claude Code — Maestro types fine.)
+- **Headless device-exact seed repro: durable-restore `capturedAt` epoch-0
+  artifact (known gap, no fix).** When a headless test installs a seed the
+  device-exact way (`seedOnboardingProgram` + `commitAcceptedStateTransaction`,
+  `preserveExactAcceptedWorkouts`) and then drives a durable source-fact commit
+  that rolls back, the rollback can fail with
+  `accepted_state_rollback_mismatch` because the restored
+  `acceptedProfileSnapshot.capturedAt` normalises to `1970-01-01` (epoch-0) while
+  the captured pre-state holds the install timestamp. This is a
+  localStorage-mock persistence-fidelity gap on the *restore* side — NOT the
+  `new Date()` drift (that was fixed 2026-07-22: the accepted-profile snapshot
+  now uses `appDateNow()`, and a frozen test clock makes the install-side
+  `capturedAt` deterministic). It masks the real rejection reason in
+  device-exact repros. The normal suite seed (R1-style: normalized context, no
+  profile snapshot) does NOT hit it. Freeze the clock and prefer the R1-style
+  seed for repros; don't re-diagnose the epoch-0 as a product bug.
+  See `docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md`.
 
 ## Known pre-existing reds (do not re-investigate)
 

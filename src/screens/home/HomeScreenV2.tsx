@@ -36,11 +36,9 @@ import { guidedInjuryResultFromConstraint } from '../../utils/guidedInjuryContro
 import type { ActiveInjuryConstraint } from '../../store/coachUpdatesStore';
 import { shortDayMonthLabel, todayISOLocal } from '../../utils/appDate';
 import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
-import {
-  loadReductionModifierIdForDate,
-  recoveryModeModifierIdForDate,
-} from '../../utils/tapProgramModifiers';
-import { poorSleepConstraintId } from '../../utils/readinessConstraints';
+import { resolveVisibleReadinessState } from '../../utils/visibleReadinessState';
+import { buildReadinessAcknowledgment, type ReadinessAcknowledgment } from '../../utils/readinessAcknowledgment';
+import { applyLighterDayForToday } from '../../utils/lighterDayTransaction';
 import type { MissedSession, MissedSessionResponse } from '../../utils/missedSessions';
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
@@ -199,48 +197,25 @@ export default function HomeScreenV2() {
   // Active state is derived from the EXISTING tap modifiers for the
   // currently selected week (ids are week-keyed by Monday).
   const [readinessVisible, setReadinessVisible] = useState(false);
+  const [readinessAck, setReadinessAck] = useState<ReadinessAcknowledgment | null>(null);
+  // Opt-in "make today lighter" offer, shown after a today-scoped readiness report.
+  const [lighterDayOffer, setLighterDayOffer] = useState<{ date: string } | null>(null);
+  const [lighterDayBusy, setLighterDayBusy] = useState(false);
   const [readinessInjuryVisible, setReadinessInjuryVisible] = useState(false);
   const weekAnchorISO = weekDays[0]?.date ?? todayISOLocal();
   const readinessActiveConstraints = useCoachUpdatesStore((s: any) => s.activeConstraints) ?? [];
-  const weekReadiness = useMemo(() => {
-    const todayISO = todayISOLocal();
-    const ids = [
-      recoveryModeModifierIdForDate(weekAnchorISO),
-      loadReductionModifierIdForDate(weekAnchorISO),
-      poorSleepConstraintId(weekAnchorISO, 'repeated'),
-    ];
-    const match = readinessActiveConstraints.find((c: any) => {
-      if (!ids.includes(c.id)) return false;
-      const end = typeof c.expiresAt === 'string' ? c.expiresAt : undefined;
-      return !(end && end < todayISO);
-    });
-    if (match) {
-      return {
-        id: match.id as string,
-        isRecovery: match.id === ids[0],
-        title: String(match.modifierTitle ?? match.reasonLabel ?? 'Readiness adjusted'),
-        scope: 'week' as const,
-      };
-    }
-    const todayPoorSleepId = poorSleepConstraintId(todayISO, 'single_night');
-    const todayPoorSleep = readinessActiveConstraints.find((c: any) =>
-      c.id === todayPoorSleepId && !(c.expiresAt && c.expiresAt < todayISO));
-    if (isThisWeek && todayPoorSleep) {
-      return {
-        id: todayPoorSleep.id as string,
-        isRecovery: false,
-        title: String(todayPoorSleep.modifierTitle ?? 'Poor sleep adjustment active'),
-        scope: 'today' as const,
-      };
-    }
-    if (!isThisWeek || !todayReadinessModifier) return null;
-    return {
-      id: todayReadinessModifier.id,
-      isRecovery: false,
-      title: todayReadinessModifier.title,
-      scope: 'today' as const,
-    };
-  }, [isThisWeek, readinessActiveConstraints, todayReadinessModifier, weekAnchorISO]);
+  // Pure projection of the canonical readiness source facts (+ preserved legacy
+  // recovery-mode path). See docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md
+  // — a fatigue "tired today" fact now flips this card because the label reads the
+  // fact the write produces, not the legacy tap-* constraint-id scheme.
+  const weekReadiness = useMemo(() => resolveVisibleReadinessState({
+    readinessFacts,
+    activeConstraints: readinessActiveConstraints,
+    weekAnchorISO,
+    todayISO: todayISOLocal(),
+    isThisWeek,
+    todayReadinessModifier,
+  }), [isThisWeek, readinessActiveConstraints, readinessFacts, todayReadinessModifier, weekAnchorISO]);
   const activeEquipmentFact = equipmentFacts.find((fact) => fact.status === 'active') ?? null;
   const readinessProgrammingEffectFactIds = useMemo(() => new Set(
     activeConstraints.flatMap((constraint) => constraint.temporarySourceFactIds ?? []),
@@ -686,7 +661,7 @@ export default function HomeScreenV2() {
         {/* ── Weekly readiness ("I'm not 100%") — all phases, week-level ── */}
         {isNormal && (
           <Pressable
-            onPress={() => setReadinessVisible(true)}
+            onPress={() => { setReadinessAck(null); setReadinessVisible(true); }}
             style={({ pressed }) => [pressed && { opacity: 0.75 }]}
             testID={weekReadiness
               ? explorerTestId.readinessUpdate(weekReadiness.id)
@@ -807,13 +782,37 @@ export default function HomeScreenV2() {
       <WeekReadinessSheet
         visible={readinessVisible}
         active={weekReadiness}
-        onClose={() => setReadinessVisible(false)}
+        acknowledgment={readinessAck}
+        lighterDayOffer={lighterDayOffer}
+        lighterDayBusy={lighterDayBusy}
+        onClose={() => { setReadinessVisible(false); setReadinessAck(null); setLighterDayOffer(null); }}
         onApply={async (kind) => {
-          await handleApplyWeekReadiness(kind, weekAnchorISO);
-          setReadinessVisible(false);
+          // Acknowledge unconditionally — never close in silence. On success the
+          // sheet transitions to the adjusted/acknowledged state (active is now
+          // set); on failure the error acknowledgment is shown in place.
+          const result = await handleApplyWeekReadiness(kind, weekAnchorISO);
+          setReadinessAck(buildReadinessAcknowledgment(result));
+          // Opt-in lighter-day offer after a today-scoped report.
+          const todayScoped = kind === 'tired_today' || kind === 'poor_sleep_today' || kind === 'sore_today';
+          setLighterDayOffer(result?.ok && todayScoped ? { date: todayISOLocal() } : null);
         }}
+        onAcceptLighterDay={async (date) => {
+          setLighterDayBusy(true);
+          try {
+            const outcome = await applyLighterDayForToday({ date, todayISO: date });
+            setLighterDayOffer(null);
+            setReadinessAck(outcome.ok
+              ? { tone: 'success', message: outcome.message }
+              : { tone: 'error', message: outcome.message });
+          } finally {
+            setLighterDayBusy(false);
+          }
+        }}
+        onDeclineLighterDay={() => setLighterDayOffer(null)}
         onClear={async (modifierId) => {
           await handleClearWeekReadiness(modifierId);
+          setReadinessAck(null);
+          setLighterDayOffer(null);
           setReadinessVisible(false);
         }}
         onInjury={() => {
@@ -2041,8 +2040,13 @@ function MissedChip({ label, primary, onPress }: {
 interface WeekReadinessSheetProps {
   visible: boolean;
   active: { id: string; isRecovery: boolean; title: string; scope: 'today' | 'week' } | null;
+  acknowledgment: ReadinessAcknowledgment | null;
+  lighterDayOffer: { date: string } | null;
+  lighterDayBusy: boolean;
   onClose: () => void;
   onApply: (kind: WeekReadinessAction) => void | Promise<void>;
+  onAcceptLighterDay: (date: string) => void | Promise<void>;
+  onDeclineLighterDay: () => void;
   onClear: (modifierId: string) => void | Promise<void>;
   onInjury: () => void;
   onShortTime: () => void;
@@ -2055,8 +2059,13 @@ interface WeekReadinessSheetProps {
 function WeekReadinessSheet({
   visible,
   active,
+  acknowledgment,
+  lighterDayOffer,
+  lighterDayBusy,
   onClose,
   onApply,
+  onAcceptLighterDay,
+  onDeclineLighterDay,
   onClear,
   onInjury,
   onShortTime,
@@ -2067,7 +2076,8 @@ function WeekReadinessSheet({
     if (visible) setUpdating(false);
   }, [visible]);
 
-  const showOptions = !active || updating;
+  // While the opt-in lighter-day offer is showing, don't re-show the option list.
+  const showOptions = (!active || updating) && !lighterDayOffer;
 
   const pulseIcon = (color: string) => (
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -2077,7 +2087,40 @@ function WeekReadinessSheet({
 
   return (
     <Sheet visible={visible} onClose={onClose} testID="home-week-readiness-sheet">
-      {!showOptions && active && (
+      {acknowledgment && (
+        <View
+          testID={acknowledgment.tone === 'success'
+            ? 'home-week-readiness-ack-success'
+            : 'home-week-readiness-ack-error'}
+          style={[styles.readinessAck, acknowledgment.tone === 'error' && styles.readinessAckError]}
+        >
+          <Text style={styles.readinessAckText}>{acknowledgment.message}</Text>
+        </View>
+      )}
+      {lighterDayOffer && (
+        <View testID="home-week-readiness-lighter-offer">
+          <Text style={styles.sheetTitle}>Make today lighter?</Text>
+          <Text style={styles.busyAwayEmpty}>
+            I'll keep your main lift but trim the volume, drop any finisher, and ease hard conditioning.
+            Nothing permanent — you can undo it anytime.
+          </Text>
+          <SheetOption
+            label="Yes — make today lighter"
+            testID="readiness-lighter-accept"
+            accent
+            icon={pulseIcon('#C8FF00')}
+            onPress={() => { if (!lighterDayBusy) onAcceptLighterDay(lighterDayOffer.date); }}
+          />
+          <SheetOption
+            label="No thanks — keep it as planned"
+            testID="readiness-lighter-decline"
+            icon={pulseIcon('#8A94A6')}
+            onPress={onDeclineLighterDay}
+          />
+          <Button label="Done" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
+        </View>
+      )}
+      {!showOptions && !lighterDayOffer && active && (
         <View>
           <Text style={styles.sheetTitle}>{active.title}</Text>
           <Text style={styles.busyAwayEmpty}>
@@ -2644,6 +2687,13 @@ const styles = StyleSheet.create({
   // Weekly readiness card = same treatment with a wellbeing tint.
   readinessIconTint: { backgroundColor: 'rgba(255, 122, 133, 0.12)' },
   equipmentIconTint: { backgroundColor: 'rgba(198, 255, 107, 0.12)' },
+  readinessAck: {
+    backgroundColor: 'rgba(198, 255, 0, 0.12)',
+    borderRadius: 12, paddingVertical: spacing.sm, paddingHorizontal: spacing.md,
+    marginBottom: spacing.md,
+  },
+  readinessAckError: { backgroundColor: 'rgba(255, 122, 133, 0.14)' },
+  readinessAckText: { color: 'rgba(255,255,255,0.92)', fontSize: 14, lineHeight: 20 },
   busyAwayEmpty: {
     color: 'rgba(255,255,255,0.6)', fontSize: 14, lineHeight: 20,
     marginVertical: spacing.sm,

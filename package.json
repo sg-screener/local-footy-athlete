@@ -17,7 +17,7 @@
     "test:qa:local": "npm run test:qa",
     "test:bounds": "sucrase-node src/__tests__/blockBoundsTests.js",
     "qa:athlete": "sucrase-node src/__tests__/scenarioQA/index.ts",
-    "test:bible": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleConformance/runSlice1.ts && npm run test:section18-planner && npm run test:section18-v2 && npm run test:section18-safety && npm run test:section18-gateway && npm run test:whole-week-repair && npm run test:accepted-state-transactions && npm run test:athlete-session-deletion && npm run test:athlete-session-move && npm run test:phase-clock && npm run test:section18-ownership",
+    "test:bible": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleConformance/runSlice1.ts && npm run test:section18-planner && npm run test:section18-v2 && npm run test:section18-safety && npm run test:section18-gateway && npm run test:whole-week-repair && npm run test:accepted-state-transactions && npm run test:athlete-session-deletion && npm run test:athlete-session-move && npm run test:phase-clock && npm run test:section18-ownership && npm run test:readiness-ownership",
     "test:bible:extended": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleConformance/runExtended.ts && npm run test:section18-planner && npm run test:section18-v2 && npm run test:section18-safety && npm run test:section18-gateway && npm run test:accepted-state-transactions && npm run test:athlete-session-deletion",
     "test:bible:report": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleConformance/runExtended.ts --report && npm run test:section18-planner && npm run test:section18-v2 && npm run test:section18-safety && npm run test:section18-gateway && npm run test:accepted-state-transactions && npm run test:athlete-session-deletion",
     "test:section18-planner": "TZ=Australia/Melbourne sucrase-node src/__tests__/section18PhasePlannerTests.ts",
@@ -186,7 +186,8 @@
     "test:testing-bias": "sucrase-node src/__tests__/testingBiasTests.ts",
     "dev:coach-semantic-active": "EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE=active EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE=1 expo start --clear",
     "e2e:maestro:ios": "scripts/dev-e2e/run-maestro-ios.sh",
-    "e2e:explorer-nine:live": "sucrase-node scripts/run-explorer-nine-live.ts"
+    "e2e:explorer-nine:live": "sucrase-node scripts/run-explorer-nine-live.ts",
+    "test:readiness-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessSourceFactOwnershipTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

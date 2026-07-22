@@ -540,6 +540,16 @@ function globalConstraint(
     projectionScore(right) - projectionScore(left) ||
     right.updatedAt.localeCompare(left.updatedAt))[0];
   const severity = projectionScore(strongest);
+  // Minor-tier contextual facts (severity < 4 = the exposure engine's `minor`
+  // tier: slight/"tired today" fatigue, single-night poor sleep) are RECORD-ONLY.
+  // They compose NO active constraint, so they have ZERO derivation effect on week
+  // resolution / §18 — merely saying "I'm tired" must not mutate the program
+  // (adjustment is strictly opt-in via the lighter-day offer). The readiness
+  // witness signal is emitted separately by `readinessProjection`, so the card
+  // still reflects the fact. Severe tiers (≥4) keep their auto-protect behaviour.
+  // Product decision (Sam, 2026-07-22); see
+  // docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md.
+  if (severity < 4) return null;
   const dateScoped = facts.every((fact) => fact.scope.kind === 'date') &&
     new Set(facts.map((fact) => fact.effectiveFrom)).size === 1;
   const poorSleep = strongest.factKind === 'poor_sleep' ? strongest : null;

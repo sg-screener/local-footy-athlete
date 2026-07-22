@@ -276,6 +276,20 @@ export async function commitTemporarySourceFactSet(
     activeConstraints: ownership.context.activeConstraints,
     readinessSignalsByDate: ownership.context.readinessSignalsByDate,
   });
+  // A fact commit that composes NO change to the exposure-affecting (source-fact)
+  // constraints is INERT: it changes no visible program, so it must NOT re-run the
+  // whole-week §18 MUTATION gate. A contextual signal is not a program mutation —
+  // it commits off that boundary (Q4/Q5; Sam 2026-07-22). Deriving facts (which
+  // add or remove a source-fact constraint, e.g. severe fatigue / injury) still run
+  // the gate. This is the fix for the whole-week §18 gateway firing on a record-only
+  // fact commit. See docs/READINESS_SOURCE_FACT_REASSESSMENT_2026-07-22.md.
+  const sourceFactConstraintSignature = (constraints: readonly unknown[]): string =>
+    JSON.stringify((constraints as Array<{ id?: string; type?: string; severity?: number }>)
+      .filter((constraint) => isTemporarySourceFactConstraint(constraint as never))
+      .map((constraint) => ({ id: constraint.id, type: constraint.type, severity: constraint.severity }))
+      .sort((left, right) => String(left.id).localeCompare(String(right.id))));
+  const inertComposition = sourceFactConstraintSignature(ownership.context.activeConstraints)
+    === sourceFactConstraintSignature(compatibility.activeConstraints);
   const horizon = affectedHorizon(args.todayISO, normalizedFacts);
   const baseFingerprint = semanticFingerprint(compositionBase.surfaces);
   const ledgerFingerprint = semanticFingerprint(compositionBase.surfaces.reversibleAdjustmentLedger);
@@ -296,12 +310,14 @@ export async function commitTemporarySourceFactSet(
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         acceptedCompositionBase: compositionBase,
       });
-      args.testHooks?.beforeEffectiveValidation?.();
-      validateEffectiveComposition({
-        base: compositionBase,
-        context: nextContext,
-        weekStarts: horizon.weeks,
-      });
+      if (!inertComposition) {
+        args.testHooks?.beforeEffectiveValidation?.();
+        validateEffectiveComposition({
+          base: compositionBase,
+          context: nextContext,
+          weekStarts: horizon.weeks,
+        });
+      }
       return commitAcceptedStateTransaction({
         reason: args.reason,
         program: compositionBase.surfaces,
@@ -311,7 +327,13 @@ export async function commitTemporarySourceFactSet(
         activeInjury: compatibility.activeInjury,
         readinessSignalsByDate: compatibility.readinessSignalsByDate,
         acceptedCompositionBase: compositionBase,
-        validateWeekStarts: horizon.weeks,
+        // Inert facts commit off the mutation boundary: no whole-week §18 re-gate,
+        // AND the exact accepted program surfaces are preserved (no re-canonicalise).
+        // Re-canonicalising a record-only fact mutates `acceptedCompositionBase.surfaces`,
+        // which `verifyCandidate` rejects with
+        // `accepted_composition_base_changed_by_temporary_fact` (the on-device failure).
+        validateWeekStarts: inertComposition ? [] : horizon.weeks,
+        preserveExactAcceptedWorkouts: inertComposition ? true : undefined,
         skipConstraintProjection: true,
       });
     },
