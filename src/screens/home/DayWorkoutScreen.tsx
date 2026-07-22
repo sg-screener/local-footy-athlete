@@ -76,6 +76,8 @@ function DayWorkoutScreenClassic() {
     isFinished,
     justSaved,
     savedFeedbackReceipt,
+    persistedReceipt,
+    isAlreadyComplete,
     editingWeightId,
     editingWeightText,
     setEditingWeightText,
@@ -574,8 +576,15 @@ function DayWorkoutScreenClassic() {
 
         <RecoveryAddonSection addons={workout.recoveryAddons ?? []} />
 
-        {/* Post-finish: feedback panel, or "Session logged" success moment. */}
-        {isFinished && date ? (
+        {/* Reopen of a completed session → read-only summary (persisted receipt). */}
+        {isAlreadyComplete && date ? (
+          <SessionCompleteMoment
+            date={date}
+            receipt={persistedReceipt}
+            headline="Session complete"
+          />
+        ) : /* Post-finish: feedback panel, or "Session logged" success moment. */
+        isFinished && date ? (
           justSaved ? (
             <SessionCompleteMoment date={date} receipt={savedFeedbackReceipt} />
           ) : (
@@ -583,11 +592,12 @@ function DayWorkoutScreenClassic() {
           )
         ) : null}
 
-        {/* Finish CTA — hidden once finished (feedback panel takes over).
+        {/* Finish CTA — hidden once finished (feedback panel takes over) or once
+            the session is already complete (read-only summary takes over).
             Labelled "Finish Session" to match DayWorkoutScreenV2's wording
             and keep individual-workout CTA language consistent across the
             Classic/V2 variants. */}
-        {!isFinished && (
+        {!isFinished && !isAlreadyComplete && (
           <View style={styles.buttonContainer}>
             <Button
               onPress={handleFinishWorkout}

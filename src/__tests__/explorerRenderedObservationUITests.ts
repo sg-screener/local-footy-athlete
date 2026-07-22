@@ -16,6 +16,7 @@ import {
 const root = path.resolve(__dirname, '..');
 const read = (relative: string) => fs.readFileSync(path.join(root, relative), 'utf8');
 const hook = read('screens/home/useHomeScreen.ts');
+const home = read('screens/home/HomeScreenV2.tsx');
 const plan = read('screens/home/PlanChangeSheet.tsx');
 const workout = read('screens/home/DayWorkoutScreenV2.tsx');
 const feedback = read('components/SessionFeedbackPanel.tsx');
@@ -56,6 +57,20 @@ check('feedback registers only the transaction result, then observes from comple
   /useEffect\(\(\) => \{[\s\S]*feedbackReceipt\(receipt\.transactionId\)[\s\S]*observeRenderedAthleteActionOutcome/.test(completion));
 check('observation marker contains control, trace and observation identity',
   /markerToken\(controlId\)[\s\S]*'trace'[\s\S]*markerToken\(traceId\)[\s\S]*'observation'[\s\S]*markerToken\(observationId\)/.test(state));
+
+// Visible-verification (GROUPB finding 1): a saved session outcome (persisted
+// receipt) must surface as a completed day card and a read-only reopen — the
+// receipt was already persisted; these pin that the visible layer reads it back.
+check('completed day card is driven by the persisted feedback receipt',
+  /const isCompleted = hasWorkout && feedbackReceipts\.length > 0;/.test(home) &&
+  /isCompleted \? \(/.test(home) &&
+  /label="View summary"/.test(home));
+check('completed sessions show a Done marker in the week list',
+  /\{isCompleted && <Badge label="Done"/.test(home));
+check('reopening a completed session shows a read-only summary, not Finish again',
+  /isAlreadyComplete && date \?/.test(workout) &&
+  /headline="Session complete"/.test(workout) &&
+  /!isFinished && !isAlreadyComplete \?/.test(workout));
 
 __resetDevE2EStateForTest();
 setDevE2ETraceUIObserved(

@@ -96,6 +96,15 @@ export function useDayWorkout() {
     date ? s.weightOverrides[date] : undefined,
   );
   const setWeightOverride = useProgramStore((s: any) => s.setWeightOverride);
+  // A persisted session-outcome receipt for this date means the session was
+  // already finished and saved. Reopening it must show a read-only completed
+  // view, not "Finish Session" again (WORKOUT_2026-07-21 row 2.1 / GROUPB
+  // finding 1). `justSaved` excludes the just-saved transient success moment,
+  // which owns its own auto-dismissing SessionCompleteMoment.
+  const persistedReceipt = useProgramStore((s: any) =>
+    date ? (s.sessionFeedback[date]?.outcomeReceipt ?? null) : null,
+  ) as SessionOutcomeTransactionReceipt | null;
+  const isAlreadyComplete = !!persistedReceipt && !justSaved;
   const [editingWeightId, setEditingWeightId] = useState<string | null>(null);
   const [editingWeightText, setEditingWeightText] = useState('');
 
@@ -469,6 +478,8 @@ export function useDayWorkout() {
     isFinished,
     justSaved,
     savedFeedbackReceipt,
+    persistedReceipt,
+    isAlreadyComplete,
 
     // Weight-override API
     editingWeightId,
