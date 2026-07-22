@@ -606,7 +606,13 @@ function displacedStrengthTemplates(
   const projected = byDay(visibleResolver(input)(input.sourceWorkouts));
   const retainedIds = new Set(source.map((workout) => workout.planEntryId ?? workout.id));
   const inferredDisplacements = input.sourceWorkouts.flatMap((workout) => {
-    if (!hasMainStrength(workout) || isTeamTraining(workout)) return [];
+    // A Team Training anchor day (Team Training + a stacked lift) is admitted
+    // here when its lift is displaced: the relocate-first rule applies to the
+    // strength component exactly as it does to a plain strength day (invariant
+    // 8a → 8c). Only the lift moves — extractRelocatableStrengthComponent keeps
+    // Team Training on its accepted date, so the anchor is never relocated.
+    // Pure Team Training days (no lift) still fall out via !hasMainStrength.
+    if (!hasMainStrength(workout)) return [];
     if (explicitSourceIds.has(workout.planEntryId ?? workout.id)) return [];
     const visible = projected.get(workout.dayOfWeek);
     const displaced = !retainedIds.has(workout.planEntryId ?? workout.id) ||
@@ -617,8 +623,12 @@ function displacedStrengthTemplates(
         record.dependency.restoration.sourcePlanEntryId === workout.planEntryId ||
         record.dependency.displacedSession.sourcePlanEntryId === workout.planEntryId
       ));
+    // On an anchor day only the lift may move; relocating the whole stacked
+    // workout would carry the Team Training anchor with it. Elsewhere, a day
+    // that keeps another visible component relocates only its strength; a fully
+    // displaced plain day relocates whole.
     const keepsAnotherVisibleComponent = !!visible;
-    const relocationTemplate = keepsAnotherVisibleComponent
+    const relocationTemplate = (keepsAnotherVisibleComponent || isTeamTraining(workout))
       ? extractRelocatableStrengthComponent(workout)
       : workout;
     return relocationTemplate ? [{ workout: relocationTemplate, fixtureDisplacement }] : [];
