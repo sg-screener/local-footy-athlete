@@ -368,3 +368,99 @@ Defect 3's withdrawal made them code-hygiene, not correctness, deferred.
 `standard-in-season-week`, iPhone 17 Pro) — confirm the acknowledgment shows, the
 card flips, the witness renders, and the inline lighter-day offer applies +
 undoes. Not yet run.
+
+---
+
+## On-device replay REVERSES the characterization correction — Defect 3 is REAL (2026-07-22)
+
+Ran the on-device pass (iPhone 17 Pro, iOS 26.3, seed
+`standard-in-season-week`, dev bundle carrying this branch). **The write fails on
+device**, which reverses the "Characterization correction" above:
+
+- **Part (a) acknowledgment — VALIDATED on device.** Tapping "Just a bit tired
+  today" no longer closes in silence; it shows the honest error banner
+  (`home-week-readiness-ack-error`): *"Couldn't log that just now — give it
+  another go in a moment."* (verbatim `readinessAcknowledgment.ts`, confirming the
+  device runs this branch). The unconditional-ack fix does exactly its job.
+- **Defect 3 is REAL, not an artifact.** The Metro log shows the fatigue write
+  rejected by the §18 final-week gate:
+  `Section 18 final-week rejection (pattern_restore_failure:strength_patterns |
+  required_minimum_shortfall:conditioning | required_minimum_shortfall:main_strength)`.
+  The contextual fatigue fact, composed into the accepted context, perturbs the
+  re-evaluated effective-week exposure signature (the fatigue constraint
+  limits/blocks max-effort + heavy work), and `assertAcceptedVisibleLedgerEquivalence`
+  rejects the commit for a main_strength/conditioning shortfall vs the stored
+  ledger. **This is the exact mechanism Defect 3 named.**
+- **Why the headless "faithful" seed missed it.** The normalized-context +
+  `commitAcceptedStateTransaction` acceptance used in R1/R5/R6 does NOT reproduce
+  the device seed's stored exposure-contract ledger, so the fatigue composition
+  did not trip the equivalence check in-test. R1's `ok:true` is a **harness
+  fidelity gap**, not production truth. The reassessment's Defect-3 withdrawal is
+  **rescinded**; the generic "visible program could not be verified" collapse and
+  the contextual-fact commit boundary are back in scope.
+- **Consequence for parts (b)/(c):** correctly implemented and unit-green, but
+  **unreachable on device** while the write is rejected — the card cannot flip and
+  the offer is gated on `ok`. They cannot be validated until Defect 3 is fixed.
+
+**STOPPED per instruction (device pass not clean → no merge, no patching in the
+merge path).** Next: fix Defect 3 — the contextual fatigue fact must commit on a
+boundary that does not re-run the whole-week §18 exposure-equivalence gate (Q4/Q5:
+a contextual signal is not a program mutation). Then re-run the on-device pass to
+validate (a)+(b)+(c) end-to-end. The R1/R5/R6 harness must be upgraded to load the
+real device exposure ledger so it reproduces this rejection before the fix.
+
+---
+
+## Defect 3 fix — part 1 landed (inert), part 2 STILL REQUIRED; device unverified (2026-07-22)
+
+Product decision (Sam): **minor-tier (severity < 4) fatigue/readiness facts are
+RECORD-ONLY** — witness/card state, zero derivation effect; program change strictly
+opt-in via the lighter-day offer. Severe tiers (cooked=8, sore 5-7, repeated poor
+sleep=5) keep their existing auto-protect behaviour **unchanged this branch**
+(disclosed + reversible as today). Injury rides a separate owned channel
+(`composeInjuryCompatibility` → `buildInjuryConstraint`), unaffected. Post-v1
+product review logged: whether severe reports become ask-first with a pre-selected
+recommendation, informed by Journal fatigue data.
+
+**Part 1 — LANDED (inert fact).** `globalConstraint` (`temporarySourceFact.ts`)
+returns record-only (no `ActiveFatigueConstraint`) when `severity < 4`, so a slight
+"tired today" / single-night poor-sleep fact composes nothing into
+`activeConstraints`; the `readinessProjection` witness is untouched, so the card
+still reflects it. Pinned by **R7** (compose seam: minor-tier composes no
+constraint, witness preserved, severe unchanged) and **R8** (a committed minor-tier
+fact leaves the resolved week byte-identical). `test:bible` green;
+`test:temporary-source-facts` 45/45; §18 ownership 12/12; readiness suite 8/8.
+
+**Part 2 — STILL REQUIRED (non-mutation boundary).** Part 1 alone does NOT resolve
+the device rejection. The device fatigue commit is rejected by the WHOLE-WEEK §18
+gateway (`validateEffectiveComposition` → `canonicaliseAcceptedStateCandidate` →
+`requireSection18AcceptedWeek`) with the signature
+`pattern_restore_failure:strength_patterns ×4 | required_minimum_shortfall:{conditioning,main_strength}`
+— the **same gateway-repair-search fragility the §18 stage-2 diagnosis found on
+`standard-in-season-week` with NO fatigue at all**. So the commit re-runs a
+whole-week §18 mutation gate that a *contextual* fact should never trigger. Per the
+Q4/Q5 ownership and Sam's directive, the fact must commit on a boundary that does
+not re-run that gate. **Not yet implemented.**
+
+**Verification impasse (documented honestly).**
+- On-device (post part-1, iPhone 17 Pro): the sheet still shows the honest error
+  banner (part (a) working) — the write is still `ok:false`. Could not capture the
+  exact post-fix reason: the device has two Metro instances and the file log
+  capture went dead after relaunch; the Maestro driver was crashing mid-flow.
+- Headless CANNOT reproduce the rejection: `canonicaliseAcceptedStateCandidate` on
+  the device-exact-installed `standard-in-season-week` accepted week PASSES §18
+  re-validation both with and without the slight fatigue constraint, with and
+  without the game day marked. The device-exact durable commit instead trips a
+  `new Date()`-driven `accepted_state_rollback_mismatch` (profile-snapshot
+  `capturedAt`: real-time vs epoch-0) that masks the real path. The standard seed
+  simply does not fail §18 re-validation in-harness where the device does.
+
+**Recommended next steps (for approval):**
+1. Restore a clean single-Metro device environment (one `expo start` logging to a
+   file) so the exact post-part-1 rejection reason is capturable, confirming part 2
+   is the cause vs a bundle-staleness artifact; AND
+2. Implement part 2 tests-first against a **constructed** §18-violating accepted
+   week (since the standard seed passes re-validation in-harness): a contextual
+   (inert) fact commit must succeed even when the whole-week §18 gate would reject
+   the week — proving it commits off the mutation gate. Then re-run the full
+   on-device pass before any merge.

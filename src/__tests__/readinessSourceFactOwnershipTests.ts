@@ -42,7 +42,7 @@ import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjust
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
-import { isInjurySourceFact } from '../rules/temporarySourceFact';
+import { isInjurySourceFact, createTemporaryFatigueFact, composeTemporarySourceFactCompatibility } from '../rules/temporarySourceFact';
 import { resolveWeekWithConditioning, addDays } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { applyLighterDayTrim } from '../utils/lighterDayTrim';
@@ -437,6 +437,66 @@ async function main(): Promise<void> {
     // The readiness fact survives the lighter-day undo.
     assert(activeReadinessFacts().length === 1,
       'undoing the lighter day must not clear the tired-today readiness fact');
+  });
+
+  // ── Invariant R7 (Defect 3 fix, the seam): a minor-tier (severity < 4) fatigue
+  // fact is RECORD-ONLY — it composes NO exposure-affecting active constraint,
+  // while the readiness witness signal is preserved. Severe tiers (cooked, sev 8)
+  // KEEP their constraint (auto-protect unchanged this branch). RED today: current
+  // compose emits an ActiveFatigueConstraint for slight, which reaches the
+  // exposure engine and perturbs the §18 signature (the device rejection source).
+  await run('R7 record-only seam: minor-tier fatigue composes no active constraint; witness preserved; severe unchanged', () => {
+    const dateScope = { kind: 'date' as const, date: WEEK, from: WEEK, until: WEEK };
+    const slight = createTemporaryFatigueFact({
+      observedDate: WEEK, scope: dateScope, athleteReportedLevel: 'slight',
+      reportKind: 'fatigue', sourceSurface: 'week_readiness_sheet',
+    });
+    const composedSlight = composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: [slight], activeConstraints: [], readinessSignalsByDate: {},
+    });
+    const slightFatigueConstraints = (composedSlight.activeConstraints as any[])
+      .filter((c) => c.type === 'fatigue');
+    assert(slightFatigueConstraints.length === 0,
+      `slight fatigue must be RECORD-ONLY (no active constraint), got ${slightFatigueConstraints.length}`);
+    assert(!!composedSlight.readinessSignalsByDate[WEEK],
+      'the readiness witness signal must still be produced for a record-only slight fact');
+
+    // Severe (cooked, severity 8) keeps its auto-protect constraint — unchanged.
+    const weekScope = { kind: 'week' as const, weekStart: WEEK, from: WEEK, until: addDays(WEEK, 6) };
+    const cooked = createTemporaryFatigueFact({
+      observedDate: WEEK, scope: weekScope, athleteReportedLevel: 'cooked',
+      reportKind: 'cooked', sourceSurface: 'week_readiness_sheet',
+    });
+    const composedCooked = composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: [cooked], activeConstraints: [], readinessSignalsByDate: {},
+    });
+    const cookedFatigueConstraints = (composedCooked.activeConstraints as any[])
+      .filter((c) => c.type === 'fatigue');
+    assert(cookedFatigueConstraints.length >= 1,
+      'severe (cooked) fatigue must KEEP its active constraint (auto-protect unchanged this branch)');
+  });
+
+  // ── Invariant R8 (Defect 3 fix, the outcome): committing a minor-tier fatigue
+  // fact has ZERO derivation effect — the resolved week is byte-identical before
+  // and after. "Just saying I'm tired" must not mutate the program (opt-in only).
+  await run('R8 inert-resolution: a committed minor-tier fatigue fact leaves the resolved week byte-identical', async () => {
+    seed();
+    const signature = (): string => JSON.stringify(
+      resolveWeekWithConditioning(WEEK, buildScheduleStateImperative())
+        .map((day) => ({
+          date: day.date,
+          type: day.workout?.workoutType,
+          ex: (day.workout?.exercises ?? []).map((r: any) => ({
+            id: r.exerciseId, sets: r.prescribedSets, kg: r.prescribedWeightKg,
+          })),
+          cond: day.workout?.conditioningBlock?.attachedKind ?? null,
+        })));
+    const before = signature();
+    const result = await reportTiredToday('today_only');
+    assert((result as { ok?: boolean }).ok === true, 'precondition: fatigue write commits');
+    const after = signature();
+    assert(before === after,
+      'a minor-tier fatigue fact changed the resolved week (it must be record-only / inert)');
   });
 
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);
