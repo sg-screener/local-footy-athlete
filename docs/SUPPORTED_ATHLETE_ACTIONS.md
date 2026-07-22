@@ -54,6 +54,41 @@ requested changed, or if a legal action is refused.
 | 4.1 | Add / move / remove a game | BUILT | G−1/G+1 re-derive automatically |
 | 4.2 | Bye this week | BUILT | Unlocks hard-conditioning menu |
 
+### Game day lock (applies to 4.1's session, not the fixture)
+
+Game day's **session** is fully locked: no swap, no add, no override. This is
+the one deliberate exception to the Override principle below — it is not a
+risk-tier warning with a "proceed anyway", it is a hard stop with no
+override choice offered, ever.
+
+- **Tap door menu** — opening "Want to change something?" on a game day
+  offers only two options: **Log Game** and **Move or remove game day**. No
+  Swap / Add affordance is shown at all; the lock is enforced at the menu
+  itself, before any change is even proposed.
+- **Refusal copy (tap door)** — if a locked change is still attempted (e.g.
+  a legacy write path), the refusal is the plain-language: *"It's game day —
+  sessions can't be changed or added here."* Never a raw error code
+  (`protected_game_day` or similar never renders on the visible surface).
+- **What's still editable** — only the session is locked. The fixture entry
+  itself is fully editable via 4.1 (add / move / remove a game) and via
+  **Log Game**; moving or removing the game is not the same action as
+  swapping/adding the training session that sits on that date.
+- **Coach chat is NOT covered by this guarantee.** The plain-language lock
+  above is wired through the tap-door typed transaction only. Per Group 6,
+  coach-driven program mutations are not under test, and the 2026-07-22
+  smoke pass found the coach door still refuses game-day changes with the
+  generic *"couldn't safely preview/validate that revision"* copy (safe —
+  nothing applies, no raw code — but not the specific game-day wording).
+  Do not test coach-chat game-day refusal wording until Group 6 is unblocked.
+
+Status: BUILT (stage 3, `fe01da8`). Test note: pass criteria 1-5 at the top
+of this page do not apply to the locked session itself — a test PASSES here
+when nothing changes and the plain-language refusal (or the no-affordance
+menu) is shown, not when a change previews/applies. Source:
+`docs/audits/SECTION18_SMOKE_2026-07-22.md` ("Game day — swap + add" flow),
+re-verified on-device 2026-07-22 for this page (tap menu still shows only
+Log Game / Move or remove game day, no swap/add affordance).
+
 ## Group 5 — My schedule (rare, settings-level)
 
 | # | Action | Status | Test note |
