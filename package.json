@@ -43,6 +43,7 @@
     "test:chained-mutation-continuity": "TZ=Australia/Melbourne sucrase-node src/__tests__/chainedMutationContinuityTests.ts",
     "test:athlete-session-deletion": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteSessionDeletionTests.ts",
     "test:athlete-session-move": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteSessionMoveTests.ts",
+    "test:athlete-move-occupied-content-loss": "TZ=Australia/Melbourne sucrase-node src/__tests__/athleteMoveOccupiedContentLossTests.ts",
     "test:week-rebuild": "sucrase-node src/__tests__/weekRebuildIntegrationTests.ts",
     "test:block-state": "sucrase-node src/__tests__/programBlockStateTests.ts",
     "test:block-rollover": "sucrase-node src/__tests__/programBlockRolloverTests.ts",
