@@ -558,10 +558,30 @@ green after the fix. Gates: readiness **11/11**; `test:bible` exit 0;
   session but made it lighter: Trimmed accessory volume. You can undo this
   anytime."* MON stays **CORE / Lower Body Strength** (main lift kept) ✓
 
-**OPEN — undo affordance (device pass not fully clean).** The disclosure promises
-"undo anytime," and the transaction-level undo is proven (R6:
-`clearReversibleAdjustment`), but there is **no discoverable UI to undo the
-lighter-day trim**: it's a separate reversible adjustment from the readiness fact,
-and the sheet's "Clear adjustment — I'm good now" clears the *fact*, not the *trim*.
-This needs wiring (either a dedicated undo, or make the readiness clear cascade to
-the linked lighter-day adjustment) before merge — device pass remains the gate.
+**Undo affordance — RESOLVED via cascade (Sam's decision).** Clearing the readiness
+fact now also reverts the linked lighter-day trim, via a **generic** mechanism (no
+per-feature special case):
+- `ReversibleAdjustmentRecord` gained a first-class `sourceFactId`;
+  `applyLighterDayForToday` records the readiness fact that offered the trim.
+- `clear_fatigue_status` cascade-reverts ANY adjustment keyed on that recorded
+  `sourceFactId` through the proven transaction-owned `clearReversibleAdjustment`
+  path, then resolves the fact (no parallel writer).
+- Disclosure copy now points at the mechanism: *"…undo anytime by clearing
+  \"Not 100% today\"."*
+- **R12** (readiness suite): after accepting the trim, clearing the fact (a) removes
+  the fact, (b) reverts the linked adjustment restoring the accepted week
+  byte-identical to pre-offer state (link resolved by RECORDED id); plus no-op
+  cascade (clear with no trim) and unlinked-adjustment-untouched.
+
+**Full device pass — CLEAN (iPhone 17 Pro, confirmed-fresh bundle):**
+- success ack ✓ · card flips to "Not 100% today" ✓ · record-only week unchanged ✓
+- lighter-day offer + mechanism-pointing disclosure ✓
+- **cascade**: "Clear adjustment — I'm good now" → fact removed, trim reverted,
+  **card flips back to "I'm not 100%"** ✓
+
+**Scoreboard:** readiness ownership **12/12** (R1–R12); `test:section18-ownership`
+12/12; `test:bible` exit 0; `test:temporary-source-facts` 45/45; accepted-state
+25/25; weekly-readiness 14/14; tsc clean. Branch commits:
+3247e1e → 66ad92e → da345ba → bb7abb7 → b98ffc6 → f23fd30 → (docs). **Ready for the
+group-A merge on Sam's go-ahead; nothing merged on harness evidence alone — device
+pass is clean.**
