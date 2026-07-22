@@ -677,15 +677,18 @@ function policyFor(input: Pick<
       };
     case 'illness_recovery':
       // Severe-illness recovery week: EVERY §18 minimum is lifted (nothing is
-      // required this week). Remaining work is OPTIONAL and recovery-tier
-      // (light stress, no power, capped strength) — not cleared to rest.
+      // required this week) and all selection is optional. The REDUCTION to
+      // recovery-tier is owned by the severe-illness auto-protect constraint
+      // (prohibited hard/sprint/power), exactly as severe fatigue; the mode's
+      // maximums mirror bye_recovery's proven envelope so the auto-protect
+      // recomposed week is never rejected for a ceiling it already respects.
       return {
         strength: { required: 0, defaultTarget: 0, preferred: { min: 0, max: 2 }, max: 2 },
         conditioning: { required: 0, defaultTarget: 0, preferred: { min: 0, max: tt }, max: null, stress: ['light'], optionalFlush: { min: 0, max: 1 }, requiredAppMediumHardMinimum: 0, requiredAppHardMinimum: 0, permittedHardCoreMaximum: 0 },
-        sprint: { required: 0, preferred: { min: 0, max: 0 }, max: 0 },
+        sprint: { required: 0, preferred: { min: 0, max: 1 }, max: null },
         power: { eligible: false, preferred: { min: 0, max: 0 }, removalReason: 'illness_recovery_mode' },
         rest: { required: 2, preferred: { min: 2, max: 4 } },
-        hardDays: { preferred: { min: 0, max: 0 }, permittedMaximum: 2 },
+        hardDays: { preferred: { min: 0, max: 2 }, permittedMaximum: 4 },
         balance: false,
         selectionKind: 'optional',
       };

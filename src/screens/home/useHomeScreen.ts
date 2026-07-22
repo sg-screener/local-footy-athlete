@@ -1390,15 +1390,19 @@ export function useHomeScreen() {
   ) => {
     const todayISO = todayISOLocal();
     const result = kind === 'sick_week'
-      ? executeProgramControlAction({
-          type: 'set_recovery_mode',
+      ? await executeProgramControlActionDurably({
+          type: 'set_illness_status',
           source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
           scope: 'current_week',
-          payload: { date: anchorDateISO, todayISO, recoveryScope: 'week' },
+          // Bed-ridden = a SEVERE illness week-fact through the standard deriving
+          // path. It derives the illness_recovery §18 week mode (minimums lifted,
+          // remaining work optional/reduced) — no shutdown_week, no recovery-mode
+          // writer. The handler maps severity 'severe' → week scope.
+          payload: { date: anchorDateISO, todayISO, severity: 'severe' },
           requiresRebuild: false,
           createsActiveModifier: true,
           oneOffOnly: false,
-        }, { todayISO, visibleWeek: weekDays })
+        }, { todayISO })
       : kind === 'sniffle_today'
         ? await executeProgramControlActionDurably({
             type: 'set_illness_status',

@@ -555,11 +555,11 @@ export function buildIllnessRecoveryExposureContract(
     // is OPTIONAL, reduced and recovery-tier — not cleared to rest.
     strength: { required: 0, preferredMin: 0, preferredMax: 2, selectedTarget: selected.mainStrength },
     conditioning: { required: 0, preferredMin: 0, preferredMax: teams, selectedTarget: selected.coreConditioning },
-    sprintCod: { required: 0, preferredMin: 0, preferredMax: 0, selectedTarget: selected.sprintHighSpeed },
+    sprintCod: { required: 0, preferredMin: 0, preferredMax: 1, selectedTarget: selected.sprintHighSpeed },
     fullRest: { required: 2, preferredMin: 2, preferredMax: 4 },
     allowCombined: false,
     preferredHardDays: 0,
-    permittedHardDays: 2,
+    permittedHardDays: 4,
   });
   return applyCommonSafetyReductions(contract, input);
 }

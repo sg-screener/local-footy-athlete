@@ -608,11 +608,19 @@ async function transactTemporarySourceFactWithinTrace(
           ? 'temporary time cap'
           : 'report'
     : 'report';
+  // A severe (bed-ridden) illness derives the illness_recovery week mode: nothing
+  // is required this week and the remaining work is optional/reduced. Disclose
+  // that specifically when it lands, rather than the generic recompose line.
+  const severeIllnessLanding = target && !isInjurySourceFact(target) &&
+    target.factKind === 'illness' && 'severity' in target && target.severity === 'severe' &&
+    effectiveOperation === 'create';
   return {
     outcome: `${prefix}_${persisted.changedProgram ? 'and_recomposed' : 'no_program_change'}` as TemporarySourceFactTransactionOutcome,
     factId: targetFactId,
     changedProgram: persisted.changedProgram,
-    message: persisted.changedProgram
+    message: severeIllnessLanding
+      ? "Rest up — nothing's required this week. I've left gentle optional work if you're up to it, at a lighter dose."
+      : persisted.changedProgram
       ? effectiveOperation === 'resolve' || effectiveOperation === 'expire' ||
         effectiveOperation === 'supersede'
         ? `That ${subject} is inactive. The visible program was recomposed from the clean accepted base, restoring only what verification allowed while preserving other active facts and later edits.`

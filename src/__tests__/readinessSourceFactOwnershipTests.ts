@@ -769,6 +769,40 @@ async function main(): Promise<void> {
       'a minor illness fact must compose NO source-fact constraint (inert)');
   });
 
+  // ── Invariant R15 (bed-ridden = severe illness through the standard deriving
+  // path): the readiness sheet's "Sick / run down" tier commits a SEVERE illness
+  // week-fact through the durable path — the same one the tap surface calls. On a
+  // normal in-season week this is now ACCEPTED (never safely_rejected), because
+  // the derived illness_recovery §18 week mode lifts the minimums; the resolved
+  // week is illness_recovery. No shutdown_week, no recovery-mode writer.
+  await run('R15 bed-ridden: a severe illness commit is accepted and derives illness_recovery', async () => {
+    seed();
+    const result = await executeProgramControlActionDurably({
+      type: 'set_illness_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { date: WEEK, todayISO: WEEK, severity: 'severe' },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    } as never, { todayISO: WEEK });
+    assert(result.ok && !/safely_rejected|conflicted/.test(result.message ?? ''),
+      `bed-ridden severe illness must be accepted, got ok=${result.ok} message="${result.message}"`);
+    assert(/nothing's required|optional/i.test(result.message ?? ''),
+      `bed-ridden must disclose the optional/nothing-required recovery week, got "${result.message}"`);
+    assert(activeIllnessFacts().some((fact) => 'severity' in fact && fact.severity === 'severe'),
+      'a severe illness fact must persist after the bed-ridden commit');
+    const regenerated = generateProgramLocally(profile(), {
+      todayISO: WEEK, previousProgram: null, activeConstraints: [], readinessSignal: null,
+      seasonPhaseClock: {
+        protocolVersion: 1, selectedPhase: 'In-season',
+        phaseEntryWeekStartISO: WEEK, originProvenance: 'explicit_user_phase_change',
+      },
+    });
+    assert(regenerated.microcycles[0]?.exposureContract?.identity.mode === 'illness_recovery',
+      `the bed-ridden week must derive illness_recovery, got ${regenerated.microcycles[0]?.exposureContract?.identity.mode}`);
+  });
+
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);
   if (failures.length > 0) {
     console.log('Currently RED (expected pre-fix):');
