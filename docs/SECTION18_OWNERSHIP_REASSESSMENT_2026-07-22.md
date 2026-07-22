@@ -705,3 +705,86 @@ stage 3** (the four residuals amendment 2 enumerated, so none is quietly dropped
 across two error codes; item 2 is the shared code, listed separately per the
 tracking record.) A future stage migrates occupied-day stack adds through a
 transaction-owned stack primitive to finish the retirement.
+
+## Stage 4 landed — disclosed-repair + cross-door; fix group A closed (2026-07-22)
+
+The two remaining red invariants are green. **Scoreboard: #1..#10 and #5 all
+green (11/11).** `test:section18-ownership` is now appended to `test:bible`
+(`package.json`) — the ownership suite is part of the bible gate, and **fix
+group A is closed**.
+
+### #4 disclosed-repair (target 1)
+The Bin/deletion confirmation named only the single relocation `destinationDate`
+while a §18 repair can touch several days (e.g. relocate pull to Wednesday **and**
+empty Friday's optional session — bug 3's exact signature). The addition path
+already discloses its full set (`AthleteAdditionPublishedOutcome.repairedDates` →
+`athleteAdditionDoneMessage`); the deletion path discarded it.
+
+- `AthleteDeletionPublishedOutcome` gained `repairedDates`;
+  `athleteDeletionDoneMessage` (`planChangeProducer.ts`) appends a residual-days
+  clause naming every touched day beyond the target and the already-named
+  destination, in the addition path's voice.
+- **Design correction (same shape as the stage-2/3 corrections).** The first cut
+  sourced `repairedDates` from the reversible adjustment's `affectedDates` (parity
+  with the addition path). That **over-discloses**: `affectedDates` is a
+  fingerprint/marked-day/override diff and flags days whose *visible* content did
+  not change, which broke `athleteSessionDeletionTests` regression 15. The honest
+  source is the **before/after athlete-visible exercise signature** — exactly how
+  the invariant itself defines a changed day — computed in
+  `deriveAthleteDeletionPublishedOutcome` (which already has before/after in
+  scope). `deletionVisibleExerciseSignature` is that per-day signature.
+- `athleteSessionDeletionTests` regression 15's exact-message assertion encoded
+  the old **undisclosed** message; updated to the now-correctly-disclosed message
+  (its structural assertions — Friday absent, Team Training preserved, no
+  reduction — unchanged). Same class of sibling-suite update stage 2 made.
+
+### #5 cross-door (target 2)
+A coach exercise-swap reported "Done" while the accepted row kept its `ex-squat`
+identity, diverging from the tap door. The divergence was **not** the commit
+layer (both doors reach `setManualOverride` → the accepted-state transaction) but
+the coach's own write+verify pipeline: `applyReplaceExercise` renamed the row in
+place (kept `exerciseId: ex-squat`), and a **name-only** `verifyRenderedExerciseSwap`
+then declared "Done" over a row whose identity never changed.
+
+- `runReplaceExercise` (`coachCommandExecutor.ts`) now delegates the WRITE to
+  **`replaceExerciseAtDate`** (the tap-door owner, which mints the
+  `ex-coach-<name>` identity and commits through `setManualOverride`), keeping
+  only the coach front-half (target/source/replacement resolution + clarifiers)
+  and the undo/revert bookkeeping. The door **trusts the owner's result — no
+  separate verifier — exactly as the tap door does**. The coach's AdjustmentEvent
+  write, the name-only verifier, and `composeReplaceExerciseResult` are retired
+  for this path.
+- **Ownership discovery (a later layer didn't own what it looked like it owned).**
+  Past-date protection lived *only* in the coach's `applyEvents` seam
+  (`allowPastDates: false`); `replaceExerciseAtDate` had no such guard, and
+  neither did the tap entry. Rather than re-add a coach-specific guard, past-date
+  protection moved **into the shared owner** (`replaceExerciseAtDate` gained an
+  optional `todayISO`), so **both doors inherit it** — the tap door gains
+  protection it previously lacked. Sam approved routing to the shared owner + this
+  guard placement.
+
+### Test migration
+`coachCommandRouterTests` §15 + 17.6 replace_exercise cases moved off the retired
+AdjustmentEvent apply/verify stubs onto a **real seeded store** (the proven
+`coachActions` module-stub seam: fixture-backed `resolveDateWithConditioning` +
+captured `setManualOverride`), asserting the real owner result and the captured
+override. The **ghost-swap / name-only-verifier test (15.7) was deleted, not
+migrated** (Sam's call): the dual-surface name-only verifier it asserted is the
+exact false-"Done" source this stage removes, so its split-brain state can no
+longer occur. Router suite 597/0.
+
+### Retirement ledger update
+- **Coach `replace_exercise` AdjustmentEvent path + name-only
+  `verifyRenderedExerciseSwap`** are retired *for the coach door* but not deleted:
+  `applyReplaceExercise` and `verifyRenderedExerciseSwap` are still referenced by
+  `programAdjustmentEngineTests` and
+  `bibleConformance/generated/deterministicGenerator.ts`. They become deletion
+  candidates once no prod caller remains.
+- The four legacy single-date-override residuals from stage 3 (occupied-day stack
+  adds; `add_defers_to_legacy_stack`; `no_template_for_category`; removal-constraint
+  re-add) are **unchanged** — still owned by the legacy writer, still tracked above.
+
+### Known unrelated red
+`coachProgramEditDraftTests` §23 (4 assertions) are **pre-existing** source-ordering
+checks on `coachTurnController.ts` (which stage 4 does not touch); they fail
+identically with this stage's changes stashed. Not a stage-4 regression.
