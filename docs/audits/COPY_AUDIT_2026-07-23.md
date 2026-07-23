@@ -74,28 +74,8 @@ nudge), a two-sentence version:
 
 Either way: no field-count enumeration, no `\n`-joined "Key: Value" lines.
 
-### P2-2 — "Gunshow" reads like a leaked internal nickname, not shipped copy
-
-`planChangeProducer.ts:171-172` (`CATEGORY_COPY.accessories`):
-
-```
-label: "Accessories", sub: "Gunshow or prehab - small muscles, big payoff"
-```
-
-`docs/audits/GROUPCD_WORKLIST_2026-07-22.md` line 42 independently refers to
-a *different* screen as "the FRI 'Gunshow' sheet" — in quotes, as a
-team-internal nickname for an accessories-day sheet used during QA
-narration. Finding the same slang term inside actual shipped category copy
-raises the question of which came first: is "Gunshow" intentional Aussie
-gym-slang brand voice (plausible — the App Store description leans casual
-Australian: "Made in Australia for footballers"), or did an internal joke
-name get typed into the copy field and never revisited?
-
-**This needs a founder call, not a unilateral fix** — flagging rather than
-prescribing. If it's intentional, keep it; the brand voice supports casual
-slang. If it's not, the safer default:
-
-> sub: "Arms, core and small stuff - quick payoff"
+**P2-2 (Gunshow) — resolved, not a fix item.** See "Resolved — confirmed
+intentional" below.
 
 ### P2-3 — Coach-chat reason strings written in third person about the athlete, to the athlete
 
@@ -248,6 +228,29 @@ elsewhere in its own fallback branch: "HOW MUCH IS THIS LIMITING YOU?" —
 don't splice free-text into the all-caps template at all. Keep the
 area-name splice only for the fixed preset list, where the grammar is
 guaranteed to work.
+
+---
+
+## Resolved — confirmed intentional
+
+### P2-2 — "Gunshow" (`planChangeProducer.ts:171-172`, `CATEGORY_COPY.accessories`)
+
+```
+label: "Accessories", sub: "Gunshow or prehab - small muscles, big payoff"
+```
+
+Originally flagged as possibly a leaked internal QA nickname rather than
+deliberate copy — `docs/audits/GROUPCD_WORKLIST_2026-07-22.md` line 42
+independently refers to a *different* screen as "the FRI 'Gunshow' sheet,"
+which raised the question of whether the term originated as team-internal
+slang and got typed into shipped copy by accident.
+
+**Confirmed intentional brand voice (Sam, 2026-07-23).** No replacement
+copy needed — the app's casual-Australian voice ("Made in Australia for
+footballers") supports this kind of slang deliberately. A female-friendly
+session variant for the same slot is on the post-v1 roadmap; not a copy fix,
+not part of this audit. This finding is closed and requires no engineering
+action.
 
 ---
 
