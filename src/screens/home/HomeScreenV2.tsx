@@ -768,6 +768,7 @@ export default function HomeScreenV2() {
         weekDays={weekDays}
         onClose={() => setChangeSheetDate(null)}
         onAskCoach={handleMessageCoach}
+        onOpenReadiness={() => { setReadinessAck(null); setReadinessVisible(true); }}
       />
 
       <GameDaySheet
@@ -792,8 +793,9 @@ export default function HomeScreenV2() {
           // set); on failure the error acknowledgment is shown in place.
           const result = await handleApplyWeekReadiness(kind, weekAnchorISO);
           setReadinessAck(buildReadinessAcknowledgment(result));
-          // Opt-in lighter-day offer after a today-scoped report.
-          const todayScoped = kind === 'tired_today' || kind === 'poor_sleep_today' || kind === 'sore_today';
+          // Opt-in lighter-day / "soften today" offer after a today-scoped report.
+          const todayScoped = kind === 'tired_today' || kind === 'poor_sleep_today' ||
+            kind === 'sore_today' || kind === 'sniffle_today';
           setLighterDayOffer(result?.ok && todayScoped ? { date: todayISOLocal() } : null);
         }}
         onAcceptLighterDay={async (date) => {
@@ -818,10 +820,6 @@ export default function HomeScreenV2() {
         onInjury={() => {
           setReadinessVisible(false);
           setReadinessInjuryVisible(true);
-        }}
-        onShortTime={() => {
-          setReadinessVisible(false);
-          setBusyAwayVisible(true);
         }}
       />
 
@@ -1335,6 +1333,10 @@ function DayRow({
     day.workout.workoutType === 'Recovery' ||
     day.workout.sessionTier === 'recovery'
   );
+  // An illness_recovery week keeps its (reduced) sessions rather than clearing to
+  // Rest, marking them sessionTier 'optional'. Such a session must read as OPTIONAL
+  // — nothing required — not the prominent CORE "Start Session" treatment.
+  const isOptionalSession = hasWorkout && day.workout.sessionTier === 'optional';
   // A persisted session-outcome receipt for this day means the athlete finished
   // and saved feedback — the day is complete. Drives the "Done" marker and the
   // read-only completed CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
@@ -1573,6 +1575,11 @@ function DayRow({
             </>
           ) : isTeamOnly ? (
             <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
+          ) : isOptionalSession ? (
+            <>
+              <Text style={styles.expandedMeta}>Optional this week — only if you're up to it. Nothing's required.</Text>
+              <Button label="Start optional session" variant="secondary" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
+            </>
           ) : (
             <>
               {isRecoverySession ? (
@@ -1959,12 +1966,13 @@ function GameDaySheet({
 interface SheetOptionProps {
   label: string;
   icon: React.ReactNode;
+  sub?: string;
   accent?: boolean;
   danger?: boolean;
   onPress: () => void;
   testID?: string;
 }
-function SheetOption({ label, icon, accent, danger, onPress, testID }: SheetOptionProps) {
+function SheetOption({ label, icon, sub, accent, danger, onPress, testID }: SheetOptionProps) {
   return (
     <Pressable
       onPress={onPress}
@@ -1980,7 +1988,14 @@ function SheetOption({ label, icon, accent, danger, onPress, testID }: SheetOpti
       ]}>
         {icon}
       </View>
-      <Text style={[styles.sheetOptionText, danger && { color: '#F44336' }]}>{label}</Text>
+      {sub ? (
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.sheetOptionText, danger && { color: '#F44336' }]}>{label}</Text>
+          <Text style={styles.sheetOptionSub}>{sub}</Text>
+        </View>
+      ) : (
+        <Text style={[styles.sheetOptionText, danger && { color: '#F44336' }]}>{label}</Text>
+      )}
     </Pressable>
   );
 }
@@ -2049,7 +2064,6 @@ interface WeekReadinessSheetProps {
   onDeclineLighterDay: () => void;
   onClear: (modifierId: string) => void | Promise<void>;
   onInjury: () => void;
-  onShortTime: () => void;
 }
 
 /**
@@ -2068,13 +2082,19 @@ function WeekReadinessSheet({
   onDeclineLighterDay,
   onClear,
   onInjury,
-  onShortTime,
 }: WeekReadinessSheetProps) {
   const [updating, setUpdating] = useState(false);
+  // Russian-doll navigation for the option list: three top-level buckets, each
+  // expanding to its leaves. 'sleep' is a leaf of 'flat'. Reset to the top
+  // whenever the list re-shows.
+  const [bucket, setBucket] = useState<'top' | 'flat' | 'sleep' | 'sick'>('top');
 
   React.useEffect(() => {
-    if (visible) setUpdating(false);
+    if (visible) { setUpdating(false); setBucket('top'); }
   }, [visible]);
+  React.useEffect(() => {
+    if (updating) setBucket('top');
+  }, [updating]);
 
   // While the opt-in lighter-day offer is showing, don't re-show the option list.
   const showOptions = (!active || updating) && !lighterDayOffer;
@@ -2084,6 +2104,20 @@ function WeekReadinessSheet({
       <Path d="M22 12h-4l-3 8-6-16-3 8H2" />
     </Svg>
   );
+  // Distinct glyphs per bucket/leaf (X2 icon cleanup — one recognisable shape
+  // each, not the old repeated pulse waveform).
+  const svg = (color: string, children: React.ReactNode) => (
+    <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      {children}
+    </Svg>
+  );
+  const flatIcon = (color: string) => svg(color, <><Path d="M3 8h13v8H3z" /><Path d="M19 11v2" /><Path d="M6 11v2" /></>);
+  const sickIcon = (color: string) => svg(color, <Path d="M14 14.76V5a2 2 0 0 0-4 0v9.76a4 4 0 1 0 4 0z" />);
+  const hurtIcon = (color: string) => svg(color, <><Path d="M12 9v4" /><Path d="M12 17h.01" /><Path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /></>);
+  const moonIcon = (color: string) => svg(color, <Path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />);
+  const zapIcon = (color: string) => svg(color, <Path d="M13 2 3 14h7l-1 8 10-12h-7z" />);
+  const dropletIcon = (color: string) => svg(color, <Path d="M12 2.69 6.34 8.35a8 8 0 1 0 11.31 0z" />);
+  const chevron = (color: string) => svg(color, <Path d="M9 18 15 12 9 6" />);
 
   return (
     <Sheet visible={visible} onClose={onClose} testID="home-week-readiness-sheet">
@@ -2148,33 +2182,49 @@ function WeekReadinessSheet({
         </View>
       )}
 
-      {showOptions && (
+      {showOptions && bucket === 'top' && (
         <View>
           <Text style={styles.sheetTitle}>Not 100%? What's going on?</Text>
           <SheetOption
-            label="Just a bit tired today"
+            label="Feeling flat"
+            sub="Tired, poor sleep, sore or cooked"
+            testID="readiness-bucket-flat"
+            icon={flatIcon('#FFC247')}
+            onPress={() => setBucket('flat')}
+          />
+          <SheetOption
+            label="Sick"
+            sub="Coming down with something, or properly sick"
+            testID="readiness-bucket-sick"
+            icon={sickIcon('#1EA7FF')}
+            onPress={() => setBucket('sick')}
+          />
+          <SheetOption
+            label="Something hurts"
+            sub="A niggle or an injury"
+            testID={explorerTestId.injuryIngress('set')}
+            icon={hurtIcon('#FF7A85')}
+            onPress={onInjury}
+          />
+          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
+        </View>
+      )}
+
+      {showOptions && bucket === 'flat' && (
+        <View>
+          <Text style={styles.sheetTitle}>Feeling flat — what's closest?</Text>
+          <SheetOption
+            label="Bit tired today"
             testID={explorerTestId.readinessOption('tired_today')}
-            icon={pulseIcon('#FFC247')}
+            icon={moonIcon('#FFC247')}
             onPress={() => onApply('tired_today')}
           />
           <SheetOption
-            label="Poor sleep last night"
-            testID={explorerTestId.readinessOption('poor_sleep_today')}
-            icon={pulseIcon('#FFC247')}
-            onPress={() => onApply('poor_sleep_today')}
-          />
-          <SheetOption
-            label="Poor sleep for a few nights"
-            testID={explorerTestId.readinessOption('poor_sleep_week')}
-            icon={pulseIcon('#FF7A85')}
-            onPress={() => onApply('poor_sleep_week')}
-          />
-          <SheetOption
-            label="Cooked / need an easier week"
-            testID={explorerTestId.readinessOption('cooked_week')}
-            accent
-            icon={pulseIcon('#C8FF00')}
-            onPress={() => onApply('cooked_week')}
+            label="Rough sleep"
+            sub="One bad night, or a few in a row"
+            testID="readiness-leaf-sleep"
+            icon={chevron('#8A94A6')}
+            onPress={() => setBucket('sleep')}
           />
           <SheetOption
             label="Sore or tight"
@@ -2183,32 +2233,53 @@ function WeekReadinessSheet({
             onPress={() => onApply('sore_today')}
           />
           <SheetOption
-            label="Sick / run down"
+            label="Totally cooked — easier week"
+            testID={explorerTestId.readinessOption('cooked_week')}
+            accent
+            icon={zapIcon('#C8FF00')}
+            onPress={() => onApply('cooked_week')}
+          />
+          <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('top')} style={{ marginTop: spacing.md }} />
+        </View>
+      )}
+
+      {showOptions && bucket === 'sleep' && (
+        <View>
+          <Text style={styles.sheetTitle}>Rough sleep — how long?</Text>
+          <SheetOption
+            label="Just last night"
+            testID={explorerTestId.readinessOption('poor_sleep_today')}
+            icon={moonIcon('#FFC247')}
+            onPress={() => onApply('poor_sleep_today')}
+          />
+          <SheetOption
+            label="A few nights running"
+            testID={explorerTestId.readinessOption('poor_sleep_week')}
+            icon={moonIcon('#FF7A85')}
+            onPress={() => onApply('poor_sleep_week')}
+          />
+          <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('flat')} style={{ marginTop: spacing.md }} />
+        </View>
+      )}
+
+      {showOptions && bucket === 'sick' && (
+        <View>
+          <Text style={styles.sheetTitle}>Sick — how bad?</Text>
+          <SheetOption
+            label="Coming down with something"
+            sub="Log it — I'll offer to soften today if you want"
+            testID={explorerTestId.readinessOption('sniffle_today')}
+            icon={dropletIcon('#1EA7FF')}
+            onPress={() => onApply('sniffle_today')}
+          />
+          <SheetOption
+            label="Properly sick"
+            sub="Nothing will be required this week — gentle optional work if you're up to it"
             testID={explorerTestId.readinessOption('sick_week')}
-            icon={pulseIcon('#1EA7FF')}
+            icon={sickIcon('#FF7A85')}
             onPress={() => onApply('sick_week')}
           />
-          <SheetOption
-            label="Niggle or injury"
-            testID={explorerTestId.injuryIngress('set')}
-            icon={
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#FF7A85" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M12 9v4" /><Path d="M12 17h.01" /><Path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" />
-              </Svg>
-            }
-            onPress={onInjury}
-          />
-          <SheetOption
-            label="Short on time"
-            testID={explorerTestId.readinessOption('short_time')}
-            icon={
-              <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke="#1EA7FF" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <Path d="M12 6v6l4 2" /><Path d="M12 2a10 10 0 100 20 10 10 0 000-20z" />
-              </Svg>
-            }
-            onPress={onShortTime}
-          />
-          <Button label="Cancel" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
+          <Button label="Back" variant="secondary" size="md" onPress={() => setBucket('top')} style={{ marginTop: spacing.md }} />
         </View>
       )}
     </Sheet>
@@ -3068,6 +3139,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', marginRight: 14,
   },
   sheetOptionText: { fontSize: 16, fontWeight: '500', color: '#FFFFFF' },
+  sheetOptionSub: { fontSize: 13, color: '#8A94A6', marginTop: 2, lineHeight: 17 },
 
   noteBlock: {
     gap: 6, backgroundColor: '#1A1A1A', borderRadius: borderRadius.lg,

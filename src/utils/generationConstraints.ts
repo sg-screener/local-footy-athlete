@@ -21,6 +21,8 @@ import {
   type BibleInjurySeverityBand,
 } from '../rules/injurySeverityBands';
 import { stageReintroductionSeverity } from '../rules/injuryReintroduction';
+import { deriveIllnessRecoveryWeekMode } from '../rules/illnessRecoveryWeekMode';
+import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { constraintAppliesToDate } from './readinessConstraints';
 
 export type GenerationReadinessTier =
@@ -76,6 +78,13 @@ export interface GenerationConstraintContext {
   injuries: GenerationInjuryConstraint[];
   readiness?: GenerationReadinessConstraint;
   activeInjuryKeys: InjuryKey[];
+  /**
+   * §18 week mode minted by the single fact-reading owner
+   * (`deriveIllnessRecoveryWeekMode`). Only the generation path supplies the
+   * facts to derive it; the validation path preserves the mode off the built
+   * contract instead of re-reading facts.
+   */
+  weekMode?: 'illness_recovery';
 }
 
 /** Schedule-history notes describe an accepted mutation; they are not load/readiness inputs. */
@@ -91,6 +100,8 @@ export function buildGenerationConstraintContext(args: {
   activeConstraints?: readonly ActiveConstraint[] | null;
   todayISO: string;
   periodEndISO?: string;
+  /** Raw facts, supplied only by the generation path, to mint the week mode. */
+  temporarySourceFacts?: readonly TemporarySourceFact[] | null;
 }): GenerationConstraintContext | undefined {
   const live = (args.activeConstraints ?? []).filter((constraint) =>
     isStructuralGenerationConstraint(constraint) &&
@@ -110,12 +121,21 @@ export function buildGenerationConstraintContext(args: {
       .flatMap((injury) => injury.injuryKeys),
   ));
 
-  if (injuries.length === 0 && !readiness) return undefined;
+  const weekMode = args.temporarySourceFacts &&
+    deriveIllnessRecoveryWeekMode({
+      temporarySourceFacts: args.temporarySourceFacts,
+      weekStartISO: args.todayISO.slice(0, 10),
+    })
+    ? ('illness_recovery' as const)
+    : undefined;
+
+  if (injuries.length === 0 && !readiness && !weekMode) return undefined;
   return {
     activeConstraintIds: live.map((constraint) => constraint.id),
     injuries,
     readiness,
     activeInjuryKeys,
+    weekMode,
   };
 }
 

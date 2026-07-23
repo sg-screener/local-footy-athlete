@@ -58,6 +58,7 @@ import {
 } from '../store/injuryEpisodeTransaction';
 import {
   createTemporaryFatigueFact,
+  createTemporaryIllnessFact,
   createTemporaryEquipmentFact,
   createTemporaryPoorSleepFact,
   createTemporaryScheduleFact,
@@ -86,6 +87,7 @@ export type ProgramControlActionType =
   | 'clear_recovery_mode'
   | 'set_fatigue_status'
   | 'set_poor_sleep_status'
+  | 'set_illness_status'
   | 'clear_fatigue_status'
   | 'set_injury_modifier'
   | 'clear_injury_modifier'
@@ -189,6 +191,11 @@ export type ProgramControlAction =
       date: string;
       todayISO?: string;
       pattern: PoorSleepPattern;
+    }>
+  | ProgramControlActionBase<'set_illness_status', {
+      date: string;
+      todayISO?: string;
+      severity: 'minor' | 'severe';
     }>
   | ProgramControlActionBase<'clear_fatigue_status', { noteId?: string; modifierId?: string; date?: string }>
   | ProgramControlActionBase<'set_injury_modifier', { constraint?: ActiveInjuryConstraint }>
@@ -697,6 +704,16 @@ function executeProgramControlActionWithinTrace(
         route: route.route,
       };
     }
+    case 'set_illness_status': {
+      return {
+        ok: false,
+        changedProgram: false,
+        requiresRebuild: false,
+        message: 'Illness reports require the durable source-fact transaction.',
+        fallbackToCoach: false,
+        route: route.route,
+      };
+    }
     case 'clear_injury_modifier':
       return {
         ok: false,
@@ -822,6 +839,7 @@ function diagnosticActionType(action: ProgramControlAction): AthleteActionType {
   }
   if (action.type === 'set_equipment_modifier') return 'equipment_change';
   if (action.type === 'set_fatigue_status' || action.type === 'set_poor_sleep_status' ||
+    action.type === 'set_illness_status' ||
     action.type === 'clear_fatigue_status') return 'readiness_change';
   if (action.type.startsWith('clear_') || action.type === 'clear_active_modifier') {
     return 'clear_adjustment';
@@ -1184,6 +1202,40 @@ async function executeProgramControlActionDurablyWithinTrace(
       requiresRebuild: false,
       createdModifierIds: ok ? [fact.factId] : undefined,
       message: result.message,
+      fallbackToCoach: false,
+      route: routeProgramControlAction(action).route,
+    };
+  }
+  if (action.type === 'set_illness_status') {
+    const date = action.payload.date.slice(0, 10);
+    const sourceSurface = action.source.surface ?? action.source.screen;
+    // Minor illness is today-scoped + inert (record-only, opt-in soften offer);
+    // severe illness is week-scoped + deriving (auto-protect). The create helper
+    // maps severity → athleteReportedLevel so the shared health-fact threshold
+    // classifies it (see temporarySourceFact `globalConstraint`).
+    const fact = createTemporaryIllnessFact({
+      observedDate: date,
+      scope: temporaryFactScope({
+        kind: action.payload.severity === 'severe' ? 'week' : 'date',
+        date,
+      }),
+      severity: action.payload.severity,
+      sourceSurface,
+    });
+    const factResult = await transactTemporarySourceFact({
+      operation: 'create',
+      fact,
+      todayISO: action.payload.todayISO ?? context.todayISO ?? date,
+      sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
+      sourceSurface,
+    });
+    const ok = factResult.outcome !== 'conflicted' && factResult.outcome !== 'safely_rejected';
+    return {
+      ok,
+      changedProgram: factResult.changedProgram,
+      requiresRebuild: false,
+      createdModifierIds: ok && factResult.factId ? [factResult.factId] : undefined,
+      message: factResult.message,
       fallbackToCoach: false,
       route: routeProgramControlAction(action).route,
     };

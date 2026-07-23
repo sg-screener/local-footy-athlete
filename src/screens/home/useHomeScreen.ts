@@ -28,6 +28,7 @@ import {
   type ProgramControlActionResult,
   type ProgramControlStatusUpdate,
 } from '../../utils/programControlActions';
+import { readinessActionForKind } from '../../utils/weekReadinessActions';
 import type { TemporaryEquipmentPresetId } from '../../utils/equipmentAvailability';
 import {
   buildGuidedInjuryConstraint,
@@ -81,6 +82,7 @@ export type WeekReadinessAction =
   | 'poor_sleep_week'
   | 'cooked_week'
   | 'sore_today'
+  | 'sniffle_today'
   | 'sick_week';
 
 const targetStatusModifierKind = (
@@ -370,7 +372,8 @@ export function useHomeScreen() {
     )), [temporarySourceFacts, visibleWeekEnd, visibleWeekStart]);
   const readinessFacts = useMemo(() => temporarySourceFacts.filter((fact) =>
     'factKind' in fact && (
-      fact.factKind === 'fatigue' || fact.factKind === 'soreness' || fact.factKind === 'poor_sleep'
+      fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
+      fact.factKind === 'poor_sleep' || fact.factKind === 'illness'
     ) && (!visibleWeekStart || !visibleWeekEnd || (
       fact.scope.from <= visibleWeekEnd &&
       fact.scope.until >= visibleWeekStart
@@ -1387,47 +1390,16 @@ export function useHomeScreen() {
     anchorDateISO: string,
   ) => {
     const todayISO = todayISOLocal();
-    const result = kind === 'sick_week'
-      ? executeProgramControlAction({
-          type: 'set_recovery_mode',
-          source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-          scope: 'current_week',
-          payload: { date: anchorDateISO, todayISO, recoveryScope: 'week' },
-          requiresRebuild: false,
-          createsActiveModifier: true,
-          oneOffOnly: false,
-        }, { todayISO })
-      : kind === 'poor_sleep_today' || kind === 'poor_sleep_week'
-        ? await executeProgramControlActionDurably({
-            type: 'set_poor_sleep_status',
-            source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-            scope: kind === 'poor_sleep_week' ? 'current_week' : 'today_only',
-            payload: {
-              date: kind === 'poor_sleep_week' ? anchorDateISO : todayISO,
-              todayISO,
-              pattern: kind === 'poor_sleep_week' ? 'repeated' : 'single_night',
-            },
-            requiresRebuild: false,
-            createsActiveModifier: true,
-            oneOffOnly: false,
-          }, { todayISO })
-        : await executeProgramControlActionDurably({
-          type: 'set_fatigue_status',
-          source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-          scope: kind === 'cooked_week' ? 'current_week' : 'today_only',
-          payload: {
-            date: kind === 'cooked_week' ? anchorDateISO : todayISO,
-            todayISO,
-            level: kind === 'cooked_week'
-              ? 'cooked'
-              : kind === 'sore_today'
-                ? 'sore'
-                : 'low_energy',
-          },
-          requiresRebuild: false,
-          createsActiveModifier: true,
-          oneOffOnly: false,
-        }, { todayISO });
+    // Single owner: every tier maps through the one pure `readinessActionForKind`
+    // function (invariant R16). sick_week → SEVERE illness (derives the
+    // illness_recovery §18 week mode: minimums lifted, remaining work
+    // optional/reduced — no shutdown_week, no recovery-mode writer); sniffle_today
+    // → MINOR illness (record-only + inert, today-scoped soften offer). The
+    // day-card door opens this same sheet, so both doors commit identically.
+    const result = await executeProgramControlActionDurably(
+      readinessActionForKind(kind, { anchorDateISO, todayISO }),
+      { todayISO },
+    );
     registerSourceFactRenderObservation({
       result,
       domain: 'readiness',
@@ -1435,7 +1407,7 @@ export function useHomeScreen() {
     });
     await handleProgramControlResult(result);
     return result;
-  }, [handleProgramControlResult, registerSourceFactRenderObservation]);
+  }, [handleProgramControlResult, registerSourceFactRenderObservation, weekDays]);
 
   const handleClearWeekReadiness = useCallback(async (constraintId: string) => {
     const todayISO = todayISOLocal();

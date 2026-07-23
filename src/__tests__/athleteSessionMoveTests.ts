@@ -775,15 +775,20 @@ run('15 newer overlapping athlete intent supersedes stale restoration', () => {
   assert(first, 'first move adjustment missing');
   const moved = workoutOn(FUTURE_WEEK, 3);
   assert(moved, 'first move target missing');
+  // Second, overlapping move relocates the SAME session again to another empty
+  // day (Monday, vacated by the first move). Target must be a plain empty day —
+  // Friday is a G-1 Gunshow filler and a move onto it is now (correctly) refused
+  // by the content-conservation gate; the supersede semantics under test are
+  // independent of the destination day.
   commitAthleteSessionMoveTransaction({
     sourceDate: dateForDay(FUTURE_WEEK, 3),
-    targetDate: dateForDay(FUTURE_WEEK, 5),
+    targetDate: dateForDay(FUTURE_WEEK, 1),
     reason: 'test:newer_athlete_move',
     source: 'tap',
     acceptedSourcePlanEntryId: moved.planEntryId ?? null,
     sourceWorkoutId: moved.id,
     originalSourceWorkout: moved,
-    existingTargetWorkout: workoutOn(FUTURE_WEEK, 5),
+    existingTargetWorkout: workoutOn(FUTURE_WEEK, 1),
     scope: 'whole_session',
   });
   const second = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
@@ -909,16 +914,29 @@ run('18 hydration migration creates ledger state only from exact legacy removal 
 });
 
 run('19 clearing one of two same-week adjustments preserves the unrelated active move', () => {
-  seed();
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK, 1, 3));
+  // Off-season week: five plain gym sessions Mon–Fri with empty Sat/Sun and NO
+  // game-proximity fillers, so two INDEPENDENT non-destructive moves exist (the
+  // In-season week has only one movable non-anchor session). Both relocate a real
+  // session onto an empty weekend day; days 2 and 4 stay untouched.
+  const athlete: OnboardingData = {
+    ...profile(),
+    seasonPhase: 'Off-season',
+    usualGameDay: undefined,
+    gameDay: undefined,
+    teamTrainingDaysPerWeek: 0,
+    teamTrainingDays: [],
+    preferredTrainingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+  };
+  seed(athlete);
+  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK, 1, 6));
   const first = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
   assert(first, 'first same-week adjustment missing');
-  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK, 5, 2));
+  commitAthleteSessionMoveTransaction(moveInput(FUTURE_WEEK, 3, 0));
   const second = useProgramStore.getState().reversibleAdjustmentLedger.adjustments.at(-1);
   assert(second && second.id !== first.id, 'second same-week adjustment identity missing');
   assert(first.affectedWeeks.some((week) => second.affectedWeeks.includes(week)),
     'same-week adjustment precondition missing');
-  const unrelatedBefore = JSON.stringify([2, 5].map((day) => {
+  const unrelatedBefore = JSON.stringify([2, 4].map((day) => {
     const workout = workoutOn(FUTURE_WEEK, day);
     return workout ? {
       day,
@@ -935,7 +953,7 @@ run('19 clearing one of two same-week adjustments preserves the unrelated active
   assert(useProgramStore.getState().reversibleAdjustmentLedger.adjustments
     .find((candidate) => candidate.id === second.id)?.status === 'active',
   'clearing the first adjustment cleared the unrelated second adjustment');
-  const unrelatedAfter = JSON.stringify([2, 5].map((day) => {
+  const unrelatedAfter = JSON.stringify([2, 4].map((day) => {
     const workout = workoutOn(FUTURE_WEEK, day);
     return workout ? {
       day,

@@ -7,11 +7,6 @@ import { useCoachUpdatesStore } from '../../store/coachUpdatesStore';
 import { useProfileStore } from '../../store/profileStore';
 import { todayISOLocal } from '../../utils/appDate';
 import type { ResolvedDay } from '../../utils/sessionResolver';
-import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
-import {
-  buildGuidedInjuryConstraint,
-  type GuidedInjuryFlowResult,
-} from '../../utils/guidedInjuryControl';
 import {
   applyPlanChange,
   listPlanChangeOptionsForDay,
@@ -22,10 +17,8 @@ import {
   type PlanChangeDayOptions,
 } from '../../utils/planChangeProducer';
 import {
-  executeProgramControlAction,
   executeProgramControlActionDurably,
 } from '../../utils/programControlActions';
-import type { TapRecoveryModifierScope } from '../../utils/tapProgramModifiers';
 import type { ProgramEditRiskFinding } from '../../utils/programEditRiskAssessment';
 import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
 import {
@@ -85,11 +78,6 @@ type Step =
   | { kind: 'pick_destination' }
   | { kind: 'pick_bin_scope' }
   | { kind: 'confirm_remove'; scope: PlanChangeBinScopeId; label: string }
-  | { kind: 'pick_wellbeing' }
-  | { kind: 'pick_tired' }
-  | { kind: 'pick_sleep' }
-  | { kind: 'pick_sick' }
-  | { kind: 'confirm_shutdown' }
   | {
       kind: 'result';
       ok: boolean;
@@ -112,6 +100,9 @@ interface PlanChangeSheetProps {
   weekDays: ResolvedDay[];
   onClose: () => void;
   onAskCoach: (prefill: string) => void;
+  /** Open the single week-level readiness owner (the "I'm not 100%" door). The
+   *  day-card holds no readiness committer of its own — it hands off here. */
+  onOpenReadiness: () => void;
 }
 
 function weekdayLabel(dateISO: string): string {
@@ -162,10 +153,9 @@ function riskReasons(findings: ProgramEditRiskFinding[]): string[] {
 }
 
 export function PlanChangeSheet({
-  visible, date, weekDays, onClose, onAskCoach,
+  visible, date, weekDays, onClose, onAskCoach, onOpenReadiness,
 }: PlanChangeSheetProps) {
   const [step, setStep] = useState<Step>({ kind: 'menu' });
-  const [injuryFlowVisible, setInjuryFlowVisible] = useState(false);
   const onboardingData = useProfileStore((state) => state.onboardingData);
   const activeConstraints = useCoachUpdatesStore((state) => state.activeConstraints);
 
@@ -173,7 +163,6 @@ export function PlanChangeSheet({
   useEffect(() => {
     if (visible) {
       setStep({ kind: 'menu' });
-      setInjuryFlowVisible(false);
     }
   }, [visible, date]);
 
@@ -234,14 +223,6 @@ export function PlanChangeSheet({
     [weekDays, todayISO],
   );
   const todayInView = todayDay !== null;
-  const WELLBEING_STEP_KINDS: Step['kind'][] = [
-    'pick_wellbeing',
-    'pick_tired',
-    'pick_sleep',
-    'pick_sick',
-    'confirm_shutdown',
-  ];
-  const isWellbeingStep = WELLBEING_STEP_KINDS.includes(step.kind);
 
   if (!date) return null;
   const selectedWorkout = selectedDay?.workout ?? null;
@@ -345,41 +326,9 @@ export function PlanChangeSheet({
     change: PlanChange,
     opts?: {
       closeOnSuccess?: boolean;
-      recoveryModifierScope?: TapRecoveryModifierScope;
       backStep?: Step;
     },
   ) => {
-    if (opts?.recoveryModifierScope && 'date' in change) {
-      const result = executeProgramControlAction({
-        type: 'set_recovery_mode',
-        source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
-        scope: opts.recoveryModifierScope === 'week' ? 'current_week' : 'today_only',
-        payload: {
-          date: change.date,
-          todayISO,
-          recoveryScope: opts.recoveryModifierScope,
-          planChange: change,
-        },
-        requiresRebuild: false,
-        createsActiveModifier: true,
-        oneOffOnly: false,
-      }, { visibleWeek: weekDays, todayISO });
-      if (result.ok && opts.closeOnSuccess) {
-        onClose();
-        return;
-      }
-      setStep({
-        kind: 'result',
-        ok: result.ok,
-        message: result.message ?? (
-          result.ok
-            ? 'Done. Recovery mode is active.'
-            : "I couldn't safely update recovery mode here."
-        ),
-      });
-      return;
-    }
-
     const preview = previewPlanChangeRisk({
       change,
       visibleWeek: weekDays,
@@ -497,128 +446,17 @@ export function PlanChangeSheet({
     onAskCoach(`About ${weekdayLabel(date)}: `);
   };
 
-  const applyTired = async (severity: 'spark' | 'cooked') => {
-    const result = await executeProgramControlActionDurably({
-      type: 'set_fatigue_status',
-      source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
-      scope: severity === 'cooked' ? 'current_week' : 'today_only',
-      payload: {
-        date: todayISO,
-        todayISO,
-        level: severity === 'cooked' ? 'cooked' : 'low_energy',
-      },
-      requiresRebuild: false,
-      createsActiveModifier: true,
-      oneOffOnly: false,
-    }, { todayISO });
-    setStep({
-      kind: 'result',
-      ok: result.ok,
-      message: result.message ?? 'The report was not applied because the visible program could not be verified.',
-    });
-  };
-
-  const applySore = async () => {
-    const result = await executeProgramControlActionDurably({
-      type: 'set_fatigue_status',
-      source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
-      scope: 'today_only',
-      payload: { date: todayISO, todayISO, level: 'sore' },
-      requiresRebuild: false,
-      createsActiveModifier: true,
-      oneOffOnly: false,
-    }, { todayISO });
-    setStep({
-      kind: 'result',
-      ok: result.ok,
-      message: result.message ?? 'The soreness report was not applied.',
-    });
-  };
-
-  const applyPoorSleep = async (pattern: 'single_night' | 'repeated') => {
-    const result = await executeProgramControlActionDurably({
-      type: 'set_poor_sleep_status',
-      source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
-      scope: pattern === 'repeated' ? 'current_week' : 'today_only',
-      payload: { date: todayISO, todayISO, pattern },
-      requiresRebuild: false,
-      createsActiveModifier: true,
-      oneOffOnly: false,
-    }, { todayISO });
-    setStep({
-      kind: 'result',
-      ok: result.ok,
-      message: result.message ?? 'The poor-sleep report was not applied.',
-    });
-  };
-
-  const applyRoughSick = () => {
-    const result = executeProgramControlAction({
-      type: 'set_recovery_mode',
-      source: { screen: 'program_tab', surface: 'plan_change_sheet', initiatedBy: 'tap' },
-      scope: 'current_week',
-      payload: {
-        date: todayISO,
-        todayISO,
-        recoveryScope: 'week',
-      },
-      requiresRebuild: false,
-      createsActiveModifier: true,
-      oneOffOnly: false,
-    }, { todayISO });
-    setStep({
-      kind: 'result',
-      ok: result.ok,
-      message: "Recovery mode is active for this week. Clear the note when you're good again.",
-    });
-  };
-
-  const applySniffle = () => {
-    // Light sniffle: TODAY's session softens to the recovery flow (not the
-    // tapped day). On a rest day there's nothing to soften.
-    const todayHasSession =
-      !!todayDay?.workout && todayDay.workout.workoutType !== 'Game';
-    if (!todayHasSession) {
-      setStep({
-        kind: 'result',
-        ok: true,
-        message: "Today's already an easy day - perfect. Fluids, food, sleep.",
-      });
-      return;
-    }
-    apply(
-      { kind: 'swap_category', date: todayISO, category: 'recovery' },
-      { recoveryModifierScope: 'day' },
-    );
-  };
-
-  const applyGuidedInjury = async (result: GuidedInjuryFlowResult) => {
-    const constraint = buildGuidedInjuryConstraint(result, { todayISO });
-    const trainingPaused = constraint.adjustmentLevel === 'training_paused';
-    const actionResult = await executeProgramControlActionDurably({
-      type: 'set_injury_modifier',
-      source: { screen: 'program_tab', surface: 'plan_change_injury_flow', initiatedBy: 'tap' },
-      scope: 'current_and_future',
-      payload: { constraint },
-      requiresRebuild: false,
-      createsActiveModifier: true,
-      oneOffOnly: false,
-    }, { todayISO });
-    setInjuryFlowVisible(false);
-    setStep({
-      kind: 'result',
-      ok: actionResult.ok,
-      message: trainingPaused
-        ? 'Affected training is paused until you get medical or physio advice.'
-        : 'Injury adjustment is active. Coach Notes will show it until you clear it.',
-    });
+  // The day-card no longer owns readiness/illness/injury reporting — the
+  // "I'm not 100%" row hands off to the single week-level owner (onOpenReadiness).
+  const openReadiness = () => {
+    onClose();
+    onOpenReadiness();
   };
 
   return (
-    <>
-    <Sheet visible={visible && !injuryFlowVisible} onClose={onClose} testID="plan-change-sheet">
+    <Sheet visible={visible} onClose={onClose} testID="plan-change-sheet">
       <Text style={styles.title}>
-        {isWellbeingStep ? 'How are you today?' : weekdayLabel(date)}
+        {weekdayLabel(date)}
       </Text>
 
       {options?.locked === 'outside_horizon' && (
@@ -652,8 +490,8 @@ export function PlanChangeSheet({
           {todayInView && (
             <MenuOption
               label="I'm not 100%"
-              sub="Tired, sick or injured today - the plan adjusts"
-              onPress={() => setStep({ kind: 'pick_wellbeing' })}
+              sub="Tired, sick or a niggle - tell the coach and the plan adjusts"
+              onPress={openReadiness}
             />
           )}
           <MenuOption
@@ -753,124 +591,6 @@ export function PlanChangeSheet({
             onPress={startBin}
           />
           <BackRow onPress={() => setStep({ kind: 'pick_add_kind', returnTo: step.returnTo })} />
-        </View>
-      )}
-
-      {/* "I'm not 100%" level 1: what's going on. */}
-      {step.kind === 'pick_wellbeing' && (
-        <View>
-          <Text style={styles.sectionLabel}>What's going on?</Text>
-          <MenuOption
-            label="I'm tired"
-            sub="Flat, heavy legs, low battery"
-            onPress={() => setStep({ kind: 'pick_tired' })}
-          />
-          <MenuOption
-            label="I slept poorly"
-            sub="One bad night or a repeated pattern"
-            onPress={() => setStep({ kind: 'pick_sleep' })}
-          />
-          <MenuOption
-            label="I'm sick"
-            sub="From light sniffle to bed-ridden"
-            onPress={() => setStep({ kind: 'pick_sick' })}
-          />
-          <MenuOption
-            label="I'm sore"
-            sub="General soreness - today adjusts"
-            onPress={applySore}
-          />
-          <MenuOption
-            label="I'm injured"
-            sub="Area, severity and triggers"
-            onPress={() => setInjuryFlowVisible(true)}
-          />
-          <BackRow onPress={() => setStep({ kind: 'menu' })} />
-        </View>
-      )}
-
-      {/* Tired severity: clear ends are deterministic (readiness signal). */}
-      {step.kind === 'pick_tired' && (
-        <View>
-          <Text style={styles.sectionLabel}>How tired?</Text>
-          <MenuOption
-            label="Lacking a bit of spark"
-            sub="Today backs off the hard stuff where it can"
-            onPress={() => applyTired('spark')}
-          />
-          <MenuOption
-            label="Absolutely cooked"
-            sub="Today drops to recovery level"
-            onPress={() => applyTired('cooked')}
-          />
-          <BackRow onPress={() => setStep({ kind: 'pick_wellbeing' })} />
-        </View>
-      )}
-
-      {step.kind === 'pick_sleep' && (
-        <View>
-          <Text style={styles.sectionLabel}>How long has sleep been poor?</Text>
-          <MenuOption
-            label="Just last night"
-            sub="A small adjustment for today"
-            onPress={() => applyPoorSleep('single_night')}
-          />
-          <MenuOption
-            label="A few nights in a row"
-            sub="Reduce hard load for this week"
-            onPress={() => applyPoorSleep('repeated')}
-          />
-          <BackRow onPress={() => setStep({ kind: 'pick_wellbeing' })} />
-        </View>
-      )}
-
-      {/* Sick severity: sniffle softens today, bed-ridden clears the week,
-          the middle talks to the coach with context pre-loaded. */}
-      {step.kind === 'pick_sick' && (
-        <View>
-          <Text style={styles.sectionLabel}>How sick?</Text>
-          <MenuOption
-            label="Light sniffle"
-            sub="Today softens to a recovery flow"
-            onPress={applySniffle}
-          />
-          <MenuOption
-            label="Pretty rough"
-            sub="Recovery mode for this week"
-            onPress={applyRoughSick}
-          />
-          <MenuOption
-            label="Bed-ridden"
-            sub="Clears the rest of this week"
-            danger
-            onPress={() => setStep({ kind: 'confirm_shutdown' })}
-          />
-          <BackRow onPress={() => setStep({ kind: 'pick_wellbeing' })} />
-        </View>
-      )}
-
-      {step.kind === 'confirm_shutdown' && (
-        <View>
-          <Text style={styles.confirmText}>
-            Are you sure? Every remaining session this week becomes rest
-            (game day is left alone). You can add sessions back the moment
-            you're better.
-          </Text>
-          <MenuOption
-            label="Yes - clear my week"
-            danger
-            onPress={() =>
-              apply(
-                // Bed-ridden clears THIS week from today onward, regardless
-                // of which day's sheet opened it.
-                { kind: 'shutdown_week', date: todayISO },
-                { recoveryModifierScope: 'week' },
-              )}
-          />
-          <MenuOption
-            label="No, keep the plan"
-            onPress={() => setStep({ kind: 'pick_sick' })}
-          />
         </View>
       )}
 
@@ -1099,13 +819,6 @@ export function PlanChangeSheet({
         </View>
       )}
     </Sheet>
-    <GuidedInjuryFlowSheet
-      visible={visible && injuryFlowVisible}
-      onClose={() => setInjuryFlowVisible(false)}
-      onComplete={applyGuidedInjury}
-      titlePrefix={date ? weekdayLabel(date) : undefined}
-    />
-    </>
   );
 }
 

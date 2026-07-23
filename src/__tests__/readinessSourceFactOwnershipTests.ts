@@ -41,8 +41,9 @@ import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
 import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
-import { isInjurySourceFact, createTemporaryFatigueFact, composeTemporarySourceFactCompatibility, isTemporarySourceFactConstraint } from '../rules/temporarySourceFact';
+import { isInjurySourceFact, createTemporaryFatigueFact, createTemporaryIllnessFact, composeTemporarySourceFactCompatibility, isTemporarySourceFactConstraint } from '../rules/temporarySourceFact';
 import { transactTemporarySourceFact } from '../store/temporarySourceFactTransaction';
 import { resolveWeekWithConditioning, addDays } from '../utils/sessionResolver';
 import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
@@ -198,7 +199,15 @@ function activeReadinessFacts(): TemporarySourceFact[] {
     useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
   return facts.filter((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
     'factKind' in fact &&
-    (fact.factKind === 'fatigue' || fact.factKind === 'soreness' || fact.factKind === 'poor_sleep'));
+    (fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
+      fact.factKind === 'poor_sleep' || fact.factKind === 'illness'));
+}
+
+function activeIllnessFacts(): TemporarySourceFact[] {
+  const facts = normalizeAcceptedMaterialContext(
+    useProgramStore.getState().acceptedMaterialContext).temporarySourceFacts;
+  return facts.filter((fact) => !isInjurySourceFact(fact) && fact.status === 'active' &&
+    'factKind' in fact && fact.factKind === 'illness');
 }
 
 /** DEVICE-EXACT seed install — establishes a real `acceptedCompositionBase` the way
@@ -698,6 +707,271 @@ async function main(): Promise<void> {
     const unlinkedAfter = ledger().find((a) => a.id === (unlinked as { id: string }).id);
     assert(unlinkedAfter && unlinkedAfter.status === 'active',
       'clearing the fact must NOT touch an unlinked adjustment');
+  });
+
+  // ── Invariant R13 (illness severity doctrine — minor is INERT): a minor illness
+  // fact is a sibling health fact that follows the same non-mutation boundary as
+  // minor fatigue. It commits OFF the §18 mutation gate (record-only, zero
+  // derivation) even when whole-week re-validation WOULD reject. The adjustment is
+  // strictly opt-in via the "soften today?" offer.
+  await run('R13 illness-inert: a minor illness fact commits off the §18 mutation gate', async () => {
+    const dateScope = { kind: 'date' as const, date: WEEK, from: WEEK, until: WEEK };
+    const wouldReject = { beforeEffectiveValidation: () => { throw new Error('SIMULATED §18 whole-week rejection'); } };
+    seed();
+    const minor = createTemporaryIllnessFact({
+      observedDate: WEEK, scope: dateScope, severity: 'minor',
+      sourceSurface: 'week_readiness_sheet',
+    });
+    const result = await transactTemporarySourceFact({
+      operation: 'create', fact: minor, todayISO: WEEK, testHooks: wouldReject,
+    });
+    assert(!/safely_rejected|conflicted/.test(result.outcome),
+      `minor illness fact must commit off the §18 mutation gate, got outcome=${result.outcome}`);
+    assert(activeIllnessFacts().length === 1,
+      `minor illness fact did not persist (count=${activeIllnessFacts().length})`);
+  });
+
+  // ── Invariant R14 (illness severity doctrine — severe is DERIVING): a severe
+  // illness fact composes an auto-protect constraint, so it changes the composition
+  // signature and can NEVER be misclassified inert — it stays gated by §18
+  // validation exactly as severe fatigue does.
+  await run('R14 illness-deriving: a severe illness fact stays gated by §18 validation', async () => {
+    const weekScope = { kind: 'week' as const, weekStart: WEEK, from: WEEK, until: addDays(WEEK, 6) };
+    const wouldReject = { beforeEffectiveValidation: () => { throw new Error('SIMULATED §18 whole-week rejection'); } };
+    seed();
+    const severe = createTemporaryIllnessFact({
+      observedDate: WEEK, scope: weekScope, severity: 'severe',
+      sourceSurface: 'week_readiness_sheet',
+    });
+    const result = await transactTemporarySourceFact({
+      operation: 'create', fact: severe, todayISO: WEEK, testHooks: wouldReject,
+    });
+    assert(/safely_rejected/.test(result.outcome),
+      `severe illness fact must stay gated by §18 validation, got outcome=${result.outcome}`);
+    // The severity boundary is the shared one: a severe illness composes a
+    // source-fact constraint (deriving), a minor one composes none (inert).
+    const composed = composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: [createTemporaryIllnessFact({
+        observedDate: WEEK, scope: weekScope, severity: 'severe',
+        sourceSurface: 'week_readiness_sheet',
+      })],
+      activeConstraints: [],
+    });
+    assert(composed.activeConstraints.some((c) => isTemporarySourceFactConstraint(c)),
+      'a severe illness fact must compose a source-fact (auto-protect) constraint');
+    const inertCompose = composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: [createTemporaryIllnessFact({
+        observedDate: WEEK, scope: { kind: 'date', date: WEEK, from: WEEK, until: WEEK },
+        severity: 'minor', sourceSurface: 'week_readiness_sheet',
+      })],
+      activeConstraints: [],
+    });
+    assert(!inertCompose.activeConstraints.some((c) => isTemporarySourceFactConstraint(c)),
+      'a minor illness fact must compose NO source-fact constraint (inert)');
+  });
+
+  // ── Invariant R15 (bed-ridden = severe illness through the standard deriving
+  // path): the readiness sheet's "Sick / run down" tier commits a SEVERE illness
+  // week-fact through the durable path — the same one the tap surface calls. On a
+  // normal in-season week this is now ACCEPTED (never safely_rejected): the deriving
+  // commit AUTHORS a scoped-regen illness_recovery week overlay. Re-pointed (Group D
+  // scoped-regen): the assertion is that the COMMITTED accepted week is
+  // illness_recovery — not a separate regeneration — proving delivery, not just
+  // derivability. No shutdown_week, no recovery-mode writer.
+  await run('R15 bed-ridden: the COMMITTED accepted week is authored illness_recovery', async () => {
+    seed();
+    const result = await executeProgramControlActionDurably({
+      type: 'set_illness_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { date: WEEK, todayISO: WEEK, severity: 'severe' },
+      requiresRebuild: false,
+      createsActiveModifier: true,
+      oneOffOnly: false,
+    } as never, { todayISO: WEEK });
+    assert(result.ok && !/safely_rejected|conflicted/.test(result.message ?? ''),
+      `bed-ridden severe illness must be accepted, got ok=${result.ok} message="${result.message}"`);
+    assert(/nothing's required|optional/i.test(result.message ?? ''),
+      `bed-ridden must disclose the optional/nothing-required recovery week, got "${result.message}"`);
+    assert(activeIllnessFacts().some((fact) => 'severity' in fact && fact.severity === 'severe'),
+      'a severe illness fact must persist after the bed-ridden commit');
+    const committed = rebaseAcceptedEffectiveWeek({
+      surfaces: useProgramStore.getState() as never,
+      weekStart: WEEK,
+      profile: useProfileStore.getState().onboardingData,
+      markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
+    });
+    assert(committed.contract.identity.mode === 'illness_recovery',
+      `the COMMITTED accepted week must be illness_recovery, got ${committed.contract.identity.mode}`);
+  });
+
+  // ── Invariant R16 (door unification — ONE readiness owner, two doors cannot
+  // diverge): after 0.2 the day-card "I'm not 100%" door no longer commits any
+  // readiness/illness/recovery fact of its own — it opens the week owner. The
+  // tier→action mapping lives in exactly ONE pure function, `readinessActionForKind`,
+  // which every tier (incl. the new "Coming down with something"/"Properly sick"
+  // groupings) routes through. Two doors + one committer = identical outcome by
+  // construction. This replaces the old two-committer risk (R13 era) with a
+  // single-owner structural guarantee plus a per-tier mapping equivalence.
+  await run('R16 door-unification: one owner maps every readiness tier + the day door holds no committer', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { readinessActionForKind } = require('../utils/weekReadinessActions') as
+      typeof import('../utils/weekReadinessActions');
+    const ANCHOR = '2026-07-13';
+    const TODAY = '2026-07-15';
+    const ctx = { anchorDateISO: ANCHOR, todayISO: TODAY };
+
+    const cases = [
+      { kind: 'tired_today', type: 'set_fatigue_status', scope: 'today_only', date: TODAY, level: 'low_energy' },
+      { kind: 'sore_today', type: 'set_fatigue_status', scope: 'today_only', date: TODAY, level: 'sore' },
+      { kind: 'cooked_week', type: 'set_fatigue_status', scope: 'current_week', date: ANCHOR, level: 'cooked' },
+      { kind: 'poor_sleep_today', type: 'set_poor_sleep_status', scope: 'today_only', date: TODAY, pattern: 'single_night' },
+      { kind: 'poor_sleep_week', type: 'set_poor_sleep_status', scope: 'current_week', date: ANCHOR, pattern: 'repeated' },
+      { kind: 'sniffle_today', type: 'set_illness_status', scope: 'today_only', date: TODAY, severity: 'minor' },
+      { kind: 'sick_week', type: 'set_illness_status', scope: 'current_week', date: ANCHOR, severity: 'severe' },
+    ] as const;
+
+    for (const c of cases) {
+      const action = readinessActionForKind(c.kind as never, ctx) as {
+        type: string; scope: string; source: { surface?: string };
+        requiresRebuild: boolean; createsActiveModifier: boolean; oneOffOnly: boolean;
+        payload: Record<string, unknown>;
+      };
+      assert(action.type === c.type, `${c.kind}: type expected ${c.type}, got ${action.type}`);
+      assert(action.scope === c.scope, `${c.kind}: scope expected ${c.scope}, got ${action.scope}`);
+      assert(action.payload.date === c.date, `${c.kind}: date expected ${c.date}, got ${String(action.payload.date)}`);
+      assert(action.payload.todayISO === TODAY, `${c.kind}: todayISO must be threaded`);
+      assert(action.source.surface === 'week_readiness_sheet', `${c.kind}: surface must be week_readiness_sheet`);
+      assert(action.requiresRebuild === false && action.createsActiveModifier === true && action.oneOffOnly === false,
+        `${c.kind}: durable flags must match the owner's`);
+      if ('level' in c) assert(action.payload.level === c.level, `${c.kind}: level expected ${c.level}, got ${String(action.payload.level)}`);
+      if ('pattern' in c) assert(action.payload.pattern === c.pattern, `${c.kind}: pattern expected ${c.pattern}`);
+      if ('severity' in c) assert(action.payload.severity === c.severity, `${c.kind}: severity expected ${c.severity}`);
+    }
+
+    // Structural single-owner guarantee: the day-card door commits NOTHING of its
+    // own — no readiness/illness/recovery committer, no shutdown_week, no wellbeing
+    // subtree — it only opens the week owner via onOpenReadiness.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = require('fs');
+    const planSheet = fs.readFileSync(`${__dirname}/../screens/home/PlanChangeSheet.tsx`, 'utf8') as string;
+    for (const forbidden of [
+      'pick_wellbeing', 'pick_tired', 'pick_sleep', 'pick_sick', 'confirm_shutdown',
+      'shutdown_week', 'set_fatigue_status', 'set_illness_status', 'set_poor_sleep_status',
+      'set_recovery_mode',
+    ]) {
+      assert(!planSheet.includes(forbidden),
+        `the day-card door must hold no readiness committer, found "${forbidden}" in PlanChangeSheet`);
+    }
+    assert(planSheet.includes('onOpenReadiness') && planSheet.includes("I'm not 100%"),
+      'the day-card "I\'m not 100%" row must route to the week owner via onOpenReadiness');
+  });
+
+  // ── Invariant R17 (attribution per fact kind): a coach note for an ILLNESS
+  // source fact must never read "you said you're cooked" (a fatigue attribution).
+  // Severe illness composes a fatigue-typed constraint (post-v1 the constraint
+  // type is still shared), so the constraint carries a typed readinessKind:'illness'
+  // discriminator and the lead author branches on it — no string special-casing.
+  await run('R17 attribution: an illness fact reads as illness, never "you said you\'re cooked"', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { readinessBodyLead } = require('../utils/activeProgramModifiers') as
+      typeof import('../utils/activeProgramModifiers');
+    const weekScope = { kind: 'week' as const, weekStart: WEEK, from: WEEK, until: addDays(WEEK, 6) };
+    const composed = composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: [createTemporaryIllnessFact({
+        observedDate: WEEK, scope: weekScope, severity: 'severe',
+        sourceSurface: 'week_readiness_sheet',
+      })],
+      activeConstraints: [],
+    });
+    const illness = composed.activeConstraints.find((c) => isTemporarySourceFactConstraint(c)) as
+      { type: string; readinessKind?: string; severity: number; reasonLabel?: string } | undefined;
+    assert(!!illness, 'a severe illness fact must compose an active constraint');
+    assert(illness!.readinessKind === 'illness',
+      `the illness constraint must carry the typed readinessKind:'illness' discriminator, got ${String(illness!.readinessKind)}`);
+    const lead = readinessBodyLead(illness as never, illness!.reasonLabel ?? '');
+    assert(!/cooked/i.test(lead), `illness lead must not read "cooked", got "${lead}"`);
+    assert(/sick/i.test(lead), `illness lead must attribute to illness, got "${lead}"`);
+    // Fatigue attribution stays intact (no regression): a cooked fatigue constraint
+    // still reads cooked; a flat one still reads flat.
+    assert(/cooked/i.test(readinessBodyLead({ type: 'fatigue', severity: 8 } as never, '')),
+      'a cooked fatigue constraint must still read "cooked"');
+    assert(/flat/i.test(readinessBodyLead({ type: 'fatigue', severity: 2 } as never, '')),
+      'a flat fatigue constraint must still read "flat"');
+  });
+
+  // ── Invariant R18 (ack surfaces the real disclosure): when a readiness report
+  // actually CHANGES the program (severe illness → illness_recovery week), the
+  // sheet acknowledgment must surface the authored disclosure ("nothing's required
+  // this week…"), not a generic "logged how you're feeling". A record-only report
+  // (no program change) keeps the generic ack.
+  await run('R18 ack-disclosure: a program-changing report surfaces its authored disclosure', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { buildReadinessAcknowledgment } = require('../utils/readinessAcknowledgment') as
+      typeof import('../utils/readinessAcknowledgment');
+    const disclosure = "Rest up — nothing's required this week. I've left gentle optional work if you're up to it, at a lighter dose.";
+    const changed = buildReadinessAcknowledgment({ ok: true, changedProgram: true, message: disclosure });
+    assert(changed?.tone === 'success' && changed?.message === disclosure,
+      `a program-changing success must surface its disclosure, got "${changed?.message}"`);
+    // Record-only (no program change) keeps the generic acknowledgment.
+    const recorded = buildReadinessAcknowledgment({ ok: true, changedProgram: false, message: '' });
+    assert(recorded?.tone === 'success' && /logged how you're feeling/.test(recorded?.message ?? ''),
+      `a record-only report keeps the generic ack, got "${recorded?.message}"`);
+  });
+
+  // ── Invariant R19 (finding #4 root cause — ONE owner of the readiness-active
+  // state, illness included): the device intermittent ("fact sometimes unresolved
+  // after clear") was a SPLIT representation. The hook's readinessFacts (the
+  // readiness-active witness + coach note) INCLUDE illness, but the card-label
+  // resolver `resolveVisibleReadinessState` EXCLUDED it (READINESS_FACT_KINDS), so
+  // `weekReadiness` was null for illness — the card and its clear never owned the
+  // fact. Clearing fell to a decoupled path that reverts the week but leaves the
+  // fact active (readiness-active + coach note persist). Fix: the resolver owns
+  // illness like its sibling kinds, so the card surfaces it (id = the illness
+  // factId) and the card clear resolves the exact fact.
+  await run('R19 illness-card-ownership (finding #4): illness IS the week-readiness active state and its clear resolves the fact', async () => {
+    seed();
+    await executeProgramControlActionDurably({
+      type: 'set_illness_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { date: WEEK, todayISO: WEEK, severity: 'severe' },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    } as never, { todayISO: WEEK });
+    const illnessBefore = activeIllnessFacts();
+    assert(illnessBefore.length === 1, `precondition: one active illness fact, got ${illnessBefore.length}`);
+    const factId = illnessBefore[0].factId;
+
+    // 1. The card must surface the illness fact as its active state (same ownership
+    //    fatigue/soreness/poor_sleep get) — id === the illness factId, week scope.
+    const mod = require('../utils/visibleReadinessState') as {
+      resolveVisibleReadinessState: (input: unknown) => { id: string; scope: string; isRecovery: boolean } | null;
+    };
+    const state = mod.resolveVisibleReadinessState({
+      readinessFacts: activeReadinessFacts(),
+      activeConstraints: useCoachUpdatesStore.getState().activeConstraints ?? [],
+      weekAnchorISO: WEEK, todayISO: WEEK, isThisWeek: true,
+    });
+    assert(state !== null,
+      'card did not surface the illness fact: resolveVisibleReadinessState returned null (split representation)');
+    assert(state!.id === factId,
+      `card active id must be the illness factId (so its clear resolves the exact fact), got ${state!.id}`);
+    assert(state!.scope === 'week', `severe illness is week-scoped, got ${state!.scope}`);
+
+    // 2. Clearing through the card's exact active id resolves the fact — no leftover
+    //    active witness / coach note. This is the trust-layer guarantee: the fact
+    //    the week reverted for is the fact that gets resolved.
+    const clearResult = await executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { modifierId: state!.id, date: WEEK },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    } as never, { todayISO: WEEK });
+    assert((clearResult as { ok?: boolean }).ok === true,
+      `clear must succeed, got ok=${(clearResult as { ok?: boolean }).ok} message="${(clearResult as { message?: string }).message}"`);
+    assert(activeIllnessFacts().length === 0,
+      `the illness fact must be resolved after clear, still ${activeIllnessFacts().length} active (finding #4)`);
   });
 
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);

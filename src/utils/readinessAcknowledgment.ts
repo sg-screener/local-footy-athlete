@@ -30,6 +30,14 @@ export function buildReadinessAcknowledgment(
 ): ReadinessAcknowledgment | null {
   if (!result) return null;
   if (result.ok) {
+    // When the report actually changed the program (e.g. a severe illness authors
+    // the illness_recovery week), surface the authored disclosure so the athlete
+    // reads exactly what changed ("nothing's required this week…"). A record-only
+    // report (no program change) keeps the generic "logged how you're feeling".
+    const disclosure = result.message?.trim();
+    if (result.changedProgram && disclosure) {
+      return { tone: 'success', message: disclosure };
+    }
     return {
       tone: 'success',
       message: "Got it — logged how you're feeling. Your week's adjusted to match.",

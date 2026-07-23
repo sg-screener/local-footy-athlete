@@ -102,6 +102,7 @@ import {
   buildSection18WeeklyExposureContractV2,
   migrateLegacyReductionV2,
   resolveSection18PhasePlannerSelection,
+  isOptionalOnlyWeekMode,
   type Section18ConditioningRole,
   type Section18EquipmentPolicyState,
   type Section18Subphase,
@@ -528,6 +529,12 @@ function section18ModeAndSubphase(
   inputs: CoachingInputs,
   legacy: WeeklyExposureContract,
 ): { mode: Section18WeekMode; declaredSubphase: Section18Subphase; anchorState: 'game' | 'bye' | 'practice_match' | 'none' } {
+  // A minted illness_recovery mode is preserved verbatim into Contract v2 — it
+  // wins over game/bye typing (the athlete is recovering, not participating in
+  // anchors), so declared and expected subphase stay in agreement.
+  if (legacy.identity.mode === 'illness_recovery') {
+    return { mode: 'illness_recovery', declaredSubphase: 'illness_recovery', anchorState: 'bye' };
+  }
   if (inputs.seasonPhase === 'Pre-season' && inputs.hasGame) {
     return {
       mode: 'practice_match_week',
@@ -1040,6 +1047,7 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
       inputs.conditioningSubstitutionPolicy?.consideredSubstitutions,
     profileInjuries: inputs.injuries,
     activeInjuries: inputs.generationConstraints?.injuries,
+    weekModeOverride: inputs.generationConstraints?.weekMode,
   });
   const phasePlannerContractV2 = buildParallelSection18Contract({
     inputs,
@@ -1258,7 +1266,15 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   //   1-core → must be full body (covers lower + push + pull in one session)
   //   2-core → lower + balanced upper (push + pull merged)
   //   3-core → lower + push + pull (separate sessions)
-  if (isInSeason && inputs.hasGame && actualCore >= 1) {
+  // Optional-only week modes (illness_recovery / bye_recovery / early_offseason) lift every
+  // minimum to 0 and stamp every surviving session optional ("nothing required this week") —
+  // so there IS no required lower/upper/full-body exposure to validate, and the emergency
+  // promotion below must not force an optional session back to core (it would fight the mode).
+  // Skip the whole block under the SAME derived mode the §18 gateway consumes (finding #3,
+  // Sam 2026-07-24). See docs/FINDING3_VISIBLE_OPTIONAL_DIAGNOSIS_2026-07-23.md.
+  const optionalOnlyWeek = !!weeklyExposureContract &&
+    isOptionalOnlyWeekMode(weeklyExposureContract.identity.mode);
+  if (isInSeason && inputs.hasGame && actualCore >= 1 && !optionalOnlyWeek) {
     if (actualCore === 1) {
       // 1-core: must be full body
       const hasFullBody = weeklyPlan.some(s => s.tier === 'core' && /full body/i.test(s.focus));
@@ -6855,8 +6871,7 @@ function applySection18ConditioningAllocation(
     0,
     contract.conditioning.optionalRecoveryAerobic.plannerSelectedCount ?? 0,
   );
-  const optionalOnlyMode = contract.identity.mode === 'early_offseason' ||
-    contract.identity.mode === 'in_season_bye_recovery';
+  const optionalOnlyMode = isOptionalOnlyWeekMode(contract.identity.mode);
   if (optionalOnlyMode) {
     const existing = plan.filter((session) => hasConditioning(session) && !session.isTeamDay)
       .sort(inTrainingOrder);
@@ -6865,7 +6880,8 @@ function applySection18ConditioningAllocation(
       else clearConditioning(session);
     });
     let remaining = Math.max(0, optionalRecoveryTarget - existing.length);
-    const preserveByeRecoveryRest = contract.identity.mode === 'in_season_bye_recovery';
+    const preserveByeRecoveryRest = contract.identity.mode === 'in_season_bye_recovery' ||
+      contract.identity.mode === 'illness_recovery';
     const optionalCandidates = plan
       .filter((session) => !session.isTeamDay && !hasConditioning(session) &&
         (preserveByeRecoveryRest || !hasStrength(session)))
@@ -6880,6 +6896,13 @@ function applySection18ConditioningAllocation(
       applyOptionalRecovery(session);
       remaining--;
     }
+    // Mode-level ownership (Sam 2026-07-24, finding #3): an optional-only week is "nothing
+    // will be required this week" — EVERY surviving session renders optional, regardless of
+    // type (strength, team-training, conditioning), with no per-type carve-outs. The
+    // conditioning logic above owns WHAT survives the reduction; the mode owns the TIER of
+    // whatever survives. Games are fixtures (not sessions in `plan`), so they stay untouched
+    // per the standing rule. See docs/FINDING3_VISIBLE_OPTIONAL_DIAGNOSIS_2026-07-23.md.
+    for (const session of plan) session.tier = 'optional';
     return;
   }
 

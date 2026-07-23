@@ -112,6 +112,7 @@ type ReadinessOption =
   | 'poor_sleep_week'
   | 'cooked_week'
   | 'sore_today'
+  | 'sniffle_today'
   | 'sick_week';
 
 const applyReadiness = (kind: ReadinessOption, anchorISO: string, todayISO: string) =>
@@ -358,26 +359,28 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     readinessEntryTag.includes('accessibilityRole="button"') &&
     readinessEntryTag.includes('accessibilityLabel={weekReadiness'));
 
+  // Every readiness tier still commits (zero capability loss), now reached via the
+  // russian-doll buckets. sniffle_today is now a first-class leaf ("Coming down
+  // with something"). "short_time" is REMOVED from this sheet (returns with the 5.4
+  // busy design) — no dead affordance and no dead prop.
   const readinessActionKinds: ReadinessOption[] = [
     'tired_today',
     'poor_sleep_today',
     'poor_sleep_week',
     'cooked_week',
     'sore_today',
+    'sniffle_today',
     'sick_week',
   ];
   const readinessOptionSelectors = [
     ...readinessActionKinds.map((kind) => explorerTestId.readinessOption(kind)),
-    explorerTestId.readinessOption('short_time'),
     explorerTestId.injuryIngress('set'),
   ];
-  ok('readiness options plus update and clear controls use semantic identities',
+  ok('every readiness leaf + update/clear controls use semantic identities',
     new Set(readinessOptionSelectors).size === readinessOptionSelectors.length &&
     readinessActionKinds.every((kind) => sheetOptionTags.some((tag) =>
       tag.includes(`explorerTestId.readinessOption('${kind}')`) &&
       tag.includes(`onApply('${kind}')`))) &&
-    sheetOptionTags.some((tag) =>
-      tag.includes("explorerTestId.readinessOption('short_time')") && tag.includes('onShortTime')) &&
     sheetOptionTags.some((tag) =>
       tag.includes("explorerTestId.injuryIngress('set')") && tag.includes('onInjury')) &&
     sheetOptionTags.some((tag) =>
@@ -401,19 +404,41 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     /<View[\s\S]*accessible[\s\S]*accessibilityLabel=\{accessibilityLabel\}[\s\S]*accessibilityRole="text"[\s\S]*collapsable=\{false\}[\s\S]*testID=\{testID\}/.test(witnessSrc));
   ok('tapping opens the readiness sheet (state wiring present)',
     src.includes('setReadinessVisible(true)') && src.includes('home-week-readiness-sheet'));
-  ok('sheet offers all eight athlete-facing options',
-    src.includes('Just a bit tired today') && src.includes('Cooked / need an easier week') &&
-    src.includes('Poor sleep last night') && src.includes('Poor sleep for a few nights') &&
-    src.includes('Sore or tight') &&
-    src.includes('Sick / run down') && src.includes('Niggle or injury') &&
-    src.includes('Short on time'));
-  ok('sheet maps readiness choices to distinct deterministic routes',
+  // X2 / R16 redesign: exactly three top-level buckets with russian-doll
+  // expansion — "Feeling flat", "Sick", "Something hurts". Sam's Sick ruling:
+  // TWO sub-options only ("Coming down with something" → minor; "Properly sick" →
+  // severe/illness_recovery, its subtitle absorbing bed-ridden). The old flat
+  // 9-list labels and "Short on time" are gone.
+  ok('sheet groups readiness under three top-level russian-doll buckets',
+    src.includes('Feeling flat') && src.includes('Something hurts') &&
+    src.includes('Coming down with something') && src.includes('Properly sick') &&
+    src.includes('Rough sleep') && src.includes('Bit tired today') &&
+    !src.includes('Short on time') && !src.includes('Sick / run down') &&
+    !src.includes('Just a bit tired today'));
+  ok('sheet maps every tier to its deterministic route (zero capability loss)',
     src.includes("onApply('tired_today')") && src.includes("onApply('cooked_week')") &&
     src.includes("onApply('poor_sleep_today')") && src.includes("onApply('poor_sleep_week')") &&
-    src.includes("onApply('sore_today')") && src.includes("onApply('sick_week')") &&
-    src.includes('onPress={onInjury}') && src.includes('onPress={onShortTime}'));
-  ok('short-on-time hands off to the existing Busy/Away sheet',
-    /onShortTime=\{\(\) => \{[\s\S]{0,160}setBusyAwayVisible\(true\)/.test(src));
+    src.includes("onApply('sore_today')") && src.includes("onApply('sniffle_today')") &&
+    src.includes("onApply('sick_week')") && src.includes('onPress={onInjury}'));
+  ok('Properly sick discloses the illness_recovery framing (absorbs bed-ridden)',
+    src.includes("Nothing will be required this week"));
+  ok('Short on time removed from the sheet — no dead affordance and no dead prop',
+    !src.includes('Short on time') && !/onShortTime/.test(src) &&
+    !/readinessOption\('short_time'\)/.test(src));
+  ok('top-level buckets use distinct icons (icon cleanup, no repeated-pulse spam)',
+    src.includes('flatIcon') && src.includes('sickIcon') &&
+    (src.match(/pulseIcon\(/g) || []).length <= 4);
+
+  // Device finding #3: the illness_recovery week keeps its sessions (sessionTier
+  // 'optional') rather than clearing to Rest, so the day card must surface an
+  // optional-tier session as OPTIONAL (de-emphasised, "only if you're up to it"),
+  // not the prominent "Start Session" CORE treatment — the same visibly-optional
+  // framing cooked's Rest day already gets.
+  ok('an optional-tier session surfaces as optional, not prominent Start Session (finding #3)',
+    /isOptionalSession\b/.test(src) &&
+    /sessionTier === 'optional'/.test(src) &&
+    /Start optional session/.test(src) &&
+    /only if you're up to it/i.test(src));
   ok('active state label + update/clear affordances present',
     src.includes('Not 100% today') && src.includes("Not 100% this week") &&
     src.includes('Recovery mode this week') &&
@@ -421,18 +446,29 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   ok('no coach-chat / LLM in the flow (no askCoach or fetch in readiness paths)',
     !/WeekReadinessSheet[\s\S]{0,4000}onAskCoach/.test(src));
 
-  ok('hook keeps today and week scopes distinct',
-    hookSrc.includes("scope: kind === 'cooked_week' ? 'current_week' : 'today_only'") &&
-    hookSrc.includes("kind === 'poor_sleep_week' ? 'current_week' : 'today_only'") &&
-    hookSrc.includes("kind === 'sore_today'") && hookSrc.includes("kind === 'sick_week'"));
+  // Scope distinctness now lives in the single readiness owner (0.2 / R16): the
+  // tier→action mapping was extracted from the hook into the pure
+  // weekReadinessActions module so both doors route through one testable owner.
+  const readinessActionsSrc = fs.readFileSync(`${__dirname}/../utils/weekReadinessActions.ts`, 'utf8') as string;
+  ok('the single readiness owner keeps today and week scopes distinct',
+    hookSrc.includes('readinessActionForKind') &&
+    /kind === 'cooked_week'/.test(readinessActionsSrc) &&
+    /kind === 'poor_sleep_week'/.test(readinessActionsSrc) &&
+    /kind === 'sore_today'/.test(readinessActionsSrc) &&
+    /kind === 'sick_week'/.test(readinessActionsSrc) &&
+    /scope: cooked \? 'current_week' : 'today_only'/.test(readinessActionsSrc) &&
+    /scope: week \? 'current_week' : 'today_only'/.test(readinessActionsSrc));
   ok('health taps use the durable canonical source-fact boundary',
     hookSrc.includes('executeProgramControlActionDurably') &&
     !hookSrc.includes('weekReadinessIds.has(modifier.sourceId)'));
 
-  // Day-level wellbeing flow untouched.
+  // Door unification (0.2 / R16): the day-card "I'm not 100%" door no longer runs
+  // a record-only wellbeing subtree — it opens the single week-level owner. The
+  // retired pick_wellbeing / shutdown_week paths must be gone.
   const planSheet = fs.readFileSync(`${__dirname}/../screens/home/PlanChangeSheet.tsx`, 'utf8') as string;
-  ok('day-level "How are you today?" flow still present',
-    planSheet.includes("pick_wellbeing") && planSheet.includes("I'm not 100%"));
+  ok('day-card "I\'m not 100%" opens the single week readiness owner (record-only branch retired)',
+    planSheet.includes("I'm not 100%") && planSheet.includes('onOpenReadiness') &&
+    !planSheet.includes('pick_wellbeing') && !planSheet.includes('shutdown_week'));
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────

@@ -398,21 +398,39 @@ function deterministicReadinessBody(
   }
 
   const title = modifierString(c as ActiveConstraint, 'modifierTitle') ?? c.reasonLabel ?? '';
+  return sentence([readinessBodyLead(c, title), effectSentence(parts)]);
+}
+
+/**
+ * The lead sentence of a readiness coach note, attributed to the fact KIND — never
+ * a fatigue attribution ("you said you're cooked") on an illness or poor-sleep
+ * fact. Illness is discriminated by the typed `readinessKind:'illness'` marker the
+ * constraint carries (it shares the fatigue constraint type for now), so this
+ * branches on typed intent rather than string-matching the title. Exported as the
+ * single testable owner of readiness attribution.
+ */
+export function readinessBodyLead(
+  c: {
+    type: string;
+    readinessKind?: 'poor_sleep' | 'illness';
+    readinessPattern?: 'single_night' | 'repeated';
+    severity: number;
+  },
+  title: string,
+): string {
+  if (c.type === 'fatigue' && c.readinessKind === 'illness') {
+    return "You said you're sick.";
+  }
   const poorSleepPattern = c.type === 'fatigue' && c.readinessKind === 'poor_sleep'
     ? c.readinessPattern
     : undefined;
-  const isFlat = c.type === 'fatigue' && (c.severity <= 3 || /flat|feeling flat/i.test(title));
+  if (poorSleepPattern === 'repeated') return 'Repeated poor sleep adjustment active.';
+  if (poorSleepPattern === 'single_night') return 'Poor sleep adjustment active today.';
   const isCooked = c.type === 'fatigue' && (c.severity >= 7 || /cooked|load reduced/i.test(title));
-  const lead = poorSleepPattern === 'repeated'
-    ? 'Repeated poor sleep adjustment active.'
-    : poorSleepPattern === 'single_night'
-      ? 'Poor sleep adjustment active today.'
-      : isCooked
-        ? "You said you're cooked."
-        : isFlat
-          ? "You said you're flat today."
-          : 'Readiness adjustment active.';
-  return sentence([lead, effectSentence(parts)]);
+  const isFlat = c.type === 'fatigue' && (c.severity <= 3 || /flat|feeling flat/i.test(title));
+  if (isCooked) return "You said you're cooked.";
+  if (isFlat) return "You said you're flat today.";
+  return 'Readiness adjustment active.';
 }
 
 function proofGateInjuryModifier(

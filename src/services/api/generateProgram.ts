@@ -19,6 +19,7 @@ import {
 import { todayISOLocal } from '../../utils/appDate';
 import { getAthletePrefs } from '../../store/athletePreferencesStore';
 import { useCoachUpdatesStore, type ActiveConstraint } from '../../store/coachUpdatesStore';
+import type { TemporarySourceFact } from '../../rules/temporarySourceFact';
 import { useReadinessStore } from '../../store/readinessStore';
 import {
   buildBlockWeekStates,
@@ -121,6 +122,14 @@ export interface GenerateProgramFromProfileOptions {
   activeConstraints?: readonly ActiveConstraint[];
   readinessSignal?: ReadinessSignal | null;
   generationConstraints?: GenerationConstraintContext;
+  /**
+   * Pending temporary source facts to mint the week mode from, supplied by an
+   * authoring caller mid-transaction (the facts are not yet in the store). When
+   * omitted, generation reads the current accepted facts. Threaded to the
+   * per-week `buildGenerationConstraintContext` so a severe illness derives the
+   * illness_recovery mode during a scoped-regen commit.
+   */
+  temporarySourceFacts?: readonly TemporarySourceFact[] | null;
   /** Explicit continuity input for pure callers; normal app paths use the live persisted program. */
   previousProgram?: TrainingProgram | null;
   seasonPhaseClock?: SeasonPhaseClock | null;
@@ -249,6 +258,9 @@ function resolveGenerationConstraints(
   return buildGenerationConstraintContext({
     activeConstraints,
     todayISO,
+    temporarySourceFacts: options.temporarySourceFacts ??
+      require('../../store/programStore').useProgramStore.getState()
+        .acceptedMaterialContext?.temporarySourceFacts,
   });
 }
 
@@ -267,6 +279,8 @@ export function buildGeneratedMicrocycles(args: {
   availableConditioningModalities?: readonly ConditioningEquipmentModality[];
   generationConstraints?: GenerationConstraintContext;
   activeConstraints?: readonly ActiveConstraint[];
+  /** Raw facts, threaded per-week to mint the illness_recovery week mode. */
+  temporarySourceFacts?: readonly TemporarySourceFact[] | null;
   weekLimit?: 1 | 4;
 }): Microcycle[] {
   const states = buildBlockWeekStates({
@@ -283,6 +297,7 @@ export function buildGeneratedMicrocycles(args: {
           activeConstraints: args.activeConstraints,
           todayISO: blockState.weekStart,
           periodEndISO: blockState.weekEnd,
+          temporarySourceFacts: args.temporarySourceFacts,
         })
       : args.generationConstraints;
     const profile = applyGenerationConstraintsToProfile(args.profile, generationConstraints);
@@ -601,6 +616,9 @@ export function generateProgramLocally(
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
     activeConstraints: activeConstraintsForGeneration,
+    temporarySourceFacts: options.temporarySourceFacts ??
+      require('../../store/programStore').useProgramStore.getState()
+        .acceptedMaterialContext?.temporarySourceFacts,
     weekLimit: options.microcycleLimit,
   });
   const firstMicrocycle = microcycles[0];

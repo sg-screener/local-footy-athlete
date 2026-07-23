@@ -32,10 +32,11 @@ app, with a coach that acts through safe, disclosed, reversible edits:
 5. Anchor-day swap relocate-first bug — shipped in group B item 4 ✓ (listed
    for the record; verify in final regression pass).
 6. `SUPPORTED_ATHLETE_ACTIONS.md` contract text for the game-day lock.
-7. **Auth decision** — is v1 single-user-on-own-phone (no accounts) or
-   multi-user with Supabase auth? Blocks TestFlight scope. Sam to decide.
-8. Ship logistics — TestFlight setup, app icon/screenshots, privacy policy,
-   Supabase production config, App Store review.
+7. ~~Auth decision~~ — DECIDED 2026-07-22: v1 is single-user, data
+   on-device, no accounts. Auth screens stay unbuilt (NOT-product). Removed
+   from blockers.
+8. Ship logistics — Apple Developer enrolment (started 2026-07-22),
+   TestFlight setup, app icon/screenshots, privacy policy, App Store review.
 9. Final full QA pass — re-run the screen audits + Maestro smoke on the
    release candidate; test:bible green is a merge gate for every item above.
 
