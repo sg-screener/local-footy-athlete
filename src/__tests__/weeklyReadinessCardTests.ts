@@ -422,6 +422,45 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     src.includes("onApply('sick_week')") && src.includes('onPress={onInjury}'));
   ok('Properly sick discloses the illness_recovery framing (absorbs bed-ridden)',
     src.includes("Nothing will be required this week"));
+
+  // ── A2 (L10 device finding 2026-07-24) ─────────────────────────────────
+  // Confirming "Properly sick" dropped the athlete straight into the manage
+  // view ("Update" / "Clear adjustment — I'm good now"). The sheet had only
+  // TWO states and `showOptions` derived both from one overloaded variable, so
+  // "this week has an active adjustment" (a fact about the week) and "the
+  // athlete came here to manage it" (a fact about this visit) were the same
+  // condition — making the moment of confirming indistinguishable from a later
+  // visit. Sam's ruling: right after confirming, show the disclosure with a
+  // close/return only; clearing belongs to a later visit.
+  //
+  // The fix adds the missing state rather than a guard on the existing one.
+  ok('[A2] the sheet has a distinct just-confirmed state',
+    /const \[confirmed, setConfirmed\] = useState/.test(src) &&
+    src.includes('home-week-readiness-confirmed'));
+  ok('[A2] confirming suppresses BOTH the option list and the manage view',
+    /showOptions =[^;]*!justConfirmed/.test(src) &&
+    /!showOptions && !lighterDayOffer && !justConfirmed && active/.test(src));
+  // Extract the just-confirmed block itself rather than testing source
+  // proximity — the manage view follows it in the file, so a windowed regex
+  // would happily read the manage view's clear action as belonging to it.
+  const confirmedBlock = (() => {
+    const start = src.indexOf('{justConfirmed && acknowledgment && (');
+    const end = src.indexOf('{!showOptions && !lighterDayOffer && !justConfirmed && active && (');
+    return start >= 0 && end > start ? src.slice(start, end) : '';
+  })();
+  ok('[A2] the just-confirmed state offers a close/return and no clear',
+    confirmedBlock.includes('home-week-readiness-confirmed') &&
+    confirmedBlock.includes('label="Done"') &&
+    !confirmedBlock.includes('readinessClearAction') &&
+    !confirmedBlock.includes('readinessUpdate') &&
+    !/Clear adjustment/.test(confirmedBlock));
+  ok('[A2] the confirmed state carries the authored disclosure, not a new string',
+    /home-week-readiness-confirmed[\s\S]{0,700}acknowledgment\.message/.test(src));
+  ok('[A2] confirmation resets on reopen and when the athlete taps Update',
+    /if \(visible\) \{[^}]*setConfirmed\(false\)/.test(src) &&
+    /setUpdating\(true\); setConfirmed\(false\)/.test(src));
+  ok('[A2] a FAILED report does not enter the confirmed state',
+    /acknowledgment\?\.tone === 'success'/.test(src));
   ok('Short on time removed from the sheet — no dead affordance and no dead prop',
     !src.includes('Short on time') && !/onShortTime/.test(src) &&
     !/readinessOption\('short_time'\)/.test(src));

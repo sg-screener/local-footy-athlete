@@ -2077,27 +2077,38 @@ function WeekReadinessSheet({
   lighterDayOffer,
   lighterDayBusy,
   onClose,
-  onApply,
+  onApply: onApplyProp,
   onAcceptLighterDay,
   onDeclineLighterDay,
   onClear,
   onInjury,
 }: WeekReadinessSheetProps) {
   const [updating, setUpdating] = useState(false);
+  // A2: whether the athlete JUST reported something in this visit, as opposed to
+  // arriving with something already active. Without it, `active` carried both
+  // meanings and the manage view ("Update" / "Clear adjustment") was the
+  // fallthrough for any non-null `active` — so confirming "Properly sick"
+  // immediately offered to clear it. Sam's ruling: right after confirming, show
+  // the disclosure and a way out, nothing else.
+  const [confirmed, setConfirmed] = useState(false);
   // Russian-doll navigation for the option list: three top-level buckets, each
   // expanding to its leaves. 'sleep' is a leaf of 'flat'. Reset to the top
   // whenever the list re-shows.
   const [bucket, setBucket] = useState<'top' | 'flat' | 'sleep' | 'sick'>('top');
 
   React.useEffect(() => {
-    if (visible) { setUpdating(false); setBucket('top'); }
+    if (visible) { setUpdating(false); setConfirmed(false); setBucket('top'); }
   }, [visible]);
   React.useEffect(() => {
     if (updating) setBucket('top');
   }, [updating]);
 
-  // While the opt-in lighter-day offer is showing, don't re-show the option list.
-  const showOptions = (!active || updating) && !lighterDayOffer;
+  // A failed report must NOT read as confirmation — the error acknowledgment
+  // stays in place over the options so the athlete can try again.
+  const justConfirmed = confirmed && acknowledgment?.tone === 'success' && !lighterDayOffer;
+  // While the opt-in lighter-day offer or the just-confirmed disclosure is
+  // showing, don't re-show the option list.
+  const showOptions = (!active || updating) && !lighterDayOffer && !justConfirmed;
 
   const pulseIcon = (color: string) => (
     <Svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -2119,9 +2130,17 @@ function WeekReadinessSheet({
   const dropletIcon = (color: string) => svg(color, <Path d="M12 2.69 6.34 8.35a8 8 0 1 0 11.31 0z" />);
   const chevron = (color: string) => svg(color, <Path d="M9 18 15 12 9 6" />);
 
+  // A2: "the athlete reported something in THIS visit" is a fact the sheet owns,
+  // so it is recorded at the one boundary every tier already goes through rather
+  // than at eight call sites. Whether the report SUCCEEDED is still the
+  // acknowledgment's to say — see `justConfirmed`.
+  const onApply = (kind: WeekReadinessAction) => {
+    void Promise.resolve(onApplyProp(kind)).then(() => setConfirmed(true));
+  };
+
   return (
     <Sheet visible={visible} onClose={onClose} testID="home-week-readiness-sheet">
-      {acknowledgment && (
+      {acknowledgment && !justConfirmed && (
         <View
           testID={acknowledgment.tone === 'success'
             ? 'home-week-readiness-ack-success'
@@ -2154,7 +2173,25 @@ function WeekReadinessSheet({
           <Button label="Done" variant="secondary" size="md" onPress={onClose} style={{ marginTop: spacing.md }} />
         </View>
       )}
-      {!showOptions && !lighterDayOffer && active && (
+      {justConfirmed && acknowledgment && (
+        <View testID="home-week-readiness-confirmed">
+          <Text style={styles.sheetTitle}>{active?.title ?? "Got it"}</Text>
+          {/* The authored disclosure the commit returned — not a second string
+              written here. For a severe illness that is "Rest up — nothing's
+              required this week…". */}
+          <Text style={styles.busyAwayEmpty}>{acknowledgment.message}</Text>
+          <Button
+            label="Done"
+            variant="secondary"
+            size="md"
+            onPress={onClose}
+            testID="home-week-readiness-confirmed-done"
+            style={{ marginTop: spacing.md }}
+          />
+        </View>
+      )}
+
+      {!showOptions && !lighterDayOffer && !justConfirmed && active && (
         <View>
           <Text style={styles.sheetTitle}>{active.title}</Text>
           <Text style={styles.busyAwayEmpty}>
@@ -2165,7 +2202,7 @@ function WeekReadinessSheet({
             label="Update — how I'm feeling changed"
             testID={explorerTestId.readinessUpdate(active.id)}
             icon={pulseIcon('#FF7A85')}
-            onPress={() => setUpdating(true)}
+            onPress={() => { setUpdating(true); setConfirmed(false); }}
           />
           <SheetOption
             label="Clear adjustment — I'm good now"
