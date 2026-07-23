@@ -13,7 +13,6 @@ import { SettingsRow } from '../../components/common/SettingsRow';
 import { useProfileStore } from '../../store/profileStore';
 import { useAuthStore } from '../../store/authStore';
 import {
-  clearCoachAdjustments,
   clearCoachChat,
   resetProgramAndOnboarding,
 } from '../../utils/resetCoach';
@@ -43,29 +42,6 @@ export const ProfileHomeScreen: React.FC = () => {
   // Three levels of destructiveness, each behind a confirmation prompt.
   // Surgical "Clear coach adjustments" preserves the base program; the
   // full reset returns the user to onboarding. See utils/resetCoach.ts.
-  const handleClearCoachAdjustments = () => {
-    Alert.alert(
-      'Clear coach adjustments?',
-      'Removes the active injury, Coach Update cards, and any program changes the coach has made. Your base program, profile, and game days stay intact.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          style: 'destructive',
-          onPress: () => {
-            const summary = clearCoachAdjustments();
-            Alert.alert(
-              'Coach state cleared',
-              `Active injury: ${summary.activeInjuryCleared ? 'removed' : 'none'}\n` +
-              `Coach Update cards: ${summary.coachUpdatesCleared}\n` +
-              `Injury overrides: ${summary.injuryOverridesRemoved.length}`,
-            );
-          },
-        },
-      ],
-    );
-  };
-
   const handleClearCoachChat = () => {
     Alert.alert(
       'Clear coach chat?',
@@ -218,11 +194,6 @@ export const ProfileHomeScreen: React.FC = () => {
       <Text variant="h4" style={styles.sectionTitle}>
         Coach state
       </Text>
-      <SettingsRow
-        icon="🩹"
-        label="Clear coach adjustments"
-        onPress={handleClearCoachAdjustments}
-      />
       <SettingsRow
         icon="💬"
         label="Clear coach chat"

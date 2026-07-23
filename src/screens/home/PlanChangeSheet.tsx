@@ -19,7 +19,7 @@ import {
 import {
   executeProgramControlActionDurably,
 } from '../../utils/programControlActions';
-import type { ProgramEditRiskFinding } from '../../utils/programEditRiskAssessment';
+import { riskReasons } from '../../utils/planChangeRefusalCopy';
 import type { AthleteActionTraceContext } from '../../utils/athleteActionDiagnostics';
 import {
   observeRenderedAthleteActionOutcome,
@@ -70,8 +70,9 @@ type Step =
       trace: AthleteActionTraceContext;
     }
   | {
+      // A6: no `title`. The refusal headline is the domain's own reason; the
+      // sheet holds no competing constant. See utils/planChangeRefusalCopy.
       kind: 'block_warning';
-      title: string;
       reasons: string[];
       backStep: Step;
     }
@@ -108,48 +109,6 @@ interface PlanChangeSheetProps {
 function weekdayLabel(dateISO: string): string {
   const day = new Date(`${dateISO}T12:00:00`);
   return day.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'short' });
-}
-
-function riskReason(finding: ProgramEditRiskFinding): string {
-  const observed = typeof finding.data?.observed === 'number' ? finding.data.observed : null;
-  switch (finding.ruleId) {
-    case 'cap_maxHardDays_over':
-      return observed
-        ? `This gives you ${observed} hard days this week. That's the upper edge.`
-        : 'This pushes your hard days above the clean weekly target.';
-    case 'cap_maxMainStrengthSessions_over':
-      return observed
-        ? `This gives you ${observed} main strength sessions this week. That's more than the normal cap.`
-        : 'This pushes main strength above the normal weekly cap.';
-    case 'cap_maxRunningExposures_over':
-      return 'This adds more running than the weekly cap.';
-    case 'cap_sprintCodExposures_over':
-      return 'This adds more sprint/COD than the week needs.';
-    case 'g1_hard_work':
-    case 'g1_not_light':
-      return "This puts hard work one day before your game, so it can't be applied. Choose a lighter session or another day.";
-    case 'g2_hard_lower':
-    case 'g2_hard_conditioning':
-    case 'g2_sprint_cod':
-      return 'This puts hard work too close to game day.';
-    case 'g_plus1_hard_work':
-      return 'This adds hard work the day after your game, when recovery should win.';
-    case 'game_day_hard_work':
-      return "This puts hard training on game day, so it can't be applied. Choose a recovery session or another day.";
-    case 'protected_anchor_edit_blocked':
-    case 'protected_game_anchor_removed':
-    case 'protected_team_training_anchor_removed':
-      return "This would remove a protected team/game anchor, so it can't be applied. Use the team/game controls to change that anchor.";
-    case 'active_injury_hard_stop':
-      return "There's an active medical/injury hard stop, so normal training edits are paused. Choose recovery or clear it once you're ready.";
-    default:
-      return finding.message;
-  }
-}
-
-function riskReasons(findings: ProgramEditRiskFinding[]): string[] {
-  const reasons = findings.map(riskReason);
-  return Array.from(new Set(reasons)).slice(0, 3);
 }
 
 export function PlanChangeSheet({
@@ -344,7 +303,6 @@ export function PlanChangeSheet({
     if (preview.assessment.decision === 'block') {
       setStep({
         kind: 'block_warning',
-        title: "Can't apply this edit",
         reasons: riskReasons(preview.assessment.findings),
         backStep,
       });
@@ -713,10 +671,23 @@ export function PlanChangeSheet({
 
       {step.kind === 'block_warning' && (
         <View>
-          <Text style={styles.blockingTitle}>{step.title}</Text>
-          {step.reasons.map((reason) => (
-            <Text key={reason} style={styles.confirmText}>{reason}</Text>
-          ))}
+          {/* A6: the domain's plain-language refusal IS the headline. The lead
+              reason carries the prominence the generic "Can't apply this edit"
+              used to take; any further reasons follow as supporting detail. The
+              generic line survives only when the assessment gave us nothing to
+              say, which should not happen for a hard stop. */}
+          {step.reasons.length === 0 ? (
+            <Text style={styles.blockingTitle}>Can't apply this edit</Text>
+          ) : (
+            step.reasons.map((reason, index) => (
+              <Text
+                key={reason}
+                style={index === 0 ? styles.blockingReason : styles.confirmText}
+              >
+                {reason}
+              </Text>
+            ))
+          )}
           <MenuOption
             label="OK"
             onPress={() => setStep(step.backStep)}
@@ -877,6 +848,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF',
     marginBottom: 8,
+  },
+  // The lead refusal reason. Sized for a sentence rather than a label — it has
+  // to carry the whole explanation at full contrast, which is the point of A6.
+  blockingReason: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    lineHeight: 22,
+    marginBottom: 10,
   },
   lockedText: {
     fontSize: 14,

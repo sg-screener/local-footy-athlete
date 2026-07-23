@@ -523,6 +523,10 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     path.resolve(__dirname, '..', 'screens', 'home', 'PlanChangeSheet.tsx'),
     'utf8',
   );
+  const refusalCopySrc = fs.readFileSync(
+    path.resolve(__dirname, '..', 'utils', 'planChangeRefusalCopy.ts'),
+    'utf8',
+  );
   const menuIdx = sheet.indexOf("step.kind === 'menu'");
   const editIdx = sheet.indexOf("step.kind === 'edit_session'");
   const categoryIdx = sheet.indexOf("step.kind === 'pick_category'");
@@ -605,9 +609,10 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
   ok('[9] deletion success remains visible until accepted outcome feedback is read',
     /apply\(\s*\{ kind: 'remove_session'/.test(removeConfirmBlock) &&
       !/closeOnSuccess/.test(removeConfirmBlock));
+  // A6 moved the reason copy to its pure owner; assert it there, not in the view.
   ok('[9] tap warning copy is readable and coach-like',
-    /This gives you \$\{observed\} hard days this week\. That's the upper edge\./.test(sheet)
-      && /This puts hard work one day before your game/.test(sheet)
+    /This gives you \$\{observed\} hard days this week\. That's the upper edge\./.test(refusalCopySrc)
+      && /This puts hard work one day before your game/.test(refusalCopySrc)
       && !/program invalid/i.test(confirmWarningBlock));
   ok('[9] one risky tap edit renders one Continue and one Cancel action',
     (confirmWarningBlock.match(/label="Continue"/g) ?? []).length === 1
@@ -616,8 +621,63 @@ function applyPlanChangeMove(week: ResolvedDay[]) {
     /label="OK"[\s\S]*setStep\(step\.backStep\)/.test(blockWarningBlock)
       && !/label="Continue"|commitPlanChange/.test(blockWarningBlock));
   ok('[9] tap hard-stop copy offers a safer next action',
-    /Choose a lighter session or another day/.test(sheet)
-      && /Use the team\/game controls to change that anchor/.test(sheet));
+    /Choose a lighter session or another day/.test(refusalCopySrc)
+      && /Use the team\/game controls to change that anchor/.test(refusalCopySrc));
+
+  // ── A6 (L10 device finding) ────────────────────────────────────────────
+  // Moving a session onto a G+1 day refused with a bold generic "Can't apply
+  // this edit" while the domain's honest, game-framed sentence was demoted to
+  // grey secondary text. The domain already owns that copy deliberately
+  // (`blockedAssessmentForBuildError`: "a plain-language refusal, never a raw
+  // error code"). The defect was a SECOND representation of the refusal — a
+  // constant headline owned by the sheet — outranking it. The fix removes the
+  // constant, it does not add a case.
+  ok('[9][A6] the sheet holds no constant refusal headline',
+    !/title: "Can't apply this edit"/.test(sheet));
+  ok('[9][A6] the domain reason is what renders prominently',
+    /styles\.blockingReason/.test(blockWarningBlock)
+      && /step\.reasons/.test(blockWarningBlock));
+  ok('[9][A6] the generic headline survives ONLY as a no-reasons fallback',
+    /step\.reasons\.length === 0/.test(blockWarningBlock)
+      && /Can't apply this edit/.test(blockWarningBlock));
+  // The two game-locked rules are domain-voiced on purpose: riskReason must NOT
+  // gain cases for them, because that would re-create the duplicate copy this
+  // fix removes. They reach the athlete through the `default: finding.message`
+  // fallthrough, unchanged.
+  ok('[9][A6] game-locked rules stay domain-voiced (no UI copy duplicate)',
+    !/case 'game_proximity_day_locked'/.test(sheet)
+      && !/case 'game_day_locked'/.test(sheet)
+      && !/That day is kept light around your game/.test(sheet));
+}
+
+// A6 behavioural: the honest sentence the domain writes is the exact string the
+// sheet's reason mapping hands to the view — no rewrite, no truncation.
+{
+  console.log('\n[9b] A6 — the domain owns the refusal copy end to end');
+  const { riskReason, riskReasons } = require('../utils/planChangeRefusalCopy') as {
+    riskReason: (finding: { ruleId: string; message: string; data?: Record<string, unknown> }) => string;
+    riskReasons: (findings: Array<{ ruleId: string; message: string }>) => string[];
+  };
+  const domainMessage =
+    "That day is kept light around your game, so a session can't be moved onto it. The plan is untouched.";
+  ok('[9b] game_proximity_day_locked reaches the view verbatim',
+    riskReason({ ruleId: 'game_proximity_day_locked', message: domainMessage }) === domainMessage);
+  ok('[9b] game_day_locked reaches the view verbatim',
+    riskReason({
+      ruleId: 'game_day_locked',
+      message: "It's game day — sessions can't be changed or added here.",
+    }) === "It's game day — sessions can't be changed or added here.");
+  ok('[9b] the refusal copy owner is pure (no React Native import)',
+    !/react-native|@expo/.test(
+      require('fs').readFileSync(
+        require('path').resolve(__dirname, '..', 'utils', 'planChangeRefusalCopy.ts'),
+        'utf8',
+      )));
+  ok('[9b] reasons dedupe and cap without dropping the leading domain reason',
+    riskReasons([
+      { ruleId: 'game_proximity_day_locked', message: domainMessage },
+      { ruleId: 'game_proximity_day_locked', message: domainMessage },
+    ])[0] === domainMessage);
 }
 
 {

@@ -20,7 +20,6 @@ import { useCoachPreferencesStore } from '../../store/coachPreferencesStore';
 import { useReadinessStore } from '../../store/readinessStore';
 import { commitProfileProgramTransaction } from '../../store/profileProgramTransaction';
 import {
-  clearCoachAdjustments,
   clearCoachChat,
   resetProgramAndOnboarding,
   resetToDevPostOnboardingState,
@@ -195,29 +194,6 @@ export default function ProfileScreen() {
   }, [isSetupUpdating, setupUpdateMsgOpacity]);
 
   // ─── Reset handlers ────────────────────────────────────────────────
-  const onClearCoachAdjustments = () => {
-    logger.debug('[reset-ui] clear_coach_adjustments_pressed');
-    Alert.alert(
-      'Clear coach adjustments?',
-      'Clears active restrictions and coach-made program edits. Keeps your base program.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear',
-          onPress: () => {
-            const summary = clearCoachAdjustments();
-            Alert.alert(
-              'Coach adjustments cleared',
-              `Active injury: ${summary.activeInjuryCleared ? 'removed' : 'none'}\n` +
-              `Coach Update cards: ${summary.coachUpdatesCleared}\n` +
-              `Injury overrides: ${summary.injuryOverridesRemoved.length}`,
-            );
-          },
-        },
-      ],
-    );
-  };
-
   const onClearCoachChat = () => {
     logger.debug('[reset-ui] clear_coach_chat_pressed');
     Alert.alert(
@@ -627,25 +603,11 @@ export default function ProfileScreen() {
                 </Text>
               )}
             </View>
-            {activeIssues.length > 0 ? (
-              <>
-                <View style={styles.resetDivider} />
-                <TouchableOpacity
-                  style={styles.resetRow}
-                  activeOpacity={0.7}
-                  onPress={onClearCoachAdjustments}
-                  testID="profile-clear-coach-adjustments"
-                  accessibilityLabel="Clear active changes"
-                >
-                  <Text variant="body" color={colors.text.primary} style={{ fontWeight: '600' }}>
-                    Clear active changes
-                  </Text>
-                  <Text variant="caption" color={colors.text.tertiary}>
-                    Clears active restrictions and coach-made edits. Keeps your base program.
-                  </Text>
-                </TouchableOpacity>
-              </>
-            ) : null}
+            {/* A5: no clear control here. It cleared only the pre-§18 mirror
+                stores, so the fact, the week overlay, the ledger adjustment and
+                the visible week all survived a tap that reported success. The
+                Program tab's active-state cards own clearing — one door, through
+                the cascade. This section stays read-only. */}
             <View style={styles.resetDivider} />
             <TouchableOpacity
               style={styles.resetRow}

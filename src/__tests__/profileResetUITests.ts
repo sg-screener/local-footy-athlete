@@ -92,7 +92,14 @@ ok(
   'page subtitle present',
   /Your program setup, coach adjustments and support\./.test(src),
 );
-ok('label "Clear active changes" present', /Clear active changes/.test(src));
+// A5 (Sam's v1 ruling): the Profile clear-coach-adjustments control is REMOVED.
+// It rendered, reported success with an all-zero summary, and changed nothing —
+// `clearCoachAdjustments` only clears the pre-§18 mirror stores, so the illness
+// fact, the week overlay, the ledger adjustment and the visible week all
+// survived it. Rather than rebuild a third door onto fact clearing, v1 removes
+// the affordance; the readiness card and Coach Notes own clearing (L5: a visible
+// control either works or does not exist).
+ok('A5: "Clear active changes" control removed', !/Clear active changes/.test(src));
 ok('old visible label "Clear coach adjustments" removed', !/>\s*Clear coach adjustments\s*</.test(src));
 ok('label "Clear coach chat" present', /Clear coach chat/.test(src));
 ok('label "Privacy Policy" present', /Privacy Policy/.test(src));
@@ -308,8 +315,8 @@ ok('Profile bullets keep severity visible when present', /\$\{note\.title\} — 
 ok('renders Active label', /Active:/.test(src));
 ok('renders no active coach changes empty state', /No active coach changes\./.test(src));
 ok(
-  'Clear active changes only renders when active issues exist',
-  /activeIssues\.length > 0 \? \([\s\S]{0,900}profile-clear-coach-adjustments/.test(src),
+  'A5: no clear-coach-adjustments control renders at all',
+  !/profile-clear-coach-adjustments/.test(src),
 );
 ok(
   'old equipment guidance copy removed from Profile',
@@ -321,8 +328,8 @@ ok(
 // ═════════════════════════════════════════════════════════════════════
 section('[2] Reset functions imported from utils/resetCoach');
 ok(
-  'imports clearCoachAdjustments',
-  /import\s*{[^}]*clearCoachAdjustments[^}]*}\s*from\s*['"][^'"]*resetCoach['"]/.test(src),
+  'A5: no longer imports clearCoachAdjustments',
+  !/import\s*{[^}]*clearCoachAdjustments[^}]*}\s*from\s*['"][^'"]*resetCoach['"]/.test(src),
 );
 ok(
   'imports clearCoachChat',
@@ -342,8 +349,8 @@ ok(
 // ═════════════════════════════════════════════════════════════════════
 section('[3] Button handlers wired to correct reset functions');
 ok(
-  'Clear active changes handler still calls clearCoachAdjustments()',
-  /onClearCoachAdjustments[\s\S]*?clearCoachAdjustments\(/.test(src),
+  'A5: no clear-coach-adjustments handler remains',
+  !/onClearCoachAdjustments/.test(src),
 );
 ok(
   'onClearCoachChat calls clearCoachChat()',
@@ -447,7 +454,7 @@ ok('testID profile-legal-section', /testID="profile-legal-section"/.test(src));
 ok('testID profile-privacy-policy', /testID="profile-privacy-policy"/.test(src));
 ok('testID profile-terms-of-use', /testID="profile-terms-of-use"/.test(src));
 ok('testID profile-danger-zone-section', /testID="profile-danger-zone-section"/.test(src));
-ok('testID profile-clear-coach-adjustments', /testID="profile-clear-coach-adjustments"/.test(src));
+ok('A5: testID profile-clear-coach-adjustments gone', !/testID="profile-clear-coach-adjustments"/.test(src));
 ok('testID profile-clear-coach-chat', /testID="profile-clear-coach-chat"/.test(src));
 ok('testID profile-full-reset', /testID="profile-full-reset"/.test(src));
 
@@ -470,8 +477,8 @@ ok(
   /\[profile\]\s*coach_adjustments_section_rendered/.test(src),
 );
 ok(
-  '[reset-ui] clear_coach_adjustments_pressed',
-  /\[reset-ui\]\s*clear_coach_adjustments_pressed/.test(src),
+  'A5: no clear_coach_adjustments press log (control removed)',
+  !/\[reset-ui\]\s*clear_coach_adjustments_pressed/.test(src),
 );
 ok(
   '[reset-ui] clear_coach_chat_pressed',
