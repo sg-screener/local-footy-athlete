@@ -42,10 +42,10 @@ requested changed, or if a legal action is refused.
 
 | # | Action | Status | Test note |
 |---|--------|--------|-----------|
-| 3.1 | Tired → readiness signal for today | BUILT 07-04 | Self-heals tomorrow |
-| 3.2 | Sick: sniffle → today becomes Recovery Flow | BUILT 07-04 | |
-| 3.3 | Sick: bed-ridden → confirm → recovery-only week | BUILT 07-04 | Games untouched |
-| 3.4 | Injured → body area → plan adapts + clean un-do | BUILT | Murky cases open coach PRE-LOADED, never re-asks |
+| 3.1 | Feeling flat → tired/sleep/sore (today) or Cooked (severe fatigue, week reduces) | BUILT; R16 door 07-23 | Single week-level owner (`home-week-readiness-sheet`); self-heals / undoable |
+| 3.2 | Sick → "Coming down with something" (sniffle) → records + offers "make today lighter" | BUILT; R16 07-23 | Minor/inert: week unchanged unless the soften offer is accepted; undoable |
+| 3.3 | Sick → "Properly sick" (bed-ridden) → illness_recovery week: load reduced AND every surviving session rendered VISIBLY OPTIONAL ("nothing's required this week"), minimums lifted, never "cleared to rest" | BUILT; R16 + finding #3/#4 07-24 | Games untouched (fixture). Readiness-card clear restores the week byte-identical AND resolves the fact — verified on a GAME week (finding #4). Team-training days render optional too (no carve-outs). |
+| 3.4 | Something hurts → body area → injury flow + clean un-do | BUILT | Murky cases open coach PRE-LOADED, never re-asks |
 
 ## Group 4 — Games
 
