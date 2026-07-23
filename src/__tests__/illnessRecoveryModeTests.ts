@@ -92,7 +92,7 @@ function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
  *  generate a program the athlete would see. Mirrors production: the fact is in
  *  acceptedMaterialContext and its composed constraint drives the readiness
  *  pipeline; the mode derivation reads the raw fact. */
-function generateWithIllness(severe: boolean) {
+function generateWithIllness(severe: boolean, withGame = true) {
   const athlete = profile();
   const facts = severe
     ? [createTemporaryIllnessFact({
@@ -103,13 +103,14 @@ function generateWithIllness(severe: boolean) {
   const compat = composeTemporarySourceFactCompatibility({
     temporarySourceFacts: facts, activeConstraints: [], onDate: WEEK,
   });
-  useCalendarStore.setState({ markedDays: { '2026-07-18': 'game' }, selectedDate: null });
+  const markedDays = withGame ? { '2026-07-18': 'game' } : {};
+  useCalendarStore.setState({ markedDays, selectedDate: null } as never);
   useReadinessStore.setState({ signalsByDate: {} });
   useCoachUpdatesStore.setState({ activeConstraints: compat.activeConstraints, activeInjury: null } as never);
   useProfileStore.setState({ onboardingData: athlete, isOnboardingComplete: true });
   useProgramStore.setState({
     acceptedMaterialContext: {
-      markedDays: { '2026-07-18': 'game' },
+      markedDays,
       readinessSignalsByDate: {},
       activeConstraints: compat.activeConstraints,
       activeInjury: null,
@@ -139,6 +140,21 @@ function generateWithIllness(severe: boolean) {
     },
   }));
   return program.microcycles[0];
+}
+
+type GenWorkout = { dayOfWeek: number; workoutType?: string; sessionTier?: string };
+type GenMicro = { exposureContract?: { identity?: { mode?: string } }; workouts: GenWorkout[] };
+
+/** Sam 2026-07-24: in an optional-only week mode, EVERY surviving session (any type that
+ *  isn't a bare Rest and isn't the game fixture) is tier 'optional' — team days included. */
+function assertEverySurvivingSessionOptional(mc: GenMicro, label: string): void {
+  const mode = mc.exposureContract?.identity?.mode ?? '(none)';
+  const worked = mc.workouts.filter((w) => w.workoutType !== 'Rest' && w.workoutType !== 'Game');
+  assert(worked.length > 0, `${label}: expected surviving worked sessions to assert on (mode=${mode})`);
+  const notOptional = worked.filter((w) => w.sessionTier !== 'optional');
+  assert(notOptional.length === 0,
+    `${label} (mode=${mode}): surviving sessions NOT stamped optional: ` +
+    notOptional.map((w) => `dow${w.dayOfWeek}:${w.workoutType}/${w.sessionTier}`).join(', '));
 }
 
 function inSeasonContractInput(weekModeOverride?: 'illness_recovery') {
@@ -306,6 +322,49 @@ run('2 cascade: clearing the severe illness fact restores the normal contract by
     'fact present must derive the mode');
   assert(!deriveIllnessRecoveryWeekMode({ temporarySourceFacts: [], weekStartISO: WEEK }),
     'fact cleared must derive no mode (cascade back to normal)');
+});
+
+// ── Invariant 5 — MODE-LEVEL optional tier (finding #3, Sam 2026-07-24). In an
+// optional-only week mode, every surviving session is stamped tier 'optional' at
+// authoring, regardless of session type (strength, team-training, conditioning) —
+// "nothing will be required this week", no carve-outs. Games are fixtures, untouched.
+// This is the same everywhere: game week AND non-game week (it is NOT the finding #4
+// game-proximity re-tiering — that was projection; this is authoring).
+run('5 illness_recovery GAME week: every surviving session is optional (team days included)', () => {
+  const mc = generateWithIllness(true, true) as unknown as GenMicro;
+  assert(mc.exposureContract?.identity?.mode === 'illness_recovery',
+    `precondition: illness_recovery mode, got ${mc.exposureContract?.identity?.mode}`);
+  assertEverySurvivingSessionOptional(mc, 'illness_recovery game');
+});
+
+run('5b illness_recovery NON-game week: every surviving session is optional', () => {
+  const mc = generateWithIllness(true, false) as unknown as GenMicro;
+  assert(mc.exposureContract?.identity?.mode === 'illness_recovery',
+    `precondition: illness_recovery mode, got ${mc.exposureContract?.identity?.mode}`);
+  assertEverySurvivingSessionOptional(mc, 'illness_recovery non-game');
+});
+
+// ── Invariant 6 — TYPE-AGNOSTIC (this is what makes the fix mode-level, and what the
+// sibling optional-only modes rely on). The stamp is a single unconditional pass over the
+// surviving plan inside `if (optionalOnlyMode)` (coachingEngine.ts, one branch shared by
+// illness_recovery / in_season_bye_recovery / early_offseason, no per-mode or per-type
+// branching). Prove it carves out NO session type: the illness_recovery week keeps sessions
+// of different types (a strength/Mixed day AND a team-training day) and BOTH are optional —
+// so the same guarantee holds for the siblings that share the branch. (Full generation of
+// bye_recovery / early_offseason needs multi-week/season-model context not built here — see
+// the diagnosis doc / report NOT-COVERED.)
+run('6 mode-level stamp is type-agnostic: strength AND team sessions both render optional', () => {
+  const mc = generateWithIllness(true, true) as unknown as GenMicro;
+  const worked = mc.workouts.filter((w) => w.workoutType !== 'Rest' && w.workoutType !== 'Game');
+  const strengthLike = worked.filter((w) => w.workoutType === 'Mixed' || w.workoutType === 'Strength');
+  const teamLike = worked.filter((w) => w.workoutType === 'Team Training');
+  assert(strengthLike.length > 0 && teamLike.length > 0,
+    `precondition: the reduced week must keep a strength-type AND a team session to prove ` +
+    `type-agnosticism; got types ${worked.map((w) => w.workoutType).join(', ')}`);
+  assert(strengthLike.every((w) => w.sessionTier === 'optional'),
+    `a surviving STRENGTH session was not optional: ${strengthLike.map((w) => `${w.workoutType}/${w.sessionTier}`).join(', ')}`);
+  assert(teamLike.every((w) => w.sessionTier === 'optional'),
+    `a surviving TEAM session was not optional: ${teamLike.map((w) => `${w.workoutType}/${w.sessionTier}`).join(', ')}`);
 });
 
 console.log(`\nillness_recovery week-mode invariants: ${passes} passing, ${failures.length} failing`);

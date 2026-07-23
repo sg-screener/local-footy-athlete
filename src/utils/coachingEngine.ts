@@ -6889,6 +6889,13 @@ function applySection18ConditioningAllocation(
       applyOptionalRecovery(session);
       remaining--;
     }
+    // Mode-level ownership (Sam 2026-07-24, finding #3): an optional-only week is "nothing
+    // will be required this week" — EVERY surviving session renders optional, regardless of
+    // type (strength, team-training, conditioning), with no per-type carve-outs. The
+    // conditioning logic above owns WHAT survives the reduction; the mode owns the TIER of
+    // whatever survives. Games are fixtures (not sessions in `plan`), so they stay untouched
+    // per the standing rule. See docs/FINDING3_VISIBLE_OPTIONAL_DIAGNOSIS_2026-07-23.md.
+    for (const session of plan) session.tier = 'optional';
     return;
   }
 
