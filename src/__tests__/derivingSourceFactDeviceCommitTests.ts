@@ -7,10 +7,21 @@
  * `accepted_composition_base_changed_by_temporary_fact` — the deriving-side sibling
  * of the Part 2b finding (which fixed the INERT case via preserveExactAcceptedWorkouts).
  *
- * The whole SEVERE readiness class fails, not just illness: severe fatigue (cooked)
- * and severe illness (bed-ridden) both fail identically. That equality is the proof
- * the failure is BEFORE/independent of the §18 mode (illness_recovery lifts minimums;
- * if this were a §18 rejection, illness would pass while fatigue failed).
+ * CORRECTED diagnosis (2026-07-23, superseding the base-preserving "Option B" in
+ * the reassessment doc's first cut): the deriving-commit path has TWO pre-fix
+ * failure modes, and the reject is only the surface one:
+ *   • device-exact real base → REJECTED (accepted_composition_base_changed_by_temporary_fact);
+ *   • R1-style null base → "succeeds" but is a SILENT NO-OP — the accepted week AND
+ *     the visible resolver stay byte-identical game_week, because the illness_recovery
+ *     mode is derived ONLY in generation and this path re-canonicalises with
+ *     skipConstraintProjection (no regen, no mode).
+ * So these invariants pin the CORRECT behaviour: the commit must RE-AUTHOR a reduced
+ * mode week (scoped regeneration committed as authored state, per weekRebuild:block),
+ * which a base-preserving no-op fix would NOT satisfy.
+ *
+ * Severe fatigue (cooked) shares the class — the shipped "auto-protect" delivered no
+ * visible reduction either (read-resolver readiness is profile-derived, ignoring the
+ * active constraint). That is recorded in the reassessment doc.
  *
  * Faithfulness note (the runbook epoch-0 mask): the ok:false OUTCOME is deterministic
  * and clock-independent — verifyCandidate rejects on the base-surfaces fingerprint
@@ -37,12 +48,14 @@ const memory = new Map<string, string>();
 };
 process.env.TZ = 'Australia/Melbourne';
 
+import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
 import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { buildDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
 import { seedOnboardingProgram } from '../utils/onboardingCompletion';
 import { deriveStoredBlockStateFromProgram } from '../utils/programBlockState';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 
 const WEEK = '2026-07-13';
 let passes = 0;
@@ -91,10 +104,32 @@ function seedDeviceExact(): string {
   return d.anchorDate;
 }
 
+/** The ACCEPTED effective week as the athlete would see it — mode + a stable
+ *  day/tier/intensity signature. This is the pure-projection read; it is what a
+ *  correct (b)-style scoped-regen commit must have re-authored. */
+function acceptedWeek(anchor: string): { mode: string; signature: string } {
+  const state = useProgramStore.getState();
+  const rebased = rebaseAcceptedEffectiveWeek({
+    surfaces: state as never, weekStart: anchor,
+    profile: useProfileStore.getState().onboardingData,
+    markedDays: state.acceptedMaterialContext.markedDays,
+  });
+  return {
+    mode: rebased.contract.identity.mode,
+    signature: rebased.visibleWorkouts
+      .map((w) => `${w.dayOfWeek}:${w.workoutType}/${w.sessionTier ?? '-'}/${w.intensity ?? '-'}`)
+      .join('  '),
+  };
+}
+
 async function main(): Promise<void> {
-  // ── D1 — a DERIVING severe illness (bed-ridden) commit must be ACCEPTED against a
-  // real composition base (currently RED: accepted_composition_base_changed_by_temporary_fact).
-  await run('D1 deriving-illness: a severe illness commit is accepted against a real composition base', async () => {
+  // ── D1 — a DERIVING severe illness (bed-ridden) commit must produce a REDUCED,
+  // mode-authored week, not a silent no-op. Pins BOTH pre-fix failure modes:
+  //   • device-exact real base → rejected (accepted_composition_base_changed_by_temporary_fact);
+  //   • R1-style null base → "succeeds" but leaves the accepted week byte-identical
+  //     game_week (the mode is generation-only and this path never regenerates).
+  // A correct scoped-regen commit re-authors the week under illness_recovery.
+  await run('D1 deriving-illness: a severe illness commit re-authors an illness_recovery week', async () => {
     const anchor = seedDeviceExact();
     const res = await executeProgramControlActionDurably({
       type: 'set_illness_status',
@@ -104,12 +139,16 @@ async function main(): Promise<void> {
     } as never, { todayISO: anchor });
     assert((res as { ok?: boolean }).ok === true,
       `severe illness rejected against a real composition base: "${(res as { message?: string }).message}"`);
+    assert(acceptedWeek(anchor).mode === 'illness_recovery',
+      `the accepted week was not re-authored under illness_recovery (silent no-op), mode=${acceptedWeek(anchor).mode}`);
   });
 
-  // ── D2 — the same class for severe FATIGUE (cooked). Equal behaviour with D1 is the
-  // proof this is a deriving-commit ownership issue, not a §18-mode or illness-specific one.
-  await run('D2 deriving-fatigue: a severe (cooked) fatigue commit is accepted against a real composition base', async () => {
+  // ── D2 — the same class for severe FATIGUE (cooked): the commit must actually
+  // REDUCE the accepted week (not a no-op). Equal pre-fix behaviour with D1 is the
+  // proof this is a deriving-commit ownership issue, not illness-specific.
+  await run('D2 deriving-fatigue: a severe (cooked) fatigue commit actually reduces the accepted week', async () => {
     const anchor = seedDeviceExact();
+    const before = acceptedWeek(anchor).signature;
     const res = await executeProgramControlActionDurably({
       type: 'set_fatigue_status',
       source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
@@ -118,6 +157,35 @@ async function main(): Promise<void> {
     } as never, { todayISO: anchor });
     assert((res as { ok?: boolean }).ok === true,
       `severe fatigue rejected against a real composition base: "${(res as { message?: string }).message}"`);
+    assert(acceptedWeek(anchor).signature !== before,
+      'the accepted week was byte-identical after a severe fatigue commit (silent no-op)');
+  });
+
+  // ── D3 — cascade: clearing the fact restores the accepted week BYTE-IDENTICAL to
+  // the pre-illness authored week (via stored prior state, not a re-regeneration).
+  await run('D3 cascade: clearing the severe illness fact restores the accepted week byte-identical', async () => {
+    const anchor = seedDeviceExact();
+    const before = acceptedWeek(anchor).signature;
+    const commit = await executeProgramControlActionDurably({
+      type: 'set_illness_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week', payload: { date: anchor, todayISO: anchor, severity: 'severe' },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    } as never, { todayISO: anchor });
+    // Non-vacuous: the fact must actually have re-authored a reduced week first,
+    // else "restore" is trivially true. RED until the commit itself works.
+    assert((commit as { ok?: boolean }).ok === true &&
+      acceptedWeek(anchor).signature !== before,
+      'precondition: the severe illness commit must first re-author a reduced week');
+    const modifierId = (commit as { createdModifierIds?: string[] }).createdModifierIds?.[0];
+    await executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week', payload: { date: anchor, modifierId },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    } as never, { todayISO: anchor });
+    assert(acceptedWeek(anchor).signature === before,
+      'clearing the fact did not restore the accepted week byte-identical');
   });
 
   console.log(`\nDeriving source-fact device-commit invariants: ${passes} passing, ${failures.length} failing`);

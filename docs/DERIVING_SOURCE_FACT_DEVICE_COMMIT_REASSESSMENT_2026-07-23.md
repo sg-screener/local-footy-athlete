@@ -1,5 +1,14 @@
 # Deriving Source-Fact Device-Commit Reassessment — 2026-07-23
 
+> **⚠️ SUPERSEDED (proposed fix only).** The root-cause *symptom* here (the
+> `accepted_composition_base_changed_by_temporary_fact` reject) is real, but the
+> proposed fix — "Option B: base-preserving deriving commit" — was built on a wrong
+> mechanism model: it would make the commit succeed as a **silent no-op** (no reduction,
+> because the illness_recovery mode is generation-only and this path never regenerates).
+> The corrected diagnosis and the approved direction (scoped regeneration committed as
+> authored state) are in
+> **`DERIVING_SOURCE_FACT_SCOPED_REGEN_REASSESSMENT_2026-07-23.md`**. Read that one.
+
 **Status:** architecture reassessment required by `CLAUDE.md` (Coach Architecture
 Escalation Rule) and `AGENTS.md`. **Design document only — no fix here, and none may
 be written until this is approved.** Trigger: the bed-ridden device smoke
