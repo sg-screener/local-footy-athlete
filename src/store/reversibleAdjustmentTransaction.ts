@@ -426,6 +426,106 @@ function stageClearRepeatWeekAdjustment(args: {
   }
 }
 
+/**
+ * Clearing a DERIVING source-fact adjustment reverts the whole week it authored.
+ * The reduced/illness overlay is removed (restored to its pre-fact state — nothing,
+ * for a fresh authored week), and any edit the athlete LAYERED on that temporary
+ * week (a session binned during the illness_recovery week: a later in-week
+ * userRemovalConstraint + its adjustment) is superseded. Pre-fact pins (created
+ * before the fact) are untouched. No orphaned active undos remain.
+ */
+function stageClearDerivingSourceFactAdjustment(args: {
+  adjustment: ReversibleAdjustmentRecord;
+  surfaces: AcceptedProgramSurfaces;
+  context: AcceptedMaterialContext;
+  expectedRevision: number;
+}): ClearReversibleAdjustmentStage {
+  const delta = args.adjustment.displacedOriginalState.weekOverlay;
+  const weekStart = delta?.weekStart ?? args.adjustment.affectedWeeks[0] ?? args.adjustment.rollingDependencyWeeks[0];
+  const surfaces = clone(args.surfaces);
+  const now = new Date().toISOString();
+  if (delta?.before) surfaces.weekScopedOverlays[weekStart] = clone(delta.before);
+  else delete surfaces.weekScopedOverlays[weekStart];
+  const inWeekDates = new Set(args.adjustment.affectedDates.map((date) => date.slice(0, 10)));
+  const affectedWeeks = new Set(args.adjustment.affectedWeeks);
+  // Discard removals the athlete layered on the temporary week (created after the
+  // fact) — drop them outright so the visible resolver stops applying them. Pre-fact
+  // removals survive (earlier createdAt).
+  surfaces.userRemovalConstraints = surfaces.userRemovalConstraints.filter((constraint) =>
+    !(constraint.status === 'active' &&
+      constraint.createdAt > args.adjustment.createdAt &&
+      inWeekDates.has(constraint.targetDate.slice(0, 10))));
+  // Drop any date override the layered edit left inside the reverted week.
+  for (const date of inWeekDates) {
+    delete surfaces.dateOverrides[date];
+    delete surfaces.overrideContexts[date];
+  }
+  // Clear any whole-day rest mark the layered removal wrote in-week (it makes the
+  // day unavailable, so the restored session would be dropped at resolve). Fixture
+  // marks (game/noGame) are left untouched.
+  const markedDays = { ...args.context.markedDays };
+  for (const date of inWeekDates) {
+    if (markedDays[date] === 'rest') delete markedDays[date];
+  }
+  const cleared = updateAdjustmentStatus({
+    adjustment: args.adjustment,
+    status: 'cleared',
+    reason: 'Deriving source-fact week reverted; layered edits superseded.',
+  });
+  surfaces.reversibleAdjustmentLedger = {
+    protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+    adjustments: surfaces.reversibleAdjustmentLedger.adjustments.map((candidate) => {
+      if (candidate.id === cleared.id) return cleared;
+      if (candidate.status === 'active' &&
+        candidate.createdAt > args.adjustment.createdAt &&
+        candidate.affectedWeeks.some((week) => affectedWeeks.has(week))) {
+        return updateAdjustmentStatus({
+          adjustment: candidate,
+          status: 'superseded',
+          supersededById: args.adjustment.id,
+          reason: 'Superseded by clearing the deriving source-fact week it was layered on.',
+        });
+      }
+      return candidate;
+    }),
+  };
+  const profile = useProfileStore.getState().onboardingData;
+  const proposal: AcceptedStateTransactionProposal = {
+    reason: `reversible_adjustment:clear:${args.adjustment.id}`,
+    profile,
+    program: surfaces,
+    markedDays,
+    preserveExactAcceptedWorkouts: true,
+    validateWeekStarts: args.adjustment.rollingDependencyWeeks,
+  };
+  try {
+    const accepted = stageAcceptedStateTransaction(proposal);
+    return {
+      proposal,
+      accepted,
+      result: clearResult({
+        outcome: args.expectedRevision === args.context.revision ? 'restored' : 'recomposed',
+        adjustmentId: args.adjustment.id,
+        context: args.context,
+        adjustment: args.adjustment,
+        acceptedRevisionAfter: accepted.context.revision,
+      }),
+    };
+  } catch (error) {
+    return {
+      proposal: null,
+      accepted: { program: args.surfaces, context: args.context },
+      result: clearResult({
+        outcome: 'safely-rejected',
+        adjustmentId: args.adjustment.id,
+        context: args.context,
+        adjustment: args.adjustment,
+        reason: error instanceof Error ? error.message : String(error),
+      }),
+    };
+  }
+}
+
 function reductionFingerprint(args: {
   weekStart: string;
   entry: WeeklyExposureContractV2['authorisedReductions'][number];
@@ -772,6 +872,18 @@ export function stageClearReversibleAdjustment(
       }),
     };
   }
+  // A deriving source-fact OWNS the whole week it authored: clearing it reverts
+  // that week (and any edit the athlete layered on it), so the newer-intent guard
+  // does NOT apply — a later in-week edit is superseded BY the revert, not the
+  // other way round. Route it before that guard.
+  if (adjustment.kind === 'deriving_source_fact') {
+    return stageClearDerivingSourceFactAdjustment({
+      adjustment,
+      surfaces,
+      context,
+      expectedRevision,
+    });
+  }
   const newer = newerOverlappingAdjustment(
     adjustment,
     surfaces.reversibleAdjustmentLedger.adjustments,
@@ -785,6 +897,8 @@ export function stageClearReversibleAdjustment(
       outcome: 'superseded',
     });
   }
+  // Repeat Week owns a week overlay; clearing restores the byte-exact stored prior
+  // overlay (delete when there was none).
   if (adjustment.kind === 'repeat_week') {
     return stageClearRepeatWeekAdjustment({
       adjustment,

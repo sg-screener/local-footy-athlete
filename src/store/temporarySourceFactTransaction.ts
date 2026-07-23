@@ -8,10 +8,29 @@ import {
 import {
   assertAcceptedVisibleLedgerEquivalence,
   commitAcceptedStateTransaction,
+  type AcceptedStateTransactionResult,
 } from './acceptedStateTransaction';
 import { runCoachMutationTransaction } from './coachMutationTransaction';
-import { canonicaliseAcceptedStateCandidate, useProgramStore } from './programStore';
+import {
+  canonicaliseAcceptedStateCandidate,
+  getCurrentBlockNumberForGeneration,
+  useProgramStore,
+} from './programStore';
 import { useProfileStore } from './profileStore';
+import type { WeekScopedWorkoutOverlay } from '../types/domain';
+import { generateProgramLocally } from '../services/api/generateProgram';
+import { buildWeekScopedWorkoutOverlay } from '../utils/weekRebuild';
+import { deriveIllnessRecoveryWeekMode } from '../rules/illnessRecoveryWeekMode';
+import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import {
+  activeUserRemovalConstraintsForWeek,
+  applyAthleteRemovalTypedReduction,
+} from '../rules/userRemovalConstraints';
+import {
+  REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+  reversibleAdjustmentId,
+  type ReversibleAdjustmentRecord,
+} from '../rules/reversibleAdjustmentLedger';
 import {
   composeTemporarySourceFactCompatibility,
   expireTemporarySourceFacts,
@@ -241,6 +260,206 @@ function validateEffectiveComposition(args: {
 }
 
 /**
+ * A DERIVING readiness/illness fact is an AUTHORING event: it changes what the
+ * athlete is prescribed. Severe illness derives the illness_recovery §18 week
+ * mode; cooked fatigue derives a readiness reduction. Neither is delivered by
+ * the pure-projection resolvers (mode/reduction live only in generation), so the
+ * overlay-preserving inert path is a silent no-op. This authors the reduced week
+ * as a scoped regeneration committed as a week overlay + fact-linked reversible
+ * adjustment, mirroring repeatWeek: the base microcycle stays clean, the overlay
+ * is the mutation layer, and clearing the fact cascade-reverts byte-exact via the
+ * stored prior overlay (R12, keyed on `sourceFactId`).
+ */
+function buildDerivingSourceFactAdjustment(args: {
+  sourceFactId: string;
+  weekStart: string;
+  beforeOverlay: WeekScopedWorkoutOverlay | null;
+  afterOverlay: WeekScopedWorkoutOverlay;
+  acceptedRevision: number;
+  createdAt: string;
+}): ReversibleAdjustmentRecord {
+  const sourceActionOrIntentId = `${args.sourceFactId}:${args.weekStart}`;
+  const id = reversibleAdjustmentId({
+    kind: 'deriving_source_fact',
+    sourceActionOrIntentId,
+    createdAt: args.createdAt,
+  });
+  const affectedDates = Array.from({ length: 7 }, (_, offset) => addDays(args.weekStart, offset));
+  return {
+    protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+    id,
+    kind: 'deriving_source_fact',
+    sourceActor: 'athlete',
+    sourceSurface: 'program_tab',
+    sourceActionOrIntentId,
+    sourceProducer: 'tap',
+    sourceFactId: args.sourceFactId,
+    createdAt: args.createdAt,
+    acceptedRevision: args.acceptedRevision,
+    status: 'active',
+    clearedAt: null,
+    supersededById: null,
+    supersededReason: null,
+    affectedDates,
+    affectedWeeks: [args.weekStart],
+    rollingDependencyWeeks: [args.weekStart],
+    displacedOriginalState: {
+      ownedDays: [],
+      ownedWeeks: [],
+      calendarFacts: [],
+      userRemovalConstraint: null,
+      weekOverlay: {
+        weekStart: args.weekStart,
+        before: clone(args.beforeOverlay),
+        after: clone(args.afterOverlay),
+        beforeFingerprint: semanticFingerprint(args.beforeOverlay),
+        afterFingerprint: semanticFingerprint(args.afterOverlay),
+      },
+      sweptOverrides: [],
+      provenanceDeltas: { added: [], removed: [] },
+      typedReductionDeltas: { added: [], removed: [] },
+    },
+    acceptedAfterSemanticFingerprints: [],
+    restorationTarget: {
+      kind: 'week_overlay',
+      dates: affectedDates,
+      stableIdentities: [args.afterOverlay.id],
+    },
+    linkedConstraintIds: [],
+    linkedCalendarFacts: [],
+    linkedOverrideOwners: [],
+    linkedOverlayIds: [args.afterOverlay.id],
+    linkedUserRemovalConstraintIds: [],
+    linkedProvenanceIds: [],
+    linkedTypedReductions: [],
+    validity: {
+      reversible: true,
+      source: 'runtime_exact_delta',
+      validWhile: ['target_overlay_matches_deriving_accepted_after'],
+      invalidWhen: [
+        'newer_overlapping_athlete_intent_exists',
+        'unowned_target_overlay_drift',
+      ],
+    },
+    laterIntentPolicy: 'newer_athlete_intent_wins',
+  };
+}
+
+function commitDerivingSourceFactScopedRegen(args: {
+  compositionBase: AcceptedCompositionBaseV1;
+  normalizedFacts: TemporarySourceFact[];
+  compatibility: ReturnType<typeof composeTemporarySourceFactCompatibility>;
+  weekStart: string;
+  reason: string;
+  sourceFactId: string;
+  now: string;
+}): AcceptedStateTransactionResult {
+  const state = useProgramStore.getState();
+  const currentProgram = state.currentProgram;
+  if (!currentProgram) throw new Error('deriving_scoped_regen_requires_current_program');
+  const profile = acceptedProfileForContext(
+    normalizeAcceptedMaterialContext(state.acceptedMaterialContext),
+    useProfileStore.getState().onboardingData,
+  );
+  // 1. Generate the reduced week with the PENDING facts threaded, so the per-week
+  //    context mints the illness_recovery mode / readiness reduction (the store is
+  //    still fact-empty mid-transaction). Single microcycle — the target week only.
+  const generated = generateProgramLocally(profile, {
+    todayISO: args.weekStart,
+    blockNumber: getCurrentBlockNumberForGeneration(args.weekStart),
+    previousProgram: currentProgram,
+    seasonPhaseClock: currentProgram.seasonPhaseClock,
+    activeConstraints: args.compatibility.activeConstraints.filter((constraint) =>
+      isTemporarySourceFactConstraint(constraint)),
+    temporarySourceFacts: args.normalizedFacts,
+    microcycleLimit: 1,
+  });
+  // 2. The regenerated microcycle becomes a sparse week overlay (the mutation
+  //    layer). The base microcycle is never touched.
+  const built = buildWeekScopedWorkoutOverlay({
+    program: generated,
+    weekStart: args.weekStart,
+    anchorDate: null,
+    reason: 'readiness_reduction',
+  });
+  let overlay: WeekScopedWorkoutOverlay = { ...built, createdAt: args.now, updatedAt: args.now };
+  // Preserve athlete pins across the regen: a session removed BEFORE the fact
+  // stays removed over the reduced week (the removal re-applies at resolve), and
+  // the reduced contract must AUTHORISE that removal — otherwise §18 flags the
+  // pinned gap as a planner-target / pattern shortfall. This mirrors the accepted
+  // week's own removal path (applyAthleteRemovalTypedReduction).
+  const activeRemovals = activeUserRemovalConstraintsForWeek(
+    state.userRemovalConstraints, args.weekStart);
+  if (activeRemovals.length > 0 && overlay.exposureContractV2) {
+    // Lower the reduced contract to the athlete's actual pinned week and iterate
+    // to a fixpoint. The commit's equivalence check both (a) rejects blocking
+    // violations and (b) requires the persisted contract to equal the
+    // safety-finalised evaluation contract — so each pass ADOPTS the finaliser's
+    // contract (which can expose a second-order pattern shortfall) and re-authors
+    // the removal against the finalised visible week. Bounded + monotonic,
+    // mirroring the accepted-week deletion path (fixtureMinimalReplan).
+    let contract = overlay.exposureContractV2;
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const trial: WeekScopedWorkoutOverlay = { ...overlay, exposureContractV2: contract };
+      const rebased = rebaseAcceptedEffectiveWeek({
+        surfaces: {
+          ...state,
+          weekScopedOverlays: { ...state.weekScopedOverlays, [args.weekStart]: trial },
+        } as never,
+        weekStart: args.weekStart,
+        profile,
+        markedDays: state.acceptedMaterialContext.markedDays,
+      });
+      const finalised = rebased.evaluation.contract;
+      const stable = semanticFingerprint(finalised) === semanticFingerprint(contract);
+      if (rebased.evaluation.blockingViolations.length === 0 && stable) break;
+      let next = finalised;
+      for (const constraint of activeRemovals) {
+        next = applyAthleteRemovalTypedReduction({
+          contract: next, workouts: rebased.visibleWorkouts, weekStart: args.weekStart, constraint,
+        });
+      }
+      if (semanticFingerprint(next) === semanticFingerprint(contract)) { contract = finalised; break; }
+      contract = next;
+    }
+    overlay = { ...overlay, exposureContractV2: contract };
+  }
+  const beforeOverlay = state.weekScopedOverlays[args.weekStart] ?? null;
+  // 3. Fact-linked reversible adjustment with the byte-exact prior overlay.
+  const adjustment = buildDerivingSourceFactAdjustment({
+    sourceFactId: args.sourceFactId,
+    weekStart: args.weekStart,
+    beforeOverlay,
+    afterOverlay: overlay,
+    acceptedRevision: state.acceptedMaterialContext.revision + 1,
+    createdAt: args.now,
+  });
+  // 4. One atomic authoring commit: overlay + ledger + fact context. The base
+  //    stays clean (preserveExactAcceptedWorkouts); the overlay carries the
+  //    reduced contract, validated for the effective week by validateWeekStarts.
+  return commitAcceptedStateTransaction({
+    reason: args.reason,
+    program: {
+      weekScopedOverlays: { ...state.weekScopedOverlays, [args.weekStart]: overlay },
+      reversibleAdjustmentLedger: {
+        protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
+        adjustments: [...state.reversibleAdjustmentLedger.adjustments, adjustment],
+      },
+    },
+    temporarySourceFacts: args.normalizedFacts,
+    injuryEpisodes: args.compatibility.injuryEpisodes,
+    activeConstraints: args.compatibility.activeConstraints,
+    activeInjury: args.compatibility.activeInjury,
+    readinessSignalsByDate: args.compatibility.readinessSignalsByDate,
+    acceptedCompositionBase: args.compositionBase,
+    profile,
+    preserveExactAcceptedWorkouts: true,
+    skipConstraintProjection: true,
+    validateWeekStarts: [args.weekStart],
+  });
+}
+
+/**
  * The one canonical source-fact publication boundary used by injuries and all
  * non-injury facts. It validates a composed candidate from the clean accepted
  * base, then publishes the clean base plus the canonical facts atomically.
@@ -290,6 +509,25 @@ export async function commitTemporarySourceFactSet(
       .sort((left, right) => String(left.id).localeCompare(String(right.id))));
   const inertComposition = sourceFactConstraintSignature(ownership.context.activeConstraints)
     === sourceFactConstraintSignature(compatibility.activeConstraints);
+  // A DERIVING readiness/illness fact (severe illness → illness_recovery, cooked
+  // fatigue → readiness reduction) is an AUTHORING event with no projection home:
+  // the mode/reduction lives only in generation. When a NEW auto-protect
+  // (type 'fatigue') source-fact constraint appears, route it through a scoped
+  // regeneration committed as a week overlay + fact-linked adjustment, rather than
+  // the overlay-preserving inert path (a silent no-op) or the base-immutability
+  // guard (a reject). Injury/equipment/schedule facts deliver via projection and
+  // stay on their existing path. See
+  // docs/DERIVING_SOURCE_FACT_SCOPED_REGEN_REASSESSMENT_2026-07-23.md.
+  const fatigueSourceFactIds = (constraints: readonly unknown[]): Set<string> =>
+    new Set((constraints as Array<{ id?: string; type?: string }>)
+      .filter((constraint) => constraint.type === 'fatigue' &&
+        isTemporarySourceFactConstraint(constraint as never))
+      .map((constraint) => String(constraint.id)));
+  const priorFatigueIds = fatigueSourceFactIds(ownership.context.activeConstraints);
+  const scopedRegenWeekStart = mondayFor(args.todayISO);
+  const scopedRegen = !inertComposition &&
+    Array.from(fatigueSourceFactIds(compatibility.activeConstraints))
+      .some((id) => !priorFatigueIds.has(id));
   const horizon = affectedHorizon(args.todayISO, normalizedFacts);
   const baseFingerprint = semanticFingerprint(compositionBase.surfaces);
   const ledgerFingerprint = semanticFingerprint(compositionBase.surfaces.reversibleAdjustmentLedger);
@@ -312,6 +550,19 @@ export async function commitTemporarySourceFactSet(
       });
       if (!inertComposition) {
         args.testHooks?.beforeEffectiveValidation?.();
+        // A deriving fact still runs the §18 gate (the fact stays gated — R9/R14),
+        // but its effective week is the RE-AUTHORED reduced week, not the base.
+        if (scopedRegen) {
+          return commitDerivingSourceFactScopedRegen({
+            compositionBase,
+            normalizedFacts,
+            compatibility,
+            weekStart: scopedRegenWeekStart,
+            reason: args.reason,
+            sourceFactId: args.targetFactId,
+            now,
+          });
+        }
         validateEffectiveComposition({
           base: compositionBase,
           context: nextContext,
@@ -350,14 +601,21 @@ export async function commitTemporarySourceFactSet(
       if (semanticFingerprint(accepted.temporarySourceFacts) !== factsFingerprint) {
         return { ok: false, reason: 'temporary_source_fact_candidate_mismatch' };
       }
-      if (semanticFingerprint(accepted.acceptedCompositionBase?.surfaces ?? null) !== baseFingerprint) {
-        return { ok: false, reason: 'accepted_composition_base_changed_by_temporary_fact' };
+      // A scoped-regen authoring commit LEGITIMATELY re-authors the accepted
+      // surfaces (adds the week overlay) and the ledger (the fact-linked
+      // adjustment) — the same base-change authority weekRebuild:block uses. The
+      // base-immutability and ledger-immutability guards protect the INERT path
+      // only; they do not apply to an authorised deriving regen.
+      if (!scopedRegen) {
+        if (semanticFingerprint(accepted.acceptedCompositionBase?.surfaces ?? null) !== baseFingerprint) {
+          return { ok: false, reason: 'accepted_composition_base_changed_by_temporary_fact' };
+        }
+        if (semanticFingerprint(useProgramStore.getState().reversibleAdjustmentLedger) !== ledgerFingerprint) {
+          return { ok: false, reason: 'temporary_source_fact_created_reversible_adjustment' };
+        }
       }
       if (accepted.acceptedCompositionBase?.provenance !== compositionBase.provenance) {
         return { ok: false, reason: 'accepted_composition_base_provenance_mismatch' };
-      }
-      if (semanticFingerprint(useProgramStore.getState().reversibleAdjustmentLedger) !== ledgerFingerprint) {
-        return { ok: false, reason: 'temporary_source_fact_created_reversible_adjustment' };
       }
       return { ok: true };
     },
@@ -369,7 +627,8 @@ export async function commitTemporarySourceFactSet(
       if (semanticFingerprint(accepted.temporarySourceFacts) !== factsFingerprint) {
         return { ok: false, reason: 'temporary_source_fact_durable_readback_mismatch' };
       }
-      if (semanticFingerprint(accepted.acceptedCompositionBase?.surfaces ?? null) !== baseFingerprint) {
+      if (!scopedRegen &&
+        semanticFingerprint(accepted.acceptedCompositionBase?.surfaces ?? null) !== baseFingerprint) {
         return { ok: false, reason: 'accepted_composition_base_durable_readback_mismatch' };
       }
       if (accepted.acceptedCompositionBase?.provenance !== compositionBase.provenance) {

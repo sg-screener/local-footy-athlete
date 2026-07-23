@@ -30,8 +30,8 @@
  * removes the rollback path entirely → ok:true, no epoch-0. The specific reason was
  * confirmed via temporary verifyCandidate instrumentation (see the reassessment doc).
  *
- * These assert the CORRECT (post-fix) behaviour, so they are RED today. This suite
- * is standalone and NOT in test:bible until the reassessment is approved and green.
+ * These assert the CORRECT (post-fix) behaviour. GREEN after the approved (b)
+ * scoped-regen fix; folded into test:bible.
  *
  * Run: npm run test:deriving-device-commit
  */
@@ -50,6 +50,11 @@ process.env.TZ = 'Australia/Melbourne';
 
 import { useProgramStore } from '../store/programStore';
 import { useProfileStore } from '../store/profileStore';
+import { useCalendarStore } from '../store/calendarStore';
+import { useReadinessStore } from '../store/readinessStore';
+import { useCoachUpdatesStore } from '../store/coachUpdatesStore';
+import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
+import { createEmptyReversibleAdjustmentLedger } from '../rules/reversibleAdjustmentLedger';
 import { commitAcceptedStateTransaction } from '../store/acceptedStateTransaction';
 import { executeProgramControlActionDurably } from '../utils/programControlActions';
 import { buildDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
@@ -83,6 +88,25 @@ async function run(name: string, body: () => Promise<void>): Promise<void> {
  *  preserveExactAcceptedWorkouts). R11-style: the R1-style seed leaves the base null,
  *  which is exactly why the whole R-suite never caught this class. */
 function seedDeviceExact(): string {
+  // Per-test isolation: hard-reset the live authoring surfaces + material context
+  // before installing. The install path (seedOnboardingProgram + preserveExact
+  // commits) patches only base surfaces, so overlays / ledger / facts authored by
+  // a prior test would otherwise leak into the next one — invisible while the
+  // deriving commit was a no-op, load-bearing now that it authors a week overlay.
+  useCalendarStore.setState({ markedDays: {}, selectedDate: null } as never);
+  useReadinessStore.setState({ signalsByDate: {} } as never);
+  useCoachUpdatesStore.setState({ activeConstraints: [], activeInjury: null } as never);
+  useProgramStore.setState({
+    weekScopedOverlays: {},
+    dateOverrides: {},
+    overrideContexts: {},
+    userRemovalConstraints: [],
+    reversibleAdjustmentLedger: createEmptyReversibleAdjustmentLedger(),
+    exposureContractsByWeek: {},
+    sessionFeedback: {},
+    weightOverrides: {},
+    acceptedMaterialContext: normalizeAcceptedMaterialContext({ revision: 0 }),
+  } as never);
   const d = buildDevE2ESeed('standard-in-season-week');
   const vws = d.program.microcycles.map((m) => m.startDate.slice(0, 10));
   quiet(() => seedOnboardingProgram({
