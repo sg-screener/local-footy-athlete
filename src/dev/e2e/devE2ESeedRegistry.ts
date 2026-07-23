@@ -274,7 +274,12 @@ function fixedProfile(overrides: Partial<OnboardingData> = {}): OnboardingData {
 }
 
 function seedMicrocycleLimit(seedId: DevE2ESeedId): 1 | 4 {
-  return seedId === 'feedback-progression-case' ||
+  // spent-week-friday needs real ADJACENT weeks: half its reason to exist is
+  // asking what an active fact does to the week the athlete swipes to next.
+  // A single-microcycle seed answers that question with an empty week, which
+  // is a seed artifact rather than a finding.
+  return seedId === 'spent-week-friday' ||
+    seedId === 'feedback-progression-case' ||
     seedId === 'multi-reload-fixture-chain' ||
     seedId === 'repeat-week-phase-transition' ||
     seedId === 'coach-production-replay'

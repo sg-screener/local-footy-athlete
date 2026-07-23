@@ -130,6 +130,12 @@ try {
       spentState.calendarMarks['2026-07-25'] === 'game',
   );
   ok(
+    'spent-week seed carries a real adjacent next week to project onto',
+    spentSeed.program.microcycles.length >= 2 &&
+      spentSeed.program.microcycles[1]?.startDate.slice(0, 10) === '2026-07-27' &&
+      (spentSeed.program.microcycles[1]?.workouts.length ?? 0) > 0,
+  );
+  ok(
     'spent-week seed starts with an empty fact store (findings cannot be pre-seeded)',
     (spentState.temporarySourceFacts ?? []).length === 0 &&
       spentState.activeInjury === null &&
