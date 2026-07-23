@@ -23,6 +23,7 @@ import {
 import { dayOfWeekForISODate } from '../../utils/appDate';
 import {
   DEV_E2E_DATE_ANCHORS,
+  devE2EWeekStartForSeed,
   isDevE2ESeedId,
   type DevE2ESeedId,
 } from './devE2ESeedIds';
@@ -32,6 +33,7 @@ import { semanticFingerprint } from './semanticFingerprint';
 export {
   DEV_E2E_DATE_ANCHORS,
   DEV_E2E_SEED_IDS,
+  devE2EWeekStartForSeed,
   isDevE2ESeedId,
   type DevE2ESeedId,
 } from './devE2ESeedIds';
@@ -215,6 +217,8 @@ const FIXED_TIMESTAMP = '2026-07-13T12:00:00.000Z';
 const ONE_SET_EXERCISE_ID = 'dev-e2e-one-set-main';
 const STACKED_WORKOUT_ID = 'dev-e2e-stacked-team-upper-pull';
 const INJURY_CONSTRAINT_ID = 'dev-e2e-injury-right-hamstring';
+/** Monday / Tuesday / Thursday — the days already recorded Done by Friday. */
+const SPENT_WEEK_DONE_OFFSETS = [0, 1, 3] as const;
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -280,7 +284,7 @@ function seedMicrocycleLimit(seedId: DevE2ESeedId): 1 | 4 {
 
 function stabilizeProgram(program: TrainingProgram, seedId: DevE2ESeedId): TrainingProgram {
   const result = stabilizeAuditTimestamps(clone(program));
-  const anchorDate = DEV_E2E_DATE_ANCHORS[seedId];
+  const anchorDate = devE2EWeekStartForSeed(seedId);
   const lastWeekIndex = Math.max(0, result.microcycles.length - 1);
   result.id = `dev-e2e-${seedId}`;
   result.userId = 'dev-e2e-athlete';
@@ -351,7 +355,7 @@ function deterministicProgram(
   seedId: DevE2ESeedId,
   profile: OnboardingData,
 ): TrainingProgram {
-  const anchorDate = DEV_E2E_DATE_ANCHORS[seedId];
+  const anchorDate = devE2EWeekStartForSeed(seedId);
   return stabilizeProgram(generateProgramLocally(profile, {
     todayISO: anchorDate,
     blockNumber: 1,
@@ -426,7 +430,7 @@ function withRepeatPhaseTransition(
   seedId: DevE2ESeedId,
   profile: OnboardingData,
 ): TrainingProgram {
-  const targetWeekStart = addDaysISO(DEV_E2E_DATE_ANCHORS[seedId], 7);
+  const targetWeekStart = addDaysISO(devE2EWeekStartForSeed(seedId), 7);
   const targetCandidate = generateProgramLocally(profile, {
     todayISO: targetWeekStart,
     blockNumber: 1,
@@ -661,7 +665,7 @@ function baseWitness(seedId: DevE2ESeedId): DevE2EWitness {
   return {
     kind: 'program',
     programId: `dev-e2e-${seedId}`,
-    weekStart: DEV_E2E_DATE_ANCHORS[seedId],
+    weekStart: devE2EWeekStartForSeed(seedId),
   };
 }
 
@@ -690,6 +694,16 @@ function progressionWitness(identity: ProgressionIdentity): DevE2EWitness {
 }
 
 export function profileForDevE2ESeed(seedId: DevE2ESeedId): OnboardingData {
+  if (seedId === 'spent-week-friday') {
+    // Sam's device profile (2026-07-24): three training days rather than the
+    // standard five, so the generated week is MON strength / TUE team /
+    // WED rest / THU team / FRI rest, with the Saturday fixture and Sunday
+    // recovery arriving from the visible-week projection.
+    return fixedProfile({
+      trainingDaysPerWeek: 3,
+      preferredTrainingDays: ['Monday', 'Tuesday', 'Thursday'],
+    });
+  }
   if (seedId === 'equipment-restriction-case') {
     return fixedProfile({
       trainingLocation: 'Outdoor',
@@ -714,11 +728,12 @@ export function witnessesForDevE2ESeed(
   suppliedProfile?: OnboardingData,
 ): DevE2EWitness[] {
   const anchorDate = DEV_E2E_DATE_ANCHORS[seedId];
+  const weekStart = devE2EWeekStartForSeed(seedId);
   const profile = suppliedProfile ?? profileForDevE2ESeed(seedId);
   const program = suppliedProgram ?? programForSeed(seedId, profile);
-  const fixtureDate = addDaysISO(anchorDate, 5);
-  const sundayDate = addDaysISO(anchorDate, 6);
-  const followingMonday = addDaysISO(anchorDate, 7);
+  const fixtureDate = addDaysISO(weekStart, 5);
+  const sundayDate = addDaysISO(weekStart, 6);
+  const followingMonday = addDaysISO(weekStart, 7);
   const witnesses: DevE2EWitness[] = [
     baseWitness(seedId),
     { kind: 'profile_exact', profile },
@@ -728,6 +743,47 @@ export function witnessesForDevE2ESeed(
     case 'standard-in-season-week':
       witnesses.push({ kind: 'calendar_mark', date: fixtureDate, mark: 'game' });
       break;
+    case 'spent-week-friday': {
+      // The "week is spent" state every other seed structurally cannot reach:
+      // today is FRIDAY, not the Monday anchor, and MON/TUE/THU are already
+      // recorded Done. Reported by Sam on device 2026-07-24; the L10 findings
+      // A3/A4/A6 were all observed from here, and no Monday-anchored seed can
+      // reproduce them because on a Monday nothing is spent yet.
+      witnesses.push({ kind: 'calendar_mark', date: fixtureDate, mark: 'game' });
+      for (const dayOffset of SPENT_WEEK_DONE_OFFSETS) {
+        const date = addDaysISO(weekStart, dayOffset);
+        const workout = underlyingWorkoutForDate(program, date);
+        if (!workout) {
+          throw new Error(`spent-week-friday requires a session on ${date}.`);
+        }
+        witnesses.push({
+          kind: 'workout',
+          dayOfWeek: workout.dayOfWeek,
+          date,
+          workoutId: workout.id,
+        });
+        witnesses.push({
+          kind: 'session_feedback',
+          date,
+          workoutId: workout.id,
+          ...(workout.planEntryId ? { planEntryId: workout.planEntryId } : {}),
+          completion: 'full',
+        });
+      }
+      // Wednesday is the in-week rest day and stays an eligible move target —
+      // the destination the A6 move-refusal repro needs to distinguish from
+      // the blocked G+1 Sunday.
+      witnesses.push({
+        kind: 'eligible_target_date',
+        date: addDaysISO(weekStart, 2),
+        eligibility: 'rest_or_empty',
+      });
+      // Nothing reported yet: the readiness/injury findings all start from a
+      // clean fact store, so "next week never changed" cannot be blamed on a
+      // pre-existing fact.
+      witnesses.push(...cleanSourceFactWitnesses());
+      break;
+    }
     case 'stacked-team-training-upper-pull': {
       const stackedDate = addDaysISO(anchorDate, 1);
       const stacked = underlyingWorkoutForDate(program, stackedDate);
@@ -1030,6 +1086,27 @@ export function buildDevE2ESeed(seedId: DevE2ESeedId): DevE2ESeed {
       break;
     case 'lower-body-deletion':
       break;
+    case 'spent-week-friday': {
+      const weekStart = devE2EWeekStartForSeed(seedId);
+      for (const dayOffset of SPENT_WEEK_DONE_OFFSETS) {
+        const date = addDaysISO(weekStart, dayOffset);
+        const workout = underlyingWorkoutForDate(program, date);
+        if (!workout) {
+          throw new Error(`spent-week-friday requires a session on ${date}.`);
+        }
+        auxiliaryState.push({
+          kind: 'session_feedback',
+          date,
+          workoutId: workout.id,
+          ...(workout.planEntryId ? { planEntryId: workout.planEntryId } : {}),
+          completion: 'full',
+          feeling: 'very_easy',
+          soreness: 'none',
+          difficulty: 3,
+        });
+      }
+      break;
+    }
     case 'injury-case':
       auxiliaryState.push({
         kind: 'canonical_injury_episode',

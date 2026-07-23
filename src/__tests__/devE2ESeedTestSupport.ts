@@ -200,7 +200,9 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
     item.kind === 'canonical_injury_episode');
   const equipment = seed.auxiliaryState.find((item) =>
     item.kind === 'temporary_equipment');
-  const feedback = seed.auxiliaryState.find((item) =>
+  // A seed may record MORE than one session as Done (spent-week-friday records
+  // three), so every feedback entry has to land — not just the first.
+  const feedbackEntries = seed.auxiliaryState.filter((item) =>
     item.kind === 'session_feedback');
   const equipmentFact = equipment?.kind === 'temporary_equipment'
     ? createTemporaryEquipmentFact({
@@ -220,7 +222,8 @@ export function buildDevE2EWitnessState(seed: DevE2ESeed): DevE2EWitnessState {
       })
     : null;
   const sessionFeedback: DevE2EWitnessState['sessionFeedback'] = {};
-  if (feedback?.kind === 'session_feedback') {
+  for (const feedback of feedbackEntries) {
+    if (feedback.kind !== 'session_feedback') continue;
     sessionFeedback[feedback.date] = {
       completion: feedback.completion,
       outcomeReceipt: {

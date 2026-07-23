@@ -1,6 +1,7 @@
 import {
   DEV_E2E_SEED_IDS,
   buildDevE2ESeed,
+  devE2EWeekStartForSeed,
   validateDevE2EWitnesses,
   type DevE2ESeedId,
 } from '../dev/e2e/devE2ESeedRegistry';
@@ -29,6 +30,8 @@ const EXPLORER_SEEDS = [
 
 const EXPECTED_WITNESS_KINDS: Record<DevE2ESeedId, string> = {
   'standard-in-season-week': 'program,profile_exact,calendar_mark',
+  'spent-week-friday':
+    'program,profile_exact,calendar_mark,workout,session_feedback,workout,session_feedback,workout,session_feedback,eligible_target_date,absent_source_fact,absent_source_fact,absent_source_fact,absent_source_fact',
   'stacked-team-training-upper-pull':
     'program,profile_exact,workout,component_identity,component_identity,visible_card_detail_equality',
   'lower-body-deletion': 'program,profile_exact,workout',
@@ -58,7 +61,7 @@ globalThis.fetch = (async () => {
 try {
   ok(
     'Explorer campaign adds exactly the three requested seed IDs',
-    DEV_E2E_SEED_IDS.length === 11 &&
+    DEV_E2E_SEED_IDS.length === 12 &&
       DEV_E2E_SEED_IDS.filter((seedId) =>
       (EXPLORER_SEEDS as readonly string[]).includes(seedId)).join(',') ===
       EXPLORER_SEEDS.join(','),
@@ -88,6 +91,50 @@ try {
         EXPECTED_WITNESS_KINDS[seedId],
     );
   }
+
+  // ── spent-week-friday: the device-exact "week is spent" state ────────────
+  // Sam's phone, 2026-07-24. Every other seed anchors on a Monday, so "today"
+  // and "the visible week's Monday" were the same date and a partly-spent week
+  // was unreachable. These assertions pin the divergence itself, not just the
+  // witnesses — if a future change re-collapses anchor and week start, this
+  // seed silently stops reproducing the state it exists for.
+  const spentSeed = buildDevE2ESeed('spent-week-friday');
+  const spentWeekStart = devE2EWeekStartForSeed('spent-week-friday');
+  ok(
+    'spent-week seed anchors on Friday, four days into its own week',
+    spentSeed.anchorDate === '2026-07-24' &&
+      spentWeekStart === '2026-07-20' &&
+      spentSeed.anchorDate !== spentWeekStart,
+  );
+  ok(
+    'spent-week seed program covers the week the Friday anchor falls in',
+    spentSeed.program.microcycles[0]?.startDate.slice(0, 10) === spentWeekStart,
+  );
+  const spentDone = spentSeed.auxiliaryState.filter((item) =>
+    item.kind === 'session_feedback');
+  ok(
+    'spent-week seed records Mon/Tue/Thu Done before the anchor day',
+    spentDone.length === 3 &&
+      spentDone.every((item) =>
+        item.kind === 'session_feedback' &&
+        item.completion === 'full' &&
+        item.date < spentSeed.anchorDate) &&
+      spentDone.map((item) => (item.kind === 'session_feedback' ? item.date : ''))
+        .join(',') === '2026-07-20,2026-07-21,2026-07-23',
+  );
+  const spentState = buildDevE2EWitnessState(spentSeed);
+  ok(
+    'spent-week seed leaves Wednesday and Friday unsessioned and Saturday a game',
+    !spentState.program?.microcycles[0]?.workouts.some((workout) =>
+      workout.dayOfWeek === 3 || workout.dayOfWeek === 5) &&
+      spentState.calendarMarks['2026-07-25'] === 'game',
+  );
+  ok(
+    'spent-week seed starts with an empty fact store (findings cannot be pre-seeded)',
+    (spentState.temporarySourceFacts ?? []).length === 0 &&
+      spentState.activeInjury === null &&
+      spentState.activeConstraints.length === 0,
+  );
 
   const repeatSeed = buildDevE2ESeed('repeat-week-phase-transition');
   const repeatSignatures = repeatSeed.witnesses
