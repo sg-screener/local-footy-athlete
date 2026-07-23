@@ -826,7 +826,7 @@ export interface WeekScopedWorkoutOverlay {
   weekStart: string;
   weekEnd: string;
   anchorDate: string | null;
-  reason: 'one_off_game' | 'one_off_no_game' | 'repeat_week';
+  reason: 'one_off_game' | 'one_off_no_game' | 'repeat_week' | 'readiness_reduction';
   /** Re-resolved for this target week; never inherited blindly from the source week. */
   exposureContract?: import('../rules/weeklyExposureContract').WeeklyExposureContract;
   /** Parallel Section 18 policy contract for observational evaluation. */

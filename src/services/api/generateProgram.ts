@@ -122,6 +122,14 @@ export interface GenerateProgramFromProfileOptions {
   activeConstraints?: readonly ActiveConstraint[];
   readinessSignal?: ReadinessSignal | null;
   generationConstraints?: GenerationConstraintContext;
+  /**
+   * Pending temporary source facts to mint the week mode from, supplied by an
+   * authoring caller mid-transaction (the facts are not yet in the store). When
+   * omitted, generation reads the current accepted facts. Threaded to the
+   * per-week `buildGenerationConstraintContext` so a severe illness derives the
+   * illness_recovery mode during a scoped-regen commit.
+   */
+  temporarySourceFacts?: readonly TemporarySourceFact[] | null;
   /** Explicit continuity input for pure callers; normal app paths use the live persisted program. */
   previousProgram?: TrainingProgram | null;
   seasonPhaseClock?: SeasonPhaseClock | null;
@@ -250,8 +258,9 @@ function resolveGenerationConstraints(
   return buildGenerationConstraintContext({
     activeConstraints,
     todayISO,
-    temporarySourceFacts: require('../../store/programStore').useProgramStore.getState()
-      .acceptedMaterialContext?.temporarySourceFacts,
+    temporarySourceFacts: options.temporarySourceFacts ??
+      require('../../store/programStore').useProgramStore.getState()
+        .acceptedMaterialContext?.temporarySourceFacts,
   });
 }
 
@@ -607,8 +616,9 @@ export function generateProgramLocally(
     availableConditioningModalities: resolvedEquipment.conditioningModalities,
     generationConstraints,
     activeConstraints: activeConstraintsForGeneration,
-    temporarySourceFacts: require('../../store/programStore').useProgramStore.getState()
-      .acceptedMaterialContext?.temporarySourceFacts,
+    temporarySourceFacts: options.temporarySourceFacts ??
+      require('../../store/programStore').useProgramStore.getState()
+        .acceptedMaterialContext?.temporarySourceFacts,
     weekLimit: options.microcycleLimit,
   });
   const firstMicrocycle = microcycles[0];

@@ -30,6 +30,13 @@ export type ReversibleAdjustmentKind =
   | 'session_add'
   /** Exact target-overlay transaction produced by Repeat Week. */
   | 'repeat_week'
+  /**
+   * Exact week-overlay transaction authored by a DERIVING readiness/illness
+   * source fact (severe illness → illness_recovery, cooked fatigue → readiness
+   * reduction). Carries `sourceFactId`; clearing the fact cascade-reverts it via
+   * the shared week_overlay restoration, byte-exact to the stored prior overlay.
+   */
+  | 'deriving_source_fact'
   /** Exact accepted delta for an explicit athlete go-lighter command. */
   | 'explicit_load_edit';
 
