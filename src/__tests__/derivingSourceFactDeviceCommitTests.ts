@@ -56,6 +56,9 @@ import { buildDevE2ESeed } from '../dev/e2e/devE2ESeedRegistry';
 import { seedOnboardingProgram } from '../utils/onboardingCompletion';
 import { deriveStoredBlockStateFromProgram } from '../utils/programBlockState';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { applyPlanChange, previewPlanChangeRisk } from '../utils/planChangeProducer';
+import { resolveWeekWithConditioning } from '../utils/sessionResolver';
+import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 
 const WEEK = '2026-07-13';
 let passes = 0;
@@ -116,10 +119,35 @@ function acceptedWeek(anchor: string): { mode: string; signature: string } {
   });
   return {
     mode: rebased.contract.identity.mode,
+    blockingViolations: rebased.evaluation.blockingViolations.map((v) => v.code),
+    optionalCount: rebased.visibleWorkouts.filter((w) =>
+      w.sessionTier === 'optional' || w.sessionTier === 'recovery').length,
     signature: rebased.visibleWorkouts
       .map((w) => `${w.dayOfWeek}:${w.workoutType}/${w.sessionTier ?? '-'}/${w.intensity ?? '-'}`)
       .join('  '),
   };
+}
+
+/** The VISIBLE resolver signature (what the athlete taps on) — must reflect the
+ *  reduction too, not only the accepted-effective-week. */
+function visibleSignature(anchor: string): string {
+  return resolveWeekWithConditioning(anchor, buildScheduleStateImperative())
+    .map((d) => `${d.workout?.dayOfWeek}:${d.workout?.workoutType ?? 'Rest'}/${d.workout?.sessionTier ?? '-'}`)
+    .join('  ');
+}
+
+function activeAdjustments() {
+  return useProgramStore.getState().reversibleAdjustmentLedger.adjustments
+    .filter((a) => a.status === 'active');
+}
+
+async function commitSevereIllness(anchor: string) {
+  return executeProgramControlActionDurably({
+    type: 'set_illness_status',
+    source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+    scope: 'current_week', payload: { date: anchor, todayISO: anchor, severity: 'severe' },
+    requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+  } as never, { todayISO: anchor });
 }
 
 async function main(): Promise<void> {
@@ -186,6 +214,130 @@ async function main(): Promise<void> {
     } as never, { todayISO: anchor });
     assert(acceptedWeek(anchor).signature === before,
       'clearing the fact did not restore the accepted week byte-identical');
+  });
+
+  // ── D4 — §18 validates the EFFECTIVE (re-authored) week (rider 1). The commit is
+  // accepted AND the resulting illness_recovery week passes §18 (no blocking
+  // violations) — the fact stays gated, validated against the reduced week, not
+  // bypassed.
+  await run('D4 §18 validates the effective week: the illness_recovery week has no blocking violations', async () => {
+    const anchor = seedDeviceExact();
+    const commit = await commitSevereIllness(anchor);
+    assert((commit as { ok?: boolean }).ok === true, `commit rejected: "${(commit as { message?: string }).message}"`);
+    const week = acceptedWeek(anchor);
+    assert(week.mode === 'illness_recovery', `not illness_recovery, mode=${week.mode}`);
+    assert(week.blockingViolations.length === 0,
+      `the effective illness_recovery week has §18 blocking violations: ${week.blockingViolations.join(',')}`);
+  });
+
+  // ── D5 — authorised change + fact-linked undo. The commit records exactly one
+  // active reversible adjustment linked to the illness fact (sourceFactId), so
+  // clearing the fact can cascade-revert it (R12 pattern). No dangling entries.
+  await run('D5 authorised change: the commit records a fact-linked reversible adjustment', async () => {
+    const anchor = seedDeviceExact();
+    const commit = await commitSevereIllness(anchor);
+    assert((commit as { ok?: boolean }).ok === true, `commit rejected: "${(commit as { message?: string }).message}"`);
+    const factId = (commit as { createdModifierIds?: string[] }).createdModifierIds?.[0];
+    const linked = activeAdjustments().filter((a) => a.sourceFactId === factId);
+    assert(linked.length === 1,
+      `expected exactly one active reversible adjustment linked to the illness fact, got ${linked.length}`);
+  });
+
+  // ── D6 — the re-authored week is visibly OPTIONAL/reduced on BOTH the accepted and
+  // the visible surfaces, and the commit discloses (Sam's bed-ridden semantics).
+  await run('D6 visibly optional + disclosed: the bed-ridden week marks sessions optional and discloses', async () => {
+    const anchor = seedDeviceExact();
+    const before = visibleSignature(anchor);
+    const commit = await commitSevereIllness(anchor);
+    assert((commit as { ok?: boolean }).ok === true, `commit rejected: "${(commit as { message?: string }).message}"`);
+    assert(acceptedWeek(anchor).optionalCount >= 1,
+      'the illness_recovery week marks no sessions optional/recovery on the accepted surface');
+    assert(visibleSignature(anchor) !== before,
+      'the VISIBLE resolver did not reflect the reduction (still full week)');
+    assert(/nothing's required|optional/i.test((commit as { message?: string }).message ?? ''),
+      `commit did not disclose the optional/recovery week: "${(commit as { message?: string }).message}"`);
+  });
+
+  // ── D7 — no read-time regression. An INERT (minor) illness fact must NOT trigger a
+  // regen: the accepted week stays byte-identical (record-only), proving the scoped
+  // regen fires ONLY for deriving facts and resolvers stay pure projection.
+  await run('D7 no read-time regression: a minor (inert) illness fact leaves the accepted week byte-identical', async () => {
+    const anchor = seedDeviceExact();
+    const before = acceptedWeek(anchor).signature;
+    const commit = await executeProgramControlActionDurably({
+      type: 'set_illness_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'today_only', payload: { date: anchor, todayISO: anchor, severity: 'minor' },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    } as never, { todayISO: anchor });
+    assert((commit as { ok?: boolean }).ok === true, `minor illness rejected: "${(commit as { message?: string }).message}"`);
+    assert(acceptedWeek(anchor).signature === before,
+      'a minor (inert) illness fact changed the accepted week — it must be record-only');
+  });
+
+  // ── D8 — edit-during-illness supersession (rider 1). If the athlete makes a tap
+  // edit while the illness week is active, then clears the fact, the clear restores
+  // the pre-illness state and SUPERSEDES the illness-week edit — with NO orphaned
+  // active ledger entries (target-4 lesson: linked entries clear consistently).
+  await run('D8 edit-during-illness: clearing the fact restores pre-illness state and supersedes edits, no orphans', async () => {
+    const anchor = seedDeviceExact();
+    const before = acceptedWeek(anchor).signature;
+    const commit = await commitSevereIllness(anchor);
+    assert((commit as { ok?: boolean }).ok === true &&
+      acceptedWeek(anchor).signature !== before,
+      'precondition: the severe illness commit must first re-author a reduced week');
+    // Athlete bins Monday's (optional) session during the illness week.
+    const week = resolveWeekWithConditioning(anchor, buildScheduleStateImperative());
+    const mon = week.find((d) => d.workout && d.workout.workoutType !== 'Rest');
+    if (mon?.workout) {
+      const change = { kind: 'remove_session' as const, date: mon.date };
+      const preview = previewPlanChangeRisk({ change, visibleWeek: week, todayISO: anchor,
+        profile: useProfileStore.getState().onboardingData ?? undefined });
+      applyPlanChange({ change, visibleWeek: week, todayISO: anchor, trace: preview.trace,
+        setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w, c) });
+    }
+    const factId = (commit as { createdModifierIds?: string[] }).createdModifierIds?.[0];
+    await executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week', payload: { date: anchor, modifierId: factId },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    } as never, { todayISO: anchor });
+    assert(acceptedWeek(anchor).signature === before,
+      'clearing the fact did not restore the pre-illness week (supersede illness-week edits)');
+    assert(activeAdjustments().length === 0,
+      `orphaned active reversible adjustments remain after clearing the illness fact: ${activeAdjustments().length}`);
+  });
+
+  // ── D9 — athlete-owned pins survive the scoped regen (decideOverrideSweep). A user
+  // removal/override made BEFORE the illness fact must still be honoured in the
+  // re-authored illness_recovery week (not silently reinstated by regeneration).
+  await run('D9 pins survive: a pre-illness athlete removal is preserved through the scoped regen', async () => {
+    const anchor = seedDeviceExact();
+    // Athlete bins Monday's session BEFORE getting sick.
+    const week0 = resolveWeekWithConditioning(anchor, buildScheduleStateImperative());
+    const mon = week0.find((d) => d.workout && d.workout.workoutType !== 'Rest');
+    assert(!!mon?.workout, 'precondition: a non-rest session to remove');
+    const change = { kind: 'remove_session' as const, date: mon!.date };
+    const preview = previewPlanChangeRisk({ change, visibleWeek: week0, todayISO: anchor,
+      profile: useProfileStore.getState().onboardingData ?? undefined });
+    const removed = applyPlanChange({ change, visibleWeek: week0, todayISO: anchor, trace: preview.trace,
+      setManualOverride: (d, w, c) => useProgramStore.getState().setManualOverride(d, w, c) });
+    assert((removed as { ok?: boolean }).ok === true, `precondition removal failed: "${(removed as { message?: string }).message}"`);
+    const removalConstraintsBefore = useProgramStore.getState().userRemovalConstraints.length;
+    const commit = await commitSevereIllness(anchor);
+    assert((commit as { ok?: boolean }).ok === true, `commit rejected: "${(commit as { message?: string }).message}"`);
+    assert(useProgramStore.getState().userRemovalConstraints.length >= removalConstraintsBefore,
+      'the pre-illness user removal constraint was dropped by the scoped regen');
+    const monDow = mon!.workout!.dayOfWeek;
+    const after = rebaseAcceptedEffectiveWeek({
+      surfaces: useProgramStore.getState() as never, weekStart: anchor,
+      profile: useProfileStore.getState().onboardingData,
+      markedDays: useProgramStore.getState().acceptedMaterialContext.markedDays,
+    });
+    const monAfter = after.visibleWorkouts.find((w) => w.dayOfWeek === monDow);
+    assert(!monAfter || monAfter.workoutType === 'Rest',
+      'the athlete-removed Monday session was silently reinstated by the illness regen');
   });
 
   console.log(`\nDeriving source-fact device-commit invariants: ${passes} passing, ${failures.length} failing`);
