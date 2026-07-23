@@ -51,11 +51,18 @@ export interface ResolveVisibleReadinessStateInput {
   todayReadinessModifier?: ProgramModifierLike | null;
 }
 
-const READINESS_FACT_KINDS = new Set(['fatigue', 'soreness', 'poor_sleep']);
+// The card owns EVERY non-injury readiness fact kind the hook surfaces — including
+// illness. Excluding illness here (while the hook's readinessFacts + coach note
+// included it) split the representation: the card/clear never owned the illness
+// fact, so clearing fell to a decoupled path that reverted the week but left the
+// fact active (finding #4). Illness is a first-class sibling of fatigue/soreness/
+// poor_sleep for the visible active-state.
+const READINESS_FACT_KINDS = new Set(['fatigue', 'soreness', 'poor_sleep', 'illness']);
 
 function factKindTitle(factKind: string, scope: 'today' | 'week'): string {
   if (factKind === 'poor_sleep') return scope === 'today' ? 'Poor sleep today' : 'Poor sleep this week';
   if (factKind === 'soreness') return scope === 'today' ? 'Sore today' : 'Sore this week';
+  if (factKind === 'illness') return scope === 'today' ? 'Under the weather today' : 'Under the weather this week';
   return scope === 'today' ? 'Not 100% today' : 'Not 100% this week';
 }
 

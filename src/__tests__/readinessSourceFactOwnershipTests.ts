@@ -919,6 +919,61 @@ async function main(): Promise<void> {
       `a record-only report keeps the generic ack, got "${recorded?.message}"`);
   });
 
+  // ── Invariant R19 (finding #4 root cause — ONE owner of the readiness-active
+  // state, illness included): the device intermittent ("fact sometimes unresolved
+  // after clear") was a SPLIT representation. The hook's readinessFacts (the
+  // readiness-active witness + coach note) INCLUDE illness, but the card-label
+  // resolver `resolveVisibleReadinessState` EXCLUDED it (READINESS_FACT_KINDS), so
+  // `weekReadiness` was null for illness — the card and its clear never owned the
+  // fact. Clearing fell to a decoupled path that reverts the week but leaves the
+  // fact active (readiness-active + coach note persist). Fix: the resolver owns
+  // illness like its sibling kinds, so the card surfaces it (id = the illness
+  // factId) and the card clear resolves the exact fact.
+  await run('R19 illness-card-ownership (finding #4): illness IS the week-readiness active state and its clear resolves the fact', async () => {
+    seed();
+    await executeProgramControlActionDurably({
+      type: 'set_illness_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { date: WEEK, todayISO: WEEK, severity: 'severe' },
+      requiresRebuild: false, createsActiveModifier: true, oneOffOnly: false,
+    } as never, { todayISO: WEEK });
+    const illnessBefore = activeIllnessFacts();
+    assert(illnessBefore.length === 1, `precondition: one active illness fact, got ${illnessBefore.length}`);
+    const factId = illnessBefore[0].factId;
+
+    // 1. The card must surface the illness fact as its active state (same ownership
+    //    fatigue/soreness/poor_sleep get) — id === the illness factId, week scope.
+    const mod = require('../utils/visibleReadinessState') as {
+      resolveVisibleReadinessState: (input: unknown) => { id: string; scope: string; isRecovery: boolean } | null;
+    };
+    const state = mod.resolveVisibleReadinessState({
+      readinessFacts: activeReadinessFacts(),
+      activeConstraints: useCoachUpdatesStore.getState().activeConstraints ?? [],
+      weekAnchorISO: WEEK, todayISO: WEEK, isThisWeek: true,
+    });
+    assert(state !== null,
+      'card did not surface the illness fact: resolveVisibleReadinessState returned null (split representation)');
+    assert(state!.id === factId,
+      `card active id must be the illness factId (so its clear resolves the exact fact), got ${state!.id}`);
+    assert(state!.scope === 'week', `severe illness is week-scoped, got ${state!.scope}`);
+
+    // 2. Clearing through the card's exact active id resolves the fact — no leftover
+    //    active witness / coach note. This is the trust-layer guarantee: the fact
+    //    the week reverted for is the fact that gets resolved.
+    const clearResult = await executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { modifierId: state!.id, date: WEEK },
+      requiresRebuild: false, createsActiveModifier: false, oneOffOnly: false,
+    } as never, { todayISO: WEEK });
+    assert((clearResult as { ok?: boolean }).ok === true,
+      `clear must succeed, got ok=${(clearResult as { ok?: boolean }).ok} message="${(clearResult as { message?: string }).message}"`);
+    assert(activeIllnessFacts().length === 0,
+      `the illness fact must be resolved after clear, still ${activeIllnessFacts().length} active (finding #4)`);
+  });
+
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);
   if (failures.length > 0) {
     console.log('Currently RED (expected pre-fix):');
