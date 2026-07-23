@@ -27,6 +27,47 @@ item, separate PR); the §18 ownership / stack-primitive residuals (tracked in
 
 ---
 
+## Decisions — 2026-07-23 (Sam)
+
+Group D is now **fully specified**. These three decisions close every open
+question this plan flagged for confirmation; no further design input is
+needed before implementation.
+
+1. **"Gunshow" (`planChangeProducer.ts:171-172`, `CATEGORY_COPY.accessories`
+   sub-copy) is intentional brand voice — KEEP.** This was flagged in
+   `docs/audits/COPY_AUDIT_2026-07-23.md` (finding P2-2) as possibly a leaked
+   internal QA nickname rather than deliberate copy. Confirmed: it's
+   deliberate. **Action:** remove P2-2 from `COPY_AUDIT_2026-07-23.md`'s fix
+   list (not yet done as of this edit — that file needs its own follow-up
+   pass; this plan is the source-of-truth record of the decision in the
+   meantime). A female-friendly session variant for the same slot is
+   recorded on the post-v1 roadmap, not this plan — no Group D work follows
+   from this decision beyond leaving the string alone.
+2. **D1's feedback form is message + required email ONLY — no star
+   rating.** The star-rating UI in `src/screens/profile/FeedbackScreen.tsx`
+   is being stripped, not preserved, as part of D1's rewrite (this plan's
+   original "Sites touched" section flagged the rating removal as a scope
+   question for Sam to confirm before implementation — it's now decided:
+   remove it). App Store review solicitation will use the native StoreKit
+   review-prompt API post-v1 instead of a rating collected through this
+   form — that's separate, out-of-scope future work, not part of D1.
+3. **Every "Option B (recommended)" in this plan is approved as written**:
+   the D4 allowlist-inversion (safe-by-default error copy, not an extended
+   allowlist), D1's anon-insert/deny-read RLS design for the `feedback`
+   table, D5's swap-to-Rest aliasing to the existing `remove_session` path,
+   and D1's single form/two-`topic`-values mechanism for both "Leave
+   Feedback" and "Ask a Human." No further option-comparison work is needed
+   on any of the five items — implementation can proceed directly from the
+   "Fix approach"/"Sites touched" sections as written.
+
+**Status: no code until the readiness branch merges.** This plan is
+approved and frozen, but implementation does not start yet — Sam has held
+Group D pending the readiness branch (Group B item 2 / illness_recovery
+work, per `MEMORY.md`) merging first. Do not begin any D1-D5 site work
+before that merge lands.
+
+---
+
 ## Global constraints (apply to every item below)
 
 - **No raw internal identifiers, error codes, or ISO date strings
@@ -75,7 +116,10 @@ Two separate things exist and neither is the fix:
    (`{ email: user?.email, rating, feedback }`) and reads `user` from
    `useAuthStore` — a store that has nothing to read from, since v1 has no
    live auth flow. This screen cannot be wired up as-is; it was built against
-   an auth assumption the product no longer has.
+   an auth assumption the product no longer has. **Decided 2026-07-23:** the
+   star rating is dropped, not preserved — the form is message + required
+   email only. App Store review solicitation is deferred to the native
+   StoreKit review-prompt API post-v1, not built here.
 
 ### Fix approach — reuse the existing screen, not a new one
 
@@ -95,21 +139,21 @@ Mail app being configured at all) rather than adding a guard around it, and
 retires a dead-code screen instead of leaving it to rot next to its
 now-superseded sibling.
 
-**Recommendation: Option B.** It's not bigger scope than Option A once you
-count that Option A still leaves `FeedbackScreen.tsx` as untouched dead code
-that the next engineer will trip over. Both buttons ("Leave Feedback" and
-"Ask a Human") route to the same form with a `topic` param
-(`'feedback' | 'ask_a_human'`) that only changes the sheet's title/subtitle
-copy and a `topic` column value — one mechanism closes both dead-button
-findings from the worklist, not two.
+**Approved: Option B, as recommended (2026-07-23).** It's not bigger scope
+than Option A once you count that Option A still leaves
+`FeedbackScreen.tsx` as untouched dead code that the next engineer will
+trip over. Both buttons ("Leave Feedback" and "Ask a Human") route to the
+same form with a `topic` param (`'feedback' | 'ask_a_human'`) that only
+changes the sheet's title/subtitle copy and a `topic` column value — one
+mechanism closes both dead-button findings from the worklist, not two.
 
 ### Sites touched
 
 - **`src/screens/profile/FeedbackScreen.tsx`** — remove the star-rating UI
-  (not requested by this task's scope; the form is "message + required
-  email" per the task brief, not a rating widget — flag the rating removal
-  as a scope decision for Sam to confirm before implementation, since the
-  screen currently has one). Remove `useAuthStore` import/usage. Add a
+  (decided 2026-07-23: the form is message + required email only, no
+  rating; App Store review solicitation moves to the native StoreKit
+  review-prompt API post-v1, not this form). Remove `useAuthStore`
+  import/usage. Add a
   required, validated email `TextInput` (non-empty, contains `@`). Replace
   the `console.log` submit body with a Supabase insert into the new
   `feedback` table. Add a `topic` prop/param read from route params,
@@ -418,11 +462,11 @@ gets safe-by-default copy automatically; they only need to touch this
 function if they want *better* copy than the generic fallback, not to avoid
 a raw-code leak.
 
-**Recommendation: Option B.** It's the same number of call sites to touch as
-Option A (all four still need visiting, since the legacy-proposal fallback
-needs the call added either way) but removes the whole "did we remember to
-add this code" failure mode instead of patching today's five known
-instances.
+**Approved: Option B, as recommended (2026-07-23).** It's the same number of
+call sites to touch as Option A (all four still need visiting, since the
+legacy-proposal fallback needs the call added either way) but removes the
+whole "did we remember to add this code" failure mode instead of patching
+today's five known instances.
 
 Apply the same inversion to `coachActions.ts:1026,1043` — replace the raw
 `action.kind`/exception-message interpolation with a fixed generic
@@ -492,11 +536,11 @@ Rest" sitting alongside Conditioning/Strength/Recovery) instead of a red
 construction, so there's no new invariant to prove — only the existing
 `remove_session` invariants, which already have coverage.
 
-**Recommendation: Option B.** This is the smaller change (one new category
-id that maps to an existing change kind, one new filter branch in
-`pick_category`'s render) and it removes a whole class of "does this new
-path repair the week correctly" work by construction, per CLAUDE.md's
-redesign-vs-incremental framing.
+**Approved: Option B, as recommended (2026-07-23).** This is the smaller
+change (one new category id that maps to an existing change kind, one new
+filter branch in `pick_category`'s render) and it removes a whole class of
+"does this new path repair the week correctly" work by construction, per
+CLAUDE.md's redesign-vs-incremental framing.
 
 ### Sites touched
 
