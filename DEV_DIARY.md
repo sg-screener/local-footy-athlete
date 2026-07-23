@@ -6,6 +6,53 @@ the top.
 
 ---
 
+## Wednesday 23 July 2026 — the day the app got real, in both directions
+
+Huge day. Maybe the most important one yet, and not for the reasons I
+expected this morning.
+
+The good, first: Local Footy Athlete officially exists in Apple's world now.
+Developer account paid, the App Store page built end to end — name,
+description, keywords, age rating, the privacy questionnaire, all of it. The
+privacy policy is live on the website. We designed a proper logo — a yellow
+footy with LFA across it — and it's on the website, the socials, everywhere.
+And then the moment I'll remember: I plugged in my phone, and put my own app
+on it. Built by my own company, signed with my own certificate, my ball on
+my home screen. Wild feeling.
+
+Then I used it. Properly, like an athlete would — fresh signup, no
+shortcuts. And it was rough. Really rough. Keyboards covering buttons, the
+app asking if I'd done sessions from before I even signed up, buttons that
+claimed to work and did nothing, the program quality falling apart after
+week one, season changes erroring out. I was furious, and I said so.
+
+Here's the thing I understand now that I didn't this morning: all the
+testing we've done for weeks was deep but narrow. It tested the app's
+engine — the part that edits your week safely — and that part held up. My
+swaps worked, my changes were honest, nothing got destroyed. But nobody,
+human or robot, had ever walked in the front door like a new user. Tonight
+that changed permanently: every finding went into a master list, the testing
+rules got rewritten so the whole app is the test surface, and nothing counts
+as fixed anymore until I've checked it on my own phone with my own thumbs.
+
+We also made the big calls. Everything ships before launch now — the
+program quality fixes, an elite coach chat, and the full Journal (weekly
+review, workload tracking, the lot). No cutting corners, no "later". It'll
+take longer. It'll be right.
+
+Also today, because apparently it was a big day even before the drama: the
+app learned the difference between a sniffle and being properly sick, and
+telling it you're wrecked now actually gives you an easier week — for real,
+verified on screen.
+
+Hard day. Right direction. This is what building something you'd stake your
+name on looks like.
+
+*Numbers for the nerds: 24 findings from one hour of real use, 6 commits
+shipped, 9 new invariants green, one master plan, zero corners cut.*
+
+---
+
 ## Wednesday 22 July 2026 — Program edits now go through one system, not two
 
 **What happened.**
