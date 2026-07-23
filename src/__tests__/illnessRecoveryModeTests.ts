@@ -60,6 +60,23 @@ function quiet<T>(body: () => T): T {
   }
 }
 
+// Engine-validate runs regardless of __DEV__ (logger.error always emits — logger.ts
+// shouldEmitLog), so a headless suite CAN see the invariants the DEV LogBox surfaces. This
+// captures any '[ENGINE-VALIDATE] INVARIANT VIOLATION' while suppressing other console noise,
+// so test:bible catches the class that the device red-boxed (closing the __DEV__ gap).
+let lastEngineViolations: string[] = [];
+function captureEngineValidate<T>(body: () => T): T {
+  const warn = console.warn; const error = console.error; const log = console.log;
+  lastEngineViolations = [];
+  console.warn = () => undefined;
+  console.log = () => undefined;
+  console.error = (...args: unknown[]) => {
+    const msg = args.map((a) => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+    if (/\[ENGINE-VALIDATE\][^]*INVARIANT VIOLATION/i.test(msg)) lastEngineViolations.push(msg);
+  };
+  try { return body(); } finally { console.warn = warn; console.error = error; console.log = log; }
+}
+
 function profile(overrides: Partial<OnboardingData> = {}): OnboardingData {
   return {
     seasonPhase: 'In-season',
@@ -127,7 +144,7 @@ function generateWithIllness(severe: boolean, withGame = true) {
     sessionFeedback: {},
     weightOverrides: {},
   } as never);
-  const program = quiet(() => generateProgramLocally(athlete, {
+  const program = captureEngineValidate(() => generateProgramLocally(athlete, {
     todayISO: WEEK,
     previousProgram: null,
     activeConstraints: compat.activeConstraints,
@@ -365,6 +382,26 @@ run('6 mode-level stamp is type-agnostic: strength AND team sessions both render
     `a surviving STRENGTH session was not optional: ${strengthLike.map((w) => `${w.workoutType}/${w.sessionTier}`).join(', ')}`);
   assert(teamLike.every((w) => w.sessionTier === 'optional'),
     `a surviving TEAM session was not optional: ${teamLike.map((w) => `${w.workoutType}/${w.sessionTier}`).join(', ')}`);
+});
+
+// ── Invariant 7 — the mode-level optional stamp must be CONSISTENT with the in-season
+// coverage validation (finding #3 device pass, Sam 2026-07-24). An optional-only week is
+// "nothing required", so the in-season game-week coverage validation must not (a) log an
+// ENGINE-VALIDATE INVARIANT VIOLATION for missing lower/upper/full-body exposure, nor (b)
+// emergency-promote an optional session back to core (that would fight the mode). Engine-
+// validate runs headless here (logger.error always emits) — this is the gate that keeps
+// DEV-only validation from diverging from test:bible.
+run('7 optional-only week: no engine-validate coverage violation AND no emergency promotion', () => {
+  const mc = generateWithIllness(true, true) as unknown as GenMicro;
+  assert(mc.exposureContract?.identity?.mode === 'illness_recovery',
+    `precondition: illness_recovery mode, got ${mc.exposureContract?.identity?.mode}`);
+  assert(lastEngineViolations.length === 0,
+    `optional-only week logged engine-validate coverage violation(s): ${lastEngineViolations.join(' | ')}`);
+  const promotedCore = mc.workouts.filter((w) =>
+    w.sessionTier === 'core' && w.workoutType !== 'Rest' && w.workoutType !== 'Game');
+  assert(promotedCore.length === 0,
+    `emergency promotion forced a session back to core in an optional-only week: ` +
+    promotedCore.map((w) => `dow${w.dayOfWeek}:${w.workoutType}`).join(', '));
 });
 
 console.log(`\nillness_recovery week-mode invariants: ${passes} passing, ${failures.length} failing`);

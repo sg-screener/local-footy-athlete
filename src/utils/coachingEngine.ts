@@ -102,6 +102,7 @@ import {
   buildSection18WeeklyExposureContractV2,
   migrateLegacyReductionV2,
   resolveSection18PhasePlannerSelection,
+  isOptionalOnlyWeekMode,
   type Section18ConditioningRole,
   type Section18EquipmentPolicyState,
   type Section18Subphase,
@@ -1265,7 +1266,15 @@ export function buildCoachingPlan(inputs: CoachingInputs): CoachingPlan {
   //   1-core → must be full body (covers lower + push + pull in one session)
   //   2-core → lower + balanced upper (push + pull merged)
   //   3-core → lower + push + pull (separate sessions)
-  if (isInSeason && inputs.hasGame && actualCore >= 1) {
+  // Optional-only week modes (illness_recovery / bye_recovery / early_offseason) lift every
+  // minimum to 0 and stamp every surviving session optional ("nothing required this week") —
+  // so there IS no required lower/upper/full-body exposure to validate, and the emergency
+  // promotion below must not force an optional session back to core (it would fight the mode).
+  // Skip the whole block under the SAME derived mode the §18 gateway consumes (finding #3,
+  // Sam 2026-07-24). See docs/FINDING3_VISIBLE_OPTIONAL_DIAGNOSIS_2026-07-23.md.
+  const optionalOnlyWeek = !!weeklyExposureContract &&
+    isOptionalOnlyWeekMode(weeklyExposureContract.identity.mode);
+  if (isInSeason && inputs.hasGame && actualCore >= 1 && !optionalOnlyWeek) {
     if (actualCore === 1) {
       // 1-core: must be full body
       const hasFullBody = weeklyPlan.some(s => s.tier === 'core' && /full body/i.test(s.focus));
@@ -6862,9 +6871,7 @@ function applySection18ConditioningAllocation(
     0,
     contract.conditioning.optionalRecoveryAerobic.plannerSelectedCount ?? 0,
   );
-  const optionalOnlyMode = contract.identity.mode === 'early_offseason' ||
-    contract.identity.mode === 'in_season_bye_recovery' ||
-    contract.identity.mode === 'illness_recovery';
+  const optionalOnlyMode = isOptionalOnlyWeekMode(contract.identity.mode);
   if (optionalOnlyMode) {
     const existing = plan.filter((session) => hasConditioning(session) && !session.isTeamDay)
       .sort(inTrainingOrder);

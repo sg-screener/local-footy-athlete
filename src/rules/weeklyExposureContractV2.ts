@@ -37,6 +37,20 @@ export type Section18WeekMode =
   | 'late_preseason'
   | 'practice_match_week';
 
+/**
+ * Optional-only week modes: minimums lifted to 0 and every surviving session is optional
+ * ("nothing is required this week"). The SINGLE source of truth for that classification,
+ * keyed on the derived week mode the §18 gateway already consumes (never a duplicated
+ * fact-kind or mode list). Both the session-tier stamp (generation) and the in-season
+ * coverage validation key off this, so DEV-only validation cannot diverge from the mode.
+ * See docs/FINDING3_VISIBLE_OPTIONAL_DIAGNOSIS_2026-07-23.md.
+ */
+export function isOptionalOnlyWeekMode(mode: Section18WeekMode): boolean {
+  return mode === 'illness_recovery' ||
+    mode === 'in_season_bye_recovery' ||
+    mode === 'early_offseason';
+}
+
 export type Section18Subphase =
   | OffseasonSubphase
   | PreseasonSubphase
