@@ -79,7 +79,10 @@ no-op** on the reproduced case. What actually ships and why:
    optional check on a game week is confounded headlessly and belongs to the DEVICE merge-
    gate pass** (device generation is warm; device is arbiter). **Trigger:** device merge-gate
    pass — if the bed-ridden week does not render sessions visibly optional on a game week on
-   device, that is a live finding-#3 defect → STOP.
+   device, that is a live finding-#3 defect → STOP. **Additional trigger (Sam, 2026-07-24):**
+   any future deriving-commit defect involving a game week → **migrate the D-suite to the
+   canonical fixture FIRST, before diagnosis** — the stripped seed is known to lie exactly
+   there, and must not be allowed to lie quietly again.
 5. **Frozen-clock / `__DEV__ = true` rejected for the fixture.** It would defeat the QA_RUNBOOK
    epoch-0 mask, but `__DEV__ = true` diverges from Release (it changed the visible resolver),
    so the fixture stays `__DEV__ = false`; the epoch-0 mask remains a known limitation on the
