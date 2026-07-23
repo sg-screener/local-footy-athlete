@@ -528,6 +528,21 @@ export async function commitTemporarySourceFactSet(
   const scopedRegen = !inertComposition &&
     Array.from(fatigueSourceFactIds(compatibility.activeConstraints))
       .some((id) => !priorFatigueIds.has(id));
+  // Typed ownership (undo = stored prior state, never re-derive): removing a fact that
+  // OWNS a scoped-regen reversible adjustment (sourceFactId-linked) is a stored-prior-state
+  // restore, not a re-derivation. The scoped-regen ADD kept the base clean (preserveExact)
+  // — its overlay carried the reduction — and the cascade revert has already put the base
+  // back. Re-canonicalising here would re-author a base this fact never owned (e.g. null
+  // today's workout on a game week), tripping the base-immutability guard: the finding #4
+  // half-apply. Preserve the base exactly, symmetric with the ADD. The ownership link is
+  // the whole condition — NO fact-kind sniffing. Projection-delivered facts (equipment/
+  // schedule/time_cap) own no such adjustment and keep re-projecting on the path below.
+  // See docs/ILLNESS_CLEAR_LEDGER_REASSESSMENT_2026-07-23.md.
+  const ownsScopedRegenAdjustment = useProgramStore.getState()
+    .reversibleAdjustmentLedger.adjustments
+    .some((adjustment) => adjustment.kind === 'deriving_source_fact' &&
+      adjustment.sourceFactId === args.targetFactId);
+  const scopedRegenRestore = !inertComposition && !scopedRegen && ownsScopedRegenAdjustment;
   const horizon = affectedHorizon(args.todayISO, normalizedFacts);
   const baseFingerprint = semanticFingerprint(compositionBase.surfaces);
   const ledgerFingerprint = semanticFingerprint(compositionBase.surfaces.reversibleAdjustmentLedger);
@@ -563,11 +578,16 @@ export async function commitTemporarySourceFactSet(
             now,
           });
         }
-        validateEffectiveComposition({
-          base: compositionBase,
-          context: nextContext,
-          weekStarts: horizon.weeks,
-        });
+        // A scoped-regen RESTORE re-authors nothing: the cascade revert already restored
+        // the stored prior base, and the commit below preserves it exactly. Its effective
+        // week is that restored (previously validated) base, re-gated by validateWeekStarts.
+        if (!scopedRegenRestore) {
+          validateEffectiveComposition({
+            base: compositionBase,
+            context: nextContext,
+            weekStarts: horizon.weeks,
+          });
+        }
       }
       return commitAcceptedStateTransaction({
         reason: args.reason,
@@ -584,7 +604,9 @@ export async function commitTemporarySourceFactSet(
         // which `verifyCandidate` rejects with
         // `accepted_composition_base_changed_by_temporary_fact` (the on-device failure).
         validateWeekStarts: inertComposition ? [] : horizon.weeks,
-        preserveExactAcceptedWorkouts: inertComposition ? true : undefined,
+        // Base-preserving for inert facts AND scoped-regen restores (both own no base
+        // change); the re-canonicalising path stays for projection-delivered facts.
+        preserveExactAcceptedWorkouts: (inertComposition || scopedRegenRestore) ? true : undefined,
         skipConstraintProjection: true,
       });
     },
