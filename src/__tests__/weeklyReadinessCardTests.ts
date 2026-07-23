@@ -428,6 +428,17 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   ok('top-level buckets use distinct icons (icon cleanup, no repeated-pulse spam)',
     src.includes('flatIcon') && src.includes('sickIcon') &&
     (src.match(/pulseIcon\(/g) || []).length <= 4);
+
+  // Device finding #3: the illness_recovery week keeps its sessions (sessionTier
+  // 'optional') rather than clearing to Rest, so the day card must surface an
+  // optional-tier session as OPTIONAL (de-emphasised, "only if you're up to it"),
+  // not the prominent "Start Session" CORE treatment — the same visibly-optional
+  // framing cooked's Rest day already gets.
+  ok('an optional-tier session surfaces as optional, not prominent Start Session (finding #3)',
+    /isOptionalSession\b/.test(src) &&
+    /sessionTier === 'optional'/.test(src) &&
+    /Start optional session/.test(src) &&
+    /only if you're up to it/i.test(src));
   ok('active state label + update/clear affordances present',
     src.includes('Not 100% today') && src.includes("Not 100% this week") &&
     src.includes('Recovery mode this week') &&

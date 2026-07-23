@@ -1333,6 +1333,10 @@ function DayRow({
     day.workout.workoutType === 'Recovery' ||
     day.workout.sessionTier === 'recovery'
   );
+  // An illness_recovery week keeps its (reduced) sessions rather than clearing to
+  // Rest, marking them sessionTier 'optional'. Such a session must read as OPTIONAL
+  // — nothing required — not the prominent CORE "Start Session" treatment.
+  const isOptionalSession = hasWorkout && day.workout.sessionTier === 'optional';
   // A persisted session-outcome receipt for this day means the athlete finished
   // and saved feedback — the day is complete. Drives the "Done" marker and the
   // read-only completed CTA (WORKOUT_2026-07-21 row 2.1 / GROUPB finding 1: the
@@ -1571,6 +1575,11 @@ function DayRow({
             </>
           ) : isTeamOnly ? (
             <Button label="Log Session" size="lg" glow={false} onPress={onFinishTeam} />
+          ) : isOptionalSession ? (
+            <>
+              <Text style={styles.expandedMeta}>Optional this week — only if you're up to it. Nothing's required.</Text>
+              <Button label="Start optional session" variant="secondary" size="lg" glow={false} onPress={onViewWorkout} testID="view-workout-button" />
+            </>
           ) : (
             <>
               {isRecoverySession ? (
