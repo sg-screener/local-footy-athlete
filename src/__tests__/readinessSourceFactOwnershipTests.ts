@@ -867,6 +867,58 @@ async function main(): Promise<void> {
       'the day-card "I\'m not 100%" row must route to the week owner via onOpenReadiness');
   });
 
+  // ── Invariant R17 (attribution per fact kind): a coach note for an ILLNESS
+  // source fact must never read "you said you're cooked" (a fatigue attribution).
+  // Severe illness composes a fatigue-typed constraint (post-v1 the constraint
+  // type is still shared), so the constraint carries a typed readinessKind:'illness'
+  // discriminator and the lead author branches on it — no string special-casing.
+  await run('R17 attribution: an illness fact reads as illness, never "you said you\'re cooked"', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { readinessBodyLead } = require('../utils/activeProgramModifiers') as
+      typeof import('../utils/activeProgramModifiers');
+    const weekScope = { kind: 'week' as const, weekStart: WEEK, from: WEEK, until: addDays(WEEK, 6) };
+    const composed = composeTemporarySourceFactCompatibility({
+      temporarySourceFacts: [createTemporaryIllnessFact({
+        observedDate: WEEK, scope: weekScope, severity: 'severe',
+        sourceSurface: 'week_readiness_sheet',
+      })],
+      activeConstraints: [],
+    });
+    const illness = composed.activeConstraints.find((c) => isTemporarySourceFactConstraint(c)) as
+      { type: string; readinessKind?: string; severity: number; reasonLabel?: string } | undefined;
+    assert(!!illness, 'a severe illness fact must compose an active constraint');
+    assert(illness!.readinessKind === 'illness',
+      `the illness constraint must carry the typed readinessKind:'illness' discriminator, got ${String(illness!.readinessKind)}`);
+    const lead = readinessBodyLead(illness as never, illness!.reasonLabel ?? '');
+    assert(!/cooked/i.test(lead), `illness lead must not read "cooked", got "${lead}"`);
+    assert(/sick/i.test(lead), `illness lead must attribute to illness, got "${lead}"`);
+    // Fatigue attribution stays intact (no regression): a cooked fatigue constraint
+    // still reads cooked; a flat one still reads flat.
+    assert(/cooked/i.test(readinessBodyLead({ type: 'fatigue', severity: 8 } as never, '')),
+      'a cooked fatigue constraint must still read "cooked"');
+    assert(/flat/i.test(readinessBodyLead({ type: 'fatigue', severity: 2 } as never, '')),
+      'a flat fatigue constraint must still read "flat"');
+  });
+
+  // ── Invariant R18 (ack surfaces the real disclosure): when a readiness report
+  // actually CHANGES the program (severe illness → illness_recovery week), the
+  // sheet acknowledgment must surface the authored disclosure ("nothing's required
+  // this week…"), not a generic "logged how you're feeling". A record-only report
+  // (no program change) keeps the generic ack.
+  await run('R18 ack-disclosure: a program-changing report surfaces its authored disclosure', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { buildReadinessAcknowledgment } = require('../utils/readinessAcknowledgment') as
+      typeof import('../utils/readinessAcknowledgment');
+    const disclosure = "Rest up — nothing's required this week. I've left gentle optional work if you're up to it, at a lighter dose.";
+    const changed = buildReadinessAcknowledgment({ ok: true, changedProgram: true, message: disclosure });
+    assert(changed?.tone === 'success' && changed?.message === disclosure,
+      `a program-changing success must surface its disclosure, got "${changed?.message}"`);
+    // Record-only (no program change) keeps the generic acknowledgment.
+    const recorded = buildReadinessAcknowledgment({ ok: true, changedProgram: false, message: '' });
+    assert(recorded?.tone === 'success' && /logged how you're feeling/.test(recorded?.message ?? ''),
+      `a record-only report keeps the generic ack, got "${recorded?.message}"`);
+  });
+
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);
   if (failures.length > 0) {
     console.log('Currently RED (expected pre-fix):');

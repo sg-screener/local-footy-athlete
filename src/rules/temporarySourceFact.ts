@@ -587,6 +587,10 @@ function globalConstraint(
         : strongest.factKind === 'illness' ? 'Illness' : 'Fatigue',
     source: poorSleep ? 'readiness' : 'coach',
     ...(poorSleep ? { readinessKind: 'poor_sleep' as const, readinessPattern: poorSleep.pattern } : {}),
+    // Typed discriminator so coach-note attribution never mislabels an illness as
+    // fatigue ("you said you're cooked"). Illness shares the fatigue constraint
+    // type for now (post-v1 cleanup gives it its own type).
+    ...(strongest.factKind === 'illness' ? { readinessKind: 'illness' as const } : {}),
     ...(dateScoped ? { appliesToDate: strongest.effectiveFrom } : {}),
     ...(strongest.scope.kind === 'week' ? { weekStartISO: strongest.scope.weekStart } : {}),
     modifierAffects: [dateScoped ? 'current_day' : 'current_week'],
