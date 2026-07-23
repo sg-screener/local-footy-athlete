@@ -478,10 +478,30 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
     /sessionTier === 'optional'/.test(src) &&
     /Start optional session/.test(src) &&
     /only if you're up to it/i.test(src));
-  ok('active state label + update/clear affordances present',
-    src.includes('Not 100% today') && src.includes("Not 100% this week") &&
-    src.includes('Recovery mode this week') &&
+  // A4 (L10 device finding 2026-07-24): this assertion used to REQUIRE the
+  // hardcoded labels in HomeScreenV2 — and passed precisely BECAUSE the card
+  // ignored its own owner. `resolveVisibleReadinessState` computed
+  // "Under the weather this week" for an illness fact and the card threw the
+  // title away, re-deriving "Not 100% this week" from scope/isRecovery. The
+  // test pinned the defect, so the fix inverts it: the card must hold no
+  // readiness labels of its own and must render the owner's title.
+  ok('[A4] the card renders the owner\'s title and holds no labels of its own',
+    /weekReadiness\.title/.test(src) &&
+    !src.includes("'Not 100% today'") &&
+    !src.includes("'Not 100% this week'") &&
+    !src.includes("'Recovery mode this week'"));
+  ok('[A4] the un-set card still invites a report',
+    src.includes('"I\'m not 100%"'));
+  ok('active state update/clear affordances present',
     src.includes('Clear adjustment'));
+
+  // Rider (a): the active-state surface sits ABOVE the seven day rows so it
+  // explains the week it precedes — and only while something is shaping it.
+  ok('[A4] active-state notes render above the week list',
+    src.indexOf('<CoachNotesSection') > 0 &&
+    src.indexOf('<CoachNotesSection') < src.indexOf('{weekDays.map('));
+  ok('[A4] nothing active means no empty card takes screen space',
+    /if \(notes\.length === 0\) return null;/.test(src));
   ok('no coach-chat / LLM in the flow (no askCoach or fetch in readiness paths)',
     !/WeekReadinessSheet[\s\S]{0,4000}onAskCoach/.test(src));
 

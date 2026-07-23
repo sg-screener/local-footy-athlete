@@ -18,6 +18,10 @@ import {
   loadReductionModifierIdForDate,
 } from './tapProgramModifiers';
 import { poorSleepConstraintId } from './readinessConstraints';
+import {
+  readinessFactTitle,
+  type ReadinessFactKind,
+} from './readinessFactAttribution';
 
 export interface VisibleReadinessState {
   id: string;
@@ -59,11 +63,16 @@ export interface ResolveVisibleReadinessStateInput {
 // poor_sleep for the visible active-state.
 const READINESS_FACT_KINDS = new Set(['fatigue', 'soreness', 'poor_sleep', 'illness']);
 
+// A4: the card and the coach note read ONE vocabulary owner, so the two
+// surfaces cannot drift into naming the same fact differently. The card passes
+// no severity — it says "Not 100%" where the note, which has severity, can say
+// "Cooked". That is a refinement of one vocabulary, not a second one.
 function factKindTitle(factKind: string, scope: 'today' | 'week'): string {
-  if (factKind === 'poor_sleep') return scope === 'today' ? 'Poor sleep today' : 'Poor sleep this week';
-  if (factKind === 'soreness') return scope === 'today' ? 'Sore today' : 'Sore this week';
-  if (factKind === 'illness') return scope === 'today' ? 'Under the weather today' : 'Under the weather this week';
-  return scope === 'today' ? 'Not 100% today' : 'Not 100% this week';
+  const kind: ReadinessFactKind =
+    factKind === 'poor_sleep' || factKind === 'soreness' || factKind === 'illness'
+      ? factKind
+      : 'fatigue';
+  return readinessFactTitle({ kind, scope });
 }
 
 /**

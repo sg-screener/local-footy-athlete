@@ -439,6 +439,19 @@ export default function HomeScreenV2() {
           />
         )}
 
+        {/* ── What's shaping this week ──
+            A4 rider (a): above the week it explains, and only while something
+            is actually active — CoachNotesSection renders nothing when the list
+            is empty, so a normal week loses no screen space. Rider (c): one
+            line and one clear per active fact, never collapsed. Rider (d): the
+            clears route through handleCoachNoteAction, the same cascade doors
+            used everywhere else. */}
+        <CoachNotesSection
+          notes={coachNotes}
+          equipmentFactIds={new Set(equipmentFacts.map((fact) => fact.factId))}
+          onAction={handleCoachNoteAction}
+        />
+
         {/* ── Week list — all seven days, selected day carries the emphasis ── */}
         <View style={styles.dayList}>
           {weekDays.map((day, idx) => {
@@ -482,12 +495,6 @@ export default function HomeScreenV2() {
             );
           })}
         </View>
-
-        <CoachNotesSection
-          notes={coachNotes}
-          equipmentFactIds={new Set(equipmentFacts.map((fact) => fact.factId))}
-          onAction={handleCoachNoteAction}
-        />
 
         {/* Canonical state leaves survive wording changes and cold reloads. */}
         {injuryEpisodes.map((episode) => (
@@ -679,13 +686,12 @@ export default function HomeScreenV2() {
                   </Svg>
                 </View>
                 <Text style={styles.busyAwayText}>
-                  {weekReadiness
-                    ? (weekReadiness.scope === 'today'
-                        ? 'Not 100% today'
-                        : weekReadiness.isRecovery
-                          ? 'Recovery mode this week'
-                          : 'Not 100% this week')
-                    : "I'm not 100%"}
+                  {/* A4: the label is the owner's, not the card's.
+                      `resolveVisibleReadinessState` already attributes it to the
+                      fact kind; re-deriving it here from scope/isRecovery threw
+                      that away and printed the same generic line for every
+                      fact, which is what Sam saw on the phone. */}
+                  {weekReadiness ? weekReadiness.title : "I'm not 100%"}
                 </Text>
               </View>
             </Card>

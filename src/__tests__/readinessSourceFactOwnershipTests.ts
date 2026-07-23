@@ -974,6 +974,96 @@ async function main(): Promise<void> {
       `the illness fact must be resolved after clear, still ${activeIllnessFacts().length} active (finding #4)`);
   });
 
+  // ── A4 (L10 device finding 2026-07-24) ────────────────────────────────
+  // Attribution comes from the FACT KIND, not the constraint type.
+  //
+  // Every health source fact projects onto one compatibility constraint of
+  // `type: 'fatigue'` (illness included — it shares the type until the post-v1
+  // split). `statusModifier` titled every such constraint "Recovery mode
+  // active", so a severe illness surfaced as "Recovery mode active — 7/10":
+  // a domain the athlete never mentioned, at a severity they never gave.
+  //
+  // The projection already carries the typed `readinessKind` discriminator and
+  // the note BODY already reads it (`readinessBodyLead` — "You said you're
+  // sick."). The title was never wired to the same source. Pin that it is, and
+  // that the card and the note share ONE vocabulary owner.
+  await run('R20 fact-kind attribution: a note says what the athlete actually reported', () => {
+    const { buildActiveCoachNotes } = require('../utils/activeCoachNotes') as
+      typeof import('../utils/activeCoachNotes');
+    const factConstraint = (extra: Record<string, unknown>) => ({
+      id: 'source-fact:global:2026-07-20:2026-07-26',
+      type: 'fatigue',
+      severity: 7,
+      status: 'active',
+      startDate: '2026-07-20T00:00:00Z',
+      lastUpdatedAt: '2026-07-20T00:00:00Z',
+      rules: ['max-effort lifts'],
+      safeFocus: ['Easy aerobic conditioning'],
+      advice: [],
+      modifierAffects: ['current_week'],
+      temporarySourceFactIds: ['temporary-source-fact:v1:illness:week:2026-07-20'],
+      ...extra,
+    });
+    const titleOf = (extra: Record<string, unknown>): string | undefined =>
+      buildActiveCoachNotes([factConstraint(extra) as never])[0]?.title;
+
+    const illness = titleOf({ readinessKind: 'illness', reasonLabel: 'Illness' });
+    assert(illness !== 'Recovery mode active',
+      'an illness fact must never read as "Recovery mode active" (the device defect)');
+    assert(illness === 'Under the weather this week',
+      `illness title must say illness, got "${illness}"`);
+    const sleep = titleOf({ readinessKind: 'poor_sleep', readinessPattern: 'repeated' });
+    assert(sleep === 'Poor sleep this week', `poor sleep title, got "${sleep}"`);
+    const cooked = titleOf({ severity: 8 });
+    assert(cooked === 'Cooked this week', `cooked title, got "${cooked}"`);
+    const today = titleOf({
+      readinessKind: 'illness', modifierAffects: ['current_day'], appliesToDate: '2026-07-24',
+    });
+    assert(today === 'Under the weather today', `scope must be respected, got "${today}"`);
+  });
+
+  await run('R21 fact-kind attribution: two active facts keep two lines and two clears', () => {
+    const { buildActiveCoachNotes } = require('../utils/activeCoachNotes') as
+      typeof import('../utils/activeCoachNotes');
+    const notes = buildActiveCoachNotes([
+      {
+        id: 'source-fact:global:2026-07-20:2026-07-26', type: 'fatigue', severity: 7,
+        status: 'active', startDate: '2026-07-20T00:00:00Z', lastUpdatedAt: '2026-07-20T00:00:00Z',
+        rules: ['max-effort lifts'], safeFocus: ['Easy aerobic'], advice: [],
+        modifierAffects: ['current_week'], readinessKind: 'illness',
+      },
+      {
+        id: 'source-fact:soreness:hamstring:2026-07-20:2026-07-26', type: 'soreness',
+        bodyPart: 'hamstring', bucket: 'hamstring', severity: 6, status: 'active',
+        startDate: '2026-07-20T00:00:00Z', lastUpdatedAt: '2026-07-20T00:00:00Z',
+        rules: ['keep hamstring work pain-free'], safeFocus: ['Pain-free strength'], advice: [],
+        modifierAffects: ['current_week'], reasonLabel: 'hamstring soreness',
+      },
+    ] as never);
+    assert(notes.length === 2, `two facts must render two notes, got ${notes.length}`);
+    assert(new Set(notes.map((note) => note.id)).size === 2, 'notes must be separately identified');
+    assert(notes.every((note) => note.actions.some((action) => action.kind === 'clear_status')),
+      'each note must carry its own clear');
+    assert(new Set(notes.map((note) => note.title)).size === 2,
+      'two different facts must not collapse to one label');
+  });
+
+  await run('R22 fact-kind attribution has ONE vocabulary owner, read by both surfaces', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const read = (file: string): string =>
+      fs.readFileSync(path.resolve(__dirname, '..', 'utils', file), 'utf8');
+    const owner = read('readinessFactAttribution.ts');
+    assert(/Under the weather/.test(owner) && /Cooked/.test(owner),
+      'the vocabulary must live in the owner module');
+    assert(/readinessFactAttribution/.test(read('visibleReadinessState.ts')),
+      'the card must read the shared owner');
+    assert(/readinessFactAttribution/.test(read('activeProgramModifiers.ts')),
+      'the coach note must read the shared owner');
+    assert(!/'Recovery mode active'/.test(read('activeProgramModifiers.ts')),
+      'the derived-title path must no longer mint "Recovery mode active"');
+  });
+
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);
   if (failures.length > 0) {
     console.log('Currently RED (expected pre-fix):');

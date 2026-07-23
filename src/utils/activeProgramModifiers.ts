@@ -22,6 +22,11 @@ import { buildReadinessActiveConstraints } from './readinessConstraints';
 import { todayISOLocal } from './appDate';
 import { formatExerciseDisplayName } from './exerciseDisplay';
 import { logger } from './logger';
+import {
+  readinessFactKindOfConstraint,
+  readinessFactTitle,
+  readinessScopeOfConstraint,
+} from './readinessFactAttribution';
 import { buildDeterministicCoachNoteDescriptors } from './deterministicCoachNoteFactory';
 import type { AthletePoolPrefs } from '../data/exercisePoolsStrength';
 import type {
@@ -851,11 +856,20 @@ function statusModifier(
   const isLegacyFixtureProjection = c.type === 'schedule' &&
     c.noteProof?.kind === 'game_change' && !c.reversibleAdjustmentId;
   const isSoreness = c.type === 'soreness';
-  const fallbackTitle = c.type === 'fatigue'
-    ? 'Recovery mode active'
-    : isSoreness
-      ? `${capitaliseWords(displayBodyPart(c))} soreness active`
-      : c.reasonLabel || 'Program adjustment active';
+  // A4: the title is attributed to the FACT KIND through the projection's typed
+  // `readinessKind` discriminator — the same source the body already reads via
+  // `readinessBodyLead`. Branching on the constraint TYPE is what made a severe
+  // illness read as "Recovery mode active": every health fact shares the fatigue
+  // constraint type. Vocabulary lives in one owner shared with the Program card.
+  const readinessFactKind = readinessFactKindOfConstraint(c as never);
+  const fallbackTitle = readinessFactKind
+    ? readinessFactTitle({
+        kind: readinessFactKind,
+        scope: readinessScopeOfConstraint(c as never),
+        severity: 'severity' in c ? c.severity : undefined,
+        bodyPart: isSoreness ? capitaliseWords(displayBodyPart(c)) : undefined,
+      })
+    : c.reasonLabel || 'Program adjustment active';
   const fallbackBody = c.type === 'fatigue'
     ? sentence([
         'Your training load is reduced while you recover.',
