@@ -28,6 +28,7 @@ import {
   type ProgramControlActionResult,
   type ProgramControlStatusUpdate,
 } from '../../utils/programControlActions';
+import { readinessActionForKind } from '../../utils/weekReadinessActions';
 import type { TemporaryEquipmentPresetId } from '../../utils/equipmentAvailability';
 import {
   buildGuidedInjuryConstraint,
@@ -1389,65 +1390,16 @@ export function useHomeScreen() {
     anchorDateISO: string,
   ) => {
     const todayISO = todayISOLocal();
-    const result = kind === 'sick_week'
-      ? await executeProgramControlActionDurably({
-          type: 'set_illness_status',
-          source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-          scope: 'current_week',
-          // Bed-ridden = a SEVERE illness week-fact through the standard deriving
-          // path. It derives the illness_recovery §18 week mode (minimums lifted,
-          // remaining work optional/reduced) — no shutdown_week, no recovery-mode
-          // writer. The handler maps severity 'severe' → week scope.
-          payload: { date: anchorDateISO, todayISO, severity: 'severe' },
-          requiresRebuild: false,
-          createsActiveModifier: true,
-          oneOffOnly: false,
-        }, { todayISO })
-      : kind === 'sniffle_today'
-        ? await executeProgramControlActionDurably({
-            type: 'set_illness_status',
-            source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-            scope: 'today_only',
-            // Minor illness (sniffle): record-only + inert. The opt-in "soften
-            // today?" offer (lighter-day pattern) is surfaced by the sheet for
-            // today-scoped tiers. (Severe illness / bed-ridden is a later stage —
-            // it derives the illness_recovery week mode.)
-            payload: { date: todayISO, todayISO, severity: 'minor' },
-            requiresRebuild: false,
-            createsActiveModifier: true,
-            oneOffOnly: false,
-          }, { todayISO })
-      : kind === 'poor_sleep_today' || kind === 'poor_sleep_week'
-        ? await executeProgramControlActionDurably({
-            type: 'set_poor_sleep_status',
-            source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-            scope: kind === 'poor_sleep_week' ? 'current_week' : 'today_only',
-            payload: {
-              date: kind === 'poor_sleep_week' ? anchorDateISO : todayISO,
-              todayISO,
-              pattern: kind === 'poor_sleep_week' ? 'repeated' : 'single_night',
-            },
-            requiresRebuild: false,
-            createsActiveModifier: true,
-            oneOffOnly: false,
-          }, { todayISO })
-        : await executeProgramControlActionDurably({
-          type: 'set_fatigue_status',
-          source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
-          scope: kind === 'cooked_week' ? 'current_week' : 'today_only',
-          payload: {
-            date: kind === 'cooked_week' ? anchorDateISO : todayISO,
-            todayISO,
-            level: kind === 'cooked_week'
-              ? 'cooked'
-              : kind === 'sore_today'
-                ? 'sore'
-                : 'low_energy',
-          },
-          requiresRebuild: false,
-          createsActiveModifier: true,
-          oneOffOnly: false,
-        }, { todayISO });
+    // Single owner: every tier maps through the one pure `readinessActionForKind`
+    // function (invariant R16). sick_week → SEVERE illness (derives the
+    // illness_recovery §18 week mode: minimums lifted, remaining work
+    // optional/reduced — no shutdown_week, no recovery-mode writer); sniffle_today
+    // → MINOR illness (record-only + inert, today-scoped soften offer). The
+    // day-card door opens this same sheet, so both doors commit identically.
+    const result = await executeProgramControlActionDurably(
+      readinessActionForKind(kind, { anchorDateISO, todayISO }),
+      { todayISO },
+    );
     registerSourceFactRenderObservation({
       result,
       domain: 'readiness',

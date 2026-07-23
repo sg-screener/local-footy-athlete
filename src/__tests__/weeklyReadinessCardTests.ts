@@ -421,18 +421,29 @@ console.log('\n── 5. Program screen source: card, placement, phases, sheet �
   ok('no coach-chat / LLM in the flow (no askCoach or fetch in readiness paths)',
     !/WeekReadinessSheet[\s\S]{0,4000}onAskCoach/.test(src));
 
-  ok('hook keeps today and week scopes distinct',
-    hookSrc.includes("scope: kind === 'cooked_week' ? 'current_week' : 'today_only'") &&
-    hookSrc.includes("kind === 'poor_sleep_week' ? 'current_week' : 'today_only'") &&
-    hookSrc.includes("kind === 'sore_today'") && hookSrc.includes("kind === 'sick_week'"));
+  // Scope distinctness now lives in the single readiness owner (0.2 / R16): the
+  // tier→action mapping was extracted from the hook into the pure
+  // weekReadinessActions module so both doors route through one testable owner.
+  const readinessActionsSrc = fs.readFileSync(`${__dirname}/../utils/weekReadinessActions.ts`, 'utf8') as string;
+  ok('the single readiness owner keeps today and week scopes distinct',
+    hookSrc.includes('readinessActionForKind') &&
+    /kind === 'cooked_week'/.test(readinessActionsSrc) &&
+    /kind === 'poor_sleep_week'/.test(readinessActionsSrc) &&
+    /kind === 'sore_today'/.test(readinessActionsSrc) &&
+    /kind === 'sick_week'/.test(readinessActionsSrc) &&
+    /scope: cooked \? 'current_week' : 'today_only'/.test(readinessActionsSrc) &&
+    /scope: week \? 'current_week' : 'today_only'/.test(readinessActionsSrc));
   ok('health taps use the durable canonical source-fact boundary',
     hookSrc.includes('executeProgramControlActionDurably') &&
     !hookSrc.includes('weekReadinessIds.has(modifier.sourceId)'));
 
-  // Day-level wellbeing flow untouched.
+  // Door unification (0.2 / R16): the day-card "I'm not 100%" door no longer runs
+  // a record-only wellbeing subtree — it opens the single week-level owner. The
+  // retired pick_wellbeing / shutdown_week paths must be gone.
   const planSheet = fs.readFileSync(`${__dirname}/../screens/home/PlanChangeSheet.tsx`, 'utf8') as string;
-  ok('day-level "How are you today?" flow still present',
-    planSheet.includes("pick_wellbeing") && planSheet.includes("I'm not 100%"));
+  ok('day-card "I\'m not 100%" opens the single week readiness owner (record-only branch retired)',
+    planSheet.includes("I'm not 100%") && planSheet.includes('onOpenReadiness') &&
+    !planSheet.includes('pick_wellbeing') && !planSheet.includes('shutdown_week'));
 }
 
 // ─── Summary ─────────────────────────────────────────────────────────

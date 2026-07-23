@@ -825,8 +825,12 @@ console.log('\n[9] Program tab renders Coach Notes below week list without chat 
   ok('CoachNoteSheet does not navigate to CoachTab', !/CoachTab|handleQuickAction|onAskCoach/.test(sheetBlock));
   ok('useHomeScreen exposes active note selector', /selectActiveCoachNotes\(\{[\s\S]*activeConstraints[\s\S]*modalityPreferences[\s\S]*readinessSignalsByDate/.test(hookSrc));
   ok('useHomeScreen clear action uses ProgramControlAction', /executeProgramControlAction\(\{[\s\S]*type:\s*'clear_active_modifier'/.test(hookSrc));
-  ok('PlanChangeSheet routes recovery status through ProgramControlAction', /executeProgramControlAction\(\{[\s\S]*type:\s*'set_recovery_mode'/.test(sheetSrc));
-  ok('PlanChangeSheet routes fatigue status through ProgramControlAction', /executeProgramControlAction\(\{[\s\S]*type:\s*'set_fatigue_status'/.test(sheetSrc));
+  // Door unification (0.2 / R16): the day-card "I'm not 100%" door no longer
+  // commits any readiness/recovery status of its own — it hands off to the single
+  // week-level owner via onOpenReadiness. The former set_recovery_mode /
+  // set_fatigue_status committers are retired from this sheet.
+  ok('PlanChangeSheet holds no readiness/recovery committer', !/set_recovery_mode|set_fatigue_status|set_illness_status|shutdown_week/.test(sheetSrc));
+  ok('PlanChangeSheet "I\'m not 100%" hands off to the single week owner', /"I'm not 100%"[\s\S]*onPress=\{openReadiness\}/.test(sheetSrc) && /onOpenReadiness/.test(sheetSrc));
   ok('CoachNoteSheet offers guided status update options', /How are you feeling now\?[\s\S]*Still sick[\s\S]*Still cooked[\s\S]*Worse/.test(homeSrc));
   ok(
     'guided status category changes clear the previous status note first',
@@ -877,13 +881,16 @@ console.log('\n[9b] Program/Home quick actions use guided no-chat fallbacks');
   ok('quick action detail fallback requires explicit Message coach tap', /I need a bit more detail[\s\S]*Message the coach[\s\S]*Cancel/.test(quickSheetSrc));
   ok('stale override Review opens a guided review sheet', /testID="stale-override-review-sheet"[\s\S]*Keep this change[\s\S]*Clear this change[\s\S]*Update this change[\s\S]*Message the coach/.test(staleSrc));
   ok('stale override only calls onReview from explicit Message handler', /const handleMessageCoach[\s\S]*onReview\?\.\(coachPrefill\)/.test(staleSrc));
+  // Injury reporting is now owned by the week readiness sheet's "Something hurts"
+  // ingress (single door). The day-card sheet no longer carries its own injury
+  // flow — it hands off to the week owner via onOpenReadiness.
   ok(
-    'PlanChangeSheet injury path opens guided injury flow',
-    /label="I'm injured"[\s\S]*setInjuryFlowVisible\(true\)/.test(sheetSrc),
+    'PlanChangeSheet no longer owns a guided injury flow',
+    !/setInjuryFlowVisible|GuidedInjuryFlowSheet|label="I'm injured"/.test(sheetSrc),
   );
   ok(
-    'PlanChangeSheet injury path no longer pre-fills Coach',
-    !/label="I'm injured"[\s\S]*askCoachWith\("I'm injured/.test(sheetSrc),
+    'PlanChangeSheet routes all readiness/injury reports to the week owner',
+    /onOpenReadiness/.test(sheetSrc),
   );
   ok(
     'Home quick action injury opens guided injury flow',

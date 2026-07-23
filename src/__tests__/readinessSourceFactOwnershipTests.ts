@@ -805,6 +805,68 @@ async function main(): Promise<void> {
       `the COMMITTED accepted week must be illness_recovery, got ${committed.contract.identity.mode}`);
   });
 
+  // ── Invariant R16 (door unification — ONE readiness owner, two doors cannot
+  // diverge): after 0.2 the day-card "I'm not 100%" door no longer commits any
+  // readiness/illness/recovery fact of its own — it opens the week owner. The
+  // tier→action mapping lives in exactly ONE pure function, `readinessActionForKind`,
+  // which every tier (incl. the new "Coming down with something"/"Properly sick"
+  // groupings) routes through. Two doors + one committer = identical outcome by
+  // construction. This replaces the old two-committer risk (R13 era) with a
+  // single-owner structural guarantee plus a per-tier mapping equivalence.
+  await run('R16 door-unification: one owner maps every readiness tier + the day door holds no committer', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { readinessActionForKind } = require('../utils/weekReadinessActions') as
+      typeof import('../utils/weekReadinessActions');
+    const ANCHOR = '2026-07-13';
+    const TODAY = '2026-07-15';
+    const ctx = { anchorDateISO: ANCHOR, todayISO: TODAY };
+
+    const cases = [
+      { kind: 'tired_today', type: 'set_fatigue_status', scope: 'today_only', date: TODAY, level: 'low_energy' },
+      { kind: 'sore_today', type: 'set_fatigue_status', scope: 'today_only', date: TODAY, level: 'sore' },
+      { kind: 'cooked_week', type: 'set_fatigue_status', scope: 'current_week', date: ANCHOR, level: 'cooked' },
+      { kind: 'poor_sleep_today', type: 'set_poor_sleep_status', scope: 'today_only', date: TODAY, pattern: 'single_night' },
+      { kind: 'poor_sleep_week', type: 'set_poor_sleep_status', scope: 'current_week', date: ANCHOR, pattern: 'repeated' },
+      { kind: 'sniffle_today', type: 'set_illness_status', scope: 'today_only', date: TODAY, severity: 'minor' },
+      { kind: 'sick_week', type: 'set_illness_status', scope: 'current_week', date: ANCHOR, severity: 'severe' },
+    ] as const;
+
+    for (const c of cases) {
+      const action = readinessActionForKind(c.kind as never, ctx) as {
+        type: string; scope: string; source: { surface?: string };
+        requiresRebuild: boolean; createsActiveModifier: boolean; oneOffOnly: boolean;
+        payload: Record<string, unknown>;
+      };
+      assert(action.type === c.type, `${c.kind}: type expected ${c.type}, got ${action.type}`);
+      assert(action.scope === c.scope, `${c.kind}: scope expected ${c.scope}, got ${action.scope}`);
+      assert(action.payload.date === c.date, `${c.kind}: date expected ${c.date}, got ${String(action.payload.date)}`);
+      assert(action.payload.todayISO === TODAY, `${c.kind}: todayISO must be threaded`);
+      assert(action.source.surface === 'week_readiness_sheet', `${c.kind}: surface must be week_readiness_sheet`);
+      assert(action.requiresRebuild === false && action.createsActiveModifier === true && action.oneOffOnly === false,
+        `${c.kind}: durable flags must match the owner's`);
+      if ('level' in c) assert(action.payload.level === c.level, `${c.kind}: level expected ${c.level}, got ${String(action.payload.level)}`);
+      if ('pattern' in c) assert(action.payload.pattern === c.pattern, `${c.kind}: pattern expected ${c.pattern}`);
+      if ('severity' in c) assert(action.payload.severity === c.severity, `${c.kind}: severity expected ${c.severity}`);
+    }
+
+    // Structural single-owner guarantee: the day-card door commits NOTHING of its
+    // own — no readiness/illness/recovery committer, no shutdown_week, no wellbeing
+    // subtree — it only opens the week owner via onOpenReadiness.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const fs = require('fs');
+    const planSheet = fs.readFileSync(`${__dirname}/../screens/home/PlanChangeSheet.tsx`, 'utf8') as string;
+    for (const forbidden of [
+      'pick_wellbeing', 'pick_tired', 'pick_sleep', 'pick_sick', 'confirm_shutdown',
+      'shutdown_week', 'set_fatigue_status', 'set_illness_status', 'set_poor_sleep_status',
+      'set_recovery_mode',
+    ]) {
+      assert(!planSheet.includes(forbidden),
+        `the day-card door must hold no readiness committer, found "${forbidden}" in PlanChangeSheet`);
+    }
+    assert(planSheet.includes('onOpenReadiness') && planSheet.includes("I'm not 100%"),
+      'the day-card "I\'m not 100%" row must route to the week owner via onOpenReadiness');
+  });
+
   console.log(`\nReadiness / source-fact ownership invariants: ${passes} passing, ${failures.length} failing`);
   if (failures.length > 0) {
     console.log('Currently RED (expected pre-fix):');

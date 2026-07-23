@@ -768,6 +768,7 @@ export default function HomeScreenV2() {
         weekDays={weekDays}
         onClose={() => setChangeSheetDate(null)}
         onAskCoach={handleMessageCoach}
+        onOpenReadiness={() => { setReadinessAck(null); setReadinessVisible(true); }}
       />
 
       <GameDaySheet
