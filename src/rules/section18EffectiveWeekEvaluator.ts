@@ -683,6 +683,15 @@ function metricGovernedActual(
     case 'conditioning_core_frequency': return ledger.conditioning.split.appPrescribed;
     case 'sprint_high_speed_frequency': return ledger.sprintHighSpeed.split.appPrescribed;
     case 'power_primer_budget': return ledger.power.split.appPrescribed;
+    case 'strength_pattern_count': {
+      // Patterns trained in the governed remainder only — a pattern the
+      // athlete already trained before the boundary is history, not a
+      // contradiction of a reduction authored after it.
+      const history = new Set(ledger.historyDays);
+      return PATTERNS.filter((pattern) =>
+        ledger.strengthPatterns.sessionDaysByPattern[pattern]
+          .some((day) => !history.has(day))).length;
+    }
     default: return metricActual(metric, ledger);
   }
 }
@@ -995,15 +1004,18 @@ export function evaluateSection18EffectiveWeek(
     });
   }
 
+  // Prohibitions govern the remainder: pressing the athlete did on Monday is
+  // history a Friday shoulder report cannot retroactively make a violation.
+  const historyDaysForPatterns = new Set(ledger.historyDays);
   for (const pattern of contract.strengthPatterns.prohibitedPatterns) {
-    const actual = ledger.strengthPatterns.meaningfulMainLiftCount[pattern];
-    if (actual <= 0) continue;
+    const governedDays = ledger.strengthPatterns.sessionDaysByPattern[pattern]
+      .filter((day) => !historyDaysForPatterns.has(day));
+    if (governedDays.length <= 0) continue;
     addFinding(findings, {
       code: 'prohibited_pattern_breach', severity: 'blocking', domain: 'strength_patterns',
-      expected: 0, actual,
+      expected: 0, actual: governedDays.length,
       detail: `Injury-prohibited ${pattern} main-strength work returned in the final week.`,
-      evidence: ledger.strengthPatterns.sessionDaysByPattern[pattern]
-        .map((day) => dateForDay(input.weekStart, day)),
+      evidence: governedDays.map((day) => dateForDay(input.weekStart, day)),
     });
   }
   const patternCoverageSelected = contract.mainStrength.exposure.plannerSelectedTarget > 0 &&

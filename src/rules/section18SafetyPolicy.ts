@@ -227,24 +227,20 @@ export function applyGenerationSafetyToSection18Contract(args: {
   // question. See Addendum A of the durable-athlete-state reassessment and
   // `docs/investigations/RIDER0_INJURY_AUTHORITY_AT_THE_GATE_2026-07-24.md`.
   //
-  // SCOPE: this removes the UPPER-BODY inference only. A lower-body or back
-  // injury still withdraws field participation here, and the same argument says
-  // it should not — but for that region the withdrawal is structurally coupled
-  // to the `sprint_high_speed_frequency <= 0` reduction below and to
-  // `prohibitedSprintHighSpeed`, which forces the week's total high-speed
-  // ceiling (anchor credit included) to zero. Moving one without the other just
-  // reverses the contradiction: authorised 0 versus an athlete who is still
-  // playing on Saturday. Three attempts at decoupling each surfaced a new
-  // failure elsewhere in the safety boundary, which is the signal to stop
-  // patching and settle ownership first. Lower-body and back injuries at 6/10
-  // and above therefore remain unrecordable, pinned RED and quarantined by
-  // invariants I3/I4, and belong to the §18 elapsed-week / materialisation
-  // reassessment along with T4 and I6.
+  // NO injury region silently withdraws field participation (Sam's D10: the
+  // default never assumes an injury costs the athlete their team training or
+  // game; where it genuinely might, Stage 2b ASKS and records the answer).
+  // The lower-body coupling that previously forced this is resolved: the
+  // `sprint_high_speed_frequency <= 0` reduction and the
+  // `prohibitedSprintHighSpeed` blocker both govern APP-PRESCRIBED work only
+  // (delivered-vs-remaining ownership), so "the app prescribes no sprint to an
+  // 8/10 knee" no longer asserts "the athlete's own Saturday game produced
+  // nothing". The finaliser still strips app-authored speed blocks.
   //
   // Low readiness continues to withdraw field participation, and legitimately so:
   // it authors matching main-strength, conditioning and sprint reductions in the
   // same pass, so its contracts stay satisfiable.
-  const hasFieldRestriction = lowerBodyRestriction || readinessFieldRestriction;
+  const hasFieldRestriction = readinessFieldRestriction;
 
   if (prohibited.length > 0) {
     addReduction(contract, {

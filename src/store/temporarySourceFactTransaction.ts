@@ -569,24 +569,32 @@ export async function commitTemporarySourceFactSet(
       .sort((left, right) => String(left.id).localeCompare(String(right.id))));
   const inertComposition = sourceFactConstraintSignature(ownership.context.activeConstraints)
     === sourceFactConstraintSignature(compatibility.activeConstraints);
-  // A DERIVING readiness/illness fact (severe illness → illness_recovery, cooked
-  // fatigue → readiness reduction) is an AUTHORING event with no projection home:
-  // the mode/reduction lives only in generation. When a NEW auto-protect
-  // (type 'fatigue') source-fact constraint appears, route it through a scoped
-  // regeneration committed as a week overlay + fact-linked adjustment, rather than
-  // the overlay-preserving inert path (a silent no-op) or the base-immutability
-  // guard (a reject). Injury/equipment/schedule facts deliver via projection and
-  // stay on their existing path. See
-  // docs/DERIVING_SOURCE_FACT_SCOPED_REGEN_REASSESSMENT_2026-07-23.md.
-  const fatigueSourceFactIds = (constraints: readonly unknown[]): Set<string> =>
+  // A DERIVING fact (severe illness → illness_recovery, cooked fatigue →
+  // readiness reduction, an injury restriction) is an AUTHORING event with no
+  // projection home: the mode/reduction/prohibition lives only in generation.
+  // When a NEW auto-protect ('fatigue') or injury source-fact constraint
+  // appears, route it through a scoped regeneration committed as a week
+  // overlay + fact-linked adjustment, rather than the overlay-preserving inert
+  // path (a silent no-op) or the base-immutability guard (a reject).
+  // Equipment/schedule/time-cap facts deliver via projection and stay on their
+  // existing path — the rider-1 materialisation table names one owner per
+  // effect, and injury's owner is THIS one (I6: the athlete must SEE the week
+  // stop prescribing the affected work). See
+  // docs/DERIVING_SOURCE_FACT_SCOPED_REGEN_REASSESSMENT_2026-07-23.md and
+  // docs/SECTION18_DELIVERED_VS_REMAINING_REASSESSMENT_2026-07-24.md §3.
+  const derivingSourceFactIds = (constraints: readonly unknown[]): Set<string> =>
     new Set((constraints as Array<{ id?: string; type?: string }>)
-      .filter((constraint) => constraint.type === 'fatigue' &&
+      .filter((constraint) => (constraint.type === 'fatigue' || constraint.type === 'injury') &&
         isTemporarySourceFactConstraint(constraint as never))
       .map((constraint) => String(constraint.id)));
-  const priorFatigueIds = fatigueSourceFactIds(ownership.context.activeConstraints);
-  const scopedRegen = !inertComposition &&
-    Array.from(fatigueSourceFactIds(compatibility.activeConstraints))
-      .some((id) => !priorFatigueIds.has(id));
+  const priorDerivingIds = derivingSourceFactIds(ownership.context.activeConstraints);
+  // Materialisation needs a program to materialise into; without one (cold
+  // start, synthetic bases) the fact still commits via the projection path.
+  const canScopedRegen =
+    (useProgramStore.getState().currentProgram?.microcycles?.length ?? 0) > 0;
+  const scopedRegen = !inertComposition && canScopedRegen &&
+    Array.from(derivingSourceFactIds(compatibility.activeConstraints))
+      .some((id) => !priorDerivingIds.has(id));
   // Stage 1: which weeks a deriving fact re-authors is the FACT's business, not
   // `mondayFor(todayISO)`'s. The candidates are the weeks the athlete actually
   // has (the accepted program's microcycles, plus the current week); the fact's

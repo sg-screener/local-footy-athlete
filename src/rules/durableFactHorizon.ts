@@ -93,9 +93,16 @@ export function durableStateFactScope(args: {
 export function factHorizon(fact: TemporarySourceFact): DurableFactHorizon {
   if (isInjury(fact)) {
     const weeks = [...(fact as { affectedWeeks: string[] }).affectedWeeks].sort();
-    const first = weeks[0] ?? (fact as { reportedDate?: string }).reportedDate ?? '1970-01-01';
+    const reported = (fact as { onsetOrReportedDate?: string }).onsetOrReportedDate?.slice(0, 10);
+    const first = weeks[0] ?? reported ?? '1970-01-01';
     const last = weeks[weeks.length - 1] ?? first;
-    return { startsFrom: first, endsAfter: addDays(last, 6) };
+    // Same start rule as every durable state fact: never earlier than the
+    // report. An injury reported Friday shapes Friday onward — the Monday of
+    // its affected week is bookkeeping, not licence to rewrite done days.
+    return {
+      startsFrom: reported && reported > first ? reported : first,
+      endsAfter: addDays(last, 6),
+    };
   }
   const nonInjury = fact as { effectiveFrom: string; effectiveUntil: string | null };
   return { startsFrom: nonInjury.effectiveFrom, endsAfter: nonInjury.effectiveUntil ?? null };
