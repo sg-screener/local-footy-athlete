@@ -423,6 +423,43 @@ function registerScenarios(): void {
       offending.map((day) => `${day.date} ${day.workout!.name}/${day.workout!.sessionTier}`).join('; '));
   });
 
+  // ── A1 — GAMES UNTOUCHED (Sam's standing ruling). The device finding: a
+  // "Properly sick" commit on a game week failed at the §18 gate. The correct
+  // outcome is that the commit SUCCEEDS, the live game anchor and its day
+  // survive byte-identical, and everything else goes optional. This drives
+  // the same seed's real game Saturday through the sick commit.
+  scenario('a1-game-week', 'A1 a severe illness on a game week keeps the game anchor; everything else goes optional', async () => {
+    seedSpentWeekFriday();
+    await markSpentDaysDone();
+    const accepted = getAcceptedMaterialContext();
+    const gameDates = Object.entries(accepted.markedDays ?? {})
+      .filter(([, kind]) => kind === 'game')
+      .map(([date]) => date)
+      .sort();
+    assert(gameDates.length > 0, 'seed carries no marked game day — A1 needs a live game anchor');
+    const landingGames = gameDates.filter((date) => date >= WEEK_1 && date < WEEK_2);
+    assert(landingGames.length > 0, 'no game inside the landing week on this seed');
+    const before = acceptedWeek(WEEK_1).days;
+
+    const result = await commitReadiness('sick_week');
+    assert((result as { ok?: boolean }).ok === true,
+      `severe illness on a game week was rejected: ${(result as { message?: string }).message}`);
+
+    const after = acceptedWeek(WEEK_1).days;
+    for (const date of landingGames) {
+      assert(before[date] === after[date],
+        `the live game day ${date} was rewritten by the sick commit: "${before[date]}" → "${after[date]}"`);
+    }
+    // The game marking itself survives in accepted state.
+    const markedAfter = getAcceptedMaterialContext().markedDays ?? {};
+    for (const date of landingGames) {
+      assert(markedAfter[date] === 'game', `game marking for ${date} was lost by the sick commit`);
+    }
+    // And the week still landed as an illness_recovery week.
+    assert(acceptedWeek(WEEK_1).mode === 'illness_recovery',
+      `landing week mode is "${acceptedWeek(WEEK_1).mode}", not illness_recovery`);
+  });
+
   // ── T5 — exactly ONE duration representation. A static invariant: no
   // consumer may compute an effect window from anything but the fact's horizon
   // owner. Without this, the other four tests can be made green by teaching
