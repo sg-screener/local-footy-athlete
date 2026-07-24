@@ -360,22 +360,33 @@ function workoutsFor(
     ws.map((w) => `${w.dayOfWeek}:${w.powerBlock ? 'POWER' : '-'}`).join(' | '));
 }
 
-// Equipment respected: med ball option only appears when a med ball is available.
+// The power block is BODYWEIGHT-ONLY and equipment-independent.
+//
+// Sam retired the whole medicine-ball family (Chest Pass and Slam 2026-07-24,
+// Overhead Throw 2026-07-25), so `buildPowerBlock` no longer branches on
+// equipment at all. These assertions used to prove the med-ball alternate
+// appeared only when a ball was available; they now prove the stronger and
+// simpler property — owning a medicine ball changes nothing, and no power
+// option ever demands an implement the athlete may not have.
 {
   const noBall = workoutsFor(profile({ equipment: ['Barbell', 'Dumbbells', 'Bench'] }));
-  const noBallBlocks = noBall.filter((w) => w.powerBlock);
-  ok('without a med ball, every power option is bodyweight-feasible',
-    noBallBlocks.every((w) => (w.powerBlock!.options[0].equipmentRequired.length === 0)
-      && w.powerBlock!.options.every((o) => o.equipmentRequired.every((eq) => !/ball/i.test(eq) || false) || o.equipmentRequired.length === 0)),
-    'first option should need no equipment');
-  ok('without a med ball, no medicine-ball option is offered',
-    noBallBlocks.every((w) => w.powerBlock!.options.every((o) => !/medicine ball/i.test(o.name))));
-
   const withBall = workoutsFor(profile({ equipment: ['Barbell', 'Dumbbells', 'Bench', 'Medicine Ball'] }));
-  const withBallBlocks = withBall.filter((w) => w.powerBlock);
-  ok('with a med ball, a medicine-ball option is offered on at least one power block',
-    withBallBlocks.some((w) => w.powerBlock!.options.some((o) => /medicine ball/i.test(o.name))),
-    withBallBlocks.map((w) => w.powerBlock!.options.map((o) => o.name).join('/')).join(' | '));
+  const blocks = [...noBall, ...withBall].filter((w) => w.powerBlock);
+
+  ok('every power option needs no equipment at all',
+    blocks.every((w) => w.powerBlock!.options.every((o) => o.equipmentRequired.length === 0)),
+    blocks.map((w) => w.powerBlock!.options.map((o) => `${o.name}[${o.equipmentRequired.join(',')}]`).join('/')).join(' | '));
+
+  ok('no medicine-ball option is offered, with or without a ball',
+    blocks.every((w) => w.powerBlock!.options.every((o) => !/medicine ball/i.test(o.name))));
+
+  // Equipment-independence, proven by comparison rather than asserted: the same
+  // athlete with and without a ball gets byte-identical power options.
+  const names = (ws: typeof noBall) =>
+    ws.filter((w) => w.powerBlock).map((w) => w.powerBlock!.options.map((o) => o.name).join('/')).join(' | ');
+  ok('owning a medicine ball changes no power option',
+    names(noBall) === names(withBall),
+    `noBall="${names(noBall)}"\n      withBall="${names(withBall)}"`);
 }
 
 // Healthy default: strength exercise content is unchanged by the power layer

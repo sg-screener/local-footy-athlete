@@ -68,6 +68,7 @@ Sections marked PROPOSED are the only ones still awaiting a Sam ruling.
 - Abductor Machine (late ruling)
 - Adductor Machine (late ruling)
 - Olympic lifts (cleans, snatches) (late ruling)
+- Medicine Ball Overhead Throw (late ruling)
 
 ### Removal scope — what "everywhere" reaches, and what it does not
 
@@ -84,9 +85,12 @@ exception is a ruling rather than a miss:
 - **Olympic lifts (cleans, snatches)** — the only occurrence in live code is
   `coach-chat`'s `NEVER program:` prohibition. Deleting the prohibition would
   *permit* them. The census entry is retired; the ban stays.
-- **Medicine Ball Chest Pass** — deleted from `buildPowerBlock`'s upper power
-  options (a live render path). `Medicine Ball Overhead Throw` is NOT in the
-  removal list and survives; only the rotational throw, chest pass and slam go.
+- **The medicine-ball family is gone entirely.** Chest Pass and Slam went on
+  2026-07-24; Sam retired `Medicine Ball Overhead Throw` on 2026-07-25, which
+  was the last one standing. Both `buildPowerBlock` branches that offered a
+  med-ball alternate are deleted — the function no longer reads
+  `availableEquipment` at all, and the power block is **bodyweight-only** until
+  the power unit builds `POWER_EXERCISE_POOL_SPEC`'s pool.
 
 `supabase/functions/generate-program`, `supabase/functions/sync-exercises` and
 the applied SQL seed migrations still name 21 of the removals. All three are

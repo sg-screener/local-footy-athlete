@@ -161,6 +161,11 @@ placements: `Pogo Jumps → Pogo Hops`, and the retired
 `Medicine Ball Chest Pass` removed from the upper option list.
 `Medicine Ball Overhead Throw` is **not** in your removal list and survives.
 
+> **Superseded 2026-07-25**: Sam then retired `Medicine Ball Overhead Throw`
+> too. The whole medicine-ball family is gone, `buildPowerBlock` no longer
+> branches on equipment, and the power block is bodyweight-only. See the
+> follow-up unit's report.
+
 **Open for the power unit** (recorded, not decided here): the spec's pool has a
 `family` axis of `lower` / `upper` only. `Speed Trap Bar Deadlift` and
 `Speed Bench` are barbell speed lifts, not jumps — they need a third family or
