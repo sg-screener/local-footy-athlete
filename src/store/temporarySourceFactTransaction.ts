@@ -134,6 +134,9 @@ export interface CommitTemporarySourceFactSetResult {
   visibleProgramChanged: boolean;
   /** @deprecated Compatibility alias for visibleProgramChanged. */
   changedProgram: boolean;
+  /** Rider 3: the weeks a scoped-regen authoring actually changed, so the
+   *  disclosure copy derives from the committed diff. */
+  changedWeekStarts?: string[];
   reason?: string;
   route?: string;
 }
@@ -373,6 +376,9 @@ function commitDerivingSourceFactScopedRegen(args: {
   reason: string;
   sourceFactId: string;
   now: string;
+  /** Rider 3: reports which weeks the authoring actually CHANGED (prior
+   *  overlay fingerprint vs new), so the disclosure derives from the diff. */
+  onWeeksAuthored?: (changedWeekStarts: string[]) => void;
 }): AcceptedStateTransactionResult {
   const state = useProgramStore.getState();
   const currentProgram = state.currentProgram;
@@ -493,6 +499,10 @@ function commitDerivingSourceFactScopedRegen(args: {
     }));
     nextOverlays[weekStart] = overlay;
   }
+
+  args.onWeeksAuthored?.(args.weekStarts.filter((weekStart) =>
+    semanticFingerprint(state.weekScopedOverlays[weekStart] ?? null) !==
+      semanticFingerprint(nextOverlays[weekStart] ?? null)));
 
   // 5. One atomic authoring commit for every reached week: overlays + ledger +
   //    fact context. The base stays clean (preserveExactAcceptedWorkouts); each
@@ -630,6 +640,7 @@ export async function commitTemporarySourceFactSet(
   const baseFingerprint = semanticFingerprint(compositionBase.surfaces);
   const ledgerFingerprint = semanticFingerprint(compositionBase.surfaces.reversibleAdjustmentLedger);
   const factsFingerprint = semanticFingerprint(normalizedFacts);
+  let scopedRegenChangedWeeks: string[] | null = null;
   const transaction = await runCoachMutationTransaction({
     todayISO: args.todayISO,
     extraDates: horizon.dates,
@@ -660,6 +671,9 @@ export async function commitTemporarySourceFactSet(
             reason: args.reason,
             sourceFactId: args.targetFactId,
             now,
+            onWeeksAuthored: (changedWeekStarts) => {
+              scopedRegenChangedWeeks = changedWeekStarts;
+            },
           });
         }
         // A scoped-regen RESTORE re-authors nothing: the cascade revert already restored
@@ -749,6 +763,7 @@ export async function commitTemporarySourceFactSet(
       acceptedStateChanged: true,
       visibleProgramChanged: transaction.diff.hasProgrammingChange,
       changedProgram: transaction.diff.hasProgrammingChange,
+      changedWeekStarts: scopedRegenChangedWeeks ?? undefined,
     };
   }
   return {
@@ -979,12 +994,20 @@ async function transactTemporarySourceFactWithinTrace(
   const severeIllnessLanding = target && !isInjurySourceFact(target) &&
     target.factKind === 'illness' && 'severity' in target && target.severity === 'severe' &&
     effectiveOperation === 'create';
+  // Rider 3: the multi-week half of the disclosure comes from the COMMITTED
+  // diff — the weeks the scoped regen actually changed — never from the
+  // action kind alone.
+  const laterWeeksChanged = (persisted.changedWeekStarts ?? [])
+    .some((weekStart) => weekStart > mondayFor(todayISO));
   return {
     outcome: `${prefix}_${persisted.changedProgram ? 'and_recomposed' : 'no_program_change'}` as TemporarySourceFactTransactionOutcome,
     factId: targetFactId,
     changedProgram: persisted.changedProgram,
     message: severeIllnessLanding
-      ? "Rest up — nothing's required this week. I've left gentle optional work if you're up to it, at a lighter dose."
+      ? "Rest up — nothing's required this week. I've left gentle optional work if you're up to it, at a lighter dose." +
+        (laterWeeksChanged
+          ? " I've eased the weeks ahead the same way — they stay that way until you tell me you're better."
+          : '')
       : persisted.changedProgram
       ? effectiveOperation === 'resolve' || effectiveOperation === 'expire' ||
         effectiveOperation === 'supersede'

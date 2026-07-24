@@ -531,6 +531,50 @@ function registerScenarios(): void {
       'the cleared fact still shapes the next block — residue across the boundary');
   });
 
+  // ── RIDER 3 — disclosures derive from the ACTUAL diff. Two device-proven
+  // dishonesty shapes: cooked on a spent Friday claimed "safely recomposed"
+  // while the week was byte-identical; a severe illness said "nothing's
+  // required this week" while having authored every later week it reached.
+  // The copy must say what changed, this week vs the weeks ahead — derived
+  // from the committed diff, never from the action kind alone.
+  scenario('r3-severe', 'R3 the severe-illness disclosure owns its multi-week reach', async () => {
+    seedSpentWeekFriday();
+    await markSpentDaysDone();
+    const before = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);
+    const result = await commitReadiness('sick_week');
+    assert((result as { ok?: boolean }).ok === true,
+      `severe illness was rejected: ${(result as { message?: string }).message}`);
+    const after = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);
+    const laterChanged = after.slice(1).some((signature, index) => signature !== before[index + 1]);
+    const message = String((result as { message?: string }).message ?? '');
+    assert(laterChanged,
+      'seed drift: the severe illness no longer reaches a later week — rider 3 needs the multi-week case');
+    assert(/week(s)? ahead|later week|next week|until you/i.test(message),
+      `the disclosure claims only this week while later weeks were re-authored: "${message}"`);
+  });
+
+  for (const kind of ['cooked_week', 'poor_sleep_week'] as const) {
+    scenario(`r3-${kind}`, `R3 ${kind}'s disclosure matches what actually changed`, async () => {
+      seedSpentWeekFriday();
+      await markSpentDaysDone();
+      const before = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);
+      const result = await commitReadiness(kind);
+      assert((result as { ok?: boolean }).ok === true,
+        `${kind} was rejected: ${(result as { message?: string }).message}`);
+      const after = [WEEK_1, WEEK_2, WEEK_3].map((week) => acceptedWeek(week).signature);
+      const anyChanged = after.some((signature, index) => signature !== before[index]);
+      const message = String((result as { message?: string }).message ?? '');
+      const changedProgram = (result as { changedProgram?: boolean }).changedProgram === true;
+      if (anyChanged) {
+        assert(changedProgram && /recomposed|eased|adjusted/i.test(message),
+          `the week changed but the disclosure does not say so: "${message}" (changedProgram=${changedProgram})`);
+      } else {
+        assert(!changedProgram && /no visible session needed changing|already fits|nothing needed changing/i.test(message),
+          `nothing changed but the disclosure claims a recomposition: "${message}" (changedProgram=${changedProgram})`);
+      }
+    });
+  }
+
   // ── T5 — exactly ONE duration representation. A static invariant: no
   // consumer may compute an effect window from anything but the fact's horizon
   // owner. Without this, the other four tests can be made green by teaching
