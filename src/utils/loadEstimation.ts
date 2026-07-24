@@ -173,11 +173,11 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Leg Press':              { anchor: 'squat', ratio: 1.30, equipment: 'machine' },
 
   // ═══ CARRIES — stored and displayed PER HAND (Sam, 2026-07-24) ═══
-  // Farmer's total is 0.75 x bench across both hands; the number the athlete
+  // Farmer's total is 0.71 x bench across both hands; the number the athlete
   // sees is one hand's worth. Suitcase is a single dumbbell at the same
   // per-hand load. Their cues state this.
-  'Farmer Carry':           { anchor: 'bench', ratio: 0.375, equipment: 'dumbbell' },
-  'Suitcase Carry':         { anchor: 'bench', ratio: 0.375, equipment: 'dumbbell' },
+  'Farmer Carry':           { anchor: 'bench', ratio: 0.355, equipment: 'dumbbell' },
+  'Suitcase Carry':         { anchor: 'bench', ratio: 0.355, equipment: 'dumbbell' },
   'Overhead Carry':         { anchor: 'bench', ratio: 0.20, equipment: 'dumbbell' },
 
   // ═══ MACHINE / ACCESSORY ADDITIONS (Sam, 2026-07-24) ═══
