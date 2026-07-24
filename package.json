@@ -17,7 +17,7 @@
     "test:qa:local": "npm run test:qa",
     "test:bounds": "sucrase-node src/__tests__/blockBoundsTests.js",
     "qa:athlete": "sucrase-node src/__tests__/scenarioQA/index.ts",
-    "test:bible": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleConformance/runSlice1.ts && npm run test:section18-planner && npm run test:section18-v2 && npm run test:section18-safety && npm run test:section18-gateway && npm run test:whole-week-repair && npm run test:accepted-state-transactions && npm run test:athlete-session-deletion && npm run test:athlete-session-move && npm run test:athlete-move-occupied-content-loss && npm run test:phase-clock && npm run test:section18-ownership && npm run test:readiness-ownership && npm run test:illness-recovery-mode && npm run test:deriving-device-commit && npm run test:illness-clear-game-week",
+    "test:bible": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleConformance/runSlice1.ts && npm run test:section18-planner && npm run test:section18-v2 && npm run test:section18-safety && npm run test:section18-gateway && npm run test:whole-week-repair && npm run test:accepted-state-transactions && npm run test:athlete-session-deletion && npm run test:athlete-session-move && npm run test:athlete-move-occupied-content-loss && npm run test:phase-clock && npm run test:section18-ownership && npm run test:readiness-ownership && npm run test:illness-recovery-mode && npm run test:deriving-device-commit && npm run test:illness-clear-game-week && npm run test:section18-delivered-remaining",
     "test:illness-clear-game-week": "TZ=Australia/Melbourne sucrase-node src/__tests__/illnessClearGameWeekResolveTests.ts",
     "test:bible:extended": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleConformance/runExtended.ts && npm run test:section18-planner && npm run test:section18-v2 && npm run test:section18-safety && npm run test:section18-gateway && npm run test:accepted-state-transactions && npm run test:athlete-session-deletion",
     "test:bible:report": "TZ=Australia/Melbourne sucrase-node src/__tests__/bibleConformance/runExtended.ts --report && npm run test:section18-planner && npm run test:section18-v2 && npm run test:section18-safety && npm run test:section18-gateway && npm run test:accepted-state-transactions && npm run test:athlete-session-deletion",
@@ -193,7 +193,8 @@
     "e2e:explorer-nine:live": "sucrase-node scripts/run-explorer-nine-live.ts",
     "test:readiness-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessSourceFactOwnershipTests.ts",
     "test:fact-horizon": "TZ=Australia/Melbourne sucrase-node src/__tests__/durableFactHorizonTests.ts",
-    "test:injury-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryAuthorityOwnershipTests.ts"
+    "test:injury-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryAuthorityOwnershipTests.ts",
+    "test:section18-delivered-remaining": "TZ=Australia/Melbourne sucrase-node src/__tests__/section18DeliveredRemainingTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

@@ -88,12 +88,36 @@ export interface Section18AnchorLedgerRow {
   currentProductionClaim: Section18AnchorContract['currentProductionClaim'];
 }
 
+/**
+ * How one domain's exposure divides across the governed boundary.
+ *
+ * `delivered` is history the athlete actually did; `prescribed` is everything in
+ * the governed remainder; `appPrescribed` is the part of that remainder the APP
+ * authored, excluding exposure the athlete brings from their own team training
+ * and game. `delivered + prescribed` is the domain's achieved total, which is
+ * what the existing `achievedCount` fields keep reporting.
+ */
+export interface Section18ExposureSplit {
+  delivered: number;
+  prescribed: number;
+  appPrescribed: number;
+}
+
 export interface Section18EffectiveWeekLedger {
   weekStart: string;
+  /** Exclusive boundary: dates before it are history. Null = the whole week is governed. */
+  governedFromISO: string | null;
+  /** Day-of-week values that fall before the boundary. */
+  historyDays: number[];
   mainStrength: {
     achievedCount: number;
     sessionDays: number[];
     accessoryOnlySessionCount: number;
+    split: Section18ExposureSplit;
+    /** @deprecated read `split.delivered` */
+    delivered: number;
+    /** @deprecated read `split.prescribed` */
+    prescribed: number;
   };
   strengthPatterns: {
     meaningfulMainLiftCount: Record<MainStrengthPattern, number>;
@@ -110,16 +134,19 @@ export interface Section18EffectiveWeekLedger {
     anchorCoreCount: number;
     byStress: Record<Section18ConditioningStress, number>;
     credits: Section18ConditioningCredit[];
+    split: Section18ExposureSplit;
   };
   sprintHighSpeed: {
     achievedCount: number;
     sources: Section18SprintCreditSource[];
+    split: Section18ExposureSplit;
   };
   anchors: Section18AnchorLedgerRow[];
   power: {
     achievedPrimerCount: number;
     primerSources: Array<{ dayOfWeek: number; family: 'lower' | 'upper' }>;
     fieldActionPrimerCredit: 0;
+    split: Section18ExposureSplit;
   };
   restStress: {
     trueFullRestDays: number[];
@@ -144,6 +171,14 @@ export interface Section18EffectiveWeekInput {
   contract: WeeklyExposureContractV2;
   workouts: readonly Workout[];
   weekStart: string;
+  /**
+   * Dates the athlete actually completed. Only consulted for dates BEFORE the
+   * contract's `governedFromISO`. Omitted means "history was delivered", which
+   * is right for a normal past week; E6's pre-signup days pass an explicit empty
+   * set, because days before the program existed were never delivered and must
+   * count toward nothing.
+   */
+  deliveredDates?: ReadonlySet<string>;
   /** Optional diagnostic comparison with the incomplete legacy ledger. */
   legacyReportedFullRestCount?: number | null;
 }
@@ -256,6 +291,17 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
     list.push(workout);
     workoutsByDay.set(workout.dayOfWeek, list);
   }
+
+  // ── The governed boundary. Dates before it are HISTORY: they count toward the
+  // week's requirements and are never governed. §18 governs what the app
+  // prescribes for the remainder — see
+  // docs/SECTION18_DELIVERED_VS_REMAINING_REASSESSMENT_2026-07-24.md.
+  const governedFromISO = input.contract.governedFromISO ?? null;
+  const isHistory = (day: number): boolean =>
+    governedFromISO !== null && dateForDay(input.weekStart, day) < governedFromISO;
+  const wasDelivered = (day: number): boolean =>
+    input.deliveredDates === undefined ||
+    input.deliveredDates.has(dateForDay(input.weekStart, day));
 
   let creditedAnchorIndex = 0;
   const anchors: Section18AnchorLedgerRow[] = input.contract.anchors.map((anchor) => {
@@ -415,12 +461,48 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
   }
 
   const trueRestDays = [0, 1, 2, 3, 4, 5, 6].filter((day) => !activeDays.has(day));
+
+  const splitDays = (
+    days: readonly number[],
+    appAuthored: readonly boolean[] = [],
+  ): Section18ExposureSplit => {
+    let delivered = 0; let prescribed = 0; let appPrescribed = 0;
+    days.forEach((day, index) => {
+      if (isHistory(day)) {
+        if (wasDelivered(day)) delivered += 1;
+        return;
+      }
+      prescribed += 1;
+      if (appAuthored.length === 0 || appAuthored[index]) appPrescribed += 1;
+    });
+    return { delivered, prescribed, appPrescribed };
+  };
+
+  const coreCredits = conditioningCredits.filter((credit) =>
+    credit.role === 'core' || credit.role === 'required_core' ||
+    credit.role === 'planner_selected_core');
+  const conditioningSplit = splitDays(
+    coreCredits.map((credit) => credit.dayOfWeek),
+    coreCredits.map((credit) => credit.source === 'app'),
+  );
+  const sprintSplit = splitDays(
+    sprintSources.map((source) => source.dayOfWeek),
+    sprintSources.map((source) => source.kind === 'app_sprint'),
+  );
+  const mainSplit = splitDays(mainDays);
+  const powerSplit = splitDays(primerSources.map((source) => source.dayOfWeek));
+
   return {
     weekStart: input.weekStart.slice(0, 10),
+    governedFromISO,
+    historyDays: [0, 1, 2, 3, 4, 5, 6].filter(isHistory),
     mainStrength: {
       achievedCount: mainCount,
       sessionDays: uniq(mainDays),
       accessoryOnlySessionCount: accessoryOnly,
+      split: mainSplit,
+      delivered: mainSplit.delivered,
+      prescribed: mainSplit.prescribed,
     },
     strengthPatterns: {
       meaningfulMainLiftCount: patterns,
@@ -442,13 +524,20 @@ function buildLedger(input: Section18EffectiveWeekInput): Section18EffectiveWeek
       anchorCoreCount: anchorCore,
       byStress: conditioningByStress,
       credits: conditioningCredits,
+      split: conditioningSplit,
     },
     sprintHighSpeed: {
       achievedCount: sprintSources.length,
       sources: sprintSources,
+      split: sprintSplit,
     },
     anchors,
-    power: { achievedPrimerCount: primerCount, primerSources, fieldActionPrimerCredit: 0 },
+    power: {
+      achievedPrimerCount: primerCount,
+      primerSources,
+      fieldActionPrimerCredit: 0,
+      split: powerSplit,
+    },
     restStress: {
       trueFullRestDays: trueRestDays,
       activeRecoveryDays: uniq(activeRecoveryDays),
@@ -486,6 +575,8 @@ function evaluateNumeric(args: {
   reductionMetric: Section18ReductionMetric;
   label: string;
   evidence?: string[];
+  /** How this domain's exposure divides across the governed boundary. */
+  split?: Section18ExposureSplit;
 }): void {
   if (args.actual < args.required) {
     addFinding(args.findings, {
@@ -525,14 +616,28 @@ function evaluateNumeric(args: {
       evidence: args.evidence ?? [],
     });
   }
-  if (args.maximum !== null && args.actual > args.maximum) {
+  // MAXIMUMS bind the TOTAL week — delivered plus prescribed — but they are
+  // enforced on the part the app still controls: the prescribed remainder is
+  // capped at (maximum - delivered), floored at zero. So a maximum is never
+  // contradicted over history (the app cannot un-prescribe what the athlete
+  // already did), and delivered work never buys a fresh full allowance on top
+  // of itself. With no governed boundary the split is all-prescribed and this
+  // is exactly the old whole-week check.
+  const delivered = args.split?.delivered ?? 0;
+  const prescribed = args.split ? args.split.prescribed : args.actual;
+  const prescribedAllowance = args.maximum === null
+    ? null
+    : Math.max(0, args.maximum - delivered);
+  if (prescribedAllowance !== null && prescribed > prescribedAllowance) {
     addFinding(args.findings, {
       code: 'maximum_breach',
       severity: 'blocking',
       domain: args.domain,
       expected: args.maximum,
       actual: args.actual,
-      detail: `${args.label} exceeds the Section 18 permitted maximum.`,
+      detail: delivered > 0
+        ? `${args.label} exceeds the Section 18 permitted maximum: ${delivered} already delivered leaves room for ${prescribedAllowance}, and ${prescribed} more ${prescribed === 1 ? 'is' : 'are'} prescribed.`
+        : `${args.label} exceeds the Section 18 permitted maximum.`,
       evidence: args.evidence ?? [],
     });
   }
@@ -554,6 +659,31 @@ function metricActual(
     case 'session_volume':
     default:
       return null;
+  }
+}
+
+/**
+ * What an AUTHORISED REDUCTION is measured against.
+ *
+ * A reduction is the app declaring its own restraint, so it binds only the work
+ * the app authored in the governed remainder. It cannot reach backwards over
+ * delivered history, and it has no authority over exposure the athlete brings
+ * from their own team training and game — which is why "no app sprint this week"
+ * must not read as a breach against a Saturday game they are still playing.
+ *
+ * Metrics with no app/athlete distinction (patterns, rest days) keep the
+ * whole-week figure.
+ */
+function metricGovernedActual(
+  metric: Section18ReductionMetric,
+  ledger: Section18EffectiveWeekLedger,
+): number | null {
+  switch (metric) {
+    case 'main_strength_frequency': return ledger.mainStrength.split.appPrescribed;
+    case 'conditioning_core_frequency': return ledger.conditioning.split.appPrescribed;
+    case 'sprint_high_speed_frequency': return ledger.sprintHighSpeed.split.appPrescribed;
+    case 'power_primer_budget': return ledger.power.split.appPrescribed;
+    default: return metricActual(metric, ledger);
   }
 }
 
@@ -719,6 +849,7 @@ export function evaluateSection18EffectiveWeek(
     reductions: contract.mainStrength.reductions,
     reductionMetric: 'main_strength_frequency',
     label: 'Main-strength frequency',
+    split: ledger.mainStrength.split,
     evidence: ledger.mainStrength.sessionDays.map((day) => `${dateForDay(input.weekStart, day)}:main_strength`),
   });
 
@@ -744,6 +875,7 @@ export function evaluateSection18EffectiveWeek(
     reductions: contract.conditioning.reductions,
     reductionMetric: 'conditioning_core_frequency',
     label: 'Core-conditioning frequency',
+    split: ledger.conditioning.split,
     evidence: ledger.conditioning.credits.map((credit) =>
       `${dateForDay(input.weekStart, credit.dayOfWeek)}:${credit.source}:${credit.role}:${credit.stress}`),
   });
@@ -840,6 +972,7 @@ export function evaluateSection18EffectiveWeek(
     reductions: contract.sprintHighSpeed.reductions,
     reductionMetric: 'sprint_high_speed_frequency',
     label: 'Sprint/high-speed frequency',
+    split: ledger.sprintHighSpeed.split,
     evidence: ledger.sprintHighSpeed.sources.map((source) =>
       `${dateForDay(input.weekStart, source.dayOfWeek)}:${source.kind}`),
   });
@@ -985,7 +1118,7 @@ export function evaluateSection18EffectiveWeek(
     ...contract.sprintHighSpeed.reductions,
   ];
   for (const reduction of reductions) {
-    const actual = metricActual(reduction.metric, ledger);
+    const actual = metricGovernedActual(reduction.metric, ledger);
     if (actual === null) {
       addFinding(findings, {
         code: 'legacy_evidence_unknown', severity: 'advisory', domain: 'migration',

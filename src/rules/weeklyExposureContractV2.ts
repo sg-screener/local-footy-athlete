@@ -163,6 +163,20 @@ export interface Section18AuthorisedReduction {
   deletionIdentity?: string;
 }
 
+/**
+ * The governed boundary for a week contract.
+ *
+ * §18 governs what the app PRESCRIBES from this date onward. Dates before it are
+ * history: they count toward the week's requirements and are never governed,
+ * never re-prescribed, never rewritten. Null (the default, and every contract
+ * authored before this existed) means the whole week is governed.
+ *
+ * Two things set it: an authoring owner stamping "today" when a fact lands
+ * mid-week, and onboarding stamping the signup date so days before the program
+ * existed are neither missed nor governed (E6).
+ */
+export type Section18GovernedFrom = string | null;
+
 export interface Section18AnchorContract {
   id: string;
   kind: Section18AnchorKind;
@@ -253,6 +267,12 @@ export interface WeeklyExposureContractV2 {
   authorisedReductions: Section18AuthorisedReduction[];
   /** Safety-only ownership consumed by the shared post-canonical finaliser. */
   safety: Section18SafetyPolicy;
+  /**
+   * From which date this contract governs. Earlier dates are history — counted
+   * toward requirements, never governed, never rewritten. Optional so every
+   * contract authored before this concept remains valid and fully governed.
+   */
+  governedFromISO?: Section18GovernedFrom;
   identity: Section18Identity;
   mainStrength: {
     exposure: Section18NumericPolicy;
