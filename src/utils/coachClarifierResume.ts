@@ -545,6 +545,28 @@ function buildAddToDateTransaction(args: {
   };
 }
 
+/**
+ * Seed the add_to_date transaction at the date-rejection capture site
+ * (add_session aimed at a past date). The stale date is NOT copied in —
+ * the athlete hasn't confirmed the proposed replacement yet, so
+ * target_date stays outstanding and the clarification slot's
+ * proposedCandidate carries next-<day> for the answer classification.
+ */
+export function buildAddToDateTransactionFromDateRejection(args: {
+  originalMessage: string;
+}): PendingAddToDateTransaction {
+  const classified = classifyAddTypeAnswer(args.originalMessage);
+  // Generic "add a session" wording is not an add-type answer.
+  const addType = !classified || classified === 'session' ? 'unknown' : classified;
+  return buildAddToDateTransaction({
+    originalMessage: args.originalMessage,
+    targetDate: undefined,
+    addType,
+    missingFields: ['target_date', ...(addType === 'unknown' ? ['add_type'] : [])],
+    createdFromVisibleWeek: false,
+  });
+}
+
 function summariseScheduleSession(
   sessionName: string | undefined,
   items: ProgramEditCandidateItem[] | undefined,

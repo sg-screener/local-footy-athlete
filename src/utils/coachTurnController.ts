@@ -89,6 +89,7 @@ import {
   type SemanticProgramEditDraftResult,
 } from './semanticProgramEditDraft';
 import {
+  buildAddToDateTransactionFromDateRejection,
   captureFromExecutorClarify,
   resumeFromPending,
   resolvePendingGameDayReadinessAnswer,
@@ -1669,6 +1670,13 @@ export function capturePendingDateClarificationFromProgramEditRejection(args: {
     moveScope:
       command.payload.operation === 'move_session'
         ? command.payload.moveScope
+        : undefined,
+    // add_session under-specification is owned by the multi-field
+    // transaction, not the single-slot date re-ask: answered fields are
+    // removed from missingFields and the next outstanding field is asked.
+    scheduleTransaction:
+      command.payload.operation === 'add_session'
+        ? buildAddToDateTransactionFromDateRejection({ originalMessage })
         : undefined,
     missingFields,
     originalMessage,
