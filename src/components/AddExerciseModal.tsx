@@ -35,7 +35,7 @@ const POPULAR_EXERCISES = [
   'Hanging Leg Raise',
   'Dips',
   'Pull-Ups',
-  'Farmers Carry',
+  'Farmer Carry',
   'Hip Thrusts',
   'Incline DB Curls',
 ];

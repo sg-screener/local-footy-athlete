@@ -77,3 +77,74 @@ export function riskReason(finding: PlanChangeRiskFindingLike): string {
 export function riskReasons(findings: readonly PlanChangeRiskFindingLike[]): string[] {
   return Array.from(new Set(findings.map(riskReason))).slice(0, MAX_REASONS);
 }
+
+/**
+ * The one sentence shown when a program edit did not go through but there is no
+ * athlete-framed reason to show — either the layer produced none, or it produced
+ * an internal diagnostic never meant for a human.
+ */
+const SAFE_REFUSAL_FALLBACK =
+  "That change didn't go through — nothing on your plan changed. Try again, or ask your coach.";
+
+/**
+ * Markers of a raw internal reason. These are the vocabulary of the transaction
+ * and rules layers (executor candidates, accepted-state fingerprints, route
+ * codes, "requires the durable … transaction" developer messages) — none of it
+ * is athlete copy. If a reason carries any of these, it is replaced wholesale.
+ */
+const INTERNAL_REASON_MARKERS: readonly RegExp[] = [
+  /executor/i,
+  /candidate/i,
+  /fingerprint/i,
+  /accepted[-\s]?state/i,
+  /\btransaction\b/i,
+  /envelope/i,
+  /presentation field/i,
+  /programming field/i,
+  /\bsemantic/i,
+  /rolled back/i,
+  /could not be persisted/i,
+  /source[-\s]?fact/i,
+  /guided executor/i,
+  /\bStage \d/i,
+  /section\s*18|§\s*18/i,
+  /miscount/i,
+  /shortfall/i,
+  /final-week rejection/i,
+];
+
+/**
+ * A snake_case token anywhere in the string (e.g. a route code like
+ * `coach_mutation_not_applied` or an embedded diagnostic like
+ * `full_rest_miscount`). Athlete copy never contains one, so its presence marks
+ * the whole string as an internal diagnostic.
+ */
+const SNAKE_CASE_TOKEN = /\b[a-z0-9]+(?:_[a-z0-9]+)+\b/;
+
+/**
+ * athleteSafeRefusal — gate every refusal string through here before it reaches
+ * the athlete. Athlete-framed domain copy (the sentences `riskReason` owns)
+ * passes through unchanged; a missing reason or any raw internal diagnostic
+ * collapses to one honest fallback sentence.
+ *
+ * The single display seam for refusal copy: a raw internal reason must never be
+ * rendered, no matter which layer produced it (L10 device finding, 2026-07-24).
+ */
+/**
+ * Coach apply-failure copy. The injury-progression fallback replies used to read
+ * developer TODOs to the athlete ("Investigate event targeting…"); this owns the
+ * plain-language version. The diagnostic detail stays log-side only (census #3).
+ */
+export const COACH_NO_OVERRIDE_FALLBACK =
+  "I lined up changes for your week, but they didn't land on your sessions, so I've left your program as it is. Try again, or tell me and we'll sort it.";
+
+export const COACH_NO_VISIBLE_DIFF_FALLBACK =
+  "I tried to adjust your program but nothing actually changed on your plan, so I haven't claimed it as done. Try again, or let me know.";
+
+export function athleteSafeRefusal(reason?: string | null): string {
+  const trimmed = (reason ?? '').trim();
+  if (!trimmed) return SAFE_REFUSAL_FALLBACK;
+  if (SNAKE_CASE_TOKEN.test(trimmed)) return SAFE_REFUSAL_FALLBACK;
+  if (INTERNAL_REASON_MARKERS.some((marker) => marker.test(trimmed))) return SAFE_REFUSAL_FALLBACK;
+  return trimmed;
+}

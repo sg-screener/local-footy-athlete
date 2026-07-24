@@ -1,5 +1,6 @@
 import { EXERCISE_TAGS } from '../../data/exerciseTags';
 import { getExerciseCue } from '../../data/exerciseCues';
+import { canonicalExerciseName } from '../../utils/exerciseCanonicalisation';
 import { logger } from '../../utils/logger';
 
 /**
@@ -8,22 +9,50 @@ import { logger } from '../../utils/logger';
  * __DEV__-only warn in buildCueText when the fallback cue is hit).
  */
 
+/**
+ * Join two independent cue clauses so they read as two sentences rather than a
+ * run-on. The primary and secondary cues are authored separately; the sentence
+ * boundary between them belongs to the join, not the author — so a primary that
+ * ends without terminal punctuation (or with a dangling comma/semicolon/colon)
+ * is promoted to a full stop before the secondary begins.
+ */
+export function joinCueClauses(primary: string, secondary: string): string {
+  const first = (primary ?? '').trim();
+  const second = (secondary ?? '').trim();
+  if (!first) return second;
+  if (!second) return first;
+  // Drop a dangling clause separator, then ensure a terminal stop.
+  const trimmed = first.replace(/[\s,;:]+$/, '');
+  const terminated = /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+  return `${terminated} ${second}`;
+}
+
 /** Build a display string from exercise cues. Returns null if no cue available. */
 export function buildCueText(exerciseName: string): string | null {
-  const movement = EXERCISE_TAGS[exerciseName]?.movement ?? null;
-  const cue = getExerciseCue(exerciseName, movement);
+  // Canonicalise onto the curated vocabulary FIRST — the generator name may be
+  // an off-vocabulary spelling ("Farmers Carry"). Reading the cue/tag off the
+  // raw name is the bug this boundary retires (Part B / Stage 3).
+  const name = canonicalExerciseName(exerciseName);
+  const movement = EXERCISE_TAGS[name]?.movement ?? null;
+  const cue = getExerciseCue(name, movement);
 
-  // DEV-ONLY: warn when absolute fallback is used (no specific cue or family match)
-  if (
-    __DEV__ &&
+  // The curated layer owns every athlete-visible word. If a name does not land
+  // on a real curated (or family) cue, render NOTHING rather than the generic
+  // filler — the generic branch is unreachable in product (Part B / Stage 3
+  // B5.5). This also absorbs the two non-pool `defaultProgram` fallbacks
+  // (`Hamstring Curl`, `Mobility Flow`) and any off-vocabulary AI-backend name.
+  const isGenericFallback =
     cue.primaryCue === 'Control the movement.' &&
-    cue.secondaryCue === 'Stay tight through the full range.'
-  ) {
-    logger.debug(`[exerciseCues] Missing specific cue for: ${exerciseName}`);
+    cue.secondaryCue === 'Stay tight through the full range.';
+  if (isGenericFallback) {
+    if (__DEV__) {
+      logger.debug(`[exerciseCues] No curated cue for: ${exerciseName} (canonical: ${name}) — rendering none`);
+    }
+    return null;
   }
 
   if (!cue.primaryCue && !cue.secondaryCue) return null;
-  if (cue.primaryCue && cue.secondaryCue) return `${cue.primaryCue} ${cue.secondaryCue}`;
+  if (cue.primaryCue && cue.secondaryCue) return joinCueClauses(cue.primaryCue, cue.secondaryCue);
   return cue.primaryCue || cue.secondaryCue || null;
 }
 

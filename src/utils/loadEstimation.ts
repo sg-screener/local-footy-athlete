@@ -349,6 +349,20 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'bear carry':                             'Bear Carry',
   'bear carries':                           'Bear Carry',
   'bear hug carry':                         'Bear Carry',
+  // Carry family — the AI backend emits plural/possessive/"walk" spellings the
+  // curated vocabulary does not use (census #4 / Part B "Farmers Carry").
+  'farmer carry':                           'Farmer Carry',
+  'farmers carry':                          'Farmer Carry',
+  "farmer's carry":                         'Farmer Carry',
+  'farmer carries':                         'Farmer Carry',
+  'farmers carries':                        'Farmer Carry',
+  'farmer walk':                            'Farmer Carry',
+  'farmers walk':                           'Farmer Carry',
+  "farmer's walk":                          'Farmer Carry',
+  'suitcase carries':                       'Suitcase Carry',
+  'suitcase walk':                          'Suitcase Carry',
+  'overhead carries':                       'Overhead Carry',
+  'overhead walk':                          'Overhead Carry',
 
   // ── Row variants ──
   'bent-over row':            'Barbell Row',

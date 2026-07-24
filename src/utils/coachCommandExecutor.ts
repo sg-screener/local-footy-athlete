@@ -95,9 +95,12 @@ import { guardProgramEditWritesForHardStops, type ProgramEditWrite } from './pro
 import {
   commitAthleteSessionMoveTransaction,
   commitAthleteSessionDeletionTransaction,
+  commitAthleteSessionAdditionTransaction,
   getAcceptedMaterialContext,
 } from '../store/acceptedStateTransaction';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
+import { finaliseWorkoutAfterMutation } from './workoutCanonicalisation';
+import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import { commitClearReversibleAdjustment } from '../store/reversibleAdjustmentTransaction';
 import { evaluateSection18EffectiveWeek } from '../rules/section18EffectiveWeekEvaluator';
 import {
@@ -3616,11 +3619,29 @@ function defaultApplyAddSession(
   }
   try {
     const workout = buildAddedSessionWorkout(input.sourceWorkout, input.targetDate, input.reason);
-    useProgramStore.getState().setManualOverride(
-      input.targetDate,
-      workout,
-      { intent: 'program_adjustment', label: input.reason ?? 'coach add_session' } as OverrideContext,
-    );
+    // Materialise through the same finalisation boundary the tap door uses before
+    // the owner (planChangeProducer's materializeAthleteSwapSession). The owner's
+    // input contract requires an already-finalised session; an un-finalised clone
+    // carries the source day's classification, which the whole-week §18 gate then
+    // miscounts.
+    const phase = useProfileStore.getState().onboardingData?.seasonPhase ?? undefined;
+    const finalisedWorkout = finaliseWorkoutAfterMutation(workout, {
+      date: input.targetDate,
+      phase,
+      planIntentValid: false,
+    }).workout;
+    // Route through the dedicated addition-transaction owner — the same primitive
+    // the tap-door empty-day add uses (§18 stage 3). It pins the new session
+    // against the day's base placeholder with a UserRemovalConstraint and commits
+    // through the accepted-state transaction, so a coach-added session is owned by
+    // §18 and can never be silently canonicalised back to Rest on a later repair.
+    // The prior direct `setManualOverride` write had no pin — census finding #1.
+    commitAthleteSessionAdditionTransaction({
+      date: input.targetDate,
+      reason: input.reason ?? 'coach add_session',
+      source: 'coach',
+      addedWorkout: finalisedWorkout,
+    });
     useCalendarStore.getState().removeRestDay(input.targetDate);
     return { applied: true };
   } catch (e) {
@@ -3855,15 +3876,32 @@ function hardStopRiskRejection(args: {
   route: string;
   progress: ProgressStage[];
 }): ExecutionResult | null {
-  const guard = guardProgramEditWritesForHardStops({
-    writes: args.writes,
-    todayISO: args.todayISO,
-    visibleWeek: args.visibleWeek,
-  });
+  let guard: ReturnType<typeof guardProgramEditWritesForHardStops>;
+  try {
+    guard = guardProgramEditWritesForHardStops({
+      writes: args.writes,
+      todayISO: args.todayISO,
+      visibleWeek: args.visibleWeek,
+    });
+  } catch (error) {
+    // A validation layer threw instead of returning a hard stop — notably the
+    // §18 week-acceptance gateway (Section18WeekAcceptanceError) when an add
+    // would break a week-level rule (e.g. removing the only rest day). Left
+    // uncaught this crashes the coach turn AND reads a raw diagnostic to the
+    // athlete. Convert it to a safe, plain-language refusal (census finding #3
+    // class): the change is refused, nothing is applied.
+    return {
+      kind: 'rejected',
+      reply: athleteSafeRefusal((error as Error)?.message),
+      applied: false,
+      route: `${args.route}:validation_threw`,
+      progress: args.progress,
+    };
+  }
   if (guard.ok !== false) return null;
   return {
     kind: 'rejected',
-    reply: guard.message,
+    reply: athleteSafeRefusal(guard.message),
     applied: false,
     route: args.route,
     progress: args.progress,
@@ -3908,8 +3946,14 @@ function addSessionApplyRejectReply(targetDate: string, reason?: string): string
   if (reason === 'past_date_blocked') {
     return `${humanDate(targetDate)} is in the past - I can't change it.`;
   }
-  return reason
-    ? `I couldn't add a session to ${humanDate(targetDate)}: ${reason}.`
+  // Surface the reason only if it is athlete-facing copy. Executor/§18 rejection
+  // strings (e.g. "Section 18 final-week rejection (full_rest_miscount:…)") are
+  // internal diagnostics — the safety gate collapses them, so we drop the detail
+  // rather than read a code dump to the athlete (census finding #3 class).
+  const trimmed = reason?.trim();
+  const surfaced = trimmed && athleteSafeRefusal(trimmed) === trimmed ? trimmed : null;
+  return surfaced
+    ? `I couldn't add a session to ${humanDate(targetDate)}: ${surfaced}.`
     : `I couldn't add a session to ${humanDate(targetDate)}.`;
 }
 

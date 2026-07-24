@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   Pressable,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
@@ -12,6 +11,7 @@ import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import ExerciseVideoModal from '../../components/ExerciseVideoModal';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
+import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
@@ -1097,12 +1097,20 @@ export default function DayWorkoutScreenV2() {
         </View>
       </View>
 
-      <ScrollView
+      {/*
+        The whole day scroll routes through the shared keyboard owner so the
+        inline weight editor's numeric keypad gets the one Done bar and
+        scroll-into-view (census finding #9). `dismissOnBackgroundTap` is off —
+        the body is a tappable session list, not a form. Device-verify (L10).
+      */}
+      <KeyboardSafeArea
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        onScrollBeginDrag={handleScrollBeginDrag}
+        dismissOnBackgroundTap={false}
+        scrollProps={{
+          contentContainerStyle: styles.scrollContent,
+          showsVerticalScrollIndicator: false,
+          onScrollBeginDrag: handleScrollBeginDrag,
+        }}
       >
         {/* Stale override warning */}
         {staleWarning ? (
@@ -1201,7 +1209,7 @@ export default function DayWorkoutScreenV2() {
         {!isFinished && !isAlreadyComplete ? (
           <FinishMoment onPress={handleFinishWorkout} />
         ) : null}
-      </ScrollView>
+      </KeyboardSafeArea>
 
       <ExerciseVideoModal
         visible={!!selectedExercise}
@@ -1579,7 +1587,6 @@ function StrengthExerciseCard({
 }: StrengthExerciseCardProps) {
   const exerciseName = exercise.exercise?.name || `Exercise`;
   const exerciseDisplayName = displayExerciseName(exerciseName);
-  const displayNotes = cleanNotes(exercise.notes);
   const setsReps = formatStrengthSetsReps(exercise);
   const restLabel = exercise.restSeconds >= 90 ? formatRest(exercise.restSeconds) : null;
   const cueText = buildCueText(exerciseName);
@@ -1666,26 +1673,18 @@ function StrengthExerciseCard({
         </View>
       </View>
 
-      {/* Notes + rest */}
-      {displayNotes || restLabel ? (
+      {/* Rest hint */}
+      {restLabel ? (
         <View style={styles.detailsRow}>
-          {displayNotes ? (
-            <Text style={styles.exerciseNotes}>{displayNotes}</Text>
-          ) : null}
-          {restLabel ? <Text style={styles.restHint}>{restLabel}</Text> : null}
+          <Text style={styles.restHint}>{restLabel}</Text>
         </View>
       ) : null}
 
-      {/* Collapsible coaching cue */}
-      {cueText ? (
-        <CueToggle
-          cueText={cueText}
-          exerciseId={exercise.id}
-          hasNotes={!!displayNotes}
-          expanded={displayNotes ? !!expandedCues[exercise.id] : true}
-          onToggle={toggleCue}
-        />
-      ) : null}
+      {/* Curated coaching cue — always visible, the athlete-facing lead.
+          Generator per-exercise notes are deliberately NOT rendered: the
+          curated layer owns every athlete-visible word; generation provides
+          structure only (sets/reps/weight/type). Stage 3 ownership ruling. */}
+      {cueText ? <Text style={styles.cueText}>{cueText}</Text> : null}
     </Card>
   );
 }
@@ -1717,7 +1716,6 @@ function RecoveryBlock({
         const setsPrefix =
           exercise.prescribedSets > 1 ? `${exercise.prescribedSets} × ` : '';
         const restLabel = formatRest(exercise.restSeconds);
-        const displayNotes = cleanNotes(exercise.notes);
         const cueText = buildCueText(exerciseName);
         const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
 
@@ -1752,19 +1750,9 @@ function RecoveryBlock({
               ) : null}
             </View>
 
-            {displayNotes ? (
-              <Text style={styles.exerciseNotes}>{displayNotes}</Text>
-            ) : null}
-
-            {cueText ? (
-              <CueToggle
-                cueText={cueText}
-                exerciseId={exercise.id}
-                hasNotes={!!displayNotes}
-                expanded={displayNotes ? !!expandedCues[exercise.id] : true}
-                onToggle={toggleCue}
-              />
-            ) : null}
+            {/* Curated cue only — always visible; generator notes are not
+                rendered (Stage 3 ownership: curated layer owns the words). */}
+            {cueText ? <Text style={styles.cueText}>{cueText}</Text> : null}
           </Card>
         );
       })}
