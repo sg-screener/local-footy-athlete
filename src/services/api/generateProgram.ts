@@ -74,9 +74,9 @@ import type { FixtureConditionedAvailability } from '../../rules/fixtureConditio
 import { validateWorkoutAgainstActiveConstraints } from '../../utils/postGenerationConstraintValidation';
 import { collapseWorkoutToRest } from '../../utils/workoutContent';
 import {
-  curatedExerciseVocabulary,
   ExerciseVocabularyViolation,
 } from '../../utils/exerciseCanonicalisation';
+import { selectableVocabularyGroups } from '../../data/selectableExerciseVocabulary';
 
 /**
  * Kinds of program-generation failure — used by the UI to decide whether
@@ -1737,8 +1737,18 @@ export function buildGenerationPrompt(
   // can name anything; the fix is upstream — offer the vocabulary and require
   // selection from it. Derived from the curated cue layer (never hand-copied),
   // so a cue Sam authors is offered on the very next generation.
-  parts.push('\nEXERCISE VOCABULARY (authoritative — these are the ONLY exercise names that exist):');
-  parts.push(curatedExerciseVocabulary().join(' | '));
+  //
+  // GROUPED, because the grouping retires a second representation. `coach-chat`
+  // used to carry its own hand-copied "MOVEMENT PATTERNS" list to teach the
+  // model which pattern each exercise belonged to — a list that could drift
+  // from the pools with nothing to catch it. Emitting the vocabulary grouped by
+  // the pool slot that owns each name teaches BOTH the names and the patterns
+  // from ONE derived source, so that list could be deleted rather than synced.
+  parts.push('\nEXERCISE VOCABULARY (authoritative — these are the ONLY exercise names that exist,');
+  parts.push('grouped by movement pattern; every exercise belongs to exactly one group):');
+  for (const group of selectableVocabularyGroups()) {
+    parts.push(`${group.label}: ${group.names.join(' | ')}`);
+  }
   parts.push(
     'Every exercise `name` you return must be copied EXACTLY from that list, character for '
     + 'character. Do NOT invent a new name, abbreviate one ("OHP", "SA"), pluralise one '

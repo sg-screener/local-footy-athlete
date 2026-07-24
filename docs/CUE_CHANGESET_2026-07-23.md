@@ -223,3 +223,20 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Woodchop (Standing)**: Rotate through the torso, not the arms. | Feet stay planted.
 - **World's Greatest Stretch**: Lunge deep, elbow to instep. | Then rotate and reach to the sky.
 - **Z-Press**: Sit up tall, slight lean back when pressing. | Stay tight through midline. Can be done seated on a bench, or with dumbbells.
+## Superseded by the locked list (2026-07-24)
+
+Sam's later locked-list changeset (`docs/EXERCISE_LOCKED_LIST_CHANGESET_2026-07-24.md`)
+overrides four entries in the Final cue library above. The earlier text stays as
+written — it was signed off and this is a record, not a draft — but the shipped
+library follows the locked list, and `authoredCueLibraryTests` subtracts the
+names below before comparing so both documents can be true at once.
+
+Retired entirely (cue, video, tags, load profile, pool slot all deleted):
+
+- Abductor Machine — locked-list REMOVALS, late ruling
+- Adductor Machine — locked-list REMOVALS, late ruling
+
+Cue replaced by the locked list's ADDITIONS text:
+
+- Hamstring Curl — now "Pad should be lower calf area, squeeze heels to butt." with no secondary
+- Pull-Ups — secondary gains the appended weight line (locked-list CUE EDIT)

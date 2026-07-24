@@ -168,7 +168,9 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Groin Squeeze':                    'https://youtube.com/shorts/Wt8y_Gagay0?si=vn3LP-2AA546wK7N',
   // No demo pinned yet — play button stays disabled. Named here so the
   // 'explosive push up' aliases resolve to a known exercise rather than dangle.
-  'Explosive Push-Ups':               null,
+  // Sam's locked list collapses "explosive push-ups"/"Explosive Push-Ups" onto
+  // this single entry; placement is owned by the power unit.
+  'Explosive Push-up':                null,
   'Long-Lever Copenhagen':            'https://youtube.com/shorts/NBQIxbMAalk?si=nU796DqBg9LT0fSG',
 
   // ═══ Prehab — Calves ═══
@@ -213,13 +215,36 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Crocodile Breathing':              'https://youtube.com/shorts/ZSkGaCxrijc?si=lL9FtZlQ8haFMSlz',
   'Box Breathing':                    'https://youtube.com/shorts/sCCQNO9C7DA?si=a6trc-rGVygN2Qvu',
   "Child's Pose with Breathing":      'https://youtube.com/shorts/Ynrg6Wsiapc?si=ONBF8XVx0MvqSitn',
-  'Abductor Machine': 'https://youtube.com/shorts/S_FGYHNHJ_c?si=Wqz3kGC0csTyr5Lh',
-  'Adductor Machine': 'https://youtube.com/shorts/iPLvw74e7Tk?si=o3AmNgRbvvikIbi5',
   'Kneeling Jump': 'https://youtube.com/shorts/xaFQGw73peA?si=GiiYoy2aZebpMjtH',
   'Lateral Jump': 'https://youtube.com/shorts/m1JDpuGzCZw?si=alXGCw-wq5sxSuhK',
   'Neutral-Grip Pulldown': 'https://youtube.com/shorts/QuSqYj7tFbI?si=5lS2n9Tsohh7LPBP',
   'Overhead Carry': 'https://youtube.com/shorts/_f17ljGZWq0?si=AFi4XzPiPtMbxS3P',
   'Z-Press': 'https://youtube.com/shorts/5T4Ax70UqC0?si=loaS9aL3Z1SBWPxh',
+
+  // ═══ Sam's locked-list additions (2026-07-24) ═══
+  'Banded TKE':                       'https://youtube.com/shorts/CU7Fn11YMTw?si=NTFuHD1T6G61HyzF',
+  'Bodyweight Squat':                 'https://youtube.com/shorts/-5LhNSMBrEs?si=4BjCCOFx_gWNWVgc',
+  'Bosch Hold':                       'https://youtube.com/shorts/WIrkq7Kd6E8?si=uFJoVmzBX2MH-0hR',
+  'Glute Bridge':                     'https://youtube.com/shorts/mSuDY5J0Fwo?si=lbES-sNynf1nzRuV',
+  'Hamstring Curl':                   'https://youtube.com/shorts/EfeVvA1vdd4?si=M68PVv0bXBYICDQv',
+  'Hollow Hold':                      'https://youtube.com/shorts/pN_YFk4Lx8Q?si=BGSE18ha_P1JsxFs',
+  'Plank':                            'https://youtube.com/shorts/hoeNgjheDHk?si=urWIrNWTSgdpU5KI',
+  'Pogo Hops':                        'https://youtube.com/shorts/SjHRwhGXBl8?si=RzqJnRFhEhHjBzJO',
+  'Side Plank Row':                   'https://youtube.com/shorts/h3EfXtxlonY?si=a95V7UuE-47T6-SB',
+  'Single-Leg Hip Thrust':            'https://youtube.com/shorts/bRZeB6UG6Js?si=w4SjRdY3L96gu-gQ',
+  'Slant Board Step-Down':            'https://youtube.com/shorts/Y7-m2oSUEJQ?si=bQDAKrpodIuBTJNp',
+  'Spanish Squat Hold':               'https://youtube.com/shorts/UKXVgo4jfkw?si=zR6WD7rBjbFSi0X0',
+  'Stir the Pot':                     'https://youtube.com/shorts/TojWydRDiHY?si=Fx3Nqse-BBWn6keC',
+  'Back Extension':                   'https://youtube.com/shorts/d-S2VfpRL_I?si=fCBFbXBVXXToQuXG',
+  'Crab Walks':                       'https://youtube.com/shorts/yItH_robbcU?si=yWEx-UIvVnLW3rMM',
+  'Dragon Flag':                      'https://youtube.com/shorts/mL-_0xacP_8?si=0gB_ZXpgJYeTfu7F',
+  'High Box Squat':                   'https://youtube.com/shorts/oFSJ13d3Hc4?si=WMBzS7_HeL_-c1tu',
+  'Speed Trap Bar Deadlift':          'https://youtube.com/shorts/0ZfQDDiI1Hs?si=b3Pt-cMT8VU9LsRt',
+  'QL Back Extension':                'https://youtube.com/shorts/MVu18rxmukk?si=F8L_pi2vYToxg8rb',
+  'ATG Split Squat':                  'https://youtube.com/shorts/7Adg7R5BknU?si=SAfVIuE7G2HpJ-pR',
+  'Elephant Walks':                   'https://youtube.com/shorts/GMYMWEkki6U?si=eFuoyRDoDux_QhHW',
+  'Cossack Squat':                    'https://youtube.com/shorts/MJvazUpmdZU?si=I8QDr6TOUMUWEtN6',
+  'Lateral Lunge':                    'https://youtube.com/shorts/5JPYr0JEFtY?si=OxHmKfhzZ_GApjoY',
 };
 
 // ─── Name Normalisation ────────────────────────────────────────────
@@ -316,8 +341,11 @@ const EXERCISE_NAME_ALIASES: Record<string, string> = {
   'half kneeling single arm overhead press': 'Half-Kneeling Single-Arm Overhead Press',
   'half-kneeling single-arm press':       'Half-Kneeling Single-Arm Overhead Press',
   'half kneeling single-arm press':       'Half-Kneeling Single-Arm Overhead Press',
-  'explosive push up':                'Explosive Push-Ups',
-  'explosive push ups':               'Explosive Push-Ups',
+  'explosive push up':                'Explosive Push-up',
+  'explosive push ups':               'Explosive Push-up',
+  'explosive push-ups':               'Explosive Push-up',
+  'explosive pushup':                 'Explosive Push-up',
+  'explosive pushups':                'Explosive Push-up',
 
   // Upper — pull
   'pull up':                          'Pull-Ups',

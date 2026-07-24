@@ -120,6 +120,10 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
   'Hard Row Intervals':       { tier: 'B-high', modality: 'row',  impact: 'low' },
   'Hard SkiErg Intervals':    { tier: 'B-high', modality: 'ski',  impact: 'low' },
   'Hard Assault Bike Intervals': { tier: 'B-high', modality: 'bike', impact: 'low' },
+  // Sam's locked list (2026-07-24) adds the format; the tier/modality/impact
+  // triple is PROPOSED (mirrors Hard Row Intervals / 4x4 VO2) and awaits his
+  // ruling — see the changeset's "PROPOSED — Erg EMOM classification".
+  'Erg EMOM':                 { tier: 'B-high', modality: 'mixed', impact: 'low' },
 
   // ── Tier B-low — Moderate Output ──
   'Tempo Run':                { tier: 'B-low',  modality: 'run',  impact: 'high' },
@@ -198,6 +202,13 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: SAFE,
   },
 
+  'High Box Squat': {
+    movement: 'squat', region: 'lower', load: 'high', fatigue: 'moderate',
+    doms: 'low', stability: 'moderate', unilateral: false,
+    eccentric: 'low', lateWeek: 'caution',
+    injury: inj({ pubalgia: 'caution', lowerBack: 'caution' }),
+  },
+
   'Bulgarian Split Squats': {
     movement: 'lunge', region: 'lower', load: 'moderate', fatigue: 'high',
     doms: 'high', stability: 'moderate', unilateral: true,
@@ -226,25 +237,27 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ ankle: 'caution' }),
   },
 
-  'Tempo Step-Up': {
-    movement: 'lunge', region: 'lower', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'moderate', unilateral: true,
-    eccentric: 'low', lateWeek: 'good',
-    injury: inj({ knee: 'caution', ankle: 'caution' }),
-  },
 
-  'Step-Down': {
-    movement: 'lunge', region: 'lower', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'moderate', unilateral: true,
-    eccentric: 'moderate', lateWeek: 'good',
-    injury: inj({ knee: 'caution', ankle: 'caution' }),
-  },
 
   'Slant Board Step-Down': {
     movement: 'lunge', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: true,
     eccentric: 'moderate', lateWeek: 'good',
     injury: inj({ knee: 'caution', ankle: 'caution' }),
+  },
+
+  'Cossack Squat': {
+    movement: 'lunge', region: 'lower', load: 'low', fatigue: 'moderate',
+    doms: 'moderate', stability: 'low', unilateral: true,
+    eccentric: 'moderate', lateWeek: 'caution',
+    injury: inj({ adductor: 'caution', pubalgia: 'caution', knee: 'caution' }),
+  },
+
+  'Lateral Lunge': {
+    movement: 'lunge', region: 'lower', load: 'low', fatigue: 'moderate',
+    doms: 'moderate', stability: 'moderate', unilateral: true,
+    eccentric: 'moderate', lateWeek: 'caution',
+    injury: inj({ adductor: 'caution', pubalgia: 'caution', knee: 'caution' }),
   },
 
   'Single-Leg Squat (to Box)': {
@@ -314,6 +327,20 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ pubalgia: 'caution' }),
   },
 
+  'Single-Leg Hip Thrust': {
+    movement: 'isolation_lower', region: 'lower', load: 'moderate', fatigue: 'moderate',
+    doms: 'low', stability: 'moderate', unilateral: true,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({ hamstring: 'caution', lowerBack: 'caution' }),
+  },
+
+  'Back Extension': {
+    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'moderate', unilateral: false,
+    eccentric: 'moderate', lateWeek: 'good',
+    injury: inj({ lowerBack: 'caution', hamstring: 'caution' }),
+  },
+
   'Nordic Lower': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'high',
     doms: 'high', stability: 'low', unilateral: false,
@@ -372,26 +399,13 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
   /**
-   * Abductor Machine — NEW (Sam, 2026-07-24). Its OWN classification, not a
-   * mirror of Adductor Machine: it works the glutes/outer hip, not the groin,
-   * so every injury rating stays at the default 'good' — an athlete on adductor
-   * or groin restriction is unaffected by it.
-   *
-   * Two parts of Sam's ruling have no field to live in yet: there is no
-   * hip-abduction `MovementPattern` (so it rides `isolation_lower`, the only
-   * lower-isolation pattern) and no hip/glute key on `InjuryProfile`. It is
-   * also deliberately absent from every pool — "never a swap candidate for
-   * groin/adductor work" cannot be enforced while `getSlotSiblings` returns a
-   * slot's whole role array. Both land with the muscle-block mechanism, the
-   * first item of the Phase 4.3 programming pass
-   * (PROGRAMMING_DESIGN_SESSION D3/D11); it joins the pool then.
+   * Abductor Machine and Adductor Machine were RETIRED by Sam's locked-list
+   * changeset (2026-07-24, late ruling) — cue, video, tags, load profile and
+   * the isolation_lower pool slot all deleted. The muscle-block mechanism they
+   * were waiting on (PROGRAMMING_DESIGN_SESSION D3/D11) is no longer needed for
+   * them. Groin coverage after the removal is Copenhagens + Groin Squeeze +
+   * Cossack Squat + Lateral Lunge, per the changeset's NOTES.
    */
-  'Abductor Machine': {
-    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'high', unilateral: false,
-    eccentric: 'low', lateWeek: 'good',
-    injury: inj({}),
-  },
 
   'Groin Squeeze': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
@@ -400,12 +414,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ adductor: 'caution', pubalgia: 'caution' }),
   },
 
-  'Adductor Machine': {
-    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'high', unilateral: false,
-    eccentric: 'low', lateWeek: 'good',
-    injury: inj({ adductor: 'caution', pubalgia: 'caution' }),
-  },
 
   'Banded TKE': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
@@ -437,6 +445,20 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
 
+  'Hamstring Curl': {
+    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
+    doms: 'moderate', stability: 'high', unilateral: false,
+    eccentric: 'moderate', lateWeek: 'good',
+    injury: inj({ hamstring: 'caution', knee: 'caution' }),
+  },
+
+  'Crab Walks': {
+    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'moderate', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({ knee: 'caution' }),
+  },
+
   'Swiss Ball Hamstring Curl': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
@@ -462,11 +484,26 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ knee: 'caution', hamstring: 'caution', calf: 'caution', ankle: 'caution' }),
   },
 
-  'Countermovement Jump': {
+
+  'Pogo Hops': {
     movement: 'plyo', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'moderate', unilateral: false,
+    eccentric: 'low', lateWeek: 'good', power: true,
+    injury: inj({ calf: 'caution', ankle: 'caution' }),
+  },
+
+  'Kneeling Jump': {
+    movement: 'plyo', region: 'lower', load: 'low', fatigue: 'moderate',
+    doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'low', lateWeek: 'caution', power: true,
-    injury: inj({ knee: 'caution', hamstring: 'caution', calf: 'caution', ankle: 'caution' }),
+    injury: inj({ knee: 'caution', lowerBack: 'caution' }),
+  },
+
+  'Lateral Jump': {
+    movement: 'plyo', region: 'lower', load: 'low', fatigue: 'moderate',
+    doms: 'low', stability: 'low', unilateral: true,
+    eccentric: 'moderate', lateWeek: 'caution', power: true,
+    injury: inj({ adductor: 'caution', knee: 'caution', ankle: 'caution' }),
   },
 
   'Box Jumps': {
@@ -610,12 +647,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: SAFE,
   },
 
-  'Half-Kneeling Landmine Press': {
-    movement: 'vertical_push', region: 'upper', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'high', unilateral: true,
-    eccentric: 'low', lateWeek: 'good',
-    injury: inj({ shoulder: 'caution', elbow: 'caution', wrist: 'caution' }),
-  },
 
   'Bottoms-Up KB Press': {
     movement: 'vertical_push', region: 'upper', load: 'low', fatigue: 'low',
@@ -741,6 +772,13 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   // UPPER BODY — POWER / PLYO
   // ═══════════════════════════════════════════════════════════════
 
+  'Speed Trap Bar Deadlift': {
+    movement: 'hinge', region: 'lower', load: 'moderate', fatigue: 'moderate',
+    doms: 'low', stability: 'moderate', unilateral: false,
+    eccentric: 'low', lateWeek: 'caution', power: true,
+    injury: inj({ lowerBack: 'caution', hamstring: 'caution' }),
+  },
+
   'Speed Bench': {
     movement: 'horizontal_push', region: 'upper', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'high', unilateral: false,
@@ -749,7 +787,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
   },
 
 
-  'Explosive Push-Ups': {
+  'Explosive Push-up': {
     movement: 'horizontal_push', region: 'upper', load: 'low', fatigue: 'moderate',
     doms: 'low', stability: 'moderate', unilateral: false,
     eccentric: 'moderate', lateWeek: 'avoid', power: true,
@@ -802,11 +840,46 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ shoulder: 'caution', adductor: 'caution', pubalgia: 'caution' }),
   },
 
+  'Plank': {
+    movement: 'core', region: 'core', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'high', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({ shoulder: 'caution' }),
+  },
+
+  'Hollow Hold': {
+    movement: 'core', region: 'core', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'high', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({ lowerBack: 'caution' }),
+  },
+
+  'Side Plank Row': {
+    movement: 'core', region: 'core', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'low', unilateral: true,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({ shoulder: 'caution' }),
+  },
+
   'Side Plank': {
     movement: 'core', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: true,
     eccentric: 'low', lateWeek: 'good',
     injury: SAFE,
+  },
+
+  'Stir the Pot': {
+    movement: 'core', region: 'core', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'low', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({ lowerBack: 'caution', shoulder: 'caution' }),
+  },
+
+  'Dragon Flag': {
+    movement: 'core', region: 'core', load: 'low', fatigue: 'moderate',
+    doms: 'moderate', stability: 'low', unilateral: false,
+    eccentric: 'high', lateWeek: 'caution',
+    injury: inj({ lowerBack: 'avoid', shoulder: 'caution' }),
   },
 
   'Dead Bug': {

@@ -1398,7 +1398,8 @@ function buildPowerBlock(
 
   if (spec.family === 'lower') {
     options.push({
-      name: spec.reduced ? 'Pogo Jumps' : 'Vertical Jump',
+      // Sam's locked-list rename (2026-07-24): Pogo Jumps → Pogo Hops, one entry.
+      name: spec.reduced ? 'Pogo Hops' : 'Vertical Jump',
       sets: spec.sets,
       repsMin: spec.repsMin,
       repsMax: spec.repsMax,
@@ -1421,15 +1422,9 @@ function buildPowerBlock(
       repsMax: spec.repsMax,
       equipmentRequired: [],
     });
-    if (hasMedBall) {
-      options.push({
-        name: 'Medicine Ball Chest Pass',
-        sets: spec.sets,
-        repsMin: spec.repsMin,
-        repsMax: spec.repsMax,
-        equipmentRequired: ['Medicine Ball'],
-      });
-    }
+    // The medicine-ball chest pass was RETIRED by Sam's locked-list changeset
+    // (2026-07-24), so the upper power slot has one option. The lower slot keeps
+    // its Medicine Ball Overhead Throw, which he did not retire.
   }
 
   const notes = [

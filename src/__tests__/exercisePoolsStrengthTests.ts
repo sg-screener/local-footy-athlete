@@ -214,7 +214,11 @@ section('3. Anchor rotation cadence');
   assert(mc1.name === squatAnchor.entries[0].name, `mc=1 → entries[0] (${mc1.name})`);
   assert(mc2.name === squatAnchor.entries[1].name, `mc=2 → entries[1] (${mc2.name})`);
   assert(mc3.name === squatAnchor.entries[2].name, `mc=3 → entries[2] (${mc3.name})`);
-  assert(mc4.name === squatAnchor.entries[0].name, `mc=4 wraps → entries[0] (${mc4.name})`);
+  // Derived, not "entries[0]": Sam's locked list added High Box Squat, so the
+  // squat anchor is four deep and mc=4 no longer wraps. The cadence law is
+  // (mc - 1) mod poolLen — asserting the law survives a pool resize.
+  assert(mc4.name === squatAnchor.entries[(4 - 1) % poolLen].name,
+    `mc=4 → entries[${(4 - 1) % poolLen}] (${mc4.name})`);
 
   // Anchor must be stable within a mini-cycle (weekInBlock has no effect)
   for (const wib of [1, 2, 3, 4]) {
@@ -584,18 +588,22 @@ section('11. applyPoolRotation for expansion slots');
 // ─────────────────────────────────────────────────────────────────
 section('12. Isolation_lower (accessory-only slot)');
 {
-  // Shape: anchor pool is intentionally empty; accessory pool has 6 entries.
+  // Shape: anchor pool is intentionally empty; the accessory pool carries the
+  // rehab/prehab movements. Sam's locked list (2026-07-24) added Hamstring
+  // Curl, Single-Leg Hip Thrust and Back Extension, and retired Adductor
+  // Machine, taking it from five to seven.
   const anchor = STRENGTH_POOLS.isolation_lower.anchor;
   const accessory = STRENGTH_POOLS.isolation_lower.accessory;
   assert(anchor.entries.length === 0,
     `isolation_lower/anchor is empty (accessory-only slot, got ${anchor.entries.length})`);
-  assert(accessory.entries.length === 5,
-    `isolation_lower/accessory has 5 entries (got ${accessory.entries.length})`);
+  assert(accessory.entries.length === 7,
+    `isolation_lower/accessory has 7 entries (got ${accessory.entries.length})`);
 
-  // All five canonical names classify to isolation_lower/accessory
+  // Every canonical name classifies to isolation_lower/accessory
   const ISO_LOWER_NAMES = [
-    'Nordic Lower', 'Leg Extension',
-    'Calf Raises', 'Tib Raises', 'Adductor Machine',
+    'Nordic Lower', 'Hamstring Curl', 'Leg Extension',
+    'Calf Raises', 'Tib Raises',
+    'Single-Leg Hip Thrust', 'Back Extension',
   ];
   for (const name of ISO_LOWER_NAMES) {
     const classified = classifyPoolSlot(name);
@@ -652,7 +660,7 @@ section('12. Isolation_lower (accessory-only slot)');
 
   // applyPoolRotation for iso_lower rewrites within the accessory pool
   const nordicMc2 = applyPoolRotation('Nordic Lower', { miniCycleNumber: 2, weekInBlock: 1 });
-  // base = (2-1)*4 + (1-1) = 4 → 4 mod 5 = 4 → entries[4] = Adductor Machine
+  // base = (2-1)*4 + (1-1) = 4 → 4 mod 7 = 4 → entries[4]
   assert(nordicMc2 === accessory.entries[4].name,
     `Nordic Lower mc=2/w=1 → ${nordicMc2} (expected ${accessory.entries[4].name})`);
 }
@@ -795,12 +803,12 @@ section('14. Athlete overrides (prefs filter / bias)');
     squatAnchor, { miniCycleNumber: 2, weekInBlock: 1 }, emptyAvoid, exclBackSquat);
   const mc3 = selectPoolEntryAvoiding(
     squatAnchor, { miniCycleNumber: 3, weekInBlock: 1 }, emptyAvoid, exclBackSquat);
-  // Effective pool after excluding Back Squat: [Front Squat, Box Squat]
-  // mc=1 → idx 0 = Front Squat; mc=2 → idx 1 = Box Squat; mc=3 → idx 0 = Front Squat
+  // Effective pool after excluding Back Squat: [Front Squat, Box Squat, High Box Squat]
+  // mc=1 → idx 0 = Front Squat; mc=2 → idx 1 = Box Squat; mc=3 → idx 2 = High Box Squat
   assert(mc2.name === 'Box Squat',
     `Exclusion: mc=2 → Box Squat (got "${mc2.name}")`);
-  assert(mc3.name === 'Front Squat',
-    `Exclusion: mc=3 → Front Squat, wraps 2-entry pool (got "${mc3.name}")`);
+  assert(mc3.name === 'High Box Squat',
+    `Exclusion: mc=3 → High Box Squat (got "${mc3.name}")`);
 
   // ── 14.3 Pinned floats to rotation-start ──
   const pinBox: AthletePoolPrefs = { excluded: [], pinned: ['Box Squat'] };
@@ -849,8 +857,10 @@ section('14. Athlete overrides (prefs filter / bias)');
     `Caution deprio: mc=1 → Front Squat (good, first; got "${cautionMc1.name}")`);
   assert(cautionMc2.name === 'Box Squat',
     `Caution deprio: mc=2 → Box Squat (good, second; got "${cautionMc2.name}")`);
-  assert(cautionMc3.name === 'Back Squat',
-    `Caution deprio: mc=3 → Back Squat (caution, last; got "${cautionMc3.name}")`);
+  // Only Back Squat is shoulder='caution', so it sorts last behind the three
+  // 'good' entries: [Front Squat, Box Squat, High Box Squat, Back Squat].
+  assert(cautionMc3.name === 'High Box Squat',
+    `Caution deprio: mc=3 → High Box Squat (good, third; got "${cautionMc3.name}")`);
 
   // ── 14.7 Empty-after-filter → fall through to raw pool + structured log ──
   // Capture console.warn while running.
@@ -859,7 +869,7 @@ section('14. Athlete overrides (prefs filter / bias)');
   console.warn = (msg: string) => { warnings.push(msg); };
   try {
     const allExcluded: AthletePoolPrefs = {
-      excluded: ['Back Squat', 'Front Squat', 'Box Squat'],
+      excluded: ['Back Squat', 'Front Squat', 'Box Squat', 'High Box Squat'],
       pinned: [],
     };
     const fallbackPick = selectPoolEntryAvoiding(squatAnchor, ctx, emptyAvoid, allExcluded);
@@ -876,7 +886,7 @@ section('14. Athlete overrides (prefs filter / bias)');
         `Fallback log includes slot name (got: ${w})`);
       assert(w.includes('filtered=0'),
         `Fallback log includes filtered=0 marker (got: ${w})`);
-      assert(w.includes('excluded=3'),
+      assert(w.includes('excluded=4'),
         `Fallback log reports exclusion count (got: ${w})`);
       assert(w.includes('injury=0'),
         `Fallback log reports injury count (got: ${w})`);
@@ -892,11 +902,11 @@ section('14. Athlete overrides (prefs filter / bias)');
     // Exclude Back Squat; rely on lowerBack=avoid/caution to drop the rest.
     // Actually Front Squat & Box Squat are 'caution', not 'avoid' — so
     // lowerBack alone won't empty the pool. Use pubalgia=avoid instead:
-    //   Back Squat, Front Squat  → pubalgia='avoid'
-    //   Box Squat                → pubalgia='caution'
-    // So exclude Box Squat + activeInjuries=['pubalgia'] → everything drops.
+    //   Back Squat, Front Squat     → pubalgia='avoid'
+    //   Box Squat, High Box Squat   → pubalgia='caution'
+    // So exclude both cautions + activeInjuries=['pubalgia'] → everything drops.
     const mixed: AthletePoolPrefs = {
-      excluded: ['Box Squat'],
+      excluded: ['Box Squat', 'High Box Squat'],
       pinned: [],
       activeInjuries: ['pubalgia'],
     };
@@ -907,8 +917,8 @@ section('14. Athlete overrides (prefs filter / bias)');
       `Mixed fallback logs once (got ${warnings.length})`);
     if (warnings.length > 0) {
       const w = warnings[0];
-      assert(w.includes('excluded=1') && w.includes('injury=2'),
-        `Mixed fallback reports excluded=1 injury=2 (got: ${w})`);
+      assert(w.includes('excluded=2') && w.includes('injury=2'),
+        `Mixed fallback reports excluded=2 injury=2 (got: ${w})`);
     }
   } finally {
     console.warn = originalWarn;

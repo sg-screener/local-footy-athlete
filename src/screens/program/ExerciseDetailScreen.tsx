@@ -35,9 +35,11 @@ const MOCK_EXERCISE = {
   updatedAt: '2025-01-20T00:00:00Z',
 };
 
+// Machine Chest Press was retired by Sam's locked-list changeset (2026-07-24);
+// Incline DB Bench is the curated horizontal-push sibling that replaced it here.
 const SIMILAR_EXERCISES = [
   'Dumbbell Bench Press',
-  'Machine Chest Press',
+  'Incline DB Bench',
   'Push-ups',
 ];
 

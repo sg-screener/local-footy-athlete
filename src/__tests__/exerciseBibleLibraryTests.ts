@@ -56,17 +56,18 @@ const expectedTags: Array<{
   movement: MovementPattern;
   region: Region;
 }> = [
+  // Sam's locked-list changeset (2026-07-24) retired Countermovement Jump,
+  // Step-Down, Tempo Step-Up and Half-Kneeling Landmine Press, and collapsed
+  // "Explosive Push-Ups" onto the single "Explosive Push-up" entry. The Bible
+  // still names some of them; Sam's ruling is the later one, and the locked
+  // list's own suite proves they are gone from every content surface.
   { name: 'Vertical Jump', movement: 'plyo', region: 'lower' },
-  { name: 'Countermovement Jump', movement: 'plyo', region: 'lower' },
   { name: 'RFE Split Squat Jump', movement: 'plyo', region: 'lower' },
-  { name: 'Explosive Push-Ups', movement: 'horizontal_push', region: 'upper' },
+  { name: 'Explosive Push-up', movement: 'horizontal_push', region: 'upper' },
   { name: 'Banded TKE', movement: 'isolation_lower', region: 'lower' },
   { name: 'Slant Board Step-Down', movement: 'lunge', region: 'lower' },
-  { name: 'Step-Down', movement: 'lunge', region: 'lower' },
   { name: 'Spanish Squat Hold', movement: 'isolation_lower', region: 'lower' },
-  { name: 'Tempo Step-Up', movement: 'lunge', region: 'lower' },
   { name: 'Bottoms-Up KB Press', movement: 'vertical_push', region: 'upper' },
-  { name: 'Half-Kneeling Landmine Press', movement: 'vertical_push', region: 'upper' },
   { name: 'Scap Push-Up', movement: 'horizontal_push', region: 'upper' },
   { name: 'Banded External Rotation', movement: 'isolation_upper', region: 'upper' },
   { name: 'Bosch Hold', movement: 'isolation_lower', region: 'lower' },
@@ -95,8 +96,7 @@ const aliases: Array<[string, string]> = [
   ['slant board step down', 'Slant Board Step-Down'],
   ['bottoms up press', 'Bottoms-Up KB Press'],
   ['bottoms-up kettlebell press', 'Bottoms-Up KB Press'],
-  ['half kneeling landmine press', 'Half-Kneeling Landmine Press'],
-  ['explosive pushup', 'Explosive Push-Ups'],
+  ['explosive pushup', 'Explosive Push-up'],
   ['speed bench press', 'Speed Bench'],
   ['rear foot elevated split squat jump', 'RFE Split Squat Jump'],
   ['rfess jump', 'RFE Split Squat Jump'],
@@ -114,7 +114,7 @@ for (const [input, expected] of aliases) {
 
 console.log('\n[exerciseBibleLibrary] power stress and injury cautions');
 
-for (const name of ['Vertical Jump', 'Countermovement Jump', 'Box Jumps', 'Broad Jumps', 'RFE Split Squat Jump']) {
+for (const name of ['Vertical Jump', 'Box Jumps', 'Broad Jumps', 'RFE Split Squat Jump']) {
   const tags = EXERCISE_TAGS[name];
   ok(`${name} is marked as power`, tags?.power === true);
   ok(
@@ -126,7 +126,7 @@ for (const name of ['Vertical Jump', 'Countermovement Jump', 'Box Jumps', 'Broad
   );
 }
 
-for (const name of ['Explosive Push-Ups', 'Speed Bench']) {
+for (const name of ['Explosive Push-up', 'Speed Bench']) {
   const tags = EXERCISE_TAGS[name];
   ok(`${name} is marked as power`, tags?.power === true);
   ok(

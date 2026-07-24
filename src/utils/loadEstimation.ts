@@ -100,24 +100,32 @@ export const TRUE_BODYWEIGHT_EXERCISES = new Set([
   'Pull-Ups',
   'Chin-Ups',
   'Push-ups',
-  'Explosive Push-Ups',
+  'Explosive Push-up',
   'Dips',
   'Scap Push-Up',
-  'Inverted Rows',
   'Inverted Row (Bodyweight)',
   'Chin-Up Negative (Slow)',
   'Bodyweight Squat',
   'Glute Bridge',
+  'Plank',
+  'Hollow Hold',
+  'Dragon Flag',
+  'Stir the Pot',
   // Lower body BW / plyo
   'Vertical Jump',
-  'Countermovement Jump',
   'Box Jumps',
   'Broad Jumps',
   'Jump Squats',
   'Lateral Bounds',
   'RFE Split Squat Jump',
   'Depth Jumps',
-  'Step-Down',
+  // Sam's locked list (2026-07-24): bodyweight additions.
+  'Cossack Squat',
+  'Lateral Lunge',
+  'ATG Split Squat',
+  'Pogo Hops',
+  'Kneeling Jump',
+  'Lateral Jump',
   'Slant Board Step-Down',
   'Nordic Lower',
   // Conditioning / cardio (no external load)
@@ -162,7 +170,6 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Walking Lunges':         { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
   'Reverse Lunges':         { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
   'Step Ups':               { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
-  'Tempo Step-Up':          { anchor: 'squat', ratio: 0.15, equipment: 'dumbbell' },
   'Goblet Squat':           { anchor: 'squat', ratio: 0.22, equipment: 'dumbbell' },
   'Bodyweight Squat':       { anchor: 'squat', ratio: 0.00, equipment: 'bodyweight' },
   'Glute Bridge':           { anchor: 'squat', ratio: 0.00, equipment: 'bodyweight' },
@@ -181,7 +188,6 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Overhead Carry':         { anchor: 'bench', ratio: 0.20, equipment: 'dumbbell' },
 
   // ═══ MACHINE / ACCESSORY ADDITIONS (Sam, 2026-07-24) ═══
-  'Adductor Machine':       { anchor: 'squat', ratio: 0.25, equipment: 'machine' },
   // Same machine as Lat Pulldown, different handle — mirrors it exactly.
   'Neutral-Grip Pulldown':  { anchor: 'bench', ratio: 0.55, equipment: 'cable' },
   'Single-Leg Squat (to Box)': { anchor: 'squat', ratio: 0.16, equipment: 'dumbbell' },
@@ -218,7 +224,6 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Cable Face Pull':          { anchor: 'bench', ratio: 0.18, equipment: 'cable' },
   'Chest Supported Row':      { anchor: 'bench', ratio: 0.28, equipment: 'dumbbell' },
   'Landmine Press':           { anchor: 'bench', ratio: 0.35, equipment: 'barbell' },
-  'Half-Kneeling Landmine Press': { anchor: 'bench', ratio: 0.25, equipment: 'barbell' },
   'Bottoms-Up KB Press':      { anchor: 'bench', ratio: 0.08, equipment: 'kettlebell' },
   'Explosive Landmine Press': { anchor: 'bench', ratio: 0.25, equipment: 'barbell' },
   'Bear Carry':               { anchor: 'squat', ratio: 0.30, equipment: 'dumbbell' },
@@ -249,12 +254,7 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Single-Arm Shrug':           { anchor: 'bench', ratio: 0.18, equipment: 'dumbbell' },
 
   // ═══ COMMON GYM EXERCISES (missing from original map) ═══
-  'Cable Fly':                  { anchor: 'bench', ratio: 0.15, equipment: 'cable' },
-  'Cable Chest Fly':            { anchor: 'bench', ratio: 0.15, equipment: 'cable' },
   'Leg Extension':              { anchor: 'squat', ratio: 0.30, equipment: 'machine' },
-  'Hack Squat':                 { anchor: 'squat', ratio: 0.80, equipment: 'machine' },
-  'Machine Chest Press':        { anchor: 'bench', ratio: 0.65, equipment: 'machine' },
-  'Pec Deck':                   { anchor: 'bench', ratio: 0.30, equipment: 'machine' },
 };
 
 // ─── Exercise Name Aliases ───
@@ -337,9 +337,6 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'half-kneeling single arm overhead press': 'Half-Kneeling Single-Arm Overhead Press',
   'half kneeling single arm overhead press': 'Half-Kneeling Single-Arm Overhead Press',
   'half-kneeling single-arm press':         'Half-Kneeling Single-Arm Overhead Press',
-  'half-kneeling landmine press':           'Half-Kneeling Landmine Press',
-  'half kneeling landmine press':           'Half-Kneeling Landmine Press',
-  'single arm landmine press':              'Half-Kneeling Landmine Press',
   'bottoms up press':                       'Bottoms-Up KB Press',
   'bottoms-up press':                       'Bottoms-Up KB Press',
   'bottoms up kb press':                    'Bottoms-Up KB Press',
@@ -403,13 +400,6 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'tricep dips':              'Dips',
   'chest dips':               'Dips',
   'parallel bar dips':        'Dips',
-  'explosive push-ups':       'Explosive Push-Ups',
-  'explosive push ups':       'Explosive Push-Ups',
-  'explosive push-up':        'Explosive Push-Ups',
-  'explosive pushup':         'Explosive Push-Ups',
-  'explosive pushups':        'Explosive Push-Ups',
-  'plyo push-ups':            'Explosive Push-Ups',
-  'plyometric push-ups':      'Explosive Push-Ups',
   'scap push-up':             'Scap Push-Up',
   'scap push up':             'Scap Push-Up',
   'scap pushup':              'Scap Push-Up',
@@ -428,11 +418,6 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'step ups':                 'Step Ups',
   'db step ups':              'Step Ups',
   'dumbbell step ups':        'Step Ups',
-  'tempo step up':            'Tempo Step-Up',
-  'tempo step-up':            'Tempo Step-Up',
-  'step down':                'Step-Down',
-  'step-down':                'Step-Down',
-  'controlled step down':     'Step-Down',
   'slant board step down':    'Slant Board Step-Down',
   'slant-board step-down':    'Slant Board Step-Down',
 
@@ -503,9 +488,6 @@ const EXERCISE_ALIASES: Record<string, string> = {
   // ── Plyo ──
   'vertical jump':             'Vertical Jump',
   'vertical jumps':            'Vertical Jump',
-  'countermovement jump':      'Countermovement Jump',
-  'countermovement jumps':     'Countermovement Jump',
-  'counter movement jump':     'Countermovement Jump',
   'box jump':                 'Box Jumps',
   'broad jump':               'Broad Jumps',
   'jump squat':               'Jump Squats',
@@ -575,22 +557,11 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'pistol squat':             'Single-Leg Squat (to Box)',
 
   // ── Cable fly variants ──
-  'cable fly':                  'Cable Fly',
-  'cable flyes':                'Cable Fly',
-  'cable chest fly':            'Cable Chest Fly',
-  'cable flys':                 'Cable Fly',
-  'cable crossover':            'Cable Fly',
 
   // ── Machine variants ──
   'leg extensions':             'Leg Extension',
   'machine leg extension':      'Leg Extension',
   'knee extension':             'Leg Extension',
-  'hack squats':                'Hack Squat',
-  'machine hack squat':         'Hack Squat',
-  'machine chest press':        'Machine Chest Press',
-  'chest press machine':        'Machine Chest Press',
-  'pec deck':                   'Pec Deck',
-  'pec fly machine':            'Pec Deck',
 
   // ── Band Pull-Apart ──
   'band pull-apart':            'Band Pull-Apart',
@@ -660,6 +631,25 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'toe stretch':                'Toe Stretch',
   'calf stretch':               'Calf Stretch',
   'standing calf stretch':      'Calf Stretch',
+  // ── Sam's locked-list merges (2026-07-24): variants of ONE canonical entry ──
+  // The upper power default: every spelling of the explosive push-up now points
+  // at the single "Explosive Push-up" entry.
+  'explosive push-ups':         'Explosive Push-up',
+  'explosive push ups':         'Explosive Push-up',
+  'explosive push-up':          'Explosive Push-up',
+  'explosive pushup':           'Explosive Push-up',
+  'explosive pushups':          'Explosive Push-up',
+  // Each is a spelling the token signature cannot collapse on its own, because
+  // the two names do not share a word set ("RFE" vs "Bulgarian", "Jumps" vs
+  // "Hops"). An alias is a curator's explicit ruling about what a spelling
+  // means, which is exactly what a merge is.
+  'seated db ohp':              'Seated DB Press',
+  'seated dumbbell ohp':        'Seated DB Press',
+  'rfe split squat':            'Bulgarian Split Squats',
+  'rfe split squats':           'Bulgarian Split Squats',
+  'pogo jump':                  'Pogo Hops',
+  'pogo jumps':                 'Pogo Hops',
+  'pogo hop':                   'Pogo Hops',
   // ── Groin squeeze rename ──
 };
 
@@ -694,7 +684,6 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   // Pool exercises that are inherently unloaded or band-only
   'Band Pull-Apart',            // Single canonical (was: Band Pull-Apart (delts) + Band Pull-Aparts)
   'Banded TKE',
-  'Step-Down',
   'Slant Board Step-Down',
   'Spanish Squat Hold',
   'Copenhagen Plank (Half)',
@@ -708,6 +697,12 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Tib Raises',
   'Tib Raises',             // exercisePools uses this variant
   'Bosch Hold',
+  // Sam's locked list (2026-07-24): band / mobility additions — no external
+  // load, so no fake precision on the card.
+  'Crab Walks',
+  'Side Plank Row',
+  'QL Back Extension',
+  'Elephant Walks',
   'Dead Bug',
   'Banded Dead Bug',
   'McGill Sit Up',

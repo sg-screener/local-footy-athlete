@@ -153,10 +153,19 @@ export const UPPER_BACK_PUMP_POOL: PoolExercise[] = [
 // PREHAB & ACCESSORIES pools
 // ═══════════════════════════════════════════════════════════════
 
+/**
+ * GROIN / ADDUCTORS.
+ *
+ * Sam's locked-list changeset (2026-07-24) retired the Adductor and Abductor
+ * Machines, so the whole of groin coverage is now these four: two Copenhagens,
+ * the squeeze, and the two lateral patterns he added in their place.
+ */
 export const GROIN_ADDUCTORS_POOL: PoolExercise[] = [
   ex('copenhagen-plank',  'Copenhagen Plank (Half)',           3, 20, 30, 45, 'Builds inner thigh strength.',                ['bodyweight'],['groin', 'knee'], 'low', { prescriptionType: 'duration', perSide: true }),
   ex('copenhagen-long',   'Long-Lever Copenhagen',             3, 15, 25, 45, 'Full lever. Hips high, no dropping.',         ['bodyweight'],['groin', 'knee'], 'moderate', { prescriptionType: 'duration', perSide: true }),
   ex('groin-squeeze',     'Groin Squeeze',                     3, 10, 12, 30, 'Ball or fists between the knees. Squeeze and hold.', [],            ['groin'],         'low', { prescriptionType: 'reps' }),
+  ex('cossack-squat',     'Cossack Squat',                     3, 6,  8,  45, 'Sit onto one leg, other leg straight. Hold a rack if needed.', ['bodyweight'], ['groin', 'knee'], 'moderate', { prescriptionType: 'reps', perSide: true }),
+  ex('lateral-lunge',     'Lateral Lunge',                     3, 8,  10, 45, 'Big step sideways, sit into that hip.',        ['bodyweight'], ['groin', 'knee'], 'moderate', { prescriptionType: 'reps', perSide: true }),
 ];
 
 /**
@@ -169,12 +178,16 @@ export const CALVES_POOL: PoolExercise[] = [
 ];
 
 /**
- * LOWER PREHAB — ankle / shin / tibialis work.
+ * LOWER PREHAB — knee / hip / ankle / shin tissue work.
  *
  * Context-specific: only eligible in lower-body or recovery/prehab sessions.
- * NOT a neutral filler. These exercises exist to support ankle and shin
+ * NOT a neutral filler. These exercises exist to support lower-limb joint
  * health and should only appear when the session intent includes lower-body
  * or explicit prehab goals.
+ *
+ * Sam's locked-list changeset (2026-07-24) widened this from ankle/shin work
+ * alone to the full lower-limb prehab set — the five entries below were all
+ * already tagged and are now selectable rather than orphaned.
  *
  * Session eligibility:
  *   ✓ Lower strength/hypertrophy (as accessory)
@@ -185,6 +198,11 @@ export const CALVES_POOL: PoolExercise[] = [
  */
 export const LOWER_PREHAB_POOL: PoolExercise[] = [
   ex('tib-raise',         'Tib Raises',             2, 15, 20, 30, 'Front of shins. Helps prevent shin splints.', ['bodyweight'],['ankle'], 'low', { prescriptionType: 'reps' }),
+  ex('banded-tke',        'Banded TKE',             2, 15, 20, 30, 'Band behind the knee. Straighten and squeeze the quad.', ['bands'], ['knee'], 'low', { prescriptionType: 'reps' }),
+  ex('bosch-hold',        'Bosch Hold',             2, 20, 30, 30, 'Drive the heel down, hips high. Single or double leg.', ['bodyweight'], ['hamstring', 'knee'], 'low', { prescriptionType: 'duration', perSide: true }),
+  ex('spanish-squat',     'Spanish Squat Hold',     2, 20, 30, 30, 'Band behind the knees. Sit back and hold.',   ['bands'], ['knee'], 'low', { prescriptionType: 'duration' }),
+  ex('slant-step-down',   'Slant Board Step-Down',  2, 8,  10, 30, 'Knee tracks over the toes. Tap, don\'t drop.', ['bodyweight'], ['knee'], 'low', { prescriptionType: 'reps', perSide: true }),
+  ex('crab-walks',        'Crab Walks',             2, 10, 12, 30, 'Band around the feet. Push off the outside leg.', ['bands'], ['hip', 'knee'], 'low', { prescriptionType: 'reps', perSide: true }),
 ];
 
 export const TRUNK_ANTI_ROTATION_POOL: PoolExercise[] = [
@@ -197,6 +215,13 @@ export const TRUNK_ANTI_ROTATION_POOL: PoolExercise[] = [
   ex('hanging-leg-raise', 'Hanging Leg Raise',          3, 6,  10, 60, 'Dead hang from bar. No swing.',               ['pullup_bar'],['shoulder'],            'moderate', { prescriptionType: 'reps' }),
   ex('bird-dog',          'Bird Dog',                   2, 8,  10, 30, 'Slow and controlled.',                        ['bodyweight'],['lower_back'],         'low', { prescriptionType: 'reps', perSide: true }),
   ex('side-plank',        'Side Plank',                 2, 30, 45, 30, 'Stack hips. Breathe.',                        ['bodyweight'],['shoulder'],            'low', { prescriptionType: 'duration', perSide: true }),
+  // Sam's locked-list additions (2026-07-24) — the anti-extension block the
+  // Bible names alongside Dead Bug, plus the loaded side-plank variant.
+  ex('plank',             'Plank',                      2, 30, 45, 30, 'Neutral spine, squeeze the glutes, breathe.', ['bodyweight'],['shoulder'],            'low', { prescriptionType: 'duration' }),
+  ex('hollow-hold',       'Hollow Hold',                2, 20, 30, 30, 'Low back pinned to the floor. Stay tight.',   ['bodyweight'],['lower_back'],          'low', { prescriptionType: 'duration' }),
+  ex('stir-the-pot',      'Stir the Pot',               2, 8,  10, 30, 'Forearms on the ball. Resist the rotation.',  ['bodyweight'],['lower_back', 'shoulder'], 'low', { prescriptionType: 'reps', perSide: true }),
+  ex('dragon-flag',       'Dragon Flag',                2, 4,  6,  60, 'Control the way down. Roll through the back.', ['bodyweight'],['lower_back', 'shoulder'], 'moderate', { prescriptionType: 'reps' }),
+  ex('side-plank-row',    'Side Plank Row',             2, 8,  10, 30, 'Row the band in, resist rolling forward.',    ['bands'],     ['shoulder'],            'low', { prescriptionType: 'reps', perSide: true }),
   ex('woodchop-standing', 'Woodchop (Standing)',        2, 10, 12, 45, 'Cable or band, high to low. Rotate from torso.', ['cables', 'bands'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('woodchop-hk',       'Woodchop (Half Kneeling)',   2, 10, 12, 45, 'Half-kneeling. Controlled rotation. Light weight.', ['cables', 'bands'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
   ex('suitcase-carry',    'Suitcase Carry',             2, 30, 40, 45, 'Stay tall, don\'t lean.',                     ['dumbbells'], ['lower_back', 'wrist'],'low', { prescriptionType: 'distance', perSide: true }),
@@ -240,6 +265,10 @@ export const MOBILITY_POOL: PoolExercise[] = [
   ex('dead-hang',         'Dead Hang',                    2, 20, 30, 30, 'Passive hang from a bar. Decompresses spine and shoulders.', ['pullup_bar'], ['shoulder', 'elbow'], 'low', { prescriptionType: 'duration' }),
   ex('toe-stretch',       'Toe Stretch',                  2, 30, 45, 15, 'Toes tucked, sit back onto heels. Builds foot resilience.', ['bodyweight'], ['ankle'], 'low', { prescriptionType: 'duration' }),
   ex('calf-stretch',      'Calf Stretch',                 2, 30, 45, 15, 'Wall or step. Straight-leg then bent-knee variation.', ['bodyweight'], ['ankle', 'calf'], 'low', { prescriptionType: 'duration', perSide: true }),
+  // Sam's locked-list additions (2026-07-24).
+  ex('ql-back-extension', 'QL Back Extension',            2, 8,  10, 15, 'Pinned in a 45° hyper. Bend sideways slowly.', ['bodyweight'], ['lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
+  ex('atg-split-squat',   'ATG Split Squat',              2, 6,  8,  30, 'Front foot elevated. Slow, pause at the bottom.', ['bodyweight'], ['knee', 'hip'], 'low', { prescriptionType: 'reps', perSide: true }),
+  ex('elephant-walks',    'Elephant Walks',               2, 8,  10, 15, 'Fold forward over blocks. Alternate legs slowly.', ['bodyweight'], ['hamstring', 'lower_back'], 'low', { prescriptionType: 'reps', perSide: true }),
 ];
 
 /**

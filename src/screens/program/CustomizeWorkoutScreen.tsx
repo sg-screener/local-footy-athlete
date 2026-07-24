@@ -85,7 +85,8 @@ const MOCK_WORKOUT = {
 const REPLACEMENT_OPTIONS: Record<string, { id: string; name: string }[]> = {
   'Bench Press': [
     { id: 'ex-11', name: 'Dumbbell Bench Press' },
-    { id: 'ex-12', name: 'Machine Chest Press' },
+    // Machine Chest Press retired by Sam's locked-list changeset (2026-07-24).
+    { id: 'ex-12', name: 'Incline DB Bench' },
     { id: 'ex-13', name: 'Push-ups' },
   ],
   'Barbell Row': [
