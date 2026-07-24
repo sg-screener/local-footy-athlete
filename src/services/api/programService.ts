@@ -386,8 +386,9 @@ function transformMicrocycleData(data: any): Microcycle {
     weekNumber: data.week_number,
     startDate: data.start_date,
     endDate: data.end_date,
-    deloadWeek: data.deload_week,
     intensityMultiplier: data.intensity_multiplier,
+    // `deload_week` is a boolean column; Microcycle models it as weekKind.
+    weekKind: data.deload_week ? 'deload' : 'build',
     workouts: (data.workouts || []).map(transformWorkoutData),
     createdAt: data.created_at,
     updatedAt: data.updated_at,

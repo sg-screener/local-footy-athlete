@@ -5,6 +5,39 @@ Status: **DESIGN APPROVED — builds PRE-LAUNCH (Master Plan Phase 5C, Sam
 decisions below were made by Sam in design review and should not be
 re-litigated at build time.
 
+## Inherited defect the 5C build must settle first (added 2026-07-24)
+
+The typecheck-gate unit found that in-session logging does not type-check
+against its own domain model, and the logging screens are **not mounted**.
+
+`LoggedSet` (`src/types/domain.ts`) declares `actualReps`, `actualWeightKg`,
+`notes` — **no `actualRpe`, no `completed`**. The logging code reads and writes
+both throughout (`workoutService.ts:307,401`; `SetLoggerRow.tsx:68,78,83`), and
+`WorkoutLoggerScreen.tsx:84` / `useWorkoutLog.ts:38` pass a `LoggedWorkout`
+where a `Workout` is expected. 15 errors across `WorkoutLoggerScreen`(4),
+`SetLoggerRow`(4), `workoutService`(4), `calculations`(2), `useWorkoutLog`(1).
+
+The triage asked whether this was "live and silently writing to fields that
+don't persist, or broken since the type was narrowed". **It is neither, and
+that is the useful answer:** `AppNavigator` mounts only Home, DayWorkout,
+Coach, Profile, FAQ, Privacy and Terms. `WorkoutLoggerScreen`, `SetLoggerRow`
+and the whole `src/screens/journal/` tree are reachable only through barrel
+files nothing imports — 109 product files are unreachable from `App.tsx` in
+total. No athlete can currently reach this flow, so nothing is silently
+corrupting data today.
+
+What that means for 5C: **do not treat these screens as a working baseline to
+extend.** Decide deliberately whether `actualRpe` and `completed` belong on
+`LoggedSet` (they are exactly the fields a journal wants), then fix the type
+and the implementation together — rather than inheriting a screen that has
+never run. The errors are baseline-suppressed in
+`scripts/typecheck-baseline.json` naming this document as the owner, so they
+cannot be silently papered over before 5C starts.
+
+Secondary hazard for the same build: `src/types/domain.d.ts` and
+`src/types/domain.ts` both declare `Workout`/`LoggedWorkout`/`LoggedSet`. They
+agree today; a hand-maintained `.d.ts` beside the real source is standing drift.
+
 Structural clarification (Sam, 2026-07-23): the **Journal TAB** is the
 permanent home and ships in the launch build; the **Monday card is a
 pop-up** (local notification → card) whose results persist into the tab.

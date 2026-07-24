@@ -1,5 +1,7 @@
 import { supabase, handleSupabaseError } from './supabaseClient';
-import { CoachConversation, CoachMessage, StreamCoachMessageChunk } from '../../types/domain';
+import { CoachConversation, CoachMessage } from '../../types/domain';
+// StreamCoachMessageChunk is declared in types/api, not types/domain.
+import type { StreamCoachMessageChunk } from '../../types/api';
 import {
   ApiResponse,
   StreamCoachMessageRequest,

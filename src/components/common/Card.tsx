@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   View,
+  StyleProp,
   ViewStyle,
   StyleSheet,
   Pressable,
@@ -13,7 +14,8 @@ export type CardVariant = 'default' | 'elevated' | 'outlined';
 
 interface CardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  /** React Native accepts style arrays and falsy entries; the prop type must too. */
+  style?: StyleProp<ViewStyle>;
   variant?: CardVariant;
   onPress?: (event: GestureResponderEvent) => void;
 }
