@@ -13,6 +13,7 @@ import {
   type GuidedInjuryRegion,
 } from '../../utils/guidedInjuryControl';
 import { explorerTestId } from '../../utils/stableTestId';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 
 const INJURY_AREA_TEST_IDS: Record<string, string> = {
   Neck: 'neck',
@@ -188,7 +189,7 @@ export function GuidedInjuryFlowSheet({
       return (
         <>
           <Text style={styles.title}>What area is it?</Text>
-          <TextInput
+          <AppTextInput
             value={customArea}
             onChangeText={setCustomArea}
             placeholder="e.g. calf, wrist, elbow"

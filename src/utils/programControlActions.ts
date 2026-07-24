@@ -15,6 +15,7 @@ import {
   type PlanChangeBinScopeId,
   type PlanChangeCategoryId,
 } from './planChangeProducer';
+import { athleteSafeRefusal } from './planChangeRefusalCopy';
 import { buildCoachNotesFromModifiers, clearActiveCoachNote } from './activeCoachNotes';
 import { getActiveProgramModifiers } from './activeProgramModifiers';
 import {
@@ -1392,9 +1393,10 @@ async function executeProgramControlActionDurablyWithinTrace(
     ok: false,
     changedProgram: false,
     requiresRebuild: false,
-    message: 'reason' in transaction
-      ? transaction.reason
-      : 'The accepted session change could not be persisted.',
+    // The transaction's `reason` is an internal diagnostic (executor/candidate/
+    // accepted-state route codes). Never render it raw — the athlete-facing
+    // copy owner turns any raw reason into one honest sentence.
+    message: athleteSafeRefusal('reason' in transaction ? transaction.reason : null),
     fallbackToCoach: false,
     route: routeProgramControlAction(action).route,
   };

@@ -8,11 +8,21 @@
  * Fallback: if an exercise has no entry, the system uses the MovementPattern
  * from exerciseTags.ts to select a family-level cue pair.
  *
+ * PROVENANCE: Authored by Sam, 2026-07-23. Additions require Sam sign-off.
+ * COPYEDIT: Sam-authorised mechanical punctuation pass (2026-07-24) — terminal
+ * stops + a stray trailing comma fixed on 43 cues, zero word changes. Applied
+ * identically to the changeset doc so doc↔code equality holds.
+ *
+ * EXERCISE_CUES is generated from Sam's authored sheet
+ * (docs/CUE_CHANGESET_2026-07-23.md, "Final cue library"). It is not edited by
+ * hand: `src/__tests__/authoredCueLibraryTests.ts` parses that document and
+ * fails the build on any divergence, so a reworded cue cannot ship.
+ *
  * ADDING CUES:
- *   Append to EXERCISE_CUES. Follow the rules in FAMILY_RULES.
- *   primaryCue = mechanics, position, range, bracing.
+ *   Add to the changeset document first, with Sam's sign-off, then mirror it
+ *   here. primaryCue = mechanics, position, range, bracing.
  *   secondaryCue = intent, control, tempo, tension.
- *   3–8 words ideal, 12 words hard cap. No full sentences. No fluff.
+ *   3–8 words ideal, 18 words hard cap. No fluff.
  */
 
 import type { MovementPattern } from './exerciseTags';
@@ -127,619 +137,70 @@ export function getExerciseCue(
 // ─── Part 3: Exercise Cue Library ───
 
 export const EXERCISE_CUES: Record<string, ExerciseCue> = {
-
-  // ═══════════════════════════════════════════════════
-  // SQUAT
-  // ═══════════════════════════════════════════════════
-
-  'Back Squat': {
-    primaryCue: 'Sit into the hips, chest up.',
-    secondaryCue: 'Own the bottom position.',
-  },
-  'Front Squat': {
-    primaryCue: 'Elbows high, sit between the heels.',
-    secondaryCue: 'Stay tall through the trunk.',
-  },
-  'Goblet Squat': {
-    primaryCue: 'Elbows inside the knees at the bottom.',
-    secondaryCue: 'Smooth tempo, no rushing.',
-  },
-  'Box Squat': {
-    primaryCue: 'Sit back to the box, pause, then drive.',
-    secondaryCue: 'Explode off the box.',
-  },
-  'Leg Press': {
-    primaryCue: 'Full depth without lower back rounding.',
-    secondaryCue: 'Push through the whole foot.',
-  },
-  'Single-Leg Leg Press': {
-    primaryCue: 'Keep the hips square on the pad.',
-    secondaryCue: 'Control on the way down.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // HINGE
-  // ═══════════════════════════════════════════════════
-
-  'Trap Bar Deadlift': {
-    primaryCue: 'Push the floor away.',
-    secondaryCue: 'Hips and shoulders rise together.',
-  },
-  'Deadlift': {
-    primaryCue: 'Wedge into the bar, then push the floor.',
-    secondaryCue: 'Flat back from start to lockout.',
-  },
-  'RDLs': {
-    primaryCue: 'Push hips back, bar stays close.',
-    secondaryCue: 'Feel the hamstrings load on the way down.',
-  },
-  'Single-Leg RDL': {
-    primaryCue: 'Hinge at the hip, soft knee.',
-    secondaryCue: 'Balance and control over speed.',
-  },
-  'Hip Thrusts': {
-    primaryCue: 'Drive through the heels, squeeze at the top.',
-    secondaryCue: 'Ribs down, no overextending.',
-  },
-  'Kettlebell Swings': {
-    primaryCue: 'Snap the hips, arms are just along for the ride.',
-    secondaryCue: 'Power from the hinge, not the arms.',
-  },
-  'Nordic Lower': {
-    primaryCue: 'Lower as slow as you can.',
-    secondaryCue: 'Fight gravity the whole way down.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // LUNGE / SPLIT SQUAT
-  // ═══════════════════════════════════════════════════
-
-  'Bulgarian Split Squats': {
-    primaryCue: 'Front shin stays vertical.',
-    secondaryCue: 'Control the descent, no bouncing.',
-  },
-  'Walking Lunges': {
-    primaryCue: 'Long stride, trunk upright.',
-    secondaryCue: 'Steady and deliberate.',
-  },
-  'Reverse Lunges': {
-    primaryCue: 'Step back, drop straight down.',
-    secondaryCue: 'Front knee tracks over the toe.',
-  },
-  'Step Ups': {
-    primaryCue: 'Drive through the top foot only.',
-    secondaryCue: "Don't push off the back leg.",
-  },
-  'Single-Leg Squat (to Box)': {
-    primaryCue: 'Sit to the box under control.',
-    secondaryCue: 'Keep the knee tracking straight.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // HORIZONTAL PUSH
-  // ═══════════════════════════════════════════════════
-
-  'Bench Press': {
-    primaryCue: 'Shoulder blades pinched, feet planted.',
-    secondaryCue: 'Bar to chest, press hard to lockout.',
-  },
-  'DB Bench Press': {
-    primaryCue: 'Shoulder blades set on the bench.',
-    secondaryCue: 'Control the dumbbells down and drive.',
-  },
-  'Incline Bench': {
-    primaryCue: 'Set the blades on the incline.',
-    secondaryCue: 'Press through the palms.',
-  },
-  'Incline DB Bench': {
-    primaryCue: 'Elbows at 45 degrees, full stretch at the bottom.',
-    secondaryCue: 'Drive up and together.',
-  },
-  'Close Grip Bench': {
-    primaryCue: 'Hands inside shoulder width, elbows tight.',
-    secondaryCue: 'Triceps do the work.',
-  },
-  'Push-ups': {
-    primaryCue: 'Body in a straight line, elbows at 45.',
-    secondaryCue: 'Chest to floor, full lockout.',
-  },
-  'Dips': {
-    primaryCue: 'Lean slightly forward, elbows back.',
-    secondaryCue: 'Control the descent.',
-  },
-  'Single-Arm DB Floor Press': {
-    primaryCue: 'Brace the trunk, press from the floor.',
-    secondaryCue: "Don't let the torso rotate.",
-  },
-  'Single-Arm DB Bench Press': {
-    primaryCue: 'Fight the rotation, press even.',
-    secondaryCue: 'Brace hard through the trunk.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // VERTICAL PUSH
-  // ═══════════════════════════════════════════════════
-
-  'Overhead Press': {
-    primaryCue: 'Ribs down, bar finishes over the ears.',
-    secondaryCue: 'Press hard and finish strong.',
-  },
-  'DB Shoulder Press': {
-    primaryCue: 'Start at the shoulders, press to lockout.',
-    secondaryCue: 'No arching through the lower back.',
-  },
-  'Landmine Press': {
-    primaryCue: 'Press at an angle, follow the arc.',
-    secondaryCue: 'Stable base, strong finish.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // HORIZONTAL PULL
-  // ═══════════════════════════════════════════════════
-
-  'Barbell Row': {
-    primaryCue: 'Hinge forward, pull to the belly.',
-    secondaryCue: 'Squeeze the shoulder blades at the top.',
-  },
-  'Chest Supported Row': {
-    primaryCue: 'Chest on the pad, pull straight back.',
-    secondaryCue: 'Retract and hold for a beat.',
-  },
-  'Seated Cable Row': {
-    primaryCue: 'Sit tall, pull to the sternum.',
-    secondaryCue: 'Slow on the return.',
-  },
-  'Single-Arm DB Row': {
-    primaryCue: 'Elbow drives past the torso.',
-    secondaryCue: 'Keep the hips and shoulders square.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // VERTICAL PULL
-  // ═══════════════════════════════════════════════════
-
-  'Pull-Ups': {
-    primaryCue: 'Dead hang to chin over bar.',
-    secondaryCue: 'Initiate with the lats, not the arms.',
-  },
-  'Chin-Ups': {
-    primaryCue: 'Palms facing you, full range.',
-    secondaryCue: 'Control the lowering.',
-  },
-  'Lat Pulldown': {
-    primaryCue: 'Pull to the collarbone, lean slightly back.',
-    secondaryCue: 'Squeeze at the bottom, slow return.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // CARRY
-  // ═══════════════════════════════════════════════════
-
-  'Farmer Carry': {
-    primaryCue: 'Shoulders packed, walk tall.',
-    secondaryCue: 'Breathe and keep moving.',
-  },
-  'Suitcase Carry': {
-    primaryCue: "Stay tall - don't lean into the weight.",
-    secondaryCue: 'Resist the side bend.',
-  },
-  'Bear Carry': {
-    primaryCue: 'Hug the load tight, ribs down.',
-    secondaryCue: 'Short steady steps, no leaning back.',
-  },
-  'Bottoms-Up KB Carry': {
-    primaryCue: 'Bell vertical, wrist stacked over elbow.',
-    secondaryCue: 'Walk slowly, keep the shoulder packed.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // TRUNK / CORE
-  // ═══════════════════════════════════════════════════
-
-  'Dead Bug': {
-    primaryCue: 'Lower back stays flat on the floor.',
-    secondaryCue: 'Opposite arm and leg, slow.',
-  },
-  'Bird Dog': {
-    primaryCue: 'Extend arm and opposite leg, no shift.',
-    secondaryCue: 'Slow and controlled.',
-  },
-  'Side Plank': {
-    primaryCue: 'Stack the hips, straight line from head to feet.',
-    secondaryCue: 'Breathe behind the brace.',
-  },
-  'Woodchop (Half Kneeling)': {
-    primaryCue: 'Drive with the trunk, arms guide.',
-    secondaryCue: 'Controlled rotation, not a throw.',
-  },
-  'Woodchop (Standing)': {
-    primaryCue: 'Rotate through the torso, not the arms.',
-    secondaryCue: 'Feet stay planted.',
-  },
-  'Ab Wheel': {
-    primaryCue: 'Roll out only as far as you can control.',
-    secondaryCue: 'Ribs down, no sagging.',
-  },
-  'Hanging Leg Raise': {
-    primaryCue: 'Curl the pelvis, not just the legs.',
-    secondaryCue: 'No swinging.',
-  },
-  'Banded Dead Bug': {
-    primaryCue: 'Drive feet into the band, ribs down.',
-    secondaryCue: 'Lower back stays glued to the floor.',
-  },
-  'Weighted Dead Bug': {
-    primaryCue: 'Dumbbells locked overhead, ribs stitched down.',
-    secondaryCue: 'Slow extension, full exhale.',
-  },
-  'McGill Sit Up': {
-    primaryCue: 'Hands under the lower back, lift the shoulder blades only.',
-    secondaryCue: 'No spinal flexion - short, controlled lift.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // GROIN / ADDUCTOR
-  // ═══════════════════════════════════════════════════
-
-  'Copenhagen Plank': {
-    primaryCue: 'Top leg on the bench, drive through the inner thigh.',
-    secondaryCue: 'Hold tension, no dropping.',
-  },
-  'Short-Lever Copenhagen': {
-    primaryCue: 'Top knee supported, hips stacked.',
-    secondaryCue: 'Controlled hold, no groin pinch.',
-  },
-  'Long-Lever Copenhagen': {
-    primaryCue: 'Top ankle supported, hips high.',
-    secondaryCue: 'Short controlled holds only.',
-  },
-  'Groin Squeeze (Band Adductor)': {
-    primaryCue: 'Squeeze the band between the knees.',
-    secondaryCue: 'Hold each squeeze for a beat.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // CALF
-  // ═══════════════════════════════════════════════════
-
-  'Single-Leg Calf Raise': {
-    primaryCue: 'Full drop at the bottom, pause, then rise.',
-    secondaryCue: 'Three-second lowering.',
-  },
-  'Calf Raises': {
-    primaryCue: 'Full heel drop, rise onto the big toe.',
-    secondaryCue: 'Pause high, lower slowly.',
-  },
-  'Seated Calf Raise': {
-    primaryCue: 'Bent knee, full range top to bottom.',
-    secondaryCue: 'Slow tempo, no bouncing.',
-  },
-  'Tib Raise': {
-    primaryCue: 'Pull the toes up against the resistance.',
-    secondaryCue: 'Controlled reps, full range.',
-  },
-  'Tibialis Raise': {
-    primaryCue: 'Pull the toes up against the resistance.',
-    secondaryCue: 'Controlled reps, full range.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // HAMSTRING (LIGHT / PREHAB)
-  // ═══════════════════════════════════════════════════
-
-  // ═══════════════════════════════════════════════════
-  // SHOULDER HEALTH
-  // ═══════════════════════════════════════════════════
-
-  'Banded External Rotation': {
-    primaryCue: 'Elbow at 90 degrees, rotate against the band.',
-    secondaryCue: 'Slow and controlled arc.',
-  },
-  'Scap Push-Up': {
-    primaryCue: 'Keep elbows locked, glide shoulder blades.',
-    secondaryCue: 'Move slowly, no sagging hips.',
-  },
-  'Bottoms-Up KB Press': {
-    primaryCue: 'Bell vertical, wrist stacked.',
-    secondaryCue: 'Press smooth, keep ribs down.',
-  },
-  // ═══════════════════════════════════════════════════
-  // PLYO / JUMP
-  // ═══════════════════════════════════════════════════
-
-  'Box Jumps': {
-    primaryCue: 'Jump up, step down.',
-    secondaryCue: 'Land soft, absorb with the hips.',
-  },
-  'Broad Jumps': {
-    primaryCue: 'Drive forward, land balanced.',
-    secondaryCue: 'Stick the landing.',
-  },
-  'Lateral Bounds': {
-    primaryCue: 'Push off hard, land and hold.',
-    secondaryCue: 'Stick each landing before the next.',
-  },
-  'Depth Jumps': {
-    primaryCue: 'Step off, hit the ground, explode.',
-    secondaryCue: 'Minimum ground contact time.',
-  },
-  'Jump Squats': {
-    primaryCue: 'Quarter squat, jump with intent.',
-    secondaryCue: 'Land soft, reset between reps.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // ARMS / PUMP
-  // ═══════════════════════════════════════════════════
-
-  'Hammer Curl': {
-    primaryCue: 'Neutral grip, no swinging.',
-    secondaryCue: 'Control both directions.',
-  },
-  'Incline Dumbbell Curl': {
-    primaryCue: 'Let the arm stretch at the bottom.',
-    secondaryCue: 'Slow curl, squeeze at the top.',
-  },
-  'Overhead Tricep Extension': {
-    primaryCue: 'Full stretch at the bottom, press to lockout.',
-    secondaryCue: 'Elbows stay pointed forward.',
-  },
-  'Cable Face Pull': {
-    primaryCue: 'Pull to the forehead, open the hands out.',
-    secondaryCue: 'Squeeze the rear delts.',
-  },
-  'Rear Delt Fly': {
-    primaryCue: 'Bent over, pinch the shoulder blades.',
-    secondaryCue: 'Light weight, feel the squeeze.',
-  },
-  'Chest-Supported DB Row': {
-    primaryCue: 'Chest on the pad, pull to the hips.',
-    secondaryCue: 'Squeeze the shoulder blades back.',
-  },
-  'Inverted Row (Bodyweight)': {
-    primaryCue: 'Straight body, pull chest to bar.',
-    secondaryCue: 'Scale with foot position.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // CONDITIONING
-  // ═══════════════════════════════════════════════════
-
-  'Sprint Intervals': {
-    primaryCue: 'Drive through the ground, arms straight.',
-    secondaryCue: 'Full recovery between efforts.',
-  },
-  'Tempo Run': {
-    primaryCue: 'Hold the pace, settle into the rhythm.',
-    secondaryCue: 'Controlled breathing throughout.',
-  },
-  'Flog Friday': {
-    primaryCue: 'Match the effort to each station.',
-    secondaryCue: 'Empty the tank.',
-  },
-  'Hill Sprints': {
-    primaryCue: 'Drive the knees, lean into the hill.',
-    secondaryCue: 'Walk back for full recovery.',
-  },
-  'Easy Bike': {
-    primaryCue: 'Conversational pace, legs turning over.',
-    secondaryCue: 'This is recovery, not training.',
-  },
-  'Flush Run': {
-    primaryCue: 'Easy jog, nothing above zone one.',
-    secondaryCue: 'Move and loosen up.',
-  },
-  'MetCon': {
-    primaryCue: 'Pace across stations, don\'t redline early.',
-    secondaryCue: 'Sustain output, finish strong.',
-  },
-  'Quality Sprints': {
-    primaryCue: 'Max intent every rep, full recovery between.',
-    secondaryCue: 'If speed drops, the set is done.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // POOL: BREATHING & RESET
-  // ═══════════════════════════════════════════════════
-
   '90/90 Breathing': {
     primaryCue: 'Knees and hips at 90, exhale fully.',
     secondaryCue: 'Pause at the bottom of each breath.',
   },
-  'Box Breathing': {
-    primaryCue: 'Four counts in, hold, out, hold.',
-    secondaryCue: 'Stay relaxed, find the rhythm.',
+  'Ab Wheel': {
+    primaryCue: 'Roll out only as far as you can control.',
+    secondaryCue: 'Ribs down, slightly rounded back, no sagging at hips.',
   },
-  'Crocodile Breathing': {
-    primaryCue: 'Face down, breathe into the belly.',
-    secondaryCue: 'Feel the floor push back on the exhale.',
+  'Abductor Machine': {
+    primaryCue: 'Push the knees apart against the pads.',
+    secondaryCue: '',
   },
-
-  // ═══════════════════════════════════════════════════
-  // POOL: MOBILITY
-  // ═══════════════════════════════════════════════════
-
+  'Adductor Machine': {
+    primaryCue: 'Squeeze knees together.',
+    secondaryCue: '',
+  },
   'Adductor Rockback': {
-    primaryCue: 'Wide knees, rock hips back to the heels.',
+    primaryCue: 'Wide knees, one leg out straight to side, rock hips back to the heels.',
     secondaryCue: 'Hold the end range, breathe.',
   },
-  'Cat-Cow': {
-    primaryCue: 'Round fully, then extend fully.',
-    secondaryCue: 'Match each position to a breath.',
+  'Air Bike Sprints': {
+    primaryCue: 'Explosive effort.',
+    secondaryCue: 'Recover fully between sprints.',
   },
-  'Couch Stretch': {
-    primaryCue: 'Back knee to the wall, squeeze the glute.',
-    secondaryCue: 'Tall trunk, no arching.',
+  'Back Squat': {
+    primaryCue: 'Sit into the hips, chest up.',
+    secondaryCue: 'Own the bottom position.',
   },
-  'Lat Stretch': {
-    primaryCue: 'Hold a rack or doorframe, hips back.',
-    secondaryCue: 'Sink the chest, breathe under the armpit.',
-  },
-  'Dead Hang': {
-    primaryCue: 'Passive hang, shoulders open and relaxed.',
-    secondaryCue: 'Breathe - let the spine decompress.',
-  },
-  'Toe Stretch': {
-    primaryCue: 'Tuck toes under, sit back into the heels.',
-    secondaryCue: 'Build tolerance gradually.',
-  },
-  'Calf Stretch': {
-    primaryCue: 'Heel down, drive knee toward the wall.',
-    secondaryCue: 'Switch to bent-knee for the soleus.',
-  },
-  'Chest / Pec Stretch (Doorway)': {
-    primaryCue: 'Forearm on the doorframe, step the foot through.',
-    secondaryCue: 'Big stretch through the chest, breathe slow.',
-  },
-  'Deep Squat Hold': {
-    primaryCue: 'Sit between the heels, chest up.',
-    secondaryCue: 'Breathe and hold position.',
-  },
-  'Hip 90/90 Stretch': {
-    primaryCue: 'Front and back legs at 90 degrees.',
-    secondaryCue: 'Stay tall, shift weight gently.',
-  },
-  'Open Book Thoracic Rotation': {
-    primaryCue: 'Knees stacked, rotate through the upper back.',
-    secondaryCue: 'Follow the hand with the eyes.',
-  },
-  'Pigeon Stretch': {
-    primaryCue: 'Front shin across, square the hips.',
-    secondaryCue: 'Sink in and breathe.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // POOL: TISSUE QUALITY
-  // ═══════════════════════════════════════════════════
-
-  'Foam Roll — Calves & Outer Shins': {
-    primaryCue: 'Slow passes, pause on tender spots.',
-    secondaryCue: 'Breathe through each hold.',
-  },
-  'Foam Roll — Hip Flexor, Quad, Adductors': {
-    primaryCue: 'Work the full length, hold on knots.',
-    secondaryCue: 'Relax into the pressure.',
-  },
-  'Foam Roll — T-Spine': {
-    primaryCue: 'Mid-back over the roller, support the head.',
-    secondaryCue: 'Open the ribs and breathe.',
-  },
-  'Foam Roll — IT Band': {
-    primaryCue: 'Side-lying, slow passes from hip to knee.',
-    secondaryCue: 'Stack the legs to dial pressure.',
-  },
-  'Foam Roll — Lats': {
-    primaryCue: 'Side-lying with arm overhead.',
-    secondaryCue: 'Roll under the armpit, breathe into it.',
-  },
-  'Lacrosse Ball Glute Release': {
-    primaryCue: 'Sit on the ball, shift to find the spot.',
-    secondaryCue: 'Hold 30-60 seconds per side.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // POOL: EASY CARDIO
-  // ═══════════════════════════════════════════════════
-
-  'Incline Treadmill Walk': {
-    primaryCue: 'Moderate incline, steady pace.',
-    secondaryCue: 'No holding the rails.',
-  },
-  'Light Skipping': {
-    primaryCue: 'Soft ground contacts, stay light.',
-    secondaryCue: 'Easy rhythm, not intensity.',
-  },
-  'Light Walk or Stationary Bike': {
-    primaryCue: 'Conversational effort, keep moving.',
-    secondaryCue: 'This is blood flow, not training.',
-  },
-  'Outdoor Walk': {
-    primaryCue: 'Easy pace, arms swinging naturally.',
-    secondaryCue: 'Get outside and move.',
-  },
-
-  // ═══════════════════════════════════════════════════
-  // POOL: ACCESSORIES
-  // ═══════════════════════════════════════════════════
-
   'Band Pallof Press': {
     primaryCue: 'Press out, resist the pull.',
-    secondaryCue: 'Hips stay square.',
-  },
-  'Banded Bicep Curl': {
-    primaryCue: 'Elbows pinned, curl against the band.',
-    secondaryCue: 'Slow on the way down.',
-  },
-  'Banded Tricep Pushdown': {
-    primaryCue: 'Lock the elbows, press to full extension.',
-    secondaryCue: 'Constant tension, no slack.',
-  },
-  'Chin-Up Negative (Slow)': {
-    primaryCue: 'Jump to the top, lower for five seconds.',
-    secondaryCue: 'Fight gravity the whole way.',
-  },
-  'Concentration Curl': {
-    primaryCue: 'Elbow braced on the inner thigh.',
-    secondaryCue: 'Strict curl, no body swing.',
-  },
-  'Dumbbell Kickback': {
-    primaryCue: 'Hinge forward, extend to full lockout.',
-    secondaryCue: 'Squeeze at the top, slow return.',
-  },
-  'Dumbbell Skull Crusher': {
-    primaryCue: 'Lower to the sides of the head, press up.',
-    secondaryCue: 'Elbows stay fixed in place.',
-  },
-  'Seated DB Press': {
-    primaryCue: 'Back flat against the pad, press to lockout.',
-    secondaryCue: 'Ribs down, control the descent.',
-  },
-  'Half-Kneeling Single-Arm Overhead Press': {
-    primaryCue: 'Half-kneel, press straight overhead.',
-    secondaryCue: 'Fight the rotation, ribs stay down.',
-  },
-  'Single-Arm Lat Pulldown': {
-    primaryCue: 'Pull the handle to the shoulder, lead with the lat.',
-    secondaryCue: 'Control the return, full stretch at the top.',
-  },
-  'Swiss Ball Hamstring Curl': {
-    primaryCue: 'Hips up, curl the ball in and out.',
-    secondaryCue: "Don't let the hips drop.",
-  },
-
-  // ═══════════════════════════════════════════════════
-  // CANONICAL SHOULDER / UPPER-BACK / ARM CUES
-  // ═══════════════════════════════════════════════════
-
-  'Lateral Raise': {
-    primaryCue: 'Light weight, lead with the elbows.',
-    secondaryCue: 'No momentum, strict form.',
-  },
-  'Tricep Pushdown': {
-    primaryCue: 'Keep elbows pinned, press to full lockout.',
-    secondaryCue: 'Constant tension, no jerking.',
-  },
-  'Face Pull': {
-    primaryCue: 'Pull to the forehead, open the hands out.',
-    secondaryCue: 'Squeeze the rear delts, slow return.',
+    secondaryCue: 'Hips stay square, slight knee and hip bend.',
   },
   'Band Pull-Apart': {
     primaryCue: 'Squeeze the shoulder blades together.',
     secondaryCue: 'Elbows straight, controlled return.',
   },
-  'Single-Arm Shrug': {
-    primaryCue: 'One side at a time, shoulder straight up.',
-    secondaryCue: 'Pause at the top, controlled lower.',
+  'Banded Bicep Curl': {
+    primaryCue: 'Elbows pinned, curl against the band.',
+    secondaryCue: 'Slow on the way down.',
   },
-  'Tricep Circuit (Dirty 30)': {
-    primaryCue: 'Move through all three positions without rest.',
-    secondaryCue: 'Empty the triceps by the final rep.',
+  'Banded Dead Bug': {
+    primaryCue: 'Band behind head, pull band with straight arms toward knees, ribs down.',
+    secondaryCue: 'Lower back stays glued to the floor.',
   },
-
-  // ═══════════════════════════════════════════════════
-  // HIGH-VALUE FAMILY-FALLBACK UPGRADES
-  // ═══════════════════════════════════════════════════
-
+  'Banded External Rotation': {
+    primaryCue: 'Elbow at 90 degrees, rotate against the band.',
+    secondaryCue: 'Slow and controlled arc.',
+  },
+  'Banded Tricep Pushdown': {
+    primaryCue: 'Lock the elbows, press to full extension.',
+    secondaryCue: 'Constant tension, no slack.',
+  },
+  'Barbell Row': {
+    primaryCue: 'Hinge forward, pull to the belly.',
+    secondaryCue: 'Squeeze the shoulder blades at the top.',
+  },
+  'Bear Carry': {
+    primaryCue: 'Hug the load tight, ribs down.',
+    secondaryCue: 'Short steady steps, no leaning back.',
+  },
+  'Bench Press': {
+    primaryCue: 'Shoulder blades pinched, bend bar like snapping a twig, feet planted.',
+    secondaryCue: 'Bar to chest, press hard to lockout.',
+  },
   'Bicep Curl (Barbell)': {
     primaryCue: 'Elbows glued to the sides, full range.',
     secondaryCue: 'No swinging, control the bar path.',
@@ -748,41 +209,137 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Neutral start, supinate as you curl.',
     secondaryCue: 'Smooth tempo, squeeze at the top.',
   },
-  'Lying Dumbbell Curl': {
-    primaryCue: 'Lie flat, arms stretch at the bottom.',
-    secondaryCue: 'Control both directions, no momentum.',
+  'Bird Dog': {
+    primaryCue: 'Extend arm and opposite leg, no shift, tuck hips under you.',
+    secondaryCue: 'Slow and controlled.',
   },
-  'Skull Crushers': {
+  'Bottoms-Up KB Press': {
+    primaryCue: 'Bell vertical, wrist stacked.',
+    secondaryCue: 'Press smooth, keep ribs down.',
+  },
+  'Box Breathing': {
+    primaryCue: 'Four counts in, hold, out, hold.',
+    secondaryCue: 'Stay relaxed, find the rhythm.',
+  },
+  'Box Jumps': {
+    primaryCue: 'Jump up, step down.',
+    secondaryCue: 'Land soft, absorb with the hips.',
+  },
+  'Box Squat': {
+    primaryCue: 'Sit back to the box, pause, then drive.',
+    secondaryCue: 'Explode off the box.',
+  },
+  'Broad Jumps': {
+    primaryCue: 'Drive forward, land balanced.',
+    secondaryCue: 'Stick the landing.',
+  },
+  'Bulgarian Split Squats': {
+    primaryCue: 'Slight lean forward.',
+    secondaryCue: 'Control the descent, no bouncing.',
+  },
+  'Cable Face Pull': {
+    primaryCue: 'Pull to the forehead, open the hands out.',
+    secondaryCue: 'Squeeze the rear delts.',
+  },
+  'Calf Raises': {
+    primaryCue: 'Elevate balls of feet on step, full heel drop, rise onto the big toe.',
+    secondaryCue: 'Pause high, lower slowly.',
+  },
+  'Calf Stretch': {
+    primaryCue: 'Heel down, drive knee toward the wall.',
+    secondaryCue: 'Switch to bent-knee for the soleus.',
+  },
+  'Cat-Cow': {
+    primaryCue: 'Round fully, then extend fully.',
+    secondaryCue: 'Match each position to a breath.',
+  },
+  'Chest / Pec Stretch (Doorway)': {
+    primaryCue: 'Forearm on the doorframe, step the foot through.',
+    secondaryCue: 'Big stretch through the chest, breathe slow.',
+  },
+  'Chest Supported Row': {
+    primaryCue: 'Chest on the pad, pull straight back.',
+    secondaryCue: 'Retract and hold for a beat.',
+  },
+  'Chest-Supported DB Row': {
+    primaryCue: 'Chest on the pad, pull to the hips, can do on incline bench.',
+    secondaryCue: 'Squeeze the shoulder blades back.',
+  },
+  'Child\'s Pose with Breathing': {
+    primaryCue: 'Sink back onto the heels, arms long.',
+    secondaryCue: 'Slow breaths into the back.',
+  },
+  'Chin-Up Negative (Slow)': {
+    primaryCue: 'Jump to the top, lower slowly, can pull yourself up if you can.',
+    secondaryCue: 'Fight gravity the whole way.',
+  },
+  'Chin-Ups': {
+    primaryCue: 'Palms facing you, full range.',
+    secondaryCue: 'Control the lowering.',
+  },
+  'Close Grip Bench': {
+    primaryCue: 'Hands at or inside shoulder width, elbows tight.',
+    secondaryCue: 'Triceps do the work.',
+  },
+  'Concentration Curl': {
+    primaryCue: 'Elbow braced on the inner thigh.',
+    secondaryCue: 'Strict curl, no body swing.',
+  },
+  'Copenhagen Plank (Half)': {
+    primaryCue: 'Top leg on the bench, drive through the inner thigh.',
+    secondaryCue: 'Hold tension, no dropping.',
+  },
+  'Couch Stretch': {
+    primaryCue: 'Back knee to the wall, squeeze the glute.',
+    secondaryCue: 'Tall trunk, no arching.',
+  },
+  'Crocodile Breathing': {
+    primaryCue: 'Face down, breathe into the belly.',
+    secondaryCue: 'Feel the floor push back on the exhale.',
+  },
+  'DB Bench Press': {
+    primaryCue: 'Shoulder blades set on the bench.',
+    secondaryCue: 'Control the dumbbells down and drive.',
+  },
+  'DB Shoulder Press': {
+    primaryCue: 'Start at the shoulders, press to lockout.',
+    secondaryCue: 'No arching through the lower back.',
+  },
+  'Dead Bug': {
+    primaryCue: 'Lower back stays flat on the floor.',
+    secondaryCue: 'Opposite arm and leg, slow.',
+  },
+  'Dead Hang': {
+    primaryCue: 'Passive hang, shoulders open and relaxed.',
+    secondaryCue: 'Breathe - let the spine decompress.',
+  },
+  'Deadlift': {
+    primaryCue: 'Keep bar close, get tight through the lats.',
+    secondaryCue: 'Flat back from start to lockout.',
+  },
+  'Deep Squat Hold': {
+    primaryCue: 'Sit between the heels, chest up.',
+    secondaryCue: 'Breathe and hold position.',
+  },
+  'Depth Jumps': {
+    primaryCue: 'Step off, explode off the ground.',
+    secondaryCue: 'Minimum ground contact time.',
+  },
+  'Dips': {
+    primaryCue: 'Lean slightly forward, elbows back.',
+    secondaryCue: 'Control the descent.',
+  },
+  'Dumbbell Kickback': {
+    primaryCue: 'One knee on bench, one hand on bench, extend to full lockout.',
+    secondaryCue: 'Squeeze at the top, slow return.',
+  },
+  'Dumbbell Skull Crusher': {
     primaryCue: 'Lower to the sides of the head, press up.',
-    secondaryCue: 'Full range, elbows stay in place.',
+    secondaryCue: 'Elbows stay fixed in place.',
   },
-  'Shrugs': {
-    primaryCue: 'Shoulders straight up, no roll.',
-    secondaryCue: 'Squeeze at the top, controlled lower.',
-  },
-  'Clap Push-Ups': {
-    primaryCue: 'Explosive ascent, catch the clap.',
-    secondaryCue: 'Land soft, reset between reps.',
-  },
-  'Speed Bench': {
-    primaryCue: 'Light load, explosive intent, pause at chest.',
-    secondaryCue: 'Drive hard, fast lockout.',
-  },
-  'Incline Y Raise': {
-    primaryCue: 'Chest on the incline, arms to a Y.',
-    secondaryCue: 'Light weight, pause at the top.',
-  },
-  'Explosive Landmine Press': {
-    primaryCue: 'Fast setup, drive hard into the bar.',
-    secondaryCue: 'Full lockout, reset quickly.',
-  },
-  'Bike Sprints': {
-    primaryCue: 'Steady cadence, explosive effort.',
-    secondaryCue: 'Recover fully between sprints.',
-  },
-  'Row Intervals': {
-    primaryCue: 'Full catch, explosive drive.',
-    secondaryCue: 'Maintain power, recover completely.',
+  'Easy Bike': {
+    primaryCue: 'Conversational pace, legs turning over.',
+    secondaryCue: 'This is recovery, not training.',
   },
   'Easy Row': {
     primaryCue: 'Controlled rhythm, long strokes.',
@@ -792,12 +349,369 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Smooth technique, conversational pace.',
     secondaryCue: 'Focus on form, not intensity.',
   },
-  'Long Run': {
-    primaryCue: 'Steady aerobic pace, find your rhythm.',
-    secondaryCue: 'Settle in, breathe steadily.',
+  'Explosive Landmine Press': {
+    primaryCue: 'Split stance, drive hard into the bar.',
+    secondaryCue: 'Full lockout, reset quickly.',
+  },
+  'Face Pull': {
+    primaryCue: 'Pull to the forehead, open the hands out.',
+    secondaryCue: 'Squeeze the rear delts, slow return.',
+  },
+  'Farmer Carry': {
+    primaryCue: 'Shoulders packed, walk tall.',
+    secondaryCue: 'Breathe and keep moving. Weight shown is per hand.',
+  },
+  'Flush Run': {
+    primaryCue: 'Easy jog, nothing above zone one or two.',
+    secondaryCue: 'Move and loosen up.',
+  },
+  'Foam Roll — Calves & Outer Shins': {
+    primaryCue: 'Slow passes, pause on tender spots.',
+    secondaryCue: 'Breathe through each hold.',
+  },
+  'Foam Roll — Hip Flexor, Quad, Adductors': {
+    primaryCue: 'Work the full length, hold on knots.',
+    secondaryCue: 'Relax into the pressure.',
+  },
+  'Foam Roll — IT Band': {
+    primaryCue: 'Side-lying, slow passes from hip to knee.',
+    secondaryCue: 'Stack the legs to dial pressure.',
+  },
+  'Foam Roll — Lats': {
+    primaryCue: 'Side-lying with arm overhead.',
+    secondaryCue: 'Roll under the armpit, breathe into it.',
+  },
+  'Foam Roll — T-Spine': {
+    primaryCue: 'Mid-back over the roller, support the head.',
+    secondaryCue: 'Open the ribs and breathe.',
+  },
+  'Front Squat': {
+    primaryCue: 'Elbows high, sit between the heels.',
+    secondaryCue: 'Stay tall through the trunk.',
+  },
+  'Goblet Squat': {
+    primaryCue: 'Elbows inside the knees at the bottom.',
+    secondaryCue: 'Smooth tempo, no rushing.',
+  },
+  'Groin Squeeze': {
+    primaryCue: 'Squeeze the ball between the knees — or your fists if no ball.',
+    secondaryCue: 'Hold each squeeze for a beat.',
+  },
+  'Half-Kneeling Single-Arm Overhead Press': {
+    primaryCue: 'Half-kneel, press straight overhead, knee on ground = arm overhead.',
+    secondaryCue: 'Fight the rotation, ribs stay down.',
+  },
+  'Hammer Curl': {
+    primaryCue: 'Neutral grip, no swinging.',
+    secondaryCue: 'Control both directions.',
+  },
+  'Hamstring Curl': {
+    primaryCue: 'Curl the heels toward your butt.',
+    secondaryCue: 'Control the return, no slamming.',
+  },
+  'Hanging Leg Raise': {
+    primaryCue: 'Stay tight through midline, breath.',
+    secondaryCue: 'No swinging.',
+  },
+  'Hill Sprints': {
+    primaryCue: 'Drive the knees, lean into the hill.',
+    secondaryCue: 'Walk back for full recovery.',
+  },
+  'Hip 90/90 Stretch': {
+    primaryCue: 'Front and back legs at 90 degrees.',
+    secondaryCue: 'Stay tall, shift weight gently.',
+  },
+  'Hip Thrusts': {
+    primaryCue: 'Drive through the heels, squeeze at the top.',
+    secondaryCue: 'Ribs down, no overextending.',
+  },
+  'Incline Bench': {
+    primaryCue: 'Set the blades on the incline.',
+    secondaryCue: 'Press through the palms.',
+  },
+  'Incline DB Bench': {
+    primaryCue: 'Elbows at 45 degrees, full stretch at the bottom.',
+    secondaryCue: 'Drive up and together.',
+  },
+  'Incline Dumbbell Curl': {
+    primaryCue: 'Let the arm stretch at the bottom.',
+    secondaryCue: 'Slow curl, squeeze at the top.',
+  },
+  'Incline Treadmill Walk': {
+    primaryCue: 'Moderate incline, steady pace.',
+    secondaryCue: 'No holding the rails.',
+  },
+  'Incline Y Raise': {
+    primaryCue: 'Chest on the incline, arms to a Y.',
+    secondaryCue: 'Light weight, pause at the top.',
+  },
+  'Inverted Row (Bodyweight)': {
+    primaryCue: 'Straight body, pull chest to bar.',
+    secondaryCue: 'Scale with foot position.',
+  },
+  'Jump Squats': {
+    primaryCue: 'Quarter squat, jump with intent.',
+    secondaryCue: 'Land soft, reset between reps.',
+  },
+  'Kettlebell Swings': {
+    primaryCue: 'Snap the hips, KB should come back down fast.',
+    secondaryCue: 'Power from hips, don’t lift with arms.',
+  },
+  'Lacrosse Ball Glute Release': {
+    primaryCue: 'Sit on the ball, shift to find the spot.',
+    secondaryCue: 'Hold 30-60 seconds per side.',
+  },
+  'Landmine Press': {
+    primaryCue: 'Split stance, press at an angle, follow the arc.',
+    secondaryCue: 'Stable base, strong finish.',
+  },
+  'Lat Pulldown': {
+    primaryCue: 'Pull to the collarbone, lean slightly back, push chest at bottom.',
+    secondaryCue: 'Squeeze at the bottom, slow return.',
+  },
+  'Lat Stretch': {
+    primaryCue: 'Hold a rack or doorframe, hips back.',
+    secondaryCue: 'Sink the chest, breathe under the armpit, slight lean to one side.',
+  },
+  'Lateral Bounds': {
+    primaryCue: 'Push off outside leg.',
+    secondaryCue: 'Stick each landing before the next.',
+  },
+  'Lateral Raise': {
+    primaryCue: 'Light weight, lead with the elbows.',
+    secondaryCue: 'No momentum, strict form.',
+  },
+  'Leg Extension': {
+    primaryCue: 'Drive feet to ceiling, lean back slightly if possible.',
+    secondaryCue: '',
+  },
+  'Leg Press': {
+    primaryCue: 'Full depth without lower back rounding.',
+    secondaryCue: 'Push through the whole foot.',
   },
   'Light Circuits': {
     primaryCue: 'Low intensity rounds, controlled transitions.',
     secondaryCue: 'This is recovery, not intensity.',
+  },
+  'Light Skipping': {
+    primaryCue: 'Soft ground contacts, stay light.',
+    secondaryCue: 'Easy rhythm, not intensity.',
+  },
+  'Light Walk or Stationary Bike': {
+    primaryCue: 'Conversational effort, keep moving.',
+    secondaryCue: 'This is blood flow, not training.',
+  },
+  'Long Run': {
+    primaryCue: 'Steady aerobic pace, find your rhythm.',
+    secondaryCue: 'Settle in, breathe steadily.',
+  },
+  'Long-Lever Copenhagen': {
+    primaryCue: 'Top ankle supported, hips high.',
+    secondaryCue: 'Don’t let hips drop.',
+  },
+  'Lying Dumbbell Curl': {
+    primaryCue: 'Lie flat, arms stretch at the bottom.',
+    secondaryCue: 'Control both directions, no momentum.',
+  },
+  'McGill Sit Up': {
+    primaryCue: 'Hands under the lower back, lift the shoulder blades only.',
+    secondaryCue: 'Drive low back into hands slightly.',
+  },
+  'Neutral-Grip Pulldown': {
+    primaryCue: 'Use V grip attachment, puff chest out as hands come down.',
+    secondaryCue: '',
+  },
+  'Nordic Lower': {
+    primaryCue: 'Lower as slow as you can.',
+    secondaryCue: 'Fight gravity the whole way down.',
+  },
+  'Open Book Thoracic Rotation': {
+    primaryCue: 'Knees stacked, rotate through the upper back.',
+    secondaryCue: 'Follow the hand with the eyes.',
+  },
+  'Outdoor Walk': {
+    primaryCue: 'Easy pace, arms swinging naturally.',
+    secondaryCue: 'Get outside and move.',
+  },
+  'Overhead Carry': {
+    primaryCue: 'Stand tall, arms overhead, stay tight through midline.',
+    secondaryCue: 'Weight shown is per hand.',
+  },
+  'Overhead Press': {
+    primaryCue: 'Ribs down, bar finishes over the ears.',
+    secondaryCue: 'Press hard and finish strong.',
+  },
+  'Overhead Tricep Extension': {
+    primaryCue: 'Full stretch at the bottom, press to lockout.',
+    secondaryCue: 'Elbows stay pointed forward.',
+  },
+  'Pigeon Stretch': {
+    primaryCue: 'Front shin across bench, square the hips.',
+    secondaryCue: 'Sink in and breathe.',
+  },
+  'Pull-Ups': {
+    primaryCue: 'Dead hang to chin over bar, any grip is fine.',
+    secondaryCue: 'Initiate with the lats, not the arms.',
+  },
+  'Push-ups': {
+    primaryCue: 'Body in a straight line, elbows at 45.',
+    secondaryCue: 'Chest to floor, full lockout.',
+  },
+  'Quality Sprints': {
+    primaryCue: 'Max intent every rep, full recovery between.',
+    secondaryCue: 'If speed drops, the set is done.',
+  },
+  'RDLs': {
+    primaryCue: 'Push hips back, bar slides down leg.',
+    secondaryCue: 'Feel the hamstrings load on the way down.',
+  },
+  'Rear Delt Fly': {
+    primaryCue: 'Rest on incline bench, pinch the shoulder blades.',
+    secondaryCue: 'Light weight, feel the squeeze.',
+  },
+  'Reverse Lunges': {
+    primaryCue: 'Step back, drop straight down.',
+    secondaryCue: 'Front knee tracks over the toe.',
+  },
+  'Row Intervals': {
+    primaryCue: 'Full catch, explosive drive.',
+    secondaryCue: 'Maintain power, recover completely.',
+  },
+  'Scap Push-Up': {
+    primaryCue: 'Keep elbows locked, glide shoulder blades.',
+    secondaryCue: 'Move slowly, no sagging hips.',
+  },
+  'Seated Cable Row': {
+    primaryCue: 'Sit tall, pull to the sternum.',
+    secondaryCue: 'Slow on the return.',
+  },
+  'Seated Calf Raise': {
+    primaryCue: 'Bent knee, full range top to bottom.',
+    secondaryCue: 'Slow tempo, no bouncing.',
+  },
+  'Seated DB Press': {
+    primaryCue: 'Back flat against the pad, press to lockout.',
+    secondaryCue: 'Ribs down, control the descent.',
+  },
+  'Shrugs': {
+    primaryCue: 'Shoulders straight up to ears, no roll.',
+    secondaryCue: 'Squeeze at the top, controlled lower.',
+  },
+  'Side Plank': {
+    primaryCue: 'Stack the hips, straight line from head to feet, can add weight to top hip.',
+    secondaryCue: 'Breathe behind the brace.',
+  },
+  'Single-Arm DB Bench Press': {
+    primaryCue: 'Fight the rotation.',
+    secondaryCue: 'Brace hard through the trunk.',
+  },
+  'Single-Arm DB Row': {
+    primaryCue: 'Elbow drives past the torso, pull to belly.',
+    secondaryCue: 'Keep the hips and shoulders square.',
+  },
+  'Single-Arm Lat Pulldown': {
+    primaryCue: 'Pull the handle to the shoulder, lead with the lat, V grip attachment.',
+    secondaryCue: 'Control the return, full stretch at the top.',
+  },
+  'Single-Arm Pulldown': {
+    primaryCue: 'Use V grip on pulldown machine.',
+    secondaryCue: 'Stay tight through midline.',
+  },
+  'Single-Arm Shrug': {
+    primaryCue: 'One side at a time, shoulder straight up.',
+    secondaryCue: 'Pause at the top, controlled lower.',
+  },
+  'Single-Leg Calf Raise': {
+    primaryCue: 'Full drop at the bottom, pause, then rise.',
+    secondaryCue: 'Three-second lowering.',
+  },
+  'Single-Leg Leg Press': {
+    primaryCue: 'Keep the hips square on the pad.',
+    secondaryCue: 'Control on the way down.',
+  },
+  'Single-Leg RDL': {
+    primaryCue: 'Hinge at the hip, soft knee.',
+    secondaryCue: 'Balance and control over speed.',
+  },
+  'Single-Leg Squat (to Box)': {
+    primaryCue: 'Sit to the box under control.',
+    secondaryCue: 'Keep the knee tracking straight.',
+  },
+  'Skull Crushers': {
+    primaryCue: 'Lower to the sides of the head, press up, use straight or Z bar.',
+    secondaryCue: 'Full range, elbows stay in place.',
+  },
+  'Speed Bench': {
+    primaryCue: 'Light load, explosive intent, pause at chest.',
+    secondaryCue: 'Drive hard, fast lockout.',
+  },
+  'Sprint Intervals': {
+    primaryCue: 'Drive through the ground, arms straight.',
+    secondaryCue: 'Full recovery between efforts.',
+  },
+  'Step Ups': {
+    primaryCue: 'Use top leg to drive movement.',
+    secondaryCue: 'Don’t bounce with leg on ground.',
+  },
+  'Suitcase Carry': {
+    primaryCue: 'Walk tall, don’t lean.',
+    secondaryCue: 'Don’t rest weight on thigh.',
+  },
+  'Swiss Ball Hamstring Curl': {
+    primaryCue: 'Keep hips high.',
+    secondaryCue: 'Curl heels into butt.',
+  },
+  'Tempo Run': {
+    primaryCue: 'Hold the pace, settle into the rhythm.',
+    secondaryCue: 'Controlled breathing throughout.',
+  },
+  'Tib Raises': {
+    primaryCue: 'Lean back against wall, lift toes to sky, can use a Tib bar if you have one.',
+    secondaryCue: 'Controlled reps, full range.',
+  },
+  'Toe Stretch': {
+    primaryCue: 'Tuck toes under, sit back into the heels.',
+    secondaryCue: 'Build tolerance gradually.',
+  },
+  'Trap Bar Deadlift': {
+    primaryCue: 'Tight through the lats, push the floor away.',
+    secondaryCue: 'Hips and shoulders rise together.',
+  },
+  'Tricep Circuit (Dirty 30)': {
+    primaryCue: 'Move through all three positions without rest.',
+    secondaryCue: 'Empty the triceps by the final rep.',
+  },
+  'Tricep Pushdown': {
+    primaryCue: 'Keep elbows pinned, press to full lockout.',
+    secondaryCue: 'Constant tension, no jerking.',
+  },
+  'Walking Lunges': {
+    primaryCue: 'Long stride, trunk upright.',
+    secondaryCue: 'Steady and deliberate.',
+  },
+  'Weighted Dead Bug': {
+    primaryCue: 'Hold weight plate or dumbbells, extended arms overhead and feet out, low back pinned to ground.',
+    secondaryCue: 'Slow extension, full exhale.',
+  },
+  'Woodchop (Half Kneeling)': {
+    primaryCue: 'Drive with the trunk, arms guide.',
+    secondaryCue: 'Controlled rotation, not a throw.',
+  },
+  'Woodchop (Standing)': {
+    primaryCue: 'Rotate through the torso, not the arms.',
+    secondaryCue: 'Feet stay planted.',
+  },
+  'World\'s Greatest Stretch': {
+    primaryCue: 'Lunge deep, elbow to instep.',
+    secondaryCue: 'Then rotate and reach to the sky.',
+  },
+  'Z-Press': {
+    primaryCue: 'Sit up tall, slight lean back when pressing.',
+    secondaryCue: 'Stay tight through midline. Can be done seated on a bench, or with dumbbells.',
+  },
+  // Not in Sam's sheet by design — the Bible's pressing injury-swap.
+  'Single-Arm DB Floor Press': {
+    primaryCue: 'Brace the trunk, press from the floor.',
+    secondaryCue: "Don't let the torso rotate.",
   },
 };

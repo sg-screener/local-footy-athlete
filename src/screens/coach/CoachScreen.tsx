@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
+  TextInput,
   View,
   StyleSheet,
-  TextInput,
   Animated,
   Pressable,
   FlatList,
@@ -100,6 +100,10 @@ import {
   shouldCreateSemanticProgramEditDraftAdapter,
 } from '../../config/env';
 import { logger } from '../../utils/logger';
+import {
+  COACH_NO_OVERRIDE_FALLBACK,
+  COACH_NO_VISIBLE_DIFF_FALLBACK,
+} from '../../utils/planChangeRefusalCopy';
 import { resolveEquipmentAvailability } from '../../utils/equipmentAvailability';
 import { setCoachReady } from '../../navigation/smokeNavState';
 import { getSmokeInitialRoute } from '../../utils/smokeBootstrap';
@@ -115,6 +119,7 @@ import {
   observeCoachFixtureReply,
   type CoachFixtureReplyObservation,
 } from '../../utils/coachFixtureReplyObservation';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 // NOTE: SMOKE_WEDNESDAY_* fixture constants are now consumed exclusively by
 // SmokeCoachBikeHarness (src/components/dev/SmokeCoachBikeHarness.tsx).
 // CoachScreen no longer owns the visible-week preflight markers — they
@@ -351,12 +356,18 @@ function buildNoOverrideFallbackReply(
     bodyPart === 'unknown'
       ? `Got it - ${severity}/10.`
       : `Got it - ${bodyPart} ${severity}/10.`;
-  // The engine emitted events but applyAdjustmentEvents wrote zero
-  // overrides. Surface the failure mode by name so the bug is loud
-  // instead of silent.
+  // The engine emitted events but applyAdjustmentEvents wrote zero overrides.
+  // Keep the failure-mode name log-side (loud for us) but read the athlete
+  // plain-language copy from the owner — never a raw "Investigate …" TODO
+  // (census finding #3).
+  if (rejectedCount > 0) {
+    logger.warn('[coach-injury-progression] no override written', {
+      bodyPart, severity, rejectedCount, failureMode: 'event_targeting_mismatch',
+    });
+  }
   const body =
     rejectedCount > 0
-      ? `Planned changes could not be applied - I lined up adjustments for your week, but they didn't land on real sessions. Investigate event targeting (likely date / session mismatch).`
+      ? COACH_NO_OVERRIDE_FALLBACK
       : `Nothing in your remaining week loads that area, so I left the program unchanged.`;
   return `${head}\n\n${body}\n\nKeep things easy and let me know if it gets worse.`;
 }
@@ -374,9 +385,11 @@ function buildNoVisibleDiffFallbackReply(
     bodyPart === 'unknown'
       ? `Got it - ${severity}/10.`
       : `Got it - ${bodyPart} ${severity}/10.`;
-  return (
-    `${head}\n\nNo changes applied - I tried to adjust the program but the user-visible surface didn't move (no exercise / note / name change). Investigate the apply layer or visible-diff verifier.`
-  );
+  // Diagnostic stays log-side; the athlete reads the owner's plain-language copy.
+  logger.warn('[coach-injury-progression] no visible diff after apply', {
+    bodyPart, severity, failureMode: 'visible_diff_verifier',
+  });
+  return `${head}\n\n${COACH_NO_VISIBLE_DIFF_FALLBACK}`;
 }
 
 function safeLogError(error: unknown): string {
@@ -2330,7 +2343,7 @@ export default function CoachScreen() {
 
         {/* Input bar */}
         <View style={styles.inputContainer}>
-          <TextInput
+          <AppTextInput
             ref={inputRef}
             style={styles.textInput}
             placeholder="Ask the coach..."

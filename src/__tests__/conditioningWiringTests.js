@@ -241,7 +241,7 @@ console.log('\n=== Section 7: In-Season Conditioning Caps ===');
   for (const cd of condDays) {
     const name = cd.workout?.name;
     // Should not see Tier A exercises
-    const tierANames = ['Sprint Intervals', 'Hill Sprints', 'Quality Sprints', 'MAS Training', 'Flog Friday'];
+    const tierANames = ['Sprint Intervals', 'Hill Sprints', 'Quality Sprints', 'MAS Training'];
     assert(!tierANames.includes(name), `In-season bye (low readiness): no Tier A (got ${name})`);
   }
 }
@@ -355,7 +355,7 @@ console.log('\n=== Section 13: Injury Filtering Integration ===');
   for (const cd of condDays) {
     const name = cd.workout?.name || '';
     // With hamstring avoid: no Tier A, no running B
-    const blocked = ['Sprint Intervals', 'Hill Sprints', 'Quality Sprints', 'MAS Training', 'Flog Friday',
+    const blocked = ['Sprint Intervals', 'Hill Sprints', 'Quality Sprints', 'MAS Training',
                      'Tempo Run', 'Long Run', '6x1km', 'MetCon'];
     assert(!blocked.includes(name), `Hamstring injury: ${name} should not be placed`);
   }
@@ -384,9 +384,9 @@ console.log('\n=== Section 14: Progressive Stacking Guard ===');
   for (const cd of condDays) {
     const name = cd.workout?.name || '';
     // Quick tier check from known exercise names
-    const tierANames = ['Sprint Intervals', 'Hill Sprints', 'Quality Sprints', 'MAS Training', 'Flog Friday'];
+    const tierANames = ['Sprint Intervals', 'Hill Sprints', 'Quality Sprints', 'MAS Training'];
     const tierBhighNames = ['MetCon', 'Long Run', '6x1km', 'Hard Row Intervals', 'Hard SkiErg Intervals', 'Hard Assault Bike Intervals'];
-    const tierBlowNames = ['Tempo Run', 'Bike Sprints', 'Row Intervals', 'SkiErg Intervals', 'Assault Bike Intervals'];
+    const tierBlowNames = ['Tempo Run', 'Air Bike Sprints', 'Row Intervals', 'SkiErg Intervals', 'Assault Bike Intervals'];
     if (tierANames.includes(name)) aCount++;
     if (tierBhighNames.includes(name) || tierBlowNames.includes(name)) bCount++;
   }

@@ -1868,6 +1868,29 @@ export const useProgramStore = create<ProgramState>()(
             const acceptedBefore = normalizeAcceptedMaterialContext(
               useProgramStore.getState().acceptedMaterialContext,
             );
+
+            // Nothing has ever been accepted on this device and there is no
+            // program to accept — a fresh install, mid-onboarding.
+            //
+            // This path used to commit an accepted-state transaction anyway,
+            // taking the store to revision 1 with an `acceptedProfileSnapshot`
+            // of the (empty) profile. That is an acceptance record no athlete
+            // ever made, and it is what armed `profileStore`'s mirror against
+            // onboarding, reverting every answer in memory.
+            //
+            // There is nothing to accept, migrate, or project here: no program,
+            // no facts, no prior revision. Recording an acceptance is a lie.
+            //
+            // Reassessment: docs/PROFILE_MIRROR_OWNERSHIP_REASSESSMENT_2026-07-24.md
+            // Proof: onboardingReliabilityTests case 0b.
+            if (!hydrated.currentProgram && acceptedBefore.revision === 0) {
+              emitAthleteActionEvent(trace, 'athlete_action_completed', {
+                outcome: 'accepted',
+                internalResultCode: 'hydration_no_accepted_state_to_project',
+              });
+              return;
+            }
+
             if (programHydrationIngressForAcceptance?.kind === 'accepted_canonical') {
               await runWithAthleteActionTrace(trace, async () => {
                 if (acceptedBefore.temporarySourceFacts.length > 0) {

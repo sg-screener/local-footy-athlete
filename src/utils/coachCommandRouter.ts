@@ -2680,7 +2680,7 @@ function detectSprintBikeActivity(
   effortKind: 'sprint' | 'interval' | undefined,
 ): string | undefined {
   if (modality !== 'bike' || effortKind !== 'sprint') return undefined;
-  return bikeLabel === 'assault' ? 'Assault Bike Sprints' : 'Bike Sprints';
+  return bikeLabel === 'assault' ? 'Assault Bike Sprints' : 'Air Bike Sprints';
 }
 
 function detectDurationMinutes(message: string): number | undefined {

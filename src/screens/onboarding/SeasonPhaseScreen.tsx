@@ -7,9 +7,9 @@ import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { SeasonPhase } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
@@ -109,30 +109,30 @@ export const SeasonPhaseScreen: React.FC<SeasonPhaseScreenProps> = ({
   const [selectedPhase, setSelectedPhase] = useState<SeasonPhase | null>(null);
   const { label: stepLabel, progressPercent } =
     useOnboardingProgress('SeasonPhase');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData,
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const handleSelect = useCallback((phase: SeasonPhase) => {
     setSelectedPhase(phase);
-    updateOnboardingData({ seasonPhase: phase });
-
-    setTimeout(() => {
-      if (phase === 'Off-season') {
-        navigation.navigate('TrainingCommitment');
-      } else if (phase === 'Pre-season') {
-        navigation.navigate('TeamTrainingDays');
-      } else {
-        navigation.navigate('GameDay');
-      }
-    }, 300);
-  }, [navigation, updateOnboardingData]);
+    void commitAndAdvance({ seasonPhase: phase }, () => {
+      setTimeout(() => {
+        if (phase === 'Off-season') {
+          navigation.navigate('TrainingCommitment');
+        } else if (phase === 'Pre-season') {
+          navigation.navigate('TeamTrainingDays');
+        } else {
+          navigation.navigate('GameDay');
+        }
+      }, 300);
+    });
+  }, [navigation, commitAndAdvance]);
 
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={() => {}}
       hideFooter
     >

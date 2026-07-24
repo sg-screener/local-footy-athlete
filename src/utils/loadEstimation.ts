@@ -102,7 +102,6 @@ export const TRUE_BODYWEIGHT_EXERCISES = new Set([
   'Push-ups',
   'Explosive Push-Ups',
   'Dips',
-  'Clap Push-Ups',
   'Scap Push-Up',
   'Inverted Rows',
   'Inverted Row (Bodyweight)',
@@ -172,6 +171,22 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
 
   // ═══ LOWER BODY — MACHINE ═══
   'Leg Press':              { anchor: 'squat', ratio: 1.30, equipment: 'machine' },
+
+  // ═══ CARRIES — stored and displayed PER HAND (Sam, 2026-07-24) ═══
+  // Farmer's total is 0.71 x bench across both hands; the number the athlete
+  // sees is one hand's worth. Suitcase is a single dumbbell at the same
+  // per-hand load. Their cues state this.
+  'Farmer Carry':           { anchor: 'bench', ratio: 0.355, equipment: 'dumbbell' },
+  'Suitcase Carry':         { anchor: 'bench', ratio: 0.355, equipment: 'dumbbell' },
+  'Overhead Carry':         { anchor: 'bench', ratio: 0.20, equipment: 'dumbbell' },
+
+  // ═══ MACHINE / ACCESSORY ADDITIONS (Sam, 2026-07-24) ═══
+  'Adductor Machine':       { anchor: 'squat', ratio: 0.25, equipment: 'machine' },
+  // Same machine as Lat Pulldown, different handle — mirrors it exactly.
+  'Neutral-Grip Pulldown':  { anchor: 'bench', ratio: 0.55, equipment: 'cable' },
+  'Single-Leg Squat (to Box)': { anchor: 'squat', ratio: 0.16, equipment: 'dumbbell' },
+  'Z-Press':                { anchor: 'bench', ratio: 0.35, equipment: 'barbell' },
+
   'Single-Leg Leg Press':   { anchor: 'squat', ratio: 0.60, equipment: 'machine' },
   'Calf Raises':            { anchor: 'squat', ratio: 0.50, equipment: 'machine' },
 
@@ -206,7 +221,6 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Half-Kneeling Landmine Press': { anchor: 'bench', ratio: 0.25, equipment: 'barbell' },
   'Bottoms-Up KB Press':      { anchor: 'bench', ratio: 0.08, equipment: 'kettlebell' },
   'Explosive Landmine Press': { anchor: 'bench', ratio: 0.25, equipment: 'barbell' },
-  'Bottoms-Up KB Carry':      { anchor: 'squat', ratio: 0.12, equipment: 'kettlebell' },
   'Bear Carry':               { anchor: 'squat', ratio: 0.30, equipment: 'dumbbell' },
 
   // ═══ CORE (low load — most are BW but some use cable/band) ═══
@@ -332,14 +346,23 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'bottoms-up kb press':                    'Bottoms-Up KB Press',
   'bottoms up kettlebell press':            'Bottoms-Up KB Press',
   'bottoms-up kettlebell press':            'Bottoms-Up KB Press',
-  'bottoms up carry':                       'Bottoms-Up KB Carry',
-  'bottoms-up carry':                       'Bottoms-Up KB Carry',
-  'bottoms up kb carry':                    'Bottoms-Up KB Carry',
-  'bottoms-up kb carry':                    'Bottoms-Up KB Carry',
-  'bottoms-up kettlebell carry':            'Bottoms-Up KB Carry',
   'bear carry':                             'Bear Carry',
   'bear carries':                           'Bear Carry',
   'bear hug carry':                         'Bear Carry',
+  // Carry family — the AI backend emits plural/possessive/"walk" spellings the
+  // curated vocabulary does not use (census #4 / Part B "Farmers Carry").
+  'farmer carry':                           'Farmer Carry',
+  'farmers carry':                          'Farmer Carry',
+  "farmer's carry":                         'Farmer Carry',
+  'farmer carries':                         'Farmer Carry',
+  'farmers carries':                        'Farmer Carry',
+  'farmer walk':                            'Farmer Carry',
+  'farmers walk':                           'Farmer Carry',
+  "farmer's walk":                          'Farmer Carry',
+  'suitcase carries':                       'Suitcase Carry',
+  'suitcase walk':                          'Suitcase Carry',
+  'overhead carries':                       'Overhead Carry',
+  'overhead walk':                          'Overhead Carry',
 
   // ── Row variants ──
   'bent-over row':            'Barbell Row',
@@ -588,16 +611,16 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'spanish squat':              'Spanish Squat Hold',
   'spanish squat hold':         'Spanish Squat Hold',
   'spanish squat iso':          'Spanish Squat Hold',
-  'tibialis raise':             'Tibialis Raise',
-  'tibialis raises':            'Tibialis Raise',
-  'tib raises':                 'Tibialis Raise',
-  'tib raise':                  'Tibialis Raise',
-  'copenhagen':                 'Copenhagen Plank',
-  'copenhagen plank':           'Copenhagen Plank',
-  'copenhagen planks':          'Copenhagen Plank',
-  'short lever copenhagen':     'Short-Lever Copenhagen',
-  'short-lever copenhagen':     'Short-Lever Copenhagen',
-  'short lever copenhagen plank': 'Short-Lever Copenhagen',
+  'tibialis raise':             'Tib Raises',
+  'tibialis raises':            'Tib Raises',
+  'tib raises':                 'Tib Raises',
+  'tib raise':                  'Tib Raises',
+  'copenhagen':                 'Copenhagen Plank (Half)',
+  'copenhagen plank':           'Copenhagen Plank (Half)',
+  'copenhagen planks':          'Copenhagen Plank (Half)',
+  'short lever copenhagen':     'Copenhagen Plank (Half)',
+  'short-lever copenhagen':     'Copenhagen Plank (Half)',
+  'short lever copenhagen plank': 'Copenhagen Plank (Half)',
   'long lever copenhagen':      'Long-Lever Copenhagen',
   'long-lever copenhagen':      'Long-Lever Copenhagen',
   'long lever copenhagen plank': 'Long-Lever Copenhagen',
@@ -638,9 +661,6 @@ const EXERCISE_ALIASES: Record<string, string> = {
   'calf stretch':               'Calf Stretch',
   'standing calf stretch':      'Calf Stretch',
   // ── Groin squeeze rename ──
-  'band adductor squeeze':      'Groin Squeeze (Band Adductor)',
-  'adductor squeeze':           'Groin Squeeze (Band Adductor)',
-  'groin squeeze':              'Groin Squeeze (Band Adductor)',
 };
 
 /**
@@ -677,13 +697,16 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Step-Down',
   'Slant Board Step-Down',
   'Spanish Squat Hold',
-  'Copenhagen Plank',
-  'Short-Lever Copenhagen',
+  'Copenhagen Plank (Half)',
   'Long-Lever Copenhagen',
+  'Groin Squeeze',
+  // Zone-1 cyclical recovery — no external load by definition.
+  'Incline Treadmill Walk',
+  'Light Walk or Stationary Bike',
   'Single-Leg Calf Raise',
   'Seated Calf Raise',
-  'Tib Raise',
-  'Tibialis Raise',             // exercisePools uses this variant
+  'Tib Raises',
+  'Tib Raises',             // exercisePools uses this variant
   'Bosch Hold',
   'Dead Bug',
   'Banded Dead Bug',
@@ -698,7 +721,6 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Banded External Rotation',
   'Banded Bicep Curl',
   'Banded Tricep Pushdown',
-  'Groin Squeeze (Band Adductor)',
   'Chin-Up Negative (Slow)',
   'Inverted Row (Bodyweight)',
   // Tissue quality

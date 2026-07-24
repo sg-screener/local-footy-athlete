@@ -26,6 +26,15 @@ Agenda (from MASTER_PLAN 4.1):
   is never allowed to change the exercise's purpose.
 - Maps onto D2's pattern taxonomy: swap pool = same movement pattern +
   same slot role (main/secondary/single-leg/accessory/prehab).
+- IMPLEMENTATION PREREQUISITE (found 2026-07-24, Abductor Machine
+  divergence): the pool system has NO muscle-group concept (PoolEntry =
+  name+loadRatio; "blocks" are comments; getSlotSiblings returns whole
+  role arrays, and two of its three callers are §18 progression
+  transfer). D3's strictest same-job-same-part rule requires a real
+  muscle-block/grouping mechanism — designed and built WITH the Phase
+  4.3 swap-candidate work, covering coach swap + progression transfer.
+  Until then: Abductor Machine ships unpooled (tags/cue/video only, not
+  auto-programmed), joins the pool when the mechanism lands.
 - OPEN: conditioning swap strictness (asked next).
 
 ### D6 — Exercise cues (G4) — Sam, 2026-07-23
@@ -40,6 +49,41 @@ Agenda (from MASTER_PLAN 4.1):
   (tests: cue-rule conformance + no pool exercise without authored cue).
   File then carries "authored by Sam" provenance; future additions need
   his sign-off.
+
+### D11 — Muscle blocks: no same-muscle stacking + visible muscles (Sam, 2026-07-24)
+
+- **Rule: a session must not stack multiple exercises targeting the
+  same muscle block** (e.g., groin squeeze + adductor machine +
+  Copenhagen plank in one session) — the accessory/prehab analogue of
+  D2's one-main-per-pattern law. Enforced at generation AND swap once
+  the muscle-block mechanism (D3 prerequisite) lands in Phase 4.3.
+- **Muscles worked shown on the exercise card** ("works: glutes, outer
+  hip") — athlete-facing, helps injury awareness; built on the same
+  mechanism, ships with 4.3 if cheap there, else immediately after.
+- Priority: FIRST item of the Phase 4.3 programming pass, alongside the
+  swap-pool mechanism it shares.
+
+### D10 — Injury vs team-training/game credit (Sam, 2026-07-24)
+
+**Principle (Sam, verbatim intent): "It's a dialogue between S&C coach
+and athlete — not trying to prescribe rehab for injuries, that's for
+the physio. Just figure out what they can and can't do, and prescribe
+it."** The app never diagnoses, never treats — it asks, records, and
+programs the work that's still safe and useful.
+
+- **The app never assumes; it asks.** Default: an injury pauses
+  AFFECTED-region work only — team nights and games keep their
+  conditioning/sprint credit (a shoulder doesn't stop him running).
+- When severity/region genuinely threatens participation (≈6+/10 or
+  region-relevant): the injury flow asks, in Sam's words: "Can you
+  still train and play?" → no → "Will you be doing any work on those
+  days?" → yes → "Want me to prescribe a session that fits?"
+- Every answer is a recorded typed fact; credit withdrawal + matching
+  requirement reduction are ONE atomic authored decision; replacement
+  session generated respecting the injury, transaction-owned,
+  disclosed, cascade-undoable.
+- Same questions asked by the coach chat — same door (added to
+  COACH_ACCEPTANCE_CONTRACT).
 
 ### D7 — Repeat-week (F7) — Sam, 2026-07-23
 

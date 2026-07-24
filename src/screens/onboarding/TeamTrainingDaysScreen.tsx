@@ -5,9 +5,9 @@ import { Text } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { DayOfWeek } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { DayGrid } from '../../components/onboarding/DayGrid';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
@@ -28,9 +28,7 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
 }) => {
   const [selectedDays, setSelectedDays] = useState<DayOfWeek[]>([]);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('TeamTrainingDays');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const toggleDay = (day: DayOfWeek) => {
     if (selectedDays.includes(day)) {
@@ -44,11 +42,10 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
 
   const handleContinue = () => {
     if (isValid) {
-      updateOnboardingData({
+      void commitAndAdvance({
         teamTrainingDaysPerWeek: selectedDays.length,
         teamTrainingDays: selectedDays,
-      });
-      navigation.navigate('TeamTrainingDuration');
+      }, () => navigation.navigate('TeamTrainingDuration'));
     }
   };
 
@@ -57,6 +54,8 @@ export const TeamTrainingDaysScreen: React.FC<TeamTrainingDaysScreenProps> = ({
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={handleContinue}
       continueDisabled={!isValid}
     >

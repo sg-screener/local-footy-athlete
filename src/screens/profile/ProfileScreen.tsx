@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -42,6 +41,8 @@ import {
   roleBucketLabel,
 } from '../../utils/roleBuckets';
 import type { DayOfWeek, ExperienceLevel, OnboardingData, RoleBucket, SeasonPhase } from '../../types/domain';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
+import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 
 type SetupSheetStep =
   | 'overview'
@@ -944,7 +945,7 @@ function SetupUpdateSheet({
       <Text style={styles.sheetTitle}>What should I call you?</Text>
       <View style={styles.playerInputCard}>
         <Feather name="user" size={19} color={colors.text.tertiary} />
-        <TextInput
+        <AppTextInput
           style={styles.playerTextInput}
           value={draftName}
           onChangeText={onSetDraftName}
@@ -1295,17 +1296,21 @@ function SetupUpdateSheet({
       {building ? (
         content
       ) : (
-        <ScrollView
+        // Route the setup-sheet inputs through the shared keyboard owner so they
+        // get scroll-into-view and the one Done bar (census finding #9).
+        // Device-verify the sheet layout (L10).
+        <KeyboardSafeArea
           style={styles.setupSheetScroll}
-          contentContainerStyle={[
-            styles.setupSheetScrollContent,
-            showBack && styles.setupSheetScrollContentWithBack,
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+          scrollProps={{
+            contentContainerStyle: [
+              styles.setupSheetScrollContent,
+              showBack && styles.setupSheetScrollContentWithBack,
+            ],
+            showsVerticalScrollIndicator: false,
+          }}
         >
           {content}
-        </ScrollView>
+        </KeyboardSafeArea>
       )}
     </Sheet>
   );

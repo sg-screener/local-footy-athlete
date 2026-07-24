@@ -7,6 +7,7 @@ import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
 import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { DayOfWeek } from '../../types/domain';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { DayGrid } from '../../components/onboarding/DayGrid';
@@ -28,9 +29,7 @@ export const PreferredTrainingDaysScreen: React.FC<
   const trainingDaysUnsure = useProfileStore(
     (state) => state.onboardingData.trainingDaysUnsure === true
   );
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const cap = trainingDaysUnsure ? 3 : trainingDaysPerWeek || 0;
   const isFlexible = !trainingDaysUnsure && (!trainingDaysPerWeek || trainingDaysPerWeek === 0);
@@ -85,11 +84,10 @@ export const PreferredTrainingDaysScreen: React.FC<
       } else if (!isFlexible) {
         nextTrainingDays = cap;
       }
-      updateOnboardingData({
+      void commitAndAdvance({
         preferredTrainingDays: selectedDays,
         trainingDaysPerWeek: nextTrainingDays,
-      });
-      navigation.navigate('GymExperience');
+      }, () => navigation.navigate('GymExperience'));
     }
   };
 
@@ -98,6 +96,8 @@ export const PreferredTrainingDaysScreen: React.FC<
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={handleContinue}
       continueDisabled={!isValid}
     >

@@ -326,6 +326,38 @@ does not answer "until cleared" — a wider window is still a fixed window. The
 Option B removes three of the four duration representations and removes the
 gate's authority over facts entirely. Recommended, subject to review.
 
+#### Type-level evidence that the union is already non-uniform (added 2026-07-24)
+
+The typecheck-gate unit measured this independently, and the compiler agrees
+with Q2: `TemporarySourceFact = InjuryEpisodeV1 | NonInjuryTemporarySourceFact`
+is **not a uniform union**. `InjuryEpisodeV1` (`src/rules/injuryEpisode.ts:35`)
+is a standalone interface that does not extend `TemporarySourceFactBase` — it
+has `episodeId` not `factId`, `onsetOrReportedDate` not
+`effectiveFrom`/`effectiveUntil`, and no `scope` or `factKind`. Every site that
+reads the union polymorphically therefore fails to compile:
+
+| File | Errors |
+|---|---|
+| `src/screens/home/HomeScreenV2.tsx` | 5 |
+| `src/rules/illnessRecoveryWeekMode.ts` | 4 |
+| `src/utils/programControlActions.ts` | 4 |
+| `src/utils/coachTurnController.ts` | 3 |
+| `src/utils/visibleReadinessState.ts` | 3 |
+| `src/rules/temporarySourceFact.ts` | 3 |
+| `src/utils/lighterDayTransaction.ts` | 1 |
+| **Total** | **23** |
+
+These are **23 independent call sites already reading fields that an
+`InjuryEpisodeV1` does not carry** — at runtime silent `undefined`, not throws.
+That is Option B's Q2 ("how many representations") measured rather than argued,
+and it is the strongest single piece of evidence for doing B1 (one duration
+representation) rather than patching call sites.
+
+Per the Escalation Rule these were **deliberately not fixed**. They are
+baseline-suppressed in `scripts/typecheck-baseline.json`, which names this
+document as the owner, so the gate cannot go green by someone quietly adding
+guards at the 23 sites. They come clean as a by-product of Option B Phase 2.
+
 ### Q6 — Which legacy paths should be bypassed or retired rather than patched?
 
 - **`temporaryFactScope({kind:'week'})` for durable state facts.** It is the

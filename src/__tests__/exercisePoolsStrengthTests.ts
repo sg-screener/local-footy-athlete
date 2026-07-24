@@ -112,9 +112,9 @@ section('1. Classification');
   assert(neutralPulldown?.slot === 'vertical_pull' && neutralPulldown?.role === 'accessory',
     'Neutral-Grip Pulldown → vertical_pull/accessory (new entry)');
 
-  const straightArm = classifyPoolSlot('Straight-Arm Pulldown');
+  const straightArm = classifyPoolSlot('Single-Arm Pulldown');
   assert(straightArm?.slot === 'vertical_pull' && straightArm?.role === 'accessory',
-    'Straight-Arm Pulldown → vertical_pull/accessory (new entry)');
+    'Single-Arm Pulldown → vertical_pull/accessory (new entry)');
 
   const walkingLunges = classifyPoolSlot('Walking Lunges');
   assert(walkingLunges?.slot === 'squat' && walkingLunges?.role === 'accessory',
@@ -411,8 +411,12 @@ section('8. buildWorkoutsFromCoach integration');
   );
   const rotatedNames = rotated[0].exercises.map((e: any) => e.exercise?.name);
   const expectedAnchor = STRENGTH_POOLS.squat.anchor.entries[1].name;
-  // Accessory base index at mc=2, w=1 = (2-1)*4 + (1-1) = 4 → 4 % 4 = 0
-  const expectedAccessory = STRENGTH_POOLS.squat.accessory.entries[0].name;
+  // Accessory base index at mc=2, w=1 = (2-1)*4 + (1-1) = 4, taken modulo the
+  // pool size. Derived rather than hard-coded: this assertion previously
+  // assumed a 4-entry pool and broke the moment Sam's approved accessories
+  // were added, which is a property of the test, not of the rotation.
+  const squatAccessories = STRENGTH_POOLS.squat.accessory.entries;
+  const expectedAccessory = squatAccessories[4 % squatAccessories.length].name;
   assert(rotatedNames[0] === expectedAnchor,
     `mc=2 anchor rotates: got ${rotatedNames[0]}, expected ${expectedAnchor}`);
   assert(rotatedNames[1] === expectedAccessory,
@@ -510,10 +514,19 @@ section('10. Expansion slot rotation');
   assert(plyoSwap === 0,
     `Plyo swap with bodyweight (0kg) stays 0 (got ${plyoSwap})`);
 
-  // Carry-specific: Farmer Carry (1.00) → Overhead Carry (0.55): 40kg → 22kg
-  const carrySwap = normalizeLoadAcrossSiblings(40, 'Farmer Carry', 'Overhead Carry');
-  assert(Math.abs(carrySwap - 22) < 0.01,
-    `Farmer Carry 40kg → Overhead Carry ${carrySwap.toFixed(1)}kg (expected 22)`);
+  // Carry-specific. Load transfer only applies WITHIN a (slot, role) pair, so
+  // the pairing is retuned to same-role carries after the four-carry
+  // restructure: heavy handles anchor (Farmer/Bear), lighter unilateral and
+  // overhead carries accessory (Suitcase/Overhead).
+  const carrySwap = normalizeLoadAcrossSiblings(40, 'Farmer Carry', 'Bear Carry');
+  assert(Math.abs(carrySwap - 30) < 0.01,
+    `Farmer Carry 40kg → Bear Carry ${carrySwap.toFixed(1)}kg (expected 30)`);
+  const carryAccessorySwap = normalizeLoadAcrossSiblings(30, 'Suitcase Carry', 'Overhead Carry');
+  assert(Math.abs(carryAccessorySwap - 27.5) < 0.01,
+    `Suitcase Carry 30kg → Overhead Carry ${carryAccessorySwap.toFixed(1)}kg (expected 27.5)`);
+  // Cross-role carries deliberately do NOT transfer — different job, different load.
+  assert(normalizeLoadAcrossSiblings(40, 'Farmer Carry', 'Overhead Carry') === 40,
+    'Farmer (anchor) → Overhead (accessory) is a fresh exposure, not a transfer');
 
   // Isolation_upper-specific: Shrugs (1.00) → Skull Crushers (0.35): 100kg → 35kg
   const isoSwap = normalizeLoadAcrossSiblings(100, 'Shrugs', 'Skull Crushers');
@@ -577,7 +590,7 @@ section('12. Isolation_lower (accessory-only slot)');
   // All five canonical names classify to isolation_lower/accessory
   const ISO_LOWER_NAMES = [
     'Nordic Lower', 'Leg Extension',
-    'Calf Raises', 'Tib Raise', 'Adductor Machine',
+    'Calf Raises', 'Tib Raises', 'Adductor Machine',
   ];
   for (const name of ISO_LOWER_NAMES) {
     const classified = classifyPoolSlot(name);

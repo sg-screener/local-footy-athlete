@@ -66,15 +66,12 @@ const expectedTags: Array<{
   { name: 'Spanish Squat Hold', movement: 'isolation_lower', region: 'lower' },
   { name: 'Tempo Step-Up', movement: 'lunge', region: 'lower' },
   { name: 'Bottoms-Up KB Press', movement: 'vertical_push', region: 'upper' },
-  { name: 'Bottoms-Up KB Carry', movement: 'carry', region: 'upper' },
   { name: 'Half-Kneeling Landmine Press', movement: 'vertical_push', region: 'upper' },
   { name: 'Scap Push-Up', movement: 'horizontal_push', region: 'upper' },
   { name: 'Banded External Rotation', movement: 'isolation_upper', region: 'upper' },
   { name: 'Bosch Hold', movement: 'isolation_lower', region: 'lower' },
-  { name: 'Copenhagen Plank', movement: 'isolation_lower', region: 'lower' },
-  { name: 'Short-Lever Copenhagen', movement: 'isolation_lower', region: 'lower' },
+  { name: 'Copenhagen Plank (Half)', movement: 'isolation_lower', region: 'lower' },
   { name: 'Long-Lever Copenhagen', movement: 'isolation_lower', region: 'lower' },
-  { name: 'Groin Squeeze (Band Adductor)', movement: 'isolation_lower', region: 'lower' },
   { name: 'Single-Leg Calf Raise', movement: 'isolation_lower', region: 'lower' },
   { name: 'Seated Calf Raise', movement: 'isolation_lower', region: 'lower' },
   { name: 'Swiss Ball Hamstring Curl', movement: 'isolation_lower', region: 'lower' },
@@ -103,8 +100,8 @@ const aliases: Array<[string, string]> = [
   ['speed bench press', 'Speed Bench'],
   ['rear foot elevated split squat jump', 'RFE Split Squat Jump'],
   ['rfess jump', 'RFE Split Squat Jump'],
-  ['Copenhagen', 'Copenhagen Plank'],
-  ['short lever copenhagen', 'Short-Lever Copenhagen'],
+  ['Copenhagen', 'Copenhagen Plank (Half)'],
+  ['short lever copenhagen', 'Copenhagen Plank (Half)'],
   ['long lever copenhagen', 'Long-Lever Copenhagen'],
   ['mcgill curl up', 'McGill Sit Up'],
   ['cable chop', 'Woodchop (Standing)'],
@@ -148,7 +145,7 @@ ok(
 
 ok(
   'Copenhagen variants are groin/pubalgia-cautioned',
-  ['Copenhagen Plank', 'Short-Lever Copenhagen', 'Long-Lever Copenhagen'].every((name) => {
+  ['Copenhagen Plank (Half)', 'Long-Lever Copenhagen'].every((name) => {
     const tags = EXERCISE_TAGS[name];
     return tags?.injury.adductor === 'caution' && tags?.injury.pubalgia === 'caution';
   }),
@@ -203,7 +200,6 @@ for (const name of [
   'RFE Split Squat Jump',
   'Banded TKE',
   'Bottoms-Up KB Press',
-  'Bottoms-Up KB Carry',
   'Spanish Squat Hold',
   'Bosch Hold',
 ]) {

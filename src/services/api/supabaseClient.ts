@@ -84,11 +84,19 @@ export async function getCurrentSession() {
   }
 }
 
-// Helper to handle Supabase errors
+/**
+ * Normalise any thrown value into the error shape every service layer expects.
+ *
+ * `details` is `Record<string, unknown>`, not `unknown`: every caller declares
+ * its own local error type wanting a keyed object, and returning `unknown` made
+ * all six service files fail to compile (33 of the 136 product-`src` errors in
+ * docs/TYPECHECK_BASELINE_TRIAGE_2026-07-24.md — one declaration, 33 symptoms).
+ * The runtime values were already objects; only the declaration was wrong.
+ */
 export function handleSupabaseError(error: unknown): {
   code: string;
   message: string;
-  details?: unknown;
+  details?: Record<string, unknown>;
 } {
   if (!error) {
     return {
@@ -112,7 +120,7 @@ export function handleSupabaseError(error: unknown): {
       return {
         code: 'SUPABASE_ERROR',
         message: (err.message as string) || 'Supabase error',
-        details: error,
+        details: err,
       };
     }
   }

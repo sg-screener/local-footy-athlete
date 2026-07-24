@@ -5,9 +5,9 @@
  *
  * Implements the Final Conditioning Rule Design:
  *   - Tier A: field-based sprinting only (Sprint Intervals, Hill Sprints,
- *     Quality Sprints, MAS Training, Flog Friday)
+ *     Quality Sprints, MAS Training)
  *   - Tier B-high: high output (MetCon, Long Run, 6x1km, Hard Row/Ski/Bike)
- *   - Tier B-low: moderate output (Tempo Run, Bike Sprints, Row/Ski/Bike Intervals)
+ *   - Tier B-low: moderate output (Tempo Run, Air Bike Sprints, Row/Ski/Bike Intervals)
  *   - Tier C: recovery/flush (Flush Run, Easy Bike/Row/Ski/Swim, Light Circuits)
  *
  * Hard rules:
@@ -434,7 +434,7 @@ function filterConditioningByInjury(
     // Tier A: blocked for ANY lower-limb injury at caution+
     if (meta.tier === 'A' && hasLowerLimb) return false;
 
-    // Mixed-modality sessions (Flog Friday, MetCon) include running,
+    // Mixed-modality sessions (MetCon) include running,
     // so treat them the same as 'run' for injury routing purposes.
     const isRunning = meta.modality === 'run' || meta.modality === 'mixed';
     const isLowImpact = meta.impact === 'low';
@@ -583,9 +583,7 @@ export function resolveConditioning(
   if (tierFiltered.length === 0) return null;
 
   // Step 5b: Day-name filtering — exclude sessions named for a specific day
-  // when placed on a different day (e.g. "Flog Friday" only on Fridays).
   const dayNameFiltered = tierFiltered.filter(name => {
-    if (name === 'Flog Friday' && ctx.dayOfWeek !== 5) return false;
     return true;
   });
   if (dayNameFiltered.length === 0) return null;

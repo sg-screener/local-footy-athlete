@@ -1,16 +1,16 @@
 import React from 'react';
 import {
   View,
-  ScrollView,
   StyleSheet,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Text } from '../common/Text';
 import { colors } from '../../theme/colors';
 import { shadows } from '../../theme/spacing';
+import { KeyboardSafeArea } from '../keyboard/KeyboardSafeArea';
 
 interface OnboardingLayoutProps {
   children: React.ReactNode;
@@ -30,8 +30,10 @@ interface OnboardingLayoutProps {
   footerHelperText?: string;
   /** Extra room at the end of the scroll area, useful above sticky footers. */
   scrollContentExtraBottomPadding?: number;
-  /** Enables keyboard avoidance for steps with text inputs. */
-  keyboardAvoiding?: boolean;
+  /** True while the step's answer is being saved — blocks a double-advance. */
+  saving?: boolean;
+  /** Set when the answer could not be saved; shown instead of the CTA helper. */
+  saveError?: string | null;
   /** @deprecated No longer displayed — kept for backward compat */
   stepLabel?: string;
 }
@@ -44,11 +46,15 @@ const DEFAULT_SCROLL_BOTTOM_PADDING = 40;
  * Layout (no absolute positioning anywhere):
  *
  *   SafeAreaView  flex:1
- *   └─ View  flex:1  (column)
- *      ├─ Header        (auto height — back button + progress bar)
- *      ├─ View flex:1   (scroll wrapper — bounded)
- *      │  └─ ScrollView (scrolls within bounded wrapper)
- *      └─ Footer        (auto height, always visible — unless hideFooter)
+ *   ├─ Header             (auto height — back button + progress bar)
+ *   └─ KeyboardSafeArea   (owns avoidance, scroll, dismiss, Done accessory)
+ *      ├─ ScrollView      (content)
+ *      └─ Footer          (CTA — INSIDE the avoided region)
+ *
+ * Keyboard avoidance used to be an opt-in prop, and the two screens that most
+ * needed it — Name and BodyMeasurements — never opted in, which is dogfood
+ * finding E3. There is no opt-in any more: the shell is keyboard-safe for every
+ * step, because the convention lives in KeyboardSafeArea rather than here.
  */
 export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   children,
@@ -60,13 +66,62 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   hideFooter = false,
   footerHelperText,
   scrollContentExtraBottomPadding = 0,
-  keyboardAvoiding = false,
+  saving = false,
+  saveError = null,
 }) => {
   const scrollBottomPadding =
     DEFAULT_SCROLL_BOTTOM_PADDING + scrollContentExtraBottomPadding;
 
-  const content = (
-    <>
+  // Keyboard-LIFT is owned by KeyboardSafeArea (the sticky footer). The bottom
+  // safe-area INSET is a separate concern owned here by the shell: it must clear
+  // the home indicator at rest, but COLLAPSE while the keyboard is up — the keypad
+  // then covers the home-indicator zone, and the CTA must ride flush on it with
+  // zero gap (run-3 device finding + Sam ruling). Keeping the inset static on the
+  // outer SafeAreaView is exactly what the full-height sticky lift overshot.
+  //
+  // The inset must collapse on the SAME clock the sticky lift rides, or it races
+  // it. A boolean `isVisible` flag flips once, snapping paddingBottom
+  // insets.bottom -> 0 in a single step, while KeyboardStickyView's transform
+  // lifts continuously over the open animation — the CTA overshoots above the
+  // keypad then settles (run-4 device finding). So the inset is interpolated on
+  // the reanimated keyboard PROGRESS (0 closed .. 1 open) that KeyboardStickyView
+  // also rides, on the UI thread: inset-collapse and lift are one motion, flush.
+  const insets = useSafeAreaInsets();
+  const { progress: keyboardProgress } = useReanimatedKeyboardAnimation();
+  const restingBottomInset = Math.max(insets.bottom, 12);
+  const footerInsetStyle = useAnimatedStyle(() => ({
+    paddingBottom: (1 - keyboardProgress.value) * restingBottomInset,
+  }));
+
+  const footer = hideFooter ? null : (
+    <Animated.View style={[styles.footer, footerInsetStyle]}>
+      {saveError ? (
+        <Text style={styles.footerError}>{saveError}</Text>
+      ) : footerHelperText ? (
+        <Text style={styles.footerHelper}>{footerHelperText}</Text>
+      ) : null}
+      <Pressable
+        onPress={onContinue}
+        disabled={continueDisabled || saving}
+        style={({ pressed }) => [
+          styles.ctaButton,
+          (continueDisabled || saving) && styles.ctaDisabled,
+          pressed && !continueDisabled && !saving && styles.ctaPressed,
+        ]}
+      >
+        <Text
+          variant="button"
+          color={continueDisabled || saving ? colors.text.disabled : colors.text.inverse}
+          align="center"
+        >
+          {saving ? 'Saving…' : continueLabel}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* ─── Header ─── */}
       <View style={styles.header}>
         <Pressable
@@ -90,60 +145,21 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         </View>
       </View>
 
-      {/* ─── Scrollable Content ─── */}
-      <View style={styles.scrollWrapper}>
-        <ScrollView
-          contentContainerStyle={[
+      {/* ─── Content + CTA, both inside the avoided region ─── */}
+      <KeyboardSafeArea
+        footer={footer}
+        // Auto-advance steps (hideFooter) are selection-only — no text input,
+        // so no keyboard and no Done bar (L10 device finding, 2026-07-24).
+        hasTextInput={!hideFooter}
+        scrollProps={{
+          contentContainerStyle: [
             styles.scrollContent,
             { paddingBottom: scrollBottomPadding },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {children}
-        </ScrollView>
-      </View>
-
-      {/* ─── Fixed Bottom CTA ─── */}
-      {!hideFooter && (
-        <View style={styles.footer}>
-          {footerHelperText ? (
-            <Text style={styles.footerHelper}>{footerHelperText}</Text>
-          ) : null}
-          <Pressable
-            onPress={onContinue}
-            disabled={continueDisabled}
-            style={({ pressed }) => [
-              styles.ctaButton,
-              continueDisabled && styles.ctaDisabled,
-              pressed && !continueDisabled && styles.ctaPressed,
-            ]}
-          >
-            <Text
-              variant="button"
-              color={continueDisabled ? colors.text.disabled : colors.text.inverse}
-              align="center"
-            >
-              {continueLabel}
-            </Text>
-          </Pressable>
-        </View>
-      )}
-    </>
-  );
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      {keyboardAvoiding ? (
-        <KeyboardAvoidingView
-          style={styles.root}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          {content}
-        </KeyboardAvoidingView>
-      ) : (
-        <View style={styles.root}>{content}</View>
-      )}
+          ],
+        }}
+      >
+        {children}
+      </KeyboardSafeArea>
     </SafeAreaView>
   );
 };
@@ -209,6 +225,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.primary,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  footerError: {
+    color: colors.status.error,
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   footerHelper: {
     color: colors.text.tertiary,

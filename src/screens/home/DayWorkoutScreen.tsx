@@ -4,7 +4,6 @@ import {
   View,
   ScrollView,
   Pressable,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
@@ -34,6 +33,7 @@ import {
 import { formatExerciseDisplayName } from '../../utils/exerciseDisplay';
 import { deriveVisibleWorkoutIdentity } from '../../utils/visibleWorkoutIdentity';
 import type { RecoveryAddonBlock } from '../../types/domain';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 
 // ── Design-version flag ──
 // Hardcoded to 'v2' so the app opens directly into the redesigned DayWorkout
@@ -422,7 +422,7 @@ function DayWorkoutScreenClassic() {
                             <Text style={styles.weightBtnText}>−</Text>
                           </Pressable>
                           {editingWeightId === exercise.exerciseId ? (
-                            <TextInput
+                            <AppTextInput
                               style={styles.weightInput}
                               value={editingWeightText}
                               onChangeText={setEditingWeightText}

@@ -154,8 +154,9 @@ export const UPPER_BACK_PUMP_POOL: PoolExercise[] = [
 // ═══════════════════════════════════════════════════════════════
 
 export const GROIN_ADDUCTORS_POOL: PoolExercise[] = [
-  ex('copenhagen-plank',  'Copenhagen Plank',           3, 20, 30, 45, 'Builds inner thigh strength.',                ['bodyweight'],['groin', 'knee'], 'low', { prescriptionType: 'duration', perSide: true }),
-  ex('groin-squeeze',     'Groin Squeeze (Band Adductor)', 3, 10, 12, 30, 'Squeeze band between knees and hold.',     ['bands'],    ['groin'],          'low', { prescriptionType: 'reps' }),
+  ex('copenhagen-plank',  'Copenhagen Plank (Half)',           3, 20, 30, 45, 'Builds inner thigh strength.',                ['bodyweight'],['groin', 'knee'], 'low', { prescriptionType: 'duration', perSide: true }),
+  ex('copenhagen-long',   'Long-Lever Copenhagen',             3, 15, 25, 45, 'Full lever. Hips high, no dropping.',         ['bodyweight'],['groin', 'knee'], 'moderate', { prescriptionType: 'duration', perSide: true }),
+  ex('groin-squeeze',     'Groin Squeeze',                     3, 10, 12, 30, 'Ball or fists between the knees. Squeeze and hold.', [],            ['groin'],         'low', { prescriptionType: 'reps' }),
 ];
 
 /**
@@ -183,7 +184,7 @@ export const CALVES_POOL: PoolExercise[] = [
  *   ✗ Generic prehab_accessories (use calves instead)
  */
 export const LOWER_PREHAB_POOL: PoolExercise[] = [
-  ex('tib-raise',         'Tibialis Raise',             2, 15, 20, 30, 'Front of shins. Helps prevent shin splints.', ['bodyweight'],['ankle'], 'low', { prescriptionType: 'reps' }),
+  ex('tib-raise',         'Tib Raises',             2, 15, 20, 30, 'Front of shins. Helps prevent shin splints.', ['bodyweight'],['ankle'], 'low', { prescriptionType: 'reps' }),
 ];
 
 export const TRUNK_ANTI_ROTATION_POOL: PoolExercise[] = [
@@ -204,6 +205,8 @@ export const TRUNK_ANTI_ROTATION_POOL: PoolExercise[] = [
 export const SHOULDER_HEALTH_POOL: PoolExercise[] = [
   ex('band-pull-apart-sh','Band Pull-Apart',            3, 15, 20, 20, 'Squeeze shoulder blades together at the top.', ['bands'],     [],          'low', { prescriptionType: 'reps' }),
   ex('band-ext-rot',      'Banded External Rotation',   2, 15, 20, 20, 'Elbow at 90°. Rotate out against band.',     ['bands'],     ['shoulder'],'low', { prescriptionType: 'reps' }),
+  ex('bottoms-up-press',  'Bottoms-Up KB Press',        2, 6,  8,  45, 'Bell inverted. Wrist stacked, ribs down.',    ['kettlebell'],['shoulder', 'wrist'], 'low', { prescriptionType: 'reps', perSide: true }),
+  ex('scap-push-up',      'Scap Push-Up',               2, 10, 15, 30, 'Elbows locked. Glide the shoulder blades.',   ['bodyweight'],['shoulder', 'wrist'], 'low', { prescriptionType: 'reps' }),
 ];
 
 export const HAMSTRING_LIGHT_POOL: PoolExercise[] = [

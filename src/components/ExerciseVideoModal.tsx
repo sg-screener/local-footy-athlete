@@ -305,14 +305,16 @@ const styles = StyleSheet.create({
   body: {
     padding: 0,
   },
-  // Shorts are 9:16. With modal max width 400, iframe height ≈ 711.
-  // We cap via maxHeight so it fits short phones; aspectRatio handles
-  // the common case. The lime border hugs the player so the live feed
-  // visually anchors to the rest of the V2 accents.
+  // Shorts are 9:16. The box is aspect-locked from a single definite height so
+  // the WebView box always equals the video and the Short fills it edge to edge.
+  // The earlier cut pinned width:100% AND maxHeight alongside the aspectRatio;
+  // when maxHeight bound on a shorter phone the explicit width won, the box
+  // stopped being 9:16, and the Short letterboxed inside it (L10 finding,
+  // 2026-07-24). Centring keeps the portrait player anchored in the modal.
   playerFrame: {
-    width: '100%',
+    height: 560,
     aspectRatio: 9 / 16,
-    maxHeight: 560,
+    alignSelf: 'center',
     backgroundColor: '#000',
     borderTopWidth: 1,
     borderBottomWidth: 1,

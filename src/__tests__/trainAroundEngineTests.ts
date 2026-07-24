@@ -164,8 +164,8 @@ ok(
   classifyExercisePatterns('Farmer Carry').includes('loaded_carry'),
 );
 ok(
-  'Copenhagen Plank → adductor_groin',
-  classifyExercisePatterns('Copenhagen Plank').includes('adductor_groin'),
+  'Copenhagen Plank (Half) → adductor_groin',
+  classifyExercisePatterns('Copenhagen Plank (Half)').includes('adductor_groin'),
 );
 ok(
   'Stretching → mobility (no false hits)',

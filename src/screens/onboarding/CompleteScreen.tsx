@@ -31,6 +31,11 @@ import {
 } from '../../utils/onboardingCompletion';
 import { logger } from '../../utils/logger';
 import { todayISOLocal } from '../../utils/appDate';
+import {
+  assessOnboardingCompleteness,
+  onboardingIncompleteMessage,
+} from '../../utils/onboardingCompleteness';
+import type { OnboardingStepName } from '../../utils/onboardingSteps';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
 type CompleteScreenProps = NativeStackScreenProps<
@@ -86,9 +91,12 @@ const FADE_DURATION = 175;      // crossfade between messages
 const LONG_WAIT_THRESHOLD = 50000; // inject long-wait line once at ~50s
 const MIN_DISPLAY_MS = 2000;    // floor so loading never flickers past
 
-export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
+export const CompleteScreen: React.FC<CompleteScreenProps> = ({ navigation }) => {
   const [phase, setPhase] = useState<'generating' | 'ready' | 'error'>('generating');
   const [errorMessage, setErrorMessage] = useState('');
+  // Set when generation was refused for a missing answer: the error state then
+  // offers the step that owns it instead of a pointless retry.
+  const [incompleteStep, setIncompleteStep] = useState<OnboardingStepName | null>(null);
   // The currently-displayed loading line. Held in state so the fade-in
   // re-renders with the new copy.
   const [currentMessage, setCurrentMessage] = useState(BASE_SEQUENCE[0]);
@@ -259,6 +267,21 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
   const generateProgram = async () => {
     setPhase('generating');
     setErrorMessage('');
+
+    // Refuse before generating. Reaching this screen with a gap means Review
+    // was bypassed (a deep link, a back-stack jump) — generating around it
+    // would hand the athlete a program built on answers they never gave.
+    const completeness = assessOnboardingCompleteness(onboardingData);
+    if (!completeness.complete && completeness.firstIncompleteStep) {
+      logger.warn('[Onboarding][generation] refused: profile incomplete', {
+        missingSteps: completeness.missingSteps.map((step) => step.name),
+      });
+      setIncompleteStep(completeness.firstIncompleteStep);
+      setErrorMessage(onboardingIncompleteMessage(completeness));
+      setPhase('error');
+      return;
+    }
+
     // One Effective Onboarding Date: one generation attempt owns one date.
     // A retry starts a new attempt and may therefore capture a new date.
     const effectiveTodayISO = todayISOLocal();
@@ -413,6 +436,10 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
   };
 
   const handleRetry = () => {
+    if (incompleteStep) {
+      navigation.navigate(incompleteStep as never);
+      return;
+    }
     hasStarted.current = false;
     loadingOpacity.setValue(1);
     readyOpacity.setValue(0);
@@ -439,7 +466,7 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
             align="center"
             style={{ marginBottom: spacing.md, fontWeight: '700' }}
           >
-            Something went wrong
+            {incompleteStep ? 'One more answer needed' : 'Something went wrong'}
           </Text>
           <Text
             variant="bodySmall"
@@ -449,7 +476,12 @@ export const CompleteScreen: React.FC<CompleteScreenProps> = () => {
           >
             {errorMessage || 'Failed to generate your program. Tap below to try again.'}
           </Text>
-          <Button title="Try Again" onPress={handleRetry} size="lg" fullWidth />
+          <Button
+            title={incompleteStep ? 'Finish that step' : 'Try Again'}
+            onPress={handleRetry}
+            size="lg"
+            fullWidth
+          />
         </View>
       </SafeAreaView>
     );

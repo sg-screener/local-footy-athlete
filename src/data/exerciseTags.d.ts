@@ -68,7 +68,7 @@ export interface ConditioningMeta {
  *   Tier B-low = moderate output, lower tissue cost.
  *   Tier C = recovery / flush.
  *
- * Mixed-modality sessions (Flog Friday, MetCon) are classified by intent.
+ * Mixed-modality sessions (MetCon) are classified by intent.
  * Modality field is used only for injury compatibility routing.
  */
 export declare const CONDITIONING_META: Record<string, ConditioningMeta>;

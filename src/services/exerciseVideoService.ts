@@ -45,12 +45,12 @@ export interface ExerciseLookupResult {
 
 export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   // ═══ LOWER — Squat ═══
-  'Back Squat':                       'https://youtube.com/shorts/Ak1iHbEeeY8?si=T1UaEmAule8_YWCV',
-  'Front Squat':                      'https://youtube.com/shorts/rKjh8K-ZxLc?si=5B3OVs-oOt8p1Sc-',
+  'Back Squat':                       'https://youtube.com/shorts/hscOjLrW60c?si=w-VfL2KXVSR8tlhX',
+  'Front Squat':                      'https://youtube.com/shorts/N4WGYDGu6bI?si=ca0DyggYeEZBOAVa',
   'Box Squat':                        'https://youtube.com/shorts/jq9YxrTGvhg?si=TxggHO0TzD-15cRX',
   'Goblet Squat':                     'https://youtube.com/shorts/yTDROg8zZsU?si=2Ne2CfgFCKupJ38l',
   'Single-Leg Squat (to Box)':        'https://youtube.com/shorts/mk-lMrXRwyA?si=-2zVWLyadrwEkgCr',
-  'Leg Press':                        'https://youtube.com/shorts/EotSw18oR9w?si=wVyOhltjDBDLgKRq',
+  'Leg Press':                        'https://youtube.com/shorts/nDh_BlnLCGc?si=ePHOzkzXXuoDG6uQ',
   'Single-Leg Leg Press':             'https://youtube.com/shorts/LbKwZIbVYZI?si=JU_FY4giSQ5cATgs',
 
   // ═══ LOWER — Lunge ═══
@@ -60,7 +60,7 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Step Ups':                         'https://youtube.com/shorts/PzDbmqL6qo8?si=psSix8Uu_SoGY6hH',
 
   // ═══ LOWER — Hinge ═══
-  'Deadlift':                         'https://youtube.com/shorts/xNwpvDuZJ3k?si=bmybIZ2FXyDjG2tv',
+  'Deadlift':                         'https://youtube.com/shorts/vfKwjT5-86k?si=wy5FDB7Fhe0in82l',
   'Trap Bar Deadlift':                'https://youtube.com/shorts/v-SrIcAp3vM?si=NgsvLWJbCw6rz73U',
   'RDLs':                             'https://youtube.com/shorts/g5u75sgpn04?si=OXvMDpOjCaR0mP2r',
   'Single-Leg RDL':                   'https://youtube.com/shorts/R_fJ6H3FlVw?si=b9TIsBIrsFMjc0KT',
@@ -68,60 +68,59 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Kettlebell Swings':                'https://youtube.com/shorts/jwILQCx61ts?si=EzLjxPLFrFSJs9ie',
 
   // ═══ LOWER — Isolation (accessory) ═══
-  'Leg Extension':                    'https://youtube.com/shorts/uM86QE59Tgc?si=qJpemVPkSwFnnY3a',
+  'Leg Extension':                    'https://youtube.com/shorts/t8--Y-pjTmg?si=361wZ-G2w94KOacA',
   'Nordic Lower':                     'https://youtube.com/shorts/wwgtGMHhS8Y?si=JHb9jqCNBGf4o6wC',
-  'Calf Raises':                      null,
-  'Tib Raise':                        'https://youtube.com/shorts/pQcvW08rnAk?si=C40CUR9MTjrHCKQ8',
+  'Calf Raises':                      'https://youtube.com/shorts/E1mG5L9rpFc?si=LkeJyI_vaFswymaQ',
+  'Tib Raises':                        'https://youtube.com/shorts/pQcvW08rnAk?si=C40CUR9MTjrHCKQ8',
 
   // ═══ LOWER — Plyo / Power ═══
   'Box Jumps':                        'https://youtube.com/shorts/7EfeTsHZ5vk?si=n2P8e9ByOFEoVrCy',
   'Broad Jumps':                      'https://youtube.com/shorts/v0yrBWA3eEs?si=F6-nti33bKirBn1b',
   'Jump Squats':                      'https://youtube.com/shorts/36vnWAkL7ZQ?si=pMSxyvYAkr3hUcbZ',
-  'Lateral Bounds':                   'https://youtube.com/shorts/ZkYORFHgRTw?si=bRmjKubk8h2gsTSD',
+  'Lateral Bounds':                   'https://youtube.com/shorts/Rs1zxDgyUXA?si=cukZToNM-kGFEcEe',
   'Depth Jumps':                      'https://youtube.com/shorts/V2e-wz6AIhk?si=Wo6dRhoeA8-iG1UG',
 
   // ═══ UPPER — Horizontal Push ═══
-  'Bench Press':                      'https://youtube.com/shorts/_FkbD0FhgVE?si=OFz3foQyzRoYEfjB',
-  'DB Bench Press':                   'https://youtube.com/shorts/WbCEvFA0NJs?si=YfVkROwORBpb1e-0',
-  'Incline Bench':                    'https://youtube.com/shorts/98HWfiRonkE?si=Vb_GnDc0F5rwaFb_',
-  'Incline DB Bench':                 'https://youtube.com/shorts/8fXfwG4ftaQ?si=HCKM0XPgjHI1gKH0',
+  'Bench Press':                      'https://youtube.com/shorts/hWbUlkb5Ms4?si=p8AusjhVLAC5ZqJk',
+  'DB Bench Press':                   'https://youtube.com/shorts/Ne_9EKkUVXY?si=wKZZOtKFsAY4WUiO',
+  'Incline Bench':                    'https://youtube.com/shorts/L9UKMQw1Nss?si=b0Gf95olarmdMwfc',
+  'Incline DB Bench':                 'https://youtube.com/shorts/5orOHJL2qS4?si=IL8OhkIRS1hvZvFH',
   'Close Grip Bench':                 'https://youtube.com/shorts/VXJCfMES2C8?si=_JL-QquUVYfeyr_J',
-  'Push-ups':                         'https://youtube.com/shorts/4Bc1tPaYkOo?si=wR6lGZyYUjtj-bJr',
+  'Push-ups':                         'https://youtube.com/shorts/c-lBErfxszs?si=k01MuYu6xozOUWy9',
   'Dips':                             'https://youtube.com/shorts/Nd43B5LFtgk?si=ufBoYiEIIMAHX5wm',
   'Single-Arm DB Floor Press':        'https://youtube.com/shorts/y477pOZ_fNM?si=JriRvkiNAO9q1V_U',
   'Single-Arm DB Bench Press':        'https://youtube.com/shorts/NMes2aQzJUA?si=zMzvBM9rApj99k3J',
 
   // ═══ UPPER — Vertical Push ═══
   'Overhead Press':                            'https://youtube.com/shorts/DN3WXJlB1Q4?si=h4aSnpiKOUz5u3K1',
-  'DB Shoulder Press':                         'https://youtube.com/shorts/eNMl9UoO7YA?si=3GfwQsrDc94SEyBF',
-  'Seated DB Press':                           'https://youtube.com/shorts/k6tzKisR3NY?si=piNS4HRhg1AqUYxA',
+  'DB Shoulder Press':                         'https://youtube.com/shorts/b132W5N8Jrg?si=ntraNt8GsJg9qhx2',
+  'Seated DB Press':                           'https://youtube.com/shorts/-lqkH31Hs10?si=vD5AVHJbeUEJgVx7',
   'Half-Kneeling Single-Arm Overhead Press':  'https://youtube.com/shorts/vpFJr1vMNQ4?si=9QQ2xTzgjYlsx1tg',
-  'Landmine Press':                            'https://youtube.com/shorts/Iu5pYQEkj38?si=9v49_OvhjzXF_9ei',
+  'Landmine Press':                            'https://youtube.com/shorts/9lSi9Sflr3M?si=WPYiSYjQ3ARgWERJ',
 
   // ═══ UPPER — Horizontal Pull ═══
-  'Barbell Row':                      'https://youtube.com/shorts/HamNqVyElPc?si=PgXwOMA4DsybHpQ-',
+  'Barbell Row':                      'https://youtube.com/shorts/UL8ZcK64KxA?si=SDD5wMC5nxQZyKGl',
   'Chest Supported Row':              'https://youtube.com/shorts/yxpS2oMHyvA?si=J6i6PM9UvGN9_Llz',
   'Chest-Supported DB Row':           'https://youtube.com/shorts/FiQ1X4jaaCY?si=WKpfSd0qGYcR-lKp',
-  'Seated Cable Row':                 'https://youtube.com/shorts/8QuMq1GMMng?si=uGhZsgfte-YDN53h',
+  'Seated Cable Row':                 'https://youtube.com/shorts/UyI7Sc7ZVdU?si=oraLYxiDnIkFzVz-',
   'Single-Arm DB Row':                'https://youtube.com/shorts/KaCcBqhiXtc?si=9QFdIUczbaxcWqs2',
   'Inverted Row (Bodyweight)':        'https://youtube.com/shorts/moG8jdcOnQQ?si=aaExGC5DIOshQa3c',
 
   // ═══ UPPER — Vertical Pull ═══
-  'Pull-Ups':                         'https://youtube.com/shorts/3pUSB4MvUWQ?si=Ff878pLjtzcCcalm',
-  'Chin-Ups':                         'https://youtube.com/shorts/3pUSB4MvUWQ?si=Ff878pLjtzcCcalm',
+  'Pull-Ups':                         'https://youtube.com/shorts/dvG8B2OjfWk?si=yqgXl7NvejneCp1w',
+  'Chin-Ups':                         'https://youtube.com/shorts/gibW62a_3o0?si=hcHIaeENxhRBfQ2L',
   'Chin-Up Negative (Slow)':          'https://youtube.com/shorts/F0rXGrrCP0I?si=ySzWk5UGux3aLTOg',
   'Lat Pulldown':                     'https://youtube.com/shorts/8d6d46pGdQM?si=PBNICHhLwxTKUA2c',
-  'Single-Arm Lat Pulldown':          'https://youtube.com/shorts/wYy32uk4Bu8?si=_yBkS9cAn59kNa9C',
+  'Single-Arm Lat Pulldown':          'https://youtube.com/shorts/8zA8DjHRaq0?si=ndryCAiuk2W18QXv',
 
   // ═══ UPPER — Power / Plyo ═══
-  'Speed Bench':                      null,
-  'Clap Push-Ups':                    null,
-  'Explosive Landmine Press':         null,
+  'Speed Bench':                      'https://youtube.com/shorts/bv1vwhBwjUY?si=qAgsG_WoYjDeX-KV',
+  'Explosive Landmine Press':         'https://youtube.com/shorts/gKdmAu3yqcc?si=Wp34uZedWc7tV8m7',
 
   // ═══ Shoulders / Upper Back (isolation + pump) ═══
-  'Lateral Raise':                    'https://youtube.com/shorts/iK22GwXJji0?si=Lt2no2JWCkQoEn-K',
+  'Lateral Raise':                    'https://youtube.com/shorts/lnVEvYCBGDo?si=c1bGR8q_pCa358Yf',
   'Face Pull':                        'https://youtube.com/shorts/1s-0WtJMsu8?si=-q1SZYXs490Tn8VH',
-  'Cable Face Pull':                  'https://youtube.com/shorts/IeOqdw9WI90?si=XOolZySMwS0_39mZ',
+  'Cable Face Pull':                  'https://youtube.com/shorts/vQCi5Xzhoyw?si=fCAm2YLNsHVcEEMW',
   'Rear Delt Fly':                    'https://youtube.com/shorts/YB6aY-kCKac?si=zQ51-7Dk0tObMT1g',
   'Band Pull-Apart':                  'https://youtube.com/shorts/SuvO4TBwSu4?si=sRbHg2r4VIaRTEOc',
   'Shrugs':                           'https://youtube.com/shorts/zv50RkqKEsM?si=Rauq1r4cuaS5XvYH',
@@ -138,19 +137,19 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Concentration Curl':               'https://youtube.com/shorts/cHxRJdSVIkA?si=wCY9np4ZCoMTqljo',
 
   // ═══ Triceps ═══
-  'Tricep Pushdown':                  'https://youtube.com/shorts/Rc7-euA8FDI?si=q2sHAhmOvCHG8oDU',
+  'Tricep Pushdown':                  'https://youtube.com/shorts/xguGXQAvbKk?si=cwE217VcW9OJN1_y',
   'Banded Tricep Pushdown':           'https://youtube.com/shorts/Ik1hyO3a4t0?si=EfjB0e4elwe2LSPh',
-  'Skull Crushers':                   'https://youtube.com/shorts/K3mFeNz4e3w?si=YTk7-20o7ona9mC4',
+  'Skull Crushers':                   'https://youtube.com/shorts/zR9gty7LUxE?si=LomBZEO0pV6BKWC-',
   'Dumbbell Skull Crusher':           'https://youtube.com/shorts/HurmGkvE5s0?si=KytDa96NanU4fzuS',
-  'Overhead Tricep Extension':        'https://youtube.com/shorts/b_r_LW4HEcM?si=qgIY_pGfbGQsQFkn',
-  'Dumbbell Kickback':                'https://youtube.com/shorts/WhBxKbe1-NU?si=OkfXaL9BHmOIkhDE',
+  'Overhead Tricep Extension':        'https://youtube.com/shorts/ekEo-BSg0_U?si=VKBDNhLGmy1twEla',
+  'Dumbbell Kickback':                'https://youtube.com/shorts/ZGjHc9NnJ-4?si=aXyJRxuhsVVrExqa',
   'Tricep Circuit (Dirty 30)':        'https://youtube.com/shorts/ngiSRh_rweo?si=AtoDiuDdWL2Spcdn',
 
   // ═══ Core / Trunk ═══
   'Band Pallof Press':                'https://youtube.com/shorts/5aZ0IhJS8O8?si=M-uhHRbHryI9VCCo',
   'Woodchop (Standing)':              'https://youtube.com/shorts/42brJJCw-OU?si=SmB3GH0Udzvx4t3w',
   'Woodchop (Half Kneeling)':         'https://youtube.com/shorts/ftQ4xaQoVKY?si=Yer5dQOQYaLlA8lk',
-  'Ab Wheel':                         'https://youtube.com/shorts/kISuoI7QCYk?si=g78qxRrObFckNWOK',
+  'Ab Wheel':                         'https://youtube.com/shorts/QHXLnvbJ444?si=MzhlejwMTRGa4s8-',
   'Hanging Leg Raise':                'https://youtube.com/shorts/Z9ryXTU4FBQ?si=BjCrZGio1xIFEMtZ',
   'Side Plank':                       'https://youtube.com/shorts/GIDLif1n0bM?si=m1Pe-jAcQ-GogDBj',
   'Dead Bug':                         'https://youtube.com/shorts/DqLL45uk2Tk?si=n73OZqQv4HRXfHWI',
@@ -162,26 +161,26 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   // ═══ Carries ═══
   'Farmer Carry':                     'https://youtube.com/shorts/UmQELGR2lws?si=BXi3NduEyfeoX8WM',
   'Suitcase Carry':                   'https://youtube.com/shorts/v8O0kNuvp_k?si=Q1qE2ZjuL-jjm7Bd',
-  'Bear Carry':                       null,
-  'Bottoms-Up KB Carry':              null,
+  'Bear Carry':                       'https://youtube.com/shorts/XVDCJghr56s?si=ag2Bqh3VUPacRdr6',
 
   // ═══ Prehab — Groin / Adductors ═══
-  'Copenhagen Plank':                 'https://youtube.com/shorts/AiYzzRoXOEY?si=T5f5pwlZxBd4FcGQ',
-  'Short-Lever Copenhagen':           null,
-  'Long-Lever Copenhagen':            null,
-  'Groin Squeeze (Band Adductor)':    'https://youtube.com/shorts/46PUjgOIZsU?si=zaYtxUhHVI6FU4Bc',
+  'Copenhagen Plank (Half)':                 'https://youtube.com/shorts/Rwap0_j5i5A?si=t0G7VC_EHuhGD9hE',
+  'Groin Squeeze':                    'https://youtube.com/shorts/Wt8y_Gagay0?si=vn3LP-2AA546wK7N',
+  // No demo pinned yet — play button stays disabled. Named here so the
+  // 'explosive push up' aliases resolve to a known exercise rather than dangle.
+  'Explosive Push-Ups':               null,
+  'Long-Lever Copenhagen':            'https://youtube.com/shorts/NBQIxbMAalk?si=nU796DqBg9LT0fSG',
 
   // ═══ Prehab — Calves ═══
   'Single-Leg Calf Raise':            'https://youtube.com/shorts/E1mG5L9rpFc?si=9SCBs2Vy_tt4XDU8',
   'Seated Calf Raise':                'https://youtube.com/shorts/EP6LVvotYWE?si=eih-1b4s48BzCNoh',
 
   // ═══ Prehab — Lower (ankle / shin) ═══
-  'Tibialis Raise':                   'https://youtube.com/shorts/pQcvW08rnAk?si=C40CUR9MTjrHCKQ8',
 
   // ═══ Prehab — Shoulder Health ═══
   'Banded External Rotation':         'https://youtube.com/shorts/7DqYesMRkzU?si=wR0oLWbHsA41Spm6',
-  'Scap Push-Up':                     null,
-  'Bottoms-Up KB Press':              null,
+  'Scap Push-Up':                     'https://youtube.com/shorts/emB58J1SyXA?si=7qFwI-rqbIoAKdpm',
+  'Bottoms-Up KB Press':              'https://youtube.com/shorts/PDVTbKBXAl4?si=AynipcSYTa7P6Z3p',
 
   // ═══ Prehab — Hamstring (light) ═══
   'Swiss Ball Hamstring Curl':        'https://youtube.com/shorts/xB1lGVzRwWk?si=S8i01b5vzUVFGiUu',
@@ -214,6 +213,13 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
   'Crocodile Breathing':              'https://youtube.com/shorts/ZSkGaCxrijc?si=lL9FtZlQ8haFMSlz',
   'Box Breathing':                    'https://youtube.com/shorts/sCCQNO9C7DA?si=a6trc-rGVygN2Qvu',
   "Child's Pose with Breathing":      'https://youtube.com/shorts/Ynrg6Wsiapc?si=ONBF8XVx0MvqSitn',
+  'Abductor Machine': 'https://youtube.com/shorts/S_FGYHNHJ_c?si=Wqz3kGC0csTyr5Lh',
+  'Adductor Machine': 'https://youtube.com/shorts/iPLvw74e7Tk?si=o3AmNgRbvvikIbi5',
+  'Kneeling Jump': 'https://youtube.com/shorts/xaFQGw73peA?si=GiiYoy2aZebpMjtH',
+  'Lateral Jump': 'https://youtube.com/shorts/m1JDpuGzCZw?si=alXGCw-wq5sxSuhK',
+  'Neutral-Grip Pulldown': 'https://youtube.com/shorts/QuSqYj7tFbI?si=5lS2n9Tsohh7LPBP',
+  'Overhead Carry': 'https://youtube.com/shorts/_f17ljGZWq0?si=AFi4XzPiPtMbxS3P',
+  'Z-Press': 'https://youtube.com/shorts/5T4Ax70UqC0?si=loaS9aL3Z1SBWPxh',
 };
 
 // ─── Name Normalisation ────────────────────────────────────────────
@@ -310,9 +316,8 @@ const EXERCISE_NAME_ALIASES: Record<string, string> = {
   'half kneeling single arm overhead press': 'Half-Kneeling Single-Arm Overhead Press',
   'half-kneeling single-arm press':       'Half-Kneeling Single-Arm Overhead Press',
   'half kneeling single-arm press':       'Half-Kneeling Single-Arm Overhead Press',
-  'clap push up':                     'Clap Push-Ups',
-  'explosive push up':                'Clap Push-Ups',
-  'explosive push ups':               'Clap Push-Ups',
+  'explosive push up':                'Explosive Push-Ups',
+  'explosive push ups':               'Explosive Push-Ups',
 
   // Upper — pull
   'pull up':                          'Pull-Ups',
@@ -446,8 +451,6 @@ const EXERCISE_NAME_ALIASES: Record<string, string> = {
   'bear carry':                       'Bear Carry',
   'bear carries':                     'Bear Carry',
   'bear hug carry':                   'Bear Carry',
-  'band adductor squeeze':            'Groin Squeeze (Band Adductor)',
-  'groin squeeze':                    'Groin Squeeze (Band Adductor)',
   'foam roll quads':                  'Foam Roll — Hip Flexor, Quad, Adductors',
   'foam roll — quads':                'Foam Roll — Hip Flexor, Quad, Adductors',
   'foam roll quads, glutes & adductors': 'Foam Roll — Hip Flexor, Quad, Adductors',
@@ -473,9 +476,9 @@ const EXERCISE_NAME_ALIASES: Record<string, string> = {
   'calf stretch':                     'Calf Stretch',
 
   // Prehab
-  'tib raise':                        'Tibialis Raise',
-  'tib raises':                       'Tibialis Raise',
-  'tibialis raises':                  'Tibialis Raise',
+  'tib raise':                        'Tib Raises',
+  'tib raises':                       'Tib Raises',
+  'tibialis raises':                  'Tib Raises',
   'external rotation':                'Banded External Rotation',
   'band external rotation':           'Banded External Rotation',
   'banded external rotation':         'Banded External Rotation',
@@ -485,19 +488,15 @@ const EXERCISE_NAME_ALIASES: Record<string, string> = {
   'single leg calf raise':            'Single-Leg Calf Raise',
   'calf raise':                       'Single-Leg Calf Raise',
   'bent leg calf raise':              'Seated Calf Raise',
-  'copenhagen plank':                 'Copenhagen Plank',
-  'short lever copenhagen':           'Short-Lever Copenhagen',
-  'short-lever copenhagen':           'Short-Lever Copenhagen',
+  'copenhagen plank':                 'Copenhagen Plank (Half)',
+  'short lever copenhagen':           'Copenhagen Plank (Half)',
+  'short-lever copenhagen':           'Copenhagen Plank (Half)',
   'long lever copenhagen':            'Long-Lever Copenhagen',
   'long-lever copenhagen':            'Long-Lever Copenhagen',
   'bottoms up press':                 'Bottoms-Up KB Press',
   'bottoms-up press':                 'Bottoms-Up KB Press',
   'bottoms up kb press':              'Bottoms-Up KB Press',
   'bottoms-up kb press':              'Bottoms-Up KB Press',
-  'bottoms up carry':                 'Bottoms-Up KB Carry',
-  'bottoms-up carry':                 'Bottoms-Up KB Carry',
-  'bottoms up kb carry':              'Bottoms-Up KB Carry',
-  'bottoms-up kb carry':              'Bottoms-Up KB Carry',
   'scap push-up':                     'Scap Push-Up',
   'scap push up':                     'Scap Push-Up',
   'scapular push-up':                 'Scap Push-Up',

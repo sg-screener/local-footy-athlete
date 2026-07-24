@@ -3,8 +3,6 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -15,6 +13,7 @@ import { Input } from '../../components/common/Input';
 import { Button } from '../../components/common/Button';
 import { resetPassword } from '../../services/auth/authService';
 import type { AuthStackParamList } from '../../types/navigation';
+import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 
 type ForgotPasswordScreenProps = NativeStackScreenProps<
   AuthStackParamList,
@@ -114,14 +113,10 @@ export default function ForgotPasswordScreen({
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardSafeArea
       style={styles.container}
+      scrollProps={{ contentContainerStyle: styles.scrollContent }}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
         {/* Header */}
         <View style={styles.header}>
           {/* Back Button */}
@@ -201,8 +196,7 @@ export default function ForgotPasswordScreen({
             </Text>
           </Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardSafeArea>
   );
 }
 

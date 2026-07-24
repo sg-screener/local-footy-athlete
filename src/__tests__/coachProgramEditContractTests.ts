@@ -833,7 +833,7 @@ eq('ditch conditioning event carries target item id',
 
 const mixedConditioningRemovalWorkout = strengthWithConditioningWorkout(
   'Lower Squat',
-  ['Back Squat', 'Copenhagen Plank'],
+  ['Back Squat', 'Copenhagen Plank (Half)'],
   ['Rower Flush'],
 );
 const ditchConditioningFromMixed = interpretCoachMessageToProgramEdit({
@@ -857,7 +857,7 @@ ok('remove conditioning from mixed session keeps strength exercises',
     ex.exercise?.name === 'Back Squat',
   ) &&
     ditchConditioningFromMixedApply.written?.exercises?.some((ex: any) =>
-      ex.exercise?.name === 'Copenhagen Plank',
+      ex.exercise?.name === 'Copenhagen Plank (Half)',
     ),
   ditchConditioningFromMixedApply.written);
 ok('remove conditioning from mixed session removes the rower',
@@ -931,7 +931,7 @@ ok('easier today asks a useful load question',
 
 const mixedSession = strengthWithConditioningWorkout(
   'Lower Squat',
-  ['Back Squat', 'Copenhagen Plank'],
+  ['Back Squat', 'Copenhagen Plank (Half)'],
   ['Rower Flush'],
 );
 const easierMixed = interpretCoachMessageToProgramEdit({
@@ -2538,7 +2538,7 @@ const sixExerciseStrengthFlush = strengthWithConditioningWorkout(
     'Walking Lunge',
     'Split Squat',
     'Nordic Curl',
-    'Copenhagen Plank',
+    'Copenhagen Plank (Half)',
   ],
   ['Easy Aerobic Flush'],
 );

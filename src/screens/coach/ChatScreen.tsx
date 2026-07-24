@@ -1,12 +1,11 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
+  TextInput,
   View,
   StyleSheet,
   FlatList,
-  KeyboardAvoidingView,
   Platform,
   Pressable,
-  TextInput,
   ActivityIndicator,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -20,6 +19,8 @@ import { MessageBubble } from '../../components/coach/MessageBubble';
 import { TypingIndicator } from '../../components/coach/TypingIndicator';
 import { QuickPromptsBar } from '../../components/coach/QuickPromptsBar';
 import type { CoachMessage } from '../../types/domain';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
+import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 
 type ChatScreenProps = NativeStackScreenProps<CoachStackParamList, 'CoachChat'>;
 
@@ -118,10 +119,10 @@ export default function ChatScreen({ route, navigation }: ChatScreenProps) {
   const isInputDisabled = !inputValue.trim() || isTyping || isLoading;
 
   return (
-    <KeyboardAvoidingView
+    <KeyboardSafeArea
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      scrollable={false}
+      dismissOnBackgroundTap={false}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
@@ -168,7 +169,7 @@ export default function ChatScreen({ route, navigation }: ChatScreenProps) {
       {/* Input Area */}
       <View style={[styles.inputArea, { paddingBottom: insets.bottom + spacing.md }]}>
         <View style={styles.inputContainer}>
-          <TextInput
+          <AppTextInput
             ref={inputRef}
             style={styles.input}
             placeholder="Ask your coach..."
@@ -202,7 +203,7 @@ export default function ChatScreen({ route, navigation }: ChatScreenProps) {
           </Pressable>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardSafeArea>
   );
 }
 

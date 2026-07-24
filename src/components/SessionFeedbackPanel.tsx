@@ -29,7 +29,6 @@ import {
   View,
   StyleSheet,
   Pressable,
-  TextInput,
   type TextStyle,
 } from 'react-native';
 import { Text } from './common/Text';
@@ -84,6 +83,7 @@ import {
 import type { SessionOutcomeTransactionReceipt } from '../types/sessionOutcome';
 import { registerAthleteActionUIOutcome } from '../dev/e2e/athleteActionUIObservation';
 import { explorerTestId } from '../utils/stableTestId';
+import { AppTextInput } from '../components/keyboard/AppTextInput';
 
 interface Props {
   /** ISO date string 'YYYY-MM-DD' for the session */
@@ -814,7 +814,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             />
           </View>
           {conditioningConfig.fields.includes('bestInterval') ? (
-            <TextInput
+            <AppTextInput
               style={styles.singleLineInput}
               placeholder="Best interval (optional)"
               placeholderTextColor={colors.text.tertiary}
@@ -825,7 +825,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             />
           ) : null}
           {conditioningConfig.fields.includes('averagePace') ? (
-            <TextInput
+            <AppTextInput
               style={styles.singleLineInput}
               placeholder="Average pace / split (optional)"
               placeholderTextColor={colors.text.tertiary}
@@ -849,7 +849,7 @@ export const SessionFeedbackPanel: React.FC<Props> = ({ date, workout, onSave })
             <Text style={styles.notesToggleText}>+ Add a note</Text>
           </Pressable>
         ) : (
-          <TextInput
+          <AppTextInput
             style={styles.notesInput}
             placeholder="Anything to note? (optional)"
             placeholderTextColor={colors.text.tertiary}
@@ -952,7 +952,7 @@ function ConditioningMetricInput({
   return (
     <View style={styles.metricInputWrap}>
       <Text style={styles.metricLabel}>{label}</Text>
-      <TextInput
+      <AppTextInput
         style={styles.metricInput}
         placeholder="-"
         placeholderTextColor={colors.text.tertiary}

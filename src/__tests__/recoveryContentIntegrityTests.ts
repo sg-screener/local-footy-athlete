@@ -58,13 +58,12 @@ const REQUESTED_CONTENT: Array<{ label: string; canonical: string }> = [
   { label: 'Bear Carry', canonical: 'Bear Carry' },
   { label: 'Nordic Curl', canonical: 'Nordic Lower' },
   { label: 'Nordic Lower', canonical: 'Nordic Lower' },
-  { label: 'Short-lever Copenhagen', canonical: 'Short-Lever Copenhagen' },
   { label: 'Long-lever Copenhagen', canonical: 'Long-Lever Copenhagen' },
-  { label: 'Groin squeeze', canonical: 'Groin Squeeze (Band Adductor)' },
+  { label: 'Copenhagen plank (half)', canonical: 'Copenhagen Plank (Half)' },
   { label: 'Side Plank', canonical: 'Side Plank' },
   { label: 'Bird Dog', canonical: 'Bird Dog' },
   { label: 'McGill Curl-Up', canonical: 'McGill Sit Up' },
-  { label: 'Tibialis Raise', canonical: 'Tibialis Raise' },
+  { label: 'Tib Raises', canonical: 'Tib Raises' },
   { label: 'Standing Calf Raise', canonical: 'Calf Raises' },
   { label: 'Seated Calf Raise', canonical: 'Seated Calf Raise' },
   { label: 'Single-Leg Calf Raise', canonical: 'Single-Leg Calf Raise' },
@@ -74,7 +73,6 @@ const REQUESTED_CONTENT: Array<{ label: string; canonical: string }> = [
   { label: 'Face Pull', canonical: 'Face Pull' },
   { label: 'External Rotation', canonical: 'Banded External Rotation' },
   { label: 'Scap Push-Up', canonical: 'Scap Push-Up' },
-  { label: 'Bottoms-Up KB Carry', canonical: 'Bottoms-Up KB Carry' },
   { label: 'Bottoms-Up KB Press', canonical: 'Bottoms-Up KB Press' },
 ];
 
@@ -113,14 +111,14 @@ for (const item of REQUESTED_CONTENT) {
 }
 
 section('[3] injury profile rules match recovery add-on content');
-for (const name of ['Short-Lever Copenhagen', 'Long-Lever Copenhagen', 'Groin Squeeze (Band Adductor)']) {
+for (const name of ['Copenhagen Plank (Half)', 'Long-Lever Copenhagen', 'Adductor Rockback']) {
   const injury = EXERCISE_TAGS[name]?.injury;
   ok(`${name} respects groin/adductor`, injury?.adductor === 'caution' && injury?.pubalgia === 'caution');
 }
 
 ok('Nordic Lower avoids active hamstring issues', EXERCISE_TAGS['Nordic Lower']?.injury.hamstring === 'avoid');
 
-for (const name of ['Farmer Carry', 'Suitcase Carry', 'Bear Carry', 'Bottoms-Up KB Carry']) {
+for (const name of ['Farmer Carry', 'Suitcase Carry', 'Bear Carry', 'Overhead Carry']) {
   const injury = EXERCISE_TAGS[name]?.injury;
   ok(
     `${name} respects loaded-carry issues`,
@@ -131,7 +129,7 @@ for (const name of ['Farmer Carry', 'Suitcase Carry', 'Bear Carry', 'Bottoms-Up 
   );
 }
 
-for (const name of ['Calf Raises', 'Single-Leg Calf Raise', 'Seated Calf Raise', 'Tib Raise', 'Tibialis Raise']) {
+for (const name of ['Calf Raises', 'Single-Leg Calf Raise', 'Seated Calf Raise', 'Tib Raises', 'Tib Raises']) {
   const injury = EXERCISE_TAGS[name]?.injury;
   ok(`${name} respects calf/Achilles`, injury?.calf === 'caution' && injury?.ankle === 'caution');
 }
@@ -166,7 +164,7 @@ for (const name of ['McGill Sit Up', 'Bird Dog']) {
   ok(`${name} is controlled corrective core`, exercise?.prescriptionType === 'reps' && exercise.sets <= 3 && exercise.repsMax <= 10);
 }
 
-for (const name of ['Single-Leg Calf Raise', 'Seated Calf Raise', 'Tibialis Raise']) {
+for (const name of ['Single-Leg Calf Raise', 'Seated Calf Raise', 'Tib Raises']) {
   const exercise = poolByName.get(name);
   ok(`${name} stays 2-3 x 8-20 style`, exercise?.sets >= 2 && exercise.sets <= 3 && exercise.repsMin >= 8 && exercise.repsMax <= 20);
 }

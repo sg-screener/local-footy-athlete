@@ -222,6 +222,10 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Bulgarian Split Squats', loadRatio: 0.40 },
         { name: 'Reverse Lunges',         loadRatio: 0.45 },
         { name: 'Step Ups',               loadRatio: 0.40 },
+        { name: 'Goblet Squat',           loadRatio: 0.35 },
+        { name: 'Leg Press',             loadRatio: 0.90 },
+        { name: 'Single-Leg Leg Press',   loadRatio: 0.50 },
+        { name: 'Single-Leg Squat (to Box)', loadRatio: 0.30 },
       ],
     },
   },
@@ -265,6 +269,13 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Incline DB Bench', loadRatio: 0.70 },
         { name: 'Push-ups',        loadRatio: 0.00 },
         { name: 'Dips',            loadRatio: 0.60 },
+        { name: 'Single-Arm DB Bench Press', loadRatio: 0.35 },
+        // 'Speed Bench' is NOT here on purpose: it classifies as `power`, and
+        // the power policy strips power rows from coach-built strength content
+        // (workoutCanonicalisation.ts:572). Pooled here it silently deleted the
+        // athlete's accessory whenever rotation selected it. Its cue, video and
+        // tags ship; placement is owned by the queued power-pool unit
+        // (docs/POWER_EXERCISE_POOL_SPEC_2026-07-23.md), with Kneeling/Lateral Jump.
       ],
     },
   },
@@ -314,7 +325,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Lat Pulldown',            loadRatio: 0.80 },
         { name: 'Neutral-Grip Pulldown',   loadRatio: 0.80 },
         { name: 'Single-Arm Lat Pulldown', loadRatio: 0.40 },
-        { name: 'Straight-Arm Pulldown',   loadRatio: 0.50 },
+        { name: 'Single-Arm Pulldown',   loadRatio: 0.50 },
       ],
     },
   },
@@ -335,19 +346,24 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   //     meaningful, but the infrastructure still cleans up duplicates
   //     and guarantees rotation.
   carry: {
+    // Four carries, split 2/2 so BOTH roles rotate (Sam, 2026-07-24). The
+    // 2026-07-23 cue changeset's carry deletion had left one stranded
+    // accessory that could never rotate.
+    // Heavy two-handed carries anchor; lighter unilateral/overhead carries are
+    // the accessory. Load transfer only applies within a role, so the split
+    // also decides which carries share a load reference.
     anchor: {
       slot: 'carry', role: 'anchor', entries: [
         { name: 'Farmer Carry',   loadRatio: 1.00 },
         // Bear-hug/sandbag carries usually cap out before farmer handles, so
         // use ~75% of Farmer Carry as the carry-slot load reference.
         { name: 'Bear Carry',     loadRatio: 0.75 },
-        { name: 'Overhead Carry', loadRatio: 0.55 },
       ],
     },
     accessory: {
       slot: 'carry', role: 'accessory', entries: [
         { name: 'Suitcase Carry', loadRatio: 0.60 },
-        { name: 'Zercher Carry',  loadRatio: 0.55 },
+        { name: 'Overhead Carry', loadRatio: 0.55 },
       ],
     },
   },
@@ -399,7 +415,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   //     ratio is 0 (bodyweight guard).
   //
   //   - Rotation order groups: hamstring (Nordic Lower) →
-  //     quad (Leg Extension) → calf/ankle (Calf Raises / Tib Raise) →
+  //     quad (Leg Extension) → calf/ankle (Calf Raises / Tib Raises) →
   //     adductor (Adductor Machine). Intra-session avoidance spreads
   //     multiple AI suggestions across muscle groups cleanly.
   isolation_lower: {
@@ -414,7 +430,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Leg Extension',   loadRatio: 0 },
         // Calf / ankle block
         { name: 'Calf Raises',     loadRatio: 0 },
-        { name: 'Tib Raise',       loadRatio: 0 },
+        { name: 'Tib Raises',       loadRatio: 0 },
         // Adductor block
         { name: 'Adductor Machine', loadRatio: 0 },
       ],

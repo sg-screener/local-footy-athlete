@@ -2,6 +2,8 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '../theme/colors';
 import { OnboardingStackParamList } from '../types/navigation';
+import { useProfileStore } from '../store/profileStore';
+import { resolveOnboardingResumeStep } from '../utils/onboardingSteps';
 
 // Import all onboarding screens
 import { WelcomeScreen } from '../screens/onboarding/WelcomeScreen';
@@ -29,10 +31,30 @@ import { CompleteScreen } from '../screens/onboarding/CompleteScreen';
 
 const Stack = createNativeStackNavigator<OnboardingStackParamList>();
 
+/**
+ * Interrupted-onboarding recovery.
+ *
+ * Onboarding always restarted at Welcome, so an athlete whose first process was
+ * killed mid-flow re-entered at step 1 and any step they did not revisit kept
+ * its default straight through to Review
+ * (docs/ONBOARDING_PERSISTENCE_DIAGNOSIS_2026-07-24.md §4). With answers now
+ * durably committed per step, a relaunch can resume where the athlete stopped.
+ *
+ * The entry point is resolved once, from hydrated state, when the navigator
+ * mounts — RootNavigator does not mount this until the hydration gate reports
+ * ready, so the profile read here is the persisted one.
+ */
 export default function OnboardingNavigator() {
+  const onboardingData = useProfileStore.getState().onboardingData;
+  const resumeStep = resolveOnboardingResumeStep(onboardingData);
+  // A profile with nothing answered is a genuine first run: show Welcome.
+  const initialRouteName: keyof OnboardingStackParamList =
+    resumeStep === 'Name' && !onboardingData.firstName ? 'Welcome' : resumeStep;
+
   return (
     <Stack.Navigator
       id={undefined}
+      initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
         contentStyle: {
