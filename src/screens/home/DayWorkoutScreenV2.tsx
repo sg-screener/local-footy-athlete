@@ -339,7 +339,7 @@ function suggestAddExercise(
       { name: 'Dead Bug', sets: 2, repsMin: 8, repsMax: 10, perSide: true },
     ],
     Prehab: [
-      { name: 'Copenhagen Plank', sets: 2, repsMin: 20, repsMax: 30, prescriptionType: 'duration', perSide: true },
+      { name: 'Copenhagen Plank (Half)', sets: 2, repsMin: 20, repsMax: 30, prescriptionType: 'duration', perSide: true },
       { name: 'Calf Isometric Hold', sets: 2, repsMin: 30, repsMax: 45, prescriptionType: 'duration' },
     ],
     Mobility: [

@@ -23,6 +23,7 @@ no rewording. Where secondary is blank, store empty (render omits).
 - Bottoms-Up KB Carry
 - Clap Push-Ups ('no need if we have explosive push-ups')
 - Groin Squeeze (Band Adductor) (med-ball version stays)
+- MetCon (dead entry — Sam, 2026-07-24)
 
 ## Pool additions (Sam-approved; conditioning names need NO pool action — already selectable via conditioning system)
 
@@ -41,10 +42,38 @@ no rewording. Where secondary is blank, store empty (render omits).
 - Conditioning cues: kept as Sam edited (no stripping).
 - Depth Jumps / Lateral Bounds: sheet cues below are canonical — align the power pool spec cues to these.
 
+## Amendment — Sam's rulings, 2026-07-24
+
+Applying this changeset exposed four names it did not cover and one it could
+not place. Sam ruled on each; the library below already reflects them.
+
+- **Child's Pose with Breathing** — KEEP, cue authored (was falling back to the
+  generic family cue).
+- **World's Greatest Stretch** — KEEP, cue authored (same).
+- **MetCon** — DELETE (dead entry); added to Deletions above.
+- **Single-Arm DB Floor Press** — KEEP with its existing cue. It is the Bible's
+  pressing injury-swap, so it stays out of this sheet but stays in the library.
+  (The library is therefore the sheet PLUS this entry, not a wholesale replace.)
+- **Z-Press** — secondary extended with Sam's variation note. `PoolEntry` has no
+  `notes` field to hold it, and the 18-word cap does, so it rides the cue.
+- **Abductor Machine** — NEW exercise (Sam, 2026-07-24). Cue + video + tags ship;
+  its own hip/glute classification, NOT a mirror of Adductor Machine (it works
+  the glutes/outer hip, not the groin).
+
+  **It is deliberately NOT in a strength pool.** Sam's ruling — "glute/hip
+  accessories only, never a swap candidate for groin/adductor work" — cannot be
+  expressed today: `PoolEntry` is `{name, loadRatio}` with no muscle-block field,
+  and `getSlotSiblings` returns a slot's whole role array, so pooling it would
+  make it a rotation and swap sibling of Adductor Machine. Unpooled, the ruling
+  holds trivially. The grouping mechanism is the first item of the Phase 4.3
+  programming pass (see PROGRAMMING_DESIGN_SESSION D3/D11); Abductor Machine
+  joins the pool then.
+
 ## Final cue library (name → primary | secondary)
 
 - **90/90 Breathing**: Knees and hips at 90, exhale fully. | Pause at the bottom of each breath.
 - **Ab Wheel**: Roll out only as far as you can control. | Ribs down, slightly rounded back, no sagging at hips
+- **Abductor Machine**: Push the knees apart against the pads. | (none)
 - **Adductor Machine**: Squeeze knees together | (none)
 - **Adductor Rockback**: Wide knees, one leg out straight to side, rock hips back to the heels. | Hold the end range, breathe.
 - **Air Bike Sprints**: Explosive effort. | Recover fully between sprints.
@@ -74,6 +103,7 @@ no rewording. Where secondary is blank, store empty (render omits).
 - **Chest / Pec Stretch (Doorway)**: Forearm on the doorframe, step the foot through. | Big stretch through the chest, breathe slow.
 - **Chest Supported Row**: Chest on the pad, pull straight back. | Retract and hold for a beat.
 - **Chest-Supported DB Row**: Chest on the pad, pull to the hips, can do on incline bench. | Squeeze the shoulder blades back.
+- **Child's Pose with Breathing**: Sink back onto the heels, arms long. | Slow breaths into the back.
 - **Chin-Up Negative (Slow)**: Jump to the top, lower slowly, can pull yourself up if you can | Fight gravity the whole way.
 - **Chin-Ups**: Palms facing you, full range. | Control the lowering.
 - **Close Grip Bench**: Hands at or inside shoulder width, elbows tight. | Triceps do the work.
@@ -181,4 +211,5 @@ no rewording. Where secondary is blank, store empty (render omits).
 - **Weighted Dead Bug**: Hold weight plate or dumbbells, extended arms overhead and feet out, low back pinned to ground | Slow extension, full exhale.
 - **Woodchop (Half Kneeling)**: Drive with the trunk, arms guide. | Controlled rotation, not a throw.
 - **Woodchop (Standing)**: Rotate through the torso, not the arms. | Feet stay planted.
-- **Z-Press**: Sit up tall, slight lean back when pressing | Stay tight through midline
+- **World's Greatest Stretch**: Lunge deep, elbow to instep. | Then rotate and reach to the sky.
+- **Z-Press**: Sit up tall, slight lean back when pressing | Stay tight through midline. Can be done seated on a bench, or with dumbbells.

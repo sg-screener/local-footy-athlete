@@ -5,9 +5,14 @@ src/services/exerciseVideoService.ts EXERCISE_DEMO_VIDEOS (after the cue
 changeset's renames/deletions). 36 URLs below are Sam's picks — apply
 EXACTLY, keep ?si= params as given.
 
-## Set / replace (36)
+## Set / replace (41)
 
+Amended 2026-07-24: the original 36 plus five added when applying the changeset
+surfaced real gaps — see "Still no video" below.
+
+- **Abductor Machine**: https://youtube.com/shorts/S_FGYHNHJ_c?si=Wqz3kGC0csTyr5Lh
 - **Ab Wheel**: https://youtube.com/shorts/QHXLnvbJ444?si=MzhlejwMTRGa4s8-
+- **Adductor Machine**: https://youtube.com/shorts/iPLvw74e7Tk?si=o3AmNgRbvvikIbi5
 - **Back Squat**: https://youtube.com/shorts/hscOjLrW60c?si=w-VfL2KXVSR8tlhX
 - **Barbell Row**: https://youtube.com/shorts/UL8ZcK64KxA?si=SDD5wMC5nxQZyKGl
 - **Bear Carry**: https://youtube.com/shorts/XVDCJghr56s?si=ag2Bqh3VUPacRdr6
@@ -33,6 +38,8 @@ EXACTLY, keep ?si= params as given.
 - **Leg Extension**: https://youtube.com/shorts/t8--Y-pjTmg?si=361wZ-G2w94KOacA
 - **Leg Press**: https://youtube.com/shorts/nDh_BlnLCGc?si=ePHOzkzXXuoDG6uQ
 - **Long-Lever Copenhagen**: https://youtube.com/shorts/NBQIxbMAalk?si=nU796DqBg9LT0fSG
+- **Neutral-Grip Pulldown**: https://youtube.com/shorts/QuSqYj7tFbI?si=5lS2n9Tsohh7LPBP
+- **Overhead Carry**: https://youtube.com/shorts/_f17ljGZWq0?si=AFi4XzPiPtMbxS3P
 - **Overhead Tricep Extension**: https://youtube.com/shorts/ekEo-BSg0_U?si=VKBDNhLGmy1twEla
 - **Pull-Ups**: https://youtube.com/shorts/dvG8B2OjfWk?si=yqgXl7NvejneCp1w
 - **Push-ups**: https://youtube.com/shorts/c-lBErfxszs?si=k01MuYu6xozOUWy9
@@ -43,13 +50,31 @@ EXACTLY, keep ?si= params as given.
 - **Skull Crushers**: https://youtube.com/shorts/zR9gty7LUxE?si=LomBZEO0pV6BKWC-
 - **Speed Bench**: https://youtube.com/shorts/bv1vwhBwjUY?si=qAgsG_WoYjDeX-KV
 - **Tricep Pushdown**: https://youtube.com/shorts/xguGXQAvbKk?si=cwE217VcW9OJN1_y
+- **Z-Press**: https://youtube.com/shorts/5T4Ax70UqC0?si=loaS9aL3Z1SBWPxh
 
 ## Still no video
 
-NONE — every pool exercise has a video after this changeset. (Correction
-2026-07-24: an earlier draft wrongly listed five as missing due to a
-stale comparison file; all five already exist in the service map.
-Verified directly against exerciseVideoService.ts.)
+NONE — every pool exercise has a video after this changeset.
+
+**Correction history.** An earlier draft listed five as missing; the 2026-07-24
+correction called that stale and claimed nothing remained. **That correction was
+itself incomplete.** Applying the changeset against the pools showed four kept,
+cued pool exercises with no entry in `EXERCISE_DEMO_VIDEOS` at all (absent, not
+null, and unreachable via the alias map):
+
+- Adductor Machine
+- Neutral-Grip Pulldown
+- Overhead Carry
+- Z-Press
+
+Sam supplied all four above, plus one for the new Abductor Machine. The "NONE
+remaining" claim is now true and is enforced by
+`src/__tests__/authoredCueLibraryTests.ts` §6, which fails the build if any pool
+exercise stops resolving a video.
+
+Zone-1 recovery modalities (Light Walk or Stationary Bike, Incline Treadmill
+Walk, Outdoor Walk, Light Skipping) remain out of the map by design and are
+excluded from that invariant.
 
 ## Unchanged
 

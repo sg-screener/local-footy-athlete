@@ -357,7 +357,7 @@ section('[7] injury/readiness constraints downgrade add-ons');
     constraints: injuryContext('lower back', 5, ['lowerBack']),
   });
   ok('lower-back issue avoids heavy carries',
-    !/Farmer Carry|Bear Carry|Bottoms-Up KB Carry/i.test(addonText(back)) && !focusAreas(back).includes('carries'),
+    !/Farmer Carry|Bear Carry|Overhead Carry/i.test(addonText(back)) && !focusAreas(back).includes('carries'),
     addonText(back));
 
   const cooked = attach({

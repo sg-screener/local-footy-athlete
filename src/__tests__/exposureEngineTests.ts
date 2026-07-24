@@ -116,7 +116,7 @@ ok('Lateral Raise → shoulder_isolation', hasExp('Lateral Raise', 'shoulder_iso
 ok('Pull-Up → vertical_pull + heavy_pull + grip_heavy', hasExp('Pull-Up', 'vertical_pull') && hasExp('Pull-Up', 'heavy_pull') && hasExp('Pull-Up', 'grip_heavy'));
 ok('Pendlay Row → horizontal_pull + heavy_pull', hasExp('Pendlay Row', 'horizontal_pull') && hasExp('Pendlay Row', 'heavy_pull'));
 ok('Farmer Carry → loaded_carry + grip_heavy', hasExp('Farmer Carry', 'loaded_carry') && hasExp('Farmer Carry', 'grip_heavy'));
-ok('Copenhagen Plank → adductor_groin + trunk + isometric', hasExp('Copenhagen Plank', 'adductor_groin') && hasExp('Copenhagen Plank', 'trunk') && hasExp('Copenhagen Plank', 'isometric'));
+ok('Copenhagen Plank (Half) → adductor_groin + trunk + isometric', hasExp('Copenhagen Plank (Half)', 'adductor_groin') && hasExp('Copenhagen Plank (Half)', 'trunk') && hasExp('Copenhagen Plank (Half)', 'isometric'));
 ok('Pallof Press → trunk + anti_rotation', hasExp('Pallof Press', 'trunk') && hasExp('Pallof Press', 'anti_rotation'));
 ok('10m Sprint → sprint + acceleration + high_speed_running', hasExp('10m Sprint', 'sprint') && hasExp('10m Sprint', 'acceleration') && hasExp('10m Sprint', 'high_speed_running'));
 ok('Tempo Run → high_speed_running', hasExp('Tempo Run', 'high_speed_running'));

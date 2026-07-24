@@ -411,7 +411,7 @@ type _ProgramEditRejectsAppendWithTargetItem = ExpectFalse<IsAssignable<{
   targetSessionId: null;
   targetItemId: 'existing-card';
   requestedChange: 'type';
-  newValue: { activity: 'Bike Sprints' };
+  newValue: { activity: 'Air Bike Sprints' };
   missingFields: [];
   confidence: 1;
   naturalLanguageReason: 'type contract';

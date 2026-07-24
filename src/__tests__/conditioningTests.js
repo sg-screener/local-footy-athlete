@@ -83,7 +83,7 @@ function baseCtx(overrides = {}) {
 section('1. Conditioning Metadata — Tier Assignments');
 
 // Tier A
-const tierA = ['Sprint Intervals', 'Hill Sprints', 'Quality Sprints', 'MAS Training', 'Flog Friday'];
+const tierA = ['Sprint Intervals', 'Hill Sprints', 'Quality Sprints', 'MAS Training'];
 for (const name of tierA) {
   assert(CONDITIONING_META[name]?.tier === 'A', `${name} is Tier A`);
 }
@@ -95,7 +95,7 @@ for (const name of tierBHigh) {
 }
 
 // Tier B-low
-const tierBLow = ['Tempo Run', 'Bike Sprints', 'Row Intervals', 'SkiErg Intervals', 'Assault Bike Intervals'];
+const tierBLow = ['Tempo Run', 'Air Bike Sprints', 'Row Intervals', 'SkiErg Intervals', 'Assault Bike Intervals'];
 for (const name of tierBLow) {
   assert(CONDITIONING_META[name]?.tier === 'B-low', `${name} is Tier B-low`);
 }
@@ -108,10 +108,9 @@ for (const name of tierC) {
 
 section('1b. Conditioning Metadata — Modality & Impact');
 
-assert(CONDITIONING_META['Flog Friday'].modality === 'mixed', 'Flog Friday is mixed modality');
 assert(CONDITIONING_META['MetCon'].modality === 'mixed', 'MetCon is mixed modality');
 assert(CONDITIONING_META['Sprint Intervals'].modality === 'run', 'Sprint Intervals is run modality');
-assert(CONDITIONING_META['Bike Sprints'].modality === 'bike', 'Bike Sprints is bike modality');
+assert(CONDITIONING_META['Air Bike Sprints'].modality === 'bike', 'Air Bike Sprints is bike modality');
 assert(CONDITIONING_META['Row Intervals'].modality === 'row', 'Row Intervals is row modality');
 assert(CONDITIONING_META['Easy Swim'].modality === 'swim', 'Easy Swim is swim modality');
 assert(CONDITIONING_META['SkiErg Intervals'].modality === 'ski', 'SkiErg Intervals is ski modality');
@@ -122,7 +121,7 @@ for (const name of tierA) {
 }
 
 // Low-impact machines
-assert(CONDITIONING_META['Bike Sprints'].impact === 'low', 'Bike Sprints is low impact');
+assert(CONDITIONING_META['Air Bike Sprints'].impact === 'low', 'Air Bike Sprints is low impact');
 assert(CONDITIONING_META['Easy Bike'].impact === 'low', 'Easy Bike is low impact');
 assert(CONDITIONING_META['Easy Swim'].impact === 'low', 'Easy Swim is low impact');
 

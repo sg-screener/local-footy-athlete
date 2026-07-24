@@ -204,7 +204,7 @@ function buildAccessoryExercises(workoutId: string): WorkoutExercise[] {
   // via the pool-based builder with category gating.
   return [
     makeExercise(workoutId, 1, 'band-pallof', 'Band Pallof Press', 3, 10, 12, 45, 'Band at chest height. Anti-rotation trunk work.'),
-    makeExercise(workoutId, 2, 'copenhagen-plank', 'Copenhagen Plank', 3, 20, 30, 45, 'Seconds per side. Groin / adductor strength.'),
+    makeExercise(workoutId, 2, 'copenhagen-plank', 'Copenhagen Plank (Half)', 3, 20, 30, 45, 'Seconds per side. Groin / adductor strength.'),
     makeExercise(workoutId, 3, 'band-pull-apart', 'Band Pull-Apart', 3, 15, 20, 30, 'Shoulder health. Squeeze at end range.'),
     makeExercise(workoutId, 4, 'calf-raise', 'Single-Leg Calf Raise', 3, 12, 15, 30, 'Per side. Slow eccentric (3 sec down).'),
     makeExercise(workoutId, 5, 'swiss-ball-curl', 'Swiss Ball Hamstring Curl', 2, 10, 12, 45, 'Hips up. Roll ball in and out.'),

@@ -112,9 +112,9 @@ section('1. Classification');
   assert(neutralPulldown?.slot === 'vertical_pull' && neutralPulldown?.role === 'accessory',
     'Neutral-Grip Pulldown → vertical_pull/accessory (new entry)');
 
-  const straightArm = classifyPoolSlot('Straight-Arm Pulldown');
+  const straightArm = classifyPoolSlot('Single-Arm Pulldown');
   assert(straightArm?.slot === 'vertical_pull' && straightArm?.role === 'accessory',
-    'Straight-Arm Pulldown → vertical_pull/accessory (new entry)');
+    'Single-Arm Pulldown → vertical_pull/accessory (new entry)');
 
   const walkingLunges = classifyPoolSlot('Walking Lunges');
   assert(walkingLunges?.slot === 'squat' && walkingLunges?.role === 'accessory',
@@ -577,7 +577,7 @@ section('12. Isolation_lower (accessory-only slot)');
   // All five canonical names classify to isolation_lower/accessory
   const ISO_LOWER_NAMES = [
     'Nordic Lower', 'Leg Extension',
-    'Calf Raises', 'Tib Raise', 'Adductor Machine',
+    'Calf Raises', 'Tib Raises', 'Adductor Machine',
   ];
   for (const name of ISO_LOWER_NAMES) {
     const classified = classifyPoolSlot(name);
