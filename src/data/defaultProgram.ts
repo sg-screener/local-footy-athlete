@@ -90,6 +90,7 @@ import {
   buildPrescriptionEffectEvidence,
 } from '../utils/deterministicCoachNoteFactory';
 import { classifyGeneratedWorkoutRow } from '../rules/generatedWorkoutRowClassification';
+import { enforceCuratedCueContract } from '../rules/curatedCueContract';
 import {
   mainPatternsForLegacyStrengthPattern,
   normalizeStrengthIntent,
@@ -2094,7 +2095,7 @@ export function buildWorkoutsFromCoach(
     prevDow = cw.dayOfWeek;
   }
 
-  return completedCoachWorkouts.map((cw) => {
+  const acceptedWorkouts = completedCoachWorkouts.map((cw) => {
     const workoutId = `w-coach-${cw.dayOfWeek}`;
     const planEntry = resolveGeneratedPlanEntry(cw, planIdentityLookup, planLookup);
     const aiTier = (cw.sessionTier as SessionTier) || undefined;
@@ -2514,6 +2515,12 @@ export function buildWorkoutsFromCoach(
       beginnerPrescriptionEvidence,
     );
   });
+  // Program acceptance: every strength card must carry a curated cue. A name
+  // that does not resolve is a loud generation-contract violation, never a
+  // silent cueless card (Sam ruling, L10 run 3). Scoped by typed kind — power /
+  // conditioning / recovery rows are exempt.
+  enforceCuratedCueContract(acceptedWorkouts, `buildWorkoutsFromCoach(${microcycleId})`);
+  return acceptedWorkouts;
 }
 
 /**

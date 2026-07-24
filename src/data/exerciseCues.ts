@@ -405,6 +405,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Neutral grip, no swinging.',
     secondaryCue: 'Control both directions.',
   },
+  'Hamstring Curl': {
+    primaryCue: 'Curl the heels toward your butt.',
+    secondaryCue: 'Control the return, no slamming.',
+  },
   'Hanging Leg Raise': {
     primaryCue: 'Stay tight through midline, breath.',
     secondaryCue: 'No swinging.',
