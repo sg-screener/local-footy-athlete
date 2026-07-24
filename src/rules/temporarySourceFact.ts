@@ -17,6 +17,13 @@ import {
   normalizeInjuryEpisodes,
   type InjuryEpisodeV1,
 } from './injuryEpisode';
+// The single duration owner. This module STORES the bounds; it never decides
+// what they mean. `durableFactHorizon` imports only types from here, so there
+// is no cycle.
+import {
+  factHorizonCoversDate,
+  factHorizonHasElapsed,
+} from './durableFactHorizon';
 
 export const TEMPORARY_SOURCE_FACT_PROTOCOL_VERSION = 1 as const;
 
@@ -38,12 +45,19 @@ export type TemporaryAthleteReportedLevel =
   | 'cooked'
   | 'unspecified';
 
+/**
+ * `kind: 'open'` with `until: null` is how a DURABLE STATE fact says "true
+ * until the athlete clears it". Before Stage 1 that had no representation, so
+ * `status: 'active'` and a calendar-expired `effectiveUntil` could disagree
+ * about the same fact. `durableFactHorizon` is the only module that decides
+ * what these bounds mean.
+ */
 export interface TemporarySourceFactScope {
-  kind: 'date' | 'week' | 'window';
+  kind: 'date' | 'week' | 'window' | 'open';
   date?: string;
   weekStart?: string;
   from: string;
-  until: string;
+  until: string | null;
 }
 
 export interface TemporarySourceFactTransition {
@@ -62,7 +76,8 @@ interface TemporarySourceFactBase<TKind extends string> {
   status: TemporarySourceFactStatus;
   observedDate: string;
   effectiveFrom: string;
-  effectiveUntil: string;
+  /** `null` = open, until the athlete resolves it. Read via `factHorizon`. */
+  effectiveUntil: string | null;
   scope: TemporarySourceFactScope;
   athleteReportedLevel: TemporaryAthleteReportedLevel;
   createdAt: string;
@@ -199,15 +214,24 @@ function canonicalBodyPartBucket(value: unknown): InjuryState['bucket'] | null {
     : null;
 }
 
-function normalizeScope(value: unknown, from: string, until: string): TemporarySourceFactScope {
+function normalizeScope(
+  value: unknown,
+  from: string,
+  until: string | null,
+): TemporarySourceFactScope {
   const raw = isRecord(value) ? value : {};
-  const kind = raw.kind === 'week' || raw.kind === 'window' ? raw.kind : 'date';
+  const kind = raw.kind === 'week' || raw.kind === 'window' || raw.kind === 'open'
+    ? raw.kind
+    : 'date';
   return {
     kind,
     ...(kind === 'date' ? { date: isoDate(raw.date) ?? from } : {}),
     ...(kind === 'week' ? { weekStart: isoDate(raw.weekStart) ?? from } : {}),
     from: isoDate(raw.from) ?? from,
-    until: isoDate(raw.until) ?? until,
+    // An OPEN scope has no end. `isoDate(undefined) ?? until` would silently
+    // re-close a hydrated open fact, which is the exact truncation Stage 1
+    // removed, so open-ness is preserved explicitly.
+    until: kind === 'open' ? null : isoDate(raw.until) ?? until,
   };
 }
 
@@ -298,8 +322,14 @@ function normalizeNonInjuryFact(value: unknown): NonInjuryTemporarySourceFact | 
   }
   const observedDate = isoDate(value.observedDate);
   const effectiveFrom = isoDate(value.effectiveFrom) ?? observedDate;
-  const effectiveUntil = isoDate(value.effectiveUntil) ?? effectiveFrom;
-  if (!observedDate || !effectiveFrom || !effectiveUntil) return null;
+  // An OPEN fact hydrates back as open. `?? effectiveFrom` would re-close it to
+  // a single day, quietly resurrecting the truncation Stage 1 removed — so
+  // open-ness is read from the persisted scope, not inferred from a missing end.
+  const persistedOpen = isRecord(value.scope) && value.scope.kind === 'open';
+  const effectiveUntil = persistedOpen
+    ? null
+    : isoDate(value.effectiveUntil) ?? effectiveFrom;
+  if (!observedDate || !effectiveFrom || (!persistedOpen && !effectiveUntil)) return null;
   const createdAt = isoTimestamp(value.createdAt, `${observedDate}T00:00:00.000Z`);
   const updatedAt = isoTimestamp(value.updatedAt, createdAt);
   const status = normalizeStatus(value.status);
@@ -494,7 +524,7 @@ export function activeTemporarySourceFacts(
   return facts.filter((fact) => {
     if (isInjurySourceFact(fact)) return fact.status === 'active' || fact.status === 'improving';
     if (fact.status !== 'active') return false;
-    return !onDate || (fact.effectiveFrom <= onDate && fact.effectiveUntil >= onDate);
+    return !onDate || factHorizonCoversDate(fact, onDate);
   });
 }
 
@@ -504,7 +534,11 @@ export function expireTemporarySourceFacts(
   now: string,
 ): TemporarySourceFact[] {
   return facts.map((fact) => {
-    if (isInjurySourceFact(fact) || fact.status !== 'active' || fact.effectiveUntil >= onDate) return fact;
+    // An OPEN fact never elapses by calendar. "I'm properly sick" stops being
+    // true when the athlete says so, not at midnight on Sunday — the whole
+    // point of Stage 1. Only a closed window can expire.
+    if (isInjurySourceFact(fact) || fact.status !== 'active' ||
+      !factHorizonHasElapsed(fact, onDate)) return fact;
     return {
       ...fact,
       status: 'expired',
@@ -543,14 +577,31 @@ function projectionScore(
   return levelScore(fact.athleteReportedLevel);
 }
 
+/**
+ * Stable identity token for a fact's window. An open window has no end date, so
+ * it contributes the literal `open` rather than a date — ids stay stable and a
+ * hydrated open fact never collides with a closed one covering the same start.
+ */
+export function factWindowKey(fact: { effectiveFrom: string; effectiveUntil: string | null }): string {
+  return `${fact.effectiveFrom}:${fact.effectiveUntil ?? 'open'}`;
+}
+
 function factConstraintMetadata(facts: readonly TemporaryHealthFact[]) {
   const updated = facts.map((fact) => fact.updatedAt).sort();
-  const expires = facts.map((fact) => fact.effectiveUntil).sort();
+  // One open fact makes the composed constraint open: it cannot expire on a
+  // calendar date while the athlete still has the condition.
+  const anyOpen = facts.some((fact) => fact.effectiveUntil === null);
+  const expires = facts
+    .map((fact) => fact.effectiveUntil)
+    .filter((value): value is string => value !== null)
+    .sort();
   return {
     temporarySourceFactIds: facts.map((fact) => fact.factId).sort(),
     startDate: facts.map((fact) => fact.effectiveFrom).sort()[0],
     lastUpdatedAt: updated[updated.length - 1],
-    expiresAt: expires[expires.length - 1],
+    ...(anyOpen || expires.length === 0
+      ? {}
+      : { expiresAt: expires[expires.length - 1] }),
   };
 }
 
@@ -576,7 +627,7 @@ function globalConstraint(
     new Set(facts.map((fact) => fact.effectiveFrom)).size === 1;
   const poorSleep = strongest.factKind === 'poor_sleep' ? strongest : null;
   return {
-    id: `source-fact:global:${strongest.effectiveFrom}:${strongest.effectiveUntil}`,
+    id: `source-fact:global:${factWindowKey(strongest)}`,
     type: 'fatigue',
     severity,
     status: 'active',
@@ -611,7 +662,7 @@ function globalConstraints(
 ): ActiveFatigueConstraint[] {
   const byWindow = new Map<string, TemporaryHealthFact[]>();
   for (const fact of facts) {
-    const key = `${fact.effectiveFrom}:${fact.effectiveUntil}`;
+    const key = factWindowKey(fact);
     const windowFacts = byWindow.get(key) ?? [];
     windowFacts.push(fact);
     byWindow.set(key, windowFacts);
@@ -629,7 +680,7 @@ function localizedSorenessConstraints(facts: readonly TemporarySorenessFact[]): 
   }>();
   for (const fact of facts) {
     if (fact.distribution !== 'localized' || !fact.canonicalBodyPartBucket) continue;
-    const key = `${fact.canonicalBodyPartBucket}:${fact.effectiveFrom}:${fact.effectiveUntil}`;
+    const key = `${fact.canonicalBodyPartBucket}:${factWindowKey(fact)}`;
     const group = byBucketAndWindow.get(key) ?? {
       bucket: fact.canonicalBodyPartBucket,
       facts: [],
@@ -649,7 +700,7 @@ function localizedSorenessConstraints(facts: readonly TemporarySorenessFact[]): 
     const dateScoped = bucketFacts.every((fact) => fact.scope.kind === 'date') &&
       new Set(bucketFacts.map((fact) => fact.effectiveFrom)).size === 1;
     return {
-      id: `source-fact:soreness:${bucket}:${strongest.effectiveFrom}:${strongest.effectiveUntil}`,
+      id: `source-fact:soreness:${bucket}:${factWindowKey(strongest)}`,
       type: 'soreness',
       bodyPart,
       bucket,
@@ -720,7 +771,7 @@ function equipmentProjection(
       fact.sourceActor === 'system' ? 'system' : 'tap',
     reasonLabel: fact.mode === 'only' ? 'Temporary equipment setup' : 'Equipment unavailable',
     temporarySourceFactIds: [fact.factId],
-    expiresAt: fact.effectiveUntil,
+    ...(fact.effectiveUntil === null ? {} : { expiresAt: fact.effectiveUntil }),
     ...(fact.scope.kind === 'week' ? { weekStartISO: fact.scope.weekStart } : {}),
     modifierTitle: 'Equipment restriction active',
     modifierBody: fact.mode === 'only'
@@ -750,7 +801,7 @@ function scheduleProjection(
     source: fact.sourceActor === 'coach' ? 'coach' :
       fact.sourceActor === 'system' ? 'system' : 'tap',
     temporarySourceFactIds: [fact.factId],
-    expiresAt: fact.effectiveUntil,
+    ...(fact.effectiveUntil === null ? {} : { expiresAt: fact.effectiveUntil }),
     ...(fact.scope.kind === 'week' ? { weekStartISO: fact.scope.weekStart } : {}),
     scheduleKind: fact.scheduleKind,
     unavailableDates: [...fact.unavailableDates],
@@ -795,7 +846,7 @@ function timeCapProjection(
     source: fact.sourceActor === 'coach' ? 'coach' :
       fact.sourceActor === 'system' ? 'system' : 'tap',
     temporarySourceFactIds: [fact.factId],
-    expiresAt: fact.effectiveUntil,
+    ...(fact.effectiveUntil === null ? {} : { expiresAt: fact.effectiveUntil }),
     ...(fact.scope.kind === 'week' ? { weekStartISO: fact.scope.weekStart } : {}),
     scheduleKind: 'time_cap',
     maxSessionMinutes: fact.maxSessionMinutes,

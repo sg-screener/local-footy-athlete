@@ -13,23 +13,27 @@
 
 import { activeTemporarySourceFacts } from './temporarySourceFact';
 import type { TemporarySourceFact } from './temporarySourceFact';
-import { addDaysISO } from '../utils/programBlockState';
+import { factHorizonCoversWeek } from './durableFactHorizon';
 
 /**
  * True iff an active severe illness fact covers the given week — the sole
  * trigger for the illness_recovery §18 week mode. Existing bye/readiness logic
  * is untouched: a minor illness fact (inert), a severe fatigue/soreness fact, a
- * resolved fact, and a fact scoped to a different week all leave this false.
+ * resolved fact, and a fact whose horizon does not reach this week all leave
+ * this false.
+ *
+ * Stage 1: coverage is asked of `durableFactHorizon`, never recomputed here.
+ * This function used to carry its own overlap predicate — one of the four
+ * competing duration representations — and it returned false for every week
+ * after the report week because the fact's window had been truncated upstream.
+ * It has no opinion about duration now, so it cannot disagree with the fact.
  */
 export function deriveIllnessRecoveryWeekMode(args: {
   temporarySourceFacts: readonly TemporarySourceFact[];
   weekStartISO: string;
 }): boolean {
-  const weekEnd = addDaysISO(args.weekStartISO, 6);
   return activeTemporarySourceFacts(args.temporarySourceFacts).some((fact) =>
     fact.factKind === 'illness' &&
     fact.severity === 'severe' &&
-    // Overlap: the fact's active window intersects [weekStart, weekEnd].
-    fact.effectiveFrom <= weekEnd &&
-    fact.effectiveUntil >= args.weekStartISO);
+    factHorizonCoversWeek(fact, args.weekStartISO));
 }

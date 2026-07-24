@@ -191,7 +191,8 @@
     "dev:coach-semantic-active": "EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_MODE=active EXPO_PUBLIC_COACH_SEMANTIC_PROGRAM_EDIT_DEV_ACTIVE=1 expo start --clear",
     "e2e:maestro:ios": "scripts/dev-e2e/run-maestro-ios.sh",
     "e2e:explorer-nine:live": "sucrase-node scripts/run-explorer-nine-live.ts",
-    "test:readiness-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessSourceFactOwnershipTests.ts"
+    "test:readiness-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessSourceFactOwnershipTests.ts",
+    "test:fact-horizon": "TZ=Australia/Melbourne sucrase-node src/__tests__/durableFactHorizonTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

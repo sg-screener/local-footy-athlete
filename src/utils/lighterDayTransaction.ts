@@ -23,6 +23,7 @@ import { buildScheduleStateImperative } from '../utils/coachWeekDiff';
 import { applyLighterDayTrim } from '../utils/lighterDayTrim';
 import { normalizeAcceptedMaterialContext } from '../store/acceptedStateColdStart';
 import { isInjurySourceFact } from '../rules/temporarySourceFact';
+import { factHorizonCoversDate } from '../rules/durableFactHorizon';
 
 export interface ApplyLighterDayResult {
   ok: boolean;
@@ -48,7 +49,7 @@ function activeReadinessFactIdForDate(date: string): string | undefined {
     'factKind' in fact &&
     (fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
       fact.factKind === 'poor_sleep' || fact.factKind === 'illness') &&
-    fact.scope.from <= date && fact.scope.until >= date);
+    factHorizonCoversDate(fact, date));
   return match?.factId;
 }
 

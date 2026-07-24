@@ -21,6 +21,11 @@ import type { WeekScopedWorkoutOverlay } from '../types/domain';
 import { generateProgramLocally } from '../services/api/generateProgram';
 import { buildWeekScopedWorkoutOverlay } from '../utils/weekRebuild';
 import { deriveIllnessRecoveryWeekMode } from '../rules/illnessRecoveryWeekMode';
+import {
+  factHorizon,
+  factHorizonWeeks,
+  firstShapedDateInWeek,
+} from '../rules/durableFactHorizon';
 import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import {
   activeUserRemovalConstraintsForWeek,
@@ -167,10 +172,16 @@ function affectedHorizon(anchorDate: string, facts: readonly TemporarySourceFact
   for (const fact of facts) {
     if (isInjurySourceFact(fact)) {
       for (const week of fact.affectedWeeks) weeks.add(week.slice(0, 10));
-    } else {
-      weeks.add(mondayFor(fact.effectiveFrom));
-      weeks.add(mondayFor(fact.effectiveUntil));
+      continue;
     }
+    // Stage 1: the reached weeks come from the fact's horizon, asked of its
+    // owner. An OPEN horizon has no last week of its own, so it reaches every
+    // week the athlete actually has — which the program weeks above already
+    // enumerate. Reading `effectiveUntil` here was the third of the four
+    // duration representations.
+    const horizon = factHorizon(fact);
+    weeks.add(mondayFor(horizon.startsFrom));
+    if (horizon.endsAfter !== null) weeks.add(mondayFor(horizon.endsAfter));
   }
   const sortedWeeks = Array.from(weeks).sort();
   return {
@@ -349,7 +360,10 @@ function commitDerivingSourceFactScopedRegen(args: {
   compositionBase: AcceptedCompositionBaseV1;
   normalizedFacts: TemporarySourceFact[];
   compatibility: ReturnType<typeof composeTemporarySourceFactCompatibility>;
-  weekStart: string;
+  /** Every week the fact's horizon reaches, ascending. Stage 1: no longer one. */
+  weekStarts: readonly string[];
+  /** The fact itself — the single owner of which dates it may shape. */
+  fact: TemporarySourceFact;
   reason: string;
   sourceFactId: string;
   now: string;
@@ -361,89 +375,116 @@ function commitDerivingSourceFactScopedRegen(args: {
     normalizeAcceptedMaterialContext(state.acceptedMaterialContext),
     useProfileStore.getState().onboardingData,
   );
-  // 1. Generate the reduced week with the PENDING facts threaded, so the per-week
-  //    context mints the illness_recovery mode / readiness reduction (the store is
-  //    still fact-empty mid-transaction). Single microcycle — the target week only.
-  const generated = generateProgramLocally(profile, {
-    todayISO: args.weekStart,
-    blockNumber: getCurrentBlockNumberForGeneration(args.weekStart),
-    previousProgram: currentProgram,
-    seasonPhaseClock: currentProgram.seasonPhaseClock,
-    activeConstraints: args.compatibility.activeConstraints.filter((constraint) =>
-      isTemporarySourceFactConstraint(constraint)),
-    temporarySourceFacts: args.normalizedFacts,
-    microcycleLimit: 1,
-  });
-  // 2. The regenerated microcycle becomes a sparse week overlay (the mutation
-  //    layer). The base microcycle is never touched.
-  const built = buildWeekScopedWorkoutOverlay({
-    program: generated,
-    weekStart: args.weekStart,
-    anchorDate: null,
-    reason: 'readiness_reduction',
-  });
-  let overlay: WeekScopedWorkoutOverlay = { ...built, createdAt: args.now, updatedAt: args.now };
-  // Preserve athlete pins across the regen: a session removed BEFORE the fact
-  // stays removed over the reduced week (the removal re-applies at resolve), and
-  // the reduced contract must AUTHORISE that removal — otherwise §18 flags the
-  // pinned gap as a planner-target / pattern shortfall. This mirrors the accepted
-  // week's own removal path (applyAthleteRemovalTypedReduction).
-  const activeRemovals = activeUserRemovalConstraintsForWeek(
-    state.userRemovalConstraints, args.weekStart);
-  if (activeRemovals.length > 0 && overlay.exposureContractV2) {
-    // Lower the reduced contract to the athlete's actual pinned week and iterate
-    // to a fixpoint. The commit's equivalence check both (a) rejects blocking
-    // violations and (b) requires the persisted contract to equal the
-    // safety-finalised evaluation contract — so each pass ADOPTS the finaliser's
-    // contract (which can expose a second-order pattern shortfall) and re-authors
-    // the removal against the finalised visible week. Bounded + monotonic,
-    // mirroring the accepted-week deletion path (fixtureMinimalReplan).
-    let contract = overlay.exposureContractV2;
-    for (let attempt = 0; attempt < 6; attempt += 1) {
-      const trial: WeekScopedWorkoutOverlay = { ...overlay, exposureContractV2: contract };
-      const rebased = rebaseAcceptedEffectiveWeek({
-        surfaces: {
-          ...state,
-          weekScopedOverlays: { ...state.weekScopedOverlays, [args.weekStart]: trial },
-        } as never,
-        weekStart: args.weekStart,
-        profile,
-        markedDays: state.acceptedMaterialContext.markedDays,
-      });
-      const finalised = rebased.evaluation.contract;
-      const stable = semanticFingerprint(finalised) === semanticFingerprint(contract);
-      if (rebased.evaluation.blockingViolations.length === 0 && stable) break;
-      let next = finalised;
-      for (const constraint of activeRemovals) {
-        next = applyAthleteRemovalTypedReduction({
-          contract: next, workouts: rebased.visibleWorkouts, weekStart: args.weekStart, constraint,
+
+  const nextOverlays: Record<string, WeekScopedWorkoutOverlay> = { ...state.weekScopedOverlays };
+  const adjustments: ReversibleAdjustmentRecord[] = [];
+
+  for (const weekStart of args.weekStarts) {
+    // 1. Generate the reduced week with the PENDING facts threaded, so the per-week
+    //    context mints the illness_recovery mode / readiness reduction (the store is
+    //    still fact-empty mid-transaction). Single microcycle — this week only.
+    const generated = generateProgramLocally(profile, {
+      todayISO: weekStart,
+      blockNumber: getCurrentBlockNumberForGeneration(weekStart),
+      previousProgram: currentProgram,
+      seasonPhaseClock: currentProgram.seasonPhaseClock,
+      activeConstraints: args.compatibility.activeConstraints.filter((constraint) =>
+        isTemporarySourceFactConstraint(constraint)),
+      temporarySourceFacts: args.normalizedFacts,
+      microcycleLimit: 1,
+    });
+    // 2. The regenerated microcycle becomes a sparse week overlay (the mutation
+    //    layer). The base microcycle is never touched.
+    const built = buildWeekScopedWorkoutOverlay({
+      program: generated,
+      weekStart,
+      anchorDate: null,
+      reason: 'readiness_reduction',
+    });
+    // 2b. NOT YET — the history boundary is BUILT (`governedFromISO` on the
+    //     contract, delivered/prescribed in the ledger, Phase 1, green) but the
+    //     landing week cannot yet USE it. Dropping the pre-boundary days makes
+    //     severe illness and cooked correct (T4 green for both), and breaks the
+    //     milder readiness tiers: generation authors a WHOLE week, so discarding
+    //     the history days can discard the very sessions that satisfied the
+    //     remaining minimums, and a readiness demotion additionally withdraws
+    //     credit from anchors the athlete already completed. Result:
+    //     `required_minimum_shortfall` for poor sleep, and two
+    //     `acceptedStateTransactionTests` regressions.
+    //
+    //     The fix is at the generator, not here: the remainder must be authored
+    //     as a remainder (or delivered anchors must keep their credit — tried,
+    //     and it regressed every scenario via `strength_pattern_count`). Left
+    //     quarantined rather than half-applied. `firstShapedDateInWeek(fact,
+    //     weekStart)` is the boundary this will stamp.
+    let overlay: WeekScopedWorkoutOverlay = {
+      ...built,
+      createdAt: args.now,
+      updatedAt: args.now,
+    };
+    // 3. Reconcile the reduced contract with the week the athlete will ACTUALLY
+    //    have, and iterate to a fixpoint. Two things can make the generated
+    //    contract disagree with that week: preserved athlete pins (a session
+    //    removed before the fact stays removed, and the contract must AUTHORISE
+    //    the gap or §18 reads it as a shortfall), and — new in Stage 1 —
+    //    preserved past days, which the generator never saw. Each pass ADOPTS the
+    //    finaliser's contract and re-authors any removals against the finalised
+    //    visible week. Bounded + monotonic, mirroring the accepted-week deletion
+    //    path (fixtureMinimalReplan).
+    const activeRemovals = activeUserRemovalConstraintsForWeek(
+      state.userRemovalConstraints, weekStart);
+    if (overlay.exposureContractV2) {
+      let contract = overlay.exposureContractV2;
+      for (let attempt = 0; attempt < 6; attempt += 1) {
+        const trial: WeekScopedWorkoutOverlay = { ...overlay, exposureContractV2: contract };
+        const rebased = rebaseAcceptedEffectiveWeek({
+          surfaces: {
+            ...state,
+            weekScopedOverlays: { ...nextOverlays, [weekStart]: trial },
+          } as never,
+          weekStart,
+          profile,
+          markedDays: state.acceptedMaterialContext.markedDays,
         });
+        const finalised = rebased.evaluation.contract;
+        const stable = semanticFingerprint(finalised) === semanticFingerprint(contract);
+        if (rebased.evaluation.blockingViolations.length === 0 && stable) break;
+        let next = finalised;
+        for (const constraint of activeRemovals) {
+          next = applyAthleteRemovalTypedReduction({
+            contract: next, workouts: rebased.visibleWorkouts, weekStart, constraint,
+          });
+        }
+        if (semanticFingerprint(next) === semanticFingerprint(contract)) { contract = finalised; break; }
+        contract = next;
       }
-      if (semanticFingerprint(next) === semanticFingerprint(contract)) { contract = finalised; break; }
-      contract = next;
+      overlay = { ...overlay, exposureContractV2: contract };
     }
-    overlay = { ...overlay, exposureContractV2: contract };
+    // 4. Fact-linked reversible adjustment with the byte-exact prior overlay.
+    //    One per reached week: `clear_fatigue_status` already reverts EVERY
+    //    adjustment carrying this `sourceFactId`, so extending the horizon
+    //    extends the cascade with it and no week is left behind (T3).
+    adjustments.push(buildDerivingSourceFactAdjustment({
+      sourceFactId: args.sourceFactId,
+      weekStart,
+      beforeOverlay: state.weekScopedOverlays[weekStart] ?? null,
+      afterOverlay: overlay,
+      acceptedRevision: state.acceptedMaterialContext.revision + 1,
+      createdAt: args.now,
+    }));
+    nextOverlays[weekStart] = overlay;
   }
-  const beforeOverlay = state.weekScopedOverlays[args.weekStart] ?? null;
-  // 3. Fact-linked reversible adjustment with the byte-exact prior overlay.
-  const adjustment = buildDerivingSourceFactAdjustment({
-    sourceFactId: args.sourceFactId,
-    weekStart: args.weekStart,
-    beforeOverlay,
-    afterOverlay: overlay,
-    acceptedRevision: state.acceptedMaterialContext.revision + 1,
-    createdAt: args.now,
-  });
-  // 4. One atomic authoring commit: overlay + ledger + fact context. The base
-  //    stays clean (preserveExactAcceptedWorkouts); the overlay carries the
-  //    reduced contract, validated for the effective week by validateWeekStarts.
+
+  // 5. One atomic authoring commit for every reached week: overlays + ledger +
+  //    fact context. The base stays clean (preserveExactAcceptedWorkouts); each
+  //    overlay carries its reduced contract, validated by validateWeekStarts.
   return commitAcceptedStateTransaction({
     reason: args.reason,
     program: {
-      weekScopedOverlays: { ...state.weekScopedOverlays, [args.weekStart]: overlay },
+      weekScopedOverlays: nextOverlays,
       reversibleAdjustmentLedger: {
         protocolVersion: REVERSIBLE_ADJUSTMENT_PROTOCOL_VERSION,
-        adjustments: [...state.reversibleAdjustmentLedger.adjustments, adjustment],
+        adjustments: [...state.reversibleAdjustmentLedger.adjustments, ...adjustments],
       },
     },
     temporarySourceFacts: args.normalizedFacts,
@@ -455,7 +496,7 @@ function commitDerivingSourceFactScopedRegen(args: {
     profile,
     preserveExactAcceptedWorkouts: true,
     skipConstraintProjection: true,
-    validateWeekStarts: [args.weekStart],
+    validateWeekStarts: [...args.weekStarts],
   });
 }
 
@@ -524,10 +565,25 @@ export async function commitTemporarySourceFactSet(
         isTemporarySourceFactConstraint(constraint as never))
       .map((constraint) => String(constraint.id)));
   const priorFatigueIds = fatigueSourceFactIds(ownership.context.activeConstraints);
-  const scopedRegenWeekStart = mondayFor(args.todayISO);
   const scopedRegen = !inertComposition &&
     Array.from(fatigueSourceFactIds(compatibility.activeConstraints))
       .some((id) => !priorFatigueIds.has(id));
+  // Stage 1: which weeks a deriving fact re-authors is the FACT's business, not
+  // `mondayFor(todayISO)`'s. The candidates are the weeks the athlete actually
+  // has (the accepted program's microcycles, plus the current week); the fact's
+  // horizon selects from them. An open horizon therefore reaches all of them,
+  // and clearing it cascades back over all of them.
+  const targetFact = normalizedFacts.find((fact) =>
+    temporarySourceFactId(fact) === args.targetFactId) ?? null;
+  const candidateRegenWeeks = Array.from(new Set([
+    mondayFor(args.todayISO),
+    ...(useProgramStore.getState().currentProgram?.microcycles ?? [])
+      .map((microcycle) => microcycle.startDate.slice(0, 10)),
+  ])).sort();
+  const scopedRegenWeeks = targetFact
+    ? factHorizonWeeks(targetFact, candidateRegenWeeks)
+    : [mondayFor(args.todayISO)];
+
   // Typed ownership (undo = stored prior state, never re-derive): removing a fact that
   // OWNS a scoped-regen reversible adjustment (sourceFactId-linked) is a stored-prior-state
   // restore, not a re-derivation. The scoped-regen ADD kept the base clean (preserveExact)
@@ -567,12 +623,13 @@ export async function commitTemporarySourceFactSet(
         args.testHooks?.beforeEffectiveValidation?.();
         // A deriving fact still runs the §18 gate (the fact stays gated — R9/R14),
         // but its effective week is the RE-AUTHORED reduced week, not the base.
-        if (scopedRegen) {
+        if (scopedRegen && targetFact) {
           return commitDerivingSourceFactScopedRegen({
             compositionBase,
             normalizedFacts,
             compatibility,
-            weekStart: scopedRegenWeekStart,
+            weekStarts: scopedRegenWeeks,
+            fact: targetFact,
             reason: args.reason,
             sourceFactId: args.targetFactId,
             now,
