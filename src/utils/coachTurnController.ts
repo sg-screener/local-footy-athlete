@@ -4873,9 +4873,12 @@ export async function handleCoachTurn(
         }
         const result = guarded.result;
         recordVerifiedProgramEditMutationFocus(programEditFromDraft, result, input.todayISO);
-        if (result.kind === 'mutated' && result.applied) {
-          usePendingCoachClarifierStore.getState().clearPending();
-        }
+        // A completed resume has consumed the slot's answer. The clarifier is
+        // spent whatever the executor said — a not-applied result must never
+        // leave the pending frozen on an already-answered question. Multi-field
+        // under-specification advances through the schedule transaction, which
+        // is resolved before this branch.
+        usePendingCoachClarifierStore.getState().clearPending();
         return replyAndFinish(input, 'pending-program-edit-draft-resume', result.reply);
       }
       const pendingProgramEditAnswer = resolvePendingProgramEditAnswer({
@@ -4918,9 +4921,9 @@ export async function handleCoachTurn(
         }
         const result = guarded.result;
         recordVerifiedProgramEditMutationFocus(pendingProgramEditAnswer.programEdit, result, input.todayISO);
-        if (result.kind === 'mutated' && result.applied) {
-          usePendingCoachClarifierStore.getState().clearPending();
-        }
+        // Same spent-clarifier rule as the draft resume above: the answer was
+        // consumed, so the pending never survives to re-ask an answered field.
+        usePendingCoachClarifierStore.getState().clearPending();
         logger.debug('[coach-flow] router_executed', {
           route: result.route,
           executorKind: result.kind,
