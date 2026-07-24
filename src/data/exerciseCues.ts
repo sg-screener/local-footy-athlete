@@ -9,6 +9,9 @@
  * from exerciseTags.ts to select a family-level cue pair.
  *
  * PROVENANCE: Authored by Sam, 2026-07-23. Additions require Sam sign-off.
+ * COPYEDIT: Sam-authorised mechanical punctuation pass (2026-07-24) — terminal
+ * stops + a stray trailing comma fixed on 43 cues, zero word changes. Applied
+ * identically to the changeset doc so doc↔code equality holds.
  *
  * EXERCISE_CUES is generated from Sam's authored sheet
  * (docs/CUE_CHANGESET_2026-07-23.md, "Final cue library"). It is not edited by
@@ -140,14 +143,14 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Ab Wheel': {
     primaryCue: 'Roll out only as far as you can control.',
-    secondaryCue: 'Ribs down, slightly rounded back, no sagging at hips',
+    secondaryCue: 'Ribs down, slightly rounded back, no sagging at hips.',
   },
   'Abductor Machine': {
     primaryCue: 'Push the knees apart against the pads.',
     secondaryCue: '',
   },
   'Adductor Machine': {
-    primaryCue: 'Squeeze knees together',
+    primaryCue: 'Squeeze knees together.',
     secondaryCue: '',
   },
   'Adductor Rockback': {
@@ -164,7 +167,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Band Pallof Press': {
     primaryCue: 'Press out, resist the pull.',
-    secondaryCue: 'Hips stay square, slight knee and hip bend',
+    secondaryCue: 'Hips stay square, slight knee and hip bend.',
   },
   'Band Pull-Apart': {
     primaryCue: 'Squeeze the shoulder blades together.',
@@ -191,7 +194,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Squeeze the shoulder blades at the top.',
   },
   'Bear Carry': {
-    primaryCue: 'Hug the load tight, ribs down,',
+    primaryCue: 'Hug the load tight, ribs down.',
     secondaryCue: 'Short steady steps, no leaning back.',
   },
   'Bench Press': {
@@ -207,7 +210,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Smooth tempo, squeeze at the top.',
   },
   'Bird Dog': {
-    primaryCue: 'Extend arm and opposite leg, no shift, tuck hips under you',
+    primaryCue: 'Extend arm and opposite leg, no shift, tuck hips under you.',
     secondaryCue: 'Slow and controlled.',
   },
   'Bottoms-Up KB Press': {
@@ -231,7 +234,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Stick the landing.',
   },
   'Bulgarian Split Squats': {
-    primaryCue: 'Slight lean forward',
+    primaryCue: 'Slight lean forward.',
     secondaryCue: 'Control the descent, no bouncing.',
   },
   'Cable Face Pull': {
@@ -267,7 +270,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Slow breaths into the back.',
   },
   'Chin-Up Negative (Slow)': {
-    primaryCue: 'Jump to the top, lower slowly, can pull yourself up if you can',
+    primaryCue: 'Jump to the top, lower slowly, can pull yourself up if you can.',
     secondaryCue: 'Fight gravity the whole way.',
   },
   'Chin-Ups': {
@@ -283,7 +286,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Strict curl, no body swing.',
   },
   'Copenhagen Plank (Half)': {
-    primaryCue: 'Top leg on the bench, drive through the inner thigh',
+    primaryCue: 'Top leg on the bench, drive through the inner thigh.',
     secondaryCue: 'Hold tension, no dropping.',
   },
   'Couch Stretch': {
@@ -311,7 +314,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Breathe - let the spine decompress.',
   },
   'Deadlift': {
-    primaryCue: 'Keep bar close, get tight through the lats',
+    primaryCue: 'Keep bar close, get tight through the lats.',
     secondaryCue: 'Flat back from start to lockout.',
   },
   'Deep Squat Hold': {
@@ -319,7 +322,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Breathe and hold position.',
   },
   'Depth Jumps': {
-    primaryCue: 'Step off, explode off the ground',
+    primaryCue: 'Step off, explode off the ground.',
     secondaryCue: 'Minimum ground contact time.',
   },
   'Dips': {
@@ -359,7 +362,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Breathe and keep moving. Weight shown is per hand.',
   },
   'Flush Run': {
-    primaryCue: 'Easy jog, nothing above zone one or two',
+    primaryCue: 'Easy jog, nothing above zone one or two.',
     secondaryCue: 'Move and loosen up.',
   },
   'Foam Roll — Calves & Outer Shins': {
@@ -395,7 +398,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Hold each squeeze for a beat.',
   },
   'Half-Kneeling Single-Arm Overhead Press': {
-    primaryCue: 'Half-kneel, press straight overhead, knee on ground = arm overhead',
+    primaryCue: 'Half-kneel, press straight overhead, knee on ground = arm overhead.',
     secondaryCue: 'Fight the rotation, ribs stay down.',
   },
   'Hammer Curl': {
@@ -403,7 +406,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Control both directions.',
   },
   'Hanging Leg Raise': {
-    primaryCue: 'Stay tight through midline, breath',
+    primaryCue: 'Stay tight through midline, breath.',
     secondaryCue: 'No swinging.',
   },
   'Hill Sprints': {
@@ -419,7 +422,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Ribs down, no overextending.',
   },
   'Incline Bench': {
-    primaryCue: 'Set the blades on the incline',
+    primaryCue: 'Set the blades on the incline.',
     secondaryCue: 'Press through the palms.',
   },
   'Incline DB Bench': {
@@ -447,8 +450,8 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Land soft, reset between reps.',
   },
   'Kettlebell Swings': {
-    primaryCue: 'Snap the hips, KB should come back down fast',
-    secondaryCue: 'Power from hips, don’t lift with arms',
+    primaryCue: 'Snap the hips, KB should come back down fast.',
+    secondaryCue: 'Power from hips, don’t lift with arms.',
   },
   'Lacrosse Ball Glute Release': {
     primaryCue: 'Sit on the ball, shift to find the spot.',
@@ -459,15 +462,15 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Stable base, strong finish.',
   },
   'Lat Pulldown': {
-    primaryCue: 'Pull to the collarbone, lean slightly back, push chest at bottom',
+    primaryCue: 'Pull to the collarbone, lean slightly back, push chest at bottom.',
     secondaryCue: 'Squeeze at the bottom, slow return.',
   },
   'Lat Stretch': {
     primaryCue: 'Hold a rack or doorframe, hips back.',
-    secondaryCue: 'Sink the chest, breathe under the armpit, slight lean to one side',
+    secondaryCue: 'Sink the chest, breathe under the armpit, slight lean to one side.',
   },
   'Lateral Bounds': {
-    primaryCue: 'Push off outside leg',
+    primaryCue: 'Push off outside leg.',
     secondaryCue: 'Stick each landing before the next.',
   },
   'Lateral Raise': {
@@ -475,7 +478,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'No momentum, strict form.',
   },
   'Leg Extension': {
-    primaryCue: 'Drive feet to ceiling, lean back slightly if possible',
+    primaryCue: 'Drive feet to ceiling, lean back slightly if possible.',
     secondaryCue: '',
   },
   'Leg Press': {
@@ -500,7 +503,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Long-Lever Copenhagen': {
     primaryCue: 'Top ankle supported, hips high.',
-    secondaryCue: 'Don’t let hips drop',
+    secondaryCue: 'Don’t let hips drop.',
   },
   'Lying Dumbbell Curl': {
     primaryCue: 'Lie flat, arms stretch at the bottom.',
@@ -508,10 +511,10 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'McGill Sit Up': {
     primaryCue: 'Hands under the lower back, lift the shoulder blades only.',
-    secondaryCue: 'Drive low back into hands slightly',
+    secondaryCue: 'Drive low back into hands slightly.',
   },
   'Neutral-Grip Pulldown': {
-    primaryCue: 'Use V grip attachment, puff chest out as hands come down',
+    primaryCue: 'Use V grip attachment, puff chest out as hands come down.',
     secondaryCue: '',
   },
   'Nordic Lower': {
@@ -527,7 +530,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Get outside and move.',
   },
   'Overhead Carry': {
-    primaryCue: 'Stand tall, arms overhead, stay tight through midline',
+    primaryCue: 'Stand tall, arms overhead, stay tight through midline.',
     secondaryCue: 'Weight shown is per hand.',
   },
   'Overhead Press': {
@@ -543,7 +546,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Sink in and breathe.',
   },
   'Pull-Ups': {
-    primaryCue: 'Dead hang to chin over bar, any grip is fine',
+    primaryCue: 'Dead hang to chin over bar, any grip is fine.',
     secondaryCue: 'Initiate with the lats, not the arms.',
   },
   'Push-ups': {
@@ -555,7 +558,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'If speed drops, the set is done.',
   },
   'RDLs': {
-    primaryCue: 'Push hips back, bar slides down leg',
+    primaryCue: 'Push hips back, bar slides down leg.',
     secondaryCue: 'Feel the hamstrings load on the way down.',
   },
   'Rear Delt Fly': {
@@ -591,24 +594,24 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Squeeze at the top, controlled lower.',
   },
   'Side Plank': {
-    primaryCue: 'Stack the hips, straight line from head to feet, can add weight to top hip',
+    primaryCue: 'Stack the hips, straight line from head to feet, can add weight to top hip.',
     secondaryCue: 'Breathe behind the brace.',
   },
   'Single-Arm DB Bench Press': {
-    primaryCue: 'Fight the rotation',
+    primaryCue: 'Fight the rotation.',
     secondaryCue: 'Brace hard through the trunk.',
   },
   'Single-Arm DB Row': {
-    primaryCue: 'Elbow drives past the torso, pull to belly',
+    primaryCue: 'Elbow drives past the torso, pull to belly.',
     secondaryCue: 'Keep the hips and shoulders square.',
   },
   'Single-Arm Lat Pulldown': {
-    primaryCue: 'Pull the handle to the shoulder, lead with the lat, V grip attachment',
+    primaryCue: 'Pull the handle to the shoulder, lead with the lat, V grip attachment.',
     secondaryCue: 'Control the return, full stretch at the top.',
   },
   'Single-Arm Pulldown': {
-    primaryCue: 'Use V grip on pulldown machine',
-    secondaryCue: 'Stay tight through midline',
+    primaryCue: 'Use V grip on pulldown machine.',
+    secondaryCue: 'Stay tight through midline.',
   },
   'Single-Arm Shrug': {
     primaryCue: 'One side at a time, shoulder straight up.',
@@ -631,7 +634,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Keep the knee tracking straight.',
   },
   'Skull Crushers': {
-    primaryCue: 'Lower to the sides of the head, press up, use straight or Z bar',
+    primaryCue: 'Lower to the sides of the head, press up, use straight or Z bar.',
     secondaryCue: 'Full range, elbows stay in place.',
   },
   'Speed Bench': {
@@ -643,23 +646,23 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Full recovery between efforts.',
   },
   'Step Ups': {
-    primaryCue: 'Use top leg to drive movement',
-    secondaryCue: 'Don’t bounce with leg on ground',
+    primaryCue: 'Use top leg to drive movement.',
+    secondaryCue: 'Don’t bounce with leg on ground.',
   },
   'Suitcase Carry': {
-    primaryCue: 'Walk tall, don’t lean',
-    secondaryCue: 'Don’t rest weight on thigh',
+    primaryCue: 'Walk tall, don’t lean.',
+    secondaryCue: 'Don’t rest weight on thigh.',
   },
   'Swiss Ball Hamstring Curl': {
-    primaryCue: 'Keep hips high,',
-    secondaryCue: 'Curl heels into butt',
+    primaryCue: 'Keep hips high.',
+    secondaryCue: 'Curl heels into butt.',
   },
   'Tempo Run': {
     primaryCue: 'Hold the pace, settle into the rhythm.',
     secondaryCue: 'Controlled breathing throughout.',
   },
   'Tib Raises': {
-    primaryCue: 'Lean back against wall, lift toes to sky, can use a Tib bar if you have one',
+    primaryCue: 'Lean back against wall, lift toes to sky, can use a Tib bar if you have one.',
     secondaryCue: 'Controlled reps, full range.',
   },
   'Toe Stretch': {
@@ -667,7 +670,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Build tolerance gradually.',
   },
   'Trap Bar Deadlift': {
-    primaryCue: 'Tight through the lats, push the floor away',
+    primaryCue: 'Tight through the lats, push the floor away.',
     secondaryCue: 'Hips and shoulders rise together.',
   },
   'Tricep Circuit (Dirty 30)': {
@@ -683,7 +686,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Steady and deliberate.',
   },
   'Weighted Dead Bug': {
-    primaryCue: 'Hold weight plate or dumbbells, extended arms overhead and feet out, low back pinned to ground',
+    primaryCue: 'Hold weight plate or dumbbells, extended arms overhead and feet out, low back pinned to ground.',
     secondaryCue: 'Slow extension, full exhale.',
   },
   'Woodchop (Half Kneeling)': {
@@ -699,7 +702,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     secondaryCue: 'Then rotate and reach to the sky.',
   },
   'Z-Press': {
-    primaryCue: 'Sit up tall, slight lean back when pressing',
+    primaryCue: 'Sit up tall, slight lean back when pressing.',
     secondaryCue: 'Stay tight through midline. Can be done seated on a bench, or with dumbbells.',
   },
   // Not in Sam's sheet by design — the Bible's pressing injury-swap.

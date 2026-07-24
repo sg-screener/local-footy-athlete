@@ -1587,7 +1587,6 @@ function StrengthExerciseCard({
 }: StrengthExerciseCardProps) {
   const exerciseName = exercise.exercise?.name || `Exercise`;
   const exerciseDisplayName = displayExerciseName(exerciseName);
-  const displayNotes = cleanNotes(exercise.notes);
   const setsReps = formatStrengthSetsReps(exercise);
   const restLabel = exercise.restSeconds >= 90 ? formatRest(exercise.restSeconds) : null;
   const cueText = buildCueText(exerciseName);
@@ -1674,26 +1673,18 @@ function StrengthExerciseCard({
         </View>
       </View>
 
-      {/* Notes + rest */}
-      {displayNotes || restLabel ? (
+      {/* Rest hint */}
+      {restLabel ? (
         <View style={styles.detailsRow}>
-          {displayNotes ? (
-            <Text style={styles.exerciseNotes}>{displayNotes}</Text>
-          ) : null}
-          {restLabel ? <Text style={styles.restHint}>{restLabel}</Text> : null}
+          <Text style={styles.restHint}>{restLabel}</Text>
         </View>
       ) : null}
 
-      {/* Collapsible coaching cue */}
-      {cueText ? (
-        <CueToggle
-          cueText={cueText}
-          exerciseId={exercise.id}
-          hasNotes={!!displayNotes}
-          expanded={displayNotes ? !!expandedCues[exercise.id] : true}
-          onToggle={toggleCue}
-        />
-      ) : null}
+      {/* Curated coaching cue — always visible, the athlete-facing lead.
+          Generator per-exercise notes are deliberately NOT rendered: the
+          curated layer owns every athlete-visible word; generation provides
+          structure only (sets/reps/weight/type). Stage 3 ownership ruling. */}
+      {cueText ? <Text style={styles.cueText}>{cueText}</Text> : null}
     </Card>
   );
 }
@@ -1725,7 +1716,6 @@ function RecoveryBlock({
         const setsPrefix =
           exercise.prescribedSets > 1 ? `${exercise.prescribedSets} × ` : '';
         const restLabel = formatRest(exercise.restSeconds);
-        const displayNotes = cleanNotes(exercise.notes);
         const cueText = buildCueText(exerciseName);
         const exerciseToken = stableTestIdToken(exercise.id || exercise.exerciseId);
 
@@ -1760,19 +1750,9 @@ function RecoveryBlock({
               ) : null}
             </View>
 
-            {displayNotes ? (
-              <Text style={styles.exerciseNotes}>{displayNotes}</Text>
-            ) : null}
-
-            {cueText ? (
-              <CueToggle
-                cueText={cueText}
-                exerciseId={exercise.id}
-                hasNotes={!!displayNotes}
-                expanded={displayNotes ? !!expandedCues[exercise.id] : true}
-                onToggle={toggleCue}
-              />
-            ) : null}
+            {/* Curated cue only — always visible; generator notes are not
+                rendered (Stage 3 ownership: curated layer owns the words). */}
+            {cueText ? <Text style={styles.cueText}>{cueText}</Text> : null}
           </Card>
         );
       })}
