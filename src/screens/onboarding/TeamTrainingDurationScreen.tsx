@@ -5,9 +5,9 @@ import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { TeamTrainingDuration, TeamTrainingIntensity } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
@@ -63,26 +63,25 @@ export const TeamTrainingDurationScreen: React.FC<TeamTrainingDurationScreenProp
   const [intensity, setIntensity] = useState<TeamTrainingIntensity | null>(null);
   const { label: stepLabel, progressPercent } =
     useOnboardingProgress('TeamTrainingDuration');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData,
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const canContinue = duration !== null && intensity !== null;
 
   const handleContinue = useCallback(() => {
     if (!canContinue || !duration || !intensity) return;
-    updateOnboardingData({
+    void commitAndAdvance({
       teamTrainingDuration: duration,
       teamTrainingIntensity: intensity,
-    });
-    navigation.navigate('TrainingCommitment');
-  }, [canContinue, duration, intensity, navigation, updateOnboardingData]);
+    }, () => navigation.navigate('TrainingCommitment'));
+  }, [canContinue, duration, intensity, navigation, commitAndAdvance]);
 
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={handleContinue}
       continueDisabled={!canContinue}
       footerHelperText={canContinue ? undefined : 'Select duration and intensity'}

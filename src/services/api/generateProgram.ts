@@ -17,6 +17,7 @@ import {
   type AIConstraints,
 } from '../../utils/coachingEngine';
 import { todayISOLocal } from '../../utils/appDate';
+import { missingRequiredProfileFields } from '../../utils/onboardingSteps';
 import { getAthletePrefs } from '../../store/athletePreferencesStore';
 import { useCoachUpdatesStore, type ActiveConstraint } from '../../store/coachUpdatesStore';
 import type { TemporarySourceFact } from '../../rules/temporarySourceFact';
@@ -83,6 +84,7 @@ export type ProgramGenErrorKind =
   | 'unauthorized'   // 401/403 — config problem
   | 'bad_response'   // 200 but shape is wrong / empty
   | 'network'        // fetch threw (offline, DNS, timeout)
+  | 'missing_required_profile' // onboarding never collected a required answer
   | 'unknown';
 
 export class ProgramGenError extends Error {
@@ -172,12 +174,43 @@ function currentPersistedProgram(
   }
 }
 
+/**
+ * Phase used only to keep diagnostics renderable when the athlete never
+ * answered. Never reaches a generated program.
+ */
+const DIAGNOSTICS_PHASE_WHEN_UNANSWERED = 'Pre-season' as const;
+
+/**
+ * The athlete's season phase, or a refusal.
+ *
+ * Generation used to substitute Pre-season for a missing answer. When
+ * onboarding lost the answer, an in-season athlete silently received a
+ * pre-season program and had no way to tell it was wrong
+ * (docs/ONBOARDING_PERSISTENCE_DIAGNOSIS_2026-07-24.md §2). Generation now
+ * refuses; Review and Complete catch the refusal and send the athlete back to
+ * the step that owns the answer.
+ */
+export function generationSeasonPhaseOrThrow(
+  profile: OnboardingData,
+): NonNullable<OnboardingData['seasonPhase']> {
+  if (!profile.seasonPhase) {
+    throw new ProgramGenError(
+      'missing_required_profile',
+      "I still need to know where you are in the season before I can build your program.",
+      'generation refused: onboarding never collected seasonPhase',
+      false,
+      { missingRequired: missingRequiredProfileFields(profile) },
+    );
+  }
+  return profile.seasonPhase;
+}
+
 function generationPhaseResolution(
   profile: OnboardingData,
   blockStartISO: string,
   options: GenerateProgramFromProfileOptions,
 ): SeasonPhaseClockResolution {
-  const selectedPhase = profile.seasonPhase ?? 'Pre-season';
+  const selectedPhase = generationSeasonPhaseOrThrow(profile);
   const previousProgram = currentPersistedProgram(options);
   return resolveSeasonPhaseClock({
     selectedPhase,
@@ -748,28 +781,18 @@ export function buildProgramGenerationEdgePayload(args: {
   };
 }
 
-const REQUIRED_PROGRAM_GEN_PROFILE_FIELDS: Array<keyof OnboardingData> = [
-  'firstName',
-  'heightCm',
-  'weightKg',
-  'position',
-  'motivation',
-  'seasonPhase',
-  'trainingDaysPerWeek',
-  'preferredTrainingDays',
-  'sessionDurationMinutes',
-  'trainingLocation',
-  'equipment',
-  'experienceLevel',
-  'squatStrength',
-  'benchStrength',
-  'conditioningLevel',
-  'sprintExposure',
-  'recentTrainingLoad',
-  'injuries',
-];
-
+/**
+ * `sessionDurationMinutes` is deliberately NOT required.
+ *
+ * `SessionDurationScreen` exists and is registered in the navigator but no
+ * screen has ever navigated to it — the linear flow runs
+ * PreferredTrainingDays → GymExperience — so onboarding has never collected
+ * this field. Requiring an answer the flow cannot collect would refuse every
+ * genuine onboarding. It is recommended (and diagnosed) until the step is
+ * wired into the flow; see the L2 report's NOT-COVERED.
+ */
 const RECOMMENDED_PROGRAM_GEN_PROFILE_FIELDS: Array<keyof OnboardingData> = [
+  'sessionDurationMinutes',
   'biggestLimitation',
   'biggestFrustration',
   'successVision',
@@ -786,24 +809,9 @@ export function getProgramGenerationProfileFieldDiagnostics(data: OnboardingData
   missingRequired: string[];
   missingRecommended: string[];
 } {
-  const missingRequired = REQUIRED_PROGRAM_GEN_PROFILE_FIELDS
-    .filter((field) => !hasProfileValue(data, field))
-    .map(String);
-
-  if (
-    data.seasonPhase === 'In-season' &&
-    !data.usualGameDay &&
-    !data.gameDay
-  ) {
-    missingRequired.push('usualGameDay/gameDay');
-  }
-
-  if (
-    (data.teamTrainingDaysPerWeek ?? 0) > 0 &&
-    (!data.teamTrainingDays || data.teamTrainingDays.length === 0)
-  ) {
-    missingRequired.push('teamTrainingDays');
-  }
+  // The required set is derived from the onboarding step registry, so the
+  // generator and the flow can never disagree about what an athlete was asked.
+  const missingRequired = missingRequiredProfileFields(data);
 
   const missingRecommended = RECOMMENDED_PROGRAM_GEN_PROFILE_FIELDS
     .filter((field) => !hasProfileValue(data, field))
@@ -827,8 +835,12 @@ export function buildProgramGenerationRequestDiagnostics(
     availabilityDateISO: todayISO,
   });
   const diagnosticsWeek = computeBlockBounds(dateFromISO(todayISO)).blockStart;
+  // Diagnostics describe a profile that may be broken — that is their job — so
+  // this one function must not throw on a missing phase the way generation does.
+  // The substitution is named and reported (`seasonPhaseAnswered` below) rather
+  // than silently standing in for an answer.
   const diagnosticsClock = resolveSeasonPhaseClock({
-    selectedPhase: generationProfile.seasonPhase ?? 'Pre-season',
+    selectedPhase: generationProfile.seasonPhase ?? DIAGNOSTICS_PHASE_WHEN_UNANSWERED,
     targetWeekStartISO: diagnosticsWeek,
   }).clock;
   const derivedPlan = plan ?? buildInitialGeneratedCoachingPlan({
@@ -876,6 +888,9 @@ export function buildProgramGenerationRequestDiagnostics(
       presentFields: profileFields,
       missingRequired: profileFieldDiagnostics.missingRequired,
       missingRecommended: profileFieldDiagnostics.missingRecommended,
+      // Makes the diagnostics-only phase substitution above visible in the log
+      // instead of reading as an answer the athlete gave.
+      seasonPhaseAnswered: Boolean(generationProfile.seasonPhase),
       summary: {
         firstName: generationProfile.firstName ?? null,
         position: generationProfile.position ?? null,

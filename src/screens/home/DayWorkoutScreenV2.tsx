@@ -4,7 +4,6 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
@@ -70,6 +69,7 @@ import { deriveVisibleWorkoutIdentity } from '../../utils/visibleWorkoutIdentity
 import { stableTestIdToken } from '../../utils/stableTestId';
 import { explorerTestId } from '../../utils/stableTestId';
 import { ExplorerRenderWitness } from '../../components/ExplorerRenderWitness';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 
 type EditableExercise = {
   key: string;
@@ -1633,7 +1633,7 @@ function StrengthExerciseCard({
             <Text style={styles.weightBtnText}>−</Text>
           </Pressable>
           {isEditing ? (
-            <TextInput
+            <AppTextInput
               style={styles.weightInput}
               value={editingWeightText}
               onChangeText={setEditingWeightText}

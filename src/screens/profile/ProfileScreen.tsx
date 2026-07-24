@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
-  TextInput,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -42,6 +41,7 @@ import {
   roleBucketLabel,
 } from '../../utils/roleBuckets';
 import type { DayOfWeek, ExperienceLevel, OnboardingData, RoleBucket, SeasonPhase } from '../../types/domain';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 
 type SetupSheetStep =
   | 'overview'
@@ -944,7 +944,7 @@ function SetupUpdateSheet({
       <Text style={styles.sheetTitle}>What should I call you?</Text>
       <View style={styles.playerInputCard}>
         <Feather name="user" size={19} color={colors.text.tertiary} />
-        <TextInput
+        <AppTextInput
           style={styles.playerTextInput}
           value={draftName}
           onChangeText={onSetDraftName}

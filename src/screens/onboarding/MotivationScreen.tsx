@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  TextInput,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
 type MotivationScreenProps = NativeStackScreenProps<
@@ -44,9 +44,7 @@ export const MotivationScreen: React.FC<MotivationScreenProps> = ({
   const [selected, setSelected] = useState<string[]>([]);
   const [otherText, setOtherText] = useState('');
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Motivation');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const isAtMax = selected.length >= MAX_SELECTIONS;
   const hasOther = selected.includes('other');
@@ -73,8 +71,7 @@ export const MotivationScreen: React.FC<MotivationScreenProps> = ({
       return MOTIVATION_OPTIONS.find((o) => o.id === id)?.label || id;
     });
 
-    updateOnboardingData({ motivation: labels.join(', ') });
-    navigation.navigate('SeasonPhase');
+    void commitAndAdvance({ motivation: labels.join(', ') }, () => navigation.navigate('SeasonPhase'));
   };
 
   return (
@@ -82,6 +79,8 @@ export const MotivationScreen: React.FC<MotivationScreenProps> = ({
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={handleContinue}
       continueDisabled={!canContinue}
     >
@@ -141,7 +140,7 @@ export const MotivationScreen: React.FC<MotivationScreenProps> = ({
 
       {hasOther && (
         <View style={styles.otherInputContainer}>
-          <TextInput
+          <AppTextInput
             style={styles.otherInput}
             placeholder="What's your focus?"
             placeholderTextColor={colors.text.tertiary}

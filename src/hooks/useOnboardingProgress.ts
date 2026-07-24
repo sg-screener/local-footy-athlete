@@ -1,59 +1,17 @@
 import { useProfileStore } from '../store/profileStore';
+import { visibleOnboardingSteps } from '../utils/onboardingSteps';
 
 /**
- * All onboarding screen names in order (excluding Welcome and Complete).
- * Conditional screens are included with their condition.
+ * Progress display, derived from the shared onboarding step registry.
+ *
+ * This hook used to keep its own copy of the flow (`ONBOARDING_SCREENS`), which
+ * could disagree with the navigator and with the generator's required fields.
+ * `onboardingSteps.ts` is now the single declaration; this is a projection of it.
  */
-type ScreenEntry = {
-  name: string;
-  condition?: 'in-season-only' | 'pre-or-in-season' | 'not-beginner';
-};
-
-const ONBOARDING_SCREENS: ScreenEntry[] = [
-  { name: 'Name' },
-  { name: 'BodyMeasurements' },
-  { name: 'Position' },
-  { name: 'Motivation' },
-  { name: 'SeasonPhase' },
-  { name: 'GameDay', condition: 'in-season-only' },
-  { name: 'TeamTrainingDays', condition: 'pre-or-in-season' },
-  // TeamTrainingDuration screen captures BOTH duration + intensity now.
-  // The separate TeamTrainingIntensity screen still exists in the nav
-  // map (legacy deep links) but is no longer linked in the linear flow.
-  { name: 'TeamTrainingDuration', condition: 'pre-or-in-season' },
-  { name: 'TrainingCommitment' },
-  { name: 'PreferredTrainingDays' },
-  { name: 'GymExperience' },
-  { name: 'SquatStrength', condition: 'not-beginner' },
-  { name: 'BenchStrength', condition: 'not-beginner' },
-  { name: 'ConditioningLevel' },
-  { name: 'SprintExposure' },
-  { name: 'RecentTrainingLoad' },
-  { name: 'Injuries' },
-  { name: 'Review' },
-];
-
 export function useOnboardingProgress(screenName: string) {
-  const seasonPhase = useProfileStore((s) => s.onboardingData.seasonPhase);
-  const experienceLevel = useProfileStore((s) => s.onboardingData.experienceLevel);
+  const onboardingData = useProfileStore((s) => s.onboardingData);
 
-  const isScreenVisible = (entry: ScreenEntry): boolean => {
-    if (!entry.condition) return true;
-
-    switch (entry.condition) {
-      case 'in-season-only':
-        return seasonPhase === 'In-season';
-      case 'pre-or-in-season':
-        return seasonPhase === 'Pre-season' || seasonPhase === 'In-season';
-      case 'not-beginner':
-        return experienceLevel !== 'Complete beginner';
-      default:
-        return true;
-    }
-  };
-
-  // Build the visible screens list based on current onboarding data
-  const visibleScreens = ONBOARDING_SCREENS.filter(isScreenVisible);
+  const visibleScreens = visibleOnboardingSteps(onboardingData);
   const totalSteps = visibleScreens.length;
   const currentIndex = visibleScreens.findIndex((s) => s.name === screenName);
   const currentStep = currentIndex + 1; // 1-based

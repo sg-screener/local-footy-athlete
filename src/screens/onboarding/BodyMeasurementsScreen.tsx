@@ -1,8 +1,8 @@
 import React, { useRef, useState } from 'react';
 import {
+  TextInput,
   View,
   StyleSheet,
-  TextInput,
   Pressable,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -11,9 +11,10 @@ import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
 import { spacing, shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
 type BodyMeasurementsScreenProps = NativeStackScreenProps<
@@ -31,9 +32,7 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
   const heightInputRef = useRef<TextInput>(null);
   const weightInputRef = useRef<TextInput>(null);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('BodyMeasurements');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const isValid =
     heightCm.trim() &&
@@ -43,11 +42,10 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
 
   const handleContinue = () => {
     if (isValid) {
-      updateOnboardingData({
+      void commitAndAdvance({
         heightCm: parseFloat(heightCm),
         weightKg: parseFloat(weightKg),
-      });
-      navigation.navigate('Position');
+      }, () => navigation.navigate('Position'));
     }
   };
 
@@ -56,6 +54,8 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={handleContinue}
       continueDisabled={!isValid}
     >
@@ -99,7 +99,7 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
               size={19}
               color={colors.text.tertiary}
             />
-            <TextInput
+            <AppTextInput
               ref={heightInputRef}
               style={styles.input}
               placeholder="180"
@@ -134,7 +134,7 @@ export const BodyMeasurementsScreen: React.FC<BodyMeasurementsScreenProps> = ({
               size={19}
               color={colors.text.tertiary}
             />
-            <TextInput
+            <AppTextInput
               ref={weightInputRef}
               style={styles.input}
               placeholder="80"

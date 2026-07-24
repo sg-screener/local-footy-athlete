@@ -784,6 +784,55 @@ longer occur. Router suite 597/0.
   adds; `add_defers_to_legacy_stack`; `no_template_for_category`; removal-constraint
   re-add) are **unchanged** — still owned by the legacy writer, still tracked above.
 
+## Mirror residual — the accepted-profile compatibility mirror (2026-07-24)
+
+Added by the onboarding reliability unit
+(`feat/onboarding-reliability-keyboard`). This belongs in the same ledger as the
+single-date-override residuals: a legacy compatibility writer that still owns
+state a canonical owner should own, tracked so it is retired rather than lived
+with. Full analysis:
+`docs/PROFILE_MIRROR_OWNERSHIP_REASSESSMENT_2026-07-24.md`.
+
+**What it is.** `profileStore.ts`'s `useProfileStore.subscribe` fence, plus
+`publishAcceptedProfileCompatibilityMirror` /
+`restoreAcceptedProfileCompatibilityMirror`. It exists so pre-§18 readers of
+`profileStore.onboardingData` keep working after a coach edit changes the
+accepted profile — `profileStore` is a read mirror of
+`acceptedMaterialContext.acceptedProfileSnapshot`.
+
+**What it cost.** The fence ran unconditionally, including before any program
+had ever been accepted. Combined with hydration minting a revision-1 acceptance
+snapshot on a fresh install, it silently reverted **every onboarding answer in
+memory** — the confirmed root cause of the 2026-07-24 device report, and the
+same shape as the false-"Done" class: a record of an acceptance nobody made.
+
+**Closed in this unit (Sam approved both, sequenced):**
+- **A** — the fence is now inert while `isOnboardingComplete` is false, making
+  its own stated contract ("ProgramStore's accepted profile is authoritative")
+  true instead of aspirational (`profileStore.ts`).
+- **B** — hydration no longer commits an accepted-state transaction when there
+  is no program and no prior revision, so a fresh install stays at revision 0
+  with no snapshot (`programStore.ts`, `onRehydrateStorage`).
+
+Proof: `onboardingReliabilityTests` cases `0` (whole fresh-install journey) and
+`0b` (no acceptance nobody made). `test:bible` green.
+
+**Still residual — the retirement itself.** The mirror is scoped, not retired.
+It remains a second, independent path by which `onboardingData` can be replaced
+outside any screen's control. Every reader of `profileStore.onboardingData`
+that migrates to the accepted context shrinks it; when the last one migrates,
+the subscribe fence and both `publish…`/`restore…CompatibilityMirror` entry
+points can be deleted outright. **Trigger to finish it:** any further defect
+where profile state changes without a caller asking it to, or the next unit
+that touches accepted-profile readers — whichever comes first. Do not add a
+third condition to the fence; migrate the readers.
+
+**Not covered.** The other `publishAcceptedProfileCompatibilityMirror` call
+sites (`acceptedStateTransaction.ts:689`, `programStore.ts:1880`) were read but
+not audited for the same fresh-install assumption. The iCloud-restore /
+TestFlight-update shapes (storage non-empty on a nominal "fresh install") are
+protected by A but were not exercised on a device.
+
 ### Known unrelated red
 `coachProgramEditDraftTests` §23 (4 assertions) are **pre-existing** source-ordering
 checks on `coachTurnController.ts` (which stage 4 does not touch); they fail

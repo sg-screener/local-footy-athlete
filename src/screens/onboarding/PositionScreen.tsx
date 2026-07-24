@@ -9,6 +9,7 @@ import { useProfileStore } from '../../store/profileStore';
 import type { RoleBucket } from '../../types/domain';
 import { ROLE_BUCKET_OPTIONS, normalizeRoleBucket } from '../../utils/roleBuckets';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
@@ -34,23 +35,22 @@ export const PositionScreen: React.FC<PositionScreenProps> = ({
     savedPosition ? normalizeRoleBucket(savedPosition) : null,
   );
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Position');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const handleSelect = useCallback((position: RoleBucket) => {
     setSelectedPosition(position);
-    updateOnboardingData({ position });
-    setTimeout(() => {
-      navigation.navigate('Motivation');
-    }, 220);
-  }, [navigation, updateOnboardingData]);
+    void commitAndAdvance({ position }, () => {
+      setTimeout(() => navigation.navigate('Motivation'), 220);
+    });
+  }, [navigation, commitAndAdvance]);
 
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={() => {}}
       hideFooter
     >

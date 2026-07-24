@@ -50,15 +50,65 @@ export const asyncStorageDurable = {
   },
 };
 
+/**
+ * In-flight durable writes.
+ *
+ * Zustand's persist middleware fires `void setItem()` and never awaits it
+ * (node_modules/zustand/middleware.js:509-512), so nothing in the app could
+ * tell an answer held in memory from an answer that had actually reached disk.
+ * A relaunch landing in that window is the confirmed onboarding data-loss
+ * mechanism (docs/ONBOARDING_PERSISTENCE_DIAGNOSIS_2026-07-24.md §4).
+ *
+ * Registering each write here makes the fire-and-forget queue *observable*
+ * without duplicating zustand's serialisation: callers that need durability
+ * before proceeding await `flushPendingStorageWrites()`. Rejections are held
+ * so the flush can surface them rather than leaving an unhandled rejection.
+ */
+const pendingWrites = new Set<Promise<void>>();
+
+function trackDurableWrite(write: Promise<void>): Promise<void> {
+  // Swallow here only so an un-flushed caller cannot crash the app; the
+  // rejection is re-raised to whoever awaits the flush.
+  const tracked = write.finally(() => {
+    pendingWrites.delete(tracked);
+  });
+  pendingWrites.add(tracked);
+  void tracked.catch(() => undefined);
+  return write;
+}
+
+export function pendingStorageWriteCount(): number {
+  return pendingWrites.size;
+}
+
+/**
+ * Resolve once every durable write started so far has settled — including
+ * writes started *while* flushing, since a store subscription can trigger
+ * another persist during the drain. Rejects with the first write failure.
+ */
+export async function flushPendingStorageWrites(): Promise<void> {
+  let firstFailure: unknown = null;
+  while (pendingWrites.size > 0) {
+    const batch = [...pendingWrites];
+    const results = await Promise.allSettled(batch);
+    for (const result of results) {
+      if (result.status === 'rejected' && firstFailure === null) {
+        firstFailure = result.reason;
+      }
+    }
+  }
+  if (firstFailure !== null) throw firstFailure;
+}
+
 export const asyncStorageCompat = {
   getItem: asyncStorageDurable.getItem,
-  async setItem(name: string, value: string): Promise<void> {
-    if (activeStage?.keys.has(name)) return;
-    await asyncStorageDurable.setItem(name, value);
+  setItem(name: string, value: string): Promise<void> {
+    if (activeStage?.keys.has(name)) return Promise.resolve();
+    return trackDurableWrite(asyncStorageDurable.setItem(name, value));
   },
-  async removeItem(name: string): Promise<void> {
-    if (activeStage?.keys.has(name)) return;
-    await asyncStorageDurable.removeItem(name);
+  removeItem(name: string): Promise<void> {
+    if (activeStage?.keys.has(name)) return Promise.resolve();
+    return trackDurableWrite(asyncStorageDurable.removeItem(name));
   },
 };
 

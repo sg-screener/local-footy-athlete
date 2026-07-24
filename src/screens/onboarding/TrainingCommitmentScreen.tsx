@@ -5,8 +5,8 @@ import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
@@ -35,41 +35,37 @@ export const TrainingCommitmentScreen: React.FC<
 > = ({ navigation }) => {
   const [selectedDays, setSelectedDays] = useState<number | null>(null);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('TrainingCommitment');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const [notSure, setNotSure] = useState(false);
 
   const handleSelect = useCallback((days: number) => {
     setSelectedDays(days);
     setNotSure(false);
-    updateOnboardingData({
-      trainingDaysPerWeek: days,
-      trainingDaysUnsure: false,
-    });
-  }, [updateOnboardingData]);
+  }, []);
 
   const handleNotSure = useCallback(() => {
     setSelectedDays(null);
     setNotSure(true);
-    updateOnboardingData({
-      trainingDaysPerWeek: 3,
-      trainingDaysUnsure: true,
-    });
-  }, [updateOnboardingData]);
+  }, []);
 
+  // The pick is local until Continue: one commit, awaited, tied to the advance.
+  // "Not sure" is an answer too — 3 days, flagged as unsure.
   const handleContinue = useCallback(() => {
-    if (selectedDays !== null || notSure) {
-      navigation.navigate('PreferredTrainingDays');
-    }
-  }, [navigation, notSure, selectedDays]);
+    if (selectedDays === null && !notSure) return;
+    void commitAndAdvance({
+      trainingDaysPerWeek: selectedDays ?? 3,
+      trainingDaysUnsure: selectedDays === null,
+    }, () => navigation.navigate('PreferredTrainingDays'));
+  }, [commitAndAdvance, navigation, notSure, selectedDays]);
 
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={handleContinue}
       continueDisabled={selectedDays === null && !notSure}
     >

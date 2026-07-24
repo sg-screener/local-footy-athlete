@@ -4,14 +4,14 @@ import {
   View,
   StyleSheet,
   Pressable,
-  TextInput,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
 } from 'react-native';
 import { Text } from './common/Text';
 import { colors } from '../theme/colors';
 import { spacing, borderRadius } from '../theme/spacing';
+import { AppTextInput } from '../components/keyboard/AppTextInput';
+import { KeyboardSafeArea } from './keyboard/KeyboardSafeArea';
 
 interface AddExerciseModalProps {
   visible: boolean;
@@ -72,9 +72,10 @@ export default function AddExerciseModal({ visible, onClose, onAdd }: AddExercis
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardSafeArea
         style={styles.overlay}
+        scrollable={false}
+        dismissOnBackgroundTap={false}
       >
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={styles.sheet}>
@@ -113,7 +114,7 @@ export default function AddExerciseModal({ visible, onClose, onAdd }: AddExercis
             <Text variant="caption" color={colors.text.tertiary} style={styles.label}>
               EXERCISE NAME
             </Text>
-            <TextInput
+            <AppTextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
@@ -128,7 +129,7 @@ export default function AddExerciseModal({ visible, onClose, onAdd }: AddExercis
                 <Text variant="caption" color={colors.text.tertiary} style={styles.label}>
                   SETS
                 </Text>
-                <TextInput
+                <AppTextInput
                   style={styles.input}
                   value={sets}
                   onChangeText={setSets}
@@ -141,7 +142,7 @@ export default function AddExerciseModal({ visible, onClose, onAdd }: AddExercis
                 <Text variant="caption" color={colors.text.tertiary} style={styles.label}>
                   REPS
                 </Text>
-                <TextInput
+                <AppTextInput
                   style={styles.input}
                   value={reps}
                   onChangeText={setReps}
@@ -156,7 +157,7 @@ export default function AddExerciseModal({ visible, onClose, onAdd }: AddExercis
             <Text variant="caption" color={colors.text.tertiary} style={styles.label}>
               NOTES (OPTIONAL)
             </Text>
-            <TextInput
+            <AppTextInput
               style={[styles.input, styles.notesInput]}
               value={notes}
               onChangeText={setNotes}
@@ -180,7 +181,7 @@ export default function AddExerciseModal({ visible, onClose, onAdd }: AddExercis
             <View style={{ height: 30 }} />
           </ScrollView>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardSafeArea>
     </Modal>
   );
 }

@@ -1,16 +1,14 @@
 import React from 'react';
 import {
   View,
-  ScrollView,
   StyleSheet,
   Pressable,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text } from '../common/Text';
 import { colors } from '../../theme/colors';
 import { shadows } from '../../theme/spacing';
+import { KeyboardSafeArea } from '../keyboard/KeyboardSafeArea';
 
 interface OnboardingLayoutProps {
   children: React.ReactNode;
@@ -30,8 +28,10 @@ interface OnboardingLayoutProps {
   footerHelperText?: string;
   /** Extra room at the end of the scroll area, useful above sticky footers. */
   scrollContentExtraBottomPadding?: number;
-  /** Enables keyboard avoidance for steps with text inputs. */
-  keyboardAvoiding?: boolean;
+  /** True while the step's answer is being saved — blocks a double-advance. */
+  saving?: boolean;
+  /** Set when the answer could not be saved; shown instead of the CTA helper. */
+  saveError?: string | null;
   /** @deprecated No longer displayed — kept for backward compat */
   stepLabel?: string;
 }
@@ -44,11 +44,15 @@ const DEFAULT_SCROLL_BOTTOM_PADDING = 40;
  * Layout (no absolute positioning anywhere):
  *
  *   SafeAreaView  flex:1
- *   └─ View  flex:1  (column)
- *      ├─ Header        (auto height — back button + progress bar)
- *      ├─ View flex:1   (scroll wrapper — bounded)
- *      │  └─ ScrollView (scrolls within bounded wrapper)
- *      └─ Footer        (auto height, always visible — unless hideFooter)
+ *   ├─ Header             (auto height — back button + progress bar)
+ *   └─ KeyboardSafeArea   (owns avoidance, scroll, dismiss, Done accessory)
+ *      ├─ ScrollView      (content)
+ *      └─ Footer          (CTA — INSIDE the avoided region)
+ *
+ * Keyboard avoidance used to be an opt-in prop, and the two screens that most
+ * needed it — Name and BodyMeasurements — never opted in, which is dogfood
+ * finding E3. There is no opt-in any more: the shell is keyboard-safe for every
+ * step, because the convention lives in KeyboardSafeArea rather than here.
  */
 export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   children,
@@ -60,13 +64,41 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   hideFooter = false,
   footerHelperText,
   scrollContentExtraBottomPadding = 0,
-  keyboardAvoiding = false,
+  saving = false,
+  saveError = null,
 }) => {
   const scrollBottomPadding =
     DEFAULT_SCROLL_BOTTOM_PADDING + scrollContentExtraBottomPadding;
 
-  const content = (
-    <>
+  const footer = hideFooter ? null : (
+    <View style={styles.footer}>
+      {saveError ? (
+        <Text style={styles.footerError}>{saveError}</Text>
+      ) : footerHelperText ? (
+        <Text style={styles.footerHelper}>{footerHelperText}</Text>
+      ) : null}
+      <Pressable
+        onPress={onContinue}
+        disabled={continueDisabled || saving}
+        style={({ pressed }) => [
+          styles.ctaButton,
+          (continueDisabled || saving) && styles.ctaDisabled,
+          pressed && !continueDisabled && !saving && styles.ctaPressed,
+        ]}
+      >
+        <Text
+          variant="button"
+          color={continueDisabled || saving ? colors.text.disabled : colors.text.inverse}
+          align="center"
+        >
+          {saving ? 'Saving…' : continueLabel}
+        </Text>
+      </Pressable>
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
       {/* ─── Header ─── */}
       <View style={styles.header}>
         <Pressable
@@ -90,60 +122,18 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
         </View>
       </View>
 
-      {/* ─── Scrollable Content ─── */}
-      <View style={styles.scrollWrapper}>
-        <ScrollView
-          contentContainerStyle={[
+      {/* ─── Content + CTA, both inside the avoided region ─── */}
+      <KeyboardSafeArea
+        footer={footer}
+        scrollProps={{
+          contentContainerStyle: [
             styles.scrollContent,
             { paddingBottom: scrollBottomPadding },
-          ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {children}
-        </ScrollView>
-      </View>
-
-      {/* ─── Fixed Bottom CTA ─── */}
-      {!hideFooter && (
-        <View style={styles.footer}>
-          {footerHelperText ? (
-            <Text style={styles.footerHelper}>{footerHelperText}</Text>
-          ) : null}
-          <Pressable
-            onPress={onContinue}
-            disabled={continueDisabled}
-            style={({ pressed }) => [
-              styles.ctaButton,
-              continueDisabled && styles.ctaDisabled,
-              pressed && !continueDisabled && styles.ctaPressed,
-            ]}
-          >
-            <Text
-              variant="button"
-              color={continueDisabled ? colors.text.disabled : colors.text.inverse}
-              align="center"
-            >
-              {continueLabel}
-            </Text>
-          </Pressable>
-        </View>
-      )}
-    </>
-  );
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      {keyboardAvoiding ? (
-        <KeyboardAvoidingView
-          style={styles.root}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          {content}
-        </KeyboardAvoidingView>
-      ) : (
-        <View style={styles.root}>{content}</View>
-      )}
+          ],
+        }}
+      >
+        {children}
+      </KeyboardSafeArea>
     </SafeAreaView>
   );
 };
@@ -209,6 +199,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface.primary,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,255,255,0.06)',
+  },
+  footerError: {
+    color: colors.status.error,
+    fontSize: 13,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 10,
   },
   footerHelper: {
     color: colors.text.tertiary,

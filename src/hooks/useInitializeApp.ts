@@ -1,19 +1,33 @@
 import { useEffect, useState } from 'react';
-import { useProfileStore } from '../store/profileStore';
+import {
+  awaitAppHydration,
+  getAppHydrationState,
+  subscribeToAppHydration,
+  type AppHydrationState,
+} from '../store/appHydrationGate';
 
 interface UseInitializeAppReturn {
   isReady: boolean;
+  hydration: AppHydrationState;
 }
 
-/** Existing app-start grace period; dev E2E readiness has its own hydration gate. */
+/**
+ * App-start readiness.
+ *
+ * This used to release the UI after a flat grace period that checked nothing,
+ * so onboarding could mount before AsyncStorage had been read
+ * (docs/ONBOARDING_PERSISTENCE_DIAGNOSIS_2026-07-24.md §3.3). Readiness is now
+ * the hydration gate's verdict: ready when every persisted store has hydrated,
+ * failed when one did not. Never elapsed time.
+ */
 export function useInitializeApp(): UseInitializeAppReturn {
-  const [isReady, setIsReady] = useState(false);
-  useProfileStore((state) => state.isOnboardingComplete);
+  const [hydration, setHydration] = useState<AppHydrationState>(getAppHydrationState);
 
   useEffect(() => {
-    const timer = setTimeout(() => setIsReady(true), 300);
-    return () => clearTimeout(timer);
+    const unsubscribe = subscribeToAppHydration(setHydration);
+    void awaitAppHydration().then(setHydration);
+    return unsubscribe;
   }, []);
 
-  return { isReady };
+  return { isReady: hydration.status !== 'hydrating', hydration };
 }

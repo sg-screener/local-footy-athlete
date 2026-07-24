@@ -9,8 +9,8 @@ import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { SessionDuration } from '../../types/domain';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
@@ -33,14 +33,11 @@ export const SessionDurationScreen: React.FC<SessionDurationScreenProps> = ({
 }) => {
   const [selectedDuration, setSelectedDuration] = useState<SessionDuration | null>(null);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('SessionDuration');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const handleContinue = () => {
     if (selectedDuration !== null) {
-      updateOnboardingData({ sessionDurationMinutes: selectedDuration });
-      navigation.navigate('GymExperience');
+      void commitAndAdvance({ sessionDurationMinutes: selectedDuration }, () => navigation.navigate('GymExperience'));
     }
   };
 
@@ -49,6 +46,8 @@ export const SessionDurationScreen: React.FC<SessionDurationScreenProps> = ({
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={handleContinue}
       continueDisabled={selectedDuration === null}
     >
