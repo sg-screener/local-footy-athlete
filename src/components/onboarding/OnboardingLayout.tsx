@@ -4,7 +4,8 @@ import {
   StyleSheet,
   Pressable,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { Text } from '../common/Text';
 import { colors } from '../../theme/colors';
 import { shadows } from '../../theme/spacing';
@@ -70,8 +71,22 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   const scrollBottomPadding =
     DEFAULT_SCROLL_BOTTOM_PADDING + scrollContentExtraBottomPadding;
 
+  // Keyboard-LIFT is owned by KeyboardSafeArea (the sticky footer). The bottom
+  // safe-area INSET is a separate concern owned here by the shell: it must clear
+  // the home indicator at rest, but COLLAPSE while the keyboard is up — the keypad
+  // then covers the home-indicator zone, and the CTA must ride flush on it with
+  // zero gap (run-3 device finding + Sam ruling). Keeping the inset static on the
+  // outer SafeAreaView is exactly what the full-height sticky lift overshot.
+  const insets = useSafeAreaInsets();
+  const keyboardVisible = useKeyboardState((state) => state.isVisible);
+
   const footer = hideFooter ? null : (
-    <View style={styles.footer}>
+    <View
+      style={[
+        styles.footer,
+        { paddingBottom: keyboardVisible ? 0 : Math.max(insets.bottom, 12) },
+      ]}
+    >
       {saveError ? (
         <Text style={styles.footerError}>{saveError}</Text>
       ) : footerHelperText ? (
@@ -98,7 +113,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {/* ─── Header ─── */}
       <View style={styles.header}>
         <Pressable

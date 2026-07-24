@@ -45,7 +45,10 @@ export function buildCueText(exerciseName: string): string | null {
     cue.primaryCue === 'Control the movement.' &&
     cue.secondaryCue === 'Stay tight through the full range.';
   if (isGenericFallback) {
-    if (__DEV__) {
+    // `typeof` guard, not a bare `__DEV__`: buildCueText now also runs in the
+    // program-build path (the cue contract), which some harnesses enter without
+    // defining the RN `__DEV__` global.
+    if (typeof __DEV__ !== 'undefined' && __DEV__) {
       logger.debug(`[exerciseCues] No curated cue for: ${exerciseName} (canonical: ${name}) — rendering none`);
     }
     return null;

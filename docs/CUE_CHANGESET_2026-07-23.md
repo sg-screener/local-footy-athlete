@@ -147,6 +147,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Groin Squeeze**: Squeeze the ball between the knees — or your fists if no ball. | Hold each squeeze for a beat.
 - **Half-Kneeling Single-Arm Overhead Press**: Half-kneel, press straight overhead, knee on ground = arm overhead. | Fight the rotation, ribs stay down.
 - **Hammer Curl**: Neutral grip, no swinging. | Control both directions.
+- **Hamstring Curl**: Curl the heels toward your butt. | Control the return, no slamming.
 - **Hanging Leg Raise**: Stay tight through midline, breath. | No swinging.
 - **Hill Sprints**: Drive the knees, lean into the hill. | Walk back for full recovery.
 - **Hip 90/90 Stretch**: Front and back legs at 90 degrees. | Stay tall, shift weight gently.

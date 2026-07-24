@@ -102,6 +102,20 @@ const UNPOOLED_BY_RULING: Record<string, string> = {
 };
 
 /**
+ * Cues that ship for a fallback default-program exercise that is deliberately
+ * NOT pooled or demoed. The athlete meets these only in the hardcoded default
+ * program (defaultProgram.ts), never via pool rotation, so they carry a curated
+ * cue but no pool slot and no video. A recorded Sam ruling, not an orphan.
+ */
+const CUE_ONLY_BY_RULING: Record<string, string> = {
+  'Hamstring Curl':
+    'Sam 2026-07-24 (L10 run 3): a curated cue for the default-program hamstring '
+    + 'curl fallback. The pooled + demoed curl is "Swiss Ball Hamstring Curl"; this '
+    + 'bare machine-curl name renders only in the hardcoded default program, so it '
+    + 'ships a cue but no pool slot or video.',
+};
+
+/**
  * Pool entries awaiting a load-handling ruling from Sam.
  *
  * EMPTY as of 2026-07-24 — Sam ruled on all nine (carries re-anchored to bench
@@ -159,11 +173,13 @@ console.log('\n[1] Pool → cue / video / load / tags');
 console.log('\n[2] Cue → something that can prescribe it');
 {
   ok('no cue is fully orphaned (no pool, no conditioning, no video)',
-    [...cues].filter((n) => !pool.has(n) && !conditioning.has(n) && !videos.has(n)));
+    [...cues].filter((n) =>
+      !pool.has(n) && !conditioning.has(n) && !videos.has(n) && !(n in CUE_ONLY_BY_RULING)));
 
   ok('every cue is prescribable, or unpooled by a recorded ruling',
     [...cues].filter((n) =>
-      !pool.has(n) && !conditioning.has(n) && !(n in UNPOOLED_BY_RULING)));
+      !pool.has(n) && !conditioning.has(n)
+      && !(n in UNPOOLED_BY_RULING) && !(n in CUE_ONLY_BY_RULING)));
 }
 
 console.log('\n[3] Video → something that uses it');
@@ -209,6 +225,10 @@ console.log('\n[5] The whitelists themselves stay honest');
   ok('no MOBILITY_NO_TAGS_BY_DESIGN entry has quietly gained tags',
     [...MOBILITY_NO_TAGS_BY_DESIGN].filter((n) => EXERCISE_TAGS[n]),
     'these are now tagged — remove them from the whitelist');
+
+  ok('no CUE_ONLY_BY_RULING entry has quietly been pooled or demoed',
+    Object.keys(CUE_ONLY_BY_RULING).filter((n) => pool.has(n) || videos.has(n)),
+    'these now ship a pool slot or video — remove them from the whitelist');
 
   ok('the load-handling pending list is empty',
     [...LOAD_HANDLING_PENDING_SAM],

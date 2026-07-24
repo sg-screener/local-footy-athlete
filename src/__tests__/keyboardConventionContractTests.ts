@@ -259,6 +259,36 @@ console.log('\n[5] The Done bar only mounts where a keyboard can be raised (L10)
   );
 }
 
+console.log('\n[6] The Continue footer rides flush on the keypad (run-3 device finding)');
+{
+  // Run-3 device truth: the Continue CTA sat ~1 bottom-safe-area-inset ABOVE the
+  // keypad. Cause (verified in source): OnboardingLayout's outer SafeAreaView had
+  // no `edges` prop, so it applied the bottom inset as STATIC padding; the footer
+  // rides KeyboardStickyView, whose transform lifts it by the FULL keyboard height
+  // measured from the true screen bottom. Resting already one inset up, it overshot
+  // the keypad top by exactly that inset. Sam ruling (run 3): the CTA rides flush on
+  // the keypad, zero gap. The inset must be owned by the footer and COLLAPSE while
+  // the keyboard is up (the keypad then covers the home-indicator zone anyway), so
+  // opened:0 on the sticky footer is genuinely flush because the footer now rests at
+  // the true screen bottom. Keyboard-LIFT stays owned by KeyboardSafeArea; the
+  // safe-area INSET is owned by the onboarding shell — two different concerns.
+  const layout = read('components/onboarding/OnboardingLayout.tsx');
+  ok(
+    'OnboardingLayout SafeAreaView drops the bottom edge so the footer reaches the keypad',
+    /edges=\{\['top', 'left', 'right'\]\}/.test(layout),
+    'a static bottom inset on the outer SafeAreaView is exactly what the sticky '
+      + 'footer overshot — the footer, not the shell, must own the bottom inset',
+  );
+  ok(
+    'the Continue footer owns the bottom safe-area inset and collapses it under the keyboard',
+    /useSafeAreaInsets/.test(layout) &&
+      /useKeyboardState/.test(layout) &&
+      /paddingBottom:[^\n]*insets\.bottom/.test(layout),
+    'rest: the CTA clears the home indicator (paddingBottom = insets.bottom); '
+      + 'keyboard up: the inset collapses to 0 so the CTA rides flush on the keypad',
+  );
+}
+
 const total = passed + failures.length;
 console.log(`\nKeyboard convention totals: passed=${passed}/${total} failures=${failures.length}`);
 if (failures.length > 0) {
