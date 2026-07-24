@@ -5,7 +5,8 @@ import {
   Pressable,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useKeyboardState } from 'react-native-keyboard-controller';
+import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { Text } from '../common/Text';
 import { colors } from '../../theme/colors';
 import { shadows } from '../../theme/spacing';
@@ -77,16 +78,23 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   // then covers the home-indicator zone, and the CTA must ride flush on it with
   // zero gap (run-3 device finding + Sam ruling). Keeping the inset static on the
   // outer SafeAreaView is exactly what the full-height sticky lift overshot.
+  //
+  // The inset must collapse on the SAME clock the sticky lift rides, or it races
+  // it. A boolean `isVisible` flag flips once, snapping paddingBottom
+  // insets.bottom -> 0 in a single step, while KeyboardStickyView's transform
+  // lifts continuously over the open animation — the CTA overshoots above the
+  // keypad then settles (run-4 device finding). So the inset is interpolated on
+  // the reanimated keyboard PROGRESS (0 closed .. 1 open) that KeyboardStickyView
+  // also rides, on the UI thread: inset-collapse and lift are one motion, flush.
   const insets = useSafeAreaInsets();
-  const keyboardVisible = useKeyboardState((state) => state.isVisible);
+  const { progress: keyboardProgress } = useReanimatedKeyboardAnimation();
+  const restingBottomInset = Math.max(insets.bottom, 12);
+  const footerInsetStyle = useAnimatedStyle(() => ({
+    paddingBottom: (1 - keyboardProgress.value) * restingBottomInset,
+  }));
 
   const footer = hideFooter ? null : (
-    <View
-      style={[
-        styles.footer,
-        { paddingBottom: keyboardVisible ? 0 : Math.max(insets.bottom, 12) },
-      ]}
-    >
+    <Animated.View style={[styles.footer, footerInsetStyle]}>
       {saveError ? (
         <Text style={styles.footerError}>{saveError}</Text>
       ) : footerHelperText ? (
@@ -109,7 +117,7 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
           {saving ? 'Saving…' : continueLabel}
         </Text>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 
   return (
