@@ -1,7 +1,9 @@
 # Onboarding Reliability + Keyboard Unit — 2026-07-24
 
 Branch: `feat/onboarding-reliability-keyboard` (off `main`). Tests-first
-throughout. **Gates green, awaiting Sam device acceptance.**
+throughout. **Gates green; simulator fresh-install pass clean; merged to `main`.
+Awaiting Sam's real-phone acceptance**, which rides the single rebuild after the
+cue/video unit also lands.
 
 ## L2 header
 
@@ -223,12 +225,65 @@ It tracks the keyboard frame natively on both platforms, which RN's own
 
 ---
 
-## Device pass owed (L3)
+## Simulator fresh-install pass — 2026-07-24 (clean, after one fix)
+
+Erased simulator, cold install, software keyboard on. Two full runs.
+
+**Data integrity — the original failure, reproduced clean.** Every field that
+showed "Not provided / Not selected" on Sam's device now shows the real answer:
+
+| Review row | Sam's device (broken) | This pass |
+|---|---|---|
+| Footy role | Not provided | Inside mid |
+| Goals | Not selected | Stay injury-free, Get stronger & fitter |
+| Height / Weight | Not provided | 183 cm / 84 kg |
+| **Season Phase** | **Not selected → generated Pre-season** | **In-season** |
+| Game Day | — | Saturday |
+| Team Sessions | — | 90 min, Moderate |
+| **LFA Days** | **Not set** | **3 days per week** |
+| LFA Training Days | — | Monday, Wednesday, Friday |
+| Physical (6 rows) | Not selected | all six correct |
+
+The Game Day step appearing at all is itself proof the answer stuck — that step
+is only visible when `seasonPhase === 'In-season'`. Generation then produced a
+real in-season week with Team Training on the chosen Tue/Thu, and the Profile
+tab reads **Name: Sam** (was "Athlete") with LFA Days populated (was "Not set").
+
+**Keyboard — one real regression found and fixed.** The source contracts passed
+while the screen was visibly wrong, which is exactly the limit of source-level
+testing this report warned about. Both defects are in `285825a`:
+
+1. `KeyboardAwareScrollView` nested inside a `KeyboardAvoidingView` — each
+   shifted the same content and the toolbar was both laid out as content and
+   positioned against the keyboard, drawing a **second, floating Done bar over
+   the screen title**.
+2. With that fixed, the toolbar and the sticky footer both claimed the strip
+   above the keypad, so **Done rendered on top of Continue**.
+
+After the fix, verified on a clean install: Name and height/weight both show
+title, field and an enabled Continue above the keyboard with no stray bar (E3),
+the numeric keypad has a Done and Continue is tappable first-tap (E4), and the
+weight field stays visible while typing (E7). A second full 17-step run reached
+Review with every answer intact.
+
+**ChatScreen** — composer rides correctly above the keyboard, no overlap. This
+was the flagged regression risk; it is clean.
+
+**AddExerciseModal** — **could not be checked: it has zero call sites.** Nothing
+in the app imports it, so an athlete cannot reach it. It is dead code of the
+same class as `SessionDurationScreen` and belongs in the Phase 1.6 orphan sweep.
+The regression risk flagged for it is therefore moot, but the file was still
+swept onto the convention, so it will be correct if ever wired.
+
+## Real-phone pass still owed (L3)
 
 Per L3 this must be a **real fresh install — delete the app, reboot the phone,
-reinstall** — not a simulator reset and not a TestFlight update over an existing
-install. That is the only state that reproduces the original bug, and it is the
-state both mirror fixes target.
+reinstall**. Sam's ruling: this happens after the cue/video unit also lands, as
+one rebuild for both.
+
+The simulator pass above covers the same cold-storage state and is clean, but a
+simulator is not a phone: it cannot reproduce iOS memory-pressure process kills,
+real AsyncStorage timing, or an iCloud-restore "fresh install".
 
 What to check:
 1. Onboard end-to-end. Every answer must appear correctly on Review, and the
@@ -246,19 +301,24 @@ What to check:
 
 ## NOT-COVERED
 
-- **No device run of any kind.** Nothing here has been on hardware or a
-  simulator. Every claim is headless. Per L10 this is not a PASS.
-- **The keyboard convention is verified only by source contract.** The repo ships
-  no native renderer, so nothing proves the Done bar renders, that
-  `bottomOffset: 64` is the right clearance on every device size, or that
-  `KeyboardAvoidingView` from `react-native-keyboard-controller` behaves in the
-  Modal that `AddExerciseModal` lives in. E3/E4/E7 are *addressed*, not
-  *confirmed fixed*.
-- **The chat and modal surfaces changed shape.** `ChatScreen` and
-  `AddExerciseModal` moved from a bespoke `KeyboardAvoidingView` with tuned
-  `keyboardVerticalOffset` to the shared convention. Their previous offsets were
-  hand-fitted; the new behaviour is untested on a device and is the most likely
-  place for a visual regression.
+- **No run on real hardware.** Simulator only. Per L10 that is not Sam's
+  acceptance.
+- **One screen size only** — iPhone 17 Pro. `bottomOffset: 64` is unverified on
+  smaller devices (SE-class) where the keypad occupies proportionally more of
+  the screen, and on iPad.
+- **Android is entirely unverified.** The convention is built on primitives
+  chosen partly *because* they work on Android, but no Android device or
+  emulator was run.
+- **`AddExerciseModal` is unreachable dead code** (zero call sites), so its
+  swept keyboard behaviour inside a `Modal` is untested and untestable until
+  something wires it up.
+- **`CoachScreen` still owns its own `KeyboardStickyView`** for the message
+  composer. It predates this convention and was left alone; the contract test
+  deliberately does not scan for `KeyboardStickyView` for that reason. It is the
+  one input surface not yet behind the shared owner.
+- **Interrupted-flow resume was not exercised on the simulator.** Force-quit
+  mid-onboarding and reopen is covered by headless tests (`C2`/`C3`) but was not
+  driven on the device pass.
 - **`profileStore`/`ProfileHomeScreen`'s `firstName || 'Athlete'` fallbacks are
   still there.** The brief called them "generation-time" fallbacks; they are not —
   there is no `firstName` fallback at generation time, only these two display

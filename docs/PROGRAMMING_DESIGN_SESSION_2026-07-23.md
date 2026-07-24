@@ -41,6 +41,28 @@ Agenda (from MASTER_PLAN 4.1):
   File then carries "authored by Sam" provenance; future additions need
   his sign-off.
 
+### D10 — Injury vs team-training/game credit (Sam, 2026-07-24)
+
+**Principle (Sam, verbatim intent): "It's a dialogue between S&C coach
+and athlete — not trying to prescribe rehab for injuries, that's for
+the physio. Just figure out what they can and can't do, and prescribe
+it."** The app never diagnoses, never treats — it asks, records, and
+programs the work that's still safe and useful.
+
+- **The app never assumes; it asks.** Default: an injury pauses
+  AFFECTED-region work only — team nights and games keep their
+  conditioning/sprint credit (a shoulder doesn't stop him running).
+- When severity/region genuinely threatens participation (≈6+/10 or
+  region-relevant): the injury flow asks, in Sam's words: "Can you
+  still train and play?" → no → "Will you be doing any work on those
+  days?" → yes → "Want me to prescribe a session that fits?"
+- Every answer is a recorded typed fact; credit withdrawal + matching
+  requirement reduction are ONE atomic authored decision; replacement
+  session generated respecting the injury, transaction-owned,
+  disclosed, cascade-undoable.
+- Same questions asked by the coach chat — same door (added to
+  COACH_ACCEPTANCE_CONTRACT).
+
 ### D7 — Repeat-week (F7) — Sam, 2026-07-23
 
 - **HIDE for launch.** Button removed from the UI in the Phase 1.6
