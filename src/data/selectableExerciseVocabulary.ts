@@ -310,6 +310,115 @@ export function isSelectable(name: string): boolean {
   return selectableNameSet().has(name);
 }
 
+// ─── The never-again lock: hardcoded exercise-name literals ───
+
+/**
+ * Why a string literal sitting in an exercise-identity position is allowed not
+ * to be an exercise name.
+ *
+ * The census gap Sam caught: the vocabulary switch closed the GENERATOR's
+ * naming rights, but said nothing about names hardcoded in CODE. Those bypass
+ * every gate — `Medicine Ball Overhead Throw` lived in `buildPowerBlock` for
+ * months, and the live "Add exercise" table on the session screen still offers
+ * six names the app cannot cue. A literal in a builder is a name the athlete
+ * can see, so it must be held to the same vocabulary as a generated one.
+ *
+ * `hardcodedExerciseNameLockTests` extracts every literal in an exercise
+ * identity position and requires it to EITHER resolve to the locked vocabulary
+ * OR carry one of these kinds. Nothing silently survives.
+ */
+export type LiteralExemptionKind =
+  | 'not_an_exercise'
+  | 'session_label'
+  | 'recovery_flow'
+  | 'conditioning_prescription'
+  | 'dead_mock_fixture'
+  | 'awaiting_sam_ruling';
+
+export interface LiteralExemptionSpec {
+  ruling: string;
+}
+
+export const LITERAL_EXEMPTION_KINDS: Record<LiteralExemptionKind, LiteralExemptionSpec> = {
+  not_an_exercise: {
+    ruling:
+      'A muscle group, category, id or description that happens to sit in an '
+      + 'object beside prescription fields. Never rendered as an exercise name.',
+  },
+  session_label: {
+    ruling:
+      'The name of a SESSION or block, not a movement — "Upper Body Strength", '
+      + '"Conditioning". Rendered as a session title, which has no cue.',
+  },
+  recovery_flow: {
+    ruling:
+      'A recovery/mobility FLOW rendered as one card standing for a template of '
+      + 'movements (MOBILITY_FLOW_TEMPLATES), not a single movement to cue.',
+  },
+  conditioning_prescription: {
+    ruling:
+      'A conditioning prescription written as free text ("3 x 8min zone 2 '
+      + 'Rower"). Conditioning rows are exempt from the cue contract by render '
+      + 'path, so this is a dose, not a name.',
+  },
+  dead_mock_fixture: {
+    ruling:
+      'Mock/demo data inside a screen unreachable from App.tsx. Deleted by the '
+      + 'Phase 1.6 purge, which makes this exemption self-liquidating: once the '
+      + 'file is gone the sweep stops finding the literal and the staleness '
+      + 'assertion forces the exemption out too.',
+  },
+  awaiting_sam_ruling: {
+    ruling:
+      'A REAL exercise name that does not resolve to the locked vocabulary. '
+      + 'Declared here rather than silently tolerated: each one is listed in the '
+      + 'build report with a proposed mapping, and Sam rules. Until then the card '
+      + 'renders WITHOUT a cue, which is the defect this kind exists to make loud.',
+  },
+};
+
+/**
+ * Every literal the lock has seen, with the kind that excuses it.
+ *
+ * Kept flat and explicit on purpose: adding a name here is a visible, reviewable
+ * act, and `awaiting_sam_ruling` entries are asserted against the report so a
+ * real gap cannot be parked and forgotten.
+ */
+export const LITERAL_EXEMPTIONS: Record<string, LiteralExemptionKind> = {
+  // ── Mock data in unreachable screens (Phase 1.6 purge deletes both files) ──
+  // 'Leg Curl' is a name Sam RETIRED, still sitting in a journal fixture — the
+  // clearest possible proof that the vocabulary switch alone could not see code.
+  'Leg Curl': 'dead_mock_fixture',
+  'Squat': 'dead_mock_fixture',
+
+  // ── Session / block labels ──
+  'Upper Body Strength': 'session_label',
+  'Conditioning': 'session_label',
+
+  // ── Recovery flows: one card standing for a template ──
+  'Mobility Flow': 'recovery_flow',
+
+  // ── Conditioning prescriptions (free-text dose) ──
+  '3 x 8min zone 2 Rower': 'conditioning_prescription',
+  '3 x 8min zone 2 SkiErg': 'conditioning_prescription',
+  'Breathing Reset': 'recovery_flow',
+
+  // ── REAL exercise names that do not resolve. Sam's ruling owed. ──
+  // All six are offered by the LIVE "Add exercise" affordance on the session
+  // screen and render with NO cue today. Proposed mappings are in the report.
+  'Split Squat': 'awaiting_sam_ruling',
+  'Calf Isometric Hold': 'awaiting_sam_ruling',
+  'Hip Mobility Flow': 'awaiting_sam_ruling',
+  'T-Spine Openers': 'awaiting_sam_ruling',
+  'Bike Flush Finisher': 'awaiting_sam_ruling',
+  'Tempo Run Finisher': 'awaiting_sam_ruling',
+};
+
+/** The exemption kind for a hardcoded literal, or null when none is recorded. */
+export function literalExemptionFor(literal: string): LiteralExemptionKind | null {
+  return LITERAL_EXEMPTIONS[literal] ?? null;
+}
+
 let cachedSet: Set<string> | null = null;
 function selectableNameSet(): Set<string> {
   if (!cachedSet) cachedSet = new Set(selectableExerciseNames());
