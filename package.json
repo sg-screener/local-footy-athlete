@@ -200,6 +200,7 @@
     "test:video-modal-fill": "sucrase-node src/__tests__/exerciseVideoModalFillTests.ts",
     "test:coach-add-session-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachAddSessionOwnershipTests.ts",
     "test:coach-failure-copy": "sucrase-node src/__tests__/coachFailureCopyContractTests.ts",
+    "test:coach-clarifier-advance": "TZ=Australia/Melbourne sucrase-node src/__tests__/coachClarifierAdvanceTests.ts",
     "test:exercise-canonicalisation": "TZ=Australia/Melbourne sucrase-node src/__tests__/exerciseNameCanonicalisationTests.ts"
   },
   "dependencies": {
