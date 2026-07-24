@@ -70,7 +70,7 @@ import { rebaseAcceptedEffectiveWeek } from '../rules/acceptedEffectiveWeek';
 import { deriveIllnessRecoveryWeekMode } from '../rules/illnessRecoveryWeekMode';
 import { addDaysISO } from '../utils/programBlockState';
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
-import { isInjurySourceFact } from '../rules/temporarySourceFact';
+import { isInjurySourceFact, temporarySourceFactId } from '../rules/temporarySourceFact';
 
 const WEEK_1 = '2026-07-20';
 const WEEK_2 = '2026-07-27';
@@ -458,6 +458,77 @@ function registerScenarios(): void {
     // And the week still landed as an illness_recovery week.
     assert(acceptedWeek(WEEK_1).mode === 'illness_recovery',
       `landing week mode is "${acceptedWeek(WEEK_1).mode}", not illness_recovery`);
+  });
+
+  // ── RIDER 2 — the open horizon at season/block boundaries. DECIDED: an open
+  // fact survives a block rollover and a season-phase change — only the athlete
+  // ends it. Weeks minted at those boundaries come from GENERATION AT CREATION
+  // (rider-1 table, last column), which reads the accepted facts, so the new
+  // block's weeks are born reduced rather than patched afterwards. Clearing
+  // the fact returns generation to normal — no residue in later blocks.
+  scenario('r2-boundaries', 'R2 an open illness shapes the next block and a phase change, and only clearing ends it', async () => {
+    seedSpentWeekFriday();
+    await markSpentDaysDone();
+    const result = await commitReadiness('sick_week');
+    assert((result as { ok?: boolean }).ok === true,
+      `severe illness was rejected: ${(result as { message?: string }).message}`);
+    const factId = activeFacts().map((fact) => temporarySourceFactId(fact))[0];
+    assert(!!factId, 'no active fact recorded');
+
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { generateProgramLocally } = require('../services/api/generateProgram');
+    const profile = useProfileStore.getState().onboardingData!;
+    const program = useProgramStore.getState().currentProgram!;
+    const NEXT_BLOCK_START = '2026-08-17';
+
+    // Block rollover: the next block generates under the open fact.
+    const nextBlock = quiet(() => generateProgramLocally(profile, {
+      todayISO: NEXT_BLOCK_START,
+      blockNumber: 2,
+      previousProgram: program,
+      seasonPhaseClock: program.seasonPhaseClock,
+      microcycleLimit: 1,
+    }));
+    assert(nextBlock.microcycles[0]?.exposureContractV2?.identity.mode === 'illness_recovery',
+      `next block's first week generated as "${nextBlock.microcycles[0]?.exposureContractV2?.identity.mode}" — the open horizon did not cross the block rollover`);
+
+    // Season-phase change: the fact survives the phase boundary too.
+    const phaseChanged = quiet(() => generateProgramLocally(profile, {
+      todayISO: NEXT_BLOCK_START,
+      blockNumber: 2,
+      previousProgram: program,
+      seasonPhaseClock: {
+        protocolVersion: 1,
+        selectedPhase: profile.seasonPhase,
+        phaseEntryWeekStartISO: NEXT_BLOCK_START,
+        originProvenance: 'explicit_user_phase_change',
+      } as never,
+      microcycleLimit: 1,
+    }));
+    assert(phaseChanged.microcycles[0]?.exposureContractV2?.identity.mode === 'illness_recovery',
+      `phase-change week generated as "${phaseChanged.microcycles[0]?.exposureContractV2?.identity.mode}" — the open horizon did not cross the phase change`);
+
+    // Only the athlete ends it: clear, then the same generation is normal.
+    const cleared = await quietAsync(() => executeProgramControlActionDurably({
+      type: 'clear_fatigue_status',
+      source: { screen: 'program_tab', surface: 'week_readiness_sheet', initiatedBy: 'tap' },
+      scope: 'current_week',
+      payload: { modifierId: factId, date: WEEK_1, todayISO: TODAY },
+      requiresRebuild: false,
+      createsActiveModifier: false,
+      oneOffOnly: false,
+    } as never, { todayISO: TODAY }));
+    assert((cleared as { ok?: boolean }).ok === true,
+      `clearing the illness failed: ${(cleared as { message?: string }).message}`);
+    const afterClear = quiet(() => generateProgramLocally(profile, {
+      todayISO: NEXT_BLOCK_START,
+      blockNumber: 2,
+      previousProgram: useProgramStore.getState().currentProgram,
+      seasonPhaseClock: program.seasonPhaseClock,
+      microcycleLimit: 1,
+    }));
+    assert(afterClear.microcycles[0]?.exposureContractV2?.identity.mode !== 'illness_recovery',
+      'the cleared fact still shapes the next block — residue across the boundary');
   });
 
   // ── T5 — exactly ONE duration representation. A static invariant: no
