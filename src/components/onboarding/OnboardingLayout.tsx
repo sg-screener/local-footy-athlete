@@ -125,6 +125,9 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
       {/* ─── Content + CTA, both inside the avoided region ─── */}
       <KeyboardSafeArea
         footer={footer}
+        // Auto-advance steps (hideFooter) are selection-only — no text input,
+        // so no keyboard and no Done bar (L10 device finding, 2026-07-24).
+        hasTextInput={!hideFooter}
         scrollProps={{
           contentContainerStyle: [
             styles.scrollContent,

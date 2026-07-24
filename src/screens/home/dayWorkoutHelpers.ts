@@ -8,6 +8,24 @@ import { logger } from '../../utils/logger';
  * __DEV__-only warn in buildCueText when the fallback cue is hit).
  */
 
+/**
+ * Join two independent cue clauses so they read as two sentences rather than a
+ * run-on. The primary and secondary cues are authored separately; the sentence
+ * boundary between them belongs to the join, not the author — so a primary that
+ * ends without terminal punctuation (or with a dangling comma/semicolon/colon)
+ * is promoted to a full stop before the secondary begins.
+ */
+export function joinCueClauses(primary: string, secondary: string): string {
+  const first = (primary ?? '').trim();
+  const second = (secondary ?? '').trim();
+  if (!first) return second;
+  if (!second) return first;
+  // Drop a dangling clause separator, then ensure a terminal stop.
+  const trimmed = first.replace(/[\s,;:]+$/, '');
+  const terminated = /[.!?]$/.test(trimmed) ? trimmed : `${trimmed}.`;
+  return `${terminated} ${second}`;
+}
+
 /** Build a display string from exercise cues. Returns null if no cue available. */
 export function buildCueText(exerciseName: string): string | null {
   const movement = EXERCISE_TAGS[exerciseName]?.movement ?? null;
@@ -23,7 +41,7 @@ export function buildCueText(exerciseName: string): string | null {
   }
 
   if (!cue.primaryCue && !cue.secondaryCue) return null;
-  if (cue.primaryCue && cue.secondaryCue) return `${cue.primaryCue} ${cue.secondaryCue}`;
+  if (cue.primaryCue && cue.secondaryCue) return joinCueClauses(cue.primaryCue, cue.secondaryCue);
   return cue.primaryCue || cue.secondaryCue || null;
 }
 

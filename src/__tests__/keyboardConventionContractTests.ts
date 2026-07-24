@@ -135,9 +135,10 @@ console.log('\n[1] The convention exists and owns the primitives');
   );
   ok(
     'the Done bar and a footer CTA never contend for the same strip',
-    /\{footer \? null : <KeyboardDoneAccessory \/>\}/.test(safeArea),
+    /\{footer \|\| !hasTextInput \? null : <KeyboardDoneAccessory \/>\}/.test(safeArea),
     'rendering both put the toolbar on top of Continue (simulator pass, '
-      + '2026-07-24). Where there is a CTA above the keypad, it is the exit.',
+      + '2026-07-24). Where there is a CTA above the keypad, it is the exit. '
+      + 'A screen with no text input also falls through to null (L10).',
   );
 }
 
@@ -217,6 +218,31 @@ console.log('\n[4] Every onboarding text step uses the convention');
       !/(?<![\w.])<TextInput[\s/>]/.test(source),
     );
   }
+}
+
+console.log('\n[5] The Done bar only mounts where a keyboard can be raised (L10)');
+{
+  // L10 device finding, 2026-07-24: the "Done" bar appeared on a selection-only
+  // step (an auto-advance question with no text input). A screen with no input
+  // never raises a keyboard, so it must never mount the dismiss affordance.
+  const safeArea = read('components/keyboard/KeyboardSafeArea.tsx');
+  ok(
+    'KeyboardSafeArea takes a hasTextInput signal',
+    /hasTextInput/.test(safeArea),
+    'the owner cannot introspect its children for inputs, so the caller declares it',
+  );
+  ok(
+    'the Done accessory is gated on both no-footer AND hasTextInput',
+    /\{footer \|\| !hasTextInput \? null : <KeyboardDoneAccessory \/>\}/.test(safeArea),
+    'a selection-only screen (no input, no footer) must fall through to null, not the toolbar',
+  );
+
+  const layout = read('components/onboarding/OnboardingLayout.tsx');
+  ok(
+    'OnboardingLayout tells the owner an auto-advance step has no text input',
+    /hasTextInput=\{!hideFooter\}/.test(layout),
+    'auto-advance (hideFooter) steps are selection-only — no keypad, so no Done bar',
+  );
 }
 
 const total = passed + failures.length;

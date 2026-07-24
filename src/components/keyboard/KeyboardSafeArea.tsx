@@ -38,6 +38,14 @@ interface KeyboardSafeAreaProps {
   style?: StyleProp<ViewStyle>;
   /** Tap outside an input to dismiss. Off for screens whose body is a list. */
   dismissOnBackgroundTap?: boolean;
+  /**
+   * Whether this screen contains a text input. The Done bar exists only to get
+   * off a keyboard, so a selection-only screen (no input) must not mount it —
+   * L10 device finding, 2026-07-24, where a "Done" bar showed on an auto-advance
+   * question. The owner can't introspect its children, so the caller declares
+   * it; defaults true so every existing input screen keeps its exit.
+   */
+  hasTextInput?: boolean;
 }
 
 /**
@@ -76,6 +84,7 @@ export const KeyboardSafeArea: React.FC<KeyboardSafeAreaProps> = ({
   scrollProps,
   style,
   dismissOnBackgroundTap = true,
+  hasTextInput = true,
 }) => {
   const body = scrollable ? (
     <KeyboardAwareScrollView
@@ -114,8 +123,12 @@ export const KeyboardSafeArea: React.FC<KeyboardSafeAreaProps> = ({
         exit — it rides above the keyboard and `keyboardShouldPersistTaps`
         makes it tappable on the first tap, which is exactly what E4 asked for.
         The toolbar is for screens with no CTA of their own.
+
+        It is also gated on `hasTextInput`: a selection-only screen never raises
+        a keyboard, so mounting a dismiss bar there is pure noise (L10 device
+        finding). No input and no footer → the strip stays empty.
       */}
-      {footer ? null : <KeyboardDoneAccessory />}
+      {footer || !hasTextInput ? null : <KeyboardDoneAccessory />}
     </View>
   );
 };
