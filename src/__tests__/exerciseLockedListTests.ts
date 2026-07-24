@@ -174,19 +174,37 @@ function parsePowerStaged(): string[] {
   return names;
 }
 
-/** The PROPOSED load-handling table's first column. */
-function parsePendingLoad(): string[] {
-  const block = doc.split('### PROPOSED — awaiting Sam, line by line')[1]
-    ?.split('### PROPOSED — Erg EMOM')[0] ?? '';
-  const names: string[] = [];
+interface LoadRuling {
+  exercise: string;
+  /** `1.14`, `0.00`, `0 (slot convention)`, or `n/a — still power-staged`. */
+  loadRatio: string;
+  /** `{ squat, 0.90, barbell }` or a prose "none — …" / "unchanged" cell. */
+  loadMap: string;
+}
+
+/**
+ * Sam's RULED load table. Parsed rather than transcribed, so a ruling recorded
+ * in the document but not shipped (or shipped but not recorded) fails the build.
+ */
+function parseLoadRulings(): LoadRuling[] {
+  const block = doc.split('### RULED — Sam, 2026-07-25, applied')[1]
+    ?.split('### RULED — Erg EMOM')[0] ?? '';
+  const rulings: LoadRuling[] = [];
   for (const line of block.split('\n')) {
     if (!line.startsWith('| ')) continue;
     const cells = line.split('|').slice(1, -1).map((c) => c.trim());
-    if (cells.length !== 5) continue;
+    if (cells.length !== 4) continue;
     if (cells[0] === 'Exercise' || /^-+$/.test(cells[0])) continue;
-    names.push(cells[0]);
+    rulings.push({ exercise: cells[0], loadRatio: cells[1], loadMap: cells[2] });
   }
-  return names;
+  return rulings;
+}
+
+/** `{ squat, 0.90, barbell }` → the shape EXERCISE_LOAD_MAP must carry. */
+function parseLoadMapCell(cell: string): { anchor: string; ratio: number; equipment: string } | null {
+  const match = cell.match(/\{\s*(\w+),\s*([\d.]+),\s*(\w+)\s*\}/);
+  if (!match) return null;
+  return { anchor: match[1], ratio: Number(match[2]), equipment: match[3] };
 }
 
 const removals = parseRemovals();
@@ -194,7 +212,7 @@ const merges = parseMerges();
 const additions = parseAdditions();
 const finalNames = parseFinalNames();
 const powerStaged = parsePowerStaged();
-const pendingLoad = parsePendingLoad();
+const loadRulings = parseLoadRulings();
 
 /** Sam's sheet entry → the name that actually ships. */
 const shipsAs = new Map(finalNames.map((r) => [r.entry, r.ships]));
@@ -256,7 +274,7 @@ function main(): void {
       `table rows=${finalNames.length} additions=${additions.length}; `
         + `missing: ${additions.filter((a) => !shipsAs.has(a.entry)).map((a) => a.entry).join(', ')}`);
     ok('the power staging table parsed', powerStaged.length === 8, `parsed ${powerStaged.length}`);
-    ok('the pending-load table parsed', pendingLoad.length === 7, `parsed ${pendingLoad.length}`);
+    ok('the ruled-load table parsed', loadRulings.length === 7, `parsed ${loadRulings.length}`);
   }
 
   console.log('\n[1] REMOVALS — gone from every content surface');
@@ -450,29 +468,69 @@ function main(): void {
       [...POWER_POOL_PENDING].filter((n) => exemptionsFor(n).length === 0));
   }
 
-  console.log('\n[8] LOAD HANDLING — no-load classes applied, pending rulings parked honestly');
+  console.log('\n[8] LOAD HANDLING — Sam\'s rulings applied, queue empty');
   {
-    const pendingSet = new Set(pendingLoad);
+    const ruledSet = new Set(loadRulings.map((r) => r.exercise));
     const noLoadAdditions = additions
       .map((a) => shipsAs.get(a.entry))
       .filter((n): n is string => Boolean(n))
-      .filter((n) => !pendingSet.has(n))
+      .filter((n) => !ruledSet.has(n))
       .filter((n) => !CONDITIONING_META[n]);
 
-    okEmpty('every non-pending addition lands in a no-load class',
+    okEmpty('every unruled addition lands in a no-load class',
       noLoadAdditions.filter((n) => !isTrueBodyweightExercise(n)),
       'band / bodyweight entries must resolve as unloaded, not fall through to a weight estimate');
 
-    // The pending list is Sam's queue, so it must BE the queue: the typed
-    // `load_ruling_pending` exemption and this table are the same seven names,
-    // or the build fails. Nothing can be parked silently, and nothing can be
-    // ruled on in the document without being unparked in code.
-    okEmpty('the parked load-handling list matches the document (code → doc)',
-      [...LOAD_RULING_PENDING].filter((n) => !pendingSet.has(n)));
-    okEmpty('the parked load-handling list matches the document (doc → code)',
-      pendingLoad.filter((n) => !LOAD_RULING_PENDING.has(n)));
-    okEmpty('every parked entry actually claims the typed load exemption',
-      [...LOAD_RULING_PENDING].filter((n) => !hasExemption(n, 'load_ruling_pending')));
+    // The queue is EMPTY, and emptiness is the proof rather than a comment: the
+    // assertion below fails the moment anything is parked again without a
+    // ruling in the document.
+    okEmpty('nothing is parked awaiting a load ruling', [...LOAD_RULING_PENDING],
+      'Sam ruled all seven on 2026-07-25; a new entry here needs a RULED row first');
+    okEmpty('no exercise still claims the load exemption',
+      [...ruledSet].filter((n) => hasExemption(n, 'load_ruling_pending')));
+
+    // Every ruled value SHIPS. Parsed from the document, never transcribed here,
+    // so the ruling and the code cannot drift in either direction.
+    const wrongRatio: string[] = [];
+    const wrongMap: string[] = [];
+    for (const ruling of loadRulings) {
+      const expectedMap = parseLoadMapCell(ruling.loadMap);
+      const shipped = EXERCISE_LOAD_MAP[ruling.exercise];
+      if (expectedMap) {
+        if (!shipped) {
+          wrongMap.push(`${ruling.exercise}: absent from EXERCISE_LOAD_MAP, doc says ${ruling.loadMap}`);
+        } else if (
+          shipped.anchor !== expectedMap.anchor
+          || shipped.ratio !== expectedMap.ratio
+          || shipped.equipment !== expectedMap.equipment
+        ) {
+          wrongMap.push(
+            `${ruling.exercise}\n        doc:  ${ruling.loadMap}\n        code: `
+            + `{ ${shipped.anchor}, ${shipped.ratio}, ${shipped.equipment} }`);
+        }
+      } else if (/^none\b/i.test(ruling.loadMap)) {
+        // "none — stays TRUE_BODYWEIGHT_EXERCISES": bodyweight-with-optional.
+        // A starting-weight entry here would be the fake precision Sam ruled out.
+        if (shipped) {
+          wrongMap.push(`${ruling.exercise}: doc says no starting suggestion, code carries one`);
+        }
+        if (!TRUE_BODYWEIGHT_EXERCISES.has(ruling.exercise)) {
+          wrongMap.push(`${ruling.exercise}: doc says it stays TRUE_BODYWEIGHT_EXERCISES, it does not`);
+        }
+      }
+
+      const expectedRatio = ruling.loadRatio.match(/^([\d.]+)$/);
+      if (expectedRatio) {
+        const entry = findStrengthPoolEntry(ruling.exercise);
+        if (!entry) {
+          wrongRatio.push(`${ruling.exercise}: doc rules loadRatio ${expectedRatio[1]} but it is in no strength pool`);
+        } else if (entry.loadRatio !== Number(expectedRatio[1])) {
+          wrongRatio.push(`${ruling.exercise}: doc ${expectedRatio[1]}, code ${entry.loadRatio}`);
+        }
+      }
+    }
+    okEmpty('every ruled loadRatio ships exactly', wrongRatio);
+    okEmpty('every ruled starting-weight profile ships exactly', wrongMap);
   }
 
   const total = passed + failures.length;
@@ -481,6 +539,17 @@ function main(): void {
     console.error(`Failing: ${failures.join(', ')}`);
     process.exit(1);
   }
+}
+
+/** The strength-pool entry for a name, or null when no pool carries it. */
+function findStrengthPoolEntry(name: string): { loadRatio: number } | null {
+  for (const slot of Object.values(STRENGTH_POOLS)) {
+    for (const definition of [slot.anchor, slot.accessory]) {
+      const entry = definition.entries.find((e) => e.name === name);
+      if (entry) return entry;
+    }
+  }
+  return null;
 }
 
 function slotHas(slot: keyof typeof STRENGTH_POOLS, name: string): boolean {

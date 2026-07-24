@@ -160,6 +160,9 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Back Squat':           { anchor: 'squat', ratio: 0.82, equipment: 'barbell' },
   'Front Squat':          { anchor: 'squat', ratio: 0.70, equipment: 'barbell' },
   'Box Squat':            { anchor: 'squat', ratio: 0.75, equipment: 'barbell' },
+  // Sam, 2026-07-25: High Box Squat is 1.2 x Box Squat — a higher box is a
+  // shorter range, so heavier, not lighter. 0.75 x 1.2 = 0.90.
+  'High Box Squat':       { anchor: 'squat', ratio: 0.90, equipment: 'barbell' },
   'Deadlift':             { anchor: 'squat', ratio: 1.00, equipment: 'barbell' },
   'Trap Bar Deadlift':    { anchor: 'squat', ratio: 0.90, equipment: 'barbell' },
   'RDLs':                 { anchor: 'squat', ratio: 0.65, equipment: 'barbell' },
@@ -172,7 +175,11 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Step Ups':               { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
   'Goblet Squat':           { anchor: 'squat', ratio: 0.22, equipment: 'dumbbell' },
   'Bodyweight Squat':       { anchor: 'squat', ratio: 0.00, equipment: 'bodyweight' },
-  'Glute Bridge':           { anchor: 'squat', ratio: 0.00, equipment: 'bodyweight' },
+  // Glute Bridge deliberately has NO profile: Sam ruled it
+  // bodyweight-with-optional (2026-07-25). It sits in
+  // TRUE_BODYWEIGHT_EXERCISES, which short-circuits before this map is read,
+  // so a 0.00 entry here was a second representation of the same fact. The
+  // cue's "add weight to hips if you can" is the whole instruction.
   'Single-Leg RDL':         { anchor: 'squat', ratio: 0.15, equipment: 'dumbbell' },
   'Kettlebell Swings':      { anchor: 'squat', ratio: 0.20, equipment: 'kettlebell' },
 
@@ -186,6 +193,17 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
   'Farmer Carry':           { anchor: 'bench', ratio: 0.355, equipment: 'dumbbell' },
   'Suitcase Carry':         { anchor: 'bench', ratio: 0.355, equipment: 'dumbbell' },
   'Overhead Carry':         { anchor: 'bench', ratio: 0.20, equipment: 'dumbbell' },
+
+  // ═══ SAM'S LOCKED-LIST LOAD RULINGS (2026-07-25) ═══
+  'Single-Leg Hip Thrust':  { anchor: 'squat', ratio: 0.20, equipment: 'dumbbell' },
+  // NOTE: 'machine' rounds to 5 kg increments, so this surfaces 25 kg at Sam's
+  // reference athlete rather than the 22.5 kg his note quotes. Re-classing it as
+  // 'dumbbell' would hit 22.5 but would also mis-gate equipment availability —
+  // a leg-curl stack is not a dumbbell. Flagged in the report; ratio ships as ruled.
+  'Hamstring Curl':         { anchor: 'squat', ratio: 0.25, equipment: 'machine' },
+  'Back Extension':         { anchor: 'squat', ratio: 0.15, equipment: 'dumbbell' },
+  // 40 kg reference (~0.45 x squat). Pool placement still owned by the power unit.
+  'Speed Trap Bar Deadlift': { anchor: 'squat', ratio: 0.45, equipment: 'barbell' },
 
   // ═══ MACHINE / ACCESSORY ADDITIONS (Sam, 2026-07-24) ═══
   // Same machine as Lat Pulldown, different handle — mirrors it exactly.

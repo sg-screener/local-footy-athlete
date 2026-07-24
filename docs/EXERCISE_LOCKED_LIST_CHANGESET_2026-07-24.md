@@ -335,40 +335,53 @@ Step-Down, Crab Walks, Hollow Hold, Plank, Side Plank Row, Stir the Pot, Dragon
 Flag, QL Back Extension, ATG Split Squat, Elephant Walks, Cossack Squat, Lateral
 Lunge, Bodyweight Squat, Pogo Hops, Kneeling Jump, Lateral Jump.
 
-### PROPOSED — awaiting Sam, line by line
+### RULED — Sam, 2026-07-25, applied
 
-The seven genuinely loaded additions. Ratios below MIRROR the named comparable
-entry; nothing here is a new judgement about how heavy a lift should be. They are
-parked in `LOAD_HANDLING_PENDING_SAM` until Sam rules — the pool entries ship, the
-numbers do not, and `estimateStartingWeight` falls through to the tag heuristic
-meanwhile (never undefined, never a blank card).
+The seven genuinely loaded additions, ruled line by line. `LOAD_RULING_PENDING`
+is now **EMPTY**, and `exerciseLockedListTests` §8 asserts that emptiness plus
+every shipped value below — so a future addition cannot be parked silently, and
+a ruling cannot be recorded here without shipping.
 
 Two columns because this app splits load handling in two: `loadRatio` is
-progression *transfer* between pool siblings; `EXERCISE_LOAD_MAP` is the *starting
-weight* estimate.
+progression *transfer* between pool siblings; `EXERCISE_LOAD_MAP` is the
+*starting weight* estimate.
 
-| Exercise | Proposed loadRatio | Mirrors | Proposed EXERCISE_LOAD_MAP | Mirrors |
-|---|---|---|---|---|
-| High Box Squat | 1.00 | Box Squat 0.95 — higher box, shorter ROM | `{ squat, 0.78, barbell }` | Box Squat 0.75 |
-| Glute Bridge | 0.90 | Hip Thrusts 1.10 — floor ROM, less loadable | `{ squat, 0.55, barbell }` | Hip Thrusts 0.70 |
-| Single-Leg Hip Thrust | 0 (slot convention) | `isolation_lower` is all-zero by design | `{ squat, 0.20, dumbbell }` | Single-Leg RDL 0.15 |
-| Hamstring Curl | 0 (slot convention) | `isolation_lower` is all-zero by design | `{ squat, 0.25, machine }` | Leg Extension 0.30 |
-| Back Extension | 0 (slot convention) | `isolation_lower` is all-zero by design | `{ squat, 0.15, dumbbell }` | Weighted Dead Bug 0.10 |
-| Single-Arm DB Floor Press | 0.35 | Single-Arm DB Bench Press 0.35 | `{ bench, 0.22, dumbbell }` — already shipped, unchanged | — |
-| Speed Trap Bar Deadlift | n/a until the power unit places it | — | `{ squat, 0.55, barbell }` | Speed Bench 0.55 |
+| Exercise | loadRatio | EXERCISE_LOAD_MAP | Sam's ruling |
+|---|---|---|---|
+| High Box Squat | 1.14 | `{ squat, 0.90, barbell }` | 1.2 × Box Squat, both derived from Box Squat (0.95 / 0.75). Heavier, not lighter — a higher box is a shorter range. |
+| Glute Bridge | 0.00 | none — stays `TRUE_BODYWEIGHT_EXERCISES` | Bodyweight-with-optional. No starting suggestion; the cue's "add weight to hips if you can" stands on its own. |
+| Single-Leg Hip Thrust | 0 (slot convention) | `{ squat, 0.20, dumbbell }` | Approved as proposed. |
+| Hamstring Curl | 0 (slot convention) | `{ squat, 0.25, machine }` | Approved as proposed. See the rounding note below. |
+| Back Extension | 0 (slot convention) | `{ squat, 0.15, dumbbell }` | Approved as proposed. |
+| Single-Arm DB Floor Press | 0.35 | `{ bench, 0.22, dumbbell }` | Unchanged. |
+| Speed Trap Bar Deadlift | n/a — still power-staged | `{ squat, 0.45, barbell }` | 40 kg reference (~0.45 × squat). Placement still owned by the power unit. |
 
-Glute Bridge currently ships as `{ squat, 0.00, bodyweight }` and sits in
-`TRUE_BODYWEIGHT_EXERCISES`. Sam's own cue says "add weight to hips if you can",
-which contradicts that. The proposal above moves it out of bodyweight; until Sam
-rules it keeps today's bodyweight handling.
+`isolation_lower` entries keep `loadRatio: 0` because that slot transfers no
+load between siblings by design; their starting weight comes from the map above,
+not from rotation.
 
-### PROPOSED — Erg EMOM conditioning classification
+**Rounding note (open, not blocking).** Sam's reference figures — 17.5 / 22.5 /
+12.5 / 40 kg — pin his reference athlete at a **88 kg squat 1RM**, where
+`Single-Leg Hip Thrust` = 17.5, `Back Extension` = 12.5 and
+`Speed Trap Bar Deadlift` = 40 all fall out of the ratios exactly.
 
-`CONDITIONING_META` is required for a conditioning format to be selectable, and
-Sam's sheet gives a cue but no tier/modality/impact. Proposed
-`{ tier: 'B-high', modality: 'mixed', impact: 'low' }` — mirrors
-`Hard Row Intervals` / `4x4 VO2`; the Bible names Erg EMOM a hard-intervals
-format (~lines 576, 1265) and an erg is a low-impact mixed modality.
+`Hamstring Curl` cannot reach 22.5 at any bodyweight: `machine` rounds to 5 kg
+increments (`ROUND_INCREMENTS`), so at 88 kg it surfaces **20 kg** (and 25 kg
+from a 90 kg squat) — 22.5 is not on the machine grid at all. Re-classing it as
+`dumbbell` would produce 22.5 but would also be wrong: equipment class gates
+availability filtering, and a leg-curl stack is not a dumbbell. Either the
+machine grid is accepted, or plate-loaded stacks move to a 2.5 kg increment.
+Sam's call; the ratio ships as ruled meanwhile.
+
+### RULED — Erg EMOM conditioning classification
+
+Approved by Sam, 2026-07-25: `{ tier: 'B-high', modality: 'mixed', impact: 'low' }`.
+
+### RULED — QL / ATG naming
+
+Approved by Sam, 2026-07-25: `QL Back Extension` and `ATG Split Squat` keep the
+abbreviations verbatim. They are the movements' names, not equipment or
+implement abbreviations, so the no-abbreviation rule does not reach them.
 
 ## VOCABULARY SWITCH (one circle)
 - AI generation vocabulary derives from SELECTABLE POOL MEMBERSHIP (union of all

@@ -109,21 +109,20 @@ export const EXEMPTION_KINDS: Record<ContentExemptionKind, ExemptionKindSpec> = 
 };
 
 /**
- * The seven loaded additions awaiting Sam's line-by-line load ruling.
+ * Loaded additions awaiting Sam's line-by-line load ruling.
  *
- * This lives with the other typed kinds rather than in a test file because two
+ * EMPTY as of 2026-07-25 — Sam ruled all seven (High Box Squat at 1.2 x Box
+ * Squat, Glute Bridge as bodyweight-with-optional, the rest as proposed). The
+ * kind stays declared on purpose: emptiness is the PROOF, not a comment.
+ * `exerciseLockedListTests` §8 fails the build the moment anything is parked
+ * here without a RULED row in the changeset, and the reconciliation suite's
+ * load assertion no longer has anything to forgive.
+ *
+ * It lives with the other typed kinds rather than in a test file because two
  * suites need it (content reconciliation and the canonicalisation anchor
- * check). A second copy would be a second thing to forget when Sam rules.
+ * check). A second copy would be a second thing to forget.
  */
-export const LOAD_RULING_PENDING = new Set<string>([
-  'High Box Squat',
-  'Glute Bridge',
-  'Single-Leg Hip Thrust',
-  'Hamstring Curl',
-  'Back Extension',
-  'Single-Arm DB Floor Press',
-  'Speed Trap Bar Deadlift',
-]);
+export const LOAD_RULING_PENDING = new Set<string>([]);
 
 /**
  * Zone-1 cyclical recovery. Selectable (EASY_CARDIO_POOL) and cued, but not
