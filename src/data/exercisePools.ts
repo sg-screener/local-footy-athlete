@@ -156,6 +156,7 @@ export const UPPER_BACK_PUMP_POOL: PoolExercise[] = [
 export const GROIN_ADDUCTORS_POOL: PoolExercise[] = [
   ex('copenhagen-plank',  'Copenhagen Plank (Half)',           3, 20, 30, 45, 'Builds inner thigh strength.',                ['bodyweight'],['groin', 'knee'], 'low', { prescriptionType: 'duration', perSide: true }),
   ex('copenhagen-long',   'Long-Lever Copenhagen',             3, 15, 25, 45, 'Full lever. Hips high, no dropping.',         ['bodyweight'],['groin', 'knee'], 'moderate', { prescriptionType: 'duration', perSide: true }),
+  ex('groin-squeeze',     'Groin Squeeze',                     3, 10, 12, 30, 'Ball or fists between the knees. Squeeze and hold.', [],            ['groin'],         'low', { prescriptionType: 'reps' }),
 ];
 
 /**

@@ -124,10 +124,11 @@ function main(): void {
   {
     ok('cue changeset yielded a full library', authoredCues.size >= 130,
       `parsed ${authoredCues.size} cues — expected the full authored library`);
-    // 36 original picks + 5 added on 2026-07-24 when applying the changeset
-    // exposed four real gaps and Sam added the new Abductor Machine.
-    ok('video changeset yielded Sam\'s 41 picks', authoredVideos.size === 41,
-      `parsed ${authoredVideos.size} video URLs, expected 41`);
+    // 36 original picks, + 5 added on 2026-07-24 when applying the changeset
+    // exposed four real gaps and Sam added the new Abductor Machine, + 1 for
+    // the unified Groin Squeeze.
+    ok('video changeset yielded Sam\'s 42 picks', authoredVideos.size === 42,
+      `parsed ${authoredVideos.size} video URLs, expected 42`);
   }
 
   console.log('\n[2] The cue library IS Sam\'s authored text');

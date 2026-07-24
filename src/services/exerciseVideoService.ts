@@ -165,6 +165,10 @@ export const EXERCISE_DEMO_VIDEOS: Record<string, string | null> = {
 
   // ═══ Prehab — Groin / Adductors ═══
   'Copenhagen Plank (Half)':                 'https://youtube.com/shorts/Rwap0_j5i5A?si=t0G7VC_EHuhGD9hE',
+  'Groin Squeeze':                    'https://youtube.com/shorts/Wt8y_Gagay0?si=vn3LP-2AA546wK7N',
+  // No demo pinned yet — play button stays disabled. Named here so the
+  // 'explosive push up' aliases resolve to a known exercise rather than dangle.
+  'Explosive Push-Ups':               null,
   'Long-Lever Copenhagen':            'https://youtube.com/shorts/NBQIxbMAalk?si=nU796DqBg9LT0fSG',
 
   // ═══ Prehab — Calves ═══

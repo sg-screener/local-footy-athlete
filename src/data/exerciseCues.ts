@@ -390,8 +390,8 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
     primaryCue: 'Elbows inside the knees at the bottom.',
     secondaryCue: 'Smooth tempo, no rushing.',
   },
-  'Groin Squeeze (Med ball)': {
-    primaryCue: 'Squeeze the ball between the knees.',
+  'Groin Squeeze': {
+    primaryCue: 'Squeeze the ball between the knees — or your fists if no ball.',
     secondaryCue: 'Hold each squeeze for a beat.',
   },
   'Half-Kneeling Single-Arm Overhead Press': {

@@ -22,7 +22,7 @@ no rewording. Where secondary is blank, store empty (render omits).
 - Short-Lever Copenhagen (duplicate of Copenhagen Plank (Half))
 - Bottoms-Up KB Carry
 - Clap Push-Ups ('no need if we have explosive push-ups')
-- Groin Squeeze (Band Adductor) (med-ball version stays)
+- Groin Squeeze (Band Adductor) (the generic Groin Squeeze stays — see the 2026-07-24 amendment)
 - MetCon (dead entry — Sam, 2026-07-24)
 
 ## Pool additions (Sam-approved; conditioning names need NO pool action — already selectable via conditioning system)
@@ -56,6 +56,12 @@ not place. Sam ruled on each; the library below already reflects them.
   (The library is therefore the sheet PLUS this entry, not a wholesale replace.)
 - **Z-Press** — secondary extended with Sam's variation note. `PoolEntry` has no
   `notes` field to hold it, and the 18-word cap does, so it rides the cue.
+- **Groin Squeeze** — UNIFIED (Sam, 2026-07-24). The med-ball and band variants
+  collapse into ONE generic exercise named `Groin Squeeze`, cue reworded to
+  cover the no-equipment case. It is **bodyweight — no equipment requirement**,
+  so every athlete can always be given it. The band version stays deleted.
+  (This also closes a pre-existing orphan: `recoveryAddonBuilder` already
+  prescribed a bare "Groin Squeeze" that matched no cue, video, pool or tag.)
 - **Abductor Machine** — NEW exercise (Sam, 2026-07-24). Cue + video + tags ship;
   its own hip/glute classification, NOT a mirror of Adductor Machine (it works
   the glutes/outer hip, not the groin).
@@ -135,7 +141,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Foam Roll — T-Spine**: Mid-back over the roller, support the head. | Open the ribs and breathe.
 - **Front Squat**: Elbows high, sit between the heels. | Stay tall through the trunk.
 - **Goblet Squat**: Elbows inside the knees at the bottom. | Smooth tempo, no rushing.
-- **Groin Squeeze (Med ball)**: Squeeze the ball between the knees. | Hold each squeeze for a beat.
+- **Groin Squeeze**: Squeeze the ball between the knees — or your fists if no ball. | Hold each squeeze for a beat.
 - **Half-Kneeling Single-Arm Overhead Press**: Half-kneel, press straight overhead, knee on ground = arm overhead | Fight the rotation, ribs stay down.
 - **Hammer Curl**: Neutral grip, no swinging. | Control both directions.
 - **Hanging Leg Raise**: Stay tight through midline, breath | No swinging.

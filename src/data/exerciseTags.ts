@@ -393,6 +393,13 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({}),
   },
 
+  'Groin Squeeze': {
+    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'high', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({ adductor: 'caution', pubalgia: 'caution' }),
+  },
+
   'Adductor Machine': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,

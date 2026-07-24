@@ -343,6 +343,219 @@ reasonable middle ground between "fix everything now" and "gate nothing" —
 it stops new drift immediately while categories 2-4 above get worked
 through on their own timeline.
 
+## 7. Addendum (follow-up session, still 2026-07-24): Cluster C root-caused
+
+Read-only follow-up. No code changed; `scripts/typecheck-baseline.json` was
+read, not edited. This section **supersedes** §3a's "needs follow-up, not
+confirmed either way" and §6's "investigate root cause... unresolved in
+this triage" language for Cluster C — root cause is now resolved for all 6
+files. `scripts/typecheck-baseline.json`'s `cluster-C-result-narrowing`
+entry (`"owner": "UNASSIGNED... Needs a root-cause spike"`) can be updated
+accordingly by whoever next touches that file; I did not edit it, per the
+read-only scope of this pass.
+
+### 7.0 Count reconciliation: it's 11 distinct errors, not 22
+
+The baseline's `"errors": 22` for this cluster double-counts. Re-running
+`tsc` fresh against each of the three live scopes
+(`tsconfig.compile.json` / `.devtools.json` / `.tests.json`, all three
+`extends: expo/tsconfig.base` with no compiler-option overrides — so a
+shared file produces byte-identical errors in every scope that reaches it)
+and filtering to the 6 cluster-C files:
+
+| Scope | Errors in these 6 files |
+|---|---|
+| `product` (`tsconfig.compile.json`) | 11 |
+| `tests` (`tsconfig.tests.json`) | 11 |
+| `devtools` (`tsconfig.devtools.json`) | 8 |
+
+`product`'s 11 + `tests`' 11 = 22 exactly. These are not 22 independent
+bugs — they're **the same 11 source-level errors**, counted once because
+`tsconfig.compile.json` reaches these files directly and a second time
+because `tsconfig.tests.json`'s test files import them transitively (TS
+type-checks a file's full dependency graph, not just the files an
+`include` glob names directly — the same mechanism that makes `devtools`
+re-surface 8 of the 11). **11 is the number that matters** — it's what
+ships in the `product` scope, which is the only one that reflects athlete-
+facing risk.
+
+### 7.1 Three distinct mechanisms, not one
+
+Root-caused by reading each guard against its type, then confirming each
+mechanism with a minimal isolated `tsc` repro (kept in the scratchpad, not
+the repo). All three mechanisms are **type-checker limitations on code
+that is already logically correct at runtime** — none of the 11 errors
+found here indicate the guards fire wrong or fail to protect anything.
+That is a materially different conclusion than Cluster A (real `undefined`
+reads) or Cluster B's open question (real feature, unverified on-device).
+
+**Mechanism 1 — `strictNullChecks: false` disables narrowing on inline
+truthy/falsy discriminant checks (6 of 11 errors, 3 files).**
+
+Confirmed by isolated repro: a plain
+
+```ts
+type Result = { ok: true; value: string } | { ok: false; reason: string };
+function f(r: Result) {
+  if (!r.ok) { r.reason; }   // TS2339 under strictNullChecks:false
+}
+```
+
+fails to narrow **only** when `strictNullChecks` is off, and only for the
+truthy/falsy form (`if (!r.ok)` or `if (r.needsClarification)`) — the
+equivalent `if (r.ok === false)` narrows correctly under both settings.
+`expo/tsconfig.base` (which every `tsconfig.*.json` in this repo extends,
+unmodified) never sets `strict` or `strictNullChecks`, so this project has
+always run with `strictNullChecks: false`. Every file in this bucket uses
+the `if (!x.ok)` / `if (x.needsClarification)` idiom, correctly, at a spot
+where the guard is exactly what a reader would expect:
+
+- `fixtureMutationTransaction.ts:734,736,737` — `if (!transaction.ok) { ... transaction.reason / .route }` after `await runCoachMutationTransaction<CandidateResult>(...)`, whose return type is explicitly `Promise<CoachMutationTransactionResult<T>>` (`coachMutationTransaction.ts:142`, no inference ambiguity — checked).
+- `profileProgramTransaction.ts:366` — identical shape, `CoachMutationTransactionResult<AcceptedStateTransactionResult>`.
+- `coachFixtureChange.ts:416,487` — different discriminant but same mechanism: `executeCoachFixtureChange` guards `if (intent.needsClarification) { return ...; }` at the top (`coachFixtureChange.ts:312`) against `FixtureChangeIntent`, a **correctly** discriminated union (`needsClarification: false` ⇒ `payload: FixtureChangePayload`; `needsClarification: true` ⇒ `payload: IncompleteFixtureClarificationPayload`, `coachIntent.ts:280-291`). The guard is right; `strictNullChecks:false` is why TS still carries `IncompleteFixtureClarificationPayload` in `payload`'s type 100 lines later at the `payload.action === 'move'` check.
+
+**Product risk: none identified.** These are `!x.ok` / `if (x.flag)` reads
+guarding a `return`/early-exit — the runtime behavior is correct JS
+regardless of what the type checker can prove. The risk is indirect: with
+`strictNullChecks` off, the type checker's ability to catch a **real**
+missing-guard bug in this exact idiom, anywhere in the codebase, is
+weakened — it can't tell a correct guard from a missing one here, so it
+conservatively flags both by treating the union as unnarrowed. (Mechanism 3
+below is what an undetected version of that real bug looks like.)
+
+**Recommended fix:** mechanical, not architectural — rewrite the guard
+condition from truthy/falsy form to explicit equality
+(`if (transaction.ok === false)`, `if (intent.needsClarification === true)`),
+confirmed by repro to narrow correctly under this project's actual
+`strictNullChecks: false`. Zero runtime change, no new abstraction, does
+not touch `CoachMutationTransactionResult<T>`, `FixtureChangeIntent`, or
+any resolver/executor. This does **not** trip the CLAUDE.md escalation
+rule — it isn't a guard, fallback, or resolver being *added*; it's an
+existing correct guard's spelling being changed so the type checker can
+verify it. (Project-wide `strictNullChecks: true` was not evaluated as an
+alternative — flipping it is a repo-wide blast-radius change utterly out
+of scope for an 11-error cluster, and would need its own reassessment.)
+
+**Mechanism 2 — narrowing doesn't propagate through a named boolean
+derived from the discriminant check (3 of 11 errors, 2 files).**
+
+Confirmed by isolated repro, and confirmed this one is independent of
+`strictNullChecks` (fails identically under `strict: true` and
+`strict: false`):
+
+```ts
+type Safety = { kind: 'standard' } | { kind: 'red_flag'; reason: string };
+function f(args: { command: { safety: Safety } }) {
+  const isRed = args.command.safety.kind === 'red_flag';
+  return isRed ? args.command.safety.reason : undefined;  // TS2339, both strict settings
+}
+```
+
+TypeScript narrows a union based on the discriminant expression *actually
+written in the condition*. Once that check is captured in a named boolean
+and the object is re-accessed later through a fresh property-access
+expression, TS does not retroactively connect the two — this holds even
+though `args.command.safety` is never reassigned and the logic is sound.
+
+- `injuryEpisodeCommand.ts:190` — `const redFlag = args.command.safety.kind === 'red_flag';` (line 167), then 23 lines later `redFlag ? args.command.safety.reason : undefined` (line 190). Same nested-chain-through-a-flag shape as the repro exactly.
+- `planChangeProducer.ts:1342,1664` — `const wantsTypedSwap = args.change.kind === 'swap_category' || args.change.kind === 'swap_template'; const wantsTypedAdd = args.change.kind === 'add_category' || args.change.kind === 'add_template'; if (args.change.kind === 'move_session' || args.change.kind === 'remove_session' || wantsTypedSwap || wantsTypedAdd) { resolveAthleteMutation({ change: args.change, ... }) }` (`planChangeProducer.ts:1335-1343`). Two of the four disjuncts are direct discriminant comparisons TS can use; the other two are opaque booleans it can't map back to `kind`, so the `if` only narrows out what the direct comparisons exclude, leaving `args.change` too wide for the `AthleteOwnedPlanChange` (`Extract<PlanChange, ...>`) parameter.
+
+**Product risk: none identified**, same reasoning as Mechanism 1 — both
+booleans are computed correctly and used correctly; this is the type
+checker failing to *prove* what the code already does right.
+
+**Recommended fix:** at each site, make the discriminant check visible to
+TS at the point of use instead of routing it through a named boolean —
+either inline the comparison directly in the ternary/`if`
+(`args.command.safety.kind === 'red_flag' ? args.command.safety.reason : undefined`),
+or capture the narrowed *value* (not a boolean) once
+(`const safety = args.command.safety; if (safety.kind === 'red_flag') { safety.reason }`).
+For `planChangeProducer.ts`, a small named type predicate
+(`function isAthleteOwnedPlanChange(c: PlanChange): c is AthleteOwnedPlanChange`)
+used directly in the `if` would read better than four inlined comparisons
+and is the more natural fix given `AthleteOwnedPlanChange` is already a
+named type one function above. Same non-escalation reasoning as Mechanism
+1: this changes how an already-correct check is *expressed*, not what it
+does.
+
+**Mechanism 3 — a real missing-case gap, currently dormant (2 of 11
+errors, 1 file, both on the same line).**
+
+`weeklyCoachUpdate.ts:150` is different in kind from the other 10: it is
+not a narrowing limitation, it's TS correctly catching an incomplete
+`if`-chain.
+
+```ts
+// weeklyCoachUpdate.ts:127-150
+function reasonLine(c: ActiveConstraint): string {
+  ...
+  if (c.type === 'fatigue' && ...) { ... }
+  if (c.type === 'injury') { ... return ...; }
+  if (c.type === 'fatigue') { ... return ...; }
+  if (c.type === 'soreness') { ... return ...; }
+  if (c.type === 'schedule') { ... return ...; }
+  // missed_session
+  return c.sessionName ? `Missed ${c.sessionName}` : 'Missed session';
+}
+```
+
+`ActiveConstraint` (`coachUpdatesStore.ts:377`) is a **7-member** union:
+injury, fatigue, soreness, schedule, equipment, missed_session,
+preference. The chain above handles 4 of them by name and falls through
+for the rest under a comment that assumes only `missed_session` remains —
+but `ActiveEquipmentConstraint` and `ActivePreferenceConstraint` are also
+possible at this point and neither has a `sessionName` field. If either
+ever reaches this function, `c.sessionName` is `undefined` and the reason
+line silently reads **"Missed session"** for what is actually an equipment
+restriction or a stated preference — a real, athlete-visible mislabel, not
+a type-checker artifact.
+
+**Product risk: dormant, not live.** `reasonLine` is only called from
+`buildWeeklyCoachUpdateFromConstraints` (`weeklyCoachUpdate.ts:237`,
+`constraints.map(reasonLine)`, unfiltered by type), and grepping the whole
+tree for every export of `weeklyCoachUpdate.ts`
+(`getUpdateCoachPrefill`, `buildWeeklyCoachUpdateFromConstraints`,
+`buildSessionConstraintNote`) turns up **zero non-test callers anywhere in
+`src/`**. This file is one of the 109 files in
+[[unreachable-product-files]] — nothing on the path from `App.tsx` reaches
+it today, so the mislabel cannot currently show up in the running app.
+
+**Recommended fix:** replace the trailing assumption with an explicit
+`c.type === 'missed_session'` check plus a final exhaustiveness assert
+(`const _exhaustive: never = c;`) so a future 8th `ActiveConstraint`
+variant fails the build the same way this one should have. Low priority
+given dormancy — bundle it with whatever unit eventually wires
+`weeklyCoachUpdate.ts` back into a reachable surface, not before. Do not
+delete the file to silence this — per [[unreachable-product-files]],
+retiring unreachable code is a product decision, not implied by a
+typecheck finding.
+
+### 7.2 Owner/slot recommendation
+
+None of Cluster C needs the CLAUDE.md escalation reassessment Cluster A
+does — there is no representation drift and no case of "the AI/semantic
+layer understands the request correctly but a later layer reinterprets
+it." Mechanisms 1 and 2 are mechanical, low-risk, same-behavior rewrites;
+Mechanism 3 is a one-line real fix that only matters once its file is
+reachable.
+
+- **Mechanisms 1 + 2 (9 errors, 5 files)** — small standalone PR, no
+  named unit currently owns it. `planChangeProducer.ts`'s two sites sit
+  in the exact ownership boundary (`AthleteOwnedPlanChange`) that shipped
+  today in `41dd803` ("give the athlete's answers one owner") — natural to
+  fold into that unit's next follow-up rather than a separate slot.
+  `injuryEpisodeCommand.ts` sits in the same injury/coach-command
+  neighborhood as Cluster A's Option B Phase 2 work
+  (`docs/DURABLE_ATHLETE_STATE_FACT_OWNERSHIP_REASSESSMENT_2026-07-24.md`)
+  — worth doing alongside that unit for shared context, though it does not
+  require that unit's reassessment. `fixtureMutationTransaction.ts`,
+  `profileProgramTransaction.ts`, and `coachFixtureChange.ts` have no
+  obvious existing owner — fine as a fresh small "typecheck narrowing
+  hygiene" slot.
+- **Mechanism 3 (2 errors, 1 file)** — no owner needed yet; note it
+  against `weeklyCoachUpdate.ts` and revisit when/if that file is ever
+  wired back into a reachable screen.
+
 ## NOT-COVERED
 
 Per Process Law, explicitly out of scope for this triage:
@@ -353,10 +566,13 @@ Per Process Law, explicitly out of scope for this triage:
 - **No device/simulator run.** Cluster B's "is in-session workout logging
   actually broken" question is stated as a hypothesis from static types
   only, not verified against the running app.
-- **Cluster C's root cause is unresolved**, not just undocumented — I could
-  not determine within this triage whether the narrowing failure on
-  `CoachMutationTransactionResult<T>` reflects a real bug or a TS
-  generic-inference limitation.
+- ~~Cluster C's root cause is unresolved~~ — **resolved in §7** (follow-up
+  pass, same date): three mechanisms (`strictNullChecks:false` truthy-guard
+  narrowing, boolean-flag-indirection narrowing, one real dormant
+  missing-case bug), all with isolated repros. What §7 itself does not
+  cover: no code was changed there either (mechanical fixes described, not
+  applied), and `scripts/typecheck-baseline.json`'s `owner: "UNASSIGNED"`
+  field was read but not edited to reflect the new findings.
 - **The 333 test-harness errors were sampled, not individually
   categorized.** The error-code distribution and top-offender list are
   real; a per-file dead/test-only/real-risk breakdown like §3 was not done

@@ -5,10 +5,10 @@ src/services/exerciseVideoService.ts EXERCISE_DEMO_VIDEOS (after the cue
 changeset's renames/deletions). 36 URLs below are Sam's picks — apply
 EXACTLY, keep ?si= params as given.
 
-## Set / replace (41)
+## Set / replace (42)
 
-Amended 2026-07-24: the original 36 plus five added when applying the changeset
-surfaced real gaps — see "Still no video" below.
+Amended 2026-07-24: the original 36, plus five added when applying the changeset
+surfaced real gaps (see "Still no video"), plus one for the unified Groin Squeeze.
 
 - **Abductor Machine**: https://youtube.com/shorts/S_FGYHNHJ_c?si=Wqz3kGC0csTyr5Lh
 - **Ab Wheel**: https://youtube.com/shorts/QHXLnvbJ444?si=MzhlejwMTRGa4s8-
@@ -28,6 +28,7 @@ surfaced real gaps — see "Still no video" below.
 - **Dumbbell Kickback**: https://youtube.com/shorts/ZGjHc9NnJ-4?si=aXyJRxuhsVVrExqa
 - **Explosive Landmine Press**: https://youtube.com/shorts/gKdmAu3yqcc?si=Wp34uZedWc7tV8m7
 - **Front Squat**: https://youtube.com/shorts/N4WGYDGu6bI?si=ca0DyggYeEZBOAVa
+- **Groin Squeeze**: https://youtube.com/shorts/Wt8y_Gagay0?si=vn3LP-2AA546wK7N
 - **Incline Bench**: https://youtube.com/shorts/L9UKMQw1Nss?si=b0Gf95olarmdMwfc
 - **Incline DB Bench**: https://youtube.com/shorts/5orOHJL2qS4?si=IL8OhkIRS1hvZvFH
 - **Kneeling Jump**: https://youtube.com/shorts/xaFQGw73peA?si=GiiYoy2aZebpMjtH

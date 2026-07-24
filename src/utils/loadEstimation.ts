@@ -669,6 +669,7 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Spanish Squat Hold',
   'Copenhagen Plank (Half)',
   'Long-Lever Copenhagen',
+  'Groin Squeeze',
   'Single-Leg Calf Raise',
   'Seated Calf Raise',
   'Tib Raises',
