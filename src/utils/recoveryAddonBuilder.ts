@@ -531,16 +531,16 @@ function exercisesFor(
       }
       return [
         exercise('Groin Squeeze', '2 x 20-30s', 'Smooth ramp up and down.'),
-        exercise('Short-Lever Copenhagen', '2 x 15-25s/side', 'Controlled, short lever, stop well before strain.'),
+        exercise('Copenhagen Plank (Half)', '2 x 15-25s/side', 'Controlled, short lever, stop well before strain.'),
       ];
     case 'calves_tib_ankles':
       if (recommendation.status !== 'recommended' || isGMinusOne || weekKind === 'deload') {
         return [
-          exercise('Tibialis Raise', '2 x 10-12', 'Easy pace; stop if shin/calf/Achilles symptoms flare.'),
+          exercise('Tib Raises', '2 x 10-12', 'Easy pace; stop if shin/calf/Achilles symptoms flare.'),
         ];
       }
       return [
-        exercise('Tibialis Raise', '2 x 12-15', 'Controlled reps.'),
+        exercise('Tib Raises', '2 x 12-15', 'Controlled reps.'),
         exercise('Seated Calf Raise', '2 x 10-15', 'Quiet tempo, no bouncing.'),
       ];
     case 'hamstring_light_prehab':

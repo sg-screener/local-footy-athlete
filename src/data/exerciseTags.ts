@@ -93,7 +93,7 @@ export interface ConditioningMeta {
  *   Tier B-low = moderate output, lower tissue cost.
  *   Tier C = recovery / flush.
  *
- * Mixed-modality sessions (Flog Friday, MetCon) are classified by intent.
+ * Mixed-modality sessions (MetCon) are classified by intent.
  * Modality field is used only for injury compatibility routing.
  */
 export const CONDITIONING_META: Record<string, ConditioningMeta> = {
@@ -108,7 +108,6 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
   'Inverse Tabata':           { tier: 'A',      modality: 'mixed', impact: 'low' },
   'Max Effort Sprint Accumulation': { tier: 'A', modality: 'bike', impact: 'low' },
   'Free Sprint Session':      { tier: 'A',      modality: 'run',  impact: 'high' },
-  'Flog Friday':              { tier: 'A',      modality: 'mixed', impact: 'high' },
 
   // ── Tier B-high — High Output ──
   'MetCon':                   { tier: 'B-high', modality: 'mixed', impact: 'high' },
@@ -130,7 +129,7 @@ export const CONDITIONING_META: Record<string, ConditioningMeta> = {
   'Tempo Intervals (1min on / 1min easy)': { tier: 'B-low', modality: 'run', impact: 'high' },
   'Cruise Intervals':         { tier: 'B-low',  modality: 'run',  impact: 'high' },
   'Bike/Row/Ski Tempo Intervals': { tier: 'B-low', modality: 'mixed', impact: 'low' },
-  'Bike Sprints':             { tier: 'B-low',  modality: 'bike', impact: 'low' },
+  'Air Bike Sprints':             { tier: 'B-low',  modality: 'bike', impact: 'low' },
   'Row Intervals':            { tier: 'B-low',  modality: 'row',  impact: 'low' },
   'SkiErg Intervals':         { tier: 'B-low',  modality: 'ski',  impact: 'low' },
   'Assault Bike Intervals':   { tier: 'B-low',  modality: 'bike', impact: 'low' },
@@ -351,14 +350,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ calf: 'caution', ankle: 'caution' }),
   },
 
-  'Tib Raise': {
-    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'high', unilateral: false,
-    eccentric: 'low', lateWeek: 'good',
-    injury: inj({ calf: 'caution', ankle: 'caution' }),
-  },
-
-  'Tibialis Raise': {
+  'Tib Raises': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -377,6 +369,28 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
     injury: inj({ calf: 'caution', ankle: 'caution' }),
+  },
+
+  /**
+   * Abductor Machine — NEW (Sam, 2026-07-24). Its OWN classification, not a
+   * mirror of Adductor Machine: it works the glutes/outer hip, not the groin,
+   * so every injury rating stays at the default 'good' — an athlete on adductor
+   * or groin restriction is unaffected by it.
+   *
+   * Two parts of Sam's ruling have no field to live in yet: there is no
+   * hip-abduction `MovementPattern` (so it rides `isolation_lower`, the only
+   * lower-isolation pattern) and no hip/glute key on `InjuryProfile`. It is
+   * also deliberately absent from every pool — "never a swap candidate for
+   * groin/adductor work" cannot be enforced while `getSlotSiblings` returns a
+   * slot's whole role array. Both land with the muscle-block mechanism, the
+   * first item of the Phase 4.3 programming pass
+   * (PROGRAMMING_DESIGN_SESSION D3/D11); it joins the pool then.
+   */
+  'Abductor Machine': {
+    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
+    doms: 'low', stability: 'high', unilateral: false,
+    eccentric: 'low', lateWeek: 'good',
+    injury: inj({}),
   },
 
   'Adductor Machine': {
@@ -400,19 +414,13 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ knee: 'caution' }),
   },
 
-  'Copenhagen Plank': {
+  'Copenhagen Plank (Half)': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'moderate',
     doms: 'moderate', stability: 'low', unilateral: true,
     eccentric: 'moderate', lateWeek: 'caution',
     injury: inj({ adductor: 'caution', pubalgia: 'caution', knee: 'caution' }),
   },
 
-  'Short-Lever Copenhagen': {
-    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'moderate', unilateral: true,
-    eccentric: 'low', lateWeek: 'good',
-    injury: inj({ adductor: 'caution', pubalgia: 'caution', knee: 'caution' }),
-  },
 
   'Long-Lever Copenhagen': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'moderate',
@@ -421,12 +429,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ adductor: 'caution', pubalgia: 'caution', knee: 'caution' }),
   },
 
-  'Groin Squeeze (Band Adductor)': {
-    movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'high', unilateral: false,
-    eccentric: 'low', lateWeek: 'good',
-    injury: inj({ adductor: 'caution', pubalgia: 'caution' }),
-  },
 
   'Swiss Ball Hamstring Curl': {
     movement: 'isolation_lower', region: 'lower', load: 'low', fatigue: 'low',
@@ -714,7 +716,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: SAFE,
   },
 
-  'Straight-Arm Pulldown': {
+  'Single-Arm Pulldown': {
     movement: 'vertical_pull', region: 'upper', load: 'low', fatigue: 'low',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',
@@ -739,12 +741,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ shoulder: 'caution', elbow: 'caution', wrist: 'caution' }),
   },
 
-  'Clap Push-Ups': {
-    movement: 'horizontal_push', region: 'upper', load: 'low', fatigue: 'moderate',
-    doms: 'low', stability: 'moderate', unilateral: false,
-    eccentric: 'moderate', lateWeek: 'avoid', power: true,
-    injury: inj({ shoulder: 'caution', elbow: 'caution', wrist: 'caution' }),
-  },
 
   'Explosive Push-Ups': {
     movement: 'horizontal_push', region: 'upper', load: 'low', fatigue: 'moderate',
@@ -873,19 +869,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ shoulder: 'caution', lowerBack: 'caution' }),
   },
 
-  'Bottoms-Up KB Carry': {
-    movement: 'carry', region: 'upper', load: 'low', fatigue: 'low',
-    doms: 'low', stability: 'low', unilateral: true,
-    eccentric: 'low', lateWeek: 'good',
-    injury: inj({ shoulder: 'caution', elbow: 'caution', wrist: 'caution', lowerBack: 'caution' }),
-  },
 
-  'Zercher Carry': {
-    movement: 'carry', region: 'upper', load: 'moderate', fatigue: 'moderate',
-    doms: 'low', stability: 'moderate', unilateral: false,
-    eccentric: 'low', lateWeek: 'good',
-    injury: inj({ elbow: 'caution', lowerBack: 'caution' }),
-  },
 
   // ═══════════════════════════════════════════════════════════════
   // SHOULDERS / UPPER BACK
@@ -1103,12 +1087,6 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ hamstring: 'avoid', calf: 'avoid', ankle: 'caution', adductor: 'caution' }),
   },
 
-  'Flog Friday': {
-    movement: 'conditioning', region: 'full', load: 'high', fatigue: 'high',
-    doms: 'high', stability: 'moderate', unilateral: false,
-    eccentric: 'moderate', lateWeek: 'avoid',
-    injury: inj({ hamstring: 'avoid', calf: 'avoid', ankle: 'caution', adductor: 'caution', lowerBack: 'caution', shoulder: 'caution' }),
-  },
 
   // ── Tier B-high — High Output ──
 
@@ -1163,7 +1141,7 @@ export const EXERCISE_TAGS: Record<string, ExerciseTag> = {
     injury: inj({ hamstring: 'caution', calf: 'caution', ankle: 'caution' }),
   },
 
-  'Bike Sprints': {
+  'Air Bike Sprints': {
     movement: 'conditioning', region: 'full', load: 'moderate', fatigue: 'moderate',
     doms: 'low', stability: 'high', unilateral: false,
     eccentric: 'low', lateWeek: 'good',

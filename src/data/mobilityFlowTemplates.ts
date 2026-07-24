@@ -149,7 +149,7 @@ export const MOBILITY_FLOW_TEMPLATES: MobilityFlowTemplate[] = [
     movements: [
       { name: 'Toe Stretch', prescriptionType: 'duration', sets: 1, durationSecondsMin: 30, durationSecondsMax: 45 },
       { name: 'Calf Stretch', prescriptionType: 'duration', sets: 1, durationSecondsMin: 30, durationSecondsMax: 45, perSide: true },
-      { name: 'Tibialis Raise', prescriptionType: 'reps', sets: 1, repsMin: 8, repsMax: 10 },
+      { name: 'Tib Raises', prescriptionType: 'reps', sets: 1, repsMin: 8, repsMax: 10 },
       { name: 'Cat-Cow', prescriptionType: 'reps', sets: 1, repsMin: 6, repsMax: 8 },
       { name: 'Box Breathing', prescriptionType: 'breathing_reps', sets: 1, repsMin: 6, repsMax: 8 },
     ],

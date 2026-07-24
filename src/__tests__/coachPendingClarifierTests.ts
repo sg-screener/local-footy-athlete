@@ -1943,7 +1943,7 @@ async function runControllerPendingDateSection() {
     'Walking Lunge',
     'Split Squat',
     'Nordic Curl',
-    'Copenhagen Plank',
+    'Copenhagen Plank (Half)',
   ].map((name, index) => ({
     id: `mon-draft-strength-${index + 1}`,
     workoutId: mondayBase.id,

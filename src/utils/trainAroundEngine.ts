@@ -200,7 +200,7 @@ export function classifyExercisePatterns(rawName: string): MovementPattern[] {
   if (/(plank|side\s*plank|dead[-\s]?bug|bird[-\s]?dog|ab\s*wheel|hollow|crunch|sit[-\s]?up|pallof|landmine\s*twist|rotation|anti[-\s]?rotation|cable\s*chop|farmer\s*carry|core)/i.test(n)) {
     patterns.add('trunk');
   }
-  // Note: Copenhagen Plank is BOTH adductor_groin and trunk; we
+  // Note: Copenhagen Plank (Half) is BOTH adductor_groin and trunk; we
   // already added trunk via "plank" match above — that's fine.
 
   // Mobility / recovery

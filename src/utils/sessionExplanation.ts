@@ -92,7 +92,7 @@ export type ConditioningKind =
   | 'repeat_sprint'      // Sprint Intervals, 200m/400m Repeat Runs
   | 'accel_accumulation' // Max Effort Sprint Accumulation
   | 'high_intensity'     // Tabata, Inverse Tabata, Hard Row/Ski/Bike Intervals, 4x4 VO2
-  | 'metcon'             // MetCon, Flog Friday
+  | 'metcon'             // MetCon
   | 'fartlek'            // Footy Fartlek
   | 'tempo'              // Tempo Run, Long Nasal Run, Tempo-Run
   | 'long_aerobic'       // Long Run, 6x1km, 1km Repeats
@@ -134,7 +134,7 @@ function classifyConditioning(name: string, workoutType?: string): ConditioningK
     return 'high_intensity';
   }
 
-  // MetCon / Flog Friday — mixed conditioning
+  // MetCon — mixed conditioning
   if (n.includes('metcon') || wt === 'metcon') return 'metcon';
   if (n.includes('flog friday') || wt === 'flog-friday') return 'metcon';
 

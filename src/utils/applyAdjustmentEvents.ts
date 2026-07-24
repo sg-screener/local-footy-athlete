@@ -172,7 +172,6 @@ const RUN_TO_OFFFEET: Record<string, string> = {
   'Flying Sprints': 'Max Effort Sprint Accumulation',
   'MAS 15:15 Blocks': 'Max Effort Sprint Accumulation',
   'Free Sprint Session': 'Max Effort Sprint Accumulation',
-  'Flog Friday': 'Hard Assault Bike Intervals',
   // Tier B-high
   'Long Run': 'Hard Assault Bike Intervals',
   '6x1km': 'Hard Assault Bike Intervals',

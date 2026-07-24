@@ -221,7 +221,7 @@ const lowerMixedExercises = [
   { name: 'Box Squat' },
   { name: 'Hip Thrusts' },
   { name: 'Nordic Lowers' },
-  { name: 'Copenhagen Plank' },
+  { name: 'Copenhagen Plank (Half)' },
   { name: 'Tib Raises' },
 ];
 
@@ -319,7 +319,7 @@ eq(
   'prehab identity is not promoted to main strength',
   resolveSessionDisplayName({
     name: 'Prehab & Accessories',
-    exercises: [{ name: 'Face Pull' }, { name: 'Copenhagen Plank' }],
+    exercises: [{ name: 'Face Pull' }, { name: 'Copenhagen Plank (Half)' }],
   }),
   'Prehab & Accessories',
 );
@@ -420,7 +420,7 @@ section('[5] Edge-normalised mixed session keeps one honest visible identity');
   eq('mixed workout type remains Mixed', workout.workoutType, 'Mixed');
   ok(
     'naming leaves the edge-provided squat, hinge and support content visible',
-    ['Box Squat', 'Hip Thrusts', 'Nordic Lower', 'Copenhagen Plank', 'Tib Raises']
+    ['Box Squat', 'Hip Thrusts', 'Nordic Lower', 'Copenhagen Plank (Half)', 'Tib Raises']
       .every((name) => visibleStrengthNames.includes(name)),
     visibleStrengthNames.join(' | '),
   );

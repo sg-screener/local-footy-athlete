@@ -167,7 +167,7 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
   adductors_groin: {
     label: 'Adductors/Groin',
     categories: ['groin_adductors', 'mobility'],
-    exerciseNames: ['Groin Squeeze (Band Adductor)', 'Short-Lever Copenhagen', 'Long-Lever Copenhagen', 'Adductor Rockback'],
+    exerciseNames: ['Copenhagen Plank (Half)', 'Long-Lever Copenhagen', 'Adductor Rockback'],
     exerciseTags: ['adductor', 'groin', 'isometric', 'copenhagen'],
     mobilityFocusTags: ['groin_adductors', 'hips'],
     templateIds: ['hips-adductors-groin-reset', 'recovery-day-full-body-flow'],
@@ -177,7 +177,7 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
   calves_tib_ankles: {
     label: 'Calves/Tib/Ankles',
     categories: ['calves', 'lower_prehab', 'mobility'],
-    exerciseNames: ['Single-Leg Calf Raise', 'Seated Calf Raise', 'Tibialis Raise', 'Calf Stretch'],
+    exerciseNames: ['Single-Leg Calf Raise', 'Seated Calf Raise', 'Tib Raises', 'Calf Stretch'],
     exerciseTags: ['calf', 'soleus', 'tibialis', 'ankle'],
     mobilityFocusTags: ['calves_ankles'],
     templateIds: ['ankles-calves-reset', 'lower-body-reset'],
@@ -217,7 +217,7 @@ const FOCUS_DEFINITIONS: Record<RecoveryAddonFocusArea, FocusDefinition> = {
   carries: {
     label: 'Carries',
     categories: ['trunk_anti_rotation'],
-    exerciseNames: ['Farmer Carry', 'Suitcase Carry', 'Bear Carry', 'Bottoms-Up KB Carry'],
+    exerciseNames: ['Farmer Carry', 'Suitcase Carry', 'Bear Carry', 'Overhead Carry'],
     exerciseTags: ['carry', 'grip', 'bracing', 'contact_robustness'],
     mobilityFocusTags: ['lower_back_trunk'],
     templateIds: [],

@@ -222,6 +222,9 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Bulgarian Split Squats', loadRatio: 0.40 },
         { name: 'Reverse Lunges',         loadRatio: 0.45 },
         { name: 'Step Ups',               loadRatio: 0.40 },
+        { name: 'Goblet Squat',           loadRatio: 0.35 },
+        { name: 'Single-Leg Leg Press',   loadRatio: 0.50 },
+        { name: 'Single-Leg Squat (to Box)', loadRatio: 0.30 },
       ],
     },
   },
@@ -265,6 +268,8 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Incline DB Bench', loadRatio: 0.70 },
         { name: 'Push-ups',        loadRatio: 0.00 },
         { name: 'Dips',            loadRatio: 0.60 },
+        { name: 'Speed Bench',     loadRatio: 0.55 },
+        { name: 'Single-Arm DB Bench Press', loadRatio: 0.35 },
       ],
     },
   },
@@ -314,7 +319,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Lat Pulldown',            loadRatio: 0.80 },
         { name: 'Neutral-Grip Pulldown',   loadRatio: 0.80 },
         { name: 'Single-Arm Lat Pulldown', loadRatio: 0.40 },
-        { name: 'Straight-Arm Pulldown',   loadRatio: 0.50 },
+        { name: 'Single-Arm Pulldown',   loadRatio: 0.50 },
       ],
     },
   },
@@ -347,7 +352,6 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
     accessory: {
       slot: 'carry', role: 'accessory', entries: [
         { name: 'Suitcase Carry', loadRatio: 0.60 },
-        { name: 'Zercher Carry',  loadRatio: 0.55 },
       ],
     },
   },
@@ -399,7 +403,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   //     ratio is 0 (bodyweight guard).
   //
   //   - Rotation order groups: hamstring (Nordic Lower) →
-  //     quad (Leg Extension) → calf/ankle (Calf Raises / Tib Raise) →
+  //     quad (Leg Extension) → calf/ankle (Calf Raises / Tib Raises) →
   //     adductor (Adductor Machine). Intra-session avoidance spreads
   //     multiple AI suggestions across muscle groups cleanly.
   isolation_lower: {
@@ -414,7 +418,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Leg Extension',   loadRatio: 0 },
         // Calf / ankle block
         { name: 'Calf Raises',     loadRatio: 0 },
-        { name: 'Tib Raise',       loadRatio: 0 },
+        { name: 'Tib Raises',       loadRatio: 0 },
         // Adductor block
         { name: 'Adductor Machine', loadRatio: 0 },
       ],
