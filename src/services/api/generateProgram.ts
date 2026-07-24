@@ -782,14 +782,18 @@ export function buildProgramGenerationEdgePayload(args: {
 }
 
 /**
- * `sessionDurationMinutes` is deliberately NOT required.
+ * `sessionDurationMinutes` is deliberately NOT required — an interim state.
  *
- * `SessionDurationScreen` exists and is registered in the navigator but no
- * screen has ever navigated to it — the linear flow runs
- * PreferredTrainingDays → GymExperience — so onboarding has never collected
- * this field. Requiring an answer the flow cannot collect would refuse every
- * genuine onboarding. It is recommended (and diagnosed) until the step is
- * wired into the flow; see the L2 report's NOT-COVERED.
+ * `SessionDurationScreen` is registered in the navigator but no screen has ever
+ * navigated to it (the flow runs PreferredTrainingDays → GymExperience), so
+ * onboarding has never collected this field. Requiring an answer the flow
+ * cannot collect would refuse every genuine onboarding.
+ *
+ * Already ruled KILLED — see PROGRAMMING_DESIGN_SESSION_2026-07-23.md §D6b:
+ * the screen and this field are to be DELETED, from onboarding data and from
+ * both sides of the generation contract (client + edge function), in the
+ * Phase 1.6 dead-affordance/orphan sweep. Do not wire the step in. This entry
+ * exists only so the completeness gate is honest until that sweep lands.
  */
 const RECOMMENDED_PROGRAM_GEN_PROFILE_FIELDS: Array<keyof OnboardingData> = [
   'sessionDurationMinutes',

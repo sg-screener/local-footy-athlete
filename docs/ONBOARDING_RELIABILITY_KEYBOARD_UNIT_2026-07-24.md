@@ -206,10 +206,20 @@ It tracks the keyboard frame natively on both platforms, which RN's own
    PreferredTrainingDays → GymExperience), so `sessionDurationMinutes` has never
    been collected in onboarding — since the initial commit. It was listed as
    *required* for generation, which meant a completeness gate keyed on the old
-   list would have refused **every genuine onboarding**. It is now
-   *recommended*, with the reason recorded at the definition. **Sam's call:**
-   wire the step into the flow (and make it required again), or leave the field
-   permanently defaulted.
+   list would have refused **every genuine onboarding**.
+
+   **Already ruled: KILLED** — `PROGRAMMING_DESIGN_SESSION_2026-07-23.md` §D6b
+   (Sam, 2026-07-23): the orphaned gym-session-duration question is *removed,
+   not wired in*. `SessionDurationScreen` and the `sessionDurationMinutes` field
+   are to be deleted from onboarding data **and both sides of the generation
+   contract** (client + edge function stop expecting it; it currently ships
+   blank). Team-training duration — the wired question — is untouched. That
+   deletion rides the **Phase 1.6 dead-affordance/orphan sweep**, tests-first,
+   pairing with the G6 fix.
+
+   Demoting the field required→recommended here is the correct **interim**
+   state: it unblocks the completeness gate without pre-empting the Phase 1.6
+   deletion. This unit does not delete the screen.
 
 ---
 
