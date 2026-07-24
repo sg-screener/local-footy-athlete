@@ -35,6 +35,8 @@ import type { CoachReferenceResolution } from './coachReferenceResolver';
 import type {
   PendingCoachClarifier,
   PendingAddToDateTransaction,
+  PendingClarificationAnswerClassification,
+  PendingClarificationSlot,
   PendingMoveSessionTransaction,
   PendingScheduleTransaction,
 } from '../store/pendingCoachClarifierStore';
@@ -732,6 +734,73 @@ function parseDayAnswer(message: string): { day: DayOfWeek; explicitNext: boolea
   return { day, explicitNext: !!m[1] };
 }
 
+/**
+ * The already-classified answer to the outstanding date question. This is
+ * the owned path for "Yes" → proposed Next-<day>: the classification layer
+ * has resolved the candidate, so the resolver must consume it rather than
+ * re-parse the raw affirmation (which can never parse as a date).
+ */
+function classifiedDateAnswer(
+  classification: PendingClarificationAnswerClassification | null | undefined,
+): string | undefined {
+  if (!classification) return undefined;
+  if (classification.kind !== 'accept_proposed' && classification.kind !== 'choose_candidate') {
+    return undefined;
+  }
+  const candidate = classification.candidate;
+  if (!candidate || candidate.answerType !== 'date') return undefined;
+  return /^\d{4}-\d{2}-\d{2}$/.test(candidate.value) ? candidate.value : undefined;
+}
+
+/**
+ * Rebuild the clarification slot so it describes the transaction's CURRENT
+ * outstanding field. Without this, the slot keeps advertising the answered
+ * field (e.g. targetDate + its proposed candidate) and the next turn's
+ * answer classification runs against a stale question.
+ */
+export function scheduleTransactionClarificationSlot(args: {
+  transaction: PendingScheduleTransaction;
+  reply: string;
+  options?: string[];
+  previous?: PendingClarificationSlot | null;
+}): PendingClarificationSlot {
+  const { transaction, reply, options, previous } = args;
+  const step = transaction.currentStep;
+  const stillOnTarget =
+    step === 'resolve_target' &&
+    (previous?.missingField === 'targetDate' || previous?.missingField === 'target_date');
+  const field =
+    step === 'resolve_target' ? 'target_date' :
+    step === 'resolve_add_type' ? 'add_type' :
+    step === 'resolve_scope' ? 'setup_scope' :
+    step === 'resolve_existing_target' ? 'target_mode' :
+    step === 'resolve_source' ? 'source_date' :
+    step === 'resolve_conflict' ? 'target_mode' :
+    step === 'resolve_week_context' ? 'week_context' :
+    step === 'confirm' ? 'confirmation' :
+    'ready';
+  const answerType: PendingClarificationSlot['expectedAnswerType'] =
+    field === 'target_date' || field === 'source_date' ? 'date' :
+    field === 'add_type' ? 'type' :
+    field === 'setup_scope' || field === 'week_context' ? 'scope' :
+    field === 'target_mode' || field === 'confirmation' ? 'confirmation' :
+    'unknown';
+  return {
+    originalIntent: previous?.originalIntent ?? `${transaction.kind}:${step}`,
+    missingField: field,
+    expectedAnswerType: answerType,
+    source: previous?.source,
+    continuationId: previous?.continuationId,
+    originalUserWording: previous?.originalUserWording ?? transaction.originalUserMessage,
+    // The proposed candidate only survives while the SAME date question is
+    // still outstanding; an advanced step must not re-offer it.
+    proposedCandidate: stillOnTarget ? previous?.proposedCandidate : undefined,
+    candidateOptions: options && options.length > 0 ? options : undefined,
+    partialTransaction: transaction,
+    reason: `schedule_transaction:${step}`,
+  };
+}
+
 function parseAddTargetDate(message: string, todayISO?: string): string | undefined {
   if (!todayISO) return undefined;
   const text = String(message ?? '');
@@ -826,6 +895,7 @@ export function resolvePendingScheduleTransactionAnswer(input: {
   userMessage: string;
   todayISO: string;
   currentWeek?: Array<{ date: string; sessionName?: string; workout?: unknown | null }>;
+  pendingAnswerClassification?: PendingClarificationAnswerClassification | null;
 }): PendingScheduleTransactionAnswer {
   const rawTransaction =
     input.pending.scheduleTransaction ?? buildScheduleTransactionFromPending(input.pending, input.todayISO);
@@ -839,6 +909,7 @@ export function resolvePendingScheduleTransactionAnswer(input: {
       input.userMessage,
       input.todayISO,
       input.currentWeek ?? [],
+      input.pendingAnswerClassification ?? null,
     );
   }
   if (transaction.kind !== 'move_session_transaction') return { kind: 'unresolved' };
@@ -881,8 +952,23 @@ function resolvePendingAddToDateTransactionAnswer(
   message: string,
   todayISO: string,
   currentWeek: Array<{ date: string; sessionName?: string; workout?: unknown | null }>,
+  classification: PendingClarificationAnswerClassification | null = null,
 ): PendingScheduleTransactionAnswer {
-  const targetDateAnswer = parseAddTargetDate(message, todayISO);
+  // A definitive rejection of the proposed date while the target is still
+  // outstanding means the athlete declined the replacement day — cancel
+  // instead of re-asking a question they just answered "no" to.
+  if (
+    !transaction.targetDate &&
+    classification?.kind === 'reject_proposed'
+  ) {
+    return {
+      kind: 'cancelled',
+      transaction,
+      reply: 'No worries - I left the plan unchanged.',
+    };
+  }
+  const targetDateAnswer =
+    classifiedDateAnswer(classification) ?? parseAddTargetDate(message, todayISO);
   const addTypeAnswer = classifyAddTypeAnswer(message);
   const addScopeAnswer = classifyAddScopeAnswer(message);
   const messageAsksForSetupChange = isRecurringAddSetupIntent(message);

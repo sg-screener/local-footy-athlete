@@ -94,6 +94,7 @@ import {
   resumeFromPending,
   resolvePendingGameDayReadinessAnswer,
   resolvePendingScheduleTransactionAnswer,
+  scheduleTransactionClarificationSlot,
 } from './coachClarifierResume';
 import {
   createTemporaryEquipmentFact,
@@ -4600,6 +4601,7 @@ export async function handleCoachTurn(
         userMessage: input.userMessage.content,
         todayISO: input.todayISO,
         currentWeek: currentWeekRefs(packet),
+        pendingAnswerClassification,
       });
       if (pendingScheduleAnswer.kind === 'cancelled') {
         usePendingCoachClarifierStore.getState().clearPending();
@@ -4616,6 +4618,12 @@ export async function handleCoachTurn(
           missingFields: pendingScheduleAnswer.transaction.missingFields,
           askedQuestion: pendingScheduleAnswer.reply,
           scheduleTransaction: pendingScheduleAnswer.transaction,
+          pendingClarification: scheduleTransactionClarificationSlot({
+            transaction: pendingScheduleAnswer.transaction,
+            reply: pendingScheduleAnswer.reply,
+            options: pendingScheduleAnswer.options,
+            previous: pendingClarifier.pendingClarification,
+          }),
           createdAt: pendingClarifier.createdAt,
         });
         logger.debug('[pending-schedule-transaction] clarify', {
