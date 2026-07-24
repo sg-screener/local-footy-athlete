@@ -386,6 +386,43 @@ function registerScenarios(): void {
     });
   }
 
+  // ── A3a MATERIALISATION — the device-proven gap: the commit message claimed
+  // next-week coverage while the program SCREEN showed an unchanged week. The
+  // accepted mode reaching WEEK_2 (T1) is necessary but not sufficient — this
+  // drives the REAL program-tab projection (buildProgramTabProjectedWeek over
+  // buildScheduleStateImperative, the same pipeline HomeScreen renders) and
+  // asserts the athlete SEES next week's sessions as optional.
+  scenario('a3a-visible', 'A3a a severe illness reported Friday makes NEXT week visibly optional on the program screen', async () => {
+    seedSpentWeekFriday();
+    await markSpentDaysDone();
+    const result = await commitReadiness('sick_week');
+    assert((result as { ok?: boolean }).ok === true,
+      `severe illness was rejected: ${(result as { message?: string }).message}`);
+
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { buildScheduleStateImperative } = require('../utils/coachWeekDiff');
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { buildProgramTabProjectedWeek } = require('../utils/visibleProgramReadModel');
+    const state = buildScheduleStateImperative();
+    const week2 = buildProgramTabProjectedWeek({
+      mondayISO: WEEK_2,
+      todayISO: TODAY,
+      state,
+    }) as Array<{ date: string; workout: { workoutType?: string; sessionTier?: string; name?: string } | null }>;
+
+    const active = week2.filter((day) => day.workout &&
+      day.workout.workoutType !== 'Rest' &&
+      day.workout.workoutType !== 'Game' &&
+      (state.markedDays ?? {})[day.date] !== 'game');
+    assert(active.length > 0,
+      'next week projected as entirely blank — nothing for the athlete to see at all');
+    const offending = active.filter((day) =>
+      day.workout!.sessionTier !== 'optional' && day.workout!.sessionTier !== 'recovery');
+    assert(offending.length === 0,
+      `next week still shows required sessions on the program screen: ` +
+      offending.map((day) => `${day.date} ${day.workout!.name}/${day.workout!.sessionTier}`).join('; '));
+  });
+
   // ── T5 — exactly ONE duration representation. A static invariant: no
   // consumer may compute an effect window from anything but the fact's horizon
   // owner. Without this, the other four tests can be made green by teaching
