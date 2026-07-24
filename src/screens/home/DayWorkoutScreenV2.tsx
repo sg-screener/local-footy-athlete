@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   Pressable,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Path, Polygon } from 'react-native-svg';
@@ -12,6 +11,7 @@ import { Card, Button, IconButton, SectionLabel, Sheet } from '../../components/
 import { GuidedInjuryFlowSheet } from './GuidedInjuryFlowSheet';
 import ExerciseVideoModal from '../../components/ExerciseVideoModal';
 import { StaleOverrideBanner } from '../../components/StaleOverrideBanner';
+import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 import { getCoachNoteDisplay } from '../../utils/coachNoteSummary';
 import { SessionFeedbackPanel } from '../../components/SessionFeedbackPanel';
 import { SessionCompleteMoment } from '../../components/SessionCompleteMoment';
@@ -1097,12 +1097,20 @@ export default function DayWorkoutScreenV2() {
         </View>
       </View>
 
-      <ScrollView
+      {/*
+        The whole day scroll routes through the shared keyboard owner so the
+        inline weight editor's numeric keypad gets the one Done bar and
+        scroll-into-view (census finding #9). `dismissOnBackgroundTap` is off —
+        the body is a tappable session list, not a form. Device-verify (L10).
+      */}
+      <KeyboardSafeArea
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        onScrollBeginDrag={handleScrollBeginDrag}
+        dismissOnBackgroundTap={false}
+        scrollProps={{
+          contentContainerStyle: styles.scrollContent,
+          showsVerticalScrollIndicator: false,
+          onScrollBeginDrag: handleScrollBeginDrag,
+        }}
       >
         {/* Stale override warning */}
         {staleWarning ? (
@@ -1201,7 +1209,7 @@ export default function DayWorkoutScreenV2() {
         {!isFinished && !isAlreadyComplete ? (
           <FinishMoment onPress={handleFinishWorkout} />
         ) : null}
-      </ScrollView>
+      </KeyboardSafeArea>
 
       <ExerciseVideoModal
         visible={!!selectedExercise}

@@ -33,7 +33,7 @@ interface KeyboardSafeAreaProps {
   scrollable?: boolean;
   scrollProps?: Pick<
     ScrollViewProps,
-    'contentContainerStyle' | 'showsVerticalScrollIndicator'
+    'contentContainerStyle' | 'showsVerticalScrollIndicator' | 'onScrollBeginDrag'
   >;
   style?: StyleProp<ViewStyle>;
   /** Tap outside an input to dismiss. Off for screens whose body is a list. */
@@ -94,6 +94,7 @@ export const KeyboardSafeArea: React.FC<KeyboardSafeAreaProps> = ({
       keyboardShouldPersistTaps="handled"
       keyboardDismissMode="interactive"
       bottomOffset={FOCUSED_INPUT_BOTTOM_OFFSET}
+      onScrollBeginDrag={scrollProps?.onScrollBeginDrag}
     >
       {children}
     </KeyboardAwareScrollView>

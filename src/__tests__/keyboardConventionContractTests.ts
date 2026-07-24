@@ -70,15 +70,29 @@ console.log('\n[1] The convention exists and owns the primitives');
     ? read(CONVENTION_OWNERS[1])
     : '';
   ok(
-    'the dismiss affordance is a keyboard-controller toolbar, not a per-input accessory',
-    /<KeyboardToolbar/.test(accessory) &&
+    'the dismiss affordance is a custom flush bar, NOT the OS floating toolbar',
+    !/<KeyboardToolbar/.test(accessory) &&
+      /KeyboardStickyView/.test(accessory) &&
       /from 'react-native-keyboard-controller'/.test(accessory),
-    'E4: the toolbar attaches itself to the focused input on BOTH platforms, so '
-      + 'no input needs per-call wiring and none can be forgotten',
+    "Sam ruling (L10 run 2): no floating pill — a flush, full-width Done bar on "
+      + 'every iOS version. KeyboardToolbar floats on iOS 26+, which read as a gap.',
   );
   ok(
-    'the toolbar offers an explicit Done',
-    /doneText="Done"/.test(accessory),
+    'the bar dismisses the keyboard',
+    /KeyboardController\.dismiss\(\)/.test(accessory),
+  );
+  ok(
+    'the bar offers an explicit Done label',
+    /doneText\s*=\s*'Done'|>Done</.test(accessory) || /'Done'/.test(accessory),
+  );
+  ok(
+    'the bar only mounts while the keyboard is visible (never at rest)',
+    /useKeyboardState/.test(accessory) && /isVisible/.test(accessory),
+  );
+  ok(
+    'the bar sits flush at the keyboard top (no opened-offset gap)',
+    /opened:\s*0/.test(accessory),
+    'a full-width bar with zero opened offset attaches to the keypad with no gap',
   );
 
   const input = fs.existsSync(path.join(src, CONVENTION_OWNERS[0]))
