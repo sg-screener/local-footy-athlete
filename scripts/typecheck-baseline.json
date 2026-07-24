@@ -35,17 +35,15 @@
       "owner": "docs/JOURNAL_DESIGN_2026-07-23.md - Phase 5C build. Fix type and implementation together; do not extend these screens as if they work."
     },
     "cluster-C-result-narrowing": {
-      "errors": 22,
-      "files": [
-        "src/store/fixtureMutationTransaction.ts",
-        "src/store/injuryEpisodeCommand.ts",
-        "src/store/profileProgramTransaction.ts",
-        "src/utils/coachFixtureChange.ts",
-        "src/utils/planChangeProducer.ts",
-        "src/utils/weeklyCoachUpdate.ts"
-      ],
-      "cause": "Discriminated-union narrowing on CoachMutationTransactionResult<T> fails despite correct `if (!x.ok)` guards. Root cause UNRESOLVED - generic inference limitation vs. a real mismatch was not determined.",
-      "owner": "UNASSIGNED. Not named in the typecheck-gate unit brief; flagged in that unit's report for Sam to slot. Needs a root-cause spike before fix-or-suppress is decided - do not suppress permanently on the assumption it is cosmetic."
+      "errors": 11,
+      "note": "Was recorded as 22; \u00a77.0 of the triage shows that double-counts. The same 11 product-scope errors are re-surfaced by tsconfig.tests.json because TS checks a file's whole dependency graph. 11 is the athlete-facing number.",
+      "rootCause": "RESOLVED by TYPECHECK_BASELINE_TRIAGE \u00a77 \u2014 three distinct mechanisms, not one. No longer a spike.",
+      "mechanisms": {
+        "1-strictNullChecks-off-kills-inline-narrowing": "fixtureMutationTransaction.ts, profileProgramTransaction.ts, coachFixtureChange.ts \u2014 guards are CORRECT; strictNullChecks:false is why TS keeps the wide type. OWNER: Phase 1.6 sweep.",
+        "2-narrowing-does-not-propagate-through-a-named-boolean": "planChangeProducer.ts (two sites; opaque boolean disjuncts TS cannot map back to `kind`) and injuryEpisodeCommand.ts:190. OWNER: planChangeProducer.ts \u2192 the 41dd803 follow-up; injuryEpisodeCommand.ts \u2192 Option B Phase 2 brief (docs/DURABLE_ATHLETE_STATE_FACT_OWNERSHIP_REASSESSMENT_2026-07-24.md), same injury/coach-command ownership boundary. Mechanism itself: Phase 1.6 sweep.",
+        "3-real-missing-case-gap-currently-dormant": "weeklyCoachUpdate.ts:150 \u2014 a genuine gap, but the file is unreachable. RESOLVES BY DELETION in the approved 109-file purge (see the unreachable-product-files finding). Do not fix; delete."
+      },
+      "owner": "ASSIGNED (Sam, 2026-07-24). No UNASSIGNED entries remain in this baseline."
     },
     "devtools-harness": {
       "errors": 55,

@@ -298,10 +298,12 @@ function main(): void {
 
   console.log('\n[7] Pool additions Sam approved are present');
   {
+    // 'Speed Bench' is deliberately absent: it classifies as `power`, so the
+    // power policy strips it from strength content — pooling it silently
+    // deleted the athlete's accessory. Owned by the power-pool unit.
     const additions = [
       'Goblet Squat',
       'Bottoms-Up KB Press',
-      'Speed Bench',
       'Single-Arm DB Bench Press',
       'Single-Leg Leg Press',
       'Single-Leg Squat (to Box)',
