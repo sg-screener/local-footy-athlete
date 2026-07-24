@@ -129,7 +129,12 @@ function participationForConstraint(args: {
   hasFieldRestriction: boolean;
   lowerBodyRestriction: boolean;
   readinessRestriction: boolean;
+  deliveredHistory: boolean;
 }): AnchorParticipationState {
+  // Settled history: the anchor's day elapsed before the governed boundary.
+  // What the athlete did there is a fact; a restriction authored later cannot
+  // retroactively withdraw it.
+  if (args.deliveredHistory) return args.existing;
   if (args.explicit && args.existing !== 'normal_unrestricted') return args.existing;
   if (args.legacyUnknown) return 'unknown';
   if (!args.hasFieldRestriction) {
@@ -333,10 +338,12 @@ export function applyGenerationSafetyToSection18Contract(args: {
   applyReductionProjections(contract);
 
   contract.anchors = contract.anchors.map((anchor) => {
+    const deliveredHistory = anchor.participationProvenance === 'delivered_history';
     const participation = participationForConstraint({
       existing: anchor.participation,
       explicit: anchor.participationProvenance === 'explicit',
-      legacyUnknown: anchor.participationProvenance !== 'explicit' && (
+      legacyUnknown: anchor.participationProvenance !== 'explicit' &&
+        !deliveredHistory && (
         contract.source === 'legacy_migration' ||
         anchor.participationProvenance === 'legacy_unknown' ||
         anchor.participationProvenance === 'healthy_legacy_assumption' ||
@@ -345,12 +352,15 @@ export function applyGenerationSafetyToSection18Contract(args: {
       hasFieldRestriction,
       lowerBodyRestriction,
       readinessRestriction: readinessFieldRestriction,
+      deliveredHistory,
     });
     const normal = participation === 'normal_unrestricted';
     return {
       ...anchor,
       participation,
-      participationProvenance: anchor.participationProvenance === 'explicit' &&
+      participationProvenance: deliveredHistory
+        ? 'delivered_history'
+        : anchor.participationProvenance === 'explicit' &&
         participation === anchor.participation
         ? 'explicit'
         : participation === 'unknown'

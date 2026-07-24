@@ -356,6 +356,12 @@ function buildDerivingSourceFactAdjustment(args: {
   };
 }
 
+function dateForWeekday(weekStartISO: string, dayOfWeek: number): string {
+  const date = new Date(`${weekStartISO.slice(0, 10)}T12:00:00`);
+  date.setDate(date.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+  return date.toISOString().slice(0, 10);
+}
+
 function commitDerivingSourceFactScopedRegen(args: {
   compositionBase: AcceptedCompositionBaseV1;
   normalizedFacts: TemporarySourceFact[];
@@ -380,6 +386,24 @@ function commitDerivingSourceFactScopedRegen(args: {
   const adjustments: ReversibleAdjustmentRecord[] = [];
 
   for (const weekStart of args.weekStarts) {
+    // 0. The governed boundary for THIS week: days before it are history the
+    //    fact may not shape (T4/L6 — a session the athlete already did cannot
+    //    be re-prescribed retrospectively). When the boundary falls inside the
+    //    week, the athlete's actual days are pinned and generation authors the
+    //    remainder AS a remainder.
+    const governedFromISO = firstShapedDateInWeek(args.fact, weekStart);
+    const remainderBoundary = governedFromISO > weekStart
+      ? {
+          governedFromISO,
+          pinnedHistoryWorkouts: rebaseAcceptedEffectiveWeek({
+            surfaces: { ...state, weekScopedOverlays: nextOverlays } as never,
+            weekStart,
+            profile,
+            markedDays: state.acceptedMaterialContext.markedDays,
+          }).visibleWorkouts.filter((workout) =>
+            dateForWeekday(weekStart, workout.dayOfWeek) < governedFromISO),
+        }
+      : null;
     // 1. Generate the reduced week with the PENDING facts threaded, so the per-week
     //    context mints the illness_recovery mode / readiness reduction (the store is
     //    still fact-empty mid-transaction). Single microcycle — this week only.
@@ -392,6 +416,7 @@ function commitDerivingSourceFactScopedRegen(args: {
         isTemporarySourceFactConstraint(constraint)),
       temporarySourceFacts: args.normalizedFacts,
       microcycleLimit: 1,
+      remainderBoundary,
     });
     // 2. The regenerated microcycle becomes a sparse week overlay (the mutation
     //    layer). The base microcycle is never touched.
@@ -401,24 +426,18 @@ function commitDerivingSourceFactScopedRegen(args: {
       anchorDate: null,
       reason: 'readiness_reduction',
     });
-    // 2b. NOT YET — the history boundary is BUILT (`governedFromISO` on the
-    //     contract, delivered/prescribed in the ledger, Phase 1, green) but the
-    //     landing week cannot yet USE it. Dropping the pre-boundary days makes
-    //     severe illness and cooked correct (T4 green for both), and breaks the
-    //     milder readiness tiers: generation authors a WHOLE week, so discarding
-    //     the history days can discard the very sessions that satisfied the
-    //     remaining minimums, and a readiness demotion additionally withdraws
-    //     credit from anchors the athlete already completed. Result:
-    //     `required_minimum_shortfall` for poor sleep, and two
-    //     `acceptedStateTransactionTests` regressions.
-    //
-    //     The fix is at the generator, not here: the remainder must be authored
-    //     as a remainder (or delivered anchors must keep their credit — tried,
-    //     and it regressed every scenario via `strength_pattern_count`). Left
-    //     quarantined rather than half-applied. `firstShapedDateInWeek(fact,
-    //     weekStart)` is the boundary this will stamp.
+    // 2b. History is immutable: dates before the governed boundary are dropped
+    //     from the overlay, so both resolvers fall through to the untouched
+    //     base on the missing key — byte-exact preservation by construction.
+    //     The generated contract carries `governedFromISO` (stamped at
+    //     generation) and pre-boundary anchors keep settled participation, so
+    //     the preserved week is admissible under the Phase-1 asymmetry.
     let overlay: WeekScopedWorkoutOverlay = {
       ...built,
+      workoutsByDate: remainderBoundary
+        ? Object.fromEntries(Object.entries(built.workoutsByDate).filter(
+            ([date]) => date >= remainderBoundary.governedFromISO))
+        : built.workoutsByDate,
       createdAt: args.now,
       updatedAt: args.now,
     };

@@ -177,6 +177,54 @@ export interface Section18AuthorisedReduction {
  */
 export type Section18GovernedFrom = string | null;
 
+/**
+ * The ONE owner of the governed boundary stamp. Sets `governedFromISO` and
+ * marks every anchor whose day falls before it as `delivered_history` —
+ * settled participation no later safety pass may demote. Called by whichever
+ * owner authors the week (the scoped regen, generation); nothing else may
+ * write the boundary. See
+ * docs/SECTION18_DELIVERED_VS_REMAINING_REASSESSMENT_2026-07-24.md §2 Q4.
+ */
+export function stampSection18GovernedBoundary(args: {
+  contract: WeeklyExposureContractV2;
+  weekStartISO: string;
+  governedFromISO: string;
+}): WeeklyExposureContractV2 {
+  const weekStart = args.weekStartISO.slice(0, 10);
+  const boundary = args.governedFromISO.slice(0, 10);
+  const dateForDow = (dayOfWeek: number): string => {
+    const date = new Date(`${weekStart}T12:00:00`);
+    date.setDate(date.getDate() + (dayOfWeek === 0 ? 6 : dayOfWeek - 1));
+    return date.toISOString().slice(0, 10);
+  };
+  if (boundary <= weekStart) return { ...args.contract, governedFromISO: boundary };
+  return {
+    ...args.contract,
+    governedFromISO: boundary,
+    anchors: args.contract.anchors.map((anchor) => {
+      if (dateForDow(anchor.dayOfWeek) >= boundary) return anchor;
+      // A history anchor's participation is what actually happened. An
+      // explicitly recorded modification stands; a DERIVED demotion (minted
+      // from a fact reported after the day elapsed) is exactly the
+      // retroactive credit withdrawal the boundary forbids, so it is undone.
+      const participation = anchor.participationProvenance === 'explicit'
+        ? anchor.participation
+        : 'normal_unrestricted' as const;
+      const normal = participation === 'normal_unrestricted';
+      return {
+        ...anchor,
+        participation,
+        participationProvenance: 'delivered_history' as const,
+        currentProductionClaim: {
+          conditioning: normal,
+          sprintHighSpeed: normal,
+          hardDay: normal,
+        },
+      };
+    }),
+  };
+}
+
 export interface Section18AnchorContract {
   id: string;
   kind: Section18AnchorKind;
@@ -188,7 +236,12 @@ export interface Section18AnchorContract {
     | 'derived_active_constraint'
     | 'healthy_legacy_assumption'
     | 'legacy_unknown'
-    | 'current_input_missing';
+    | 'current_input_missing'
+    /** The anchor's day elapsed before the contract's governed boundary. Its
+     *  participation is settled history: no later safety pass may demote it,
+     *  because a demotion would retroactively decide that work the athlete
+     *  already completed produced nothing. */
+    | 'delivered_history';
   /** What the current/legacy production path claimed before v2 participation gates. */
   currentProductionClaim: {
     conditioning: boolean;

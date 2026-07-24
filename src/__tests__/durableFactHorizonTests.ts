@@ -250,6 +250,11 @@ function activeAdjustments() {
 
 async function commitReadiness(kind: WeekReadinessApplyKind, anchorDateISO = WEEK_1) {
   const action = readinessActionForKind(kind, { anchorDateISO, todayISO: TODAY });
+  // HORIZON_VERBOSE=1 keeps the transaction logs (blocker codes) visible when
+  // diagnosing a single scenario via HORIZON_ONLY.
+  if (process.env.HORIZON_VERBOSE) {
+    return executeProgramControlActionDurably(action as never, { todayISO: TODAY });
+  }
   return quietAsync(() => executeProgramControlActionDurably(action as never, { todayISO: TODAY }));
 }
 

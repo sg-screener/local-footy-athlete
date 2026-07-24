@@ -853,11 +853,16 @@ export function evaluateSection18EffectiveWeek(
     evidence: ledger.mainStrength.sessionDays.map((day) => `${dateForDay(input.weekStart, day)}:main_strength`),
   });
 
-  if (contract.safety?.prohibitedSprintHighSpeed && ledger.sprintHighSpeed.achievedCount > 0) {
+  // The prohibition governs what the APP prescribes: the finaliser strips
+  // app-authored speed blocks and this asserts none survived. The athlete's
+  // own team-training and game exposure is theirs, and delivered history is
+  // settled — neither is something the app can un-prescribe. See
+  // docs/SECTION18_DELIVERED_VS_REMAINING_REASSESSMENT_2026-07-24.md §2 Q6.
+  if (contract.safety?.prohibitedSprintHighSpeed && ledger.sprintHighSpeed.split.appPrescribed > 0) {
     addFinding(findings, {
       code: 'reduction_contradiction', severity: 'blocking', domain: 'sprint_high_speed',
-      expected: 0, actual: ledger.sprintHighSpeed.achievedCount,
-      detail: 'Sprint/high-speed exposure remains despite the active safety prohibition.',
+      expected: 0, actual: ledger.sprintHighSpeed.split.appPrescribed,
+      detail: 'App-prescribed sprint/high-speed work remains despite the active safety prohibition.',
       evidence: ledger.sprintHighSpeed.sources.map((source) =>
         `${dateForDay(input.weekStart, source.dayOfWeek)}:${source.kind}`),
     });
@@ -1003,11 +1008,18 @@ export function evaluateSection18EffectiveWeek(
   }
   const patternCoverageSelected = contract.mainStrength.exposure.plannerSelectedTarget > 0 &&
     !contract.safety.fullPause;
+  // Weekly pattern coverage is a whole-week authoring expectation. When the
+  // contract governs only a remainder (mid-week boundary), the first days are
+  // immutable history and a reduced remainder may honestly be unable to
+  // restore every pattern — that cannot block the athlete's report.
+  const partialWeekGoverned = ledger.historyDays.length > 0;
   if (patternCoverageSelected) {
     for (const pattern of contract.strengthPatterns.requiredSafePatterns) {
       if (ledger.strengthPatterns.meaningfulMainLiftCount[pattern] > 0) continue;
       addFinding(findings, {
-        code: 'pattern_restore_failure', severity: 'blocking', domain: 'strength_patterns',
+        code: 'pattern_restore_failure',
+        severity: partialWeekGoverned ? 'advisory' : 'blocking',
+        domain: 'strength_patterns',
         expected: `at least one meaningful ${pattern} main lift`, actual: 0,
         detail: `Safe weekly ${pattern} coverage was not restored by a later session.`,
         evidence: [],
@@ -1032,10 +1044,13 @@ export function evaluateSection18EffectiveWeek(
   }
 
   const primers = ledger.power.achievedPrimerCount;
-  if (contract.power.eligible === false && primers > 0) {
+  // Ineligibility governs the remainder: a primer the athlete already
+  // completed is history and cannot be un-prescribed by a policy authored
+  // after it happened.
+  if (contract.power.eligible === false && ledger.power.split.prescribed > 0) {
     addFinding(findings, {
       code: 'power_policy_breach', severity: 'blocking', domain: 'power',
-      expected: 0, actual: primers,
+      expected: 0, actual: ledger.power.split.prescribed,
       detail: `Power primers remain despite ineligibility (${contract.power.removalReason ?? 'unspecified'}).`,
       evidence: [],
     });
@@ -1048,7 +1063,9 @@ export function evaluateSection18EffectiveWeek(
       evidence: [],
     });
   }
+  const historyDaySet = new Set(ledger.historyDays);
   const prohibitedPowerSources = ledger.power.primerSources.filter((source) =>
+    !historyDaySet.has(source.dayOfWeek) &&
     contract.safety?.prohibitedPowerFamilies?.includes(source.family));
   if (prohibitedPowerSources.length > 0) {
     addFinding(findings, {
