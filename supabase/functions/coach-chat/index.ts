@@ -874,25 +874,12 @@ Your job: fill sessions with exercises. The coaching engine has ALREADY decided 
 
 === EXERCISE SELECTION RULES ===
 
-MOVEMENT PATTERNS (every exercise belongs to exactly one):
-Upper push horizontal: bench press, incline bench, flat/incline DB press, landmine press, dips, push-ups, explosive push-ups, speed bench.
-Upper push vertical: overhead press (BB), single arm half kneeling OHP (DB), seated DB OHP, Z press.
-Upper pull horizontal: bent over BB row, incline DB row (chest supported), single arm DB row, face pulls.
-Upper pull vertical: pull-ups, weighted pull-ups (advanced only: 8+ BW reps), chin-ups.
-Lower squat bilateral: back squat, box squat, high box squat, goblet squat, leg press.
-Lower squat unilateral: Bulgarian/RFE split squats, lunges, walking lunges, single leg squat to box.
-Lower hinge bilateral: trap bar deadlift, RDL, hip thrusts, speed trap bar DL.
-Lower hinge unilateral: single leg RDL.
-Lower power: squat jump (DB/BB light), box jump, vertical jump, broad jump.
-Upper power: speed bench, explosive landmine press, explosive push-ups.
-Core: ab wheel, hanging leg raise, dragon flag, Pallof press, suitcase carry, side plank, farmers carry.
-Accessories upper: skull crushers, tricep pushdowns, bicep curls, lateral raises, DB shrugs.
-Accessories lower: Nordic lowers, hamstring curls, knee extensions, calf raises, tib raises, Copenhagen plank, crab walks, back extension.
+MOVEMENT PATTERNS: the request's EXERCISE VOCABULARY block lists every exercise name that exists, grouped by the movement pattern that owns it. Every exercise belongs to exactly one group. Select names from that block ONLY, exactly as written. Do NOT work from memory — this prompt deliberately carries no exercise list of its own, because the vocabulary is derived from the app's selectable pools and a second copy here would drift out of step with them.
 
 PATTERN RULES:
 - The WEEKLY PLAN line's MAIN PATTERNS are authoritative for main lifts. Do not add another session's main pattern; small opposite-pattern accessories are allowed only when clearly secondary.
 - No same primary pattern on consecutive training days.
-- No back squat + trap bar DL same day (axial overload). Pair bilateral with unilateral, squat with hinge.
+- No Back Squat + Trap Bar Deadlift same day (axial overload). Pair bilateral with unilateral, squat with hinge.
 - Pull max 2x/week, push max 2-3x/week, heavy hinge max 2x/week, heavy squat max 2x/week.
 - Across the week: cover horizontal push, vertical push, horizontal pull, vertical pull, squat, hinge, core.
 
@@ -915,7 +902,7 @@ PAIRING (experienced athletes only, core sessions only):
 
 IN-SEASON DOMS RULES:
 - HIGH DOMS exercises (RFE/Bulgarians, walking lunges, Nordics, heavy eccentrics): 3-6 reps ONLY, 2-3 sets, early in loading window (G-5/G-4). NEVER after G-4.
-- PREFERRED alternatives: trap bar DL, leg press, machine curls, isometrics (zero DOMS).
+- PREFERRED alternatives: Trap Bar Deadlift, Leg Press, Hamstring Curl, isometrics (zero DOMS).
 - No heavy lower body within 48h of game. No lower body AT ALL on G-1.
 - G-2: push-dominant upper ONLY. No heavy pull/back (creates stiffness). Light face pulls OK.
 - G-1: arms/pump ONLY (biceps, triceps, laterals). ZERO lower body, sprinting, conditioning, plyometrics.
@@ -937,7 +924,7 @@ NEVER program: Olympic lifts (cleans, snatches). Use jump squats for explosive s
 CONDITIONING (only if constraints allow):
 - Off-season: finish CORE sessions with 20-30min conditioning. Hit all 3 energy systems across the week.
 - In-season: no extra running. Optional conditioning = off-leg only (bike, rower, ski erg).
-- Never hide conditioning or power work inside ordinary strength exercises when the WEEKLY PLAN did not assign that component. Early off-season optional weeks have no power, jumps, explosive push-ups, contrast work, running or hard conditioning.
+- Never hide conditioning or power work inside ordinary strength exercises when the WEEKLY PLAN did not assign that component. Early off-season optional weeks have no power, jumps, explosive push-up work, contrast work, running or hard conditioning.
 
 === OUTPUT CONTRACT — STRICTLY ENFORCED ===
 

@@ -214,6 +214,10 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Back Squat',  loadRatio: 1.00 },
         { name: 'Front Squat', loadRatio: 0.85 },
         { name: 'Box Squat',   loadRatio: 0.95 },
+        // Sam's locked list (2026-07-24). Ratio PROPOSED (mirrors Box Squat's
+        // 0.95 — a higher box is a shorter range, so slightly stronger) and
+        // parked in LOAD_HANDLING_PENDING_SAM until he rules line by line.
+        { name: 'High Box Squat', loadRatio: 1.00 },
       ],
     },
     accessory: {
@@ -226,6 +230,7 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Leg Press',             loadRatio: 0.90 },
         { name: 'Single-Leg Leg Press',   loadRatio: 0.50 },
         { name: 'Single-Leg Squat (to Box)', loadRatio: 0.30 },
+        { name: 'Bodyweight Squat',       loadRatio: 0.00 },
       ],
     },
   },
@@ -242,6 +247,9 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Single-Leg RDL',    loadRatio: 0.45 },
         { name: 'Hip Thrusts',       loadRatio: 1.10 },
         { name: 'Kettlebell Swings', loadRatio: 0.35 },
+        // Sam's locked list (2026-07-24). Ratio PROPOSED (mirrors Hip Thrusts'
+        // 1.10, discounted for the shorter floor range) — pending his ruling.
+        { name: 'Glute Bridge',      loadRatio: 0.90 },
       ],
     },
   },
@@ -270,6 +278,10 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
         { name: 'Push-ups',        loadRatio: 0.00 },
         { name: 'Dips',            loadRatio: 0.60 },
         { name: 'Single-Arm DB Bench Press', loadRatio: 0.35 },
+        // Sam's locked list (2026-07-24) pools the Bible's pressing injury-swap
+        // rather than leaving it reachable by substitution only. Ratio PROPOSED
+        // (mirrors Single-Arm DB Bench Press exactly) — pending his ruling.
+        { name: 'Single-Arm DB Floor Press', loadRatio: 0.35 },
         // 'Speed Bench' is NOT here on purpose: it classifies as `power`, and
         // the power policy strips power rows from coach-built strength content
         // (workoutCanonicalisation.ts:572). Pooled here it silently deleted the
@@ -414,10 +426,13 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
   //     normalizeLoadAcrossSiblings returns input unchanged when either
   //     ratio is 0 (bodyweight guard).
   //
-  //   - Rotation order groups: hamstring (Nordic Lower) →
+  //   - Rotation order groups: hamstring (Nordic Lower / Hamstring Curl) →
   //     quad (Leg Extension) → calf/ankle (Calf Raises / Tib Raises) →
-  //     adductor (Adductor Machine). Intra-session avoidance spreads
-  //     multiple AI suggestions across muscle groups cleanly.
+  //     glute/posterior (Single-Leg Hip Thrust / Back Extension). Intra-session
+  //     avoidance spreads multiple AI suggestions across muscle groups cleanly.
+  //     The adductor group left this slot when Sam's locked-list changeset
+  //     (2026-07-24) retired the Adductor Machine; groin work is now owned by
+  //     GROIN_ADDUCTORS_POOL (Copenhagens, Groin Squeeze, Cossack, Lateral Lunge).
   isolation_lower: {
     anchor: {
       slot: 'isolation_lower', role: 'anchor', entries: [],
@@ -426,13 +441,16 @@ export const STRENGTH_POOLS: Record<PoolSlotKey, {
       slot: 'isolation_lower', role: 'accessory', entries: [
         // Hamstring block
         { name: 'Nordic Lower',    loadRatio: 0 },
+        { name: 'Hamstring Curl',  loadRatio: 0 },
         // Quad block
         { name: 'Leg Extension',   loadRatio: 0 },
         // Calf / ankle block
         { name: 'Calf Raises',     loadRatio: 0 },
         { name: 'Tib Raises',       loadRatio: 0 },
-        // Adductor block
-        { name: 'Adductor Machine', loadRatio: 0 },
+        // Glute / posterior block — Sam's locked-list additions (2026-07-24),
+        // which also replaced the retired Adductor Machine in this slot.
+        { name: 'Single-Leg Hip Thrust', loadRatio: 0 },
+        { name: 'Back Extension',        loadRatio: 0 },
       ],
     },
   },

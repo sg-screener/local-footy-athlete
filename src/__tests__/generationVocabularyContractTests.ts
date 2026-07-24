@@ -37,6 +37,11 @@ import {
 } from '../services/api/generateProgram';
 import { FULL_GYM_EQUIPMENT } from '../utils/equipmentAvailability';
 import { curatedExerciseVocabulary, ExerciseVocabularyViolation } from '../utils/exerciseCanonicalisation';
+import {
+  isSelectable,
+  selectableExerciseNames,
+  selectableVocabularyGroups,
+} from '../data/selectableExerciseVocabulary';
 
 let passed = 0;
 const failures: string[] = [];
@@ -75,17 +80,49 @@ const prompt = buildGenerationPrompt(PROFILE, plan, FULL_GYM_EQUIPMENT);
 console.log('\n[1] The generator loses naming rights — the prompt carries the vocabulary');
 {
   const vocabulary = curatedExerciseVocabulary();
-  ok('the curated vocabulary is derived from the curated cue layer',
-    vocabulary.length === Object.keys(EXERCISE_CUES).length &&
-      vocabulary.every((name) => Boolean(EXERCISE_CUES[name])),
-    `vocabulary=${vocabulary.length} curatedCues=${Object.keys(EXERCISE_CUES).length}`);
+  const selectable = selectableExerciseNames();
 
-  // The derivation proof: EVERY curated name reaches the prompt. A hand-copied
-  // list would drift the moment Sam authors a cue, and this fails immediately.
+  // THE VOCABULARY SWITCH (Sam's locked list, 2026-07-24). The vocabulary used
+  // to derive from "has a cue", which answers the wrong question: a cue means
+  // the app can DESCRIBE a movement, not that any builder can PRESCRIBE it. The
+  // generator was therefore offered census-confirmed orphans, and the
+  // completeness check could not notice because the offer and the check were
+  // the same set. Membership of a pool a live builder selects from is now the
+  // single definition, checked in both directions below.
+  ok('the AI vocabulary IS selectable pool membership, exactly',
+    vocabulary.length === selectable.length &&
+      vocabulary.every((name, i) => name === selectable[i]),
+    `vocabulary=${vocabulary.length} selectable=${selectable.length}`);
+
+  ok('nothing the generator is offered is unprescribable',
+    vocabulary.every((name) => isSelectable(name)),
+    `not selectable: ${vocabulary.filter((n) => !isSelectable(n)).slice(0, 12).join(' | ')}`);
+
+  ok('nothing prescribable is withheld from the generator',
+    selectable.every((name) => vocabulary.includes(name)),
+    `absent from the offer: ${selectable.filter((n) => !vocabulary.includes(n)).slice(0, 12).join(' | ')}`);
+
+  // The derivation proof: EVERY selectable name reaches the prompt. A
+  // hand-copied list would drift the moment Sam pools a movement, and this
+  // fails immediately.
   const missing = vocabulary.filter((name) => !prompt.includes(name));
-  ok('every curated exercise name appears verbatim in the generation prompt',
+  ok('every selectable exercise name appears verbatim in the generation prompt',
     missing.length === 0,
     `absent from the prompt: ${missing.slice(0, 12).join(' | ')}`);
+
+  // The prompt carries the movement-pattern GROUPING too, which is what let the
+  // edge function's hand-copied MOVEMENT PATTERNS list be deleted rather than
+  // kept in sync — one derived representation instead of two.
+  const groups = selectableVocabularyGroups();
+  ok('the prompt groups the vocabulary by the pool slot that owns each name',
+    groups.length > 5 && groups.every((g) => prompt.includes(`${g.label}: `)),
+    `groups=${groups.length}; missing: ${groups.filter((g) => !prompt.includes(`${g.label}: `)).map((g) => g.label).join(' | ')}`);
+
+  ok('the second, hand-copied vocabulary is gone from the edge prompt',
+    !fs.readFileSync(
+      path.join(__dirname, '..', '..', 'supabase/functions/coach-chat/index.ts'), 'utf8',
+    ).includes('MOVEMENT PATTERNS (every exercise belongs to exactly one):'),
+    'a hand-maintained second list is exactly the drift the switch retires');
 
   ok('the prompt names the vocabulary as authoritative and selection-only',
     /EXERCISE VOCABULARY/i.test(prompt) && /\bONLY\b/.test(prompt) && /exact/i.test(prompt),

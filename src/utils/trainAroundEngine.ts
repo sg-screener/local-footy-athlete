@@ -86,9 +86,9 @@ export function severityToTier(severity: number): InjurySeverityTier {
 /**
  * Map an exercise NAME to one or more movement patterns. Robust to
  * AI-generated naming variants ("Incline DB Press", "Single Arm Half
- * Kneeling DB OHP", "Explosive Push-Ups", "Slider Hamstring Curl").
+ * Kneeling DB OHP", "Explosive Push-up", "Slider Hamstring Curl").
  *
- * An exercise can match multiple patterns — e.g. "Explosive Push-Ups"
+ * An exercise can match multiple patterns — e.g. "Explosive Push-up"
  * is both `horizontal_press` AND `explosive_push`; "Deadlift" is both
  * `hinge` AND `posterior_chain` AND `heavy_pull`.
  *

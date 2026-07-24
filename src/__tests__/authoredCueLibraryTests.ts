@@ -51,6 +51,31 @@ const cueDoc = fs.readFileSync(
 const videoDoc = fs.readFileSync(
   path.join(repoRoot, 'docs/VIDEO_CHANGESET_2026-07-24.md'), 'utf8');
 
+/**
+ * Names a LATER Sam changeset overrode, parsed from each document's own
+ * "Superseded by the locked list" section.
+ *
+ * Two Sam sign-offs can both be true at once: the 2026-07-23 cue sheet is a
+ * record of what he approved then, and the 2026-07-24 locked list is what
+ * ships now. Rewriting the earlier document would falsify a record; ignoring
+ * it would let this suite demand retired content. So the earlier document
+ * declares its own supersessions and they are subtracted here — DERIVED from
+ * the document, never a literal list in this file, for the same reason §4's
+ * retired names are.
+ */
+function parseSuperseded(source: string): Set<string> {
+  const section = source.split('## Superseded by the locked list')[1] ?? '';
+  const names = new Set<string>();
+  for (const line of section.split('\n')) {
+    const match = line.match(/^- (.+?) — /);
+    if (match) names.add(match[1].trim());
+  }
+  return names;
+}
+
+const supersededCues = parseSuperseded(cueDoc);
+const supersededVideos = parseSuperseded(videoDoc);
+
 /** `- **Name**: primary | secondary` from the final cue library section. */
 function parseAuthoredCues(): Map<string, { primary: string; secondary: string }> {
   const section = cueDoc.split('## Final cue library')[1] ?? '';
@@ -59,6 +84,7 @@ function parseAuthoredCues(): Map<string, { primary: string; secondary: string }
     const match = line.match(/^- \*\*(.+?)\*\*:\s*(.*)$/);
     if (!match) continue;
     const [, name, body] = match;
+    if (supersededCues.has(name)) continue;
     const pipe = body.lastIndexOf('|');
     const primary = (pipe >= 0 ? body.slice(0, pipe) : body).trim();
     const rawSecondary = pipe >= 0 ? body.slice(pipe + 1).trim() : '';
@@ -77,7 +103,7 @@ function parseAuthoredVideos(): Map<string, string> {
   const videos = new Map<string, string>();
   for (const line of section.split('\n')) {
     const match = line.match(/^- \*\*(.+?)\*\*:\s*(\S+)\s*$/);
-    if (match) videos.set(match[1], match[2]);
+    if (match && !supersededVideos.has(match[1])) videos.set(match[1], match[2]);
   }
   return videos;
 }
@@ -126,9 +152,17 @@ function main(): void {
       `parsed ${authoredCues.size} cues — expected the full authored library`);
     // 36 original picks, + 5 added on 2026-07-24 when applying the changeset
     // exposed four real gaps and Sam added the new Abductor Machine, + 1 for
-    // the unified Groin Squeeze.
-    ok('video changeset yielded Sam\'s 42 picks', authoredVideos.size === 42,
-      `parsed ${authoredVideos.size} video URLs, expected 42`);
+    // the unified Groin Squeeze = 42 supplied. The locked list then retired the
+    // two machine exercises the same day, so 40 of them still ship.
+    ok('video changeset yielded Sam\'s 42 picks, less the 2 it superseded',
+      authoredVideos.size === 40 && supersededVideos.size === 2,
+      `parsed ${authoredVideos.size} live video URLs (expected 40), `
+        + `${supersededVideos.size} superseded (expected 2)`);
+
+    ok('both supersessions are declared by the documents themselves',
+      supersededCues.size === 4 && supersededVideos.size === 2,
+      `cue supersessions=${supersededCues.size} (expected 4), `
+        + `video supersessions=${supersededVideos.size} (expected 2)`);
   }
 
   console.log('\n[2] The cue library IS Sam\'s authored text');

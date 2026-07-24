@@ -80,3 +80,13 @@ excluded from that invariant.
 ## Unchanged
 
 Every other entry keeps its existing URL. Zone-1 recovery walks stay out of the map by design.
+## Superseded by the locked list (2026-07-24)
+
+Two of the URLs in "Set / replace" above are for exercises Sam retired later the
+same day in `docs/EXERCISE_LOCKED_LIST_CHANGESET_2026-07-24.md`. The videos are
+no longer in the app because the exercises are not. `authoredCueLibraryTests`
+subtracts them before comparing, so the count in that heading is the count Sam
+supplied, not the count that ships.
+
+- Abductor Machine — retired, locked-list REMOVALS
+- Adductor Machine — retired, locked-list REMOVALS

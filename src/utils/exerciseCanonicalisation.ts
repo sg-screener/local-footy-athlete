@@ -34,10 +34,40 @@
  * that is a permanent tail-chase.
  */
 import { EXERCISE_CUES } from '../data/exerciseCues';
+import {
+  POWER_POOL_PENDING,
+  selectableExerciseNames,
+} from '../data/selectableExerciseVocabulary';
 import { resolveExerciseName } from './loadEstimation';
 
+/**
+ * The curated NAME registry — every name the app is willing to call an
+ * exercise, which is a strictly wider question than "which names have a cue".
+ *
+ * Selectable pool membership is the spine (see selectableExerciseVocabulary:
+ * one circle), plus the power-block vocabulary the app itself names while its
+ * pool placement is pending. Keying the boundary on cues alone meant a movement
+ * with a family-level cue — every conditioning format, and the whole power
+ * block — could not be canonicalised at all, so a merged spelling had nowhere
+ * to land ("explosive push-ups" → "Explosive Push-up").
+ *
+ * Resolving a name and having a cue stay separate questions: `hasCuratedCue`
+ * still demands a real EXERCISE_CUES entry, so widening the registry cannot
+ * weaken the acceptance gate.
+ */
+function curatedNameRegistry(): string[] {
+  return [...new Set([
+    ...Object.keys(EXERCISE_CUES),
+    ...selectableExerciseNames(),
+    ...POWER_POOL_PENDING,
+  ])];
+}
+
+const CURATED_NAMES: string[] = curatedNameRegistry();
+const CURATED_NAME_SET: Set<string> = new Set(CURATED_NAMES);
+
 const curatedKeyByLower: Map<string, string> = new Map(
-  Object.keys(EXERCISE_CUES).map((key) => [key.toLowerCase(), key]),
+  CURATED_NAMES.map((key) => [key.toLowerCase(), key]),
 );
 
 /**
@@ -54,6 +84,11 @@ const TOKEN_EXPANSIONS: Record<string, string> = {
   bb: 'barbell',
   kb: 'kettlebell',
   rdl: 'romanian deadlift',
+  // Sam's locked list spells lifts out in full ("Speed Trap Bar Deadlift", not
+  // "speed trap bar DL"). Expanding the abbreviation here is the general form of
+  // that rule, so "trap bar DL" collapses onto "Trap Bar Deadlift" without a
+  // per-spelling alias for every lift the shorthand can decorate.
+  dl: 'deadlift',
   banded: 'band',
 };
 
@@ -135,7 +170,7 @@ function tokenSignature(raw: string): string {
  */
 const curatedKeyBySignature: Map<string, string> = (() => {
   const map = new Map<string, string>();
-  for (const key of Object.keys(EXERCISE_CUES)) {
+  for (const key of CURATED_NAMES) {
     const sig = tokenSignature(key);
     if (!map.has(sig)) map.set(sig, key);
   }
@@ -194,7 +229,7 @@ function combinations(items: readonly string[], k: number): string[][] {
  * half-kneeling OHP", "Hamstring Curls"), then a bounded superset match.
  */
 function curatedKeyForSpelling(name: string): string | null {
-  if (EXERCISE_CUES[name]) return name;
+  if (CURATED_NAME_SET.has(name)) return name;
   const ci = curatedKeyByLower.get(name.toLowerCase());
   if (ci) return ci;
   const tokens = signatureTokens(name);
@@ -205,7 +240,7 @@ function curatedKeyForSpelling(name: string): string | null {
 /** The curated cue key an incoming name maps to, or the raw name if none. */
 export function canonicalExerciseName(raw: string): string {
   if (!raw) return raw;
-  if (EXERCISE_CUES[raw]) return raw;
+  if (CURATED_NAME_SET.has(raw)) return raw;
   const ci = curatedKeyByLower.get(raw.toLowerCase());
   if (ci) return ci;
   // Bridge divergent spellings through the load-alias map FIRST — an alias is a
@@ -224,16 +259,23 @@ export function canonicalExerciseName(raw: string): string {
 }
 
 /**
- * The exercise names the app is willing to render — the curated layer itself,
- * in stable alphabetical order.
+ * The exercise names the generator may choose from — SELECTABLE POOL
+ * MEMBERSHIP, exactly, in stable alphabetical order.
  *
- * This is what the generation prompt offers the model to choose from, so the
- * generator no longer holds naming rights (device run 5). It is DERIVED, never
- * hand-copied: a cue Sam authors is offered on the very next generation, and a
- * prompt list can never drift out of step with what the app can actually cue.
+ * The vocabulary switch (Sam's locked-list changeset, 2026-07-24). It used to
+ * derive from "has a cue", which answered the wrong question: a cue means the
+ * app can DESCRIBE a movement, not that any builder can PRESCRIBE it. The
+ * generator was therefore offered 42 census-confirmed orphans — names no pool
+ * reaches — while the completeness invariant had no way to notice, because
+ * "has a cue" was both the offer and the check.
+ *
+ * Now membership of a pool a live builder selects from is the single
+ * definition, and the invariant runs in both directions (pool entry with no
+ * cue+video, cue with no pool entry) with typed-kind exemptions only. See
+ * src/data/selectableExerciseVocabulary.ts.
  */
 export function curatedExerciseVocabulary(): string[] {
-  return Object.keys(EXERCISE_CUES).sort((a, b) => a.localeCompare(b));
+  return selectableExerciseNames();
 }
 
 /** True when a name resolves to a real curated cue (never the generic fallback). */

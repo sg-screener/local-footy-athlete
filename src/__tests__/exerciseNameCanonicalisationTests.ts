@@ -40,6 +40,7 @@ import {
   EQUIPMENT_QUALIFIER_TOKENS,
   POSITION_QUALIFIER_TOKENS,
 } from '../utils/exerciseCanonicalisation';
+import { isExempt } from '../data/selectableExerciseVocabulary';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
 import { cuelessStrengthCards, enforceCuratedCueContract } from '../rules/curatedCueContract';
 
@@ -106,6 +107,12 @@ console.log('\n[3] Anchor-resolves — every loaded exercise keeps a load profil
 {
   const unloaded = pool
     .filter((name) => !CONDITIONING_META[name])
+    // Sam rules on the locked list's seven loaded additions line by line; until
+    // he does, their ratio is deliberately absent and `estimateStartingWeight`
+    // falls through to the tag heuristic. The typed `load_ruling_pending`
+    // exemption is the single record of that queue — see
+    // src/data/selectableExerciseVocabulary.ts.
+    .filter((name) => !isExempt(name, 'load'))
     .filter((name) => {
       const resolved = resolveExerciseName(name);
       return !EXERCISE_LOAD_MAP[resolved] && !isTrueBodyweightExercise(name);
