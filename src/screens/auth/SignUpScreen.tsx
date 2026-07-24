@@ -2,9 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,6 +13,7 @@ import { Button } from '../../components/common/Button';
 import { useAuthStore } from '../../store/authStore';
 import { signUp } from '../../services/auth/authService';
 import type { AuthStackParamList } from '../../types/navigation';
+import { KeyboardSafeArea } from '../../components/keyboard/KeyboardSafeArea';
 
 type SignUpScreenProps = NativeStackScreenProps<AuthStackParamList, 'SignUp'>;
 
@@ -111,14 +109,10 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    <KeyboardSafeArea
       style={styles.container}
+      scrollProps={{ contentContainerStyle: styles.scrollContent }}
     >
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
         {/* Header */}
         <View style={styles.header}>
           <Text variant="h2" color={colors.text.primary} align="center">
@@ -214,8 +208,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
             </Text>
           </Text>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardSafeArea>
   );
 }
 

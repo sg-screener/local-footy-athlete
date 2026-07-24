@@ -8,8 +8,8 @@ import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { SquatStrength } from '../../types/domain';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
@@ -40,23 +40,22 @@ export const SquatStrengthScreen: React.FC<SquatStrengthScreenProps> = ({
 }) => {
   const [selectedStrength, setSelectedStrength] = useState<SquatStrength | null>(null);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('SquatStrength');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const handleSelect = useCallback((strength: SquatStrength) => {
     setSelectedStrength(strength);
-    updateOnboardingData({ squatStrength: strength });
-    setTimeout(() => {
-      navigation.navigate('BenchStrength');
-    }, 250);
-  }, [navigation, updateOnboardingData]);
+    void commitAndAdvance({ squatStrength: strength }, () => {
+      setTimeout(() => navigation.navigate('BenchStrength'), 250);
+    });
+  }, [navigation, commitAndAdvance]);
 
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={() => {}}
       hideFooter
     >

@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   Pressable,
-  TextInput,
   ScrollView,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -11,10 +10,11 @@ import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { OnboardingInjury, InjurySeverity, InjuryCategory } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
 type InjuriesScreenProps = NativeStackScreenProps<
@@ -145,9 +145,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
   const [injuryDetails, setInjuryDetails] = useState<{ [key: string]: InjuryDetail }>({});
   const [currentInjuryIndex, setCurrentInjuryIndex] = useState(0);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Injuries');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const currentArea = selectedAreas[currentInjuryIndex];
   const currentDetail: InjuryDetail = injuryDetails[currentArea] || { movementTriggers: [], notes: '' };
@@ -209,8 +207,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
 
   const handleNo = () => {
     setHasInjuries(false);
-    updateOnboardingData({ injuries: [] });
-    navigation.navigate('Review');
+    void commitAndAdvance({ injuries: [] }, () => navigation.navigate('Review'));
   };
 
   const handleNoIssuesAfterAll = () => {
@@ -218,8 +215,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
     setSelectedAreas([]);
     setInjuryDetails({});
     setCurrentInjuryIndex(0);
-    updateOnboardingData({ injuries: [] });
-    navigation.navigate('Review');
+    void commitAndAdvance({ injuries: [] }, () => navigation.navigate('Review'));
   };
 
   const handleAreasSelected = () => {
@@ -263,8 +259,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
           notes: detail.notes || undefined,
         };
       });
-      updateOnboardingData({ injuries });
-      navigation.navigate('Review');
+      void commitAndAdvance({ injuries }, () => navigation.navigate('Review'));
     }
   };
 
@@ -303,6 +298,8 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
         stepLabel={stepLabel}
         progressPercent={progressPercent}
         onBack={() => navigation.goBack()}
+        saving={saving}
+        saveError={saveError}
         onContinue={() => {}}
         hideFooter
       >
@@ -431,7 +428,6 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
         onContinue={handleCustomAreaNext}
         continueLabel="Next"
         scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
-        keyboardAvoiding
       >
         {progressIndicator}
 
@@ -444,7 +440,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
           </Text>
         </View>
 
-        <TextInput
+        <AppTextInput
           style={styles.areaInput}
           placeholder="e.g. calf, wrist, elbow"
           placeholderTextColor={colors.text.tertiary}
@@ -589,7 +585,6 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
       continueDisabled={false}
       continueLabel={isLastInjury ? 'Continue' : 'Next injury'}
       scrollContentExtraBottomPadding={INJURY_BOTTOM_SCROLL_PADDING}
-      keyboardAvoiding
     >
       {progressIndicator}
 
@@ -602,7 +597,7 @@ export const InjuriesScreen: React.FC<InjuriesScreenProps> = ({
         </Text>
       </View>
 
-      <TextInput
+      <AppTextInput
         style={styles.notesInput}
         placeholder="e.g. Had surgery 6 months ago, avoiding heavy lifts"
         placeholderTextColor={colors.text.tertiary}

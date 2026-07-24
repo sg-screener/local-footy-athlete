@@ -54,6 +54,24 @@ v1; nothing in v1 blocks on this file.
   this. When it ships, the App Store description line may be restored to
   "shows you what will change before you approve it."
 
+## Support & data visibility (Sam, 2026-07-24)
+
+- **"Attach my program so the coach can see it"** — opt-in attachment on
+  the feedback form: bundles the athlete's current program/settings into
+  the message THEY send. No accounts, no server persistence, fits the
+  existing user-provided-content privacy declaration. Build when support
+  volume justifies it; until then support = athlete screenshots.
+- **Accounts + cloud sync (the heavyweight option)** — ONLY if
+  program-visibility support requests become common after launch. A
+  different product shape: privacy policy + App Store label overhaul,
+  auth, server storage. Explicitly deferred until user volume proves the
+  need. [SAM GATE]
+
+NOTE (2026-07-24): several items below moved PRE-launch by
+MASTER_PLAN_2026-07-23 (Journal → Phase 5C; coach free-text → Phase 5B;
+density/anchors/full-toggle → resolved in the Phase 4 design session,
+D1–D10). MASTER_PLAN governs; this file is the post-launch remainder.
+
 ## Feature backlog (unsequenced, decided-in-principle)
 
 - 5.4 pick-days-out busy flow; 5.5 missed-session day-card prompt.

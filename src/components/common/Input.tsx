@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   View,
-  TextInput,
   StyleSheet,
   ViewStyle,
   TextInputProps,
@@ -10,6 +9,7 @@ import { colors } from '../../theme/colors';
 import { spacing, borderRadius, dimensions } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { Text } from './Text';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 
 interface InputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -78,7 +78,7 @@ export const Input = ({
       <View style={inputContainerStyle}>
         {icon && <View style={styles.iconContainer}>{icon}</View>}
 
-        <TextInput
+        <AppTextInput
           {...props}
           value={value}
           onChangeText={onChangeText}

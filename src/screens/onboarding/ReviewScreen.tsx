@@ -27,6 +27,10 @@ import {
   TeamTrainingIntensity,
 } from '../../types/domain';
 import { roleBucketLabel } from '../../utils/roleBuckets';
+import {
+  assessOnboardingCompleteness,
+  onboardingIncompleteMessage,
+} from '../../utils/onboardingCompleteness';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
 type ReviewScreenProps = NativeStackScreenProps<
@@ -161,7 +165,17 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
   const onboardingData = useProfileStore((state) => state.onboardingData);
   const insets = useSafeAreaInsets();
 
+  // Refuse rather than generate around a gap. Naming the missing answer and
+  // sending the athlete to the step that owns it is the only honest response —
+  // a default that looks like an answer is worse than no answer, because they
+  // cannot tell it is wrong.
+  const completeness = assessOnboardingCompleteness(onboardingData);
+
   const handleGenerateProgram = () => {
+    if (!completeness.complete && completeness.firstIncompleteStep) {
+      navigation.navigate(completeness.firstIncompleteStep as any);
+      return;
+    }
     navigation.navigate('Complete' as any);
   };
 
@@ -361,8 +375,20 @@ export const ReviewScreen: React.FC<ReviewScreenProps> = ({ navigation }) => {
         </View>
 
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+          {completeness.complete ? null : (
+            <Text
+              variant="bodySmall"
+              color={colors.text.tertiary}
+              align="center"
+              style={styles.footerHelper}
+            >
+              {onboardingIncompleteMessage(completeness)}
+            </Text>
+          )}
           <Button
-            title="Generate My Program"
+            title={completeness.complete
+              ? 'Generate My Program'
+              : `Add ${completeness.missingSteps[0].answerLabel}`}
             onPress={handleGenerateProgram}
             size="lg"
             fullWidth
@@ -589,6 +615,10 @@ const styles = StyleSheet.create({
   summaryLabel: {
     color: colors.text.tertiary,
     fontWeight: '700',
+  },
+  footerHelper: {
+    marginBottom: 10,
+    lineHeight: 18,
   },
   footer: {
     paddingHorizontal: 20,

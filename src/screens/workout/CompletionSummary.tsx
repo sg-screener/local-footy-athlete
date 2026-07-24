@@ -5,7 +5,6 @@ import {
   Pressable,
   Modal,
   ScrollView,
-  TextInput,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../theme/colors';
@@ -15,6 +14,7 @@ import { Text } from '../../components/common/Text';
 import { Button } from '../../components/common/Button';
 import { Card } from '../../components/common/Card';
 import type { SessionFeeling } from '../../types/domain';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 
 interface CompletionSummaryProps {
   duration: number;
@@ -148,7 +148,7 @@ export const CompletionSummary = ({
               <Text variant="h4" color={colors.text.primary} style={styles.notesTitle}>
                 Notes (Optional)
               </Text>
-              <TextInput
+              <AppTextInput
                 style={styles.notesInput}
                 placeholder="Any observations or notes?"
                 placeholderTextColor={colors.text.tertiary}

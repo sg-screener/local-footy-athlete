@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import {
   View,
-  TextInput,
   StyleSheet,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -10,9 +9,10 @@ import { Text } from '../../components/common/Text';
 import { colors } from '../../theme/colors';
 import { shadows } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
 type NameScreenProps = NativeStackScreenProps<
@@ -23,15 +23,12 @@ type NameScreenProps = NativeStackScreenProps<
 export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
   const [name, setName] = useState('');
   const { label: stepLabel, progressPercent } = useOnboardingProgress('Name');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData,
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const handleContinue = () => {
     const trimmed = name.trim();
     if (trimmed.length > 0) {
-      updateOnboardingData({ firstName: trimmed });
-      navigation.navigate('BodyMeasurements');
+      void commitAndAdvance({ firstName: trimmed }, () => navigation.navigate('BodyMeasurements'));
     }
   };
 
@@ -40,6 +37,8 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={handleContinue}
       continueDisabled={name.trim().length === 0}
     >
@@ -62,7 +61,7 @@ export const NameScreen: React.FC<NameScreenProps> = ({ navigation }) => {
 
       <View style={[styles.inputCard, shadows.xs]}>
         <Feather name="user" size={19} color={colors.text.tertiary} />
-        <TextInput
+        <AppTextInput
           style={styles.textInput}
           value={name}
           onChangeText={setName}

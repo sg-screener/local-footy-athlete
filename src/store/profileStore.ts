@@ -134,6 +134,18 @@ export function restoreAcceptedProfileCompatibilityMirror(snapshot: {
 
 useProfileStore.subscribe((state) => {
   if (acceptedProfileMirrorPublicationInProgress) return;
+  // Post-acceptance mirror only.
+  //
+  // The contract this fence enforces is that ProgramStore's *accepted* profile
+  // is authoritative. Before onboarding completes there is no accepted program,
+  // so there is nothing to mirror — any snapshot present at that point records
+  // an acceptance no athlete ever made. Letting the fence run anyway reverted
+  // every onboarding answer in memory on a fresh install, which is the confirmed
+  // root cause of the 2026-07-24 device report.
+  //
+  // Reassessment: docs/PROFILE_MIRROR_OWNERSHIP_REASSESSMENT_2026-07-24.md
+  // Proof: onboardingReliabilityTests case 0 (whole-journey fresh install).
+  if (!state.isOnboardingComplete) return;
   const canonical = canonicalAcceptedProfile();
   if (!canonical ||
     JSON.stringify(state.onboardingData) === JSON.stringify(canonical)) return;

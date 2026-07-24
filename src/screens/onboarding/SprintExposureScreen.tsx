@@ -8,9 +8,9 @@ import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { SprintExposure } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
@@ -44,23 +44,22 @@ export const SprintExposureScreen: React.FC<SprintExposureScreenProps> = ({
 }) => {
   const [selectedExposure, setSelectedExposure] = useState<SprintExposure | null>(null);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('SprintExposure');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const handleSelect = useCallback((exposure: SprintExposure) => {
     setSelectedExposure(exposure);
-    updateOnboardingData({ sprintExposure: exposure });
-    setTimeout(() => {
-      navigation.navigate('RecentTrainingLoad');
-    }, 250);
-  }, [navigation, updateOnboardingData]);
+    void commitAndAdvance({ sprintExposure: exposure }, () => {
+      setTimeout(() => navigation.navigate('RecentTrainingLoad'), 250);
+    });
+  }, [navigation, commitAndAdvance]);
 
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={() => {}}
       hideFooter
     >

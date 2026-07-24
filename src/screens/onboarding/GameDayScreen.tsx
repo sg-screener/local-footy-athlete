@@ -4,9 +4,9 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Text, SelectableTile } from '../../components/common';
 import { colors } from '../../theme/colors';
 import { OnboardingStackParamList } from '../../types/navigation';
-import { useProfileStore } from '../../store/profileStore';
 import { GameDay } from '../../types/domain';
 import { useOnboardingProgress } from '../../hooks/useOnboardingProgress';
+import { useOnboardingStepCommit } from '../../hooks/useOnboardingStepCommit';
 import { OnboardingLayout } from '../../components/onboarding/OnboardingLayout';
 import { headingXL } from '../../components/onboarding/onboardingStyles';
 
@@ -34,23 +34,22 @@ const GAME_DAY_OPTIONS: { id: GameDay; label: string }[] = [
 export const GameDayScreen: React.FC<GameDayScreenProps> = ({ navigation }) => {
   const [selectedGameDay, setSelectedGameDay] = useState<GameDay | null>(null);
   const { label: stepLabel, progressPercent } = useOnboardingProgress('GameDay');
-  const updateOnboardingData = useProfileStore(
-    (state) => state.updateOnboardingData
-  );
+  const { commitAndAdvance, saving, saveError } = useOnboardingStepCommit();
 
   const handleSelect = useCallback((day: GameDay) => {
     setSelectedGameDay(day);
-    updateOnboardingData({ gameDay: day });
-    setTimeout(() => {
-      navigation.navigate('TeamTrainingDays');
-    }, 250);
-  }, [navigation, updateOnboardingData]);
+    void commitAndAdvance({ gameDay: day }, () => {
+      setTimeout(() => navigation.navigate('TeamTrainingDays'), 250);
+    });
+  }, [navigation, commitAndAdvance]);
 
   return (
     <OnboardingLayout
       stepLabel={stepLabel}
       progressPercent={progressPercent}
       onBack={() => navigation.goBack()}
+      saving={saving}
+      saveError={saveError}
       onContinue={() => {}}
       hideFooter
     >

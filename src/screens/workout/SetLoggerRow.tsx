@@ -3,7 +3,6 @@ import {
   View,
   StyleSheet,
   Pressable,
-  TextInput,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { colors } from '../../theme/colors';
@@ -11,6 +10,7 @@ import { spacing, borderRadius } from '../../theme/spacing';
 import { typography } from '../../theme/typography';
 import { Text } from '../../components/common/Text';
 import type { LoggedSet } from '../../types/domain';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 
 interface SetLoggerRowProps {
   set: LoggedSet;
@@ -116,7 +116,7 @@ export const SetLoggerRow = ({
         </Pressable>
 
         {isEditingWeight ? (
-          <TextInput
+          <AppTextInput
             style={styles.weightInput}
             placeholder="0"
             placeholderTextColor={colors.text.tertiary}

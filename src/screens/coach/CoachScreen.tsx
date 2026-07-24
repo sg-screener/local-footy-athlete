@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
+  TextInput,
   View,
   StyleSheet,
-  TextInput,
   Animated,
   Pressable,
   FlatList,
@@ -115,6 +115,7 @@ import {
   observeCoachFixtureReply,
   type CoachFixtureReplyObservation,
 } from '../../utils/coachFixtureReplyObservation';
+import { AppTextInput } from '../../components/keyboard/AppTextInput';
 // NOTE: SMOKE_WEDNESDAY_* fixture constants are now consumed exclusively by
 // SmokeCoachBikeHarness (src/components/dev/SmokeCoachBikeHarness.tsx).
 // CoachScreen no longer owns the visible-week preflight markers — they
@@ -2330,7 +2331,7 @@ export default function CoachScreen() {
 
         {/* Input bar */}
         <View style={styles.inputContainer}>
-          <TextInput
+          <AppTextInput
             ref={inputRef}
             style={styles.textInput}
             placeholder="Ask the coach..."
