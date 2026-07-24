@@ -192,7 +192,8 @@
     "e2e:maestro:ios": "scripts/dev-e2e/run-maestro-ios.sh",
     "e2e:explorer-nine:live": "sucrase-node scripts/run-explorer-nine-live.ts",
     "test:readiness-ownership": "TZ=Australia/Melbourne sucrase-node src/__tests__/readinessSourceFactOwnershipTests.ts",
-    "test:fact-horizon": "TZ=Australia/Melbourne sucrase-node src/__tests__/durableFactHorizonTests.ts"
+    "test:fact-horizon": "TZ=Australia/Melbourne sucrase-node src/__tests__/durableFactHorizonTests.ts",
+    "test:injury-authority": "TZ=Australia/Melbourne sucrase-node src/__tests__/injuryAuthorityOwnershipTests.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

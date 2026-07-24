@@ -201,7 +201,45 @@ export function applyGenerationSafetyToSection18Contract(args: {
     readiness?.tier === 'major_reduction' || readiness?.tier === 'full_pause' ||
     cookedReadiness || fullPause;
   const readinessFieldRestriction = significantReadinessRestriction;
-  const hasFieldRestriction = lowerBodyRestriction || upperBodyRestriction || readinessFieldRestriction;
+  // FIELD participation — what the athlete produces at team training and on game
+  // day: conditioning, running, high-speed exposure. It is threatened by a
+  // lower-body or back restriction, and by low readiness. It is NOT threatened by
+  // an upper-body one: the Bible pauses the AFFECTED work, and a shoulder does
+  // not stop someone running (:2131-2134, and the same shape per body area).
+  //
+  // Including `upperBodyRestriction` here demoted EVERY anchor to `modified` for
+  // a shoulder injury, silently zeroing their conditioning and sprint production
+  // claim — while no branch below ever authorises a conditioning reduction. The
+  // contract then reached the §18 gate asserting both "these anchors no longer
+  // produce conditioning" and "this week requires 3 conditioning exposures", so
+  // it was unsatisfiable before the gate ran, and the single fact+week
+  // transaction destroyed the athlete's injury report along with the week. That
+  // is why NO injury from 6/10 up could be recorded, in any region.
+  //
+  // Sam's D10 ruling: the default never assumes an injury costs field
+  // participation. Where it genuinely might, the athlete is ASKED (Stage 2b) and
+  // the answer becomes a typed fact — an assumption is not a substitute for the
+  // question. See Addendum A of the durable-athlete-state reassessment and
+  // `docs/investigations/RIDER0_INJURY_AUTHORITY_AT_THE_GATE_2026-07-24.md`.
+  //
+  // SCOPE: this removes the UPPER-BODY inference only. A lower-body or back
+  // injury still withdraws field participation here, and the same argument says
+  // it should not — but for that region the withdrawal is structurally coupled
+  // to the `sprint_high_speed_frequency <= 0` reduction below and to
+  // `prohibitedSprintHighSpeed`, which forces the week's total high-speed
+  // ceiling (anchor credit included) to zero. Moving one without the other just
+  // reverses the contradiction: authorised 0 versus an athlete who is still
+  // playing on Saturday. Three attempts at decoupling each surfaced a new
+  // failure elsewhere in the safety boundary, which is the signal to stop
+  // patching and settle ownership first. Lower-body and back injuries at 6/10
+  // and above therefore remain unrecordable, pinned RED and quarantined by
+  // invariants I3/I4, and belong to the §18 elapsed-week / materialisation
+  // reassessment along with T4 and I6.
+  //
+  // Low readiness continues to withdraw field participation, and legitimately so:
+  // it authors matching main-strength, conditioning and sprint reductions in the
+  // same pass, so its contracts stay satisfiable.
+  const hasFieldRestriction = lowerBodyRestriction || readinessFieldRestriction;
 
   if (prohibited.length > 0) {
     addReduction(contract, {
@@ -371,6 +409,19 @@ export function applyGenerationSafetyToSection18Contract(args: {
 
   contract = refreshSection18SafetyPolicy(contract, {
     cookedReadiness,
+    // `prohibitedSprintHighSpeed` forces the week's high-speed ceiling to a hard
+    // 0 — ALL exposure, including the athlete's own team-training and game
+    // running (`weeklyExposureContractV2.ts:455`). That is true under a full
+    // pause or a readiness restriction, both of which also withdraw anchor
+    // participation, so the claim matches the week.
+    //
+    // It stays TRUE for a lower-body injury — the app must never prescribe a
+    // speed session to a torn hamstring, and the finaliser strips speed content
+    // on this flag. What changed is downstream: the flag no longer forces the
+    // week's total high-speed ceiling to 0 by itself. The typed
+    // `injury_restriction` reduction above carries the honest number
+    // (`anchors.length`: no app sprint, the athlete's own game exposure intact),
+    // and `buildSafetyPolicy` now reads it rather than assuming zero.
     prohibitedSprintHighSpeed: lowerBodyRestriction || significantReadinessRestriction || fullPause,
     prohibitedPower,
     prohibitedPowerFamilies,
