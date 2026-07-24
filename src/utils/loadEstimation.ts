@@ -171,6 +171,22 @@ export const EXERCISE_LOAD_MAP: Record<string, ExerciseLoadProfile> = {
 
   // ═══ LOWER BODY — MACHINE ═══
   'Leg Press':              { anchor: 'squat', ratio: 1.30, equipment: 'machine' },
+
+  // ═══ CARRIES — stored and displayed PER HAND (Sam, 2026-07-24) ═══
+  // Farmer's total is 0.75 x bench across both hands; the number the athlete
+  // sees is one hand's worth. Suitcase is a single dumbbell at the same
+  // per-hand load. Their cues state this.
+  'Farmer Carry':           { anchor: 'bench', ratio: 0.375, equipment: 'dumbbell' },
+  'Suitcase Carry':         { anchor: 'bench', ratio: 0.375, equipment: 'dumbbell' },
+  'Overhead Carry':         { anchor: 'bench', ratio: 0.20, equipment: 'dumbbell' },
+
+  // ═══ MACHINE / ACCESSORY ADDITIONS (Sam, 2026-07-24) ═══
+  'Adductor Machine':       { anchor: 'squat', ratio: 0.25, equipment: 'machine' },
+  // Same machine as Lat Pulldown, different handle — mirrors it exactly.
+  'Neutral-Grip Pulldown':  { anchor: 'bench', ratio: 0.55, equipment: 'cable' },
+  'Single-Leg Squat (to Box)': { anchor: 'squat', ratio: 0.16, equipment: 'dumbbell' },
+  'Z-Press':                { anchor: 'bench', ratio: 0.35, equipment: 'barbell' },
+
   'Single-Leg Leg Press':   { anchor: 'squat', ratio: 0.60, equipment: 'machine' },
   'Calf Raises':            { anchor: 'squat', ratio: 0.50, equipment: 'machine' },
 
@@ -670,6 +686,9 @@ const PREHAB_NO_LOAD_EXERCISES = new Set([
   'Copenhagen Plank (Half)',
   'Long-Lever Copenhagen',
   'Groin Squeeze',
+  // Zone-1 cyclical recovery — no external load by definition.
+  'Incline Treadmill Walk',
+  'Light Walk or Stationary Bike',
   'Single-Leg Calf Raise',
   'Seated Calf Raise',
   'Tib Raises',

@@ -102,15 +102,16 @@ const UNPOOLED_BY_RULING: Record<string, string> = {
 };
 
 /**
- * Pool entries with no load handling — no EXERCISE_LOAD_MAP profile and not
- * true-bodyweight. Each needs a loadRatio decision from Sam; the table was
- * put to him on 2026-07-24 and these stay recorded until he rules.
+ * Pool entries awaiting a load-handling ruling from Sam.
+ *
+ * EMPTY as of 2026-07-24 — Sam ruled on all nine (carries re-anchored to bench
+ * and stored per hand, Neutral-Grip Pulldown mirroring Lat Pulldown, the two
+ * zone-1 walks moved to TRUE_BODYWEIGHT_EXERCISES, the rest as proposed). It
+ * stays here deliberately: the `[1]` assertion below now demands EVERY pool
+ * entry have defined load handling, and `[5]` fails if anything is ever added
+ * back without a ruling. Emptiness is the proof, not a comment.
  */
-const LOAD_HANDLING_PENDING_SAM = new Set([
-  'Adductor Machine', 'Farmer Carry', 'Incline Treadmill Walk',
-  'Light Walk or Stationary Bike', 'Neutral-Grip Pulldown', 'Overhead Carry',
-  'Single-Leg Squat (to Box)', 'Suitcase Carry', 'Z-Press',
-]);
+const LOAD_HANDLING_PENDING_SAM = new Set<string>([]);
 
 /* ── Inputs ── */
 
@@ -141,7 +142,7 @@ console.log('\n[1] Pool → cue / video / load / tags');
     [...pool].filter((n) =>
       !ZONE_1_NO_VIDEO_BY_DESIGN.has(n) && !conditioning.has(n) && !lookupExerciseDemo(n).url));
 
-  ok('every pool entry has defined load handling (or is a recorded pending case)',
+  ok('EVERY pool entry has defined load handling — zero pending',
     [...pool].filter((n) =>
       !EXERCISE_LOAD_MAP[resolveExerciseName(n)]
       && !isTrueBodyweightExercise(n)
@@ -209,10 +210,9 @@ console.log('\n[5] The whitelists themselves stay honest');
     [...MOBILITY_NO_TAGS_BY_DESIGN].filter((n) => EXERCISE_TAGS[n]),
     'these are now tagged — remove them from the whitelist');
 
-  ok('no LOAD_HANDLING_PENDING_SAM entry has quietly been resolved',
-    [...LOAD_HANDLING_PENDING_SAM].filter((n) =>
-      EXERCISE_LOAD_MAP[resolveExerciseName(n)] || isTrueBodyweightExercise(n)),
-    'Sam has ruled on these — remove them from the whitelist');
+  ok('the load-handling pending list is empty',
+    [...LOAD_HANDLING_PENDING_SAM],
+    'every entry now carries a Sam ruling; nothing may be parked here silently');
 }
 
 const total = passed + failures.length;

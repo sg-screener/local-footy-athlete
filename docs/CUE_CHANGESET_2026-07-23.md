@@ -62,6 +62,9 @@ not place. Sam ruled on each; the library below already reflects them.
   so every athlete can always be given it. The band version stays deleted.
   (This also closes a pre-existing orphan: `recoveryAddonBuilder` already
   prescribed a bare "Groin Squeeze" that matched no cue, video, pool or tag.)
+- **Carry load, per hand** (Sam, 2026-07-24). Farmer and Overhead carries store
+  and display the weight **in each hand**, not the total, so their cues say so.
+  Suitcase Carry is a single dumbbell and needs no such wording.
 - **Abductor Machine** — NEW exercise (Sam, 2026-07-24). Cue + video + tags ship;
   its own hip/glute classification, NOT a mirror of Adductor Machine (it works
   the glutes/outer hip, not the groin).
@@ -132,7 +135,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Easy Ski**: Smooth technique, conversational pace. | Focus on form, not intensity.
 - **Explosive Landmine Press**: Split stance, drive hard into the bar. | Full lockout, reset quickly.
 - **Face Pull**: Pull to the forehead, open the hands out. | Squeeze the rear delts, slow return.
-- **Farmer Carry**: Shoulders packed, walk tall. | Breathe and keep moving.
+- **Farmer Carry**: Shoulders packed, walk tall. | Breathe and keep moving. Weight shown is per hand.
 - **Flush Run**: Easy jog, nothing above zone one or two | Move and loosen up.
 - **Foam Roll — Calves & Outer Shins**: Slow passes, pause on tender spots. | Breathe through each hold.
 - **Foam Roll — Hip Flexor, Quad, Adductors**: Work the full length, hold on knots. | Relax into the pressure.
@@ -175,7 +178,7 @@ not place. Sam ruled on each; the library below already reflects them.
 - **Nordic Lower**: Lower as slow as you can. | Fight gravity the whole way down.
 - **Open Book Thoracic Rotation**: Knees stacked, rotate through the upper back. | Follow the hand with the eyes.
 - **Outdoor Walk**: Easy pace, arms swinging naturally. | Get outside and move.
-- **Overhead Carry**: Stand tall, arms overhead, stay tight through midline | (none)
+- **Overhead Carry**: Stand tall, arms overhead, stay tight through midline | Weight shown is per hand.
 - **Overhead Press**: Ribs down, bar finishes over the ears. | Press hard and finish strong.
 - **Overhead Tricep Extension**: Full stretch at the bottom, press to lockout. | Elbows stay pointed forward.
 - **Pigeon Stretch**: Front shin across bench, square the hips. | Sink in and breathe.

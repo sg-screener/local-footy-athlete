@@ -356,7 +356,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Farmer Carry': {
     primaryCue: 'Shoulders packed, walk tall.',
-    secondaryCue: 'Breathe and keep moving.',
+    secondaryCue: 'Breathe and keep moving. Weight shown is per hand.',
   },
   'Flush Run': {
     primaryCue: 'Easy jog, nothing above zone one or two',
@@ -528,7 +528,7 @@ export const EXERCISE_CUES: Record<string, ExerciseCue> = {
   },
   'Overhead Carry': {
     primaryCue: 'Stand tall, arms overhead, stay tight through midline',
-    secondaryCue: '',
+    secondaryCue: 'Weight shown is per hand.',
   },
   'Overhead Press': {
     primaryCue: 'Ribs down, bar finishes over the ears.',
