@@ -101,9 +101,18 @@ console.log('\n[1] The convention exists and owns the primitives');
     : '';
   ok(
     'KeyboardSafeArea owns keyboard avoidance',
-    /KeyboardAvoidingView/.test(safeArea) &&
+    /KeyboardStickyView/.test(safeArea) &&
       /from 'react-native-keyboard-controller'/.test(safeArea),
-    'RN\'s own KeyboardAvoidingView cannot track the keyboard frame on Android',
+    'E3: the CTA footer must ride above the keypad. KeyboardStickyView moves it '
+      + 'on the UI thread; RN\'s own KeyboardAvoidingView cannot track the '
+      + 'keyboard frame reliably on Android',
+  );
+  ok(
+    'KeyboardSafeArea does not stack two avoidance primitives',
+    !/<KeyboardAvoidingView[\s>]/.test(safeArea),
+    'nesting KeyboardAwareScrollView inside a KeyboardAvoidingView shifted the '
+      + 'same content twice and rendered a second, floating Done bar over the '
+      + 'screen title (simulator pass, 2026-07-24)',
   );
   ok(
     'KeyboardSafeArea keeps taps working while the keyboard is up',
@@ -124,6 +133,12 @@ console.log('\n[1] The convention exists and owns the primitives');
     /<KeyboardDoneAccessory \/>/.test(safeArea),
     'one owner renders it once — screens must not have to remember',
   );
+  ok(
+    'the Done bar and a footer CTA never contend for the same strip',
+    /\{footer \? null : <KeyboardDoneAccessory \/>\}/.test(safeArea),
+    'rendering both put the toolbar on top of Continue (simulator pass, '
+      + '2026-07-24). Where there is a CTA above the keypad, it is the exit.',
+  );
 }
 
 console.log('\n[2] No screen keeps its own keyboard handling');
@@ -141,6 +156,10 @@ console.log('\n[2] No screen keeps its own keyboard handling');
     if (/(?<![\w.])<TextInput[\s/>]/.test(source)) rawInputOffenders.push(file);
     if (/<KeyboardAvoidingView[\s>]/.test(source)) rawAvoidanceOffenders.push(file);
     if (/<KeyboardAwareScrollView[\s>]/.test(source)) rawAvoidanceOffenders.push(file);
+    // KeyboardStickyView is intentionally NOT scanned: CoachScreen's message
+    // composer uses one directly and predates this convention. It is a narrower
+    // primitive than an avoidance container, and migrating that composer is out
+    // of this unit's scope — recorded in the unit report's NOT-COVERED.
     if (/<InputAccessoryView[\s>]/.test(source) || /<KeyboardToolbar[\s>]/.test(source)) {
       rawAccessoryOffenders.push(file);
     }
