@@ -38,6 +38,7 @@ import {
 import {
   mostRecentMissedSession,
   missedSessionFeedback,
+  programHistoryBoundaryFromCreatedAt,
   type MissedSession,
   type MissedSessionResponse,
 } from '../../utils/missedSessions';
@@ -629,8 +630,13 @@ export function useHomeScreen() {
         weekDays,
         todayISO: todayISOLocal(),
         sessionFeedback,
+        // E6: days before the program existed are history — display context,
+        // never prompted, never counted missed.
+        programHistoryBeforeISO: programHistoryBoundaryFromCreatedAt(
+          currentProgram?.createdAt,
+        ),
       }),
-    [weekDays, sessionFeedback],
+    [weekDays, sessionFeedback, currentProgram?.createdAt],
   );
 
 
