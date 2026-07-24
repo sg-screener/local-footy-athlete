@@ -12,6 +12,15 @@ import { colors } from '../../theme/colors';
 import { shadows } from '../../theme/spacing';
 import { KeyboardSafeArea } from '../keyboard/KeyboardSafeArea';
 
+/**
+ * The breathing gap between the Continue CTA and the top of the keypad while the
+ * keyboard is up (Sam, device run 5). Flush was correct against the run-3 bug —
+ * the CTA had been floating a whole safe-area inset above the keypad — but zero
+ * gap made the two read as one slab. Small and fixed: enough separation to see
+ * the button as a button, not enough to read as the old float.
+ */
+const KEYBOARD_BREATHING_GAP = 8;
+
 interface OnboardingLayoutProps {
   children: React.ReactNode;
   progressPercent: number;
@@ -86,11 +95,17 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
   // keypad then settles (run-4 device finding). So the inset is interpolated on
   // the reanimated keyboard PROGRESS (0 closed .. 1 open) that KeyboardStickyView
   // also rides, on the UI thread: inset-collapse and lift are one motion, flush.
+  //
+  // Run-5 polish (Sam): fully flush read too tight — the CTA and the keypad
+  // merged into one slab. The keyboard-up terminus is now a small breathing gap
+  // rather than 0. It is a FLOOR on the same animated inset, not a second
+  // offset: one clock, so the run-4 overshoot cannot come back, and the resting
+  // home-indicator clearance is unchanged.
   const insets = useSafeAreaInsets();
   const { progress: keyboardProgress } = useReanimatedKeyboardAnimation();
   const restingBottomInset = Math.max(insets.bottom, 12);
   const footerInsetStyle = useAnimatedStyle(() => ({
-    paddingBottom: (1 - keyboardProgress.value) * restingBottomInset,
+    paddingBottom: KEYBOARD_BREATHING_GAP + (1 - keyboardProgress.value) * (restingBottomInset - KEYBOARD_BREATHING_GAP),
   }));
 
   const footer = hideFooter ? null : (

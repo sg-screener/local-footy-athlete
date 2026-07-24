@@ -383,7 +383,12 @@ section('8. buildWorkoutsFromCoach integration');
   const aiExercises = [
     { name: 'Back Squat', sets: 4, repsMin: 3, repsMax: 3 },
     { name: 'Walking Lunges', sets: 3, repsMin: 8, repsMax: 10 },
-    { name: 'Plank', sets: 3, repsMin: 30, repsMax: 30 },
+    // A curated, non-pool name: it must pass rotation through untouched. It has
+    // to be a name the app can actually CUE — the acceptance-time vocabulary
+    // contract now refuses a program carrying one it cannot (device run 5), and
+    // the app has no cue for a plain front 'Plank' (tracked in the master census
+    // as a curation gap for Sam, not a defect in this test).
+    { name: 'Side Plank', sets: 3, repsMin: 30, repsMax: 30 },
   ];
   const coachWorkout = {
     dayOfWeek: 1,
@@ -422,9 +427,9 @@ section('8. buildWorkoutsFromCoach integration');
   assert(rotatedNames[1] === expectedAccessory,
     `mc=2 w=1 accessory rotates: got ${rotatedNames[1]}, expected ${expectedAccessory}`);
 
-  // Plank (unmanaged) passes through regardless of context
-  assert(rotatedNames[2] === 'Plank',
-    `Non-pool Plank preserved under rotation (got ${rotatedNames[2]})`);
+  // Side Plank (unmanaged) passes through regardless of context
+  assert(rotatedNames[2] === 'Side Plank',
+    `Non-pool Side Plank preserved under rotation (got ${rotatedNames[2]})`);
 }
 
 // ─────────────────────────────────────────────────────────────────

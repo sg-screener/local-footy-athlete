@@ -15,11 +15,23 @@
  * Resolution order:
  *   1. Already a curated cue key (exact).
  *   2. Case-insensitive curated key.
- *   3. The load-alias resolver (`resolveExerciseName`, plurals/possessives) —
- *      taken only when it lands on a curated cue key.
- * Otherwise the raw name is returned unchanged; the vocabulary-closure test
+ *   3. The load-alias resolver (`resolveExerciseName`) — a curator's explicit
+ *      ruling about a spelling, so it outranks any inferred match. Its TARGET is
+ *      then resolved by rules 1/4/5 like any other spelling.
+ *   4. Token signature: word order, number and in-compound abbreviation removed.
+ *   5. Bounded superset match: shed equipment/position qualifier tokens while
+ *      the remainder resolves to exactly one curated key.
+ * Otherwise the raw name is returned unchanged, and the acceptance gate
+ * (`enforceCuratedCueContract`) REFUSES the program rather than render it — an
+ * unresolved name is a loud generation-contract violation, never a silent
+ * cueless card (Sam ruling, device run 5). The vocabulary-closure test
  * (exerciseNameCanonicalisationTests) fails the build if a name the app can
  * prescribe does not land on a curated key here.
+ *
+ * The upstream half of the same contract: the generation prompt now offers this
+ * vocabulary (`curatedExerciseVocabulary`) and instructs selection from it only,
+ * so the generator no longer holds naming rights. Widening this matcher without
+ * that is a permanent tail-chase.
  */
 import { EXERCISE_CUES } from '../data/exerciseCues';
 import { resolveExerciseName } from './loadEstimation';
@@ -42,25 +54,78 @@ const TOKEN_EXPANSIONS: Record<string, string> = {
   bb: 'barbell',
   kb: 'kettlebell',
   rdl: 'romanian deadlift',
+  banded: 'band',
 };
 
 /**
- * A word-order-independent signature: lowercase, punctuation/hyphens to spaces,
- * abbreviations expanded to the curated full words, tokens sorted. Two spellings
- * that differ only in word order or in-compound abbreviation share a signature;
- * spellings with a different set of words do not (no partial/substring matching,
- * so no false positives).
+ * Number is not part of a movement's identity: "Hamstring Curls" and "Hamstring
+ * Curl" are the same lift. Plurals used to be handled ad-hoc by whole-string
+ * aliases, so whichever plural nobody had thought of rendered cueless (device
+ * run 5). Singularisation is applied symmetrically to both sides of the
+ * signature, so it can never change which names are distinguishable — only
+ * which spellings collapse onto the same one.
  */
-function tokenSignature(raw: string): string {
-  return raw
+function singulariseToken(token: string): string {
+  if (token.length <= 2 || !/[a-z]s$/.test(token)) return token;
+  if (/ies$/.test(token)) return `${token.slice(0, -3)}y`;
+  // "-es" is only a plural suffix when the STEM is a real sibilant ending
+  // ("presses" -> "press", "boxes" -> "box"). A stem that merely ends in a
+  // single s or z is a silent-e word, so only the "s" belongs to the plural
+  // ("releases" -> "release", "squeezes" -> "squeeze", "raises" -> "raise").
+  if (/es$/.test(token)) {
+    const stem = token.slice(0, -2);
+    if (/(?:ss|zz|ch|sh|x)$/.test(stem)) return stem;
+  }
+  if (/ss$/.test(token)) return token;          // "press", "cross" are singular
+  return token.slice(0, -1);
+}
+
+/**
+ * Qualifier tokens a generator decorates a movement with: the equipment it is
+ * loaded with and the position/setup it is performed in. They are the tokens a
+ * superset spelling adds ("… OHP (DB)", "Incline DB Row (Chest Supported)"), and
+ * the ONLY tokens the boundary may drop — never a token that carries the
+ * movement's identity ("single", "arm", "chest", "supported", "row").
+ */
+export const EQUIPMENT_QUALIFIER_TOKENS = new Set([
+  'dumbbell', 'barbell', 'kettlebell', 'cable', 'machine', 'band',
+  'bodyweight', 'smith', 'weighted', 'plate',
+]);
+export const POSITION_QUALIFIER_TOKENS = new Set([
+  'incline', 'decline', 'seated', 'standing', 'lying', 'kneeling', 'half',
+  'supported', 'alternating', 'staggered', 'elevated', 'close', 'wide', 'neutral',
+]);
+const QUALIFIER_TOKENS = new Set([...EQUIPMENT_QUALIFIER_TOKENS, ...POSITION_QUALIFIER_TOKENS]);
+
+/** How many qualifier tokens a superset spelling may shed. Bounded on purpose. */
+const MAX_DROPPED_QUALIFIERS = 2;
+
+/**
+ * The normalised, de-duplicated, sorted tokens of a name. Lowercase,
+ * punctuation/hyphens to spaces, singularised, abbreviations expanded to the
+ * curated full words. De-duplication makes the signature a SET, so appending a
+ * qualifier a name already carries ("Incline DB Bench (DB)") is a no-op.
+ */
+export function signatureTokens(raw: string): string[] {
+  const tokens = raw
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, ' ')
     .trim()
     .split(/\s+/)
     .filter(Boolean)
-    .flatMap((token) => (TOKEN_EXPANSIONS[token] ?? token).split(' '))
-    .sort()
-    .join(' ');
+    .map(singulariseToken)
+    .flatMap((token) => (TOKEN_EXPANSIONS[token] ?? token).split(' '));
+  return [...new Set(tokens)].sort();
+}
+
+/**
+ * A word-order-independent signature. Two spellings that differ only in word
+ * order, number, or in-compound abbreviation share a signature; spellings with a
+ * different set of words do not (no partial/substring matching, so no false
+ * positives).
+ */
+function tokenSignature(raw: string): string {
+  return signatureTokens(raw).join(' ');
 }
 
 /**
@@ -77,27 +142,98 @@ const curatedKeyBySignature: Map<string, string> = (() => {
   return map;
 })();
 
+/**
+ * A curated key reached by shedding qualifier tokens from a SUPERSET spelling,
+ * or null.
+ *
+ * Token-sort equality can only match a name with exactly the curated word set,
+ * so a generator that decorates a movement with the equipment or position it
+ * used ("Single Arm Half Kneeling OHP (DB)") never matched and rendered blank
+ * (device run 5). This sheds qualifier tokens — fewest first, at most
+ * `MAX_DROPPED_QUALIFIERS` — and adopts the result ONLY when exactly one curated
+ * key is reachable at that depth. Fewest-first is what makes the more specific
+ * key win: "Incline DB Row (Chest Supported)" sheds only "incline" and lands on
+ * "Chest-Supported DB Row" rather than shedding "dumbbell" too and flattening to
+ * "Chest Supported Row". Two distinct keys at the same depth is genuine
+ * ambiguity: the name stays unresolved and the acceptance gate refuses it, which
+ * is the honest outcome — never a guessed cue.
+ */
+function resolveBySheddingQualifiers(tokens: readonly string[]): string | null {
+  const shed = tokens.filter((token) => QUALIFIER_TOKENS.has(token));
+  const depth = Math.min(MAX_DROPPED_QUALIFIERS, shed.length);
+  for (let k = 1; k <= depth; k += 1) {
+    const reached = new Set<string>();
+    for (const subset of combinations(shed, k)) {
+      const remainder = tokens.filter((token) => !subset.includes(token));
+      if (remainder.length === 0) continue;
+      const key = curatedKeyBySignature.get(remainder.join(' '));
+      if (key) reached.add(key);
+    }
+    if (reached.size === 1) return [...reached][0];
+    if (reached.size > 1) return null;   // ambiguous at the shallowest depth — refuse
+  }
+  return null;
+}
+
+/** Every k-sized subset of `items` (k <= 2 in practice, so this stays trivial). */
+function combinations(items: readonly string[], k: number): string[][] {
+  if (k === 0) return [[]];
+  const out: string[][] = [];
+  for (let i = 0; i <= items.length - k; i += 1) {
+    for (const rest of combinations(items.slice(i + 1), k - 1)) {
+      out.push([items[i], ...rest]);
+    }
+  }
+  return out;
+}
+
+/**
+ * The curated key a single spelling lands on, or null: exact, then
+ * case-insensitive, then a token-normalised signature (so a reordered,
+ * pluralised or in-compound abbreviated spelling still lands — "single-arm
+ * half-kneeling OHP", "Hamstring Curls"), then a bounded superset match.
+ */
+function curatedKeyForSpelling(name: string): string | null {
+  if (EXERCISE_CUES[name]) return name;
+  const ci = curatedKeyByLower.get(name.toLowerCase());
+  if (ci) return ci;
+  const tokens = signatureTokens(name);
+  return curatedKeyBySignature.get(tokens.join(' '))
+    ?? resolveBySheddingQualifiers(tokens);
+}
+
 /** The curated cue key an incoming name maps to, or the raw name if none. */
 export function canonicalExerciseName(raw: string): string {
   if (!raw) return raw;
   if (EXERCISE_CUES[raw]) return raw;
-  const lower = raw.toLowerCase();
-  const ci = curatedKeyByLower.get(lower);
+  const ci = curatedKeyByLower.get(raw.toLowerCase());
   if (ci) return ci;
-  // Bridge divergent spellings through the load-alias map, but only adopt the
-  // result when it is itself a curated key (otherwise keep the raw name).
+  // Bridge divergent spellings through the load-alias map FIRST — an alias is a
+  // curator's explicit ruling about what a spelling means, so it outranks any
+  // inferred match. The alias TARGET is then resolved by the same rules as any
+  // other spelling: it used to be adopted only on an exact/case-insensitive hit,
+  // so an alias pointing at a cosmetically different spelling of a curated key
+  // ("Chest Supported DB Row" vs the curated "Chest-Supported DB Row") silently
+  // resolved to nothing and the card rendered blank.
   const resolved = resolveExerciseName(raw);
   if (resolved !== raw) {
-    if (EXERCISE_CUES[resolved]) return resolved;
-    const resolvedCi = curatedKeyByLower.get(resolved.toLowerCase());
-    if (resolvedCi) return resolvedCi;
+    const viaAlias = curatedKeyForSpelling(resolved);
+    if (viaAlias) return viaAlias;
   }
-  // Last: a token-normalised signature match, so a reordered or in-compound
-  // abbreviated spelling ("single-arm half-kneeling OHP") still lands on its
-  // curated key. This is what the whole-string alias table above cannot do.
-  const bySignature = curatedKeyBySignature.get(tokenSignature(raw));
-  if (bySignature) return bySignature;
-  return raw;
+  return curatedKeyForSpelling(raw) ?? raw;
+}
+
+/**
+ * The exercise names the app is willing to render — the curated layer itself,
+ * in stable alphabetical order.
+ *
+ * This is what the generation prompt offers the model to choose from, so the
+ * generator no longer holds naming rights (device run 5). It is DERIVED, never
+ * hand-copied: a cue Sam authors is offered on the very next generation, and a
+ * prompt list can never drift out of step with what the app can actually cue.
+ */
+export function curatedExerciseVocabulary(): string[] {
+  return Object.keys(EXERCISE_CUES).sort((a, b) => a.localeCompare(b));
 }
 
 /** True when a name resolves to a real curated cue (never the generic fallback). */

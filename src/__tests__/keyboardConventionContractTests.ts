@@ -332,6 +332,39 @@ console.log(
   );
 }
 
+console.log(
+  '\n[6c] The CTA keeps a small breathing gap above the keypad (run-5 Sam polish)',
+);
+{
+  // Run-5 device truth: fully flush read TOO TIGHT — the Continue button and the
+  // keypad became one undifferentiated slab. Sam ruling: keep a small fixed
+  // breathing gap between the CTA and the keypad. It is a floor on the SAME
+  // animated inset, not a second offset: the footer still interpolates on the
+  // reanimated keyboard progress ([6b]), it just lands on the gap instead of 0.
+  // Zero would be flush again; a resting-inset-sized value is the run-3 bug.
+  const layout = read('components/onboarding/OnboardingLayout.tsx');
+  ok(
+    'the breathing gap is a named constant, not an inline magic number',
+    /KEYBOARD_BREATHING_GAP\s*=\s*8\b/.test(layout),
+    'Sam asked for ~8px; naming it keeps the CTA/keypad relationship reviewable',
+  );
+  ok(
+    'the keyboard-open inset lands on the breathing gap, not flush on 0',
+    /paddingBottom:[^\n]*KEYBOARD_BREATHING_GAP/.test(layout),
+    'the gap must be the keyboard-up terminus of the animated paddingBottom',
+  );
+  ok(
+    'the gap still rides the same reanimated keyboard progress (no new clock)',
+    /paddingBottom:[^\n]*keyboardProgress\.value/.test(layout),
+    'a separately-clocked gap would reintroduce the run-4 overshoot',
+  );
+  ok(
+    'at rest the CTA still clears the home indicator by the full safe-area inset',
+    /restingBottomInset/.test(layout) && /Math\.max\(insets\.bottom/.test(layout),
+    'the gap is a keyboard-up floor; it must not shrink the resting clearance',
+  );
+}
+
 const total = passed + failures.length;
 console.log(`\nKeyboard convention totals: passed=${passed}/${total} failures=${failures.length}`);
 if (failures.length > 0) {
