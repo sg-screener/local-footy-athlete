@@ -52,6 +52,7 @@ import {
   resolveWeeklyConditioningFeasibility,
 } from '../../rules/conditioningFeasibility';
 import { evaluateEffectiveWeekExposureContract } from '../../rules/weeklyExposureContract';
+import { stampSection18GovernedBoundary } from '../../rules/weeklyExposureContractV2';
 import { requireSection18AcceptedWeek } from '../../rules/section18AcceptedWeekGateway';
 import {
   rebindDerivedSessionProvenance,
@@ -141,6 +142,21 @@ export interface GenerateProgramFromProfileOptions {
   targetFixtureDay?: DayOfWeek | null;
   /** Build only the target week when the caller needs a contract/fallback candidate. */
   microcycleLimit?: 1 | 4;
+  /**
+   * Author the remainder AS a remainder. When the generated week contains
+   * `governedFromISO`, days before it are HISTORY: the candidate week pins
+   * `pinnedHistoryWorkouts` (what the athlete actually has/did) in their
+   * place, the week contract is stamped with the boundary, and pre-boundary
+   * anchors keep their settled participation. §18 acceptance then evaluates
+   * the true week — delivered history plus the authored remainder — instead
+   * of a fictional whole week whose first days will be discarded. See
+   * docs/SECTION18_DELIVERED_VS_REMAINING_REASSESSMENT_2026-07-24.md
+   * Addendum B2.
+   */
+  remainderBoundary?: {
+    governedFromISO: string;
+    pinnedHistoryWorkouts: readonly Workout[];
+  } | null;
 }
 
 type CoachGeneratedWorkouts = Parameters<typeof buildWorkoutsFromCoach>[0];
@@ -315,6 +331,11 @@ export function buildGeneratedMicrocycles(args: {
   /** Raw facts, threaded per-week to mint the illness_recovery week mode. */
   temporarySourceFacts?: readonly TemporarySourceFact[] | null;
   weekLimit?: 1 | 4;
+  /** See GenerateProgramFromProfileOptions.remainderBoundary. */
+  remainderBoundary?: {
+    governedFromISO: string;
+    pinnedHistoryWorkouts: readonly Workout[];
+  } | null;
 }): Microcycle[] {
   const states = buildBlockWeekStates({
     blockStartISO: args.blockStartISO,
@@ -397,6 +418,32 @@ export function buildGeneratedMicrocycles(args: {
     // Later weeks use their own deterministic plan/fallback content.
     const sourceCoachWorkouts = stateIndex === 0 ? args.coachWorkouts : [];
     let exposureContractV2 = weekPlan.weeklyExposureContractV2;
+    // The governed boundary, when it falls inside THIS week. Days before it are
+    // history: the contract is stamped, pre-boundary anchors keep settled
+    // participation, and the candidate pins the athlete's actual days so §18
+    // acceptance evaluates the true week (remainder authored AS a remainder).
+    const boundary = args.remainderBoundary &&
+      args.remainderBoundary.governedFromISO > blockState.weekStart &&
+      args.remainderBoundary.governedFromISO <= blockState.weekEnd
+      ? args.remainderBoundary
+      : null;
+    if (boundary && exposureContractV2) {
+      exposureContractV2 = stampSection18GovernedBoundary({
+        contract: exposureContractV2,
+        weekStartISO: blockState.weekStart,
+        governedFromISO: boundary.governedFromISO,
+      });
+    }
+    const pinHistoryDays = (built: Workout[]): Workout[] => {
+      if (!boundary) return built;
+      const isHistoryDate = (dayOfWeek: number): boolean =>
+        dateForWeekday(blockState.weekStart, dayOfWeek) < boundary.governedFromISO;
+      return [
+        ...built.filter((workout) => !isHistoryDate(workout.dayOfWeek)),
+        ...boundary.pinnedHistoryWorkouts.filter((workout) =>
+          isHistoryDate(workout.dayOfWeek)),
+      ];
+    };
     const buildCanonicalCandidate = (source: typeof sourceCoachWorkouts): Workout[] => {
       const built = attachRecoveryAddonsToWeek({
         workouts: buildWorkoutsFromCoach(
@@ -438,13 +485,13 @@ export function buildGeneratedMicrocycles(args: {
               profile,
             }).workout ?? collapseWorkoutToRest(workout))
         : built;
-      return exposureContractV2
+      return pinHistoryDays(exposureContractV2
         ? stampPlannerDerivedSessionProvenance({
             workouts: constrained,
             contract: exposureContractV2,
             weekStart: blockState.weekStart,
           })
-        : constrained;
+        : constrained);
     };
     let workouts = buildCanonicalCandidate(sourceCoachWorkouts);
     if (exposureContractV2) {
@@ -653,6 +700,7 @@ export function generateProgramLocally(
       require('../../store/programStore').useProgramStore.getState()
         .acceptedMaterialContext?.temporarySourceFacts,
     weekLimit: options.microcycleLimit,
+    remainderBoundary: options.remainderBoundary ?? null,
   });
   const firstMicrocycle = microcycles[0];
   if (!firstMicrocycle?.workouts.length) {

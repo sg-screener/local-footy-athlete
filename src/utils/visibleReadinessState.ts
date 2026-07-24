@@ -12,7 +12,7 @@
 
 import type { TemporarySourceFact } from '../rules/temporarySourceFact';
 import { isInjurySourceFact } from '../rules/temporarySourceFact';
-import { addDaysISO } from './programBlockState';
+import { factHorizonCoversWeek } from '../rules/durableFactHorizon';
 import {
   recoveryModeModifierIdForDate,
   loadReductionModifierIdForDate,
@@ -84,16 +84,18 @@ export function resolveVisibleReadinessState(
   input: ResolveVisibleReadinessStateInput,
 ): VisibleReadinessState | null {
   const { readinessFacts, activeConstraints, weekAnchorISO, todayISO, isThisWeek } = input;
-  const weekEndISO = addDaysISO(weekAnchorISO, 6);
 
   // 1. Canonical readiness facts — the source the write actually produces.
+  //    Whether a fact reaches this week is asked of `durableFactHorizon`, never
+  //    recomputed here: this filter used to compare `scope.until` directly and
+  //    so silently dropped every OPEN fact, blanking the card for exactly the
+  //    reports that matter most (R19).
   const activeFacts = readinessFacts.filter((fact) =>
     !isInjurySourceFact(fact) &&
     fact.status === 'active' &&
     'factKind' in fact &&
     READINESS_FACT_KINDS.has((fact as { factKind: string }).factKind) &&
-    fact.scope.from <= weekEndISO &&
-    fact.scope.until >= weekAnchorISO);
+    factHorizonCoversWeek(fact, weekAnchorISO));
   if (activeFacts.length > 0) {
     // Prefer a today-scoped fact so the card reads "today" when that's true.
     const scopeOf = (fact: TemporarySourceFact): 'today' | 'week' =>

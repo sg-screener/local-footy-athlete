@@ -1,7 +1,12 @@
 # Reassessment — who owns the effect window and authority of a durable athlete-state fact?
 
-**Status: DRAFT, awaiting review. No code. STOP after this doc** (CLAUDE.md
-escalation rule; MASTER_PLAN L9).
+**Status: APPROVED (Option B) with four review riders, then AMENDED.** Rider 0
+was executed before any code and its evidence **contradicted §1c of this
+document**. See **Addendum A (2026-07-24)** at the end, which corrects the A3b
+mechanism, widens its scope, eliminates one proposed retirement, restates B4,
+adds a fourth divergence, and records Sam's D10 ruling. **Read Addendum A before
+acting on §1c, Q3 step 5, Q5/B4, Q6 or Q7's T6-T10** — the addendum supersedes
+them where they conflict.
 
 **Trigger.** Two L10 device findings from 2026-07-24, diagnosed in
 `docs/investigations/L10_DEVICE_FINDINGS_A1_A6_DIAGNOSIS_2026-07-24.md`:
@@ -477,3 +482,147 @@ Written against `spent-week-friday`, which is where all of this was observed.
   may be the hardest case in Option B.
 - **No estimate of implementation size** is offered for either option, and no
   gate suite was run for this document — it changes no code.
+
+---
+---
+
+# Addendum A (2026-07-24) — rider 0 executed; §1c corrected; D10 ruled
+
+Full evidence: `docs/investigations/RIDER0_INJURY_AUTHORITY_AT_THE_GATE_2026-07-24.md`.
+Probe: `spent-week-friday`, device-exact install, one fresh process per cell,
+`evaluateSection18EffectiveWeek` patched to record the contract it was actually
+handed. This addendum records only what changed.
+
+## A1. Rider 0's binary was false
+
+§1c posed: either the gate ignored an authorised reduction, or the authority
+never reached the gate. **Neither.** The `injury_restriction` reductions were in
+the contract at evaluation time and the gate honoured every one of them. They
+were **authored incompletely**, by the same owner that withdrew the credit they
+were meant to cover.
+
+The gate's fidelity is proven by contrast, not by inspection: for a lower-body
+injury `applyGenerationSafetyToSection18Contract` *does* author
+`sprint_high_speed_frequency<=0`, and the sprint minimum duly drops to 0 and the
+sprint shortfall disappears. Where a reduction is authored, it is applied.
+
+**Mechanism.** Any prohibited main-strength pattern sets `hasFieldRestriction`
+(`section18SafetyPolicy.ts:199-204`), demoting **every** anchor to `modified`,
+which zeroes `currentProductionClaim.conditioning` and `.sprintHighSpeed`. On
+this seed all conditioning (3) and all sprint (3) exposure is anchor credit from
+two team trainings and the game — zero app-authored. The same function authors
+reductions for `strength_pattern_count`, `main_strength_frequency` and
+(lower-body only) `sprint_high_speed_frequency`. It **never** authors a
+conditioning reduction, in any branch, for any injury. The contract handed to the
+gate therefore asserts both *"these anchors no longer produce conditioning"* and
+*"this week requires 3 conditioning exposures"* — unsatisfiable before the gate
+runs. One transaction then takes the athlete's injury report down with the week.
+
+## A2. Q3 step 5 / Q6 — the `safeFocusFor` collapse is ELIMINATED
+
+Not the trigger, on two independent grounds:
+
+1. Region scoping survived intact to the contract — `prohibitedPatterns` is
+   exactly `["push","pull"]`, `requiredSafe` exactly `["squat","hinge"]`.
+   `safeFocus` and `rules` are display copy and reach no contract field.
+2. Severity 7 never takes the serious branch (`trainingPaused` is false) and is
+   rejected identically.
+
+**Q6's "retire the `safeFocusFor(region, serious)` collapse" is struck** from
+scope unless re-justified as a copy fix on its own merits.
+
+## A3. Scope is much wider than §1c and than the L10 diagnosis
+
+The trigger is neither the severity band nor `pauseAffectedTraining`. It is
+**any injury that prohibits at least one main-strength pattern** — severity
+**≥ 6 in any region** (`weeklyExposureContractBuilders.ts:231-232`), plus
+anything with `pauseAffectedTraining`.
+
+| region | severity | commit | fact recorded |
+|---|---|---|---|
+| upper | 2, 5 | ok | yes |
+| upper | **7, 9** | **REJECTED** | **no** |
+| lower | 5 | ok | yes |
+| lower | **7, 9** | **REJECTED** | **no** |
+
+Severity 5 persists cleanly — the moderate band is fine, closing T9's open
+question in the direction the reassessment did not assume. But **the app cannot
+record any injury from 6/10 upward**, the 6-7 "limiting" band included. This
+widens the F6 correction in
+`docs/audits/DEAD_AFFORDANCE_INVENTORY_2026-07-23.md` beyond the paused band.
+
+## A4. Fourth divergence — the injury week has no materialisation owner
+
+Not identified anywhere in the original document. In **every** rejected cell the
+candidate week is byte-identical to the healthy week. The injury path validates
+the *existing base* against a stricter contract and never regenerates content.
+So even with a perfectly consistent contract the shoulder-injured athlete's
+Monday pressing session stays on screen: the week would stop *failing* without
+ever *changing*.
+
+**B4 alone does not make an injury visible.** The injury path needs a visible
+materialisation owner exactly as illness got one
+(`commitDerivingSourceFactScopedRegen`). This is rider 1's question arriving
+early and it is now in rider 1's scope, not optional.
+
+## A5. What survives, and B4 restated
+
+- **B3 (split the transaction) — confirmed harder than argued.** The fact dies
+  with the week in four of seven cells. Unchanged, and still the root fix.
+- **B1/B2 (fact owns its horizon; projection reads facts) — untouched.** Nothing
+  here revisits A3a; every A3a figure stands.
+- **B4 — restated.** Not "the translation from Bible bands to typed reductions
+  is missing"; it is *partial*. The correct and stronger statement:
+  **withdrawing production credit and authorising the matching typed reduction
+  are ONE atomic decision with ONE owner.** No contract may reach the gate
+  claiming both "this no longer produces X" and "this week requires X". That is
+  a static invariant, and it is what T7/T10 must pin.
+
+## A6. Sam's ruling — D10, ask the athlete
+
+> **Principle.** This is a dialogue between an S&C coach and an athlete. It is
+> not rehab — that is the physio's job. The job is to figure out what the
+> athlete can and cannot do, and prescribe that.
+
+Do not assume on the athlete's behalf. Ruled in two stages:
+
+**Stage 2a — build now.** Default to region-scoped anchor participation (the
+mechanics of option 1). An injury **never silently withdraws** team-training or
+game conditioning/sprint credit. Affected-region work pauses per the Bible
+bands. Outcome: injuries become recordable at **every** severity.
+
+**Stage 2b — design and build after 2a is green** (same unit if it fits, else
+the next). When severity or region genuinely threatens anchor participation
+(≥6/10, or region-relevant), the injury flow **asks**:
+
+1. "Can you still train and play?" → if no:
+2. "Will you be doing any work on those days?" → if yes:
+3. "Want me to prescribe a session that fits?"
+
+Sam's wording above is the base copy. Each answer is a **recorded typed fact**.
+Credit withdrawal and the matching typed requirement reduction are **one atomic
+authored decision with one owner** (B4 as restated in A5, adopted). Any
+prescribed replacement session comes from generation respecting the injury, is
+transaction-owned, disclosed, and undoable through the existing cascade.
+Materialisation ownership (A4 / rider 1) must be answered in the same design.
+
+**Sequence ruled:** this addendum → Stage 1 (duration ownership, T1-T5) →
+Stage 2a. No further approval gate between those steps unless evidence diverges
+again, in which case M8 applies as it did here.
+
+## NOT COVERED by this addendum (L2)
+
+- **No device pass and no code.** Same standing as the parent document; L4
+  unchanged.
+- **One seed, one profile.** `spent-week-friday` carries zero app-authored
+  conditioning. A profile that *does* carry app conditioning may clear the
+  minimum and mask the defect — untested, and possibly why this survived. The
+  on-device failure may therefore be profile-dependent; not established.
+- **`back_midline` and `other` regions untested**; expected to behave as lower
+  body, not measured.
+- **Only the report/create operation was probed.** Injury update, refresh,
+  resolve, and severity-lowering recovery (8-10 → 6-7) are untested.
+- **Stage 2b is a ruling, not a design.** No copy beyond Sam's base wording, no
+  typed-fact shape, no flow states, no undo semantics have been designed.
+- **A4 asserts the absence of re-authoring, not what should replace it.** Which
+  owner materialises an injury week is rider 1's open question.

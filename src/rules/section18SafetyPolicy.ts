@@ -129,7 +129,12 @@ function participationForConstraint(args: {
   hasFieldRestriction: boolean;
   lowerBodyRestriction: boolean;
   readinessRestriction: boolean;
+  deliveredHistory: boolean;
 }): AnchorParticipationState {
+  // Settled history: the anchor's day elapsed before the governed boundary.
+  // What the athlete did there is a fact; a restriction authored later cannot
+  // retroactively withdraw it.
+  if (args.deliveredHistory) return args.existing;
   if (args.explicit && args.existing !== 'normal_unrestricted') return args.existing;
   if (args.legacyUnknown) return 'unknown';
   if (!args.hasFieldRestriction) {
@@ -201,7 +206,41 @@ export function applyGenerationSafetyToSection18Contract(args: {
     readiness?.tier === 'major_reduction' || readiness?.tier === 'full_pause' ||
     cookedReadiness || fullPause;
   const readinessFieldRestriction = significantReadinessRestriction;
-  const hasFieldRestriction = lowerBodyRestriction || upperBodyRestriction || readinessFieldRestriction;
+  // FIELD participation — what the athlete produces at team training and on game
+  // day: conditioning, running, high-speed exposure. It is threatened by a
+  // lower-body or back restriction, and by low readiness. It is NOT threatened by
+  // an upper-body one: the Bible pauses the AFFECTED work, and a shoulder does
+  // not stop someone running (:2131-2134, and the same shape per body area).
+  //
+  // Including `upperBodyRestriction` here demoted EVERY anchor to `modified` for
+  // a shoulder injury, silently zeroing their conditioning and sprint production
+  // claim — while no branch below ever authorises a conditioning reduction. The
+  // contract then reached the §18 gate asserting both "these anchors no longer
+  // produce conditioning" and "this week requires 3 conditioning exposures", so
+  // it was unsatisfiable before the gate ran, and the single fact+week
+  // transaction destroyed the athlete's injury report along with the week. That
+  // is why NO injury from 6/10 up could be recorded, in any region.
+  //
+  // Sam's D10 ruling: the default never assumes an injury costs field
+  // participation. Where it genuinely might, the athlete is ASKED (Stage 2b) and
+  // the answer becomes a typed fact — an assumption is not a substitute for the
+  // question. See Addendum A of the durable-athlete-state reassessment and
+  // `docs/investigations/RIDER0_INJURY_AUTHORITY_AT_THE_GATE_2026-07-24.md`.
+  //
+  // NO injury region silently withdraws field participation (Sam's D10: the
+  // default never assumes an injury costs the athlete their team training or
+  // game; where it genuinely might, Stage 2b ASKS and records the answer).
+  // The lower-body coupling that previously forced this is resolved: the
+  // `sprint_high_speed_frequency <= 0` reduction and the
+  // `prohibitedSprintHighSpeed` blocker both govern APP-PRESCRIBED work only
+  // (delivered-vs-remaining ownership), so "the app prescribes no sprint to an
+  // 8/10 knee" no longer asserts "the athlete's own Saturday game produced
+  // nothing". The finaliser still strips app-authored speed blocks.
+  //
+  // Low readiness continues to withdraw field participation, and legitimately so:
+  // it authors matching main-strength, conditioning and sprint reductions in the
+  // same pass, so its contracts stay satisfiable.
+  const hasFieldRestriction = readinessFieldRestriction;
 
   if (prohibited.length > 0) {
     addReduction(contract, {
@@ -295,10 +334,12 @@ export function applyGenerationSafetyToSection18Contract(args: {
   applyReductionProjections(contract);
 
   contract.anchors = contract.anchors.map((anchor) => {
+    const deliveredHistory = anchor.participationProvenance === 'delivered_history';
     const participation = participationForConstraint({
       existing: anchor.participation,
       explicit: anchor.participationProvenance === 'explicit',
-      legacyUnknown: anchor.participationProvenance !== 'explicit' && (
+      legacyUnknown: anchor.participationProvenance !== 'explicit' &&
+        !deliveredHistory && (
         contract.source === 'legacy_migration' ||
         anchor.participationProvenance === 'legacy_unknown' ||
         anchor.participationProvenance === 'healthy_legacy_assumption' ||
@@ -307,12 +348,15 @@ export function applyGenerationSafetyToSection18Contract(args: {
       hasFieldRestriction,
       lowerBodyRestriction,
       readinessRestriction: readinessFieldRestriction,
+      deliveredHistory,
     });
     const normal = participation === 'normal_unrestricted';
     return {
       ...anchor,
       participation,
-      participationProvenance: anchor.participationProvenance === 'explicit' &&
+      participationProvenance: deliveredHistory
+        ? 'delivered_history'
+        : anchor.participationProvenance === 'explicit' &&
         participation === anchor.participation
         ? 'explicit'
         : participation === 'unknown'
@@ -371,6 +415,19 @@ export function applyGenerationSafetyToSection18Contract(args: {
 
   contract = refreshSection18SafetyPolicy(contract, {
     cookedReadiness,
+    // `prohibitedSprintHighSpeed` forces the week's high-speed ceiling to a hard
+    // 0 — ALL exposure, including the athlete's own team-training and game
+    // running (`weeklyExposureContractV2.ts:455`). That is true under a full
+    // pause or a readiness restriction, both of which also withdraw anchor
+    // participation, so the claim matches the week.
+    //
+    // It stays TRUE for a lower-body injury — the app must never prescribe a
+    // speed session to a torn hamstring, and the finaliser strips speed content
+    // on this flag. What changed is downstream: the flag no longer forces the
+    // week's total high-speed ceiling to 0 by itself. The typed
+    // `injury_restriction` reduction above carries the honest number
+    // (`anchors.length`: no app sprint, the athlete's own game exposure intact),
+    // and `buildSafetyPolicy` now reads it rather than assuming zero.
     prohibitedSprintHighSpeed: lowerBodyRestriction || significantReadinessRestriction || fullPause,
     prohibitedPower,
     prohibitedPowerFamilies,

@@ -102,6 +102,14 @@ function clearLocalStateThroughPublicAPIs(): void {
   useProgramStore.getState().clear();
 }
 
+/** The Monday of the week containing `dateISO` — same arithmetic as
+ *  `devE2EWeekStartForSeed`, applied to an arbitrary anchor. */
+function weekStartForAnchor(dateISO: string): string {
+  const date = new Date(`${dateISO.slice(0, 10)}T12:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
+  return date.toISOString().slice(0, 10);
+}
+
 function installAcceptedCalendarGame(date: string, fallbackProfile?: ReturnType<
   typeof buildDevE2ESeed
 >['profile']): void {
@@ -161,7 +169,12 @@ function installAcceptedSeedProgram(seed: ReturnType<typeof buildDevE2ESeed>): v
         program: { todayWorkout: workout },
         profile: seed.profile,
         preserveExactAcceptedWorkouts: true,
-        validateWeekStarts: [seed.anchorDate],
+        // The WEEK containing the anchor, never the anchor itself: every seed
+        // before spent-week-friday anchored on a Monday, which let the two be
+        // conflated. A Friday anchor validated as a "week start" misaligns
+        // every day and rejects a perfectly valid seed
+        // (see devE2ESeedIds.ts DEV_E2E_DATE_ANCHORS).
+        validateWeekStarts: [weekStartForAnchor(seed.anchorDate)],
       }),
     },
     // The registry owns the exact accepted seed. Installing its fixture marks

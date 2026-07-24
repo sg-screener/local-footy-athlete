@@ -70,6 +70,7 @@ import {
   temporaryFactScope,
   temporarySourceFactId,
 } from '../rules/temporarySourceFact';
+import { durableStateFactScope } from '../rules/durableFactHorizon';
 import {
   commitTemporarySourceFactSet,
   transactTemporarySourceFact,
@@ -1211,22 +1212,28 @@ async function executeProgramControlActionDurablyWithinTrace(
     const date = action.payload.date.slice(0, 10);
     const sourceSurface = action.source.surface ?? action.source.screen;
     // Minor illness is today-scoped + inert (record-only, opt-in soften offer);
-    // severe illness is week-scoped + deriving (auto-protect). The create helper
-    // maps severity → athleteReportedLevel so the shared health-fact threshold
-    // classifies it (see temporarySourceFact `globalConstraint`).
+    // severe illness is a DURABLE STATE fact + deriving (auto-protect). The
+    // create helper maps severity → athleteReportedLevel so the shared
+    // health-fact threshold classifies it (see temporarySourceFact
+    // `globalConstraint`).
+    //
+    // Stage 1: severe illness no longer takes its duration from the UI's scope
+    // string. "I'm properly sick" is true until the athlete says otherwise, and
+    // it starts when they say it — never back-dated to Monday over days they
+    // have already trained.
+    const todayISO = (action.payload.todayISO ?? context.todayISO ?? date).slice(0, 10);
     const fact = createTemporaryIllnessFact({
       observedDate: date,
-      scope: temporaryFactScope({
-        kind: action.payload.severity === 'severe' ? 'week' : 'date',
-        date,
-      }),
+      scope: action.payload.severity === 'severe'
+        ? durableStateFactScope({ anchorDate: date, todayISO })
+        : temporaryFactScope({ kind: 'date', date }),
       severity: action.payload.severity,
       sourceSurface,
     });
     const factResult = await transactTemporarySourceFact({
       operation: 'create',
       fact,
-      todayISO: action.payload.todayISO ?? context.todayISO ?? date,
+      todayISO,
       sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
       sourceSurface,
     });
@@ -1244,6 +1251,11 @@ async function executeProgramControlActionDurablyWithinTrace(
   if (action.type === 'set_fatigue_status' || action.type === 'set_poor_sleep_status') {
     const date = action.payload.date.slice(0, 10);
     const sourceSurface = action.source.surface ?? action.source.screen;
+    // Stage 1: the week-tier readiness reports ("cooked", repeated poor sleep)
+    // are DURABLE STATE facts like severe illness — they last until the athlete
+    // says otherwise and start when they are reported, not on the week's Monday.
+    // The today-tier reports stay genuinely date-shaped.
+    const todayISO = (action.payload.todayISO ?? context.todayISO ?? date).slice(0, 10);
     const existingPoorSleep = action.type === 'set_poor_sleep_status'
       ? useProgramStore.getState().acceptedMaterialContext.temporarySourceFacts
           ?.find((fact) => !isInjurySourceFact(fact) && fact.factKind === 'poor_sleep' && fact.status === 'active')
@@ -1251,10 +1263,9 @@ async function executeProgramControlActionDurablyWithinTrace(
     const fact = action.type === 'set_poor_sleep_status'
       ? createTemporaryPoorSleepFact({
           observedDate: date,
-          scope: temporaryFactScope({
-            kind: action.payload.pattern === 'repeated' ? 'week' : 'date',
-            date,
-          }),
+          scope: action.payload.pattern === 'repeated'
+            ? durableStateFactScope({ anchorDate: date, todayISO })
+            : temporaryFactScope({ kind: 'date', date }),
           pattern: action.payload.pattern,
           sourceSurface,
           factId: existingPoorSleep && !isInjurySourceFact(existingPoorSleep)
@@ -1271,10 +1282,9 @@ async function executeProgramControlActionDurablyWithinTrace(
           })
         : createTemporaryFatigueFact({
             observedDate: date,
-            scope: temporaryFactScope({
-              kind: action.payload.level === 'cooked' ? 'week' : 'date',
-              date,
-            }),
+            scope: action.payload.level === 'cooked'
+              ? durableStateFactScope({ anchorDate: date, todayISO })
+              : temporaryFactScope({ kind: 'date', date }),
             athleteReportedLevel: action.payload.level === 'cooked'
               ? 'cooked'
               : action.payload.level === 'worse' ? 'high' : action.payload.level === 'not_right' ? 'moderate' : 'slight',
@@ -1284,7 +1294,7 @@ async function executeProgramControlActionDurablyWithinTrace(
     const factResult = await transactTemporarySourceFact({
       operation: existingPoorSleep ? 'update' : 'create',
       fact,
-      todayISO: action.payload.todayISO ?? context.todayISO ?? date,
+      todayISO,
       sourceActor: action.source.initiatedBy === 'system' ? 'system' : 'athlete',
       sourceSurface,
     });

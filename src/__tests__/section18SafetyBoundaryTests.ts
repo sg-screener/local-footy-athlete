@@ -433,16 +433,25 @@ run('mutation', 'M2 restoring default squat/hinge rows is killed', () => {
   assert(observed.findings.filter((finding) => finding.code === 'prohibited_pattern_breach').length >= 2, 'restored defaults escaped observer');
 });
 
-run('mutation', 'M3 treating every TT as unrestricted is killed', () => {
-  const contract = withSafety(baseContract({ teamParticipation: { 2: 'modified' } }), injuryContext('lower_body'));
+// M3, redefined under the delivered-vs-remaining ownership (Addendum A §A5,
+// Sam's D10). The OLD mutant asserted that a lower-body injury must zero the
+// athlete's own TT/game exposure — exactly the silent credit withdrawal the
+// ruling forbids, and the coupling that made every ≥6/10 injury unrecordable.
+// The defect worth killing is the B4 violation: a contract that WITHDRAWS an
+// anchor's production claims without authorising a matching reduction is
+// unsatisfiable by construction and must be blocked, not accepted.
+run('mutation', 'M3 withdrawing anchor credit without a matching reduction is killed', () => {
+  const contract = withSafety(baseContract(), undefined);
   const mutated = JSON.parse(JSON.stringify(contract)) as WeeklyExposureContractV2;
   mutated.anchors = mutated.anchors.map((anchor) => ({
     ...anchor,
-    participation: 'normal_unrestricted',
-    currentProductionClaim: { conditioning: true, sprintHighSpeed: true, hardDay: true },
+    participation: 'modified',
+    currentProductionClaim: { conditioning: false, sprintHighSpeed: false, hardDay: false },
   }));
   const observed = evaluateSection18EffectiveWeek({ contract: mutated, workouts: [], weekStart: WEEK_START });
-  assert(observed.blockingViolations.some((finding) => finding.code === 'reduction_contradiction'), 'unrestricted TT mutation escaped');
+  assert(observed.blockingViolations.some((finding) =>
+    finding.code === 'required_minimum_shortfall' || finding.code === 'reduction_contradiction'),
+    'credit-withdrawal-without-reduction mutation escaped');
 });
 
 run('mutation', 'M4 retaining power under low readiness is killed', () => {

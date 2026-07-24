@@ -38,6 +38,7 @@ import {
 import {
   mostRecentMissedSession,
   missedSessionFeedback,
+  programHistoryBoundaryFromCreatedAt,
   type MissedSession,
   type MissedSessionResponse,
 } from '../../utils/missedSessions';
@@ -73,6 +74,7 @@ import {
 } from '../../dev/e2e/athleteActionUIObservation';
 import { dayOfWeekTestIdToken, explorerTestId } from '../../utils/stableTestId';
 import { isTemporaryEquipmentFact } from '../../rules/temporarySourceFact';
+import { factHorizonCoversWeek } from '../../rules/durableFactHorizon';
 import { seasonPhaseFromProgram } from '../../rules/seasonPhaseClock';
 
 type StatusModifierKind = 'recovery' | 'load_reduction' | 'readiness' | 'unknown';
@@ -365,20 +367,21 @@ export function useHomeScreen() {
     .filter((adjustment) => adjustment.kind === 'repeat_week')
     .sort((left, right) => right.acceptedRevision - left.acceptedRevision)[0] ?? null,
   [visibleReversibleAdjustments]);
+  // Which facts reach the visible week is asked of `durableFactHorizon`. These
+  // two filters used to compare `scope.until` directly, which drops every OPEN
+  // fact — the coach note and the readiness list would go blank for exactly the
+  // durable reports (severe illness, cooked) that most need showing.
   const equipmentFacts = useMemo(() => temporarySourceFacts
     .filter(isTemporaryEquipmentFact)
-    .filter((fact) => !visibleWeekStart || !visibleWeekEnd || (
-      fact.scope.from <= visibleWeekEnd &&
-      fact.scope.until >= visibleWeekStart
-    )), [temporarySourceFacts, visibleWeekEnd, visibleWeekStart]);
+    .filter((fact) => !visibleWeekStart ||
+      factHorizonCoversWeek(fact, visibleWeekStart)),
+  [temporarySourceFacts, visibleWeekStart]);
   const readinessFacts = useMemo(() => temporarySourceFacts.filter((fact) =>
     'factKind' in fact && (
       fact.factKind === 'fatigue' || fact.factKind === 'soreness' ||
       fact.factKind === 'poor_sleep' || fact.factKind === 'illness'
-    ) && (!visibleWeekStart || !visibleWeekEnd || (
-      fact.scope.from <= visibleWeekEnd &&
-      fact.scope.until >= visibleWeekStart
-    ))), [temporarySourceFacts, visibleWeekEnd, visibleWeekStart]);
+    ) && (!visibleWeekStart || factHorizonCoversWeek(fact, visibleWeekStart))),
+  [temporarySourceFacts, visibleWeekStart]);
   const visibleWeekKind = useMemo(() => {
     if (!visibleWeekStart) return undefined;
     const exactMicrocycle = currentProgram?.microcycles?.find((microcycle) => {
@@ -627,8 +630,13 @@ export function useHomeScreen() {
         weekDays,
         todayISO: todayISOLocal(),
         sessionFeedback,
+        // E6: days before the program existed are history — display context,
+        // never prompted, never counted missed.
+        programHistoryBeforeISO: programHistoryBoundaryFromCreatedAt(
+          currentProgram?.createdAt,
+        ),
       }),
-    [weekDays, sessionFeedback],
+    [weekDays, sessionFeedback, currentProgram?.createdAt],
   );
 
 

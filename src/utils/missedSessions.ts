@@ -60,11 +60,20 @@ export function detectMissedSessions(args: {
   weekDays: ResolvedDay[];
   todayISO: string;
   sessionFeedback: Record<string, SessionFeedback>;
+  /**
+   * Dates before this are HISTORY from before the program existed (E6):
+   * plan rows minted for the week's earlier days are display context, not
+   * commitments — the athlete could never have done them, so they are never
+   * prompted about and never counted missed. Normally the program's local
+   * creation date (`programHistoryBoundaryFromCreatedAt`).
+   */
+  programHistoryBeforeISO?: string | null;
 }): MissedSession[] {
   const { weekDays, todayISO, sessionFeedback } = args;
   const out: MissedSession[] = [];
   for (const day of weekDays) {
     if (day.date >= todayISO) continue; // today + future are not "missed" yet
+    if (args.programHistoryBeforeISO && day.date < args.programHistoryBeforeISO) continue;
     if (!day.workout) continue;
     if (isGame(day) || isRestOrRecovery(day)) continue;
     if (sessionFeedback[day.date]) continue; // already logged → handled
@@ -89,9 +98,27 @@ export function mostRecentMissedSession(args: {
   weekDays: ResolvedDay[];
   todayISO: string;
   sessionFeedback: Record<string, SessionFeedback>;
+  programHistoryBeforeISO?: string | null;
 }): MissedSession | null {
   const all = detectMissedSessions(args);
   return all.length > 0 ? all[all.length - 1] : null;
+}
+
+/**
+ * The signup boundary in LOCAL calendar terms. A Thursday-morning signup in
+ * Melbourne is still Wednesday in UTC, so slicing the raw ISO instant would
+ * exempt one day too few.
+ */
+export function programHistoryBoundaryFromCreatedAt(
+  createdAt: string | undefined | null,
+): string | null {
+  if (!createdAt) return null;
+  const parsed = new Date(createdAt);
+  if (Number.isNaN(parsed.getTime())) return null;
+  const y = parsed.getFullYear();
+  const m = String(parsed.getMonth() + 1).padStart(2, '0');
+  const d = String(parsed.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 export type MissedSessionResponse = 'did_it' | 'missed_it' | 'move_forward' | 'skip_it';
