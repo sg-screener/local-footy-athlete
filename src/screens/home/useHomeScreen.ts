@@ -29,6 +29,7 @@ import {
   type ProgramControlStatusUpdate,
 } from '../../utils/programControlActions';
 import { readinessActionForKind } from '../../utils/weekReadinessActions';
+import { athleteSafeRefusal } from '../../utils/planChangeRefusalCopy';
 import type { TemporaryEquipmentPresetId } from '../../utils/equipmentAvailability';
 import {
   buildGuidedInjuryConstraint,
@@ -1680,8 +1681,11 @@ export function useHomeScreen() {
       }
       if (result.outcome === 'safely-rejected' || result.outcome === 'conflicted' ||
         result.outcome === 'superseded') {
-        Alert.alert('Couldn’t restore this adjustment', result.reason ??
-          'Your program has changed since this adjustment was made.');
+        // result.reason can be a raw transaction error.message — never show it
+        // verbatim (census finding #8 / addendum i). The safety gate collapses an
+        // internal reason to plain copy; a curated reason passes through.
+        Alert.alert('Couldn’t restore this adjustment', athleteSafeRefusal(result.reason ??
+          'Your program has changed since this adjustment was made.'));
       }
       return;
     }

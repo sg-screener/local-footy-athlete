@@ -58,6 +58,14 @@ console.log('\n[athlete-safe refusal] raw internal reasons never reach the athle
     'a durable-transaction developer message is replaced',
     athleteSafeRefusal('Illness reports require the durable source-fact transaction.') === fallback,
   );
+  ok(
+    'a raw §18 rejection string is replaced',
+    athleteSafeRefusal('Section 18 final-week rejection (full_rest_miscount:full_rest:"active recovery cannot be full rest")') === fallback,
+  );
+  ok(
+    'an embedded snake_case diagnostic token is replaced',
+    athleteSafeRefusal("I couldn't add a session: full_rest_miscount shortfall") === fallback,
+  );
 
   // Athlete-framed domain copy passes straight through.
   ok(

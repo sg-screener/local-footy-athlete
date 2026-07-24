@@ -107,10 +107,19 @@ const INTERNAL_REASON_MARKERS: readonly RegExp[] = [
   /source[-\s]?fact/i,
   /guided executor/i,
   /\bStage \d/i,
+  /section\s*18|§\s*18/i,
+  /miscount/i,
+  /shortfall/i,
+  /final-week rejection/i,
 ];
 
-/** A bare snake_case token (e.g. a route code like `coach_mutation_not_applied`). */
-const SNAKE_CASE_TOKEN = /^[a-z0-9]+(?:_[a-z0-9]+)+$/;
+/**
+ * A snake_case token anywhere in the string (e.g. a route code like
+ * `coach_mutation_not_applied` or an embedded diagnostic like
+ * `full_rest_miscount`). Athlete copy never contains one, so its presence marks
+ * the whole string as an internal diagnostic.
+ */
+const SNAKE_CASE_TOKEN = /\b[a-z0-9]+(?:_[a-z0-9]+)+\b/;
 
 /**
  * athleteSafeRefusal — gate every refusal string through here before it reaches
@@ -121,6 +130,17 @@ const SNAKE_CASE_TOKEN = /^[a-z0-9]+(?:_[a-z0-9]+)+$/;
  * The single display seam for refusal copy: a raw internal reason must never be
  * rendered, no matter which layer produced it (L10 device finding, 2026-07-24).
  */
+/**
+ * Coach apply-failure copy. The injury-progression fallback replies used to read
+ * developer TODOs to the athlete ("Investigate event targeting…"); this owns the
+ * plain-language version. The diagnostic detail stays log-side only (census #3).
+ */
+export const COACH_NO_OVERRIDE_FALLBACK =
+  "I lined up changes for your week, but they didn't land on your sessions, so I've left your program as it is. Try again, or tell me and we'll sort it.";
+
+export const COACH_NO_VISIBLE_DIFF_FALLBACK =
+  "I tried to adjust your program but nothing actually changed on your plan, so I haven't claimed it as done. Try again, or let me know.";
+
 export function athleteSafeRefusal(reason?: string | null): string {
   const trimmed = (reason ?? '').trim();
   if (!trimmed) return SAFE_REFUSAL_FALLBACK;
