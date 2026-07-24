@@ -99,11 +99,24 @@ console.log('\n[1] The convention exists and owns the primitives');
     ? read(CONVENTION_OWNERS[0])
     : '';
   ok(
-    'AppTextInput gives single-line inputs a submit key',
-    /returnKeyType=\{props\.returnKeyType \?\? \(props\.multiline \? undefined : 'done'\)\}/
-      .test(input),
-    'E4: the inconsistent per-screen submit config is what differed between the '
-      + 'name and height/weight screens',
+    'AppTextInput gives single-line, non-keypad inputs a submit key',
+    /returnKeyType=\{props\.returnKeyType \?\? defaultReturnKeyType\}/.test(input) &&
+      /props\.multiline \|\| isKeypad \? undefined : 'done'/.test(input),
+    'E4: text keyboards keep their Done submit key; the inconsistent per-screen '
+      + 'submit config is what differed between the name and height/weight screens',
+  );
+  ok(
+    'AppTextInput requests NO returnKeyType on keyless keypad keyboards (run-4 pill)',
+    /const isKeypad =/.test(input) &&
+      /keyboardType/.test(input) &&
+      /'number-pad'/.test(input) &&
+      /'numeric'/.test(input) &&
+      /'decimal-pad'/.test(input) &&
+      /'phone-pad'/.test(input),
+    'iOS 26 floats a rounded "Done" pill above the keypad whenever a returnKeyType '
+      + 'is set on a keyboard with no return key (verified: bare number-pad shows no '
+      + 'pill; +returnKeyType=done shows it). Keypad types must default to none — the '
+      + 'same float KeyboardDoneAccessory was hand-rolled to avoid',
   );
   ok(
     'AppTextInput forwards refs so it is a true drop-in',
@@ -280,12 +293,42 @@ console.log('\n[6] The Continue footer rides flush on the keypad (run-3 device f
       + 'footer overshot — the footer, not the shell, must own the bottom inset',
   );
   ok(
-    'the Continue footer owns the bottom safe-area inset and collapses it under the keyboard',
+    'the Continue footer owns the bottom safe-area inset',
     /useSafeAreaInsets/.test(layout) &&
-      /useKeyboardState/.test(layout) &&
-      /paddingBottom:[^\n]*insets\.bottom/.test(layout),
+      /Math\.max\(insets\.bottom/.test(layout),
     'rest: the CTA clears the home indicator (paddingBottom = insets.bottom); '
       + 'keyboard up: the inset collapses to 0 so the CTA rides flush on the keypad',
+  );
+}
+
+console.log(
+  '\n[6b] The footer inset collapses on the SAME animated keyboard clock as the ' +
+    'sticky lift (run-4 device finding — no overshoot/bounce)',
+);
+{
+  // Run-4 device truth: on keyboard APPEAR the Continue CTA overshoots ABOVE the
+  // keypad, then settles. Cause (verified in source + on iOS 26.3 sim): the inset
+  // collapse was driven by a BOOLEAN keyboard-visible flag (useKeyboardState), so
+  // paddingBottom snapped insets.bottom -> 0 in a single discrete step, while the
+  // footer's KeyboardStickyView transform lifts CONTINUOUSLY over the open
+  // animation. A discrete padding change racing a continuous lift is the bounce.
+  // Fix: drive the inset from the SAME reanimated keyboard progress the sticky
+  // view rides, so the CTA collapses its inset and lifts as one motion.
+  const layout = read('components/onboarding/OnboardingLayout.tsx');
+  ok(
+    'the footer inset is driven by the reanimated keyboard progress, not a boolean',
+    /useReanimatedKeyboardAnimation/.test(layout) &&
+      /useAnimatedStyle/.test(layout) &&
+      /paddingBottom:[^\n]*keyboardProgress\.value/.test(layout),
+    'the inset must interpolate on the continuous keyboard progress (0..1) that '
+      + 'KeyboardStickyView also rides, so it collapses in lockstep with the lift',
+  );
+  ok(
+    'the footer inset is NOT snapped by a discrete keyboard-visible boolean',
+    !/paddingBottom:[^\n]*keyboardVisible/.test(layout) &&
+      !/keyboardVisible \? 0 :/.test(layout),
+    'a boolean-gated paddingBottom snaps in one step and races the continuous '
+      + 'sticky lift — exactly the run-4 overshoot; it must not reappear',
   );
 }
 
