@@ -73,6 +73,10 @@ import {
 import type { FixtureConditionedAvailability } from '../../rules/fixtureConditionedAvailability';
 import { validateWorkoutAgainstActiveConstraints } from '../../utils/postGenerationConstraintValidation';
 import { collapseWorkoutToRest } from '../../utils/workoutContent';
+import {
+  curatedExerciseVocabulary,
+  ExerciseVocabularyViolation,
+} from '../../utils/exerciseCanonicalisation';
 
 /**
  * Kinds of program-generation failure — used by the UI to decide whether
@@ -112,6 +116,30 @@ export class ProgramGenError extends Error {
     this.diagnostic = diagnostic;
     this.details = details;
   }
+}
+
+/**
+ * The honest refusal for a program that reached acceptance carrying an exercise
+ * the app cannot cue.
+ *
+ * Sam ruling (device run 5): a loud generation-contract violation, never a
+ * silent cueless card. The athlete is told the program was withheld and offered
+ * a rebuild — the generation prompt now carries the vocabulary, so a retry is
+ * genuinely likely to succeed. The offending names stay in the developer
+ * diagnostic; athlete-facing copy never carries internal identifiers.
+ */
+export function programGenErrorForCuelessCards(
+  violation: ExerciseVocabularyViolation,
+  details?: Record<string, unknown>,
+): ProgramGenError {
+  return new ProgramGenError(
+    'bad_response',
+    'Some exercises came back without coaching cues, so I’ve held your program back '
+      + 'rather than show you a session with blank instructions. Please try again.',
+    `cueless exercise names at program acceptance: ${violation.unresolved.join(', ')}`,
+    true,
+    { ...details, unresolvedExerciseNames: violation.unresolved },
+  );
 }
 
 export interface GenerateProgramFromProfileOptions {
@@ -1520,6 +1548,20 @@ export async function generateProgramFromProfile(
       activeConstraints: activeConstraintsForGeneration,
     });
   } catch (normaliseErr: any) {
+    // A vocabulary violation is NOT an unreadable response — the program parsed
+    // fine, it just contains an exercise the app cannot cue. Reporting it as the
+    // generic "could not read it" is the mis-signalling G6 diagnosed, so it gets
+    // its own honest refusal and never reaches the generic copy below.
+    if (normaliseErr instanceof ExerciseVocabularyViolation) {
+      logger.error('[ProgramGen] Generated program refused: cueless exercise cards at acceptance', {
+        unresolved: normaliseErr.unresolved,
+        generatedWorkoutDiagnostics,
+      });
+      throw programGenErrorForCuelessCards(normaliseErr, {
+        request: requestDiagnostics,
+        generatedProgram: generatedWorkoutDiagnostics,
+      });
+    }
     const diagnostic = `generated program normalisation failed: ${errorDiagnostic(normaliseErr)}`;
     logger.error('[ProgramGen] Generated program normalisation failed before client acceptance', {
       diagnostic,
@@ -1685,6 +1727,25 @@ export function buildGenerationPrompt(
   });
 
   parts.push('Generate my initial training program using the update_program tool.');
+
+  // ─── Exercise vocabulary (the generator does not get naming rights) ───
+  // The curated layer owns every athlete-visible word, so it must also own the
+  // NAMES the model is allowed to return. Before this, generation invented
+  // superset spellings of curated movements ("Single Arm Half Kneeling OHP
+  // (DB)") and the athlete got a card with no coaching cue at all (device run
+  // 5). Widening the ingress matcher alone is a tail-chase while the generator
+  // can name anything; the fix is upstream — offer the vocabulary and require
+  // selection from it. Derived from the curated cue layer (never hand-copied),
+  // so a cue Sam authors is offered on the very next generation.
+  parts.push('\nEXERCISE VOCABULARY (authoritative — these are the ONLY exercise names that exist):');
+  parts.push(curatedExerciseVocabulary().join(' | '));
+  parts.push(
+    'Every exercise `name` you return must be copied EXACTLY from that list, character for '
+    + 'character. Do NOT invent a new name, abbreviate one ("OHP", "SA"), pluralise one '
+    + '("Hamstring Curls"), or add a qualifier in brackets or in front ("(DB)", "Incline …"). '
+    + 'If the movement you had in mind is not listed, pick the closest listed movement instead. '
+    + 'The client refuses any program containing a name that is not in this vocabulary.',
+  );
 
   if (data.position) {
     const roleContext = buildRoleContext(data);

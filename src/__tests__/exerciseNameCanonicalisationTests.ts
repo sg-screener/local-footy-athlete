@@ -36,6 +36,9 @@ import {
   collectUnresolvedCues,
   assertCuratedExerciseCues,
   ExerciseVocabularyViolation,
+  signatureTokens,
+  EQUIPMENT_QUALIFIER_TOKENS,
+  POSITION_QUALIFIER_TOKENS,
 } from '../utils/exerciseCanonicalisation';
 import { buildCueText } from '../screens/home/dayWorkoutHelpers';
 import { cuelessStrengthCards, enforceCuratedCueContract } from '../rules/curatedCueContract';
@@ -62,6 +65,11 @@ function poolExerciseNames(): string[] {
     }
   }
   return [...names].sort();
+}
+
+/** Pluralise a curated key's final word — the shape a generator actually emits. */
+function pluralise(key: string): string {
+  return key.replace(/([A-Za-z]+)$/, (word) => (/s$/i.test(word) ? word : `${word}s`));
 }
 
 const GENERIC_PRIMARY = 'Control the movement.';
@@ -232,11 +240,130 @@ console.log('\n[8] Runtime invariant — scoped to the render truth (cued streng
     cuelessStrengthCards(conditioningWk).length === 0);
   ok('recovery freeform text is exempt by render path (no strength rows)',
     cuelessStrengthCards(recoveryWk).length === 0);
-  ok('enforceCuratedCueContract is loud but non-throwing (never bricks generation)', (() => {
-    try { enforceCuratedCueContract([strengthWk, recoveryWk, conditioningWk], 'unit'); }
-    catch { return false; }
-    return true;
+  // Sam ruling (device run 5): a name that renders no cue is a LOUD
+  // generation-contract violation, never a silent cueless card. The previous
+  // non-throwing `logger.error` contradicted that ruling — a violation was
+  // OBSERVED at render instead of ENFORCED at acceptance, and three superset
+  // variants shipped to the device as blank cards. The invariant now refuses.
+  ok('enforceCuratedCueContract THROWS on a cueless strength card (enforced, not observed)', (() => {
+    try { enforceCuratedCueContract([strengthWk, recoveryWk, conditioningWk], 'unit'); return false; }
+    catch (e) { return e instanceof ExerciseVocabularyViolation; }
   })());
+  ok('...and the violation names the offending exercise', (() => {
+    try { enforceCuratedCueContract([strengthWk], 'unit'); return false; }
+    catch (e) {
+      return e instanceof ExerciseVocabularyViolation
+        && e.unresolved.length === 1
+        && e.unresolved[0] === 'Some Made Up Move';
+    }
+  })());
+  ok('a fully-cued week passes acceptance untouched', (() => {
+    const cleanWk: any = { workoutType: 'Strength', exercises: [
+      { id: 'a', exercise: { name: 'Back Squat' } },
+      { id: 'b', exercise: { name: 'single-arm half-kneeling OHP' } },
+    ] };
+    try { enforceCuratedCueContract([cleanWk, recoveryWk, conditioningWk], 'unit'); return true; }
+    catch { return false; }
+  })());
+}
+
+console.log('\n[9] Plural normalisation — a pluralised spelling is the same movement');
+{
+  // Device run-5 truth: the generator emitted "Hamstring Curls" and the ingress
+  // boundary reported it cueless, because plurals were only handled ad-hoc by
+  // whole-string aliases ("Chest Supported Rows" happened to be aliased,
+  // "Barbell Rows" was not). Number is not part of a movement's identity, so it
+  // is normalised in the token signature — symmetrically on both sides.
+  ok('the reported name resolves', canonicalExerciseName('Hamstring Curls') === 'Hamstring Curl',
+    `got ${JSON.stringify(canonicalExerciseName('Hamstring Curls'))}`);
+  for (const [variant, canon] of [
+    ['Barbell Rows', 'Barbell Row'],
+    ['Single-Arm DB Rows', 'Single-Arm DB Row'],
+    ['Goblet Squats', 'Goblet Squat'],
+    ['Nordic Lowers', 'Nordic Lower'],
+  ] as const) {
+    ok(`"${variant}" resolves to "${canon}"`, canonicalExerciseName(variant) === canon,
+      `got ${JSON.stringify(canonicalExerciseName(variant))}`);
+  }
+  // The plural of a curated key must never be a word that IS singular already:
+  // "Press", "Cross", "Dips" must survive normalisation intact.
+  ok('an -ss word is not mangled into a false singular',
+    canonicalExerciseName('Overhead Press') === 'Overhead Press' &&
+    canonicalExerciseName('Bench Press') === 'Bench Press');
+
+  // The general invariant, not the three reported phrases: pluralising ANY
+  // curated key still lands on a curated cue.
+  const curatedKeys = Object.keys(EXERCISE_CUES);
+  const pluralBroken = curatedKeys.filter((key) => !hasCuratedCue(pluralise(key)));
+  ok('every curated key still resolves when pluralised', pluralBroken.length === 0,
+    `pluralised form went cueless: ${pluralBroken.slice(0, 12).map(pluralise).join(' | ')}`);
+}
+
+console.log('\n[10] Bounded superset matching — equipment/position qualifiers are droppable');
+{
+  // Device run-5 truth: the generator emitted qualifier-decorated supersets of
+  // curated keys — "Single Arm Half Kneeling OHP (DB)" and "Incline DB Row
+  // (Chest Supported)". Token-sort EQUALITY can never match a superset, so both
+  // rendered blank. The boundary now drops equipment/position qualifier tokens,
+  // fewest first, and adopts the result ONLY when the remainder resolves to
+  // exactly one curated key — bounded, so an ambiguous name still refuses.
+  ok('"Single Arm Half Kneeling OHP (DB)" resolves (equipment qualifier dropped)',
+    canonicalExerciseName('Single Arm Half Kneeling OHP (DB)') === 'Half-Kneeling Single-Arm Overhead Press',
+    `got ${JSON.stringify(canonicalExerciseName('Single Arm Half Kneeling OHP (DB)'))}`);
+  ok('"Incline DB Row (Chest Supported)" resolves to the DB row, not the generic row',
+    canonicalExerciseName('Incline DB Row (Chest Supported)') === 'Chest-Supported DB Row',
+    `got ${JSON.stringify(canonicalExerciseName('Incline DB Row (Chest Supported)'))}`);
+  ok('...all three run-5 device names now carry a cue',
+    collectUnresolvedCues([
+      'Single Arm Half Kneeling OHP (DB)',
+      'Incline DB Row (Chest Supported)',
+      'Hamstring Curls',
+    ]).length === 0,
+    `still unresolved: ${collectUnresolvedCues([
+      'Single Arm Half Kneeling OHP (DB)',
+      'Incline DB Row (Chest Supported)',
+      'Hamstring Curls',
+    ]).join(', ')}`);
+
+  // Bounded, not open-ended: a name whose remainder is not a curated key stays
+  // unresolved, so superset-matching can never invent a cue for a real gap.
+  ok('a non-qualifier superset does NOT match (bounded)',
+    !hasCuratedCue('Barbell Zercher Front Squat Cluster'),
+    `unexpectedly resolved to ${JSON.stringify(canonicalExerciseName('Barbell Zercher Front Squat Cluster'))}`);
+  ok('dropping qualifiers off an unknown movement still refuses',
+    !hasCuratedCue('Incline DB Zerg Rush'));
+
+  // A CONTRADICTORY decoration must still refuse. "Banded Bicep Curl (DB)"
+  // names two different implements, and both "Banded Bicep Curl" and "Bicep
+  // Curl (Dumbbell)" are one shed away — genuine ambiguity. Guessing one would
+  // be exactly the silent-wrong-cue failure this boundary exists to prevent, so
+  // the name stays unresolved and the acceptance gate refuses it.
+  ok('a contradictory equipment decoration refuses rather than guessing',
+    !hasCuratedCue('Banded Bicep Curl (DB)'),
+    `resolved to ${JSON.stringify(canonicalExerciseName('Banded Bicep Curl (DB)'))}`);
+  ok('a contradictory position decoration refuses rather than guessing',
+    !hasCuratedCue('Incline Lying Dumbbell Curl'),
+    `resolved to ${JSON.stringify(canonicalExerciseName('Incline Lying Dumbbell Curl'))}`);
+
+  // The general invariant: decorating any curated key that does NOT already
+  // name an implement / position with that class of qualifier keeps it cued.
+  const curatedKeys = Object.keys(EXERCISE_CUES);
+  const carries = (key: string, tokens: ReadonlySet<string>) =>
+    signatureTokens(key).some((token) => tokens.has(token));
+
+  const equipmentBroken = curatedKeys
+    .filter((key) => !carries(key, EQUIPMENT_QUALIFIER_TOKENS))
+    .filter((key) => !hasCuratedCue(`${key} (DB)`));
+  ok('every implement-free curated key survives an appended equipment qualifier',
+    equipmentBroken.length === 0,
+    `went cueless with "(DB)": ${equipmentBroken.slice(0, 12).join(' | ')}`);
+
+  const positionBroken = curatedKeys
+    .filter((key) => !carries(key, POSITION_QUALIFIER_TOKENS))
+    .filter((key) => !hasCuratedCue(`Incline ${key}`));
+  ok('every position-free curated key survives a prepended position qualifier',
+    positionBroken.length === 0,
+    `went cueless with "Incline": ${positionBroken.slice(0, 12).join(' | ')}`);
 }
 
 console.log(`\nexercise canonicalisation: ${passed} passed, ${failures.length} failed`);

@@ -61,12 +61,20 @@ export function cuelessStrengthCards(workout: Partial<Workout> | null | undefine
 }
 
 /**
- * Enforce the cue contract over accepted workouts. Loud, but non-throwing: it
- * surfaces every offending name via `logger.error` rather than crashing program
- * generation, because an unresolved name is usually a curation gap that is Sam's
- * to close (a new cue), not a code fault to hard-fail on. The
- * `ExerciseVocabularyViolation` message names every offender so the gap is
- * actionable the moment it appears.
+ * Enforce the cue contract over accepted workouts. THROWS
+ * `ExerciseVocabularyViolation` naming every offender.
+ *
+ * This gate shipped first as a non-fatal `logger.error`, on the reasoning that
+ * an unresolved name is a curation gap for Sam to close rather than a code fault
+ * to hard-fail on. Device run 5 showed why that was wrong: a log nobody reads is
+ * indistinguishable from no gate at all, and three superset-token variants
+ * reached the athlete as blank cards while the "contract" quietly passed. Sam's
+ * ruling is a loud generation-contract violation, never a silent cueless card —
+ * so the invariant is ENFORCED at acceptance, not merely OBSERVED at render.
+ *
+ * Callers own the policy for the refusal: `generateProgram` turns it into an
+ * honest, retryable `ProgramGenError` so the athlete is offered a rebuild rather
+ * than shown a half-finished session.
  */
 export function enforceCuratedCueContract(
   workouts: ReadonlyArray<Partial<Workout> | null | undefined>,
@@ -79,4 +87,5 @@ export function enforceCuratedCueContract(
   if (seen.size === 0) return;
   const violation = new ExerciseVocabularyViolation(context, [...seen]);
   logger.error(violation.message, { unresolved: violation.unresolved });
+  throw violation;
 }
