@@ -1,5 +1,5 @@
 import type { OnboardingData, TrainingProgram } from '../types/domain';
-import { useProgramStore } from '../store/programStore';
+import { assertAcceptedProgramInstallable, useProgramStore } from '../store/programStore';
 import { useCalendarStore } from '../store/calendarStore';
 import { computeGameDatesForBlock } from './sessionResolver';
 import { logger } from './logger';
@@ -94,6 +94,15 @@ export function seedOnboardingProgram(args: {
   const programStore = args.programStore ?? useProgramStore.getState();
   const calendarStore = args.calendarStore ?? useCalendarStore.getState();
   const { program, onboardingData } = args;
+
+  // Fail fast, by name, BEFORE anything is installed (Sam ruling 2026-07-26,
+  // option (b)). A program with no exposure contract cannot be installed —
+  // every accepted-week read requires one — but accepting it used to succeed
+  // here and detonate several steps later at `setGameDay`, so the athlete was
+  // told a save had failed when the real fault was an uninstallable week.
+  // Refusing here reports the fault at its cause. The accept path never
+  // rebuilds a week to rescue it; structural migration belongs to hydration.
+  assertAcceptedProgramInstallable(program);
 
   // Brand-new athlete program: a TRUE fresh slate is intended here, so the
   // override wipe is explicit. (setCurrentProgram no longer clears
