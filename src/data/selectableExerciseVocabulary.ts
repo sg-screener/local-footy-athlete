@@ -399,14 +399,17 @@ export const LITERAL_EXEMPTIONS: Record<string, LiteralExemptionKind> = {
   'Breathing Reset': 'recovery_flow',
 
   // ── REAL exercise names that do not resolve. Sam's ruling owed. ──
-  // All six are offered by the LIVE "Add exercise" affordance on the session
-  // screen and render with NO cue today. Proposed mappings are in the report.
+  // Offered by the LIVE "Add exercise" affordance on the session screen, and
+  // rendering with NO cue. Proposed mappings are in the report.
+  //
+  // Sam approved three swaps on 2026-07-25 and they are applied, so the three
+  // that remain are the ones that need a real decision rather than a rename:
+  // each names a movement the curated vocabulary does not contain at all, so
+  // closing it means ADDING an entry (cue + video + pool) or dropping the
+  // suggestion. That is content authoring, not a mapping.
   'Split Squat': 'awaiting_sam_ruling',
   'Calf Isometric Hold': 'awaiting_sam_ruling',
   'Hip Mobility Flow': 'awaiting_sam_ruling',
-  'T-Spine Openers': 'awaiting_sam_ruling',
-  'Bike Flush Finisher': 'awaiting_sam_ruling',
-  'Tempo Run Finisher': 'awaiting_sam_ruling',
 };
 
 /** The exemption kind for a hardcoded literal, or null when none is recorded. */

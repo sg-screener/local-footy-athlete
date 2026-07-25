@@ -364,18 +364,21 @@ progression *transfer* between pool siblings; `EXERCISE_LOAD_MAP` is the
 load between siblings by design; their starting weight comes from the map above,
 not from rotation.
 
-**Rounding note (open, not blocking).** Sam's reference figures — 17.5 / 22.5 /
-12.5 / 40 kg — pin his reference athlete at a **88 kg squat 1RM**, where
-`Single-Leg Hip Thrust` = 17.5, `Back Extension` = 12.5 and
+**Rounding — RULED by Sam, 2026-07-25: 20 kg accepted.** His reference figures —
+17.5 / 22.5 / 12.5 / 40 kg — pin his reference athlete at an **88 kg squat 1RM**,
+where `Single-Leg Hip Thrust` = 17.5, `Back Extension` = 12.5 and
 `Speed Trap Bar Deadlift` = 40 all fall out of the ratios exactly.
 
 `Hamstring Curl` cannot reach 22.5 at any bodyweight: `machine` rounds to 5 kg
-increments (`ROUND_INCREMENTS`), so at 88 kg it surfaces **20 kg** (and 25 kg
-from a 90 kg squat) — 22.5 is not on the machine grid at all. Re-classing it as
-`dumbbell` would produce 22.5 but would also be wrong: equipment class gates
-availability filtering, and a leg-curl stack is not a dumbbell. Either the
-machine grid is accepted, or plate-loaded stacks move to a 2.5 kg increment.
-Sam's call; the ratio ships as ruled meanwhile.
+increments (`ROUND_INCREMENTS`), so at 88 kg it surfaces **20 kg** — 22.5 is not
+on the machine grid at all. Re-classing it as `dumbbell` would have produced 22.5
+but would also have been wrong: equipment class gates availability filtering, and
+a leg-curl stack is not a dumbbell.
+
+Sam accepted **20 kg** and the machine grid stays at 5 kg increments. So the
+ratio (0.25) and the equipment class (`machine`) both ship exactly as first
+ruled, and nothing further is owed here. Recorded rather than dropped, because
+the 22.5 in his original note would otherwise read as an unexplained miss.
 
 ### RULED — Erg EMOM conditioning classification
 

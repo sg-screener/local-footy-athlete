@@ -344,11 +344,17 @@ function suggestAddExercise(
     ],
     Mobility: [
       { name: 'Hip Mobility Flow', sets: 1, repsMin: 5, repsMax: 8, prescriptionType: 'duration_minutes', notes: 'Move easy.' },
-      { name: 'T-Spine Openers', sets: 2, repsMin: 6, repsMax: 8, perSide: true },
+      // Sam approved 2026-07-25: "T-Spine Openers" was the same drill under a
+      // name the app could not cue, so it now names the curated entry.
+      { name: 'Open Book Thoracic Rotation', sets: 2, repsMin: 6, repsMax: 8, perSide: true },
     ],
     'Conditioning finisher': [
-      { name: 'Bike Flush Finisher', sets: 1, repsMin: 8, repsMax: 10, prescriptionType: 'duration_minutes', notes: 'Easy-moderate pace.' },
-      { name: 'Tempo Run Finisher', sets: 1, repsMin: 8, repsMax: 10, prescriptionType: 'duration_minutes', notes: 'Smooth, not a test.' },
+      // Sam approved 2026-07-25: both finishers named formats that did not exist
+      // in the vocabulary, so both rendered blank. They now name the curated
+      // conditioning entries; the notes carry the "easy, not a test" intent that
+      // the invented "Finisher" suffix used to.
+      { name: 'Easy Bike', sets: 1, repsMin: 8, repsMax: 10, prescriptionType: 'duration_minutes', notes: 'Easy-moderate pace.' },
+      { name: 'Tempo Run', sets: 1, repsMin: 8, repsMax: 10, prescriptionType: 'duration_minutes', notes: 'Smooth, not a test.' },
     ],
   };
   return candidates[kind].find((candidate) => !existing.has(candidate.name.toLowerCase())) ?? null;
