@@ -108,7 +108,8 @@ a literal only counts as an exercise name when it sits in `name:` /
 `*EXERCISES` string array. A builder's exercise always comes with its dose; a
 store key, a route, an icon and a session title never do.
 
-Post-purge: **49 distinct literals across 108 positions**, 34 resolving outright.
+Post-purge: **49 distinct literals across 97 positions** — 38 resolve outright,
+11 carry a typed exemption, **0 unaccounted**.
 `data/defaultProgram.ts` is deliberately in scope despite its path, and the suite
 asserts the sweep reaches it — so it cannot go blind to the class that hid the
 med-ball throw.
