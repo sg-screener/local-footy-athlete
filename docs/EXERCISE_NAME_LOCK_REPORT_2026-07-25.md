@@ -39,43 +39,49 @@ it is the program builder, and `buildPowerBlock` is the exact class of site this
 lock exists to police. Test files are out of scope: they name retired exercises
 in order to ban them, and nothing in them reaches an athlete.
 
-## Sam's rulings applied — three swaps done, three still owed
+## Sam's rulings — ALL SIX CLOSED (2026-07-25)
 
-The lock originally surfaced **six** names offered by the "Add exercise"
-affordance in `src/screens/home/DayWorkoutScreenV2.tsx` (a live, reachable
-screen) that the app could not cue. Sam ruled on 2026-07-25.
+The lock surfaced **six** names offered by the "Add exercise" affordance in
+`src/screens/home/DayWorkoutScreenV2.tsx` — a live, reachable screen — that the
+app could not cue. Every one of the six now renders a real curated cue. The
+`awaiting_sam_ruling` queue is **empty**, and the gate asserts that emptiness.
 
-### APPLIED — three approved swaps (2026-07-25)
+### Renames — the vocabulary already had the movement
 
-Each named a movement the curated vocabulary already had under its real name, so
-these were renames, not content decisions. All three now render a real cue,
-verified through `buildCueText`:
+| Was offered | Now offers |
+|---|---|
+| `T-Spine Openers` | **Open Book Thoracic Rotation** |
+| `Bike Flush Finisher` | **Easy Bike** |
+| `Tempo Run Finisher` | **Tempo Run** |
 
-| Was offered | Now offers | Cue it renders |
+### Redirects — the vocabulary genuinely lacked what they named
+
+Sam's call was to point each at the nearest curated movement rather than author
+new content. **Two of the three changed the prescription**, because a name and
+its dose are not independent:
+
+| Was offered | Now offers | Prescription change |
 |---|---|---|
-| `T-Spine Openers` | **Open Book Thoracic Rotation** | "Knees stacked, rotate through the upper back. Follow the hand with the eyes." |
-| `Bike Flush Finisher` | **Easy Bike** | "Conversational pace, legs turning over. This is recovery, not training." |
-| `Tempo Run Finisher` | **Tempo Run** | "Hold the pace, settle into the rhythm. Controlled breathing throughout." |
+| `Split Squat` | **Reverse Lunges** | none — 2 × 8-10 per side already suited it |
+| `Calf Isometric Hold` | **Single-Leg Calf Raise** | `duration` 30-45s → **`reps` 12-15 per side**. The old entry was an isometric HOLD; the curated raise is rep-counted, so keeping the duration would have prescribed "30-45 seconds" of a rep movement. |
+| `Hip Mobility Flow` | **Hip 90/90 Stretch** | `duration_minutes` 5-8 → **`duration` 30-45s per side**. 5-8 minutes of a FLOW became seconds of a single stretch hold. |
 
-Prescriptions and notes are unchanged — the notes ("Easy-moderate pace.",
-"Smooth, not a test.") already carried the intent that the invented "Finisher"
-suffix was trying to express, so nothing about the dose needed to move.
+Both changed doses now match the curated pool entry exactly (`CALVES_POOL`,
+`MOBILITY_POOL`), including their notes ("3-second lowering.", "Breathe into the
+stretch."). Copy adapted only where the old text described a thing that no longer
+exists — a flow you move through is not a hold you breathe into.
 
-### STILL OWED — three names, and they need authoring, not mapping
+**Flow-capable suggestions are a POSSIBLE FUTURE BUILD, not now** (Sam's ruling).
+The table can only emit single exercises, so a suggestion naming a
+`MOBILITY_FLOW_TEMPLATES` entry has nowhere to land. `Hip 90/90 Stretch` is the
+honest single-movement stand-in until the table learns templates.
 
-These are the ones that survived the swap pass precisely because they are *not*
-renames. Each names a movement the curated vocabulary **does not contain at all**,
-so closing it means either ADDING an entry — cue + video + pool placement — or
-dropping the suggestion. That is content authoring and it is Sam's.
+### Not a lock finding, still open
 
-They remain parked under `awaiting_sam_ruling`, and the gate still asserts both
-that they render no cue and that this report names them.
-
-| Name offered today | Renders | What closing it actually requires |
-|---|---|---|
-| `Split Squat` | no cue | The census flagged plain split squat as a **distinct, easier regression** from `Bulgarian Split Squats`, not a synonym — a real athlete progression the app is missing. Either author it (cue + video + squat-slot placement) or drop the suggestion and let the Lower-body slot offer `Bulgarian Split Squats` / `Reverse Lunges`. |
-| `Calf Isometric Hold` | no cue | Nothing equivalent exists. `Single-Leg Calf Raise` is a different movement (dynamic, not an isometric hold), so swapping to it would change the prescription. Author it, or drop the suggestion — the Prehab slot still offers `Copenhagen Plank (Half)`. |
-| `Hip Mobility Flow` | no cue | This is a **flow**, not a movement: `MOBILITY_FLOW_TEMPLATES` already has **Hips/Adductors/Groin Reset**. The clean fix is for the suggestion to point at a flow TEMPLATE rather than name a movement, which is a small structural change to the suggestion table (it currently only knows how to emit single exercises). Flagged as design, not a one-liner. |
+`Tempo Run` under "Conditioning finisher" is a real `B-low`/high-impact tempo run
+rather than a flush. It resolves and cues, so the lock is satisfied — but whether
+it is the right *dose* for a finisher slot is Sam's device read, and it stays as
+the finisher pending that.
 
 ## Typed exemption kinds
 
@@ -94,9 +100,9 @@ list cannot rot into a hiding place.
 
 ## The complete sweep
 
-**47 distinct literals across 97 positions** — 39 resolve outright,
-8 carry a typed exemption, **0 unaccounted**. Regenerated after the three
-approved swaps landed.
+**46 distinct literals across 97 positions** — 41 resolve outright,
+5 carry a typed exemption, **0 unaccounted**, and **0 parked awaiting a ruling**.
+Regenerated after the final three redirects landed.
 
 | Literal | Verdict | Sites |
 |---|---|---|
@@ -111,20 +117,19 @@ approved swaps landed.
 | `Bodyweight Squat` | RESOLVES | `data/defaultProgram.ts:168` |
 | `Breathing Reset` | exempt `recovery_flow` | `utils/tapSwapHierarchy.ts:206` |
 | `Bulgarian Split Squats` | RESOLVES | `data/defaultProgram.ts:124`<br>`data/defaultProgram.ts:1167` |
-| `Calf Isometric Hold` | exempt `awaiting_sam_ruling` | `screens/home/DayWorkoutScreenV2.tsx:343` |
 | `Calf Raises` | RESOLVES | `data/defaultProgram.ts:190`<br>`data/defaultProgram.ts:1079` |
 | `Chest Supported Row` | RESOLVES | `data/defaultProgram.ts:1120`<br>`data/defaultProgram.ts:1146` |
 | `Conditioning` | exempt `session_label` | `data/defaultProgram.ts:1069` |
-| `Copenhagen Plank (Half)` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:342` |
-| `Dead Bug` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:339` |
+| `Copenhagen Plank (Half)` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:347` |
+| `Dead Bug` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:344` |
 | `Dips` | RESOLVES | `data/defaultProgram.ts:258`<br>`data/defaultProgram.ts:1188` |
-| `Easy Bike` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:356`<br>`utils/tapSwapHierarchy.ts:190` |
+| `Easy Bike` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:371`<br>`utils/tapSwapHierarchy.ts:190` |
 | `Face Pulls` | RESOLVES → `Face Pull` | `data/defaultProgram.ts:247`<br>`data/defaultProgram.ts:1078`<br>`data/defaultProgram.ts:1088`<br>`data/defaultProgram.ts:1121`<br>`data/defaultProgram.ts:1126`<br>`data/defaultProgram.ts:1147`<br>`data/defaultProgram.ts:1175`<br>`screens/home/DayWorkoutScreenV2.tsx:330` |
 | `Glute Bridge` | RESOLVES | `data/defaultProgram.ts:179` |
 | `Goblet Squat` | RESOLVES | `data/defaultProgram.ts:157`<br>`data/defaultProgram.ts:1111` |
 | `Hamstring Curl` | RESOLVES | `data/defaultProgram.ts:1087`<br>`data/defaultProgram.ts:1133` |
-| `Hip Mobility Flow` | exempt `awaiting_sam_ruling` | `screens/home/DayWorkoutScreenV2.tsx:346` |
-| `Hip Thrust` | RESOLVES → `Hip Thrusts` | `screens/home/DayWorkoutScreenV2.tsx:335` |
+| `Hip 90/90 Stretch` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:361` |
+| `Hip Thrust` | RESOLVES → `Hip Thrusts` | `screens/home/DayWorkoutScreenV2.tsx:340` |
 | `Hip Thrusts` | RESOLVES | `data/defaultProgram.ts:282`<br>`data/defaultProgram.ts:1132`<br>`data/defaultProgram.ts:1160` |
 | `Incline DB Bench` | RESOLVES | `data/defaultProgram.ts:339`<br>`data/defaultProgram.ts:1125`<br>`data/defaultProgram.ts:1153` |
 | `Inverted Row (Bodyweight)` | RESOLVES | `data/defaultProgram.ts:236` |
@@ -133,17 +138,17 @@ approved swaps landed.
 | `Leg Press` | RESOLVES | `data/defaultProgram.ts:146` |
 | `Mobility Flow` | exempt `recovery_flow` | `data/defaultProgram.ts:1063` |
 | `Nordic Lower` | RESOLVES | `data/defaultProgram.ts:315`<br>`data/defaultProgram.ts:1161` |
-| `Open Book Thoracic Rotation` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:349` |
+| `Open Book Thoracic Rotation` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:364` |
 | `Overhead Press` | RESOLVES | `data/defaultProgram.ts:214`<br>`data/defaultProgram.ts:1152`<br>`data/defaultProgram.ts:1187` |
-| `Pallof Press` | RESOLVES → `Band Pallof Press` | `data/defaultProgram.ts:1080`<br>`data/defaultProgram.ts:1089`<br>`data/defaultProgram.ts:1098`<br>`data/defaultProgram.ts:1107`<br>`data/defaultProgram.ts:1112`<br>`screens/home/DayWorkoutScreenV2.tsx:338` |
+| `Pallof Press` | RESOLVES → `Band Pallof Press` | `data/defaultProgram.ts:1080`<br>`data/defaultProgram.ts:1089`<br>`data/defaultProgram.ts:1098`<br>`data/defaultProgram.ts:1107`<br>`data/defaultProgram.ts:1112`<br>`screens/home/DayWorkoutScreenV2.tsx:343` |
 | `Pull-Ups` | RESOLVES | `data/defaultProgram.ts:328`<br>`data/defaultProgram.ts:1086`<br>`data/defaultProgram.ts:1124`<br>`data/defaultProgram.ts:1145`<br>`data/defaultProgram.ts:1173` |
 | `Push-Ups` | RESOLVES → `Push-ups` | `screens/home/DayWorkoutScreenV2.tsx:331` |
 | `RDLs` | RESOLVES | `data/defaultProgram.ts:135`<br>`data/defaultProgram.ts:1085`<br>`data/defaultProgram.ts:1106`<br>`data/defaultProgram.ts:1110`<br>`data/defaultProgram.ts:1131`<br>`data/defaultProgram.ts:1159` |
-| `Reverse Lunges` | RESOLVES | `data/defaultProgram.ts:1139` |
+| `Reverse Lunges` | RESOLVES | `data/defaultProgram.ts:1139`<br>`screens/home/DayWorkoutScreenV2.tsx:339` |
 | `Single-Arm DB Row` | RESOLVES | `data/defaultProgram.ts:225`<br>`data/defaultProgram.ts:1097`<br>`data/defaultProgram.ts:1182` |
-| `Split Squat` | exempt `awaiting_sam_ruling` | `screens/home/DayWorkoutScreenV2.tsx:334` |
+| `Single-Leg Calf Raise` | RESOLVES | `screens/home/DayWorkoutScreenV2.tsx:353` |
 | `Sprint Intervals` | RESOLVES | `data/defaultProgram.ts:385` |
-| `Tempo Run` | RESOLVES | `data/defaultProgram.ts:396`<br>`screens/home/DayWorkoutScreenV2.tsx:357` |
+| `Tempo Run` | RESOLVES | `data/defaultProgram.ts:396`<br>`screens/home/DayWorkoutScreenV2.tsx:372` |
 | `Trap Bar Deadlift` | RESOLVES | `data/defaultProgram.ts:271` |
 | `Tricep Pushdowns` | RESOLVES → `Tricep Pushdown` | `data/defaultProgram.ts:1077` |
 | `Walking Lunges` | RESOLVES | `data/defaultProgram.ts:293` |

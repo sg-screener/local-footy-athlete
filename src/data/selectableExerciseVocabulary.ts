@@ -375,7 +375,12 @@ export const LITERAL_EXEMPTION_KINDS: Record<LiteralExemptionKind, LiteralExempt
       'A REAL exercise name that does not resolve to the locked vocabulary. '
       + 'Declared here rather than silently tolerated: each one is listed in the '
       + 'build report with a proposed mapping, and Sam rules. Until then the card '
-      + 'renders WITHOUT a cue, which is the defect this kind exists to make loud.',
+      + 'renders WITHOUT a cue, which is the defect this kind exists to make loud. '
+      + 'UNUSED as of 2026-07-25: the kind surfaced six cueless names in the live '
+      + '"Add exercise" table and Sam ruled every one — three as renames onto '
+      + 'existing vocabulary, three as redirects onto a different curated movement '
+      + 'once it was clear the vocabulary genuinely lacked what they named. The '
+      + 'kind stays declared because emptiness is what the gate checks.',
   },
 };
 
@@ -399,17 +404,9 @@ export const LITERAL_EXEMPTIONS: Record<string, LiteralExemptionKind> = {
   'Breathing Reset': 'recovery_flow',
 
   // ── REAL exercise names that do not resolve. Sam's ruling owed. ──
-  // Offered by the LIVE "Add exercise" affordance on the session screen, and
-  // rendering with NO cue. Proposed mappings are in the report.
-  //
-  // Sam approved three swaps on 2026-07-25 and they are applied, so the three
-  // that remain are the ones that need a real decision rather than a rename:
-  // each names a movement the curated vocabulary does not contain at all, so
-  // closing it means ADDING an entry (cue + video + pool) or dropping the
-  // suggestion. That is content authoring, not a mapping.
-  'Split Squat': 'awaiting_sam_ruling',
-  'Calf Isometric Hold': 'awaiting_sam_ruling',
-  'Hip Mobility Flow': 'awaiting_sam_ruling',
+  // EMPTY as of 2026-07-25 — Sam ruled all six the lock surfaced. Emptiness is
+  // the PROOF, not a comment: `hardcodedExerciseNameLockTests` §4 asserts it, so
+  // a name parked here again without a row in the lock report fails the build.
 };
 
 /** The exemption kind for a hardcoded literal, or null when none is recorded. */

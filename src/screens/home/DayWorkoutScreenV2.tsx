@@ -331,7 +331,12 @@ function suggestAddExercise(
       { name: 'Push-Ups', sets: 2, repsMin: 8, repsMax: 12 },
     ],
     'Lower body': [
-      { name: 'Split Squat', sets: 2, repsMin: 8, repsMax: 10, perSide: true },
+      // Sam ruled 2026-07-25: "Split Squat" named a progression the curated
+      // vocabulary does not have, so the suggestion points at Reverse Lunges
+      // rather than at Bulgarian Split Squats — mapping it to Bulgarian would
+      // have handed a beginner the HARDER variant, which is the opposite of what
+      // the split-squat suggestion was for.
+      { name: 'Reverse Lunges', sets: 2, repsMin: 8, repsMax: 10, perSide: true },
       { name: 'Hip Thrust', sets: 2, repsMin: 10, repsMax: 12 },
     ],
     Core: [
@@ -340,10 +345,20 @@ function suggestAddExercise(
     ],
     Prehab: [
       { name: 'Copenhagen Plank (Half)', sets: 2, repsMin: 20, repsMax: 30, prescriptionType: 'duration', perSide: true },
-      { name: 'Calf Isometric Hold', sets: 2, repsMin: 30, repsMax: 45, prescriptionType: 'duration' },
+      // Sam ruled 2026-07-25: Single-Leg Calf Raise. The PRESCRIPTION had to move
+      // with the name — the old entry was a 30-45s isometric hold, and the
+      // curated raise is 12-15 reps per side. Keeping the duration would have
+      // prescribed "30-45 seconds" of a rep-counted movement. Dose matches the
+      // curated pool entry (CALVES_POOL), including its 3-second lowering.
+      { name: 'Single-Leg Calf Raise', sets: 2, repsMin: 12, repsMax: 15, prescriptionType: 'reps', perSide: true, notes: '3-second lowering.' },
     ],
     Mobility: [
-      { name: 'Hip Mobility Flow', sets: 1, repsMin: 5, repsMax: 8, prescriptionType: 'duration_minutes', notes: 'Move easy.' },
+      // Sam ruled 2026-07-25: Hip 90/90 Stretch. Flow-capable suggestions are a
+      // POSSIBLE FUTURE BUILD, not now — this table emits single exercises, so a
+      // suggestion naming a MOBILITY_FLOW_TEMPLATES entry has nowhere to land.
+      // The prescription moved with the name: 5-8 MINUTES of a flow becomes
+      // 30-45 SECONDS per side of a stretch, matching MOBILITY_POOL.
+      { name: 'Hip 90/90 Stretch', sets: 2, repsMin: 30, repsMax: 45, prescriptionType: 'duration', perSide: true, notes: 'Breathe into the stretch.' },
       // Sam approved 2026-07-25: "T-Spine Openers" was the same drill under a
       // name the app could not cue, so it now names the curated entry.
       { name: 'Open Book Thoracic Rotation', sets: 2, repsMin: 6, repsMax: 8, perSide: true },
